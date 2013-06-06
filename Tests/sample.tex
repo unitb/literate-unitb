@@ -1,0 +1,58 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{calculation}
+\usepackage{unitb}
+\usepackage{amsmath}
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for come common customisations
+
+\title{A Sample Unit-B Toolkit proof}
+\author{Simon Hudon}
+\date{} % delete this line to display the current date
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+%\tableofcontents
+
+%\section{}
+
+%\begin{theorem} 
+%Any conjunctive function is monotonic
+%\begin{assumption}
+%f.(x \land y) ~ \equiv~ f.x \land f.y
+%\end{assumption}
+%\end{theorem}
+%\begin{dummy}
+\begin{calculation}
+	f.x \le f.y
+\hint{=}{ $\le$ to $=$ and $\uparrow$ }
+	f.x \uparrow f.y \,=\, f.y
+\hint{=}{ $f$ over $\uparrow$ }
+	f.(x \uparrow y) \,=\, f.y
+\hint{\follows}{ Leibniz }
+	x \uparrow y \,=\, y
+\hint{=}{ $\le$ from $=$ and $\uparrow$ }
+	x \le y
+\end{calculation}
+
+\begin{calculation}
+	f.x
+\hint{\le}{ $x \le x\uparrow y$ }
+	f.x \uparrow f.y
+\hint{=}{ $f$ over $\uparrow$ }
+	f.(x \uparrow y)
+\hint{=}{ $x \le y$ cast as $x\uparrow y = y$ }
+	f.y
+\end{calculation}
+
+%\subsection{}
+
+\end{document}

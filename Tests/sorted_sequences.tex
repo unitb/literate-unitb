@@ -1,0 +1,104 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+\usepackage{amsmath}
+\usepackage{calculation}
+
+% See the ``Article customise'' template for come common customisations
+
+\title{Sorted Sequences}
+\author{Simon Hudon}
+\date{} % delete this line to display the current date
+
+\newcounter{thm}
+\setcounter{thm}{-1}
+\newtheorem{theorem}[thm]{Theorem}
+\newtheorem{lemma}[thm]{Lemma}
+\newtheorem{axiom}[thm]{Hypothesis}
+
+\newcounter{prop}
+\setcounter{prop}{-1}
+%\newcommand{\proptag}{}
+\newenvironment{assertion}[2]
+{	%\renewcommand{\proptag}{#1}
+	\begin{equation} 
+	\stepcounter{prop}
+	\tag{#1\arabic{prop}} 
+	\label{#2} }
+{ 	\end{equation} }
+
+%\newcommand{\newassertion}
+%{ 	\newenvironment{invariant}[1]
+%	{	\begin{assertion}{#1}{#1} }
+%	{	\end{assertion} } }
+
+\newenvironment{invariant}[1]
+	{	\begin{assertion}{J}{#1} }
+	{	\end{assertion} }
+\newenvironment{guard}[1]
+	{	\begin{assertion}{G}{#1} }
+	{	\end{assertion} }
+\newenvironment{f:schedule}[1]
+	{	\begin{assertion}{F}{#1} }
+	{	\end{assertion} }
+\newenvironment{c:schedule}[1]
+	{	\begin{assertion}{C}{#1} }
+	{	\end{assertion} }
+\newenvironment{assignment}[1]
+	{	\begin{assertion}{A}{#1} }
+	{	\end{assertion} }
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+%\tableofcontents
+%
+\begin{axiom} \label{axm0}
+	\[ \ew{ q \le p } \]
+\end{axiom}
+\begin{theorem}
+	\[ \ew{ sort.q \le sort.p } \]
+\end{theorem}
+\begin{proof}
+\begin{calculation}
+		  sort.p.n  \le  x
+	\hint{=}{ \eqref{lmm1} }
+		  n+1  ~\le~  \quant{+}{i}{p.i \le x}{1}
+	\hint{\implies}{ $\ew{ q \le p }$: \eqref{axm0} }
+		  n+1  ~\le~ \quant{+}{i}{q.i \le x}{1}
+	\hint{=}{ \eqref{lmm1} }
+		  sort.q.n \le x
+\end{calculation}
+\end{proof}
+\begin{lemma} \label{lmm1}
+	\[ sort.p.n  \le  x   \quad \equiv \quad   n+1 \le \quant{+}{i}{p.i \le x}{1} \]
+\end{lemma}
+
+\begin{axiom} \label{lmm2}
+For all $p$,
+	\[ \ew{ b.( \, sort.p\, ) = b.p } \]
+\end{axiom}
+\begin{proof}[Proof of \eqref{lmm1}]
+\begin{calculation}
+		  sort.p.n  \le  x
+	\hint{=}{ \eqref{lmm3} }
+		  n+1 ~\le~ \quant{+}{ i}{  sort.p.i \le x}{ 1 }
+	\hint{=}{ (8) }
+		  n+1 \1\le \quant{+}{ y}{ y \le x}{ b.( sort.p ).y }
+	\hint{=}{ \eqref{lmm2} }
+		  n+1 \1\le \quant{+}{ y}{ y \le x}{ b.p.y}
+	\hint{=}{ (8) }
+		  n+1 \1\le \quant{+}{i}{p.i \le x}{ 1}
+\end{calculation}
+\end{proof}
+%\arabic{prop}
+\begin{invariant}{inv0}
+	\qforall{i,j}{gr.i \land gr.j}{i = j}
+\end{invariant}
+
+We preserve \ref{inv0}
+
+\end{document}
