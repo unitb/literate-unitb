@@ -4,10 +4,12 @@ import Control.Monad
 
 import Data.List hiding (union)
 import Data.Map as M hiding (map,filter)
+import Data.Typeable
 
 import System.Cmd
 import System.Exit
 import System.IO
+import System.IO.Unsafe
 import System.Process
 
 import Z3.Def
@@ -25,10 +27,10 @@ class Tree a where
 --instance Tree a => Show a where
 --    show x = show $ as_tree x
 
-match BOOL BOOL = True
-match INT INT = True
-match REAL REAL = True
-match (ARRAY t0 t1) (ARRAY t2 t3) = match t0 t2 && match t1 t3
+match_type BOOL BOOL = True
+match_type INT INT = True
+match_type REAL REAL = True
+match_type (ARRAY t0 t1) (ARRAY t2 t3) = match_type t0 t2 && match_type t1 t3
 
 z3_path = "./bin/z3"
 
@@ -38,6 +40,7 @@ instance Show Quantifier where
 
 instance Tree Expr where
     as_tree (Word (Var xs _)) = Str xs
+    as_tree (Number n)        = Str $ show n
     as_tree (Const xs _)      = Str xs
     as_tree (FunApp (Fun name _ _) ts)  = 
         List (Str name : (map as_tree ts))
@@ -51,6 +54,7 @@ instance Tree Type where
     as_tree INT  = Str "Int"
     as_tree REAL = Str "Real"
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
+    as_tree (GENERIC x) = Str x
 
 instance Tree Decl where
     as_tree (FunDecl name dom ran) =
@@ -68,10 +72,12 @@ instance Tree Decl where
                 (as_tree val) ]
 
 instance Tree Command where
-    as_tree (Decl d)    = as_tree d
-    as_tree (Assert xp) = List [Str "assert", as_tree xp]
-    as_tree CheckSat    = List [Str "check-sat"]
-    as_tree GetModel   = List [Str "get-model"]
+    as_tree (Decl d)      = as_tree d
+    as_tree (Assert xp)   = List [Str "assert", as_tree xp]
+    as_tree (CheckSat True)  = List [Str "check-sat-using", 
+                                    List [Str "then", Str "qe", Str "smt"] ]
+    as_tree (CheckSat False) = List [Str "check-sat"]
+    as_tree GetModel      = List [Str "get-model"]
                 
 instance Tree Var where
     as_tree (Var vn vt) = List [Str vn, as_tree vt]
@@ -118,7 +124,9 @@ feed_z3 xs = do
             std_in = CreatePipe,
             std_err = CreatePipe } 
         (Just stdin,Just stdout,Just stderr,ph) <- createProcess c
+--        putStrLn xs
         hPutStr stdin xs
+        b <- hIsOpen stdin 
         out <- hGetContents stdout
         err <- hGetContents stderr
         hClose stdin
@@ -126,15 +134,15 @@ feed_z3 xs = do
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
-    deriving Show
+    deriving (Show, Typeable)
 
 data Validity = Valid | Invalid | ValUnknown
-    deriving (Show, Eq)
+    deriving (Show, Eq, Typeable)
 
-data ProofObligation = ProofObligation Context [Expr] Expr
+data ProofObligation = ProofObligation Context [Expr] Bool Expr
 
 instance Show ProofObligation where
-    show (ProofObligation (Context vs fs ds) as g) =
+    show (ProofObligation (Context vs fs ds) as _ g) =
         unlines (
                map (" " ++)
             (  (map show $ elems fs)
@@ -144,6 +152,9 @@ instance Show ProofObligation where
             ++ ["|----"," " ++ show g] )
 
 data Context = Context (Map String Var) (Map String Fun) (Map String Def)
+
+var_decl :: String -> Context -> Maybe Var
+var_decl s (Context m _ _) = M.lookup s m
 
 from_decl (FunDecl n ps r) = Left (Fun n ps r)
 from_decl (ConstDecl n t) = Right (Var n t)
@@ -212,11 +223,11 @@ merge_all ms = unionsWith f ms
             | x /= y = error "conflicting declaration"
 
 discharge :: ProofObligation -> IO Validity
-discharge (ProofObligation d assume assert) = do
+discharge (ProofObligation d assume exist assert) = do
     s <- verify ( (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
-        ++ [CheckSat] )
+        ++ [CheckSat exist] )
     return (case s of
         Right Sat -> Invalid
         Right Unsat -> Valid
@@ -225,10 +236,11 @@ discharge (ProofObligation d assume assert) = do
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
-        let code = (unlines $ (map (show . as_tree) xs ++ [" ; this is a comment"]))
+--        putStrLn $ show $ f (xs !! 3)
+        let code = (unlines $ (map (show . as_tree) xs))
         (_,out,err) <- feed_z3 code
         let ln = lines out
-        if ln == [] || 
+        r <- if ln == [] || 
                 (   head ln /= "sat"
                     && head ln /= "unsat"
                     && head ln /= "unknown") then do
@@ -247,6 +259,7 @@ verify xs = do
 --                forM (zip [1..] $ lines code) print
 --                putStrLn out
             return $ Left out
+        return r
     where
         err_msg code out err = 
             unlines (
@@ -255,13 +268,25 @@ verify xs = do
                 ++  (map ("> " ++) $ lines out)
                 ++  ["err"]
                 ++  (map ("> " ++) $  lines err) )
+--        f (Assert (FunApp fn (FunApp x xs:_)))
+--              = "assert: " ++ show x ++ " " ++ show (map as_tree xs)
+--                -- ++ show (length xs) ++ " " ++ show fn --(map as_tree xs)
+--        f (Assert (FunApp fn xs))    = "assert "
+--        f (Assert (Binder _ xs _))   = "assert: quantifier" -- ++ show (length xs)
+--        f (Assert (Word _))          = "assert: word"
+--        f (Assert (Number _))        = "assert: number"
+--        f (Assert (Const _ _))       = "assert: const"
+--        f (CheckSat x) = "checksat"
+--        f (Decl x)     = "decl"
+--        f (GetModel)   = "get-model"
 
 entails 
-        (ProofObligation (Context cons0 fun0 def0) xs0 xp0) 
-        (ProofObligation (Context cons1 fun1 def1) xs1 xp1) = 
+        (ProofObligation (Context cons0 fun0 def0) xs0 ex0 xp0) 
+        (ProofObligation (Context cons1 fun1 def1) xs1 ex1 xp1) = 
     discharge $ ProofObligation 
         (Context empty (fun0 `merge` fun1) (def0 `merge` def1))
         [zforall (elems cons0) (zimplies (zall xs0) xp0)]
+        ex1
         (zforall (elems cons1) (zimplies (zall xs1) xp1))
         
 

@@ -11,7 +11,7 @@ fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
 znot         = fun1 $ Fun "not" [BOOL] BOOL
 zimplies     = fun2 $ Fun "=>"  [BOOL,BOOL] BOOL
 zand         = fun2 $ Fun "and" [BOOL,BOOL] BOOL
-zor          = fun2 $ Fun "or" [BOOL,BOOL] BOOL
+zor          = fun2 $ Fun "or"  [BOOL,BOOL] BOOL
 zeq          = fun2 $ Fun "="   [GENERIC "a", GENERIC "a"] BOOL
 zfollows     = fun2 $ Fun "follows" [BOOL,BOOL] BOOL
 ztrue        = Const "true"  BOOL

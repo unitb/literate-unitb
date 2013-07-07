@@ -1,0 +1,73 @@
+\ProvidesPackage{calculation}
+
+	% Packages
+\RequirePackage[retainorgcmds]{IEEEtrantools}
+
+\newcommand{\newkw}[3][\1]{ \newcommand{#2}{ #1{\textbf{#3}}} }
+
+	% Environment
+\newenvironment{calculation}{\begin{IEEEeqnarray*}{llll}&}{\end{IEEEeqnarray*}}
+% \newenvironment{laws}{\begin{IEEEeqnarray*}{llll}}{\end{IEEEeqnarray*}}
+\newenvironment{laws}[1][ll]{\begin{tabular}{#1}}{\end{tabular}}
+\newenvironment{defs}{}{}
+
+	% Layout
+\newcommand{\relspace}{\,}
+\newcommand{\hint}[2]{ \\ #1 \relspace & \qquad \text{\{#2\}} \\ & }
+\newcommand{\mhint}[3]{ \\ #2 \relspace & \qquad \left\{\;\; \parbox{#1}{ \begin{flushleft} #3 \end{flushleft} } \;\;\right\} \\ & }
+\newcommand{\mlhint}[2]{ \relspace & \qquad \{ \;\; \parbox[t]{#1}{#2} \; \; \} }
+
+%\newcommand{\law}[2]{ \text{(#1)} \qquad #2 }
+\newcommand{\law}[2]{ (#1) \qquad & { $#2$ } }
+%\newcommand{\comment}[1]{ & \qquad #1 }
+
+%\newcommand{\definition}[2]{ \noindent #1: \qquad \qquad $#2$ }
+
+	% Operators
+\newcommand{\follows}{\Leftarrow}
+\renewcommand{\implies}{\Rightarrow}
+\newcommand{\up}{\uparrow}
+\newcommand{\down}{\downarrow}
+%\newcommand{\pow}{\0{\nearrow}}
+\newcommand{\true}{\text{true}}
+\newcommand{\false}{\text{false}}
+%\newcommand{\[}{\langle}
+%\newcommand{\]}{\rangle}
+
+% Relational calculus
+\newcommand{\J}{\text{J}}
+
+	% Quantifiers
+\newcommand{\ew}[1]{ [\; #1 \;] }
+\newcommand{\quant}[4]{ { \langle #1 \:#2\!:\, #3\!:\, #4 \rangle } }
+\newcommand{\qforall}[3]{ \quant{\forall}{#1}{#2}{#3} } 
+\newcommand{\qexists}[3]{ \quant{\exists}{#1}{#2}{#3} } 
+\newcommand{\qsum}[3]{ \quant{+}{#1}{#2}{#3} } 
+\newcommand{\qprod}[3]{ \quant{\times}{#1}{#2}{#3} } 
+\newcommand{\qosum}[3]{ \quant{\oplus}{#1}{#2}{#3} } 
+\newcommand{\qoprod}[3]{ \quant{\otimes}{#1}{#2}{#3} } 
+\newcommand{\qmax}[3]{ \quant{\up}{#1}{#2}{#3} } 
+\newcommand{\qmin}[3]{ \quant{\down}{#1}{#2}{#3} } 
+\newcommand{\qcap}[3]{ \quant{\sqcap}{#1}{#2}{#3} }
+\newcommand{\qcup}[3]{ \quant{\sqcup}{#1}{#2}{#3} }
+\newcommand{\qmu}{\quant{\mu}}
+\newcommand{\qnu}{\quant{\nu}}
+\newcommand{\qunion}{\quant{\cup}}
+\newcommand{\qinter}{\quant{\cap}}
+
+	% Spacing
+\newcommand{\opspace}{\;}
+\newcommand{\0}[1]{\! #1 \!}
+\newcommand{\1}[2][\opspace]{#1 #2 #1}
+\newcommand{\2}[2][\opspace]{ \1[#1]{\1[#1]{#2}} }
+\newcommand{\3}[2][\opspace]{ \2[#1]{\1[#1]{#2}} }
+\newcommand{\4}[2][\opspace]{ \3[#1]{\1[#1]{#2}} }
+\newcommand{\5}[2][\opspace]{ \4[#1]{\1[#1]{#2}} }
+\newcommand{\6}[2][\opspace]{ \5[#1]{\1[#1]{#2}} }
+\newcommand{\7}[2][\opspace]{ \6[#1]{\1[#1]{#2}} }
+\newcommand{\8}[2][\opspace]{ \7[#1]{\1[#1]{#2}} }
+\newcommand{\9}[2][\opspace]{ \8[#1]{\1[#1]{#2}} }
+
+
+	% Misc
+\newcommand{\hoare}[3]{ \{ ~#1~ \} ~~#2~~ \{ ~#3~ \} }

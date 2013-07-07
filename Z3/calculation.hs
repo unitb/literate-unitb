@@ -7,9 +7,9 @@ import Z3.Def
 
 steps_po (Calc d _ e0 []) = []
 steps_po (Calc d g e0 ((r0, e1, a0):es)) = 
-    ProofObligation d a0 (r0 e0 e1) : steps_po (Calc d g e1 es)
+    ProofObligation d a0 False (r0 e0 e1) : steps_po (Calc d g e1 es)
 
-entails_goal_po (Calc d g e0 es) = ProofObligation d assume g
+entails_goal_po (Calc d g e0 es) = ProofObligation d assume False g
     where
         assume = map (\(x,y,z) -> (x y z)) $ zip3 rs xs ys
         ys = map (\(_,x,_) -> x) es
@@ -18,10 +18,11 @@ entails_goal_po (Calc d g e0 es) = ProofObligation d assume g
 
 obligations c = entails_goal_po c : steps_po c
 
-goal_po c = ProofObligation (context c) xs (goal c)
+goal_po c = ProofObligation (context c) xs False (goal c)
     where
         xs = concatMap (\(_,_,x) -> x) $ following c
 
+check :: Calculation -> IO [(Validity, Int)]
 check c = do
     let po = obligations c
     rs <- forM po discharge

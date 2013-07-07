@@ -1,0 +1,39 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+\usepackage{unitb}
+
+% See the ``Article customise'' template for come common customisations
+
+\title{A Small Machine}
+\author{Simon Hudon}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+
+As an example, we look
+
+\begin{machine}{m0}
+
+\begin{variable}
+	x,y: \Int
+\end{variable}
+
+\newevent{inc}
+
+\begin{invariant}{inv0}
+	x = 2 \cdot y
+\end{invariant}
+
+\begin{evassignment}{inc}{a0}
+	x' = x + 2
+\end{evassignment}
+
+\end{machine}
+
+\end{document}

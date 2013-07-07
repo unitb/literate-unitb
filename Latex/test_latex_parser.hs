@@ -11,12 +11,22 @@ path1 = "/Users/simonhudon/Documents/ecole/EventB/eventb/trunk/thesis 2/"
     ++ "progress/unit-b-papers/2013-iFM/source/contribution.tex"
 
 path2 = "tests/sample.tex"
-result2 = concat ["Right (fromList [(\"calculation\"",
-            ",[Env{calculation} (13),",
-            "Env{calculation} (10)])])"]
+result2 = concat ["Right (fromList [",
+            "(\"align\",[]),",
+            "(\"calculation\",",
+                "[Env{calculation} (13),",
+                "Env{calculation} (10)]),",
+            "(\"equation\",[]),",
+            "(\"invariant\",[]),",
+            "(\"lemma\",[]),",
+            "(\"machine\",[]),",
+            "(\"theorem\",[])",
+            "])"]
 
 path3 = "tests/sorted_sequences_err.tex"
 result3 = "Left (\"expected \\\\end{equation}, read '}'\",29,13)"
+
+path4 = "tests/sorted_sequences.tex"
 
 sections = [
     "calculation",
@@ -29,18 +39,30 @@ sections = [
 
 extract_structure ct = do
     xs <- latex_structure ct
-    return (find sections xs)
+    return (find_env sections xs)
 
 test_case = ("latex parser", cases, True)
 
-cases = test_suite [
-    ("sample.tex", main path2, result2),
-    ("sorted seq.tex", main path3, result3) ]
+cases = test_cases [
+    (Case "sample.tex" (main path2) result2),
+    (Case "sorted seq.tex" (main path3) result3),
+    (CalcCase "reconstitute sample.tex" (tests path2) (fmap uncomment $ readFile path2)),
+    (CalcCase "reconstitute sorted seq.tex" (tests path4) (fmap uncomment $ readFile path4)) ]
 
 main path = do
         ct <- readFile path
         return $ show $ extract_structure ct
+
+tests path = do
+        ct <- readFile path
+        let x = (do
+            tree <- latex_structure ct
+            return (concatMap flatten tree))
+        return (case x of
+            Right xs -> xs
+            Left (xs, i, j) -> error (xs ++ " (" ++ show i ++ ", " ++ show j ++ ")"))
+
 --        either f g lt
 --    where
---        f lt        = return $ find ["calculation"] lt
+--        f lt        = return $ find_env ["calculation"] lt
 --        g (s,(i,j)) = putStrLn "Error: " ++ s ++ " (" ++ show i ++ ", " ++ show j ++ ")"

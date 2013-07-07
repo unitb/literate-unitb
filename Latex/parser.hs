@@ -1,17 +1,50 @@
 module Latex.Parser where
+    -- TODO: Separate Latex from the Scanner monad
+
 
 import Control.Monad
 
 import Data.Char
 import Data.Map hiding ( map, null )
 
---import Text.ParserCombinators.ReadP
+import Latex.Scanner
+
+import System.IO.Unsafe
 
 data LatexDoc = 
-        Env String [[LatexDoc]] [LatexDoc]
-        | Bracket Bool [LatexDoc]
-        | Text [LatexToken]
+        Env String (Int,Int) [LatexDoc] (Int,Int)
+        | Bracket Bool (Int,Int) [LatexDoc] (Int,Int)
+        | Text [Cell LatexToken]
     deriving (Eq)
+
+flatten (Env s _ ct _) = 
+           "\\begin{" ++ s ++ "}"
+        ++ concatMap flatten ct
+        ++ "\\end{" ++ s ++ "}"
+flatten (Bracket b _ ct _) = b0 ++ concatMap flatten ct ++ b1
+    where
+        (b0,b1) = if b
+            then ("{", "}")
+            else ("[", "]")
+flatten (Text xs) = concatMap (lexeme . item) xs
+
+flatten_li (Env s (i0,j0) ct (i1,j1)) = 
+           zip ("\\begin{" ++ s ++ "}") (zip (repeat i0) [j0..])
+        ++ concatMap flatten_li ct
+        ++ zip ("\\end{" ++ s ++ "}") (zip (repeat i1) [j1..])
+flatten_li (Text xs)        = concatMap lexeme_li xs
+flatten_li (Bracket b (i0,j0) ct (i1,j1)) 
+        = (b0,(i0,j0)) : concatMap flatten_li ct ++ [(b1,(i1,j1))]
+    where
+        (b0,b1) = if b
+            then ('{', '}')
+            else ('[', ']')
+
+data Cell a = Cell { item :: a, line :: Int, col :: Int }
+    deriving Eq
+
+instance Show a => Show (Cell a) where
+    show x = show $ item x
 
 data LatexToken =
         Command String
@@ -19,14 +52,21 @@ data LatexToken =
         | Blank String
         | Open Bool | Close Bool
     deriving (Eq, Show)
-    
-instance Show LatexDoc where
-    show (Env b _ xs) = "Env{" ++ b ++ "} (" ++ show (length xs) ++ ")"
-    show (Text xs)    = "Text (" ++ show (take 10 xs) ++ "...)"
-    show (Bracket True c) = "Bracket {" ++ show c ++ "} "
-    show (Bracket False c) = "Bracket [" ++ show c ++ "] "
 
-source (Text xs) = concatMap lexeme xs
+instance Show LatexDoc where
+    show (Env b _ xs _) = "Env{" ++ b ++ "} (" ++ show (length xs) ++ ")"
+    show (Text xs)      = "Text (" ++ show (take 10 xs) ++ "...)"
+    show (Bracket True _ c _)  = "Bracket {" ++ show c ++ "} "
+    show (Bracket False _ c _) = "Bracket [" ++ show c ++ "] "
+
+--instance Show LatexDoc where
+--    show (Env b li0 xs _) = "Env" ++ show li0 ++ "{" ++ b ++ "} (" ++ show (length xs) ++ ")"
+--    show (Text xs)      = "Text (" ++ show (map lexeme_li (take 10 xs)) ++ "...)"
+--    show (Bracket True li c _)  = "Bracket" ++ show li ++ " {" ++ show c ++ "} "
+--    show (Bracket False li c _) = "Bracket" ++ show li ++ " [" ++ show c ++ "] "
+
+
+source (Text xs) = concatMap (lexeme . item) xs
 source x         = show x
 
 lexeme (Command xs)   = xs
@@ -39,85 +79,10 @@ lexeme (Close b)
     | b               = "}"
     | not b           = "]"
 
+lexeme_li (Cell x i j) = zip (lexeme x) $ zip (repeat i) [j ..]
+
 begin_kw = "\\begin"
 end_kw   = "\\end"
-
-data State a = State [(a,(Int,Int))] Int Int
-
-data Scanner a b = 
-    Scanner (State a -> Either (String, Int, Int) (b, State a))
-
-instance Monad (Scanner a) where
-    f >>= gF = comb f gF
-    fail s   = Scanner (\(State _ i j) -> Left (s, i, j))
-    return x = Scanner (\s -> Right (x,s))
-    
-comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
-comb (Scanner f) gF = Scanner h
-    where
-        h s0               = h0 (f s0)
-        h0 (Left x)        = Left x
-        h0 (Right (r, s1)) = g s1
-            where
-                Scanner g  = gF r
-
-line_number xs     = concatMap f ys
-    where
-        f (n, xs)  = map (g n) xs
-        g n (i, x) = (x, (n, i))
-        ys         = zip [1..] $ map (zip [1..] . (++ "\n")) $ lines xs
-
-peek = Scanner f
-    where
-        f s@(State xs _ _) = Right (map fst xs, s)
-
-eof = do
-        b <- is_eof
-        if b 
-            then return ()
-            else fail "Expected end of file"
-            
-is_eof = do
-        xs <- peek
-        return (null xs)
-            
-read_char = Scanner f
-    where
-        f s@(State ((x,(i,j)):xs) _ _) = Right (x, State xs i j)
-        f s@(State [] i j)             = Left ("Expected: character", i, j)
-
-read_string :: Int -> Scanner a [a]
-read_string 0 = return []
-read_string n = do
-        x  <- read_char
-        xs <- read_string (n-1)
-        return (x:xs)
-
-match :: ([a] -> Maybe Int) -> Scanner a (Maybe [a])
-match p = do
-        xs <- peek
-        case p xs of
-            Just n  -> do
-                xs <- read_string n
-                return $ Just xs
-            Nothing -> return Nothing
-
-match_string :: Eq a => [a] -> [a] -> Maybe Int
-match_string xs = \ys -> do
-        guard (xs == take n ys)
-        return n
-    where
-        n = length xs
-
-type Pattern a b = ([a] -> Maybe Int, [a] -> b)
-
-match_first :: [Pattern a b] -> Scanner a (Maybe b)
-match_first []     = return Nothing
-match_first ((p,f):xs) = do
-        c <- match p
-        case c of
-            Just ys -> return $ Just $ f ys
-            Nothing -> match_first xs
 
 is_identifier :: String -> Maybe Int
 is_identifier []    = Nothing
@@ -142,10 +107,6 @@ is_space xs = do
         guard (1 <= n)
         Just n
 
-line_info = Scanner f
-    where
-        f s@(State _ i j) = Right ((i,j), s)
-
 tex_tokens :: Scanner Char [(LatexToken,(Int,Int))]
 tex_tokens = do 
     b <- is_eof
@@ -153,47 +114,26 @@ tex_tokens = do
         then return []
         else do
             c <- match_first [
-                    (is_space, Blank),
-                    (is_command, Command),
-                    (match_string "{", (\_ -> Open True)),
-                    (match_string "}", (\_ -> Close True)),
-                    (match_string "[", (\_ -> Open False)),
-                    (match_string "]", (\_ -> Close False)) ]
+                    (is_space, \xs -> return $ Just $ Blank xs),
+                    (is_command, \xs -> return $ Just $ Command xs),
+                    (match_string "{", (\_ -> return (Just $ Open True))),
+                    (match_string "}", (\_ -> return (Just $ Close True))),
+                    (match_string "[", (\_ -> return (Just $ Open False))),
+                    (match_string "]", (\_ -> return (Just $ Close False))) ]
+                    (return Nothing)
             case c of
                 Just x  -> do
-                    (i,j) <- line_info
+                    li <- line_info
                     xs <- tex_tokens
-                    return ((x,(i,j)):xs)
+                    return ((x,li):xs)
                 Nothing -> do
-                    (i,j) <- line_info
-                    d <- read_char
+                    li <- line_info
+                    d  <- read_char
                     xs <- tex_tokens
                     case xs of
                         (TextBlock ys,_):zs -> 
-                            return ((TextBlock (d:ys),(i,j)):zs)
-                        _ ->return ((TextBlock [d],(i,j)):xs)
-                
-        
-read_lines :: Scanner Char a -> String -> Either (String, Int, Int) a 
-read_lines s xs = read_tokens s (line_number xs)
-
-read_tokens :: Scanner a b -> [(a, (Int,Int))] -> Either (String, Int, Int) b
-read_tokens (Scanner f) xs = 
-        do  (r, State xs i j) <- f (State xs 0 0)
-            case xs of 
-                [] -> return r
-                _ -> Left ("expected end of file", i, j)
-        
-
-choice :: [Scanner a b] -> Scanner a b
-choice [] = fail "no valid choice"
-choice (Scanner f:xs) = Scanner g
-    where
-        g s0 = case f s0 of
-                    Left  _ -> 
-                        case choice xs of
-                            Scanner h -> h s0
-                    x -> x
+                            return ((TextBlock (d:ys),li):zs)
+                        _ ->return ((TextBlock [d],li):xs)
 
 latex_content :: Scanner LatexToken [LatexDoc]
 latex_content = do
@@ -207,28 +147,32 @@ latex_content = do
                     begin_block
             Open c0 -> do
                     read_char
+                    (i0,j0) <- line_info
                     ct <- latex_content
-                    c <- read_char
+                    c  <- read_char
+                    (i1,j1) <- line_info
                     case c of
                         Close c1 -> do
                             unless (c0 == c1) $ fail "mismatched brackets"
                         _ -> fail "expected closing bracket"
                     rest <- latex_content 
-                    return (Bracket c0 ct:rest)
+                    return (Bracket c0 (i0,j0) ct (i1,j1):rest)
             Close _ ->         return []
             Command "\\end" -> return []
             t@(Blank s)     -> content_token t
             t@(TextBlock s) -> content_token t
             t@(Command s)   -> content_token t
 
+content_token :: LatexToken -> Scanner LatexToken [LatexDoc]
 content_token t = do
         read_char
+        (i,j) <- line_info
         xs <- latex_content
         case xs of
             Text y:ys -> 
-                return (Text (t:y):ys)
+                return (Text ((Cell t i j):y):ys)
             _ -> 
-                return (Text [t]:xs)
+                return (Text [(Cell t i j)]:xs)
 
 opt_args :: Scanner LatexToken [[LatexDoc]]
 opt_args = return []
@@ -254,115 +198,54 @@ argument = do
 begin_block :: Scanner LatexToken [LatexDoc]
 begin_block = do
     read_char
-    oargs <- opt_args
+    li0 <- line_info
+--    oargs <- opt_args
     args0 <- argument
     ct    <- latex_content
     end   <- read_char
+    li1   <- line_info
     unless (end == Command "\\end") $ 
         fail ("expected \\end{" ++ concatMap source args0 ++ "}, read \'" ++ lexeme end ++ "\'")
     args1 <- argument
-    unless (args0 == args1) $ fail "begin / end do not match"
-    case args0 of
-        [Text [TextBlock s]] -> do
-            rest <- latex_content 
-            return (Env s oargs ct:rest)
-        _  -> fail "name of a begin / end block must be a simple string"    
+    (begin, end) <- 
+        case (args0, args1) of
+            ( [Text [Cell (TextBlock begin) _ _]],
+              [Text [Cell (TextBlock end) _ _]] ) -> do
+                return (begin, end)
+            _  -> fail "name of a begin / end block must be a simple string"    
+    unless (begin == end) $ 
+        fail ("begin / end do not match: " ++ begin ++ " / " ++ end)
+    rest <- latex_content 
+    return (Env begin li0 ct li1:rest)
 
 latex_structure :: String -> Either (String, Int, Int) [LatexDoc]
 latex_structure xs = do
         ys <- read_lines tex_tokens (uncomment xs)
         read_tokens latex_content ys
 
---tokens ('\\':xs)    
---        | isAlpha $ head xs = 
---            Command ('\\' : [head xs] ++ takeWhile isAlphaNum (tail xs))
---            : tokens (dropWhile isAlphaNum (tail xs))
---        | otherwise = 
---            Command ('\\' : [head xs]) : tokens (tail xs)
---tokens (x:xs)       = 
---        case tokens xs of
---            Command xs:ys   -> TextBlock [x] : Command xs : ys
---            TextBlock xs:ys -> TextBlock (x:xs) : ys
---tokens []           = []
-
 is_prefix xs ys = xs == take (length xs) ys
 
---latex_doc 
-
---latex_doc = do xs <- many latex_element ; eos ; return xs
---
---latex_element :: ReadP LatexDoc
---latex_element = block <++ text_block
---
---block = do
---    b <- string begin_kw
---    kw1 <- bracket
---    t <- latex_doc
---    e <- string end_kw
---    kw2 <- bracket
---    return (Env kw1 t kw2)
---
---bracket = do
---    skipSpaces
---    char '{'
---    xs <- munch (\x -> x /= '{' && x /= '}')
---    char '}'
---    return xs
---
---eos = do(eof <++ 
---          (do   xs <- look ; 
---                guard (is_prefix end_kw xs))) ; 
---        return []
---
---text_block = do
---    xs <- text
---    return $ Text xs
---
---text = (do
---            ys <- look
---            guard (not $ is_prefix end_kw ys)
---            guard (not $ is_prefix begin_kw ys)
---            c <- get 
---            xs <- text
---            return (c:xs))
---    <++ (return [])
-
+uncomment :: String -> String
 uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 
---latex_content xs = fst $ head $ readP_to_S latex_doc $ uncomment xs
+with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
 
---test = do
---        let path = "/Users/simonhudon/Documents/ecole"
---                ++ "/YorkU/SEL/research/tools-methods/PAT"
---                ++ "/Devel/Docs/paper/sections/pacemaker.tex"
-----        let path = "/Users/simonhudon/Documents/ecole"
-----                ++ "/YorkU/SEL/research/tools-methods/PAT"
-----                ++ "/Devel/Docs/paper/TTM.tex"
---        ct <- readFile path
---        let uc = uncomment ct
---        let res = fst $ head (readP_to_S latex_doc uc)
-----        return res
---        return $ find ["tabular"] res
+find_env :: [String] -> [LatexDoc] -> Map String [LatexDoc]
+find_env kw (e@(Env b _ c _):xs)
+    | b `elem` kw     = insertWith (++) b [e] $ find_env kw xs
+    | otherwise       = unionWith (++) (find_env kw c) (find_env kw xs)
+find_env kw (Bracket _ _ c _:xs) = unionWith (++) (find_env kw c) (find_env kw xs)
+find_env kw (_:xs)        = find_env kw xs
+find_env kw []            = fromList $ map (\x -> (x, [])) kw 
 
-find :: [String] -> [LatexDoc] -> Map String [LatexDoc]
-find kw (e@(Env b _ c):xs)
-    | b `elem` kw     = insertWith (++) b [e] $ find kw xs
-    | otherwise       = unionWith (++) (find kw c) (find kw xs)
-find kw (Bracket _ c:xs) = unionWith (++) (find kw c) (find kw xs)
-find kw (_:xs)        = find kw xs
-find _  []            = empty
+find_cmd :: [String] -> [LatexDoc] -> Map String [[LatexDoc]]
+find_cmd kw (Env b _ c _:xs)         = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
+find_cmd kw (Bracket _ _ c _:xs)       = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
+find_cmd kw e@((Text (Cell (Command c) _ _:ys):xs))
+    | c `elem` kw                  = insertWith (++) c [e :: [LatexDoc]] $
+                                        find_cmd kw (Text ys:xs)
+    | otherwise                    = find_cmd kw (Text ys:xs)
+find_cmd kw (Text (_:ys):xs)       = find_cmd kw (Text ys:xs)
+find_cmd kw (Text []:xs)           = find_cmd kw xs
+find_cmd kw []                     = fromList $ map (\x -> (x,[])) kw
 
-
---parse_latex :: String -> ([LatexDoc], String)
---parse_latex (x:xs)
---    | is_prefix (x:xs) begin_kw = 
---        case parse_latex (drop (length begin_kw) (x:xs)) of
---            (ws, ys) -> 
---                case parse_latex $ drop (length end_kw) ys of
---                    (vs,us) -> (Env begin_kw ws end_kw:vs, us)
---    | is_prefix (x:xs) end_kw   = ([], (x:xs))
---    | otherwise                 = 
---        case parse_latex xs of
---            (Text zs:ws, ys)   -> (Text (x:zs):ws, ys)
---            (ws, ys)           -> (Text [x]:ws, ys) 
---parse_latex [] = ([], [])

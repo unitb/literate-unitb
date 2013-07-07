@@ -3,6 +3,7 @@ module Z3.Def where
 
 data Expr = 
         Word Var 
+        | Number Int
         | Const String Type
         | FunApp Fun [Expr]
         | Binder Quantifier [Var] Expr
@@ -18,7 +19,7 @@ data Decl = FunDecl String [Type] Type
     | ConstDecl String Type
     | FunDef String [Var] Type Expr
 
-data Command = Decl Decl | Assert Expr | CheckSat | GetModel
+data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
 
 data Fun = Fun String [Type] Type
     deriving Eq
@@ -28,3 +29,4 @@ data Var = Var String Type
 
 data Def = Def String [Var] Type Expr
     deriving Eq
+

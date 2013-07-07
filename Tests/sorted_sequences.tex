@@ -4,6 +4,7 @@
 \geometry{a4paper} % or letter or a5paper or ... etc
 % \geometry{landscape} % rotated page geometry
 \usepackage{amsmath}
+\usepackage{unitb}
 \usepackage{calculation}
 
 % See the ``Article customise'' template for come common customisations
@@ -18,37 +19,63 @@
 \newtheorem{lemma}[thm]{Lemma}
 \newtheorem{axiom}[thm]{Hypothesis}
 
-\newcounter{prop}
-\setcounter{prop}{-1}
-%\newcommand{\proptag}{}
-\newenvironment{assertion}[2]
-{	%\renewcommand{\proptag}{#1}
-	\begin{equation} 
-	\stepcounter{prop}
-	\tag{#1\arabic{prop}} 
-	\label{#2} }
-{ 	\end{equation} }
+\usepackage{xifthen}% provides \isempty test
 
-%\newcommand{\newassertion}
-%{ 	\newenvironment{invariant}[1]
-%	{	\begin{assertion}{#1}{#1} }
+%\newcommand{\optarg}[1][]{%
+%  \ifthenelse{\isempty{#1}}%
+%    {}% if #1 is empty
+%    {(((#1)))}% if #1 is not empty
+%}
+
+%\newcounter{prop}
+%\setcounter{prop}{-1}
+%%\newcommand{\proptag}{}
+%\newenvironment{assertion}[3] % {label prefix}{counter}{label}
+%{	%\renewcommand{\proptag}{#1}
+%	\begin{equation}
+%	\ifthenelse{\isempty{#2}} 
+%	{	\stepcounter{prop}
+%		\tag{#1\arabic{prop}} }
+%	{	\stepcounter{#2}
+%		\tag{#2:#1\arabic{#2}} }
+%	\label{#3} } 
+%{ 	\end{equation} }
+%
+%\newcommand{\newassertion}[2] % {invariant}{J}
+%{ 	%\newcounter{cnt:#1}
+%	\newenvironment{#1}
+%	{	\begin{assertion}{#2}{}  } % {label}
+%	{	 \end{assertion} } }
+%%\newcommand{\newdeclaration}
+%\newcommand{\newcompound}[1] % {evt}
+%{	\newcounter{#1}
+%	\setcounter{#1}{-1} }
+%\newcommand{\newcomponent}[2] % {assignment}{A}
+%{	\newenvironment{#1}
+%	{	\begin{assertion}{#2} } % {counter}{label}
 %	{	\end{assertion} } }
-
-\newenvironment{invariant}[1]
-	{	\begin{assertion}{J}{#1} }
-	{	\end{assertion} }
-\newenvironment{guard}[1]
-	{	\begin{assertion}{G}{#1} }
-	{	\end{assertion} }
-\newenvironment{f:schedule}[1]
-	{	\begin{assertion}{F}{#1} }
-	{	\end{assertion} }
-\newenvironment{c:schedule}[1]
-	{	\begin{assertion}{C}{#1} }
-	{	\end{assertion} }
-\newenvironment{assignment}[1]
-	{	\begin{assertion}{A}{#1} }
-	{	\end{assertion} }
+%
+%%\newcomponent
+%\newassertion{invariant}{J}
+%\newcomponent{guard}{G}
+%\newcomponent{f:schedule}{F}
+%\newcomponent{c:schedule}{C}
+%\newcomponent{assignment}{A}
+%\newenvironment{invariant}[1]
+%	{	\begin{assertion}{J}{#1} }
+%	{	\end{assertion} }
+%\newenvironment{guard}[1]
+%	{	\begin{assertion}{G}{#1} }
+%	{	\end{assertion} }
+%\newenvironment{f:schedule}[1]
+%	{	\begin{assertion}{F}{#1} }
+%	{	\end{assertion} }
+%\newenvironment{c:schedule}[1]
+%	{	\begin{assertion}{C}{#1} }
+%	{	\end{assertion} }
+%\newenvironment{assignment}[1]
+%	{	\begin{assertion}{A}{#1} }
+%	{	\end{assertion} }
 
 %%% BEGIN DOCUMENT
 \begin{document}
@@ -98,7 +125,33 @@ For all $p$,
 \begin{invariant}{inv0}
 	\qforall{i,j}{gr.i \land gr.j}{i = j}
 \end{invariant}
+\begin{invariant}{inv1}
+	7
+\end{invariant}
 
-We preserve \ref{inv0}
+We preserve \ref{inv0}, \ref{inv1}
+
+\newcompound{evt0}
+
+\begin{ev:guard}{evt0}{grd0}
+	x \le y
+\end{ev:guard}
+
+\begin{ev:guard}{evt0}{grd1}
+	x \le z
+\end{ev:guard}
+\ref{grd1} and \ref{grd0}
+
+\newcompound{evt1}
+
+\begin{ev:guard}{evt1}{grd2}
+	x \le y
+\end{ev:guard}
+
+\begin{ev:guard}{evt1}{grd3}
+	x \le z
+\end{ev:guard}
+\ref{grd2} and \ref{grd3}
+
 
 \end{document}
