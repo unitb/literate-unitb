@@ -34,4 +34,14 @@ data Calculation = Calc {
     goal :: Expr,
     first_step :: Expr,
     following :: [(Expr -> Expr -> Expr, Expr, [Expr])] }
-    
+
+show_proof (Calc _ g fs ss) = 
+        unlines ( [
+                show g,
+                "----",
+                "    " ++ show fs ]
+            ++  concatMap f ss )
+    where
+        f (_, s, h) = (
+                   (map ("      | " ++) $ map show h)
+                ++ [ "    " ++ show s ] )

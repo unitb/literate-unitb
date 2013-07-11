@@ -74,9 +74,20 @@ instance Tree Decl where
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
-    as_tree (CheckSat True)  = List [Str "check-sat-using", 
-                                    List [Str "then", Str "qe", Str "smt"] ]
-    as_tree (CheckSat False) = List [Str "check-sat"]
+    as_tree (CheckSat _)  = List [Str "check-sat-using", 
+                                    List [Str "or-else", 
+                                        strat $ Str "qe", 
+                                        strat $ Str "skip",
+                                        strat $ List [
+                                            Str "using-params",
+                                            Str "simplify",
+                                            Str ":expand-power",
+                                            Str "true"] ] ]
+        where
+            strat t = List [Str "then", t, Str "smt"]
+--    as_tree (CheckSat True)  = List [Str "check-sat-using", 
+--                                    List [Str "then", Str "qe", Str "smt"] ]
+--    as_tree (CheckSat False) = List [Str "check-sat"]
     as_tree GetModel      = List [Str "get-model"]
                 
 instance Tree Var where

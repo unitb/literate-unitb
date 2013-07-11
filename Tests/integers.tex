@@ -1,0 +1,89 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{unitb}
+\usepackage{calculation}
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%\section{}
+%\subsection{}
+
+\begin{machine}{m0}
+
+\hide{
+	\begin{variable}
+		n,a : \Int
+	\end{variable}
+}
+
+\begin{invariant}{inv0}
+	a = n^3
+\end{invariant}
+
+%\begin{proof}{INIT/INV/inv0}
+%\begin{calculation}
+%	
+%\end{calculation}
+%\end{proof}
+
+\newevent{evt}
+
+\begin{initialization}{init0}
+	n = 0 \land a = 0
+\end{initialization}
+
+\begin{evassignment}{evt}{a0}
+	n' = n + 1
+\end{evassignment}
+
+\begin{proof}{evt/INV/inv0}
+	\begin{calculation}
+		(n')^3
+	\hint{=}{ \ref{a0} }
+		(n+1)^3
+	\hint{=}{ arithmetic }
+		n^3 + 3 \cdot n^2 + 3 \cdot n + 1
+	\hint{=}{ \ref{inv0} }
+		a + 3 \cdot n^2 + 3 \cdot n + 1
+	\hint{=}{ \ref{inv1} }
+		a + b
+	\hint{=}{ \ref{a1} }
+		a'
+	\end{calculation}
+\end{proof}
+
+\begin{variable}
+	b : \Int
+\end{variable}
+
+\begin{invariant}{inv1}
+	b = 3 \cdot n^2 + 3 \cdot n + 1
+\end{invariant}
+%\begin{invariant}{inv2}
+%	b ~=~ 3 \cdot n^2 + 3 \cdot n + 1
+%\end{invariant}
+
+\begin{evassignment}{evt}{a1}
+	a' = a + b
+\end{evassignment}
+
+\begin{initialization}{in1}
+	b = 1
+\end{initialization}
+
+\end{machine}
+
+\end{document}

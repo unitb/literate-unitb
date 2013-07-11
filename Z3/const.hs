@@ -29,6 +29,7 @@ zplus        = fun2 $ Fun "+" [INT,INT] INT
 zminus       = fun2 $ Fun "-" [INT,INT] INT
 zopp         = fun1 $ Fun "-" [INT] INT
 ztimes       = fun2 $ Fun "*" [INT,INT] INT
+zpow         = fun2 $ Fun "^" [INT,INT] INT
 zint n       = Const (show n) INT
 
 zapply       = fun2 $ Fun "select" [

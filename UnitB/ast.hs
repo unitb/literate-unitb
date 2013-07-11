@@ -95,7 +95,7 @@ instance Show PropertySet where
         ("program_prop", show $ program_prop x),
         ("inv", show $ inv x),
         ("inv_thm", show $ inv_thm x),
-        ("proofs", show $ size $ proofs x),
+        ("proofs", show $ keys $ proofs x),
         ("progress", show $ progress x),
         ("safety", show $ safety x)]
 

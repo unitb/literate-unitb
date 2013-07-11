@@ -124,18 +124,19 @@ read_tokens (Scanner f) xs =
                 _ -> Left ("expected end of file", i, j)
         
 
-choice :: [Scanner a b] -> Scanner a b
-choice [] = fail "no valid choice"
-choice (Scanner f:xs) = Scanner g
-    where
-        g s0 = case f s0 of
-                    Left  _ -> 
-                        case choice xs of
-                            Scanner h -> h s0
-                    x -> x
+choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c
+choice [] f s = f
+choice (x:xs) f s = try x s (choice xs f s)
+--    where
+--        g s0 = 
+--            case h s0 of
+--                    Left  _ -> 
+--                        case choice xs d of
+--                            Scanner h2 -> 2h s0
+--                    x -> x
 
-line_info :: Scanner a (Int, Int)
-line_info = Scanner f
+get_line_info :: Scanner a (Int, Int)
+get_line_info = Scanner f
     where
         f s@(State _ i j) = Right ((i,j), s)
 
@@ -169,8 +170,16 @@ sepBy1 b s = do
         xs <- sepBy b s
         return (x,xs)
 
+look_ahead :: Scanner a b -> Scanner a Bool
 look_ahead (Scanner f) = Scanner g
     where
         g x = case f x of
                 Right _ -> Right (True,x)
                 Left  _ -> Right (False,x)
+
+read_ :: String -> Scanner Char ()
+read_ xs = do
+        x <- match $ match_string xs
+        case x of
+            Just _  -> return ()
+            Nothing -> fail ("expecting: " ++ xs)

@@ -96,7 +96,9 @@ init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = singleton (composite_label [_name m, init_fis_lbl]) po
     where
         po = ProofObligation (assert_ctx m) [] True goal
-        goal = (zexists (elems $ variables m) $ zall $ inits m)
+        goal 
+            | M.null $ variables m  = ztrue
+            | otherwise             = (zexists (elems $ variables m) $ zall $ inits m)
 
 prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
 prop_po m pname (Transient fv xp evt_lbl) = 
@@ -229,25 +231,30 @@ verify_machine m = h_verify_machine stdout m
 str_verify_machine :: Machine -> IO (String, Int, Int)
 str_verify_machine m = -- unsafeInterleaveIO 
     (do
-        let !pos = proof_obligation m
-        !rs <- forM (toList pos) (\(lbl, po) -> do
+        let pos = proof_obligation m
+--        let !() = unsafePerformIO (putStrLn 
+--                ("checking proof: " ++ show (keys $ proofs $ props m)))
+        rs <- forM (toList pos) (\(lbl, po) -> do
 --            putStrLn $ show lbl
 --            print po
             if lbl `member` proofs ps then do
+                let !() = unsafePerformIO (putStrLn ("check a proof... " ++ show lbl))
                 r0 <- check (proofs ps ! lbl)
                 r1 <- entails (goal_po (proofs ps ! lbl)) po
+--                let !() = unsafePerformIO $ print r0
+--                let !() = unsafePerformIO $ print r1
                 case (r0,r1) of
                     ([], Valid) -> 
                         return (True, [" o " ++ show lbl])
                     (r0,r1) -> do
                         let xs = [" x " ++ show lbl]
-                        ys <- if null r0 then
-                            return ["     " ++ "incorrect proof"]
-                        else return []
-                        case r1 of
-                            Valid -> return ["     " ++ "proof does not match goal"]
-                            x -> return []
-                        return (False, xs ++ ys)
+                        ys <- if null r0
+                            then return []
+                            else return ["     " ++ "incorrect proof"]
+                        zs <- case r1 of
+                            Valid -> return []
+                            x -> return ["     " ++ "proof does not match goal"]
+                        return (False, xs ++ ys ++ zs)
             else do
                 r <- discharge po
                 case r of
