@@ -80,10 +80,10 @@ sample_calc = (Calc
               ConstDecl "y" BOOL ] )
         ( (x `zimplies` y) `zimplies` (f x `zimplies` f y) )
                      (f x `zimplies` f y)
-        [ (zeq,      (f x `zeq` (f x `zand` f y)),  []),
-          (zeq,      ( f x `zeq` f (x `zand` y) ),  [hyp]),
-          (zfollows, ( x `zeq` (x `zand` y) ), []),
-          (zeq,      ( x `zimplies` y ),        []) ] )
+        [ (Equal,    (f x `zeq` (f x `zand` f y)),  []),
+          (Equal,    ( f x `zeq` f (x `zand` y) ),  [hyp]),
+          (Follows,  ( x `zeq` (x `zand` y) ), []),
+          (Equal,    ( x `zimplies` y ),        []) ] )
     where
         forall      = Binder Forall 
         hyp         = forall 

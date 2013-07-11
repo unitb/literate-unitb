@@ -47,3 +47,20 @@ prog_var n t = (Word v, Word $ prime v, v)
         v = Var n t
 
 prime (Var n t) = Var (n ++ "_prime") t
+
+mk_expr Plus x y    = x `zplus` y
+mk_expr Mult x y    = x `ztimes` y
+mk_expr And x y     = x `zand` y 
+mk_expr Power x y   = x `zpow` y
+
+mk_expr Equal x y   = x `zeq` y
+mk_expr Implies x y = x `zimplies` y 
+mk_expr Follows x y = x `zfollows` y 
+mk_expr Leq x y     = x `zle` y
+
+chain Equal x         = x
+chain x Equal         = x
+chain Implies Implies = Implies
+chain Follows Follows = Follows
+chain Leq Leq         = Leq
+chain _ _             = error "operators cannot be chained"

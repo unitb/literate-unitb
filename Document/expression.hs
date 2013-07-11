@@ -188,21 +188,8 @@ number = do
             where
                 n = length $ takeWhile isDigit x
 
-type Oper = ((Expr -> Expr -> Expr), Int)
-
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving Show
-
-data Operator = Plus | Mult | Equal | Leq | Implies | And | Power
-    deriving (Eq,Ord,Show,Enum)
-
-mk_expr Plus x y    = x `zplus` y
-mk_expr Mult x y    = x `ztimes` y
-mk_expr Equal x y   = x `zeq` y
-mk_expr Leq x y     = x `zle` y
-mk_expr Implies x y = x `zimplies` y 
-mk_expr And x y     = x `zand` y 
-mk_expr Power x y   = x `zpow` y
 
 associativity = [
         ([Power],Ambiguous),
@@ -210,7 +197,7 @@ associativity = [
         ([Plus],LeftAssoc),
         ([Equal,Leq],Ambiguous),
         ([And],LeftAssoc),
-        ([Implies],Ambiguous) ]
+        ([Implies,Follows],Ambiguous) ]
 
 prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]
 

@@ -30,3 +30,8 @@ data Var = Var String Type
 data Def = Def String [Var] Type Expr
     deriving Eq
 
+data Operator = 
+        Plus | Mult | Equal 
+        | Leq | Implies 
+        | Follows | And | Power
+    deriving (Eq,Ord,Show,Enum)

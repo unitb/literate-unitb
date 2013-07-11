@@ -186,15 +186,18 @@ case5 = do
 
 var_a = Var "a" INT
 var_b = Var "b" INT
+var_c = Var "c" INT
 var_n = Var "n" INT
 
 var_a' = Var "a_prime" INT
 var_b' = Var "b_prime" INT
+var_c' = Var "c_prime" INT
 var_n' = Var "n_prime" INT
 
 machine6 = (empty_machine "m0") {
-        variables = fromList $ map as_pair [var_a,var_b,var_n],
+        variables = fromList $ map as_pair [var_a,var_b,var_c,var_n],
         inits = [
+                (c `zeq` z6),
                 (b `zeq` z1),
                 (n `zeq` z0) `zand` (a `zeq` z0) ],
         props = prop_set6,
@@ -202,29 +205,40 @@ machine6 = (empty_machine "m0") {
     where
         a = Word var_a
         b = Word var_b
+        c = Word var_c
         n = Word var_n
         z0 = zint 0
         z1 = zint 1
+        z6 = zint 6
 
 prop_set6 = empty_property_set {
-        proofs = singleton (label "m0/evt/INV/inv0") $ 
-            Calc (step_ctx m1_machine) ztrue ztrue [],
+        proofs = fromList [ 
+                    (label "m0/evt/INV/inv0", calc),
+                    (label "m0/evt/INV/inv1", calc),
+                    (label "m0/evt/INV/inv2", calc) ],
         inv = fromList $ zip 
-                (map label ["inv0","inv1"]) 
+                (map label ["inv0","inv1","inv2"]) 
                 [ (a `zeq` (n `zpow` z3)),
                   (b `zeq` ( (zint 3 `ztimes` (n `zpow` zint 2))
                      `zplus` (zint 3 `ztimes` n)
-                     `zplus` zint 1) )] }
+                     `zplus` zint 1) ), 
+                  (c `zeq` ((z6 `ztimes` n) `zplus` z6)) ] }
     where
         a = Word var_a
         b = Word var_b
+        c = Word var_c
         n = Word var_n
         z3 = zint 3
+        z6 = zint 6
+        calc = Calc (step_ctx m1_machine) ztrue ztrue []
 
 event6_evt = empty_event {
         action = fromList $ zip 
-            (map label ["a1", "a0"])
-            [a' `zeq` (a `zplus` b), n' `zeq` (n `zplus` zint 1) ] }
+            (map label ["a1", "a0", "a2", "a3"])
+            [ a' `zeq` (a `zplus` b), 
+              n' `zeq` (n `zplus` zint 1),
+              b' `zeq` (b `zplus` c),
+              c' `zeq` (c `zplus` zint 6) ] }
     where
         a  = Word var_a
         a' = Word var_a'
@@ -232,6 +246,8 @@ event6_evt = empty_event {
         n' = Word var_n'
         b  = Word var_b
         b' = Word var_b'
+        c  = Word var_c
+        c' = Word var_c'
     
 path6    = "Tests/integers.tex"
 case6    = parse_machine path6
@@ -250,7 +266,6 @@ case7 = do
     r <- parse_machine path6
     case r of
         Right [m] -> do
-            print $ elems $ M.map obligations $ proofs $ props m
             (s,_,_)   <- str_verify_machine m
             return s
         x -> return $ show x
@@ -300,7 +315,7 @@ case9 = do
         case r of
             Right [m] -> do
                 case toList $ proofs $ props m of
-                    [ (lbl,calc) ] -> 
+                    (lbl,calc):xs -> 
                         return (show lbl ++ ":\n" ++ show_proof calc)
                     xs       -> return ("error: found " ++ show (length xs) ++ " proofs")
             x -> return $ show x

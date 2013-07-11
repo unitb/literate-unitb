@@ -238,7 +238,7 @@ str_verify_machine m = -- unsafeInterleaveIO
 --            putStrLn $ show lbl
 --            print po
             if lbl `member` proofs ps then do
-                let !() = unsafePerformIO (putStrLn ("check a proof... " ++ show lbl))
+--                let !() = unsafePerformIO (putStrLn ("check a proof... " ++ show lbl))
                 r0 <- check (proofs ps ! lbl)
                 r1 <- entails (goal_po (proofs ps ! lbl)) po
 --                let !() = unsafePerformIO $ print r0
@@ -250,7 +250,7 @@ str_verify_machine m = -- unsafeInterleaveIO
                         let xs = [" x " ++ show lbl]
                         ys <- if null r0
                             then return []
-                            else return ["     " ++ "incorrect proof"]
+                            else return ["     " ++ "incorrect proof: " ++ show (map snd r0)]
                         zs <- case r1 of
                             Valid -> return []
                             x -> return ["     " ++ "proof does not match goal"]

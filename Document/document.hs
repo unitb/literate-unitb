@@ -117,18 +117,18 @@ pop_token ((Text [x1]):ys) = ys
 
 as_action :: Context -> [LatexDoc] -> Either Error (Map Label Event) 
 as_action ctx c = do
-            (a,b,xs) <- get_labels
+            (a,b,xs) <- get_2_lbl c
             e        <- parse_expr ctx (concatMap flatten_li xs)
             return $ singleton (label a) $ empty_event { action = singleton (label b) e }
     where
-        get_labels = do
-            kk <- cmd_params 2 c
-            case kk of
-                ([  [Text [TextBlock a _]], 
-                    [Text [TextBlock b _]]],xs) -> 
-                    return (a,b,xs)
-                _                                        -> 
-                    Left ("invalid assignment names", -1, -1)
+--        get_labels = do
+--            kk <- cmd_params 2 c
+--            case kk of
+--                ([  [Text [TextBlock a _]], 
+--                    [Text [TextBlock b _]]],xs) -> 
+--                    return (a,b,xs)
+--                _                                        -> 
+--                    Left ("invalid assignment names", -1, -1)
 
 all_machines :: [LatexDoc] -> Either Error (Map String Machine)
 all_machines xs = do
@@ -343,7 +343,7 @@ collect_proofs cs m = foldl f (Right m) cs --  error "not implemented"
             | n == "calculation"    = do
                 xs <- mxs
                 cc <- calc c
-                return (cc:xs)
+                return (cc { goal = infer_goal cc }:xs)
             | otherwise             = foldl g mxs c
         g xs x                      = fold_doc g xs x
         calc xs = 
@@ -359,7 +359,7 @@ collect_proofs cs m = foldl f (Right m) cs --  error "not implemented"
                     r   <- calc d
                     return r { 
                         first_step = xp,
-                        following  = (mk_expr op,first_step r,hyp):following r }
+                        following  = (op,first_step r,hyp):following r }
                 Nothing         -> do
                     xp <- get_expr m xs
                     return $ Calc (context m) ztrue xp []
