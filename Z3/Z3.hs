@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveDataTypeable #-} 
+
 module Z3.Z3 where
 
 import Control.Monad

@@ -1,0 +1,34 @@
++- Unit-B Document
+|  +- small machine, test 0
+|  +- small machine, test 1 (separate machine blocks)
+|  +- small machine, test 2 (verification, one failure)
+|  +- small machine, test 3 (verification)
+|  +- small machine, test 4 (proof obligation, invariance)
+|  +- small machine, test 5 (co, 'skip' proof obligation)
+|  +- table of cubes, test 0 (syntax)
+|  +- table of cubes, test 1 (verification)
+|  +- table of cubes, test 2 (init/fis po)
+|  +- table of cubes, proof of inv0
+|  +- table of cubes, empty proof
+|  +- [ Success: 11 / 11 ]
++- Unit-B
+|  +- 'x eventually increases' verifies
+|  +- train, model 0, verification
+|  +- train, m0 PO
+|  +- example0: enabledness PO
+|  +- [ Success: 4 / 4 ]
++- latex parser
+|  +- sample.tex
+|  +- sorted seq err.tex
+|  +- reconstitute sample.tex
+|  +- reconstitute integers.tex
+|  +- reconstitute sorted seq.tex
+|  +- [ Success: 5 / 5 ]
++- Z3 test
+|  +- sample_quant
+|  +- sample_quant2
+|  +- sample_quant3
+|  +- sample proof
+|  +- check sample calc
+|  +- [ Success: 5 / 5 ]
++- [ Success: 4 / 4 ]

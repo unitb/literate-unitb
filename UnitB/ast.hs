@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveDataTypeable #-} 
+
 module UnitB.AST (
     Label, Theory (..), Event(..), empty_event, 
     Machine (..), label,
