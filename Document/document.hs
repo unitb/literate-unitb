@@ -278,21 +278,21 @@ get_expr m xs =
         parse_expr (context m) (concatMap flatten_li xs)
 
 find_cmd_arg :: Int -> [String] -> [LatexDoc] 
-             -> Maybe ([LatexDoc],[[LatexDoc]],[LatexDoc])
+             -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])
 find_cmd_arg n cmds (x@(Text xs) : cs) = 
         case (trim_blanks $ reverse xs) of
-            (Command ys _:zs) -> 
+            (t@(Command ys _):zs) -> 
                     if ys `elem` cmds
                     then do
                         case cmd_params n cs of
-                            Right (xs,ws) -> Just (f zs,xs,ws)
+                            Right (xs,ws) -> Just (f zs,t,xs,ws)
                             Left _        -> Nothing
                     else continue
             _    -> continue
     where
         continue = do
-                (a,b,c) <- find_cmd_arg n cmds cs
-                return (x:a,b,c)
+                (a,t,b,c) <- find_cmd_arg n cmds cs
+                return (x:a,t,b,c)
         f [] = []
         f xs = [Text $ reverse xs]
 find_cmd_arg _ cmd []     = Nothing
@@ -334,21 +334,21 @@ collect_proofs cs m = foldl f (Right m) cs --  error "not implemented"
                         [p] -> return m { 
                             props = (props m) { 
                                 proofs = insert (composite_label 
-                                    [_name m, label po]) p $ 
-                                    proofs $ props m } }
+                                    [ _name m, label po ]) p $ 
+                                      proofs $ props m } }
                         _   -> Left ("expecting a single calculation",i,j)
             | otherwise     = foldl f em c
         f em x              = fold_doc f em x
         g mxs (Env n (i,j) c _)
             | n == "calculation"    = do
                 xs <- mxs
-                cc <- calc c
+                cc <- calc c (i,j)
                 return (cc { goal = infer_goal cc }:xs)
             | otherwise             = foldl g mxs c
         g xs x                      = fold_doc g xs x
-        calc xs = 
+        calc xs li = 
             case find_cmd_arg 2 ["\\hint"] xs of
-                Just (a,[b,c],d)    -> do
+                Just (a,t,[b,c],d)    -> do
                     xp <- get_expr m a
                     op <- read_tokens 
                             (do eat_space ; x <- oper ; eat_space ; return x) 
@@ -356,18 +356,18 @@ collect_proofs cs m = foldl f (Right m) cs --  error "not implemented"
                     hs  <- fmap (map (\(x,y) -> (label x,y))) $ hint c
                     hyp <- mapM find hs
 --                    let !() = unsafePerformIO $ print hyp
-                    r   <- calc d
+                    r   <- calc d li
                     return r { 
                         first_step = xp,
-                        following  = (op,first_step r,hyp):following r }
+                        following  = (op,first_step r,hyp,line_info t):following r }
                 Nothing         -> do
                     xp <- get_expr m xs
-                    return $ Calc (context m) ztrue xp []
+                    return $ Calc (context m) ztrue xp [] li
             where
                 f x = composite_label [_name m,label x]
         hint xs =
             case find_cmd_arg 1 ["\\ref","\\eqref"] xs of
-                Just (a,[[Text [TextBlock b li]]],c)  -> do
+                Just (a,_,[[Text [TextBlock b li]]],c)  -> do
                     xs <- hint c
                     return ((b,li):xs)
                 Nothing         -> return []

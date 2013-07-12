@@ -191,6 +191,7 @@ number = do
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving Show
 
+associativity :: [([Operator],Assoc)]
 associativity = [
         ([Power],Ambiguous),
         ([Mult],LeftAssoc),

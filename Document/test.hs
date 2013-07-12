@@ -83,12 +83,14 @@ test = test_cases [
             case5 result5),
         (Case "table of cubes, test 0 (syntax)" 
             case6 $ Right [machine6]),
---        (StringCase "table of cubes, test 1 (verification)" 
---            case7 result7),
---        (StringCase "table of cubes, test 2 (init/fis po)" 
---            case8 result8),
+        (StringCase "table of cubes, test 1 (verification)" 
+            case7 result7),
+        (StringCase "table of cubes, test 2 (init/fis po)" 
+            case8 result8),
         (StringCase "table of cubes, proof of inv0" 
-            case9 result9) 
+            case9 result9),
+        (StringCase "table of cubes, empty proof"
+            case10 result10)
         ]
 
 path0 = "Tests/small_machine_t0.tex"
@@ -102,15 +104,15 @@ case1 = do
     parse_machine path1
 
 result2 = (unlines [
-        " o m0/INIT/FIS",
-        " o m0/INIT/INV/inv0",
-        " o m0/INIT/INV/inv1",
-        " o m0/inc/FIS" ,
-        " o m0/inc/INV/inv0",
-        " x m0/inc/INV/inv1",
-        " o m0/inc/SCH",
-        " x m0/inc/TR/EN/tr0",
-        " o m0/inc/TR/NEG/tr0",
+        "  o  m0/INIT/FIS",
+        "  o  m0/INIT/INV/inv0",
+        "  o  m0/INIT/INV/inv1",
+        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/INV/inv0",
+        " xxx m0/inc/INV/inv1",
+        "  o  m0/inc/SCH",
+        " xxx m0/inc/TR/EN/tr0",
+        "  o  m0/inc/TR/NEG/tr0",
         "passed 7 / 9"
     ])
 
@@ -125,15 +127,15 @@ case2 = do
         x -> return $ show x
 
 result3 = (unlines [
-        " o m0/INIT/FIS",
-        " o m0/INIT/INV/inv0",
-        " x m0/SKIP/CO/c0",
-        " o m0/inc/CO/c0",
-        " o m0/inc/FIS" ,
-        " o m0/inc/INV/inv0",
-        " o m0/inc/SCH",
-        " o m0/inc/TR/EN/tr0",
-        " o m0/inc/TR/NEG/tr0",
+        "  o  m0/INIT/FIS",
+        "  o  m0/INIT/INV/inv0",
+        " xxx m0/SKIP/CO/c0",
+        "  o  m0/inc/CO/c0",
+        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/INV/inv0",
+        "  o  m0/inc/SCH",
+        "  o  m0/inc/TR/EN/tr0",
+        "  o  m0/inc/TR/NEG/tr0",
         "passed 8 / 9"
     ])
 
@@ -230,7 +232,7 @@ prop_set6 = empty_property_set {
         n = Word var_n
         z3 = zint 3
         z6 = zint 6
-        calc = Calc (step_ctx m1_machine) ztrue ztrue []
+        calc = Calc (step_ctx m1_machine) ztrue ztrue [] (0,0)
 
 event6_evt = empty_event {
         action = fromList $ zip 
@@ -253,14 +255,16 @@ path6    = "Tests/integers.tex"
 case6    = parse_machine path6
 
 result7 = unlines [
-        " o m0/INIT/FIS",
-        " o m0/INIT/INV/inv0",
-        " o m0/INIT/INV/inv1",
-        " o m0/evt/FIS",
-        " o m0/evt/INV/inv0",
-        " x m0/evt/INV/inv1",
-        " o m0/evt/SCH",
-        "passed 5 / 7"]
+        "  o  m0/INIT/FIS",
+        "  o  m0/INIT/INV/inv0",
+        "  o  m0/INIT/INV/inv1",
+        "  o  m0/INIT/INV/inv2",
+        "  o  m0/evt/FIS",
+        "  o  m0/evt/INV/inv0",
+        "  o  m0/evt/INV/inv1",
+        "  o  m0/evt/INV/inv2",
+        "  o  m0/evt/SCH",
+        "passed 9 / 9"]
 
 case7 = do
     r <- parse_machine path6
@@ -272,8 +276,9 @@ case7 = do
 
 path8   = "Tests/integers_t8.tex"
 result8 = unlines [
+        " x: Int",
         "|----",
-        " true"]
+        " (exists ((x Int)) true)"]
 
 case8 = do
         r <- parse_machine path8
@@ -317,5 +322,23 @@ case9 = do
                 case toList $ proofs $ props m of
                     (lbl,calc):xs -> 
                         return (show lbl ++ ":\n" ++ show_proof calc)
-                    xs       -> return ("error: found " ++ show (length xs) ++ " proofs")
+                    xs       -> return (
+                                      "error: found "
+                                   ++ show (length xs) 
+                                   ++ " proofs")
             x -> return $ show x
+
+result10 = unlines [
+        " xxx m0/INIT/FIS",
+        "     incorrect proof: ",
+        "         cannot prove a relationship " ++
+                 "between the first and the last line: (31,1)",
+        "     proof does not match proof obligation: (31,1)",
+        "passed 0 / 1"]
+case10 = do
+    r <- parse_machine path8
+    case r of
+        Right [m] -> do
+            (s,_,_)   <- str_verify_machine m
+            return s
+        x -> return $ show x

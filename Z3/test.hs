@@ -80,10 +80,11 @@ sample_calc = (Calc
               ConstDecl "y" BOOL ] )
         ( (x `zimplies` y) `zimplies` (f x `zimplies` f y) )
                      (f x `zimplies` f y)
-        [ (Equal,    (f x `zeq` (f x `zand` f y)),  []),
-          (Equal,    ( f x `zeq` f (x `zand` y) ),  [hyp]),
-          (Follows,  ( x `zeq` (x `zand` y) ), []),
-          (Equal,    ( x `zimplies` y ),        []) ] )
+        [ (Equal,    (f x `zeq` (f x `zand` f y)),  [], li),
+          (Equal,    ( f x `zeq` f (x `zand` y) ),  [hyp], li),
+          (Follows,  ( x `zeq` (x `zand` y) ), [], li),
+          (Equal,    ( x `zimplies` y ),        [], li) ]
+        li )
     where
         forall      = Binder Forall 
         hyp         = forall 
@@ -92,6 +93,7 @@ sample_calc = (Calc
         (x,x')      = var "x" BOOL
         (y,y')      = var "y" BOOL
         f           = fun1 $ Fun "f" [BOOL] BOOL
+        li          = (-1,-1)
 
 indent xs = unlines (map (">  " ++) (lines xs))
 

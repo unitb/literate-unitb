@@ -131,7 +131,7 @@ prop_po m pname (Transient fv xp evt_lbl) =
         ind  = indices evt
         dummy = Context (fromList $ map as_pair fv) empty empty
         exist_ind xp = if null ind then xp else zexists ind xp
-prop_po m pname (Co fv xp) = --error "not implemented"
+prop_po m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (insert 
                 (label "SKIP") 
@@ -222,46 +222,57 @@ primed vs (FunApp f xs)     = FunApp f $ map (primed vs) xs
 primed vs (Binder q d xp)   = Binder q d (primed (foldr M.delete vs (map name d)) xp)
 primed _ x@(Number _)       = x
 
---act_decl :: Machine -> String -> [Decl]
---act_decl = error "not implemented"
-
 verify_machine :: Machine -> IO (Int, Int)
-verify_machine m = h_verify_machine stdout m
+verify_machine m = do
+    (s,i,j) <- str_verify_machine m
+    putStrLn s
+    return (i,j)
 
 str_verify_machine :: Machine -> IO (String, Int, Int)
-str_verify_machine m = -- unsafeInterleaveIO 
+str_verify_machine m = 
     (do
         let pos = proof_obligation m
---        let !() = unsafePerformIO (putStrLn 
---                ("checking proof: " ++ show (keys $ proofs $ props m)))
         rs <- forM (toList pos) (\(lbl, po) -> do
---            putStrLn $ show lbl
---            print po
             if lbl `member` proofs ps then do
---                let !() = unsafePerformIO (putStrLn ("check a proof... " ++ show lbl))
-                r0 <- check (proofs ps ! lbl)
-                r1 <- entails (goal_po (proofs ps ! lbl)) po
---                let !() = unsafePerformIO $ print r0
---                let !() = unsafePerformIO $ print r1
+                let p@(Calc _ _ _ steps li) = proofs ps ! lbl
+                r0 <- check p
+                r1 <- entails (goal_po p) po
                 case (r0,r1) of
                     ([], Valid) -> 
-                        return (True, [" o " ++ show lbl])
+                        return (True, ["  o  " ++ show lbl])
                     (r0,r1) -> do
-                        let xs = [" x " ++ show lbl]
+                        let xs = [" xxx " ++ show lbl]
+                        let (r2,r3) = break (1 <=) $ map snd r0
                         ys <- if null r0
                             then return []
-                            else return ["     " ++ "incorrect proof: " ++ show (map snd r0)]
+                            else
+                                let f (n,(_,_,_,k)) =  if n `elem` r3 
+                                                       then [
+                                                        "    invalid step:  " 
+                                                        ++ show k]
+                                                       else [] 
+                                in
+                                return $ map ("     " ++) ( [
+                                       "incorrect proof: "] 
+                                    ++ ( if null r2 
+                                         then [] 
+                                         else ["    cannot prove a relationship " ++
+                                               "between the first and the last line: " ++ 
+                                               show li ] )
+                                    ++ concatMap f (zip [1..] steps) )
                         zs <- case r1 of
                             Valid -> return []
-                            x -> return ["     " ++ "proof does not match goal"]
+                            x ->     return [
+                                   "     "
+                                ++ "proof does not match proof obligation: " ++ show li]
                         return (False, xs ++ ys ++ zs)
             else do
                 r <- discharge po
                 case r of
                     Valid -> do
-                        return (True, [" o " ++ show lbl])
+                        return (True, ["  o  " ++ show lbl])
                     x     -> do
-                        return (False, [" x " ++ show lbl]))
+                        return (False, [" xxx " ++ show lbl]))
         let total = length rs
         let passed = length $ filter fst rs
         let xs = "passed " ++ (show passed) ++ " / " ++ show total
@@ -270,37 +281,37 @@ str_verify_machine m = -- unsafeInterleaveIO
     where
         ps = props m
         
-h_verify_machine :: Handle -> Machine -> IO (Int, Int)
-h_verify_machine h m = do
-        rs <- forM (toList $ proof_obligation m) (\(lbl, po) -> do
-            if lbl `member` proofs ps then do
-                r0 <- check (proofs ps ! lbl)
-                r1 <- entails (goal_po (proofs ps ! lbl)) po
-                case (r0,r1) of
-                    ([], Valid) -> (do
-                        hPutStrLn h (" o " ++ show lbl)
-                        return True)
-                    (r0,r1) -> do
-                        hPutStrLn h (" x " ++ show lbl)
-                        if null r0 then
-                            hPutStrLn h ("     " ++ "incorrect proof")
-                        else return ()
-                        case r1 of
-                            Valid -> hPutStrLn h ("     " ++ "proof does not match goal")
-                            x -> return ()
-                        return False
-            else do
-                r <- discharge po
-                case r of
-                    Valid -> (do
-                        hPutStrLn h (" o " ++ show lbl)
-                        return True)
-                    x     -> (do
-                        hPutStrLn h (" x " ++ show lbl)
-                        return False))
-        let total = length rs
-        let passed = length $ filter id rs
-        hPutStrLn h ("passed " ++ (show passed) ++ " / " ++ show total)
-        return (passed, total)
-    where
-        ps = props m
+--h_verify_machine :: Handle -> Machine -> IO (Int, Int)
+--h_verify_machine h m = do
+--        rs <- forM (toList $ proof_obligation m) (\(lbl, po) -> do
+--            if lbl `member` proofs ps then do
+--                r0 <- check (proofs ps ! lbl)
+--                r1 <- entails (goal_po (proofs ps ! lbl)) po
+--                case (r0,r1) of
+--                    ([], Valid) -> (do
+--                        hPutStrLn h (" o " ++ show lbl)
+--                        return True)
+--                    (r0,r1) -> do
+--                        hPutStrLn h (" x " ++ show lbl)
+--                        if null r0 then
+--                            hPutStrLn h ("     " ++ "incorrect proof")
+--                        else return ()
+--                        case r1 of
+--                            Valid -> hPutStrLn h ("     " ++ "proof does not match goal")
+--                            x -> return ()
+--                        return False
+--            else do
+--                r <- discharge po
+--                case r of
+--                    Valid -> (do
+--                        hPutStrLn h (" o " ++ show lbl)
+--                        return True)
+--                    x     -> (do
+--                        hPutStrLn h (" x " ++ show lbl)
+--                        return False))
+--        let total = length rs
+--        let passed = length $ filter id rs
+--        hPutStrLn h ("passed " ++ (show passed) ++ " / " ++ show total)
+--        return (passed, total)
+--    where
+--        ps = props m

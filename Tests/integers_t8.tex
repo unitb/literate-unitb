@@ -1,6 +1,8 @@
 
 \documentclass[12pt]{amsart}
 \usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{unitb}
+\usepackage{calculation}
 \geometry{a4paper} % or letter or a5paper or ... etc
 % \geometry{landscape} % rotated page geometry
 
@@ -14,12 +16,23 @@
 \begin{document}
 
 \maketitle
-\tableofcontents
+%\tableofcontents
 
-\section{}
-\subsection{}
+%\section{}
+%\subsection{}
 
 \begin{machine}{m0}
+
+\begin{variable}
+	x : \Int
+\end{variable}
+
+\begin{proof}{INIT/FIS}
+	\begin{calculation}
+		x
+	\end{calculation}
+\end{proof}
+
 \end{machine}
 
 \end{document}

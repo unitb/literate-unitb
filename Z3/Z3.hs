@@ -233,12 +233,15 @@ merge_all ms = unionsWith f ms
             | x == y = x
             | x /= y = error "conflicting declaration"
 
-discharge :: ProofObligation -> IO Validity
-discharge (ProofObligation d assume exist assert) = do
-    s <- verify ( (map Decl $ decl d)
+z3_code (ProofObligation d assume exist assert) = 
+    ( (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat exist] )
+
+discharge :: ProofObligation -> IO Validity
+discharge po = do
+    s <- verify $ z3_code po
     return (case s of
         Right Sat -> Invalid
         Right Unsat -> Valid
@@ -292,14 +295,15 @@ verify xs = do
 --        f (GetModel)   = "get-model"
 
 entails 
-        (ProofObligation (Context cons0 fun0 def0) xs0 ex0 xp0) 
-        (ProofObligation (Context cons1 fun1 def1) xs1 ex1 xp1) = 
-    discharge $ ProofObligation 
-        (Context empty (fun0 `merge` fun1) (def0 `merge` def1))
-        [zforall (elems cons0) (zimplies (zall xs0) xp0)]
-        ex1
-        (zforall (elems cons1) (zimplies (zall xs1) xp1))
-        
+    (ProofObligation (Context cons0 fun0 def0) xs0 ex0 xp0) 
+    (ProofObligation (Context cons1 fun1 def1) xs1 ex1 xp1) = 
+            discharge $ po
+    where
+        po = ProofObligation 
+            (Context empty (fun0 `merge` fun1) (def0 `merge` def1))
+            [zforall (elems cons0) (zimplies (zall xs0) xp0)]
+            ex1
+            (zforall (elems cons1) (zimplies (zall xs1) xp1))
 
 --    system "./z3"
 --    let c = shell "./z3 source.z"

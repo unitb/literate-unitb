@@ -75,29 +75,29 @@ catch_output act = do
     return (x,r)
 
 result_example0 = unlines [
-    " o m0/INIT/FIS",
-    " o m0/INIT/INV/J0",
-    " o m0/SKIP/CO/CO0",
-    " o m0/evt/CO/CO0",
-    " o m0/evt/FIS",
-    " o m0/evt/INV/J0",
-    " o m0/evt/SCH",
-    " o m0/evt/TR/EN/TR0",
-    " o m0/evt/TR/NEG/TR0",
+    "  o  m0/INIT/FIS",
+    "  o  m0/INIT/INV/J0",
+    "  o  m0/SKIP/CO/CO0",
+    "  o  m0/evt/CO/CO0",
+    "  o  m0/evt/FIS",
+    "  o  m0/evt/INV/J0",
+    "  o  m0/evt/SCH",
+    "  o  m0/evt/TR/EN/TR0",
+    "  o  m0/evt/TR/NEG/TR0",
     "passed 9 / 9"]
 --    ""]
 
 result_train_m0 = unlines [
-    " o train_m0/INIT/FIS",
-    " o train_m0/INIT/INV/J0",
-    " o train_m0/enter/FIS",
-    " o train_m0/enter/INV/J0",
-    " o train_m0/enter/SCH",
-    " o train_m0/leave/FIS",
-    " o train_m0/leave/INV/J0",
-    " o train_m0/leave/SCH",
-    " o train_m0/leave/TR/EN/TR0",
-    " o train_m0/leave/TR/NEG/TR0",
+    "  o  train_m0/INIT/FIS",
+    "  o  train_m0/INIT/INV/J0",
+    "  o  train_m0/enter/FIS",
+    "  o  train_m0/enter/INV/J0",
+    "  o  train_m0/enter/SCH",
+    "  o  train_m0/leave/FIS",
+    "  o  train_m0/leave/INV/J0",
+    "  o  train_m0/leave/SCH",
+    "  o  train_m0/leave/TR/EN/TR0",
+    "  o  train_m0/leave/TR/NEG/TR0",
     "passed 10 / 10"]
 --    ""]
 
