@@ -1,16 +1,20 @@
 +- Unit-B Document
-|  +- small machine, test 0
-|  +- small machine, test 1 (separate machine blocks)
-|  +- small machine, test 2 (verification, one failure)
-|  +- small machine, test 3 (verification)
-|  +- small machine, test 4 (proof obligation, invariance)
-|  +- small machine, test 5 (co, 'skip' proof obligation)
-|  +- table of cubes, test 0 (syntax)
-|  +- table of cubes, test 1 (verification)
-|  +- table of cubes, test 2 (init/fis po)
-|  +- table of cubes, proof of inv0
-|  +- table of cubes, empty proof
-|  +- [ Success: 11 / 11 ]
+|  +- small machine example
+|  |  +- test 0
+|  |  +- test 1 (separate machine blocks)
+|  |  +- test 2 (verification, one failure)
+|  |  +- test 3 (verification)
+|  |  +- test 4 (proof obligation, invariance)
+|  |  +- test 5 (co, 'skip' proof obligation)
+|  |  +- [ Success: 6 / 6 ]
+|  +- table of cubes example
+|  |  +- test 0 (syntax)
+|  |  +- test 1 (verification)
+|  |  +- test 2 (init/fis po)
+|  |  +- proof of inv0
+|  |  +- empty proof
+|  |  +- [ Success: 5 / 5 ]
+|  +- [ Success: 2 / 2 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -32,3 +36,7 @@
 |  +- check sample calc
 |  +- [ Success: 5 / 5 ]
 +- [ Success: 4 / 4 ]
+
+***************
+*** SUCCESS ***
+***************

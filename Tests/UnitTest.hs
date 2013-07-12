@@ -1,5 +1,4 @@
 {-# LANGUAGE ExistentialQuantification #-} 
-
 module Tests.UnitTest where
 
 import Control.Exception

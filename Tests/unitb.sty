@@ -394,13 +394,25 @@
 \newenvironment{machine}[1]
 {	\renewcommand{\curmachine}{#1}
 	\noindent \textbf{machine}~#1 }
-{ 	\noindent (\textbf{end} \curmachine) }
-\newenvironment{variable}{ \[ }{ \] }
+{ 	
+
+	\noindent (\textbf{end} \curmachine) }
+\newenvironment{variable}{ 
+	\noindent \textbf{variable} 
+	\[ }
+{ 	\] }
+\newcommand{\set}[2]{
+
+	\newcommand{#2}{\text{#1}}
+	\noindent \textbf{set}: #1 }
+
+
 
 % types
 \newcommand{\newtype}[2]{\newcommand{#1}{\textbf{#2}}}
 
 \newtype{\Int}{int}
+\newtype{\Real}{real}
 
 \newcommand{\newevent}[1]{ \noindent \textbf{event}~#1\newcompound{#1} }
 
