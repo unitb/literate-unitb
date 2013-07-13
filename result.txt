@@ -14,7 +14,10 @@
 |  |  +- proof of inv0
 |  |  +- empty proof
 |  |  +- [ Success: 5 / 5 ]
-|  +- [ Success: 2 / 2 ]
+|  +- train station example
+|  |  +- test 0, syntax
+|  |  +- [ Success: 1 / 1 ]
+|  +- [ Success: 3 / 3 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -40,3 +43,5 @@
 ***************
 *** SUCCESS ***
 ***************
+Lines of Haskell code:
+    2674   15642  138849

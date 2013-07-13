@@ -6,6 +6,7 @@ import Document.Document
 
 import qualified Document.Tests.Cubes as Cubes
 import qualified Document.Tests.SmallMachine as SMch
+import qualified Document.Tests.TrainStation as Train
 
 import Tests.UnitTest
 
@@ -22,5 +23,6 @@ test_case = ("Unit-B Document", test, True)
 test :: IO Bool
 test = test_cases [
         SMch.test_case,
-        Cubes.test_case
+        Cubes.test_case,
+        Train.test_case
         ]

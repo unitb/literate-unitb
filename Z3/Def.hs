@@ -12,7 +12,11 @@ data Expr =
 data Quantifier = Forall | Exists 
     deriving Eq
 
-data Type = BOOL | INT | REAL | ARRAY Type Type | GENERIC String
+data Type = BOOL | INT | REAL 
+        | ARRAY Type Type 
+        | GENERIC String 
+        | USER_DEFINED String
+        | SET Type
     deriving Eq
 
 data Decl = FunDecl String [Type] Type 

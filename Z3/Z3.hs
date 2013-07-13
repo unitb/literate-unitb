@@ -7,7 +7,7 @@ import Control.Monad
 import Data.List hiding (union)
 import Data.Map as M hiding (map,filter)
 import Data.Typeable
-
+ 
 import System.Cmd
 import System.Exit
 import System.IO
@@ -32,7 +32,11 @@ class Tree a where
 match_type BOOL BOOL = True
 match_type INT INT = True
 match_type REAL REAL = True
+match_type (SET t0) (SET t1) = match_type t0 t1
 match_type (ARRAY t0 t1) (ARRAY t2 t3) = match_type t0 t2 && match_type t1 t3
+match_type (GENERIC x) (GENERIC y) = x == y
+match_type (USER_DEFINED x) (USER_DEFINED y) = x == y
+match_type _ _ = False
 
 z3_path = "./bin/z3"
 
@@ -57,6 +61,8 @@ instance Tree Type where
     as_tree REAL = Str "Real"
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
     as_tree (GENERIC x) = Str x
+    as_tree (SET t) = List [Str "Array", as_tree t, Str "Bool"]
+    as_tree (USER_DEFINED x) = Str x
 
 instance Tree Decl where
     as_tree (FunDecl name dom ran) =
@@ -117,19 +123,6 @@ instance Show Def where
 instance Show Expr where
     show e = show $ as_tree e
 
---data StrList = List [StrList] | Str String
---
---parse :: Int -> [(Char, Int)] -> [(Char, Int)] -> Int -> Maybe [StrList]
---parse xs ys = 
---
---trim :: Int -> [(Char, Int)] -> Int -> (Int, [(Char,Int)])
---trim n [] m = (n, [])
---trim 
---
---tree xs = parse 1 ys (reverse ys) (length ys)
---    where
---        ys = zip xs [1..]
-
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
         let c = (shell (z3_path ++ " -smt2 -in ")) { 
@@ -137,7 +130,6 @@ feed_z3 xs = do
             std_in = CreatePipe,
             std_err = CreatePipe } 
         (Just stdin,Just stdout,Just stderr,ph) <- createProcess c
---        putStrLn xs
         hPutStr stdin xs
         b <- hIsOpen stdin 
         out <- hGetContents stdout
@@ -155,19 +147,20 @@ data Validity = Valid | Invalid | ValUnknown
 data ProofObligation = ProofObligation Context [Expr] Bool Expr
 
 instance Show ProofObligation where
-    show (ProofObligation (Context vs fs ds) as _ g) =
+    show (ProofObligation (Context ss vs fs ds) as _ g) =
         unlines (
                map (" " ++)
-            (  (map show $ elems fs)
+            (  ["sort: " ++ intercalate "," ss]
+            ++ (map show $ elems fs)
             ++ (map show $ elems ds)
             ++ (map show $ elems vs)
             ++ map show as)
             ++ ["|----"," " ++ show g] )
 
-data Context = Context (Map String Var) (Map String Fun) (Map String Def)
+data Context = Context [String] (Map String Var) (Map String Fun) (Map String Def)
 
 var_decl :: String -> Context -> Maybe Var
-var_decl s (Context m _ _) = M.lookup s m
+var_decl s (Context _ m _ _) = M.lookup s m
 
 from_decl (FunDecl n ps r) = Left (Fun n ps r)
 from_decl (ConstDecl n t) = Right (Var n t)
@@ -176,23 +169,29 @@ from_decl (FunDef n ps r _) = Left (Fun n (map (\(Var _ t) -> t) ps) r)
 context :: [Decl] -> Context
 context (x:xs) = 
         case context xs of
-            Context vs fs defs -> 
+            Context ss vs fs defs -> 
                 case x of
-                    ConstDecl n t -> Context (M.insert n (Var n t) vs) fs defs
-                    FunDecl n ps t -> Context vs (M.insert n (Fun n ps t) fs) defs
-                    FunDef n ps t e -> Context vs fs (M.insert n (Def n ps t e) defs)
-context [] = Context empty empty empty
+                    ConstDecl n t -> Context ss (M.insert n (Var n t) vs) fs defs
+                    FunDecl n ps t -> Context ss vs (M.insert n (Fun n ps t) fs) defs
+                    FunDef n ps t e -> Context ss vs fs (M.insert n (Def n ps t e) defs)
+context [] = Context [] empty empty empty
 
-merge_ctx (Context vs0 fs0 ds0) (Context vs1 fs1 ds1) = 
-        Context (vs0 `merge` vs1) (fs0 `merge` fs1) (ds0 `merge` ds1)
+merge_ctx (Context ss0 vs0 fs0 ds0) (Context ss1 vs1 fs1 ds1) = 
+        Context 
+            (ss0 ++ ss1) 
+            (vs0 `merge` vs1) 
+            (fs0 `merge` fs1) 
+            (ds0 `merge` ds1)
 merge_all_ctx cs = Context 
-        (merge_all $ map f cs) 
+        (concat $ map f cs) 
         (merge_all $ map g cs)
         (merge_all $ map h cs)
+        (merge_all $ map ff cs)
     where
-        f (Context x _ _) = x
-        g (Context _ x _) = x
-        h (Context _ _ x) = x
+        f  (Context x _ _ _) = x
+        g  (Context _ x _ _) = x
+        h  (Context _ _ x _) = x
+        ff (Context _ _ _ x) = x
 
 class Symbol a where
     decl :: a -> [Decl]
@@ -207,7 +206,7 @@ instance Symbol Def where
     decl (Def name ps typ ex)  = [FunDef name ps typ ex]
 
 instance Symbol Context where
-    decl (Context cons fun defs) = 
+    decl (Context sorts cons fun defs) = 
                 concatMap decl (elems cons) 
             ++  concatMap decl (elems fun) 
             ++  concatMap decl (elems defs) 
@@ -252,7 +251,6 @@ discharge po = do
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
---        putStrLn $ show $ f (xs !! 3)
         let code = (unlines $ (map (show . as_tree) xs))
         (_,out,err) <- feed_z3 code
         let ln = lines out
@@ -260,20 +258,14 @@ verify xs = do
                 (   head ln /= "sat"
                     && head ln /= "unsat"
                     && head ln /= "unknown") then do
---            putStrLn $ err_msg code out err
             return $ Left ("error: " ++ err ++ out)
         else if head ln == "sat" then do
---            putStrLn $ err_msg code out err
---            putStrLn $ unlines $ tail ln
             return $ Right Sat
         else if head ln == "unsat" then 
             return $ Right Unsat
         else if head ln == "unknown" then do
---            putStrLn $ err_msg code out err
             return $ Right SatUnknown
         else do
---                forM (zip [1..] $ lines code) print
---                putStrLn out
             return $ Left out
         return r
     where
@@ -297,21 +289,12 @@ verify xs = do
 --        f (GetModel)   = "get-model"
 
 entails 
-    (ProofObligation (Context cons0 fun0 def0) xs0 ex0 xp0) 
-    (ProofObligation (Context cons1 fun1 def1) xs1 ex1 xp1) = 
+    (ProofObligation (Context srt0 cons0 fun0 def0) xs0 ex0 xp0) 
+    (ProofObligation (Context srt1 cons1 fun1 def1) xs1 ex1 xp1) = 
             discharge $ po
     where
         po = ProofObligation 
-            (Context empty (fun0 `merge` fun1) (def0 `merge` def1))
+            (Context (srt0 ++ srt1) empty (fun0 `merge` fun1) (def0 `merge` def1))
             [zforall (elems cons0) (zimplies (zall xs0) xp0)]
             ex1
             (zforall (elems cons1) (zimplies (zall xs1) xp1))
-
---    system "./z3"
---    let c = shell "./z3 source.z"
---    createProcess c
---    putStrLn "all"
---    withFile "file.txt" WriteMode (\h -> do
---        let c = (shell "./z3 -smt2 source.z") { std_out = UseHandle h } 
---        (_,_,_,ph) <- createProcess c
---        waitForProcess ph)

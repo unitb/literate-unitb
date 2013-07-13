@@ -92,6 +92,7 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
+        " sort: ",
         " x: Int",
         " x_prime: Int",
         " y: Int",
@@ -111,6 +112,7 @@ case4 = do
             x -> return $ show x
 
 result5 = unlines [
+        " sort: ",
         " x: Int",
         " x_prime: Int",
         " y: Int",

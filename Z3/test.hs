@@ -42,7 +42,6 @@ sample_quant = [
         ff          = Fun "f" [INT] INT
         f x         = FunApp ff [x]
         forall      = Binder Forall 
---        neg x       = FunApp "not" [x]
 
 sample_proof = ProofObligation
         ( Z.context [FunDecl "f" [INT] INT] )
@@ -99,7 +98,6 @@ indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
    
---cases :: (String, IO Result, Result)
 cases = test_cases [case0, case1, case2, case3, case4]
 
 test_case = ("Z3 test", cases, True)
@@ -110,19 +108,10 @@ case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
 case3 = Case "sample proof" (discharge sample_proof) Valid
 
 case4 = Case "check sample calc" (check sample_calc) []
---        print [s1,s2]
---        print s3
---        return (s1,s2,s3,s4)
 
 main = do
         s1 <- verify sample_quant
         s2 <- verify sample_quant2
         s3 <- discharge sample_proof
         s4 <- check sample_calc
---        print [s1,s2]
---        print s3
         return (s1,s2,s3,s4)
---        (st,out,err) <- feed_z3 sample
---        putStrLn ("Status: " ++ show st)
---        putStrLn ("Output: \n" ++ indent out)
---        putStrLn ("Error: \n" ++ show (indent err))

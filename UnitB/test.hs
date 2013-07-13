@@ -102,6 +102,7 @@ result_train_m0 = unlines [
 --    ""]
 
 result_example0_tr_en_po = unlines [
+    " sort: ",
     " x: Int",
     " y: Int",
     " (= x (* 2 y))",
@@ -109,6 +110,7 @@ result_example0_tr_en_po = unlines [
     " (=> (= x 0) (= x y))"]
 
 result_train_m0_tr_po = unlines [
+    " sort: ",
     " st: (Array Int Bool)",
     " st_prime: (Array Int Bool)",
     " t: Int",

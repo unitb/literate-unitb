@@ -5,7 +5,7 @@ module UnitB.AST (
     Machine (..), label,
     empty_machine, ProgramProp(..), ProgressProp,
     SafetyProp, PropertySet, empty_property_set,
-    composite_label,
+    composite_label, empty_theory,
     proofs, program_prop, inv, inv_thm, ps_union
     ) 
 where
@@ -28,13 +28,17 @@ instance Show Label where
 label s = Lbl s
 
 data Theory = Theory {
-    extends :: [Theory],
-    funs    :: Map String Fun,
-    consts  :: Map String Var,
-    fact    :: Map Label Expr }
+        extends :: [Theory],
+        types   :: [String],
+        funs    :: Map String Fun,
+        consts  :: Map String Var,
+        fact    :: Map Label Expr }
+    deriving Show
 
-instance Show Theory where
-    show t = "{ Theory ... }" 
+empty_theory = Theory [] [] empty empty empty
+
+--instance Show Theory where
+--    show t = "{ Theory ... }" 
 
 data Event = Event {
         indices   :: [Var],
@@ -62,7 +66,7 @@ class RefRule a where
     ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) [] empty [] empty empty_property_set
+empty_machine n = Mch (Lbl n) [empty_theory] empty [] empty empty_property_set
 
 instance Named Machine where
     name m = case _name m of Lbl s -> s

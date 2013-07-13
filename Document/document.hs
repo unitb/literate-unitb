@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Document.Document where
 
 import Control.Monad hiding ( guard )
@@ -133,9 +134,10 @@ as_action ctx c = do
 all_machines :: [LatexDoc] -> Either Error (Map String Machine)
 all_machines xs = do
         ms0 <- L.foldl gather (Right empty) xs
-        ms1 <- L.foldl (f first_pass) (Right ms0) xs
-        ms2 <- L.foldl (f sec_pass) (Right ms1) xs
-        L.foldl (f third_pass) (Right ms2) xs
+        ms1 <- L.foldl (f type_decl) (Right ms0) xs
+        ms2 <- L.foldl (f declarations) (Right ms1) xs
+        ms3 <- L.foldl (f build_machine) (Right ms2) xs
+        L.foldl (f collect_proofs) (Right ms3) xs
 --        return ms1
     where
         first_pass cont m = declarations cont m
@@ -171,14 +173,44 @@ merge_event e@(Event ind0 c0 f0 p0 g0 a0) (Event ind1 c1 f1 p1 g1 a1) =
                 [x:_]     -> Just x
                 []        -> Nothing
 
-merge_machine :: Machine -> Machine -> Machine
-merge_machine (Mch n t0 v0 i0 ev0 p0) (Mch _ t1 v1 i1 ev1 p1) =
-        Mch n (t0 ++ t1) 
-            (v0 `union` v1) (i0++i1) 
-            (unionWith merge_event ev0 ev1)
-            (p0 `ps_union` p1)
+--merge_machine :: Machine -> Machine -> Machine
+--merge_machine (Mch n t0 v0 i0 ev0 p0) (Mch _ t1 v1 i1 ev1 p1) =
+--        Mch n (t0 ++ t1) 
+--            (v0 `union` v1) (i0++i1) 
+--            (unionWith merge_event ev0 ev1)
+--            (p0 `ps_union` p1)
 
 context m = step_ctx m -- Context (variables m) empty empty     
+
+type_decl :: [LatexDoc] -> Machine -> Either Error Machine
+type_decl cs m = g (Right m) cs
+    where
+        f em e@(Env s _ xs _)       = g em xs
+        f em (Bracket _ _ xs _)     = g em xs
+        f em (Text _)               = em
+        g :: Either Error Machine -> [LatexDoc] -> Either Error Machine
+        g em xs = m1
+            where
+                m0 = foldl f em xs 
+                m1 = foldl h m0 (zip3 xs (drop 1 xs) $ drop 2 xs )
+        h :: Either Error Machine
+             -> (LatexDoc,LatexDoc,LatexDoc) 
+             -> Either Error Machine
+        h em (
+                Text xs, 
+                Bracket _ _ [Text [TextBlock ys _]] _, 
+                Bracket _ _ [Text [zs]] _) =
+            case reverse $ trim_blanks xs of
+                Command "\\newset" (i,j):_ -> do
+                    m   <- em
+                    let th = (head $ theories m)
+                    let hd = th { types = types th ++ [lexeme zs] } 
+                    let tl = tail $ theories m
+                    if ys `elem` types th 
+                        then Left ("set '" ++ ys ++ "' is already defined", i, j)
+                        else Right m { theories = hd : tl }
+                _ -> em
+        h em _ = em
 
 declarations :: [LatexDoc] -> Machine -> Either Error Machine
 declarations cs m = g (Right m) cs
@@ -186,7 +218,7 @@ declarations cs m = g (Right m) cs
         f em e@(Env s _ xs _) 
                 | s == "variable"   = do
                     m  <- em
-                    vs <- as_variables e
+                    vs <- as_variables (context m) e
                     return m { variables = fromList vs `union` variables m}
                 | otherwise         = foldl f em xs
         f em (Bracket _ _ xs _)     = g em xs
@@ -296,31 +328,6 @@ find_cmd_arg n cmds (x@(Text xs) : cs) =
         f [] = []
         f xs = [Text $ reverse xs]
 find_cmd_arg _ cmd []     = Nothing
-
---find_cmd_2_arg :: String
---               -> [LatexDoc] 
---               -> Maybe ([LatexDoc],([LatexDoc],[LatexDoc]),[LatexDoc])
---find_cmd_2_arg cmd (x@(Text xs) : cs) = 
---        case (trim_blanks $ reverse xs, cs) of
---            (Command ys _:us, Bracket True _ zs _:ws) -> 
---                    if ys == cmd
---                    then Just ([Text $ reverse us],zs,ws)
---                    else continue
---            _    -> continue
---    where
---        continue = do
---                (a,b,c) <- find_cmd_1_arg cmd cs
---                return (x:a,b,c)
---find_cmd_2_arg cmd []     = Nothing
-
---foldl2 :: (a -> b -> b -> a) -> a -> [b] -> a
---foldl2 f x (y0:y1:ys) = foldl2 f (f x y0 y1) (y1:ys)
---foldl2 _ x _          = x 
---
---foldl3 :: (a -> b -> b -> b -> a) -> a -> [b] -> a
---foldl3 f x (y0:y1:y2:ys) = foldl3 f (f x y0 y1 y2) (y1:y2:ys)
---foldl3 _ x _             = x 
-
 
 collect_proofs :: [LatexDoc] -> Machine -> Either (String,Int,Int) Machine
 collect_proofs cs m = foldl f (Right m) cs --  error "not implemented" 

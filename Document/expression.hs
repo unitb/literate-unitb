@@ -71,33 +71,52 @@ colon = do
             (\_ -> eat_space)
             (fail "expecting colon (':')")
             
-type_t :: Scanner Char String
-type_t = do
-        read_if (== '\\')
+read_list :: (Eq a,Show a) => [a] -> Scanner a [a]
+read_list xs = do
+        x <- match (match_string xs) 
+        case x of
+            Just x -> return x
+            Nothing -> fail ("expecting: " ++ show xs)
+            
+type_t :: Context -> Scanner Char Type
+type_t ctx@(Context ts _ _ _) = do
+        t <- read_if (== '\\')
             (\_ -> do
                 xs <- word
                 return ('\\':xs))
             word
+        if t == "\\set"
+        then do
+            eat_space
+            read_list "["
+            eat_space
+            t <- type_t ctx
+            eat_space
+            read_list "]"
+            eat_space
+            return (SET t)
+        else case type_of ctx t of
+                Just t -> return t
+                Nothing -> fail ("Invalid type, '" ++ t ++ "' not found, " ++ show ts)
 
-type_of x = M.lookup x m
+type_of (Context ts _ _ _) x = M.lookup x m
     where
-        m = fromList [("\\Int", INT)]
+        m = fromList ( 
+                   [("\\Int", INT), ("\\Real", REAL), ("\\Bool", BOOL)]
+                ++ zip ts (map USER_DEFINED ts) )
 
-vars :: Scanner Char [(String,Type)]
-vars = do
+vars :: Context -> Scanner Char [(String,Type)]
+vars ctx = do
         eat_space
         vs <- sep1 word comma
         colon
-        t <- type_t
-        eat_space
-        case type_of t of
-            Just t -> return (map (\x -> (x,t)) vs)
-            Nothing -> fail "Invalid type"
-            
+        t <- type_t ctx
+        eat_space       
+        return (map (\x -> (x,t)) vs)     
 
-as_variables :: LatexDoc -> Either Error [(String, Var)]
-as_variables (Env s _ c _) = do
-        xs <- read_tokens vars m
+as_variables :: Context -> LatexDoc -> Either Error [(String, Var)]
+as_variables ctx (Env s _ c _) = do
+        xs <- read_tokens (vars ctx) m
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
         m = concatMap flatten_li c

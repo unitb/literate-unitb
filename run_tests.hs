@@ -20,9 +20,13 @@ run phase cmd  = do
 
 main = do
         c0 <- rawSystem "ghc" ["test.hs", "--make"] 
-        case c0 of
+        c3 <- rawSystem "ghc" ["continuous.hs", "--make"]
+        c4 <- rawSystem "ghc" ["verify.hs", "--make"]
+        case c0 `success` c3 `success` c4 of
             ExitSuccess -> do
                 c1 <- system "./test > result.txt"
+                system "echo \"Lines of Haskell code:\" >> result.txt"
+                system "grep . */*.hs *.hs | wc >> result.txt"
                 c2 <- rawSystem "cat" ["result.txt"]
                 return $ success c1 c2
             ExitFailure _ -> do
