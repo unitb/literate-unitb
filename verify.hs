@@ -20,7 +20,7 @@ check path = do
         case r of
             Right ms -> do
                 xs <- forM ms check_one
-                putStr $ take 40 $ cycle "\n"
+--                putStr $ take 40 $ cycle "\n"
                 forM_ xs (putStrLn . f)
             Left x -> print x
     where
@@ -33,14 +33,13 @@ main = do
             [xs] -> do
                 b <- doesFileExist xs
                 if b
-                then do
-                    check xs
-                    t <- getModificationTime xs
-                    foldM (f xs) t $ repeat ()
-                    return ()
-                else do
+                then check xs
+--                    t <- getModificationTime xs
+--                    foldM (f xs) t $ repeat ()
+--                    return ()
+                else
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
-            _ -> putStrLn "usage: continuous file"
+            _ -> putStrLn "usage: verify file"
     where
         f xs t0 () = do
             sleep 1
