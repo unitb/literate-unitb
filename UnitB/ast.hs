@@ -32,10 +32,12 @@ data Theory = Theory {
         types   :: [String],
         funs    :: Map String Fun,
         consts  :: Map String Var,
-        fact    :: Map Label Expr }
+        fact    :: Map Label Expr,
+        dummies :: Map String Var }
     deriving Show
 
-empty_theory = Theory [] [] empty empty empty
+empty_theory :: Theory
+empty_theory = Theory [] [] empty empty empty empty
 
 --instance Show Theory where
 --    show t = "{ Theory ... }" 
@@ -54,7 +56,7 @@ empty_event = Event [] Nothing  Nothing [] empty empty
 data Machine = 
     Mch {
         _name      :: Label,
-        theories   :: [Theory],
+        theory     :: Theory,
         variables  :: Map String Var,
         inits      :: [Expr],
         events     :: Map Label Event,
@@ -66,7 +68,7 @@ class RefRule a where
     ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) [empty_theory] empty [] empty empty_property_set
+empty_machine n = Mch (Lbl n) empty_theory empty [] empty empty_property_set
 
 instance Named Machine where
     name m = case _name m of Lbl s -> s

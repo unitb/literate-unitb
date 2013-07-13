@@ -52,24 +52,33 @@ fis_lbl         = label "FIS"
 sch_lbl         = label "SCH"
 thm_lbl         = label "THM"
 
-theory_ctx (Theory d ts f c _) = merge_all_ctx (Context ts c f empty : map theory_ctx d)
+theory_ctx :: Theory -> Context
+theory_ctx (Theory d ts f c _ dums) = 
+    merge_all_ctx 
+        (Context ts c f empty dums : map theory_ctx d)
 
-theory_facts (Theory d _ _ _ f) = merge_all (f : map theory_facts d)
+theory_facts :: Theory -> Map Label Expr
+theory_facts (Theory d _ _ _ f _) = 
+    merge_all (f : map theory_facts d)
 
-assert_ctx m = merge_all_ctx (
-           Context [] (variables m) empty empty
-        : (map theory_ctx $ theories m))
-
-step_ctx m = merge_all_ctx (
-           Context [] (prime_all $ variables m) empty empty
-        :  Context [] (variables m) empty empty
-        : (map theory_ctx $ theories m))
+assert_ctx :: Machine -> Context
+assert_ctx m = merge_ctx
+          (Context [] (variables m) empty empty empty)
+          (theory_ctx $ theory m)
+step_ctx :: Machine -> Context
+step_ctx m = merge_all_ctx 
+        [  Context [] (prime_all $ variables m) empty empty empty
+        ,  Context [] (variables m) empty empty empty
+        , (theory_ctx $ theory m) ]
     where
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
         prime_var (Var n t) = (Var (n ++ "_prime") t)
 
-evt_saf_ctx evt  = Context [] (fromList $ map as_pair $ params evt) empty empty
-evt_live_ctx evt = Context [] (fromList $ map as_pair $ indices evt) empty empty
+evt_saf_ctx :: Event -> Context
+evt_saf_ctx evt  = Context [] (fromList $ map as_pair $ params evt) empty empty empty
+
+evt_live_ctx :: Event -> Context
+evt_live_ctx evt = Context [] (fromList $ map as_pair $ indices evt) empty empty empty
 
 skip_event m = empty_event { action = 
     fromList $ zip 
@@ -105,7 +114,7 @@ prop_po m pname (Transient fv xp evt_lbl) =
         fromList [ 
             ( (composite_label [_name m, evt_lbl, tr_neg_lbl, pname]),
               (ProofObligation 
-                (  step_ctx m 
+                (           step_ctx m 
                 `merge_ctx` evt_live_ctx evt
                 `merge_ctx` evt_saf_ctx evt
                 `merge_ctx` dummy) 
@@ -129,7 +138,7 @@ prop_po m pname (Transient fv xp evt_lbl) =
         act  = elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
-        dummy = Context [] (fromList $ map as_pair fv) empty empty
+        dummy = Context [] (fromList $ map as_pair fv) empty empty empty    
         exist_ind xp = if null ind then xp else zexists ind xp
 prop_po m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
@@ -161,7 +170,7 @@ inv_po m pname xp =
         p = props m
         po lbl evt = 
                 (ProofObligation 
-                    (step_ctx m `merge_ctx` Context [] ind empty empty) 
+                    (step_ctx m `merge_ctx` Context [] ind empty empty empty) 
                     (invariants p ++ grd ++ act)
                     False
                     (primed (variables m) xp))
@@ -174,7 +183,7 @@ inv_po m pname xp =
 fis_po m lbl evt = singleton
         (composite_label [_name m, lbl, fis_lbl])
         (ProofObligation 
-            (assert_ctx m `merge_ctx` Context [] ind empty empty)
+            (assert_ctx m `merge_ctx` Context [] ind empty empty empty)
             (invariants p ++ grd)
             True
             (zexists pvar act))
@@ -185,6 +194,7 @@ fis_po m lbl evt = singleton
         pvar = map prime $ elems $ variables m
         ind  = fromList $ map as_pair (indices evt ++ params evt)
 
+sch_po :: Machine -> Label -> Event -> Map Label ProofObligation
 sch_po m lbl evt = singleton
         (composite_label [_name m, lbl, sch_lbl])
         (ProofObligation 

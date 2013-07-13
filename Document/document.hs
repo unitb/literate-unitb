@@ -133,11 +133,12 @@ as_action ctx c = do
 
 all_machines :: [LatexDoc] -> Either Error (Map String Machine)
 all_machines xs = do
-        ms0 <- L.foldl gather (Right empty) xs
-        ms1 <- L.foldl (f type_decl) (Right ms0) xs
-        ms2 <- L.foldl (f declarations) (Right ms1) xs
-        ms3 <- L.foldl (f build_machine) (Right ms2) xs
-        L.foldl (f collect_proofs) (Right ms3) xs
+        ms <- L.foldl gather (Right empty) xs
+        ms <- L.foldl (f type_decl) (Right ms) xs
+        ms <- L.foldl (f declarations) (Right ms) xs
+        ms <- L.foldl (f build_machine) (Right ms) xs
+        ms <- L.foldl (f collect_proofs) (Right ms) xs
+        return ms
 --        return ms1
     where
         first_pass cont m = declarations cont m
@@ -203,12 +204,11 @@ type_decl cs m = g (Right m) cs
             case reverse $ trim_blanks xs of
                 Command "\\newset" (i,j):_ -> do
                     m   <- em
-                    let th = (head $ theories m)
+                    let th = theory m
                     let hd = th { types = types th ++ [lexeme zs] } 
-                    let tl = tail $ theories m
                     if ys `elem` types th 
                         then Left ("set '" ++ ys ++ "' is already defined", i, j)
-                        else Right m { theories = hd : tl }
+                        else Right m { theory = hd }
                 _ -> em
         h em _ = em
 
@@ -217,9 +217,16 @@ declarations cs m = g (Right m) cs
     where
         f em e@(Env s _ xs _) 
                 | s == "variable"   = do
-                    m  <- em
-                    vs <- as_variables (context m) e
-                    return m { variables = fromList vs `union` variables m}
+                        m           <- em
+                        vs          <- as_variables (context m) e
+                        return m { variables = fromList vs `union` variables m}
+                | s == "dummy"          = do
+                        m               <- em
+                        vs              <- as_variables (context m) e
+                        return m { theory = (theory m) { 
+                                dummies = merge 
+                                    (fromListWith (error "repeated definition") vs) 
+                                    (dummies $ theory m) } }
                 | otherwise         = foldl f em xs
         f em (Bracket _ _ xs _)     = g em xs
         f em (Text _)               = em
@@ -272,8 +279,9 @@ build_machine cs m = foldl f (Right $ m) cs
                         tr            <- get_expr m rest
                         m <- return m {
                             props = (props m) {
-                                program_prop = insert (label lbl) (Transient [] tr $ label ev)
-                                    $ program_prop $ props m } }
+                                program_prop = insert (label lbl) 
+                                    (Transient (free_vars (context m) tr) tr $ label ev)
+                                        $ program_prop $ props m } }
                         return m
                 | s == "cschedule"     = do
                         m              <- em

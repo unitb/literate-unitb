@@ -1,4 +1,5 @@
 module Document.Expression where
+{-# LANGUAGE BangPatterns #-}
 
 import Data.Char
 import Data.List
@@ -6,6 +7,8 @@ import Data.Map as M hiding ( map )
 
 import Latex.Scanner
 import Latex.Parser
+
+import System.IO.Unsafe
 
 import Z3.Const
 import Z3.Def
@@ -79,7 +82,7 @@ read_list xs = do
             Nothing -> fail ("expecting: " ++ show xs)
             
 type_t :: Context -> Scanner Char Type
-type_t ctx@(Context ts _ _ _) = do
+type_t ctx@(Context ts _ _ _ _) = do
         t <- read_if (== '\\')
             (\_ -> do
                 xs <- word
@@ -99,7 +102,8 @@ type_t ctx@(Context ts _ _ _) = do
                 Just t -> return t
                 Nothing -> fail ("Invalid type, '" ++ t ++ "' not found, " ++ show ts)
 
-type_of (Context ts _ _ _) x = M.lookup x m
+type_of :: Context -> String -> Maybe Type
+type_of (Context ts _ _ _ _) x = M.lookup x m
     where
         m = fromList ( 
                    [("\\Int", INT), ("\\Real", REAL), ("\\Bool", BOOL)]
@@ -157,20 +161,39 @@ power = do
             Just _  -> return ()
             Nothing -> fail "expecting exponential (^)"
 
+membership = do
+        x <- match $ match_string "\\in"
+        case x of
+            Just _  -> return ()
+            Nothing -> fail "expecting set membership (\\in)"
+
 oper = do
-        try plus 
-            (\_ -> return Plus) $
-            try times
-                (\_ -> return Mult) $
-                try implication
-                    (\_ -> return Implies) $
-                    try conjunction
-                        (\_ -> return And) $
-                        try leq
-                            (\_ -> return Leq) $
-                            try power
-                                (\_ -> return Power) $
-                                (do equal ; return Equal)
+        choice [
+                (plus >> return Plus),
+                (times >> return Mult),
+                (implication >> return Implies),
+                (conjunction >> return And),
+                (leq >> return Leq),
+                (power >> return Power),
+                (membership >> return Membership),
+                (equal >> return Equal) ]
+            (fail "expecting: +, \\cdot, \\implies, \\land, \\le, ^, \\in or =")            
+            return
+
+            
+--        try plus 
+--            (\_ -> return Plus) $
+--            try times
+--                (\_ -> return Mult) $
+--                try implication
+--                    (\_ -> return Implies) $
+--                    try conjunction
+--                        (\_ -> return And) $
+--                        try leq
+--                            (\_ -> return Leq) $
+--                            try power
+--                                (\_ -> return Power) $
+--                                (do equal ; return Equal)
 
 equal = do
         x <- match $ match_string "="
@@ -206,34 +229,6 @@ number = do
                 | 0 < n     = Just n
             where
                 n = length $ takeWhile isDigit x
-
-data Assoc = LeftAssoc | RightAssoc | Ambiguous
-    deriving Show
-
-associativity :: [([Operator],Assoc)]
-associativity = [
-        ([Power],Ambiguous),
-        ([Mult],LeftAssoc),
-        ([Plus],LeftAssoc),
-        ([Equal,Leq],Ambiguous),
-        ([And],LeftAssoc),
-        ([Implies,Follows],Ambiguous) ]
-
-prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]
-
-pairs = fromList (concat (do
-            ((x,_),xs) <- zip a $ tail $ tails a
-            (y,_)      <- xs
-            a          <- x
-            b          <- y
-            return [
-                ((a,b),LeftAssoc),
-                ((b,a),RightAssoc) ])
-        ++ concatMap prod a    )
-    where
-        a = associativity
-
-assoc x y = pairs ! (x,y)
 
 --assoc Equal Equal = Ambiguous
 --assoc Equal Leq   = Ambiguous

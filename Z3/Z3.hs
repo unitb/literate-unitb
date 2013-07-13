@@ -3,9 +3,11 @@
 module Z3.Z3 where
 
 import Control.Monad
+import Control.Applicative hiding ( empty, Const )
+    -- for the operator <|>
 
 import Data.List hiding (union)
-import Data.Map as M hiding (map,filter)
+import Data.Map as M hiding (map,filter,foldl)
 import Data.Typeable
  
 import System.Cmd
@@ -118,8 +120,6 @@ instance Show Def where
         ++ " -> " ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
 
-
-
 instance Show Expr where
     show e = show $ as_tree e
 
@@ -147,7 +147,7 @@ data Validity = Valid | Invalid | ValUnknown
 data ProofObligation = ProofObligation Context [Expr] Bool Expr
 
 instance Show ProofObligation where
-    show (ProofObligation (Context ss vs fs ds) as _ g) =
+    show (ProofObligation (Context ss vs fs ds dum) as _ g) =
         unlines (
                map (" " ++)
             (  ["sort: " ++ intercalate "," ss]
@@ -157,10 +157,31 @@ instance Show ProofObligation where
             ++ map show as)
             ++ ["|----"," " ++ show g] )
 
-data Context = Context [String] (Map String Var) (Map String Fun) (Map String Def)
+fold_expr f x (Word _)          = x
+fold_expr f x (Number _)        = x
+fold_expr f x (Const _ _)       = x
+fold_expr f x (FunApp _ xs)     = foldl f x xs
+fold_expr f x (Binder _ _ xp)   = f x xp
+
+free_vars :: Context -> Expr -> [Var]
+free_vars (Context _ _ _ _ dum) e = f [] e
+    where
+        f xs (Word v@(Var n t))
+            | n `member` dum = v:xs
+            | otherwise              = xs
+        f xs v = fold_expr f xs v
+
+data Context = Context 
+        [String] 
+        (Map String Var)  -- constants
+        (Map String Fun)  -- functions and operators
+        (Map String Def)  -- transparent definitions
+        (Map String Var)  -- dummies
+    deriving Show
 
 var_decl :: String -> Context -> Maybe Var
-var_decl s (Context _ m _ _) = M.lookup s m
+var_decl s (Context _ m _ _ d) = 
+    M.lookup s m <|> M.lookup s d
 
 from_decl (FunDecl n ps r) = Left (Fun n ps r)
 from_decl (ConstDecl n t) = Right (Var n t)
@@ -169,29 +190,43 @@ from_decl (FunDef n ps r _) = Left (Fun n (map (\(Var _ t) -> t) ps) r)
 context :: [Decl] -> Context
 context (x:xs) = 
         case context xs of
-            Context ss vs fs defs -> 
+            Context ss vs fs defs dums -> 
                 case x of
-                    ConstDecl n t -> Context ss (M.insert n (Var n t) vs) fs defs
-                    FunDecl n ps t -> Context ss vs (M.insert n (Fun n ps t) fs) defs
-                    FunDef n ps t e -> Context ss vs fs (M.insert n (Def n ps t e) defs)
-context [] = Context [] empty empty empty
+                    ConstDecl n t -> 
+                        Context 
+                            ss (M.insert n (Var n t) vs) 
+                            fs defs dums
+                    FunDecl n ps t -> 
+                        Context 
+                            ss vs 
+                            (M.insert n (Fun n ps t) fs)
+                            defs dums
+                    FunDef n ps t e -> 
+                        Context 
+                            ss vs fs 
+                            (M.insert n (Def n ps t e) defs) 
+                            dums
+context [] = Context [] empty empty empty empty
 
-merge_ctx (Context ss0 vs0 fs0 ds0) (Context ss1 vs1 fs1 ds1) = 
+merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
         Context 
             (ss0 ++ ss1) 
             (vs0 `merge` vs1) 
             (fs0 `merge` fs1) 
             (ds0 `merge` ds1)
+            (dum0 `merge` dum1)
 merge_all_ctx cs = Context 
-        (concat $ map f cs) 
-        (merge_all $ map g cs)
-        (merge_all $ map h cs)
-        (merge_all $ map ff cs)
+        (concat $ map f0 cs) 
+        (merge_all $ map f1 cs)
+        (merge_all $ map f2 cs)
+        (merge_all $ map f3 cs)
+        (merge_all $ map f4 cs)
     where
-        f  (Context x _ _ _) = x
-        g  (Context _ x _ _) = x
-        h  (Context _ _ x _) = x
-        ff (Context _ _ _ x) = x
+        f0 (Context x _ _ _ _) = x
+        f1 (Context _ x _ _ _) = x
+        f2 (Context _ _ x _ _) = x
+        f3 (Context _ _ _ x _) = x
+        f4 (Context _ _ _ _ x) = x
 
 class Symbol a where
     decl :: a -> [Decl]
@@ -206,10 +241,11 @@ instance Symbol Def where
     decl (Def name ps typ ex)  = [FunDef name ps typ ex]
 
 instance Symbol Context where
-    decl (Context sorts cons fun defs) = 
+    decl (Context sorts cons fun defs dums) = 
                 concatMap decl (elems cons) 
             ++  concatMap decl (elems fun) 
             ++  concatMap decl (elems defs) 
+            ++  concatMap decl (elems dums) 
 
 class Named n where
     name    :: n -> String
@@ -276,25 +312,19 @@ verify xs = do
                 ++  (map ("> " ++) $ lines out)
                 ++  ["err"]
                 ++  (map ("> " ++) $  lines err) )
---        f (Assert (FunApp fn (FunApp x xs:_)))
---              = "assert: " ++ show x ++ " " ++ show (map as_tree xs)
---                -- ++ show (length xs) ++ " " ++ show fn --(map as_tree xs)
---        f (Assert (FunApp fn xs))    = "assert "
---        f (Assert (Binder _ xs _))   = "assert: quantifier" -- ++ show (length xs)
---        f (Assert (Word _))          = "assert: word"
---        f (Assert (Number _))        = "assert: number"
---        f (Assert (Const _ _))       = "assert: const"
---        f (CheckSat x) = "checksat"
---        f (Decl x)     = "decl"
---        f (GetModel)   = "get-model"
 
 entails 
-    (ProofObligation (Context srt0 cons0 fun0 def0) xs0 ex0 xp0) 
-    (ProofObligation (Context srt1 cons1 fun1 def1) xs1 ex1 xp1) = 
+    (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 ex0 xp0) 
+    (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
             discharge $ po
     where
         po = ProofObligation 
-            (Context (srt0 ++ srt1) empty (fun0 `merge` fun1) (def0 `merge` def1))
+            (Context 
+                (srt0 ++ srt1) 
+                empty 
+                (fun0 `merge` fun1) 
+                (def0 `merge` def1)
+                (dum0 `merge` dum1))
             [zforall (elems cons0) (zimplies (zall xs0) xp0)]
             ex1
             (zforall (elems cons1) (zimplies (zall xs1) xp1))

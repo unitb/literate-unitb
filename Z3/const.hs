@@ -1,6 +1,10 @@
 module Z3.Const where
 
+import Data.List ( tails )
+import Data.Map hiding (foldl)
+
 import Z3.Def
+    
 
 fun1 f x           = FunApp f [x]
 fun2 f x y         = FunApp f [x,y]
@@ -31,6 +35,7 @@ zopp         = fun1 $ Fun "-" [INT] INT
 ztimes       = fun2 $ Fun "*" [INT,INT] INT
 zpow         = fun2 $ Fun "^" [INT,INT] INT
 zint n       = Const (show n) INT
+zelem        = fun2 $ Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL
 
 zapply       = fun2 $ Fun "select" [
         ARRAY (GENERIC "b") $ GENERIC "a", 
@@ -53,10 +58,11 @@ mk_expr Mult x y    = x `ztimes` y
 mk_expr And x y     = x `zand` y 
 mk_expr Power x y   = x `zpow` y
 
-mk_expr Equal x y   = x `zeq` y
-mk_expr Implies x y = x `zimplies` y 
-mk_expr Follows x y = x `zfollows` y 
-mk_expr Leq x y     = x `zle` y
+mk_expr Equal x y      = x `zeq` y
+mk_expr Implies x y    = x `zimplies` y 
+mk_expr Follows x y    = x `zfollows` y 
+mk_expr Leq x y        = x `zle` y
+mk_expr Membership x y = x `zelem` y
 
 chain Equal x         = x
 chain x Equal         = x
@@ -64,3 +70,32 @@ chain Implies Implies = Implies
 chain Follows Follows = Follows
 chain Leq Leq         = Leq
 chain _ _             = error "operators cannot be chained"
+
+
+data Assoc = LeftAssoc | RightAssoc | Ambiguous
+    deriving Show
+
+associativity :: [([Operator],Assoc)]
+associativity = [
+        ([Power],Ambiguous),
+        ([Mult],LeftAssoc),
+        ([Plus],LeftAssoc),
+        ([Equal,Leq],Ambiguous),
+        ([And],LeftAssoc),
+        ([Implies,Follows],Ambiguous) ]
+
+prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]
+
+pairs = fromList (concat (do
+            ((x,_),xs) <- zip a $ tail $ tails a
+            (y,_)      <- xs
+            a          <- x
+            b          <- y
+            return [
+                ((a,b),LeftAssoc),
+                ((b,a),RightAssoc) ])
+        ++ concatMap prod a    )
+    where
+        a = associativity
+
+assoc x y = pairs ! (x,y)
