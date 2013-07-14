@@ -1,6 +1,7 @@
-{-# LANGUAGE BangPatterns #-}
 module Document.Document where
+{-# LANGUAGE BangPatterns #-}
 
+import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
 
 import Data.Char
@@ -8,6 +9,8 @@ import Data.Map hiding ( map, foldl )
 import Data.Maybe
 import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Map as M
+import qualified Data.Set as S
+--import Data.Set as S
 
 import Document.Expression
 
@@ -116,12 +119,12 @@ pop_token ((Text [x1]):ys) = ys
 --              ( match_string "=", \_ -> return (zeq, 2)) ]
 --            (fail "invalid operator")
 
-as_action :: Context -> [LatexDoc] -> Either Error (Map Label Event) 
-as_action ctx c = do
-            (a,b,xs) <- get_2_lbl c
-            e        <- parse_expr ctx (concatMap flatten_li xs)
-            return $ singleton (label a) $ empty_event { action = singleton (label b) e }
-    where
+--as_action :: Context -> [LatexDoc] -> Either Error (Map Label Event) 
+--as_action ctx c = do
+--            (a,b,xs) <- get_2_lbl c
+--            e        <- parse_expr ctx (concatMap flatten_li xs)
+--            return $ singleton (label a) $ empty_event { action = singleton (label b) e }
+--    where
 --        get_labels = do
 --            kk <- cmd_params 2 c
 --            case kk of
@@ -163,7 +166,7 @@ all_machines xs = do
 
 merge_event :: Event -> Event -> Event
 merge_event e@(Event ind0 c0 f0 p0 g0 a0) (Event ind1 c1 f1 p1 g1 a1) = 
-        Event (ind0++ind1) c2 f2 (p0++p1) (g0`union`g1) (a0`union`a1)
+        Event (ind0 `merge` ind1) c2 f2 (p0 `merge` p1) (g0`union`g1) (a0`union`a1)
     where
         c2 = case maybeToList c0 ++ maybeToList c1 of
                 [x,y] -> Just (x `union` y)
@@ -190,14 +193,15 @@ type_decl cs m = g (Right m) cs
         f em (Bracket _ _ xs _)     = g em xs
         f em (Text _)               = em
         g :: Either Error Machine -> [LatexDoc] -> Either Error Machine
-        g em xs = m1
+        g em xs = m2
             where
                 m0 = foldl f em xs 
-                m1 = foldl h m0 (zip3 xs (drop 1 xs) $ drop 2 xs )
-        h :: Either Error Machine
+                m1 = foldl h0 m0 (zip3 xs (drop 1 xs) $ drop 2 xs )
+                m2 = foldl h1 m1 (zip xs $ drop 1 xs)
+        h0 :: Either Error Machine
              -> (LatexDoc,LatexDoc,LatexDoc) 
              -> Either Error Machine
-        h em (
+        h0 em (
                 Text xs, 
                 Bracket _ _ [Text [TextBlock ys _]] _, 
                 Bracket _ _ [Text [zs]] _) =
@@ -205,38 +209,18 @@ type_decl cs m = g (Right m) cs
                 Command "\\newset" (i,j):_ -> do
                     m   <- em
                     let th = theory m
-                    let hd = th { types = types th ++ [lexeme zs] } 
-                    if ys `elem` types th 
+                    let hd = th { types = insert 
+                                    (lexeme zs) 
+                                    (Sort (lexeme zs) ys) 
+                                    (types th) }
+                    if ys `member` types th 
                         then Left ("set '" ++ ys ++ "' is already defined", i, j)
                         else Right m { theory = hd }
                 _ -> em
-        h em _ = em
+        h0 em _ = em
 
-declarations :: [LatexDoc] -> Machine -> Either Error Machine
-declarations cs m = g (Right m) cs
-    where
-        f em e@(Env s _ xs _) 
-                | s == "variable"   = do
-                        m           <- em
-                        vs          <- as_variables (context m) e
-                        return m { variables = fromList vs `union` variables m}
-                | s == "dummy"          = do
-                        m               <- em
-                        vs              <- as_variables (context m) e
-                        return m { theory = (theory m) { 
-                                dummies = merge 
-                                    (fromListWith (error "repeated definition") vs) 
-                                    (dummies $ theory m) } }
-                | otherwise         = foldl f em xs
-        f em (Bracket _ _ xs _)     = g em xs
-        f em (Text _)               = em
-        g :: Either Error Machine -> [LatexDoc] -> Either Error Machine
-        g em xs = m1
-            where
-                m0 = foldl f em xs
-                m1 = foldl h m0 (zip xs $ drop 1 xs)
-        h :: Either Error Machine -> (LatexDoc,LatexDoc) -> Either Error Machine
-        h em (Text xs, Bracket _ _ [Text [TextBlock ys _]] _) =
+        h1 :: Either Error Machine -> (LatexDoc,LatexDoc) -> Either Error Machine
+        h1 em (Text xs, Bracket _ _ [Text [TextBlock ys _]] _) =
             case reverse $ trim_blanks xs of
                 Command "\\newevent" (i,j):_ -> do
                     m   <- em
@@ -245,7 +229,37 @@ declarations cs m = g (Right m) cs
                         then Left ("event '" ++ ys ++ "' is already defined", i, j)
                         else Right m { events = insert lbl (empty_event) $ events m }
                 _ -> em
-        h em _ = em
+        h1 em _ = em
+
+
+declarations :: [LatexDoc] -> Machine -> Either Error Machine
+declarations cs m = g (Right m) cs
+    where
+        f em e@(Env s _ xs _) 
+                | s == "variable"   = do
+                        m           <- em
+                        vs          <- get_variables (context m) xs
+                        return m { variables = fromList vs `union` variables m}
+                | s == "indices"   = do
+                        m           <- em
+                        (evt,rest)  <- get_1_lbl xs
+                        vs          <- get_variables (context m) rest
+                        let old_event = events m ! label evt
+                        let new_event = old_event { 
+                            indices = fromList vs `union` indices old_event }
+                        return m { events = insert (label evt) new_event $ events m }
+                | s == "dummy"          = do
+                        m               <- em
+                        vs              <- get_variables (context m) xs
+                        return m { theory = (theory m) { 
+                                dummies = merge 
+                                    (fromListWith (error "repeated definition") vs) 
+                                    (dummies $ theory m) } }
+                | otherwise         = foldl f em xs
+        f em (Bracket _ _ xs _)     = g em xs
+        f em (Text _)               = em
+        g :: Either Error Machine -> [LatexDoc] -> Either Error Machine
+        g em xs = foldl f em xs
 
         
     -- Todo: report an error if we create assignments (or other events elements)
@@ -253,13 +267,26 @@ declarations cs m = g (Right m) cs
 build_machine :: [LatexDoc] -> Machine -> Either (String,Int,Int) Machine
 build_machine cs m = foldl f (Right $ m) cs
     where
-        f em e@(Env s _ xs _) 
+        f em e@(Env s li xs _) 
                 | s == "evassignment"   = do
-                        m             <- em
-                        (ev,lbl,rest) <- get_2_lbl xs
-                        act           <- as_action (context m) xs
-                        return m { events = unionWith merge_event act
-                                        $ events m } 
+                        m               <- em
+                        (ev,lbl,rest)   <- get_2_lbl xs
+                        act             <- get_expr m rest
+--            return $ singleton (label a) $ empty_event { action = singleton (label b) 
+--                        act           <- as_action (context m) xs
+--                        return m { events = unionWith merge_event act
+--                                        $ events m } 
+                        let evt       = events m ! label ev
+                        let new_event = evt { 
+                                    action = insertWith 
+                                        (error "name class")  
+                                        (label lbl) act
+                                        (action evt) }
+--                                    c_sched =  
+--                                        fmap ( c_sched evt <|> Just empty }
+                        scope (context m) act (params evt `merge` indices evt) li
+                        return m {          
+                                events  = insert (label ev) new_event $ events m }
                 | s == "invariant"      = do
                         m             <- em
                         (lbl,rest)    <- get_1_lbl xs
@@ -277,30 +304,40 @@ build_machine cs m = foldl f (Right $ m) cs
                         m             <- em
                         (ev,lbl,rest) <- get_2_lbl xs
                         tr            <- get_expr m rest
-                        m <- return m {
+                        let prop = Transient (free_vars (context m) tr) tr $ label ev
+                        let old_prog_prop = program_prop $ props m
+                        let new_props     = insert (label lbl) prop $ old_prog_prop
+                        return m {
                             props = (props m) {
-                                program_prop = insert (label lbl) 
-                                    (Transient (free_vars (context m) tr) tr $ label ev)
-                                        $ program_prop $ props m } }
-                        return m
+                                program_prop = new_props } }
                 | s == "cschedule"     = do
                         m              <- em
                         (evt,lbl,rest) <- get_2_lbl xs
                         sched          <- get_expr m rest
-                        let event = singleton (label evt) 
-                                (empty_event { 
-                                    c_sched = Just $ singleton (label lbl) sched })
+                        let old_event = events m ! label evt
+                        let new_event = old_event { 
+                                    c_sched =  
+                                        fmap (insert (label lbl) sched) 
+                                            ( c_sched old_event <|> Just empty ) }
+--                        let event = singleton (label evt) 
+--                                (empty_event { 
+--                                    c_sched = Just $ singleton (label lbl) sched })
+--                        return m {          
+--                                events  = unionWith merge_event event $ events m }
+--                        let event = (events m ! label lbl) { 
+--                                    c_sched = Just $ singleton (label lbl) sched }
+                        scope (context m) sched (indices old_event) li
                         return m {          
-                                events  = unionWith merge_event event $ events m }
+                                events  = insert (label evt) new_event $ events m }
                 | s == "fschedule"     = do
                         m              <- em
                         (evt,lbl,rest) <- get_2_lbl xs
                         sched          <- get_expr m rest
-                        let event = singleton (label evt) 
-                                (empty_event { 
-                                    f_sched = Just sched })
+                        let event = (events m ! label evt) { 
+                                    f_sched = Just sched }
+                        scope (context m) sched (indices event) li
                         return m {          
-                                events  = unionWith merge_event event $ events m }
+                                events  = insert (label evt) event $ events m }
                 | s == "constraint"     = do
                         m               <- em
                         (lbl,rest)      <- get_1_lbl xs
@@ -311,6 +348,14 @@ build_machine cs m = foldl f (Right $ m) cs
                                     $ program_prop $ props m } }
                 | otherwise             = foldl f em xs
         f em x     = fold_doc f em x
+        scope :: Context -> Expr -> Map String Var -> (Int,Int) -> Either Error ()
+        scope ctx xp vs (i,j) = do
+            let fv          = keysSet $ free_vars ctx xp
+            let decl_v      = keysSet vs
+            let undecl_v    = S.toList (fv `S.difference` decl_v)
+            if fv `S.isSubsetOf` decl_v
+            then return ()
+            else Left ("Undeclared variables: " ++ intercalate ", " undecl_v, i,j)
         
 
 get_expr :: Machine -> [LatexDoc] -> Either Error Expr
@@ -370,7 +415,6 @@ collect_proofs cs m = foldl f (Right m) cs --  error "not implemented"
                             (concatMap flatten_li b)
                     hs  <- fmap (map (\(x,y) -> (label x,y))) $ hint c
                     hyp <- mapM find hs
---                    let !() = unsafePerformIO $ print hyp
                     r   <- calc d li
                     return r { 
                         first_step = xp,

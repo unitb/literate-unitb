@@ -63,22 +63,22 @@ theory_facts (Theory d _ _ _ f _) =
 
 assert_ctx :: Machine -> Context
 assert_ctx m = merge_ctx
-          (Context [] (variables m) empty empty empty)
+          (Context empty (variables m) empty empty empty)
           (theory_ctx $ theory m)
 step_ctx :: Machine -> Context
 step_ctx m = merge_all_ctx 
-        [  Context [] (prime_all $ variables m) empty empty empty
-        ,  Context [] (variables m) empty empty empty
+        [  Context empty (prime_all $ variables m) empty empty empty
+        ,  Context empty (variables m) empty empty empty
         , (theory_ctx $ theory m) ]
     where
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
-        prime_var (Var n t) = (Var (n ++ "_prime") t)
+        prime_var (Var n t) = (Var (n ++ "@prime") t)
 
 evt_saf_ctx :: Event -> Context
-evt_saf_ctx evt  = Context [] (fromList $ map as_pair $ params evt) empty empty empty
+evt_saf_ctx evt  = Context empty (params evt) empty empty empty
 
 evt_live_ctx :: Event -> Context
-evt_live_ctx evt = Context [] (fromList $ map as_pair $ indices evt) empty empty empty
+evt_live_ctx evt = Context empty (indices evt) empty empty empty
 
 skip_event m = empty_event { action = 
     fromList $ zip 
@@ -138,8 +138,8 @@ prop_po m pname (Transient fv xp evt_lbl) =
         act  = elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
-        dummy = Context [] (fromList $ map as_pair fv) empty empty empty    
-        exist_ind xp = if null ind then xp else zexists ind xp
+        dummy = Context empty fv empty empty empty    
+        exist_ind xp = if M.null ind then xp else zexists (elems ind) xp
 prop_po m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (insert 
@@ -170,20 +170,20 @@ inv_po m pname xp =
         p = props m
         po lbl evt = 
                 (ProofObligation 
-                    (step_ctx m `merge_ctx` Context [] ind empty empty empty) 
+                    (step_ctx m `merge_ctx` Context empty ind empty empty empty) 
                     (invariants p ++ grd ++ act)
                     False
                     (primed (variables m) xp))
             where
                 grd = elems $ guard evt
                 act = elems $ action evt
-                ind = fromList $ map as_pair (indices evt ++ params evt)
+                ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
 
 fis_po m lbl evt = singleton
         (composite_label [_name m, lbl, fis_lbl])
         (ProofObligation 
-            (assert_ctx m `merge_ctx` Context [] ind empty empty empty)
+            (assert_ctx m `merge_ctx` Context empty ind empty empty empty)
             (invariants p ++ grd)
             True
             (zexists pvar act))
@@ -192,13 +192,15 @@ fis_po m lbl evt = singleton
         grd  = elems $ guard evt
         act  = zall $ elems $ action evt
         pvar = map prime $ elems $ variables m
-        ind  = fromList $ map as_pair (indices evt ++ params evt)
+        ind  = indices evt `merge` params evt
 
 sch_po :: Machine -> Label -> Event -> Map Label ProofObligation
 sch_po m lbl evt = singleton
         (composite_label [_name m, lbl, sch_lbl])
         (ProofObligation 
-            (assert_ctx m `merge_ctx` evt_live_ctx evt)
+            (           assert_ctx m 
+            `merge_ctx` evt_live_ctx evt
+            `merge_ctx` Context empty ind empty empty empty)
             (invariants p ++ sch)
             True
             (exist_param $ zall grd))
@@ -209,8 +211,9 @@ sch_po m lbl evt = singleton
                   Just sch -> elems sch
                   Nothing  -> [zfalse]
         param = params evt
-        ind   = indices evt
-        exist_param xp = if null param then xp else zexists param xp
+--        ind   = indices evt
+        ind   = indices evt `merge` params evt
+        exist_param xp = if M.null param then xp else zexists (M.elems param) xp
 
 thm_po m lbl xp = singleton
         (composite_label [_name m, lbl, thm_lbl])
@@ -224,7 +227,7 @@ thm_po m lbl xp = singleton
 
 primed :: Map String Var -> Expr -> Expr
 primed vs w@(Word (Var vn vt)) 
-        | vn `member` vs    = Word (Var (vn ++ "_prime") vt)
+        | vn `member` vs    = Word (Var (vn ++ "@prime") vt)
         | otherwise         = w
 primed _ c@(Const _ _)      = c
 primed vs (FunApp f xs)     = FunApp f $ map (primed vs) xs

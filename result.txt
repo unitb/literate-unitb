@@ -16,8 +16,57 @@
 |  |  +- [ Success: 5 / 5 ]
 |  +- train station example
 |  |  +- test 0, syntax
-|  |  +- [ Success: 1 / 1 ]
-|  +- [ Success: 3 / 3 ]
+|  |  +- test 1, verification
+|  |    o  m0/INIT/FIS
+|  |    o  m0/enter/FIS
+|  |    o  m0/enter/SC|___|/leave/FIS
+|  |    o  m0/leave/SCH
+|  |    o  m0/leave/TR/EN/tr0
+|  |    o  m0/leave/TR/NEG/tr0
+|  |  passed 6 / 7
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > H\n
+|  |    < H\n
+|  |    -    
+|  |    > _.xxx_.m0
+|  |    < _._.o_._.m0
+|  |    -   ---  --
+|  |  ]
+|  |  +- test 2, proof obligation, INIT/fis
+|  |  +- test 3, proof obligation, leave/fis
+|  |  +- test 4, proof obligation, leave/sch
+|  |  +- test 5, proof obligation, leave/en/tr0
+|  |  +- test 6, proof obligation, leave/neg/tr0
+|  |  +- test 7, undeclared symbol
+|  |  +- [ Success: 7 / 8 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
+|  +- [ Success: 2 / 3 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -38,10 +87,10 @@
 |  +- sample proof
 |  +- check sample calc
 |  +- [ Success: 5 / 5 ]
-+- [ Success: 4 / 4 ]
++- [ Success: 3 / 4 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-    2761   16077  142977
+    2832   16531  148065

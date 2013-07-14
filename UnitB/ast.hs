@@ -29,7 +29,7 @@ label s = Lbl s
 
 data Theory = Theory {
         extends :: [Theory],
-        types   :: [String],
+        types   :: Map String Sort,
         funs    :: Map String Fun,
         consts  :: Map String Var,
         fact    :: Map Label Expr,
@@ -37,21 +37,21 @@ data Theory = Theory {
     deriving Show
 
 empty_theory :: Theory
-empty_theory = Theory [] [] empty empty empty empty
+empty_theory = Theory [] empty empty empty empty empty
 
 --instance Show Theory where
 --    show t = "{ Theory ... }" 
 
 data Event = Event {
-        indices   :: [Var],
+        indices   :: Map String Var,
         c_sched   :: Maybe (Map Label Expr),
         f_sched   :: Maybe Expr,
-        params    :: [Var],
+        params    :: Map String Var,
         guard     :: Map Label Expr,
         action    :: Map Label Expr }
     deriving Show
 
-empty_event = Event [] Nothing  Nothing [] empty empty
+empty_event = Event empty Nothing  Nothing empty empty empty
 
 data Machine = 
     Mch {
@@ -75,7 +75,7 @@ instance Named Machine where
 
 data ProgramProp = 
         Co [Var] Expr
-        | Transient [Var] Expr Label
+        | Transient (Map String Var) Expr Label
 --      | Grd thm
 --      | Sch thm
     deriving Show

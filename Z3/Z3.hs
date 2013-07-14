@@ -80,6 +80,9 @@ instance Tree Decl where
                 (List $ map as_tree dom), 
                 (as_tree ran),
                 (as_tree val) ]
+    as_tree (SortDecl (Sort tag name)) = 
+            List [ Str "declare-sort",
+                Str name ]
 
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
@@ -148,14 +151,16 @@ data ProofObligation = ProofObligation Context [Expr] Bool Expr
 
 instance Show ProofObligation where
     show (ProofObligation (Context ss vs fs ds dum) as _ g) =
-        unlines (
-               map (" " ++)
-            (  ["sort: " ++ intercalate "," ss]
-            ++ (map show $ elems fs)
-            ++ (map show $ elems ds)
-            ++ (map show $ elems vs)
-            ++ map show as)
-            ++ ["|----"," " ++ show g] )
+            unlines (
+                   map (" " ++)
+                (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
+                ++ (map show $ elems fs)
+                ++ (map show $ elems ds)
+                ++ (map show $ elems vs)
+                ++ map show as)
+                ++ ["|----"," " ++ show g] )
+        where
+            f (x, Sort y z) = z
 
 fold_expr f x (Word _)          = x
 fold_expr f x (Number _)        = x
@@ -163,16 +168,16 @@ fold_expr f x (Const _ _)       = x
 fold_expr f x (FunApp _ xs)     = foldl f x xs
 fold_expr f x (Binder _ _ xp)   = f x xp
 
-free_vars :: Context -> Expr -> [Var]
-free_vars (Context _ _ _ _ dum) e = f [] e
+free_vars :: Context -> Expr -> Map String Var
+free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
     where
         f xs (Word v@(Var n t))
-            | n `member` dum = v:xs
-            | otherwise              = xs
+            | n `member` dum = (n,v):xs
+            | otherwise      = xs
         f xs v = fold_expr f xs v
 
 data Context = Context 
-        [String] 
+        (Map String Sort) -- sorts
         (Map String Var)  -- constants
         (Map String Fun)  -- functions and operators
         (Map String Def)  -- transparent definitions
@@ -206,17 +211,17 @@ context (x:xs) =
                             ss vs fs 
                             (M.insert n (Def n ps t e) defs) 
                             dums
-context [] = Context [] empty empty empty empty
+context [] = Context empty empty empty empty empty
 
 merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
         Context 
-            (ss0 ++ ss1) 
+            (ss0 `merge` ss1) 
             (vs0 `merge` vs1) 
             (fs0 `merge` fs1) 
             (ds0 `merge` ds1)
             (dum0 `merge` dum1)
 merge_all_ctx cs = Context 
-        (concat $ map f0 cs) 
+        (merge_all $ map f0 cs) 
         (merge_all $ map f1 cs)
         (merge_all $ map f2 cs)
         (merge_all $ map f3 cs)
@@ -231,6 +236,9 @@ merge_all_ctx cs = Context
 class Symbol a where
     decl :: a -> [Decl]
 
+instance Symbol Sort where
+    decl s = [SortDecl s]
+
 instance Symbol Fun where
     decl (Fun name params ret) = [FunDecl name params ret]
 
@@ -242,10 +250,14 @@ instance Symbol Def where
 
 instance Symbol Context where
     decl (Context sorts cons fun defs dums) = 
-                concatMap decl (elems cons) 
+                concatMap decl (elems sorts)
+            ++  concatMap decl (elems cons) 
             ++  concatMap decl (elems fun) 
             ++  concatMap decl (elems defs) 
-            ++  concatMap decl (elems dums) 
+--            ++  concatMap decl (elems dums) 
+
+symbol_table :: Named a => [a] -> Map String a
+symbol_table xs = fromList $ map as_pair xs
 
 class Named n where
     name    :: n -> String
@@ -271,7 +283,7 @@ merge_all ms = unionsWith f ms
             | x /= y = error "conflicting declaration"
 
 z3_code (ProofObligation d assume exist assert) = 
-    ( (map Decl $ decl d)
+    (      (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat exist] )
@@ -320,7 +332,7 @@ entails
     where
         po = ProofObligation 
             (Context 
-                (srt0 ++ srt1) 
+                (srt0 `merge` srt1) 
                 empty 
                 (fun0 `merge` fun1) 
                 (def0 `merge` def1)

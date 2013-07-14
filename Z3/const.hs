@@ -35,7 +35,7 @@ zopp         = fun1 $ Fun "-" [INT] INT
 ztimes       = fun2 $ Fun "*" [INT,INT] INT
 zpow         = fun2 $ Fun "^" [INT,INT] INT
 zint n       = Const (show n) INT
-zelem        = fun2 $ Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL
+zelem x y    = fun2 (Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL) y x
 
 zapply       = fun2 $ Fun "select" [
         ARRAY (GENERIC "b") $ GENERIC "a", 
@@ -51,12 +51,13 @@ prog_var n t = (Word v, Word $ prime v, v)
     where
         v = Var n t
 
-prime (Var n t) = Var (n ++ "_prime") t
+prime (Var n t) = Var (n ++ "@prime") t
 
 mk_expr Plus x y    = x `zplus` y
 mk_expr Mult x y    = x `ztimes` y
 mk_expr And x y     = x `zand` y 
 mk_expr Power x y   = x `zpow` y
+mk_expr Apply x y   = x `zapply` y
 
 mk_expr Equal x y      = x `zeq` y
 mk_expr Implies x y    = x `zimplies` y 
@@ -77,6 +78,7 @@ data Assoc = LeftAssoc | RightAssoc | Ambiguous
 
 associativity :: [([Operator],Assoc)]
 associativity = [
+        ([Apply],LeftAssoc),
         ([Power],Ambiguous),
         ([Mult],LeftAssoc),
         ([Plus],LeftAssoc),

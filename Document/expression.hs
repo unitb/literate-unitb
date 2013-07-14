@@ -2,8 +2,9 @@ module Document.Expression where
 {-# LANGUAGE BangPatterns #-}
 
 import Data.Char
-import Data.List
+import Data.List as L
 import Data.Map as M hiding ( map )
+import qualified Data.Map as M ( map )
 
 import Latex.Scanner
 import Latex.Parser
@@ -81,13 +82,16 @@ read_list xs = do
             Just x -> return x
             Nothing -> fail ("expecting: " ++ show xs)
             
-type_t :: Context -> Scanner Char Type
-type_t ctx@(Context ts _ _ _ _) = do
-        t <- read_if (== '\\')
+word_or_command =
+    read_if (== '\\')
             (\_ -> do
                 xs <- word
                 return ('\\':xs))
             word
+
+type_t :: Context -> Scanner Char Type
+type_t ctx@(Context ts _ _ _ _) = do
+        t <- word_or_command
         if t == "\\set"
         then do
             eat_space
@@ -106,8 +110,10 @@ type_of :: Context -> String -> Maybe Type
 type_of (Context ts _ _ _ _) x = M.lookup x m
     where
         m = fromList ( 
-                   [("\\Int", INT), ("\\Real", REAL), ("\\Bool", BOOL)]
-                ++ zip ts (map USER_DEFINED ts) )
+                   [("\\Int", INT), ("\\Real", REAL), ("\\Bool", BOOL)])
+            `M.union` M.map z3_type ts
+--                ++ zip (keys ts) (map USER_DEFINED $ map z3_type $ elems ts) )
+        z3_type (Sort _ x) = USER_DEFINED x
 
 vars :: Context -> Scanner Char [(String,Type)]
 vars ctx = do
@@ -118,18 +124,31 @@ vars ctx = do
         eat_space       
         return (map (\x -> (x,t)) vs)     
 
-as_variables :: Context -> LatexDoc -> Either Error [(String, Var)]
-as_variables ctx (Env s _ c _) = do
+get_variables :: Context -> [LatexDoc] -> Either Error [(String, Var)]
+get_variables ctx cs = do
         xs <- read_tokens (vars ctx) m
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
-        m = concatMap flatten_li c
+        m = concatMap flatten_li cs
+
+--as_variables :: Context -> LatexDoc -> Either Error [(String, Var)]
+--as_variables ctx (Env s _ c _) = do
+--        xs <- read_tokens (vars ctx) m
+--        return $ map (\(x,y) -> (x,Var x y)) xs
+--    where
+--        m = concatMap flatten_li c
 
 plus = do
         x <- match $ match_string "+"
         case x of
             Just _ -> return ()
             Nothing -> fail "expecting plus (+)"
+
+fun_app = do
+        x <- match $ match_string "."
+        case x of
+            Just _ -> return ()
+            Nothing -> fail "expecting function application (.)"
 
 leq = do
         x <- match $ match_string "\\le"
@@ -176,8 +195,9 @@ oper = do
                 (leq >> return Leq),
                 (power >> return Power),
                 (membership >> return Membership),
-                (equal >> return Equal) ]
-            (fail "expecting: +, \\cdot, \\implies, \\land, \\le, ^, \\in or =")            
+                (equal >> return Equal),
+                (fun_app >> return Apply) ]
+            (fail "expecting: (.), (+), \\cdot, \\implies, \\land, \\le, ^, \\in or =")            
             return
 
             
@@ -204,15 +224,18 @@ equal = do
 term :: Context -> Scanner Char (Expr)
 term ctx = do
         eat_space
-        try word
+        try word_or_command
             (\xs -> do
                 (ys,zs) <- read_if (== '\'') 
-                    (\x -> return (xs ++ "\'", xs ++ "_prime"))
+                    (\x -> return (xs ++ "\'", xs ++ "@prime"))
                     (return (xs,xs))
                 eat_space
-                case var_decl xs ctx of
-                    Just (Var _ t) -> return (Word $ Var zs t)
-                    Nothing -> fail ("undeclared variable: " ++ xs))
+                case xs `L.lookup` [("\\true",ztrue), ("\\false",zfalse)] of
+                    Just e  -> return e 
+                    Nothing ->
+                        case var_decl xs ctx of
+                            Just (Var _ t) -> return (Word $ Var zs t)
+                            Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
                 xs <- number
                 eat_space

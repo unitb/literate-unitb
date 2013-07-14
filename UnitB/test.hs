@@ -30,7 +30,7 @@ example0 = m
             inits = [x `zeq` zint 0, y `zeq` zint 0],
             props = ps }
         inv0 = x `zeq` (zint 2 `ztimes` y)
-        tr0 = Transient [] (x `zeq` zint 0) (label "evt")
+        tr0 = Transient empty (x `zeq` zint 0) (label "evt")
         co0 = Co [] (x `zle` x')
         (x,x',x_decl) = prog_var "x" INT
         (y,y',y_decl) = prog_var "y" INT
@@ -49,7 +49,8 @@ train_m0 = m
             variables = fromList $ map as_pair [st_decl],
             events = fromList [enter, leave] }
         props = fromList [
-            (label "TR0", Transient [t_decl] (zapply st t) $ label "leave")]
+            (label "TR0", Transient (symbol_table [t_decl]) 
+                (zapply st t) $ label "leave")]
         inv = fromList [inv0]
         inv0 = (label "J0", zforall [t_decl] $
                     zall [(zovl st t zfalse `zeq` zovl st t zfalse)])
@@ -57,7 +58,7 @@ train_m0 = m
         (t,t_decl) = var "t" INT
         enter = (label "enter", empty_event)
         leave = (label "leave", empty_event {
-                indices = [t_decl],
+                indices = symbol_table [t_decl],
                 c_sched = Just $ fromList [(label "C0", (zapply st t))],
                 action  = fromList [(label "A0", st' `zeq` zovl st t zfalse)]
             })
@@ -112,14 +113,14 @@ result_example0_tr_en_po = unlines [
 result_train_m0_tr_po = unlines [
     " sort: ",
     " st: (Array Int Bool)",
-    " st_prime: (Array Int Bool)",
+    " st@prime: (Array Int Bool)",
     " t: Int",
     " (select st t)",
     " (forall ((t Int)) (= (store st t false) (store st t false)))",
     " (select st t)",
-    " (= st_prime (store st t false))",
+    " (= st@prime (store st t false))",
     "|----",
-    " (not (select st_prime t))"
+    " (not (select st@prime t))"
     ]
 
 test_case = ("Unit-B", test, True)

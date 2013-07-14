@@ -33,10 +33,10 @@ var_b = Var "b" INT
 var_c = Var "c" INT
 var_n = Var "n" INT
 
-var_a' = Var "a_prime" INT
-var_b' = Var "b_prime" INT
-var_c' = Var "c_prime" INT
-var_n' = Var "n_prime" INT
+var_a' = Var "a@prime" INT
+var_b' = Var "b@prime" INT
+var_c' = Var "c@prime" INT
+var_n' = Var "n@prime" INT
 
 machine6 = (empty_machine "m0") {
         variables = fromList $ map as_pair [var_a,var_b,var_c,var_n],
@@ -141,10 +141,10 @@ pos = do
 
 result9 = unlines [
         "m0/evt/INV/inv0:",
-        "(= (^ n_prime 3) a_prime)",
+        "(= (^ n@prime 3) a@prime)",
         "----",
-        "    (^ n_prime 3)",
-        "      | (= n_prime (+ n 1))",
+        "    (^ n@prime 3)",
+        "      | (= n@prime (+ n 1))",
         "    (^ (+ n 1) 3)",
         "    (+ (+ (+ (^ n 3) (* 3 (^ n 2)))" ++
                  " (* 3 n))" ++
@@ -155,8 +155,8 @@ result9 = unlines [
               " 1)",
         "      | (= b (+ (+ (* 3 (^ n 2)) (* 3 n)) 1))",
         "    (+ a b)",
-        "      | (= a_prime (+ a b))",
-        "    a_prime"
+        "      | (= a@prime (+ a b))",
+        "    a@prime"
     ]
 case9 = do
         r <- parse_machine path6

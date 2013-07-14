@@ -94,14 +94,14 @@ case3 = do
 result4 = unlines [
         " sort: ",
         " x: Int",
-        " x_prime: Int",
+        " x@prime: Int",
         " y: Int",
-        " y_prime: Int",
+        " y@prime: Int",
         " (= x (* 2 y))",
-        " (= x_prime (+ x 2))",
-        " (= y_prime (+ y 1))",
+        " (= x@prime (+ x 2))",
+        " (= y@prime (+ y 1))",
         "|----",
-        " (= x_prime (* 2 y_prime))"]
+        " (= x@prime (* 2 y@prime))"]
 case4 = do
         ct <- readFile path3
         r <- parse_machine path3
@@ -114,14 +114,14 @@ case4 = do
 result5 = unlines [
         " sort: ",
         " x: Int",
-        " x_prime: Int",
+        " x@prime: Int",
         " y: Int",
-        " y_prime: Int",
+        " y@prime: Int",
         " (= x (* 2 y))",
-        " (= x_prime x)",
-        " (= y_prime y)",
+        " (= x@prime x)",
+        " (= y@prime y)",
         "|----",
-        " (=> (= x 2) (= x_prime 4))"]
+        " (=> (= x 2) (= x@prime 4))"]
 case5 = do
         r <- parse_machine path3
         case r of
@@ -134,8 +134,8 @@ case5 = do
 var_x = Var "x" INT
 var_y = Var "y" INT
 
-var_x' = Var "x_prime" INT
-var_y' = Var "y_prime" INT
+var_x' = Var "x@prime" INT
+var_y' = Var "y@prime" INT
 
 inc_event_m0 = empty_event { 
     action = fromList [
@@ -169,7 +169,7 @@ m0_props = empty_property_set {
 
 m1_props = m0_props {
         program_prop = fromList [
-            (label "tr0", Transient [] (x `zeq` y) (label "inc")),
+            (label "tr0", Transient empty (x `zeq` y) (label "inc")),
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ],
         inv = insert (label "inv1") (x `zeq` (x `ztimes` (y `zplus` z1))) (inv m0_props) }
     where

@@ -22,6 +22,7 @@ data Type = BOOL | INT | REAL
 data Decl = FunDecl String [Type] Type 
     | ConstDecl String Type
     | FunDef String [Var] Type Expr
+    | SortDecl Sort
 
 data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
 
@@ -34,8 +35,12 @@ data Var = Var String Type
 data Def = Def String [Var] Type Expr
     deriving Eq
 
+data Sort = Sort String String
+    deriving (Eq, Show)
+
 data Operator = 
-        Plus | Mult | Equal
+        Apply
+        | Plus | Mult | Equal
         | Membership
         | Leq | Implies 
         | Follows | And | Power
