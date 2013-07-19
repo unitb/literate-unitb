@@ -14,30 +14,28 @@ import Data.List hiding ( union )
 import Data.Map as M hiding (map)
 import Data.Typeable
 
+import UnitB.Theory
+import UnitB.SetTheory
+
 import Z3.Z3
 import Z3.Calculation
 import Z3.Def
 import Z3.Const
 
-data Label = Lbl String
-    deriving (Ord, Eq)
+-----------------------
+-- TODO: REMOVE THIS --
+-----------------------
 
-instance Show Label where
-    show (Lbl s) = s
+--train_type = USER_DEFINED (Sort "\\TRAIN" "TRAIN" []) []
+--train_set_type = USER_DEFINED SET [train_type]
 
-label s = Lbl s
+-----------------------
+-----------------------
 
-data Theory = Theory {
-        extends :: [Theory],
-        types   :: Map String Sort,
-        funs    :: Map String Fun,
-        consts  :: Map String Var,
-        fact    :: Map Label Expr,
-        dummies :: Map String Var }
-    deriving Show
 
 empty_theory :: Theory
-empty_theory = Theory [] empty empty empty empty empty
+empty_theory = Theory [] --[set_theory train_type] 
+    empty empty empty empty empty
 
 --instance Show Theory where
 --    show t = "{ Theory ... }" 

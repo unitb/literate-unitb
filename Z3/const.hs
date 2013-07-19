@@ -35,7 +35,12 @@ zopp         = fun1 $ Fun "-" [INT] INT
 ztimes       = fun2 $ Fun "*" [INT,INT] INT
 zpow         = fun2 $ Fun "^" [INT,INT] INT
 zint n       = Const (show n) INT
-zelem x y    = fun2 (Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL) y x
+--zelem x y    = fun2 (Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL) y x
+zelem x y    = fun2 (Fun "elem" [SET (GENERIC "a"), GENERIC "a"] BOOL) x y
+zsetdiff     = fun2 $ Fun "set-diff" [SET gena,SET gena] $ SET gena
+zmk_set      = fun1 $ Fun "mk-set" [SET gena] $ SET gena
+
+gena = GENERIC "a"
 
 zapply       = fun2 $ Fun "select" [
         ARRAY (GENERIC "b") $ GENERIC "a", 
@@ -65,6 +70,8 @@ mk_expr Follows x y    = x `zfollows` y
 mk_expr Leq x y        = x `zle` y
 mk_expr Membership x y = x `zelem` y
 
+mk_expr SetDiff x y    = x `zsetdiff` y
+
 chain Equal x         = x
 chain x Equal         = x
 chain Implies Implies = Implies
@@ -82,6 +89,7 @@ associativity = [
         ([Power],Ambiguous),
         ([Mult],LeftAssoc),
         ([Plus],LeftAssoc),
+        ([SetDiff],Ambiguous),
         ([Equal,Leq],Ambiguous),
         ([And],LeftAssoc),
         ([Implies,Follows],Ambiguous) ]

@@ -17,62 +17,34 @@
 |  +- train station example
 |  |  +- test 0, syntax
 |  |  +- test 1, verification
-|  |    o  m0/INIT/FIS
-|  |    o  m0/enter/FIS
-|  |    o  m0/enter/SC|___|/leave/FIS
-|  |    o  m0/leave/SCH
-|  |    o  m0/leave/TR/EN/tr0
-|  |    o  m0/leave/TR/NEG/tr0
-|  |  passed 6 / 7
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > H\n
-|  |    < H\n
-|  |    -    
-|  |    > _.xxx_.m0
-|  |    < _._.o_._.m0
-|  |    -   ---  --
-|  |  ]
 |  |  +- test 2, proof obligation, INIT/fis
 |  |  +- test 3, proof obligation, leave/fis
 |  |  +- test 4, proof obligation, leave/sch
 |  |  +- test 5, proof obligation, leave/en/tr0
 |  |  +- test 6, proof obligation, leave/neg/tr0
 |  |  +- test 7, undeclared symbol
-|  |  +- [ Success: 7 / 8 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
-|  +- [ Success: 2 / 3 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  |  +- test 8, undeclared event (wrt transient)
+|  |  +- test 9, undeclared event (wrt c sched)
+|  |  +- test 10, undeclared event (wrt indices)
+|  |  +- test 11, undeclared event (wrt assignment)
+|  |  +- [ Success: 12 / 12 ]
+|  +- [ Success: 3 / 3 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
 |  +- train, m0 PO
 |  +- example0: enabledness PO
-|  +- [ Success: 4 / 4 ]
+|  +- genericity
+|  |  +- unification, t0
+|  |  +- unification, t1
+|  |  +- unification, t2
+|  |  +- type instantiation
+|  |  +- type inference 0
+|  |  +- type inference 1
+|  |  +- type inference 3
+|  |  +- type inference 4
+|  |  +- [ Success: 8 / 8 ]
+|  +- [ Success: 5 / 5 ]
 +- latex parser
 |  +- sample.tex
 |  +- sorted seq err.tex
@@ -87,10 +59,14 @@ Comparison:[
 |  +- sample proof
 |  +- check sample calc
 |  +- [ Success: 5 / 5 ]
-+- [ Success: 3 / 4 ]
++- Formatting utilities
+|  +- test 0
+|  +- test 1
+|  +- [ Success: 2 / 2 ]
++- [ Success: 5 / 5 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-    2832   16531  148065
+    3386   20161  178429

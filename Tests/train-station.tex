@@ -1,6 +1,7 @@
 
 \documentclass[12pt]{amsart}
 \usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
 \usepackage{unitb}
 \usepackage{calculation}
 \usepackage{ulem}
@@ -52,12 +53,16 @@
 	t \in in
 \end{cschedule}
 
+\begin{use:set}{\TRAIN} \end{use:set}
+
 \begin{indices}{leave}
 	t: \TRAIN
 \end{indices}
 
 \begin{evassignment}{leave}{a0}
-	in'.t = \false
+%	in' = in | (t \rightarrow \false)
+	in' = in \setminus \{ t \}
+%	in'.t = \false 
 \end{evassignment}
 %\begin{invariant}{inv0}
 %	a = n^3

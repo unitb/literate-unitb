@@ -121,7 +121,7 @@ read_tokens (Scanner f) xs =
         do  (r, State xs i j) <- f (State xs 0 0)
             case xs of 
                 [] -> return r
-                _ -> Left ("expected end of file", i, j)
+                _ -> Left ("expected end of input", i, j)
         
 
 choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c

@@ -1,12 +1,15 @@
 module Main where
 
+import Control.Concurrent
 import Control.Monad
 
 import Document.Document
 
 import System.Directory
 import System.Environment
-import System.Posix
+--import System.Posix
+
+import Text.Printf
 
 import UnitB.AST
 import UnitB.PO
@@ -22,7 +25,9 @@ check path = do
                 xs <- forM ms check_one
                 putStr $ take 40 $ cycle "\n"
                 forM_ xs (putStrLn . f)
-            Left x -> print x
+            Left (x,i,j) -> do
+                putStr $ take 40 $ cycle "\n"
+                printf "error (%d,%d): %s\n" i j x
     where
         f xs = unlines $ filter p $ lines xs
         p ln = take 4 ln /= "  o "
@@ -43,7 +48,7 @@ main = do
             _ -> putStrLn "usage: continuous file"
     where
         f xs t0 () = do
-            sleep 1
+            threadDelay 1000000
             t1 <- getModificationTime xs
             when (t0 /= t1) $ check xs
             return t1 

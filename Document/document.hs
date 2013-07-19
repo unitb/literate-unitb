@@ -1,5 +1,5 @@
-module Document.Document where
 {-# LANGUAGE BangPatterns #-}
+module Document.Document where
 
 import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
@@ -17,11 +17,14 @@ import Document.Expression
 import Latex.Scanner
 import Latex.Parser
 
-import UnitB.AST
-import UnitB.PO
-
 import System.IO
 import System.IO.Unsafe
+
+import UnitB.AST
+import UnitB.PO
+import UnitB.SetTheory
+
+import Utilities.Format
 
 -- import Text.LaTeX.Base.Syntax
 
@@ -138,6 +141,7 @@ all_machines :: [LatexDoc] -> Either Error (Map String Machine)
 all_machines xs = do
         ms <- L.foldl gather (Right empty) xs
         ms <- L.foldl (f type_decl) (Right ms) xs
+        ms <- L.foldl (f imports) (Right ms) xs
         ms <- L.foldl (f declarations) (Right ms) xs
         ms <- L.foldl (f build_machine) (Right ms) xs
         ms <- L.foldl (f collect_proofs) (Right ms) xs
@@ -185,7 +189,26 @@ merge_event e@(Event ind0 c0 f0 p0 g0 a0) (Event ind1 c1 f1 p1 g1 a1) =
 --            (p0 `ps_union` p1)
 
 context m = step_ctx m -- Context (variables m) empty empty     
+--    where
+--        !() = unsafePerformIO (print $ theory m)
 
+imports :: [LatexDoc] -> Machine -> Either Error Machine 
+imports cs m = foldl f (Right $ m) cs
+    where
+        f em e@(Env s (i,j) xs _)
+                | s == "use:set"        = do
+                        m               <- em 
+                        (cset, _)       <- get_1_lbl xs
+--                        error "not implemented"
+                        let th = theory m
+                        -- error, cset is not a type
+                        case M.lookup cset $ types th of
+                            Just s -> return m { theory = th {
+                                extends = set_theory (USER_DEFINED s []) : extends th } }
+                            Nothing -> Left (format "Carrier set {0} undefined" cset,i,j)
+                | otherwise             = foldl f em xs
+        f em x     = fold_doc f em x
+    
 type_decl :: [LatexDoc] -> Machine -> Either Error Machine
 type_decl cs m = g (Right m) cs
     where
@@ -211,7 +234,7 @@ type_decl cs m = g (Right m) cs
                     let th = theory m
                     let hd = th { types = insert 
                                     (lexeme zs) 
-                                    (Sort (lexeme zs) ys) 
+                                    (Sort (lexeme zs) ys 0) 
                                     (types th) }
                     if ys `member` types th 
                         then Left ("set '" ++ ys ++ "' is already defined", i, j)
@@ -231,11 +254,12 @@ type_decl cs m = g (Right m) cs
                 _ -> em
         h1 em _ = em
 
+--ferror 
 
 declarations :: [LatexDoc] -> Machine -> Either Error Machine
 declarations cs m = g (Right m) cs
     where
-        f em e@(Env s _ xs _) 
+        f em e@(Env s li@(i,j) xs _) 
                 | s == "variable"   = do
                         m           <- em
                         vs          <- get_variables (context m) xs
@@ -244,6 +268,8 @@ declarations cs m = g (Right m) cs
                         m           <- em
                         (evt,rest)  <- get_1_lbl xs
                         vs          <- get_variables (context m) rest
+                        unless (label evt `member` events m) (
+                            Left ("event '" ++ evt ++ "' is undeclared",i,j))
                         let old_event = events m ! label evt
                         let new_event = old_event { 
                             indices = fromList vs `union` indices old_event }
@@ -267,7 +293,7 @@ declarations cs m = g (Right m) cs
 build_machine :: [LatexDoc] -> Machine -> Either (String,Int,Int) Machine
 build_machine cs m = foldl f (Right $ m) cs
     where
-        f em e@(Env s li xs _) 
+        f em e@(Env s li@(i,j) xs _) 
                 | s == "evassignment"   = do
                         m               <- em
                         (ev,lbl,rest)   <- get_2_lbl xs
@@ -276,6 +302,8 @@ build_machine cs m = foldl f (Right $ m) cs
 --                        act           <- as_action (context m) xs
 --                        return m { events = unionWith merge_event act
 --                                        $ events m } 
+                        unless (label ev `member` events m) (
+                            Left ("event '" ++ ev ++ "' is undeclared",i,j))
                         let evt       = events m ! label ev
                         let new_event = evt { 
                                     action = insertWith 
@@ -304,6 +332,8 @@ build_machine cs m = foldl f (Right $ m) cs
                         m             <- em
                         (ev,lbl,rest) <- get_2_lbl xs
                         tr            <- get_expr m rest
+                        unless (label ev `member` events m) (
+                            Left ("event '" ++ ev ++ "' is undeclared",i,j))
                         let prop = Transient (free_vars (context m) tr) tr $ label ev
                         let old_prog_prop = program_prop $ props m
                         let new_props     = insert (label lbl) prop $ old_prog_prop
@@ -314,6 +344,8 @@ build_machine cs m = foldl f (Right $ m) cs
                         m              <- em
                         (evt,lbl,rest) <- get_2_lbl xs
                         sched          <- get_expr m rest
+                        unless (label evt `member` events m) (
+                            Left ("event '" ++ evt ++ "' is undeclared",i,j))
                         let old_event = events m ! label evt
                         let new_event = old_event { 
                                     c_sched =  
@@ -333,6 +365,8 @@ build_machine cs m = foldl f (Right $ m) cs
                         m              <- em
                         (evt,lbl,rest) <- get_2_lbl xs
                         sched          <- get_expr m rest
+                        unless (label evt `member` events m) (
+                            Left (format "event '{0}' is undeclared" evt,i,j))
                         let event = (events m ! label evt) { 
                                     f_sched = Just sched }
                         scope (context m) sched (indices event) li
@@ -355,7 +389,7 @@ build_machine cs m = foldl f (Right $ m) cs
             let undecl_v    = S.toList (fv `S.difference` decl_v)
             if fv `S.isSubsetOf` decl_v
             then return ()
-            else Left ("Undeclared variables: " ++ intercalate ", " undecl_v, i,j)
+            else Left (format "Undeclared variables: {0}" (intercalate ", " undecl_v), i,j)
         
 
 get_expr :: Machine -> [LatexDoc] -> Either Error Expr
@@ -458,9 +492,11 @@ get_1_lbl xs = do -- Right ("", xs)
         case (trim_blank_text x) of
             ([Text [TextBlock x _]]) 
                 -> Right (x,z)
-            _   -> err_msg
+            ([Text [Command x _]]) 
+                -> Right (x,z)
+            _   -> err_msg (line_info x)
     where
-        err_msg = Left  ("expecting a label",-1,-1)
+        err_msg (i,j) = Left  ("expecting a label",i,j)
 get_2_lbl :: [LatexDoc] -> Either Error (String, String, [LatexDoc])
 get_2_lbl xs = do
         (lbl0,xs) <- get_1_lbl xs
@@ -472,17 +508,17 @@ with_print_latex x =
         putStrLn (tex_to_string x)
         return x)
 
-parse_machine :: FilePath -> IO (Either String [Machine])
+parse_machine :: FilePath -> IO (Either Error [Machine])
 parse_machine fn = do
         ct <- readFile fn
         let r = do 
             xs <- latex_structure ct
             r <- all_machines xs
             return $ map snd $ toList $ r
-        let x = case r of
-                    Left xs -> Left $ show xs
-                    Right r -> Right r
-        return x
+--        let x = case r of
+--                    Left xs -> Left xs
+--                    Right r -> Right r
+        return r
 --    where
 --        open (Env _ _ c _) = c
 --        cont (Text xs) = xs

@@ -11,6 +11,9 @@ import Latex.Scanner
 
 import System.IO.Unsafe
 
+class Syntactic a where
+    line_info :: a -> (Int,Int)
+
 data LatexDoc = 
         Env String (Int,Int) [LatexDoc] (Int,Int)
         | Bracket Bool (Int,Int) [LatexDoc] (Int,Int)
@@ -58,11 +61,20 @@ instance Show LatexDoc where
     show (Bracket True _ c _)  = "Bracket {" ++ show c ++ "} "
     show (Bracket False _ c _) = "Bracket [" ++ show c ++ "] "
 
-line_info (Command _ li)    = li
-line_info (TextBlock _ li)  = li
-line_info (Blank _ li)      = li
-line_info (Open _ li)       = li
-line_info (Close _ li)      = li
+instance Syntactic LatexToken where
+    line_info (Command _ li)    = li
+    line_info (TextBlock _ li)  = li
+    line_info (Blank _ li)      = li
+    line_info (Open _ li)       = li
+    line_info (Close _ li)      = li
+
+instance Syntactic LatexDoc where
+    line_info (Env _ li _ _)     = li
+    line_info (Bracket _ li _ _) = li
+    line_info (Text xs)          = line_info $ head xs
+
+instance Syntactic a => Syntactic [a] where
+    line_info xs = line_info $ head xs
 
 --instance Show LatexDoc where
 --    show (Env b li0 xs _) = "Env" ++ show li0 ++ "{" ++ b ++ "} (" ++ show (length xs) ++ ")"

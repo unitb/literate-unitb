@@ -10,6 +10,7 @@ import System.IO
 import System.IO.Unsafe
 
 import UnitB.AST
+import UnitB.Theory
 
 import Z3.Z3
 import Z3.Const
@@ -91,7 +92,7 @@ invariants p = elems (inv p) ++ elems (inv_thm p)
 invariants_only p = elems (inv p)
 
 proof_obligation :: Machine -> Map Label ProofObligation
-proof_obligation m = unions (
+proof_obligation m = M.map f $ unions (
            (map (uncurry $ prop_po m) $ toList $ program_prop p)
         ++ [init_fis_po m]
         ++ (map (uncurry $ inv_po m) $ toList $ inv p) 
@@ -100,6 +101,7 @@ proof_obligation m = unions (
         ++ (map (uncurry $ thm_po m) $ toList $ inv_thm p) )
     where
         p = props m
+        f (ProofObligation a b c d) = ProofObligation a (elems (theory_facts $ theory m)++b) c d
 
 init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = singleton (composite_label [_name m, init_fis_lbl]) po
@@ -232,7 +234,7 @@ primed vs w@(Word (Var vn vt))
 primed _ c@(Const _ _)      = c
 primed vs (FunApp f xs)     = FunApp f $ map (primed vs) xs
 primed vs (Binder q d xp)   = Binder q d (primed (foldr M.delete vs (map name d)) xp)
-primed _ x@(Number _)       = x
+--primed _ x@(Number _)       = x
 
 verify_machine :: Machine -> IO (Int, Int)
 verify_machine m = do

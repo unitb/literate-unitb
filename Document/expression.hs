@@ -92,28 +92,30 @@ word_or_command =
 type_t :: Context -> Scanner Char Type
 type_t ctx@(Context ts _ _ _ _) = do
         t <- word_or_command
-        if t == "\\set"
-        then do
-            eat_space
-            read_list "["
-            eat_space
-            t <- type_t ctx
-            eat_space
-            read_list "]"
-            eat_space
-            return (SET t)
-        else case type_of ctx t of
-                Just t -> return t
-                Nothing -> fail ("Invalid type, '" ++ t ++ "' not found, " ++ show ts)
+        eat_space
+        b <- look_ahead $ read_list "["
+        ts <- if b
+            then do
+                read_list "["
+                eat_space
+                ts <- sep1 (type_t ctx) comma
+                eat_space
+                read_list "]"
+                eat_space
+                return ts
+            else return []
+        case type_of ctx t of
+            Just s -> return $ USER_DEFINED s ts
+            Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
 
-type_of :: Context -> String -> Maybe Type
+type_of :: Context -> String -> Maybe Sort
 type_of (Context ts _ _ _ _) x = M.lookup x m
     where
         m = fromList ( 
-                   [("\\Int", INT), ("\\Real", REAL), ("\\Bool", BOOL)])
-            `M.union` M.map z3_type ts
+                   [("\\Int", IntSort), ("\\Real", RealSort), ("\\Bool", BoolSort)])
+            `M.union` ts
 --                ++ zip (keys ts) (map USER_DEFINED $ map z3_type $ elems ts) )
-        z3_type (Sort _ x) = USER_DEFINED x
+        z3_type s@(Sort _ x _) = USER_DEFINED s
 
 vars :: Context -> Scanner Char [(String,Type)]
 vars ctx = do
@@ -180,11 +182,13 @@ power = do
             Just _  -> return ()
             Nothing -> fail "expecting exponential (^)"
 
-membership = do
-        x <- match $ match_string "\\in"
-        case x of
-            Just _  -> return ()
-            Nothing -> fail "expecting set membership (\\in)"
+membership = 
+        read_list "\\in"
+--        case x of
+--            Just _  -> return ()
+--            Nothing -> fail "expecting set membership (\\in)"
+
+set_diff = read_list "\\setminus"
 
 oper = do
         choice [
@@ -196,8 +200,9 @@ oper = do
                 (power >> return Power),
                 (membership >> return Membership),
                 (equal >> return Equal),
+                (set_diff >> return SetDiff),
                 (fun_app >> return Apply) ]
-            (fail "expecting: (.), (+), \\cdot, \\implies, \\land, \\le, ^, \\in or =")            
+            (fail "expecting an operator")            
             return
 
             
@@ -239,12 +244,13 @@ term ctx = do
             (do 
                 xs <- number
                 eat_space
-                return (Number xs))
+                return (Const xs INT))
 
+number :: Scanner Char String
 number = do
         xs <- match f
         case xs of
-            Just n  -> return $ read n
+            Just n  -> return n
             Nothing -> fail "expecting a number"
     where
         f x
@@ -276,6 +282,11 @@ close_brack = do
             Just _ -> return ()
             Nothing -> fail "expecting a bracket ')'"
 
+
+open_curly = read_list "\\{"
+
+close_curly = read_list "\\}"
+
 expr :: Context -> Scanner Char Expr
 expr ctx = do
         r <- read_term []
@@ -286,19 +297,26 @@ expr ctx = do
             s <- peek
             eat_space
             try open_brack
-                (\() -> do
+                (\_ -> do
                         r <- expr ctx
                         close_brack
                         eat_space
                         read_op xs r
-                    ) $ (do
-                        t <- term ctx
-                        read_op xs t)
+                    ) $ (try open_curly 
+                             (\_ -> do
+                                r <- expr ctx
+                                close_curly
+                                eat_space
+                                read_op xs (zmk_set r)
+                            ) $ (do
+                                t <- term ctx
+                                read_op xs t))
         read_op :: [(Expr, Operator)] -> Expr -> Scanner Char Expr
         read_op xs e0 = do
             b1 <- is_eof
             b2 <- look_ahead close_brack
-            if b1 || b2
+            b3 <- look_ahead close_curly
+            if b1 || b2 || b3
             then do
                 reduce_all xs e0
             else do

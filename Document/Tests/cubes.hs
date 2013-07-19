@@ -1,4 +1,4 @@
-module Document.Tests.Cubes ( test_case ) where
+module Document.Tests.Cubes ( test_case, test ) where
 
 import Data.Map hiding ( map )
 --import qualified Data.Map as M
@@ -8,6 +8,7 @@ import Tests.UnitTest
 
 import UnitB.AST
 import UnitB.PO
+import UnitB.Theory
 
 import Z3.Calculation
 import Z3.Const
@@ -38,14 +39,16 @@ var_b' = Var "b@prime" INT
 var_c' = Var "c@prime" INT
 var_n' = Var "n@prime" INT
 
-machine6 = (empty_machine "m0") {
-        variables = fromList $ map as_pair [var_a,var_b,var_c,var_n],
-        inits = [
-                (c `zeq` z6),
-                (b `zeq` z1),
-                (n `zeq` z0) `zand` (a `zeq` z0) ],
-        props = prop_set6,
-        events = singleton (label "evt") event6_evt }
+machine6 = (empty_machine "m0") 
+        {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
+        ,  inits =
+                [ (c `zeq` z6)
+                , (b `zeq` z1)
+                , (n `zeq` z0) `zand` (a `zeq` z0) 
+                ]
+        ,  props = prop_set6
+        ,  events = singleton (label "evt") event6_evt 
+        }
     where
         a = Word var_a
         b = Word var_b

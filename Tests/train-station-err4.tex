@@ -36,23 +36,29 @@
 %}
 %
 
-\begin{use:set}{\TRAIN} \end{use:set}
-
 \newevent{enter}
 
-\newevent{leave}
+%\newevent{leave}
 
-\begin{transient}{leave}{tr0}
-	t \in in
-\end{transient}
+%\begin{transient}{leave}{tr0}
+%	t \in in
+%\end{transient}
 
 \begin{dummy}
 	t : \TRAIN
 \end{dummy}
 
-\begin{cschedule}{leave}{c0}
-	t \in in
-\end{cschedule}
+%\begin{cschedule}{leave}{c0}
+%	t \in in
+%\end{cschedule}
+%
+%\begin{indices}{leave}
+%	t: \TRAIN
+%\end{indices}
+
+\begin{evassignment}{leave}{a0}
+	in'.t = \false
+\end{evassignment}
 %\begin{invariant}{inv0}
 %	a = n^3
 %\end{invariant}
@@ -198,6 +204,9 @@
 %	c' = c + 6
 %\end{evassignment}
 %
+
+\begin{use:set}{\TRAIN} \end{use:set}
+
 \end{machine}
 
 \end{document}

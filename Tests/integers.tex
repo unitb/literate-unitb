@@ -108,6 +108,9 @@ We now have a new invariant to preserve. It is easy to see how to establish it i
 
 \section{Todo:}
 \begin{itemize}
+\item grammar: make operator grammar generic
+\item grammar: include prefix operators and quantifiers
+\item 
 \item in Z3.Z3.merge, remove the exceptions to integrate it to error handling
 \item spacing in the middle of event and set declarations
 \item testing the input validation, error messages
@@ -125,7 +128,7 @@ We now have a new invariant to preserve. It is easy to see how to establish it i
 \end{itemize}
 
 I'm now describing how I came up with the proof. It came to me in a dream and I forgot it in another dream.
-
+%
 \begin{proof}{evt/INV/inv1}
 	\begin{calculation}
 		3 \cdot (n')^2 + 3 \cdot n' + 1
@@ -150,7 +153,7 @@ I'm now describing how I came up with the proof. It came to me in a dream and I 
 
 \begin{invariant}{inv2}
 	c = 6 \cdot n + 6
-\end{invariant}
+\end{invariant} 
 
 \begin{evassignment}{evt}{a2}
 	b' = b + c

@@ -1,25 +1,39 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Z3.Def where
 
+import Data.Typeable
 
 data Expr = 
         Word Var 
-        | Number Int
+--        | Number Int
         | Const String Type
         | FunApp Fun [Expr]
         | Binder Quantifier [Var] Expr
-    deriving Eq
+    deriving (Eq, Typeable)
 
 data Quantifier = Forall | Exists 
     deriving Eq
 
-data Type = BOOL | INT | REAL 
+data Type = 
+        BOOL | INT | REAL 
         | ARRAY Type Type 
         | GENERIC String 
-        | USER_DEFINED String
+        | USER_DEFINED Sort [Type]
         | SET Type
-    deriving Eq
+    deriving (Eq, Show, Typeable)
 
-data Decl = FunDecl String [Type] Type 
+data Sort =
+        BoolSort | IntSort | RealSort 
+        | Sort String String Int --[String]
+    deriving (Eq, Show)
+
+z3_name (BoolSort) = "Bool"
+z3_name (IntSort) = "Int"
+z3_name (RealSort) = "Real"
+z3_name (Sort _ x _) = x
+
+data Decl = 
+    FunDecl String [Type] Type 
     | ConstDecl String Type
     | FunDef String [Var] Type Expr
     | SortDecl Sort
@@ -35,11 +49,9 @@ data Var = Var String Type
 data Def = Def String [Var] Type Expr
     deriving Eq
 
-data Sort = Sort String String
-    deriving (Eq, Show)
-
 data Operator = 
-        Apply
+        SetDiff
+        | Apply
         | Plus | Mult | Equal
         | Membership
         | Leq | Implies 
