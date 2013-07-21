@@ -20,18 +20,18 @@ import Latex.Parser
 import System.IO
 import System.IO.Unsafe
 
+import Text.Printf
+
 import UnitB.AST
 import UnitB.PO
 import UnitB.SetTheory
+import UnitB.Calculation hiding ( context )
 
 import Utilities.Format
 
 -- import Text.LaTeX.Base.Syntax
 
-import Z3.Z3 hiding ( context )
-import Z3.Calculation hiding ( context )
-import Z3.Const
-import Z3.Def
+import Z3.Z3 -- hiding ( context )
 
 with_print_lbl txt x = unsafePerformIO (do
         putStrLn ("<< " ++ txt ++ ": " ++ show x ++ " >>")
@@ -55,24 +55,12 @@ tex_to_string d = unlines $ concatMap (aux 0) d
                 f '\t'  = "\\t"
                 f x     = [x]
 
---sections = [
---    "machine"]
---
---extract_structure ct = do
---        xs <- latex_structure ct
---        return (find_env sections xs)
---    where
---        open (Env _ _ c _) = c
---        cont (Text xs _) = xs
-
---get_name 
-
 drop_blank_text :: [LatexDoc] -> [LatexDoc]
 drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
 drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
 drop_blank_text xs = xs
 
-trim_blank_text xs = reverse $ drop_blank_text $ reverse $ drop_blank_text xs
+trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
 
 skip_blanks :: [LatexToken] -> [LatexToken]
 skip_blanks (Blank _ _ : xs) = xs
@@ -80,13 +68,6 @@ skip_blanks xs = xs
 
 trim_blanks :: [LatexToken] -> [LatexToken]
 trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
-
-event_lbl = "\\newevent"
-var_env = "variable"
-act_env = "ev:assignment"
-
-cmds = [ event_lbl ]
-envs = [ var_env, act_env ]
 
 cmd_params :: Int -> [LatexDoc] -> Either Error ([[LatexDoc]], [LatexDoc])
 cmd_params 0 xs     = Right ([], xs)
@@ -99,43 +80,9 @@ cmd_params n xs     =
 
 cmd_params_ n xs = fmap fst $ cmd_params n xs
 
---as_event :: [LatexDoc] -> (Label, Event)
---as_event xs = (label name, empty_event)
---    where
---        ys   = pop_token xs
---        name = case map trim_blank_text $ cmd_params_ 1 ys of
---                [ [Text [(TextBlock xs) _ _]] ] -> xs
---                _             -> error "bad name"
-
---with_print x = 
---        unsafePerformIO (do
---            print x
---            return x)
-
 pop_token :: [LatexDoc] -> [LatexDoc]
 pop_token (Text (x1:x2:xs):ys) = Text xs:ys
 pop_token ((Text [x1]):ys) = ys
-
---oper :: Context -> Scanner Char ((Expr -> Expr -> Expr), Int)
---oper ctx = match_first [
---              ( match_string "+", \_ -> return (zplus, 1)),
---              ( match_string "=", \_ -> return (zeq, 2)) ]
---            (fail "invalid operator")
-
---as_action :: Context -> [LatexDoc] -> Either Error (Map Label Event) 
---as_action ctx c = do
---            (a,b,xs) <- get_2_lbl c
---            e        <- parse_expr ctx (concatMap flatten_li xs)
---            return $ singleton (label a) $ empty_event { action = singleton (label b) e }
---    where
---        get_labels = do
---            kk <- cmd_params 2 c
---            case kk of
---                ([  [Text [TextBlock a _]], 
---                    [Text [TextBlock b _]]],xs) -> 
---                    return (a,b,xs)
---                _                                        -> 
---                    Left ("invalid assignment names", -1, -1)
 
 all_machines :: [LatexDoc] -> Either Error (Map String Machine)
 all_machines xs = do
@@ -168,29 +115,20 @@ all_machines xs = do
                 | otherwise         = L.foldl (f pass) em c
         f pass em x                 = fold_doc (f pass) em x
 
-merge_event :: Event -> Event -> Event
-merge_event e@(Event ind0 c0 f0 p0 g0 a0) (Event ind1 c1 f1 p1 g1 a1) = 
-        Event (ind0 `merge` ind1) c2 f2 (p0 `merge` p1) (g0`union`g1) (a0`union`a1)
-    where
-        c2 = case maybeToList c0 ++ maybeToList c1 of
-                [x,y] -> Just (x `union` y)
-                [x]   -> Just x
-                []    -> Nothing
-        f2 = case group (maybeToList f0 ++ maybeToList f1) of
-                [[x],[y]] -> Nothing -- Just (x `zand` y)
-                [x:_]     -> Just x
-                []        -> Nothing
-
---merge_machine :: Machine -> Machine -> Machine
---merge_machine (Mch n t0 v0 i0 ev0 p0) (Mch _ t1 v1 i1 ev1 p1) =
---        Mch n (t0 ++ t1) 
---            (v0 `union` v1) (i0++i1) 
---            (unionWith merge_event ev0 ev1)
---            (p0 `ps_union` p1)
-
-context m = step_ctx m -- Context (variables m) empty empty     
+--merge_event :: Event -> Event -> Event
+--merge_event e@(Event ind0 c0 f0 p0 g0 a0) (Event ind1 c1 f1 p1 g1 a1) = 
+--        Event (ind0 `merge` ind1) c2 f2 (p0 `merge` p1) (g0`union`g1) (a0`union`a1)
 --    where
---        !() = unsafePerformIO (print $ theory m)
+--        c2 = case maybeToList c0 ++ maybeToList c1 of
+--                [x,y] -> Just (x `union` y)
+--                [x]   -> Just x
+--                []    -> Nothing
+--        f2 = case group (maybeToList f0 ++ maybeToList f1) of
+--                [[x],[y]] -> Nothing
+--                [x:_]     -> Just x
+--                []        -> Nothing
+
+context m = step_ctx m
 
 data EnvBlock a = 
         Block0Args ([LatexDoc] -> a -> (Int,Int) -> Either Error a)
@@ -208,33 +146,28 @@ visit_doc blks cmds cs x = do
         g (Right x) cs
     where
         f ((name,c):cs) ex e@(Env s (i,j) xs _)
-            | name == s = do
---                    let !() = if name == "use:set" 
---                        then unsafePerformIO (print "matching use:set")
---                        else ()
-                    x <- ex
-                    case c of
-                        Block0Args g -> do
-                            g xs x (i,j)
-                        Block1Args g -> do
-                            (arg,xs) <- get_1_lbl xs
-                            g arg xs x (i,j)
-                        Block2Args g -> do
-                            (arg0,arg1,xs) <- get_2_lbl xs
-                            g arg0 arg1 xs x (i,j)
-            | otherwise = f cs ex e
+                | name == s = do
+                        x <- ex
+                        case c of
+                            Block0Args g -> do
+                                g xs x (i,j)
+                            Block1Args g -> do
+                                (arg,xs) <- get_1_lbl xs
+                                g arg xs x (i,j)
+                            Block2Args g -> do
+                                (arg0,arg1,xs) <- get_2_lbl xs
+                                g arg0 arg1 xs x (i,j)
+                | otherwise = f cs ex e
         f _ ex (Bracket _ _ cs _)  = do
                 x <- foldl (f blks) ex cs
                 g (Right x) cs
         f _ ex e       = fold_doc (f blks) ex e
---        g :: Either Error a -> [LatexDoc] -> Either Error a
         g ex (Text xs : ts) = do
             case trim_blanks $ reverse xs of
                 Command c (i,j):_   -> h cmds ex c ts (i,j)
                 _                   -> g ex ts
         g ex (t : ts) = g ex ts
         g ex [] = ex
---        h :: [(String,CmdBlock a)] -> Either Error a -> String -> [LatexDoc] -> (Int,Int) -> Either Error a
         h ((name,c):cs) ex cmd ts (i,j)
             | name == cmd   = do
                     x       <- ex
@@ -253,48 +186,25 @@ visit_doc blks cmds cs x = do
             | otherwise     = h cs ex cmd ts (i,j)
         h [] ex cmd ts (i,j) = g ex ts 
 
-
-imports :: [LatexDoc] -> Machine -> Either Error Machine 
-imports = visit_doc 
-            [ ( "use:set"
-              , Block1Args (\cset _ m (i,j) -> do
---                    let !() = unsafePerformIO (print "matching use:set")
-                    let th = theory m
-                    case M.lookup cset $ types th of
-                            Just s -> return m { theory = th {
-                                extends = set_theory (USER_DEFINED s []) : extends th } }
-                            Nothing -> Left (format "Carrier set {0} undefined" cset,i,j) )
-              )
-            ]
-            []
-
---imports cs m = foldl f (Right $ m) cs
---    where
---        f em e@(Env s (i,j) xs _)
---                | s == "use:set"        = do
---                        m               <- em 
---                        (cset, _)       <- get_1_lbl xs
---                        let th = theory m
---                        case M.lookup cset $ types th of
---                            Just s -> return m { theory = th {
---                                extends = set_theory (USER_DEFINED s []) : extends th } }
---                            Nothing -> Left (format "Carrier set {0} undefined" cset,i,j)
---                | otherwise             = foldl f em xs
---        f em x     = fold_doc f em x
-    
 type_decl :: [LatexDoc] -> Machine -> Either Error Machine
 type_decl = visit_doc []
             [  (  "\\newset"
-               ,  Cmd2Args (\tag name m (i,j) -> do
+               ,  Cmd2Args (\name tag m (i,j) -> do
                     let th = theory m
---                    let !() = unsafePerformIO (print "matching a new set")
-                    let hd = th { types = insert 
-                                    name
-                                    (Sort name tag 0) 
-                                    (types th) }
-                    if tag `member` types th 
-                        then Left (format "set '{0}' is already defined" tag, i, j)
-                        else Right m { theory = hd } )
+                    let new_sort = Sort tag name 0
+                    let new_type = USER_DEFINED new_sort []
+                    when (tag `member` types th) $
+                        Left (format "a sort with name '{0}' is already declared" tag,i,j)
+                    when (tag `member` consts th) $
+                        Left (format "a constant with name '{0}' is already declared" tag,i,j)
+                    let hd = th 
+                            {  types = insert 
+                                    tag
+                                    new_sort
+                                    (types th) 
+                            ,  consts = insert tag (Var name $ set_type new_type) $ consts th
+                            }
+                    return m { theory = hd } )
                )
             ,  (  "\\newevent"
                ,  Cmd1Args (\evt m (i,j) -> do 
@@ -350,6 +260,35 @@ type_decl = visit_doc []
 
 --ferror 
 
+imports :: [LatexDoc] -> Machine -> Either Error Machine 
+imports = visit_doc 
+            [ ( "use:set"
+              , Block1Args (\cset _ m (i,j) -> do
+                    let th = theory m
+                    case M.lookup cset $ types th of
+                            Just s -> return m { theory = th {
+                                extends = set_theory (USER_DEFINED s []) : extends th } }
+                            Nothing -> Left (format "Carrier set {0} undefined" cset,i,j) )
+              )
+            ]
+            []
+
+--imports cs m = foldl f (Right $ m) cs
+--    where
+--        f em e@(Env s (i,j) xs _)
+--                | s == "use:set"        = do
+--                        m               <- em 
+--                        (cset, _)       <- get_1_lbl xs
+--                        let th = theory m
+--                        case M.lookup cset $ types th of
+--                            Just s -> return m { theory = th {
+--                                extends = set_theory (USER_DEFINED s []) : extends th } }
+--                            Nothing -> Left (format "Carrier set {0} undefined" cset,i,j)
+--                | otherwise             = foldl f em xs
+--        f em x     = fold_doc f em x
+    
+
+
 declarations :: [LatexDoc] -> Machine -> Either Error Machine
 declarations = visit_doc 
         [   (   "variable"
@@ -367,6 +306,14 @@ declarations = visit_doc
                             indices = fromList vs `union` indices old_event }
                         return m { events = insert (label evt) new_event $ events m } )
             )
+        ,   (   "constant"
+            ,   Block0Args (\xs m (i,j) -> do
+                        vs              <- get_variables (context m) xs
+                        return m { theory = (theory m) { 
+                                consts = merge 
+                                    (fromListWith (error "repeated definition") vs) 
+                                    (consts $ theory m) } } )
+            )
         ,   (   "dummy"
             ,   Block0Args (\xs m (i,j) -> do
                         vs              <- get_variables (context m) xs
@@ -382,7 +329,6 @@ declarations = visit_doc
 --        f em e@(Env s li@(i,j) xs _) 
 --                | s == "variable"   = do
 --                        m           <- em
-----                        let !() = unsafePerformIO (print m)
 --                        vs          <- get_variables (context m) xs
 --                        return m { variables = fromList vs `union` variables m}
 --                | s == "indices"   = do
@@ -434,6 +380,14 @@ build_machine = visit_doc
                         return m { 
                             props = (props m) { 
                                 inv = insert (label lbl) invar $ inv $ props m } } )
+            )
+        ,   (   "assumption"
+            ,   Block1Args (\lbl xs m (i,j) -> do
+                        axm             <- get_expr m xs
+                        let th = theory m
+                        when (label lbl `member` fact th) $ Left (format "{0} is already used for another assertion" lbl,i,j)
+                        return m { 
+                            theory = th { fact = insert (label lbl) axm $ fact th } } )
             )
         ,   (   "initialization"
             ,   Block1Args (\lbl xs m _ -> do
@@ -648,7 +602,9 @@ collect_proofs xs m = visit_doc
             | n == "calculation"    = do
                 xs <- mxs
                 cc <- calc c (i,j)
-                return (cc { goal = infer_goal cc }:xs)
+                case infer_goal cc of
+                    Just cc_goal -> return (cc { goal = cc_goal }:xs)
+                    Nothing      -> Left ("type error",i,j)
             | otherwise             = foldl g mxs c
         g xs x                      = fold_doc g xs x
         calc xs li = 
@@ -698,12 +654,12 @@ collect_proofs xs m = visit_doc
 get_1_lbl :: [LatexDoc] -> Either Error (String, [LatexDoc])
 get_1_lbl xs = do -- Right ("", xs)
         ([x],z) <- cmd_params 1 xs
-        case (trim_blank_text x) of
+        case trim_blank_text x of
             ([Text [TextBlock x _]]) 
                 -> Right (x,z)
             ([Text [Command x _]]) 
                 -> Right (x,z)
-            _   -> err_msg (line_info x)
+            _   -> err_msg (line_info xs)
     where
         err_msg (i,j) = Left  ("expecting a label",i,j)
         

@@ -10,10 +10,8 @@ import Tests.UnitTest
 
 import UnitB.AST
 import UnitB.PO
+import UnitB.Calculation
 
-import Z3.Calculation
-import Z3.Const
-import Z3.Def
 import Z3.Z3
 
 test_case = Case "small machine example" test True
@@ -92,7 +90,7 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
-        " sort: ",
+        " sort: set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",
@@ -112,7 +110,7 @@ case4 = do
             x -> return $ show x
 
 result5 = unlines [
-        " sort: ",
+        " sort: set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",

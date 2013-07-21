@@ -25,15 +25,15 @@ run phase cmd  = do
 
 general = do
         c0 <- rawSystem "ghc" ["test.hs", "--make"] 
-        c3 <- rawSystem "ghc" ["continuous.hs", "--make"]
-        c4 <- rawSystem "ghc" ["verify.hs", "--make"]
-        case c0 `success` c3 `success` c4 of
+        case c0 of
             ExitSuccess -> do
                 c1 <- system "./test > result.txt"
                 system "echo \"Lines of Haskell code:\" >> result.txt"
                 system "grep . */*.hs *.hs | wc >> result.txt"
                 c2 <- rawSystem "cat" ["result.txt"]
-                return $ success c1 c2
+                c3 <- rawSystem "ghc" ["continuous.hs", "--make"]
+                c4 <- rawSystem "ghc" ["verify.hs", "--make"]
+                return (c1 `success` c2 `success` c3 `success` c4)
             ExitFailure _ -> do
                 putStrLn "\n***************"
                 putStrLn   "*** FAILURE ***"

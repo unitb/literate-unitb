@@ -1,12 +1,13 @@
 module Z3.Test where
 
+import Data.Maybe
+
 import Tests.UnitTest
 
 import Z3.Z3 as Z
-import Z3.Def
-import Z3.Const
 
-import Z3.Calculation
+import UnitB.Calculation
+import UnitB.Operator
 
 sample = unlines [
     "(declare-const a Int)",
@@ -34,64 +35,59 @@ sample_ast = [
 
 sample_quant = [
         Decl (FunDecl "f" [INT] INT),
-        Assert (forall [x'] (f x `zless` zint 10)),
-        Assert $ znot (forall [x'] (f x `zless` zint 9)),
+        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 9)),
         CheckSat False,
         GetModel ]
     where
         ff          = Fun "f" [INT] INT
-        f x         = FunApp ff [x]
-        forall      = Binder Forall 
+        f           = maybe1 $ (\x -> FunApp ff [x])
 
 sample_proof = ProofObligation
-        ( Z.context [FunDecl "f" [INT] INT] )
-        [forall [x'] (f x `zless` zint 10)]
+        ( mk_context [FunDecl "f" [INT] INT] )
+        [fromJust $ mzforall [x'] (f x `mzless` mzint 10)]
         False
-        (forall [x'] (f x `zless` zint 12))
+        (fromJust $ mzforall [x'] (f x `mzless` mzint 12))
     where
-        f           = fun1 ff
-        forall      = Binder Forall 
+        f           = maybe1 $ fun1 ff
 
 sample_quant2 = [
         Decl (FunDecl "f" [INT] INT),
-        Assert (forall [x'] (f x `zless` zint 10)),
-        Assert (forall [x'] (f x `zless` zint 11)),
+        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
+        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 11)),
         CheckSat False]
     where
-        f           = fun1 $ Fun "f" [INT] INT
-        forall      = Binder Forall 
+        f           = maybe1 $ fun1 $ Fun "f" [INT] INT
 
 sample_quant3 = [
         Decl (FunDecl "f" [INT] INT),
-        Assert (forall [x'] (f x `zless` zint 10)),
-        Assert $ znot (forall [x'] (f x `zless` zint 11)),
+        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 11)),
         CheckSat False]
     where
-        f           = fun1 $ Fun "f" [INT] INT
-        forall      = Binder Forall 
+        f           = maybe1 $ fun1 $ Fun "f" [INT] INT
         
 
 sample_calc = (Calc  
-        ( Z.context [ FunDecl "f" [BOOL] BOOL,
+        ( mk_context [ FunDecl "f" [BOOL] BOOL,
               FunDef "follows" [x',y'] 
-                BOOL (y `zimplies` x),
+                BOOL (fromJust (y `mzimplies` x)),
               ConstDecl "x" BOOL,
               ConstDecl "y" BOOL ] )
-        ( (x `zimplies` y) `zimplies` (f x `zimplies` f y) )
-                     (f x `zimplies` f y)
-        [ (Equal,    (f x `zeq` (f x `zand` f y)),  [], li),
-          (Equal,    ( f x `zeq` f (x `zand` y) ),  [hyp], li),
-          (Follows,  ( x `zeq` (x `zand` y) ), [], li),
-          (Equal,    ( x `zimplies` y ),        [], li) ]
+        (  fromJust  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
+                   ( fromJust (f x `mzimplies` f y) )
+        [ (Equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li),
+          (Equal,    fromJust ( f x `mzeq` f (x `mzand` y) ),  [hyp], li),
+          (Follows,  fromJust ( x `mzeq` (x `mzand` y) ), [], li),
+          (Equal,    fromJust ( x `mzimplies` y ),        [], li) ]
         li )
     where
-        forall      = Binder Forall 
-        hyp         = forall 
+        hyp         = fromJust $ mzforall 
             [x',y'] 
-            ( (f (x `zand` y) `zeq` (f x `zand` f y)) )
+            ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" BOOL
         (y,y')      = var "y" BOOL
-        f           = fun1 $ Fun "f" [BOOL] BOOL
+        f           = maybe1 $ fun1 $ Fun "f" [INT] INT
         li          = (-1,-1)
 
 indent xs = unlines (map (">  " ++) (lines xs))
@@ -107,7 +103,7 @@ case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
 case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
 case3 = Case "sample proof" (discharge sample_proof) Valid
 
-case4 = Case "check sample calc" (check sample_calc) []
+case4 = Case "check sample calc" (check sample_calc) (Just [])
 
 main = do
         s1 <- verify sample_quant

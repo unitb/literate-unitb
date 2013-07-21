@@ -54,6 +54,7 @@
 \end{cschedule}
 
 \begin{use:set}{\TRAIN} \end{use:set}
+\begin{use:set}{\LOC} \end{use:set}
 
 \begin{indices}{leave}
 	t: \TRAIN
@@ -64,6 +65,17 @@
 	in' = in \setminus \{ t \}
 %	in'.t = \false 
 \end{evassignment}
+
+\newset{LOC}{\LOC}
+
+\begin{constant}
+	ent,plf,ext : \LOC
+\end{constant}
+
+\begin{assumption}{axm0}
+	\LOC = \{ ent, plf, ext \}
+\end{assumption}
+
 %\begin{invariant}{inv0}
 %	a = n^3
 %\end{invariant}

@@ -12,8 +12,7 @@ import Data.Set as S
 
 import Prelude as L
 
-import Z3.Def
-import Z3.Z3
+import Z3.Z3 hiding ( type_of )
 
 import Tests.UnitTest
 

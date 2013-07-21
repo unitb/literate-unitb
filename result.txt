@@ -28,7 +28,8 @@
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
 |  |  +- [ Success: 12 / 12 ]
-|  +- [ Success: 3 / 3 ]
+|  +- the parser is exception free
+|  +- [ Success: 4 / 4 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -69,4 +70,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    3588   21506  192928
+    3820   22662  206682

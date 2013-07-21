@@ -14,13 +14,11 @@ import Data.List hiding ( union )
 import Data.Map as M hiding (map)
 import Data.Typeable
 
-import UnitB.Theory
 import UnitB.SetTheory
+import UnitB.Theory
+import UnitB.Calculation
 
 import Z3.Z3
-import Z3.Calculation
-import Z3.Def
-import Z3.Const
 
 -----------------------
 -- TODO: REMOVE THIS --
@@ -35,7 +33,7 @@ import Z3.Const
 
 empty_theory :: Theory
 empty_theory = Theory [] --[set_theory train_type] 
-    empty empty empty empty empty
+    (symbol_table [set_sort]) empty empty empty empty
 
 --instance Show Theory where
 --    show t = "{ Theory ... }" 

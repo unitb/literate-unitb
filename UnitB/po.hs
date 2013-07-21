@@ -11,11 +11,9 @@ import System.IO.Unsafe
 
 import UnitB.AST
 import UnitB.Theory
+import UnitB.Calculation
 
 import Z3.Z3
-import Z3.Const
-import Z3.Def
-import Z3.Calculation
 
     -- 
     --
@@ -252,32 +250,35 @@ str_verify_machine m =
                 r0 <- check p
                 r1 <- entails (goal_po p) po
                 case (r0,r1) of
-                    ([], Valid) -> 
+                    (Just [], Valid) -> 
                         return (True, ["  o  " ++ show lbl])
                     (r0,r1) -> do
                         let xs = [" xxx " ++ show lbl]
-                        let (r2,r3) = break (1 <=) $ map snd r0
-                        ys <- if null r0
-                            then return []
-                            else
-                                let f (n,(_,_,_,k)) =  if n `elem` r3 
-                                                       then [
-                                                        "    invalid step:  " 
-                                                        ++ show k]
-                                                       else [] 
-                                in
-                                return $ map ("     " ++) ( [
-                                       "incorrect proof: "] 
-                                    ++ ( if null r2 
-                                         then [] 
-                                         else ["    cannot prove a relationship " ++
-                                               "between the first and the last line: " ++ 
-                                               show li ] )
-                                    ++ concatMap f (zip [1..] steps) )
+                        ys <- case r0 of
+                            Just r0 -> do
+                                    let (r2,r3) = break (1 <=) $ map snd r0
+                                    if null r0
+                                        then return []
+                                        else
+                                            let f (n,(_,_,_,k)) =  if n `elem` r3 
+                                                                   then [
+                                                                    "    invalid step:  " 
+                                                                    ++ show k]
+                                                                   else [] 
+                                            in
+                                            return $ map ("     " ++) ( [
+                                                   "incorrect proof: "] 
+                                                ++ ( if null r2 
+                                                     then [] 
+                                                     else ["    cannot prove a relationship " ++
+                                                           "between the first and the last line: " ++ 
+                                                           show li ] )
+                                                ++ concatMap f (zip [1..] steps) )
+                            Nothing -> return ["     type error in proof"]
                         zs <- case r1 of
                             Valid -> return []
                             x ->     return [
-                                   "     "
+                                    "     "
                                 ++ "proof does not match proof obligation: " ++ show li]
                         return (False, xs ++ ys ++ zs)
             else do

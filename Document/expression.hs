@@ -11,6 +11,9 @@ import Latex.Parser
 
 import System.IO.Unsafe
 
+import UnitB.Operator
+import UnitB.SetTheory
+
 import Z3.Const
 import Z3.Def
 import Z3.Z3
@@ -104,12 +107,12 @@ type_t ctx@(Context ts _ _ _ _) = do
                 eat_space
                 return ts
             else return []
-        case type_of ctx t of
+        case get_type ctx t of
             Just s -> return $ USER_DEFINED s ts
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
 
-type_of :: Context -> String -> Maybe Sort
-type_of (Context ts _ _ _ _) x = M.lookup x m
+get_type :: Context -> String -> Maybe Sort
+get_type (Context ts _ _ _ _) x = M.lookup x m
     where
         m = fromList ( 
                    [("\\Int", IntSort), ("\\Real", RealSort), ("\\Bool", BoolSort)])
@@ -205,21 +208,6 @@ oper = do
             (fail "expecting an operator")            
             return
 
-            
---        try plus 
---            (\_ -> return Plus) $
---            try times
---                (\_ -> return Mult) $
---                try implication
---                    (\_ -> return Implies) $
---                    try conjunction
---                        (\_ -> return And) $
---                        try leq
---                            (\_ -> return Leq) $
---                            try power
---                                (\_ -> return Power) $
---                                (do equal ; return Equal)
-
 equal = do
         x <- match $ match_string "="
         case x of
@@ -232,14 +220,14 @@ term ctx = do
         try word_or_command
             (\xs -> do
                 (ys,zs) <- read_if (== '\'') 
-                    (\x -> return (xs ++ "\'", xs ++ "@prime"))
-                    (return (xs,xs))
+                    (\x -> return (\x -> x ++ "\'", \x -> x ++ "@prime"))
+                    (return (id,id))
                 eat_space
                 case xs `L.lookup` [("\\true",ztrue), ("\\false",zfalse)] of
                     Just e  -> return e 
                     Nothing ->
                         case var_decl xs ctx of
-                            Just (Var _ t) -> return (Word $ Var zs t)
+                            Just (Var v t) -> return (Word $ Var (zs v) t) 
                             Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
                 xs <- number
@@ -304,10 +292,12 @@ expr ctx = do
                         read_op xs r
                     ) $ (try open_curly 
                              (\_ -> do
-                                r <- expr ctx
+                                rs <- sep1 (expr ctx) comma
                                 close_curly
                                 eat_space
-                                read_op xs (zmk_set r)
+                                case zset_enum $ map Just rs of
+                                    Just rs -> read_op xs rs 
+                                    Nothing -> fail ("type error")
                             ) $ (do
                                 t <- term ctx
                                 read_op xs t))
@@ -316,7 +306,8 @@ expr ctx = do
             b1 <- is_eof
             b2 <- look_ahead close_brack
             b3 <- look_ahead close_curly
-            if b1 || b2 || b3
+            b4 <- look_ahead comma
+            if b1 || b2 || b3 || b4
             then do
                 reduce_all xs e0
             else do
@@ -326,13 +317,20 @@ expr ctx = do
         reduce [] e0 op0                 = read_term [(e0,op0)]
         reduce xs@( (e0,op0):ys ) e1 op1 = do
             case assoc op0 op1 of
-                LeftAssoc ->  
-                    reduce ys (mk_expr op0 e0 e1) op1
+                LeftAssoc ->  do
+                    e2 <- apply_op op0 e0 e1
+                    reduce ys e2 op1
                 RightAssoc -> read_term ((e1,op1):xs)
                 Ambiguous ->  fail ("ambiguous expression: use parentheses")
         reduce_all [] e               = return e
         reduce_all xs@( (e0,op0):ys ) e1 = do
-                reduce_all ys (mk_expr op0 e0 e1)
+                e2 <- apply_op op0 e0 e1
+                reduce_all ys e2
+
+apply_op op x0 x1 = 
+    case mk_expr op x0 x1 of
+        Just x2 -> return x2
+        Nothing -> fail "type error"
 
 parse_expr :: Context -> [(Char, (Int,Int))] -> Either (String, Int, Int) Expr
 parse_expr ctx c = read_tokens (expr ctx) c

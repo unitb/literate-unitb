@@ -9,10 +9,8 @@ import Tests.UnitTest
 import UnitB.AST
 import UnitB.PO
 import UnitB.Theory
+import UnitB.Calculation
 
-import Z3.Calculation
-import Z3.Const
-import Z3.Def
 import Z3.Z3
 
 test_case = Case "table of cubes example" test True
@@ -121,7 +119,7 @@ case7 = do
 
 path8   = "Tests/integers_t8.tex"
 result8 = unlines [
-        " sort: ",
+        " sort: set [a]",
         " x: Int",
         "|----",
         " (exists ((x Int)) true)"]

@@ -1,6 +1,6 @@
 module Z3.Const where
 
-import Data.List ( tails )
+import Data.List as L ( tails, map )
 import Data.Map hiding (foldl)
 
 import Z3.Def
@@ -11,6 +11,32 @@ fun2 f x y         = FunApp f [x,y]
 fun3 f x y z       = FunApp f [x,y,z]
 fun4 f x0 x1 x2 x3 = FunApp f [x0,x1,x2,x3]
 fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
+
+typed_fun1 f mx           = do
+        x  <- mx
+        fn <- f $ type_of x
+        return $ FunApp fn [x]
+typed_fun2 f mx my         = do
+        x  <- mx
+        y  <- my
+        fn <- f (type_of x) (type_of y)
+        return $ FunApp fn [x,y]
+maybe1 f mx = do
+        x <- mx :: Maybe Expr
+        return $ f x
+maybe2 f mx my = do
+        x <- mx :: Maybe Expr
+        y <- my :: Maybe Expr
+        return $ f x y
+maybe3 f mx my mz = do
+        x <- mx :: Maybe Expr
+        y <- my :: Maybe Expr
+        z <- mz :: Maybe Expr
+        return $ f x y z
+
+--fun3 f x y z       = FunApp f [x,y,z]
+--fun4 f x0 x1 x2 x3 = FunApp f [x0,x1,x2,x3]
+--fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
 
 znot         = fun1 $ Fun "not" [BOOL] BOOL
 zimplies     = fun2 $ Fun "=>"  [BOOL,BOOL] BOOL
@@ -25,6 +51,19 @@ zall []      = ztrue
 zforall      = Binder Forall
 zexists      = Binder Exists
 
+mznot         = maybe1 znot
+mzimplies     = maybe2 zimplies
+mzand         = maybe2 zand
+mzor          = maybe2 zor
+mzeq          = maybe2 zeq
+mzfollows     = maybe2 zfollows
+mztrue        = Just ztrue
+mzfalse       = Just zfalse
+mzall (x:xs)  = foldl mzand x xs
+mzall []      = mztrue
+mzforall xs   = maybe1 $ zforall xs
+mzexists xs   = maybe1 $ zexists xs
+
 zless        = fun2 $ Fun "<" [INT,INT] BOOL
 zgreater     = fun2 $ Fun ">" [INT,INT] BOOL
 zle          = fun2 $ Fun "<=" [INT,INT] BOOL
@@ -35,10 +74,17 @@ zopp         = fun1 $ Fun "-" [INT] INT
 ztimes       = fun2 $ Fun "*" [INT,INT] INT
 zpow         = fun2 $ Fun "^" [INT,INT] INT
 zint n       = Const (show n) INT
---zelem x y    = fun2 (Fun "select" [SET (GENERIC "a"), GENERIC "a"] BOOL) y x
-zelem x y    = fun2 (Fun "elem" [SET (GENERIC "a"), GENERIC "a"] BOOL) x y
-zsetdiff     = fun2 $ Fun "set-diff" [SET gena,SET gena] $ SET gena
-zmk_set      = fun1 $ Fun "mk-set" [SET gena] $ SET gena
+
+mzless        = maybe2 zless
+mzgreater     = maybe2 zgreater
+mzle          = maybe2 zle
+mzge          = maybe2 zge
+mzplus        = maybe2 zplus
+mzminus       = maybe2 zminus
+mzopp         = fun1 $ Fun "-" [INT] INT
+mztimes       = maybe2 ztimes
+mzpow         = maybe2 zpow
+mzint n       = Just $ zint n
 
 gena = GENERIC "a"
 
@@ -51,61 +97,13 @@ zovl        = fun3 $ Fun "store" [
         GENERIC "b", GENERIC "a"] $ 
     ARRAY (GENERIC "b") $ GENERIC "a"
 
-var n t = (Word $ Var n t, Var n t)
-prog_var n t = (Word v, Word $ prime v, v)
+mzapply = maybe2 zapply
+mzovl = maybe3 zovl
+
+var n t = (Just $ Word $ Var n t, Var n t)
+prog_var n t = (Just $ Word v, Just $ Word $ prime v, v)
     where
         v = Var n t
 
 prime (Var n t) = Var (n ++ "@prime") t
 
-mk_expr Plus x y    = x `zplus` y
-mk_expr Mult x y    = x `ztimes` y
-mk_expr And x y     = x `zand` y 
-mk_expr Power x y   = x `zpow` y
-mk_expr Apply x y   = x `zapply` y
-
-mk_expr Equal x y      = x `zeq` y
-mk_expr Implies x y    = x `zimplies` y 
-mk_expr Follows x y    = x `zfollows` y 
-mk_expr Leq x y        = x `zle` y
-mk_expr Membership x y = x `zelem` y
-
-mk_expr SetDiff x y    = x `zsetdiff` y
-
-chain Equal x         = x
-chain x Equal         = x
-chain Implies Implies = Implies
-chain Follows Follows = Follows
-chain Leq Leq         = Leq
-chain _ _             = error "operators cannot be chained"
-
-
-data Assoc = LeftAssoc | RightAssoc | Ambiguous
-    deriving Show
-
-associativity :: [([Operator],Assoc)]
-associativity = [
-        ([Apply],LeftAssoc),
-        ([Power],Ambiguous),
-        ([Mult],LeftAssoc),
-        ([Plus],LeftAssoc),
-        ([SetDiff],Ambiguous),
-        ([Equal,Leq],Ambiguous),
-        ([And],LeftAssoc),
-        ([Implies,Follows],Ambiguous) ]
-
-prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]
-
-pairs = fromList (concat (do
-            ((x,_),xs) <- zip a $ tail $ tails a
-            (y,_)      <- xs
-            a          <- x
-            b          <- y
-            return [
-                ((a,b),LeftAssoc),
-                ((b,a),RightAssoc) ])
-        ++ concatMap prod a    )
-    where
-        a = associativity
-
-assoc x y = pairs ! (x,y)

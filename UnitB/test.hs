@@ -2,6 +2,7 @@ module UnitB.Test where
 
 import Control.Monad
 
+import Data.Maybe 
 import Data.Map hiding (map)
 
 import System.IO
@@ -18,22 +19,25 @@ import Z3.Z3
 import Z3.Const
 import Z3.Def
 
+mk_just xs = map fromJust xs
+mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
+
 example0 :: Machine
 example0 = m
     where
         evt = empty_event { 
-            c_sched = Just $ singleton (label "sch0") (x `zeq` y),   
-            action = fromList [
-                (label "S0", x' `zeq` (x `zplus` zint 2)),
-                (label "S1", y' `zeq` (y `zplus` zint 1)) ] }
+            c_sched = Just $ singleton (label "sch0") $ fromJust (x `mzeq` y),   
+            action = fromList $ mk_snd_just [
+                (label "S0", x' `mzeq` (x `mzplus` mzint 2)),
+                (label "S1", y' `mzeq` (y `mzplus` mzint 1)) ] }
         m = (empty_machine "m0") {
             variables = fromList $ map as_pair [x_decl,y_decl],
             events = singleton (label "evt") evt,
-            inits = [x `zeq` zint 0, y `zeq` zint 0],
+            inits = mk_just [x `mzeq` mzint 0, y `mzeq` mzint 0],
             props = ps }
-        inv0 = x `zeq` (zint 2 `ztimes` y)
-        tr0 = Transient empty (x `zeq` zint 0) (label "evt")
-        co0 = Co [] (x `zle` x')
+        inv0 = fromJust (x `mzeq` (mzint 2 `mztimes` y))
+        tr0 = Transient empty (fromJust (x `mzeq` mzint 0)) (label "evt")
+        co0 = Co [] (fromJust (x `mzle` x'))
         (x,x',x_decl) = prog_var "x" INT
         (y,y',y_decl) = prog_var "y" INT
         ps = empty_property_set {
@@ -52,17 +56,17 @@ train_m0 = m
             events = fromList [enter, leave] }
         props = fromList [
             (label "TR0", Transient (symbol_table [t_decl]) 
-                (zapply st t) $ label "leave")]
-        inv = fromList [inv0]
-        inv0 = (label "J0", zforall [t_decl] $
-                    zall [(zovl st t zfalse `zeq` zovl st t zfalse)])
+                (fromJust $ mzapply st t) $ label "leave")]
+        inv = fromList $ mk_snd_just [inv0]
+        inv0 = (label "J0", mzforall [t_decl] $
+                    mzall [(mzovl st t mzfalse `mzeq` mzovl st t mzfalse)])
         (st,st',st_decl) = prog_var "st" (ARRAY INT BOOL)
         (t,t_decl) = var "t" INT
         enter = (label "enter", empty_event)
         leave = (label "leave", empty_event {
                 indices = symbol_table [t_decl],
-                c_sched = Just $ fromList [(label "C0", (zapply st t))],
-                action  = fromList [(label "A0", st' `zeq` zovl st t zfalse)]
+                c_sched = Just $ fromList $ mk_snd_just [(label "C0", (mzapply st t))],
+                action  = fromList $ mk_snd_just [(label "A0", st' `mzeq` mzovl st t mzfalse)]
             })
         ps = empty_property_set { program_prop = props, inv = inv }
 
@@ -105,7 +109,7 @@ result_train_m0 = unlines [
 --    ""]
 
 result_example0_tr_en_po = unlines [
-    " sort: ",
+    " sort: set [a]",
     " x: Int",
     " y: Int",
     " (= x (* 2 y))",
@@ -113,7 +117,7 @@ result_example0_tr_en_po = unlines [
     " (=> (= x 0) (= x y))"]
 
 result_train_m0_tr_po = unlines [
-    " sort: ",
+    " sort: set [a]",
     " st: (Array Int Bool)",
     " st@prime: (Array Int Bool)",
     " t: Int",
