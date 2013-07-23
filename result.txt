@@ -99,7 +99,27 @@ Comparison:[
 |  +- train, model 0, verification
 |  +- train, m0 PO
 |  +- example0: enabledness PO
-|  +- [ Success: 4 / 4 ]
+|  +- genericity
+|  |  +- unification, t0
+|  |  +- unification, t1
+|  |  +- unification, t2
+|  |  +- unification, t3
+|  |  +- unification, t4
+|  |  +- unification, t5
+|  |  +- unification, t6
+|  |  +- type instantiation
+|  |  +- type inference 1
+|  |  +- type inference 3
+|  |  +- type inference 4
+|  |  +- instantiation of unified types is unique
++++ OK, passed 100 tests.
+|  |  +- instantiation of unified types is unique (counter examples)
+|  |  +- types unify with self
++++ OK, passed 100 tests.
+|  |  +- type mapping are acyclic
++++ OK, passed 100 tests.
+|  |  +- [ Success: 15 / 15 ]
+|  +- [ Success: 5 / 5 ]
 +- latex parser
 |  +- sample.tex
 |  +- sorted seq err.tex
@@ -124,4 +144,4 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-    4255   27440  236488
+    4439   28686  248870

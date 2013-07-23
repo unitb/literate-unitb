@@ -11,7 +11,7 @@ import System.Posix.IO
 import Tests.UnitTest
 
 import UnitB.AST
---import qualified UnitB.Genericity as Gen
+import qualified UnitB.TestGenericity as Gen
 import UnitB.PO
 import UnitB.Theory
 import UnitB.FunctionTheory
@@ -20,6 +20,14 @@ import Z3.Z3
 
 mk_just xs = map fromJust xs
 mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
+
+test = test_cases 
+        [  Case "'x eventually increases' verifies" (check example0) result_example0
+        ,  Case "train, model 0, verification" (check train_m0) result_train_m0
+        ,  Case "train, m0 PO" (get_tr_po train_m0) result_train_m0_tr_po
+        ,  Case "example0: enabledness PO" (get_en_po example0) result_example0_tr_en_po
+        ,  Gen.test_case
+        ]
 
 example0 :: Machine
 example0 = m
@@ -133,14 +141,6 @@ test_case = ("Unit-B", test, True)
 check m = do
     (xs,_,_) <- str_verify_machine m
     return xs
-
-test = test_cases 
-        [  Case "'x eventually increases' verifies" (check example0) result_example0
-        ,  Case "train, model 0, verification" (check train_m0) result_train_m0
-        ,  Case "train, m0 PO" (get_tr_po train_m0) result_train_m0_tr_po
-        ,  Case "example0: enabledness PO" (get_en_po example0) result_example0_tr_en_po
---        ,  Gen.test_case
-        ]
 
 main = do
     verify_machine example0
