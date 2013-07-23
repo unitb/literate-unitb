@@ -10,24 +10,43 @@ import qualified Data.Map as M
 import Data.Set as S 
     hiding ( map, fromList, insert, foldl )
 
+import Data.Graph
+
 import Prelude as L
 
 import Z3.Z3 hiding ( type_of )
 
 import Tests.UnitTest
 
+data Unification = Uni
+    { left_to_right :: Map String Type
+    , right_to_left :: Map String Type
+    , vertices :: Map String Vertex
+    , dependencies :: Graph 
+    }
+
+suffix_generics :: String -> Type -> Type
+suffix_generics _ BOOL = BOOL
+suffix_generics _ INT = INT
+suffix_generics _ REAL = REAL
+suffix_generics xs (GENERIC x) = GENERIC (x ++ "@" ++ xs)
+suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
+
     -- A
-unify :: Type -> Type -> Maybe (Map String Type)
-unify BOOL BOOL = Just M.empty
-unify INT INT   = Just M.empty
-unify REAL REAL = Just M.empty
-unify t0@(GENERIC x) t1@(GENERIC y) 
-        | x == y = Just M.empty
+unify_aux :: Type -> Type -> Maybe (Map String Type)
+unify_aux BOOL BOOL = Just
+unify_aux INT INT   = Just
+unify_aux REAL REAL = Just
+unify_aux t0@(GENERIC x) t1@(GENERIC y) u
+        | x == y = Just u { 
         | True   = Nothing
-unify (GENERIC x) t
+unify_aux (GENERIC x) t
         | S.null $ generics t = Just $ M.singleton x t
         | otherwise           = Nothing
-unify (USER_DEFINED x xs) (USER_DEFINED y ys) 
+unify_aux t (GENERIC x)
+        | S.null $ generics t = Just $ M.singleton x t
+        | otherwise           = Nothing
+unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) 
         | x == y && length xs == length ys = foldl f (Just M.empty) (zip xs ys)
         | otherwise                        = Nothing
     where
@@ -35,11 +54,8 @@ unify (USER_DEFINED x xs) (USER_DEFINED y ys)
                 r0 <- mr
                 r1 <- unify x y
                 merge_inst r0 r1
-unify (SET t0) (SET t1) = unify t0 t1
-unify t (GENERIC x)
-        | S.null $ generics t = Just $ M.singleton x t
-        | otherwise           = Nothing
-unify _ _ = Nothing
+unify_aux (SET t0) (SET t1) = unify t0 t1
+unify_aux _ _ = Nothing
 
     -- merge type instances
 merge_inst :: Map String Type -> Map String Type -> Maybe (Map String Type)

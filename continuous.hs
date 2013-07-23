@@ -25,9 +25,9 @@ check path = do
                 xs <- forM ms check_one
                 putStr $ take 40 $ cycle "\n"
                 forM_ xs (putStrLn . f)
-            Left (x,i,j) -> do
+            Left xs -> do
                 putStr $ take 40 $ cycle "\n"
-                printf "error (%d,%d): %s\n" i j x
+                forM_ xs (\(x,i,j) -> printf "error (%d,%d): %s\n" i j x)
     where
         f xs = unlines $ filter p $ lines xs
         p ln = take 4 ln /= "  o "
@@ -48,7 +48,7 @@ main = do
             _ -> putStrLn "usage: continuous file"
     where
         f xs t0 () = do
-            threadDelay 1000000
+            threadDelay 100000
             t1 <- getModificationTime xs
             when (t0 /= t1) $ check xs
             return t1 

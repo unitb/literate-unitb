@@ -1,7 +1,10 @@
-module Z3.Const where
+module Z3.Const
+where
 
 import Data.List as L ( tails, map )
 import Data.Map hiding (foldl)
+
+import Utilities.Format
 
 import Z3.Def
     
@@ -13,25 +16,25 @@ fun4 f x0 x1 x2 x3 = FunApp f [x0,x1,x2,x3]
 fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
 
 typed_fun1 f mx           = do
-        x  <- mx
+        x  <- mx :: Either String Expr
         fn <- f $ type_of x
         return $ FunApp fn [x]
 typed_fun2 f mx my         = do
-        x  <- mx
-        y  <- my
+        x  <- mx :: Either String Expr
+        y  <- my :: Either String Expr
         fn <- f (type_of x) (type_of y)
         return $ FunApp fn [x,y]
 maybe1 f mx = do
-        x <- mx :: Maybe Expr
+        x <- mx :: Either String Expr
         return $ f x
 maybe2 f mx my = do
-        x <- mx :: Maybe Expr
-        y <- my :: Maybe Expr
+        x <- mx :: Either String Expr
+        y <- my :: Either String Expr
         return $ f x y
 maybe3 f mx my mz = do
-        x <- mx :: Maybe Expr
-        y <- my :: Maybe Expr
-        z <- mz :: Maybe Expr
+        x <- mx :: Either String Expr
+        y <- my :: Either String Expr
+        z <- mz :: Either String Expr
         return $ f x y z
 
 --fun3 f x y z       = FunApp f [x,y,z]
@@ -57,8 +60,8 @@ mzand         = maybe2 zand
 mzor          = maybe2 zor
 mzeq          = maybe2 zeq
 mzfollows     = maybe2 zfollows
-mztrue        = Just ztrue
-mzfalse       = Just zfalse
+mztrue        = Right ztrue
+mzfalse       = Right zfalse
 mzall (x:xs)  = foldl mzand x xs
 mzall []      = mztrue
 mzforall xs   = maybe1 $ zforall xs
@@ -84,26 +87,18 @@ mzminus       = maybe2 zminus
 mzopp         = fun1 $ Fun "-" [INT] INT
 mztimes       = maybe2 ztimes
 mzpow         = maybe2 zpow
-mzint n       = Just $ zint n
+mzint n       = Right $ zint n
 
 gena = GENERIC "a"
 
-zapply       = fun2 $ Fun "select" [
-        ARRAY (GENERIC "b") $ GENERIC "a", 
-        GENERIC "b"] $ 
-    GENERIC "a"
-zovl        = fun3 $ Fun "store" [
-        ARRAY (GENERIC "b") $ GENERIC "a", 
-        GENERIC "b", GENERIC "a"] $ 
-    ARRAY (GENERIC "b") $ GENERIC "a"
-
-mzapply = maybe2 zapply
-mzovl = maybe3 zovl
-
-var n t = (Just $ Word $ Var n t, Var n t)
-prog_var n t = (Just $ Word v, Just $ Word $ prime v, v)
+var n t      = (Right $ Word $ v, v)
+    where
+        v = Var n t
+prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
     where
         v = Var n t
 
 prime (Var n t) = Var (n ++ "@prime") t
 
+fromJust (Right x) = x
+fromJust (Left msg) = error $ format "error: {0}" msg

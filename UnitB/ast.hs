@@ -14,6 +14,7 @@ import Data.List hiding ( union )
 import Data.Map as M hiding (map)
 import Data.Typeable
 
+import UnitB.FunctionTheory
 import UnitB.SetTheory
 import UnitB.Theory
 import UnitB.Calculation
@@ -33,7 +34,7 @@ import Z3.Z3
 
 empty_theory :: Theory
 empty_theory = Theory [] --[set_theory train_type] 
-    (symbol_table [set_sort]) empty empty empty empty
+    (symbol_table [set_sort,fun_sort]) empty empty empty empty
 
 --instance Show Theory where
 --    show t = "{ Theory ... }" 

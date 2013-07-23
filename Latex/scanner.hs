@@ -6,7 +6,9 @@ import Control.Monad.Instances
 data State a = State [(a,(Int,Int))] Int Int
 
 data Scanner a b = 
-    Scanner (State a -> Either (String, Int, Int) (b, State a))
+    Scanner (State a -> Either [Error] (b, State a))
+
+type Error = (String,Int,Int)
 
 --instance Monad (Either a) where
 --    return        = Right
@@ -15,7 +17,7 @@ data Scanner a b =
 
 instance Monad (Scanner a) where
     f >>= gF = comb f gF
-    fail s   = Scanner (\(State _ i j) -> Left (s, i, j))
+    fail s   = Scanner (\(State _ i j) -> Left [(s, i, j)])
     return x = Scanner (\s -> Right (x,s))
     
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
@@ -78,7 +80,7 @@ is_eof = do
 read_char = Scanner f
     where
         f s@(State ((x,(i,j)):xs) _ _) = Right (x, State xs i j)
-        f s@(State [] i j)             = Left ("Expected: character", i, j)
+        f s@(State [] i j)             = Left [("Expected: character", i, j)]
 
 read_string :: Int -> Scanner a [a]
 read_string 0 = return []
@@ -113,15 +115,15 @@ match_first ((p,f):xs) x = do
             Just ys -> f ys
             Nothing -> match_first xs x
 
-read_lines :: Scanner Char a -> String -> Either (String, Int, Int) a 
+read_lines :: Scanner Char a -> String -> Either [Error] a 
 read_lines s xs = read_tokens s (line_number xs)
 
-read_tokens :: Scanner a b -> [(a, (Int,Int))] -> Either (String, Int, Int) b
+read_tokens :: Scanner a b -> [(a, (Int,Int))] -> Either [Error] b
 read_tokens (Scanner f) xs = 
         do  (r, State xs i j) <- f (State xs 0 0)
             case xs of 
                 [] -> return r
-                _ -> Left ("expected end of input", i, j)
+                _ -> Left [("expected end of input", i, j)]
         
 
 choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c

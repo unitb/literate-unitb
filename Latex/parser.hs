@@ -235,7 +235,7 @@ begin_block = do
     rest <- latex_content 
     return (Env begin li0 ct li1:rest)
 
-latex_structure :: String -> Either (String, Int, Int) [LatexDoc]
+latex_structure :: String -> Either [Error] [LatexDoc]
 latex_structure xs = do
         ys <- read_lines tex_tokens (uncomment xs)
         read_tokens latex_content ys

@@ -4,6 +4,7 @@ import Data.List as L
 import Data.Map hiding ( foldl )
 
 import UnitB.SetTheory
+import UnitB.FunctionTheory
 
 import Z3.Def
 import Z3.Const
@@ -13,24 +14,27 @@ data Operator =
         | Apply
         | Plus | Mult | Equal
         | Membership
+        | TotalFunction
         | Leq | Implies 
         | Follows | And | Power
     deriving (Eq,Ord,Show,Enum)
 
-mk_expr :: Operator -> Expr -> Expr -> Maybe Expr
-mk_expr Plus x y    = Just x `mzplus` Just y
-mk_expr Mult x y    = Just x `mztimes` Just y
-mk_expr And x y     = Just x `mzand` Just y 
-mk_expr Power x y   = Just x `mzpow` Just y
-mk_expr Apply x y   = Just (x `zapply` y)
+mk_expr :: Operator -> Expr -> Expr -> Either String Expr
+mk_expr Plus x y    = Right x `mzplus` Right y
+mk_expr Mult x y    = Right x `mztimes` Right y
+mk_expr And x y     = Right x `mzand` Right y 
+mk_expr Power x y   = Right x `mzpow` Right y
+mk_expr Apply x y   = Right x `zapply` Right y
 
-mk_expr Equal x y      = Just x `mzeq` Just y
-mk_expr Implies x y    = Just x `mzimplies` Just y 
-mk_expr Follows x y    = Just x `mzfollows` Just y 
-mk_expr Leq x y        = Just x `mzle` Just y
-mk_expr Membership x y = Just x `zelem` Just y
+mk_expr Equal x y      = Right x `mzeq` Right y
+mk_expr Implies x y    = Right x `mzimplies` Right y 
+mk_expr Follows x y    = Right x `mzfollows` Right y 
+mk_expr Leq x y        = Right x `mzle` Right y
+mk_expr Membership x y = Right x `zelem` Right y
 
-mk_expr SetDiff x y    = Just x `zsetdiff` Just y
+mk_expr SetDiff x y    = Right x `zsetdiff` Right y
+
+mk_expr TotalFunction x y = Right x `ztfun` Right y
 
 chain Equal x         = x
 chain x Equal         = x
@@ -50,7 +54,8 @@ associativity = [
         ([Mult],LeftAssoc),
         ([Plus],LeftAssoc),
         ([SetDiff],Ambiguous),
-        ([Equal,Leq],Ambiguous),
+        ([TotalFunction],Ambiguous),
+        ([Equal,Leq,Membership],Ambiguous),
         ([And],LeftAssoc),
         ([Implies,Follows],Ambiguous) ]
 

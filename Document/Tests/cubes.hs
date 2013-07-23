@@ -119,7 +119,7 @@ case7 = do
 
 path8   = "Tests/integers_t8.tex"
 result8 = unlines [
-        " sort: set [a]",
+        " sort: pfun [a,b], set [a]",
         " x: Int",
         "|----",
         " (exists ((x Int)) true)"]

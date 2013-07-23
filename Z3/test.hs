@@ -1,6 +1,6 @@
 module Z3.Test where
 
-import Data.Maybe
+--import Data.Maybe
 
 import Tests.UnitTest
 
@@ -8,6 +8,8 @@ import Z3.Z3 as Z
 
 import UnitB.Calculation
 import UnitB.Operator
+
+
 
 sample = unlines [
     "(declare-const a Int)",
@@ -103,7 +105,7 @@ case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
 case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
 case3 = Case "sample proof" (discharge sample_proof) Valid
 
-case4 = Case "check sample calc" (check sample_calc) (Just [])
+case4 = Case "check sample calc" (check sample_calc) (Right [])
 
 main = do
         s1 <- verify sample_quant

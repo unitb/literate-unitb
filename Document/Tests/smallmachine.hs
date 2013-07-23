@@ -90,7 +90,7 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
-        " sort: set [a]",
+        " sort: pfun [a,b], set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",
@@ -110,7 +110,7 @@ case4 = do
             x -> return $ show x
 
 result5 = unlines [
-        " sort: set [a]",
+        " sort: pfun [a,b], set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",

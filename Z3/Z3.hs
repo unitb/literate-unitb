@@ -95,6 +95,13 @@ instance Tree Decl where
                 Str "declare-sort",
                 Str name,
                 Str $ show n ]
+    as_tree (SortDecl (DefSort tag name xs def)) = 
+            List 
+                [ Str "define-sort"
+                , Str name
+                , List $ map Str xs
+                , as_tree def 
+                ]
     rewrite' = id
 
 instance Tree Command where
@@ -122,6 +129,12 @@ instance Tree Var where
     rewrite' = id
 
 instance Tree Sort where
+    as_tree (DefSort _ x xs def) = 
+            List 
+                [ Str x
+                , List $ map Str xs
+                , as_tree def
+                ]
     as_tree (Sort _ x n) = List [Str x, Str $ show n]
     rewrite' = id
 
@@ -144,7 +157,7 @@ instance Show Expr where
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        let c = (shell (z3_path ++ " -smt2 -in ")) { 
+        let c = (shell (z3_path ++ " -smt2 -in -T:1")) { 
             std_out = CreatePipe,
             std_in = CreatePipe,
             std_err = CreatePipe } 
@@ -154,7 +167,9 @@ feed_z3 xs = do
         out <- hGetContents stdout
         err <- hGetContents stderr
         hClose stdin
+--        let !() = unsafePerformIO (putStrLn "checkpoint 10")
         st <- waitForProcess ph
+--        let !() = unsafePerformIO (putStrLn "checkpoint 11")
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
@@ -176,6 +191,7 @@ instance Show ProofObligation where
                 ++ map show as)
                 ++ ["|----"," " ++ show g] )
         where
+            f (x, DefSort y z xs _) = f (x, Sort y z $ length xs)
             f (x, Sort y z 0) = z
             f (x, Sort y z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
                 --[" ++ intercalate "," zs ++ "]"

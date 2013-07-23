@@ -48,9 +48,13 @@ test = test_cases [
 --                return False) :: SomeException -> IO Bool))
 
 prop_parser_exc_free xs = 
-    case all_machines xs of
+    classify (depth xs < 5) "shallow" $
+    classify (5 <= depth xs && depth xs < 20) "medium" $
+    classify (20 <= depth xs && depth xs < 100) "deep" $
+    classify (100 <= depth xs) "very deep"
+    (case all_machines xs of
         Right _ -> True
-        Left  _ -> True
+        Left  _ -> True)
 
 --exception_free (all_machines xs)
 
@@ -60,22 +64,28 @@ properties = do
             Success _ _ _ -> return True
             x -> putStrLn ("failed: " ++ show x) >> return False
 
+depth xs = maximum $ 0:map f xs
+    where
+        f (Env _ _ xs _)    = 1 + depth xs
+        f (Bracket _ _ xs _)  = 1 + depth xs
+        f (Text _)          = 0
+
 instance Arbitrary LatexDoc where
     arbitrary = do
-            n <- choose (1,8) :: Gen Int
+            n <- choose (1,7) :: Gen Int
             if n == 1 
                 then do
                     n <- choose (0,length kw+2)
                     name <- if length kw <= n
                         then arbitrary :: Gen String
                         else return (kw !! n)
-                    m    <- choose (0,5) :: Gen Int
+                    m    <- choose (0,6) :: Gen Int
                     xs   <- forM [1..m] (\_ -> arbitrary :: Gen LatexDoc)
                     return $ Env name (0,0) xs (0,0)
             else if n == 2
                 then do
                     b  <- arbitrary :: Gen Bool
-                    m    <- choose (0,5) :: Gen Int
+                    m    <- choose (0,6) :: Gen Int
                     xs   <- forM [1..m] (\_ -> arbitrary :: Gen LatexDoc)
                     return $ Bracket b (0,0) xs (0,0)
             else if 2 < n

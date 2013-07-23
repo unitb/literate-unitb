@@ -39,6 +39,10 @@ instance Named Var where
 
 instance Named Sort where
     name (Sort x _ _) = x
+    name (DefSort x _ _ _) = x
+--        BoolSort | IntSort | RealSort 
+--        | Sort String String Int --[String]
+
 --
 --data TheoryInstance = TI {
 --        generator :: Theory,

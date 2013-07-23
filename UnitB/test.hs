@@ -2,7 +2,7 @@ module UnitB.Test where
 
 import Control.Monad
 
-import Data.Maybe 
+--import Data.Maybe 
 import Data.Map hiding (map)
 
 import System.IO
@@ -11,13 +11,12 @@ import System.Posix.IO
 import Tests.UnitTest
 
 import UnitB.AST
-import qualified UnitB.Genericity as Gen
+--import qualified UnitB.Genericity as Gen
 import UnitB.PO
 import UnitB.Theory
+import UnitB.FunctionTheory
 
 import Z3.Z3
-import Z3.Const
-import Z3.Def
 
 mk_just xs = map fromJust xs
 mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
@@ -56,16 +55,16 @@ train_m0 = m
             events = fromList [enter, leave] }
         props = fromList [
             (label "TR0", Transient (symbol_table [t_decl]) 
-                (fromJust $ mzapply st t) $ label "leave")]
+                (fromJust (st `zapply` t) ) $ label "leave")]
         inv = fromList $ mk_snd_just [inv0]
         inv0 = (label "J0", mzforall [t_decl] $
                     mzall [(mzovl st t mzfalse `mzeq` mzovl st t mzfalse)])
-        (st,st',st_decl) = prog_var "st" (ARRAY INT BOOL)
+        (st,st',st_decl) = prog_var "st" (fun_type INT BOOL)
         (t,t_decl) = var "t" INT
         enter = (label "enter", empty_event)
         leave = (label "leave", empty_event {
                 indices = symbol_table [t_decl],
-                c_sched = Just $ fromList $ mk_snd_just [(label "C0", (mzapply st t))],
+                c_sched = Just $ fromList $ mk_snd_just [(label "C0", (st `zapply` t))],
                 action  = fromList $ mk_snd_just [(label "A0", st' `mzeq` mzovl st t mzfalse)]
             })
         ps = empty_property_set { program_prop = props, inv = inv }
@@ -109,7 +108,7 @@ result_train_m0 = unlines [
 --    ""]
 
 result_example0_tr_en_po = unlines [
-    " sort: set [a]",
+    " sort: pfun [a,b], set [a]",
     " x: Int",
     " y: Int",
     " (= x (* 2 y))",
@@ -117,9 +116,9 @@ result_example0_tr_en_po = unlines [
     " (=> (= x 0) (= x y))"]
 
 result_train_m0_tr_po = unlines [
-    " sort: set [a]",
-    " st: (Array Int Bool)",
-    " st@prime: (Array Int Bool)",
+    " sort: pfun [a,b], set [a]",
+    " st: (pfun Int Bool)",
+    " st@prime: (pfun Int Bool)",
     " t: Int",
     " (select st t)",
     " (forall ((t Int)) (= (store st t false) (store st t false)))",
@@ -140,7 +139,7 @@ test = test_cases
         ,  Case "train, model 0, verification" (check train_m0) result_train_m0
         ,  Case "train, m0 PO" (get_tr_po train_m0) result_train_m0_tr_po
         ,  Case "example0: enabledness PO" (get_en_po example0) result_example0_tr_en_po
-        ,  Gen.test_case
+--        ,  Gen.test_case
         ]
 
 main = do

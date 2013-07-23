@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module UnitB.PO where
 
 import Control.Monad hiding (guard)
@@ -12,6 +13,8 @@ import System.IO.Unsafe
 import UnitB.AST
 import UnitB.Theory
 import UnitB.Calculation
+
+import Utilities.Format
 
 import Z3.Z3
 
@@ -249,13 +252,13 @@ str_verify_machine m =
                 let p@(Calc _ _ _ steps li) = proofs ps ! lbl
                 r0 <- check p
                 r1 <- entails (goal_po p) po
-                case (r0,r1) of
-                    (Just [], Valid) -> 
+                x <- case (r0,r1) of
+                    (Right [], Valid) -> 
                         return (True, ["  o  " ++ show lbl])
                     (r0,r1) -> do
                         let xs = [" xxx " ++ show lbl]
                         ys <- case r0 of
-                            Just r0 -> do
+                            Right r0 -> do
                                     let (r2,r3) = break (1 <=) $ map snd r0
                                     if null r0
                                         then return []
@@ -274,20 +277,22 @@ str_verify_machine m =
                                                            "between the first and the last line: " ++ 
                                                            show li ] )
                                                 ++ concatMap f (zip [1..] steps) )
-                            Nothing -> return ["     type error in proof"]
+                            Left xs -> return [format "     type error in proof: {0}" xs]
                         zs <- case r1 of
                             Valid -> return []
                             x ->     return [
                                     "     "
                                 ++ "proof does not match proof obligation: " ++ show li]
                         return (False, xs ++ ys ++ zs)
+                return x
             else do
                 r <- discharge po
-                case r of
+                x <- case r of
                     Valid -> do
                         return (True, ["  o  " ++ show lbl])
                     x     -> do
-                        return (False, [" xxx " ++ show lbl]))
+                        return (False, [" xxx " ++ show lbl])
+                return x)
         let total = length rs
         let passed = length $ filter fst rs
         let xs = "passed " ++ (show passed) ++ " / " ++ show total

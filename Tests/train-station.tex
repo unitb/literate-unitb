@@ -27,6 +27,7 @@
 \begin{machine}{m0}
 
 \newset{TRAIN}{\TRAIN}
+\newset{BLK}{\BLK}
 %\end{set}
 
 %
@@ -49,12 +50,25 @@
 	t : \TRAIN
 \end{dummy}
 
+\begin{variable}
+	loc : \TRAIN \pfun \BLK
+\end{variable}
+
+\begin{invariant}{inv2}
+	loc \in in \tfun \BLK
+\end{invariant}
+
 \begin{cschedule}{leave}{c0}
 	t \in in
 \end{cschedule}
 
+%\begin{initialization}{in0}
+%	in = \emptyset
+%\end{initialization}
+
 \begin{use:set}{\TRAIN} \end{use:set}
 \begin{use:set}{\LOC} \end{use:set}
+\begin{use:fun}{\TRAIN}{\LOC} \end{use:fun}
 
 \begin{indices}{leave}
 	t: \TRAIN

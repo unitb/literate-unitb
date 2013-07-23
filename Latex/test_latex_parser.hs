@@ -10,6 +10,8 @@ import Tests.UnitTest
 
 import Text.ParserCombinators.ReadP
 
+import Utilities.Format
+
 path1 = "/Users/simonhudon/Documents/ecole/EventB/eventb/trunk/thesis 2/"
     ++ "progress/unit-b-papers/2013-iFM/source/contribution.tex"
 
@@ -27,7 +29,7 @@ result2 = concat ["Right (fromList [",
             "])"]
 
 path3 = "tests/sorted_sequences_err.tex"
-result3 = "Left (\"expected \\\\end{equation}, read '}'\",29,12)"
+result3 = "Left [(\"expected \\\\end{equation}, read '}'\",29,12)]"
 
 path4 = "tests/sorted_sequences.tex"
 path5 = "tests/integers.tex"
@@ -79,7 +81,7 @@ tests path = do
             return (concatMap flatten tree))
         return (case x of
             Right xs -> xs
-            Left (xs, i, j) -> error (xs ++ " (" ++ show i ++ ", " ++ show j ++ ")"))
+            Left msgs -> error $ unlines $ map (\(xs, i, j) -> format "error ({0},{1}): {2}" i j xs) msgs)
 
 --        either f g lt
 --    where

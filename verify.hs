@@ -24,7 +24,8 @@ check path = do
                 xs <- forM ms check_one
 --                putStr $ take 40 $ cycle "\n"
                 forM_ xs (putStrLn . f)
-            Left (x,i,j) -> printf "error (%d,%d): %s\n" i j x
+            Left xs -> do
+                forM_ xs (\(x,i,j) -> printf "error (%d,%d): %s\n" i j x)
     where
         f xs = unlines $ filter p $ lines xs
         p ln = take 4 ln /= "  o "

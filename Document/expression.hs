@@ -1,5 +1,5 @@
-module Document.Expression where
 {-# LANGUAGE BangPatterns #-}
+module Document.Expression where
 
 import Data.Char
 import Data.List as L
@@ -13,6 +13,9 @@ import System.IO.Unsafe
 
 import UnitB.Operator
 import UnitB.SetTheory
+import UnitB.FunctionTheory
+
+import Utilities.Format
 
 import Z3.Const
 import Z3.Def
@@ -96,8 +99,8 @@ type_t :: Context -> Scanner Char Type
 type_t ctx@(Context ts _ _ _ _) = do
         t <- word_or_command
         eat_space
-        b <- look_ahead $ read_list "["
-        ts <- if b
+        b1 <- look_ahead $ read_list "["
+        ts <- if b1
             then do
                 read_list "["
                 eat_space
@@ -107,9 +110,19 @@ type_t ctx@(Context ts _ _ _ _) = do
                 eat_space
                 return ts
             else return []
-        case get_type ctx t of
+        t <- case get_type ctx t of
             Just s -> return $ USER_DEFINED s ts
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
+        b2 <- look_ahead $ read_list "\\pfun"
+        if b2 
+        then do
+            read_list "\\pfun"
+            eat_space
+            t2 <- type_t ctx
+            t <- return $ fun_type t t2
+--            let !() = unsafePerformIO (putStrLn $ format "parsed a type {0}" t)
+            return t
+        else return t
 
 get_type :: Context -> String -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
@@ -129,7 +142,7 @@ vars ctx = do
         eat_space       
         return (map (\x -> (x,t)) vs)     
 
-get_variables :: Context -> [LatexDoc] -> Either Error [(String, Var)]
+get_variables :: Context -> [LatexDoc] -> Either [Error] [(String, Var)]
 get_variables ctx cs = do
         xs <- read_tokens (vars ctx) m
         return $ map (\(x,y) -> (x,Var x y)) xs
@@ -185,6 +198,8 @@ power = do
             Just _  -> return ()
             Nothing -> fail "expecting exponential (^)"
 
+tfun = read_list "\\tfun"
+
 membership = 
         read_list "\\in"
 --        case x of
@@ -204,6 +219,7 @@ oper = do
                 (membership >> return Membership),
                 (equal >> return Equal),
                 (set_diff >> return SetDiff),
+                (tfun >> return TotalFunction),
                 (fun_app >> return Apply) ]
             (fail "expecting an operator")            
             return
@@ -295,9 +311,9 @@ expr ctx = do
                                 rs <- sep1 (expr ctx) comma
                                 close_curly
                                 eat_space
-                                case zset_enum $ map Just rs of
-                                    Just rs -> read_op xs rs 
-                                    Nothing -> fail ("type error")
+                                case zset_enum $ map Right rs of
+                                    Right rs -> read_op xs rs 
+                                    Left xs -> fail (format "type error: {0}" xs)
                             ) $ (do
                                 t <- term ctx
                                 read_op xs t))
@@ -327,12 +343,14 @@ expr ctx = do
                 e2 <- apply_op op0 e0 e1
                 reduce_all ys e2
 
-apply_op op x0 x1 = 
+apply_op op x0 x1 = do
+--    let !() = unsafePerformIO (putStrLn $ format "types {0},{1} and {2}" op (x0) (x1))
+--    let !() = unsafePerformIO (putStrLn $ format "types {0} and {1}" (type_of x0) (type_of x1))
     case mk_expr op x0 x1 of
-        Just x2 -> return x2
-        Nothing -> fail "type error"
+        Right x2 -> return x2
+        Left xs -> 
+--            let !() = unsafePerformIO (putStrLn $ format "type error") in
+            fail (format "type error: {0}" xs)
 
-parse_expr :: Context -> [(Char, (Int,Int))] -> Either (String, Int, Int) Expr
-parse_expr ctx c = read_tokens (expr ctx) c
-
-type Error = (String,Int,Int)
+parse_expr :: Context -> [(Char, (Int,Int))] -> Either [Error] Expr
+parse_expr ctx c = read_tokens (expr ctx) c 

@@ -81,6 +81,7 @@ z3_decoration t = f $ as_tree t :: String
 
 data Sort =
         BoolSort | IntSort | RealSort 
+        | DefSort String String [String] Type
         | Sort String String Int --[String]
     deriving (Eq, Show)
 
@@ -88,6 +89,7 @@ z3_name (BoolSort) = "Bool"
 z3_name (IntSort) = "Int"
 z3_name (RealSort) = "Real"
 z3_name (Sort _ x _) = x
+z3_name (DefSort _ x _ _) = x
 
 data Decl = 
     FunDecl String [Type] Type 

@@ -6,7 +6,7 @@ import Z3.Z3 -- hiding ( context )
 
 import UnitB.Operator
 
-steps_po :: Calculation -> Maybe [ProofObligation]
+steps_po :: Calculation -> Either String [ProofObligation]
 steps_po (Calc d _ e0 [] _) = return []
 steps_po (Calc d g e0 ((r0, e1, a0,_):es) li) = do
     expr <- mk_expr r0 e0 e1
@@ -19,12 +19,14 @@ entails_goal_po (Calc d g e0 es _) = do
     where
         assume = 
                 fmap reverse $ foldM f [] (map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
-        f xs (Just x) = Just (x:xs)
-        f xs Nothing  = Nothing
+        f xs mx = do 
+            x <- mx
+            return (x:xs)
         ys = map (\(_,x,_,_) -> x) es
         xs = take (length es) (e0:ys)
         rs = map (\(x,_,_,_) -> x) es
 
+obligations :: Calculation -> Either String [ProofObligation]
 obligations c = do
         x <- entails_goal_po c
         ys <- steps_po c
@@ -34,16 +36,19 @@ goal_po c = ProofObligation (context c) xs False (goal c)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 
-check :: Calculation -> IO (Maybe [(Validity, Int)])
-check c = f (\po -> do
-        rs <- forM po discharge
-        let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..]
+check :: Calculation -> IO (Either String [(Validity, Int)])
+check c = f (\pos -> do
+        rs <- forM pos discharge :: IO [Validity]
+        let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
     where
-        f g = case po of
-            Just po -> fmap Just $ g po
-            Nothing -> return Nothing
-        po = obligations c
+        f :: ([ProofObligation] -> IO [(Validity, Int)]) -> IO (Either String [(Validity, Int)])
+        f g = case mpo of
+            Right po -> do
+                xs <- g po
+                return (Right xs)
+            Left x -> return (Left x)
+        mpo = obligations c
 
 data Calculation = Calc {
     context :: Context,
