@@ -27,15 +27,15 @@ test = test_cases
          (StringCase "empty proof"
              case10 result10) ]
 
-var_a = Var "a" INT
-var_b = Var "b" INT
-var_c = Var "c" INT
-var_n = Var "n" INT
+var_a = Var "a" int
+var_b = Var "b" int
+var_c = Var "c" int
+var_n = Var "n" int
 
-var_a' = Var "a@prime" INT
-var_b' = Var "b@prime" INT
-var_c' = Var "c@prime" INT
-var_n' = Var "n@prime" INT
+var_a' = Var "a@prime" int
+var_b' = Var "b@prime" int
+var_c' = Var "c@prime" int
+var_n' = Var "n@prime" int
 
 machine6 = (empty_machine "m0") 
         {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
@@ -172,15 +172,10 @@ case9 = do
                                    ++ " proofs")
             x -> return $ show x
 
-result10 = unlines [
-        " xxx m0/INIT/FIS",
-        "     incorrect proof: ",
-        "         cannot prove a relationship " ++
-                 "between the first and the last line: (31,1)",
-        "     proof does not match proof obligation: (31,1)",
-        "passed 0 / 1"]
+path10   = "Tests/integers_t10.tex"
+result10 = "Left [(\"type error: a calculation must include at least one reasoning step\",31,1)]"
 case10 = do
-    r <- parse_machine path8
+    r <- parse_machine path10
     case r of
         Right [m] -> do
             (s,_,_)   <- str_verify_machine m

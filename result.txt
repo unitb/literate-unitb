@@ -111,11 +111,10 @@ Comparison:[
 |  |  +- type inference 1
 |  |  +- type inference 3
 |  |  +- type inference 4
+|  |  +- type inference 5
 |  |  +- instantiation of unified types is unique
 +++ OK, passed 100 tests.
 |  |  +- instantiation of unified types is unique (counter examples)
-|  |  +- types unify with self
-+++ OK, passed 100 tests.
 |  |  +- type mapping are acyclic
 +++ OK, passed 100 tests.
 |  |  +- [ Success: 15 / 15 ]
@@ -144,4 +143,4 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-    4439   28686  248870
+    4720   30560  266198

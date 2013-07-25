@@ -65,31 +65,35 @@ blk_type = USER_DEFINED blk_sort []
 (block, block_var) = var "BLK" $ set_type blk_type
 
 machine0 = (empty_machine "m0") 
-    {   theory = empty_theory 
-            {   extends = [ function_theory train_type loc_type, set_theory loc_type, set_theory train_type ]
-            ,   types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort]
-            ,   dummies = singleton "t" $ Var "t" $ train_type 
-            ,   fact    = singleton (label "axm0") (fromJust (loc_cons `mzeq` zset_enum [ent,plf,ext]) )
-            ,   consts  = fromList
-                    [ ("\\TRAIN", train_var)
-                    , ("\\LOC", loc_var)
-                    , ("\\BLK", block_var)
-                    , ("ent", ent_var)
-                    , ("ext", ext_var)
-                    , ("plf", plf_var)
+    {  theory = empty_theory 
+            {  extends = 
+                    [  function_theory train_type loc_type
+                    ,  set_theory loc_type
+                    ,  set_theory train_type ]
+            ,  types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort]
+            ,  dummies = singleton "t" $ Var "t" $ train_type 
+            ,  fact    = singleton (label "axm0") (fromJust (loc_cons `mzeq` zset_enum [ent,plf,ext]) )
+            ,  consts  = fromList
+                    [  ("\\TRAIN", train_var)
+                    ,  ("\\LOC", loc_var)
+                    ,  ("\\BLK", block_var)
+                    ,  ("ent", ent_var)
+                    ,  ("ext", ext_var)
+                    ,  ("plf", plf_var)
                     ]
             }
-    ,   variables = symbol_table [in_decl,loc_decl]
-    ,   events = fromList [(label "enter", empty_event), (label "leave", leave_evt)]
-    ,   props = props0
+    ,  inits = map fromJust [in_var `mzeq` Right zempty_set]
+    ,  variables = symbol_table [in_decl,loc_decl]
+    ,  events = fromList [(label "enter", empty_event), (label "leave", leave_evt)]
+    ,  props = props0
     }
 props0 = empty_property_set
-        { program_prop = singleton (label "tr0") 
+    {  program_prop = singleton (label "tr0") 
             (Transient 
                 (singleton "t" $ Var "t" train_type) 
                 (fromJust (t `zelem` in_var)) (label "leave") )
-        , inv = fromList [(label "inv2",fromJust (loc `zelem` (in_var `ztfun` block)))]
-        }
+    ,  inv = fromList [(label "inv2",fromJust (loc `zelem` (in_var `ztfun` block)))]
+    }
 
 leave_evt = empty_event {
         indices = symbol_table [t_decl],
@@ -212,7 +216,7 @@ result2 = unlines (
      ++ set_decl_smt2
      ++ set_facts ++ -- set_decl_smt2 ++
      [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
-     ,  "(assert (not (exists ((in (set TRAIN)) (loc (pfun TRAIN BLK))) true)))"
+     ,  "(assert (not (exists ((in (set TRAIN)) (loc (pfun TRAIN BLK))) (= in empty-set@@TRAIN))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
          "(then skip smt) " ++
@@ -236,7 +240,7 @@ result3 = unlines (
      set_decl_smt2 ++ 
      set_facts ++
      [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
-     ,  "(assert (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+     ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
      ,  "(assert (not (exists ((in@prime (set TRAIN)) (loc@prime (pfun TRAIN BLK))) "
             ++ "(= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))))"
      ,  "(check-sat-using (or-else " ++
@@ -264,7 +268,7 @@ result4 = unlines (
         set_facts ++
         [ "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf))"
                                     ++" (mk-set@@LOC ext))))"
-        , "(assert (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+        , "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         , "(assert (elem@@TRAIN t in))"
         , "(assert (not true))"
         , "(check-sat-using (or-else " ++
@@ -292,7 +296,7 @@ result5 = unlines (
         set_facts ++
         [ "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf))"
                                     ++" (mk-set@@LOC ext))))"
-        , "(assert (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+        , "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         , "(assert (not (exists ((t TRAIN)) (=> (elem@@TRAIN t in) (elem@@TRAIN t in)))))"
         , "(check-sat-using (or-else (then qe smt) (then skip smt)"
                         ++ " (then (using-params simplify :expand-power true) smt)))"
@@ -315,7 +319,7 @@ result6 = unlines (
         set_facts ++
         [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
         ,  "(assert (elem@@TRAIN t in))"
-        ,  "(assert (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+        ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         ,  "(assert (elem@@TRAIN t in))"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "(assert (not (not (elem@@TRAIN t in@prime))))"
@@ -342,9 +346,9 @@ result12 = unlines (
         set_decl_smt2 ++ 
         set_facts ++
         [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
-        ,  "(assert (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+        ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
-        ,  "(assert (not (elem@Open@@pfun@Comma@@TRAIN@Comma@@BLK@Close loc@prime (tfun@@TRAIN@@BLK in@prime BLK))))"
+        ,  "(assert (not (elem@Open@@pfun@@TRAIN@@BLK@Close loc@prime (tfun@@TRAIN@@BLK in@prime BLK))))"
         ,  "(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))"
         ] )
     where

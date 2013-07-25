@@ -32,7 +32,7 @@ class Named n where
     as_pair n = (name n, n)
 
 instance Named Fun where
-    name (Fun x _ _) = x
+    name (Fun _ x _ _) = x
 
 instance Named Var where
     name (Var x _) = x

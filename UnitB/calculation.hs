@@ -36,29 +36,46 @@ goal_po c = ProofObligation (context c) xs False (goal c)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 
+embed :: Either a b -> (b -> IO c) -> IO (Either a c)
+embed em f = do
+        case em of
+            Right x -> do
+                y <- f x
+                return (Right y)
+            Left x  -> 
+                return (Left x)
+
 check :: Calculation -> IO (Either String [(Validity, Int)])
-check c = f (\pos -> do
+check c = embed 
+            (obligations c) 
+            (\pos -> do
         rs <- forM pos discharge :: IO [Validity]
         let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
-    where
-        f :: ([ProofObligation] -> IO [(Validity, Int)]) -> IO (Either String [(Validity, Int)])
-        f g = case mpo of
-            Right po -> do
-                xs <- g po
-                return (Right xs)
-            Left x -> return (Left x)
-        mpo = obligations c
+--    where
+--        f :: ([ProofObligation] -> IO [(Validity, Int)]) -> IO (Either String [(Validity, Int)])
+--        f g = case mpo of
+--            Right po -> do
+--                xs <- g po
+--                return (Right xs)
+--            Left x   -> return (Left x)
+--        mpo = obligations c
 
-data Calculation = Calc {
-    context :: Context,
-    goal :: Expr,
-    first_step :: Expr,
---    following :: [(Expr -> Expr -> Expr, Expr, [Expr])] }
-    following :: [(Operator, Expr, [Expr], (Int,Int))],
-    l_info :: (Int,Int) }
+data Calculation = Calc 
+    {  context    :: Context
+    ,  goal       :: Expr
+    ,  first_step :: Expr
+    ,  following  :: [(Operator, Expr, [Expr], (Int,Int))]
+    ,  l_info     :: (Int,Int) 
+    }
 
-infer_goal (Calc _ _ s0 xs _) = s0 `op` last (ztrue:map f xs)
+infer_goal (Calc _ _ s0 xs (i,j)) = 
+        case reverse $ map f xs of
+            x:xs -> either 
+                        (\x -> Left (x)) --,i,j)) 
+                        Right 
+                        (s0 `op` x)
+            []   -> Left ("a calculation must include at least one reasoning step") --,i,j)
     where
         op = mk_expr $ foldl chain Equal $ map g xs
         f (x,y,z,_) = y

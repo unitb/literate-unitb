@@ -1,5 +1,12 @@
 module UnitB.TestGenericity where
 
+    -- Modules
+import UnitB.Genericity
+import UnitB.SetTheory
+
+import Z3.Z3 hiding ( type_of )
+
+    -- Libraries
 import Control.Monad
 
 import Data.Map hiding ( map )
@@ -8,10 +15,6 @@ import qualified Data.Set as S
 import Test.QuickCheck
 
 import Tests.UnitTest
-
-import UnitB.Genericity
-
-import Z3.Def hiding ( type_of )
 
 left  = suffix_generics "1"
 right = suffix_generics "2"
@@ -62,11 +65,12 @@ check_prop p = do
 --            names = [ y ++ [x] | y <- []:names, x <- ['a' .. 'z'] ]
 
 instance Arbitrary Type where
-    arbitrary = oneof 
+    arbitrary = oneof (
                 [ return BOOL
                 , return INT
                 , return REAL
-                , do
+                ] ++ concat (take 2 $ repeat
+                [ do
                     t0 <- arbitrary
                     t1 <- arbitrary
                     return $ ARRAY t0 t1
@@ -85,7 +89,7 @@ instance Arbitrary Type where
                 , do
                     t <- arbitrary
                     return $ SET t
-                ]
+                ] ) )
         where
             sorts = map return
                 [ Sort "A" "" 0
@@ -123,15 +127,16 @@ test = test_cases (
                 -- a generic parameter to a generic expression
         ,  Case "type inference 3" case5 result5
         ,  Case "type inference 4" case6 result6
+        ,  Case "type inference 5" case7 result7
         , Case "instantiation of unified types is unique" (check_prop prop_unifying_yields_unified_type) True
         ] ++
         map (\ce -> Case 
                 "instantiation of unified types is unique (counter examples)" 
                 (return $ prop_yield_same_type ce) 
                 Nothing
-            ) unicity_counter_example ++
-        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
-        , Case "type mapping are acyclic" (check_prop prop_type_mapping_acyclic) True
+            ) unicity_counter_example ++ 
+--        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
+        [ Case "type mapping are acyclic" (check_prop prop_type_mapping_acyclic) True
         ] )
     where
         fun_sort = Sort "\\tfun" "fun" 2
@@ -163,7 +168,7 @@ test = test_cases (
 --(case3,result3) = (return $ type_of p, Just (BOOL, fromList [("a",INT),("b",SET INT)]))
 ( case3,result3,case5,result5,case6,result6 ) = ( 
                     return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
-                    , FunApp (Fun "union" [SET gB,SET gB] $ SET gB) [x3,x4] 
+                    , FunApp (Fun [gB] "union" [SET gB,SET gB] $ SET gB) [x3,x4] 
 --                    , return $ type_of pp
 --                    , Just (BOOL, fromList [("a",INT),("b",SET INT)])
                     , return p
@@ -180,10 +185,18 @@ test = test_cases (
         x4 = Word $ Var "x3" (SET $ SET INT)
         y  = Word $ Var "y" INT
         z  = Word $ Var "z" REAL
-        union  = Fun "union" [SET gA,SET gA] $ SET gA
-        member = Fun "member" [gA, SET gA] BOOL
+        union  = Fun [gA] "union" [SET gA,SET gA] $ SET gA
+        member = Fun [gA] "member" [gA, SET gA] BOOL
         pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",SET $ GENERIC "a")]) $ FunApp union [x3,x4]]
-        qq = FunApp member [FunApp union [x1,x2], FunApp (Fun "union" [SET $ SET gA,SET $ SET gA] $ SET $ SET gB) [x3,x4]]
-        p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]]
-        q = FunApp member [FunApp union [x1,x2], FunApp (Fun "union" [SET gB,SET gB] $ SET gB) [x3,x4]]
-        
+        qq = FunApp member [FunApp union [x1,x2], FunApp (Fun [SET gA] "union" [SET $ SET gA,SET $ SET gA] $ SET $ SET gB) [x3,x4]]
+        p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",SET $ GENERIC "a")]) $ FunApp union [x3,x4]]
+        q = FunApp member [FunApp union [x1,x2], FunApp (Fun [SET gA] "union" [SET gA,SET gA] $ SET gA) [x3,x4]]
+
+(case7, result7) = 
+        ( return (x `zelem` Right zempty_set)
+        , Right $ FunApp (Fun [train] "elem" [train,set_type train] BOOL) [either (error "expecting right") id x,empty_set_of_train]
+        )
+    where
+        train = USER_DEFINED (Sort "\train" "train" 0) []
+        (x,_) = var "x" train
+        empty_set_of_train = Const [train] "empty-set" $ set_type train

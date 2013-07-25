@@ -1,5 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
 module Document.Expression where
+{-# LANGUAGE BangPatterns #-}
 
 import Data.Char
 import Data.List as L
@@ -9,7 +9,7 @@ import qualified Data.Map as M ( map )
 import Latex.Scanner
 import Latex.Parser
 
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import UnitB.Operator
 import UnitB.SetTheory
@@ -239,7 +239,10 @@ term ctx = do
                     (\x -> return (\x -> x ++ "\'", \x -> x ++ "@prime"))
                     (return (id,id))
                 eat_space
-                case xs `L.lookup` [("\\true",ztrue), ("\\false",zfalse)] of
+                case xs `L.lookup` 
+                        [ ("\\true",ztrue)
+                        , ("\\false",zfalse)
+                        , ("\\emptyset", zempty_set)] of
                     Just e  -> return e 
                     Nothing ->
                         case var_decl xs ctx of
@@ -248,7 +251,7 @@ term ctx = do
             (do 
                 xs <- number
                 eat_space
-                return (Const xs INT))
+                return (Const [] xs $ USER_DEFINED IntSort []))
 
 number :: Scanner Char String
 number = do

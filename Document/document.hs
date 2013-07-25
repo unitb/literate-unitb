@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Document.Document where
 
 import Control.Applicative hiding ( empty )
@@ -17,7 +17,7 @@ import Latex.Scanner
 import Latex.Parser
 
 import System.IO
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import Text.Printf
 
@@ -32,9 +32,9 @@ import Utilities.Format
 
 import Z3.Z3 
 
-with_print_lbl txt x = unsafePerformIO (do
-        putStrLn ("<< " ++ txt ++ ": " ++ show x ++ " >>")
-        return x)
+--with_print_lbl txt x = unsafePerformIO (do
+--        putStrLn ("<< " ++ txt ++ ": " ++ show x ++ " >>")
+--        return x)
 
 tex_to_string d = unlines $ concatMap (aux 0) d
     where
@@ -92,21 +92,27 @@ list_machines ct = do
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = do
         ms <- L.foldl gather (Right empty) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 1")
         ms <- toEither $ L.foldl (f type_decl) (MRight ms) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 2")
 
             -- take actual generic parameter from `type_decl'
         ms <- toEither $ L.foldl (f imports) (MRight ms) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 3")
 
             -- take the types from `imports' and `type_decl`
         ms <- toEither $ L.foldl (f declarations) (MRight ms) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 4")
             
             -- use the `declarations' of variables to check the
             -- type of expressions
         ms <- toEither $ L.foldl (f collect_expr) (MRight ms) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 5")
             
             -- use the label of expressions from `collect_expr' 
             -- in hints.
         ms <- toEither $ L.foldl (f collect_proofs) (MRight ms) xs
+--        let !() = unsafePerformIO (putStrLn "checkpoint 6")
         return ms
     where
         gather em (Env n _ c _)     
@@ -574,10 +580,10 @@ get_2_lbl xs = do
         (lbl1,xs) <- get_1_lbl xs
         return (lbl0,lbl1,xs)
 
-with_print_latex x = 
-    unsafePerformIO (do
-        putStrLn (tex_to_string x)
-        return x)
+--with_print_latex x = 
+--    unsafePerformIO (do
+--        putStrLn (tex_to_string x)
+--        return x)
 
 parse_machine :: FilePath -> IO (Either [Error] [Machine])
 parse_machine fn = do

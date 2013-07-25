@@ -1,10 +1,14 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.Genericity where
 
+    -- Modules
+import Z3.Def -- hiding ( type_of )
+
+    -- Libraries
 import Control.Monad
 
 import Data.Foldable as F
-    hiding ( foldl )
+    hiding ( foldl, forM_, mapM_ )
 import Data.List as L
 import Data.Map as M 
     hiding ( foldl, map, union, unions )
@@ -16,9 +20,9 @@ import qualified Data.Graph as G
 
 import Prelude as L
 
-import System.IO.Unsafe
+import Utilities.Format
 
-import Z3.Z3 hiding ( type_of )
+import qualified System.IO.Unsafe as Unsafe
 
 instance Show a => Show (G.SCC a) where
     show (G.AcyclicSCC v) = "AcyclicSCC " ++ show v
@@ -32,6 +36,9 @@ data Unification = Uni
 --    , dependencies :: Graph 
     }
 
+unsafePerformIO x = ()
+--unsafePerformIO = Unsafe.unsafePerformIO
+
 empty_u = Uni empty []
 
 suffix_generics :: String -> Type -> Type
@@ -42,6 +49,103 @@ suffix_generics xs (GENERIC x) = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
 suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
 suffix_generics xs (SET t)             = SET (suffix_generics xs t) 
+
+rewrite_types :: String -> Expr -> Expr
+rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
+    where
+        fe          = rewrite_types xs
+        ft          = suffix_generics xs
+        u           = ft t
+rewrite_types xs (Const gs v t)             = rewrite fe $ Const (map ft gs) v u
+    where
+        fe          = rewrite_types xs
+        ft          = suffix_generics xs
+        u           = ft t
+rewrite_types xs (FunApp (Fun gs f ts t) args) = rewrite fe $ FunApp (Fun (map ft gs) f us u) new_args
+    where
+        fe          = rewrite_types xs
+        ft          = suffix_generics xs
+        us          = map ft ts
+        u           = ft t
+        new_args    = map fe args
+rewrite_types xs e@(Binder _ _ _)           = rewrite (rewrite_types xs) e
+
+--set_type t (Word (Var xs _))       = Word (Var xs t)
+--set_type t (Const v _)             = Const v t
+--set_type t 
+--set_type t 
+
+check_args :: [Expr] -> Fun -> Maybe (Expr) --, Map String Type)
+check_args xp f@(Fun gs name ts t) = do
+            let !()     = unsafePerformIO (putStrLn "> step 0")
+            guard (length xp == length ts)
+            let !()     = unsafePerformIO (putStrLn "> step 1")
+            let n       = length ts
+            let xs      = zip (L.map show [1..n]) xp
+            let args    = L.map (uncurry rewrite_types) xs
+            let targs   = L.map type_of args
+            let rt      = GENERIC ("a@" ++ show (n+1))
+            let t0      = USER_DEFINED IntSort (t:ts) 
+            let t1      = USER_DEFINED IntSort (rt:targs)
+            let !()     = unsafePerformIO (putStrLn "> step 2")
+            let !()     = unsafePerformIO (print gs)
+            let !()     = unsafePerformIO (putStrLn "> signature")
+            let !()     = unsafePerformIO (forM_ (ts++[t]) (\x -> print $ suffix_generics "1" x))
+            let !()     = unsafePerformIO (putStrLn "> argument type")
+            let !()     = unsafePerformIO (forM_ (targs++[rt]) (\x -> print $ suffix_generics "2" x))
+            let !()     = unsafePerformIO (putStrLn "> args:")
+            let !()     = unsafePerformIO (print args)
+            uni <- unify t0 t1
+            let !()    = unsafePerformIO (print $ instantiate_left uni t0)
+            let !()    = unsafePerformIO (putStrLn "> step 3")
+            let fe x   = specialize uni . rewrite_types x
+            let ft x   = instantiate uni . suffix_generics x
+            let gs2   = map (ft "1") gs
+            let us    = L.map (ft "1") ts
+            let u     = ft "1" t
+            let !args1 = map (rewrite_types "2") args
+            let !args2 = map (fe "2") args
+            let expr = FunApp (Fun gs2 name us u) $ args2 
+            let !()    = unsafePerformIO (putStrLn "> mapping")
+            let !()     = unsafePerformIO (mapM_ print $ M.toList uni)
+--            let !()     = unsafePerformIO (print $ map (suffix_generics "1") gs)
+            let !()    = unsafePerformIO (putStrLn "> actual generic parameters")
+            let !()     = unsafePerformIO (print gs2)
+            let !()    = unsafePerformIO (putStrLn "> name")
+            let !()     = unsafePerformIO (print name)
+            let !()    = unsafePerformIO (putStrLn "> argument types")
+            let !()     = unsafePerformIO (mapM_ print us)
+            let !()    = unsafePerformIO (putStrLn "> return type")
+            let !()     = unsafePerformIO (print u)
+            let !()    = unsafePerformIO (putStrLn "> actual arguments")
+            let !()     = unsafePerformIO (print args1)
+            let !()     = unsafePerformIO (print args2)
+            let !()     = unsafePerformIO (putStrLn "> step 4")
+            return (expr) --,uni)
+
+typ_fun1 f mx        = do
+        x <- mx
+        maybe (Left "bad type") Right $ check_args [x] f
+typ_fun2 f@(Fun gs n ts t) mx my     = do
+        x <- mx
+        y <- my
+        let err_msg = format (unlines 
+                    [  "arguments of '{0}' do not match its signature:"
+                    ,  "   signature: {1} -> {2}"
+                    ,  "   left argument: {3}"
+                    ,  "     type {4}"
+                    ,  "   right argument: {5}"
+                    ,  "     type {6}"
+                    ] )
+                    n ts t x (type_of x) y (type_of y) :: String
+        let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
+        let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
+        maybe (Left err_msg) Right $ check_args [x,y] f
+typ_fun3 f mx my mz  = do
+        x <- mx
+        y <- my
+        z <- mz
+        maybe (Left "bad type") Right $ check_args [x,y,z] f
 
     -- A
 unify_aux :: Type -> Type -> Unification -> Maybe Unification
@@ -56,12 +160,15 @@ unify_aux t0@(GENERIC x) t1 u
         | x `member` l_to_r u         = do
             new_u <- unify_aux t1 (l_to_r u ! x) u
             let new_t = instantiate (l_to_r new_u) t1
-            return u 
-                { l_to_r = M.insert x new_t $ l_to_r u 
+            return new_u 
+                { l_to_r = M.insert x new_t $ l_to_r $ new_u 
                 , edges = [ (x,y) | y <- fv ] ++ edges u
                 }
     where
         fv = S.toList $ generics t1
+        !() = unsafePerformIO (do
+                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
+                print (t0,t1))
 --unify_aux (GENERIC x) t u
 --        | S.null $ generics t = Just $ M.singleton x t
 --        | otherwise           = Nothing
@@ -96,8 +203,12 @@ unify t0 t1 = do
             -- add the vertices with no neighbors
 
         let m = l_to_r u
-        let top_order = G.stronglyConnComp compl
-
+        let top_order = reverse $ G.stronglyConnComp compl
+        let !() = unsafePerformIO (putStrLn "> > partial mapping")
+        let !() = unsafePerformIO (mapM_ print $ M.toList $ l_to_r u)
+        let !() = unsafePerformIO (putStrLn "> > symbolic dependencies")
+        let !() = unsafePerformIO (mapM_ print compl)
+        
             -- this is a loop that makes sure that a type
             -- instantiation map can be applied in any 
             -- order equivalently. If the result of unify_aux
@@ -120,6 +231,8 @@ unify t0 t1 = do
         foldM (\m cc -> 
                 case cc of
                     G.AcyclicSCC v ->
+                        let !() = unsafePerformIO (putStrLn "hello")
+                        in
                         if v `member` m
                             then return $ M.map (instantiate $ singleton v (m ! v)) m
                             else return m
@@ -164,7 +277,7 @@ instance Generic Type where
 --    d
 
 instance Generic Fun where
-    generics (Fun _ ts t) = S.unions (generics t : map generics ts)
+    generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
 
 --map_type f t@INT                 = t
 --map_type f t@REAL                = t
@@ -179,7 +292,10 @@ instance Generic Fun where
 instantiate :: Map String Type -> Type -> Type
 instantiate m t = f t
     where
-        f (GENERIC x) = m ! x
+        f t0@(GENERIC x) = 
+            case M.lookup x m of
+                Just t1  -> t1
+                Nothing  -> t0
         f t           = rewrite f t
 
 instantiate_left m t = instantiate m (suffix_generics "1" t)
@@ -189,15 +305,19 @@ instantiate_right m t = instantiate m (suffix_generics "2" t)
 specialize :: Map String Type -> Expr -> Expr
 specialize m e = f e
     where
-        f (Const x t)       = Const x $ g t
+        f (Const gs x t)    = Const (map g gs) x $ g t
         f (Word x)          = Word $ h x
-        f x@(FunApp (Fun n ts t) args) = rewrite f $ FunApp (Fun n (map g ts) $ g t) args
-        f x@(Binder q vs e) = rewrite f $ Binder q (map h vs) e
-        g t = instantiate m t
+        f x@(FunApp (Fun gs n ts t) args) 
+                = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) args
+        f x@(Binder q vs e) 
+                = rewrite f $ Binder q (map h vs) e
+        g t     = instantiate m t
         h (Var x t) = Var x $ g t
 
 -- is_type_correct
 
+--data TypeInfo = TI Expr (Map String Type)
+--
 --type_of :: Expr -> Maybe (Type, Map String Type)
 ----type_of = error "not implemented"
 --type_of (Const _ t)      = Just (t, M.empty)
@@ -230,6 +350,3 @@ make_gen_param_unique e = f 0 e
     where
         f e = rewrite f e
 
-    ----------------
-    -- UNIT TESTS --
-    ----------------

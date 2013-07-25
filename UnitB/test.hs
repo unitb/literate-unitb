@@ -18,64 +18,72 @@ import UnitB.FunctionTheory
 
 import Z3.Z3
 
-mk_just xs = map fromJust xs
-mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
+--mk_just xs = map fromJust xs
+--mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
 
 test = test_cases 
-        [  Case "'x eventually increases' verifies" (check example0) result_example0
-        ,  Case "train, model 0, verification" (check train_m0) result_train_m0
-        ,  Case "train, m0 PO" (get_tr_po train_m0) result_train_m0_tr_po
-        ,  Case "example0: enabledness PO" (get_en_po example0) result_example0_tr_en_po
+        [  Case "'x eventually increases' verifies" (check example0) (Right result_example0)
+        ,  Case "train, model 0, verification" (check train_m0) (Right result_train_m0)
+        ,  Case "train, m0 PO" (get_tr_po train_m0) (Right result_train_m0_tr_po)
+        ,  Case "example0: enabledness PO" (get_en_po example0) (Right result_example0_tr_en_po)
         ,  Gen.test_case
         ]
 
-example0 :: Machine
-example0 = m
-    where
-        evt = empty_event { 
-            c_sched = Just $ singleton (label "sch0") $ fromJust (x `mzeq` y),   
-            action = fromList $ mk_snd_just [
-                (label "S0", x' `mzeq` (x `mzplus` mzint 2)),
-                (label "S1", y' `mzeq` (y `mzplus` mzint 1)) ] }
-        m = (empty_machine "m0") {
-            variables = fromList $ map as_pair [x_decl,y_decl],
-            events = singleton (label "evt") evt,
-            inits = mk_just [x `mzeq` mzint 0, y `mzeq` mzint 0],
-            props = ps }
-        inv0 = fromJust (x `mzeq` (mzint 2 `mztimes` y))
-        tr0 = Transient empty (fromJust (x `mzeq` mzint 0)) (label "evt")
-        co0 = Co [] (fromJust (x `mzle` x'))
-        (x,x',x_decl) = prog_var "x" INT
-        (y,y',y_decl) = prog_var "y" INT
-        ps = empty_property_set {
+--example0 :: Machine
+example0 = do
+        let (x,x',x_decl) = prog_var "x" int
+        let (y,y',y_decl) = prog_var "y" int
+        inv0   <- x `mzeq` (mzint 2 `mztimes` y)
+        init0  <- x `mzeq` mzint 0
+        init1  <- y `mzeq` mzint 0
+        tr     <- x `mzeq` mzint 0
+        co     <- x `mzle` x'
+        csched <- x `mzeq` y
+        s0     <- x' `mzeq` (x `mzplus` mzint 2)
+        s1     <- y' `mzeq` (y `mzplus` mzint 1)
+        let tr0 = Transient empty tr (label "evt")
+        let co0 = Co [] co
+        let ps = empty_property_set {
                 program_prop = 
                     fromList [
                         (label "TR0", tr0),
                         (label "CO0", co0)],
                 inv = fromList [(label "J0", inv0)] }
+        let evt = empty_event { 
+            c_sched = Just $ singleton (label "sch0") $ csched,   
+            action = fromList [
+                (label "S0", s0),
+                (label "S1", s1) ] }
+        let m = (empty_machine "m0") {
+            variables = fromList $ map as_pair [x_decl,y_decl],
+            events = singleton (label "evt") evt,
+            inits = [init0, init1],
+            props = ps }
+        return m
 
-train_m0 :: Machine
-train_m0 = m
-    where
-        m = (empty_machine "train_m0") {
+--train_m0 :: Machine
+train_m0 = do
+        let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
+        let (t,t_decl) = var "t" int
+        inv0 <- mzforall [t_decl] $
+                   mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)]
+        c0   <- st `zselect` t
+        a0   <- st' `mzeq` zstore st t mzfalse
+        let inv = fromList [(label "J0",inv0)]
+        let enter = (label "enter", empty_event)
+        let leave = (label "leave", empty_event {
+                indices = symbol_table [t_decl],
+                c_sched = Just $ fromList [(label "C0", c0)],
+                action  = fromList [(label "A0", a0)]
+            })
+        tr <- (st `zselect` t)
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr $ label "leave")] 
+        let ps = empty_property_set { program_prop = props, inv = inv }
+        let m = (empty_machine "train_m0") {
             props = ps,
             variables = fromList $ map as_pair [st_decl],
             events = fromList [enter, leave] }
-        props = fromList [
-            (label "TR0", Transient (symbol_table [t_decl]) 
-                (fromJust (st `zapply` t) ) $ label "leave")]
-        inv = fromList $ mk_snd_just [inv0]
-        inv0 = (label "J0", mzforall [t_decl] $
-                    mzall [(mzovl st t mzfalse `mzeq` mzovl st t mzfalse)])
-        (st,st',st_decl) = prog_var "st" (fun_type INT BOOL)
-        (t,t_decl) = var "t" INT
-        enter = (label "enter", empty_event)
-        leave = (label "leave", empty_event {
-                indices = symbol_table [t_decl],
-                c_sched = Just $ fromList $ mk_snd_just [(label "C0", (st `zapply` t))],
-                action  = fromList $ mk_snd_just [(label "A0", st' `mzeq` mzovl st t mzfalse)]
-            })
-        ps = empty_property_set { program_prop = props, inv = inv }
+        return m
 
 catch_output :: (Handle -> IO a) -> IO (a, String)
 catch_output act = do
@@ -125,8 +133,8 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_po = unlines [
     " sort: pfun [a,b], set [a]",
-    " st: (pfun Int Bool)",
-    " st@prime: (pfun Int Bool)",
+    " st: (Array Int Bool)",
+    " st@prime: (Array Int Bool)",
     " t: Int",
     " (select st t)",
     " (forall ((t Int)) (= (store st t false) (store st t false)))",
@@ -138,21 +146,26 @@ result_train_m0_tr_po = unlines [
 
 test_case = ("Unit-B", test, True)
 
-check m = do
-    (xs,_,_) <- str_verify_machine m
-    return xs
+check em = do
+    case em of
+        Right m -> do
+            (xs,_,_) <- str_verify_machine m
+            return $ Right xs
+        Left x -> return (Left x)
 
-main = do
-    verify_machine example0
-    verify_machine train_m0
-    return ()
+--main = do
+--    verify_machine example0
+--    verify_machine train_m0
+--    return ()
     
-get_tr_po m = do
+get_tr_po em = return (do
+        m <- em
         let lbl = composite_label [_name m, label "leave/TR/NEG/TR0"]
         let po  = proof_obligation m ! lbl
-        return $ show po
+        return $ show po)
 
-get_en_po m = do
+get_en_po em = return (do
+        m <- em
         let lbl = composite_label [_name m, label "evt/TR/EN/TR0"]
         let po  = proof_obligation m ! lbl
-        return $ show po
+        return $ show po)

@@ -8,7 +8,7 @@ import qualified Data.Map as M
 import Data.List hiding (inits, union,insert)
 
 import System.IO
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import UnitB.AST
 import UnitB.Theory
@@ -232,7 +232,7 @@ primed :: Map String Var -> Expr -> Expr
 primed vs w@(Word (Var vn vt)) 
         | vn `member` vs    = Word (Var (vn ++ "@prime") vt)
         | otherwise         = w
-primed _ c@(Const _ _)      = c
+primed _ c@(Const _ _ _)    = c
 primed vs (FunApp f xs)     = FunApp f $ map (primed vs) xs
 primed vs (Binder q d xp)   = Binder q d (primed (foldr M.delete vs (map name d)) xp)
 --primed _ x@(Number _)       = x
@@ -277,11 +277,11 @@ str_verify_machine m =
                                                            "between the first and the last line: " ++ 
                                                            show li ] )
                                                 ++ concatMap f (zip [1..] steps) )
-                            Left xs -> return [format "     type error in proof: {0}" xs]
+                            Left (xs) -> return [format "     type error in proof: {0}" xs]
                         zs <- case r1 of
                             Valid -> return []
                             x ->     return [
-                                    "     "
+                                   "     "
                                 ++ "proof does not match proof obligation: " ++ show li]
                         return (False, xs ++ ys ++ zs)
                 return x
