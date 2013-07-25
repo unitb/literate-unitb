@@ -1,22 +1,1225 @@
 +- Unit-B Document
 |  +- small machine example
 |  |  +- test 0
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
 |  |  +- test 1 (separate machine blocks)
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
+x = y
+
+y
+
+x = y
+
+y
+
+x = 1 \imp
+1 \implies
+x' = 2
+
+2
+
+x = y
+
+y
+
+y' = y + 1
+y + 1
+
+1
+
+x = x \cdo
+x \cdot (y
+(y + 1)
+
+y + 1)
+
+1)
+
 |  |  +- test 2 (verification, one failure)
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
+x = 0
+
+0
+
+y = 0
+
+0
+
+y' = y + 1
+y + 1
+
+1
+
+x = y
+
+y
+
+x = y
+
+y
+
+x \le 10
+
+10
+
 |  |  +- test 3 (verification)
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
+x = 0
+
+0
+
+x = y
+
+y
+
+x = 2 \imp
+2 \implies
+x' = 4
+
+4
+
+y = 0
+
+0
+
+y' = y + 1
+y + 1
+
+1
+
+x = y
+
+y
+
 |  |  +- test 4 (proof obligation, invariance)
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
+x = 0
+
+0
+
+x = y
+
+y
+
+x = 2 \imp
+2 \implies
+x' = 4
+
+4
+
+y = 0
+
+0
+
+y' = y + 1
+y + 1
+
+1
+
+x = y
+
+y
+
 |  |  +- test 5 (co, 'skip' proof obligation)
+x = 2 \cdo
+2 \cdot y
+
+y
+
+x' = x + 2
+x + 2
+
+2
+
+x = 0
+
+0
+
+x = y
+
+y
+
+x = 2 \imp
+2 \implies
+x' = 4
+
+4
+
+y = 0
+
+0
+
+y' = y + 1
+y + 1
+
+1
+
+x = y
+
+y
+
 |  |  +- [ Success: 6 / 6 ]
 |  +- table of cubes example
 |  |  +- test 0 (syntax)
+a = n^3
+
+n^3
+
+3
+
+n = 0 \lan
+0 \land a 
+a = 0
+
+0
+
+n' = n + 1
+n + 1
+
+1
+
+b = 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+
+1
+
+a' = a + b
+a + b
+
+b
+
+b = 1
+
+1
+
+c = 6 \cdo
+6 \cdot n 
+n + 6
+
+6
+
+b' = b + c
+b + c
+
+c
+
+c = 6
+
+6
+
+c' = c + 6
+c + 6
+
+6
+
+(n')^3
+	
+n')^3
+	
+3
+	
+(n+1)^3
+	
+n+1)^3
+	
+1)^3
+	
+3
+	
+n^3 + 3 \c
+3 + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + b
+	
+b
+	
+a'
+	
+3 \cdot (n
+(n')^2 + 3
+n')^2 + 3 
+2 + 3 \cdo
+3 \cdot n'
+n' + 1
+	
+1
+	
+3 \cdot (n
+(n+1)^2 + 
+n+1)^2 + 3
+1)^2 + 3 \
+2 + 3 \cdo
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot (n
+(n^2+2\cdo
+n^2+2\cdot
+2+2\cdot n
+2\cdot n+1
+n+1) + 3 \
+1) + 3 \cd
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot n^
+n^2+6\cdot
+2+6\cdot n
+6\cdot n+3
+n+3 + 3 \c
+3 + 3 \cdo
+3 \cdot n 
+n + 3 + 1
+
+3 + 1
+	
+1
+	
+b+6\cdot n
+6\cdot n+3
+n+3+3
+	
+3+3
+	
+3
+	
+b+c
+	
+c
+	
+b'
+	
+6 \cdot (n
+(n') + 6
+	
+n') + 6
+	
+6
+	
+6 \cdot (n
+(n+1) + 6
+
+n+1) + 6
+	
+1) + 6
+	
+6
+	
+6 \cdot n 
+n + 6 + 6
+
+6 + 6
+	
+6
+	
+c + 6
+	
+6
+	
+c'
+	
 |  |  +- test 1 (verification)
+a = n^3
+
+n^3
+
+3
+
+n = 0 \lan
+0 \land a 
+a = 0
+
+0
+
+n' = n + 1
+n + 1
+
+1
+
+b = 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+
+1
+
+a' = a + b
+a + b
+
+b
+
+b = 1
+
+1
+
+c = 6 \cdo
+6 \cdot n 
+n + 6
+
+6
+
+b' = b + c
+b + c
+
+c
+
+c = 6
+
+6
+
+c' = c + 6
+c + 6
+
+6
+
+(n')^3
+	
+n')^3
+	
+3
+	
+(n+1)^3
+	
+n+1)^3
+	
+1)^3
+	
+3
+	
+n^3 + 3 \c
+3 + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + b
+	
+b
+	
+a'
+	
+3 \cdot (n
+(n')^2 + 3
+n')^2 + 3 
+2 + 3 \cdo
+3 \cdot n'
+n' + 1
+	
+1
+	
+3 \cdot (n
+(n+1)^2 + 
+n+1)^2 + 3
+1)^2 + 3 \
+2 + 3 \cdo
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot (n
+(n^2+2\cdo
+n^2+2\cdot
+2+2\cdot n
+2\cdot n+1
+n+1) + 3 \
+1) + 3 \cd
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot n^
+n^2+6\cdot
+2+6\cdot n
+6\cdot n+3
+n+3 + 3 \c
+3 + 3 \cdo
+3 \cdot n 
+n + 3 + 1
+
+3 + 1
+	
+1
+	
+b+6\cdot n
+6\cdot n+3
+n+3+3
+	
+3+3
+	
+3
+	
+b+c
+	
+c
+	
+b'
+	
+6 \cdot (n
+(n') + 6
+	
+n') + 6
+	
+6
+	
+6 \cdot (n
+(n+1) + 6
+
+n+1) + 6
+	
+1) + 6
+	
+6
+	
+6 \cdot n 
+n + 6 + 6
+
+6 + 6
+	
+6
+	
+c + 6
+	
+6
+	
+c'
+	
+> verification results
+Right []
+> entailment result
+Valid
+> verification results
+Right []
+> entailment result
+Valid
+> verification results
+Right []
+> entailment result
+Valid
 |  |  +- test 2 (init/fis po)
 |  |  +- proof of inv0
+a = n^3
+
+n^3
+
+3
+
+n = 0 \lan
+0 \land a 
+a = 0
+
+0
+
+n' = n + 1
+n + 1
+
+1
+
+b = 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+
+1
+
+a' = a + b
+a + b
+
+b
+
+b = 1
+
+1
+
+c = 6 \cdo
+6 \cdot n 
+n + 6
+
+6
+
+b' = b + c
+b + c
+
+c
+
+c = 6
+
+6
+
+c' = c + 6
+c + 6
+
+6
+
+(n')^3
+	
+n')^3
+	
+3
+	
+(n+1)^3
+	
+n+1)^3
+	
+1)^3
+	
+3
+	
+n^3 + 3 \c
+3 + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + 3 \cdo
+3 \cdot n^
+n^2 + 3 \c
+2 + 3 \cdo
+3 \cdot n 
+n + 1
+	
+1
+	
+a + b
+	
+b
+	
+a'
+	
+3 \cdot (n
+(n')^2 + 3
+n')^2 + 3 
+2 + 3 \cdo
+3 \cdot n'
+n' + 1
+	
+1
+	
+3 \cdot (n
+(n+1)^2 + 
+n+1)^2 + 3
+1)^2 + 3 \
+2 + 3 \cdo
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot (n
+(n^2+2\cdo
+n^2+2\cdot
+2+2\cdot n
+2\cdot n+1
+n+1) + 3 \
+1) + 3 \cd
+3 \cdot (n
+(n+1) + 1
+
+n+1) + 1
+	
+1) + 1
+	
+1
+	
+3 \cdot n^
+n^2+6\cdot
+2+6\cdot n
+6\cdot n+3
+n+3 + 3 \c
+3 + 3 \cdo
+3 \cdot n 
+n + 3 + 1
+
+3 + 1
+	
+1
+	
+b+6\cdot n
+6\cdot n+3
+n+3+3
+	
+3+3
+	
+3
+	
+b+c
+	
+c
+	
+b'
+	
+6 \cdot (n
+(n') + 6
+	
+n') + 6
+	
+6
+	
+6 \cdot (n
+(n+1) + 6
+
+n+1) + 6
+	
+1) + 6
+	
+6
+	
+6 \cdot n 
+n + 6 + 6
+
+6 + 6
+	
+6
+	
+c + 6
+	
+6
+	
+c'
+	
 |  |  +- empty proof
+x = x
+	
+x
+	
 |  |  +- [ Success: 5 / 5 ]
 |  +- train station example
 |  |  +- test 0, syntax
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  Right [Mch {_name = m0, theory = Theory {extends = [Theory {extends = [Theory {
+|  |  extends = [], types = fromList [("\\set",Sort "\\set" "set" 1)], funs = 
+|  |   [("elem@Open@@pfun@@TRAI|___|progress = fromList [], safety = fromList []}]
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > N@@LOC@Close",elem@Open@@pfun@@TRAIN@@LOC@Close[]:_.(pfun_.TRAIN_.LOC)_.x_.(set
+|  |    < N@@BLK@Close",elem@Open@@pfun@@TRAIN@@BLK@Close[]:_.(pfun_.TRAIN_.BLK)_.x_.(set
+|  |    -    ---                                ---                         ---          
+|  |    > _.(pfun_.TRAIN_.LOC))_.->_.Bool),("empty-set@Open@@pfun@@TRAIN@@LOC@Close",
+|  |    < _.(pfun_.TRAIN_.BLK))_.->_.Bool),("empty-set@Open@@pfun@@TRAIN@@BLK@Close",
+|  |    -                 ---                                             ---        
+|  |    > -set@Open@@pfun@@TRAIN@@LOC@Close[]:_._.->_.(set_.(pfun_.TRAIN_.LOC))),("mk-set
+|  |    < -set@Open@@pfun@@TRAIN@@BLK@Close[]:_._.->_.(set_.(pfun_.TRAIN_.BLK))),("mk-set
+|  |    -                         ---                                     ---            
+|  |    > Open@@pfun@@TRAIN@@LOC@Close",mk-set@Open@@pfun@@TRAIN@@LOC@Close[]:_.(pfun_.
+|  |    < Open@@pfun@@TRAIN@@BLK@Close",mk-set@Open@@pfun@@TRAIN@@BLK@Close[]:_.(pfun_.
+|  |    -                    ---                                  ---                  
+|  |    > TRAIN_.LOC)_.->_.(set_.(pfun_.TRAIN_.LOC))),("set-diff@Open@@pfun@@TRAIN@@LOC@
+|  |    < TRAIN_.BLK)_.->_.(set_.(pfun_.TRAIN_.BLK))),("set-diff@Open@@pfun@@TRAIN@@BLK@
+|  |    -        ---                           ---                                  --- 
+|  |    > ",set-diff@Open@@pfun@@TRAIN@@LOC@Close[]:_.(set_.(pfun_.TRAIN_.LOC))_.x_.(set
+|  |    < ",set-diff@Open@@pfun@@TRAIN@@BLK@Close[]:_.(set_.(pfun_.TRAIN_.BLK))_.x_.(set
+|  |    -                               ---                               ---           
+|  |    > _.(pfun_.TRAIN_.LOC))_.->_.(set_.(pfun_.TRAIN_.LOC))),("union@Open@@pfun@@TRAIN
+|  |    < _.(pfun_.TRAIN_.BLK))_.->_.(set_.(pfun_.TRAIN_.BLK))),("union@Open@@pfun@@TRAIN
+|  |    -                 ---                            ---                             
+|  |    > LOC@Close",bunion@Open@@pfun@@TRAIN@@LOC@Close[pfun_.[TRAIN_.[],LOC_.[]]]:_.(
+|  |    < BLK@Close",bunion@Open@@pfun@@TRAIN@@BLK@Close[pfun_.[TRAIN_.[],BLK_.[]]]:_.(
+|  |    - ---                                  ---                        ---          
+|  |    > _.(pfun_.TRAIN_.LOC))_.x_.(set_.(pfun_.TRAIN_.LOC))_.->_.(set_.(pfun_.TRAIN_.
+|  |    < _.(pfun_.TRAIN_.BLK))_.x_.(set_.(pfun_.TRAIN_.BLK))_.->_.(set_.(pfun_.TRAIN_.
+|  |    -                 ---                           ---                            
+|  |    > )))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@Open@@pfun@@TRAIN@@LOC@
+|  |    < )))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@Open@@pfun@@TRAIN@@BLK@
+|  |    -                                                                            --- 
+|  |    > Close,(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem@
+|  |    < Close,(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem@
+|  |    -                                   ---                      ---               
+|  |    > @@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y))_.(=_.x_.
+|  |    < @@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y))_.(=_.x_.
+|  |    -                ---                                      ---                    
+|  |    > )))),(1@Open@@pfun@@TRAIN@@LOC@Close,(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(
+|  |    < )))),(1@Open@@pfun@@TRAIN@@BLK@Close,(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(
+|  |    -                            ---                                   ---          
+|  |    > _.(pfun_.TRAIN_.LOC)))_.(s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun
+|  |    < _.(pfun_.TRAIN_.BLK)))_.(s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun
+|  |    -                 ---                              ---                          
+|  |    > TRAIN@@LOC@Close_.x_.(set-diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(
+|  |    < TRAIN@@BLK@Close_.x_.(set-diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(
+|  |    -        ---                                        ---                         
+|  |    > elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@
+|  |    < elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@
+|  |    -                         ---                                               --- 
+|  |    > Close_.x_.s2))))))],_.dummies_.=_.fromList_.[]}],_.types_.=_.fromList_.[],_.
+|  |    < Close_.x_.s2))))))],_.dummies_.=_.fromList_.[]}],_.types_.=_.fromList_.[],_.
+|  |    -                                                                             
+|  |    > _.=_.fromList_.[("apply@@TRAIN@@LOC",apply@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_.(
+|  |    < _.=_.fromList_.[("apply@@TRAIN@@BLK",apply@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(
+|  |    -                                 ---                ---           ---         
+|  |    > TRAIN_.LOC)_.x_.TRAIN_.->_.LOC),("dom-rest@@TRAIN@@LOC",dom-rest@@TRAIN@@LOC[
+|  |    < TRAIN_.BLK)_.x_.TRAIN_.->_.BLK),("dom-rest@@TRAIN@@BLK",dom-rest@@TRAIN@@BLK[
+|  |    -        ---                 ---                     ---                   --- 
+|  |    > TRAIN_.[],LOC_.[]]:_.(set_.TRAIN)_.x_.(pfun_.TRAIN_.LOC)_.->_.(pfun_.TRAIN_.LOC
+|  |    < TRAIN_.[],BLK_.[]]:_.(set_.TRAIN)_.x_.(pfun_.TRAIN_.BLK)_.->_.(pfun_.TRAIN_.BLK
+|  |    -           ---                                       ---                     ---
+|  |    > dom-subst@@TRAIN@@LOC",dom-subst@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_.(set_.TRAIN
+|  |    < dom-subst@@TRAIN@@BLK",dom-subst@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(set_.TRAIN
+|  |    -                   ---                    ---           ---                   
+|  |    > x_.(pfun_.TRAIN_.LOC)_.->_.(pfun_.TRAIN_.LOC)),("dom@@TRAIN@@LOC",dom@@TRAIN@@
+|  |    < x_.(pfun_.TRAIN_.BLK)_.->_.(pfun_.TRAIN_.BLK)),("dom@@TRAIN@@BLK",dom@@TRAIN@@
+|  |    -                  ---                     ---                 ---              
+|  |    > LOC[TRAIN_.[],LOC_.[]]:_.(pfun_.TRAIN_.LOC)_.->_.(set_.TRAIN)),("empty-fun@@
+|  |    < BLK[TRAIN_.[],BLK_.[]]:_.(pfun_.TRAIN_.BLK)_.->_.(set_.TRAIN)),("empty-fun@@
+|  |    - ---           ---                      ---                                  
+|  |    > @@LOC",empty-fun@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_._.->_.(pfun_.TRAIN_.LOC)),("
+|  |    < @@BLK",empty-fun@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_._.->_.(pfun_.TRAIN_.BLK)),("
+|  |    -   ---                    ---           ---                            ---     
+|  |    > fun@@TRAIN@@LOC",mk-fun@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_.TRAIN_.x_.LOC_.->_.(
+|  |    < fun@@TRAIN@@BLK",mk-fun@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.TRAIN_.x_.BLK_.->_.(
+|  |    -             ---                 ---           ---                  ---       
+|  |    > pfun_.TRAIN_.LOC)),("ovl@@TRAIN@@LOC",ovl@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_.(
+|  |    < pfun_.TRAIN_.BLK)),("ovl@@TRAIN@@BLK",ovl@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(
+|  |    -              ---                 ---              ---           ---         
+|  |    > TRAIN_.LOC)_.x_.(pfun_.TRAIN_.LOC)_.->_.(pfun_.TRAIN_.LOC)),("tfun@@TRAIN@@LOC
+|  |    < TRAIN_.BLK)_.x_.(pfun_.TRAIN_.BLK)_.->_.(pfun_.TRAIN_.BLK)),("tfun@@TRAIN@@BLK
+|  |    -        ---                    ---                     ---                  ---
+|  |    > tfun@@TRAIN@@LOC[TRAIN_.[],LOC_.[]]:_.(set_.TRAIN)_.x_.(set_.LOC)_.->_.(set_.(
+|  |    < tfun@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(set_.TRAIN)_.x_.(set_.BLK)_.->_.(set_.(
+|  |    -              ---           ---                               ---              
+|  |    > pfun_.TRAIN_.LOC)))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@@TRAIN
+|  |    < pfun_.TRAIN_.BLK)))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@@TRAIN
+|  |    -              ---                                                              
+|  |    > ,(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(bunion@@
+|  |    < ,(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(bunion@@
+|  |    -                               ---                       ---                  
+|  |    > TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC_.(ovl@@
+|  |    < TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK_.(ovl@@
+|  |    -                     ---                    ---                     ---        
+|  |    > @@LOC_.f1_.f2))))),(1@@TRAIN@@LOC,(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC
+|  |    < @@BLK_.f1_.f2))))),(1@@TRAIN@@BLK,(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK
+|  |    -   ---                         ---                  ---                    ---
+|  |    > empty-set@@TRAIN)),(2@@TRAIN@@LOC,(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun
+|  |    < empty-set@@TRAIN)),(2@@TRAIN@@BLK,(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun
+|  |    -                               ---                      ---                     
+|  |    > @@TRAIN@@LOC@Close_.empty-fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN
+|  |    < @@TRAIN@@BLK@Close_.empty-fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN
+|  |    -          ---                          ---                ---                  
+|  |    > s2))))],_.dummies_.=_.fromList_.[]},Theory_.{extends_.=_.[Theory_.{extends
+|  |    < s2))))],_.dummies_.=_.fromList_.[]},Theory_.{extends_.=_.[],_.types_.=_.
+|  |    -                                                           ----- --------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    < _.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.fromList_.[("elem@@BLK",elem@@
+|  |    -   ------------------------------------------  -------------------------------
+|  |    > _.[("elem@Open@@pfun@@TRAIN@@BLK@Close",elem@Open@@pfun@@TRAIN@@BLK@Close[]:_.(
+|  |    < BLK[]:_.BLK_.x_.(set_.BLK)_.->_.Bool),("empty-set@@BLK",empty-set@@BLK
+|  |    - ---------------------------------------- ------ -  -------------------
+|  |    > pfun_.TRAIN_.BLK)_.x_.(set_.(pfun_.TRAIN_.BLK))_.->_.Bool),("empty-set@Open@@
+|  |    < set_.BLK)),("mk-set@@BLK",mk-set@@BLK[]:_.BLK_.->_.(set_.BLK)),("set-diff@@BLK
+|  |    - ----------------------------------------     --------------------------------
+|  |    > TRAIN@@BLK@Close",empty-set@Open@@pfun@@TRAIN@@BLK@Close[]:_._.->_.(set_.(pfun
+|  |    < set-diff@@BLK[]:_.(set_.BLK)_.x_.(set_.BLK)_.->_.(set_.BLK)),("union@@BLK",
+|  |    - --------------------- -----------------------------------------------------
+|  |    > TRAIN_.BLK))),("mk-set@Open@@pfun@@TRAIN@@BLK@Close",mk-set@Open@@pfun@@TRAIN@@
+|  |    < bunion@@BLK[BLK_.[]]:_.(set_.BLK)_.x_.(set_.BLK)_.->_.(set_.BLK))],_.consts
+|  |    - ------------------------- -------------------------------------------------
+|  |    > BLK@Close[]:_.(pfun_.TRAIN_.BLK)_.->_.(set_.(pfun_.TRAIN_.BLK))),("set-diff@
+|  |    < fromList_.[],_.fact_.=_.fromList_.[(0@@BLK,(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(
+|  |    - -------------------  -----------  ------------------------------------------
+|  |    > @@pfun@@TRAIN@@BLK@Close",set-diff@Open@@pfun@@TRAIN@@BLK@Close[]:_.(set_.(pfun
+|  |    < BLK_.x_.(mk-set@@BLK_.y))_.(=_.x_.y)))),(1@@BLK,(forall_.((x_.BLK)_.(s1_.(set_.
+|  |    - ------------------------------------------------------------------    ---------
+|  |    > TRAIN_.BLK))_.x_.(set_.(pfun_.TRAIN_.BLK))_.->_.(set_.(pfun_.TRAIN_.BLK))),("
+|  |    < BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(
+|  |    - -----  ---------------------  -------   -------------------  ----------------
+|  |    > union@Open@@pfun@@TRAIN@@BLK@Close",bunion@Open@@pfun@@TRAIN@@BLK@Close[pfun_.[
+|  |    < elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x_.s2))))))],_.dummies_.=_.fromList_.[]},
+|  |    - ----- ------------------------------------------------------------------------
+|  |    > TRAIN_.[],BLK_.[]]]:_.(set_.(pfun_.TRAIN_.BLK))_.x_.(set_.(pfun_.TRAIN_.BLK
+|  |    < Theory_.{extends_.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1
+|  |    -  --------------------------------------------------------------------------
+|  |    > set_.(pfun_.TRAIN_.BLK)))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@
+|  |    < funs_.=_.fromList_.[("elem@@LOC",elem@@LOC[]:_.LOC_.x_.(set_.LOC)_.->_.Bool),("
+|  |    - -----------------  ----------------------------------  ---   -----------------
+|  |    > Open@@pfun@@TRAIN@@BLK@Close,(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.
+|  |    < empty-set@@LOC",empty-set@@LOC[]:_._.->_.(set_.LOC)),("mk-set@@LOC",mk-set@@LOC
+|  |    - ---------- ----------------------------------------------------------------
+|  |    > BLK)))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@
+|  |    < []:_.LOC_.->_.(set_.LOC)),("set-diff@@LOC",set-diff@@LOC[]:_.(set_.LOC)_.x_.(
+|  |    - ------------------------------------ - --------------------------------------
+|  |    > BLK@Close_.y))_.(=_.x_.y)))),(1@Open@@pfun@@TRAIN@@BLK@Close,(forall_.((x_.(
+|  |    < LOC)_.->_.(set_.LOC)),("union@@LOC",bunion@@LOC[LOC_.[]]:_.(set_.LOC)_.x_.(set
+|  |    - --------------  ---------------- --------   --------------------------------
+|  |    > TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(s2_.(set_.(pfun_.TRAIN_.BLK
+|  |    < LOC)_.->_.(set_.LOC))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@@LOC
+|  |    - -----------------------  --------------- ------------------- --------------
+|  |    > ))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(set-diff@Open@@pfun@@TRAIN@@
+|  |    < forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y))_.(=_.x_.y
+|  |    - --------------------------------------------      --------- ----------------
+|  |    > Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s1)_.(not_.(elem@
+|  |    < )))),(1@@LOC,(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem
+|  |    - ----------------------- ------------------------------------  -----------------
+|  |    > @@pfun@@TRAIN@@BLK@Close_.x_.s2))))))],_.dummies_.=_.fromList_.[]}],_.types
+|  |    < _.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x_.
+|  |    - -------------- - -------------------------------------------   ------------
+|  |    > fromList_.[],_.funs_.=_.fromList_.[("apply@@TRAIN@@BLK",apply@@TRAIN@@BLK[TRAIN
+|  |    < ))))))],_.dummies_.=_.fromList_.[]},Theory_.{extends_.=_.[],_.types_.=_.
+|  |    - --------  ------------------------------- ------------------------------
+|  |    > _.[],BLK_.[]]:_.(pfun_.TRAIN_.BLK)_.x_.TRAIN_.->_.BLK),("dom-rest@@TRAIN@@BLK",
+|  |    < _.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.fromList_.[("elem@@TRAIN",elem
+|  |    -    -----------------------------------------  ---------------- --- ------------
+|  |    > dom-rest@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(set_.TRAIN)_.x_.(pfun_.TRAIN_.BLK
+|  |    < TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("empty-set@@TRAIN",empty-set@@
+|  |    - ----------     ------------------------------------------------------------
+|  |    > )_.->_.(pfun_.TRAIN_.BLK)),("dom-subst@@TRAIN@@BLK",dom-subst@@TRAIN@@BLK[TRAIN
+|  |    < []:_._.->_.(set_.TRAIN)),("mk-set@@TRAIN",mk-set@@TRAIN[]:_.TRAIN_.->_.(set_.
+|  |    - -----  ----------------------------------------------------------------------
+|  |    > BLK_.[]]:_.(set_.TRAIN)_.x_.(pfun_.TRAIN_.BLK)_.->_.(pfun_.TRAIN_.BLK)),("dom@@
+|  |    < TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN[]:_.(set_.TRAIN)_.x_.(set_.TRAIN
+|  |    - ---------------------------------------------------------------------------
+|  |    > TRAIN@@BLK",dom@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(pfun_.TRAIN_.BLK)_.->_.(set_.
+|  |    < set_.TRAIN)),("union@@TRAIN",bunion@@TRAIN[TRAIN_.[]]:_.(set_.TRAIN)_.x_.(set_.
+|  |    - ------------------------------------------------------  ---------------        
+|  |    > TRAIN)),("empty-fun@@TRAIN@@BLK",empty-fun@@TRAIN@@BLK[TRAIN_.[],BLK
+|  |    < TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@@
+|  |    -       --------------------------------------------------------------
+|  |    > pfun_.TRAIN_.BLK)),("mk-fun@@TRAIN@@BLK",mk-fun@@TRAIN@@BLK[TRAIN_.[],BLK
+|  |    < TRAIN,(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN_.y
+|  |    - -------------------------------------------------------------------------
+|  |    > TRAIN_.x_.BLK_.->_.(pfun_.TRAIN_.BLK)),("ovl@@TRAIN@@BLK",ovl@@TRAIN@@BLK[TRAIN
+|  |    < ))_.(=_.x_.y)))),(1@@TRAIN,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set
+|  |    - ------------------------------------------------------------------------------
+|  |    > _.[],BLK_.[]]:_.(pfun_.TRAIN_.BLK)_.x_.(pfun_.TRAIN_.BLK)_.->_.(pfun_.TRAIN_.
+|  |    < TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.
+|  |    - --------  -----------------------------------------  ---   ------------------
+|  |    > )),("tfun@@TRAIN@@BLK",tfun@@TRAIN@@BLK[TRAIN_.[],BLK_.[]]:_.(set_.TRAIN)_.x_.(
+|  |    < s1)_.(not_.(elem@@TRAIN_.x_.s2))))))],_.dummies_.=_.fromList_.[]}],_.types_.=_.
+|  |    - ----------------  -------------------------------------------------------------
+|  |    > set_.BLK)_.->_.(set_.(pfun_.TRAIN_.BLK)))],_.consts_.=_.fromList_.[],_.fact
+|  |    < fromList_.[("\\BLK",Sort_."\\BLK"_."BLK"_.0),("\\LOC",Sort_."\\LOC"_."LOC"_.0
+|  |    - ---------------------------------  ----------------------------------------
+|  |    > fromList_.[(0@@TRAIN@@BLK,(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN
+|  |    < ),("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0),("\\pfun",DefSort_."\\pfun"_."pfun
+|  |    - ----------------------------------------------------------------------------
+|  |    > BLK)))_.(=_.(bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom
+|  |    < b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.fromList
+|  |    - ----------  ---------------------------------------------------------------
+|  |    > TRAIN@@BLK_.(ovl@@TRAIN@@BLK_.f1_.f2))))),(1@@TRAIN@@BLK,(=_.(dom@@TRAIN@@BLK_.
+|  |    < _.[],_.consts_.=_.fromList_.[("\\BLK",BLK:_.(set_.BLK)),("\\LOC",LOC:_.(set_.
+|  |    - -----------------------------------------------------------------------------
+|  |    > empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN)),(2@@TRAIN@@BLK,(forall_.((s2_.(set_.
+|  |    < )),("\\TRAIN",TRAIN:_.(set_.TRAIN)),("ent",ent:_.LOC),("ext",ext:_.LOC),("plf",
+|  |    - ------------------------ ----------------- ----------------------  ------------
+|  |    > BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty-fun@@TRAIN@@BLK_.(tfun@@TRAIN
+|  |    < LOC)],_.fact_.=_.fromList_.[(axm0,(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set
+|  |    - --- --  ----------------------------------------------------------------------
+|  |    > BLK_.empty-set@@TRAIN_.s2))))],_.dummies_.=_.fromList_.[]},Theory_.{extends
+|  |    < LOC_.ent)_.(mk-set@@LOC_.plf))_.(mk-set@@LOC_.ext))))],_.dummies_.=_.fromList
+|  |    - ---   ---------------------- ----------------------------------------------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    < _.[("t",t:_.TRAIN)]},_.variables_.=_.fromList_.[("in",in:_.(set_.TRAIN)),("loc
+|  |    -   ----- -------------------------------------------- ------------------------
+|  |    > _.[("elem@@BLK",elem@@BLK[]:_.BLK_.x_.(set_.BLK)_.->_.Bool),("empty-set@@BLK",
+|  |    < :_.(pfun_.TRAIN_.BLK))],_.inits_.=_.[(=_.loc_.empty-fun@@TRAIN@@BLK),(=_.in_.
+|  |    - --- -------------------------------------------------------------------------
+|  |    > empty-set@@BLK[]:_._.->_.(set_.BLK)),("mk-set@@BLK",mk-set@@BLK[]:_.BLK_.->_.(
+|  |    < empty-set@@TRAIN)],_.events_.=_.fromList_.[(enter,Event_.{indices_.=_.fromList
+|  |    -            --------  ----- ---------------------------------------------------
+|  |    > BLK)),("set-diff@@BLK",set-diff@@BLK[]:_.(set_.BLK)_.x_.(set_.BLK)_.->_.(set_.
+|  |    < _.[],_.c_sched_.=_.Nothing,_.f_sched_.=_.Nothing,_.params_.=_.fromList_.[],_.
+|  |    - ----------------------------- ---------  -------------------  --------  -----
+|  |    > BLK)),("union@@BLK",bunion@@BLK[BLK_.[]]:_.(set_.BLK)_.x_.(set_.BLK)_.->_.(set
+|  |    < _.=_.fromList_.[],_.action_.=_.fromList_.[]}),(leave,Event_.{indices_.=_.
+|  |    - ---------- ------------   ------------------------------------------  ---
+|  |    > BLK))],_.consts_.=_.fromList_.[],_.fact_.=_.fromList_.[(0@@BLK,(forall_.((x_.
+|  |    < _.[("t",t:_.TRAIN)],_.c_sched_.=_.Just_.(fromList_.[(c0,(elem@@TRAIN_.t_.in
+|  |    - ---------------------------------------------------------------------------
+|  |    > )_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y))_.(=_.x_.y)))),(1@@BLK,(
+|  |    < f_sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    - - --------------------------  -  -----------------------------------------
+|  |    > _.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@BLK_.x_.(set-diff
+|  |    < _.=_.fromList_.[(a0,(=_.in@prime_.(set-diff@@TRAIN_.in_.(mk-set@@TRAIN_.t
+|  |    -   --------------------  ------------------------------------------------ 
+|  |    > BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x_.s2))))))],_.
+|  |    < ))))]})],_.props_.=_.program_prop_.=_.fromList_.[(tr0,Transient_.(fromList_.[("
+|  |    - -------------------  -----------------------------------------------------
+|  |    > _.=_.fromList_.[]},Theory_.{extends_.=_.[],_.types_.=_.fromList_.[("\\set",Sort
+|  |    < TRAIN)])_.(elem@@TRAIN_.t_.in)_.leave)],_.inv_.=_.fromList_.[(inv2,(=_.(dom@@
+|  |    - -------------------------  --------------------------------------------------
+|  |    > _."\\set"_."set"_.1)],_.funs_.=_.fromList_.[("elem@@LOC",elem@@LOC[]:_.LOC_.x
+|  |    < @@BLK_.loc)_.in))],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[],_.
+|  |    - ----------------------------                --------------------
+|  |    > set_.LOC)_.->_.Bool),("empty-set@@LOC",empty-set@@LOC[]:_._.->_.(set_.LOC)),("
+|  |    > set@@LOC",mk-set@@LOC[]:_.LOC_.->_.(set_.LOC)),("set-diff@@LOC",set-diff@@LOC
+|  |    > []:_.(set_.LOC)_.x_.(set_.LOC)_.->_.(set_.LOC)),("union@@LOC",bunion@@LOC[LOC
+|  |    > _.[]]:_.(set_.LOC)_.x_.(set_.LOC)_.->_.(set_.LOC))],_.consts_.=_.fromList
+|  |    > _.=_.fromList_.[(0@@LOC,(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-
+|  |    > LOC_.y))_.(=_.x_.y)))),(1@@LOC,(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set
+|  |    > LOC)))_.(=_.(elem@@LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1
+|  |    > not_.(elem@@LOC_.x_.s2))))))],_.dummies_.=_.fromList_.[]},Theory_.{extends
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    > _.[("elem@@TRAIN",elem@@TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("empty-set
+|  |    > TRAIN",empty-set@@TRAIN[]:_._.->_.(set_.TRAIN)),("mk-set@@TRAIN",mk-set@@TRAIN
+|  |    > []:_.TRAIN_.->_.(set_.TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN[]:_.(set_.
+|  |    > )_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("union@@TRAIN",bunion@@TRAIN[TRAIN
+|  |    > set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.fromList_.[],_.
+|  |    > fact_.=_.fromList_.[(0@@TRAIN,(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@
+|  |    > x_.(mk-set@@TRAIN_.y))_.(=_.x_.y)))),(1@@TRAIN,(forall_.((x_.TRAIN)_.(s1_.(set
+|  |    > TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2
+|  |    > and_.(elem@@TRAIN_.x_.s1)_.(not_.(elem@@TRAIN_.x_.s2))))))],_.dummies_.=_.
+|  |    > fromList_.[]}],_.types_.=_.fromList_.[("\\BLK",Sort_."\\BLK"_."BLK"_.0),("\\LOC
+|  |    > _."\\LOC"_."LOC"_.0),("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0),("\\pfun",DefSort
+|  |    > _."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set"_."set"_.1
+|  |    > )],_.funs_.=_.fromList_.[],_.consts_.=_.fromList_.[("\\BLK",BLK:_.(set_.BLK
+|  |    > LOC",LOC:_.(set_.LOC)),("\\TRAIN",TRAIN:_.(set_.TRAIN)),("ent",ent:_.LOC),("ext
+|  |    > ext:_.LOC),("plf",plf:_.LOC)],_.fact_.=_.fromList_.[(axm0,(=_.LOC_.(bunion@@LOC
+|  |    > _.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC_.plf))_.(mk-set@@LOC_.ext
+|  |    > dummies_.=_.fromList_.[("t",t:_.TRAIN)]},_.variables_.=_.fromList_.[("in",in
+|  |    > set_.TRAIN)),("loc",loc:_.(pfun_.TRAIN_.LOC))],_.inits_.=_.[(=_.loc_.empty-fun
+|  |    > TRAIN@@LOC),(=_.in_.empty-set@@TRAIN)],_.events_.=_.fromList_.[(enter,Event_.{
+|  |    > indices_.=_.fromList_.[("t",t:_.TRAIN)],_.c_sched_.=_.Nothing,_.f_sched_.=_.
+|  |    > Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action_.=_.
+|  |    > ,(and_.(=_.in@prime_.(bunion@@TRAIN_.in_.(mk-set@@TRAIN_.t)))_.(=_.loc@prime_.(
+|  |    > ovl@@TRAIN@@LOC_.loc_.(mk-fun@@TRAIN@@LOC_.t_.ent)))))]}),(leave,Event_.{
+|  |    > _.=_.fromList_.[("t",t:_.TRAIN)],_.c_sched_.=_.Just_.(fromList_.[(c0,(elem@@
+|  |    > _.t_.in))]),_.f_sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.
+|  |    > _.[],_.action_.=_.fromList_.[(a0,(=_.in@prime_.(set-diff@@TRAIN_.in_.(mk-set@@
+|  |    > TRAIN_.t))))]})],_.props_.=_.program_prop_.=_.fromList_.[(tr0,Transient_.(
+|  |    > _.[("t",t:_.TRAIN)])_.(elem@@TRAIN_.t_.in)_.leave)],_.inv_.=_.fromList_.[(inv2
+|  |    > ,(=_.(dom@@TRAIN@@LOC_.loc)_.in))],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[m0/
+|  |    > enter/INV/inv2],_.
+|  |  ]
 |  |  +- test 1, verification
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
 |  |    o  m0/INIT/FI|___|10
 |  |  
 |  |  
@@ -27,49 +1230,2085 @@
 |  |    > S\n
 |  |    < S\n
 |  |    -    
-|  |    > _.xxx_.m0/INIT/INV/inv2\n
+|  |    > _._.o_._.m0/INIT/INV/inv2\n
 |  |    < _.ooo_.m0/INIT/INV/inv2\n
-|  |    -   ---                    
-|  |    > _.xxx_.m0/enter/FIS\n
+|  |    -   --   ----- ------------
+|  |    > _._.o_._.m0/enter/FIS\n
 |  |    < _.ooo_.m0/enter/FIS\n
-|  |    -   ---                
+|  |    -   --   --------------
 |  |    > _.xxx_.m0/enter/INV/inv2\n
 |  |    < _.ooo_.m0/enter/INV/inv2\n
 |  |    -   ---                     
-|  |    > _.xxx_.m0/enter/SCH\n
+|  |    > _._.o_._.m0/enter/SCH\n
 |  |    < _.ooo_.m0/enter/SCH\n
-|  |    -   ---                
-|  |    > _.xxx_.m0/leave/FIS\n
+|  |    -   --   --------------
+|  |    > _._.o_._.m0/leave/FIS\n
 |  |    < _.ooo_.m0/leave/FIS\n
-|  |    -   ---                
+|  |    -   --   --------------
 |  |    > _.xxx_.m0/leave/INV/inv2\n
 |  |    < _.ooo_.m0/leave/INV/inv2\n
 |  |    -   ---                     
-|  |    > _.xxx_.m0/leave/SCH\n
+|  |    > _._.o_._.m0/leave/SCH\n
 |  |    < _.ooo_.m0/leave/SCH\n
-|  |    -   ---                
-|  |    > _.xxx_.m0/leave/TR/EN/tr0\n
+|  |    -   --   --------------
+|  |    > _._.o_._.m0/leave/TR/EN/tr0\n
 |  |    < _.ooo_.m0/leave/TR/EN/tr0\n
-|  |    -   ---                      
-|  |    > _.xxx_.m0/leave/TR/NEG/tr0\n
+|  |    -   --   --------------------
+|  |    > _._.o_._.m0/leave/TR/NEG/tr0\n
 |  |    < _.ooo_.m0/leave/TR/NEG/tr0\n
-|  |    -   ---                       
-|  |    > passed_.1_./_.
+|  |    -   --   ---------------------
+|  |    > passed_.8_./_.
 |  |    < passed_.7_./_.
 |  |    -         -     
 |  |  ]
 |  |  +- test 2, proof obligation, INIT/fis
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___|= in empty-set@@TRAIN)))))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(not_.(exists_.((in_.(set_.TRAIN))_.(loc_.(pfun_.TRAIN_.BLK)))_.(and
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    < _.(=_.loc_.empty-fun@@TRAIN@@BLK)_.(
+|  |    - ------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(not_.(exists_.((in_.(set_.TRAIN))_.(loc_.(pfun_.TRAIN_.LOC)))_.(and
+|  |    > _.(=_.loc_.empty-fun@@TRAIN@@LOC)_.(
+|  |  ]
 |  |  +- test 3, proof obligation, leave/fis
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___| (= in@prime (set-diff@@TRAIN in (mk-set@@
+|  |  TRAIN t))))))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-const_.t_.TRAIN)\n
+|  |    < (declare-const_.t_.TRAIN)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.loc)_.in))\n
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    < (assert_.(not_.(exists_.((in@prime_.(set_.TRAIN))_.(loc@prime_.(pfun_.TRAIN_.
+|  |    -           - ----------   ----------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    < BLK)))
+|  |    - ------
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.loc)_.in))\n
+|  |    > (assert_.(not_.(exists_.((in@prime_.(set_.TRAIN))_.(loc@prime_.(pfun_.TRAIN_.
+|  |    > LOC)))
+|  |  ]
 |  |  +- test 4, proof obligation, leave/sch
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___|c) in))
+|  |  (assert (elem@@TRAIN t in))
+|  |  (assert (not true))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-const_.t_.TRAIN)\n
+|  |    < (declare-const_.t_.TRAIN)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.lo
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.lo
+|  |  ]
 |  |  +- test 5, proof obligation, leave/en/tr0
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___|c) in))
+|  |  (assert (not (exists ((t TRAIN)) (=> (elem@@TRAIN t in) (elem@@TRAIN t in)))))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-const_.t_.TRAIN)\n
+|  |    < (declare-const_.t_.TRAIN)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.lo
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.lo
+|  |  ]
 |  |  +- test 6, proof obligation, leave/neg/tr0
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const in@prime (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___|c) in))
+|  |  (assert (elem@@TRAIN t in))
+|  |  (assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))
+|  |  (assert (not (not (elem@@TRAIN t in@prime))))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.loc@prime_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-const_.loc@prime_.(pfun_.TRAIN_.BLK))\n
+|  |    -                                          ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-const_.t_.TRAIN)\n
+|  |    < (declare-const_.t_.TRAIN)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(elem@@TRAIN_.t_.in))\n
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.lo
+|  |    -           -------------------  --
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(elem@@TRAIN_.t_.in))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.lo
+|  |  ]
 |  |  +- test 7, undeclared symbol
+t \in in
+
+in
+
+t \in in
+
+in
+
 |  |  +- test 8, undeclared event (wrt transient)
 |  |  +- test 9, undeclared event (wrt c sched)
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
 |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- [ Success: 12 / 13 ]
+t \in in
+
+in
+
+\dom . loc
+in
+
+in' = in \
+in \bunion
+\{ t \}
+	\
+t \}
+	\lan
+loc' = loc
+loc | (t \
+(t \tfun e
+t \tfun en
+ent)
+
+t \in in
+
+in
+
+in = \empt
+\emptyset
+
+loc = \emp
+\emptyfun
+
+in' = in \
+in \setmin
+\{ t \}
+
+
+t \}
+
+
+\LOC = \{ 
+\{ ent, pl
+ent, plf, 
+plf, ext \
+ext \}
+
+in'
+	
+in \bunion
+\{ t \}
+t \}
+\dom.loc \
+\{ t \}
+t \}
+\dom.loc \
+\dom.(t \t
+t \tfun en
+ent)
+	
+\dom.(loc 
+loc   |   
+t \tfun en
+ent)
+	
+\dom. ( lo
+loc' )
+	
+|  |  (declare-sort BLK 0)
+|  |  (declare-sort LOC 0)
+|  |  (declare-sort TRAIN 0)
+|  |  (define-sort pfun (a b) (Array a b))
+|  |  (declare-sort set 1)
+|  |  (declare-const BLK (set BLK))
+|  |  (declare-const LOC (set LOC))
+|  |  (declare-const TRAIN (set TRAIN))
+|  |  (declare-const ent LOC)
+|  |  (declare-const ext LOC)
+|  |  (declare-const in (set TRAIN))
+|  |  (declare-const in@prime (set TRAIN))
+|  |  (declare-const loc (pfun TRA|___|c@prime) in@prime)))
+|  |  (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params 
+|  |  simplify :expand-power true) smt)))
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > IN_.LOC))\n
+|  |    < IN_.BLK))\n
+|  |    -     ---    
+|  |    > (declare-const_.loc@prime_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-const_.loc@prime_.(pfun_.TRAIN_.BLK))\n
+|  |    -                                          ---    
+|  |    > (declare-const_.plf_.LOC)\n
+|  |    < (declare-const_.plf_.LOC)\n
+|  |    -                            
+|  |    > (declare-const_.t_.TRAIN)\n
+|  |    < (declare-const_.t_.TRAIN)\n
+|  |    -                            
+|  |    > (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    < (declare-fun_.apply@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.TRAIN)_.BLK)\n
+|  |    -                                                                     
+|  |    > (declare-fun_.apply@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.TRAIN)_.LOC)\n
+|  |    < (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    -               ------------------------------------------------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun_.
+|  |    < TRAIN_.BLK))\n
+|  |    - --------------
+|  |    > TRAIN_.BLK))\n
+|  |    < (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    - --------------
+|  |    > (declare-fun_.dom-rest@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > TRAIN_.LOC))\n
+|  |    < (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    - --------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@BLK_.((set_.TRAIN)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    -               ---------------------  -----  -------
+|  |    > _.TRAIN_.BLK))\n
+|  |    < (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    - ----------------
+|  |    > (declare-fun_.dom-subst@@TRAIN@@LOC_.((set_.TRAIN)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    -               ------------------------------------------ 
+|  |    > _.TRAIN_.LOC))\n
+|  |    < (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    - ----------------
+|  |    > (declare-fun_.dom@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK))_.(set_.TRAIN))\n
+|  |    < pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.dom@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC))_.(set_.TRAIN))\n
+|  |    < (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    -               ---------- -------------------------------------
+|  |    > (declare-fun_.elem@@BLK_.(BLK_.(set_.BLK))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@LOC_.(LOC_.(set_.LOC))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    -                --------------------------------
+|  |    > (declare-fun_.elem@@TRAIN_.(TRAIN_.(set_.TRAIN))_.Bool)\n
+|  |    < (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    -                -------------------------------- ---
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK)_.(set_.(
+|  |    < (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    -                ------ - - --- ----------- --------------------  -------------
+|  |    > pfun_.TRAIN_.BLK)))_.Bool)\n
+|  |    < BLK)))\n
+|  |    - --------
+|  |    > (declare-fun_.elem@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC)_.(set_.(
+|  |    < (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    -               -------------------------------------------------------
+|  |    > pfun_.TRAIN_.LOC)))_.Bool)\n
+|  |    < (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    - ----------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@BLK_.()_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    -               ---------------------------------
+|  |    > (declare-fun_.empty-fun@@TRAIN@@LOC_.()_.(pfun_.TRAIN_.LOC))\n
+|  |    < (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    -               ---------------------------------------
+|  |    > (declare-fun_.empty-set@@BLK_.()_.(set_.BLK))\n
+|  |    < (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    -               --------------------------   ----
+|  |    > (declare-fun_.empty-set@@LOC_.()_.(set_.LOC))\n
+|  |    < _.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.empty-set@@TRAIN_.()_.(set_.TRAIN))\n
+|  |    < (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    -               ---------- ------- ------------------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@BLK@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < _.TRAIN_.BLK))\n
+|  |    - ----------------
+|  |    > BLK)))\n
+|  |    < (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    - --------
+|  |    > (declare-fun_.empty-set@Open@@pfun@@TRAIN@@LOC@Close_.()_.(set_.(pfun_.TRAIN_.
+|  |    < (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               --------- --------------------------------------------
+|  |    > LOC)))\n
+|  |    < (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - --------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@BLK_.(TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))\n
+|  |    < (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               -------------  ------     --   ------------------------
+|  |    > (declare-fun_.mk-fun@@TRAIN@@LOC_.(TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.mk-set@@BLK_.(BLK)_.(set_.BLK))\n
+|  |    < (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    -               ------------------------------ --
+|  |    > (declare-fun_.mk-set@@LOC_.(LOC)_.(set_.LOC))\n
+|  |    < _.BLK)))\n
+|  |    - ----------
+|  |    > (declare-fun_.mk-set@@TRAIN_.(TRAIN)_.(set_.TRAIN))\n
+|  |    < (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    -               ------  ---------------------------  --
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@BLK@Close_.((pfun_.TRAIN_.BLK))_.(set
+|  |    < (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    -               ------ ------------------------------------  -------
+|  |    > _.(pfun_.TRAIN_.BLK)))\n
+|  |    < (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.mk-set@Open@@pfun@@TRAIN@@LOC@Close_.((pfun_.TRAIN_.LOC))_.(set
+|  |    < (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    -               ------                    ---          ----------------------
+|  |    > _.(pfun_.TRAIN_.LOC)))\n
+|  |    < ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    - ------------------------
+|  |    > (declare-fun_.ovl@@TRAIN@@BLK_.((pfun_.TRAIN_.BLK)_.(pfun_.TRAIN_.BLK))_.(pfun
+|  |    < (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.BLK))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.ovl@@TRAIN@@LOC_.((pfun_.TRAIN_.LOC)_.(pfun_.TRAIN_.LOC))_.(pfun
+|  |    < (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    -  --------------------------------------------------------  ------------  -
+|  |    > _.TRAIN_.LOC))\n
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ------------  --
+|  |    > (declare-fun_.set-diff@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    -  ---------------------------------------------  --------------------
+|  |    > (declare-fun_.set-diff@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < _.y))_.(=_.x_.y))))\n
+|  |    - ------------  -------
+|  |    > (declare-fun_.set-diff@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    -  ------------------- --------  -----  --------------------------------------
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    - --------------------------- -------------------------------------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    - ---------------  ---------- --
+|  |    > (declare-fun_.set-diff@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    -  ----------------------- -----------------------------------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    - ------------------------------------------------------------
+|  |    > (declare-fun_.tfun@@TRAIN@@BLK_.((set_.TRAIN)_.(set_.BLK))_.(set_.(pfun_.TRAIN
+|  |    < ))_.(=_.x_.y))))\n
+|  |    - ----------------- 
+|  |    > _.BLK)))\n
+|  |    < (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    - ----------
+|  |    > (declare-fun_.tfun@@TRAIN@@LOC_.((set_.TRAIN)_.(set_.LOC))_.(set_.(pfun_.TRAIN
+|  |    < BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    - --------------- -- --------------------------------------    --    -----------
+|  |    > _.LOC)))\n
+|  |    < s2))))))\n
+|  |    - -----     
+|  |    > (declare-fun_.bunion@@BLK_.((set_.BLK)_.(set_.BLK))_.(set_.BLK))\n
+|  |    < (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    -  ---------------------- --------  ----  ----------------------  --
+|  |    > (declare-fun_.bunion@@LOC_.((set_.LOC)_.(set_.LOC))_.(set_.LOC))\n
+|  |    < LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    - --------------------------------  ----   -------------------------
+|  |    > (declare-fun_.bunion@@TRAIN_.((set_.TRAIN)_.(set_.TRAIN))_.(set_.TRAIN))\n
+|  |    < s2))))))\n
+|  |    - ----------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@BLK@Close_.((set_.(pfun_.TRAIN_.BLK
+|  |    < (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    -  ------------------------------------------------   ------------------  ---
+|  |    > ))_.(set_.(pfun_.TRAIN_.BLK)))_.(set_.(pfun_.TRAIN_.BLK)))\n
+|  |    < elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    - ------------------------------------  ----------------------
+|  |    > (declare-fun_.bunion@Open@@pfun@@TRAIN@@LOC@Close_.((set_.(pfun_.TRAIN_.LOC
+|  |    < elem@@TRAIN_.x_.s2))))))\n
+|  |    - -- -----------------------
+|  |    > ))_.(set_.(pfun_.TRAIN_.LOC)))_.(set_.(pfun_.TRAIN_.LOC)))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    - ------------------------------------------------------------
+|  |    > (assert_.(forall_.((x_.BLK)_.(y_.BLK))_.(=_.(elem@@BLK_.x_.(mk-set@@BLK_.y
+|  |    < (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    -                        -------------------   -----------------------------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    - --   -------------
+|  |    > (assert_.(forall_.((x_.LOC)_.(y_.LOC))_.(=_.(elem@@LOC_.x_.(mk-set@@LOC_.y
+|  |    < diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    - ------------------------------------------------------------------- ------
+|  |    > ))_.(=_.x_.y))))\n
+|  |    < Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    - ------------ -----
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(y_.TRAIN))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN
+|  |    < (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    -                     ---------------------------------- ------------------------
+|  |    > _.y))_.(=_.x_.y))))\n
+|  |    < -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    - ---------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.BLK))_.(f2_.(pfun_.TRAIN_.BLK)))_.(=_.(
+|  |    < (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    -           ------   ----------------------------------------------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@BLK_.f1)_.(dom@@TRAIN@@BLK_.f2))_.(dom@@TRAIN@@BLK
+|  |    < _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    - --------------------------------
+|  |    > ovl@@TRAIN@@BLK_.f1_.f2)))))\n
+|  |    < (assert_.(=_.(dom@@TRAIN@@BLK_.loc)_.in))\n
+|  |    - ------------------------------
+|  |    > (assert_.(forall_.((f1_.(pfun_.TRAIN_.LOC))_.(f2_.(pfun_.TRAIN_.LOC)))_.(=_.(
+|  |    < (assert_.(=_.in@prime_.(set-diff@@TRAIN_.in_.(mk-set@@TRAIN_.t))))\n
+|  |    -           ---------------------------------   ----------------------
+|  |    > bunion@@TRAIN_.(dom@@TRAIN@@LOC_.f1)_.(dom@@TRAIN@@LOC_.f2))_.(dom@@TRAIN@@LOC
+|  |    < (assert_.(not_.(=_.(dom@@TRAIN@@BLK_.lo
+|  |    - -------------   -----------------------
+|  |    > ovl@@TRAIN@@LOC_.f1_.f2)))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(y_.(pfun_.TRAIN_.BLK)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@BLK@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@BLK@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(y_.(pfun_.TRAIN_.LOC)))_.(=_.(elem
+|  |    > @Open@@pfun@@TRAIN@@LOC@Close_.x_.(mk-set@Open@@pfun@@TRAIN@@LOC@Close_.y
+|  |    > ))_.(=_.x_.y))))\n
+|  |    > (assert_.(forall_.((x_.BLK)_.(s1_.(set_.BLK))_.(s2_.(set_.BLK)))_.(=_.(elem@@
+|  |    > BLK_.x_.(set-diff@@BLK_.s1_.s2))_.(and_.(elem@@BLK_.x_.s1)_.(not_.(elem@@BLK_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.LOC)_.(s1_.(set_.LOC))_.(s2_.(set_.LOC)))_.(=_.(elem@@
+|  |    > LOC_.x_.(set-diff@@LOC_.s1_.s2))_.(and_.(elem@@LOC_.x_.s1)_.(not_.(elem@@LOC_.x
+|  |    > s2))))))\n
+|  |    > (assert_.(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(
+|  |    > elem@@TRAIN_.x_.(set-diff@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(
+|  |    > elem@@TRAIN_.x_.s2))))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@BLK_.empty-fun@@TRAIN@@BLK)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.empty-fun@@TRAIN@@LOC)_.empty-set@@TRAIN))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.BLK))_.(s1_.(set_.(pfun_.TRAIN_.BLK)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.BLK))))_.(=_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@BLK@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@BLK
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((x_.(pfun_.TRAIN_.LOC))_.(s1_.(set_.(pfun_.TRAIN_.LOC)))_.(
+|  |    > s2_.(set_.(pfun_.TRAIN_.LOC))))_.(=_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.(
+|  |    > diff@Open@@pfun@@TRAIN@@LOC@Close_.s1_.s2))_.(and_.(elem@Open@@pfun@@TRAIN@@LOC
+|  |    > Close_.x_.s1)_.(not_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.x_.s2))))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.BLK)))_.(elem@Open@@pfun@@TRAIN@@BLK@Close_.empty
+|  |    > -fun@@TRAIN@@BLK_.(tfun@@TRAIN@@BLK_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(forall_.((s2_.(set_.LOC)))_.(elem@Open@@pfun@@TRAIN@@LOC@Close_.empty
+|  |    > -fun@@TRAIN@@LOC_.(tfun@@TRAIN@@LOC_.empty-set@@TRAIN_.s2))))\n
+|  |    > (assert_.(=_.LOC_.(bunion@@LOC_.(bunion@@LOC_.(mk-set@@LOC_.ent)_.(mk-set@@LOC
+|  |    > _.plf))_.(mk-set@@LOC_.ext))))\n
+|  |    > (assert_.(=_.(dom@@TRAIN@@LOC_.loc)_.in))\n
+|  |    > (assert_.(=_.in@prime_.(set-diff@@TRAIN_.in_.(mk-set@@TRAIN_.t))))\n
+|  |    > (assert_.(not_.(=_.(dom@@TRAIN@@LOC_.lo
+|  |  ]
+|  |  +- [ Success: 5 / 13 ]
 |  |___|
 |  
 |  
@@ -143,4 +3382,4 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-    4720   30560  266198
+    4799   31010  271369

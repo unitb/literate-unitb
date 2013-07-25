@@ -15,9 +15,15 @@ module Z3.Z3
     , z3_code
     , Tree ( .. )
     , Symbol ( .. )
+    , Command ( .. )
     )
 where
 
+    -- Modules
+import Z3.Def
+import Z3.Const
+
+    -- Libraries
 import Control.Monad
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
@@ -34,9 +40,6 @@ import System.IO.Unsafe
 import System.Process
 
 import Utilities.Format
-
-import Z3.Def
-import Z3.Const
 
 --match_type BOOL BOOL = True
 --match_type INT INT = True
@@ -199,7 +202,7 @@ instance Symbol Def where
 instance Symbol Context where
     decl (Context sorts cons fun defs dums) = 
                 concatMap decl (elems sorts)
-            ++  concatMap decl (elems cons) 
+            ++  concatMap decl (elems (cons `merge` dums)) 
             ++  concatMap decl (elems fun) 
             ++  concatMap decl (elems defs) 
 --            ++  concatMap decl (elems dums) 
@@ -233,7 +236,7 @@ discharge po = do
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
-        let !code = (unlines $ (set_theory ++ map (show . as_tree) xs))
+        let !code = (unlines $ map (show . as_tree) xs)
         (_,out,err) <- feed_z3 code
         let ln = lines out
         r <- if ln == [] || 
@@ -258,7 +261,6 @@ verify xs = do
                 ++  (map ("> " ++) $ lines out)
                 ++  ["err"]
                 ++  (map ("> " ++) $  lines err) )
-        set_theory = []
 
 entails 
     (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 ex0 xp0) 

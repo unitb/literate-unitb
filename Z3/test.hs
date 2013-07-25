@@ -8,6 +8,8 @@ import Z3.Z3 as Z
 
 import UnitB.Calculation
 import UnitB.Operator
+import UnitB.PO
+import UnitB.AST
 
 cases = test_cases [case0, case1, case2, case3, case4]
 
@@ -18,7 +20,7 @@ case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
 case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
 case3 = Case "sample proof" (discharge sample_proof) Valid
 
-case4 = Case "check sample calc" (check sample_calc) (Right [])
+case4 = Case "check sample calc" (check empty_theory sample_calc) (Right [])
 
 
 sample = unlines [
@@ -111,5 +113,5 @@ main = do
         s1 <- verify sample_quant
         s2 <- verify sample_quant2
         s3 <- discharge sample_proof
-        s4 <- check sample_calc
+        s4 <- check empty_theory sample_calc
         return (s1,s2,s3,s4)

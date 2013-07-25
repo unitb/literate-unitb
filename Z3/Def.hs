@@ -130,6 +130,8 @@ instance Show Quantifier where
 instance Tree Expr where
     as_tree (Word (Var xs _))    = Str xs
     as_tree (Const ys xs _)      = Str (xs ++ concatMap z3_decoration ys)
+    as_tree (FunApp (Fun xs name _ _) [])  = 
+        Str (name ++ concatMap z3_decoration xs)
     as_tree (FunApp (Fun xs name _ _) ts)  = 
         List (Str (name ++ concatMap z3_decoration xs) : (map as_tree ts))
     as_tree (Binder q xs xp)  = List [

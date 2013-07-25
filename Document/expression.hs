@@ -1,5 +1,5 @@
-module Document.Expression where
 {-# LANGUAGE BangPatterns #-}
+module Document.Expression where
 
 import Data.Char
 import Data.List as L
@@ -9,7 +9,7 @@ import qualified Data.Map as M ( map )
 import Latex.Scanner
 import Latex.Parser
 
---import System.IO.Unsafe
+import System.IO.Unsafe
 
 import UnitB.Operator
 import UnitB.SetTheory
@@ -200,6 +200,14 @@ power = do
 
 tfun = read_list "\\tfun"
 
+bunion = read_list "\\bunion"
+
+overload = read_list "|"
+
+dom_sub  = read_list "\\domsub"
+
+dom_rest = read_list "\\domres"
+
 membership = 
         read_list "\\in"
 --        case x of
@@ -216,10 +224,14 @@ oper = do
                 (conjunction >> return And),
                 (leq >> return Leq),
                 (power >> return Power),
+                (bunion >> return Union),
                 (membership >> return Membership),
                 (equal >> return Equal),
                 (set_diff >> return SetDiff),
-                (tfun >> return TotalFunction),
+                (overload >> return Overload),
+                (dom_sub >> return DomSubt),
+                (dom_rest >> return DomRest),
+                (tfun >> return MkFunction), -- TotalFunction),
                 (fun_app >> return Apply) ]
             (fail "expecting an operator")            
             return
@@ -230,7 +242,7 @@ equal = do
             Just _  -> return ()
             Nothing -> fail "expecting equal (=)"
 
-term :: Context -> Scanner Char (Expr)
+term :: Context -> Scanner Char Expr
 term ctx = do
         eat_space
         try word_or_command
@@ -242,12 +254,27 @@ term ctx = do
                 case xs `L.lookup` 
                         [ ("\\true",ztrue)
                         , ("\\false",zfalse)
-                        , ("\\emptyset", zempty_set)] of
+                        , ("\\emptyset", zempty_set)
+                        , ("\\emptyfun", zempty_fun) ] of
                     Just e  -> return e 
                     Nothing ->
-                        case var_decl xs ctx of
-                            Just (Var v t) -> return (Word $ Var (zs v) t) 
-                            Nothing -> fail ("undeclared variable: " ++ xs))
+                        if xs == "\\dom"
+                            then do
+                                read_list "."
+                                choice 
+                                    [ term ctx
+                                    , do    eat_space
+                                            read_list "("
+                                            e <- expr ctx
+                                            eat_space
+                                            read_list ")"
+                                            eat_space
+                                            return e
+                                    ] (fail "invalid argument for 'dom'") 
+                                    (\x -> either (\(x) -> fail x) return $ zdom $ Right x)
+                            else case var_decl xs ctx of
+                                    Just (Var v t) -> return (Word $ Var (zs v) t) 
+                                    Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
                 xs <- number
                 eat_space
@@ -301,8 +328,9 @@ expr ctx = do
     where
         read_term :: [(Expr, Operator)] -> Scanner Char Expr
         read_term xs = do
-            s <- peek
             eat_space
+            s <- peek
+--            let !() = unsafePerformIO (putStrLn $ take 10 s)
             try open_brack
                 (\_ -> do
                         r <- expr ctx

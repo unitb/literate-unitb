@@ -22,8 +22,8 @@ import Z3.Z3
 --mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
 
 test = test_cases 
-        [  Case "'x eventually increases' verifies" (check example0) (Right result_example0)
-        ,  Case "train, model 0, verification" (check train_m0) (Right result_train_m0)
+        [  Case "'x eventually increases' verifies" (check_mch example0) (Right result_example0)
+        ,  Case "train, model 0, verification" (check_mch train_m0) (Right result_train_m0)
         ,  Case "train, m0 PO" (get_tr_po train_m0) (Right result_train_m0_tr_po)
         ,  Case "example0: enabledness PO" (get_en_po example0) (Right result_example0_tr_en_po)
         ,  Gen.test_case
@@ -146,7 +146,7 @@ result_train_m0_tr_po = unlines [
 
 test_case = ("Unit-B", test, True)
 
-check em = do
+check_mch em = do
     case em of
         Right m -> do
             (xs,_,_) <- str_verify_machine m

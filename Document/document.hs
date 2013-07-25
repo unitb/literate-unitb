@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
 module Document.Document where
 
 import Control.Applicative hiding ( empty )
@@ -17,7 +17,7 @@ import Latex.Scanner
 import Latex.Parser
 
 import System.IO
---import System.IO.Unsafe
+import System.IO.Unsafe
 
 import Text.Printf
 
@@ -559,7 +559,10 @@ find_cmd_arg n cmds (x@(Text xs) : cs) =
                 return (x:a,t,b,c)
         f [] = []
         f xs = [Text $ reverse xs]
-find_cmd_arg _ cmd []     = Nothing
+find_cmd_arg _ cmds []     = Nothing
+find_cmd_arg n cmds (x:xs) = do
+                (a,t,b,c) <- find_cmd_arg n cmds xs
+                return (x:a,t,b,c)
 
 
 get_1_lbl :: [LatexDoc] -> Either [Error] (String, [LatexDoc])

@@ -28,6 +28,8 @@
 
 \newset{TRAIN}{\TRAIN}
 \newset{BLK}{\BLK}
+%\newset{LOC}{\LOC}
+\newset{LOC}{\LOC}
 %\end{set}
 
 %
@@ -51,12 +53,55 @@
 \end{dummy}
 
 \begin{variable}
-	loc : \TRAIN \pfun \BLK
+	loc : \TRAIN \pfun \LOC
 \end{variable}
 
 \begin{invariant}{inv2}
-	loc \in in \tfun \BLK
+%	loc \in in \tfun \BLK
+	\dom . loc = in
 \end{invariant}
+
+\begin{evassignment}{enter}{a1}
+	in' = in \bunion \{ t \}
+\end{evassignment}
+
+\begin{proof}{enter/INV/inv2}
+	\begin{calculation}
+		in'
+	\hint{=}{ \ref{a1} }
+		in \bunion \{ t \}
+	\hint{=}{ \ref{inv2} }
+		\dom.loc \bunion \{ t \}
+	\hint{=}{ function calculus }
+		\dom.loc \bunion \dom.(t \tfun ent)
+	\hint{=}{ $\dom$ over $|$ }
+		\dom.(loc   |   t \tfun ent)
+	\hint{=}{ \ref{a2} }
+		\dom. ( loc' )
+	\end{calculation}
+\end{proof}
+
+\begin{evassignment}{enter}{a2}
+	loc' = loc | (t \tfun ent)
+\end{evassignment}
+
+\begin{proof}{leave/INV/inv2}
+	\begin{calculation}
+		in'
+	\hint{=}{ \ref{a0} }
+		in \setminus \{ t \}
+	\hint{=}{ \ref{inv2} }
+		\dom.loc \setminus \{ t \}
+	\hint{=}{ domain of singleton functions }
+		\dom.(\{ t \} \domsub loc)
+	\hint{=}{ \ref{a3} } 
+		\dom. ( loc' )
+	\end{calculation}
+\end{proof}
+
+\begin{evassignment}{leave}{a3}
+	loc' = \{ t \} \domsub loc 
+\end{evassignment}
 
 \begin{cschedule}{leave}{c0}
 	t \in in
@@ -65,12 +110,21 @@
 \begin{initialization}{in0}
 	in = \emptyset
 \end{initialization}
+\begin{initialization}{in1}
+	loc = \emptyfun
+\end{initialization}
 
 \begin{use:set}{\TRAIN} \end{use:set}
 \begin{use:set}{\LOC} \end{use:set}
+\begin{use:set}{\BLK} \end{use:set}
+\begin{use:fun}{\TRAIN}{\BLK} \end{use:fun}
 \begin{use:fun}{\TRAIN}{\LOC} \end{use:fun}
 
 \begin{indices}{leave}
+	t: \TRAIN
+\end{indices}
+
+\begin{indices}{enter}
 	t: \TRAIN
 \end{indices}
 
@@ -80,7 +134,6 @@
 %	in'.t = \false 
 \end{evassignment}
 
-\newset{LOC}{\LOC}
 
 \begin{constant}
 	ent,plf,ext : \LOC

@@ -17,7 +17,7 @@ check_one m = do
         (s,_,_)   <- str_verify_machine m
         return ("> machine " ++ show (_name m) ++ ":\n" ++ s)        
 
-check path = do
+check_file path = do
         r <- parse_machine path
         case r of
             Right ms -> do
@@ -36,7 +36,7 @@ main = do
             [xs] -> do
                 b <- doesFileExist xs
                 if b
-                then check xs
+                then check_file xs
 --                    t <- getModificationTime xs
 --                    foldM (f xs) t $ repeat ()
 --                    return ()

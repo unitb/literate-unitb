@@ -41,6 +41,17 @@ unsafePerformIO x = ()
 
 empty_u = Uni empty []
 
+zcast t me = do
+        e <- me
+        let { err_msg = format (unlines
+            [ "expression has type incompatible with its type annotation:"
+            , "  expression: {0}"
+            , "  type: {1}"
+            , "  type annotation: {2} "
+            ]) e (type_of e) t :: String }
+        u <- maybe (Left err_msg) Right $ unify t $ type_of e
+        return $ specialize_right u e
+
 suffix_generics :: String -> Type -> Type
 suffix_generics _ BOOL = BOOL
 suffix_generics _ INT = INT
@@ -56,17 +67,21 @@ rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u
         fe          = rewrite_types xs
         ft          = suffix_generics xs
         u           = ft t
-rewrite_types xs (Const gs v t)             = rewrite fe $ Const (map ft gs) v u
+rewrite_types xs (Const gs v t)             = rewrite fe $ Const gs2 v u
     where
+--        !()         = unsafePerformIO (putStrLn (format "[- const ({0}) actual param: {1} -]" v gs2))
         fe          = rewrite_types xs
         ft          = suffix_generics xs
         u           = ft t
-rewrite_types xs (FunApp (Fun gs f ts t) args) = rewrite fe $ FunApp (Fun (map ft gs) f us u) new_args
+        gs2         = map ft gs
+rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_args
     where
+--        !()         = unsafePerformIO (putStrLn (format "[- const ({0}) actual param: {1} -]" f gs2))
         fe          = rewrite_types xs
         ft          = suffix_generics xs
         us          = map ft ts
         u           = ft t
+        gs2         = map ft gs
         new_args    = map fe args
 rewrite_types xs e@(Binder _ _ _)           = rewrite (rewrite_types xs) e
 
@@ -308,11 +323,14 @@ specialize m e = f e
         f (Const gs x t)    = Const (map g gs) x $ g t
         f (Word x)          = Word $ h x
         f x@(FunApp (Fun gs n ts t) args) 
-                = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) args
+                = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) (map (specialize m) args)
         f x@(Binder q vs e) 
                 = rewrite f $ Binder q (map h vs) e
         g t     = instantiate m t
         h (Var x t) = Var x $ g t
+
+specialize_left m e  = specialize m (rewrite_types "1" e)
+specialize_right m e = specialize m (rewrite_types "2" e)
 
 -- is_type_correct
 

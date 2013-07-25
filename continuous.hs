@@ -18,7 +18,7 @@ check_one m = do
         (s,_,_)   <- str_verify_machine m
         return ("> machine " ++ show (_name m) ++ ":\n" ++ s)        
 
-check path = do
+check_file path = do
         r <- parse_machine path
         case r of
             Right ms -> do
@@ -39,7 +39,7 @@ main = do
                 b <- doesFileExist xs
                 if b
                 then do
-                    check xs
+                    check_file xs
                     t <- getModificationTime xs
                     foldM (f xs) t $ repeat ()
                     return ()
@@ -50,5 +50,5 @@ main = do
         f xs t0 () = do
             threadDelay 100000
             t1 <- getModificationTime xs
-            when (t0 /= t1) $ check xs
+            when (t0 /= t1) $ check_file xs
             return t1 

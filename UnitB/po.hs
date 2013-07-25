@@ -1,6 +1,15 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.PO where
 
+    -- Modules
+import UnitB.AST
+import UnitB.Theory
+import UnitB.Calculation
+import UnitB.Operator
+
+import Z3.Z3
+
+    -- Libraries
 import Control.Monad hiding (guard)
 
 import Data.Map as M hiding (map, foldl, foldr, delete, filter, null)
@@ -8,15 +17,9 @@ import qualified Data.Map as M
 import Data.List hiding (inits, union,insert)
 
 import System.IO
---import System.IO.Unsafe
-
-import UnitB.AST
-import UnitB.Theory
-import UnitB.Calculation
+import System.IO.Unsafe
 
 import Utilities.Format
-
-import Z3.Z3
 
     -- 
     --
@@ -243,48 +246,137 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
+steps_po :: Theory -> Calculation -> Either String [ProofObligation]
+steps_po th (Calc d _ e0 [] _) = return []
+steps_po th (Calc d g e0 ((r0, e1, a0,_):es) li) = do
+    expr <- mk_expr r0 e0 e1
+    tail <- steps_po th (Calc d g e1 es li)
+    return $ ProofObligation (d `merge_ctx` theory_ctx th) (a0 ++ elems (theory_facts th)) False expr : tail
+
+entails_goal_po th (Calc d g e0 es _) = do
+            a <- assume
+            return $ ProofObligation (d `merge_ctx` theory_ctx th) (a ++ elems (theory_facts th)) False g
+    where
+        assume = 
+                fmap reverse $ foldM f [] (map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
+        f xs mx = do 
+            x <- mx
+            return (x:xs)
+        ys = map (\(_,x,_,_) -> x) es
+        xs = take (length es) (e0:ys)
+        rs = map (\(x,_,_,_) -> x) es
+
+goal_po c = ProofObligation (context c) xs False (goal c)
+    where
+        xs = concatMap (\(_,_,x,_) -> x) $ following c
+
+obligations :: Theory -> Calculation -> Either String [ProofObligation]
+obligations th c = do
+        x <- entails_goal_po th c
+        ys <- steps_po th c
+        return (x:ys)
+
+check :: Theory -> Calculation -> IO (Either String [(Validity, Int)])
+check th c = embed 
+            (obligations th c) 
+            (\pos -> do
+--        let txt = (do
+--            p <- pos
+--            ("\n; ------------\n(push)" : (do
+--                c <- z3_code p
+--                return $ show $ as_tree c) ++ ["\n(pop)"] ))
+--        putStrLn $ unlines txt
+        rs <- forM pos discharge :: IO [Validity]
+        let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
+        return ln)
+
+match_proof :: Machine -> Label -> ProofObligation -> Calculation -> IO (Bool, [String])
+match_proof m lbl po
+            p@(Calc _ _ _ steps li) = do
+        r0 <- check (theory m) p
+        r1 <- entails (goal_po p) po
+--        let !() = unsafePerformIO (do
+--            putStrLn "> verification results"
+--            print r0
+--            putStrLn "> entailment result"
+--            print r1)
+        x <- case (r0,r1) of
+            (Right [], Valid) -> 
+                return (True, ["  o  " ++ show lbl])
+            (r0,r1) -> do
+                let xs = [" xxx " ++ show lbl]
+                ys <- case r0 of
+                    Right r0 -> do
+                            let (r2,r3) = break (1 <=) $ map snd r0
+                            if null r0
+                                then return []
+                                else
+                                    let f (n,(_,_,_,k)) =  if n `elem` r3 
+                                                            then [
+                                                            "    invalid step:  " 
+                                                            ++ show k]
+                                                            else [] 
+                                    in
+                                    return $ map ("     " ++) ( [
+                                            "incorrect proof: "] 
+                                        ++ ( if null r2 
+                                                then [] 
+                                                else ["    cannot prove a relationship " ++
+                                                    "between the first and the last line: " ++ 
+                                                    show li ] )
+                                        ++ concatMap f (zip [1..] steps) )
+                    Left (xs) -> return [format "     type error in proof: {0}" xs]
+                zs <- case r1 of
+                    Valid -> return []
+                    x ->     return [
+                            "     "
+                        ++ "proof does not match proof obligation: " ++ show li]
+                return (False, xs ++ ys ++ zs)
+        return x
+                
 str_verify_machine :: Machine -> IO (String, Int, Int)
 str_verify_machine m = 
     (do
         let pos = proof_obligation m
         rs <- forM (toList pos) (\(lbl, po) -> do
             if lbl `member` proofs ps then do
-                let p@(Calc _ _ _ steps li) = proofs ps ! lbl
-                r0 <- check p
-                r1 <- entails (goal_po p) po
-                x <- case (r0,r1) of
-                    (Right [], Valid) -> 
-                        return (True, ["  o  " ++ show lbl])
-                    (r0,r1) -> do
-                        let xs = [" xxx " ++ show lbl]
-                        ys <- case r0 of
-                            Right r0 -> do
-                                    let (r2,r3) = break (1 <=) $ map snd r0
-                                    if null r0
-                                        then return []
-                                        else
-                                            let f (n,(_,_,_,k)) =  if n `elem` r3 
-                                                                   then [
-                                                                    "    invalid step:  " 
-                                                                    ++ show k]
-                                                                   else [] 
-                                            in
-                                            return $ map ("     " ++) ( [
-                                                   "incorrect proof: "] 
-                                                ++ ( if null r2 
-                                                     then [] 
-                                                     else ["    cannot prove a relationship " ++
-                                                           "between the first and the last line: " ++ 
-                                                           show li ] )
-                                                ++ concatMap f (zip [1..] steps) )
-                            Left (xs) -> return [format "     type error in proof: {0}" xs]
-                        zs <- case r1 of
-                            Valid -> return []
-                            x ->     return [
-                                   "     "
-                                ++ "proof does not match proof obligation: " ++ show li]
-                        return (False, xs ++ ys ++ zs)
-                return x
+                match_proof m lbl po (proofs ps ! lbl)
+--                let p@(Calc _ _ _ steps li) = proofs ps ! lbl
+--                r0 <- check p
+--                r1 <- entails (goal_po p) po
+--                x <- case (r0,r1) of
+--                    (Right [], Valid) -> 
+--                        return (True, ["  o  " ++ show lbl])
+--                    (r0,r1) -> do
+--                        let xs = [" xxx " ++ show lbl]
+--                        ys <- case r0 of
+--                            Right r0 -> do
+--                                    let (r2,r3) = break (1 <=) $ map snd r0
+--                                    if null r0
+--                                        then return []
+--                                        else
+--                                            let f (n,(_,_,_,k)) =  if n `elem` r3 
+--                                                                   then [
+--                                                                    "    invalid step:  " 
+--                                                                    ++ show k]
+--                                                                   else [] 
+--                                            in
+--                                            return $ map ("     " ++) ( [
+--                                                   "incorrect proof: "] 
+--                                                ++ ( if null r2 
+--                                                     then [] 
+--                                                     else ["    cannot prove a relationship " ++
+--                                                           "between the first and the last line: " ++ 
+--                                                           show li ] )
+--                                                ++ concatMap f (zip [1..] steps) )
+--                            Left (xs) -> return [format "     type error in proof: {0}" xs]
+--                        zs <- case r1 of
+--                            Valid -> return []
+--                            x ->     return [
+--                                   "     "
+--                                ++ "proof does not match proof obligation: " ++ show li]
+--                        return (False, xs ++ ys ++ zs)
+--                return x
             else do
                 r <- discharge po
                 x <- case r of
