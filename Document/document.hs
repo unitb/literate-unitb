@@ -268,10 +268,10 @@ imports = visit_doc
               , Block2Args (\(dset, rset) _ m (i,j) -> do
                     let th = theory m
                     toEither $ error_list (i,j) 
-                        [ ( not (dset `member` types th)
-                          , format "Carrier set {0} undefined" dset )
-                        , ( not (rset `member` types th)
-                          , format "Carrier set {0} undefined" rset )
+                        [   ( not (dset `member` types th)
+                            , format "Carrier set {0} undefined" dset )
+                        ,   ( not (rset `member` types th)
+                            , format "Carrier set {0} undefined" rset )
                         ]
                     let dtype = USER_DEFINED (types th ! dset) []
                     let rtype = USER_DEFINED (types th ! rset) []
@@ -398,7 +398,7 @@ collect_expr = visit_doc
                               , format "event '{0}' is undeclared" ev )
                             ]
                         toEither $ error_list (i,j)
-                            [ ( label lbl `member` program_prop (props m)
+                            [   ( label lbl `member` program_prop (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
                         tr <- get_expr m xs

@@ -24,9 +24,9 @@ ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
 zdom = typ_fun1 (Fun [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
 
-zdomsub = typ_fun2 (Fun [gA,gB] "domsub" [set_type gA, fun_type gA gB] $ fun_type gA gB)
+zdomsubt = typ_fun2 (Fun [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
-zdomrest = typ_fun2 (Fun [gA,gB] "domrest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
+zdomrest = typ_fun2 (Fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
 zapply  = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] gB)
 
@@ -66,20 +66,22 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
                 ,  Fun [t0,t1] (dec "apply") [fun_type t0 t1,t0] t1
                 ,  Fun [t0,t1] (dec "ovl") [fun_type t0 t1,fun_type t0 t1] $ fun_type t0 t1
                 ,  Fun [t0,t1] (dec "dom-rest") [set_type t0,fun_type t0 t1] $ fun_type t0 t1
-                ,  Fun [t0,t1] (dec "dom-subst") [set_type t0,fun_type t0 t1] $ fun_type t0 t1
+                ,  Fun [t0,t1] (dec "dom-subt") [set_type t0,fun_type t0 t1] $ fun_type t0 t1
                 ,  Fun [t0,t1] (dec "mk-fun") [t0,t1] $ fun_type t0 t1 
                 ,  Fun [t0,t1] (dec "tfun") [set_type t0,set_type t1] $ fun_set
                 ]
         facts = fromList 
-                [ (label $ dec "0", axm0)
-                , (label $ dec "1", axm1)
+                [ (label $ dec' "0", axm0)
+                , (label $ dec' "1", axm1)
 --                , (label $ dec "2", axm2)
 --                , (label $ dec "3", axm3)
-                , (label $ dec "2", axm4)
+                , (label $ dec' "2", axm4)
 --                , (label $ dec "5", axm5)
 --                , (label $ dec "6", axm6)
 --                , (label $ dec "7", axm7)
-                , (label $ dec "3", axm8)
+                , (label $ dec' "3", axm8)
+--                , (label $ dec "3", axm9)
+                , (label $ dec' "4", axm10)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -100,6 +102,10 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
             -- dom and tfun
             -- dom-rest and tfun
             -- dom-subst and tfun
+            -- dom-rest and dom
+        axm9  = fromJust $ mzforall [f1_decl,s1_decl] ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
+            -- dom-subst and dom
+        axm10 = fromJust $ mzforall [f1_decl,s1_decl] ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
         as_fun e = zcast (fun_type t0 t1) e
 --        as_fun e = e
@@ -113,3 +119,4 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
         (s1,s1_decl) = var "s1" $ set_type t0
         (s2,s2_decl) = var "s2" $ set_type t1
         dec x = x ++ z3_decoration t0 ++ z3_decoration t1
+        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x

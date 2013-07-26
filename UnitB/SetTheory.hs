@@ -27,13 +27,14 @@ set_theory t = Theory [] types funs empty facts empty
         set_type = USER_DEFINED set_sort [t]
         funs = M.insert (dec "union") (Fun [t] (dec "bunion") [set_type,set_type] set_type) $
             symbol_table [
+                Fun [] (dec "intersect") [set_type,set_type] set_type,
                 Fun [] (dec "empty-set") [] set_type,
                 Fun [] (dec "elem") [t,set_type] BOOL,
                 Fun [] (dec "set-diff") [set_type,set_type] set_type,
                 Fun [] (dec "mk-set") [t] set_type ]
         facts = fromList 
-                [ (label $ dec "0", axm0)
-                , (label $ dec "1", axm1)
+                [ (label $ dec' "0", axm0)
+                , (label $ dec' "1", axm1)
 --                , (label $ dec "2", axm2)
                 ]
         Right axm0 = mzforall [x_decl,y_decl] ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
@@ -45,7 +46,8 @@ set_theory t = Theory [] types funs empty facts empty
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" set_type
         (s2,s2_decl) = var "s2" set_type
-        dec x = x ++ z3_decoration t
+        dec x  = x ++ z3_decoration t
+        dec' x = z3_decoration t ++ x
 --            Fun 
         
 --typed_expr   
@@ -71,6 +73,9 @@ zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_typ
 --                            t1 <- item_type s1
 --                            unless (t0 == t1) $ Left $ format " the element type of {0} and {1} do not match " t0 s0
 --                            return $ Fun [gA] (dec "set-diff" t0) [s0,s0] s0)
+
+zintersect   = typ_fun2 (Fun [gA] "intersect" [set_type gA,set_type gA] $ set_type gA)
+
 zunion       = typ_fun2 (Fun [gA] "bunion" [set_type gA,set_type gA] $ set_type gA)
     where 
         !() = unsafePerformIO (putStrLn "union")

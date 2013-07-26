@@ -338,12 +338,12 @@
 \newcommand{\CncAction}{\mathbf{R}}
 
 %%%% Semantics
-\newcommand{\safety}{\mathit{saf}}
-\newcommand{\liveness}{\mathit{live}}
-\newcommand{\step}{\mathit{step}}
-\newcommand{\schedule}{\mathit{sched}}
-\newcommand{\wf}{\text{wf}}
-\newcommand{\strf}{\text{sf}}
+%\newcommand{\safety}{\mathit{saf}}
+%\newcommand{\liveness}{\mathit{live}}
+%\newcommand{\step}{\mathit{step}}
+%\newcommand{\schedule}{\mathit{sched}}
+%\newcommand{\wf}{\text{wf}}
+%\newcommand{\strf}{\text{sf}}
 
 %%%% Additional symbols
 %\newcommand{\sneg}{\sim}
@@ -413,6 +413,13 @@
 	\noindent \textbf{constant}
 	\[ }
 { 	\] }
+\newcommand{\safety}[3]
+{	\begin{equation}
+			#2 \textbf{\quad un\quad} #3
+			\stepcounter{prop}
+			\tag{S\arabic{prop}} 
+		\label{#1} 
+		\end{equation}	}
 \newenvironment{use:set}[1]{}{}
 \newenvironment{use:fun}[2]{}{}
 \newcommand{\newset}[2]{

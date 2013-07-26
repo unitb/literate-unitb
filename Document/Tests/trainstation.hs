@@ -59,9 +59,9 @@ blk_type = USER_DEFINED blk_sort []
 
 (train,train_var) = (var "TRAIN" $ set_type train_type)
 (loc_cons,loc_var)   = (var "LOC" $ set_type loc_type)
-(ent,ent_var)   = (var "ent" $ loc_type)
-(ext,ext_var)   = (var "ext" $ loc_type)
-(plf,plf_var)   = (var "plf" $ loc_type)
+(ent,ent_var)   = (var "ent" $ blk_type)
+(ext,ext_var)   = (var "ext" $ blk_type)
+(plf,plf_var)   = (var "PLF" $ set_type blk_type)
 
 (block, block_var) = var "BLK" $ set_type blk_type
 
@@ -71,22 +71,24 @@ machine0 = (empty_machine "m0")
                     [  function_theory train_type blk_type
                     ,  set_theory blk_type
                     ,  set_theory loc_type
-                    ,  set_theory train_type ]
+                    ,  set_theory train_type 
+--                    ,  function_theory train_type loc_type
+                    ]
             ,  types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort]
             ,  dummies = singleton "t" $ Var "t" $ train_type 
-            ,  fact    = singleton (label "axm0") (fromJust (loc_cons `mzeq` zset_enum [ent,plf,ext]) )
+            ,  fact    = singleton (label "axm0") (fromJust (block `mzeq` (zset_enum [ent,ext] `zunion` plf)) )
             ,  consts  = fromList
                     [  ("\\TRAIN", train_var)
                     ,  ("\\LOC", loc_var)
                     ,  ("\\BLK", block_var)
                     ,  ("ent", ent_var)
                     ,  ("ext", ext_var)
-                    ,  ("plf", plf_var)
+                    ,  ("PLF", plf_var)
                     ]
             }
     ,  inits = map fromJust [loc `mzeq` Right zempty_fun, in_var `mzeq` Right zempty_set]
     ,  variables = symbol_table [in_decl,loc_decl]
-    ,  events = fromList [(label "enter", empty_event), (label "leave", leave_evt)]
+    ,  events = fromList [(label "enter", enter_evt), (label "leave", leave_evt)]
     ,  props = props0
     }
 props0 = empty_property_set
@@ -94,17 +96,30 @@ props0 = empty_property_set
             (Transient 
                 (singleton "t" $ Var "t" train_type) 
                 (fromJust (t `zelem` in_var)) (label "leave") )
-    ,  inv = fromList [
---            (label "inv2",fromJust (loc `zelem` (in_var `ztfun` block)))
-            (label "inv2",fromJust (zdom loc `mzeq` in_var))
+    ,  inv = fromList 
+            [   (label "inv2",fromJust (zdom loc `mzeq` in_var))
+            ]
+    ,  proofs = fromList
+            [   ( label "m0/enter/INV/inv2"
+                , Calc empty_ctx ztrue ztrue [] (0,0))
+            ,   ( label "m0/leave/INV/inv2"
+                , Calc empty_ctx ztrue ztrue [] (0,0))
             ]
     }
 
+enter_evt = empty_event
+    {  indices = symbol_table [t_decl]
+    ,  action = fromList
+            [  (label "a1", (fromJust (in_var' `mzeq` (in_var `zunion` zmk_set t))))
+            ,  (label "a2", (fromJust (loc' `mzeq` (loc `zovl` zmk_fun t ent))))
+            ]
+    }
 leave_evt = empty_event {
         indices = symbol_table [t_decl],
         c_sched = Just $ singleton (label "c0") (fromJust (t `zelem` in_var)),
-        action = fromList [
-            (label "a0", (fromJust (in_var' `mzeq` (in_var `zsetdiff` zmk_set t))))
+        action = fromList 
+            [  (label "a0", (fromJust (in_var' `mzeq` (in_var `zsetdiff` zmk_set t))))
+            ,  (label "a3", (fromJust (loc' `mzeq` (zmk_set t `zdomsubt` loc))))
             ] }
 
 (t, t_decl) = var "t" train_type
@@ -117,14 +132,15 @@ train_decl b =
         , "(declare-sort TRAIN 0)"
         , "(define-sort pfun (a b) (Array a b))"
         , "(declare-sort set 1)"
+        , "(declare-const PLF (set BLK))"
         , "(declare-const BLK (set BLK))"
         , "(declare-const LOC (set LOC))"
         , "(declare-const TRAIN (set TRAIN))"
-        , "(declare-const ent LOC)"
-        , "(declare-const ext LOC)"
+        , "(declare-const ent BLK)"
+        , "(declare-const ext BLK)"
         ] ++ var_decl ++
-        [ "(declare-const plf LOC)"
-        ] -- ++ set_decl_smt2
+        [ "(declare-const t TRAIN)"
+        ] 
     where
         var_decl
             | b     =
@@ -141,7 +157,7 @@ train_decl b =
 set_decl_smt2 = 
         [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"
         ,  "(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun dom-subst@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
+        ,  "(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
         ,  "(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))"
         ,  "(declare-fun elem@@BLK (BLK (set BLK)) Bool)"
         ,  "(declare-fun elem@@LOC (LOC (set LOC)) Bool)"
@@ -152,6 +168,10 @@ set_decl_smt2 =
         ,  "(declare-fun empty-set@@LOC () (set LOC))"
         ,  "(declare-fun empty-set@@TRAIN () (set TRAIN))"
         ,  "(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))"
+        ,  "(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))"
+        ,  "(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))"
+        ,  "(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
+        ,  "(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
         ,  "(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))"
         ,  "(declare-fun mk-set@@BLK (BLK) (set BLK))"
         ,  "(declare-fun mk-set@@LOC (LOC) (set LOC))"
@@ -171,12 +191,12 @@ set_decl_smt2 =
 
 set_facts :: (String,String) -> [(String,String)]
 set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
-        [   ( "0{0}"
+        [   ( "{0}0"
             , "(forall ((x {0}) (y {0}))" ++
                        " (= (elem@{1} x (mk-set@{1} y))" ++
                           " (= x y)))"
             )
-        ,   ( "1{0}"
+        ,   ( "{0}1"
             , "(forall ((x {0}) (s1 (set {0})) (s2 (set {0})))" ++
                         " (= (elem@{1} x (set-diff@{1} s1 s2))" ++
                            " (and (elem@{1} x s1)" ++
@@ -186,87 +206,56 @@ set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
 
 fun_facts :: (String,String) -> (String,String) -> [(String,String)]
 fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1)) $
-                            zip (map ((++ "{0}{1}") . show) [0..]) 
+                            zip (map (("{0}{1}" ++) . show) [0..]) 
         [ "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})))"
                      ++ " (= (bunion@{1} (dom@{1}@{3} f1)"
-                        ++                " (dom@{1}@{3} f2))"
-                        ++ " (dom@{1}@{3} (ovl@{1}@{3} f1 f2))))"
-        , "(= (dom@{1}@{3}" ++
-                " empty-fun@{1}@{3})" ++ 
-                " empty-set@{1})"
-        , "(forall ((s2 (set {2})))" ++
-                        " (elem@Open@@pfun@{1}@{3}@Close" ++
-                                " empty-fun@{1}@{3}" ++ 
-                                " (tfun@{1}@{3} empty-set@{1} s2)))"
+                     ++                " (dom@{1}@{3} f2))"
+                     ++    " (dom@{1}@{3} (ovl@{1}@{3} f1 f2))))"
+        , "(= (dom@{1}@{3} empty-fun@{1}@{3}) empty-set@{1})"
+        , "(forall ((x {0}) (y {2}))"
+                     ++ " (= (dom@{1}@{3} (mk-fun@{1}@{3} x y))"
+                     ++                 " (mk-set@{1} x)))"
+        , "(forall ((s2 (set {2})))"
+                     ++ " (elem@Open@@pfun@{1}@{3}@Close"
+                     ++                 " empty-fun@{1}@{3}"
+                     ++                 " (tfun@{1}@{3} empty-set@{1} s2)))"
+        , "(forall ((f1 (pfun TRAIN BLK)) (s1 (set TRAIN)))"
+                     ++      " (= (dom@@TRAIN@@BLK (dom-subt@@TRAIN@@BLK s1 f1))"
+                     ++         " (set-diff@@TRAIN (dom@@TRAIN@@BLK f1) s1)))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $
-            map snd $ sort (   concatMap set_facts 
-                                [   ("TRAIN","@TRAIN")
-                                ,   ("BLK","@BLK")
+             map snd    (   concatMap set_facts 
+                                [   ("BLK","@BLK")
                                 ,   ("LOC","@LOC")
-                                ,   ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
+                                ,   ("TRAIN","@TRAIN")
                                 ]
-                            ++ concatMap (uncurry fun_facts) [(("TRAIN","@TRAIN"),("BLK","@BLK"))] )
---        [ "(forall ((x BLK) (y BLK))" ++
---                       " (= (elem@@BLK x (mk-set@@BLK y))" ++
---                          " (= x y)))"
---        , "(forall ((x LOC) (y LOC))" ++
---                       " (= (elem@@LOC x (mk-set@@LOC y))" ++
---                          " (= x y)))"
---        , "(forall ((x TRAIN) (y TRAIN))" ++
---                       " (= (elem@@TRAIN x (mk-set@@TRAIN y))" ++
---                          " (= x y)))"
---        , "(forall ((x (pfun TRAIN BLK)) (y (pfun TRAIN BLK)))" ++
---                       " (= (elem@@TRAIN x (mk-set@@TRAIN y))" ++
---                          " (= x y)))"
---        , "(forall ((f1 (pfun TRAIN BLK)) (f2 (pfun TRAIN BLK)))"
---                     ++ " (= (bunion@@TRAIN (dom@@TRAIN@@BLK f1)"
---                        ++                " (dom@@TRAIN@@BLK f2))"
---                        ++ " (dom@@TRAIN@@BLK (ovl@@TRAIN@@BLK f1 f2))))"
---        , "(forall ((x BLK) (s1 (set BLK)) (s2 (set BLK)))" ++
---                        " (= (elem@@BLK x (set-diff@@BLK s1 s2))" ++
---                           " (and (elem@@BLK x s1)" ++
---                                " (not (elem@@BLK x s2)))))"
---        , "(forall ((x LOC) (s1 (set LOC)) (s2 (set LOC)))" ++
---                        " (= (elem@@LOC x (set-diff@@LOC s1 s2))" ++
---                           " (and (elem@@LOC x s1)" ++
---                                " (not (elem@@LOC x s2)))))"
---        , "(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN)))" ++
---                        " (= (elem@@TRAIN x (set-diff@@TRAIN s1 s2))" ++
---                           " (and (elem@@TRAIN x s1)" ++
---                                " (not (elem@@TRAIN x s2)))))"
---        , "(forall ((x (pfun TRAIN BLK)) (s1 (set (pfun TRAIN BLK))) (s2 (set (pfun TRAIN BLK))))" ++
---                        " (= (elem@@TRAIN x (set-diff@@TRAIN s1 s2))" ++
---                           " (and (elem@@TRAIN x s1)" ++
---                                " (not (elem@@TRAIN x s2)))))"
---        , "(forall ((s2 (set BLK)))" ++
---                        " (elem@Open@@pfun@@TRAIN@@BLK@Close" ++
---                                " empty-fun@@TRAIN@@BLK" ++ 
---                                " (tfun@@TRAIN@@BLK empty-set@@TRAIN s2)))"
---        , "(forall ((s2 (set BLK)))" ++
---                        " (elem@Open@@pfun@@TRAIN@@BLK@Close" ++
---                                " empty-fun@@TRAIN@@BLK" ++ 
---                                " (tfun@@TRAIN@@BLK empty-set@@TRAIN s2)))"
---        ]
-        
-
+                            ++ concatMap (uncurry fun_facts) 
+                                [  (("TRAIN","@TRAIN"),("BLK","@BLK"))
+                                ] 
+                            ++ concatMap set_facts 
+                                [   ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
+                                ]
+--                            ++ concatMap (uncurry fun_facts) 
+--                                [  (("TRAIN","@TRAIN"),("LOC","@LOC"))
+--                                ] 
+                            )
 
 path0 = "Tests/train-station.tex"
 case0 = parse_machine path0
 
 result1 = unlines [
         "  o  m0/INIT/FIS",
-        " ooo m0/INIT/INV/inv2",
-        " ooo m0/enter/FIS",
-        " ooo m0/enter/INV/inv2",
-        " ooo m0/enter/SCH",
-        " ooo m0/leave/FIS",
-        " ooo m0/leave/INV/inv2",
-        " ooo m0/leave/SCH",
-        " ooo m0/leave/TR/EN/tr0",
-        " ooo m0/leave/TR/NEG/tr0",
-        "passed 7 / 10"
+        "  o  m0/INIT/INV/inv2",
+        "  o  m0/enter/FIS",
+        "  o  m0/enter/INV/inv2",
+        "  o  m0/enter/SCH",
+        "  o  m0/leave/FIS",
+        "  o  m0/leave/INV/inv2",
+        "  o  m0/leave/SCH",
+        "  o  m0/leave/TR/EN/tr0",
+        "  o  m0/leave/TR/NEG/tr0",
+        "passed 10 / 10"
         ]
 case1 = do
     r <- parse_machine path0
@@ -280,7 +269,7 @@ result2 = unlines (
         train_decl False 
      ++ set_decl_smt2
      ++ comp_facts ++ -- set_decl_smt2 ++
-     [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
+     [  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((in (set TRAIN)) (loc (pfun TRAIN BLK)))" ++ 
             " (and (= loc empty-fun@@TRAIN@@BLK) (= in empty-set@@TRAIN)))))"
      ,  "(check-sat-using (or-else " ++
@@ -301,15 +290,16 @@ case2 = do
 
 result3 = unlines (
      train_decl False ++ 
-     [  "(declare-const t TRAIN)"
-     ] ++
+--     [  "(declare-const t TRAIN)"
+--     ] ++
      set_decl_smt2 ++ 
      comp_facts ++
-     [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
+     [  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
 --     ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-     ,  "(assert (not (exists ((in@prime (set TRAIN)) (loc@prime (pfun TRAIN BLK))) "
-            ++ "(= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))))"
+     ,  "(assert (not (exists ((in@prime (set TRAIN)) (loc@prime (pfun TRAIN BLK)))"
+            ++              " (and (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))"
+            ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
          "(then skip smt) " ++
@@ -329,12 +319,10 @@ case3 = do
 
 result4 = unlines ( 
         train_decl False ++ 
-        [  "(declare-const t TRAIN)"
-        ] ++
         set_decl_smt2 ++ 
         comp_facts ++
-        [ "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf))"
-                                    ++" (mk-set@@LOC ext))))"
+        [ "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+                                    ++" PLF)))"
 --        , "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         , "(assert (= (dom@@TRAIN@@BLK loc) in))"
         , "(assert (elem@@TRAIN t in))"
@@ -358,12 +346,10 @@ case4 = do
 
 result5 = unlines ( 
         train_decl False ++ 
-        [  "(declare-const t TRAIN)"
-        ] ++
         set_decl_smt2 ++ 
         comp_facts ++
-        [ "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf))"
-                                    ++" (mk-set@@LOC ext))))"
+        [ "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+                                    ++" PLF)))"
 --        , "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         , "(assert (= (dom@@TRAIN@@BLK loc) in))"
         , "(assert (not (exists ((t TRAIN)) (=> (elem@@TRAIN t in) (elem@@TRAIN t in)))))"
@@ -382,16 +368,15 @@ case5 = do
 
 result6 = unlines ( 
         train_decl True ++ 
-        [  "(declare-const t TRAIN)"
-        ] ++
         set_decl_smt2 ++ 
         comp_facts ++
-        [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
+        [  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "(assert (elem@@TRAIN t in))"
 --        ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
         ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
         ,  "(assert (elem@@TRAIN t in))"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
+        ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
         ,  "(assert (not (not (elem@@TRAIN t in@prime))))"
         ,  "(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))"
         ] )
@@ -411,15 +396,12 @@ case6 = do
 
 result12 = unlines ( 
         train_decl True ++ 
-        [  "(declare-const t TRAIN)"
-        ] ++
         set_decl_smt2 ++ 
         comp_facts ++
-        [  "(assert (= LOC (bunion@@LOC (bunion@@LOC (mk-set@@LOC ent) (mk-set@@LOC plf)) (mk-set@@LOC ext))))"
---        ,  "(assert (elem@Open@@pfun@@TRAIN@@BLK@Close loc (tfun@@TRAIN@@BLK in BLK)))"
+        [  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
---        ,  "(assert (not (elem@Open@@pfun@@TRAIN@@BLK@Close loc@prime (tfun@@TRAIN@@BLK in@prime BLK))))"
+        ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
         ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
         ,  "(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))"
         ] )

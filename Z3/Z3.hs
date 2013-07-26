@@ -9,6 +9,7 @@ module Z3.Z3
     , discharge, verify
     , Context ( .. )
     , mk_context
+    , empty_ctx
     , merge_all_ctx, merge_ctx
     , merge_all, merge, entails
     , var_decl, free_vars
@@ -134,6 +135,8 @@ data Context = Context
         (Map String Def)  -- transparent definitions
         (Map String Var)  -- dummies
     deriving Show
+
+empty_ctx = Context empty empty empty empty empty
 
 var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 

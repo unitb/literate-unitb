@@ -46,7 +46,7 @@ mk_expr Union x y      = Right x `zunion` Right y
 
 mk_expr TotalFunction x y = Right x `ztfun` Right y
 mk_expr Overload x y      = Right x `zovl` Right y
-mk_expr DomSubt x y      = Right x `zdomsub` Right y
+mk_expr DomSubt x y       = Right x `zdomsubt` Right y
 mk_expr DomRest x y       = Right x `zdomrest` Right y
 mk_expr MkFunction x y    = Right x `zmk_fun` Right y
 
