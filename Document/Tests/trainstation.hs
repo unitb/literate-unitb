@@ -427,7 +427,7 @@ result1 = unlines
         ,  "  o  train0/leave/CO/co1/relation"
         ,  "  o  train0/leave/CO/co1/step 1"
         ,  "  o  train0/leave/CO/co1/step 2"
-        ,  " ooo train0/leave/CO/co1/step 3"
+        ,  "  o  train0/leave/CO/co1/step 3"
         ,  "  o  train0/leave/CO/co1/step 4"
         ,  "  o  train0/leave/CO/co1/step 5"
         ,  "  o  train0/leave/CO/co1/step 6"

@@ -17,105 +17,6 @@
 |  +- train station example
 |  |  +- test 0, syntax
 |  |  +- test 1, verification
-|  |    o  train0/INIT/FIS
-|  |    o  train0/INIT/INV/inv1
-|  |    o  train0/INIT/INV/inv2
-|  |    o  train0/SKIP/CO/co0
-|  |    o  train0/SKIP/CO/co1
-|  |    o  train0/enter/CO/co0/goal
-|  |    o  train0/enter/CO/co0/relation
-|  |    o  train0/enter/CO/co0/step 1
-|  |    o  train0/enter/CO/co0/step 2
-|  |    o  train0/enter/CO/co0/step 3
-|  |    o  train0/enter/CO/co0/step 4
-|  |    o  train0/enter/CO/co0/step 5
-|  |    o  train0/enter/CO/co0/step 6
-|  |    o  train0/enter/CO/co0/step 7
-|  |    o  train0/enter/CO/co0/step 8
-|  |    o  train0/enter/CO/co1
-|  |    o  train0/enter/FIS
-|  |    o  train0/enter/INV/inv1
-|  |    o  train0/enter/INV/inv2/goal
-|  |    o  train0/enter/INV/inv2/relation
-|  |    o  train0/enter/INV/inv2/step 1
-|  |    o  train0/enter/INV/inv2/step 2
-|  |    o  train0/enter/INV/inv2/step 3
-|  |    o  train0/enter/INV/inv2/step 4
-|  |    o  train0/enter/INV/inv2/step 5
-|  |    o  train0/enter/SCH
-|  |    o  train0/leave/CO/co0/goal
-|  |    o  train0/leave/CO/co0/relation
-|  |    o  train0/leave/CO/co0/step 1
-|  |    o  train0/leave/CO/co0/step 2
-|  |    o  train0/leave/CO/co0/step 3
-|  |    o  train0/leave/CO/co0/step 4
-|  |    o  train0/leave/CO/co0/step 5
-|  |    o  train0/leave/CO/co0/step 6
-|  |    o  train0/leave/CO/co1/goal
-|  |    o  train0/leave/CO/co1/relation
-|  |    o  train0/leave/CO/co1/step 1
-|  |    o  train0/leave/CO/co1/step |___|54
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > 2\n
-|  |    < 2\n
-|  |    -    
-|  |    > _.xxx_.train0/leave/CO/co1/step_.3\n
-|  |    < _.ooo_.train0/leave/CO/co1/step_.3\n
-|  |    -   ---                               
-|  |    > _._.o_._.train0/leave/CO/co1/step_.4\n
-|  |    < _._.o_._.train0/leave/CO/co1/step_.4\n
-|  |    -                                       
-|  |    > _._.o_._.train0/leave/CO/co1/step_.5\n
-|  |    < _._.o_._.train0/leave/CO/co1/step_.5\n
-|  |    -                                       
-|  |    > _._.o_._.train0/leave/CO/co1/step_.6\n
-|  |    < _._.o_._.train0/leave/CO/co1/step_.6\n
-|  |    -                                       
-|  |    > _._.o_._.train0/leave/CO/co1/step_.7\n
-|  |    < _._.o_._.train0/leave/CO/co1/step_.7\n
-|  |    -                                       
-|  |    > _._.o_._.train0/leave/CO/co1/step_.8\n
-|  |    < _._.o_._.train0/leave/CO/co1/step_.8\n
-|  |    -                                       
-|  |    > _._.o_._.train0/leave/FIS\n
-|  |    < _._.o_._.train0/leave/FIS\n
-|  |    -                            
-|  |    > _._.o_._.train0/leave/INV/inv1\n
-|  |    < _._.o_._.train0/leave/INV/inv1\n
-|  |    -                                 
-|  |    > _._.o_._.train0/leave/INV/inv2/goal\n
-|  |    < _._.o_._.train0/leave/INV/inv2/goal\n
-|  |    -                                      
-|  |    > _._.o_._.train0/leave/INV/inv2/relation\n
-|  |    < _._.o_._.train0/leave/INV/inv2/relation\n
-|  |    -                                          
-|  |    > _._.o_._.train0/leave/INV/inv2/step_.1\n
-|  |    < _._.o_._.train0/leave/INV/inv2/step_.1\n
-|  |    -                                         
-|  |    > _._.o_._.train0/leave/INV/inv2/step_.2\n
-|  |    < _._.o_._.train0/leave/INV/inv2/step_.2\n
-|  |    -                                         
-|  |    > _._.o_._.train0/leave/INV/inv2/step_.3\n
-|  |    < _._.o_._.train0/leave/INV/inv2/step_.3\n
-|  |    -                                         
-|  |    > _._.o_._.train0/leave/INV/inv2/step_.4\n
-|  |    < _._.o_._.train0/leave/INV/inv2/step_.4\n
-|  |    -                                         
-|  |    > _.xxx_.train0/leave/SCH\n
-|  |    < _.xxx_.train0/leave/SCH\n
-|  |    -                          
-|  |    > _._.o_._.train0/leave/TR/tr0\n
-|  |    < _._.o_._.train0/leave/TR/tr0\n
-|  |    -                               
-|  |    > passed_.52_./_.
-|  |    < passed_.53_./_.
-|  |    -          -     
-|  |  ]
 |  |  +- test 2, proof obligation, INIT/fis
 |  |  +- test 3, proof obligation, leave/fis
 |  |  +- test 4, proof obligation, leave/sch
@@ -126,31 +27,9 @@
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
 |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- [ Success: 11 / 12 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- [ Success: 12 / 12 ]
 |  +- the parser is exception free
-|  +- [ Success: 3 / 4 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  +- [ Success: 4 / 4 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -193,10 +72,10 @@ Comparison:[
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 4 / 5 ]
++- [ Success: 5 / 5 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5172   33270  292970
+    5205   33500  294690
