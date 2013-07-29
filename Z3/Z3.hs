@@ -99,6 +99,7 @@ data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
 data ProofObligation = ProofObligation Context [Expr] Bool Expr
+    deriving Eq
 
 instance Show ProofObligation where
     show (ProofObligation (Context ss vs fs ds dum) as _ g) =
@@ -135,7 +136,7 @@ data Context = Context
         (Map String Fun)  -- functions and operators
         (Map String Def)  -- transparent definitions
         (Map String Var)  -- dummies
-    deriving Show
+    deriving (Show,Eq)
 
 empty_ctx = Context empty empty empty empty empty
 
@@ -283,5 +284,5 @@ entailment
                 (dum0 `merge` dum1))
             (zimplies (zall xs0) xp0:xs1)
             ex1
-            xp1
+            xp1 
 --            (zforall (elems cons1) (zimplies (zall xs1) xp1))

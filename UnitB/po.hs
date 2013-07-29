@@ -125,9 +125,6 @@ proof_obligation m = do
                 Nothing -> 
                     return [(lbl,po)])
         return $ fromList $ concat xs
-    where
---        p = props m
---        f (ProofObligation a b c d) = ProofObligation a (elems (theory_facts $ theory m)++b) c d
 
 init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = singleton (composite_label [_name m, init_fis_lbl]) po
@@ -427,30 +424,60 @@ dump name pos = do
 --                ("(Assert ":repeat "          ")
 --                $ pretty_print (as_tree x)) ++ ")"
         f x          = show $ as_tree x
+
+verify_all :: Map Label ProofObligation -> IO (Map Label Bool)
+verify_all pos = do
+    rs <- forM (toList pos) (\(lbl, po) -> do
+            r <- discharge po
+            case r of
+                Valid -> do
+                    return (lbl, True) --  , ["  o  " ++ show lbl])
+                x     -> do
+                    return (lbl, False)) -- , [" xxx " ++ show lbl])
+    return $ fromList rs
+
+verify_changes :: Machine -> Map Label (Bool,ProofObligation) -> IO (Map Label (Bool,ProofObligation), String,Int)
+verify_changes m old_pos = do
+        case proof_obligation m of
+            Right pos -> do
+                dump (show $ _name m) pos
+                let new_pos = differenceWith f pos old_pos
+                res <- verify_all new_pos
+                let { h k p0 = (
+                    case M.lookup k res of
+                        Just b  -> (b,p0)
+                        Nothing -> old_pos ! k) }
+                let all_pos = M.mapWithKey h pos 
+                (res,_,_) <- format_result (M.map fst all_pos)
+                return (all_pos,res,size new_pos)
+            Left msgs -> 
+                return (old_pos,unlines $ map g msgs,0)
+    where
+        f p0 (b,p1)
+            | p0 == p1 = Nothing 
+            | p0 /= p1 = Just p0
+        g (xs,i,j) = format "error ({0},{1}): {2}" i j xs :: String
                 
-str_verify_machine :: Machine -> IO (String, Int, Int)
+str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
         case proof_obligation m of
             Right pos -> do
                 dump (show $ _name m) pos
-                rs <- forM (toList pos) (\(lbl, po) -> do
---                    if lbl `member` proofs ps then do
---                        match_proof m lbl po (proofs ps ! lbl)
---                    else do
-                        r <- discharge po
-                        x <- case r of
-                            Valid -> do
-                                return (True, ["  o  " ++ show lbl])
-                            x     -> do
-                                return (False, [" xxx " ++ show lbl])
-                        return x)
-                let total = length rs
-                let passed = length $ filter fst rs
-                let xs = "passed " ++ (show passed) ++ " / " ++ show total
-                let ys = concatMap snd rs ++ [xs]
-                return (unlines ys, passed, total)
+                xs <- verify_all pos
+                format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)
     where
         ps = props m
         f (xs,i,j) = format "error ({0},{1}): {2}" i j xs :: String
-        
+
+format_result :: Map Label Bool -> IO (String,Int,Int)
+format_result xs = do
+        let rs    = map f $ toList xs
+        let total = length rs
+        let passed = length $ filter fst rs
+        let xs = "passed " ++ (show passed) ++ " / " ++ show total
+        let ys = map snd rs ++ [xs]
+        return (unlines ys, passed, total)
+    where
+        f (y,True)  = (True, "  o  " ++ show y)
+        f (y,False) = (False," xxx " ++ show y)

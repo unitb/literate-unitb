@@ -2574,53 +2574,27 @@
                                 (= (select loc@prime
                                            t0)
                                    ent)))))
-           (and (=> (and (not (elem@@TRAIN t
-                                           in))
-                         (elem@@TRAIN t
-                                      (bunion@@TRAIN in
-                                                     (mk-set@@TRAIN t))))
-                    (= (select (ovl@@TRAIN@@BLK loc
-                                                (mk-fun@@TRAIN@@BLK t
-                                                                    ent))
-                               t)
-                       ent))
-                (forall ( (t0 TRAIN) )
-                        (=> (and (not (elem@@TRAIN t0
-                                                   in))
-                                 (not (= t0
-                                         t)))
-                            (=> (elem@@TRAIN t0
-                                             (bunion@@TRAIN in
-                                                            (mk-set@@TRAIN t)))
-                                (= (select (ovl@@TRAIN@@BLK loc
-                                                            (mk-fun@@TRAIN@@BLK t
-                                                                                ent))
-                                           t0)
-                                   ent)))))))
+           (=> (and (not (elem@@TRAIN t
+                                      in))
+                    (elem@@TRAIN t
+                                 (bunion@@TRAIN in
+                                                (mk-set@@TRAIN t))))
+               (= (select (ovl@@TRAIN@@BLK loc
+                                           (mk-fun@@TRAIN@@BLK t
+                                                               ent))
+                          t)
+                  ent))))
 
-(assert (= (and (=> (and (not (elem@@TRAIN t
-                                           in))
-                         (elem@@TRAIN t
-                                      (bunion@@TRAIN in
-                                                     (mk-set@@TRAIN t))))
-                    (= (select (ovl@@TRAIN@@BLK loc
-                                                (mk-fun@@TRAIN@@BLK t
-                                                                    ent))
-                               t)
-                       ent))
-                (forall ( (t0 TRAIN) )
-                        (=> (and (not (elem@@TRAIN t0
-                                                   in))
-                                 (not (= t0
-                                         t)))
-                            (=> (elem@@TRAIN t0
-                                             (bunion@@TRAIN in
-                                                            (mk-set@@TRAIN t)))
-                                (= (select (ovl@@TRAIN@@BLK loc
-                                                            (mk-fun@@TRAIN@@BLK t
-                                                                                ent))
-                                           t0)
-                                   ent)))))
+(assert (= (=> (and (not (elem@@TRAIN t
+                                      in))
+                    (elem@@TRAIN t
+                                 (bunion@@TRAIN in
+                                                (mk-set@@TRAIN t))))
+               (= (select (ovl@@TRAIN@@BLK loc
+                                           (mk-fun@@TRAIN@@BLK t
+                                                               ent))
+                          t)
+                  ent))
            (=> (not (elem@@TRAIN t
                                  in))
                (= (select (ovl@@TRAIN@@BLK loc
@@ -4629,29 +4603,16 @@
                                      (= (select loc@prime
                                                 t0)
                                         ent)))))
-                (and (=> (and (not (elem@@TRAIN t
-                                                in))
-                              (elem@@TRAIN t
-                                           (bunion@@TRAIN in
-                                                          (mk-set@@TRAIN t))))
-                         (= (select (ovl@@TRAIN@@BLK loc
-                                                     (mk-fun@@TRAIN@@BLK t
-                                                                         ent))
-                                    t)
-                            ent))
-                     (forall ( (t0 TRAIN) )
-                             (=> (and (not (elem@@TRAIN t0
-                                                        in))
-                                      (not (= t0
-                                              t)))
-                                 (=> (elem@@TRAIN t0
-                                                  (bunion@@TRAIN in
-                                                                 (mk-set@@TRAIN t)))
-                                     (= (select (ovl@@TRAIN@@BLK loc
-                                                                 (mk-fun@@TRAIN@@BLK t
-                                                                                     ent))
-                                                t0)
-                                        ent))))))))
+                (=> (and (not (elem@@TRAIN t
+                                           in))
+                         (elem@@TRAIN t
+                                      (bunion@@TRAIN in
+                                                     (mk-set@@TRAIN t))))
+                    (= (select (ovl@@TRAIN@@BLK loc
+                                                (mk-fun@@TRAIN@@BLK t
+                                                                    ent))
+                               t)
+                       ent)))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 
@@ -5033,29 +4994,16 @@
                                      (mk-set@@BLK ext))
                         PLF)))
 
-(assert (not (= (and (=> (and (not (elem@@TRAIN t
-                                                in))
-                              (elem@@TRAIN t
-                                           (bunion@@TRAIN in
-                                                          (mk-set@@TRAIN t))))
-                         (= (select (ovl@@TRAIN@@BLK loc
-                                                     (mk-fun@@TRAIN@@BLK t
-                                                                         ent))
-                                    t)
-                            ent))
-                     (forall ( (t0 TRAIN) )
-                             (=> (and (not (elem@@TRAIN t0
-                                                        in))
-                                      (not (= t0
-                                              t)))
-                                 (=> (elem@@TRAIN t0
-                                                  (bunion@@TRAIN in
-                                                                 (mk-set@@TRAIN t)))
-                                     (= (select (ovl@@TRAIN@@BLK loc
-                                                                 (mk-fun@@TRAIN@@BLK t
-                                                                                     ent))
-                                                t0)
-                                        ent)))))
+(assert (not (= (=> (and (not (elem@@TRAIN t
+                                           in))
+                         (elem@@TRAIN t
+                                      (bunion@@TRAIN in
+                                                     (mk-set@@TRAIN t))))
+                    (= (select (ovl@@TRAIN@@BLK loc
+                                                (mk-fun@@TRAIN@@BLK t
+                                                                    ent))
+                               t)
+                       ent))
                 (=> (not (elem@@TRAIN t
                                       in))
                     (= (select (ovl@@TRAIN@@BLK loc
@@ -14332,7 +14280,7 @@
                                t0)
                        ent)))
            (and (elem@@TRAIN t0
-                             (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                             (set-diff@@TRAIN in
                                               (mk-set@@TRAIN t)))
                 (or (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                              loc)
@@ -14344,7 +14292,7 @@
                        ent)))))
 
 (assert (= (and (elem@@TRAIN t0
-                             (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                             (set-diff@@TRAIN in
                                               (mk-set@@TRAIN t)))
                 (or (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                              loc)
@@ -14355,14 +14303,14 @@
                                t0)
                        ent)))
            (or (and (elem@@TRAIN t0
-                                 (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                 (set-diff@@TRAIN in
                                                   (mk-set@@TRAIN t)))
                     (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                              loc)
                                        t0)
                                PLF))
                (and (elem@@TRAIN t0
-                                 (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                 (set-diff@@TRAIN in
                                                   (mk-set@@TRAIN t)))
                     (= (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                      loc)
@@ -14370,14 +14318,14 @@
                        ent)))))
 
 (assert (= (or (and (elem@@TRAIN t0
-                                 (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                 (set-diff@@TRAIN in
                                                   (mk-set@@TRAIN t)))
                     (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                              loc)
                                        t0)
                                PLF))
                (and (elem@@TRAIN t0
-                                 (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                 (set-diff@@TRAIN in
                                                   (mk-set@@TRAIN t)))
                     (= (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                      loc)
@@ -14880,9 +14828,6 @@
            (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                  loc)))
 
-(assert (= (dom@@TRAIN@@BLK loc)
-           in))
-
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -15213,7 +15158,7 @@
                                     t0)
                             ent)))
                 (and (elem@@TRAIN t0
-                                  (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                  (set-diff@@TRAIN in
                                                    (mk-set@@TRAIN t)))
                      (or (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                                   loc)
@@ -15605,7 +15550,7 @@
                         PLF)))
 
 (assert (not (= (and (elem@@TRAIN t0
-                                  (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                  (set-diff@@TRAIN in
                                                    (mk-set@@TRAIN t)))
                      (or (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                                   loc)
@@ -15616,14 +15561,14 @@
                                     t0)
                             ent)))
                 (or (and (elem@@TRAIN t0
-                                      (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                      (set-diff@@TRAIN in
                                                        (mk-set@@TRAIN t)))
                          (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                                   loc)
                                             t0)
                                     PLF))
                     (and (elem@@TRAIN t0
-                                      (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                      (set-diff@@TRAIN in
                                                        (mk-set@@TRAIN t)))
                          (= (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                           loc)
@@ -15689,6 +15634,9 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(assert (= (dom@@TRAIN@@BLK loc)
+           in))
+
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -16011,14 +15959,14 @@
                         PLF)))
 
 (assert (not (= (or (and (elem@@TRAIN t0
-                                      (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                      (set-diff@@TRAIN in
                                                        (mk-set@@TRAIN t)))
                          (elem@@BLK (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                                   loc)
                                             t0)
                                     PLF))
                     (and (elem@@TRAIN t0
-                                      (set-diff@@TRAIN (dom@@TRAIN@@BLK loc)
+                                      (set-diff@@TRAIN in
                                                        (mk-set@@TRAIN t)))
                          (= (select (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                                           loc)

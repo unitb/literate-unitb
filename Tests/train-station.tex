@@ -202,6 +202,11 @@
 	% case
 	% split
 	\begin{calculation}
+%		t0 \in in' \implies  loc'.t0 = ent
+%	\hint{=}{ \ref{a2} \ref{a1} }
+%		t0 \in in \bunion \{ t \} \implies  (loc |t \tfun ent).t0 = ent
+%	\hint{\follows}{ }
+%		\neg t0 \in in
 		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
 	\hint{=}{  }
 		\qforall{t0}{\neg t0 \in in \land (t0 = t \lor \neg  t0 = t)}{ t0 \in in' \implies  loc'.t0 = ent }
@@ -213,7 +218,7 @@
 	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
 	\hint{=}{ \ref{a1} and \ref{a2} }
 		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
-	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
+%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
 	\hint{=}{  }
 		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
 	\hint{=}{  }
@@ -228,27 +233,28 @@
 \begin{proof}{leave/CO/co1}
 	\begin{calculation}
 		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
-	\hint{=}{ \ref{a0} and \ref{a3} \ref{inv2} } % step 1
-		t0 \in \dom.loc \setminus \{ t \} 
+	\hint{=}{  \ref{a0}  and \ref{a3} } % step 1
+		t0 \in in \setminus \{ t \} 
 		\land ( (\{ t \} \domsub loc).t0 \in PLF \lor (\{ t \} \domsub loc).t0 = ent)
 	\hint{=}{ }	% step 2
-		( t0 \in \dom.loc \setminus \{ t \} 
-		\land  (\{ t \} \domsub loc).t0 \in PLF )
-		\lor ( t0 \in (\dom.loc \setminus \{ t \} )
+		( t0 \in in \setminus \{ t \} 
+		\land  ( \{ t \} \domsub loc).t0 \in PLF )
+			   \lor ( t0 \in (in \setminus \{ t \} )
 		\land (\{ t \} \domsub loc).t0 = ent)
-	\hint{=}{ }	% step 3
-		t0 \in in \setminus \{ t \} 
+	\hint{=}{ \ref{inv2} }	% step 3
+			t0 \in in \setminus \{ t \} 
 		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
-	\hint{=}{ } % step 3
+	\hint{=}{ } % step 4
 		t0 \in in \land \neg t0  = t 
 		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
-	\hint{=}{  } % step 4
+	\hint{=}{  } % step 5
 		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
-	\hint{=}{  \ref{grd0} } % step 5
+	\hint{=}{  \ref{grd0} } % step 6
 	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
-	\hint{\follows}{  \ref{grd0} } % step 6
+	\hint{\follows}{  \ref{grd0} } % step 7
+%		\true
 	 	t0 \in in \land loc.t0 = ent 
-	\hint{=}{   } % step 7
+	\hint{=}{   } % step 8
 	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
 	\end{calculation}
 \end{proof}
