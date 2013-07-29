@@ -1,25 +1,28 @@
 {-# LANGUAGE BangPatterns #-}
 module Document.Expression where
 
-import Data.Char
-import Data.List as L
-import Data.Map as M hiding ( map )
-import qualified Data.Map as M ( map )
-
 import Latex.Scanner
 import Latex.Parser
-
-import System.IO.Unsafe
 
 import UnitB.Operator
 import UnitB.SetTheory
 import UnitB.FunctionTheory
 
-import Utilities.Format
+import Utilities.Syntactic
 
 import Z3.Const
 import Z3.Def
 import Z3.Z3
+
+    -- Libraries
+import Data.Char
+import Data.List as L
+import Data.Map as M hiding ( map )
+import qualified Data.Map as M ( map )
+
+import System.IO.Unsafe
+
+import Utilities.Format
 
 eat_space :: Scanner Char ()
 eat_space = do
@@ -180,25 +183,19 @@ times = do
             Just _ -> return ()
             Nothing -> fail "expecting times (\\cdot)"
 
-implication = do
-        x <- match $ match_string "\\implies"
-        case x of
-            Just _  -> return ()
-            Nothing -> fail "expecting implication (\\implies)"
+implication = read_list "\\implies"
 
-conjunction = do
-        x <- match $ match_string "\\land"
-        case x of
-            Just _  -> return ()
-            Nothing -> fail "expecting conjunction (\\land)"
+follows     = read_list "\\follows"
 
-power = do
-        x <- match $ match_string "^"
-        case x of
-            Just _  -> return ()
-            Nothing -> fail "expecting exponential (^)"
+conjunction = read_list "\\land"
 
-tfun = read_list "\\tfun"
+disjunction = read_list "\\lor"
+
+equivalence = read_list "\\equiv"
+
+power  = read_list "^"
+
+tfun   = read_list "\\tfun"
 
 bunion = read_list "\\bunion"
 
@@ -216,24 +213,37 @@ membership =
 
 set_diff = read_list "\\setminus"
 
+negation = read_list "\\neg"
+
+unary :: Scanner Char UnaryOperator
+unary = do
+        choice 
+            [  negation >> return Negation
+            ]
+            (fail "expecting an unary operator")            
+            return
+
 oper = do
         choice [
-                (plus >> return Plus),
+                (plus  >> return Plus),
                 (times >> return Mult),
-                (implication >> return Implies),
-                (conjunction >> return And),
-                (leq >> return Leq),
                 (power >> return Power),
-                (bunion >> return Union),
-                (membership >> return Membership),
+                (implication >> return Implies),
+                (follows     >> return Follows),
+                (conjunction >> return And),
+                (disjunction >> return Or),
+                (equivalence >> return Equiv),
+                (leq >> return Leq),
                 (equal >> return Equal),
+                (membership >> return Membership),
+                (bunion >> return Union),
                 (set_diff >> return SetDiff),
                 (overload >> return Overload),
                 (dom_sub >> return DomSubt),
                 (dom_rest >> return DomRest),
                 (tfun >> return MkFunction), -- TotalFunction),
                 (fun_app >> return Apply) ]
-            (fail "expecting an operator")            
+            (fail "expecting an binary operator")            
             return
 
 equal = do
@@ -259,26 +269,58 @@ term ctx = do
                     Just e  -> return e 
                     Nothing ->
                         if xs == "\\dom"
-                            then do
-                                read_list "."
-                                choice 
-                                    [ term ctx
-                                    , do    eat_space
-                                            read_list "("
-                                            e <- expr ctx
-                                            eat_space
-                                            read_list ")"
-                                            eat_space
-                                            return e
-                                    ] (fail "invalid argument for 'dom'") 
-                                    (\x -> either (\(x) -> fail x) return $ zdom $ Right x)
-                            else case var_decl xs ctx of
-                                    Just (Var v t) -> return (Word $ Var (zs v) t) 
-                                    Nothing -> fail ("undeclared variable: " ++ xs))
+                        then do
+                            read_list "."
+                            choice 
+                                [ term ctx
+                                , do    eat_space
+                                        read_list "("
+                                        e <- expr ctx
+                                        eat_space
+                                        read_list ")"
+                                        eat_space
+                                        return e
+                                ] (fail "invalid argument for 'dom'") 
+                                (\x -> either (\(x) -> fail x) return $ zdom $ Right x)
+                        else if xs == "\\qforall"
+                        then do
+                            eat_space
+
+                            read_list "{"
+                            eat_space
+                            vs <- sep1 word comma :: Scanner Char [String]
+                            eat_space
+                            read_list "}"
+                            eat_space
+
+                            read_list "{"
+                            eat_space
+                            r <- try (read_list "}") 
+                                (\_ -> return ztrue)
+                                (do r <- expr ctx
+                                    read_list "}"
+                                    return r)
+                            eat_space
+                            
+                            read_list "{"
+                            t <- expr ctx
+                            read_list "}"
+                            eat_space
+                            
+                            case dummy_types vs ctx of
+                                Just vs -> return (Binder Forall vs (r `zimplies` t))
+                                Nothing -> fail ("bound variables are not typed")
+                        else case var_decl xs ctx of
+                            Just (Var v t) -> return (Word $ Var (zs v) t) 
+                            Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
                 xs <- number
                 eat_space
                 return (Const [] xs $ USER_DEFINED IntSort []))
+
+dummy_types vs (Context c0 c1 c2 c3 dums) = mapM f vs
+    where
+        f x = M.lookup x dums
 
 number :: Scanner Char String
 number = do
@@ -326,61 +368,89 @@ expr ctx = do
         r <- read_term []
         return r
     where
-        read_term :: [(Expr, Operator)] -> Scanner Char Expr
+        read_term :: [([UnaryOperator], Expr, BinOperator)] 
+                  -> Scanner Char Expr
         read_term xs = do
+            us <- many (eat_space >> unary)
             eat_space
-            s <- peek
+--            s <- peek
 --            let !() = unsafePerformIO (putStrLn $ take 10 s)
             try open_brack
                 (\_ -> do
-                        r <- expr ctx
+                        e <- expr ctx
                         close_brack
                         eat_space
-                        read_op xs r
+                        read_op xs us e
                     ) $ (try open_curly 
                              (\_ -> do
                                 rs <- sep1 (expr ctx) comma
                                 close_curly
                                 eat_space
                                 case zset_enum $ map Right rs of
-                                    Right rs -> read_op xs rs 
+                                    Right e -> read_op xs us e 
                                     Left xs -> fail (format "type error: {0}" xs)
                             ) $ (do
                                 t <- term ctx
-                                read_op xs t))
-        read_op :: [(Expr, Operator)] -> Expr -> Scanner Char Expr
-        read_op xs e0 = do
+                                read_op xs us t))
+        read_op :: [([UnaryOperator], Expr, BinOperator)] 
+                -> [UnaryOperator] 
+                -> Expr 
+                -> Scanner Char Expr
+        read_op xs us e0 = do
             b1 <- is_eof
             b2 <- look_ahead close_brack
             b3 <- look_ahead close_curly
             b4 <- look_ahead comma
-            if b1 || b2 || b3 || b4
+            b5 <- look_ahead (read_list "}")
+            if b1 || b2 || b3 || b4 || b5
             then do
-                reduce_all xs e0
+                reduce_all xs us e0
             else do
                 op <- oper
-                reduce xs e0 op
-        reduce :: [(Expr, Operator)] -> Expr -> Operator -> Scanner Char Expr
-        reduce [] e0 op0                 = read_term [(e0,op0)]
-        reduce xs@( (e0,op0):ys ) e1 op1 = do
+                reduce xs us e0 op
+        reduce :: [([UnaryOperator], Expr, BinOperator)] 
+               -> [UnaryOperator]
+               -> Expr 
+               -> BinOperator 
+               -> Scanner Char Expr
+        reduce [] [] e0 op0                 = read_term [([],e0,op0)]
+        reduce xs@( (vs,e0,op0):ys ) [] e1 op1 = do
             case assoc op0 op1 of
                 LeftAssoc ->  do
                     e2 <- apply_op op0 e0 e1
-                    reduce ys e2 op1
-                RightAssoc -> read_term ((e1,op1):xs)
+                    reduce ys vs e2 op1
+                RightAssoc -> read_term (([],e1,op1):xs)
                 Ambiguous ->  fail ("ambiguous expression: use parentheses")
-        reduce_all [] e               = return e
-        reduce_all xs@( (e0,op0):ys ) e1 = do
+        reduce xs (u:us) e0 op0             =
+            case binds u op0 of
+                LeftAssoc   -> do
+                    e1 <- apply_unary u e0
+                    reduce xs us e1 op0
+                RightAssoc  -> read_term ((u:us,e0,op0):xs)
+                Ambiguous   -> fail ("ambiguous expression: use parentheses")
+        reduce_all :: [([UnaryOperator], Expr, BinOperator)] 
+                   -> [UnaryOperator] 
+                   -> Expr 
+                   -> Scanner Char Expr
+        reduce_all [] [] e             = return e
+        reduce_all ( (us,e0,op0):ys ) [] e1 = do
                 e2 <- apply_op op0 e0 e1
-                reduce_all ys e2
+                reduce_all ys us e2
+        reduce_all xs (u:us) e0        = do
+                e1 <- apply_unary u e0
+                reduce_all xs us e1
 
-apply_op op x0 x1 = do
---    let !() = unsafePerformIO (putStrLn $ format "types {0},{1} and {2}" op (x0) (x1))
---    let !() = unsafePerformIO (putStrLn $ format "types {0} and {1}" (type_of x0) (type_of x1))
-    case mk_expr op x0 x1 of
+apply_unary :: UnaryOperator -> Expr -> Scanner Char Expr
+apply_unary op e = do
+    case mk_unary op e of
         Right x2 -> return x2
         Left xs -> 
---            let !() = unsafePerformIO (putStrLn $ format "type error") in
+            fail (format "type error: {0}" xs)
+        
+apply_op op x0 x1 = do
+    case mk_expr op x0 x1 of
+        Right x2 -> return x2
+        Left xs  -> 
             fail (format "type error: {0}" xs)
 
 parse_expr :: Context -> [(Char, (Int,Int))] -> Either [Error] Expr

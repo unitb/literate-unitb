@@ -2,17 +2,21 @@ module Document.Tests.SmallMachine
     ( test_case ) 
 where
 
+    -- Modules
+import UnitB.AST
+import UnitB.PO
+import UnitB.Calculation
+
+import Z3.Z3
+
+    -- Libraries
 import Data.Map hiding ( map )
 import qualified Data.Map as M
 import Document.Document
 
 import Tests.UnitTest
 
-import UnitB.AST
-import UnitB.PO
-import UnitB.Calculation
-
-import Z3.Z3
+import Utilities.Syntactic
 
 test_case = Case "small machine example" test True
 
@@ -51,9 +55,9 @@ result2 = (unlines [
         "  o  m0/inc/INV/inv0",
         " xxx m0/inc/INV/inv1",
         "  o  m0/inc/SCH",
-        " xxx m0/inc/TR/EN/tr0",
-        "  o  m0/inc/TR/NEG/tr0",
-        "passed 7 / 9"
+        " xxx m0/inc/TR/tr0",
+--        "  o  m0/inc/TR/NEG/tr0",
+        "passed 6 / 8"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -74,9 +78,8 @@ result3 = (unlines [
         "  o  m0/inc/FIS" ,
         "  o  m0/inc/INV/inv0",
         "  o  m0/inc/SCH",
-        "  o  m0/inc/TR/EN/tr0",
-        "  o  m0/inc/TR/NEG/tr0",
-        "passed 8 / 9"
+        "  o  m0/inc/TR/tr0",
+        "passed 7 / 8"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -100,14 +103,20 @@ result4 = unlines [
         " (= y@prime (+ y 1))",
         "|----",
         " (= x@prime (* 2 y@prime))"]
-case4 = do
-        ct <- readFile path3
-        r <- parse_machine path3
+
+show_po lbl = do
+        m <- parse_machine path3
+        r <- return (do
+            [m] <- m
+            po <- proof_obligation m 
+            return (po ! lbl) )
         case r of
-            Right [m] -> do
-                let po = proof_obligation m ! label "m0/inc/INV/inv0"
+            Right po -> do
                 return $ show po
-            x -> return $ show x
+            Left x -> return $ show_err x
+
+
+case4 = show_po $ label "m0/inc/INV/inv0"
 
 result5 = unlines [
         " sort: pfun [a,b], set [a]",
@@ -120,14 +129,8 @@ result5 = unlines [
         " (= y@prime y)",
         "|----",
         " (=> (= x 2) (= x@prime 4))"]
-case5 = do
-        r <- parse_machine path3
-        case r of
-            Right [m] -> do
-                let po = proof_obligation m ! label "m0/SKIP/CO/c0"
-                return $ show po
-            x -> return $ show x
 
+case5 = show_po $ label "m0/SKIP/CO/c0"
 
 var_x = Var "x" INT
 var_y = Var "y" INT

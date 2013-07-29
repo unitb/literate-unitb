@@ -3,10 +3,14 @@
 module UnitB.AST (
     Label, Theory (..), Event(..), empty_event, 
     Machine (..), label,
-    empty_machine, ProgramProp(..), ProgressProp,
-    SafetyProp, PropertySet, empty_property_set,
+    empty_machine, 
+    ProgramProp (..), 
+    ProgressProp(..),
+    SafetyProp  (..), 
+    PropertySet (..), 
+    empty_property_set,
     composite_label, empty_theory,
-    proofs, program_prop, inv, inv_thm, ps_union
+    ps_union
     ) 
 where
 
@@ -91,7 +95,7 @@ data PropertySet = PS {
         program_prop :: Map Label ProgramProp,
         inv          :: Map Label Expr,       -- inv
         inv_thm      :: Map Label Expr,       -- inv thm
-        proofs       :: Map Label Calculation,
+        proofs       :: Map Label Proof,
         progress     :: Map Label ProgressProp,
         safety       :: Map Label SafetyProp }
 

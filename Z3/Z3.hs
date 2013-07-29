@@ -12,6 +12,7 @@ module Z3.Z3
     , empty_ctx
     , merge_all_ctx, merge_ctx
     , merge_all, merge, entails
+    , entailment
     , var_decl, free_vars
     , z3_code
     , Tree ( .. )
@@ -265,18 +266,22 @@ verify xs = do
                 ++  ["err"]
                 ++  (map ("> " ++) $  lines err) )
 
-entails 
+
+entails po0 po1 = discharge (entailment po0 po1)
+
+entailment  
     (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 ex0 xp0) 
     (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
-            discharge $ po
+            po
     where
         po = ProofObligation 
             (Context 
                 (srt0 `merge` srt1) 
-                empty 
+                (cons0 `merge` cons1) 
                 (fun0 `merge` fun1) 
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
-            [zforall (elems cons0) (zimplies (zall xs0) xp0)]
+            (zimplies (zall xs0) xp0:xs1)
             ex1
-            (zforall (elems cons1) (zimplies (zall xs1) xp1))
+            xp1
+--            (zforall (elems cons1) (zimplies (zall xs1) xp1))

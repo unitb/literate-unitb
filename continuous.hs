@@ -7,6 +7,7 @@ import Document.Document
 
 import System.Directory
 import System.Environment
+import System.IO
 --import System.Posix
 
 import Text.Printf
@@ -41,14 +42,17 @@ main = do
                 then do
                     check_file xs
                     t <- getModificationTime xs
-                    foldM (f xs) t $ repeat ()
-                    return ()
+                    f xs t 
                 else do
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
             _ -> putStrLn "usage: continuous file"
     where
-        f xs t0 () = do
+        f xs t0 = do
             threadDelay 100000
-            t1 <- getModificationTime xs
-            when (t0 /= t1) $ check_file xs
-            return t1 
+            x <- hReady stdin
+            c <- if x then getChar else return ' '
+            if c `elem` ['q','Q'] then return ()
+            else do 
+                t1 <- getModificationTime xs
+                when (t0 /= t1) $ check_file xs
+                f xs t1 

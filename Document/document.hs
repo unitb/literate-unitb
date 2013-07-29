@@ -1,6 +1,22 @@
 {-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
 module Document.Document where
 
+    -- Modules
+import Document.Expression
+
+import Latex.Scanner
+import Latex.Parser
+
+import UnitB.AST
+import UnitB.PO
+import UnitB.SetTheory
+import UnitB.FunctionTheory
+import UnitB.Calculation hiding ( context )
+import UnitB.Operator
+
+import Z3.Z3 
+
+    -- Libraries
 import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
 
@@ -11,26 +27,13 @@ import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Map as M
 import qualified Data.Set as S
 
-import Document.Expression
-
-import Latex.Scanner
-import Latex.Parser
-
 import System.IO
 import System.IO.Unsafe
 
 import Text.Printf
 
-import UnitB.AST
-import UnitB.PO
-import UnitB.SetTheory
-import UnitB.FunctionTheory
-import UnitB.Calculation hiding ( context )
-import UnitB.Operator
-
 import Utilities.Format
-
-import Z3.Z3 
+import Utilities.Syntactic
 
 --with_print_lbl txt x = unsafePerformIO (do
 --        putStrLn ("<< " ++ txt ++ ": " ++ show x ++ " >>")
@@ -82,6 +85,16 @@ cmd_params_ n xs = fmap fst $ cmd_params n xs
 pop_token :: [LatexDoc] -> [LatexDoc]
 pop_token (Text (x1:x2:xs):ys) = Text xs:ys
 pop_token ((Text [x1]):ys) = ys
+
+list_file_obligations fn = do
+        ct <- readFile fn
+        return $ list_proof_obligations ct
+
+list_proof_obligations ct = do
+        xs <- list_machines ct
+        forM xs (\x -> do
+            y <- proof_obligation x
+            return (x,y))
 
 list_machines :: String -> Either [Error] [Machine]
 list_machines ct = do
@@ -144,6 +157,7 @@ data CmdBlock a =
         Cmd0Args (() -> a -> (Int,Int) -> Either [Error] a)
         | Cmd1Args ((String,()) -> a -> (Int,Int) -> Either [Error] a)
         | Cmd2Args ((String, String) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd3Args ((String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
 
 data MEither a b = MLeft [a] b | MRight b
 
@@ -216,6 +230,12 @@ visit_doc blks cmds cs x = do
                                 (arg0,arg1,ts) <- get_2_lbl ts
                                 f (arg0, arg1) x (i,j))
                             g (MRight x) ts
+                        Cmd3Args f -> do
+                            x <- fromEither x (do
+                                (arg0,ts) <- get_1_lbl ts
+                                ([arg1,arg2],ts) <- cmd_params 2 ts
+                                f (arg0, arg1, arg2) x (i,j))
+                            g (MRight x) ts
             | otherwise     = h cs ex cmd ts (i,j)
         h [] ex cmd ts (i,j) = g ex ts 
 
@@ -254,8 +274,8 @@ type_decl = visit_doc []
 
 imports :: [LatexDoc] -> Machine -> MEither Error Machine 
 imports = visit_doc 
-            [ ( "use:set"
-              , Block1Args (\(cset,()) _ m (i,j) -> do
+            [   ( "use:set"
+                , Block1Args (\(cset,()) _ m (i,j) -> do
                     let th = theory m
                     toEither $ error_list (i,j) 
                         [ ( not (cset `member` types th)
@@ -263,9 +283,9 @@ imports = visit_doc
                         ]
                     return m { theory = th {
                                 extends = set_theory (USER_DEFINED (types th ! cset) []) : extends th } } )
-              )
-            , ( "use:fun"
-              , Block2Args (\(dset, rset) _ m (i,j) -> do
+                )
+            ,   ( "use:fun"
+                , Block2Args (\(dset, rset) _ m (i,j) -> do
                     let th = theory m
                     toEither $ error_list (i,j) 
                         [   ( not (dset `member` types th)
@@ -277,7 +297,7 @@ imports = visit_doc
                     let rtype = USER_DEFINED (types th ! rset) []
                     return m { theory = th {
                                 extends = function_theory dtype rtype : extends th } } )
-              )
+                )
             ]
             []
 
@@ -338,6 +358,9 @@ declarations = visit_doc
     -- Todo: check scopes
 collect_expr :: [LatexDoc] -> Machine -> MEither Error Machine
 collect_expr = visit_doc 
+                --------------
+                --  Events  --
+                --------------
         [   (   "evassignment"
             ,   Block2Args (\(ev, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
@@ -359,55 +382,24 @@ collect_expr = visit_doc
                         return m {          
                                 events  = insert (label ev) new_event $ events m } ) 
             )
-        ,   (   "invariant"
-            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
+        ,   (   "evguard"
+            ,   Block2Args (\(evt, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
-                            [ ( label lbl `member` inv (props m)
-                              , format "{0} is already used for another invariant" lbl )
+                            [   ( not (label evt `member` events m)
+                                , format "event '{0}' is undeclared" evt )
                             ]
-                        invar         <- get_expr m xs
-                        return m { 
-                            props = (props m) { 
-                                inv = insert (label lbl) invar $ inv $ props m } } )
-            )
-        ,   (   "assumption"
-            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
-                        let th = theory m
+                        let old_event = events m ! label evt
+                        let grds = guard old_event
                         toEither $ error_list (i,j)
-                            [ ( label lbl `member` fact th
-                              , format "{0} is already used for another assertion" lbl )
+                            [   ( label evt `member` grds
+                                , format "{0} is already used for another guard" lbl )
                             ]
-                        axm <- get_expr m xs
-                        return m { 
-                            theory = th { fact = insert (label lbl) axm $ fact th } } ) 
-            )
-        ,   (   "initialization"
-            ,   Block1Args (\(lbl,()) xs m _ -> do
-                        initp         <- get_expr m xs
---                        toEither $ error_list (i,j)
---                            [ ( label lbl `member` inv (props m)
---                              , format "{0} is already used for another invariant" lbl
---                            ]
-                        return m {
-                                inits = initp : inits m } )
-            )
-        ,   (   "transient"      
-            ,   Block2Args (\(ev, lbl) xs m (i,j) -> do
-                        toEither $ error_list (i,j)
-                            [ ( not (label ev `member` events m)
-                              , format "event '{0}' is undeclared" ev )
-                            ]
-                        toEither $ error_list (i,j)
-                            [   ( label lbl `member` program_prop (props m)
-                                , format "{0} is already used for another program property" lbl )
-                            ]
-                        tr <- get_expr m xs
-                        let prop = Transient (free_vars (context m) tr) tr $ label ev
-                        let old_prog_prop = program_prop $ props m
-                        let new_props     = insert (label lbl) prop $ old_prog_prop
-                        return m {
-                            props = (props m) {
-                                program_prop = new_props } } )
+                        grd <- get_expr m xs
+                        let new_event = old_event { 
+                                    guard =  insert (label lbl) grd grds  }
+                        scope (context m) grd (indices old_event `merge` params old_event) li
+                        return m {          
+                                events  = insert (label evt) new_event $ events m } )
             )
         ,   (   "cschedule"
             ,   Block2Args (\(evt, lbl) xs m li@(i,j) -> do
@@ -445,6 +437,63 @@ collect_expr = visit_doc
                         return m {          
                                 events  = insert (label evt) event $ events m } )
             )
+                -------------------------
+                --  Theory Properties  --
+                -------------------------
+        ,   (   "assumption"
+            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
+--                        let !() = unsafePerformIO (putStrLn $ format "allo {0}" lbl)
+                        let th = theory m
+                        toEither $ error_list (i,j)
+                            [ ( label lbl `member` fact th
+                              , format "{0} is already used for another assertion" lbl )
+                            ]
+                        axm <- get_expr m xs
+                        return m { 
+                            theory = th { fact = insert (label lbl) axm $ fact th } } ) 
+            )
+                --------------------------
+                --  Program properties  --
+                --------------------------
+        ,   (   "initialization"
+            ,   Block1Args (\(lbl,()) xs m _ -> do
+                        initp         <- get_expr m xs
+--                        toEither $ error_list (i,j)
+--                            [ ( label lbl `member` inv (props m)
+--                              , format "{0} is already used for another invariant" lbl
+--                            ]
+                        return m {
+                                inits = initp : inits m } )
+            )
+        ,   (   "invariant"
+            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
+                        toEither $ error_list (i,j)
+                            [ ( label lbl `member` inv (props m)
+                              , format "{0} is already used for another invariant" lbl )
+                            ]
+                        invar         <- get_expr m xs
+                        return m { 
+                            props = (props m) { 
+                                inv = insert (label lbl) invar $ inv $ props m } } )
+            )
+        ,   (   "transient"      
+            ,   Block2Args (\(ev, lbl) xs m (i,j) -> do
+                        toEither $ error_list (i,j)
+                            [ ( not (label ev `member` events m)
+                              , format "event '{0}' is undeclared" ev )
+                            ]
+                        toEither $ error_list (i,j)
+                            [   ( label lbl `member` program_prop (props m)
+                                , format "{0} is already used for another program property" lbl )
+                            ]
+                        tr <- get_expr m xs
+                        let prop = Transient (free_vars (context m) tr) tr $ label ev
+                        let old_prog_prop = program_prop $ props m
+                        let new_props     = insert (label lbl) prop $ old_prog_prop
+                        return m {
+                            props = (props m) {
+                                program_prop = new_props } } )
+            )
         ,   (   "constraint"
             ,   Block1Args (\(lbl,()) xs m (i,j) -> do
                         toEither $ error_list (i,j)
@@ -454,10 +503,25 @@ collect_expr = visit_doc
                         pre             <- get_expr m xs
                         return m { 
                             props = (props m) { 
-                                program_prop = insert (label lbl) (Co [] pre) 
+                                program_prop = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
                                     $ program_prop $ props m } } )
             )
-        ] []
+        ] [ (   "\\safety"
+            ,   Cmd3Args (\(lbl, pCt, qCt) m (i,j) -> do
+                    let prop = safety $ props m
+                    (p,q) <- toEither (do
+                        p <- fromEither ztrue $ get_expr m pCt
+                        q <- fromEither ztrue $ get_expr m qCt
+                        error_list (i,j) 
+                            [   ( label lbl `member` prop
+                                , format "" )
+                            ] 
+                        return (p,q))
+                    let new_prop = Unless [] p q
+                    return m { props = (props m) 
+                        { safety = insert (label lbl) new_prop $ prop } } )
+            )
+        ]
     where
         scope :: Context -> Expr -> Map String Var -> (Int,Int) -> Either [Error] ()
         scope ctx xp vs (i,j) = do
@@ -479,7 +543,7 @@ collect_proofs xs m = visit_doc
                                 proofs = insert (composite_label 
                                     [ _name m, label po ]) p $ 
                                       proofs $ props m } }
-                        _   -> Left [("expecting a single calculation",i,j)]         )
+                        _   -> Left [("expecting a single calculation or a case distinction",i,j)]         )
             )
         ] [] xs m
     where
@@ -488,7 +552,7 @@ collect_proofs xs m = visit_doc
                 xs <- mxs
                 cc <- toEither $ calc c (i,j)
                 case infer_goal cc of
-                    Right cc_goal -> return (cc { goal = cc_goal }:xs)
+                    Right cc_goal -> return (ByCalc cc { goal = cc_goal }:xs)
                     Left msg      -> Left [(format "type error: {0}" msg,i,j)]
             | otherwise             = foldl g mxs c
         g xs x                      = fold_doc g xs x

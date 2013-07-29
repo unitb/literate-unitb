@@ -410,7 +410,7 @@
 	\[ }
 { 	\] }
 \newenvironment{constant}{ 
-	\noindent \textbf{constant}
+	%\noindent \textbf{constant}
 	\[ }
 { 	\] }
 \newcommand{\safety}[3]
@@ -427,11 +427,14 @@
 	\newcommand{#2}{\text{#1}}
 	\noindent \textbf{set}: #1 }
 
+%%%%%%%
 % constants
-
+%
 \newcommand{\emptyfun}{\epsilon}
 
+%%%%%
 % types
+%
 \newcommand{\newtype}[2]{\newcommand{#1}{\textbf{#2}}}
 
 \newtype{\Int}{int}
@@ -440,13 +443,23 @@
 
 \newcommand{\newevent}[1]{ \noindent \textbf{event}~#1\newcompound{#1} }
 
+%%%%%%%%%
+% Assertions
+%
 %\newcomponent
 \newassertion{invariant}{J}
 \newassertion{initialization}{IN}
 \newassertion{constraint}{CO}
-\newassertion{assumption}{AX}
+\newassertion{assumption}{ASM}
 \newcomponent{transient}{TR}
 \newcomponent{evguard}{G}
 \newcomponent{fschedule}{F}
 \newcomponent{cschedule}{C}
 \newcomponent{evassignment}{A}
+
+%%%%%%%%%%%%%%%%%%
+% Proof obligations and refinement
+%
+\newcommand{\discharge}[2]
+{	\noindent \textbf{discharge} \ref{#1} 
+	\textbf{with} \ref{#2} \\	}

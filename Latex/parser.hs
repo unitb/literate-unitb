@@ -1,18 +1,18 @@
 module Latex.Parser where
     -- TODO: Separate Latex from the Scanner monad
 
+    -- Modules
+import Latex.Scanner
 
+    -- Libraries
 import Control.Monad
 
 import Data.Char
 import Data.Map hiding ( foldl, map, null )
 
-import Latex.Scanner
-
 import System.IO.Unsafe
 
-class Syntactic a where
-    line_info :: a -> (Int,Int)
+import Utilities.Syntactic
 
 data LatexDoc = 
         Env String (Int,Int) [LatexDoc] (Int,Int)

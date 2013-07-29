@@ -3,12 +3,13 @@ module Latex.Scanner where
 import Control.Monad
 import Control.Monad.Instances
 
+import Utilities.Format
+import Utilities.Syntactic
+
 data State a = State [(a,(Int,Int))] Int Int
 
 data Scanner a b = 
     Scanner (State a -> Either [Error] (b, State a))
-
-type Error = (String,Int,Int)
 
 --instance Monad (Either a) where
 --    return        = Right
@@ -142,14 +143,22 @@ get_line_info = Scanner f
     where
         f s@(State _ i j) = Right ((i,j), s)
 
+many :: Scanner a b -> Scanner a [b]
+many p = do
+        try p
+            (\x -> do
+                xs <- many p
+                return (x:xs))
+            (return [])
+
 sep :: Scanner a b -> Scanner a c -> Scanner a [b]
 sep b s = do
-            try s 
-                (\x -> do
-                    x  <- b
-                    xs <- sep b s
-                    return (x:xs)) 
-                (return [])
+        try s 
+            (\x -> do
+                x  <- b
+                xs <- sep b s
+                return (x:xs)) 
+            (return [])
 
 sep1 :: Scanner a b -> Scanner a c -> Scanner a [b]
 sep1 b s = do

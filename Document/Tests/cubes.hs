@@ -1,6 +1,5 @@
 module Document.Tests.Cubes ( test_case, test ) where
 
-import Data.Map hiding ( map )
 --import qualified Data.Map as M
 import Document.Document
 
@@ -12,6 +11,10 @@ import UnitB.Theory
 import UnitB.Calculation
 
 import Z3.Z3
+
+    -- Libraries
+import Data.Map hiding ( map )
+import Utilities.Syntactic
 
 test_case = Case "table of cubes example" test True
 
@@ -75,7 +78,7 @@ prop_set6 = empty_property_set {
         n = Word var_n
         z3 = zint 3
         z6 = zint 6
-        calc = Calc (step_ctx machine6) ztrue ztrue [] (0,0)
+        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (0,0)
 
 event6_evt = empty_event {
         action = fromList $ zip 
@@ -103,11 +106,29 @@ result7 = unlines [
         "  o  m0/INIT/INV/inv1",
         "  o  m0/INIT/INV/inv2",
         "  o  m0/evt/FIS",
-        "  o  m0/evt/INV/inv0",
-        "  o  m0/evt/INV/inv1",
-        "  o  m0/evt/INV/inv2",
+        "  o  m0/evt/INV/inv0/goal",
+        "  o  m0/evt/INV/inv0/relation",
+        "  o  m0/evt/INV/inv0/step 1",
+        "  o  m0/evt/INV/inv0/step 2",
+        "  o  m0/evt/INV/inv0/step 3",
+        "  o  m0/evt/INV/inv0/step 4",
+        "  o  m0/evt/INV/inv0/step 5",
+        "  o  m0/evt/INV/inv1/goal",
+        "  o  m0/evt/INV/inv1/relation",
+        "  o  m0/evt/INV/inv1/step 1",
+        "  o  m0/evt/INV/inv1/step 2",
+        "  o  m0/evt/INV/inv1/step 3",
+        "  o  m0/evt/INV/inv1/step 4",
+        "  o  m0/evt/INV/inv1/step 5",
+        "  o  m0/evt/INV/inv1/step 6",
+        "  o  m0/evt/INV/inv2/goal",
+        "  o  m0/evt/INV/inv2/relation",
+        "  o  m0/evt/INV/inv2/step 1",
+        "  o  m0/evt/INV/inv2/step 2",
+        "  o  m0/evt/INV/inv2/step 3",
+        "  o  m0/evt/INV/inv2/step 4",
         "  o  m0/evt/SCH",
-        "passed 9 / 9"]
+        "passed 27 / 27"]
 
 case7 = do
     r <- parse_machine path6
@@ -125,20 +146,28 @@ result8 = unlines [
         " (exists ((x Int)) true)"]
 
 case8 = do
-        r <- parse_machine path8
+        m <- parse_machine path8
+        let r = (do 
+                [m] <- m
+                pos  <- proof_obligation m
+                return (pos ! label "m0/INIT/FIS"))
         case r of
-            Right [m] -> do
-                let po = proof_obligation m ! label "m0/INIT/FIS"
+            Right po -> 
                 return $ show po
-            x -> return $ show x
+            x -> 
+                return $ show x
 
 pos = do
-    r <- parse_machine path6
-    case r of
-        Right [m] -> do
-            let po = proof_obligation m ! label "m0/evt/INV/inv0"
-            return $ show po
-        x -> return $ show x
+        m <- parse_machine path8
+        let r = (do 
+                [m] <- m
+                pos  <- proof_obligation m
+                return (pos ! label "m0/evt/INV/inv0"))
+        case r of
+            Right po -> 
+                return $ show po
+            x -> 
+                return $ show x
 
 result9 = unlines [
         "m0/evt/INV/inv0:",
@@ -164,7 +193,7 @@ case9 = do
         case r of
             Right [m] -> do
                 case toList $ proofs $ props m of
-                    (lbl,calc):xs -> 
+                    (lbl,ByCalc calc):xs -> 
                         return (show lbl ++ ":\n" ++ show_proof calc)
                     xs       -> return (
                                       "error: found "

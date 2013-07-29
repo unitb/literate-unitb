@@ -58,28 +58,53 @@ maybe3 f mx my mz = do
 
 znot         = fun1 $ Fun [] "not" [BOOL] BOOL
 zimplies     = fun2 $ Fun [] "=>"  [BOOL,BOOL] BOOL
-zand         = fun2 $ Fun [] "and" [BOOL,BOOL] BOOL
-zor          = fun2 $ Fun [] "or"  [BOOL,BOOL] BOOL
+--zand         = fun2 $ Fun [] "and" [BOOL,BOOL] BOOL
+zand x y     = zall [x,y]
+--zor          = fun2 $ Fun [] "or"  [BOOL,BOOL] BOOL
+zor x y      = zsome [x,y]
 zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
 mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
 zfollows     = fun2 $ Fun [] "follows" [BOOL,BOOL] BOOL
 ztrue        = Const [] "true"  BOOL
 zfalse       = Const [] "false" BOOL
-zall (x:xs)  = foldl zand x xs
 zall []      = ztrue
+zall [x]     = x
+zall xs      = FunApp (Fun [] "and" (take n $ repeat BOOL) BOOL) $ concatMap f xs
+    where
+        n = length xs
+        f (FunApp (Fun [] "and" _ BOOL) xs) = concatMap f xs
+        f x = [x]
+zsome []     = zfalse
+zsome [x]    = x
+zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
+    where
+        n = length xs
+        f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
+        f x = [x]
+--zall (x:xs)  = foldl zand x xs
 zforall      = Binder Forall
 zexists      = Binder Exists
 
 mznot         = maybe1 znot
 mzimplies     = maybe2 zimplies
-mzand         = maybe2 zand
-mzor          = maybe2 zor
+--mzand         = maybe2 zand
+mzand x y     = mzall [x,y]
+--mzor          = maybe2 zor
+mzor x y      = mzsome [x,y]
 --mzeq          = maybe2 zeq
 mzfollows     = maybe2 zfollows
 mztrue        = Right ztrue
 mzfalse       = Right zfalse
-mzall (x:xs)  = foldl mzand x xs
 mzall []      = mztrue
+mzall [x]     = x
+mzall xs      = do
+        xs <- forM xs id
+        return $ zall xs
+mzsome []     = mzfalse
+mzsome [x]    = x
+mzsome xs     = do
+        xs <- forM xs id
+        return $ zsome xs
 mzforall xs   = maybe1 $ zforall xs
 mzexists xs   = maybe1 $ zexists xs
 

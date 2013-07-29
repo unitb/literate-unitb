@@ -56,7 +56,7 @@ suffix_generics :: String -> Type -> Type
 suffix_generics _ BOOL = BOOL
 suffix_generics _ INT = INT
 suffix_generics _ REAL = REAL
-suffix_generics xs (GENERIC x) = GENERIC (x ++ "@" ++ xs)
+suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
 suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
 suffix_generics xs (SET t)             = SET (suffix_generics xs t) 
@@ -138,9 +138,17 @@ check_args xp f@(Fun gs name ts t) = do
             let !()     = unsafePerformIO (putStrLn "> step 4")
             return (expr) --,uni)
 
-typ_fun1 f mx        = do
+typ_fun1 f@(Fun gs n ts t) mx        = do
         x <- mx
-        maybe (Left "bad type") Right $ check_args [x] f
+        let err_msg = format (unlines 
+                    [  "argument of '{0}' do not match its signature:"
+                    ,  "   signature: {1} -> {2}"
+                    ,  "   argument: {3}"
+                    ,  "     type {4}"
+                    ] )
+                    n ts t 
+                    x (type_of x) :: String
+        maybe (Left err_msg) Right $ check_args [x] f
 typ_fun2 f@(Fun gs n ts t) mx my     = do
         x <- mx
         y <- my
@@ -152,15 +160,31 @@ typ_fun2 f@(Fun gs n ts t) mx my     = do
                     ,  "   right argument: {5}"
                     ,  "     type {6}"
                     ] )
-                    n ts t x (type_of x) y (type_of y) :: String
+                    n ts t 
+                    x (type_of x) 
+                    y (type_of y) :: String
         let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
         let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
         maybe (Left err_msg) Right $ check_args [x,y] f
-typ_fun3 f mx my mz  = do
+typ_fun3 f@(Fun gs n ts t) mx my mz  = do
         x <- mx
         y <- my
         z <- mz
-        maybe (Left "bad type") Right $ check_args [x,y,z] f
+        let err_msg = format (unlines 
+                    [  "arguments of '{0}' do not match its signature:"
+                    ,  "   signature: {1} -> {2}"
+                    ,  "   first argument: {3}"
+                    ,  "     type {4}"
+                    ,  "   second argument: {5}"
+                    ,  "     type {6}"
+                    ,  "   third argument: {7}"
+                    ,  "     type {8}"
+                    ] )
+                    n ts t 
+                    x (type_of x) 
+                    y (type_of y) 
+                    z (type_of z) :: String
+        maybe (Left err_msg) Right $ check_args [x,y,z] f
 
     -- A
 unify_aux :: Type -> Type -> Unification -> Maybe Unification

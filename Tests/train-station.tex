@@ -24,7 +24,7 @@
 %\section{}
 %\subsection{}
 
-\begin{machine}{m0}
+\begin{machine}{train0}
 
 \newset{TRAIN}{\TRAIN}
 \newset{BLK}{\BLK}
@@ -49,8 +49,13 @@
 \end{transient}
 
 \begin{dummy}
-	t : \TRAIN
+	t,t0,t1,t2,t3 : \TRAIN
 \end{dummy}
+
+\begin{dummy}
+	p,q : \BLK
+\end{dummy}
+
 
 \begin{variable}
 	loc : \TRAIN \pfun \BLK
@@ -147,6 +152,126 @@
 
 \safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent }
 \safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
+%
+\begin{constraint}{co0}
+	\neg t \in in \land t \in in' \implies  loc'.t = ent % \lor \neg t \in in'
+\end{constraint}
+%
+\begin{proof}{leave/CO/co0}
+	\begin{calculation}
+		t \in in' 
+	\hint{=}{ \ref{a0} }
+		t \in in \setminus \{ t \} 
+	\hint{=}{ $\in$ over $\setminus$ }
+		t \in in \land \neg t \in \{ t \} 
+	\hint{=}{ $\in$ over singleton }
+		t \in in \land \neg t = t 
+	\hint{=}{ reflexivity }
+		t \in in \land \false
+	\hint{=}{ zero of $\land$ } 
+		\false
+	\hint{\implies}{ $\false \implies p$ }
+		\neg t \in in \implies  loc'.t = ent
+	\end{calculation}
+\end{proof}
+%
+\begin{constraint}{co1}
+	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
+\implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
+\end{constraint}
+
+\discharge{s0}{co0}
+\discharge{s1}{co1}
+
+% test the error message for
+%\begin{guard}{co0}
+%
+%\end{guard}
+
+\begin{evguard}{leave}{grd0}
+	loc.t = ext \land t \in in
+\end{evguard}
+
+\begin{evguard}{enter}{grd1}
+	\neg t \in in
+\end{evguard}
+
+\begin{proof}{enter/CO/co0}
+	% assume 
+	% forall
+	% case
+	% split
+	\begin{calculation}
+		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{  }
+		\qforall{t0}{\neg t0 \in in \land (t0 = t \lor \neg  t0 = t)}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ }
+		\qforall{t0}{\neg t0 \in in \land t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ }
+		(\neg t \in in \land t \in in' \implies  loc'.t = ent )
+	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ \ref{a1} and \ref{a2} }
+		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
+	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
+	\hint{=}{  }
+		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
+	\hint{=}{  }
+		\neg t \in in \implies  (t \tfun ent).t = ent 
+	\hint{=}{  }
+		\neg t \in in \implies  ent = ent 
+	\hint{=}{  }
+		\true
+	\end{calculation}
+\end{proof}
+
+\begin{proof}{leave/CO/co1}
+	\begin{calculation}
+		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
+	\hint{=}{ \ref{a0} and \ref{a3} \ref{inv2} } % step 1
+		t0 \in \dom.loc \setminus \{ t \} 
+		\land ( (\{ t \} \domsub loc).t0 \in PLF \lor (\{ t \} \domsub loc).t0 = ent)
+	\hint{=}{ }	% step 2
+		( t0 \in \dom.loc \setminus \{ t \} 
+		\land  (\{ t \} \domsub loc).t0 \in PLF )
+		\lor ( t0 \in (\dom.loc \setminus \{ t \} )
+		\land (\{ t \} \domsub loc).t0 = ent)
+	\hint{=}{ }	% step 3
+		t0 \in in \setminus \{ t \} 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+	\hint{=}{ } % step 3
+		t0 \in in \land \neg t0  = t 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+	\hint{=}{  } % step 4
+		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
+	\hint{=}{  \ref{grd0} } % step 5
+	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
+	\hint{\follows}{  \ref{grd0} } % step 6
+	 	t0 \in in \land loc.t0 = ent 
+	\hint{=}{   } % step 7
+	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
+	\end{calculation}
+\end{proof}
+
+\begin{invariant}{inv1}
+	\qforall{t}{t \in in}{loc.t \in \BLK}
+\end{invariant}
+
+\begin{assumption}{asm2}
+	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF
+\end{assumption}
+
+\begin{assumption}{asm3}
+	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }
+\end{assumption}
+
+\begin{assumption}{asm4}
+	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
+\end{assumption}
+
+\begin{assumption}{asm5}
+	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }
+\end{assumption}
 
 \end{machine}
 

@@ -35,12 +35,27 @@ set_theory t = Theory [] types funs empty facts empty
         facts = fromList 
                 [ (label $ dec' "0", axm0)
                 , (label $ dec' "1", axm1)
---                , (label $ dec "2", axm2)
+                , (label $ dec' "2", axm2)
+                , (label $ dec' "3", axm3)
+                , (label $ dec' "4", axm4)
                 ]
+            -- elem and mk-set
         Right axm0 = mzforall [x_decl,y_decl] ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
+            -- elem over set-diff
         Right axm1 = mzforall [x_decl,s1_decl,s2_decl] (
                           (x `zelem` (s1 `zsetdiff` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzand` mznot (x `zelem` s2) ))
+            -- elem over intersect
+        Right axm2 = mzforall [x_decl,s1_decl,s2_decl] (
+                          (x `zelem` (s1 `zintersect` s2)) 
+                    `mzeq` ( (x `zelem` s1) `mzand` (x `zelem` s2) ))
+            -- elem over union
+        Right axm3 = mzforall [x_decl,s1_decl,s2_decl] (
+                          (x `zelem` (s1 `zunion` s2)) 
+                    `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
+            -- elem over empty-set
+        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] (
+                          mznot (x `zelem` Right zempty_set)  )
 --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t

@@ -1,15 +1,6 @@
 module UnitB.Test where 
 
-import Control.Monad
-
---import Data.Maybe 
-import Data.Map hiding (map)
-
-import System.IO
-import System.Posix.IO
-
-import Tests.UnitTest
-
+    -- Modules
 import UnitB.AST
 import qualified UnitB.TestGenericity as Gen
 import UnitB.PO
@@ -18,29 +9,40 @@ import UnitB.FunctionTheory
 
 import Z3.Z3
 
---mk_just xs = map fromJust xs
---mk_snd_just xs = map (\(x,y) -> (x, fromJust y)) xs
+    -- Libraries
+import Control.Monad
+
+import Data.Maybe 
+import Data.Map hiding (map)
+
+import System.IO
+import System.Posix.IO
+
+import Tests.UnitTest
+
+import Utilities.Syntactic
 
 test = test_cases 
-        [  Case "'x eventually increases' verifies" (check_mch example0) (Right result_example0)
-        ,  Case "train, model 0, verification" (check_mch train_m0) (Right result_train_m0)
-        ,  Case "train, m0 PO" (get_tr_po train_m0) (Right result_train_m0_tr_po)
-        ,  Case "example0: enabledness PO" (get_en_po example0) (Right result_example0_tr_en_po)
+        [  Case "'x eventually increases' verifies" (check_mch example0) (result_example0)
+        ,  Case "train, model 0, verification" (check_mch train_m0) (result_train_m0)
+        ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
+--        ,  Case "example0: enabledness PO" (get_en_po example0) (result_example0_tr_en_po)
         ,  Gen.test_case
         ]
 
---example0 :: Machine
+--with_li (i,j) = either (\x -> Left [(x,i,j)]) Right
+
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
         let (y,y',y_decl) = prog_var "y" int
-        inv0   <- x `mzeq` (mzint 2 `mztimes` y)
-        init0  <- x `mzeq` mzint 0
-        init1  <- y `mzeq` mzint 0
-        tr     <- x `mzeq` mzint 0
-        co     <- x `mzle` x'
-        csched <- x `mzeq` y
-        s0     <- x' `mzeq` (x `mzplus` mzint 2)
-        s1     <- y' `mzeq` (y `mzplus` mzint 1)
+        inv0   <- with_li (0,0) (x `mzeq` (mzint 2 `mztimes` y))
+        init0  <- with_li (0,0) (x `mzeq` mzint 0)
+        init1  <- with_li (0,0) (y `mzeq` mzint 0)
+        tr     <- with_li (0,0) (x `mzeq` mzint 0)
+        co     <- with_li (0,0) (x `mzle` x')
+        csched <- with_li (0,0) (x `mzeq` y)
+        s0     <- with_li (0,0) (x' `mzeq` (x `mzplus` mzint 2))
+        s1     <- with_li (0,0) (y' `mzeq` (y `mzplus` mzint 1))
         let tr0 = Transient empty tr (label "evt")
         let co0 = Co [] co
         let ps = empty_property_set {
@@ -65,10 +67,10 @@ example0 = do
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
         let (t,t_decl) = var "t" int
-        inv0 <- mzforall [t_decl] $
-                   mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)]
-        c0   <- st `zselect` t
-        a0   <- st' `mzeq` zstore st t mzfalse
+        inv0 <- with_li (0,0) (mzforall [t_decl] $
+                   mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
+        c0   <- with_li (0,0) (st `zselect` t)
+        a0   <- with_li (0,0) (st' `mzeq` zstore st t mzfalse)
         let inv = fromList [(label "J0",inv0)]
         let enter = (label "enter", empty_event)
         let leave = (label "leave", empty_event {
@@ -76,7 +78,7 @@ train_m0 = do
                 c_sched = Just $ fromList [(label "C0", c0)],
                 action  = fromList [(label "A0", a0)]
             })
-        tr <- (st `zselect` t)
+        tr <- with_li (0,0) (st `zselect` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr $ label "leave")] 
         let ps = empty_property_set { program_prop = props, inv = inv }
         let m = (empty_machine "train_m0") {
@@ -104,9 +106,8 @@ result_example0 = unlines [
     "  o  m0/evt/FIS",
     "  o  m0/evt/INV/J0",
     "  o  m0/evt/SCH",
-    "  o  m0/evt/TR/EN/TR0",
-    "  o  m0/evt/TR/NEG/TR0",
-    "passed 9 / 9"]
+    "  o  m0/evt/TR/TR0",
+    "passed 8 / 8"]
 --    ""]
 
 result_train_m0 = unlines [
@@ -118,9 +119,8 @@ result_train_m0 = unlines [
     "  o  train_m0/leave/FIS",
     "  o  train_m0/leave/INV/J0",
     "  o  train_m0/leave/SCH",
-    "  o  train_m0/leave/TR/EN/TR0",
-    "  o  train_m0/leave/TR/NEG/TR0",
-    "passed 10 / 10"]
+    "  o  train_m0/leave/TR/TR0",
+    "passed 9 / 9"]
 --    ""]
 
 result_example0_tr_en_po = unlines [
@@ -131,41 +131,58 @@ result_example0_tr_en_po = unlines [
     "|----",
     " (=> (= x 0) (= x y))"]
 
-result_train_m0_tr_po = unlines [
-    " sort: pfun [a,b], set [a]",
-    " st: (Array Int Bool)",
-    " st@prime: (Array Int Bool)",
-    " t: Int",
-    " (select st t)",
-    " (forall ((t Int)) (= (store st t false) (store st t false)))",
-    " (select st t)",
-    " (= st@prime (store st t false))",
-    "|----",
-    " (not (select st@prime t))"
+result_train_m0_tr_po = unlines 
+    [ " sort: pfun [a,b], set [a]"
+    , " st: (Array Int Bool)"
+    , " st@prime: (Array Int Bool)"
+    , " t: Int"
+    , " (forall ((t Int)) (= (store st t false) (store st t false)))"
+--    , " (select st t)"
+--    " (select st t)",
+    , "|----"
+    , " (exists ((t@param Int))"
+          ++   " (and (=> (select st t) (select st t@param))"
+          ++        " (=> (and (select st t)"
+          ++                 " (select st t@param)"
+          ++                 " (= st@prime (store st t@param false)))"
+          ++            " (not (select st@prime t)))))"
     ]
 
 test_case = ("Unit-B", test, True)
 
+check_mch :: Either [Error] Machine -> IO String
 check_mch em = do
     case em of
         Right m -> do
             (xs,_,_) <- str_verify_machine m
-            return $ Right xs
-        Left x -> return (Left x)
+            return xs
+        Left x -> return (show_err x)
 
---main = do
---    verify_machine example0
---    verify_machine train_m0
---    return ()
+get_cmd_tr_po em = return (do
+        m <- em
+        let lbl = composite_label [_name m, label "leave/TR/TR0"]
+        pos <- proof_obligation m
+        let po = pos ! lbl
+        let cmd =  z3_code po
+        return $ unlines $ map (show . as_tree) cmd)
     
-get_tr_po em = return (do
+get_tr_po :: Either [Error] Machine -> IO String
+get_tr_po em = case (do
         m <- em
-        let lbl = composite_label [_name m, label "leave/TR/NEG/TR0"]
-        let po  = proof_obligation m ! lbl
-        return $ show po)
+        let lbl = composite_label [_name m, label "leave/TR/TR0"]
+        pos <- proof_obligation m
+        let po = pos ! lbl
+        let cmd = z3_code po
+        return $ show po) of
+            Right xs -> return xs
+            Left xs  -> return $ show_err xs
 
-get_en_po em = return (do
-        m <- em
-        let lbl = composite_label [_name m, label "evt/TR/EN/TR0"]
-        let po  = proof_obligation m ! lbl
-        return $ show po)
+--get_en_po :: Either [Error] Machine -> IO String
+--get_en_po em = case (do
+--        m <- em
+--        let lbl = composite_label [_name m, label "evt/TR/EN/TR0"]
+--        pos <- proof_obligation m
+--        let po = pos ! lbl
+--        return $ show po) of
+--            Right xs -> return xs
+--            Left xs  -> return $ show_err xs
