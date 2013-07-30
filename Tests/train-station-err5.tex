@@ -158,21 +158,23 @@
 \end{constraint}
 %
 \begin{proof}{leave/CO/co0}
-	\begin{free:var}{t}{t0}
+%	\begin{free:var}{t}{t0}
 	\begin{calculation}
-		\neg t0 \in in \land t0 \in in'
-	\hint{=}{ \ref{grd0} }
-		\neg t0 = t \land \neg t0 \in in \land t0 \in in' 
+		t \in in' 
 	\hint{=}{ \ref{a0} }
-		\neg t0 = t \land \neg t0 \in in \land t0 \in in \bunion \{ t \} 
-%	\hint{=}{ $\in$ over singleton }
-%		\neg t0 = t \land \neg t0 \in in \land t0 \in in
-	\hint{=}{ contradiction }
+		t0 \in in \setminus \{ t \} 
+	\hint{=}{ $\in$ over $\setminus$ }
+		t0 \in in \land \neg t0 \in \{ t \} 
+	\hint{=}{ $\in$ over singleton }
+		t0 \in in \land \neg t0 = t 
+	\hint{=}{ reflexivity }
+		t0 \in in \land \false
+	\hint{=}{ zero of $\land$ } 
 		\false
 	\hint{\implies}{ $\false \implies p$ }
-		loc'.t0 = ent
+		\neg t \in in \implies  loc'.t0 = ent
 	\end{calculation}
-	\end{free:var}
+%	\end{free:var}
 \end{proof}
 %
 \begin{constraint}{co1}
@@ -231,7 +233,6 @@
 \end{proof}
 
 \begin{proof}{leave/CO/co1}
-	\begin{free:var}{t}{t0}
 	\begin{calculation}
 		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
 	\hint{=}{  \ref{a0}  and \ref{a3} } % step 1
@@ -258,7 +259,6 @@
 	\hint{=}{   } % step 8
 	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
 	\end{calculation}
-	\end{free:var}
 \end{proof}
 
 \begin{invariant}{inv1}

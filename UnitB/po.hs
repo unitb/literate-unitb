@@ -279,7 +279,7 @@ make_unique _ _ c@(Const _ _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
 make_unique suf vs (Binder q d xp)   = Binder q d (make_unique suf (foldr M.delete vs (map name d)) xp)
 
-rename suf (Var n t) = Var (n ++ suf) t
+add_suffix suf (Var n t) = Var (n ++ suf) t
 
 new_dummy = make_unique "@param"
 
@@ -347,12 +347,60 @@ pretty_print (List ys@(x:xs)) =
                 y0:y1:ys -> reverse ( (y1++y0):ys )
 
 proof_po th (ByCalc c) lbl po = do
-        let y = entailment (goal_po c) po
+        let (y0,y1) = entailment (goal_po c) po
         ys   <- obligations th c
         let f x = composite_label [lbl,label x]
         let step_lbls = map (("step "++) . show) [1..]
-        let lbls = map f ("goal" : "relation" : step_lbls)
-        return $ zip lbls (y:ys)
+        let lbls = map f ("goal" : "hypotheses" : "relation" : step_lbls)
+        return $ zip lbls (y0:y1:ys)
+proof_po th (ByCases xs _) lbl (ProofObligation ctx asm b goal) = do
+        dis <- mzsome (map (\(_,x,_) -> Right x) xs)
+        let c  = completeness dis
+        cs <- mapM case_a $ zip [1..] xs
+        return (c : concat cs)
+    where
+        completeness dis = 
+                ( (f "completeness") 
+                , ProofObligation ctx asm b dis )
+        case_a (n,(lbl,x,p)) = proof_po th p (f ("case " ++ show n))
+                $ ProofObligation ctx (x:asm) b goal
+        f x     = composite_label [lbl,label x]
+proof_po    th  (FreeGoal v u p (i,j)) 
+            lbl po@(ProofObligation ctx asm b goal) = do
+        new_goal <- free_vars goal
+        proof_po th p lbl $ ProofObligation ctx asm b new_goal
+    where
+        free_vars (Binder Forall ds expr) 
+                | are_fresh [u] po = if S.fromList (map name ds) `isSubsetOf` S.fromList [v]
+                                        then return $ rename v u expr
+                                        else return (Binder Forall (L.filter g ds) 
+                                            $ rename v u expr)
+                | otherwise          = Left $ [(format "variable can't be freed: {0}" u :: String,i,j)]
+            where
+        free_vars expr = return expr
+        step_lbls = map (("case "++) . show) [1..]
+        lbls      = map f ("completeness" : step_lbls)
+        f x       = composite_label [lbl,label x]
+        g x       = name x /= v
+
+are_fresh :: [String] -> ProofObligation -> Bool
+are_fresh vs (ProofObligation ctx asm b goal) = 
+            S.fromList vs `S.intersection` (S.map name $ S.unions $ map used_var (goal:asm))
+         == S.empty 
+
+
+rename :: String -> String -> Expr -> Expr
+rename x y e@(Word (Var vn t))
+        | vn == x   = Word (Var y t)
+        | otherwise = e
+rename x y e@(Binder q vs xp)
+        | x `elem` map name vs  = e
+        | otherwise             = Binder q vs $ rename x y xp
+rename x y e = rewrite (rename x y) e 
+
+used_var (Word v) = S.singleton v
+used_var (Binder _ vs expr) = used_var expr `S.difference` S.fromList vs
+used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 

@@ -27,7 +27,8 @@
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
 |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- [ Success: 12 / 12 ]
+|  |  +- test 13, verification, name clash between dummy and index
+|  |  +- [ Success: 13 / 13 ]
 |  +- the parser is exception free
 |  +- [ Success: 4 / 4 ]
 +- Unit-B
@@ -78,4 +79,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5205   33500  294690
+    5390   34610  305301

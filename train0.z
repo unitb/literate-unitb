@@ -2037,23 +2037,84 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
-(assert (=> (and (= in@prime
-                    (bunion@@TRAIN in
-                                   (mk-set@@TRAIN t)))
-                 (= loc@prime
-                    (ovl@@TRAIN@@BLK loc
-                                     (mk-fun@@TRAIN@@BLK t
-                                                         ent))))
-            (= (forall ( (t0 TRAIN) )
-                       (=> (not (elem@@TRAIN t0
-                                             in))
-                           (=> (elem@@TRAIN t0
-                                            in@prime)
-                               (= (select loc@prime
-                                          t0)
-                                  ent))))
-               true)))
+(assert (= (forall ( (t0 TRAIN) )
+                   (=> (not (elem@@TRAIN t0
+                                         in))
+                       (=> (elem@@TRAIN t0
+                                        in@prime)
+                           (= (select loc@prime
+                                      t0)
+                              ent))))
+           true))
 
+(assert (not (forall ( (t TRAIN) )
+                     (=> (and (not (elem@@TRAIN t
+                                                in))
+                              (elem@@TRAIN t
+                                           in@prime))
+                         (= (select loc@prime
+                                    t)
+                            ent)))))
+
+(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
+
+(pop)
+(echo "> train0/enter/CO/co0/hypotheses")
+(push)
+(declare-sort BLK 0)
+(declare-sort LOC 0)
+(declare-sort TRAIN 0)
+(define-sort pfun (a b) (Array a b))
+(declare-sort set 1)
+(declare-const PLF (set BLK))
+(declare-const BLK (set BLK))
+(declare-const LOC (set LOC))
+(declare-const TRAIN (set TRAIN))
+(declare-const ent BLK)
+(declare-const ext BLK)
+(declare-const in (set TRAIN))
+(declare-const in@prime (set TRAIN))
+(declare-const loc (pfun TRAIN BLK))
+(declare-const loc@prime (pfun TRAIN BLK))
+(declare-const p BLK)
+(declare-const q BLK)
+(declare-const t TRAIN)
+(declare-const t0 TRAIN)
+(declare-const t1 TRAIN)
+(declare-const t2 TRAIN)
+(declare-const t3 TRAIN)
+(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)
+(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))
+(declare-fun elem@@BLK (BLK (set BLK)) Bool)
+(declare-fun elem@@LOC (LOC (set LOC)) Bool)
+(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)
+(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)
+(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))
+(declare-fun empty-set@@BLK () (set BLK))
+(declare-fun empty-set@@LOC () (set LOC))
+(declare-fun empty-set@@TRAIN () (set TRAIN))
+(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))
+(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))
+(declare-fun mk-set@@BLK (BLK) (set BLK))
+(declare-fun mk-set@@LOC (LOC) (set LOC))
+(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))
+(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))
+(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))
+(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -2397,14 +2458,13 @@
                             (mk-fun@@TRAIN@@BLK t
                                                 ent))))
 
-(assert (not (forall ( (t TRAIN) )
-                     (=> (and (not (elem@@TRAIN t
-                                                in))
-                              (elem@@TRAIN t
-                                           in@prime))
-                         (= (select loc@prime
-                                    t)
-                            ent)))))
+(assert (not (and (= in@prime
+                     (bunion@@TRAIN in
+                                    (mk-set@@TRAIN t)))
+                  (= loc@prime
+                     (ovl@@TRAIN@@BLK loc
+                                      (mk-fun@@TRAIN@@BLK t
+                                                          ent))))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 
@@ -7473,18 +7533,71 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
-(assert (=> (and (= in@prime
-                    (bunion@@TRAIN in
-                                   (mk-set@@TRAIN t)))
-                 (= (dom@@TRAIN@@BLK loc)
-                    in)
-                 (= loc@prime
-                    (ovl@@TRAIN@@BLK loc
-                                     (mk-fun@@TRAIN@@BLK t
-                                                         ent))))
-            (= in@prime
-               (dom@@TRAIN@@BLK loc@prime))))
+(assert (= in@prime
+           (dom@@TRAIN@@BLK loc@prime)))
 
+(assert (not (= (dom@@TRAIN@@BLK loc@prime)
+                in@prime)))
+
+(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
+
+(pop)
+(echo "> train0/enter/INV/inv2/hypotheses")
+(push)
+(declare-sort BLK 0)
+(declare-sort LOC 0)
+(declare-sort TRAIN 0)
+(define-sort pfun (a b) (Array a b))
+(declare-sort set 1)
+(declare-const PLF (set BLK))
+(declare-const BLK (set BLK))
+(declare-const LOC (set LOC))
+(declare-const TRAIN (set TRAIN))
+(declare-const ent BLK)
+(declare-const ext BLK)
+(declare-const in (set TRAIN))
+(declare-const in@prime (set TRAIN))
+(declare-const loc (pfun TRAIN BLK))
+(declare-const loc@prime (pfun TRAIN BLK))
+(declare-const p BLK)
+(declare-const q BLK)
+(declare-const t TRAIN)
+(declare-const t0 TRAIN)
+(declare-const t1 TRAIN)
+(declare-const t2 TRAIN)
+(declare-const t3 TRAIN)
+(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)
+(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))
+(declare-fun elem@@BLK (BLK (set BLK)) Bool)
+(declare-fun elem@@LOC (LOC (set LOC)) Bool)
+(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)
+(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)
+(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))
+(declare-fun empty-set@@BLK () (set BLK))
+(declare-fun empty-set@@LOC () (set LOC))
+(declare-fun empty-set@@TRAIN () (set TRAIN))
+(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))
+(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))
+(declare-fun mk-set@@BLK (BLK) (set BLK))
+(declare-fun mk-set@@LOC (LOC) (set LOC))
+(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))
+(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))
+(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))
+(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -7828,8 +7941,15 @@
                             (mk-fun@@TRAIN@@BLK t
                                                 ent))))
 
-(assert (not (= (dom@@TRAIN@@BLK loc@prime)
-                in@prime)))
+(assert (not (and (= in@prime
+                     (bunion@@TRAIN in
+                                    (mk-set@@TRAIN t)))
+                  (= (dom@@TRAIN@@BLK loc)
+                     in)
+                  (= loc@prime
+                     (ovl@@TRAIN@@BLK loc
+                                      (mk-fun@@TRAIN@@BLK t
+                                                          ent))))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 
@@ -10632,17 +10752,82 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
-(assert (=> (= in@prime
-               (set-diff@@TRAIN in
-                                (mk-set@@TRAIN t)))
-            (=> (elem@@TRAIN t
-                             in@prime)
-                (=> (not (elem@@TRAIN t
-                                      in))
-                    (= (select loc@prime
-                               t)
-                       ent)))))
+(assert (=> (elem@@TRAIN t
+                         in@prime)
+            (=> (not (elem@@TRAIN t
+                                  in))
+                (= (select loc@prime
+                           t0)
+                   ent))))
 
+(assert (not (forall ( (t TRAIN) )
+                     (=> (and (not (elem@@TRAIN t
+                                                in))
+                              (elem@@TRAIN t
+                                           in@prime))
+                         (= (select loc@prime
+                                    t)
+                            ent)))))
+
+(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
+
+(pop)
+(echo "> train0/leave/CO/co0/hypotheses")
+(push)
+(declare-sort BLK 0)
+(declare-sort LOC 0)
+(declare-sort TRAIN 0)
+(define-sort pfun (a b) (Array a b))
+(declare-sort set 1)
+(declare-const PLF (set BLK))
+(declare-const BLK (set BLK))
+(declare-const LOC (set LOC))
+(declare-const TRAIN (set TRAIN))
+(declare-const ent BLK)
+(declare-const ext BLK)
+(declare-const in (set TRAIN))
+(declare-const in@prime (set TRAIN))
+(declare-const loc (pfun TRAIN BLK))
+(declare-const loc@prime (pfun TRAIN BLK))
+(declare-const p BLK)
+(declare-const q BLK)
+(declare-const t TRAIN)
+(declare-const t0 TRAIN)
+(declare-const t1 TRAIN)
+(declare-const t2 TRAIN)
+(declare-const t3 TRAIN)
+(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)
+(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))
+(declare-fun elem@@BLK (BLK (set BLK)) Bool)
+(declare-fun elem@@LOC (LOC (set LOC)) Bool)
+(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)
+(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)
+(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))
+(declare-fun empty-set@@BLK () (set BLK))
+(declare-fun empty-set@@LOC () (set LOC))
+(declare-fun empty-set@@TRAIN () (set TRAIN))
+(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))
+(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))
+(declare-fun mk-set@@BLK (BLK) (set BLK))
+(declare-fun mk-set@@LOC (LOC) (set LOC))
+(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))
+(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))
+(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))
+(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -10988,14 +11173,9 @@
            (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                  loc)))
 
-(assert (not (forall ( (t TRAIN) )
-                     (=> (and (not (elem@@TRAIN t
-                                                in))
-                              (elem@@TRAIN t
-                                           in@prime))
-                         (= (select loc@prime
-                                    t)
-                            ent)))))
+(assert (not (= in@prime
+                (set-diff@@TRAIN in
+                                 (mk-set@@TRAIN t)))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 
@@ -11058,36 +11238,36 @@
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (= (elem@@TRAIN t
                         in@prime)
-           (elem@@TRAIN t
+           (elem@@TRAIN t0
                         (set-diff@@TRAIN in
                                          (mk-set@@TRAIN t)))))
 
-(assert (= (elem@@TRAIN t
+(assert (= (elem@@TRAIN t0
                         (set-diff@@TRAIN in
                                          (mk-set@@TRAIN t)))
-           (and (elem@@TRAIN t
+           (and (elem@@TRAIN t0
                              in)
-                (not (elem@@TRAIN t
+                (not (elem@@TRAIN t0
                                   (mk-set@@TRAIN t))))))
 
-(assert (= (and (elem@@TRAIN t
+(assert (= (and (elem@@TRAIN t0
                              in)
-                (not (elem@@TRAIN t
+                (not (elem@@TRAIN t0
                                   (mk-set@@TRAIN t))))
-           (and (elem@@TRAIN t
+           (and (elem@@TRAIN t0
                              in)
-                (not (= t
+                (not (= t0
                         t)))))
 
-(assert (= (and (elem@@TRAIN t
+(assert (= (and (elem@@TRAIN t0
                              in)
-                (not (= t
+                (not (= t0
                         t)))
-           (and (elem@@TRAIN t
+           (and (elem@@TRAIN t0
                              in)
                 false)))
 
-(assert (= (and (elem@@TRAIN t
+(assert (= (and (elem@@TRAIN t0
                              in)
                 false)
            false))
@@ -11096,7 +11276,7 @@
             (=> (not (elem@@TRAIN t
                                   in))
                 (= (select loc@prime
-                           t)
+                           t0)
                    ent))))
 
 (assert (forall ( (x BLK)
@@ -11425,7 +11605,7 @@
                  (=> (not (elem@@TRAIN t
                                        in))
                      (= (select loc@prime
-                                t)
+                                t0)
                         ent)))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
@@ -11814,7 +11994,7 @@
 
 (assert (not (= (elem@@TRAIN t
                              in@prime)
-                (elem@@TRAIN t
+                (elem@@TRAIN t0
                              (set-diff@@TRAIN in
                                               (mk-set@@TRAIN t))))))
 
@@ -12198,12 +12378,12 @@
                                      (mk-set@@BLK ext))
                         PLF)))
 
-(assert (not (= (elem@@TRAIN t
+(assert (not (= (elem@@TRAIN t0
                              (set-diff@@TRAIN in
                                               (mk-set@@TRAIN t)))
-                (and (elem@@TRAIN t
+                (and (elem@@TRAIN t0
                                   in)
-                     (not (elem@@TRAIN t
+                     (not (elem@@TRAIN t0
                                        (mk-set@@TRAIN t)))))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
@@ -12586,13 +12766,13 @@
                                      (mk-set@@BLK ext))
                         PLF)))
 
-(assert (not (= (and (elem@@TRAIN t
+(assert (not (= (and (elem@@TRAIN t0
                                   in)
-                     (not (elem@@TRAIN t
+                     (not (elem@@TRAIN t0
                                        (mk-set@@TRAIN t))))
-                (and (elem@@TRAIN t
+                (and (elem@@TRAIN t0
                                   in)
-                     (not (= t
+                     (not (= t0
                              t))))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
@@ -12975,11 +13155,11 @@
                                      (mk-set@@BLK ext))
                         PLF)))
 
-(assert (not (= (and (elem@@TRAIN t
+(assert (not (= (and (elem@@TRAIN t0
                                   in)
-                     (not (= t
+                     (not (= t0
                              t)))
-                (and (elem@@TRAIN t
+                (and (elem@@TRAIN t0
                                   in)
                      false))))
 
@@ -13363,7 +13543,7 @@
                                      (mk-set@@BLK ext))
                         PLF)))
 
-(assert (not (= (and (elem@@TRAIN t
+(assert (not (= (and (elem@@TRAIN t0
                                   in)
                      false)
                 false)))
@@ -13752,7 +13932,7 @@
                  (=> (not (elem@@TRAIN t
                                        in))
                      (= (select loc@prime
-                                t)
+                                t0)
                         ent)))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
@@ -13814,41 +13994,100 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
-(assert (=> (and (= in@prime
-                    (set-diff@@TRAIN in
-                                     (mk-set@@TRAIN t)))
-                 (= loc@prime
-                    (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
-                                          loc))
-                 (= (dom@@TRAIN@@BLK loc)
-                    in)
-                 (= (select loc
-                            t)
-                    ext)
-                 (elem@@TRAIN t
+(assert (=> (and (elem@@TRAIN t0
                               in)
                  (= (select loc
-                            t)
-                    ext)
-                 (elem@@TRAIN t
-                              in))
-            (=> (and (elem@@TRAIN t0
-                                  in)
-                     (= (select loc
+                            t0)
+                    ent)
+                 (not (elem@@BLK (select loc
+                                         t0)
+                                 PLF)))
+            (and (elem@@TRAIN t0
+                              in@prime)
+                 (or (elem@@BLK (select loc@prime
+                                        t0)
+                                PLF)
+                     (= (select loc@prime
                                 t0)
-                        ent)
-                     (not (elem@@BLK (select loc
-                                             t0)
-                                     PLF)))
-                (and (elem@@TRAIN t0
-                                  in@prime)
-                     (or (elem@@BLK (select loc@prime
-                                            t0)
-                                    PLF)
-                         (= (select loc@prime
-                                    t0)
-                            ent))))))
+                        ent)))))
 
+(assert (not (forall ( (t TRAIN) )
+                     (=> (and (elem@@TRAIN t
+                                           in)
+                              (= (select loc
+                                         t)
+                                 ent)
+                              (not (elem@@BLK (select loc
+                                                      t)
+                                              PLF)))
+                         (and (elem@@TRAIN t
+                                           in@prime)
+                              (or (elem@@BLK (select loc@prime
+                                                     t)
+                                             PLF)
+                                  (= (select loc@prime
+                                             t)
+                                     ent)))))))
+
+(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
+
+(pop)
+(echo "> train0/leave/CO/co1/hypotheses")
+(push)
+(declare-sort BLK 0)
+(declare-sort LOC 0)
+(declare-sort TRAIN 0)
+(define-sort pfun (a b) (Array a b))
+(declare-sort set 1)
+(declare-const PLF (set BLK))
+(declare-const BLK (set BLK))
+(declare-const LOC (set LOC))
+(declare-const TRAIN (set TRAIN))
+(declare-const ent BLK)
+(declare-const ext BLK)
+(declare-const in (set TRAIN))
+(declare-const in@prime (set TRAIN))
+(declare-const loc (pfun TRAIN BLK))
+(declare-const loc@prime (pfun TRAIN BLK))
+(declare-const p BLK)
+(declare-const q BLK)
+(declare-const t TRAIN)
+(declare-const t0 TRAIN)
+(declare-const t1 TRAIN)
+(declare-const t2 TRAIN)
+(declare-const t3 TRAIN)
+(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)
+(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))
+(declare-fun elem@@BLK (BLK (set BLK)) Bool)
+(declare-fun elem@@LOC (LOC (set LOC)) Bool)
+(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)
+(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)
+(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))
+(declare-fun empty-set@@BLK () (set BLK))
+(declare-fun empty-set@@LOC () (set LOC))
+(declare-fun empty-set@@TRAIN () (set TRAIN))
+(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))
+(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))
+(declare-fun mk-set@@BLK (BLK) (set BLK))
+(declare-fun mk-set@@LOC (LOC) (set LOC))
+(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))
+(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))
+(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))
+(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -14194,23 +14433,24 @@
            (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                  loc)))
 
-(assert (not (forall ( (t TRAIN) )
-                     (=> (and (elem@@TRAIN t
-                                           in)
-                              (= (select loc
-                                         t)
-                                 ent)
-                              (not (elem@@BLK (select loc
-                                                      t)
-                                              PLF)))
-                         (and (elem@@TRAIN t
-                                           in@prime)
-                              (or (elem@@BLK (select loc@prime
-                                                     t)
-                                             PLF)
-                                  (= (select loc@prime
-                                             t)
-                                     ent)))))))
+(assert (not (and (= in@prime
+                     (set-diff@@TRAIN in
+                                      (mk-set@@TRAIN t)))
+                  (= loc@prime
+                     (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
+                                           loc))
+                  (= (dom@@TRAIN@@BLK loc)
+                     in)
+                  (= (select loc
+                             t)
+                     ext)
+                  (elem@@TRAIN t
+                               in)
+                  (= (select loc
+                             t)
+                     ext)
+                  (elem@@TRAIN t
+                               in))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 
@@ -18850,17 +19090,71 @@
 (declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
 (declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
 (declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
-(assert (=> (and (= in@prime
-                    (set-diff@@TRAIN in
-                                     (mk-set@@TRAIN t)))
-                 (= (dom@@TRAIN@@BLK loc)
-                    in)
-                 (= loc@prime
-                    (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
-                                          loc)))
-            (= in@prime
-               (dom@@TRAIN@@BLK loc@prime))))
+(assert (= in@prime
+           (dom@@TRAIN@@BLK loc@prime)))
 
+(assert (not (= (dom@@TRAIN@@BLK loc@prime)
+                in@prime)))
+
+(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
+
+(pop)
+(echo "> train0/leave/INV/inv2/hypotheses")
+(push)
+(declare-sort BLK 0)
+(declare-sort LOC 0)
+(declare-sort TRAIN 0)
+(define-sort pfun (a b) (Array a b))
+(declare-sort set 1)
+(declare-const PLF (set BLK))
+(declare-const BLK (set BLK))
+(declare-const LOC (set LOC))
+(declare-const TRAIN (set TRAIN))
+(declare-const ent BLK)
+(declare-const ext BLK)
+(declare-const in (set TRAIN))
+(declare-const in@prime (set TRAIN))
+(declare-const loc (pfun TRAIN BLK))
+(declare-const loc@prime (pfun TRAIN BLK))
+(declare-const p BLK)
+(declare-const q BLK)
+(declare-const t TRAIN)
+(declare-const t0 TRAIN)
+(declare-const t1 TRAIN)
+(declare-const t2 TRAIN)
+(declare-const t3 TRAIN)
+(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)
+(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))
+(declare-fun elem@@BLK (BLK (set BLK)) Bool)
+(declare-fun elem@@LOC (LOC (set LOC)) Bool)
+(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)
+(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)
+(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))
+(declare-fun empty-set@@BLK () (set BLK))
+(declare-fun empty-set@@LOC () (set LOC))
+(declare-fun empty-set@@TRAIN () (set TRAIN))
+(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))
+(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))
+(declare-fun mk-set@@BLK (BLK) (set BLK))
+(declare-fun mk-set@@LOC (LOC) (set LOC))
+(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))
+(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))
+(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))
+(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
+(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))
+(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))
+(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))
+(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))
+(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))
 (assert (forall ( (x BLK)
                   (y BLK) )
                 (= (elem@@BLK x
@@ -19206,8 +19500,14 @@
            (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
                                  loc)))
 
-(assert (not (= (dom@@TRAIN@@BLK loc@prime)
-                in@prime)))
+(assert (not (and (= in@prime
+                     (set-diff@@TRAIN in
+                                      (mk-set@@TRAIN t)))
+                  (= (dom@@TRAIN@@BLK loc)
+                     in)
+                  (= loc@prime
+                     (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t)
+                                           loc)))))
 
 (check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))
 

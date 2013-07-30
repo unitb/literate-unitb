@@ -442,7 +442,6 @@ collect_expr = visit_doc
                 -------------------------
         ,   (   "assumption"
             ,   Block1Args (\(lbl,()) xs m (i,j) -> do
---                        let !() = unsafePerformIO (putStrLn $ format "allo {0}" lbl)
                         let th = theory m
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` fact th
@@ -532,57 +531,51 @@ collect_expr = visit_doc
             then return ()
             else Left [(format "Undeclared variables: {0}" (intercalate ", " undecl_v), i,j)]
 
-collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
-collect_proofs xs m = visit_doc
-        [   (   "proof"
-            ,   Block1Args (\(po,()) xs m (i,j) -> do
-                    mproofs     <- foldl g (Right []) xs
-                    case mproofs of
-                        [p] -> return m { 
-                            props = (props m) { 
-                                proofs = insert (composite_label 
-                                    [ _name m, label po ]) p $ 
-                                      proofs $ props m } }
-                        _   -> Left [("expecting a single calculation or a case distinction",i,j)]         )
+find_proof_step = visit_doc 
+        [   (   "calculation"
+            ,   Block0Args (\() xs (m,proofs) (i,j) -> do
+                    cc <- toEither $ parse_calc m xs (i,j)
+                    case infer_goal cc of
+                        Right cc_goal -> return (m,ByCalc cc { goal = cc_goal }:proofs)
+                        Left msg      -> Left [(format "type error: {0}" msg,i,j)]) 
             )
-        ] [] xs m
+        ,   (   "free:var"
+            ,   Block2Args (\(from,to) xs (m,proofs) (i,j) -> do
+                    (_,mproofs)     <- toEither $ find_proof_step xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,FreeGoal from to p (i,j):proofs)
+                        _   -> Left [("too many proof elements",i,j)] )
+            )
+        ] []
+--    where
+
+parse_calc m xs li = 
+    case find_cmd_arg 2 ["\\hint"] xs of
+        Just (a,t,[b,c],d)    -> do
+            xp <- fromEither ztrue $ get_expr m a
+            op <- fromEither Equal $ read_tokens 
+                    (do eat_space ; x <- oper ; eat_space ; return x) 
+                    (concatMap flatten_li b)
+            hyp <- fromEither [] (do
+                hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
+                mapM (find m) hs)
+            r   <- parse_calc m d li
+            return r { 
+                first_step = xp,
+                following  = (op,first_step r,hyp,line_info t):following r }
+        Nothing         -> do
+            xp <- fromEither ztrue $ get_expr m xs
+            return $ Calc (context m) ztrue xp [] li
     where
-        g mxs (Env n (i,j) c _)
-            | n == "calculation"    = do
-                xs <- mxs
-                cc <- toEither $ calc c (i,j)
-                case infer_goal cc of
-                    Right cc_goal -> return (ByCalc cc { goal = cc_goal }:xs)
-                    Left msg      -> Left [(format "type error: {0}" msg,i,j)]
-            | otherwise             = foldl g mxs c
-        g xs x                      = fold_doc g xs x
-        calc xs li = 
-            case find_cmd_arg 2 ["\\hint"] xs of
-                Just (a,t,[b,c],d)    -> do
-                    xp <- fromEither ztrue $ get_expr m a
-                    op <- fromEither Equal $ read_tokens 
-                            (do eat_space ; x <- oper ; eat_space ; return x) 
-                            (concatMap flatten_li b)
-                    hyp <- fromEither [] (do
-                        hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
-                        mapM find hs)
-                    r   <- calc d li
-                    return r { 
-                        first_step = xp,
-                        following  = (op,first_step r,hyp,line_info t):following r }
-                Nothing         -> do
-                    xp <- fromEither ztrue $ get_expr m xs
-                    return $ Calc (context m) ztrue xp [] li
-            where
-                f x = composite_label [_name m,label x]
+        f x = composite_label [_name m,label x]
         hint xs =
             case find_cmd_arg 1 ["\\ref","\\eqref"] xs of
                 Just (a,_,[[Text [TextBlock b li]]],c)  -> do
                     xs <- hint c
                     return ((b,li):xs)
                 Nothing         -> return []
-        find :: (Label,(Int,Int)) -> Either [Error] Expr
-        find (xs,(i,j)) = either Right Left (do
+        find :: Machine -> (Label,(Int,Int)) -> Either [Error] Expr
+        find m (xs,(i,j)) = either Right Left (do
                 err $ M.lookup xs $ inv p
                 err $ M.lookup xs $ inv_thm p
                 foldM f [err_msg] $ elems $ events m
@@ -599,6 +592,74 @@ collect_proofs xs m = visit_doc
                         M.lookup xs x)
                     err $ M.lookup xs $ guard ev
                     err $ M.lookup xs $ action ev
+
+collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
+collect_proofs xs m = visit_doc
+        [   (   "proof"
+            ,   Block1Args (\(po,()) xs m (i,j) -> do
+                    (_,mproofs)     <- toEither $ find_proof_step xs (m,[])
+                    case mproofs of
+                        [p] -> return m { 
+                            props = (props m) { 
+                                proofs = insert (composite_label 
+                                    [ _name m, label po ]) p $ 
+                                      proofs $ props m } }
+                        _   -> Left [("expecting a single calculation or a case distinction",i,j)]         )
+            )
+        ] [] xs m
+    where
+--        g mxs (Env n (i,j) c _)
+--            | n == "calculation"    = do
+--                xs <- mxs
+--                cc <- toEither $ calc c (i,j)
+--                case infer_goal cc of
+--                    Right cc_goal -> return (ByCalc cc { goal = cc_goal }:xs)
+--                    Left msg      -> Left [(format "type error: {0}" msg,i,j)]
+--            | otherwise             = foldl g mxs c
+--        g xs x                      = fold_doc g xs x
+--        calc xs li = 
+--            case find_cmd_arg 2 ["\\hint"] xs of
+--                Just (a,t,[b,c],d)    -> do
+--                    xp <- fromEither ztrue $ get_expr m a
+--                    op <- fromEither Equal $ read_tokens 
+--                            (do eat_space ; x <- oper ; eat_space ; return x) 
+--                            (concatMap flatten_li b)
+--                    hyp <- fromEither [] (do
+--                        hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
+--                        mapM find hs)
+--                    r   <- calc d li
+--                    return r { 
+--                        first_step = xp,
+--                        following  = (op,first_step r,hyp,line_info t):following r }
+--                Nothing         -> do
+--                    xp <- fromEither ztrue $ get_expr m xs
+--                    return $ Calc (context m) ztrue xp [] li
+--            where
+--                f x = composite_label [_name m,label x]
+--        hint xs =
+--            case find_cmd_arg 1 ["\\ref","\\eqref"] xs of
+--                Just (a,_,[[Text [TextBlock b li]]],c)  -> do
+--                    xs <- hint c
+--                    return ((b,li):xs)
+--                Nothing         -> return []
+--        find :: (Label,(Int,Int)) -> Either [Error] Expr
+--        find (xs,(i,j)) = either Right Left (do
+--                err $ M.lookup xs $ inv p
+--                err $ M.lookup xs $ inv_thm p
+--                foldM f [err_msg] $ elems $ events m
+--                )
+--            where
+--                p = props m
+--                err (Just x) = Left x
+--                err Nothing  = Right [err_msg]
+--                err_msg      = ("reference to unknown predicate",i,j)
+--                f :: [Error] -> Event -> Either Expr [Error]
+--                f _ ev = do
+--                    err (do
+--                        x <- c_sched ev
+--                        M.lookup xs x)
+--                    err $ M.lookup xs $ guard ev
+--                    err $ M.lookup xs $ action ev
                                 
 
 get_expr :: Machine -> [LatexDoc] -> Either [Error] Expr

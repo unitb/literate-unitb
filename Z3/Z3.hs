@@ -11,7 +11,7 @@ module Z3.Z3
     , mk_context
     , empty_ctx
     , merge_all_ctx, merge_ctx
-    , merge_all, merge, entails
+    , merge_all, merge --, entails
     , entailment
     , var_decl, free_vars
     , z3_code
@@ -268,21 +268,41 @@ verify xs = do
                 ++  (map ("> " ++) $  lines err) )
 
 
-entails po0 po1 = discharge (entailment po0 po1)
-
 entailment  
     (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 ex0 xp0) 
     (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
-            po
+            (po0,po1)
     where
-        po = ProofObligation 
+        po0 = ProofObligation 
             (Context 
                 (srt0 `merge` srt1) 
                 (cons0 `merge` cons1) 
                 (fun0 `merge` fun1) 
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
-            (zimplies (zall xs0) xp0:xs1)
+            [xp0]
             ex1
             xp1 
+        po1 = ProofObligation 
+            (Context 
+                (srt0 `merge` srt1) 
+                (cons0 `merge` cons1) 
+                (fun0 `merge` fun1) 
+                (def0 `merge` def1)
+                (dum0 `merge` dum1))
+            xs1
+            ex1
+            (zall xs0)
+                  
+--        po = ProofObligation 
+--            (Context 
+--                (srt0 `merge` srt1) 
+--                (cons0 `merge` cons1) 
+--                (fun0 `merge` fun1) 
+--                (def0 `merge` def1)
+--                (dum0 `merge` dum1))
+--            (zimplies (zall xs0) xp0:xs1)
+--            ex1
+--            xp1 
 --            (zforall (elems cons1) (zimplies (zall xs1) xp1))
+
