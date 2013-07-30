@@ -12,9 +12,11 @@ import Z3.Z3
     -- Libraries
 import Control.Monad hiding (guard)
 
-import Data.Map as M hiding (map, foldl, foldr, delete, filter, null)
+import Data.Map as M hiding (map, foldl, foldr, delete, filter, null,(\\))
 import qualified Data.Map as M
-import Data.List hiding (inits, union,insert)
+import Data.List as L hiding (inits, union,insert)
+import Data.Set as S hiding (map,filter,foldr,(\\))
+import qualified Data.Set as S (map,filter,foldr,(\\))
 
 import System.IO
 import System.IO.Unsafe
@@ -62,7 +64,7 @@ thm_lbl         = label "THM"
 theory_ctx :: Theory -> Context
 theory_ctx (Theory d ts f c _ dums) = 
     merge_all_ctx 
-        (Context ts c f empty dums : map theory_ctx d)
+        (Context ts c f M.empty dums : map theory_ctx d)
 
 theory_facts :: Theory -> Map Label Expr
 theory_facts (Theory d _ _ _ f _) = 
@@ -70,74 +72,74 @@ theory_facts (Theory d _ _ _ f _) =
 
 assert_ctx :: Machine -> Context
 assert_ctx m = merge_ctx
-          (Context empty (variables m) empty empty empty)
+          (Context M.empty (variables m) M.empty M.empty M.empty)
           (theory_ctx $ theory m)
 step_ctx :: Machine -> Context
 step_ctx m = merge_all_ctx 
-        [  Context empty (prime_all $ variables m) empty empty empty
-        ,  Context empty (variables m) empty empty empty
+        [  Context M.empty (prime_all $ variables m) M.empty M.empty M.empty
+        ,  Context M.empty (variables m) M.empty M.empty M.empty
         , (theory_ctx $ theory m) ]
     where
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
         prime_var (Var n t) = (Var (n ++ "@prime") t)
 
 evt_saf_ctx :: Event -> Context
-evt_saf_ctx evt  = Context empty (params evt) empty empty empty
+evt_saf_ctx evt  = Context M.empty (params evt) M.empty M.empty M.empty
 
 evt_live_ctx :: Event -> Context
-evt_live_ctx evt = Context empty (indices evt) empty empty empty
+evt_live_ctx evt = Context M.empty (indices evt) M.empty M.empty M.empty
 
 skip_event m = empty_event { action = 
-    fromList $ zip 
+    M.fromList $ zip 
         (map (\i -> label ("S" ++ show i)) [0 ..])
         (map (\v -> primed (variables m) (Word v) `zeq` (Word v))  
-            $ elems $ variables m) }
+            $ M.elems $ variables m) }
 
-invariants p = elems (inv p) ++ elems (inv_thm p)
+invariants p = M.elems (inv p) ++ M.elems (inv_thm p)
 
-invariants_only p = elems (inv p)
+invariants_only p = M.elems (inv p)
 
 raw_machine_pos :: Machine -> (Map Label ProofObligation)
 raw_machine_pos m = pos
     where
-        pos = M.map f $ unions (
-               (map (uncurry $ prop_po m) $ toList $ program_prop p)
+        pos = M.map f $ M.unions (
+               (map (uncurry $ prop_po m) $ M.toList $ program_prop p)
             ++ [init_fis_po m]
-            ++ (map (uncurry $ inv_po m) $ toList $ inv p) 
-            ++ (map (uncurry $ sch_po m) $ toList $ events m)
-            ++ (map (uncurry $ fis_po m) $ toList $ events m)
-            ++ (map (uncurry $ thm_po m) $ toList $ inv_thm p))
+            ++ (map (uncurry $ inv_po m) $ M.toList $ inv p) 
+            ++ (map (uncurry $ sch_po m) $ M.toList $ events m)
+            ++ (map (uncurry $ fis_po m) $ M.toList $ events m)
+            ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p))
         p = props m
-        f (ProofObligation a b c d) = ProofObligation a (elems (theory_facts $ theory m)++b) c d
+        f (ProofObligation a b c d) = ProofObligation a (M.elems (theory_facts $ theory m)++b) c d
 
 proof_obligation :: Machine -> Either [Error] (Map Label ProofObligation)
 proof_obligation m = do
         let { pos = raw_machine_pos m }
-        forM_ (toList $ proofs $ props $ m) (\(lbl,p) -> do
+        forM_ (M.toList $ proofs $ props $ m) (\(lbl,p) -> do
             let (i,j) = line_info p
-            if lbl `member` pos
+            if lbl `M.member` pos
                 then return ()
                 else Left [(format "a proof is provided for non-existant proof obligation {0}" lbl,i,j)])
-        xs <- forM (toList pos) (\(lbl,po) -> do
+        xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl $ proofs $ props $ m of
                 Just c ->
                     proof_po (theory m) c lbl po
                 Nothing -> 
                     return [(lbl,po)])
-        return $ fromList $ concat xs
+        return $ M.fromList $ concat xs
 
 init_fis_po :: Machine -> Map Label ProofObligation
-init_fis_po m = singleton (composite_label [_name m, init_fis_lbl]) po
+init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
     where
         po = ProofObligation (assert_ctx m) [] True goal
         goal 
             | M.null $ variables m  = ztrue
-            | otherwise             = (zexists (elems $ variables m) $ zall $ inits m)
+            | otherwise             = (zexists (M.elems $ variables m) $ zall $ inits m)
  
 
 prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
 prop_po m pname (Transient fv xp evt_lbl) = 
-    fromList 
+    M.fromList 
         [   ( (composite_label [_name m, evt_lbl, tr_lbl, pname])
             , (ProofObligation 
                 (           assert_ctx m 
@@ -171,22 +173,22 @@ prop_po m pname (Transient fv xp evt_lbl) =
         p    = props m
         prop = program_prop p
         thm  = inv_thm p
-        grd  = elems $ guard evt
+        grd  = M.elems $ guard evt
         sch  = case c_sched evt of
-                Just sch -> elems sch
+                Just sch -> M.elems sch
                 Nothing  -> [zfalse]
-        act  = elems $ action evt
+        act  = M.elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
-        dummy = Context empty fv empty empty empty    
+        dummy = Context M.empty fv M.empty  M.empty  M.empty    
         exist_ind xp = if M.null ind 
                 then xp 
                 else zexists 
-                    (map (rename "@param") $ elems ind) 
+                    (map (add_suffix "@param") $ M.elems ind) 
                     xp
 prop_po m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
-            (insert 
+            (M.insert 
                 (label "SKIP") 
                 (skip_event $ m) 
                 (events $ m))
@@ -199,67 +201,67 @@ prop_po m pname (Co fv xp) =
                     False
                     (forall_fv xp) )
             where
-                grd = elems $ guard evt
-                act = elems $ action evt
-                forall_fv xp = if null fv then xp else zforall fv xp
+                grd = M.elems $ guard evt
+                act = M.elems $ action evt
+                forall_fv xp = if L.null fv then xp else zforall fv xp
         po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
 
 inv_po m pname xp = 
-        union 
+        M.union 
             (mapKeys po_name $ mapWithKey po (events m))
-            (singleton 
+            (M.singleton 
                 (composite_label [_name m, inv_init_lbl, pname])
                 (ProofObligation (assert_ctx m) (inits m) False xp))
     where
         p = props m
         po lbl evt = 
                 (ProofObligation 
-                    (step_ctx m `merge_ctx` Context empty ind empty empty empty) 
+                    (step_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
                     (invariants p ++ grd ++ act)
                     False
                     (primed (variables m) xp))
             where
-                grd = elems $ guard evt
-                act = elems $ action evt
+                grd = M.elems $ guard evt
+                act = M.elems $ action evt
                 ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
 
-fis_po m lbl evt = singleton
+fis_po m lbl evt = M.singleton
         (composite_label [_name m, lbl, fis_lbl])
         (ProofObligation 
-            (assert_ctx m `merge_ctx` Context empty ind empty empty empty)
+            (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants p ++ grd)
             True
             (zexists pvar act))
     where
         p    = props m
-        grd  = elems $ guard evt
-        act  = zall $ elems $ action evt
-        pvar = map prime $ elems $ variables m
+        grd  = M.elems $ guard evt
+        act  = zall $ M.elems $ action evt
+        pvar = map prime $ M.elems $ variables m
         ind  = indices evt `merge` params evt
 
 sch_po :: Machine -> Label -> Event -> Map Label ProofObligation
-sch_po m lbl evt = singleton
+sch_po m lbl evt = M.singleton
         (composite_label [_name m, lbl, sch_lbl])
         (ProofObligation 
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
-            `merge_ctx` Context empty ind empty empty empty)
+            `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants p ++ sch)
             True
             (exist_param $ zall grd))
     where
         p     = props m
-        grd   = elems $ guard evt
+        grd   = M.elems $ guard evt
         sch   = case c_sched evt of
-                  Just sch -> elems sch
+                  Just sch -> M.elems sch
                   Nothing  -> [zfalse]
         param = params evt
 --        ind   = indices evt
         ind   = indices evt `merge` params evt
         exist_param xp = if M.null param then xp else zexists (M.elems param) xp
 
-thm_po m lbl xp = singleton
+thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
         (ProofObligation
             (assert_ctx m)
@@ -271,7 +273,7 @@ thm_po m lbl xp = singleton
 
 make_unique :: String -> Map String Var -> Expr -> Expr
 make_unique suf vs w@(Word (Var vn vt)) 
-        | vn `member` vs    = Word (Var (vn ++ suf) vt)
+        | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
         | otherwise         = w
 make_unique _ _ c@(Const _ _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
@@ -302,11 +304,11 @@ steps_po th (Calc d _ e0 [] _) = return []
 steps_po th (Calc d g e0 ((r0, e1, a0,_):es) li) = do
     expr <- with_li li $ mk_expr r0 e0 e1
     tail <- steps_po th (Calc d g e1 es li)
-    return $ ProofObligation (d `merge_ctx` theory_ctx th) (a0 ++ elems (theory_facts th)) False expr : tail
+    return $ ProofObligation (d `merge_ctx` theory_ctx th) (a0 ++ M.elems (theory_facts th)) False expr : tail
 
 entails_goal_po th (Calc d g e0 es (i,j)) = do
             a <- with_li (i,j) assume
-            return $ ProofObligation (d `merge_ctx` theory_ctx th) (a ++ elems (theory_facts th)) False g
+            return $ ProofObligation (d `merge_ctx` theory_ctx th) (a ++ M.elems (theory_facts th)) False g
     where
         assume = 
                 fmap reverse $ foldM f [] (map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
@@ -366,54 +368,54 @@ check th c = embed
         let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
 
-match_proof :: Machine -> Label -> ProofObligation -> Proof -> IO (Bool, [String])
-match_proof m lbl po
-            (ByCalc p@(Calc _ _ _ steps li)) = do
-        r0 <- check (theory m) p
-        r1 <- entails (goal_po p) po
---        let !() = unsafePerformIO (do
---            putStrLn "> verification results"
---            print r0
---            putStrLn "> entailment result"
---            print r1)
-        x <- case (r0,r1) of
-            (Right [], Valid) -> 
-                return (True, ["  o  " ++ show lbl])
-            (r0,r1) -> do
-                let xs = [" xxx " ++ show lbl]
-                ys <- case r0 of
-                    Right r0 -> do
-                            let (r2,r3) = break (1 <=) $ map snd r0
-                            if null r0
-                                then return []
-                                else
-                                    let f (n,(_,_,_,k)) =  if n `elem` r3 
-                                                            then [
-                                                            "    invalid step:  " 
-                                                            ++ show k]
-                                                            else [] 
-                                    in
-                                    return $ map ("     " ++) ( [
-                                            "incorrect proof: "] 
-                                        ++ ( if null r2 
-                                                then [] 
-                                                else ["    cannot prove a relationship " ++
-                                                    "between the first and the last line: " ++ 
-                                                    show li ] )
-                                        ++ concatMap f (zip [1..] steps) )
-                    Left (xs) -> return [format "     type error in proof: {0}" xs]
-                zs <- case r1 of
-                    Valid -> return []
-                    x ->     return [
-                            "     "
-                        ++ "proof does not match proof obligation: " ++ show li]
-                return (False, xs ++ ys ++ zs)
-        return x
+--match_proof :: Machine -> Label -> ProofObligation -> Proof -> IO (Bool, [String])
+--match_proof m lbl po
+--            (ByCalc p@(Calc _ _ _ steps li)) = do
+--        r0 <- check (theory m) p
+--        r1 <- entails (goal_po p) po
+----        let !() = unsafePerformIO (do
+----            putStrLn "> verification results"
+----            print r0
+----            putStrLn "> entailment result"
+----            print r1)
+--        x <- case (r0,r1) of
+--            (Right [], Valid) -> 
+--                return (True, ["  o  " ++ show lbl])
+--            (r0,r1) -> do
+--                let xs = [" xxx " ++ show lbl]
+--                ys <- case r0 of
+--                    Right r0 -> do
+--                            let (r2,r3) = break (1 <=) $ map snd r0
+--                            if null r0
+--                                then return []
+--                                else
+--                                    let f (n,(_,_,_,k)) =  if n `elem` r3 
+--                                                            then [
+--                                                            "    invalid step:  " 
+--                                                            ++ show k]
+--                                                            else [] 
+--                                    in
+--                                    return $ map ("     " ++) ( [
+--                                            "incorrect proof: "] 
+--                                        ++ ( if null r2 
+--                                                then [] 
+--                                                else ["    cannot prove a relationship " ++
+--                                                    "between the first and the last line: " ++ 
+--                                                    show li ] )
+--                                        ++ concatMap f (zip [1..] steps) )
+--                    Left (xs) -> return [format "     type error in proof: {0}" xs]
+--                zs <- case r1 of
+--                    Valid -> return []
+--                    x ->     return [
+--                            "     "
+--                        ++ "proof does not match proof obligation: " ++ show li]
+--                return (False, xs ++ ys ++ zs)
+--        return x
 
 dump :: String -> Map Label ProofObligation -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
-            forM_ (toList pos) (\(lbl, po) -> do
+            forM_ (M.toList pos) (\(lbl, po) -> do
                 hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
                 hPutStrLn h (unlines $ map f $ z3_code po)
                 hPutStrLn h "(pop)"
@@ -427,14 +429,14 @@ dump name pos = do
 
 verify_all :: Map Label ProofObligation -> IO (Map Label Bool)
 verify_all pos = do
-    rs <- forM (toList pos) (\(lbl, po) -> do
+    rs <- forM (M.toList pos) (\(lbl, po) -> do
             r <- discharge po
             case r of
                 Valid -> do
                     return (lbl, True) --  , ["  o  " ++ show lbl])
                 x     -> do
                     return (lbl, False)) -- , [" xxx " ++ show lbl])
-    return $ fromList rs
+    return $ M.fromList rs
 
 verify_changes :: Machine -> Map Label (Bool,ProofObligation) -> IO (Map Label (Bool,ProofObligation), String,Int)
 verify_changes m old_pos = do
@@ -449,7 +451,7 @@ verify_changes m old_pos = do
                         Nothing -> old_pos ! k) }
                 let all_pos = M.mapWithKey h pos 
                 (res,_,_) <- format_result (M.map fst all_pos)
-                return (all_pos,res,size new_pos)
+                return (all_pos,res, M.size new_pos)
             Left msgs -> 
                 return (old_pos,unlines $ map g msgs,0)
     where
@@ -472,7 +474,7 @@ str_verify_machine m =
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs = do
-        let rs    = map f $ toList xs
+        let rs    = map f $ M.toList xs
         let total = length rs
         let passed = length $ filter fst rs
         let xs = "passed " ++ (show passed) ++ " / " ++ show total
