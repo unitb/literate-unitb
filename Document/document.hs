@@ -149,9 +149,11 @@ all_machines xs = do
 context m = step_ctx m
 
 data EnvBlock a = 
-        Block0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
-        | Block1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
-        | Block2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
 
 data CmdBlock a =
         Cmd0Args (() -> a -> (Int,Int) -> Either [Error] a)
@@ -194,14 +196,22 @@ visit_doc blks cmds cs x = do
                 | name == s = do
                         x <- ex
                         fromEither x (case c of
-                            Block0Args g -> do
+                            Env0Args g -> do
                                 g () xs x (i,j)
-                            Block1Args g -> do
+                            Env1Args g -> do
                                 (arg,xs) <- get_1_lbl xs
                                 g (arg,()) xs x (i,j)
-                            Block2Args g -> do
+                            Env2Args g -> do
                                 (arg0,arg1,xs) <- get_2_lbl xs
-                                g (arg0, arg1) xs x (i,j))
+                                g (arg0, arg1) xs x (i,j)
+                            Env1Args1Blocks g -> do
+                                (arg0,xs) <- get_1_lbl xs
+                                ([arg1],xs) <- cmd_params 1 xs
+                                g (arg0, arg1) xs x (i,j)
+                            Env1Args2Blocks g -> do
+                                (arg0,xs) <- get_1_lbl xs
+                                ([arg1,arg2],xs) <- cmd_params 2 xs
+                                g (arg0, arg1, arg2) xs x (i,j))
                 | otherwise = f cs ex e
         f _ ex (Bracket _ _ cs _)  = do
                x <- foldl (f blks) ex cs
@@ -275,7 +285,7 @@ type_decl = visit_doc []
 imports :: [LatexDoc] -> Machine -> MEither Error Machine 
 imports = visit_doc 
             [   ( "use:set"
-                , Block1Args (\(cset,()) _ m (i,j) -> do
+                , Env1Args (\(cset,()) _ m (i,j) -> do
                     let th = theory m
                     toEither $ error_list (i,j) 
                         [ ( not (cset `member` types th)
@@ -285,7 +295,7 @@ imports = visit_doc
                                 extends = set_theory (USER_DEFINED (types th ! cset) []) : extends th } } )
                 )
             ,   ( "use:fun"
-                , Block2Args (\(dset, rset) _ m (i,j) -> do
+                , Env2Args (\(dset, rset) _ m (i,j) -> do
                     let th = theory m
                     toEither $ error_list (i,j) 
                         [   ( not (dset `member` types th)
@@ -306,7 +316,7 @@ imports = visit_doc
 declarations :: [LatexDoc] -> Machine -> MEither Error Machine
 declarations = visit_doc 
         [   (   "variable"
-            ,   Block0Args (\() xs m (i,j) -> do
+            ,   Env0Args (\() xs m (i,j) -> do
                         vs          <- get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list (i,j) 
@@ -316,7 +326,7 @@ declarations = visit_doc
                         return m { variables = fromList vs `union` variables m} )
             )
         ,   (   "indices"
-            ,   Block1Args (\(evt,()) xs m (i,j) -> do
+            ,   Env1Args (\(evt,()) xs m (i,j) -> do
                         vs <- get_variables (context m) xs
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m) 
@@ -334,7 +344,7 @@ declarations = visit_doc
                         return m { events = insert (label evt) new_event $ events m } )
             )
         ,   (   "constant"
-            ,   Block0Args (\() xs m (i,j) -> do
+            ,   Env0Args (\() xs m (i,j) -> do
                         vs              <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
@@ -342,7 +352,7 @@ declarations = visit_doc
                                     (consts $ theory m) } } )
             )
         ,   (   "dummy"
-            ,   Block0Args (\() xs m (i,j) -> do
+            ,   Env0Args (\() xs m (i,j) -> do
                         vs              <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
@@ -362,7 +372,7 @@ collect_expr = visit_doc
                 --  Events  --
                 --------------
         [   (   "evassignment"
-            ,   Block2Args (\(ev, lbl) xs m li@(i,j) -> do
+            ,   Env2Args (\(ev, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -383,7 +393,7 @@ collect_expr = visit_doc
                                 events  = insert (label ev) new_event $ events m } ) 
             )
         ,   (   "evguard"
-            ,   Block2Args (\(evt, lbl) xs m li@(i,j) -> do
+            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [   ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -402,7 +412,7 @@ collect_expr = visit_doc
                                 events  = insert (label evt) new_event $ events m } )
             )
         ,   (   "cschedule"
-            ,   Block2Args (\(evt, lbl) xs m li@(i,j) -> do
+            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -425,7 +435,7 @@ collect_expr = visit_doc
                                 events  = insert (label evt) new_event $ events m } )
             )
         ,   (   "fschedule"
-            ,   Block2Args (\(evt, lbl) xs m li@(i,j) -> do
+            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
@@ -441,8 +451,7 @@ collect_expr = visit_doc
                 --  Theory Properties  --
                 -------------------------
         ,   (   "assumption"
-            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
---                        let !() = unsafePerformIO (putStrLn $ format "allo {0}" lbl)
+            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
                         let th = theory m
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` fact th
@@ -456,7 +465,7 @@ collect_expr = visit_doc
                 --  Program properties  --
                 --------------------------
         ,   (   "initialization"
-            ,   Block1Args (\(lbl,()) xs m _ -> do
+            ,   Env1Args (\(lbl,()) xs m _ -> do
                         initp         <- get_expr m xs
 --                        toEither $ error_list (i,j)
 --                            [ ( label lbl `member` inv (props m)
@@ -466,7 +475,7 @@ collect_expr = visit_doc
                                 inits = initp : inits m } )
             )
         ,   (   "invariant"
-            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
+            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -477,7 +486,7 @@ collect_expr = visit_doc
                                 inv = insert (label lbl) invar $ inv $ props m } } )
             )
         ,   (   "transient"      
-            ,   Block2Args (\(ev, lbl) xs m (i,j) -> do
+            ,   Env2Args (\(ev, lbl) xs m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -495,7 +504,7 @@ collect_expr = visit_doc
                                 program_prop = new_props } } )
             )
         ,   (   "constraint"
-            ,   Block1Args (\(lbl,()) xs m (i,j) -> do
+            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` program_prop (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -532,57 +541,89 @@ collect_expr = visit_doc
             then return ()
             else Left [(format "Undeclared variables: {0}" (intercalate ", " undecl_v), i,j)]
 
-collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
-collect_proofs xs m = visit_doc
-        [   (   "proof"
-            ,   Block1Args (\(po,()) xs m (i,j) -> do
-                    mproofs     <- foldl g (Right []) xs
-                    case mproofs of
-                        [p] -> return m { 
-                            props = (props m) { 
-                                proofs = insert (composite_label 
-                                    [ _name m, label po ]) p $ 
-                                      proofs $ props m } }
-                        _   -> Left [("expecting a single calculation or a case distinction",i,j)]         )
+find_proof_step :: Map Label Expr 
+                -> [LatexDoc] 
+                -> (Machine,[Proof]) 
+                -> MEither Error (Machine,[Proof])
+find_proof_step hyps = visit_doc
+        [   (   "calculation"
+            ,   Env0Args (\() xs (m,proofs) (i,j) -> do
+                    cc <- toEither $ parse_calc hyps m xs (i,j)
+                    case infer_goal cc of
+                        Right cc_goal -> return (m,ByCalc cc { goal = cc_goal }:proofs)
+                        Left msg      -> Left [(format "type error: {0}" msg,i,j)]) 
             )
-        ] [] xs m
+        ,   (   "free:var"
+            ,   Env2Args (\(from,to) xs (m,proofs) (i,j) -> do
+                    (_,mproofs)     <- toEither $ find_proof_step hyps xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,FreeGoal from to p (i,j):proofs)
+                        _   -> Left [("requiring one proof element",i,j)] )
+            )
+        ,   (   "by:cases"
+            ,   Env0Args (\() xs (m,proofs) (i,j) -> do
+                    (_,cases) <- toEither $ find_cases hyps xs (m,[])
+                    return (m,ByCases cases (i,j):proofs) )
+            )
+        ,   (   "assume"
+            ,   Env1Args2Blocks (\(lbl,formula0,formula1) xs (m,proofs) (i,j) -> do
+                    expr0           <- get_expr m formula0
+                    expr1           <- get_expr m formula1
+                    (_,mproofs)     <- toEither $ find_proof_step 
+                            (insert (label lbl) expr0 hyps)
+                            xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,Assume (label lbl) expr0 expr1 p (i,j):proofs)
+                        _   -> Left [("requiring one proof element",i,j)] )
+            )
+        ] [ (   "\\easy"
+            ,   Cmd0Args (\() (m,proofs) (i,j) -> return (m,Easy (i,j):proofs))
+            )
+        ]
+
+find_cases :: Map Label Expr 
+           -> [LatexDoc] 
+           -> (Machine,[(Label,Expr,Proof)]) 
+           -> MEither Error (Machine,[(Label,Expr,Proof)])
+find_cases hyps = visit_doc 
+        [   (   "case"
+            ,   Env1Args1Blocks (\(lbl,formula) xs (m,cases) (i,j) -> do
+                    expr            <- get_expr m formula
+                    (_,mproofs)     <- toEither $ find_proof_step (insert (label lbl) expr hyps) xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,(label lbl, expr, p):cases)
+                        _   -> Left [("too many proof elements",i,j)] ) 
+            )
+        ] []
+
+parse_calc hyps m xs li = 
+    case find_cmd_arg 2 ["\\hint"] xs of
+        Just (a,t,[b,c],d)    -> do
+            xp <- fromEither ztrue $ get_expr m a
+            op <- fromEither Equal $ read_tokens 
+                    (do eat_space ; x <- oper ; eat_space ; return x) 
+                    (concatMap flatten_li b)
+            hyp <- fromEither [] (do
+                hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
+                mapM (find hyps m) hs)
+            r   <- parse_calc hyps m d li
+            return r { 
+                first_step = xp,
+                following  = (op,first_step r,hyp,line_info t):following r }
+        Nothing         -> do
+            xp <- fromEither ztrue $ get_expr m xs
+            return $ Calc (context m) ztrue xp [] li
     where
-        g mxs (Env n (i,j) c _)
-            | n == "calculation"    = do
-                xs <- mxs
-                cc <- toEither $ calc c (i,j)
-                case infer_goal cc of
-                    Right cc_goal -> return (ByCalc cc { goal = cc_goal }:xs)
-                    Left msg      -> Left [(format "type error: {0}" msg,i,j)]
-            | otherwise             = foldl g mxs c
-        g xs x                      = fold_doc g xs x
-        calc xs li = 
-            case find_cmd_arg 2 ["\\hint"] xs of
-                Just (a,t,[b,c],d)    -> do
-                    xp <- fromEither ztrue $ get_expr m a
-                    op <- fromEither Equal $ read_tokens 
-                            (do eat_space ; x <- oper ; eat_space ; return x) 
-                            (concatMap flatten_li b)
-                    hyp <- fromEither [] (do
-                        hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
-                        mapM find hs)
-                    r   <- calc d li
-                    return r { 
-                        first_step = xp,
-                        following  = (op,first_step r,hyp,line_info t):following r }
-                Nothing         -> do
-                    xp <- fromEither ztrue $ get_expr m xs
-                    return $ Calc (context m) ztrue xp [] li
-            where
-                f x = composite_label [_name m,label x]
+        f x = composite_label [_name m,label x]
         hint xs =
             case find_cmd_arg 1 ["\\ref","\\eqref"] xs of
                 Just (a,_,[[Text [TextBlock b li]]],c)  -> do
                     xs <- hint c
                     return ((b,li):xs)
                 Nothing         -> return []
-        find :: (Label,(Int,Int)) -> Either [Error] Expr
-        find (xs,(i,j)) = either Right Left (do
+        find :: Map Label Expr -> Machine -> (Label,(Int,Int)) -> Either [Error] Expr
+        find hyps m (xs,(i,j)) = either Right Left (do
+                err $ M.lookup xs $ hyps
                 err $ M.lookup xs $ inv p
                 err $ M.lookup xs $ inv_thm p
                 foldM f [err_msg] $ elems $ events m
@@ -599,8 +640,22 @@ collect_proofs xs m = visit_doc
                         M.lookup xs x)
                     err $ M.lookup xs $ guard ev
                     err $ M.lookup xs $ action ev
-                                
 
+collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
+collect_proofs = visit_doc
+        [   (   "proof"
+            ,   Env1Args (\(po,()) xs m (i,j) -> do
+                    (_,mproofs)     <- toEither $ find_proof_step empty xs (m,[])
+                    case mproofs of
+                        [p] -> return m { 
+                            props = (props m) { 
+                                proofs = insert (composite_label 
+                                    [ _name m, label po ]) p $ 
+                                      proofs $ props m } }
+                        _   -> Left [("expecting a single calculation or a case distinction",i,j)]         )
+            )
+        ] []
+                                
 get_expr :: Machine -> [LatexDoc] -> Either [Error] Expr
 get_expr m xs =
         parse_expr (context m) (concatMap flatten_li xs)

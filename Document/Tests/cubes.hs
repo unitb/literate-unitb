@@ -19,16 +19,17 @@ import Utilities.Syntactic
 test_case = Case "table of cubes example" test True
 
 test = test_cases
-       [ (Case "test 0 (syntax)" 
-             case6 $ Right [machine6]),
-         (StringCase "test 1 (verification)" 
-             case7 result7),
-         (StringCase "test 2 (init/fis po)" 
-             case8 result8),
-         (StringCase "proof of inv0" 
-             case9 result9),
-         (StringCase "empty proof"
-             case10 result10) ]
+        [ (Case "test 0 (syntax)" 
+                case6 $ Right [machine6])
+        , (StringCase "test 1 (verification)" 
+                case7 result7)
+        , (StringCase "test 2 (init/fis po)" 
+             case8 result8)
+        , (StringCase "proof of inv0" 
+             case9 result9)
+        , (StringCase "empty proof"
+             case10 result10) 
+        ]
 
 var_a = Var "a" int
 var_b = Var "b" int
@@ -107,6 +108,7 @@ result7 = unlines [
         "  o  m0/INIT/INV/inv2",
         "  o  m0/evt/FIS",
         "  o  m0/evt/INV/inv0/goal",
+        "  o  m0/evt/INV/inv0/hypotheses",
         "  o  m0/evt/INV/inv0/relation",
         "  o  m0/evt/INV/inv0/step 1",
         "  o  m0/evt/INV/inv0/step 2",
@@ -114,6 +116,7 @@ result7 = unlines [
         "  o  m0/evt/INV/inv0/step 4",
         "  o  m0/evt/INV/inv0/step 5",
         "  o  m0/evt/INV/inv1/goal",
+        "  o  m0/evt/INV/inv1/hypotheses",
         "  o  m0/evt/INV/inv1/relation",
         "  o  m0/evt/INV/inv1/step 1",
         "  o  m0/evt/INV/inv1/step 2",
@@ -122,13 +125,14 @@ result7 = unlines [
         "  o  m0/evt/INV/inv1/step 5",
         "  o  m0/evt/INV/inv1/step 6",
         "  o  m0/evt/INV/inv2/goal",
+        "  o  m0/evt/INV/inv2/hypotheses",
         "  o  m0/evt/INV/inv2/relation",
         "  o  m0/evt/INV/inv2/step 1",
         "  o  m0/evt/INV/inv2/step 2",
         "  o  m0/evt/INV/inv2/step 3",
         "  o  m0/evt/INV/inv2/step 4",
         "  o  m0/evt/SCH",
-        "passed 27 / 27"]
+        "passed 30 / 30"]
 
 case7 = do
     r <- parse_machine path6

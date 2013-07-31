@@ -27,7 +27,7 @@ data Type =
         | GENERIC String 
         | USER_DEFINED Sort [Type]
         | SET Type
-    deriving (Eq, Typeable)
+    deriving (Eq, Ord, Typeable)
 
 instance Show Type where
     show BOOL                = "BOOL"
@@ -94,7 +94,7 @@ data Sort =
         BoolSort | IntSort | RealSort 
         | DefSort String String [String] Type
         | Sort String String Int --[String]
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 z3_name (BoolSort) = "Bool"
 z3_name (IntSort) = "Int"
@@ -114,7 +114,7 @@ data Fun = Fun [Type] String [Type] Type
     deriving Eq
 
 data Var = Var String Type
-    deriving Eq
+    deriving (Eq,Ord)
 
 data Def = Def [Type] String [Var] Type Expr
     deriving Eq
