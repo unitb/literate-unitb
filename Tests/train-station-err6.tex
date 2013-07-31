@@ -49,7 +49,7 @@
 \end{transient}
 
 \begin{dummy}
-	t,t_0,t_1,t_2,t_3 : \TRAIN
+	t,t0,t1,t2,t3 : \TRAIN
 \end{dummy}
 
 \begin{dummy}
@@ -158,19 +158,19 @@
 \end{constraint}
 %
 \begin{proof}{leave/CO/co0}
-	\begin{free:var}{t}{t_0}
+	\begin{free:var}{t}{t0}
 	\begin{calculation}
-		\neg t_0 \in in \land t_0 \in in'
+		\neg t0 \in in \land t0 \in in'
 	\hint{=}{ \ref{grd0} }
-		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in' 
+		\neg t0 = t \land \neg t0 \in in \land t0 \in in' 
 	\hint{=}{ \ref{a0} }
-		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in \bunion \{ t \} 
+		\neg t0 = t \land \neg t0 \in in \land t0 \in in \bunion \{ t \} 
 %	\hint{=}{ $\in$ over singleton }
-%		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in
+%		\neg t0 = t \land \neg t0 \in in \land t0 \in in
 	\hint{=}{ contradiction }
 		\false
 	\hint{\implies}{ $\false \implies p$ }
-		loc'.t_0 = ent
+		loc'.t0 = ent
 	\end{calculation}
 	\end{free:var}
 \end{proof}
@@ -202,67 +202,68 @@
 	% case
 	% split
 	% TODO: add a case distinction that isn't complete
-	\begin{free:var}{t}{t_0}
+	\begin{free:var}{t}{t0}
 
 	\begin{by:cases}
-
-	\begin{case}{h0}{t_0 = t}
+	\begin{case}{h0}{t0 = t}
 	\begin{calculation}
-		\neg t_0 \in in \land t_0 \in in' \implies  loc'.t_0 = ent 
-	\hint{=}{ \eqref{h0} and \ref{a1}  }
+		\neg t0 \in in \land t0 \in in' \implies  loc'.t0 = ent 
+	\hint{=}{ \eqref{h0} \ref{a1}  }
 		\neg t \in in \implies  loc'.t = ent 
 	\hint{=}{ \ref{a2} }
 		\true
+%		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
+%	\hint{=}{  }
+%		\qforall{t0}{\neg t0 \in in \land (t0 = t \lor \neg  t0 = t)}{ t0 \in in' \implies  loc'.t0 = ent }
+%	\hint{=}{ }
+%		\qforall{t0}{\neg t0 \in in \land t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+%	\hint{=}{ }
+%		(\neg t \in in \land t \in in' \implies  loc'.t = ent )
+%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+%	\hint{=}{ \ref{a1} and \ref{a2} }
+%		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
+%	\hint{=}{  }
+%		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
+%	\hint{=}{  }
+%		\neg t \in in \implies  (t \tfun ent).t = ent 
+%	\hint{=}{  }
+%		\neg t \in in \implies  ent = ent 
+%	\hint{=}{  }
+%		\true
 	\end{calculation}
-
 	\end{case}
-
-	\begin{case}{h1}{ \neg t_0 = t }
-	\begin{calculation}
-		\neg t_0 \in in \land t_0 \in in' 
-	\hint{=}{ \ref{a1}  }
-		\neg t_0 \in in \land  t_0 \in in \bunion \{ t \}
-	\hint{=}{ \eqref{h1} }
-		\neg t_0 \in in \land  t_0 \in in
-	\hint{=}{ contradiction }
-		\false
-	\hint{\implies}{ pred. calc. }
-		loc'.t_0 = ent 
-	\end{calculation}
-
-	\end{case}
-
 	\end{by:cases}
 	\end{free:var}
 \end{proof}
 
 \begin{proof}{leave/CO/co1}
-	\begin{free:var}{t}{t_0}
+	\begin{free:var}{t}{t0}
 	\begin{calculation}
-		t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)
+		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
 	\hint{=}{  \ref{a0}  and \ref{a3} } % step 1
-		t_0 \in in \setminus \{ t \} 
-		\land ( (\{ t \} \domsub loc).t_0 \in PLF \lor (\{ t \} \domsub loc).t_0 = ent)
+		t0 \in in \setminus \{ t \} 
+		\land ( (\{ t \} \domsub loc).t0 \in PLF \lor (\{ t \} \domsub loc).t0 = ent)
 	\hint{=}{ }	% step 2
-		( t_0 \in in \setminus \{ t \} 
-		\land  ( \{ t \} \domsub loc).t_0 \in PLF )
-			   \lor ( t_0 \in (in \setminus \{ t \} )
-		\land (\{ t \} \domsub loc).t_0 = ent)
+		( t0 \in in \setminus \{ t \} 
+		\land  ( \{ t \} \domsub loc).t0 \in PLF )
+			   \lor ( t0 \in (in \setminus \{ t \} )
+		\land (\{ t \} \domsub loc).t0 = ent)
 	\hint{=}{ \ref{inv2} }	% step 3
-			t_0 \in in \setminus \{ t \} 
-		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
+			t0 \in in \setminus \{ t \} 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
 	\hint{=}{ } % step 4
-		t_0 \in in \land \neg t_0  = t 
-		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
+		t0 \in in \land \neg t0  = t 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
 	\hint{=}{  } % step 5
-		t_0 \in in \land \neg t_0  = t \land \neg loc.t_0 = ext
+		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
 	\hint{=}{  \ref{grd0} } % step 6
-	 	t_0 \in in \land \neg loc.t_0 = ext \land loc.t = ext
+	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
 	\hint{\follows}{  \ref{grd0} } % step 7
 %		\true
-	 	t_0 \in in \land loc.t_0 = ent 
+	 	t0 \in in \land loc.t0 = ent 
 	\hint{=}{   } % step 8
-	 	t_0 \in in \land loc.t_0 = ent  \land \neg loc.t_0 \in PLF 
+	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
 	\end{calculation}
 	\end{free:var}
 \end{proof}
