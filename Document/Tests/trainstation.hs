@@ -42,6 +42,7 @@ test = test_cases [
             , (StringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
             , (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
             , (StringCase "test 14, verification, non-exhaustive case analysis" case14 result14)
+            , (StringCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
 
 train_sort :: Sort
@@ -849,6 +850,77 @@ result14 = unlines
         
 case14 = do
     r <- parse_machine path14
+    case r of
+        Right [m] -> do
+            (s,_,_) <- str_verify_machine m
+            return s
+        x -> return $ show x
+
+path15 = "Tests/train-station-err7.tex"
+result15 = unlines
+        [  "  o  train0/INIT/FIS"
+        ,  "  o  train0/INIT/INV/inv1"
+        ,  "  o  train0/INIT/INV/inv2"
+        ,  "  o  train0/SKIP/CO/co0"
+        ,  "  o  train0/SKIP/CO/co1"
+        ,  "  o  train0/enter/CO/co0/case 1/goal"
+        ,  "  o  train0/enter/CO/co0/case 1/hypotheses"
+        ,  "  o  train0/enter/CO/co0/case 1/relation"
+        ,  "  o  train0/enter/CO/co0/case 1/step 1"
+        ,  "  o  train0/enter/CO/co0/case 1/step 2"
+        ,  "  o  train0/enter/CO/co0/case 1/step 3"
+        ,  "  o  train0/enter/CO/co0/case 1/step 4"
+        ,  "  o  train0/enter/CO/co0/case 2/goal"
+        ,  "  o  train0/enter/CO/co0/case 2/hypotheses"
+        ,  "  o  train0/enter/CO/co0/case 2/relation"
+        ,  "  o  train0/enter/CO/co0/case 2/step 1"
+        ,  "  o  train0/enter/CO/co0/case 2/step 2"
+        ,  "  o  train0/enter/CO/co0/completeness"
+        ,  "  o  train0/enter/CO/co1"
+        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/INV/inv1"
+        ,  "  o  train0/enter/INV/inv2/goal"
+        ,  "  o  train0/enter/INV/inv2/hypotheses"
+        ,  "  o  train0/enter/INV/inv2/relation"
+        ,  "  o  train0/enter/INV/inv2/step 1"
+        ,  "  o  train0/enter/INV/inv2/step 2"
+        ,  "  o  train0/enter/INV/inv2/step 3"
+        ,  "  o  train0/enter/INV/inv2/step 4"
+        ,  "  o  train0/enter/INV/inv2/step 5"
+        ,  "  o  train0/enter/SCH"
+        ,  "  o  train0/leave/CO/co0/goal"
+        ,  "  o  train0/leave/CO/co0/hypotheses"
+        ,  " xxx train0/leave/CO/co0/new assumption"
+        ,  "  o  train0/leave/CO/co0/relation"
+        ,  "  o  train0/leave/CO/co0/step 1"
+        ,  " xxx train0/leave/CO/co0/step 2"
+        ,  "  o  train0/leave/CO/co1/goal"
+        ,  "  o  train0/leave/CO/co1/hypotheses"
+        ,  "  o  train0/leave/CO/co1/relation"
+        ,  "  o  train0/leave/CO/co1/step 1"
+        ,  "  o  train0/leave/CO/co1/step 2"
+        ,  "  o  train0/leave/CO/co1/step 3"
+        ,  "  o  train0/leave/CO/co1/step 4"
+        ,  "  o  train0/leave/CO/co1/step 5"
+        ,  "  o  train0/leave/CO/co1/step 6"
+        ,  "  o  train0/leave/CO/co1/step 7"
+        ,  "  o  train0/leave/CO/co1/step 8"
+        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/INV/inv1"
+        ,  "  o  train0/leave/INV/inv2/goal"
+        ,  "  o  train0/leave/INV/inv2/hypotheses"
+        ,  "  o  train0/leave/INV/inv2/relation"
+        ,  "  o  train0/leave/INV/inv2/step 1"
+        ,  "  o  train0/leave/INV/inv2/step 2"
+        ,  "  o  train0/leave/INV/inv2/step 3"
+        ,  "  o  train0/leave/INV/inv2/step 4"
+        ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/TR/tr0"
+        ,  "passed 55 / 58"
+        ]
+        
+case15 = do
+    r <- parse_machine path15
     case r of
         Right [m] -> do
             (s,_,_) <- str_verify_machine m

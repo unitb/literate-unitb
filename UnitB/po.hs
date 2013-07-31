@@ -382,6 +382,15 @@ proof_po    th  (FreeGoal v u p (i,j))
         lbls      = map f ("completeness" : step_lbls)
         f x       = composite_label [lbl,label x]
         g x       = name x /= v
+proof_po    th  (Easy (i,j)) 
+            lbl po = 
+        return [(lbl,po)]
+proof_po    th  (Assume albl new_asm new_goal p (i,j))
+            lbl po@(ProofObligation ctx asm b goal) = do
+        pos <- proof_po th p lbl $ ProofObligation ctx (new_asm:asm) b new_goal
+        return ( ( composite_label [lbl, label "new assumption"]
+                 , ProofObligation ctx [] b (zimplies new_asm new_goal `zimplies` goal) )
+               : pos)
 
 are_fresh :: [String] -> ProofObligation -> Bool
 are_fresh vs (ProofObligation ctx asm b goal) = 
@@ -401,6 +410,25 @@ rename x y e = rewrite (rename x y) e
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs expr) = used_var expr `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
+
+--canonical :: Expr -> Maybe ([Expr],Expr)
+--canonical (FunApp f [x,y])
+--        | impl == f     = (do
+--            (zs,z) <- canonical y
+--            return (xs++zs,z)
+--            ) <|> Just (xs,y)
+--        | otherwise     = Nothing
+--    where
+--        impl   = Fun "=>"  [BOOL,BOOL] BOOL    
+--        xs     = conjuncts x
+--canonical _ = Nothing
+--
+--conjuncts :: Expr -> [Expr]
+--conjuncts e@(FunApp f xs)
+--        | f == conj (length xs) = xs
+--        | otherwise             = [e]
+--    where
+--        conj n = Fun "and" (take n $ repeat BOOL) BOOL
 
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 

@@ -153,6 +153,7 @@ data EnvBlock a =
         | Env1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
 
 data CmdBlock a =
         Cmd0Args (() -> a -> (Int,Int) -> Either [Error] a)
@@ -206,7 +207,11 @@ visit_doc blks cmds cs x = do
                             Env1Args1Blocks g -> do
                                 (arg0,xs) <- get_1_lbl xs
                                 ([arg1],xs) <- cmd_params 1 xs
-                                g (arg0, arg1) xs x (i,j))
+                                g (arg0, arg1) xs x (i,j)
+                            Env1Args2Blocks g -> do
+                                (arg0,xs) <- get_1_lbl xs
+                                ([arg1,arg2],xs) <- cmd_params 2 xs
+                                g (arg0, arg1, arg2) xs x (i,j))
                 | otherwise = f cs ex e
         f _ ex (Bracket _ _ cs _)  = do
                x <- foldl (f blks) ex cs
@@ -536,7 +541,10 @@ collect_expr = visit_doc
             then return ()
             else Left [(format "Undeclared variables: {0}" (intercalate ", " undecl_v), i,j)]
 
-find_proof_step :: Map Label Expr -> [LatexDoc] -> (Machine,[Proof]) -> MEither Error (Machine,[Proof])
+find_proof_step :: Map Label Expr 
+                -> [LatexDoc] 
+                -> (Machine,[Proof]) 
+                -> MEither Error (Machine,[Proof])
 find_proof_step hyps = visit_doc
         [   (   "calculation"
             ,   Env0Args (\() xs (m,proofs) (i,j) -> do
@@ -550,14 +558,28 @@ find_proof_step hyps = visit_doc
                     (_,mproofs)     <- toEither $ find_proof_step hyps xs (m,[])
                     case mproofs of 
                         [p] -> return (m,FreeGoal from to p (i,j):proofs)
-                        _   -> Left [("too many proof elements",i,j)] )
+                        _   -> Left [("requiring one proof element",i,j)] )
             )
         ,   (   "by:cases"
             ,   Env0Args (\() xs (m,proofs) (i,j) -> do
                     (_,cases) <- toEither $ find_cases hyps xs (m,[])
                     return (m,ByCases cases (i,j):proofs) )
             )
-        ] []
+        ,   (   "assume"
+            ,   Env1Args2Blocks (\(lbl,formula0,formula1) xs (m,proofs) (i,j) -> do
+                    expr0           <- get_expr m formula0
+                    expr1           <- get_expr m formula1
+                    (_,mproofs)     <- toEither $ find_proof_step 
+                            (insert (label lbl) expr0 hyps)
+                            xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,Assume (label lbl) expr0 expr1 p (i,j):proofs)
+                        _   -> Left [("requiring one proof element",i,j)] )
+            )
+        ] [ (   "\\easy"
+            ,   Cmd0Args (\() (m,proofs) (i,j) -> return (m,Easy (i,j):proofs))
+            )
+        ]
 
 find_cases :: Map Label Expr 
            -> [LatexDoc] 
