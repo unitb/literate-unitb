@@ -427,11 +427,19 @@
 {	\noindent \textbf{begin} case distinction }
 {	\noindent (\textbf{end} case distinction) }
 \newenvironment{assume}[3]
-{	\noindent \textbf{assume} \begin{align} #2 \label{#1} \end{align} }
+{	
+%	\noindent \textbf{assume} 
+	\begin{align} #2 \label{#1} \end{align} }
 {	}
 \newenvironment{case}[2]
 {	\noindent \textbf{case }\begin{align}  #2 \label{#1} \end{align} }
 {	\noindent (\textbf{end} case) }
+\newenvironment{by:parts}{}{}
+\newenvironment{part:a}[1]
+{	\noindent \textbf{subgoal:} 
+	$ #1 $ }
+{	\noindent (\textbf{end} subgoal) \\}
+\newcommand{\easy}{ }
 
 \newenvironment{use:set}[1]{}{}
 \newenvironment{use:fun}[2]{}{}

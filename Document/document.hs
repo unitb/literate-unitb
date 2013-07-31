@@ -150,10 +150,11 @@ context m = step_ctx m
 
 data EnvBlock a = 
         Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
-        | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
+        | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
 
 data CmdBlock a =
         Cmd0Args (() -> a -> (Int,Int) -> Either [Error] a)
@@ -198,6 +199,9 @@ visit_doc blks cmds cs x = do
                         fromEither x (case c of
                             Env0Args g -> do
                                 g () xs x (i,j)
+                            Env0Args1Blocks g -> do
+                                ([arg0],xs) <- cmd_params 1 xs
+                                g (arg0, ()) xs x (i,j)
                             Env1Args g -> do
                                 (arg,xs) <- get_1_lbl xs
                                 g (arg,()) xs x (i,j)
@@ -563,7 +567,12 @@ find_proof_step hyps = visit_doc
         ,   (   "by:cases"
             ,   Env0Args (\() xs (m,proofs) (i,j) -> do
                     (_,cases) <- toEither $ find_cases hyps xs (m,[])
-                    return (m,ByCases cases (i,j):proofs) )
+                    return (m,ByCases (reverse cases) (i,j):proofs) )
+            )
+        ,   (   "by:parts"
+            ,   Env0Args (\() xs (m,proofs) (i,j) -> do
+                    (_,cases) <- toEither $ find_parts hyps xs (m,[])
+                    return (m,ByParts (reverse cases) (i,j):proofs) )
             )
         ,   (   "assume"
             ,   Env1Args2Blocks (\(lbl,formula0,formula1) xs (m,proofs) (i,j) -> do
@@ -592,6 +601,21 @@ find_cases hyps = visit_doc
                     (_,mproofs)     <- toEither $ find_proof_step (insert (label lbl) expr hyps) xs (m,[])
                     case mproofs of 
                         [p] -> return (m,(label lbl, expr, p):cases)
+                        _   -> Left [("too many proof elements",i,j)] ) 
+            )
+        ] []
+
+find_parts :: Map Label Expr 
+           -> [LatexDoc] 
+           -> (Machine,[(Expr,Proof)]) 
+           -> MEither Error (Machine,[(Expr,Proof)])
+find_parts hyps = visit_doc 
+        [   (   "part:a"
+            ,   Env0Args1Blocks (\(formula,()) xs (m,cases) (i,j) -> do
+                    expr            <- get_expr m formula
+                    (_,mproofs)     <- toEither $ find_proof_step hyps xs (m,[])
+                    case mproofs of 
+                        [p] -> return (m,(expr, p):cases)
                         _   -> Left [("too many proof elements",i,j)] ) 
             )
         ] []

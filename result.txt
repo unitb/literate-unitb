@@ -30,7 +30,8 @@
 |  |  +- test 13, verification, name clash between dummy and index
 |  |  +- test 14, verification, non-exhaustive case analysis
 |  |  +- test 15, verification, incorrect new assumption
-|  |  +- [ Success: 15 / 15 ]
+|  |  +- test 16, verification, proof by parts
+|  |  +- [ Success: 16 / 16 ]
 |  +- the parser is exception free
 |  +- [ Success: 4 / 4 ]
 +- Unit-B
@@ -81,4 +82,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5411   34720  306472
+    5446   34944  308716

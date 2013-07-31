@@ -365,6 +365,18 @@ proof_po th (ByCases xs _) lbl (ProofObligation ctx asm b goal) = do
         case_a (n,(lbl,x,p)) = proof_po th p (f ("case " ++ show n))
                 $ ProofObligation ctx (x:asm) b goal
         f x     = composite_label [lbl,label x]
+proof_po th (ByParts xs _) lbl (ProofObligation ctx asm b goal) = do
+        let conj = map (\(x,_) -> x) xs
+        let c  = completeness conj
+        cs <- mapM part $ zip [1..] xs
+        return (c : concat cs)
+    where
+        completeness conj = 
+                ( (f "completeness") 
+                , ProofObligation ctx conj b goal )
+        part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
+                $ ProofObligation ctx asm b x
+        f x     = composite_label [lbl,label x]
 proof_po    th  (FreeGoal v u p (i,j)) 
             lbl po@(ProofObligation ctx asm b goal) = do
         new_goal <- free_vars goal

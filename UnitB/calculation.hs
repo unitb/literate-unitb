@@ -37,14 +37,14 @@ data Proof =
     | ByCases   [(Label, Expr, Proof)] (Int,Int)
     | Easy                             (Int,Int)
     | Assume Label Expr Expr Proof     (Int,Int)
-    | Split [(Label,Expr,Proof)]       (Int,Int)
+    | ByParts [(Expr,Proof)]           (Int,Int)
     | Assertion Label Expr Proof       (Int,Int)
 
 instance Syntactic Proof where
     line_info (ByCalc c)            = l_info c
     line_info (ByCases _ li)        = li
     line_info (Assume _ _ _ _ li)   = li
-    line_info (Split _ li)          = li
+    line_info (ByParts _ li)        = li
     line_info (Assertion _ _ _ li)  = li
     line_info (Easy li)             = li
     line_info (FreeGoal _ _ _ li)   = li
