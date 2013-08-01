@@ -24,6 +24,8 @@ import System.IO.Unsafe
 
 import Utilities.Format
 
+match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
+
 eat_space :: Scanner Char ()
 eat_space = do
 --        choice [
@@ -35,9 +37,18 @@ eat_space = do
         b <- is_eof
         if b
         then return ()
-        else read_if isSpace (
-                \_ -> eat_space)
-                (return ())
+        else choice 
+                [ match_char isSpace -- (\_ -> return ()) (fail "")
+                , read_list "\\\\" >> return ()
+                , read_list "~" >> return ()
+                , read_list "&" >> return ()
+                , read_list "\\," >> return ()
+                , read_list "\\:" >> return ()
+                , read_list "\\;" >> return ()
+                , read_list "\\!" >> return ()
+                , read_list "\\" >> match_char isDigit 
+                ] (return ())
+                (\_ -> eat_space)
 --            x:_ <- peek
 --            if isSpace x
 --            then do
