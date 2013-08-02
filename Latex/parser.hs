@@ -12,6 +12,7 @@ import Data.Map hiding ( foldl, map, null )
 
 import System.IO.Unsafe
 
+import Utilities.Format
 import Utilities.Syntactic
 
 data LatexDoc = 
@@ -208,9 +209,11 @@ argument = do
             Open True _:_ -> do  
                 read_char
                 ct <- latex_content
-                Close True _ <- read_char
-                return ct
-            _ -> fail "expecting brackets '{'"            
+                close <- read_char
+                case close of
+                    Close True _ -> return ct
+                    _ -> fail "expecting closing bracket '}'"        
+            _ -> fail "expecting opening bracket '{'"            
 
 begin_block :: Scanner LatexToken [LatexDoc]
 begin_block = do
@@ -224,14 +227,14 @@ begin_block = do
     unless (end == Command "\\end" (line_info end)) $ 
         fail ("expected \\end{" ++ concatMap source args0 ++ "}, read \'" ++ lexeme end ++ "\'")
     args1 <- argument
-    (begin, end) <- 
+    (begin, li2, end, li3) <- 
         case (args0, args1) of
-            ( [Text [TextBlock begin _]],
-              [Text [TextBlock end _]] ) -> do
-                return (begin, end)
+            ( [Text [TextBlock begin li0]],
+              [Text [TextBlock end li1]] ) -> do
+                return (begin, li0, end, li1)
             _  -> fail "name of a begin / end block must be a simple string"    
     unless (begin == end) $ 
-        fail ("begin / end do not match: " ++ begin ++ " / " ++ end)
+        fail (format "begin / end do not match: {0} {1} / {2} {3}" begin li2 end li3)
     rest <- latex_content 
     return (Env begin li0 ct li1:rest)
 

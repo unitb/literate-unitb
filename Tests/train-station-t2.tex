@@ -44,9 +44,10 @@
 
 \newevent{leave}
 
-\begin{transient}{leave}{tr0}
-	t \in in
-\end{transient}
+\begin{align*}
+\transient{leave}{tr0}
+{	t \in in	}
+\end{align*}
 
 \begin{dummy}
 	t,t_0,t_1,t_2,t_3 : \TRAIN
@@ -61,14 +62,16 @@
 	loc : \TRAIN \pfun \BLK
 \end{variable}
 
-\begin{invariant}{inv2}
+\begin{align*}
+\invariant{inv2}
 %	loc \in in \tfun \BLK
-	\dom . loc = in
-\end{invariant}
+{	\dom . loc = in	}
+\end{align*}
 
-\begin{evassignment}{enter}{a1}
-	in' = in \bunion \{ t \}
-\end{evassignment}
+\begin{align*}
+\evassignment{enter}{a1}
+{	in' = in \bunion \{ t \}	}
+\end{align*}
 
 \begin{proof}{enter/INV/inv2}
 	\begin{calculation}
@@ -86,9 +89,10 @@
 	\end{calculation}
 \end{proof}
 
-\begin{evassignment}{enter}{a2}
-	loc' = loc | (t \tfun ent)
-\end{evassignment}
+\begin{align*}
+\evassignment{enter}{a2}
+{	loc' = loc | (t \tfun ent)	}
+\end{align*}
 
 \begin{proof}{leave/INV/inv2}
 	\begin{calculation}
@@ -104,20 +108,24 @@
 	\end{calculation}
 \end{proof}
 
-\begin{evassignment}{leave}{a3}
-	loc' = \{ t \} \domsub loc 
-\end{evassignment}
+\begin{align*}
+\evassignment{leave}{a3}
+{	loc' = \{ t \} \domsub loc 	}
+\end{align*}
 
-\begin{cschedule}{leave}{c0}
-	t \in in
-\end{cschedule}
+\begin{align*}
+\cschedule{leave}{c0}
+{	t \in in	}
+\end{align*}
 
-\begin{initialization}{in0}
-	in = \emptyset
-\end{initialization}
-\begin{initialization}{in1}
-	loc = \emptyfun
-\end{initialization}
+\begin{align*}
+\initialization{in0}
+{	in = \emptyset	}
+\end{align*}
+\begin{align*}
+\initialization{in1}
+{	loc = \emptyfun	}
+\end{align*}
 
 \begin{use:set}{\TRAIN} \end{use:set}
 \begin{use:set}{\LOC} \end{use:set}
@@ -133,11 +141,12 @@
 	t: \TRAIN
 \end{indices}
 
-\begin{evassignment}{leave}{a0}
+\begin{align*}
+\evassignment{leave}{a0}
 %	in' = in | (t \rightarrow \false)
-	in' = in \setminus \{ t \}
+{	in' = in \setminus \{ t \}	}
 %	in'.t = \false 
-\end{evassignment}
+\end{align*}
 
 \begin{constant}
 	ent,ext : \BLK
@@ -146,16 +155,18 @@
 	PLF : \set [\BLK]
 \end{constant}
 
-\begin{assumption}{axm0}
-	\BLK = \{ ent, ext \} \bunion PLF
-\end{assumption}
+\begin{align*}
+\assumption{axm0}
+{	\BLK = \{ ent, ext \} \bunion PLF	}
+\end{align*}
 
 \safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent }
 \safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
 %
-\begin{constraint}{co0}
-	\neg t \in in \land t \in in' \implies  loc'.t = ent % \lor \neg t \in in'
-\end{constraint}
+\begin{align*}
+\constraint{co0}
+{	\neg t \in in \land t \in in' \implies  loc'.t = ent } % \lor \neg t \in in'
+\end{align*}
 %
 \begin{proof}{leave/CO/co0}
 	\begin{free:var}{t}{t_0}
@@ -181,10 +192,11 @@
 	\end{free:var}
 \end{proof}
 %
-\begin{constraint}{co1}
-	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
-\implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-\end{constraint}
+\begin{align*}
+\constraint{co1}
+{	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 	
+\implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)	}
+\end{align*}
 
 \begin{proof}{enter/CO/co1}
 	\begin{free:var}{t}{t_0}
@@ -255,13 +267,15 @@
 %
 %\end{guard}
 
-\begin{evguard}{leave}{grd0}
-	loc.t = ext \land t \in in
-\end{evguard}
+\begin{align*}
+\evguard{leave}{grd0}
+{	loc.t = ext \land t \in in	}
+\end{align*}
 
-\begin{evguard}{enter}{grd1}
-	\neg t \in in
-\end{evguard}
+\begin{align*}
+\evguard{enter}{grd1}
+{	\neg t \in in	}
+\end{align*}
 
 \begin{proof}{enter/CO/co0}
 	% assume 
@@ -335,25 +349,30 @@
 	\end{free:var}
 \end{proof}
 
-\begin{invariant}{inv1}
-	\qforall{t}{t \in in}{loc.t \in \BLK}
-\end{invariant}
+\begin{align*}
+\invariant{inv1}
+{	\qforall{t}{t \in in}{loc.t \in \BLK}	}
+\end{align*}
 
-\begin{assumption}{asm2}
-	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF
-\end{assumption}
+\begin{align*}
+\assumption{asm2}
+{	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF	}
+\end{align*}
 
-\begin{assumption}{asm3}
-	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }
-\end{assumption}
+\begin{align*}
+\assumption{asm3}
+{	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }	}
+\end{align*}
 
-\begin{assumption}{asm4}
-	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
-\end{assumption}
+\begin{align*}
+\assumption{asm4}
+{	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }	}
+\end{align*}
 
-\begin{assumption}{asm5}
-	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }
-\end{assumption}
+\begin{align*}
+\assumption{asm5}
+{	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
+\end{align*}
 
 \end{machine}
 

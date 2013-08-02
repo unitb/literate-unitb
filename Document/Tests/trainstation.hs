@@ -716,17 +716,17 @@ case12 = do
     -- Error handling --
     --------------------
 
-result7 = Left [("Undeclared variables: t",52,1)]
+result7 = Left [("Undeclared variables: t",52,15)]
 
 path7 = "Tests/train-station-err0.tex"
 case7 = parse_machine path7
 
-result8 = Left [("event 'leave' is undeclared",42,1)]
+result8 = Left [("event 'leave' is undeclared",42,15)]
 
 path8 = "Tests/train-station-err1.tex"
 case8 = parse_machine path8
 
-result9 = Left [("event 'leave' is undeclared",50,1)]
+result9 = Left [("event 'leave' is undeclared",51,15)]
 
 path9 = "Tests/train-station-err2.tex"
 case9 = parse_machine path9
@@ -736,7 +736,7 @@ result10 = Left [("event 'leave' is undeclared",54,1)]
 path10 = "Tests/train-station-err3.tex"
 case10 = parse_machine path10
 
-result11 = Left [("event 'leave' is undeclared",58,1)]
+result11 = Left [("event 'leave' is undeclared",59,15)]
 
 path11 = "Tests/train-station-err4.tex"
 case11 = parse_machine path11
