@@ -22,25 +22,30 @@ As an example, we look
 
 \newevent{inc}
 
-\begin{invariant}{inv0}
-	x = 2 \cdot y
-\end{invariant}
+\begin{align*}
+\invariant{inv0}
+{	x = 2 \cdot y	}
+\end{align*}
 
-\begin{evassignment}{inc}{a0}
-	x' = x + 2
-\end{evassignment}
+\begin{align*}
+\evassignment{inc}{a0}
+{	x' = x + 2	}
+\end{align*}
 
-\begin{transient}{inc}{tr0}
-	x = y
-\end{transient}
+\begin{align*}
+\transient{inc}{tr0}
+{	x = y	}
+\end{align*}
 
-\begin{cschedule}{inc}{c0}
-	x = y
-\end{cschedule}
+\begin{align*}
+\cschedule{inc}{c0}
+{	x = y	}
+\end{align*}
 
-\begin{constraint}{c0}
-	x = 1 \implies x' = 2
-\end{constraint}
+\begin{align*}
+\constraint{c0}
+{	x = 1 \implies x' = 2	}
+\end{align*}
 
 \begin{variable}
 	y: \Int
@@ -51,21 +56,24 @@ This is outside a machine's scope
 
 \begin{machine}{m0}
 
-\begin{fschedule}{inc}{f0}
-	x = y
-\end{fschedule}
+\begin{align*}
+\fschedule{inc}{f0}
+{	x = y	}
+\end{align*}
 
-\begin{evassignment}{inc}{a1}
-	y' = y + 1
-\end{evassignment}
+\begin{align*}
+\evassignment{inc}{a1}
+{	y' = y + 1	}
+\end{align*}
 
 \begin{variable}
 	x: \Int
 \end{variable}
 
-\begin{invariant}{inv1}
-	x = x \cdot (y + 1)
-\end{invariant}
+\begin{align*}
+\invariant{inv1}
+{	x = x \cdot (y + 1)	}
+\end{align*}
 
 \end{machine}
 \end{document}

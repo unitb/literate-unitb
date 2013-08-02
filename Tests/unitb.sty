@@ -15,6 +15,8 @@
 \RequirePackage{eventB}
 \RequirePackage{xifthen}
 \RequirePackage{amsmath}
+\RequirePackage[retainorgcmds]{IEEEtrantools}
+
 
 %%%%% Macros for Unit-B
 \newcommand{\unitb}{Unit-B\xspace}
@@ -365,30 +367,28 @@
 \newcounter{prop}
 \setcounter{prop}{-1}
 %\newcommand{\proptag}{}
-\newenvironment{assertion}[3] % {label prefix}{counter}{label}
+\newcommand{\assertion}[4] % {tag prefix}{counter}{label}{expr}
 {	%\renewcommand{\proptag}{#1}
-	\begin{equation}
+	\label{#3}
 	\ifthenelse{\isempty{#2}} 
 	{	\stepcounter{prop}
 		\tag{#1\arabic{prop}} }
 	{	\stepcounter{#2}
 		\tag{#2/#1\arabic{#2}} }
-	\label{#3} } 
-{ 	\end{equation} }
+	#4 } 
 
-\newcommand{\newassertion}[2] % {invariant}{J}
+\newcommand{\newassertion}[2] % {\invariant}{J}
 { 	%\newcounter{cnt:#1}
-	\newenvironment{#1}
-	{	\begin{assertion}{#2}{} } % {label}
-	{	\end{assertion} } }
+	\newcommand{#1}
+	{	\assertion{#2}{} } } % {label}{expr}
 %\newcommand{\newdeclaration}
 \newcommand{\newcompound}[1] % {evt}
 {	\newcounter{#1}
 	\setcounter{#1}{-1} }
 \newcommand{\newcomponent}[2] % {assignment}{A}
-{	\newenvironment{#1}
-	{	\begin{assertion}{#2} } % {counter}{label}
-	{	\end{assertion} } }
+{ 	%\newcounter{cnt:#1}
+	\newcommand{#1}
+	{	\assertion{#2} } } % {counter}{label}{expr}
 
 \newcommand{\curmachine}{}
 \newenvironment{machine}[1]
@@ -414,23 +414,18 @@
 	\[ }
 { 	\] }
 \newcommand{\safety}[3]
-{	\begin{equation}
-			#2 \textbf{\quad un\quad} #3
+{			#2 \textbf{\quad un\quad} #3
 			\stepcounter{prop}
 			\tag{S\arabic{prop}} 
-		\label{#1} 
-		\end{equation}	}
+		\label{#1} 	}
 
+	% 
 	% PROOF STRUCTURE
+	%
 \newenvironment{free:var}[2]{}{}
 \newenvironment{by:cases}
 {	\noindent \textbf{begin} case distinction }
 {	\noindent (\textbf{end} case distinction) }
-\newenvironment{assume}[3]
-{	
-%	\noindent \textbf{assume} 
-	\begin{align} #2 \label{#1} \end{align} }
-{	}
 \newenvironment{case}[2]
 {	\noindent \textbf{case }\begin{align}  #2 \label{#1} \end{align} }
 {	\noindent (\textbf{end} case) }
@@ -440,13 +435,28 @@
 	$ #1 $ }
 {	\noindent (\textbf{end} subgoal) \\}
 \newcommand{\easy}{ }
+	
+	% SHOULD BE COMMANDS
+\newenvironment{assume}[3]
+{	
+%	\noindent \textbf{assume} 
+	\begin{align} #2 \label{#1} \end{align} }
+{	}
+\newenvironment{assert}[2]
+{	\noindent \textbf{assert} 
+	\begin{align} #2 \label{#1} \end{align}
+} {	}
 
+	% 
+	% IMPORT
+	%	
 \newenvironment{use:set}[1]{}{}
 \newenvironment{use:fun}[2]{}{}
-\newcommand{\newset}[2]{
-
+\newcommand{\newset}[2]
+{ 	
 	\newcommand{#2}{\text{#1}}
-	\noindent \textbf{set}: #1 }
+	\noindent \textbf{set}: #1 
+}
 
 %%%%%%%
 % constants
@@ -468,15 +478,15 @@
 % Assertions
 %
 %\newcomponent
-\newassertion{invariant}{J}
-\newassertion{initialization}{IN}
-\newassertion{constraint}{CO}
-\newassertion{assumption}{ASM}
-\newcomponent{transient}{TR}
-\newcomponent{evguard}{G}
-\newcomponent{fschedule}{F}
-\newcomponent{cschedule}{C}
-\newcomponent{evassignment}{A}
+\newassertion{\invariant}{J}
+\newassertion{\initialization}{IN}
+\newassertion{\constraint}{CO}
+\newassertion{\assumption}{ASM}
+\newcomponent{\transient}{TR}
+\newcomponent{\evguard}{G}
+\newcomponent{\fschedule}{F}
+\newcomponent{\cschedule}{C}
+\newcomponent{\evassignment}{A}
 
 %%%%%%%%%%%%%%%%%%
 % Proof obligations and refinement

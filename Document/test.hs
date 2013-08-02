@@ -31,12 +31,33 @@ import Z3.Z3
 test_case = ("Unit-B Document", test, True)
 
 test :: IO Bool
-test = test_cases [
-        SMch.test_case,
-        Cubes.test_case,
-        Train.test_case,
-        all_properties
+test = test_cases 
+        [ StringCase "basic syntax and scopes" case1 result1
+        , SMch.test_case
+        , Cubes.test_case
+        , Train.test_case
+        , all_properties
         ]
+
+result1 = (unlines [
+        "  o  m/INIT/FIS",
+        "  o  m/enter/FIS" ,
+        "  o  m/enter/SCH/goal",
+        "  o  m/enter/SCH/hypotheses",
+        "  o  m/enter/SCH/relation",
+        "  o  m/enter/SCH/step 1",
+--        "  o  m0/inc/TR/NEG/tr0",
+        "passed 6 / 6"
+    ])
+
+path1 = "Tests/new_syntax.tex"
+case1 = do
+    r <- parse_machine path1
+    case r of
+        Right [m] -> do
+            (s,_,_)   <- str_verify_machine m
+            return s
+        x -> return $ show x
 
 --exists xs = unsafePerformIO $ 
 

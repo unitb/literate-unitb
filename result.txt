@@ -1,19 +1,189 @@
 +- Unit-B Document
+|  +- basic syntax and scopes
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
 |  |  +- test 2 (verification, one failure)
+|  |    o  m0/INIT/FIS
+|  |    o  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > m0/inc/FIS\n
+|  |    < m0/INIT/INV/inv0\n
+|  |    -    ----- ---
+|  |    > _._.o_._.m0/inc/SCH\n
+|  |    < _._.o_._.m0/INIT/INV/inv1\n
+|  |    -             ---------
+|  |    > passed_.3_./_.3\n
+|  |    < _._.o_._.m0/inc/FIS\n
+|  |    - ----------- -----
+|  |    < _._.o_._.m0/inc/INV/inv0\n
+|  |    < _.xxx_.m0/inc/INV/inv1\n
+|  |    < _._.o_._.m0/inc/SCH\n
+|  |    < _.xxx_.m0/inc/TR/tr0\n
+|  |    < passed_.6_./_.8\n
+|  |  ]
 |  |  +- test 3 (verification)
 |  |  +- test 4 (proof obligation, invariance)
 |  |  +- test 5 (co, 'skip' proof obligation)
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- [ Success: 5 / 6 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- table of cubes example
 |  |  +- test 0 (syntax)
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",61,16),("reference_.to_.unknown_.
+|  |    < Right_.[Mch_.{_name_.=_.m0,_.theory_.=_.Theory_.{extends_.=_.[],_.types_.=_.
+|  |    - --------------- ------  ----------------------------------------------------
+|  |    > predicate",65,16),("reference_.to_.unknown_.predicate",67,39),("reference_.to_.
+|  |    < fromList_.[("\\pfun",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\
+|  |    - - ----- ----------- ---------------  ------------- -- -------------------------
+|  |    > unknown_.predicate",69,16),("reference_.to_.unknown_.predicate",135,16),("
+|  |    < ",Sort_."\\set"_."set"_.1)],_.funs_.=_.fromList_.[],_.consts_.=_.fromList
+|  |    - ------------------------- --------------- -------------------------------
+|  |    > _.to_.unknown_.predicate",141,16),("reference_.to_.unknown_.predicate",143,16
+|  |    < fact_.=_.fromList_.[],_.dummies_.=_.fromList_.[]},_.variables_.=_.fromList_.[("
+|  |    - ----  -----------------------------------------------------------------------
+|  |    > ),("reference_.to_.unknown_.predicate",145,16),("reference_.to_.unknown_.
+|  |    < ",a:_.Int),("b",b:_.Int),("c",c:_.Int),("n",n:_.Int)],_.inits_.=_.[(=_.c_.6
+|  |    - - ------------------------------------ ----------------------------------
+|  |    > ",171,16),("reference_.to_.unknown_.predicate",175,16),("reference_.to_.unknown
+|  |    < b_.1),(and_.(=_.n_.0)_.(=_.a_.0))],_.events_.=_.fromList_.[(evt,Event_.{indices
+|  |    - ----- ---------------  --  --------------------------------- ------- ---- -----
+|  |    > predicate",177,16)]
+|  |    < _.=_.fromList_.[],_.c_sched_.=_.Nothing,_.f_sched_.=_.Nothing,_.params_.=_.
+|  |    - -------------------
+|  |    < fromList_.[],_.guard_.=_.fromList_.[],_.action_.=_.fromList_.[(a0,(=_.n@prime
+|  |    < 1))),(a1,(=_.a@prime_.(+_.a_.b))),(a2,(=_.b@prime_.(+_.b_.c))),(a3,(=_.c@prime
+|  |    < _.(+_.c_.6)))]})],_.props_.=_.program_prop_.=_.fromList_.[],_.inv_.=_.fromList
+|  |    < inv0,(=_.a_.(^_.n_.3))),(inv1,(=_.b_.(+_.(+_.(*_.3_.(^_.n_.2))_.(*_.3_.n))_.1
+|  |    < ))),(inv2,(=_.c_.(+_.(*_.6_.n)_.6)))],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[
+|  |    < evt/INV/inv0,m0/evt/INV/inv1,m0/evt/INV/inv2],_.progress_.=_.fromList_.[],_.
+|  |    < safety_.=_.fromList_.[]}]
+|  |  ]
 |  |  +- test 1 (verification)
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",61,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.m0/INIT/FIS\n
+|  |    - ----------------------
+|  |    > predicate",65,16),("reference_.to_.unknown_.predicate",67,39),("reference_.to_.
+|  |    < _._.o_._.m0/INIT/INV/inv0\n
+|  |    - -------------------------- 
+|  |    > unknown_.predicate",69,16),("reference_.to_.unknown_.predicate",135,16),("
+|  |    < _._.o_._.m0/INIT/INV/inv1\n
+|  |    - ---- --  ------------------
+|  |    > _.to_.unknown_.predicate",141,16),("reference_.to_.unknown_.predicate",143,16
+|  |    < _._.o_._.m0/INIT/INV/inv2\n
+|  |    -   -------------------------
+|  |    > ),("reference_.to_.unknown_.predicate",145,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.m0/evt/FIS\n
+|  |    - ------------ ------- 
+|  |    > ",171,16),("reference_.to_.unknown_.predicate",175,16),("reference_.to_.unknown
+|  |    < _._.o_._.m0/evt/INV/inv0/goal\n
+|  |    - ------------------------------ 
+|  |    > predicate",177,16)]
+|  |    < _._.o_._.m0/evt/INV/inv0/hypotheses\n
+|  |    - -------------------
+|  |    < _._.o_._.m0/evt/INV/inv0/relation\n
+|  |    < _._.o_._.m0/evt/INV/inv0/step_.1\n
+|  |    < _._.o_._.m0/evt/INV/inv0/step_.2\n
+|  |    < _._.o_._.m0/evt/INV/inv0/step_.3\n
+|  |    < _._.o_._.m0/evt/INV/inv0/step_.4\n
+|  |    < _._.o_._.m0/evt/INV/inv0/step_.5\n
+|  |    < _._.o_._.m0/evt/INV/inv1/goal\n
+|  |    < _._.o_._.m0/evt/INV/inv1/hypotheses\n
+|  |    < _._.o_._.m0/evt/INV/inv1/relation\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.1\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.2\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.3\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.4\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.5\n
+|  |    < _._.o_._.m0/evt/INV/inv1/step_.6\n
+|  |    < _._.o_._.m0/evt/INV/inv2/goal\n
+|  |    < _._.o_._.m0/evt/INV/inv2/hypotheses\n
+|  |    < _._.o_._.m0/evt/INV/inv2/relation\n
+|  |    < _._.o_._.m0/evt/INV/inv2/step_.1\n
+|  |    < _._.o_._.m0/evt/INV/inv2/step_.2\n
+|  |    < _._.o_._.m0/evt/INV/inv2/step_.3\n
+|  |    < _._.o_._.m0/evt/INV/inv2/step_.4\n
+|  |    < _._.o_._.m0/evt/SCH\n
+|  |    < passed_.30_./_.30\n
+|  |  ]
 |  |  +- test 2 (init/fis po)
 |  |  +- proof of inv0
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",61,16),("reference_.to_.unknown_.
+|  |    < m0/evt/INV/inv0:\n
+|  |    - ------------------
+|  |    > predicate",65,16),("reference_.to_.unknown_.predicate",67,39),("reference_.to_.
+|  |    < (=_.(^_.n@prime_.3)_.a@prime)\n
+|  |    - ------------------------ ------
+|  |    > unknown_.predicate",69,16),("reference_.to_.unknown_.predicate",135,16),("
+|  |    < ----\n
+|  |    - ------
+|  |    > _.to_.unknown_.predicate",141,16),("reference_.to_.unknown_.predicate",143,16
+|  |    < _._._._.(^_.n@prime_.3)\n
+|  |    -   --  ------ ------------
+|  |    > ),("reference_.to_.unknown_.predicate",145,16),("reference_.to_.unknown_.
+|  |    < _._._._._._.|_.(=_.n@prime_.(+_.n_.1))\n
+|  |    - -------------  --  -------  ------------
+|  |    > ",171,16),("reference_.to_.unknown_.predicate",175,16),("reference_.to_.unknown
+|  |    < _._._._.(^_.(+_.n_.1)_.3)\n
+|  |    - ---------------------  ----
+|  |    > predicate",177,16)]
+|  |    < _._._._.(+_.(+_.(+_.(^_.n_.3)_.(*_.3_.(^_.n_.2)))_.(*_.3_.n))_.1)\n
+|  |    - -------------------
+|  |    < _._._._._._.|_.(=_.a_.(^_.n_.3))\n
+|  |    < _._._._.(+_.(+_.(+_.a_.(*_.3_.(^_.n_.2)))_.(*_.3_.n))_.1)\n
+|  |    < _._._._._._.|_.(=_.b_.(+_.(+_.(*_.3_.(^_.n_.2))_.(*_.3_.n))_.1))\n
+|  |    < _._._._.(+_.a_.b)\n
+|  |    < _._._._._._.|_.(=_.a@prime_.(+_.a_.b))\n
+|  |    < _._._._.a@prime\n
+|  |  ]
 |  |  +- empty proof
-|  |  +- [ Success: 5 / 5 ]
+|  |  +- [ Success: 2 / 5 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- train station example
 |  |  +- test 0, syntax
 |  |  +- test 1, verification
@@ -22,18 +192,544 @@
 |  |  +- test 4, proof obligation, leave/sch
 |  |  +- test 5, proof obligation, leave/en/tr0
 |  |  +- test 7, undeclared symbol
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Right_.[Mch_.{_name_.=_.m0,_.theory_.=_.Theory_.{extends_.=_.[Theory_.{extends
+|  |    < Left_.[("Undeclared_.variables:_.t",52,1)]
+|  |    - -------------------  ---------------------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    > fromList_.[("elem@@TRAIN",elem@@TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("
+|  |    > set@@TRAIN",empty-set@@TRAIN[]:_._.->_.(set_.TRAIN)),("intersect@@TRAIN",
+|  |    > intersect@@TRAIN[]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("mk-set
+|  |    > mk-set@@TRAIN[]:_.TRAIN_.->_.(set_.TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN
+|  |    > []:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("union@@TRAIN",bunion@@
+|  |    > [TRAIN_.[]]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.
+|  |    > fromList_.[],_.fact_.=_.fromList_.[(@@TRAIN0,(forall_.((x_.TRAIN)_.(y_.TRAIN
+|  |    > ))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN_.y))_.(=_.x_.y)))),(@@TRAIN1,(forall
+|  |    > TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff
+|  |    > TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(elem@@TRAIN_.x_.s2
+|  |    > TRAIN2,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem
+|  |    > TRAIN_.x_.(intersect@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(elem@@TRAIN
+|  |    > _.s2))))),(@@TRAIN3,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN
+|  |    > )))_.(=_.(elem@@TRAIN_.x_.(bunion@@TRAIN_.s1_.s2))_.(or_.(elem@@TRAIN_.x_.s1
+|  |    > elem@@TRAIN_.x_.s2))))),(@@TRAIN4,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2
+|  |    > set_.TRAIN)))_.(not_.(elem@@TRAIN_.x_.empty-set@@TRAIN))))],_.dummies_.=_.
+|  |    > fromList_.[]}],_.types_.=_.fromList_.[("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0
+|  |    > ",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set
+|  |    > "_."set"_.1)],_.funs_.=_.fromList_.[],_.consts_.=_.fromList_.[("\\TRAIN",TRAIN
+|  |    > set_.TRAIN))],_.fact_.=_.fromList_.[],_.dummies_.=_.fromList_.[("t",t:_.TRAIN
+|  |    > )]},_.variables_.=_.fromList_.[("in",in:_.(set_.TRAIN))],_.inits_.=_.[],_.
+|  |    > _.=_.fromList_.[(enter,Event_.{indices_.=_.fromList_.[],_.c_sched_.=_.Nothing
+|  |    > sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    > fromList_.[]}),(leave,Event_.{indices_.=_.fromList_.[],_.c_sched_.=_.Nothing,_.
+|  |    > _sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    > _.=_.fromList_.[]})],_.props_.=_.program_prop_.=_.fromList_.[],_.inv_.=_.
+|  |    > _.[],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[],_.progress_.=_.fromList_.[],_.
+|  |    > safety_.=_.fromList_.[]}]
+|  |  ]
 |  |  +- test 8, undeclared event (wrt transient)
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Right_.[Mch_.{_name_.=_.m0,_.theory_.=_.Theory_.{extends_.=_.[Theory_.{extends
+|  |    < Left_.[("event_.'leave'_.is_.undeclared",42,1)]
+|  |    - -------------- --- --------  ------------------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    > fromList_.[("elem@@TRAIN",elem@@TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("
+|  |    > set@@TRAIN",empty-set@@TRAIN[]:_._.->_.(set_.TRAIN)),("intersect@@TRAIN",
+|  |    > intersect@@TRAIN[]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("mk-set
+|  |    > mk-set@@TRAIN[]:_.TRAIN_.->_.(set_.TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN
+|  |    > []:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("union@@TRAIN",bunion@@
+|  |    > [TRAIN_.[]]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.
+|  |    > fromList_.[],_.fact_.=_.fromList_.[(@@TRAIN0,(forall_.((x_.TRAIN)_.(y_.TRAIN
+|  |    > ))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN_.y))_.(=_.x_.y)))),(@@TRAIN1,(forall
+|  |    > TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff
+|  |    > TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(elem@@TRAIN_.x_.s2
+|  |    > TRAIN2,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem
+|  |    > TRAIN_.x_.(intersect@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(elem@@TRAIN
+|  |    > _.s2))))),(@@TRAIN3,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN
+|  |    > )))_.(=_.(elem@@TRAIN_.x_.(bunion@@TRAIN_.s1_.s2))_.(or_.(elem@@TRAIN_.x_.s1
+|  |    > elem@@TRAIN_.x_.s2))))),(@@TRAIN4,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2
+|  |    > set_.TRAIN)))_.(not_.(elem@@TRAIN_.x_.empty-set@@TRAIN))))],_.dummies_.=_.
+|  |    > fromList_.[]}],_.types_.=_.fromList_.[("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0
+|  |    > ",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set
+|  |    > "_."set"_.1)],_.funs_.=_.fromList_.[],_.consts_.=_.fromList_.[("\\TRAIN",TRAIN
+|  |    > set_.TRAIN))],_.fact_.=_.fromList_.[],_.dummies_.=_.fromList_.[("t",t:_.TRAIN
+|  |    > )]},_.variables_.=_.fromList_.[("in",in:_.(set_.TRAIN))],_.inits_.=_.[],_.
+|  |    > _.=_.fromList_.[(enter,Event_.{indices_.=_.fromList_.[],_.c_sched_.=_.Nothing
+|  |    > sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    > fromList_.[]})],_.props_.=_.program_prop_.=_.fromList_.[],_.inv_.=_.fromList
+|  |    > _.[],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[],_.progress_.=_.fromList_.[],_.
+|  |    > _.=_.fromList_.[]}]
+|  |  ]
 |  |  +- test 9, undeclared event (wrt c sched)
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Right_.[Mch_.{_name_.=_.m0,_.theory_.=_.Theory_.{extends_.=_.[Theory_.{extends
+|  |    < Left_.[("event_.'leave'_.is_.undeclared",50,1)]
+|  |    - -------------- --- --------  ------------------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    > fromList_.[("elem@@TRAIN",elem@@TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("
+|  |    > set@@TRAIN",empty-set@@TRAIN[]:_._.->_.(set_.TRAIN)),("intersect@@TRAIN",
+|  |    > intersect@@TRAIN[]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("mk-set
+|  |    > mk-set@@TRAIN[]:_.TRAIN_.->_.(set_.TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN
+|  |    > []:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("union@@TRAIN",bunion@@
+|  |    > [TRAIN_.[]]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.
+|  |    > fromList_.[],_.fact_.=_.fromList_.[(@@TRAIN0,(forall_.((x_.TRAIN)_.(y_.TRAIN
+|  |    > ))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN_.y))_.(=_.x_.y)))),(@@TRAIN1,(forall
+|  |    > TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff
+|  |    > TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(elem@@TRAIN_.x_.s2
+|  |    > TRAIN2,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem
+|  |    > TRAIN_.x_.(intersect@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(elem@@TRAIN
+|  |    > _.s2))))),(@@TRAIN3,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN
+|  |    > )))_.(=_.(elem@@TRAIN_.x_.(bunion@@TRAIN_.s1_.s2))_.(or_.(elem@@TRAIN_.x_.s1
+|  |    > elem@@TRAIN_.x_.s2))))),(@@TRAIN4,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2
+|  |    > set_.TRAIN)))_.(not_.(elem@@TRAIN_.x_.empty-set@@TRAIN))))],_.dummies_.=_.
+|  |    > fromList_.[]}],_.types_.=_.fromList_.[("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0
+|  |    > ",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set
+|  |    > "_."set"_.1)],_.funs_.=_.fromList_.[],_.consts_.=_.fromList_.[("\\TRAIN",TRAIN
+|  |    > set_.TRAIN))],_.fact_.=_.fromList_.[],_.dummies_.=_.fromList_.[("t",t:_.TRAIN
+|  |    > )]},_.variables_.=_.fromList_.[("in",in:_.(set_.TRAIN))],_.inits_.=_.[],_.
+|  |    > _.=_.fromList_.[(enter,Event_.{indices_.=_.fromList_.[],_.c_sched_.=_.Nothing
+|  |    > sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    > fromList_.[]})],_.props_.=_.program_prop_.=_.fromList_.[],_.inv_.=_.fromList
+|  |    > _.[],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[],_.progress_.=_.fromList_.[],_.
+|  |    > _.=_.fromList_.[]}]
+|  |  ]
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Right_.[Mch_.{_name_.=_.m0,_.theory_.=_.Theory_.{extends_.=_.[Theory_.{extends
+|  |    < Left_.[("event_.'leave'_.is_.undeclared",58,1)]
+|  |    - -------------- --- --------  ------------------
+|  |    > _.=_.[],_.types_.=_.fromList_.[("\\set",Sort_."\\set"_."set"_.1)],_.funs_.=_.
+|  |    > fromList_.[("elem@@TRAIN",elem@@TRAIN[]:_.TRAIN_.x_.(set_.TRAIN)_.->_.Bool),("
+|  |    > set@@TRAIN",empty-set@@TRAIN[]:_._.->_.(set_.TRAIN)),("intersect@@TRAIN",
+|  |    > intersect@@TRAIN[]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("mk-set
+|  |    > mk-set@@TRAIN[]:_.TRAIN_.->_.(set_.TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN
+|  |    > []:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN)),("union@@TRAIN",bunion@@
+|  |    > [TRAIN_.[]]:_.(set_.TRAIN)_.x_.(set_.TRAIN)_.->_.(set_.TRAIN))],_.consts_.=_.
+|  |    > fromList_.[],_.fact_.=_.fromList_.[(@@TRAIN0,(forall_.((x_.TRAIN)_.(y_.TRAIN
+|  |    > ))_.(=_.(elem@@TRAIN_.x_.(mk-set@@TRAIN_.y))_.(=_.x_.y)))),(@@TRAIN1,(forall
+|  |    > TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem@@TRAIN_.x_.(set-diff
+|  |    > TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(not_.(elem@@TRAIN_.x_.s2
+|  |    > TRAIN2,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN)))_.(=_.(elem
+|  |    > TRAIN_.x_.(intersect@@TRAIN_.s1_.s2))_.(and_.(elem@@TRAIN_.x_.s1)_.(elem@@TRAIN
+|  |    > _.s2))))),(@@TRAIN3,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2_.(set_.TRAIN
+|  |    > )))_.(=_.(elem@@TRAIN_.x_.(bunion@@TRAIN_.s1_.s2))_.(or_.(elem@@TRAIN_.x_.s1
+|  |    > elem@@TRAIN_.x_.s2))))),(@@TRAIN4,(forall_.((x_.TRAIN)_.(s1_.(set_.TRAIN))_.(s2
+|  |    > set_.TRAIN)))_.(not_.(elem@@TRAIN_.x_.empty-set@@TRAIN))))],_.dummies_.=_.
+|  |    > fromList_.[]}],_.types_.=_.fromList_.[("\\TRAIN",Sort_."\\TRAIN"_."TRAIN"_.0
+|  |    > ",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,_b]),("\\set",Sort_."\\set
+|  |    > "_."set"_.1)],_.funs_.=_.fromList_.[],_.consts_.=_.fromList_.[("\\TRAIN",TRAIN
+|  |    > set_.TRAIN))],_.fact_.=_.fromList_.[],_.dummies_.=_.fromList_.[("t",t:_.TRAIN
+|  |    > )]},_.variables_.=_.fromList_.[("in",in:_.(set_.TRAIN))],_.inits_.=_.[],_.
+|  |    > _.=_.fromList_.[(enter,Event_.{indices_.=_.fromList_.[],_.c_sched_.=_.Nothing
+|  |    > sched_.=_.Nothing,_.params_.=_.fromList_.[],_.guard_.=_.fromList_.[],_.action
+|  |    > fromList_.[]})],_.props_.=_.program_prop_.=_.fromList_.[],_.inv_.=_.fromList
+|  |    > _.[],_.inv_thm_.=_.fromList_.[],_.proofs_.=_.[],_.progress_.=_.fromList_.[],_.
+|  |    > _.=_.fromList_.[]}]
+|  |  ]
 |  |  +- test 12, proof obligation leave/INV/inv2
 |  |  +- test 13, verification, name clash between dummy and index
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",76,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/INIT/FIS\n
+|  |    - ------------------------- 
+|  |    > predicate",78,16),("reference_.to_.unknown_.predicate",84,16),("reference_.to_.
+|  |    < _._.o_._.train0/INIT/INV/inv1\n
+|  |    - -------------------------- ----
+|  |    > unknown_.predicate",96,16),("reference_.to_.unknown_.predicate",98,16),("
+|  |    < _._.o_._.train0/INIT/INV/inv2\n
+|  |    - ---- --  - --------------------
+|  |    > _.to_.unknown_.predicate",102,16),("reference_.to_.unknown_.predicate",164,16
+|  |    < _._.o_._.train0/SKIP/CO/co0\n
+|  |    -   ---------------------------
+|  |    > reference_.to_.unknown_.predicate",221,16),("reference_.to_.unknown_.predicate
+|  |    < _._.o_._.train0/SKIP/CO/co1\n
+|  |    - -----------------------------
+|  |    > 238,17),("reference_.to_.unknown_.predicate",246,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/enter/CO/co0/goal\n
+|  |    - ---------- ------------------------
+|  |    > predicate",254,17),("reference_.to_.unknown_.predicate",256,24)]
+|  |    < _._.o_._.train0/enter/CO/co0/hypotheses\n
+|  |    - -----------------------------------------
+|  |    < _._.o_._.train0/enter/CO/co0/relation\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.3\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.4\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.5\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.6\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.7\n
+|  |    < _._.o_._.train0/enter/CO/co0/step_.8\n
+|  |    < _._.o_._.train0/enter/CO/co1\n
+|  |    < _._.o_._.train0/enter/FIS\n
+|  |    < _._.o_._.train0/enter/INV/inv1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/goal\n
+|  |    < _._.o_._.train0/enter/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/enter/INV/inv2/relation\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.4\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.5\n
+|  |    < _._.o_._.train0/enter/SCH\n
+|  |    < _.xxx_.train0/leave/CO/co0/goal\n
+|  |    < _._.o_._.train0/leave/CO/co0/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co0/relation\n
+|  |    < _.xxx_.train0/leave/CO/co0/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.3\n
+|  |    < _.xxx_.train0/leave/CO/co0/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.5\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.6\n
+|  |    < _.xxx_.train0/leave/CO/co1/goal\n
+|  |    < _._.o_._.train0/leave/CO/co1/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co1/relation\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.5\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.6\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.7\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.8\n
+|  |    < _._.o_._.train0/leave/FIS\n
+|  |    < _._.o_._.train0/leave/INV/inv1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/goal\n
+|  |    < _._.o_._.train0/leave/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/leave/INV/inv2/relation\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.4\n
+|  |    < _.xxx_.train0/leave/SCH\n
+|  |    < _._.o_._.train0/leave/TR/tr0\n
+|  |    < passed_.54_./_.59\n
+|  |  ]
 |  |  +- test 14, verification, non-exhaustive case analysis
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",76,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/INIT/FIS\n
+|  |    - ------------------------- 
+|  |    > predicate",78,16),("reference_.to_.unknown_.predicate",84,16),("reference_.to_.
+|  |    < _._.o_._.train0/INIT/INV/inv1\n
+|  |    - -------------------------- ----
+|  |    > unknown_.predicate",96,16),("reference_.to_.unknown_.predicate",98,16),("
+|  |    < _._.o_._.train0/INIT/INV/inv2\n
+|  |    - ---- --  - --------------------
+|  |    > _.to_.unknown_.predicate",102,16),("reference_.to_.unknown_.predicate",164,16
+|  |    < _._.o_._.train0/SKIP/CO/co0\n
+|  |    -   ---------------------------
+|  |    > reference_.to_.unknown_.predicate",166,16),("reference_.to_.unknown_.predicate
+|  |    < _._.o_._.train0/SKIP/CO/co1\n
+|  |    - -----------------------------
+|  |    > 211,27),("reference_.to_.unknown_.predicate",213,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/goal\n
+|  |    - ---------- --------------------------------
+|  |    > predicate",244,17),("reference_.to_.unknown_.predicate",252,16),("reference_.to
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/hypotheses\n
+|  |    - ---------------------------------------- --------
+|  |    > unknown_.predicate",260,17),("reference_.to_.unknown_.predicate",262,24)]
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/relation\n
+|  |    - ---- --  - --------------------------- -- ---- 
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.2\n
+|  |    < _.xxx_.train0/enter/CO/co0/completeness\n
+|  |    < _._.o_._.train0/enter/CO/co1\n
+|  |    < _._.o_._.train0/enter/FIS\n
+|  |    < _._.o_._.train0/enter/INV/inv1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/goal\n
+|  |    < _._.o_._.train0/enter/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/enter/INV/inv2/relation\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.4\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.5\n
+|  |    < _._.o_._.train0/enter/SCH\n
+|  |    < _._.o_._.train0/leave/CO/co0/goal\n
+|  |    < _._.o_._.train0/leave/CO/co0/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co0/relation\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/goal\n
+|  |    < _._.o_._.train0/leave/CO/co1/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co1/relation\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.5\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.6\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.7\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.8\n
+|  |    < _._.o_._.train0/leave/FIS\n
+|  |    < _._.o_._.train0/leave/INV/inv1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/goal\n
+|  |    < _._.o_._.train0/leave/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/leave/INV/inv2/relation\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.4\n
+|  |    < _.xxx_.train0/leave/SCH\n
+|  |    < _._.o_._.train0/leave/TR/tr0\n
+|  |    < passed_.50_./_.52\n
+|  |  ]
 |  |  +- test 15, verification, incorrect new assumption
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",76,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/INIT/FIS\n
+|  |    - ------------------------- 
+|  |    > predicate",78,16),("reference_.to_.unknown_.predicate",84,16),("reference_.to_.
+|  |    < _._.o_._.train0/INIT/INV/inv1\n
+|  |    - -------------------------- ----
+|  |    > unknown_.predicate",96,16),("reference_.to_.unknown_.predicate",98,16),("
+|  |    < _._.o_._.train0/INIT/INV/inv2\n
+|  |    - ---- --  - --------------------
+|  |    > _.to_.unknown_.predicate",102,16),("reference_.to_.unknown_.predicate",218,31
+|  |    < _._.o_._.train0/SKIP/CO/co0\n
+|  |    -   ---------------------------
+|  |    > reference_.to_.unknown_.predicate",220,16),("reference_.to_.unknown_.predicate
+|  |    < _._.o_._.train0/SKIP/CO/co1\n
+|  |    - -----------------------------
+|  |    > 230,16),("reference_.to_.unknown_.predicate",250,17),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/goal\n
+|  |    - ---------- --------------------------------
+|  |    > predicate",258,16),("reference_.to_.unknown_.predicate",266,17),("reference_.to
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/hypotheses\n
+|  |    - ---------------------------------------- --------
+|  |    > unknown_.predicate",268,24)]
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/relation\n
+|  |    - ---- --  - -----------------
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/goal\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/hypotheses\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/relation\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.3\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.4\n
+|  |    < _._.o_._.train0/enter/CO/co0/completeness\n
+|  |    < _._.o_._.train0/enter/CO/co1\n
+|  |    < _._.o_._.train0/enter/FIS\n
+|  |    < _._.o_._.train0/enter/INV/inv1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/goal\n
+|  |    < _._.o_._.train0/enter/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/enter/INV/inv2/relation\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.4\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.5\n
+|  |    < _._.o_._.train0/enter/SCH\n
+|  |    < _._.o_._.train0/leave/CO/co0/goal\n
+|  |    < _._.o_._.train0/leave/CO/co0/hypotheses\n
+|  |    < _.xxx_.train0/leave/CO/co0/new_.assumption\n
+|  |    < _._.o_._.train0/leave/CO/co0/relation\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.1\n
+|  |    < _.xxx_.train0/leave/CO/co0/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co1/goal\n
+|  |    < _._.o_._.train0/leave/CO/co1/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co1/relation\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.5\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.6\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.7\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.8\n
+|  |    < _._.o_._.train0/leave/FIS\n
+|  |    < _._.o_._.train0/leave/INV/inv1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/goal\n
+|  |    < _._.o_._.train0/leave/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/leave/INV/inv2/relation\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.4\n
+|  |    < _.xxx_.train0/leave/SCH\n
+|  |    < _._.o_._.train0/leave/TR/tr0\n
+|  |    < passed_.55_./_.58\n
+|  |  ]
 |  |  +- test 16, verification, proof by parts
-|  |  +- [ Success: 16 / 16 ]
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Left_.[("reference_.to_.unknown_.predicate",76,16),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/INIT/FIS\n
+|  |    - ------------------------- 
+|  |    > predicate",78,16),("reference_.to_.unknown_.predicate",84,16),("reference_.to_.
+|  |    < _._.o_._.train0/INIT/INV/inv1\n
+|  |    - -------------------------- ----
+|  |    > unknown_.predicate",96,16),("reference_.to_.unknown_.predicate",98,16),("
+|  |    < _._.o_._.train0/INIT/INV/inv2\n
+|  |    - ---- --  - --------------------
+|  |    > _.to_.unknown_.predicate",102,16),("reference_.to_.unknown_.predicate",171,16
+|  |    < _._.o_._.train0/SKIP/CO/co0\n
+|  |    -   ---------------------------
+|  |    > reference_.to_.unknown_.predicate",173,16),("reference_.to_.unknown_.predicate
+|  |    < _._.o_._.train0/SKIP/CO/co1\n
+|  |    - -----------------------------
+|  |    > 206,17),("reference_.to_.unknown_.predicate",220,17),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/goal\n
+|  |    - ---------- --------------------------------
+|  |    > predicate",231,17),("reference_.to_.unknown_.predicate",279,31),("reference_.to
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/hypotheses\n
+|  |    - ---------------------------------------- --------
+|  |    > unknown_.predicate",281,16),("reference_.to_.unknown_.predicate",291,16),("
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/relation\n
+|  |    - ---- --  - --------------------------- -- ---- 
+|  |    > reference_.to_.unknown_.predicate",311,17),("reference_.to_.unknown_.predicate
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.1\n
+|  |    - -----------------------------  - -------------
+|  |    > 16),("reference_.to_.unknown_.predicate",327,17),("reference_.to_.unknown_.
+|  |    < _._.o_._.train0/enter/CO/co0/case_.1/step_.2\n
+|  |    - ---------- --------------------- -------------
+|  |    > predicate",329,24)]
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/goal\n
+|  |    - -------------------
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/hypotheses\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/relation\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.3\n
+|  |    < _._.o_._.train0/enter/CO/co0/case_.2/step_.4\n
+|  |    < _._.o_._.train0/enter/CO/co0/completeness\n
+|  |    < _._.o_._.train0/enter/CO/co1/completeness\n
+|  |    < _._.o_._.train0/enter/CO/co1/new_.assumption\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.1/goal\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.1/hypotheses\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.1/relation\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.1/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.1/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.1/goal\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.1/hypotheses\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.1/relation\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.1/step_.1\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.1/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.2/goal\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.2/hypotheses\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.2/relation\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.2/step_.1\n
+|  |    < _.xxx_.train0/enter/CO/co1/part_.2/case_.2/step_.2\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/case_.2/step_.3\n
+|  |    < _._.o_._.train0/enter/CO/co1/part_.2/completeness\n
+|  |    < _._.o_._.train0/enter/FIS\n
+|  |    < _._.o_._.train0/enter/INV/inv1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/goal\n
+|  |    < _._.o_._.train0/enter/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/enter/INV/inv2/relation\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.4\n
+|  |    < _._.o_._.train0/enter/INV/inv2/step_.5\n
+|  |    < _._.o_._.train0/enter/SCH\n
+|  |    < _._.o_._.train0/leave/CO/co0/goal\n
+|  |    < _._.o_._.train0/leave/CO/co0/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co0/relation\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co0/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/goal\n
+|  |    < _._.o_._.train0/leave/CO/co1/hypotheses\n
+|  |    < _._.o_._.train0/leave/CO/co1/relation\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.1\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.2\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.3\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.4\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.5\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.6\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.7\n
+|  |    < _._.o_._.train0/leave/CO/co1/step_.8\n
+|  |    < _._.o_._.train0/leave/FIS\n
+|  |    < _._.o_._.train0/leave/INV/inv1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/goal\n
+|  |    < _._.o_._.train0/leave/INV/inv2/hypotheses\n
+|  |    < _._.o_._.train0/leave/INV/inv2/relation\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.1\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.2\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.3\n
+|  |    < _._.o_._.train0/leave/INV/inv2/step_.4\n
+|  |    < _.xxx_.train0/leave/SCH\n
+|  |    < _._.o_._.train0/leave/TR/tr0\n
+|  |    < passed_.75_./_.77\n
+|  |  ]
+|  |  +- [ Success: 8 / 16 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- the parser is exception free
-|  +- [ Success: 4 / 4 ]
+|  +- [ Success: 2 / 5 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -76,10 +772,10 @@
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 5 / 5 ]
++- [ Success: 4 / 5 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-    5456   35024  309455
+    5513   35342  313178

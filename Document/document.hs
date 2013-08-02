@@ -159,8 +159,11 @@ data EnvBlock a =
 data CmdBlock a =
         Cmd0Args (() -> a -> (Int,Int) -> Either [Error] a)
         | Cmd1Args ((String,()) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd1Args1Blocks ((String, [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
         | Cmd2Args ((String, String) -> a -> (Int,Int) -> Either [Error] a)
-        | Cmd3Args ((String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
 
 data MEither a b = MLeft [a] b | MRight b
 
@@ -217,10 +220,13 @@ visit_doc blks cmds cs x = do
                                 ([arg1,arg2],xs) <- cmd_params 2 xs
                                 g (arg0, arg1, arg2) xs x (i,j))
                 | otherwise = f cs ex e
-        f _ ex (Bracket _ _ cs _)  = do
+        f [] ex e@(Env s (i,j) xs _)  = do
+               x <- foldl (f blks) ex xs
+               g (MRight x) xs
+        f _ ex (Bracket _ _ cs _)     = do
                x <- foldl (f blks) ex cs
                g (MRight x) cs
-        f _ ex e       = fold_doc (f blks) ex e
+        f _ ex (Text _)               = ex
         g ex (Text xs : ts) = do
             case trim_blanks $ reverse xs of
                 Command c (i,j):_   -> h cmds ex c ts (i,j)
@@ -244,11 +250,29 @@ visit_doc blks cmds cs x = do
                                 (arg0,arg1,ts) <- get_2_lbl ts
                                 f (arg0, arg1) x (i,j))
                             g (MRight x) ts
-                        Cmd3Args f -> do
+                        Cmd1Args1Blocks f -> do
+                            x <- fromEither x (do
+                                (arg0,ts) <- get_1_lbl ts
+                                ([arg1],ts) <- cmd_params 1 ts
+                                f (arg0, arg1) x (i,j))
+                            g (MRight x) ts
+                        Cmd1Args2Blocks f -> do
                             x <- fromEither x (do
                                 (arg0,ts) <- get_1_lbl ts
                                 ([arg1,arg2],ts) <- cmd_params 2 ts
                                 f (arg0, arg1, arg2) x (i,j))
+                            g (MRight x) ts
+                        Cmd2Args1Blocks f -> do
+                            x <- fromEither x (do
+                                (arg0,arg1,ts) <- get_2_lbl ts
+                                ([arg2],ts) <- cmd_params 1 ts
+                                f (arg0, arg1, arg2) x (i,j))
+                            g (MRight x) ts
+                        Cmd2Args2Blocks f -> do
+                            x <- fromEither x (do
+                                (arg0,arg1,ts) <- get_2_lbl ts
+                                ([arg2,arg3],ts) <- cmd_params 2 ts
+                                f (arg0, arg1, arg2, arg3) x (i,j))
                             g (MRight x) ts
             | otherwise     = h cs ex cmd ts (i,j)
         h [] ex cmd ts (i,j) = g ex ts 
@@ -375,8 +399,8 @@ collect_expr = visit_doc
                 --------------
                 --  Events  --
                 --------------
-        [   (   "evassignment"
-            ,   Env2Args (\(ev, lbl) xs m li@(i,j) -> do
+        [] [(   "\\evassignment"
+            ,   Cmd2Args1Blocks (\(ev, lbl, xs) m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -385,19 +409,19 @@ collect_expr = visit_doc
                             [ ( label lbl `member` action (events m ! label ev)
                               , format "{0} is already used for another assignment" lbl )
                             ]
-                        act <- get_expr m xs
-                        let evt       = events m ! label ev
-                        let new_event = evt { 
+                        let old_event = events m ! label ev
+                        act <- get_evt_part m old_event xs
+                        let new_event = old_event { 
                                     action = insertWith 
                                         (error "name clash")  
                                         (label lbl) act
-                                        (action evt) }
-                        scope (context m) act (params evt `merge` indices evt) li
+                                        (action old_event) }
+                        scope (context m) act (params old_event `merge` indices old_event) li
                         return m {          
                                 events  = insert (label ev) new_event $ events m } ) 
             )
-        ,   (   "evguard"
-            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
+        ,   (   "\\evguard"
+            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [   ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -408,15 +432,15 @@ collect_expr = visit_doc
                             [   ( label evt `member` grds
                                 , format "{0} is already used for another guard" lbl )
                             ]
-                        grd <- get_expr m xs
+                        grd <- get_evt_part m old_event xs
                         let new_event = old_event { 
                                     guard =  insert (label lbl) grd grds  }
                         scope (context m) grd (indices old_event `merge` params old_event) li
                         return m {          
                                 events  = insert (label evt) new_event $ events m } )
             )
-        ,   (   "cschedule"
-            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
+        ,   (   "\\cschedule"
+            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -428,8 +452,8 @@ collect_expr = visit_doc
                             [ ( label evt `member` sc
                                 , format "{0} is already used for another coarse schedule" lbl )
                             ]
-                        sched <- get_expr m xs
                         let old_event = events m ! label evt
+                        sched <- get_evt_part m old_event xs
                         let new_event = old_event { 
                                     c_sched =  
                                         fmap (insert (label lbl) sched) 
@@ -438,14 +462,15 @@ collect_expr = visit_doc
                         return m {          
                                 events  = insert (label evt) new_event $ events m } )
             )
-        ,   (   "fschedule"
-            ,   Env2Args (\(evt, lbl) xs m li@(i,j) -> do
+        ,   (   "\\fschedule"
+            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
                             ]
-                        sched <- get_expr m xs
-                        let event = (events m ! label evt) { 
+                        let old_event = events m ! label evt
+                        sched <- get_evt_part m old_event xs
+                        let event = old_event { 
                                     f_sched = Just sched }
                         scope (context m) sched (indices event) li
                         return m {          
@@ -454,8 +479,8 @@ collect_expr = visit_doc
                 -------------------------
                 --  Theory Properties  --
                 -------------------------
-        ,   (   "assumption"
-            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
+        ,   (   "\\assumption"
+            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         let th = theory m
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` fact th
@@ -468,8 +493,8 @@ collect_expr = visit_doc
                 --------------------------
                 --  Program properties  --
                 --------------------------
-        ,   (   "initialization"
-            ,   Env1Args (\(lbl,()) xs m _ -> do
+        ,   (   "\\initialization"
+            ,   Cmd1Args1Blocks (\(lbl,xs) m _ -> do
                         initp         <- get_expr m xs
 --                        toEither $ error_list (i,j)
 --                            [ ( label lbl `member` inv (props m)
@@ -478,8 +503,8 @@ collect_expr = visit_doc
                         return m {
                                 inits = initp : inits m } )
             )
-        ,   (   "invariant"
-            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
+        ,   (   "\\invariant"
+            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -489,8 +514,8 @@ collect_expr = visit_doc
                             props = (props m) { 
                                 inv = insert (label lbl) invar $ inv $ props m } } )
             )
-        ,   (   "transient"      
-            ,   Env2Args (\(ev, lbl) xs m (i,j) -> do
+        ,   (   "\\transient"      
+            ,   Cmd2Args1Blocks (\(ev, lbl, xs) m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -507,8 +532,8 @@ collect_expr = visit_doc
                             props = (props m) {
                                 program_prop = new_props } } )
             )
-        ,   (   "constraint"
-            ,   Env1Args (\(lbl,()) xs m (i,j) -> do
+        ,   (   "\\constraint"
+            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` program_prop (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -519,8 +544,8 @@ collect_expr = visit_doc
                                 program_prop = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
                                     $ program_prop $ props m } } )
             )
-        ] [ (   "\\safety"
-            ,   Cmd3Args (\(lbl, pCt, qCt) m (i,j) -> do
+        ,   (   "\\safety"
+            ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
                     let prop = safety $ props m
                     (p,q) <- toEither (do
                         p <- fromEither ztrue $ get_expr m pCt
@@ -683,6 +708,13 @@ collect_proofs = visit_doc
 get_expr :: Machine -> [LatexDoc] -> Either [Error] Expr
 get_expr m xs =
         parse_expr (context m) (concatMap flatten_li xs)
+
+get_evt_part :: Machine -> Event -> [LatexDoc] -> Either [Error] Expr
+get_evt_part m e xs =
+        parse_expr (            step_ctx m 
+                    `merge_ctx` evt_live_ctx e
+                    `merge_ctx` evt_saf_ctx  e)
+                   (concatMap flatten_li xs)
 
 find_cmd_arg :: Int -> [String] -> [LatexDoc] 
              -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])

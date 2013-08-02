@@ -299,16 +299,22 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-steps_po :: Theory -> Calculation -> Either [Error] [ProofObligation]
-steps_po th (Calc d _ e0 [] _) = return []
-steps_po th (Calc d g e0 ((r0, e1, a0,_):es) li) = do
+steps_po :: Theory -> Context -> Calculation -> Either [Error] [ProofObligation]
+steps_po th ctx (Calc d _ e0 [] _) = return []
+steps_po th ctx (Calc d g e0 ((r0, e1, a0,_):es) li) = do
     expr <- with_li li $ mk_expr r0 e0 e1
-    tail <- steps_po th (Calc d g e1 es li)
-    return $ ProofObligation (d `merge_ctx` theory_ctx th) (a0 ++ M.elems (theory_facts th)) False expr : tail
+    tail <- steps_po th ctx (Calc d g e1 es li)
+    return $ ProofObligation 
+            (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
+            (a0 ++ M.elems (theory_facts th)) 
+            False expr : tail
 
-entails_goal_po th (Calc d g e0 es (i,j)) = do
+entails_goal_po th ctx (Calc d g e0 es (i,j)) = do
             a <- with_li (i,j) assume
-            return $ ProofObligation (d `merge_ctx` theory_ctx th) (a ++ M.elems (theory_facts th)) False g
+            return $ ProofObligation 
+                (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
+                (a ++ M.elems (theory_facts th)) 
+                False g
     where
         assume = 
                 fmap reverse $ foldM f [] (map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
@@ -323,10 +329,10 @@ goal_po c = ProofObligation (context c) xs False (goal c)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 
-obligations :: Theory -> Calculation -> Either [Error] [ProofObligation]
-obligations th c = do
-        x  <- entails_goal_po th c
-        ys <- steps_po th c
+obligations :: Theory -> Context -> Calculation -> Either [Error] [ProofObligation]
+obligations th ctx c = do
+        x  <- entails_goal_po th ctx c
+        ys <- steps_po th ctx c
         return (x:ys)
 
 pretty_print :: StrList -> [String]
@@ -346,9 +352,9 @@ pretty_print (List ys@(x:xs)) =
             case reverse xs of
                 y0:y1:ys -> reverse ( (y1++y0):ys )
 
-proof_po th (ByCalc c) lbl po = do
+proof_po th (ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
         let (y0,y1) = entailment (goal_po c) po
-        ys   <- obligations th c
+        ys   <- obligations th ctx c
         let f x = composite_label [lbl,label x]
         let step_lbls = map (("step "++) . show) [1..]
         let lbls = map f ("goal" : "hypotheses" : "relation" : step_lbls)
@@ -444,7 +450,7 @@ used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 
-            (obligations th c) 
+            (obligations th empty_ctx c) 
             (\pos -> do
 --        let txt = (do
 --            p <- pos
@@ -455,7 +461,7 @@ check th c = embed
         rs <- forM pos discharge :: IO [Validity]
         let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
-
+--
 --match_proof :: Machine -> Label -> ProofObligation -> Proof -> IO (Bool, [String])
 --match_proof m lbl po
 --            (ByCalc p@(Calc _ _ _ steps li)) = do
