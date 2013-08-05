@@ -153,22 +153,6 @@ prop_po m pname (Transient fv xp evt_lbl) =
                                   (znot $ primed (variables m) xp)  )) )
            ) 
         ]
---        [   ( (composite_label [_name m, evt_lbl, tr_neg_lbl, pname])
---            , (ProofObligation 
---                (           step_ctx m 
---                `merge_ctx` evt_live_ctx evt
---                `merge_ctx` evt_saf_ctx evt
---                `merge_ctx` dummy) 
---                (invariants p ++ grd ++ sch ++ act)
---                False
---                (xp `zimplies` (znot $ primed (variables m) xp) ) ) )
---        ,   ( (composite_label [_name m, evt_lbl, tr_en_lbl, pname])
---            , (ProofObligation 
---                (assert_ctx m `merge_ctx` dummy) 
---                (invariants p)
---                True
---                (exist_ind (xp `zimplies` (zall sch)))) ) 
---        ]
     where
         p    = props m
         prop = program_prop p
@@ -285,13 +269,6 @@ new_dummy = make_unique "@param"
 
 primed :: Map String Var -> Expr -> Expr
 primed vs e = make_unique "@prime" vs e
---primed vs w@(Word (Var vn vt)) 
---        | vn `member` vs    = Word (Var (vn ++ "@prime") vt)
---        | otherwise         = w
---primed _ c@(Const _ _ _)    = c
---primed vs (FunApp f xs)     = FunApp f $ map (primed vs) xs
---primed vs (Binder q d xp)   = Binder q d (primed (foldr M.delete vs (map name d)) xp)
---primed _ x@(Number _)       = x
 
 verify_machine :: Machine -> IO (Int, Int)
 verify_machine m = do
@@ -370,9 +347,7 @@ pretty_print (List ys@(x:xs)) =
 proof_po th p@(ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
         let (y0,y1) = entailment (goal_po c) po
         ys   <- obligations' th ctx c
---        let step_lbls = map (\n -> "step " ++ show n ++ " " ++ show li) [1..]
         return $ map f ((g "goal ",y0) : (g "hypotheses ",y1) : ys)
---        return $ zip lbls (y0:y1:ys)
     where 
         f (x,y) = (composite_label [lbl, x],y)
         g x = label (x ++ show li)
@@ -435,9 +410,6 @@ proof_po    th  (Assertion lemma p (i,j))
             proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
                 $ ProofObligation ctx asm b g )
         return (pos1 ++ concat pos2)
---        return ( ( composite_label [lbl, label "new assumption"]
---                 , ProofObligation ctx [] b (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
---               : pos)
 
 are_fresh :: [String] -> ProofObligation -> Bool
 are_fresh vs (ProofObligation ctx asm b goal) = 
@@ -458,82 +430,13 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs expr) = used_var expr `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
---canonical :: Expr -> Maybe ([Expr],Expr)
---canonical (FunApp f [x,y])
---        | impl == f     = (do
---            (zs,z) <- canonical y
---            return (xs++zs,z)
---            ) <|> Just (xs,y)
---        | otherwise     = Nothing
---    where
---        impl   = Fun "=>"  [BOOL,BOOL] BOOL    
---        xs     = conjuncts x
---canonical _ = Nothing
---
---conjuncts :: Expr -> [Expr]
---conjuncts e@(FunApp f xs)
---        | f == conj (length xs) = xs
---        | otherwise             = [e]
---    where
---        conj n = Fun "and" (take n $ repeat BOOL) BOOL
-
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 
             (obligations th empty_ctx c) 
             (\pos -> do
---        let txt = (do
---            p <- pos
---            ("\n; ------------\n(push)" : (do
---                c <- z3_code p
---                return $ show $ as_tree c) ++ ["\n(pop)"] ))
---        putStrLn $ unlines txt
         rs <- forM pos discharge :: IO [Validity]
         let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
---
---match_proof :: Machine -> Label -> ProofObligation -> Proof -> IO (Bool, [String])
---match_proof m lbl po
---            (ByCalc p@(Calc _ _ _ steps li)) = do
---        r0 <- check (theory m) p
---        r1 <- entails (goal_po p) po
-----        let !() = unsafePerformIO (do
-----            putStrLn "> verification results"
-----            print r0
-----            putStrLn "> entailment result"
-----            print r1)
---        x <- case (r0,r1) of
---            (Right [], Valid) -> 
---                return (True, ["  o  " ++ show lbl])
---            (r0,r1) -> do
---                let xs = [" xxx " ++ show lbl]
---                ys <- case r0 of
---                    Right r0 -> do
---                            let (r2,r3) = break (1 <=) $ map snd r0
---                            if null r0
---                                then return []
---                                else
---                                    let f (n,(_,_,_,k)) =  if n `elem` r3 
---                                                            then [
---                                                            "    invalid step:  " 
---                                                            ++ show k]
---                                                            else [] 
---                                    in
---                                    return $ map ("     " ++) ( [
---                                            "incorrect proof: "] 
---                                        ++ ( if null r2 
---                                                then [] 
---                                                else ["    cannot prove a relationship " ++
---                                                    "between the first and the last line: " ++ 
---                                                    show li ] )
---                                        ++ concatMap f (zip [1..] steps) )
---                    Left (xs) -> return [format "     type error in proof: {0}" xs]
---                zs <- case r1 of
---                    Valid -> return []
---                    x ->     return [
---                            "     "
---                        ++ "proof does not match proof obligation: " ++ show li]
---                return (False, xs ++ ys ++ zs)
---        return x
 
 dump :: String -> Map Label ProofObligation -> IO ()
 dump name pos = do
@@ -545,9 +448,6 @@ dump name pos = do
                 ) )
     where
         f x@(Assert _) = unlines $ pretty_print (as_tree x)
---            unlines (map (uncurry (++)) $ zip
---                ("(Assert ":repeat "          ")
---                $ pretty_print (as_tree x)) ++ ")"
         f x          = show $ as_tree x
 
 verify_all :: Map Label ProofObligation -> IO (Map Label Bool)
