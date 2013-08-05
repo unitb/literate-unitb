@@ -564,7 +564,7 @@ collect_expr = visit_doc
                         q <- fromEither ztrue $ get_expr m qCt
                         error_list (i,j) 
                             [   ( label lbl `member` prop
-                                , format "" )
+                                , format "safety property {0} already exists" lbl )
                             ] 
                         return (p,q))
                     let new_prop = Unless [] p q
@@ -597,11 +597,17 @@ set_proof p (Step a b c d (Just _)) = Left [("too many proofs",i,j)]
 set_goal g _ (Step a b c Nothing d)       = return $ Step a b c (Just g) d
 set_goal g (i,j) (Step a b c (Just _) d)  = Left [("too many goals",i,j)]
 
-add_assumption lbl asm _ (Step a b c d e) = return $ Step a b (insert lbl asm c) d e
+add_assumption lbl asm (i,j) (Step a b c d e) 
+    | lbl `member` c    = Left [(format "an assumption {0} already exists" lbl,i,j)]
+    | otherwise         = return $ Step a b (insert lbl asm c) d e
 
-add_assert lbl asrt _ (Step a b c d e)    = return $ Step (insert lbl asrt a) b c d e
+add_assert lbl asrt (i,j) (Step a b c d e)    
+    | lbl `member` a    = Left [(format "an assertion {0} already exists" lbl,i,j)]
+    | otherwise         = return $ Step (insert lbl asrt a) b c d e
 
-add_proof lbl prf _ (Step a b c d e)      = return $ Step a (insert lbl prf b) c d e
+add_proof lbl prf (i,j) (Step a b c d e)      
+    | lbl `member` b    = Left [(format "a proof for assertion {0} already exists" lbl,i,j)]
+    | otherwise         = return $ Step a (insert lbl prf b) c d e
 
 empty_step = Step empty empty empty Nothing Nothing
 
@@ -781,11 +787,15 @@ collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   Env1Args (\(po,()) xs m (i,j) -> do
+                    let lbl = composite_label [ _name m, label po ]
+                    toEither $ error_list (i,j) 
+                        [   ( lbl `member` proofs (props m)
+                            , format "a proof for {0} already exists" lbl )
+                        ] 
                     p <- collect_proof_step empty m xs (i,j)
                     return m { 
                         props = (props m) { 
-                            proofs = insert (composite_label 
-                                [ _name m, label po ]) p $ 
+                            proofs = insert lbl p $ 
                                     proofs $ props m } } )
             )
         ] []

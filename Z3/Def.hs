@@ -35,6 +35,7 @@ instance Show Type where
     show REAL                = "REAL"
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
+    show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
     show (SET t) = format "SET {0}" t
 
