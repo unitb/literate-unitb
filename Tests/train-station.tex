@@ -91,7 +91,7 @@
 
 \begin{align*}
 \evassignment{enter}{a2}
-{	loc' = loc | (t \tfun ent)	}
+{	loc' = loc  \1| (t \tfun ent)	}
 \end{align*}
 
 \begin{proof}{leave/INV/inv2}
@@ -167,25 +167,48 @@
 \begin{proof}{leave/CO/co0}
 	\begin{free:var}{t}{t_0}
 	
-	\begin{assert}{hyp5}{ \neg t = t_0 }
-	\end{assert} 
+	\begin{align}
+	\assert{hyp6}{ \neg t = t_0 } \\
+	\assume{hyp7}{ \neg t_0 \in in } \\
+	\goal{ \neg t_0 \in in' }
+	\end{align}
 %	\begin{assume}{hyp0}{ \neg t_0 \in in \land  t_0 \in in' }{ loc'.t_0 = ent }
 	\begin{calculation}
-%		loc'.t_0 = ent
-%	\hint{\follows}{ }
-%		\false
-%	\hint{=}{ \eqref{hyp0} \ref{a3} }
-%		\true
-		\neg t_0 \in in \land t_0 \in in'
-	\hint{=}{ \ref{grd0} }
-		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in' 
+		t_0 \in in'
 	\hint{=}{ \ref{a0} }
-		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in \bunion \{ t \} 
-	\hint{=}{ contradiction }
+		t_0 \in in \setminus \{ t \}
+	\hint{=}{ $\in$ over $\setminus$ }
+		t_0 \in in \1\land \neg t_0 \in \{ t \} 
+	\hint{=}{ \eqref{hyp7} }
+		\false \1\land \neg t_0 \in \{ t \} 
+	\hint{=}{ zero of $\land$ }
 		\false
-	\hint{\implies}{ $\false \implies p$ }
-		loc'.t_0 = ent
+%%		loc'.t_0 = ent
+%%	\hint{\follows}{ }
+%%		\false
+%%	\hint{=}{ \eqref{hyp0} \ref{a3} }
+%%		\true
+%		\neg t_0 \in in \land t_0 \in in'
+%	\hint{=}{ \ref{grd0} }
+%		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in' 
+%	\hint{=}{ \ref{a0} }
+%		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in \bunion \{ t \} 
+%	\hint{=}{ contradiction }
+%		\false
+%	\hint{\implies}{ $\false \implies p$ }
+%		loc'.t_0 = ent
 	\end{calculation}
+	\begin{subproof}{hyp6} 
+	\begin{calculation}
+		t = t_0
+	\hint{\implies}{ Leibniz }
+		t \in in \2\equiv t_0 \in in
+	\hint{\implies}{ reflexivity }
+		t \in in \2\implies t_0 \in in
+	\hint{=}{ \eqref{grd0}; \eqref{hyp7} }
+		\false
+	\end{calculation}
+	\end{subproof}
 %	\end{assume}
 	\end{free:var}
 \end{proof}
@@ -200,13 +223,26 @@
 	\begin{free:var}{t}{t_0}
 	
 	\noindent \textbf{assume:}
-	\begin{assume}{hyp2}{t_0 \in in}
-		{  loc.t_0 = ent \land \neg loc.t_0 \in PLF 
-			\implies t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent) }
-	\begin{assume}{hyp3}{ loc.t_0 = ent  }
-		{ \neg loc.t_0 \in PLF 
-			\implies t_0 \in in' 
-			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\begin{align}
+	\assume{hyp2}{		t_0 \in in	} \\
+	\assume{hyp3}{		loc.t_0 = ent  }
+	\end{align}
+	
+	\noindent \textbf{prove}
+	\begin{align}
+%	\goal{ \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' 
+%			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\goal{	t_0 \in in' 
+			\1\land loc'.t_0 = ent}
+	\end{align}
+%	\begin{assume}{hyp2}{t_0 \in in}
+%		{  loc.t_0 = ent \land \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent) }
+%	\begin{assume}{hyp3}{ loc.t_0 = ent  }
+%		{ \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' 
+%			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
 	\begin{by:parts}
 	
 		\begin{part:a}{ t_0 \in in' }
@@ -236,24 +272,34 @@
 		\end{case}
 
 		\begin{case}{hyp5}{ \neg t_0 = t}
+		\begin{align}
+		\assert{hyp6}{ t_0 \in \dom.loc \setminus \dom.(t \tfun ent) }
+		\end{align}
 		\begin{calculation}
 			loc'.t_0 = ent
 		\hint{=}{ \ref{a2} }
 			(loc | t \tfun ent).t_0 = ent
-		\hint{=}{ \eqref{hyp5} }
+		\hint{=}{ \eqref{hyp5} \eqref{hyp6} }
 			loc.t_0 = ent
 		\hint{=}{ \eqref{hyp3} }
 			\true
 		\end{calculation}
-		
+		\begin{subproof}{hyp6}
+		\easy
+%		\begin{calculation}
+%			\true
+%		\hint{=}{ }
+%			\true
+%		\end{calculation}
+		\end{subproof}
 		\end{case}
 		
 		\end{by:cases}
 		
 		\end{part:a}		
 	\end{by:parts}
-	\end{assume}
-	\end{assume}
+%	\end{assume}
+%	\end{assume}
 	\end{free:var}
 \end{proof}
 

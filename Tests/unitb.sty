@@ -435,17 +435,18 @@
 	$ #1 $ }
 {	\noindent (\textbf{end} subgoal) \\}
 \newcommand{\easy}{ }
-	
+\newenvironment{subproof}[1]{ ~ }{ }
+
 	% SHOULD BE COMMANDS
-\newenvironment{assume}[3]
+\newcommand{\assume}[2]
 {	
 %	\noindent \textbf{assume} 
-	\begin{align} #2 \label{#1} \end{align} }
-{	}
-\newenvironment{assert}[2]
-{	\noindent \textbf{assert} 
-	\begin{align} #2 \label{#1} \end{align}
-} {	}
+	#2 \label{#1} }
+\newcommand{\goal}[1]
+{	#1}
+\newcommand{\assert}[2]
+{	#2 \label{#1} 
+}
 
 	% 
 	% IMPORT

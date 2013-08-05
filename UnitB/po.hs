@@ -299,15 +299,20 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-steps_po :: Theory -> Context -> Calculation -> Either [Error] [ProofObligation]
-steps_po th ctx (Calc d _ e0 [] _) = return []
-steps_po th ctx (Calc d g e0 ((r0, e1, a0,_):es) li) = do
-    expr <- with_li li $ mk_expr r0 e0 e1
-    tail <- steps_po th ctx (Calc d g e1 es li)
-    return $ ProofObligation 
-            (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
-            (a0 ++ M.elems (theory_facts th)) 
-            False expr : tail
+steps_po :: Theory -> Context -> Calculation -> Either [Error] [(Label, ProofObligation)]
+steps_po th ctx (Calc d g e0 es _) = f e0 es
+    where
+        f e0 [] = return []
+        f e0 ((r0, e1, a0,li):es) = do
+            expr <- with_li li $ mk_expr r0 e0 e1
+            tail <- f e1 es
+            return (
+                ( label ("step " ++ show li)
+                , ProofObligation 
+                    (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
+                    (a0 ++ M.elems (theory_facts th)) 
+                    False expr
+                ) : tail)
 
 entails_goal_po th ctx (Calc d g e0 es (i,j)) = do
             a <- with_li (i,j) assume
@@ -331,9 +336,14 @@ goal_po c = ProofObligation (context c) xs False (goal c)
 
 obligations :: Theory -> Context -> Calculation -> Either [Error] [ProofObligation]
 obligations th ctx c = do
+        fmap (map snd) $ obligations' th ctx c
+
+obligations' :: Theory -> Context -> Calculation -> Either [Error] [(Label, ProofObligation)]
+obligations' th ctx c = do
         x  <- entails_goal_po th ctx c
         ys <- steps_po th ctx c
-        return (x:ys)
+        return ((label ("relation " ++ show (l_info c)),x):ys)
+
 
 pretty_print :: StrList -> [String]
 pretty_print (Str xs) = [xs]
@@ -351,34 +361,42 @@ pretty_print (List ys@(x:xs)) =
         collapse xs = 
             case reverse xs of
                 y0:y1:ys -> reverse ( (y1++y0):ys )
+        is_short x = case pp of
+                        [ln] -> length ln <= 50
+                        _    -> False
+            where
+                pp = pretty_print x
 
-proof_po th (ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
+proof_po th p@(ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
         let (y0,y1) = entailment (goal_po c) po
-        ys   <- obligations th ctx c
-        let f x = composite_label [lbl,label x]
-        let step_lbls = map (("step "++) . show) [1..]
-        let lbls = map f ("goal" : "hypotheses" : "relation" : step_lbls)
-        return $ zip lbls (y0:y1:ys)
-proof_po th (ByCases xs _) lbl (ProofObligation ctx asm b goal) = do
+        ys   <- obligations' th ctx c
+--        let step_lbls = map (\n -> "step " ++ show n ++ " " ++ show li) [1..]
+        return $ map f ((g "goal ",y0) : (g "hypotheses ",y1) : ys)
+--        return $ zip lbls (y0:y1:ys)
+    where 
+        f (x,y) = (composite_label [lbl, x],y)
+        g x = label (x ++ show li)
+        li  = line_info p
+proof_po th (ByCases xs li) lbl (ProofObligation ctx asm b goal) = do
         dis <- mzsome (map (\(_,x,_) -> Right x) xs)
         let c  = completeness dis
         cs <- mapM case_a $ zip [1..] xs
         return (c : concat cs)
     where
         completeness dis = 
-                ( (f "completeness") 
+                ( (f ("completeness " ++ show li)) 
                 , ProofObligation ctx asm b dis )
         case_a (n,(lbl,x,p)) = proof_po th p (f ("case " ++ show n))
                 $ ProofObligation ctx (x:asm) b goal
         f x     = composite_label [lbl,label x]
-proof_po th (ByParts xs _) lbl (ProofObligation ctx asm b goal) = do
+proof_po th (ByParts xs li) lbl (ProofObligation ctx asm b goal) = do
         let conj = map (\(x,_) -> x) xs
         let c  = completeness conj
         cs <- mapM part $ zip [1..] xs
         return (c : concat cs)
     where
         completeness conj = 
-                ( (f "completeness") 
+                ( (f ("completeness " ++ show li)) 
                 , ProofObligation ctx conj b goal )
         part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
                 $ ProofObligation ctx asm b x
@@ -402,13 +420,24 @@ proof_po    th  (FreeGoal v u p (i,j))
         g x       = name x /= v
 proof_po    th  (Easy (i,j)) 
             lbl po = 
-        return [(lbl,po)]
-proof_po    th  (Assume albl new_asm new_goal p (i,j))
+        return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
+proof_po    th  (Assume new_asm new_goal p (i,j))
             lbl po@(ProofObligation ctx asm b goal) = do
-        pos <- proof_po th p lbl $ ProofObligation ctx (new_asm:asm) b new_goal
-        return ( ( composite_label [lbl, label "new assumption"]
-                 , ProofObligation ctx [] b (zimplies new_asm new_goal `zimplies` goal) )
+        pos <- proof_po th p lbl $ ProofObligation ctx (M.elems new_asm ++ asm) b new_goal
+        return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
+                 , ProofObligation ctx [] b (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
                : pos)
+proof_po    th  (Assertion lemma p (i,j))
+            lbl po@(ProofObligation ctx asm b goal) = do
+        pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
+            $ ProofObligation ctx (map fst (M.elems lemma) ++ asm) b goal
+        pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
+            proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
+                $ ProofObligation ctx asm b g )
+        return (pos1 ++ concat pos2)
+--        return ( ( composite_label [lbl, label "new assumption"]
+--                 , ProofObligation ctx [] b (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
+--               : pos)
 
 are_fresh :: [String] -> ProofObligation -> Bool
 are_fresh vs (ProofObligation ctx asm b goal) = 

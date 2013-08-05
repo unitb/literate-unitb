@@ -42,10 +42,10 @@ test = test_cases
 result1 = (unlines [
         "  o  m/INIT/FIS",
         "  o  m/enter/FIS" ,
-        "  o  m/enter/SCH/goal",
-        "  o  m/enter/SCH/hypotheses",
-        "  o  m/enter/SCH/relation",
-        "  o  m/enter/SCH/step 1",
+        "  o  m/enter/SCH/goal (21,1)",
+        "  o  m/enter/SCH/hypotheses (21,1)",
+        "  o  m/enter/SCH/relation (21,1)",
+        "  o  m/enter/SCH/step (23,1)",
 --        "  o  m0/inc/TR/NEG/tr0",
         "passed 6 / 6"
     ])

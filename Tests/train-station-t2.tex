@@ -157,11 +157,11 @@
 
 \begin{align*}
 \assumption{axm0}
-{	\BLK = \{ ent, ext \} \bunion PLF	}
+{	\BLK = \{ ent, ext \} \bunion PLF	} \\
+\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent } \\
+\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
 \end{align*}
 
-\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent }
-\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
 %
 \begin{align*}
 \constraint{co0}
@@ -202,13 +202,16 @@
 	\begin{free:var}{t}{t_0}
 	
 	\noindent \textbf{assume:}
-	\begin{assume}{hyp2}{t_0 \in in}
-		{  loc.t_0 = ent \land \neg loc.t_0 \in PLF 
-			\implies t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent) }
-	\begin{assume}{hyp3}{ loc.t_0 = ent  }
-		{ \neg loc.t_0 \in PLF 
-			\implies t_0 \in in' 
+	\begin{align}
+	\assume{hyp2}{t_0 \in in} \\ 
+	\assume{hyp3}{ loc.t_0 = ent  }
+	\end{align}
+	
+	\noindent \textbf{prove:}
+	\begin{align*}
+	\goal{ t_0 \in in' 
 			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\end{align*}
 	\begin{by:parts}
 	
 		\begin{part:a}{ t_0 \in in' }
@@ -254,8 +257,6 @@
 		
 		\end{part:a}		
 	\end{by:parts}
-	\end{assume}
-	\end{assume}
 	\end{free:var}
 \end{proof}
 
