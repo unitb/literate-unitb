@@ -327,9 +327,12 @@ pretty_print (Str xs) = [xs]
 pretty_print (List []) = ["()"]
 pretty_print (List ys@(x:xs)) = 
         case x of
-            Str y    -> map (uncurry (++)) $ zip
-                (("(" ++ y ++ " "):repeat (margin (length y + 2)))
-                (collapse (concatMap pretty_print xs ++ [")"]))
+            Str y    -> 
+                if length one_line <= 50
+                then ["(" ++ y ++ one_line ++ ")"]
+                else map (uncurry (++)) $ zip
+                        (("(" ++ y ++ " "):repeat (margin (length y + 2)))
+                        (collapse (concatMap pretty_print xs ++ [")"]))
             List _ -> map (uncurry (++)) $ zip
                 ("( ":repeat (margin 2))
                 (collapse (concatMap pretty_print ys ++ [" )"]))
@@ -338,11 +341,8 @@ pretty_print (List ys@(x:xs)) =
         collapse xs = 
             case reverse xs of
                 y0:y1:ys -> reverse ( (y1++y0):ys )
-        is_short x = case pp of
-                        [ln] -> length ln <= 50
-                        _    -> False
-            where
-                pp = pretty_print x
+                _        -> xs
+        one_line = concatMap (uncurry (++)) $ zip (repeat " ") $ concatMap pretty_print xs
 
 proof_po th p@(ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
         let (y0,y1) = entailment (goal_po c) po
@@ -443,12 +443,11 @@ dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
                 hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
-                hPutStrLn h (unlines $ map f $ z3_code po)
+                hPutStrLn h (concat $ map f $ z3_code po)
                 hPutStrLn h "(pop)"
                 ) )
     where
-        f x@(Assert _) = unlines $ pretty_print (as_tree x)
-        f x          = show $ as_tree x
+        f x = unlines $ pretty_print (as_tree x)
 
 verify_all :: Map Label ProofObligation -> IO (Map Label Bool)
 verify_all pos = do
