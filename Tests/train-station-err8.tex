@@ -72,9 +72,9 @@
 	\begin{calculation}
 		\dom. loc
 	\hint{=}{ \ref{in1} }
-		 \dom . {  \emptyfun }
+		 \oftype{ \dom . \emptyfun }{ \set[\TRAIN] } \bunion \dom . \emptyfun
 	\hint{=}{ empty functions }
-		\oftype{ \emptyset }{\set[\TRAIN]}
+		\oftype{ \emptyset \bunion \dom . \emptyfun }{\set[\TRAIN]}
 	\hint{=}{ \ref{in0} }
 		in
 	\end{calculation}

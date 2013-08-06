@@ -793,27 +793,48 @@ collect_proofs = visit_doc
         ] []
                                 
 get_expr :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
-get_expr m xs (i,j) = do
+get_expr m ys li = do
         x <- parse_expr (context m) (concatMap flatten_li xs)
-        unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
+        unless (L.null $ ambiguities x) $ Left 
+            $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
+                $ ambiguities x
         return x
+    where
+        xs    = drop_blank_text ys
+        (i,j) = if L.null xs
+                then li
+                else line_info xs
 
 get_assert :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
-get_assert m xs (i,j) = do
+get_assert m ys li = do
         x <- parse_expr (context m) (concatMap flatten_li xs)
         x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
-        unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
+        unless (L.null $ ambiguities x) $ Left 
+            $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
+                $ ambiguities x
         return x
+    where
+        xs    = drop_blank_text ys
+        (i,j) = if L.null xs
+                then li
+                else line_info xs
 
 get_evt_part :: Machine -> Event -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
-get_evt_part m e xs (i,j) = do
+get_evt_part m e ys li = do
         x <- parse_expr (            step_ctx m 
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)
         x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
-        unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
+        unless (L.null $ ambiguities x) $ Left 
+            $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
+                $ ambiguities x
         return x
+    where
+        xs    = drop_blank_text ys
+        (i,j) = if L.null xs
+                then li
+                else line_info xs
 
 find_cmd_arg :: Int -> [String] -> [LatexDoc] 
              -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])

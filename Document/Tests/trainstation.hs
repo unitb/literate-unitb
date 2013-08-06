@@ -1057,7 +1057,9 @@ case16 = do
 
 path17 = "Tests/train-station-err8.tex"
 result17 = unlines 
-        [  "error (72,1): type of (dom@@a@1@2@@b@1@2 empty-fun@@a@1@2@@b@1@2) is ill-defined: set [_a@1@2]"
+        [  "error (75,3): type of empty-fun@@TRAIN@@b@1@2@2@1@2 is ill-defined: pfun [TRAIN,_b@1@2@2@1@2]"
+        ,  "error (75,3): type of empty-fun@@TRAIN@@b@1@2@2@2 is ill-defined: pfun [TRAIN,_b@1@2@2@2]"
+        ,  "error (77,2): type of empty-fun@@TRAIN@@b@1@2@2@2@2 is ill-defined: pfun [TRAIN,_b@1@2@2@2@2]"
         ]
 
 case17 = do
@@ -1071,22 +1073,22 @@ case17 = do
 
 path18 = "Tests/train-station-err9.tex"
 result18 = unlines 
-        [  "error (65,15): expression has type incompatible with its type annotation:"
+        [  "error (68,2): expression has type incompatible with its type annotation:"
         ,  "  expression: (dom@@TRAIN@@BLK loc)"
         ,  "  type: set [TRAIN]"
         ,  "  type annotation: BOOL "
         ,  ""
-        ,  "error (71,15): expression has type incompatible with its type annotation:"
+        ,  "error (73,2): expression has type incompatible with its type annotation:"
         ,  "  expression: (bunion@@TRAIN in (mk-set@@TRAIN t))"
         ,  "  type: set [TRAIN]"
         ,  "  type annotation: BOOL "
         ,  ""
-        ,  "error (116,15): expression has type incompatible with its type annotation:"
+        ,  "error (118,2): expression has type incompatible with its type annotation:"
         ,  "  expression: t"
         ,  "  type: TRAIN"
         ,  "  type annotation: BOOL "
         ,  ""
-        ,  "error (121,15): expression has type incompatible with its type annotation:"
+        ,  "error (123,2): expression has type incompatible with its type annotation:"
         ,  "  expression: empty-set@@a"
         ,  "  type: set [_a]"
         ,  "  type annotation: BOOL "

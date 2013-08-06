@@ -281,6 +281,20 @@ instance Generic Expr where
     generics (FunApp f xp)    = S.unions (generics f : map generics xp)
     generics (Binder _ vs xp) = S.unions (generics xp : map generics vs)
 
+ambiguities e@(Word (Var _ t))
+        | S.null $ generics t = []
+        | otherwise           = [e]
+ambiguities e@(Const _ _ t)    
+        | S.null $ generics t = []
+        | otherwise           = [e]
+ambiguities e@(FunApp f xp)    
+        | not $ L.null children     = children
+        | not $ S.null $ generics f = [e]
+        | otherwise                 = []
+    where
+        children = L.concatMap ambiguities xp
+ambiguities e@(Binder _ vs xp) = ambiguities xp
+
 instantiate :: Map String Type -> Type -> Type
 instantiate m t = f t
     where
