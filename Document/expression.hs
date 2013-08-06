@@ -28,17 +28,11 @@ match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
 
 eat_space :: Scanner Char ()
 eat_space = do
---        choice [
---            try eof (\() -> fail "") (return ()),
---            read_if isSpace (\_ -> return ()) (fail "")
-----            space_cmd
---            ] (return ())
---              (\() -> eat_space)
         b <- is_eof
         if b
         then return ()
         else choice 
-                [ match_char isSpace -- (\_ -> return ()) (fail "")
+                [ match_char isSpace 
                 , read_list "\\\\" >> return ()
                 , read_list "~" >> return ()
                 , read_list "&" >> return ()
@@ -49,18 +43,6 @@ eat_space = do
                 , read_list "\\" >> match_char isDigit 
                 ] (return ())
                 (\_ -> eat_space)
---            x:_ <- peek
---            if isSpace x
---            then do
---                read_char
---                eat_space
-----            else do
-----                b <- look_ahead space_cmd
-----                if b
-----                then do
-----                    space_cmd
-----                    eat_space
---            else return ()
 
 space_cmd :: Scanner a ()
 space_cmd = return ()
@@ -134,7 +116,6 @@ type_t ctx@(Context ts _ _ _ _) = do
             eat_space
             t2 <- type_t ctx
             t <- return $ fun_type t t2
---            let !() = unsafePerformIO (putStrLn $ format "parsed a type {0}" t)
             return t
         else return t
 
@@ -144,7 +125,6 @@ get_type (Context ts _ _ _ _) x = M.lookup x m
         m = fromList ( 
                    [("\\Int", IntSort), ("\\Real", RealSort), ("\\Bool", BoolSort)])
             `M.union` ts
---                ++ zip (keys ts) (map USER_DEFINED $ map z3_type $ elems ts) )
         z3_type s@(Sort _ x _) = USER_DEFINED s
 
 vars :: Context -> Scanner Char [(String,Type)]
@@ -162,13 +142,6 @@ get_variables ctx cs = do
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
         m = concatMap flatten_li cs
-
---as_variables :: Context -> LatexDoc -> Either Error [(String, Var)]
---as_variables ctx (Env s _ c _) = do
---        xs <- read_tokens (vars ctx) m
---        return $ map (\(x,y) -> (x,Var x y)) xs
---    where
---        m = concatMap flatten_li c
 
 plus = do
         x <- match $ match_string "+"
@@ -218,9 +191,6 @@ dom_rest = read_list "\\domres"
 
 membership = 
         read_list "\\in"
---        case x of
---            Just _  -> return ()
---            Nothing -> fail "expecting set membership (\\in)"
 
 set_diff = read_list "\\setminus"
 
@@ -346,17 +316,6 @@ number = do
             where
                 n = length $ takeWhile isDigit x
 
---assoc Equal Equal = Ambiguous
---assoc Equal Leq   = Ambiguous
---assoc Leq Equal   = Ambiguous
---assoc Leq Leq     = Ambiguous
---assoc Equal _     = RightAssoc
---assoc _ Equal     = LeftAssoc
---assoc Leq _       = RightAssoc
---assoc _ Leq       = LeftAssoc
---assoc Plus Mult   = RightAssoc
---assoc _ _         = LeftAssoc
-
 open_brack  = do 
         x <- match $ match_string "("
         case x of
@@ -384,8 +343,6 @@ expr ctx = do
         read_term xs = do
             us <- many (eat_space >> unary)
             eat_space
---            s <- peek
---            let !() = unsafePerformIO (putStrLn $ take 10 s)
             try open_brack
                 (\_ -> do
                         e <- expr ctx

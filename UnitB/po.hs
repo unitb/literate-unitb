@@ -45,10 +45,8 @@ import Utilities.Syntactic
     --
 
     -- TODO: 
-    -- Discharge POs using calculational proofs
     -- add theorem POs
     --      problem: In what order do we prove the theorems?
-    -- add free variables to co and transient properties
 
 tr_neg_lbl      = label "TR/NEG"
 tr_en_lbl       = label "TR/EN"
@@ -241,7 +239,6 @@ sch_po m lbl evt = M.singleton
                   Just sch -> M.elems sch
                   Nothing  -> [zfalse]
         param = params evt
---        ind   = indices evt
         ind   = indices evt `merge` params evt
         exist_param xp = if M.null param then xp else zexists (M.elems param) xp
 
@@ -455,9 +452,9 @@ verify_all pos = do
             r <- discharge po
             case r of
                 Valid -> do
-                    return (lbl, True) --  , ["  o  " ++ show lbl])
+                    return (lbl, True) 
                 x     -> do
-                    return (lbl, False)) -- , [" xxx " ++ show lbl])
+                    return (lbl, False)) 
     return $ M.fromList rs
 
 verify_changes :: Machine -> Map Label (Bool,ProofObligation) -> IO (Map Label (Bool,ProofObligation), String,Int)

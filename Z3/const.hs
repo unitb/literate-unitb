@@ -52,15 +52,9 @@ maybe3 f mx my mz = do
         z <- mz :: Either String Expr
         return $ f x y z
 
---fun3 f x y z       = FunApp f [x,y,z]
---fun4 f x0 x1 x2 x3 = FunApp f [x0,x1,x2,x3]
---fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
-
 znot         = fun1 $ Fun [] "not" [BOOL] BOOL
 zimplies     = fun2 $ Fun [] "=>"  [BOOL,BOOL] BOOL
---zand         = fun2 $ Fun [] "and" [BOOL,BOOL] BOOL
 zand x y     = zall [x,y]
---zor          = fun2 $ Fun [] "or"  [BOOL,BOOL] BOOL
 zor x y      = zsome [x,y]
 zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
 mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
@@ -81,17 +75,13 @@ zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
         n = length xs
         f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
         f x = [x]
---zall (x:xs)  = foldl zand x xs
 zforall      = Binder Forall
 zexists      = Binder Exists
 
 mznot         = maybe1 znot
 mzimplies     = maybe2 zimplies
---mzand         = maybe2 zand
 mzand x y     = mzall [x,y]
---mzor          = maybe2 zor
 mzor x y      = mzsome [x,y]
---mzeq          = maybe2 zeq
 mzfollows     = maybe2 zfollows
 mztrue        = Right ztrue
 mzfalse       = Right zfalse
@@ -131,15 +121,6 @@ mzopp         = typ_fun1 $ Fun [] "-" [int] int
 mztimes       = typ_fun2 $ Fun [] "*" [int,int] int
 mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 
---mzless        = maybe2 zless
---mzgreater     = maybe2 zgreater
---mzle          = maybe2 zle
---mzge          = maybe2 zge
---mzplus        = maybe2 zplus
---mzminus       = maybe2 zminus
---mzopp         = fun1 $ Fun [] "-" [INT] INT
---mztimes       = maybe2 ztimes
---mzpow         = maybe2 zpow
 mzint n       = Right $ zint n
 
 gena = GENERIC "a"

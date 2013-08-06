@@ -1,5 +1,4 @@
 module Latex.Parser where
-    -- TODO: Separate Latex from the Scanner monad
 
     -- Modules
 import Latex.Scanner
@@ -76,13 +75,6 @@ instance Syntactic LatexDoc where
 
 instance Syntactic a => Syntactic [a] where
     line_info xs = line_info $ head xs
-
---instance Show LatexDoc where
---    show (Env b li0 xs _) = "Env" ++ show li0 ++ "{" ++ b ++ "} (" ++ show (length xs) ++ ")"
---    show (Text xs)      = "Text (" ++ show (map lexeme_li (take 10 xs)) ++ "...)"
---    show (Bracket True li c _)  = "Bracket" ++ show li ++ " {" ++ show c ++ "} "
---    show (Bracket False li c _) = "Bracket" ++ show li ++ " [" ++ show c ++ "] "
-
 
 source (Text xs) = concatMap lexeme xs
 source x         = show x
@@ -219,7 +211,6 @@ begin_block :: Scanner LatexToken [LatexDoc]
 begin_block = do
     read_char
     li0 <- get_line_info
---    oargs <- opt_args
     args0 <- argument
     ct    <- latex_content
     end   <- read_char
@@ -249,15 +240,3 @@ uncomment :: String -> String
 uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 
 with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
---
---find_cmd :: [String] -> [LatexDoc] -> Map String [[LatexDoc]]
---find_cmd kw (Env b _ c _:xs)         = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
---find_cmd kw (Bracket _ _ c _:xs)       = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
---find_cmd kw e@((Text (Command c _:ys):xs))
---    | c `elem` kw                  = insertWith (++) c [e :: [LatexDoc]] $
---                                        find_cmd kw (Text ys:xs)
---    | otherwise                    = find_cmd kw (Text ys:xs)
---find_cmd kw (Text (_:ys):xs)       = find_cmd kw (Text ys:xs)
---find_cmd kw (Text []:xs)           = find_cmd kw xs
---find_cmd kw []                     = fromList $ map (\x -> (x,[])) kw
---

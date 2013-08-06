@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 module Document.Test ( test_case ) where
 
---import Control.Exception
 import Control.Monad
 
 import Data.List as L
@@ -46,7 +45,6 @@ result1 = (unlines [
         "  o  m/enter/SCH/hypotheses (21,1)",
         "  o  m/enter/SCH/relation (21,1)",
         "  o  m/enter/SCH/step (23,1)",
---        "  o  m0/inc/TR/NEG/tr0",
         "passed 6 / 6"
     ])
 
@@ -59,15 +57,6 @@ case1 = do
             return s
         x -> return $ show x
 
---exists xs = unsafePerformIO $ 
-
---exception_free x = unsafePerformIO (do
---        catch (do
---                let !y = x
---                return True)
---            ((\e ->
---                return False) :: SomeException -> IO Bool))
-
 prop_parser_exc_free xs = 
     classify (depth xs < 5) "shallow" $
     classify (5 <= depth xs && depth xs < 20) "medium" $
@@ -76,8 +65,6 @@ prop_parser_exc_free xs =
     (case all_machines xs of
         Right _ -> True
         Left  _ -> True)
-
---exception_free (all_machines xs)
 
 properties = do
         r <- quickCheckResult prop_parser_exc_free

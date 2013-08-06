@@ -26,11 +26,8 @@ test = test_cases
         [  Case "'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  Case "train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
---        ,  Case "example0: enabledness PO" (get_en_po example0) (result_example0_tr_en_po)
         ,  Gen.test_case
         ]
-
---with_li (i,j) = either (\x -> Left [(x,i,j)]) Right
 
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
@@ -63,7 +60,6 @@ example0 = do
             props = ps }
         return m
 
---train_m0 :: Machine
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
         let (t,t_decl) = var "t" int
@@ -87,17 +83,6 @@ train_m0 = do
             events = fromList [enter, leave] }
         return m
 
-catch_output :: (Handle -> IO a) -> IO (a, String)
-catch_output act = do
-    (i,o) <- createPipe
-    iH <- fdToHandle i
-    oH <- fdToHandle o
-    x <- act oH
-    r <- hGetContents iH
---    closeFd i
---    closeFd o
-    return (x,r)
-
 result_example0 = unlines [
     "  o  m0/INIT/FIS",
     "  o  m0/INIT/INV/J0",
@@ -108,7 +93,6 @@ result_example0 = unlines [
     "  o  m0/evt/SCH",
     "  o  m0/evt/TR/TR0",
     "passed 8 / 8"]
---    ""]
 
 result_train_m0 = unlines [
     "  o  train_m0/INIT/FIS",
@@ -121,7 +105,6 @@ result_train_m0 = unlines [
     "  o  train_m0/leave/SCH",
     "  o  train_m0/leave/TR/TR0",
     "passed 9 / 9"]
---    ""]
 
 result_example0_tr_en_po = unlines [
     " sort: pfun [a,b], set [a]",
@@ -137,8 +120,6 @@ result_train_m0_tr_po = unlines
     , " st@prime: (Array Int Bool)"
     , " t: Int"
     , " (forall ((t Int)) (= (store st t false) (store st t false)))"
---    , " (select st t)"
---    " (select st t)",
     , "|----"
     , " (exists ((t@param Int))"
           ++   " (and (=> (select st t) (select st t@param))"
@@ -176,13 +157,3 @@ get_tr_po em = case (do
         return $ show po) of
             Right xs -> return xs
             Left xs  -> return $ show_err xs
-
---get_en_po :: Either [Error] Machine -> IO String
---get_en_po em = case (do
---        m <- em
---        let lbl = composite_label [_name m, label "evt/TR/EN/TR0"]
---        pos <- proof_obligation m
---        let po = pos ! lbl
---        return $ show po) of
---            Right xs -> return xs
---            Left xs  -> return $ show_err xs

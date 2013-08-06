@@ -25,23 +25,9 @@ import UnitB.Calculation
 
 import Z3.Z3
 
------------------------
--- TODO: REMOVE THIS --
------------------------
-
---train_type = USER_DEFINED (Sort "\\TRAIN" "TRAIN" []) []
---train_set_type = USER_DEFINED SET [train_type]
-
------------------------
------------------------
-
-
 empty_theory :: Theory
 empty_theory = Theory [] --[set_theory train_type] 
     (symbol_table [set_sort,fun_sort]) empty empty empty empty
-
---instance Show Theory where
---    show t = "{ Theory ... }" 
 
 data Event = Event {
         indices   :: Map String Var,

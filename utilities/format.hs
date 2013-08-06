@@ -4,8 +4,6 @@ module Utilities.Format
     ) 
 where
 
-{-# LANGUAGE OverlappingInstances, FlexibleInstances, IncoherentInstances #-}
-
 import Tests.UnitTest
 
 format :: Formatter a => String -> a
@@ -19,17 +17,9 @@ instance Formatter [Char] where
 
 instance (Show a, Formatter b) => Formatter (a -> b) where
     fargs xs n x = fargs (subst xs n $ show x) (n+1)
---        case cast x of
---            Just x -> fargs (subst xs n x) (n+1)
---            Nothing -> fargs (subst xs n $ show x) (n+1)
 
 instance Formatter a => Formatter ([Char] -> a) where
     fargs xs n x = fargs (subst xs n x) (n+1)
-
---substitute :: Map String String -> String -> String
---substitute m [] = []
---substitute m xs@('{':_)
---        | 
 
 subst :: String -> Int -> String -> String
 subst [] _ _ = []
