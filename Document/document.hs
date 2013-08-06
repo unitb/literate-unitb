@@ -489,7 +489,7 @@ collect_expr = visit_doc
                             [ ( label lbl `member` fact th
                               , format "{0} is already used for another assertion" lbl )
                             ]
-                        axm <- get_expr m xs (i,j)
+                        axm <- get_assert m xs (i,j)
                         return m { 
                             theory = th { fact = insert (label lbl) axm $ fact th } } ) 
             )
@@ -498,7 +498,7 @@ collect_expr = visit_doc
                 --------------------------
         ,   (   "\\initialization"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
-                        initp         <- get_expr m xs (i,j)
+                        initp         <- get_assert m xs (i,j)
                         toEither $ error_list (i,j)
                             [ ( label lbl `member` inits m
                               , format "{0} is already used for another invariant" lbl )
@@ -512,7 +512,7 @@ collect_expr = visit_doc
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
-                        invar         <- get_expr m xs (i,j)
+                        invar         <- get_assert m xs (i,j)
                         return m { 
                             props = (props m) { 
                                 inv = insert (label lbl) invar $ inv $ props m } } )
@@ -527,7 +527,7 @@ collect_expr = visit_doc
                             [   ( label lbl `member` program_prop (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
-                        tr <- get_expr m xs (i,j)
+                        tr <- get_assert m xs (i,j)
                         let prop = Transient (free_vars (context m) tr) tr $ label ev
                         let old_prog_prop = program_prop $ props m
                         let new_props     = insert (label lbl) prop $ old_prog_prop
@@ -541,7 +541,7 @@ collect_expr = visit_doc
                             [ ( label lbl `member` program_prop (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
-                        pre             <- get_expr m xs (i,j)
+                        pre             <- get_assert m xs (i,j)
                         return m { 
                             props = (props m) { 
                                 program_prop = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
@@ -551,8 +551,8 @@ collect_expr = visit_doc
             ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
                     let prop = safety $ props m
                     (p,q) <- toEither (do
-                        p <- fromEither ztrue $ get_expr m pCt (i,j)
-                        q <- fromEither ztrue $ get_expr m qCt (i,j)
+                        p <- fromEither ztrue $ get_assert m pCt (i,j)
+                        q <- fromEither ztrue $ get_assert m qCt (i,j)
                         error_list (i,j) 
                             [   ( label lbl `member` prop
                                 , format "safety property {0} already exists" lbl )
@@ -624,17 +624,17 @@ find_assumptions m = visit_doc
             )
         ] [ (   "\\assume"
             ,   Cmd1Args1Blocks (\(lbl,formula) proofs (i,j) -> do
-                    expr <- get_expr m formula (i,j)
+                    expr <- get_assert m formula (i,j)
                     add_assumption (label lbl) expr (i,j) proofs)
             )
         ,   (   "\\assert"
             ,   Cmd1Args1Blocks (\(lbl,formula) proofs (i,j) -> do
-                    expr <- get_expr m formula (i,j)
+                    expr <- get_assert m formula (i,j)
                     add_assert (label lbl) expr (i,j) proofs)
             )
         ,   (   "\\goal"
             ,   Cmd0Args1Blocks (\(formula,()) proofs (i,j) -> do
-                    expr <- get_expr m formula (i,j)
+                    expr <- get_assert m formula (i,j)
                     set_goal expr (i,j) proofs)
             )
         ]
@@ -687,7 +687,7 @@ find_cases :: Map Label Expr
 find_cases hyps m = visit_doc 
         [   (   "case"
             ,   Env1Args1Blocks (\(lbl,formula) xs cases (i,j) -> do
-                    expr      <- get_expr m formula (i,j)
+                    expr      <- get_assert m formula (i,j)
                     p         <- collect_proof_step 
                             (insert (label lbl) expr hyps) 
                             m xs (i,j)
@@ -703,7 +703,7 @@ find_parts :: Map Label Expr
 find_parts hyps m = visit_doc 
         [   (   "part:a"
             ,   Env0Args1Blocks (\(formula,()) xs cases (i,j) -> do
-                    expr      <- get_expr m formula (i,j)
+                    expr      <- get_assert m formula (i,j)
                     p         <- collect_proof_step hyps m xs (i,j)
                     return ((expr, p):cases))
             )
@@ -798,12 +798,20 @@ get_expr m xs (i,j) = do
         unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
         return x
 
+get_assert :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
+get_assert m xs (i,j) = do
+        x <- parse_expr (context m) (concatMap flatten_li xs)
+        x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
+        unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
+        return x
+
 get_evt_part :: Machine -> Event -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
 get_evt_part m e xs (i,j) = do
         x <- parse_expr (            step_ctx m 
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)
+        x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
         unless (S.null $ generics x) $ Left [(format "type of {0} is ill-defined: {1}" x (type_of x),i,j)]
         return x
 

@@ -44,6 +44,7 @@ test = test_cases [
             , (StringCase "test 15, verification, incorrect new assumption" case15 result15)
             , (StringCase "test 16, verification, proof by parts" case16 result16)
             , (StringCase "test 17, ill-defined types" case17 result17)
+            , (StringCase "test 18, assertions have type bool" case18 result18)
             ]
 
 train_sort :: Sort
@@ -1061,6 +1062,39 @@ result17 = unlines
 
 case17 = do
         r <- parse_machine path17
+        case r of
+            Right _ -> do
+                return "successful verification"
+            Left xs -> return $ unlines $ map f xs
+    where
+        f (x,i,j) = format "error {0}: {1}" (i, j) (x :: String) :: String
+
+path18 = "Tests/train-station-err9.tex"
+result18 = unlines 
+        [  "error (65,15): expression has type incompatible with its type annotation:"
+        ,  "  expression: (dom@@TRAIN@@BLK loc)"
+        ,  "  type: set [TRAIN]"
+        ,  "  type annotation: BOOL "
+        ,  ""
+        ,  "error (71,15): expression has type incompatible with its type annotation:"
+        ,  "  expression: (bunion@@TRAIN in (mk-set@@TRAIN t))"
+        ,  "  type: set [TRAIN]"
+        ,  "  type annotation: BOOL "
+        ,  ""
+        ,  "error (116,15): expression has type incompatible with its type annotation:"
+        ,  "  expression: t"
+        ,  "  type: TRAIN"
+        ,  "  type annotation: BOOL "
+        ,  ""
+        ,  "error (121,15): expression has type incompatible with its type annotation:"
+        ,  "  expression: empty-set@@a"
+        ,  "  type: set [_a]"
+        ,  "  type annotation: BOOL "
+        ,  ""
+        ]
+
+case18 = do
+        r <- parse_machine path18
         case r of
             Right _ -> do
                 return "successful verification"

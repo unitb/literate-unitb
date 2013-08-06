@@ -33,7 +33,8 @@
 |  |  +- test 15, verification, incorrect new assumption
 |  |  +- test 16, verification, proof by parts
 |  |  +- test 17, ill-defined types
-|  |  +- [ Success: 17 / 17 ]
+|  |  +- test 18, assertions have type bool
+|  |  +- [ Success: 18 / 18 ]
 |  +- the parser is exception free
 |  +- [ Success: 5 / 5 ]
 +- Unit-B
@@ -84,4 +85,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5183   33283  294626
+    5190   33360  295226
