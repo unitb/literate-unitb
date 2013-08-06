@@ -56,7 +56,9 @@ example0 = do
         let m = (empty_machine "m0") {
             variables = fromList $ map as_pair [x_decl,y_decl],
             events = singleton (label "evt") evt,
-            inits = [init0, init1],
+            inits = fromList 
+                [ (label "init0", init0)
+                , (label "init1", init1) ],
             props = ps }
         return m
 

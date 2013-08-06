@@ -45,7 +45,7 @@ data Machine =
         _name      :: Label,
         theory     :: Theory,
         variables  :: Map String Var,
-        inits      :: [Expr],
+        inits      :: Map Label Expr,
         events     :: Map Label Event,
         props      :: PropertySet }
     deriving (Show, Typeable)
@@ -55,7 +55,7 @@ class RefRule a where
     ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) empty_theory empty [] empty empty_property_set
+empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set
 
 instance Named Machine where
     name m = case _name m of Lbl s -> s

@@ -32,7 +32,8 @@
 |  |  +- test 14, verification, non-exhaustive case analysis
 |  |  +- test 15, verification, incorrect new assumption
 |  |  +- test 16, verification, proof by parts
-|  |  +- [ Success: 16 / 16 ]
+|  |  +- test 17, ill-defined types
+|  |  +- [ Success: 17 / 17 ]
 |  +- the parser is exception free
 |  +- [ Success: 5 / 5 ]
 +- Unit-B
@@ -83,4 +84,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5127   32949  290623
+    5183   33283  294626

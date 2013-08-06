@@ -68,6 +68,18 @@
 {	\dom . loc = in }
 \end{align*}
 
+\begin{proof}{INIT/INV/inv2}
+	\begin{calculation}
+		\dom. loc
+	\hint{=}{ \ref{in1} }
+		 \dom . {  \emptyfun }
+	\hint{=}{ empty functions }
+		\oftype{ \emptyset }{\set[\TRAIN]}
+	\hint{=}{ \ref{in0} }
+		in
+	\end{calculation}
+\end{proof}
+
 \begin{align*}
 \evassignment{enter}{a1}
 {	in' = in \bunion \{ t \} }
@@ -417,18 +429,6 @@
 \assumption{asm5}
 {	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
 \end{align*}
-
-\begin{proof}{INIT/INV/inv2}
-	\begin{calculation}
-		\dom. loc
-	\hint{=}{ \ref{in1} }
-		 \dom . { \oftype{ \emptyfun }{ \pfun[\TRAIN, \BLK] }  }
-	\hint{=}{ empty functions }
-		\oftype{ \emptyset }{\set[\TRAIN]}
-	\hint{=}{ \ref{in0} }
-		in
-	\end{calculation}
-\end{proof}
 
 \end{machine}
 

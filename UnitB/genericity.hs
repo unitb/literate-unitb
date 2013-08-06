@@ -33,8 +33,8 @@ data Unification = Uni
     , edges  :: [(String,String)]
     }
 
-unsafePerformIO x = ()
---unsafePerformIO = Unsafe.unsafePerformIO
+--unsafePerformIO x = ()
+unsafePerformIO = Unsafe.unsafePerformIO
 
 empty_u = Uni empty []
 
@@ -47,6 +47,12 @@ zcast t me = do
             , "  type annotation: {2} "
             ]) e (type_of e) t :: String }
         u <- maybe (Left err_msg) Right $ unify t $ type_of e
+--        let !() = unsafePerformIO (do
+--                putStrLn "> > > cast"
+--                print t
+--                print $ type_of e
+--                print u
+--                print $ specialize_right u e)
         return $ specialize_right u e
 
 suffix_generics :: String -> Type -> Type
@@ -126,8 +132,8 @@ typ_fun2 f@(Fun gs n ts t) mx my     = do
                     n ts t 
                     x (type_of x) 
                     y (type_of y) :: String
-        let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
-        let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
+--        let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
+--        let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
         maybe (Left err_msg) Right $ check_args [x,y] f
 typ_fun3 f@(Fun gs n ts t) mx my mz  = do
         x <- mx
@@ -167,9 +173,9 @@ unify_aux t0@(GENERIC x) t1 u
                 }
     where
         fv = S.toList $ generics t1
-        !() = unsafePerformIO (do
-                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
-                print (t0,t1))
+--        !() = unsafePerformIO (do
+--                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
+--                print (t0,t1))
 unify_aux t0 t1@(GENERIC x) u = unify_aux t1 t0 u
 unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | x == y && length xs == length ys = foldM f u (zip xs ys)
@@ -194,10 +200,10 @@ unify t0 t1 = do
 
         let m = l_to_r u
         let top_order = reverse $ G.stronglyConnComp compl
-        let !() = unsafePerformIO (putStrLn "> > partial mapping")
-        let !() = unsafePerformIO (mapM_ print $ M.toList $ l_to_r u)
-        let !() = unsafePerformIO (putStrLn "> > symbolic dependencies")
-        let !() = unsafePerformIO (mapM_ print compl)
+--        let !() = unsafePerformIO (putStrLn "> > partial mapping")
+--        let !() = unsafePerformIO (mapM_ print $ M.toList $ l_to_r u)
+--        let !() = unsafePerformIO (putStrLn "> > symbolic dependencies")
+--        let !() = unsafePerformIO (mapM_ print compl)
         
             -- this is a loop that makes sure that a type
             -- instantiation map can be applied in any 
@@ -221,8 +227,8 @@ unify t0 t1 = do
         foldM (\m cc -> 
                 case cc of
                     G.AcyclicSCC v ->
-                        let !() = unsafePerformIO (putStrLn "hello")
-                        in
+--                        let !() = unsafePerformIO (putStrLn "hello")
+--                        in
                         if v `member` m
                             then return $ M.map (instantiate $ singleton v (m ! v)) m
                             else return m
@@ -265,6 +271,15 @@ instance Generic Type where
 
 instance Generic Fun where
     generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
+
+instance Generic Var where
+    generics (Var v t)  = generics t
+
+instance Generic Expr where
+    generics (Word (Var v t)) = generics t
+    generics (Const ts n t)   = S.unions $ map generics (t : ts)
+    generics (FunApp f xp)    = S.unions (generics f : map generics xp)
+    generics (Binder _ vs xp) = S.unions (generics xp : map generics vs)
 
 instantiate :: Map String Type -> Type -> Type
 instantiate m t = f t

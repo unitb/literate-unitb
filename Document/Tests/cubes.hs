@@ -43,10 +43,10 @@ var_n' = Var "n@prime" int
 
 machine6 = (empty_machine "m0") 
         {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
-        ,  inits =
-                [ (c `zeq` z6)
-                , (b `zeq` z1)
-                , (n `zeq` z0) `zand` (a `zeq` z0) 
+        ,  inits = fromList
+                [ (label "in2", c `zeq` z6)
+                , (label "in1", b `zeq` z1)
+                , (label "init0", (n `zeq` z0) `zand` (a `zeq` z0) )
                 ]
         ,  props = prop_set6
         ,  events = singleton (label "evt") event6_evt 

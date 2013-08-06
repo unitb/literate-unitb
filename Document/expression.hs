@@ -4,6 +4,7 @@ module Document.Expression where
 import Latex.Scanner
 import Latex.Parser
 
+import UnitB.Genericity hiding (unsafePerformIO)
 import UnitB.Operator
 import UnitB.SetTheory
 import UnitB.FunctionTheory
@@ -224,7 +225,7 @@ oper = do
                 (dom_rest >> return DomRest),
                 (tfun >> return MkFunction), -- TotalFunction),
                 (fun_app >> return Apply) ]
-            (fail "expecting an binary operator")            
+            (fail "expecting a binary operator")            
             return
 
 equal = do
@@ -252,17 +253,25 @@ term ctx = do
                         if xs == "\\dom"
                         then do
                             read_list "."
-                            choice 
-                                [ term ctx
-                                , do    eat_space
-                                        read_list "("
+                            eat_space
+                            x <- pick 
+                                [ (term ctx, return)
+                                , (read_list "(" >> return ztrue, \_ -> do
+                                        eat_space
                                         e <- expr ctx
                                         eat_space
                                         read_list ")"
                                         eat_space
-                                        return e
+                                        return e)
+                                , (read_list "{" >> return ztrue, \_ -> do
+                                        eat_space
+                                        e <- expr ctx
+                                        eat_space
+                                        read_list "}"
+                                        eat_space
+                                        return e)
                                 ] (fail "invalid argument for 'dom'") 
-                                (\x -> either (\(x) -> fail x) return $ zdom $ Right x)
+                            either (\(x) -> fail x) return (zdom $ Right x)
                         else if xs == "\\qforall"
                         then do
                             eat_space
@@ -284,13 +293,33 @@ term ctx = do
                             eat_space
                             
                             read_list "{"
+                            eat_space
                             t <- expr ctx
+                            eat_space
                             read_list "}"
                             eat_space
                             
                             case dummy_types vs ctx of
                                 Just vs -> return (Binder Forall vs (r `zimplies` t))
                                 Nothing -> fail ("bound variables are not typed")
+                        else if xs == "\\oftype"
+                        then do
+                            eat_space
+                            read_list "{"
+                            eat_space
+                            e <- expr ctx
+                            eat_space
+                            read_list "}"
+                            eat_space
+                            read_list "{"
+                            eat_space
+                            t <- type_t ctx
+                            eat_space
+                            read_list "}"
+                            eat_space
+                            case zcast t (Right e) of
+                                Right new_e -> return new_e
+                                Left msg -> fail msg
                         else case var_decl xs ctx of
                             Just (Var v t) -> return (Word $ Var (zs v) t) 
                             Nothing -> fail ("undeclared variable: " ++ xs))
@@ -370,6 +399,7 @@ expr ctx = do
             b3 <- look_ahead close_curly
             b4 <- look_ahead comma
             b5 <- look_ahead (read_list "}")
+--            let !() = unsafePerformIO (print [b1,b2,b3,b4,b5])
             if b1 || b2 || b3 || b4 || b5
             then do
                 reduce_all xs us e0

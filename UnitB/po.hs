@@ -132,7 +132,7 @@ init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
         po = ProofObligation (assert_ctx m) [] True goal
         goal 
             | M.null $ variables m  = ztrue
-            | otherwise             = (zexists (M.elems $ variables m) $ zall $ inits m)
+            | otherwise             = (zexists (M.elems $ variables m) $ zall $ M.elems $ inits m)
  
 
 prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
@@ -193,7 +193,7 @@ inv_po m pname xp =
             (mapKeys po_name $ mapWithKey po (events m))
             (M.singleton 
                 (composite_label [_name m, inv_init_lbl, pname])
-                (ProofObligation (assert_ctx m) (inits m) False xp))
+                (ProofObligation (assert_ctx m) (M.elems $ inits m) False xp))
     where
         p = props m
         po lbl evt = 
@@ -477,7 +477,7 @@ verify_changes m old_pos = do
         f p0 (b,p1)
             | p0 == p1 = Nothing 
             | p0 /= p1 = Just p0
-        g (xs,i,j) = format "error ({0},{1}): {2}" i j xs :: String
+        g (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
                 
 str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
@@ -489,7 +489,7 @@ str_verify_machine m =
             Left msgs -> return (unlines $ map f msgs,0,0)
     where
         ps = props m
-        f (xs,i,j) = format "error ({0},{1}): {2}" i j xs :: String
+        f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs = do

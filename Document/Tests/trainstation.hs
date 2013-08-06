@@ -43,6 +43,7 @@ test = test_cases [
             , (StringCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (StringCase "test 15, verification, incorrect new assumption" case15 result15)
             , (StringCase "test 16, verification, proof by parts" case16 result16)
+            , (StringCase "test 17, ill-defined types" case17 result17)
             ]
 
 train_sort :: Sort
@@ -98,7 +99,8 @@ machine0 = (empty_machine "train0")
                     ,  ("PLF", plf_var)
                     ]
             }
-    ,  inits = map fromJust [loc `mzeq` Right zempty_fun, in_var `mzeq` Right zempty_set]
+    ,  inits = fromList $ zip (map (label . ("in" ++) . show . (1 -)) [0..])
+            $ map fromJust [loc `mzeq` Right zempty_fun, in_var `mzeq` Right zempty_set]
     ,  variables = symbol_table [in_decl,loc_decl]
     ,  events = fromList [(label "enter", enter_evt), (label "leave", leave_evt)]
     ,  props = props0
@@ -155,6 +157,8 @@ props0 = empty_property_set
             [   ( label "train0/enter/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
             ,   ( label "train0/leave/INV/inv2"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+            ,   ( label "train0/INIT/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
             ,   ( label "train0/enter/CO/co0"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
@@ -395,7 +399,12 @@ case0 = parse_machine path0
 result1 = unlines 
         [  "  o  train0/INIT/FIS"
         ,  "  o  train0/INIT/INV/inv1"
-        ,  "  o  train0/INIT/INV/inv2"
+        ,  "  o  train0/INIT/INV/inv2/goal (422,1)"
+        ,  "  o  train0/INIT/INV/inv2/hypotheses (422,1)"
+        ,  "  o  train0/INIT/INV/inv2/relation (422,1)"
+        ,  "  o  train0/INIT/INV/inv2/step (424,1)"
+        ,  "  o  train0/INIT/INV/inv2/step (426,1)"
+        ,  "  o  train0/INIT/INV/inv2/step (428,1)"
         ,  "  o  train0/SKIP/CO/co0"
         ,  "  o  train0/SKIP/CO/co1"
         ,  "  o  train0/enter/CO/co0/case 1/goal (335,1)"
@@ -469,12 +478,6 @@ result1 = unlines
         ,  "  o  train0/leave/CO/co1/step (390,1)"
         ,  "  o  train0/leave/FIS"
         ,  "  o  train0/leave/INV/inv1"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/goal (202,1)"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/hypotheses (202,1)"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/relation (202,1)"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/step (204,1)"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/step (206,1)"
---        ,  "  o  train0/leave/INV/inv2/assertion/hyp6/step (208,1)"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
         ,  "  o  train0/leave/INV/inv2/relation (98,1)"
@@ -484,7 +487,7 @@ result1 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 84 / 85"
+        ,  "passed 89 / 90"
         ]
 
 case1 = do
@@ -513,7 +516,7 @@ result2 = unlines (
             ++         " (not (elem@@BLK p PLF))))))"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((in (set TRAIN)) (loc (pfun TRAIN BLK)))" ++ 
-            " (and (= loc empty-fun@@TRAIN@@BLK) (= in empty-set@@TRAIN)))))"
+            " (and (= in empty-set@@TRAIN) (= loc empty-fun@@TRAIN@@BLK)))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
          "(then skip smt) " ++
@@ -1050,6 +1053,20 @@ case16 = do
             (s,_,_) <- str_verify_machine m
             return s
         x -> return $ show x
+
+path17 = "Tests/train-station-err8.tex"
+result17 = unlines 
+        [  "error (72,1): type of (dom@@a@1@2@@b@1@2 empty-fun@@a@1@2@@b@1@2) is ill-defined: set [_a@1@2]"
+        ]
+
+case17 = do
+        r <- parse_machine path17
+        case r of
+            Right _ -> do
+                return "successful verification"
+            Left xs -> return $ unlines $ map f xs
+    where
+        f (x,i,j) = format "error {0}: {1}" (i, j) (x :: String) :: String
 
 get_proof_obl name = do
         pos <- list_file_obligations path0
