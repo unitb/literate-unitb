@@ -61,11 +61,11 @@ instance Tree Command where
         where
             strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]
-    rewrite' = id
+    rewriteM' = id
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        let c = (shell (z3_path ++ " -smt2 -in -T:1")) { 
+        let c = (shell (z3_path ++ " -smt2 -in -T:2")) { 
             std_out = CreatePipe,
             std_in = CreatePipe,
             std_err = CreatePipe } 

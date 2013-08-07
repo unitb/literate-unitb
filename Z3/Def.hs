@@ -45,6 +45,13 @@ instance Show Type where
 
 data StrList = List [StrList] | Str String
 
+fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
+fold_mapM f s [] = return (s,[])
+fold_mapM f s0 (x:xs) = do
+        (s1,y)  <- f s0 x
+        (s2,ys) <- fold_mapM f s1 xs
+        return (s2,y:ys)
+
 fold_map :: (a -> b -> (a,c)) -> a -> [b] -> (a,[c])
 fold_map f s [] = (s,[])
 fold_map f s0 (x:xs) = (s2,y:ys)
@@ -53,9 +60,13 @@ fold_map f s0 (x:xs) = (s2,y:ys)
         (s2,ys) = fold_map f s1 xs
 
 class Tree a where
-    as_tree  :: a -> StrList
-    rewrite' :: (b -> a -> (b,a)) -> b -> a -> (b,a)
-
+    as_tree   :: a -> StrList
+    rewriteM' :: Monad m => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
+    rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
+    rewrite' f x t = (rewriteM' g x t) ()
+        where
+            g x t () = f x t
+ 
 visit    :: Tree a => (b -> a -> b) -> b -> a -> b
 visit f s x = fst $ rewrite' g s x
     where
@@ -64,6 +75,22 @@ rewrite  :: Tree a => (a -> a) -> a -> a
 rewrite f x = snd $ rewrite' g () x
     where
         g () x = ((), f x)
+
+visitM :: (Monad m, Tree a) => (b -> a -> m b) -> b -> a -> m b
+visitM f x t = visit g (return x) t
+    where
+        g x t = do
+            y <- x
+            f y t
+
+rewriteM :: (Monad m, Tree a) => (a -> m a) -> a -> m a
+rewriteM f t = do
+        ((),x) <- rewriteM' g () t
+        return x
+    where 
+        g () x = do
+            y <- f x
+            return ((),y)
 
 instance Tree Type where
     as_tree BOOL = Str "Bool"
@@ -74,18 +101,32 @@ instance Tree Type where
     as_tree (SET t) = List [Str "Array", as_tree t, Str "Bool"]
     as_tree (USER_DEFINED s []) = Str $ z3_name s
     as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
-    rewrite' f s x@BOOL = (s,x)
-    rewrite' f s x@INT  = (s,x)
-    rewrite' f s x@REAL = (s,x)
-    rewrite' f s0 x@(ARRAY t0 t1) = (s2,ARRAY t2 t3)
-        where
-            (s1,t2) = f s0 t0
-            (s2,t3) = f s1 t1
-    rewrite' f s x@(GENERIC _) = (s,x)
-    rewrite' f s x@(SET t) = (fst $ f s t, SET $ snd $ f s t)
-    rewrite' f s0 x@(USER_DEFINED s xs) = (s1, USER_DEFINED s ys)
-        where
-            (s1,ys) = fold_map f s0 xs
+--    rewrite' f s x@BOOL = (s,x)
+--    rewrite' f s x@INT  = (s,x)
+--    rewrite' f s x@REAL = (s,x)
+--    rewrite' f s0 x@(ARRAY t0 t1) = (s2,ARRAY t2 t3)
+--        where
+--            (s1,t2) = f s0 t0
+--            (s2,t3) = f s1 t1
+--    rewrite' f s x@(GENERIC _) = (s,x)
+--    rewrite' f s x@(SET t) = (fst $ f s t, SET $ snd $ f s t)
+--    rewrite' f s0 x@(USER_DEFINED s xs) = (s1, USER_DEFINED s ys)
+--        where
+--            (s1,ys) = fold_map f s0 xs
+    rewriteM' f s x@BOOL = return (s,x)
+    rewriteM' f s x@INT  = return (s,x)
+    rewriteM' f s x@REAL = return (s,x)
+    rewriteM' f s0 x@(ARRAY t0 t1) = do
+            (s1,t2) <- f s0 t0
+            (s2,t3) <- f s1 t1
+            return (s2,ARRAY t2 t3)
+    rewriteM' f s x@(GENERIC _) = return (s,x)
+    rewriteM' f s x@(SET t) = do
+            (s,t) <- f s t
+            return (s,SET t)
+    rewriteM' f s0 x@(USER_DEFINED s xs) = do
+            (s1,ys) <- fold_mapM f s0 xs
+            return (s1, USER_DEFINED s ys)
 
 z3_decoration :: Type -> String
 z3_decoration t = f $ as_tree t :: String
@@ -145,15 +186,15 @@ instance Tree Expr where
             [ merge_range q
             , as_tree r
             , as_tree xp ] ]
-    rewrite' f s x@(Word (Var xs _)) = (s,x)
-    rewrite' f s x@(Const _ _ _)      = (s,x)
-    rewrite' f s0 (FunApp g@(Fun _ _ _ _) xs)  = (s1,FunApp g ys)
-        where
-            (s1,ys) = fold_map f s0 xs
-    rewrite' f s0 (Binder q xs r0 x)  = (s2,Binder q xs r1 y)
-        where
-            (s1,r1) = f s0 r0
-            (s2,y)  = f s1 x
+    rewriteM' f s x@(Word (Var xs _))           = return (s,x)
+    rewriteM' f s x@(Const _ _ _)               = return (s,x)
+    rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
+            (s1,ys) <- fold_mapM f s0 xs
+            return (s1,FunApp g ys)
+    rewriteM' f s0 (Binder q xs r0 x)  = do
+            (s1,r1) <- f s0 r0
+            (s2,y)  <- f s1 x
+            return (s2,Binder q xs r1 y)
 
 instance Show Expr where
     show e = show $ as_tree e
@@ -184,11 +225,11 @@ instance Tree Decl where
                 , List $ map Str xs
                 , as_tree def 
                 ]
-    rewrite' = id
+    rewriteM' = id
     
 instance Tree Var where
     as_tree (Var vn vt) = List [Str vn, as_tree vt]
-    rewrite' = id
+    rewriteM' = id
 
 instance Tree Sort where
     as_tree (DefSort _ x xs def) = 
@@ -198,7 +239,7 @@ instance Tree Sort where
                 , as_tree def
                 ]
     as_tree (Sort _ x n) = List [Str x, Str $ show n]
-    rewrite' = id
+    rewriteM' = id
 
 instance Show Var where
     show (Var n t) = n ++ ": " ++ show (as_tree t)
