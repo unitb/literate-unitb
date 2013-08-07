@@ -794,7 +794,7 @@ collect_proofs = visit_doc
                                 
 get_expr :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
 get_expr m ys li = do
-        x <- parse_expr (context m) (concatMap flatten_li xs)
+        x <- fmap normalize_generics $ parse_expr (context m) (concatMap flatten_li xs)
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
                 $ ambiguities x
@@ -808,7 +808,7 @@ get_expr m ys li = do
 get_assert :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
 get_assert m ys li = do
         x <- parse_expr (context m) (concatMap flatten_li xs)
-        x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
+        x <- either (\x -> Left [(x,i,j)]) (Right . normalize_generics) $ zcast BOOL $ Right x
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
                 $ ambiguities x
@@ -825,7 +825,7 @@ get_evt_part m e ys li = do
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)
-        x <- either (\x -> Left [(x,i,j)]) Right $ zcast BOOL $ Right x
+        x <- either (\x -> Left [(x,i,j)]) (Right . normalize_generics) $ zcast BOOL $ Right x
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
                 $ ambiguities x

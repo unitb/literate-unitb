@@ -1057,9 +1057,9 @@ case16 = do
 
 path17 = "Tests/train-station-err8.tex"
 result17 = unlines 
-        [  "error (75,3): type of empty-fun@@TRAIN@@b@1@2@2@1@2 is ill-defined: pfun [TRAIN,_b@1@2@2@1@2]"
-        ,  "error (75,3): type of empty-fun@@TRAIN@@b@1@2@2@2 is ill-defined: pfun [TRAIN,_b@1@2@2@2]"
-        ,  "error (77,2): type of empty-fun@@TRAIN@@b@1@2@2@2@2 is ill-defined: pfun [TRAIN,_b@1@2@2@2@2]"
+        [  "error (75,3): type of empty-fun@@TRAIN@@a is ill-defined: pfun [TRAIN,_a]"
+        ,  "error (75,3): type of empty-fun@@TRAIN@@b is ill-defined: pfun [TRAIN,_b]"
+        ,  "error (77,2): type of empty-fun@@TRAIN@@a is ill-defined: pfun [TRAIN,_a]"
         ]
 
 case17 = do

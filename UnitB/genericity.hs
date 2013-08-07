@@ -8,11 +8,12 @@ import Z3.Def -- hiding ( type_of )
 import Control.Monad
 
 import Data.Foldable as F
-    hiding ( foldl, forM_, mapM_ )
-import Data.List as L
+    hiding ( foldl, forM_, mapM_, toList )
+import Data.List as L hiding ( (\\), union )
 import Data.Map as M 
-    hiding ( foldl, map, union, unions )
+    hiding ( foldl, map, union, unions, (\\) )
 import qualified Data.Map as M
+import Data.Set as S ( (\\) )
 import qualified Data.Set as S 
     hiding ( map, fromList, insert, foldl )
 
@@ -294,6 +295,18 @@ ambiguities e@(FunApp f xp)
     where
         children = L.concatMap ambiguities xp
 ambiguities e@(Binder _ vs xp) = ambiguities xp
+
+normalize_generics :: Expr -> Expr
+normalize_generics expr = specialize renaming expr
+    where
+        letters = map (:[]) [ 'a' .. 'z' ]
+        gen = (letters ++ [ x ++ y | x <- gen, y <- letters ])
+        f (m,names) e = (M.union renaming m, drop n names)
+            where
+                free_gen = generics e \\ keysSet m
+                renaming = fromList $ zip (S.toList free_gen) names
+                n        = S.size free_gen
+        renaming = fst $ visit f (empty, map GENERIC gen) expr
 
 instantiate :: Map String Type -> Type -> Type
 instantiate m t = f t
