@@ -46,7 +46,7 @@
 
 \begin{align*}
 \transient{leave}{tr0}
-{	t \in in	}
+{	t \in in}
 \end{align*}
 
 \begin{dummy}
@@ -65,12 +65,12 @@
 \begin{align*}
 \invariant{inv2}
 %	loc \in in \tfun \BLK
-{	\dom . loc = in	}
+{	\dom . loc }
 \end{align*}
 
 \begin{align*}
 \evassignment{enter}{a1}
-{	in' = in \bunion \{ t \}	}
+{	in \bunion \{ t \} }
 \end{align*}
 
 \begin{proof}{enter/INV/inv2}
@@ -83,15 +83,15 @@
 	\hint{=}{ function calculus }
 		\dom.loc \bunion \dom.(t \tfun ent)
 	\hint{=}{ $\dom$ over $|$ }
-		\dom.(loc   |   t \tfun ent)
+		\dom.(loc  \1 |   t \tfun ent)
 	\hint{=}{ \ref{a2} }
-		\dom. ( loc' )
+		\dom. loc' 
 	\end{calculation}
 \end{proof}
 
 \begin{align*}
 \evassignment{enter}{a2}
-{	loc' = loc | (t \tfun ent)	}
+{	loc' = loc  \1| (t \tfun ent)	}
 \end{align*}
 
 \begin{proof}{leave/INV/inv2}
@@ -115,12 +115,12 @@
 
 \begin{align*}
 \cschedule{leave}{c0}
-{	t \in in	}
+{	t }
 \end{align*}
 
 \begin{align*}
 \initialization{in0}
-{	in = \emptyset 	}
+{	\emptyset	}
 \end{align*}
 \begin{align*}
 \initialization{in1}
@@ -157,32 +157,37 @@
 
 \begin{align*}
 \assumption{axm0}
-{	\BLK = \{ ent, ext \} \bunion PLF	} \\
-\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent } \\
-\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
-\end{align*}
-
-%
-\begin{align*}
+{	\BLK &= \{ ent, ext \} \bunion PLF	} \\
+\safety{s0}{ \neg t \in in & }{ t \in in \land loc.t = ent } \\
+\safety{s1}{ t \in in \land loc.t = ent & }{ t \in in \land loc.t \in PLF } \\
 \constraint{co0}
-{	\neg t \in in \land t \in in' \implies  loc'.t = ent } % \lor \neg t \in in'
+{	\neg t \in in \land t \in in' & \2\implies  loc'.t = ent } % \lor \neg t \in in'
 \end{align*}
 %
 \begin{proof}{leave/CO/co0}
 	\begin{free:var}{t}{t_0}
 	
-	\noindent Assuming
 	\begin{align}
-	\assume{hyp0}{ t_0 \in in \land \neg  t_0 \in in' }
+	\assert{hyp6}{ \neg t = t_0 } \\
+	\assume{hyp7}{ \neg t_0 \in in } \\
+	\goal{ \neg t_0 \in in' }
 	\end{align}
-	we now have to prove $\goal{ loc'.t_0 = ent }$.
-	
+%	\begin{assume}{hyp0}{ \neg t_0 \in in \land  t_0 \in in' }{ loc'.t_0 = ent }
 	\begin{calculation}
-		loc'.t_0 = ent
-	\hint{\follows}{ }
+		t_0 \in in'
+	\hint{=}{ \ref{a0} }
+		t_0 \in in \setminus \{ t \}
+	\hint{=}{ $\in$ over $\setminus$ }
+		t_0 \in in \1\land \neg t_0 \in \{ t \} 
+	\hint{=}{ \eqref{hyp7} }
+		\false \1\land \neg t_0 \in \{ t \} 
+	\hint{=}{ zero of $\land$ }
 		\false
-	\hint{=}{ \eqref{hyp0} }
-		\true
+%%		loc'.t_0 = ent
+%%	\hint{\follows}{ }
+%%		\false
+%%	\hint{=}{ \eqref{hyp0} \ref{a3} }
+%%		\true
 %		\neg t_0 \in in \land t_0 \in in'
 %	\hint{=}{ \ref{grd0} }
 %		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in' 
@@ -193,14 +198,110 @@
 %	\hint{\implies}{ $\false \implies p$ }
 %		loc'.t_0 = ent
 	\end{calculation}
+	\begin{subproof}{hyp6} 
+	\begin{calculation}
+		t = t_0
+	\hint{\implies}{ Leibniz }
+		t \in in \2\equiv t_0 \in in
+	\hint{\implies}{ reflexivity }
+		t \in in \2\implies t_0 \in in
+	\hint{=}{ \eqref{grd0}; \eqref{hyp7} }
+		\false
+	\end{calculation}
+	\end{subproof}
+%	\end{assume}
 	\end{free:var}
 \end{proof}
 %
 \begin{align*}
 \constraint{co1}
-{	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
-\implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)	}
+	{ & t \in in \1\land loc.t = ent  \1\land \neg loc.t \in PLF  \\
+\3\implies & t \in in' \2\land (loc'.t \in PLF \2\lor loc'.t = ent) }
 \end{align*}
+
+\begin{proof}{enter/CO/co1}
+	\begin{free:var}{t}{t_0}
+	
+	\noindent \textbf{assume:}
+	\begin{align}
+	\assume{hyp2}{		t_0 \in in	} \\
+	\assume{hyp3}{		loc.t_0 = ent  }
+	\end{align}
+	
+	\noindent \textbf{prove}
+	\begin{align}
+%	\goal{ \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' 
+%			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\goal{	t_0 \in in' 
+			\1\land loc'.t_0 = ent}
+	\end{align}
+%	\begin{assume}{hyp2}{t_0 \in in}
+%		{  loc.t_0 = ent \land \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent) }
+%	\begin{assume}{hyp3}{ loc.t_0 = ent  }
+%		{ \neg loc.t_0 \in PLF 
+%			\implies t_0 \in in' 
+%			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\begin{by:parts}
+	
+		\begin{part:a}{ t_0 \in in' }
+			% TODO: new assumption PO should have distinct names (maybe line numbers?)
+		\begin{calculation}
+			t_0 \in in'
+		\hint{=}{ \ref{a1} }
+			t_0 \in in \bunion \{ t \}
+		\hint{=}{ \eqref{hyp2} }
+			\true
+		\end{calculation}
+
+		\end{part:a}
+		\begin{part:a}{ loc'.t_0 = ent }
+		
+		\begin{by:cases}
+		
+		\begin{case}{hyp4}{ t_0 = t}
+		\begin{calculation}
+			loc'.t_0 = ent
+		\hint{=}{ \ref{a2} }
+			(loc | t \tfun ent).t_0 = ent
+		\hint{=}{ \eqref{hyp4} }
+			\true
+		\end{calculation}
+
+		\end{case}
+
+		\begin{case}{hyp5}{ \neg t_0 = t}
+		\begin{align}
+		\assert{hyp6}{ t_0 \in \dom.loc \setminus \dom.(t \tfun ent) }
+		\end{align}
+		\begin{calculation}
+			loc'.t_0 = ent
+		\hint{=}{ \ref{a2} }
+			(loc | t \tfun ent).t_0 = ent
+		\hint{=}{ \eqref{hyp5} \eqref{hyp6} }
+			loc.t_0 = ent
+		\hint{=}{ \eqref{hyp3} }
+			\true
+		\end{calculation}
+		\begin{subproof}{hyp6}
+		\easy
+%		\begin{calculation}
+%			\true
+%		\hint{=}{ }
+%			\true
+%		\end{calculation}
+		\end{subproof}
+		\end{case}
+		
+		\end{by:cases}
+		
+		\end{part:a}		
+	\end{by:parts}
+%	\end{assume}
+%	\end{assume}
+	\end{free:var}
+\end{proof}
 
 \discharge{s0}{co0}
 \discharge{s1}{co1}
@@ -210,15 +311,15 @@
 %
 %\end{guard}
 
-\begin{align*}
+\begin{align}
 \evguard{leave}{grd0}
-{	loc.t = ext \land t \in in	}
-\end{align*}
-
-\begin{align*}
+{	loc.t = ext \land t \in in	} \\
+%\end{align}
+%
+%\begin{align}
 \evguard{enter}{grd1}
 {	\neg t \in in	}
-\end{align*}
+\end{align}
 
 \begin{proof}{enter/CO/co0}
 	% assume 
@@ -297,21 +398,37 @@
 {	\qforall{t}{t \in in}{loc.t \in \BLK}	}
 \end{align*}
 
-\begin{align*}\assumption{asm2}
+\begin{align*}
+\assumption{asm2}
 {	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF	}
 \end{align*}
 
-\begin{align*}\assumption{asm3}
+\begin{align*}
+\assumption{asm3}
 {	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }	}
 \end{align*}
 
-\begin{align*}\assumption{asm4}
+\begin{align*}
+\assumption{asm4}
 {	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }	}
 \end{align*}
 
-\begin{align*}\assumption{asm5}
+\begin{align*}
+\assumption{asm5}
 {	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
 \end{align*}
+
+\begin{proof}{INIT/INV/inv2}
+	\begin{calculation}
+		\dom. loc
+	\hint{=}{ \ref{in1} }
+		 \dom . { \oftype{ \emptyfun }{ \pfun[\TRAIN, \BLK] }  }
+	\hint{=}{ empty functions }
+		\oftype{ \emptyset }{\set[\TRAIN]}
+	\hint{=}{ \ref{in0} }
+		in
+	\end{calculation}
+\end{proof}
 
 \end{machine}
 

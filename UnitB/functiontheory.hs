@@ -97,8 +97,8 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
         axm5 = fromJust $ mzforall [x_decl,y_decl] ( (zmk_fun x y `zapply` x) `mzeq` y )
             -- ovl and apply
         axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
-                           (x `zelem` zdom f2) 
-               `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
+                        (x `zelem` zdom f2) 
+            `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
         axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
                         (x `zelem` (zdom f1 `zsetdiff` zdom f2))
             `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f1 x))

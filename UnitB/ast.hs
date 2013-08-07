@@ -25,23 +25,9 @@ import UnitB.Calculation
 
 import Z3.Z3
 
------------------------
--- TODO: REMOVE THIS --
------------------------
-
---train_type = USER_DEFINED (Sort "\\TRAIN" "TRAIN" []) []
---train_set_type = USER_DEFINED SET [train_type]
-
------------------------
------------------------
-
-
 empty_theory :: Theory
 empty_theory = Theory [] --[set_theory train_type] 
     (symbol_table [set_sort,fun_sort]) empty empty empty empty
-
---instance Show Theory where
---    show t = "{ Theory ... }" 
 
 data Event = Event {
         indices   :: Map String Var,
@@ -59,7 +45,7 @@ data Machine =
         _name      :: Label,
         theory     :: Theory,
         variables  :: Map String Var,
-        inits      :: [Expr],
+        inits      :: Map Label Expr,
         events     :: Map Label Event,
         props      :: PropertySet }
     deriving (Show, Typeable)
@@ -69,7 +55,7 @@ class RefRule a where
     ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) empty_theory empty [] empty empty_property_set
+empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set
 
 instance Named Machine where
     name m = case _name m of Lbl s -> s

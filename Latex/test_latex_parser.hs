@@ -3,12 +3,12 @@ module Latex.Test_Latex_Parser where
 import Data.List
 import qualified Data.Map as M 
 
-import Latex.Proof_Parser
+--import Latex.Proof_Parser
 import Latex.Parser
 
 import Tests.UnitTest
 
-import Text.ParserCombinators.ReadP
+--import Text.ParserCombinators.ReadP
 
 import Utilities.Format
 
@@ -82,8 +82,3 @@ tests path = do
         return (case x of
             Right xs -> xs
             Left msgs -> error $ unlines $ map (\(xs, i, j) -> format "error ({0},{1}): {2}" i j xs) msgs)
-
---        either f g lt
---    where
---        f lt        = return $ find_env ["calculation"] lt
---        g (s,(i,j)) = putStrLn "Error: " ++ s ++ " (" ++ show i ++ ", " ++ show j ++ ")"

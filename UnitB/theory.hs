@@ -15,7 +15,6 @@ label s = Lbl s
 
 data Theory = Theory {
         extends :: [Theory],
---        t_param :: Set String,
         types   :: Map String Sort,
         funs    :: Map String Fun,
         consts  :: Map String Var,
@@ -40,15 +39,6 @@ instance Named Var where
 instance Named Sort where
     name (Sort x _ _) = x
     name (DefSort x _ _ _) = x
---        BoolSort | IntSort | RealSort 
---        | Sort String String Int --[String]
-
---
---data TheoryInstance = TI {
---        generator :: Theory,
---        functions :: Map String [Fun],
---        constants :: Map String [Var],
---        fact_inst :: Map Label [Expr],
---        dummies   :: Map String [Var] }
---
---instantiate :: Map String Var -> Theory 
+    name BoolSort   = "Bool"
+    name IntSort    = "Int"
+    name RealSort   = "Real"

@@ -50,7 +50,7 @@
 \end{align*}
 
 \begin{dummy}
-	t,t0,t1,t2,t3 : \TRAIN
+	t,t_0,t_1,t_2,t_3 : \TRAIN
 \end{dummy}
 
 \begin{dummy}
@@ -157,11 +157,11 @@
 
 \begin{align*}
 \assumption{axm0}
-{	\BLK = \{ ent, ext \} \bunion PLF	}
+{	\BLK = \{ ent, ext \} \bunion PLF	} \\
+\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent } \\
+\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
 \end{align*}
 
-\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent }
-\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
 %
 \begin{align*}
 \constraint{co0}
@@ -169,30 +169,96 @@
 \end{align*}
 %
 \begin{proof}{leave/CO/co0}
-%	\begin{free:var}{t}{t0}
+	\begin{free:var}{t}{t_0}
+
+%	\begin{assume}{hyp0}{ \neg t_0 \in in \land  t_0 \in in' }{ loc'.t_0 = ent }
 	\begin{calculation}
-		t \in in' 
+%		loc'.t_0 = ent
+%	\hint{\follows}{ }
+%		\false
+%	\hint{=}{ \eqref{hyp0} \ref{a3} }
+%		\true
+		\neg t_0 \in in \land t_0 \in in'
+	\hint{=}{ \ref{grd0} }
+		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in' 
 	\hint{=}{ \ref{a0} }
-		t0 \in in \setminus \{ t \} 
-	\hint{=}{ $\in$ over $\setminus$ }
-		t0 \in in \land \neg t0 \in \{ t \} 
-	\hint{=}{ $\in$ over singleton }
-		t0 \in in \land \neg t0 = t 
-	\hint{=}{ reflexivity }
-		t0 \in in \land \false
-	\hint{=}{ zero of $\land$ } 
+		\neg t_0 = t \land \neg t_0 \in in \land t_0 \in in \bunion \{ t \} 
+	\hint{=}{ contradiction }
 		\false
 	\hint{\implies}{ $\false \implies p$ }
-		\neg t \in in \implies  loc'.t0 = ent
+		loc'.t_0 = ent
 	\end{calculation}
-%	\end{free:var}
+%	\end{assume}
+	\end{free:var}
 \end{proof}
 %
 \begin{align*}
 \constraint{co1}
-{	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
+{	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 	
 \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)	}
 \end{align*}
+
+\begin{proof}{enter/CO/co1}
+	\begin{free:var}{t}{t_0}
+	
+	\noindent \textbf{assume:}
+	\begin{align}
+	\assume{hyp2}{t_0 \in in} \\ 
+	\assume{hyp3}{ loc.t_0 = ent  }
+	\end{align}
+	
+	\noindent \textbf{prove:}
+	\begin{align*}
+	\goal{ t_0 \in in' 
+			\land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)}
+	\end{align*}
+	\begin{by:parts}
+	
+		\begin{part:a}{ t_0 \in in' }
+			% TODO: new assumption PO should have distinct names (maybe line numbers?)
+		\begin{calculation}
+			t_0 \in in'
+		\hint{=}{ \ref{a1} }
+			t_0 \in in \bunion \{ t \}
+		\hint{=}{ \eqref{hyp2} }
+			\true
+		\end{calculation}
+
+		\end{part:a}
+		\begin{part:a}{ loc'.t_0 = ent }
+		
+		\begin{by:cases}
+		
+		\begin{case}{hyp4}{ t_0 = t}
+		\begin{calculation}
+			loc'.t_0 = ent
+		\hint{=}{ \ref{a2} }
+			(loc | t \tfun ent).t_0 = ent
+		\hint{=}{ \eqref{hyp4} }
+			\true
+		\end{calculation}
+
+		\end{case}
+
+		\begin{case}{hyp5}{ \neg t_0 = t}
+		\begin{calculation}
+			loc'.t_0 = ent
+		\hint{=}{ \ref{a2} }
+			(loc | t \tfun ent).t_0 = ent
+		\hint{=}{ \eqref{hyp5} }
+			loc.t_0 = ent
+		\hint{=}{ \eqref{hyp3} }
+			\true
+		\end{calculation}
+		
+		\end{case}
+		
+		\end{by:cases}
+		
+		\end{part:a}		
+	\end{by:parts}
+	\end{free:var}
+\end{proof}
 
 \discharge{s0}{co0}
 \discharge{s1}{co1}
@@ -217,62 +283,71 @@
 	% forall
 	% case
 	% split
+	% TODO: add a case distinction that isn't complete
+	\begin{free:var}{t}{t_0}
+
+	\begin{by:cases}
+
+	\begin{case}{h0}{t_0 = t}
 	\begin{calculation}
-%		t0 \in in' \implies  loc'.t0 = ent
-%	\hint{=}{ \ref{a2} \ref{a1} }
-%		t0 \in in \bunion \{ t \} \implies  (loc |t \tfun ent).t0 = ent
-%	\hint{\follows}{ }
-%		\neg t0 \in in
-		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
-	\hint{=}{  }
-		\qforall{t0}{\neg t0 \in in \land (t0 = t \lor \neg  t0 = t)}{ t0 \in in' \implies  loc'.t0 = ent }
-	\hint{=}{ }
-		\qforall{t0}{\neg t0 \in in \land t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
-	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
-	\hint{=}{ }
-		(\neg t \in in \land t \in in' \implies  loc'.t = ent )
-	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
-	\hint{=}{ \ref{a1} and \ref{a2} }
-		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
-%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
-	\hint{=}{  }
-		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
-	\hint{=}{  }
-		\neg t \in in \implies  (t \tfun ent).t = ent 
-	\hint{=}{  }
-		\neg t \in in \implies  ent = ent 
-	\hint{=}{  }
+		\neg t_0 \in in \land t_0 \in in' \implies  loc'.t_0 = ent 
+	\hint{=}{ \eqref{h0} and \ref{a1}  }
+		\neg t \in in \implies  loc'.t = ent 
+	\hint{=}{ \ref{a2} }
 		\true
 	\end{calculation}
+
+	\end{case}
+
+	\begin{case}{h1}{ \neg t_0 = t }
+%	\easy
+	\begin{calculation}
+		\neg t_0 \in in \land t_0 \in in' 
+	\hint{=}{ \ref{a1}  }
+		\neg t_0 \in in \land  t_0 \in in \bunion \{ t \}
+	\hint{=}{ \eqref{h1} }
+		\neg t_0 \in in \land  t_0 \in in
+	\hint{=}{ contradiction }
+		\false
+	\hint{\implies}{ pred. calc. }
+		loc'.t_0 = ent 
+	\end{calculation}
+
+	\end{case}
+
+	\end{by:cases}
+	\end{free:var}
 \end{proof}
 
 \begin{proof}{leave/CO/co1}
+	\begin{free:var}{t}{t_0}
 	\begin{calculation}
-		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
+		t_0 \in in' \land (loc'.t_0 \in PLF \lor loc'.t_0 = ent)
 	\hint{=}{  \ref{a0}  and \ref{a3} } % step 1
-		t0 \in in \setminus \{ t \} 
-		\land ( (\{ t \} \domsub loc).t0 \in PLF \lor (\{ t \} \domsub loc).t0 = ent)
+		t_0 \in in \setminus \{ t \} 
+		\land ( (\{ t \} \domsub loc).t_0 \in PLF \lor (\{ t \} \domsub loc).t_0 = ent)
 	\hint{=}{ }	% step 2
-		( t0 \in in \setminus \{ t \} 
-		\land  ( \{ t \} \domsub loc).t0 \in PLF )
-			   \lor ( t0 \in (in \setminus \{ t \} )
-		\land (\{ t \} \domsub loc).t0 = ent)
+		( t_0 \in in \setminus \{ t \} 
+		\land  ( \{ t \} \domsub loc).t_0 \in PLF )
+			   \lor ( t_0 \in (in \setminus \{ t \} )
+		\land (\{ t \} \domsub loc).t_0 = ent)
 	\hint{=}{ \ref{inv2} }	% step 3
-			t0 \in in \setminus \{ t \} 
-		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+			t_0 \in in \setminus \{ t \} 
+		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
 	\hint{=}{ } % step 4
-		t0 \in in \land \neg t0  = t 
-		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+		t_0 \in in \land \neg t_0  = t 
+		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
 	\hint{=}{  } % step 5
-		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
+		t_0 \in in \land \neg t_0  = t \land \neg loc.t_0 = ext
 	\hint{=}{  \ref{grd0} } % step 6
-	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
+	 	t_0 \in in \land \neg loc.t_0 = ext \land loc.t = ext
 	\hint{\follows}{  \ref{grd0} } % step 7
 %		\true
-	 	t0 \in in \land loc.t0 = ent 
+	 	t_0 \in in \land loc.t_0 = ent 
 	\hint{=}{   } % step 8
-	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
+	 	t_0 \in in \land loc.t_0 = ent  \land \neg loc.t_0 \in PLF 
 	\end{calculation}
+	\end{free:var}
 \end{proof}
 
 \begin{align*}
@@ -280,19 +355,23 @@
 {	\qforall{t}{t \in in}{loc.t \in \BLK}	}
 \end{align*}
 
-\begin{align*}\assumption{asm2}
+\begin{align*}
+\assumption{asm2}
 {	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF	}
 \end{align*}
 
-\begin{align*}\assumption{asm3}
+\begin{align*}
+\assumption{asm3}
 {	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }	}
 \end{align*}
 
-\begin{align*}\assumption{asm4}
+\begin{align*}
+\assumption{asm4}
 {	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }	}
 \end{align*}
 
-\begin{align*}\assumption{asm5}
+\begin{align*}
+\assumption{asm5}
 {	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
 \end{align*}
 

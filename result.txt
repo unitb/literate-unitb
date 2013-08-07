@@ -1,4 +1,5 @@
 +- Unit-B Document
+|  +- basic syntax and scopes
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -30,9 +31,12 @@
 |  |  +- test 13, verification, name clash between dummy and index
 |  |  +- test 14, verification, non-exhaustive case analysis
 |  |  +- test 15, verification, incorrect new assumption
-|  |  +- [ Success: 15 / 15 ]
+|  |  +- test 16, verification, proof by parts
+|  |  +- test 17, ill-defined types
+|  |  +- test 18, assertions have type bool
+|  |  +- [ Success: 18 / 18 ]
 |  +- the parser is exception free
-|  +- [ Success: 4 / 4 ]
+|  +- [ Success: 5 / 5 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -81,4 +85,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5411   34720  306472
+    5238   33644  297969

@@ -55,15 +55,6 @@ check_prop p = do
             Success _ _ _ -> return True
             _             -> return False
 
---data MatchingTypes = MT Type Type Type
---
---instance Arbitrary MatchingTypes where
---    arbitrary = do
---            t <- arbitrary
---            let t0 = f names 
---        where
---            names = [ y ++ [x] | y <- []:names, x <- ['a' .. 'z'] ]
-
 instance Arbitrary Type where
     arbitrary = oneof (
                 [ return BOOL
@@ -151,26 +142,9 @@ test = test_cases (
         gtype2   = USER_DEFINED fun_sort [SET gA, gA]
         gA = GENERIC "a"
 
---(case2,result2) = (return $ type_of p, Just (BOOL, fromList [("a",INT)]))
---    where
---        gA = GENERIC "a"
---        x1 = Word $ Var "x1" (SET INT)
---        x2 = Word $ Var "x2" (SET INT)
---        x3 = Word $ Var "x3" (SET INT)
---        y  = Word $ Var "y" INT
---        z  = Word $ Var "z" REAL
---        union  = Fun "union" [SET gA,SET gA] $ SET gA
---        member = Fun "member" [gA, SET gA] BOOL
---        p = FunApp member [y, FunApp union [x1,x2]]
-
---case3   :: IO (Maybe (Type, Map String Type))
---result3 :: Maybe (Type, Map String Type)
---(case3,result3) = (return $ type_of p, Just (BOOL, fromList [("a",INT),("b",SET INT)]))
 ( case3,result3,case5,result5,case6,result6 ) = ( 
                     return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
                     , FunApp (Fun [gB] "union" [SET gB,SET gB] $ SET gB) [x3,x4] 
---                    , return $ type_of pp
---                    , Just (BOOL, fromList [("a",INT),("b",SET INT)])
                     , return p
                     , q
                     , return pp
