@@ -147,7 +147,7 @@ result8 = unlines [
         " sort: pfun [a,b], set [a]",
         " x: Int",
         "|----",
-        " (exists ((x Int)) true)"]
+        " (exists ((x Int)) (and true true))"]
 
 case8 = do
         m <- parse_machine path8

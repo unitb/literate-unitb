@@ -123,8 +123,10 @@ type_t ctx@(Context ts _ _ _ _) = do
 get_type :: Context -> String -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
     where
-        m = fromList ( 
-                   [("\\Int", IntSort), ("\\Real", RealSort), ("\\Bool", BoolSort)])
+        m = fromList 
+                   [ ("\\Int", IntSort)
+                   , ("\\Real", RealSort)
+                   , ("\\Bool", BoolSort)]
             `M.union` ts
         z3_type s@(Sort _ x _) = USER_DEFINED s
 
@@ -156,11 +158,13 @@ fun_app = do
             Just _ -> return ()
             Nothing -> fail "expecting function application (.)"
 
-leq = do
-        x <- match $ match_string "\\le"
-        case x of
-            Just _ -> return ()
-            Nothing -> fail "expecting less of equal (\\le)"
+leq = read_list "\\le"
+
+lt = read_list "<"
+
+geq = read_list "\\ge"
+
+gt = read_list ">"
 
 times = do
         x <- match $ match_string "\\cdot"
@@ -216,6 +220,9 @@ oper = do
                 (disjunction >> return Or),
                 (equivalence >> return Equiv),
                 (leq >> return Leq),
+                (lt >> return Less),
+                (geq >> return Geq),
+                (gt >> return Greater),
                 (equal >> return Equal),
                 (membership >> return Membership),
                 (bunion >> return Union),
@@ -272,7 +279,9 @@ term ctx = do
                                         return e)
                                 ] (fail "invalid argument for 'dom'") 
                             either (\(x) -> fail x) return (zdom $ Right x)
-                        else if xs == "\\qforall"
+                        else if xs `elem` 
+                            [ "\\qforall"
+                            , "\\qfun"]
                         then do
                             eat_space
 
@@ -298,9 +307,12 @@ term ctx = do
                             eat_space
                             read_list "}"
                             eat_space
-                            
+                            let { quant = fromList 
+                                [ ("\\qforall",Forall)
+                                , ("\\qexists",Exists)
+                                , ("\\qfun",Lambda) ] ! xs }
                             case dummy_types vs ctx of
-                                Just vs -> return (Binder Forall vs (r `zimplies` t))
+                                Just vs -> return (Binder quant vs r t)
                                 Nothing -> fail ("bound variables are not typed")
                         else if xs == "\\oftype"
                         then do

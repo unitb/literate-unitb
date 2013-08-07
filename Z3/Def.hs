@@ -10,16 +10,19 @@ data Expr =
         Word Var 
         | Const [Type] String Type
         | FunApp Fun [Expr]
-        | Binder Quantifier [Var] Expr
+        | Binder Quantifier [Var] Expr Expr
     deriving (Eq, Typeable)
 
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t
 type_of (FunApp (Fun _ _ ts t) _) = t
-type_of (Binder _ _ e)            = type_of e
+type_of (Binder _ _ _ e)          = type_of e
 
-data Quantifier = Forall | Exists 
+data Quantifier = Forall | Exists | Lambda
     deriving Eq
+
+merge_range Forall = Str "=>"
+merge_range Exists = Str "and"
 
 data Type = 
         BOOL | INT | REAL 
@@ -135,18 +138,22 @@ instance Tree Expr where
         Str (name ++ concatMap z3_decoration xs)
     as_tree (FunApp (Fun xs name _ _) ts)  = 
         List (Str (name ++ concatMap z3_decoration xs) : (map as_tree ts))
-    as_tree (Binder q xs xp)  = List [
-        Str $ show q, 
-        List $ map as_tree xs,
-        as_tree xp ]
+    as_tree (Binder q xs r xp)  = List 
+        [ Str $ show q
+        , List $ map as_tree xs
+        , List 
+            [ merge_range q
+            , as_tree r
+            , as_tree xp ] ]
     rewrite' f s x@(Word (Var xs _)) = (s,x)
     rewrite' f s x@(Const _ _ _)      = (s,x)
     rewrite' f s0 (FunApp g@(Fun _ _ _ _) xs)  = (s1,FunApp g ys)
         where
             (s1,ys) = fold_map f s0 xs
-    rewrite' f s0 (Binder q xs x)  = (s1,Binder q xs y)
+    rewrite' f s0 (Binder q xs r0 x)  = (s2,Binder q xs r1 y)
         where
-            (s1,y) = f s0 x
+            (s1,r1) = f s0 r0
+            (s2,y)  = f s1 x
 
 instance Show Expr where
     show e = show $ as_tree e

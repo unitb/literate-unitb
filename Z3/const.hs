@@ -95,8 +95,14 @@ mzsome [x]    = x
 mzsome xs     = do
         xs <- forM xs id
         return $ zsome xs
-mzforall xs   = maybe1 $ zforall xs
-mzexists xs   = maybe1 $ zexists xs
+mzforall xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zforall xs x y
+mzexists xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zexists xs x y
 
 zless        = fun2 $ Fun [] "<" [int,int] BOOL
 zgreater     = fun2 $ Fun [] ">" [int,int] BOOL
@@ -112,9 +118,9 @@ zint n       = Const [] (show n) int
 int = USER_DEFINED IntSort []
 
 mzless        = typ_fun2 $ Fun [] "<" [int,int] BOOL
-mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
+--mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] BOOL
-mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
+--mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp         = typ_fun1 $ Fun [] "-" [int] int

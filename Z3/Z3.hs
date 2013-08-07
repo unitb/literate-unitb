@@ -102,18 +102,13 @@ instance Show ProofObligation where
             f (x, Sort y z 0) = z
             f (x, Sort y z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
-fold_expr f x (Word _)          = x
-fold_expr f x (Const _ _ _)     = x
-fold_expr f x (FunApp _ xs)     = foldl f x xs
-fold_expr f x (Binder _ _ xp)   = f x xp
-
 free_vars :: Context -> Expr -> Map String Var
 free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
     where
         f xs (Word v@(Var n t))
             | n `member` dum = (n,v):xs
             | otherwise      = xs
-        f xs v = fold_expr f xs v
+        f xs v = visit f xs v
 
 data Context = Context 
         (Map String Sort) -- sorts

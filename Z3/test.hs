@@ -49,8 +49,8 @@ sample_ast = [
 
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 9)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat False,
         GetModel ]
     where
@@ -59,24 +59,24 @@ sample_quant = [
 
 sample_proof = ProofObligation
         ( mk_context [FunDecl [] "f" [int] int] )
-        [fromJust $ mzforall [x'] (f x `mzless` mzint 10)]
+        [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         False
-        (fromJust $ mzforall [x'] (f x `mzless` mzint 12))
+        (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
         f           = maybe1 $ fun1 ff
 
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 11)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat False]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
 
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 11)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat False]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
@@ -98,7 +98,7 @@ sample_calc = (Calc
         li )
     where
         hyp         = fromJust $ mzforall 
-            [x',y'] 
+            [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" BOOL
         (y,y')      = var "y" BOOL

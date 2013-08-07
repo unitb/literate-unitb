@@ -71,7 +71,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
                 ,  Fun [t0,t1] (dec "tfun") [set_type t0,set_type t1] $ fun_set
                 ]
         facts = fromList 
-                [ (label $ dec' "0", axm0)
+                [ (label $ dec' "0", axm0) :: (Label, Expr)
                 , (label $ dec' "1", axm1)
 --                , (label $ dec "2", axm2)
 --                , (label $ dec "3", axm3)
@@ -89,42 +89,42 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
             -- empty-fun and ovl
-        axm2 = fromJust $ mzforall [f1_decl] ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
-        axm3 = fromJust $ mzforall [f1_decl] ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
+        axm2 = fromJust $ mzforall [f1_decl] mztrue ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
+        axm3 = fromJust $ mzforall [f1_decl] mztrue ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
             -- dom and mk-fun
-        axm4 = fromJust $ mzforall [x_decl,y_decl] ( zdom (x `zmk_fun` y) `mzeq` zmk_set x )
+        axm4 = fromJust $ mzforall [x_decl,y_decl] mztrue ( zdom (x `zmk_fun` y) `mzeq` zmk_set x )
             -- mk_fun and apply
-        axm5 = fromJust $ mzforall [x_decl,y_decl] ( (zmk_fun x y `zapply` x) `mzeq` y )
+        axm5 = fromJust $ mzforall [x_decl,y_decl] mztrue ( (zmk_fun x y `zapply` x) `mzeq` y )
             -- ovl and apply
-        axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
+        axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] mztrue ( 
                         (x `zelem` zdom f2) 
             `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
-        axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
+        axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] mztrue ( 
                         (x `zelem` (zdom f1 `zsetdiff` zdom f2))
             `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f1 x))
             -- apply and mk-fun
-        axm11 = fromJust $ mzforall [x_decl,y_decl] ( 
+        axm11 = fromJust $ mzforall [x_decl,y_decl] mztrue ( 
                 (zmk_fun x y `zapply` x) `mzeq` y )
             -- dom-rest and apply
-        axm12 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
+        axm12 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] mztrue (
                         (x `zelem` (s1 `zintersect` zdom f1))
             `mzimplies` (zapply (s1 `zdomrest` f1) x `mzeq` zapply f1 x) )
             -- dom-subst and apply
-        axm13 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
+        axm13 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] mztrue (
                         (x `zelem` (zdom f1 `zsetdiff` s1))
             `mzimplies` (zapply (s1 `zdomsubt` f1) x `mzeq` zapply f1 x) )
             -- empty-fun as a total function
 --        axm8 = fromJust $ mzforall [s2_decl] 
 --            ( as_fun (Right zempty_fun) `zelem` ztfun (as_dom $ Right zempty_set) s2 )
             -- dom and overload
-        axm0 = fromJust $ mzforall [f1_decl,f2_decl] ((zdom f1 `zunion` zdom f2) `mzeq` (zdom (f1 `zovl` f2)))
+        axm0 = fromJust $ mzforall [f1_decl,f2_decl] mztrue ((zdom f1 `zunion` zdom f2) `mzeq` (zdom (f1 `zovl` f2)))
             -- dom and tfun
             -- dom-rest and tfun
             -- dom-subst and tfun
             -- dom-rest and dom
-        axm9  = fromJust $ mzforall [f1_decl,s1_decl] ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
+        axm9  = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
             -- dom-subst and dom
-        axm10 = fromJust $ mzforall [f1_decl,s1_decl] ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
+        axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
         as_fun e = zcast (fun_type t0 t1) e
 --        as_fun e = e
