@@ -95,8 +95,14 @@ mzsome [x]    = x
 mzsome xs     = do
         xs <- forM xs id
         return $ zsome xs
-mzforall xs   = maybe1 $ zforall xs
-mzexists xs   = maybe1 $ zexists xs
+mzforall xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zforall xs x y
+mzexists xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zexists xs x y
 
 zless        = fun2 $ Fun [] "<" [int,int] BOOL
 zgreater     = fun2 $ Fun [] ">" [int,int] BOOL
@@ -107,14 +113,23 @@ zminus       = fun2 $ Fun [] "-" [int,int] int
 zopp         = fun1 $ Fun [] "-" [int] int
 ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow         = fun2 $ Fun [] "^" [int,int] int
+zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 zint n       = Const [] (show n) int
+ztuple []    = Const [] "null" (USER_DEFINED (Sort "Null" "Null" 0) [])
+ztuple(x:xs) = FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
+    where
+        tx  = type_of x
+        txs = type_of tail
+        pair_sort = Sort "Pair" "Pair" 2
+        pair_type = USER_DEFINED pair_sort [tx,txs]
+        tail = ztuple xs
 
 int = USER_DEFINED IntSort []
 
 mzless        = typ_fun2 $ Fun [] "<" [int,int] BOOL
-mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
+--mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] BOOL
-mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
+--mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp         = typ_fun1 $ Fun [] "-" [int] int
@@ -124,6 +139,8 @@ mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 mzint n       = Right $ zint n
 
 gena = GENERIC "a"
+gA = GENERIC "a"
+gB = GENERIC "b"
 
 var n t      = (Right $ Word $ v, v)
     where

@@ -65,7 +65,7 @@ example0 = do
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
         let (t,t_decl) = var "t" int
-        inv0 <- with_li (0,0) (mzforall [t_decl] $
+        inv0 <- with_li (0,0) (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
         c0   <- with_li (0,0) (st `zselect` t)
         a0   <- with_li (0,0) (st' `mzeq` zstore st t mzfalse)
@@ -121,14 +121,15 @@ result_train_m0_tr_po = unlines
     , " st: (Array Int Bool)"
     , " st@prime: (Array Int Bool)"
     , " t: Int"
-    , " (forall ((t Int)) (= (store st t false) (store st t false)))"
+    , " (forall ((t Int)) (=> true (= (store st t false) (store st t false))))"
     , "|----"
     , " (exists ((t@param Int))"
+          ++   " (and true"
           ++   " (and (=> (select st t) (select st t@param))"
           ++        " (=> (and (select st t)"
           ++                 " (select st t@param)"
           ++                 " (= st@prime (store st t@param false)))"
-          ++            " (not (select st@prime t)))))"
+          ++            " (not (select st@prime t))))))"
     ]
 
 test_case = ("Unit-B", test, True)

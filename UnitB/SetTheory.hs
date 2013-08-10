@@ -40,21 +40,21 @@ set_theory t = Theory [] types funs empty facts empty
                 , (label $ dec' "4", axm4)
                 ]
             -- elem and mk-set
-        Right axm0 = mzforall [x_decl,y_decl] ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
+        Right axm0 = mzforall [x_decl,y_decl] mztrue ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
             -- elem over set-diff
-        Right axm1 = mzforall [x_decl,s1_decl,s2_decl] (
+        Right axm1 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
                           (x `zelem` (s1 `zsetdiff` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzand` mznot (x `zelem` s2) ))
             -- elem over intersect
-        Right axm2 = mzforall [x_decl,s1_decl,s2_decl] (
+        Right axm2 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
                           (x `zelem` (s1 `zintersect` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzand` (x `zelem` s2) ))
             -- elem over union
-        Right axm3 = mzforall [x_decl,s1_decl,s2_decl] (
+        Right axm3 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
                           (x `zelem` (s1 `zunion` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
             -- elem over empty-set
-        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] (
+        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
                           mznot (x `zelem` Right zempty_set)  )
 --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
         (x,x_decl) = var "x" t
@@ -65,8 +65,6 @@ set_theory t = Theory [] types funs empty facts empty
         dec' x = z3_decoration t ++ x
 
 zempty_set   = Const [gA] "empty-set" $ set_type gA
-
-gA = GENERIC "a"
 
 zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] BOOL)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)

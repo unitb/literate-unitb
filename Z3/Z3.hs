@@ -13,7 +13,8 @@ module Z3.Z3
     , merge_all_ctx, merge_ctx
     , merge_all, merge --, entails
     , entailment
-    , var_decl, free_vars
+    , var_decl 
+    , free_vars
     , z3_code
     , Tree ( .. )
     , Symbol ( .. )
@@ -26,7 +27,6 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
 
@@ -35,10 +35,8 @@ import Data.List hiding (union)
 import Data.Map as M hiding (map,filter,foldl)
 import Data.Typeable
  
-import System.Cmd
 import System.Exit
 import System.IO
-import System.IO.Unsafe
 import System.Process
 
 import Utilities.Format
@@ -61,11 +59,11 @@ instance Tree Command where
         where
             strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]
-    rewrite' = id
+    rewriteM' = id
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        let c = (shell (z3_path ++ " -smt2 -in -T:1")) { 
+        let c = (shell (z3_path ++ " -smt2 -in -T:2")) { 
             std_out = CreatePipe,
             std_in = CreatePipe,
             std_err = CreatePipe } 
@@ -102,18 +100,13 @@ instance Show ProofObligation where
             f (x, Sort y z 0) = z
             f (x, Sort y z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
-fold_expr f x (Word _)          = x
-fold_expr f x (Const _ _ _)     = x
-fold_expr f x (FunApp _ xs)     = foldl f x xs
-fold_expr f x (Binder _ _ xp)   = f x xp
-
 free_vars :: Context -> Expr -> Map String Var
 free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
     where
         f xs (Word v@(Var n t))
             | n `member` dum = (n,v):xs
             | otherwise      = xs
-        f xs v = fold_expr f xs v
+        f xs v = visit f xs v
 
 data Context = Context 
         (Map String Sort) -- sorts
@@ -213,6 +206,7 @@ z3_code (ProofObligation d assume exist assert) =
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat exist] )
+    where
 
 discharge :: ProofObligation -> IO Validity
 discharge po = do

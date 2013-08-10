@@ -132,7 +132,7 @@ init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
         po = ProofObligation (assert_ctx m) [] True goal
         goal 
             | M.null $ variables m  = ztrue
-            | otherwise             = (zexists (M.elems $ variables m) $ zall $ M.elems $ inits m)
+            | otherwise             = (zexists (M.elems $ variables m) ztrue $ zall $ M.elems $ inits m)
  
 
 prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
@@ -167,7 +167,7 @@ prop_po m pname (Transient fv xp evt_lbl) =
                 then xp 
                 else zexists 
                     (map (add_suffix "@param") $ M.elems ind) 
-                    xp
+                    ztrue xp
 prop_po m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (M.insert 
@@ -185,7 +185,7 @@ prop_po m pname (Co fv xp) =
             where
                 grd = M.elems $ guard evt
                 act = M.elems $ action evt
-                forall_fv xp = if L.null fv then xp else zforall fv xp
+                forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
         po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
 
 inv_po m pname xp = 
@@ -214,7 +214,7 @@ fis_po m lbl evt = M.singleton
             (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants p ++ grd)
             True
-            (zexists pvar act))
+            (zexists pvar ztrue act))
     where
         p    = props m
         grd  = M.elems $ guard evt
@@ -240,7 +240,7 @@ sch_po m lbl evt = M.singleton
                   Nothing  -> [zfalse]
         param = params evt
         ind   = indices evt `merge` params evt
-        exist_param xp = if M.null param then xp else zexists (M.elems param) xp
+        exist_param xp = if M.null param then xp else zexists (M.elems param) ztrue xp
 
 thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
@@ -258,7 +258,10 @@ make_unique suf vs w@(Word (Var vn vt))
         | otherwise         = w
 make_unique _ _ c@(Const _ _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
-make_unique suf vs (Binder q d xp)   = Binder q d (make_unique suf (foldr M.delete vs (map name d)) xp)
+make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
+    where
+        local = (foldr M.delete vs (map name d))
+        f = make_unique suf local
 
 add_suffix suf (Var n t) = Var (n ++ suf) t
 
@@ -378,10 +381,11 @@ proof_po    th  (FreeGoal v u p (i,j))
         new_goal <- free_vars goal
         proof_po th p lbl $ ProofObligation ctx asm b new_goal
     where
-        free_vars (Binder Forall ds expr) 
+        free_vars (Binder Forall ds r expr) 
                 | are_fresh [u] po = if S.fromList (map name ds) `isSubsetOf` S.fromList [v]
                                         then return $ rename v u expr
                                         else return (Binder Forall (L.filter g ds) 
+                                            (rename v u r)
                                             $ rename v u expr)
                 | otherwise          = Left $ [(format "variable can't be freed: {0}" u :: String,i,j)]
             where
@@ -418,14 +422,10 @@ rename :: String -> String -> Expr -> Expr
 rename x y e@(Word (Var vn t))
         | vn == x   = Word (Var y t)
         | otherwise = e
-rename x y e@(Binder q vs xp)
+rename x y e@(Binder q vs r xp)
         | x `elem` map name vs  = e
-        | otherwise             = Binder q vs $ rename x y xp
+        | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
-
-used_var (Word v) = S.singleton v
-used_var (Binder _ vs expr) = used_var expr `S.difference` S.fromList vs
-used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 

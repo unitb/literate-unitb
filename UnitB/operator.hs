@@ -15,7 +15,8 @@ data BinOperator =
         SetDiff
         | Apply
         | Plus  | Mult | Power
-        | Equal | Leq 
+        | Equal | Leq | Geq
+        | Less | Greater
         | Membership | Union 
         | Overload | DomSubt | DomRest
         | MkFunction
@@ -40,6 +41,14 @@ mk_expr Apply x y   = Right x `zapply` Right y
 
 mk_expr Equal x y      = Right x `mzeq` Right y
 mk_expr Leq x y        = Right x `mzle` Right y
+mk_expr Geq y x        = Right x `mzle` Right y
+    -- here the operands are inverted. we use only mzle in the
+    -- backend on purpose to not have many operators than
+    -- doing the same thing
+
+mk_expr Less x y       = Right x `mzless` Right y
+mk_expr Greater y x    = Right x `mzless` Right y
+
 
 mk_expr Equiv x y   = Right x `mzeq` Right y
 mk_expr And x y     = Right x `mzand` Right y 
@@ -66,6 +75,13 @@ chain x Equal         = x
 chain Implies Implies = Implies
 chain Follows Follows = Follows
 chain Leq Leq         = Leq
+chain Less Leq        = Less
+chain Leq Less        = Less
+chain Less Less       = Less
+chain Geq Geq         = Geq
+chain Greater Geq     = Greater
+chain Geq Greater     = Greater
+chain Greater Greater = Greater
 chain _ _             = error "operators cannot be chained"
 
 
@@ -84,7 +100,7 @@ associativity =
         , ([SetDiff],Ambiguous)
         , ([TotalFunction],Ambiguous)
         , ([DomRest,DomSubt],LeftAssoc)
-        , ([Equal,Leq,Membership],Ambiguous)
+        , ([Equal,Leq,Less,Membership,Geq,Greater],Ambiguous)
         , ([And],LeftAssoc)
         , ([Or],LeftAssoc)
         , ([Implies,Follows],Ambiguous) 

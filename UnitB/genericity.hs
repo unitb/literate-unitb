@@ -85,7 +85,7 @@ rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_arg
         u           = ft t
         gs2         = map ft gs
         new_args    = map fe args
-rewrite_types xs e@(Binder _ _ _)           = rewrite (rewrite_types xs) e
+rewrite_types xs e@(Binder _ _ _ _)            = rewrite (rewrite_types xs) e
 
 check_args :: [Expr] -> Fun -> Maybe (Expr) 
 check_args xp f@(Fun gs name ts t) = do
@@ -280,7 +280,7 @@ instance Generic Expr where
     generics (Word (Var v t)) = generics t
     generics (Const ts n t)   = S.unions $ map generics (t : ts)
     generics (FunApp f xp)    = S.unions (generics f : map generics xp)
-    generics (Binder _ vs xp) = S.unions (generics xp : map generics vs)
+    generics (Binder _ vs r xp) = S.unions (generics r : generics xp : map generics vs)
 
 ambiguities e@(Word (Var _ t))
         | S.null $ generics t = []
@@ -294,7 +294,7 @@ ambiguities e@(FunApp f xp)
         | otherwise                 = []
     where
         children = L.concatMap ambiguities xp
-ambiguities e@(Binder _ vs xp) = ambiguities xp
+ambiguities e@(Binder _ vs r xp) = ambiguities r ++ ambiguities xp
 
 normalize_generics :: Expr -> Expr
 normalize_generics expr = specialize renaming expr
@@ -328,8 +328,8 @@ specialize m e = f e
         f (Word x)          = Word $ h x
         f x@(FunApp (Fun gs n ts t) args) 
                 = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) (map (specialize m) args)
-        f x@(Binder q vs e) 
-                = rewrite f $ Binder q (map h vs) e
+        f x@(Binder q vs r e) 
+                = rewrite f $ Binder q (map h vs) r e
         g t     = instantiate m t
         h (Var x t) = Var x $ g t
 
