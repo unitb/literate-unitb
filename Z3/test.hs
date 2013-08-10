@@ -4,6 +4,7 @@ module Z3.Test where
 
 import Tests.UnitTest
 
+import Z3.Lambda
 import Z3.Z3 as Z
 
 import UnitB.Calculation
@@ -11,9 +12,14 @@ import UnitB.Operator
 import UnitB.PO
 import UnitB.AST
 
-cases = test_cases [case0, case1, case2, case3, case4]
+test = test_cases 
+        [ case0, case1
+        , case2, case3
+        , case4
+        , Case "canonical lambdas" case5 result5
+        , Case "canonical lambdas with quantifier" case6 result6]
 
-test_case = ("Z3 test", cases, True)
+test_case = ("Z3 test", test, True)
 
 case0 = Case "sample_quant" (verify sample_quant) $ Right Sat
 case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
@@ -109,9 +115,54 @@ indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
    
-main = do
-        s1 <- verify sample_quant
-        s2 <- verify sample_quant2
-        s3 <- discharge sample_proof
-        s4 <- check empty_theory sample_calc
-        return (s1,s2,s3,s4)
+--main = do
+--        s1 <- verify sample_quant
+--        s2 <- verify sample_quant2
+--        s3 <- discharge sample_proof
+--        s4 <- check empty_theory sample_calc
+--        return (s1,s2,s3,s4)
+
+result5 = ( CL 
+                [fv0_decl,fv1_decl] [x_decl] 
+                (x `zle` fv0) ( (x `zplus` fv1) `zle` fv1 ) 
+                BOOL
+            , [y,z `zplus` y])
+    where
+        (Right x,x_decl) = var "@@bound_var@@_0" INT
+        (Right fv0,fv0_decl) = var "@@free_var@@_0" INT
+        (Right fv1,fv1_decl) = var "@@free_var@@_1" INT
+        (Right y,y_decl) = var "y" INT
+        (Right z,z_decl) = var "z" INT
+
+case5 = do
+        return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
+    where
+        (Right x,x_decl) = var "x" INT
+        (Right y,y_decl) = var "y" INT
+        (Right z,z_decl) = var "z" INT
+
+result6 = ( CL 
+                [fv0_decl,fv1_decl] 
+                [x_decl] 
+                (x `zle` fv0) 
+                ( (zforall [lv0_decl] 
+                    (x `zle` fv1)
+                    ((x `zplus` (lv0 `zplus` fv0)) `zle` (lv0 `zplus` fv0) )) ) 
+                BOOL
+            , [y,zplus (zint 3) y])
+    where
+        (Right x,x_decl) = var "@@bound_var@@_0" INT
+        (Right fv0,fv0_decl) = var "@@free_var@@_0" INT
+        (Right fv1,fv1_decl) = var "@@free_var@@_1" INT
+        (Right lv0,lv0_decl) = var "@@local_var@@_0" INT
+        (Right y,y_decl) = var "y" INT
+        (Right z,z_decl) = var "z" INT
+
+case6 = do
+        return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
+            (x `zle` zplus (zint 3) y)
+            ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
+    where
+        (Right x,x_decl) = var "x" INT
+        (Right y,y_decl) = var "y" INT
+        (Right z,z_decl) = var "z" INT

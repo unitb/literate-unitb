@@ -74,7 +74,9 @@
 |  +- sample_quant3
 |  +- sample proof
 |  +- check sample calc
-|  +- [ Success: 5 / 5 ]
+|  +- canonical lambdas
+|  +- canonical lambdas with quantifier
+|  +- [ Success: 7 / 7 ]
 +- Formatting utilities
 |  +- test 0
 |  +- test 1
@@ -85,4 +87,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5342   34275  301748
+    5596   35640  313631

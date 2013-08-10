@@ -2,6 +2,7 @@
 module Z3.Def where
 
 import Data.List
+import qualified Data.Set as S
 import Data.Typeable
 
 import Utilities.Format
@@ -11,7 +12,7 @@ data Expr =
         | Const [Type] String Type
         | FunApp Fun [Expr]
         | Binder Quantifier [Var] Expr Expr
-    deriving (Eq, Typeable)
+    deriving (Eq, Ord, Typeable)
 
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t
@@ -19,7 +20,7 @@ type_of (FunApp (Fun _ _ ts t) _) = t
 type_of (Binder _ _ _ e)          = type_of e
 
 data Quantifier = Forall | Exists | Lambda
-    deriving Eq
+    deriving (Eq, Ord)
 
 merge_range Forall = Str "=>"
 merge_range Exists = Str "and"
@@ -148,15 +149,15 @@ z3_name (Sort _ x _) = x
 z3_name (DefSort _ x _ _) = x
 
 data Decl = 
-    FunDecl [Type] String [Type] Type 
-    | ConstDecl String Type
-    | FunDef [Type] String [Var] Type Expr
-    | SortDecl Sort
+        FunDecl [Type] String [Type] Type 
+        | ConstDecl String Type
+        | FunDef [Type] String [Var] Type Expr
+        | SortDecl Sort
 
 data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
 
 data Fun = Fun [Type] String [Type] Type
-    deriving Eq
+    deriving (Eq, Ord)
 
 data Var = Var String Type
     deriving (Eq,Ord)
@@ -254,3 +255,7 @@ instance Show Def where
         ++ intercalate " x " (map (show . as_tree) ps)
         ++ " -> " ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
+
+used_var (Word v) = S.singleton v
+used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
+used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr

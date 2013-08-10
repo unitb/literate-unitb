@@ -66,8 +66,6 @@ set_theory t = Theory [] types funs empty facts empty
 
 zempty_set   = Const [gA] "empty-set" $ set_type gA
 
-gA = GENERIC "a"
-
 zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] BOOL)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 zintersect   = typ_fun2 (Fun [gA] "intersect" [set_type gA,set_type gA] $ set_type gA)

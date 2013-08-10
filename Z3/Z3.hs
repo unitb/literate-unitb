@@ -13,7 +13,8 @@ module Z3.Z3
     , merge_all_ctx, merge_ctx
     , merge_all, merge --, entails
     , entailment
-    , var_decl, free_vars
+    , var_decl 
+    , free_vars
     , z3_code
     , Tree ( .. )
     , Symbol ( .. )
@@ -26,7 +27,6 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
 
@@ -35,10 +35,8 @@ import Data.List hiding (union)
 import Data.Map as M hiding (map,filter,foldl)
 import Data.Typeable
  
-import System.Cmd
 import System.Exit
 import System.IO
-import System.IO.Unsafe
 import System.Process
 
 import Utilities.Format
@@ -208,6 +206,7 @@ z3_code (ProofObligation d assume exist assert) =
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat exist] )
+    where
 
 discharge :: ProofObligation -> IO Validity
 discharge po = do

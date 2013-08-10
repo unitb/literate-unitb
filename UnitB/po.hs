@@ -427,10 +427,6 @@ rename x y e@(Binder q vs r xp)
         | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
 
-used_var (Word v) = S.singleton v
-used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
-used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
-
 check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 
             (obligations th empty_ctx c) 

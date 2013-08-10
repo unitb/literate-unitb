@@ -43,9 +43,7 @@ zstore        = typ_fun3 $ Fun [] "store" [
         gB, gA] $ 
     ARRAY gB gA
 
-zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
-
-gB = GENERIC "b"
+--zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 
 fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (GENERIC "b"))
 
