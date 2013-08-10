@@ -1,5 +1,16 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
+    -- Modules
+import Document.Document
+
+import UnitB.AST
+import UnitB.PO
+
+import Z3.Z3
+
+    -- Libraries
+import Control.Applicative ( (<|>) )
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
@@ -7,22 +18,23 @@ import Control.Monad.State
 import Data.Map as M 
     ( Map,lookup
     , empty,union
-    , fromList,insert 
+    , fromList
+    , insert, alter
     )
-import Document.Document
 
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
 import System.IO
---import System.Posix
 
 import Text.Printf
 
-import UnitB.AST
-import UnitB.PO
-
-import Z3.Z3
+liftMS :: (Monad m, Ord k) => v -> StateT v m a -> k -> StateT (Map k v) m a
+liftMS y act x = do
+        m <- get
+        (r,y) <- lift $ runStateT act (maybe y id $ M.lookup x m)
+        put (insert x y m)
+        return r
 
 monitor :: (Monad m, Eq s) 
         => m s -> m () 
@@ -48,37 +60,42 @@ data Params = Params
         , pos :: Map Label (Map Label (Bool,ProofObligation))
         }
 
+check_one :: (MonadIO m, MonadState Params m) 
+          => Machine -> m (Int,String)
 check_one m = do
         param <- get
         let p = M.lookup (_name m) $ pos param
         let po = maybe empty id p
-        (po,s,n)    <- lift $ verify_changes m po
+        (po,s,n)    <- liftIO $ verify_changes m po
         put (param { pos = insert (_name m) po $ pos param })
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
+clear :: (MonadIO m, MonadState Params m) 
+      => m ()
 clear = do
     param <- get
     if continuous param 
-        then lift $ putStr $ take 40 $ cycle "\n"
+        then liftIO $ putStr $ take 40 $ cycle "\n"
         else return ()
 
+check_file :: (MonadIO m, MonadState Params m) 
+           => m ()
 check_file = do
         param <- get
         let m = pos param
         let { p ln = verbose param || take 4 ln /= "  o " }
---        let f (n,xs) = unlines (filter p (lines xs) ++ ["Redid " ++ show n ++ " proofs"])
-        r <- lift $ parse_machine $ path param
+        r <- liftIO $ parse_machine $ path param
         case r of
             Right ms -> do
                 xs <- forM ms check_one
                 clear
-                forM_ xs (\(n,xs) -> lift $ do
+                forM_ xs (\(n,xs) -> liftIO $ do
                     forM_ (filter p $ lines xs) 
                         putStrLn
                     putStrLn ("Redid " ++ show n ++ " proofs"))
             Left xs -> do
                 clear
-                lift $ forM_ xs (\(x,i,j) -> 
+                forM_ xs (\(x,i,j) -> liftIO $ 
                     printf "error (%d,%d): %s\n" i j x)
 
 data Option = Verbose | Continuous
@@ -100,17 +117,17 @@ main = do
                 b <- doesFileExist xs
                 if b then do
                     let { param = Params 
-                            { path = xs
+                            { path = xs, pos = empty
                             , verbose = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
-                            , pos = empty
                             } }
                     runStateT (do
                         check_file
-                        if Continuous `elem` opts then do
+                        if continuous param 
+                        then do
                             monitor
-                                (lift $ getModificationTime xs)
-                                (lift $ threadDelay 1000000)
+                                (liftIO $ getModificationTime xs)
+                                (liftIO $ threadDelay 1000000)
                                 check_file
                         else return ()) param
                     return ()
