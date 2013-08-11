@@ -55,7 +55,10 @@ pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
         t0 = type_of x
         t1 = type_of y
 
-fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (GENERIC "b"))
+maybe_sort   = Sort "\\maybe" "Maybe" 1
+maybe_type t = USER_DEFINED maybe_sort [t]
+
+fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (maybe_type $ GENERIC "b"))
 
 fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
 

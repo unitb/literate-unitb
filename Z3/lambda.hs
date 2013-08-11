@@ -32,7 +32,7 @@ data CanonicalLambda = CL
 
 array_type (CL fv bv r t rt) = ARRAY 
         (type_of $ ztuple $ map Word fv)
-        (fun_type (type_of $ ztuple $ map Word bv) rt)
+        (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
 can_bound_vars = map ( ("@@bound_var@@_" ++) . show ) [0..]
 
@@ -169,9 +169,9 @@ lambda_def = do
                 let { sel = zselect 
                         (Right $ Word v) 
                         (Right $ ztuple $ map Word vs) }
-                let app = zapply sel (Right $ ztuple $ map Word us)
-                let eq  = mzeq app $ Right t
-                let Right res = mzforall (vs ++ us) (Right r) eq
+                let app = zselect sel (Right $ ztuple $ map Word us)
+                let eq  = mzeq app $ zite (Right r) (zjust $ Right t) znothing
+                let res = fromJust $ mzforall (vs ++ us) mztrue eq
                 return $ res
 
 delambdify :: ProofObligation -> ProofObligation

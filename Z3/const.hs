@@ -78,6 +78,11 @@ zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
 zforall      = Binder Forall
 zexists      = Binder Exists
 
+zite       = typ_fun3 (Fun [] "ite" [BOOL,gA,gA] gA)
+
+zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
+znothing   = Right (Const [] "Nothing" $ maybe_type gA)
+
 mznot         = maybe1 znot
 mzimplies     = maybe2 zimplies
 mzand x y     = mzall [x,y]

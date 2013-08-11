@@ -28,7 +28,7 @@ zdomsubt = typ_fun2 (Fun [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_
 
 zdomrest = typ_fun2 (Fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
-zapply  = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] gB)
+zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
 zovl    = typ_fun2 (Fun [gA,gB] "ovl" [ft,ft] ft)
     where

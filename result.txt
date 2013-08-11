@@ -17,26 +17,20 @@
 |  |  +- [ Success: 5 / 5 ]
 |  +- train station example
 |  |  +- test 0, syntax
-|  |  +- test 1, verification
-|  |  +- test 2, proof obligation, INIT/fis
-|  |  +- test 3, proof obligation, leave/fis
-|  |  +- test 4, proof obligation, leave/sch
-|  |  +- test 5, proof obligation, leave/en/tr0
-|  |  +- test 7, undeclared symbol
-|  |  +- test 8, undeclared event (wrt transient)
-|  |  +- test 9, undeclared event (wrt c sched)
-|  |  +- test 10, undeclared event (wrt indices)
-|  |  +- test 11, undeclared event (wrt assignment)
-|  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- test 13, verification, name clash between dummy and index
-|  |  +- test 14, verification, non-exhaustive case analysis
-|  |  +- test 15, verification, incorrect new assumption
-|  |  +- test 16, verification, proof by parts
-|  |  +- test 17, ill-defined types
-|  |  +- test 18, assertions have type bool
-|  |  +- [ Success: 18 / 18 ]
+|     Exception:  error: "arguments of '=' do not match its signature:\n   signature: [_a,_a] -> BOOL\n   left argument: x\n     type TRAIN\n   right argument: y\n     type BLK\n"
 |  +- the parser is exception free
-|  +- [ Success: 5 / 5 ]
+|  +- [ Success: 4 / 5 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -81,10 +75,10 @@
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 5 / 5 ]
++- [ Success: 4 / 5 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-    5596   35640  313631
+    5699   36404  319739

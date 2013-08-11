@@ -90,6 +90,9 @@ instance Show ProofObligation where
                 ++ map show as)
                 ++ ["|----"," " ++ show g] )
         where
+            f (x, IntSort) = ""
+            f (x, BoolSort) = ""
+            f (x, RealSort) = ""
             f (x, DefSort y z xs _) = f (x, Sort y z $ length xs)
             f (x, Sort y z 0) = z
             f (x, Sort y z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 

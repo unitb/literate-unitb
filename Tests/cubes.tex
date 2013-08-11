@@ -221,11 +221,20 @@ Invariant \ref{inv2} is easy to satisfy initially:
 	\begin{calculation}
 		\qfun{i}{ 0 \le i \land i < n }{ i^3 }
 	\hint{=}{ \ref{init0} }
-		\qfun{i}{ 0 \le i \land i < 0 }{ i^3 }
+		\qfun{i}{ 0 \le i \1\land i < 0 }{ i^3 }
 	\hint{=}{ arithmetic }
 		\qfun{i}{ \false }{ i^3 }
+	\hint{=}{ arithmetic }
+		\oftype{ \emptyfun }{ \pfun [ \Int, \Int ] }
+	\hint{=}{ \ref{init3} }
+		f
 	\end{calculation}
 \end{proof}
+
+\begin{align*}
+\initialization{init3}
+{	f = \emptyfun	}
+\end{align*}
 
 \end{machine}
 
