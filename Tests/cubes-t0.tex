@@ -236,34 +236,6 @@ Invariant \ref{inv2} is easy to satisfy initially:
 {	f = \emptyfun	}
 \end{align*}
 
-\begin{proof}{evt/INV/inv3}
-	\begin{calculation}
-		\qfun{i}{ 0 \le i \land i < n' }{ i^3 }
-	\hint{=}{ \ref{a0} }
-		\qfun{i}{ 0 \le i \1\land i < n+1 }{ i^3 }
-	\hint{=}{ split range }
-		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | \qfun{i}{ 0 \le i \1\land i = n }{ i^3 }
-	\hint{=}{ \ref{inv4} }
-		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | \qfun{i}{ i = n }{ i^3 }
-	\hint{=}{ one-point rule }
-		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \2 | n \tfun n^3
-	\hint{=}{ \ref{inv3} }
-		f \2 | n \tfun n^3
-	\hint{=}{ \ref{a4} }
-		f'
-	\end{calculation}
-\end{proof}
-
-\begin{align*}
-\invariant{inv4}
-{ 0 \le n }
-\end{align*}
-
-\begin{align*}
-\evassignment{evt}{a4}
-{ f' \2 = f \1 | n \tfun n^3 }
-\end{align*}
-
 \end{machine}
 
 \end{document}

@@ -383,6 +383,36 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
                      ++      " (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1) s1))"
                      ++          " (= (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x)"
                      ++             " (apply@{1}@{3} f1 x)))))"
+--            -- empty-fun
+--        axm14 = fromJust $ mzforall [x_decl] mztrue 
+--                (      zrep_select (Right zempty_fun) x
+--                `mzeq` zcast (maybe_type t1) znothing )
+        , "(forall ((x {0}))"
+            ++    " (=> true"
+            ++        " (= (select empty-fun@{1}@{3} x)"
+            ++           " Nothing)))"
+--            -- mk-fun
+--        axm15 = fromJust $ mzforall [x_decl,x2_decl,y_decl] mztrue 
+--                (      zrep_select (zmk_fun x y) x2
+--                `mzeq` zite (mzeq x x2) (zjust y) znothing )
+        , "(forall ((x {0}) (x2 {0}) (y {2}))"
+            ++    " (=> true"
+            ++        " (= (select (mk-fun@{1}@{3} x y) x2)"
+            ++           " (ite (= x x2)"
+            ++                " (Just y)"
+            ++                " Nothing))))"
+--            -- apply
+--        axm16 = fromJust $ mzforall [x_decl,f1_decl,f2_decl] mztrue 
+--                (      zrep_select (zovl f1 f2) x
+--                `mzeq` zite (mzeq (zrep_select f1 x) znothing)
+--                            (zrep_select f2 x)
+--                            (zrep_select f1 x) )
+        , "(forall ((x {0}) (f1 (pfun {0} {2})) (f2 (pfun {0} {2})))"
+            ++    " (=> true"
+            ++        " (= (select (ovl@{1}@{3} f1 f2) x)"
+            ++           " (ite (= (select f1 x) Nothing)"
+            ++                " (select f2 x)"
+            ++                " (select f1 x)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $

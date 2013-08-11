@@ -11,6 +11,7 @@ import Document.Document
 import qualified Document.Tests.Cubes as Cubes
 import qualified Document.Tests.SmallMachine as SMch
 import qualified Document.Tests.TrainStation as Train
+import qualified Document.Tests.Lambdas as Lambdas
 
 import Latex.Parser
 import Latex.Scanner
@@ -35,6 +36,7 @@ test = test_cases
         , SMch.test_case
         , Cubes.test_case
         , Train.test_case
+        , Lambdas.test_case
         , all_properties
         ]
 

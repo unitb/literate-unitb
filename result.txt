@@ -35,8 +35,12 @@
 |  |  +- test 17, ill-defined types
 |  |  +- test 18, assertions have type bool
 |  |  +- [ Success: 18 / 18 ]
+|  +- lambda expressions in the cube example
+|  |  +- test 0, verification, lambda vs empty-fun
+|  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  +- [ Success: 2 / 2 ]
 |  +- the parser is exception free
-|  +- [ Success: 5 / 5 ]
+|  +- [ Success: 6 / 6 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -87,4 +91,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5709   36443  320576
+    5733   36633  322505

@@ -30,6 +30,8 @@ zdomrest = typ_fun2 (Fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_
 
 zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
+zrep_select = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
+
 zovl    = typ_fun2 (Fun [gA,gB] "ovl" [ft,ft] ft)
     where
         ft = fun_type gA gB
@@ -38,6 +40,7 @@ zmk_fun = typ_fun2 (Fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 
 zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
 
+    -- encoding is done on an expression per expression basis
 zlambda xs mx my = do
         x <- zcast BOOL mx
         y <- my
@@ -70,22 +73,24 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 ,  Fun [t0,t1] (dec "tfun") [set_type t0,set_type t1] $ fun_set
                 ]
         facts = fromList 
-                [ (label $ dec' "0", axm0) :: (Label, Expr)
-                , (label $ dec' "1", axm1)
+                [ (label $ dec' "00", axm0) :: (Label, Expr)
+                , (label $ dec' "01", axm1)
 --                , (label $ dec "2", axm2)
 --                , (label $ dec "3", axm3)
-                , (label $ dec' "2", axm4)
+                , (label $ dec' "02", axm4)
 --                , (label $ dec "5", axm5)
-                , (label $ dec' "3", axm6)
-                , (label $ dec' "4", axm7)
+                , (label $ dec' "03", axm6)
+                , (label $ dec' "04", axm7)
 --                , (label $ dec' "5", axm8)
 --                , (label $ dec "3", axm9)
-                , (label $ dec' "5", axm10)
-                , (label $ dec' "6", axm11)
-                , (label $ dec' "7", axm12)
-                , (label $ dec' "8", axm13)
---                , (label $ dec' "9", axm14)
---                , (label $ dec' "10", axm15)
+                , (label $ dec' "05", axm10)
+                , (label $ dec' "06", axm11)
+                , (label $ dec' "07", axm12)
+                , (label $ dec' "08", axm13)
+                    -- encoding of dom rest, dom subt, dom, apply, empty-fun, mk-fun
+                , (label $ dec' "09", axm14)
+                , (label $ dec' "10", axm15)
+                , (label $ dec' "11", axm16)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -134,7 +139,24 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
 --        axm15 = fromJust $ mzforall [f1_decl,x2_decl] mztrue (
 --                    mzeq (zlambda [x_decl] (x `mzeq` x2) (zapply f1 x))
 --                         $ zmk_fun x2 (zapply f1 x2) )
-
+            -- encoding of dom rest, dom subt, dom, apply, empty-fun, mk-fun
+            -- empty-fun
+            -- NOTE: this is not type correct (in literate-unitb) because we are using array operations on
+            -- a pfun. It works because pfun [a,b] is represented as ARRAY [a,Maybe b], and Z3 considers them
+            -- type correct.
+        axm14 = fromJust $ mzforall [x_decl] mztrue 
+                (      zrep_select (Right zempty_fun) x
+                `mzeq` zcast (maybe_type t1) znothing )
+            -- mk-fun
+        axm15 = fromJust $ mzforall [x_decl,x2_decl,y_decl] mztrue 
+                (      zrep_select (zmk_fun x y) x2
+                `mzeq` zite (mzeq x x2) (zjust y) znothing )
+            -- apply
+        axm16 = fromJust $ mzforall [x_decl,f1_decl,f2_decl] mztrue 
+                (      zrep_select (zovl f1 f2) x
+                `mzeq` zite (mzeq (zrep_select f1 x) znothing)
+                            (zrep_select f2 x)
+                            (zrep_select f1 x) )
         as_fun e = zcast (fun_type t0 t1) e
 --        as_fun e = e
 --        as_dom e = zcast (set_type t0) e

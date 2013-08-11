@@ -12,7 +12,7 @@ show_err xs = unlines $ map f xs
     where
         f (x,i,j) = format "error {0}: {1}" (i,j) (x :: String) :: String
             where 
-                !() = unsafePerformIO (print x)
+--                !() = unsafePerformIO (print x)
 
 class Syntactic a where
     line_info :: a -> (Int,Int)
