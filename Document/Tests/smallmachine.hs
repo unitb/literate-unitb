@@ -132,11 +132,11 @@ result5 = unlines [
 
 case5 = show_po $ label "m0/SKIP/CO/c0"
 
-var_x = Var "x" INT
-var_y = Var "y" INT
+var_x = Var "x" int
+var_y = Var "y" int
 
-var_x' = Var "x@prime" INT
-var_y' = Var "y@prime" INT
+var_x' = Var "x@prime" int
+var_y' = Var "y@prime" int
 
 inc_event_m0 = empty_event { 
     action = fromList [

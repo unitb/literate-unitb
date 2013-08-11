@@ -67,11 +67,10 @@ merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
 
 data Type = 
-        BOOL | INT | REAL 
+        BOOL -- | INT | REAL | SET Type
         | ARRAY Type Type 
         | GENERIC String 
         | USER_DEFINED Sort [Type]
-        | SET Type
     deriving (Eq, Ord, Typeable)
 
 data Context = Context 
@@ -87,13 +86,13 @@ data ProofObligation = ProofObligation Context [Expr] Bool Expr
 
 instance Show Type where
     show BOOL                = "BOOL"
-    show INT                 = "INT"
-    show REAL                = "REAL"
+--    show INT                 = "INT"
+--    show REAL                = "REAL"
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
-    show (SET t) = format "SET {0}" t
+--    show (SET t) = format "SET {0}" t
 
 
 data StrList = List [StrList] | Str String
@@ -147,11 +146,11 @@ rewriteM f t = do
 
 instance Tree Type where
     as_tree BOOL = Str "Bool"
-    as_tree INT  = Str "Int"
-    as_tree REAL = Str "Real"
+--    as_tree INT  = Str "Int"
+--    as_tree REAL = Str "Real"
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
     as_tree (GENERIC x) = Str x
-    as_tree (SET t) = List [Str "Array", as_tree t, Str "Bool"]
+--    as_tree (SET t) = List [Str "Array", as_tree t, Str "Bool"]
     as_tree (USER_DEFINED s []) = Str $ z3_name s
     as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
 --    rewrite' f s x@BOOL = (s,x)
@@ -167,16 +166,16 @@ instance Tree Type where
 --        where
 --            (s1,ys) = fold_map f s0 xs
     rewriteM' f s x@BOOL = return (s,x)
-    rewriteM' f s x@INT  = return (s,x)
-    rewriteM' f s x@REAL = return (s,x)
+--    rewriteM' f s x@INT  = return (s,x)
+--    rewriteM' f s x@REAL = return (s,x)
     rewriteM' f s0 x@(ARRAY t0 t1) = do
             (s1,t2) <- f s0 t0
             (s2,t3) <- f s1 t1
             return (s2,ARRAY t2 t3)
     rewriteM' f s x@(GENERIC _) = return (s,x)
-    rewriteM' f s x@(SET t) = do
-            (s,t) <- f s t
-            return (s,SET t)
+--    rewriteM' f s x@(SET t) = do
+--            (s,t) <- f s t
+--            return (s,SET t)
     rewriteM' f s0 x@(USER_DEFINED s xs) = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1, USER_DEFINED s ys)

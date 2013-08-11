@@ -121,7 +121,8 @@ zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 zint n       = Const [] (show n) int
 
-int = USER_DEFINED IntSort []
+int  = USER_DEFINED IntSort []
+real = USER_DEFINED RealSort []
 
 mzless        = typ_fun2 $ Fun [] "<" [int,int] BOOL
 --mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL

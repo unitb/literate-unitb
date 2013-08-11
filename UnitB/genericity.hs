@@ -58,12 +58,12 @@ zcast t me = do
 
 suffix_generics :: String -> Type -> Type
 suffix_generics _ BOOL = BOOL
-suffix_generics _ INT = INT
-suffix_generics _ REAL = REAL
+--suffix_generics _ INT = INT
+--suffix_generics _ REAL = REAL
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
 suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
-suffix_generics xs (SET t)             = SET (suffix_generics xs t) 
+--suffix_generics xs (SET t)             = SET (suffix_generics xs t) 
 
 rewrite_types :: String -> Expr -> Expr
 rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
@@ -158,8 +158,8 @@ typ_fun3 f@(Fun gs n ts t) mx my mz  = do
 
 unify_aux :: Type -> Type -> Unification -> Maybe Unification
 unify_aux BOOL BOOL u = Just u
-unify_aux INT INT u   = Just u
-unify_aux REAL REAL u = Just u
+--unify_aux INT INT u   = Just u
+--unify_aux REAL REAL u = Just u
 unify_aux t0@(GENERIC x) t1 u
         | not (x `member` l_to_r u)   = Just u 
                 { l_to_r = M.insert x t1 $ l_to_r u
@@ -183,7 +183,7 @@ unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | otherwise                        = Nothing
     where
         f u (x, y) = unify_aux x y u
-unify_aux (SET t0) (SET t1) u = unify_aux t0 t1 u
+--unify_aux (SET t0) (SET t1) u = unify_aux t0 t1 u
 unify_aux (ARRAY t0 t1) (ARRAY t2 t3) u = do
         u <- unify_aux t0 t2 u
         unify_aux t1 t3 u
@@ -263,12 +263,12 @@ class Generic a where
     
 instance Generic Type where
     generics BOOL = S.empty
-    generics INT  = S.empty
-    generics REAL = S.empty
+--    generics INT  = S.empty
+--    generics REAL = S.empty
     generics (GENERIC s)        = S.singleton s
     generics (ARRAY t0 t1)      = generics t0 `S.union` generics t1
     generics (USER_DEFINED s ts)= S.unions $ map generics ts
-    generics (SET t)            = generics t  
+--    generics (SET t)            = generics t  
 
 instance Generic Fun where
     generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
