@@ -84,8 +84,8 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 , (label $ dec' "6", axm11)
                 , (label $ dec' "7", axm12)
                 , (label $ dec' "8", axm13)
-                , (label $ dec' "9", axm14)
-                , (label $ dec' "10", axm15)
+--                , (label $ dec' "9", axm14)
+--                , (label $ dec' "10", axm15)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -127,13 +127,13 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- dom-subst and dom
         axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
-        axm14 = fromJust $ mzforall [f1_decl] mztrue (
-                    mzeq (zlambda [x_decl] mzfalse (zapply f1 x))
-                         $ Right zempty_fun)
+--        axm14 = fromJust $ mzforall [f1_decl] mztrue (
+--                    mzeq (zlambda [x_decl] mzfalse (zapply f1 x))
+--                         $ Right zempty_fun)
         
-        axm15 = fromJust $ mzforall [f1_decl,y_decl] mztrue (
-                    mzeq (zlambda [x_decl] (x `mzeq` y) (zapply f1 x))
-                         $ zmk_fun y (zapply f1 y) )
+--        axm15 = fromJust $ mzforall [f1_decl,x2_decl] mztrue (
+--                    mzeq (zlambda [x_decl] (x `mzeq` x2) (zapply f1 x))
+--                         $ zmk_fun x2 (zapply f1 x2) )
 
         as_fun e = zcast (fun_type t0 t1) e
 --        as_fun e = e
@@ -141,6 +141,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         as_dom e = e
         
         (x,x_decl) = var "x" t0
+        (x2,x2_decl) = var "x2" t0
         (y,y_decl) = var "y" t1
         (f1,f1_decl) = var "f1" $ fun_type t0 t1
         (f2,f2_decl) = var "f2" $ fun_type t0 t1

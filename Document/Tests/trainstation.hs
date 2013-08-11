@@ -79,7 +79,7 @@ machine0 = (empty_machine "train0")
                     ,  set_theory train_type 
 --                    ,  function_theory train_type loc_type
                     ]
-            ,  types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort]
+            ,  types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort, IntSort, RealSort, BoolSort]
             ,  dummies = symbol_table 
                             $ (map (\t -> Var t $ train_type) 
                                 [ "t","t_0","t_1","t_2","t_3" ]
@@ -211,10 +211,16 @@ leave_evt = empty_event
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
     
 train_decl b = 
-        [ "(declare-sort BLK 0)"
+        [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
+        , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
+        , "(declare-datatypes () ((Null null)))"
+        , "(declare-sort BLK 0)"
+        , "; comment: we don't need to declare the sort Bool"
+        , "; comment: we don't need to declare the sort Int"
         , "(declare-sort LOC 0)"
+        , "; comment: we don't need to declare the sort Real"
         , "(declare-sort TRAIN 0)"
-        , "(define-sort pfun (a b) (Array a b))"
+        , "(define-sort pfun (a b) (Array a (Maybe b)))"
         , "(declare-sort set 1)"
         , "(declare-const PLF (set BLK))"
         , "(declare-const BLK (set BLK))"
@@ -340,16 +346,16 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
 --                     ++                 " (tfun@{1}@{3} empty-set@{1} s2)))"
         , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})) (x {0})) (=> true"
                      ++     " (=> (elem@{1} x (dom@{1}@{3} f2))"
-                     ++         " (= (select (ovl@{1}@{3} f1 f2) x)"
-                     ++            " (select f2 x)))))"
+                     ++         " (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
+                     ++            " (apply@{1}@{3} f2 x)))))"
 --        axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
 --                            (x `zelem` zdom f2) 
 --                `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
         , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})) (x {0})) (=> true"
                      ++     " (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1)"
                      ++                                   " (dom@{1}@{3} f2)))"
-                     ++         " (= (select (ovl@{1}@{3} f1 f2) x)"
-                     ++            " (select f1 x)))))"
+                     ++         " (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
+                     ++            " (apply@{1}@{3} f1 x)))))"
 --        axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
 --                        (x `zelem` (zdom f2 `zsetdiff` zdom f1))
 --            `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f1 x))
@@ -362,21 +368,21 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
 --            `mzimplies` (zapply (s1 `zdomrest` f1) x `mzeq` zapply f1 x) )
 --            -- dom-subst and apply
         , "(forall ((x {0}) (y {2})) (=> true"
-                     ++      " (= (select (mk-fun@{1}@{3} x y) x) y)))"
+                     ++      " (= (apply@{1}@{3} (mk-fun@{1}@{3} x y) x) y)))"
 --        axm11 = fromJust $ mzforall [x_decl,y_decl] ( 
 --                (zmk_fun x y `zapply` x) `mzeq` y )
 --            -- dom-rest and apply
         , "(forall ((f1 (pfun {0} {2})) (s1 (set {0})) (x {0})) (=> true"
                      ++      " (=> (elem@{1} x (intersect@{1} s1 (dom@{1}@{3} f1)))"
-                     ++          " (= (select (dom-rest@{1}@{3} s1 f1) x)"
-                     ++             " (select f1 x)))))"
+                     ++          " (= (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x)"
+                     ++             " (apply@{1}@{3} f1 x)))))"
 --        axm13 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
 --                        (x `zelem` (zdom f1 `zsetdiff` s1))
 --            `mzimplies` (zapply (s1 `zdomsubt` f1
         , "(forall ((f1 (pfun {0} {2})) (s1 (set {0})) (x {0})) (=> true"
                      ++      " (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1) s1))"
-                     ++          " (= (select (dom-subt@{1}@{3} s1 f1) x)"
-                     ++             " (select f1 x)))))"
+                     ++          " (= (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x)"
+                     ++             " (apply@{1}@{3} f1 x)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $
@@ -551,9 +557,9 @@ result3 = unlines (
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (forall ((t TRAIN))"
             ++        " (=> (elem@@TRAIN t in)"
-            ++            " (elem@@BLK (select loc t) BLK))))"
+            ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-     ,  "(assert (and (= (select loc t) ext) (elem@@TRAIN t in)))"
+     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
      ,  "(assert (not (exists ((in@prime (set TRAIN)) (loc@prime (pfun TRAIN BLK))) (and true"
             ++              " (and (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))"
             ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))))))"
@@ -592,10 +598,10 @@ result4 = unlines (
         , "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         , "(assert (forall ((t TRAIN))"
                 ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (select loc t) BLK))))"
+                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
         , "(assert (= (dom@@TRAIN@@BLK loc) in))"
         , "(assert (elem@@TRAIN t in))"
-        , "(assert (not (and (= (select loc t) ext) (elem@@TRAIN t in))))"
+        , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in))))"
         , "(check-sat-using (or-else " ++
             "(then qe smt) " ++
             "(then skip smt) " ++
@@ -631,13 +637,13 @@ result5 = unlines (
         ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "(assert (forall ((t TRAIN))"
                 ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (select loc t) BLK))))"
+                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
         ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
         ,  "(assert (not (exists ((t@param TRAIN)) (and true"
                 ++ " (and (=> (elem@@TRAIN t in) (elem@@TRAIN t@param in))"
                 ++      " (=> (and (elem@@TRAIN t in)"
                 ++               " (elem@@TRAIN t@param in)"
-                ++               " (= (select loc t@param) ext)"
+                ++               " (= (apply@@TRAIN@@BLK loc t@param) ext)"
                 ++               " (elem@@TRAIN t@param in)"
                 ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
                 ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc)))"
@@ -701,9 +707,9 @@ result12 = unlines (
         ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "(assert (forall ((t TRAIN))"
                 ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (select loc t) BLK))))"
+                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
         ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-        ,  "(assert (and (= (select loc t) ext)"
+        ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
                 ++     " (elem@@TRAIN t in)))"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"

@@ -149,4 +149,4 @@ prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
 prime (Var n t) = Var (n ++ "@prime") t
 
 fromJust (Right x) = x
-fromJust (Left msg) = error $ format "error: {0}" msg
+fromJust (Left msg) = error $ format "error: {0}" (msg :: String)
