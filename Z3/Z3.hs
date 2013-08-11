@@ -8,10 +8,6 @@ module Z3.Z3
     , Satisfiability ( .. )
     , discharge, verify
     , Context ( .. )
-    , mk_context
-    , empty_ctx
-    , merge_all_ctx, merge_ctx
-    , merge_all, merge --, entails
     , entailment
     , var_decl 
     , free_vars
@@ -25,6 +21,7 @@ where
     -- Modules
 import Z3.Def
 import Z3.Const
+import Z3.Lambda
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
@@ -82,9 +79,6 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
-data ProofObligation = ProofObligation Context [Expr] Bool Expr
-    deriving Eq
-
 instance Show ProofObligation where
     show (ProofObligation (Context ss vs fs ds dum) as _ g) =
             unlines (
@@ -108,16 +102,6 @@ free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
             | otherwise      = xs
         f xs v = visit f xs v
 
-data Context = Context 
-        (Map String Sort) -- sorts
-        (Map String Var)  -- constants
-        (Map String Fun)  -- functions and operators
-        (Map String Def)  -- transparent definitions
-        (Map String Var)  -- dummies
-    deriving (Show,Eq)
-
-empty_ctx = Context empty empty empty empty empty
-
 var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 
     M.lookup s m <|> M.lookup s d
@@ -126,91 +110,30 @@ from_decl (FunDecl xs n ps r)  = Left (Fun xs n ps r)
 from_decl (ConstDecl n t)      = Right (Var n t)
 from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
 
-mk_context :: [Decl] -> Context
-mk_context (x:xs) = 
-        case mk_context xs of
-            Context ss vs fs defs dums -> 
-                case x of
-                    ConstDecl n t -> 
-                        Context 
-                            ss (M.insert n (Var n t) vs) 
-                            fs defs dums
-                    FunDecl gs n ps t -> 
-                        Context 
-                            ss vs 
-                            (M.insert n (Fun gs n ps t) fs)
-                            defs dums
-                    FunDef gs n ps t e -> 
-                        Context 
-                            ss vs fs 
-                            (M.insert n (Def gs n ps t e) defs) 
-                            dums
-mk_context [] = Context empty empty empty empty empty
-
-merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
-        Context 
-            (ss0 `merge` ss1) 
-            (vs0 `merge` vs1) 
-            (fs0 `merge` fs1) 
-            (ds0 `merge` ds1)
-            (dum0 `merge` dum1)
-merge_all_ctx cs = Context 
-        (merge_all $ map f0 cs) 
-        (merge_all $ map f1 cs)
-        (merge_all $ map f2 cs)
-        (merge_all $ map f3 cs)
-        (merge_all $ map f4 cs)
-    where
-        f0 (Context x _ _ _ _) = x
-        f1 (Context _ x _ _ _) = x
-        f2 (Context _ _ x _ _) = x
-        f3 (Context _ _ _ x _) = x
-        f4 (Context _ _ _ _ x) = x
-
-class Symbol a where
-    decl :: a -> [Decl]
-
-instance Symbol Sort where
-    decl s = [SortDecl s]
-
-instance Symbol Fun where
-    decl (Fun xs name params ret) = [FunDecl xs name params ret]
-
-instance Symbol Var where
-    decl (Var name typ)        = [ConstDecl name typ]
-
-instance Symbol Def where
-    decl (Def xs name ps typ ex)  = [FunDef xs name ps typ ex]
-
-instance Symbol Context where
-    decl (Context sorts cons fun defs dums) = 
-                concatMap decl (elems sorts)
-            ++  concatMap decl (elems (cons `merge` dums)) 
-            ++  concatMap decl (elems fun) 
-            ++  concatMap decl (elems defs) 
-
-merge m0 m1 = unionWithKey f m0 m1
-    where
-        f k x y
-            | x == y = x
-            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
-
-merge_all ms = foldl (unionWithKey f) empty ms
-    where
-        f k x y
-            | x == y = x
-            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
-
-z3_code (ProofObligation d assume exist assert) = 
-    (      (map Decl $ decl d)
+z3_code po = 
+    (      map Decl
+               [ Datatype ["a"] "Maybe" 
+                    [ ("Just", [("fromJust", GENERIC "a")])
+                    , ("Nothing", []) ]
+               , Datatype ["a","b"] "Pair" 
+                    [ ("pair", 
+                        [ ("first",  GENERIC "a")
+                        , ("second", GENERIC "b") ]) ]
+               , Datatype [] "Null"
+                    [ ("null", []) ] ] 
+        ++ (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat exist] )
     where
+--        !() = unsafePerformIO (p
+        (ProofObligation d assume exist assert) = delambdify po
 
 discharge :: ProofObligation -> IO Validity
 discharge po = do
-    s <- verify $ z3_code po
+    let code = z3_code po
+--    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
+    s <- verify code
     return (case s of
         Right Sat -> Invalid
         Right Unsat -> Valid

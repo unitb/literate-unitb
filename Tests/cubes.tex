@@ -215,6 +215,18 @@ Invariant \ref{inv2} is easy to satisfy initially:
 	i : \Int
 \end{dummy}
 
+\begin{use:fun}{\Int}{\Int} \end{use:fun}
+
+\begin{proof}{INIT/INV/inv3}
+	\begin{calculation}
+		\qfun{i}{ 0 \le i \land i < n }{ i^3 }
+	\hint{=}{ \ref{init0} }
+		\qfun{i}{ 0 \le i \land i < 0 }{ i^3 }
+	\hint{=}{ arithmetic }
+		\qfun{i}{ \false }{ i^3 }
+	\end{calculation}
+\end{proof}
+
 \end{machine}
 
 \end{document}

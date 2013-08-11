@@ -1,11 +1,17 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Z3.Lambda where
+module Z3.Lambda 
+    ( delambdify
+    , CanonicalLambda ( .. )
+    , canonical )
+where
 
     -- Modules
 import UnitB.Theory
+import UnitB.FunctionTheory
 
-import Z3.Def
 import Z3.Const
+import Z3.Def
+--import Z3.Z3 hiding ( free_vars )
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
@@ -24,6 +30,10 @@ data CanonicalLambda = CL
         Type        -- return type
     deriving (Eq, Ord, Typeable, Show)
 
+array_type (CL fv bv r t rt) = ARRAY 
+        (type_of $ ztuple $ map Word fv)
+        (fun_type (type_of $ ztuple $ map Word bv) rt)
+
 can_bound_vars = map ( ("@@bound_var@@_" ++) . show ) [0..]
 
 can_free_vars  = map ( ("@@free_var@@_" ++) . show ) [0..]
@@ -34,14 +44,14 @@ data CanonicalRewriter = CR
         {  local_gen :: [String]            -- locals
         ,  free_gen  :: [String]            -- bound var names
         ,  renaming :: Map String String -- rewrites
-        ,  exprs  :: Map Expr Var
+        ,  exprs  :: [(Expr, Var)]
         }
 
 free_vars :: Monad m => StateT CanonicalRewriter m ([Var],[Expr])
 free_vars = gets g
     where
         g s = (map fst (f s), map snd (f s))
-        f s = sort $ map swap $ toList $ exprs s
+        f s = sort $ map swap $ exprs s
 
 --        [String]            -- free_vars names
 --        (Map Expr Var)      -- expressions containing no bound variables
@@ -64,15 +74,21 @@ rename v@(Var n t) = do
 
 expr_name :: Monad m => Expr -> StateT CanonicalRewriter m Var
 expr_name e = do
-        es <- gets exprs
-        case M.lookup e es of
-            Just v  -> return v
-            Nothing -> do
-                n:ns <- gets free_gen
-                modify (\m -> m { free_gen = ns }) 
-                let v = Var n $ type_of e
-                modify (\m -> m { exprs = M.insert e v es } )
-                return v
+            n:ns <- gets free_gen
+            modify (\m -> m { free_gen = ns }) 
+            let v = Var n $ type_of e
+            es <- gets exprs
+            modify (\m -> m { exprs = (e, v):es } )
+            return v
+--        es <- gets exprs
+--        case M.lookup e es of
+--            Just v  -> return v
+--            Nothing -> do
+--                n:ns <- gets free_gen
+--                modify (\m -> m { free_gen = ns }) 
+--                let v = Var n $ type_of e
+--                modify (\m -> m { exprs = M.insert e v es } )
+--                return v
 
 canonical :: [Var] -> Expr -> Expr -> (CanonicalLambda, [Expr])
 canonical vs r t = do
@@ -80,7 +96,7 @@ canonical vs r t = do
             { local_gen = can_local_vars
             , free_gen  = can_free_vars
             , renaming  = fromList $ zip (map name vs) can_bound_vars 
-            , exprs     = empty 
+            , exprs     = [] 
             } }
         evalState (do
             r'      <- f (S.fromList vs) r
@@ -127,32 +143,61 @@ canonical vs r t = do
 --                return e'
 --error "not implemented"
 
-type TermStore = Map CanonicalLambda String
+type TermStore = Map CanonicalLambda Var
 
-get_lambda_term :: CanonicalLambda -> State TermStore String
+get_lambda_term :: Monad m => CanonicalLambda -> StateT TermStore m Var
 get_lambda_term t = do
         m <- get
         case M.lookup t m of
             Just s -> return s
             Nothing -> do
                 let n = size m
-                let term = "@@lambda@@_" ++ show n
+                let term = Var ("@@lambda@@_" ++ show n) $ array_type t
                 put (M.insert t term m)
                 return term 
 
-type_ :: CanonicalLambda -> Type
-type_ = error ""
+lambda_decl :: Monad m => StateT TermStore m [Decl] 
+lambda_decl = do
+            xs <- gets toList 
+            liftM concat $ forM xs $ \(cl,v) ->
+                return $ decl v -- $ Var n $ array_type cl
 
---lambdas :: Expr -> State TermStore Expr
---lambdas expr = f expr
---    where
---        f (Binder Lambda vs r t) = do
---            r' <- f r
---            t' <- f t
---            let (can, param) = canonical vs r' t'
---            name <- get_lambda_term can
---            let array = Const [] name (ARRAY (type_of $ ztuple param) d
---            let select = zselect array (ztuple param)
---                -- careful here! we expect this expression to be type checked already 
---            return select
---        f e = rewriteM f e
+lambda_def :: Monad m => StateT TermStore m [Expr]
+lambda_def = do
+            xs <- gets toList
+            forM xs $ \(CL vs us r t _,v) -> do
+                let { sel = zselect 
+                        (Right $ Word v) 
+                        (Right $ ztuple $ map Word vs) }
+                let app = zapply sel (Right $ ztuple $ map Word us)
+                let eq  = mzeq app $ Right t
+                let Right res = mzforall (vs ++ us) (Right r) eq
+                return $ res
+
+delambdify :: ProofObligation -> ProofObligation
+delambdify (ProofObligation ctx asm b goal) = 
+        evalState (do
+            asm'  <- forM asm lambdas
+            goal' <- lambdas goal
+            defs  <- lambda_def
+            decl  <- lambda_decl
+            return $ ProofObligation
+                (            ctx 
+                 `merge_ctx` mk_context decl) 
+                (defs ++ asm')
+                b goal'
+            ) empty
+
+lambdas :: Monad m => Expr -> StateT TermStore m Expr
+lambdas expr = f expr
+    where
+        f (Binder Lambda vs r t) = do
+            r' <- f r
+            t' <- f t
+            let (can, param) = canonical vs r' t'
+            array <- Word `liftM` get_lambda_term can
+--            let array = Const [] name (array_type can)
+            let Right select = zselect (Right $ array) (Right $ ztuple param)
+                -- careful here! we expect this expression to be type checked already 
+            return select
+        f e = rewriteM f e

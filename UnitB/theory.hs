@@ -3,7 +3,8 @@ module UnitB.Theory where
 import Data.Map hiding ( map )
 
 import Z3.Def
-import Z3.Z3
+import Z3.Const
+--import Z3.Z3
 
 data Label = Lbl String
     deriving (Ord, Eq)
@@ -39,6 +40,6 @@ instance Named Var where
 instance Named Sort where
     name (Sort x _ _) = x
     name (DefSort x _ _ _) = x
-    name BoolSort   = "Bool"
-    name IntSort    = "Int"
-    name RealSort   = "Real"
+    name BoolSort   = "\\Bool"
+    name IntSort    = "\\Int"
+    name RealSort   = "\\Real"

@@ -27,7 +27,7 @@ import Z3.Z3
 
 empty_theory :: Theory
 empty_theory = Theory [] --[set_theory train_type] 
-    (symbol_table [set_sort,fun_sort]) empty empty empty empty
+    (symbol_table [set_sort,fun_sort,BoolSort,IntSort,RealSort]) empty empty empty empty
 
 data Event = Event {
         indices   :: Map String Var,

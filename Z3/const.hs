@@ -115,14 +115,6 @@ ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 zint n       = Const [] (show n) int
-ztuple []    = Const [] "null" (USER_DEFINED (Sort "Null" "Null" 0) [])
-ztuple(x:xs) = FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
-    where
-        tx  = type_of x
-        txs = type_of tail
-        pair_sort = Sort "Pair" "Pair" 2
-        pair_type = USER_DEFINED pair_sort [tx,txs]
-        tail = ztuple xs
 
 int = USER_DEFINED IntSort []
 

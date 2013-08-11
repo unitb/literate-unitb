@@ -7,7 +7,8 @@ import Control.Monad
 import UnitB.Genericity
 import UnitB.Theory
 
-import Z3.Z3
+import Z3.Def
+import Z3.Const
 
     -- Libraries
 import Data.List as L

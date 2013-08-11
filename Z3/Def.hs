@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Z3.Def where
 
+    -- library
 import Data.List
+import Data.Map as M hiding (map,filter,foldl)
 import qualified Data.Set as S
 import Data.Typeable
 
@@ -14,16 +16,52 @@ data Expr =
         | Binder Quantifier [Var] Expr Expr
     deriving (Eq, Ord, Typeable)
 
-type_of (Word (Var _ t))          = t
-type_of (Const _ _ t)             = t
-type_of (FunApp (Fun _ _ ts t) _) = t
-type_of (Binder _ _ _ e)          = type_of e
-
 data Quantifier = Forall | Exists | Lambda
     deriving (Eq, Ord)
 
+type_of (Word (Var _ t))          = t
+type_of (Const _ _ t)             = t
+type_of (FunApp (Fun _ _ ts t) _) = t
+type_of (Binder Lambda vs _ e)    = fun_type (type_of tuple) $ type_of e
+    where
+        tuple = ztuple $ map Word vs
+type_of (Binder _ _ _ e)          = type_of e
+
+ztuple_type []          = null_type
+ztuple_type [x]         = x
+ztuple_type [x0,x1]     = pair_type x0 $ pair_type x1 null_type
+ztuple_type (x0:x1:xs)  = pair_type x0 $ ztuple_type (x1:xs)
+ztuple []           = unit
+ztuple [x]          = x
+ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
+ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
+--    where
+--        tx  = type_of x
+--        txs = type_of tail
+--        pair_sort = Sort "Pair" "Pair" 2
+--        pair_type = USER_DEFINED pair_sort [tx,txs]
+--        tail = ztuple xs
+
+pair_sort = Sort "Pair" "Pair" 2
+pair_type x y = USER_DEFINED pair_sort [x,y]
+
+null_sort = Sort "Null" "Null" 2
+null_type = USER_DEFINED null_sort []
+
+unit = Const [] "null" null_type
+
+pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
+    where
+        t0 = type_of x
+        t1 = type_of y
+
+fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (GENERIC "b"))
+
+fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
+
 merge_range Forall = Str "=>"
 merge_range Exists = Str "and"
+merge_range Lambda = Str "PRE"
 
 data Type = 
         BOOL | INT | REAL 
@@ -32,6 +70,17 @@ data Type =
         | USER_DEFINED Sort [Type]
         | SET Type
     deriving (Eq, Ord, Typeable)
+
+data Context = Context 
+        (Map String Sort) -- sorts
+        (Map String Var)  -- constants
+        (Map String Fun)  -- functions and operators
+        (Map String Def)  -- transparent definitions
+        (Map String Var)  -- dummies
+    deriving (Show,Eq)
+
+data ProofObligation = ProofObligation Context [Expr] Bool Expr
+    deriving Eq
 
 instance Show Type where
     show BOOL                = "BOOL"
@@ -152,6 +201,10 @@ data Decl =
         FunDecl [Type] String [Type] Type 
         | ConstDecl String Type
         | FunDef [Type] String [Var] Type Expr
+        | Datatype 
+            [String]    -- Parameters
+            String      -- type name
+            [(String, [(String,Type)])] -- alternatives and named components
         | SortDecl Sort
 
 data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
@@ -172,6 +225,7 @@ instance Show StrList where
 instance Show Quantifier where
     show Forall = "forall"
     show Exists = "exists"
+    show Lambda = "lambda"
 
 instance Tree Expr where
     as_tree (Word (Var xs _))    = Str xs
@@ -214,6 +268,18 @@ instance Tree Decl where
                 (List $ map as_tree dom), 
                 (as_tree ran),
                 (as_tree val) ]
+    as_tree (Datatype xs n alt) =
+            List 
+                [ Str "declare-datatypes"
+                , List $ map Str xs
+                , List [List (Str n : map f alt)] ]
+        where
+            f (x,[])    = Str x
+            f (x,xs)    = List (Str x : map g xs)
+            g (n,t)     = List [Str n, as_tree t]
+    as_tree (SortDecl IntSort)  = Str "; comment: we don't need to declare the sort Int"
+    as_tree (SortDecl BoolSort) = Str "; comment: we don't need to declare the sort Bool" 
+    as_tree (SortDecl RealSort) = Str "; comment: we don't need to declare the sort Real"
     as_tree (SortDecl (Sort tag name n)) = 
             List [ 
                 Str "declare-sort",
@@ -255,6 +321,83 @@ instance Show Def where
         ++ intercalate " x " (map (show . as_tree) ps)
         ++ " -> " ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
+
+class Symbol a where
+    decl :: a -> [Decl]
+
+instance Symbol Sort where
+    decl s = [SortDecl s]
+
+instance Symbol Fun where
+    decl (Fun xs name params ret) = [FunDecl xs name params ret]
+
+instance Symbol Var where
+    decl (Var name typ)        = [ConstDecl name typ]
+
+instance Symbol Def where
+    decl (Def xs name ps typ ex)  = [FunDef xs name ps typ ex]
+
+instance Symbol Context where
+    decl (Context sorts cons fun defs dums) = 
+                concatMap decl (elems sorts)
+            ++  concatMap decl (elems (cons `merge` dums)) 
+            ++  concatMap decl (elems fun) 
+            ++  concatMap decl (elems defs) 
+
+merge m0 m1 = unionWithKey f m0 m1
+    where
+        f k x y
+            | x == y = x
+            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
+
+merge_all ms = foldl (unionWithKey f) empty ms
+    where
+        f k x y
+            | x == y = x
+            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
+
+mk_context :: [Decl] -> Context
+mk_context (x:xs) = 
+        case mk_context xs of
+            Context ss vs fs defs dums -> 
+                case x of
+                    ConstDecl n t -> 
+                        Context 
+                            ss (M.insert n (Var n t) vs) 
+                            fs defs dums
+                    FunDecl gs n ps t -> 
+                        Context 
+                            ss vs 
+                            (M.insert n (Fun gs n ps t) fs)
+                            defs dums
+                    FunDef gs n ps t e -> 
+                        Context 
+                            ss vs fs 
+                            (M.insert n (Def gs n ps t e) defs) 
+                            dums
+mk_context [] = Context empty empty empty empty empty
+
+empty_ctx = Context empty empty empty empty empty
+
+merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
+        Context 
+            (ss0 `merge` ss1) 
+            (vs0 `merge` vs1) 
+            (fs0 `merge` fs1) 
+            (ds0 `merge` ds1)
+            (dum0 `merge` dum1)
+merge_all_ctx cs = Context 
+        (merge_all $ map f0 cs) 
+        (merge_all $ map f1 cs)
+        (merge_all $ map f2 cs)
+        (merge_all $ map f3 cs)
+        (merge_all $ map f4 cs)
+    where
+        f0 (Context x _ _ _ _) = x
+        f1 (Context _ x _ _ _) = x
+        f2 (Context _ _ x _ _) = x
+        f3 (Context _ _ _ x _) = x
+        f4 (Context _ _ _ _ x) = x
 
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs

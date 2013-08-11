@@ -38,6 +38,11 @@ zmk_fun = typ_fun2 (Fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 
 zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
 
+zlambda xs mx my = do
+        x <- zcast BOOL mx
+        y <- my
+        return $ Binder Lambda xs x y
+
 zstore        = typ_fun3 $ Fun [] "store" [
         ARRAY (gB) $ gA, 
         gB, gA] $ 
@@ -45,14 +50,10 @@ zstore        = typ_fun3 $ Fun [] "store" [
 
 --zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 
-fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (GENERIC "b"))
-
-fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
-
 fun_set t0 t1 = set_type (fun_type t0 t1)
 
 function_theory :: Type -> Type -> Theory 
-function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty facts empty
+function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] types funs empty facts empty
     where
 --        set_ths  = 
         fun_set  = set_type (fun_type t0 t1)
@@ -83,6 +84,8 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
                 , (label $ dec' "6", axm11)
                 , (label $ dec' "7", axm12)
                 , (label $ dec' "8", axm13)
+                , (label $ dec' "9", axm14)
+                , (label $ dec' "10", axm15)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -124,6 +127,14 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1] types funs empty fa
             -- dom-subst and dom
         axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
+        axm14 = fromJust $ mzforall [f1_decl] mztrue (
+                    mzeq (zlambda [x_decl] mzfalse (zapply f1 x))
+                         $ Right zempty_fun)
+        
+        axm15 = fromJust $ mzforall [f1_decl,y_decl] mztrue (
+                    mzeq (zlambda [x_decl] (x `mzeq` y) (zapply f1 x))
+                         $ zmk_fun y (zapply f1 y) )
+
         as_fun e = zcast (fun_type t0 t1) e
 --        as_fun e = e
 --        as_dom e = zcast (set_type t0) e
