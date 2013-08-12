@@ -39,7 +39,8 @@
 |  |  +- test 0, verification, lambda vs empty-fun
 |  |  +- test 1, verification, lambda vs ovl, mk-fun
 |  |  +- test 2, verification, lambda vs apply
-|  |  +- [ Success: 3 / 3 ]
+|  |  +- test 3, verification, set comprehension, failed proof
+|  |  +- [ Success: 4 / 4 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -92,4 +93,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5763   36845  324612
+    5765   36851  324689
