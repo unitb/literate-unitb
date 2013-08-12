@@ -108,6 +108,22 @@ check_args xp f@(Fun gs name ts t) = do
             let expr = FunApp (Fun gs2 name us u) $ args2 
             return expr
 
+check_type :: Fun -> [Either String Expr] -> Either String Expr
+check_type f@(Fun gs n ts t) mxs = do
+        xs <- forM mxs id
+        let args = unlines $ map (\(i,x) -> format (unlines
+                            [ "   argument {0}:  {1}"
+                            , "   type:          {2}" ] )
+                            i x (type_of x))
+                        (zip [0..] xs) 
+        let err_msg = format (unlines 
+                    [  "arguments of '{0}' do not match its signature:"
+                    ,  "   signature: {1} -> {2}"
+                    ,  "{3}"
+                    ] )
+                    n ts t args :: String
+        maybe (Left err_msg) Right $ check_args xs f
+
 typ_fun1 f@(Fun gs n ts t) mx        = do
         x <- mx
         let err_msg = format (unlines 

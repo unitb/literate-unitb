@@ -96,6 +96,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 , (label $ dec' "11", axm16)
                 , (label $ dec' "12", axm17)
                 , (label $ dec' "13", axm18)
+                , (label $ dec' "14", axm19)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -171,6 +172,11 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 (      zelem y (zset f1)
                 `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
                             (zapply f1 x `mzeq` y)))
+
+        axm19 = fromJust $ mzforall [x_decl,y_decl,f1_decl] mztrue 
+                (      (zelem x (zdom f1) `mzand` (zapply f1 x `mzeq` y))
+                `mzeq` (zrep_select f1 x `mzeq` zjust y))
+
 
 --                       zite (mzeq (zrep_select f1 x) znothing)
 --                            (zrep_select f2 x)

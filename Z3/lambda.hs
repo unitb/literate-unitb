@@ -6,6 +6,7 @@ module Z3.Lambda
 where
 
     -- Modules
+import UnitB.Genericity
 import UnitB.Theory
 import UnitB.FunctionTheory
 
@@ -30,8 +31,13 @@ data CanonicalLambda = CL
         Type        -- return type
     deriving (Eq, Ord, Typeable, Show)
 
-array_type (CL fv bv r t rt) = ARRAY 
-        (type_of $ ztuple $ map Word fv)
+--array_type (CL fv bv r t rt) = ARRAY 
+--        (type_of $ ztuple $ map Word fv)
+--        (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
+
+arg_type (CL vs _ _ _ _) = map (type_of . Word) vs
+
+return_type (CL fv bv r t rt) = 
         (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
 can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
@@ -143,16 +149,16 @@ canonical vs r t = do
 --                return e'
 --error "not implemented"
 
-type TermStore = Map CanonicalLambda Var
+type TermStore = Map CanonicalLambda Fun
 
-get_lambda_term :: Monad m => CanonicalLambda -> StateT TermStore m Var
+get_lambda_term :: Monad m => CanonicalLambda -> StateT TermStore m Fun
 get_lambda_term t = do
         m <- get
         case M.lookup t m of
             Just s -> return s
             Nothing -> do
                 let n = size m
-                let term = Var ("@@lambda@@_" ++ show n) $ array_type t
+                let term = Fun [] ("@@lambda@@_" ++ show n) (arg_type t) (return_type t)
                 put (M.insert t term m)
                 return term 
 
@@ -165,10 +171,8 @@ lambda_decl = do
 lambda_def :: Monad m => StateT TermStore m [Expr]
 lambda_def = do
             xs <- gets toList
-            forM xs $ \(CL vs us r t _,v) -> do
-                let { sel = zselect 
-                        (Right $ Word v) 
-                        (Right $ ztuple $ map Word vs) }
+            forM xs $ \(CL vs us r t _,fun) -> do
+                let sel = check_type fun $ map (Right . Word) vs
                 let app = zselect sel (Right $ ztuple $ map Word us)
                 let eq  = mzeq app $ zite (Right r) (zjust $ Right t) znothing
                 let res = fromJust $ mzforall (vs ++ us) mztrue eq
@@ -195,9 +199,10 @@ lambdas expr = f expr
             r' <- f r
             t' <- f t
             let (can, param) = canonical vs r' t'
-            array <- Word `liftM` get_lambda_term can
+            fun <- get_lambda_term can
 --            let array = Const [] name (array_type can)
-            let Right select = zselect (Right $ array) (Right $ ztuple param)
+            let select = fromJust (check_type fun $ map Right param)
+--                FunApp fun (Right $ ztuple param)
                 -- careful here! we expect this expression to be type checked already 
             return select
         f e = rewriteM f e

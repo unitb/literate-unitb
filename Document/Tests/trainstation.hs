@@ -438,6 +438,15 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
                            " (exists ((x {0}))"               ++
                                    " (and (elem@{1} x (dom@{1}@{3} f1))"     ++
                                         " (= (apply@{1}@{3} f1 x) y))))))"
+--        axm19 = fromJust $ mzforall [x_decl,y_decl,f1_decl] mztrue 
+--                (      (zelem x (zdom f1) `mzand` (zapply f1 x `mzeq` y))
+--                `mzeq` (zrep_select f1 x `mzeq` zjust y))
+        ,   "(forall ((x {0}) (y {2}) (f1 (pfun {0} {2}))) (=> true"
+            ++      " (= (and (elem@{1} x (dom@{1}@{3} f1))"
+            ++              " (= (apply@{1}@{3} f1 x)"
+            ++                 " y))"
+            ++         " (= (select f1 x)"
+            ++            " (Just y)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $
