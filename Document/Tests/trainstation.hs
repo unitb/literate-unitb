@@ -221,7 +221,7 @@ train_decl b =
         , "; comment: we don't need to declare the sort Real"
         , "(declare-sort TRAIN 0)"
         , "(define-sort pfun (a b) (Array a (Maybe b)))"
-        , "(declare-sort set 1)"
+        , "(define-sort set (a) (Array a Bool))"
         , "(declare-const PLF (set BLK))"
         , "(declare-const BLK (set BLK))"
         , "(declare-const LOC (set LOC))"
@@ -322,8 +322,16 @@ set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
 --        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] (
 --                          mznot (x `zelem` Right zempty_set)  )
         ,   ( "{0}4"
-            , "(forall ((x {0}) (s1 (set {0})) (s2 (set {0}))) (=> true"  ++
+            , "(forall ((x {0})) (=> true"  ++
                         " (not (elem@{1} x empty-set@{1}))))"
+            )
+--        axm5 = fromJust $ mzforall [x_decl,s1_decl] mztrue (
+--                          mzeq (zelem x s1)
+--                               (zset_select s1 x)  )
+        ,   ( "{0}5"
+            , "(forall ((x {0}) (s1 (set {0}))) (=> true"  ++
+                        " (= (elem@{1} x s1)"   ++
+                           " (select s1 x))))"
             )
         ]
 
@@ -413,6 +421,13 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++           " (ite (= (select f1 x) Nothing)"
             ++                " (select f2 x)"
             ++                " (select f1 x)))))"
+--        axm17 = fromJust $ mzforall [x_decl,f1_decl] mztrue 
+--                (      zset_select (zdom f1) x
+--                `mzeq` mznot (zrep_select f1 x `mzeq` znothing))
+        , "(forall ((x {0}) (f1 (pfun {0} {2})))"
+            ++    " (=> true"
+            ++        " (= (select (dom@{1}@{3} f1) x)"
+            ++           " (not (= (select f1 x) Nothing)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $

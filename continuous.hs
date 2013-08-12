@@ -29,6 +29,7 @@ import System.Console.GetOpt
 import System.Directory
 import System.Environment
 import System.IO
+import System.Locale
 
 import Text.Printf
 
@@ -100,8 +101,10 @@ check_file = do
                 clear
                 forM_ xs (\(x,i,j) -> liftIO $ 
                     printf "error (%d,%d): %s\n" i j x)
-        t <- liftIO (getCurrentTime :: IO UTCTime)
-        liftIO $ print t
+        liftIO $ putStrLn ""
+        tz <- liftIO (getCurrentTimeZone)
+        t  <- liftIO (getCurrentTime :: IO UTCTime)
+        liftIO $ putStrLn $ formatTime defaultTimeLocale "Time: %H:%M:%S" $ utcToLocalTime tz t
 
 data Option = Verbose | Continuous
     deriving Eq

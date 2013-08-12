@@ -34,11 +34,11 @@ array_type (CL fv bv r t rt) = ARRAY
         (type_of $ ztuple $ map Word fv)
         (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
-can_bound_vars = map ( ("@@bound_var@@_" ++) . show ) [0..]
+can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
 
-can_free_vars  = map ( ("@@free_var@@_" ++) . show ) [0..]
+can_free_vars  = map ( ("@@fv@@_" ++) . show ) [0..]
 
-can_local_vars = map ( ("@@local_var@@_" ++) . show ) [0..]
+can_local_vars = map ( ("@@lv@@_" ++) . show ) [0..]
 
 data CanonicalRewriter = CR 
         {  local_gen :: [String]            -- locals

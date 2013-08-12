@@ -18,7 +18,7 @@ import Data.Map as M hiding ( foldl )
 
 import Utilities.Format
 
-set_sort = Sort "\\set" "set" 1
+set_sort = DefSort "\\set" "set" ["a"] (ARRAY (GENERIC "a") BOOL)
 set_type t = USER_DEFINED set_sort [t]
 
 set_theory :: Type -> Theory 
@@ -39,6 +39,7 @@ set_theory t = Theory [] types funs empty facts empty
                 , (label $ dec' "2", axm2)
                 , (label $ dec' "3", axm3)
                 , (label $ dec' "4", axm4)
+                , (label $ dec' "5", axm5)
                 ]
             -- elem and mk-set
         Right axm0 = mzforall [x_decl,y_decl] mztrue ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
@@ -55,8 +56,11 @@ set_theory t = Theory [] types funs empty facts empty
                           (x `zelem` (s1 `zunion` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
             -- elem over empty-set
-        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
+        Right axm4 = mzforall [x_decl] mztrue (
                           mznot (x `zelem` Right zempty_set)  )
+        axm5 = fromJust $ mzforall [x_decl,s1_decl] mztrue (
+                          mzeq (zelem x s1)
+                               (zset_select s1 x)  )
 --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t
@@ -64,6 +68,8 @@ set_theory t = Theory [] types funs empty facts empty
         (s2,s2_decl) = var "s2" set_type
         dec x  = x ++ z3_decoration t
         dec' x = z3_decoration t ++ x
+
+zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] BOOL)
 
 zempty_set   = Const [gA] "empty-set" $ set_type gA
 

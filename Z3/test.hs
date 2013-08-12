@@ -128,10 +128,10 @@ result5 = ( CL
                 BOOL
             , [y,z `zplus` y,z `zplus` y])
     where
-        (Right x,x_decl) = var "@@bound_var@@_0" int
-        (Right fv0,fv0_decl) = var "@@free_var@@_0" int
-        (Right fv1,fv1_decl) = var "@@free_var@@_1" int
-        (Right fv2,fv2_decl) = var "@@free_var@@_2" int
+        (Right x,x_decl) = var "@@bv@@_0" int
+        (Right fv0,fv0_decl) = var "@@fv@@_0" int
+        (Right fv1,fv1_decl) = var "@@fv@@_1" int
+        (Right fv2,fv2_decl) = var "@@fv@@_2" int
         (Right y,y_decl) = var "y" int
         (Right z,z_decl) = var "z" int
 
@@ -152,12 +152,12 @@ result6 = ( CL
                 BOOL
             , [y,zplus (zint 3) y,y,y])
     where
-        (Right x,x_decl) = var "@@bound_var@@_0" int
-        (Right fv0,fv0_decl) = var "@@free_var@@_0" int
-        (Right fv1,fv1_decl) = var "@@free_var@@_1" int
-        (Right fv2,fv2_decl) = var "@@free_var@@_2" int
-        (Right fv3,fv3_decl) = var "@@free_var@@_3" int
-        (Right lv0,lv0_decl) = var "@@local_var@@_0" int
+        (Right x,x_decl) = var "@@bv@@_0" int
+        (Right fv0,fv0_decl) = var "@@fv@@_0" int
+        (Right fv1,fv1_decl) = var "@@fv@@_1" int
+        (Right fv2,fv2_decl) = var "@@fv@@_2" int
+        (Right fv3,fv3_decl) = var "@@fv@@_3" int
+        (Right lv0,lv0_decl) = var "@@lv@@_0" int
         (Right y,y_decl) = var "y" int
         (Right z,z_decl) = var "z" int
 
