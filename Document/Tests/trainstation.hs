@@ -278,6 +278,7 @@ set_decl_smt2 =
         ,  "(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))"
         ,  "(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
         ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
+        ,  "(declare-fun set@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"
         ,  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"
         ,  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
@@ -428,6 +429,15 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++    " (=> true"
             ++        " (= (select (dom@{1}@{3} f1) x)"
             ++           " (not (= (select f1 x) Nothing)))))"
+--        axm18 = fromJust $ mzforall [y_decl,f1_decl] mztrue 
+--                (      zelem y (zset f1)
+--                `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
+--                            (zapply f1 x `mzeq` y)))
+        ,   "(forall ((y {2}) (f1 (pfun {0} {2}))) (=> true"  ++
+                        " (= (elem@{3} y (set@{1}@{3} f1))"   ++
+                           " (exists ((x {0}))"               ++
+                                   " (and (elem@{1} x (dom@{1}@{3} f1))"     ++
+                                        " (= (apply@{1}@{3} f1 x) y))))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $

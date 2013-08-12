@@ -299,26 +299,10 @@ Invariant \ref{inv2} is easy to satisfy initially:
 	\end{subproof}
 \end{proof}
 
-\begin{align*}
-\invariant{inv6}
-{	\dom.f = \qset{i}{0 \le i \land i < n }{ i }		}
-\end{align*}
-
-\begin{proof}{evt/INV/inv6}
-	\begin{calculation}
-		\qset{i}{0 \le i \land i < n' }{ i }
-	\hint{=}{ \ref{a0} }
-		\qset{i}{0 \le i \land i < n+1 }{ i }
-	\hint{=}{ split range }
-		\qset{i}{0 \le i \land i < n }{ i } \bunion \qset{i}{ 0 \le i \land i = n}{ i }
-	\hint{=}{ \ref{inv6} }
-		\dom.f \bunion \qset{i}{ 0 \le i \land i = n}{ i }
-	\hint{=}{ one point rule with \ref{inv4} }
-		\dom.f \bunion \{ i \}
-	\hint{=}{ split range }
-		\dom.f'
-	\end{calculation}
-\end{proof}
+%\begin{align*}
+%\invariant{inv6}
+%{	\qforall{i}{}{ i \in \dom.f \2\equiv 0 \le i \land i < n }		}
+%\end{align*}
 
 \end{machine}
 

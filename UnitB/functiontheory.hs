@@ -38,6 +38,8 @@ zovl    = typ_fun2 (Fun [gA,gB] "ovl" [ft,ft] ft)
 
 zmk_fun = typ_fun2 (Fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 
+zset = typ_fun1 (Fun [gA,gB] "set" [fun_type gA gB] $ set_type gB)
+
 zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
 
     -- encoding is done on an expression per expression basis
@@ -71,6 +73,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 ,  Fun [t0,t1] (dec "dom-subt") [set_type t0,fun_type t0 t1] $ fun_type t0 t1
                 ,  Fun [t0,t1] (dec "mk-fun") [t0,t1] $ fun_type t0 t1 
                 ,  Fun [t0,t1] (dec "tfun") [set_type t0,set_type t1] $ fun_set
+                ,  Fun [t0,t1] (dec "set") [fun_type t0 t1] $ set_type t1
                 ]
         facts = fromList 
                 [ (label $ dec' "00", axm0) :: (Label, Expr)
@@ -92,6 +95,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 , (label $ dec' "10", axm15)
                 , (label $ dec' "11", axm16)
                 , (label $ dec' "12", axm17)
+                , (label $ dec' "13", axm18)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -162,6 +166,12 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         axm17 = fromJust $ mzforall [x_decl,f1_decl] mztrue 
                 (      zset_select (zdom f1) x
                 `mzeq` mznot (zrep_select f1 x `mzeq` znothing))
+            -- set comprehension
+        axm18 = fromJust $ mzforall [y_decl,f1_decl] mztrue 
+                (      zelem y (zset f1)
+                `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
+                            (zapply f1 x `mzeq` y)))
+
 --                       zite (mzeq (zrep_select f1 x) znothing)
 --                            (zrep_select f2 x)
 --                            (zrep_select f1 x) )

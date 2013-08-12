@@ -38,7 +38,8 @@
 |  +- lambda expressions in the cube example
 |  |  +- test 0, verification, lambda vs empty-fun
 |  |  +- test 1, verification, lambda vs ovl, mk-fun
-|  |  +- [ Success: 2 / 2 ]
+|  |  +- test 2, verification, lambda vs apply
+|  |  +- [ Success: 3 / 3 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -91,4 +92,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5753   36759  323795
+    5763   36845  324612

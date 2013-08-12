@@ -281,7 +281,8 @@ term ctx = do
                             either (\(x) -> fail x) return (zdom $ Right x)
                         else if xs `elem` 
                             [ "\\qforall"
-                            , "\\qfun"]
+                            , "\\qfun"
+                            , "\\qset" ]
                         then do
                             eat_space
 
@@ -308,11 +309,12 @@ term ctx = do
                             read_list "}"
                             eat_space
                             let { quant = fromList 
-                                [ ("\\qforall",Forall)
-                                , ("\\qexists",Exists)
-                                , ("\\qfun",Lambda) ] ! xs }
+                                [ ("\\qforall",Binder Forall)
+                                , ("\\qexists",Binder Exists)
+                                , ("\\qfun",Binder Lambda) 
+                                , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
                             case dummy_types vs ctx of
-                                Just vs -> return (Binder quant vs r t)
+                                Just vs -> return (quant vs r t)
                                 Nothing -> fail ("bound variables are not typed")
                         else if xs == "\\oftype"
                         then do
