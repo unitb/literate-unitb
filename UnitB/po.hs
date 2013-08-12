@@ -442,6 +442,7 @@ dump name pos = do
                 hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
                 hPutStrLn h (concat $ map f $ z3_code po)
                 hPutStrLn h "(pop)"
+                hPutStrLn h ("; end of " ++ show lbl)
                 ) )
     where
         f x = unlines $ pretty_print (as_tree x)
