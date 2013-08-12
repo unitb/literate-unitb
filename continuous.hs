@@ -2,6 +2,9 @@
 module Main where
 
     -- Modules
+import Data.Time
+import Data.Time.Clock
+
 import Document.Document
 
 import UnitB.AST
@@ -97,6 +100,8 @@ check_file = do
                 clear
                 forM_ xs (\(x,i,j) -> liftIO $ 
                     printf "error (%d,%d): %s\n" i j x)
+        t <- liftIO (getCurrentTime :: IO UTCTime)
+        liftIO $ print t
 
 data Option = Verbose | Continuous
     deriving Eq
