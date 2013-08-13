@@ -1,5 +1,5 @@
 module Document.Tests.SmallMachine
-    ( test_case ) 
+    ( test_case, test ) 
 where
 
     -- Modules
@@ -93,7 +93,7 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
-        " sort: pfun [a,b], set [a]",
+        " sort: , , , pfun [a,b], set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",
@@ -119,7 +119,7 @@ show_po lbl = do
 case4 = show_po $ label "m0/inc/INV/inv0"
 
 result5 = unlines [
-        " sort: pfun [a,b], set [a]",
+        " sort: , , , pfun [a,b], set [a]",
         " x: Int",
         " x@prime: Int",
         " y: Int",
@@ -132,11 +132,11 @@ result5 = unlines [
 
 case5 = show_po $ label "m0/SKIP/CO/c0"
 
-var_x = Var "x" INT
-var_y = Var "y" INT
+var_x = Var "x" int
+var_y = Var "y" int
 
-var_x' = Var "x@prime" INT
-var_y' = Var "y@prime" INT
+var_x' = Var "x@prime" int
+var_y' = Var "y@prime" int
 
 inc_event_m0 = empty_event { 
     action = fromList [

@@ -1,0 +1,27 @@
+\begin{machine}{m}
+\newset{TRAIN}{\TRAIN}
+\begin{variable}
+	in : \set[\TRAIN]
+\end{variable}
+
+\newevent{enter}
+
+\begin{use:set}{\TRAIN} \end{use:set}
+
+\begin{indices}{enter}
+	t: \TRAIN
+\end{indices}
+
+\begin{banana}
+\evassignment{enter}{a1}
+{	in' = in \bunion \{ t \} }
+\end{banana}
+
+\begin{proof}{enter/SCH}
+	\begin{calculation}
+		\true
+	\hint{=}{ \ref{a1} }
+		\true
+	\end{calculation}
+\end{proof}
+\end{machine}

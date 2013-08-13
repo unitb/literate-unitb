@@ -4,6 +4,7 @@ module Z3.Test where
 
 import Tests.UnitTest
 
+import Z3.Lambda
 import Z3.Z3 as Z
 
 import UnitB.Calculation
@@ -11,9 +12,14 @@ import UnitB.Operator
 import UnitB.PO
 import UnitB.AST
 
-cases = test_cases [case0, case1, case2, case3, case4]
+test = test_cases 
+        [ case0, case1
+        , case2, case3
+        , case4
+        , Case "canonical lambdas" case5 result5
+        , Case "canonical lambdas with quantifier" case6 result6]
 
-test_case = ("Z3 test", cases, True)
+test_case = ("Z3 test", test, True)
 
 case0 = Case "sample_quant" (verify sample_quant) $ Right Sat
 case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
@@ -49,8 +55,8 @@ sample_ast = [
 
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 9)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat False,
         GetModel ]
     where
@@ -59,24 +65,24 @@ sample_quant = [
 
 sample_proof = ProofObligation
         ( mk_context [FunDecl [] "f" [int] int] )
-        [fromJust $ mzforall [x'] (f x `mzless` mzint 10)]
+        [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         False
-        (fromJust $ mzforall [x'] (f x `mzless` mzint 12))
+        (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
         f           = maybe1 $ fun1 ff
 
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 11)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat False]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
 
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] (f x `mzless` mzint 11)),
+        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat False]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
@@ -98,7 +104,7 @@ sample_calc = (Calc
         li )
     where
         hyp         = fromJust $ mzforall 
-            [x',y'] 
+            [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" BOOL
         (y,y')      = var "y" BOOL
@@ -109,9 +115,57 @@ indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
    
-main = do
-        s1 <- verify sample_quant
-        s2 <- verify sample_quant2
-        s3 <- discharge sample_proof
-        s4 <- check empty_theory sample_calc
-        return (s1,s2,s3,s4)
+--main = do
+--        s1 <- verify sample_quant
+--        s2 <- verify sample_quant2
+--        s3 <- discharge sample_proof
+--        s4 <- check empty_theory sample_calc
+--        return (s1,s2,s3,s4)
+
+result5 = ( CL 
+                [fv0_decl,fv1_decl,fv2_decl] [x_decl] 
+                (x `zle` fv0) ( (x `zplus` fv1) `zle` fv2 ) 
+                BOOL
+            , [y,z `zplus` y,z `zplus` y])
+    where
+        (Right x,x_decl) = var "@@bv@@_0" int
+        (Right fv0,fv0_decl) = var "@@fv@@_0" int
+        (Right fv1,fv1_decl) = var "@@fv@@_1" int
+        (Right fv2,fv2_decl) = var "@@fv@@_2" int
+        (Right y,y_decl) = var "y" int
+        (Right z,z_decl) = var "z" int
+
+case5 = do
+        return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
+    where
+        (Right x,x_decl) = var "x" int
+        (Right y,y_decl) = var "y" int
+        (Right z,z_decl) = var "z" int
+
+result6 = ( CL 
+                [fv0_decl,fv1_decl,fv2_decl,fv3_decl] 
+                [x_decl] 
+                (x `zle` fv0) 
+                ( (zforall [lv0_decl] 
+                    (x `zle` fv1)
+                    ((x `zplus` (lv0 `zplus` fv2)) `zle` (lv0 `zplus` fv3) )) ) 
+                BOOL
+            , [y,zplus (zint 3) y,y,y])
+    where
+        (Right x,x_decl) = var "@@bv@@_0" int
+        (Right fv0,fv0_decl) = var "@@fv@@_0" int
+        (Right fv1,fv1_decl) = var "@@fv@@_1" int
+        (Right fv2,fv2_decl) = var "@@fv@@_2" int
+        (Right fv3,fv3_decl) = var "@@fv@@_3" int
+        (Right lv0,lv0_decl) = var "@@lv@@_0" int
+        (Right y,y_decl) = var "y" int
+        (Right z,z_decl) = var "z" int
+
+case6 = do
+        return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
+            (x `zle` zplus (zint 3) y)
+            ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
+    where
+        (Right x,x_decl) = var "x" int
+        (Right y,y_decl) = var "y" int
+        (Right z,z_decl) = var "z" int

@@ -44,22 +44,11 @@ break_line y =  map concat (
         f x y   = p x == p y
         p x     = (isSpace x, isAlphaNum x)
 
---break_words x = groupBy f x
---    where
---        g       = groupBy f x
---        f x y   = p x == p y
---        p x     = (isSpace x, isAlphaNum x)
---        ls      = map length g
---        xs      = map sum $ tail inits ls
---        ys      = zip xs g
-
 takel :: Int -> [[a]] -> [[a]]
 takel n (x:xs)
     | n <= length x  = []
     | length x < n = x:takel (n-length x) xs
 takel _ [] = []
-
---map $ concat
 
 dropl :: Int -> [[a]] -> [[a]]
 dropl n (x:xs)

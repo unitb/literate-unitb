@@ -1,5 +1,4 @@
 module Latex.Parser where
-    -- TODO: Separate Latex from the Scanner monad
 
     -- Modules
 import Latex.Scanner
@@ -12,6 +11,7 @@ import Data.Map hiding ( foldl, map, null )
 
 import System.IO.Unsafe
 
+import Utilities.Format
 import Utilities.Syntactic
 
 data LatexDoc = 
@@ -75,13 +75,6 @@ instance Syntactic LatexDoc where
 
 instance Syntactic a => Syntactic [a] where
     line_info xs = line_info $ head xs
-
---instance Show LatexDoc where
---    show (Env b li0 xs _) = "Env" ++ show li0 ++ "{" ++ b ++ "} (" ++ show (length xs) ++ ")"
---    show (Text xs)      = "Text (" ++ show (map lexeme_li (take 10 xs)) ++ "...)"
---    show (Bracket True li c _)  = "Bracket" ++ show li ++ " {" ++ show c ++ "} "
---    show (Bracket False li c _) = "Bracket" ++ show li ++ " [" ++ show c ++ "] "
-
 
 source (Text xs) = concatMap lexeme xs
 source x         = show x
@@ -208,15 +201,16 @@ argument = do
             Open True _:_ -> do  
                 read_char
                 ct <- latex_content
-                Close True _ <- read_char
-                return ct
-            _ -> fail "expecting brackets '{'"            
+                close <- read_char
+                case close of
+                    Close True _ -> return ct
+                    _ -> fail "expecting closing bracket '}'"        
+            _ -> fail "expecting opening bracket '{'"            
 
 begin_block :: Scanner LatexToken [LatexDoc]
 begin_block = do
     read_char
     li0 <- get_line_info
---    oargs <- opt_args
     args0 <- argument
     ct    <- latex_content
     end   <- read_char
@@ -224,14 +218,14 @@ begin_block = do
     unless (end == Command "\\end" (line_info end)) $ 
         fail ("expected \\end{" ++ concatMap source args0 ++ "}, read \'" ++ lexeme end ++ "\'")
     args1 <- argument
-    (begin, end) <- 
+    (begin, li2, end, li3) <- 
         case (args0, args1) of
-            ( [Text [TextBlock begin _]],
-              [Text [TextBlock end _]] ) -> do
-                return (begin, end)
+            ( [Text [TextBlock begin li0]],
+              [Text [TextBlock end li1]] ) -> do
+                return (begin, li0, end, li1)
             _  -> fail "name of a begin / end block must be a simple string"    
     unless (begin == end) $ 
-        fail ("begin / end do not match: " ++ begin ++ " / " ++ end)
+        fail (format "begin / end do not match: {0} {1} / {2} {3}" begin li2 end li3)
     rest <- latex_content 
     return (Env begin li0 ct li1:rest)
 
@@ -246,15 +240,3 @@ uncomment :: String -> String
 uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 
 with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
---
---find_cmd :: [String] -> [LatexDoc] -> Map String [[LatexDoc]]
---find_cmd kw (Env b _ c _:xs)         = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
---find_cmd kw (Bracket _ _ c _:xs)       = unionWith (++) (find_cmd kw c) $ find_cmd kw xs
---find_cmd kw e@((Text (Command c _:ys):xs))
---    | c `elem` kw                  = insertWith (++) c [e :: [LatexDoc]] $
---                                        find_cmd kw (Text ys:xs)
---    | otherwise                    = find_cmd kw (Text ys:xs)
---find_cmd kw (Text (_:ys):xs)       = find_cmd kw (Text ys:xs)
---find_cmd kw (Text []:xs)           = find_cmd kw xs
---find_cmd kw []                     = fromList $ map (\x -> (x,[])) kw
---

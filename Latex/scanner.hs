@@ -11,11 +11,6 @@ data State a = State [(a,(Int,Int))] Int Int
 data Scanner a b = 
     Scanner (State a -> Either [Error] (b, State a))
 
---instance Monad (Either a) where
---    return        = Right
---    Right b >>= f = f b
---    Left a >>= _  = Left a
-
 instance Monad (Scanner a) where
     f >>= gF = comb f gF
     fail s   = Scanner (\(State _ i j) -> Left [(s, i, j)])
@@ -130,13 +125,6 @@ read_tokens (Scanner f) xs =
 choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c
 choice [] f s = f
 choice (x:xs) f s = try x s (choice xs f s)
---    where
---        g s0 = 
---            case h s0 of
---                    Left  _ -> 
---                        case choice xs d of
---                            Scanner h2 -> 2h s0
---                    x -> x
 
 get_line_info :: Scanner a (Int, Int)
 get_line_info = Scanner f

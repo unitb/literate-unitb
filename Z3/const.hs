@@ -52,15 +52,9 @@ maybe3 f mx my mz = do
         z <- mz :: Either String Expr
         return $ f x y z
 
---fun3 f x y z       = FunApp f [x,y,z]
---fun4 f x0 x1 x2 x3 = FunApp f [x0,x1,x2,x3]
---fun5 f x0 x1 x2 x3 x4 = FunApp f [x0,x1,x2,x3,x4]
-
 znot         = fun1 $ Fun [] "not" [BOOL] BOOL
 zimplies     = fun2 $ Fun [] "=>"  [BOOL,BOOL] BOOL
---zand         = fun2 $ Fun [] "and" [BOOL,BOOL] BOOL
 zand x y     = zall [x,y]
---zor          = fun2 $ Fun [] "or"  [BOOL,BOOL] BOOL
 zor x y      = zsome [x,y]
 zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
 mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
@@ -81,17 +75,18 @@ zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
         n = length xs
         f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
         f x = [x]
---zall (x:xs)  = foldl zand x xs
 zforall      = Binder Forall
 zexists      = Binder Exists
 
+zite       = typ_fun3 (Fun [] "ite" [BOOL,gA,gA] gA)
+
+zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
+znothing   = Right (Const [] "Nothing" $ maybe_type gA)
+
 mznot         = maybe1 znot
 mzimplies     = maybe2 zimplies
---mzand         = maybe2 zand
 mzand x y     = mzall [x,y]
---mzor          = maybe2 zor
 mzor x y      = mzsome [x,y]
---mzeq          = maybe2 zeq
 mzfollows     = maybe2 zfollows
 mztrue        = Right ztrue
 mzfalse       = Right zfalse
@@ -105,8 +100,14 @@ mzsome [x]    = x
 mzsome xs     = do
         xs <- forM xs id
         return $ zsome xs
-mzforall xs   = maybe1 $ zforall xs
-mzexists xs   = maybe1 $ zexists xs
+mzforall xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zforall xs x y
+mzexists xs mx my = do
+        x <- zcast BOOL mx
+        y <- zcast BOOL my
+        return $ zexists xs x y
 
 zless        = fun2 $ Fun [] "<" [int,int] BOOL
 zgreater     = fun2 $ Fun [] ">" [int,int] BOOL
@@ -117,32 +118,27 @@ zminus       = fun2 $ Fun [] "-" [int,int] int
 zopp         = fun1 $ Fun [] "-" [int] int
 ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow         = fun2 $ Fun [] "^" [int,int] int
+zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 zint n       = Const [] (show n) int
 
-int = USER_DEFINED IntSort []
+int  = USER_DEFINED IntSort []
+real = USER_DEFINED RealSort []
 
 mzless        = typ_fun2 $ Fun [] "<" [int,int] BOOL
-mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
+--mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] BOOL
-mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
+--mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp         = typ_fun1 $ Fun [] "-" [int] int
 mztimes       = typ_fun2 $ Fun [] "*" [int,int] int
 mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 
---mzless        = maybe2 zless
---mzgreater     = maybe2 zgreater
---mzle          = maybe2 zle
---mzge          = maybe2 zge
---mzplus        = maybe2 zplus
---mzminus       = maybe2 zminus
---mzopp         = fun1 $ Fun [] "-" [INT] INT
---mztimes       = maybe2 ztimes
---mzpow         = maybe2 zpow
 mzint n       = Right $ zint n
 
 gena = GENERIC "a"
+gA = GENERIC "a"
+gB = GENERIC "b"
 
 var n t      = (Right $ Word $ v, v)
     where
@@ -154,4 +150,4 @@ prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
 prime (Var n t) = Var (n ++ "@prime") t
 
 fromJust (Right x) = x
-fromJust (Left msg) = error $ format "error: {0}" msg
+fromJust (Left msg) = error $ format "error: {0}" (msg :: String)

@@ -4,6 +4,7 @@ module Document.Expression where
 import Latex.Scanner
 import Latex.Parser
 
+import UnitB.Genericity hiding (unsafePerformIO)
 import UnitB.Operator
 import UnitB.SetTheory
 import UnitB.FunctionTheory
@@ -24,32 +25,25 @@ import System.IO.Unsafe
 
 import Utilities.Format
 
+match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
+
 eat_space :: Scanner Char ()
 eat_space = do
---        choice [
---            try eof (\() -> fail "") (return ()),
---            read_if isSpace (\_ -> return ()) (fail "")
-----            space_cmd
---            ] (return ())
---              (\() -> eat_space)
         b <- is_eof
         if b
         then return ()
-        else read_if isSpace (
-                \_ -> eat_space)
-                (return ())
---            x:_ <- peek
---            if isSpace x
---            then do
---                read_char
---                eat_space
-----            else do
-----                b <- look_ahead space_cmd
-----                if b
-----                then do
-----                    space_cmd
-----                    eat_space
---            else return ()
+        else choice 
+                [ match_char isSpace 
+                , read_list "\\\\" >> return ()
+                , read_list "~" >> return ()
+                , read_list "&" >> return ()
+                , read_list "\\," >> return ()
+                , read_list "\\:" >> return ()
+                , read_list "\\;" >> return ()
+                , read_list "\\!" >> return ()
+                , read_list "\\" >> match_char isDigit 
+                ] (return ())
+                (\_ -> eat_space)
 
 space_cmd :: Scanner a ()
 space_cmd = return ()
@@ -123,17 +117,17 @@ type_t ctx@(Context ts _ _ _ _) = do
             eat_space
             t2 <- type_t ctx
             t <- return $ fun_type t t2
---            let !() = unsafePerformIO (putStrLn $ format "parsed a type {0}" t)
             return t
         else return t
 
 get_type :: Context -> String -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
     where
-        m = fromList ( 
-                   [("\\Int", IntSort), ("\\Real", RealSort), ("\\Bool", BoolSort)])
+        m = fromList 
+                   [ ("\\Int", IntSort)
+                   , ("\\Real", RealSort)
+                   , ("\\Bool", BoolSort)]
             `M.union` ts
---                ++ zip (keys ts) (map USER_DEFINED $ map z3_type $ elems ts) )
         z3_type s@(Sort _ x _) = USER_DEFINED s
 
 vars :: Context -> Scanner Char [(String,Type)]
@@ -152,13 +146,6 @@ get_variables ctx cs = do
     where
         m = concatMap flatten_li cs
 
---as_variables :: Context -> LatexDoc -> Either Error [(String, Var)]
---as_variables ctx (Env s _ c _) = do
---        xs <- read_tokens (vars ctx) m
---        return $ map (\(x,y) -> (x,Var x y)) xs
---    where
---        m = concatMap flatten_li c
-
 plus = do
         x <- match $ match_string "+"
         case x of
@@ -171,11 +158,13 @@ fun_app = do
             Just _ -> return ()
             Nothing -> fail "expecting function application (.)"
 
-leq = do
-        x <- match $ match_string "\\le"
-        case x of
-            Just _ -> return ()
-            Nothing -> fail "expecting less of equal (\\le)"
+leq = read_list "\\le"
+
+lt = read_list "<"
+
+geq = read_list "\\ge"
+
+gt = read_list ">"
 
 times = do
         x <- match $ match_string "\\cdot"
@@ -207,9 +196,6 @@ dom_rest = read_list "\\domres"
 
 membership = 
         read_list "\\in"
---        case x of
---            Just _  -> return ()
---            Nothing -> fail "expecting set membership (\\in)"
 
 set_diff = read_list "\\setminus"
 
@@ -234,6 +220,9 @@ oper = do
                 (disjunction >> return Or),
                 (equivalence >> return Equiv),
                 (leq >> return Leq),
+                (lt >> return Less),
+                (geq >> return Geq),
+                (gt >> return Greater),
                 (equal >> return Equal),
                 (membership >> return Membership),
                 (bunion >> return Union),
@@ -243,7 +232,7 @@ oper = do
                 (dom_rest >> return DomRest),
                 (tfun >> return MkFunction), -- TotalFunction),
                 (fun_app >> return Apply) ]
-            (fail "expecting an binary operator")            
+            (fail "expecting a binary operator")            
             return
 
 equal = do
@@ -271,18 +260,29 @@ term ctx = do
                         if xs == "\\dom"
                         then do
                             read_list "."
-                            choice 
-                                [ term ctx
-                                , do    eat_space
-                                        read_list "("
+                            eat_space
+                            x <- pick 
+                                [ (term ctx, return)
+                                , (read_list "(" >> return ztrue, \_ -> do
+                                        eat_space
                                         e <- expr ctx
                                         eat_space
                                         read_list ")"
                                         eat_space
-                                        return e
+                                        return e)
+                                , (read_list "{" >> return ztrue, \_ -> do
+                                        eat_space
+                                        e <- expr ctx
+                                        eat_space
+                                        read_list "}"
+                                        eat_space
+                                        return e)
                                 ] (fail "invalid argument for 'dom'") 
-                                (\x -> either (\(x) -> fail x) return $ zdom $ Right x)
-                        else if xs == "\\qforall"
+                            either (\(x) -> fail x) return (zdom $ Right x)
+                        else if xs `elem` 
+                            [ "\\qforall"
+                            , "\\qfun"
+                            , "\\qset" ]
                         then do
                             eat_space
 
@@ -303,13 +303,37 @@ term ctx = do
                             eat_space
                             
                             read_list "{"
+                            eat_space
                             t <- expr ctx
+                            eat_space
                             read_list "}"
                             eat_space
-                            
+                            let { quant = fromList 
+                                [ ("\\qforall",Binder Forall)
+                                , ("\\qexists",Binder Exists)
+                                , ("\\qfun",Binder Lambda) 
+                                , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
                             case dummy_types vs ctx of
-                                Just vs -> return (Binder Forall vs (r `zimplies` t))
+                                Just vs -> return (quant vs r t)
                                 Nothing -> fail ("bound variables are not typed")
+                        else if xs == "\\oftype"
+                        then do
+                            eat_space
+                            read_list "{"
+                            eat_space
+                            e <- expr ctx
+                            eat_space
+                            read_list "}"
+                            eat_space
+                            read_list "{"
+                            eat_space
+                            t <- type_t ctx
+                            eat_space
+                            read_list "}"
+                            eat_space
+                            case zcast t (Right e) of
+                                Right new_e -> return new_e
+                                Left msg -> fail msg
                         else case var_decl xs ctx of
                             Just (Var v t) -> return (Word $ Var (zs v) t) 
                             Nothing -> fail ("undeclared variable: " ++ xs))
@@ -334,17 +358,6 @@ number = do
                 | 0 < n     = Just n
             where
                 n = length $ takeWhile isDigit x
-
---assoc Equal Equal = Ambiguous
---assoc Equal Leq   = Ambiguous
---assoc Leq Equal   = Ambiguous
---assoc Leq Leq     = Ambiguous
---assoc Equal _     = RightAssoc
---assoc _ Equal     = LeftAssoc
---assoc Leq _       = RightAssoc
---assoc _ Leq       = LeftAssoc
---assoc Plus Mult   = RightAssoc
---assoc _ _         = LeftAssoc
 
 open_brack  = do 
         x <- match $ match_string "("
@@ -373,8 +386,6 @@ expr ctx = do
         read_term xs = do
             us <- many (eat_space >> unary)
             eat_space
---            s <- peek
---            let !() = unsafePerformIO (putStrLn $ take 10 s)
             try open_brack
                 (\_ -> do
                         e <- expr ctx
@@ -402,6 +413,7 @@ expr ctx = do
             b3 <- look_ahead close_curly
             b4 <- look_ahead comma
             b5 <- look_ahead (read_list "}")
+--            let !() = unsafePerformIO (print [b1,b2,b3,b4,b5])
             if b1 || b2 || b3 || b4 || b5
             then do
                 reduce_all xs us e0

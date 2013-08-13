@@ -1,0 +1,301 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%\section{}
+%\subsection{}
+
+\begin{machine}{train0}
+
+\newset{TRAIN}{\TRAIN}
+\newset{BLK}{\BLK}
+%\newset{LOC}{\LOC}
+\newset{LOC}{\LOC}
+%\end{set}
+
+%
+%\hide{
+	\begin{variable}
+		in : \set[\TRAIN]
+	\end{variable}
+%}
+%
+
+\newevent{enter}
+
+\newevent{leave}
+
+\begin{align*}
+\transient{leave}{tr0}
+{	t \in in	}
+\end{align*}
+
+\begin{dummy}
+	t,t0,t1,t2,t3 : \TRAIN
+\end{dummy}
+
+\begin{dummy}
+	p,q : \BLK
+\end{dummy}
+
+
+\begin{variable}
+	loc : \TRAIN \pfun \BLK
+\end{variable}
+
+\begin{align*}
+\invariant{inv2}
+%	loc \in in \tfun \BLK
+{	\dom . loc = in	}
+\end{align*}
+
+\begin{align*}
+\evassignment{enter}{a1}
+{	in' = in \bunion \{ t \}	}
+\end{align*}
+
+\begin{proof}{enter/INV/inv2}
+	\begin{calculation}
+		in'
+	\hint{=}{ \ref{a1} }
+		in \bunion \{ t \}
+	\hint{=}{ \ref{inv2} }
+		\dom.loc \bunion \{ t \}
+	\hint{=}{ function calculus }
+		\dom.loc \bunion \dom.(t \tfun ent)
+	\hint{=}{ $\dom$ over $|$ }
+		\dom.(loc   |   t \tfun ent)
+	\hint{=}{ \ref{a2} }
+		\dom. ( loc' )
+	\end{calculation}
+\end{proof}
+
+\begin{align*}
+\evassignment{enter}{a2}
+{	loc' = loc | (t \tfun ent)	}
+\end{align*}
+
+\begin{proof}{leave/INV/inv2}
+	\begin{calculation}
+		in'
+	\hint{=}{ \ref{a0} }
+		in \setminus \{ t \}
+	\hint{=}{ \ref{inv2} }
+		\dom.loc \setminus \{ t \}
+	\hint{=}{ domain of domain subtraction }
+		\dom.(\{ t \} \domsub loc)
+	\hint{=}{ \ref{a3} } 
+		\dom. loc' 
+	\end{calculation}
+\end{proof}
+
+\begin{align*}
+\evassignment{leave}{a3}
+{	loc' = \{ t \} \domsub loc 	}
+\end{align*}
+
+\begin{align*}
+\cschedule{leave}{c0}
+{	t \in in	}
+\end{align*}
+
+\begin{align*}
+\initialization{in0}
+{	in = \emptyset	}
+\end{align*}
+\begin{align*}
+\initialization{in1}
+{	loc = \emptyfun	}
+\end{align*}
+
+\begin{use:set}{\TRAIN} \end{use:set}
+\begin{use:set}{\LOC} \end{use:set}
+\begin{use:set}{\BLK} \end{use:set}
+\begin{use:fun}{\TRAIN}{\BLK} \end{use:fun}
+%\begin{use:fun}{\TRAIN}{\LOC} \end{use:fun}
+
+\begin{indices}{leave}
+	t: \TRAIN
+\end{indices}
+
+\begin{indices}{enter}
+	t: \TRAIN
+\end{indices}
+
+\begin{align*}
+\evassignment{leave}{a0}
+%	in' = in | (t \rightarrow \false)
+{	in' = in \setminus \{ t \}	}
+%	in'.t = \false 
+\end{align*}
+
+\begin{constant}
+	ent,ext : \BLK
+\end{constant}
+\begin{constant}
+	PLF : \set [\BLK]
+\end{constant}
+
+\begin{align*}
+\assumption{axm0}
+{	\BLK = \{ ent, ext \} \bunion PLF	}
+\end{align*}
+
+\safety{s0}{ \neg t \in in }{ t \in in \land loc.t = ent }
+\safety{s1}{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in PLF }
+%
+\begin{align*}
+\constraint{co0}
+{	\neg t \in in \land t \in in' \implies  loc'.t = ent } % \lor \neg t \in in'
+\end{align*}
+%
+\begin{proof}{leave/CO/co0}
+%	\begin{free:var}{t}{t0}
+	\begin{calculation}
+		t \in in' 
+	\hint{=}{ \ref{a0} }
+		t0 \in in \setminus \{ t \} 
+	\hint{=}{ $\in$ over $\setminus$ }
+		t0 \in in \land \neg t0 \in \{ t \} 
+	\hint{=}{ $\in$ over singleton }
+		t0 \in in \land \neg t0 = t 
+	\hint{=}{ reflexivity }
+		t0 \in in \land \false
+	\hint{=}{ zero of $\land$ } 
+		\false
+	\hint{\implies}{ $\false \implies p$ }
+		\neg t \in in \implies  loc'.t0 = ent
+	\end{calculation}
+%	\end{free:var}
+\end{proof}
+%
+\begin{align*}
+\constraint{co1}
+{	 t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
+\implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)	}
+\end{align*}
+
+\discharge{s0}{co0}
+\discharge{s1}{co1}
+
+% test the error message for
+%\begin{guard}{co0}
+%
+%\end{guard}
+
+\begin{align*}
+\evguard{leave}{grd0}
+{	loc.t = ext \land t \in in	}
+\end{align*}
+
+\begin{align*}
+\evguard{enter}{grd1}
+{	\neg t \in in	}
+\end{align*}
+
+\begin{proof}{enter/CO/co0}
+	% assume 
+	% forall
+	% case
+	% split
+	\begin{calculation}
+%		t0 \in in' \implies  loc'.t0 = ent
+%	\hint{=}{ \ref{a2} \ref{a1} }
+%		t0 \in in \bunion \{ t \} \implies  (loc |t \tfun ent).t0 = ent
+%	\hint{\follows}{ }
+%		\neg t0 \in in
+		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{  }
+		\qforall{t0}{\neg t0 \in in \land (t0 = t \lor \neg  t0 = t)}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ }
+		\qforall{t0}{\neg t0 \in in \land t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ }
+		(\neg t \in in \land t \in in' \implies  loc'.t = ent )
+	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
+	\hint{=}{ \ref{a1} and \ref{a2} }
+		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
+%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
+	\hint{=}{  }
+		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
+	\hint{=}{  }
+		\neg t \in in \implies  (t \tfun ent).t = ent 
+	\hint{=}{  }
+		\neg t \in in \implies  ent = ent 
+	\hint{=}{  }
+		\true
+	\end{calculation}
+\end{proof}
+
+\begin{proof}{leave/CO/co1}
+	\begin{calculation}
+		t0 \in in' \land (loc'.t0 \in PLF \lor loc'.t0 = ent)
+	\hint{=}{  \ref{a0}  and \ref{a3} } % step 1
+		t0 \in in \setminus \{ t \} 
+		\land ( (\{ t \} \domsub loc).t0 \in PLF \lor (\{ t \} \domsub loc).t0 = ent)
+	\hint{=}{ }	% step 2
+		( t0 \in in \setminus \{ t \} 
+		\land  ( \{ t \} \domsub loc).t0 \in PLF )
+			   \lor ( t0 \in (in \setminus \{ t \} )
+		\land (\{ t \} \domsub loc).t0 = ent)
+	\hint{=}{ \ref{inv2} }	% step 3
+			t0 \in in \setminus \{ t \} 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+	\hint{=}{ } % step 4
+		t0 \in in \land \neg t0  = t 
+		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
+	\hint{=}{  } % step 5
+		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
+	\hint{=}{  \ref{grd0} } % step 6
+	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
+	\hint{\follows}{  \ref{grd0} } % step 7
+%		\true
+	 	t0 \in in \land loc.t0 = ent 
+	\hint{=}{   } % step 8
+	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
+	\end{calculation}
+\end{proof}
+
+\begin{align*}
+\invariant{inv1}
+{	\qforall{t}{t \in in}{loc.t \in \BLK}	}
+\end{align*}
+
+\begin{align*}\assumption{asm2}
+{	\neg ent = ext \land \neg ent \in PLF \land \neg ext \in PLF	}
+\end{align*}
+
+\begin{align*}\assumption{asm3}
+{	\qforall{p}{}{ \neg p = ext \equiv p \in \{ent\} \bunion PLF }	}
+\end{align*}
+
+\begin{align*}\assumption{asm4}
+{	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }	}
+\end{align*}
+
+\begin{align*}\assumption{asm5}
+{	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
+\end{align*}
+
+\end{machine}
+
+\end{document}

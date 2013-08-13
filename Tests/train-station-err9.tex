@@ -65,12 +65,12 @@
 \begin{align*}
 \invariant{inv2}
 %	loc \in in \tfun \BLK
-{	\dom . loc = in }
+{	\dom . loc }
 \end{align*}
 
 \begin{align*}
 \evassignment{enter}{a1}
-{	in' = in \bunion \{ t \} }
+{	in \bunion \{ t \} }
 \end{align*}
 
 \begin{proof}{enter/INV/inv2}
@@ -115,12 +115,12 @@
 
 \begin{align*}
 \cschedule{leave}{c0}
-{	t \in in}
+{	t }
 \end{align*}
 
 \begin{align*}
 \initialization{in0}
-{	in = \emptyset	}
+{	\emptyset	}
 \end{align*}
 \begin{align*}
 \initialization{in1}

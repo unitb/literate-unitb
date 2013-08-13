@@ -55,20 +55,11 @@ check_prop p = do
             Success _ _ _ -> return True
             _             -> return False
 
---data MatchingTypes = MT Type Type Type
---
---instance Arbitrary MatchingTypes where
---    arbitrary = do
---            t <- arbitrary
---            let t0 = f names 
---        where
---            names = [ y ++ [x] | y <- []:names, x <- ['a' .. 'z'] ]
-
 instance Arbitrary Type where
     arbitrary = oneof (
                 [ return BOOL
-                , return INT
-                , return REAL
+                , return int
+                , return real
                 ] ++ concat (take 2 $ repeat
                 [ do
                     t0 <- arbitrary
@@ -82,13 +73,20 @@ instance Arbitrary Type where
                             forM [1 .. n] (\_ -> arbitrary)
                         DefSort _ _ args _ -> 
                             forM [1 .. length args] (\_ -> arbitrary)
-                        BoolSort -> return []
-                        IntSort  -> return []
-                        RealSort -> return []                        
+                        IntSort -> 
+                            return []
+                        RealSort ->
+                            return []
+                        BoolSort -> 
+                            return []
                     return $ USER_DEFINED s ts
                 , do
                     t <- arbitrary
-                    return $ SET t
+                    return $ set_type t
+                , do
+                    t0 <- arbitrary
+                    t1 <- arbitrary
+                    return $ fun_type t0 t1
                 ] ) )
         where
             sorts = map return
@@ -98,6 +96,8 @@ instance Arbitrary Type where
                 , Sort "D" "" 2
                 , DefSort "E" "" ["a","b"] $ ARRAY (GENERIC "a") (GENERIC "b")
                 , BoolSort
+                , IntSort
+                , RealSort
                 ]
             gen_prm = map return
                 [ GENERIC "a"
@@ -108,18 +108,18 @@ instance Arbitrary Type where
 test_case = Case "genericity" test True
 
 unicity_counter_example = 
-    [   (ARRAY REAL (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
+    [   (ARRAY real (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
 test = test_cases (
-        [  Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",INT), ("b@1",REAL)])
-        ,  Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",SET INT), ("b@1",REAL)])
+        [  Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
+        ,  Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
         ,  Case "unification, t2" (return $ unify gtype stype2) Nothing
-        ,  Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [("a@1",SET INT), ("a@2",REAL)])
+        ,  Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [("a@1",set_type int), ("a@2",real)])
         ,  Case "unification, t4" (return $ unify gtype1 gtype2) Nothing
-        ,  Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [("a@2",SET REAL), ("a@1",SET $ SET REAL)])
-        ,  Case "unification, t6" (return $ unify INT (GENERIC "c")) (Just $ fromList [("c@2",INT)])
-        ,  Case "type instantiation" (return $ instantiate (fromList [("c", SET INT),("b",REAL)]) gtype) stype1
+        ,  Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [("a@2",set_type real), ("a@1",set_type $ set_type real)])
+        ,  Case "unification, t6" (return $ unify int (GENERIC "c")) (Just $ fromList [("c@2",int)])
+        ,  Case "type instantiation" (return $ instantiate (fromList [("c", set_type int),("b",real)]) gtype) stype1
 --        ,  Case "type inference 0" case2 result2
         ,  Case "type inference 1" case3 result3
 --        ,  Case "type inference 2" case4 result4
@@ -140,37 +140,20 @@ test = test_cases (
         ] )
     where
         fun_sort = Sort "\\tfun" "fun" 2
-        gtype    = USER_DEFINED fun_sort [GENERIC "c", SET $ GENERIC "b"]
+        gtype    = USER_DEFINED fun_sort [GENERIC "c", set_type $ GENERIC "b"]
         
-        stype0   = USER_DEFINED fun_sort [INT, SET REAL]
-        stype1   = USER_DEFINED fun_sort [SET INT, SET REAL]
-        stype2   = USER_DEFINED fun_sort [SET INT, REAL]
+        stype0   = USER_DEFINED fun_sort [int, set_type real]
+        stype1   = USER_DEFINED fun_sort [set_type int, set_type real]
+        stype2   = USER_DEFINED fun_sort [set_type int, real]
         
-        gtype0   = USER_DEFINED fun_sort [gA, SET REAL]
-        gtype1   = USER_DEFINED fun_sort [SET INT, SET gA]
-        gtype2   = USER_DEFINED fun_sort [SET gA, gA]
+        gtype0   = USER_DEFINED fun_sort [gA, set_type real]
+        gtype1   = USER_DEFINED fun_sort [set_type int, set_type gA]
+        gtype2   = USER_DEFINED fun_sort [set_type gA, gA]
         gA = GENERIC "a"
 
---(case2,result2) = (return $ type_of p, Just (BOOL, fromList [("a",INT)]))
---    where
---        gA = GENERIC "a"
---        x1 = Word $ Var "x1" (SET INT)
---        x2 = Word $ Var "x2" (SET INT)
---        x3 = Word $ Var "x3" (SET INT)
---        y  = Word $ Var "y" INT
---        z  = Word $ Var "z" REAL
---        union  = Fun "union" [SET gA,SET gA] $ SET gA
---        member = Fun "member" [gA, SET gA] BOOL
---        p = FunApp member [y, FunApp union [x1,x2]]
-
---case3   :: IO (Maybe (Type, Map String Type))
---result3 :: Maybe (Type, Map String Type)
---(case3,result3) = (return $ type_of p, Just (BOOL, fromList [("a",INT),("b",SET INT)]))
 ( case3,result3,case5,result5,case6,result6 ) = ( 
                     return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
-                    , FunApp (Fun [gB] "union" [SET gB,SET gB] $ SET gB) [x3,x4] 
---                    , return $ type_of pp
---                    , Just (BOOL, fromList [("a",INT),("b",SET INT)])
+                    , FunApp (Fun [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
                     , return p
                     , q
                     , return pp
@@ -179,18 +162,18 @@ test = test_cases (
     where
         gA = GENERIC "a"
         gB = GENERIC "b"
-        x1 = Word $ Var "x1" (SET INT)
-        x2 = Word $ Var "x2" (SET INT)
-        x3 = Word $ Var "x3" (SET $ SET INT)
-        x4 = Word $ Var "x3" (SET $ SET INT)
-        y  = Word $ Var "y" INT
-        z  = Word $ Var "z" REAL
-        union  = Fun [gA] "union" [SET gA,SET gA] $ SET gA
-        member = Fun [gA] "member" [gA, SET gA] BOOL
-        pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",SET $ GENERIC "a")]) $ FunApp union [x3,x4]]
-        qq = FunApp member [FunApp union [x1,x2], FunApp (Fun [SET gA] "union" [SET $ SET gA,SET $ SET gA] $ SET $ SET gB) [x3,x4]]
-        p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",SET $ GENERIC "a")]) $ FunApp union [x3,x4]]
-        q = FunApp member [FunApp union [x1,x2], FunApp (Fun [SET gA] "union" [SET gA,SET gA] $ SET gA) [x3,x4]]
+        x1 = Word $ Var "x1" (set_type int)
+        x2 = Word $ Var "x2" (set_type int)
+        x3 = Word $ Var "x3" (set_type $ set_type int)
+        x4 = Word $ Var "x3" (set_type $ set_type int)
+        y  = Word $ Var "y" int
+        z  = Word $ Var "z" real
+        union  = Fun [gA] "union" [set_type gA,set_type gA] $ set_type gA
+        member = Fun [gA] "member" [gA, set_type gA] BOOL
+        pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
+        qq = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gB) [x3,x4]]
+        p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
+        q = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type gA,set_type gA] $ set_type gA) [x3,x4]]
 
 (case7, result7) = 
         ( return (x `zelem` Right zempty_set)

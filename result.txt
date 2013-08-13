@@ -1,4 +1,5 @@
 +- Unit-B Document
+|  +- basic syntax and scopes
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -27,9 +28,21 @@
 |  |  +- test 10, undeclared event (wrt indices)
 |  |  +- test 11, undeclared event (wrt assignment)
 |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- [ Success: 12 / 12 ]
+|  |  +- test 13, verification, name clash between dummy and index
+|  |  +- test 14, verification, non-exhaustive case analysis
+|  |  +- test 15, verification, incorrect new assumption
+|  |  +- test 16, verification, proof by parts
+|  |  +- test 17, ill-defined types
+|  |  +- test 18, assertions have type bool
+|  |  +- [ Success: 18 / 18 ]
+|  +- lambda expressions in the cube example
+|  |  +- test 0, verification, lambda vs empty-fun
+|  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  +- test 2, verification, lambda vs apply
+|  |  +- test 3, verification, set comprehension, failed proof
+|  |  +- [ Success: 4 / 4 ]
 |  +- the parser is exception free
-|  +- [ Success: 4 / 4 ]
+|  +- [ Success: 6 / 6 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -67,7 +80,9 @@
 |  +- sample_quant3
 |  +- sample proof
 |  +- check sample calc
-|  +- [ Success: 5 / 5 ]
+|  +- canonical lambdas
+|  +- canonical lambdas with quantifier
+|  +- [ Success: 7 / 7 ]
 +- Formatting utilities
 |  +- test 0
 |  +- test 1
@@ -78,4 +93,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5205   33500  294690
+    5787   37022  326223

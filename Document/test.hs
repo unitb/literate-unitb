@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 module Document.Test ( test_case ) where
 
---import Control.Exception
 import Control.Monad
 
 import Data.List as L
@@ -12,6 +11,7 @@ import Document.Document
 import qualified Document.Tests.Cubes as Cubes
 import qualified Document.Tests.SmallMachine as SMch
 import qualified Document.Tests.TrainStation as Train
+import qualified Document.Tests.Lambdas as Lambdas
 
 import Latex.Parser
 import Latex.Scanner
@@ -31,21 +31,33 @@ import Z3.Z3
 test_case = ("Unit-B Document", test, True)
 
 test :: IO Bool
-test = test_cases [
-        SMch.test_case,
-        Cubes.test_case,
-        Train.test_case,
-        all_properties
+test = test_cases 
+        [ StringCase "basic syntax and scopes" case1 result1
+        , SMch.test_case
+        , Cubes.test_case
+        , Train.test_case
+        , Lambdas.test_case
+        , all_properties
         ]
 
---exists xs = unsafePerformIO $ 
+result1 = (unlines [
+        "  o  m/INIT/FIS",
+        "  o  m/enter/FIS" ,
+        "  o  m/enter/SCH/goal (21,1)",
+        "  o  m/enter/SCH/hypotheses (21,1)",
+        "  o  m/enter/SCH/relation (21,1)",
+        "  o  m/enter/SCH/step (23,1)",
+        "passed 6 / 6"
+    ])
 
---exception_free x = unsafePerformIO (do
---        catch (do
---                let !y = x
---                return True)
---            ((\e ->
---                return False) :: SomeException -> IO Bool))
+path1 = "Tests/new_syntax.tex"
+case1 = do
+    r <- parse_machine path1
+    case r of
+        Right [m] -> do
+            (s,_,_)   <- str_verify_machine m
+            return s
+        x -> return $ show x
 
 prop_parser_exc_free xs = 
     classify (depth xs < 5) "shallow" $
@@ -55,8 +67,6 @@ prop_parser_exc_free xs =
     (case all_machines xs of
         Right _ -> True
         Left  _ -> True)
-
---exception_free (all_machines xs)
 
 properties = do
         r <- quickCheckResult prop_parser_exc_free

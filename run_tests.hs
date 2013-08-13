@@ -33,6 +33,8 @@ general = do
             ExitFailure _ -> return c0
         case c1 of
             ExitSuccess -> do
+                putStrLn "Running test ..."
+                hFlush stdout
                 c1 <- system "./test > result.txt"
                 system "echo \"Lines of Haskell code:\" >> result.txt"
                 system "grep . */*.hs *.hs | wc >> result.txt"
@@ -54,8 +56,10 @@ specific mod_name = do
         hClose h
         c0 <- rawSystem "ghc" ["test_tmp.hs", "--make"]
         case c0 of
-            ExitSuccess -> 
-                system "./test_tmp" >> return ()
+            ExitSuccess -> do
+                putStrLn "Running test ..."
+                hFlush stdout
+                void $ system "./test_tmp"
             ExitFailure _ -> do
                 putStrLn "\n***************"
                 putStrLn   "*** FAILURE ***"

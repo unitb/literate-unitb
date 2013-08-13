@@ -19,16 +19,17 @@ import Utilities.Syntactic
 test_case = Case "table of cubes example" test True
 
 test = test_cases
-       [ (Case "test 0 (syntax)" 
-             case6 $ Right [machine6]),
-         (StringCase "test 1 (verification)" 
-             case7 result7),
-         (StringCase "test 2 (init/fis po)" 
-             case8 result8),
-         (StringCase "proof of inv0" 
-             case9 result9),
-         (StringCase "empty proof"
-             case10 result10) ]
+        [ (Case "test 0 (syntax)" 
+                case6 $ Right [machine6])
+        , (StringCase "test 1 (verification)" 
+                case7 result7)
+        , (StringCase "test 2 (init/fis po)" 
+             case8 result8)
+        , (StringCase "proof of inv0" 
+             case9 result9)
+        , (StringCase "empty proof"
+             case10 result10) 
+        ]
 
 var_a = Var "a" int
 var_b = Var "b" int
@@ -42,10 +43,10 @@ var_n' = Var "n@prime" int
 
 machine6 = (empty_machine "m0") 
         {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
-        ,  inits =
-                [ (c `zeq` z6)
-                , (b `zeq` z1)
-                , (n `zeq` z0) `zand` (a `zeq` z0) 
+        ,  inits = fromList
+                [ (label "in2", c `zeq` z6)
+                , (label "in1", b `zeq` z1)
+                , (label "init0", (n `zeq` z0) `zand` (a `zeq` z0) )
                 ]
         ,  props = prop_set6
         ,  events = singleton (label "evt") event6_evt 
@@ -106,29 +107,32 @@ result7 = unlines [
         "  o  m0/INIT/INV/inv1",
         "  o  m0/INIT/INV/inv2",
         "  o  m0/evt/FIS",
-        "  o  m0/evt/INV/inv0/goal",
-        "  o  m0/evt/INV/inv0/relation",
-        "  o  m0/evt/INV/inv0/step 1",
-        "  o  m0/evt/INV/inv0/step 2",
-        "  o  m0/evt/INV/inv0/step 3",
-        "  o  m0/evt/INV/inv0/step 4",
-        "  o  m0/evt/INV/inv0/step 5",
-        "  o  m0/evt/INV/inv1/goal",
-        "  o  m0/evt/INV/inv1/relation",
-        "  o  m0/evt/INV/inv1/step 1",
-        "  o  m0/evt/INV/inv1/step 2",
-        "  o  m0/evt/INV/inv1/step 3",
-        "  o  m0/evt/INV/inv1/step 4",
-        "  o  m0/evt/INV/inv1/step 5",
-        "  o  m0/evt/INV/inv1/step 6",
-        "  o  m0/evt/INV/inv2/goal",
-        "  o  m0/evt/INV/inv2/relation",
-        "  o  m0/evt/INV/inv2/step 1",
-        "  o  m0/evt/INV/inv2/step 2",
-        "  o  m0/evt/INV/inv2/step 3",
-        "  o  m0/evt/INV/inv2/step 4",
+        "  o  m0/evt/INV/inv0/goal (62,1)",
+        "  o  m0/evt/INV/inv0/hypotheses (62,1)",
+        "  o  m0/evt/INV/inv0/relation (62,1)",
+        "  o  m0/evt/INV/inv0/step (64,1)",
+        "  o  m0/evt/INV/inv0/step (66,1)",
+        "  o  m0/evt/INV/inv0/step (68,1)",
+        "  o  m0/evt/INV/inv0/step (70,1)",
+        "  o  m0/evt/INV/inv0/step (72,1)",
+        "  o  m0/evt/INV/inv1/goal (139,1)",
+        "  o  m0/evt/INV/inv1/hypotheses (139,1)",
+        "  o  m0/evt/INV/inv1/relation (139,1)",
+        "  o  m0/evt/INV/inv1/step (141,1)",
+        "  o  m0/evt/INV/inv1/step (143,1)",
+        "  o  m0/evt/INV/inv1/step (145,1)",
+        "  o  m0/evt/INV/inv1/step (147,1)",
+        "  o  m0/evt/INV/inv1/step (149,1)",
+        "  o  m0/evt/INV/inv1/step (151,1)",
+        "  o  m0/evt/INV/inv2/goal (178,1)",
+        "  o  m0/evt/INV/inv2/hypotheses (178,1)",
+        "  o  m0/evt/INV/inv2/relation (178,1)",
+        "  o  m0/evt/INV/inv2/step (180,1)",
+        "  o  m0/evt/INV/inv2/step (182,1)",
+        "  o  m0/evt/INV/inv2/step (184,1)",
+        "  o  m0/evt/INV/inv2/step (186,1)",
         "  o  m0/evt/SCH",
-        "passed 27 / 27"]
+        "passed 30 / 30"]
 
 case7 = do
     r <- parse_machine path6
@@ -140,10 +144,10 @@ case7 = do
 
 path8   = "Tests/integers_t8.tex"
 result8 = unlines [
-        " sort: pfun [a,b], set [a]",
+        " sort: , , , pfun [a,b], set [a]",
         " x: Int",
         "|----",
-        " (exists ((x Int)) true)"]
+        " (exists ((x Int)) (and true true))"]
 
 case8 = do
         m <- parse_machine path8

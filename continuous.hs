@@ -1,66 +1,144 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
-import Control.Concurrent
-import Control.Monad
+    -- Modules
+import Data.Time
+import Data.Time.Clock
 
-import Data.Map as M (lookup,empty,union,fromList)
 import Document.Document
-
-import System.Directory
-import System.Environment
-import System.IO
---import System.Posix
-
-import Text.Printf
 
 import UnitB.AST
 import UnitB.PO
 
-check_one pos m = do
-        let { po = case M.lookup (_name m) pos of
-            Just po -> po
-            Nothing -> empty }
-        (po,s,n)   <- verify_changes m po
-        return ((n,"> machine " ++ show (_name m) ++ ":\n" ++ s), (_name m,po))
+import Z3.Z3
 
-check_file path m = do
-        r <- parse_machine path
+    -- Libraries
+import Control.Applicative ( (<|>) )
+import Control.Concurrent
+import Control.Monad
+import Control.Monad.State
+
+import Data.Map as M 
+    ( Map,lookup
+    , empty,union
+    , fromList
+    , insert, alter
+    )
+
+import System.Console.GetOpt
+import System.Directory
+import System.Environment
+import System.IO
+import System.Locale
+
+import Text.Printf
+
+liftMS :: (Monad m, Ord k) => v -> StateT v m a -> k -> StateT (Map k v) m a
+liftMS y act x = do
+        m <- get
+        (r,y) <- lift $ runStateT act (maybe y id $ M.lookup x m)
+        put (insert x y m)
+        return r
+
+monitor :: (Monad m, Eq s) 
+        => m s -> m () 
+        -> m () -> m ()
+monitor measure delay act = do
+    t <- measure
+    runStateT (
+        forever (do
+            t0 <- get
+            t1 <- lift measure
+            if t0 == t1
+                then return ()
+                else do 
+                    put t1
+                    lift act
+            lift delay)) t
+    return ()
+
+data Params = Params
+        { path :: FilePath
+        , verbose :: Bool
+        , continuous :: Bool
+        , pos :: Map Label (Map Label (Bool,ProofObligation))
+        }
+
+check_one :: (MonadIO m, MonadState Params m) 
+          => Machine -> m (Int,String)
+check_one m = do
+        param <- get
+        let p = M.lookup (_name m) $ pos param
+        let po = maybe empty id p
+        (po,s,n)    <- liftIO $ verify_changes m po
+        put (param { pos = insert (_name m) po $ pos param })
+        return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
+
+clear :: (MonadIO m, MonadState Params m) 
+      => m ()
+clear = do
+    param <- get
+    if continuous param 
+        then liftIO $ putStr $ take 40 $ cycle "\n"
+        else return ()
+
+check_file :: (MonadIO m, MonadState Params m) 
+           => m ()
+check_file = do
+        param <- get
+        let m = pos param
+        let { p ln = verbose param || take 4 ln /= "  o " }
+        r <- liftIO $ parse_machine $ path param
         case r of
             Right ms -> do
-                xs <- forM ms (check_one m)
-                putStr $ take 40 $ cycle "\n"
-                forM_ (map fst xs) (putStrLn . f)
-                return (union (fromList $ map snd xs) m)
+                xs <- forM ms check_one
+                clear
+                forM_ xs (\(n,xs) -> liftIO $ do
+                    forM_ (filter p $ lines xs) 
+                        putStrLn
+                    putStrLn ("Redid " ++ show n ++ " proofs"))
             Left xs -> do
-                putStr $ take 40 $ cycle "\n"
-                forM_ xs (\(x,i,j) -> printf "error (%d,%d): %s\n" i j x)
-                return m
-    where
-        f (n,xs) = unlines (filter p (lines xs) ++ ["Redid " ++ show n ++ " proofs"])
-        p ln = take 4 ln /= "  o "
+                clear
+                forM_ xs (\(x,i,j) -> liftIO $ 
+                    printf "error (%d,%d): %s\n" i j x)
+        liftIO $ putStrLn ""
+        tz <- liftIO (getCurrentTimeZone)
+        t  <- liftIO (getCurrentTime :: IO UTCTime)
+        liftIO $ putStrLn $ formatTime defaultTimeLocale "Time: %H:%M:%S" $ utcToLocalTime tz t
+
+data Option = Verbose | Continuous
+    deriving Eq
+
+options :: [OptDescr Option]
+options =
+    [ Option ['V'] ["verbose"] (NoArg Verbose) 
+            "display all successful proof obligations" 
+    , Option ['c'] ["continuous"] (NoArg Continuous) 
+            "monitor input files and reverify when they change"
+    ]
 
 main = do
-        args <- getArgs
+        rawargs <- getArgs
+        let (opts,args,err) = getOpt Permute options rawargs
         case args of
             [xs] -> do
                 b <- doesFileExist xs
-                if b
-                then do
-                    pos <- check_file xs empty
-                    t <- getModificationTime xs
-                    f xs (t, pos) 
+                if b then do
+                    let { param = Params 
+                            { path = xs, pos = empty
+                            , verbose = Verbose `elem` opts
+                            , continuous = Continuous `elem` opts
+                            } }
+                    runStateT (do
+                        check_file
+                        if continuous param 
+                        then do
+                            monitor
+                                (liftIO $ getModificationTime xs)
+                                (liftIO $ threadDelay 1000000)
+                                check_file
+                        else return ()) param
+                    return ()
                 else do
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
-            _ -> putStrLn "usage: continuous file"
-    where
-        f xs (t0,m) = do
-            threadDelay 100000
-            x <- hReady stdin
-            c <- if x then getChar else return ' '
-            if c `elem` ['q','Q'] then return ()
-            else do 
-                t1 <- getModificationTime xs
-                m <- if t0 /= t1 
-                    then check_file xs m 
-                    else return m
-                f xs (t1,m) 
+            _ -> putStrLn $ usageInfo "usage: continuous file" options

@@ -1,0 +1,325 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%\section{}
+%\subsection{}
+
+\begin{machine}{m0}
+
+%\hide{
+	\begin{variable}
+		n,a : \Int
+	\end{variable}
+%}
+
+\begin{align*}
+\invariant{inv0}
+{	a = n^3	}
+\end{align*}
+%
+%%\begin{proof}{INIT/INV/inv0}
+%%\begin{calculation}
+%%	
+%%\end{calculation}
+%%\end{proof}
+
+\newevent{evt}
+
+%
+\begin{align*}
+\initialization{init0}
+{	n = 0 \land a = 0	}
+\end{align*}
+%%
+%%
+\begin{align*}
+\evassignment{evt}{a0}
+{	n' = n + 1	}
+\end{align*}
+%
+We use the proof obligation of \ref{inv0} to deduce a proper assignment to $a$:
+%
+\begin{proof}{evt/INV/inv0}
+	\begin{calculation}
+		(n')^3
+	\hint{=}{ \ref{a0} }
+		(n+1)^3
+	\hint{=}{ arithmetic }
+		n^3 + 3 \cdot n^2 + 3 \cdot n + 1
+	\hint{=}{ \ref{inv0} }
+		a + 3 \cdot n^2 + 3 \cdot n + 1
+	\hint{=}{ we add a variable $b$: \ref{inv1}, see below }
+		a + b
+	\hint{=}{ \ref{a1} }
+%	\hint{=}{ }
+		a'
+	\end{calculation}
+\end{proof}
+%
+\begin{variable}
+	b : \Int
+\end{variable}
+%
+\begin{align*}
+\invariant{inv1}
+{	b = 3 \cdot n^2 + 3 \cdot n + 1	}
+\end{align*}
+%%%%%\begin{invariant}{inv2}
+%%%%%	b ~=~ 3 \cdot n^2 + 3 \cdot n + 1
+%%%%%\end{invariant}
+%%%%
+\begin{align*}
+\evassignment{evt}{a1}
+{	a' = a + b	}
+\end{align*}
+%
+We now have a new invariant to preserve. It is easy to see how to establish it initially:
+%%
+\begin{align*}
+\initialization{in1}
+{	b = 1	}
+\end{align*}
+%
+%\begin{itemize}
+%\item label initialization predicates
+%\item spacing commands
+%\item \sout{dummy section}
+%\item \sout{test case: train system}
+%\item refinement
+%
+%	add refinement environments for: changing schedules, transforming progress properties
+%\item po labels: check that proofs match a po
+%\item translate the tags in proof obligations
+%	
+%	create toc entries with the proof environment, in unitb.sty
+%\end{itemize}
+%
+%\section{Todo:}
+%\begin{itemize}
+%\item grammar: make operator grammar generic
+%\item grammar: include prefix operators and quantifiers
+%\item 
+%\item in Z3.Z3.merge, remove the exceptions to integrate it to error handling
+%\item spacing in the middle of event and set declarations
+%\item testing the input validation, error messages
+%\item proof structures (proof by cases, etc)
+%\item types
+%\item invariant theorems
+%\item error checking
+%\item better LaTeX formatting
+%\item lazy proof checking
+%\item \sout{continuous checking}
+%\item \sout{\emph{bug}: last of empty list of calculation steps}
+%\item \sout{error report: report line number instead of step number when proof is incorrect}
+%\item generate documentation
+%\item handle the ``\textbackslash input'' commands in latex and use it to produce a project hierarchy
+%\end{itemize}
+%
+%I'm now describing how I came up with the proof. It came to me in a dream and I forgot it in another dream.
+%%
+\begin{proof}{evt/INV/inv1}
+	\begin{calculation}
+		3 \cdot (n')^2 + 3 \cdot n' + 1
+	\hint{=}{ \ref{a0} }
+		3 \cdot (n+1)^2 + 3 \cdot (n+1) + 1
+	\hint{=}{ arithmetic }
+		3 \cdot (n^2+2\cdot n+1) + 3 \cdot (n+1) + 1
+	\hint{=}{ arithmetic }
+		3 \cdot n^2+6\cdot n+3 + 3 \cdot n + 3 + 1
+	\hint{=}{ arithmetic }
+		3 \cdot n^2 + 3 \cdot n + 1 +6\cdot n+3 + 3
+	\hint{=}{ \ref{inv1} }
+		b+6\cdot n+3+3
+	\hint{=}{ \ref{inv2}, see below }
+		b+c
+	\hint{=}{ \ref{a2}, see below }
+%	\hint{=}{ }
+		b'
+	\end{calculation}
+\end{proof}
+%
+\begin{variable}
+	c : \Int
+\end{variable}
+%
+\begin{align*}
+\invariant{inv2}
+{	c = 6 \cdot n + 6	}
+\end{align*} 
+%
+\begin{align*}
+\evassignment{evt}{a2}
+{	b' = b + c	}
+\end{align*}
+
+Invariant \ref{inv2} is easy to satisfy initially:
+
+\begin{align*}
+\initialization{in2}
+{	c = 6	}
+\end{align*}
+%
+\begin{proof}{evt/INV/inv2}
+
+	If we increase $c$ by 6, we can easily see that \ref{inv2} is preserved:
+\begin{align*}
+\evassignment{evt}{a3}
+{	c' = c + 6	}
+\end{align*}
+
+	\easy
+%	\begin{calculation}
+%		6 \cdot (n') + 6
+%	\hint{=}{ \ref{a0} }
+%		6 \cdot (n+1) + 6
+%	\hint{=}{ arithmetic }
+%		6 \cdot n + 6 + 6
+%	\hint{=}{ \ref{inv2} }
+%		c + 6
+%	\hint{=}{ \ref{a3} }
+%		c'
+%	\end{calculation}
+\end{proof}
+%%
+
+\begin{align*}
+\invariant{inv3}
+{	f = \qfun{i}{ 0 \le i \land i < n }{ i^3 } }
+\end{align*}
+
+\begin{variable}
+	f : \Int \pfun \Int
+\end{variable}
+
+\begin{dummy}
+	i : \Int
+\end{dummy}
+
+\begin{use:fun}{\Int}{\Int} \end{use:fun}
+
+\begin{proof}{INIT/INV/inv3}
+	\begin{calculation}
+		\qfun{i}{ 0 \le i \land i < n }{ i^3 }
+	\hint{=}{ \ref{init0} }
+		\qfun{i}{ 0 \le i \1\land i < 0 }{ i^3 }
+	\hint{=}{ arithmetic }
+%		\qfun{i}{ \false }{ i^3 }
+%	\hint{=}{ arithmetic }
+		\oftype{ \emptyfun }{ \pfun [ \Int, \Int ] }
+	\hint{=}{ \ref{init3} }
+		f
+	\end{calculation}
+\end{proof}
+
+\begin{align*}
+\initialization{init3}
+{	f = \emptyfun	}
+\end{align*}
+
+\begin{proof}{evt/INV/inv3}
+	\begin{calculation}
+		\qfun{i}{ 0 \le i \land i < n' }{ i^3 }
+	\hint{=}{ \ref{a0} }
+		\qfun{i}{ 0 \le i \1\land i < n+1 }{ i^3 }
+	\hint{=}{ split range with \ref{inv4} (see below) }
+		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | n \tfun n^3
+	\hint{=}{ \ref{inv3} }
+%		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | \qfun{i}{ i = n }{ i^3 }
+%	\hint{=}{ one-point rule }
+%		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \2 | n \tfun n^3
+%	\hint{=}{ \ref{inv3} }
+		f \1 | n \tfun n^3
+	\hint{=}{ \ref{inv0} }
+		f \1 | n \tfun a
+	\hint{=}{ \ref{a4} }
+		f'
+	\end{calculation}
+\end{proof}
+
+\begin{align*}
+\invariant{inv4}
+{ 0 \le n }
+\end{align*}
+
+\begin{align*}
+\evassignment{evt}{a4}
+{ f' \2 = f \1 | n \tfun a }
+\end{align*}
+
+\begin{align*}
+\invariant{inv5}
+{	\qforall{i}{0 \le i \1\land i < n}{ f.i = i^3 }		}
+\end{align*}
+
+\begin{proof}{evt/INV/inv5}
+	\begin{align}
+	\assert{asm0}{ \qforall{i}{}{ i \in \dom.f \2\equiv 0 \le i \land i < n } }
+	\end{align}
+	\begin{calculation}
+		\qforall{i}{0 \le i \1\land i < n'}{ f'.i = i^3 }
+	\hint{=}{ \ref{a0} }
+		\qforall{i}{0 \le i \1\land i < n+1}{ f'.i = i^3 }
+	\hint{=}{ split range with \ref{inv4} }
+		\qforall{i}{0 \le i \1\land i < n}{ f'.i = i^3 } \2 \land f'.n = n^3
+	\hint{=}{ \ref{a4} and \ref{inv0} }
+		\qforall{i}{0 \le i \1\land i < n}{ f'.i = i^3 } % \2 \land a = n^3
+	\hint{=}{ \eqref{asm0} with \ref{a4}  }
+		\qforall{i}{0 \le i \1\land i < n  }
+			{ f.i = i^3 } 
+	\hint{=}{ \ref{inv5} }
+%		\qforall{i}{0 \le i \1\land i < n 
+%			\1\land i \in \dom.f \setminus \dom.(n \tfun a) }
+%			{ f'.i = i^3 } 
+%	\hint{=}{  }
+		\true
+	\end{calculation}
+	\begin{subproof}{asm0}
+	\easy
+	\end{subproof}
+\end{proof}
+
+\begin{align*}
+\invariant{inv6}
+{	\dom.f = \qset{i}{0 \le i \land i < n }{ i }		}
+\end{align*}
+
+\begin{proof}{evt/INV/inv6}
+	\begin{calculation}
+		\qset{i}{0 \le i \land i < n' }{ i }
+	\hint{=}{ \ref{a0} }
+		\qset{i}{0 \le i \land i < n+1 }{ i }
+	\hint{=}{ split range }
+		\qset{i}{0 \le i \land i < n }{ i } \bunion \qset{i}{ 0 \le i \land i = n}{ i }
+	\hint{=}{ \ref{inv6} }
+		\dom.f \bunion \qset{i}{ 0 \le i \land i = n}{ i }
+	\hint{=}{ one point rule with \ref{inv4} }
+		\dom.f \bunion \{ i \}
+	\hint{=}{ split range }
+		\dom.f'
+	\end{calculation}
+\end{proof}
+
+\end{machine}
+
+\end{document}
