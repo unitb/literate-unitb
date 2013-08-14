@@ -44,3 +44,4 @@ z3.cabal
 *.gz(busy)
 m.z
 train0.z
+*.state
