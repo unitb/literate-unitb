@@ -18,12 +18,18 @@ import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
 
+import qualified 
+       Data.ByteString as BS
+import qualified 
+       Data.ByteString.Internal as BSI
 import Data.Map as M 
     ( Map,lookup
     , empty,union
     , fromList
     , insert, alter
     )
+import qualified
+       Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory
@@ -32,6 +38,37 @@ import System.IO
 import System.Locale
 
 import Text.Printf
+
+instance Ser.Serialize Label where
+instance Ser.Serialize Sort where
+instance Ser.Serialize Var where
+instance Ser.Serialize Type where
+instance Ser.Serialize Fun where
+instance Ser.Serialize Def where
+instance Ser.Serialize Quantifier where
+instance Ser.Serialize Context where
+instance Ser.Serialize Expr where
+instance Ser.Serialize ProofObligation where
+
+with_po_map act param = do
+        let fn = path param ++ ".state"
+        putStrLn fn
+        b <- doesFileExist fn
+        param <- if b then do
+            xs <- BS.readFile fn
+            either 
+                (\_ -> return param) 
+                (\po -> return param { pos = po }) 
+                $ Ser.decode xs
+        else return param
+        void $ execStateT act param
+
+dump_pos :: MonadIO m => StateT Params m ()
+dump_pos = do
+        p    <- gets pos
+        file <- gets path         
+        let fn = file ++ ".state"
+        liftIO $ BS.writeFile fn $ Ser.encode p
 
 liftMS :: (Monad m, Ord k) => v -> StateT v m a -> k -> StateT (Map k v) m a
 liftMS y act x = do
@@ -125,18 +162,21 @@ main = do
                 b <- doesFileExist xs
                 if b then do
                     let { param = Params 
-                            { path = xs, pos = empty
+                            { path = xs
+                            , pos = empty
                             , verbose = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
                             } }
-                    runStateT (do
+                    with_po_map (do
                         check_file
+                        dump_pos
                         if continuous param 
                         then do
                             monitor
                                 (liftIO $ getModificationTime xs)
                                 (liftIO $ threadDelay 1000000)
-                                check_file
+                                (do check_file
+                                    dump_pos)
                         else return ()) param
                     return ()
                 else do
