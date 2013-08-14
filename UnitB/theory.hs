@@ -1,13 +1,16 @@
+{-# LANGUAGE DeriveGeneric #-}
 module UnitB.Theory where
 
 import Data.Map hiding ( map )
 
 import Z3.Def
 import Z3.Const
---import Z3.Z3
+
+    -- Libraries
+import GHC.Generics
 
 data Label = Lbl String
-    deriving (Ord, Eq)
+    deriving (Ord, Eq, Generic)
 
 instance Show Label where
     show (Lbl s) = s
