@@ -70,13 +70,6 @@ dump_pos = do
         let fn = file ++ ".state"
         liftIO $ BS.writeFile fn $ Ser.encode p
 
-liftMS :: (Monad m, Ord k) => v -> StateT v m a -> k -> StateT (Map k v) m a
-liftMS y act x = do
-        m <- get
-        (r,y) <- lift $ runStateT act (maybe y id $ M.lookup x m)
-        put (insert x y m)
-        return r
-
 monitor :: (Monad m, Eq s) 
         => m s -> m () 
         -> m () -> m ()
