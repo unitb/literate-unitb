@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, DefaultSignatures #-}
 module Z3.Def where
 
     -- library
+import GHC.Generics
 import Data.List
 import Data.Map as M hiding (map,filter,foldl)
-import qualified Data.Set as S
+import qualified 
+       Data.Set as S
 import Data.Typeable
 
 import Utilities.Format
@@ -14,10 +16,10 @@ data Expr =
         | Const [Type] String Type
         | FunApp Fun [Expr]
         | Binder Quantifier [Var] Expr Expr
-    deriving (Eq, Ord, Typeable)
+    deriving (Eq, Ord, Typeable, Generic)
 
 data Quantifier = Forall | Exists | Lambda
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t
@@ -71,7 +73,7 @@ data Type =
         | ARRAY Type Type 
         | GENERIC String 
         | USER_DEFINED Sort [Type]
-    deriving (Eq, Ord, Typeable)
+    deriving (Eq, Ord, Typeable, Generic)
 
 data Context = Context 
         (Map String Sort) -- sorts
@@ -79,10 +81,10 @@ data Context = Context
         (Map String Fun)  -- functions and operators
         (Map String Def)  -- transparent definitions
         (Map String Var)  -- dummies
-    deriving (Show,Eq)
+    deriving (Show,Eq,Generic)
 
 data ProofObligation = ProofObligation Context [Expr] Bool Expr
-    deriving Eq
+    deriving (Eq, Generic)
 
 instance Show Type where
     show BOOL                = "BOOL"
@@ -93,7 +95,6 @@ instance Show Type where
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
 --    show (SET t) = format "SET {0}" t
-
 
 data StrList = List [StrList] | Str String
 
@@ -191,7 +192,7 @@ data Sort =
         BoolSort | IntSort | RealSort 
         | DefSort String String [String] Type
         | Sort String String Int --[String]
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 z3_name (BoolSort) = "Bool"
 z3_name (IntSort) = "Int"
@@ -212,13 +213,13 @@ data Decl =
 data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
 
 data Fun = Fun [Type] String [Type] Type
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 data Var = Var String Type
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic)
 
 data Def = Def [Type] String [Var] Type Expr
-    deriving Eq
+    deriving (Eq,Generic)
 
 instance Show StrList where
     show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
