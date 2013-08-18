@@ -1,16 +1,19 @@
 {-# LANGUAGE DeriveDataTypeable #-} 
 
-module UnitB.AST (
-    Label, Theory (..), Event(..), empty_event, 
-    Machine (..), label,
-    empty_machine, 
-    ProgramProp (..), 
-    ProgressProp(..),
-    SafetyProp  (..), 
-    PropertySet (..), 
-    empty_property_set,
-    composite_label, empty_theory,
-    ps_union
+module UnitB.AST 
+    ( Label, Theory (..), Event(..), empty_event
+    , Machine (..), label
+    , empty_machine
+    , ProgramProp (..)
+    , ProgressProp(..)
+    , SafetyProp  (..) 
+    , PropertySet (..) 
+    , empty_property_set
+    , composite_label, empty_theory
+    , Rule (..)
+    , Variant (..)
+    , Direction (..)
+--    , ps_union
     ) 
 where
 
@@ -67,9 +70,34 @@ data ProgramProp =
 --      | Sch thm
     deriving Show
 
+--data Derivation = Deriv 
+--        Label Rule 
+--        [LivenessDerivation] 
+--        [Label] 
+
+data Direction = Up | Down
+
+data Variant = 
+    SetVariant Expr Expr Direction
+    | IntegerVariant Expr Expr Direction
+
+data Rule = 
+        Monotonicity Label
+        | Transitivity Label Label
+        | Induction Label Variant
+        | PSP Label Label
+        | Disjunction Label
+        | NegateDisjunct Label
+        | Discharge Label
+        | Add
+
+--data Liveness = Live (Map Label ProgressProp) 
+
 data ProgressProp = LeadsTo [Var] Expr Expr
+    deriving Typeable
 
 data SafetyProp = Unless [Var] Expr Expr
+    deriving Typeable
 
 instance Show ProgressProp where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
@@ -77,13 +105,15 @@ instance Show ProgressProp where
 instance Show SafetyProp where
     show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
 
-data PropertySet = PS {
-        program_prop :: Map Label ProgramProp,
-        inv          :: Map Label Expr,       -- inv
-        inv_thm      :: Map Label Expr,       -- inv thm
-        proofs       :: Map Label Proof,
-        progress     :: Map Label ProgressProp,
-        safety       :: Map Label SafetyProp }
+data PropertySet = PS
+        { program_prop :: Map Label ProgramProp
+        , inv          :: Map Label Expr       -- inv
+        , inv_thm      :: Map Label Expr       -- inv thm
+        , proofs       :: Map Label Proof
+        , progress     :: Map Label ProgressProp
+        , safety       :: Map Label SafetyProp
+        , derivation   :: Map Label Rule
+        }
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y) [
@@ -95,12 +125,12 @@ instance Show PropertySet where
         ("safety", show $ safety x)]
 
 empty_property_set :: PropertySet
-empty_property_set = PS empty empty empty empty empty empty
+empty_property_set = PS empty empty empty empty empty empty empty
 
-ps_union (PS a0 b0 c0 d0 e0 f0) (PS a1 b1 c1 d1 e1 f1) =
-    PS (a0 `union` a1) (b0 `union` b1) 
-        (c0 `union` c1) (d0 `union` d1)
-        (e0 `union` e1) (f0 `union` f1)
+--ps_union (PS a0 b0 c0 d0 e0 f0) (PS a1 b1 c1 d1 e1 f1) =
+--    PS (a0 `union` a1) (b0 `union` b1) 
+--        (c0 `union` c1) (d0 `union` d1)
+--        (e0 `union` e1) (f0 `union` f1)
         
 
 composite_label xs = Lbl $ intercalate "/" $ map str xs

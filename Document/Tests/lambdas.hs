@@ -2,11 +2,25 @@ module Document.Tests.Lambdas
     ( test_case, test )
 where
 
+    -- Modules
 import Document.Document
 
+import UnitB.AST
 import UnitB.PO
+import UnitB.FunctionTheory
+
+import Z3.Z3 hiding (verify)
+
+    -- Libraries
+import Control.Monad.IO.Class
+import Control.Monad.Trans
+import Control.Monad.Trans.Either
+
+import Data.Map
 
 import Tests.UnitTest
+
+import Utilities.Syntactic
 
 test_case = Case "lambda expressions in the cube example" test True
 
@@ -15,6 +29,8 @@ test = test_cases
             , (StringCase "test 1, verification, lambda vs ovl, mk-fun" (verify path1) result1)
             , (StringCase "test 2, verification, lambda vs apply" (verify path2) result2)
             , (StringCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
+            , (Case "test 4, adding a progress property" case4 result4)
+            , (Case "test 5, unless properties" case5 result5)
             ]
 
 result0 = unlines 
@@ -218,6 +234,62 @@ result3 = unlines
      ]
 
 path3 = "tests/cubes-t3.tex"
+
+result4 = either g Right (do
+        q0 <- f `mzeq` zlambda [i_decl] 
+            (mzle (mzint 0) i `mzand` mzless i bigN) 
+            (mzpow i $ mzint 3)
+        q1 <- bigN `mzeq` n
+        q2 <- (k `mzless` n) `mzor` (n `mzeq` bigN)
+        p1  <- (n `mzeq` k)
+        p2  <- mzall [k `mzle` n, n `mzeq` k, mznot (n `mzeq` bigN)]
+        p3 <-  mzall [n `mzeq` k, mznot (n `mzeq` bigN)]
+        q3 <- mzor 
+                (mzle k n `mzand` mznot (k `mzeq` n)) 
+                (n `mzeq` bigN)
+        q4 <- mznot (n `mzeq` k)
+        return $ fromList 
+            [   (label "prog0", LeadsTo [] ztrue q0)
+            ,   (label "prog1", LeadsTo [] ztrue q1)
+            ,   (label "prog2", LeadsTo [] p1 q2)
+            ,   (label "prog3", LeadsTo [] p2 q3)
+            ,   (label "prog4", LeadsTo [] p3 q4)
+            ])
+    where
+        (k,k_decl) = var "k" int
+        (i,i_decl) = var "i" int
+        (f,f_decl) = var "f" (fun_type int int)
+        (n,_)      = var "n" int
+        (bigN,_)   = var "N" int
+        g x = Left [(x,0,0)]
+
+path4 = "tests/cubes.tex"
+
+case4 = runEitherT (do
+    ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
+    case ms of
+        [m] -> right $ progress $ props $ m
+        _   -> left [("a single machine is expected",0,0)])
+
+result5 = either g Right (do
+        q  <- bigN `mzeq` n
+        p  <- (k `mzle` n)
+        return $ fromList 
+            [   (label "saf0", Unless [k_decl] p q)
+            ])
+    where
+        (k,k_decl) = var "k" int
+        (i,i_decl) = var "i" int
+        (f,f_decl) = var "f" (fun_type int int)
+        (n,_)      = var "n" int
+        (bigN,_)   = var "N" int
+        g x = Left [(x,0,0)]
+
+case5 = runEitherT (do
+    ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
+    case ms of
+        [m] -> right $ safety $ props $ m
+        _   -> left [("a single machine is expected",0,0)])
 
 verify path = do
     r <- parse_machine path

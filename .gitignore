@@ -45,3 +45,4 @@ z3.cabal
 m.z
 train0.z
 *.state
+playground.hs

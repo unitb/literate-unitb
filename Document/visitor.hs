@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Document.Visitor where
 
     -- Modules
@@ -6,6 +7,9 @@ import Latex.Parser
 import Document.Expression
 
     -- Libraries
+import System.IO
+import System.IO.Unsafe
+
 import Utilities.Syntactic
 
 drop_blank_text :: [LatexDoc] -> [LatexDoc]
@@ -74,6 +78,19 @@ get_2_lbl xs = do
         (lbl1,xs) <- get_1_lbl xs
         return (lbl0,lbl1,xs)
 
+get_3_lbl xs = do
+        (lbl0,xs) <- get_1_lbl xs
+        (lbl1,xs) <- get_1_lbl xs
+        (lbl2,xs) <- get_1_lbl xs
+        return (lbl0,lbl1,lbl2,xs)
+
+get_4_lbl xs = do
+        (lbl0,xs) <- get_1_lbl xs
+        (lbl1,xs) <- get_1_lbl xs
+        (lbl2,xs) <- get_1_lbl xs
+        (lbl3,xs) <- get_1_lbl xs
+        return (lbl0,lbl1,lbl2,lbl3,xs)
+
 data EnvBlock a = 
         Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
         | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> (Int,Int) -> Either [Error] a)
@@ -92,6 +109,8 @@ data CmdBlock a =
         | Cmd2Args ((String, String) -> a -> (Int,Int) -> Either [Error] a)
         | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
         | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd3Args ((String, String, String) -> a -> (Int,Int) -> Either [Error] a)
+        | Cmd4Args ((String, String, String, String) -> a -> (Int,Int) -> Either [Error] a)
 
 data MEither a b = MLeft [a] b | MRight b
 
@@ -164,7 +183,7 @@ visit_doc blks cmds cs x = do
         h ((name,c):cs) ex cmd ts (i,j)
             | name == cmd   = do
                     x       <- ex
-                    case c of
+                    r <- case c of
                         Cmd0Args f -> do
                             x <- fromEither x $ f () x (i,j)
                             g (MRight x) ts
@@ -212,5 +231,16 @@ visit_doc blks cmds cs x = do
                                 ([arg2,arg3],ts) <- cmd_params 2 ts
                                 f (arg0, arg1, arg2, arg3) x (i,j))
                             g (MRight x) ts
+                        Cmd3Args f -> do
+                            x <- fromEither x (do
+                                (arg0,arg1,arg2,ts) <- get_3_lbl ts
+                                f (arg0, arg1, arg2) x (i,j))
+                            g (MRight x) ts
+                        Cmd4Args f -> do
+                            x <- fromEither x (do
+                                (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
+                                f (arg0, arg1, arg2, arg3) x (i,j))
+                            g (MRight x) ts
+                    return r
             | otherwise     = h cs ex cmd ts (i,j)
         h [] ex cmd ts (i,j) = g ex ts 

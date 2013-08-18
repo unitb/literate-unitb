@@ -228,23 +228,6 @@ parse_calc hyps m xs li =
                         M.lookup xs x)
                     err $ M.lookup xs $ guard ev
                     err $ M.lookup xs $ action ev
-
-collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
-collect_proofs = visit_doc
-        [   (   "proof"
-            ,   Env1Args (\(po,()) xs m (i,j) -> do
-                    let lbl = composite_label [ _name m, label po ]
-                    toEither $ error_list (i,j) 
-                        [   ( lbl `member` proofs (props m)
-                            , format "a proof for {0} already exists" lbl )
-                        ] 
-                    p <- collect_proof_step empty m xs (i,j)
-                    return m { 
-                        props = (props m) { 
-                            proofs = insert lbl p $ 
-                                    proofs $ props m } } )
-            )
-        ] []
                                 
 get_expr :: Machine -> [LatexDoc] -> (Int,Int) -> Either [Error] Expr
 get_expr m ys li = do

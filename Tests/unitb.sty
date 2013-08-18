@@ -418,6 +418,13 @@
 			\stepcounter{prop}
 			\tag{S\arabic{prop}} 
 		\label{#1} 	}
+\newcommand{\progress}[3]
+	% \progress{label}{p}{q} means 
+	%			label: p |-> q
+{			#2 \quad \mapsto\quad #3
+			\stepcounter{prop}
+			\tag{P\arabic{prop}	} 
+		\label{#1} 	}
 
 	% 
 	% PROOF STRUCTURE
@@ -494,6 +501,13 @@
 %%%%%%%%%%%%%%%%%%
 % Proof obligations and refinement
 %
-\newcommand{\discharge}[2]
+\newcommand{\discharge}[2]	
+	% \discharge{P0}{T0} 
+	%	-- transient predicate T0 implements P0
 {	\noindent \textbf{discharge} \ref{#1} 
 	\textbf{with} \ref{#2} \\	}
+
+\newcommand{\refine}[4]
+	% \refine{prop}{rule}{new props}{ comment }
+{	\\ \sqsubseteq \quad & \qquad \{\text{ #2#4 }\} \\ }
+\newcommand{\var}[1]{}

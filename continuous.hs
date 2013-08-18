@@ -52,7 +52,6 @@ instance Ser.Serialize ProofObligation where
 
 with_po_map act param = do
         let fn = path param ++ ".state"
-        putStrLn fn
         b <- doesFileExist fn
         param <- if b then do
             xs <- BS.readFile fn

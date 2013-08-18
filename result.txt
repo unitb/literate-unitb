@@ -40,7 +40,9 @@
 |  |  +- test 1, verification, lambda vs ovl, mk-fun
 |  |  +- test 2, verification, lambda vs apply
 |  |  +- test 3, verification, set comprehension, failed proof
-|  |  +- [ Success: 4 / 4 ]
+|  |  +- test 4, adding a progress property
+|  |  +- test 5, unless properties
+|  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -93,4 +95,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5787   37022  326223
+    5544   33681  310699

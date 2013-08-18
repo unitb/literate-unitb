@@ -33,6 +33,8 @@
 	\end{variable}
 %}
 
+
+
 \begin{align*}
 \invariant{inv0}
 {	a = n^3	}
@@ -213,7 +215,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \end{variable}
 
 \begin{dummy}
-	i : \Int
+	i,k : \Int
 \end{dummy}
 
 \begin{use:fun}{\Int}{\Int} \end{use:fun}
@@ -319,6 +321,29 @@ Invariant \ref{inv2} is easy to satisfy initially:
 		\dom.f'
 	\end{calculation}
 \end{proof}
+
+\begin{constant}
+	N: \Int
+\end{constant}
+
+\begin{align*}
+&	\progress{prog0}{\true}{ f = \qfun{i}{0 \le i \land i < N}{i^3} }
+\refine{prog0}{monotonicity}{prog1}{ with \ref{inv3} }
+&	\progress{prog1}{\true}{ N = n  }
+\refine{prog1}{induction}{prog2}{ \var{n} $\max{N}$ }
+&	\progress{prog2}{n = k}{ k < n \2\lor n = N } 
+\refine{prog2}{trading}{prog3}{}
+&	\progress{prog3}
+		{ k \le n \1\land n = k \1\land \neg n = N}
+		{ (k \le n \1\land \neg k = n) \1\lor n = N } 
+\refine{prog3}{PSP}{ prog4, saf0 }{ \var{n} $\max{N}$ }
+&	\progress{prog4}
+		{n = k \1\land \neg n = N }
+		{ \neg n = k } 
+\\ & 	\safety{saf0}{ k \le n }{ N = n }
+%\refine{prog2}{trading}{prog3}{}
+%&	\progress{prog3}{n = k \2\land \neg n = N}{ n < k } \\
+\end{align*}
 
 \end{machine}
 

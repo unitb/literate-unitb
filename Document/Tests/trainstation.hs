@@ -170,15 +170,16 @@ props0 = empty_property_set
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
             ]
     ,  safety = fromList
-            [   ( label "s0"
-                , Unless [t_decl] 
-                        (fromJust $ mznot (t `zelem` in_var)) 
-                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent ))) )
-            ,   ( label "s1"
-                , Unless [t_decl] 
-                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent )))
-                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `zelem` plf ))) )
-            ]
+            []
+--               ( label "s0"
+--                , Unless [t_decl] 
+--                        (fromJust $ mznot (t `zelem` in_var)) 
+--                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent ))) )
+--            ,   ( label "s1"
+--                , Unless [t_decl] 
+--                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent )))
+--                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `zelem` plf ))) )
+--            ]
     }
 
 enter_evt = empty_event
@@ -833,6 +834,8 @@ result13 = unlines
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
         ,  "  o  train0/SKIP/CO/co1"
+        ,  "  o  train0/SKIP/CO/s0"
+        ,  "  o  train0/SKIP/CO/s1"
         ,  "  o  train0/enter/CO/co0/goal (220,1)"
         ,  "  o  train0/enter/CO/co0/hypotheses (220,1)"
         ,  "  o  train0/enter/CO/co0/relation (220,1)"
@@ -845,6 +848,8 @@ result13 = unlines
         ,  "  o  train0/enter/CO/co0/step (242,1)"
         ,  "  o  train0/enter/CO/co0/step (244,1)"
         ,  "  o  train0/enter/CO/co1"
+        ,  "  o  train0/enter/CO/s0"
+        ,  "  o  train0/enter/CO/s1"
         ,  "  o  train0/enter/FIS"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
@@ -876,6 +881,8 @@ result13 = unlines
         ,  "  o  train0/leave/CO/co1/step (268,1)"
         ,  "  o  train0/leave/CO/co1/step (270,1)"
         ,  "  o  train0/leave/CO/co1/step (273,1)"
+        ,  "  o  train0/leave/CO/s0"
+        ,  "  o  train0/leave/CO/s1"
         ,  "  o  train0/leave/FIS"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
@@ -887,7 +894,7 @@ result13 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 54 / 59"
+        ,  "passed 60 / 65"
         ]
         
 case13 = do
@@ -905,6 +912,8 @@ result14 = unlines
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
         ,  "  o  train0/SKIP/CO/co1"
+        ,  "  o  train0/SKIP/CO/s0"
+        ,  "  o  train0/SKIP/CO/s1"
         ,  "  o  train0/enter/CO/co0/case 1/goal (222,1)"
         ,  "  o  train0/enter/CO/co0/case 1/hypotheses (222,1)"
         ,  "  o  train0/enter/CO/co0/case 1/relation (222,1)"
@@ -912,6 +921,8 @@ result14 = unlines
         ,  "  o  train0/enter/CO/co0/case 1/step (226,1)"
         ,  " xxx train0/enter/CO/co0/completeness (220,1)"
         ,  "  o  train0/enter/CO/co1"
+        ,  "  o  train0/enter/CO/s0"
+        ,  "  o  train0/enter/CO/s1"
         ,  "  o  train0/enter/FIS"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
@@ -941,6 +952,8 @@ result14 = unlines
         ,  "  o  train0/leave/CO/co1/step (273,1)"
         ,  "  o  train0/leave/CO/co1/step (275,1)"
         ,  "  o  train0/leave/CO/co1/step (278,1)"
+        ,  "  o  train0/leave/CO/s0"
+        ,  "  o  train0/leave/CO/s1"
         ,  "  o  train0/leave/FIS"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
@@ -952,7 +965,7 @@ result14 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 50 / 52"
+        ,  "passed 56 / 58"
         ]
         
 case14 = do
@@ -970,6 +983,8 @@ result15 = unlines
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
         ,  "  o  train0/SKIP/CO/co1"
+        ,  "  o  train0/SKIP/CO/s0"
+        ,  "  o  train0/SKIP/CO/s1"
         ,  "  o  train0/enter/CO/co0/case 1/goal (234,1)"
         ,  "  o  train0/enter/CO/co0/case 1/hypotheses (234,1)"
         ,  "  o  train0/enter/CO/co0/case 1/relation (234,1)"
@@ -984,6 +999,8 @@ result15 = unlines
         ,  "  o  train0/enter/CO/co0/case 2/step (254,1)"
         ,  "  o  train0/enter/CO/co0/completeness (231,1)"
         ,  "  o  train0/enter/CO/co1"
+        ,  "  o  train0/enter/CO/s0"
+        ,  "  o  train0/enter/CO/s1"
         ,  "  o  train0/enter/FIS"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
@@ -1012,6 +1029,8 @@ result15 = unlines
         ,  "  o  train0/leave/CO/co1/step (284,1)"
         ,  "  o  train0/leave/CO/co1/step (286,1)"
         ,  "  o  train0/leave/CO/co1/step (289,1)"
+        ,  "  o  train0/leave/CO/s0"
+        ,  "  o  train0/leave/CO/s1"
         ,  "  o  train0/leave/FIS"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
@@ -1023,7 +1042,7 @@ result15 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 55 / 58"
+        ,  "passed 61 / 64"
         ]
         
 case15 = do
@@ -1041,6 +1060,8 @@ result16 = unlines
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
         ,  "  o  train0/SKIP/CO/co1"
+        ,  "  o  train0/SKIP/CO/s0"
+        ,  "  o  train0/SKIP/CO/s1"
         ,  "  o  train0/enter/CO/co0/case 1/goal (292,1)"
         ,  "  o  train0/enter/CO/co0/case 1/hypotheses (292,1)"
         ,  "  o  train0/enter/CO/co0/case 1/relation (292,1)"
@@ -1073,6 +1094,8 @@ result16 = unlines
         ,  " xxx train0/enter/CO/co1/part 2/case 2/step (248,2)"
         ,  "  o  train0/enter/CO/co1/part 2/case 2/step (250,2)"
         ,  "  o  train0/enter/CO/co1/part 2/completeness (230,2)"
+        ,  "  o  train0/enter/CO/s0"
+        ,  "  o  train0/enter/CO/s1"
         ,  "  o  train0/enter/FIS"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
@@ -1102,6 +1125,8 @@ result16 = unlines
         ,  "  o  train0/leave/CO/co1/step (342,1)"
         ,  "  o  train0/leave/CO/co1/step (344,1)"
         ,  "  o  train0/leave/CO/co1/step (347,1)"
+        ,  "  o  train0/leave/CO/s0"
+        ,  "  o  train0/leave/CO/s1"
         ,  "  o  train0/leave/FIS"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
@@ -1113,7 +1138,7 @@ result16 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 75 / 77"
+        ,  "passed 81 / 83"
         ]
 
 case16 = do
