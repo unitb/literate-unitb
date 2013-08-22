@@ -4,7 +4,8 @@ module UnitB.AST
     ( Label, Theory (..), Event(..), empty_event
     , Machine (..), label
     , empty_machine
-    , ProgramProp (..)
+    , Transient  (..)
+    , Constraint (..)
     , ProgressProp(..)
     , SafetyProp  (..) 
     , PropertySet (..) 
@@ -63,9 +64,12 @@ empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set
 instance Named Machine where
     name m = case _name m of Lbl s -> s
 
-data ProgramProp = 
+data Constraint = 
         Co [Var] Expr
-        | Transient (Map String Var) Expr Label
+    deriving Show
+
+data Transient = 
+        Transient (Map String Var) Expr Label
 --      | Grd thm
 --      | Sch thm
     deriving Show
@@ -76,25 +80,28 @@ data ProgramProp =
 --        [Label] 
 
 data Direction = Up | Down
+    deriving Show
 
 data Variant = 
-    SetVariant Expr Expr Direction
-    | IntegerVariant Expr Expr Direction
+        SetVariant Expr Expr Direction
+        | IntegerVariant Expr Expr Direction
+    deriving Show
 
 data Rule = 
-        Monotonicity Label
-        | Transitivity Label Label
-        | Induction Label Variant
-        | PSP Label Label
+        Monotonicity ProgressProp ProgressProp
+        | Transitivity ProgressProp ProgressProp ProgressProp
+        | Induction ProgressProp ProgressProp Variant
+        | PSP ProgressProp ProgressProp SafetyProp
         | Disjunction Label
-        | NegateDisjunct Label
-        | Discharge Label
+        | NegateDisjunct ProgressProp ProgressProp
+        | Discharge ProgressProp Transient (Maybe SafetyProp)
         | Add
+    deriving Show
 
 --data Liveness = Live (Map Label ProgressProp) 
 
 data ProgressProp = LeadsTo [Var] Expr Expr
-    deriving Typeable
+    deriving (Typeable)
 
 data SafetyProp = Unless [Var] Expr Expr
     deriving Typeable
@@ -106,7 +113,8 @@ instance Show SafetyProp where
     show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
 
 data PropertySet = PS
-        { program_prop :: Map Label ProgramProp
+        { transient    :: Map Label Transient
+        , constraint   :: Map Label Constraint
         , inv          :: Map Label Expr       -- inv
         , inv_thm      :: Map Label Expr       -- inv thm
         , proofs       :: Map Label Proof
@@ -117,7 +125,8 @@ data PropertySet = PS
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y) [
-        ("program_prop", show $ program_prop x),
+        ("transient",  show $ transient x),
+        ("constraint", show $ constraint x),
         ("inv", show $ inv x),
         ("inv_thm", show $ inv_thm x),
         ("proofs", show $ keys $ proofs x),
@@ -125,7 +134,7 @@ instance Show PropertySet where
         ("safety", show $ safety x)]
 
 empty_property_set :: PropertySet
-empty_property_set = PS empty empty empty empty empty empty empty
+empty_property_set = PS empty empty empty empty empty empty empty empty
 
 --ps_union (PS a0 b0 c0 d0 e0 f0) (PS a1 b1 c1 d1 e1 f1) =
 --    PS (a0 `union` a1) (b0 `union` b1) 

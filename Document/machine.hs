@@ -328,28 +328,28 @@ collect_expr = visit_doc
                               , format "event '{0}' is undeclared" ev )
                             ]
                         toEither $ error_list (i,j)
-                            [   ( label lbl `member` program_prop (props m)
+                            [   ( label lbl `member` transient (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
                         tr <- get_assert m xs (i,j)
                         let prop = Transient (free_vars (context m) tr) tr $ label ev
-                        let old_prog_prop = program_prop $ props m
+                        let old_prog_prop = transient $ props m
                         let new_props     = insert (label lbl) prop $ old_prog_prop
                         return m {
                             props = (props m) {
-                                program_prop = new_props } } )
+                                transient = new_props } } )
             )
         ,   (   "\\constraint"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         toEither $ error_list (i,j)
-                            [ ( label lbl `member` program_prop (props m)
+                            [ ( label lbl `member` constraint (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
                         pre             <- get_assert m xs (i,j)
                         return m { 
                             props = (props m) { 
-                                program_prop = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
-                                    $ program_prop $ props m } } )
+                                constraint = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
+                                    $ constraint $ props m } } )
             )
         ,   (   "\\safety"
             ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
@@ -366,9 +366,9 @@ collect_expr = visit_doc
                     let new_prop = Unless (M.elems dum) p q
                     return m { props = (props m) 
                         { safety = insert (label lbl) new_prop $ prop 
-                        , program_prop = insert (label lbl) 
+                        , constraint = insert (label lbl) 
                             (Co (M.elems dum) (zimplies (zand p $ znot q) $ primed (variables m) (zor p q)))
-                            (program_prop $ props m) } } )
+                            (constraint $ props m) } } )
             )
         ,   (   "\\progress"
             ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
@@ -432,19 +432,40 @@ collect_proofs = visit_doc
                         [   ( not (goal_lbl `member` (progress $ props m))
                             , format "the goal is an undefined progress property {0}, {1}" goal_lbl $ keys $ progress $ props m )
                         ]
+                    let prog = progress $ props m
+                    let saf  = safety $ props m
                     r <- case map toLower rule of
                         "discharge" -> do
                             toEither $ error_list (i,j)
-                                [   ( length hyps_lbls /= 1
+                                [   ( 1 > length hyps_lbls || length hyps_lbls > 2
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
-                            let [h0] = hyps_lbls
-                            toEither $ error_list (i,j)
-                                [   ( not (h0 `member` program_prop (props m))
-                                    , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
-                                ]
-                            return (Discharge h0)
+                            if length hyps_lbls == 2 then do
+                                let [h0,h1] = hyps_lbls
+                                toEither $ error_list (i,j)
+                                    [   ( not (goal_lbl `member` prog)
+                                        , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                    ,   ( not (h0 `member` transient (props m))
+                                        , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
+                                    ,   ( not (h1 `member` safety (props m))
+                                        , format "refinement ({0}): {1} should be a safety property" rule h0 )
+                                    ]
+                                let p0 = prog ! goal_lbl
+                                let p1 = transient (props m) ! h0
+                                let p2 = safety (props m) ! h1
+                                return (Discharge p0 p1 $ Just p2)
+                            else do -- length hyps_lbls == 1
+                                let [h0] = hyps_lbls
+                                toEither $ error_list (i,j)
+                                    [   ( not (goal_lbl `member` prog)
+                                        , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                    ,   ( not (h0 `member` transient (props m))
+                                        , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
+                                    ]
+                                let p0 = prog ! goal_lbl
+                                let p1 = transient (props m) ! h0
+                                return (Discharge p0 p1 Nothing)
                         "monotonicity" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 1
@@ -453,10 +474,14 @@ collect_proofs = visit_doc
                                 ]
                             let [h0] = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
+                                [   ( not (goal_lbl `member` prog)
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ,   ( not (h0 `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
                                 ]
-                            return (Monotonicity h0)
+                            let p0 = prog ! goal_lbl
+                            let p1 = prog ! h0
+                            return (Monotonicity p0 p1)
                         "disjunction" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 1
@@ -477,10 +502,14 @@ collect_proofs = visit_doc
                                 ]
                             let [h0] = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
+                                [   ( not (goal_lbl `member` prog)
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ,   ( not (h0 `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
                                 ]
-                            return (NegateDisjunct h0)
+                            let p0 = prog ! goal_lbl
+                            let p1 = prog ! h0
+                            return (NegateDisjunct p0 p1)
                         "transitivity" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 2
@@ -489,12 +518,17 @@ collect_proofs = visit_doc
                                 ]
                             let [h0,h1] = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
+                                [   ( not (goal_lbl `member` progress (props m))
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ,   ( not (h0 `member` progress (props m))
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
                                 ,   ( not (h1 `member` progress (props m))
                                     , format "refinement ({0}): {1} should be a progress property" rule h1 )
                                 ]
-                            return (Transitivity h0 h1)
+                            let p0 = prog ! goal_lbl
+                            let p1 = prog ! h0
+                            let p2 = prog ! h1
+                            return (Transitivity p0 p1 p2)
                         "psp" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 2
@@ -503,12 +537,17 @@ collect_proofs = visit_doc
                                 ]
                             let [h0,h1] = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
+                                [   ( not (goal_lbl `member` prog)
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ,   ( not (h0 `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ,   ( not (h1 `member` safety (props m))
+                                ,   ( not (h1 `member` saf)
                                     , format "refinement ({0}): {1} should be a safety property" rule h1 )
                                 ]
-                            return (PSP h0 h1)
+                            let p0 = prog ! goal_lbl
+                            let p1 = prog ! h0
+                            let p2 = saf ! h1
+                            return (PSP p0 p1 p2)
                         "induction" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 1
@@ -517,12 +556,16 @@ collect_proofs = visit_doc
                                 ]
                             let [h0] = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
+                                [   ( not (goal_lbl `member` prog)
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ,   ( not (h0 `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
                                 ]
-                            return (Induction h0 (IntegerVariant ztrue (zint 0) Down))
+                            let p0 = prog ! goal_lbl
+                            let p1 = prog ! h0
+                            return (Induction p0 p1 (IntegerVariant ztrue (zint 0) Down))
                         _ -> Left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
-                    return m))
+                    return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } ))
         ]
 
 parse_machine :: FilePath -> IO (Either [Error] [Machine])

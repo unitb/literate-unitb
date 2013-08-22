@@ -31,6 +31,8 @@ test = test_cases
             , (StringCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
+            , (StringCase "test 6, verify progress refinement" (verify path6) result6)
+            , (StringCase "test 7, verify refinement rules" (verify path7) result7)
             ]
 
 result0 = unlines 
@@ -272,10 +274,16 @@ case4 = runEitherT (do
         _   -> left [("a single machine is expected",0,0)])
 
 result5 = either g Right (do
-        q  <- bigN `mzeq` n
-        p  <- (k `mzle` n)
+        q0  <- bigN `mzeq` n
+        p0  <- (k `mzle` n)
+        q1  <- mznot (n `mzeq` k)
+        p1  <- mzall
+                [ n `mzeq` k
+                , mznot (n `mzeq` bigN)
+                ]
         return $ fromList 
-            [   (label "saf0", Unless [k_decl] p q)
+            [   (label "saf0", Unless [k_decl] p0 q0)
+            ,   (label "saf1", Unless [k_decl] p1 q1)
             ])
     where
         (k,k_decl) = var "k" int
@@ -291,6 +299,154 @@ case5 = runEitherT (do
         [m] -> right $ safety $ props $ m
         _   -> left [("a single machine is expected",0,0)])
 
+result6 = unlines
+     [ "  o  m0/INIT/FIS"
+     , "  o  m0/INIT/INV/inv0"
+     , "  o  m0/INIT/INV/inv1"
+     , "  o  m0/INIT/INV/inv2"
+     , "  o  m0/INIT/INV/inv3/goal (224,1)"
+     , "  o  m0/INIT/INV/inv3/hypotheses (224,1)"
+     , "  o  m0/INIT/INV/inv3/relation (224,1)"
+     , "  o  m0/INIT/INV/inv3/step (226,1)"
+     , "  o  m0/INIT/INV/inv3/step (228,1)"
+     , "  o  m0/INIT/INV/inv3/step (232,1)"
+     , "  o  m0/INIT/INV/inv4"
+     , "  o  m0/INIT/INV/inv5"
+     , "  o  m0/INIT/INV/inv6"
+     , " xxx m0/INIT/INV/inv8"
+     , "  o  m0/SKIP/CO/saf0"
+     , "  o  m0/evt/CO/saf0"
+     , "  o  m0/evt/FIS"
+     , "  o  m0/evt/INV/inv0/goal (66,1)"
+     , "  o  m0/evt/INV/inv0/hypotheses (66,1)"
+     , "  o  m0/evt/INV/inv0/relation (66,1)"
+     , "  o  m0/evt/INV/inv0/step (68,1)"
+     , "  o  m0/evt/INV/inv0/step (70,1)"
+     , "  o  m0/evt/INV/inv0/step (72,1)"
+     , "  o  m0/evt/INV/inv0/step (74,1)"
+     , "  o  m0/evt/INV/inv0/step (76,1)"
+     , "  o  m0/evt/INV/inv1/goal (144,1)"
+     , "  o  m0/evt/INV/inv1/hypotheses (144,1)"
+     , "  o  m0/evt/INV/inv1/relation (144,1)"
+     , "  o  m0/evt/INV/inv1/step (146,1)"
+     , "  o  m0/evt/INV/inv1/step (148,1)"
+     , "  o  m0/evt/INV/inv1/step (150,1)"
+     , "  o  m0/evt/INV/inv1/step (152,1)"
+     , "  o  m0/evt/INV/inv1/step (154,1)"
+     , "  o  m0/evt/INV/inv1/step (156,1)"
+     , "  o  m0/evt/INV/inv1/step (158,1)"
+     , "  o  m0/evt/INV/inv2/easy (193,1)"
+     , "  o  m0/evt/INV/inv3/goal (243,1)"
+     , "  o  m0/evt/INV/inv3/hypotheses (243,1)"
+     , "  o  m0/evt/INV/inv3/relation (243,1)"
+     , "  o  m0/evt/INV/inv3/step (245,1)"
+     , "  o  m0/evt/INV/inv3/step (247,1)"
+     , "  o  m0/evt/INV/inv3/step (249,1)"
+     , "  o  m0/evt/INV/inv3/step (255,1)"
+     , "  o  m0/evt/INV/inv3/step (257,1)"
+     , "  o  m0/evt/INV/inv4"
+     , "  o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)"
+     , "  o  m0/evt/INV/inv5/main goal/goal (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/hypotheses (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/relation (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (289,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (292,1)"
+     , "  o  m0/evt/INV/inv6/goal (310,1)"
+     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
+     , "  o  m0/evt/INV/inv6/relation (310,1)"
+     , "  o  m0/evt/INV/inv6/step (312,1)"
+     , " xxx m0/evt/INV/inv6/step (314,1)"
+     , "  o  m0/evt/INV/inv6/step (316,1)"
+     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , " xxx m0/evt/INV/inv6/step (320,1)"
+     , "  o  m0/evt/INV/inv8"
+     , "  o  m0/evt/SCH"
+     , "  o  m0/evt/TR/tr0"
+     , "  o  m0/prog0/REF/mono"
+     , "  o  m0/prog2/REF/trade"
+     , "  o  m0/prog3/REF/PSP"
+     , " xxx m0/prog4/REF/discharge"
+     , "passed 64 / 69"
+     ]
+
+path6 = "tests/cubes-t5.tex"
+
+result7 = unlines
+     [ "  o  m0/INIT/FIS"
+     , "  o  m0/INIT/INV/inv0"
+     , "  o  m0/INIT/INV/inv1"
+     , "  o  m0/INIT/INV/inv2"
+     , "  o  m0/INIT/INV/inv3/goal (224,1)"
+     , "  o  m0/INIT/INV/inv3/hypotheses (224,1)"
+     , "  o  m0/INIT/INV/inv3/relation (224,1)"
+     , "  o  m0/INIT/INV/inv3/step (226,1)"
+     , "  o  m0/INIT/INV/inv3/step (228,1)"
+     , "  o  m0/INIT/INV/inv3/step (232,1)"
+     , "  o  m0/INIT/INV/inv4"
+     , "  o  m0/INIT/INV/inv5"
+     , "  o  m0/INIT/INV/inv6"
+     , "  o  m0/SKIP/CO/saf0"
+     , "  o  m0/evt/CO/saf0"
+     , "  o  m0/evt/FIS"
+     , "  o  m0/evt/INV/inv0/goal (66,1)"
+     , "  o  m0/evt/INV/inv0/hypotheses (66,1)"
+     , "  o  m0/evt/INV/inv0/relation (66,1)"
+     , "  o  m0/evt/INV/inv0/step (68,1)"
+     , "  o  m0/evt/INV/inv0/step (70,1)"
+     , "  o  m0/evt/INV/inv0/step (72,1)"
+     , "  o  m0/evt/INV/inv0/step (74,1)"
+     , "  o  m0/evt/INV/inv0/step (76,1)"
+     , "  o  m0/evt/INV/inv1/goal (144,1)"
+     , "  o  m0/evt/INV/inv1/hypotheses (144,1)"
+     , "  o  m0/evt/INV/inv1/relation (144,1)"
+     , "  o  m0/evt/INV/inv1/step (146,1)"
+     , "  o  m0/evt/INV/inv1/step (148,1)"
+     , "  o  m0/evt/INV/inv1/step (150,1)"
+     , "  o  m0/evt/INV/inv1/step (152,1)"
+     , "  o  m0/evt/INV/inv1/step (154,1)"
+     , "  o  m0/evt/INV/inv1/step (156,1)"
+     , "  o  m0/evt/INV/inv1/step (158,1)"
+     , "  o  m0/evt/INV/inv2/easy (193,1)"
+     , "  o  m0/evt/INV/inv3/goal (243,1)"
+     , "  o  m0/evt/INV/inv3/hypotheses (243,1)"
+     , "  o  m0/evt/INV/inv3/relation (243,1)"
+     , "  o  m0/evt/INV/inv3/step (245,1)"
+     , "  o  m0/evt/INV/inv3/step (247,1)"
+     , "  o  m0/evt/INV/inv3/step (249,1)"
+     , "  o  m0/evt/INV/inv3/step (255,1)"
+     , "  o  m0/evt/INV/inv3/step (257,1)"
+     , "  o  m0/evt/INV/inv4"
+     , "  o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)"
+     , "  o  m0/evt/INV/inv5/main goal/goal (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/hypotheses (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/relation (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (289,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (292,1)"
+     , "  o  m0/evt/INV/inv6/goal (310,1)"
+     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
+     , "  o  m0/evt/INV/inv6/relation (310,1)"
+     , "  o  m0/evt/INV/inv6/step (312,1)"
+     , " xxx m0/evt/INV/inv6/step (314,1)"
+     , "  o  m0/evt/INV/inv6/step (316,1)"
+     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , " xxx m0/evt/INV/inv6/step (320,1)"
+     , "  o  m0/evt/SCH"
+     , "  o  m0/prog0/REF/mono"
+     , " xxx m0/prog2/REF/trade"
+     , " xxx m0/prog3/REF/PSP"
+     , " xxx m0/prog5/REF/transitivity"
+     , "  o  m0/prog8/REF/transitivity"
+     , "passed 61 / 67"
+     ]
+
+path7 = "tests/cubes-t4.tex"
+     
 verify path = do
     r <- parse_machine path
     case r of

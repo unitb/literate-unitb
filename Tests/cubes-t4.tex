@@ -334,41 +334,29 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \\ &	\progress{prog2}{n = k}{ k < n \2\lor n = N } 
 \refine{prog2}{trading}{prog3}{}
 &	\progress{prog3}
-		{ k \le n \1\land n = k \1\land \neg n = N}
+		{ k \le n \1\land n = k \1\land n = N}
 		{ (k \le n \1\land \neg k = n) \1\lor n = N } 
 \refine{prog3}{PSP}{ prog4, saf0 }{ \var{n} $\max{N}$ }
 &	\progress{prog4}
-		{n = k \1\land \neg n = N } 
+		{n = k \1\land \neg n = N }
 		{ \neg n = k } 
-\\ & 	\safety{saf0}{ k \le n }{ N = n }
+\\ & 	\safety{saf0}{ k \le n }{ \neg N = n }
 %\refine{prog2}{trading}{prog3}{}
 %&	\progress{prog3}{n = k \2\land \neg n = N}{ n < k } \\
- \refine{prog4}{discharge}{tr0,saf1}{  }
-& 	\safety{saf1}{ n = k \1\land \neg n = N }{ \neg n = k }
 \end{align*}
 
 \begin{align*}
-\invariant{inv8}
-{	n \le N
-	}
+&	\progress{prog5}{\true}{ n = k+2 }
+\refine{prog5}{transitivity}{prog6,prog7}{    }
+&	\progress{prog6}{ n = k }{ n = k+1  }
+\\ &	\progress{prog7}{ n = k+1 }{ n = k+2  }
 \end{align*}
 
 \begin{align*}
-\transient{evt}{tr0}
-{	n = k \1\land \neg n = N
-	}
-\end{align*}
-
-\begin{align*}
-\cschedule{evt}{c0}
-{	n < N
-	}
-\end{align*}
-
-\begin{align*}
-\evguard{evt}{grd0}
-{	n < N
-	}
+&	\progress{prog8}{n = k}{ n = k+2 }
+\refine{prog8}{transitivity}{prog9,prog10}{    }
+&	\progress{prog9}{ \true }{ n = k+1  }
+\\ &	\progress{prog10}{ n \le k+1 }{ n = k+2  }
 \end{align*}
 
 \end{machine}

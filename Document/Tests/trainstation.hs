@@ -126,7 +126,7 @@ machine0 = (empty_machine "train0")
                 `mzeq`  mznot (p `zelem` plf) )
       --    	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
 props0 = empty_property_set
-    {  program_prop = fromList 
+    {  constraint = fromList 
             [   ( label "co0"
                 , Co [t_decl] 
                     $ fromJust (mzimplies 
@@ -141,9 +141,11 @@ props0 = empty_property_set
                         (mzand (t `zelem` in_var')
                                ((zapply loc' t `zelem` plf) `mzor` ((loc' `zapply` t) 
                                `mzeq` ent)))) )
+            ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-            ,   ( label "tr0"
+    ,   transient = fromList
+            [   ( label "tr0"
                 , Transient
                     (symbol_table [t_decl])
                     (fromJust (t `zelem` in_var)) (label "leave") )
@@ -590,6 +592,7 @@ result2 = unlines (
             " (and (= in empty-set@@TRAIN) (= loc empty-fun@@TRAIN@@BLK))))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
+         "(then simplify smt) " ++
          "(then skip smt) " ++
          "(then (using-params simplify :expand-power true) smt)))"
      ] )
@@ -630,6 +633,7 @@ result3 = unlines (
             ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
+         "(then simplify smt) " ++
          "(then skip smt) " ++
          "(then (using-params simplify :expand-power true) smt)))"
      ] )
@@ -669,6 +673,7 @@ result4 = unlines (
         , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in))))"
         , "(check-sat-using (or-else " ++
             "(then qe smt) " ++
+            "(then simplify smt) " ++
             "(then skip smt) " ++
             "(then (using-params simplify :expand-power true) smt)))"
         ] )
@@ -713,7 +718,10 @@ result5 = unlines (
                 ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
                 ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc)))"
                 ++          " (not (elem@@TRAIN t in@prime))))))))"
-        ,  "(check-sat-using (or-else (then qe smt) (then skip smt)"
+        ,  "(check-sat-using (or-else"
+                        ++ " (then qe smt)"
+                        ++ " (then simplify smt)"
+                        ++ " (then skip smt)"
                         ++ " (then (using-params simplify :expand-power true) smt)))"
         ] )
 
@@ -779,7 +787,10 @@ result12 = unlines (
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
         ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
-        ,  "(check-sat-using (or-else (then qe smt) (then skip smt) (then (using-params simplify :expand-power true) smt)))"
+        ,  "(check-sat-using (or-else"
+                ++  " (then qe smt)"
+                ++  " (then simplify smt)"
+                ++  " (then skip smt) (then (using-params simplify :expand-power true) smt)))"
         ] )
 
 case12 = do

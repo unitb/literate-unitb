@@ -46,3 +46,4 @@ m.z
 train0.z
 *.state
 playground.hs
+*.out

@@ -38,21 +38,24 @@ import System.Process
 
 import Utilities.Format
 
-z3_path = "./bin/z3"
+--z3_path = "./bin/z3"
 --z3_path = "/Users/simonhudon/Downloads/z3-4.3.2.5b5a474b5443-x64-osx-10.8.2/bin/z3"
+z3_path = "z3"
 
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
     as_tree (CheckSat _)  = List [Str "check-sat-using", 
-                                    List (Str "or-else" : map strat
-                                        [ Str "qe" 
-                                        , Str "skip"
-                                        , List 
-                                            [ Str "using-params"
-                                            , Str "simplify"
-                                            , Str ":expand-power"
-                                            , Str "true"] ] ) ]
+                                    List ( Str "or-else" 
+                                         : map strat
+                                         [ Str "qe" 
+                                         , Str "simplify"
+                                         , Str "skip"
+                                         , List 
+                                             [ Str "using-params"
+                                             , Str "simplify"
+                                             , Str ":expand-power"
+                                             , Str "true"] ] ) ]
         where
             strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]

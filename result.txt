@@ -42,7 +42,9 @@
 |  |  +- test 3, verification, set comprehension, failed proof
 |  |  +- test 4, adding a progress property
 |  |  +- test 5, unless properties
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- test 6, verify progress refinement
+|  |  +- test 7, verify refinement rules
+|  |  +- [ Success: 8 / 8 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -95,4 +97,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5544   33681  310699
+    5686   34562  319940

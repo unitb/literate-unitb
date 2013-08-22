@@ -48,16 +48,21 @@ import Utilities.Syntactic
     -- add theorem POs
     --      problem: In what order do we prove the theorems?
 
-tr_neg_lbl      = label "TR/NEG"
-tr_en_lbl       = label "TR/EN"
-tr_lbl          = label "TR"
-co_lbl          = label "CO"
-inv_lbl         = label "INV"
-inv_init_lbl    = label "INIT/INV"
-init_fis_lbl    = label "INIT/FIS"
-fis_lbl         = label "FIS"
-sch_lbl         = label "SCH"
-thm_lbl         = label "THM"
+tr_lbl            = label "TR"
+co_lbl            = label "CO"
+inv_lbl           = label "INV"
+inv_init_lbl      = label "INIT/INV"
+init_fis_lbl      = label "INIT/FIS"
+fis_lbl           = label "FIS"
+sch_lbl           = label "SCH"
+thm_lbl           = label "THM"
+ref_mono_lbl      = label "REF/mono"
+ref_ind_lbl       = label "REF/ind"
+ref_disj_lbl      = label "REF/disj"
+ref_psp_lbl       = label "REF/PSP"
+ref_trade_lbl     = label "REF/trade"
+ref_trans_lbl     = label "REF/transitivity"
+ref_discharge_lbl = label "REF/discharge"
 
 theory_ctx :: Theory -> Context
 theory_ctx (Theory d ts f c _ dums) = 
@@ -101,12 +106,14 @@ raw_machine_pos :: Machine -> (Map Label ProofObligation)
 raw_machine_pos m = pos
     where
         pos = M.map f $ M.unions (
-               (map (uncurry $ prop_po m) $ M.toList $ program_prop p)
+               (map (uncurry $ prop_tr m) $ M.toList $ transient p)
+            ++ (map (uncurry $ prop_co m) $ M.toList $ constraint p)
             ++ [init_fis_po m]
             ++ (map (uncurry $ inv_po m) $ M.toList $ inv p) 
             ++ (map (uncurry $ sch_po m) $ M.toList $ events m)
             ++ (map (uncurry $ fis_po m) $ M.toList $ events m)
-            ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p))
+            ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
+            ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
         f (ProofObligation a b c d) = ProofObligation a (M.elems (theory_facts $ theory m)++b) c d
 
@@ -126,6 +133,86 @@ proof_obligation m = do
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
 
+ref_po :: Machine -> Label -> Rule -> Map Label ProofObligation
+ref_po m lbl r = 
+    M.fromList $ 
+        case r of
+            Monotonicity 
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)  ->  
+                assert ref_mono_lbl (
+                    zforall (fv0 ++ fv1) ztrue $
+                        zand (p0 `zimplies` p1)
+                                (q1 `zimplies` q0))
+            Transitivity
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)
+                    (LeadsTo fv2 p2 q2) -> 
+                assert ref_trans_lbl $ 
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                        zall[ p0 `zimplies` p1
+                            , q1 `zimplies` p2
+                            , q2 `zimplies` q0
+                            ]
+            Induction 
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1) v     -> error "induction"
+            PSP
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)
+                    (Unless fv2 r b)   -> 
+                assert ref_psp_lbl $ 
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                        zall[ zand p1 r `zimplies` p0
+                            , q0 `zimplies` zor (q1 `zand` r) b
+                            ]
+            Disjunction h0     -> error "disjunction"
+            NegateDisjunct
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)      -> 
+                assert ref_trade_lbl (
+                    zforall (fv0 ++ fv1) ztrue $
+                        zand (zand p0 (znot q0) `zimplies` p1)
+                                (q1 `zimplies` q0))
+            Discharge 
+                    (LeadsTo fv0 p0 q0)
+                    (Transient fv1 p1 _)
+                    (Just (Unless fv2 p2 q2)) ->
+                assert ref_discharge_lbl (
+                    zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
+                        zall[ p0 `zimplies` p2
+                            , q2 `zimplies` q0
+                            , zand p0 (znot q0) `zimplies` p1
+                            ]  ) )
+            Discharge 
+                    (LeadsTo fv0 p0 q0)
+                    (Transient fv1 p1 _)
+                    Nothing ->
+                assert ref_discharge_lbl (
+                    zforall (fv0 ++ M.elems fv1) ztrue (
+                        zand (p0 `zimplies` p1)
+                             (znot p1 `zimplies` q0) ) )
+            Add                -> []
+    where
+--        !() = unsafePerformIO (do
+--                putStrLn "hoho"
+--                hFlush stdout
+--                putStrLn $ format "allo {0} {1}" lbl r)
+--        f !x = unsafePerformIO (do
+--                putStrLn "bye bye"
+--                return x)
+                
+        assert t prop = 
+            [ ( (composite_label [_name m, lbl, t])
+              , (ProofObligation 
+                    (           assert_ctx m 
+                    `merge_ctx` step_ctx m) 
+                    (invariants p)
+                    True
+                    prop))
+            ]
+        p    = props m
+
 init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
     where
@@ -135,8 +222,8 @@ init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
             | otherwise             = (zexists (M.elems $ variables m) ztrue $ zall $ M.elems $ inits m)
  
 
-prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
-prop_po m pname (Transient fv xp evt_lbl) = 
+prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
+prop_tr m pname (Transient fv xp evt_lbl) = 
     M.fromList 
         [   ( (composite_label [_name m, evt_lbl, tr_lbl, pname])
             , (ProofObligation 
@@ -153,7 +240,6 @@ prop_po m pname (Transient fv xp evt_lbl) =
         ]
     where
         p    = props m
-        prop = program_prop p
         thm  = inv_thm p
         grd  = M.elems $ guard evt
         sch  = case c_sched evt of
@@ -168,7 +254,10 @@ prop_po m pname (Transient fv xp evt_lbl) =
                 else zexists 
                     (map (add_suffix "@param") $ M.elems ind) 
                     ztrue xp
-prop_po m pname (Co fv xp) = 
+
+
+prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation
+prop_co m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (M.insert 
                 (label "SKIP") 
