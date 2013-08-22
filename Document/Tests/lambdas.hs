@@ -33,6 +33,7 @@ test = test_cases
             , (Case "test 5, unless properties" case5 result5)
             , (StringCase "test 6, verify progress refinement" (verify path6) result6)
             , (StringCase "test 7, verify refinement rules" (verify path7) result7)
+            , (StringCase "test 8, verify refinement rules" (verify path8) result8)
             ]
 
 result0 = unlines 
@@ -366,7 +367,7 @@ result6 = unlines
      , "  o  m0/evt/SCH"
      , "  o  m0/evt/TR/tr0"
      , "  o  m0/prog0/REF/mono"
-     , "  o  m0/prog2/REF/trade"
+     , "  o  m0/prog2/REF/trading"
      , "  o  m0/prog3/REF/PSP"
      , " xxx m0/prog4/REF/discharge"
      , "passed 64 / 69"
@@ -438,7 +439,7 @@ result7 = unlines
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/SCH"
      , "  o  m0/prog0/REF/mono"
-     , " xxx m0/prog2/REF/trade"
+     , " xxx m0/prog2/REF/trading"
      , " xxx m0/prog3/REF/PSP"
      , " xxx m0/prog5/REF/transitivity"
      , "  o  m0/prog8/REF/transitivity"
@@ -446,6 +447,86 @@ result7 = unlines
      ]
 
 path7 = "tests/cubes-t4.tex"
+
+result8 = unlines
+     [ "  o  m0/INIT/FIS"
+     , "  o  m0/INIT/INV/inv0"
+     , "  o  m0/INIT/INV/inv1"
+     , "  o  m0/INIT/INV/inv2"
+     , "  o  m0/INIT/INV/inv3/goal (224,1)"
+     , "  o  m0/INIT/INV/inv3/hypotheses (224,1)"
+     , "  o  m0/INIT/INV/inv3/relation (224,1)"
+     , "  o  m0/INIT/INV/inv3/step (226,1)"
+     , "  o  m0/INIT/INV/inv3/step (228,1)"
+     , "  o  m0/INIT/INV/inv3/step (232,1)"
+     , "  o  m0/INIT/INV/inv4"
+     , "  o  m0/INIT/INV/inv5"
+     , "  o  m0/INIT/INV/inv6"
+     , "  o  m0/INIT/INV/inv7"
+     , "  o  m0/SKIP/CO/saf0"
+     , "  o  m0/SKIP/CO/saf1"
+     , "  o  m0/evt/CO/saf0"
+     , "  o  m0/evt/CO/saf1"
+     , "  o  m0/evt/FIS"
+     , "  o  m0/evt/INV/inv0/goal (66,1)"
+     , "  o  m0/evt/INV/inv0/hypotheses (66,1)"
+     , "  o  m0/evt/INV/inv0/relation (66,1)"
+     , "  o  m0/evt/INV/inv0/step (68,1)"
+     , "  o  m0/evt/INV/inv0/step (70,1)"
+     , "  o  m0/evt/INV/inv0/step (72,1)"
+     , "  o  m0/evt/INV/inv0/step (74,1)"
+     , "  o  m0/evt/INV/inv0/step (76,1)"
+     , "  o  m0/evt/INV/inv1/goal (144,1)"
+     , "  o  m0/evt/INV/inv1/hypotheses (144,1)"
+     , "  o  m0/evt/INV/inv1/relation (144,1)"
+     , "  o  m0/evt/INV/inv1/step (146,1)"
+     , "  o  m0/evt/INV/inv1/step (148,1)"
+     , "  o  m0/evt/INV/inv1/step (150,1)"
+     , "  o  m0/evt/INV/inv1/step (152,1)"
+     , "  o  m0/evt/INV/inv1/step (154,1)"
+     , "  o  m0/evt/INV/inv1/step (156,1)"
+     , "  o  m0/evt/INV/inv1/step (158,1)"
+     , "  o  m0/evt/INV/inv2/easy (193,1)"
+     , "  o  m0/evt/INV/inv3/goal (243,1)"
+     , "  o  m0/evt/INV/inv3/hypotheses (243,1)"
+     , "  o  m0/evt/INV/inv3/relation (243,1)"
+     , "  o  m0/evt/INV/inv3/step (245,1)"
+     , "  o  m0/evt/INV/inv3/step (247,1)"
+     , "  o  m0/evt/INV/inv3/step (249,1)"
+     , "  o  m0/evt/INV/inv3/step (255,1)"
+     , "  o  m0/evt/INV/inv3/step (257,1)"
+     , "  o  m0/evt/INV/inv4"
+     , "  o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)"
+     , "  o  m0/evt/INV/inv5/main goal/goal (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/hypotheses (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/relation (281,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (289,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (292,1)"
+     , "  o  m0/evt/INV/inv6/goal (310,1)"
+     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
+     , "  o  m0/evt/INV/inv6/relation (310,1)"
+     , "  o  m0/evt/INV/inv6/step (312,1)"
+     , " xxx m0/evt/INV/inv6/step (314,1)"
+     , "  o  m0/evt/INV/inv6/step (316,1)"
+     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , " xxx m0/evt/INV/inv6/step (320,1)"
+     , "  o  m0/evt/INV/inv7"
+     , "  o  m0/evt/SCH"
+     , "  o  m0/evt/TR/tr0"
+     , "  o  m0/prog0/REF/mono"
+     , "  o  m0/prog1/REF/induction"
+     , "  o  m0/prog2/REF/trading"
+     , "  o  m0/prog3/REF/PSP"
+     , "  o  m0/prog4/REF/discharge"
+     , "passed 69 / 72"
+     ]
+     
+path8 = "tests/cubes-t7.tex"
+
+
      
 verify path = do
     r <- parse_machine path

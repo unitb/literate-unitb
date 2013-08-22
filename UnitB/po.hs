@@ -57,10 +57,10 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 ref_mono_lbl      = label "REF/mono"
-ref_ind_lbl       = label "REF/ind"
-ref_disj_lbl      = label "REF/disj"
+ref_ind_lbl       = label "REF/induction"
+ref_disj_lbl      = label "REF/disjunction"
 ref_psp_lbl       = label "REF/PSP"
-ref_trade_lbl     = label "REF/trade"
+ref_trade_lbl     = label "REF/trading"
 ref_trans_lbl     = label "REF/transitivity"
 ref_discharge_lbl = label "REF/discharge"
 
@@ -143,7 +143,7 @@ ref_po m lbl r =
                 assert ref_mono_lbl (
                     zforall (fv0 ++ fv1) ztrue $
                         zand (p0 `zimplies` p1)
-                                (q1 `zimplies` q0))
+                             (q1 `zimplies` q0))
             Transitivity
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
@@ -156,7 +156,13 @@ ref_po m lbl r =
                             ]
             Induction 
                     (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1) v     -> error "induction"
+                    (LeadsTo fv1 p1 q1) v     -> 
+                assert ref_ind_lbl (
+                    zforall (fv0 ++ fv1) ztrue $
+                        zall
+                            [ (p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1
+                            , q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0
+                            ] )
             PSP
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
@@ -194,14 +200,6 @@ ref_po m lbl r =
                              (znot p1 `zimplies` q0) ) )
             Add                -> []
     where
---        !() = unsafePerformIO (do
---                putStrLn "hoho"
---                hFlush stdout
---                putStrLn $ format "allo {0} {1}" lbl r)
---        f !x = unsafePerformIO (do
---                putStrLn "bye bye"
---                return x)
-                
         assert t prop = 
             [ ( (composite_label [_name m, lbl, t])
               , (ProofObligation 

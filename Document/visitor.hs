@@ -37,6 +37,9 @@ cmd_params n xs     =
 
 cmd_params_ n xs = fmap fst $ cmd_params n xs
 
+    -- Given a Latex document piece, find one instance
+    -- of the given command, its arguments and the
+    -- the parts surrounding it to the left and right
 find_cmd_arg :: Int -> [String] -> [LatexDoc] 
              -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])
 find_cmd_arg n cmds (x@(Text xs) : cs) = 

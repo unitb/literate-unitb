@@ -12,6 +12,7 @@ import UnitB.AST
 import UnitB.PO
 import UnitB.SetTheory
 import UnitB.FunctionTheory
+import UnitB.Genericity
 
 import Z3.Z3 
 
@@ -20,7 +21,7 @@ import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
 
 import Data.Char
-import Data.Map  as M hiding ( map, foldl )
+import Data.Map  as M hiding ( map, foldl, (\\) )
 import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
@@ -561,9 +562,33 @@ collect_proofs = visit_doc
                                 ,   ( not (h0 `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule h0 )
                                 ]
-                            let p0 = prog ! goal_lbl
-                            let p1 = prog ! h0
-                            return (Induction p0 p1 (IntegerVariant ztrue (zint 0) Down))
+                            (dir,var,bound) <- case find_cmd_arg 3 ["\\var"] hint of
+                                Just (_,_,[var,dir,bound],_) -> do
+                                        var   <- get_expr m var   (i,j)
+                                        bound <- get_expr m bound (i,j)
+                                        dir  <- case map toLower $ concatMap flatten dir of
+                                            "up"   -> return Up
+                                            "down" -> return Down
+                                            _      -> Left [("expecting a direction for the variant",i,j)]
+                                        var <- either 
+                                            (\x -> Left [(x,i,j)]) 
+                                            Right
+                                            $ zcast int 
+                                            $ Right var
+                                        bound <- either
+                                            (\x -> Left [(x,i,j)])
+                                            Right
+                                            $ zcast int
+                                            $ Right bound
+                                        return (dir,var,bound)
+                                Nothing -> Left [("expecting a variant", i,j)]
+                            let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
+                            let pr1@(LeadsTo fv1 p1 q1) = prog ! h0
+                            dum <- case fv1 \\ fv0 of
+                                [v] -> return v
+                                _   -> Left [(   "inductive formula should have one free "
+                                              ++ "variable to record the variant",i,j)]                    
+                            return (Induction pr0 pr1 (IntegerVariant dum var bound dir))
                         _ -> Left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
                     return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } ))
         ]
