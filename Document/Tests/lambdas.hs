@@ -265,7 +265,7 @@ result4 = either g Right (do
         (bigN,_)   = var "N" int
         g x = Left [(x,0,0)]
 
-path4 = "tests/cubes.tex"
+path4 = "tests/cubes-t6.tex"
 
 case4 = runEitherT (do
     ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
