@@ -414,16 +414,16 @@
 	\[ }
 { 	\] }
 \newcommand{\safety}[3]
-{			#2 \textbf{\quad un\quad} #3
-			\stepcounter{prop}
-			\tag{S\arabic{prop}} 
+{		#2 \textbf{\quad un\quad} #3
+		\stepcounter{prop}
+		\tag{S\arabic{prop}} 
 		\label{#1} 	}
 \newcommand{\progress}[3]
 	% \progress{label}{p}{q} means 
 	%			label: p |-> q
-{			#2 \quad \mapsto\quad #3
-			\stepcounter{prop}
-			\tag{P\arabic{prop}	} 
+{		#2 \quad \mapsto\quad #3
+		\stepcounter{prop}
+		\tag{P\arabic{prop}	} 
 		\label{#1} 	}
 
 	% 
@@ -444,7 +444,6 @@
 \newcommand{\easy}{ }
 \newenvironment{subproof}[1]{ ~ }{ }
 
-	% SHOULD BE COMMANDS
 \newcommand{\assume}[2]
 {	
 %	\noindent \textbf{assume} 
@@ -461,10 +460,9 @@
 \newenvironment{use:set}[1]{}{}
 \newenvironment{use:fun}[2]{}{}
 \newcommand{\newset}[2]
-{ 	
-	\newcommand{#2}{\text{#1}}
+{ 	\newcommand{#2}{\text{#1}}
 	\noindent \textbf{set}: #1 
-}
+	}
 
 %%%%%%%
 % constants
@@ -509,5 +507,5 @@
 
 \newcommand{\refine}[4]
 	% \refine{prop}{rule}{new props}{ comment }
-{	\\ \sqsubseteq \quad & \qquad \{\text{ #2#4 }\} \\ }
+{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2#4 }\right\} \\ }
 \newcommand{\var}[3]{#1}

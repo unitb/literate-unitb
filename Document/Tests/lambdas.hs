@@ -366,11 +366,12 @@ result6 = unlines
      , "  o  m0/evt/INV/inv8"
      , "  o  m0/evt/SCH"
      , "  o  m0/evt/TR/tr0"
-     , "  o  m0/prog0/REF/mono"
+     , "  o  m0/prog0/REF/monotonicity/lhs"
+     , "  o  m0/prog0/REF/monotonicity/rhs"
      , "  o  m0/prog2/REF/trading"
      , "  o  m0/prog3/REF/PSP"
      , " xxx m0/prog4/REF/discharge"
-     , "passed 64 / 69"
+     , "passed 65 / 70"
      ]
 
 path6 = "tests/cubes-t5.tex"
@@ -438,12 +439,13 @@ result7 = unlines
      , " xxx m0/evt/INV/inv6/step (318,1)"
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/SCH"
-     , "  o  m0/prog0/REF/mono"
+     , "  o  m0/prog0/REF/monotonicity/lhs"
+     , "  o  m0/prog0/REF/monotonicity/rhs"
      , " xxx m0/prog2/REF/trading"
      , " xxx m0/prog3/REF/PSP"
      , " xxx m0/prog5/REF/transitivity"
      , "  o  m0/prog8/REF/transitivity"
-     , "passed 61 / 67"
+     , "passed 62 / 68"
      ]
 
 path7 = "tests/cubes-t4.tex"
@@ -516,17 +518,21 @@ result8 = unlines
      , "  o  m0/evt/INV/inv7"
      , "  o  m0/evt/SCH"
      , "  o  m0/evt/TR/tr0"
-     , "  o  m0/prog0/REF/mono"
-     , "  o  m0/prog1/REF/induction"
+     , "  o  m0/prog0/REF/monotonicity/lhs"
+     , "  o  m0/prog0/REF/monotonicity/rhs"
+     , "  o  m0/prog1/REF/induction/lhs"
+     , "  o  m0/prog1/REF/induction/rhs"
      , "  o  m0/prog2/REF/trading"
      , "  o  m0/prog3/REF/PSP"
      , "  o  m0/prog4/REF/discharge"
-     , "passed 69 / 72"
+     , "passed 71 / 74"
      ]
      
 path8 = "tests/cubes-t7.tex"
 
+result9 = unlines
 
+path9 = "tests/cubes-t8.tex"
      
 verify path = do
     r <- parse_machine path

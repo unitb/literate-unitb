@@ -86,19 +86,19 @@ data Direction = Up | Down
     deriving Show
 
 data Variant = 
-        SetVariant Var Expr Expr Direction
-        | IntegerVariant Var Expr Expr Direction
+--        SetVariant Var Expr Expr Direction
+        IntegerVariant Var Expr Expr Direction
     deriving Show
 
-variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
+--variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
 
-variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
+--variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
 variant_decreased (IntegerVariant d var b Up)   = Word d `zless` var
-variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
+--variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
 variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 
-variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
+--variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
 
@@ -107,7 +107,7 @@ data Rule =
         | Transitivity ProgressProp ProgressProp ProgressProp
         | Induction ProgressProp ProgressProp Variant
         | PSP ProgressProp ProgressProp SafetyProp
-        | Disjunction Label
+        | Disjunction ProgressProp [([Var], ProgressProp)]
         | NegateDisjunct ProgressProp ProgressProp
         | Discharge ProgressProp Transient (Maybe SafetyProp)
         | Add

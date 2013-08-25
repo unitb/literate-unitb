@@ -19,6 +19,8 @@ module Z3.Z3
 where
 
     -- Modules
+import UnitB.Theory
+
 import Z3.Def
 import Z3.Const
 import Z3.Lambda
@@ -29,7 +31,7 @@ import Control.Applicative hiding ( empty, Const )
 
 import Data.Char
 import Data.List hiding (union)
-import Data.Map as M hiding (map,filter,foldl)
+import Data.Map as M hiding (map,filter,foldl, (\\))
 import Data.Typeable
  
 import System.Exit
@@ -106,6 +108,7 @@ free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
         f xs (Word v@(Var n t))
             | n `member` dum = (n,v):xs
             | otherwise      = xs
+        f xs v@(Binder _ vs r t) = visit f xs v \\ toList (symbol_table vs)
         f xs v = visit f xs v
 
 var_decl :: String -> Context -> Maybe Var

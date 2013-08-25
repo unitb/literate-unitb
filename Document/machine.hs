@@ -10,6 +10,7 @@ import Latex.Parser
 
 import UnitB.AST
 import UnitB.PO
+import UnitB.Theory
 import UnitB.SetTheory
 import UnitB.FunctionTheory
 import UnitB.Genericity
@@ -363,7 +364,8 @@ collect_expr = visit_doc
                                 , format "safety property {0} already exists" lbl )
                             ] 
                         return (p,q))
-                    let dum = free_vars (context m) p `union` free_vars (context m) q
+                    let ctx = context m
+                    let dum = free_vars ctx p `union` free_vars ctx q
                     let new_prop = Unless (M.elems dum) p q
                     return m { props = (props m) 
                         { safety = insert (label lbl) new_prop $ prop 
@@ -382,8 +384,10 @@ collect_expr = visit_doc
                                 , format "progress property {0} already exists" lbl )
                             ] 
                         return (p,q))
-                    let dum = free_vars (context m) p `union` free_vars (context m) q
-                    let new_prop = LeadsTo (M.elems dum) p q
+                    let ctx = context m
+                    let dum = S.fromList (elems $ free_vars ctx p) 
+                                `S.union` S.fromList (elems $ free_vars ctx q)
+                    let new_prop = LeadsTo (S.elems dum) p q
                     return m { props = (props m) 
                         { progress   = insert (label lbl) new_prop $ prop 
                         , derivation = insert (label lbl) Add $ derivation $ props m
@@ -485,16 +489,20 @@ collect_proofs = visit_doc
                             return (Monotonicity p0 p1)
                         "disjunction" -> do
                             toEither $ error_list (i,j)
-                                [   ( length hyps_lbls /= 1
-                                    , format "too many hypotheses in the application of the rule: {0}" 
+                                [   ( length hyps_lbls < 1
+                                    , format "too few hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
-                            let [h0] = hyps_lbls
+                            let hs = hyps_lbls
                             toEither $ error_list (i,j)
-                                [   ( not (h0 `member` progress (props m))
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
+                                [   ( not (all (`member` progress (props m)) hs)
+                                    , format "refinement ({0}): {1} should be progress properties" rule  
+                                        $ intercalate "," $ map show hs)
                                 ]
-                            return (Disjunction h0)
+                            let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
+                            let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
+                            let ps = map (f . (prog !)) hs
+                            return (Disjunction pr0 ps)
                         "trading" -> do
                             toEither $ error_list (i,j)
                                 [   ( length hyps_lbls /= 1

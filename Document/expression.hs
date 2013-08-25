@@ -281,6 +281,7 @@ term ctx = do
                             either (\(x) -> fail x) return (zdom $ Right x)
                         else if xs `elem` 
                             [ "\\qforall"
+                            , "\\qexists"
                             , "\\qfun"
                             , "\\qset" ]
                         then do
