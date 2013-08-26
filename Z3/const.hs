@@ -75,8 +75,10 @@ zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
         n = length xs
         f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
         f x = [x]
-zforall      = Binder Forall
-zexists      = Binder Exists
+zforall []   = zimplies
+zforall vs   = Binder Forall vs
+zexists []   = zand
+zexists vs   = Binder Exists vs
 
 zite       = typ_fun3 (Fun [] "ite" [BOOL,gA,gA] gA)
 

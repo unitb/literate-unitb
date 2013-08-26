@@ -178,12 +178,13 @@ ref_po m lbl r =
                             ]
             Disjunction 
                     (LeadsTo fv0 p0 q0)
-                    ps   -> 
-                assert ref_disj_lbl "" (
+                    ps   ->  
+                assert ref_disj_lbl "lhs" (
                     zforall fv0 ztrue (
-                        zall
-                          [ p0 `zimplies` zsome (map disj_p ps)
-                          , zsome (map disj_q ps) `zimplies` q0 ] ) )
+                        ( p0 `zimplies` zsome (map disj_p ps) ) ) )
+             ++ assert ref_disj_lbl "rhs" (
+                    zforall fv0 ztrue (
+                        ( zsome (map disj_q ps) `zimplies` q0 ) ) )
             NegateDisjunct
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)      -> 

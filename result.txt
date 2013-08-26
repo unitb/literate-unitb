@@ -45,7 +45,8 @@
 |  |  +- test 6, verify progress refinement
 |  |  +- test 7, verify refinement rules
 |  |  +- test 8, verify refinement rules
-|  |  +- [ Success: 9 / 9 ]
+|  |  +- test 9, verify disjunction rule
+|  |  +- [ Success: 10 / 10 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -98,4 +99,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5783   35184  326298
+    5786   35208  326445
