@@ -51,21 +51,21 @@ list_machines ct = do
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = do
         ms <- L.foldl gather (Right empty) xs
-        ms <- toEither $ L.foldl (f type_decl) (MRight ms) xs
+        ms <- toEither $ foldM (f type_decl) ms xs
 
             -- take actual generic parameter from `type_decl'
-        ms <- toEither $ L.foldl (f imports) (MRight ms) xs
+        ms <- toEither $ foldM (f imports) ms xs
 
             -- take the types from `imports' and `type_decl`
-        ms <- toEither $ L.foldl (f declarations) (MRight ms) xs
+        ms <- toEither $ foldM (f declarations) ms xs
             
             -- use the `declarations' of variables to check the
             -- type of expressions
-        ms <- toEither $ L.foldl (f collect_expr) (MRight ms) xs
+        ms <- toEither $ foldM (f collect_expr) ms xs
             
             -- use the label of expressions from `collect_expr' 
             -- in hints.
-        ms <- toEither $ L.foldl (f collect_proofs) (MRight ms) xs
+        ms <- toEither $ foldM (f collect_proofs) ms xs
         return ms
     where
         gather em (Env n _ c _)     
@@ -76,15 +76,14 @@ all_machines xs = do
                     return (insert name m ms)
                 | otherwise         = L.foldl gather em c
         gather em x                 = fold_doc gather em x
-        f pass em (Env n _ c _)     
+        f pass ms (Env n _ c _)     
                 | n == "machine"    = do
-                    ms          <- em
                     fromEither ms (do
                         (name,cont) <- get_1_lbl c
                         m           <- toEither $ pass cont (ms ! name)
                         return (insert name m ms))
-                | otherwise         = L.foldl (f pass) em c
-        f pass em x                 = fold_doc (f pass) em x
+                | otherwise         = foldM (f pass) ms c
+        f pass ms x                 = fold_docM (f pass) ms x
 
 type_decl :: [LatexDoc] -> Machine -> MEither Error Machine
 type_decl = visit_doc []

@@ -7,6 +7,10 @@ import Latex.Parser
 import Document.Expression
 
     -- Libraries
+import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.Trans.Writer
+
 import System.IO
 import System.IO.Unsafe
 
@@ -115,135 +119,154 @@ data CmdBlock a =
         | Cmd3Args ((String, String, String) -> a -> (Int,Int) -> Either [Error] a)
         | Cmd4Args ((String, String, String, String) -> a -> (Int,Int) -> Either [Error] a)
 
-data MEither a b = MLeft [a] b | MRight b
+--data MEither a b = MLeft [a] b | MRight b
+type MEither a = Writer [a]
 
-instance Monad (MEither a) where
-    MRight x >>= f = f x
-    MLeft xs x >>= f =
-        case f x of
-            MRight y     -> MLeft xs y
-            MLeft ys y   -> MLeft (xs++ys) y
-    return x = MRight x
+--instance Monad (MEither a) where
+--    MRight x >>= f = f x
+--    MLeft xs x >>= f =
+--        case f x of
+--            MRight y     -> MLeft xs y
+--            MLeft ys y   -> MLeft (xs++ys) y
+--    return x = MRight x
+
+data Param a = Param 
+    { blocks :: [(String, EnvBlock a)]
+    , cmds   :: [(String, CmdBlock a)] }
 
 fromEither :: a -> Either [b] a -> MEither b a
-fromEither _ (Right x) = MRight x
-fromEither y (Left xs) = MLeft xs y
+fromEither _ (Right x) = return x
+fromEither y (Left xs) = do
+        tell xs
+        return y
 
 toEither :: MEither a b -> Either [a] b
-toEither (MRight x)     = Right x
-toEither (MLeft xs y)   = Left xs
+toEither m = 
+    case runWriter m of
+        (x, []) -> Right x
+        (x, xs) -> Left xs
 
 error_list :: (Int,Int) -> [(Bool, String)] -> MEither Error ()
 error_list _ [] = return ()
 error_list li@(i,j) ( (b,msg):xs )
         | not b = error_list li xs
-        | b     = case error_list li xs of
-                        MRight ()    -> MLeft [(msg,i,j)] ()
-                        MLeft xs ()  -> MLeft ((msg,i,j):xs) ()
+        | b     = do
+            tell [(msg,i,j)]
+            error_list li xs
 
 visit_doc :: [(String,EnvBlock a)] -> [(String,CmdBlock a)] -> [LatexDoc] -> a -> MEither Error a
-visit_doc blks cmds cs x = do
-        x <- foldl (f blks) (MRight x) cs
-        g (MRight x) cs
-    where
-        f ((name,c):cs) ex e@(Env s (i,j) xs _)
-                | name == s = do
-                        x <- ex
-                        fromEither x (case c of
-                            Env0Args g -> do
-                                g () xs x (i,j)
-                            Env0Args1Blocks g -> do
-                                ([arg0],xs) <- cmd_params 1 xs
-                                g (arg0, ()) xs x (i,j)
-                            Env1Args g -> do
-                                (arg,xs) <- get_1_lbl xs
-                                g (arg,()) xs x (i,j)
-                            Env2Args g -> do
-                                (arg0,arg1,xs) <- get_2_lbl xs
-                                g (arg0, arg1) xs x (i,j)
-                            Env1Args1Blocks g -> do
-                                (arg0,xs) <- get_1_lbl xs
-                                ([arg1],xs) <- cmd_params 1 xs
-                                g (arg0, arg1) xs x (i,j)
-                            Env1Args2Blocks g -> do
-                                (arg0,xs) <- get_1_lbl xs
-                                ([arg1,arg2],xs) <- cmd_params 2 xs
-                                g (arg0, arg1, arg2) xs x (i,j))
-                | otherwise = f cs ex e
-        f [] ex e@(Env s (i,j) xs _)  = do
-               x <- foldl (f blks) ex xs
-               g (MRight x) xs
-        f _ ex (Bracket _ _ cs _)     = do
-               x <- foldl (f blks) ex cs
-               g (MRight x) cs
-        f _ ex (Text _)               = ex
-        g ex (Text xs : ts) = do
-            case trim_blanks $ reverse xs of
-                Command c (i,j):_   -> h cmds ex c ts (i,j)
-                _                   -> g ex ts
-        g ex (t : ts) = g ex ts
-        g ex [] = ex
-        h ((name,c):cs) ex cmd ts (i,j)
-            | name == cmd   = do
-                    x       <- ex
-                    r <- case c of
-                        Cmd0Args f -> do
-                            x <- fromEither x $ f () x (i,j)
-                            g (MRight x) ts
-                        Cmd1Args f -> do
-                            x <- fromEither x (do
-                                (arg,ts) <- get_1_lbl ts
-                                f (arg,()) x (i,j))
-                            g (MRight x) ts
-                        Cmd2Args f -> do
-                            x <- fromEither x (do
-                                (arg0,arg1,ts) <- get_2_lbl ts
-                                f (arg0, arg1) x (i,j))
-                            g (MRight x) ts
-                        Cmd0Args1Blocks f -> do
-                            x <- fromEither x (do
-                                ([arg0],ts) <- cmd_params 1 ts
-                                f (arg0, ()) x (i,j))
-                            g (MRight x) ts
-                        Cmd0Args2Blocks f -> do
-                            x <- fromEither x (do
-                                ([arg0,arg1],ts) <- cmd_params 2 ts
-                                f (arg0, arg1) x (i,j))
-                            g (MRight x) ts
-                        Cmd1Args1Blocks f -> do
-                            x <- fromEither x (do
-                                (arg0,ts) <- get_1_lbl ts
-                                ([arg1],ts) <- cmd_params 1 ts
-                                f (arg0, arg1) x (i,j))
-                            g (MRight x) ts
-                        Cmd1Args2Blocks f -> do
-                            x <- fromEither x (do
-                                (arg0,ts) <- get_1_lbl ts
-                                ([arg1,arg2],ts) <- cmd_params 2 ts
-                                f (arg0, arg1, arg2) x (i,j))
-                            g (MRight x) ts
-                        Cmd2Args1Blocks f -> do
-                            x <- fromEither x (do
-                                (arg0,arg1,ts) <- get_2_lbl ts
-                                ([arg2],ts) <- cmd_params 1 ts
-                                f (arg0, arg1, arg2) x (i,j))
-                            g (MRight x) ts
-                        Cmd2Args2Blocks f -> do
-                            x <- fromEither x (do
-                                (arg0,arg1,ts) <- get_2_lbl ts
-                                ([arg2,arg3],ts) <- cmd_params 2 ts
-                                f (arg0, arg1, arg2, arg3) x (i,j))
-                            g (MRight x) ts
-                        Cmd3Args f -> do
-                            x <- fromEither x (do
-                                (arg0,arg1,arg2,ts) <- get_3_lbl ts
-                                f (arg0, arg1, arg2) x (i,j))
-                            g (MRight x) ts
-                        Cmd4Args f -> do
-                            x <- fromEither x (do
-                                (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
-                                f (arg0, arg1, arg2, arg3) x (i,j))
-                            g (MRight x) ts
-                    return r
-            | otherwise     = h cs ex cmd ts (i,j)
-        h [] ex cmd ts (i,j) = g ex ts 
+visit_doc blks cmds cs x = runReaderT (do
+        x <- foldM (f blks) x cs
+        g x cs) (Param blks cmds)
+
+f :: [(String, EnvBlock a)] -> a -> LatexDoc 
+  -> ReaderT (Param a) (MEither Error) a
+f ((name,c):cs) x e@(Env s (i,j) xs _)
+        | name == s = do
+--                        x <- ex
+                lift $ fromEither x (case c of
+                    Env0Args g -> do
+                        g () xs x (i,j)
+                    Env0Args1Blocks g -> do
+                        ([arg0],xs) <- cmd_params 1 xs
+                        g (arg0, ()) xs x (i,j)
+                    Env1Args g -> do
+                        (arg,xs) <- get_1_lbl xs
+                        g (arg,()) xs x (i,j)
+                    Env2Args g -> do
+                        (arg0,arg1,xs) <- get_2_lbl xs
+                        g (arg0, arg1) xs x (i,j)
+                    Env1Args1Blocks g -> do
+                        (arg0,xs) <- get_1_lbl xs
+                        ([arg1],xs) <- cmd_params 1 xs
+                        g (arg0, arg1) xs x (i,j)
+                    Env1Args2Blocks g -> do
+                        (arg0,xs) <- get_1_lbl xs
+                        ([arg1,arg2],xs) <- cmd_params 2 xs
+                        g (arg0, arg1, arg2) xs x (i,j))
+        | otherwise = f cs x e
+f [] ex e@(Env s (i,j) xs _)  = do
+        blks <- asks blocks
+        x    <- foldM (f blks) ex xs
+        g x xs
+f _ ex (Bracket _ _ cs _)     = do
+        blks <- asks blocks
+        x    <- foldM (f blks) ex cs
+        g x cs
+f _ ex (Text _)               = return ex
+
+g :: a -> [LatexDoc] -> ReaderT (Param a) (MEither Error) a 
+g ex (Text xs : ts) = do
+    case trim_blanks $ reverse xs of
+        Command c (i,j):_   -> do
+                cmds <- asks cmds
+                h cmds ex c ts (i,j)
+        _                   -> g ex ts
+g x (t : ts) = g x ts
+g x [] = return x
+
+h :: [(String,CmdBlock a)] -> a -> String -> [LatexDoc] 
+  -> (Int,Int) -> ReaderT (Param a) (MEither Error) a 
+h ((name,c):cs) x cmd ts (i,j)
+    | name == cmd   = do
+            r <- case c of
+                Cmd0Args f -> do
+                    x <- lift $ fromEither x $ f () x (i,j)
+                    g x ts
+                Cmd1Args f -> do
+                    x <- lift $ fromEither x (do
+                        (arg,ts) <- get_1_lbl ts
+                        f (arg,()) x (i,j))
+                    g x ts
+                Cmd2Args f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,arg1,ts) <- get_2_lbl ts
+                        f (arg0, arg1) x (i,j))
+                    g x ts
+                Cmd0Args1Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        ([arg0],ts) <- cmd_params 1 ts
+                        f (arg0, ()) x (i,j))
+                    g x ts
+                Cmd0Args2Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        ([arg0,arg1],ts) <- cmd_params 2 ts
+                        f (arg0, arg1) x (i,j))
+                    g x ts
+                Cmd1Args1Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,ts) <- get_1_lbl ts
+                        ([arg1],ts) <- cmd_params 1 ts
+                        f (arg0, arg1) x (i,j))
+                    g x ts
+                Cmd1Args2Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,ts) <- get_1_lbl ts
+                        ([arg1,arg2],ts) <- cmd_params 2 ts
+                        f (arg0, arg1, arg2) x (i,j))
+                    g x ts
+                Cmd2Args1Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,arg1,ts) <- get_2_lbl ts
+                        ([arg2],ts) <- cmd_params 1 ts
+                        f (arg0, arg1, arg2) x (i,j))
+                    g x ts
+                Cmd2Args2Blocks f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,arg1,ts) <- get_2_lbl ts
+                        ([arg2,arg3],ts) <- cmd_params 2 ts
+                        f (arg0, arg1, arg2, arg3) x (i,j))
+                    g x ts
+                Cmd3Args f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,arg1,arg2,ts) <- get_3_lbl ts
+                        f (arg0, arg1, arg2) x (i,j))
+                    g x ts
+                Cmd4Args f -> do
+                    x <- lift $ fromEither x (do
+                        (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
+                        f (arg0, arg1, arg2, arg3) x (i,j))
+                    g x ts
+            return r
+    | otherwise     = h cs x cmd ts (i,j)
+h [] x cmd ts (i,j) = g x ts 

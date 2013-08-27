@@ -47,6 +47,10 @@ fold_doc f x (Env s _ c _)     = foldl f x c
 fold_doc f x (Bracket _ _ c _) = foldl f x c
 fold_doc f x (Text _)          = x
 
+fold_docM f x (Env s _ c _)     = foldM f x c
+fold_docM f x (Bracket _ _ c _) = foldM f x c
+fold_docM f x (Text _)          = return x
+
 data LatexToken =
         Command String (Int, Int)
         | TextBlock String (Int, Int)
