@@ -20,6 +20,9 @@ import Z3.Z3
     -- Libraries
 import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
+import Control.Monad.Identity hiding ( guard )
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Either
 
 import Data.Char
 import Data.Map  as M hiding ( map, foldl, (\\) )
@@ -27,7 +30,7 @@ import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
 import System.IO
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -36,6 +39,7 @@ list_file_obligations fn = do
         ct <- readFile fn
         return $ list_proof_obligations ct
 
+list_proof_obligations :: String -> Either [Error] [(Machine, Map Label ProofObligation)]
 list_proof_obligations ct = do
         xs <- list_machines ct
         forM xs (\x -> do
@@ -49,33 +53,37 @@ list_machines ct = do
         return $ map snd $ toList $ ms
 
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
-all_machines xs = do
-        ms <- L.foldl gather (Right empty) xs
+all_machines xs = join $ runEitherT $ do
+        ms <- foldM gather empty xs
+--        let !() = unsafePerformIO (putStrLn "phase A")
         ms <- toEither $ foldM (f type_decl) ms xs
 
             -- take actual generic parameter from `type_decl'
         ms <- toEither $ foldM (f imports) ms xs
+--        let !() = unsafePerformIO (putStrLn "phase B")
 
             -- take the types from `imports' and `type_decl`
         ms <- toEither $ foldM (f declarations) ms xs
+--        let !() = unsafePerformIO (putStrLn "phase C")
             
             -- use the `declarations' of variables to check the
             -- type of expressions
         ms <- toEither $ foldM (f collect_expr) ms xs
+--        let !() = unsafePerformIO (putStrLn "phase D")
             
             -- use the label of expressions from `collect_expr' 
             -- in hints.
         ms <- toEither $ foldM (f collect_proofs) ms xs
+--        let !() = unsafePerformIO (putStrLn "phase E")
         return ms
     where
-        gather em (Env n _ c _)     
+        gather ms (Env n _ c _)     
                 | n == "machine"    = do
-                    ms          <- em
                     (name,cont) <- get_1_lbl c
                     let m        = empty_machine name
                     return (insert name m ms)
-                | otherwise         = L.foldl gather em c
-        gather em x                 = fold_doc gather em x
+                | otherwise         = foldM gather ms c
+        gather ms x                 = fold_docM gather ms x
         f pass ms (Env n _ c _)     
                 | n == "machine"    = do
                     fromEither ms (do
@@ -153,7 +161,7 @@ declarations :: [LatexDoc] -> Machine -> MEither Error Machine
 declarations = visit_doc 
         [   (   "variable"
             ,   Env0Args (\() xs m (i,j) -> do
-                        vs          <- get_variables (context m) xs
+                        vs          <- hoistEither $ get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list (i,j) 
                             [ ( not $ S.null inter
@@ -163,7 +171,7 @@ declarations = visit_doc
             )
         ,   (   "indices"
             ,   Env1Args (\(evt,()) xs m (i,j) -> do
-                        vs <- get_variables (context m) xs
+                        vs <- hoistEither $ get_variables (context m) xs
                         toEither $ error_list (i,j)
                             [ ( not (label evt `member` events m) 
                               , format "event '{0}' is undeclared" evt )
@@ -181,7 +189,7 @@ declarations = visit_doc
             )
         ,   (   "constant"
             ,   Env0Args (\() xs m (i,j) -> do
-                        vs              <- get_variables (context m) xs
+                        vs              <- hoistEither $ get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -189,7 +197,7 @@ declarations = visit_doc
             )
         ,   (   "dummy"
             ,   Env0Args (\() xs m (i,j) -> do
-                        vs              <- get_variables (context m) xs
+                        vs              <- hoistEither $ get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -224,7 +232,7 @@ collect_expr = visit_doc
                                         (error "name clash")  
                                         (label lbl) act
                                         (action old_event) }
-                        scope (context m) act (params old_event `merge` indices old_event) li
+                        hoistEither $ scope (context m) act (params old_event `merge` indices old_event) li
                         return m {          
                                 events  = insert (label ev) new_event $ events m } ) 
             )
@@ -243,7 +251,7 @@ collect_expr = visit_doc
                         grd <- get_evt_part m old_event xs (i,j)
                         let new_event = old_event { 
                                     guard =  insert (label lbl) grd grds  }
-                        scope (context m) grd (indices old_event `merge` params old_event) li
+                        hoistEither $ scope (context m) grd (indices old_event `merge` params old_event) li
                         return m {          
                                 events  = insert (label evt) new_event $ events m } )
             )
@@ -266,7 +274,7 @@ collect_expr = visit_doc
                                     c_sched =  
                                         fmap (insert (label lbl) sched) 
                                             ( c_sched old_event <|> Just empty ) }
-                        scope (context m) sched (indices old_event) li
+                        hoistEither $ scope (context m) sched (indices old_event) li
                         return m {          
                                 events  = insert (label evt) new_event $ events m } )
             )
@@ -280,7 +288,7 @@ collect_expr = visit_doc
                         sched <- get_evt_part m old_event xs li
                         let event = old_event { 
                                     f_sched = Just sched }
-                        scope (context m) sched (indices event) li
+                        hoistEither $ scope (context m) sched (indices event) li
                         return m {          
                                 events  = insert (label evt) event $ events m } )
             )
@@ -576,27 +584,27 @@ collect_proofs = visit_doc
                                         dir  <- case map toLower $ concatMap flatten dir of
                                             "up"   -> return Up
                                             "down" -> return Down
-                                            _      -> Left [("expecting a direction for the variant",i,j)]
-                                        var <- either 
+                                            _      -> left [("expecting a direction for the variant",i,j)]
+                                        var <- hoistEither $ either
                                             (\x -> Left [(x,i,j)]) 
                                             Right
-                                            $ zcast int 
+                                            $ (zcast int)
                                             $ Right var
-                                        bound <- either
+                                        bound <- hoistEither $ either
                                             (\x -> Left [(x,i,j)])
                                             Right
                                             $ zcast int
                                             $ Right bound
                                         return (dir,var,bound)
-                                Nothing -> Left [("expecting a variant", i,j)]
+                                Nothing -> left [("expecting a variant", i,j)]
                             let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
                             let pr1@(LeadsTo fv1 p1 q1) = prog ! h0
                             dum <- case fv1 \\ fv0 of
                                 [v] -> return v
-                                _   -> Left [(   "inductive formula should have one free "
+                                _   -> left [(   "inductive formula should have one free "
                                               ++ "variable to record the variant",i,j)]                    
                             return (Induction pr0 pr1 (IntegerVariant dum var bound dir))
-                        _ -> Left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
+                        _ -> left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
                     return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } ))
         ]
 
