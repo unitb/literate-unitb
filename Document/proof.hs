@@ -182,7 +182,6 @@ collect_proof_step :: Monad m
                    -> Machine 
                    -> [LatexDoc] 
                    -> (Int,Int) 
---                   -> RWST (Int,Int) [Error] () m Proof
                    -> EitherT [Error] (RWST (Int,Int) [Error] s m) Proof
 collect_proof_step hyps m xs (i,j) = do
         step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m xs empty_step

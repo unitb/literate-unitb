@@ -7,16 +7,12 @@ import Latex.Parser
 import Document.Expression
 
     -- Libraries
-import Control.Monad
 import 
     Control.Monad.Trans.RWS hiding ( ask, tell, asks )
 import qualified
     Control.Monad.Trans.RWS as RWS
 import Control.Monad.Reader
---import Control.Monad.Reader.Class
 import Control.Monad.Trans.Either
-import Control.Monad.Trans.Writer
---import Control.Monad.Writer.Class
 
 import Data.Monoid
 
@@ -110,7 +106,6 @@ get_4_lbl xs = do
 
 type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
 type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
---type NodeT m = EitherT [Error] (ReaderT (Int,Int) (WriterT [Error] m))
 
 data EnvBlock s a = 
         Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
@@ -182,39 +177,21 @@ visit_doc :: Monad m
           -> RWST b [Error] s m a
 visit_doc blks cmds cs x = do
         s0 <- RWS.get
---        let !() = unsafePerformIO (putStrLn ("before"))
         let (r,s1,w) = runRWS (do
                         x <- foldM (f blks) x cs
                         g x cs)
                         (Param blks cmds) s0
---        let !() = unsafePerformIO (putStrLn ("after"))
         RWS.put s1
         RWS.tell w
         return r
 
---run :: Monad m => ReaderT (Int,Int) (EitherT [Error] m) a -> (Int,Int) -> EitherT [Error] m a
-----run :: Monad m => EitherT [Error] (ReaderT (Int,Int) m) a -> (Int,Int) -> EitherT [Error] m a
---run m li = runReaderT m li
-
 run :: Monoid c
     => EitherT [Error] (RWS (Int,Int) c d) a -> (Int,Int) 
     -> EitherT [Error] (RWS b c d) a
---run :: Monad m => EitherT [Error] (ReaderT (Int,Int) m) a -> (Int,Int) -> EitherT [Error] m a
 run m li = EitherT $ do 
         s <- get
         x <- withRWS (const (const (li,s))) $ runEitherT m
         return x
-
-
---rotate :: Monad m 
---       => EitherT [Error] (ReaderT b m) a 
---       -> ReaderT b (EitherT [Error] m) a
---rotate = error ""
---
---rotateM :: Monad m 
---       => MEitherT [Error] (ReaderT b m) a 
---       -> ReaderT b (MEitherT [Error] m) a
---rotateM = error ""
 
 pushEither :: Monoid c => e -> EitherT c (RWS a c d) e -> RWS a c d e
 pushEither y m = do
@@ -225,15 +202,10 @@ pushEither y m = do
                 RWS.tell xs
                 return y
 
---
---closeEither :: (Monad m) => Either a b -> EitherT a m b
---closeEither :: 
-
 f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
   -> RWS (Param s a) [Error] s a
 f ((name,c):cs) x e@(Env s (i,j) xs _)
         | name == s = do
---                let !() = unsafePerformIO (putStrLn ("match env:" ++ name))
                 pushEither x 
                      $ run
                  (case c of
@@ -283,7 +255,6 @@ h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc]
   -> (Int,Int) -> RWS (Param s a) [Error] s a
 h ((name,c):cs) x cmd ts (i,j)
     | name == cmd   = do
---            let !() = unsafePerformIO (putStrLn ("match cmd:" ++ name))
             r <- case c of
                 Cmd0Args f -> do
                     x <- pushEither x $ run (f () x (i,j)) (i,j)

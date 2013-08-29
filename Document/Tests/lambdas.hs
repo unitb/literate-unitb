@@ -35,7 +35,7 @@ test = test_cases
             , (StringCase "test 7, verify refinement rules" (verify path7) result7)
             , (StringCase "test 8, verify refinement rules" (verify path8) result8)
             , (StringCase "test 9, verify disjunction rule" (verify path9) result9)
---            , (StringCase "test 10, error: cyclic proof" (verify path10) result10)
+            , (StringCase "test 10, error: cyclic proof" (verify path10) result10)
             ]
 
 result0 = unlines 
@@ -616,7 +616,7 @@ path9 = "tests/cubes-t8.tex"
      
 path10 = "tests/cubes-t9.tex"
 
-result10 = "Left \"A cycle exists in the proof of liveness: prog0,prog1,prog2,prog3\""
+result10 = "Left [(\"A cycle exists in the proof of liveness: prog0,prog1,prog2,prog3\",0,0)]"
 
 verify path = do
     r <- parse_machine path

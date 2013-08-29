@@ -20,19 +20,16 @@ import Z3.Z3
     -- Libraries
 import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
-import Control.Monad.Identity hiding ( guard )
-import Control.Monad.IO.Class
-import Control.Monad.Trans.RWS
-import Control.Monad.Trans.State
+import Control.Monad.Trans.RWS as RWS
 import Control.Monad.Trans.Either
 
 import Data.Char
+import Data.Graph
 import Data.Map  as M hiding ( map, foldl, (\\) )
 import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
 import System.IO
---import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -61,34 +58,39 @@ inject s0 m = RWST f
             (x,s1,w) <- runRWST m r s0 
             return (x,s,w)
         
+cycles xs = stronglyConnComp $ map f $ groupBy eq $ sort xs
+    where
+        eq (x,_) (y,_) = x == y
+        f xs = (fst $ head xs, fst $ head xs, map snd xs)
 
---error "not implemented"
 
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             ms <- foldM gather empty xs 
---            let !() = unsafePerformIO (putStrLn "phase A")
             ms <- toEither $ (foldM (f type_decl) ms xs :: (RWS () [Error] ()) (Map String Machine))
---            let !() = unsafePerformIO (putStrLn "phase A")
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
---            let !() = unsafePerformIO (putStrLn "phase A")
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
---            let !() = unsafePerformIO (putStrLn "phase A")
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
---            let !() = unsafePerformIO (putStrLn "phase A")
                 
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
-            ms <- toEither $ inject [] $ foldM (f collect_proofs) ms xs
+            ms <- toEither $ inject [] $ do
+                    ms <- foldM (f collect_proofs) ms xs
+                    s  <- RWS.get
+                    let cs = cycles s
+                    mapM cycl_err_msg cs
+                    return ms
             return ms) () () }
         in x
     where
+        cycl_err_msg (AcyclicSCC v) = return ()
+        cycl_err_msg (CyclicSCC vs) = tell [("A cycle exists in the proof of liveness: " ++ intercalate "," (map show vs),0,0)]
         gather ms (Env n _ c _)     
                 | n == "machine"    = do
                     (name,cont) <- get_1_lbl c
@@ -242,7 +244,6 @@ collect_expr = visit_doc
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
                             ]
---                        let !() = unsafePerformIO (putStrLn ("this is an error: " ++ ev))
                         toEither $ error_list
                             [ ( label lbl `member` action (events m ! label ev)
                               , format "{0} is already used for another assignment" lbl )
@@ -443,10 +444,14 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
+add_proof_edge x xs = EitherT $ do
+    RWS.modify (map ((,) x) xs ++)
+    return $ Right ()
+
 collect_proofs :: Monad m 
                => [LatexDoc] 
                -> Machine
-               -> MSEitherT Error [(String,String)] m Machine
+               -> MSEitherT Error [(Label,Label)] m Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   Env1Args (\(po,()) xs m (i,j) -> do
@@ -491,6 +496,7 @@ collect_proofs = visit_doc
                                 let p0 = prog ! goal_lbl
                                 let p1 = transient (props m) ! h0
                                 let p2 = safety (props m) ! h1
+                                add_proof_edge goal_lbl [h0,h1]
                                 return (Discharge p0 p1 $ Just p2)
                             else do -- length hyps_lbls == 1
                                 let [h0] = hyps_lbls
@@ -502,6 +508,7 @@ collect_proofs = visit_doc
                                     ]
                                 let p0 = prog ! goal_lbl
                                 let p1 = transient (props m) ! h0
+                                add_proof_edge goal_lbl [h0]
                                 return (Discharge p0 p1 Nothing)
                         "monotonicity" -> do
                             toEither $ error_list
@@ -518,6 +525,7 @@ collect_proofs = visit_doc
                                 ]
                             let p0 = prog ! goal_lbl
                             let p1 = prog ! h0
+                            add_proof_edge goal_lbl [h0]
                             return (Monotonicity p0 p1)
                         "disjunction" -> do
                             toEither $ error_list
@@ -534,6 +542,7 @@ collect_proofs = visit_doc
                             let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
                             let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
                             let ps = map (f . (prog !)) hs
+                            add_proof_edge goal_lbl hs
                             return (Disjunction pr0 ps)
                         "trading" -> do
                             toEither $ error_list
@@ -550,6 +559,7 @@ collect_proofs = visit_doc
                                 ]
                             let p0 = prog ! goal_lbl
                             let p1 = prog ! h0
+                            add_proof_edge goal_lbl [h0]
                             return (NegateDisjunct p0 p1)
                         "transitivity" -> do
                             toEither $ error_list
@@ -569,6 +579,7 @@ collect_proofs = visit_doc
                             let p0 = prog ! goal_lbl
                             let p1 = prog ! h0
                             let p2 = prog ! h1
+                            add_proof_edge goal_lbl [h0,h1]
                             return (Transitivity p0 p1 p2)
                         "psp" -> do
                             toEither $ error_list
@@ -588,6 +599,7 @@ collect_proofs = visit_doc
                             let p0 = prog ! goal_lbl
                             let p1 = prog ! h0
                             let p2 = saf ! h1
+                            add_proof_edge goal_lbl [h0,h1]
                             return (PSP p0 p1 p2)
                         "induction" -> do
                             toEither $ error_list
@@ -628,6 +640,7 @@ collect_proofs = visit_doc
                                 [v] -> return v
                                 _   -> left [(   "inductive formula should have one free "
                                               ++ "variable to record the variant",i,j)]                    
+                            add_proof_edge goal_lbl [h0]
                             return (Induction pr0 pr1 (IntegerVariant dum var bound dir))
                         _ -> left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
                     return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } ))
