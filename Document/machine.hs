@@ -22,6 +22,8 @@ import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
 import Control.Monad.Identity hiding ( guard )
 import Control.Monad.IO.Class
+import Control.Monad.Trans.RWS
+import Control.Monad.Trans.State
 import Control.Monad.Trans.Either
 
 import Data.Char
@@ -52,30 +54,40 @@ list_machines ct = do
         ms <- all_machines xs
         return $ map snd $ toList $ ms
 
+inject :: Monad m => c -> RWST a b c m d -> RWST a b e m d
+inject s0 m = RWST f
+    where
+        f r s = do
+            (x,s1,w) <- runRWST m r s0 
+            return (x,s,w)
+        
+
+--error "not implemented"
+
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
-all_machines xs = join $ runEitherT $ do
-        ms <- foldM gather empty xs
---        let !() = unsafePerformIO (putStrLn "phase A")
-        ms <- toEither $ foldM (f type_decl) ms xs
-
-            -- take actual generic parameter from `type_decl'
-        ms <- toEither $ foldM (f imports) ms xs
---        let !() = unsafePerformIO (putStrLn "phase B")
-
-            -- take the types from `imports' and `type_decl`
-        ms <- toEither $ foldM (f declarations) ms xs
---        let !() = unsafePerformIO (putStrLn "phase C")
-            
-            -- use the `declarations' of variables to check the
-            -- type of expressions
-        ms <- toEither $ foldM (f collect_expr) ms xs
---        let !() = unsafePerformIO (putStrLn "phase D")
-            
-            -- use the label of expressions from `collect_expr' 
-            -- in hints.
-        ms <- toEither $ foldM (f collect_proofs) ms xs
---        let !() = unsafePerformIO (putStrLn "phase E")
-        return ms
+all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
+            ms <- foldM gather empty xs 
+--            let !() = unsafePerformIO (putStrLn "phase A")
+            ms <- toEither $ (foldM (f type_decl) ms xs :: (RWS () [Error] ()) (Map String Machine))
+--            let !() = unsafePerformIO (putStrLn "phase A")
+                -- take actual generic parameter from `type_decl'
+            ms <- toEither $ foldM (f imports) ms xs
+--            let !() = unsafePerformIO (putStrLn "phase A")
+    
+                -- take the types from `imports' and `type_decl`
+            ms <- toEither $ foldM (f declarations) ms xs
+--            let !() = unsafePerformIO (putStrLn "phase A")
+                
+                -- use the `declarations' of variables to check the
+                -- type of expressions
+            ms <- toEither $ foldM (f collect_expr) ms xs
+--            let !() = unsafePerformIO (putStrLn "phase A")
+                
+                -- use the label of expressions from `collect_expr' 
+                -- in hints.
+            ms <- toEither $ inject [] $ foldM (f collect_proofs) ms xs
+            return ms) () () }
+        in x
     where
         gather ms (Env n _ c _)     
                 | n == "machine"    = do
@@ -100,7 +112,7 @@ type_decl = visit_doc []
                     let th = theory m
                     let new_sort = Sort tag name 0
                     let new_type = USER_DEFINED new_sort []
-                    toEither $ error_list (i,j)
+                    toEither $ error_list
                         [ ( tag `member` types th
                           , format "a sort with name '{0}' is already declared" tag )
                         , ( tag `member` consts th
@@ -118,7 +130,7 @@ type_decl = visit_doc []
             ,  (  "\\newevent"
                ,  Cmd1Args (\(evt,()) m (i,j) -> do 
                         let lbl = label evt
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( lbl `member` events m
                               , format "event '{0}' is already defined" evt )
                             ]
@@ -126,12 +138,15 @@ type_decl = visit_doc []
                )
             ]
 
-imports :: [LatexDoc] -> Machine -> MEither Error Machine 
+imports :: Monad m 
+        => [LatexDoc] 
+        -> Machine 
+        -> MEitherT Error m Machine 
 imports = visit_doc 
             [   ( "use:set"
                 , Env1Args (\(cset,()) _ m (i,j) -> do
                     let th = theory m
-                    toEither $ error_list (i,j) 
+                    toEither $ error_list
                         [ ( not (cset `member` types th)
                           , format "Carrier set {0} undefined" cset )
                         ]
@@ -141,7 +156,7 @@ imports = visit_doc
             ,   ( "use:fun"
                 , Env2Args (\(dset, rset) _ m (i,j) -> do
                     let th = theory m
-                    toEither $ error_list (i,j) 
+                    toEither $ error_list 
                         [   ( not (dset `member` types th)
                             , format "Carrier set {0} undefined" dset )
                         ,   ( not (rset `member` types th)
@@ -157,13 +172,16 @@ imports = visit_doc
 
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
-declarations :: [LatexDoc] -> Machine -> MEither Error Machine
+declarations :: Monad m
+             => [LatexDoc] 
+             -> Machine 
+             -> MEitherT Error m Machine
 declarations = visit_doc 
         [   (   "variable"
             ,   Env0Args (\() xs m (i,j) -> do
                         vs          <- hoistEither $ get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
-                        toEither $ error_list (i,j) 
+                        toEither $ error_list 
                             [ ( not $ S.null inter
                               , format "repeated declaration: {0}" (intercalate ", " $ S.toList inter ))
                             ]
@@ -172,14 +190,14 @@ declarations = visit_doc
         ,   (   "indices"
             ,   Env1Args (\(evt,()) xs m (i,j) -> do
                         vs <- hoistEither $ get_variables (context m) xs
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not (label evt `member` events m) 
                               , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! label evt
                         let var_names = map fst vs
                         let inter = S.fromList var_names `S.intersection` keysSet (indices old_event)
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not $ S.null inter
                               , format "repeated declaration: {0}" (intercalate ", " $ S.toList inter ) )
                             ]
@@ -210,18 +228,22 @@ declarations = visit_doc
     -- with the same name
     -- Todo: guard the `insert` statements with checks for name clashes
     -- Todo: check scopes
-collect_expr :: [LatexDoc] -> Machine -> MEither Error Machine
+collect_expr :: Monad m
+             => [LatexDoc] 
+             -> Machine 
+             -> MEitherT Error m Machine
 collect_expr = visit_doc 
                 --------------
                 --  Events  --
                 --------------
         [] [(   "\\evassignment"
             ,   Cmd2Args1Blocks (\(ev, lbl, xs) m li@(i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
                             ]
-                        toEither $ error_list (i,j)
+--                        let !() = unsafePerformIO (putStrLn ("this is an error: " ++ ev))
+                        toEither $ error_list
                             [ ( label lbl `member` action (events m ! label ev)
                               , format "{0} is already used for another assignment" lbl )
                             ]
@@ -238,13 +260,13 @@ collect_expr = visit_doc
             )
         ,   (   "\\evguard"
             ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [   ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! label evt
                         let grds = guard old_event
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [   ( label evt `member` grds
                                 , format "{0} is already used for another guard" lbl )
                             ]
@@ -257,14 +279,14 @@ collect_expr = visit_doc
             )
         ,   (   "\\cschedule"
             ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
                         let sc = case c_sched (events m ! label evt) of
                                     Just x  -> x
                                     Nothing -> empty
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( label evt `member` sc
                                 , format "{0} is already used for another coarse schedule" lbl )
                             ]
@@ -280,7 +302,7 @@ collect_expr = visit_doc
             )
         ,   (   "\\fschedule"
             ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not (label evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
                             ]
@@ -298,7 +320,7 @@ collect_expr = visit_doc
         ,   (   "\\assumption"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         let th = theory m
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( label lbl `member` fact th
                               , format "{0} is already used for another assertion" lbl )
                             ]
@@ -312,7 +334,7 @@ collect_expr = visit_doc
         ,   (   "\\initialization"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
                         initp         <- get_assert m xs (i,j)
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( label lbl `member` inits m
                               , format "{0} is already used for another invariant" lbl )
                             ]
@@ -321,7 +343,7 @@ collect_expr = visit_doc
             )
         ,   (   "\\invariant"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
@@ -332,11 +354,11 @@ collect_expr = visit_doc
             )
         ,   (   "\\transient"      
             ,   Cmd2Args1Blocks (\(ev, lbl, xs) m (i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
                             ]
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [   ( label lbl `member` transient (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
@@ -350,7 +372,7 @@ collect_expr = visit_doc
             )
         ,   (   "\\constraint"
             ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
-                        toEither $ error_list (i,j)
+                        toEither $ error_list
                             [ ( label lbl `member` constraint (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
@@ -366,7 +388,7 @@ collect_expr = visit_doc
                     (p,q) <- toEither (do
                         p <- fromEither ztrue $ get_assert m pCt (i,j)
                         q <- fromEither ztrue $ get_assert m qCt (i,j)
-                        error_list (i,j) 
+                        error_list 
                             [   ( label lbl `member` prop
                                 , format "safety property {0} already exists" lbl )
                             ] 
@@ -386,7 +408,7 @@ collect_expr = visit_doc
                     (p,q) <- toEither (do
                         p <- fromEither ztrue $ get_assert m pCt (i,j)
                         q <- fromEither ztrue $ get_assert m qCt (i,j)
-                        error_list (i,j) 
+                        error_list 
                             [   ( label lbl `member` prop
                                 , format "progress property {0} already exists" lbl )
                             ] 
@@ -421,12 +443,15 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
-collect_proofs :: [LatexDoc] -> Machine -> MEither Error Machine
+collect_proofs :: Monad m 
+               => [LatexDoc] 
+               -> Machine
+               -> MSEitherT Error [(String,String)] m Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   Env1Args (\(po,()) xs m (i,j) -> do
                     let lbl = composite_label [ _name m, label po ]
-                    toEither $ error_list (i,j) 
+                    toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
                         ] 
@@ -440,7 +465,7 @@ collect_proofs = visit_doc
             ,   Cmd2Args2Blocks (\(goal,rule,hyps,hint) m (i,j) -> do
                     let goal_lbl = label goal
                     let hyps_lbls = map label $ comma_sep (concatMap flatten hyps)
-                    toEither $ error_list (i,j)
+                    toEither $ error_list
                         [   ( not (goal_lbl `member` (progress $ props m))
                             , format "the goal is an undefined progress property {0}, {1}" goal_lbl $ keys $ progress $ props m )
                         ]
@@ -448,14 +473,14 @@ collect_proofs = visit_doc
                     let saf  = safety $ props m
                     r <- case map toLower rule of
                         "discharge" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( 1 > length hyps_lbls || length hyps_lbls > 2
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             if length hyps_lbls == 2 then do
                                 let [h0,h1] = hyps_lbls
-                                toEither $ error_list (i,j)
+                                toEither $ error_list
                                     [   ( not (goal_lbl `member` prog)
                                         , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                     ,   ( not (h0 `member` transient (props m))
@@ -469,7 +494,7 @@ collect_proofs = visit_doc
                                 return (Discharge p0 p1 $ Just p2)
                             else do -- length hyps_lbls == 1
                                 let [h0] = hyps_lbls
-                                toEither $ error_list (i,j)
+                                toEither $ error_list
                                     [   ( not (goal_lbl `member` prog)
                                         , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                     ,   ( not (h0 `member` transient (props m))
@@ -479,13 +504,13 @@ collect_proofs = visit_doc
                                 let p1 = transient (props m) ! h0
                                 return (Discharge p0 p1 Nothing)
                         "monotonicity" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls /= 1
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let [h0] = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (goal_lbl `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                 ,   ( not (h0 `member` prog)
@@ -495,13 +520,13 @@ collect_proofs = visit_doc
                             let p1 = prog ! h0
                             return (Monotonicity p0 p1)
                         "disjunction" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls < 1
                                     , format "too few hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let hs = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (all (`member` progress (props m)) hs)
                                     , format "refinement ({0}): {1} should be progress properties" rule  
                                         $ intercalate "," $ map show hs)
@@ -511,13 +536,13 @@ collect_proofs = visit_doc
                             let ps = map (f . (prog !)) hs
                             return (Disjunction pr0 ps)
                         "trading" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls /= 1
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let [h0] = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (goal_lbl `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                 ,   ( not (h0 `member` prog)
@@ -527,13 +552,13 @@ collect_proofs = visit_doc
                             let p1 = prog ! h0
                             return (NegateDisjunct p0 p1)
                         "transitivity" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls /= 2
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let [h0,h1] = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (goal_lbl `member` progress (props m))
                                     , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                 ,   ( not (h0 `member` progress (props m))
@@ -546,13 +571,13 @@ collect_proofs = visit_doc
                             let p2 = prog ! h1
                             return (Transitivity p0 p1 p2)
                         "psp" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls /= 2
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let [h0,h1] = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (goal_lbl `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                 ,   ( not (h0 `member` prog)
@@ -565,13 +590,13 @@ collect_proofs = visit_doc
                             let p2 = saf ! h1
                             return (PSP p0 p1 p2)
                         "induction" -> do
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( length hyps_lbls /= 1
                                     , format "too many hypotheses in the application of the rule: {0}" 
                                         $ intercalate "," $ map show hyps_lbls)
                                 ]
                             let [h0] = hyps_lbls
-                            toEither $ error_list (i,j)
+                            toEither $ error_list
                                 [   ( not (goal_lbl `member` prog)
                                     , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
                                 ,   ( not (h0 `member` prog)

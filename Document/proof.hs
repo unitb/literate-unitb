@@ -18,6 +18,10 @@ import Z3.Z3
     -- Libraries
 import Control.Monad hiding ( guard )
 import Control.Monad.Trans.Either
+import 
+    Control.Monad.Trans.RWS hiding ( ask, tell, asks )
+import qualified
+    Control.Monad.Trans.RWS as RWS
 
 import Data.Map hiding ( map, foldl )
 import Data.List as L hiding ( union, insert, inits )
@@ -62,10 +66,11 @@ add_proof lbl prf (i,j) (Step a b c d e)
 
 empty_step = Step empty empty empty Nothing Nothing
 
-find_assumptions :: Machine
+find_assumptions :: Monad m
+                 => Machine
                  -> [LatexDoc] 
                  -> ProofStep
-                 -> MEither Error ProofStep
+                 -> RWST (Int,Int) [Error] s m ProofStep
 find_assumptions m = visit_doc
         [   (   "calculation"
             ,   Env0Args (\() xs proofs (i,j) -> return proofs)
@@ -99,11 +104,12 @@ find_assumptions m = visit_doc
             )
         ]
 
-find_proof_step :: Map Label Expr 
+find_proof_step :: Monad m
+                => Map Label Expr 
                 -> Machine
                 -> [LatexDoc] 
                 -> ProofStep
-                -> MEither Error ProofStep
+                -> RWST (Int,Int) [Error] s m ProofStep
 find_proof_step hyps m = visit_doc
         [   (   "calculation"
             ,   Env0Args (\() xs proofs (i,j) -> do
@@ -139,11 +145,12 @@ find_proof_step hyps m = visit_doc
             )
         ]
 
-find_cases :: Map Label Expr 
+find_cases :: Monad m
+           => Map Label Expr 
            -> Machine
            -> [LatexDoc] 
            -> [(Label,Expr,Proof)]
-           -> MEither Error [(Label,Expr,Proof)]
+           -> RWST (Int,Int) [Error] s m [(Label,Expr,Proof)]
 find_cases hyps m = visit_doc 
         [   (   "case"
             ,   Env1Args1Blocks (\(lbl,formula) xs cases (i,j) -> do
@@ -155,11 +162,12 @@ find_cases hyps m = visit_doc
             )
         ] []
 
-find_parts :: Map Label Expr 
+find_parts :: Monad m
+           => Map Label Expr 
            -> Machine
            -> [LatexDoc] 
            -> [(Expr,Proof)]
-           -> MEither Error [(Expr,Proof)]
+           -> RWST (Int,Int) [Error] s m [(Expr,Proof)]
 find_parts hyps m = visit_doc 
         [   (   "part:a"
             ,   Env0Args1Blocks (\(formula,()) xs cases (i,j) -> do
@@ -169,7 +177,13 @@ find_parts hyps m = visit_doc
             )
         ] []
 
-collect_proof_step :: Monad m => Map Label Expr -> Machine -> [LatexDoc] -> (Int,Int) -> EitherT [Error] m Proof
+collect_proof_step :: Monad m 
+                   => Map Label Expr 
+                   -> Machine 
+                   -> [LatexDoc] 
+                   -> (Int,Int) 
+--                   -> RWST (Int,Int) [Error] () m Proof
+                   -> EitherT [Error] (RWST (Int,Int) [Error] s m) Proof
 collect_proof_step hyps m xs (i,j) = do
         step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m xs empty_step
         let hyps2 = asrt `union` asm `union` hyps
@@ -190,7 +204,10 @@ collect_proof_step hyps m xs (i,j) = do
                         else left [("assumptions must be accompanied by a new goal",i,j)]
             _   -> left [("expecting a single proof step",i,j)]         
 
-parse_calc :: Map Label Expr -> Machine -> [LatexDoc] -> (Int,Int) -> MEither Error Calculation
+parse_calc :: Monad m
+           => Map Label Expr -> Machine 
+           -> [LatexDoc] -> (Int,Int) 
+           -> RWST (Int,Int) [Error] s m Calculation
 parse_calc hyps m xs li = 
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do

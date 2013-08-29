@@ -8,9 +8,17 @@ import Document.Expression
 
     -- Libraries
 import Control.Monad
+import 
+    Control.Monad.Trans.RWS hiding ( ask, tell, asks )
+import qualified
+    Control.Monad.Trans.RWS as RWS
 import Control.Monad.Reader
+--import Control.Monad.Reader.Class
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Writer
+--import Control.Monad.Writer.Class
+
+import Data.Monoid
 
 import System.IO
 import System.IO.Unsafe
@@ -100,90 +108,149 @@ get_4_lbl xs = do
         (lbl3,xs) <- get_1_lbl xs
         return (lbl0,lbl1,lbl2,lbl3,xs)
 
-type Node = EitherT [Error] (Reader (Int,Int))
+type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
+type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
+--type NodeT m = EitherT [Error] (ReaderT (Int,Int) (WriterT [Error] m))
 
-type NodeT m = EitherT [Error] (ReaderT (Int,Int) m)
+data EnvBlock s a = 
+        Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        | Env1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
 
-data EnvBlock a = 
-        Env0Args (forall m. Monad m => () -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
-        | Env0Args1Blocks (forall m. Monad m => ([LatexDoc],()) -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
-        | Env1Args (forall m. Monad m => (String, ()) -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
-        | Env1Args1Blocks (forall m. Monad m => (String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
-        | Env1Args2Blocks (forall m. Monad m => (String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
-        | Env2Args (forall m. Monad m => (String, String) -> [LatexDoc] -> a -> (Int,Int) -> NodeT m a)
+data CmdBlock s a =
+        Cmd0Args (() -> a -> (Int,Int) -> Node s a)
+        | Cmd0Args1Blocks (([LatexDoc], ()) -> a -> (Int,Int) -> Node s a)
+        | Cmd0Args2Blocks (([LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
+        | Cmd1Args ((String,()) -> a -> (Int,Int) -> Node s a)
+        | Cmd1Args1Blocks ((String, [LatexDoc]) -> a -> (Int,Int) -> Node s a)
+        | Cmd1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
+        | Cmd2Args ((String, String) -> a -> (Int,Int) -> Node s a)
+        | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> (Int,Int) -> Node s a)
+        | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
+        | Cmd3Args ((String, String, String) -> a -> (Int,Int) -> Node s a)
+        | Cmd4Args ((String, String, String, String) -> a -> (Int,Int) -> Node s a)
 
-data CmdBlock a =
-        Cmd0Args (forall m. Monad m => () -> a -> (Int,Int) -> NodeT m a)
-        | Cmd0Args1Blocks (forall m. Monad m => ([LatexDoc], ()) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd0Args2Blocks (forall m. Monad m => ([LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd1Args (forall m. Monad m => (String,()) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd1Args1Blocks (forall m. Monad m => (String, [LatexDoc]) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd1Args2Blocks (forall m. Monad m => (String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd2Args (forall m. Monad m => (String, String) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd2Args1Blocks (forall m. Monad m => (String, String, [LatexDoc]) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd2Args2Blocks (forall m. Monad m => (String, String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd3Args (forall m. Monad m => (String, String, String) -> a -> (Int,Int) -> NodeT m a)
-        | Cmd4Args (forall m. Monad m => (String, String, String, String) -> a -> (Int,Int) -> NodeT m a)
+type MEither a = RWS () [a] ()
 
-type MEither a = Writer [a]
+type MEitherT a m = RWST () [a] () m
 
-data Param a = Param 
-    { blocks :: [(String, EnvBlock a)]
-    , cmds   :: [(String, CmdBlock a)] }
+type MSEither a s = RWS () [a] s
 
---fromEither :: Monad m => a -> EitherT [b] m a -> MEither b a
-fromEither y m =
-        eitherT
-            (\xs -> do
-                tell xs
-                return y)
-            return
-            m
+type MSEitherT a s m = RWST () [a] s m
 
-toEither :: Monad m => MEither a b -> EitherT [a] m b
-toEither m = 
-    case runWriter m of
-        (x, []) -> right x
-        (x, xs) -> left xs
+data Param s a = Param 
+    { blocks :: [(String, EnvBlock s a)]
+    , cmds   :: [(String, CmdBlock s a)] }
 
-error_list :: (Int,Int) -> [(Bool, String)] -> MEither Error ()
-error_list _ [] = return ()
-error_list li@(i,j) ( (b,msg):xs )
-        | not b = error_list li xs
+fromEither :: Monad m => a -> EitherT [b] (RWST c [b] d m) a -> RWST c [b] d m a
+fromEither y m = do
+        x <- runEitherT m
+        case x of
+            Right x -> do
+                RWS.tell []
+                return x
+            Left xs -> do
+                RWS.tell xs
+                return y
+
+toEither :: Monad m => RWST a [c] d m b -> EitherT [c] (RWST a [c] d m) b
+toEither m = EitherT $ mapRWST f $ do
+        (x,xs) <- RWS.listen m
+        case xs of
+            [] -> return $ Right x
+            xs -> return $ Left xs
+    where
+        f m = m >>= \(x,y,z) -> return (x,y,[])
+
+error_list :: Monad m
+           => [(Bool, String)] -> RWST (Int,Int) [Error] s m ()
+error_list [] = return ()
+error_list ( (b,msg):xs )
+        | not b = error_list xs
         | b     = do
-            tell [(msg,i,j)]
-            error_list li xs
+            (i,j) <- RWS.ask 
+            RWS.tell [(msg,i,j)]
+            error_list xs
 
-visit_doc :: [(String,EnvBlock a)] -> [(String,CmdBlock a)] -> [LatexDoc] -> a -> MEither Error a
-visit_doc blks cmds cs x = runReaderT (do
-        x <- foldM (f blks) x cs
-        g x cs) (Param blks cmds)
+visit_doc :: Monad m 
+          => [(String,EnvBlock s a)] 
+          -> [(String,CmdBlock s a)] 
+          -> [LatexDoc] -> a 
+          -> RWST b [Error] s m a
+visit_doc blks cmds cs x = do
+        s0 <- RWS.get
+--        let !() = unsafePerformIO (putStrLn ("before"))
+        let (r,s1,w) = runRWS (do
+                        x <- foldM (f blks) x cs
+                        g x cs)
+                        (Param blks cmds) s0
+--        let !() = unsafePerformIO (putStrLn ("after"))
+        RWS.put s1
+        RWS.tell w
+        return r
 
-run :: Monad m => EitherT [Error] (ReaderT (Int,Int) m) a -> (Int,Int) -> EitherT [Error] m a
-run m li = EitherT (runReaderT (runEitherT m) li)
+--run :: Monad m => ReaderT (Int,Int) (EitherT [Error] m) a -> (Int,Int) -> EitherT [Error] m a
+----run :: Monad m => EitherT [Error] (ReaderT (Int,Int) m) a -> (Int,Int) -> EitherT [Error] m a
+--run m li = runReaderT m li
 
-f :: [(String, EnvBlock a)] -> a -> LatexDoc 
-  -> ReaderT (Param a) (MEither Error) a
+run :: Monoid c
+    => EitherT [Error] (RWS (Int,Int) c d) a -> (Int,Int) 
+    -> EitherT [Error] (RWS b c d) a
+--run :: Monad m => EitherT [Error] (ReaderT (Int,Int) m) a -> (Int,Int) -> EitherT [Error] m a
+run m li = EitherT $ do 
+        s <- get
+        x <- withRWS (const (const (li,s))) $ runEitherT m
+        return x
+
+
+--rotate :: Monad m 
+--       => EitherT [Error] (ReaderT b m) a 
+--       -> ReaderT b (EitherT [Error] m) a
+--rotate = error ""
+--
+--rotateM :: Monad m 
+--       => MEitherT [Error] (ReaderT b m) a 
+--       -> ReaderT b (MEitherT [Error] m) a
+--rotateM = error ""
+
+pushEither :: Monoid c => e -> EitherT c (RWS a c d) e -> RWS a c d e
+pushEither y m = do
+        x <- runEitherT m
+        case x of
+            Right x -> return x
+            Left xs -> do
+                RWS.tell xs
+                return y
+
+--
+--closeEither :: (Monad m) => Either a b -> EitherT a m b
+--closeEither :: 
+
+f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
+  -> RWS (Param s a) [Error] s a
 f ((name,c):cs) x e@(Env s (i,j) xs _)
         | name == s = do
---                let !() = unsafePerformIO (putStrLn ("matching " ++ name))
-                lift $ fromEither x 
+--                let !() = unsafePerformIO (putStrLn ("match env:" ++ name))
+                pushEither x 
                      $ run
                  (case c of
                     Env0Args g -> do
                         g () xs x (i,j)
                     Env0Args1Blocks g -> do
-                        ([arg0],xs) <- cmd_params 1 xs
+                        ([arg0],xs) <- cmd_params 1 xs 
                         g (arg0,()) xs x (i,j)
                     Env1Args g -> do
                         (arg,xs) <- get_1_lbl xs
                         g (arg,()) xs x (i,j)
                     Env1Args1Blocks g -> do
-                        (arg0,xs) <- get_1_lbl xs
+                        (arg0,xs)   <- get_1_lbl xs
                         ([arg1],xs) <- cmd_params 1 xs
                         g (arg0,arg1) xs x (i,j)
                     Env1Args2Blocks g -> do
-                        (arg0,xs) <- get_1_lbl xs
+                        (arg0,xs)        <- get_1_lbl xs
                         ([arg1,arg2],xs) <- cmd_params 2 xs
                         g (arg0,arg1,arg2) xs x (i,j)
                     Env2Args g -> do
@@ -201,7 +268,8 @@ f _ x (Bracket _ _ cs _)     = do
         g x cs
 f _ x (Text _)               = return x
 
-g :: a -> [LatexDoc] -> ReaderT (Param a) (MEither Error) a 
+g :: a -> [LatexDoc] 
+  -> RWS (Param s a) [Error] s a
 g x (Text xs : ts) = do
     case trim_blanks $ reverse xs of
         Command c (i,j):_   -> do
@@ -211,75 +279,75 @@ g x (Text xs : ts) = do
 g x (t : ts) = g x ts
 g x [] = return x
 
-h :: [(String,CmdBlock a)] -> a -> String -> [LatexDoc] 
-  -> (Int,Int) -> ReaderT (Param a) (MEither Error) a 
+h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
+  -> (Int,Int) -> RWS (Param s a) [Error] s a
 h ((name,c):cs) x cmd ts (i,j)
     | name == cmd   = do
---            let !() = unsafePerformIO (putStrLn ("matching cmd: " ++ name))
+--            let !() = unsafePerformIO (putStrLn ("match cmd:" ++ name))
             r <- case c of
                 Cmd0Args f -> do
-                    x <- lift $ fromEither x $ run (f () x (i,j)) (i,j)
+                    x <- pushEither x $ run (f () x (i,j)) (i,j)
                     g x ts
                 Cmd1Args f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg,ts) <- get_1_lbl ts
                         f (arg,()) x (i,j))
                         (i,j)
                     g x ts
                 Cmd2Args f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,arg1,ts) <- get_2_lbl ts
                         f (arg0,arg1) x (i,j))
                         (i,j)
                     g x ts
                 Cmd0Args1Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         ([arg0],ts) <- cmd_params 1 ts
                         f (arg0,()) x (i,j))
                         (i,j)
                     g x ts
                 Cmd0Args2Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         ([arg0,arg1],ts) <- cmd_params 2 ts
                         f (arg0,arg1) x (i,j))
                         (i,j)
                     g x ts
                 Cmd1Args1Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,ts) <- get_1_lbl ts
                         ([arg1],ts) <- cmd_params 1 ts
                         f (arg0,arg1) x (i,j))
                         (i,j)
                     g x ts
                 Cmd1Args2Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,ts) <- get_1_lbl ts
                         ([arg1,arg2],ts) <- cmd_params 2 ts
                         f (arg0,arg1,arg2) x (i,j))
                         (i,j)
                     g x ts
                 Cmd2Args1Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,arg1,ts) <- get_2_lbl ts
                         ([arg2],ts) <- cmd_params 1 ts
                         f (arg0,arg1,arg2) x (i,j))
                         (i,j)
                     g x ts
                 Cmd2Args2Blocks f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,arg1,ts) <- get_2_lbl ts
                         ([arg2,arg3],ts) <- cmd_params 2 ts
                         f (arg0,arg1,arg2,arg3) x (i,j))
                         (i,j)
                     g x ts
                 Cmd3Args f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,arg1,arg2,ts) <- get_3_lbl ts
                         f (arg0,arg1,arg2) x (i,j))
                         (i,j)
                     g x ts
                 Cmd4Args f -> do
-                    x <- lift $ fromEither x $ run (do
+                    x <- pushEither x $ run (do
                         (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
                         f (arg0,arg1,arg2,arg3) x (i,j))
                         (i,j)
