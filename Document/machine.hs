@@ -478,7 +478,7 @@ collect_proofs = visit_doc
                     let hyps_lbls = map label $ comma_sep (concatMap flatten hyps)
                     toEither $ error_list
                         [   ( not (goal_lbl `member` (progress $ props m))
-                            , format "the goal is an undefined progress property {0}, {1}" goal_lbl $ keys $ progress $ props m )
+                            , format "the goal is an undefined progress property {0}" goal_lbl )
                         ]
                     let prog = progress $ props m
                     let saf  = safety $ props m
