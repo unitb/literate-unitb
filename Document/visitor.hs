@@ -108,25 +108,25 @@ type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
 type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
 
 data EnvBlock s a = 
-        Env0Args (() -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
-        | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
-        | Env1Args ((String, ()) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
-        | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
-        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
-        | Env2Args ((String, String) -> [LatexDoc] -> a -> (Int,Int) -> Node s a)
+        Env0Args (() -> [LatexDoc] -> a -> Node s a)
+        | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> Node s a)
+        | Env1Args ((String, ()) -> [LatexDoc] -> a -> Node s a)
+        | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> Node s a)
+        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> Node s a)
+        | Env2Args ((String, String) -> [LatexDoc] -> a -> Node s a)
 
 data CmdBlock s a =
-        Cmd0Args (() -> a -> (Int,Int) -> Node s a)
-        | Cmd0Args1Blocks (([LatexDoc], ()) -> a -> (Int,Int) -> Node s a)
-        | Cmd0Args2Blocks (([LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
-        | Cmd1Args ((String,()) -> a -> (Int,Int) -> Node s a)
-        | Cmd1Args1Blocks ((String, [LatexDoc]) -> a -> (Int,Int) -> Node s a)
-        | Cmd1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
-        | Cmd2Args ((String, String) -> a -> (Int,Int) -> Node s a)
-        | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> (Int,Int) -> Node s a)
-        | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> (Int,Int) -> Node s a)
-        | Cmd3Args ((String, String, String) -> a -> (Int,Int) -> Node s a)
-        | Cmd4Args ((String, String, String, String) -> a -> (Int,Int) -> Node s a)
+        Cmd0Args (() -> a -> Node s a)
+        | Cmd0Args1Blocks (([LatexDoc], ()) -> a -> Node s a)
+        | Cmd0Args2Blocks (([LatexDoc], [LatexDoc]) -> a -> Node s a)
+        | Cmd1Args ((String,()) -> a -> Node s a)
+        | Cmd1Args1Blocks ((String, [LatexDoc]) -> a -> Node s a)
+        | Cmd1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> a -> Node s a)
+        | Cmd2Args ((String, String) -> a -> Node s a)
+        | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> Node s a)
+        | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> Node s a)
+        | Cmd3Args ((String, String, String) -> a -> Node s a)
+        | Cmd4Args ((String, String, String, String) -> a -> Node s a)
 
 type MEither a = RWS () [a] ()
 
@@ -186,9 +186,10 @@ visit_doc blks cmds cs x = do
         return r
 
 run :: Monoid c
-    => EitherT [Error] (RWS (Int,Int) c d) a -> (Int,Int) 
+    => (Int,Int) 
+    -> EitherT [Error] (RWS (Int,Int) c d) a
     -> EitherT [Error] (RWS b c d) a
-run m li = EitherT $ do 
+run li m = EitherT $ do 
         s <- get
         x <- withRWS (const (const (li,s))) $ runEitherT m
         return x
@@ -207,28 +208,27 @@ f :: [(String, EnvBlock s a)] -> a -> LatexDoc
 f ((name,c):cs) x e@(Env s (i,j) xs _)
         | name == s = do
                 pushEither x 
-                     $ run
+                     $ run (i,j)
                  (case c of
                     Env0Args g -> do
-                        g () xs x (i,j)
+                        g () xs x
                     Env0Args1Blocks g -> do
                         ([arg0],xs) <- cmd_params 1 xs 
-                        g (arg0,()) xs x (i,j)
+                        g (arg0,()) xs x
                     Env1Args g -> do
                         (arg,xs) <- get_1_lbl xs
-                        g (arg,()) xs x (i,j)
+                        g (arg,()) xs x
                     Env1Args1Blocks g -> do
                         (arg0,xs)   <- get_1_lbl xs
                         ([arg1],xs) <- cmd_params 1 xs
-                        g (arg0,arg1) xs x (i,j)
+                        g (arg0,arg1) xs x
                     Env1Args2Blocks g -> do
                         (arg0,xs)        <- get_1_lbl xs
                         ([arg1,arg2],xs) <- cmd_params 2 xs
-                        g (arg0,arg1,arg2) xs x (i,j)
+                        g (arg0,arg1,arg2) xs x
                     Env2Args g -> do
                         (arg0,arg1,xs) <- get_2_lbl xs
-                        g (arg0,arg1) xs x (i,j))
-                    (i,j)
+                        g (arg0,arg1) xs x)
         | otherwise = f cs x e
 f [] x e@(Env s (i,j) xs _)  = do
         blks <- asks blocks
@@ -257,71 +257,61 @@ h ((name,c):cs) x cmd ts (i,j)
     | name == cmd   = do
             r <- case c of
                 Cmd0Args f -> do
-                    x <- pushEither x $ run (f () x (i,j)) (i,j)
+                    x <- pushEither x $ run (i,j) $ f () x
                     g x ts
                 Cmd1Args f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg,ts) <- get_1_lbl ts
-                        f (arg,()) x (i,j))
-                        (i,j)
+                        f (arg,()) x
                     g x ts
                 Cmd2Args f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,arg1,ts) <- get_2_lbl ts
-                        f (arg0,arg1) x (i,j))
-                        (i,j)
+                        f (arg0,arg1) x
                     g x ts
                 Cmd0Args1Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         ([arg0],ts) <- cmd_params 1 ts
-                        f (arg0,()) x (i,j))
-                        (i,j)
+                        f (arg0,()) x
                     g x ts
                 Cmd0Args2Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         ([arg0,arg1],ts) <- cmd_params 2 ts
-                        f (arg0,arg1) x (i,j))
-                        (i,j)
+                        f (arg0,arg1) x
                     g x ts
                 Cmd1Args1Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,ts) <- get_1_lbl ts
                         ([arg1],ts) <- cmd_params 1 ts
-                        f (arg0,arg1) x (i,j))
-                        (i,j)
+                        f (arg0,arg1) x
                     g x ts
                 Cmd1Args2Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,ts) <- get_1_lbl ts
                         ([arg1,arg2],ts) <- cmd_params 2 ts
-                        f (arg0,arg1,arg2) x (i,j))
-                        (i,j)
+                        f (arg0,arg1,arg2) x 
                     g x ts
                 Cmd2Args1Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,arg1,ts) <- get_2_lbl ts
                         ([arg2],ts) <- cmd_params 1 ts
-                        f (arg0,arg1,arg2) x (i,j))
-                        (i,j)
+                        f (arg0,arg1,arg2) x 
                     g x ts
                 Cmd2Args2Blocks f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,arg1,ts) <- get_2_lbl ts
                         ([arg2,arg3],ts) <- cmd_params 2 ts
-                        f (arg0,arg1,arg2,arg3) x (i,j))
-                        (i,j)
+                        f (arg0,arg1,arg2,arg3) x 
                     g x ts
                 Cmd3Args f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,arg1,arg2,ts) <- get_3_lbl ts
-                        f (arg0,arg1,arg2) x (i,j))
-                        (i,j)
+                        f (arg0,arg1,arg2) x 
                     g x ts
                 Cmd4Args f -> do
-                    x <- pushEither x $ run (do
+                    x <- pushEither x $ run (i,j) $ do
                         (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
-                        f (arg0,arg1,arg2,arg3) x (i,j))
-                        (i,j)
+                        f (arg0,arg1,arg2,arg3) x 
                     g x ts
             return r
     | otherwise     = h cs x cmd ts (i,j)

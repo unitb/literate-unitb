@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts #-}
 module Document.Machine where
 
     -- Modules
@@ -20,6 +20,8 @@ import Z3.Z3
     -- Libraries
 import Control.Applicative hiding ( empty )
 import Control.Monad hiding ( guard )
+import qualified Control.Monad.Reader.Class as R
+import Control.Monad.Trans
 import Control.Monad.Trans.RWS as RWS
 import Control.Monad.Trans.Either
 
@@ -110,7 +112,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
 type_decl :: [LatexDoc] -> Machine -> MEither Error Machine
 type_decl = visit_doc []
             [  (  "\\newset"
-               ,  Cmd2Args (\(name, tag) m (i,j) -> do
+               ,  Cmd2Args $ \(name, tag) m -> do
                     let th = theory m
                     let new_sort = Sort tag name 0
                     let new_type = USER_DEFINED new_sort []
@@ -127,16 +129,16 @@ type_decl = visit_doc []
                                     (types th) 
                             ,  consts = insert tag (Var name $ set_type new_type) $ consts th
                             }
-                    return m { theory = hd } )
+                    return m { theory = hd } 
                )
             ,  (  "\\newevent"
-               ,  Cmd1Args (\(evt,()) m (i,j) -> do 
+               ,  Cmd1Args $ \(evt,()) m -> do 
                         let lbl = label evt
                         toEither $ error_list
                             [ ( lbl `member` events m
                               , format "event '{0}' is already defined" evt )
                             ]
-                        return m { events = insert lbl (empty_event) $ events m } )
+                        return m { events = insert lbl (empty_event) $ events m } 
                )
             ]
 
@@ -146,17 +148,17 @@ imports :: Monad m
         -> MEitherT Error m Machine 
 imports = visit_doc 
             [   ( "use:set"
-                , Env1Args (\(cset,()) _ m (i,j) -> do
+                , Env1Args $ \(cset,()) _ m -> do
                     let th = theory m
                     toEither $ error_list
                         [ ( not (cset `member` types th)
                           , format "Carrier set {0} undefined" cset )
                         ]
                     return m { theory = th {
-                                extends = set_theory (USER_DEFINED (types th ! cset) []) : extends th } } )
+                                extends = set_theory (USER_DEFINED (types th ! cset) []) : extends th } } 
                 )
             ,   ( "use:fun"
-                , Env2Args (\(dset, rset) _ m (i,j) -> do
+                , Env2Args $ \(dset, rset) _ m -> do
                     let th = theory m
                     toEither $ error_list 
                         [   ( not (dset `member` types th)
@@ -167,7 +169,7 @@ imports = visit_doc
                     let dtype = USER_DEFINED (types th ! dset) []
                     let rtype = USER_DEFINED (types th ! rset) []
                     return m { theory = th {
-                                extends = function_theory dtype rtype : extends th } } )
+                                extends = function_theory dtype rtype : extends th } } 
                 )
             ]
             []
@@ -180,17 +182,17 @@ declarations :: Monad m
              -> MEitherT Error m Machine
 declarations = visit_doc 
         [   (   "variable"
-            ,   Env0Args (\() xs m (i,j) -> do
+            ,   Env0Args $ \() xs m -> do
                         vs          <- hoistEither $ get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list 
                             [ ( not $ S.null inter
                               , format "repeated declaration: {0}" (intercalate ", " $ S.toList inter ))
                             ]
-                        return m { variables = fromList vs `union` variables m} )
+                        return m { variables = fromList vs `union` variables m} 
             )
         ,   (   "indices"
-            ,   Env1Args (\(evt,()) xs m (i,j) -> do
+            ,   Env1Args $ \(evt,()) xs m -> do
                         vs <- hoistEither $ get_variables (context m) xs
                         toEither $ error_list
                             [ ( not (label evt `member` events m) 
@@ -205,23 +207,23 @@ declarations = visit_doc
                             ]
                         let new_event = old_event { 
                             indices = fromList vs `union` indices old_event }
-                        return m { events = insert (label evt) new_event $ events m } )
+                        return m { events = insert (label evt) new_event $ events m } 
             )
         ,   (   "constant"
-            ,   Env0Args (\() xs m (i,j) -> do
+            ,   Env0Args $ \() xs m -> do
                         vs              <- hoistEither $ get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
-                                    (consts $ theory m) } } )
+                                    (consts $ theory m) } } 
             )
         ,   (   "dummy"
-            ,   Env0Args (\() xs m (i,j) -> do
+            ,   Env0Args $ \() xs m -> do
                         vs              <- hoistEither $ get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 
-                                    (dummies $ theory m) } } )
+                                    (dummies $ theory m) } } 
             )
         ] 
         []
@@ -239,7 +241,7 @@ collect_expr = visit_doc
                 --  Events  --
                 --------------
         [] [(   "\\evassignment"
-            ,   Cmd2Args1Blocks (\(ev, lbl, xs) m li@(i,j) -> do
+            ,   Cmd2Args1Blocks $ \(ev, lbl, xs) m -> do
                         toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -249,18 +251,18 @@ collect_expr = visit_doc
                               , format "{0} is already used for another assignment" lbl )
                             ]
                         let old_event = events m ! label ev
-                        act <- get_evt_part m old_event xs (i,j)
+                        act   <- get_evt_part m old_event xs
                         let new_event = old_event { 
                                     action = insertWith 
                                         (error "name clash")  
                                         (label lbl) act
                                         (action old_event) }
-                        hoistEither $ scope (context m) act (params old_event `merge` indices old_event) li
+                        scope (context m) act (params old_event `merge` indices old_event)
                         return m {          
-                                events  = insert (label ev) new_event $ events m } ) 
+                                events  = insert (label ev) new_event $ events m } 
             )
         ,   (   "\\evguard"
-            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
+            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
                         toEither $ error_list
                             [   ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -271,15 +273,15 @@ collect_expr = visit_doc
                             [   ( label evt `member` grds
                                 , format "{0} is already used for another guard" lbl )
                             ]
-                        grd <- get_evt_part m old_event xs (i,j)
+                        grd      <- get_evt_part m old_event xs
                         let new_event = old_event { 
                                     guard =  insert (label lbl) grd grds  }
-                        hoistEither $ scope (context m) grd (indices old_event `merge` params old_event) li
+                        scope (context m) grd (indices old_event `merge` params old_event)
                         return m {          
-                                events  = insert (label evt) new_event $ events m } )
+                                events  = insert (label evt) new_event $ events m } 
             )
         ,   (   "\\cschedule"
-            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
+            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
                         toEither $ error_list
                             [ ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -292,69 +294,69 @@ collect_expr = visit_doc
                                 , format "{0} is already used for another coarse schedule" lbl )
                             ]
                         let old_event = events m ! label evt
-                        sched <- get_evt_part m old_event xs li
+                        sched <- get_evt_part m old_event xs
                         let new_event = old_event { 
                                     c_sched =  
                                         fmap (insert (label lbl) sched) 
                                             ( c_sched old_event <|> Just empty ) }
-                        hoistEither $ scope (context m) sched (indices old_event) li
+                        scope (context m) sched (indices old_event) 
                         return m {          
-                                events  = insert (label evt) new_event $ events m } )
+                                events  = insert (label evt) new_event $ events m } 
             )
         ,   (   "\\fschedule"
-            ,   Cmd2Args1Blocks (\(evt, lbl, xs) m li@(i,j) -> do
+            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
                         toEither $ error_list
                             [ ( not (label evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! label evt
-                        sched <- get_evt_part m old_event xs li
+                        sched <- get_evt_part m old_event xs
                         let event = old_event { 
                                     f_sched = Just sched }
-                        hoistEither $ scope (context m) sched (indices event) li
+                        scope (context m) sched (indices event) 
                         return m {          
-                                events  = insert (label evt) event $ events m } )
+                                events  = insert (label evt) event $ events m } 
             )
                 -------------------------
                 --  Theory Properties  --
                 -------------------------
         ,   (   "\\assumption"
-            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
+            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
                         let th = theory m
                         toEither $ error_list
                             [ ( label lbl `member` fact th
                               , format "{0} is already used for another assertion" lbl )
                             ]
-                        axm <- get_assert m xs (i,j)
+                        axm <- get_assert m xs
                         return m { 
-                            theory = th { fact = insert (label lbl) axm $ fact th } } ) 
+                            theory = th { fact = insert (label lbl) axm $ fact th } } 
             )
                 --------------------------
                 --  Program properties  --
                 --------------------------
         ,   (   "\\initialization"
-            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
-                        initp         <- get_assert m xs (i,j)
+            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
+                        initp         <- get_assert m xs
                         toEither $ error_list
                             [ ( label lbl `member` inits m
                               , format "{0} is already used for another invariant" lbl )
                             ]
                         return m {
-                                inits = insert (label lbl) initp $ inits m } )
+                                inits = insert (label lbl) initp $ inits m } 
             )
         ,   (   "\\invariant"
-            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
+            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
                         toEither $ error_list
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
-                        invar         <- get_assert m xs (i,j)
+                        invar         <- get_assert m xs
                         return m { 
                             props = (props m) { 
-                                inv = insert (label lbl) invar $ inv $ props m } } )
+                                inv = insert (label lbl) invar $ inv $ props m } } 
             )
         ,   (   "\\transient"      
-            ,   Cmd2Args1Blocks (\(ev, lbl, xs) m (i,j) -> do
+            ,   Cmd2Args1Blocks $ \(ev, lbl, xs) m -> do
                         toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -363,32 +365,32 @@ collect_expr = visit_doc
                             [   ( label lbl `member` transient (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
-                        tr <- get_assert m xs (i,j)
+                        tr            <- get_assert m xs
                         let prop = Transient (free_vars (context m) tr) tr $ label ev
                         let old_prog_prop = transient $ props m
                         let new_props     = insert (label lbl) prop $ old_prog_prop
                         return m {
                             props = (props m) {
-                                transient = new_props } } )
+                                transient = new_props } } 
             )
         ,   (   "\\constraint"
-            ,   Cmd1Args1Blocks (\(lbl,xs) m (i,j) -> do
+            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
                         toEither $ error_list
                             [ ( label lbl `member` constraint (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
-                        pre             <- get_assert m xs (i,j)
+                        pre           <- get_assert m xs
                         return m { 
                             props = (props m) { 
                                 constraint = insert (label lbl) (Co (elems $ free_vars (context m) pre) pre) 
-                                    $ constraint $ props m } } )
+                                    $ constraint $ props m } } 
             )
         ,   (   "\\safety"
-            ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
+            ,   Cmd1Args2Blocks $ \(lbl, pCt, qCt) m -> do
                     let prop = safety $ props m
-                    (p,q) <- toEither (do
-                        p <- fromEither ztrue $ get_assert m pCt (i,j)
-                        q <- fromEither ztrue $ get_assert m qCt (i,j)
+                    (p,q)    <- toEither (do
+                        p    <- fromEither ztrue $ get_assert m pCt
+                        q    <- fromEither ztrue $ get_assert m qCt
                         error_list 
                             [   ( label lbl `member` prop
                                 , format "safety property {0} already exists" lbl )
@@ -401,14 +403,14 @@ collect_expr = visit_doc
                         { safety = insert (label lbl) new_prop $ prop 
                         , constraint = insert (label lbl) 
                             (Co (M.elems dum) (zimplies (zand p $ znot q) $ primed (variables m) (zor p q)))
-                            (constraint $ props m) } } )
+                            (constraint $ props m) } } 
             )
         ,   (   "\\progress"
-            ,   Cmd1Args2Blocks (\(lbl, pCt, qCt) m (i,j) -> do
+            ,   Cmd1Args2Blocks $ \(lbl, pCt, qCt) m -> do
                     let prop = progress $ props m
-                    (p,q) <- toEither (do
-                        p <- fromEither ztrue $ get_assert m pCt (i,j)
-                        q <- fromEither ztrue $ get_assert m qCt (i,j)
+                    (p,q)    <- toEither (do
+                        p    <- fromEither ztrue $ get_assert m pCt
+                        q    <- fromEither ztrue $ get_assert m qCt
                         error_list 
                             [   ( label lbl `member` prop
                                 , format "progress property {0} already exists" lbl )
@@ -421,18 +423,22 @@ collect_expr = visit_doc
                     return m { props = (props m) 
                         { progress   = insert (label lbl) new_prop $ prop 
                         , derivation = insert (label lbl) Add $ derivation $ props m
-                        } } )
+                        } } 
             )
         ]
-    where
-        scope :: Context -> Expr -> Map String Var -> (Int,Int) -> Either [Error] ()
-        scope ctx xp vs (i,j) = do
-            let fv          = keysSet $ free_vars ctx xp
-            let decl_v      = keysSet vs
-            let undecl_v    = S.toList (fv `S.difference` decl_v)
-            if fv `S.isSubsetOf` decl_v
-            then return ()
-            else Left [(format "Undeclared variables: {0}" (intercalate ", " undecl_v), i,j)]
+
+scope :: (Monad m, R.MonadReader (Int,Int) m)
+      => Context -> Expr -> Map String Var 
+      -> EitherT [Error] m ()
+scope ctx xp vs = do
+    let fv          = keysSet $ free_vars ctx xp
+    let decl_v      = keysSet vs
+    let undecl_v    = S.toList (fv `S.difference` decl_v)
+    (i,j)           <- R.ask
+    if fv `S.isSubsetOf` decl_v
+    then return ()
+    else left [(format "Undeclared variables: {0}" 
+                (intercalate ", " undecl_v), i,j)]
 
 trim xs = reverse $ f $ reverse $ f xs
     where
@@ -454,20 +460,20 @@ collect_proofs :: Monad m
                -> MSEitherT Error [(Label,Label)] m Machine
 collect_proofs = visit_doc
         [   (   "proof"
-            ,   Env1Args (\(po,()) xs m (i,j) -> do
+            ,   Env1Args $ \(po,()) xs m -> do
                     let lbl = composite_label [ _name m, label po ]
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
                         ] 
-                    p <- collect_proof_step empty m xs (i,j)
+                    p           <- collect_proof_step empty m xs
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 
-                                    proofs $ props m } } )
+                                    proofs $ props m } } 
             )
         ] [ (   "\\refine"
-            ,   Cmd2Args2Blocks (\(goal,rule,hyps,hint) m (i,j) -> do
+            ,   Cmd2Args2Blocks $ \(goal,rule,hyps,hint) m -> do
                     let goal_lbl = label goal
                     let hyps_lbls = map label $ comma_sep (concatMap flatten hyps)
                     toEither $ error_list
@@ -476,6 +482,7 @@ collect_proofs = visit_doc
                         ]
                     let prog = progress $ props m
                     let saf  = safety $ props m
+                    li@(i,j)      <- lift $ ask
                     r <- case map toLower rule of
                         "discharge" -> do
                             toEither $ error_list
@@ -616,8 +623,8 @@ collect_proofs = visit_doc
                                 ]
                             (dir,var,bound) <- case find_cmd_arg 3 ["\\var"] hint of
                                 Just (_,_,[var,dir,bound],_) -> do
-                                        var   <- get_expr m var   (i,j)
-                                        bound <- get_expr m bound (i,j)
+                                        var   <- get_expr m var   
+                                        bound <- get_expr m bound 
                                         dir  <- case map toLower $ concatMap flatten dir of
                                             "up"   -> return Up
                                             "down" -> return Down
@@ -643,7 +650,8 @@ collect_proofs = visit_doc
                             add_proof_edge goal_lbl [h0]
                             return (Induction pr0 pr1 (IntegerVariant dum var bound dir))
                         _ -> left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
-                    return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } ))
+                    return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } 
+            )
         ]
 
 parse_machine :: FilePath -> IO (Either [Error] [Machine])
