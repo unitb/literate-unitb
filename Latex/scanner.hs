@@ -112,11 +112,12 @@ match_first ((p,f):xs) x = do
             Nothing -> match_first xs x
 
 read_lines :: Scanner Char a -> String -> Either [Error] a 
-read_lines s xs = read_tokens s (line_number xs)
+read_lines s xs = read_tokens s (line_number xs) (1,1)
 
-read_tokens :: Scanner a b -> [(a, (Int,Int))] -> Either [Error] b
-read_tokens (Scanner f) xs = 
-        do  (r, State xs i j) <- f (State xs 0 0)
+read_tokens :: Scanner a b -> [(a, (Int,Int))] 
+            -> (Int,Int) -> Either [Error] b
+read_tokens (Scanner f) xs (i,j) = 
+        do  (r, State xs i j) <- f (State xs i j)
             case xs of 
                 [] -> return r
                 _ -> Left [("expected end of input", i, j)]

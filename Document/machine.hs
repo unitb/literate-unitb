@@ -69,7 +69,7 @@ cycles xs = stronglyConnComp $ map f $ groupBy eq $ sort xs
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             ms <- foldM gather empty xs 
-            ms <- toEither $ (foldM (f type_decl) ms xs :: (RWS () [Error] ()) (Map String Machine))
+            ms <- toEither $ foldM (f type_decl) ms xs
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
     
@@ -93,17 +93,17 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
     where
         cycl_err_msg (AcyclicSCC v) = return ()
         cycl_err_msg (CyclicSCC vs) = tell [("A cycle exists in the proof of liveness: " ++ intercalate "," (map show vs),0,0)]
-        gather ms (Env n _ c _)     
+        gather ms (Env n _ c li)     
                 | n == "machine"    = do
-                    (name,cont) <- get_1_lbl c
+                    (name,cont) <- with_line_info li $ get_1_lbl c
                     let m        = empty_machine name
                     return (insert name m ms)
                 | otherwise         = foldM gather ms c
         gather ms x                 = fold_docM gather ms x
-        f pass ms (Env n _ c _)     
+        f pass ms (Env n _ c li)     
                 | n == "machine"    = do
                     fromEither ms (do
-                        (name,cont) <- get_1_lbl c
+                        (name,cont) <- with_line_info li $ get_1_lbl c
                         m           <- toEither $ pass cont (ms ! name)
                         return (insert name m ms))
                 | otherwise         = foldM (f pass) ms c
@@ -183,7 +183,7 @@ declarations :: Monad m
 declarations = visit_doc 
         [   (   "variable"
             ,   Env0Args $ \() xs m -> do
-                        vs          <- hoistEither $ get_variables (context m) xs
+                        vs <- get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list 
                             [ ( not $ S.null inter
@@ -193,7 +193,7 @@ declarations = visit_doc
             )
         ,   (   "indices"
             ,   Env1Args $ \(evt,()) xs m -> do
-                        vs <- hoistEither $ get_variables (context m) xs
+                        vs <- get_variables (context m) xs
                         toEither $ error_list
                             [ ( not (label evt `member` events m) 
                               , format "event '{0}' is undeclared" evt )
@@ -211,7 +211,7 @@ declarations = visit_doc
             )
         ,   (   "constant"
             ,   Env0Args $ \() xs m -> do
-                        vs              <- hoistEither $ get_variables (context m) xs
+                        vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -219,7 +219,7 @@ declarations = visit_doc
             )
         ,   (   "dummy"
             ,   Env0Args $ \() xs m -> do
-                        vs              <- hoistEither $ get_variables (context m) xs
+                        vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 

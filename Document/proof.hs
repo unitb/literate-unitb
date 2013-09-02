@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, BangPatterns #-}
 module Document.Proof where
 
     -- Modules
@@ -235,9 +235,10 @@ parse_calc hyps m xs =
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do
             xp <- fromEither ztrue $ get_expr m a
+            li <- RWS.ask
             op <- fromEither Equal $ hoistEither $ read_tokens 
                     (do eat_space ; x <- oper ; eat_space ; return x) 
-                    (concatMap flatten_li b)
+                    (concatMap flatten_li b) li
             hyp <- fromEither [] (do
                 hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
                 mapM (hoistEither . find hyps m) hs)
@@ -282,7 +283,7 @@ get_expr :: (Monad m, MonadReader (Int,Int) m)
          => Machine -> [LatexDoc] 
          -> EitherT [Error] m Expr
 get_expr m ys = do
-        x  <- fmap normalize_generics $ hoistEither $ parse_expr (context m) (concatMap flatten_li xs)
+        x  <- fmap normalize_generics $ parse_expr (context m) (concatMap flatten_li xs)
         li <- ask
         let (i,j) = if L.null xs
                     then li
@@ -299,7 +300,7 @@ get_assert :: (Monad m, MonadReader (Int,Int) m)
            => Machine -> [LatexDoc] 
            -> EitherT [Error] m Expr
 get_assert m ys = do
-        x <- hoistEither $ parse_expr (context m) (concatMap flatten_li xs)
+        x <- parse_expr (context m) (concatMap flatten_li xs)
         li <- ask
         let (i,j) = if L.null xs
                     then li
@@ -317,8 +318,7 @@ get_evt_part :: (Monad m, MonadReader (Int,Int) m)
              -> [LatexDoc]
              -> EitherT [Error] m Expr
 get_evt_part m e ys = do
-        x <- hoistEither $ 
-             parse_expr (            step_ctx m 
+        x <- parse_expr (            step_ctx m 
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)

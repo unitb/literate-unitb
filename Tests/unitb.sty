@@ -14,6 +14,7 @@
 %%%%% Require packages
 \RequirePackage{eventB}
 \RequirePackage{xifthen}
+\RequirePackage{ifthen}
 \RequirePackage{amsmath}
 \RequirePackage[retainorgcmds]{IEEEtrantools}
 
@@ -423,7 +424,7 @@
 	%			label: p |-> q
 {		#2 \quad \mapsto\quad #3
 		\stepcounter{prop}
-		\tag{P\arabic{prop}	} 
+		\tag{P\arabic{prop}} 
 		\label{#1} 	}
 
 	% 
@@ -506,6 +507,8 @@
 	\textbf{with} \ref{#2} \\	}
 
 \newcommand{\refine}[4]
-	% \refine{prop}{rule}{new props}{ comment }
-{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2#4 }\right\} \\ }
+	% \refine{prop}{rule}{new props}{ comment }{<notag>}
+{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}#4 }\right\} \\ }
 \newcommand{\var}[3]{$#1$, #2 to $#3$}
+
+%\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}

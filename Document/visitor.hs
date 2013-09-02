@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RankNTypes #-}
+{-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-}
 module Document.Visitor where
 
     -- Modules
@@ -8,7 +8,7 @@ import Document.Expression
 
     -- Libraries
 import 
-    Control.Monad.Trans.RWS hiding ( ask, tell, asks )
+    Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
 import qualified
     Control.Monad.Trans.RWS as RWS
 import Control.Monad.Reader
@@ -35,30 +35,38 @@ skip_blanks xs = xs
 trim_blanks :: [LatexToken] -> [LatexToken]
 trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
 
-cmd_params :: Monad m => Int -> [LatexDoc] 
+cmd_params :: (Monad m, MonadReader (Int,Int) m)
+           => Int -> [LatexDoc] 
            -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
 cmd_params 0 xs     = right ([], xs)
-cmd_params n xs     = 
+cmd_params n xs     = do
+        (i,j) <- lift $ ask
         case drop_blank_text xs of
-            Bracket _ _ xs _ : ys -> do
-                (ws, zs) <- cmd_params (n-1) ys
+            Bracket _ _ xs (i,j) : ys -> do
+                (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
                 right (xs:ws, zs)
-            x                 -> left [("bad argument: " ++ show xs,-1,-1)]
+            x                 -> left [("bad argument: " ++ show xs,i,j)]
 
 cmd_params_ n xs = fmap fst $ cmd_params n xs
+
+with_line_info :: (Int, Int) -> EitherT a (ReaderT (Int,Int) m) b -> EitherT a m b
+with_line_info li cmd = 
+        EitherT $ runReaderT (runEitherT cmd) li
+        
 
     -- Given a Latex document piece, find one instance
     -- of the given command, its arguments and the
     -- the parts surrounding it to the left and right
 find_cmd_arg :: Int -> [String] -> [LatexDoc] 
              -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])
-find_cmd_arg n cmds (x@(Text xs) : cs) = 
+find_cmd_arg n cmds (x@(Text xs) : cs) =
         case (trim_blanks $ reverse xs) of
-            (t@(Command ys _):zs) -> 
+            (t@(Command ys (i,j)):zs) -> 
                     if ys `elem` cmds
                     then eitherT
                             (\_       -> Nothing)
                             (\(xs,ws) -> Just (f zs,t,xs,ws))
+                        $ with_line_info (i,j)
                         $ cmd_params n cs
                     else continue
             _    -> continue
@@ -73,7 +81,8 @@ find_cmd_arg n cmds (x:xs) = do
                 (a,t,b,c) <- find_cmd_arg n cmds xs
                 return (x:a,t,b,c)
 
-get_1_lbl :: Monad m => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
+get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
+          => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
 get_1_lbl xs = do 
         ([x],z) <- cmd_params 1 xs
         case trim_blank_text x of
@@ -85,7 +94,9 @@ get_1_lbl xs = do
     where
         err_msg (i,j) = left [("expecting a label",i,j)]
         
-get_2_lbl :: Monad m => [LatexDoc] -> EitherT [Error] m (String, String, [LatexDoc])
+get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
+          => [LatexDoc] 
+          -> EitherT [Error] m (String, String, [LatexDoc])
 get_2_lbl xs = do
         (lbl0,xs) <- get_1_lbl xs
         (lbl1,xs) <- get_1_lbl xs
@@ -257,7 +268,8 @@ h ((name,c):cs) x cmd ts (i,j)
     | name == cmd   = do
             r <- case c of
                 Cmd0Args f -> do
-                    x <- pushEither x $ run (i,j) $ f () x
+                    x <- pushEither x $ run (i,j) $ 
+                        f () x
                     g x ts
                 Cmd1Args f -> do
                     x <- pushEither x $ run (i,j) $ do

@@ -236,7 +236,7 @@ begin_block = do
 latex_structure :: String -> Either [Error] [LatexDoc]
 latex_structure xs = do
         ys <- read_lines tex_tokens (uncomment xs)
-        read_tokens latex_content ys
+        read_tokens latex_content ys (1,1)
 
 is_prefix xs ys = xs == take (length xs) ys
 
