@@ -43,9 +43,11 @@ example0 = do
         let tr0 = Transient empty tr (label "evt")
         let co0 = Co [] co
         let ps = empty_property_set {
-                program_prop = 
+                transient = 
                     fromList [
-                        (label "TR0", tr0),
+                        (label "TR0", tr0)],
+                constraint =
+                    fromList [
                         (label "CO0", co0)],
                 inv = fromList [(label "J0", inv0)] }
         let evt = empty_event { 
@@ -78,7 +80,7 @@ train_m0 = do
             })
         tr <- with_li (0,0) (st `zselect` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr $ label "leave")] 
-        let ps = empty_property_set { program_prop = props, inv = inv }
+        let ps = empty_property_set { transient = props, inv = inv }
         let m = (empty_machine "train_m0") {
             props = ps,
             variables = fromList $ map as_pair [st_decl],

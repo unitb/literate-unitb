@@ -1,0 +1,108 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf390
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 LucidaGrande;\f2\fnil\fcharset0 AppleSymbols;
+\f3\fnil\fcharset128 HiraKakuProN-W3;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww19880\viewh10800\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+
+\f0\fs36 \cf0 accept TA assignment\
+\
+change schedules\
+Decompose refinement POs into many sub-POs\
+\
+<refactoring> create a Visitor type to encapsulate all the pattern matching data. it will allow\
+	us to split the visitation of a LaTeX tree in two parts: first gather all the relevant subtrees\
+	then execute one phase after the other.\
+<refactoring> Refinement rules: \
+	use only one enumeration of the refinement / proof rules (single choice principle)\
+	\
+\
+pulse paper proof\
+slides from Basin's FP\
+\
+\strike \strikec0 add/discharge properties\strike0\striked0 \
+theorem POs (hard)\
+named expressions in proofs\
+refinement\
+	a "machine" block should be understood as describing the relation between a top and\
+	a bottom machine\
+\
+document the decomposition map\
+\
+arrange the proof environment to show tags instead of labels\
+	- in \\begin\{proof\}\{po-tag\}, accept command \\ref\{co7\}\
+	- (easy)\
+<refactoring> Create a cluster "Logic" on which both UnitB and Z3 can depend\
+	- in it, put Genericity, Z3.Def (as Expression, type, etc), lambda, theory\
+<refactoring> in Z3, remove references to UnitB\
+structured proofs\
+	free variable (there exists in hypothesis)\
+	<refactoring> structure the assertion name space\
+theories\
+	precondition / axiom / theorem\
+	parameter / constants / definitions\
+	type parameter / type declaration / type definition \
+set comprehension / iterated operators (union, intersection, fixpoint)\
+\
+\
+<refactoring> standardize function / variable name decoration\
+<refactoring> put operator definition as parts of theories\
+		--| define an ADT OperatorSet which\
+		--| 	o has a top and a bottom virtual operator in order to formulate\
+		--|		"all the operators of this theory bind tighter than the operators of this one theory"\
+		--|	o has a precedence graph\
+		--|	o has a list of lexemes and tokens\
+		--|	o its tokens contains a function to build expressions\
+		--|	o step aggregation data structure\
+\strike \strikec0 \
+\strike0\striked0 set / function theory\
+design of the visitor: \
+	do not search for commands in the body of matched environment \
+	<refactoring> instead of outputting one machine from the parsing, output symbol tables of the form: \
+		name 
+\f1 \uc0\u8594  (object, parent)
+\f0 \
+Well-definedness\
+<refactoring> improve the structure of symbol tables: unify\
+fix line numbers (monad?)\
+\\input\
+infer generic function instantiation\
+infer theory argument instantiation\
+understand scoping rules and sequent calculus better\
+<refactoring> get rid of every type but "user defined"\
+structured proofs\
+	\strike \strikec0 assert\strike0\striked0 \
+	\strike \strikec0 free variable (forall in goal)\strike0\striked0 , \
+	\strike \strikec0 easy\strike0\striked0 \
+	\strike \strikec0 assume\strike0\striked0 \
+	\strike \strikec0 split\strike0\striked0 \
+	\strike \strikec0 cases\strike0\striked0 \
+\strike \strikec0 Change binder expressions to give them a range\
+Split document into: visitor, refinement, machine and proof\
+give initialization values a tag\strike0\striked0 \
+\strike \strikec0 space commands\
+pretty printing: when a function applications can hold on one line in fewer than 40 characters, put it on one line.\strike0\striked0 \
+\strike \strikec0 memorize proof obligations\
+checking for no loose proofs / proof clash\strike0\striked0 \
+\strike \strikec0 two part entailment (h0 
+\f2 \uc0\u8866 
+\f0  g0) 
+\f3 \'81\'cb
+\f0  (h1 
+\f2 \uc0\u8866 
+\f0  g1) as (h1 
+\f2 \uc0\u8866 
+\f0  h0) 
+\f2 \uc0\u8743 
+\f0  (g0 
+\f2 \uc0\u8866 
+\f0  g1)\strike0\striked0 \
+\strike \strikec0 line number in proof step failure\strike0\striked0 \
+\strike \strikec0 merge 'verify' and 'continuous' into one program with options\
+unary operators\strike0\striked0 \
+\strike \strikec0 check that assertions are of boolean type and that types are all defined\strike0\striked0 \
+\strike \strikec0 unification\strike0\striked0 \
+\strike \strikec0 translate "select" into "apply" and the representation of "pfun" to Array a (Maybe b)\
+remove type SET\
+lambda (hard)\strike0\striked0 \
+}

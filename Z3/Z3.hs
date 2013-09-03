@@ -19,6 +19,8 @@ module Z3.Z3
 where
 
     -- Modules
+import UnitB.Theory
+
 import Z3.Def
 import Z3.Const
 import Z3.Lambda
@@ -29,7 +31,7 @@ import Control.Applicative hiding ( empty, Const )
 
 import Data.Char
 import Data.List hiding (union)
-import Data.Map as M hiding (map,filter,foldl)
+import Data.Map as M hiding (map,filter,foldl, (\\))
 import Data.Typeable
  
 import System.Exit
@@ -38,21 +40,24 @@ import System.Process
 
 import Utilities.Format
 
-z3_path = "./bin/z3"
+--z3_path = "./bin/z3"
 --z3_path = "/Users/simonhudon/Downloads/z3-4.3.2.5b5a474b5443-x64-osx-10.8.2/bin/z3"
+z3_path = "z3"
 
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
     as_tree (CheckSat _)  = List [Str "check-sat-using", 
-                                    List (Str "or-else" : map strat
-                                        [ Str "qe" 
-                                        , Str "skip"
-                                        , List 
-                                            [ Str "using-params"
-                                            , Str "simplify"
-                                            , Str ":expand-power"
-                                            , Str "true"] ] ) ]
+                                    List ( Str "or-else" 
+                                         : map strat
+                                         [ Str "qe" 
+                                         , Str "simplify"
+                                         , Str "skip"
+                                         , List 
+                                             [ Str "using-params"
+                                             , Str "simplify"
+                                             , Str ":expand-power"
+                                             , Str "true"] ] ) ]
         where
             strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]
@@ -103,6 +108,7 @@ free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
         f xs (Word v@(Var n t))
             | n `member` dum = (n,v):xs
             | otherwise      = xs
+        f xs v@(Binder _ vs r t) = visit f xs v \\ toList (symbol_table vs)
         f xs v = visit f xs v
 
 var_decl :: String -> Context -> Maybe Var

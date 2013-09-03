@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts #-}
 module Document.Expression where
 
 import Latex.Scanner
@@ -16,6 +16,10 @@ import Z3.Def
 import Z3.Z3
 
     -- Libraries
+import Control.Monad.Reader.Class
+import Control.Monad.Trans
+import Control.Monad.Trans.Either
+
 import Data.Char
 import Data.List as L
 import Data.Map as M hiding ( map )
@@ -41,6 +45,8 @@ eat_space = do
                 , read_list "\\:" >> return ()
                 , read_list "\\;" >> return ()
                 , read_list "\\!" >> return ()
+                , read_list "\\quad" >> return ()
+                , read_list "\\qquad" >> return ()
                 , read_list "\\" >> match_char isDigit 
                 ] (return ())
                 (\_ -> eat_space)
@@ -139,9 +145,11 @@ vars ctx = do
         eat_space       
         return (map (\x -> (x,t)) vs)     
 
-get_variables :: Context -> [LatexDoc] -> Either [Error] [(String, Var)]
+get_variables :: (Monad m, MonadReader (Int,Int) m)
+              => Context -> [LatexDoc] -> EitherT [Error] m [(String, Var)]
 get_variables ctx cs = do
-        xs <- read_tokens (vars ctx) m
+        li <- lift $ ask
+        xs <- hoistEither $ read_tokens (vars ctx) m li
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
         m = concatMap flatten_li cs
@@ -281,6 +289,7 @@ term ctx = do
                             either (\(x) -> fail x) return (zdom $ Right x)
                         else if xs `elem` 
                             [ "\\qforall"
+                            , "\\qexists"
                             , "\\qfun"
                             , "\\qset" ]
                         then do
@@ -413,7 +422,6 @@ expr ctx = do
             b3 <- look_ahead close_curly
             b4 <- look_ahead comma
             b5 <- look_ahead (read_list "}")
---            let !() = unsafePerformIO (print [b1,b2,b3,b4,b5])
             if b1 || b2 || b3 || b4 || b5
             then do
                 reduce_all xs us e0
@@ -465,5 +473,9 @@ apply_op op x0 x1 = do
         Left xs  -> 
             fail (format "type error: {0}" xs)
 
-parse_expr :: Context -> [(Char, (Int,Int))] -> Either [Error] Expr
-parse_expr ctx c = read_tokens (expr ctx) c 
+parse_expr :: (Monad m, MonadReader (Int,Int) m) 
+           => Context -> [(Char, (Int,Int))] 
+           -> EitherT [Error] m Expr
+parse_expr ctx c = do
+        li <- lift $ ask
+        hoistEither $ read_tokens (expr ctx) c li

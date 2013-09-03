@@ -1,16 +1,23 @@
 {-# LANGUAGE DeriveDataTypeable #-} 
 
-module UnitB.AST (
-    Label, Theory (..), Event(..), empty_event, 
-    Machine (..), label,
-    empty_machine, 
-    ProgramProp (..), 
-    ProgressProp(..),
-    SafetyProp  (..), 
-    PropertySet (..), 
-    empty_property_set,
-    composite_label, empty_theory,
-    ps_union
+module UnitB.AST 
+    ( Label, Theory (..), Event(..), empty_event
+    , Machine (..), label
+    , empty_machine
+    , Transient  (..)
+    , Constraint (..)
+    , ProgressProp(..)
+    , SafetyProp  (..) 
+    , PropertySet (..) 
+    , empty_property_set
+    , composite_label, empty_theory
+    , Rule (..)
+    , Variant (..)
+    , variant_decreased
+    , variant_equals_dummy
+    , variant_bounded
+    , Direction (..)
+--    , ps_union
     ) 
 where
 
@@ -60,16 +67,60 @@ empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set
 instance Named Machine where
     name m = case _name m of Lbl s -> s
 
-data ProgramProp = 
+data Constraint = 
         Co [Var] Expr
-        | Transient (Map String Var) Expr Label
+    deriving Show
+
+data Transient = 
+        Transient (Map String Var) Expr Label
 --      | Grd thm
 --      | Sch thm
     deriving Show
 
+--data Derivation = Deriv 
+--        Label Rule 
+--        [LivenessDerivation] 
+--        [Label] 
+
+data Direction = Up | Down
+    deriving Show
+
+data Variant = 
+--        SetVariant Var Expr Expr Direction
+        IntegerVariant Var Expr Expr Direction
+    deriving Show
+
+--variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
+variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
+
+--variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
+variant_decreased (IntegerVariant d var b Up)   = Word d `zless` var
+--variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
+variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
+
+--variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
+variant_bounded (IntegerVariant _ var b Down) = b `zle` var
+variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
+
+data Rule = 
+        Monotonicity ProgressProp ProgressProp
+        | Transitivity ProgressProp ProgressProp ProgressProp
+        | Induction ProgressProp ProgressProp Variant
+        | PSP ProgressProp ProgressProp SafetyProp
+        | Disjunction ProgressProp [([Var], ProgressProp)]
+        | NegateDisjunct ProgressProp ProgressProp
+        | Discharge ProgressProp Transient (Maybe SafetyProp)
+        | Implication ProgressProp
+        | Add
+    deriving Show
+
+--data Liveness = Live (Map Label ProgressProp) 
+
 data ProgressProp = LeadsTo [Var] Expr Expr
+    deriving (Typeable)
 
 data SafetyProp = Unless [Var] Expr Expr
+    deriving Typeable
 
 instance Show ProgressProp where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
@@ -77,17 +128,21 @@ instance Show ProgressProp where
 instance Show SafetyProp where
     show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
 
-data PropertySet = PS {
-        program_prop :: Map Label ProgramProp,
-        inv          :: Map Label Expr,       -- inv
-        inv_thm      :: Map Label Expr,       -- inv thm
-        proofs       :: Map Label Proof,
-        progress     :: Map Label ProgressProp,
-        safety       :: Map Label SafetyProp }
+data PropertySet = PS
+        { transient    :: Map Label Transient
+        , constraint   :: Map Label Constraint
+        , inv          :: Map Label Expr       -- inv
+        , inv_thm      :: Map Label Expr       -- inv thm
+        , proofs       :: Map Label Proof
+        , progress     :: Map Label ProgressProp
+        , safety       :: Map Label SafetyProp
+        , derivation   :: Map Label Rule
+        }
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y) [
-        ("program_prop", show $ program_prop x),
+        ("transient",  show $ transient x),
+        ("constraint", show $ constraint x),
         ("inv", show $ inv x),
         ("inv_thm", show $ inv_thm x),
         ("proofs", show $ keys $ proofs x),
@@ -95,12 +150,12 @@ instance Show PropertySet where
         ("safety", show $ safety x)]
 
 empty_property_set :: PropertySet
-empty_property_set = PS empty empty empty empty empty empty
+empty_property_set = PS empty empty empty empty empty empty empty empty
 
-ps_union (PS a0 b0 c0 d0 e0 f0) (PS a1 b1 c1 d1 e1 f1) =
-    PS (a0 `union` a1) (b0 `union` b1) 
-        (c0 `union` c1) (d0 `union` d1)
-        (e0 `union` e1) (f0 `union` f1)
+--ps_union (PS a0 b0 c0 d0 e0 f0) (PS a1 b1 c1 d1 e1 f1) =
+--    PS (a0 `union` a1) (b0 `union` b1) 
+--        (c0 `union` c1) (d0 `union` d1)
+--        (e0 `union` e1) (f0 `union` f1)
         
 
 composite_label xs = Lbl $ intercalate "/" $ map str xs

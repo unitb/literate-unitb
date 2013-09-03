@@ -1,0 +1,8 @@
+DESIGN PRINCIPLES
+=================
+
+1. A document contains model elements. The order in which those elements must be provided should be free unless there is a reason for which a certain order is the only way for an element to make sense. An example of such a case would be a calculational proof. The steps has to be given in order so that consecutive steps are related by a hint.
+
+A bad example would be a list of theorems. It should not be necessary to give the theorems so that one theorem relies only on the theorems above it. Either order can be useful in the presentation of a mathematical theory.
+
+2. In order to submit formulas to Z3, Literate Unit-B will derive formulas of its own. Any formula derived by the tool can't be shown to the user. A guide of the various proof obligations should be enough to use the tool.

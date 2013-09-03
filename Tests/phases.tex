@@ -1,0 +1,176 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+%\tableofcontents
+
+%\section{}
+%\subsection{}
+
+\begin{machine}{m0}
+
+\newset{P}{\Pcs}
+
+%\hide{
+	\begin{variable}
+		pc : \Pcs \pfun \Int
+	\end{variable}
+%}
+
+\begin{dummy}
+	p,p_0,p_1: \Pcs
+\end{dummy}
+
+\begin{dummy}
+	N,k: \Int
+\end{dummy}
+
+\begin{use:fun}{\Pcs}{\Int}  \end{use:fun}
+\begin{use:set}{\Int}  \end{use:set}
+
+\newevent{step}
+\begin{align*}
+&	\progress{prog0}{\true}{N \le pc.p}
+\refine{prog0}{disjunction}{prog1,prog2}{ with }
+&	\progress{prog2}{pc.p \le N}{N \le pc.p}
+\\&	\progress{prog1}{N \le pc.p}{N \le pc.p}
+\refine{prog1}{implication}{}{}
+&	pc.p \le N \3\mapsto N \le pc.p \tag{\ref{prog2}}
+\refine{prog2}{induction}{prog3}{ over \var{pc.p}{up}{N} }
+&	\progress{prog3}{pc.p = k \land pc.p \le N}{(k < pc.p \land pc.p \le N) \lor N \le pc.p}
+\refine{prog3}{PSP}{prog4,saf0}{}
+&	\safety{saf0}{k \le pc.p \land pc.p \le N}{N \le pc.p}
+\\ &	\progress{prog4}{pc.p = k}{\neg k = pc.p}
+\refine{prog4}{discharge}{tr0}{}
+&	\transient{step}{tr0}{ pc.p = k }\textbf{ is transient}
+\end{align*}
+
+\begin{align*}
+\cschedule{step}{c0}{\true} \\
+\evassignment{step}{a0}{ pc' \2= pc \2| p \tfun (pc.p + 1) }
+\end{align*}
+
+\begin{indices}{step}
+	p: \Pcs
+\end{indices}
+
+%\begin{proof}{step/CO/saf0}
+%	\begin{free:var}{k}{k}
+%	\begin{free:var}{p}{p_0}
+%	\begin{by:cases}
+%		\begin{case}{hyp0}{p_0 = p}
+%		\easy
+%		\end{case}
+%		\begin{case}{hyp1}{\neg p_0 = p}
+%		\begin{calculation}
+%			k \le pc'.p_0
+%		\hint{=}{  \ref{a0} }
+%			k \le (pc \1 | p \1\tfun pc.p \0+ 1).p_0
+%		\hint{=}{  \eqref{hyp1} }
+%			k \le pc.p_0
+%		\end{calculation}
+%		\end{case}
+%	\end{by:cases}
+%	\end{free:var}
+%	\end{free:var}
+%\end{proof}
+
+\begin{proof}{step/TR/tr0}
+%	\begin{free:var}{k}{k}
+%	\begin{free:var}{p}{p_0}
+\begin{align}
+	\assume{hyp1}{ pc' &\1= pc \1| p \tfun pc.p\0+1 } \\
+	\goal{\neg ~ pc'.p  &= pc.p}
+%	\goal{
+\end{align}
+	\easy
+%	\begin{subproof}{hyp0}
+%	\begin{calculation}
+%		pc'.p = pc.p
+%	\hint{=}{ \ref{hyp1} }
+%		(pc \1| p \tfun pc.p + 1).p = pc.p 
+%	\hint{=}{ function application }
+%		pc.p + 1 = pc.p
+%	\hint{=}{ function application }
+%		\false
+%	\end{calculation}
+%	\end{subproof}
+%	\begin{by:cases}
+%		\begin{case}{hyp0}{p_0 = p}
+%		\easy
+%		\end{case}
+%		\begin{case}{hyp1}{\neg p_0 = p}
+%		\begin{calculation}
+%			k \le pc'.p_0
+%		\hint{=}{  \ref{a0} }
+%			k \le (pc \1 | p \1\tfun pc.p \0+ 1).p_0
+%		\hint{=}{  \eqref{hyp1} }
+%			k \le pc.p_0
+%		\end{calculation}
+%		\end{case}
+%	\end{by:cases}
+%	\end{free:var}
+%	\end{free:var}
+\end{proof}
+
+\begin{align*}
+\invariant{inv0}
+{	&\qforall{p_0,p_1}{}{pc.p_0 \le pc.p_1 + 1} } \\
+\initialization{init0}
+{	&\quad pc = \qfun{p}{}{0} }
+\end{align*}
+
+\begin{proof}{step/INV/inv0}
+	\begin{free:var}{p_0}{p_0}
+	\begin{free:var}{p_1}{p_1}
+	\begin{by:cases}
+		\begin{case}{hyp0}{p = p_1}
+		easy ...
+		\easy
+		
+		\end{case}
+		\begin{case}{hyp1}{\neg ~ p = p_1 \land p = p_0}
+\begin{calculation}
+		pc'.p_0 \le pc'.p_1 + 1
+	\hint{=}{ \ref{a0} and \eqref{hyp1} }
+		pc.p + 1 \le pc.p_1 + 1
+	\hint{=}{ arithmetic }
+		pc.p \le pc.p_1
+	\hint{=}{ \ref{grd0} }
+		\true
+\end{calculation}
+		\end{case}
+		\begin{case}{hyp2}{\neg ~ p = p_1 \1\land \neg~p = p_0}
+		\easy
+		\end{case}
+	\end{by:cases}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\begin{align*}
+\evguard{step}{grd0}
+{	\qforall{p_0}{}{ pc.p \le pc.p_0 } }
+\end{align*}
+
+\end{machine}
+
+\end{document}

@@ -48,16 +48,22 @@ import Utilities.Syntactic
     -- add theorem POs
     --      problem: In what order do we prove the theorems?
 
-tr_neg_lbl      = label "TR/NEG"
-tr_en_lbl       = label "TR/EN"
-tr_lbl          = label "TR"
-co_lbl          = label "CO"
-inv_lbl         = label "INV"
-inv_init_lbl    = label "INIT/INV"
-init_fis_lbl    = label "INIT/FIS"
-fis_lbl         = label "FIS"
-sch_lbl         = label "SCH"
-thm_lbl         = label "THM"
+tr_lbl            = label "TR"
+co_lbl            = label "CO"
+inv_lbl           = label "INV"
+inv_init_lbl      = label "INIT/INV"
+init_fis_lbl      = label "INIT/FIS"
+fis_lbl           = label "FIS"
+sch_lbl           = label "SCH"
+thm_lbl           = label "THM"
+ref_mono_lbl      = label "REF/monotonicity"
+ref_impl_lbl      = label "REF/implication"
+ref_ind_lbl       = label "REF/induction"
+ref_disj_lbl      = label "REF/disjunction"
+ref_psp_lbl       = label "REF/PSP"
+ref_trade_lbl     = label "REF/trading"
+ref_trans_lbl     = label "REF/transitivity"
+ref_discharge_lbl = label "REF/discharge"
 
 theory_ctx :: Theory -> Context
 theory_ctx (Theory d ts f c _ dums) = 
@@ -101,12 +107,14 @@ raw_machine_pos :: Machine -> (Map Label ProofObligation)
 raw_machine_pos m = pos
     where
         pos = M.map f $ M.unions (
-               (map (uncurry $ prop_po m) $ M.toList $ program_prop p)
+               (map (uncurry $ prop_tr m) $ M.toList $ transient p)
+            ++ (map (uncurry $ prop_co m) $ M.toList $ constraint p)
             ++ [init_fis_po m]
             ++ (map (uncurry $ inv_po m) $ M.toList $ inv p) 
             ++ (map (uncurry $ sch_po m) $ M.toList $ events m)
             ++ (map (uncurry $ fis_po m) $ M.toList $ events m)
-            ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p))
+            ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
+            ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
         f (ProofObligation a b c d) = ProofObligation a (M.elems (theory_facts $ theory m)++b) c d
 
@@ -126,6 +134,115 @@ proof_obligation m = do
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
 
+ref_po :: Machine -> Label -> Rule -> Map Label ProofObligation
+ref_po m lbl r = 
+    M.fromList $ 
+        case r of
+            Monotonicity 
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)  ->  
+                assert ref_mono_lbl "lhs" (
+                    zforall (fv0 ++ fv1) ztrue $
+                             (p0 `zimplies` p1))
+             ++ assert ref_mono_lbl "rhs" (
+                    zforall (fv0 ++ fv1) ztrue $
+                             (q1 `zimplies` q0))
+            Implication 
+                    (LeadsTo fv1 p1 q1)  ->  
+                assert ref_impl_lbl "" (
+                    zforall fv1 ztrue $
+                             (p1 `zimplies` q1))
+            Transitivity
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)
+                    (LeadsTo fv2 p2 q2) -> 
+                assert ref_trans_lbl "" $ 
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                        zall[ p0 `zimplies` p1
+                            , q1 `zimplies` p2
+                            , q2 `zimplies` q0
+                            ]
+            Induction 
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1) v     -> 
+                assert ref_ind_lbl "lhs" (
+                    zforall (fv0 ++ fv1) ztrue $
+                        ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
+                        )
+             ++ assert ref_ind_lbl "rhs" (
+                    zforall (fv0 ++ fv1) ztrue $
+                        (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
+                        )
+            PSP
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)
+                    (Unless fv2 r b)   -> 
+                assert ref_psp_lbl "lhs" (
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                        (zand p1 r `zimplies` p0))
+             ++ assert ref_psp_lbl "rhs" (
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                            (q0 `zimplies` zor (q1 `zand` r) b))
+            Disjunction 
+                    (LeadsTo fv0 p0 q0)
+                    ps   ->  
+                assert ref_disj_lbl "lhs" (
+                    zforall fv0 ztrue (
+                        ( p0 `zimplies` zsome (map disj_p ps) ) ) )
+             ++ assert ref_disj_lbl "rhs" (
+                    zforall fv0 ztrue (
+                        ( zsome (map disj_q ps) `zimplies` q0 ) ) )
+            NegateDisjunct
+                    (LeadsTo fv0 p0 q0)
+                    (LeadsTo fv1 p1 q1)      -> 
+                assert ref_trade_lbl "" (
+                    zforall (fv0 ++ fv1) ztrue $
+                        zand (zand p0 (znot q0) `zimplies` p1)
+                                (q1 `zimplies` q0))
+            Discharge 
+                    (LeadsTo fv0 p0 q0)
+                    (Transient fv1 p1 _)
+                    (Just (Unless fv2 p2 q2)) ->
+                assert ref_discharge_lbl "" (
+                    zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
+                        zall[ p0 `zimplies` p2
+                            , q2 `zimplies` q0
+                            , zand p0 (znot q0) `zimplies` p1
+                            ]  ) )
+            Discharge 
+                    (LeadsTo fv0 p0 q0)
+                    (Transient fv1 p1 _)
+                    Nothing ->
+                assert ref_discharge_lbl "" (
+                    zforall (fv0 ++ M.elems fv1) ztrue (
+                        zand (p0 `zimplies` p1)
+                             (znot p1 `zimplies` q0) ) )
+            Add                -> []
+    where
+        f x = unsafePerformIO (do
+                putStrLn "begin"
+                let !y = x
+                putStrLn "end"
+                return y)
+        assert t suff prop = 
+                [ ( po_lbl
+                  , (ProofObligation 
+                        (           assert_ctx m 
+                        `merge_ctx` step_ctx m) 
+                        (invariants p)
+                        True
+                        prop))
+                ]
+            where
+                po_lbl 
+                    | L.null suff = composite_label [_name m, lbl, t]
+                    | otherwise   = composite_label [_name m, lbl, t, label suff]
+        p    = props m
+        disj_p ([], LeadsTo fv1 p1 q1) = p1
+        disj_p (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue p1
+        disj_q ([], LeadsTo fv1 p1 q1) = q1
+        disj_q (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue q1
+
 init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
     where
@@ -135,8 +252,8 @@ init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
             | otherwise             = (zexists (M.elems $ variables m) ztrue $ zall $ M.elems $ inits m)
  
 
-prop_po :: Machine -> Label -> ProgramProp -> Map Label ProofObligation
-prop_po m pname (Transient fv xp evt_lbl) = 
+prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
+prop_tr m pname (Transient fv xp evt_lbl) = 
     M.fromList 
         [   ( (composite_label [_name m, evt_lbl, tr_lbl, pname])
             , (ProofObligation 
@@ -153,7 +270,6 @@ prop_po m pname (Transient fv xp evt_lbl) =
         ]
     where
         p    = props m
-        prop = program_prop p
         thm  = inv_thm p
         grd  = M.elems $ guard evt
         sch  = case c_sched evt of
@@ -168,7 +284,10 @@ prop_po m pname (Transient fv xp evt_lbl) =
                 else zexists 
                     (map (add_suffix "@param") $ M.elems ind) 
                     ztrue xp
-prop_po m pname (Co fv xp) = 
+
+
+prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation
+prop_co m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (M.insert 
                 (label "SKIP") 
@@ -255,7 +374,7 @@ thm_po m lbl xp = M.singleton
 make_unique :: String -> Map String Var -> Expr -> Expr
 make_unique suf vs w@(Word (Var vn vt)) 
         | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
-        | otherwise         = w
+        | otherwise           = w
 make_unique _ _ c@(Const _ _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
 make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
@@ -406,7 +525,7 @@ proof_po    th  (Assume new_asm new_goal p (i,j))
 proof_po    th  (Assertion lemma p (i,j))
             lbl po@(ProofObligation ctx asm b goal) = do
         pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
-            $ ProofObligation ctx (map fst (M.elems lemma) ++ asm) b goal
+            $ ProofObligation ctx (asm ++ map fst (M.elems lemma)) b goal
         pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
             proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
                 $ ProofObligation ctx asm b g )

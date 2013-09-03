@@ -47,6 +47,10 @@ fold_doc f x (Env s _ c _)     = foldl f x c
 fold_doc f x (Bracket _ _ c _) = foldl f x c
 fold_doc f x (Text _)          = x
 
+fold_docM f x (Env s _ c _)     = foldM f x c
+fold_docM f x (Bracket _ _ c _) = foldM f x c
+fold_docM f x (Text _)          = return x
+
 data LatexToken =
         Command String (Int, Int)
         | TextBlock String (Int, Int)
@@ -232,7 +236,7 @@ begin_block = do
 latex_structure :: String -> Either [Error] [LatexDoc]
 latex_structure xs = do
         ys <- read_lines tex_tokens (uncomment xs)
-        read_tokens latex_content ys
+        read_tokens latex_content ys (1,1)
 
 is_prefix xs ys = xs == take (length xs) ys
 

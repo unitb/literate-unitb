@@ -40,7 +40,14 @@
 |  |  +- test 1, verification, lambda vs ovl, mk-fun
 |  |  +- test 2, verification, lambda vs apply
 |  |  +- test 3, verification, set comprehension, failed proof
-|  |  +- [ Success: 4 / 4 ]
+|  |  +- test 4, adding a progress property
+|  |  +- test 5, unless properties
+|  |  +- test 6, verify progress refinement
+|  |  +- test 7, verify refinement rules
+|  |  +- test 8, verify refinement rules
+|  |  +- test 9, verify disjunction rule
+|  |  +- test 10, error: cyclic proof
+|  |  +- [ Success: 11 / 11 ]
 |  +- the parser is exception free
 |  +- [ Success: 6 / 6 ]
 +- Unit-B
@@ -93,4 +100,4 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    5787   37022  326223
+    6055   36515  339004

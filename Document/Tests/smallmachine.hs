@@ -168,11 +168,13 @@ m0_props = empty_property_set {
         x = Word var_x
         y = Word var_y
 
-m1_props = m0_props {
-        program_prop = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc")),
-            (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ],
-        inv = insert (label "inv1") (x `zeq` (x `ztimes` (y `zplus` z1))) (inv m0_props) }
+m1_props = m0_props
+        { transient = fromList [
+            (label "tr0", Transient empty (x `zeq` y) (label "inc")) ]
+        , constraint = fromList [
+            (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
+        , inv = insert (label "inv1") (x `zeq` (x `ztimes` (y `zplus` z1))) (inv m0_props)
+        }
     where
         x  = Word var_x
         y  = Word var_y

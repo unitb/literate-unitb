@@ -1,16 +1,16 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 module UnitB.Theory where
-
-import Data.Map hiding ( map )
 
 import Z3.Def
 import Z3.Const
 
     -- Libraries
-import GHC.Generics
+import GHC.Generics 
+import Data.Map hiding ( map )
+import Data.Typeable
 
 data Label = Lbl String
-    deriving (Ord, Eq, Generic)
+    deriving (Ord, Eq, Typeable, Generic)
 
 instance Show Label where
     show (Lbl s) = s
@@ -24,7 +24,7 @@ data Theory = Theory {
         consts  :: Map String Var,
         fact    :: Map Label Expr,
         dummies :: Map String Var }
-    deriving Show
+    deriving (Show)
 
 symbol_table :: Named a => [a] -> Map String a
 symbol_table xs = fromList $ map as_pair xs

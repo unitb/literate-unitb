@@ -322,69 +322,42 @@ Invariant \ref{inv2} is easy to satisfy initially:
 	\end{calculation}
 \end{proof}
 
-\begin{dummy}
+\begin{constant}
 	N: \Int
-\end{dummy}
-
-%\begin{align*}
-%&	\progress{prog5}{ \qexists{k}{}{k = n} }{ 7 < n }
-%\refine{prog5}{disjunction}{prog6,prog7,prog8}{ with \ref{inv3} }
-%&	\progress{prog6}{ n = 8 }{ 7 < n  }
-%\\ &	\progress{prog7}{ n = 1 }{ 7 < n  }
-%\\ &	\progress{prog8}{ \neg k = 8 \land \neg k = 1 \land k = n }{ 7 < n  }
-%\end{align*}
+\end{constant}
 
 \begin{align*}
-&	\progress{prog0}{ f = \emptyfun \land 0 \le N }{ f = \qfun{i}{0 \le i \land i < N}{i^3} }
+&	\progress{prog0}{\true}{ f = \qfun{i}{0 \le i \land i < N}{i^3} }
 \refine{prog0}{monotonicity}{prog1}{ with \ref{inv3} }
-&	\progress{prog1}{ n \le N }{ N = n  }
-\refine{prog1}{induction}{prog2}{ over \var{n}{up}{N} }
-&	\progress{prog2}
-		{ n \le N \1\land n = k}
-		{ (k < n \1\land n \le N) \2\lor n = N } 
-%\refine{prog2}{trading}{prog3}{}
-%&	\progress{prog3}
-%		{ n = k \1\land \neg n = N}
-%		{ k < n \1\lor n = N } 
-\refine{prog2}{PSP}{ prog4, saf0 }{}{}
+&	\progress{prog1}{\true}{ N = n  }
+%\refine{prog1}{induction}{prog2}{ \var{n} $\max{N}$ }
+\\ &	\progress{prog2}{n = k}{ k < n \2\lor n = N } 
+\refine{prog2}{trading}{prog3}{}
+&	\progress{prog3}
+		{ k \le n \1\land n = k \1\land n = N}
+		{ (k \le n \1\land \neg k = n) \1\lor n = N } 
+\refine{prog3}{PSP}{ prog4, saf0 }{ \var{n} $\max{N}$ }
 &	\progress{prog4}
-		{n = k  } 
+		{n = k \1\land \neg n = N }
 		{ \neg n = k } 
-\\ & 	\safety{saf0}{ k \le n \1\land n \le N }{ N = n }
+\\ & 	\safety{saf0}{ k \le n }{ \neg N = n }
 %\refine{prog2}{trading}{prog3}{}
 %&	\progress{prog3}{n = k \2\land \neg n = N}{ n < k } \\
- \refine{prog4}{discharge}{tr0}{}
-& \transient{evt}{tr0}
-{	n = k 
-	} \textbf{\quad is transient}
-%\\ & 	\safety{saf1}{ n = k \1\land \neg n = N }{ \neg n = k  }
 \end{align*}
-
-%\begin{align*}
-%\transient{evt}{tr0}
-%{	n = k \1\land \neg n = N
-%	}
-%\end{align*}
 
 \begin{align*}
-\cschedule{evt}{c0}
-{	\true
-	}
+&	\progress{prog5}{\true}{ n = k+2 }
+\refine{prog5}{transitivity}{prog6,prog7}{    }
+&	\progress{prog6}{ n = k }{ n = k+1  }
+\\ &	\progress{prog7}{ n = k+1 }{ n = k+2  }
 \end{align*}
 
-%\begin{align*}
-%\evguard{evt}{grd0}
-%{	\neg n = N
-%	}
-%\end{align*}
-
-%\begin{align*}
-%\invariant{inv7}
-%{	n \le N
-%	} \\
-%\assumption{asm3}
-%{	0 \le N	}
-%\end{align*}
+\begin{align*}
+&	\progress{prog8}{n = k}{ n = k+2 }
+\refine{prog8}{transitivity}{prog9,prog10}{    }
+&	\progress{prog9}{ \true }{ n = k+1  }
+\\ &	\progress{prog10}{ n \le k+1 }{ n = k+2  }
+\end{align*}
 
 \end{machine}
 
