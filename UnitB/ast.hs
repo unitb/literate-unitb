@@ -110,6 +110,7 @@ data Rule =
         | Disjunction ProgressProp [([Var], ProgressProp)]
         | NegateDisjunct ProgressProp ProgressProp
         | Discharge ProgressProp Transient (Maybe SafetyProp)
+        | Implication ProgressProp
         | Add
     deriving Show
 

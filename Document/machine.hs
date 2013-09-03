@@ -534,6 +534,18 @@ collect_proofs = visit_doc
                             let p1 = prog ! h0
                             add_proof_edge goal_lbl [h0]
                             return (Monotonicity p0 p1)
+                        "implication" -> do
+                            toEither $ error_list
+                                [   ( length hyps_lbls /= 0
+                                    , format "too many hypotheses in the application of the rule: {0}" 
+                                        $ intercalate "," $ map show hyps_lbls)
+                                ]
+                            toEither $ error_list
+                                [   ( not (goal_lbl `member` prog)
+                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
+                                ]
+                            let p0 = prog ! goal_lbl
+                            return (Implication p0)
                         "disjunction" -> do
                             toEither $ error_list
                                 [   ( length hyps_lbls < 1

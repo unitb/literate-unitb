@@ -450,6 +450,14 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++                 " y))"
             ++         " (= (select f1 x)"
             ++            " (Just y)))))"
+--        axm20 = fromJust $ mzforall [f1_decl,x2_decl,x_decl,y_decl] mztrue ( 
+--                        mznot (x `mzeq` x2)
+--            `mzimplies` (zapply (f1 `zovl` zmk_fun x y) x2 `mzeq` zapply f1 x2))
+        ,   "(forall ((f1 (pfun {0} {2})) (x2 {0}) (x {0}) (y {2}))"
+            ++          " (=> true"
+            ++              " (=> (not (= x x2))"
+            ++                  " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2)"
+            ++                     " (apply@{1}@{3} f1 x2)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $
@@ -1102,7 +1110,7 @@ result16 = unlines
         ,  "  o  train0/enter/CO/co1/part 2/case 2/hypotheses (244,2)"
         ,  "  o  train0/enter/CO/co1/part 2/case 2/relation (244,2)"
         ,  "  o  train0/enter/CO/co1/part 2/case 2/step (246,2)"
-        ,  " xxx train0/enter/CO/co1/part 2/case 2/step (248,2)"
+        ,  "  o  train0/enter/CO/co1/part 2/case 2/step (248,2)"
         ,  "  o  train0/enter/CO/co1/part 2/case 2/step (250,2)"
         ,  "  o  train0/enter/CO/co1/part 2/completeness (230,2)"
         ,  "  o  train0/enter/CO/s0"
@@ -1149,7 +1157,7 @@ result16 = unlines
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 81 / 83"
+        ,  "passed 82 / 83"
         ]
 
 case16 = do

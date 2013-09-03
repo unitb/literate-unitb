@@ -275,9 +275,9 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \end{align*}
 
 \begin{proof}{evt/INV/inv5}
-	\begin{align}
-	\assert{asm0}{ \qforall{i}{}{ i \in \dom.f \2\equiv 0 \le i \land i < n } }
-	\end{align}
+%	\begin{align}
+%	\assert{asm0}{ \qforall{i}{}{ i \in \dom.f \2\equiv 0 \le i \land i < n } }
+%	\end{align}
 	\begin{calculation}
 		\qforall{i}{0 \le i \1\land i < n'}{ f'.i = i^3 }
 	\hint{=}{ \ref{a0} }
@@ -286,7 +286,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 		\qforall{i}{0 \le i \1\land i < n}{ f'.i = i^3 } \2 \land f'.n = n^3
 	\hint{=}{ \ref{a4} and \ref{inv0} }
 		\qforall{i}{0 \le i \1\land i < n}{ f'.i = i^3 } % \2 \land a = n^3
-	\hint{=}{ \eqref{asm0} with \ref{a4}  }
+	\hint{=}{ \ref{a4}  }
 		\qforall{i}{0 \le i \1\land i < n  }
 			{ f.i = i^3 } 
 	\hint{=}{ \ref{inv5} }
@@ -296,9 +296,9 @@ Invariant \ref{inv2} is easy to satisfy initially:
 %	\hint{=}{  }
 		\true
 	\end{calculation}
-	\begin{subproof}{asm0}
-	\easy
-	\end{subproof}
+%	\begin{subproof}{asm0}
+%	\easy
+%	\end{subproof}
 \end{proof}
 
 \begin{align*}

@@ -45,6 +45,8 @@ eat_space = do
                 , read_list "\\:" >> return ()
                 , read_list "\\;" >> return ()
                 , read_list "\\!" >> return ()
+                , read_list "\\quad" >> return ()
+                , read_list "\\qquad" >> return ()
                 , read_list "\\" >> match_char isDigit 
                 ] (return ())
                 (\_ -> eat_space)

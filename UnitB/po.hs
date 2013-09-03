@@ -57,6 +57,7 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 ref_mono_lbl      = label "REF/monotonicity"
+ref_impl_lbl      = label "REF/implication"
 ref_ind_lbl       = label "REF/induction"
 ref_disj_lbl      = label "REF/disjunction"
 ref_psp_lbl       = label "REF/PSP"
@@ -146,6 +147,11 @@ ref_po m lbl r =
              ++ assert ref_mono_lbl "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
                              (q1 `zimplies` q0))
+            Implication 
+                    (LeadsTo fv1 p1 q1)  ->  
+                assert ref_impl_lbl "" (
+                    zforall fv1 ztrue $
+                             (p1 `zimplies` q1))
             Transitivity
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
@@ -171,11 +177,12 @@ ref_po m lbl r =
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
                     (Unless fv2 r b)   -> 
-                assert ref_psp_lbl "" $ 
+                assert ref_psp_lbl "lhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                        zall[ zand p1 r `zimplies` p0
-                            , q0 `zimplies` zor (q1 `zand` r) b
-                            ]
+                        (zand p1 r `zimplies` p0))
+             ++ assert ref_psp_lbl "rhs" (
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                            (q0 `zimplies` zor (q1 `zand` r) b))
             Disjunction 
                     (LeadsTo fv0 p0 q0)
                     ps   ->  
@@ -518,7 +525,7 @@ proof_po    th  (Assume new_asm new_goal p (i,j))
 proof_po    th  (Assertion lemma p (i,j))
             lbl po@(ProofObligation ctx asm b goal) = do
         pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
-            $ ProofObligation ctx (map fst (M.elems lemma) ++ asm) b goal
+            $ ProofObligation ctx (asm ++ map fst (M.elems lemma)) b goal
         pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
             proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
                 $ ProofObligation ctx asm b g )
