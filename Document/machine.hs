@@ -122,12 +122,21 @@ type_decl = visit_doc []
                         , ( tag `member` consts th
                           , format "a constant with name '{0}' is already declared" tag )
                         ]
+                    let dummy = Var "x@@" new_type
+                    let new_const = Var name $ set_type new_type
                     let hd = th 
                             {  types = insert 
                                     tag
                                     new_sort
                                     (types th) 
-                            ,  consts = insert tag (Var name $ set_type new_type) $ consts th
+                            ,  consts = insert tag new_const $ consts th
+                            ,  fact = insert 
+                                    (label (tag ++ "-def"))
+                                    (fromJust $ mzforall [dummy] mztrue 
+                                        (zelem 
+                                            (Right $ Word dummy) 
+                                            (Right $ Word new_const)))
+                                    (fact th)
                             }
                     return m { theory = hd } 
                )
@@ -498,7 +507,7 @@ collect_proofs = visit_doc
                                     ,   ( not (h0 `member` transient (props m))
                                         , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
                                     ,   ( not (h1 `member` safety (props m))
-                                        , format "refinement ({0}): {1} should be a safety property" rule h0 )
+                                        , format "refinement ({0}): {1} should be a safety property" rule h1 )
                                     ]
                                 let p0 = prog ! goal_lbl
                                 let p1 = transient (props m) ! h0

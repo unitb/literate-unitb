@@ -13,7 +13,6 @@ import Data.List as L ( tails, map )
 import Data.Map hiding (foldl)
 
 import Utilities.Format
-    
 
 fun1 f x           = FunApp f [x]
 fun2 f x y         = FunApp f [x,y]
@@ -53,7 +52,12 @@ maybe3 f mx my mz = do
         return $ f x y z
 
 znot         = fun1 $ Fun [] "not" [BOOL] BOOL
-zimplies     = fun2 $ Fun [] "=>"  [BOOL,BOOL] BOOL
+zimplies x y
+    | x == ztrue  = y
+    | y == ztrue  = ztrue
+    | x == zfalse = ztrue
+    | y == zfalse = znot x 
+    | otherwise   = fun2 (Fun [] "=>"  [BOOL,BOOL] BOOL) x y
 zand x y     = zall [x,y]
 zor x y      = zsome [x,y]
 zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
@@ -67,18 +71,29 @@ zall xs      = FunApp (Fun [] "and" (take n $ repeat BOOL) BOOL) $ concatMap f x
     where
         n = length xs
         f (FunApp (Fun [] "and" _ BOOL) xs) = concatMap f xs
-        f x = [x]
+        f x
+            | x == ztrue = []
+            | otherwise   = [x]
 zsome []     = zfalse
 zsome [x]    = x
 zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
     where
         n = length xs
         f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
-        f x = [x]
-zforall []   = zimplies
-zforall vs   = Binder Forall vs
-zexists []   = zand
-zexists vs   = Binder Exists vs
+        f x
+            | x == zfalse = []
+            | otherwise   = [x]
+zforall [] x y  = zimplies x y
+zforall vs x w@(Binder Forall us y z) 
+    | x == ztrue = zforall (vs ++ us) y z
+    | otherwise  = Binder Forall vs x w
+zforall vs x w   = Binder Forall vs x w
+zexists [] x y = zand x y
+zexists vs x w@(Binder Exists us y z) 
+    | x == ztrue = zexists (vs ++ us) y z
+    | otherwise  = Binder Exists vs x w
+zexists vs x w   = Binder Exists vs x w
+
 
 zite       = typ_fun3 (Fun [] "ite" [BOOL,gA,gA] gA)
 

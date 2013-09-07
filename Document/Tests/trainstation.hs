@@ -86,11 +86,15 @@ machine0 = (empty_machine "train0")
                                ++ map (\t -> Var t $ blk_type) 
                                 [ "p","q" ])
             ,  fact    = fromList 
-                    [ (label "axm0", axm0)
+                    [ (label "\\BLK-def", axm7)
+                    , (label "\\LOC-def", axm8) 
+                    , (label "\\TRAIN-def", axm6) 
+                    , (label "axm0", axm0)
                     , (label "asm2", axm2)
                     , (label "asm3", axm3) 
                     , (label "asm4", axm4) 
-                    , (label "asm5", axm5) ]
+                    , (label "asm5", axm5) 
+                    ]
             ,  consts  = fromList
                     [  ("\\TRAIN", train_var)
                     ,  ("\\LOC", loc_var)
@@ -124,6 +128,21 @@ machine0 = (empty_machine "train0")
             mzforall [p_decl] mztrue $ (
                         (mzeq p ent `mzor` mzeq p ext)
                 `mzeq`  mznot (p `zelem` plf) )
+        axm6 = fromJust $ 
+                mzforall [x_at_decl] mztrue (
+                    x_at `zelem` train)
+            where
+                (x_at, x_at_decl) = var "x@@" train_type
+        axm7 = fromJust $ 
+                mzforall [x_at_decl] mztrue (
+                    x_at `zelem` block)
+            where
+                (x_at, x_at_decl) = var "x@@" blk_type
+        axm8 = fromJust $ 
+                mzforall [x_at_decl] mztrue (
+                    x_at `zelem` loc_cons)
+            where
+                (x_at, x_at_decl) = var "x@@" loc_type
       --    	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
 props0 = empty_property_set
     {  constraint = fromList 
@@ -471,6 +490,11 @@ comp_facts = map (\x -> "(assert " ++ x ++ ")") $
                                 ] 
                             ++ concatMap set_facts 
                                 [   ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
+                                ]
+                            ++ map ((,) "")
+                                [   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))"
+                                ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))"
+                                ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))"
                                 ]
                             )
 
