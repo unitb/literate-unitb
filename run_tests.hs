@@ -8,6 +8,7 @@ import System.IO
 --import System.Posix
 import System.Environment
 import System.Process
+import Control.Concurrent
 
 import Text.Printf
 
@@ -35,11 +36,32 @@ general = do
             ExitSuccess -> do
                 putStrLn "Running test ..."
                 hFlush stdout
+--                (_,hout,_,ps) <- runInteractiveCommand "./test"
+--                hSetBinaryMode hout False
+----                (_, Just out, _, ps) <- createProcess (shell "./test") { std_out = CreatePipe }
+--                out                  <- hGetContents hout
+----                (c1,out,_) <- readProcessWithExitCode "./test" [] ""
+--                withFile "result.txt" WriteMode $ \h -> do
+--                    (_, Just hreport, _, p2) <- createProcess 
+--                        (shell "wc -l $(git ls-files | grep '.*\\.hs$') | sort -r | head -n 6")
+--                            { std_out = CreatePipe }
+--                    report <- hGetContents hreport
+--                    let lns = lines out ++ ["Lines of Haskell code:"] ++ lines report
+--                    if null out 
+--                        then putStrLn "NULL" 
+--                        else putStrLn "not NULL"
+--                    forM_ lns $ \ln -> do
+--                        putStrLn ln
+--                        hPutStrLn h ln
+--                        hFlush stdout
+--                        hFlush h
+--                    waitForProcess p2
+--                c1 <- waitForProcess ps
                 c1 <- system "./test > result.txt"
                 system "echo \"Lines of Haskell code:\" >> result.txt"
-                system "grep . */*.hs *.hs | wc >> result.txt"
+                system "wc -l $(git ls-files | grep '.*\\.hs$') | sort -r | head -n 6 >> result.txt"
                 c2 <- rawSystem "cat" ["result.txt"]
-                return (c1 `success` c2)
+                return c1
             ExitFailure _ -> do
                 putStrLn "\n***************"
                 putStrLn   "*** FAILURE ***"
