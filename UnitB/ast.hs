@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-} 
-
+{-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
 module UnitB.AST 
     ( Label, Theory (..), Event(..), empty_event
     , Machine (..), label
@@ -17,6 +16,7 @@ module UnitB.AST
     , variant_equals_dummy
     , variant_bounded
     , Direction (..)
+    , RefRule (..)
 --    , ps_union
     ) 
 where
@@ -58,8 +58,11 @@ data Machine =
     deriving (Show, Typeable)
 
 class RefRule a where
-    apply         :: a -> Machine -> Machine
-    ref_condition :: a -> Machine -> Map Label ProofObligation
+    refinement_po :: a -> Machine -> Map Label ProofObligation
+    rule_name     :: a -> Label
+    
+--    apply         :: a -> Machine -> Machine
+--    ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
 empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set
@@ -102,17 +105,7 @@ variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
 
-data Rule = 
-        Monotonicity ProgressProp ProgressProp
-        | Transitivity ProgressProp ProgressProp ProgressProp
-        | Induction ProgressProp ProgressProp Variant
-        | PSP ProgressProp ProgressProp SafetyProp
-        | Disjunction ProgressProp [([Var], ProgressProp)]
-        | NegateDisjunct ProgressProp ProgressProp
-        | Discharge ProgressProp Transient (Maybe SafetyProp)
-        | Implication ProgressProp
-        | Add
-    deriving Show
+data Rule = forall r. RefRule r => Rule r
 
 --data Liveness = Live (Map Label ProgressProp) 
 

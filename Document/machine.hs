@@ -5,6 +5,7 @@ module Document.Machine where
 import Document.Expression
 import Document.Visitor
 import Document.Proof
+import Document.Refinement
 
 import Latex.Parser
 
@@ -26,6 +27,7 @@ import Control.Monad.Trans.RWS as RWS
 import Control.Monad.Trans.Either
 
 import Data.Char
+import Data.Functor.Identity
 import Data.Graph
 import Data.Map  as M hiding ( map, foldl, (\\) )
 import Data.List as L hiding ( union, insert, inits )
@@ -43,9 +45,9 @@ list_file_obligations fn = do
 list_proof_obligations :: String -> Either [Error] [(Machine, Map Label ProofObligation)]
 list_proof_obligations ct = do
         xs <- list_machines ct
-        forM xs (\x -> do
+        forM xs $ \x -> do
             y <- proof_obligation x
-            return (x,y))
+            return (x,y)
 
 list_machines :: String -> Either [Error] [Machine]
 list_machines ct = do
@@ -65,6 +67,31 @@ cycles xs = stronglyConnComp $ map f $ groupBy eq $ sort xs
         eq (x,_) (y,_) = x == y
         f xs = (fst $ head xs, fst $ head xs, map snd xs)
 
+parse_rule :: (Monad m)
+           => String
+           -> RuleParserParameter
+           -> EitherT [Error] (RWST (Int,Int) [Error] [(Label, Label)] m) Rule
+parse_rule rule param = do
+    (i,j) <- lift $ ask
+    case M.lookup rule refinement_parser of
+        Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
+            runEitherT $ f rule param
+        Nothing -> left [(format "invalid refinement rule: {0}" rule,i,j)]
+
+refinement_parser :: Map String (
+                  String
+               -> RuleParserParameter
+               -> EitherT [Error] (RWS (Int, Int) [Error] [(Label, Label)]) Rule)
+refinement_parser = fromList 
+    [   ("disjunction", parse_disjunction)
+    ,   ("discharge", parse_discharge)
+    ,   ("monotonicity", parse_monotonicity)
+    ,   ("implication", parse_implication)
+    ,   ("trading", parse_trading)
+    ,   ("transitivity", parse_transitivity)
+    ,   ("psp", parse_psp)
+    ,   ("induction", parse_induction)
+    ]
 
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
@@ -431,7 +458,7 @@ collect_expr = visit_doc
                     let new_prop = LeadsTo (S.elems dum) p q
                     return m { props = (props m) 
                         { progress   = insert (label lbl) new_prop $ prop 
-                        , derivation = insert (label lbl) Add $ derivation $ props m
+                        , derivation = insert (label lbl) (Rule Add) $ derivation $ props m
                         } } 
             )
         ]
@@ -458,10 +485,6 @@ comma_sep [] = []
 comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
-
-add_proof_edge x xs = EitherT $ do
-    RWS.modify (map ((,) x) xs ++)
-    return $ Right ()
 
 collect_proofs :: Monad m 
                => [LatexDoc] 
@@ -492,185 +515,7 @@ collect_proofs = visit_doc
                     let prog = progress $ props m
                     let saf  = safety $ props m
                     li@(i,j)      <- lift $ ask
-                    r <- case map toLower rule of
-                        "discharge" -> do
-                            toEither $ error_list
-                                [   ( 1 > length hyps_lbls || length hyps_lbls > 2
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            if length hyps_lbls == 2 then do
-                                let [h0,h1] = hyps_lbls
-                                toEither $ error_list
-                                    [   ( not (goal_lbl `member` prog)
-                                        , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                    ,   ( not (h0 `member` transient (props m))
-                                        , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
-                                    ,   ( not (h1 `member` safety (props m))
-                                        , format "refinement ({0}): {1} should be a safety property" rule h1 )
-                                    ]
-                                let p0 = prog ! goal_lbl
-                                let p1 = transient (props m) ! h0
-                                let p2 = safety (props m) ! h1
-                                add_proof_edge goal_lbl [h0,h1]
-                                return (Discharge p0 p1 $ Just p2)
-                            else do -- length hyps_lbls == 1
-                                let [h0] = hyps_lbls
-                                toEither $ error_list
-                                    [   ( not (goal_lbl `member` prog)
-                                        , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                    ,   ( not (h0 `member` transient (props m))
-                                        , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
-                                    ]
-                                let p0 = prog ! goal_lbl
-                                let p1 = transient (props m) ! h0
-                                add_proof_edge goal_lbl [h0]
-                                return (Discharge p0 p1 Nothing)
-                        "monotonicity" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 1
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let [h0] = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ,   ( not (h0 `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ]
-                            let p0 = prog ! goal_lbl
-                            let p1 = prog ! h0
-                            add_proof_edge goal_lbl [h0]
-                            return (Monotonicity p0 p1)
-                        "implication" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 0
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ]
-                            let p0 = prog ! goal_lbl
-                            return (Implication p0)
-                        "disjunction" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls < 1
-                                    , format "too few hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let hs = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (all (`member` progress (props m)) hs)
-                                    , format "refinement ({0}): {1} should be progress properties" rule  
-                                        $ intercalate "," $ map show hs)
-                                ]
-                            let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
-                            let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
-                            let ps = map (f . (prog !)) hs
-                            add_proof_edge goal_lbl hs
-                            return (Disjunction pr0 ps)
-                        "trading" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 1
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let [h0] = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ,   ( not (h0 `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ]
-                            let p0 = prog ! goal_lbl
-                            let p1 = prog ! h0
-                            add_proof_edge goal_lbl [h0]
-                            return (NegateDisjunct p0 p1)
-                        "transitivity" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 2
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let [h0,h1] = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` progress (props m))
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ,   ( not (h0 `member` progress (props m))
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ,   ( not (h1 `member` progress (props m))
-                                    , format "refinement ({0}): {1} should be a progress property" rule h1 )
-                                ]
-                            let p0 = prog ! goal_lbl
-                            let p1 = prog ! h0
-                            let p2 = prog ! h1
-                            add_proof_edge goal_lbl [h0,h1]
-                            return (Transitivity p0 p1 p2)
-                        "psp" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 2
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let [h0,h1] = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ,   ( not (h0 `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ,   ( not (h1 `member` saf)
-                                    , format "refinement ({0}): {1} should be a safety property" rule h1 )
-                                ]
-                            let p0 = prog ! goal_lbl
-                            let p1 = prog ! h0
-                            let p2 = saf ! h1
-                            add_proof_edge goal_lbl [h0,h1]
-                            return (PSP p0 p1 p2)
-                        "induction" -> do
-                            toEither $ error_list
-                                [   ( length hyps_lbls /= 1
-                                    , format "too many hypotheses in the application of the rule: {0}" 
-                                        $ intercalate "," $ map show hyps_lbls)
-                                ]
-                            let [h0] = hyps_lbls
-                            toEither $ error_list
-                                [   ( not (goal_lbl `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                                ,   ( not (h0 `member` prog)
-                                    , format "refinement ({0}): {1} should be a progress property" rule h0 )
-                                ]
-                            (dir,var,bound) <- case find_cmd_arg 3 ["\\var"] hint of
-                                Just (_,_,[var,dir,bound],_) -> do
-                                        var   <- get_expr m var   
-                                        bound <- get_expr m bound 
-                                        dir  <- case map toLower $ concatMap flatten dir of
-                                            "up"   -> return Up
-                                            "down" -> return Down
-                                            _      -> left [("expecting a direction for the variant",i,j)]
-                                        var <- hoistEither $ either
-                                            (\x -> Left [(x,i,j)]) 
-                                            Right
-                                            $ (zcast int)
-                                            $ Right var
-                                        bound <- hoistEither $ either
-                                            (\x -> Left [(x,i,j)])
-                                            Right
-                                            $ zcast int
-                                            $ Right bound
-                                        return (dir,var,bound)
-                                Nothing -> left [("expecting a variant", i,j)]
-                            let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
-                            let pr1@(LeadsTo fv1 p1 q1) = prog ! h0
-                            dum <- case fv1 \\ fv0 of
-                                [v] -> return v
-                                _   -> left [(   "inductive formula should have one free "
-                                              ++ "variable to record the variant",i,j)]                    
-                            add_proof_edge goal_lbl [h0]
-                            return (Induction pr0 pr1 (IntegerVariant dum var bound dir))
-                        _ -> left [(format "invalid refinement rule: {0}" $ map toLower rule,i,j)]
+                    r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal_lbl hyps_lbls hint)
                     return m { props = (props m) { derivation = insert goal_lbl r $ derivation $ props m } } 
             )
         ]

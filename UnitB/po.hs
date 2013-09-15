@@ -135,113 +135,11 @@ proof_obligation m = do
         return $ M.fromList $ concat xs
 
 ref_po :: Machine -> Label -> Rule -> Map Label ProofObligation
-ref_po m lbl r = 
-    M.fromList $ 
-        case r of
-            Monotonicity 
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)  ->  
-                assert ref_mono_lbl "lhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                             (p0 `zimplies` p1))
-             ++ assert ref_mono_lbl "rhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                             (q1 `zimplies` q0))
-            Implication 
-                    (LeadsTo fv1 p1 q1)  ->  
-                assert ref_impl_lbl "" (
-                    zforall fv1 ztrue $
-                             (p1 `zimplies` q1))
-            Transitivity
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)
-                    (LeadsTo fv2 p2 q2) -> 
-                assert ref_trans_lbl "" $ 
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                        zall[ p0 `zimplies` p1
-                            , q1 `zimplies` p2
-                            , q2 `zimplies` q0
-                            ]
-            Induction 
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1) v     -> 
-                assert ref_ind_lbl "lhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                        ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
-                        )
-             ++ assert ref_ind_lbl "rhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                        (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
-                        )
-            PSP
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)
-                    (Unless fv2 r b)   -> 
-                assert ref_psp_lbl "lhs" (
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                        (zand p1 r `zimplies` p0))
-             ++ assert ref_psp_lbl "rhs" (
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            (q0 `zimplies` zor (q1 `zand` r) b))
-            Disjunction 
-                    (LeadsTo fv0 p0 q0)
-                    ps   ->  
-                assert ref_disj_lbl "lhs" (
-                    zforall fv0 ztrue (
-                        ( p0 `zimplies` zsome (map disj_p ps) ) ) )
-             ++ assert ref_disj_lbl "rhs" (
-                    zforall fv0 ztrue (
-                        ( zsome (map disj_q ps) `zimplies` q0 ) ) )
-            NegateDisjunct
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)      -> 
-                assert ref_trade_lbl "" (
-                    zforall (fv0 ++ fv1) ztrue $
-                        zand (zand p0 (znot q0) `zimplies` p1)
-                                (q1 `zimplies` q0))
-            Discharge 
-                    (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _)
-                    (Just (Unless fv2 p2 q2)) ->
-                assert ref_discharge_lbl "" (
-                    zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                        zall[ p0 `zimplies` p2
-                            , q2 `zimplies` q0
-                            , zand p0 (znot q0) `zimplies` p1
-                            ]  ) )
-            Discharge 
-                    (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _)
-                    Nothing ->
-                assert ref_discharge_lbl "" (
-                    zforall (fv0 ++ M.elems fv1) ztrue (
-                        zand (p0 `zimplies` p1)
-                             (znot p1 `zimplies` q0) ) )
-            Add                -> []
+ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
     where
-        f x = unsafePerformIO (do
-                putStrLn "begin"
-                let !y = x
-                putStrLn "end"
-                return y)
-        assert t suff prop = 
-                [ ( po_lbl
-                  , (ProofObligation 
-                        (           assert_ctx m 
-                        `merge_ctx` step_ctx m) 
-                        (invariants p)
-                        True
-                        prop))
-                ]
-            where
-                po_lbl 
-                    | L.null suff = composite_label [_name m, lbl, t]
-                    | otherwise   = composite_label [_name m, lbl, t, label suff]
-        p    = props m
-        disj_p ([], LeadsTo fv1 p1 q1) = p1
-        disj_p (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue p1
-        disj_q ([], LeadsTo fv1 p1 q1) = q1
-        disj_q (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue q1
+        f x
+            | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
+            | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
 init_fis_po :: Machine -> Map Label ProofObligation
 init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
