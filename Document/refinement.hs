@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, IncoherentInstances #-}
 module Document.Refinement where
 
     -- Module
@@ -46,11 +46,59 @@ instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ _ = fromList []
 
---class RuleParser a where
---    parse_rule :: a -> String -> RuleParserParameter -> RWS (Int,Int) [Error] b Rule
---
---instance RefRule a => RuleParser a where
---    parse_rule x _ _ = return $ Rule x
+class RuleParser a where
+--    are_valid  :: a -> [Label] -> RuleParserParameter -> RWS (Int,Int) [Error] b ()
+    parse_rule :: a -> [Label] -> String -> RuleParserParameter -> EitherT [Error] (RWS (Int,Int) [Error] b) Rule
+
+instance RefRule a => RuleParser (a,()) where
+--    are_valid _ _ _ = return ()
+    parse_rule (x,_) [] _ _ = return $ Rule x
+    parse_rule (x,_) hyps_lbls _ _ = do
+        (i,j) <- lift $ ask
+        left [(format "too many hypotheses in the application of the rule: {0}" 
+                    $ intercalate "," $ map show hyps_lbls, i, j)]
+
+instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
+--    are_valid _ (x:xs) 
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+        case M.lookup x prog of
+            Just p -> parse_rule (f p, ()) xs rule param
+            Nothing -> do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a progress property" rule goal_lbl,i,j)]
+    parse_rule _ [] rule _ = do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+
+instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
+--    are_valid _ (x:xs) 
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+        case M.lookup x saf of
+            Just p -> parse_rule (f p, ()) xs rule param
+            Nothing -> do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+    parse_rule _ [] rule _ = do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+
+--instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
+----    are_valid _ (x:xs) 
+--    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+--        case M.lookup x prog of
+--            Just p -> parse_rule (f p, ()) xs rule param
+--            Nothing -> do
+--                (i,j) <- lift $ ask
+--                left [(format "refinement ({0}): {1} should be a transient predicate" rule goal_lbl,i,j)]
+--        where
+--            g 
+--    parse_rule _ [] rule _ = do
+--                (i,j) <- lift $ ask
+--                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+
+parse rc n param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+        add_proof_edge goal_lbl hyps_lbls
+        parse_rule rc (goal_lbl:hyps_lbls) n param
 
 -- PO
 

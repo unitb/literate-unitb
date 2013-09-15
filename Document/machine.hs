@@ -5,7 +5,7 @@ module Document.Machine where
 import Document.Expression
 import Document.Visitor
 import Document.Proof
-import Document.Refinement
+import Document.Refinement hiding ( parse_rule )
 
 import Latex.Parser
 
@@ -85,11 +85,11 @@ refinement_parser :: Map String (
 refinement_parser = fromList 
     [   ("disjunction", parse_disjunction)
     ,   ("discharge", parse_discharge)
-    ,   ("monotonicity", parse_monotonicity)
-    ,   ("implication", parse_implication)
-    ,   ("trading", parse_trading)
-    ,   ("transitivity", parse_transitivity)
-    ,   ("psp", parse_psp)
+    ,   ("monotonicity", parse (Monotonicity, ()))
+    ,   ("implication", parse (Implication, ()))
+    ,   ("trading", parse (NegateDisjunct, ()))
+    ,   ("transitivity", parse (Transitivity, ()))
+    ,   ("psp", parse (PSP, ()))
     ,   ("induction", parse_induction)
     ]
 
