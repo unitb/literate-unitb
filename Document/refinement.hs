@@ -37,9 +37,6 @@ data RuleParserParameter =
         [Label]
         [LatexDoc]
 
---data Rule = 
---    deriving Show
-
 data Add = Add
 
 instance RefRule Add where
@@ -47,11 +44,9 @@ instance RefRule Add where
     refinement_po _ _ = fromList []
 
 class RuleParser a where
---    are_valid  :: a -> [Label] -> RuleParserParameter -> RWS (Int,Int) [Error] b ()
     parse_rule :: a -> [Label] -> String -> RuleParserParameter -> EitherT [Error] (RWS (Int,Int) [Error] b) Rule
 
 instance RefRule a => RuleParser (a,()) where
---    are_valid _ _ _ = return ()
     parse_rule (x,_) [] _ _ = return $ Rule x
     parse_rule (x,_) hyps_lbls _ _ = do
         (i,j) <- lift $ ask
@@ -59,7 +54,6 @@ instance RefRule a => RuleParser (a,()) where
                     $ intercalate "," $ map show hyps_lbls, i, j)]
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
---    are_valid _ (x:xs) 
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
         case M.lookup x prog of
             Just p -> parse_rule (f p, ()) xs rule param
@@ -71,7 +65,6 @@ instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
 instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
---    are_valid _ (x:xs) 
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
         case M.lookup x saf of
             Just p -> parse_rule (f p, ()) xs rule param
@@ -82,35 +75,21 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
---instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
-----    are_valid _ (x:xs) 
---    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
---        case M.lookup x prog of
---            Just p -> parse_rule (f p, ()) xs rule param
---            Nothing -> do
---                (i,j) <- lift $ ask
---                left [(format "refinement ({0}): {1} should be a transient predicate" rule goal_lbl,i,j)]
---        where
---            g 
---    parse_rule _ [] rule _ = do
---                (i,j) <- lift $ ask
---                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
+    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+            xs <- forM xs g
+            return $ Rule (f xs)        
+        where
+            g x = maybe (do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a progress property" rule goal_lbl,i,j)] )
+                return
+                $ M.lookup x prog
 
 parse rc n param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
--- PO
-
---    M.fromList $ 
---        case r of
---            Add                -> []
---    where
---        f x = unsafePerformIO (do
---                putStrLn "begin"
---                let !y = x
---                putStrLn "end"
---                return y)
 assert m suff prop = 
         [ ( po_lbl
             , (ProofObligation 
@@ -125,11 +104,6 @@ assert m suff prop =
         po_lbl 
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
-
--- Parsing
-
-
---case map toLower rule of
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
 
@@ -192,8 +166,6 @@ parse_discharge rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
             add_proof_edge goal_lbl [h0]
             return $ Rule $ Discharge p0 p1 Nothing
 
---                        "monotonicity" -> do
-
 data Monotonicity = Monotonicity ProgressProp ProgressProp
 
 instance RefRule Monotonicity where
@@ -209,24 +181,6 @@ instance RefRule Monotonicity where
                     zforall (fv0 ++ fv1) ztrue $
                              (q1 `zimplies` q0)))
 
-parse_monotonicity rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( length hyps_lbls /= 1
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        let [h0] = hyps_lbls
-        toEither $ error_list
-            [   ( not (goal_lbl `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-            ,   ( not (h0 `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule h0 )
-            ]
-        let p0 = prog ! goal_lbl
-        let p1 = prog ! h0
-        add_proof_edge goal_lbl [h0]
-        return $ Rule (Monotonicity p0 p1)
-
 data Implication = Implication ProgressProp
 
 instance RefRule Implication where
@@ -237,19 +191,6 @@ instance RefRule Implication where
                 assert m "" (
                     zforall fv1 ztrue $
                              (p1 `zimplies` q1))
-
-parse_implication rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( length hyps_lbls /= 0
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        toEither $ error_list
-            [   ( not (goal_lbl `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-            ]
-        let p0 = prog ! goal_lbl
-        return $ Rule (Implication p0)
 
 data Disjunction = Disjunction ProgressProp [([Var], ProgressProp)]
 
@@ -265,35 +206,16 @@ instance RefRule Disjunction where
                     zforall fv0 ztrue (
                         ( zsome (map disj_q ps) `zimplies` q0 ) ) ) )
         where
---            p    = props m
             disj_p ([], LeadsTo fv1 p1 q1) = p1
             disj_p (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue p1
             disj_q ([], LeadsTo fv1 p1 q1) = q1
             disj_q (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue q1
 
-parse_disjunction 
-            :: (Monad m)
-            => String
-            -> RuleParserParameter
-            -> EitherT [Error] (RWST (Int, Int) [Error] [(Label, Label)] m) Rule
-parse_disjunction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-    toEither $ error_list
-        [   ( length hyps_lbls < 1
-            , format "too few hypotheses in the application of the rule: {0}" 
-                $ intercalate "," $ map show hyps_lbls)
-        ]
-    let hs = hyps_lbls
-    toEither $ error_list
-        [   ( not (all (`member` progress (props m)) hs)
-            , format "refinement ({0}): {1} should be progress properties" rule  
-                $ intercalate "," $ map show hs)
-        ]
-    let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
-    let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
-    let ps = map (f . (prog !)) hs
-    add_proof_edge goal_lbl hs
-    return (Rule $ Disjunction pr0 ps)
---                        "trading" -> do
+disjunction :: ProgressProp -> [ProgressProp] -> Disjunction
+disjunction pr0@(LeadsTo fv0 p0 q0) ps = 
+        let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
+            ps0 = map f ps
+        in (Disjunction pr0 ps0)
 
 data NegateDisjunct = NegateDisjunct ProgressProp ProgressProp
 
@@ -308,24 +230,6 @@ instance RefRule NegateDisjunct where
                     zforall (fv0 ++ fv1) ztrue $
                         zand (zand p0 (znot q0) `zimplies` p1)
                                 (q1 `zimplies` q0))
-
-parse_trading rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( length hyps_lbls /= 1
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        let [h0] = hyps_lbls
-        toEither $ error_list
-            [   ( not (goal_lbl `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-            ,   ( not (h0 `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule h0 )
-            ]
-        let p0 = prog ! goal_lbl
-        let p1 = prog ! h0
-        add_proof_edge goal_lbl [h0]
-        return $ Rule (NegateDisjunct p0 p1)
         
 data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
 
@@ -344,27 +248,6 @@ instance RefRule Transitivity where
                             , q2 `zimplies` q0
                             ]
 
-parse_transitivity rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( length hyps_lbls /= 2
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        let [h0,h1] = hyps_lbls
-        toEither $ error_list
-            [   ( not (goal_lbl `member` progress (props m))
-                , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-            ,   ( not (h0 `member` progress (props m))
-                , format "refinement ({0}): {1} should be a progress property" rule h0 )
-            ,   ( not (h1 `member` progress (props m))
-                , format "refinement ({0}): {1} should be a progress property" rule h1 )
-            ]
-        let p0 = prog ! goal_lbl
-        let p1 = prog ! h0
-        let p2 = prog ! h1
-        add_proof_edge goal_lbl [h0,h1]
-        return $ Rule (Transitivity p0 p1 p2)
-
 data PSP = PSP ProgressProp ProgressProp SafetyProp
 
 instance RefRule PSP where
@@ -381,27 +264,6 @@ instance RefRule PSP where
              ++ assert m "rhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             (q0 `zimplies` zor (q1 `zand` r) b)))
-
-parse_psp rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( length hyps_lbls /= 2
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        let [h0,h1] = hyps_lbls
-        toEither $ error_list
-            [   ( not (goal_lbl `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-            ,   ( not (h0 `member` prog)
-                , format "refinement ({0}): {1} should be a progress property" rule h0 )
-            ,   ( not (h1 `member` saf)
-                , format "refinement ({0}): {1} should be a safety property" rule h1 )
-            ]
-        let p0 = prog ! goal_lbl
-        let p1 = prog ! h0
-        let p2 = saf ! h1
-        add_proof_edge goal_lbl [h0,h1]
-        return $ Rule (PSP p0 p1 p2)
 
 data Induction = Induction ProgressProp ProgressProp Variant
 

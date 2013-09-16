@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns, FlexibleContexts #-}
-module Document.Expression where
+module Document.Expression 
+    ( parse_expr, oper, eat_space, get_variables )
+where
 
 import Latex.Scanner
 import Latex.Parser

@@ -83,7 +83,7 @@ refinement_parser :: Map String (
                -> RuleParserParameter
                -> EitherT [Error] (RWS (Int, Int) [Error] [(Label, Label)]) Rule)
 refinement_parser = fromList 
-    [   ("disjunction", parse_disjunction)
+    [   ("disjunction", parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
     ,   ("monotonicity", parse (Monotonicity, ()))
     ,   ("implication", parse (Implication, ()))
