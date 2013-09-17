@@ -70,7 +70,7 @@ cycles xs = stronglyConnComp $ map f $ groupBy eq $ sort xs
 parse_rule :: (Monad m)
            => String
            -> RuleParserParameter
-           -> EitherT [Error] (RWST (Int,Int) [Error] [(Label, Label)] m) Rule
+           -> EitherT [Error] (RWST (Int,Int) [Error] Architecture m) Rule
 parse_rule rule param = do
     (i,j) <- lift $ ask
     case M.lookup rule refinement_parser of
@@ -81,7 +81,7 @@ parse_rule rule param = do
 refinement_parser :: Map String (
                   String
                -> RuleParserParameter
-               -> EitherT [Error] (RWS (Int, Int) [Error] [(Label, Label)]) Rule)
+               -> EitherT [Error] (RWS (Int, Int) [Error] Architecture) Rule)
 refinement_parser = fromList 
     [   ("disjunction", parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
@@ -92,6 +92,9 @@ refinement_parser = fromList
     ,   ("psp", parse (PSP, ()))
     ,   ("induction", parse_induction)
     ]
+
+merge_machine :: Machine -> Machine -> Machine
+merge_machine = error "not implemented"
 
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
@@ -109,17 +112,33 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
                 
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
-            ms <- toEither $ inject [] $ do
-                    ms <- foldM (f collect_proofs) ms xs
-                    s  <- RWS.get
-                    let cs = cycles s
-                    mapM cycl_err_msg cs
-                    return ms
-            return ms) () () }
+            ms <- toEither $ foldM (f collect_proofs) ms xs
+            s  <- lift $ RWS.gets proof_struct
+            let cs = cycles s
+            toEither $ mapM cycl_err_msg cs
+            s  <- lift $ RWS.gets ref_struct
+            let rs = cycles $ toList s
+            rs <- toEither $ forM (reverse rs) $ \x ->
+                case x of
+                    AcyclicSCC v -> return [v]
+                    CyclicSCC vs -> do
+                        tell [(cycle_msg "refinement structure" vs,0,0)]
+                        return []
+--            ms <- return $ M.mapKeys label ms
+            ms <- foldM (\ms n -> 
+                    case M.lookup n s of
+                        Just anc  -> 
+                            return $ insert (show n) (merge_machine (ms ! show n) (ms ! show anc)) ms
+                        Nothing -> return ms
+                    ) ms $ concat rs
+            return ms) () empty_arc }
         in x
     where
+        cycle_msg x ys = format msg x $ intercalate "," (map show ys)
+            where
+                msg = "A cycle exists in the {0}: {1}"
         cycl_err_msg (AcyclicSCC v) = return ()
-        cycl_err_msg (CyclicSCC vs) = tell [("A cycle exists in the proof of liveness: " ++ intercalate "," (map show vs),0,0)]
+        cycl_err_msg (CyclicSCC vs) = tell [(cycle_msg "proof of liveness" vs,0,0)]
         gather ms (Env n _ c li)     
                 | n == "machine"    = do
                     (name,cont) <- with_line_info li $ get_1_lbl c
@@ -136,7 +155,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
                 | otherwise         = foldM (f pass) ms c
         f pass ms x                 = fold_docM (f pass) ms x
 
-type_decl :: [LatexDoc] -> Machine -> MEither Error Machine
+type_decl :: [LatexDoc] -> Machine -> MSEither Error Architecture Machine
 type_decl = visit_doc []
             [  (  "\\newset"
                ,  Cmd2Args $ \(name, tag) m -> do
@@ -176,12 +195,20 @@ type_decl = visit_doc []
                             ]
                         return m { events = insert lbl (empty_event) $ events m } 
                )
+            ,  (  "\\refines"
+               ,  Cmd1Args $ \(mch,()) m -> do
+                        anc   <- lift $ gets ref_struct
+                        (i,j) <- lift $ ask
+                        when (label mch `member` anc) $ left [("Machines can only refine one machine",i,j)]
+                        lift $ modify $ \x -> x { ref_struct = insert (_name m) (label mch) $ ref_struct x }
+                        return m
+               )
             ]
 
 imports :: Monad m 
         => [LatexDoc] 
         -> Machine 
-        -> MEitherT Error m Machine 
+        -> MSEitherT Error Architecture m Machine 
 imports = visit_doc 
             [   ( "use:set"
                 , Env1Args $ \(cset,()) _ m -> do
@@ -215,7 +242,7 @@ imports = visit_doc
 declarations :: Monad m
              => [LatexDoc] 
              -> Machine 
-             -> MEitherT Error m Machine
+             -> MSEitherT Error Architecture m Machine
 declarations = visit_doc 
         [   (   "variable"
             ,   Env0Args $ \() xs m -> do
@@ -271,7 +298,7 @@ declarations = visit_doc
 collect_expr :: Monad m
              => [LatexDoc] 
              -> Machine 
-             -> MEitherT Error m Machine
+             -> MSEitherT Error Architecture m Machine
 collect_expr = visit_doc 
                 --------------
                 --  Events  --
@@ -489,7 +516,7 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
 collect_proofs :: Monad m 
                => [LatexDoc] 
                -> Machine
-               -> MSEitherT Error [(Label,Label)] m Machine
+               -> MSEitherT Error Architecture m Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   Env1Args $ \(po,()) xs m -> do

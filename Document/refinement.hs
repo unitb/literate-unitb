@@ -24,9 +24,18 @@ import Data.Map as M hiding ( map, (\\) )
 import Utilities.Format
 import Utilities.Syntactic
 
+data Architecture = Arc 
+    {  proof_struct :: [(Label,Label)]
+    ,  ref_struct   :: Map Label Label
+    }
+
+empty_arc = Arc [] empty
+
 add_proof_edge x xs = EitherT $ do
-    RWS.modify (map ((,) x) xs ++)
-    return $ Right ()
+        RWS.modify (\x -> x { proof_struct = f $ proof_struct x } )
+        return $ Right ()
+    where
+        f ys = map ((,) x) xs ++ ys
 
 data RuleParserParameter = 
     RuleParserParameter
@@ -75,6 +84,17 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
+instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+        case M.lookup x $ transient $ props m of
+            Just p -> parse_rule (f p, ()) xs rule param
+            Nothing -> do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+    parse_rule _ [] rule _ = do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
     parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
             xs <- forM xs g
@@ -85,6 +105,17 @@ instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
                 left [(format "refinement ({0}): {1} should be a progress property" rule goal_lbl,i,j)] )
                 return
                 $ M.lookup x prog
+
+instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
+    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+            xs <- forM xs g
+            return $ Rule (f xs)        
+        where
+            g x = maybe (do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)] )
+                return
+                $ M.lookup x saf
 
 parse rc n param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
@@ -132,39 +163,16 @@ instance RefRule Discharge where
                         zand (p0 `zimplies` p1)
                              (znot p1 `zimplies` q0) ) )
 
-parse_discharge rule (RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
-        toEither $ error_list
-            [   ( 1 > length hyps_lbls || length hyps_lbls > 2
-                , format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls)
-            ]
-        if length hyps_lbls == 2 then do
-            let [h0,h1] = hyps_lbls
-            toEither $ error_list
-                [   ( not (goal_lbl `member` prog)
-                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                ,   ( not (h0 `member` transient (props m))
-                    , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
-                ,   ( not (h1 `member` safety (props m))
-                    , format "refinement ({0}): {1} should be a safety property" rule h1 )
-                ]
-            let p0 = prog ! goal_lbl
-            let p1 = transient (props m) ! h0
-            let p2 = safety (props m) ! h1
-            add_proof_edge goal_lbl [h0,h1]
-            return $ Rule $ Discharge p0 p1 $ Just p2
-        else do -- length hyps_lbls == 1
-            let [h0] = hyps_lbls
-            toEither $ error_list
-                [   ( not (goal_lbl `member` prog)
-                    , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )
-                ,   ( not (h0 `member` transient (props m))
-                    , format "refinement ({0}): {1} should be a transient predicate" rule h0 )
-                ]
-            let p0 = prog ! goal_lbl
-            let p1 = transient (props m) ! h0
-            add_proof_edge goal_lbl [h0]
-            return $ Rule $ Discharge p0 p1 Nothing
+mk_discharge :: ProgressProp -> Transient -> [SafetyProp] -> Discharge
+mk_discharge p tr [s] = Discharge p tr $ Just s
+mk_discharge p tr [] = Discharge p tr Nothing
+
+parse_discharge rule params@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    (i,j) <- lift $ ask
+    when (1 > length hyps_lbls || length hyps_lbls > 2)
+        $ left [(format "too many hypotheses in the application of the rule: {0}" 
+                    $ intercalate "," $ map show hyps_lbls,i,j)]
+    parse (mk_discharge,()) rule params
 
 data Monotonicity = Monotonicity ProgressProp ProgressProp
 
@@ -325,3 +333,18 @@ parse_induction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls hint) = 
                             ++ "variable to record the variant",i,j)]                    
         add_proof_edge goal_lbl [h0]
         return $ Rule (Induction pr0 pr1 (IntegerVariant dum var bound dir))
+
+--data Cancellation = Cancellation ProgressProp ProgressProp ProgressProp
+--
+--instance RefRule Cancellation where
+--    rule_name _ = label "cancellation"
+--    refinement_po 
+--        (   Cancellation 
+--                    (LeadsTo fv0 p0 q0)
+--                    (LeadsTo fv1 p1 q1)
+--                    (LeadsTo fv2 p2 q2))
+--        m = fromList (
+--            assert m "p" (p0 `zimplies` p1)
+--         ++ assert m "q" (q1 `zimplies` 
+--         ++ assert m "r"
+--         ++ assert m "b"
