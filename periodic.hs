@@ -14,6 +14,6 @@ microseconds (Seconds x) = x * 1000000
 
 main = do
     forever $ do
-        system "cp result.txt last_result.txt"
         system "./run_tests"
+        system "cp result.txt last_result.txt"
         delay (microseconds interval)
