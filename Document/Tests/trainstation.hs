@@ -77,9 +77,14 @@ machine0 = (empty_machine "train0")
                     ,  set_theory blk_type
                     ,  set_theory loc_type
                     ,  set_theory train_type 
+                    ,  basic_theory
 --                    ,  function_theory train_type loc_type
                     ]
-            ,  types   = symbol_table [fun_sort, train_sort, loc_sort, set_sort, blk_sort, IntSort, RealSort, BoolSort]
+            ,  types   = symbol_table 
+                    [ train_sort
+                    , loc_sort
+                    , blk_sort
+                    ]
             ,  dummies = symbol_table 
                             $ (map (\t -> Var t $ train_type) 
                                 [ "t","t_0","t_1","t_2","t_3" ]

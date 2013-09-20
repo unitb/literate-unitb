@@ -19,6 +19,7 @@ module UnitB.AST
     , RefRule (..)
     , primed, make_unique
     , merge_machine, all_types
+    , basic_theory
 --    , ps_union
     ) 
 where
@@ -49,7 +50,7 @@ basic_theory = Theory []
 all_types th = unions (types th : map all_types (extends th)) 
 
 empty_theory :: Theory
-empty_theory = Theory [basic_theory] --[set_theory train_type] 
+empty_theory = Theory [] --[set_theory train_type] 
     empty empty empty empty empty
 
 data Event = Event {
@@ -82,7 +83,11 @@ class Show a => RefRule a where
 --    ref_condition :: a -> Machine -> Map Label ProofObligation
 
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) empty_theory empty empty empty empty_property_set empty_property_set
+empty_machine n = Mch (Lbl n) 
+        empty_theory { extends = [basic_theory] }
+        empty empty empty 
+        empty_property_set 
+        empty_property_set
 
 merge :: (Eq c, Ord a, Monoid c) => b -> (b -> b -> Either c b) -> Map a b -> Map a b -> Either c (Map a b)
 merge x f m0 m1 = do
