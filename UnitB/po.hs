@@ -269,23 +269,9 @@ thm_po m lbl xp = M.singleton
     where
         p = props m
 
-make_unique :: String -> Map String Var -> Expr -> Expr
-make_unique suf vs w@(Word (Var vn vt)) 
-        | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
-        | otherwise           = w
-make_unique _ _ c@(Const _ _ _)    = c
-make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
-make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
-    where
-        local = (foldr M.delete vs (map name d))
-        f = make_unique suf local
-
 add_suffix suf (Var n t) = Var (n ++ suf) t
 
 new_dummy = make_unique "@param"
-
-primed :: Map String Var -> Expr -> Expr
-primed vs e = make_unique "@prime" vs e
 
 verify_machine :: Machine -> IO (Int, Int)
 verify_machine m = do

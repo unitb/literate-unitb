@@ -47,6 +47,7 @@ data RuleParserParameter =
         [LatexDoc]
 
 data Add = Add
+    deriving Show
 
 instance RefRule Add where
     rule_name _       = label "add"
@@ -137,6 +138,7 @@ assert m suff prop =
             | otherwise   = composite_label [label suff]
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
+    deriving Show
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
@@ -175,6 +177,7 @@ parse_discharge rule params@(RuleParserParameter m prog saf goal_lbl hyps_lbls _
     parse (mk_discharge,()) rule params
 
 data Monotonicity = Monotonicity ProgressProp ProgressProp
+    deriving Show
 
 instance RefRule Monotonicity where
     rule_name _   = label "monotonicity"
@@ -190,6 +193,7 @@ instance RefRule Monotonicity where
                              (q1 `zimplies` q0)))
 
 data Implication = Implication ProgressProp
+    deriving Show
 
 instance RefRule Implication where
     rule_name _   = label "implication"
@@ -201,6 +205,7 @@ instance RefRule Implication where
                              (p1 `zimplies` q1))
 
 data Disjunction = Disjunction ProgressProp [([Var], ProgressProp)]
+    deriving Show
 
 instance RefRule Disjunction where
     rule_name _ = label "disjunction"
@@ -226,6 +231,7 @@ disjunction pr0@(LeadsTo fv0 p0 q0) ps =
         in (Disjunction pr0 ps0)
 
 data NegateDisjunct = NegateDisjunct ProgressProp ProgressProp
+    deriving Show
 
 instance RefRule NegateDisjunct where
     rule_name _   = label "trading"
@@ -240,6 +246,7 @@ instance RefRule NegateDisjunct where
                                 (q1 `zimplies` q0))
         
 data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
+    deriving Show
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
@@ -257,6 +264,7 @@ instance RefRule Transitivity where
                             ]
 
 data PSP = PSP ProgressProp ProgressProp SafetyProp
+    deriving Show
 
 instance RefRule PSP where
     rule_name _ = label "PSP"
@@ -274,6 +282,7 @@ instance RefRule PSP where
                             (q0 `zimplies` zor (q1 `zand` r) b)))
 
 data Induction = Induction ProgressProp ProgressProp Variant
+    deriving Show
 
 instance RefRule Induction where
     rule_name _ = label "induction"

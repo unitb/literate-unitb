@@ -93,9 +93,6 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
-merge_machine :: Machine -> Machine -> Machine
-merge_machine = error "not implemented"
-
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             ms <- foldM gather empty xs 
@@ -127,8 +124,11 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
 --            ms <- return $ M.mapKeys label ms
             ms <- foldM (\ms n -> 
                     case M.lookup n s of
-                        Just anc  -> 
-                            return $ insert (show n) (merge_machine (ms ! show n) (ms ! show anc)) ms
+                        Just anc  -> do
+                            m <- hoistEither $ either 
+                                (Left . map (\x -> (x,0,0))) Right 
+                                $ merge_machine (ms ! show n) (ms ! show anc)
+                            return $ insert (show n) m ms
                         Nothing -> return ms
                     ) ms $ concat rs
             return ms) () empty_arc }
@@ -163,7 +163,7 @@ type_decl = visit_doc []
                     let new_sort = Sort tag name 0
                     let new_type = USER_DEFINED new_sort []
                     toEither $ error_list
-                        [ ( tag `member` types th
+                        [ ( tag `member` all_types th
                           , format "a sort with name '{0}' is already declared" tag )
                         , ( tag `member` consts th
                           , format "a constant with name '{0}' is already declared" tag )
@@ -214,23 +214,23 @@ imports = visit_doc
                 , Env1Args $ \(cset,()) _ m -> do
                     let th = theory m
                     toEither $ error_list
-                        [ ( not (cset `member` types th)
+                        [ ( not (cset `member` all_types th)
                           , format "Carrier set {0} undefined" cset )
                         ]
                     return m { theory = th {
-                                extends = set_theory (USER_DEFINED (types th ! cset) []) : extends th } } 
+                                extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
                 )
             ,   ( "use:fun"
                 , Env2Args $ \(dset, rset) _ m -> do
                     let th = theory m
                     toEither $ error_list 
-                        [   ( not (dset `member` types th)
+                        [   ( not (dset `member` all_types th)
                             , format "Carrier set {0} undefined" dset )
-                        ,   ( not (rset `member` types th)
+                        ,   ( not (rset `member` all_types th)
                             , format "Carrier set {0} undefined" rset )
                         ]
-                    let dtype = USER_DEFINED (types th ! dset) []
-                    let rtype = USER_DEFINED (types th ! rset) []
+                    let dtype = USER_DEFINED (all_types th ! dset) []
+                    let rtype = USER_DEFINED (all_types th ! rset) []
                     return m { theory = th {
                                 extends = function_theory dtype rtype : extends th } } 
                 )
