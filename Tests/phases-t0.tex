@@ -131,12 +131,6 @@
 %	\end{free:var}
 \end{proof}
 
-\end{machine}
-
-\begin{machine}{m1}
-
-\refines{m0}
-
 \begin{align*}
 \invariant{inv0}
 {	&\qforall{p_0,p_1}{}{pc.p_0 \le pc.p_1 + 1} } \\
@@ -176,6 +170,14 @@
 \evguard{step}{grd0}
 {	\qforall{p_0}{}{ pc.p \le pc.p_0 } }
 \end{align*}
+
+\refines{m1}
+
+\end{machine}
+
+\begin{machine}{m1}
+
+\refines{m0}
 
 \end{machine}
 

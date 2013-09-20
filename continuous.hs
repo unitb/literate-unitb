@@ -2,9 +2,6 @@
 module Main where
 
     -- Modules
-import Data.Time
-import Data.Time.Clock
-
 import Document.Document
 
 import UnitB.AST
@@ -18,18 +15,18 @@ import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
 
-import qualified 
-       Data.ByteString as BS
-import qualified 
-       Data.ByteString.Internal as BSI
-import Data.Map as M 
+import Data.Time
+import Data.Time.Clock
+
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Internal as BSI
+import           Data.Map as M 
     ( Map,lookup
     , empty,union
     , fromList
     , insert, alter
     )
-import qualified
-       Data.Serialize as Ser
+import qualified Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory

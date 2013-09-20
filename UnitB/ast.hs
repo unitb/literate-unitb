@@ -1,11 +1,13 @@
 {-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
 module UnitB.AST 
-    ( Label, Theory (..), Event(..), empty_event
+    ( Label, Theory (..)
+    , Event(..), empty_event
     , Machine (..), label
     , empty_machine
     , Transient  (..)
     , Constraint (..)
     , ProgressProp(..)
+    , Schedule    (..)
     , SafetyProp  (..) 
     , PropertySet (..) 
     , empty_property_set
@@ -242,7 +244,8 @@ instance Show Rule where
 
 --data Liveness = Live (Map Label ProgressProp) 
 
-data Schedule = Schedule Expr Expr
+data Schedule = Schedule [Var] Expr Expr Label
+    deriving Typeable
 
 data ProgressProp = LeadsTo [Var] Expr Expr
     deriving Typeable
@@ -263,13 +266,14 @@ data PropertySet = PS
         , inv_thm      :: Map Label Expr       -- inv thm
         , proofs       :: Map Label Proof
         , progress     :: Map Label ProgressProp
+        , schedule     :: Map Label Schedule
         , safety       :: Map Label SafetyProp
         , derivation   :: Map Label Rule
         }
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y)
-        [  ("transient",  show $ transient x)
+        [ ("transient",  show $ transient x)
         , ("constraint", show $ constraint x)
         , ("inv", show $ inv x)
         , ("inv_thm", show $ inv_thm x)
@@ -280,19 +284,24 @@ instance Show PropertySet where
         ]
 
 empty_property_set :: PropertySet
-empty_property_set = PS empty empty empty empty empty empty empty empty
+empty_property_set = PS 
+        empty empty empty 
+        empty empty empty 
+        empty empty empty
 
-ps_union (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS a1 b1 c1 d1 e1 f1 g1 h1) = do
-        a2 <- disjoint_union (f "transient predicate") a0 a1
-        b2 <- disjoint_union (f "co predicate") b0 b1
-        c2 <- disjoint_union (f "invariant") c0 c1
-        d2 <- disjoint_union (f "theorem") d0 d1
---        e2 <- disjoint_union (f "proof") e0 e1
+ps_union (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+    toEither $ do
+        a2 <- fromEither empty $ disjoint_union (f "transient predicate") a0 a1
+        b2 <- fromEither empty $ disjoint_union (f "co predicate") b0 b1
+        c2 <- fromEither empty $ disjoint_union (f "invariant") c0 c1
+        d2 <- fromEither empty $ disjoint_union (f "theorem") d0 d1
+--        e2 <- fromEither empty $ disjoint_union (f "proof") e0 e1
         let e2 = e0
-        f2 <- disjoint_union (f "progress property") f0 f1
-        g2 <- disjoint_union (f "safety property") g0 g1
-        h2 <- disjoint_union (f "deduction step") h0 h1
-        return $ PS a2 b2 c2 d2 e2 f2 g2 h2
+        f2 <- fromEither empty $ disjoint_union (f "progress property") f0 f1
+        g2 <- fromEither empty $ disjoint_union (f "safety property") g0 g1
+        h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
+        i2 <- fromEither empty $ disjoint_union (f "schedule") i0 i1
+        return $ PS a2 b2 c2 d2 e2 f2 i2 g2 h2
     where
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
 

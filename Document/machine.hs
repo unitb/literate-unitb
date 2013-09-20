@@ -199,7 +199,7 @@ type_decl = visit_doc []
                ,  Cmd1Args $ \(mch,()) m -> do
                         anc   <- lift $ gets ref_struct
                         (i,j) <- lift $ ask
-                        when (label mch `member` anc) $ left [("Machines can only refine one machine",i,j)]
+                        when (_name m `member` anc) $ left [(format "Machines can only refine one machine",i,j)]
                         lift $ modify $ \x -> x { ref_struct = insert (_name m) (label mch) $ ref_struct x }
                         return m
                )

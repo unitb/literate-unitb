@@ -96,6 +96,17 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
+instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+        case M.lookup x $ schedule $ props m of
+            Just p -> parse_rule (f p, ()) xs rule param
+            Nothing -> do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+    parse_rule _ [] rule _ = do
+                (i,j) <- lift $ ask
+                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
     parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
             xs <- forM xs g
