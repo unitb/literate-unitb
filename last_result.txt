@@ -1,0 +1,326 @@
++- Unit-B Document
+|  +- basic syntax and scopes
+|  +- small machine example
+|  |  +- test 0
+|  |  +- test 1 (separate machine blocks)
+|  |  +- test 2 (verification, one failure)
+|  |  +- test 3 (verification)
+|  |  +- test 4 (proof obligation, invariance)
+|  |  +- test 5 (co, 'skip' proof obligation)
+|  |  +- [ Success: 6 / 6 ]
+|  +- table of cubes example
+|  |  +- test 0 (syntax)
+|  |  +- test 1 (verification)
+|  |  +- test 2 (init/fis po)
+|  |  +- proof of inv0
+|  |  +- empty proof
+|  |  +- [ Success: 5 / 5 ]
+|  +- train station example
+|  |  +- test 0, syntax
+|  |  Right [Mch {_name = train0, theory = Theory {extends = [Theory {extends = [
+|  |  Theory {extends = [], types = fromList [("\\set",DefSort "\\set" "set" ["a"] 
+|  |  [_a,BOOL])], funs = fromList [("elem@Open@@pfun@@TRAIN@@BLK@Close",elem@Open@@
+|  |  pfun@@TRAIN@@BLK@Close[]: (pfun TRAIN BLK) x (set (pfun TRAIN BLK)) -> Bool),("
+|  |  empty-set@Open@@pfun@@TRAIN@@BLK@Close",empty-set@Open@@pfun@@TRAIN@@BLK@Close
+|  |  -> (set (pfun TRAIN BLK))),("intersect@Open@@pfun@@TRAIN@@BLK@Close",intersect@
+|  |  Open@@pfun@@TRAIN@@BLK@Close[]: (set (pfun TRAIN BLK)) x (set (pfun TRAIN BLK))
+|  |   (set (pfun TRAIN BLK))),("mk-set@Open@@pfun@@TRAIN@@BLK@Close",mk-set@Open@@
+|  |  pfun@@TRAIN@@BLK@Close[]: (pfun TRAIN BLK) -> (set (pfun TRAIN BLK))),("set-
+|  |  Open@@pfun@@TRAIN@@BLK@Close",set-diff@Open@@pfun@@TRAIN@@BLK@Close[]: (set (
+|  |  TRAIN BLK)) x (set (pfun TRAIN BLK)) -> (set (pfun TRAIN BLK))),("union@Open@@
+|  |  pfun@@TRAIN@@BLK@Close",bunion@Open@@pfun@@TRAIN@@BLK@Close[pfun [TRAIN,BLK]]: 
+|  |  set (pfun TRAIN BLK)) x (set (pfun TRAIN BLK)) -> (set (pfun TRAIN BLK)))], 
+|  |   = fromList [], fact = fromList [(@Open@@pfun@@TRAIN@@BLK@Close0,(forall ((x (
+|  |  pfun TRAIN BLK)) (y (pfun TRAIN BLK))) (=> true (= (elem@Open@@pfun@@TRAIN@@BLK
+|  |  Close x (mk-set@Open@@pfun@@TRAIN@@BLK@Close y)) (= x y))))),(@Open@@pfun@@
+|  |  BLK@Close1,(forall ((x (pfun TRAIN BLK)) (s1 (set (pfun TRAIN BLK))) (s2 (set (
+|  |  pfun TRAIN BLK)))) (=> true (= (elem@Open@@pfun@@TRAIN@@BLK@Close x (set-diff@
+|  |  Open@@pfun@@TRAIN@@BLK@Close s1 s2)) (and (elem@Open@@pfun@@TRAIN@@BLK@Close x 
+|  |  (not (elem@Open@@pfun@@TRAIN@@BLK@Close x s2))))))),(@Open@@pfun@@TRAIN@@BLK@
+|  |  Close2,(forall ((x (pfun TRAIN BLK)) (s1 (set (pfun TRAIN BLK))) (s2 (set (pfun
+|  |  TRAIN BLK)))) (=> true (= (elem@Open@@pfun@@TRAIN@@BLK@Close x (intersect@Open
+|  |  pfun@@TRAIN@@BLK@Close s1 s2)) (and (elem@Open@@pfun@@TRAIN@@BLK@Close x s1) (
+|  |  Open@@pfun@@TRAIN@@BLK@Close x s2)))))),(@Open@@pfun@@TRAIN@@BLK@Close3,(forall
+|  |  ((x (pfun TRAIN BLK)) (s1 (set (pfun TRAIN BLK))) (s2 (set (pfun TRAIN BLK)))) 
+|  |  (=> true (= (elem@Open@@pfun@@TRAIN@@BLK@Close x (bunion@Open@@pfun@@TRAIN@@BLK
+|  |  Close s1 s2)) (or (elem@Open@@pfun@@TRAIN@@BLK@Close x s1) (elem@Open@@pfun@@
+|  |  TRAIN@@BLK@Close x s2)))))),(@Open@@pfun@@TRAIN@@BLK@Close4,(forall ((x (pfun 
+|  |  BLK))) (=> true (not (elem@Open@@pfun@@TRAIN@@BLK@Close x empty-set@Open@@pfun
+|  |  TRAIN@@BLK@Close))))),(@Open@@pfun@@TRAIN@@BLK@Close5,(forall ((x (pfun TRAIN 
+|  |  BLK)) (s1 (set (pfun TRAIN BLK)))) (=> true (= (elem@Open@@pfun@@TRAIN@@BLK@
+|  |  x s1) (select s1 x)))))], dummies = fromList []},Theory {extends = [], types = 
+|  |  fromList [("\\set",DefSort "\\set" "set" ["a"] ARRAY [_a,BOOL])], funs = 
+|  |   [("elem@@TRAIN",elem@@TRAIN[]: TRAIN x (set TRAIN) -> Bool),("empty-set@@TRAIN
+|  |  ",empty-set@@TRAIN[]:  -> (set TRAIN)),("intersect@@TRAIN",intersect@@TRAIN[]: 
+|  |  set TRAIN) x (set TRAIN) -> (set TRAIN)),("mk-set@@TRAIN",mk-set@@TRAIN[]: 
+|  |  -> (set TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN[]: (set TRAIN) x (set TRAIN)
+|  |  -> (set TRAIN)),("union@@TRAIN",bunion@@TRAIN[TRAIN]: (set TRAIN) x (set TRAIN)
+|  |  -> (set TRAIN))], consts = fromList [], fact = fromList [(@@TRAIN0,(forall ((x 
+|  |  TRAIN) (y TRAIN)) (=> true (= (elem@@TRAIN x (mk-set@@TRAIN y)) (= x y))))),(@@
+|  |  TRAIN1,(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> true (= (elem
+|  |  TRAIN x (set-diff@@TRAIN s1 s2)) (and (elem@@TRAIN x s1) (not (elem@@TRAIN x s2
+|  |  ))))))),(@@TRAIN2,(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> 
+|  |   (elem@@TRAIN x (intersect@@TRAIN s1 s2)) (and (elem@@TRAIN x s1) (elem@@TRAIN 
+|  |   s2)))))),(@@TRAIN3,(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> 
+|  |  true (= (elem@@TRAIN x (bunion@@TRAIN s1 s2)) (or (elem@@TRAIN x s1) (elem@@
+|  |  x s2)))))),(@@TRAIN4,(forall ((x TRAIN)) (=> true (not (elem@@TRAIN x empty-set
+|  |  @@TRAIN))))),(@@TRAIN5,(forall ((x TRAIN) (s1 (set TRAIN))) (=> true (= (elem@@
+|  |  TRAIN x s1) (select s1 x)))))], dummies = fromList []}], types = fromList [], 
+|  |   = fromList [("apply@@TRAIN@@BLK",apply@@TRAIN@@BLK[TRAIN,BLK]: (pfun TRAIN BLK
+|  |   x TRAIN -> BLK),("dom-rest@@TRAIN@@BLK",dom-rest@@TRAIN@@BLK[TRAIN,BLK]: (set 
+|  |  TRAIN) x (pfun TRAIN BLK) -> (pfun TRAIN BLK)),("dom-subt@@TRAIN@@BLK",dom-subt
+|  |  TRAIN@@BLK[TRAIN,BLK]: (set TRAIN) x (pfun TRAIN BLK) -> (pfun TRAIN BLK)),("
+|  |  @@TRAIN@@BLK",dom@@TRAIN@@BLK[TRAIN,BLK]: (pfun TRAIN BLK) -> (set TRAIN)),("
+|  |  empty-fun@@TRAIN@@BLK",empty-fun@@TRAIN@@BLK[TRAIN,BLK]:  -> (pfun TRAIN BLK
+|  |  -fun@@TRAIN@@BLK",mk-fun@@TRAIN@@BLK[TRAIN,BLK]: TRAIN x BLK -> (pfun TRAIN BLK
+|  |  )),("ovl@@TRAIN@@BLK",ovl@@TRAIN@@BLK[TRAIN,BLK]: (pfun TRAIN BLK) x (pfun 
+|  |  BLK) -> (pfun TRAIN BLK)),("set@@TRAIN@@BLK",set@@TRAIN@@BLK[TRAIN,BLK]: (pfun 
+|  |  TRAIN BLK) -> (set BLK)),("tfun@@TRAIN@@BLK",tfun@@TRAIN@@BLK[TRAIN,BLK]: (set 
+|  |  TRAIN) x (set BLK) -> (set (pfun TRAIN BLK)))], consts = fromList [], fact = 
+|  |  fromList [(@@TRAIN@@BLK00,(forall ((f1 (pfun TRAIN BLK)) (f2 (pfun TRAIN BLK)))
+|  |  true (= (bunion@@TRAIN (dom@@TRAIN@@BLK f1) (dom@@TRAIN@@BLK f2)) (dom@@TRAIN@@
+|  |  BLK (ovl@@TRAIN@@BLK f1 f2)))))),(@@TRAIN@@BLK01,(= (dom@@TRAIN@@BLK empty-fun
+|  |  TRAIN@@BLK) empty-set@@TRAIN)),(@@TRAIN@@BLK02,(forall ((x TRAIN) (y BLK)) (=> 
+|  |  true (= (dom@@TRAIN@@BLK (mk-fun@@TRAIN@@BLK x y)) (mk-set@@TRAIN x))))),(@@
+|  |  BLK03,(forall ((f1 (pfun TRAIN BLK)) (f2 (pfun TRAIN BLK)) (x TRAIN)) (=> true 
+|  |  (=> (elem@@TRAIN x (dom@@TRAIN@@BLK f2)) (= (apply@@TRAIN@@BLK (ovl@@TRAIN@@BLK
+|  |  f1 f2) x) (apply@@TRAIN@@BLK f2 x)))))),(@@TRAIN@@BLK04,(forall ((f1 (pfun 
+|  |  BLK)) (f2 (pfun TRAIN BLK)) (x TRAIN)) (=> true (=> (elem@@TRAIN x (set-diff@@
+|  |  TRAIN (dom@@TRAIN@@BLK f1) (dom@@TRAIN@@BLK f2))) (= (apply@@TRAIN@@BLK (ovl@@
+|  |  TRAIN@@BLK f1 f2) x) (apply@@TRAIN@@BLK f1 x)))))),(@@TRAIN@@BLK05,(forall ((f1
+|  |  pfun TRAIN BLK)) (s1 (set TRAIN))) (=> true (= (dom@@TRAIN@@BLK (dom-subt@@
+|  |  BLK s1 f1)) (set-diff@@TRAIN (dom@@TRAIN@@BLK f1) s1))))),(@@TRAIN@@BLK06,(
+|  |   ((x TRAIN) (y BLK)) (=> true (= (apply@@TRAIN@@BLK (mk-fun@@TRAIN@@BLK x y) x)
+|  |  y)))),(@@TRAIN@@BLK07,(forall ((f1 (pfun TRAIN BLK)) (s1 (set TRAIN)) (x TRAIN
+|  |   (=> true (=> (elem@@TRAIN x (intersect@@TRAIN s1 (dom@@TRAIN@@BLK f1))) (= (
+|  |  apply@@TRAIN@@BLK (dom-rest@@TRAIN@@BLK s1 f1) x) (apply@@TRAIN@@BLK f1 x
+|  |  TRAIN@@BLK08,(forall ((f1 (pfun TRAIN BLK)) (s1 (set TRAIN)) (x TRAIN)) (=> 
+|  |   (=> (elem@@TRAIN x (set-diff@@TRAIN (dom@@TRAIN@@BLK f1) s1)) (= (apply@@TRAIN
+|  |  @@BLK (dom-subt@@TRAIN@@BLK s1 f1) x) (apply@@TRAIN@@BLK f1 x)))))),(@@TRAIN@@
+|  |  BLK09,(forall ((x TRAIN)) (=> true (= (select empty-fun@@TRAIN@@BLK x) Nothing
+|  |  )))),(@@TRAIN@@BLK10,(forall ((x TRAIN) (x2 TRAIN) (y BLK)) (=> true (= (select
+|  |  fun@@TRAIN@@BLK x y) x2) (ite (= x x2) (Just y) Nothing))))),(@@TRAIN@@BLK11,(
+|  |  forall ((x TRAIN) (f1 (pfun TRAIN BLK)) (f2 (pfun TRAIN BLK))) (=> true (= (
+|  |  (ovl@@TRAIN@@BLK f1 f2) x) (ite (= (select f1 x) Nothing) (select f2 x) (select
+|  |  f1 x)))))),(@@TRAIN@@BLK12,(forall ((x TRAIN) (f1 (pfun TRAIN BLK))) (=> true 
+|  |   (select (dom@@TRAIN@@BLK f1) x) (not (= (select f1 x) Nothing)))))),(@@TRAIN@@
+|  |  BLK13,(forall ((y BLK) (f1 (pfun TRAIN BLK))) (=> true (= (elem@@BLK y (set@@
+|  |  TRAIN@@BLK f1)) (exists ((x TRAIN)) (and (elem@@TRAIN x (dom@@TRAIN@@BLK f1)) 
+|  |  apply@@TRAIN@@BLK f1 x) y))))))),(@@TRAIN@@BLK14,(forall ((x TRAIN) (y BLK) (f1
+|  |  pfun TRAIN BLK))) (=> true (= (and (elem@@TRAIN x (dom@@TRAIN@@BLK f1)) (= (
+|  |  @@TRAIN@@BLK f1 x) y)) (= (select f1 x) (Just y)))))),(@@TRAIN@@BLK15,(forall 
+|  |  f1 (pfun TRAIN BLK)) (x2 TRAIN) (x TRAIN) (y BLK)) (=> true (=> (not (= x x2)) 
+|  |  (= (apply@@TRAIN@@BLK (ovl@@TRAIN@@BLK f1 (mk-fun@@TRAIN@@BLK x y)) x2) (apply
+|  |  TRAIN@@BLK f1 x2))))))], dummies = fromList []},Theory {extends = [], types = 
+|  |  fromList [("\\set",DefSort "\\set" "set" ["a"] ARRAY [_a,BOOL])], funs = 
+|  |  [("elem@@BLK",elem@@BLK[]: BLK x (set BLK) -> Bool),("empty-set@@BLK",empty-set
+|  |  BLK[]:  -> (set BLK)),("intersect@@BLK",intersect@@BLK[]: (set BLK) x (set BLK)
+|  |  -> (set BLK)),("mk-set@@BLK",mk-set@@BLK[]: BLK -> (set BLK)),("set-diff@@BLK",
+|  |  set-diff@@BLK[]: (set BLK) x (set BLK) -> (set BLK)),("union@@BLK",bunion@@BLK[
+|  |  BLK]: (set BLK) x (set BLK) -> (set BLK))], consts = fromList [], fact = 
+|  |  [(@@BLK0,(forall ((x BLK) (y BLK)) (=> true (= (elem@@BLK x (mk-set@@BLK y)) (=
+|  |  x y))))),(@@BLK1,(forall ((x BLK) (s1 (set BLK)) (s2 (set BLK))) (=> true (= (
+|  |  elem@@BLK x (set-diff@@BLK s1 s2)) (and (elem@@BLK x s1) (not (elem@@BLK x s2
+|  |  ))))))),(@@BLK2,(forall ((x BLK) (s1 (set BLK)) (s2 (set BLK))) (=> true (= (
+|  |  BLK x (intersect@@BLK s1 s2)) (and (elem@@BLK x s1) (elem@@BLK x s2)))))),(@@
+|  |  ,(forall ((x BLK) (s1 (set BLK)) (s2 (set BLK))) (=> true (= (elem@@BLK x (
+|  |  @@BLK s1 s2)) (or (elem@@BLK x s1) (elem@@BLK x s2)))))),(@@BLK4,(forall ((x 
+|  |  )) (=> true (not (elem@@BLK x empty-set@@BLK))))),(@@BLK5,(forall ((x BLK) (s1 
+|  |  set BLK))) (=> true (= (elem@@BLK x s1) (select s1 x)))))], dummies = fromList 
+|  |  []},Theory {extends = [], types = fromList [("\\set",DefSort "\\set" "set" ["a
+|  |  ARRAY [_a,BOOL])], funs = fromList [("elem@@LOC",elem@@LOC[]: LOC x (set LOC) 
+|  |   Bool),("empty-set@@LOC",empty-set@@LOC[]:  -> (set LOC)),("intersect@@LOC",
+|  |  intersect@@LOC[]: (set LOC) x (set LOC) -> (set LOC)),("mk-set@@LOC",mk-set@@
+|  |  LOC -> (set LOC)),("set-diff@@LOC",set-diff@@LOC[]: (set LOC) x (set LOC) -> (
+|  |  set LOC)),("union@@LOC",bunion@@LOC[LOC]: (set LOC) x (set LOC) -> (set LOC))],
+|  |  consts = fromList [], fact = fromList [(@@LOC0,(forall ((x LOC) (y LOC)) (=> 
+|  |  (= (elem@@LOC x (mk-set@@LOC y)) (= x y))))),(@@LOC1,(forall ((x LOC) (s1 (set 
+|  |  LOC)) (s2 (set LOC))) (=> true (= (elem@@LOC x (set-diff@@LOC s1 s2)) (and (
+|  |  @@LOC x s1) (not (elem@@LOC x s2))))))),(@@LOC2,(forall ((x LOC) (s1 (set LOC))
+|  |  s2 (set LOC))) (=> true (= (elem@@LOC x (intersect@@LOC s1 s2)) (and (elem@@LOC
+|  |  x s1) (elem@@LOC x s2)))))),(@@LOC3,(forall ((x LOC) (s1 (set LOC)) (s2 (set 
+|  |  ))) (=> true (= (elem@@LOC x (bunion@@LOC s1 s2)) (or (elem@@LOC x s1) (elem@@
+|  |  LOC x s2)))))),(@@LOC4,(forall ((x LOC)) (=> true (not (elem@@LOC x empty-set@@
+|  |  ))))),(@@LOC5,(forall ((x LOC) (s1 (set LOC))) (=> true (= (elem@@LOC x s1) (
+|  |  select s1 x)))))], dummies = fromList []},Theory {extends = [], types = 
+|  |  [("\\set",DefSort "\\set" "set" ["a"] ARRAY [_a,BOOL])], funs = fromList [("
+|  |  TRAIN",elem@@TRAIN[]: TRAIN x (set TRAIN) -> Bool),("empty-set@@TRAIN",empty-
+|  |  @@TRAIN[]:  -> (set TRAIN)),("intersect@@TRAIN",intersect@@TRAIN[]: (set TRAIN)
+|  |  x (set TRAIN) -> (set TRAIN)),("mk-set@@TRAIN",mk-set@@TRAIN[]: TRAIN -> (set 
+|  |  TRAIN)),("set-diff@@TRAIN",set-diff@@TRAIN[]: (set TRAIN) x (set TRAIN) -> (set
+|  |  TRAIN)),("union@@TRAIN",bunion@@TRAIN[TRAIN]: (set TRAIN) x (set TRAIN) -> (set
+|  |  TRAIN))], consts = fromList [], fact = fromList [(@@TRAIN0,(forall ((x TRAIN) (
+|  |  TRAIN)) (=> true (= (elem@@TRAIN x (mk-set@@TRAIN y)) (= x y))))),(@@TRAIN1,(
+|  |  forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> true (= (elem@@TRAIN x
+|  |  -diff@@TRAIN s1 s2)) (and (elem@@TRAIN x s1) (not (elem@@TRAIN x s2))))))),(@@
+|  |  TRAIN2,(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> true (= (elem
+|  |  TRAIN x (intersect@@TRAIN s1 s2)) (and (elem@@TRAIN x s1) (elem@@TRAIN x s2
+|  |  )))))),(@@TRAIN3,(forall ((x TRAIN) (s1 (set TRAIN)) (s2 (set TRAIN))) (=> true
+|  |  elem@@TRAIN x (bunion@@TRAIN s1 s2)) (or (elem@@TRAIN x s1) (elem@@TRAIN x s2
+|  |  )))))),(@@TRAIN4,(forall ((x TRAIN)) (=> true (not (elem@@TRAIN x empty-set@@
+|  |  ))))),(@@TRAIN5,(forall ((x TRAIN) (s1 (set TRAIN))) (=> true (= (elem@@TRAIN x
+|  |  (select s1 x)))))], dummies = fromList []},Theory {extends = [], types = 
+|  |  fromList [("\\Bool",BoolSort),("\\Int",IntSort),("\\Real",RealSort),("\\pfun",
+|  |  "\\pfun" "pfun" ["a","b"] ARRAY [_a,Maybe [_b]]),("\\set",DefSort "\\set" "set"
+|  |  ["a"] ARRAY [_a,BOOL])], funs = fromList [], consts = fromList [], fact = 
+|  |  fromList [], dummies = fromList []}], types = fromList [("\\BLK",Sort "\\BLK" "
+|  |  ),("\\LOC",Sort "\\LOC" "LOC" 0),("\\TRAIN",Sort "\\TRAIN" "TRAIN"|___| funs = 
+|  |  fromList [], consts = fromList [("PLF",PLF: (set BLK)),("\\BLK",BLK: (set BLK
+|  |  )),("\\LOC",LOC: (set LOC)),("\\TRAIN",TRAIN: (set TRAIN)),("ent",ent: BLK),("
+|  |  : BLK)], fact = fromList [(\BLK-def,(forall ((x@@ BLK)) (=> true (elem@@BLK x@@
+|  |  BLK)))),(\LOC-def,(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))),(\TRAIN-
+|  |  def,(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))),(asm2,(and (not 
+|  |  ent ext)) (not (elem@@BLK ent PLF)) (not (elem@@BLK ext PLF)))),(asm3,(forall 
+|  |   BLK)) (=> true (= (not (= p ext)) (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) 
+|  |  PLF)))))),(asm4,(forall ((p BLK)) (=> true (= (not (= p ent)) (elem@@BLK p (
+|  |  bunion@@BLK (mk-set@@BLK ext) PLF)))))),(asm5,(forall ((p BLK)) (=> true (= (or
+|  |  ent) (= p ext)) (not (elem@@BLK p PLF)))))),(axm0,(= BLK (bunion@@BLK (bunion@@
+|  |  BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))], dummies = fromList [("p",p: 
+|  |  ),("q",q: BLK),("t",t: TRAIN),("t_0",t_0: TRAIN),("t_1",t_1: TRAIN),("t_2",t_2:
+|  |  TRAIN),("t_3",t_3: TRAIN)]}, variables = fromList [("in",in: (set TRAIN)),("loc
+|  |  ",loc: (pfun TRAIN BLK))], inits = fromList [(in0,(= in empty-set@@TRAIN)),(in1
+|  |  ,(= loc empty-fun@@TRAIN@@BLK))], events = fromList [(enter,Event {indices = 
+|  |  fromList [("t",t: TRAIN)], c_sched = Nothing, f_sched = Nothing, params = 
+|  |  [], guard = fromList [(grd1,(not (elem@@TRAIN t in)))], action = fromList [(a1
+|  |  in@prime (bunion@@TRAIN in (mk-set@@TRAIN t)))),(a2,(= loc@prime (ovl@@TRAIN@@
+|  |  BLK loc (mk-fun@@TRAIN@@BLK t ent))))]}),(leave,Event {indices = fromList [("t
+|  |   TRAIN)], c_sched = Just (fromList [(c0,(elem@@TRAIN t in))]), f_sched = 
+|  |  , params = fromList [], guard = fromList [(grd0,(and (= (apply@@TRAIN@@BLK loc 
+|  |  ) ext) (elem@@TRAIN t in)))], action = fromList [(a0,(= in@prime (set-diff@@
+|  |  TRAIN in (mk-set@@TRAIN t)))),(a3,(= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@
+|  |  t) loc)))]})], inh_props = transient = fromList [], constraint = fromList [], 
+|  |  inv = fromList [], inv_thm = fromList [], proofs = [], progress = fromList [], 
+|  |  safety = fromList [], deduction steps = fromList [], props = transient = 
+|  |  [(tr0,Transient (fromList [("t",t: TRAIN)]) (elem@@TRAIN t in) leave)], 
+|  |  constraint = fromList [(co0,Co [t: TRAIN] (=> (and (not (elem@@TRAIN t in)) (
+|  |  t in@prime)) (= (apply@@TRAIN@@BLK loc@prime t) ent))),(co1,Co [t: TRAIN] (=> (
+|  |  and (elem@@TRAIN t in) (= (apply@@TRAIN@@BLK loc t) ent) (not (elem@@BLK (apply
+|  |  TRAIN@@BLK loc t) PLF))) (and (elem@@TRAIN t in@prime) (or (elem@@BLK (apply@@
+|  |  TRAIN@@BLK loc@prime t) PLF) (= (apply@@TRAIN@@BLK loc@prime t) ent)))))], inv 
+|  |  fromList [(inv1,(forall ((t TRAIN)) (=> (elem@@TRAIN t in) (elem@@BLK (apply@@
+|  |  TRAIN@@BLK loc t) BLK)))),(inv2,(= (dom@@TRAIN@@BLK loc) in))], inv_thm = 
+|  |  [], proofs = [train0/INIT/INV/inv2,train0/enter/CO/co0,train0/enter/CO/co1,
+|  |  train0/enter/INV/inv2,train0/leave/CO/co0,train0/leave/CO/co1,train0/leave/INV/
+|  |   progress = fromList [], safety = fromList [], deduction steps = fromList []}]
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > _.0)],
+|  |    < _.0),("\\pfun",DefSort_."\\pfun"_."pfun"_.["a","b"]_.ARRAY_.[_a,Maybe_.[_b
+|  |    -     --
+|  |    < ]]),("\\set",DefSort_."\\set"_."set"_.["a"]_.ARRAY_.[_a,BOOL])],
+|  |  ]
+|  |  +- test 1, verification
+|  |  +- test 2, proof obligation, INIT/fis
+|  |  +- test 3, proof obligation, leave/fis
+|  |  +- test 4, proof obligation, leave/sch
+|  |  +- test 5, proof obligation, leave/en/tr0
+|  |  +- test 7, undeclared symbol
+|  |  +- test 8, undeclared event (wrt transient)
+|  |  +- test 9, undeclared event (wrt c sched)
+|  |  +- test 10, undeclared event (wrt indices)
+|  |  +- test 11, undeclared event (wrt assignment)
+|  |  +- test 12, proof obligation leave/INV/inv2
+|  |  +- test 13, verification, name clash between dummy and index
+|  |  +- test 14, verification, non-exhaustive case analysis
+|  |  +- test 15, verification, incorrect new assumption
+|  |  +- test 16, verification, proof by parts
+|  |  +- test 17, ill-defined types
+|  |  +- test 18, assertions have type bool
+|  |  +- [ Success: 17 / 18 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
+|  +- lambda expressions in the cube example
+|  |  +- test 0, verification, lambda vs empty-fun
+|  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  +- test 2, verification, lambda vs apply
+|  |  +- test 3, verification, set comprehension, failed proof
+|  |  +- test 4, adding a progress property
+|  |  +- test 5, unless properties
+|  |  +- test 6, verify progress refinement
+|  |  +- test 7, verify refinement rules
+|  |  +- test 8, verify refinement rules
+|  |  +- test 9, verify disjunction rule
+|  |  +- test 10, error: cyclic proof
+|  |  +- [ Success: 11 / 11 ]
+|  +- the parser is exception free
+|  +- [ Success: 5 / 6 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
++- Unit-B
+|  +- 'x eventually increases' verifies
+|  +- train, model 0, verification
+|  +- train, m0 transient / falsification PO
+|  +- genericity
+|  |  +- unification, t0
+|  |  +- unification, t1
+|  |  +- unification, t2
+|  |  +- unification, t3
+|  |  +- unification, t4
+|  |  +- unification, t5
+|  |  +- unification, t6
+|  |  +- type instantiation
+|  |  +- type inference 1
+|  |  +- type inference 3
+|  |  +- type inference 4
+|  |  +- type inference 5
+|  |  +- instantiation of unified types is unique
++++ OK, passed 100 tests.
+|  |  +- instantiation of unified types is unique (counter examples)
+|  |  +- type mapping are acyclic
++++ OK, passed 100 tests.
+|  |  +- [ Success: 15 / 15 ]
+|  +- [ Success: 4 / 4 ]
++- latex parser
+|  +- sample.tex
+|  +- sorted seq err.tex
+|  +- reconstitute sample.tex
+|  +- reconstitute integers.tex
+|  +- reconstitute sorted seq.tex
+|  +- [ Success: 5 / 5 ]
++- Z3 test
+|  +- sample_quant
+|  +- sample_quant2
+|  +- sample_quant3
+|  +- sample proof
+|  +- check sample calc
+|  +- canonical lambdas
+|  +- canonical lambdas with quantifier
+|  +- [ Success: 7 / 7 ]
++- Formatting utilities
+|  +- test 0
+|  +- test 1
+|  +- [ Success: 2 / 2 ]
++- [ Success: 4 / 5 ]
+
+***************
+*** FAILURE ***
+***************
+Lines of Haskell code:
+    9234 total
+    1263 Document/Tests/trainstation.hs
+     631 Document/Tests/lambdas.hs
+     553 Document/machine.hs
+     507 UnitB/po.hs
+     483 Document/expression.hs
