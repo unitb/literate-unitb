@@ -51,43 +51,9 @@
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
 |  |  +- test 1, valid references to variables and event declared in ancester
-|  |  |___|
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > Just_.[("undeclared_.variable:_.pc",142,24),("undeclared_.variable:_.pc",144,11
-|  |    < Nothing
-|  |    - -------
-|  |    > ),("event_.'step'_.is_.undeclared",175,15)]
-|  |  ]
-|  |  +- [ Success: 1 / 2 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- [ Success: 2 / 2 ]
 |  +- the parser is exception free
-|  +- [ Success: 6 / 7 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  +- [ Success: 7 / 7 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -132,15 +98,15 @@ Comparison:[
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 4 / 5 ]
++- [ Success: 5 / 5 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-    9334 total
+    9480 total
     1263 Document/Tests/trainstation.hs
      631 Document/Tests/lambdas.hs
-     553 Document/machine.hs
+     567 Document/machine.hs
      507 UnitB/po.hs
      483 Document/expression.hs

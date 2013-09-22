@@ -1,10 +1,10 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts, TupleSections #-}
 module Document.Machine where
 
     -- Modules
 import Document.Expression
 import Document.Visitor
-import Document.Proof
+import Document.Proof -- hiding ( context )
 import Document.Refinement hiding ( parse_rule )
 
 import Latex.Parser
@@ -19,18 +19,20 @@ import UnitB.Genericity
 import Z3.Z3 
 
     -- Libraries
-import Control.Applicative hiding ( empty )
-import Control.Monad hiding ( guard )
+import           Control.Applicative hiding ( empty )
+import           Control.Monad hiding ( guard )
 import qualified Control.Monad.Reader.Class as R
-import Control.Monad.Trans
-import Control.Monad.Trans.RWS as RWS
-import Control.Monad.Trans.Either
+import           Control.Monad.Trans
+import           Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Trans.Either
 
-import Data.Char
-import Data.Functor.Identity
-import Data.Graph
-import Data.Map  as M hiding ( map, foldl, (\\) )
-import Data.List as L hiding ( union, insert, inits )
+import           Data.Char
+import           Data.Function
+import           Data.Functor.Identity
+import           Data.Graph
+import           Data.Map  as M hiding ( map, foldl, (\\) )
+import           Data.List as L hiding ( union, insert, inits )
+import qualified Data.Map as M
 import qualified Data.Set as S
 
 import System.IO
@@ -62,7 +64,7 @@ inject s0 m = RWST f
             (x,s1,w) <- runRWST m r s0 
             return (x,s,w)
         
-cycles xs = stronglyConnComp $ map f $ groupBy eq $ sort xs
+cycles xs = stronglyConnComp $ map f $ groupBy ((==) `on` fst) $ sort xs
     where
         eq (x,_) (y,_) = x == y
         f xs = (fst $ head xs, fst $ head xs, map snd xs)
@@ -93,52 +95,64 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
+check_acyclic :: (Monad m) => String -> [(Label,Label)] -> EitherT [Error] (RWST b [Error] d m) ()
+check_acyclic x es = do
+        let cs = cycles es
+        toEither $ mapM_ (cycl_err_msg x) cs
+    where
+        cycle_msg x ys = format msg (x :: String) $ intercalate "," (map show ys)
+            where
+                msg = "A cycle exists in the {0}: {1}"
+        cycl_err_msg _ (AcyclicSCC v) = return ()
+        cycl_err_msg x (CyclicSCC vs) = tell [(cycle_msg x vs,0,0)]
+
+trickle_down
+        :: Monad m
+        => Map Label Label 
+        -> Map String a 
+        -> (a -> a -> Either [String] a) 
+        -> EitherT [Error] m (Map String a)
+trickle_down s ms f = do -- error "not implemented"
+            let rs = reverse $ map (\(AcyclicSCC v) -> v) $ cycles $ toList s
+            foldM (\ms n -> 
+                    case M.lookup n s of
+                        Just anc  -> do
+                            m <- hoistEither $ either 
+                                (Left . map (\x -> (x,0,0))) Right 
+                                $ f (ms ! show n) (ms ! show anc)
+                            return $ insert (show n) m ms
+                        Nothing -> return ms
+                    ) ms rs
+
 all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
 all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             ms <- foldM gather empty xs 
             ms <- toEither $ foldM (f type_decl) ms xs
+            refs  <- lift $ RWS.gets ref_struct
+            check_acyclic "refinement structure" $ toList refs
+
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
+            ms <- trickle_down refs ms merge_struct
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
+            ms <- trickle_down refs ms merge_decl
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
+            ms <- trickle_down refs ms merge_exprs
                 
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
             ms <- toEither $ foldM (f collect_proofs) ms xs
             s  <- lift $ RWS.gets proof_struct
-            let cs = cycles s
-            toEither $ mapM cycl_err_msg cs
-            s  <- lift $ RWS.gets ref_struct
-            let rs = cycles $ toList s
-            rs <- toEither $ forM (reverse rs) $ \x ->
-                case x of
-                    AcyclicSCC v -> return [v]
-                    CyclicSCC vs -> do
-                        tell [(cycle_msg "refinement structure" vs,0,0)]
-                        return []
---            ms <- return $ M.mapKeys label ms
-            ms <- foldM (\ms n -> 
-                    case M.lookup n s of
-                        Just anc  -> do
-                            m <- hoistEither $ either 
-                                (Left . map (\x -> (x,0,0))) Right 
-                                $ merge_machine (ms ! show n) (ms ! show anc)
-                            return $ insert (show n) m ms
-                        Nothing -> return ms
-                    ) ms $ concat rs
+            check_acyclic "proof of liveness" s
+            ms <- trickle_down refs ms merge_proofs
             return ms) () empty_arc }
         in x
     where
-        cycle_msg x ys = format msg x $ intercalate "," (map show ys)
-            where
-                msg = "A cycle exists in the {0}: {1}"
-        cycl_err_msg (AcyclicSCC v) = return ()
-        cycl_err_msg (CyclicSCC vs) = tell [(cycle_msg "proof of liveness" vs,0,0)]
         gather ms (Env n _ c li)     
                 | n == "machine"    = do
                     (name,cont) <- with_line_info li $ get_1_lbl c
@@ -199,7 +213,7 @@ type_decl = visit_doc []
                ,  Cmd1Args $ \(mch,()) m -> do
                         anc   <- lift $ gets ref_struct
                         (i,j) <- lift $ ask
-                        when (_name m `member` anc) $ left [(format "Machines can only refine one machine",i,j)]
+                        when (_name m `member` anc) $ left [(format "Machines can only refine one other machine",i,j)]
                         lift $ modify $ \x -> x { ref_struct = insert (_name m) (label mch) $ ref_struct x }
                         return m
                )

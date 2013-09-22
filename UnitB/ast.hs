@@ -20,9 +20,13 @@ module UnitB.AST
     , Direction (..)
     , RefRule (..)
     , primed, make_unique
-    , merge_machine, all_types
+    , merge_struct
+    , merge_decl
+    , merge_exprs
+    , merge_proofs
+    , all_types
     , basic_theory
---    , ps_union
+    , disjoint_union
     ) 
 where
 
@@ -35,12 +39,15 @@ import UnitB.Calculation
 import Z3.Z3 hiding (merge)
 
     -- Libraries
-import Control.Monad
-import Control.Monad.Writer
+import Control.Applicative ( (<|>) )
+import Control.Monad hiding ( guard )
+import Control.Monad.Writer hiding ( guard )
 
+import qualified Data.Foldable as F
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
+import           Data.Maybe
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -52,7 +59,7 @@ basic_theory = Theory []
 all_types th = unions (types th : map all_types (extends th)) 
 
 empty_theory :: Theory
-empty_theory = Theory [] --[set_theory train_type] 
+empty_theory = Theory [] 
     empty empty empty empty empty
 
 data Event = Event {
@@ -81,9 +88,6 @@ class Show a => RefRule a where
     refinement_po :: a -> Machine -> Map Label ProofObligation
     rule_name     :: a -> Label
     
---    apply         :: a -> Machine -> Machine
---    ref_condition :: a -> Machine -> Map Label ProofObligation
-
 empty_machine :: String -> Machine
 empty_machine n = Mch (Lbl n) 
         empty_theory { extends = [basic_theory] }
@@ -127,35 +131,154 @@ disjoint_union f x y = do
     where
         zs = S.toList (keysSet x `S.intersection` keysSet y)
 
-merge_event _ _ = Left [[]]
+merge_struct :: Machine -> Machine -> Either [String] Machine
+merge_struct m0 m1 = toEither $ do
+        th   <- fromEither empty_theory $ merge_th_types
+                    (theory m0)
+                    (theory m1) 
+        evts <- fromEither empty $ merge 
+                    (skip m1)
+                    merge_evt_struct 
+                    (events m0)
+                    (events m1)
+        return m0 
+            { theory = th
+            , events = evts
+            }
 
-merge_machine :: Machine -> Machine -> Either [String] Machine
-merge_machine m0 m1 = toEither $ do
-        th   <- fromEither empty_theory $ merge_theory
+merge_decl :: Machine -> Machine -> Either [String] Machine
+merge_decl m0 m1 = toEither $ do
+        th   <- fromEither empty_theory $ merge_th_decl
                     (theory m0)
                     (theory m1) 
         vars <- fromEither empty $ disjoint_union
                     (\x -> ["Name clash with variable '" ++ x ++ "'"])
                     (variables m0)
                     (variables m1)
+        evts <- fromEither empty $ merge 
+                    (skip m1)
+                    merge_evt_decl
+                    (events m0)
+                    (events m1)
+        return m0
+                { theory = th
+                , variables = vars
+                , events = evts
+                }
+
+merge_exprs :: Machine -> Machine -> Either [String] Machine
+merge_exprs m0 m1 = toEither $ do
+        th   <- fromEither empty_theory $ merge_th_exprs
+                    (theory m0)
+                    (theory m1) 
         init <- fromEither empty $ disjoint_union 
                     (\x -> ["Name clash with initialization predicate '" ++ show x ++ "'"])
                     (inits m0)
                     (inits m1)
         evts <- fromEither empty $ merge 
                     (skip m1)
-                    merge_event 
+                    merge_evt_exprs
                     (events m0)
                     (events m1)
         inh   <- fromEither empty_property_set 
-                $ foldM ps_union empty_property_set
+                $ foldM ps_union_expr empty_property_set
                     [ inh_props m0
                     , inh_props m1
                     , props m1 ]
-        return $ Mch 
-            (_name m0) 
-            th vars init evts inh (props m0)    
+        return m0
+            { theory = th
+            , inits = init
+            , events = evts
+            , inh_props = inh
+            }
 
+merge_proofs :: Machine -> Machine -> Either [String] Machine
+merge_proofs m0 m1 = toEither $ do
+        inh   <- fromEither empty_property_set 
+                $ foldM ps_union_proofs empty_property_set
+                    [ inh_props m0
+                    , inh_props m1
+                    , props m1 ]
+        return m0
+            { inh_props = inh
+            }
+
+merge_th_types :: Theory -> Theory -> Either [String] Theory
+merge_th_types t0 t1 = toEither $ do
+        let es = extends t0 ++ extends t1
+        types <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with type '" ++ show x ++ "'"])
+                (types t0)
+                (types t1)
+        return $ t0
+            { extends = es
+            , types = types
+            }
+merge_th_decl :: Theory -> Theory -> Either [String] Theory
+merge_th_decl t0 t1 = toEither $ do
+        funs <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with function '" ++ show x ++ "'"])
+                (funs t0)
+                (funs t1)
+        consts <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with constant '" ++ show x ++ "'"])
+                (consts t0)
+                (consts t1)
+        dummies <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with dummy '" ++ show x ++ "'"])
+                (dummies t0)
+                (dummies t1)
+        return $ t0
+            { funs = funs
+            , dummies = dummies
+            , consts = consts
+            }
+merge_th_struct :: Theory -> Theory -> Either [String] Theory
+merge_th_struct t0 t1 = toEither $ do
+        return $ t0
+merge_th_exprs :: Theory -> Theory -> Either [String] Theory
+merge_th_exprs t0 t1 = toEither $ do
+        fact <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with fact '" ++ show x ++ "'"])
+                (fact t0)
+                (fact t1)
+        return $ t0
+            { fact = fact }
+
+merge_evt_struct :: Event -> Event -> Either [String] Event
+merge_evt_struct e0 e1 = error "A not implemented"
+merge_evt_decl :: Event -> Event -> Either [String] Event
+merge_evt_decl e0 e1 = toEither $ do
+        ind <- fromEither empty $ disjoint_union
+                (\x -> ["multiple indices with the same name: " ++ x ++ ""])
+                (indices e0)
+                (indices e1)
+        return e0 
+            { indices = ind }
+merge_evt_exprs :: Event -> Event -> Either [String] Event
+merge_evt_exprs e0 e1 = toEither $ do
+        coarse_sch <- fromEither Nothing $ case (c_sched e0, c_sched e1) of
+            (Nothing, Nothing) -> return Nothing
+            _                 -> do
+                cs <- foldM (\x y -> do
+                        disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
+                    ) empty (maybeToList (c_sched e0) ++ maybeToList (c_sched e1))
+                return $ Just cs
+        let fine_sch   = f_sched e0 <|> f_sched e1
+        grd <- fromEither empty $ disjoint_union
+                (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
+                (guard e0)
+                (guard e1)
+        act <- fromEither empty $ disjoint_union
+                (\x -> ["multiple actions with the same label: " ++ show x ++ ""])
+                (action e0)
+                (action e1)
+        return e0 
+            { c_sched = coarse_sch
+            , f_sched = fine_sch
+            , guard   = grd
+            , action = act }
+ 
 merge_theory :: Theory -> Theory -> Either [String] Theory
 merge_theory t0 t1 = toEither $ do
         let es = extends t0 ++ extends t1
@@ -289,7 +412,8 @@ empty_property_set = PS
         empty empty empty 
         empty empty empty
 
-ps_union (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+ps_union_expr :: PropertySet -> PropertySet -> Either [String] PropertySet
+ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
     toEither $ do
         a2 <- fromEither empty $ disjoint_union (f "transient predicate") a0 a1
         b2 <- fromEither empty $ disjoint_union (f "co predicate") b0 b1
@@ -299,11 +423,19 @@ ps_union (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) =
         let e2 = e0
         f2 <- fromEither empty $ disjoint_union (f "progress property") f0 f1
         g2 <- fromEither empty $ disjoint_union (f "safety property") g0 g1
-        h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
         i2 <- fromEither empty $ disjoint_union (f "schedule") i0 i1
-        return $ PS a2 b2 c2 d2 e2 f2 i2 g2 h2
+        return $ PS a2 b2 c2 d2 e2 f2 i2 g2 h0
     where
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
+
+ps_union_proofs :: PropertySet -> PropertySet -> Either [String] PropertySet
+ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+    toEither $ do
+        h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
+        return $ PS a0 b0 c0 d0 e0 f0 i0 g0 h2
+    where
+        f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
+
 
 composite_label xs = Lbl $ intercalate "/" $ map str xs
     where
