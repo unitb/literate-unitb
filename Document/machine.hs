@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts, TupleSections, ScopedTypeVariables #-}
 module Document.Machine where
 
     -- Modules
@@ -27,7 +27,6 @@ import           Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Trans.Either
 
 import           Data.Char
-import           Data.Function
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
@@ -172,7 +171,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
 type_decl :: [LatexDoc] -> Machine -> MSEither Error Architecture Machine
 type_decl = visit_doc []
             [  (  "\\newset"
-               ,  Cmd2Args $ \(name, tag) m -> do
+               ,  CmdBlock $ \(name, tag,()) m -> do
                     let th = theory m
                     let new_sort = Sort tag name 0
                     let new_type = USER_DEFINED new_sort []
@@ -201,7 +200,7 @@ type_decl = visit_doc []
                     return m { theory = hd } 
                )
             ,  (  "\\newevent"
-               ,  Cmd1Args $ \(evt,()) m -> do 
+               ,  CmdBlock $ \(evt,()) m -> do 
                         let lbl = label evt
                         toEither $ error_list
                             [ ( lbl `member` events m
@@ -210,7 +209,7 @@ type_decl = visit_doc []
                         return m { events = insert lbl (empty_event) $ events m } 
                )
             ,  (  "\\refines"
-               ,  Cmd1Args $ \(mch,()) m -> do
+               ,  CmdBlock $ \(mch,()) m -> do
                         anc   <- lift $ gets ref_struct
                         (i,j) <- lift $ ask
                         when (_name m `member` anc) $ left [(format "Machines can only refine one other machine",i,j)]
@@ -225,7 +224,7 @@ imports :: Monad m
         -> MSEitherT Error Architecture m Machine 
 imports = visit_doc 
             [   ( "use:set"
-                , Env1Args $ \(cset,()) _ m -> do
+                , EnvBlock $ \(cset,()) _ m -> do
                     let th = theory m
                     toEither $ error_list
                         [ ( not (cset `member` all_types th)
@@ -235,7 +234,7 @@ imports = visit_doc
                                 extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
                 )
             ,   ( "use:fun"
-                , Env2Args $ \(dset, rset) _ m -> do
+                , EnvBlock $ \(dset, rset,()) _ m -> do
                     let th = theory m
                     toEither $ error_list 
                         [   ( not (dset `member` all_types th)
@@ -259,7 +258,7 @@ declarations :: Monad m
              -> MSEitherT Error Architecture m Machine
 declarations = visit_doc 
         [   (   "variable"
-            ,   Env0Args $ \() xs m -> do
+            ,   EnvBlock $ \() xs m -> do
                         vs <- get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list 
@@ -269,7 +268,7 @@ declarations = visit_doc
                         return m { variables = fromList vs `union` variables m} 
             )
         ,   (   "indices"
-            ,   Env1Args $ \(evt,()) xs m -> do
+            ,   EnvBlock $ \(evt,()) xs m -> do
                         vs <- get_variables (context m) xs
                         toEither $ error_list
                             [ ( not (label evt `member` events m) 
@@ -287,7 +286,7 @@ declarations = visit_doc
                         return m { events = insert (label evt) new_event $ events m } 
             )
         ,   (   "constant"
-            ,   Env0Args $ \() xs m -> do
+            ,   EnvBlock $ \() xs m -> do
                         vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
@@ -295,7 +294,7 @@ declarations = visit_doc
                                     (consts $ theory m) } } 
             )
         ,   (   "dummy"
-            ,   Env0Args $ \() xs m -> do
+            ,   EnvBlock $ \() xs m -> do
                         vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
@@ -318,7 +317,7 @@ collect_expr = visit_doc
                 --  Events  --
                 --------------
         [] [(   "\\evassignment"
-            ,   Cmd2Args1Blocks $ \(ev, lbl, xs) m -> do
+            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -339,7 +338,7 @@ collect_expr = visit_doc
                                 events  = insert (label ev) new_event $ events m } 
             )
         ,   (   "\\evguard"
-            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
+            ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
                         toEither $ error_list
                             [   ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -358,7 +357,7 @@ collect_expr = visit_doc
                                 events  = insert (label evt) new_event $ events m } 
             )
         ,   (   "\\cschedule"
-            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
+            ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (label evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
@@ -367,7 +366,7 @@ collect_expr = visit_doc
                                     Just x  -> x
                                     Nothing -> empty
                         toEither $ error_list
-                            [ ( label evt `member` sc
+                            [ ( label lbl `member` sc
                                 , format "{0} is already used for another coarse schedule" lbl )
                             ]
                         let old_event = events m ! label evt
@@ -381,7 +380,7 @@ collect_expr = visit_doc
                                 events  = insert (label evt) new_event $ events m } 
             )
         ,   (   "\\fschedule"
-            ,   Cmd2Args1Blocks $ \(evt, lbl, xs) m -> do
+            ,   CmdBlock $ \(evt, lbl :: String, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (label evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
@@ -398,7 +397,7 @@ collect_expr = visit_doc
                 --  Theory Properties  --
                 -------------------------
         ,   (   "\\assumption"
-            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
+            ,   CmdBlock $ \(lbl,xs,()) m -> do
                         let th = theory m
                         toEither $ error_list
                             [ ( label lbl `member` fact th
@@ -412,7 +411,7 @@ collect_expr = visit_doc
                 --  Program properties  --
                 --------------------------
         ,   (   "\\initialization"
-            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
+            ,   CmdBlock $ \(lbl,xs,()) m -> do
                         initp         <- get_assert m xs
                         toEither $ error_list
                             [ ( label lbl `member` inits m
@@ -422,7 +421,7 @@ collect_expr = visit_doc
                                 inits = insert (label lbl) initp $ inits m } 
             )
         ,   (   "\\invariant"
-            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
+            ,   CmdBlock $ \(lbl,xs,()) m -> do
                         toEither $ error_list
                             [ ( label lbl `member` inv (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -433,7 +432,7 @@ collect_expr = visit_doc
                                 inv = insert (label lbl) invar $ inv $ props m } } 
             )
         ,   (   "\\transient"      
-            ,   Cmd2Args1Blocks $ \(ev, lbl, xs) m -> do
+            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (label ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -451,7 +450,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\constraint"
-            ,   Cmd1Args1Blocks $ \(lbl,xs) m -> do
+            ,   CmdBlock $ \(lbl,xs,()) m -> do
                         toEither $ error_list
                             [ ( label lbl `member` constraint (props m)
                               , format "{0} is already used for another invariant" lbl )
@@ -463,7 +462,7 @@ collect_expr = visit_doc
                                     $ constraint $ props m } } 
             )
         ,   (   "\\safety"
-            ,   Cmd1Args2Blocks $ \(lbl, pCt, qCt) m -> do
+            ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
                     let prop = safety $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert m pCt
@@ -483,7 +482,7 @@ collect_expr = visit_doc
                             (constraint $ props m) } } 
             )
         ,   (   "\\progress"
-            ,   Cmd1Args2Blocks $ \(lbl, pCt, qCt) m -> do
+            ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
                     let prop = progress $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert m pCt
@@ -533,7 +532,7 @@ collect_proofs :: Monad m
                -> MSEitherT Error Architecture m Machine
 collect_proofs = visit_doc
         [   (   "proof"
-            ,   Env1Args $ \(po,()) xs m -> do
+            ,   EnvBlock $ \(po,()) xs m -> do
                     let lbl = composite_label [ _name m, label po ]
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
@@ -546,7 +545,7 @@ collect_proofs = visit_doc
                                     proofs $ props m } } 
             )
         ] [ (   "\\refine"
-            ,   Cmd2Args2Blocks $ \(goal,rule,hyps,hint) m -> do
+            ,   CmdBlock $ \(goal,rule,hyps,hint,()) m -> do
                     let goal_lbl = label goal
                     let hyps_lbls = map label $ comma_sep (concatMap flatten hyps)
                     toEither $ error_list

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, BangPatterns #-}
+{-# LANGUAGE FlexibleContexts, BangPatterns, ScopedTypeVariables #-}
 module Document.Proof where
 
     -- Modules
@@ -92,32 +92,32 @@ find_assumptions :: Monad m
                  -> RWST (Int,Int) [Error] s m ProofStep
 find_assumptions m = visit_doc
         [   (   "calculation"
-            ,   Env0Args (\() xs proofs -> return proofs)
+            ,   EnvBlock (\() xs proofs -> return proofs)
             )
         ,   (   "free:var"
-            ,   Env2Args (\(from,to) xs proofs -> return proofs)
+            ,   EnvBlock (\(from :: String,to :: String,()) xs proofs -> return proofs)
             )
         ,   (   "by:cases"
-            ,   Env0Args (\() xs proofs -> return proofs)
+            ,   EnvBlock (\() xs proofs -> return proofs)
             )
         ,   (   "by:parts"
-            ,   Env0Args (\() xs proofs -> return proofs)
+            ,   EnvBlock (\() xs proofs -> return proofs)
             )
         ,   (   "subproof"
-            ,   Env1Args (\(lbl,()) xs proofs -> return proofs)
+            ,   EnvBlock (\(lbl :: String,()) xs proofs -> return proofs)
             )
         ] [ (   "\\assume"
-            ,   Cmd1Args1Blocks $ \(lbl,formula) proofs -> do
+            ,   CmdBlock $ \(lbl,formula,()) proofs -> do
                     expr <- get_assert m formula
                     add_assumption (label lbl) expr proofs
             )
         ,   (   "\\assert"
-            ,   Cmd1Args1Blocks $ \(lbl,formula) proofs -> do
+            ,   CmdBlock $ \(lbl,formula,()) proofs -> do
                     expr <- get_assert m formula
                     add_assert (label lbl) expr proofs
             )
         ,   (   "\\goal"
-            ,   Cmd0Args1Blocks $ \(formula,()) proofs -> do
+            ,   CmdBlock $ \(formula,()) proofs -> do
                     expr <- get_assert m formula
                     set_goal expr proofs
             )
@@ -131,7 +131,7 @@ find_proof_step :: Monad m
                 -> RWST (Int,Int) [Error] s m ProofStep
 find_proof_step hyps m = visit_doc
         [   (   "calculation"
-            ,   Env0Args $ \() xs proofs -> do
+            ,   EnvBlock $ \() xs proofs -> do
                     (i,j) <- lift $ ask
                     cc <- toEither $ parse_calc hyps m xs
                     case infer_goal cc of
@@ -140,30 +140,30 @@ find_proof_step hyps m = visit_doc
             )
                 -- TODO: make into a command
         ,   (   "free:var"
-            ,   Env2Args $ \(from,to) xs proofs -> do
+            ,   EnvBlock $ \(from,to,()) xs proofs -> do
                     (i,j) <- lift $ ask
                     p     <- collect_proof_step hyps m xs
                     set_proof (FreeGoal from to p (i,j)) proofs
             )
         ,   (   "by:cases"
-            ,   Env0Args (\() xs proofs -> do
+            ,   EnvBlock (\() xs proofs -> do
                     (i,j) <- lift $ ask
                     cases <- toEither $ find_cases hyps m xs []
                     set_proof (ByCases (reverse cases) (i,j)) proofs )
             )
         ,   (   "by:parts"
-            ,   Env0Args (\() xs proofs -> do
+            ,   EnvBlock (\() xs proofs -> do
                     (i,j) <- lift $ ask
                     cases <- toEither $ find_parts hyps m xs []
                     set_proof (ByParts (reverse cases) (i,j)) proofs )
             )
         ,   (   "subproof"
-            ,   Env1Args $ \(lbl,()) xs proofs -> do
+            ,   EnvBlock $ \(lbl,()) xs proofs -> do
                     p <- collect_proof_step hyps m xs
                     add_proof (label lbl) p proofs
             )
         ] [ (   "\\easy"
-            ,   Cmd0Args $ \() proofs -> do
+            ,   CmdBlock $ \() proofs -> do
                     (i,j) <- lift $ ask        
                     set_proof (Easy (i,j)) proofs
             )
@@ -177,7 +177,7 @@ find_cases :: Monad m
            -> RWST (Int,Int) [Error] s m [(Label,Expr,Proof)]
 find_cases hyps m = visit_doc 
         [   (   "case"
-            ,   Env1Args1Blocks $ \(lbl,formula) xs cases -> do
+            ,   EnvBlock $ \(lbl,formula,()) xs cases -> do
                     expr      <- get_assert m formula
                     p         <- collect_proof_step 
                             (insert (label lbl) expr hyps) 
@@ -194,7 +194,7 @@ find_parts :: Monad m
            -> RWST (Int,Int) [Error] s m [(Expr,Proof)]
 find_parts hyps m = visit_doc 
         [   (   "part:a"
-            ,   Env0Args1Blocks (\(formula,()) xs cases -> do
+            ,   EnvBlock (\(formula,()) xs cases -> do
                     expr      <- get_assert m formula
                     p         <- collect_proof_step hyps m xs
                     return ((expr, p):cases))

@@ -1,10 +1,24 @@
-{-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-}
-module Document.Visitor where
+{-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-} 
+{-# LANGUAGE ExistentialQuantification #-}
+module Document.Visitor 
+    ( module Document.TypeList 
+    , fromEither
+    , find_cmd_arg 
+    , visit_doc 
+    , toEither 
+    , EnvBlock (..) 
+    , CmdBlock (..) 
+    , error_list 
+    , MSEitherT 
+    , MSEither 
+    , with_line_info )
+where
 
     -- Modules
 import Latex.Parser
 
 import Document.Expression
+import Document.TypeList
 
     -- Libraries
 import 
@@ -21,33 +35,8 @@ import System.IO.Unsafe
 
 import Utilities.Syntactic
 
-drop_blank_text :: [LatexDoc] -> [LatexDoc]
-drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
-drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
-drop_blank_text xs = xs
-
-trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
-
-skip_blanks :: [LatexToken] -> [LatexToken]
-skip_blanks (Blank _ _ : xs) = xs
-skip_blanks xs = xs 
-
 trim_blanks :: [LatexToken] -> [LatexToken]
 trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
-
-cmd_params :: (Monad m, MonadReader (Int,Int) m)
-           => Int -> [LatexDoc] 
-           -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
-cmd_params 0 xs     = right ([], xs)
-cmd_params n xs     = do
-        (i,j) <- lift $ ask
-        case drop_blank_text xs of
-            Bracket _ _ xs (i,j) : ys -> do
-                (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
-                right (xs:ws, zs)
-            x                 -> left [("bad argument: " ++ show xs,i,j)]
-
-cmd_params_ n xs = fmap fst $ cmd_params n xs
 
 with_line_info :: (Int, Int) -> EitherT a (ReaderT (Int,Int) m) b -> EitherT a m b
 with_line_info li cmd = 
@@ -81,63 +70,14 @@ find_cmd_arg n cmds (x:xs) = do
                 (a,t,b,c) <- find_cmd_arg n cmds xs
                 return (x:a,t,b,c)
 
-get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
-          => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
-get_1_lbl xs = do 
-        ([x],z) <- cmd_params 1 xs
-        case trim_blank_text x of
-            ([Text [TextBlock x _]]) 
-                -> right (x,z)
-            ([Text [Command x _]]) 
-                -> right (x,z)
-            _   -> err_msg (line_info xs)
-    where
-        err_msg (i,j) = left [("expecting a label",i,j)]
-        
-get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
-          => [LatexDoc] 
-          -> EitherT [Error] m (String, String, [LatexDoc])
-get_2_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,xs)
-
-get_3_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,xs)
-
-get_4_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        (lbl3,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,lbl3,xs)
-
 type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
 type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
 
 data EnvBlock s a = 
-        Env0Args (() -> [LatexDoc] -> a -> Node s a)
-        | Env0Args1Blocks (([LatexDoc],()) -> [LatexDoc] -> a -> Node s a)
-        | Env1Args ((String, ()) -> [LatexDoc] -> a -> Node s a)
-        | Env1Args1Blocks ((String, [LatexDoc]) -> [LatexDoc] -> a -> Node s a)
-        | Env1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> [LatexDoc] -> a -> Node s a)
-        | Env2Args ((String, String) -> [LatexDoc] -> a -> Node s a)
+            forall t. TypeList t => EnvBlock (t -> [LatexDoc] -> a -> Node s a)
 
 data CmdBlock s a =
-        Cmd0Args (() -> a -> Node s a)
-        | Cmd0Args1Blocks (([LatexDoc], ()) -> a -> Node s a)
-        | Cmd0Args2Blocks (([LatexDoc], [LatexDoc]) -> a -> Node s a)
-        | Cmd1Args ((String,()) -> a -> Node s a)
-        | Cmd1Args1Blocks ((String, [LatexDoc]) -> a -> Node s a)
-        | Cmd1Args2Blocks ((String, [LatexDoc], [LatexDoc]) -> a -> Node s a)
-        | Cmd2Args ((String, String) -> a -> Node s a)
-        | Cmd2Args1Blocks ((String, String, [LatexDoc]) -> a -> Node s a)
-        | Cmd2Args2Blocks ((String, String, [LatexDoc], [LatexDoc]) -> a -> Node s a)
-        | Cmd3Args ((String, String, String) -> a -> Node s a)
-        | Cmd4Args ((String, String, String, String) -> a -> Node s a)
+            forall t. TypeList t => CmdBlock (t -> a -> Node s a)
 
 type MEither a = RWS () [a] ()
 
@@ -216,30 +156,11 @@ pushEither y m = do
 
 f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
   -> RWS (Param s a) [Error] s a
-f ((name,c):cs) x e@(Env s (i,j) xs _)
+f ((name,EnvBlock g):cs) x e@(Env s (i,j) xs _)
         | name == s = do
-                pushEither x 
-                     $ run (i,j)
-                 (case c of
-                    Env0Args g -> do
-                        g () xs x
-                    Env0Args1Blocks g -> do
-                        ([arg0],xs) <- cmd_params 1 xs 
-                        g (arg0,()) xs x
-                    Env1Args g -> do
-                        (arg,xs) <- get_1_lbl xs
-                        g (arg,()) xs x
-                    Env1Args1Blocks g -> do
-                        (arg0,xs)   <- get_1_lbl xs
-                        ([arg1],xs) <- cmd_params 1 xs
-                        g (arg0,arg1) xs x
-                    Env1Args2Blocks g -> do
-                        (arg0,xs)        <- get_1_lbl xs
-                        ([arg1,arg2],xs) <- cmd_params 2 xs
-                        g (arg0,arg1,arg2) xs x
-                    Env2Args g -> do
-                        (arg0,arg1,xs) <- get_2_lbl xs
-                        g (arg0,arg1) xs x)
+                pushEither x $ run (i,j) $ do
+                    (args,xs) <- get_tuple xs 
+                    g args xs x
         | otherwise = f cs x e
 f [] x e@(Env s (i,j) xs _)  = do
         blks <- asks blocks
@@ -265,66 +186,13 @@ g x [] = return x
 h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
   -> (Int,Int) -> RWS (Param s a) [Error] s a
 h ((name,c):cs) x cmd ts (i,j)
-    | name == cmd   = do
-            r <- case c of
-                Cmd0Args f -> do
-                    x <- pushEither x $ run (i,j) $ 
-                        f () x
-                    g x ts
-                Cmd1Args f -> do
+    | name == cmd   =
+            case c of 
+                CmdBlock f -> do
                     x <- pushEither x $ run (i,j) $ do
-                        (arg,ts) <- get_1_lbl ts
-                        f (arg,()) x
-                    g x ts
-                Cmd2Args f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,arg1,ts) <- get_2_lbl ts
-                        f (arg0,arg1) x
-                    g x ts
-                Cmd0Args1Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        ([arg0],ts) <- cmd_params 1 ts
-                        f (arg0,()) x
-                    g x ts
-                Cmd0Args2Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        ([arg0,arg1],ts) <- cmd_params 2 ts
-                        f (arg0,arg1) x
-                    g x ts
-                Cmd1Args1Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,ts) <- get_1_lbl ts
-                        ([arg1],ts) <- cmd_params 1 ts
-                        f (arg0,arg1) x
-                    g x ts
-                Cmd1Args2Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,ts) <- get_1_lbl ts
-                        ([arg1,arg2],ts) <- cmd_params 2 ts
-                        f (arg0,arg1,arg2) x 
-                    g x ts
-                Cmd2Args1Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,arg1,ts) <- get_2_lbl ts
-                        ([arg2],ts) <- cmd_params 1 ts
-                        f (arg0,arg1,arg2) x 
-                    g x ts
-                Cmd2Args2Blocks f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,arg1,ts) <- get_2_lbl ts
-                        ([arg2,arg3],ts) <- cmd_params 2 ts
-                        f (arg0,arg1,arg2,arg3) x 
-                    g x ts
-                Cmd3Args f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,arg1,arg2,ts) <- get_3_lbl ts
-                        f (arg0,arg1,arg2) x 
-                    g x ts
-                Cmd4Args f -> do
-                    x <- pushEither x $ run (i,j) $ do
-                        (arg0,arg1,arg2,arg3,ts) <- get_4_lbl ts
-                        f (arg0,arg1,arg2,arg3) x 
-                    g x ts
-            return r
+                        (args,_) <- get_tuple ts
+                        f args x 
+                    r <- g x ts
+                    return r
     | otherwise     = h cs x cmd ts (i,j)
 h [] x cmd ts (i,j) = g x ts 

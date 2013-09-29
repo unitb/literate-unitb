@@ -20,15 +20,16 @@ microseconds (Seconds x) = x * 1000000
 
 main = do
     forever $ do
-        b <- doesFileExist "test"
-        c <- if b
+        b0 <- doesFileExist "test"
+        b1 <- doesFileExist "last_result.txt"
+        c <- if b0 && b1
         then do
             t0 <- getModificationTime "test"
-            system "ghc test 2>&1 >> /dev/null"
-            t1 <- getModificationTime "test"
-            return (t0 /= t1)
+--            system "ghc test 2>&1 >> /dev/null"
+            t1 <- getModificationTime "last_result.txt"
+            return (t0 >= t1)
         else do
-            system "ghc test 2>&1 >> /dev/null"
+--            system "ghc test 2>&1 >> /dev/null"
             return True
         if c then do
             system "./run_tests 2>&1 >> /dev/null"
