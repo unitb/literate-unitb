@@ -24,12 +24,12 @@ main = do
         b1 <- doesFileExist "last_result.txt"
         c <- if b0 && b1
         then do
+            system "ghc test 2>&1 >> /dev/null"
             t0 <- getModificationTime "test"
---            system "ghc test 2>&1 >> /dev/null"
             t1 <- getModificationTime "last_result.txt"
             return (t0 >= t1)
         else do
---            system "ghc test 2>&1 >> /dev/null"
+            system "ghc test 2>&1 >> /dev/null"
             return True
         if c then do
             system "./run_tests 2>&1 >> /dev/null"
