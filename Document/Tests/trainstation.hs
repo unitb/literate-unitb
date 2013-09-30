@@ -15,7 +15,7 @@ import Tests.UnitTest
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.Theory
+import UnitB.Label
 import UnitB.SetTheory
 import UnitB.FunctionTheory
 import UnitB.Calculation

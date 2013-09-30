@@ -4,7 +4,7 @@ module UnitB.Test where
 import UnitB.AST
 import qualified UnitB.TestGenericity as Gen
 import UnitB.PO
-import UnitB.Theory
+import UnitB.Label
 import UnitB.FunctionTheory
 
 import Z3.Z3

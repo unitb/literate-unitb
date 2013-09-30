@@ -1,17 +1,20 @@
 {-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-} 
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances #-}
 module Document.Visitor 
     ( module Document.TypeList 
     , fromEither
     , find_cmd_arg 
     , visit_doc 
     , toEither 
+    , Str (..)
     , EnvBlock (..) 
     , CmdBlock (..) 
     , error_list 
     , MSEitherT 
     , MSEither 
-    , with_line_info )
+    , with_line_info
+    , drop_blank_text
+    , get_1_lbl )
 where
 
     -- Modules
@@ -20,23 +23,144 @@ import Latex.Parser
 import Document.Expression
 import Document.TypeList
 
-    -- Libraries
-import 
-    Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
-import qualified
-    Control.Monad.Trans.RWS as RWS
-import Control.Monad.Reader
-import Control.Monad.Trans.Either
+import UnitB.Label
 
+    -- Libraries
+import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
+import qualified Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Reader
+import           Control.Monad.Trans.Either
+import qualified Control.Monad.Trans.State as ST
+
+import Data.Char
 import Data.Monoid
+import Data.Set hiding (map)
 
 import System.IO
 import System.IO.Unsafe
 
 import Utilities.Syntactic
+import Utilities.Format 
+
+trim xs = reverse $ f $ reverse $ f xs
+    where
+        f = dropWhile isSpace
+
+comma_sep :: String -> [String]
+comma_sep [] = []
+comma_sep xs = trim ys : comma_sep (drop 1 zs)
+    where
+        (ys,zs) = break (== ',') xs
 
 trim_blanks :: [LatexToken] -> [LatexToken]
 trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
+
+instance Readable [LatexDoc] where
+    read_args = do
+        ts <- ST.get
+        ([arg],ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        return arg
+
+data Str = String { toString :: String }
+
+instance Readable Str where
+    read_args = do
+        ts <- ST.get
+        (arg,ts) <- lift $ get_1_lbl ts
+        ST.put ts
+        return $ String arg
+
+instance Readable Int where
+    read_args = do
+        ts <- ST.get
+        (arg,ts) <- lift $ get_1_lbl ts
+        ST.put ts
+        case reads arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                (i,j) <- lift ask
+                left [(format "invalid integer: '{0}'" arg,i,j)]
+
+instance Readable Label where
+    read_args = do
+        ts <- ST.get
+        (arg,ts) <- lift $ get_1_lbl ts
+        ST.put ts
+        return $ label arg
+
+instance Readable [Label] where
+    read_args = do
+        ts <- ST.get
+        ([arg],ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        return $ map label $ comma_sep (concatMap flatten arg)
+
+instance Readable (Set Label) where
+    read_args = do
+        ts <- ST.get
+        ([arg],ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        return $ fromList $ map label $ comma_sep (concatMap flatten arg)
+
+cmd_params :: (Monad m, MonadReader (Int,Int) m)
+           => Int -> [LatexDoc] 
+           -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
+cmd_params 0 xs     = right ([], xs)
+cmd_params n xs     = do
+        (i,j) <- lift $ ask
+        case drop_blank_text xs of
+            Bracket _ _ xs (i,j) : ys -> do
+                (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
+                right (xs:ws, zs)
+            x                 -> left [("bad argument: " ++ show xs,i,j)]
+
+cmd_params_ n xs = fmap fst $ cmd_params n xs
+
+get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
+          => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
+get_1_lbl xs = do 
+        ([x],z) <- cmd_params 1 xs
+        case trim_blank_text x of
+            ([Text [TextBlock x _]]) 
+                -> right (x,z)
+            ([Text [Command x _]]) 
+                -> right (x,z)
+            _   -> err_msg (line_info xs)
+    where
+        err_msg (i,j) = left [("expecting a label",i,j)]
+        
+get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
+          => [LatexDoc] 
+          -> EitherT [Error] m (String, String, [LatexDoc])
+get_2_lbl xs = do
+        (lbl0,xs) <- get_1_lbl xs
+        (lbl1,xs) <- get_1_lbl xs
+        return (lbl0,lbl1,xs)
+
+get_3_lbl xs = do
+        (lbl0,xs) <- get_1_lbl xs
+        (lbl1,xs) <- get_1_lbl xs
+        (lbl2,xs) <- get_1_lbl xs
+        return (lbl0,lbl1,lbl2,xs)
+
+get_4_lbl xs = do
+        (lbl0,xs) <- get_1_lbl xs
+        (lbl1,xs) <- get_1_lbl xs
+        (lbl2,xs) <- get_1_lbl xs
+        (lbl3,xs) <- get_1_lbl xs
+        return (lbl0,lbl1,lbl2,lbl3,xs)
+
+drop_blank_text :: [LatexDoc] -> [LatexDoc]
+drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
+drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
+drop_blank_text xs = xs
+
+trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
+
+skip_blanks :: [LatexToken] -> [LatexToken]
+skip_blanks (Blank _ _ : xs) = xs
+skip_blanks xs = xs 
 
 with_line_info :: (Int, Int) -> EitherT a (ReaderT (Int,Int) m) b -> EitherT a m b
 with_line_info li cmd = 

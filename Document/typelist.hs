@@ -21,30 +21,6 @@ class Readable a where
     read_args :: (Monad m, MonadReader (Int,Int) m)
               => StateT [LatexDoc] (EitherT [Error] m) a
 
-instance Readable [LatexDoc] where
-    read_args = do
-        ts <- get
-        ([arg],ts) <- lift $ cmd_params 1 ts
-        put ts
-        return arg
-
-instance Readable [Char] where
-    read_args = do
-        ts <- get
-        (arg,ts) <- lift $ get_1_lbl ts
-        put ts
-        return arg
-
---     this instance is added to allow
---     a visitor to require the presence of some
---     arguments without using them
---instance Readable () where
---    read_args = do
---        ts <- get
---        (_,ts) <- lift $ cmd_params 1 ts
---        put ts
---        return ()
-
 class TypeList a where
     get_tuple :: (Monad m, MonadReader (Int,Int) m)
               => [LatexDoc] -> EitherT [Error] m (a, [LatexDoc])
@@ -471,62 +447,3 @@ instance
                    , x8, x9, x10,x11,x12,x13,x14,x15
                    , x16,x17,x18,x19
                    ,())
-
-cmd_params :: (Monad m, MonadReader (Int,Int) m)
-           => Int -> [LatexDoc] 
-           -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
-cmd_params 0 xs     = right ([], xs)
-cmd_params n xs     = do
-        (i,j) <- lift $ ask
-        case drop_blank_text xs of
-            Bracket _ _ xs (i,j) : ys -> do
-                (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
-                right (xs:ws, zs)
-            x                 -> left [("bad argument: " ++ show xs,i,j)]
-
-cmd_params_ n xs = fmap fst $ cmd_params n xs
-
-get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
-          => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
-get_1_lbl xs = do 
-        ([x],z) <- cmd_params 1 xs
-        case trim_blank_text x of
-            ([Text [TextBlock x _]]) 
-                -> right (x,z)
-            ([Text [Command x _]]) 
-                -> right (x,z)
-            _   -> err_msg (line_info xs)
-    where
-        err_msg (i,j) = left [("expecting a label",i,j)]
-        
-get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
-          => [LatexDoc] 
-          -> EitherT [Error] m (String, String, [LatexDoc])
-get_2_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,xs)
-
-get_3_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,xs)
-
-get_4_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        (lbl3,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,lbl3,xs)
-
-drop_blank_text :: [LatexDoc] -> [LatexDoc]
-drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
-drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
-drop_blank_text xs = xs
-
-trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
-
-skip_blanks :: [LatexToken] -> [LatexToken]
-skip_blanks (Blank _ _ : xs) = xs
-skip_blanks xs = xs 

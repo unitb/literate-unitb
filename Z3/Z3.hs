@@ -19,7 +19,7 @@ module Z3.Z3
 where
 
     -- Modules
-import UnitB.Theory
+import UnitB.Label
 
 import Z3.Def
 import Z3.Const

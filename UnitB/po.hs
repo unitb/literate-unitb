@@ -3,9 +3,9 @@ module UnitB.PO where
 
     -- Modules
 import UnitB.AST
-import UnitB.Theory
 import UnitB.Calculation
 import UnitB.Operator
+import UnitB.Label
 
 import Z3.Z3
 

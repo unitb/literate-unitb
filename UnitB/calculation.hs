@@ -4,7 +4,7 @@ module UnitB.Calculation where
 import Z3.Z3 
 
 import UnitB.Operator
-import UnitB.Theory
+import UnitB.Label
 
     -- Libraries
 import Control.Monad

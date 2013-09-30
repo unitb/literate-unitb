@@ -5,6 +5,7 @@ module UnitB.FunctionTheory where
 import UnitB.Genericity
 import UnitB.Theory
 import UnitB.SetTheory hiding ( dec )
+import UnitB.Label
 
 import Z3.Def
 import Z3.Const

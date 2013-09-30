@@ -7,8 +7,9 @@ where
 
     -- Modules
 import UnitB.Genericity
-import UnitB.Theory
+--import UnitB.Theory
 import UnitB.FunctionTheory
+import UnitB.Label
 
 import Z3.Const
 import Z3.Def

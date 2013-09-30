@@ -7,7 +7,7 @@ import Tests.UnitTest
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.Theory
+import UnitB.Label
 import UnitB.Calculation
 
 import Z3.Z3

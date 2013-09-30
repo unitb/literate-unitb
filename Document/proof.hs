@@ -95,7 +95,7 @@ find_assumptions m = visit_doc
             ,   EnvBlock (\() xs proofs -> return proofs)
             )
         ,   (   "free:var"
-            ,   EnvBlock (\(from :: String,to :: String,()) xs proofs -> return proofs)
+            ,   EnvBlock (\(from :: Label,to :: Label,()) xs proofs -> return proofs)
             )
         ,   (   "by:cases"
             ,   EnvBlock (\() xs proofs -> return proofs)
@@ -104,17 +104,17 @@ find_assumptions m = visit_doc
             ,   EnvBlock (\() xs proofs -> return proofs)
             )
         ,   (   "subproof"
-            ,   EnvBlock (\(lbl :: String,()) xs proofs -> return proofs)
+            ,   EnvBlock (\(lbl :: Label,()) xs proofs -> return proofs)
             )
         ] [ (   "\\assume"
             ,   CmdBlock $ \(lbl,formula,()) proofs -> do
                     expr <- get_assert m formula
-                    add_assumption (label lbl) expr proofs
+                    add_assumption lbl expr proofs
             )
         ,   (   "\\assert"
             ,   CmdBlock $ \(lbl,formula,()) proofs -> do
                     expr <- get_assert m formula
-                    add_assert (label lbl) expr proofs
+                    add_assert lbl expr proofs
             )
         ,   (   "\\goal"
             ,   CmdBlock $ \(formula,()) proofs -> do
@@ -140,7 +140,7 @@ find_proof_step hyps m = visit_doc
             )
                 -- TODO: make into a command
         ,   (   "free:var"
-            ,   EnvBlock $ \(from,to,()) xs proofs -> do
+            ,   EnvBlock $ \(String from,String to,()) xs proofs -> do
                     (i,j) <- lift $ ask
                     p     <- collect_proof_step hyps m xs
                     set_proof (FreeGoal from to p (i,j)) proofs
@@ -160,7 +160,7 @@ find_proof_step hyps m = visit_doc
         ,   (   "subproof"
             ,   EnvBlock $ \(lbl,()) xs proofs -> do
                     p <- collect_proof_step hyps m xs
-                    add_proof (label lbl) p proofs
+                    add_proof lbl p proofs
             )
         ] [ (   "\\easy"
             ,   CmdBlock $ \() proofs -> do
@@ -180,9 +180,9 @@ find_cases hyps m = visit_doc
             ,   EnvBlock $ \(lbl,formula,()) xs cases -> do
                     expr      <- get_assert m formula
                     p         <- collect_proof_step 
-                            (insert (label lbl) expr hyps) 
+                            (insert lbl expr hyps) 
                             m xs
-                    return ((label lbl, expr, p):cases) 
+                    return ((lbl, expr, p):cases) 
             )
         ] []
 
