@@ -63,11 +63,6 @@ inject s0 m = RWST f
             (x,s1,w) <- runRWST m r s0 
             return (x,s,w)
         
-cycles xs = stronglyConnComp $ map f $ groupBy ((==) `on` fst) $ sort xs
-    where
-        eq (x,_) (y,_) = x == y
-        f xs = (fst $ head xs, fst $ head xs, map snd xs)
-
 parse_rule :: (Monad m)
            => String
            -> RuleParserParameter
@@ -111,7 +106,7 @@ trickle_down
         -> Map String a 
         -> (a -> a -> Either [String] a) 
         -> EitherT [Error] m (Map String a)
-trickle_down s ms f = do -- error "not implemented"
+trickle_down s ms f = do
             let rs = reverse $ map (\(AcyclicSCC v) -> v) $ cycles $ toList s
             foldM (\ms n -> 
                     case M.lookup n s of
@@ -361,9 +356,7 @@ collect_expr = visit_doc
                             [ ( not (evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
-                        let sc = case c_sched (events m ! evt) of
-                                    Just x  -> x
-                                    Nothing -> empty
+                        let sc = c_sched (events m ! evt)
                         toEither $ error_list
                             [ ( lbl `member` sc
                                 , format "{0} is already used for another coarse schedule" lbl )
@@ -371,9 +364,8 @@ collect_expr = visit_doc
                         let old_event = events m ! evt
                         sched <- get_evt_part m old_event xs
                         let new_event = old_event { 
-                                    c_sched =  
-                                        fmap (insert lbl sched) 
-                                            ( c_sched old_event <|> Just empty ) }
+                                    c_sched = insert lbl sched 
+                                            ( c_sched old_event ) }
                         scope (context m) sched (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
@@ -431,7 +423,7 @@ collect_expr = visit_doc
                                 inv = insert lbl invar $ inv $ props m } } 
             )
         ,   (   "\\transient"      
-            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(ev, n, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -441,7 +433,7 @@ collect_expr = visit_doc
                                 , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
-                        let prop = Transient (free_vars (context m) tr) tr ev
+                        let prop = Transient (free_vars (context m) tr) tr ev n
                         let old_prog_prop = transient $ props m
                         let new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -544,6 +536,72 @@ collect_proofs = visit_doc
                     li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
+            )
+        ,   (   "\\replace"
+            ,   CmdBlock $ \(evt,n,del,add,keep,prog,saf,()) m -> do
+                    toEither $ error_list
+                        [ ( not (evt `member` events m)
+                            , format "event '{0}' is undeclared" evt )
+                        ]
+                    let old_event = events m ! evt
+                        sc        = c_sched old_event
+                        lbls      = (S.elems $ add `S.union` del `S.union` keep)
+                        progs     = progress $ props m
+                        safs      = safety $ props m
+                    toEither $ do
+                        error_list $ flip map lbls $ \lbl ->
+                            ( not $ lbl `member` sc
+                                , format "'{0}' is not a valid coarse schedule" lbl )
+                        error_list
+                            [ ( not $ prog `member` progs
+                              , format "'{0}' is not a valid progress property" prog )
+                            , ( not $ saf `member` safs
+                              , format "'{0}' is not a valid safety property" saf )
+                            ]
+                    let rule      = (replace evt (progs!prog) (safs!saf)) 
+                                    { remove = del
+                                    , add = add
+                                    , keep = keep }
+                        new_event = old_event { sched_ref = insert n rule 
+                                        $ sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    return m 
+                      { events = insert evt new_event $ events m
+                      , props = (props m) { 
+                            derivation = 
+                                insert po_lbl (Rule (n,rule))
+                            $ derivation (props m) } 
+                      }
+            )
+        ,   (   "\\weakento"
+            ,   CmdBlock $ \(evt :: Label,n :: Int,del :: S.Set Label,add :: S.Set Label,()) m -> do
+                    toEither $ error_list
+                        [ ( not (evt `member` events m)
+                            , format "event '{0}' is undeclared" evt )
+                        ]
+                    let old_event = events m ! evt
+                        sc        = c_sched old_event
+                        lbls      = (S.elems $ add `S.union` del)
+                        progs     = progress $ props m
+                        safs      = safety $ props m
+                    toEither $ do
+                        error_list $ flip map lbls $ \lbl ->
+                            ( not $ lbl `member` sc
+                                , format "'{0}' is not a valid coarse schedule" lbl )
+                    let rule      = (weaken evt)
+                                    { remove = del
+                                    , add = add }
+                        new_event = old_event 
+                                    { sched_ref = insert n rule 
+                                        $ sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    return m 
+                      { events = insert evt new_event $ events m
+                      , props = (props m) { 
+                            derivation = 
+                                insert po_lbl (Rule (n,rule))
+                            $ derivation (props m) } 
+                      }
             )
         ]
 

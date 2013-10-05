@@ -45,7 +45,7 @@
 \newevent{leave}
 
 \begin{align*}
-\transient{leave}{tr0}
+\transient{leave}{0}{tr0}
 {	t \in in	}
 \end{align*}
 
@@ -312,6 +312,8 @@
 \begin{align*}\assumption{asm5}
 {	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
 \end{align*}
+
+\weakento{leave}{0}{default}{c0}
 
 \end{machine}
 

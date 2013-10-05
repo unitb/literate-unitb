@@ -12,10 +12,11 @@ import Z3.Z3
     -- Libraries
 import Control.Monad hiding (guard)
 
-import Data.Map as M hiding (map, foldl, foldr, delete, filter, null,(\\))
+import           Data.Map as M hiding (map, foldl, foldr, delete, filter, null,(\\))
 import qualified Data.Map as M
-import Data.List as L hiding (inits, union,insert)
-import Data.Set as S hiding (map,filter,foldr,(\\))
+import           Data.Maybe as M
+import           Data.List as L hiding (inits, union,insert)
+import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map,filter,foldr,(\\))
 
 import System.IO
@@ -23,6 +24,11 @@ import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Syntactic
+
+data POLabel = 
+    InProp Label 
+    | InEvent Label
+    | PropAndEvent Label Label
 
     -- 
     --
@@ -151,7 +157,7 @@ init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
  
 
 prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
-prop_tr m pname (Transient fv xp evt_lbl) = 
+prop_tr m pname (Transient fv xp evt_lbl n) = 
     M.fromList 
         [   ( (composite_label [_name m, evt_lbl, tr_lbl, pname])
             , (ProofObligation 
@@ -170,9 +176,7 @@ prop_tr m pname (Transient fv xp evt_lbl) =
         p    = props m
         thm  = inv_thm p
         grd  = M.elems $ guard evt
-        sch  = case c_sched evt of
-                Just sch -> M.elems sch
-                Nothing  -> [zfalse]
+        sch  = M.elems $ list_schedules (sched_ref evt) (c_sched evt) ! n
         act  = M.elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
@@ -252,9 +256,17 @@ sch_po m lbl evt = M.singleton
     where
         p     = props m
         grd   = M.elems $ guard evt
-        sch   = case c_sched evt of
-                  Just sch -> M.elems sch
-                  Nothing  -> [zfalse]
+        sch   = unsafePerformIO $ do
+            let xs = list_schedules (sched_ref evt) $ c_sched evt
+                x  = M.elems 
+                    $ fst $ M.fromJust
+                    $ M.maxView 
+                    $ xs
+--            print lbl
+--            putStrLn $ "> ref: " ++ show (sched_ref evt)
+--            putStrLn $ "> all scheds: " ++ show (c_sched evt)
+--            putStrLn $ "> sched seq: " ++ show xs
+            return x
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = if M.null param then xp else zexists (M.elems param) ztrue xp

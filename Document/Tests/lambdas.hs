@@ -1,5 +1,7 @@
 module Document.Tests.Lambdas 
-    ( test_case, test )
+    ( test_case, test
+    , part0, part1
+    , part2, part3 )
 where
 
     -- Modules
@@ -24,17 +26,29 @@ import Utilities.Syntactic
 
 test_case = Case "lambda expressions in the cube example" test True
 
-test = test_cases 
+test = test_cases
+            [ (Case "part 0" part0 True)
+            , (Case "part 1" part1 True) 
+            , (Case "part 2" part2 True) 
+            , (Case "part 3" part3 True) 
+            ]            
+part0 = test_cases
             [ (StringCase "test 0, verification, lambda vs empty-fun" (verify path0) result0)
             , (StringCase "test 1, verification, lambda vs ovl, mk-fun" (verify path1) result1)
             , (StringCase "test 2, verification, lambda vs apply" (verify path2) result2)
-            , (StringCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
+            ]            
+part1 = test_cases
+            [ (StringCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
-            , (StringCase "test 6, verify progress refinement" (verify path6) result6)
+            ]            
+part2 = test_cases
+            [ (StringCase "test 6, verify progress refinement" (verify path6) result6)
             , (StringCase "test 7, verify refinement rules" (verify path7) result7)
             , (StringCase "test 8, verify refinement rules" (verify path8) result8)
-            , (StringCase "test 9, verify disjunction rule" (verify path9) result9)
+            ]            
+part3 = test_cases
+            [ (StringCase "test 9, verify disjunction rule" (verify path9) result9)
             , (StringCase "test 10, error: cyclic proof" (verify path10) result10)
             ]
 
@@ -367,6 +381,7 @@ result6 = unlines
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/INV/inv8"
      , "  o  m0/evt/SCH"
+     , "  o  m0/evt/SCH/0/REF/weaken"
      , "  o  m0/evt/TR/tr0"
      , "  o  m0/prog0/REF/monotonicity/lhs"
      , "  o  m0/prog0/REF/monotonicity/rhs"
@@ -374,7 +389,7 @@ result6 = unlines
      , "  o  m0/prog3/REF/PSP/lhs"
      , "  o  m0/prog3/REF/PSP/rhs"
      , " xxx m0/prog4/REF/discharge"
-     , "passed 66 / 71"
+     , "passed 67 / 72"
      ]
 
 path6 = "tests/cubes-t5.tex"
@@ -521,6 +536,7 @@ result8 = unlines
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/INV/inv7"
      , "  o  m0/evt/SCH"
+     , "  o  m0/evt/SCH/0/REF/weaken"
      , "  o  m0/evt/TR/tr0"
      , "  o  m0/prog0/REF/monotonicity/lhs"
      , "  o  m0/prog0/REF/monotonicity/rhs"
@@ -530,7 +546,7 @@ result8 = unlines
      , "  o  m0/prog3/REF/PSP/lhs"
      , "  o  m0/prog3/REF/PSP/rhs"
      , "  o  m0/prog4/REF/discharge"
-     , "passed 71 / 74"
+     , "passed 72 / 75"
      ]
      
 path8 = "tests/cubes-t7.tex"
@@ -602,6 +618,7 @@ result9 = unlines
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/INV/inv7"
      , "  o  m0/evt/SCH"
+     , "  o  m0/evt/SCH/0/REF/weaken"
      , "  o  m0/evt/TR/tr0"
      , "  o  m0/prog0/REF/monotonicity/lhs"
      , "  o  m0/prog0/REF/monotonicity/rhs"
@@ -613,7 +630,7 @@ result9 = unlines
      , "  o  m0/prog4/REF/discharge"
      , "  o  m0/prog5/REF/disjunction/lhs"
      , "  o  m0/prog5/REF/disjunction/rhs"
-     , "passed 73 / 76"
+     , "passed 74 / 77"
      ]
      
 path9 = "tests/cubes-t8.tex"

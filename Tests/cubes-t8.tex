@@ -352,7 +352,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 %\refine{prog2}{trading}{prog3}{}
 %&	\progress{prog3}{n = k \2\land \neg n = N}{ n < k } \\
  \refine{prog4}{discharge}{tr0,saf1}{}
-& \transient{evt}{tr0}
+& \transient{evt}{0}{tr0}
 {	n = k \1\land \neg n = N
 	} \textbf{\quad is transient}
 \\ & 	\safety{saf1}{ n = k \1\land \neg n = N }{ \neg n = k }
@@ -383,6 +383,8 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \assumption{asm3}
 {	0 \le N	}
 \end{align*}
+
+\weakento{evt}{0}{default}{c0}
 
 \end{machine}
 

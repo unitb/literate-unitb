@@ -1,16 +1,17 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.SetTheory where
 
-import Control.Monad
-
     -- Modules
 import UnitB.Genericity
 import UnitB.Theory
+import UnitB.Label
 
 import Z3.Def
 import Z3.Const
 
     -- Libraries
+import Control.Monad
+
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
 

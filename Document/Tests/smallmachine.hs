@@ -34,7 +34,17 @@ test = test_cases [
         (StringCase "test 4 (proof obligation, invariance)" 
             case4 result4),
         (StringCase "test 5 (co, 'skip' proof obligation)" 
-            case5 result5) ]
+            case5 result5),
+        (StringCase "test 6 (verification, coarse schedule stronger than guard)" 
+            case6 result6),
+        (StringCase "test 7 (schedulability proof obligation)" 
+            case7 result7),
+        (StringCase "test 8 (schedulability without selecting schedules (trivially true))" 
+            case8 result8),
+        (StringCase "test 9 (coarse schedule weakening, PO)" 
+            case9 result9),
+        (StringCase "test 10 (transient PO)" 
+            case10 result10)  ]
 
 
 path0 = "Tests/small_machine_t0.tex"
@@ -78,8 +88,8 @@ result3 = (unlines [
         "  o  m0/inc/FIS" ,
         "  o  m0/inc/INV/inv0",
         "  o  m0/inc/SCH",
-        "  o  m0/inc/TR/tr0",
-        "passed 7 / 8"
+        " xxx m0/inc/TR/tr0",
+        "passed 6 / 8"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -104,8 +114,8 @@ result4 = unlines [
         "|----",
         " (= x@prime (* 2 y@prime))"]
 
-show_po lbl = do
-        m <- parse_machine path3
+show_po path lbl = do
+        m <- parse_machine path
         r <- return (do
             [m] <- m
             po <- proof_obligation m 
@@ -116,7 +126,7 @@ show_po lbl = do
             Left x -> return $ show_err x
 
 
-case4 = show_po $ label "m0/inc/INV/inv0"
+case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
 result5 = unlines [
         " sort: , , , pfun [a,b], set [a]",
@@ -130,7 +140,86 @@ result5 = unlines [
         "|----",
         " (=> (= x 2) (= x@prime 4))"]
 
-case5 = show_po $ label "m0/SKIP/CO/c0"
+case5 = show_po path3 $ label "m0/SKIP/CO/c0"
+
+result6 = (unlines [
+        "  o  m0/INIT/FIS",
+        "  o  m0/INIT/INV/inv0",
+        " xxx m0/SKIP/CO/c0",
+        "  o  m0/inc/CO/c0",
+        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/INV/inv0",
+        "  o  m0/inc/SCH",
+        "  o  m0/inc/SCH/0/REF/weaken",
+        "  o  m0/inc/TR/tr0",
+        "passed 8 / 9"
+    ])
+
+path6 = "Tests/small_machine_t3.tex"
+case6 = do
+    ct  <- readFile path6
+    r <- parse_machine path6
+    case r of
+        Right [m] -> do
+            (s,_,_)   <- str_verify_machine m
+            return s
+        x -> return $ show x
+
+result7 = unlines [
+        " sort: , , , pfun [a,b], set [a]",
+        " x: Int",
+        " y: Int",
+        " (= x (* 2 y))",
+        " (= x y)",
+        "|----",
+        " (= x y)"]
+
+case7 = show_po path6 $ label "m0/inc/SCH"
+
+path8 = "Tests/small_machine_t4.tex"
+result8 = unlines [
+        " sort: , , , pfun [a,b], set [a]",
+        " x: Int",
+        " y: Int",
+        " (= x (* 2 y))",
+        " false",
+        "|----",
+        " (= x y)"]
+
+case8 = show_po path8 $ label "m0/inc/SCH"
+
+result9 = unlines [
+        " sort: , , , pfun [a,b], set [a]",
+        " x: Int",
+        " x@prime: Int",
+        " y: Int",
+        " y@prime: Int",
+        " (= x (* 2 y))",
+        "|----",
+            -- This should be the goal but it boils down to true
+            -- after Literate Unit-B has simplified it
+--        " (=> false (= x y))"]
+        " true"]
+
+case9 = show_po path6 $ label "m0/inc/SCH/0/REF/weaken"
+
+result10 = unlines [
+        " sort: , , , pfun [a,b], set [a]",
+        " x: Int",
+        " x@prime: Int",
+        " y: Int",
+        " y@prime: Int",
+        " (= x (* 2 y))",
+        "|----",
+        " (and (=> (= x y) (= x y))" ++
+             " (=> (and (= x y)" ++
+                      " (= x y)" ++
+                      " (= x y)" ++
+                      " (= x@prime (+ x 2))" ++
+                      " (= y@prime (+ y 1)))" ++
+                 " (not (= x@prime y@prime))))" ]
+
+case10 = show_po path6 $ label "m0/inc/TR/tr0"
 
 var_x = Var "x" int
 var_y = Var "y" int
@@ -143,7 +232,7 @@ inc_event_m0 = empty_event {
                 (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
 inc_event_m1 = empty_event { 
-        c_sched = Just $ fromList [((label "c0"), x `zeq` y)],
+        c_sched = insert (label "c0") (x `zeq` y) default_schedule,
         f_sched = Just (x `zeq` y),
         action  = fromList [
                     (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)),
@@ -170,7 +259,7 @@ m0_props = empty_property_set {
 
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc")) ]
+            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert (label "inv1") (x `zeq` (x `ztimes` (y `zplus` z1))) (inv m0_props)

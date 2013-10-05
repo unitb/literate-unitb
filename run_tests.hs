@@ -30,7 +30,10 @@ general = do
             ExitSuccess -> do
                 c3 <- rawSystem "ghc" ["continuous.hs", "--make"]
                 c4 <- rawSystem "ghc" ["verify.hs", "--make"]
-                return (c3 `success` c4)
+                c5 <- rawSystem "ghc" ["periodic.hs", "--make"]
+                c6 <- rawSystem "ghc" ["compile.hs", "--make"]
+                c7 <- rawSystem "ghc" ["run_tests.hs", "--make"]
+                return $ foldl success ExitSuccess [c3,c4,c5,c6,c7]
             ExitFailure _ -> return c0
         case c1 of
             ExitSuccess -> do
@@ -71,8 +74,8 @@ general = do
         success ExitSuccess ExitSuccess = ExitSuccess
         success _ _                     = ExitFailure 0
 
-specific :: String -> IO ()
-specific mod_name = do
+specific :: String -> Maybe String -> IO ()
+specific mod_name fun_name = do
         h <- openFile "test_tmp.hs" WriteMode
         hPrintf h test_prog mod_name
         hClose h
@@ -90,13 +93,17 @@ specific mod_name = do
         test_prog = unlines 
             [ "module Main where"
             , "import %s "
-            , "main = test" 
+            , "main = " ++ fun 
             ]
+        fun = case fun_name of
+            Just x  -> x
+            Nothing -> "test"
 
 main = do
     xs <- getArgs
     case xs of
-        []  -> general >> return ()
-        [x] -> specific x
-        _   -> putStrLn "usage: run_test [module_name]"
+        []    -> general >> return ()
+        [x]   -> specific x Nothing
+        [x,y] -> specific x $ Just y
+        _   -> putStrLn "usage: run_test [module_name [function_name]]"
     

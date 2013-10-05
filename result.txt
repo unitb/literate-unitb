@@ -7,7 +7,12 @@
 |  |  +- test 3 (verification)
 |  |  +- test 4 (proof obligation, invariance)
 |  |  +- test 5 (co, 'skip' proof obligation)
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- test 6 (verification, coarse schedule stronger than guard)
+|  |  +- test 7 (schedulability proof obligation)
+|  |  +- test 8 (schedulability without selecting schedules (trivially true))
+|  |  +- test 9 (coarse schedule weakening, PO)
+|  |  +- test 10 (transient PO)
+|  |  +- [ Success: 11 / 11 ]
 |  +- table of cubes example
 |  |  +- test 0 (syntax)
 |  |  +- test 1 (verification)
@@ -16,38 +21,58 @@
 |  |  +- empty proof
 |  |  +- [ Success: 5 / 5 ]
 |  +- train station example
-|  |  +- test 0, syntax
-|  |  +- test 1, verification
-|  |  +- test 2, proof obligation, INIT/fis
-|  |  +- test 3, proof obligation, leave/fis
-|  |  +- test 4, proof obligation, leave/sch
-|  |  +- test 5, proof obligation, leave/en/tr0
-|  |  +- test 7, undeclared symbol
-|  |  +- test 8, undeclared event (wrt transient)
-|  |  +- test 9, undeclared event (wrt c sched)
-|  |  +- test 10, undeclared event (wrt indices)
-|  |  +- test 11, undeclared event (wrt assignment)
-|  |  +- test 12, proof obligation leave/INV/inv2
-|  |  +- test 13, verification, name clash between dummy and index
-|  |  +- test 14, verification, non-exhaustive case analysis
-|  |  +- test 15, verification, incorrect new assumption
-|  |  +- test 16, verification, proof by parts
-|  |  +- test 17, ill-defined types
-|  |  +- test 18, assertions have type bool
-|  |  +- [ Success: 18 / 18 ]
+|  |  +- part 0
+|  |  |  +- test 0, syntax
+|  |  |  +- [ Success: 1 / 1 ]
+|  |  +- part 1
+|  |  |  +- test 1, verification
+|  |  |  +- test 2, proof obligation, INIT/fis
+|  |  |  +- test 3, proof obligation, leave/fis
+|  |  |  +- test 4, proof obligation, leave/sch
+|  |  |  +- [ Success: 4 / 4 ]
+|  |  +- part 2
+|  |  |  +- test 5, proof obligation, leave/en/tr0
+|  |  |  +- test 7, undeclared symbol
+|  |  |  +- test 8, undeclared event (wrt transient)
+|  |  |  +- test 9, undeclared event (wrt c sched)
+|  |  |  +- [ Success: 4 / 4 ]
+|  |  +- part 3
+|  |  |  +- test 10, undeclared event (wrt indices)
+|  |  |  +- test 11, undeclared event (wrt assignment)
+|  |  |  +- test 12, proof obligation leave/INV/inv2
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 4
+|  |  |  +- test 13, verification, name clash between dummy and index
+|  |  |  +- test 14, verification, non-exhaustive case analysis
+|  |  |  +- test 15, verification, incorrect new assumption
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 5
+|  |  |  +- test 16, verification, proof by parts
+|  |  |  +- test 17, ill-defined types
+|  |  |  +- test 18, assertions have type bool
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- [ Success: 6 / 6 ]
 |  +- lambda expressions in the cube example
-|  |  +- test 0, verification, lambda vs empty-fun
-|  |  +- test 1, verification, lambda vs ovl, mk-fun
-|  |  +- test 2, verification, lambda vs apply
-|  |  +- test 3, verification, set comprehension, failed proof
-|  |  +- test 4, adding a progress property
-|  |  +- test 5, unless properties
-|  |  +- test 6, verify progress refinement
-|  |  +- test 7, verify refinement rules
-|  |  +- test 8, verify refinement rules
-|  |  +- test 9, verify disjunction rule
-|  |  +- test 10, error: cyclic proof
-|  |  +- [ Success: 11 / 11 ]
+|  |  +- part 0
+|  |  |  +- test 0, verification, lambda vs empty-fun
+|  |  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  |  +- test 2, verification, lambda vs apply
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 1
+|  |  |  +- test 3, verification, set comprehension, failed proof
+|  |  |  +- test 4, adding a progress property
+|  |  |  +- test 5, unless properties
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 2
+|  |  |  +- test 6, verify progress refinement
+|  |  |  +- test 7, verify refinement rules
+|  |  |  +- test 8, verify refinement rules
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 3
+|  |  |  +- test 9, verify disjunction rule
+|  |  |  +- test 10, error: cyclic proof
+|  |  |  +- [ Success: 2 / 2 ]
+|  |  +- [ Success: 4 / 4 ]
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
 |  |  +- test 1, valid references to variables and event declared in ancester
@@ -104,9 +129,9 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-    9997 total
-    1263 Document/Tests/trainstation.hs
-     631 Document/Tests/lambdas.hs
-     570 Document/machine.hs
-     523 UnitB/ast.hs
-     512 UnitB/po.hs
+    9973 total
+    1297 Document/Tests/trainstation.hs
+     648 Document/Tests/lambdas.hs
+     611 Document/machine.hs
+     544 UnitB/ast.hs
+     519 UnitB/po.hs

@@ -20,6 +20,7 @@ import Control.Monad.RWS as RWS
 import Data.Char
 import Data.List as L ( intercalate, (\\), null )
 import Data.Map as M hiding ( map, (\\) )
+import Data.Set as S hiding ( fromList, member, map, (\\) )
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -29,7 +30,7 @@ data Architecture = Arc
     ,  ref_struct   :: Map Label Label
     }
 
-empty_arc = Arc [] empty
+empty_arc = Arc [] M.empty
 
 add_proof_edge x xs = EitherT $ do
         RWS.modify (\x -> x { proof_struct = f $ proof_struct x } )
@@ -51,7 +52,7 @@ data Add = Add
 
 instance RefRule Add where
     rule_name _       = label "add"
-    refinement_po _ _ = fromList []
+    refinement_po _ _ = M.fromList []
 
 class RuleParser a where
     parse_rule :: a -> [Label] -> String -> RuleParserParameter -> EitherT [Error] (RWS (Int,Int) [Error] b) Rule
@@ -156,7 +157,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _)
+                    (Transient fv1 p1 _ _)
                     (Just (Unless fv2 p2 q2))) 
             m = fromList $
         assert m "" (
@@ -168,7 +169,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _)
+                    (Transient fv1 p1 _ _)
                     Nothing)
             m = fromList $
                 assert m "" (
@@ -222,7 +223,7 @@ instance RefRule Disjunction where
     rule_name _ = label "disjunction"
     refinement_po (Disjunction 
                     (LeadsTo fv0 p0 q0)
-                    ps) m = fromList (
+                    ps) m = M.fromList (
                 assert m "lhs" (
                     zforall fv0 ztrue (
                         ( p0 `zimplies` zsome (map disj_p ps) ) ) )
@@ -250,7 +251,7 @@ instance RefRule NegateDisjunct where
             (NegateDisjunct
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1))
-            m = fromList $ 
+            m = M.fromList $ 
                 assert m "" (
                     zforall (fv0 ++ fv1) ztrue $
                         zand (zand p0 (znot q0) `zimplies` p1)
@@ -266,7 +267,7 @@ instance RefRule Transitivity where
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
                     (LeadsTo fv2 p2 q2))
-            m = fromList $
+            m = M.fromList $
                 assert m "" $ 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                         zall[ p0 `zimplies` p1
@@ -284,7 +285,7 @@ instance RefRule PSP where
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
                     (Unless fv2 r b))
-            m = fromList (
+            m = M.fromList (
                 assert m "lhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                         (zand p1 r `zimplies` p0))
@@ -301,7 +302,7 @@ instance RefRule Induction where
             (Induction 
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1) v)
-            m = fromList (
+            m = M.fromList (
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
                         ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
@@ -353,6 +354,52 @@ parse_induction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls hint) = 
                             ++ "variable to record the variant",i,j)]                    
         add_proof_edge goal_lbl [h0]
         return $ Rule (Induction pr0 pr1 (IntegerVariant dum var bound dir))
+
+instance RefRule (Int, ScheduleChange) where 
+    rule_name     (_, r) = 
+        case rule r of 
+            Replace _ _ -> label "delay"
+            Weaken      -> label "weaken"
+    refinement_po (n,r) m = 
+        case rule r of
+            Replace prog saf ->
+                let LeadsTo vs p0 q0 = prog
+                    Unless us p1 q1  = saf
+                in
+                  M.fromList (
+                    assert m "prog/lhs" (
+                        zforall (vs ++ ind) ztrue $
+                            (sch0 `zimplies` p0)
+                            )
+                 ++ assert m "prog/rhs" (
+                        zforall (vs ++ ind) ztrue $
+                            (q0 `zimplies` sch1)
+                            )
+                 ++ assert m "saf/lhs" (
+                        zforall (us ++ ind) ztrue $
+                            (p1 `zeq` sch1)
+                            )
+                 ++ assert m "saf/rhs" (
+                        zforall (us ++ ind) ztrue $
+                            (q1 `zimplies` znot sch0)
+                            ))
+            Weaken -> M.fromList $
+                assert m "" $
+                    zforall ind ztrue $ sch0 `zimplies` sch1
+        where
+            sch  =  c_sched evt
+            evt = events m ! event r
+            ind = M.elems $ indices evt
+            sch0 = zall $ map (sch!) $ S.elems $ remove r `S.union` keep r
+            sch1 = zall $ map (sch!) $ S.elems $ add r `S.union` keep r
+--    refinement_po (n, r@(Weaken lbl _ _))    m = 
+--            
+--        where
+--            sch  =  c_sched evt
+--            evt = events m ! lbl
+--            ind = M.elems $ indices evt
+--            sch0 = zall $ map (sch!) $ S.elems $ remove r `S.union` keep r
+--            sch1 = zall $ map (sch!) $ S.elems $ add r `S.union` keep r
 
 --data Cancellation = Cancellation ProgressProp ProgressProp ProgressProp
 --

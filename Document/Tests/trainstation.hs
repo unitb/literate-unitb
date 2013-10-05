@@ -1,12 +1,16 @@
 module Document.Tests.TrainStation
-    ( test_case, test )
+    ( test_case, test
+    , part0, part1, part2
+    , part3, part4, part5 )
 where
 
 import Control.Monad hiding ( guard )
 
-import Data.List ( sort )
-import Data.Map hiding ( map )
+import           Data.List ( sort )
+import           Data.Map hiding ( map )
 import qualified Data.Map as M
+--import           Data.Set as S 
+import qualified Data.Set as S
 --import Data.Maybe
 
 import Document.Document as Doc
@@ -26,23 +30,41 @@ import Z3.Z3
 
 test_case = Case "train station example" test True
 
-test = test_cases [
-            (Case "test 0, syntax" case0 $ Right [machine0])
-            , (StringCase "test 1, verification" case1 result1)
+test = test_cases
+            [ Case "part 0" part0 True
+            , Case "part 1" part1 True
+            , Case "part 2" part2 True
+            , Case "part 3" part3 True
+            , Case "part 4" part4 True
+            , Case "part 5" part5 True
+            ]
+part0 = test_cases
+            [ (Case "test 0, syntax" case0 $ Right [machine0])
+            ]
+part1 = test_cases
+            [ (StringCase "test 1, verification" case1 result1)
             , (StringCase "test 2, proof obligation, INIT/fis" case2 result2)
             , (StringCase "test 3, proof obligation, leave/fis" case3 result3)
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
-            , (StringCase "test 5, proof obligation, leave/en/tr0" case5 result5)
+            ]
+part2 = test_cases
+            [ (StringCase "test 5, proof obligation, leave/en/tr0" case5 result5)
             , (Case "test 7, undeclared symbol" case7 result7)
             , (Case "test 8, undeclared event (wrt transient)" case8 result8)
             , (Case "test 9, undeclared event (wrt c sched)" case9 result9)
-            , (Case "test 10, undeclared event (wrt indices)" case10 result10)
+            ]
+part3 = test_cases
+            [ (Case "test 10, undeclared event (wrt indices)" case10 result10)
             , (Case "test 11, undeclared event (wrt assignment)" case11 result11)
             , (StringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
-            , (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
+            ]
+part4 = test_cases
+            [ (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
             , (StringCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (StringCase "test 15, verification, incorrect new assumption" case15 result15)
-            , (StringCase "test 16, verification, proof by parts" case16 result16)
+            ]
+part5 = test_cases
+            [ (StringCase "test 16, verification, proof by parts" case16 result16)
             , (StringCase "test 17, ill-defined types" case17 result17)
             , (StringCase "test 18, assertions have type bool" case18 result18)
             ]
@@ -168,11 +190,15 @@ props0 = empty_property_set
             ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
+    ,   derivation = singleton (label "leave/SCH/0") 
+            $ Rule (0 :: Int, (weaken (label "leave"))
+                    { remove = S.singleton (label "default")
+                    , add    = S.singleton (label "c0") } )
     ,   transient = fromList
             [   ( label "tr0"
                 , Transient
                     (symbol_table [t_decl])
-                    (fromJust (t `zelem` in_var)) (label "leave") )
+                    (fromJust (t `zelem` in_var)) (label "leave") 0)
             ]
     ,  inv = fromList 
             [   (label "inv2",fromJust (zdom loc `mzeq` in_var))
@@ -219,8 +245,11 @@ enter_evt = empty_event
             ]
     }
 leave_evt = empty_event 
-    {  indices = symbol_table [t_decl]
-    ,  c_sched = Just $ singleton (label "c0") (fromJust (t `zelem` in_var))
+    {  indices   = symbol_table [t_decl]
+    ,  c_sched   = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
+    ,  sched_ref = fromList [(0, (weaken (label "leave"))
+                    { remove = S.singleton (label "default")
+                    , add    = S.singleton (label "c0") } )]
     ,  guard = fromList
             [  (label "grd0", fromJust $ mzand 
                                     (zapply loc t `mzeq` ext) 
@@ -596,8 +625,9 @@ result1 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 89 / 90"
+        ,  "passed 90 / 91"
         ]
 
 case1 = do
@@ -941,8 +971,9 @@ result13 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 60 / 65"
+        ,  "passed 61 / 66"
         ]
         
 case13 = do
@@ -1012,8 +1043,9 @@ result14 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 56 / 58"
+        ,  "passed 57 / 59"
         ]
         
 case14 = do
@@ -1089,8 +1121,9 @@ result15 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 61 / 64"
+        ,  "passed 62 / 65"
         ]
         
 case15 = do
@@ -1185,8 +1218,9 @@ result16 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
+        ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 82 / 83"
+        ,  "passed 83 / 84"
         ]
 
 case16 = do

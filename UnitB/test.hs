@@ -12,8 +12,9 @@ import Z3.Z3
     -- Libraries
 import Control.Monad
 
-import Data.Maybe 
-import Data.Map hiding (map)
+import           Data.Maybe 
+import           Data.Map hiding (map)
+import qualified Data.Set as S hiding (map, fromList, insert, empty)
 
 import System.IO
 import System.Posix.IO
@@ -40,9 +41,9 @@ example0 = do
         csched <- with_li (0,0) (x `mzeq` y)
         s0     <- with_li (0,0) (x' `mzeq` (x `mzplus` mzint 2))
         s1     <- with_li (0,0) (y' `mzeq` (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt")
-        let co0 = Co [] co
-        let ps = empty_property_set {
+        let tr0 = Transient empty tr (label "evt") 0
+            co0 = Co [] co
+            ps = empty_property_set {
                 transient = 
                     fromList [
                         (label "TR0", tr0)],
@@ -50,41 +51,49 @@ example0 = do
                     fromList [
                         (label "CO0", co0)],
                 inv = fromList [(label "J0", inv0)] }
-        let evt = empty_event { 
-            c_sched = Just $ singleton (label "sch0") $ csched,   
-            action = fromList [
-                (label "S0", s0),
-                (label "S1", s1) ] }
-        let m = (empty_machine "m0") {
-            variables = fromList $ map as_pair [x_decl,y_decl],
-            events = singleton (label "evt") evt,
-            inits = fromList 
-                [ (label "init0", init0)
-                , (label "init1", init1) ],
-            props = ps }
+            sch_ref0 = (weaken $ label "evt")
+                { remove = S.singleton (label "default")
+                , add    = S.singleton (label "sch0") }
+            evt = empty_event
+                    { sched_ref = singleton 0 sch_ref0
+                    , c_sched = insert (label "sch0") csched default_schedule
+                    , action = fromList [
+                        (label "S0", s0),
+                        (label "S1", s1) ] }
+            m = (empty_machine "m0") 
+                { variables = fromList $ map as_pair [x_decl,y_decl]
+                , events = singleton (label "evt") evt
+                , inits = fromList 
+                    [ (label "init0", init0)
+                    , (label "init1", init1) ]
+                , props = ps }
         return m
 
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
-        let (t,t_decl) = var "t" int
+            (t,t_decl) = var "t" int
         inv0 <- with_li (0,0) (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
         c0   <- with_li (0,0) (st `zselect` t)
         a0   <- with_li (0,0) (st' `mzeq` zstore st t mzfalse)
         let inv = fromList [(label "J0",inv0)]
-        let enter = (label "enter", empty_event)
-        let leave = (label "leave", empty_event {
-                indices = symbol_table [t_decl],
-                c_sched = Just $ fromList [(label "C0", c0)],
-                action  = fromList [(label "A0", a0)]
-            })
+            sch_ref0 = (weaken $ label "evt")
+                { remove = S.singleton (label "default")
+                , add    = S.singleton (label "C0") }
+            enter = (label "enter", empty_event)
+            leave = (label "leave", empty_event 
+                    {   indices = symbol_table [t_decl]
+                    ,   sched_ref = singleton 0 sch_ref0
+                    ,   c_sched = insert (label "C0") c0 $ default_schedule
+                    ,   action  = fromList [(label "A0", a0)]
+                    })
         tr <- with_li (0,0) (st `zselect` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr $ label "leave")] 
-        let ps = empty_property_set { transient = props, inv = inv }
-        let m = (empty_machine "train_m0") {
-            props = ps,
-            variables = fromList $ map as_pair [st_decl],
-            events = fromList [enter, leave] }
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0)] 
+            ps    = empty_property_set { transient = props, inv = inv }
+            m     = (empty_machine "train_m0") 
+                        { props = ps
+                        , variables = fromList $ map as_pair [st_decl]
+                        , events = fromList [enter, leave] }
         return m
 
 result_example0 = unlines [

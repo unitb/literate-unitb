@@ -142,13 +142,6 @@ canonical vs r t = do
                         Word `liftM` rename v
                     _               ->
                         rewriteM (f ls) e
---        f (Word v)  = rename v
---        f e@(Binder _ vs r t) 
---                    = with_locals vs (rewriteM f e)
---        f e         = do
---                e' <- rewriteM f e
---                return e'
---error "not implemented"
 
 type TermStore = Map CanonicalLambda Fun
 

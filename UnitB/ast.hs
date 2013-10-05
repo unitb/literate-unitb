@@ -1,17 +1,21 @@
 {-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
 module UnitB.AST 
-    ( Label, Theory (..)
-    , Event(..), empty_event
-    , Machine (..), label
+    ( Label
+    , label
+    , composite_label
+    , Theory  (..)
+    , Machine (..)
+    , Event   (..)
+    , empty_event
     , empty_machine
-    , Transient  (..)
-    , Constraint (..)
+    , empty_theory
+    , Transient   (..)
+    , Constraint  (..)
     , ProgressProp(..)
     , Schedule    (..)
     , SafetyProp  (..) 
     , PropertySet (..) 
     , empty_property_set
-    , composite_label, empty_theory
     , Rule (..)
     , Variant (..)
     , variant_decreased
@@ -27,14 +31,24 @@ module UnitB.AST
     , all_types
     , basic_theory
     , disjoint_union
+    , cycles
+    , ScheduleChange 
+        ( add, remove
+        , keep, event
+        , rule)
+    , replace, weaken
+    , ScheduleRule (..)
+    , list_schedules
+    , default_schedule
     ) 
 where
-
+ 
     -- Modules
 import UnitB.FunctionTheory
 import UnitB.SetTheory
 import UnitB.Theory
 import UnitB.Calculation
+import UnitB.Label
 
 import Z3.Z3 hiding (merge)
 
@@ -44,6 +58,8 @@ import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
 import qualified Data.Foldable as F
+import           Data.Function
+import           Data.Graph
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
@@ -62,16 +78,17 @@ empty_theory :: Theory
 empty_theory = Theory [] 
     empty empty empty empty empty
 
-data Event = Event {
-        indices   :: Map String Var,
-        c_sched   :: Maybe (Map Label Expr),
-        f_sched   :: Maybe Expr,
-        params    :: Map String Var,
-        guard     :: Map Label Expr,
-        action    :: Map Label Expr }
+data Event = Event 
+        { indices   :: Map String Var
+        , sched_ref :: Map Int ScheduleChange
+        , c_sched   :: Map Label Expr
+        , f_sched   :: Maybe Expr
+        , params    :: Map String Var
+        , guard     :: Map Label Expr
+        , action    :: Map Label Expr }
     deriving Show
 
-empty_event = Event empty Nothing  Nothing empty empty empty
+empty_event = Event empty empty default_schedule Nothing empty empty empty
 
 data Machine = 
     Mch 
@@ -95,7 +112,10 @@ empty_machine n = Mch (Lbl n)
         empty_property_set 
         empty_property_set
 
-merge :: (Eq c, Ord a, Monoid c) => b -> (b -> b -> Either c b) -> Map a b -> Map a b -> Either c (Map a b)
+merge :: (Eq c, Ord a, Monoid c) 
+      => b -> (b -> b -> Either c b) 
+      -> Map a b -> Map a b 
+      -> Either c (Map a b)
 merge x f m0 m1 = do
         xs <- toEither $ forM (toList m3) $ \(x,z) ->
             fromEither (x,z) $
@@ -257,13 +277,13 @@ merge_evt_decl e0 e1 = toEither $ do
             { indices = ind }
 merge_evt_exprs :: Event -> Event -> Either [String] Event
 merge_evt_exprs e0 e1 = toEither $ do
-        coarse_sch <- fromEither Nothing $ case (c_sched e0, c_sched e1) of
-            (Nothing, Nothing) -> return Nothing
-            _                 -> do
+        coarse_sch <- fromEither default_schedule $ do
                 cs <- foldM (\x y -> do
                         disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
-                    ) empty (maybeToList (c_sched e0) ++ maybeToList (c_sched e1))
-                return $ Just cs
+                    ) default_schedule
+                    [ c_sched e0 `difference` default_schedule
+                    , c_sched e1 `difference` default_schedule]
+                return cs
         let fine_sch   = f_sched e0 <|> f_sched e1
         grd <- fromEither empty $ disjoint_union
                 (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
@@ -304,9 +324,16 @@ merge_theory t0 t1 = toEither $ do
                 (dummies t1)
         return $ Theory es types funs consts fact dummies
 
-skip m = Event M.empty Nothing Nothing M.empty M.empty $ fromList $ map f $ M.elems $ variables m
+skip m = Event 
+        M.empty M.empty 
+        default_schedule 
+        Nothing M.empty 
+        M.empty 
+        $ fromList $ map f $ M.elems $ variables m
     where
         f v@(Var n _) = (label ("SKIP:" ++ n), Word v `zeq` primed (variables m) (Word v))
+
+default_schedule = fromList [(label "default", zfalse)]
 
 primed :: Map String Var -> Expr -> Expr
 primed vs e = make_unique "@prime" vs e
@@ -330,7 +357,11 @@ data Constraint =
     deriving Show
 
 data Transient = 
-        Transient (Map String Var) Expr Label
+        Transient 
+            (Map String Var)    -- Free variables
+            Expr                -- Predicate
+            Label Int           -- Event, Schedule 
+--            (Maybe Label)       -- Progress Property for fine schedule
 --      | Grd thm
 --      | Sch thm
     deriving Show
@@ -405,6 +436,78 @@ instance Show PropertySet where
         , ("safety", show $ safety x)
         , ("deduction steps", show $ derivation x)
         ]
+
+data ScheduleChange = ScheduleChange 
+        { event  :: Label
+        , remove :: S.Set Label
+        , add    :: S.Set Label
+        , keep   :: S.Set Label
+        , rule   :: ScheduleRule
+        }
+    deriving (Show)
+
+data ScheduleRule = 
+        Replace ProgressProp SafetyProp
+        | Weaken
+    deriving Show
+
+weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
+
+replace lbl prog saf = ScheduleChange lbl S.empty S.empty S.empty (Replace prog saf)
+
+list_schedules :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr)
+list_schedules r m0 = 
+        fromAscList $ scanl f first (toAscList r)
+    where
+        p ref k _    = k `S.member` after ref 
+        q ref k _    = not $ k `S.member` before ref 
+        f (_,m1) (i,ref) = (i, M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1)
+        first_index
+            | not $ M.null r = fst (findMin r)-1
+            | M.null r       = 0
+        first                = (first_index,fromList [(label "default",zfalse)])
+
+before x = keep x `S.union` remove x
+after x = keep x `S.union` add x
+
+cycles xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
+    where
+        f xs  = (fst $ head xs, fst $ head xs, map snd xs)
+        vs    = map (\x -> (x,x,[])) $ nub (map fst xs ++ map snd xs)
+        alist = map f $ groupBy ((==) `on` fst) $ sort xs
+        collapse ( (x1,x2,xs) : zs@( (y1,y2,ys):ws ) )
+            | x1 == y1  = collapse $ (x1,x2,xs++ys):ws
+            | x1 /= y1  = (x1,x2,xs) : collapse zs
+        collapse xs = xs
+
+--linearize :: [ScheduleChange] -> Either [[ScheduleChange]] [ScheduleChange]
+--linearize xs = toEither $ mapM g comp
+--    where
+--        g (Node x []) = return $ vertex_fn x
+--        g other@(Node x _) = do
+--                tell [dec other []] 
+--                return (vertex_fn x)
+--          where
+--            dec (Node v ts) vs = vertex_fn v : L.foldr dec vs ts        
+--        comp     = scc graph
+--        graph    = buildG (1,length xs) edges
+--        pairs    = [ (x,y) | x <- vertices, y <- vertices, fst x /= fst y ]
+--        vertex_fn x = fromList vertices ! x
+--        vertices = zip [1..] xs
+--        edges    = concatMap (uncurry f) pairs 
+--        f (i,x) (j,y)
+--            | S.null (after x `S.intersection` before y)    = []
+--            | otherwise                                     = [(i,j)]
+--
+--first_schedule :: [ScheduleChange] -> S.Set Label -> S.Set Label
+--first_schedule xs x = L.foldl f x $ reverse xs
+--    where
+--        f x y = (x `S.difference` after y) `S.union` before y
+--
+--all_schedules :: [ScheduleChange] -> S.Set Label -> [S.Set Label]
+--all_schedules xs x = reverse $ L.foldl f [first_schedule xs x] xs
+--    where
+--        f xs@(x:_) y = ((x `S.difference` after y) `S.union` before y):xs
 
 empty_property_set :: PropertySet
 empty_property_set = PS 
