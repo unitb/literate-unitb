@@ -1,3 +1,6 @@
+\subsection{Visitor}
+
+\begin{code}
 {-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-} 
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances #-}
 module Document.Visitor 
@@ -320,3 +323,5 @@ h ((name,c):cs) x cmd ts (i,j)
                     return r
     | otherwise     = h cs x cmd ts (i,j)
 h [] x cmd ts (i,j) = g x ts 
+
+\end{code}
