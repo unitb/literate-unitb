@@ -38,8 +38,8 @@ main = do
         b <- didAnythingChange
         c <- lift $ if b
         then do
-            (c,xs,ys) <- readProcessWithExitCode "ghc" ["test"] ""
             forM_ (take 20 $ repeat "") putStrLn
+            (c,xs,ys) <- readProcessWithExitCode "ghc" ["test"] ""
             putStr ys 
             putStr $ (take 60 $ cycle "\b") ++ show c ++ "       "
             hFlush stdout
