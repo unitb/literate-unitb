@@ -385,11 +385,12 @@ result6 = unlines
      , "  o  m0/evt/TR/tr0"
      , "  o  m0/prog0/REF/monotonicity/lhs"
      , "  o  m0/prog0/REF/monotonicity/rhs"
+     , " xxx m0/prog1/REF/add" 
      , "  o  m0/prog2/REF/trading"
      , "  o  m0/prog3/REF/PSP/lhs"
      , "  o  m0/prog3/REF/PSP/rhs"
      , " xxx m0/prog4/REF/discharge"
-     , "passed 67 / 72"
+     , "passed 67 / 73"
      ]
 
 path6 = "tests/cubes-t5.tex"
@@ -459,12 +460,18 @@ result7 = unlines
      , "  o  m0/evt/SCH"
      , "  o  m0/prog0/REF/monotonicity/lhs"
      , "  o  m0/prog0/REF/monotonicity/rhs"
+     , " xxx m0/prog1/REF/add"
+     , " xxx m0/prog10/REF/add"
      , " xxx m0/prog2/REF/trading"
      , " xxx m0/prog3/REF/PSP/lhs"
      , " xxx m0/prog3/REF/PSP/rhs"
+     , " xxx m0/prog4/REF/add"
      , " xxx m0/prog5/REF/transitivity"
+     , " xxx m0/prog6/REF/add"
+     , " xxx m0/prog7/REF/add"
      , "  o  m0/prog8/REF/transitivity"
-     , "passed 62 / 69"
+     , " xxx m0/prog9/REF/add"
+     , "passed 62 / 75"
      ]
 
 path7 = "tests/cubes-t4.tex"
@@ -630,7 +637,10 @@ result9 = unlines
      , "  o  m0/prog4/REF/discharge"
      , "  o  m0/prog5/REF/disjunction/lhs"
      , "  o  m0/prog5/REF/disjunction/rhs"
-     , "passed 74 / 77"
+     , " xxx m0/prog6/REF/add"
+     , " xxx m0/prog7/REF/add"
+     , " xxx m0/prog8/REF/add"
+     , "passed 74 / 80"
      ]
      
 path9 = "tests/cubes-t8.tex"

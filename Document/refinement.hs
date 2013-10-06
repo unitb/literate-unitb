@@ -52,7 +52,7 @@ data Add = Add
 
 instance RefRule Add where
     rule_name _       = label "add"
-    refinement_po _ _ = M.fromList []
+    refinement_po _ m = M.fromList $ assert m "" zfalse
 
 class RuleParser a where
     parse_rule :: a -> [Label] -> String -> RuleParserParameter -> EitherT [Error] (RWS (Int,Int) [Error] b) Rule
@@ -70,7 +70,7 @@ instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a progress property" rule goal_lbl,i,j)]
+                left [(format "refinement ({0}): {1} should be a progress property" rule x,i,j)]
     parse_rule _ [] rule _ = do
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
@@ -81,7 +81,7 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
     parse_rule _ [] rule _ = do
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
@@ -92,7 +92,7 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
     parse_rule _ [] rule _ = do
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
@@ -103,7 +103,7 @@ instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)]
+                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
     parse_rule _ [] rule _ = do
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
@@ -115,7 +115,7 @@ instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
         where
             g x = maybe (do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a progress property" rule goal_lbl,i,j)] )
+                left [(format "refinement ({0}): {1} should be a progress property" rule x,i,j)] )
                 return
                 $ M.lookup x prog
 
@@ -126,7 +126,7 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
         where
             g x = maybe (do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule goal_lbl,i,j)] )
+                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)] )
                 return
                 $ M.lookup x saf
 
@@ -347,7 +347,7 @@ parse_induction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls hint) = 
                     return (dir,var,bound)
             Nothing -> left [("expecting a variant", i,j)]
         let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
-        let pr1@(LeadsTo fv1 p1 q1) = prog ! h0
+            pr1@(LeadsTo fv1 p1 q1) = prog ! h0
         dum <- case fv1 \\ fv0 of
             [v] -> return v
             _   -> left [(   "inductive formula should have one free "
