@@ -44,6 +44,7 @@ main = do
                         t0 <- getModificationTime "test"
                         t1 <- getModificationTime "last_result.txt"
                         if t1 <= t0 then do
+                            t2 <- getCurrentTime
                             system $ "./run_tests 2>&1 >> /dev/null"
                             system "cp result.txt last_result.txt"
                             tz <- getCurrentTimeZone
@@ -51,6 +52,10 @@ main = do
                             let local = utcToLocalTime tz t
                                 time = formatTime defaultTimeLocale "Time: %H:%M:%S" $ local
                             system $ "echo \"" ++ time ++ "\" >> last_result.txt"
+                            t0 <- getModificationTime "test"
+                            if t2 <= t0 then
+                                void $ system "touch test"
+                            else return ()
                             void $ system "cat last_result.txt"
                         else return ()
                     else
