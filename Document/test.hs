@@ -13,6 +13,7 @@ import qualified Document.Tests.SmallMachine as SMch
 import qualified Document.Tests.TrainStation as Train
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.Phase as Phase
+import qualified Document.Tests.TrainStationRefinement as Ref
 
 import Latex.Parser
 import Latex.Scanner
@@ -39,6 +40,7 @@ test = test_cases
         , Train.test_case
         , Lambdas.test_case
         , Phase.test_case
+        , Ref.test_case
         , all_properties
         ]
 

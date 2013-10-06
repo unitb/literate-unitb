@@ -77,8 +77,12 @@
 |  |  +- test 0, cyclic refinement relation between machines
 |  |  +- test 1, valid references to variables and event declared in ancester
 |  |  +- [ Success: 2 / 2 ]
+|  +- train station example, with refinement
+|  |  +- verify machine m0
+|  |  +- verify machine m1
+|  |  +- [ Success: 2 / 2 ]
 |  +- the parser is exception free
-|  +- [ Success: 7 / 7 ]
+|  +- [ Success: 8 / 8 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -129,10 +133,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   10116 total
+   10208 total
     1297 Document/Tests/trainstation.hs
      658 Document/Tests/lambdas.hs
      613 Document/machine.hs
      570 UnitB/ast.hs
      519 UnitB/po.hs
-Time: 01:19:57
+Time: 01:35:50

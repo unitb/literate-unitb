@@ -1,0 +1,479 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%\section{}
+%\subsection{}
+
+\newcommand{\Train}{\text{TRAIN}}
+\newcommand{\Blk}{\text{BLK}}
+
+\section{Initial model}
+\begin{machine}{m0}
+
+\begin{align*}
+	\false \tag{DEFAULT} \label{default}
+\end{align*}
+
+\newset{TRAIN}{\Train}
+
+\begin{use:set}{\Train} \end{use:set}
+
+\begin{variable}
+	in : \set [ \Train ]
+\end{variable}
+
+\begin{dummy}
+	t : \Train
+\end{dummy}
+
+%\begin{align*}
+\newevent{m0:enter}{enter} 
+\newevent{m0:leave}{leave}
+%\end{align*}
+%\newcompound{m0:enter}
+%\newcompound{m0:leave}
+
+\begin{indices}{m0:leave}
+	t : \Train
+\end{indices}
+\begin{indices}{m0:enter}
+	t : \Train
+\end{indices}
+
+\weakento{m0:leave}{0}{default}{c0}
+
+\begin{align*}
+\cschedule{m0:leave}{c0}
+	{	t &\in in } \\ 
+\evassignment{m0:leave}{a0}
+	{	in' &= in \setminus \{ t \} } \\
+\evassignment{m0:enter}{a0}
+	{	in' &= in \bunion \{ t \} }
+\end{align*}
+
+\begin{align*}
+&\progress{prog0}
+	{	t \in in }{ \neg t \in in }
+\refine{prog0}{discharge}{tr0}{}
+&\transient{m0:leave}{0}{tr0}
+	{	t \in in }
+\end{align*}
+
+\end{machine}
+
+\section{First refinement}
+\begin{machine}{m1}
+
+
+
+\refines{m0}
+
+\newset{BLK}{\Blk}
+%\newset{TRAIN}{\Train}
+
+%\begin{use:set}{\Train} \end{use:set}
+\begin{use:set}{\Blk} \end{use:set}
+\begin{use:fun}{\Train}{\Blk} \end{use:fun}
+
+%%\begin{variable}
+%%	in : \set [ \Train ]
+%%\end{variable}
+
+\begin{variable}
+	loc : \Train \pfun \Blk
+\end{variable}
+
+%\begin{dummy}
+%	t : \Train
+%\end{dummy}
+
+%\newevent{m1:enter}{enter}
+%
+%\newevent{m1:leave}{leave}
+
+%\begin{indices}{m1:leave}
+%	t : \Train
+%\end{indices}
+%
+%\begin{indices}{m1:enter}
+%	t : \Train
+%\end{indices}
+
+\begin{align*}
+%\cschedule{m1:leave}{c0}
+%	{	t &\in in } \\ 
+%\evassignment{m1:leave}{a0}
+%	{	in' &= in \setminus \{ t \} }
+\\ \initialization{in1}
+	{ in = \emptyset }
+\end{align*}
+
+%\begin{align*}
+%\evassignment{m1:enter}{a0}
+%	{	in' &= in \bunion \{ t \} }
+%\end{align*}
+
+\begin{align*}
+\invariant{inv0}
+	{	\dom.loc = in }
+\end{align*}
+
+\begin{constant}
+	ent,ext : \Blk
+\end{constant}
+
+\begin{constant}
+	plf : \set [ \Blk ]
+\end{constant}
+
+\subsection{New requirements}
+\begin{align*}
+\safety{saf0}
+	{ \neg t \in in& }{ t \in in \land loc.t = ent }
+\\ \safety{saf1}
+	{ t \in in \land loc.t = ent& }{ t \in in \land loc.t \in plf }
+\\ \safety{saf2}
+	{ t \in in \land loc.t \in plf& }{ t \in in \land loc.t = ext }
+\\ \safety{saf3}
+	{ t \in in \land loc.t = ext& }{ \neg t \in in }
+\end{align*}
+
+\subsection{Proofs}
+
+\subsubsection{Invariant \ref{inv0}}
+
+\begin{align*}
+\evassignment{m0:leave}{a2}
+	{ loc' &= \{ t \} \domsub loc }
+\\ \evassignment{m0:enter}{a2}
+	{ loc' &= loc \1| t \tfun ent }
+\\ \initialization{in0}
+	{ loc \, &= \emptyfun }
+\end{align*}
+
+\subsubsection{Safety \ref{saf1}, \ref{saf2}}
+
+This takes care of \eqref{saf2}:
+
+\begin{align*}
+\evguard{m0:leave}{grd1}
+	{ loc.t = ext }
+\end{align*}
+
+This takes care of \eqref{saf1}
+
+\begin{align*}
+\evguard{m0:leave}{grd0}
+	{ t \in in }
+\\ \assumption{asm0}
+	{ \neg ext \in plf \1\land \neg ext = ent }
+\end{align*}
+
+\subsubsection{Side conditions}
+
+In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{prog0} and \ref{saf3} in order to prove refinement.
+\replace{m0:leave}{1}{c0}{c0,c1}{}{prog0}{saf3}
+
+\begin{align*}
+\cschedule{m0:leave}{c1}
+	{ loc.t = ext }
+%\\ \safety{saf4}
+%	{ t \in in \land loc.t = ext }{ \neg t \in in }
+\\ \progress{prog0}
+	{ t \in in }{ t \in in \land loc.t = ext }
+\end{align*}
+
+The first step in implementing \eqref{prog0} is to break it down in a few cases. The property says ``a train inside the station eventually reaches the exit''. Now, we're going to break the predicate ``the train is inside the station'' into ``the train is at the entrance'', ``the train is at a platform'' and ``the train is at the exit'', as described by the following assumption:
+\hide{
+	\begin{dummy}
+		b : \Blk
+	\end{dummy}
+}
+\begin{align*}
+\assumption{asm1}
+{	\qforall{b}{}{ b \in \Blk \2\equiv b \in plf \1\lor b = ent \1\lor b = ext }	}
+\end{align*}
+
+Which allows us to appy \emph{disjunction} to \eqref{prog0}.
+
+\begin{align*}
+& { t \in in }\3\mapsto{ t \in in \land loc.t = ext }
+\refine{prog0}{disjunction}{prog1,prog2,prog3}{}
+& \progress{prog2}
+	{ t \in in \land loc.t = ext }{ t \in in \land loc.t = ext }
+\\ & \progress{prog1}
+	{ t \in in \land loc.t = ent }{ t \in in \land loc.t = ext }
+\\ & \progress{prog3}
+	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
+\end{align*}
+%
+\hide{ \refine{prog2}{implication}{}{} } %
+%
+\eqref{prog2} is true by implication. This leaves us \eqref{prog1} and \eqref{prog3}. \eqref{prog1} says that a train at the entrance reaches the exit. However, \eqref{saf1} says that a train can only leave the entrance through a platform:
+
+\begin{align*}
+	& { t \in in \land loc.t = ent }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{prog1}}
+\refine{prog1}{transitivity}{prog4,prog3}{}
+& \progress{prog4}
+	{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in plf } 
+\\ & { t \in in \land loc.t \in plf }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{prog3}}
+\end{align*}
+
+We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
+%\begin{align*}
+\newevent{m1:movein}{move\_in} 
+\newevent{m1:moveout}{move\_out} 
+%\end{align*}
+\hide{
+	\refine{prog3}{discharge}{tr0,saf2}{}
+	\refine{prog4}{discharge}{tr1,saf1}{}
+}
+\begin{align*}
+%\\ & \safety{saf5}
+%	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
+& \transient{m1:movein}{0}{tr1}
+	{ t \in in \1\land loc.t = ent }
+\\ & \transient{m1:moveout}{0}{tr0}
+	{ t \in in \1\land loc.t \in plf }
+%\\ & \safety{saf6}
+%	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
+\end{align*}
+
+
+\subsubsection{New events} 
+
+
+\begin{indices}{m1:moveout}
+	t : \Train
+\end{indices}
+
+We adjust \ref{m1:moveout} to satisfy \ref{tr0}.
+
+\weakento{m1:moveout}{0}{default}{c1}{}
+
+\begin{align*}
+\evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
+%\\ \evassignment{m1:moveout}{a3}{ in' = in }
+\\ \assumption{asm2}
+	{ \qexists{b}{}{b \in plf} }
+\\ \cschedule{m1:moveout}{c1}{ t \in in \land loc.t \in plf }
+\\ \evguard{m1:moveout}{g1}{ t \in in }
+%\evassignment{m1:moveout}{a2}{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
+\end{align*}
+
+We adjust \ref{m1:movein} to satisfy \ref{tr1}.
+
+\weakento{m1:movein}{0}{default}{c1,c2}{}
+
+\begin{indices}{m1:movein}
+	t : \Train
+\end{indices}
+
+\begin{align*}
+\evassignment{m1:movein}{a2}
+	{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
+%\end{align*}
+%\begin{align*}
+%\\ \evassignment{m1:movein}{a3}{ in' & = in }
+\\ \assumption{asm3}
+	{ \neg ent &\in plf }
+\\ \cschedule{m1:movein}{c1}{ t &\in in } 
+\\ \cschedule{m1:movein}{c2}{ loc.t &= ent }
+\\ \evguard{m1:movein}{g1}{ t &\in in }
+\end{align*}
+%
+\end{machine}
+
+\section{Second refinement}
+
+%\begin{machine}{m2}
+%\newevent{m2:enter}{enter}
+%\newevent{m2:leave}{leave}
+%\newevent{m2:moveout}{move\_out}
+%\newevent{m2:movein}{move\_in}
+%
+%\hide{
+%\newset{BLK}{\Blk}
+%\newset{TRAIN}{\Train}
+%
+%\begin{use:set}{\Train} \end{use:set}
+%\begin{use:set}{\Blk} \end{use:set}
+%\begin{use:fun}{\Train}{\Blk} \end{use:fun}
+%
+%\begin{variable}
+%	in : \set [ \Train ]
+%\end{variable}
+%
+%\begin{variable}
+%	loc : \Train \pfun \Blk
+%\end{variable}
+%
+%\begin{dummy}
+%	t,t_0,t_1 : \Train
+%\end{dummy}
+%
+%\begin{indices}{m2:leave}
+%	t : \Train
+%\end{indices}
+%
+%\begin{indices}{m2:enter}
+%	t : \Train
+%\end{indices}
+%
+%\begin{align*}
+%\cschedule{m2:leave}{c0}
+%	{	t &\in in } \\ 
+%\evassignment{m2:leave}{a0}
+%	{	in' &= in \setminus \{ t \} }
+%\\ \initialization{in1}
+%	{ in = \emptyset }
+%\end{align*}
+%
+%\begin{align*}
+%\evassignment{m2:enter}{a0}
+%	{	in' &= in \bunion \{ t \} }
+%\end{align*}
+%
+%\begin{align*}
+%\invariant{inv0}
+%	{	\dom.loc = in }
+%\end{align*}
+%
+%\begin{constant}
+%	ent,ext : \Blk
+%\end{constant}
+%
+%\begin{constant}
+%	plf : \set [ \Blk ]
+%\end{constant}
+%
+%\subsection{New requirements}
+%\begin{align*}
+%\safety{saf0}
+%	{ \neg t \in in& }{ t \in in \land loc.t = ent }
+%\\ \safety{saf1}
+%	{ t \in in \land loc.t = ent& }{ t \in in \land loc.t \in plf }
+%\\ \safety{saf2}
+%	{ t \in in \land loc.t \in plf& }{ t \in in \land loc.t = ext }
+%\\ \safety{saf3}
+%	{ t \in in \land loc.t = ext& }{ \neg t \in in }
+%\end{align*}
+%
+%\subsection{Proofs}
+%
+%\subsubsection{Invariant \ref{inv0}}
+%
+%\begin{align*}
+%\evassignment{m2:leave}{a2}
+%	{ loc' &= \{ t \} \domsub loc }
+%\\ \evassignment{m2:enter}{a2}
+%	{ loc' &= loc \1| t \tfun ent }
+%\\ \initialization{in0}
+%	{ loc = \emptyfun }
+%\end{align*}
+%
+%\subsubsection{Safety \ref{saf1}, \ref{saf2}}
+%
+%\begin{align*}
+%\evguard{m2:leave}{grd0}
+%	{ t \in in }
+%\\ \evguard{m2:leave}{grd1}
+%	{ loc.t = ext }
+%\end{align*}
+%
+%\begin{align*}
+%\assumption{asm0}
+%	{ \neg ext \in plf \1\land \neg ext = ent }
+%\end{align*}
+%
+%\subsubsection{Side conditions}
+%
+%\begin{align*}
+%\cschedule{m2:leave}{c1}
+%	{ loc.t = ext }
+%\end{align*}
+%
+%\begin{dummy}
+%	b : \Blk
+%\end{dummy}
+%
+%\begin{align*}
+%\assumption{asm1}
+%{	\qforall{b}{}{ b \in \Blk \2\equiv b \in plf \1\lor b = ent \1\lor b = ext }	}
+%\end{align*}
+%
+%\subsubsection{New events} 
+%
+%\begin{indices}{m2:moveout}
+%	t : \Train
+%\end{indices}
+%
+%\begin{align*}
+%\evassignment{m2:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
+%\\ \evassignment{m2:moveout}{a3}{ in' = in }
+%\\ \assumption{asm2}
+%	{ \qexists{b}{}{b \in plf} }
+%\\ \cschedule{m2:moveout}{c1}{ t \in in \land loc.t \in plf }
+%\\ \evguard{m2:moveout}{g1}{ t \in in }
+%\end{align*}
+%
+%\begin{indices}{m2:movein}
+%	t : \Train
+%\end{indices}
+%
+%\begin{align*}
+%\\ \evassignment{m2:movein}{a3}{ in' & = in }
+%\\ \assumption{asm3}
+%	{ \neg ent &\in plf }
+%\\ \cschedule{m2:movein}{c1}{ t &\in in } 
+%\\ \cschedule{m2:movein}{c2}{ loc.t &= ent }
+%\\ \evguard{m2:movein}{g1}{ t &\in in }
+%\end{align*}
+%}
+%
+%\subsection{New Requirement}
+%\begin{align*}
+%\invariant{m2:inv0}
+%	{	\qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	}
+%\end{align*}
+%
+%\subsection{Design}
+%
+%\begin{align*}
+%\evguard{m2:movein}{g0}
+%	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
+%\\ \evassignment{m2:movein}{a6}
+%	{ \qexists{b}{b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+%		{ loc' = loc \1| t \tfun b } }
+%\evguard{m2:enter}{g1}
+%	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
+%\evguard{m2:moveout}{g1}
+%	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+%%	{ \qexists{b}{}{ loc'  }
+%\end{align*}
+%
+%\end{machine}
+
+\end{document}
