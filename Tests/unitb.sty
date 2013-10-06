@@ -491,7 +491,10 @@
 \newassertion{\initialization}{IN}
 \newassertion{\constraint}{CO}
 \newassertion{\assumption}{ASM}
-\newcomponent{\transient}{TR}
+\newcommand{\transient}[3] % {evt}{sched_num}{label}
+{	\transientA{#1}{#3}
+	}
+\newcomponent{\transientA}{TR}
 \newcomponent{\evguard}{G}
 \newcomponent{\fschedule}{F}
 \newcomponent{\cschedule}{C}
