@@ -106,7 +106,10 @@ result7 = unlines [
         "  o  m0/INIT/INV/inv0",
         "  o  m0/INIT/INV/inv1",
         "  o  m0/INIT/INV/inv2",
-        "  o  m0/evt/FIS",
+        "  o  m0/evt/FIS/a@prime",
+        "  o  m0/evt/FIS/b@prime",
+        "  o  m0/evt/FIS/c@prime",
+        "  o  m0/evt/FIS/n@prime",
         "  o  m0/evt/INV/inv0/goal (62,1)",
         "  o  m0/evt/INV/inv0/hypotheses (62,1)",
         "  o  m0/evt/INV/inv0/relation (62,1)",
@@ -132,7 +135,7 @@ result7 = unlines [
         "  o  m0/evt/INV/inv2/step (184,1)",
         "  o  m0/evt/INV/inv2/step (186,1)",
         "  o  m0/evt/SCH",
-        "passed 30 / 30"]
+        "passed 33 / 33"]
 
 case7 = do
     r <- parse_machine path6

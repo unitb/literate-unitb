@@ -61,13 +61,14 @@ result2 = (unlines [
         "  o  m0/INIT/FIS",
         "  o  m0/INIT/INV/inv0",
         "  o  m0/INIT/INV/inv1",
-        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/FIS/x@prime" ,
+        "  o  m0/inc/FIS/y@prime" ,
         "  o  m0/inc/INV/inv0",
         " xxx m0/inc/INV/inv1",
         "  o  m0/inc/SCH",
         " xxx m0/inc/TR/tr0",
 --        "  o  m0/inc/TR/NEG/tr0",
-        "passed 6 / 8"
+        "passed 7 / 9"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -85,11 +86,12 @@ result3 = (unlines [
         "  o  m0/INIT/INV/inv0",
         " xxx m0/SKIP/CO/c0",
         "  o  m0/inc/CO/c0",
-        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/FIS/x@prime" ,
+        "  o  m0/inc/FIS/y@prime" ,
         "  o  m0/inc/INV/inv0",
         "  o  m0/inc/SCH",
         " xxx m0/inc/TR/tr0",
-        "passed 6 / 8"
+        "passed 7 / 9"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -147,12 +149,13 @@ result6 = (unlines [
         "  o  m0/INIT/INV/inv0",
         " xxx m0/SKIP/CO/c0",
         "  o  m0/inc/CO/c0",
-        "  o  m0/inc/FIS" ,
+        "  o  m0/inc/FIS/x@prime" ,
+        "  o  m0/inc/FIS/y@prime" ,
         "  o  m0/inc/INV/inv0",
         "  o  m0/inc/SCH",
         "  o  m0/inc/SCH/0/REF/weaken",
         "  o  m0/inc/TR/tr0",
-        "passed 8 / 9"
+        "passed 9 / 10"
     ])
 
 path6 = "Tests/small_machine_t3.tex"

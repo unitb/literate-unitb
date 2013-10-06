@@ -46,7 +46,7 @@ test = test_cases
 
 result1 = (unlines [
         "  o  m/INIT/FIS",
-        "  o  m/enter/FIS" ,
+	    "  o  m/enter/FIS/in@prime",
         "  o  m/enter/SCH/goal (21,1)",
         "  o  m/enter/SCH/hypotheses (21,1)",
         "  o  m/enter/SCH/relation (21,1)",

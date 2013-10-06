@@ -44,7 +44,8 @@ part0 = test_cases
 part1 = test_cases
             [ (StringCase "test 1, verification" case1 result1)
             , (StringCase "test 2, proof obligation, INIT/fis" case2 result2)
-            , (StringCase "test 3, proof obligation, leave/fis" case3 result3)
+            , (StringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
+            , (StringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
             ]
 part2 = test_cases
@@ -579,7 +580,8 @@ result1 = unlines
         ,  "  o  train0/enter/CO/co1/part 2/case 2/main goal/step (282,2)"
         ,  "  o  train0/enter/CO/co1/part 2/case 2/main goal/step (284,2)"
         ,  "  o  train0/enter/CO/co1/part 2/completeness (261,2)"
-        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/FIS/in@prime"
+        ,  "  o  train0/enter/FIS/loc@prime"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
         ,  "  o  train0/enter/INV/inv2/hypotheses (77,1)"
@@ -615,7 +617,8 @@ result1 = unlines
         ,  "  o  train0/leave/CO/co1/step (385,1)"
         ,  "  o  train0/leave/CO/co1/step (387,1)"
         ,  "  o  train0/leave/CO/co1/step (390,1)"
-        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/FIS/in@prime"
+        ,  "  o  train0/leave/FIS/loc@prime"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
@@ -627,7 +630,7 @@ result1 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 90 / 91"
+        ,  "passed 92 / 93"
         ]
 
 case1 = do
@@ -695,9 +698,8 @@ result3 = unlines (
             ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
-     ,  "(assert (not (exists ((in@prime (set TRAIN)) (loc@prime (pfun TRAIN BLK))) (and true"
-            ++              " (and (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))"
-            ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))))))"
+     ,  "(assert (not (exists ((in@prime (set TRAIN))) (and true"
+            ++              " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
          "(then simplify smt) " ++
@@ -709,11 +711,50 @@ case3 = do
         pos <- list_file_obligations path0
         case pos of
             Right [(_,pos)] -> do
-                let po = pos ! label "train0/leave/FIS"
+                let po = pos ! label "train0/leave/FIS/in@prime"
                 let cmd = unlines $ map (show . as_tree) $ z3_code po
                 return cmd
             x -> return $ show x
 
+result19 = unlines (
+     train_decl False ++ 
+     set_decl_smt2 ++ 
+     comp_facts ++
+     [  "(assert (and (not (= ent ext))"
+            ++      " (not (elem@@BLK ent PLF))"
+            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (not (= p ext))"
+            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (not (= p ent))"
+            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (or (= p ent) (= p ext))"
+            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (forall ((t TRAIN))"
+            ++        " (=> (elem@@TRAIN t in)"
+            ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
+     ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
+     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
+     ,  "(assert (not (exists ((loc@prime (pfun TRAIN BLK))) (and true"
+            ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))"
+     ,  "(check-sat-using (or-else " ++
+         "(then qe smt) " ++
+         "(then simplify smt) " ++
+         "(then skip smt) " ++
+         "(then (using-params simplify :expand-power true) smt)))"
+     ] )
+
+case19 = do
+        pos <- list_file_obligations path0
+        case pos of
+            Right [(_,pos)] -> do
+                let po = pos ! label "train0/leave/FIS/loc@prime"
+                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                return cmd
+            x -> return $ show x
 
 result4 = unlines ( 
         train_decl False ++ 
@@ -928,7 +969,8 @@ result13 = unlines
         ,  "  o  train0/enter/CO/co1"
         ,  "  o  train0/enter/CO/s0"
         ,  "  o  train0/enter/CO/s1"
-        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/FIS/in@prime"
+        ,  "  o  train0/enter/FIS/loc@prime"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
         ,  "  o  train0/enter/INV/inv2/hypotheses (77,1)"
@@ -961,7 +1003,8 @@ result13 = unlines
         ,  "  o  train0/leave/CO/co1/step (273,1)"
         ,  "  o  train0/leave/CO/s0"
         ,  "  o  train0/leave/CO/s1"
-        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/FIS/in@prime"
+        ,  "  o  train0/leave/FIS/loc@prime"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
@@ -973,7 +1016,7 @@ result13 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 61 / 66"
+        ,  "passed 63 / 68"
         ]
         
 case13 = do
@@ -1002,7 +1045,8 @@ result14 = unlines
         ,  "  o  train0/enter/CO/co1"
         ,  "  o  train0/enter/CO/s0"
         ,  "  o  train0/enter/CO/s1"
-        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/FIS/in@prime"
+        ,  "  o  train0/enter/FIS/loc@prime"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
         ,  "  o  train0/enter/INV/inv2/hypotheses (77,1)"
@@ -1033,7 +1077,8 @@ result14 = unlines
         ,  "  o  train0/leave/CO/co1/step (278,1)"
         ,  "  o  train0/leave/CO/s0"
         ,  "  o  train0/leave/CO/s1"
-        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/FIS/in@prime"
+        ,  "  o  train0/leave/FIS/loc@prime"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
@@ -1045,7 +1090,7 @@ result14 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 57 / 59"
+        ,  "passed 59 / 61"
         ]
         
 case14 = do
@@ -1081,7 +1126,8 @@ result15 = unlines
         ,  "  o  train0/enter/CO/co1"
         ,  "  o  train0/enter/CO/s0"
         ,  "  o  train0/enter/CO/s1"
-        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/FIS/in@prime"
+        ,  "  o  train0/enter/FIS/loc@prime"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
         ,  "  o  train0/enter/INV/inv2/hypotheses (77,1)"
@@ -1111,7 +1157,8 @@ result15 = unlines
         ,  "  o  train0/leave/CO/co1/step (289,1)"
         ,  "  o  train0/leave/CO/s0"
         ,  "  o  train0/leave/CO/s1"
-        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/FIS/in@prime"
+        ,  "  o  train0/leave/FIS/loc@prime"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
@@ -1123,7 +1170,7 @@ result15 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 62 / 65"
+        ,  "passed 64 / 67"
         ]
         
 case15 = do
@@ -1177,7 +1224,8 @@ result16 = unlines
         ,  "  o  train0/enter/CO/co1/part 2/completeness (230,2)"
         ,  "  o  train0/enter/CO/s0"
         ,  "  o  train0/enter/CO/s1"
-        ,  "  o  train0/enter/FIS"
+        ,  "  o  train0/enter/FIS/in@prime"
+        ,  "  o  train0/enter/FIS/loc@prime"
         ,  "  o  train0/enter/INV/inv1"
         ,  "  o  train0/enter/INV/inv2/goal (77,1)"
         ,  "  o  train0/enter/INV/inv2/hypotheses (77,1)"
@@ -1208,7 +1256,8 @@ result16 = unlines
         ,  "  o  train0/leave/CO/co1/step (347,1)"
         ,  "  o  train0/leave/CO/s0"
         ,  "  o  train0/leave/CO/s1"
-        ,  "  o  train0/leave/FIS"
+        ,  "  o  train0/leave/FIS/in@prime"
+        ,  "  o  train0/leave/FIS/loc@prime"
         ,  "  o  train0/leave/INV/inv1"
         ,  "  o  train0/leave/INV/inv2/goal (98,1)"
         ,  "  o  train0/leave/INV/inv2/hypotheses (98,1)"
@@ -1220,7 +1269,7 @@ result16 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 83 / 84"
+        ,  "passed 85 / 86"
         ]
 
 case16 = do

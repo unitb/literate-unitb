@@ -6,6 +6,7 @@ import UnitB.AST
 import UnitB.Calculation
 import UnitB.Operator
 import UnitB.Label
+import UnitB.Feasibility
 
 import Z3.Z3
 
@@ -229,19 +230,20 @@ inv_po m pname xp =
                 ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
 
-fis_po m lbl evt = M.singleton
-        (composite_label [_name m, lbl, fis_lbl])
-        (ProofObligation 
+fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
+        ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
+          ProofObligation 
             (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants p ++ grd)
             True
-            (zexists pvar ztrue act))
+            (zexists pvar ztrue $ zall acts))
     where
         p    = props m
         grd  = M.elems $ guard evt
-        act  = zall $ M.elems $ action evt
+--        act  = zall $ M.elems $ action evt
         pvar = map prime $ M.elems $ variables m
         ind  = indices evt `merge` params evt
+        pos  = partition_expr pvar $ M.elems $ action evt
 
 sch_po :: Machine -> Label -> Event -> Map Label ProofObligation
 sch_po m lbl evt = M.singleton
