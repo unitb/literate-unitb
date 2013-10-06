@@ -57,18 +57,19 @@ case1 = do
     ct <- readFile path1
     parse_machine path1
 
-result2 = (unlines [
-        "  o  m0/INIT/FIS",
-        "  o  m0/INIT/INV/inv0",
-        "  o  m0/INIT/INV/inv1",
-        "  o  m0/inc/FIS/x@prime" ,
-        "  o  m0/inc/FIS/y@prime" ,
-        "  o  m0/inc/INV/inv0",
-        " xxx m0/inc/INV/inv1",
-        "  o  m0/inc/SCH",
-        " xxx m0/inc/TR/tr0",
---        "  o  m0/inc/TR/NEG/tr0",
-        "passed 7 / 9"
+result2 = (unlines 
+	  [ "  o  m0/INIT/FIS/x"
+      , "  o  m0/INIT/FIS/y"
+      , "  o  m0/INIT/INV/inv0"
+      , "  o  m0/INIT/INV/inv1"
+      , "  o  m0/inc/FIS/x@prime" 
+      , "  o  m0/inc/FIS/y@prime" 
+      , "  o  m0/inc/INV/inv0"
+      , " xxx m0/inc/INV/inv1"
+      , "  o  m0/inc/SCH"
+      , " xxx m0/inc/TR/tr0"
+--        "  o  m0/inc/TR/NEG/tr0"
+      , "passed 8 / 10"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -81,17 +82,18 @@ case2 = do
             return s
         x -> return $ show x
 
-result3 = (unlines [
-        "  o  m0/INIT/FIS",
-        "  o  m0/INIT/INV/inv0",
-        " xxx m0/SKIP/CO/c0",
-        "  o  m0/inc/CO/c0",
-        "  o  m0/inc/FIS/x@prime" ,
-        "  o  m0/inc/FIS/y@prime" ,
-        "  o  m0/inc/INV/inv0",
-        "  o  m0/inc/SCH",
-        " xxx m0/inc/TR/tr0",
-        "passed 7 / 9"
+result3 = (unlines 
+      [ "  o  m0/INIT/FIS/x"
+      , "  o  m0/INIT/FIS/y"
+      , "  o  m0/INIT/INV/inv0"
+      , " xxx m0/SKIP/CO/c0"
+      , "  o  m0/inc/CO/c0"
+      , "  o  m0/inc/FIS/x@prime" 
+      , "  o  m0/inc/FIS/y@prime" 
+      , "  o  m0/inc/INV/inv0"
+      , "  o  m0/inc/SCH"
+      , " xxx m0/inc/TR/tr0"
+      , "passed 8 / 10"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -105,16 +107,16 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " x@prime: Int",
-        " y: Int",
-        " y@prime: Int",
-        " (= x (* 2 y))",
-        " (= x@prime (+ x 2))",
-        " (= y@prime (+ y 1))",
-        "|----",
-        " (= x@prime (* 2 y@prime))"]
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " x@prime: Int"
+      , " y: Int"
+      , " y@prime: Int"
+      , " (= x (* 2 y))"
+      , " (= x@prime (+ x 2))"
+      , " (= y@prime (+ y 1))"
+      , "|----"
+      , " (= x@prime (* 2 y@prime))"]
 
 show_po path lbl = do
         m <- parse_machine path
@@ -131,31 +133,32 @@ show_po path lbl = do
 case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
 result5 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " x@prime: Int",
-        " y: Int",
-        " y@prime: Int",
-        " (= x (* 2 y))",
-        " (= x@prime x)",
-        " (= y@prime y)",
-        "|----",
-        " (=> (= x 2) (= x@prime 4))"]
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " x@prime: Int"
+      , " y: Int"
+      , " y@prime: Int"
+      , " (= x (* 2 y))"
+      , " (= x@prime x)"
+      , " (= y@prime y)"
+      , "|----"
+      , " (=> (= x 2) (= x@prime 4))"]
 
 case5 = show_po path3 $ label "m0/SKIP/CO/c0"
 
 result6 = (unlines [
-        "  o  m0/INIT/FIS",
-        "  o  m0/INIT/INV/inv0",
-        " xxx m0/SKIP/CO/c0",
-        "  o  m0/inc/CO/c0",
-        "  o  m0/inc/FIS/x@prime" ,
-        "  o  m0/inc/FIS/y@prime" ,
-        "  o  m0/inc/INV/inv0",
-        "  o  m0/inc/SCH",
-        "  o  m0/inc/SCH/0/REF/weaken",
-        "  o  m0/inc/TR/tr0",
-        "passed 9 / 10"
+        "  o  m0/INIT/FIS/x"
+      , "  o  m0/INIT/FIS/y"
+      , "  o  m0/INIT/INV/inv0"
+      , " xxx m0/SKIP/CO/c0"
+      , "  o  m0/inc/CO/c0"
+      , "  o  m0/inc/FIS/x@prime" 
+      , "  o  m0/inc/FIS/y@prime" 
+      , "  o  m0/inc/INV/inv0"
+      , "  o  m0/inc/SCH"
+      , "  o  m0/inc/SCH/0/REF/weaken"
+      , "  o  m0/inc/TR/tr0"
+      , "passed 10 / 11"
     ])
 
 path6 = "Tests/small_machine_t3.tex"
@@ -169,36 +172,36 @@ case6 = do
         x -> return $ show x
 
 result7 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " y: Int",
-        " (= x (* 2 y))",
-        " (= x y)",
-        "|----",
-        " (= x y)"]
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " y: Int"
+      , " (= x (* 2 y))"
+      , " (= x y)"
+      , "|----"
+      , " (= x y)"]
 
 case7 = show_po path6 $ label "m0/inc/SCH"
 
 path8 = "Tests/small_machine_t4.tex"
 result8 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " y: Int",
-        " (= x (* 2 y))",
-        " false",
-        "|----",
-        " (= x y)"]
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " y: Int"
+      , " (= x (* 2 y))"
+      , " false"
+      , "|----"
+      , " (= x y)"]
 
 case8 = show_po path8 $ label "m0/inc/SCH"
 
 result9 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " x@prime: Int",
-        " y: Int",
-        " y@prime: Int",
-        " (= x (* 2 y))",
-        "|----",
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " x@prime: Int"
+      , " y: Int"
+      , " y@prime: Int"
+      , " (= x (* 2 y))"
+      , "|----",
             -- This should be the goal but it boils down to true
             -- after Literate Unit-B has simplified it
 --        " (=> false (= x y))"]
@@ -207,14 +210,14 @@ result9 = unlines [
 case9 = show_po path6 $ label "m0/inc/SCH/0/REF/weaken"
 
 result10 = unlines [
-        " sort: , , , pfun [a,b], set [a]",
-        " x: Int",
-        " x@prime: Int",
-        " y: Int",
-        " y@prime: Int",
-        " (= x (* 2 y))",
-        "|----",
-        " (and (=> (= x y) (= x y))" ++
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " x@prime: Int"
+      , " y: Int"
+      , " y@prime: Int"
+      , " (= x (* 2 y))"
+      , "|----"
+      , " (and (=> (= x y) (= x y))" ++
              " (=> (and (= x y)" ++
                       " (= x y)" ++
                       " (= x y)" ++

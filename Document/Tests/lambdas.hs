@@ -53,7 +53,11 @@ part3 = test_cases
             ]
 
 result0 = unlines 
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -89,13 +93,17 @@ result0 = unlines
      , "  o  m0/evt/INV/inv2/easy (190,1)"
      , " xxx m0/evt/INV/inv3"
      , "  o  m0/evt/SCH"
-     , "passed 35 / 36"
+     , "passed 39 / 40"
      ]
 
 path0 = "tests/cubes-t0.tex"
 
 result1 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -141,13 +149,17 @@ result1 = unlines
      , "  o  m0/evt/INV/inv3/step (252,1)"
      , "  o  m0/evt/INV/inv4"
      , "  o  m0/evt/SCH"
-     , "passed 46 / 46"
+     , "passed 50 / 50"
      ]
 
 path1 = "tests/cubes-t1.tex"
 
 result2 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -202,13 +214,17 @@ result2 = unlines
      , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
      , "  o  m0/evt/SCH"
-     , "passed 55 / 55"
+     , "passed 59 / 59"
      ]
 
 path2 = "tests/cubes-t2.tex"
 
 result3 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -265,7 +281,7 @@ result3 = unlines
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
      , "  o  m0/evt/INV/inv6"
      , "  o  m0/evt/SCH"
-     , "passed 57 / 57"
+     , "passed 61 / 61"
      ]
 
 path3 = "tests/cubes-t3.tex"
@@ -333,7 +349,11 @@ case5 = runEitherT (do
         _   -> left [("a single machine is expected",0,0)])
 
 result6 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -410,13 +430,17 @@ result6 = unlines
      , "  o  m0/prog3/REF/PSP/lhs"
      , "  o  m0/prog3/REF/PSP/rhs"
      , " xxx m0/prog4/REF/discharge"
-     , "passed 71 / 77"
+     , "passed 75 / 81"
      ]
 
 path6 = "tests/cubes-t5.tex"
 
 result7 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -495,13 +519,17 @@ result7 = unlines
      , " xxx m0/prog7/REF/add"
      , "  o  m0/prog8/REF/transitivity"
      , " xxx m0/prog9/REF/add"
-     , "passed 66 / 79"
+     , "passed 70 / 83"
      ]
 
 path7 = "tests/cubes-t4.tex"
 
 result8 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -581,13 +609,17 @@ result8 = unlines
      , "  o  m0/prog3/REF/PSP/lhs"
      , "  o  m0/prog3/REF/PSP/rhs"
      , "  o  m0/prog4/REF/discharge"
-     , "passed 76 / 79"
+     , "passed 80 / 83"
      ]
      
 path8 = "tests/cubes-t7.tex"
 
 result9 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/a"
+     , "  o  m0/INIT/FIS/b"
+     , "  o  m0/INIT/FIS/c"
+     , "  o  m0/INIT/FIS/f"
+     , "  o  m0/INIT/FIS/n"
      , "  o  m0/INIT/INV/inv0"
      , "  o  m0/INIT/INV/inv1"
      , "  o  m0/INIT/INV/inv2"
@@ -672,7 +704,7 @@ result9 = unlines
      , " xxx m0/prog6/REF/add"
      , " xxx m0/prog7/REF/add"
      , " xxx m0/prog8/REF/add"
-     , "passed 78 / 84"
+     , "passed 82 / 88"
      ]
      
 path9 = "tests/cubes-t8.tex"

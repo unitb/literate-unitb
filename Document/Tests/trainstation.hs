@@ -43,7 +43,8 @@ part0 = test_cases
             ]
 part1 = test_cases
             [ (StringCase "test 1, verification" case1 result1)
-            , (StringCase "test 2, proof obligation, INIT/fis" case2 result2)
+            , (StringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
+            , (StringCase "test 20, proof obligation, INIT/fis, loc" case20 result20)
             , (StringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
             , (StringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
@@ -537,7 +538,8 @@ path0 = "Tests/train-station.tex"
 case0 = parse_machine path0
 
 result1 = unlines 
-        [  "  o  train0/INIT/FIS"
+        [  "  o  train0/INIT/FIS/in"
+        ,  "  o  train0/INIT/FIS/loc"
         ,  "  o  train0/INIT/INV/inv1"
         ,  "  o  train0/INIT/INV/inv2/goal (422,1)"
         ,  "  o  train0/INIT/INV/inv2/hypotheses (422,1)"
@@ -630,7 +632,7 @@ result1 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 92 / 93"
+        ,  "passed 93 / 94"
         ]
 
 case1 = do
@@ -658,8 +660,8 @@ result2 = unlines (
             ++      " (= (or (= p ent) (= p ext))"
             ++         " (not (elem@@BLK p PLF))))))"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-     ,  "(assert (not (exists ((in (set TRAIN)) (loc (pfun TRAIN BLK))) (and true" ++ 
-            " (and (= in empty-set@@TRAIN) (= loc empty-fun@@TRAIN@@BLK))))))"
+     ,  "(assert (not (exists ((in (set TRAIN))) (and true" ++ 
+            " (= in empty-set@@TRAIN)))))"
      ,  "(check-sat-using (or-else " ++
          "(then qe smt) " ++
          "(then simplify smt) " ++
@@ -671,11 +673,46 @@ case2 = do
         pos <- list_file_obligations path0
         case pos of
             Right [(_,pos)] -> do
-                let po = pos ! label "train0/INIT/FIS"
+                let po = pos ! label "train0/INIT/FIS/in"
                 let cmd = unlines $ map (show . as_tree) $ z3_code po
                 return cmd
             x -> return $ show x
 
+result20 = unlines (
+        train_decl False 
+     ++ set_decl_smt2
+     ++ comp_facts ++ -- set_decl_smt2 ++
+     [  "(assert (and (not (= ent ext))"
+            ++      " (not (elem@@BLK ent PLF))"
+            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (not (= p ext))"
+            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (not (= p ent))"
+            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ((p BLK)) (=> true"
+            ++      " (= (or (= p ent) (= p ext))"
+            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (not (exists ((loc (pfun TRAIN BLK))) (and true" ++ 
+            " (= loc empty-fun@@TRAIN@@BLK)))))"
+     ,  "(check-sat-using (or-else " ++
+         "(then qe smt) " ++
+         "(then simplify smt) " ++
+         "(then skip smt) " ++
+         "(then (using-params simplify :expand-power true) smt)))"
+     ] )
+
+case20 = do
+        pos <- list_file_obligations path0
+        case pos of
+            Right [(_,pos)] -> do
+                let po = pos ! label "train0/INIT/FIS/loc"
+                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                return cmd
+            x -> return $ show x
+            
 result3 = unlines (
      train_decl False ++ 
      set_decl_smt2 ++ 
@@ -948,7 +985,8 @@ case11 = parse_machine path11
 
 path13 = "Tests/train-station-err5.tex"
 result13 = unlines
-        [  "  o  train0/INIT/FIS"
+        [  "  o  train0/INIT/FIS/in"
+        ,  "  o  train0/INIT/FIS/loc"
         ,  "  o  train0/INIT/INV/inv1"
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
@@ -1016,7 +1054,7 @@ result13 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 63 / 68"
+        ,  "passed 64 / 69"
         ]
         
 case13 = do
@@ -1029,7 +1067,8 @@ case13 = do
 
 path14 = "Tests/train-station-err6.tex"
 result14 = unlines
-        [  "  o  train0/INIT/FIS"
+        [  "  o  train0/INIT/FIS/in"
+        ,  "  o  train0/INIT/FIS/loc"
         ,  "  o  train0/INIT/INV/inv1"
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
@@ -1090,7 +1129,7 @@ result14 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 59 / 61"
+        ,  "passed 60 / 62"
         ]
         
 case14 = do
@@ -1103,7 +1142,8 @@ case14 = do
 
 path15 = "Tests/train-station-err7.tex"
 result15 = unlines
-        [  "  o  train0/INIT/FIS"
+        [  "  o  train0/INIT/FIS/in"
+        ,  "  o  train0/INIT/FIS/loc"
         ,  "  o  train0/INIT/INV/inv1"
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
@@ -1170,7 +1210,7 @@ result15 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 64 / 67"
+        ,  "passed 65 / 68"
         ]
         
 case15 = do
@@ -1183,7 +1223,8 @@ case15 = do
 
 path16 = "Tests/train-station-t2.tex"
 result16 = unlines 
-        [  "  o  train0/INIT/FIS"
+        [  "  o  train0/INIT/FIS/in"
+        ,  "  o  train0/INIT/FIS/loc"
         ,  "  o  train0/INIT/INV/inv1"
         ,  "  o  train0/INIT/INV/inv2"
         ,  "  o  train0/SKIP/CO/co0"
@@ -1269,7 +1310,7 @@ result16 = unlines
         ,  " xxx train0/leave/SCH"
         ,  "  o  train0/leave/SCH/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
-        ,  "passed 85 / 86"
+        ,  "passed 86 / 87"
         ]
 
 case16 = do

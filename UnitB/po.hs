@@ -149,12 +149,13 @@ ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
             | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
 init_fis_po :: Machine -> Map Label ProofObligation
-init_fis_po m = M.singleton (composite_label [_name m, init_fis_lbl]) po
+init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 
+            ( composite_label $ [_name m, init_fis_lbl] ++ map (label . name) vs
+            , po $ goal vs es)
     where
-        po = ProofObligation (assert_ctx m) [] True goal
-        goal 
-            | M.null $ variables m  = ztrue
-            | otherwise             = (zexists (M.elems $ variables m) ztrue $ zall $ M.elems $ inits m)
+        po = ProofObligation (assert_ctx m) [] True
+        clauses = partition_expr (M.elems $ variables m) (M.elems $ inits m)
+        goal vs es = (zexists vs ztrue $ zall es)
  
 
 prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
@@ -182,9 +183,7 @@ prop_tr m pname (Transient fv xp evt_lbl n) =
         evt  = events m ! evt_lbl
         ind  = indices evt
         dummy = Context M.empty fv M.empty  M.empty  M.empty    
-        exist_ind xp = if M.null ind 
-                then xp 
-                else zexists 
+        exist_ind xp = zexists 
                     (map (add_suffix "@param") $ M.elems ind) 
                     ztrue xp
 
@@ -271,7 +270,7 @@ sch_po m lbl evt = M.singleton
             return x
         param = params evt
         ind   = indices evt `merge` params evt
-        exist_param xp = if M.null param then xp else zexists (M.elems param) ztrue xp
+        exist_param xp = zexists (M.elems param) ztrue xp
 
 thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])

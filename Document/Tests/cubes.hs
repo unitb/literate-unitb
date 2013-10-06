@@ -101,41 +101,44 @@ event6_evt = empty_event {
 path6    = "Tests/integers.tex"
 case6    = parse_machine path6
 
-result7 = unlines [
-        "  o  m0/INIT/FIS",
-        "  o  m0/INIT/INV/inv0",
-        "  o  m0/INIT/INV/inv1",
-        "  o  m0/INIT/INV/inv2",
-        "  o  m0/evt/FIS/a@prime",
-        "  o  m0/evt/FIS/b@prime",
-        "  o  m0/evt/FIS/c@prime",
-        "  o  m0/evt/FIS/n@prime",
-        "  o  m0/evt/INV/inv0/goal (62,1)",
-        "  o  m0/evt/INV/inv0/hypotheses (62,1)",
-        "  o  m0/evt/INV/inv0/relation (62,1)",
-        "  o  m0/evt/INV/inv0/step (64,1)",
-        "  o  m0/evt/INV/inv0/step (66,1)",
-        "  o  m0/evt/INV/inv0/step (68,1)",
-        "  o  m0/evt/INV/inv0/step (70,1)",
-        "  o  m0/evt/INV/inv0/step (72,1)",
-        "  o  m0/evt/INV/inv1/goal (139,1)",
-        "  o  m0/evt/INV/inv1/hypotheses (139,1)",
-        "  o  m0/evt/INV/inv1/relation (139,1)",
-        "  o  m0/evt/INV/inv1/step (141,1)",
-        "  o  m0/evt/INV/inv1/step (143,1)",
-        "  o  m0/evt/INV/inv1/step (145,1)",
-        "  o  m0/evt/INV/inv1/step (147,1)",
-        "  o  m0/evt/INV/inv1/step (149,1)",
-        "  o  m0/evt/INV/inv1/step (151,1)",
-        "  o  m0/evt/INV/inv2/goal (178,1)",
-        "  o  m0/evt/INV/inv2/hypotheses (178,1)",
-        "  o  m0/evt/INV/inv2/relation (178,1)",
-        "  o  m0/evt/INV/inv2/step (180,1)",
-        "  o  m0/evt/INV/inv2/step (182,1)",
-        "  o  m0/evt/INV/inv2/step (184,1)",
-        "  o  m0/evt/INV/inv2/step (186,1)",
-        "  o  m0/evt/SCH",
-        "passed 33 / 33"]
+result7 = unlines 
+      [ "  o  m0/INIT/FIS/a"
+      , "  o  m0/INIT/FIS/b"
+      , "  o  m0/INIT/FIS/c"
+      , "  o  m0/INIT/FIS/n"
+      , "  o  m0/INIT/INV/inv0"
+      , "  o  m0/INIT/INV/inv1"
+      , "  o  m0/INIT/INV/inv2"
+      , "  o  m0/evt/FIS/a@prime"
+      , "  o  m0/evt/FIS/b@prime"
+      , "  o  m0/evt/FIS/c@prime"
+      , "  o  m0/evt/FIS/n@prime"
+      , "  o  m0/evt/INV/inv0/goal (62,1)"
+      , "  o  m0/evt/INV/inv0/hypotheses (62,1)"
+      , "  o  m0/evt/INV/inv0/relation (62,1)"
+      , "  o  m0/evt/INV/inv0/step (64,1)"
+      , "  o  m0/evt/INV/inv0/step (66,1)"
+      , "  o  m0/evt/INV/inv0/step (68,1)"
+      , "  o  m0/evt/INV/inv0/step (70,1)"
+      , "  o  m0/evt/INV/inv0/step (72,1)"
+      , "  o  m0/evt/INV/inv1/goal (139,1)"
+      , "  o  m0/evt/INV/inv1/hypotheses (139,1)"
+      , "  o  m0/evt/INV/inv1/relation (139,1)"
+      , "  o  m0/evt/INV/inv1/step (141,1)"
+      , "  o  m0/evt/INV/inv1/step (143,1)"
+      , "  o  m0/evt/INV/inv1/step (145,1)"
+      , "  o  m0/evt/INV/inv1/step (147,1)"
+      , "  o  m0/evt/INV/inv1/step (149,1)"
+      , "  o  m0/evt/INV/inv1/step (151,1)"
+      , "  o  m0/evt/INV/inv2/goal (178,1)"
+      , "  o  m0/evt/INV/inv2/hypotheses (178,1)"
+      , "  o  m0/evt/INV/inv2/relation (178,1)"
+      , "  o  m0/evt/INV/inv2/step (180,1)"
+      , "  o  m0/evt/INV/inv2/step (182,1)"
+      , "  o  m0/evt/INV/inv2/step (184,1)"
+      , "  o  m0/evt/INV/inv2/step (186,1)"
+      , "  o  m0/evt/SCH"
+      , "passed 36 / 36"]
 
 case7 = do
     r <- parse_machine path6
@@ -157,7 +160,7 @@ case8 = do
         let r = (do 
                 [m] <- m
                 pos  <- proof_obligation m
-                return (pos ! label "m0/INIT/FIS"))
+                return (pos ! label "m0/INIT/FIS/x"))
         case r of
             Right po -> 
                 return $ show po

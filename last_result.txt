@@ -26,11 +26,12 @@
 |  |  |  +- [ Success: 1 / 1 ]
 |  |  +- part 1
 |  |  |  +- test 1, verification
-|  |  |  +- test 2, proof obligation, INIT/fis
+|  |  |  +- test 2, proof obligation, INIT/fis, in
+|  |  |  +- test 20, proof obligation, INIT/fis, loc
 |  |  |  +- test 3, proof obligation, leave/fis, in'
 |  |  |  +- test 19, proof obligation, leave/fis, loc'
 |  |  |  +- test 4, proof obligation, leave/sch
-|  |  |  +- [ Success: 5 / 5 ]
+|  |  |  +- [ Success: 6 / 6 ]
 |  |  +- part 2
 |  |  |  +- test 5, proof obligation, leave/en/tr0
 |  |  |  +- test 7, undeclared symbol
@@ -136,10 +137,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   10483 total
-    1346 Document/Tests/trainstation.hs
-     690 Document/Tests/lambdas.hs
+   10574 total
+    1387 Document/Tests/trainstation.hs
+     722 Document/Tests/lambdas.hs
      613 Document/machine.hs
      570 UnitB/ast.hs
-     521 UnitB/po.hs
-Time: 15:04:55
+     520 UnitB/po.hs
+Time: 16:18:00

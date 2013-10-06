@@ -101,7 +101,8 @@ train_m0 = do
         return m
 
 result_example0 = unlines [
-    "  o  m0/INIT/FIS",
+    "  o  m0/INIT/FIS/x",
+    "  o  m0/INIT/FIS/y",
     "  o  m0/INIT/INV/J0",
     "  o  m0/SKIP/CO/CO0",
     "  o  m0/evt/CO/CO0",
@@ -110,10 +111,10 @@ result_example0 = unlines [
     "  o  m0/evt/INV/J0",
     "  o  m0/evt/SCH",
     "  o  m0/evt/TR/TR0",
-    "passed 9 / 9"]
+    "passed 10 / 10"]
 
 result_train_m0 = unlines [
-    "  o  train_m0/INIT/FIS",
+    "  o  train_m0/INIT/FIS/st",
     "  o  train_m0/INIT/INV/J0",
     "  o  train_m0/enter/FIS/st@prime",
     "  o  train_m0/enter/INV/J0",

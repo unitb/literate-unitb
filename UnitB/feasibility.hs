@@ -127,7 +127,7 @@ compress = do
             j <- parent i
             set_parent x j
             
-classes :: (Monad m, MonadState Partition m) => m [[Int]]
+classes :: PartitionT [[Int]]
 classes = do
         compress
         xs <- gets $ assocs . getMap

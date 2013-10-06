@@ -16,7 +16,7 @@ test = test_cases
             ]
 
 result0 = unlines
-     [ "  o  m0/INIT/FIS"
+     [ "  o  m0/INIT/FIS/in"
      , "  o  m0/m0:enter/FIS/in@prime"
      , "  o  m0/m0:enter/SCH"
      , "  o  m0/m0:leave/FIS/in@prime"
@@ -28,7 +28,8 @@ result0 = unlines
      ]
 
 result1 = unlines
-     [ "  o  m1/INIT/FIS"
+     [ "  o  m1/INIT/FIS/in"
+     , "  o  m1/INIT/FIS/loc"
      , "  o  m1/INIT/INV/inv0"
      , "  o  m1/SKIP/CO/saf0"
      , "  o  m1/SKIP/CO/saf1"
@@ -80,7 +81,7 @@ result1 = unlines
      , "  o  m1/prog2/REF/implication"
      , "  o  m1/prog3/REF/discharge"
      , "  o  m1/prog4/REF/discharge"
-     , "passed 52 / 52"
+     , "passed 53 / 53"
      ]
 
 path0 = "Tests/train-station-ref.tex"

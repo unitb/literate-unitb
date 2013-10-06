@@ -65,18 +65,23 @@ mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
 zfollows     = fun2 $ Fun [] "follows" [BOOL,BOOL] BOOL
 ztrue        = Const [] "true"  BOOL
 zfalse       = Const [] "false" BOOL
-zall []      = ztrue
-zall [x]     = x
-zall xs      = FunApp (Fun [] "and" (take n $ repeat BOOL) BOOL) $ concatMap f xs
+zall xs      = 
+        case concatMap f xs of
+            []  -> ztrue
+            [x] -> x
+            xs  -> FunApp (Fun [] "and" (take n $ repeat BOOL) BOOL) xs
     where
         n = length xs
         f (FunApp (Fun [] "and" _ BOOL) xs) = concatMap f xs
         f x
             | x == ztrue = []
             | otherwise   = [x]
-zsome []     = zfalse
-zsome [x]    = x
-zsome xs     = FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) $ concatMap f xs
+zsome xs      = 
+        case concatMap f xs of
+            []  -> ztrue
+            [x] -> x
+            xs  -> FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) xs
+
     where
         n = length xs
         f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
