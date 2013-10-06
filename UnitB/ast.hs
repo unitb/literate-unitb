@@ -25,6 +25,7 @@ module UnitB.AST
     , RefRule (..)
     , primed, make_unique
     , merge_struct
+    , merge_import
     , merge_decl
     , merge_exprs
     , merge_proofs
@@ -166,6 +167,13 @@ merge_struct m0 m1 = toEither $ do
             , events = evts
             }
 
+merge_import m0 m1 = toEither $ do
+        th   <- fromEither empty_theory $ merge_th_struct
+                    (theory m0)
+                    (theory m1) 
+        return m0
+            { theory = th }
+
 merge_decl :: Machine -> Machine -> Either [String] Machine
 merge_decl m0 m1 = toEither $ do
         th   <- fromEither empty_theory $ merge_th_decl
@@ -214,6 +222,11 @@ merge_exprs m0 m1 = toEither $ do
 
 merge_proofs :: Machine -> Machine -> Either [String] Machine
 merge_proofs m0 m1 = toEither $ do
+        evts <- fromEither empty $ merge 
+                    (skip m1)
+                    merge_evt_proof
+                    (events m0)
+                    (events m1)
         inh   <- fromEither empty_property_set 
                 $ foldM ps_union_proofs empty_property_set
                     [ inh_props m0
@@ -221,6 +234,7 @@ merge_proofs m0 m1 = toEither $ do
                     , props m1 ]
         return m0
             { inh_props = inh
+            , events = evts
             }
 
 merge_th_types :: Theory -> Theory -> Either [String] Theory
@@ -237,15 +251,15 @@ merge_th_types t0 t1 = toEither $ do
 merge_th_decl :: Theory -> Theory -> Either [String] Theory
 merge_th_decl t0 t1 = toEither $ do
         funs <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with function '" ++ show x ++ "'"])
+                (\x -> ["Name clash with function '" ++ x ++ "'"])
                 (funs t0)
                 (funs t1)
         consts <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with constant '" ++ show x ++ "'"])
+                (\x -> ["Name clash with constant '" ++ x ++ "'"])
                 (consts t0)
                 (consts t1)
         dummies <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with dummy '" ++ show x ++ "'"])
+                (\x -> ["Name clash with dummy '" ++ x ++ "'"])
                 (dummies t0)
                 (dummies t1)
         return $ t0
@@ -255,7 +269,9 @@ merge_th_decl t0 t1 = toEither $ do
             }
 merge_th_struct :: Theory -> Theory -> Either [String] Theory
 merge_th_struct t0 t1 = toEither $ do
-        return $ t0
+        let ext = (extends t0 ++ extends t1)
+        return t0
+            { extends = ext }
 merge_th_exprs :: Theory -> Theory -> Either [String] Theory
 merge_th_exprs t0 t1 = toEither $ do
         fact <- fromEither empty $ disjoint_union
@@ -266,7 +282,7 @@ merge_th_exprs t0 t1 = toEither $ do
             { fact = fact }
 
 merge_evt_struct :: Event -> Event -> Either [String] Event
-merge_evt_struct e0 e1 = error "A not implemented"
+merge_evt_struct e0 e1 = return e0
 merge_evt_decl :: Event -> Event -> Either [String] Event
 merge_evt_decl e0 e1 = toEither $ do
         ind <- fromEither empty $ disjoint_union
@@ -298,7 +314,17 @@ merge_evt_exprs e0 e1 = toEither $ do
             , f_sched = fine_sch
             , guard   = grd
             , action = act }
- 
+
+merge_evt_proof :: Event -> Event -> Either [String] Event
+merge_evt_proof e0 e1 = toEither $ do
+        ref <- fromEither empty $ disjoint_union
+                (\x -> ["multiple schedule refinement rules with the same index: " ++ show x ++ ""])
+                (sched_ref e0)
+                (sched_ref e1)
+        return e0 
+            { sched_ref = ref }
+
+
 merge_theory :: Theory -> Theory -> Either [String] Theory
 merge_theory t0 t1 = toEither $ do
         let es = extends t0 ++ extends t1

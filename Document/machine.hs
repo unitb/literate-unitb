@@ -124,10 +124,12 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             ms <- toEither $ foldM (f type_decl) ms xs
             refs  <- lift $ RWS.gets ref_struct
             check_acyclic "refinement structure" $ toList refs
+--            ms <- trickle_down refs ms merge_types
+            ms <- trickle_down refs ms merge_struct
 
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
-            ms <- trickle_down refs ms merge_struct
+            ms <- trickle_down refs ms merge_import
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
