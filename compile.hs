@@ -3,6 +3,7 @@ module Main where
 import BuildSystem
 
 import Control.Concurrent.Thread.Delay
+import Control.Concurrent.Timeout
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
@@ -33,20 +34,33 @@ microseconds (Seconds x) = x * 1000000
 --            | isAlpha x       = [Nothing, Just ys]
 --            | not $ isAlpha x = [Just ys]
 
-main = do
-    flip evalStateT init_state $ forever $ do
-        b <- didAnythingChange
-        c <- lift $ if b
-        then do
-            forM_ (take 20 $ repeat "") putStrLn
-            (c,xs,ys) <- readProcessWithExitCode "ghc" ["test"] ""
-            putStr ys 
-            putStr $ (take 60 $ cycle "\b") ++ show c ++ "       "
-            hFlush stdout
+repeatWhile m = do
+    b <- m
+    if b 
+        then repeatWhile m
         else return ()
---            return True
---        if c then do
---            xs <- readFile "errors.txt"
---            putStrLn xs
---        else return ()
-        lift $ delay (microseconds retry_interval)
+
+main = do
+    flip evalStateT [] $ flip evalStateT init_state $ forever $ do
+        b <- didAnythingChange
+        if b then do
+            ys <- liftIO $ do
+                forM_ (take 20 $ repeat "") putStrLn
+                (c,xs,ys) <- readProcessWithExitCode "ghc" ["test"] ""
+                putStr ys 
+                putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "
+                hFlush stdout
+                return ys
+            lift $ put ys
+        else return ()
+        ys <- lift $ get
+        liftIO $ do
+            xs <- timeout (microseconds retry_interval) getLine
+            if xs == Just "less" then do
+                writeFile "errors.txt" ys
+                pc <- runCommand "less errors.txt"
+                void $ waitForProcess pc
+            else return ()
+--            delay (microseconds retry_interval)
+        return True
+            
