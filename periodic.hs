@@ -19,7 +19,7 @@ import System.Process
 
 long_interval = Minutes 1
 short_interval = Seconds 10
-retry_interval = Seconds 30
+retry_interval = Seconds 10
 
 data Time = Minutes Integer | Seconds Integer
 
@@ -41,15 +41,20 @@ main = do
                 b2 <- didAnythingChange
                 lift $ if b2 then do
                     if null args then do
-                        system $ "./run_tests 2>&1 >> /dev/null"
-                        system "cp result.txt last_result.txt"
-                        tz <- getCurrentTimeZone
-                        t  <- getCurrentTime :: IO UTCTime
-                        let local = utcToLocalTime tz t
-                            time = formatTime defaultTimeLocale "Time: %H:%M:%S" $ local
-                        system $ "echo \"" ++ time ++ "\" >> last_result.txt"
-                        system "cat last_result.txt"
+                        t0 <- getModificationTime "test"
+                        t1 <- getModificationTime "last_result.txt"
+                        if t1 <= t0 then do
+                            system $ "./run_tests 2>&1 >> /dev/null"
+                            system "cp result.txt last_result.txt"
+                            tz <- getCurrentTimeZone
+                            t  <- getCurrentTime :: IO UTCTime
+                            let local = utcToLocalTime tz t
+                                time = formatTime defaultTimeLocale "Time: %H:%M:%S" $ local
+                            system $ "echo \"" ++ time ++ "\" >> last_result.txt"
+                            void $ system "cat last_result.txt"
+                        else return ()
                     else
-                        system $ "./run_tests \"" ++ args ++ "\""
-                    delay (microseconds interval)
-                else delay (microseconds retry_interval)
+                        void $ system $ "./run_tests \"" ++ args ++ "\""
+--                    delay (microseconds interval)
+                else return ()
+                lift $ delay (microseconds retry_interval)
