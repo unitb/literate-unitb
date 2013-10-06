@@ -6,13 +6,15 @@ import qualified UnitB.TestGenericity as Gen
 import UnitB.PO
 import UnitB.Label
 import UnitB.FunctionTheory
+import UnitB.Feasibility
 
 import Z3.Z3
 
     -- Libraries
 import Control.Monad
+import Control.Monad.Trans.Either
 
-import           Data.Maybe 
+import           Data.List ( sort )
 import           Data.Map hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
 
@@ -27,6 +29,8 @@ test = test_cases
         [  Case "'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  Case "train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
+        ,  Case "Feasibility and partitioning" case3 result3
+        ,  Case "Debugging the partitioning" case4 result4
         ,  Gen.test_case
         ]
 
@@ -172,3 +176,29 @@ get_tr_po em = case (do
         return $ show po) of
             Right xs -> return xs
             Left xs  -> return $ show_err xs
+
+(case3, result3, case4, result4) = fromJust $ do
+			e0 <- a
+			e1 <- d `mzplus` b
+			e2 <- b `mzplus` c
+			e3 <- c `mzplus` d
+			let arg0 = [a_decl,b_decl,c_decl,d_decl] 
+			let arg1 = [e0,e1,e2,e3]
+			return 
+				( return $ map f $ partition_expr arg0 arg1
+				, [([a_decl],[e0]),([b_decl,c_decl,d_decl],[e2,e3,e1])]
+				, return $ get_partition arg0 arg1
+				, ( [ (0,0), (1,1)
+				    , (2,1), (3,1)
+				    , (4,0), (5,1)
+				    , (6,1), (7,1)]
+				  , [ (a_decl,0), (b_decl,1)
+				    , (c_decl,2), (d_decl,3)]
+				  , [ (e0,4), (e2,6), (e3,7)
+				    , (e1,5)]) )
+	where
+		(a,a_decl) = var "a" int
+		(b,b_decl) = var "b" int
+		(c,c_decl) = var "c" int
+		(d,d_decl) = var "d" int
+		f (xs,ys) = (sort xs, sort ys)

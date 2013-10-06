@@ -216,7 +216,7 @@ data Fun = Fun [Type] String [Type] Type
     deriving (Eq, Ord, Generic)
 
 data Var = Var String Type
-    deriving (Eq,Ord,Generic)
+    deriving (Eq,Ord,Generic,Typeable)
 
 data Def = Def [Type] String [Var] Type Expr
     deriving (Eq,Generic)

@@ -88,6 +88,8 @@
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
 |  +- train, m0 transient / falsification PO
+|  +- Feasibility and partitioning
+|  +- Debugging the partitioning
 |  +- genericity
 |  |  +- unification, t0
 |  |  +- unification, t1
@@ -107,7 +109,7 @@
 |  |  +- type mapping are acyclic
 +++ OK, passed 100 tests.
 |  |  +- [ Success: 15 / 15 ]
-|  +- [ Success: 4 / 4 ]
+|  +- [ Success: 6 / 6 ]
 +- latex parser
 |  +- sample.tex
 |  +- sorted seq err.tex
@@ -134,10 +136,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   10398 total
+   10483 total
     1346 Document/Tests/trainstation.hs
      690 Document/Tests/lambdas.hs
      613 Document/machine.hs
      570 UnitB/ast.hs
      521 UnitB/po.hs
-Time: 12:19:07
+Time: 15:04:55

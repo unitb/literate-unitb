@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module UnitB.Feasibility 
-    ( partition_expr )
+    ( partition_expr
+    , get_partition )
 where
 
     -- Modules
@@ -11,8 +12,8 @@ import Z3.Const
 
     -- Libraries
 import           Control.Monad 
-import           Control.Monad.State.Class
-import qualified Control.Monad.Trans.State as ST
+--import           Control.Monad.State.Class
+import           Control.Monad.State as ST
 
 import           Data.IntMap 
             ( (!), fromListWith, keys
@@ -28,6 +29,27 @@ conjuncts xs = --error "UnitB.Feasibility.conjuncts: not implemented"
           FunApp (Fun _ "and" _ _) xs -> xs
           _ -> xs
 
+get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not implemented"
+        runPartitionWith [0..m+n-1] $ do
+            forM_ (M.assocs me) $ \(e,i) -> 
+                forM_ (S.elems $ used_var e) $ \v ->
+                    case M.lookup v mv of
+                        Just j  -> merge i j
+                        Nothing -> return ()
+            compress
+                -- At this point, i and j are in the same partition  ==  parent i = parent j
+            xs <- gets $ assocs . getMap
+            return (xs, M.toList mv, M.toList me)
+    where
+        m = length vs
+        n = length cs
+        cs = conjuncts es
+        mv = M.fromList $ zip vs [0..]
+            -- map variable
+        me = M.fromList $ zip cs [m..]
+            -- map expressions
+
+
 partition_expr :: [Var] -> [Expr] -> [([Var],[Expr])]
 partition_expr vs es = do -- error "UnitB.Feasibility.partition_expr: not implemented"
         runPartitionWith [0..m+n-1] $ do
@@ -37,13 +59,14 @@ partition_expr vs es = do -- error "UnitB.Feasibility.partition_expr: not implem
                         Just j  -> merge i j
                         Nothing -> return ()
             compress
+                -- At this point, i and j are in the same partition  ==  parent i = parent j
             xs <- forM (M.assocs me) $ \(e,i) -> do
                 j <- parent i
                 return (j,([],[e]))
             ys <- forM (M.assocs mv) $ \(v,i) -> do
                 j <- parent i
                 return (j,([v],[]))
-            let m = fromListWith mappend $ (xs ++ ys :: [(Int,([Var],[Expr]))])
+            let m = fromListWith mappend $ xs ++ ys
             return $ elems m 
     where
         m = length vs
@@ -55,37 +78,52 @@ partition_expr vs es = do -- error "UnitB.Feasibility.partition_expr: not implem
             -- map expressions
 
 data Partition = Partition { getMap :: IntMap Int }
+    -- invariant for every edge x -> y, y ≤ x so that traversing the forest
+    -- in increasing order of vertex number traverses each trees starting
+    -- from the root.
 
 type PartitionT = ST.State Partition
 
-empty_p = Partition empty
-
 p_fromList xs = Partition $ fromList $ zip xs xs
-
-runPartition m = ST.evalStateT m empty_p
 
 runPartitionWith :: [Int] -> PartitionT a -> a
 runPartitionWith xs m = ST.evalState m $ p_fromList xs
 
-add :: (Monad m, MonadState Partition m) => Int -> m ()
-add x = modify $ \(Partition m) -> Partition $ insert x x m
+--merge :: Int -> Int -> PartitionT ()
+--merge x y
+--        | x <= y    = modify $ f x y
+--        | y <= x    = modify $ f y x
+--    where
+--        f x y (Partition m) = Partition $ insert y (m ! x) m
 
-merge :: (Monad m, MonadState Partition m) => Int -> Int -> m ()
-merge x y
-        | x <= y    = modify $ f x y
-        | y <= x    = modify $ f y x
+merge :: Int -> Int -> PartitionT ()
+merge x y = do
+            ry <- root y
+            rx <- root x
+            if ry <= rx 
+                then f ry rx
+                else f rx ry
     where
-        f x y (Partition m) = Partition $ insert y (m ! x) m
+        f x y = modify $ Partition . insert y x . getMap
+
+root :: Int -> PartitionT Int
+root x = do
+        y <- parent x
+        if x == y 
+        then return x
+        else do
+            z <- root y
+            modify $ Partition . (insert x z) . getMap
+            return z
 
 parent x = gets ((!x) . getMap)
 
 set_parent x y = modify (Partition . insert x y . getMap)
 
-compress :: (Monad m, MonadState Partition m) => m ()
+compress :: PartitionT ()
 compress = do
-        xs <- gets $ keys . getMap
-        forM_ xs $ \x -> do
-            i <- parent x
+        xs <- gets $ assocs . getMap
+        forM_ xs $ \(x,i) -> do
             j <- parent i
             set_parent x j
             
