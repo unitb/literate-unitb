@@ -40,13 +40,13 @@
 
 \begin{use:set}{\Train} \end{use:set}
 
-\begin{variable}
-	in : \set [ \Train ]
-\end{variable}
+\begin{align*}
+\variable{	in : \set [ \Train ]}
+\end{align*}
 
-\begin{dummy}
-	t : \Train
-\end{dummy}
+\begin{align*}
+\dummy{	t : \Train}
+\end{align*}
 
 %\begin{align*}
 \newevent{m0:enter}{enter} 
@@ -55,12 +55,12 @@
 %\newcompound{m0:enter}
 %\newcompound{m0:leave}
 
-\begin{indices}{m0:leave}
-	t : \Train
-\end{indices}
-\begin{indices}{m0:enter}
-	t : \Train
-\end{indices}
+\begin{align*}
+\indices{m0:leave}{	t : \Train}
+\end{align*}
+\begin{align*}
+\indices{m0:enter}{	t : \Train}
+\end{align*}
 
 \weakento{m0:leave}{0}{default}{c0}
 
@@ -101,9 +101,9 @@
 %%	in : \set [ \Train ]
 %%\end{variable}
 
-\begin{variable}
-	loc : \Train \pfun \Blk
-\end{variable}
+\begin{align*}
+\variable{	loc : \Train \pfun \Blk}
+\end{align*}
 
 %\begin{dummy}
 %	t : \Train
@@ -140,13 +140,13 @@
 	{	\dom.loc = in }
 \end{align*}
 
-\begin{constant}
-	ent,ext : \Blk
-\end{constant}
+\begin{align*}
+\constant{	ent,ext : \Blk}
+\end{align*}
 
-\begin{constant}
-	plf : \set [ \Blk ]
-\end{constant}
+\begin{align*}
+\constant{	plf : \set [ \Blk ]}
+\end{align*}
 
 \subsection{New requirements}
 \begin{align*}
@@ -207,9 +207,9 @@ In order to take care of the schedulability of \ref{m0:leave}, we need to streng
 
 The first step in implementing \eqref{m1:prog0} is to break it down in a few cases. The property says ``a train inside the station eventually reaches the exit''. Now, we're going to break the predicate ``the train is inside the station'' into ``the train is at the entrance'', ``the train is at a platform'' and ``the train is at the exit'', as described by the following assumption:
 \hide{
-	\begin{dummy}
-		b : \Blk
-	\end{dummy}
+	\begin{align*}
+	\dummy{		b : \Blk}
+	\end{align*}
 }
 \begin{align*}
 \assumption{asm1}
@@ -227,7 +227,7 @@ Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 	{ t \in in \land loc.t = ent }{ t \in in \land loc.t = ext }
 \\ & \progress{prog3}
 	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
-\end{align*}
+\end{align*} 
 %
 \hide{ \refine{prog2}{implication}{}{} } %
 %
@@ -265,9 +265,9 @@ We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
 \subsubsection{New events} 
 
 
-\begin{indices}{m1:moveout}
-	t : \Train
-\end{indices}
+\begin{align*}
+\indices{m1:moveout}{	t : \Train}
+\end{align*}
 
 We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 
@@ -287,9 +287,9 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 
 \weakento{m1:movein}{0}{default}{c1,c2}{}
 
-\begin{indices}{m1:movein}
-	t : \Train
-\end{indices}
+\begin{align*}
+\indices{m1:movein}{	t : \Train}
+\end{align*}
 
 \begin{align*}
 \evassignment{m1:movein}{a2}
@@ -333,9 +333,9 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 %	loc : \Train \pfun \Blk
 %\end{variable}
 %
-\begin{dummy}
-	t_0,t_1 : \Train
-\end{dummy}
+\begin{align*}
+\dummy{	t_0,t_1 : \Train}
+\end{align*}
 %
 %\begin{indices}{m2:leave}
 %	t : \Train

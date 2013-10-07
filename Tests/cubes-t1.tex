@@ -27,9 +27,9 @@
 \begin{machine}{m0}
 
 %\hide{
-	\begin{variable}
-		n,a : \Int
-	\end{variable}
+	\begin{align*}
+\variable{		n,a : \Int}
+	\end{align*}
 %}
 
 \begin{align*}
@@ -76,9 +76,9 @@ We use the proof obligation of \ref{inv0} to deduce a proper assignment to $a$:
 	\end{calculation}
 \end{proof}
 %
-\begin{variable}
-	b : \Int
-\end{variable}
+\begin{align*}
+\variable{	b : \Int}
+\end{align*}
 %
 \begin{align*}
 \invariant{inv1}
@@ -158,9 +158,9 @@ We now have a new invariant to preserve. It is easy to see how to establish it i
 	\end{calculation}
 \end{proof}
 %
-\begin{variable}
-	c : \Int
-\end{variable}
+\begin{align*}
+\variable{	c : \Int}
+\end{align*}
 %
 \begin{align*}
 \invariant{inv2}
@@ -207,13 +207,13 @@ Invariant \ref{inv2} is easy to satisfy initially:
 {	f = \qfun{i}{ 0 \le i \land i < n }{ i^3 } }
 \end{align*}
 
-\begin{variable}
-	f : \Int \pfun \Int
-\end{variable}
+\begin{align*}
+\variable{	f : \Int \pfun \Int}
+\end{align*}
 
-\begin{dummy}
-	i : \Int
-\end{dummy}
+\begin{align*}
+\dummy{	i : \Int}
+\end{align*}
 
 \begin{use:fun}{\Int}{\Int} \end{use:fun}
 

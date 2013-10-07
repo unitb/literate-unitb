@@ -141,7 +141,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
     where
         gather ms (Env n _ c li)     
                 | n == "machine"    = do
-                    (name,cont) <- with_line_info li $ get_1_lbl c
+                    (name,_) <- with_line_info li $ get_1_lbl c
                     let m        = empty_machine name
                     return (insert name m ms)
                 | otherwise         = foldM gather ms c
@@ -242,9 +242,9 @@ declarations :: Monad m
              => [LatexDoc] 
              -> Machine 
              -> MSEitherT Error Architecture m Machine
-declarations = visit_doc 
-        [   (   "variable"
-            ,   EnvBlock $ \() xs m -> do
+declarations = visit_doc []
+        [   (   "\\variable"
+            ,   CmdBlock $ \(xs,()) m -> do
                         vs <- get_variables (context m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list 
@@ -253,8 +253,8 @@ declarations = visit_doc
                             ]
                         return m { variables = fromList vs `union` variables m} 
             )
-        ,   (   "indices"
-            ,   EnvBlock $ \(evt,()) xs m -> do
+        ,   (   "\\indices"
+            ,   CmdBlock $ \(evt,xs,()) m -> do
                         vs <- get_variables (context m) xs
                         toEither $ error_list
                             [ ( not (evt `member` events m) 
@@ -271,24 +271,23 @@ declarations = visit_doc
                             indices = fromList vs `union` indices old_event }
                         return m { events = insert evt new_event $ events m } 
             )
-        ,   (   "constant"
-            ,   EnvBlock $ \() xs m -> do
+        ,   (   "\\constant"
+            ,   CmdBlock $ \(xs,()) m -> do
                         vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
                                     (consts $ theory m) } } 
             )
-        ,   (   "dummy"
-            ,   EnvBlock $ \() xs m -> do
+        ,   (   "\\dummy"
+            ,   CmdBlock $ \(xs,()) m -> do
                         vs <- get_variables (context m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 
                                     (dummies $ theory m) } } 
             )
-        ] 
-        []
+        ]
 
     -- Todo: report an error if we create two assignments (or other events elements)
     -- with the same name

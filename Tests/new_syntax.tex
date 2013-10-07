@@ -1,16 +1,16 @@
 \begin{machine}{m}
 \newset{TRAIN}{\TRAIN}
-\begin{variable}
-	in : \set[\TRAIN]
-\end{variable}
+\begin{align*}
+\variable{	in : \set[\TRAIN]}
+\end{align*}
 
 \newevent{enter}
 
 \begin{use:set}{\TRAIN} \end{use:set}
 
-\begin{indices}{enter}
-	t: \TRAIN
-\end{indices}
+\begin{align*}
+\indices{enter}{	t: \TRAIN}
+\end{align*}
 
 \begin{banana}
 \evassignment{enter}{a1}

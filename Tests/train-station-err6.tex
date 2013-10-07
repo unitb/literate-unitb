@@ -34,9 +34,9 @@
 
 %
 %\hide{
-	\begin{variable}
-		in : \set[\TRAIN]
-	\end{variable}
+	\begin{align*}
+\variable{		in : \set[\TRAIN]}
+	\end{align*}
 %}
 %
 
@@ -49,18 +49,18 @@
 {	t \in in	}
 \end{align*}
 
-\begin{dummy}
-	t,t0,t1,t2,t3 : \TRAIN
-\end{dummy}
+\begin{align*}
+\dummy{	t,t0,t1,t2,t3 : \TRAIN}
+\end{align*}
 
-\begin{dummy}
-	p,q : \BLK
-\end{dummy}
+\begin{align*}
+\dummy{	p,q : \BLK}
+\end{align*}
 
 
-\begin{variable}
-	loc : \TRAIN \pfun \BLK
-\end{variable}
+\begin{align*}
+\variable{	loc : \TRAIN \pfun \BLK}
+\end{align*}
 
 \begin{align*}
 \invariant{inv2}
@@ -133,13 +133,13 @@
 \begin{use:fun}{\TRAIN}{\BLK} \end{use:fun}
 %\begin{use:fun}{\TRAIN}{\LOC} \end{use:fun}
 
-\begin{indices}{leave}
-	t: \TRAIN
-\end{indices}
+\begin{align*}
+\indices{leave}{	t: \TRAIN}
+\end{align*}
 
-\begin{indices}{enter}
-	t: \TRAIN
-\end{indices}
+\begin{align*}
+\indices{enter}{	t: \TRAIN}
+\end{align*}
 
 \begin{align*}
 \evassignment{leave}{a0}
@@ -148,12 +148,12 @@
 %	in'.t = \false 
 \end{align*}
 
-\begin{constant}
-	ent,ext : \BLK
-\end{constant}
-\begin{constant}
-	PLF : \set [\BLK]
-\end{constant}
+\begin{align*}
+\constant{	ent,ext : \BLK}
+\end{align*}
+\begin{align*}
+\constant{	PLF : \set [\BLK]}
+\end{align*}
 
 \begin{align*}\assumption{axm0}
 {	\BLK = \{ ent, ext \} \bunion PLF }

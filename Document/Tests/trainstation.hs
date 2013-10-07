@@ -973,7 +973,7 @@ result9 = Left [("event 'leave' is undeclared",51,15)]
 path9 = "Tests/train-station-err2.tex"
 case9 = parse_machine path9
 
-result10 = Left [("event 'leave' is undeclared",54,1)]
+result10 = Left [("event 'leave' is undeclared",55,15)]
 
 path10 = "Tests/train-station-err3.tex"
 case10 = parse_machine path10
