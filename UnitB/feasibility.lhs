@@ -1,3 +1,18 @@
+% !TEX root = ../design.tex
+\subsection{Feasibility}
+
+Since the feasibility of an event is proved existential with a list of conjuncts, we can identify partitions of the set of assignments of an event based on whether or not they reference the same primed variables.
+
+It can be done with the following strategy:
+\begin{itemize}
+\item for each assignments, calculate the set of primed variables that it contains
+\item create an undirected graph where the assignments are the vertices and draw an edge between two vertices if their set of primed variables intersect.
+\item take the transitive closure of the graph. It should create a set of partitions
+\end{itemize}
+
+We implement it in \emph{partition\_expr} with a disjoint set data structure.
+
+\begin{code}
 {-# LANGUAGE FlexibleContexts #-}
 module UnitB.Feasibility 
     ( partition_expr
@@ -24,7 +39,7 @@ import           Data.Monoid ( mappend )
 import qualified Data.Set as S
 
 conjuncts :: [Expr] -> [Expr]
-conjuncts xs = --error "UnitB.Feasibility.conjuncts: not implemented"
+conjuncts xs = 
      case zall xs of 
           FunApp (Fun _ "and" _ _) xs -> xs
           _ -> xs
@@ -133,3 +148,4 @@ classes = do
         xs <- gets $ assocs . getMap
         let ys = fromListWith (++) $ flip map xs $ \(x,y) -> (y,[x])
         return $ elems ys
+\end{code}

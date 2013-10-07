@@ -1,14 +1,14 @@
-
 \documentclass[12pt]{amsart}
 \usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
 \geometry{a4paper} % or letter or a5paper or ... etc
 % \geometry{landscape} % rotated page geometry
 \usepackage{listings}
+\usepackage{hyperref}
 \lstnewenvironment{code}{\lstset{language=Haskell,basicstyle=\small}}{}
 
 % See the ``Article customise'' template for come common customisations
 
-\title{}
+\title{Design of the Literate Unit-B toolset}
 \author{Simon Hudon}
 \date{} % delete this line to display the current date
 
@@ -25,5 +25,8 @@
 
 \input{Document/visitor.lhs}
 \subsection{Parser}
+\section{Proof Obligations}
+
+\input{UnitB/feasibility.lhs}
 
 \end{document}
