@@ -27,7 +27,6 @@ import Z3.Const
 
     -- Libraries
 import           Control.Monad 
---import           Control.Monad.State.Class
 import           Control.Monad.State as ST
 
 import           Data.IntMap 

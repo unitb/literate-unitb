@@ -74,10 +74,10 @@
 \end{align*}
 
 \begin{align*}
-&\progress{prog0}
+&\progress{m0:prog0}
 	{	t \in in }{ \neg t \in in }
-\refine{prog0}{discharge}{tr0}{}
-&\transient{m0:leave}{0}{tr0}
+\refine{m0:prog0}{discharge}{m0:tr0}{}
+&\transient{m0:leave}{0}{m0:tr0}
 	{	t \in in }
 \end{align*}
 
@@ -193,19 +193,19 @@ This takes care of \eqref{saf1}
 
 \subsubsection{Side conditions}
 
-In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{prog0} and \ref{saf3} in order to prove refinement.
-\replace{m0:leave}{1}{c0}{c0,c1}{}{prog0}{saf3}
+In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{saf3} in order to prove refinement.
+\replace{m0:leave}{1}{c0}{c0,c1}{}{m1:prog0}{saf3}
 
 \begin{align*}
 \cschedule{m0:leave}{c1}
 	{ loc.t = ext }
 %\\ \safety{saf4}
 %	{ t \in in \land loc.t = ext }{ \neg t \in in }
-\\ \progress{prog0}
+\\ \progress{m1:prog0}
 	{ t \in in }{ t \in in \land loc.t = ext }
 \end{align*}
 
-The first step in implementing \eqref{prog0} is to break it down in a few cases. The property says ``a train inside the station eventually reaches the exit''. Now, we're going to break the predicate ``the train is inside the station'' into ``the train is at the entrance'', ``the train is at a platform'' and ``the train is at the exit'', as described by the following assumption:
+The first step in implementing \eqref{m1:prog0} is to break it down in a few cases. The property says ``a train inside the station eventually reaches the exit''. Now, we're going to break the predicate ``the train is inside the station'' into ``the train is at the entrance'', ``the train is at a platform'' and ``the train is at the exit'', as described by the following assumption:
 \hide{
 	\begin{dummy}
 		b : \Blk
@@ -216,11 +216,11 @@ The first step in implementing \eqref{prog0} is to break it down in a few cases.
 {	\qforall{b}{}{ b \in \Blk \2\equiv b \in plf \1\lor b = ent \1\lor b = ext }	}
 \end{align*}
 
-Which allows us to appy \emph{disjunction} to \eqref{prog0}.
+Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 
 \begin{align*}
 & { t \in in }\3\mapsto{ t \in in \land loc.t = ext }
-\refine{prog0}{disjunction}{prog1,prog2,prog3}{}
+\refine{m1:prog0}{disjunction}{prog1,prog2,prog3}{}
 & \progress{prog2}
 	{ t \in in \land loc.t = ext }{ t \in in \land loc.t = ext }
 \\ & \progress{prog1}
@@ -247,15 +247,15 @@ We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
 \newevent{m1:moveout}{move\_out} 
 %\end{align*}
 \hide{
-	\refine{prog3}{discharge}{tr0,saf2}{}
-	\refine{prog4}{discharge}{tr1,saf1}{}
+	\refine{prog3}{discharge}{m1:tr0,saf2}{}
+	\refine{prog4}{discharge}{m1:tr1,saf1}{}
 }
 \begin{align*}
 %\\ & \safety{saf5}
 %	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
-& \transient{m1:movein}{0}{tr1}
+& \transient{m1:movein}{0}{m1:tr1}
 	{ t \in in \1\land loc.t = ent }
-\\ & \transient{m1:moveout}{0}{tr0}
+\\ & \transient{m1:moveout}{0}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
 %\\ & \safety{saf6}
 %	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
@@ -269,7 +269,7 @@ We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
 	t : \Train
 \end{indices}
 
-We adjust \ref{m1:moveout} to satisfy \ref{tr0}.
+We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 
 \weakento{m1:moveout}{0}{default}{c1}{}
 
@@ -308,7 +308,10 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 
 \section{Second refinement}
 
-%\begin{machine}{m2}
+\begin{machine}{m2}
+
+\refines{m1} 
+
 %\newevent{m2:enter}{enter}
 %\newevent{m2:leave}{leave}
 %\newevent{m2:moveout}{move\_out}
@@ -330,9 +333,9 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 %	loc : \Train \pfun \Blk
 %\end{variable}
 %
-%\begin{dummy}
-%	t,t_0,t_1 : \Train
-%\end{dummy}
+\begin{dummy}
+	t_0,t_1 : \Train
+\end{dummy}
 %
 %\begin{indices}{m2:leave}
 %	t : \Train
@@ -453,27 +456,39 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 %\end{align*}
 %}
 %
-%\subsection{New Requirement}
-%\begin{align*}
-%\invariant{m2:inv0}
-%	{	\qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	}
-%\end{align*}
+\subsection{New Requirement}
+\begin{align*}
+\invariant{m2:inv0}
+	{	\qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	}
+\end{align*}
 %
-%\subsection{Design}
+\subsection{Design}
 %
-%\begin{align*}
-%\evguard{m2:movein}{g0}
-%	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
-%\\ \evassignment{m2:movein}{a6}
-%	{ \qexists{b}{b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
-%		{ loc' = loc \1| t \tfun b } }
-%\evguard{m2:enter}{g1}
-%	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
-%\evguard{m2:moveout}{g1}
+\replace{m1:movein}{1}{}{c0}{}{m2:prog0}{m2:saf0}
+\begin{align*}
+\progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\\ \safety{m2:saf0}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} \2{\textbf{except}} \text{\ref{m1:movein}}
+\end{align*}
+
+\begin{align*}
+\evguard{m1:movein}{g0}
+	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
+\\ \cschedule{m1:movein}{c0}
+	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
+\\ \evassignment{m1:movein}{a6}
+	{ \qexists{b}{b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+		{ loc' = loc \1| t \tfun b } }
+\\ \evguard{m0:enter}{g1}
+	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
+%\evguard{m0:leave}{g1}
 %	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+\\ \evguard{m1:moveout}{g2}
+	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
 %%	{ \qexists{b}{}{ loc'  }
-%\end{align*}
+\end{align*}
 %
-%\end{machine}
+x
+
+\end{machine}
 
 \end{document}

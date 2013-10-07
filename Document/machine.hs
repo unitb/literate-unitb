@@ -107,7 +107,7 @@ trickle_down
         -> (a -> a -> Either [String] a) 
         -> EitherT [Error] m (Map String a)
 trickle_down s ms f = do
-            let rs = reverse $ map (\(AcyclicSCC v) -> v) $ cycles $ toList s
+            let rs = map (\(AcyclicSCC v) -> v) $ cycles $ toList s
             foldM (\ms n -> 
                     case M.lookup n s of
                         Just anc  -> do
