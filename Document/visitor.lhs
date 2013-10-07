@@ -255,6 +255,10 @@ visit_doc :: Monad m
           -> RWST b [Error] s m a
 visit_doc blks cmds cs x = do
         s0 <- RWS.get
+        unless (all (\(x,_) -> take 1 x == "\\") cmds) 
+            $ error $ format ("Document.Visitor.visit_doc: "
+                    ++ "all commands must start with '\\': {0}")
+                $ map fst cmds
         let (r,s1,w) = runRWS (do
                         x <- foldM (f blks) x cs
                         g x cs)

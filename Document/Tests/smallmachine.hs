@@ -5,13 +5,11 @@ where
     -- Modules
 import UnitB.AST
 import UnitB.PO
-import UnitB.Calculation
 
 import Z3.Z3
 
     -- Libraries
 import Data.Map hiding ( map )
-import qualified Data.Map as M
 import Document.Document
 
 import Tests.UnitTest
@@ -49,12 +47,10 @@ test = test_cases [
 
 path0 = "Tests/small_machine_t0.tex"
 case0 = do
-    ct <- readFile path0
     parse_machine path0
     
 path1 = "Tests/small_machine_t1.tex"
 case1 = do
-    ct <- readFile path1
     parse_machine path1
 
 result2 = (unlines 
@@ -74,7 +70,6 @@ result2 = (unlines
 
 path2 = "Tests/small_machine_t2.tex"
 case2 = do
-    ct  <- readFile path2
     r <- parse_machine path2
     case r of
         Right [m] -> do
@@ -98,7 +93,6 @@ result3 = (unlines
 
 path3 = "Tests/small_machine.tex"
 case3 = do
-    ct  <- readFile path3
     r <- parse_machine path3
     case r of
         Right [m] -> do
@@ -163,7 +157,6 @@ result6 = (unlines [
 
 path6 = "Tests/small_machine_t3.tex"
 case6 = do
-    ct  <- readFile path6
     r <- parse_machine path6
     case r of
         Right [m] -> do
@@ -268,12 +261,14 @@ m1_props = m0_props
             (label "tr0", Transient empty (x `zeq` y) (label "inc") 0) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
-        , inv = insert (label "inv1") (x `zeq` (x `ztimes` (y `zplus` z1))) (inv m0_props)
+        , inv = insert 
+                (label "inv1") 
+                (x `zeq` (x `ztimes` (y `zplus` z1))) 
+                (inv m0_props)
         }
     where
         x  = Word var_x
         y  = Word var_y
         x' = Word var_x'
-        y' = Word var_y'
         z1 = zint 1
         z2 = zint 2

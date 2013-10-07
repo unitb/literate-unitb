@@ -11,15 +11,12 @@ import Latex.Parser
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.Theory
 import UnitB.SetTheory
 import UnitB.FunctionTheory
-import UnitB.Genericity
 
 import Z3.Z3 
 
     -- Libraries
-import           Control.Applicative hiding ( empty )
 import           Control.Monad hiding ( guard )
 import qualified Control.Monad.Reader.Class as R
 import           Control.Monad.Trans
@@ -31,10 +28,10 @@ import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
 import           Data.List as L hiding ( union, insert, inits )
-import qualified Data.Map as M
+--import qualified Data.Map as M
 import qualified Data.Set as S
 
-import System.IO
+--import System.IO
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -55,13 +52,6 @@ list_machines ct = do
         xs <- latex_structure ct
         ms <- all_machines xs
         return $ map snd $ toList $ ms
-
-inject :: Monad m => c -> RWST a b c m d -> RWST a b e m d
-inject s0 m = RWST f
-    where
-        f r s = do
-            (x,s1,w) <- runRWST m r s0 
-            return (x,s,w)
         
 parse_rule :: (Monad m)
            => String
@@ -97,7 +87,7 @@ check_acyclic x es = do
         cycle_msg x ys = format msg (x :: String) $ intercalate "," (map show ys)
             where
                 msg = "A cycle exists in the {0}: {1}"
-        cycl_err_msg _ (AcyclicSCC v) = return ()
+        cycl_err_msg _ (AcyclicSCC _) = return ()
         cycl_err_msg x (CyclicSCC vs) = tell [(cycle_msg x vs,0,0)]
 
 trickle_down
@@ -373,7 +363,7 @@ collect_expr = visit_doc
                                 events  = insert evt new_event $ events m } 
             )
         ,   (   "\\fschedule"
-            ,   CmdBlock $ \(evt, lbl :: Label, xs,()) m -> do
+            ,   CmdBlock $ \(evt, _ :: Label, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (evt `member` events m)
                               , format "event '{0}' is undeclared" evt )
@@ -535,7 +525,7 @@ collect_proofs = visit_doc
                         ]
                     let prog = progress $ props m
                     let saf  = safety $ props m
-                    li@(i,j)      <- lift $ ask
+--                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
             )
@@ -584,8 +574,6 @@ collect_proofs = visit_doc
                     let old_event = events m ! evt
                         sc        = c_sched old_event
                         lbls      = (S.elems $ add `S.union` del)
-                        progs     = progress $ props m
-                        safs      = safety $ props m
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc

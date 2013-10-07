@@ -4,11 +4,11 @@ module Document.Tests.TrainStation
     , part3, part4, part5 )
 where
 
-import Control.Monad hiding ( guard )
+--import Control.Monad hiding ( guard )
 
-import           Data.List ( sort )
+--import           Data.List ( sort )
 import           Data.Map hiding ( map )
-import qualified Data.Map as M
+--import qualified Data.Map as M
 --import           Data.Set as S 
 import qualified Data.Set as S
 --import Data.Maybe
@@ -297,13 +297,13 @@ train_decl b =
         ] 
     where
         var_decl
-            | b     =
+            | b         =
                 [  "(declare-const in (set TRAIN))"
                 ,  "(declare-const in@prime (set TRAIN))"
                 ,  "(declare-const loc (pfun TRAIN BLK))"
                 ,  "(declare-const loc@prime (pfun TRAIN BLK))"
                 ]
-            | not b = 
+            | otherwise = 
                 [  "(declare-const in (set TRAIN))"
                 ,  "(declare-const loc (pfun TRAIN BLK))"
                 ]
@@ -1370,18 +1370,18 @@ case18 = do
     where
         f (x,i,j) = format "error {0}: {1}" (i, j) (x :: String) :: String
 
-get_proof_obl name = do
-        pos <- list_file_obligations path0
-        case pos of
-            Right [(_,pos)] -> do
-                let po = pos ! label name
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
-                putStrLn cmd
-            x -> putStrLn $ show x
+--get_proof_obl name = do
+--        pos <- list_file_obligations path0
+--        case pos of
+--            Right [(_,pos)] -> do
+--                let po = pos ! label name
+--                let cmd = unlines $ map (show . as_tree) $ z3_code po
+--                putStrLn cmd
+--            x -> putStrLn $ show x
 
-list_proof_obl = do
-        pos <- list_file_obligations path0
-        case pos of
-            Right [(_,pos)] -> do   
-                forM_ (map show $ keys $ pos) putStrLn
-            x -> return () -- $ show x
+--list_proof_obl = do
+--        pos <- list_file_obligations path0
+--        case pos of
+--            Right [(_,pos)] -> do   
+--                forM_ (map show $ keys $ pos) putStrLn
+--            _ -> return () -- $ show x

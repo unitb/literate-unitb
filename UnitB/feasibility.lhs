@@ -27,12 +27,13 @@ import Z3.Const
 
     -- Libraries
 import           Control.Monad 
+--import           Control.Monad.State.Class
 import           Control.Monad.State as ST
 
 import           Data.IntMap 
-            ( (!), fromListWith, keys
+            ( (!), fromListWith
             , assocs, insert, elems
-            , IntMap, fromList, empty )
+            , IntMap, fromList )
 import qualified Data.Map as M
 import           Data.Monoid ( mappend )
 import qualified Data.Set as S
@@ -141,10 +142,4 @@ compress = do
             j <- parent i
             set_parent x j
             
-classes :: PartitionT [[Int]]
-classes = do
-        compress
-        xs <- gets $ assocs . getMap
-        let ys = fromListWith (++) $ flip map xs $ \(x,y) -> (y,[x])
-        return $ elems ys
 \end{code}

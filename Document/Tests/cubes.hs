@@ -14,7 +14,6 @@ import Z3.Z3
 
     -- Libraries
 import Data.Map hiding ( map )
-import Utilities.Syntactic
 
 test_case = Case "table of cubes example" test True
 
@@ -167,17 +166,17 @@ case8 = do
             x -> 
                 return $ show x
 
-pos = do
-        m <- parse_machine path8
-        let r = (do 
-                [m] <- m
-                pos  <- proof_obligation m
-                return (pos ! label "m0/evt/INV/inv0"))
-        case r of
-            Right po -> 
-                return $ show po
-            x -> 
-                return $ show x
+--pos = do
+--        m <- parse_machine path8
+--        let r = (do 
+--                [m] <- m
+--                pos  <- proof_obligation m
+--                return (pos ! label "m0/evt/INV/inv0"))
+--        case r of
+--            Right po -> 
+--                return $ show po
+--            x -> 
+--                return $ show x
 
 result9 = unlines [
         "m0/evt/INV/inv0:",
@@ -203,7 +202,7 @@ case9 = do
         case r of
             Right [m] -> do
                 case toList $ proofs $ props m of
-                    (lbl,ByCalc calc):xs -> 
+                    (lbl,ByCalc calc):_ -> 
                         return (show lbl ++ ":\n" ++ show_proof calc)
                     xs       -> return (
                                       "error: found "

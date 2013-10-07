@@ -4,8 +4,6 @@ module Document.Test ( test_case ) where
 import Control.Monad
 
 import Data.List as L
-import Data.Map hiding ( map )
-import qualified Data.Map as M
 import Document.Document
 
 import qualified Document.Tests.Cubes as Cubes
@@ -18,17 +16,11 @@ import qualified Document.Tests.TrainStationRefinement as Ref
 import Latex.Parser
 import Latex.Scanner
 
-import System.IO.Unsafe
-
 import Test.QuickCheck
 
 import Tests.UnitTest
 
-import UnitB.AST
 import UnitB.PO
-import UnitB.Calculation
-
-import Z3.Z3
 
 test_case = ("Unit-B Document", test, True)
 
@@ -63,26 +55,26 @@ case1 = do
             return s
         x -> return $ show x
 
-prop_parser_exc_free xs = 
-    classify (depth xs < 5) "shallow" $
-    classify (5 <= depth xs && depth xs < 20) "medium" $
-    classify (20 <= depth xs && depth xs < 100) "deep" $
-    classify (100 <= depth xs) "very deep"
-    (case all_machines xs of
-        Right _ -> True
-        Left  _ -> True)
+--prop_parser_exc_free xs = 
+--    classify (depth xs < 5) "shallow" $
+--    classify (5 <= depth xs && depth xs < 20) "medium" $
+--    classify (20 <= depth xs && depth xs < 100) "deep" $
+--    classify (100 <= depth xs) "very deep"
+--    (case all_machines xs of
+--        Right _ -> True
+--        Left  _ -> True)
 
-properties = do
-        r <- quickCheckResult prop_parser_exc_free
-        case r of
-            Success _ _ _ -> return True
-            x -> putStrLn ("failed: " ++ show x) >> return False
-
-depth xs = maximum $ 0:map f xs
-    where
-        f (Env _ _ xs _)    = 1 + depth xs
-        f (Bracket _ _ xs _)  = 1 + depth xs
-        f (Text _)          = 0
+--properties = do
+--        r <- quickCheckResult prop_parser_exc_free
+--        case r of
+--            Success _ _ _ -> return True
+--            x -> putStrLn ("failed: " ++ show x) >> return False
+--
+--depth xs = maximum $ 0:map f xs
+--    where
+--        f (Env _ _ xs _)    = 1 + depth xs
+--        f (Bracket _ _ xs _)  = 1 + depth xs
+--        f (Text _)          = 0
 
 instance Arbitrary LatexDoc where
     arbitrary = do
@@ -108,10 +100,7 @@ instance Arbitrary LatexDoc where
                     let ys = if L.null xs 
                         then "x"
                         else xs
-                    n <- choose (0,length cmd+1)
-                    let xs = if n < length cmd
-                        then ys ++ cmd !! n
-                        else ys
+--                    n <- choose (0,length cmd+1)
                     case read_lines tex_tokens ys of
                         Right x -> return $ Text $ map fst x
                         Left _  -> return $ Text $ [TextBlock "x" (0,0)]
@@ -135,12 +124,12 @@ instance Arbitrary LatexDoc where
                 ,   "proof"
                 ,   "calculation"
                 ]
-            cmd =
-                [   "\\newset"
-                ,   "\\hint"
-                ,   "\\ref"
-                ,   "\\eqref"
-                ]
+--            cmd =
+--                [   "\\newset"
+--                ,   "\\hint"
+--                ,   "\\ref"
+--                ,   "\\eqref"
+--                ]
 
 all_properties = Case "the parser is exception free" 
     (return (all_machines tree) >> return ()) ()

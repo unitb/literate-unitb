@@ -46,7 +46,8 @@ main = do
         if b then do
             ys <- liftIO $ do
                 forM_ (take 20 $ repeat "") putStrLn
-                (c,xs,ys) <- readProcessWithExitCode "ghc" ["test"] ""
+                (c,xs,ys) <- readProcessWithExitCode "ghc" ["-W","test"] ""
+--                (c,xs,ys) <- readProcessWithExitCode "ghc" ["-W","-Werror","test"] ""
                 putStr ys 
                 putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "
                 hFlush stdout

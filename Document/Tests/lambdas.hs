@@ -14,8 +14,6 @@ import UnitB.FunctionTheory
 import Z3.Z3 hiding (verify)
 
     -- Libraries
-import Control.Monad.IO.Class
-import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 import Data.Map
@@ -307,9 +305,9 @@ result4 = either g Right (do
             ,   (label "prog4", LeadsTo [] p3 q4)
             ])
     where
-        (k,k_decl) = var "k" int
+        (k,_)      = var "k" int
         (i,i_decl) = var "i" int
-        (f,f_decl) = var "f" (fun_type int int)
+        (f,_)      = var "f" (fun_type int int)
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
         g x = Left [(x,0,0)]
@@ -336,8 +334,6 @@ result5 = either g Right (do
             ])
     where
         (k,k_decl) = var "k" int
-        (i,i_decl) = var "i" int
-        (f,f_decl) = var "f" (fun_type int int)
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
         g x = Left [(x,0,0)]

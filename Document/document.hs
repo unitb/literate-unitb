@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
 module Document.Document 
-    ( module Document.Machine )
+    ( module Document.Machine
+    , tex_to_string )
 where
 
     -- Modules

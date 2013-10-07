@@ -3,22 +3,8 @@ module Document.Tests.Phase where
     -- Modules
 import Document.Document
 
-import UnitB.AST
-import UnitB.PO
-import UnitB.FunctionTheory
-
-import Z3.Z3 hiding (verify)
-
     -- Libraries
-import Control.Monad.IO.Class
-import Control.Monad.Trans
-import Control.Monad.Trans.Either
-
-import Data.Map
-
 import Tests.UnitTest
-
-import Utilities.Syntactic
 
 test_case = Case "refinement relations in the phase example" test True
 
@@ -34,4 +20,5 @@ path1 = "tests/phases-t1.tex"
 case1 = do
     r <- parse_machine path1 
     return $ either Just (const Nothing) r
+
 result1 = Nothing
