@@ -18,7 +18,7 @@ import qualified Data.Map as M
 import           Data.Maybe as M
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
-import qualified Data.Set as S (map,filter,foldr,(\\))
+import qualified Data.Set as S (map)
 
 import System.IO
 import System.IO.Unsafe
@@ -170,13 +170,15 @@ prop_tr m pname (Transient fv xp evt_lbl n) =
                 True
                 (exist_ind $ zand 
                         (xp `zimplies` (new_dummy ind $ zall sch))
-                        (zimplies (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
-                                  (znot $ primed (variables m) xp)  )) )
+                        (zforall  
+                            (M.elems $ params evt)
+                            (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
+                            (znot $ primed (variables m) xp)  )) )
            ) 
         ]
     where
         p    = props m
-        thm  = inv_thm p
+--        thm  = inv_thm p
         grd  = M.elems $ guard evt
         sch  = M.elems $ list_schedules (sched_ref evt) (c_sched evt) ! n
         act  = M.elems $ action evt
@@ -197,7 +199,7 @@ prop_co m pname (Co fv xp) =
                 (events $ m))
     where
         p = props m
-        po lbl evt = 
+        po _ evt = 
                 (ProofObligation 
                     (step_ctx $ m) 
                     (invariants p ++ grd ++ act)
@@ -217,7 +219,7 @@ inv_po m pname xp =
                 (ProofObligation (assert_ctx m) (M.elems $ inits m) False xp))
     where
         p = props m
-        po lbl evt = 
+        po _ evt = 
                 (ProofObligation 
                     (step_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
                     (invariants p ++ grd ++ act)
@@ -293,9 +295,9 @@ verify_machine m = do
     return (i,j)
 
 steps_po :: Theory -> Context -> Calculation -> Either [Error] [(Label, ProofObligation)]
-steps_po th ctx (Calc d g e0 es _) = f e0 es
+steps_po th ctx (Calc d _ e0 es _) = f e0 es
     where
-        f e0 [] = return []
+        f _ [] = return []
         f e0 ((r0, e1, a0,li):es) = do
             expr <- with_li li $ mk_expr r0 e0 e1
             tail <- f e1 es
@@ -377,7 +379,7 @@ proof_po th (ByCases xs li) lbl (ProofObligation ctx asm b goal) = do
         completeness dis = 
                 ( (f ("completeness " ++ show li)) 
                 , ProofObligation ctx asm b dis )
-        case_a (n,(lbl,x,p)) = proof_po th p (f ("case " ++ show n))
+        case_a (n,(_,x,p)) = proof_po th p (f ("case " ++ show n))
                 $ ProofObligation ctx (x:asm) b goal
         f x     = composite_label [lbl,label x]
 proof_po th (ByParts xs li) lbl (ProofObligation ctx asm b goal) = do
@@ -404,21 +406,21 @@ proof_po    th  (FreeGoal v u p (i,j))
                 | otherwise          = Left $ [(format "variable can't be freed: {0}" u :: String,i,j)]
             where
         free_vars expr = return expr
-        step_lbls = map (("case "++) . show) [1..]
-        lbls      = map f ("completeness" : step_lbls)
-        f x       = composite_label [lbl,label x]
-        g x       = name x /= v
-proof_po    th  (Easy (i,j)) 
+--        step_lbls = map (("case "++) . show) [1..]
+--        lbls      = map f ("completeness" : step_lbls)
+--        f x       = composite_label [lbl,label x]
+--        g x       = name x /= v
+proof_po    _  (Easy (i,j)) 
             lbl po = 
         return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
 proof_po    th  (Assume new_asm new_goal p (i,j))
-            lbl po@(ProofObligation ctx asm b goal) = do
+            lbl (ProofObligation ctx asm b goal) = do
         pos <- proof_po th p lbl $ ProofObligation ctx (M.elems new_asm ++ asm) b new_goal
         return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
                  , ProofObligation ctx [] b (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
                : pos)
-proof_po    th  (Assertion lemma p (i,j))
-            lbl po@(ProofObligation ctx asm b goal) = do
+proof_po    th  (Assertion lemma p _)
+            lbl (ProofObligation ctx asm b goal) = do
         pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
             $ ProofObligation ctx (asm ++ map fst (M.elems lemma)) b goal
         pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
@@ -427,7 +429,7 @@ proof_po    th  (Assertion lemma p (i,j))
         return (pos1 ++ concat pos2)
 
 are_fresh :: [String] -> ProofObligation -> Bool
-are_fresh vs (ProofObligation ctx asm b goal) = 
+are_fresh vs (ProofObligation _ asm _ goal) = 
             S.fromList vs `S.intersection` (S.map name $ S.unions $ map used_var (goal:asm))
          == S.empty 
 
@@ -446,7 +448,7 @@ check th c = embed
             (obligations th empty_ctx c) 
             (\pos -> do
         rs <- forM pos discharge :: IO [Validity]
-        let ln = filter (\(x,y) -> x /= Valid) $ zip rs [0..] :: [(Validity, Int)]
+        let ln = filter ((/= Valid) . fst) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
 
 dump :: String -> Map Label ProofObligation -> IO ()
@@ -468,7 +470,7 @@ verify_all pos = do
             case r of
                 Valid -> do
                     return (lbl, True) 
-                x     -> do
+                _     -> do
                     return (lbl, False)) 
     return $ M.fromList rs
 
@@ -489,9 +491,9 @@ verify_changes m old_pos = do
             Left msgs -> 
                 return (old_pos,unlines $ map g msgs,0)
     where
-        f p0 (b,p1)
-            | p0 == p1 = Nothing 
-            | p0 /= p1 = Just p0
+        f p0 (_,p1)
+            | p0 == p1  = Nothing 
+            | otherwise = Just p0
         g (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
                 
 str_verify_machine :: Machine -> IO (String,Int,Int)
@@ -503,7 +505,7 @@ str_verify_machine m =
                 format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)
     where
-        ps = props m
+--        ps = props m
         f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
