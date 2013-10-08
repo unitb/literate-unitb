@@ -82,10 +82,211 @@
 |  +- train station example, with refinement
 |  |  +- verify machine m0
 |  |  +- verify machine m1
+|  |    o  m1/INIT/FIS/in
+|  |    o  m1/INIT/FIS/loc
+|  |    o  m1/INIT/INV/inv0
+|  |    o  m1/SKIP/CO/saf0
+|  |    o  m1/SKIP/CO/saf1
+|  |    o  m1/SKIP/CO/saf2
+|  |    o  m1/SKIP/CO/saf3
+|  |    o  m1/m0:enter/CO/saf0
+|  |    o  m1/m0:enter/CO/saf1
+|  |    o  m1/m0:enter/CO/saf2
+|  |    o  m1/m0:enter/CO/saf3
+|  |    o  m1/m0:enter/FIS/in@prime
+|  |    o  m1/m0:enter/FIS/loc@prime
+|  |    o  m1/m0:enter/INV/inv0
+|  |    o  m1/m0:enter/SCH
+|  |    o  m1/m0:leave/CO/saf0
+|  |    o  m1/m0:leave/CO/saf1
+|  |    o  m1/m0:leave/CO/saf2
+|  |    o  m1/m0:leave/CO/saf3
+|  |    o  m1/m0:leave/FIS/in@prime
+|  |    o  m1/m0:leave/FIS/loc@prime
+|  |    o  m1/m0:leave/INV/inv0
+|  |    o  m1/m0:leave/SCH
+|  |    o  m1/m0:leave/SCH/1/REF/delay/prog/lhs
+|  |    o  m1/m0:leave/SCH/1/REF/delay/prog/rhs
+|  |    o  m1/m0:leave/SCH/1/REF/delay/saf/lhs
+|  |    o  m1/m0:leave/SCH/1/REF/delay/saf/rhs
+|  |    o  m1/m1:movein/CO/saf0
+|  |    o  m1/m1:movein/CO/saf1
+|  |    o  m1/m1:movein/CO/saf2
+|  |    o  m1/m1:movein/CO/saf3
+|  |    o  m1/m1:movein/FIS/in@prime
+|  |    o  m1/m1:movein/FIS/loc@prime
+|  |    o  m1/m1:movein/INV/inv0
+|  |    o  m1/m1:movein/SCH
+|  |    o  m1/m1:movein/SCH/0/REF/weake|___|53
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > n\n
+|  |    < n\n
+|  |    -    
+|  |    > _.xxx_.m1/m1:movein/TR/m1:tr1\n
+|  |    < _._.o_._.m1/m1:movein/TR/m1:tr1\n
+|  |    -   ---  ------------------------
+|  |    > _._.o_._.m1/m1:moveout/CO/saf0\n
+|  |    < _._.o_._.m1/m1:moveout/CO/saf0\n
+|  |    -                                 
+|  |    > _._.o_._.m1/m1:moveout/CO/saf1\n
+|  |    < _._.o_._.m1/m1:moveout/CO/saf1\n
+|  |    -                                 
+|  |    > _._.o_._.m1/m1:moveout/CO/saf2\n
+|  |    < _._.o_._.m1/m1:moveout/CO/saf2\n
+|  |    -                                 
+|  |    > _._.o_._.m1/m1:moveout/CO/saf3\n
+|  |    < _._.o_._.m1/m1:moveout/CO/saf3\n
+|  |    -                                 
+|  |    > _._.o_._.m1/m1:moveout/FIS/in@prime\n
+|  |    < _._.o_._.m1/m1:moveout/FIS/in@prime\n
+|  |    -                                      
+|  |    > _._.o_._.m1/m1:moveout/FIS/loc@prime\n
+|  |    < _._.o_._.m1/m1:moveout/FIS/loc@prime\n
+|  |    -                                       
+|  |    > _._.o_._.m1/m1:moveout/INV/inv0\n
+|  |    < _._.o_._.m1/m1:moveout/INV/inv0\n
+|  |    -                                  
+|  |    > _._.o_._.m1/m1:moveout/SCH\n
+|  |    < _._.o_._.m1/m1:moveout/SCH\n
+|  |    -                             
+|  |    > _._.o_._.m1/m1:moveout/SCH/0/REF/weaken\n
+|  |    < _._.o_._.m1/m1:moveout/SCH/0/REF/weaken\n
+|  |    -                                          
+|  |    > _._.o_._.m1/m1:moveout/TR/m1:tr0\n
+|  |    < _._.o_._.m1/m1:moveout/TR/m1:tr0\n
+|  |    -                                   
+|  |    > _._.o_._.m1/m1:prog0/REF/disjunction/lhs\n
+|  |    < _._.o_._.m1/m1:prog0/REF/disjunction/lhs\n
+|  |    -                                           
+|  |    > _._.o_._.m1/m1:prog0/REF/disjunction/rhs\n
+|  |    < _._.o_._.m1/m1:prog0/REF/disjunction/rhs\n
+|  |    -                                           
+|  |    > _._.o_._.m1/prog1/REF/transitivity\n
+|  |    < _._.o_._.m1/prog1/REF/transitivity\n
+|  |    -                                     
+|  |    > _._.o_._.m1/prog2/REF/implication\n
+|  |    < _._.o_._.m1/prog2/REF/implication\n
+|  |    -                                    
+|  |    > _._.o_._.m1/prog3/REF/discharge\n
+|  |    < _._.o_._.m1/prog3/REF/discharge\n
+|  |    -                                  
+|  |    > _._.o_._.m1/prog4/REF/discharge\n
+|  |    < _._.o_._.m1/prog4/REF/discharge\n
+|  |    -                                  
+|  |    > passed_.52_./_.
+|  |    < passed_.53_./_.
+|  |    -          -     
+|  |  ]
 |  |  +- verify machine m2
-|  |  +- [ Success: 3 / 3 ]
+|  |    o  m2/INIT/FIS/in
+|  |    o  m2/INIT/FIS/loc
+|  |    o  m2/INIT/INV/m2:inv0
+|  |    o  m2/SKIP/CO/m2:saf0
+|  |    o  m2/m0:enter/CO/m2:saf0
+|  |    o  m2/m0:enter/FIS/in@prime
+|  |    o  m2/m0:enter/FIS/loc@prime
+|  |    o  m2/m0:enter/INV/m2:inv0
+|  |    o  m2/m0:enter/SCH
+|  |   xxx m2/m0:leave/CO/m2:saf0
+|  |    o  m2/m0:leave/FIS/in@prime
+|  |    o  m2/m0:leave/FIS/loc@prim|___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > e\n
+|  |    < e\n
+|  |    -    
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/goal_.(493,1)\n
+|  |    < _.xxx_.m2/m0:leave/INV/m2:inv0\n
+|  |    -   ---  -------------------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/hypotheses_.(493,1)\n
+|  |    < _._.o_._.m2/m0:leave/SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/relation_.(493,1)\n
+|  |    < _.xxx_.m2/m1:movein/CO/m2:saf0\n
+|  |    -   ---  --------- ---------------
+|  |    > _.xxx_.m2/m0:leave/INV/m2:inv0/step_.(495,1)\n
+|  |    < _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    -   ---  -------------------  ----- --
+|  |    > _._.o_._.m2/m0:leave/SCH\n
+|  |    < _.xxx_.m2/m1:movein/FIS/loc@prime\n
+|  |    -   ---  --------- ---------
+|  |    > _.xxx_.m2/m1:movein/CO/m2:saf0\n
+|  |    < _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    -   ---  -------------------------
+|  |    > _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:movein/SCH\n
+|  |    -                       -----
+|  |    > _.xxx_.m2/m1:movein/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:movein/SCH/1/REF/delay/prog/lhs\n
+|  |    -   ---  --------------- ------------
+|  |    > _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:movein/SCH/1/REF/delay/prog/rhs\n
+|  |    -                       --- ---------
+|  |    > _._.o_._.m2/m1:movein/SCH\n
+|  |    < _._.o_._.m2/m1:movein/SCH/1/REF/delay/saf/lhs\n
+|  |    -                          --
+|  |    > _._.o_._.m2/m1:movein/SCH/1/REF/delay/prog/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/1/REF/delay/saf/rhs\n
+|  |    -                                       ---------
+|  |    > _._.o_._.m2/m1:movein/SCH/1/REF/delay/prog/rhs\n
+|  |    < _._.o_._.m2/m1:moveout/CO/m2:saf0\n
+|  |    -                    ---- - ---------
+|  |    > _._.o_._.m2/m1:movein/SCH/1/REF/delay/saf/lhs\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    -                    ------------------
+|  |    > _._.o_._.m2/m1:movein/SCH/1/REF/delay/saf/rhs\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    -                    -------------------
+|  |    > _._.o_._.m2/m1:moveout/CO/m2:saf0\n
+|  |    < _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    -                        ------------
+|  |    > _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    < _.xxx_.m2/m1:moveout/SCH\n
+|  |    -   ---  -------------------
+|  |    > _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    < _.xxx_.m2/m2:prog0/REF/add\n
+|  |    -   ---  --------------- -----
+|  |    > _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    < passed_.23_./_.29\n
+|  |    - -------------------
+|  |    > _.xxx_.m2/m1:moveout/SCH\n
+|  |    > _.xxx_.m2/m2:prog0/REF/add\n
+|  |    > passed_.26_./_.32\n
+|  |  ]
+|  |  +- [ Success: 1 / 3 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- the parser is exception free
-|  +- [ Success: 8 / 8 ]
+|  +- [ Success: 7 / 8 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -132,15 +333,15 @@
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 5 / 5 ]
++- [ Success: 4 / 5 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   10445 total
+   10465 total
     1387 Document/Tests/trainstation.hs
      718 Document/Tests/lambdas.hs
-     600 Document/machine.hs
+     620 Document/machine.hs
      570 UnitB/ast.hs
      520 UnitB/po.hs

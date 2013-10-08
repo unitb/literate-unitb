@@ -398,9 +398,7 @@ proof_po    th  (FreeGoal v u p (i,j))
         proof_po th p lbl $ ProofObligation ctx asm b new_goal
     where
         free_vars (Binder Forall ds r expr) 
-                | are_fresh [u] po = if S.fromList (map name ds) `isSubsetOf` S.fromList [v]
-                                        then return $ rename v u expr
-                                        else return (Binder Forall (L.filter g ds) 
+                | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
                                             (rename v u r)
                                             $ rename v u expr)
                 | otherwise          = Left $ [(format "variable can't be freed: {0}" u :: String,i,j)]

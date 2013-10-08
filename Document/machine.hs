@@ -261,14 +261,34 @@ declarations = visit_doc []
                               , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! evt
-                        let var_names = map fst vs
-                        let inter = S.fromList var_names `S.intersection` keysSet (indices old_event)
+                            var_names = map fst vs
+                            inter = S.fromList var_names `S.intersection` 
+                                    ( keysSet (params old_event) `S.union` keysSet (indices old_event) )
                         toEither $ error_list
                             [ ( not $ S.null inter
                               , format "repeated declaration: {0}" (intercalate ", " $ S.toList inter ) )
                             ]
                         let new_event = old_event { 
                             indices = fromList vs `union` indices old_event }
+                        return m { events = insert evt new_event $ events m } 
+            )
+        ,   (   "\\param"
+            ,   CmdBlock $ \(evt,xs,()) m -> do
+                        vs <- get_variables (context m) xs
+                        toEither $ error_list
+                            [ ( not (evt `member` events m) 
+                              , format "event '{0}' is undeclared" evt )
+                            ]
+                        let old_event = events m ! evt
+                            var_names = map fst vs
+                            inter = S.fromList var_names `S.intersection` 
+                                    ( keysSet (params old_event) `S.union` keysSet (indices old_event) )
+                        toEither $ error_list
+                            [ ( not $ S.null inter
+                              , format "repeated declaration: {0}" (intercalate ", " $ S.toList inter ) )
+                            ]
+                        let new_event = old_event { 
+                            params = fromList vs `union` params old_event }
                         return m { events = insert evt new_event $ events m } 
             )
         ,   (   "\\constant"

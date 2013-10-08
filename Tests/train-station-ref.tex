@@ -280,17 +280,19 @@ We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 %\evassignment{m1:moveout}{a2}{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
 \end{align*}
 
-We adjust \ref{m1:movein} to satisfy \ref{tr1}.
+We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
 \weakento{m1:movein}{0}{default}{c1,c2}{}
 
 \begin{align*}
-\indices{m1:movein}{	t : \Train}
+\indices{m1:movein}{	t : \Train} ; \quad
+\param{m1:movein}{ b : \Blk }
 \end{align*}
 
 \begin{align*}
 \evassignment{m1:movein}{a2}
-	{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
+	{ loc' = loc \1| t \tfun b }
+%	{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
 %\end{align*}
 %\begin{align*}
 %\\ \evassignment{m1:movein}{a3}{ in' & = in }
@@ -484,7 +486,18 @@ We adjust \ref{m1:movein} to satisfy \ref{tr1}.
 %%	{ \qexists{b}{}{ loc'  }
 \end{align*}
 %
-x
+
+\begin{proof}{m0:leave/INV/m2:inv0}
+\begin{free:var}{t_0}{t_0}
+\begin{free:var}{t_1}{t_1}
+	\begin{calculation}
+		t_0 = t_1
+	\hint{\follows}{ }
+		t_0 \in in' \1\land t_1 \in in' \1\land loc'.t_0 = loc'.t_1
+	\end{calculation}
+\end{free:var}
+\end{free:var}
+\end{proof}
 
 \end{machine}
 
