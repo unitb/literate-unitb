@@ -21,7 +21,6 @@ import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
 
 import System.IO
-import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Syntactic
