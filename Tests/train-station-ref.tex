@@ -250,15 +250,15 @@ We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
 \begin{align*}
 %\\ & \safety{saf5}
 %	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
-& \transient{m1:movein}{0}{m1:tr1}
-	{ t \in in \1\land loc.t = ent }
+& \transientB{m1:movein}{0}{m1:tr1}
+	{ t \in in \1\land loc.t = ent }{ \index{t}{t} }
 \\ & \transient{m1:moveout}{0}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
 %\\ & \safety{saf6}
 %	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
+\\ & \evguard{m1:movein}{grd7}
+	{ b \in plf }
 \end{align*}
-
-
 \subsubsection{New events} 
 
 

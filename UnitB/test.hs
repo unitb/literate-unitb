@@ -11,9 +11,6 @@ import UnitB.Feasibility
 import Z3.Z3
 
     -- Libraries
---import Control.Monad
---import Control.Monad.Trans.Either
-
 import           Data.List ( sort )
 import           Data.Map hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
@@ -45,7 +42,7 @@ example0 = do
         csched <- with_li (0,0) (x `mzeq` y)
         s0     <- with_li (0,0) (x' `mzeq` (x `mzplus` mzint 2))
         s1     <- with_li (0,0) (y' `mzeq` (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt") 0
+        let tr0 = Transient empty tr (label "evt") 0 empty
             co0 = Co [] co
             ps = empty_property_set {
                 transient = 
@@ -92,7 +89,7 @@ train_m0 = do
                     ,   action  = fromList [(label "A0", a0)]
                     })
         tr <- with_li (0,0) (st `zselect` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0)] 
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0 empty)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps
@@ -110,8 +107,9 @@ result_example0 = unlines [
     "  o  m0/evt/FIS/y@prime",
     "  o  m0/evt/INV/J0",
     "  o  m0/evt/SCH",
-    "  o  m0/evt/TR/TR0",
-    "passed 10 / 10"]
+    "  o  m0/evt/TR/TR0/EN",
+    "  o  m0/evt/TR/TR0/NEG",
+    "passed 11 / 11"]
 
 result_train_m0 = unlines [
     "  o  train_m0/INIT/FIS/st",

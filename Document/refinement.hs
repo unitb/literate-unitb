@@ -157,7 +157,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _)
+                    (Transient fv1 p1 _ _ _)
                     (Just (Unless fv2 p2 q2))) 
             m = fromList $
         assert m "" (
@@ -169,7 +169,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _)
+                    (Transient fv1 p1 _ _ _)
                     Nothing)
             m = fromList $
                 assert m "" (

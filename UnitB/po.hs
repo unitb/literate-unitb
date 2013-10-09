@@ -170,23 +170,13 @@ init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) ->
  
 
 prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
-prop_tr m pname (Transient fv xp evt_lbl n) = 
+prop_tr m pname (Transient fv xp evt_lbl n hint) = 
     M.fromList 
-        [   ( (composite_label [_name m, evt_lbl, tr_lbl, pname])
-            , (ProofObligation 
-                (           assert_ctx m 
-                `merge_ctx` step_ctx m 
-                `merge_ctx` dummy) 
-                (invariants m)
-                True
-                (exist_ind $ zand 
-                        (xp `zimplies` (new_dummy ind $ zall sch))
-                        (zforall  
-                            (M.elems $ params evt)
-                            (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
-                            (znot $ primed (variables m) xp)  )) )
-           ) 
-        ]
+        $ if M.null ind0 then 
+            [ po [label "EN"] xp0
+            , po [label "NEG"] xp1 ]
+          else
+            [ po [] $ exist_ind $ zand xp0 xp1 ]
     where
 --        thm  = inv_thm p
         grd  = M.elems $ guard evt
@@ -194,10 +184,30 @@ prop_tr m pname (Transient fv xp evt_lbl n) =
         act  = M.elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
+        ind0 = indices evt `M.difference` hint
+        ind1 = indices evt `M.intersection` hint
+        new_defs = flip map (M.toList ind1) 
+                $ \(x,Var n t) -> (n ++ "@param", Def [] (n ++ "@param") [] t $ hint ! x)
+        def_ctx = Context M.empty M.empty M.empty (M.fromList new_defs) M.empty
         dummy = Context M.empty fv M.empty  M.empty  M.empty    
         exist_ind xp = zexists 
-                    (map (add_suffix "@param") $ M.elems ind) 
+                    (map (add_suffix "@param") $ M.elems ind0) 
                     ztrue xp
+        po lbl xp = 
+          ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname] ++ lbl)
+            , ProofObligation 
+                (           assert_ctx m 
+                `merge_ctx` step_ctx m 
+                `merge_ctx` dummy
+                `merge_ctx` def_ctx) 
+                (invariants m)
+                True
+                xp)
+        xp0 = (xp `zimplies` (new_dummy ind $ zall sch))
+        xp1 = (zforall  
+                    (M.elems $ params evt)
+                    (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
+                    (znot $ primed (variables m) xp)  )
 
 
 prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation

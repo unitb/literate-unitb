@@ -65,7 +65,8 @@ result1 = unlines
      , "  o  m1/m1:movein/INV/inv0"
      , "  o  m1/m1:movein/SCH"
      , "  o  m1/m1:movein/SCH/0/REF/weaken"
-     , "  o  m1/m1:movein/TR/m1:tr1"
+     , "  o  m1/m1:movein/TR/m1:tr1/EN"
+     , "  o  m1/m1:movein/TR/m1:tr1/NEG"
      , "  o  m1/m1:moveout/CO/saf0"
      , "  o  m1/m1:moveout/CO/saf1"
      , "  o  m1/m1:moveout/CO/saf2"
@@ -82,7 +83,7 @@ result1 = unlines
      , "  o  m1/prog2/REF/implication"
      , "  o  m1/prog3/REF/discharge"
      , "  o  m1/prog4/REF/discharge"
-     , "passed 53 / 53"
+     , "passed 54 / 54"
      ]
 
 result2 = unlines
@@ -137,7 +138,7 @@ result2 = unlines
 	, "  o  m2/m1:moveout/INV/m2:inv0"
 	, " xxx m2/m1:moveout/SCH"
 	, " xxx m2/m2:prog0/REF/add"
-	, "passed 48 / 51"
+	, "passed 49 / 51"
 	]
 
 path0 = "Tests/train-station-ref.tex"

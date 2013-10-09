@@ -399,6 +399,7 @@ data Transient =
             (Map String Var)    -- Free variables
             Expr                -- Predicate
             Label Int           -- Event, Schedule 
+            (Map String Expr)
 --            (Maybe Label)       -- Progress Property for fine schedule
 --      | Grd thm
 --      | Sch thm

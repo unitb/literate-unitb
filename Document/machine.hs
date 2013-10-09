@@ -309,6 +309,26 @@ declarations = visit_doc []
             )
         ]
 
+tr_hint :: Monad m
+        => Machine
+        -> Label
+        -> [LatexDoc]
+        -> [(String,Expr)]
+        -> RWST (Int,Int) [Error] a m [(String,Expr)]
+tr_hint m lbl = visit_doc []
+        [ ( "\\index"
+          , CmdBlock $ \(String x, xs, ()) ys -> do
+                let evt = events m ! lbl
+                expr <- get_expr m xs
+                toEither $ error_list 
+                    [ ( not $ x `member` indices evt 
+                      , format "'{0}' is not an index of '{1}'" x lbl )
+                    ]
+                return $ (x,expr):ys
+          )
+        ]
+    
+
     -- Todo: report an error if we create two assignments (or other events elements)
     -- with the same name
     -- Todo: guard the `insert` statements with checks for name clashes
@@ -349,7 +369,7 @@ collect_expr = visit_doc
                                 , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! evt
-                        let grds = guard old_event
+                            grds = guard old_event
                         toEither $ error_list
                             [   ( evt `member` grds
                                 , format "{0} is already used for another guard" lbl )
@@ -444,9 +464,28 @@ collect_expr = visit_doc
                                 , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
-                        let prop = Transient (free_vars (context m) tr) tr ev n
-                        let old_prog_prop = transient $ props m
-                        let new_props     = insert lbl prop $ old_prog_prop
+                        let prop = Transient (free_vars (context m) tr) tr ev n empty
+                            old_prog_prop = transient $ props m
+                            new_props     = insert lbl prop $ old_prog_prop
+                        return m {
+                            props = (props m) {
+                                transient = new_props } } 
+            )
+        ,   (   "\\transientB"      
+            ,   CmdBlock $ \(ev, n, lbl, xs, hint,()) m -> do
+                        toEither $ error_list
+                            [ ( not (ev `member` events m)
+                              , format "event '{0}' is undeclared" ev )
+                            ]
+                        toEither $ error_list
+                            [   ( lbl `member` transient (props m)
+                                , format "{0} is already used for another program property" lbl )
+                            ]
+                        tr            <- get_assert m xs
+                        hints         <- toEither $ tr_hint m ev hint []
+                        let prop = Transient (free_vars (context m) tr) tr ev n $ fromList hints
+                            old_prog_prop = transient $ props m
+                            new_props     = insert lbl prop $ old_prog_prop
                         return m {
                             props = (props m) {
                                 transient = new_props } } 

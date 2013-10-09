@@ -41,8 +41,10 @@ test = test_cases [
             case8 result8),
         (StringCase "test 9 (coarse schedule weakening, PO)" 
             case9 result9),
-        (StringCase "test 10 (transient PO)" 
-            case10 result10)  ]
+        (StringCase "test 10 (transient PO, enablement)" 
+            case10 result10), 
+        (StringCase "test 11 (transient PO, negation)" 
+            case11 result11)  ]
 
 
 path0 = "Tests/small_machine_t0.tex"
@@ -63,9 +65,9 @@ result2 = (unlines
       , "  o  m0/inc/INV/inv0"
       , " xxx m0/inc/INV/inv1"
       , "  o  m0/inc/SCH"
-      , " xxx m0/inc/TR/tr0"
---        "  o  m0/inc/TR/NEG/tr0"
-      , "passed 8 / 10"
+      , " xxx m0/inc/TR/tr0/EN"
+      , "  o  m0/inc/TR/tr0/NEG"
+      , "passed 9 / 11"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -87,8 +89,9 @@ result3 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , " xxx m0/inc/TR/tr0"
-      , "passed 8 / 10"
+      , " xxx m0/inc/TR/tr0/EN"
+      , "  o  m0/inc/TR/tr0/NEG"
+      , "passed 9 / 11"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -140,8 +143,8 @@ result5 = unlines [
 
 case5 = show_po path3 $ label "m0/SKIP/CO/c0"
 
-result6 = (unlines [
-        "  o  m0/INIT/FIS/x"
+result6 = (unlines 
+      [ "  o  m0/INIT/FIS/x"
       , "  o  m0/INIT/FIS/y"
       , "  o  m0/INIT/INV/inv0"
       , " xxx m0/SKIP/CO/c0"
@@ -151,8 +154,9 @@ result6 = (unlines [
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
       , "  o  m0/inc/SCH/0/REF/weaken"
-      , "  o  m0/inc/TR/tr0"
-      , "passed 10 / 11"
+      , "  o  m0/inc/TR/tr0/EN"
+      , "  o  m0/inc/TR/tr0/NEG"
+      , "passed 11 / 12"
     ])
 
 path6 = "Tests/small_machine_t3.tex"
@@ -210,15 +214,26 @@ result10 = unlines [
       , " y@prime: Int"
       , " (= x (* 2 y))"
       , "|----"
-      , " (and (=> (= x y) (= x y))" ++
-             " (=> (and (= x y)" ++
-                      " (= x y)" ++
-                      " (= x y)" ++
-                      " (= x@prime (+ x 2))" ++
-                      " (= y@prime (+ y 1)))" ++
-                 " (not (= x@prime y@prime))))" ]
+      , " (=> (= x y) (= x y))" ]
 
-case10 = show_po path6 $ label "m0/inc/TR/tr0"
+case10 = show_po path6 $ label "m0/inc/TR/tr0/EN"
+
+result11 = unlines [
+        " sort: , , , pfun [a,b], set [a]"
+      , " x: Int"
+      , " x@prime: Int"
+      , " y: Int"
+      , " y@prime: Int"
+      , " (= x (* 2 y))"
+      , "|----"
+      , " (=> (and (= x y)" ++
+                 " (= x y)" ++
+                 " (= x y)" ++
+                 " (= x@prime (+ x 2))" ++
+                 " (= y@prime (+ y 1)))" ++
+            " (not (= x@prime y@prime)))" ]
+
+case11 = show_po path6 $ label "m0/inc/TR/tr0/NEG"
 
 var_x = Var "x" int
 var_y = Var "y" int
@@ -258,7 +273,7 @@ m0_props = empty_property_set {
 
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0) ]
+            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0 empty) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 
