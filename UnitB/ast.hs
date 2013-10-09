@@ -209,10 +209,14 @@ merge_exprs m0 m1 = toEither $ do
                     (events m0)
                     (events m1)
         inh   <- fromEither empty_property_set 
-                $ foldM ps_union_expr empty_property_set
-                    [ inh_props m0
-                    , inh_props m1
-                    , props m1 ]
+                $ ps_union_expr (inh_props m0) (inh_props m1)
+        inh   <- fromEither empty_property_set 
+                $ ps_union_expr inh $ props m1
+--        inh   <- fromEither empty_property_set 
+--                $ foldM ps_union_expr empty_property_set
+--                    [ inh_props m0
+--                    , inh_props m1
+--                    , props m1 ]
         return m0
             { theory = th
             , inits = init
@@ -228,10 +232,16 @@ merge_proofs m0 m1 = toEither $ do
                     (events m0)
                     (events m1)
         inh   <- fromEither empty_property_set 
-                $ foldM ps_union_proofs empty_property_set
-                    [ inh_props m0
-                    , inh_props m1
-                    , props m1 ]
+                $ ps_union_proofs (inh_props m0) (inh_props m1)
+        inh   <- fromEither empty_property_set 
+                $ ps_union_proofs inh $ props m1
+--        inh   <- fromEither empty_property_set 
+--                $ foldM ps_union_proofs empty_property_set
+--                    [ inh_props m0
+--                    , inh_props m1
+--                    , props m1 ]
+        unless (inv (inh_props m0) `isSubmapOf` inv inh) 
+            $ tell ["incorrect inheritance"]
         return m0
             { inh_props = inh
             , events = evts
@@ -282,15 +292,20 @@ merge_th_exprs t0 t1 = toEither $ do
             { fact = fact }
 
 merge_evt_struct :: Event -> Event -> Either [String] Event
-merge_evt_struct e0 e1 = return e0
+merge_evt_struct e0 _ = return e0
 merge_evt_decl :: Event -> Event -> Either [String] Event
 merge_evt_decl e0 e1 = toEither $ do
         ind <- fromEither empty $ disjoint_union
                 (\x -> ["multiple indices with the same name: " ++ x ++ ""])
                 (indices e0)
                 (indices e1)
+        prm <- fromEither empty $ disjoint_union
+                (\x -> ["multiple indices with the same name: " ++ x ++ ""])
+                (params e0)
+                (params e1)
         return e0 
-            { indices = ind }
+            { indices = ind
+            , params = prm }
 merge_evt_exprs :: Event -> Event -> Either [String] Event
 merge_evt_exprs e0 e1 = toEither $ do
         coarse_sch <- fromEither default_schedule $ do

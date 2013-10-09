@@ -227,8 +227,20 @@ collect_proof_step hyps m xs = do
                         else left [("assumptions must be accompanied by a new goal",i,j)]
             _   -> left [("expecting a single proof step",i,j)]         
 
+hint :: Monad m
+     => [LatexDoc] 
+     -> [(Label, (Int,Int))]
+     -> RWST (Int,Int) [Error] s m [(Label, (Int,Int))] 
+hint = visit_doc []
+        [ ( "\\ref", CmdBlock f ), ( "\\eqref", CmdBlock f ) ]
+    where
+        f (b,()) xs = do
+            li <- lift $ ask 
+            return $ (b,li):xs
+
 parse_calc :: Monad m
-           => Map Label Expr -> Machine 
+           => Map Label Expr 
+           -> Machine 
            -> [LatexDoc]
            -> RWST (Int,Int) [Error] s m Calculation
 parse_calc hyps m xs = 
@@ -239,9 +251,9 @@ parse_calc hyps m xs =
             op <- fromEither Equal $ hoistEither $ read_tokens 
                     (do eat_space ; x <- oper ; eat_space ; return x) 
                     (concatMap flatten_li b) li
+            hs <- hint c []
             hyp <- fromEither [] (do
-                hs <- fmap (map (\(x,y) -> (label x,y))) $ hint c
-                mapM (hoistEither . find hyps m) hs)
+                hoistEither $ mapM (find hyps m) hs)
             r   <- parse_calc hyps m d
             return r { 
                 first_step = xp,
@@ -250,24 +262,24 @@ parse_calc hyps m xs =
             li <- ask
             xp <- fromEither ztrue $ get_expr m xs
             return $ Calc (context m) ztrue xp [] li
+        _               -> do
+                    li@(i,j) <- ask
+                    RWS.tell [("invalid hint",i,j)]
+                    return $ Calc (context m) ztrue ztrue [] li
     where
-        f x = composite_label [_name m,label x]
-        hint xs =
-            case find_cmd_arg 1 ["\\ref","\\eqref"] xs of
-                Just (a,_,[[Text [TextBlock b li]]],c)  -> do
-                    xs <- hint c
-                    return ((b,li):xs)
-                Nothing         -> return []
         find :: Map Label Expr -> Machine -> (Label,(Int,Int)) -> Either [Error] Expr
         find hyps m (xs,(i,j)) = either Right Left (do
                 err $ M.lookup xs $ hyps
-                err $ M.lookup xs $ inv p
-                err $ M.lookup xs $ inv_thm p
+                err $ M.lookup xs $ inv p0
+                err $ M.lookup xs $ inv_thm p0
+                err $ M.lookup xs $ inv p1
+                err $ M.lookup xs $ inv_thm p1
                 err $ M.lookup xs $ inits m
                 foldM f [err_msg] $ elems $ events m
                 )
             where
-                p = props m
+                p0 = props m
+                p1 = inh_props m
                 err (Just x) = Left x
                 err Nothing  = Right [err_msg]
                 err_msg      = ("reference to unknown predicate",i,j)

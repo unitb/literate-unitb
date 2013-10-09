@@ -69,7 +69,7 @@
 	{	t &\in in } \\ 
 \evassignment{m0:leave}{a0}
 	{	in' &= in \setminus \{ t \} } \\
-\evassignment{m0:enter}{a0}
+\evassignment{m0:enter}{a1}
 	{	in' &= in \bunion \{ t \} }
 \end{align*}
 
@@ -164,7 +164,7 @@
 \begin{align*}
 \evassignment{m0:leave}{a2}
 	{ loc' &= \{ t \} \domsub loc }
-\\ \evassignment{m0:enter}{a2}
+\\ \evassignment{m0:enter}{a3}
 	{ loc' &= loc \1| t \tfun ent }
 \\ \initialization{in0}
 	{ loc \, &= \emptyfun }
@@ -474,9 +474,8 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
 \\ \cschedule{m1:movein}{c0}
 	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
-\\ \evassignment{m1:movein}{a6}
-	{ \qexists{b}{b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
-		{ loc' = loc \1| t \tfun b } }
+\\ \evguard{m1:movein}{g3}
+	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
 \\ \evguard{m0:enter}{g1}
 	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
 %\evguard{m0:leave}{g1}
@@ -490,11 +489,66 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \begin{proof}{m0:leave/INV/m2:inv0}
 \begin{free:var}{t_0}{t_0}
 \begin{free:var}{t_1}{t_1}
+	\begin{align}
+	\assume{hyp0}{\neg t_0 = t_1}
+	\\ \assume{hyp1}{ t_0 \in in' }
+	\\ \assume{hyp2}{ t_1 \in in' }
+	\\ \assert{hyp5}{ t_0 \in in }
+	\\ \assert{hyp6}{ t_1 \in in }
+	\\ \assert{hyp3}{ \neg t_0 = t } % \label{hyp7}
+	\\ \assert{hyp4}{ \neg t_1 = t } % \label{hyp8}
+	\\ \goal{\neg (loc'.t_0 = loc'.t_1)} \notag
+	\end{align}
+	\hide{
+		\assert{hyp7}{ t_0 \in \dom.loc \setminus \{ t \} }
+		\assert{hyp8}{ t_1 \in \dom.loc \setminus \{ t \} }
+		}
 	\begin{calculation}
-		t_0 = t_1
-	\hint{\follows}{ }
-		t_0 \in in' \1\land t_1 \in in' \1\land loc'.t_0 = loc'.t_1
+		loc'.t_0 = loc'.t_1
+	\hint{=}{ \ref{a2} \ref{m2:inv0} }
+		(\{ t \} \domsub loc).t_0 = (\{ t \} \domsub loc).t_1 
+	\hint{=}{ \hide{ \eqref{hyp7} and \eqref{hyp8} } 
+			\igeqref{hyp3} and \igeqref{hyp4} }
+%		loc.t_0 = loc.t_1 
+%		loc.t_0 = (\{ t \} \domsub loc).t_1 
+%	\hint{=}{ \eqref{hyp8} }
+		loc.t_0 = loc.t_1 
+	\hint{=}{ \eqref{hyp5}, \eqref{hyp6}, 
+			\eqref{hyp0} with \ref{m2:inv0} 
+			} 
+		\false
 	\end{calculation}
+	\hide
+	{	\begin{subproof}{hyp3} \easy \end{subproof}
+		\begin{subproof}{hyp4} \easy \end{subproof}
+		\begin{subproof}{hyp5} \easy \end{subproof}
+		\begin{subproof}{hyp6} \easy \end{subproof}
+		}
+	\begin{subproof}{hyp7} 
+	\begin{calculation}
+		t_0 \in \dom.loc \setminus \{ t \}
+	\hint{=}{ \ref{inv0} }
+		t_0 \in in \setminus \{ t \} 
+	\hint{=}{ \ref{a0} }
+		t_0 \in in'
+	\hint{=}{ \eqref{hyp1} }
+		\true
+	\end{calculation}
+	\end{subproof}
+	Similarly for \eqref{hyp8}
+	\hide{
+		\begin{subproof}{hyp8} 
+		\begin{calculation}
+			t_1 \in \dom.loc \setminus \{ t \}
+		\hint{=}{ \ref{inv0} }
+			t_1 \in in \setminus \{ t \} 
+		\hint{=}{ \ref{a0} }
+			t_1 \in in'
+		\hint{=}{ \ref{hyp2} }
+			\true
+		\end{calculation}
+		\end{subproof}
+		}
 \end{free:var}
 \end{free:var}
 \end{proof}

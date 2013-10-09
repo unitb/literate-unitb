@@ -106,9 +106,21 @@ skip_event m = empty_event { action =
         (map (\v -> primed (variables m) (Word v) `zeq` (Word v))  
             $ M.elems $ variables m) }
 
-invariants p = M.elems (inv p) ++ M.elems (inv_thm p)
+invariants m = 
+            M.elems (inv p0) 
+        ++  M.elems (inv_thm p0) 
+        ++  M.elems (inv p1)
+        ++  M.elems (inv_thm p1)
+    where
+        p0 = props m
+        p1 = inh_props m
 
-invariants_only p = M.elems (inv p)
+invariants_only m = 
+            M.elems (inv p0) 
+        ++  M.elems (inv p1)
+    where
+        p0 = props m
+        p1 = inh_props m 
 
 raw_machine_pos :: Machine -> (Map Label ProofObligation)
 raw_machine_pos m = pos
@@ -166,7 +178,7 @@ prop_tr m pname (Transient fv xp evt_lbl n) =
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m 
                 `merge_ctx` dummy) 
-                (invariants p)
+                (invariants m)
                 True
                 (exist_ind $ zand 
                         (xp `zimplies` (new_dummy ind $ zall sch))
@@ -198,11 +210,10 @@ prop_co m pname (Co fv xp) =
                 (skip_event $ m) 
                 (events $ m))
     where
-        p = props m
         po _ evt = 
                 (ProofObligation 
                     (step_ctx $ m) 
-                    (invariants p ++ grd ++ act)
+                    (invariants m ++ grd ++ act)
                     False
                     (forall_fv xp) )
             where
@@ -218,11 +229,10 @@ inv_po m pname xp =
                 (composite_label [_name m, inv_init_lbl, pname])
                 (ProofObligation (assert_ctx m) (M.elems $ inits m) False xp))
     where
-        p = props m
         po _ evt = 
                 (ProofObligation 
                     (step_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
-                    (invariants p ++ grd ++ act)
+                    (invariants m ++ grd ++ act)
                     False
                     (primed (variables m) xp))
             where
@@ -235,11 +245,10 @@ fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
         ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
           ProofObligation 
             (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            (invariants p ++ grd)
+            (invariants m ++ grd)
             True
             (zexists pvar ztrue $ zall acts))
     where
-        p    = props m
         grd  = M.elems $ guard evt
 --        act  = zall $ M.elems $ action evt
         pvar = map prime $ M.elems $ variables m
@@ -253,23 +262,16 @@ sch_po m lbl evt = M.singleton
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
             `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            (invariants p ++ sch)
+            (invariants m ++ sch)
             True
             (exist_param $ zall grd))
     where
-        p     = props m
-        grd   = M.elems $ guard evt
-        sch   = unsafePerformIO $ do
-            let xs = list_schedules (sched_ref evt) $ c_sched evt
-                x  = M.elems 
+        grd    = M.elems $ guard evt
+        ls_sch = list_schedules (sched_ref evt) $ c_sched evt
+        sch    = M.elems 
                     $ fst $ M.fromJust
                     $ M.maxView 
-                    $ xs
---            print lbl
---            putStrLn $ "> ref: " ++ show (sched_ref evt)
---            putStrLn $ "> all scheds: " ++ show (c_sched evt)
---            putStrLn $ "> sched seq: " ++ show xs
-            return x
+                    $ ls_sch
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp
@@ -278,11 +280,10 @@ thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
         (ProofObligation
             (assert_ctx m)
-            (invariants p)
+            (invariants_only m)
             False
             xp)
     where
-        p = props m
 
 add_suffix suf (Var n t) = Var (n ++ suf) t
 

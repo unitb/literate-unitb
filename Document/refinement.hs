@@ -139,7 +139,7 @@ assert m suff prop =
             , (ProofObligation 
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m) 
-                (invariants p)
+                (invariants m)
                 True
                 prop))
         ]
