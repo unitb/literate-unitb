@@ -543,7 +543,7 @@ collect_proofs = visit_doc
                             , format "the goal is an undefined progress property {0}" goal )
                         ]
                     let prog = progress $ props m
-                    let saf  = safety $ props m
+                        saf  = safety $ props m
 --                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 

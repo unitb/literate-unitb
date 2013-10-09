@@ -44,7 +44,7 @@ data ProofStep = Step
 
 set_proof :: Monad m => Proof -> ProofStep -> EitherT [Error] m ProofStep
 set_proof p (Step a b c d Nothing)      = return $ Step a b c d $ Just p
-set_proof p (Step a b c d (Just _))     = left [("too many proofs",i,j)]
+set_proof p (Step _ _ _ _ (Just _))     = left [("too many proofs",i,j)]
     where
         (i,j) = line_info p
 
@@ -52,7 +52,7 @@ set_goal :: (Monad m, MonadReader (Int,Int) m)
          => Expr -> ProofStep
          -> EitherT [Error] m ProofStep
 set_goal g (Step a b c Nothing d)       = return $ Step a b c (Just g) d
-set_goal g (Step a b c (Just _) d)  = do
+set_goal _ (Step _ _ _ (Just _) _)  = do
         (i,j) <- ask
         left [("too many goals",i,j)]
 
@@ -92,19 +92,19 @@ find_assumptions :: Monad m
                  -> RWST (Int,Int) [Error] s m ProofStep
 find_assumptions m = visit_doc
         [   (   "calculation"
-            ,   EnvBlock (\() xs proofs -> return proofs)
+            ,   EnvBlock $ \() _ proofs -> return proofs
             )
         ,   (   "free:var"
-            ,   EnvBlock (\(from :: Label,to :: Label,()) xs proofs -> return proofs)
+            ,   EnvBlock $ \(_ :: Label,_ :: Label,()) _ proofs -> return proofs
             )
         ,   (   "by:cases"
-            ,   EnvBlock (\() xs proofs -> return proofs)
+            ,   EnvBlock $ \() _ proofs -> return proofs
             )
         ,   (   "by:parts"
-            ,   EnvBlock (\() xs proofs -> return proofs)
+            ,   EnvBlock $ \() _ proofs -> return proofs
             )
         ,   (   "subproof"
-            ,   EnvBlock (\(lbl :: Label,()) xs proofs -> return proofs)
+            ,   EnvBlock $ \(_ :: Label,()) _ proofs -> return proofs
             )
         ] [ (   "\\assume"
             ,   CmdBlock $ \(lbl,formula,()) proofs -> do

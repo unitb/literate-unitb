@@ -11,15 +11,15 @@ import UnitB.Feasibility
 import Z3.Z3
 
     -- Libraries
-import Control.Monad
-import Control.Monad.Trans.Either
+--import Control.Monad
+--import Control.Monad.Trans.Either
 
 import           Data.List ( sort )
 import           Data.Map hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
 
-import System.IO
-import System.Posix.IO
+--import System.IO
+--import System.Posix.IO
 
 import Tests.UnitTest
 
@@ -173,7 +173,7 @@ get_tr_po em = case (do
         let lbl = composite_label [_name m, label "leave/TR/TR0"]
         pos <- proof_obligation m
         let po = pos ! lbl
-        let cmd = z3_code po
+--        let cmd = z3_code po
         return $ show po) of
             Right xs -> return xs
             Left xs  -> return $ show_err xs

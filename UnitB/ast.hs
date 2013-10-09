@@ -45,7 +45,6 @@ module UnitB.AST
 where
  
     -- Modules
-import UnitB.FunctionTheory
 import UnitB.SetTheory
 import UnitB.Theory
 import UnitB.Calculation
@@ -58,13 +57,11 @@ import Control.Applicative ( (<|>) )
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
-import qualified Data.Foldable as F
 import           Data.Function
 import           Data.Graph
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
-import           Data.Maybe
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -139,7 +136,7 @@ toEither m
         (x,w) = runWriter m
 
 fromEither :: Monoid a => b -> Either a b -> Writer a b
-fromEither x (Right y) = return y
+fromEither _ (Right y) = return y
 fromEither x (Left y)  = do
         tell y
         return x    
@@ -340,30 +337,30 @@ merge_evt_proof e0 e1 = toEither $ do
             { sched_ref = ref }
 
 
-merge_theory :: Theory -> Theory -> Either [String] Theory
-merge_theory t0 t1 = toEither $ do
-        let es = extends t0 ++ extends t1
-        types <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with type '" ++ show x ++ "'"])
-                (types t0)
-                (types t1)
-        funs <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with function '" ++ show x ++ "'"])
-                (funs t0)
-                (funs t1)
-        consts <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with constant '" ++ show x ++ "'"])
-                (consts t0)
-                (consts t1)
-        fact <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with fact '" ++ show x ++ "'"])
-                (fact t0)
-                (fact t1)
-        dummies <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with dummy '" ++ show x ++ "'"])
-                (dummies t0)
-                (dummies t1)
-        return $ Theory es types funs consts fact dummies
+--merge_theory :: Theory -> Theory -> Either [String] Theory
+--merge_theory t0 t1 = toEither $ do
+--        let es = extends t0 ++ extends t1
+--        types <- fromEither empty $ disjoint_union
+--                (\x -> ["Name clash with type '" ++ show x ++ "'"])
+--                (types t0)
+--                (types t1)
+--        funs <- fromEither empty $ disjoint_union
+--                (\x -> ["Name clash with function '" ++ show x ++ "'"])
+--                (funs t0)
+--                (funs t1)
+--        consts <- fromEither empty $ disjoint_union
+--                (\x -> ["Name clash with constant '" ++ show x ++ "'"])
+--                (consts t0)
+--                (consts t1)
+--        fact <- fromEither empty $ disjoint_union
+--                (\x -> ["Name clash with fact '" ++ show x ++ "'"])
+--                (fact t0)
+--                (fact t1)
+--        dummies <- fromEither empty $ disjoint_union
+--                (\x -> ["Name clash with dummy '" ++ show x ++ "'"])
+--                (dummies t0)
+--                (dummies t1)
+--        return $ Theory es types funs consts fact dummies
 
 skip m = Event 
         M.empty M.empty 
@@ -424,7 +421,7 @@ data Variant =
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
 
 --variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
-variant_decreased (IntegerVariant d var b Up)   = Word d `zless` var
+variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` var
 --variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
 variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 
@@ -505,7 +502,7 @@ list_schedules r m0 =
         f (_,m1) (i,ref) = (i, M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1)
         first_index
             | not $ M.null r = fst (findMin r)-1
-            | M.null r       = 0
+            | otherwise      = 0
         first                = (first_index,fromList [(label "default",zfalse)])
 
 before x = keep x `S.union` remove x
@@ -516,7 +513,7 @@ cycles xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
         f xs  = (fst $ head xs, fst $ head xs, map snd xs)
         vs    = map (\x -> (x,x,[])) $ nub (map fst xs ++ map snd xs)
         alist = map f $ groupBy ((==) `on` fst) $ sort xs
-        collapse ( (x1,x2,xs) : zs@( (y1,y2,ys):ws ) )
+        collapse ( (x1,x2,xs) : zs@( (y1,_,ys):ws ) )
             | x1 == y1  = collapse $ (x1,x2,xs++ys):ws
             | x1 /= y1  = (x1,x2,xs) : collapse zs
         collapse xs = xs
@@ -557,7 +554,7 @@ empty_property_set = PS
         empty empty empty
 
 ps_union_expr :: PropertySet -> PropertySet -> Either [String] PropertySet
-ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 _ f1 i1 g1 _) = 
     toEither $ do
         a2 <- fromEither empty $ disjoint_union (f "transient predicate") a0 a1
         b2 <- fromEither empty $ disjoint_union (f "co predicate") b0 b1
@@ -573,7 +570,8 @@ ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) =
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
 
 ps_union_proofs :: PropertySet -> PropertySet -> Either [String] PropertySet
-ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+--ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
+ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS _ _ _ _ _ _ _ _ h1) = 
     toEither $ do
         h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
         return $ PS a0 b0 c0 d0 e0 f0 i0 g0 h2

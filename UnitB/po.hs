@@ -189,7 +189,6 @@ prop_tr m pname (Transient fv xp evt_lbl n) =
            ) 
         ]
     where
-        p    = props m
 --        thm  = inv_thm p
         grd  = M.elems $ guard evt
         sch  = M.elems $ list_schedules (sched_ref evt) (c_sched evt) ! n
@@ -506,7 +505,6 @@ str_verify_machine m =
                 format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)
     where
---        ps = props m
         f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
