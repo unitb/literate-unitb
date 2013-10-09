@@ -231,13 +231,13 @@ instance RefRule Disjunction where
                     zforall fv0 ztrue (
                         ( zsome (map disj_q ps) `zimplies` q0 ) ) ) )
         where
-            disj_p ([], LeadsTo fv1 p1 q1) = p1
-            disj_p (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue p1
-            disj_q ([], LeadsTo fv1 p1 q1) = q1
-            disj_q (vs, LeadsTo fv1 p1 q1) = zexists vs ztrue q1
+            disj_p ([], LeadsTo _ p1 _) = p1
+            disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
+            disj_q ([], LeadsTo _ _ q1) = q1
+            disj_q (vs, LeadsTo _ _ q1) = zexists vs ztrue q1
 
 disjunction :: ProgressProp -> [ProgressProp] -> Disjunction
-disjunction pr0@(LeadsTo fv0 p0 q0) ps = 
+disjunction pr0@(LeadsTo fv0 _ _) ps = 
         let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
             ps0 = map f ps
         in (Disjunction pr0 ps0)
@@ -312,7 +312,7 @@ instance RefRule Induction where
                         (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
                         ))
 
-parse_induction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls hint) = do
+parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
         (i,j) <- ask
         toEither $ error_list
             [   ( length hyps_lbls /= 1
@@ -346,8 +346,9 @@ parse_induction rule (RuleParserParameter m prog saf goal_lbl hyps_lbls hint) = 
                         $ Right bound
                     return (dir,var,bound)
             Nothing -> left [("expecting a variant", i,j)]
-        let pr0@(LeadsTo fv0 p0 q0) = prog ! goal_lbl
-            pr1@(LeadsTo fv1 p1 q1) = prog ! h0
+            _ -> left [("invalid variant",i,j)]
+        let pr0@(LeadsTo fv0 _ _) = prog ! goal_lbl
+            pr1@(LeadsTo fv1 _ _) = prog ! h0
         dum <- case fv1 \\ fv0 of
             [v] -> return v
             _   -> left [(   "inductive formula should have one free "
@@ -360,7 +361,7 @@ instance RefRule (Int, ScheduleChange) where
         case rule r of 
             Replace _ _ -> label "delay"
             Weaken      -> label "weaken"
-    refinement_po (n,r) m = 
+    refinement_po (_,r) m = 
         case rule r of
             Replace prog saf ->
                 let LeadsTo vs p0 q0 = prog

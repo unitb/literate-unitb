@@ -1,5 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
-module UnitB.PO where
+module UnitB.PO 
+    ( proof_obligation, step_ctx, evt_live_ctx
+    , evt_saf_ctx, invariants, assert_ctx
+    , str_verify_machine, raw_machine_pos
+    , check, verify_changes )
+where
 
     -- Modules
 import UnitB.AST
@@ -13,7 +18,10 @@ import Z3.Z3
     -- Libraries
 import Control.Monad hiding (guard)
 
-import           Data.Map as M hiding (map, foldl, foldr, delete, filter, null,(\\))
+import           Data.Map as M hiding 
+                    ( map, foldl, foldr
+                    , delete, filter, null
+                    , (\\))
 import qualified Data.Map as M
 import           Data.Maybe as M
 import           Data.List as L hiding (inits, union,insert)
@@ -207,7 +215,7 @@ prop_tr m pname (Transient fv xp evt_lbl n hint) =
         xp1 = (zforall  
                     (M.elems $ params evt)
                     (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
-                    (znot $ primed (variables m) xp)  )
+                    (znot $ primed (variables m) xp) )
 
 
 prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation

@@ -106,6 +106,21 @@ instance Readable (Set Label) where
         ST.put ts
         return $ fromList $ map label $ comma_sep (concatMap flatten arg)
 
+--instance Readable a => Readable (Maybe a) where
+--    read_args = do
+--        ts <- ST.get
+--        lift $ eitherTx $ read_args
+----        case x of
+----            Just ([arg],ts) -> do
+----                return x
+----            Nothing         -> 
+----        return $ fromList $ map label $ comma_sep (concatMap flatten arg)
+--
+--eitherTx :: Monad m
+--         => EitherT a m b 
+--         -> EitherT a m (Maybe b)
+--eitherTx m = lift $ eitherT (const $ return Nothing) (return . Just) m
+
 cmd_params :: (Monad m, MonadReader (Int,Int) m)
            => Int -> [LatexDoc] 
            -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
