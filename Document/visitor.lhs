@@ -44,8 +44,7 @@ import Data.Char
 import Data.Monoid
 import Data.Set hiding (map)
 
-import System.IO
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import Utilities.Syntactic
 import Utilities.Format 
@@ -136,9 +135,7 @@ cmd_params n xs     = do
             Bracket _ _ xs (i,j) : ys -> do
                 (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
                 right (xs:ws, zs)
-            x                 -> left [("bad argument: " ++ show xs,i,j)]
-
-cmd_params_ n xs = fmap fst $ cmd_params n xs
+            _                 -> left [("bad argument: " ++ show xs,i,j)]
 
 get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
           => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
@@ -153,26 +150,26 @@ get_1_lbl xs = do
     where
         err_msg (i,j) = left [("expecting a label",i,j)]
         
-get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
-          => [LatexDoc] 
-          -> EitherT [Error] m (String, String, [LatexDoc])
-get_2_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,xs)
-
-get_3_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,xs)
-
-get_4_lbl xs = do
-        (lbl0,xs) <- get_1_lbl xs
-        (lbl1,xs) <- get_1_lbl xs
-        (lbl2,xs) <- get_1_lbl xs
-        (lbl3,xs) <- get_1_lbl xs
-        return (lbl0,lbl1,lbl2,lbl3,xs)
+--get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
+--          => [LatexDoc] 
+--          -> EitherT [Error] m (String, String, [LatexDoc])
+--get_2_lbl xs = do
+--        (lbl0,xs) <- get_1_lbl xs
+--        (lbl1,xs) <- get_1_lbl xs
+--        return (lbl0,lbl1,xs)
+--
+--get_3_lbl xs = do
+--        (lbl0,xs) <- get_1_lbl xs
+--        (lbl1,xs) <- get_1_lbl xs
+--        (lbl2,xs) <- get_1_lbl xs
+--        return (lbl0,lbl1,lbl2,xs)
+--
+--get_4_lbl xs = do
+--        (lbl0,xs) <- get_1_lbl xs
+--        (lbl1,xs) <- get_1_lbl xs
+--        (lbl2,xs) <- get_1_lbl xs
+--        (lbl3,xs) <- get_1_lbl xs
+--        return (lbl0,lbl1,lbl2,lbl3,xs)
 
 drop_blank_text :: [LatexDoc] -> [LatexDoc]
 drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
@@ -267,9 +264,9 @@ data EnvBlock s a =
 data CmdBlock s a =
             forall t. TypeList t => CmdBlock (t -> a -> Node s a)
 
-type MEither a = RWS () [a] ()
+--type MEither a = RWS () [a] ()
 
-type MEitherT a m = RWST () [a] () m
+--type MEitherT a m = RWST () [a] () m
 
 type MSEither a s = RWS () [a] s
 
@@ -297,17 +294,18 @@ toEither m = EitherT $ mapRWST f $ do
             [] -> return $ Right x
             xs -> return $ Left xs
     where
-        f m = m >>= \(x,y,z) -> return (x,y,[])
+        f m = m >>= \(x,y,_) -> return (x,y,[])
 
 error_list :: Monad m
            => [(Bool, String)] -> RWST (Int,Int) [Error] s m ()
 error_list [] = return ()
-error_list ( (b,msg):xs )
-        | not b = error_list xs
-        | b     = do
-            (i,j) <- RWS.ask 
-            RWS.tell [(msg,i,j)]
-            error_list xs
+error_list ( (b,msg):xs ) =
+            if not b then
+                error_list xs
+            else do
+                (i,j) <- RWS.ask 
+                RWS.tell [(msg,i,j)]
+                error_list xs
 
 visit_doc :: Monad m 
           => [(String,EnvBlock s a)] 
@@ -354,7 +352,7 @@ f ((name,EnvBlock g):cs) x e@(Env s (i,j) xs _)
                     (args,xs) <- get_tuple xs 
                     g args xs x
         | otherwise = f cs x e
-f [] x e@(Env s (i,j) xs _)  = do
+f [] x (Env _ _ xs _)  = do
         blks <- asks blocks
         x    <- foldM (f blks) x xs
         g x xs
@@ -372,7 +370,7 @@ g x (Text xs : ts) = do
                 cmds <- asks cmds
                 h cmds x c ts (i,j)
         _                   -> g x ts
-g x (t : ts) = g x ts
+g x (_ : ts) = g x ts
 g x [] = return x
 
 h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
@@ -387,6 +385,6 @@ h ((name,c):cs) x cmd ts (i,j)
                     r <- g x ts
                     return r
     | otherwise     = h cs x cmd ts (i,j)
-h [] x cmd ts (i,j) = g x ts 
+h [] x _ ts _       = g x ts 
 
 \end{code}

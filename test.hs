@@ -1,7 +1,5 @@
 module Main where
 
-import Control.Monad
-
 import qualified UnitB.Test as UB
 import qualified Latex.Test_Latex_Parser as LT
 import qualified Z3.Test as ZT

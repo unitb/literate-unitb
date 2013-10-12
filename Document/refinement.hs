@@ -51,13 +51,13 @@ class RuleParser a where
 
 instance RefRule a => RuleParser (a,()) where
     parse_rule (x,_) [] _ _ = return $ Rule x
-    parse_rule (x,_) hyps_lbls _ _ = do
+    parse_rule _ hyps_lbls _ _ = do
         (i,j) <- lift $ ask
         left [(format "too many hypotheses in the application of the rule: {0}" 
                     $ intercalate "," $ map show hyps_lbls, i, j)]
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ prog _ _ _ _) = do
         case M.lookup x prog of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -68,7 +68,7 @@ instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
 instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ _ saf _ _ _) = do
         case M.lookup x saf of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -79,7 +79,7 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
 instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
         case M.lookup x $ transient $ props m of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -90,7 +90,7 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
 instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
         case M.lookup x $ schedule $ props m of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -101,7 +101,7 @@ instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]
 
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
-    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) xs rule (RuleParserParameter _ prog _ _ _ _) = do
             xs <- forM xs g
             return $ Rule (f xs)        
         where
@@ -112,7 +112,7 @@ instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
                 $ M.lookup x prog
 
 instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
-    parse_rule (f,_) xs rule param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+    parse_rule (f,_) xs rule (RuleParserParameter _ _ saf _ _ _) = do
             xs <- forM xs g
             return $ Rule (f xs)        
         where
@@ -122,7 +122,7 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
                 return
                 $ M.lookup x saf
 
-parse rc n param@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
@@ -136,7 +136,6 @@ assert m suff prop =
                 prop))
         ]
     where
-        p    = props m
         po_lbl 
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]

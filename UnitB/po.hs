@@ -23,7 +23,6 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\))
 import qualified Data.Map as M
-import           Data.Maybe as M
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
@@ -32,11 +31,6 @@ import System.IO
 
 import Utilities.Format
 import Utilities.Syntactic
-
-data POLabel = 
-    InProp Label 
-    | InEvent Label
-    | PropAndEvent Label Label
 
     -- 
     --
@@ -70,14 +64,14 @@ init_fis_lbl      = label "INIT/FIS"
 fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
-ref_mono_lbl      = label "REF/monotonicity"
-ref_impl_lbl      = label "REF/implication"
-ref_ind_lbl       = label "REF/induction"
-ref_disj_lbl      = label "REF/disjunction"
-ref_psp_lbl       = label "REF/PSP"
-ref_trade_lbl     = label "REF/trading"
-ref_trans_lbl     = label "REF/transitivity"
-ref_discharge_lbl = label "REF/discharge"
+--ref_mono_lbl      = label "REF/monotonicity"
+--ref_impl_lbl      = label "REF/implication"
+--ref_ind_lbl       = label "REF/induction"
+--ref_disj_lbl      = label "REF/disjunction"
+--ref_psp_lbl       = label "REF/PSP"
+--ref_trade_lbl     = label "REF/trading"
+--ref_trans_lbl     = label "REF/transitivity"
+--ref_discharge_lbl = label "REF/discharge"
 
 theory_ctx :: Theory -> Context
 theory_ctx (Theory d ts f c _ dums) = 

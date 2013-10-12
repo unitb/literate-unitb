@@ -25,12 +25,12 @@ import Control.Monad.State.Class
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
-import Data.Char
-import Data.List as L
-import Data.Map as M hiding ( map )
-import qualified Data.Map as M ( map )
+import           Data.Char
+import           Data.List as L
+import           Data.Map as M hiding ( map )
+--import qualified Data.Map as M ( map )
 
-import System.IO.Unsafe
+--import System.IO.Unsafe
 
 import Utilities.Format
 
@@ -56,8 +56,8 @@ eat_space = do
                 ] (return ())
                 (\_ -> eat_space)
 
-space_cmd :: Scanner a ()
-space_cmd = return ()
+--space_cmd :: Scanner a ()
+--space_cmd = return ()
 
 isWord x = isAlphaNum x || x == '_'
 
@@ -104,7 +104,7 @@ word_or_command =
             word
 
 type_t :: Context -> Scanner Char Type
-type_t ctx@(Context ts _ _ _ _) = do
+type_t ctx@(Context _ _ _ _ _) = do
         t <- word_or_command
         eat_space
         b1 <- look_ahead $ read_list "["
@@ -139,7 +139,7 @@ get_type (Context ts _ _ _ _) x = M.lookup x m
                    , ("\\Real", RealSort)
                    , ("\\Bool", BoolSort)]
             `M.union` ts
-        z3_type s@(Sort _ x _) = USER_DEFINED s
+--        z3_type s@(Sort _ x _) = USER_DEFINED s
 
 vars :: Context -> Scanner Char [(String,Type)]
 vars ctx = do
@@ -259,8 +259,8 @@ term ctx = do
         eat_space
         try word_or_command
             (\xs -> do
-                (ys,zs) <- read_if (== '\'') 
-                    (\x -> return (\x -> x ++ "\'", \x -> x ++ "@prime"))
+                (_,zs) <- read_if (== '\'') 
+                    (const $ return (\x -> x ++ "\'", \x -> x ++ "@prime"))
                     (return (id,id))
                 eat_space
                 case xs `L.lookup` 
@@ -356,7 +356,7 @@ term ctx = do
                 eat_space
                 return (Const [] xs $ USER_DEFINED IntSort []))
 
-dummy_types vs (Context c0 c1 c2 c3 dums) = mapM f vs
+dummy_types vs (Context _ _ _ _ dums) = mapM f vs
     where
         f x = M.lookup x dums
 
@@ -368,8 +368,8 @@ number = do
             Nothing -> fail "expecting a number"
     where
         f x
-                | n == 0    = Nothing
                 | 0 < n     = Just n
+                | otherwise = Nothing
             where
                 n = length $ takeWhile isDigit x
 
