@@ -3,7 +3,7 @@ module UnitB.PO
     ( proof_obligation, step_ctx, evt_live_ctx
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
-    , check, verify_changes )
+    , check, verify_changes, verify_machine )
 where
 
     -- Modules
@@ -282,12 +282,8 @@ sch_po m lbl evt = M.singleton
             True
             (exist_param $ zall grd))
     where
-        grd    = M.elems $ guard evt
-        ls_sch = list_schedules (sched_ref evt) $ c_sched evt
-        sch    = M.elems 
-                    $ fst $ M.fromJust
-                    $ M.maxView 
-                    $ ls_sch
+        grd   = M.elems $ guard evt
+        sch   = M.elems $ last_schedule evt
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp

@@ -8,6 +8,8 @@ import UnitB.PO
 
 import Tests.UnitTest
 
+import Data.String.Utils
+
 test_case = Case "train station example, with refinement" test True
 
 test = test_cases
@@ -99,29 +101,29 @@ result2 = unlines
 	, "  o  m2/m0:leave/CO/m2:saf0"
 	, "  o  m2/m0:leave/FIS/in@prime"
 	, "  o  m2/m0:leave/FIS/loc@prime"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy (522,26)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy (523,25)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy (524,25)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy (525,25)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal (528,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses (528,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation (528,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (530,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (532,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (534,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal (541,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses (541,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation (541,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (543,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (545,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (547,2)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/goal (506,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses (506,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/relation (506,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step (508,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step (510,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step (516,1)"
-	, "  o  m2/m0:leave/INV/m2:inv0/new assumption (490,27)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy "
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy "
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy "
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy "
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal " --
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses " --528,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation " --528,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " --530,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " --532,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " --534,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal " --541,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses " --541,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation " --541,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " --543,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " --545,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " --547,2)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/goal " --506,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses " --506,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/relation " --506,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " --508,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " --510,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " --516,1)"
+	, "  o  m2/m0:leave/INV/m2:inv0/new assumption " --490,27)"
 	, "  o  m2/m0:leave/SCH"
 	, "  o  m2/m1:movein/CO/m2:saf0"
 	, "  o  m2/m1:movein/FIS/in@prime"
@@ -148,5 +150,5 @@ verify n = do
     case r of
         Right ms -> do
             (s,_,_) <- str_verify_machine $ ms !! n
-            return s
+            return $ unlines $ map (head . split "(") $ lines s
         x -> return $ show x

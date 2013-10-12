@@ -3,6 +3,8 @@ module Document.Expression
     ( parse_expr, oper, eat_space, get_variables )
 where
 
+import UnitB.ExpressionStore as ES
+
 import Latex.Scanner
 import Latex.Parser
 
@@ -19,6 +21,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Monad.Reader.Class
+import Control.Monad.State.Class
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
@@ -475,9 +478,13 @@ apply_op op x0 x1 = do
         Left xs  -> 
             fail (format "type error: {0}" xs)
 
-parse_expr :: (Monad m, MonadReader (Int,Int) m) 
+parse_expr :: ( Monad m
+              , MonadReader (Int,Int) m
+              , MonadState ExprStore m) 
            => Context -> [(Char, (Int,Int))] 
            -> EitherT [Error] m Expr
 parse_expr ctx c = do
         li <- lift $ ask
-        hoistEither $ read_tokens (expr ctx) c li
+        e <- hoistEither $ read_tokens (expr ctx) c li
+        ES.insert e (map fst c)
+        return e

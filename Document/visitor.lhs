@@ -3,6 +3,7 @@
 \begin{code}
 {-# LANGUAGE BangPatterns, RankNTypes, FlexibleContexts #-} 
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Document.Visitor 
     ( module Document.TypeList 
     , fromEither
@@ -17,21 +18,25 @@ module Document.Visitor
     , MSEither 
     , with_line_info
     , drop_blank_text
-    , get_1_lbl )
+    , get_1_lbl
+    , System(..)
+    , focus_es
+    , Focus(..) )
 where
 
     -- Modules
 import Latex.Parser
 
-import Document.Expression
 import Document.TypeList
 
-import UnitB.Label
+import UnitB.AST
+import UnitB.ExpressionStore
 
     -- Libraries
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
 import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Reader
+import           Control.Monad.State.Class (MonadState)
 import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
 
@@ -207,13 +212,54 @@ find_cmd_arg n cmds (x@(Text xs) : cs) =
                 return (x:a,t,b,c)
         f [] = []
         f xs = [Text $ reverse xs]
-find_cmd_arg _ cmds []     = Nothing
+find_cmd_arg _ _ []     = Nothing
 find_cmd_arg n cmds (x:xs) = do
                 (a,t,b,c) <- find_cmd_arg n cmds xs
                 return (x:a,t,b,c)
 
+focus :: Monad m 
+      => (s1 -> s2) 
+      -> (s2 -> s1 -> s1) 
+      -> RWST a b s2 m r
+      -> RWST a b s1 m r
+focus get set m = RWST $ \r s1 -> do
+        (x,s2,w) <- runRWST m r (get s1)
+        return (x,set s2 s1,w)
+
+focusT get set m = EitherT $ focus get set $ runEitherT m
+
+focus_es m = focusT expr_store set $ m
+    where
+        set x a = a { expr_store = x }
+
+class ( MonadState ExprStore m0
+      , MonadState System m1 ) 
+   => Focus m0 m1 where
+    focus' :: m0 a -> m1 a
+
+instance (Monoid b, Monad m) 
+        => Focus (RWST a b ExprStore m) (RWST a b System m) where
+    focus' cmd = RWST $ \r s1 -> do
+            (x,s2,w) <- runRWST cmd r (get s1)
+            return (x,set s2 s1,w)
+        where
+            set x a = a { expr_store = x }
+            get = expr_store
+
+instance (Monad m) 
+        => Focus (ST.StateT ExprStore m) (ST.StateT System m) where
+    focus' cmd = ST.StateT $ \s1 -> do
+            (x,s2) <- ST.runStateT cmd (get s1)
+            return (x,set s2 s1)
+        where
+            set x a = a { expr_store = x }
+            get = expr_store
+
+instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
+    focus' cmd = EitherT $ focus' $ runEitherT cmd
+
 type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
-type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
+--type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
 
 data EnvBlock s a = 
             forall t. TypeList t => EnvBlock (t -> [LatexDoc] -> a -> Node s a)

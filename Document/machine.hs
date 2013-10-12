@@ -9,7 +9,10 @@ import Document.Refinement hiding ( parse_rule )
 
 import Latex.Parser
 
+import SummaryGen
+
 import UnitB.AST
+import UnitB.ExpressionStore ( ExprStore )
 import UnitB.PO
 import UnitB.SetTheory
 import UnitB.FunctionTheory
@@ -18,17 +21,18 @@ import Z3.Z3
 
     -- Libraries
 import           Control.Monad hiding ( guard )
+import           Control.Monad.Trans.State ( runStateT )
 import qualified Control.Monad.Reader.Class as R
 import           Control.Monad.Trans
-import           Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Trans.State ( StateT )
 
 import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
 import           Data.List as L hiding ( union, insert, inits )
---import qualified Data.Map as M
 import qualified Data.Set as S
 
 --import System.IO
@@ -51,12 +55,12 @@ list_machines :: String -> Either [Error] [Machine]
 list_machines ct = do
         xs <- latex_structure ct
         ms <- all_machines xs
-        return $ map snd $ toList $ ms
+        return $ map snd $ toList $ machines ms
         
 parse_rule :: (Monad m)
            => String
            -> RuleParserParameter
-           -> EitherT [Error] (RWST (Int,Int) [Error] Architecture m) Rule
+           -> EitherT [Error] (RWST (Int,Int) [Error] System m) Rule
 parse_rule rule param = do
     (i,j) <- lift $ ask
     case M.lookup rule refinement_parser of
@@ -67,7 +71,7 @@ parse_rule rule param = do
 refinement_parser :: Map String (
                   String
                -> RuleParserParameter
-               -> EitherT [Error] (RWS (Int, Int) [Error] Architecture) Rule)
+               -> EitherT [Error] (RWS (Int, Int) [Error] System) Rule)
 refinement_parser = fromList 
     [   ("disjunction", parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
@@ -108,8 +112,29 @@ trickle_down s ms f = do
                         Nothing -> return ms
                     ) ms rs
 
-all_machines :: [LatexDoc] -> Either [Error] (Map String Machine)
-all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
+all_machines :: [LatexDoc] -> Either [Error] System
+all_machines xs = do
+        ms <- x
+        return $ s { machines = ms }
+    where
+        (x,s,_) = runRWS (runEitherT $ foo_bar xs) () empty_system
+
+produce_summaries :: System -> IO ()
+produce_summaries sys = 
+        void $ runStateT (do
+            let ms = machines sys
+            forM_ (M.elems ms) $ \m -> 
+                forM_ (toList $ events m) $ \(lbl,evt) -> do
+                    liftIO $ putStrLn $ format "{0} - {1}" (_name m) lbl
+                    xs <- focus' (summary lbl evt :: (StateT ExprStore IO) String)
+                    liftIO $ writeFile (show (_name m) ++ "_" ++ rename lbl ++ ".tex") xs
+            ) sys
+    where
+        rename lbl = map f $ show lbl
+        f ':' = '-'
+        f x   = x
+        
+foo_bar xs = do
             ms <- foldM gather empty xs 
             ms <- toEither $ foldM (f type_decl) ms xs
             refs  <- lift $ RWS.gets ref_struct
@@ -136,8 +161,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
             s  <- lift $ RWS.gets proof_struct
             check_acyclic "proof of liveness" s
             ms <- trickle_down refs ms merge_proofs
-            return ms) () empty_arc }
-        in x
+            return ms
     where
         gather ms (Env n _ c li)     
                 | n == "machine"    = do
@@ -155,7 +179,7 @@ all_machines xs = let { (x,_,_) = runRWS (runEitherT $ do
                 | otherwise         = foldM (f pass) ms c
         f pass ms x                 = fold_docM (f pass) ms x
 
-type_decl :: [LatexDoc] -> Machine -> MSEither Error Architecture Machine
+type_decl :: [LatexDoc] -> Machine -> MSEither Error System Machine
 type_decl = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag,()) m -> do
@@ -207,7 +231,7 @@ type_decl = visit_doc []
 imports :: Monad m 
         => [LatexDoc] 
         -> Machine 
-        -> MSEitherT Error Architecture m Machine 
+        -> MSEitherT Error System m Machine 
 imports = visit_doc 
             [   ( "use:set"
                 , EnvBlock $ \(String cset,()) _ m -> do
@@ -241,7 +265,7 @@ imports = visit_doc
 declarations :: Monad m
              => [LatexDoc] 
              -> Machine 
-             -> MSEitherT Error Architecture m Machine
+             -> MSEitherT Error System m Machine
 declarations = visit_doc []
         [   (   "\\variable"
             ,   CmdBlock $ \(xs,()) m -> do
@@ -314,7 +338,7 @@ tr_hint :: Monad m
         -> Label
         -> [LatexDoc]
         -> [(String,Expr)]
-        -> RWST (Int,Int) [Error] a m [(String,Expr)]
+        -> RWST (Int,Int) [Error] System m [(String,Expr)]
 tr_hint m lbl = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs, ()) ys -> do
@@ -336,7 +360,7 @@ tr_hint m lbl = visit_doc []
 collect_expr :: Monad m
              => [LatexDoc] 
              -> Machine 
-             -> MSEitherT Error Architecture m Machine
+             -> MSEitherT Error System m Machine
 collect_expr = visit_doc 
                 --------------
                 --  Events  --
@@ -557,14 +581,20 @@ scope ctx xp vs = do
     else left [(format "Undeclared variables: {0}" 
                 (intercalate ", " undecl_v), i,j)]
 
+remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
+remove_ref ('}':xs) = remove_ref xs
+remove_ref (x:xs)   = x:remove_ref xs
+remove_ref []       = []
+
 collect_proofs :: Monad m 
                => [LatexDoc] 
                -> Machine
-               -> MSEitherT Error Architecture m Machine
+               -> MSEitherT Error System m Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(po,()) xs m -> do
-                    let lbl = composite_label [ _name m, po ]
+                    let po_lbl = label $ remove_ref $ concatMap flatten po
+                    let lbl = composite_label [ _name m, po_lbl ]
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
@@ -652,6 +682,13 @@ collect_proofs = visit_doc
                       }
             )
         ]
+
+parse_system :: FilePath -> IO (Either [Error] System)
+parse_system fn = do
+        ct <- readFile fn
+        return $ do
+                xs <- latex_structure ct
+                all_machines xs
 
 parse_machine :: FilePath -> IO (Either [Error] [Machine])
 parse_machine fn = do

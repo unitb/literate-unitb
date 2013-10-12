@@ -14,7 +14,9 @@ import Control.Applicative ( (<|>) )
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
+import Control.Monad.Trans.Either 
 
+import Data.Map as M ( elems )
 import Data.Time
 import Data.Time.Clock
 
@@ -114,15 +116,18 @@ check_file = do
         param <- get
         let m = pos param
         let { p ln = verbose param || take 4 ln /= "  o " }
-        r <- liftIO $ parse_machine $ path param
+        r <- liftIO $ runEitherT $ do
+            s <- EitherT $ parse_system $ path param
+            lift $ produce_summaries s
+            return $ M.elems $ machines s
         case r of
             Right ms -> do
                 xs <- forM ms check_one
                 clear
-                forM_ xs (\(n,xs) -> liftIO $ do
+                forM_ xs $ \(n,xs) -> liftIO $ do
                     forM_ (filter p $ lines xs) 
                         putStrLn
-                    putStrLn ("Redid " ++ show n ++ " proofs"))
+                    putStrLn $ "Redid " ++ show n ++ " proofs"
             Left xs -> do
                 clear
                 forM_ xs (\(x,i,j) -> liftIO $ 

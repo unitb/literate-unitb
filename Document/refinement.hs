@@ -25,16 +25,8 @@ import Data.Set as S hiding ( fromList, member, map, (\\) )
 import Utilities.Format
 import Utilities.Syntactic
 
-data Architecture = Arc 
-    {  proof_struct :: [(Label,Label)]
-    ,  ref_struct   :: Map Label Label
-    }
-
-empty_arc = Arc [] M.empty
-
-add_proof_edge x xs = EitherT $ do
+add_proof_edge x xs = do
         RWS.modify (\x -> x { proof_struct = f $ proof_struct x } )
-        return $ Right ()
     where
         f ys = map ((,) x) xs ++ ys
 
@@ -179,9 +171,10 @@ instance RefRule Discharge where
 
 mk_discharge :: ProgressProp -> Transient -> [SafetyProp] -> Discharge
 mk_discharge p tr [s] = Discharge p tr $ Just s
-mk_discharge p tr [] = Discharge p tr Nothing
+mk_discharge p tr []  = Discharge p tr Nothing
+mk_discharge _ _ _    = error "expecting at most one safety property" 
 
-parse_discharge rule params@(RuleParserParameter m prog saf goal_lbl hyps_lbls _) = do
+parse_discharge rule params@(RuleParserParameter _ _ _ _ hyps_lbls _) = do
     (i,j) <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
         $ left [(format "too many hypotheses in the application of the rule: {0}" 

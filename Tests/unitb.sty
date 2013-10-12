@@ -498,10 +498,10 @@
 \newassertion{\initialization}{IN}
 \newassertion{\constraint}{CO}
 \newassertion{\assumption}{ASM}
-\newcommand{\transient}[3] % {evt}{sched_num}{label}
-{	\transientA{#1}{#3}
+\newcommand{\transientB}[4] % {evt}{sched_num}{label}
+{	\transient{#1}{#3}
 	}
-\newcomponent{\transientA}{TR}
+\newcomponent{\transient}{TR}
 \newcomponent{\evguard}{G}
 \newcomponent{\fschedule}{F}
 \newcomponent{\cschedule}{C}
@@ -525,3 +525,15 @@
 
 \newcommand{\weakento}[5]{ } % We weaken the coarse schedule #2 of #1 to #3 }
 \newcommand{\replace}[7]{}
+
+\newenvironment{block}
+{	\begin{list}{}
+	{	\setlength\itemsep{0.00in}
+		\settowidth{\labelwidth}{00}
+ 		\setlength{\leftmargin}{\labelwidth}
+ 		\addtolength{\leftmargin}{\labelsep}
+ 		\renewcommand{\makelabel}[1]{##1\hfil}
+		}
+	}
+{	\end{list}
+	}

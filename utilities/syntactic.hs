@@ -10,6 +10,8 @@ import System.IO.Unsafe
 
 type Error = (String,Int,Int)
 
+type LineInfo = (Int,Int)
+
 show_err :: [(String,Int,Int)] -> String
 show_err xs = unlines $ map f xs
     where
@@ -18,7 +20,7 @@ show_err xs = unlines $ map f xs
 --                !() = unsafePerformIO (print x)
 
 class Syntactic a where
-    line_info :: a -> (Int,Int)
+    line_info :: a -> LineInfo
 
 
 with_li (i,j) = either (\x -> Left [(x,i,j)]) Right

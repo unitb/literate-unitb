@@ -49,7 +49,7 @@ main = do
                 b3 <- focus LaTeXMon $ didAnythingChange
                 t0 <- liftIO $ getModificationTime "test"
                 t1 <- liftIO $ getModificationTime "last_result.txt"
-                lift $ if (b2 && t1 <= t0) || b3 then do
+                lift $ if (t1 <= t0) || b3 then do
                     if null args then do
 --                        putStr $ take 80 (repeat '\b') ++  "Something changed"
 --                        hFlush stdout

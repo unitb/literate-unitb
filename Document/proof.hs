@@ -17,16 +17,15 @@ import UnitB.Operator
 import Z3.Z3
 
     -- Libraries
-import Control.Monad hiding ( guard )
-import Control.Monad.Reader.Class
-import Control.Monad.Trans
-import Control.Monad.Trans.Either
-import 
-    Control.Monad.Trans.RWS hiding ( ask, tell, asks )
-import qualified
-    Control.Monad.Trans.RWS as RWS
+import           Control.Monad hiding ( guard )
+import           Control.Monad.Reader.Class
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.RWS hiding ( ask, tell, asks )
+import qualified Control.Monad.Trans.RWS as RWS
 
 import Data.Map hiding ( map, foldl )
+import Data.Monoid (Monoid)
 import Data.List as L hiding ( union, insert, inits )
 import qualified Data.Map as M
 
@@ -89,7 +88,7 @@ find_assumptions :: Monad m
                  => Machine
                  -> [LatexDoc] 
                  -> ProofStep
-                 -> RWST (Int,Int) [Error] s m ProofStep
+                 -> RWST (Int,Int) [Error] System m ProofStep
 find_assumptions m = visit_doc
         [   (   "calculation"
             ,   EnvBlock $ \() _ proofs -> return proofs
@@ -128,7 +127,7 @@ find_proof_step :: Monad m
                 -> Machine
                 -> [LatexDoc] 
                 -> ProofStep
-                -> RWST (Int,Int) [Error] s m ProofStep
+                -> RWST (Int,Int) [Error] System m ProofStep
 find_proof_step hyps m = visit_doc
         [   (   "calculation"
             ,   EnvBlock $ \() xs proofs -> do
@@ -174,7 +173,7 @@ find_cases :: Monad m
            -> Machine
            -> [LatexDoc] 
            -> [(Label,Expr,Proof)]
-           -> RWST (Int,Int) [Error] s m [(Label,Expr,Proof)]
+           -> RWST (Int,Int) [Error] System m [(Label,Expr,Proof)]
 find_cases hyps m = visit_doc 
         [   (   "case"
             ,   EnvBlock $ \(lbl,formula,()) xs cases -> do
@@ -191,7 +190,7 @@ find_parts :: Monad m
            -> Machine
            -> [LatexDoc] 
            -> [(Expr,Proof)]
-           -> RWST (Int,Int) [Error] s m [(Expr,Proof)]
+           -> RWST (Int,Int) [Error] System m [(Expr,Proof)]
 find_parts hyps m = visit_doc 
         [   (   "part:a"
             ,   EnvBlock (\(formula,()) xs cases -> do
@@ -205,7 +204,7 @@ collect_proof_step :: Monad m
                    => Map Label Expr 
                    -> Machine 
                    -> [LatexDoc] 
-                   -> EitherT [Error] (RWST (Int,Int) [Error] s m) Proof
+                   -> EitherT [Error] (RWST (Int,Int) [Error] System m) Proof
 collect_proof_step hyps m xs = do
         step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m xs empty_step
         let hyps2 = asrt `union` asm `union` hyps
@@ -242,7 +241,7 @@ parse_calc :: Monad m
            => Map Label Expr 
            -> Machine 
            -> [LatexDoc]
-           -> RWST (Int,Int) [Error] s m Calculation
+           -> RWST (Int,Int) [Error] System m Calculation
 parse_calc hyps m xs = 
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do
@@ -289,11 +288,12 @@ parse_calc hyps m xs =
                     err $ M.lookup xs $ guard ev
                     err $ M.lookup xs $ action ev
                                 
-get_expr :: (Monad m, MonadReader (Int,Int) m)
+get_expr :: ( Monad m, Monoid b ) 
          => Machine -> [LatexDoc] 
-         -> EitherT [Error] m Expr
+         -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_expr m ys = do
-        x  <- fmap normalize_generics $ parse_expr (context m) (concatMap flatten_li xs)
+        y  <- focus_es $ parse_expr (context m) (concatMap flatten_li xs)
+        let x = normalize_generics y
         li <- ask
         let (i,j) = if L.null xs
                     then li
@@ -303,14 +303,13 @@ get_expr m ys = do
                 $ ambiguities x
         return x
     where
-        xs    = drop_blank_text ys
-        
+        xs    = drop_blank_text ys        
 
-get_assert :: (Monad m, MonadReader (Int,Int) m)
+get_assert :: ( Monad m, Monoid b ) 
            => Machine -> [LatexDoc] 
-           -> EitherT [Error] m Expr
+           -> EitherT [Error] (RWST LineInfo b System m) Expr
 get_assert m ys = do
-        x <- parse_expr (context m) (concatMap flatten_li xs)
+        x <- focus_es $ parse_expr (context m) (concatMap flatten_li xs)
         li <- ask
         let (i,j) = if L.null xs
                     then li
@@ -323,12 +322,12 @@ get_assert m ys = do
     where
         xs    = drop_blank_text ys
 
-get_evt_part :: (Monad m, MonadReader (Int,Int) m)
+get_evt_part :: ( Monad m, Monoid b ) 
              => Machine -> Event
-             -> [LatexDoc]
-             -> EitherT [Error] m Expr
+             -> [LatexDoc] 
+             -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_evt_part m e ys = do
-        x <- parse_expr (            step_ctx m 
+        x <- focus_es $ parse_expr (            step_ctx m 
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)

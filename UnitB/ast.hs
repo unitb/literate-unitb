@@ -38,13 +38,17 @@ module UnitB.AST
         , keep, event
         , rule)
     , replace, weaken
+    , last_schedule
     , ScheduleRule (..)
     , list_schedules
     , default_schedule
+    , System (..)
+    , empty_system
     ) 
 where
  
     -- Modules
+import UnitB.ExpressionStore
 import UnitB.SetTheory
 import UnitB.Theory
 import UnitB.Calculation
@@ -62,6 +66,7 @@ import           Data.Graph
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
+import           Data.Maybe as M
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -109,6 +114,15 @@ empty_machine n = Mch (Lbl n)
         empty empty empty 
         empty_property_set 
         empty_property_set
+
+data System = Sys 
+    {  proof_struct :: [(Label,Label)]
+    ,  ref_struct   :: Map Label Label
+    ,  expr_store   :: ExprStore
+    ,  machines     :: Map String Machine
+    }
+
+empty_system = Sys [] M.empty empty_store M.empty
 
 merge :: (Eq c, Ord a, Monoid c) 
       => b -> (b -> b -> Either c b) 
@@ -369,7 +383,7 @@ skip m = Event
         M.empty 
         $ fromList $ map f $ M.elems $ variables m
     where
-        f v@(Var n _) = (label ("SKIP:" ++ n), Word v `zeq` primed (variables m) (Word v))
+        f v@(Var n _) = (label ("SKIP:" ++ n), primed (variables m) (Word v) `zeq` Word v)
 
 default_schedule = fromList [(label "default", zfalse)]
 
@@ -505,6 +519,14 @@ list_schedules r m0 =
             | not $ M.null r = fst (findMin r)-1
             | otherwise      = 0
         first                = (first_index,fromList [(label "default",zfalse)])
+
+last_schedule evt = sch
+    where
+        ls_sch = list_schedules (sched_ref evt) $ c_sched evt
+        sch    = fst $ M.fromJust
+                    $ M.maxView 
+                    $ ls_sch
+
 
 before x = keep x `S.union` remove x
 after x = keep x `S.union` add x
