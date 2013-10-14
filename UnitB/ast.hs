@@ -44,6 +44,7 @@ module UnitB.AST
     , default_schedule
     , System (..)
     , empty_system
+    , replace_fine
     ) 
 where
  
@@ -57,7 +58,6 @@ import UnitB.Label
 import Z3.Z3 hiding (merge)
 
     -- Libraries
-import Control.Applicative ( (<|>) )
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
@@ -84,14 +84,13 @@ empty_theory = Theory []
 data Event = Event 
         { indices   :: Map String Var
         , sched_ref :: Map Int ScheduleChange
-        , c_sched   :: Map Label Expr
-        , f_sched   :: Maybe Expr
+        , sched   :: Map Label Expr
         , params    :: Map String Var
         , guard     :: Map Label Expr
         , action    :: Map Label Expr }
     deriving Show
 
-empty_event = Event empty empty default_schedule Nothing empty empty empty
+empty_event = Event empty empty default_schedule empty empty empty
 
 data Machine = 
     Mch 
@@ -323,10 +322,9 @@ merge_evt_exprs e0 e1 = toEither $ do
                 cs <- foldM (\x y -> do
                         disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
                     ) default_schedule
-                    [ c_sched e0 `difference` default_schedule
-                    , c_sched e1 `difference` default_schedule]
+                    [ sched e0 `difference` default_schedule
+                    , sched e1 `difference` default_schedule]
                 return cs
-        let fine_sch   = f_sched e0 <|> f_sched e1
         grd <- fromEither empty $ disjoint_union
                 (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
                 (guard e0)
@@ -336,8 +334,7 @@ merge_evt_exprs e0 e1 = toEither $ do
                 (action e0)
                 (action e1)
         return e0 
-            { c_sched = coarse_sch
-            , f_sched = fine_sch
+            { sched = coarse_sch
             , guard   = grd
             , action = act }
 
@@ -379,7 +376,7 @@ merge_evt_proof e0 e1 = toEither $ do
 skip m = Event 
         M.empty M.empty 
         default_schedule 
-        Nothing M.empty 
+        M.empty 
         M.empty 
         $ fromList $ map f $ M.elems $ variables m
     where
@@ -502,27 +499,38 @@ data ScheduleChange = ScheduleChange
 data ScheduleRule = 
         Replace ProgressProp SafetyProp
         | Weaken
+        | ReplaceFineSch Expr Label Expr ProgressProp 
     deriving Show
 
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
 
 replace lbl prog saf = ScheduleChange lbl S.empty S.empty S.empty (Replace prog saf)
 
-list_schedules :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr)
-list_schedules r m0 = 
-        fromAscList $ scanl f first (toAscList r)
+replace_fine lbl old tag new prog = 
+    ScheduleChange lbl S.empty S.empty S.empty 
+        (ReplaceFineSch old tag new prog)
+
+apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1, y)
     where
         p ref k _    = k `S.member` after ref 
         q ref k _    = not $ k `S.member` before ref 
-        f (_,m1) (i,ref) = (i, M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1)
+        y = case rule ref of
+                ReplaceFineSch _ lbl p _ -> Just (lbl, p)
+                _ -> x
+
+list_schedules :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
+list_schedules r m0 = 
+        fromAscList $ scanl f first (toAscList r)
+    where
+        f (_,m1) (i,ref) = (i, apply m0 m1 ref)
         first_index
             | not $ M.null r = fst (findMin r)-1
             | otherwise      = 0
-        first                = (first_index,fromList [(label "default",zfalse)])
+        first                = (first_index,(fromList [(label "default",zfalse)],Nothing))
 
 last_schedule evt = sch
     where
-        ls_sch = list_schedules (sched_ref evt) $ c_sched evt
+        ls_sch = list_schedules (sched_ref evt) $ sched evt
         sch    = fst $ M.fromJust
                     $ M.maxView 
                     $ ls_sch

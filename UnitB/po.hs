@@ -23,6 +23,7 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\))
 import qualified Data.Map as M
+import           Data.Maybe ( maybeToList )
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
@@ -182,7 +183,7 @@ prop_tr m pname (Transient fv xp evt_lbl n hint) =
     where
 --        thm  = inv_thm p
         grd  = M.elems $ guard evt
-        sch  = M.elems $ list_schedules (sched_ref evt) (c_sched evt) ! n
+        sch  = M.elems $ fst $ list_schedules (sched_ref evt) (sched evt) ! n
         act  = M.elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
@@ -272,12 +273,13 @@ sch_po m lbl evt = M.singleton
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
             `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            (invariants m ++ sch)
+            (invariants m ++ f_sch ++ c_sch)
             True
             (exist_param $ zall grd))
     where
         grd   = M.elems $ guard evt
-        sch   = M.elems $ last_schedule evt
+        c_sch = M.elems $ fst $ last_schedule evt
+        f_sch = map snd $ maybeToList $ snd $ last_schedule evt
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp

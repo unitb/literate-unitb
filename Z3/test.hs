@@ -132,15 +132,15 @@ result5 = ( CL
         (Right fv0,fv0_decl) = var "@@fv@@_0" int
         (Right fv1,fv1_decl) = var "@@fv@@_1" int
         (Right fv2,fv2_decl) = var "@@fv@@_2" int
-        (Right y,y_decl) = var "y" int
-        (Right z,z_decl) = var "z" int
+        (Right y,_) = var "y" int
+        (Right z,_) = var "z" int
 
 case5 = do
         return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
         (Right x,x_decl) = var "x" int
-        (Right y,y_decl) = var "y" int
-        (Right z,z_decl) = var "z" int
+        (Right y,_) = var "y" int
+        (Right z,_) = var "z" int
 
 result6 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl,fv3_decl] 
@@ -158,8 +158,8 @@ result6 = ( CL
         (Right fv2,fv2_decl) = var "@@fv@@_2" int
         (Right fv3,fv3_decl) = var "@@fv@@_3" int
         (Right lv0,lv0_decl) = var "@@lv@@_0" int
-        (Right y,y_decl) = var "y" int
-        (Right z,z_decl) = var "z" int
+        (Right y,_) = var "y" int
+--        (Right z,z_decl) = var "z" int
 
 case6 = do
         return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
@@ -167,5 +167,5 @@ case6 = do
             ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
     where
         (Right x,x_decl) = var "x" int
-        (Right y,y_decl) = var "y" int
+        (Right y,_) = var "y" int
         (Right z,z_decl) = var "z" int

@@ -26,9 +26,9 @@ import Utilities.Format
 import Utilities.Syntactic
 
 add_proof_edge x xs = do
-        RWS.modify (\x -> x { proof_struct = f $ proof_struct x } )
+        RWS.modify (\x -> x { proof_struct = edges ++ proof_struct x } )
     where
-        f ys = map ((,) x) xs ++ ys
+        edges = zip (repeat x) xs
 
 data RuleParserParameter = 
     RuleParserParameter
@@ -351,8 +351,9 @@ parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
 instance RefRule (Int, ScheduleChange) where 
     rule_name     (_, r) = 
         case rule r of 
-            Replace _ _ -> label "delay"
-            Weaken      -> label "weaken"
+            Replace _ _      -> label "delay"
+            Weaken           -> label "weaken"
+            ReplaceFineSch _ _ _ _ -> label "replace"
     refinement_po (_,r) m = 
         case rule r of
             Replace prog saf ->
@@ -379,10 +380,28 @@ instance RefRule (Int, ScheduleChange) where
             Weaken -> M.fromList $
                 assert m "" $
                     zforall ind ztrue $ sch0 `zimplies` sch1
+            ReplaceFineSch old _ new prog -> 
+                let LeadsTo vs p0 q0 = prog
+                in
+                  M.fromList (
+                    assert m "prog/lhs" (
+                        zforall (vs ++ ind) ztrue $
+                            (zand old kp `zimplies` p0)
+                            )
+                 ++ assert m "prog/rhs" (
+                        zforall (vs ++ ind) ztrue $
+                            (q0 `zimplies` new)
+                            )
+                 ++ assert m "str" (
+                        zforall ind ztrue $
+                            new `zimplies` old
+                            )
+                 )
         where
-            sch  =  c_sched evt
+            sch  =  sched evt
             evt = events m ! event r
             ind = M.elems $ indices evt
+            kp = zall $ map (sch!) $ S.elems $ keep r
             sch0 = zall $ map (sch!) $ S.elems $ remove r `S.union` keep r
             sch1 = zall $ map (sch!) $ S.elems $ add r `S.union` keep r
 --    refinement_po (n, r@(Weaken lbl _ _))    m = 

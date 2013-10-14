@@ -284,7 +284,7 @@ parse_calc hyps m xs =
                 err_msg      = ("reference to unknown predicate",i,j)
                 f :: [Error] -> Event -> Either Expr [Error]
                 f _ ev = do
-                    err (M.lookup xs $ c_sched ev)
+                    err (M.lookup xs $ sched ev)
                     err $ M.lookup xs $ guard ev
                     err $ M.lookup xs $ action ev
                                 

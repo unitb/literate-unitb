@@ -32,6 +32,7 @@ import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
+import           Data.Maybe ( maybeToList )
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
@@ -125,7 +126,7 @@ produce_summaries sys =
             let ms = machines sys
             forM_ (M.elems ms) $ \m -> 
                 forM_ (toList $ events m) $ \(lbl,evt) -> do
-                    liftIO $ putStrLn $ format "{0} - {1}" (_name m) lbl
+--                    liftIO $ putStrLn $ format "{0} - {1}" (_name m) lbl
                     xs <- focus' (summary lbl evt :: (StateT ExprStore IO) String)
                     liftIO $ writeFile (show (_name m) ++ "_" ++ rename lbl ++ ".tex") xs
             ) sys
@@ -411,33 +412,39 @@ collect_expr = visit_doc
                             [ ( not (evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
-                        let sc = c_sched (events m ! evt)
+                        let sc = sched (events m ! evt)
                         toEither $ error_list
                             [ ( lbl `member` sc
-                                , format "{0} is already used for another coarse schedule" lbl )
+                                , format "{0} is already used for another schedule" lbl )
                             ]
                         let old_event = events m ! evt
-                        sched <- get_evt_part m old_event xs
+                        sch <- get_evt_part m old_event xs
                         let new_event = old_event { 
-                                    c_sched = insert lbl sched 
-                                            ( c_sched old_event ) }
-                        scope (context m) sched (indices old_event) 
+                                    sched = insert lbl sch
+                                            ( sched old_event ) }
+                        scope (context m) sch (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
             )
         ,   (   "\\fschedule"
-            ,   CmdBlock $ \(evt, _ :: Label, xs,()) m -> do
+            ,   CmdBlock $ \(evt, lbl :: Label, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (evt `member` events m)
-                              , format "event '{0}' is undeclared" evt )
+                                , format "event '{0}' is undeclared" evt )
+                            ]
+                        let sc = sched (events m ! evt)
+                        toEither $ error_list
+                            [ ( lbl `member` sc
+                                , format "{0} is already used for another schedule" lbl )
                             ]
                         let old_event = events m ! evt
-                        sched <- get_evt_part m old_event xs
-                        let event = old_event { 
-                                    f_sched = Just sched }
-                        scope (context m) sched (indices event) 
+                        sch <- get_evt_part m old_event xs
+                        let new_event = old_event { 
+                                    sched = insert lbl sch
+                                            ( sched old_event ) }
+                        scope (context m) sch (indices old_event) 
                         return m {          
-                                events  = insert evt event $ events m } 
+                                events  = insert evt new_event $ events m } 
             )
                 -------------------------
                 --  Theory Properties  --
@@ -624,14 +631,14 @@ collect_proofs = visit_doc
                             , format "event '{0}' is undeclared" evt )
                         ]
                     let old_event = events m ! evt
-                        sc        = c_sched old_event
+                        sc        = sched old_event
                         lbls      = (S.elems $ add `S.union` del `S.union` keep)
                         progs     = progress $ props m
                         safs      = safety $ props m
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
-                                , format "'{0}' is not a valid coarse schedule" lbl )
+                                , format "'{0}' is not a valid schedule" lbl )
                         error_list
                             [ ( not $ prog `member` progs
                               , format "'{0}' is not a valid progress property" prog )
@@ -645,6 +652,7 @@ collect_proofs = visit_doc
                         new_event = old_event { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    add_proof_edge po_lbl [prog,saf]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -660,12 +668,12 @@ collect_proofs = visit_doc
                             , format "event '{0}' is undeclared" evt )
                         ]
                     let old_event = events m ! evt
-                        sc        = c_sched old_event
+                        sc        = sched old_event
                         lbls      = (S.elems $ add `S.union` del)
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
-                                , format "'{0}' is not a valid coarse schedule" lbl )
+                                , format "'{0}' is not a valid schedule" lbl )
                     let rule      = (weaken evt)
                                     { remove = del
                                     , add = add }
@@ -673,6 +681,40 @@ collect_proofs = visit_doc
                                     { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    return m 
+                      { events = insert evt new_event $ events m
+                      , props = (props m) { 
+                            derivation = 
+                                insert po_lbl (Rule (n,rule))
+                            $ derivation (props m) } 
+                      }
+            )
+        ,   (   "\\replacefine"
+            ,   CmdBlock $ \(evt, n, keep, old, new, prog, ()) m -> do
+                    toEither $ error_list
+                        [ ( not (evt `member` events m)
+                            , format "event '{0}' is undeclared" evt )
+                        ]
+                    let old_event = events m ! evt
+                        sc        = sched old_event
+                        lbls      = new:(maybeToList old ++ S.elems keep)
+                        progs     = progress $ props m
+                    toEither $ do
+                        error_list $ flip map lbls $ \lbl ->
+                            ( not $ lbl `member` sc
+                                , format "'{0}' is not a valid schedule" lbl )
+                        error_list
+                            [ ( not $ prog `member` progs
+                              , format "'{0}' is not a valid progress property" prog )
+                            ]
+                    let old_exp   = case old of Nothing -> ztrue ; Just x -> sc ! x
+                        rule      = (replace_fine evt old_exp new (sc ! new) (progs!prog))
+                                    { keep = keep }
+                        new_event = old_event 
+                                    { sched_ref = insert n rule 
+                                        $ sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    add_proof_edge po_lbl [prog]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 

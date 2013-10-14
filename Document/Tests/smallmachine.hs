@@ -246,8 +246,10 @@ inc_event_m0 = empty_event {
                 (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
 inc_event_m1 = empty_event { 
-        c_sched = insert (label "c0") (x `zeq` y) default_schedule,
-        f_sched = Just (x `zeq` y),
+        sched = fromList 
+            [ (label "c0", x `zeq` y) 
+            , (label "f0", x `zeq` y) ]
+            `union` default_schedule,
         action  = fromList [
                     (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)),
                     (label "a1",Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] }

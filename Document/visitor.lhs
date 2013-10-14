@@ -43,6 +43,7 @@ import qualified Control.Monad.Trans.State as ST
 import Data.Char
 import Data.Monoid
 import Data.Set hiding (map)
+import Data.String.Utils
 
 --import System.IO.Unsafe
 
@@ -88,6 +89,16 @@ instance Readable Int where
             _ -> lift $ do
                 (i,j) <- lift ask
                 left [(format "invalid integer: '{0}'" arg,i,j)]
+
+instance Readable (Maybe Label) where
+    read_args = do
+        ts <- ST.get
+        (arg,ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        let xs = (concatMap (concatMap flatten) arg)
+        if strip xs == "" then 
+            return Nothing
+        else return $ Just $ label xs
 
 instance Readable Label where
     read_args = do

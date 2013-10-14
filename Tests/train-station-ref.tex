@@ -360,6 +360,12 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 \end{free:var}
 \end{proof}
  
+\replacefine{m1:moveout}{1}{}{}{mo:f0}{m2:prog1}
+ 
+\fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+
+\progress{m2:prog1}{\true}{\qforall{t}{t \in in}{ \neg loc.t = ext}}
+
 \input{../m2_m0-enter}
 
 \input{../m2_m1-movein}

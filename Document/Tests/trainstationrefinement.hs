@@ -138,9 +138,13 @@ result2 = unlines
 	, "  o  m2/m1:moveout/FIS/in@prime"
 	, "  o  m2/m1:moveout/FIS/loc@prime"
 	, "  o  m2/m1:moveout/INV/m2:inv0"
-	, " xxx m2/m1:moveout/SCH"
+	, "  o  m2/m1:moveout/SCH"
+	, "  o  m2/m1:moveout/SCH/1/REF/replace/prog/lhs"
+	, "  o  m2/m1:moveout/SCH/1/REF/replace/prog/rhs"
+	, "  o  m2/m1:moveout/SCH/1/REF/replace/str"
 	, " xxx m2/m2:prog0/REF/add"
-	, "passed 49 / 51"
+	, " xxx m2/m2:prog1/REF/add"
+	, "passed 53 / 55"
 	]
 
 path0 = "Tests/train-station-ref.tex"

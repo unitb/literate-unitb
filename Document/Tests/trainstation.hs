@@ -248,7 +248,7 @@ enter_evt = empty_event
     }
 leave_evt = empty_event 
     {  indices   = symbol_table [t_decl]
-    ,  c_sched   = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
+    ,  sched   = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
     ,  sched_ref = fromList [(0, (weaken (label "leave"))
                     { remove = S.singleton (label "default")
                     , add    = S.singleton (label "c0") } )]
