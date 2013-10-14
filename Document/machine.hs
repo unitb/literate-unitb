@@ -32,7 +32,8 @@ import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
-import           Data.Maybe ( maybeToList )
+import           Data.Maybe as M ( maybeToList, isJust, isNothing ) 
+import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
@@ -339,19 +340,27 @@ tr_hint :: Monad m
         => Machine
         -> Label
         -> [LatexDoc]
-        -> [(String,Expr)]
-        -> RWST (Int,Int) [Error] System m [(String,Expr)]
+        -> ( [(String,Expr)], Maybe Label )
+        -> RWST (Int,Int) [Error] System m ( [(String,Expr)], Maybe Label )
 tr_hint m lbl = visit_doc []
         [ ( "\\index"
-          , CmdBlock $ \(String x, xs, ()) ys -> do
+          , CmdBlock $ \(String x, xs, ()) (ys,z) -> do
                 let evt = events m ! lbl
                 expr <- get_expr m xs
                 toEither $ error_list 
                     [ ( not $ x `member` indices evt 
                       , format "'{0}' is not an index of '{1}'" x lbl )
                     ]
-                return $ (x,expr):ys
-          )
+                return $ ((x,expr):ys,z))
+        , ( "\\lt"
+          , CmdBlock $ \(prog,()) (ys,z) -> do
+--                let progs = progress (props m)
+                toEither $ error_list 
+                    [ ( not $ isNothing z
+                      , format "Only one progress property needed for '{0}'" lbl )
+                    ]
+--                let prop = progs ! prog
+                return (ys,Just prog))
         ]
     
 
@@ -494,7 +503,7 @@ collect_expr = visit_doc
                               , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
-                        let prop = Transient (free_vars (context m) tr) tr ev n empty
+                        let prop = Transient (free_vars (context m) tr) tr ev n empty Nothing
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -512,8 +521,8 @@ collect_expr = visit_doc
                                 , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
-                        hints         <- toEither $ tr_hint m ev hint []
-                        let prop = Transient (free_vars (context m) tr) tr ev n $ fromList hints
+                        (hints,lt)    <- toEither $ tr_hint m ev hint ([],Nothing)
+                        let prop = Transient (free_vars (context m) tr) tr ev n (fromList hints) lt
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -743,13 +752,26 @@ deduct_schedule_ref_struct m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans
     where
-        check_trans (lbl,Transient _ _ evt n _)  = do
-            add_proof_edge lbl [g evt n]
-            unless (n `member` sched_ref (events m ! evt))
-                $ tell [(format fmt evt n lbl,0,0)]
+        check_trans (lbl,Transient _ _ evt n _ lt)  = do
+                add_proof_edge lbl [g evt n]
+                if n `member` sched_ref (events m ! evt) then do
+                    let (_,f_sch) = list_schedules (events m ! evt) ! n
+                        progs = progress (props m)
+                    unless (maybe True (flip member progs) lt)
+                        $ tell [(format "'{0}' is not a progress property" $ M.fromJust lt,0,0)]
+                    unless (isJust f_sch == isJust lt)
+                        $ if isJust f_sch
+                        then tell [(format fmt0 lbl evt,0,0)]
+                        else tell [(format fmt1 lbl evt,0,0)]
+                else tell [(format fmt2 evt n lbl,0,0)]
             where
-                fmt =    "Transient predicate {2}: event '{0}' "
-                      ++ "doesn't have a schedule number {1}"
+                fmt0 =    "transient predicate {0}: a leads-to property is required for "
+                       ++ "transient predicates relying on events "
+                       ++ "({1}) with a fine schedule"
+                fmt1 =    "transient predicate {0}: a leads-to property is only required "
+                       ++ "for events ({1}) with a fine schedule"
+                fmt2 =    "Transient predicate {2}: event '{0}' "
+                       ++ "doesn't have a schedule number {1}"
         check_sched (lbl,evt) = mapM_ h $ zip xs $ drop 1 xs
             where
                 xs = map (g lbl) $ keys $ sched_ref evt

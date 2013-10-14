@@ -407,11 +407,11 @@ data Constraint =
 
 data Transient = 
         Transient 
-            (Map String Var)    -- Free variables
-            Expr                -- Predicate
-            Label Int           -- Event, Schedule 
-            (Map String Expr)   -- Index substitution
---            (Maybe Label)       -- Progress Property for fine schedule
+            (Map String Var)     -- Free variables
+            Expr                 -- Predicate
+            Label Int            -- Event, Schedule 
+            (Map String Expr)    -- Index substitution
+            (Maybe Label)        -- Progress Property for fine schedule
 --      | Grd thm
 --      | Sch thm
     deriving Show
@@ -518,8 +518,11 @@ apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref
                 ReplaceFineSch _ lbl p _ -> Just (lbl, p)
                 _ -> x
 
-list_schedules :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
-list_schedules r m0 = 
+list_schedules :: Event -> Map Int (Map Label Expr, Maybe (Label, Expr))
+list_schedules evt = list_schedules' (sched_ref evt) $ sched evt
+
+list_schedules' :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
+list_schedules' r m0 = 
         fromAscList $ scanl f first (toAscList r)
     where
         f (_,m1) (i,ref) = (i, apply m0 m1 ref)
@@ -530,7 +533,7 @@ list_schedules r m0 =
 
 last_schedule evt = sch
     where
-        ls_sch = list_schedules (sched_ref evt) $ sched evt
+        ls_sch = list_schedules evt
         sch    = fst $ M.fromJust
                     $ M.maxView 
                     $ ls_sch

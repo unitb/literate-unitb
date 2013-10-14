@@ -42,7 +42,7 @@ example0 = do
         csched <- with_li (0,0) (x `mzeq` y)
         s0     <- with_li (0,0) (x' `mzeq` (x `mzplus` mzint 2))
         s1     <- with_li (0,0) (y' `mzeq` (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt") 0 empty
+        let tr0 = Transient empty tr (label "evt") 0 empty Nothing
             co0 = Co [] co
             ps = empty_property_set {
                 transient = 
@@ -89,7 +89,7 @@ train_m0 = do
                     ,   action  = fromList [(label "A0", a0)]
                     })
         tr <- with_li (0,0) (st `zselect` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0 empty)] 
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0 empty Nothing)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps

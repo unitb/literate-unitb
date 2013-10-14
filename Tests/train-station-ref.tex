@@ -402,8 +402,15 @@ We implement \eqref{m2:prog3} with the following:
 	}
 
 \begin{align*}
-	\transient{m1:moveout}{1}{m2:tr1}{ b \in plf \land t \in in \land loc.t = b }
+	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog8} \index{t}{t} }
+		{ b \in plf \land t \in in \land loc.t = b }
 \\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+\end{align*}
+
+In order to prove \ref{m1:moveout}, we need a need progress property:
+
+\begin{align*}
+	\progress{m2:prog8}{ \true }{ \qforall{t}{t \in in}{\neg loc.t = ext}  }
 \end{align*}
 
 \input{../m2_m0-enter}

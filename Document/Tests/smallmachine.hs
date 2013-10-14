@@ -71,9 +71,11 @@ result2 = (unlines
       , "  o  m0/inc/SCH/0/REF/replace/prog/rhs"
       , "  o  m0/inc/SCH/0/REF/replace/str"
       , " xxx m0/inc/TR/tr0/EN"
+      , "  o  m0/inc/TR/tr0/EN/leadsto/lhs"
+      , "  o  m0/inc/TR/tr0/EN/leadsto/rhs"
       , "  o  m0/inc/TR/tr0/NEG"
       , " xxx m0/prog0/REF/add"
-      , "passed 12 / 15"
+      , "passed 14 / 17"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -292,7 +294,7 @@ m0_props = empty_property_set {
 
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0 empty) ]
+            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0 empty Nothing) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 

@@ -173,17 +173,21 @@ init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) ->
  
 
 prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
-prop_tr m pname (Transient fv xp evt_lbl n hint) = 
+prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) = 
     M.fromList 
         $ if M.null ind0 then 
             [ po [label "EN"] xp0
-            , po [label "NEG"] xp1 ]
+            , po [label "NEG"] xp1
+            ] ++ map (uncurry po) xps
           else
-            [ po [] $ exist_ind $ zand xp0 xp1 ]
+            [ po [] $ exist_ind $ zall $ xp0:xp1:map snd xps ]
     where
 --        thm  = inv_thm p
         grd  = M.elems $ guard evt
-        sch  = M.elems $ fst $ list_schedules (sched_ref evt) (sched evt) ! n
+        schedules = list_schedules evt ! n
+        sch0 = M.elems $ fst schedules
+        sch1 = map snd $ maybeToList $ snd schedules
+        sch  = sch0 ++ sch1
         act  = M.elems $ action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
@@ -206,11 +210,23 @@ prop_tr m pname (Transient fv xp evt_lbl n hint) =
                 (invariants m)
                 True
                 xp)
-        xp0 = (xp `zimplies` (new_dummy ind $ zall sch))
+        xp0 = (xp `zimplies` (new_dummy ind $ zall sch0))
         xp1 = (zforall  
                     (M.elems $ params evt)
                     (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
                     (znot $ primed (variables m) xp) )
+        xps = case (lt_fine, snd schedules) of
+                (Just lbl, Just (_,fsch)) ->
+                    let (LeadsTo vs p q) = progress (props m) ! lbl in
+                        [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall sch0 `zimplies` p)
+                        , ([label "EN/leadsto/rhs"],zforall vs ztrue $ q `zimplies` fsch) 
+                        ]
+                (Nothing,Nothing) -> []
+                _                 -> error $ format (
+                           "transient predicate {0}'s side condition doesn't "
+                        ++ "match the fine schedule of event {1}"
+                        )
+                    pname evt_lbl
 
 
 prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation
