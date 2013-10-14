@@ -48,12 +48,8 @@
 \dummy{	t : \Train}
 \end{align*}
 
-%\begin{align*}
 \newevent{m0:enter}{enter} 
 \newevent{m0:leave}{leave}
-%\end{align*}
-%\newcompound{m0:enter}
-%\newcompound{m0:leave}
 
 \begin{align*}
 \indices{m0:leave}{	t : \Train}
@@ -62,12 +58,12 @@
 \indices{m0:enter}{	t : \Train}
 \end{align*}
 
-\weakento{m0:leave}{0}{default}{c0}
+\weakento{m0:leave}{0}{default}{lv:c0}
 
 \begin{align*}
-\cschedule{m0:leave}{c0}
+\cschedule{m0:leave}{lv:c0}
 	{	t &\in in } \\ 
-\evassignment{m0:leave}{a0}
+\evassignment{m0:leave}{lv:a0}
 	{	in' &= in \setminus \{ t \} } \\
 \evassignment{m0:enter}{a1}
 	{	in' &= in \bunion \{ t \} }
@@ -91,49 +87,18 @@
 \refines{m0}
 
 \newset{BLK}{\Blk}
-%\newset{TRAIN}{\Train}
 
-%\begin{use:set}{\Train} \end{use:set}
 \begin{use:set}{\Blk} \end{use:set}
 \begin{use:fun}{\Train}{\Blk} \end{use:fun}
-
-%%\begin{variable}
-%%	in : \set [ \Train ]
-%%\end{variable}
 
 \begin{align*}
 \variable{	loc : \Train \pfun \Blk}
 \end{align*}
 
-%\begin{dummy}
-%	t : \Train
-%\end{dummy}
-
-%\newevent{m1:enter}{enter}
-%
-%\newevent{m1:leave}{leave}
-
-%\begin{indices}{m1:leave}
-%	t : \Train
-%\end{indices}
-%
-%\begin{indices}{m1:enter}
-%	t : \Train
-%\end{indices}
-
 \begin{align*}
-%\cschedule{m1:leave}{c0}
-%	{	t &\in in } \\ 
-%\evassignment{m1:leave}{a0}
-%	{	in' &= in \setminus \{ t \} }
 \\ \initialization{in1}
 	{ in = \emptyset }
 \end{align*}
-
-%\begin{align*}
-%\evassignment{m1:enter}{a0}
-%	{	in' &= in \bunion \{ t \} }
-%\end{align*}
 
 \begin{align*}
 \invariant{inv0}
@@ -162,7 +127,7 @@
 \subsubsection{Invariant \ref{inv0}}
 
 \begin{align*}
-\evassignment{m0:leave}{a2}
+\evassignment{m0:leave}{lv:a2}
 	{ loc' &= \{ t \} \domsub loc }
 \\ \evassignment{m0:enter}{a3}
 	{ loc' &= loc \1| t \tfun ent }
@@ -191,13 +156,11 @@ This takes care of \eqref{saf1}
 \subsubsection{Side conditions}
 
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{saf3} in order to prove refinement.
-\replace{m0:leave}{1}{c0}{c0,c1}{}{m1:prog0}{saf3}
+\replace{m0:leave}{1}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{saf3}
 
 \begin{align*}
-\cschedule{m0:leave}{c1}
+\cschedule{m0:leave}{lv:c1}
 	{ loc.t = ext }
-%\\ \safety{saf4}
-%	{ t \in in \land loc.t = ext }{ \neg t \in in }
 \\ \progress{m1:prog0}
 	{ t \in in }{ t \in in \land loc.t = ext }
 \end{align*}
@@ -239,23 +202,17 @@ Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 \end{align*}
 
 We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
-%\begin{align*}
 \newevent{m1:movein}{move\_in} 
 \newevent{m1:moveout}{move\_out} 
-%\end{align*}
 \hide{
 	\refine{prog3}{discharge}{m1:tr0,saf2}{}
 	\refine{prog4}{discharge}{m1:tr1,saf1}{}
 }
 \begin{align*}
-%\\ & \safety{saf5}
-%	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
 & \transientB{m1:movein}{0}{m1:tr1}
 	{ t \in in \1\land loc.t = ent }{ \index{t}{t} }
 \\ & \transient{m1:moveout}{0}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
-%\\ & \safety{saf6}
-%	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
 \\ & \evguard{m1:movein}{mi:grd7}
 	{ b \in plf }
 \end{align*}
@@ -272,12 +229,10 @@ We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 
 \begin{align*}
 \evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
-%\\ \evassignment{m1:moveout}{a3}{ in' = in }
 \\ \assumption{asm2}
 	{ \qexists{b}{}{b \in plf} }
 \\ \cschedule{m1:moveout}{c1}{ t \in in \land loc.t \in plf }
 \\ \evguard{m1:moveout}{mo:g1}{ t \in in }
-%\evassignment{m1:moveout}{a2}{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
 \end{align*}
 
 We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
@@ -292,10 +247,6 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \begin{align*}
 \evassignment{m1:movein}{mi:a2}
 	{ loc' = loc \1| t \tfun b }
-%	{ \qexists{b}{b \in plf }{ loc' = loc \1| t \tfun b } }
-%\end{align*}
-%\begin{align*}
-%\\ \evassignment{m1:movein}{a3}{ in' & = in }
 \\ \assumption{asm3}
 	{ \neg ent &\in plf }
 \\ \cschedule{m1:movein}{mi:c1}{ t &\in in } 
@@ -311,150 +262,10 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
 \refines{m1} 
 
-%\newevent{m2:enter}{enter}
-%\newevent{m2:leave}{leave}
-%\newevent{m2:moveout}{move\_out}
-%\newevent{m2:movein}{move\_in}
-%
-%\hide{
-%\newset{BLK}{\Blk}
-%\newset{TRAIN}{\Train}
-%
-%\begin{use:set}{\Train} \end{use:set}
-%\begin{use:set}{\Blk} \end{use:set}
-%\begin{use:fun}{\Train}{\Blk} \end{use:fun}
-%
-%\begin{variable}
-%	in : \set [ \Train ]
-%\end{variable}
-%
-%\begin{variable}
-%	loc : \Train \pfun \Blk
-%\end{variable}
-%
 \begin{align*}
 \dummy{	t_0,t_1 : \Train}
 \end{align*}
-%
-%\begin{indices}{m2:leave}
-%	t : \Train
-%\end{indices}
-%
-%\begin{indices}{m2:enter}
-%	t : \Train
-%\end{indices}
-%
-%\begin{align*}
-%\cschedule{m2:leave}{c0}
-%	{	t &\in in } \\ 
-%\evassignment{m2:leave}{a0}
-%	{	in' &= in \setminus \{ t \} }
-%\\ \initialization{in1}
-%	{ in = \emptyset }
-%\end{align*}
-%
-%\begin{align*}
-%\evassignment{m2:enter}{a0}
-%	{	in' &= in \bunion \{ t \} }
-%\end{align*}
-%
-%\begin{align*}
-%\invariant{inv0}
-%	{	\dom.loc = in }
-%\end{align*}
-%
-%\begin{constant}
-%	ent,ext : \Blk
-%\end{constant}
-%
-%\begin{constant}
-%	plf : \set [ \Blk ]
-%\end{constant}
-%
-%\subsection{New requirements}
-%\begin{align*}
-%\safety{saf0}
-%	{ \neg t \in in& }{ t \in in \land loc.t = ent }
-%\\ \safety{saf1}
-%	{ t \in in \land loc.t = ent& }{ t \in in \land loc.t \in plf }
-%\\ \safety{saf2}
-%	{ t \in in \land loc.t \in plf& }{ t \in in \land loc.t = ext }
-%\\ \safety{saf3}
-%	{ t \in in \land loc.t = ext& }{ \neg t \in in }
-%\end{align*}
-%
-%\subsection{Proofs}
-%
-%\subsubsection{Invariant \ref{inv0}}
-%
-%\begin{align*}
-%\evassignment{m2:leave}{a2}
-%	{ loc' &= \{ t \} \domsub loc }
-%\\ \evassignment{m2:enter}{a2}
-%	{ loc' &= loc \1| t \tfun ent }
-%\\ \initialization{in0}
-%	{ loc = \emptyfun }
-%\end{align*}
-%
-%\subsubsection{Safety \ref{saf1}, \ref{saf2}}
-%
-%\begin{align*}
-%\evguard{m2:leave}{grd0}
-%	{ t \in in }
-%\\ \evguard{m2:leave}{grd1}
-%	{ loc.t = ext }
-%\end{align*}
-%
-%\begin{align*}
-%\assumption{asm0}
-%	{ \neg ext \in plf \1\land \neg ext = ent }
-%\end{align*}
-%
-%\subsubsection{Side conditions}
-%
-%\begin{align*}
-%\cschedule{m2:leave}{c1}
-%	{ loc.t = ext }
-%\end{align*}
-%
-%\begin{dummy}
-%	b : \Blk
-%\end{dummy}
-%
-%\begin{align*}
-%\assumption{asm1}
-%{	\qforall{b}{}{ b \in \Blk \2\equiv b \in plf \1\lor b = ent \1\lor b = ext }	}
-%\end{align*}
-%
-%\subsubsection{New events} 
-%
-%\begin{indices}{m2:moveout}
-%	t : \Train
-%\end{indices}
-%
-%\begin{align*}
-%\evassignment{m2:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
-%\\ \evassignment{m2:moveout}{a3}{ in' = in }
-%\\ \assumption{asm2}
-%	{ \qexists{b}{}{b \in plf} }
-%\\ \cschedule{m2:moveout}{c1}{ t \in in \land loc.t \in plf }
-%\\ \evguard{m2:moveout}{g1}{ t \in in }
-%\end{align*}
-%
-%\begin{indices}{m2:movein}
-%	t : \Train
-%\end{indices}
-%
-%\begin{align*}
-%\\ \evassignment{m2:movein}{a3}{ in' & = in }
-%\\ \assumption{asm3}
-%	{ \neg ent &\in plf }
-%\\ \cschedule{m2:movein}{c1}{ t &\in in } 
-%\\ \cschedule{m2:movein}{c2}{ loc.t &= ent }
-%\\ \evguard{m2:movein}{g1}{ t &\in in }
-%\end{align*}
-%}
-%
+
 \subsection{New Requirement}
 \begin{align*}
 \invariant{m2:inv0}
@@ -480,11 +291,8 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
 \\ \evguard{m0:enter}{et:g1}
 	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
-%\evguard{m0:leave}{g1}
-%	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
 \\ \evguard{m1:moveout}{mo:g2}
 	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
-%%	{ \qexists{b}{}{ loc'  }
 \end{align*}
 %
 
@@ -508,13 +316,10 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 		}
 	\begin{calculation}
 		loc'.t_0 = loc'.t_1
-	\hint{=}{ \ref{a2} \ref{m2:inv0} }
+	\hint{=}{ \ref{lv:a2} \ref{m2:inv0} }
 		(\{ t \} \domsub loc).t_0 = (\{ t \} \domsub loc).t_1 
 	\hint{=}{ \hide{ \eqref{hyp7} and \eqref{hyp8} } 
 			\igeqref{hyp3} and \igeqref{hyp4} }
-%		loc.t_0 = loc.t_1 
-%		loc.t_0 = (\{ t \} \domsub loc).t_1 
-%	\hint{=}{ \eqref{hyp8} }
 		loc.t_0 = loc.t_1 
 	\hint{=}{ \eqref{hyp5}, \eqref{hyp6}, 
 			\eqref{hyp0} with \ref{m2:inv0} 
@@ -533,7 +338,7 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 			t_0 \in \dom.loc \setminus \{ t \}
 		\hint{=}{ \ref{inv0} }
 			t_0 \in in \setminus \{ t \} 
-		\hint{=}{ \ref{a0} }
+		\hint{=}{ \ref{lv:a0} }
 			t_0 \in in'
 		\hint{=}{ \eqref{hyp1} }
 			\true
@@ -544,7 +349,7 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 			t_1 \in \dom.loc \setminus \{ t \}
 		\hint{=}{ \ref{inv0} }
 			t_1 \in in \setminus \{ t \} 
-		\hint{=}{ \ref{a0} }
+		\hint{=}{ \ref{lv:a0} }
 			t_1 \in in'
 		\hint{=}{ \ref{hyp2} }
 			\true
