@@ -3,14 +3,16 @@ module Document.Tests.SmallMachine
 where
 
     -- Modules
+import Document.Document
+
 import UnitB.AST
 import UnitB.PO
 
 import Z3.Z3
 
     -- Libraries
-import Data.Map hiding ( map )
-import Document.Document
+import           Data.Map hiding ( map )
+import qualified Data.Set as S ( singleton )
 
 import Tests.UnitTest
 
@@ -65,9 +67,13 @@ result2 = (unlines
       , "  o  m0/inc/INV/inv0"
       , " xxx m0/inc/INV/inv1"
       , "  o  m0/inc/SCH"
+      , "  o  m0/inc/SCH/0/REF/replace/prog/lhs"
+      , "  o  m0/inc/SCH/0/REF/replace/prog/rhs"
+      , "  o  m0/inc/SCH/0/REF/replace/str"
       , " xxx m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
-      , "passed 9 / 11"
+      , " xxx m0/prog0/REF/add"
+      , "passed 12 / 15"
     ])
 
 path2 = "Tests/small_machine_t2.tex"
@@ -89,9 +95,10 @@ result3 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , " xxx m0/inc/TR/tr0/EN"
+      , "  o  m0/inc/SCH/0/REF/weaken"
+      , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
-      , "passed 9 / 11"
+      , "passed 11 / 12"
     ])
 
 path3 = "Tests/small_machine.tex"
@@ -245,27 +252,37 @@ inc_event_m0 = empty_event {
     action = fromList [
                 (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
-inc_event_m1 = empty_event { 
-        sched = fromList 
+inc_event_m1 = empty_event 
+        { sched_ref = fromList
+            [ (0, sc)
+            ]
+        , sched = fromList 
             [ (label "c0", x `zeq` y) 
             , (label "f0", x `zeq` y) ]
-            `union` default_schedule,
-        action  = fromList [
+            `union` default_schedule
+        , action  = fromList [
                     (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)),
-                    (label "a1",Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] }
+                    (label "a1",Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] 
+        }
     where
         x = Word var_x
         y = Word var_y
+
+sc = (weaken (label "inc"))
+        { add = S.singleton (label "c0")
+        , remove = S.singleton (label "default")
+        }
 
 m0_machine = (empty_machine "m0") { 
         props = m0_props,
         events = singleton (label "inc") inc_event_m0,
         variables = fromList [("x", var_x), ("y", var_y)] }
 
-m1_machine = (empty_machine "m0") { 
-        props = m1_props,
-        events = singleton (label "inc") inc_event_m1,
-        variables = fromList [("x", var_x), ("y", var_y)] }
+m1_machine = (empty_machine "m0") 
+        { props = m1_props
+        , events = singleton (label "inc") inc_event_m1
+        , variables = fromList [("x", var_x), ("y", var_y)] 
+        }
 
 m0_props = empty_property_set {
         inv = singleton (label "inv0") (x `zeq` (zint 2 `ztimes` y)) }
@@ -282,6 +299,7 @@ m1_props = m0_props
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
                 (inv m0_props)
+        , derivation = singleton (label "inc/SCH/0") (Rule (0 :: Int,sc))
         }
     where
         x  = Word var_x

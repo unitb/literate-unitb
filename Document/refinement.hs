@@ -84,7 +84,7 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
+                left [(format "refinement ({0}): {1} should be a transient predicate" rule x,i,j)]
     parse_rule _ [] rule _ = do
                 (i,j) <- lift $ ask
                 left [(format "refinement ({0}): expecting more properties" rule,i,j)]

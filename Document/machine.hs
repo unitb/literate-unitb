@@ -159,9 +159,10 @@ foo_bar xs = do
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
             ms <- toEither $ foldM (f collect_proofs) ms xs
+            ms <- trickle_down refs ms merge_proofs
+            toEither $ forM_ (M.elems ms) deduct_schedule_ref_struct 
             s  <- lift $ RWS.gets proof_struct
             check_acyclic "proof of liveness" s
-            ms <- trickle_down refs ms merge_proofs
             return ms
     where
         gather ms (Env n _ c li)     
@@ -489,10 +490,8 @@ collect_expr = visit_doc
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
-                            ]
-                        toEither $ error_list
-                            [   ( lbl `member` transient (props m)
-                                , format "{0} is already used for another program property" lbl )
+                            , ( lbl `member` transient (props m)
+                              , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
                         let prop = Transient (free_vars (context m) tr) tr ev n empty
@@ -503,7 +502,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
-            ,   CmdBlock $ \(ev, n, lbl, xs, hint,()) m -> do
+            ,   CmdBlock $ \(ev, n, lbl, hint, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -645,6 +644,10 @@ collect_proofs = visit_doc
                             , ( not $ saf `member` safs
                               , format "'{0}' is not a valid safety property" saf )
                             ]
+                        error_list 
+                            [ ( n `member` sched_ref old_event
+                              , format "event '{0}', schedule '{1}' already exists" evt n )
+                            ]
                     let rule      = (replace evt (progs!prog) (safs!saf)) 
                                     { remove = del
                                     , add = add
@@ -652,7 +655,8 @@ collect_proofs = visit_doc
                         new_event = old_event { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
-                    add_proof_edge po_lbl [prog,saf]
+                        mch_lbl   = composite_label [_name m, po_lbl]
+                    add_proof_edge mch_lbl [prog,saf]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -674,6 +678,10 @@ collect_proofs = visit_doc
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
                                 , format "'{0}' is not a valid schedule" lbl )
+                        error_list 
+                            [ ( n `member` sched_ref old_event
+                              , format "event '{0}', schedule '{1}' already exists" evt n )
+                            ]
                     let rule      = (weaken evt)
                                     { remove = del
                                     , add = add }
@@ -707,6 +715,10 @@ collect_proofs = visit_doc
                             [ ( not $ prog `member` progs
                               , format "'{0}' is not a valid progress property" prog )
                             ]
+                        error_list 
+                            [ ( n `member` sched_ref old_event
+                              , format "event '{0}', schedule '{1}' already exists" evt n )
+                            ]
                     let old_exp   = case old of Nothing -> ztrue ; Just x -> sc ! x
                         rule      = (replace_fine evt old_exp new (sc ! new) (progs!prog))
                                     { keep = keep }
@@ -714,7 +726,8 @@ collect_proofs = visit_doc
                                     { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
-                    add_proof_edge po_lbl [prog]
+                        mch_lbl   = composite_label [_name m, po_lbl]
+                    add_proof_edge mch_lbl [prog]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -724,6 +737,24 @@ collect_proofs = visit_doc
                       }
             )
         ]
+
+    -- 
+deduct_schedule_ref_struct m = do
+        forM_ (toList $ events m) check_sched
+        forM_ (toList $ transient $ props m) check_trans
+    where
+        check_trans (lbl,Transient _ _ evt n _)  = do
+            add_proof_edge lbl [g evt n]
+            unless (n `member` sched_ref (events m ! evt))
+                $ tell [(format fmt evt n lbl,0,0)]
+            where
+                fmt =    "Transient predicate {2}: event '{0}' "
+                      ++ "doesn't have a schedule number {1}"
+        check_sched (lbl,evt) = mapM_ h $ zip xs $ drop 1 xs
+            where
+                xs = map (g lbl) $ keys $ sched_ref evt
+                h (x,y) = add_proof_edge x [y]
+        g lbl x = composite_label [_name m, lbl, label $ show x]
 
 parse_system :: FilePath -> IO (Either [Error] System)
 parse_system fn = do

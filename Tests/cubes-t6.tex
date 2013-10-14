@@ -343,7 +343,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \\ & 	\safety{saf0}{ k \le n }{ N = n }
 %\refine{prog2}{trading}{prog3}{}
 %&	\progress{prog3}{n = k \2\land \neg n = N}{ n < k } \\
- \refine{prog4}{discharge}{tr0,saf1}{  }
+% \refine{prog4}{discharge}{tr0,saf1}{  }
 & 	\safety{saf1}{ n = k \1\land \neg n = N }{ \neg n = k }
 \end{align*}
 
@@ -354,9 +354,9 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \end{align*}
 
 \begin{align*}
-\transient{evt}{0}{tr0}
-{	n = k \1\land \neg n = N
-	}
+%\transient{evt}{0}{tr0}
+%{	n = k \1\land \neg n = N
+%	}
 \end{align*}
 
 \begin{align*}

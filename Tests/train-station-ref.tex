@@ -23,9 +23,6 @@
 \maketitle
 \tableofcontents
 
-%\section{}
-%\subsection{}
-
 \newcommand{\Train}{\text{TRAIN}}
 \newcommand{\Blk}{\text{BLK}}
 
@@ -209,8 +206,8 @@ We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
 	\refine{prog4}{discharge}{m1:tr1,saf1}{}
 }
 \begin{align*}
-& \transientB{m1:movein}{0}{m1:tr1}
-	{ t \in in \1\land loc.t = ent }{ \index{t}{t} }
+& \transientB{m1:movein}{0}{m1:tr1}{ \index{t}{t} }
+	{ t \in in \1\land loc.t = ent }
 \\ & \transient{m1:moveout}{0}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
 \\ & \evguard{m1:movein}{mi:grd7}
@@ -359,12 +356,55 @@ The above property, \eqref{m2:saf0}, should not discharge automatically.
 \end{free:var}
 \end{free:var}
 \end{proof}
- 
-\replacefine{m1:moveout}{1}{}{}{mo:f0}{m2:prog1}
- 
-\fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
 
-\progress{m2:prog1}{\true}{\qforall{t}{t \in in}{ \neg loc.t = ext}}
+\replacefine{m1:moveout}{1}{}{}{mo:f0}{m2:prog1} 
+
+\begin{align*}
+\fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+\\ \progress{m2:prog1}{\true}{\qforall{t}{t \in in}{ \neg loc.t = ext}}
+\end{align*}
+
+\begin{align*}
+	& \true \2\mapsto \qforall{t}{t \in in}{ \neg loc.t = ext} 
+\refine{m2:prog1}{trading}{m2:prog2}{}
+	& \progress{m2:prog2}{\qexists{t}{t \in in}{ loc.t = ext} }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
+\refine{m2:prog2}{disjunction}{m2:prog3}{}
+	& \progress{m2:prog3}{ t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } \end{align*}
+%
+\hide{
+	\refine{m2:prog3}{discharge}{m2:tr0,m2:saf1}{}
+	}
+%
+We implement \eqref{m2:prog3} with the following:
+%	
+\begin{align*}
+	\transient{m0:leave}{1}{m2:tr0}
+		{ t \in in \1\land loc.t = ext }
+\\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
+\end{align*}
+
+\begin{align*}
+	& {\true} \1\mapsto {\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} } 
+%	\tag{\ref{m2:prog0}}
+\refine{m2:prog0}{trading}{m2:prog4}{}
+	& \progress{m2:prog4}{\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\!}
+		{\!\! \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\refine{m2:prog4}{monotonicity}{m2:prog5}{}
+	& \progress{m2:prog5}{\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b}}
+		{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\refine{m2:prog5}{disjunction}{m2:prog6}{}
+	& \progress{m2:prog6}{ b \in plf \land t \in in \land loc.t = b }
+		{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+\end{align*}
+
+\hide{
+	\refine{m2:prog6}{discharge}{m2:tr1,m2:saf2}{}
+	}
+
+\begin{align*}
+	\transient{m1:moveout}{1}{m2:tr1}{ b \in plf \land t \in in \land loc.t = b }
+\\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+\end{align*}
 
 \input{../m2_m0-enter}
 
