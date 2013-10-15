@@ -37,7 +37,7 @@ import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
---import System.IO
+import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -90,7 +90,7 @@ check_acyclic x es = do
         let cs = cycles es
         toEither $ mapM_ (cycl_err_msg x) cs
     where
-        cycle_msg x ys = format msg (x :: String) $ intercalate "," (map show ys)
+        cycle_msg x ys = format msg (x :: String) $ intercalate ", " (map show ys)
             where
                 msg = "A cycle exists in the {0}: {1}"
         cycl_err_msg _ (AcyclicSCC _) = return ()
@@ -163,6 +163,7 @@ foo_bar xs = do
             ms <- trickle_down refs ms merge_proofs
             toEither $ forM_ (M.elems ms) deduct_schedule_ref_struct 
             s  <- lift $ RWS.gets proof_struct
+--            let !() = unsafePerformIO $ print s
             check_acyclic "proof of liveness" s
             return ms
     where
@@ -623,11 +624,11 @@ collect_proofs = visit_doc
         ] [ (   "\\refine"
             ,   CmdBlock $ \(goal,String rule,hyps,hint,()) m -> do
                     toEither $ error_list
-                        [   ( not (goal `member` (progress $ props m))
+                        [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
                             , format "the goal is an undefined progress property {0}" goal )
                         ]
-                    let prog = progress $ props m
-                        saf  = safety $ props m
+                    let prog = progress (props m) `union` progress (inh_props m)
+                        saf  = safety (props m) `union` safety (inh_props m)
 --                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
@@ -641,8 +642,8 @@ collect_proofs = visit_doc
                     let old_event = events m ! evt
                         sc        = sched old_event
                         lbls      = (S.elems $ add `S.union` del `S.union` keep)
-                        progs     = progress $ props m
-                        safs      = safety $ props m
+                        progs     = progress (props m) `union` progress (inh_props m)
+                        safs      = safety (props m) `union` safety (inh_props m)
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
@@ -657,15 +658,14 @@ collect_proofs = visit_doc
                             [ ( n `member` sched_ref old_event
                               , format "event '{0}', schedule '{1}' already exists" evt n )
                             ]
-                    let rule      = (replace evt (progs!prog) (safs!saf)) 
+                    let rule      = (replace evt (prog,progs!prog) (saf,safs!saf)) 
                                     { remove = del
                                     , add = add
                                     , keep = keep }
                         new_event = old_event { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
-                        mch_lbl   = composite_label [_name m, po_lbl]
-                    add_proof_edge mch_lbl [prog,saf]
+--                    add_proof_edge po_lbl [prog,saf]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -715,7 +715,7 @@ collect_proofs = visit_doc
                     let old_event = events m ! evt
                         sc        = sched old_event
                         lbls      = new:(maybeToList old ++ S.elems keep)
-                        progs     = progress $ props m
+                        progs     = progress (props m) `union` progress (inh_props m)
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
@@ -728,15 +728,14 @@ collect_proofs = visit_doc
                             [ ( n `member` sched_ref old_event
                               , format "event '{0}', schedule '{1}' already exists" evt n )
                             ]
-                    let old_exp   = case old of Nothing -> ztrue ; Just x -> sc ! x
-                        rule      = (replace_fine evt old_exp new (sc ! new) (progs!prog))
+                    let old_exp   = maybe ztrue (sc !) old
+                        rule      = (replace_fine evt old_exp new (sc ! new) (prog,progs!prog))
                                     { keep = keep }
                         new_event = old_event 
                                     { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
-                        mch_lbl   = composite_label [_name m, po_lbl]
-                    add_proof_edge mch_lbl [prog]
+--                    add_proof_edge po_lbl [prog]
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -756,13 +755,14 @@ deduct_schedule_ref_struct m = do
                 add_proof_edge lbl [g evt n]
                 if n `member` sched_ref (events m ! evt) then do
                     let (_,f_sch) = list_schedules (events m ! evt) ! n
-                        progs = progress (props m)
+                        progs = progress (props m) `union` progress (inh_props m) 
                     unless (maybe True (flip member progs) lt)
                         $ tell [(format "'{0}' is not a progress property" $ M.fromJust lt,0,0)]
                     unless (isJust f_sch == isJust lt)
                         $ if isJust f_sch
                         then tell [(format fmt0 lbl evt,0,0)]
                         else tell [(format fmt1 lbl evt,0,0)]
+                    add_proof_edge lbl $ maybeToList lt
                 else tell [(format fmt2 evt n lbl,0,0)]
             where
                 fmt0 =    "transient predicate {0}: a leads-to property is required for "
@@ -770,13 +770,23 @@ deduct_schedule_ref_struct m = do
                        ++ "({1}) with a fine schedule"
                 fmt1 =    "transient predicate {0}: a leads-to property is only required "
                        ++ "for events ({1}) with a fine schedule"
-                fmt2 =    "Transient predicate {2}: event '{0}' "
+                fmt2 =    "transient predicate {2}: event '{0}' "
                        ++ "doesn't have a schedule number {1}"
-        check_sched (lbl,evt) = mapM_ h $ zip xs $ drop 1 xs
+        check_sched (lbl,evt) = do
+                mapM_ f $ zip xs $ drop 1 ys
+                mapM_ h $ zip xs $ drop 1 xs
             where
                 xs = map (g lbl) $ keys $ sched_ref evt
-                h (x,y) = add_proof_edge x [y]
-        g lbl x = composite_label [_name m, lbl, label $ show x]
+                ys = elems $ sched_ref evt
+        f (lbl,cs) = 
+            case rule cs of
+                Weaken -> return ()
+                Replace (prog,_) (saf,_) -> 
+                    add_proof_edge lbl [prog,saf]
+                ReplaceFineSch _ _ _ (prog,_) ->
+                    add_proof_edge lbl [prog]
+        g lbl x = composite_label [lbl, label "SCH", label $ show x]
+        h (x,y) = add_proof_edge x [y]
 
 parse_system :: FilePath -> IO (Either [Error] System)
 parse_system fn = do

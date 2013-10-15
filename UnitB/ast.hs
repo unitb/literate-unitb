@@ -497,9 +497,9 @@ data ScheduleChange = ScheduleChange
     deriving (Show)
 
 data ScheduleRule = 
-        Replace ProgressProp SafetyProp
+        Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
-        | ReplaceFineSch Expr Label Expr ProgressProp 
+        | ReplaceFineSch Expr Label Expr (Label,ProgressProp) 
     deriving Show
 
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken

@@ -173,11 +173,12 @@ mk_discharge p tr [s] = Discharge p tr $ Just s
 mk_discharge p tr []  = Discharge p tr Nothing
 mk_discharge _ _ _    = error "expecting at most one safety property" 
 
-parse_discharge rule params@(RuleParserParameter _ _ _ _ hyps_lbls _) = do
+parse_discharge rule params@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
     (i,j) <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
         $ left [(format "too many hypotheses in the application of the rule: {0}" 
                     $ intercalate "," $ map show hyps_lbls,i,j)]
+    add_proof_edge goal_lbl hyps_lbls
     parse (mk_discharge,()) rule params
 
 data Monotonicity = Monotonicity ProgressProp ProgressProp
@@ -356,7 +357,7 @@ instance RefRule (Int, ScheduleChange) where
             ReplaceFineSch _ _ _ _ -> label "replace"
     refinement_po (_,r) m = 
         case rule r of
-            Replace prog saf ->
+            Replace (_,prog) (_,saf) ->
                 let LeadsTo vs p0 q0 = prog
                     Unless us p1 q1  = saf
                 in
@@ -380,7 +381,7 @@ instance RefRule (Int, ScheduleChange) where
             Weaken -> M.fromList $
                 assert m "" $
                     zforall ind ztrue $ sch0 `zimplies` sch1
-            ReplaceFineSch old _ new prog -> 
+            ReplaceFineSch old _ new (_,prog) -> 
                 let LeadsTo vs p0 q0 = prog
                 in
                   M.fromList (

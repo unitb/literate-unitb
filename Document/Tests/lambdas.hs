@@ -710,7 +710,7 @@ path9 = "tests/cubes-t8.tex"
      
 path10 = "tests/cubes-t9.tex"
 
-result10 = "Left [(\"A cycle exists in the proof of liveness: prog0,prog1,prog2,prog3\",0,0)]"
+result10 = "Left [(\"A cycle exists in the proof of liveness: prog0, prog1, prog2, prog3\",0,0)]"
 
 verify path = do
     r <- parse_machine path

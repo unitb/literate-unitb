@@ -14,7 +14,7 @@ test = test_cases
             ] 
 
 path0 = "tests/phases-t0.tex"
-result0 = Left [("A cycle exists in the refinement structure: m0,m1",0,0)]
+result0 = Left [("A cycle exists in the refinement structure: m0, m1",0,0)]
 
 path1 = "tests/phases-t1.tex"
 case1 = do

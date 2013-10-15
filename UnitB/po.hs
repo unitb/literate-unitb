@@ -217,7 +217,7 @@ prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) =
                     (znot $ primed (variables m) xp) )
         xps = case (lt_fine, snd schedules) of
                 (Just lbl, Just (_,fsch)) ->
-                    let (LeadsTo vs p q) = progress (props m) ! lbl in
+                    let (LeadsTo vs p q) = (progress (props m) `M.union` progress (inh_props m)) ! lbl in
                         [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall sch0 `zimplies` p)
                         , ([label "EN/leadsto/rhs"],zforall vs ztrue $ q `zimplies` fsch) 
                         ]

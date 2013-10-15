@@ -84,7 +84,8 @@
 |  |  +- verify machine m0
 |  |  +- verify machine m1
 |  |  +- verify machine m2
-|  |  +- [ Success: 3 / 3 ]
+|  |  +- cyclic proof of liveness through 3 refinements
+|  |  +- [ Success: 4 / 4 ]
 |  +- the parser is exception free
 |  +- [ Success: 8 / 8 ]
 +- Unit-B
@@ -139,9 +140,9 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   10996 total
+   11024 total
     1387 Document/Tests/trainstation.hs
-     791 Document/machine.hs
+     801 Document/machine.hs
      721 Document/Tests/lambdas.hs
      617 UnitB/ast.hs
      544 UnitB/po.hs

@@ -2,13 +2,17 @@ module Document.Tests.TrainStationRefinement
     ( test, test_case )
 where
 
+    -- Modules
 import Document.Machine
 
 import UnitB.PO
 
+    -- Libraries
 import Tests.UnitTest
 
 import Data.String.Utils
+
+import Utilities.Format (format)
 
 test_case = Case "train station example, with refinement" test True
 
@@ -16,6 +20,7 @@ test = test_cases
             [ Case "verify machine m0" (verify 0) result0
             , Case "verify machine m1" (verify 1) result1
             , Case "verify machine m2" (verify 2) result2
+            , StringCase "cyclic proof of liveness through 3 refinements" (parse path3) result3
             ]
 
 result0 = unlines
@@ -81,10 +86,10 @@ result1 = unlines
      , "  o  m1/m1:moveout/TR/m1:tr0"
      , "  o  m1/m1:prog0/REF/disjunction/lhs"
      , "  o  m1/m1:prog0/REF/disjunction/rhs"
-     , "  o  m1/prog1/REF/transitivity"
-     , "  o  m1/prog2/REF/implication"
-     , "  o  m1/prog3/REF/discharge"
-     , "  o  m1/prog4/REF/discharge"
+     , "  o  m1/m1:prog1/REF/transitivity"
+     , "  o  m1/m1:prog2/REF/implication"
+     , "  o  m1/m1:prog3/REF/discharge"
+     , "  o  m1/m1:prog4/REF/discharge"
      , "passed 54 / 54"
      ]
 
@@ -167,11 +172,23 @@ result2 = unlines
     , "  o  m2/m2:prog5/REF/disjunction/lhs"
     , "  o  m2/m2:prog5/REF/disjunction/rhs"
     , "  o  m2/m2:prog6/REF/discharge"
-    , " xxx m2/m2:prog8/REF/add"
-  	, "passed 78 / 79"
+  	, "passed 78 / 78"
 	]
 
 path0 = "Tests/train-station-ref.tex"
+
+path3 = "Tests/train-station-ref-err0.tex"
+
+result3 = concat 
+    [ "error (0,0): A cycle exists in the proof of liveness: "
+    , "evt/SCH/0, evt/SCH/1, p0, tr0\n"
+    ]
+
+parse path = do
+    r <- parse_machine path
+    return $ case r of
+        Right _ -> "ok"
+        Left xs -> unlines $ map (\(x,i,j) -> format "error ({0},{1}): {2}" i j x) xs
 
 verify n = do
     r <- parse_machine path0

@@ -177,33 +177,33 @@ Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 
 \begin{align*}
 & { t \in in }\3\mapsto{ t \in in \land loc.t = ext }
-\refine{m1:prog0}{disjunction}{prog1,prog2,prog3}{}
-& \progress{prog2}
+\refine{m1:prog0}{disjunction}{m1:prog1,m1:prog2,m1:prog3}{}
+& \progress{m1:prog2}
 	{ t \in in \land loc.t = ext }{ t \in in \land loc.t = ext }
-\\ & \progress{prog1}
+\\ & \progress{m1:prog1}
 	{ t \in in \land loc.t = ent }{ t \in in \land loc.t = ext }
-\\ & \progress{prog3}
+\\ & \progress{m1:prog3}
 	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
 \end{align*} 
 %
-\hide{ \refine{prog2}{implication}{}{} } %
+\hide{ \refine{m1:prog2}{implication}{}{} } %
 %
-\eqref{prog2} is true by implication. This leaves us \eqref{prog1} and \eqref{prog3}. \eqref{prog1} says that a train at the entrance reaches the exit. However, \eqref{saf1} says that a train can only leave the entrance through a platform:
+\eqref{m1:prog2} is true by implication. This leaves us \eqref{m1:prog1} and \eqref{m1:prog3}. \eqref{m1:prog1} says that a train at the entrance reaches the exit. However, \eqref{saf1} says that a train can only leave the entrance through a platform:
 
 \begin{align*}
-	& { t \in in \land loc.t = ent }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{prog1}}
-\refine{prog1}{transitivity}{prog4,prog3}{}
-& \progress{prog4}
+	& { t \in in \land loc.t = ent }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{m1:prog1}}
+\refine{m1:prog1}{transitivity}{m1:prog4,m1:prog3}{}
+& \progress{m1:prog4}
 	{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in plf } 
-\\ & { t \in in \land loc.t \in plf }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{prog3}}
+\\ & { t \in in \land loc.t \in plf }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{m1:prog3}}
 \end{align*}
 
-We introduce new events to satisfy \eqref{prog3} and \eqref{prog4}
+We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 \newevent{m1:movein}{move\_in} 
 \newevent{m1:moveout}{move\_out} 
 \hide{
-	\refine{prog3}{discharge}{m1:tr0,saf2}{}
-	\refine{prog4}{discharge}{m1:tr1,saf1}{}
+	\refine{m1:prog3}{discharge}{m1:tr0,saf2}{}
+	\refine{m1:prog4}{discharge}{m1:tr1,saf1}{}
 }
 \begin{align*}
 & \transientB{m1:movein}{0}{m1:tr1}{ \index{t}{t} }
@@ -402,16 +402,12 @@ We implement \eqref{m2:prog3} with the following:
 	}
 
 \begin{align*}
-	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog8} \index{t}{t} }
+	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
 		{ b \in plf \land t \in in \land loc.t = b }
 \\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
 \end{align*}
 
-In order to prove \ref{m1:moveout}, we need a need progress property:
-
-\begin{align*}
-	\progress{m2:prog8}{ \true }{ \qforall{t}{t \in in}{\neg loc.t = ext}  }
-\end{align*}
+In order to prove \ref{m1:moveout}, we need a need progress property, to make sure that the fine schedule becomes true infinitely often. We can use the same that we used to introduce the fine schedule \eqref{m2:prog1}.
 
 \input{../m2_m0-enter}
 
