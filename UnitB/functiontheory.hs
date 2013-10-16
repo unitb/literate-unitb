@@ -131,7 +131,9 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
 --        axm8 = fromJust $ mzforall [s2_decl] 
 --            ( as_fun (Right zempty_fun) `zelem` ztfun (as_dom $ Right zempty_set) s2 )
             -- dom and overload
-        axm0 = fromJust $ mzforall [f1_decl,f2_decl] mztrue ((zdom f1 `zunion` zdom f2) `mzeq` (zdom (f1 `zovl` f2)))
+        axm0 = fromJust $ mzforall [f1_decl,f2_decl] mztrue (
+                           (zdom f1 `zunion` zdom f2) 
+                    `mzeq` (zdom (f1 `zovl` f2)))
             -- dom and tfun
             -- dom-rest and tfun
             -- dom-subst and tfun
@@ -162,9 +164,9 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- apply
         axm16 = fromJust $ mzforall [x_decl,f1_decl,f2_decl] mztrue 
                 (      zrep_select (zovl f1 f2) x
-                `mzeq` zite (mzeq (zrep_select f1 x) znothing)
-                            (zrep_select f2 x)
-                            (zrep_select f1 x) )
+                `mzeq` zite (mzeq (zrep_select f2 x) znothing)
+                            (zrep_select f1 x)
+                            (zrep_select f2 x) )
             -- domain
         axm17 = fromJust $ mzforall [x_decl,f1_decl] mztrue 
                 (      zset_select (zdom f1) x

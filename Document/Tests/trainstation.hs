@@ -457,7 +457,7 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
         , "(forall ((x {0}))"
             ++    " (=> true"
             ++        " (= (select empty-fun@{1}@{3} x)"
-            ++           " Nothing)))"
+            ++           " (as Nothing (Maybe {2})))))"
 --            -- mk-fun
 --        axm15 = fromJust $ mzforall [x_decl,x2_decl,y_decl] mztrue 
 --                (      zrep_select (zmk_fun x y) x2
@@ -467,7 +467,7 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++        " (= (select (mk-fun@{1}@{3} x y) x2)"
             ++           " (ite (= x x2)"
             ++                " (Just y)"
-            ++                " Nothing))))"
+            ++                " (as Nothing (Maybe {2}))))))"
 --            -- apply
 --        axm16 = fromJust $ mzforall [x_decl,f1_decl,f2_decl] mztrue 
 --                (      zrep_select (zovl f1 f2) x
@@ -477,16 +477,16 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
         , "(forall ((x {0}) (f1 (pfun {0} {2})) (f2 (pfun {0} {2})))"
             ++    " (=> true"
             ++        " (= (select (ovl@{1}@{3} f1 f2) x)"
-            ++           " (ite (= (select f1 x) Nothing)"
-            ++                " (select f2 x)"
-            ++                " (select f1 x)))))"
+            ++           " (ite (= (select f2 x) (as Nothing (Maybe {2})))"
+            ++                " (select f1 x)"
+            ++                " (select f2 x)))))"
 --        axm17 = fromJust $ mzforall [x_decl,f1_decl] mztrue 
 --                (      zset_select (zdom f1) x
 --                `mzeq` mznot (zrep_select f1 x `mzeq` znothing))
         , "(forall ((x {0}) (f1 (pfun {0} {2})))"
             ++    " (=> true"
             ++        " (= (select (dom@{1}@{3} f1) x)"
-            ++           " (not (= (select f1 x) Nothing)))))"
+            ++           " (not (= (select f1 x) (as Nothing (Maybe {2})))))))"
 --        axm18 = fromJust $ mzforall [y_decl,f1_decl] mztrue 
 --                (      zelem y (zset f1)
 --                `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
