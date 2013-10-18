@@ -15,6 +15,7 @@ module Z3.Z3
     , Tree ( .. )
     , Symbol ( .. )
     , Command ( .. )
+    , smoke_test
     )
 where
 
@@ -36,7 +37,7 @@ import 		qualified
 	   Data.Map as M
 import Data.Typeable 
 import System.Exit
-import System.IO
+--import System.IO
 import System.Process
 
 import Utilities.Format
@@ -51,8 +52,9 @@ instance Tree Command where
     as_tree (CheckSat _)  = List [Str "check-sat-using", 
                                     List ( Str "or-else" 
                                          : map strat
-                                         [ Str "qe" 
-                                         , Str "simplify"
+                                         [ Str "simplify"
+                                         , Str "qe"
+                                         , Str "der" 
                                          , Str "skip"
                                          , List 
                                              [ Str "using-params"
@@ -60,23 +62,24 @@ instance Tree Command where
                                              , Str ":expand-power"
                                              , Str "true"] ] ) ]
         where
-            strat t = List [Str "then", t, Str "smt"]
+            strat t = List [Str "try-for", List [Str "then", t, Str "smt"], Str "400"]
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        let c = (shell (z3_path ++ " -smt2 -in -T:2")) { 
-            std_out = CreatePipe,
-            std_in = CreatePipe,
-            std_err = CreatePipe } 
-        (Just stdin,Just stdout,Just stderr,ph) <- createProcess c
-        hPutStr stdin xs
-        b <- hIsOpen stdin 
-        out <- hGetContents stdout
-        err <- hGetContents stderr
-        hClose stdin
-        st <- waitForProcess ph
+        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2.5"] xs
+--        let c = (shell (z3_path ++ " -smt2 -in -T:2.5")) { 
+--            std_out = CreatePipe,
+--            std_in = CreatePipe,
+--            std_err = CreatePipe } 
+--        (Just stdin,Just stdout,Just stderr,ph) <- createProcess c
+--        hPutStr stdin xs
+----        b <- hIsOpen stdin 
+--        out <- hGetContents stdout
+--        err <- hGetContents stderr
+--        hClose stdin
+--        st <- waitForProcess ph
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
@@ -86,7 +89,7 @@ data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
 instance Show ProofObligation where
-    show (ProofObligation (Context ss vs fs ds dum) as _ g) =
+    show (ProofObligation (Context ss vs fs ds _) as _ g) =
             unlines (
                    map (" " ++)
                 (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
@@ -96,29 +99,29 @@ instance Show ProofObligation where
                 ++ map show as)
                 ++ ["|----"," " ++ show g] )
         where
-            f (x, IntSort) = ""
-            f (x, BoolSort) = ""
-            f (x, RealSort) = ""
+            f (_, IntSort) = ""
+            f (_, BoolSort) = ""
+            f (_, RealSort) = ""
             f (x, DefSort y z xs _) = f (x, Sort y z $ length xs)
-            f (x, Sort y z 0) = z
-            f (x, Sort y z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
+            f (_, Sort _ z 0) = z
+            f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
 free_vars :: Context -> Expr -> Map String Var
 free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
     where
-        f xs (Word v@(Var n t))
+        f xs (Word v@(Var n _))
             | n `member` dum = (n,v):xs
             | otherwise      = xs
-        f xs v@(Binder _ vs r t) = toList (fromList (visit f xs v) M.\\ symbol_table vs)
+        f xs v@(Binder _ vs _ _) = toList (fromList (visit f xs v) M.\\ symbol_table vs)
         f xs v = visit f xs v
 
 var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 
     M.lookup s m <|> M.lookup s d
 
-from_decl (FunDecl xs n ps r)  = Left (Fun xs n ps r)
-from_decl (ConstDecl n t)      = Right (Var n t)
-from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
+--from_decl (FunDecl xs n ps r)  = Left (Fun xs n ps r)
+--from_decl (ConstDecl n t)      = Right (Var n t)
+--from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
 
 z3_code po = 
     (      map Decl
@@ -139,6 +142,10 @@ z3_code po =
 --        !() = unsafePerformIO (p
         (ProofObligation d assume exist assert) = delambdify po
 
+smoke_test :: ProofObligation -> IO Validity
+smoke_test (ProofObligation a b c _) =
+    discharge $ ProofObligation a b c zfalse
+
 discharge :: ProofObligation -> IO Validity
 discharge po = do
     let code = z3_code po
@@ -148,7 +155,7 @@ discharge po = do
         Right Sat -> Invalid
         Right Unsat -> Valid
         Right SatUnknown -> ValUnknown
-        Left x -> Invalid)
+        Left _ -> Invalid)
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
@@ -169,18 +176,18 @@ verify xs = do
         else do
             return $ Left out
         return r
-    where
-        err_msg code out err = 
-            unlines (
-                    (map (\(i,x) -> show i ++ " -\t" ++ x) $ zip [1..] $ lines code) 
-                ++  ["output"]
-                ++  (map ("> " ++) $ lines out)
-                ++  ["err"]
-                ++  (map ("> " ++) $  lines err) )
+--    where
+--        err_msg code out err = 
+--            unlines (
+--                    (map (\(i,x) -> show i ++ " -\t" ++ x) $ zip [1..] $ lines code) 
+--                ++  ["output"]
+--                ++  (map ("> " ++) $ lines out)
+--                ++  ["err"]
+--                ++  (map ("> " ++) $  lines err) )
 
 
 entailment  
-    (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 ex0 xp0) 
+    (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 _ xp0) 
     (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
             (po0,po1)
     where

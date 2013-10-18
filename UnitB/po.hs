@@ -3,7 +3,8 @@ module UnitB.PO
     ( proof_obligation, step_ctx, evt_live_ctx
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
-    , check, verify_changes, verify_machine )
+    , check, verify_changes, verify_machine
+    , smoke_test_machine )
 where
 
     -- Modules
@@ -529,6 +530,18 @@ str_verify_machine m =
                 xs <- verify_all pos
                 format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)
+    where
+        f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+
+smoke_test_machine :: Machine -> IO (String)
+smoke_test_machine m =
+        case proof_obligation m of 
+            Right pos -> do
+                rs <- flip filterM (M.toList pos) $ \(_,po) -> do
+                    r <- smoke_test po
+                    return $ r == Valid
+                return $ unlines $ map (show . fst) rs
+            Left msgs -> return (unlines $ map f msgs)
     where
         f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 

@@ -109,13 +109,13 @@
 
 \subsection{New requirements}
 \begin{align*}
-\safety{saf0}
+\safety{m1:saf0}
 	{ \neg t \in in& }{ t \in in \land loc.t = ent }
-\\ \safety{saf1}
+\\ \safety{m1:saf1}
 	{ t \in in \land loc.t = ent& }{ t \in in \land loc.t \in plf }
-\\ \safety{saf2}
+\\ \safety{m1:saf2}
 	{ t \in in \land loc.t \in plf& }{ t \in in \land loc.t = ext }
-\\ \safety{saf3}
+\\ \safety{m1:saf3}
 	{ t \in in \land loc.t = ext& }{ \neg t \in in }
 \end{align*}
 
@@ -132,16 +132,18 @@
 	{ loc \, &= \emptyfun }
 \end{align*}
 
-\subsubsection{Safety \ref{saf1}, \ref{saf2}}
+\subsubsection{Safety \ref{m1:saf1}, \ref{m1:saf2}}
 
-This takes care of \eqref{saf2}:
+This takes care of \eqref{m1:saf2}:
 
 \begin{align*}
 \evguard{m0:leave}{lv:grd1}
 	{ loc.t = ext }
+\\ \evguard{m0:enter}{ent:grd1}
+	{ \neg t \in in }
 \end{align*}
 
-This takes care of \eqref{saf1}
+This takes care of \eqref{m1:saf1}
 
 \begin{align*}
 \evguard{m0:leave}{lv:grd0}
@@ -152,8 +154,8 @@ This takes care of \eqref{saf1}
 
 \subsubsection{Side conditions}
 
-In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{saf3} in order to prove refinement.
-\replace{m0:leave}{1}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{saf3}
+In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
+\replace{m0:leave}{1}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
 
 \begin{align*}
 \cschedule{m0:leave}{lv:c1}
@@ -188,7 +190,7 @@ Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 %
 \hide{ \refine{m1:prog2}{implication}{}{} } %
 %
-\eqref{m1:prog2} is true by implication. This leaves us \eqref{m1:prog1} and \eqref{m1:prog3}. \eqref{m1:prog1} says that a train at the entrance reaches the exit. However, \eqref{saf1} says that a train can only leave the entrance through a platform:
+\eqref{m1:prog2} is true by implication. This leaves us \eqref{m1:prog1} and \eqref{m1:prog3}. \eqref{m1:prog1} says that a train at the entrance reaches the exit. However, \eqref{m1:saf1} says that a train can only leave the entrance through a platform:
 
 \begin{align*}
 	& { t \in in \land loc.t = ent }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{m1:prog1}}
@@ -201,11 +203,11 @@ Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
 We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 \newevent{m1:movein}{move\_in} 
 \newevent{m1:moveout}{move\_out} 
-\hide{
-	\refine{m1:prog3}{discharge}{m1:tr0,saf2}{}
-	\refine{m1:prog4}{discharge}{m1:tr1,saf1}{}
+\hide{ 
+	\refine{m1:prog3}{discharge}{m1:tr0,m1:saf2}{}
+	\refine{m1:prog4}{discharge}{m1:tr1,m1:saf1}{}
 }
-\begin{align*}
+\begin{align*} 
 & \transientB{m1:movein}{0}{m1:tr1}{ \index{t}{t} }
 	{ t \in in \1\land loc.t = ent }
 \\ & \transient{m1:moveout}{0}{m1:tr0}
@@ -230,6 +232,7 @@ We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 	{ \qexists{b}{}{b \in plf} }
 \\ \cschedule{m1:moveout}{c1}{ t \in in \land loc.t \in plf }
 \\ \evguard{m1:moveout}{mo:g1}{ t \in in }
+\\ \evguard{m1:moveout}{mo:g2}{ loc.t \in plf }
 \end{align*}
 
 We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
@@ -243,12 +246,14 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
 \begin{align*}
 \evassignment{m1:movein}{mi:a2}
-	{ loc' = loc \1| t \tfun b }
+	{ loc' &= loc \1| t \tfun b }
 \\ \assumption{asm3}
 	{ \neg ent &\in plf }
 \\ \cschedule{m1:movein}{mi:c1}{ t &\in in } 
 \\ \cschedule{m1:movein}{mi:c2}{ loc.t &= ent }
 \\ \evguard{m1:movein}{mi:g1}{ t &\in in }
+\\ \evguard{m1:movein}{mi:grd0}
+	{ loc.t &= ent } % m1:saf3
 \end{align*}
 %
 \end{machine}
@@ -279,16 +284,16 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
 The above property, \eqref{m2:saf0}, should not discharge automatically.
 
-\begin{align*}
+\begin{align*} 
 \evguard{m1:movein}{mi:g0}
 	{	 \qforall{t}{t \in in}{ \neg loc.t = b} 	}
 \\ \cschedule{m1:movein}{mi:c0}
 	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
-\\ \evguard{m1:movein}{mi:g3}
-	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
+%\\ \evguard{m1:movein}{mi:g3}
+%	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
 \\ \evguard{m0:enter}{et:g1}
 	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
-\\ \evguard{m1:moveout}{mo:g2}
+\\ \evguard{m1:moveout}{mo:g3}
 	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
 \end{align*}
 %
@@ -409,6 +414,10 @@ We implement \eqref{m2:prog3} with the following:
 
 In order to prove \ref{m1:moveout}, we need a need progress property, to make sure that the fine schedule becomes true infinitely often. We can use the same that we used to introduce the fine schedule \eqref{m2:prog1}.
 
+\subsection{Summary of the events} 
+
+Here are the events
+
 \input{../m2_m0-enter}
 
 \input{../m2_m1-movein}
@@ -416,6 +425,33 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 \input{../m2_m1-moveout}
 
 \input{../m2_m0-leave}
+
+\end{machine}
+
+\section{Third refinement}
+
+\begin{machine}{m3}
+
+\refines{m2}
+
+\[	\variable{isgn: \Bool} ; ~
+	\variable{osgn: \Blk \pfun \Bool} 
+\]
+
+\begin{use:set}{\Bool} \end{use:set}
+\begin{use:set}{\Blk} \end{use:set}
+\begin{use:fun}{\Blk}{\Bool} \end{use:fun}
+
+
+\begin{align*}
+	\dummy{ b_0, b_1 : \Blk }
+\\	\invariant{m3:inv0}{ \dom.osgn = plf }
+\\	\invariant{m3:inv1}{ \qforall{b_0,b_1}{ b_0 \in plf \land b_1 \in plf }{ \true } }
+%\\	\evassignment{m0:enter}{m3:ent:act0}{isgn' = isgn}
+%\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' = osgn}
+\\	\evassignment{m1:movein}{m3:mi:act0}{isgn' = isgn}
+\\	\evassignment{m1:movein}{m3:mi:act1}{osgn' = osgn}
+\end{align*}
 
 \end{machine}
 

@@ -268,6 +268,16 @@ leave_evt = empty_event
 (in_var, in_var', in_decl) = prog_var "in" (set_type train_type)
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
     
+check_sat = [ format ("(check-sat-using (or-else"
+                        ++ " (try-for (then simplify smt) {0})"
+                        ++ " (try-for (then qe smt) {0})"
+                        ++ " (try-for (then der smt) {0})"
+                        ++ " (try-for (then skip smt) {0})"
+                        ++ " (try-for (then (using-params simplify :expand-power true) smt) {0})))") 
+              400
+            ]
+
+
 train_decl b = 
         [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
         , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
@@ -662,12 +672,7 @@ result2 = unlines (
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((in (set TRAIN))) (and true" ++ 
             " (= in empty-set@@TRAIN)))))"
-     ,  "(check-sat-using (or-else " ++
-         "(then qe smt) " ++
-         "(then simplify smt) " ++
-         "(then skip smt) " ++
-         "(then (using-params simplify :expand-power true) smt)))"
-     ] )
+     ] ++ check_sat)
 
 case2 = do
         pos <- list_file_obligations path0
@@ -697,12 +702,7 @@ result20 = unlines (
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((loc (pfun TRAIN BLK))) (and true" ++ 
             " (= loc empty-fun@@TRAIN@@BLK)))))"
-     ,  "(check-sat-using (or-else " ++
-         "(then qe smt) " ++
-         "(then simplify smt) " ++
-         "(then skip smt) " ++
-         "(then (using-params simplify :expand-power true) smt)))"
-     ] )
+     ] ++ check_sat )
 
 case20 = do
         pos <- list_file_obligations path0
@@ -737,12 +737,7 @@ result3 = unlines (
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
      ,  "(assert (not (exists ((in@prime (set TRAIN))) (and true"
             ++              " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))))))"
-     ,  "(check-sat-using (or-else " ++
-         "(then qe smt) " ++
-         "(then simplify smt) " ++
-         "(then skip smt) " ++
-         "(then (using-params simplify :expand-power true) smt)))"
-     ] )
+     ] ++ check_sat)
 
 case3 = do
         pos <- list_file_obligations path0
@@ -777,12 +772,7 @@ result19 = unlines (
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
      ,  "(assert (not (exists ((loc@prime (pfun TRAIN BLK))) (and true"
             ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))"
-     ,  "(check-sat-using (or-else " ++
-         "(then qe smt) " ++
-         "(then simplify smt) " ++
-         "(then skip smt) " ++
-         "(then (using-params simplify :expand-power true) smt)))"
-     ] )
+     ] ++ check_sat )
 
 case19 = do
         pos <- list_file_obligations path0
@@ -816,12 +806,7 @@ result4 = unlines (
         , "(assert (= (dom@@TRAIN@@BLK loc) in))"
         , "(assert (elem@@TRAIN t in))"
         , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in))))"
-        , "(check-sat-using (or-else " ++
-            "(then qe smt) " ++
-            "(then simplify smt) " ++
-            "(then skip smt) " ++
-            "(then (using-params simplify :expand-power true) smt)))"
-        ] )
+        ] ++ check_sat )
 
 case4 = do
         pos <- list_file_obligations path0
@@ -863,12 +848,7 @@ result5 = unlines (
                 ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
                 ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc)))"
                 ++          " (not (elem@@TRAIN t in@prime))))))))"
-        ,  "(check-sat-using (or-else"
-                        ++ " (then qe smt)"
-                        ++ " (then simplify smt)"
-                        ++ " (then skip smt)"
-                        ++ " (then (using-params simplify :expand-power true) smt)))"
-        ] )
+        ] ++ check_sat  )
 
 case5 = do
         pos <- list_file_obligations path0
@@ -932,11 +912,7 @@ result12 = unlines (
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
         ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
-        ,  "(check-sat-using (or-else"
-                ++  " (then qe smt)"
-                ++  " (then simplify smt)"
-                ++  " (then skip smt) (then (using-params simplify :expand-power true) smt)))"
-        ] )
+        ] ++ check_sat )
 
 case12 = do
 --        pos <- list_file_obligations path0

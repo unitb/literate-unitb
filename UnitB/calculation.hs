@@ -7,9 +7,6 @@ import UnitB.Operator
 import UnitB.Label
 
     -- Libraries
-import Control.Monad
-
-import Data.List (intercalate)
 import Data.Map (Map)
 
 import Utilities.Syntactic
@@ -50,17 +47,17 @@ instance Syntactic Proof where
     line_info (FreeGoal _ _ _ li)   = li
 
 
-infer_goal (Calc _ _ s0 xs (i,j)) = 
+infer_goal (Calc _ _ s0 xs _) = 
         case reverse $ map f xs of
-            x:xs -> either 
+            x:_ -> either 
                         (\x -> Left (x)) --,i,j)) 
                         Right 
                         (s0 `op` x)
             []   -> Left ("a calculation must include at least one reasoning step") --,i,j)
     where
         op = mk_expr $ foldl chain Equal $ map g xs
-        f (x,y,z,_) = y
-        g (x,y,z,_) = x
+        f (_,y,_,_) = y
+        g (x,_,_,_) = x
 
 show_proof (Calc _ g fs ss _) = 
         unlines ( [

@@ -311,7 +311,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 		\qset{i}{0 \le i \land i < n' }{ i }
 	\hint{=}{ \ref{a0} }
 		\qset{i}{0 \le i \land i < n+1 }{ i }
-	\hint{=}{ split range }
+	\hint{=}{ split range \ref{inv4} }
 		\qset{i}{0 \le i \land i < n }{ i } \bunion \qset{i}{ 0 \le i \land i = n}{ i }
 	\hint{=}{ \ref{inv6} }
 		\dom.f \bunion \qset{i}{ 0 \le i \land i = n}{ i }
