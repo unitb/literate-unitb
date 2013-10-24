@@ -10,8 +10,6 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
-
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
 
@@ -19,7 +17,7 @@ import Data.Map as M hiding ( foldl )
 
 import Utilities.Format
 
-set_sort = DefSort "\\set" "set" ["a"] (ARRAY (GENERIC "a") BOOL)
+set_sort = DefSort "\\set" "set" ["a"] (ARRAY (GENERIC "a") bool)
 set_type t = USER_DEFINED set_sort [t]
 
 set_theory :: Type -> Theory 
@@ -31,7 +29,7 @@ set_theory t = Theory [] types funs empty facts empty
             symbol_table [
                 Fun [] (dec "intersect") [set_type,set_type] set_type,
                 Fun [] (dec "empty-set") [] set_type,
-                Fun [] (dec "elem") [t,set_type] BOOL,
+                Fun [] (dec "elem") [t,set_type] bool,
                 Fun [] (dec "set-diff") [set_type,set_type] set_type,
                 Fun [] (dec "mk-set") [t] set_type ]
         facts = fromList 
@@ -70,11 +68,11 @@ set_theory t = Theory [] types funs empty facts empty
         dec x  = x ++ z3_decoration t
         dec' x = z3_decoration t ++ x
 
-zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] BOOL)
+zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] bool)
 
 zempty_set   = Const [gA] "empty-set" $ set_type gA
 
-zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] BOOL)
+zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] bool)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 zintersect   = typ_fun2 (Fun [gA] "intersect" [set_type gA,set_type gA] $ set_type gA)
 

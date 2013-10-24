@@ -9,9 +9,6 @@ import Z3.Def
     -- Libraries
 import Control.Monad
 
-import Data.List as L ( tails, map )
-import Data.Map hiding (foldl)
-
 import Utilities.Format
 
 fun1 f x           = FunApp f [x]
@@ -51,28 +48,28 @@ maybe3 f mx my mz = do
         z <- mz :: Either String Expr
         return $ f x y z
 
-znot         = fun1 $ Fun [] "not" [BOOL] BOOL
+znot         = fun1 $ Fun [] "not" [bool] bool
 zimplies x y
     | x == ztrue  = y
     | y == ztrue  = ztrue
     | x == zfalse = ztrue
     | y == zfalse = znot x 
-    | otherwise   = fun2 (Fun [] "=>"  [BOOL,BOOL] BOOL) x y
+    | otherwise   = fun2 (Fun [] "=>"  [bool,bool] bool) x y
 zand x y     = zall [x,y]
 zor x y      = zsome [x,y]
-zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
-mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] BOOL
-zfollows     = fun2 $ Fun [] "follows" [BOOL,BOOL] BOOL
-ztrue        = Const [] "true"  BOOL
-zfalse       = Const [] "false" BOOL
+zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] bool
+mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] bool
+zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool
+ztrue        = Const [] "true"  bool
+zfalse       = Const [] "false" bool
 zall xs      = 
         case concatMap f xs of
             []  -> ztrue
             [x] -> x
-            xs  -> FunApp (Fun [] "and" (take n $ repeat BOOL) BOOL) xs
+            xs  -> FunApp (Fun [] "and" (take n $ repeat bool) bool) xs
     where
         n = length xs
-        f (FunApp (Fun [] "and" _ BOOL) xs) = concatMap f xs
+        f (FunApp (Fun [] "and" _ _) xs) = concatMap f xs
         f x
             | x == ztrue = []
             | otherwise   = [x]
@@ -80,11 +77,10 @@ zsome xs      =
         case concatMap f xs of
             []  -> ztrue
             [x] -> x
-            xs  -> FunApp (Fun [] "or" (take n $ repeat BOOL) BOOL) xs
-
+            xs  -> FunApp (Fun [] "or" (take n $ repeat bool) bool) xs
     where
         n = length xs
-        f (FunApp (Fun [] "or" _ BOOL) xs) = concatMap f xs
+        f (FunApp (Fun [] "or" _ _) xs) = concatMap f xs
         f x
             | x == zfalse = []
             | otherwise   = [x]
@@ -100,7 +96,7 @@ zexists vs x w@(Binder Exists us y z)
 zexists vs x w   = Binder Exists vs x w
 
 
-zite       = typ_fun3 (Fun [] "ite" [BOOL,gA,gA] gA)
+zite       = typ_fun3 (Fun [] "ite" [bool,gA,gA] gA)
 
 zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
 znothing   = Right (Const [] "Nothing" $ maybe_type gA)
@@ -123,18 +119,18 @@ mzsome xs     = do
         xs <- forM xs id
         return $ zsome xs
 mzforall xs mx my = do
-        x <- zcast BOOL mx
-        y <- zcast BOOL my
+        x <- zcast bool mx
+        y <- zcast bool my
         return $ zforall xs x y
 mzexists xs mx my = do
-        x <- zcast BOOL mx
-        y <- zcast BOOL my
+        x <- zcast bool mx
+        y <- zcast bool my
         return $ zexists xs x y
 
-zless        = fun2 $ Fun [] "<" [int,int] BOOL
-zgreater     = fun2 $ Fun [] ">" [int,int] BOOL
-zle          = fun2 $ Fun [] "<=" [int,int] BOOL
-zge          = fun2 $ Fun [] ">=" [int,int] BOOL
+zless        = fun2 $ Fun [] "<" [int,int] bool
+zgreater     = fun2 $ Fun [] ">" [int,int] bool
+zle          = fun2 $ Fun [] "<=" [int,int] bool
+zge          = fun2 $ Fun [] ">=" [int,int] bool
 zplus        = fun2 $ Fun [] "+" [int,int] int
 zminus       = fun2 $ Fun [] "-" [int,int] int
 zopp         = fun1 $ Fun [] "-" [int] int
@@ -145,11 +141,10 @@ zint n       = Const [] (show n) int
 
 int  = USER_DEFINED IntSort []
 real = USER_DEFINED RealSort []
+bool = USER_DEFINED BoolSort []
 
-mzless        = typ_fun2 $ Fun [] "<" [int,int] BOOL
---mzgreater     = typ_fun2 $ Fun [] ">" [int,int] BOOL
-mzle          = typ_fun2 $ Fun [] "<=" [int,int] BOOL
---mzge          = typ_fun2 $ Fun [] ">=" [int,int] BOOL
+mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
+mzle          = typ_fun2 $ Fun [] "<=" [int,int] bool
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp         = typ_fun1 $ Fun [] "-" [int] int

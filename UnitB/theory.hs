@@ -3,7 +3,6 @@ module UnitB.Theory where
 import UnitB.Label
 
 import Z3.Def
-import Z3.Const
 
     -- Libraries
 import Data.Map hiding ( map )

@@ -37,8 +37,6 @@ import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
-import System.IO.Unsafe
-
 import Utilities.Format
 import Utilities.Syntactic
 

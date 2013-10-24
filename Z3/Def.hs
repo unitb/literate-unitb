@@ -23,8 +23,8 @@ data Quantifier = Forall | Exists | Lambda
 
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t
-type_of (FunApp (Fun _ _ ts t) _) = t
-type_of (Binder Lambda vs _ e)    = fun_type (type_of tuple) $ type_of e
+type_of (FunApp (Fun _ _ _ t) _) = t
+type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
     where
         tuple = ztuple $ map Word vs
 type_of (Binder _ _ _ e)          = type_of e
@@ -69,8 +69,7 @@ merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
 
 data Type = 
-        BOOL -- | INT | REAL | SET Type
-        | ARRAY Type Type 
+        ARRAY Type Type 
         | GENERIC String 
         | USER_DEFINED Sort [Type]
     deriving (Eq, Ord, Typeable, Generic)
@@ -87,26 +86,22 @@ data ProofObligation = ProofObligation Context [Expr] Bool Expr
     deriving (Eq, Generic)
 
 instance Show Type where
-    show BOOL                = "BOOL"
---    show INT                 = "INT"
---    show REAL                = "REAL"
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
---    show (SET t) = format "SET {0}" t
 
 data StrList = List [StrList] | Str String
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
-fold_mapM f s [] = return (s,[])
+fold_mapM _ s [] = return (s,[])
 fold_mapM f s0 (x:xs) = do
         (s1,y)  <- f s0 x
         (s2,ys) <- fold_mapM f s1 xs
         return (s2,y:ys)
 
 fold_map :: (a -> b -> (a,c)) -> a -> [b] -> (a,[c])
-fold_map f s [] = (s,[])
+fold_map _ s [] = (s,[])
 fold_map f s0 (x:xs) = (s2,y:ys)
     where
         (s1,y)  = f s0 x
@@ -146,38 +141,16 @@ rewriteM f t = do
             return ((),y)
 
 instance Tree Type where
-    as_tree BOOL = Str "Bool"
---    as_tree INT  = Str "Int"
---    as_tree REAL = Str "Real"
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
     as_tree (GENERIC x) = Str x
---    as_tree (SET t) = List [Str "Array", as_tree t, Str "Bool"]
     as_tree (USER_DEFINED s []) = Str $ z3_name s
     as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
---    rewrite' f s x@BOOL = (s,x)
---    rewrite' f s x@INT  = (s,x)
---    rewrite' f s x@REAL = (s,x)
---    rewrite' f s0 x@(ARRAY t0 t1) = (s2,ARRAY t2 t3)
---        where
---            (s1,t2) = f s0 t0
---            (s2,t3) = f s1 t1
---    rewrite' f s x@(GENERIC _) = (s,x)
---    rewrite' f s x@(SET t) = (fst $ f s t, SET $ snd $ f s t)
---    rewrite' f s0 x@(USER_DEFINED s xs) = (s1, USER_DEFINED s ys)
---        where
---            (s1,ys) = fold_map f s0 xs
-    rewriteM' f s x@BOOL = return (s,x)
---    rewriteM' f s x@INT  = return (s,x)
---    rewriteM' f s x@REAL = return (s,x)
-    rewriteM' f s0 x@(ARRAY t0 t1) = do
+    rewriteM' f s0 (ARRAY t0 t1) = do
             (s1,t2) <- f s0 t0
             (s2,t3) <- f s1 t1
             return (s2,ARRAY t2 t3)
-    rewriteM' f s x@(GENERIC _) = return (s,x)
---    rewriteM' f s x@(SET t) = do
---            (s,t) <- f s t
---            return (s,SET t)
-    rewriteM' f s0 x@(USER_DEFINED s xs) = do
+    rewriteM' _ s x@(GENERIC _) = return (s,x)
+    rewriteM' f s0 (USER_DEFINED s xs) = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1, USER_DEFINED s ys)
 
@@ -245,8 +218,8 @@ instance Tree Expr where
             [ merge_range q
             , as_tree r
             , as_tree xp ] ]
-    rewriteM' f s x@(Word (Var xs _))           = return (s,x)
-    rewriteM' f s x@(Const _ _ _)               = return (s,x)
+    rewriteM' _ s x@(Word _)           = return (s,x)
+    rewriteM' _ s x@(Const _ _ _)      = return (s,x)
     rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1,FunApp g ys)
@@ -284,12 +257,12 @@ instance Tree Decl where
     as_tree (SortDecl IntSort)  = Str "; comment: we don't need to declare the sort Int"
     as_tree (SortDecl BoolSort) = Str "; comment: we don't need to declare the sort Bool" 
     as_tree (SortDecl RealSort) = Str "; comment: we don't need to declare the sort Real"
-    as_tree (SortDecl (Sort tag name n)) = 
+    as_tree (SortDecl (Sort _ name n)) = 
             List [ 
                 Str "declare-sort",
                 Str name,
                 Str $ show n ]
-    as_tree (SortDecl (DefSort tag name xs def)) = 
+    as_tree (SortDecl (DefSort _ name xs def)) = 
             List 
                 [ Str "define-sort"
                 , Str name
@@ -302,15 +275,16 @@ instance Tree Var where
     as_tree (Var vn vt) = List [Str vn, as_tree vt]
     rewriteM' = id
 
-instance Tree Sort where
-    as_tree (DefSort _ x xs def) = 
-            List 
-                [ Str x
-                , List $ map Str xs
-                , as_tree def
-                ]
-    as_tree (Sort _ x n) = List [Str x, Str $ show n]
-    rewriteM' = id
+-- instance Tree Sort where
+	-- as_tree B
+    -- as_tree (DefSort _ x xs def) = 
+            -- List 
+                -- [ Str x
+                -- , List $ map Str xs
+                -- , as_tree def
+                -- ]
+    -- as_tree (Sort _ x n) = List [Str x, Str $ show n]
+    -- rewriteM' = id
 
 instance Show Var where
     show (Var n t) = n ++ ": " ++ show (as_tree t)
@@ -351,20 +325,24 @@ instance Symbol Context where
 merge m0 m1 = unionWithKey f m0 m1
     where
         f k x y
-            | x == y = x
-            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
+            | x == y 	= x
+			| otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
 merge_all ms = foldl (unionWithKey f) empty ms
     where
         f k x y
-            | x == y = x
-            | x /= y = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
+            | x == y    = x
+            | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
 mk_context :: [Decl] -> Context
 mk_context (x:xs) = 
         case mk_context xs of
             Context ss vs fs defs dums -> 
                 case x of
+                    SortDecl s ->
+                        Context
+                            (M.insert (z3_name s) s ss) vs
+                            fs defs dums
                     ConstDecl n t -> 
                         Context 
                             ss (M.insert n (Var n t) vs) 
@@ -379,6 +357,7 @@ mk_context (x:xs) =
                             ss vs fs 
                             (M.insert n (Def gs n ps t e) defs) 
                             dums
+                    Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
 mk_context [] = Context empty empty empty empty empty
 
 empty_ctx = Context empty empty empty empty empty
