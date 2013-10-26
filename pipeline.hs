@@ -7,21 +7,21 @@ import Document.Document
 import UnitB.AST
 import UnitB.PO
 
-import Z3.Def
-import Z3.Z3
+import Z3.Z3 
+		( discharge
+		, ProofObligation
+		, Validity ( .. ) )
 
 	-- Libraries
 import Control.Concurrent
--- import Control.Concurrent.MVar
--- import Control.Concurrent.Chan
 import Control.Concurrent.STM.TChan
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.STM
--- import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
+import Data.Char
 import Data.Map as M 
 			( Map, empty, keysSet
 			, insert, filterWithKey, keys
@@ -56,14 +56,14 @@ wait m = do
 		if b 
 			then return ()
 			else wait m
-
+			
 data Shared = Shared
 		{ pos     :: MVar (Map (Label,Label) Seq)
 		, tok     :: MVar ()
 		, lbls    :: MVar (Either [Error] (Set (Label,Label)))
 		, status  :: TChan (Label,Label,Seq,Bool)
 		, working :: MVar Int
-		, io      :: MVar String
+		-- , io      :: MVar String
 		}
 			
 data Display = Display
@@ -80,7 +80,6 @@ parser :: String
 	   -> Shared
 	   -> IO ()
 parser fn (Shared { .. })  = do
-		-- putMVar io "started"
 		t <- getModificationTime fn
 		parse
 		evalStateT (forever $ do
@@ -98,13 +97,11 @@ parser fn (Shared { .. })  = do
 			return $ fromList $ map (g $ _name m) $ toList $ x
 		g lbl (x,y) = ((lbl,x),y)
 		parse = do
-				-- putMVar io "parsing"
 				ms <- parse_machine fn
 				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) ProofObligation]
 				case xs of
 					Right ms -> do
 						let pos_list = unions ms
-						-- putMVar io $ format "Parser: Number of POs {0}" $ size pos_list
 						swapMVar pos pos_list
 						tryTakeMVar lbls
 						putMVar lbls (Right $ keysSet pos_list)
@@ -114,15 +111,16 @@ parser fn (Shared { .. })  = do
 						tryTakeMVar lbls
 						putMVar lbls (Left es)
 						return ()
-				-- putMVar io "done parsing"
-
 
 prover :: Shared
 	   -> StateT (Map (Label,Label) (Seq,Bool)) IO ()
-prover (Shared { .. }) = forever $ do
-		req <- liftIO $ newEmptyMVar
+prover (Shared { .. }) = do
+	req <- liftIO $ do
+		req <- newEmptyMVar
+		forM_ [1..8] $ const $ forkIO $ worker req 
+		return req
+	forever $ do
 		liftIO $ do
-			forM_ [1..8] $ const $ forkIO $ worker req
 			takeMVar tok
 			inc
 		po <- liftIO $ readMVar pos
@@ -164,14 +162,11 @@ prover (Shared { .. }) = forever $ do
 			dec
 			atomically $ writeTChan status (fst k,snd k,po,r == Valid)
 
-	-- Note, the Set (Label,Label) should be part of the state.
 display :: Shared
 	    -> StateT Display IO ()
 display (Shared { .. }) = forever $ do
 		wait $ do
-			-- liftIO $ putMVar io "Display: waiting"
 			liftIO $ threadDelay 500000
-			-- liftIO $ putMVar io "Display: reading channel"
 			st <- take_n 10
 			ls <- liftIO $ tryTakeMVar lbls
 			case ls of
@@ -194,7 +189,6 @@ display (Shared { .. }) = forever $ do
 			return $ not (null st && isNothing ls)
 		out <- gets result
 		es  <- gets errors
-		-- liftIO $ forM_ [1 .. 30] $ const $ putStrLn ""
 		xs <- forM (toList out) $ \((m,lbl),(_,r)) -> do
 			let x = " xxx "
 				-- | r 		= "  o  "
@@ -212,14 +206,12 @@ display (Shared { .. }) = forever $ do
 					then ""
 					else "> working ..."
 				 ] 
-		-- liftIO $ clearScreen
 		liftIO $ cursorUpLine $ length ys
 		liftIO $ do
 			clearFromCursorToScreenBeginning
 			forM_ ys $ \x -> do
 				clearLine
 				putStrLn x
-		-- liftIO $ putStrLn $ unlines ys
 	where
 		take_n 0 = return []
 		take_n n = do
@@ -227,20 +219,33 @@ display (Shared { .. }) = forever $ do
 			if b then
 				return []
 			else do
-				-- liftIO $ putMVar io "receiving POs"
 				x  <- liftIO $ atomically $ readTChan status
 				xs <- take_n (n-1)
 				return (x:xs)
 
+keyboard = do
+		xs <- getLine
+		if map toLower xs == "quit" 
+			then return ()
+			else do
+				putStrLn $ format "Invalid command: '{0}'" xs
+				keyboard
+				
 run_pipeline fn = do
 	pos     <- newMVar M.empty
 	lbls    <- newEmptyMVar
 	tok     <- newEmptyMVar
 	status  <- newTChanIO
-	io      <- newEmptyMVar
+	-- io      <- newEmptyMVar
 	working <- newMVar 0
 	let sh = Shared { .. }
-	forkIO $ evalStateT (display sh) (Display M.empty S.empty [])
-	forkIO $ evalStateT (prover sh) M.empty
-	forkIO $ console io
-	parser fn sh
+	t0 <- forkIO $ evalStateT (display sh) (Display M.empty S.empty [])
+	t1 <- forkIO $ evalStateT (prover sh) M.empty
+	-- t2 <- forkIO $ console io
+	t3 <- forkIO $ parser fn sh
+	keyboard 
+	putStrLn "received a 'quit' command"
+	killThread t0
+	killThread t1
+	-- killThread t2
+	killThread t3

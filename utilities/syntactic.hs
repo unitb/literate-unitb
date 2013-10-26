@@ -29,6 +29,9 @@ with_li_t (i,j) x = EitherT $ do
     x <- runEitherT x
     either (\x -> Left [(x,i,j)]) Right x
 
+report :: Error -> String
+report (msg,i,j) = format "error ({0},{1}): {2}" i j msg
+	
 makeReport :: MonadIO m => EitherT [Error] m String -> m String
 makeReport m = eitherT f return m
     where    
