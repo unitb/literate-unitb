@@ -175,4 +175,4 @@ main = do
                     return ()
                 else do
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
-            _ -> putStrLn $ usageInfo "usage: continuous file" options
+            _ -> putStrLn $ usageInfo "usage: continuous file [options]" options
