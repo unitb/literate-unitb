@@ -153,8 +153,9 @@ main = do
         let (opts,args,err) = getOpt Permute options rawargs
         case args of
             [xs] -> do
-                b <- doesFileExist xs
-                if b then do
+                b1 <- doesFileExist xs
+                b2 <- z3_installed
+                if b1 && b2 then do
                     let { param = Params 
                             { path = xs
                             , pos = empty
@@ -173,6 +174,8 @@ main = do
                                     dump_pos)
                         else return ()) param
                     return ()
-                else do
+                else if not b2 then
+                    putStrLn ("a 'z3' executable hasn't been found in the path ")
+                else
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
             _ -> putStrLn $ usageInfo "usage: continuous file [options]" options

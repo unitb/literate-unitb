@@ -1,10 +1,10 @@
+{-# LANGUAGE RecordWildCards #-}
 module Pipeline where
 
 	-- Modules
 import Document.Document
 
 import UnitB.AST
-import UnitB.Label
 import UnitB.PO
 
 import Z3.Def
@@ -12,27 +12,30 @@ import Z3.Z3
 
 	-- Libraries
 import Control.Concurrent
-import Control.Concurrent.MVar
+-- import Control.Concurrent.MVar
 -- import Control.Concurrent.Chan
 import Control.Concurrent.STM.TChan
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.STM
-import Control.Monad.Trans.Either
+-- import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import Data.Map as M 
-			( Map, empty, alter, filter
+			( Map, empty, keysSet
 			, insert, filterWithKey, keys
 			, mapWithKey, lookup, fromList
-			, toList, unions, size )
+			, toList, unions )
 import Data.Maybe
-import Data.Set as S ( Set, member )
+import Data.Set as S 
+			( Set, member, empty )
 
 import System.Directory
+import System.Console.ANSI
 
 import Utilities.Format
+import Utilities.Syntactic
 
 	-- The pipeline is made of three processes:
 	--	o the parser
@@ -54,19 +57,29 @@ wait m = do
 			then return ()
 			else wait m
 
-data Display = Display
+data Shared = Shared
+		{ pos     :: MVar (Map (Label,Label) Seq)
+		, tok     :: MVar ()
+		, lbls    :: MVar (Either [Error] (Set (Label,Label)))
+		, status  :: TChan (Label,Label,Seq,Bool)
+		, working :: MVar Int
+		, io      :: MVar String
+		}
 			
+data Display = Display
+		{ result :: Map (Label,Label) (Seq,Bool)
+		, labels :: Set (Label,Label)
+		, errors :: [Error]
+		}
+
 console io = forever $ do
 	xs <- takeMVar io
 	putStrLn xs
 			
 parser :: String
-	   -> MVar (Map (Label,Label) Seq) 
-	   -> MVar ()
-	   -> MVar (Set (Label,Label))
-	   -> MVar String
+	   -> Shared
 	   -> IO ()
-parser fn pos tok lbls io  = do
+parser fn (Shared { .. })  = do
 		-- putMVar io "started"
 		t <- getModificationTime fn
 		parse
@@ -87,55 +100,49 @@ parser fn pos tok lbls io  = do
 		parse = do
 				-- putMVar io "parsing"
 				ms <- parse_machine fn
-				let xs = ms >>= mapM f
+				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) ProofObligation]
 				case xs of
 					Right ms -> do
 						let pos_list = unions ms
 						-- putMVar io $ format "Parser: Number of POs {0}" $ size pos_list
 						swapMVar pos pos_list
+						tryTakeMVar lbls
+						putMVar lbls (Right $ keysSet pos_list)
 						tryPutMVar tok ()
 						return ()
-					Left _   -> return ()
+					Left es   -> do
+						tryTakeMVar lbls
+						putMVar lbls (Left es)
+						return ()
 				-- putMVar io "done parsing"
 
 
-prover :: MVar (Map (Label,Label) Seq) 
-	   -> MVar ()
-	   -> TChan (Label,Label,Seq,Bool)
-	   -> MVar ()
-	   -> MVar String
+prover :: Shared
 	   -> StateT (Map (Label,Label) (Seq,Bool)) IO ()
-prover pos tok status working io = forever $ do
+prover (Shared { .. }) = forever $ do
 		req <- liftIO $ newEmptyMVar
-		liftIO $ forM_ [1..8] $ const $ forkIO $ worker req
 		liftIO $ do
-			-- putMVar io "Prover: waiting"
-			takeMVar working
+			forM_ [1..8] $ const $ forkIO $ worker req
 			takeMVar tok
-			putMVar working ()
-			-- putMVar io "Prover: got a token"
+			inc
 		po <- liftIO $ readMVar pos
 		renew po
 		po <- get
-		-- liftIO $ putMVar io $ format "Prover: Number of POs {0}" $ size po
 		forM_ (keys po) $ \k -> do
 			po <- gets $ M.lookup k
 			case po of
 				Just (po,True) -> do
-					-- liftIO $ putMVar io "proving"
-					-- r <- liftIO $ discharge po
 					liftIO $ putMVar req (k,po)
 					modify $ insert k (po,False)
-					-- liftIO $ atomically $ writeTChan status (fst k,snd k,po,r == Valid)
 				_			   -> return ()
 			update_state
+		liftIO $ dec
 	where
 		update_state = do
 			b <- liftIO $ isEmptyMVar tok
 			if b then return ()
 			else do
 				po <- liftIO $ readMVar pos
-				-- liftIO $ putMVar io $ format "Prover: received POs {0}" $ size po
 				renew po
 				return ()
 		renew :: Map (Label,Label) Seq
@@ -148,46 +155,71 @@ prover pos tok status working io = forever $ do
 				| v == po && not r -> (po,False)
 				| otherwise        -> (v, True)
 			Nothing -> (v,True)
+		inc = modifyMVar_ working (return . (+1))
+		dec = modifyMVar_ working (return . (+ (-1)))			
 		worker req = forever $ do
 			(k,po) <- takeMVar req
+			inc
 			r      <- discharge po
+			dec
 			atomically $ writeTChan status (fst k,snd k,po,r == Valid)
 
 	-- Note, the Set (Label,Label) should be part of the state.
-display :: TChan (Label,Label,Seq,Bool)
-	    -> MVar (Set (Label,Label))
-		-> MVar ()
-		-> MVar String
-	    -> StateT (Map (Label,Label) (Seq, Bool)) IO ()
-display status lbls working io = forever $ do
+display :: Shared
+	    -> StateT Display IO ()
+display (Shared { .. }) = forever $ do
 		wait $ do
 			-- liftIO $ putMVar io "Display: waiting"
-			liftIO $ threadDelay 1000000
+			liftIO $ threadDelay 500000
 			-- liftIO $ putMVar io "Display: reading channel"
 			st <- take_n 10
 			ls <- liftIO $ tryTakeMVar lbls
-			forM_ st $ \(m,lbl,r,s) -> do
-				modify $ insert (m,lbl) (r,s)
 			case ls of
-				Just ls ->
-					modify $ M.filterWithKey (\k _ -> k `S.member` ls)
+				Just (Right ls) -> do 
+					let f k _ = k `S.member` ls
+					modify $ \d -> d
+						{ result = M.filterWithKey f $ result d 
+						, labels = ls
+						, errors = [] }
+				Just (Left es) ->
+					modify $ \d -> d
+						{ errors = es }
 				Nothing -> return ()
-			return $ not $ null st && isNothing ls
-		out <- get
-		liftIO $ forM_ [1 .. 30] $ const $ putStrLn ""
-		xs <- forM (toList out) $ \((m,lbl),(s,r)) -> do
+			lbls <- gets labels
+			forM_ st $ \(m,lbl,r,s) -> do
+				if (m,lbl) `S.member` lbls then
+					modify $ \d -> d 
+						{ result = insert (m,lbl) (r,s) $ result d }
+				else return ()
+			return $ not (null st && isNothing ls)
+		out <- gets result
+		es  <- gets errors
+		-- liftIO $ forM_ [1 .. 30] $ const $ putStrLn ""
+		xs <- forM (toList out) $ \((m,lbl),(_,r)) -> do
 			let x = " xxx "
 				-- | r 		= "  o  "
 				-- | otherwise = " xxx "
 			if not r then
 				-- liftIO $ putMVar io $ format "{0}{1} - {2}" x m lbl
-				return [format "{0}{1} - {2}" x m lbl]
+				return [format " x {1} - {2}" x m lbl]
 			else return []
-		liftIO $ putStrLn $ unlines $ concat xs
-		b <- liftIO $ isEmptyMVar working
-		liftIO $ if b 
-			then putStrLn ""
-			else putStrLn "> working ..."
+		b1 <- liftIO $ readMVar working
+		b2 <- liftIO $ atomically $ isEmptyTChan status
+		let ys = concat xs ++ 
+				 ( if null es then []
+				   else "> errors" : map report es ) ++
+				 [ if b1 == 0 && b2
+					then ""
+					else "> working ..."
+				 ] 
+		-- liftIO $ clearScreen
+		liftIO $ cursorUpLine $ length ys
+		liftIO $ do
+			clearFromCursorToScreenBeginning
+			forM_ ys $ \x -> do
+				clearLine
+				putStrLn x
+		-- liftIO $ putStrLn $ unlines ys
 	where
 		take_n 0 = return []
 		take_n n = do
@@ -201,13 +233,14 @@ display status lbls working io = forever $ do
 				return (x:xs)
 
 run_pipeline fn = do
-	pos     <- newMVar empty
+	pos     <- newMVar M.empty
 	lbls    <- newEmptyMVar
 	tok     <- newEmptyMVar
 	status  <- newTChanIO
 	io      <- newEmptyMVar
-	working <- newMVar ()
-	forkIO $ evalStateT (display status lbls working io) M.empty
-	forkIO $ evalStateT (prover pos tok status working io) M.empty
+	working <- newMVar 0
+	let sh = Shared { .. }
+	forkIO $ evalStateT (display sh) (Display M.empty S.empty [])
+	forkIO $ evalStateT (prover sh) M.empty
 	forkIO $ console io
-	parser fn pos tok lbls io
+	parser fn sh
