@@ -4,6 +4,8 @@ module Pipeline where
 	-- Modules
 import Document.Document
 
+import Serialize
+
 import UnitB.AST
 import UnitB.PO
 
@@ -21,15 +23,17 @@ import Control.Monad.IO.Class
 import Control.Monad.STM
 import Control.Monad.Trans.State
 
-import Data.Char
-import Data.Map as M 
-			( Map, empty, keysSet
-			, insert, filterWithKey, keys
-			, mapWithKey, lookup, fromList
-			, toList, unions )
-import Data.Maybe
-import Data.Set as S 
-			( Set, member, empty )
+import			 Data.Char
+import			 Data.Map as M 
+					( Map, empty, keysSet
+					, insert, filterWithKey, keys
+					, mapWithKey, lookup, fromList
+					, toList, unions )
+import qualified Data.Map as M 
+					( map )
+import			 Data.Maybe
+import			 Data.Set as S 
+					( Set, member, empty )
 
 import System.Directory
 import System.Console.ANSI
@@ -45,8 +49,6 @@ import Utilities.Syntactic
 	-- The prover and the parser _share_ a map of proof obligations
 	-- The prover and the parser _share_ a list of PO labels
 	-- The 
-
-type Seq = ProofObligation
 	
 default_po_state = False
 
@@ -63,6 +65,8 @@ data Shared = Shared
 		, lbls    :: MVar (Either [Error] (Set (Label,Label)))
 		, status  :: TChan (Label,Label,Seq,Bool)
 		, working :: MVar Int
+		, ser     :: MVar (Map (Label,Label) (Seq,Bool), Set (Label,Label))
+		, fname   :: FilePath
 		-- , io      :: MVar String
 		}
 			
@@ -76,16 +80,15 @@ console io = forever $ do
 	xs <- takeMVar io
 	putStrLn xs
 			
-parser :: String
-	   -> Shared
+parser :: Shared
 	   -> IO ()
-parser fn (Shared { .. })  = do
-		t <- getModificationTime fn
+parser (Shared { .. })  = do
+		t <- getModificationTime fname
 		parse
 		evalStateT (forever $ do
 			liftIO $ threadDelay 1000000
 			t0 <- get
-			t1 <- liftIO $ getModificationTime fn
+			t1 <- liftIO $ getModificationTime fname
 			if t0 == t1 then return ()
 			else do
 				put t1
@@ -97,7 +100,7 @@ parser fn (Shared { .. })  = do
 			return $ fromList $ map (g $ _name m) $ toList $ x
 		g lbl (x,y) = ((lbl,x),y)
 		parse = do
-				ms <- parse_machine fn
+				ms <- parse_machine fname
 				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) ProofObligation]
 				case xs of
 					Right ms -> do
@@ -164,7 +167,36 @@ prover (Shared { .. }) = do
 
 display :: Shared
 	    -> StateT Display IO ()
-display (Shared { .. }) = forever $ do
+display (Shared { .. }) = do
+	liftIO $ clearScreen
+	forever $ do
+		do	outs <- gets result
+			lbls <- gets labels
+			es   <- gets errors
+			liftIO $ do
+				tryTakeMVar ser
+				putMVar ser (outs,lbls)
+				xs <- forM (toList outs) $ \((m,lbl),(_,r)) -> do
+					if not r then
+						-- liftIO $ putMVar io $ format "{0}{1} - {2}" x m lbl
+						return [format " x {0} - {1}" m lbl]
+					else return []
+				b1 <- readMVar working
+				b2 <- atomically $ isEmptyTChan status
+				let ys = concat xs ++ 
+						 ( if null es then []
+						   else "> errors" : map report es ) ++
+						 [ if b1 == 0 && b2
+						   then ""
+						   else "> working ..."
+						 ] 
+				cursorUpLine $ length ys
+				clearFromCursorToScreenBeginning
+				forM_ ys $ \x -> do
+					-- clearLine
+					putStr x
+					clearFromCursorToLineEnd 
+					putStrLn ""
 		wait $ do
 			liftIO $ threadDelay 500000
 			st <- take_n 10
@@ -187,31 +219,6 @@ display (Shared { .. }) = forever $ do
 						{ result = insert (m,lbl) (r,s) $ result d }
 				else return ()
 			return $ not (null st && isNothing ls)
-		out <- gets result
-		es  <- gets errors
-		xs <- forM (toList out) $ \((m,lbl),(_,r)) -> do
-			let x = " xxx "
-				-- | r 		= "  o  "
-				-- | otherwise = " xxx "
-			if not r then
-				-- liftIO $ putMVar io $ format "{0}{1} - {2}" x m lbl
-				return [format " x {1} - {2}" x m lbl]
-			else return []
-		b1 <- liftIO $ readMVar working
-		b2 <- liftIO $ atomically $ isEmptyTChan status
-		let ys = concat xs ++ 
-				 ( if null es then []
-				   else "> errors" : map report es ) ++
-				 [ if b1 == 0 && b2
-					then ""
-					else "> working ..."
-				 ] 
-		liftIO $ cursorUpLine $ length ys
-		liftIO $ do
-			clearFromCursorToScreenBeginning
-			forM_ ys $ \x -> do
-				clearLine
-				putStrLn x
 	where
 		take_n 0 = return []
 		take_n n = do
@@ -223,6 +230,11 @@ display (Shared { .. }) = forever $ do
 				xs <- take_n (n-1)
 				return (x:xs)
 
+serialize (Shared { .. }) = forever $ do
+		threadDelay 10000000
+		pos <- takeMVar ser
+		dump_pos fname pos
+				
 keyboard = do
 		xs <- getLine
 		if map toLower xs == "quit" 
@@ -231,21 +243,26 @@ keyboard = do
 				putStrLn $ format "Invalid command: '{0}'" xs
 				keyboard
 				
-run_pipeline fn = do
-	pos     <- newMVar M.empty
-	lbls    <- newEmptyMVar
-	tok     <- newEmptyMVar
-	status  <- newTChanIO
-	-- io      <- newEmptyMVar
-	working <- newMVar 0
-	let sh = Shared { .. }
-	t0 <- forkIO $ evalStateT (display sh) (Display M.empty S.empty [])
-	t1 <- forkIO $ evalStateT (prover sh) M.empty
-	-- t2 <- forkIO $ console io
-	t3 <- forkIO $ parser fn sh
-	keyboard 
-	putStrLn "received a 'quit' command"
-	killThread t0
-	killThread t1
-	-- killThread t2
-	killThread t3
+run_pipeline fname = do
+		pos     <- newMVar M.empty
+		lbls    <- newEmptyMVar
+		tok     <- newEmptyMVar
+		ser     <- newEmptyMVar
+		status  <- newTChanIO
+		-- io      <- newEmptyMVar
+		working <- newMVar 0
+		let sh = Shared { .. }
+		(m,s) <- load_pos fname (M.empty,S.empty)
+		t0 <- forkIO $ evalStateT (display sh) (Display m s [])
+		t1 <- forkIO $ evalStateT (prover sh) (M.map f m)
+		-- t2 <- forkIO $ console io
+		t2 <- forkIO $ serialize sh
+		t3 <- forkIO $ parser sh
+		keyboard 
+		putStrLn "received a 'quit' command"
+		killThread t0
+		killThread t1
+		killThread t2
+		killThread t3
+	where
+		f (x,_) = (x,False)
