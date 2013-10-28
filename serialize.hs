@@ -2,22 +2,27 @@ module Serialize where
 
 	-- Modules
 import UnitB.AST
--- import UnitB.PO
+import UnitB.PO
 
 import Z3.Def
 
 	-- Libraries
+
+import Codec.Compression.Zlib
+	
 import Control.Monad
 import Control.Monad.State
 
-import qualified Data.ByteString as BS
-import Data.Map as M 
-		( Map, lookup, size, insert 
+import 			 Data.ByteString.Lazy as BS
+		( writeFile, readFile )
+import 			 Data.Map as M 
+		( Map, insert 
 		, (!), fromList, toList
-		, empty)
-import Data.Serialize ( Serialize, encode, decode )
-import Data.Set as S ( Set )
-import Data.Tuple
+		, empty, mapKeys )
+import qualified Data.Map as M 
+import			 Data.Serialize ( Serialize, encodeLazy, decodeLazy )
+import			 Data.Set as S ( Set )
+import			 Data.Tuple
 
 import System.Directory
 
@@ -56,21 +61,23 @@ compress_seq (ProofObligation ctx hyps b g) = do
 
 decompress_map :: IntMap -> ExprIndex (Map Key (Seq,Bool))
 decompress_map ms = do
-		xs <- forM ms $ \(x,(j,z)) -> do
+		xs <- forM (uncurry zip ms) $ \(x,(j,z)) -> do
 			y <- decompress_seq j
 			return (x,(y,z))
 		return $ fromList xs
 
 compress_map :: Map Key (Seq,Bool) -> ExprStore IntMap	
 compress_map m = do
-		forM (toList m) $ \(x,(y,z)) -> do
+		xs <- forM (toList m) $ \(x,(y,z)) -> do
 			j <- compress_seq y
 			return (x,(j,z))
+		return $ unzip xs
 		
 type Seq    = ProofObligation
 type SeqI   = (Context,[Int],Bool,Int)
 type Key    = (Label,Label)
-type IntMap = [(Key,(SeqI,Bool))]
+-- type IntMap = [(Key,(SeqI,Bool))]
+type IntMap = ([Key],[(SeqI,Bool)])
 type ExprStore = State (Map Expr Int)
 type ExprIndex = State (Map Int Expr)
 
@@ -78,26 +85,37 @@ load_pos :: FilePath
 		 -> (Map Key (Seq,Bool), Set Key)
 		 -> IO (Map Key (Seq,Bool), Set Key)
 load_pos file pos = do
-        b <- doesFileExist file
+        let fname = file ++ ".state"
+        b <- doesFileExist fname
         if b then do
-            xs <- BS.readFile $ file ++ ".state"
+            xs <- BS.readFile $ fname
             either 
                 (const $ return pos) 
-                f $ decode xs
+                (return . iseq_to_seq)
+				-- return 
+				$ decodeLazy $ decompress xs
         else return pos
 
-f :: ((IntMap,Map Expr Int),Set Key) 
-  -> IO (Map Key (Seq,Bool), Set Key)
-f ((x,y),z) = return (evalState (decompress_map x) inv,z)
+type FileStruct = ((IntMap,Map Expr Int),Set Key) 
+		
+iseq_to_seq :: FileStruct
+			-> (Map Key (Seq,Bool), Set Key)
+iseq_to_seq ((x,y),z) = (evalState (decompress_map x) inv,z)
 	where
 		inv = fromList $ map swap $ toList $ y
 		
--- load_pos
-
-
+seq_to_iseq :: (Map Key (Seq,Bool), Set Key)
+			-> FileStruct 
+seq_to_iseq (pos,x) = ((a,b),x)
+	where
+		(a,b) = runState (compress_map pos) empty
 		
--- dump_pos :: Serialize a => FilePath -> a -> IO ()
-dump_pos file (pos,x) = do
+dump_pos :: FilePath -> (Map Key (Seq,Bool), Set Key) -> IO ()
+dump_pos file pos = do
         let fn     = file ++ ".state"
-            new_po = (runState (compress_map pos) empty,x)
-        BS.writeFile fn $ encode new_po
+            new_po = seq_to_iseq pos
+        BS.writeFile fn $ compress $ encodeLazy new_po
+
+dump_z3 :: FilePath -> (Map Key (Seq,Bool), Set Key) -> IO ()
+dump_z3 file (pos,_) = dump file (M.map fst $ mapKeys snd pos)
+

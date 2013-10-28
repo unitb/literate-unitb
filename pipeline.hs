@@ -1,5 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
-module Pipeline where
+module Pipeline 
+	( run_pipeline )
+where
 
 	-- Modules
 import Document.Document
@@ -65,7 +67,7 @@ data Shared = Shared
 		, lbls    :: MVar (Either [Error] (Set (Label,Label)))
 		, status  :: TChan (Label,Label,Seq,Bool)
 		, working :: MVar Int
-		, ser     :: MVar (Map (Label,Label) (Seq,Bool), Set (Label,Label))
+		, ser     :: MVar ((Map (Label,Label) (Seq,Bool), Set (Label,Label)),[Error])
 		, fname   :: FilePath
 		-- , io      :: MVar String
 		}
@@ -120,12 +122,12 @@ prover :: Shared
 prover (Shared { .. }) = do
 	req <- liftIO $ do
 		req <- newEmptyMVar
-		forM_ [1..8] $ const $ forkIO $ worker req 
+		forM_ [1..8] $ \p -> forkOn p $ worker req 
 		return req
 	forever $ do
 		liftIO $ do
 			takeMVar tok
-			inc
+			inc 200
 		po <- liftIO $ readMVar pos
 		renew po
 		po <- get
@@ -137,7 +139,7 @@ prover (Shared { .. }) = do
 					modify $ insert k (po,False)
 				_			   -> return ()
 			update_state
-		liftIO $ dec
+		liftIO $ dec 200
 	where
 		update_state = do
 			b <- liftIO $ isEmptyMVar tok
@@ -156,15 +158,28 @@ prover (Shared { .. }) = do
 				| v == po && not r -> (po,False)
 				| otherwise        -> (v, True)
 			Nothing -> (v,True)
-		inc = modifyMVar_ working (return . (+1))
-		dec = modifyMVar_ working (return . (+ (-1)))			
+		inc x = modifyMVar_ working (return . (+x))
+		dec x = modifyMVar_ working (return . (+ (-x)))			
 		worker req = forever $ do
 			(k,po) <- takeMVar req
-			inc
+			inc 1
 			r      <- discharge po
-			dec
+			dec 1
 			atomically $ writeTChan status (fst k,snd k,po,r == Valid)
 
+proof_report outs es b = xs ++ 
+					 ( if null es then []
+					   else "> errors" : map report es ) ++
+					 [ if b
+					   then "> working ..."
+					   else ""
+					 ] 
+	where
+		xs = concatMap f (toList outs)
+		f ((m,lbl),(_,r))
+			| not r   	= [format " x {0} - {1}" m lbl]
+			| otherwise = []
+			
 display :: Shared
 	    -> StateT Display IO ()
 display (Shared { .. }) = do
@@ -175,21 +190,15 @@ display (Shared { .. }) = do
 			es   <- gets errors
 			liftIO $ do
 				tryTakeMVar ser
-				putMVar ser (outs,lbls)
-				xs <- forM (toList outs) $ \((m,lbl),(_,r)) -> do
-					if not r then
+				putMVar ser ((outs,lbls),es)
+				-- xs <- forM (toList outs) $ \((m,lbl),(_,r)) -> do
+					-- if not r then
 						-- liftIO $ putMVar io $ format "{0}{1} - {2}" x m lbl
-						return [format " x {0} - {1}" m lbl]
-					else return []
+						-- return [format " x {0} - {1}" m lbl]
+					-- else return []
 				b1 <- readMVar working
 				b2 <- atomically $ isEmptyTChan status
-				let ys = concat xs ++ 
-						 ( if null es then []
-						   else "> errors" : map report es ) ++
-						 [ if b1 == 0 && b2
-						   then ""
-						   else "> working ..."
-						 ] 
+				let ys = proof_report outs es (b1 /= 0 || not b2)
 				cursorUpLine $ length ys
 				clearFromCursorToScreenBeginning
 				forM_ ys $ \x -> do
@@ -197,6 +206,7 @@ display (Shared { .. }) = do
 					putStr x
 					clearFromCursorToLineEnd 
 					putStrLn ""
+				putStrLn $ format "n workers: {0}  Channel: {1}" b1 (if b2 then "empty" else "non-empty")
 		wait $ do
 			liftIO $ threadDelay 500000
 			st <- take_n 10
@@ -232,8 +242,10 @@ display (Shared { .. }) = do
 
 serialize (Shared { .. }) = forever $ do
 		threadDelay 10000000
-		pos <- takeMVar ser
+		(pos@(out,_),es) <- takeMVar ser
 		dump_pos fname pos
+		dump_z3 fname pos
+		writeFile (fname ++ ".report") (unlines $ proof_report out es False)
 				
 keyboard = do
 		xs <- getLine

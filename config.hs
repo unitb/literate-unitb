@@ -9,12 +9,12 @@ import System.Environment
 import System.FilePath.Posix 
 import System.Info
 
-main = do
-	b <- z3_installed
-	if b then
-		putStrLn "z3 has been found"
-	else
-		putStrLn "z3 hasn't been found"
+-- main = do
+	-- b <- z3_installed
+	-- if b then
+		-- putStrLn "z3 has been found"
+	-- else
+		-- putStrLn "z3 hasn't been found"
 
 is_os_windows = "mingw" == take 5 os 
 		

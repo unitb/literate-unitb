@@ -4,7 +4,7 @@ module UnitB.PO
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , check, verify_changes, verify_machine
-    , smoke_test_machine )
+    , smoke_test_machine, dump )
 where
 
     -- Modules
