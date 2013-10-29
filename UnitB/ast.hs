@@ -72,9 +72,11 @@ import           Data.Typeable
 
 import Utilities.Format
 
+basic_theory :: Theory
 basic_theory = Theory []
     (symbol_table [set_sort,fun_sort,BoolSort,IntSort,RealSort]) empty empty empty empty
 
+all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (extends th)) 
 
 empty_theory :: Theory
@@ -90,6 +92,7 @@ data Event = Event
         , action    :: Map Label Expr }
     deriving Show
 
+empty_event :: Event
 empty_event = Event empty empty default_schedule empty empty empty
 
 data Machine = 
@@ -121,13 +124,14 @@ data System = Sys
     ,  machines     :: Map String Machine
     }
 
+empty_system :: System
 empty_system = Sys [] M.empty empty_store M.empty
 
 merge :: (Eq c, Ord a, Monoid c) 
       => b -> (b -> b -> Either c b) 
       -> Map a b -> Map a b 
       -> Either c (Map a b)
-merge x f m0 m1 = do
+merge w f m0 m1 = do
         xs <- toEither $ forM (toList m3) $ \(x,z) ->
             fromEither (x,z) $
                 case M.lookup x m0 of
@@ -138,7 +142,7 @@ merge x f m0 m1 = do
                         return (x,z)
         return $ fromList xs
     where
-        m2 = M.map (const x) m0
+        m2 = M.map (const w) m0
         m3 = m1 `union` m2
 
 toEither :: (Eq a, Monoid a) => Writer a b -> Either a b
