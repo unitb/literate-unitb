@@ -138,8 +138,7 @@ ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 zint n       = Const [] (show n) int
-
-bool = USER_DEFINED BoolSort []
+ 
 int  = USER_DEFINED IntSort []
 real = USER_DEFINED RealSort []
 bool = USER_DEFINED BoolSort []
