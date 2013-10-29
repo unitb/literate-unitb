@@ -57,7 +57,6 @@ zcast t me = do
         return $ specialize_right u e
 
 suffix_generics :: String -> Type -> Type
-suffix_generics _ BOOL = BOOL
 --suffix_generics _ INT = INT
 --suffix_generics _ REAL = REAL
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
@@ -173,7 +172,6 @@ typ_fun3 f@(Fun gs n ts t) mx my mz  = do
         maybe (Left err_msg) Right $ check_args [x,y,z] f
 
 unify_aux :: Type -> Type -> Unification -> Maybe Unification
-unify_aux BOOL BOOL u = Just u
 --unify_aux INT INT u   = Just u
 --unify_aux REAL REAL u = Just u
 unify_aux t0@(GENERIC x) t1 u
@@ -278,7 +276,6 @@ class Generic a where
     generics :: a -> S.Set String
     
 instance Generic Type where
-    generics BOOL = S.empty
 --    generics INT  = S.empty
 --    generics REAL = S.empty
     generics (GENERIC s)        = S.singleton s

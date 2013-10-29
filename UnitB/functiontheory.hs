@@ -45,7 +45,7 @@ zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
 
     -- encoding is done on an expression per expression basis
 zlambda xs mx my = do
-        x <- zcast BOOL mx
+        x <- zcast bool mx
         y <- my
         return $ Binder Lambda xs x y
 

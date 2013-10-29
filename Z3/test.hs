@@ -42,11 +42,11 @@ sample = unlines [
 
 a        = Word (Var "a" int)
 (x,x')   = var "x" int
-ff       = Fun [] "f" [int, BOOL] int
+ff       = Fun [] "f" [int, bool] int
 
 sample_ast = [
         Decl (ConstDecl "a" int),
-        Decl (FunDecl [] "f" [int, BOOL] int),
+        Decl (FunDecl [] "f" [int, bool] int),
         Assert (a `zgreater` zint 10),
         Assert (f a ztrue `zless` zint 10),
         CheckSat False ]
@@ -89,11 +89,11 @@ sample_quant3 = [
         
 
 sample_calc = (Calc  
-        ( mk_context [ FunDecl [] "f" [BOOL] BOOL,
+        ( mk_context [ FunDecl [] "f" [bool] bool,
               FunDef [] "follows" [x',y'] 
-                BOOL (fromJust (y `mzimplies` x)),
-              ConstDecl "x" BOOL,
-              ConstDecl "y" BOOL ] )
+                bool (fromJust (y `mzimplies` x)),
+              ConstDecl "x" bool,
+              ConstDecl "y" bool ] )
         (  fromJust  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
                    ( fromJust (f x `mzimplies` f y) )
         [ (Equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li)
@@ -106,9 +106,9 @@ sample_calc = (Calc
         hyp         = fromJust $ mzforall 
             [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
-        (x,x')      = var "x" BOOL
-        (y,y')      = var "y" BOOL
-        f           = maybe1 $ fun1 $ Fun [] "f" [BOOL] BOOL
+        (x,x')      = var "x" bool
+        (y,y')      = var "y" bool
+        f           = maybe1 $ fun1 $ Fun [] "f" [bool] bool
         li          = (-1,-1)
 
 indent xs = unlines (map (">  " ++) (lines xs))
@@ -125,7 +125,7 @@ type Result = (Either String Satisfiability, Either String Satisfiability, Valid
 result5 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl] [x_decl] 
                 (x `zle` fv0) ( (x `zplus` fv1) `zle` fv2 ) 
-                BOOL
+                bool
             , [y,z `zplus` y,z `zplus` y])
     where
         (Right x,x_decl) = var "@@bv@@_0" int
@@ -149,7 +149,7 @@ result6 = ( CL
                 ( (zforall [lv0_decl] 
                     (x `zle` fv1)
                     ((x `zplus` (lv0 `zplus` fv2)) `zle` (lv0 `zplus` fv3) )) ) 
-                BOOL
+                bool
             , [y,zplus (zint 3) y,y,y])
     where
         (Right x,x_decl) = var "@@bv@@_0" int

@@ -69,8 +69,7 @@ merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
 
 data Type = 
-        BOOL -- | INT | REAL | SET Type
-        | ARRAY Type Type 
+        ARRAY Type Type 
         | GENERIC String 
         | USER_DEFINED Sort [Type]
     deriving (Eq, Ord, Typeable, Generic)
@@ -87,7 +86,6 @@ data ProofObligation = ProofObligation Context [Expr] Bool Expr
     deriving (Eq, Generic)
 
 instance Show Type where
-    show BOOL                = "BOOL"
 --    show INT                 = "INT"
 --    show REAL                = "REAL"
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
@@ -146,7 +144,6 @@ rewriteM f t = do
             return ((),y)
 
 instance Tree Type where
-    as_tree BOOL = Str "Bool"
 --    as_tree INT  = Str "Int"
 --    as_tree REAL = Str "Real"
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
@@ -166,7 +163,6 @@ instance Tree Type where
 --    rewrite' f s0 x@(USER_DEFINED s xs) = (s1, USER_DEFINED s ys)
 --        where
 --            (s1,ys) = fold_map f s0 xs
-    rewriteM' f s x@BOOL = return (s,x)
 --    rewriteM' f s x@INT  = return (s,x)
 --    rewriteM' f s x@REAL = return (s,x)
     rewriteM' f s0 x@(ARRAY t0 t1) = do

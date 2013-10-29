@@ -57,7 +57,7 @@ check_prop p = do
 
 instance Arbitrary Type where
     arbitrary = oneof (
-                [ return BOOL
+                [ return bool
                 , return int
                 , return real
                 ] ++ concat (take 2 $ repeat
@@ -169,7 +169,7 @@ test = test_cases (
         y  = Word $ Var "y" int
         z  = Word $ Var "z" real
         union  = Fun [gA] "union" [set_type gA,set_type gA] $ set_type gA
-        member = Fun [gA] "member" [gA, set_type gA] BOOL
+        member = Fun [gA] "member" [gA, set_type gA] bool
         pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
         qq = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gB) [x3,x4]]
         p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
@@ -177,7 +177,7 @@ test = test_cases (
 
 (case7, result7) = 
         ( return (x `zelem` Right zempty_set)
-        , Right $ FunApp (Fun [train] "elem" [train,set_type train] BOOL) [either (error "expecting right") id x,empty_set_of_train]
+        , Right $ FunApp (Fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
         train = USER_DEFINED (Sort "\train" "train" 0) []
