@@ -7,17 +7,13 @@ where
 
     -- Modules
 import UnitB.Genericity
---import UnitB.Theory
-import UnitB.FunctionTheory
+import UnitB.FunctionTheory()
 import UnitB.Label
 
 import Z3.Const
 import Z3.Def
---import Z3.Z3 hiding ( free_vars )
 
     -- Libraries
-import Control.Applicative hiding ( empty, Const )
-    -- for the operator <|>
 import Control.Monad.State
 
 import Data.List hiding (union)
@@ -38,7 +34,7 @@ data CanonicalLambda = CL
 
 arg_type (CL vs _ _ _ _) = map (type_of . Word) vs
 
-return_type (CL fv bv r t rt) = 
+return_type (CL _ bv _ _ rt) = 
         (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
 can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
@@ -159,7 +155,7 @@ get_lambda_term t = do
 lambda_decl :: Monad m => StateT TermStore m [Decl] 
 lambda_decl = do
             xs <- gets toList 
-            liftM concat $ forM xs $ \(cl,v) ->
+            liftM concat $ forM xs $ \(_,v) ->
                 return $ decl v -- $ Var n $ array_type cl
 
 lambda_def :: Monad m => StateT TermStore m [Expr]

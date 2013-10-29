@@ -10,8 +10,6 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
-
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
 

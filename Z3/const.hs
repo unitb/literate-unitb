@@ -9,9 +9,6 @@ import Z3.Def
     -- Libraries
 import Control.Monad
 
-import Data.List as L ( tails, map )
-import Data.Map hiding (foldl)
-
 import Utilities.Format
 
 fun1 f x           = FunApp f [x]
@@ -72,7 +69,7 @@ zall xs      =
             xs  -> FunApp (Fun [] "and" (take n $ repeat bool) bool) xs
     where
         n = length xs
-        f (FunApp (Fun [] "and" _ bool) xs) = concatMap f xs
+        f (FunApp (Fun [] "and" _ _) xs) = concatMap f xs
         f x
             | x == ztrue = []
             | otherwise   = [x]
@@ -81,10 +78,9 @@ zsome xs      =
             []  -> ztrue
             [x] -> x
             xs  -> FunApp (Fun [] "or" (take n $ repeat bool) bool) xs
-
     where
         n = length xs
-        f (FunApp (Fun [] "or" _ bool) xs) = concatMap f xs
+        f (FunApp (Fun [] "or" _ _) xs) = concatMap f xs
         f x
             | x == zfalse = []
             | otherwise   = [x]
@@ -146,11 +142,10 @@ zint n       = Const [] (show n) int
 bool = USER_DEFINED BoolSort []
 int  = USER_DEFINED IntSort []
 real = USER_DEFINED RealSort []
+bool = USER_DEFINED BoolSort []
 
 mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
---mzgreater     = typ_fun2 $ Fun [] ">" [int,int] bool
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] bool
---mzge          = typ_fun2 $ Fun [] ">=" [int,int] bool
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp         = typ_fun1 $ Fun [] "-" [int] int

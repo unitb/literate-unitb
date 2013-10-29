@@ -274,6 +274,7 @@ parse_calc hyps m xs =
                 err $ M.lookup xs $ inv p1
                 err $ M.lookup xs $ inv_thm p1
                 err $ M.lookup xs $ inits m
+                err $ M.lookup xs $ fact $ theory m
                 foldM f [err_msg] $ elems $ events m
                 )
             where

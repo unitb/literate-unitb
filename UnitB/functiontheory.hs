@@ -11,13 +11,7 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
-
 import Data.Map
-
-import Utilities.Format
-
---import System.IO.Unsafe
 
 ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
     where
@@ -189,9 +183,6 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
 --                            (zrep_select f2 x)
 --                            (zrep_select f1 x) )
         as_fun e = zcast (fun_type t0 t1) e
---        as_fun e = e
---        as_dom e = zcast (set_type t0) e
-        as_dom e = e
         
         (x,x_decl) = var "x" t0
         (x2,x2_decl) = var "x2" t0
@@ -199,6 +190,6 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         (f1,f1_decl) = var "f1" $ fun_type t0 t1
         (f2,f2_decl) = var "f2" $ fun_type t0 t1
         (s1,s1_decl) = var "s1" $ set_type t0
-        (s2,s2_decl) = var "s2" $ set_type t1
+        -- (s2,s2_decl) = var "s2" $ set_type t1
         dec x = x ++ z3_decoration t0 ++ z3_decoration t1
         dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
