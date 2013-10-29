@@ -458,14 +458,16 @@ data Schedule = Schedule [Var] Expr Expr Label
 data ProgressProp = LeadsTo [Var] Expr Expr
     deriving Typeable
 
-data SafetyProp = Unless [Var] Expr Expr
+data SafetyProp = Unless [Var] Expr Expr (Maybe Label)
     deriving Typeable
 
 instance Show ProgressProp where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
 
 instance Show SafetyProp where
-    show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
+    show (Unless _ p q ev) = show p ++ "  UNLESS  " ++ show q ++ except
+        where
+            except = maybe "" (("  EXCEPT  " ++) . show) ev
 
 data PropertySet = PS
         { transient    :: Map Label Transient

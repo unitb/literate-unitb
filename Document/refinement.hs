@@ -146,17 +146,23 @@ data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
 instance RefRule Discharge where
     rule_name _ = label "discharge"
     refinement_po 
+            (Discharge _ _
+                (Just (Unless _ _ _ (Just _)))) _
+            = error "Discharge.refinement_po: should not reach this point" 
+    refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
                     (Transient fv1 p1 _ _ _ _)
-                    (Just (Unless fv2 p2 q2))) 
-            m = fromList $
-        assert m "" (
-            zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                zall[ p0 `zimplies` p2
-                    , q2 `zimplies` q0
-                    , zand p0 (znot q0) `zimplies` p1
-                    ]  ) )
+                    (Just (Unless fv2 p2 q2 Nothing))) 
+        m = fromList $
+            assert m "" (
+                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
+                    zall[ p0 `zimplies` p2
+                        , q2 `zimplies` q0
+                        , zand p0 (znot q0) `zimplies` p1
+                        ]  ) )
+        where
+            
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
@@ -277,7 +283,7 @@ instance RefRule PSP where
             (PSP
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
-                    (Unless fv2 r b))
+                    (Unless fv2 r b Nothing))
             m = M.fromList (
                 assert m "lhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
@@ -285,6 +291,8 @@ instance RefRule PSP where
              ++ assert m "rhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             (q0 `zimplies` zor (q1 `zand` r) b)))
+    refinement_po (PSP _ _ (Unless _ _ _ (Just _))) _ 
+        = error "PSP.refinement_po: invalid"
 
 data Induction = Induction ProgressProp ProgressProp Variant
     deriving Show
@@ -358,8 +366,8 @@ instance RefRule (Int, ScheduleChange) where
     refinement_po (_,r) m = 
         case rule r of
             Replace (_,prog) (_,saf) ->
-                let LeadsTo vs p0 q0 = prog
-                    Unless us p1 q1  = saf
+                let LeadsTo vs p0 q0  = prog
+                    Unless us p1 q1 _ = saf
                 in
                   M.fromList (
                     assert m "prog/lhs" (

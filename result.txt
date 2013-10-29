@@ -140,9 +140,9 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   11025 total
+   11088 total
     1363 Document/Tests/trainstation.hs
-     801 Document/machine.hs
+     829 Document/machine.hs
      721 Document/Tests/lambdas.hs
-     617 UnitB/ast.hs
+     623 UnitB/ast.hs
      557 UnitB/po.hs

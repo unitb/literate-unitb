@@ -419,6 +419,11 @@
 		\stepcounter{prop}
 		\tag{S\arabic{prop}} 
 		\label{#1} 	}
+\newcommand{\safetyB}[4]
+{		#3 \textbf{\quad un\quad} #4 \textbf{\quad except\quad} \text{\ref{#2}}
+		\stepcounter{prop}
+		\tag{S\arabic{prop}} 
+		\label{#1} 	}
 \newcommand{\progress}[3]
 	% \progress{label}{p}{q} means 
 	%			label: p |-> q

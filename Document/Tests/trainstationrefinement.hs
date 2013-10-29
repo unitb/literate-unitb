@@ -137,7 +137,7 @@ result2 = unlines
 	, "  o  m2/m0:leave/INV/m2:inv0/new assumption " 
 	, "  o  m2/m0:leave/SCH"
 	, "  o  m2/m0:leave/TR/m2:tr0"
-	, " xxx m2/m1:movein/CO/m2:saf0"
+	, "  o  m2/m1:movein/CO/m2:saf0"
 	, "  o  m2/m1:movein/CO/m2:saf1"
 	, "  o  m2/m1:movein/CO/m2:saf2"
 	, "  o  m2/m1:movein/FIS/in@prime"
@@ -172,7 +172,7 @@ result2 = unlines
     , "  o  m2/m2:prog5/REF/disjunction/lhs"
     , "  o  m2/m2:prog5/REF/disjunction/rhs"
     , "  o  m2/m2:prog6/REF/discharge"
-  	, "passed 77 / 78"
+  	, "passed 78 / 78"
 	]
 
 path0 = "Tests/train-station-ref.tex"

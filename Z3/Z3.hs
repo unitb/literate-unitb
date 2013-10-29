@@ -52,23 +52,23 @@ instance Tree Command where
     as_tree (CheckSat _)  = List [Str "check-sat-using", 
                                     List ( Str "or-else" 
                                          : map strat
-                                         [ Str "simplify"
-                                         , Str "qe"
-                                         , Str "der" 
+                                         [ Str "qe" 
+                                         , Str "simplify"
                                          , Str "skip"
+--                                         , Str "der"
                                          , List 
                                              [ Str "using-params"
                                              , Str "simplify"
                                              , Str ":expand-power"
                                              , Str "true"] ] ) ]
         where
-            strat t = List [Str "try-for", List [Str "then", t, Str "smt"], Str "400"]
+            strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2.5"] xs
+        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2"] xs
 --        let c = (shell (z3_path ++ " -smt2 -in -T:2.5")) { 
 --            std_out = CreatePipe,
 --            std_in = CreatePipe,
