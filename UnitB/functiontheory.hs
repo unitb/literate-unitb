@@ -97,12 +97,12 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
             -- empty-fun and ovl
-        axm2 = fromJust $ mzforall [f1_decl] mztrue ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
-        axm3 = fromJust $ mzforall [f1_decl] mztrue ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
+--        axm2 = fromJust $ mzforall [f1_decl] mztrue ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
+--        axm3 = fromJust $ mzforall [f1_decl] mztrue ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
             -- dom and mk-fun
         axm4 = fromJust $ mzforall [x_decl,y_decl] mztrue ( zdom (x `zmk_fun` y) `mzeq` zmk_set x )
             -- mk_fun and apply
-        axm5 = fromJust $ mzforall [x_decl,y_decl] mztrue ( (zmk_fun x y `zapply` x) `mzeq` y )
+--        axm5 = fromJust $ mzforall [x_decl,y_decl] mztrue ( (zmk_fun x y `zapply` x) `mzeq` y )
             -- ovl and apply
         axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] mztrue ( 
                         (x `zelem` zdom f2) 
@@ -132,7 +132,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- dom-rest and tfun
             -- dom-subst and tfun
             -- dom-rest and dom
-        axm9  = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
+--        axm9  = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
             -- dom-subst and dom
         axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         

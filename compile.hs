@@ -2,21 +2,14 @@ module Main where
 
 import BuildSystem
 
-import Control.Concurrent.Thread.Delay
 import Control.Concurrent.Timeout
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
-import Control.Monad.Trans.Writer
 
-import Data.Map hiding ( map )
-import Data.Time
-import Data.Time.Clock
-
-import System.Directory
-import System.FilePath.Posix
+import System.Console.ANSI
+import System.Exit
 import System.IO 
-import System.Locale
 import System.Process
 
 interval = Minutes 1
@@ -45,9 +38,19 @@ main = do
         b <- didAnythingChange
         if b then do
             ys <- liftIO $ do
-                forM_ (take 20 $ repeat "") putStrLn
-                (c,xs,ys) <- readProcessWithExitCode "ghc" ["-W","test"] ""
---                (c,xs,ys) <- readProcessWithExitCode "ghc" ["-W","-Werror","test"] ""
+--                forM_ (take 20 $ repeat "") putStrLn
+                clearScreen
+                let compile x = readProcessWithExitCode "ghc" (x ++ ["--make","-W","-Werror"]) ""
+                rs <- mapM compile 
+                    [ ["test.hs","-threaded"]
+                    , ["continuous.hs","-threaded"]
+                    , ["verify.hs"]
+                    , ["periodic.hs"]
+                    , ["compile.hs"]
+                    , ["run_tests.hs"] ]
+                let (cs,_,yss) = unzip3 rs
+                let c = foldl success ExitSuccess cs
+                let ys = concat yss
                 putStr ys 
                 putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "
                 hFlush stdout
@@ -64,4 +67,6 @@ main = do
             else return ()
 --            delay (microseconds retry_interval)
         return True
-            
+    where
+        success ExitSuccess ExitSuccess = ExitSuccess
+        success _ _                     = ExitFailure 0

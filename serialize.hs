@@ -35,7 +35,7 @@ instance Serialize Def where
 instance Serialize Quantifier where
 instance Serialize Context where
 instance Serialize Expr where
-instance Serialize ProofObligation where
+instance Serialize Sequent where
 
 expr_number :: Expr -> State (Map Expr Int) Int
 expr_number expr = do
@@ -48,16 +48,16 @@ expr_number expr = do
 			return n
 
 decompress_seq :: SeqI -> ExprIndex Seq
-decompress_seq (ctx,hs,b,g') = do
+decompress_seq (ctx,hs,g') = do
 		hyps <- forM hs $ \x -> gets (! x)
 		g    <- gets (! g')
-		return (ProofObligation ctx hyps b g)
+		return (Sequent ctx hyps g)
 			
 compress_seq :: Seq -> ExprStore SeqI
-compress_seq (ProofObligation ctx hyps b g) = do
+compress_seq (Sequent ctx hyps g) = do
 		hs <- forM hyps expr_number
 		g' <- expr_number g
-		return (ctx,hs,b,g')
+		return (ctx,hs,g')
 
 decompress_map :: IntMap -> ExprIndex (Map Key (Seq,Bool))
 decompress_map ms = do
@@ -73,8 +73,8 @@ compress_map m = do
 			return (x,(j,z))
 		return $ unzip xs
 		
-type Seq    = ProofObligation
-type SeqI   = (Context,[Int],Bool,Int)
+type Seq    = Sequent
+type SeqI   = (Context,[Int],Int)
 type Key    = (Label,Label)
 -- type IntMap = [(Key,(SeqI,Bool))]
 type IntMap = ([Key],[(SeqI,Bool)])

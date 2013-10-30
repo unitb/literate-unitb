@@ -8,7 +8,8 @@ import System.IO
 --import System.Posix
 import System.Environment
 import System.Process
-import Control.Concurrent
+
+--import Control.Concurrent
 
 import Text.Printf
 
@@ -28,12 +29,17 @@ general = do
         c0 <- rawSystem "ghc" ["test.hs", "--make"] 
         c1 <- case c0 of
             ExitSuccess -> do
-                c3 <- rawSystem "ghc" ["continuous.hs", "--make"]
-                c4 <- rawSystem "ghc" ["verify.hs", "--make"]
-                c5 <- rawSystem "ghc" ["periodic.hs", "--make"]
-                c6 <- rawSystem "ghc" ["compile.hs", "--make"]
-                c7 <- rawSystem "ghc" ["run_tests.hs", "--make"]
-                return $ foldl success ExitSuccess [c3,c4,c5,c6,c7]
+                let compile x = readProcessWithExitCode "ghc" (x ++ ["--make","-W","-Werror"]) ""
+                rs <- mapM compile 
+                    [ ["test.hs","-threaded"]
+                    , ["continuous.hs","-threaded"]
+                    , ["verify.hs"]
+                    , ["periodic.hs"]
+                    , ["compile.hs"]
+                    , ["run_tests.hs"] ]
+                let (cs,_,_) = unzip3 rs
+                let c = foldl success c0 cs
+                return c
             ExitFailure _ -> return c0
         case c1 of
             ExitSuccess -> do
@@ -63,7 +69,7 @@ general = do
                 c1 <- system "./test > result.txt"
                 system "echo \"Lines of Haskell code:\" >> result.txt"
                 system "wc -l $(git ls-files | grep '.*\\.hs$') | sort -r | head -n 6 >> result.txt"
-                c2 <- rawSystem "cat" ["result.txt"]
+                rawSystem "cat" ["result.txt"]
                 return c1
             ExitFailure _ -> do
                 putStrLn "\n***************"

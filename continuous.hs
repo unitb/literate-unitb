@@ -13,30 +13,24 @@ import UnitB.PO
 import Z3.Z3
 
     -- Libraries
-import Control.Applicative ( (<|>) )
-import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
 
 import Data.Map as M ( elems )
 import Data.Time
-import Data.Time.Clock
 
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Internal as BSI
 import           Data.Map as M 
     ( Map,lookup
-    , empty,union
-    , fromList
-    , insert, alter
+    , empty
+    , insert
     )
 import qualified Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
-import System.IO
 import System.Locale
 
 import Text.Printf
@@ -82,7 +76,7 @@ data Params = Params
         { path :: FilePath
         , verbose :: Bool
         , continuous :: Bool
-        , pos :: Map Label (Map Label (Bool,ProofObligation))
+        , pos :: Map Label (Map Label (Bool,Sequent))
         }
 
 check_one :: (MonadIO m, MonadState Params m) 
@@ -107,7 +101,6 @@ check_file :: (MonadIO m, MonadState Params m)
            => m ()
 check_file = do
         param <- get
-        let m = pos param
         let { p ln = verbose param || take 4 ln /= "  o " }
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
@@ -143,7 +136,7 @@ options =
 
 main = do
         rawargs <- getArgs
-        let (opts,args,err) = getOpt Permute options rawargs
+        let (opts,args,_) = getOpt Permute options rawargs
         case args of
             [xs] -> do
                 b1 <- doesFileExist xs

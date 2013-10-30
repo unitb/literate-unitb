@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveDataTypeable, BangPatterns #-} 
+{-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
 
 module Z3.Z3 
     ( module Z3.Def
     , module Z3.Const
-    , ProofObligation ( .. )
+    , Sequent ( .. )
     , Validity ( .. )
     , Satisfiability ( .. )
     , discharge, verify
@@ -49,7 +49,7 @@ z3_path = "z3"
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
-    as_tree (CheckSat _)  = List [Str "check-sat-using", 
+    as_tree (CheckSat)    = List [Str "check-sat-using", 
                                     List ( Str "or-else" 
                                          : map strat
                                          [ Str "qe" 
@@ -88,8 +88,8 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
-instance Show ProofObligation where
-    show (ProofObligation (Context ss vs fs ds _) as _ g) =
+instance Show Sequent where
+    show (Sequent (Context ss vs fs ds _) as g) =
             unlines (
                    map (" " ++)
                 (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
@@ -137,16 +137,16 @@ z3_code po =
         ++ (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
-        ++ [CheckSat exist] )
+        ++ [CheckSat] )
     where
 --        !() = unsafePerformIO (p
-        (ProofObligation d assume exist assert) = delambdify po
+        (Sequent d assume assert) = delambdify po
 
-smoke_test :: ProofObligation -> IO Validity
-smoke_test (ProofObligation a b c _) =
-    discharge $ ProofObligation a b c zfalse
+smoke_test :: Sequent -> IO Validity
+smoke_test (Sequent a b _) =
+    discharge $ Sequent a b zfalse
 
-discharge :: ProofObligation -> IO Validity
+discharge :: Sequent -> IO Validity
 discharge po = do
     let code = z3_code po
 --    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
@@ -187,11 +187,11 @@ verify xs = do
 
 
 entailment  
-    (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 _ xp0) 
-    (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
+    (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 
+    (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 xp1) = 
             (po0,po1)
     where
-        po0 = ProofObligation 
+        po0 = Sequent 
             (Context 
                 (srt0 `merge` srt1) 
                 (cons0 `merge` cons1) 
@@ -199,9 +199,8 @@ entailment
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
             [xp0]
-            ex1
             xp1 
-        po1 = ProofObligation 
+        po1 = Sequent 
             (Context 
                 (srt0 `merge` srt1) 
                 (cons0 `merge` cons1) 
@@ -209,5 +208,4 @@ entailment
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
             xs1
-            ex1
             (zall xs0)

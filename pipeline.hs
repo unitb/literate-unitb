@@ -13,7 +13,7 @@ import UnitB.PO
 
 import Z3.Z3 
 		( discharge
-		, ProofObligation
+		, Sequent
 		, Validity ( .. ) )
 
 	-- Libraries
@@ -52,8 +52,6 @@ import Utilities.Syntactic
 	-- The prover and the parser _share_ a list of PO labels
 	-- The 
 	
-default_po_state = False
-
 wait :: Monad m => m Bool -> m ()
 wait m = do
 		b <- m
@@ -78,9 +76,9 @@ data Display = Display
 		, errors :: [Error]
 		}
 
-console io = forever $ do
-	xs <- takeMVar io
-	putStrLn xs
+--console io = forever $ do
+--	xs <- takeMVar io
+--	putStrLn xs
 			
 parser :: Shared
 	   -> IO ()
@@ -103,7 +101,7 @@ parser (Shared { .. })  = do
 		g lbl (x,y) = ((lbl,x),y)
 		parse = do
 				ms <- parse_machine fname
-				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) ProofObligation]
+				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) Sequent]
 				case xs of
 					Right ms -> do
 						let pos_list = unions ms

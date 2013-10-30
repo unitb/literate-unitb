@@ -49,7 +49,7 @@ sample_ast = [
         Decl (FunDecl [] "f" [int, bool] int),
         Assert (a `zgreater` zint 10),
         Assert (f a ztrue `zless` zint 10),
-        CheckSat False ]
+        CheckSat ]
     where
         f       = fun2 ff
 
@@ -57,16 +57,15 @@ sample_quant = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
-        CheckSat False,
+        CheckSat,
         GetModel ]
     where
         ff          = Fun [] "f" [int] int
         f           = maybe1 $ (\x -> FunApp ff [x])
 
-sample_proof = ProofObligation
+sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
         [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
-        False
         (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
         f           = maybe1 $ fun1 ff
@@ -75,7 +74,7 @@ sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
-        CheckSat False]
+        CheckSat]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
 
@@ -83,7 +82,7 @@ sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
-        CheckSat False]
+        CheckSat]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
         

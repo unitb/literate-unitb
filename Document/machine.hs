@@ -44,7 +44,7 @@ list_file_obligations fn = do
         ct <- readFile fn
         return $ list_proof_obligations ct
 
-list_proof_obligations :: String -> Either [Error] [(Machine, Map Label ProofObligation)]
+list_proof_obligations :: String -> Either [Error] [(Machine, Map Label Sequent)]
 list_proof_obligations ct = do
         xs <- list_machines ct
         forM xs $ \x -> do

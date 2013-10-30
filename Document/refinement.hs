@@ -128,11 +128,10 @@ parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
 
 assert m suff prop = 
         [ ( po_lbl
-            , (ProofObligation 
+            , (Sequent 
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m) 
                 (invariants m)
-                True
                 prop))
         ]
     where

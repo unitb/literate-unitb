@@ -82,7 +82,7 @@ data Context = Context
         (Map String Var)  -- dummies
     deriving (Show,Eq,Generic)
 
-data ProofObligation = ProofObligation Context [Expr] Bool Expr
+data Sequent = Sequent Context [Expr] Expr
     deriving (Eq, Generic)
 
 instance Show Type where
@@ -183,7 +183,7 @@ data Decl =
             [(String, [(String,Type)])] -- alternatives and named components
         | SortDecl Sort
 
-data Command = Decl Decl | Assert Expr | CheckSat Bool | GetModel
+data Command = Decl Decl | Assert Expr | CheckSat | GetModel
 
 data Fun = Fun [Type] String [Type] Type
     deriving (Eq, Ord, Generic)

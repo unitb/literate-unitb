@@ -107,7 +107,7 @@ data Machine =
     deriving (Show, Typeable)
 
 class Show a => RefRule a where
-    refinement_po :: a -> Machine -> Map Label ProofObligation
+    refinement_po :: a -> Machine -> Map Label Sequent
     rule_name     :: a -> Label
     
 empty_machine :: String -> Machine

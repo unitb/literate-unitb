@@ -168,18 +168,18 @@ lambda_def = do
                 let res = fromJust $ mzforall (vs ++ us) mztrue eq
                 return $ res
 
-delambdify :: ProofObligation -> ProofObligation
-delambdify (ProofObligation ctx asm b goal) = 
+delambdify :: Sequent -> Sequent
+delambdify (Sequent ctx asm goal) = 
         evalState (do
             asm'  <- forM asm lambdas
             goal' <- lambdas goal
             defs  <- lambda_def
             decl  <- lambda_decl
-            return $ ProofObligation
+            return $ Sequent
                 (            ctx 
                  `merge_ctx` mk_context decl) 
                 (defs ++ asm')
-                b goal'
+                goal'
             ) empty
 
 lambdas :: Monad m => Expr -> StateT TermStore m Expr
