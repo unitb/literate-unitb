@@ -6,6 +6,7 @@ module Z3.Z3
     , Sequent ( .. )
     , Validity ( .. )
     , Satisfiability ( .. )
+    , discharge_all
     , discharge, verify
     , Context ( .. )
     , entailment
@@ -16,6 +17,11 @@ module Z3.Z3
     , Symbol ( .. )
     , Command ( .. )
     , smoke_test
+    , Prover
+    , new_prover
+    , destroy_prover
+    , discharge_on
+    , read_result
     )
 where
 
@@ -29,15 +35,19 @@ import Z3.Lambda
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
+import Control.Concurrent
+import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Trans.Maybe
 
 import Data.Char
+import Data.Function
 import Data.List hiding (union)
 import Data.Map as M hiding (map,filter,foldl, (\\))
 import 		qualified
 	   Data.Map as M
 import Data.Typeable 
 import System.Exit
---import System.IO
 import System.Process
 
 import Utilities.Format
@@ -145,6 +155,87 @@ z3_code po =
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b _) =
     discharge $ Sequent a b zfalse
+
+data Prover = Prover
+        { inCh  :: Chan (Maybe (Int,Sequent))
+        , outCh :: Chan (Int,Validity)
+        , n_workers :: Int
+        }
+
+new_prover n_workers = do
+        inCh  <- newChan
+        outCh <- newChan
+        forM_ [1 .. n_workers] $ \p ->
+            forkOn p $ worker inCh outCh
+        return Prover { .. }
+    where
+        worker inCh outCh = void $ do
+--            (Just stdin,Just stdout,_,pcs) <- createProcess (shell "z3 -smt2 -in")
+--                { std_in = CreatePipe
+----                , std_out = CreatePipe
+--                , std_out = CreatePipe }
+--            hSetBinaryMode stdin False
+--            hSetBinaryMode stdout False
+--            hSetBuffering stdin LineBuffering
+--            hSetBuffering stdout LineBuffering
+----            hSetBinaryMode stderr False
+            runMaybeT $ forever $ do
+                cmd <- lift $ readChan inCh
+                case cmd of
+                    Just (tid, po) -> lift $ do
+                        r <- discharge po
+--                        let code = unlines 
+--                                    (   ["(echo \"begin\")"]
+--                                     ++ map (show . as_tree) (z3_code po)
+--                                     ++ ["(echo \"end\")"] )
+--                        hPutStr stdin code
+--                        xs <- hGetLine stdout
+--                        unless (xs == "begin") $ error "the first line of output should be begin"
+--                        xs <- while (/= "end") $ 
+--                            hGetLine stdout
+--                        let r
+--                                | xs == ["sat","end"]   = Invalid
+--                                | xs == ["unsat","end"] = Valid
+--                                | otherwise             = ValUnknown
+                        writeChan outCh (tid,r)
+                    Nothing -> do
+--                        lift $ terminateProcess pcs
+                        MaybeT $ return Nothing
+
+destroy_prover (Prover { .. }) = do
+        forM_ [1 .. n_workers] $ \_ ->
+            writeChan inCh Nothing
+
+discharge_on (Prover { .. }) po = do
+        writeChan inCh $ Just po
+
+read_result (Prover { .. }) = 
+        readChan outCh
+
+discharge_all :: [Sequent] -> IO [Validity]
+discharge_all xs = do
+        let ys = zip [0..] xs
+        pr <- new_prover 8
+        forkIO $ forM_ ys $ \task -> 
+            discharge_on pr task
+        rs <- forM ys $ \_ ->
+            read_result pr
+        destroy_prover pr
+--        inCh  <- newChan
+--        outCh <- newChan
+--        xs <- forM [1 .. 8] $ \p -> 
+--            forkOn p $ worker inCh outCh
+--        forM_ ys $ \task -> 
+--            writeChan inCh task
+--        rs <- forM ys $ \_ ->
+--            readChan outCh
+--        forM_ xs $ killThread
+        return $ map snd $ sortBy (compare `on` fst) rs
+--    where
+--        worker inCh outCh = forever $ do
+--            (tid, po) <- readChan inCh
+--            r <- discharge po
+--            writeChan outCh (tid,r)        
 
 discharge :: Sequent -> IO Validity
 discharge po = do
