@@ -64,7 +64,6 @@ Tests/m3_m0-enter.tex
 Tests/m3_m0-leave.tex
 Tests/m3_m1-movein.tex
 Tests/m3_m1-moveout.tex
-Tests/train-station-ref-err0.tex
 m1.z
 m1_evt.tex
 m1_m0-enter.tex
