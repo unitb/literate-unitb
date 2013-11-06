@@ -37,8 +37,6 @@ import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
-import System.IO.Unsafe
-
 import Utilities.Format
 import Utilities.Syntactic
 
@@ -46,7 +44,7 @@ list_file_obligations fn = do
         ct <- readFile fn
         return $ list_proof_obligations ct
 
-list_proof_obligations :: String -> Either [Error] [(Machine, Map Label ProofObligation)]
+list_proof_obligations :: String -> Either [Error] [(Machine, Map Label Sequent)]
 list_proof_obligations ct = do
         xs <- list_machines ct
         forM xs $ \x -> do
@@ -555,7 +553,7 @@ collect_expr = visit_doc
                         return (p,q))
                     let ctx = context m
                     let dum = free_vars ctx p `union` free_vars ctx q
-                    let new_prop = Unless (M.elems dum) p q
+                    let new_prop = Unless (M.elems dum) p q Nothing
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 
                         , constraint = insert lbl 
@@ -632,6 +630,36 @@ collect_proofs = visit_doc
 --                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
+            )
+        ,   (   "\\safetyB"
+            ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
+                    toEither $ error_list
+                        [ ( not (evt `member` events m)
+                            , format "event '{0}' is undeclared" evt )
+                        ]
+                    let event = events m ! evt
+                        prop = safety $ props m
+                    (p,q)    <- toEither (do
+                        p    <- fromEither ztrue $ get_assert m pCt
+                        q    <- fromEither ztrue $ get_assert m qCt
+                        error_list 
+                            [   ( lbl `member` prop
+                                , format "safety property {0} already exists" lbl )
+                            ] 
+                        return (p,q))
+                    let ctx = context m
+                    let dum = free_vars ctx p `union` free_vars ctx q
+                    let new_prop = Unless (M.elems dum) p q (Just evt)
+                    return m { props = (props m) 
+                        { safety = insert lbl new_prop $ prop 
+                        , constraint = insert lbl 
+                            (Co [] 
+                                (zor 
+                                    (zimplies (zand p $ znot q) $ primed (variables m) (zor p q))
+                                    (zexists (elems $ params event `union` indices event) 
+                                        (zall $ elems $ guard event)
+                                        (zall $ elems $ action event))))                                    
+                            (constraint $ props m) } } 
             )
         ,   (   "\\replace"
             ,   CmdBlock $ \(evt,n,del,add,keep,prog,saf,()) m -> do

@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveDataTypeable, BangPatterns #-} 
+{-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
 
 module Z3.Z3 
     ( module Z3.Def
     , module Z3.Const
-    , ProofObligation ( .. )
+    , Sequent ( .. )
     , Validity ( .. )
     , Satisfiability ( .. )
+    , discharge_all
     , discharge, verify
     , Context ( .. )
     , entailment
@@ -16,6 +17,11 @@ module Z3.Z3
     , Symbol ( .. )
     , Command ( .. )
     , smoke_test
+    , Prover
+    , new_prover
+    , destroy_prover
+    , discharge_on
+    , read_result
     )
 where
 
@@ -29,15 +35,19 @@ import Z3.Lambda
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
+import Control.Concurrent
+import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Trans.Maybe
 
 import Data.Char
+import Data.Function
 import Data.List hiding (union)
 import Data.Map as M hiding (map,filter,foldl, (\\))
 import 		qualified
 	   Data.Map as M
 import Data.Typeable 
 import System.Exit
---import System.IO
 import System.Process
 
 import Utilities.Format
@@ -49,26 +59,26 @@ z3_path = "z3"
 instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
-    as_tree (CheckSat _)  = List [Str "check-sat-using", 
+    as_tree (CheckSat)    = List [Str "check-sat-using", 
                                     List ( Str "or-else" 
                                          : map strat
-                                         [ Str "simplify"
-                                         , Str "qe"
-                                         , Str "der" 
+                                         [ Str "qe" 
+                                         , Str "simplify"
                                          , Str "skip"
+--                                         , Str "der"
                                          , List 
                                              [ Str "using-params"
                                              , Str "simplify"
                                              , Str ":expand-power"
                                              , Str "true"] ] ) ]
         where
-            strat t = List [Str "try-for", List [Str "then", t, Str "smt"], Str "400"]
+            strat t = List [Str "then", t, Str "smt"]
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
-        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2.5"] xs
+        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2"] xs
 --        let c = (shell (z3_path ++ " -smt2 -in -T:2.5")) { 
 --            std_out = CreatePipe,
 --            std_in = CreatePipe,
@@ -88,8 +98,8 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
-instance Show ProofObligation where
-    show (ProofObligation (Context ss vs fs ds _) as _ g) =
+instance Show Sequent where
+    show (Sequent (Context ss vs fs ds _) as g) =
             unlines (
                    map (" " ++)
                 (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
@@ -137,16 +147,97 @@ z3_code po =
         ++ (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
-        ++ [CheckSat exist] )
+        ++ [CheckSat] )
     where
 --        !() = unsafePerformIO (p
-        (ProofObligation d assume exist assert) = delambdify po
+        (Sequent d assume assert) = delambdify po
 
-smoke_test :: ProofObligation -> IO Validity
-smoke_test (ProofObligation a b c _) =
-    discharge $ ProofObligation a b c zfalse
+smoke_test :: Sequent -> IO Validity
+smoke_test (Sequent a b _) =
+    discharge $ Sequent a b zfalse
 
-discharge :: ProofObligation -> IO Validity
+data Prover = Prover
+        { inCh  :: Chan (Maybe (Int,Sequent))
+        , outCh :: Chan (Int,Validity)
+        , n_workers :: Int
+        }
+
+new_prover n_workers = do
+        inCh  <- newChan
+        outCh <- newChan
+        forM_ [1 .. n_workers] $ \p ->
+            forkOn p $ worker inCh outCh
+        return Prover { .. }
+    where
+        worker inCh outCh = void $ do
+--            (Just stdin,Just stdout,_,pcs) <- createProcess (shell "z3 -smt2 -in")
+--                { std_in = CreatePipe
+----                , std_out = CreatePipe
+--                , std_out = CreatePipe }
+--            hSetBinaryMode stdin False
+--            hSetBinaryMode stdout False
+--            hSetBuffering stdin LineBuffering
+--            hSetBuffering stdout LineBuffering
+----            hSetBinaryMode stderr False
+            runMaybeT $ forever $ do
+                cmd <- lift $ readChan inCh
+                case cmd of
+                    Just (tid, po) -> lift $ do
+                        r <- discharge po
+--                        let code = unlines 
+--                                    (   ["(echo \"begin\")"]
+--                                     ++ map (show . as_tree) (z3_code po)
+--                                     ++ ["(echo \"end\")"] )
+--                        hPutStr stdin code
+--                        xs <- hGetLine stdout
+--                        unless (xs == "begin") $ error "the first line of output should be begin"
+--                        xs <- while (/= "end") $ 
+--                            hGetLine stdout
+--                        let r
+--                                | xs == ["sat","end"]   = Invalid
+--                                | xs == ["unsat","end"] = Valid
+--                                | otherwise             = ValUnknown
+                        writeChan outCh (tid,r)
+                    Nothing -> do
+--                        lift $ terminateProcess pcs
+                        MaybeT $ return Nothing
+
+destroy_prover (Prover { .. }) = do
+        forM_ [1 .. n_workers] $ \_ ->
+            writeChan inCh Nothing
+
+discharge_on (Prover { .. }) po = do
+        writeChan inCh $ Just po
+
+read_result (Prover { .. }) = 
+        readChan outCh
+
+discharge_all :: [Sequent] -> IO [Validity]
+discharge_all xs = do
+        let ys = zip [0..] xs
+        pr <- new_prover 8
+        forkIO $ forM_ ys $ \task -> 
+            discharge_on pr task
+        rs <- forM ys $ \_ ->
+            read_result pr
+        destroy_prover pr
+--        inCh  <- newChan
+--        outCh <- newChan
+--        xs <- forM [1 .. 8] $ \p -> 
+--            forkOn p $ worker inCh outCh
+--        forM_ ys $ \task -> 
+--            writeChan inCh task
+--        rs <- forM ys $ \_ ->
+--            readChan outCh
+--        forM_ xs $ killThread
+        return $ map snd $ sortBy (compare `on` fst) rs
+--    where
+--        worker inCh outCh = forever $ do
+--            (tid, po) <- readChan inCh
+--            r <- discharge po
+--            writeChan outCh (tid,r)        
+
+discharge :: Sequent -> IO Validity
 discharge po = do
     let code = z3_code po
 --    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
@@ -187,11 +278,11 @@ verify xs = do
 
 
 entailment  
-    (ProofObligation (Context srt0 cons0 fun0 def0 dum0) xs0 _ xp0) 
-    (ProofObligation (Context srt1 cons1 fun1 def1 dum1) xs1 ex1 xp1) = 
+    (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 
+    (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 xp1) = 
             (po0,po1)
     where
-        po0 = ProofObligation 
+        po0 = Sequent 
             (Context 
                 (srt0 `merge` srt1) 
                 (cons0 `merge` cons1) 
@@ -199,9 +290,8 @@ entailment
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
             [xp0]
-            ex1
             xp1 
-        po1 = ProofObligation 
+        po1 = Sequent 
             (Context 
                 (srt0 `merge` srt1) 
                 (cons0 `merge` cons1) 
@@ -209,5 +299,4 @@ entailment
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
             xs1
-            ex1
             (zall xs0)

@@ -2,6 +2,9 @@
 module Main where
 
     -- Modules
+import Pipeline
+import Config
+	
 import Document.Document
 
 import UnitB.AST
@@ -10,44 +13,28 @@ import UnitB.PO
 import Z3.Z3
 
     -- Libraries
-import Control.Applicative ( (<|>) )
-import Control.Concurrent
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
 
 import Data.Map as M ( elems )
 import Data.Time
-import Data.Time.Clock
 
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Internal as BSI
 import           Data.Map as M 
     ( Map,lookup
-    , empty,union
-    , fromList
-    , insert, alter
+    , empty
+    , insert
     )
 import qualified Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
-import System.IO
 import System.Locale
 
 import Text.Printf
 
-instance Ser.Serialize Label where
-instance Ser.Serialize Sort where
-instance Ser.Serialize Var where
-instance Ser.Serialize Type where
-instance Ser.Serialize Fun where
-instance Ser.Serialize Def where
-instance Ser.Serialize Quantifier where
-instance Ser.Serialize Context where
-instance Ser.Serialize Expr where
-instance Ser.Serialize ProofObligation where
 
 with_po_map act param = do
         let fn = path param ++ ".state"
@@ -60,7 +47,7 @@ with_po_map act param = do
                 $ Ser.decode xs
         else return param
         void $ execStateT act param
-
+		
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         p    <- gets pos
@@ -89,7 +76,7 @@ data Params = Params
         { path :: FilePath
         , verbose :: Bool
         , continuous :: Bool
-        , pos :: Map Label (Map Label (Bool,ProofObligation))
+        , pos :: Map Label (Map Label (Bool,Sequent))
         }
 
 check_one :: (MonadIO m, MonadState Params m) 
@@ -114,7 +101,6 @@ check_file :: (MonadIO m, MonadState Params m)
            => m ()
 check_file = do
         param <- get
-        let m = pos param
         let { p ln = verbose param || take 4 ln /= "  o " }
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
@@ -150,29 +136,38 @@ options =
 
 main = do
         rawargs <- getArgs
-        let (opts,args,err) = getOpt Permute options rawargs
+        let (opts,args,_) = getOpt Permute options rawargs
         case args of
             [xs] -> do
-                b <- doesFileExist xs
-                if b then do
+                b1 <- doesFileExist xs
+                b2 <- z3_installed
+                if b1 && b2 then do
                     let { param = Params 
                             { path = xs
                             , pos = empty
-                            , verbose = Verbose `elem` opts
+                            , verbose    = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
                             } }
-                    with_po_map (do
-                        check_file
-                        dump_pos
-                        if continuous param 
-                        then do
-                            monitor
-                                (liftIO $ getModificationTime xs)
-                                (liftIO $ threadDelay 1000000)
-                                (do check_file
-                                    dump_pos)
-                        else return ()) param
+                    if continuous param then
+                    	run_pipeline xs
+                    else
+                    	with_po_map (do
+                    		check_file
+                    		dump_pos) param
+                    -- with_po_map (do
+                        -- check_file
+                        -- dump_pos
+                        -- if continuous param 
+                        -- then do
+                            -- monitor
+                                -- (liftIO $ getModificationTime xs)
+                                -- (liftIO $ threadDelay 1000000)
+                                -- (do check_file
+                                    -- dump_pos)
+                        -- else return ()) param
                     return ()
-                else do
+                else if not b2 then
+                    putStrLn ("a 'z3' executable hasn't been found in the path ")
+                else
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
-            _ -> putStrLn $ usageInfo "usage: continuous file" options
+            _ -> putStrLn $ usageInfo "usage: continuous file [options]" options

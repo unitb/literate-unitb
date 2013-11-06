@@ -71,7 +71,7 @@ example0 = do
         return m
 
 train_m0 = do
-        let (st,st',st_decl) = prog_var "st" (ARRAY int BOOL)
+        let (st,st',st_decl) = prog_var "st" (ARRAY int bool)
             (t,t_decl) = var "t" int
         inv0 <- with_li (0,0) (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])

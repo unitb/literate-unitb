@@ -274,6 +274,7 @@ parse_calc hyps m xs =
                 err $ M.lookup xs $ inv p1
                 err $ M.lookup xs $ inv_thm p1
                 err $ M.lookup xs $ inits m
+                err $ M.lookup xs $ fact $ theory m
                 foldM f [err_msg] $ elems $ events m
                 )
             where
@@ -314,7 +315,7 @@ get_assert m ys = do
         let (i,j) = if L.null xs
                     then li
                     else line_info xs
-        x <- either (\x -> left [(x,i,j)]) (right . normalize_generics) $ zcast BOOL $ Right x
+        x <- either (\x -> left [(x,i,j)]) (right . normalize_generics) $ zcast bool $ Right x
         unless (L.null $ ambiguities x) $ left 
             $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
                 $ ambiguities x
@@ -335,7 +336,7 @@ get_evt_part m e ys = do
         let (i,j) = if L.null xs
                     then li
                     else line_info xs
-        x <- either (\x -> left [(x,i,j)]) (right . normalize_generics) $ zcast BOOL $ Right x
+        x <- either (\x -> left [(x,i,j)]) (right . normalize_generics) $ zcast bool $ Right x
         unless (L.null $ ambiguities x) $ left 
             $ map (\x -> (format "type of {0} is ill-defined: {1}" x (type_of x),i,j))
                 $ ambiguities x

@@ -7,8 +7,8 @@ import Z3.Def -- hiding ( type_of )
     -- Libraries
 import Control.Monad
 
-import Data.Foldable as F
-    hiding ( foldl, forM_, mapM_, toList )
+-- import Data.Foldable as F
+    -- hiding ( foldl, forM_, mapM_, toList )
 import Data.List as L hiding ( (\\), union )
 import Data.Map as M 
     hiding ( foldl, map, union, unions, (\\) )
@@ -57,13 +57,9 @@ zcast t me = do
         return $ specialize_right u e
 
 suffix_generics :: String -> Type -> Type
-suffix_generics _ BOOL = BOOL
---suffix_generics _ INT = INT
---suffix_generics _ REAL = REAL
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
 suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
---suffix_generics xs (SET t)             = SET (suffix_generics xs t) 
 
 rewrite_types :: String -> Expr -> Expr
 rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
@@ -88,7 +84,7 @@ rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_arg
 rewrite_types xs e@(Binder _ _ _ _)            = rewrite (rewrite_types xs) e
 
 check_args :: [Expr] -> Fun -> Maybe (Expr) 
-check_args xp f@(Fun gs name ts t) = do
+check_args xp (Fun gs name ts t) = do
             guard (length xp == length ts)
             let n       = length ts
             let xs      = zip (L.map show [1..n]) xp
@@ -103,13 +99,13 @@ check_args xp f@(Fun gs name ts t) = do
             let gs2   = map (ft "1") gs
             let us    = L.map (ft "1") ts
             let u     = ft "1" t
-            let !args1 = map (rewrite_types "2") args
-            let !args2 = map (fe "2") args
+            -- let !args1 = map (rewrite_types "2") args
+            let args2 = map (fe "2") args
             let expr = FunApp (Fun gs2 name us u) $ args2 
             return expr
 
 check_type :: Fun -> [Either String Expr] -> Either String Expr
-check_type f@(Fun gs n ts t) mxs = do
+check_type f@(Fun _ n ts t) mxs = do
         xs <- forM mxs id
         let args = unlines $ map (\(i,x) -> format (unlines
                             [ "   argument {0}:  {1}"
@@ -124,7 +120,7 @@ check_type f@(Fun gs n ts t) mxs = do
                     n ts t args :: String
         maybe (Left err_msg) Right $ check_args xs f
 
-typ_fun1 f@(Fun gs n ts t) mx        = do
+typ_fun1 f@(Fun _ n ts t) mx        = do
         x <- mx
         let err_msg = format (unlines 
                     [  "argument of '{0}' do not match its signature:"
@@ -135,7 +131,7 @@ typ_fun1 f@(Fun gs n ts t) mx        = do
                     n ts t 
                     x (type_of x) :: String
         maybe (Left err_msg) Right $ check_args [x] f
-typ_fun2 f@(Fun gs n ts t) mx my     = do
+typ_fun2 f@(Fun _ n ts t) mx my     = do
         x <- mx
         y <- my
         let err_msg = format (unlines 
@@ -152,7 +148,7 @@ typ_fun2 f@(Fun gs n ts t) mx my     = do
 --        let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
 --        let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
         maybe (Left err_msg) Right $ check_args [x,y] f
-typ_fun3 f@(Fun gs n ts t) mx my mz  = do
+typ_fun3 f@(Fun _ n ts t) mx my mz  = do
         x <- mx
         y <- my
         z <- mz
@@ -173,10 +169,7 @@ typ_fun3 f@(Fun gs n ts t) mx my mz  = do
         maybe (Left err_msg) Right $ check_args [x,y,z] f
 
 unify_aux :: Type -> Type -> Unification -> Maybe Unification
-unify_aux BOOL BOOL u = Just u
---unify_aux INT INT u   = Just u
---unify_aux REAL REAL u = Just u
-unify_aux t0@(GENERIC x) t1 u
+unify_aux (GENERIC x) t1 u
         | not (x `member` l_to_r u)   = Just u 
                 { l_to_r = M.insert x t1 $ l_to_r u
                 , edges = [ (x,y) | y <- fv ] ++ edges u
@@ -193,7 +186,7 @@ unify_aux t0@(GENERIC x) t1 u
 --        !() = unsafePerformIO (do
 --                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
 --                print (t0,t1))
-unify_aux t0 t1@(GENERIC x) u = unify_aux t1 t0 u
+unify_aux t0 t1@(GENERIC _) u = unify_aux t1 t0 u
 unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | x == y && length xs == length ys = foldM f u (zip xs ys)
         | otherwise                        = Nothing
@@ -203,7 +196,7 @@ unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
 unify_aux (ARRAY t0 t1) (ARRAY t2 t3) u = do
         u <- unify_aux t0 t2 u
         unify_aux t1 t3 u
-unify_aux _ _ u               = Nothing
+unify_aux _ _ _               = Nothing
 
 unify t0 t1 = do
         u <- unify_aux (suffix_generics "1" t0) (suffix_generics "2" t1) empty_u
@@ -258,8 +251,8 @@ unify t0 t1 = do
 
         same_soure (x,_) (y,_) = x == y 
         f ( (x,y):xs ) = (x,y:map snd xs)
+        f [] 		   = error "Genericity.unify.f: expecting non empty argument"
         g x = (x,[])
-        h (x,y) = (x,x,y)
 
     -- merge type instances
 merge_inst :: Map String Type -> Map String Type -> Maybe (Map String Type)
@@ -278,23 +271,19 @@ class Generic a where
     generics :: a -> S.Set String
     
 instance Generic Type where
-    generics BOOL = S.empty
---    generics INT  = S.empty
---    generics REAL = S.empty
     generics (GENERIC s)        = S.singleton s
     generics (ARRAY t0 t1)      = generics t0 `S.union` generics t1
-    generics (USER_DEFINED s ts)= S.unions $ map generics ts
---    generics (SET t)            = generics t  
+    generics (USER_DEFINED _ ts)= S.unions $ map generics ts
 
 instance Generic Fun where
     generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
 
 instance Generic Var where
-    generics (Var v t)  = generics t
+    generics (Var _ t)  = generics t
 
 instance Generic Expr where
-    generics (Word (Var v t)) = generics t
-    generics (Const ts n t)   = S.unions $ map generics (t : ts)
+    generics (Word (Var _ t)) = generics t
+    generics (Const ts _ t)   = S.unions $ map generics (t : ts)
     generics (FunApp f xp)    = S.unions (generics f : map generics xp)
     generics (Binder _ vs r xp) = S.unions (generics r : generics xp : map generics vs)
 
@@ -310,7 +299,7 @@ ambiguities e@(FunApp f xp)
         | otherwise                 = []
     where
         children = L.concatMap ambiguities xp
-ambiguities e@(Binder _ vs r xp) = ambiguities r ++ ambiguities xp
+ambiguities (Binder _ _ r xp) = ambiguities r ++ ambiguities xp
 
 normalize_generics :: Expr -> Expr
 normalize_generics expr = specialize renaming expr
@@ -342,9 +331,9 @@ specialize m e = f e
     where
         f (Const gs x t)    = Const (map g gs) x $ g t
         f (Word x)          = Word $ h x
-        f x@(FunApp (Fun gs n ts t) args) 
+        f (FunApp (Fun gs n ts t) args) 
                 = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) (map (specialize m) args)
-        f x@(Binder q vs r e) 
+        f (Binder q vs r e) 
                 = rewrite f $ Binder q (map h vs) r e
         g t     = instantiate m t
         h (Var x t) = Var x $ g t

@@ -25,3 +25,22 @@ In order to stay up to date with the project's lead developments (today known un
 then, any time you need to update one of the branches (most likely the master branch):
 
     git pull cipher master
+
+Haskell Libraries
+=================
+
+In order to compile Literate Unit-B, you need a number of Haskell libraries which you can install using cabal in the command line.
+
+	cabal install <lib-name>
+	
+The libraries are:
+
+	cabal install either
+	cabal install MissingH
+	cabal install cereal
+	cabal install ansi-terminal
+	
+Z3
+==
+
+Z3 can be obtained from http://z3.codeplex.com/ and should be placed in the PATH.

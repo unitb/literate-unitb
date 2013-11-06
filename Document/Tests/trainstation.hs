@@ -269,11 +269,11 @@ leave_evt = empty_event
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
     
 check_sat = [ format ("(check-sat-using (or-else"
-                        ++ " (try-for (then simplify smt) {0})"
-                        ++ " (try-for (then qe smt) {0})"
-                        ++ " (try-for (then der smt) {0})"
-                        ++ " (try-for (then skip smt) {0})"
-                        ++ " (try-for (then (using-params simplify :expand-power true) smt) {0})))") 
+                        ++ " (then qe smt)"
+--                        ++ " (try-for (then der smt) {0})"
+                        ++ " (then simplify smt)"
+                        ++ " (then skip smt)"
+                        ++ " (then (using-params simplify :expand-power true) smt)))") 
               400
             ]
 
@@ -1318,22 +1318,22 @@ result18 = unlines
         [  "error (68,2): expression has type incompatible with its type annotation:"
         ,  "  expression: (dom@@TRAIN@@BLK loc)"
         ,  "  type: set [TRAIN]"
-        ,  "  type annotation: BOOL "
+        ,  "  type annotation: Bool "
         ,  ""
         ,  "error (73,2): expression has type incompatible with its type annotation:"
         ,  "  expression: (bunion@@TRAIN in (mk-set@@TRAIN t))"
         ,  "  type: set [TRAIN]"
-        ,  "  type annotation: BOOL "
+        ,  "  type annotation: Bool "
         ,  ""
         ,  "error (118,2): expression has type incompatible with its type annotation:"
         ,  "  expression: t"
         ,  "  type: TRAIN"
-        ,  "  type annotation: BOOL "
+        ,  "  type annotation: Bool "
         ,  ""
         ,  "error (123,2): expression has type incompatible with its type annotation:"
         ,  "  expression: empty-set@@a"
         ,  "  type: set [_a]"
-        ,  "  type annotation: BOOL "
+        ,  "  type annotation: Bool "
         ,  ""
         ]
 

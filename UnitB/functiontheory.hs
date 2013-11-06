@@ -11,13 +11,7 @@ import Z3.Def
 import Z3.Const
 
     -- Libraries
-import Control.Monad
-
 import Data.Map
-
-import Utilities.Format
-
---import System.IO.Unsafe
 
 ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
     where
@@ -45,7 +39,7 @@ zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
 
     -- encoding is done on an expression per expression basis
 zlambda xs mx my = do
-        x <- zcast BOOL mx
+        x <- zcast bool mx
         y <- my
         return $ Binder Lambda xs x y
 
@@ -103,12 +97,12 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
             -- empty-fun and ovl
-        axm2 = fromJust $ mzforall [f1_decl] mztrue ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
-        axm3 = fromJust $ mzforall [f1_decl] mztrue ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
+--        axm2 = fromJust $ mzforall [f1_decl] mztrue ( (f1 `zovl` Right zempty_fun) `mzeq` f1 )
+--        axm3 = fromJust $ mzforall [f1_decl] mztrue ( (Right zempty_fun `zovl` f1) `mzeq` f1 )
             -- dom and mk-fun
         axm4 = fromJust $ mzforall [x_decl,y_decl] mztrue ( zdom (x `zmk_fun` y) `mzeq` zmk_set x )
             -- mk_fun and apply
-        axm5 = fromJust $ mzforall [x_decl,y_decl] mztrue ( (zmk_fun x y `zapply` x) `mzeq` y )
+--        axm5 = fromJust $ mzforall [x_decl,y_decl] mztrue ( (zmk_fun x y `zapply` x) `mzeq` y )
             -- ovl and apply
         axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] mztrue ( 
                         (x `zelem` zdom f2) 
@@ -138,7 +132,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             -- dom-rest and tfun
             -- dom-subst and tfun
             -- dom-rest and dom
-        axm9  = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
+--        axm9  = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomrest` f1)) `mzeq` (s1 `zintersect` zdom f1))
             -- dom-subst and dom
         axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
@@ -189,9 +183,6 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
 --                            (zrep_select f2 x)
 --                            (zrep_select f1 x) )
         as_fun e = zcast (fun_type t0 t1) e
---        as_fun e = e
---        as_dom e = zcast (set_type t0) e
-        as_dom e = e
         
         (x,x_decl) = var "x" t0
         (x2,x2_decl) = var "x2" t0
@@ -199,6 +190,6 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         (f1,f1_decl) = var "f1" $ fun_type t0 t1
         (f2,f2_decl) = var "f2" $ fun_type t0 t1
         (s1,s1_decl) = var "s1" $ set_type t0
-        (s2,s2_decl) = var "s2" $ set_type t1
+        -- (s2,s2_decl) = var "s2" $ set_type t1
         dec x = x ++ z3_decoration t0 ++ z3_decoration t1
         dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x

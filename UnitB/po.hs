@@ -4,7 +4,7 @@ module UnitB.PO
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , check, verify_changes, verify_machine
-    , smoke_test_machine )
+    , smoke_test_machine, dump )
 where
 
     -- Modules
@@ -125,7 +125,7 @@ invariants_only m =
         p0 = props m
         p1 = inh_props m 
 
-raw_machine_pos :: Machine -> (Map Label ProofObligation)
+raw_machine_pos :: Machine -> (Map Label Sequent)
 raw_machine_pos m = pos
     where
         pos = M.map f $ M.unions (
@@ -138,9 +138,9 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
-        f (ProofObligation a b c d) = ProofObligation a (M.elems (theory_facts $ theory m)++b) c d
+        f (Sequent a b d) = Sequent a (M.elems (theory_facts $ theory m)++b) d
 
-proof_obligation :: Machine -> Either [Error] (Map Label ProofObligation)
+proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
         let { pos = raw_machine_pos m }
         forM_ (M.toList $ proofs $ props $ m) (\(lbl,p) -> do
@@ -156,24 +156,24 @@ proof_obligation m = do
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
 
-ref_po :: Machine -> Label -> Rule -> Map Label ProofObligation
+ref_po :: Machine -> Label -> Rule -> Map Label Sequent
 ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
     where
         f x
             | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
             | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
-init_fis_po :: Machine -> Map Label ProofObligation
+init_fis_po :: Machine -> Map Label Sequent
 init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 
             ( composite_label $ [_name m, init_fis_lbl] ++ map (label . name) vs
             , po $ goal vs es)
     where
-        po = ProofObligation (assert_ctx m) [] True
+        po = Sequent (assert_ctx m) []
         clauses = partition_expr (M.elems $ variables m) (M.elems $ inits m)
         goal vs es = (zexists vs ztrue $ zall es)
  
 
-prop_tr :: Machine -> Label -> Transient -> Map Label ProofObligation
+prop_tr :: Machine -> Label -> Transient -> Map Label Sequent
 prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) = 
     M.fromList 
         $ if M.null ind0 then 
@@ -203,13 +203,12 @@ prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) =
                     ztrue xp
         po lbl xp = 
           ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname] ++ lbl)
-            , ProofObligation 
+            , Sequent 
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m 
                 `merge_ctx` dummy
                 `merge_ctx` def_ctx) 
                 (invariants m)
-                True
                 xp)
         xp0 = (xp `zimplies` (new_dummy ind $ zall sch0))
         xp1 = (zforall  
@@ -230,7 +229,7 @@ prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) =
                     pname evt_lbl
 
 
-prop_co :: Machine -> Label -> Constraint -> Map Label ProofObligation
+prop_co :: Machine -> Label -> Constraint -> Map Label Sequent
 prop_co m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
             (M.insert 
@@ -239,10 +238,9 @@ prop_co m pname (Co fv xp) =
                 (events $ m))
     where
         po _ evt = 
-                (ProofObligation 
+                (Sequent 
                     (step_ctx $ m) 
                     (invariants m ++ grd ++ act)
-                    False
                     (forall_fv xp) )
             where
                 grd = M.elems $ guard evt
@@ -255,13 +253,12 @@ inv_po m pname xp =
             (mapKeys po_name $ mapWithKey po (events m))
             (M.singleton 
                 (composite_label [_name m, inv_init_lbl, pname])
-                (ProofObligation (assert_ctx m) (M.elems $ inits m) False xp))
+                (Sequent (assert_ctx m) (M.elems $ inits m) xp))
     where
         po _ evt = 
-                (ProofObligation 
+                (Sequent 
                     (step_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
                     (invariants m ++ grd ++ act)
-                    False
                     (primed (variables m) xp))
             where
                 grd = M.elems $ guard evt
@@ -271,10 +268,9 @@ inv_po m pname xp =
 
 fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
         ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
-          ProofObligation 
+          Sequent 
             (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants m ++ grd)
-            True
             (zexists pvar ztrue $ zall acts))
     where
         grd  = M.elems $ guard evt
@@ -283,15 +279,14 @@ fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
         ind  = indices evt `merge` params evt
         pos  = partition_expr pvar $ M.elems $ action evt
 
-sch_po :: Machine -> Label -> Event -> Map Label ProofObligation
+sch_po :: Machine -> Label -> Event -> Map Label Sequent
 sch_po m lbl evt = M.singleton
         (composite_label [_name m, lbl, sch_lbl])
-        (ProofObligation 
+        (Sequent 
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
             `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
             (invariants m ++ f_sch ++ c_sch)
-            True
             (exist_param $ zall grd))
     where
         grd   = M.elems $ guard evt
@@ -303,10 +298,9 @@ sch_po m lbl evt = M.singleton
 
 thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
-        (ProofObligation
+        (Sequent
             (assert_ctx m)
             (invariants_only m)
-            False
             xp)
     where
 
@@ -320,7 +314,7 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-steps_po :: Theory -> Context -> Calculation -> Either [Error] [(Label, ProofObligation)]
+steps_po :: Theory -> Context -> Calculation -> Either [Error] [(Label, Sequent)]
 steps_po th ctx (Calc d _ e0 es _) = f e0 es
     where
         f _ [] = return []
@@ -329,18 +323,18 @@ steps_po th ctx (Calc d _ e0 es _) = f e0 es
             tail <- f e1 es
             return (
                 ( label ("step " ++ show li)
-                , ProofObligation 
+                , Sequent 
                     (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
                     (a0 ++ M.elems (theory_facts th)) 
-                    False expr
+                    expr
                 ) : tail)
 
 entails_goal_po th ctx (Calc d g e0 es (i,j)) = do
             a <- with_li (i,j) assume
-            return $ ProofObligation 
+            return $ Sequent 
                 (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
                 (a ++ M.elems (theory_facts th)) 
-                False g
+                g
     where
         assume = 
                 fmap reverse $ foldM f [] (map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
@@ -351,15 +345,15 @@ entails_goal_po th ctx (Calc d g e0 es (i,j)) = do
         xs = take (length es) (e0:ys)
         rs = map (\(x,_,_,_) -> x) es
 
-goal_po c = ProofObligation (context c) xs False (goal c)
+goal_po c = Sequent (context c) xs (goal c)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 
-obligations :: Theory -> Context -> Calculation -> Either [Error] [ProofObligation]
+obligations :: Theory -> Context -> Calculation -> Either [Error] [Sequent]
 obligations th ctx c = do
         fmap (map snd) $ obligations' th ctx c
 
-obligations' :: Theory -> Context -> Calculation -> Either [Error] [(Label, ProofObligation)]
+obligations' :: Theory -> Context -> Calculation -> Either [Error] [(Label, Sequent)]
 obligations' th ctx c = do
         x  <- entails_goal_po th ctx c
         ys <- steps_po th ctx c
@@ -388,7 +382,7 @@ pretty_print (List ys@(x:xs)) =
                 _        -> xs
         one_line = concatMap (uncurry (++)) $ zip (repeat " ") $ concatMap pretty_print xs
 
-proof_po th p@(ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
+proof_po th p@(ByCalc c) lbl po@(Sequent ctx _ _) = do
         let (y0,y1) = entailment (goal_po c) po
         ys   <- obligations' th ctx c
         return $ map f ((g "goal ",y0) : (g "hypotheses ",y1) : ys)
@@ -396,7 +390,7 @@ proof_po th p@(ByCalc c) lbl po@(ProofObligation ctx _ _ _) = do
         f (x,y) = (composite_label [lbl, x],y)
         g x = label (x ++ show li)
         li  = line_info p
-proof_po th (ByCases xs li) lbl (ProofObligation ctx asm b goal) = do
+proof_po th (ByCases xs li) lbl (Sequent ctx asm goal) = do
         dis <- mzsome (map (\(_,x,_) -> Right x) xs)
         let c  = completeness dis
         cs <- mapM case_a $ zip [1..] xs
@@ -404,11 +398,11 @@ proof_po th (ByCases xs li) lbl (ProofObligation ctx asm b goal) = do
     where
         completeness dis = 
                 ( (f ("completeness " ++ show li)) 
-                , ProofObligation ctx asm b dis )
+                , Sequent ctx asm dis )
         case_a (n,(_,x,p)) = proof_po th p (f ("case " ++ show n))
-                $ ProofObligation ctx (x:asm) b goal
+                $ Sequent ctx (x:asm) goal
         f x     = composite_label [lbl,label x]
-proof_po th (ByParts xs li) lbl (ProofObligation ctx asm b goal) = do
+proof_po th (ByParts xs li) lbl (Sequent ctx asm goal) = do
         let conj = map (\(x,_) -> x) xs
         let c  = completeness conj
         cs <- mapM part $ zip [1..] xs
@@ -416,14 +410,14 @@ proof_po th (ByParts xs li) lbl (ProofObligation ctx asm b goal) = do
     where
         completeness conj = 
                 ( (f ("completeness " ++ show li)) 
-                , ProofObligation ctx conj b goal )
+                , Sequent ctx conj goal )
         part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
-                $ ProofObligation ctx asm b x
+                $ Sequent ctx asm x
         f x     = composite_label [lbl,label x]
 proof_po    th  (FreeGoal v u p (i,j)) 
-            lbl po@(ProofObligation ctx asm b goal) = do
+            lbl po@(Sequent ctx asm goal) = do
         new_goal <- free_vars goal
-        proof_po th p lbl $ ProofObligation ctx asm b new_goal
+        proof_po th p lbl $ Sequent ctx asm new_goal
     where
         free_vars (Binder Forall ds r expr) 
                 | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
@@ -440,22 +434,22 @@ proof_po    _  (Easy (i,j))
             lbl po = 
         return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
 proof_po    th  (Assume new_asm new_goal p (i,j))
-            lbl (ProofObligation ctx asm b goal) = do
-        pos <- proof_po th p lbl $ ProofObligation ctx (M.elems new_asm ++ asm) b new_goal
+            lbl (Sequent ctx asm goal) = do
+        pos <- proof_po th p lbl $ Sequent ctx (M.elems new_asm ++ asm) new_goal
         return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
-                 , ProofObligation ctx [] b (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
+                 , Sequent ctx [] (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
                : pos)
 proof_po    th  (Assertion lemma p _)
-            lbl (ProofObligation ctx asm b goal) = do
+            lbl (Sequent ctx asm goal) = do
         pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
-            $ ProofObligation ctx (asm ++ map fst (M.elems lemma)) b goal
+            $ Sequent ctx (asm ++ map fst (M.elems lemma)) goal
         pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
             proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
-                $ ProofObligation ctx asm b g )
+                $ Sequent ctx asm g )
         return (pos1 ++ concat pos2)
 
-are_fresh :: [String] -> ProofObligation -> Bool
-are_fresh vs (ProofObligation _ asm _ goal) = 
+are_fresh :: [String] -> Sequent -> Bool
+are_fresh vs (Sequent _ asm goal) = 
             S.fromList vs `S.intersection` (S.map name $ S.unions $ map used_var (goal:asm))
          == S.empty 
 
@@ -477,7 +471,7 @@ check th c = embed
         let ln = filter ((/= Valid) . fst) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
 
-dump :: String -> Map Label ProofObligation -> IO ()
+dump :: String -> Map Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
@@ -489,18 +483,22 @@ dump name pos = do
     where
         f x = unlines $ pretty_print (as_tree x)
 
-verify_all :: Map Label ProofObligation -> IO (Map Label Bool)
+verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos = do
-    rs <- forM (M.toList pos) (\(lbl, po) -> do
-            r <- discharge po
+    let xs = M.toList pos
+    let (lbls,pos) = unzip xs 
+    ys <- discharge_all pos
+    rs <- forM (zip lbls ys) $ \(lbl,r) -> do
+--    rs <- forM xs $ \(lbl, po) -> do
+--            r <- discharge po
             case r of
                 Valid -> do
                     return (lbl, True) 
                 _     -> do
-                    return (lbl, False)) 
+                    return (lbl, False)
     return $ M.fromList rs
 
-verify_changes :: Machine -> Map Label (Bool,ProofObligation) -> IO (Map Label (Bool,ProofObligation), String,Int)
+verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Sequent), String,Int)
 verify_changes m old_pos = do
         case proof_obligation m of
             Right pos -> do

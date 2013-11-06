@@ -1,0 +1,71 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newcommand{\Train}{\text{TRAIN}}
+\newcommand{\Blk}{\text{BLK}}
+
+\section{Initial model}
+\begin{machine}{m0}
+
+\newevent{evt}{evt}
+
+\weakento{evt}{0}{default}{c0}
+
+\cschedule{evt}{c0}{\true}
+
+\transient{evt}{0}{tr0}{ \true }
+
+\progress{p0}{ \true }{ \true }
+
+\refine{p0}{discharge}{tr0}{}
+
+\end{machine}
+
+\section{First refinement}
+\begin{machine}{m1}
+
+\refines{m0}
+
+\replace{evt}{1}{c0}{c1}{}{p0}{saf0}
+
+\safety{saf0}{ \true }{ \true }
+
+\cschedule{evt}{c1}{\true}
+
+\end{machine}{m1}
+
+\section{Second refinement}
+
+\begin{machine}{m2}
+
+\refines{m1} 
+
+\replacefine{evt}{3}{}{}{f2}{p0}
+
+\fschedule{evt}{f2}{\true}
+
+\end{machine}
+
+\end{document}

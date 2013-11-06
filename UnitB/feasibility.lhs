@@ -66,7 +66,7 @@ get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not impleme
 
 
 partition_expr :: [Var] -> [Expr] -> [([Var],[Expr])]
-partition_expr vs es = do -- error "UnitB.Feasibility.partition_expr: not implemented"
+partition_expr vs es = do 
         runPartitionWith [0..m+n-1] $ do
             forM_ (M.assocs me) $ \(e,i) -> 
                 forM_ (S.elems $ used_var e) $ \v ->
@@ -103,13 +103,6 @@ p_fromList xs = Partition $ fromList $ zip xs xs
 
 runPartitionWith :: [Int] -> PartitionT a -> a
 runPartitionWith xs m = ST.evalState m $ p_fromList xs
-
---merge :: Int -> Int -> PartitionT ()
---merge x y
---        | x <= y    = modify $ f x y
---        | y <= x    = modify $ f y x
---    where
---        f x y (Partition m) = Partition $ insert y (m ! x) m
 
 merge :: Int -> Int -> PartitionT ()
 merge x y = do
