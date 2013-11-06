@@ -6,3 +6,5 @@ DESIGN PRINCIPLES
 A bad example would be a list of theorems. It should not be necessary to give the theorems so that one theorem relies only on the theorems above it. Either order can be useful in the presentation of a mathematical theory.
 
 2. In order to submit formulas to Z3, Literate Unit-B will derive formulas of its own. Any formula derived by the tool can't be shown to the user. A guide of the various proof obligations should be enough to use the tool.
+
+3. The verification of a file from scratch must yield the same result as an interactive session where proof obligations are tried, changed and retried. Caching should not affect the result of verification.
