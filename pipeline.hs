@@ -4,7 +4,12 @@ module Pipeline
 where
 
 	-- Modules
+import Control.Monad.Trans
+import Control.Monad.Trans.Either
+	
 import Document.Document
+
+import Observable
 
 import Serialize
 
@@ -32,7 +37,6 @@ import			 Data.Map as M
 					, mapWithKey, lookup, fromList
 					, toList, unions )
 import qualified Data.Map as M 
-					( map )
 import			 Data.Maybe
 import			 Data.Set as S 
 					( Set, member, empty )
@@ -66,6 +70,7 @@ data Shared = Shared
 		, status  :: TChan (Label,Label,Seq,Bool)
 		, working :: MVar Int
 		, ser     :: MVar ((Map (Label,Label) (Seq,Bool), Set (Label,Label)),[Error])
+		, system  :: Observable System
 		, fname   :: FilePath
 		-- , io      :: MVar String
 		}
@@ -101,10 +106,14 @@ parser (Shared { .. })  = do
 		g lbl (x,y) = ((lbl,x),y)
 		parse = do
 				ms <- parse_machine fname
-				let xs = ms >>= mapM f :: Either [Error] [Map (Label,Label) Sequent]
+				(xs) <- liftIO $ runEitherT $ do
+					s  <- EitherT $ parse_system fname
+					xs <- hoistEither $ mapM f $ M.elems $ machines s
+					return (xs, s)
 				case xs of
-					Right ms -> do
+					Right (ms,s) -> do
 						let pos_list = unions ms
+						write_obs system s
 						swapMVar pos pos_list
 						tryTakeMVar lbls
 						putMVar lbls (Right $ keysSet pos_list)
@@ -244,7 +253,16 @@ serialize (Shared { .. }) = forever $ do
 		dump_pos fname pos
 		dump_z3 fname pos
 		writeFile (fname ++ ".report") (unlines $ proof_report out es False)
-				
+
+summary (Shared { .. }) = do
+		v <- newEmptyMVar
+		observe system v
+		forkIO $ forever $ do
+			threadDelay 10000000
+			takeMVar v
+			s <- read_obs system
+			produce_summaries s
+		
 keyboard = do
 		xs <- getLine
 		if map toLower xs == "quit" 
@@ -259,10 +277,12 @@ run_pipeline fname = do
 		tok     <- newEmptyMVar
 		ser     <- newEmptyMVar
 		status  <- newTChanIO
+		system  <- new_obs empty_system
 		-- io      <- newEmptyMVar
 		working <- newMVar 0
 		let sh = Shared { .. }
 		(m,s) <- load_pos fname (M.empty,S.empty)
+		summary sh
 		t0 <- forkIO $ evalStateT (display sh) (Display m s [])
 		t1 <- forkIO $ evalStateT (prover sh) (M.map f m)
 		-- t2 <- forkIO $ console io

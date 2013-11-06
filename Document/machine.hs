@@ -648,17 +648,19 @@ collect_proofs = visit_doc
                             ] 
                         return (p,q))
                     let ctx = context m
-                    let dum = free_vars ctx p `union` free_vars ctx q
+                    let dum =       free_vars ctx p 
+                            `union` free_vars ctx q
+                            `union` params event 
+                            `union` indices event
                     let new_prop = Unless (M.elems dum) p q (Just evt)
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 
                         , constraint = insert lbl 
-                            (Co [] 
+                            (Co (M.elems dum) 
                                 (zor 
                                     (zimplies (zand p $ znot q) $ primed (variables m) (zor p q))
-                                    (zexists (elems $ params event `union` indices event) 
-                                        (zall $ elems $ guard event)
-                                        (zall $ elems $ action event))))                                    
+                                    (zall $  (elems $ guard event)
+                                    	  ++ (elems $ action event))))                                    
                             (constraint $ props m) } } 
             )
         ,   (   "\\replace"
