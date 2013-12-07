@@ -1,0 +1,415 @@
+
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newcommand{\Train}{\text{TRAIN}}
+\newcommand{\Blk}{\text{BLK}}
+
+\input{ref0}
+
+\section{First refinement}
+\begin{machine}{m1}
+
+
+
+% \refines{m0}
+
+\newset{BLK}{\Blk}
+
+\begin{use:set}{\Blk} \end{use:set}
+\begin{use:fun}{\Train}{\Blk} \end{use:fun}
+
+\begin{align*}
+\variable{	loc : \Train \pfun \Blk}
+\end{align*}
+
+\begin{align*}
+\\ \initialization{in1}
+	{ in = \emptyset }
+\end{align*}
+
+\begin{align*}
+\invariant{inv0}
+	{	\dom.loc = in }
+\end{align*}
+
+\begin{align*}
+\constant{	ent,ext : \Blk} ; \quad
+\constant{	plf : \set [ \Blk ]}
+\end{align*}
+
+\subsection{New requirements}
+\begin{align*}
+\safety{m1:saf0}
+	{ \neg t \in in& }{ t \in in \land loc.t = ent }
+\\ \safety{m1:saf1}
+	{ t \in in \land loc.t = ent& }{ t \in in \land loc.t \in plf }
+\\ \safety{m1:saf2}
+	{ t \in in \land loc.t \in plf& }{ t \in in \land loc.t = ext }
+\\ \safety{m1:saf3}
+	{ t \in in \land loc.t = ext& }{ \neg t \in in }
+\end{align*}
+
+\subsection{Proofs}
+
+\subsubsection{Invariant \ref{inv0}}
+
+\begin{align*}
+\evassignment{m0:leave}{lv:a2}
+	{ loc' &= \{ t \} \domsub loc }
+\\ \evassignment{m0:enter}{a3}
+	{ loc' &= loc \1| t \tfun ent }
+\\ \initialization{in0}
+	{ loc \, &= \emptyfun }
+\end{align*}
+
+\subsubsection{Safety \ref{m1:saf1}, \ref{m1:saf2}}
+
+This takes care of \eqref{m1:saf2}:
+
+\begin{align*}
+\evguard{m0:leave}{lv:grd1}
+	{ loc.t = ext }
+\\ \evguard{m0:enter}{ent:grd1}
+	{ \neg t \in in }
+\end{align*}
+
+This takes care of \eqref{m1:saf1}
+
+\begin{align*}
+\evguard{m0:leave}{lv:grd0}
+	{ t \in in }
+\\ \assumption{asm0}
+	{ \neg ext \in plf \1\land \neg ext = ent }
+\end{align*}
+
+\subsubsection{Side conditions}
+
+In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
+\replace{m0:leave}{1}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
+
+\begin{align*}
+\cschedule{m0:leave}{lv:c1}
+	{ loc.t = ext }
+\\ \progress{m1:prog0}
+	{ t \in in }{ t \in in \land loc.t = ext }
+\end{align*}
+
+The first step in implementing \eqref{m1:prog0} is to break it down in a few cases. The property says ``a train inside the station eventually reaches the exit''. Now, we're going to break the predicate ``the train is inside the station'' into ``the train is at the entrance'', ``the train is at a platform'' and ``the train is at the exit'', as described by the following assumption:
+\hide{
+	\begin{align*}
+	\dummy{		b : \Blk}
+	\end{align*}
+}
+\begin{align*}
+\assumption{asm1}
+{	\qforall{b}{}{ b \in \Blk \2\equiv b \in plf \1\lor b = ent \1\lor b = ext }	}
+\end{align*}
+
+Which allows us to appy \emph{disjunction} to \eqref{m1:prog0}.
+
+\begin{align*}
+& { t \in in }\3\mapsto{ t \in in \land loc.t = ext }
+\refine{m1:prog0}{disjunction}{m1:prog1,m1:prog2,m1:prog3}{}
+& \progress{m1:prog2}
+	{ t \in in \land loc.t = ext }{ t \in in \land loc.t = ext }
+\\ & \progress{m1:prog1}
+	{ t \in in \land loc.t = ent }{ t \in in \land loc.t = ext }
+\\ & \progress{m1:prog3}
+	{ t \in in \land loc.t \in plf }{ t \in in \land loc.t = ext }
+\end{align*} 
+%
+\hide{ \refine{m1:prog2}{implication}{}{} } %
+%
+\eqref{m1:prog2} is true by implication. This leaves us \eqref{m1:prog1} and \eqref{m1:prog3}. \eqref{m1:prog1} says that a train at the entrance reaches the exit. However, \eqref{m1:saf1} says that a train can only leave the entrance through a platform:
+
+\begin{align*}
+	& { t \in in \land loc.t = ent }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{m1:prog1}}
+\refine{m1:prog1}{transitivity}{m1:prog4,m1:prog3}{}
+& \progress{m1:prog4}
+	{ t \in in \land loc.t = ent }{ t \in in \land loc.t \in plf } 
+\\ & { t \in in \land loc.t \in plf }\3\mapsto{ t \in in \land loc.t = ext } \tag{\ref{m1:prog3}}
+\end{align*}
+
+We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
+\newevent{m1:movein}{move\_in} 
+\newevent{m1:moveout}{move\_out} 
+\hide{ 
+	\refine{m1:prog3}{discharge}{m1:tr0,m1:saf2}{}
+	\refine{m1:prog4}{discharge}{m1:tr1,m1:saf1}{}
+}
+\begin{align*} 
+& \transientB{m1:movein}{0}{m1:tr1}{ \index{t}{t} }
+	{ t \in in \1\land loc.t = ent }
+\\ & \transient{m1:moveout}{0}{m1:tr0}
+	{ t \in in \1\land loc.t \in plf }
+\\ & \evguard{m1:movein}{mi:grd7}
+	{ b \in plf }
+\end{align*}
+\subsubsection{New events} 
+
+
+\begin{align*}
+\indices{m1:moveout}{	t : \Train}
+\end{align*}
+
+We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
+
+\weakento{m1:moveout}{0}{default}{c1}{}
+
+\begin{align*}
+\evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
+\\ \assumption{asm2}
+	{ \qexists{b}{}{b \in plf} }
+\\ \cschedule{m1:moveout}{c1}{ t \in in \land loc.t \in plf }
+\\ \evguard{m1:moveout}{mo:g1}{ t \in in }
+\\ \evguard{m1:moveout}{mo:g2}{ loc.t \in plf }
+\end{align*}
+
+We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
+
+\weakento{m1:movein}{0}{default}{mi:c1,mi:c2}{}
+
+\begin{align*}
+\indices{m1:movein}{	t : \Train} ; \quad
+\param{m1:movein}{ b : \Blk }
+\end{align*}
+
+\begin{align*}
+\evassignment{m1:movein}{mi:a2}
+	{ loc' &= loc \1| t \tfun b }
+\\ \assumption{asm3}
+	{ \neg ent &\in plf }
+\\ \cschedule{m1:movein}{mi:c1}{ t &\in in } 
+\\ \cschedule{m1:movein}{mi:c2}{ loc.t &= ent }
+\\ \evguard{m1:movein}{mi:g1}{ t &\in in }
+\\ \evguard{m1:movein}{mi:grd0}
+	{ loc.t &= ent } % m1:saf3
+\end{align*}
+%
+\end{machine}
+
+\section{Second refinement}
+
+\begin{machine}{m2}
+
+\refines{m1} 
+
+\begin{align*}
+\dummy{	t_0,t_1 : \Train}
+\end{align*}
+
+\subsection{New Requirement}
+\begin{align*}
+\invariant{m2:inv0}
+	{	\qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	}
+\end{align*}
+%
+\subsection{Design}
+%
+\replace{m1:movein}{1}{}{mi:c0}{}{m2:prog0}{m2:saf0}
+\begin{align*}
+\progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\\ \safetyB{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
+\end{align*}
+
+%The above property, \eqref{m2:saf0}, should not discharge automatically.
+
+\begin{align*} 
+\evguard{m1:movein}{mi:g0}
+	{	 \qforall{t}{t \in in}{ \neg loc.t = b} 	}
+\\ \cschedule{m1:movein}{mi:c0}
+	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
+%\\ \evguard{m1:movein}{mi:g3}
+%	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
+\\ \evguard{m0:enter}{et:g1}
+	{	\qforall{t}{t \in in}{ \neg loc.t = ent} 	}
+\\ \evguard{m1:moveout}{mo:g3}
+	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+\end{align*}
+%
+
+\begin{proof}{\ref{m0:leave}/INV/\ref{m2:inv0}}
+\begin{free:var}{t_0}{t_0}
+\begin{free:var}{t_1}{t_1}
+	\begin{align}
+	\assume{hyp0}{\neg t_0 = t_1}
+	\hide{
+		\\ \assume{hyp1}{ t_0 \in in' }
+		\\ \assume{hyp2}{ t_1 \in in' }}
+	\\ \assert{hyp5}{ t_0 \in in }
+	\\ \assert{hyp6}{ t_1 \in in }
+	\\ \assert{hyp3}{ \neg t_0 = t } % \label{hyp7}
+	\\ \assert{hyp4}{ \neg t_1 = t } % \label{hyp8}
+	\\ \goal{\neg (loc'.t_0 = loc'.t_1)} \notag
+	\end{align}
+	\hide{
+		\assert{hyp7}{ t_0 \in \dom.loc \setminus \{ t \} }
+		\assert{hyp8}{ t_1 \in \dom.loc \setminus \{ t \} }
+		}
+	\begin{calculation}
+		loc'.t_0 = loc'.t_1
+	\hint{=}{ \ref{lv:a2} \ref{m2:inv0} }
+		(\{ t \} \domsub loc).t_0 = (\{ t \} \domsub loc).t_1 
+	\hint{=}{ \hide{ \eqref{hyp7} and \eqref{hyp8} } 
+			\igeqref{hyp3} and \igeqref{hyp4} }
+		loc.t_0 = loc.t_1 
+	\hint{=}{ \eqref{hyp5}, \eqref{hyp6}, 
+			\eqref{hyp0} with \ref{m2:inv0} 
+			} 
+		\false
+	\end{calculation}
+	\hide
+	{	\begin{subproof}{hyp3} \easy \end{subproof}
+		\begin{subproof}{hyp4} \easy \end{subproof}
+		\begin{subproof}{hyp5} \easy \end{subproof}
+		\begin{subproof}{hyp6} \easy \end{subproof}
+		}
+	\hide{
+		\begin{subproof}{hyp7} 
+		\begin{calculation}
+			t_0 \in \dom.loc \setminus \{ t \}
+		\hint{=}{ \ref{inv0} }
+			t_0 \in in \setminus \{ t \} 
+		\hint{=}{ \ref{lv:a0} }
+			t_0 \in in'
+		\hint{=}{ \eqref{hyp1} }
+			\true
+		\end{calculation}
+		\end{subproof}
+		\begin{subproof}{hyp8} 
+		\begin{calculation}
+			t_1 \in \dom.loc \setminus \{ t \}
+		\hint{=}{ \ref{inv0} }
+			t_1 \in in \setminus \{ t \} 
+		\hint{=}{ \ref{lv:a0} }
+			t_1 \in in'
+		\hint{=}{ \ref{hyp2} }
+			\true
+		\end{calculation}
+		\end{subproof}
+		}
+\end{free:var}
+\end{free:var}
+\end{proof}
+
+\replacefine{m1:moveout}{1}{}{}{mo:f0}{m2:prog1} 
+
+\begin{align*}
+\fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+\\ \progress{m2:prog1}{\true}{\qforall{t}{t \in in}{ \neg loc.t = ext}}
+\end{align*}
+
+\begin{align*}
+	& \true \2\mapsto \qforall{t}{t \in in}{ \neg loc.t = ext} 
+\refine{m2:prog1}{trading}{m2:prog2}{}
+	& \progress{m2:prog2}{\qexists{t}{t \in in}{ loc.t = ext} }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
+\refine{m2:prog2}{disjunction}{m2:prog3}{}
+	& \progress{m2:prog3}{ t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } \end{align*}
+%
+\hide{
+	\refine{m2:prog3}{discharge}{m2:tr0,m2:saf1}{}
+	}
+%
+We implement \eqref{m2:prog3} with the following:
+%	
+\begin{align*}
+	\transient{m0:leave}{1}{m2:tr0}
+		{ t \in in \1\land loc.t = ext }
+\\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
+\end{align*}
+
+\begin{align*}
+	& {\true} \1\mapsto {\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} } 
+%	\tag{\ref{m2:prog0}}
+\refine{m2:prog0}{trading}{m2:prog4}{}
+	& \progress{m2:prog4}{\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\!}
+		{\!\! \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\refine{m2:prog4}{monotonicity}{m2:prog5}{}
+	& \progress{m2:prog5}{\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b}}
+		{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
+\refine{m2:prog5}{disjunction}{m2:prog6}{}
+	& \progress{m2:prog6}{ b \in plf \land t \in in \land loc.t = b }
+		{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+\end{align*}
+
+\hide{
+	\refine{m2:prog6}{discharge}{m2:tr1,m2:saf2}{}
+	}
+
+\begin{align*}
+	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
+		{ b \in plf \land t \in in \land loc.t = b }
+\\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
+\end{align*}
+
+In order to prove \ref{m1:moveout}, we need a need progress property, to make sure that the fine schedule becomes true infinitely often. We can use the same that we used to introduce the fine schedule \eqref{m2:prog1}.
+
+\subsection{Summary of the events} 
+
+\begin{block}
+
+\item[{}] Here are the events
+\item[{}]
+\input{../../m2_m0-enter}
+\item[{}]
+\input{../../m2_m1-movein}
+\item[{}]
+\input{../../m2_m1-moveout}
+\item[{}]
+\input{../../m2_m0-leave}
+\end{block}
+
+\end{machine}
+
+\section{Third refinement}
+
+\begin{machine}{m3}
+
+\refines{m2}
+
+\[	\variable{isgn: \Bool} ; ~
+	\variable{osgn: \Blk \pfun \Bool} 
+\]
+
+\begin{use:set}{\Bool} \end{use:set}
+\begin{use:set}{\Blk} \end{use:set}
+\begin{use:fun}{\Blk}{\Bool} \end{use:fun}
+
+
+\begin{align*}
+	\dummy{ b_0, b_1 : \Blk }
+\\	\invariant{m3:inv0}{ \dom.osgn = plf }
+\\	\invariant{m3:inv1}{ \qforall{b_0,b_1}{ b_0 \in plf \land b_1 \in plf }{ \true } }
+%\\	\evassignment{m0:enter}{m3:ent:act0}{isgn' = isgn}
+%\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' = osgn}
+\\	\evassignment{m1:movein}{m3:mi:act0}{isgn' = isgn}
+\\	\evassignment{m1:movein}{m3:mi:act1}{osgn' = osgn}
+\\	\initialization{m3:init0}{ osgn = \emptyfun }
+\\	\initialization{m3:init1}{ isgn = \false }
+\end{align*}
+
+\end{machine}
+
+\end{document}

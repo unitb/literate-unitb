@@ -117,7 +117,7 @@ all_machines xs = do
         ms <- x
         return $ s { machines = ms }
     where
-        (x,s,_) = runRWS (runEitherT $ foo_bar xs) () empty_system
+        (x,s,_) = runRWS (runEitherT $ read_document xs) () empty_system
 
 produce_summaries :: System -> IO ()
 produce_summaries sys = 
@@ -134,8 +134,10 @@ produce_summaries sys =
         f ':' = '-'
         f x   = x
         
-foo_bar xs = do
+read_document xs = do
             ms <- foldM gather empty xs 
+            lift $ RWS.modify (\s -> s { 
+                machines = ms })
             ms <- toEither $ foldM (f type_decl) ms xs
             refs  <- lift $ RWS.gets ref_struct
             check_acyclic "refinement structure" $ toList refs
@@ -223,7 +225,9 @@ type_decl = visit_doc []
             ,  (  "\\refines"
                ,  CmdBlock $ \(mch,()) m -> do
                         anc   <- lift $ gets ref_struct
+                        sys   <- lift $ gets machines
                         (i,j) <- lift $ ask
+                        unless (show mch `member` sys) $ left [(format "Machine {0} refines a non-existant machine: {1}" (_name m) mch,i,j)]
                         when (_name m `member` anc) $ left [(format "Machines can only refine one other machine",i,j)]
                         lift $ modify $ \x -> x { ref_struct = insert (_name m) mch $ ref_struct x }
                         return m

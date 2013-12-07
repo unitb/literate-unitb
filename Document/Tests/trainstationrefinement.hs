@@ -17,10 +17,12 @@ import Utilities.Format (format)
 test_case = Case "train station example, with refinement" test True
 
 test = test_cases
-            [ Case "verify machine m0" (verify 0) result0
-            , Case "verify machine m1" (verify 1) result1
-            , Case "verify machine m2" (verify 2) result2
+            [ Case "verify machine m0" (verify 0 path0) result0
+            , Case "verify machine m1" (verify 1 path0) result1
+            , Case "verify machine m2" (verify 2 path0) result2
+            , Case "verify machine m2, in many files" (verify 2 path1) result2
             , StringCase "cyclic proof of liveness through 3 refinements" (parse path3) result3
+            , StringCase "refinement of undefined machine" (parse path4) result4
             ]
 
 result0 = unlines
@@ -177,11 +179,19 @@ result2 = unlines
 
 path0 = "Tests/train-station-ref.tex"
 
+path1 = "Tests/train-station-ref/main.tex"
+
 path3 = "Tests/train-station-ref-err0.tex"
 
 result3 = concat 
     [ "error (0,0): A cycle exists in the proof of liveness: "
     , "evt/SCH/0, evt/SCH/1, p0, tr0\n"
+    ]
+
+path4 = "Tests/train-station-ref-err1.tex"
+
+result4 = concat 
+    [ "error (30,20): Machine m0 refines a non-existant machine: mm\n"
     ]
 
 parse path = do
@@ -190,8 +200,8 @@ parse path = do
         Right _ -> "ok"
         Left xs -> unlines $ map (\(x,i,j) -> format "error ({0},{1}): {2}" i j x) xs
 
-verify n = do
-    r <- parse_machine path0
+verify n path = do
+    r <- parse_machine path
     case r of
         Right ms -> do
             (s,_,_) <- str_verify_machine $ ms !! n

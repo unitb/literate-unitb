@@ -1,0 +1,49 @@
+\section{Initial model}
+\begin{machine}{m0}
+
+\begin{align*}
+	\false \tag{default} \label{default}
+\end{align*}
+
+\newset{TRAIN}{\Train}
+
+\begin{use:set}{\Train} \end{use:set}
+
+\begin{align*}
+\variable{	in : \set [ \Train ]}
+\end{align*}
+
+\begin{align*}
+\dummy{	t : \Train}
+\end{align*}
+
+\newevent{m0:enter}{enter} 
+\newevent{m0:leave}{leave}
+
+\begin{align*}
+\indices{m0:leave}{	t : \Train}
+\end{align*}
+\begin{align*}
+\indices{m0:enter}{	t : \Train}
+\end{align*}
+
+\weakento{m0:leave}{0}{default}{lv:c0}
+
+\begin{align*}
+\cschedule{m0:leave}{lv:c0}
+	{	t &\in in } \\ 
+\evassignment{m0:leave}{lv:a0}
+	{	in' &= in \setminus \{ t \} } \\
+\evassignment{m0:enter}{a1}
+	{	in' &= in \bunion \{ t \} }
+\end{align*}
+
+\begin{align*}
+&\progress{m0:prog0}
+	{	t \in in }{ \neg t \in in }
+\refine{m0:prog0}{discharge}{m0:tr0}{}
+&\transient{m0:leave}{0}{m0:tr0}
+	{	t \in in }
+\end{align*}
+
+\end{machine}
