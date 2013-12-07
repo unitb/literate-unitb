@@ -1,7 +1,8 @@
 module Observable 
 	( Observable, new_obs, modify_obs
 	, write_obs, read_obs, observe
-	, observe_with )
+	, observe_with
+	, test )
 where
 
 import Control.Concurrent

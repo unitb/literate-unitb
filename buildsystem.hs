@@ -4,7 +4,6 @@ module BuildSystem
     , init_state )
 where
 
-import Control.Concurrent.Thread.Delay
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State hiding ( State )
@@ -12,12 +11,9 @@ import Control.Monad.Trans.Writer
 
 import Data.Map hiding ( map )
 import Data.Time
-import Data.Time.Clock
 
 import System.Directory
 import System.FilePath.Posix
-import System.Locale
-import System.Process
 
 data State = State 
     { timestamps :: Map FilePath UTCTime

@@ -2,11 +2,11 @@ module Main where
 
 import BuildSystem
 
-import Control.Concurrent.Timeout
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
 
+import System.Timeout
 import System.Console.ANSI
 import System.Exit
 import System.IO 
@@ -15,7 +15,7 @@ import System.Process
 interval = Minutes 1
 retry_interval = Seconds 1
 
-data Time = Minutes Integer | Seconds Integer
+data Time = Minutes Int | Seconds Int
 
 microseconds (Minutes x) = x * 60000000
 microseconds (Seconds x) = x * 1000000
@@ -47,7 +47,7 @@ main = do
                     , ["verify.hs"]
                     , ["periodic.hs"]
                     , ["compile.hs"]
-                    , ["run_tests.hs"] ]
+                    , ["run_tests.hs","-threaded"] ]
                 let (cs,_,yss) = unzip3 rs
                 let c = foldl success ExitSuccess cs
                 let ys = concat yss

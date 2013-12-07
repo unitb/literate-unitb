@@ -37,8 +37,9 @@ general = do
                     , ["periodic.hs"]
                     , ["compile.hs"]
                     , ["run_tests.hs"] ]
-                let (cs,_,_) = unzip3 rs
+                let (cs,_,xs) = unzip3 rs
                 let c = foldl success c0 cs
+                forM_ (concatMap lines xs) putStrLn
                 return c
             ExitFailure _ -> return c0
         case c1 of

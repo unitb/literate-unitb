@@ -3,15 +3,12 @@ module Main where
 import BuildSystem
 import Heap
 
-import Control.Concurrent.Thread.Delay
+import Control.Concurrent
+
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.Trans.State
-import Control.Monad.Trans.Writer
 
-import Data.Map hiding ( null )
 import Data.Time
-import Data.Time.Clock
 
 import System.Directory
 import System.Environment
@@ -23,7 +20,7 @@ long_interval = Minutes 1
 short_interval = Seconds 10
 retry_interval = Seconds 10
 
-data Time = Minutes Integer | Seconds Integer
+data Time = Minutes Int | Seconds Int
 
 microseconds (Minutes x) = x * 60000000
 microseconds (Seconds x) = x * 1000000
@@ -37,15 +34,15 @@ main = do
         putStrLn "usage: run_test [module_name]"
     else do
         let args = concat xs
-        let { interval = if null xs 
-            then long_interval
-            else short_interval }
+--        let { interval = if null xs 
+--            then long_interval
+--            else short_interval }
         evalHeapT $ do
             new HaskellMon $ return init_state
             new LaTeXMon $ return init_state
             focus LaTeXMon $ set_extensions [".tex"]
             forever $ do
-                b2 <- focus HaskellMon $ didAnythingChange
+--                b2 <- focus HaskellMon $ didAnythingChange
                 b3 <- focus LaTeXMon $ didAnythingChange
                 t0 <- liftIO $ getModificationTime "test"
                 t1 <- liftIO $ getModificationTime "last_result.txt"
@@ -74,4 +71,4 @@ main = do
                         void $ system $ "./run_tests \"" ++ args ++ "\""
 --                    delay (microseconds interval)
                 else return ()
-                lift $ delay (microseconds retry_interval)
+                lift $ threadDelay (microseconds retry_interval)

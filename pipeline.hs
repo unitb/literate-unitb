@@ -18,7 +18,6 @@ import UnitB.PO
 
 import Z3.Z3 
 		( discharge
-		, Sequent
 		, Validity ( .. ) )
 
 	-- Libraries
@@ -26,15 +25,14 @@ import Control.Concurrent
 import Control.Concurrent.STM.TChan
 
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Monad.STM
 import Control.Monad.Trans.State
 
 import			 Data.Char
 import			 Data.Map as M 
-					( Map, empty, keysSet
-					, insert, filterWithKey, keys
-					, mapWithKey, lookup, fromList
+					( Map, keysSet
+					, insert, keys
+					, fromList
 					, toList, unions )
 import qualified Data.Map as M 
 import			 Data.Maybe
@@ -105,7 +103,7 @@ parser (Shared { .. })  = do
 			return $ fromList $ map (g $ _name m) $ toList $ x
 		g lbl (x,y) = ((lbl,x),y)
 		parse = do
-				ms <- parse_machine fname
+--				ms <- parse_machine fname
 				(xs) <- liftIO $ runEitherT $ do
 					s  <- EitherT $ parse_system fname
 					xs <- hoistEither $ mapM f $ M.elems $ machines s

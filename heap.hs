@@ -2,7 +2,6 @@ module Heap where
 
 import Data.Map
 
-import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
 
