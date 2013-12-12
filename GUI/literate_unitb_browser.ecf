@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-12-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-12-0 http://www.eiffel.com/developers/xml/configuration-1-12-0.xsd" name="literate_unitb_browser" uuid="DC73E23F-A1BE-4F9E-9DE4-4B3F12CD735D">
+	<target name="literate_unitb_browser">
+		<root cluster="root_cluster" class="APPLICATION" feature="make_and_launch"/>
+		<option warning="true">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<external_include location="/Users/Simon/Documents/Haskell/literate-unitb/GUI"/>
+		<external_include location="/Library/Frameworks/GHC.framework/Versions/7.6.3-x86_64/usr/lib/ghc-7.6.3/include"/>
+		<external_library location="/Users/Simon/Documents/Haskell/literate-unitb/GUI/HaskellExts.so"/>
+		<pre_compile_action working_directory="\Users\Simon\Documents\Haskell\literate-unitb\GUI\" command="make" succeed="true">
+		</pre_compile_action>
+		<precompile name="vision2_pre" location="$ISE_PRECOMP\vision2-safe.ecf"/>
+		<library name="base" location="$ISE_LIBRARY\library\base\base-safe.ecf"/>
+		<library name="vision2" location="$ISE_LIBRARY\library\vision2\vision2-safe.ecf"/>
+		<cluster name="root_cluster" location=".\" recursive="true">
+			<file_rule>
+				<exclude>/EIFGENs$</exclude>
+				<exclude>/CVS$</exclude>
+				<exclude>/.svn$</exclude>
+			</file_rule>
+		</cluster>
+	</target>
+</system>

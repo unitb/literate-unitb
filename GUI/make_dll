@@ -1,0 +1,18 @@
+ghc -O --make \
+           -no-hs-main -optl '-shared' -optc '-DMODULE=HaskellExts' \
+           -o HaskellExts.so src/HaskellExts.hs src/module_init.c
+           
+ghc -O --make \
+           -no-hs-main -optl '-shared' -optc '-DMODULE=Safe' \
+           -o HaskellExts.so Safe.hs test.c
+
+ghc -O --make \
+           -no-hs-main -optl '-shared'  \
+           -optc-O test.c Safe          \
+           -o HaskellExts.so
+
+http://www.haskell.org/haskellwiki/Calling_Haskell_from_C
+    ghc -c -O Safe.hs
+    ghc -optc-O test.c Safe.o Safe_stub.o -o test
+    ghc --make -no-hs-main -optc-O test.c Safe -o test
+
