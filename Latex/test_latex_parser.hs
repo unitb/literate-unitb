@@ -1,6 +1,5 @@
 module Latex.Test_Latex_Parser where
 
-import Data.List
 import qualified Data.Map as M 
 
 --import Latex.Proof_Parser
@@ -65,7 +64,7 @@ cases = test_cases [
 find_env :: [String] -> [LatexDoc] -> M.Map String [LatexDoc]
 find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) xs
     where
-        f m (t@(Env name _ c _))
+        f m (t@(Env name _ _ _))
             | name `elem` kw = M.insertWith (++) name [t] m
             | otherwise        = fold_doc f m t
         f m t                  = fold_doc f m t

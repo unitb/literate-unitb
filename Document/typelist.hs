@@ -2,20 +2,14 @@
 module Document.TypeList where
 
     -- Modules 
---import Document.Visitor
-
 import Latex.Parser
 
 import Utilities.Syntactic
 
     -- Libraries
-import Control.Monad
 import Control.Monad.Reader.Class
-import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
-
-import Data.Char
 
 class Readable a where
     read_args :: (Monad m, MonadReader (Int,Int) m)

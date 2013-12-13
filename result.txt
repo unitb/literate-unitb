@@ -85,33 +85,11 @@
 |  |  +- verify machine m1
 |  |  +- verify machine m2
 |  |  +- verify machine m2, in many files
-|  |     Exception:  Map.!: given key is not an element in the map
 |  |  +- cyclic proof of liveness through 3 refinements
-|  |  +- [ Success: 4 / 5 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- refinement of undefined machine
+|  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 7 / 8 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  +- [ Success: 8 / 8 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -158,15 +136,15 @@ Comparison:[
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 4 / 5 ]
++- [ Success: 5 / 5 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   11643 total
+   11937 total
     1363 Document/Tests/trainstation.hs
-     831 Document/machine.hs
+     851 Document/machine.hs
      721 Document/Tests/lambdas.hs
-     623 UnitB/ast.hs
+     617 UnitB/ast.hs
      555 UnitB/po.hs

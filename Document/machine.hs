@@ -1,7 +1,9 @@
 {-# LANGUAGE BangPatterns, FlexibleContexts, TupleSections, ScopedTypeVariables #-}
 module Document.Machine where
 
+    --
     -- Modules
+    --
 import Document.Expression
 import Document.Visitor
 import Document.Proof -- hiding ( context )
@@ -19,7 +21,9 @@ import UnitB.FunctionTheory
 
 import Z3.Z3 
 
+    --
     -- Libraries
+    --
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Trans.State ( runStateT )
 import qualified Control.Monad.Reader.Class as R
@@ -823,14 +827,26 @@ deduct_schedule_ref_struct m = do
         h (x,y) = add_proof_edge x [y]
 
 parse_system :: FilePath -> IO (Either [Error] System)
-parse_system fn = do
-        ct <- readFile fn
-        return $ do
-                xs <- latex_structure ct
-                all_machines xs
+parse_system fn = runEitherT $ do
+        xs <- EitherT $ parse_latex_document fn
+        hoistEither $ all_machines xs
+        
+--        ct <- readFile fn
+--        return $ do
+--                xs <- latex_structure ct
+--                all_machines xs
 
 parse_machine :: FilePath -> IO (Either [Error] [Machine])
-parse_machine fn = do
-        ct <- readFile fn
-        return $ list_machines ct
+parse_machine fn = runEitherT $ do
+        xs <- EitherT $ parse_latex_document fn
+        ms <- hoistEither $ all_machines xs
+        return $ map snd $ toList $ machines ms
+
+
+
+
+
+
+
+
         
