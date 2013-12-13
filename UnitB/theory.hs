@@ -14,7 +14,7 @@ data Theory = Theory {
         consts  :: Map String Var,
         fact    :: Map Label Expr,
         dummies :: Map String Var }
-    deriving (Show)
+    deriving (Eq, Show)
 
 instance Named Fun where
     name (Fun _ x _ _) = x

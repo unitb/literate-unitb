@@ -21,7 +21,6 @@ import 			 Data.Map as M
 		, empty, mapKeys )
 import qualified Data.Map as M 
 import			 Data.Serialize ( Serialize, encodeLazy, decodeLazy )
-import			 Data.Set as S ( Set )
 import			 Data.Tuple
 
 import System.Directory
@@ -59,14 +58,14 @@ compress_seq (Sequent ctx hyps g) = do
 		g' <- expr_number g
 		return (ctx,hs,g')
 
-decompress_map :: IntMap -> ExprIndex (Map Key (Seq,Bool))
+decompress_map :: IntMap -> ExprIndex (Map Key (Seq,Maybe Bool))
 decompress_map ms = do
 		xs <- forM (uncurry zip ms) $ \(x,(j,z)) -> do
 			y <- decompress_seq j
 			return (x,(y,z))
 		return $ fromList xs
 
-compress_map :: Map Key (Seq,Bool) -> ExprStore IntMap	
+compress_map :: Map Key (Seq,Maybe Bool) -> ExprStore IntMap	
 compress_map m = do
 		xs <- forM (toList m) $ \(x,(y,z)) -> do
 			j <- compress_seq y
@@ -77,13 +76,13 @@ type Seq    = Sequent
 type SeqI   = (Context,[Int],Int)
 type Key    = (Label,Label)
 -- type IntMap = [(Key,(SeqI,Bool))]
-type IntMap = ([Key],[(SeqI,Bool)])
+type IntMap = ([Key],[(SeqI,Maybe Bool)])
 type ExprStore = State (Map Expr Int)
 type ExprIndex = State (Map Int Expr)
 
 load_pos :: FilePath 
-		 -> (Map Key (Seq,Bool), Set Key)
-		 -> IO (Map Key (Seq,Bool), Set Key)
+		 -> Map Key (Seq,Maybe Bool)
+		 -> IO (Map Key (Seq,Maybe Bool))
 load_pos file pos = do
         let fname = file ++ ".state"
         b <- doesFileExist fname
@@ -96,26 +95,26 @@ load_pos file pos = do
 				$ decodeLazy $ decompress xs
         else return pos
 
-type FileStruct = ((IntMap,Map Expr Int),Set Key) 
+type FileStruct = (IntMap,Map Expr Int) 
 		
 iseq_to_seq :: FileStruct
-			-> (Map Key (Seq,Bool), Set Key)
-iseq_to_seq ((x,y),z) = (evalState (decompress_map x) inv,z)
+			-> Map Key (Seq,Maybe Bool)
+iseq_to_seq (x,y) = evalState (decompress_map x) inv
 	where
 		inv = fromList $ map swap $ toList $ y
 		
-seq_to_iseq :: (Map Key (Seq,Bool), Set Key)
+seq_to_iseq :: Map Key (Seq,Maybe Bool)
 			-> FileStruct 
-seq_to_iseq (pos,x) = ((a,b),x)
+seq_to_iseq pos = (a,b)
 	where
 		(a,b) = runState (compress_map pos) empty
 		
-dump_pos :: FilePath -> (Map Key (Seq,Bool), Set Key) -> IO ()
+dump_pos :: FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
 dump_pos file pos = do
         let fn     = file ++ ".state"
             new_po = seq_to_iseq pos
         BS.writeFile fn $ compress $ encodeLazy new_po
 
-dump_z3 :: FilePath -> (Map Key (Seq,Bool), Set Key) -> IO ()
-dump_z3 file (pos,_) = dump file (M.map fst $ mapKeys snd pos)
+dump_z3 :: FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
+dump_z3 file pos = dump file (M.map fst $ mapKeys snd pos)
 

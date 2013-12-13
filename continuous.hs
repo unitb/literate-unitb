@@ -148,8 +148,9 @@ main = do
                             , verbose    = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
                             } }
-                    if continuous param then
+                    if continuous param then do
                     	run_pipeline xs
+                    	return ()
                     else
                     	with_po_map (do
                     		check_file

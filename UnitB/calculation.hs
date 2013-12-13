@@ -21,21 +21,22 @@ embed em f = do
                 return (Left x)
 
 data Calculation = Calc 
-    {  context    :: Context
-    ,  goal       :: Expr
-    ,  first_step :: Expr
-    ,  following  :: [(BinOperator, Expr, [Expr], (Int,Int))]
-    ,  l_info     :: (Int,Int) 
-    }
+        {  context    :: Context
+        ,  goal       :: Expr
+        ,  first_step :: Expr
+        ,  following  :: [(BinOperator, Expr, [Expr], (Int,Int))]
+        ,  l_info     :: (Int,Int) }
+    deriving Eq
 
 data Proof = 
-    ByCalc Calculation
-    | FreeGoal String String Proof     (Int,Int)
-    | ByCases   [(Label, Expr, Proof)] (Int,Int)
-    | Easy                             (Int,Int)
-    | Assume (Map Label Expr) Expr Proof (Int,Int)
-    | ByParts [(Expr,Proof)]           (Int,Int)
-    | Assertion (Map Label (Expr,Proof)) Proof (Int,Int)
+        ByCalc Calculation
+        | FreeGoal String String Proof     (Int,Int)
+        | ByCases   [(Label, Expr, Proof)] (Int,Int)
+        | Easy                             (Int,Int)
+        | Assume (Map Label Expr) Expr Proof (Int,Int)
+        | ByParts [(Expr,Proof)]           (Int,Int)
+        | Assertion (Map Label (Expr,Proof)) Proof (Int,Int)
+    deriving Eq
 
 instance Syntactic Proof where
     line_info (ByCalc c)            = l_info c

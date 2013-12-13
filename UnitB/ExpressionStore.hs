@@ -54,6 +54,7 @@ instance Ord UntypedExpr where
     compare (UE x) (UE y) = compare x y
 
 data ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
+    deriving Eq
 
 empty_store = ExprStore empty
 

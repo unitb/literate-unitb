@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, IncoherentInstances #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable, IncoherentInstances #-}
 module Document.Refinement where
 
     -- Module
@@ -21,6 +22,7 @@ import Data.Char
 import Data.List as L ( intercalate, (\\), null )
 import Data.Map as M hiding ( map, (\\) )
 import Data.Set as S hiding ( fromList, member, map, (\\) )
+import Data.Typeable
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -40,7 +42,7 @@ data RuleParserParameter =
         [LatexDoc]
 
 data Add = Add
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Add where
     rule_name _       = label "add"
@@ -140,7 +142,7 @@ assert m suff prop =
             | otherwise   = composite_label [label suff]
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
@@ -187,7 +189,7 @@ parse_discharge rule params@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = d
     parse (mk_discharge,()) rule params
 
 data Monotonicity = Monotonicity ProgressProp ProgressProp
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Monotonicity where
     rule_name _   = label "monotonicity"
@@ -203,7 +205,7 @@ instance RefRule Monotonicity where
                              (q1 `zimplies` q0)))
 
 data Implication = Implication ProgressProp
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Implication where
     rule_name _   = label "implication"
@@ -215,7 +217,7 @@ instance RefRule Implication where
                              (p1 `zimplies` q1))
 
 data Disjunction = Disjunction ProgressProp [([Var], ProgressProp)]
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Disjunction where
     rule_name _ = label "disjunction"
@@ -241,7 +243,7 @@ disjunction pr0@(LeadsTo fv0 _ _) ps =
         in (Disjunction pr0 ps0)
 
 data NegateDisjunct = NegateDisjunct ProgressProp ProgressProp
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule NegateDisjunct where
     rule_name _   = label "trading"
@@ -256,7 +258,7 @@ instance RefRule NegateDisjunct where
                                 (q1 `zimplies` q0))
         
 data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
@@ -274,7 +276,7 @@ instance RefRule Transitivity where
                             ]
 
 data PSP = PSP ProgressProp ProgressProp SafetyProp
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule PSP where
     rule_name _ = label "PSP"
@@ -294,7 +296,7 @@ instance RefRule PSP where
         = error "PSP.refinement_po: invalid"
 
 data Induction = Induction ProgressProp ProgressProp Variant
-    deriving Show
+    deriving (Eq,Typeable,Show)
 
 instance RefRule Induction where
     rule_name _ = label "induction"

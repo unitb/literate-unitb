@@ -61,8 +61,6 @@ import Z3.Z3 hiding (merge)
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
-import           Data.Function
-import           Data.Graph
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
@@ -71,6 +69,7 @@ import qualified Data.Set as S
 import           Data.Typeable
 
 import Utilities.Format
+import Utilities.Graph
 
 basic_theory :: Theory
 basic_theory = Theory []
@@ -90,7 +89,7 @@ data Event = Event
         , params    :: Map String Var
         , guard     :: Map Label Expr
         , action    :: Map Label Expr }
-    deriving Show
+    deriving (Eq, Show)
 
 empty_event :: Event
 empty_event = Event empty empty default_schedule empty empty empty
@@ -104,9 +103,9 @@ data Machine =
         , events     :: Map Label Event
         , inh_props  :: PropertySet
         , props      :: PropertySet }
-    deriving (Show, Typeable)
+    deriving (Eq, Show, Typeable)
 
-class Show a => RefRule a where
+class (Typeable a, Eq a, Show a) => RefRule a where
     refinement_po :: a -> Machine -> Map Label Sequent
     rule_name     :: a -> Label
     
@@ -118,11 +117,12 @@ empty_machine n = Mch (Lbl n)
         empty_property_set
 
 data System = Sys 
-    {  proof_struct :: [(Label,Label)]
-    ,  ref_struct   :: Map Label Label
-    ,  expr_store   :: ExprStore
-    ,  machines     :: Map String Machine
-    }
+        {  proof_struct :: [(Label,Label)]
+        ,  ref_struct   :: Map Label Label
+        ,  expr_store   :: ExprStore
+        ,  machines     :: Map String Machine
+        }
+    deriving Eq
 
 empty_system :: System
 empty_system = Sys [] M.empty empty_store M.empty
@@ -407,7 +407,7 @@ instance Named Machine where
 
 data Constraint = 
         Co [Var] Expr
-    deriving Show
+    deriving (Eq, Show)
 
 data Transient = 
         Transient 
@@ -418,7 +418,7 @@ data Transient =
             (Maybe Label)        -- Progress Property for fine schedule
 --      | Grd thm
 --      | Sch thm
-    deriving Show
+    deriving (Eq,Show)
 
 --data Derivation = Deriv 
 --        Label Rule 
@@ -426,12 +426,12 @@ data Transient =
 --        [Label] 
 
 data Direction = Up | Down
-    deriving Show
+    deriving (Eq,Show)
 
 data Variant = 
 --        SetVariant Var Expr Expr Direction
         IntegerVariant Var Expr Expr Direction
-    deriving Show
+    deriving (Eq,Show)
 
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
@@ -450,16 +450,19 @@ data Rule = forall r. RefRule r => Rule r
 instance Show Rule where
     show (Rule x) = show x
 
+instance Eq Rule where
+    Rule x == Rule y = Just x == cast y
+
 --data Liveness = Live (Map Label ProgressProp) 
 
 data Schedule = Schedule [Var] Expr Expr Label
-    deriving Typeable
+    deriving (Eq,Typeable)
 
 data ProgressProp = LeadsTo [Var] Expr Expr
-    deriving Typeable
+    deriving (Eq,Typeable)
 
 data SafetyProp = Unless [Var] Expr Expr (Maybe Label)
-    deriving Typeable
+    deriving (Eq,Typeable)
 
 instance Show ProgressProp where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
@@ -480,6 +483,7 @@ data PropertySet = PS
         , safety       :: Map Label SafetyProp
         , derivation   :: Map Label Rule
         }
+    deriving Eq
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y)
@@ -500,13 +504,13 @@ data ScheduleChange = ScheduleChange
         , keep   :: S.Set Label
         , rule   :: ScheduleRule
         }
-    deriving (Show)
+    deriving (Show,Eq,Typeable)
 
 data ScheduleRule = 
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
         | ReplaceFineSch Expr Label Expr (Label,ProgressProp) 
-    deriving Show
+    deriving (Show,Eq)
 
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
 
@@ -547,16 +551,6 @@ last_schedule evt = sch
 
 before x = keep x `S.union` remove x
 after x = keep x `S.union` add x
-
-cycles xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
-    where
-        f xs  = (fst $ head xs, fst $ head xs, map snd xs)
-        vs    = map (\x -> (x,x,[])) $ nub (map fst xs ++ map snd xs)
-        alist = map f $ groupBy ((==) `on` fst) $ sort xs
-        collapse ( (x1,x2,xs) : zs@( (y1,_,ys):ws ) )
-            | x1 == y1  = collapse $ (x1,x2,xs++ys):ws
-            | x1 /= y1  = (x1,x2,xs) : collapse zs
-        collapse xs = xs
 
 --linearize :: [ScheduleChange] -> Either [[ScheduleChange]] [ScheduleChange]
 --linearize xs = toEither $ mapM g comp
