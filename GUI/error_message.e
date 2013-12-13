@@ -39,6 +39,13 @@ feature -- Access
 			Result.pointer_double_press_actions.extend (agent on_select)
 		end
 
+	tree_node: EV_TREE_NODE
+		do
+			create {EV_TREE_ITEM} Result
+			Result.set_text (message)
+			Result.pointer_double_press_actions.extend (agent on_select )
+		end
+
 	on_select (x: INTEGER_32; y: INTEGER_32;
 			button: INTEGER_32;
 			x_tilt: REAL_64; y_tilt: REAL_64;

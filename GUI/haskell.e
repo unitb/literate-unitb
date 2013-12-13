@@ -17,30 +17,59 @@ inherit
 feature
 
 	default_create
+		local
+			l_str: C_STRING
 		do
-			init
-			map := new_map
+			create l_str.make ("Tests/train-station.tex")
+			lib_init
+			verifier := run_verifier (l_str.item)
+--			map := new_map
 		end
 
-	map: POINTER
+--	map: POINTER
 
-	item alias "[]" (i: INTEGER): INTEGER assign set_item
-		do
-			Result := image (map, i)
-		end
+--	item alias "[]" (i: INTEGER): INTEGER assign set_item
+--		do
+--			Result := image (map, i)
+--		end
 
-	set_item (i, j: INTEGER)
-		do
-			set (map, j, i)
-		end
+--	set_item (i, j: INTEGER)
+--		do
+--			set (map, j, i)
+--		end
 
 	new_error_list: LIST [ERROR_MESSAGE]
 		local
 			p: POINTER
+		do
+			p := get_error_list (verifier)
+			Result := as_error_list (p)
+			free_list (p)
+		end
+
+	failed_proof_obligations: LIST [ERROR_MESSAGE]
+		local
+			p: POINTER
+		do
+			p := get_proof_obligations (verifier)
+			Result := as_error_list (p)
+			free_list (p)
+		end
+
+feature {NONE} -- C wrappers
+
+	verifier: POINTER
+
+--	init
+--		once
+--			lib_init
+--		end
+
+	as_error_list (p: POINTER): LIST [ERROR_MESSAGE]
+		local
 			l_msg: ERROR_MESSAGE
 		do
 			from
-				p := error_list
 				create {ARRAYED_LIST [ERROR_MESSAGE]} Result.make (10)
 			until
 				off (p)
@@ -52,14 +81,6 @@ feature
 				Result.extend (l_msg)
 				move_forward (p)
 			end
-			free_list (p)
-		end
-
-feature -- C wrappers
-
-	init
-		once
-			lib_init
 		end
 
 	lib_init -- (x, y: POINTER)
@@ -73,34 +94,44 @@ feature -- C wrappers
 				    int argc = 0;
 				    
 				    hs_init(&argc, NULL);
-				    hs_add_root(__stginit_Safe);
+				    // hs_add_root(__stginit_Browser);
+				    hs_add_root(__stginit_Pipeline);
 				}
 		]"
 		end
 
-	new_map: POINTER
+	lib_final
 		external
-			"C (): EIF_INTEGER  | %"haskell.h%""
+			"C inline use %"haskell.h%""
+		alias
+			"[
+				hs_exit();
+				]"
 		end
 
-	image (x: POINTER; n: INTEGER): INTEGER
-		external
-			"C (HsStablePtr, EIF_INTEGER): EIF_INTEGER  | %"haskell.h%""
-		end
+--	new_map: POINTER
+--		external
+--			"C (): EIF_INTEGER  | %"browser_stub.h%""
+--		end
 
-	set (x: POINTER; i,j: INTEGER)
-		external
-			"C (HsStablePtr, EIF_INTEGER, EIF_INTEGER) | %"haskell.h%""
-		end
+--	image (x: POINTER; n: INTEGER): INTEGER
+--		external
+--			"C (HsStablePtr, EIF_INTEGER): EIF_INTEGER  | %"browser_stub.h%""
+--		end
 
-	free_map (p : POINTER)
-		external
-			"C (HsStablePtr) | %"haskell.h%""
-		end
+--	set (x: POINTER; i,j: INTEGER)
+--		external
+--			"C (HsStablePtr, EIF_INTEGER, EIF_INTEGER) | %"browser_stub.h%""
+--		end
+
+--	free_map (p : POINTER)
+--		external
+--			"C (HsStablePtr) | %"browser_stub.h%""
+--		end
 
 	file_name (p: POINTER): STRING
 		external
-			"C inline use  %"haskell.h%""
+			"C inline use  %"browser_stub.h%""
 		alias
 			"[
 				{
@@ -116,7 +147,7 @@ feature -- C wrappers
 
 	message (p: POINTER): STRING
 		external
-			"C inline use  %"haskell.h%""
+			"C inline use  %"browser_stub.h%""
 		alias
 			"[
 				{
@@ -132,39 +163,58 @@ feature -- C wrappers
 
 	line_number (p: POINTER): INTEGER
 		external
-			"C (void*): int | %"haskell.h%""
+			"C (void*): int | %"browser_stub.h%""
 		alias
 			"get_line_number"
 		end
 
 	error_list: POINTER
 		external
-			"C (): (void*) | %"haskell.h%""
+			"C (): (void*) | %"browser_stub.h%""
 		end
+
+--	get_error_list (p: POINTER): POINTER
+--		external
+--			"C (void*): (void*) | %"pipeline_stub.h%""
+--		end
 
 	free_list (p: POINTER)
 		external
-			"C (void*) | %"haskell.h%""
+			"C (void*) | %"browser_stub.h%""
 		alias
-			"free_map"
+			"free_list"
 		end
 
 	move_forward (p: POINTER)
 		require
 			not off (p)
 		external
-			"C (void*) | %"haskell.h%""
+			"C (void*) | %"browser_stub.h%""
 		end
 
 	off (p: POINTER): BOOLEAN
 		external
-			"C (void*): HsBool | %"haskell.h%""
+			"C (void*): HsBool | %"browser_stub.h%""
 		end
 
+	run_verifier (p: POINTER): POINTER
+		external
+			"C (char*): (void *) | %"cpipeline_stub.h%""
+		end
+
+	get_error_list (v: POINTER): POINTER
+		external
+			"C (void *): (void *) | %"cpipeline_stub.h%""
+		end
+
+	get_proof_obligations (v: POINTER): POINTER
+		external
+			"C (void *): (void *) | %"cpipeline_stub.h%""
+		end
 
 	dispose
 		do
-			free_map (map)
+			lib_final
 		end
 
 end

@@ -26,16 +26,39 @@ feature {NONE} -- Initialization
 			-- and from within current class itself.
 		do
 				-- Initialize types defined in current class
+			create timer.make_with_interval (500)
+			timer.actions.extend (agent update_lists)
 		end
 
 feature {NONE} -- Implementation
 
-	
+
 	select_po (a_x, a_y, a_button: INTEGER; a_x_tilt, a_y_tilt, a_pressure: DOUBLE; a_screen_x, a_screen_y: INTEGER)
 			-- Called by `pointer_double_press_actions' of `proof_list'.
 		do
 		end
 
+	timer: EV_TIMEOUT
 
+	update_lists
+		do
+			error_list.wipe_out
+			across haskell.new_error_list as l_item loop
+				error_list.extend (l_item.item.list_row)
+			end
+			proof_list.wipe_out
+			across haskell.failed_proof_obligations as l_item loop
+				proof_list.extend (l_item.item.tree_node)
+			end
+			if not error_list.is_empty then
+				error_list.hide
+			end
+			project_view.hide
+		end
+
+	haskell: HASKELL
+		once
+			create Result
+		end
 
 end

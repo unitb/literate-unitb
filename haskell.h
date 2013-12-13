@@ -3,10 +3,11 @@
 
 // #include "hsffi2.h"
 #include "hsffi.h"
-#include "Safe_stub.h"
+#include "Browser_stub.h"
+#include "CPipeline_stub.h"
 #include "eif_plug.h"
 
-extern void init_lib();
-extern void __stginit_Safe(void);
+extern void __stginit_Browser(void);
+extern void __stginit_Pipeline(void);
 
 #endif // __HASKELL_H__

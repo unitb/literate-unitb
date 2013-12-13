@@ -15,30 +15,13 @@ create
 
 feature {NONE} -- Initialization
 
-	open (l_fn: STRING; l_line: INTEGER)
-		local
-			env: EXECUTION_ENVIRONMENT
-		do
-			create env
-			env.launch ("texstudio " + l_fn + " -line " + l_line.out)
-		end
-
 	make_and_launch
 			-- Initialize and launch application
-		local
-			l_msg: LIST [ERROR_MESSAGE]
 		do
 			default_create
 			prepare
---			first_window.*enable
-			create haskell
-			across haskell.new_error_list as l_item loop
-				first_window.error_list.extend (l_item.item.list_row)
-			end
 			launch
 		end
-
-	haskell: HASKELL
 
 	prepare
 			-- Prepare the first window to be displayed.
