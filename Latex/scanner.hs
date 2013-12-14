@@ -1,19 +1,17 @@
 module Latex.Scanner where
 
 import Control.Monad
-import Control.Monad.Instances
 
-import Utilities.Format
 import Utilities.Syntactic
 
-data State a = State [(a,(Int,Int))] Int Int
+data State a = State [(a,LineInfo)] LineInfo
 
 data Scanner a b = 
     Scanner (State a -> Either [Error] (b, State a))
 
 instance Monad (Scanner a) where
     f >>= gF = comb f gF
-    fail s   = Scanner (\(State _ i j) -> Left [(s, i, j)])
+    fail s   = Scanner (\(State _ li) -> Left [(Error s li)])
     return x = Scanner (\s -> Right (x,s))
     
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
@@ -33,7 +31,7 @@ try (Scanner bl) sc (Scanner fl) = Scanner ret
                 Right (y, s) -> 
                     case sc y of
                         Scanner f -> f s
-                Left xs ->
+                Left _ ->
                     fl x
 
 pick :: [(Scanner a b, b -> Scanner a c)] -> Scanner a c -> Scanner a c
@@ -53,15 +51,16 @@ read_if p left right = do
             else
                 right
 
-line_number xs     = concatMap f ys
+line_number fn xs     = concatMap f ys
     where
         f (n, xs)  = map (g n) xs
-        g n (i, x) = (x, (n, i))
+        g n (i, x) = (x, LI fn n i)
         ys         = zip [1..] $ map (zip [1..] . (++ "\n")) $ lines xs
 
 peek = Scanner f
     where
-        f s@(State xs _ _) = Right (map fst xs, s)
+        f s@(State xs _) = Right (map g xs, s)
+        g (x,_) = x
 
 eof = do
         b <- is_eof
@@ -75,8 +74,10 @@ is_eof = do
             
 read_char = Scanner f
     where
-        f s@(State ((x,(i,j)):xs) _ _) = Right (x, State xs i j)
-        f s@(State [] i j)             = Left [("Expected: character", i, j)]
+        f (State ((x,LI fn i j):xs) _) 
+            = Right (x, State xs (LI fn i j))
+        f (State [] li)               
+            = Left [(Error "Expected: character" li)]
 
 read_string :: Int -> Scanner a [a]
 read_string 0 = return []
@@ -111,26 +112,41 @@ match_first ((p,f):xs) x = do
             Just ys -> f ys
             Nothing -> match_first xs x
 
-read_lines :: Scanner Char a -> String -> Either [Error] a 
-read_lines s xs = read_tokens s (line_number xs) (1,1)
+read_lines :: Scanner Char a 
+            -> FilePath -> String 
+            -> Either [Error] a 
+read_lines s fn xs = read_tokens s fn (line_number fn xs) (1,1)
 
-read_tokens :: Scanner a b -> [(a, (Int,Int))] 
-            -> (Int,Int) -> Either [Error] b
-read_tokens (Scanner f) xs (i,j) = 
-        do  (r, State xs i j) <- f (State xs i j)
+read_tokens :: Scanner a b
+            -> FilePath
+            -> [(a, LineInfo)] 
+            -> (Int,Int) 
+            -> Either [Error] b
+read_tokens (Scanner f) fn xs (i,j) = 
+        do  (r, State xs li) <- f (State xs (LI fn i j))
             case xs of 
                 [] -> return r
-                _ -> Left [("expected end of input", i, j)]
+                _ -> Left [(Error "expected end of input" li)]
         
 
 choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c
-choice [] f s = f
+choice [] f _ = f
 choice (x:xs) f s = try x s (choice xs f s)
 
-get_line_info :: Scanner a (Int, Int)
+get_line_column :: Scanner a (Int, Int)
+get_line_column = Scanner f
+    where
+        f s@(State _ (LI _ i j)) = Right ((i,j), s)
+
+get_line_info :: Scanner a LineInfo
 get_line_info = Scanner f
     where
-        f s@(State _ i j) = Right ((i,j), s)
+        f s@(State _ li) = Right (li, s)
+
+get_source_file :: Scanner a FilePath
+get_source_file = Scanner f
+    where
+        f s@(State _ (LI fn _ _)) = Right (fn, s)
 
 many :: Scanner a b -> Scanner a [b]
 many p = do
@@ -143,7 +159,7 @@ many p = do
 sep :: Scanner a b -> Scanner a c -> Scanner a [b]
 sep b s = do
         try s 
-            (\x -> do
+            (\_ -> do
                 x  <- b
                 xs <- sep b s
                 return (x:xs)) 

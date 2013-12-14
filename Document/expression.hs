@@ -28,9 +28,6 @@ import Control.Monad.Trans.Either
 import           Data.Char
 import           Data.List as L
 import           Data.Map as M hiding ( map )
---import qualified Data.Map as M ( map )
-
---import System.IO.Unsafe
 
 import Utilities.Format
 
@@ -150,11 +147,11 @@ vars ctx = do
         eat_space       
         return (map (\x -> (x,t)) vs)     
 
-get_variables :: (Monad m, MonadReader (Int,Int) m)
+get_variables :: (Monad m, MonadReader LineInfo m)
               => Context -> [LatexDoc] -> EitherT [Error] m [(String, Var)]
 get_variables ctx cs = do
-        li <- lift $ ask
-        xs <- hoistEither $ read_tokens (vars ctx) m li
+        LI fn i j <- lift $ ask
+        xs <- hoistEither $ read_tokens (vars ctx) fn m (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
         m = concatMap flatten_li cs
@@ -479,12 +476,15 @@ apply_op op x0 x1 = do
             fail (format "type error: {0}" xs)
 
 parse_expr :: ( Monad m
-              , MonadReader (Int,Int) m
+              , MonadReader LineInfo m
               , MonadState ExprStore m) 
-           => Context -> [(Char, (Int,Int))] 
+           => Context -> [(Char, LineInfo)] 
            -> EitherT [Error] m Expr
 parse_expr ctx c = do
         li <- lift $ ask
-        e <- hoistEither $ read_tokens (expr ctx) c li
+        e <- hoistEither $ read_tokens 
+            (expr ctx) 
+            (file_name li) 
+            c (line li, column li)
         ES.insert e (map fst c)
         return e

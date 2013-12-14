@@ -24,18 +24,18 @@ data Calculation = Calc
         {  context    :: Context
         ,  goal       :: Expr
         ,  first_step :: Expr
-        ,  following  :: [(BinOperator, Expr, [Expr], (Int,Int))]
-        ,  l_info     :: (Int,Int) }
+        ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
+        ,  l_info     :: LineInfo }
     deriving Eq
 
 data Proof = 
         ByCalc Calculation
-        | FreeGoal String String Proof     (Int,Int)
-        | ByCases   [(Label, Expr, Proof)] (Int,Int)
-        | Easy                             (Int,Int)
-        | Assume (Map Label Expr) Expr Proof (Int,Int)
-        | ByParts [(Expr,Proof)]           (Int,Int)
-        | Assertion (Map Label (Expr,Proof)) Proof (Int,Int)
+        | FreeGoal String String Proof     LineInfo
+        | ByCases   [(Label, Expr, Proof)] LineInfo
+        | Easy                             LineInfo
+        | Assume (Map Label Expr) Expr Proof LineInfo
+        | ByParts [(Expr,Proof)]           LineInfo
+        | Assertion (Map Label (Expr,Proof)) Proof LineInfo
     deriving Eq
 
 instance Syntactic Proof where

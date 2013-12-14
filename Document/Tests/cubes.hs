@@ -15,6 +15,8 @@ import Z3.Z3
     -- Libraries
 import Data.Map hiding ( map )
 
+import Utilities.Syntactic
+
 test_case = Case "table of cubes example" test True
 
 test = test_cases
@@ -78,7 +80,7 @@ prop_set6 = empty_property_set {
         n = Word var_n
         z3 = zint 3
         z6 = zint 6
-        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (0,0)
+        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
 event6_evt = empty_event {
         action = fromList $ zip 
@@ -211,7 +213,7 @@ case9 = do
             x -> return $ show x
 
 path10   = "Tests/integers_t10.tex"
-result10 = "Left [(\"type error: a calculation must include at least one reasoning step\",31,1)]"
+result10 = "Left [Error \"type error: a calculation must include at least one reasoning step\" (31,1)]"
 case10 = do
     r <- parse_machine path10
     case r of

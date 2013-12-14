@@ -385,11 +385,11 @@ get_error_list :: Verifier -> IO CErrList
 get_error_list v = do
         Shared { .. } <- deRefStablePtr v
         err <- read_obs error_list
-        let xs = map (f fname) err
+        let xs = map f err
         r  <- newIORef (RL [] xs)
         newStablePtr r
     where
-        f fname (x,i,j) = Ref fname x (i,j)
+        f (Error x (LI fname i j)) = Ref fname x (i,j)
 
 get_proof_obligations :: Verifier -> IO CErrList
 get_proof_obligations v = do

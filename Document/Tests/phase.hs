@@ -6,6 +6,8 @@ import Document.Document
     -- Libraries
 import Tests.UnitTest
 
+import Utilities.Syntactic
+
 test_case = Case "refinement relations in the phase example" test True
 
 test = test_cases 
@@ -14,7 +16,7 @@ test = test_cases
             ] 
 
 path0 = "tests/phases-t0.tex"
-result0 = Left [("A cycle exists in the refinement structure: m0, m1",0,0)]
+result0 = Left [Error "A cycle exists in the refinement structure: m0, m1" (LI "" 1 1)]
 
 path1 = "tests/phases-t1.tex"
 case1 = do

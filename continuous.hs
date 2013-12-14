@@ -35,6 +35,7 @@ import System.Locale
 
 import Text.Printf
 
+import Utilities.Syntactic
 
 with_po_map act param = do
         let fn = path param ++ ".state"
@@ -116,7 +117,7 @@ check_file = do
                     putStrLn $ "Redid " ++ show n ++ " proofs"
             Left xs -> do
                 clear
-                forM_ xs (\(x,i,j) -> liftIO $ 
+                forM_ xs (\(Error x (LI _ i j)) -> liftIO $ 
                     printf "error (%d,%d): %s\n" i j x)
         liftIO $ putStrLn ""
         tz <- liftIO (getCurrentTimeZone)

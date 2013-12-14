@@ -44,38 +44,42 @@ import qualified Data.Set as S
 import Utilities.Format
 import Utilities.Syntactic
 
+list_file_obligations :: FilePath
+                       -> IO (Either [Error] [(Machine, Map Label Sequent)])
 list_file_obligations fn = do
         ct <- readFile fn
-        return $ list_proof_obligations ct
+        return $ list_proof_obligations fn ct
 
-list_proof_obligations :: String -> Either [Error] [(Machine, Map Label Sequent)]
-list_proof_obligations ct = do
-        xs <- list_machines ct
+list_proof_obligations :: FilePath -> String
+                       -> Either [Error] [(Machine, Map Label Sequent)]
+list_proof_obligations fn ct = do
+        xs <- list_machines fn ct
         forM xs $ \x -> do
             y <- proof_obligation x
             return (x,y)
 
-list_machines :: String -> Either [Error] [Machine]
-list_machines ct = do
-        xs <- latex_structure ct
+list_machines :: FilePath -> String 
+              -> Either [Error] [Machine]
+list_machines fn ct = do
+        xs <- latex_structure fn ct
         ms <- all_machines xs
         return $ map snd $ toList $ machines ms
         
 parse_rule :: (Monad m)
            => String
            -> RuleParserParameter
-           -> EitherT [Error] (RWST (Int,Int) [Error] System m) Rule
+           -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
 parse_rule rule param = do
-    (i,j) <- lift $ ask
+    li <- lift $ ask
     case M.lookup rule refinement_parser of
         Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
             runEitherT $ f rule param
-        Nothing -> left [(format "invalid refinement rule: {0}" rule,i,j)]
+        Nothing -> left [Error (format "invalid refinement rule: {0}" rule) li]
 
 refinement_parser :: Map String (
                   String
                -> RuleParserParameter
-               -> EitherT [Error] (RWS (Int, Int) [Error] System) Rule)
+               -> EitherT [Error] (RWS LineInfo [Error] System) Rule)
 refinement_parser = fromList 
     [   ("disjunction", parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
@@ -87,8 +91,11 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
-check_acyclic :: (Monad m) => String -> [(Label,Label)] -> EitherT [Error] (RWST b [Error] d m) ()
-check_acyclic x es = do
+check_acyclic :: (Monad m) => String 
+              -> [(Label,Label)] 
+              -> LineInfo
+              -> EitherT [Error] (RWST b [Error] d m) ()
+check_acyclic x es li = do
         let cs = cycles es
         toEither $ mapM_ (cycl_err_msg x) cs
     where
@@ -96,21 +103,22 @@ check_acyclic x es = do
             where
                 msg = "A cycle exists in the {0}: {1}"
         cycl_err_msg _ (AcyclicSCC _) = return ()
-        cycl_err_msg x (CyclicSCC vs) = tell [(cycle_msg x vs,0,0)]
+        cycl_err_msg x (CyclicSCC vs) = tell [Error (cycle_msg x vs) li]
 
 trickle_down
         :: Monad m
         => Map Label Label 
         -> Map String a 
         -> (a -> a -> Either [String] a) 
+        -> LineInfo
         -> EitherT [Error] m (Map String a)
-trickle_down s ms f = do
+trickle_down s ms f li = do
             let rs = map (\(AcyclicSCC v) -> v) $ cycles $ toList s
             foldM (\ms n -> 
                     case M.lookup n s of
                         Just anc  -> do
                             m <- hoistEither $ either 
-                                (Left . map (\x -> (x,0,0))) Right 
+                                (Left . map (\x -> Error x li)) Right 
                                 $ f (ms ! show n) (ms ! show anc)
                             return $ insert (show n) m ms
                         Nothing -> return ms
@@ -144,31 +152,33 @@ read_document xs = do
                 machines = ms })
             ms <- toEither $ foldM (f type_decl) ms xs
             refs  <- lift $ RWS.gets ref_struct
-            check_acyclic "refinement structure" $ toList refs
+            let li = line_info xs
+            check_acyclic "refinement structure" (toList refs) li
 --            ms <- trickle_down refs ms merge_types
-            ms <- trickle_down refs ms merge_struct
+            ms <- trickle_down refs ms merge_struct li
 
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
-            ms <- trickle_down refs ms merge_import
+            ms <- trickle_down refs ms merge_import li
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
-            ms <- trickle_down refs ms merge_decl
+            ms <- trickle_down refs ms merge_decl li
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
-            ms <- trickle_down refs ms merge_exprs
+            ms <- trickle_down refs ms merge_exprs li
                 
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
             ms <- toEither $ foldM (f collect_proofs) ms xs
-            ms <- trickle_down refs ms merge_proofs
-            toEither $ forM_ (M.elems ms) deduct_schedule_ref_struct 
+            ms <- trickle_down refs ms merge_proofs li
+            toEither $ forM_ (M.elems ms) 
+                $ deduct_schedule_ref_struct li
             s  <- lift $ RWS.gets proof_struct
 --            let !() = unsafePerformIO $ print s
-            check_acyclic "proof of liveness" s
+            check_acyclic "proof of liveness" s li
             return ms
     where
         gather ms (Env n _ c li)     
@@ -230,9 +240,9 @@ type_decl = visit_doc []
                ,  CmdBlock $ \(mch,()) m -> do
                         anc   <- lift $ gets ref_struct
                         sys   <- lift $ gets machines
-                        (i,j) <- lift $ ask
-                        unless (show mch `member` sys) $ left [(format "Machine {0} refines a non-existant machine: {1}" (_name m) mch,i,j)]
-                        when (_name m `member` anc) $ left [(format "Machines can only refine one other machine",i,j)]
+                        li    <- lift $ ask
+                        unless (show mch `member` sys) $ left [Error (format "Machine {0} refines a non-existant machine: {1}" (_name m) mch) li]
+                        when (_name m `member` anc) $ left [Error (format "Machines can only refine one other machine") li]
                         lift $ modify $ \x -> x { ref_struct = insert (_name m) mch $ ref_struct x }
                         return m
                )
@@ -348,7 +358,7 @@ tr_hint :: Monad m
         -> Label
         -> [LatexDoc]
         -> ( [(String,Expr)], Maybe Label )
-        -> RWST (Int,Int) [Error] System m ( [(String,Expr)], Maybe Label )
+        -> RWST LineInfo [Error] System m ( [(String,Expr)], Maybe Label )
 tr_hint m lbl = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs, ()) (ys,z) -> do
@@ -590,18 +600,18 @@ collect_expr = visit_doc
             )
         ]
 
-scope :: (Monad m, R.MonadReader (Int,Int) m)
+scope :: (Monad m, R.MonadReader LineInfo m)
       => Context -> Expr -> Map String Var 
       -> EitherT [Error] m ()
 scope ctx xp vs = do
     let fv          = keysSet $ free_vars ctx xp
     let decl_v      = keysSet vs
     let undecl_v    = S.toList (fv `S.difference` decl_v)
-    (i,j)           <- R.ask
+    li             <- R.ask
     if fv `S.isSubsetOf` decl_v
     then return ()
-    else left [(format "Undeclared variables: {0}" 
-                (intercalate ", " undecl_v), i,j)]
+    else left [Error (format "Undeclared variables: {0}" 
+                      (intercalate ", " undecl_v)) li]
 
 remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
 remove_ref ('}':xs) = remove_ref xs
@@ -785,7 +795,7 @@ collect_proofs = visit_doc
         ]
 
     -- 
-deduct_schedule_ref_struct m = do
+deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans
     where
@@ -795,13 +805,13 @@ deduct_schedule_ref_struct m = do
                     let (_,f_sch) = list_schedules (events m ! evt) ! n
                         progs = progress (props m) `union` progress (inh_props m) 
                     unless (maybe True (flip member progs) lt)
-                        $ tell [(format "'{0}' is not a progress property" $ M.fromJust lt,0,0)]
+                        $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
                     unless (isJust f_sch == isJust lt)
                         $ if isJust f_sch
-                        then tell [(format fmt0 lbl evt,0,0)]
-                        else tell [(format fmt1 lbl evt,0,0)]
+                        then tell [Error (format fmt0 lbl evt) li]
+                        else tell [Error (format fmt1 lbl evt) li]
                     add_proof_edge lbl $ maybeToList lt
-                else tell [(format fmt2 evt n lbl,0,0)]
+                else tell [Error (format fmt2 evt n lbl) li]
             where
                 fmt0 =    "transient predicate {0}: a leads-to property is required for "
                        ++ "transient predicates relying on events "

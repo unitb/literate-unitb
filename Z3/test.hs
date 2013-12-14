@@ -12,6 +12,8 @@ import UnitB.Operator
 import UnitB.PO
 import UnitB.AST
 
+import Utilities.Syntactic
+
 test = test_cases 
         [ case0, case1
         , case2, case3
@@ -108,7 +110,7 @@ sample_calc = (Calc
         (x,x')      = var "x" bool
         (y,y')      = var "y" bool
         f           = maybe1 $ fun1 $ Fun [] "f" [bool] bool
-        li          = (-1,-1)
+        li          = LI "" (-1) (-1)
 
 indent xs = unlines (map (">  " ++) (lines xs))
 

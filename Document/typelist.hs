@@ -12,11 +12,11 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 class Readable a where
-    read_args :: (Monad m, MonadReader (Int,Int) m)
+    read_args :: (Monad m, MonadReader LineInfo m)
               => StateT [LatexDoc] (EitherT [Error] m) a
 
 class TypeList a where
-    get_tuple :: (Monad m, MonadReader (Int,Int) m)
+    get_tuple :: (Monad m, MonadReader LineInfo m)
               => [LatexDoc] -> EitherT [Error] m (a, [LatexDoc])
 
 instance TypeList () where

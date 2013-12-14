@@ -144,10 +144,12 @@ proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
         let { pos = raw_machine_pos m }
         forM_ (M.toList $ proofs $ props $ m) (\(lbl,p) -> do
-            let (i,j) = line_info p
+            let li = line_info p
             if lbl `M.member` pos
                 then return ()
-                else Left [(format "a proof is provided for non-existant proof obligation {0}" lbl,i,j)])
+                else Left [Error 
+                    (format "a proof is provided for non-existant proof obligation {0}" lbl)
+                        li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl $ proofs $ props $ m of
                 Just c ->
@@ -329,8 +331,8 @@ steps_po th ctx (Calc d _ e0 es _) = f e0 es
                     expr
                 ) : tail)
 
-entails_goal_po th ctx (Calc d g e0 es (i,j)) = do
-            a <- with_li (i,j) assume
+entails_goal_po th ctx (Calc d g e0 es li) = do
+            a <- with_li li assume
             return $ Sequent 
                 (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
                 (a ++ M.elems (theory_facts th)) 
@@ -414,7 +416,7 @@ proof_po th (ByParts xs li) lbl (Sequent ctx asm goal) = do
         part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
                 $ Sequent ctx asm x
         f x     = composite_label [lbl,label x]
-proof_po    th  (FreeGoal v u p (i,j)) 
+proof_po    th  (FreeGoal v u p li) 
             lbl po@(Sequent ctx asm goal) = do
         new_goal <- free_vars goal
         proof_po th p lbl $ Sequent ctx asm new_goal
@@ -423,17 +425,17 @@ proof_po    th  (FreeGoal v u p (i,j))
                 | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
                                             (rename v u r)
                                             $ rename v u expr)
-                | otherwise          = Left $ [(format "variable can't be freed: {0}" u :: String,i,j)]
+                | otherwise          = Left $ [Error (format "variable can't be freed: {0}" u) li]
             where
         free_vars expr = return expr
 --        step_lbls = map (("case "++) . show) [1..]
 --        lbls      = map f ("completeness" : step_lbls)
 --        f x       = composite_label [lbl,label x]
 --        g x       = name x /= v
-proof_po    _  (Easy (i,j)) 
+proof_po    _  (Easy (LI _ i j)) 
             lbl po = 
         return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
-proof_po    th  (Assume new_asm new_goal p (i,j))
+proof_po    th  (Assume new_asm new_goal p (LI _ i j))
             lbl (Sequent ctx asm goal) = do
         pos <- proof_po th p lbl $ Sequent ctx (M.elems new_asm ++ asm) new_goal
         return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
@@ -518,7 +520,7 @@ verify_changes m old_pos = do
         f p0 (_,p1)
             | p0 == p1  = Nothing 
             | otherwise = Just p0
-        g (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+        g (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
                 
 str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
@@ -529,7 +531,7 @@ str_verify_machine m =
                 format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)
     where
-        f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+        f (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 
 smoke_test_machine :: Machine -> IO (String)
 smoke_test_machine m =
@@ -541,7 +543,7 @@ smoke_test_machine m =
                 return $ unlines $ map (show . fst) rs
             Left msgs -> return (unlines $ map f msgs)
     where
-        f (xs,i,j) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+        f (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs = do

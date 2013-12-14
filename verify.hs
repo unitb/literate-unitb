@@ -13,6 +13,8 @@ import Text.Printf
 import UnitB.AST
 import UnitB.PO
 
+import Utilities.Syntactic
+
 check_one m = do
         (s,_,_)   <- str_verify_machine m
         return ("> machine " ++ show (_name m) ++ ":\n" ++ s)        
@@ -25,7 +27,8 @@ check_file path = do
 --                putStr $ take 40 $ cycle "\n"
                 forM_ xs (putStrLn . f)
             Left xs -> do
-                forM_ xs (\(x,i,j) -> printf "error (%d,%d): %s\n" i j x)
+                forM_ xs (\(Error x (LI _ i j)) 
+                    -> printf "error (%d,%d): %s\n" i j x)
     where
         f xs = unlines $ filter p $ lines xs
         p ln = take 4 ln /= "  o "

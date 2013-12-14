@@ -25,6 +25,7 @@ import UnitB.FunctionTheory
 import UnitB.Calculation
 
 import Utilities.Format hiding (test,test_case)
+import Utilities.Syntactic
 
 import Z3.Z3
 
@@ -209,19 +210,19 @@ props0 = empty_property_set
             ]
     ,  proofs = fromList
             [   ( label "train0/enter/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/INIT/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] (0,0))
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ]
     ,  safety = fromList
             []
@@ -235,6 +236,8 @@ props0 = empty_property_set
 --                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `zelem` plf ))) )
 --            ]
     }
+    where 
+        li = LI "" 0 0
 
 enter_evt = empty_event
     {  indices = symbol_table [t_decl]
@@ -934,27 +937,27 @@ case12 = do
     -- Error handling --
     --------------------
 
-result7 = Left [("Undeclared variables: t",52,15)]
+result7 = Left [Error "Undeclared variables: t" (LI path7 52 15)]
 
 path7 = "Tests/train-station-err0.tex"
 case7 = parse_machine path7
 
-result8 = Left [("event 'leave' is undeclared",42,15)]
+result8 = Left [Error "event 'leave' is undeclared" (LI path8 42 15)]
 
 path8 = "Tests/train-station-err1.tex"
 case8 = parse_machine path8
 
-result9 = Left [("event 'leave' is undeclared",51,15)]
+result9 = Left [Error "event 'leave' is undeclared" (LI path9 51 15)]
 
 path9 = "Tests/train-station-err2.tex"
 case9 = parse_machine path9
 
-result10 = Left [("event 'leave' is undeclared",55,15)]
+result10 = Left [Error "event 'leave' is undeclared" (LI path10 55 15)]
 
 path10 = "Tests/train-station-err3.tex"
 case10 = parse_machine path10
 
-result11 = Left [("event 'leave' is undeclared",59,15)]
+result11 = Left [Error "event 'leave' is undeclared" (LI path11 59 15)]
 
 path11 = "Tests/train-station-err4.tex"
 case11 = parse_machine path11
@@ -1309,10 +1312,8 @@ case17 = do
         case r of
             Right _ -> do
                 return "successful verification"
-            Left xs -> return $ unlines $ map f xs
-    where
-        f (x,i,j) = format "error {0}: {1}" (i, j) (x :: String) :: String
-
+            Left xs -> return $ unlines $ map format_error xs
+        
 path18 = "Tests/train-station-err9.tex"
 result18 = unlines 
         [  "error (68,2): expression has type incompatible with its type annotation:"
@@ -1320,12 +1321,12 @@ result18 = unlines
         ,  "  type: set [TRAIN]"
         ,  "  type annotation: Bool "
         ,  ""
-        ,  "error (73,2): expression has type incompatible with its type annotation:"
+        ,  "error (73,3): expression has type incompatible with its type annotation:"
         ,  "  expression: (bunion@@TRAIN in (mk-set@@TRAIN t))"
         ,  "  type: set [TRAIN]"
         ,  "  type annotation: Bool "
         ,  ""
-        ,  "error (118,2): expression has type incompatible with its type annotation:"
+        ,  "error (118,3): expression has type incompatible with its type annotation:"
         ,  "  expression: t"
         ,  "  type: TRAIN"
         ,  "  type annotation: Bool "
@@ -1342,9 +1343,7 @@ case18 = do
         case r of
             Right _ -> do
                 return "successful verification"
-            Left xs -> return $ unlines $ map f xs
-    where
-        f (x,i,j) = format "error {0}: {1}" (i, j) (x :: String) :: String
+            Left xs -> return $ unlines $ map format_error xs
 
 --get_proof_obl name = do
 --        pos <- list_file_obligations path0
@@ -1361,3 +1360,5 @@ case18 = do
 --            Right [(_,pos)] -> do   
 --                forM_ (map show $ keys $ pos) putStrLn
 --            _ -> return () -- $ show x
+
+format_error (Error x (LI _ i j)) = format "error {0}: {1}" (i, j) (x :: String) :: String

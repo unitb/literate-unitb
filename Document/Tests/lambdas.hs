@@ -310,7 +310,7 @@ result4 = either g Right (do
         (f,_)      = var "f" (fun_type int int)
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
-        g x = Left [(x,0,0)]
+        g x = Left [Error x (LI path4 0 0)]
 
 path4 = "tests/cubes-t6.tex"
 
@@ -318,7 +318,7 @@ case4 = runEitherT (do
     ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ progress $ props $ m
-        _   -> left [("a single machine is expected",0,0)])
+        _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 result5 = either g Right (do
         q0  <- bigN `mzeq` n
@@ -336,13 +336,13 @@ result5 = either g Right (do
         (k,k_decl) = var "k" int
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
-        g x = Left [(x,0,0)]
+        g x = Left [Error x (LI path4 0 0)]
 
 case5 = runEitherT (do
     ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ safety $ props $ m
-        _   -> left [("a single machine is expected",0,0)])
+        _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 result6 = unlines
      [ "  o  m0/INIT/FIS/a"
@@ -710,7 +710,7 @@ path9 = "tests/cubes-t8.tex"
      
 path10 = "tests/cubes-t9.tex"
 
-result10 = "Left [(\"A cycle exists in the proof of liveness: prog0, prog1, prog2, prog3\",0,0)]"
+result10 = "Left [Error \"A cycle exists in the proof of liveness: prog0, prog1, prog2, prog3\" (1,1)]"
 
 verify path = do
     r <- parse_machine path

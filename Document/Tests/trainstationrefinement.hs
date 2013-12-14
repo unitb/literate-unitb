@@ -13,6 +13,7 @@ import Tests.UnitTest
 import Data.String.Utils
 
 import Utilities.Format (format)
+import Utilities.Syntactic
 
 test_case = Case "train station example, with refinement" test True
 
@@ -184,7 +185,7 @@ path1 = "Tests/train-station-ref/main.tex"
 path3 = "Tests/train-station-ref-err0.tex"
 
 result3 = concat 
-    [ "error (0,0): A cycle exists in the proof of liveness: "
+    [ "error (1,1): A cycle exists in the proof of liveness: "
     , "evt/SCH/0, evt/SCH/1, p0, tr0\n"
     ]
 
@@ -198,7 +199,7 @@ parse path = do
     r <- parse_machine path
     return $ case r of
         Right _ -> "ok"
-        Left xs -> unlines $ map (\(x,i,j) -> format "error ({0},{1}): {2}" i j x) xs
+        Left xs -> unlines $ map (\(Error x (LI _ i j)) -> format "error ({0},{1}): {2}" i j x) xs
 
 verify n path = do
     r <- parse_machine path

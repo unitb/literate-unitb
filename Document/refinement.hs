@@ -49,58 +49,60 @@ instance RefRule Add where
     refinement_po _ m = M.fromList $ assert m "" zfalse
 
 class RuleParser a where
-    parse_rule :: a -> [Label] -> String -> RuleParserParameter -> EitherT [Error] (RWS (Int,Int) [Error] b) Rule
+    parse_rule :: a -> [Label] -> String 
+               -> RuleParserParameter 
+               -> EitherT [Error] (RWS LineInfo [Error] b) Rule
 
 instance RefRule a => RuleParser (a,()) where
     parse_rule (x,_) [] _ _ = return $ Rule x
     parse_rule _ hyps_lbls _ _ = do
-        (i,j) <- lift $ ask
-        left [(format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls, i, j)]
+        li <- lift $ ask
+        left [Error (format "too many hypotheses in the application of the rule: {0}" 
+                          $ intercalate "," $ map show hyps_lbls) li]
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ prog _ _ _ _) = do
         case M.lookup x prog of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a progress property" rule x,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li]
     parse_rule _ [] rule _ = do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ _ saf _ _ _) = do
         case M.lookup x saf of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li]
     parse_rule _ [] rule _ = do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
         case M.lookup x $ transient $ props m of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a transient predicate" rule x,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li]
     parse_rule _ [] rule _ = do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
         case M.lookup x $ schedule $ props m of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li]
     parse_rule _ [] rule _ = do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): expecting more properties" rule,i,j)]
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
     parse_rule (f,_) xs rule (RuleParserParameter _ prog _ _ _ _) = do
@@ -108,8 +110,8 @@ instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
             return $ Rule (f xs)        
         where
             g x = maybe (do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a progress property" rule x,i,j)] )
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li] )
                 return
                 $ M.lookup x prog
 
@@ -119,8 +121,8 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
             return $ Rule (f xs)        
         where
             g x = maybe (do
-                (i,j) <- lift $ ask
-                left [(format "refinement ({0}): {1} should be a safety property" rule x,i,j)] )
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li] )
                 return
                 $ M.lookup x saf
 
@@ -181,10 +183,10 @@ mk_discharge p tr []  = Discharge p tr Nothing
 mk_discharge _ _ _    = error "expecting at most one safety property" 
 
 parse_discharge rule params@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
-    (i,j) <- lift $ ask
+    li <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
-        $ left [(format "too many hypotheses in the application of the rule: {0}" 
-                    $ intercalate "," $ map show hyps_lbls,i,j)]
+        $ left [Error (format "too many hypotheses in the application of the rule: {0}" 
+                            $ intercalate "," $ map show hyps_lbls) li]
     add_proof_edge goal_lbl hyps_lbls
     parse (mk_discharge,()) rule params
 
@@ -315,7 +317,7 @@ instance RefRule Induction where
                         ))
 
 parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
-        (i,j) <- ask
+        li <- ask
         toEither $ error_list
             [   ( length hyps_lbls /= 1
                 , format "too many hypotheses in the application of the rule: {0}" 
@@ -335,26 +337,26 @@ parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
                     dir  <- case map toLower $ concatMap flatten dir of
                         "up"   -> return Up
                         "down" -> return Down
-                        _      -> left [("expecting a direction for the variant",i,j)]
+                        _      -> left [Error "expecting a direction for the variant" li]
                     var <- hoistEither $ either
-                        (\x -> Left [(x,i,j)]) 
+                        (\x -> Left [Error x li]) 
                         Right
                         $ (zcast int)
                         $ Right var
                     bound <- hoistEither $ either
-                        (\x -> Left [(x,i,j)])
+                        (\x -> Left [Error x li])
                         Right
                         $ zcast int
                         $ Right bound
                     return (dir,var,bound)
-            Nothing -> left [("expecting a variant", i,j)]
-            _ -> left [("invalid variant",i,j)]
+            Nothing -> left [Error "expecting a variant" li]
+            _ -> left [Error "invalid variant" li]
         let pr0@(LeadsTo fv0 _ _) = prog ! goal_lbl
             pr1@(LeadsTo fv1 _ _) = prog ! h0
         dum <- case fv1 \\ fv0 of
             [v] -> return v
-            _   -> left [(   "inductive formula should have one free "
-                            ++ "variable to record the variant",i,j)]                    
+            _   -> left [Error (   "inductive formula should have one free "
+                                ++ "variable to record the variant") li]                    
         add_proof_edge goal_lbl [h0]
         return $ Rule (Induction pr0 pr1 (IntegerVariant dum var bound dir))
 

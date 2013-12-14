@@ -34,14 +34,15 @@ test = test_cases
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
         let (y,y',y_decl) = prog_var "y" int
-        inv0   <- with_li (0,0) (x `mzeq` (mzint 2 `mztimes` y))
-        init0  <- with_li (0,0) (x `mzeq` mzint 0)
-        init1  <- with_li (0,0) (y `mzeq` mzint 0)
-        tr     <- with_li (0,0) (x `mzeq` mzint 0)
-        co     <- with_li (0,0) (x `mzle` x')
-        csched <- with_li (0,0) (x `mzeq` y)
-        s0     <- with_li (0,0) (x' `mzeq` (x `mzplus` mzint 2))
-        s1     <- with_li (0,0) (y' `mzeq` (y `mzplus` mzint 1))
+        let li = LI "" 0 0
+        inv0   <- with_li li (x `mzeq` (mzint 2 `mztimes` y))
+        init0  <- with_li li (x `mzeq` mzint 0)
+        init1  <- with_li li (y `mzeq` mzint 0)
+        tr     <- with_li li (x `mzeq` mzint 0)
+        co     <- with_li li (x `mzle` x')
+        csched <- with_li li (x `mzeq` y)
+        s0     <- with_li li (x' `mzeq` (x `mzplus` mzint 2))
+        s1     <- with_li li (y' `mzeq` (y `mzplus` mzint 1))
         let tr0 = Transient empty tr (label "evt") 0 empty Nothing
             co0 = Co [] co
             ps = empty_property_set {
@@ -73,10 +74,11 @@ example0 = do
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int bool)
             (t,t_decl) = var "t" int
-        inv0 <- with_li (0,0) (mzforall [t_decl] mztrue $
+        let li = LI "" 0 0
+        inv0 <- with_li li (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
-        c0   <- with_li (0,0) (st `zselect` t)
-        a0   <- with_li (0,0) (st' `mzeq` zstore st t mzfalse)
+        c0   <- with_li li (st `zselect` t)
+        a0   <- with_li li (st' `mzeq` zstore st t mzfalse)
         let inv = fromList [(label "J0",inv0)]
             sch_ref0 = (weaken $ label "evt")
                 { remove = S.singleton (label "default")
@@ -88,7 +90,7 @@ train_m0 = do
                     ,   sched = insert (label "C0") c0 $ default_schedule
                     ,   action  = fromList [(label "A0", a0)]
                     })
-        tr <- with_li (0,0) (st `zselect` t)
+        tr <- with_li li (st `zselect` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0 empty Nothing)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 

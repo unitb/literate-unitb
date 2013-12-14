@@ -87,8 +87,8 @@ instance Readable Int where
         case reads arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                (i,j) <- lift ask
-                left [(format "invalid integer: '{0}'" arg,i,j)]
+                li <- lift ask
+                left [Error (format "invalid integer: '{0}'" arg) li]
 
 instance Readable (Maybe Label) where
     read_args = do
@@ -136,19 +136,19 @@ instance Readable (Set Label) where
 --         -> EitherT a m (Maybe b)
 --eitherTx m = lift $ eitherT (const $ return Nothing) (return . Just) m
 
-cmd_params :: (Monad m, MonadReader (Int,Int) m)
+cmd_params :: (Monad m, MonadReader LineInfo m)
            => Int -> [LatexDoc] 
            -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
 cmd_params 0 xs     = right ([], xs)
 cmd_params n xs     = do
-        (i,j) <- lift $ ask
+        li <- lift $ ask
         case drop_blank_text xs of
-            Bracket _ _ xs (i,j) : ys -> do
-                (ws, zs) <- local (const (i,j)) $ cmd_params (n-1) ys
+            Bracket _ _ xs li : ys -> do
+                (ws, zs) <- local (const li) $ cmd_params (n-1) ys
                 right (xs:ws, zs)
-            _                 -> left [("bad argument: " ++ show xs,i,j)]
+            _                 -> left [Error ("bad argument: " ++ show xs) li]
 
-get_1_lbl :: (Monad m, MonadReader (Int,Int) m)
+get_1_lbl :: (Monad m, MonadReader LineInfo m)
           => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
 get_1_lbl xs = do 
         ([x],z) <- cmd_params 1 xs
@@ -159,7 +159,7 @@ get_1_lbl xs = do
                 -> right (x,z)
             _   -> err_msg (line_info xs)
     where
-        err_msg (i,j) = left [("expecting a label",i,j)]
+        err_msg li = left [Error "expecting a label" li]
         
 --get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
 --          => [LatexDoc] 
@@ -193,7 +193,7 @@ skip_blanks :: [LatexToken] -> [LatexToken]
 skip_blanks (Blank _ _ : xs) = xs
 skip_blanks xs = xs 
 
-with_line_info :: (Int, Int) -> EitherT a (ReaderT (Int,Int) m) b -> EitherT a m b
+with_line_info :: LineInfo -> EitherT a (ReaderT LineInfo m) b -> EitherT a m b
 with_line_info li cmd = 
         EitherT $ runReaderT (runEitherT cmd) li
         
@@ -205,12 +205,12 @@ find_cmd_arg :: Int -> [String] -> [LatexDoc]
              -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])
 find_cmd_arg n cmds (x@(Text xs) : cs) =
         case (trim_blanks $ reverse xs) of
-            (t@(Command ys (i,j)):zs) -> 
+            (t@(Command ys li):zs) -> 
                     if ys `elem` cmds
                     then eitherT
                             (\_       -> Nothing)
                             (\(xs,ws) -> Just (f zs,t,xs,ws))
-                        $ with_line_info (i,j)
+                        $ with_line_info li
                         $ cmd_params n cs
                     else continue
             _    -> continue
@@ -266,7 +266,7 @@ instance (Monad m)
 instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
     focus' cmd = EitherT $ focus' $ runEitherT cmd
 
-type Node s = EitherT [Error] (RWS (Int,Int) [Error] s)
+type Node s = EitherT [Error] (RWS LineInfo [Error] s)
 --type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
 
 data EnvBlock s a = 
@@ -308,14 +308,14 @@ toEither m = EitherT $ mapRWST f $ do
         f m = m >>= \(x,y,_) -> return (x,y,[])
 
 error_list :: Monad m
-           => [(Bool, String)] -> RWST (Int,Int) [Error] s m ()
+           => [(Bool, String)] -> RWST LineInfo [Error] s m ()
 error_list [] = return ()
 error_list ( (b,msg):xs ) =
             if not b then
                 error_list xs
             else do
-                (i,j) <- RWS.ask 
-                RWS.tell [(msg,i,j)]
+                li <- RWS.ask 
+                RWS.tell [Error msg li]
                 error_list xs
 
 visit_doc :: Monad m 
@@ -338,8 +338,8 @@ visit_doc blks cmds cs x = do
         return r
 
 run :: Monoid c
-    => (Int,Int) 
-    -> EitherT [Error] (RWS (Int,Int) c d) a
+    => LineInfo
+    -> EitherT [Error] (RWS LineInfo c d) a
     -> EitherT [Error] (RWS b c d) a
 run li m = EitherT $ do 
         s <- get
@@ -357,9 +357,9 @@ pushEither y m = do
 
 f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
   -> RWS (Param s a) [Error] s a
-f ((name,EnvBlock g):cs) x e@(Env s (i,j) xs _)
+f ((name,EnvBlock g):cs) x e@(Env s li xs _)
         | name == s = do
-                pushEither x $ run (i,j) $ do
+                pushEither x $ run li $ do
                     (args,xs) <- get_tuple xs 
                     g args xs x
         | otherwise = f cs x e
@@ -377,25 +377,25 @@ g :: a -> [LatexDoc]
   -> RWS (Param s a) [Error] s a
 g x (Text xs : ts) = do
     case trim_blanks $ reverse xs of
-        Command c (i,j):_   -> do
+        Command c li:_   -> do
                 cmds <- asks cmds
-                h cmds x c ts (i,j)
+                h cmds x c ts li
         _                   -> g x ts
 g x (_ : ts) = g x ts
 g x [] = return x
 
 h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
-  -> (Int,Int) -> RWS (Param s a) [Error] s a
-h ((name,c):cs) x cmd ts (i,j)
+  -> LineInfo -> RWS (Param s a) [Error] s a
+h ((name,c):cs) x cmd ts li
     | name == cmd   =
             case c of 
                 CmdBlock f -> do
-                    x <- pushEither x $ run (i,j) $ do
+                    x <- pushEither x $ run li $ do
                         (args,_) <- get_tuple ts
                         f args x 
                     r <- g x ts
                     return r
-    | otherwise     = h cs x cmd ts (i,j)
+    | otherwise     = h cs x cmd ts li
 h [] x _ ts _       = g x ts 
 
 \end{code}

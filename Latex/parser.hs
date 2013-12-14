@@ -25,8 +25,8 @@ import Utilities.Graph
 import Utilities.Syntactic
 
 data LatexDoc = 
-        Env String (Int,Int) [LatexDoc] (Int,Int)
-        | Bracket Bool (Int,Int) [LatexDoc] (Int,Int)
+        Env String LineInfo [LatexDoc] LineInfo
+        | Bracket Bool LineInfo [LatexDoc] LineInfo
         | Text [LatexToken]
     deriving (Eq)
 
@@ -41,13 +41,18 @@ flatten (Bracket b _ ct _) = b0 ++ concatMap flatten ct ++ b1
             else ("[", "]")
 flatten (Text xs) = concatMap lexeme xs
 
-flatten_li (Env s (i0,j0) ct (i1,j1)) = 
-           zip ("\\begin{" ++ s ++ "}") (zip (repeat i0) [j0..])
+whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
+
+uncurry3 f (x,y,z) = f x y z
+
+flatten_li :: LatexDoc -> [(Char,LineInfo)]
+flatten_li (Env s li1 ct li0) = 
+           zip ("\\begin{" ++ s ++ "}") (whole_line li0)
         ++ concatMap flatten_li ct
-        ++ zip ("\\end{" ++ s ++ "}") (zip (repeat i1) [j1..])
+        ++ zip ("\\end{" ++ s ++ "}") (whole_line li1)
 flatten_li (Text xs)        = concatMap lexeme_li xs
-flatten_li (Bracket b (i0,j0) ct (i1,j1)) 
-        = (b0,(i0,j0)) : concatMap flatten_li ct ++ [(b1,(i1,j1))]
+flatten_li (Bracket b li0 ct li1) 
+        = (b0,li0) : concatMap flatten_li ct ++ [(b1,li1)]
     where
         (b0,b1) = if b
             then ('{', '}')
@@ -62,11 +67,11 @@ fold_docM f x (Bracket _ _ c _) = foldM f x c
 fold_docM _ x (Text _)          = return x
 
 data LatexToken =
-        Command String (Int, Int)
-        | TextBlock String (Int, Int)
-        | Blank String (Int, Int)
-        | Open Bool (Int, Int) 
-        | Close Bool (Int, Int)
+        Command String LineInfo
+        | TextBlock String LineInfo
+        | Blank String LineInfo
+        | Open Bool LineInfo
+        | Close Bool LineInfo
     deriving (Eq, Show)
 
 instance Show LatexDoc where
@@ -103,9 +108,9 @@ lexeme (Close b _)
     | b                 = "}"
     | otherwise         = "]"
 
-lexeme_li x = zip (lexeme x) $ zip (repeat i) [j ..]
+lexeme_li x = zip (lexeme x) $ whole_line li
     where
-        (i,j) = line_info x
+        li    = line_info x
 
 begin_kw = "\\begin"
 end_kw   = "\\end"
@@ -133,7 +138,7 @@ is_space xs = do
         guard (1 <= n)
         Just n
 
-tex_tokens :: Scanner Char [(LatexToken,(Int,Int))]
+tex_tokens :: Scanner Char [(LatexToken,LineInfo)]
 tex_tokens = do 
     b <- is_eof
     if b
@@ -148,12 +153,14 @@ tex_tokens = do
                     (match_string "[", (\_ -> return (Just $ Open False li))),
                     (match_string "]", (\_ -> return (Just $ Close False li))) ]
                     (return Nothing)
+            li <- get_line_info
             case c of
                 Just x  -> do
                     xs <- tex_tokens
                     return ((x,li):xs)
                 Nothing -> do
                     d  <- read_char
+                    li <- get_line_info
                     xs <- tex_tokens
                     case xs of
                         (TextBlock ys _,_):zs -> 
@@ -172,16 +179,16 @@ latex_content = do
                     begin_block
             Open c0 _ -> do
                     read_char
-                    (i0,j0) <- get_line_info
-                    ct <- latex_content
-                    c  <- read_char
-                    (i1,j1) <- get_line_info
+                    li0 <- get_line_info
+                    ct  <- latex_content
+                    c   <- read_char
+                    li1 <- get_line_info
                     case c of
                         Close c1 _ -> do
                             unless (c0 == c1) $ fail "mismatched brackets"
                         _ -> fail "expected closing bracket"
                     rest <- latex_content 
-                    return (Bracket c0 (i0,j0) ct (i1,j1):rest)
+                    return (Bracket c0 li0 ct li1:rest)
             Close _ _ ->         return []
             Command "\\end" _ -> return []
             t@(Blank _ _)     -> content_token t
@@ -225,6 +232,7 @@ begin_block :: Scanner LatexToken [LatexDoc]
 begin_block = do
     read_char
     li0 <- get_line_info
+--    let li0 = LI fn0 i0 j0 
     args0 <- argument
     ct    <- latex_content
     end   <- read_char
@@ -243,14 +251,14 @@ begin_block = do
     rest <- latex_content 
     return (Env begin li0 ct li1:rest)
 
-type DocWithHoles = Either (String,(Int,Int)) (LatexToken,(Int,Int))
+type DocWithHoles = Either (String,LineInfo) (LatexToken,LineInfo)
 
 find_input_cmd :: Scanner LatexToken [DocWithHoles]
 find_input_cmd = do
         b <- is_eof
         if b then return []
         else do
-            r <- read_char 
+            r  <- read_char 
             case r of
                 Command "\\input" li -> do
                     ts <- peek
@@ -275,10 +283,11 @@ find_input_cmd = do
                     rs <- find_input_cmd
                     return $ Right (r,line_info r) : rs
 
-scan_file :: String -> Either [Error] [DocWithHoles]
-scan_file xs = do
-        ys <- read_lines tex_tokens (uncomment xs)
-        read_tokens find_input_cmd ys (1,1)
+scan_file :: FilePath -> String 
+          -> Either [Error] [DocWithHoles]
+scan_file fname xs = do
+        ys <- read_lines tex_tokens fname (uncomment xs)
+        read_tokens find_input_cmd fname ys (1,1)
         
 --        read_tokens latex_content ys (1,1)
 
@@ -288,20 +297,23 @@ do_while cmd = do
             do_while cmd
         else return ()
 
-fill_holes :: String -> Map String [DocWithHoles] -> Either [Error] [(LatexToken,(Int,Int))]
+fill_holes :: String -> Map String [DocWithHoles] -> Either [Error] [(LatexToken,LineInfo)]
 fill_holes fname m = do
         (_,m) <- foldM propagate (m,empty) order
         return (m ! fname)
     where
         propagate (m0,m1) (AcyclicSCC v) = Right (m0, insert v (g (m0 ! v) m1) m1)
-        propagate _ (CyclicSCC xs) = Left  [(format msg $ intercalate "," xs,0,0)]
+        propagate _ (CyclicSCC xs@(y:_)) = Left 
+            [ (Error (format msg $ intercalate "," xs) 
+                $ LI y 1 1)]
+        propagate _ (CyclicSCC []) = error "fill_holes: a cycle has to include two or more vertices"
         g :: [DocWithHoles]
-          -> Map String [(LatexToken,(Int,Int))] 
-          -> [(LatexToken,(Int,Int))]
+          -> Map String [(LatexToken,LineInfo)] 
+          -> [(LatexToken,LineInfo)] 
         g doc m = concatMap (h m) doc
-        h :: Map String [(LatexToken,(Int,Int))] 
+        h :: Map String [(LatexToken,LineInfo)] 
           -> DocWithHoles
-          -> [(LatexToken,(Int,Int))] 
+          -> [(LatexToken,LineInfo)] 
         h _ (Right x)       = [x]
         h m (Left (name,_)) = m ! name
         msg = "A cycle exists in the LaTeX document structure: {0}"
@@ -315,45 +327,33 @@ fill_holes fname m = do
                         "Map.!: given key is not an element in the map: " 
                         ++ show x ++ " - " ++ show (keys m) ++ " - " ++ show order
 
-scan_doc :: String -> IO (Either [Error] [(LatexToken,(Int,Int))])
+scan_doc :: String -> IO (Either [Error] [(LatexToken,LineInfo)])
 scan_doc fname = runEitherT $ do
     let dir = takeDirectory fname
-    cd <- liftIO $ getCurrentDirectory
     fname <- liftIO $ canonicalizePath fname
---    liftIO $ putStrLn cd
-    (m,xs) <- flip execStateT (empty,[(fname,(1,1))]) 
---            $ do_while
+    (m,xs) <- flip execStateT (empty,[(fname,(LI fname 1 1))]) 
             $ fix $ \rec -> do
         (m,ys) <- get
---        liftIO $ putStrLn $ "ys = " ++ show ys
         case ys of
-            (x,(i,j)):xs -> do
---                liftIO $ putStrLn x
---                liftIO $ putStrLn $ show xs
-                b0 <- liftIO $ doesFileExist $ x
-                b1 <- liftIO $ doesFileExist $ (x ++ ".tex")
-                x <- if b1 
-                    then return $ (x ++ ".tex")
-                    else return $ x
-                if not b0 && not b1 then
-                    lift $ left [("file " ++ x ++ " does not exist",i,j)]
-                else if not $ x `member` m then do
+            (x,(LI _ i j)):xs -> do
+                if not $ x `member` m then do
                     ct  <- liftIO $ readFile x
-                    ct  <- lift $ hoistEither $ scan_file ct
+                    ct  <- lift $ hoistEither $ scan_file x ct
                     ct  <- forM ct $ \path -> do
                         either 
-                            (\(path,(i,j)) -> do
+                            (\(path,li) -> do
                                 b0 <- liftIO $ doesFileExist $ dir </> path
                                 b1 <- liftIO $ doesFileExist $ (dir </> path ++ ".tex")
                                 path <- if b1 
                                     then return $ (dir </> path ++ ".tex")
-                                    else return $ dir </> path
-                                if b0 || b1 then do
-                                    path <- liftIO $ canonicalizePath path
-                                    return $ Left (path,(i,j))
-                                else return $ Left (path,(i,j)))
+                                    else if b0 
+                                    then return $ dir </> path
+                                    else lift $ left 
+                                        [ Error ("file '" ++ path ++ "' does not exist") 
+                                            $ LI x i j]
+                                path <- liftIO $ canonicalizePath path
+                                return $ Left (path,li))
                             (return . Right) path
---                    liftIO $ putStrLn $ show (lefts ct) -- $ putStrLn . show 
                     put (insert x ct m,xs ++ lefts ct)
                 else put (m,xs)
                 rec
@@ -365,12 +365,12 @@ scan_doc fname = runEitherT $ do
 parse_latex_document :: String -> IO (Either [Error] [LatexDoc])
 parse_latex_document fname = runEitherT $ do
         ys <- EitherT $ scan_doc fname 
-        hoistEither $ read_tokens latex_content ys (1,1)
+        hoistEither $ read_tokens latex_content fname ys (1,1)
 
-latex_structure :: String -> Either [Error] [LatexDoc]
-latex_structure xs = do
-        ys <- read_lines tex_tokens (uncomment xs)
-        read_tokens latex_content ys (1,1)
+latex_structure :: FilePath -> String -> Either [Error] [LatexDoc]
+latex_structure fn xs = do
+        ys <- read_lines tex_tokens fn (uncomment xs)
+        read_tokens latex_content fn ys (1,1)
 
 is_prefix xs ys = xs == take (length xs) ys
 
