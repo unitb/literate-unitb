@@ -1,12 +1,17 @@
 module UnitB.Test where 
 
     -- Modules
+import           Logic.Classes
+import           Logic.Const
+import           Logic.Expr
+import           Logic.Label
+import qualified Logic.TestGenericity as Gen
+
+import Theories.FunctionTheory
+
 import UnitB.AST
-import qualified UnitB.TestGenericity as Gen
-import UnitB.PO
-import UnitB.Label
-import UnitB.FunctionTheory
 import UnitB.Feasibility
+import UnitB.PO
 
 import Z3.Z3
 
@@ -14,9 +19,6 @@ import Z3.Z3
 import           Data.List ( sort )
 import           Data.Map hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
-
---import System.IO
---import System.Posix.IO
 
 import Tests.UnitTest
 

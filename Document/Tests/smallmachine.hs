@@ -5,10 +5,11 @@ where
     -- Modules
 import Document.Document
 
+import Logic.Const
+import Logic.Expr
+
 import UnitB.AST
 import UnitB.PO
-
-import Z3.Z3
 
     -- Libraries
 import           Data.Map hiding ( map )

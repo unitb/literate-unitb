@@ -5,12 +5,14 @@ import Document.Document
 
 import Tests.UnitTest
 
+import Logic.Classes
+import Logic.Const
+import Logic.Expr
+import Logic.Label
+import Logic.Calculation
+
 import UnitB.AST
 import UnitB.PO
-import UnitB.Label
-import UnitB.Calculation
-
-import Z3.Z3
 
     -- Libraries
 import Data.Map hiding ( map )

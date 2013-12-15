@@ -20,14 +20,13 @@ module UnitB.Feasibility
 where
 
     -- Modules
-import Z3.Def 
+import Logic.Expr
             ( Expr(..), Var, used_var 
             , Fun (..) )
-import Z3.Const
+import Logic.Const
 
     -- Libraries
 import           Control.Monad 
---import           Control.Monad.State.Class
 import           Control.Monad.State as ST
 
 import           Data.IntMap 

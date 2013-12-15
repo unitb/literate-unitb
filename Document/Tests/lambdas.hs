@@ -7,11 +7,13 @@ where
     -- Modules
 import Document.Document
 
+import Logic.Const
+import Logic.Expr
+
+import Theories.FunctionTheory
+
 import UnitB.AST
 import UnitB.PO
-import UnitB.FunctionTheory
-
-import Z3.Z3 hiding (verify)
 
     -- Libraries
 import Control.Monad.Trans.Either

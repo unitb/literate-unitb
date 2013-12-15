@@ -1,8 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
-module UnitB.Genericity where
+module Logic.Genericity where
 
     -- Modules
-import Z3.Def -- hiding ( type_of )
+import Logic.Expr
+import Logic.Classes
 
     -- Libraries
 import Control.Monad

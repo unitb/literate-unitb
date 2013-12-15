@@ -11,13 +11,17 @@ import Document.Refinement hiding ( parse_rule )
 
 import Latex.Parser
 
+import Logic.Const
+import Logic.Expr
+import Logic.ExpressionStore ( ExprStore )
+
 import SummaryGen
 
 import UnitB.AST
-import UnitB.ExpressionStore ( ExprStore )
 import UnitB.PO
-import UnitB.SetTheory
-import UnitB.FunctionTheory
+
+import Theories.SetTheory
+import Theories.FunctionTheory
 
 import Z3.Z3 
 

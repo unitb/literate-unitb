@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
 
 module Z3.Z3 
-    ( module Z3.Def
-    , module Z3.Const
-    , Sequent ( .. )
+    ( Sequent ( .. )
     , Validity ( .. )
     , Satisfiability ( .. )
     , discharge_all
@@ -26,11 +24,11 @@ module Z3.Z3
 where
 
     -- Modules
-import UnitB.Label
-
-import Z3.Def
-import Z3.Const
-import Z3.Lambda
+import Logic.Expr
+import Logic.Classes
+import Logic.Const
+import Logic.Label
+import Logic.Lambda
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
@@ -40,20 +38,18 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 
-import Data.Char
-import Data.Function
-import Data.List hiding (union)
-import Data.Map as M hiding (map,filter,foldl, (\\))
-import 		qualified
-	   Data.Map as M
-import Data.Typeable 
-import System.Exit
-import System.Process
+import           Data.Char
+import           Data.Function
+import           Data.List hiding (union)
+import           Data.Map as M hiding (map,filter,foldl, (\\))
+import qualified Data.Map as M
+import           Data.Typeable 
+
+import           System.Exit
+import           System.Process
 
 import Utilities.Format
 
---z3_path = "./bin/z3"
---z3_path = "/Users/simonhudon/Downloads/z3-4.3.2.5b5a474b5443-x64-osx-10.8.2/bin/z3"
 z3_path = "z3"
 
 instance Tree Command where

@@ -1,9 +1,9 @@
 module SummaryGen where
 
-import UnitB.ExpressionStore
+import Logic.Classes
+import Logic.ExpressionStore
 
 import UnitB.AST
-import UnitB.Label
 
     -- Libraries
 import Control.Monad ( forM )

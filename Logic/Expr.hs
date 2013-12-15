@@ -1,13 +1,16 @@
 {-# LANGUAGE DeriveDataTypeable, DeriveGeneric, DefaultSignatures #-}
-module Z3.Def where
+module Logic.Expr where
+
+    -- Module
+import Logic.Classes
 
     -- library
-import GHC.Generics
-import Data.List
-import Data.Map as M hiding (map,filter,foldl)
-import qualified 
-       Data.Set as S
-import Data.Typeable
+import           GHC.Generics
+
+import           Data.List
+import           Data.Map as M hiding (map,filter,foldl)
+import qualified Data.Set as S
+import           Data.Typeable
 
 import Utilities.Format
 
@@ -85,60 +88,14 @@ data Context = Context
 data Sequent = Sequent Context [Expr] Expr
     deriving (Eq, Generic)
 
+class Symbol a where
+    decl :: a -> [Decl]
+
 instance Show Type where
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
-
-data StrList = List [StrList] | Str String
-
-fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
-fold_mapM _ s [] = return (s,[])
-fold_mapM f s0 (x:xs) = do
-        (s1,y)  <- f s0 x
-        (s2,ys) <- fold_mapM f s1 xs
-        return (s2,y:ys)
-
-fold_map :: (a -> b -> (a,c)) -> a -> [b] -> (a,[c])
-fold_map _ s [] = (s,[])
-fold_map f s0 (x:xs) = (s2,y:ys)
-    where
-        (s1,y)  = f s0 x
-        (s2,ys) = fold_map f s1 xs
-
-class Tree a where
-    as_tree   :: a -> StrList
-    rewriteM' :: Monad m => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
-    rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
-    rewrite' f x t = (rewriteM' g x t) ()
-        where
-            g x t () = f x t
- 
-visit    :: Tree a => (b -> a -> b) -> b -> a -> b
-visit f s x = fst $ rewrite' g s x
-    where
-        g s0 y = (f s0 y, y)
-rewrite  :: Tree a => (a -> a) -> a -> a
-rewrite f x = snd $ rewrite' g () x
-    where
-        g () x = ((), f x)
-
-visitM :: (Monad m, Tree a) => (b -> a -> m b) -> b -> a -> m b
-visitM f x t = visit g (return x) t
-    where
-        g x t = do
-            y <- x
-            f y t
-
-rewriteM :: (Monad m, Tree a) => (a -> m a) -> a -> m a
-rewriteM f t = do
-        ((),x) <- rewriteM' g () t
-        return x
-    where 
-        g () x = do
-            y <- f x
-            return ((),y)
 
 instance Tree Type where
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
@@ -300,9 +257,6 @@ instance Show Def where
         ++ " -> " ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
 
-class Symbol a where
-    decl :: a -> [Decl]
-
 instance Symbol Sort where
     decl s = [SortDecl s]
 
@@ -385,3 +339,16 @@ merge_all_ctx cs = Context
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
+
+instance Named Fun where
+    name (Fun _ x _ _) = x
+
+instance Named Var where
+    name (Var x _) = x
+
+instance Named Sort where
+    name (Sort x _ _) = x
+    name (DefSort x _ _ _) = x
+    name BoolSort   = "\\Bool"
+    name IntSort    = "\\Int"
+    name RealSort   = "\\Real"

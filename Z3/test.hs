@@ -1,18 +1,21 @@
 module Z3.Test where
 
---import Data.Maybe
-
-import Tests.UnitTest
-
-import Z3.Lambda
+    -- Modules
 import Z3.Z3 as Z
 
-import UnitB.Calculation
-import UnitB.Operator
+import Logic.Calculation
+import Logic.Const
+import Logic.Expr
+import Logic.Lambda
+import Logic.Operator
+
 import UnitB.PO
 import UnitB.AST
 
+    -- Libraries
 import Utilities.Syntactic
+
+import Tests.UnitTest
 
 test = test_cases 
         [ case0, case1

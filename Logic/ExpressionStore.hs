@@ -1,14 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
-module UnitB.ExpressionStore 
+module Logic.ExpressionStore 
     ( ExprStore, insert, empty_store, get_string )
 where
 
     -- Modules
-import Z3.Def
-import Z3.Const
-
-import UnitB.Label
-import UnitB.Theory ()
+import Logic.Expr
+import Logic.Classes
+import Logic.Const
 
     -- Libraries
 import Control.Monad.State.Class

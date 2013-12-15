@@ -4,30 +4,30 @@ module Document.Tests.TrainStation
     , part3, part4, part5 )
 where
 
---import Control.Monad hiding ( guard )
-
---import           Data.List ( sort )
-import           Data.Map hiding ( map )
---import qualified Data.Map as M
---import           Data.Set as S 
-import qualified Data.Set as S
---import Data.Maybe
-
+    -- Modules
 import Document.Document as Doc
 
-import Tests.UnitTest
+import Logic.Calculation
+import Logic.Const
+import Logic.Expr
+import Logic.Label
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.Label
-import UnitB.SetTheory
-import UnitB.FunctionTheory
-import UnitB.Calculation
+
+import Theories.SetTheory
+import Theories.FunctionTheory
+
+import Z3.Z3
+
+    -- Libraries
+import           Data.Map hiding ( map )
+import qualified Data.Set as S
+
+import Tests.UnitTest
 
 import Utilities.Format hiding (test,test_case)
 import Utilities.Syntactic
-
-import Z3.Z3
 
 test_case = Case "train station example" test True
 

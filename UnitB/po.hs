@@ -8,10 +8,14 @@ module UnitB.PO
 where
 
     -- Modules
+import Logic.Calculation
+import Logic.Classes
+import Logic.Const
+import Logic.Expr
+import Logic.Operator
+import Logic.Label
+
 import UnitB.AST
-import UnitB.Calculation
-import UnitB.Operator
-import UnitB.Label
 import UnitB.Feasibility
 
 import Z3.Z3

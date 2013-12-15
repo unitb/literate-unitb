@@ -9,12 +9,13 @@ import Latex.Parser
 import Latex.Scanner
 
 import UnitB.AST
-import UnitB.Calculation hiding ( context )
-import UnitB.Genericity
 import UnitB.PO
-import UnitB.Operator
 
-import Z3.Z3
+import Logic.Calculation hiding ( context )
+import Logic.Expr
+import Logic.Const
+import Logic.Genericity
+import Logic.Operator
 
     -- Libraries
 import           Control.Monad hiding ( guard )
@@ -24,10 +25,10 @@ import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks )
 import qualified Control.Monad.Trans.RWS as RWS
 
-import Data.Map hiding ( map, foldl )
-import Data.Monoid (Monoid)
-import Data.List as L hiding ( union, insert, inits )
+import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
+import           Data.Monoid (Monoid)
+import           Data.List as L hiding ( union, insert, inits )
 
 import Utilities.Format
 import Utilities.Syntactic

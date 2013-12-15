@@ -1,17 +1,15 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Z3.Lambda 
+module Logic.Lambda 
     ( delambdify
     , CanonicalLambda ( .. )
     , canonical )
 where
 
     -- Modules
-import UnitB.Genericity
-import UnitB.FunctionTheory()
-import UnitB.Label
-
-import Z3.Const
-import Z3.Def
+import Logic.Classes
+import Logic.Const
+import Logic.Expr
+import Logic.Genericity
 
     -- Libraries
 import Control.Monad.State

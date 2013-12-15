@@ -1,7 +1,10 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
+module Logic.Label where
 
-module UnitB.Label where
+    -- Module
+import Logic.Classes
 
+    -- Libraries
 import GHC.Generics 
 import Data.Map hiding ( map )
 import Data.Typeable
@@ -16,8 +19,3 @@ label s = Lbl s
 
 symbol_table :: Named a => [a] -> Map String a
 symbol_table xs = fromList $ map as_pair xs
-
-class Named n where
-    name    :: n -> String
-    as_pair :: n -> (String, n)
-    as_pair n = (name n, n)

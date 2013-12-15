@@ -1,10 +1,9 @@
-module Z3.Const
+module Logic.Const
 where
 
-    -- Modules
-import UnitB.Genericity
-    
-import Z3.Def
+    -- Modules    
+import Logic.Expr
+import Logic.Genericity
 
     -- Libraries
 import Control.Monad

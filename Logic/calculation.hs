@@ -1,10 +1,9 @@
-module UnitB.Calculation where
+module Logic.Calculation where
 
     -- Modules
-import Z3.Z3 
-
-import UnitB.Operator
-import UnitB.Label
+import Logic.Expr
+import Logic.Operator
+import Logic.Label
 
     -- Libraries
 import Data.Map (Map)

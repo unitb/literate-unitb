@@ -8,11 +8,12 @@ import Document.Proof
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.Genericity
 
 import Latex.Parser
 
-import Z3.Z3
+import Logic.Const
+import Logic.Expr
+import Logic.Genericity
 
     -- Libraries
 import Control.Monad.Trans.Either

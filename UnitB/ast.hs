@@ -49,13 +49,15 @@ module UnitB.AST
 where
  
     -- Modules
-import UnitB.ExpressionStore
-import UnitB.SetTheory
-import UnitB.Theory
-import UnitB.Calculation
-import UnitB.Label
+import Logic.Expr hiding (merge)
+import Logic.Const 
+import Logic.ExpressionStore
+import Logic.Calculation
+import Logic.Classes
+import Logic.Label
 
-import Z3.Z3 hiding (merge)
+import Theories.SetTheory
+import Theories.Theory
 
     -- Libraries
 import Control.Monad hiding ( guard )
@@ -481,8 +483,7 @@ data PropertySet = PS
         , progress     :: Map Label ProgressProp
         , schedule     :: Map Label Schedule
         , safety       :: Map Label SafetyProp
-        , derivation   :: Map Label Rule
-        }
+        , derivation   :: Map Label Rule         }
     deriving Eq
 
 instance Show PropertySet where

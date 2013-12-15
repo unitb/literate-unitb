@@ -49,5 +49,4 @@ didAnythingChange = do
         old_files <- gets timestamps
         files <- get_time_stamps
         modify $ \s -> s { timestamps = files }
---        let us = 
         return $ files /= old_files

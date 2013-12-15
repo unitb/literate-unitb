@@ -1,19 +1,17 @@
 {-# LANGUAGE BangPatterns #-}
-module UnitB.SetTheory where
+module Theories.SetTheory where
 
     -- Modules
-import UnitB.Genericity
-import UnitB.Theory
-import UnitB.Label
+import Logic.Const
+import Logic.Expr
+import Logic.Genericity
+import Logic.Label
 
-import Z3.Def
-import Z3.Const
+import Theories.Theory
 
     -- Libraries
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
-
---import System.IO.Unsafe
 
 import Utilities.Format
 

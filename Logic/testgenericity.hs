@@ -1,10 +1,11 @@
-module UnitB.TestGenericity where
+module Logic.TestGenericity where
 
     -- Modules
-import UnitB.Genericity
-import UnitB.SetTheory
+import Logic.Const
+import Logic.Expr
+import Logic.Genericity
 
-import Z3.Z3 hiding ( type_of )
+import Theories.SetTheory
 
     -- Libraries
 import Control.Monad

@@ -1,14 +1,14 @@
 {-# LANGUAGE BangPatterns #-}
-module UnitB.FunctionTheory where
+module Theories.FunctionTheory where
 
     -- Modules
-import UnitB.Genericity
-import UnitB.Theory
-import UnitB.SetTheory hiding ( dec )
-import UnitB.Label
+import Logic.Const
+import Logic.Expr
+import Logic.Genericity
+import Logic.Label
 
-import Z3.Def
-import Z3.Const
+import Theories.Theory
+import Theories.SetTheory hiding ( dec )
 
     -- Libraries
 import Data.Map

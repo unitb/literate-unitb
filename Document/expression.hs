@@ -3,20 +3,20 @@ module Document.Expression
     ( parse_expr, oper, eat_space, get_variables )
 where
 
-import UnitB.ExpressionStore as ES
-
 import Latex.Scanner
 import Latex.Parser
 
-import UnitB.Genericity hiding (unsafePerformIO)
-import UnitB.Operator
-import UnitB.SetTheory
-import UnitB.FunctionTheory
+import Logic.Const
+import Logic.Expr
+import Logic.ExpressionStore as ES
+import Logic.Genericity hiding (unsafePerformIO)
+import Logic.Operator
+
+import Theories.SetTheory
+import Theories.FunctionTheory
 
 import Utilities.Syntactic
 
-import Z3.Const
-import Z3.Def
 import Z3.Z3
 
     -- Libraries

@@ -1,13 +1,15 @@
-module UnitB.Operator where
+module Logic.Operator where
 
+    -- Modules
+import Theories.SetTheory
+import Theories.FunctionTheory
+
+import Logic.Expr
+import Logic.Const
+
+    -- Libraries
 import Data.List as L
 import Data.Map hiding ( foldl )
-
-import UnitB.SetTheory
-import UnitB.FunctionTheory
-
-import Z3.Def
-import Z3.Const
 
 data UnaryOperator = Negation
 

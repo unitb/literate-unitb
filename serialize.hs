@@ -1,10 +1,10 @@
 module Serialize where
 
 	-- Modules
+import Logic.Expr
+
 import UnitB.AST
 import UnitB.PO
-
-import Z3.Def
 
 	-- Libraries
 

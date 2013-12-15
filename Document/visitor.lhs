@@ -25,12 +25,13 @@ module Document.Visitor
 where
 
     -- Modules
-import Latex.Parser
-
 import Document.TypeList
 
+import Latex.Parser
+
+import Logic.ExpressionStore
+
 import UnitB.AST
-import UnitB.ExpressionStore
 
     -- Libraries
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
