@@ -5,6 +5,7 @@ import qualified Latex.Test_Latex_Parser as LT
 import qualified Z3.Test as ZT
 import qualified Document.Test as DOC
 import qualified Utilities.Format as FMT
+import qualified Utilities.Test as UT
 
 import Tests.UnitTest
 
@@ -15,6 +16,7 @@ test_case = test_suite
         ,  LT.test_case
         ,  ZT.test_case
         ,  FMT.test_case
+        ,  UT.test_case
         ]
 
 main = do
