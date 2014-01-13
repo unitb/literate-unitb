@@ -15,7 +15,8 @@ import Logic.Calculation hiding ( context )
 import Logic.Expr
 import Logic.Const
 import Logic.Genericity
-import Logic.Operator
+
+import Theories.Notation
 
     -- Libraries
 import           Control.Monad hiding ( guard )
@@ -248,7 +249,7 @@ parse_calc hyps m xs =
         Just (a,t,[b,c],d)    -> do
             xp <- fromEither ztrue $ get_expr m a
             LI fn i j  <- RWS.ask
-            op <- fromEither Equal $ hoistEither $ read_tokens 
+            op <- fromEither equal $ hoistEither $ read_tokens 
                     (do eat_space ; x <- oper ; eat_space ; return x) 
                     fn
                     (concatMap flatten_li b) (i,j)

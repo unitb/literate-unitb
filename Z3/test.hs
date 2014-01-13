@@ -12,6 +12,8 @@ import Logic.Operator
 import UnitB.PO
 import UnitB.AST
 
+import Theories.Notation
+
     -- Libraries
 import Utilities.Syntactic
 
@@ -100,10 +102,10 @@ sample_calc = (Calc
               ConstDecl "y" bool ] )
         (  fromJust  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
                    ( fromJust (f x `mzimplies` f y) )
-        [ (Equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li)
-        , (Equal,    fromJust ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
-        , (Follows,  fromJust ( x `mzeq` (x `mzand` y) ), [], li)
-        , (Equal,    fromJust ( x `mzimplies` y ),        [], li) 
+        [ (equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li)
+        , (equal,    fromJust ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
+        , (follows,  fromJust ( x `mzeq` (x `mzand` y) ), [], li)
+        , (equal,    fromJust ( x `mzimplies` y ),        [], li) 
         ]
         li )
     where

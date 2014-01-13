@@ -4,7 +4,7 @@ module Utilities.Graph
     , Min(..), closure
     , m_closure, m_closure_with
     , as_matrix, as_matrix_with
-    , matrix_of_with )
+    , matrix_of_with, Matrix )
 where
 
 import Control.Monad
@@ -15,7 +15,7 @@ import Data.Array.ST
 import Data.Function
 import Data.Graph
 import Data.List as L hiding ( union, (\\) )
---import Data.Map  as M hiding ( union, (\\) )
+import Data.Map  as M ( Map, fromList, mapKeys, (!) )
 
 import Prelude hiding ( seq )
 
@@ -24,6 +24,8 @@ instance Show a => Show (SCC a) where
     show (CyclicSCC xs) = show xs
 
 --type Array a b = 
+
+type Matrix a b = Map (a,a) b
 
 cycles xs = cycles_with [] xs
 
@@ -67,56 +69,63 @@ closure xs = ys
         es = L.map f xs
         n  = length vs
         ys = concatMap g $ A.assocs $ closure_ ar
-        f (u,v) = ((m0 ! u, m0 ! v),True)
+        f (u,v) = ((m0 A.! u, m0 A.! v),True)
         g ((i,j),b)
-            | b         = [(m1 ! i, m1 ! j)]
+            | b         = [(m1 A.! i, m1 A.! j)]
             | otherwise = []
 
 m_closure :: (Ix b, Ord b) => [(b,b)] -> Array (b,b) Bool
 m_closure xs = ixmap (g m, g n) f $ closure_ ar
     where
         (m0,m1,ar) = matrix_of xs
-        f (x,y)    = (m0 ! x, m0 ! y)
-        g (i,j)    = (m1 ! i, m1 ! j) 
+        f (x,y)    = (m0 M.! x, m0 M.! y)
+        g (i,j)    = (m1 A.! i, m1 A.! j) 
         (m,n)      = bounds ar
 
-m_closure_with :: (Ix b, Ord b) => [b] -> [(b,b)] -> Array (b,b) Bool
-m_closure_with rs xs = ixmap (g m, g n) f $ closure_ ar
+--m_closure_with :: (Ix b, Ord b) => [b] -> [(b,b)] -> Array (b,b) Bool
+--m_closure_with rs xs = ixmap (g m, g n) f $ closure_ ar
+--    where
+--        (m0,m1,ar) = matrix_of_with rs xs
+--        f (x,y)    = (m0 ! x, m0 ! y)
+--        g (i,j)    = (m1 ! i, m1 ! j) 
+--        (m,n)      = bounds ar
+
+m_closure_with :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
+m_closure_with rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
     where
-        (m0,m1,ar) = matrix_of_with rs xs
-        f (x,y)    = (m0 ! x, m0 ! y)
-        g (i,j)    = (m1 ! i, m1 ! j) 
-        (m,n)      = bounds ar
+        (_,m1,ar) = matrix_of_with rs xs
+        g (i,j)    = (m1 A.! i, m1 A.! j) 
 
 as_matrix xs = as_matrix_with [] xs
-    where
-        (m0,m1,ar) = matrix_of xs
-        f (x,y)    = (m0 ! x, m0 ! y)
-        g (i,j)    = (m1 ! i, m1 ! j) 
-        (m,n)      = bounds ar
 
-as_matrix_with :: (Ix a, Ord a) => [a] -> [(a,a)] -> Array (a,a) Bool
-as_matrix_with rs xs = ixmap (g m, g n) f ar
+as_matrix_with :: Ord a => [a] -> [(a,a)] -> Matrix a Bool
+as_matrix_with rs es = fromList $ zip cs (repeat False) ++ zip es (repeat True)
     where
-        (m0,m1,ar) = matrix_of_with rs xs
-        f (x,y)    = (m0 ! x, m0 ! y)
-        g (i,j)    = (m1 ! i, m1 ! j) 
-        (m,n)      = bounds ar
+        cs = [ (x,y) | x <- rs, y <- rs ]
 
-matrix_of :: (Ix a, Ord a) => [(a,a)] -> (Array a Int, Array Int a, Array (Int,Int) Bool)
+--as_matrix_with :: (Ix a, Ord a) => [a] -> [(a,a)] -> Array (a,a) Bool
+--as_matrix_with rs xs = ixmap (g m, g n) f ar
+--    where
+--        (m0,m1,ar) = matrix_of_with rs xs
+--        f (x,y)    = (m0 ! x, m0 ! y)
+--        g (i,j)    = (m1 ! i, m1 ! j) 
+--        (m,n)      = bounds ar
+
+matrix_of :: (Ord a) => [(a,a)] -> (Map a Int, Array Int a, Array (Int,Int) Bool)
 matrix_of xs = matrix_of_with [] xs
 
     -- replace the maps with arrays
-matrix_of_with :: (Ix a, Ord a) => [a] -> [(a,a)] -> (Array a Int, Array Int a, Array (Int,Int) Bool)
+matrix_of_with :: (Ord a) => [a] -> [(a,a)] -> (Map a Int, Array Int a, Array (Int,Int) Bool)
 matrix_of_with rs xs = (m0,m1,ar)
     where
         vs = sort $ nub (L.map fst xs ++ L.map snd xs ++ rs)
         ar = (A.listArray ((1,1),(n,n)) $ repeat False) // es
-        m0  = array (head vs, last vs) $ zip vs [1..n]
+--        m0  = array (head vs, last vs) $ zip vs [1..n]
+        m0  = fromList $ zip vs [1..n]
         m1  = array (1,n) $ zip [1..n] vs
         es = L.map f xs
         n  = length vs
-        f (u,v) = ((m0 ! u, m0 ! v),True)
+        f (u,v) = ((m0 M.! u, m0 M.! v),True)
 
 --edges_of 
 

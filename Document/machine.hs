@@ -45,8 +45,14 @@ import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
+-- import Debug.Trace
+
 import Utilities.Format
 import Utilities.Syntactic
+
+traceM :: Monad m => String -> m ()
+-- traceM xs = trace xs (return ())
+traceM _ = return ()
 
 list_file_obligations :: FilePath
                        -> IO (Either [Error] [(Machine, Map Label Sequent)])
@@ -151,6 +157,7 @@ produce_summaries sys =
         f x   = x
         
 read_document xs = do
+            traceM "step A"
             ms <- foldM gather empty xs 
             lift $ RWS.modify (\s -> s { 
                 machines = ms })
@@ -168,21 +175,26 @@ read_document xs = do
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
             ms <- trickle_down refs ms merge_decl li
+            traceM "step M"
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
             ms <- trickle_down refs ms merge_exprs li
-                
+            traceM "step Q"
+            
                 -- use the label of expressions from `collect_expr' 
                 -- in hints.
             ms <- toEither $ foldM (f collect_proofs) ms xs
+            traceM "step R"
             ms <- trickle_down refs ms merge_proofs li
+            traceM "step T"
             toEither $ forM_ (M.elems ms) 
                 $ deduct_schedule_ref_struct li
             s  <- lift $ RWS.gets proof_struct
 --            let !() = unsafePerformIO $ print s
             check_acyclic "proof of liveness" s li
+            traceM "step Z"
             return ms
     where
         gather ms (Env n _ c li)     
@@ -629,13 +641,17 @@ collect_proofs :: Monad m
 collect_proofs = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(po,()) xs m -> do
+                    traceM "step - collect: proof"
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                     let lbl = composite_label [ _name m, po_lbl ]
+                    traceM "step A"
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
                         ] 
+                    traceM "step K"
                     p           <- collect_proof_step empty m xs
+                    traceM "end"
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 
@@ -643,6 +659,7 @@ collect_proofs = visit_doc
             )
         ] [ (   "\\refine"
             ,   CmdBlock $ \(goal,String rule,hyps,hint,()) m -> do
+                    traceM "step - collect: refine"
                     toEither $ error_list
                         [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
                             , format "the goal is an undefined progress property {0}" goal )
@@ -651,10 +668,12 @@ collect_proofs = visit_doc
                         saf  = safety (props m) `union` safety (inh_props m)
 --                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
+                    traceM "end"
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
             )
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
+                    traceM "step - collect: safety B"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -675,6 +694,7 @@ collect_proofs = visit_doc
                             `union` params event 
                             `union` indices event
                     let new_prop = Unless (M.elems dum) p q (Just evt)
+                    traceM "end"
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 
                         , constraint = insert lbl 
@@ -687,6 +707,7 @@ collect_proofs = visit_doc
             )
         ,   (   "\\replace"
             ,   CmdBlock $ \(evt,n,del,add,keep,prog,saf,()) m -> do
+                    traceM "step - collect: replace"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -718,6 +739,7 @@ collect_proofs = visit_doc
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
 --                    add_proof_edge po_lbl [prog,saf]
+                    traceM "end"
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -728,6 +750,7 @@ collect_proofs = visit_doc
             )
         ,   (   "\\weakento"
             ,   CmdBlock $ \(evt :: Label,n :: Int,del :: S.Set Label,add :: S.Set Label,()) m -> do
+                    traceM "step - collect: weaken to"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -750,6 +773,7 @@ collect_proofs = visit_doc
                                     { sched_ref = insert n rule 
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                    traceM "end"
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
@@ -760,6 +784,7 @@ collect_proofs = visit_doc
             )
         ,   (   "\\replacefine"
             ,   CmdBlock $ \(evt, n, keep, old, new, prog, ()) m -> do
+                    traceM "step - collect: replace fine"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -788,6 +813,7 @@ collect_proofs = visit_doc
                                         $ sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",label $ show n]
 --                    add_proof_edge po_lbl [prog]
+                    traceM "end"
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 

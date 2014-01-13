@@ -5,6 +5,8 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Label
 
+import Theories.Notation
+
     -- Libraries
 import Data.Map (Map)
 
@@ -55,7 +57,7 @@ infer_goal (Calc _ _ s0 xs _) =
                         (s0 `op` x)
             []   -> Left ("a calculation must include at least one reasoning step") --,i,j)
     where
-        op = mk_expr $ foldl chain Equal $ map g xs
+        op = mk_expr $ foldl chain equal $ map g xs
         f (_,y,_,_) = y
         g (x,_,_,_) = x
 

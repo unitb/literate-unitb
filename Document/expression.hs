@@ -3,6 +3,7 @@ module Document.Expression
     ( parse_expr, oper, eat_space, get_variables )
 where
 
+    -- Modules
 import Latex.Scanner
 import Latex.Parser
 
@@ -14,6 +15,7 @@ import Logic.Operator
 
 import Theories.SetTheory
 import Theories.FunctionTheory
+import Theories.Notation
 
 import Utilities.Syntactic
 
@@ -25,9 +27,12 @@ import Control.Monad.State.Class
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
-import           Data.Char
-import           Data.List as L
-import           Data.Map as M hiding ( map )
+import Data.Char
+import Data.Either
+import Data.List as L
+import Data.Map as M hiding ( map )
+
+import System.IO.Unsafe 
 
 import Utilities.Format
 
@@ -156,100 +161,112 @@ get_variables ctx cs = do
     where
         m = concatMap flatten_li cs
 
-plus = do
-        x <- match $ match_string "+"
-        case x of
-            Just _ -> return ()
-            Nothing -> fail "expecting plus (+)"
-
-fun_app = do
-        x <- match $ match_string "."
-        case x of
-            Just _ -> return ()
-            Nothing -> fail "expecting function application (.)"
-
-leq = read_list "\\le"
-
-lt = read_list "<"
-
-geq = read_list "\\ge"
-
-gt = read_list ">"
-
-times = do
-        x <- match $ match_string "\\cdot"
-        case x of
-            Just _ -> return ()
-            Nothing -> fail "expecting times (\\cdot)"
-
-implication = read_list "\\implies"
-
-follows     = read_list "\\follows"
-
-conjunction = read_list "\\land"
-
-disjunction = read_list "\\lor"
-
-equivalence = read_list "\\equiv"
-
-power  = read_list "^"
-
-tfun   = read_list "\\tfun"
-
-bunion = read_list "\\bunion"
-
-overload = read_list "|"
-
-dom_sub  = read_list "\\domsub"
-
-dom_rest = read_list "\\domres"
-
-membership = 
-        read_list "\\in"
-
-set_diff = read_list "\\setminus"
-
-negation = read_list "\\neg"
+--plus = do
+--        x <- match $ match_string "+"
+--        case x of
+--            Just _ -> return ()
+--            Nothing -> fail "expecting plus (+)"
+--
+--fun_app = do
+--        x <- match $ match_string "."
+--        case x of
+--            Just _ -> return ()
+--            Nothing -> fail "expecting function application (.)"
+--
+--leq = read_list "\\le"
+--
+--lt = read_list "<"
+--
+--geq = read_list "\\ge"
+--
+--gt = read_list ">"
+--
+--times = do
+--        x <- match $ match_string "\\cdot"
+--        case x of
+--            Just _ -> return ()
+--            Nothing -> fail "expecting times (\\cdot)"
+--
+--implication = read_list "\\implies"
+--
+--follows     = read_list "\\follows"
+--
+--conjunction = read_list "\\land"
+--
+--disjunction = read_list "\\lor"
+--
+--equivalence = read_list "\\equiv"
+--
+--power  = read_list "^"
+--
+--tfun   = read_list "\\tfun"
+--
+--bunion = read_list "\\bunion"
+--
+--overload = read_list "|"
+--
+--dom_sub  = read_list "\\domsub"
+--
+--dom_rest = read_list "\\domres"
+--
+--membership = 
+--        read_list "\\in"
+--
+--set_diff = read_list "\\setminus"
+--
+--negation = read_list "\\neg"
 
 unary :: Scanner Char UnaryOperator
 unary = do
         choice 
-            [  negation >> return Negation
-            ]
+            (map f $ lefts $ new_ops notations)
+--            [  negation >> return Negation
+--            ]
             (fail "expecting an unary operator")            
             return
+    where
+        f op@(UnaryOperator _ tok _) = do
+            read_list tok
+            return op
 
 oper = do
-        choice [
-                (plus  >> return Plus),
-                (times >> return Mult),
-                (power >> return Power),
-                (implication >> return Implies),
-                (follows     >> return Follows),
-                (conjunction >> return And),
-                (disjunction >> return Or),
-                (equivalence >> return Equiv),
-                (leq >> return Leq),
-                (lt >> return Less),
-                (geq >> return Geq),
-                (gt >> return Greater),
-                (equal >> return Equal),
-                (membership >> return Membership),
-                (bunion >> return Union),
-                (set_diff >> return SetDiff),
-                (overload >> return Overload),
-                (dom_sub >> return DomSubt),
-                (dom_rest >> return DomRest),
-                (tfun >> return MkFunction), -- TotalFunction),
-                (fun_app >> return Apply) ]
+        choice 
+            (concatMap f $ rights $ new_ops notations)
+--        choice [
+--                (plus  >> return Plus),
+--                (times >> return Mult),
+--                (power >> return Power),
+--                (implication >> return Implies),
+--                (follows     >> return Follows),
+--                (conjunction >> return And),
+--                (disjunction >> return Or),
+--                (equivalence >> return Equiv),
+--                (leq >> return Leq),
+--                (lt >> return Less),
+--                (geq >> return Geq),
+--                (gt >> return Greater),
+--                (equal >> return Equal),
+--                (membership >> return Membership),
+--                (bunion >> return Union),
+--                (set_diff >> return SetDiff),
+--                (overload >> return Overload),
+--                (dom_sub >> return DomSubt),
+--                (dom_rest >> return DomRest),
+--                (tfun >> return MkFunction), -- TotalFunction),
+--                (fun_app >> return Apply) ]
             (fail "expecting a binary operator")            
             return
+    where
+        f op@(BinOperator _ tok _) = [do
+            read_list tok
+            return op]
+--        f op@(Operator Unary _ _)    = []
 
-equal = do
-        x <- match $ match_string "="
-        case x of
-            Just _  -> return ()
-            Nothing -> fail "expecting equal (=)"
+--equal = do
+--        x <- match $ match_string "="
+--        case x of
+--            Just _  -> return ()
+--            Nothing -> fail "expecting equal (=)"
 
 term :: Context -> Scanner Char Expr
 term ctx = do
@@ -442,7 +459,7 @@ expr ctx = do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
-                Ambiguous ->  fail ("ambiguous expression: use parentheses")
+                Ambiguous ->  fail $ format "ambiguous expression: {0} and {1} are not associative" op0 op1
         reduce xs (u:us) e0 op0             =
             case binds u op0 of
                 LeftAssoc   -> do
@@ -482,7 +499,7 @@ parse_expr :: ( Monad m
            -> EitherT [Error] m Expr
 parse_expr ctx c = do
         li <- lift $ ask
-        e <- hoistEither $ read_tokens 
+        !e <- hoistEither $ read_tokens 
             (expr ctx) 
             (file_name li) 
             c (line li, column li)

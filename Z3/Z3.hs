@@ -75,17 +75,6 @@ instance Tree Command where
 feed_z3 :: String -> IO (ExitCode, String, String)
 feed_z3 xs = do
         (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2"] xs
---        let c = (shell (z3_path ++ " -smt2 -in -T:2.5")) { 
---            std_out = CreatePipe,
---            std_in = CreatePipe,
---            std_err = CreatePipe } 
---        (Just stdin,Just stdout,Just stderr,ph) <- createProcess c
---        hPutStr stdin xs
-----        b <- hIsOpen stdin 
---        out <- hGetContents stdout
---        err <- hGetContents stderr
---        hClose stdin
---        st <- waitForProcess ph
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
