@@ -60,7 +60,7 @@ example0 = do
                 , add    = S.singleton (label "sch0") }
             evt = empty_event
                     { sched_ref = singleton 0 sch_ref0
-                    , sched = insert (label "sch0") csched default_schedule
+                    , scheds = insert (label "sch0") csched default_schedule
                     , action = fromList [
                         (label "S0", s0),
                         (label "S1", s1) ] }
@@ -89,7 +89,7 @@ train_m0 = do
             leave = (label "leave", empty_event 
                     {   indices = symbol_table [t_decl]
                     ,   sched_ref = singleton 0 sch_ref0
-                    ,   sched = insert (label "C0") c0 $ default_schedule
+                    ,   scheds  = insert (label "C0") c0 $ default_schedule
                     ,   action  = fromList [(label "A0", a0)]
                     })
         tr <- with_li li (st `zselect` t)

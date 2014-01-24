@@ -259,7 +259,7 @@ inc_event_m1 = empty_event
         { sched_ref = fromList
             [ (0, sc)
             ]
-        , sched = fromList 
+        , scheds = fromList 
             [ (label "c0", x `zeq` y) 
             , (label "f0", x `zeq` y) ]
             `union` default_schedule

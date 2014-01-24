@@ -411,7 +411,7 @@ instance RefRule (Int, ScheduleChange) where
                             )
                  )
         where
-            sch  =  sched evt
+            sch  =  scheds evt
             evt = events m ! event r
             ind = M.elems $ indices evt
             kp = zall $ map (sch!) $ S.elems $ keep r

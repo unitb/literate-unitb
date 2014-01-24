@@ -251,10 +251,10 @@ enter_evt = empty_event
     }
 leave_evt = empty_event 
     {  indices   = symbol_table [t_decl]
-    ,  sched   = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
     ,  sched_ref = fromList [(0, (weaken (label "leave"))
                     { remove = S.singleton (label "default")
                     , add    = S.singleton (label "c0") } )]
+    ,  scheds    = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
     ,  guard = fromList
             [  (label "grd0", fromJust $ mzand 
                                     (zapply loc t `mzeq` ext) 

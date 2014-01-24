@@ -87,7 +87,7 @@ empty_theory = Theory []
 data Event = Event 
         { indices   :: Map String Var
         , sched_ref :: Map Int ScheduleChange
-        , sched   :: Map Label Expr
+        , scheds    :: Map Label Expr
         , params    :: Map String Var
         , guard     :: Map Label Expr
         , action    :: Map Label Expr }
@@ -328,8 +328,8 @@ merge_evt_exprs e0 e1 = toEither $ do
                 cs <- foldM (\x y -> do
                         disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
                     ) default_schedule
-                    [ sched e0 `difference` default_schedule
-                    , sched e1 `difference` default_schedule]
+                    [ scheds e0 `difference` default_schedule
+                    , scheds e1 `difference` default_schedule]
                 return cs
         grd <- fromEither empty $ disjoint_union
                 (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
@@ -340,8 +340,8 @@ merge_evt_exprs e0 e1 = toEither $ do
                 (action e0)
                 (action e1)
         return e0 
-            { sched = coarse_sch
             , guard   = grd
+            { scheds = coarse_sch
             , action = act }
 
 merge_evt_proof :: Event -> Event -> Either [String] Event

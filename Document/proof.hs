@@ -288,8 +288,8 @@ parse_calc hyps m xs =
                 err_msg      = Error "reference to unknown predicate" li
                 f :: [Error] -> Event -> Either Expr [Error]
                 f _ ev = do
-                    err (M.lookup xs $ sched ev)
-                    err $ M.lookup xs $ guard ev
+                    err (M.lookup xs $ scheds  ev)
+                    err $ M.lookup xs $ guard  ev
                     err $ M.lookup xs $ action ev
                                 
 get_expr :: ( Monad m, Monoid b ) 

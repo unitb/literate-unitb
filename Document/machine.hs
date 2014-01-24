@@ -455,7 +455,7 @@ collect_expr = visit_doc
                             [ ( not (evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
-                        let sc = sched (events m ! evt)
+                        let sc = scheds (events m ! evt)
                         toEither $ error_list
                             [ ( lbl `member` sc
                                 , format "{0} is already used for another schedule" lbl )
@@ -463,8 +463,8 @@ collect_expr = visit_doc
                         let old_event = events m ! evt
                         sch <- get_evt_part m old_event xs
                         let new_event = old_event { 
-                                    sched = insert lbl sch
-                                            ( sched old_event ) }
+                                    scheds = insert lbl sch
+                                            ( scheds old_event ) }
                         scope (context m) sch (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
@@ -475,7 +475,7 @@ collect_expr = visit_doc
                             [ ( not (evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
-                        let sc = sched (events m ! evt)
+                        let sc = scheds (events m ! evt)
                         toEither $ error_list
                             [ ( lbl `member` sc
                                 , format "{0} is already used for another schedule" lbl )
@@ -483,8 +483,8 @@ collect_expr = visit_doc
                         let old_event = events m ! evt
                         sch <- get_evt_part m old_event xs
                         let new_event = old_event { 
-                                    sched = insert lbl sch
-                                            ( sched old_event ) }
+                                    scheds = insert lbl sch
+                                            ( scheds old_event ) }
                         scope (context m) sch (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
@@ -756,7 +756,7 @@ collect_proofs = visit_doc
                             , format "event '{0}' is undeclared" evt )
                         ]
                     let old_event = events m ! evt
-                        sc        = sched old_event
+                        sc        = scheds old_event
                         lbls      = (S.elems $ add `S.union` del)
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
@@ -790,7 +790,7 @@ collect_proofs = visit_doc
                             , format "event '{0}' is undeclared" evt )
                         ]
                     let old_event = events m ! evt
-                        sc        = sched old_event
+                        sc        = scheds old_event
                         lbls      = new:(maybeToList old ++ S.elems keep)
                         progs     = progress (props m) `union` progress (inh_props m)
                     toEither $ do
