@@ -68,9 +68,9 @@ result2 = (unlines
       , "  o  m0/inc/INV/inv0"
       , " xxx m0/inc/INV/inv1"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/REF/replace/prog/lhs"
-      , "  o  m0/inc/SCH/REF/replace/prog/rhs"
-      , "  o  m0/inc/SCH/REF/replace/str"
+      , "  o  m0/inc/SCH/m0/0/REF/replace/prog/lhs"
+      , "  o  m0/inc/SCH/m0/0/REF/replace/prog/rhs"
+      , "  o  m0/inc/SCH/m0/0/REF/replace/str"
       , " xxx m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/EN/leadsto/lhs"
       , "  o  m0/inc/TR/tr0/EN/leadsto/rhs"
@@ -98,7 +98,7 @@ result3 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/79/REF/weaken"
+      , "  o  m0/inc/SCH/m0/0/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
       , "passed 11 / 12"
@@ -163,7 +163,7 @@ result6 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/74/REF/weaken"
+      , "  o  m0/inc/SCH/m0/0/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
       , "passed 11 / 12"
@@ -214,7 +214,7 @@ result9 = unlines [
 --        " (=> false (= x y))"]
         " true"]
 
-case9 = show_po path6 $ label "m0/inc/SCH/74/REF/weaken"
+case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
 
 result10 = unlines [
         " sort: , , , pfun [a,b], set [a]"
@@ -300,7 +300,7 @@ m1_props = m0_props
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
                 (inv m0_props)
-        , derivation = singleton (label "inc/SCH/77") (Rule sc)
+        , derivation = singleton (label "inc/SCH/m0/0") (Rule sc)
         }
     where
         x  = Word var_x

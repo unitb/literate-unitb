@@ -193,7 +193,7 @@ props0 = empty_property_set
             ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-    ,   derivation = singleton (label "leave/SCH/432") 
+    ,   derivation = singleton (label "leave/SCH/train0/0") 
             $ Rule (weaken (label "leave"))
                     { remove = S.singleton (label "default")
                     , add    = S.singleton (label "c0") }
@@ -643,7 +643,7 @@ result1 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH" 
-        ,  "  o  train0/leave/SCH/432/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 93 / 94"
         ]
@@ -1031,7 +1031,7 @@ result13 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/298/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 64 / 69"
         ]
@@ -1106,7 +1106,7 @@ result14 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/308/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 60 / 62"
         ]
@@ -1187,7 +1187,7 @@ result15 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/315/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 65 / 68"
         ]
@@ -1287,7 +1287,7 @@ result16 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/377/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 86 / 87"
         ]
