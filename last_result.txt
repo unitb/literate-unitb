@@ -88,8 +88,13 @@
 |  |  +- cyclic proof of liveness through 3 refinements
 |  |  +- refinement of undefined machine
 |  |  +- [ Success: 6 / 6 ]
+|  +- train station example, with sets
+|  |  +- verify machine m0
+|  |  +- verify machine m1
+|  |  +- verify machine m2
+|  |  +- [ Success: 3 / 3 ]
 |  +- the parser is exception free
-|  +- [ Success: 8 / 8 ]
+|  +- [ Success: 9 / 9 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -148,10 +153,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   13621 total
+   13623 total
     1363 Document/Tests/trainstation.hs
      856 Document/machine.hs
      723 Document/Tests/lambdas.hs
      659 UnitB/ast.hs
      558 UnitB/po.hs
-Time: 02:56:19
+Time: 16:02:01

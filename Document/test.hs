@@ -12,6 +12,7 @@ import qualified Document.Tests.TrainStation as Train
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.Phase as Phase
 import qualified Document.Tests.TrainStationRefinement as Ref
+import qualified Document.Tests.TrainStationSets as Set
 
 import Latex.Parser
 import Latex.Scanner
@@ -35,6 +36,7 @@ test = test_cases
         , Lambdas.test_case
         , Phase.test_case
         , Ref.test_case
+        , Set.test_case
         , all_properties
         ]
 
