@@ -699,7 +699,7 @@ collect_proofs = visit_doc
                             (constraint $ props m) } } 
             )
         ,   (   "\\replace"
-            ,   CmdBlock $ \(evt,_ :: Int,del,add,keep,prog,saf,()) m -> do
+            ,   CmdBlock $ \(evt,del,add,keep,prog,saf,()) m -> do
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -735,7 +735,7 @@ collect_proofs = visit_doc
                       }
             )
         ,   (   "\\weakento"
-            ,   CmdBlock $ \(evt :: Label,_ :: Int,del :: S.Set Label,add :: S.Set Label,()) m -> trace_block "weaken" $ do
+            ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label,()) m -> trace_block "weaken" $ do
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -764,7 +764,7 @@ collect_proofs = visit_doc
                       }
             )
         ,   (   "\\replacefine"
-            ,   CmdBlock $ \(evt, _ :: Int, keep, old, new, prog, ()) m -> do
+            ,   CmdBlock $ \(evt, keep, old, new, prog, ()) m -> do
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )

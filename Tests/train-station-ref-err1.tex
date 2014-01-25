@@ -56,7 +56,7 @@
 \indices{m0:enter}{	t : \Train}
 \end{align*}
 
-\weakento{m0:leave}{0}{default}{lv:c0}
+\weakento{m0:leave}{default}{lv:c0}
 
 \begin{align*}
 \cschedule{m0:leave}{lv:c0}
@@ -156,7 +156,7 @@ This takes care of \eqref{m1:saf1}
 \subsubsection{Side conditions}
 
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
-\replace{m0:leave}{1}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
+\replace{m0:leave}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
 
 \begin{align*}
 \cschedule{m0:leave}{lv:c1}
@@ -225,7 +225,7 @@ We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 
 We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 
-\weakento{m1:moveout}{0}{default}{c1}{}
+\weakento{m1:moveout}{default}{c1}{}
 
 \begin{align*}
 \evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
@@ -238,7 +238,7 @@ We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 
 We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
-\weakento{m1:movein}{0}{default}{mi:c1,mi:c2}{}
+\weakento{m1:movein}{default}{mi:c1,mi:c2}{}
 
 \begin{align*}
 \indices{m1:movein}{	t : \Train} ; \quad
@@ -277,7 +277,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 %
 \subsection{Design}
 %
-\replace{m1:movein}{1}{}{mi:c0}{}{m2:prog0}{m2:saf0}
+\replace{m1:movein}{}{mi:c0}{}{m2:prog0}{m2:saf0}
 \begin{align*}
 \progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
 \\ \safetyB{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
@@ -363,7 +363,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \end{free:var}
 \end{proof}
 
-\replacefine{m1:moveout}{1}{}{}{mo:f0}{m2:prog1} 
+\replacefine{m1:moveout}{}{}{mo:f0}{m2:prog1} 
 
 \begin{align*}
 \fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
