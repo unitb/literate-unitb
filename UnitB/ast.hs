@@ -38,9 +38,10 @@ module UnitB.AST
         , keep, event
         , rule)
     , replace, weaken
-    , last_schedule
+--    , last_schedule
     , ScheduleRule (..)
-    , list_schedules
+--    , list_schedules
+    , new_sched
     , default_schedule
     , System (..)
     , empty_system
@@ -84,9 +85,19 @@ empty_theory :: Theory
 empty_theory = Theory [] 
     empty empty empty empty empty
 
+data Schedule = Schedule
+        { coarse :: Map Label Expr
+        , fine   :: Maybe (Label, Expr)
+        }
+    deriving (Eq, Show)
+
+empty_schedule = Schedule default_schedule Nothing
+
 data Event = Event 
         { indices   :: Map String Var
-        , sched_ref :: Map Int ScheduleChange
+        , sched_ref :: [ScheduleChange]
+        , old_sched :: Schedule
+--        , new_sched :: Schedule
         , scheds    :: Map Label Expr
         , params    :: Map String Var
         , guard     :: Map Label Expr
@@ -94,7 +105,15 @@ data Event = Event
     deriving (Eq, Show)
 
 empty_event :: Event
-empty_event = Event empty empty default_schedule empty empty empty
+empty_event = Event 
+        { indices = empty 
+        , sched_ref = []
+        , old_sched = empty_schedule
+        , scheds = default_schedule
+        , params = empty
+        , guard  = empty 
+        , action = empty 
+        }
 
 data Machine = 
     Mch 
@@ -340,18 +359,19 @@ merge_evt_exprs e0 e1 = toEither $ do
                 (action e0)
                 (action e1)
         return e0 
-            , guard   = grd
             { scheds = coarse_sch
+            , guard  = grd
             , action = act }
 
 merge_evt_proof :: Event -> Event -> Either [String] Event
 merge_evt_proof e0 e1 = toEither $ do
-        ref <- fromEither empty $ disjoint_union
-                (\x -> ["multiple schedule refinement rules with the same index: " ++ show x ++ ""])
-                (sched_ref e0)
-                (sched_ref e1)
+                
+--        ref <- fromEither empty $ disjoint_union
+--                (\x -> ["multiple schedule refinement rules with the same index: " ++ show x ++ ""])
+--                (sched_ref e0)
+--                (sched_ref e1)
         return e0 
-            { sched_ref = ref }
+            { old_sched = new_sched e1 }
 
 
 --merge_theory :: Theory -> Theory -> Either [String] Theory
@@ -379,8 +399,10 @@ merge_evt_proof e0 e1 = toEither $ do
 --                (dummies t1)
 --        return $ Theory es types funs consts fact dummies
 
+skip :: Machine -> Event
 skip m = Event 
-        M.empty M.empty 
+        M.empty [] 
+        empty_schedule
         default_schedule 
         M.empty 
         M.empty 
@@ -415,7 +437,7 @@ data Transient =
         Transient 
             (Map String Var)     -- Free variables
             Expr                 -- Predicate
-            Label Int            -- Event, Schedule 
+            Label                -- Event, Schedule 
             (Map String Expr)    -- Index substitution
             (Maybe Label)        -- Progress Property for fine schedule
 --      | Grd thm
@@ -457,8 +479,8 @@ instance Eq Rule where
 
 --data Liveness = Live (Map Label ProgressProp) 
 
-data Schedule = Schedule [Var] Expr Expr Label
-    deriving (Eq,Typeable)
+--data Schedule = Schedule [Var] Expr Expr Label
+--    deriving (Eq,Typeable)
 
 data ProgressProp = LeadsTo [Var] Expr Expr
     deriving (Eq,Typeable)
@@ -481,7 +503,7 @@ data PropertySet = PS
         , inv_thm      :: Map Label Expr       -- inv thm
         , proofs       :: Map Label Proof
         , progress     :: Map Label ProgressProp
-        , schedule     :: Map Label Schedule
+--        , schedule     :: Map Label Schedule
         , safety       :: Map Label SafetyProp
         , derivation   :: Map Label Rule         }
     deriving Eq
@@ -511,6 +533,7 @@ data ScheduleRule =
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
         | ReplaceFineSch Expr Label Expr (Label,ProgressProp) 
+            -- old expr, new label, new expr, proof
     deriving (Show,Eq)
 
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
@@ -521,37 +544,55 @@ replace_fine lbl old tag new prog =
     ScheduleChange lbl S.empty S.empty S.empty 
         (ReplaceFineSch old tag new prog)
 
-apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1, y)
+new_fine_sched (ScheduleChange { rule = ReplaceFineSch _ n_lbl n_expr _ }) = [(n_lbl,n_expr)]
+new_fine_sched _ = []
+
+--apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1, y)
+--    where
+--        p ref k _    = k `S.member` after ref 
+--        q ref k _    = not $ k `S.member` before ref 
+--        y = case rule ref of
+--                ReplaceFineSch _ lbl p _ -> Just (lbl, p)
+--                _ -> x
+
+--list_schedules :: Event -> Map Int (Map Label Expr, Maybe (Label, Expr))
+--list_schedules evt = list_schedules' (sched_ref evt) $ sched evt
+
+--list_schedules' :: S.Set ScheduleChange -> S.Set ScheduleChange
+--list_schedules' :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
+--list_schedules' r m0 = 
+--        fromAscList $ scanl f first (toAscList r)
+--    where
+--        f (_,m1) (i,ref) = (i, apply m0 m1 ref)
+--        first_index
+--            | not $ M.null r = fst (findMin r)-1
+--            | otherwise      = 0
+--        first                = (first_index,(fromList [(label "default",zfalse)],Nothing))
+--list_schedules' = undefined
+
+new_sched :: Event -> Schedule
+new_sched e = Schedule new_c_sched new_f_sched
     where
-        p ref k _    = k `S.member` after ref 
-        q ref k _    = not $ k `S.member` before ref 
-        y = case rule ref of
-                ReplaceFineSch _ lbl p _ -> Just (lbl, p)
-                _ -> x
-
-list_schedules :: Event -> Map Int (Map Label Expr, Maybe (Label, Expr))
-list_schedules evt = list_schedules' (sched_ref evt) $ sched evt
-
-list_schedules' :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
-list_schedules' r m0 = 
-        fromAscList $ scanl f first (toAscList r)
-    where
-        f (_,m1) (i,ref) = (i, apply m0 m1 ref)
-        first_index
-            | not $ M.null r = fst (findMin r)-1
-            | otherwise      = 0
-        first                = (first_index,(fromList [(label "default",zfalse)],Nothing))
-
-last_schedule evt = sch
-    where
-        ls_sch = list_schedules evt
-        sch    = fst $ M.fromJust
-                    $ M.maxView 
-                    $ ls_sch
+        new_c_sched = M.filterWithKey f_out c_sch `M.union` M.filterWithKey f_in sched
+        f_out k _ = not $ k `S.member` r_set
+        f_in  k _ = k `S.member` a_set
+        new_f_sched = listToMaybe $ concatMap new_fine_sched ref ++ maybeToList f_sch
+        Schedule c_sch f_sch = old_sched e 
+        ref   = sched_ref e
+        sched = scheds e 
+        r_set = L.foldl S.union S.empty $ map remove ref
+        a_set = L.foldl S.union S.empty $ map add ref
+--last_schedule :: Event -> (Map Label Expr, Maybe (Label, Expr))
+--last_schedule evt = sch
+--    where
+--        ls_sch = list_schedules evt
+--        sch    = fst $ M.fromJust
+--                    $ M.maxView 
+--                    $ ls_sch
 
 
-before x = keep x `S.union` remove x
-after x = keep x `S.union` add x
+--before x = keep x `S.union` remove x
+--after x = keep x `S.union` add x
 
 --linearize :: [ScheduleChange] -> Either [[ScheduleChange]] [ScheduleChange]
 --linearize xs = toEither $ mapM g comp
@@ -586,10 +627,10 @@ empty_property_set :: PropertySet
 empty_property_set = PS 
         empty empty empty 
         empty empty empty 
-        empty empty empty
+        empty empty
 
 ps_union_expr :: PropertySet -> PropertySet -> Either [String] PropertySet
-ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 _ f1 i1 g1 _) = 
+ps_union_expr (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS a1 b1 c1 d1 _ f1 g1 _) = 
     toEither $ do
         a2 <- fromEither empty $ disjoint_union (f "transient predicate") a0 a1
         b2 <- fromEither empty $ disjoint_union (f "co predicate") b0 b1
@@ -599,17 +640,17 @@ ps_union_expr (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 _ f1 i1 g1 _) =
         let e2 = e0
         f2 <- fromEither empty $ disjoint_union (f "progress property") f0 f1
         g2 <- fromEither empty $ disjoint_union (f "safety property") g0 g1
-        i2 <- fromEither empty $ disjoint_union (f "schedule") i0 i1
-        return $ PS a2 b2 c2 d2 e2 f2 i2 g2 h0
+--        i2 <- fromEither empty $ disjoint_union (f "schedule") i0 i1
+        return $ PS a2 b2 c2 d2 e2 f2 g2 h0
     where
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
 
 ps_union_proofs :: PropertySet -> PropertySet -> Either [String] PropertySet
 --ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
-ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS _ _ _ _ _ _ _ _ h1) = 
+ps_union_proofs (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS _ _ _ _ _ _ _ h1) = 
     toEither $ do
         h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
-        return $ PS a0 b0 c0 d0 e0 f0 i0 g0 h2
+        return $ PS a0 b0 c0 d0 e0 f0 g0 h2
     where
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
 

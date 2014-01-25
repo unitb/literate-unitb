@@ -140,7 +140,7 @@
 |  +- case 0 - complete domain of matrices
 |  +- case 1 - operator grammar discrepancy
 |  +- case 2 - new ambiguities
-|  +- case 3 - closures
+|  +- case 3 - transitive closures
 |  +- [ Success: 4 / 4 ]
 +- [ Success: 6 / 6 ]
 
@@ -148,9 +148,9 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   12345 total
+   13655 total
     1363 Document/Tests/trainstation.hs
-     865 Document/machine.hs
+     890 Document/machine.hs
      723 Document/Tests/lambdas.hs
-     618 UnitB/ast.hs
-     561 UnitB/po.hs
+     659 UnitB/ast.hs
+     558 UnitB/po.hs

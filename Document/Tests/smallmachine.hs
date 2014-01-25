@@ -68,9 +68,9 @@ result2 = (unlines
       , "  o  m0/inc/INV/inv0"
       , " xxx m0/inc/INV/inv1"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/0/REF/replace/prog/lhs"
-      , "  o  m0/inc/SCH/0/REF/replace/prog/rhs"
-      , "  o  m0/inc/SCH/0/REF/replace/str"
+      , "  o  m0/inc/SCH/REF/replace/prog/lhs"
+      , "  o  m0/inc/SCH/REF/replace/prog/rhs"
+      , "  o  m0/inc/SCH/REF/replace/str"
       , " xxx m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/EN/leadsto/lhs"
       , "  o  m0/inc/TR/tr0/EN/leadsto/rhs"
@@ -98,7 +98,7 @@ result3 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/0/REF/weaken"
+      , "  o  m0/inc/SCH/79/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
       , "passed 11 / 12"
@@ -163,7 +163,7 @@ result6 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/0/REF/weaken"
+      , "  o  m0/inc/SCH/74/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
       , "passed 11 / 12"
@@ -214,7 +214,7 @@ result9 = unlines [
 --        " (=> false (= x y))"]
         " true"]
 
-case9 = show_po path6 $ label "m0/inc/SCH/0/REF/weaken"
+case9 = show_po path6 $ label "m0/inc/SCH/74/REF/weaken"
 
 result10 = unlines [
         " sort: , , , pfun [a,b], set [a]"
@@ -256,9 +256,7 @@ inc_event_m0 = empty_event {
                 (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
 inc_event_m1 = empty_event 
-        { sched_ref = fromList
-            [ (0, sc)
-            ]
+        { sched_ref = [sc]
         , scheds = fromList 
             [ (label "c0", x `zeq` y) 
             , (label "f0", x `zeq` y) ]
@@ -295,14 +293,14 @@ m0_props = empty_property_set {
 
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc") 0 empty Nothing) ]
+            (label "tr0", Transient empty (x `zeq` y) (label "inc") empty Nothing) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
                 (inv m0_props)
-        , derivation = singleton (label "inc/SCH/0") (Rule (0 :: Int,sc))
+        , derivation = singleton (label "inc/SCH/77") (Rule sc)
         }
     where
         x  = Word var_x

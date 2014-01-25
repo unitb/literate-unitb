@@ -47,14 +47,14 @@ index_sum lbl e = return ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\
             | M.null $ indices e = ""
             | otherwise          = "[" ++ intercalate "," (map name $ M.elems $ indices e) ++ "]"
 csched_sum e
-        | M.null $ fst $ last_schedule e = return []
+        | M.null $ coarse $ new_sched e = return []
         | otherwise                = do
-            xs <- put_all_expr $ fst $ last_schedule e
+            xs <- put_all_expr $ coarse $ new_sched e
             return $ kw:xs
     where
         kw = "\\item \\textbf{during}"    
 fsched_sum e = 
-    case snd $ last_schedule e of
+    case fine $ new_sched e of
         Nothing  -> return []
         Just sch -> do
             xs <- put_all_expr $ fromList [sch]

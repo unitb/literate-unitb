@@ -136,16 +136,22 @@
 |  +- test 0
 |  +- test 1
 |  +- [ Success: 2 / 2 ]
-+- [ Success: 5 / 5 ]
++- Graphs and operator grammars
+|  +- case 0 - complete domain of matrices
+|  +- case 1 - operator grammar discrepancy
+|  +- case 2 - new ambiguities
+|  +- case 3 - transitive closures
+|  +- [ Success: 4 / 4 ]
++- [ Success: 6 / 6 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   12092 total
+   13655 total
     1363 Document/Tests/trainstation.hs
-     861 Document/machine.hs
-     721 Document/Tests/lambdas.hs
-     617 UnitB/ast.hs
-     557 UnitB/po.hs
-Time: 22:47:31
+     890 Document/machine.hs
+     723 Document/Tests/lambdas.hs
+     659 UnitB/ast.hs
+     558 UnitB/po.hs
+Time: 02:18:52

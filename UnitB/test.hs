@@ -45,7 +45,7 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (x' `mzeq` (x `mzplus` mzint 2))
         s1     <- with_li li (y' `mzeq` (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt") 0 empty Nothing
+        let tr0 = Transient empty tr (label "evt") empty Nothing
             co0 = Co [] co
             ps = empty_property_set {
                 transient = 
@@ -59,7 +59,7 @@ example0 = do
                 { remove = S.singleton (label "default")
                 , add    = S.singleton (label "sch0") }
             evt = empty_event
-                    { sched_ref = singleton 0 sch_ref0
+                    { sched_ref = [sch_ref0]
                     , scheds = insert (label "sch0") csched default_schedule
                     , action = fromList [
                         (label "S0", s0),
@@ -88,12 +88,12 @@ train_m0 = do
             enter = (label "enter", empty_event)
             leave = (label "leave", empty_event 
                     {   indices = symbol_table [t_decl]
-                    ,   sched_ref = singleton 0 sch_ref0
+                    ,   sched_ref = [sch_ref0]
                     ,   scheds  = insert (label "C0") c0 $ default_schedule
                     ,   action  = fromList [(label "A0", a0)]
                     })
         tr <- with_li li (st `zselect` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") 0 empty Nothing)] 
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty Nothing)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps

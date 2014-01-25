@@ -33,6 +33,8 @@ import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
 
+--import Debug.Trace
+
 import System.IO
 
 import Utilities.Format
@@ -70,14 +72,6 @@ init_fis_lbl      = label "INIT/FIS"
 fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
---ref_mono_lbl      = label "REF/monotonicity"
---ref_impl_lbl      = label "REF/implication"
---ref_ind_lbl       = label "REF/induction"
---ref_disj_lbl      = label "REF/disjunction"
---ref_psp_lbl       = label "REF/PSP"
---ref_trade_lbl     = label "REF/trading"
---ref_trans_lbl     = label "REF/transitivity"
---ref_discharge_lbl = label "REF/discharge"
 
 theory_ctx :: Theory -> Context
 theory_ctx (Theory d ts f c _ dums) = 
@@ -162,12 +156,16 @@ proof_obligation m = do
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
 
+my_trace :: Show a => String -> a -> a
+--my_trace x y = trace (format "{0}\n value: {1}\n" x y) y
+my_trace _ y = y
+
 ref_po :: Machine -> Label -> Rule -> Map Label Sequent
 ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
     where
         f x
-            | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
-            | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
+            | show x == "" = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\n" (name m) lbl (rule_name r)) $ composite_label [label $ name m, lbl,label "REF",rule_name r]
+            | otherwise    = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\nx: {3}\n" (name m) lbl (rule_name r) x) $ composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
 init_fis_po :: Machine -> Map Label Sequent
 init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 
@@ -180,7 +178,7 @@ init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) ->
  
 
 prop_tr :: Machine -> Label -> Transient -> Map Label Sequent
-prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) = 
+prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) = 
     M.fromList 
         $ if M.null ind0 then 
             [ po [label "EN"] xp0
@@ -191,9 +189,8 @@ prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) =
     where
 --        thm  = inv_thm p
         grd  = M.elems $ guard evt
-        schedules = list_schedules evt ! n
-        sch0 = M.elems $ fst schedules
-        sch1 = map snd $ maybeToList $ snd schedules
+        sch0 = M.elems $ coarse $ new_sched evt
+        sch1 = map snd $ maybeToList $ fine $ new_sched evt
         sch  = sch0 ++ sch1
         act  = M.elems $ action evt
         evt  = events m ! evt_lbl
@@ -221,7 +218,7 @@ prop_tr m pname (Transient fv xp evt_lbl n hint lt_fine) =
                     (M.elems $ params evt)
                     (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
                     (znot $ primed (variables m) xp) )
-        xps = case (lt_fine, snd schedules) of
+        xps = case (lt_fine, fine $ new_sched evt) of
                 (Just lbl, Just (_,fsch)) ->
                     let (LeadsTo vs p q) = (progress (props m) `M.union` progress (inh_props m)) ! lbl in
                         [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall sch0 `zimplies` p)
@@ -296,8 +293,8 @@ sch_po m lbl evt = M.singleton
             (exist_param $ zall grd))
     where
         grd   = M.elems $ guard evt
-        c_sch = M.elems $ fst $ last_schedule evt
-        f_sch = map snd $ maybeToList $ snd $ last_schedule evt
+        c_sch = M.elems $ coarse $ new_sched evt
+        f_sch = map snd $ maybeToList $ fine $ new_sched evt
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp

@@ -7,7 +7,6 @@ import Logic.Calculation
 import Logic.Const
 import Logic.Expr
 import Logic.Lambda
-import Logic.Operator
 
 import UnitB.PO
 import UnitB.AST

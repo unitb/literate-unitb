@@ -6,6 +6,8 @@
 .DS_Store
 *.hi
 *.o
+*.so
+*.exe
 .*
 Tests/unitb.synctex.gz(busy)
 bin/

@@ -45,14 +45,21 @@ import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
--- import Debug.Trace
+--import Debug.Trace
 
 import Utilities.Format
 import Utilities.Syntactic
 
 traceM :: Monad m => String -> m ()
--- traceM xs = trace xs (return ())
+--traceM xs = trace xs (return ())
 traceM _ = return ()
+
+trace_block :: Monad m => String -> m a -> m a
+trace_block s m = do
+    traceM $ "begin " ++ s
+    x <- m
+    traceM $ "end " ++ s
+    return x
 
 list_file_obligations :: FilePath
                        -> IO (Either [Error] [(Machine, Map Label Sequent)])
@@ -528,7 +535,7 @@ collect_expr = visit_doc
                                 inv = insert lbl invar $ inv $ props m } } 
             )
         ,   (   "\\transient"      
-            ,   CmdBlock $ \(ev, n, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(ev, _ :: Int, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -536,7 +543,7 @@ collect_expr = visit_doc
                               , format "{0} is already used for another program property" lbl )
                             ]
                         tr            <- get_assert m xs
-                        let prop = Transient (free_vars (context m) tr) tr ev n empty Nothing
+                        let prop = Transient (free_vars (context m) tr) tr ev empty Nothing
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -544,7 +551,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
-            ,   CmdBlock $ \(ev, n, lbl, hint, xs,()) m -> do
+            ,   CmdBlock $ \(ev, _ :: Int, lbl, hint, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -555,7 +562,7 @@ collect_expr = visit_doc
                             ]
                         tr            <- get_assert m xs
                         (hints,lt)    <- toEither $ tr_hint m ev hint ([],Nothing)
-                        let prop = Transient (free_vars (context m) tr) tr ev n (fromList hints) lt
+                        let prop = Transient (free_vars (context m) tr) tr ev (fromList hints) lt
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -641,17 +648,17 @@ collect_proofs :: Monad m
 collect_proofs = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(po,()) xs m -> do
-                    traceM "step - collect: proof"
+--                    traceM "step - collect: proof"
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                     let lbl = composite_label [ _name m, po_lbl ]
-                    traceM "step A"
+--                    traceM "step A"
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
                         ] 
-                    traceM "step K"
+--                    traceM "step K"
                     p           <- collect_proof_step empty m xs
-                    traceM "end"
+--                    traceM "end"
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 
@@ -659,7 +666,7 @@ collect_proofs = visit_doc
             )
         ] [ (   "\\refine"
             ,   CmdBlock $ \(goal,String rule,hyps,hint,()) m -> do
-                    traceM "step - collect: refine"
+--                    traceM "step - collect: refine"
                     toEither $ error_list
                         [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
                             , format "the goal is an undefined progress property {0}" goal )
@@ -668,12 +675,12 @@ collect_proofs = visit_doc
                         saf  = safety (props m) `union` safety (inh_props m)
 --                    li@(i,j)      <- lift $ ask
                     r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
-                    traceM "end"
+--                    traceM "end"
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
             )
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
-                    traceM "step - collect: safety B"
+--                    traceM "step - collect: safety B"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -694,7 +701,7 @@ collect_proofs = visit_doc
                             `union` params event 
                             `union` indices event
                     let new_prop = Unless (M.elems dum) p q (Just evt)
-                    traceM "end"
+--                    traceM "end"
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 
                         , constraint = insert lbl 
@@ -706,14 +713,14 @@ collect_proofs = visit_doc
                             (constraint $ props m) } } 
             )
         ,   (   "\\replace"
-            ,   CmdBlock $ \(evt,n,del,add,keep,prog,saf,()) m -> do
-                    traceM "step - collect: replace"
+            ,   CmdBlock $ \(evt,_ :: Int,del,add,keep,prog,saf,()) m -> do
+--                    traceM "step - collect: replace"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
                         ]
                     let old_event = events m ! evt
-                        sc        = sched old_event
+                        sc        = scheds old_event
                         lbls      = (S.elems $ add `S.union` del `S.union` keep)
                         progs     = progress (props m) `union` progress (inh_props m)
                         safs      = safety (props m) `union` safety (inh_props m)
@@ -727,30 +734,24 @@ collect_proofs = visit_doc
                             , ( not $ saf `member` safs
                               , format "'{0}' is not a valid safety property" saf )
                             ]
-                        error_list 
-                            [ ( n `member` sched_ref old_event
-                              , format "event '{0}', schedule '{1}' already exists" evt n )
-                            ]
                     let rule      = (replace evt (prog,progs!prog) (saf,safs!saf)) 
                                     { remove = del
                                     , add = add
                                     , keep = keep }
-                        new_event = old_event { sched_ref = insert n rule 
-                                        $ sched_ref old_event }
-                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                        new_event = old_event { sched_ref = rule : sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH"]
 --                    add_proof_edge po_lbl [prog,saf]
-                    traceM "end"
+--                    traceM "end"
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
                             derivation = 
-                                insert po_lbl (Rule (n,rule))
+                                insert po_lbl (Rule rule)
                             $ derivation (props m) } 
                       }
             )
         ,   (   "\\weakento"
-            ,   CmdBlock $ \(evt :: Label,n :: Int,del :: S.Set Label,add :: S.Set Label,()) m -> do
-                    traceM "step - collect: weaken to"
+            ,   CmdBlock $ \(evt :: Label,_ :: Int,del :: S.Set Label,add :: S.Set Label,()) m -> trace_block "weaken" $ do
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -762,29 +763,25 @@ collect_proofs = visit_doc
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` sc
                                 , format "'{0}' is not a valid schedule" lbl )
-                        error_list 
-                            [ ( n `member` sched_ref old_event
-                              , format "event '{0}', schedule '{1}' already exists" evt n )
-                            ]
+                    LI { line = i } <- lift $ RWS.ask
                     let rule      = (weaken evt)
                                     { remove = del
                                     , add = add }
                         new_event = old_event 
-                                    { sched_ref = insert n rule 
-                                        $ sched_ref old_event }
-                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
-                    traceM "end"
+                                    { sched_ref = rule : sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH",label $ show i]
+                    traceM $ show po_lbl
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
                             derivation = 
-                                insert po_lbl (Rule (n,rule))
+                                insert po_lbl (Rule rule)
                             $ derivation (props m) } 
                       }
             )
         ,   (   "\\replacefine"
-            ,   CmdBlock $ \(evt, n, keep, old, new, prog, ()) m -> do
-                    traceM "step - collect: replace fine"
+            ,   CmdBlock $ \(evt, _ :: Int, keep, old, new, prog, ()) m -> do
+--                    traceM "step - collect: replace fine"
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -801,24 +798,23 @@ collect_proofs = visit_doc
                             [ ( not $ prog `member` progs
                               , format "'{0}' is not a valid progress property" prog )
                             ]
-                        error_list 
-                            [ ( n `member` sched_ref old_event
-                              , format "event '{0}', schedule '{1}' already exists" evt n )
-                            ]
+--                        error_list 
+--                            [ ( n `member` sched_ref old_event
+--                              , format "event '{0}', schedule '{1}' already exists" evt n )
+--                            ]
                     let old_exp   = maybe ztrue (sc !) old
                         rule      = (replace_fine evt old_exp new (sc ! new) (prog,progs!prog))
                                     { keep = keep }
                         new_event = old_event 
-                                    { sched_ref = insert n rule 
-                                        $ sched_ref old_event }
-                        po_lbl    = composite_label [evt,label "SCH",label $ show n]
+                                    { sched_ref = rule : sched_ref old_event }
+                        po_lbl    = composite_label [evt,label "SCH"]
 --                    add_proof_edge po_lbl [prog]
-                    traceM "end"
+--                    traceM "end"
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
                             derivation = 
-                                insert po_lbl (Rule (n,rule))
+                                insert po_lbl (Rule rule)
                             $ derivation (props m) } 
                       }
             )
@@ -829,42 +825,45 @@ deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans
     where
-        check_trans (lbl,Transient _ _ evt n _ lt)  = do
-                add_proof_edge lbl [g evt n]
-                if n `member` sched_ref (events m ! evt) then do
-                    let (_,f_sch) = list_schedules (events m ! evt) ! n
-                        progs = progress (props m) `union` progress (inh_props m) 
-                    unless (maybe True (flip member progs) lt)
-                        $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
-                    unless (isJust f_sch == isJust lt)
-                        $ if isJust f_sch
-                        then tell [Error (format fmt0 lbl evt) li]
-                        else tell [Error (format fmt1 lbl evt) li]
-                    add_proof_edge lbl $ maybeToList lt
-                else tell [Error (format fmt2 evt n lbl) li]
+        check_trans (lbl,Transient _ _ evt _ lt)  = do
+                add_proof_edge lbl [g evt $ _name m]
+--                if n `member` sched_ref (events m ! evt) then do
+                let f_sch = fine $ new_sched (events m ! evt)
+                    progs = progress (props m) `union` progress (inh_props m) 
+                unless (maybe True (flip member progs) lt)
+                    $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
+                unless (isJust f_sch == isJust lt)
+                    $ if isJust f_sch
+                    then tell [Error (format fmt0 lbl evt) li]
+                    else tell [Error (format fmt1 lbl evt) li]
+                add_proof_edge lbl $ maybeToList lt
+--                else tell [Error (format fmt2 evt n lbl) li]
             where
                 fmt0 =    "transient predicate {0}: a leads-to property is required for "
                        ++ "transient predicates relying on events "
                        ++ "({1}) with a fine schedule"
                 fmt1 =    "transient predicate {0}: a leads-to property is only required "
                        ++ "for events ({1}) with a fine schedule"
-                fmt2 =    "transient predicate {2}: event '{0}' "
-                       ++ "doesn't have a schedule number {1}"
+--                fmt2 =    "transient predicate {2}: event '{0}' "
+--                       ++ "doesn't have a schedule number {1}"
         check_sched (lbl,evt) = do
-                mapM_ f $ zip xs $ drop 1 ys
-                mapM_ h $ zip xs $ drop 1 xs
-            where
-                xs = map (g lbl) $ keys $ sched_ref evt
-                ys = elems $ sched_ref evt
-        f (lbl,cs) = 
+--                mapM_ f $ zip xs $ drop 1 ys
+                ref <- gets ref_struct
+                case M.lookup (_name m) ref of
+                    Just m' -> do
+                        add_proof_edge (g lbl m') [g lbl $ _name m]
+                        mapM_ (f (g lbl m')) $ sched_ref evt
+                    Nothing ->
+                        return ()
+        f lbl cs = 
             case rule cs of
                 Weaken -> return ()
                 Replace (prog,_) (saf,_) -> 
                     add_proof_edge lbl [prog,saf]
                 ReplaceFineSch _ _ _ (prog,_) ->
                     add_proof_edge lbl [prog]
-        g lbl x = composite_label [lbl, label "SCH", label $ show x]
-        h (x,y) = add_proof_edge x [y]
+        g lbl m = composite_label [m, lbl, label "SCH"]
+--        h (x,y) = add_proof_edge x [y]
 
 parse_system :: FilePath -> IO (Either [Error] System)
 parse_system fn = runEitherT $ do

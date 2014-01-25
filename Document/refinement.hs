@@ -94,16 +94,16 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
-        case M.lookup x $ schedule $ props m of
-            Just p -> parse_rule (f p, ()) xs rule param
-            Nothing -> do
-                li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li]
-    parse_rule _ [] rule _ = do
-                li <- lift $ ask
-                left [Error (format "refinement ({0}): expecting more properties" rule) li]
+--instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
+--    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
+--        case M.lookup x $ schedule $ props m of
+--            Just p -> parse_rule (f p, ()) xs rule param
+--            Nothing -> do
+--                li <- lift $ ask
+--                left [Error (format "refinement ({0}): {1} should be a schedule" rule x) li]
+--    parse_rule _ [] rule _ = do
+--                li <- lift $ ask
+--                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
     parse_rule (f,_) xs rule (RuleParserParameter _ prog _ _ _ _) = do
@@ -156,7 +156,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _ _ _)
+                    (Transient fv1 p1 _ _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
         m = fromList $
             assert m "" (
@@ -165,12 +165,10 @@ instance RefRule Discharge where
                         , q2 `zimplies` q0
                         , zand p0 (znot q0) `zimplies` p1
                         ]  ) )
-        where
-            
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _ _ _)
+                    (Transient fv1 p1 _ _ _)
                     Nothing)
             m = fromList $
                 assert m "" (
@@ -361,13 +359,13 @@ parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
         add_proof_edge goal_lbl [h0]
         return $ Rule (Induction pr0 pr1 (IntegerVariant dum var bound dir))
 
-instance RefRule (Int, ScheduleChange) where 
-    rule_name     (_, r) = 
+instance RefRule ScheduleChange where 
+    rule_name     r = 
         case rule r of 
             Replace _ _      -> label "delay"
             Weaken           -> label "weaken"
             ReplaceFineSch _ _ _ _ -> label "replace"
-    refinement_po (_,r) m = 
+    refinement_po r m = 
         case rule r of
             Replace (_,prog) (_,saf) ->
                 let LeadsTo vs p0 q0  = prog
