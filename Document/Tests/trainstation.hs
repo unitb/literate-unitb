@@ -345,11 +345,16 @@ set_decl_smt2 =
         ,  "(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))"
         ,  "(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))"
         ,  "(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
+        ,  "(declare-fun ran@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"
         ,  "(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))"
         ,  "(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
         ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
         ,  "(declare-fun set@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"
+        ,  "(declare-fun subset@@BLK ((set BLK) (set BLK)) Bool)"
+        ,  "(declare-fun subset@@LOC ((set LOC) (set LOC)) Bool)"
+        ,  "(declare-fun subset@@TRAIN ((set TRAIN) (set TRAIN)) Bool)"
+        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
         ,  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"
         ,  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
@@ -404,6 +409,17 @@ set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
             , "(forall ((x {0}) (s1 (set {0}))) (=> true"  ++
                         " (= (elem@{1} x s1)"   ++
                            " (select s1 x))))"
+            )
+            -- subset extensionality
+--        axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+--                        ( s1 `zsubset` s2 )
+--                 `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
+        ,   ( "{0}6"
+            , "(forall ((s1 (set {0})) (s2 (set {0}))) (=> true"  ++
+                        " (= (subset@{1} s1 s2)"   ++
+                           " (forall ((x {0})) (=> true"         ++
+                                   " (=> (elem@{1} x s1)" ++ 
+                                       " (elem@{1} x s2)))))))"
             )
         ]
 
@@ -526,6 +542,34 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++              " (=> (not (= x x2))"
             ++                  " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2)"
             ++                     " (apply@{1}@{3} f1 x2)))))"
+            -- ran and empty-fun
+--        axm21 = fromJust $  
+--                   zran (zcast (fun_type t0 t1) $ Right zempty_fun) 
+--            `mzeq` Right zempty_set
+        ,  "(= (ran@{1}@{3} empty-fun@{1}@{3}) empty-set@{3})"
+            -- ran and elem
+--        axm22 = fromJust $ mzforall [f1_decl,y_decl] mztrue (
+--                        ( y `zelem` zran f1 ) 
+--                 `mzeq` ( mzexists [x_decl] mztrue 
+--                            ( (x `zelem` zdom f1) `mzand` (zapply f1 x `mzeq` y))))
+        , "(forall ((f1 (pfun {0} {2})) (y {2}))"
+            ++              " (=> true"
+            ++                  " (= (elem@{3} y (ran@{1}@{3} f1))"
+            ++                     " (exists ((x {0}))"
+            ++                             " (and true"
+            ++                                  " (and (elem@{1} x (dom@{1}@{3} f1))"
+            ++                                       " (= (apply@{1}@{3} f1 x) y)))))))"
+            -- ran mk-fun
+--        axm23 = fromJust $ mzforall [x_decl,y_decl] mztrue $
+--                        zran (zmk_fun x y) `mzeq` zmk_set y
+        , "(forall ((x {0}) (y {2})) (=> true"
+            ++              " (= (ran@{1}@{3} (mk-fun@{1}@{3} x y)) (mk-set@{3} y))))"
+            -- ran ovl
+--        axm24 = fromJust $ mzforall [f1_decl,f2_decl] mztrue $
+--                        zran (f1 `zovl` f2) `zsubset` (zran f1 `zunion` zran f2)
+        , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2}))) (=> true"
+            ++            " (subset@{3} (ran@{1}@{3} (ovl@{1}@{3} f1 f2))"
+            ++                        " (bunion@{3} (ran@{1}@{3} f1) (ran@{1}@{3} f2)))))"
         ]
 
 comp_facts = map (\x -> "(assert " ++ x ++ ")") $

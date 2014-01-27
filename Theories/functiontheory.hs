@@ -19,6 +19,8 @@ ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
 zdom = typ_fun1 (Fun [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
 
+zran = typ_fun1 (Fun [gA,gB] "ran" [fun_type gA gB] $ set_type gB)
+
 zdomsubt = typ_fun2 (Fun [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
 zdomrest = typ_fun2 (Fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
@@ -62,6 +64,7 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
             symbol_table 
                 [  Fun [t0,t1] (dec "empty-fun") [] $ fun_type t0 t1
                 ,  Fun [t0,t1] (dec "dom")   [fun_type t0 t1] $ set_type t0
+                ,  Fun [t0,t1] (dec "ran")   [fun_type t0 t1] $ set_type t1
                 ,  Fun [t0,t1] (dec "apply") [fun_type t0 t1,t0] t1
                 ,  Fun [t0,t1] (dec "ovl") [fun_type t0 t1,fun_type t0 t1] $ fun_type t0 t1
                 ,  Fun [t0,t1] (dec "dom-rest") [set_type t0,fun_type t0 t1] $ fun_type t0 t1
@@ -93,6 +96,10 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
                 , (label $ dec' "13", axm18)
                 , (label $ dec' "14", axm19)
                 , (label $ dec' "15", axm20)
+                , (label $ dec' "16", axm21)
+                , (label $ dec' "17", axm22)
+                , (label $ dec' "18", axm23)
+                , (label $ dec' "19", axm24)
                 ]
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
@@ -178,7 +185,25 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         axm20 = fromJust $ mzforall [f1_decl,x2_decl,x_decl,y_decl] mztrue ( 
                         mznot (x `mzeq` x2)
             `mzimplies` (zapply (f1 `zovl` zmk_fun x y) x2 `mzeq` zapply f1 x2))
+        
+            -- ran and empty-fun
+        axm21 = fromJust $  
+                   zran (zcast (fun_type t0 t1) $ Right zempty_fun) 
+            `mzeq` Right zempty_set
 
+            -- ran and elem
+        axm22 = fromJust $ mzforall [f1_decl,y_decl] mztrue (
+                        ( y `zelem` zran f1 ) 
+                 `mzeq` ( mzexists [x_decl] mztrue 
+                            ( (x `zelem` zdom f1) `mzand` (zapply f1 x `mzeq` y))))
+        
+            -- ran mk-fun
+        axm23 = fromJust $ mzforall [x_decl,y_decl] mztrue $
+                        zran (zmk_fun x y) `mzeq` zmk_set y
+        
+            -- ran ovl
+        axm24 = fromJust $ mzforall [f1_decl,f2_decl] mztrue $
+                        zran (f1 `zovl` f2) `zsubset` (zran f1 `zunion` zran f2)
 --                       zite (mzeq (zrep_select f1 x) znothing)
 --                            (zrep_select f2 x)
 --                            (zrep_select f1 x) )

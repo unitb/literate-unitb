@@ -28,6 +28,7 @@ set_theory t = Theory [] types funs empty facts empty
                 Fun [] (dec "intersect") [set_type,set_type] set_type,
                 Fun [] (dec "empty-set") [] set_type,
                 Fun [] (dec "elem") [t,set_type] bool,
+                Fun [] (dec "subset") [set_type,set_type] bool,
                 Fun [] (dec "set-diff") [set_type,set_type] set_type,
                 Fun [] (dec "mk-set") [t] set_type ]
         facts = fromList 
@@ -37,6 +38,7 @@ set_theory t = Theory [] types funs empty facts empty
                 , (label $ dec' "3", axm3)
                 , (label $ dec' "4", axm4)
                 , (label $ dec' "5", axm5)
+                , (label $ dec' "6", axm6)
                 ]
             -- elem and mk-set
         Right axm0 = mzforall [x_decl,y_decl] mztrue ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
@@ -59,6 +61,10 @@ set_theory t = Theory [] types funs empty facts empty
                           mzeq (zelem x s1)
                                (zset_select s1 x)  )
 --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
+            -- subset extensionality
+        axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+                        ( s1 `zsubset` s2 )
+                 `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" set_type
@@ -71,6 +77,7 @@ zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] bool)
 zempty_set   = Const [gA] "empty-set" $ set_type gA
 
 zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] bool)
+zsubset      = typ_fun2 (Fun [gA] "subset" [set_type gA,set_type gA] bool)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 zintersect   = typ_fun2 (Fun [gA] "intersect" [set_type gA,set_type gA] $ set_type gA)
 

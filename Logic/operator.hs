@@ -184,7 +184,7 @@ instance Ord UnaryOperator where
     compare (UnaryOperator x0 x1 _) (UnaryOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
 instance Show UnaryOperator where
-    show (UnaryOperator x y _) = x -- format str x y
+    show (UnaryOperator x _ _) = x -- format str x y
 --        where
 --            str = "Unary { token = {0}, lexeme = {1} }"
 
@@ -198,7 +198,7 @@ instance Ord BinOperator where
     compare (BinOperator x0 x1 _) (BinOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
 instance Show BinOperator where
-    show (BinOperator x y _) = x -- format str x y
+    show (BinOperator x _ _) = x -- format str x y
 --        where
 --            str = "Binary { token = {0}, lexeme = {1} }"
 

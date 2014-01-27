@@ -140,8 +140,6 @@ data Decl =
             [(String, [(String,Type)])] -- alternatives and named components
         | SortDecl Sort
 
-data Command = Decl Decl | Assert Expr | CheckSat | GetModel
-
 data Fun = Fun [Type] String [Type] Type
     deriving (Eq, Ord, Generic)
 

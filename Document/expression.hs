@@ -32,8 +32,6 @@ import Data.Either
 import Data.List as L
 import Data.Map as M hiding ( map )
 
-import System.IO.Unsafe 
-
 import Utilities.Format
 
 match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
@@ -268,7 +266,21 @@ oper = do
 --            Just _  -> return ()
 --            Nothing -> fail "expecting equal (=)"
 
-term :: Context -> Scanner Char Expr
+data FunOperator = Domain | Range
+    deriving Show
+
+apply_fun_op :: FunOperator -> Expr -> Scanner Char Term
+apply_fun_op fop x = 
+        case f fop $ Right x of
+            Right e -> return $ Right e
+            Left xs -> fail $ format "type error: {0}" xs
+    where
+        f Domain = zdom
+        f Range  = zran
+
+type Term = Either FunOperator Expr
+
+term :: Context -> Scanner Char Term
 term ctx = do
         eat_space
         try word_or_command
@@ -278,35 +290,38 @@ term ctx = do
                     (return (id,id))
                 eat_space
                 case xs `L.lookup` 
-                        [ ("\\true",ztrue)
-                        , ("\\false",zfalse)
-                        , ("\\emptyset", zempty_set)
-                        , ("\\emptyfun", zempty_fun) ] of
+                        [ ("\\true",Right ztrue)
+                        , ("\\false",Right zfalse)
+                        , ("\\emptyset", Right zempty_set)
+                        , ("\\emptyfun", Right zempty_fun) 
+                        , ("\\dom", Left Domain)
+                        , ("\\ran", Left Range) ] of
                     Just e  -> return e 
                     Nothing ->
-                        if xs == "\\dom"
-                        then do
-                            read_list "."
-                            eat_space
-                            x <- pick 
-                                [ (term ctx, return)
-                                , (read_list "(" >> return ztrue, \_ -> do
-                                        eat_space
-                                        e <- expr ctx
-                                        eat_space
-                                        read_list ")"
-                                        eat_space
-                                        return e)
-                                , (read_list "{" >> return ztrue, \_ -> do
-                                        eat_space
-                                        e <- expr ctx
-                                        eat_space
-                                        read_list "}"
-                                        eat_space
-                                        return e)
-                                ] (fail "invalid argument for 'dom'") 
-                            either (\(x) -> fail x) return (zdom $ Right x)
-                        else if xs `elem` 
+--                        if xs == "\\dom"
+--                        then do
+--                            read_list "."
+--                            eat_space
+--                            x <- pick 
+--                                [ (term ctx, return)
+--                                , (read_list "(" >> return ztrue, \_ -> do
+--                                        eat_space
+--                                        e <- expr ctx
+--                                        eat_space
+--                                        read_list ")"
+--                                        eat_space
+--                                        return e)
+--                                , (read_list "{" >> return ztrue, \_ -> do
+--                                        eat_space
+--                                        e <- expr ctx
+--                                        eat_space
+--                                        read_list "}"
+--                                        eat_space
+--                                        return e)
+--                                ] (fail "invalid argument for 'dom'") 
+--                            either (\(x) -> fail x) return (zdom $ Right x)
+--                        else 
+                        if xs `elem` 
                             [ "\\qforall"
                             , "\\qexists"
                             , "\\qfun"
@@ -342,7 +357,7 @@ term ctx = do
                                 , ("\\qfun",Binder Lambda) 
                                 , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
                             case dummy_types vs ctx of
-                                Just vs -> return (quant vs r t)
+                                Just vs -> return $ Right (quant vs r t)
                                 Nothing -> fail ("bound variables are not typed")
                         else if xs == "\\oftype"
                         then do
@@ -360,15 +375,15 @@ term ctx = do
                             read_list "}"
                             eat_space
                             case zcast t (Right e) of
-                                Right new_e -> return new_e
+                                Right new_e -> return $ Right new_e
                                 Left msg -> fail msg
                         else case var_decl xs ctx of
-                            Just (Var v t) -> return (Word $ Var (zs v) t) 
+                            Just (Var v t) -> return $ Right (Word $ Var (zs v) t) 
                             Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
                 xs <- number
                 eat_space
-                return (Const [] xs $ USER_DEFINED IntSort []))
+                return $ Right (Const [] xs $ USER_DEFINED IntSort []))
 
 dummy_types vs (Context _ _ _ _ dums) = mapM f vs
     where
@@ -407,10 +422,12 @@ close_curly = read_list "\\}"
 expr :: Context -> Scanner Char Expr
 expr ctx = do
         r <- read_term []
-        return r
+        case r of
+            Right e -> return e
+            Left op -> fail $ format "unused functional operator: {0}" op
     where
-        read_term :: [([UnaryOperator], Expr, BinOperator)] 
-                  -> Scanner Char Expr
+        read_term :: [([UnaryOperator], Term, BinOperator)] 
+                  -> Scanner Char Term
         read_term xs = do
             us <- many (eat_space >> unary)
             eat_space
@@ -419,22 +436,22 @@ expr ctx = do
                         e <- expr ctx
                         close_brack
                         eat_space
-                        read_op xs us e
+                        read_op xs us (Right e)
                     ) $ (try open_curly 
                              (\_ -> do
                                 rs <- sep1 (expr ctx) comma
                                 close_curly
                                 eat_space
                                 case zset_enum $ map Right rs of
-                                    Right e -> read_op xs us e 
+                                    Right e -> read_op xs us $ Right e 
                                     Left xs -> fail (format "type error: {0}" xs)
                             ) $ (do
                                 t <- term ctx
                                 read_op xs us t))
-        read_op :: [([UnaryOperator], Expr, BinOperator)] 
+        read_op :: [([UnaryOperator], Term, BinOperator)] 
                 -> [UnaryOperator] 
-                -> Expr 
-                -> Scanner Char Expr
+                -> Term 
+                -> Scanner Char Term
         read_op xs us e0 = do
             b1 <- is_eof
             b2 <- look_ahead close_brack
@@ -447,11 +464,11 @@ expr ctx = do
             else do
                 op <- oper
                 reduce xs us e0 op
-        reduce :: [([UnaryOperator], Expr, BinOperator)] 
+        reduce :: [([UnaryOperator], Term, BinOperator)] 
                -> [UnaryOperator]
-               -> Expr 
+               -> Term 
                -> BinOperator 
-               -> Scanner Char Expr
+               -> Scanner Char Term
         reduce [] [] e0 op0                 = read_term [([],e0,op0)]
         reduce xs@( (vs,e0,op0):ys ) [] e1 op1 = do
             case assoc op0 op1 of
@@ -467,10 +484,10 @@ expr ctx = do
                     reduce xs us e1 op0
                 RightAssoc  -> read_term ((u:us,e0,op0):xs)
                 Ambiguous   -> fail ("ambiguous expression: use parentheses")
-        reduce_all :: [([UnaryOperator], Expr, BinOperator)] 
+        reduce_all :: [([UnaryOperator], Term, BinOperator)] 
                    -> [UnaryOperator] 
-                   -> Expr 
-                   -> Scanner Char Expr
+                   -> Term 
+                   -> Scanner Char Term
         reduce_all [] [] e             = return e
         reduce_all ( (us,e0,op0):ys ) [] e1 = do
                 e2 <- apply_op op0 e0 e1
@@ -478,19 +495,39 @@ expr ctx = do
         reduce_all xs (u:us) e0        = do
                 e1 <- apply_unary u e0
                 reduce_all xs us e1
+                    
 
-apply_unary :: UnaryOperator -> Expr -> Scanner Char Expr
+apply_unary :: UnaryOperator -> Term -> Scanner Char Term
 apply_unary op e = do
-    case mk_unary op e of
-        Right x2 -> return x2
-        Left xs -> 
-            fail (format "type error: {0}" xs)
+        case e of 
+            Right e ->
+                case mk_unary op e of
+                    Right x2 -> return $ Right x2
+                    Left xs -> 
+                        fail (format "type error: {0}" xs)
+            Left oper -> fail $ format 
+                    err_msg oper op
+    where
+        err_msg = "functional operator cannot be the operand of any unary operator: {0}, {1}"
         
+apply_op :: BinOperator -> Term -> Term -> Scanner Char Term
 apply_op op x0 x1 = do
-    case mk_expr op x0 x1 of
-        Right x2 -> return x2
-        Left xs  -> 
-            fail (format "type error: {0}" xs)
+        case x1 of
+            Right e1 -> do
+                case x0 of
+                    Right e0 ->
+                        case mk_expr op e0 e1 of
+                            (Right e2) -> return $ Right e2
+                            Left xs  -> 
+                                fail (format "type error: {0}" xs)
+                    Left oper ->
+                        if op == apply then
+                            apply_fun_op oper e1
+                        else fail $ format err_msg oper op
+            Left e1 -> 
+                fail $ format err_msg e1 op
+    where
+        err_msg = "functional operator cannot be the operand of any binary operator: {0}, {1}"
 
 parse_expr :: ( Monad m
               , MonadReader LineInfo m
