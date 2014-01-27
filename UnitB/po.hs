@@ -362,29 +362,6 @@ obligations' th ctx c = do
         ys <- steps_po th ctx c
         return ((label ("relation " ++ show (l_info c)),x):ys)
 
-
-pretty_print :: StrList -> [String]
-pretty_print (Str xs) = [xs]
-pretty_print (List []) = ["()"]
-pretty_print (List ys@(x:xs)) = 
-        case x of
-            Str y    -> 
-                if length one_line <= 50
-                then ["(" ++ y ++ one_line ++ ")"]
-                else map (uncurry (++)) $ zip
-                        (("(" ++ y ++ " "):repeat (margin (length y + 2)))
-                        (collapse (concatMap pretty_print xs ++ [")"]))
-            List _ -> map (uncurry (++)) $ zip
-                ("( ":repeat (margin 2))
-                (collapse (concatMap pretty_print ys ++ [" )"]))
-    where
-        margin n = take n (repeat ' ')
-        collapse xs = 
-            case reverse xs of
-                y0:y1:ys -> reverse ( (y1++y0):ys )
-                _        -> xs
-        one_line = concatMap (uncurry (++)) $ zip (repeat " ") $ concatMap pretty_print xs
-
 proof_po th p@(ByCalc c) lbl po@(Sequent ctx _ _) = do
         let (y0,y1) = entailment (goal_po c) po
         ys   <- obligations' th ctx c

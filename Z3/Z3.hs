@@ -20,6 +20,7 @@ module Z3.Z3
     , destroy_prover
     , discharge_on
     , read_result
+    , pretty_print
     )
 where
 
@@ -53,6 +54,8 @@ import Utilities.Format
 z3_path = "z3"
 
 instance Tree Command where
+    as_tree (Push)        = List [Str "push"]
+    as_tree (Pop)         = List [Str "pop"]
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
     as_tree (CheckSat)    = List [Str "check-sat-using", 
@@ -118,6 +121,8 @@ var_decl s (Context _ m _ _ d) =
 --from_decl (ConstDecl n t)      = Right (Var n t)
 --from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
 
+data Command = Decl Decl | Assert Expr | CheckSat | GetModel | Push | Pop
+
 z3_code po = 
     (      map Decl
                [ Datatype ["a"] "Maybe" 
@@ -136,6 +141,28 @@ z3_code po =
     where
 --        !() = unsafePerformIO (p
         (Sequent d assume assert) = delambdify po
+
+pretty_print :: StrList -> [String]
+pretty_print (Str xs) = [xs]
+pretty_print (List []) = ["()"]
+pretty_print (List ys@(x:xs)) = 
+        case x of
+            Str y    -> 
+                if length one_line <= 50
+                then ["(" ++ y ++ one_line ++ ")"]
+                else map (uncurry (++)) $ zip
+                        (("(" ++ y ++ " "):repeat (margin (length y + 2)))
+                        (collapse (concatMap pretty_print xs ++ [")"]))
+            List _ -> map (uncurry (++)) $ zip
+                ("( ":repeat (margin 2))
+                (collapse (concatMap pretty_print ys ++ [" )"]))
+    where
+        margin n = take n (repeat ' ')
+        collapse xs = 
+            case reverse xs of
+                y0:y1:ys -> reverse ( (y1++y0):ys )
+                _        -> xs
+        one_line = concatMap (uncurry (++)) $ zip (repeat " ") $ concatMap pretty_print xs
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b _) =
