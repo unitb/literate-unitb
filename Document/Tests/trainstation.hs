@@ -273,9 +273,9 @@ leave_evt = empty_event
     
 check_sat = [ format ("(check-sat-using (or-else"
                         ++ " (then qe smt)"
---                        ++ " (try-for (then der smt) {0})"
                         ++ " (then simplify smt)"
                         ++ " (then skip smt)"
+--                        ++ " (then der smt)"
                         ++ " (then (using-params simplify :expand-power true) smt)))") 
               400
             ]
@@ -701,7 +701,8 @@ case1 = do
         x -> return $ show x
 
 result2 = unlines (
-        train_decl False 
+        push
+     ++ train_decl False 
      ++ set_decl_smt2
      ++ comp_facts ++ -- set_decl_smt2 ++
      [  "(assert (and (not (= ent ext))"
@@ -719,7 +720,12 @@ result2 = unlines (
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((in (set TRAIN))) (and true" ++ 
             " (= in empty-set@@TRAIN)))))"
-     ] ++ check_sat)
+     ] 
+     ++ check_sat
+     ++ pop )
+
+pop = []
+push = []
 
 case2 = do
         pos <- list_file_obligations path0
@@ -731,7 +737,8 @@ case2 = do
             x -> return $ show x
 
 result20 = unlines (
-        train_decl False 
+        push
+     ++ train_decl False 
      ++ set_decl_smt2
      ++ comp_facts ++ -- set_decl_smt2 ++
      [  "(assert (and (not (= ent ext))"
@@ -749,7 +756,9 @@ result20 = unlines (
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((loc (pfun TRAIN BLK))) (and true" ++ 
             " (= loc empty-fun@@TRAIN@@BLK)))))"
-     ] ++ check_sat )
+     ] 
+     ++ check_sat
+     ++ pop )
 
 case20 = do
         pos <- list_file_obligations path0
@@ -761,6 +770,7 @@ case20 = do
             x -> return $ show x
             
 result3 = unlines (
+     push ++
      train_decl False ++ 
      set_decl_smt2 ++ 
      comp_facts ++
@@ -784,7 +794,9 @@ result3 = unlines (
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
      ,  "(assert (not (exists ((in@prime (set TRAIN))) (and true"
             ++              " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))))))"
-     ] ++ check_sat)
+     ] ++ 
+     check_sat ++
+     pop )
 
 case3 = do
         pos <- list_file_obligations path0
@@ -796,6 +808,7 @@ case3 = do
             x -> return $ show x
 
 result19 = unlines (
+     push ++ 
      train_decl False ++ 
      set_decl_smt2 ++ 
      comp_facts ++
@@ -819,7 +832,9 @@ result19 = unlines (
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
      ,  "(assert (not (exists ((loc@prime (pfun TRAIN BLK))) (and true"
             ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))"
-     ] ++ check_sat )
+     ] ++ 
+     check_sat ++
+     pop )
 
 case19 = do
         pos <- list_file_obligations path0
@@ -831,6 +846,7 @@ case19 = do
             x -> return $ show x
 
 result4 = unlines ( 
+        push ++
         train_decl False ++ 
         set_decl_smt2 ++ 
         comp_facts ++
@@ -853,7 +869,9 @@ result4 = unlines (
         , "(assert (= (dom@@TRAIN@@BLK loc) in))"
         , "(assert (elem@@TRAIN t in))"
         , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in))))"
-        ] ++ check_sat )
+        ] ++ 
+        check_sat ++
+        pop )
 
 case4 = do
         pos <- list_file_obligations path0
@@ -866,6 +884,7 @@ case4 = do
 
 
 result5 = unlines ( 
+        push ++
         train_decl True ++ 
         set_decl_smt2 ++ 
         comp_facts ++
@@ -895,7 +914,9 @@ result5 = unlines (
                 ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
                 ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc)))"
                 ++          " (not (elem@@TRAIN t in@prime))))))))"
-        ] ++ check_sat  )
+        ] ++ 
+        check_sat ++
+        pop  )
 
 case5 = do
         pos <- list_file_obligations path0
@@ -934,6 +955,7 @@ case5 = do
 --            x -> return $ show x
 
 result12 = unlines ( 
+        push ++
         train_decl True ++ 
         set_decl_smt2 ++ 
         comp_facts ++
@@ -959,7 +981,9 @@ result12 = unlines (
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
         ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
-        ] ++ check_sat )
+        ] ++ 
+        check_sat ++
+        pop )
 
 case12 = do
 --        pos <- list_file_obligations path0

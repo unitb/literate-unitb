@@ -124,7 +124,8 @@ var_decl s (Context _ m _ _ d) =
 data Command = Decl Decl | Assert Expr | CheckSat | GetModel | Push | Pop
 
 z3_code po = 
-    (      map Decl
+    (      []
+        ++ map Decl
                [ Datatype ["a"] "Maybe" 
                     [ ("Just", [("fromJust", GENERIC "a")])
                     , ("Nothing", []) ]
@@ -137,7 +138,8 @@ z3_code po =
         ++ (map Decl $ decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
-        ++ [CheckSat] )
+        ++ [CheckSat]
+        ++ [] )
     where
 --        !() = unsafePerformIO (p
         (Sequent d assume assert) = delambdify po
@@ -251,17 +253,26 @@ discharge_all xs = do
 
 discharge :: Sequent -> IO Validity
 discharge po = do
-    let code = z3_code po
---    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
-    s <- verify code
-    return (case s of
-        Right Sat -> Invalid
-        Right Unsat -> Valid
-        Right SatUnknown -> ValUnknown
-        Left _ -> Invalid)
+        let code = z3_code po
+    --    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
+        s <- verify code
+    --    putStrLn "HELLO"
+        case s of
+            Right Sat -> return Invalid
+            Right Unsat -> return Valid
+            Right SatUnknown -> do
+--                putStrLn "UNKNOWN"
+                return ValUnknown
+            Left _ -> do
+--                putStrLn (concat $ map f code)
+--                putStrLn xs 
+                return Invalid
+--    where
+--        f x = unlines $ pretty_print (as_tree x)
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
+--        putStrLn "HEY"
         let !code = (unlines $ map (show . as_tree) xs)
         (_,out,err) <- feed_z3 code
         let ln = lines out
