@@ -46,10 +46,10 @@ result0 = array ((0,0),(5,5))
 result1 :: [((Operator,Operator),Assoc,Assoc)]
 result1 = sortBy (compare `on` fst3) $ zip3 (map xbin_to_bin xs) ys zs
     where
-        fflip xs = xs ++ map (\((x,y),z0,z1) -> ((y,x),left_to_right z1, left_to_right z0)) xs
-        left_to_right RightAssoc = LeftAssoc
-        left_to_right LeftAssoc = RightAssoc
-        left_to_right Ambiguous = Ambiguous
+--        fflip xs = xs ++ map (\((x,y),z0,z1) -> ((y,x),left_to_right z1, left_to_right z0)) xs
+--        left_to_right RightAssoc = LeftAssoc
+--        left_to_right LeftAssoc = RightAssoc
+--        left_to_right Ambiguous = Ambiguous
         (xs,ys,zs) = unzip3 $
             [ ((And,Or),Ambiguous,LeftAssoc)
             , ((And,TotalFunction),Ambiguous,RightAssoc)

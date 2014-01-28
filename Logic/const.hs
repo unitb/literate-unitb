@@ -9,6 +9,7 @@ import Logic.Genericity
 import Control.Monad
 
 import Utilities.Format
+import Utilities.Syntactic
 
 fun1 f x           = FunApp f [x]
 fun2 f x y         = FunApp f [x,y]
@@ -46,6 +47,10 @@ maybe3 f mx my mz = do
         y <- my :: Either String Expr
         z <- mz :: Either String Expr
         return $ f x y z
+
+toErrors li m = case m of
+        Right x -> Right x
+        Left xs -> Left [Error xs li]
 
 znot         = fun1 $ Fun [] "not" [bool] bool
 zimplies x y
@@ -110,12 +115,12 @@ mzfalse       = Right zfalse
 mzall []      = mztrue
 mzall [x]     = x
 mzall xs      = do
-        xs <- forM xs id
+        xs <- forM xs $ zcast bool 
         return $ zall xs
 mzsome []     = mzfalse
 mzsome [x]    = x
 mzsome xs     = do
-        xs <- forM xs id
+        xs <- forM xs $ zcast bool
         return $ zsome xs
 mzforall xs mx my = do
         x <- zcast bool mx

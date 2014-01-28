@@ -362,6 +362,7 @@ obligations' th ctx c = do
         ys <- steps_po th ctx c
         return ((label ("relation " ++ show (l_info c)),x):ys)
 
+proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 proof_po th p@(ByCalc c) lbl po@(Sequent ctx _ _) = do
         let (y0,y1) = entailment (goal_po c) po
         ys   <- obligations' th ctx c
@@ -371,7 +372,7 @@ proof_po th p@(ByCalc c) lbl po@(Sequent ctx _ _) = do
         g x = label (x ++ show li)
         li  = line_info p
 proof_po th (ByCases xs li) lbl (Sequent ctx asm goal) = do
-        dis <- mzsome (map (\(_,x,_) -> Right x) xs)
+        dis <- toErrors li $ mzsome (map (\(_,x,_) -> Right x) xs)
         let c  = completeness dis
         cs <- mapM case_a $ zip [1..] xs
         return (c : concat cs)
