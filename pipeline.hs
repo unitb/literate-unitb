@@ -42,13 +42,14 @@ import           Data.Set as S
                     ( Set )
 
 import Foreign
-import Foreign.C.String
+--import Foreign.C.String
 
 import System.Directory
 import System.Console.ANSI
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.Trace
 
     -- The pipeline is made of three processes:
     --  o the parser
@@ -94,21 +95,27 @@ data Display = Display
 --    putStrLn xs
             
 parser :: Shared
-       -> IO ()
-parser (Shared { .. })  = do
-        liftIO $ putStrLn "parser started"
+       -> IO (IO ())
+parser (Shared { .. })  = return $ do
+        liftIO $ traceM "parser started"
         t <- getModificationTime fname
         parse
         evalStateT (forever $ do
+--            liftIO $ putStrLn "parser loop"
             liftIO $ threadDelay 1000000
+--            liftIO $ putStrLn "time out"
             t0 <- get
+            traceM $ "parser 0" ++ show t0
             t1 <- liftIO $ getModificationTime fname
-            if t0 == t1 then return ()
+            traceM "parser 1"
+            if t0 == t1 then traceM "parser 3"
             else do
+--                liftIO $ putStrLn "parser 2"
                 put t1
-                liftIO $ putStrLn "parse"
+                liftIO $ traceM "parse"
                 liftIO $ parse
             ) t
+        liftIO $ traceM "parsed"
     where
         f m = do
             x <- proof_obligation m
@@ -118,7 +125,9 @@ parser (Shared { .. })  = do
 --                ms <- parse_machine fname
                 (xs) <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
+                    traceM "parser step A"
                     xs <- hoistEither $ mapM f $ M.elems $ machines s
+                    traceM "parser step B"
                     return (xs, s)
                 case xs of
                     Right (ms,s) -> do
@@ -142,13 +151,14 @@ parser (Shared { .. })  = do
                         write_obs error_list es
                         return ()
 
-prover :: Shared -> IO ()
+prover :: Shared -> IO (IO ())
 prover (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
     req <- newEmptyMVar
     forM_ [1..8] $ \p -> forkOn p $ worker req 
-    forever $ do
+    return $ forever $ do
+--        putStrLn "prover loop"
         takeMVar tok
         inc 200
         po <- read_obs pr_obl
@@ -206,75 +216,23 @@ proof_report outs es b = xs ++
             | r == Just False = [format " x {0} - {1}" m lbl]
             | otherwise = []
 
---collect :: Shared
---        -> IO ()
---collect (Shared { .. }) = do
---        tok <- newEmptyMVar
---        observe error_list tok
---        observe pr_obl tok
---        liftIO $ putStrLn "collect x"
---        forever $ do
---            liftIO $ threadDelay 500000
---            takeMVar tok
---            err <- gets errors
---            res <- gets result
---            merr <- gets error_msg
---            mpos <- gets failed_po
---            liftIO $ swapMVar merr $ map f err
---            liftIO $ swapMVar mpos $ concatMap g $ toList res
---            poll_result (Shared { .. })
---    where
---        f (x,i,j) = Ref fname x (i,j)
---        g ((x,y),(p,b))
---            | not b     = [Ref fname (show y) (1,1)]
---            | otherwise = []
-            
---poll_result :: Shared
---            -> StateT Display IO () 
---poll_result (Shared { .. }) = do
---        wait $ do
---            liftIO $ threadDelay 500000
---            st <- take_n 10
---            ls <- liftIO $ tryTakeMVar lbls
---            case ls of
---                Just (Right ls) -> do 
---                    let f k _ = k `S.member` ls
---                    modify $ \d -> d
---                        { result = M.filterWithKey f $ result d 
---                        , labels = ls
---                        , errors = [] }
---                Just (Left es) ->
---                    modify $ \d -> d
---                        { errors = es }
---                Nothing -> return ()
---            lbls <- gets labels
---            forM_ st $ \(m,lbl,r,s) -> do
---                if (m,lbl) `S.member` lbls then
---                    modify $ \d -> d 
---                        { result = insert (m,lbl) (r,s) $ result d }
---                else return ()
---            return $ not (null st && isNothing ls)
---    where
---        take_n 0 = return []
---        take_n n = do
---            b <- liftIO $ atomically $ isEmptyTChan status
---            if b then
---                return []
---            else do
---                x  <- liftIO $ atomically $ readTChan status
---                xs <- take_n (n-1)
---                return (x:xs)
+run_all xs = do
+        ys <- sequence xs
+        mapM f ys
+    where
+        f cmd = do
+            traceM "start"
+            forkIO $ cmd
 
 display :: Shared
-        -> IO ()
+        -> IO (IO ())
 display (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
     observe error_list tok
     observe working tok
     liftIO $ clearScreen
-    forever $ do
-            takeMVar tok
+    return $ forever $ do
             outs <- read_obs pr_obl
 --            lbls <- read_obs labels
             es   <- read_obs error_list
@@ -296,12 +254,14 @@ display (Shared { .. }) = do
                     clearFromCursorToLineEnd 
                     putStrLn ""
                 putStrLn $ format "n workers: {0}" w
+            takeMVar tok
 --        poll_result (Shared { .. })
 
 serialize (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
-    forever $ do
+    return $ forever $ do
+        traceM "serialize"
         threadDelay 10000000
         takeMVar tok
         pos <- read_obs pr_obl
@@ -317,7 +277,8 @@ serialize (Shared { .. }) = do
 summary (Shared { .. }) = do
         v <- newEmptyMVar
         observe system v
-        forkIO $ forever $ do
+        return $ forever $ do
+            traceM "summary"
             threadDelay 10000000
             takeMVar v
             s <- read_obs system
@@ -342,6 +303,7 @@ run_pipeline fname = do
 --        tok     <- newEmptyMVar
 --        ser     <- newEmptyMVar
 --        status  <- newTChanIO
+        traceM "begin"
         system     <- new_obs empty_system
         working    <- new_obs 0
         error_list <- new_obs []
@@ -351,28 +313,31 @@ run_pipeline fname = do
         -- io      <- newEmptyMVar
 --        working <- newMVar 0
         let sh = Shared { .. }
-        forkIO $ do
-            summary sh
-            t1 <- forkIO $ prover sh -- (M.map f m)
-            t2 <- forkIO $ serialize sh
-            t3 <- forkIO $ parser sh
-            t0 <- forkIO $ display sh 
-    --                    (Display m s [] v0 v1)
-            keyboard 
-            putStrLn "received a 'quit' command"
-            killThread t0
-            killThread t1
-            killThread t2
-            killThread t3
-        return sh
+        traceM "begin"
+        ts <- run_all 
+            [ do    traceM "summary"
+                    summary sh
+            , do    traceM "prover"
+                    prover sh -- (M.map f m)
+            , do    traceM "serialize"
+                    serialize sh
+            , do    traceM "parser"
+                    parser sh
+            , do    traceM "display"
+                    display sh 
+            ]
+        keyboard 
+        putStrLn "received a 'quit' command"
+        mapM_ killThread ts
+--        return sh
 
 type Verifier = StablePtr (Shared)
 
-run_verifier :: CString -> IO Verifier
-run_verifier fname = do
-    fname <- peekCString fname
-    sh <- run_pipeline fname
-    newStablePtr sh
+--run_verifier :: CString -> IO Verifier
+--run_verifier fname = do
+--    fname <- peekCString fname
+--    sh <- run_pipeline fname
+--    newStablePtr sh
 
 --            merr <- gets error_msg
 --            mpos <- gets failed_po

@@ -38,7 +38,7 @@ import Text.Printf
 import Utilities.Syntactic
 
 with_po_map act param = do
-        let fn = path param ++ ".state"
+        let fn = path param ++ ".state'"
         b <- doesFileExist fn
         param <- if b then do
             xs <- BS.readFile fn
@@ -53,7 +53,8 @@ dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         p    <- gets pos
         file <- gets path         
-        let fn = file ++ ".state"
+        let fn = file ++ ".state'"
+--        liftIO $ Ser.dump_pos file p
         liftIO $ BS.writeFile fn $ Ser.encode p
 
 monitor :: (Monad m, Eq s) 
