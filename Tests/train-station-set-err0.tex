@@ -278,23 +278,23 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 %
 \replace{m1:movein}{}{mi:c0}{}{m2:prog0}{m2:saf0}
 \begin{align*}
-\progress{m2:prog0}{\true}{\neg ~ ext \in \ran.loc  }
-\\ \safetyB{m2:saf0}{m1:movein}{ \neg ~ ext \in \ran.loc }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
+\progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \neg b \in \ran.loc } }
+\\ \safetyB{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
 \end{align*}
 
 %The above property, \eqref{m2:saf0}, should not discharge automatically.
 
 \begin{align*} 
 \evguard{m1:movein}{mi:g0}
-	{	 \neg b \in \ran.loc  	}
+	{	 \qforall{t}{t \in in}{ \neg loc.t = b} 	}
 \\ \cschedule{m1:movein}{mi:c0}
-	{	\neg ~ plf \subseteq \ran.loc 	}
+	{	\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} 	}
 %\\ \evguard{m1:movein}{mi:g3}
 %	{ \qforall{t}{t \in in}{ \neg loc.t = b} }
 \\ \evguard{m0:enter}{et:g1}
-	{	\neg ent \in \ran.loc } 
+	{	\qforall{t}{t \in in}{ \neg loc.t = ent \land ent   } 	}
 \\ \evguard{m1:moveout}{mo:g3}
-	{	\neg ext \in \ran.loc 	}
+	{	\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
 \end{align*}
 %
 
@@ -365,16 +365,16 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \replacefine{m1:moveout}{}{}{mo:f0}{m2:prog1} 
 
 \begin{align*}
-\fschedule{m1:moveout}{mo:f0}{ \neg ext \in \ran.loc } 
-\\ \progress{m2:prog1}{\true}{ \neg ext \in \ran.loc }
+\fschedule{m1:moveout}{mo:f0}{\qforall{t}{t \in in}{ \neg loc.t = ext} 	}
+\\ \progress{m2:prog1}{\true}{\qforall{t}{t \in in}{ \neg loc.t = ext}}
 \end{align*}
 
 \begin{align*}
-	& \true \2\mapsto \neg ext \in \ran. loc 
+	& \true \2\mapsto \qforall{t}{t \in in}{ \neg loc.t = ext} 
 \refine{m2:prog1}{trading}{m2:prog2}{}
-	& \progress{m2:prog2}{ext \in \ran. loc }{ \neg ext \in \ran. loc } 
+	& \progress{m2:prog2}{\qexists{t}{t \in in}{ loc.t = ext} }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
 \refine{m2:prog2}{disjunction}{m2:prog3}{}
-	& \progress{m2:prog3}{ t \in in \land loc.t = ext }{ t \in in \land \neg loc.t = ext  } \end{align*}
+	& \progress{m2:prog3}{ t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } \end{align*}
 %
 \hide{
 	\refine{m2:prog3}{discharge}{m2:tr0,m2:saf1}{}
@@ -385,21 +385,21 @@ We implement \eqref{m2:prog3} with the following:
 \begin{align*}
 	\transient{m0:leave}{1}{m2:tr0}
 		{ t \in in \1\land loc.t = ext }
-\\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \neg ext \in \ran. loc } 
+\\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \qforall{t}{t \in in}{ \neg loc.t = ext} } 
 \end{align*}
 
 \begin{align*}
-	& {\true} \1\mapsto { \neg ~ plf \subseteq \ran.loc } 
+	& {\true} \1\mapsto {\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} } 
 %	\tag{\ref{m2:prog0}}
 \refine{m2:prog0}{trading}{m2:prog4}{}
-	& \progress{m2:prog4}{plf \subseteq \ran.loc \!\!}
-		{\!\! \neg ~ plf \subseteq \ran.loc }
+	& \progress{m2:prog4}{\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\!}
+		{\!\! \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
 \refine{m2:prog4}{monotonicity}{m2:prog5}{}
-	& \progress{m2:prog5}{\qexists{b}{b \in plf}{ b \in \ran.loc }}
-		{ \qexists{b}{}{ b \in plf \1\land \neg b \in \ran.loc } }
+	& \progress{m2:prog5}{\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b}}
+		{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }
 \refine{m2:prog5}{disjunction}{m2:prog6}{}
-	& \progress{m2:prog6}{ b \in plf \1\land  b \in \ran.loc }
-		{ b \in plf \1\land \neg b \in \ran.loc }
+	& \progress{m2:prog6}{ b \in plf \land t \in in \land loc.t = b }
+		{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
 \end{align*}
 
 \hide{
@@ -408,8 +408,8 @@ We implement \eqref{m2:prog3} with the following:
 
 \begin{align*}
 	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
-		{ b \in plf \land b \in \ran.loc }
-\\ 	\safety{m2:saf2}{ b \in plf \land b \in \ran.loc }{ b \in plf \land \neg b \in \ran.loc }
+		{ b \in plf \land t \in in \land loc.t = b }
+\\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
 \end{align*}
 
 In order to prove \ref{m1:moveout}, we need a need progress property, to make sure that the fine schedule becomes true infinitely often. We can use the same that we used to introduce the fine schedule \eqref{m2:prog1}.

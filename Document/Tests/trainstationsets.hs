@@ -16,6 +16,7 @@ test = test_cases
             [ Case "verify machine m0" (verify 0 path0) result0
             , Case "verify machine m1" (verify 1 path0) result1
             , Case "verify machine m2" (verify 2 path0) result2
+            , Case "type checking of boolean expressions" case3 result3
             ]
 
 result0 = unlines
@@ -171,6 +172,20 @@ result2 = unlines
 	]
 
 path0 = "Tests/train-station-set.tex"
+
+result3 = concat
+    [ "Left [Error \"type error: expression has type incompatible with its type annotation:\\n"
+    , "  expression: ent\\n"
+    , "  type: BLK\\n"
+    , "  type annotation: Bool \\n"
+    , "\" (295,54)]"
+    ]
+
+path3 = "Tests/train-station-set-err0.tex"
+
+case3 = do
+    r <- parse_machine path3
+    return $ show r
 
 verify n path = do
     r <- parse_machine path
