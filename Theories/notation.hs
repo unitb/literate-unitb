@@ -34,6 +34,7 @@ neg     = UnaryOperator "neg" "\\neg"       mznot
 set_union   = BinOperator "union" "\\bunion"        zunion
 set_diff    = BinOperator "set-diff" "\\setminus"   zsetdiff
 membership  = BinOperator "membership" "\\in"       zelem
+subset      = BinOperator "subset"     "\\subseteq" zsubset
 
     -- function theory
 overload    = BinOperator "overload" "|"        zovl
@@ -79,12 +80,12 @@ logic = Notation
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
 set_notation = Notation
-    { new_ops     = L.map Right [set_union,set_diff,membership]
+    { new_ops     = L.map Right [set_union,set_diff,membership,subset]
     , prec = [ L.map (L.map Right)
                  [ [apply]
                  , [set_union,set_diff]
                  , [ equal
-                   , membership] ]]
+                   , membership, subset ] ]]
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []

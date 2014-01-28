@@ -456,9 +456,8 @@ dump :: String -> Map Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
-                hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
+                hPutStrLn h (format "(echo \"> {0}\")" lbl)
                 hPutStrLn h (concat $ map f $ z3_code po)
-                hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ show lbl)
                 ) )
     where
