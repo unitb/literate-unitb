@@ -398,14 +398,14 @@ We implement \eqref{m2:prog3} with the following:
 	& {\true} \1\mapsto { \neg ~ plf \subseteq \ran.loc } 
 %	\tag{\ref{m2:prog0}}
 \refine{m2:prog0}{trading}{m2:prog4}{}
-	& {\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\!} \3\mapsto
-		{\!\! \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }  
-	\notag
-\\	& \progress{m2:prog4}{plf \subseteq \ran.loc \!\!}
+%	& {\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\!} \3\mapsto
+%		{\!\! \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }  
+%	\notag \\
+	& \progress{m2:prog4}{plf \subseteq \ran.loc \!\!}
 		{\!\! \neg ~ plf \subseteq \ran.loc }
 \refine{m2:prog4}{monotonicity}{m2:prog5}{}
-	& {\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b}} \3\mapsto
-		{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} } \notag \\
+%	& {\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b}} \3\mapsto
+%		{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} } \notag \\
 	& \progress{m2:prog5}{\qexists{b}{b \in plf}{ b \in \ran.loc }}
 		{ \qexists{b}{}{ b \in plf \1\land \neg b \in \ran.loc } }
 \refine{m2:prog5}{disjunction}{m2:prog6}{}

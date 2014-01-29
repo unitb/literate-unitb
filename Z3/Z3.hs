@@ -59,8 +59,7 @@ instance Tree Command where
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
     as_tree (CheckSat)    = List [Str "check-sat-using", 
-                                    List ( Str "or-else" 
-                                         : map strat
+                                    strat
                                          [ Str "qe" 
                                          , Str "simplify"
                                          , Str "skip"
@@ -69,9 +68,12 @@ instance Tree Command where
                                              [ Str "using-params"
                                              , Str "simplify"
                                              , Str ":expand-power"
-                                             , Str "true"] ] ) ]
+                                             , Str "true"] ] ] 
         where
-            strat t = List [Str "then", t, Str "smt"]
+--            strat ts = List $ Str "or-else" : map f ts ++ [List (map Str ["then", "simplify", "bit-blast", "sat"])]
+            strat ts = List $ Str "or-else" : map f ts
+            f t = List [Str "then", t, Str "smt"]
+--            strat ts = List [Str "then", List $ Str "repeat" : [List $ Str "or-else" : ts], Str "smt"]
 --    as_tree (CheckSat)    = List [Str "check-sat-using", 
 --                                    List ( Str "or-else" 
 --                                         : map strat

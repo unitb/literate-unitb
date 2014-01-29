@@ -282,6 +282,7 @@ fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
         ind  = indices evt `merge` params evt
         pos  = partition_expr pvar $ M.elems $ action evt
 
+    -- todo: partition the existential quantifier
 sch_po :: Machine -> Label -> Event -> Map Label Sequent
 sch_po m lbl evt = M.singleton
         (composite_label [_name m, lbl, sch_lbl])

@@ -159,21 +159,29 @@ instance RefRule Discharge where
                     (Transient fv1 p1 _ _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
         m = fromList $
-            assert m "" (
+            assert m "saf/lhs" (
                 zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                    zall[ p0 `zimplies` p2
-                        , q2 `zimplies` q0
-                        , zand p0 (znot q0) `zimplies` p1
-                        ]  ) )
+                        p0 `zimplies` p2
+                        ) )
+         ++ assert m "saf/rhs" (
+                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
+                        q2 `zimplies` q0
+                        ) )
+         ++ assert m "tr" (
+                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
+                        zand p0 (znot q0) `zimplies` p1
+                        ) )
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
                     (Transient fv1 p1 _ _ _)
                     Nothing)
             m = fromList $
-                assert m "" (
+                assert m "tr/lhs" (
                     zforall (fv0 ++ M.elems fv1) ztrue (
-                        zand (p0 `zimplies` p1)
+                             (p0 `zimplies` p1) ) )
+             ++ assert m "tr/rhs" (
+                    zforall (fv0 ++ M.elems fv1) ztrue (
                              (znot p1 `zimplies` q0) ) )
 
 mk_discharge :: ProgressProp -> Transient -> [SafetyProp] -> Discharge
@@ -253,9 +261,11 @@ instance RefRule NegateDisjunct where
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1))
             m = M.fromList $ 
-                assert m "" (
+                assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
-                        zand (zand p0 (znot q0) `zimplies` p1)
+                                (zand p0 (znot q0) `zimplies` p1))
+             ++ assert m "rhs" (
+                    zforall (fv0 ++ fv1) ztrue $
                                 (q1 `zimplies` q0))
         
 data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
@@ -269,12 +279,15 @@ instance RefRule Transitivity where
                     (LeadsTo fv1 p1 q1)
                     (LeadsTo fv2 p2 q2))
             m = M.fromList $
-                assert m "" $ 
+                assert m "lhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                        zall[ p0 `zimplies` p1
-                            , q1 `zimplies` p2
-                            , q2 `zimplies` q0
-                            ]
+                            p0 `zimplies` p1 )
+             ++ assert m "mhs" ( 
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue
+                            q1 `zimplies` p2 )
+             ++ assert m "rhs" ( 
+                    zforall (fv0 ++ fv1 ++ fv2) ztrue
+                            q2 `zimplies` q0 )
 
 data PSP = PSP ProgressProp ProgressProp SafetyProp
     deriving (Eq,Typeable,Show)
