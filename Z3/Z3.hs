@@ -72,6 +72,20 @@ instance Tree Command where
                                              , Str "true"] ] ) ]
         where
             strat t = List [Str "then", t, Str "smt"]
+--    as_tree (CheckSat)    = List [Str "check-sat-using", 
+--                                    List ( Str "or-else" 
+--                                         : map strat
+--                                         [ Str "qe" 
+--                                         , Str "simplify"
+----                                         , Str "der"
+--                                         , List 
+--                                             [ Str "using-params"
+--                                             , Str "simplify"
+--                                             , Str ":expand-power"
+--                                             , Str "true"] ] 
+--                                           ++ [ Str "smt" ]) ]
+--        where
+--            strat t = List [Str "try-for", Str "200", List [Str "then", t, Str "sat"] ]
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 

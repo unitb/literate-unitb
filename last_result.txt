@@ -92,7 +92,8 @@
 |  |  +- verify machine m0
 |  |  +- verify machine m1
 |  |  +- verify machine m2
-|  |  +- [ Success: 3 / 3 ]
+|  |  +- type checking of boolean expressions
+|  |  +- [ Success: 4 / 4 ]
 |  +- the parser is exception free
 |  +- [ Success: 9 / 9 ]
 +- Unit-B
@@ -153,10 +154,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   13623 total
-    1363 Document/Tests/trainstation.hs
-     856 Document/machine.hs
-     723 Document/Tests/lambdas.hs
+   14059 total
+    1432 Document/Tests/trainstation.hs
+     847 Document/machine.hs
+     727 Document/Tests/lambdas.hs
      659 UnitB/ast.hs
-     558 UnitB/po.hs
-Time: 16:02:01
+     544 Document/expression.hs
+Time: 00:41:04

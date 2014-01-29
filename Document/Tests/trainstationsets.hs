@@ -167,8 +167,10 @@ result2 = unlines
     , "  o  m2/m2:prog4/REF/monotonicity/rhs"
     , "  o  m2/m2:prog5/REF/disjunction/lhs"
     , "  o  m2/m2:prog5/REF/disjunction/rhs"
-    , "  o  m2/m2:prog6/REF/discharge"
-  	, "passed 77 / 78"
+    , "  o  m2/m2:prog6/REF/disjunction/lhs"
+    , "  o  m2/m2:prog6/REF/disjunction/rhs"
+    , "  o  m2/m2:prog7/REF/discharge"
+  	, "passed 79 / 80"
 	]
 
 path0 = "Tests/train-station-set.tex"
