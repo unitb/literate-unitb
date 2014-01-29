@@ -35,6 +35,9 @@ set_union   = BinOperator "union" "\\bunion"        zunion
 set_diff    = BinOperator "set-diff" "\\setminus"   zsetdiff
 membership  = BinOperator "membership" "\\in"       zelem
 subset      = BinOperator "subset"     "\\subseteq" zsubset
+superset    = BinOperator "superset"   "\\supseteq" (flip zsubset)
+st_subset   = BinOperator "st-subset"   "\\subset" zsubset
+st_superset = BinOperator "st-superset" "\\supset" (flip zsubset)
 
     -- function theory
 overload    = BinOperator "overload" "|"        zovl
@@ -80,7 +83,9 @@ logic = Notation
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
 set_notation = Notation
-    { new_ops     = L.map Right [set_union,set_diff,membership,subset]
+    { new_ops     = L.map Right 
+                    [ set_union,set_diff,membership
+                    , subset,superset,st_subset,st_superset]
     , prec = [ L.map (L.map Right)
                  [ [apply]
                  , [set_union,set_diff]
@@ -89,7 +94,15 @@ set_notation = Notation
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []
-    , chaining    = []  }
+    , chaining    = [ ((subset,subset),subset) 
+                    , ((subset,st_subset),st_subset)
+                    , ((st_subset,subset),st_subset)
+                    , ((st_subset,st_subset),st_subset)
+                    , ((superset,superset),superset) 
+                    , ((superset,st_superset),st_superset)
+                    , ((st_superset,superset),st_superset)
+                    , ((st_superset,st_superset),st_superset)
+                    ]  }
 function_notation = Notation
     { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
     , prec = [ L.map (L.map Right) 

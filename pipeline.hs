@@ -254,6 +254,7 @@ display (Shared { .. }) = do
                     clearFromCursorToLineEnd 
                     putStrLn ""
                 putStrLn $ format "n workers: {0}" w
+            liftIO $ threadDelay 500000
             takeMVar tok
 --        poll_result (Shared { .. })
 
@@ -284,13 +285,17 @@ summary (Shared { .. }) = do
             s <- read_obs system
             produce_summaries s
         
-keyboard = do
+keyboard sh@(Shared { .. }) = do
         xs <- getLine
         if map toLower xs == "quit" 
-            then return ()
-            else do
-                putStrLn $ format "Invalid command: '{0}'" xs
-                keyboard
+        then return ()
+        else if map toLower xs == "reset" then do
+            modify_obs pr_obl $ \m -> 
+                return $ M.map (\(x,_) -> (x,Nothing)) m
+            keyboard sh
+        else do
+            putStrLn $ format "Invalid command: '{0}'" xs
+            keyboard sh
 
 data InterfaceStyle = 
         Terminal 
@@ -326,7 +331,7 @@ run_pipeline fname = do
             , do    traceM "display"
                     display sh 
             ]
-        keyboard 
+        keyboard sh
         putStrLn "received a 'quit' command"
         mapM_ killThread ts
 --        return sh
