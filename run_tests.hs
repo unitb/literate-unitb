@@ -1,5 +1,6 @@
 module Main where
 
+import Config
 import Control.Monad.Error
 
 import GHC.IO.Exception
@@ -12,6 +13,10 @@ import System.Process
 --import Control.Concurrent
 
 import Text.Printf
+
+p_system cmd
+	| is_os_windows = system cmd
+	| otherwise     = system $ "./" ++ cmd
 
 runRaw phase cmd args  = do
     c <- liftIO $ rawSystem cmd args
@@ -67,9 +72,9 @@ general = do
 --                        hFlush h
 --                    waitForProcess p2
 --                c1 <- waitForProcess ps
-                c1 <- system "./test > result.txt"
+                c1 <- p_system "test > result.txt"
                 system "echo \"Lines of Haskell code:\" >> result.txt"
-                system "wc -l $(git ls-files | grep '.*\\.hs$') | sort -r | head -n 6 >> result.txt"
+                system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"
                 rawSystem "cat" ["result.txt"]
                 return c1
             ExitFailure _ -> do
@@ -91,7 +96,7 @@ specific mod_name fun_name = do
             ExitSuccess -> do
                 putStrLn "Running test ..."
                 hFlush stdout
-                void $ system "./test_tmp"
+                void $ p_system "test_tmp"
             ExitFailure _ -> do
                 putStrLn "\n***************"
                 putStrLn   "*** FAILURE ***"

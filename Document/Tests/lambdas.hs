@@ -597,7 +597,8 @@ result8 = unlines
      , "  o  m0/evt/INV/inv5/step (283,1)"
      , "  o  m0/evt/INV/inv5/step (285,1)"
      , "  o  m0/evt/INV/inv5/step (287,1)"
-     , " xxx m0/evt/INV/inv5/step (289,1)"
+     , "  o  m0/evt/INV/inv5/step (289,1)"
+--     , " xxx m0/evt/INV/inv5/step (289,1)"
      , "  o  m0/evt/INV/inv5/step (292,1)"
      , "  o  m0/evt/INV/inv6/goal (310,1)"
      , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
@@ -623,7 +624,7 @@ result8 = unlines
      , "  o  m0/prog4/REF/discharge/saf/lhs"
      , "  o  m0/prog4/REF/discharge/saf/rhs"
      , "  o  m0/prog4/REF/discharge/tr"
-     , "passed 84 / 87"
+     , "passed 85 / 87"
      ]
      
 path8 = "tests/cubes-t7.tex"
@@ -691,7 +692,8 @@ result9 = unlines
      , "  o  m0/evt/INV/inv5/step (283,1)"
      , "  o  m0/evt/INV/inv5/step (285,1)"
      , "  o  m0/evt/INV/inv5/step (287,1)"
-     , " xxx m0/evt/INV/inv5/step (289,1)"
+     , "  o  m0/evt/INV/inv5/step (289,1)"
+--     , " xxx m0/evt/INV/inv5/step (289,1)"
      , "  o  m0/evt/INV/inv5/step (292,1)"
      , "  o  m0/evt/INV/inv6/goal (310,1)"
      , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
@@ -722,7 +724,7 @@ result9 = unlines
      , " xxx m0/prog6/REF/add"
      , " xxx m0/prog7/REF/add"
      , " xxx m0/prog8/REF/add"
-     , "passed 85 / 92"
+     , "passed 86 / 92"
      ]
      
 path9 = "tests/cubes-t8.tex"
