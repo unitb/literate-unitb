@@ -7,6 +7,7 @@ import Logic.Calculation
 import Logic.Const
 import Logic.Expr
 import Logic.Lambda
+import Logic.Operator
 
 import UnitB.PO
 import UnitB.AST
@@ -63,8 +64,7 @@ sample_quant = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
-        CheckSat,
-        GetModel ]
+        CheckSat ]
     where
         ff          = Fun [] "f" [int] int
         f           = maybe1 $ (\x -> FunApp ff [x])

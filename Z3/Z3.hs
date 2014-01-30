@@ -279,10 +279,10 @@ discharge po = do
             Right SatUnknown -> do
 --                putStrLn "UNKNOWN"
                 return ValUnknown
-            Left _ -> do
+            Left xs -> do
 --                putStrLn (concat $ map f code)
 --                putStrLn xs 
-                return Invalid
+                fail $ "discharge: " ++ xs
 --    where
 --        f x = unlines $ pretty_print (as_tree x)
 
@@ -293,18 +293,20 @@ verify xs = do
         (_,out,err) <- feed_z3 code
         let ln = lines out
         r <- if ln == [] || 
-                (   head ln /= "sat"
-                    && head ln /= "unsat"
-                    && head ln /= "unknown") then do
+                (   ln /= ["sat"]
+                    && ln /= ["unsat"]
+                    && ln /= ["unknown"]
+                    && ln /= ["timeout"]) then do
             return $ Left ("error: " ++ err ++ out)
-        else if head ln == "sat" then do
+        else if ln == ["sat"] then do
             return $ Right Sat
-        else if head ln == "unsat" then 
+        else if ln == ["unsat"] then 
             return $ Right Unsat
-        else if head ln == "unknown" then do
+        else if ln == ["unknown"] then do
             return $ Right SatUnknown
         else do
-            return $ Left out
+            unless (ln == ["timeout"]) $ error "verify: incomplete conditional"
+            return $ Right SatUnknown
         return r
 --    where
 --        err_msg code out err = 
