@@ -262,9 +262,9 @@ imports :: Monad m
         => [LatexDoc] 
         -> Machine 
         -> MSEitherT Error System m Machine 
-imports = visit_doc 
-            [   ( "use:set"
-                , EnvBlock $ \(String cset,()) _ m -> do
+imports = visit_doc []
+            [   ( "\\withsets"
+                , CmdBlock $ \(String cset,()) m -> do
                     let th = theory m
                     toEither $ error_list
                         [ ( not (cset `member` all_types th)
@@ -273,8 +273,8 @@ imports = visit_doc
                     return m { theory = th {
                                 extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
                 )
-            ,   ( "use:fun"
-                , EnvBlock $ \(String dset, String rset,()) _ m -> do
+            ,   ( "\\withfun"
+                , CmdBlock $ \(String dset, String rset,()) m -> do
                     let th = theory m
                     toEither $ error_list 
                         [   ( not (dset `member` all_types th)
@@ -288,7 +288,6 @@ imports = visit_doc
                                 extends = function_theory dtype rtype : extends th } } 
                 )
             ]
-            []
 
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.

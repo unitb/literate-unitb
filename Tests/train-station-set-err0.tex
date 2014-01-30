@@ -35,7 +35,7 @@
 
 \newset{TRAIN}{\Train}
 
-\begin{use:set}{\Train} \end{use:set}
+\withsets{\Train}
 
 \begin{align*}
 \variable{	in : \set [ \Train ]}
@@ -85,8 +85,8 @@
 
 \newset{BLK}{\Blk}
 
-\begin{use:set}{\Blk} \end{use:set}
-\begin{use:fun}{\Train}{\Blk} \end{use:fun}
+\withsets{\Blk}
+\withfun{\Train}{\Blk}
 
 \begin{align*}
 \variable{	loc : \Train \pfun \Blk}
@@ -441,9 +441,9 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 	\variable{osgn: \Blk \pfun \Bool} 
 \]
 
-\begin{use:set}{\Bool} \end{use:set}
-\begin{use:set}{\Blk} \end{use:set}
-\begin{use:fun}{\Blk}{\Bool} \end{use:fun}
+\withsets{\Bool}
+\withsets{\Blk}
+\withfun{\Blk}{\Bool}
 
 
 \begin{align*}
