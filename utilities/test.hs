@@ -1,8 +1,12 @@
 module Utilities.Test where
 
+    -- Modules
 import Logic.Operator
 
+import Theories.Arithmetic
 import Theories.Notation
+import Theories.SetTheory
+import Theories.FunctionTheory
 
 import Utilities.Graph
 

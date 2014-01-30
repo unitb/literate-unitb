@@ -6,12 +6,14 @@ import Logic.Const
 import Logic.Expr
 import Logic.Genericity
 import Logic.Label
+import Logic.Operator
 
 import Theories.Theory
 import Theories.SetTheory hiding ( dec )
 
     -- Libraries
 import Data.Map
+import Data.List as L
 
 ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
     where
@@ -24,8 +26,6 @@ zran = typ_fun1 (Fun [gA,gB] "ran" [fun_type gA gB] $ set_type gB)
 zdomsubt = typ_fun2 (Fun [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
 zdomrest = typ_fun2 (Fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
-
-zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
 zrep_select = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 
@@ -218,3 +218,23 @@ function_theory t0 t1 = Theory [set_theory $ fun_type t0 t1, set_theory t0] type
         -- (s2,s2_decl) = var "s2" $ set_type t1
         dec x = x ++ z3_decoration t0 ++ z3_decoration t1
         dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
+
+    -- notation
+overload    = BinOperator "overload" "|"        zovl
+mk_fun      = BinOperator "mk-fun" "\\tfun"     zmk_fun
+total_fun   = BinOperator "total-fun" "\\tfun"  ztfun
+domrest     = BinOperator "dom-rest" "\\domres" zdomrest
+domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
+
+function_notation = Notation
+    { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
+    , prec = [ L.map (L.map Right) 
+                 [ [apply]
+                 , [mk_fun]
+                 , [overload]
+                 , [domrest,domsubt] 
+                 , [ equal ] ]]
+    , left_assoc  = [[overload]]
+    , right_assoc = [[domrest,domsubt]]
+    , relations   = []
+    , chaining    = []  } 

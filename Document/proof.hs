@@ -15,8 +15,7 @@ import Logic.Calculation hiding ( context )
 import Logic.Expr
 import Logic.Const
 import Logic.Genericity
-
-import Theories.Notation
+import Logic.Operator
 
     -- Libraries
 import           Control.Monad hiding ( guard )

@@ -6,6 +6,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Genericity
 import Logic.Label
+import Logic.Operator
 
 import Theories.Theory
 
@@ -93,3 +94,34 @@ item_type t0@(USER_DEFINED s [t])
         | s == set_sort         = Right t
         | otherwise             = Left $ format " {0} is not a set " t0
 item_type t0                    = Left $ format " {0} is not a set " t0
+
+    -- set theory
+set_union   = BinOperator "union" "\\bunion"        zunion
+set_diff    = BinOperator "set-diff" "\\setminus"   zsetdiff
+membership  = BinOperator "membership" "\\in"       zelem
+subset      = BinOperator "subset"     "\\subseteq" zsubset
+superset    = BinOperator "superset"   "\\supseteq" (flip zsubset)
+st_subset   = BinOperator "st-subset"   "\\subset" zsubset
+st_superset = BinOperator "st-superset" "\\supset" (flip zsubset)
+
+set_notation = Notation
+    { new_ops     = L.map Right 
+                    [ set_union,set_diff,membership
+                    , subset,superset,st_subset,st_superset]
+    , prec = [ L.map (L.map Right)
+                 [ [apply]
+                 , [set_union,set_diff]
+                 , [ equal
+                   , membership, subset ] ]]
+    , left_assoc  = [[set_union]]
+    , right_assoc = []
+    , relations   = []
+    , chaining    = [ ((subset,subset),subset) 
+                    , ((subset,st_subset),st_subset)
+                    , ((st_subset,subset),st_subset)
+                    , ((st_subset,st_subset),st_subset)
+                    , ((superset,superset),superset) 
+                    , ((superset,st_superset),st_superset)
+                    , ((st_superset,superset),st_superset)
+                    , ((st_superset,st_superset),st_superset)
+                    ]  }

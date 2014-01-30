@@ -4,6 +4,7 @@ module Theories.Notation where
 import Logic.Const
 import Logic.Operator
 
+import Theories.Arithmetic
 import Theories.FunctionTheory
 import Theories.SetTheory
 
@@ -17,11 +18,6 @@ import Utilities.Format
 
 import System.IO.Unsafe
 
-
-    -- Basic functions
-apply = BinOperator "apply" "."     zapply
-equal = BinOperator "equal" "="     mzeq
-
     -- logic
 disj    = BinOperator "or" "\\lor"          mzor
 conj    = BinOperator "and" "\\land"        mzand
@@ -30,40 +26,6 @@ follows = BinOperator "follows" "\\follows" (flip mzimplies)
 equiv   = BinOperator "implies" "\\equiv"   mzeq
 neg     = UnaryOperator "neg" "\\neg"       mznot
 
-    -- set theory
-set_union   = BinOperator "union" "\\bunion"        zunion
-set_diff    = BinOperator "set-diff" "\\setminus"   zsetdiff
-membership  = BinOperator "membership" "\\in"       zelem
-subset      = BinOperator "subset"     "\\subseteq" zsubset
-superset    = BinOperator "superset"   "\\supseteq" (flip zsubset)
-st_subset   = BinOperator "st-subset"   "\\subset" zsubset
-st_superset = BinOperator "st-superset" "\\supset" (flip zsubset)
-
-    -- function theory
-overload    = BinOperator "overload" "|"        zovl
-mk_fun      = BinOperator "mk-fun" "\\tfun"     zmk_fun
-total_fun   = BinOperator "total-fun" "\\tfun"  ztfun
-domrest     = BinOperator "dom-rest" "\\domres" zdomrest
-domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
-
-    -- arithmetic
-power   = BinOperator "power" "^"       mzpow
-mult    = BinOperator "mult" "\\cdot"   mztimes
-plus    = BinOperator "plus" "+"        mzplus
-less    = BinOperator "less" "<"        mzless
-greater = BinOperator "greater" ">"     (flip mzless)
-leq     = BinOperator "le" "\\le"       mzle
-geq     = BinOperator "ge" "\\ge"       (flip mzle)
-
-functions = Notation
-    { new_ops     = L.map Right [equal,apply]
-    , prec = [ L.map (L.map Right)
-                     [ [apply]
-                     , [equal] ]]
-    , left_assoc  = [[apply]]
-    , right_assoc = []
-    , relations   = []
-    , chaining    = [] }
 logic = Notation
     { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
     , prec = [    [Left neg] 
@@ -82,62 +44,6 @@ logic = Notation
         , ((equiv,follows),follows)
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
-set_notation = Notation
-    { new_ops     = L.map Right 
-                    [ set_union,set_diff,membership
-                    , subset,superset,st_subset,st_superset]
-    , prec = [ L.map (L.map Right)
-                 [ [apply]
-                 , [set_union,set_diff]
-                 , [ equal
-                   , membership, subset ] ]]
-    , left_assoc  = [[set_union]]
-    , right_assoc = []
-    , relations   = []
-    , chaining    = [ ((subset,subset),subset) 
-                    , ((subset,st_subset),st_subset)
-                    , ((st_subset,subset),st_subset)
-                    , ((st_subset,st_subset),st_subset)
-                    , ((superset,superset),superset) 
-                    , ((superset,st_superset),st_superset)
-                    , ((st_superset,superset),st_superset)
-                    , ((st_superset,st_superset),st_superset)
-                    ]  }
-function_notation = Notation
-    { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
-    , prec = [ L.map (L.map Right) 
-                 [ [apply]
-                 , [mk_fun]
-                 , [overload]
-                 , [domrest,domsubt] 
-                 , [ equal ] ]]
-    , left_assoc  = [[overload]]
-    , right_assoc = [[domrest,domsubt]]
-    , relations   = []
-    , chaining    = []  } 
-arith = Notation
-    { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]
-    , prec = [ L.map (L.map Right)
-                     [ [apply]
-                     , [power]
-                     , [mult]
-                     , [plus]
-                     , [mk_fun]
-                     , [ equal,leq
-                       , less
-                       , geq,greater]]]
-    , left_assoc  = [[mult],[plus]]
-    , right_assoc = []
-    , relations   = [equal,leq,geq,less,greater]
-    , chaining    = 
-          [ ((leq,leq),leq)
-          , ((leq,less),less)
-          , ((less,leq),less)
-          , ((less,less),less)
-          , ((geq,geq),geq)
-          , ((geq,greater),greater)
-          , ((greater,geq),greater)
-          , ((greater,greater),greater) ] }
 
 notations = flip precede logic $ foldl combine empty_notation
     [ functions

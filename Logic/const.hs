@@ -172,3 +172,6 @@ prime (Var n t) = Var (n ++ "@prime") t
 
 fromJust (Right x) = x
 fromJust (Left msg) = error $ format "error: {0}" (msg :: String)
+
+zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
+
