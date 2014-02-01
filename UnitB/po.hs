@@ -1,10 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.PO 
     ( proof_obligation, step_ctx, evt_live_ctx
+    , theory_ctx, theory_facts
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , check, verify_changes, verify_machine
-    , smoke_test_machine, dump )
+    , smoke_test_machine, dump, used_types )
 where
 
     -- Modules
@@ -12,6 +13,7 @@ import Logic.Calculation
 import Logic.Classes
 import Logic.Const
 import Logic.Expr
+import Logic.Genericity
 import Logic.Operator
 import Logic.Label
 
@@ -26,19 +28,18 @@ import Control.Monad hiding (guard)
 import           Data.Map as M hiding 
                     ( map, foldl, foldr
                     , delete, filter, null
-                    , (\\))
+                    , (\\), mapMaybe )
 import qualified Data.Map as M
-import           Data.Maybe ( maybeToList )
+import           Data.Maybe as MM ( maybeToList, mapMaybe ) 
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
-
---import Debug.Trace
 
 import System.IO
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.Trace
 
     -- 
     --
@@ -73,24 +74,55 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
-theory_ctx :: Theory -> Context
-theory_ctx (Theory d ts f c _ dums) = 
-    merge_all_ctx 
-        (Context ts c f M.empty dums : map theory_ctx d)
+theory_ctx :: Set Type -> Theory -> Context
+theory_ctx used_ts th@(Theory d tparam ts fun c _ dums) = 
+        merge_all_ctx $
+            (Context ts c new_fun M.empty dums) : map (theory_ctx ref_ts) d
+    where
+        new_fun = case tparam of
+            Just t -> trace (unlines $ show ref_ts : map pretty_print' fm) $ M.fromList $ do
+                m' <- mapMaybe (unify t) $ S.elems used_ts
+                traceM $ show m'
+                let m = mapKeys (reverse . drop 2 . reverse) m'
+                f  <- M.elems fun
+                let new_f@(Fun ps n _ _) = instantiate m f
+                traceM $ format (unlines 
+                    [ "instance:"
+                    , "  params: {0}"
+                    , "  name:   {1}" ]) ps n
+                return (concatMap z3_decoration (M.elems m) ++ z3_fun_name new_f, new_f)
+            Nothing -> fun
+        ref_ts = S.unions $ used_ts : map used_types fm
+        fm = M.elems $ theory_facts used_ts th
 
-theory_facts :: Theory -> Map Label Expr
-theory_facts (Theory d _ _ _ f _) = 
-    merge_all (f : map theory_facts d)
+    -- todo: prefix name of theorems of a z3_decoration
+theory_facts :: Set Type -> Theory -> Map Label Expr
+theory_facts ts (Theory d tparam _ _ _ fact _) = 
+        trace (show ref_ts) $ merge_all (new_fact : map (theory_facts ref_ts) d)
+    where
+        new_fact = case tparam of
+            Just t -> M.fromList $ do
+                m' <- mapMaybe (unify t) $ S.elems ts
+                let m = mapKeys (reverse . drop 2 . reverse) m'
+--                traceM $ show m
+                (name, f) <- M.toList fact
+--                let new_f = substitute_type_vars_left m f
+                let new_f = substitute_type_vars m f
+                return (label $ concatMap z3_decoration (M.elems m) ++ show name, 
+                     new_f)
+            Nothing -> fact
+        ref_ts = S.unions $ map used_types $ fm
+        fm = M.elems new_fact
+            
+
 
 assert_ctx :: Machine -> Context
-assert_ctx m = merge_ctx
+assert_ctx m =
           (Context M.empty (variables m) M.empty M.empty M.empty)
-          (theory_ctx $ theory m)
 step_ctx :: Machine -> Context
 step_ctx m = merge_all_ctx 
         [  Context M.empty (prime_all $ variables m) M.empty M.empty M.empty
-        ,  Context M.empty (variables m) M.empty M.empty M.empty
-        , (theory_ctx $ theory m) ]
+        ,  Context M.empty (variables m) M.empty M.empty M.empty ]
     where
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
         prime_var (Var n t) = (Var (n ++ "@prime") t)
@@ -136,7 +168,21 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
-        f (Sequent a b d) = Sequent a (M.elems (theory_facts $ theory m)++b) d
+        f (Sequent a b d) = Sequent 
+                (a `merge_ctx` theory_ctx ts (theory m))
+                (M.elems (theory_facts ts (theory m))++b) 
+                d
+          where
+            ts = S.unions $ map used_types $ d : b
+
+used_types :: Expr -> Set Type
+used_types e = visit (flip $ S.union . used_types) (
+        case e of
+            Binder _ vs e0 e1 -> S.fromList $ type_of e0 : type_of e1 : map f vs
+            _ -> S.singleton $ type_of e
+            ) e
+    where
+        f (Var _ t) = t
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
@@ -231,7 +277,6 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
                         )
                     pname evt_lbl
 
-
 prop_co :: Machine -> Label -> Constraint -> Map Label Sequent
 prop_co m pname (Co fv xp) = 
         mapKeys po_name $ mapWithKey po 
@@ -242,13 +287,15 @@ prop_co m pname (Co fv xp) =
     where
         po _ evt = 
                 (Sequent 
-                    (step_ctx $ m) 
-                    (invariants m ++ grd ++ act)
-                    (forall_fv xp) )
+                    (step_ctx m) 
+                    hyp
+                    goal )
             where
-                grd = M.elems $ guard evt
-                act = M.elems $ action evt
+                grd  = M.elems $ guard evt
+                act  = M.elems $ action evt
                 forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
+                hyp  = invariants m ++ grd ++ act
+                goal = forall_fv xp
         po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
 
 inv_po m pname xp = 
@@ -256,11 +303,12 @@ inv_po m pname xp =
             (mapKeys po_name $ mapWithKey po (events m))
             (M.singleton 
                 (composite_label [_name m, inv_init_lbl, pname])
-                (Sequent (assert_ctx m) (M.elems $ inits m) xp))
+                (Sequent (assert_ctx m) hyp xp))
     where
         po _ evt = 
                 (Sequent 
-                    (step_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
+                    (            step_ctx m 
+                     `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
                     (invariants m ++ grd ++ act)
                     (primed (variables m) xp))
             where
@@ -268,19 +316,23 @@ inv_po m pname xp =
                 act = M.elems $ action evt
                 ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
+        hyp  = M.elems $ inits m
 
-fis_po m lbl evt = M.fromList $ flip map pos $ \(pvar, acts) ->
-        ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
-          Sequent 
-            (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            (invariants m ++ grd)
-            (zexists pvar ztrue $ zall acts))
+fis_po m lbl evt = M.fromList $ map f pos 
     where
         grd  = M.elems $ guard evt
---        act  = zall $ M.elems $ action evt
         pvar = map prime $ M.elems $ variables m
         ind  = indices evt `merge` params evt
         pos  = partition_expr pvar $ M.elems $ action evt
+        f (pvar, acts) =
+            ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
+              Sequent 
+                (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
+                hyp
+                goal)
+          where
+            hyp  = invariants m ++ grd
+            goal = zexists pvar ztrue $ zall acts
 
     -- todo: partition the existential quantifier
 sch_po :: Machine -> Label -> Event -> Map Label Sequent
@@ -290,8 +342,8 @@ sch_po m lbl evt = M.singleton
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
             `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            (invariants m ++ f_sch ++ c_sch)
-            (exist_param $ zall grd))
+            hyp
+            goal)
     where
         grd   = M.elems $ guard evt
         c_sch = M.elems $ coarse $ new_sched evt
@@ -299,14 +351,17 @@ sch_po m lbl evt = M.singleton
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp
+        hyp   = invariants m ++ f_sch ++ c_sch
+        goal  = exist_param $ zall grd
 
 thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
         (Sequent
             (assert_ctx m)
-            (invariants_only m)
+            inv
             xp)
     where
+        inv = invariants_only m
 
 add_suffix suf (Var n t) = Var (n ++ suf) t
 
@@ -323,21 +378,23 @@ steps_po th ctx (Calc d _ e0 es _) = f e0 es
     where
         f _ [] = return []
         f e0 ((r0, e1, a0,li):es) = do
-            expr <- with_li li $ mk_expr r0 e0 e1
-            tail <- f e1 es
-            return (
-                ( label ("step " ++ show li)
-                , Sequent 
-                    (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
-                    (a0 ++ M.elems (theory_facts th)) 
-                    expr
-                ) : tail)
+                expr <- with_li li $ mk_expr r0 e0 e1
+                let ts = S.unions $ map used_types $ expr : a0
+                tail <- f e1 es
+                return (
+                    ( label ("step " ++ show li)
+                    , Sequent 
+                        (ctx `merge_ctx` d `merge_ctx` theory_ctx ts th) 
+                        (a0 ++ M.elems (theory_facts ts th)) 
+                        expr
+                    ) : tail)
 
 entails_goal_po th ctx (Calc d g e0 es li) = do
             a <- with_li li assume
+            let ts = S.unions $ map used_types $ g : a
             return $ Sequent 
-                (ctx `merge_ctx` d `merge_ctx` theory_ctx th) 
-                (a ++ M.elems (theory_facts th)) 
+                (ctx `merge_ctx` d `merge_ctx` theory_ctx ts th) 
+                (a ++ M.elems (theory_facts ts th)) 
                 g
     where
         assume = 
@@ -463,7 +520,7 @@ dump name pos = do
                 hPutStrLn h ("; end of " ++ show lbl)
                 ) )
     where
-        f x = unlines $ pretty_print (as_tree x)
+        f x = pretty_print' x
 
 verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos = do

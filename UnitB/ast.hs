@@ -75,14 +75,15 @@ import Utilities.Format
 import Utilities.Graph
 
 basic_theory :: Theory
-basic_theory = Theory []
-    (symbol_table [set_sort,fun_sort,BoolSort,IntSort,RealSort]) empty empty empty empty
+basic_theory = Theory [] Nothing
+    (symbol_table [set_sort,fun_sort,BoolSort,IntSort,RealSort]) 
+    empty empty empty empty
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (extends th)) 
 
 empty_theory :: Theory
-empty_theory = Theory [] 
+empty_theory = Theory [] Nothing
     empty empty empty empty empty
 
 data Schedule = Schedule

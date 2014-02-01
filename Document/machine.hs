@@ -107,10 +107,9 @@ check_acyclic x es li = do
         toEither $ mapM_ (cycl_err_msg x) cs
     where
         cycle_msg x ys = format msg (x :: String) $ intercalate ", " (map show ys)
-            where
-                msg = "A cycle exists in the {0}: {1}"
         cycl_err_msg _ (AcyclicSCC _) = return ()
         cycl_err_msg x (CyclicSCC vs) = tell [Error (cycle_msg x vs) li]
+        msg = "A cycle exists in the {0}: {1}"
 
 trickle_down
         :: Monad m
@@ -271,7 +270,8 @@ imports = visit_doc []
                           , format "Carrier set {0} undefined" cset )
                         ]
                     return m { theory = th {
-                                extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
+--                                extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
+                                extends = set_theory : extends th } }
                 )
             ,   ( "\\withfun"
                 , CmdBlock $ \(String dset, String rset,()) m -> do
@@ -282,11 +282,12 @@ imports = visit_doc []
                         ,   ( not (rset `member` all_types th)
                             , format "Carrier set {0} undefined" rset )
                         ]
-                    let dtype = USER_DEFINED (all_types th ! dset) []
-                    let rtype = USER_DEFINED (all_types th ! rset) []
+--                    let dtype = USER_DEFINED (all_types th ! dset) []
+--                    let rtype = USER_DEFINED (all_types th ! rset) []
                     return m { theory = th {
-                                extends = function_theory dtype rtype : extends th } } 
-                )
+--                                extends = function_theory dtype rtype : extends th } } 
+                                  extends = function_theory : extends th } }
+              )
             ]
 
     -- Todo: detect when the same variable is declared twice

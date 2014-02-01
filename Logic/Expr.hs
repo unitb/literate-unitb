@@ -74,6 +74,7 @@ merge_range Lambda = Str "PRE"
 data Type = 
         ARRAY Type Type 
         | GENERIC String 
+        | VARIABLE String
         | USER_DEFINED Sort [Type]
     deriving (Eq, Ord, Typeable, Generic)
 
@@ -94,19 +95,22 @@ class Symbol a where
 instance Show Type where
     show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
+    show (VARIABLE n)        = format "'{0}" n 
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
 
 instance Tree Type where
     as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
-    as_tree (GENERIC x) = Str x
+    as_tree (GENERIC x)   = Str x
+    as_tree (VARIABLE n)  = Str $ "_" ++ n
     as_tree (USER_DEFINED s []) = Str $ z3_name s
     as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
     rewriteM' f s0 (ARRAY t0 t1) = do
             (s1,t2) <- f s0 t0
             (s2,t3) <- f s1 t1
             return (s2,ARRAY t2 t3)
-    rewriteM' _ s x@(GENERIC _) = return (s,x)
+    rewriteM' _ s x@(VARIABLE _) = return (s,x)
+    rewriteM' _ s x@(GENERIC _)  = return (s,x)
     rewriteM' f s0 (USER_DEFINED s xs) = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1, USER_DEFINED s ys)
@@ -129,6 +133,9 @@ z3_name (IntSort) = "Int"
 z3_name (RealSort) = "Real"
 z3_name (Sort _ x _) = x
 z3_name (DefSort _ x _ _) = x
+
+    -- replace it everywhere
+z3_fun_name (Fun xs ys _ _) = ys ++ concatMap z3_decoration xs
 
 data Decl = 
         FunDecl [Type] String [Type] Type 
@@ -187,9 +194,9 @@ instance Show Expr where
     show e = show $ as_tree e
 
 instance Tree Decl where
-    as_tree (FunDecl _ name dom ran) =
+    as_tree (FunDecl ts name dom ran) =
             List [ Str "declare-fun", 
-                Str name, 
+                Str $ name ++ concatMap z3_decoration ts, 
                 (List $ map as_tree dom), 
                 (as_tree ran) ]
     as_tree (ConstDecl n t) =

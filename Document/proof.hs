@@ -29,11 +29,12 @@ import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
 import           Data.Monoid (Monoid)
 import           Data.List as L hiding ( union, insert, inits )
+import qualified Data.Set as S
 
 import Utilities.Format
 import Utilities.Syntactic
 
-context m = step_ctx m
+context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
 
 data ProofStep = Step 
         (Map Label Expr)    -- assertions
@@ -332,7 +333,9 @@ get_evt_part :: ( Monad m, Monoid b )
              -> [LatexDoc] 
              -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_evt_part m e ys = do
-        x <- focus_es $ parse_expr (            step_ctx m 
+        x <- focus_es $ parse_expr (
+                                     step_ctx m 
+                         `merge_ctx` theory_ctx S.empty (theory m)
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         (concatMap flatten_li xs)

@@ -21,6 +21,7 @@ module Z3.Z3
     , discharge_on
     , read_result
     , pretty_print
+    , pretty_print'
     )
 where
 
@@ -139,6 +140,7 @@ var_decl s (Context _ m _ _ d) =
 
 data Command = Decl Decl | Assert Expr | CheckSat | GetModel | Push | Pop
 
+z3_code :: Sequent -> [Command]
 z3_code po = 
     (      []
         ++ map Decl
@@ -151,7 +153,7 @@ z3_code po =
                         , ("second", GENERIC "b") ]) ]
                , Datatype [] "Null"
                     [ ("null", []) ] ] 
-        ++ (map Decl $ decl d)
+        ++ map Decl (decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]
         ++ [CheckSat]
@@ -159,6 +161,9 @@ z3_code po =
     where
 --        !() = unsafePerformIO (p
         (Sequent d assume assert) = delambdify po
+
+pretty_print' :: Tree t => t -> String
+pretty_print' t = unlines $ pretty_print $ as_tree t 
 
 pretty_print :: StrList -> [String]
 pretty_print (Str xs) = [xs]
@@ -200,36 +205,13 @@ new_prover n_workers = do
         return Prover { .. }
     where
         worker inCh outCh = void $ do
---            (Just stdin,Just stdout,_,pcs) <- createProcess (shell "z3 -smt2 -in")
---                { std_in = CreatePipe
-----                , std_out = CreatePipe
---                , std_out = CreatePipe }
---            hSetBinaryMode stdin False
---            hSetBinaryMode stdout False
---            hSetBuffering stdin LineBuffering
---            hSetBuffering stdout LineBuffering
-----            hSetBinaryMode stderr False
             runMaybeT $ forever $ do
                 cmd <- lift $ readChan inCh
                 case cmd of
                     Just (tid, po) -> lift $ do
                         r <- discharge po
---                        let code = unlines 
---                                    (   ["(echo \"begin\")"]
---                                     ++ map (show . as_tree) (z3_code po)
---                                     ++ ["(echo \"end\")"] )
---                        hPutStr stdin code
---                        xs <- hGetLine stdout
---                        unless (xs == "begin") $ error "the first line of output should be begin"
---                        xs <- while (/= "end") $ 
---                            hGetLine stdout
---                        let r
---                                | xs == ["sat","end"]   = Invalid
---                                | xs == ["unsat","end"] = Valid
---                                | otherwise             = ValUnknown
                         writeChan outCh (tid,r)
                     Nothing -> do
---                        lift $ terminateProcess pcs
                         MaybeT $ return Nothing
 
 destroy_prover (Prover { .. }) = do
@@ -251,49 +233,27 @@ discharge_all xs = do
         rs <- forM ys $ \_ ->
             read_result pr
         destroy_prover pr
---        inCh  <- newChan
---        outCh <- newChan
---        xs <- forM [1 .. 8] $ \p -> 
---            forkOn p $ worker inCh outCh
---        forM_ ys $ \task -> 
---            writeChan inCh task
---        rs <- forM ys $ \_ ->
---            readChan outCh
---        forM_ xs $ killThread
         return $ map snd $ sortBy (compare `on` fst) rs
---    where
---        worker inCh outCh = forever $ do
---            (tid, po) <- readChan inCh
---            r <- discharge po
---            writeChan outCh (tid,r)        
 
 discharge :: Sequent -> IO Validity
 discharge po = do
         let code = z3_code po
-    --    let !() = unsafePerformIO (putStrLn $ format "code: {0}" code)
         s <- verify code
-    --    putStrLn "HELLO"
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
             Right SatUnknown -> do
---                putStrLn "UNKNOWN"
                 return ValUnknown
             Left xs -> do
---                putStrLn (concat $ map f code)
---                putStrLn xs 
                 fail $ "discharge: " ++ xs
---    where
---        f x = unlines $ pretty_print (as_tree x)
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
---        putStrLn "HEY"
         let !code = (unlines $ map (show . as_tree) xs)
         (_,out,err) <- feed_z3 code
         let ln = lines out
         r <- if ln == [] || 
-                (   ln /= ["sat"]
+                (      ln /= ["sat"]
                     && ln /= ["unsat"]
                     && ln /= ["unknown"]
                     && ln /= ["timeout"]) then do
@@ -305,18 +265,10 @@ verify xs = do
         else if ln == ["unknown"] then do
             return $ Right SatUnknown
         else do
-            unless (ln == ["timeout"]) $ error "verify: incomplete conditional"
+            unless (ln == ["timeout"]) 
+                $ error "verify: incomplete conditional"
             return $ Right SatUnknown
         return r
---    where
---        err_msg code out err = 
---            unlines (
---                    (map (\(i,x) -> show i ++ " -\t" ++ x) $ zip [1..] $ lines code) 
---                ++  ["output"]
---                ++  (map ("> " ++) $ lines out)
---                ++  ["err"]
---                ++  (map ("> " ++) $  lines err) )
-
 
 entailment  
     (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 

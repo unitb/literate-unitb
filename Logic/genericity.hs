@@ -40,6 +40,7 @@ unsafePerformIO = Unsafe.unsafePerformIO
 
 empty_u = Uni empty []
 
+zcast :: Type -> Either String Expr -> Either String Expr
 zcast t me = do
         e <- me
         let { err_msg = format (unlines
@@ -58,6 +59,7 @@ zcast t me = do
         return $ specialize_right u e
 
 suffix_generics :: String -> Type -> Type
+suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
 suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
@@ -92,6 +94,7 @@ check_args xp (Fun gs name ts t) = do
             let args    = L.map (uncurry rewrite_types) xs
             let targs   = L.map type_of args
             let rt      = GENERIC ("a@" ++ show (n+1))
+                -- t0 and t1 are type tuples for the sake of unification
             let t0      = USER_DEFINED IntSort (t:ts) 
             let t1      = USER_DEFINED IntSort (rt:targs)
             uni <- unify t0 t1
@@ -188,6 +191,9 @@ unify_aux (GENERIC x) t1 u
 --                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
 --                print (t0,t1))
 unify_aux t0 t1@(GENERIC _) u = unify_aux t1 t0 u
+unify_aux (VARIABLE x) (VARIABLE y) u
+        | x == y                = Just u
+        | otherwise             = Nothing
 unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | x == y && length xs == length ys = foldM f u (zip xs ys)
         | otherwise                        = Nothing
@@ -199,6 +205,8 @@ unify_aux (ARRAY t0 t1) (ARRAY t2 t3) u = do
         unify_aux t1 t3 u
 unify_aux _ _ _               = Nothing
 
+
+unify :: Type -> Type -> Maybe (Map String Type)
 unify t0 t1 = do
         u <- unify_aux (suffix_generics "1" t0) (suffix_generics "2" t1) empty_u
         let es = edges u
@@ -211,10 +219,6 @@ unify t0 t1 = do
 
         let m = l_to_r u
         let top_order = reverse $ G.stronglyConnComp compl
---        let !() = unsafePerformIO (putStrLn "> > partial mapping")
---        let !() = unsafePerformIO (mapM_ print $ M.toList $ l_to_r u)
---        let !() = unsafePerformIO (putStrLn "> > symbolic dependencies")
---        let !() = unsafePerformIO (mapM_ print compl)
         
             -- this is a loop that makes sure that a type
             -- instantiation map can be applied in any 
@@ -234,7 +238,6 @@ unify t0 t1 = do
             -- order and modify `m', the result of unify_aux
             -- so that, for each visited type variable, there is
             -- no reference to it left in any of the types in `m'
---        let !() = unsafePerformIO (print top_order)
         foldM (\m cc -> 
                 case cc of
                     G.AcyclicSCC v ->
@@ -270,24 +273,59 @@ merge_inst r0 r1 = foldWithKey h (Just M.empty) (M.map Just r0 `union` M.map Jus
 
 class Generic a where
     generics :: a -> S.Set String
+    substitute_types :: (Type -> Type) -> a -> a
+    instantiate :: Map String Type -> a -> a
+    substitute_type_vars :: Map String Type -> a -> a
+
+    instantiate m x = substitute_types (instantiate m) x
+    substitute_type_vars m x = substitute_types (substitute_type_vars m) x
     
 instance Generic Type where
-    generics (GENERIC s)        = S.singleton s
-    generics (ARRAY t0 t1)      = generics t0 `S.union` generics t1
-    generics (USER_DEFINED _ ts)= S.unions $ map generics ts
+    generics (GENERIC s)         = S.singleton s
+    generics (ARRAY t0 t1)       = generics t0 `S.union` generics t1
+    generics (VARIABLE _)        = S.empty
+    generics (USER_DEFINED _ ts) = S.unions $ map generics ts
+    substitute_types f t = rewrite (substitute_types f) t
+    instantiate m t = f t
+        where
+            f t0@(GENERIC x) = 
+                case M.lookup x m of
+                    Just t1  -> t1
+                    Nothing  -> t0
+            f t           = rewrite f t
+    substitute_type_vars m t = f t
+        where
+            f t0@(VARIABLE x) = 
+                case M.lookup x m of
+                    Just t1  -> t1
+                    Nothing  -> t0
+            f t           = rewrite f t
+
 
 instance Generic Fun where
     generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
+    substitute_types f (Fun gs n ts t) = Fun (map f gs) n (map f ts) $ f t
 
 instance Generic Var where
     generics (Var _ t)  = generics t
+    substitute_types f (Var x t) = Var x $ f t
 
 instance Generic Expr where
     generics (Word (Var _ t)) = generics t
     generics (Const ts _ t)   = S.unions $ map generics (t : ts)
     generics (FunApp f xp)    = S.unions (generics f : map generics xp)
     generics (Binder _ vs r xp) = S.unions (generics r : generics xp : map generics vs)
+    substitute_types g x = f x
+      where
+        f (Const gs x t)    = Const (map g gs) x $ g t
+        f (Word x)          = Word $ h x
+        f (FunApp fun args) 
+                = rewrite f $ FunApp (substitute_types g fun) (map (substitute_types g) args)
+        f (Binder q vs r e) 
+                = rewrite f $ Binder q (map h vs) r e
+        h (Var x t) = Var x $ g t
 
+ambiguities :: Expr -> [Expr]
 ambiguities e@(Word (Var _ t))
         | S.null $ generics t = []
         | otherwise           = [e]
@@ -302,6 +340,10 @@ ambiguities e@(FunApp f xp)
         children = L.concatMap ambiguities xp
 ambiguities (Binder _ _ r xp) = ambiguities r ++ ambiguities xp
 
+
+    -- Change the name of generic parameters
+    -- to follow alphabetical order: 
+    -- a .. z ; aa .. az ; ba .. bz ...
 normalize_generics :: Expr -> Expr
 normalize_generics expr = specialize renaming expr
     where
@@ -314,30 +356,36 @@ normalize_generics expr = specialize renaming expr
                 n        = S.size free_gen
         renaming = fst $ visit f (empty, map GENERIC gen) expr
 
-instantiate :: Map String Type -> Type -> Type
-instantiate m t = f t
-    where
-        f t0@(GENERIC x) = 
-            case M.lookup x m of
-                Just t1  -> t1
-                Nothing  -> t0
-        f t           = rewrite f t
+--     Apply a type substitution to (partially)
+--     instantiate a type
+--instantiate :: Map String Type -> Type -> Type
+--instantiate m t = f t
+--    where
+--        f t0@(GENERIC x) = 
+--            case M.lookup x m of
+--                Just t1  -> t1
+--                Nothing  -> t0
+--        f t           = rewrite f t
 
 instantiate_left m t = instantiate m (suffix_generics "1" t)
 
 instantiate_right m t = instantiate m (suffix_generics "2" t)
 
+--substitute_type_vars_left m e = substitute_type_vars m (substitute_types (suffix_generics "1") e)
+--substitute_type_vars_right m e = substitute_type_vars m (substitute_types (suffix_generics "2") e)
+
+    -- apply a type substitution to an expression
 specialize :: Map String Type -> Expr -> Expr
-specialize m e = f e
-    where
-        f (Const gs x t)    = Const (map g gs) x $ g t
-        f (Word x)          = Word $ h x
-        f (FunApp (Fun gs n ts t) args) 
-                = rewrite f $ FunApp (Fun (map g gs) n (map g ts) $ g t) (map (specialize m) args)
-        f (Binder q vs r e) 
-                = rewrite f $ Binder q (map h vs) r e
-        g t     = instantiate m t
-        h (Var x t) = Var x $ g t
+specialize = instantiate
+--    where
+--        f (Const gs x t)    = Const (map g gs) x $ g t
+--        f (Word x)          = Word $ h x
+--        f (FunApp fun args) 
+--                = rewrite f $ FunApp (instantiate m fun) (map (specialize m) args)
+--        f (Binder q vs r e) 
+--                = rewrite f $ Binder q (map h vs) r e
+--        g t     = instantiate m t
+--        h (Var x t) = Var x $ g t
 
 specialize_left m e  = specialize m (rewrite_types "1" e)
 specialize_right m e = specialize m (rewrite_types "2" e)

@@ -98,10 +98,10 @@ blk_type = USER_DEFINED blk_sort []
 machine0 = (empty_machine "train0") 
     {  theory = empty_theory 
             {  extends = 
-                    [  function_theory train_type blk_type
-                    ,  set_theory blk_type
-                    ,  set_theory loc_type
-                    ,  set_theory train_type 
+                    [  function_theory -- train_type blk_type
+                    ,  set_theory -- blk_type
+                    ,  set_theory -- loc_type
+                    ,  set_theory -- train_type 
                     ,  basic_theory
 --                    ,  function_theory train_type loc_type
                     ]
