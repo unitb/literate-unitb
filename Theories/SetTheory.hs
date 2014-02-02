@@ -87,7 +87,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         (s1,s1_decl) = var "s1" $ set_type t
         (s2,s2_decl) = var "s2" $ set_type t
 --            dec x  = x ++ z3_decoration t
-        dec' x = z3_decoration t ++ x
+        dec' x = "@set@@_" ++ x
 
 --set_theory :: Set Type -> Theory 
 --set_theory ts = Theory { .. } -- [] types funs empty facts empty

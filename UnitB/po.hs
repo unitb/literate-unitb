@@ -34,6 +34,7 @@ import           Data.Maybe as MM ( maybeToList, mapMaybe )
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
+import           Data.String.Utils as SU
 
 import System.IO
 
@@ -84,13 +85,16 @@ theory_ctx used_ts th@(Theory d tparam ts fun c _ dums) =
                 m' <- mapMaybe (unify t) $ S.elems used_ts
                 traceM $ show m'
                 let m = mapKeys (reverse . drop 2 . reverse) m'
-                f  <- M.elems fun
+                (tag,f)   <- M.toList fun
+--                let (name,nb) = case SU.split "@@" tag of
+--                                    [name,nb] -> (name,nb)
+--                                    xs -> error $ "theory_ctx: " ++ show xs
                 let new_f@(Fun ps n _ _) = instantiate m f
                 traceM $ format (unlines 
                     [ "instance:"
                     , "  params: {0}"
                     , "  name:   {1}" ]) ps n
-                return (concatMap z3_decoration (M.elems m) ++ z3_fun_name new_f, new_f)
+                return (tag ++ concatMap z3_decoration (M.elems m), new_f)
             Nothing -> fun
         ref_ts = S.unions $ used_ts : map used_types fm
         fm = M.elems $ theory_facts used_ts th
@@ -98,20 +102,26 @@ theory_ctx used_ts th@(Theory d tparam ts fun c _ dums) =
     -- todo: prefix name of theorems of a z3_decoration
 theory_facts :: Set Type -> Theory -> Map Label Expr
 theory_facts ts (Theory d tparam _ _ _ fact _) = 
-        trace (show ref_ts) $ merge_all (new_fact : map (theory_facts ref_ts) d)
+        merge_all (new_fact : map (theory_facts ref_ts) d)
     where
         new_fact = case tparam of
             Just t -> M.fromList $ do
+--                traceM ("param: " ++ show t)
+--                traceM ("types: " ++ show ts)
                 m' <- mapMaybe (unify t) $ S.elems ts
                 let m = mapKeys (reverse . drop 2 . reverse) m'
---                traceM $ show m
-                (name, f) <- M.toList fact
+--                traceM $ show t ++ " : " ++ show m
+                (tag, f) <- M.toList fact
 --                let new_f = substitute_type_vars_left m f
+                let (name,nb) = case SU.split "@@" $ show tag of
+                                    [name,nb] -> (name,nb)
+                                    xs -> error $ "theory_fact: " ++ show xs
                 let new_f = substitute_type_vars m f
-                return (label $ concatMap z3_decoration (M.elems m) ++ show name, 
+--                return (name, new_f)
+                return (label $ name ++ concatMap z3_decoration (M.elems m) ++ nb, 
                      new_f)
             Nothing -> fact
-        ref_ts = S.unions $ map used_types $ fm
+        ref_ts = S.unions $ ts : map used_types fm
         fm = M.elems new_fact
             
 

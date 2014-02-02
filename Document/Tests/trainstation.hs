@@ -1,7 +1,7 @@
 module Document.Tests.TrainStation
-    ( test_case, test
-    , part0, part1, part2
-    , part3, part4, part5 )
+--    ( test_case, test
+--    , part0, part1, part2
+--    , part3, part4, part5 )
 where
 
     -- Modules
@@ -321,46 +321,54 @@ train_decl b =
                 ,  "(declare-const loc (pfun TRAIN BLK))"
                 ]
 
-set_decl_smt2 = 
+set_decl_smt2 xs = 
+        when (WithPFun `elem` xs)
         [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"
         ,  "(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
         ,  "(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))"
-        ,  "(declare-fun elem@@BLK (BLK (set BLK)) Bool)"
+        ,  "(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))"]
+     ++ [  "(declare-fun elem@@BLK (BLK (set BLK)) Bool)"
         ,  "(declare-fun elem@@LOC (LOC (set LOC)) Bool)"
-        ,  "(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)"
-        ,  "(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)"
-        ,  "(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))"
-        ,  "(declare-fun empty-set@@BLK () (set BLK))"
+        ,  "(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)"]
+--        ,  "(declare-fun elem@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK) (set (pfun TRAIN BLK))) Bool)"
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))"]
+     ++ [  "(declare-fun empty-set@@BLK () (set BLK))"
         ,  "(declare-fun empty-set@@LOC () (set LOC))"
         ,  "(declare-fun empty-set@@TRAIN () (set TRAIN))"
-        ,  "(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))"
+--        ,  "(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))"
         ,  "(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
-        ,  "(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
-        ,  "(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))"
-        ,  "(declare-fun mk-set@@BLK (BLK) (set BLK))"
+        ,  "(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"]
+--        ,  "(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))"]
+     ++ [  "(declare-fun mk-set@@BLK (BLK) (set BLK))"
         ,  "(declare-fun mk-set@@LOC (LOC) (set LOC))"
-        ,  "(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))"
-        ,  "(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))"
-        ,  "(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun ran@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"
-        ,  "(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))"
+        ,  "(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))"]
+--        ,  "(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))"
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
+        ,  "(declare-fun ran@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"]
+     ++ [  "(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
-        ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
-        ,  "(declare-fun set@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"
-        ,  "(declare-fun subset@@BLK ((set BLK) (set BLK)) Bool)"
+        ,  "(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))" ]
+--        ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun set@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"]
+     ++ [  "(declare-fun subset@@BLK ((set BLK) (set BLK)) Bool)"
         ,  "(declare-fun subset@@LOC ((set LOC) (set LOC)) Bool)"
-        ,  "(declare-fun subset@@TRAIN ((set TRAIN) (set TRAIN)) Bool)"
-        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
-        ,  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"
-        ,  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
+        ,  "(declare-fun subset@@TRAIN ((set TRAIN) (set TRAIN)) Bool)"]
+--        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"]
+     ++ [  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
         ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
         ,  "(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
-        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
+--        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
         ]    
+  where
+        when b xs = if b then xs else []
 
 set_facts :: (String,String) -> [(String,String)]
 set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
@@ -572,17 +580,23 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++                        " (bunion@{3} (ran@{1}@{3} f1) (ran@{1}@{3} f2)))))"
         ]
 
-comp_facts = map (\x -> "(assert " ++ x ++ ")") $
-             map snd    (   concatMap set_facts 
-                                [   ("BLK","@BLK")
-                                ,   ("LOC","@LOC")
-                                ,   ("TRAIN","@TRAIN")
+data AxiomOption = WithPFun
+    deriving Eq
+
+comp_facts xs = 
+             map (\x -> "(assert " ++ x ++ ")") $
+             map snd    (     (if (WithPFun `elem` xs) then
+                               concatMap set_facts 
+                                [ --  ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
                                 ]
                             ++ concatMap (uncurry fun_facts) 
                                 [  (("TRAIN","@TRAIN"),("BLK","@BLK"))
                                 ] 
+                               else [])
                             ++ concatMap set_facts 
-                                [   ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
+                                [   ("BLK","@BLK")
+                                ,   ("LOC","@LOC")
+                                ,   ("TRAIN","@TRAIN")
                                 ]
                             ++ map ((,) "")
                                 [   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))"
@@ -703,8 +717,8 @@ case1 = do
 result2 = unlines (
         push
      ++ train_decl False 
-     ++ set_decl_smt2
-     ++ comp_facts ++ -- set_decl_smt2 ++
+     ++ set_decl_smt2 []
+     ++ comp_facts [] ++ -- set_decl_smt2 ++
      [  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
@@ -739,8 +753,8 @@ case2 = do
 result20 = unlines (
         push
      ++ train_decl False 
-     ++ set_decl_smt2
-     ++ comp_facts ++ -- set_decl_smt2 ++
+     ++ set_decl_smt2 [WithPFun]
+     ++ comp_facts [WithPFun] ++ 
      [  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
@@ -772,8 +786,8 @@ case20 = do
 result3 = unlines (
      push ++
      train_decl False ++ 
-     set_decl_smt2 ++ 
-     comp_facts ++
+     set_decl_smt2 [WithPFun] ++ 
+     comp_facts [WithPFun] ++
      [  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
@@ -810,8 +824,8 @@ case3 = do
 result19 = unlines (
      push ++ 
      train_decl False ++ 
-     set_decl_smt2 ++ 
-     comp_facts ++
+     set_decl_smt2 [WithPFun] ++ 
+     comp_facts [WithPFun] ++
      [  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
@@ -848,8 +862,8 @@ case19 = do
 result4 = unlines ( 
         push ++
         train_decl False ++ 
-        set_decl_smt2 ++ 
-        comp_facts ++
+        set_decl_smt2 [WithPFun] ++ 
+        comp_facts [WithPFun] ++
         [ "(assert (and (not (= ent ext))"
                ++      " (not (elem@@BLK ent PLF))"
                ++      " (not (elem@@BLK ext PLF))))"
@@ -886,8 +900,8 @@ case4 = do
 result5 = unlines ( 
         push ++
         train_decl True ++ 
-        set_decl_smt2 ++ 
-        comp_facts ++
+        set_decl_smt2 [WithPFun] ++ 
+        comp_facts [WithPFun] ++
         [  "(assert (and (not (= ent ext))"
                ++      " (not (elem@@BLK ent PLF))"
                ++      " (not (elem@@BLK ext PLF))))"
@@ -957,8 +971,8 @@ case5 = do
 result12 = unlines ( 
         push ++
         train_decl True ++ 
-        set_decl_smt2 ++ 
-        comp_facts ++
+        set_decl_smt2 [WithPFun] ++ 
+        comp_facts [WithPFun] ++
         [  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"

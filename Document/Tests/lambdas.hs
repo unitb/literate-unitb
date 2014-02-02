@@ -281,9 +281,9 @@ result3 = unlines
      , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
 --     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
-     , " xxx m0/evt/INV/inv6"
+     , "  o  m0/evt/INV/inv6"
      , "  o  m0/evt/SCH"
-     , "passed 59 / 61"
+     , "passed 60 / 61"
      ]
 
 path3 = "tests/cubes-t3.tex"

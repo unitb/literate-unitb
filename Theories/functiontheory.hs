@@ -74,7 +74,7 @@ function_theory = Theory { .. }
 --        h (t0,t1) = [ set_type t0, set_type t1, set_type (fun_type t0 t1) ]
 --        
 --        g :: Ord a => ( (Type,Type) -> Map a b ) -> Map a b
---        g = unions . flip L.map (concatMap f $ S.elems ts)
+--        g = unions . flip L.map (concatMap f $ S.elems ts)                              
                 
         gen_param = Just $ fun_type (GENERIC "t0") (GENERIC "t1")
         
@@ -247,7 +247,8 @@ function_theory = Theory { .. }
         (f2,f2_decl) = var "f2" $ fun_type t0 t1
         (s1,s1_decl) = var "s1" $ set_type t0
         -- (s2,s2_decl) = var "s2" $ set_type t1
-        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
+--        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
+        dec' x = "@function@@_" ++ x
 
 --function_theory :: S.Set Type -> Theory 
 --function_theory ts = Theory { .. }
