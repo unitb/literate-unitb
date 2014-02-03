@@ -137,7 +137,7 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_po = unlines 
     [ -- " sort: , , , pfun [a,b], set [a]"
-      " sort: "
+      " sort: , , "
     , " st: (Array Int Bool)"
     , " st@prime: (Array Int Bool)"
     , " t: Int"

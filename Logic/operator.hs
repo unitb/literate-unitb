@@ -10,13 +10,10 @@ import Logic.Const
 import Data.Array as A
 import Data.Either
 import Data.Function
---import Data.IORef
 import Data.List as L
 import Data.Map as M hiding ( foldl )
 import Data.Tuple
 import Data.Typeable
-
---import System.IO.Unsafe
 
 import Utilities.Format
 import Utilities.Graph
@@ -39,6 +36,8 @@ data XBinOperator =
         | Equiv
     deriving (Eq,Ord,Show,Enum,Ix,Typeable)
 
+    -- NOTE: All the instructions below can now be done in 
+    -- the theories
     -- To add an operator:
     -- o add it in the parser
     -- o add it in the associativity chain
@@ -47,58 +46,9 @@ data XBinOperator =
     -- o create a function that generates an expression
     --      from the token
 mk_expr (BinOperator _ _ f) x y = f (Right x) (Right y)
---mk_expr :: XBinOperator -> Expr -> Expr -> Either String Expr
---mk_expr Plus x y    = Right x `mzplus` Right y
---mk_expr Mult x y    = Right x `mztimes` Right y
---mk_expr Power x y   = Right x `mzpow` Right y
---mk_expr Apply x y   = Right x `zapply` Right y
---
---mk_expr Equal x y      = Right x `mzeq` Right y
---mk_expr Leq x y        = Right x `mzle` Right y
---mk_expr Geq y x        = Right x `mzle` Right y
---    -- here the operands are inverted. we use only mzle in the
---    -- backend on purpose to not have many operators than
---    -- doing the same thing
---
---mk_expr Less x y       = Right x `mzless` Right y
---mk_expr Greater y x    = Right x `mzless` Right y
---
---
---mk_expr Equiv x y   = Right x `mzeq` Right y
---mk_expr And x y     = Right x `mzand` Right y 
---mk_expr Or x y      = Right x `mzor` Right y 
---mk_expr Implies x y    = Right x `mzimplies` Right y 
---mk_expr Follows x y    = Right y `mzimplies` Right x
---
---mk_expr Membership x y = Right x `zelem` Right y
---mk_expr SetDiff x y    = Right x `zsetdiff` Right y
---mk_expr Union x y      = Right x `zunion` Right y
---
---mk_expr TotalFunction x y = Right x `ztfun` Right y
---mk_expr Overload x y      = Right x `zovl` Right y
---mk_expr DomSubt x y       = Right x `zdomsubt` Right y
---mk_expr DomRest x y       = Right x `zdomrest` Right y
---mk_expr MkFunction x y    = Right x `zmk_fun` Right y
 
 mk_unary :: UnaryOperator -> Expr -> Either String Expr
---mk_unary Negation x       = Right $ znot x
 mk_unary (UnaryOperator _ _ f) x = f $ Right x
-
-    -- TODO: disallow chain x y if both x y are not relational symbols
---chain Equal x         = x
---chain x Equal         = x
---chain Implies Implies = Implies
---chain Follows Follows = Follows
---chain Leq Leq         = Leq
---chain Less Leq        = Less
---chain Leq Less        = Less
---chain Less Less       = Less
---chain Geq Geq         = Geq
---chain Greater Geq     = Greater
---chain Geq Greater     = Greater
---chain Greater Greater = Greater
---chain _ _             = error "operators cannot be chained"
-
 
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving (Show,Eq,Typeable)
@@ -230,7 +180,7 @@ assoc_graph rs xss = as_matrix_with rs ys
 
 assoc' :: Notation -> Matrix Operator Assoc
 assoc' ops 
-		| not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
+--		| not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
         | otherwise   = foldl (unionWith join) M.empty
                   [ M.map (f LeftAssoc) pm
@@ -298,5 +248,32 @@ functions = Notation
     , right_assoc = []
     , relations   = []
     , chaining    = [] }
+
+    -- logic
+disj    = BinOperator "or" "\\lor"          mzor
+conj    = BinOperator "and" "\\land"        mzand
+implies = BinOperator "implies" "\\implies" mzimplies
+follows = BinOperator "follows" "\\follows" (flip mzimplies)
+equiv   = BinOperator "implies" "\\equiv"   mzeq
+neg     = UnaryOperator "neg" "\\neg"       mznot
+
+logic = Notation
+    { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
+    , prec = [    [Left neg] 
+                : L.map (L.map Right)
+                     [ [disj,conj]
+                     , [implies,follows]
+                     , [equiv] ]]
+    , left_assoc  = [[equiv],[disj],[conj]]
+    , right_assoc = []
+    , relations   = [equiv,implies,follows]
+    , chaining    = 
+        [ ((equiv,implies),implies)
+        , ((implies,equiv),implies)
+        , ((implies,implies),implies)
+        , ((equiv,equiv),equiv)
+        , ((equiv,follows),follows)
+        , ((follows,equiv),follows)
+        , ((follows,follows),follows) ]  }
 
 double (x,y) = ((x,x),(y,y))

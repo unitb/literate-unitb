@@ -147,16 +147,17 @@
 |  +- case 1 - operator grammar discrepancy
 |  +- case 2 - new ambiguities
 |  +- case 3 - transitive closures
-|  +- [ Success: 4 / 4 ]
+|  +- case 4 - transitive closures in linear time
+|  +- [ Success: 5 / 5 ]
 +- [ Success: 6 / 6 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   14397 total
+   14492 total
     1446 Document/Tests/trainstation.hs
-     836 Document/machine.hs
+     846 Document/machine.hs
      742 Document/Tests/lambdas.hs
-     650 UnitB/ast.hs
+     678 UnitB/ast.hs
      615 UnitB/po.hs

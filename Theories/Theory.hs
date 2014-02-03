@@ -8,7 +8,7 @@ import Logic.Operator
 import Data.Map hiding ( map )
 
 data Theory = Theory 
-        { extends   :: [Theory]
+        { extends   :: Map String Theory
         , gen_param :: Maybe Type
         , types     :: Map String Sort
         , funs      :: Map String Fun
@@ -20,13 +20,13 @@ data Theory = Theory
 
 
 basic_theory :: Theory
-basic_theory = Theory [] Nothing
+basic_theory = Theory empty Nothing
     (symbol_table [BoolSort]) 
     empty empty empty 
-    empty empty_notation
+    empty functions
 
 empty_theory :: Theory
-empty_theory = Theory [] Nothing
+empty_theory = Theory empty Nothing
     empty empty empty empty 
     empty empty_notation
 

@@ -12,8 +12,6 @@ import Logic.Operator
 import UnitB.PO
 import UnitB.AST
 
-import Theories.Notation
-
     -- Libraries
 import Utilities.Syntactic
 

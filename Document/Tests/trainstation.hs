@@ -17,6 +17,7 @@ import UnitB.PO
 
 import Theories.SetTheory
 import Theories.FunctionTheory
+import Theories.Arithmetic
 
 import Z3.Z3
 
@@ -97,12 +98,11 @@ blk_type = USER_DEFINED blk_sort []
 
 machine0 = (empty_machine "train0") 
     {  theory = empty_theory 
-            {  extends = 
-                    [  function_theory -- train_type blk_type
-                    ,  set_theory -- blk_type
-                    ,  set_theory -- loc_type
-                    ,  set_theory -- train_type 
-                    ,  basic_theory
+            {  extends = fromList
+                    [  ("functions", function_theory) -- train_type blk_type
+                    ,  ("sets", set_theory) -- blk_type
+                    ,  ("basic", basic_theory)
+                    ,  ("arithmetic", arithmetic)
 --                    ,  function_theory train_type loc_type
                     ]
             ,  types   = symbol_table 
@@ -287,9 +287,9 @@ train_decl b =
         , "(declare-datatypes () ((Null null)))"
         , "(declare-sort BLK 0)"
         , "; comment: we don't need to declare the sort Bool"
---        , "; comment: we don't need to declare the sort Int"
+        , "; comment: we don't need to declare the sort Int"
         , "(declare-sort LOC 0)"
---        , "; comment: we don't need to declare the sort Real"
+        , "; comment: we don't need to declare the sort Real"
         , "(declare-sort TRAIN 0)"
         , "(define-sort pfun (a b) (Array a (Maybe b)))"
         , "(define-sort set (a) (Array a Bool))"

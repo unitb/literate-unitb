@@ -275,7 +275,7 @@ imports = visit_doc []
                                 "arithmetic" -> arithmetic
                                 _ -> error "imports"
                     return m { theory = (theory m) {
-                                extends = th : extends (theory m) } }
+                                extends = insert th_name th $ extends (theory m) } }
                 )
             ]
 
@@ -288,7 +288,9 @@ declarations :: Monad m
 declarations = visit_doc []
         [   (   "\\variable"
             ,   CmdBlock $ \(xs,()) m -> do
-                        vs <- get_variables (context m) xs
+                        vs <- get_variables 
+                            (context m) 
+                            (all_notation m) xs
                         let inter = S.fromList (map fst vs) `S.intersection` keysSet (variables m)
                         toEither $ error_list 
                             [ ( not $ S.null inter
@@ -298,7 +300,9 @@ declarations = visit_doc []
             )
         ,   (   "\\indices"
             ,   CmdBlock $ \(evt,xs,()) m -> do
-                        vs <- get_variables (context m) xs
+                        vs <- get_variables 
+                            (context m) 
+                            (all_notation m) xs
                         toEither $ error_list
                             [ ( not (evt `member` events m) 
                               , format "event '{0}' is undeclared" evt )
@@ -317,7 +321,9 @@ declarations = visit_doc []
             )
         ,   (   "\\param"
             ,   CmdBlock $ \(evt,xs,()) m -> do
-                        vs <- get_variables (context m) xs
+                        vs <- get_variables 
+                            (context m) 
+                            (all_notation m) xs
                         toEither $ error_list
                             [ ( not (evt `member` events m) 
                               , format "event '{0}' is undeclared" evt )
@@ -336,7 +342,9 @@ declarations = visit_doc []
             )
         ,   (   "\\constant"
             ,   CmdBlock $ \(xs,()) m -> do
-                        vs <- get_variables (context m) xs
+                        vs <- get_variables 
+                            (context m) 
+                            (all_notation m) xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -344,7 +352,9 @@ declarations = visit_doc []
             )
         ,   (   "\\dummy"
             ,   CmdBlock $ \(xs,()) m -> do
-                        vs <- get_variables (context m) xs
+                        vs <- get_variables 
+                            (context m) 
+                            (all_notation m) xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -651,7 +661,7 @@ collect_proofs = visit_doc
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
                         ]
-                    let event = events m ! evt
+                    let event = events m ! evt 
                         prop = safety $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert m pCt

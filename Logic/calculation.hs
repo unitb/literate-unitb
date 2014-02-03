@@ -5,11 +5,12 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Label
 
-import Theories.Notation
-
     -- Libraries
-import Data.Map (Map)
+import Control.Monad
 
+import Data.Map as M (Map, lookup, fromList)
+
+import Utilities.Format
 import Utilities.Syntactic
 
 embed :: Either a b -> (b -> IO c) -> IO (Either a c)
@@ -48,8 +49,18 @@ instance Syntactic Proof where
     line_info (Easy li)             = li
     line_info (FreeGoal _ _ _ li)   = li
 
+chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
+chain n x y 
+    | x == equal = Right y
+    | y == equal = Right x
+    | otherwise  = case M.lookup (x,y) $ fromList (chaining n) of
+                    Just z -> Right z
+                    Nothing -> Left $ format "chain: operators {0} and {1} don't chain" x y
 
-infer_goal (Calc _ _ s0 xs _) = 
+
+infer_goal :: Calculation -> Notation -> Either String Expr
+infer_goal (Calc _ _ s0 xs _) n = do
+        op <- mk_expr `fmap` foldM (chain n) equal (map g xs)
         case reverse $ map f xs of
             x:_ -> either 
                         (\x -> Left (x)) --,i,j)) 
@@ -57,7 +68,7 @@ infer_goal (Calc _ _ s0 xs _) =
                         (s0 `op` x)
             []   -> Left ("a calculation must include at least one reasoning step") --,i,j)
     where
-        op = mk_expr $ foldl chain equal $ map g xs
+--        op = mk_expr $ foldl chain equal $ map g xs
         f (_,y,_,_) = y
         g (x,_,_,_) = x
 

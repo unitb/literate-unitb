@@ -71,6 +71,17 @@ with_tracing x = unsafePerformIO $ do
             else turn_tracing_off
         return r
 
+with_tracingM cmd = do
+        b <- return $ unsafePerformIO is_tracing_on
+        let !() = if b 
+            then () 
+            else unsafePerformIO turn_tracing_on
+        !r <- cmd
+        let !() = if b 
+                then () 
+                else unsafePerformIO turn_tracing_off
+        return r
+
 with_tracingIO cmd = do
         b <- liftIO $ is_tracing_on
         if b 

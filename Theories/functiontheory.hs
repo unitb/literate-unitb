@@ -78,7 +78,7 @@ function_theory = Theory { .. }
                 
         gen_param = Just $ fun_type (GENERIC "t0") (GENERIC "t1")
         
-        extends =  [ set_theory ]
+        extends =  singleton "set" set_theory
         
         consts = empty
         dummies = empty

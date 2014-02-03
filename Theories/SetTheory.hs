@@ -34,7 +34,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
 --        g :: Ord a => (Type -> Map a b) -> Map a b
 --        g = unions . flip L.map (concatMap f $ S.elems ts)
 
-        extends = []
+        extends = M.empty
         consts  = M.empty
         dummies = M.empty
         types = symbol_table [set_sort]

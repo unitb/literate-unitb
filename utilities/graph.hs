@@ -3,6 +3,7 @@ module Utilities.Graph
     ( Composition, cycles, cycles_with
     , Min(..), closure
     , m_closure, m_closure_with
+    , m_closure_with'
     , as_matrix, as_matrix_with
     , matrix_of_with, Matrix )
 where
@@ -15,7 +16,11 @@ import Data.Array.ST
 import Data.Function
 import Data.Graph
 import Data.List as L hiding ( union, (\\) )
-import Data.Map  as M ( Map, fromList, mapKeys, (!) )
+import Data.Map  as M 
+    ( Map, fromList, fromListWith
+    , toList, adjust
+    , mapKeys, (!)
+    , union )
 
 import Prelude hiding ( seq )
 
@@ -40,11 +45,11 @@ cycles_with ys xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
         collapse xs = xs
 
 class Composition a where
-    union  :: a -> a -> a
+    up  :: a -> a -> a
     seq    :: a -> a -> a
 
 instance Composition Bool where
-    union x y = x || y
+    up x y = x || y
     seq x y   = x && y
 
 data Min a = 
@@ -52,9 +57,9 @@ data Min a =
     | Infinite
 
 instance (Ord a, Num a) => Composition (Min a) where
-    union (Min x) (Min y) = Min $ x `min` y
-    union Infinite y      = y
-    union x Infinite      = x
+    up (Min x) (Min y) = Min $ x `min` y
+    up Infinite y      = y
+    up x Infinite      = x
     seq (Min x) (Min y)   = Min $  x  +  y
     seq Infinite _        = Infinite
     seq _ Infinite        = Infinite
@@ -90,11 +95,27 @@ m_closure xs = ixmap (g m, g n) f $ closure_ ar
 --        g (i,j)    = (m1 ! i, m1 ! j) 
 --        (m,n)      = bounds ar
 
-m_closure_with :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
-m_closure_with rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
+m_closure_with' :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
+m_closure_with' rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
     where
         (_,m1,ar) = matrix_of_with rs xs
         g (i,j)    = (m1 A.! i, m1 A.! j) 
+
+m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
+m_closure_with vs es = fromList $ do
+        (x,xs) <- toList result
+        y      <- vs
+        return ((x,y),y `elem` xs)
+    where
+        list        = fromListWith (++) $ map m_v vs ++ map m_e es
+        m_v v       = (v,[])
+        m_e (v0,v1) = (v0,[v1])
+        order       = cycles_with vs es
+        f m (AcyclicSCC v) = M.adjust (++ g m v) v m
+        f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
+        g m v  = list M.! v ++ concatMap (m M.!) (list M.! v)
+        h m vs = vs ++ concatMap (g m) vs
+        result      = foldl f list order
 
 as_matrix xs = as_matrix_with [] xs
 
@@ -138,7 +159,7 @@ closure_ ar = runSTArray $ do
               x <- readArray ar (i,k)
               y <- readArray ar (k,j)
               z <- readArray ar (i,j)
-              writeArray ar (i,j) $ z `union` seq x y
+              writeArray ar (i,j) $ z `up` seq x y
         return ar
     where
         ((_,m),(_,n)) = bounds ar

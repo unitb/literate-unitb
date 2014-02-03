@@ -32,6 +32,7 @@ import qualified Data.Set as S
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.Trace
 
 context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
 
@@ -134,7 +135,7 @@ find_proof_step hyps m = visit_doc
             ,   EnvBlock $ \() xs proofs -> do
                     li <- lift $ ask
                     cc <- toEither $ parse_calc hyps m xs
-                    case infer_goal cc of
+                    case infer_goal cc (all_notation m) of
                         Right cc_goal -> set_proof (ByCalc cc { goal = cc_goal }) proofs
                         Left msg      -> left [Error (format "type error: {0}" msg) li]
             )
@@ -247,7 +248,9 @@ parse_calc hyps m xs =
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do
             xp <- fromEither ztrue $ get_expr m a
-            op <- fromEither equal $ parse_oper (context m)
+            op <- fromEither equal $ parse_oper 
+                    (context m)
+                    (all_notation m)
                     (concatMap flatten_li b) 
             hs <- hint c []
             hyp <- fromEither [] (do
@@ -287,12 +290,29 @@ parse_calc hyps m xs =
                     err (M.lookup xs $ scheds  ev)
                     err $ M.lookup xs $ guard  ev
                     err $ M.lookup xs $ action ev
+
+    -- assoc' n
+get_table m = with_tracingM $ do
+        let key = sort $ M.keys $ extends $ theory m
+--        traceM $ "KEY: " ++ show key
+        tb <- lift $ RWS.gets parse_table
+        case M.lookup key tb of
+            Just x -> return x
+            Nothing -> do
+                let x   = assoc' $ all_notation m
+                    new = insert key x tb
+                lift $ RWS.modify $ \s -> s { parse_table = new }
+                return x
                                 
 get_expr :: ( Monad m, Monoid b ) 
          => Machine -> [LatexDoc] 
          -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_expr m ys = do
-        y  <- focus_es $ parse_expr (context m) (concatMap flatten_li xs)
+        tb <- get_table m
+        y  <- focus_es $ parse_expr 
+            (context m) 
+            (all_notation m) tb
+            (concatMap flatten_li xs)
         let x = normalize_generics y
         li <- if L.null xs
             then ask
@@ -309,7 +329,11 @@ get_assert :: ( Monad m, Monoid b )
            => Machine -> [LatexDoc] 
            -> EitherT [Error] (RWST LineInfo b System m) Expr
 get_assert m ys = do
-        x <- focus_es $ parse_expr (context m) (concatMap flatten_li xs)
+        tb <- get_table m
+        x  <- focus_es $ parse_expr 
+            (context m) 
+            (all_notation m) tb
+            (concatMap flatten_li xs)
         li <- if L.null xs
             then ask
             else return $ line_info xs
@@ -329,11 +353,13 @@ get_evt_part :: ( Monad m, Monoid b )
              -> [LatexDoc] 
              -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_evt_part m e ys = do
-        x <- focus_es $ parse_expr (
+        tb <- get_table m
+        x  <- focus_es $ parse_expr (
                                      step_ctx m 
                          `merge_ctx` theory_ctx S.empty (theory m)
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
+                        (all_notation m) tb
                         (concatMap flatten_li xs)
         li <- if L.null xs
             then ask

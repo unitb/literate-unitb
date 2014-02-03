@@ -16,8 +16,9 @@ import Logic.Operator
 
 import Theories.SetTheory
 import Theories.FunctionTheory
-import Theories.Notation
+--import Theories.Notation
 
+import Utilities.Graph
 import Utilities.Syntactic
 
 import Z3.Z3
@@ -36,30 +37,44 @@ import Data.Map as M hiding ( map )
 
 import Utilities.Format
 
-data Parser a = Parser { fromParser :: (R.ReaderT (Context, Notation) (Scanner Char) a) }
+type Param = (Context, Notation, Matrix Operator Assoc)
+
+data Parser a = Parser { fromParser :: (R.ReaderT Param (Scanner Char) a) }
 
 instance Monad Parser where
     Parser m0 >>= f = Parser $ m0 >>= (fromParser . f)
     return x = Parser $ return x
     fail x   = Parser $ fail x
 
-runParser :: Context -> Notation -> Parser a -> Scanner Char a
-runParser x y m = R.runReaderT (fromParser m) (x,y)
+runParser :: Context -> Notation 
+          -> Matrix Operator Assoc -> Parser a 
+          -> Scanner Char a
+runParser x y z m = R.runReaderT (fromParser m) (x,y,z)
 
 get_context :: Parser Context 
-get_context = Parser $ R.asks fst
+get_context = Parser $ do
+    (x,_,_) <- R.ask
+    return x
 
 get_notation :: Parser Notation
-get_notation = Parser $ R.asks snd
+get_notation = Parser $ do
+    (_,x,_) <- R.ask
+    return x
+
+get_table :: Parser (Matrix Operator Assoc)
+get_table = Parser $ do
+    (_,_,x) <- R.ask
+    return x
+
+get_params = Parser R.ask
 
 liftP :: Scanner Char a -> Parser a
 liftP = Parser . lift
 
 liftHOF :: (Scanner Char a -> Scanner Char b) -> Parser a -> Parser b
 liftHOF f m = do
-        x <- get_context
-        y <- get_notation
-        liftP $ f $ runParser x y m
+        (x,y,z) <- get_params
+        liftP $ f $ runParser x y z m
 
 match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
 
@@ -93,11 +108,10 @@ isWord x = isAlphaNum x || x == '_'
 
 read_ifP :: (Char -> Bool) -> (Char -> Parser a) -> Parser a -> Parser a 
 read_ifP p m0 m1 = do
-        x <- get_context
-        y <- get_notation
+        (x,y,z) <- get_params
         liftP $ read_if p 
-            (runParser x y . m0)
-            (runParser x y m1)
+            (runParser x y z . m0)
+            (runParser x y z m1)
 
 word0 :: Parser String
 word0 = read_ifP isWord 
@@ -194,20 +208,23 @@ vars = do
         return (map (\x -> (x,t)) vs)     
 
 get_variables :: (Monad m, MonadReader LineInfo m)
-              => Context -> [LatexDoc] 
+              => Context -> Notation
+              -> [LatexDoc] 
               -> EitherT [Error] m [(String, Var)]
-get_variables ctx cs = do
+get_variables ctx n cs = do
         LI fn i j <- lift $ ask
         xs <- hoistEither $ read_tokens 
-            (runParser ctx notations vars) 
+            (runParser ctx n M.empty vars) 
             fn m (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
         m = concatMap flatten_li cs
 
 unary :: Parser UnaryOperator
-unary = choiceP
-            (map f $ lefts $ new_ops notations)
+unary = do
+        n <- get_notation
+        choiceP
+            (map f $ lefts $ new_ops n)
             (fail "expecting an unary operator")            
             return
     where
@@ -217,18 +234,17 @@ unary = choiceP
 
 choiceP :: [Parser a] -> Parser a -> (a -> Parser a) -> Parser a
 choiceP xs x final = do
-        y <- get_context
-        z <- get_notation
+        (y,z,w) <- get_params
         liftP $ choice 
-            (map (runParser y z) xs)
-            (runParser y z x)
-            (runParser y z . final)
+            (map (runParser y z w) xs)
+            (runParser y z w x)
+            (runParser y z w . final)
 
 oper :: Parser BinOperator
 oper = do
-        notations <- get_notation
+        n <- get_notation
         choiceP
-            (map f $ rights $ new_ops notations)
+            (map f $ rights $ new_ops n)
             (fail "expecting a binary operator")            
             return
     where
@@ -366,20 +382,18 @@ close_curly = read_listP "\\}"
 
 tryP :: Parser a -> (a -> Parser b) -> Parser b -> Parser b
 tryP m0 m1 m2 = do
-        x <- get_context
-        y <- get_notation
+        (x,y,z) <- get_params
         liftP $ try 
-            (runParser x y m0)
-            (\z -> runParser x y (m1 z))
-            (runParser x y m2)
+            (runParser x y z m0)
+            (\k -> runParser x y z (m1 k))
+            (runParser x y z m2)
 
 sep1P :: Parser a -> Parser b -> Parser [a]
 sep1P m0 m1 = do
-        x <- get_context
-        y <- get_notation
+        (x,y,z) <- get_params
         liftP $ sep1 
-            (runParser x y m0)
-            (runParser x y m1)
+            (runParser x y z m0)
+            (runParser x y z m1)
 
 expr :: Parser Expr
 expr = do
@@ -433,14 +447,16 @@ expr = do
                -> Parser Term
         reduce [] [] e0 op0                 = read_term [([],e0,op0)]
         reduce xs@( (vs,e0,op0):ys ) [] e1 op1 = do
-            case assoc op0 op1 of
+            r <- assoc op0 op1
+            case r of
                 LeftAssoc ->  do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
                 Ambiguous ->  fail $ format "ambiguous expression: {0} and {1} are not associative" op0 op1
-        reduce xs (u:us) e0 op0             =
-            case binds u op0 of
+        reduce xs (u:us) e0 op0             = do
+            r <- binds u op0
+            case r of
                 LeftAssoc   -> do
                     e1 <- apply_unary u e0
                     reduce xs us e1 op0
@@ -458,6 +474,15 @@ expr = do
                 e1 <- apply_unary u e0
                 reduce_all xs us e1
                     
+assoc :: BinOperator -> BinOperator -> Parser Assoc
+assoc x0 x1 = do
+        tb <- get_table
+        return $ tb ! (Right x0, Right x1)
+
+binds :: UnaryOperator -> BinOperator -> Parser Assoc
+binds x0 x1 = do
+        tb <- get_table
+        return $ tb ! (Left x0, Right x1)
 
 apply_unary :: UnaryOperator -> Term -> Parser Term
 apply_unary op e = do
@@ -491,16 +516,19 @@ apply_op op x0 x1 = do
     where
         err_msg = "functional operator cannot be the operand of any binary operator: {0}, {1}"
 
+    -- Too many arguments
 parse_expr :: ( Monad m
               , MonadReader LineInfo m
               , MonadState ExprStore m) 
            => Context 
+           -> Notation
+           -> Matrix Operator Assoc 
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m Expr
-parse_expr ctx c = do
+parse_expr ctx n assoc c = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx notations expr) 
+            (runParser ctx n assoc expr) 
             (file_name li) 
             c (line li, column li)
         ES.insert e (map fst c)
@@ -509,12 +537,13 @@ parse_expr ctx c = do
 parse_oper :: ( Monad m
               , MonadReader LineInfo m) 
            => Context 
+           -> Notation
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m BinOperator
-parse_oper ctx c = do
+parse_oper ctx n c = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx notations 
+            (runParser ctx n M.empty
                 $ do eat_spaceP ; x <- oper ; eat_spaceP ; return x) 
             (file_name li) 
             c (line li, column li)

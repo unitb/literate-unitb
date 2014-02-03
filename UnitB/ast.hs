@@ -46,6 +46,7 @@ module UnitB.AST
     , System (..)
     , empty_system
     , replace_fine
+    , all_notation
     ) 
 where
  
@@ -56,8 +57,12 @@ import Logic.ExpressionStore
 import Logic.Calculation
 import Logic.Classes
 import Logic.Label
+import Logic.Operator
 
-import Theories.Theory
+import Theories.Theory as Th
+import Theories.SetTheory
+import Theories.FunctionTheory
+import Theories.Arithmetic
 
     -- Libraries
 import Control.Monad hiding ( guard )
@@ -74,7 +79,7 @@ import Utilities.Format
 import Utilities.Graph
 
 all_types :: Theory -> Map String Sort
-all_types th = unions (types th : map all_types (extends th)) 
+all_types th = unions (types th : map all_types (elems $ extends th)) 
 
 data Schedule = Schedule
         { coarse :: Map Label Expr
@@ -123,7 +128,9 @@ class (Typeable a, Eq a, Show a) => RefRule a where
     
 empty_machine :: String -> Machine
 empty_machine n = Mch (Lbl n) 
-        empty_theory { extends = [basic_theory] }
+        empty_theory { extends = fromList [
+            ("arithmetic",arithmetic), 
+            ("basic", basic_theory)] }
         empty empty empty 
         empty_property_set 
         empty_property_set
@@ -133,11 +140,32 @@ data System = Sys
         ,  ref_struct   :: Map Label Label
         ,  expr_store   :: ExprStore
         ,  machines     :: Map String Machine
+        ,  parse_table  :: Map [String] (Matrix Operator Assoc)
+        ,  theories     :: Map String Theory
         }
     deriving Eq
 
 empty_system :: System
-empty_system = Sys [] M.empty empty_store M.empty
+empty_system = Sys [] M.empty empty_store M.empty 
+        M.empty $ M.fromList 
+            [ ("sets",set_theory)
+            , ("functions",function_theory)
+            , ("arithmetic",arithmetic)
+            , ("basic",basic_theory)]
+
+all_notation m = flip precede logic 
+        $ L.foldl combine empty_notation 
+        $ map Th.notation th
+    where
+        th = theory m : elems (extends $ theory m)
+--        names = keys (extends $ theory m)
+
+--all_notation _ = flip precede logic $ L.foldl combine empty_notation
+--    [ functions
+--    , arith
+--	, function_notation
+--    , set_notation ] 
+
 
 merge :: (Eq c, Ord a, Monoid c) 
       => b -> (b -> b -> Either c b) 
@@ -275,7 +303,7 @@ merge_proofs m0 m1 = toEither $ do
 
 merge_th_types :: Theory -> Theory -> Either [String] Theory
 merge_th_types t0 t1 = toEither $ do
-        let es = extends t0 ++ extends t1
+        let es = extends t0 `union` extends t1
         types <- fromEither empty $ disjoint_union
                 (\x -> ["Name clash with type '" ++ show x ++ "'"])
                 (types t0)
@@ -305,7 +333,7 @@ merge_th_decl t0 t1 = toEither $ do
             }
 merge_th_struct :: Theory -> Theory -> Either [String] Theory
 merge_th_struct t0 t1 = toEither $ do
-        let ext = (extends t0 ++ extends t1)
+        let ext = (extends t0 `union` extends t1)
         return t0
             { extends = ext }
 merge_th_exprs :: Theory -> Theory -> Either [String] Theory

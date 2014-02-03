@@ -26,7 +26,8 @@ test = test_cases
     [ Case "case 0 - complete domain of matrices" case0 result0
     , Case "case 1 - operator grammar discrepancy" case1 result1
     , Case "case 2 - new ambiguities" case2 result2
-    , Case "case 3 - transitive closures" case3 result3 ]
+    , Case "case 3 - transitive closures" case3 result3
+    , Case "case 4 - transitive closures in linear time" case4 result4 ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do
@@ -339,5 +340,16 @@ result3 = sort
     [ (0,1),(1,2),(2,3)
     , (1,3),(0,2),(0,3)
     , (0,4),(1,4),(5,2)
+    , (5,3) ] 
 
+case4 = return $ sort (M.keys $ M.filter id $ m_closure_with [0..5] xs)
+    where
+        xs :: [(Int,Int)]
+        xs = [ (0,1),(1,2),(2,3)
+             , (1,4),(5,2) ]
+
+result4 = sort
+    [ (0,1),(1,2),(2,3)
+    , (1,3),(0,2),(0,3)
+    , (0,4),(1,4),(5,2)
     , (5,3) ] 

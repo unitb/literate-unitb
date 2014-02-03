@@ -23,7 +23,8 @@ leq     = BinOperator "le" "\\le"       mzle
 geq     = BinOperator "ge" "\\ge"       (flip mzle)
 
 arithmetic = empty_theory { 
-        types = symbol_table [IntSort,RealSort] }
+        types = symbol_table [IntSort,RealSort]
+        , notation = arith }
 
 arith = Notation
     { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]

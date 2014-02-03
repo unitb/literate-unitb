@@ -78,7 +78,7 @@ thm_lbl           = label "THM"
 theory_ctx :: Set Type -> Theory -> Context
 theory_ctx used_ts th = 
         merge_all_ctx $
-            (Context ts c new_fun M.empty dums) : map (theory_ctx ref_ts) d
+            (Context ts c new_fun M.empty dums) : map (theory_ctx ref_ts) (M.elems d)
     where
         d      = extends th
         tparam = gen_param th
@@ -109,7 +109,7 @@ theory_ctx used_ts th =
     -- todo: prefix name of theorems of a z3_decoration
 theory_facts :: Set Type -> Theory -> Map Label Expr
 theory_facts ts th = 
-        merge_all (new_fact : map (theory_facts ref_ts) d)
+        merge_all (new_fact : map (theory_facts ref_ts) (M.elems d))
     where
         d      = extends th
         tparam = gen_param th
