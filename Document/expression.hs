@@ -226,6 +226,7 @@ choiceP xs x final = do
 
 oper :: Parser BinOperator
 oper = do
+        notations <- get_notation
         choiceP
             (map f $ rights $ new_ops notations)
             (fail "expecting a binary operator")            

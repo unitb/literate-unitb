@@ -1,9 +1,13 @@
+{-# LANGUAGE RecordWildCards #-}
 module Theories.Arithmetic where
 
     -- Modules
 import Logic.Const
+import Logic.Expr
+import Logic.Label
 import Logic.Operator
 
+import Theories.Theory
 import Theories.FunctionTheory
 
     -- Libraries
@@ -17,6 +21,9 @@ less    = BinOperator "less" "<"        mzless
 greater = BinOperator "greater" ">"     (flip mzless)
 leq     = BinOperator "le" "\\le"       mzle
 geq     = BinOperator "ge" "\\ge"       (flip mzle)
+
+arithmetic = empty_theory { 
+        types = symbol_table [IntSort,RealSort] }
 
 arith = Notation
     { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]

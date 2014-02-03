@@ -22,6 +22,7 @@ import UnitB.PO
 
 import Theories.SetTheory
 import Theories.FunctionTheory
+import Theories.Arithmetic
 
 import Z3.Z3 
 
@@ -193,7 +194,7 @@ read_document xs = do
         gather ms (Env n _ c li)     
                 | n == "machine"    = do
                     (name,_) <- with_line_info li $ get_1_lbl c
-                    let m        = empty_machine name
+                    let m           = empty_machine name
                     return (insert name m ms)
                 | otherwise         = foldM gather ms c
         gather ms x                 = fold_docM gather ms x
@@ -262,32 +263,20 @@ imports :: Monad m
         -> Machine 
         -> MSEitherT Error System m Machine 
 imports = visit_doc []
-            [   ( "\\withsets"
-                , CmdBlock $ \(String cset,()) m -> do
-                    let th = theory m
+            [   ( "\\with"
+                , CmdBlock $ \(String th_name,()) m -> do
                     toEither $ error_list
-                        [ ( not (cset `member` all_types th)
-                          , format "Carrier set {0} undefined" cset )
+                        [ ( not (th_name `elem` ["sets","functions","arithmetic"])
+                          , format "Undefined theory {0} " th_name )
                         ]
-                    return m { theory = th {
---                                extends = set_theory (USER_DEFINED (all_types th ! cset) []) : extends th } } 
-                                extends = set_theory : extends th } }
+                    let th = case th_name of
+                                "sets"       -> set_theory
+                                "functions"  -> function_theory
+                                "arithmetic" -> arithmetic
+                                _ -> error "imports"
+                    return m { theory = (theory m) {
+                                extends = th : extends (theory m) } }
                 )
-            ,   ( "\\withfun"
-                , CmdBlock $ \(String dset, String rset,()) m -> do
-                    let th = theory m
-                    toEither $ error_list 
-                        [   ( not (dset `member` all_types th)
-                            , format "Carrier set {0} undefined" dset )
-                        ,   ( not (rset `member` all_types th)
-                            , format "Carrier set {0} undefined" rset )
-                        ]
---                    let dtype = USER_DEFINED (all_types th ! dset) []
---                    let rtype = USER_DEFINED (all_types th ! rset) []
-                    return m { theory = th {
---                                extends = function_theory dtype rtype : extends th } } 
-                                  extends = function_theory : extends th } }
-              )
             ]
 
     -- Todo: detect when the same variable is declared twice

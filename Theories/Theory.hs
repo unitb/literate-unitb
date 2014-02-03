@@ -18,7 +18,15 @@ data Theory = Theory
         , notation  :: Notation }
     deriving (Eq, Show)
 
---data GenericTheory = GenTh String (Set Type -> Theory)
---
---instance Show GenericTheory where
---    show (GenTh name _) = "{ generic theory: " ++ name ++ "}"
+
+basic_theory :: Theory
+basic_theory = Theory [] Nothing
+    (symbol_table [BoolSort]) 
+    empty empty empty 
+    empty empty_notation
+
+empty_theory :: Theory
+empty_theory = Theory [] Nothing
+    empty empty empty empty 
+    empty empty_notation
+

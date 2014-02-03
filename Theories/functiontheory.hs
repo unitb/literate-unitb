@@ -85,7 +85,7 @@ function_theory = Theory { .. }
         
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
-        types    = empty -- symbol_table [fun_sort]
+        types    = symbol_table [fun_sort]
         funs =
             symbol_table 
                 [  Fun [t0,t1] "empty-fun" [] $ fun_type t0 t1
