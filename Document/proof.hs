@@ -6,7 +6,6 @@ import Document.Expression
 import Document.Visitor
 
 import Latex.Parser
-import Latex.Scanner
 
 import UnitB.AST
 import UnitB.PO
@@ -248,11 +247,8 @@ parse_calc hyps m xs =
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do
             xp <- fromEither ztrue $ get_expr m a
-            LI fn i j  <- RWS.ask
-            op <- fromEither equal $ hoistEither $ read_tokens 
-                    (do eat_space ; x <- oper ; eat_space ; return x) 
-                    fn
-                    (concatMap flatten_li b) (i,j)
+            op <- fromEither equal $ parse_oper (context m)
+                    (concatMap flatten_li b) 
             hs <- hint c []
             hyp <- fromEither [] (do
                 hoistEither $ mapM (find hyps m) hs)

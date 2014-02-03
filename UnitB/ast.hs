@@ -56,6 +56,7 @@ import Logic.ExpressionStore
 import Logic.Calculation
 import Logic.Classes
 import Logic.Label
+import Logic.Operator
 
 import Theories.SetTheory
 import Theories.Theory
@@ -77,14 +78,14 @@ import Utilities.Graph
 basic_theory :: Theory
 basic_theory = Theory [] Nothing
     (symbol_table [set_sort,fun_sort,BoolSort,IntSort,RealSort]) 
-    empty empty empty empty
+    empty empty empty empty empty_notation
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (extends th)) 
 
 empty_theory :: Theory
 empty_theory = Theory [] Nothing
-    empty empty empty empty empty
+    empty empty empty empty empty empty_notation
 
 data Schedule = Schedule
         { coarse :: Map Label Expr

@@ -132,6 +132,8 @@ function_theory = Theory { .. }
                 , (label $ dec' "19", axm24)
                 ]
 
+        notation = function_notation
+
             -- dom and empty-fun
         axm1 = fromJust (zdom (as_fun $ Right zempty_fun) `mzeq` Right zempty_set)
             -- empty-fun and ovl
@@ -249,6 +251,8 @@ function_theory = Theory { .. }
         -- (s2,s2_decl) = var "s2" $ set_type t1
 --        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
         dec' x = "@function@@_" ++ x
+        
+        
 
 --function_theory :: S.Set Type -> Theory 
 --function_theory ts = Theory { .. }

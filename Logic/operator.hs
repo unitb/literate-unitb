@@ -130,7 +130,7 @@ data Notation = Notation
     , right_assoc :: [[BinOperator]]
     , relations :: [BinOperator]
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
-    }
+    } deriving (Eq,Show)
 
 empty_notation = Notation 
     { new_ops = []

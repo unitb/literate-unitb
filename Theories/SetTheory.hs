@@ -57,6 +57,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 , (label $ dec' "5", axm5)
                 , (label $ dec' "6", axm6)
                 ]
+        notation = set_notation
+                
             -- elem and mk-set
         Right axm0 = mzforall [x_decl,y_decl] mztrue ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
             -- elem over set-diff

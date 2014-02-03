@@ -76,10 +76,17 @@ sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
 theory_ctx :: Set Type -> Theory -> Context
-theory_ctx used_ts th@(Theory d tparam ts fun c _ dums) = 
+theory_ctx used_ts th = 
         merge_all_ctx $
             (Context ts c new_fun M.empty dums) : map (theory_ctx ref_ts) d
     where
+        d      = extends th
+        tparam = gen_param th
+        ts     = types th
+        fun    = funs th
+        c      = consts th
+        dums   = dummies th
+        
         new_fun = case tparam of
             Just t -> trace (unlines $ show ref_ts : map pretty_print' fm) $ M.fromList $ do
                 m' <- mapMaybe (unify t) $ S.elems used_ts
@@ -101,9 +108,13 @@ theory_ctx used_ts th@(Theory d tparam ts fun c _ dums) =
 
     -- todo: prefix name of theorems of a z3_decoration
 theory_facts :: Set Type -> Theory -> Map Label Expr
-theory_facts ts (Theory d tparam _ _ _ fact _) = 
+theory_facts ts th = 
         merge_all (new_fact : map (theory_facts ref_ts) d)
     where
+        d      = extends th
+        tparam = gen_param th
+        facts  = fact th
+
         new_fact = case tparam of
             Just t -> M.fromList $ do
 --                traceM ("param: " ++ show t)
@@ -111,7 +122,7 @@ theory_facts ts (Theory d tparam _ _ _ fact _) =
                 m' <- mapMaybe (unify t) $ S.elems ts
                 let m = mapKeys (reverse . drop 2 . reverse) m'
 --                traceM $ show t ++ " : " ++ show m
-                (tag, f) <- M.toList fact
+                (tag, f) <- M.toList facts
 --                let new_f = substitute_type_vars_left m f
                 let (name,nb) = case SU.split "@@" $ show tag of
                                     [name,nb] -> (name,nb)
@@ -120,7 +131,7 @@ theory_facts ts (Theory d tparam _ _ _ fact _) =
 --                return (name, new_f)
                 return (label $ name ++ concatMap z3_decoration (M.elems m) ++ nb, 
                      new_f)
-            Nothing -> fact
+            Nothing -> facts
         ref_ts = S.unions $ ts : map used_types fm
         fm = M.elems new_fact
             
