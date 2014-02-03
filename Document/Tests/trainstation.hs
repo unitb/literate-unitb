@@ -210,19 +210,19 @@ props0 = empty_property_set
             ]
     ,  proofs = fromList
             [   ( label "train0/enter/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/INIT/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+                , Proof $ Calc empty_ctx ztrue ztrue [] li)
             ]
     ,  safety = fromList
             []

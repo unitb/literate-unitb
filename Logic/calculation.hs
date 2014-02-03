@@ -1,3 +1,4 @@
+{-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
 module Logic.Calculation where
 
     -- Modules
@@ -5,13 +6,17 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Label
 
+import Theories.Theory
+
     -- Libraries
 import Control.Monad
 
 import Data.Map as M (Map, lookup, fromList)
+import Data.Typeable
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.HeterogenousEquality
 
 embed :: Either a b -> (b -> IO c) -> IO (Either a c)
 embed em f = do
@@ -28,25 +33,57 @@ data Calculation = Calc
         ,  first_step :: Expr
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
-    deriving Eq
+    deriving (Eq, Typeable)
 
-data Proof = 
-        ByCalc Calculation
-        | FreeGoal String String Proof     LineInfo
-        | ByCases   [(Label, Expr, Proof)] LineInfo
-        | Easy                             LineInfo
-        | Assume (Map Label Expr) Expr Proof LineInfo
-        | ByParts [(Expr,Proof)]           LineInfo
-        | Assertion (Map Label (Expr,Proof)) Proof LineInfo
-    deriving Eq
+data Proof = forall a. ProofRule a => Proof a
+    deriving Typeable
+
+instance Eq Proof where
+    Proof x == Proof y = x `h_equal` y
+
+data FreeGoal   = FreeGoal String String Proof     LineInfo
+    deriving (Eq,Typeable)
+
+data ByCases    = ByCases   [(Label, Expr, Proof)] LineInfo
+    deriving (Eq,Typeable)
+
+data Easy       = Easy                             LineInfo
+    deriving (Eq,Typeable)
+data Assume     = Assume (Map Label Expr) Expr Proof LineInfo
+    deriving (Eq,Typeable)
+data ByParts    = ByParts [(Expr,Proof)]           LineInfo
+    deriving (Eq,Typeable)
+data Assertion  = Assertion (Map Label (Expr,Proof)) Proof LineInfo
+    deriving (Eq,Typeable)
+
+class (Syntactic a, Typeable a, Eq a) => ProofRule a where
+    proof_po :: Theory -> a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
+
+instance ProofRule Proof where
+    proof_po y (Proof x) z a = proof_po y x z a
+
+instance Syntactic Calculation where
+    line_info c = l_info c
 
 instance Syntactic Proof where
-    line_info (ByCalc c)            = l_info c
+    line_info (Proof x) = line_info x
+
+instance Syntactic ByCases where
     line_info (ByCases _ li)        = li
+
+instance Syntactic Assume where
     line_info (Assume _ _ _ li)     = li
+
+instance Syntactic ByParts where
     line_info (ByParts _ li)        = li
+
+instance Syntactic Assertion where
     line_info (Assertion _ _ li)    = li
+
+instance Syntactic Easy where
     line_info (Easy li)             = li
+
+instance Syntactic FreeGoal where
     line_info (FreeGoal _ _ _ li)   = li
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator

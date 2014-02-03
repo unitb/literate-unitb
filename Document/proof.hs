@@ -136,7 +136,7 @@ find_proof_step hyps m = visit_doc
                     li <- lift $ ask
                     cc <- toEither $ parse_calc hyps m xs
                     case infer_goal cc (all_notation m) of
-                        Right cc_goal -> set_proof (ByCalc cc { goal = cc_goal }) proofs
+                        Right cc_goal -> set_proof (Proof $ cc { goal = cc_goal }) proofs
                         Left msg      -> left [Error (format "type error: {0}" msg) li]
             )
                 -- TODO: make into a command
@@ -144,19 +144,19 @@ find_proof_step hyps m = visit_doc
             ,   EnvBlock $ \(String from,String to,()) xs proofs -> do
                     li    <- lift $ ask
                     p     <- collect_proof_step hyps m xs
-                    set_proof (FreeGoal from to p li) proofs
+                    set_proof (Proof $ FreeGoal from to p li) proofs
             )
         ,   (   "by:cases"
             ,   EnvBlock (\() xs proofs -> do
                     li    <- lift $ ask
                     cases <- toEither $ find_cases hyps m xs []
-                    set_proof (ByCases (reverse cases) li) proofs )
+                    set_proof (Proof $ ByCases (reverse cases) li) proofs )
             )
         ,   (   "by:parts"
             ,   EnvBlock (\() xs proofs -> do
                     li    <- lift $ ask
                     cases <- toEither $ find_parts hyps m xs []
-                    set_proof (ByParts (reverse cases) li) proofs )
+                    set_proof (Proof $ ByParts (reverse cases) li) proofs )
             )
         ,   (   "subproof"
             ,   EnvBlock $ \(lbl,()) xs proofs -> do
@@ -166,7 +166,7 @@ find_proof_step hyps m = visit_doc
         ] [ (   "\\easy"
             ,   CmdBlock $ \() proofs -> do
                     li <- lift $ ask        
-                    set_proof (Easy li) proofs
+                    set_proof (Proof $ Easy li) proofs
             )
         ]
 
@@ -218,10 +218,10 @@ collect_proof_step hyps m xs = do
                 p <- if M.null assrt && M.null prfs
                     then return p
                     else if keysSet assrt == keysSet prfs
-                    then return $ Assertion (M.mapWithKey f assrt) p li
+                    then return $ Proof $ Assertion (M.mapWithKey f assrt) p li
                     else left [Error "assertion labels and proofs mismatch" li]
                 case ng of
-                    Just g  -> return $ Assume asm g p li
+                    Just g  -> return $ Proof $ Assume asm g p li
                     Nothing -> 
                         if M.null asm 
                         then return p
@@ -264,9 +264,9 @@ parse_calc hyps m xs =
             xp <- fromEither ztrue $ get_expr m xs
             return $ Calc (context m) ztrue xp [] li
         _               -> do
-                    li <- ask
-                    RWS.tell [Error "invalid hint" li]
-                    return $ Calc (context m) ztrue ztrue [] li
+            li <- ask
+            RWS.tell [Error "invalid hint" li]
+            return $ Calc (context m) ztrue ztrue [] li
     where
         find :: Map Label Expr -> Machine -> (Label,LineInfo) -> Either [Error] Expr
         find hyps m (xs,li) = either Right Left (do

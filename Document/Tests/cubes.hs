@@ -16,6 +16,7 @@ import UnitB.PO
 
     -- Libraries
 import Data.Map hiding ( map )
+import Data.Typeable
 
 import Utilities.Syntactic
 
@@ -82,7 +83,7 @@ prop_set6 = empty_property_set {
         n = Word var_n
         z3 = zint 3
         z6 = zint 6
-        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
+        calc = Proof $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
 event6_evt = empty_event {
         action = fromList $ zip 
@@ -206,8 +207,13 @@ case9 = do
         case r of
             Right [m] -> do
                 case toList $ proofs $ props m of
-                    (lbl,ByCalc calc):_ -> 
-                        return (show lbl ++ ":\n" ++ show_proof calc)
+                    (lbl,Proof calc):_ -> 
+                        case cast calc of
+                            Just calc ->
+                                return (show lbl ++ ":\n" ++ show_proof calc)
+                            _         ->
+                                return (
+                                      "error: incorrect proof type" ++ show (typeOf calc))
                     xs       -> return (
                                       "error: found "
                                    ++ show (length xs) 

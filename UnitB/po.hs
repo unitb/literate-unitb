@@ -441,72 +441,86 @@ obligations' th ctx c = do
         ys <- steps_po th ctx c
         return ((label ("relation " ++ show (l_info c)),x):ys)
 
-proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
-proof_po th p@(ByCalc c) lbl po@(Sequent ctx _ _) = do
-        let (y0,y1) = entailment (goal_po c) po
-        ys   <- obligations' th ctx c
-        return $ map f ((g "goal ",y0) : (g "hypotheses ",y1) : ys)
-    where 
-        f (x,y) = (composite_label [lbl, x],y)
-        g x = label (x ++ show li)
-        li  = line_info p
-proof_po th (ByCases xs li) lbl (Sequent ctx asm goal) = do
-        dis <- toErrors li $ mzsome (map (\(_,x,_) -> Right x) xs)
-        let c  = completeness dis
-        cs <- mapM case_a $ zip [1..] xs
-        return (c : concat cs)
-    where
-        completeness dis = 
-                ( (f ("completeness " ++ show li)) 
-                , Sequent ctx asm dis )
-        case_a (n,(_,x,p)) = proof_po th p (f ("case " ++ show n))
-                $ Sequent ctx (x:asm) goal
-        f x     = composite_label [lbl,label x]
-proof_po th (ByParts xs li) lbl (Sequent ctx asm goal) = do
-        let conj = map (\(x,_) -> x) xs
-        let c  = completeness conj
-        cs <- mapM part $ zip [1..] xs
-        return (c : concat cs)
-    where
-        completeness conj = 
-                ( (f ("completeness " ++ show li)) 
-                , Sequent ctx conj goal )
-        part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
-                $ Sequent ctx asm x
-        f x     = composite_label [lbl,label x]
-proof_po    th  (FreeGoal v u p li) 
-            lbl po@(Sequent ctx asm goal) = do
-        new_goal <- free_vars goal
-        proof_po th p lbl $ Sequent ctx asm new_goal
-    where
-        free_vars (Binder Forall ds r expr) 
-                | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
-                                            (rename v u r)
-                                            $ rename v u expr)
-                | otherwise          = Left $ [Error (format "variable can't be freed: {0}" u) li]
-            where
-        free_vars expr = return expr
---        step_lbls = map (("case "++) . show) [1..]
---        lbls      = map f ("completeness" : step_lbls)
---        f x       = composite_label [lbl,label x]
---        g x       = name x /= v
-proof_po    _  (Easy (LI _ i j)) 
-            lbl po = 
-        return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
-proof_po    th  (Assume new_asm new_goal p (LI _ i j))
-            lbl (Sequent ctx asm goal) = do
-        pos <- proof_po th p lbl $ Sequent ctx (M.elems new_asm ++ asm) new_goal
-        return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
-                 , Sequent ctx [] (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
-               : pos)
-proof_po    th  (Assertion lemma p _)
-            lbl (Sequent ctx asm goal) = do
-        pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
-            $ Sequent ctx (asm ++ map fst (M.elems lemma)) goal
-        pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
-            proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
-                $ Sequent ctx asm g )
-        return (pos1 ++ concat pos2)
+--proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
+
+instance ProofRule Calculation where
+    proof_po th c lbl po@(Sequent ctx _ _) = do
+            let (y0,y1) = entailment (goal_po c) po
+            ys   <- obligations' th ctx c
+            return $ map f ((g "goal ",y0) : (g "hypotheses ",y1) : ys)
+        where 
+            f (x,y) = (composite_label [lbl, x],y)
+            g x = label (x ++ show li)
+            li  = line_info c
+
+instance ProofRule ByCases where
+    proof_po th (ByCases xs li) lbl (Sequent ctx asm goal) = do
+            dis <- toErrors li $ mzsome (map (\(_,x,_) -> Right x) xs)
+            let c  = completeness dis
+            cs <- mapM case_a $ zip [1..] xs
+            return (c : concat cs)
+        where
+            completeness dis = 
+                    ( (f ("completeness " ++ show li)) 
+                    , Sequent ctx asm dis )
+            case_a (n,(_,x,p)) = proof_po th p (f ("case " ++ show n))
+                    $ Sequent ctx (x:asm) goal
+            f x     = composite_label [lbl,label x]
+
+instance ProofRule ByParts where
+    proof_po th (ByParts xs li) lbl (Sequent ctx asm goal) = do
+            let conj = map (\(x,_) -> x) xs
+            let c  = completeness conj
+            cs <- mapM part $ zip [1..] xs
+            return (c : concat cs)
+        where
+            completeness conj = 
+                    ( (f ("completeness " ++ show li)) 
+                    , Sequent ctx conj goal )
+            part (n,(x,p)) = proof_po th p (f ("part " ++ show n))
+                    $ Sequent ctx asm x
+            f x     = composite_label [lbl,label x]
+
+instance ProofRule FreeGoal where
+    proof_po    th  (FreeGoal v u p li) 
+                lbl po@(Sequent ctx asm goal) = do
+            new_goal <- free_vars goal
+            proof_po th p lbl $ Sequent ctx asm new_goal
+        where
+            free_vars (Binder Forall ds r expr) 
+                    | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
+                                                (rename v u r)
+                                                $ rename v u expr)
+                    | otherwise          = Left $ [Error (format "variable can't be freed: {0}" u) li]
+                where
+            free_vars expr = return expr
+    --        step_lbls = map (("case "++) . show) [1..]
+    --        lbls      = map f ("completeness" : step_lbls)
+    --        f x       = composite_label [lbl,label x]
+    --        g x       = name x /= v
+
+instance ProofRule Easy where
+    proof_po    _  (Easy (LI _ i j)) 
+                lbl po = 
+            return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
+
+instance ProofRule Assume where
+    proof_po    th  (Assume new_asm new_goal p (LI _ i j))
+                lbl (Sequent ctx asm goal) = do
+            pos <- proof_po th p lbl $ Sequent ctx (M.elems new_asm ++ asm) new_goal
+            return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
+                     , Sequent ctx [] (zimplies (zall $ M.elems new_asm) new_goal `zimplies` goal) )
+                   : pos)
+
+instance ProofRule Assertion where
+    proof_po    th  (Assertion lemma p _)
+                lbl (Sequent ctx asm goal) = do
+            pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
+                $ Sequent ctx (asm ++ map fst (M.elems lemma)) goal
+            pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
+                proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
+                    $ Sequent ctx asm g )
+            return (pos1 ++ concat pos2)
 
 are_fresh :: [String] -> Sequent -> Bool
 are_fresh vs (Sequent _ asm goal) = 

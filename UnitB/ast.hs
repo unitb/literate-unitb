@@ -77,6 +77,7 @@ import           Data.Typeable
 
 import Utilities.Format
 import Utilities.Graph
+import Utilities.HeterogenousEquality
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (elems $ extends th)) 
@@ -494,7 +495,7 @@ instance Show Rule where
     show (Rule x) = show x
 
 instance Eq Rule where
-    Rule x == Rule y = Just x == cast y
+    Rule x == Rule y = x `h_equal` y
 
 --data Liveness = Live (Map Label ProgressProp) 
 
