@@ -70,10 +70,10 @@ param_sum e
         return ["\\item \\textbf{any} " 
             ++ intercalate "," (map name $ M.elems $ params e)]
 guard_sum e
-    | M.null $ guard e   = return []
-    | otherwise          = do
+    | M.null $ new_guard e = return []
+    | otherwise            = do
         let kw = "\\item \\textbf{when}"
-        xs <- put_all_expr $ guard e
+        xs <- put_all_expr $ new_guard e
         return $ kw:xs
 act_sum e
     | M.null $ action e  = return []

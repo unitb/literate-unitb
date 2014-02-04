@@ -131,12 +131,14 @@ parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
-assert m suff prop = 
+assert m suff prop = assert_hyp m suff [] prop
+
+assert_hyp m suff hyps prop = 
         [ ( po_lbl
             , (Sequent 
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m) 
-                (invariants m)
+                (invariants m ++ hyps)
                 prop))
         ]
     where
@@ -378,6 +380,8 @@ instance RefRule ScheduleChange where
             Replace _ _      -> label "delay"
             Weaken           -> label "weaken"
             ReplaceFineSch _ _ _ _ -> label "replace"
+            RemoveGuard _          -> label "grd"
+            AddGuard _             -> label "add"
     refinement_po r m = 
         case rule r of
             Replace (_,prog) (_,saf) ->
@@ -421,6 +425,10 @@ instance RefRule ScheduleChange where
                             new `zimplies` old
                             )
                  )
+            RemoveGuard lbl -> 
+                M.fromList $ 
+                    assert_hyp m "" (M.elems $ new_guard evt) $ old_guard evt ! lbl 
+            AddGuard _ -> M.empty
         where
             sch  =  scheds evt
             evt = events m ! event r

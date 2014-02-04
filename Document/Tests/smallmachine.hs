@@ -163,7 +163,7 @@ result6 = (unlines
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
       , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/m0/0/REF/weaken"
+      , "  o  m0/inc/SCH/m0/1/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
       , "passed 11 / 12"
@@ -214,7 +214,7 @@ result9 = unlines [
 --        " (=> false (= x y))"]
         " true"]
 
-case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
+case9 = show_po path6 $ label "m0/inc/SCH/m0/1/REF/weaken"
 
 result10 = unlines [
         " sort: , , "

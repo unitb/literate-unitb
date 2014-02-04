@@ -193,10 +193,15 @@ props0 = empty_property_set
             ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-    ,   derivation = singleton (label "leave/SCH/train0/0") 
-            $ Rule (weaken (label "leave"))
+    ,   derivation = fromList 
+            [ ( label "leave/SCH/train0/1"
+              , Rule (weaken (label "leave"))
                     { remove = S.singleton (label "default")
-                    , add    = S.singleton (label "c0") }
+                    , add    = S.singleton (label "c0") } )
+            , ( label "enter/GRD/train0/0"
+              , Rule $ add_guard (label "enter") $ label "grd1" )
+            , ( label "leave/GRD/train0/0"
+              , Rule $ add_guard (label "leave") $ label "grd0" ) ]
     ,   transient = fromList
             [   ( label "tr0"
                 , Transient
@@ -241,9 +246,10 @@ props0 = empty_property_set
 
 enter_evt = empty_event
     {  indices = symbol_table [t_decl]
-    ,  guard = fromList
+    ,  guards = fromList
             [  (label "grd1", fromJust $ mznot (t `zelem` in_var))
             ]
+    ,  sched_ref = [add_guard (label "enter") $ label "grd1"]
     ,  action = fromList
             [  (label "a1", (fromJust (in_var' `mzeq` (in_var `zunion` zmk_set t))))
             ,  (label "a2", (fromJust (loc' `mzeq` (loc `zovl` zmk_fun t ent))))
@@ -254,8 +260,10 @@ leave_evt = empty_event
     ,  scheds    = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
     ,  sched_ref = [ (weaken (label "leave"))
                      { remove = S.singleton (label "default")
-                     , add    = S.singleton (label "c0") } ]
-    ,  guard = fromList
+                     , add    = S.singleton (label "c0") }
+                   , add_guard (label "leave") $ label "grd0"
+                   ]
+    ,  guards = fromList
             [  (label "grd0", fromJust $ mzand 
                                     (zapply loc t `mzeq` ext) 
                                     (t `zelem` in_var) )
@@ -701,7 +709,7 @@ result1 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH" 
-        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/1/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 93 / 94"
         ]
@@ -1113,7 +1121,7 @@ result13 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/1/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 64 / 69"
         ]
@@ -1188,7 +1196,7 @@ result14 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/1/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 60 / 62"
         ]
@@ -1269,7 +1277,7 @@ result15 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/1/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 65 / 68"
         ]
@@ -1369,7 +1377,7 @@ result16 = unlines
         ,  "  o  train0/leave/INV/inv2/step (104,1)"
         ,  "  o  train0/leave/INV/inv2/step (106,1)"
         ,  " xxx train0/leave/SCH"
-        ,  "  o  train0/leave/SCH/train0/0/REF/weaken"
+        ,  "  o  train0/leave/SCH/train0/1/REF/weaken"
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 86 / 87"
         ]

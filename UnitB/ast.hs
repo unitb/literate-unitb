@@ -42,11 +42,14 @@ module UnitB.AST
     , ScheduleRule (..)
 --    , list_schedules
     , new_sched
+    , new_guard
     , default_schedule
     , System (..)
     , empty_system
     , replace_fine
     , all_notation
+    , remove_guard
+    , add_guard
     ) 
 where
  
@@ -97,7 +100,8 @@ data Event = Event
 --        , new_sched :: Schedule
         , scheds    :: Map Label Expr
         , params    :: Map String Var
-        , guard     :: Map Label Expr
+        , old_guard :: Map Label Expr
+        , guards    :: Map Label Expr
         , action    :: Map Label Expr }
     deriving (Eq, Show)
 
@@ -108,7 +112,8 @@ empty_event = Event
         , old_sched = empty_schedule
         , scheds = default_schedule
         , params = empty
-        , guard  = empty 
+        , old_guard = empty
+        , guards = empty 
         , action = empty 
         }
 
@@ -372,15 +377,15 @@ merge_evt_exprs e0 e1 = toEither $ do
                 return cs
         grd <- fromEither empty $ disjoint_union
                 (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
-                (guard e0)
-                (guard e1)
+                (guards e0)
+                (guards e1)
         act <- fromEither empty $ disjoint_union
                 (\x -> ["multiple actions with the same label: " ++ show x ++ ""])
                 (action e0)
                 (action e1)
         return e0 
             { scheds = coarse_sch
-            , guard  = grd
+            , guards = grd
             , action = act }
 
 merge_evt_proof :: Event -> Event -> Either [String] Event
@@ -391,7 +396,8 @@ merge_evt_proof e0 e1 = toEither $ do
 --                (sched_ref e0)
 --                (sched_ref e1)
         return e0 
-            { old_sched = new_sched e1 }
+            { old_sched = new_sched e1
+            , old_guard = new_guard e1 }
 
 
 --merge_theory :: Theory -> Theory -> Either [String] Theory
@@ -424,6 +430,7 @@ skip m = Event
         M.empty [] 
         empty_schedule
         default_schedule 
+        M.empty
         M.empty 
         M.empty 
         $ fromList $ map f $ M.elems $ variables m
@@ -553,6 +560,8 @@ data ScheduleRule =
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
         | ReplaceFineSch Expr Label Expr (Label,ProgressProp) 
+        | RemoveGuard Label
+        | AddGuard    Label
             -- old expr, new label, new expr, proof
     deriving (Show,Eq)
 
@@ -563,6 +572,10 @@ replace lbl prog saf = ScheduleChange lbl S.empty S.empty S.empty (Replace prog 
 replace_fine lbl old tag new prog = 
     ScheduleChange lbl S.empty S.empty S.empty 
         (ReplaceFineSch old tag new prog)
+
+add_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (AddGuard lbl)
+
+remove_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (RemoveGuard lbl)
 
 new_fine_sched (ScheduleChange { rule = ReplaceFineSch _ n_lbl n_expr _ }) = [(n_lbl,n_expr)]
 new_fine_sched _ = []
@@ -602,6 +615,17 @@ new_sched e = Schedule new_c_sched new_f_sched
         sched = scheds e 
         r_set = L.foldl S.union S.empty $ map remove ref
         a_set = L.foldl S.union S.empty $ map add ref
+
+new_guard :: Event -> Map Label Expr
+new_guard e = L.foldl f old ref
+    where
+        ref = map rule $ sched_ref e
+        grd = guards e
+        old = old_guard e
+        f m (AddGuard lbl)    = M.insert lbl (grd ! lbl) m
+        f m (RemoveGuard lbl) = M.delete lbl m
+        f m _ = m
+
 --last_schedule :: Event -> (Map Label Expr, Maybe (Label, Expr))
 --last_schedule evt = sch
 --    where

@@ -453,7 +453,7 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 \refines{m2}
 
 \[	\variable{isgn: \Bool} ; ~
-	\variable{osgn: \Blk \pfun \Bool} 
+	\variable{osgn: \set [\Blk] } 
 \]
 
 \with{sets}
@@ -463,13 +463,17 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 
 \begin{align*}
 	\dummy{ b_0, b_1, p, p_0, p_1, p_2 : \Blk }
-\\	\invariant{m3:inv0}{ \dom.osgn = plf }
-\\	\invariant{m3:inv1}{ \qforall{b_0,b_1}{ b_0 \in plf \land b_1 \in plf }{ \true } }
-%\\	\evassignment{m0:enter}{m3:ent:act0}{isgn' = isgn}
-%\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' = osgn}
+\\	\invariant{m3:inv0}{ osgn \subseteq plf }
+\\	\invariant{m3:inv1}{ \qforall{p_0,p_1}{ p_0 \in osgn \land p_1 \in osgn }{ p_0 = p_1 } }
+\\	\evassignment{m0:enter}{m3:ent:act0}{isgn' = isgn}
+\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' = osgn}
 \\	\evassignment{m1:movein}{m3:mi:act0}{isgn' = isgn}
 \\	\evassignment{m1:movein}{m3:mi:act1}{osgn' = osgn}
-\\	\initialization{m3:init0}{ osgn = \emptyfun }
+\\	\evassignment{m0:leave}{m3:ext:act0}{isgn' = isgn}
+\\	\evassignment{m0:leave}{m3:ext:act1}{osgn' = osgn}
+\\	\evassignment{m1:moveout}{m3:mo:act0}{isgn' = isgn}
+\\	\evassignment{m1:moveout}{m3:mo:act1}{osgn' = osgn}
+\\	\initialization{m3:init0}{ osgn = \emptyset }
 \\	\initialization{m3:init1}{ isgn = \false }
 \end{align*}
 

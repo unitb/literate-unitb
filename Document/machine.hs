@@ -428,17 +428,25 @@ collect_expr = visit_doc
                                 , format "event '{0}' is undeclared" evt )
                             ]
                         let old_event = events m ! evt
-                            grds = guard old_event
+                            grds = guards old_event
                         toEither $ error_list
                             [   ( evt `member` grds
                                 , format "{0} is already used for another guard" lbl )
                             ]
                         grd      <- get_evt_part m old_event xs
-                        let new_event = old_event { 
-                                    guard =  insert lbl grd grds  }
+                        let n         = length $ sched_ref old_event
+                            rule      = add_guard evt lbl
+                            new_event = old_event { 
+                                            sched_ref = rule : sched_ref old_event
+                                            , guards  =  insert lbl grd grds  }
+                            po_lbl    = composite_label [evt,label "GRD",_name m,label $ show n]
                         scope (context m) grd (indices old_event `merge` params old_event)
-                        return m {          
-                                events  = insert evt new_event $ events m } 
+                        return m {  
+                              props = (props m) { 
+                                    derivation = 
+                                        insert po_lbl (Rule rule)
+                                    $ derivation (props m) } 
+                              , events  = insert evt new_event $ events m } 
             )
         ,   (   "\\cschedule"
             ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
@@ -683,8 +691,8 @@ collect_proofs = visit_doc
                             (Co (M.elems dum) 
                                 (zor 
                                     (zimplies (zand p $ znot q) $ primed (variables m) (zor p q))
-                                    (zall $  (elems $ guard event)
-                                    	  ++ (elems $ action event))))                                    
+                                    (zall $  (elems $ new_guard event)
+                                    	  ++ (elems $ action    event))))                                    
                             (constraint $ props m) } } 
             )
         ,   (   "\\replace"
@@ -824,6 +832,8 @@ deduct_schedule_ref_struct li m = do
                     add_proof_edge lbl [prog,saf]
                 ReplaceFineSch _ _ _ (prog,_) ->
                     add_proof_edge lbl [prog]
+                RemoveGuard _ -> return ()
+                AddGuard _ -> return ()
         g lbl m = composite_label [m, lbl, label "SCH"]
 
 parse_system :: FilePath -> IO (Either [Error] System)

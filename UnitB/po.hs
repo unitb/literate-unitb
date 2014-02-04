@@ -255,7 +255,7 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
             [ po [] $ exist_ind $ zall $ xp0:xp1:map snd xps ]
     where
 --        thm  = inv_thm p
-        grd  = M.elems $ guard evt
+        grd  = M.elems $ new_guard evt
         sch0 = M.elems $ coarse $ new_sched evt
         sch1 = map snd $ maybeToList $ fine $ new_sched evt
         sch  = sch0 ++ sch1
@@ -312,7 +312,7 @@ prop_co m pname (Co fv xp) =
                     hyp
                     goal )
             where
-                grd  = M.elems $ guard evt
+                grd  = M.elems $ new_guard evt
                 act  = M.elems $ action evt
                 forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
                 hyp  = invariants m ++ grd ++ act
@@ -333,7 +333,7 @@ inv_po m pname xp =
                     (invariants m ++ grd ++ act)
                     (primed (variables m) xp))
             where
-                grd = M.elems $ guard evt
+                grd = M.elems $ new_guard evt
                 act = M.elems $ action evt
                 ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
@@ -341,7 +341,7 @@ inv_po m pname xp =
 
 fis_po m lbl evt = M.fromList $ map f pos 
     where
-        grd  = M.elems $ guard evt
+        grd  = M.elems $ new_guard evt
         pvar = map prime $ M.elems $ variables m
         ind  = indices evt `merge` params evt
         pos  = partition_expr pvar $ M.elems $ action evt
@@ -366,7 +366,7 @@ sch_po m lbl evt = M.singleton
             hyp
             goal)
     where
-        grd   = M.elems $ guard evt
+        grd   = M.elems $ new_guard evt
         c_sch = M.elems $ coarse $ new_sched evt
         f_sch = map snd $ maybeToList $ fine $ new_sched evt
         param = params evt
