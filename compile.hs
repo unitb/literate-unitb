@@ -4,6 +4,7 @@ import BuildSystem
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import System.Timeout
@@ -40,17 +41,29 @@ main = do
             ys <- liftIO $ do
 --                forM_ (take 20 $ repeat "") putStrLn
                 clearScreen
-                let compile x = readProcessWithExitCode "ghc" (x ++ ["--make","-W","-Werror"]) ""
-                rs <- mapM compile 
-                    [ ["test.hs","-threaded"]
+                let f cmd = do
+                        x <- cmd
+                        case x of 
+                            (ExitSuccess,_,_) -> return $ Right x
+                            (ExitFailure _,_,_) -> return $ Left x 
+                    g cmd = do
+                        x <- cmd
+                        return $ either (:[]) id x
+                    compile x = EitherT $ f 
+                                    $ readProcessWithExitCode 
+                                        "ghc" 
+                                        (x ++ ["--make","-W","-Werror"]) ""
+                rs <- g $ runEitherT $ mapM compile 
+                    [ ["periodic.hs"]
+                    , ["compile.hs"]
+                    , ["test.hs","-threaded"]
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
-                    , ["periodic.hs"]
-                    , ["compile.hs"]
                     , ["run_tests.hs","-threaded"] ]
-                let (cs,_,yss) = unzip3 rs
+                let (cs,xs,yss) = unzip3 rs
                 let c = foldl success ExitSuccess cs
                 let ys = concat yss
+                putStr $ concat xs
                 putStr ys 
                 putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "
                 hFlush stdout
