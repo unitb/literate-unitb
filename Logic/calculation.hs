@@ -41,7 +41,7 @@ data Proof = forall a. ProofRule a => Proof a
 instance Eq Proof where
     Proof x == Proof y = x `h_equal` y
 
-data FreeGoal   = FreeGoal String String Proof     LineInfo
+data FreeGoal   = FreeGoal String String Type Proof LineInfo
     deriving (Eq,Typeable)
 
 data ByCases    = ByCases   [(Label, Expr, Proof)] LineInfo
@@ -84,7 +84,7 @@ instance Syntactic Easy where
     line_info (Easy li)             = li
 
 instance Syntactic FreeGoal where
-    line_info (FreeGoal _ _ _ li)   = li
+    line_info (FreeGoal _ _ _ _ li)   = li
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
 chain n x y 

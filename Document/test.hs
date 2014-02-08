@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
-module Document.Test ( test_case ) where
+module Document.Test 
+    ( test, test_case ) 
+where
 
 import Control.Monad
 

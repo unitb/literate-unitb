@@ -190,12 +190,12 @@ assoc' ops
             -- fromList (zip bs $ L.map g bs)
     where
         cycles = L.filter (\x -> pm M.! (x,x)) (new_ops ops)
-        complete = all_ops L.\\ (nub $ new_ops ops)
-        all_ops = nub $	concat (concat (prec ops) 
-					 ++ L.map (L.map Right) (left_assoc ops)
-					 ++ L.map (L.map Right) (right_assoc ops)
-					 ++ L.map (\((x,y),z) -> L.map Right [x,y,z]) (chaining ops))
-				++ L.map Right (relations ops)
+--        complete = all_ops L.\\ (nub $ new_ops ops)
+--        all_ops = nub $	concat (concat (prec ops) 
+--					 ++ L.map (L.map Right) (left_assoc ops)
+--					 ++ L.map (L.map Right) (right_assoc ops)
+--					 ++ L.map (\((x,y),z) -> L.map Right [x,y,z]) (chaining ops))
+--				++ L.map Right (relations ops)
         pm = precedence ops
         lm = left_assoc_graph ops
         rm = right_assoc_graph ops

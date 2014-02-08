@@ -9,9 +9,8 @@ import Data.IORef
 import Data.List
 import Data.Typeable
 
-import Prelude hiding ( catch )
+import Prelude
 
-import System.IO
 import System.IO.Unsafe
 
 data TestCase = 
@@ -47,20 +46,20 @@ break_line y =  map concat (
 takel :: Int -> [[a]] -> [[a]]
 takel n (x:xs)
     | n <= length x  = []
-    | length x < n = x:takel (n-length x) xs
+    | otherwise      = x:takel (n-length x) xs
 takel _ [] = []
 
 dropl :: Int -> [[a]] -> [[a]]
 dropl n (x:xs)
     | n <= length x  = x:xs
-    | length x < n = dropl (n-length x) xs
+    | otherwise      = dropl (n-length x) xs
 dropl _ [] = []
-
+ 
 longest_prefix [] _ = []
 longest_prefix _ [] = []
 longest_prefix (x:xs) (y:ys)
-    | x /= y    = []
     | x == y    = x : longest_prefix xs ys
+    | otherwise = []
 
 longest_suffix xs ys = reverse $ longest_prefix (reverse xs) (reverse ys)
 

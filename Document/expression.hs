@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts, RecordWildCards #-}
 module Document.Expression 
     ( parse_expr, oper
     , get_variables, parse_oper )
@@ -21,8 +21,6 @@ import Theories.FunctionTheory
 import Utilities.Graph
 import Utilities.Syntactic
 
-import Z3.Z3
-
     -- Libraries
 import           Control.Monad.Reader.Class
 import           Control.Monad.State.Class
@@ -36,8 +34,14 @@ import Data.List as L
 import Data.Map as M hiding ( map )
 
 import Utilities.Format
+import Utilities.Trace
 
-type Param = (Context, Notation, Matrix Operator Assoc)
+data Param = Param 
+    { context :: Context
+    , notation :: Notation
+    , table :: Matrix Operator Assoc
+    , variables :: Map String Var
+    }
 
 data Parser a = Parser { fromParser :: (R.ReaderT Param (Scanner Char) a) }
 
@@ -47,24 +51,39 @@ instance Monad Parser where
     fail x   = Parser $ fail x
 
 runParser :: Context -> Notation 
-          -> Matrix Operator Assoc -> Parser a 
+          -> Matrix Operator Assoc 
+          -> Map String Var
+          -> Parser a 
           -> Scanner Char a
-runParser x y z m = R.runReaderT (fromParser m) (x,y,z)
+runParser x y z w m = R.runReaderT (fromParser m) (Param x y z w)
+
+runParserWith :: Param -> Parser a -> Scanner Char a
+runParserWith x m = R.runReaderT (fromParser m) x
 
 get_context :: Parser Context 
-get_context = Parser $ do
-    (x,_,_) <- R.ask
-    return x
+get_context = Parser $ R.asks context
 
 get_notation :: Parser Notation
-get_notation = Parser $ do
-    (_,x,_) <- R.ask
-    return x
+get_notation = Parser $ R.asks notation
 
 get_table :: Parser (Matrix Operator Assoc)
-get_table = Parser $ do
-    (_,_,x) <- R.ask
-    return x
+get_table = Parser $ R.asks table
+
+get_vars :: Parser (Map String Var)
+get_vars = Parser $ R.asks variables
+
+with_vars vs cmd = do
+        x <- get_params
+        traceM $ format "New variables: {0}" vs
+        zs <- get_vars
+        traceM $ format "old variables: {0}" $ M.keys zs
+        liftP $ runParserWith (f x) $ do
+                vs <- get_vars
+                traceM $ format "With new variables: {0}" $ M.keys vs
+                cmd
+    where
+        f s@(Param { .. }) =
+                s { variables = fromList vs `M.union` variables }
 
 get_params = Parser R.ask
 
@@ -73,8 +92,8 @@ liftP = Parser . lift
 
 liftHOF :: (Scanner Char a -> Scanner Char b) -> Parser a -> Parser b
 liftHOF f m = do
-        (x,y,z) <- get_params
-        liftP $ f $ runParser x y z m
+        x <- get_params
+        liftP $ f $ runParserWith x m
 
 match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
 
@@ -108,10 +127,10 @@ isWord x = isAlphaNum x || x == '_'
 
 read_ifP :: (Char -> Bool) -> (Char -> Parser a) -> Parser a -> Parser a 
 read_ifP p m0 m1 = do
-        (x,y,z) <- get_params
+        x <- get_params
         liftP $ read_if p 
-            (runParser x y z . m0)
-            (runParser x y z m1)
+            (runParserWith x . m0)
+            (runParserWith x m1)
 
 word0 :: Parser String
 word0 = read_ifP isWord 
@@ -214,7 +233,7 @@ get_variables :: (Monad m, MonadReader LineInfo m)
 get_variables ctx n cs = do
         LI fn i j <- lift $ ask
         xs <- hoistEither $ read_tokens 
-            (runParser ctx n M.empty vars) 
+            (runParser ctx n M.empty M.empty vars) 
             fn m (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
@@ -234,11 +253,11 @@ unary = do
 
 choiceP :: [Parser a] -> Parser a -> (a -> Parser a) -> Parser a
 choiceP xs x final = do
-        (y,z,w) <- get_params
+        y <- get_params
         liftP $ choice 
-            (map (runParser y z w) xs)
-            (runParser y z w x)
-            (runParser y z w . final)
+            (map (runParserWith y) xs)
+            (runParserWith y x)
+            (runParserWith y . final)
 
 oper :: Parser BinOperator
 oper = do
@@ -294,35 +313,37 @@ term = do
 
                             read_listP "{"
                             eat_spaceP
-                            vs <- sep1P word comma
+                            ns <- sep1P word comma
                             eat_spaceP
                             read_listP "}"
                             eat_spaceP
 
-                            read_listP "{"
-                            eat_spaceP
-                            r <- tryP (read_listP "}") 
-                                (\_ -> return ztrue)
-                                (do r <- expr
-                                    read_listP "}"
-                                    return r)
-                            eat_spaceP
-                            
-                            read_listP "{"
-                            eat_spaceP
-                            t <- expr
-                            eat_spaceP
-                            read_listP "}"
-                            eat_spaceP
-                            let { quant = fromList 
-                                [ ("\\qforall",Binder Forall)
-                                , ("\\qexists",Binder Exists)
-                                , ("\\qfun",Binder Lambda) 
-                                , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
                             ctx <- get_context
-                            case dummy_types vs ctx of
-                                Just vs -> return $ Right (quant vs r t)
+                            vs  <- case dummy_types ns ctx of
+                                Just vs -> return vs
                                 Nothing -> fail ("bound variables are not typed")
+                            with_vars (zip ns vs) $ do
+                                read_listP "{"
+                                eat_spaceP
+                                r <- tryP (read_listP "}") 
+                                    (\_ -> return ztrue)
+                                    (do r <- expr
+                                        read_listP "}"
+                                        return r)
+                                eat_spaceP
+                                
+                                read_listP "{"
+                                eat_spaceP
+                                t <- expr
+                                eat_spaceP
+                                read_listP "}"
+                                eat_spaceP
+                                let { quant = fromList 
+                                    [ ("\\qforall",Binder Forall)
+                                    , ("\\qexists",Binder Exists)
+                                    , ("\\qfun",Binder Lambda) 
+                                    , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
+                                return $ Right (quant vs r t)
                         else if xs == "\\oftype"
                         then do
                             eat_spaceP
@@ -342,8 +363,8 @@ term = do
                                 Right new_e -> return $ Right new_e
                                 Left msg -> fail msg
                         else do
-                            ctx <- get_context
-                            case var_decl xs ctx of
+                            vs <- get_vars
+                            case M.lookup xs vs of
                                 Just (Var v t) -> return $ Right (Word $ Var (zs v) t) 
                                 Nothing -> fail ("undeclared variable: " ++ xs))
             (do 
@@ -382,18 +403,18 @@ close_curly = read_listP "\\}"
 
 tryP :: Parser a -> (a -> Parser b) -> Parser b -> Parser b
 tryP m0 m1 m2 = do
-        (x,y,z) <- get_params
+        x <- get_params
         liftP $ try 
-            (runParser x y z m0)
-            (\k -> runParser x y z (m1 k))
-            (runParser x y z m2)
+            (runParserWith x m0)
+            (\k -> runParserWith x (m1 k))
+            (runParserWith x m2)
 
 sep1P :: Parser a -> Parser b -> Parser [a]
 sep1P m0 m1 = do
-        (x,y,z) <- get_params
+        x <- get_params
         liftP $ sep1 
-            (runParser x y z m0)
-            (runParser x y z m1)
+            (runParserWith x m0)
+            (runParserWith x m1)
 
 expr :: Parser Expr
 expr = do
@@ -525,13 +546,14 @@ parse_expr :: ( Monad m
            -> Matrix Operator Assoc 
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m Expr
-parse_expr ctx n assoc c = do
+parse_expr ctx@(Context _ vars _ _ _)  n assoc input = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx n assoc expr) 
+            (runParser ctx n assoc vars expr) 
             (file_name li) 
-            c (line li, column li)
-        ES.insert e (map fst c)
+            input 
+            (line li, column li)
+        ES.insert e (map fst input)
         return e
 
 parse_oper :: ( Monad m
@@ -543,7 +565,7 @@ parse_oper :: ( Monad m
 parse_oper ctx n c = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx n M.empty
+            (runParser ctx n M.empty M.empty
                 $ do eat_spaceP ; x <- oper ; eat_spaceP ; return x) 
             (file_name li) 
             c (line li, column li)

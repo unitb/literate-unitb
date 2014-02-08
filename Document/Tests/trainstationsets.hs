@@ -16,7 +16,9 @@ test = test_cases
             [ Case "verify machine m0" (verify 0 path0) result0
             , Case "verify machine m1" (verify 1 path0) result1
             , Case "verify machine m2" (verify 2 path0) result2
+            , Case "verify machine m3" (verify 3 path0) result5
             , Case "type checking of boolean expressions" case3 result3
+            , Case "verify machine m3 error (wandering free variable)" (verify 3 path4) result4
             ]
 
 result0 = unlines
@@ -201,6 +203,95 @@ path3 = "Tests/train-station-set-err0.tex"
 case3 = do
     r <- parse_machine path3
     return $ show r
+
+path4 = "Tests/train-station-set-err1.tex"
+
+case4 = do
+    r <- parse_machine path4
+    return $ show r
+
+result4 = "Left [Error \"undeclared variable: t\" (494,26)]"
+
+result5 = unlines
+	[ "  o  m3/INIT/FIS/in"
+	, "  o  m3/INIT/FIS/isgn"
+	, "  o  m3/INIT/FIS/loc"
+	, "  o  m3/INIT/FIS/osgn"
+	, "  o  m3/INIT/INV/m3:inv0"
+	, "  o  m3/INIT/INV/m3:inv1"
+	, "  o  m3/INIT/INV/m3:inv2"
+	, "  o  m3/INIT/INV/m3:inv3"
+	, "  o  m3/SKIP/CO/m3:saf0"
+	, "  o  m3/SKIP/CO/m3:saf1"
+	, "  o  m3/m0:enter/CO/m3:saf0"
+	, "  o  m3/m0:enter/CO/m3:saf1"
+	, "  o  m3/m0:enter/FIS/in@prime"
+	, "  o  m3/m0:enter/FIS/isgn@prime"
+	, "  o  m3/m0:enter/FIS/loc@prime"
+	, "  o  m3/m0:enter/FIS/osgn@prime"
+	, "  o  m3/m0:enter/INV/m3:inv0"
+	, "  o  m3/m0:enter/INV/m3:inv1"
+	, "  o  m3/m0:enter/INV/m3:inv2"
+	, "  o  m3/m0:enter/INV/m3:inv3"
+	, "  o  m3/m0:enter/SCH"
+	, "  o  m3/m0:leave/CO/m3:saf0"
+	, "  o  m3/m0:leave/CO/m3:saf1"
+	, "  o  m3/m0:leave/FIS/in@prime"
+	, "  o  m3/m0:leave/FIS/isgn@prime"
+	, "  o  m3/m0:leave/FIS/loc@prime"
+	, "  o  m3/m0:leave/FIS/osgn@prime"
+	, "  o  m3/m0:leave/INV/m3:inv0"
+	, "  o  m3/m0:leave/INV/m3:inv1"
+	, "  o  m3/m0:leave/INV/m3:inv2"
+	, "  o  m3/m0:leave/INV/m3:inv3"
+	, "  o  m3/m0:leave/SCH"
+	, "  o  m3/m1:movein/CO/m3:saf0"
+	, "  o  m3/m1:movein/CO/m3:saf1"
+	, "  o  m3/m1:movein/FIS/in@prime"
+	, "  o  m3/m1:movein/FIS/isgn@prime"
+	, "  o  m3/m1:movein/FIS/loc@prime"
+	, "  o  m3/m1:movein/FIS/osgn@prime"
+	, "  o  m3/m1:movein/INV/m3:inv0"
+	, "  o  m3/m1:movein/INV/m3:inv1"
+	, "  o  m3/m1:movein/INV/m3:inv2"
+	, "  o  m3/m1:movein/INV/m3:inv3"
+	, "  o  m3/m1:movein/SCH"
+	, "  o  m3/m1:moveout/CO/m3:saf0"
+	, "  o  m3/m1:moveout/CO/m3:saf1"
+	, "  o  m3/m1:moveout/FIS/in@prime"
+	, "  o  m3/m1:moveout/FIS/isgn@prime"
+	, "  o  m3/m1:moveout/FIS/loc@prime"
+	, "  o  m3/m1:moveout/FIS/osgn@prime"
+	, "  o  m3/m1:moveout/GRD/m3/3/REF/grd"
+	, "  o  m3/m1:moveout/INV/m3:inv0"
+	, "  o  m3/m1:moveout/INV/m3:inv1"
+	, "  o  m3/m1:moveout/INV/m3:inv2"
+	, "  o  m3/m1:moveout/INV/m3:inv3"
+	, "  o  m3/m1:moveout/SCH"
+	, "  o  m3/m1:moveout/SCH/m3/1/REF/delay/prog/lhs"
+	, "  o  m3/m1:moveout/SCH/m3/1/REF/delay/prog/rhs"
+	, "  o  m3/m1:moveout/SCH/m3/1/REF/delay/saf/lhs"
+	, "  o  m3/m1:moveout/SCH/m3/1/REF/delay/saf/rhs"
+	, "  o  m3/m1:moveout/SCH/m3/2/REF/replace/prog/lhs"
+	, "  o  m3/m1:moveout/SCH/m3/2/REF/replace/prog/rhs"
+	, "  o  m3/m1:moveout/SCH/m3/2/REF/replace/str"
+	, "  o  m3/m3:ctr:plf/CO/m3:saf0"
+	, "  o  m3/m3:ctr:plf/CO/m3:saf1"
+	, "  o  m3/m3:ctr:plf/FIS/in@prime"
+	, "  o  m3/m3:ctr:plf/FIS/isgn@prime"
+	, "  o  m3/m3:ctr:plf/FIS/loc@prime"
+	, "  o  m3/m3:ctr:plf/FIS/osgn@prime"
+	, " xxx m3/m3:ctr:plf/INV/m3:inv0"
+	, " xxx m3/m3:ctr:plf/INV/m3:inv1"
+	, " xxx m3/m3:ctr:plf/INV/m3:inv2"
+	, " xxx m3/m3:ctr:plf/INV/m3:inv3"
+	, "  o  m3/m3:ctr:plf/SCH"
+	, " xxx m3/m3:ctr:plf/TR/m3:tr0/EN"
+	, "  o  m3/m3:ctr:plf/TR/m3:tr0/NEG"
+	, "  o  m3/m3:prog0/REF/discharge/saf/lhs"
+	, "  o  m3/m3:prog0/REF/discharge/saf/rhs"
+	, "  o  m3/m3:prog0/REF/discharge/tr"
+	, "passed 73 / 78" ]
 
 verify n path = do
     r <- parse_machine path

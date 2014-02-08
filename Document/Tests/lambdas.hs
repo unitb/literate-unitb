@@ -1,7 +1,7 @@
 module Document.Tests.Lambdas 
-    ( test_case, test
-    , part0, part1
-    , part2, part3 )
+--    ( test_case, test
+--    , part0, part1
+--    , part2, part3 )
 where
 
     -- Modules
@@ -418,7 +418,8 @@ result6 = unlines
      , "  o  m0/evt/INV/inv6/step (312,1)"
      , " xxx m0/evt/INV/inv6/step (314,1)"
      , "  o  m0/evt/INV/inv6/step (316,1)"
-     , " xxx m0/evt/INV/inv6/step (318,1)"
+--     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , "  o  m0/evt/INV/inv6/step (318,1)"
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/INV/inv8"
      , "  o  m0/evt/SCH"
@@ -434,7 +435,7 @@ result6 = unlines
      , "  o  m0/prog3/REF/PSP/rhs"
      , "  o  m0/prog4/REF/discharge/tr/lhs"
      , " xxx m0/prog4/REF/discharge/tr/rhs"
-     , "passed 77 / 84"
+     , "passed 78 / 84"
      ]
 
 path6 = "tests/cubes-t5.tex"
@@ -508,7 +509,8 @@ result7 = unlines
      , "  o  m0/evt/INV/inv6/step (312,1)"
      , " xxx m0/evt/INV/inv6/step (314,1)"
      , "  o  m0/evt/INV/inv6/step (316,1)"
-     , " xxx m0/evt/INV/inv6/step (318,1)"
+--     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , "  o  m0/evt/INV/inv6/step (318,1)"
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/SCH"
      , "  o  m0/prog0/REF/monotonicity/lhs"
@@ -529,7 +531,7 @@ result7 = unlines
      , "  o  m0/prog8/REF/transitivity/mhs"
      , "  o  m0/prog8/REF/transitivity/rhs"
      , " xxx m0/prog9/REF/add"
-     , "passed 74 / 88"
+     , "passed 75 / 88"
      ]
 
 path7 = "tests/cubes-t4.tex"
@@ -701,7 +703,8 @@ result9 = unlines
      , "  o  m0/evt/INV/inv6/step (312,1)"
      , " xxx m0/evt/INV/inv6/step (314,1)"
      , "  o  m0/evt/INV/inv6/step (316,1)"
-     , " xxx m0/evt/INV/inv6/step (318,1)"
+--     , " xxx m0/evt/INV/inv6/step (318,1)"
+     , "  o  m0/evt/INV/inv6/step (318,1)"
      , " xxx m0/evt/INV/inv6/step (320,1)"
      , "  o  m0/evt/INV/inv7"
      , "  o  m0/evt/SCH"
@@ -724,7 +727,7 @@ result9 = unlines
      , " xxx m0/prog6/REF/add"
      , " xxx m0/prog7/REF/add"
      , " xxx m0/prog8/REF/add"
-     , "passed 86 / 92"
+     , "passed 87 / 92"
      ]
      
 path9 = "tests/cubes-t8.tex"

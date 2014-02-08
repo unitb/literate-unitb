@@ -20,7 +20,10 @@ module Document.Visitor
     , drop_blank_text
     , get_1_lbl
     , System(..)
-    , focus_es
+    , focus_es, focusT
+    , focus, def_opt, expr_opt
+    , proof_opt
+    , Opt ( .. )
     , Focus(..) )
 where
 
@@ -34,9 +37,9 @@ import Logic.ExpressionStore
 import UnitB.AST
 
     -- Libraries
-import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local )
+import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local, writer, reader )
 import qualified Control.Monad.Trans.RWS as RWS
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding ( reader )
 import           Control.Monad.State.Class (MonadState)
 import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
@@ -227,25 +230,42 @@ find_cmd_arg n cmds (x:xs) = do
                 return (x:a,t,b,c)
 
 focus :: Monad m 
-      => (s1 -> s2) 
-      -> (s2 -> s1 -> s1) 
-      -> RWST a b s2 m r
-      -> RWST a b s1 m r
-focus get set m = RWST $ \r s1 -> do
-        (x,s2,w) <- runRWST m r (get s1)
-        return (x,set s2 s1,w)
+      => (Opt r1 r2 w1 w2 s1 s2) 
+      -> RWST r2 w2 s2 m a
+      -> RWST r1 w1 s1 m a
+focus opt m = RWST $ \r s1 -> do
+        (x,s2,w) <- runRWST m (reader opt r) (getter opt s1)
+        return (x,setter opt s2 s1, writer opt w)
 
-focusT get set m = EitherT $ focus get set $ runEitherT m
+focusT opt m = EitherT $ focus opt $ runEitherT m
 
-focus_es m = focusT expr_store set $ m
+focus_es :: Monad m
+         => EitherT e (RWST a1 b ExprStore m) a
+         -> EitherT e (RWST a1 b System m) a
+focus_es m = focusT expr_opt m
+
+data Opt a b c d f e = Opt 
+        { reader :: (a -> b)
+        , writer :: (d -> c)
+        , setter :: e -> f -> f
+        , getter :: f -> e }
+
+def_opt  = Opt id id (flip $ const id) id
+
+proof_opt = Opt id id set (expr_store . fst)
+    where
+        set x (a,b) = (a { expr_store = x }, b)
+
+expr_opt = Opt id id set expr_store
     where
         set x a = a { expr_store = x }
 
+    -- Bad, bad... unify the monad system of refinement, proof and machine already!
 class ( MonadState ExprStore m0
       , MonadState System m1 ) 
    => Focus m0 m1 where
     focus' :: m0 a -> m1 a
-
+    
 instance (Monoid b, Monad m) 
         => Focus (RWST a b ExprStore m) (RWST a b System m) where
     focus' cmd = RWST $ \r s1 -> do

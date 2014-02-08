@@ -503,11 +503,11 @@
 \newassertion{\initialization}{IN}
 \newassertion{\constraint}{CO}
 \newassertion{\assumption}{ASM}
-\newcommand{\transientB}[4] % {evt}{sched_num}{label}{ instantiation }{expr}
-{	\transientBackEnd{#1}{#3}
+\newcommand{\transientB}[3] % {evt}{label}{ instantiation }{expr}
+{	\transientBackEnd{#1}{#2}
 	}
-\newcommand{\transient}[3] % {evt}{sched_num}{label}{expr}
-{	\transientBackEnd{#1}{#3}
+\newcommand{\transient}[2] % {evt}{label}{expr}
+{	\transientBackEnd{#1}{#2}
 	}
 \newcomponent{\transientBackEnd}{TR}
 \newcomponent{\evguard}{G}
@@ -534,6 +534,7 @@
 \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
 \newcommand{\replace}[6]{}
 \newcommand{\replacefine}[5]{}
+\newcommand{\removeguard}[2]{}
 
 \newenvironment{block}
 {	\begin{list}{}

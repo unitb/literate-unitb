@@ -28,6 +28,7 @@ module UnitB.AST
     , merge_import
     , merge_decl
     , merge_exprs
+    , merge_refinements
     , merge_proofs
     , all_types
     , basic_theory
@@ -74,7 +75,6 @@ import Control.Monad.Writer hiding ( guard )
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
-import           Data.Maybe as M
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -284,13 +284,19 @@ merge_exprs m0 m1 = toEither $ do
             , inh_props = inh
             }
 
-merge_proofs :: Machine -> Machine -> Either [String] Machine
-merge_proofs m0 m1 = toEither $ do
+merge_refinements :: Machine -> Machine -> Either [String] Machine
+merge_refinements m0 m1 = toEither $ do
         evts <- fromEither empty $ merge 
                     (skip m1)
-                    merge_evt_proof
+                    merge_evt_refinement
                     (events m0)
                     (events m1)
+        return m0
+            { events = evts
+            }
+
+merge_proofs :: Machine -> Machine -> Either [String] Machine
+merge_proofs m0 m1 = toEither $ do
         inh   <- fromEither empty_property_set 
                 $ ps_union_proofs (inh_props m0) (inh_props m1)
         inh   <- fromEither empty_property_set 
@@ -304,7 +310,6 @@ merge_proofs m0 m1 = toEither $ do
             $ tell ["incorrect inheritance"]
         return m0
             { inh_props = inh
-            , events = evts
             }
 
 merge_th_types :: Theory -> Theory -> Either [String] Theory
@@ -388,8 +393,8 @@ merge_evt_exprs e0 e1 = toEither $ do
             , guards = grd
             , action = act }
 
-merge_evt_proof :: Event -> Event -> Either [String] Event
-merge_evt_proof e0 e1 = toEither $ do
+merge_evt_refinement :: Event -> Event -> Either [String] Event
+merge_evt_refinement e0 e1 = toEither $ do
                 
 --        ref <- fromEither empty $ disjoint_union
 --                (\x -> ["multiple schedule refinement rules with the same index: " ++ show x ++ ""])
@@ -559,7 +564,7 @@ data ScheduleChange = ScheduleChange
 data ScheduleRule = 
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
-        | ReplaceFineSch Expr Label Expr (Label,ProgressProp) 
+        | ReplaceFineSch Expr (Maybe Label) Expr (Label,ProgressProp) 
         | RemoveGuard Label
         | AddGuard    Label
             -- old expr, new label, new expr, proof
@@ -567,7 +572,9 @@ data ScheduleRule =
 
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
 
-replace lbl prog saf = ScheduleChange lbl S.empty S.empty S.empty (Replace prog saf)
+replace lbl prog saf = ScheduleChange lbl 
+        S.empty S.empty S.empty 
+        (Replace prog saf)
 
 replace_fine lbl old tag new prog = 
     ScheduleChange lbl S.empty S.empty S.empty 
@@ -577,8 +584,9 @@ add_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (AddGuard lbl)
 
 remove_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (RemoveGuard lbl)
 
-new_fine_sched (ScheduleChange { rule = ReplaceFineSch _ n_lbl n_expr _ }) = [(n_lbl,n_expr)]
-new_fine_sched _ = []
+new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ (Just n_lbl) n_expr _ }) = Just (n_lbl,n_expr)
+new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ Nothing _ _ }) = Nothing
+new_fine_sched x _ = x
 
 --apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1, y)
 --    where
@@ -609,7 +617,7 @@ new_sched e = Schedule new_c_sched new_f_sched
         new_c_sched = M.filterWithKey f_out c_sch `M.union` M.filterWithKey f_in sched
         f_out k _ = not $ k `S.member` r_set
         f_in  k _ = k `S.member` a_set
-        new_f_sched = listToMaybe $ concatMap new_fine_sched ref ++ maybeToList f_sch
+        new_f_sched = L.foldl new_fine_sched f_sch ref
         Schedule c_sch f_sch = old_sched e 
         ref   = sched_ref e
         sched = scheds e 

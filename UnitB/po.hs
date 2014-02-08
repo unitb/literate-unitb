@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.PO 
     ( proof_obligation, step_ctx, evt_live_ctx
-    , theory_ctx, theory_facts
+    , theory_ctx, theory_facts, dummy_ctx
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , check, verify_changes, verify_machine
@@ -30,7 +30,7 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe )
 import qualified Data.Map as M
-import           Data.Maybe as MM ( maybeToList, mapMaybe ) 
+import           Data.Maybe as MM ( maybeToList, mapMaybe, isJust ) 
 import           Data.List as L hiding (inits, union,insert)
 import           Data.Set as S hiding (map,filter,foldr,(\\))
 import qualified Data.Set as S (map)
@@ -153,6 +153,9 @@ evt_saf_ctx evt  = Context M.empty (params evt) M.empty M.empty M.empty
 
 evt_live_ctx :: Event -> Context
 evt_live_ctx evt = Context M.empty (indices evt) M.empty M.empty M.empty
+
+dummy_ctx :: Machine -> Context
+dummy_ctx m = Context M.empty (dummies $ theory m) M.empty M.empty M.empty
 
 skip_event m = empty_event { action = 
     M.fromList $ zip 
@@ -294,9 +297,9 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
                 (Nothing,Nothing) -> []
                 _                 -> error $ format (
                            "transient predicate {0}'s side condition doesn't "
-                        ++ "match the fine schedule of event {1}"
+                        ++ "match the fine schedule of event {1} ({2},{3})"
                         )
-                    pname evt_lbl
+                    pname evt_lbl (isJust lt_fine) (isJust $ fine $ new_sched evt)
 
 prop_co :: Machine -> Label -> Constraint -> Map Label Sequent
 prop_co m pname (Co fv xp) = 
@@ -308,7 +311,7 @@ prop_co m pname (Co fv xp) =
     where
         po _ evt = 
                 (Sequent 
-                    (step_ctx m) 
+                    (step_ctx m `merge_ctx` dummy_ctx m) 
                     hyp
                     goal )
             where
@@ -482,11 +485,13 @@ instance ProofRule ByParts where
             f x     = composite_label [lbl,label x]
 
 instance ProofRule FreeGoal where
-    proof_po    th  (FreeGoal v u p li) 
+    proof_po    th  (FreeGoal v u t p li) 
                 lbl po@(Sequent ctx asm goal) = do
             new_goal <- free_vars goal
-            proof_po th p lbl $ Sequent ctx asm new_goal
+            proof_po th p lbl $ Sequent new_ctx asm new_goal
         where
+            new_ctx = merge_ctx (Context M.empty (M.singleton u (Var u t)) M.empty M.empty M.empty)
+                                ctx
             free_vars (Binder Forall ds r expr) 
                     | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
                                                 (rename v u r)

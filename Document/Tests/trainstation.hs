@@ -289,7 +289,7 @@ check_sat = [ format ("(check-sat-using (or-else"
             ]
 
 
-train_decl b = 
+train_decl b ind = 
         [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
         , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
         , "(declare-datatypes () ((Null null)))"
@@ -308,14 +308,17 @@ train_decl b =
         , "(declare-const ent BLK)"
         , "(declare-const ext BLK)"
         ] ++ var_decl ++
-        [ "(declare-const p BLK)"
-        , "(declare-const q BLK)"
-        , "(declare-const t TRAIN)"
-        , "(declare-const t_0 TRAIN)"
-        , "(declare-const t_1 TRAIN)"
-        , "(declare-const t_2 TRAIN)"
-        , "(declare-const t_3 TRAIN)"
+        if ind then
+        [
+--        [ "(declare-const p BLK)"
+--        , "(declare-const q BLK)"
+        "(declare-const t TRAIN)"
+--        , "(declare-const t_0 TRAIN)"
+--        , "(declare-const t_1 TRAIN)"
+--        , "(declare-const t_2 TRAIN)"
+--        , "(declare-const t_3 TRAIN)"
         ] 
+        else []
     where
         var_decl
             | b         =
@@ -724,7 +727,7 @@ case1 = do
 
 result2 = unlines (
         push
-     ++ train_decl False 
+     ++ train_decl False False
      ++ set_decl_smt2 []
      ++ comp_facts [] ++ -- set_decl_smt2 ++
      [  "(assert (and (not (= ent ext))"
@@ -760,7 +763,7 @@ case2 = do
 
 result20 = unlines (
         push
-     ++ train_decl False 
+     ++ train_decl False False
      ++ set_decl_smt2 [WithPFun]
      ++ comp_facts [WithPFun] ++ 
      [  "(assert (and (not (= ent ext))"
@@ -793,7 +796,7 @@ case20 = do
             
 result3 = unlines (
      push ++
-     train_decl False ++ 
+     train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
      [  "(assert (and (not (= ent ext))"
@@ -831,7 +834,7 @@ case3 = do
 
 result19 = unlines (
      push ++ 
-     train_decl False ++ 
+     train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
      [  "(assert (and (not (= ent ext))"
@@ -869,7 +872,7 @@ case19 = do
 
 result4 = unlines ( 
         push ++
-        train_decl False ++ 
+        train_decl False True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
         [ "(assert (and (not (= ent ext))"
@@ -907,7 +910,7 @@ case4 = do
 
 result5 = unlines ( 
         push ++
-        train_decl True ++ 
+        train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
         [  "(assert (and (not (= ent ext))"
@@ -978,7 +981,7 @@ case5 = do
 
 result12 = unlines ( 
         push ++
-        train_decl True ++ 
+        train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
         [  "(assert (and (not (= ent ext))"
@@ -1008,17 +1011,10 @@ result12 = unlines (
         pop )
 
 case12 = do
---        pos <- list_file_obligations path0
---        case pos of
---            Right [(_,pos)] -> do
-        
         r <- parse_machine path0
         case r of
             Right [m] -> do
                 let po = raw_machine_pos m ! label "train0/leave/INV/inv2"
---                putStrLn "anus"
---                print po
---                putStrLn "buttom"
                 let cmd = unlines $ map (show . as_tree) $ z3_code po
                 return cmd
             x -> return $ show x
@@ -1027,7 +1023,7 @@ case12 = do
     -- Error handling --
     --------------------
 
-result7 = Left [Error "Undeclared variables: t" (LI path7 52 15)]
+result7 = Left [Error "undeclared variable: t" (LI path7 54 3)]
 
 path7 = "Tests/train-station-err0.tex"
 case7 = parse_machine path7

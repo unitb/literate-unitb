@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleContexts, BangPatterns, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Document.Proof where
 
     -- Modules
 import Document.Expression
 import Document.Visitor
 
-import Latex.Parser
+import Latex.Parser 
 
 import UnitB.AST
 import UnitB.PO
@@ -18,10 +19,10 @@ import Logic.Operator
 
     -- Libraries
 import           Control.Monad hiding ( guard )
-import           Control.Monad.Reader.Class
+import           Control.Monad.Reader.Class hiding ( reader )
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.RWS hiding ( ask, tell, asks )
+import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader )
 import qualified Control.Monad.Trans.RWS as RWS
 
 import           Data.Map hiding ( map, foldl )
@@ -31,7 +32,7 @@ import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
 import Utilities.Format
-import Utilities.Syntactic
+import Utilities.Syntactic hiding (line)
 import Utilities.Trace
 
 context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
@@ -42,6 +43,16 @@ data ProofStep = Step
         (Map Label Expr)    -- assumptions
         (Maybe Expr)        -- new_goal
         (Maybe Proof)       -- main proof        
+
+data ProofParam = ProofParam 
+    { hypotheses :: Map Label Expr
+    , locals     :: Map String Var
+    , ctx        :: Context
+    }
+
+empty_pr = ProofParam M.empty M.empty
+
+par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
 
 set_proof :: Monad m => Proof -> ProofStep -> EitherT [Error] m ProofStep
 set_proof p (Step a b c d Nothing)      = return $ Step a b c d $ Just p
@@ -88,10 +99,11 @@ empty_step = Step empty empty empty Nothing Nothing
 
 find_assumptions :: Monad m
                  => Machine
+                 -> ProofParam
                  -> [LatexDoc] 
                  -> ProofStep
                  -> RWST LineInfo [Error] System m ProofStep
-find_assumptions m = visit_doc
+find_assumptions m pr = visit_doc
         [   (   "calculation"
             ,   EnvBlock $ \() _ proofs -> return proofs
             )
@@ -109,32 +121,32 @@ find_assumptions m = visit_doc
             )
         ] [ (   "\\assume"
             ,   CmdBlock $ \(lbl,formula,()) proofs -> do
-                    expr <- get_assert m formula
+                    expr <- get_predicate m (par_ctx pr) WithoutFreeDummies formula 
                     add_assumption lbl expr proofs
             )
         ,   (   "\\assert"
             ,   CmdBlock $ \(lbl,formula,()) proofs -> do
-                    expr <- get_assert m formula
+                    expr <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
                     add_assert lbl expr proofs
             )
         ,   (   "\\goal"
             ,   CmdBlock $ \(formula,()) proofs -> do
-                    expr <- get_assert m formula
+                    expr <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
                     set_goal expr proofs
             )
         ]
 
 find_proof_step :: Monad m
-                => Map Label Expr 
+                => ProofParam
                 -> Machine
                 -> [LatexDoc] 
                 -> ProofStep
                 -> RWST LineInfo [Error] System m ProofStep
-find_proof_step hyps m = visit_doc
+find_proof_step pr m = visit_doc
         [   (   "calculation"
             ,   EnvBlock $ \() xs proofs -> do
                     li <- lift $ ask
-                    cc <- toEither $ parse_calc hyps m xs
+                    cc <- toEither $ parse_calc pr m xs
                     case infer_goal cc (all_notation m) of
                         Right cc_goal -> set_proof (Proof $ cc { goal = cc_goal }) proofs
                         Left msg      -> left [Error (format "type error: {0}" msg) li]
@@ -143,24 +155,34 @@ find_proof_step hyps m = visit_doc
         ,   (   "free:var"
             ,   EnvBlock $ \(String from,String to,()) xs proofs -> do
                     li    <- lift $ ask
-                    p     <- collect_proof_step hyps m xs
-                    set_proof (Proof $ FreeGoal from to p li) proofs
+                    let Context _ _ _ _ dums = ctx pr
+                    v@(Var _ t) <- maybe 
+                            (left [Error (format "cannot infer the type of '{0}'" to) li])
+                            return
+                            (M.lookup to dums)
+                    p     <- collect_proof_step pr 
+                                    { ctx =             Context M.empty 
+                                                            (M.singleton to v)
+                                                            M.empty M.empty M.empty
+                                            `merge_ctx` ctx pr }
+                                m xs
+                    set_proof (Proof $ FreeGoal from to t p li) proofs
             )
         ,   (   "by:cases"
             ,   EnvBlock (\() xs proofs -> do
                     li    <- lift $ ask
-                    cases <- toEither $ find_cases hyps m xs []
+                    cases <- toEither $ find_cases pr m xs []
                     set_proof (Proof $ ByCases (reverse cases) li) proofs )
             )
         ,   (   "by:parts"
             ,   EnvBlock (\() xs proofs -> do
                     li    <- lift $ ask
-                    cases <- toEither $ find_parts hyps m xs []
+                    cases <- toEither $ find_parts pr m xs []
                     set_proof (Proof $ ByParts (reverse cases) li) proofs )
             )
         ,   (   "subproof"
             ,   EnvBlock $ \(lbl,()) xs proofs -> do
-                    p <- collect_proof_step hyps m xs
+                    p <- collect_proof_step pr m xs
                     add_proof lbl p proofs
             )
         ] [ (   "\\easy"
@@ -171,46 +193,49 @@ find_proof_step hyps m = visit_doc
         ]
 
 find_cases :: Monad m
-           => Map Label Expr 
+           => ProofParam
            -> Machine
            -> [LatexDoc] 
            -> [(Label,Expr,Proof)]
            -> RWST LineInfo [Error] System m [(Label,Expr,Proof)]
-find_cases hyps m = visit_doc 
+find_cases pr m = visit_doc 
         [   (   "case"
             ,   EnvBlock $ \(lbl,formula,()) xs cases -> do
-                    expr      <- get_assert m formula
+                    expr      <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
                     p         <- collect_proof_step 
-                            (insert lbl expr hyps) 
+                            (pr { hypotheses = insert lbl expr hyps }) 
                             m xs
                     return ((lbl, expr, p):cases) 
             )
         ] []
+    where
+        hyps = hypotheses pr 
 
 find_parts :: Monad m
-           => Map Label Expr 
+           => ProofParam
            -> Machine
            -> [LatexDoc] 
            -> [(Expr,Proof)]
            -> RWST LineInfo [Error] System m [(Expr,Proof)]
-find_parts hyps m = visit_doc 
+find_parts pr m = visit_doc 
         [   (   "part:a"
             ,   EnvBlock (\(formula,()) xs cases -> do
-                    expr      <- get_assert m formula
-                    p         <- collect_proof_step hyps m xs
+                    expr      <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
+                    p         <- collect_proof_step pr m xs
                     return ((expr, p):cases))
             )
         ] []
 
 collect_proof_step :: Monad m 
-                   => Map Label Expr 
+                   => ProofParam
                    -> Machine 
                    -> [LatexDoc] 
                    -> EitherT [Error] (RWST LineInfo [Error] System m) Proof
-collect_proof_step hyps m xs = do
-        step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m xs empty_step
-        let hyps2 = asrt `union` asm `union` hyps
-        step <- toEither $ find_proof_step hyps2 m xs step
+collect_proof_step pr m xs = do
+        let hyps = hypotheses pr
+        step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m pr xs empty_step
+        let pr2 = pr { hypotheses = asrt `union` asm `union` hyps }
+        step <- toEither $ find_proof_step pr2 m xs step
         li   <- lift $ ask
         case step of
             Step assrt prfs asm ng (Just p) -> do
@@ -240,31 +265,33 @@ hint = visit_doc []
             return $ (b,li):xs
 
 parse_calc :: Monad m
-           => Map Label Expr 
+           => ProofParam 
            -> Machine 
            -> [LatexDoc]
            -> RWST LineInfo [Error] System m Calculation
-parse_calc hyps m xs = 
+parse_calc pr m xs = 
+    let hyps = hypotheses pr in
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (a,t,[b,c],d)    -> do
-            xp <- fromEither ztrue $ get_expr m a
-            op <- fromEither equal $ parse_oper 
+            xp <- fromEither ztrue $ get_expr_with_ctx m (par_ctx pr) a
+            op <- fromEither equal $ focusT def_opt
+                $ parse_oper 
                     (context m)
                     (all_notation m)
                     (concatMap flatten_li b) 
             hs <- hint c []
             hyp <- fromEither [] (do
                 hoistEither $ mapM (find hyps m) hs)
-            r   <- parse_calc hyps m d
+            r   <- parse_calc pr m d
             return r { 
                 first_step = xp,
                 following  = (op,first_step r,hyp,line_info t):following r }
         Nothing         -> do
             li <- ask
-            xp <- fromEither ztrue $ get_expr m xs
+            xp <- fromEither ztrue $ get_expr_with_ctx m (par_ctx pr) xs
             return $ Calc (context m) ztrue xp [] li
         _               -> do
-            li <- ask
+            li <- ask 
             RWS.tell [Error "invalid hint" li]
             return $ Calc (context m) ztrue ztrue [] li
     where
@@ -304,15 +331,23 @@ get_table m = with_tracingM $ do
                 lift $ RWS.modify $ \s -> s { parse_table = new }
                 return x
                                 
-get_expr :: ( Monad m, Monoid b ) 
-         => Machine -> [LatexDoc] 
-         -> EitherT [Error] (RWST LineInfo b System m)  Expr
-get_expr m ys = do
+data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
+
+--withProofParam cmd = EitherT $ mapRWST (\r (s0,s1) -> (r,(s0,s1))) $ runEitherT cmd
+
+
+get_expr_with_ctx :: ( Monad m, Monoid b ) 
+                  => Machine
+                  -> Context
+                  -> [LatexDoc] 
+                  -> EitherT [Error] (RWST LineInfo b (System) m)  Expr
+get_expr_with_ctx m ctx ys = do
         tb <- get_table m
-        y  <- focus_es $ parse_expr 
-            (context m) 
-            (all_notation m) tb
-            (concatMap flatten_li xs)
+        y  <- focusT expr_opt
+            $ parse_expr 
+                (context m `merge_ctx` ctx) 
+                (all_notation m) tb
+                (concatMap flatten_li xs)
         let x = normalize_generics y
         li <- if L.null xs
             then ask
@@ -325,15 +360,33 @@ get_expr m ys = do
         xs    = drop_blank_text ys
         msg   = "type of {0} is ill-defined: {1}"
 
-get_assert :: ( Monad m, Monoid b ) 
-           => Machine -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo b System m) Expr
-get_assert m ys = do
+get_expr :: ( Monad m, Monoid b ) 
+         => Machine
+         -> FreeVarOpt
+         -> [LatexDoc] 
+         -> EitherT [Error] (RWST LineInfo b (System) m)  Expr
+get_expr m opt ys = do
+        let ctx = case opt of
+                    WithFreeDummies -> dummy_ctx m
+                    WithoutFreeDummies -> empty_ctx
+        get_expr_with_ctx m ctx ys
+
+get_predicate :: ( Monad m, Monoid b ) 
+           => Machine
+           -> Context
+           -> FreeVarOpt
+           -> [LatexDoc] 
+           -> EitherT [Error] (RWST LineInfo b (System) m) Expr
+get_predicate m ctx opt ys = do
         tb <- get_table m
-        x  <- focus_es $ parse_expr 
-            (context m) 
-            (all_notation m) tb
-            (concatMap flatten_li xs)
+        let d_ctx = case opt of
+                        WithFreeDummies -> dummy_ctx m
+                        WithoutFreeDummies -> empty_ctx
+        x  <- focusT expr_opt
+            $ parse_expr 
+                (ctx `merge_ctx` d_ctx `merge_ctx` context m)
+                (all_notation m) tb
+                (concatMap flatten_li xs)
         li <- if L.null xs
             then ask
             else return $ line_info xs
@@ -348,33 +401,22 @@ get_assert m ys = do
         xs    = drop_blank_text ys
         msg   = "type of {0} is ill-defined: {1}"
 
+get_assert m ys = get_predicate m empty_ctx WithoutFreeDummies ys
+
 get_evt_part :: ( Monad m, Monoid b ) 
              => Machine -> Event
              -> [LatexDoc] 
              -> EitherT [Error] (RWST LineInfo b System m)  Expr
-get_evt_part m e ys = do
-        tb <- get_table m
-        x  <- focus_es $ parse_expr (
-                                     step_ctx m 
+get_evt_part m e ys = get_predicate m 
+                        (            step_ctx m 
                          `merge_ctx` theory_ctx S.empty (theory m)
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
-                        (all_notation m) tb
-                        (concatMap flatten_li xs)
-        li <- if L.null xs
-            then ask
-            else return $ line_info xs
---        li <- ask
---        let (i,j) = if L.null xs
---                    then li
---                    else line_info xs
-        x <- either 
-            (\x -> left [Error x li]) 
-            (right . normalize_generics) $ zcast bool $ Right x
-        unless (L.null $ ambiguities x) $ left 
-            $ map (\x -> Error (format msg x (type_of x)) li)
-                $ ambiguities x
-        return x
-    where
-        msg   = "type of {0} is ill-defined: {1}"
-        xs    = drop_blank_text ys
+                        WithoutFreeDummies
+                        ys
+
+get_assert_with_free m ys = get_predicate m 
+                        (context m)
+                        WithFreeDummies
+                        ys
+

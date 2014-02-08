@@ -70,7 +70,7 @@
 &\progress{m0:prog0}
 	{	t \in in }{ \neg t \in in }
 \refine{m0:prog0}{discharge}{m0:tr0}{}
-&\transient{m0:leave}{0}{m0:tr0}
+&\transient{m0:leave}{m0:tr0}
 	{	t \in in }
 \end{align*}
 
@@ -208,9 +208,9 @@ We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 	\refine{m1:prog4}{discharge}{m1:tr1,m1:saf1}{}
 }
 \begin{align*} 
-& \transientB{m1:movein}{0}{m1:tr1}{ \index{t}{t} }
+& \transientB{m1:movein}{m1:tr1}{ \index{t}{t} }
 	{ t \in in \1\land loc.t = ent }
-\\ & \transient{m1:moveout}{0}{m1:tr0}
+\\ & \transient{m1:moveout}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
 \\ & \evguard{m1:movein}{mi:grd7}
 	{ b \in plf }
@@ -385,7 +385,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 We implement \eqref{m2:prog3} with the following:
 %	
 \begin{align*}
-	\transient{m0:leave}{1}{m2:tr0}
+	\transient{m0:leave}{m2:tr0}
 		{ t \in in \1\land loc.t = ext }
 \\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \neg ext \in \ran. loc } 
 \end{align*}
@@ -421,7 +421,7 @@ We implement \eqref{m2:prog3} with the following:
 	}
 
 \begin{align*}
-	\transientB{m1:moveout}{1}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
+	\transientB{m1:moveout}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
 		{ b \in plf \land t \in in \land loc.t = b }
 \\ 	\safety{m2:saf2}{ t \in in \land b \in plf \1\land  loc.t = b }
 		{ b \in plf \1\land \qforall{t}{ t \in in }{ \neg loc.t = b } }
@@ -465,17 +465,72 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 	\dummy{ b_0, b_1, p, p_0, p_1, p_2 : \Blk }
 \\	\invariant{m3:inv0}{ osgn \subseteq plf }
 \\	\invariant{m3:inv1}{ \qforall{p_0,p_1}{ p_0 \in osgn \land p_1 \in osgn }{ p_0 = p_1 } }
-\\	\evassignment{m0:enter}{m3:ent:act0}{isgn' = isgn}
-\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' = osgn}
-\\	\evassignment{m1:movein}{m3:mi:act0}{isgn' = isgn}
-\\	\evassignment{m1:movein}{m3:mi:act1}{osgn' = osgn}
-\\	\evassignment{m0:leave}{m3:ext:act0}{isgn' = isgn}
-\\	\evassignment{m0:leave}{m3:ext:act1}{osgn' = osgn}
-\\	\evassignment{m1:moveout}{m3:mo:act0}{isgn' = isgn}
-\\	\evassignment{m1:moveout}{m3:mo:act1}{osgn' = osgn}
-\\	\initialization{m3:init0}{ osgn = \emptyset }
-\\	\initialization{m3:init1}{ isgn = \false }
 \end{align*}
+\begin{align*}
+	\evassignment{m0:enter}{m3:ent:act0}{isgn' &= isgn}
+\\	\evassignment{m0:enter}{m3:ent:act1}{osgn' &= osgn}
+\\	\evassignment{m1:movein}{m3:mi:act0}{isgn' &= isgn}
+\\	\evassignment{m1:movein}{m3:mi:act1}{osgn' &= osgn}
+\\	\evassignment{m0:leave}{m3:ext:act0}{isgn' &= isgn}
+\\	\evassignment{m0:leave}{m3:ext:act1}{osgn' &= osgn}
+\\	\evassignment{m1:moveout}{m3:mo:act0}{isgn' &= isgn}
+\\	\evassignment{m1:moveout}{m3:mo:act1}{osgn'  &\2 = osgn 
+	\setminus \{ loc.t \} }
+\\	\initialization{m3:init0}{ osgn &= \emptyset }
+\\	\initialization{m3:init1}{ isgn &= \false }
+\end{align*}
+
+\begin{align*}
+	\evguard{m1:moveout}{m3:mo:grd0}{ loc.t \in osgn } \\
+	\cschedule{m1:moveout}{m3:mo:sch0}{ loc.t \in osgn }
+\end{align*}
+
+\replace{m1:moveout}{}{m3:mo:sch0}{c1}{m3:prog0}{m3:saf0}
+	% it works because the PO is trivial p |-> true
+\replacefine{m1:moveout}{}{mo:f0}{}{m3:prog0}
+\removeguard{m1:moveout}{mo:g3}
+
+\begin{align*}
+	\progress{m3:prog0}{ t \in in 
+		\1\land loc.t \in plf }{ t \in in \land loc.t \in osgn }
+\\	\safety{m3:saf0}{ t \in in \land loc.t \in osgn }{
+		 \, ext \in \ran.loc  }
+\end{align*}
+
+\begin{align*} 
+	\invariant{m3:inv2}{ \qforall{t}{}{t \in in \land loc.t \in osgn \1\implies \neg \, ext \in \ran.loc } }
+\\	\invariant{m3:inv3}{ \qforall{p}{}{ p \in osgn \1\implies p \in \ran.loc } }
+\end{align*}
+
+\input{../m3_m1-moveout}
+
+%\begin{align*}
+\newevent{m3:ctr:plf}{ctr\_plf}
+%\end{align*}
+
+\begin{align*}
+	&{  t \in in 
+		\1\land loc.t \in plf }\2\mapsto{ t \in in \land loc.t \in osgn }
+\refine{m3:prog0}{discharge}{m3:tr0,m3:saf1}{}
+	&\transientB{m3:ctr:plf}{m3:tr0}
+		{ \index{p}{loc.t} }
+		{  t \in in 
+			\1\land loc.t \in plf \setminus osgn }
+\\ 	& \safety{m3:saf1}{ t \in in 
+		\1\land loc.t \in plf }
+	{	t \in in \land loc.t \in osgn }
+\end{align*}
+
+We should use intersection here:
+\begin{align*}
+\indices{m3:ctr:plf}{ p : \Blk }
+\\ \cschedule{m3:ctr:plf}{m3:cp:c0}{ p \in plf \land p \in \ran.loc \land \neg p \in osgn }
+\\ \evassignment{m3:ctr:plf}{m3:cp:act0}{ osgn' = osgn \bunion \{ p \} }
+\end{align*}
+% EN should not pass this way
+%\weakento{m3:ctr:plf}{}{m3:cp:c0}
+
+\input{../m3_m3-ctr-plf}
 
 \end{machine}
 

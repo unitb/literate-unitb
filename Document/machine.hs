@@ -179,6 +179,13 @@ read_document xs = do
             traceM "step Q"
             
                 -- use the label of expressions from `collect_expr' 
+                -- and properties
+            ms <- toEither $ foldM (f collect_refinement) ms xs
+            traceM "step QR"
+            ms <- trickle_down refs ms merge_refinements li
+            
+                -- use the label of expressions from `collect_expr' 
+                -- and the refinement rules
                 -- in hints.
             ms <- toEither $ foldM (f collect_proofs) ms xs
             traceM "step R"
@@ -364,15 +371,17 @@ declarations = visit_doc []
 
 tr_hint :: Monad m
         => Machine
+        -> Map String Var
         -> Label
         -> [LatexDoc]
         -> ( [(String,Expr)], Maybe Label )
         -> RWST LineInfo [Error] System m ( [(String,Expr)], Maybe Label )
-tr_hint m lbl = visit_doc []
+tr_hint m vs lbl = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs, ()) (ys,z) -> do
                 let evt = events m ! lbl
-                expr <- get_expr m xs
+                expr <- get_expr_with_ctx m 
+                    (Context M.empty vs M.empty M.empty M.empty) xs
                 toEither $ error_list 
                     [ ( not $ x `member` indices evt 
                       , format "'{0}' is not an index of '{1}'" x lbl )
@@ -527,14 +536,14 @@ collect_expr = visit_doc
                                 inv = insert lbl invar $ inv $ props m } } 
             )
         ,   (   "\\transient"      
-            ,   CmdBlock $ \(ev, _ :: Int, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
                             , ( lbl `member` transient (props m)
                               , format "{0} is already used for another program property" lbl )
                             ]
-                        tr            <- get_assert m xs
+                        tr            <- get_assert_with_free m xs
                         let prop = Transient (free_vars (context m) tr) tr ev empty Nothing
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
@@ -543,7 +552,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
-            ,   CmdBlock $ \(ev, _ :: Int, lbl, hint, xs,()) m -> do
+            ,   CmdBlock $ \(ev, lbl, hint, xs,()) m -> do
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
@@ -552,9 +561,10 @@ collect_expr = visit_doc
                             [   ( lbl `member` transient (props m)
                                 , format "{0} is already used for another program property" lbl )
                             ]
-                        tr            <- get_assert m xs
-                        (hints,lt)    <- toEither $ tr_hint m ev hint ([],Nothing)
-                        let prop = Transient (free_vars (context m) tr) tr ev (fromList hints) lt
+                        tr            <- get_assert_with_free m xs
+                        let fv = (free_vars (context m) tr)
+                        (hints,lt)    <- toEither $ tr_hint m fv ev hint ([],Nothing)
+                        let prop = Transient fv tr ev (fromList hints) lt
                             old_prog_prop = transient $ props m
                             new_props     = insert lbl prop $ old_prog_prop
                         return m {
@@ -567,7 +577,7 @@ collect_expr = visit_doc
                             [ ( lbl `member` constraint (props m)
                               , format "{0} is already used for another invariant" lbl )
                             ]
-                        pre           <- get_assert m xs
+                        pre           <- get_predicate m empty_ctx WithFreeDummies xs
                         return m { 
                             props = (props m) { 
                                 constraint = insert lbl (Co (elems $ free_vars (context m) pre) pre) 
@@ -577,8 +587,8 @@ collect_expr = visit_doc
             ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
                     let prop = safety $ props m
                     (p,q)    <- toEither (do
-                        p    <- fromEither ztrue $ get_assert m pCt
-                        q    <- fromEither ztrue $ get_assert m qCt
+                        p    <- fromEither ztrue $ get_assert_with_free m pCt
+                        q    <- fromEither ztrue $ get_assert_with_free m qCt
                         error_list 
                             [   ( lbl `member` prop
                                 , format "safety property {0} already exists" lbl )
@@ -597,8 +607,8 @@ collect_expr = visit_doc
             ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
                     let prop = progress $ props m
                     (p,q)    <- toEither (do
-                        p    <- fromEither ztrue $ get_assert m pCt
-                        q    <- fromEither ztrue $ get_assert m qCt
+                        p    <- fromEither ztrue $ get_assert_with_free m pCt
+                        q    <- fromEither ztrue $ get_assert_with_free m qCt
                         error_list 
                             [   ( lbl `member` prop
                                 , format "progress property {0} already exists" lbl )
@@ -633,26 +643,12 @@ remove_ref ('}':xs) = remove_ref xs
 remove_ref (x:xs)   = x:remove_ref xs
 remove_ref []       = []
 
-collect_proofs :: Monad m 
-               => [LatexDoc] 
-               -> Machine
-               -> MSEitherT Error System m Machine
-collect_proofs = visit_doc
-        [   (   "proof"
-            ,   EnvBlock $ \(po,()) xs m -> do
-                    let po_lbl = label $ remove_ref $ concatMap flatten po
-                    let lbl = composite_label [ _name m, po_lbl ]
-                    toEither $ error_list 
-                        [   ( lbl `member` proofs (props m)
-                            , format "a proof for {0} already exists" lbl )
-                        ] 
-                    p           <- collect_proof_step empty m xs
-                    return m { 
-                        props = (props m) { 
-                            proofs = insert lbl p $ 
-                                    proofs $ props m } } 
-            )
-        ] [ (   "\\refine"
+collect_refinement :: Monad m 
+                   => [LatexDoc] 
+                   -> Machine
+                   -> MSEitherT Error System m Machine 
+collect_refinement = visit_doc []
+        [ (   "\\refine"
             ,   CmdBlock $ \(goal,String rule,hyps,hint,()) m -> do
                     toEither $ error_list
                         [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
@@ -665,6 +661,7 @@ collect_proofs = visit_doc
             )
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
+                        -- Why is this here instead of the expression collector?
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )
@@ -769,7 +766,7 @@ collect_proofs = visit_doc
                         ]
                     let old_event = events m ! evt
                         sc        = scheds old_event
-                        lbls      = new:(maybeToList old ++ S.elems keep)
+                        lbls      = (maybeToList new ++ maybeToList old ++ S.elems keep)
                         progs     = progress (props m) `union` progress (inh_props m)
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
@@ -781,8 +778,11 @@ collect_proofs = visit_doc
                             ]
                     let n         = length $ sched_ref old_event
                         old_exp   = maybe ztrue (sc !) old
-                        rule      = (replace_fine evt old_exp new (sc ! new) (prog,progs!prog))
-                                    { keep = keep }
+                        new_exp   = maybe ztrue (sc !) new
+                        rule      = (replace_fine evt old_exp new new_exp (prog,progs!prog))
+--                                    { add = S.fromList $ maybeToList new
+--                                    , remove = S.fromList $ maybeToList old 
+--                                    , keep = keep }
                         new_event = old_event 
                                     { sched_ref = rule : sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",_name m,label $ show n]
@@ -794,7 +794,60 @@ collect_proofs = visit_doc
                             $ derivation (props m) } 
                       }
             )
+        ,   (   "\\removeguard"
+            ,   CmdBlock $ \(evt, lbls, ()) m -> do
+                    toEither $ error_list
+                        [ ( not (evt `member` events m)
+                            , format "event '{0}' is undeclared" evt )
+                        ]
+                    let old_event = events m ! evt
+                        grd       = guards old_event
+                    toEither $ do
+                        error_list $ flip map lbls $ \lbl ->
+                            ( not $ lbl `member` grd
+                                , format "'{0}' is not a valid schedule" lbl )
+                    let n         = length $ sched_ref old_event
+                        rules     = map (remove_guard evt) lbls
+                        new_event = old_event 
+                                    { sched_ref = rules ++ sched_ref old_event }
+                        po_lbl    = flip map [n .. ] $ \n -> 
+                                    composite_label [evt,label "GRD",_name m,label $ show n]
+                    return m 
+                      { events = insert evt new_event $ events m
+                      , props = (props m) { 
+                            derivation = 
+                                     M.fromList (zip po_lbl $ map Rule rules)
+                            `union`  derivation (props m) } 
+                      }
+            )
         ]
+
+collect_proofs :: Monad m 
+               => [LatexDoc] 
+               -> Machine
+               -> MSEitherT Error System m Machine
+collect_proofs = visit_doc
+        [   (   "proof"
+            ,   EnvBlock $ \(po,()) xs m -> do
+                        -- This should be moved to its own phase
+                    let po_lbl = label $ remove_ref $ concatMap flatten po
+                    let lbl = composite_label [ _name m, po_lbl ]
+                    toEither $ error_list 
+                        [   ( lbl `member` proofs (props m)
+                            , format "a proof for {0} already exists" lbl )
+                        ] 
+                    li <- lift $ ask
+                    Sequent ctx _ _ <- maybe
+                            (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
+                            return
+                            (M.lookup lbl $ raw_machine_pos m)
+                    p           <- collect_proof_step (empty_pr ctx) m xs 
+                    return m { 
+                        props = (props m) { 
+                            proofs = insert lbl p $ 
+                                    proofs $ props m } } 
+            )
+        ] []
 
 deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
