@@ -52,7 +52,14 @@ main = do
                     compile x = EitherT $ f 
                                     $ readProcessWithExitCode 
                                         "ghc" 
-                                        (x ++ ["--make","-W","-Werror"]) ""
+                                        (x ++ 
+                                [ "--make"
+                                , "-W"
+                                , "-Werror"
+                                , "-hidir", "interface"
+                                , "-odir", "bin"]) ""
+                putStr "compiling..."
+                hFlush stdout
                 rs <- g $ runEitherT $ mapM compile 
                     [ ["periodic.hs"]
                     , ["compile.hs"]
@@ -63,6 +70,7 @@ main = do
                 let (cs,xs,yss) = unzip3 rs
                 let c = foldl success ExitSuccess cs
                 let ys = concat yss
+                putStr (take 60 $ cycle "\b") 
                 putStr $ concat xs
                 putStr ys 
                 putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "

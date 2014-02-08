@@ -34,22 +34,16 @@ main = do
         putStrLn "usage: run_test [module_name]"
     else do
         let args = concat xs
---        let { interval = if null xs 
---            then long_interval
---            else short_interval }
         evalHeapT $ do
             new HaskellMon $ return init_state
             new LaTeXMon $ return init_state
             focus LaTeXMon $ set_extensions [".tex"]
             forever $ do
---                b2 <- focus HaskellMon $ didAnythingChange
                 b3 <- focus LaTeXMon $ didAnythingChange
                 t0 <- liftIO $ getModificationTime "test"
                 t1 <- liftIO $ getModificationTime "last_result.txt"
                 lift $ if (t1 <= t0) || b3 then do
                     if null args then do
---                        putStr $ take 80 (repeat '\b') ++  "Something changed"
---                        hFlush stdout
                         putStr $ take 80 (repeat '\b') ++ "Testing..."
                         hFlush stdout
                         t2 <- getCurrentTime
@@ -65,10 +59,7 @@ main = do
                             void $ system "touch test"
                         else return ()
                         void $ system "cat last_result.txt"
---                            putStr $ take 80 (repeat '\b') ++ "but 'test' is older than 'last_result'"
---                            hFlush stdout
                     else
                         void $ system $ "./run_tests \"" ++ args ++ "\""
---                    delay (microseconds interval)
                 else return ()
                 lift $ threadDelay (microseconds retry_interval)

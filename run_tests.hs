@@ -31,22 +31,22 @@ run phase cmd  = do
         ExitFailure _ -> throwError ("phase '" ++ phase ++ "' failed")
 
 general = do
-        c0 <- rawSystem "ghc" ["test.hs", "--make"] 
-        c1 <- case c0 of
-            ExitSuccess -> do
-                let compile x = readProcessWithExitCode "ghc" (x ++ ["--make","-W","-Werror"]) ""
-                rs <- mapM compile 
-                    [ ["test.hs","-threaded"]
-                    , ["continuous.hs","-threaded"]
-                    , ["verify.hs"]
-                    , ["periodic.hs"]
-                    , ["compile.hs"]
-                    , ["run_tests.hs"] ]
-                let (cs,_,xs) = unzip3 rs
-                let c = foldl success c0 cs
-                forM_ (concatMap lines xs) putStrLn
-                return c
-            ExitFailure _ -> return c0
+        let compile x = readProcessWithExitCode "ghc" (x ++ 
+                        [ "--make"
+                        , "-W"
+                        , "-Werror"
+                        , "-hidir", "interface"
+                        , "-odir", "bin"]) ""
+        rs <- mapM compile 
+            [ ["test.hs","-threaded"]
+            , ["continuous.hs","-threaded"]
+            , ["verify.hs"]
+            , ["periodic.hs"]
+            , ["compile.hs"]
+            , ["run_tests.hs"] ]
+        let (cs,_,xs) = unzip3 rs
+        let c1 = foldl success ExitSuccess cs
+        forM_ (concatMap lines xs) putStrLn
         case c1 of
             ExitSuccess -> do
                 putStrLn "Running test ..."
@@ -91,7 +91,11 @@ specific mod_name fun_name = do
         h <- openFile "test_tmp.hs" WriteMode
         hPrintf h test_prog mod_name
         hClose h
-        c0 <- rawSystem "ghc" ["test_tmp.hs", "--make"]
+        c0 <- rawSystem "ghc" ["test_tmp.hs", "--make"
+                                , "-W"
+                                , "-Werror"
+                                , "-hidir", "interface"
+                                , "-odir", "bin"]
         case c0 of
             ExitSuccess -> do
                 putStrLn "Running test ..."

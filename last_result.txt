@@ -157,10 +157,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   14883 total
+   14872 total
     1450 Document/Tests/trainstation.hs
-     915 Document/machine.hs
+     909 Document/machine.hs
      745 Document/Tests/lambdas.hs
      711 UnitB/ast.hs
      634 UnitB/po.hs
-Time: 00:21:02
+Time: 00:45:50
