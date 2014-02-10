@@ -1,0 +1,108 @@
+\documentclass[12pt]{amsart}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newcommand{\G}{\text{G}}
+\renewcommand{\H}{\text{H}}
+
+\section{Initial model}
+\begin{machine}{m0}
+
+\newset{G}{\G}
+\newset{H}{\H}
+
+\with{sets}
+\with{functions}
+
+\begin{align*}
+\dummy{x, x_0, x_1 : \set[\G]} \\
+\dummy{y,y_0,y_1, z: \set[\H]}
+\end{align*}
+\begin{align*}
+\constant{f : \set [\G] \pfun \set [\H]} \\
+\constant{g : \set [\H] \pfun \set [\G]} \\
+\end{align*}
+\begin{align*}
+\assumption{asm0}{ \qforall{x,y}{}{ f.x \subseteq y \2\equiv x \subseteq g.y } } \\
+\invariant{inv0}{ \qforall{x_0,x_1}{}{ f.(x_0 \bunion x_1) \1 = f.x_0 \bunion f.x_1 } }
+\end{align*}
+
+\newenvironment{indirect:equality}[3]{}{}
+
+\begin{proof}{INIT/INV/\ref{inv0}}
+	\begin{free:var}{x_0}{x_0}
+	\begin{free:var}{x_1}{x_1}
+	\begin{indirect:equality}{right}{\subseteq}{z}
+	\begin{calculation}
+		f.(x_0 \bunion x_1) \1\subseteq z
+	\hint{=}{ \eqref{asm0} }
+		x_0 \bunion x_1 \1\subseteq g.z
+	\hint{=}{ $\bunion$ and $\subseteq$ }
+		x_0 \subseteq g.z \2\land x_1 \subseteq g.z
+	\hint{=}{ \eqref{asm0} }
+		f.x_0 \subseteq z \2\land f.x_1 \subseteq z
+	\hint{=}{ $\bunion$ and $\subseteq$ }
+		f.x_0 \bunion f.x_1 \1\subseteq z
+	\end{calculation}
+	\end{indirect:equality}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\begin{align*}
+\invariant{inv1}{ \qforall{y_0,y_1}{}{ y_0 = y_1 \2\equiv \qforall{z}{}{ y_0 \subseteq z \1\equiv y_1 \subseteq z } } }
+\end{align*}
+
+\begin{proof}{INIT/INV/\ref{inv1}}
+	\begin{free:var}{y_0}{y_0}
+	\begin{free:var}{y_1}{y_1}
+	\begin{by:parts} \\
+		\begin{part:a}{y_0 = y_1 \2\implies \qforall{z}{}{ y_0 \subseteq z \1\equiv y_1 \subseteq z }}
+		\easy 
+%		banana
+		\end{part:a}
+
+		\begin{part:a}{ \qforall{z}{}{ y_0 \subseteq z \1\equiv y_1 \subseteq z } \2\implies y_0 = y_1 }
+		\begin{align}
+		\assume{hyp0}{\qforall{z}{}{ y_0 \subseteq z \1\equiv y_1 \subseteq z }} \\
+		\goal{ y_0 = y_1 }
+		\end{align}
+		\begin{calculation}
+			y_0 = y_1
+		\hint{=}{ antisymmetry of $\subseteq$ }
+			y_0 \subseteq y_1 \1\land y_1 \subseteq y_0
+		\hint{=}{ \eqref{hyp0} }
+%		\hint{=}{  }
+			y_1 \subseteq y_1 \1\land y_0 \subseteq y_0
+		\hint{=}{ reflexivity of $\subseteq$ }
+			\true
+		\end{calculation}
+		\end{part:a}
+	\end{by:parts}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\end{machine}
+
+\end{document}

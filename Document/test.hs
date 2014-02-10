@@ -15,6 +15,7 @@ import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.Phase as Phase
 import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
+import qualified Document.Tests.IndirectEq as Ind
 
 import Latex.Parser
 import Latex.Scanner
@@ -32,6 +33,7 @@ test_case = ("Unit-B Document", test, True)
 test :: IO Bool
 test = test_cases 
         [ StringCase "basic syntax and scopes" case1 result1
+        , Ind.test_case
         , SMch.test_case
         , Cubes.test_case
         , Train.test_case

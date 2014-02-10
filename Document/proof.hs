@@ -15,6 +15,7 @@ import Logic.Calculation hiding ( context )
 import Logic.Expr
 import Logic.Const
 import Logic.Genericity
+import Logic.Label
 import Logic.Operator
 
     -- Libraries
@@ -136,6 +137,12 @@ find_assumptions m pr = visit_doc
             )
         ]
 
+add_local v pr = pr { ctx =             Context M.empty 
+                                            (symbol_table v)
+                                            M.empty M.empty M.empty
+                            `merge_ctx` ctx pr }
+
+
 find_proof_step :: Monad m
                 => ProofParam
                 -> Machine
@@ -160,12 +167,7 @@ find_proof_step pr m = visit_doc
                             (left [Error (format "cannot infer the type of '{0}'" to) li])
                             return
                             (M.lookup to dums)
-                    p     <- collect_proof_step pr 
-                                    { ctx =             Context M.empty 
-                                                            (M.singleton to v)
-                                                            M.empty M.empty M.empty
-                                            `merge_ctx` ctx pr }
-                                m xs
+                    p     <- collect_proof_step (add_local [v] pr) m xs
                     set_proof (Proof $ FreeGoal from to t p li) proofs
             )
         ,   (   "by:cases"
@@ -184,6 +186,37 @@ find_proof_step pr m = visit_doc
             ,   EnvBlock $ \(lbl,()) xs proofs -> do
                     p <- collect_proof_step pr m xs
                     add_proof lbl p proofs
+            )
+        ,   (   "indirect:equality"
+            ,   EnvBlock $ \(String dir,rel,String zVar,()) xs proofs -> do
+                    let Context _ _ _ _ vars = par_ctx pr
+                    li <- ask
+                    Var _ t <- maybe 
+                        (left [Error ("invalid dummy: " ++ zVar) li])
+                        return
+                        $ M.lookup zVar vars
+                    let (x,x_decl) = var "x" t
+                        (y,y_decl) = var "y" t
+                        (z,z_decl) = var "z" t
+                    x <- hoistEither x
+                    y <- hoistEither y
+                    z <- hoistEither z
+                    op <- focusT def_opt
+                        $ parse_oper 
+                            (context m)
+                            (all_notation m)
+                            (concatMap flatten_li rel) 
+                    let equiv = case dir of
+                                "left"  -> mk_expr op z x `mzeq` mk_expr op z y
+                                "right" -> mk_expr op x z `mzeq` mk_expr op y z
+                                _       -> Left "invalid inequality side, expecting 'left' or 'right': "
+                    expr <- hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
+                                (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
+                    p <- collect_proof_step (add_local [Var zVar t] pr) m xs
+                    set_proof (Proof $ Assertion 
+                            (M.singleton (label "indirect:eq") (expr, Proof $ Easy li))
+                            (Proof $ FreeGoal "z" zVar t p li)
+                            li) proofs
             )
         ] [ (   "\\easy"
             ,   CmdBlock $ \() proofs -> do

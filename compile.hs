@@ -13,11 +13,15 @@ import System.Exit
 import System.IO 
 import System.Process
 
+interval :: Time
 interval = Minutes 1
+
+retry_interval :: Time
 retry_interval = Seconds 1
 
 data Time = Minutes Int | Seconds Int
 
+microseconds :: Time -> Int
 microseconds (Minutes x) = x * 60000000
 microseconds (Seconds x) = x * 1000000
 
@@ -28,12 +32,15 @@ microseconds (Seconds x) = x * 1000000
 --            | isAlpha x       = [Nothing, Just ys]
 --            | not $ isAlpha x = [Just ys]
 
+
+repeatWhile :: (Monad m) => m Bool -> m ()
 repeatWhile m = do
     b <- m
     if b 
         then repeatWhile m
         else return ()
 
+main :: IO ()
 main = do
     flip evalStateT [] $ flip evalStateT init_state $ forever $ do
         b <- didAnythingChange

@@ -197,9 +197,13 @@ type_t = do
         t <- case get_type ctx t of
             Just s -> return $ USER_DEFINED s ts
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
-        b2 <- liftHOF look_ahead $ read_listP "\\pfun"
+        b2 <- liftHOF look_ahead $ read_listP "\\pfun"                
         if b2 
         then do
+            maybe 
+                (fail $ "Invalid sort: '\\pfun'")
+                return
+                $ get_type ctx "\\pfun"
             read_listP "\\pfun"
             eat_spaceP
             t2 <- type_t

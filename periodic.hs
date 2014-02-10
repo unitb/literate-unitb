@@ -16,18 +16,25 @@ import System.IO
 import System.Locale
 import System.Process
 
+long_interval :: Time
 long_interval = Minutes 1
+
+short_interval :: Time
 short_interval = Seconds 10
+
+retry_interval :: Time
 retry_interval = Seconds 10
 
 data Time = Minutes Int | Seconds Int
 
+microseconds :: Time -> Int
 microseconds (Minutes x) = x * 60000000
 microseconds (Seconds x) = x * 1000000
 
 data Monitor = HaskellMon | LaTeXMon
     deriving (Eq, Ord)
 
+main :: IO ()
 main = do
     xs <- getArgs
     if not $ length xs <= 1 then 

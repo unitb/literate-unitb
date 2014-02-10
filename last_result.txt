@@ -1,5 +1,50 @@
 +- Unit-B Document
 |  +- basic syntax and scopes
+|  +- train station example, with sets
+|  |  +- verify proof with galois connections
+|  |   xxx m0/INIT/INV/inv0/assertion/indirect:eq/easy|___|/INIT/INV/inv0/main goal/
+|  |  goal 
+|  |    o  m0/INIT/INV/inv0/main goal/hypotheses 
+|  |    o  m0/INIT/INV/inv0/main goal/relation 
+|  |    o  m0/INIT/INV/inv0/main goal/step 
+|  |    o  m0/INIT/INV/inv0/main goal/step 
+|  |    o  m0/INIT/INV/inv0/main goal/step 
+|  |    o  m0/INIT/INV/inv0/main goal/step 
+|  |    o  m0/INIT/INV/inv1/completeness 
+|  |    o  m0/INIT/INV/inv1/part 1/easy 
+|  |    o  m0/INIT/INV/inv1/part 2/goal 
+|  |    o  m0/INIT/INV/inv1/part 2/hypotheses 
+|  |    o  m0/INIT/INV/inv1/part 2/new assumption 
+|  |    o  m0/INIT/INV/inv1/part 2/relation 
+|  |    o  m0/INIT/INV/inv1/part 2/step 
+|  |    o  m0/INIT/INV/inv1/part 2/step 
+|  |    o  m0/INIT/INV/inv1/part 2/step 
+|  |  passed 15 / 17
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > _.\n
+|  |    < _.\n
+|  |    -     
+|  |    > _.xxx_.m0
+|  |    < _._.o_._.m0
+|  |    -   ---  --
+|  |  ]
+|  |  +- [ Success: 0 / 1 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -97,7 +142,18 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 9 / 9 ]
+|  +- [ Success: 9 / 10 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -151,16 +207,16 @@
 |  +- case 3 - transitive closures
 |  +- case 4 - transitive closures in linear time
 |  +- [ Success: 5 / 5 ]
-+- [ Success: 6 / 6 ]
++- [ Success: 5 / 6 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   14872 total
+   14925 total
     1450 Document/Tests/trainstation.hs
      909 Document/machine.hs
      745 Document/Tests/lambdas.hs
      711 UnitB/ast.hs
      634 UnitB/po.hs
-Time: 00:45:50
+Time: 17:08:09
