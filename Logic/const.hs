@@ -61,8 +61,11 @@ zimplies x y
     | otherwise   = fun2 (Fun [] "=>"  [bool,bool] bool) x y
 zand x y     = zall [x,y]
 zor x y      = zsome [x,y]
-zeq          = fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] bool
-mzeq         = typ_fun2 $ Fun [] "="   [GENERIC "a", GENERIC "a"] bool
+
+zeq_fun      = Fun [] "="   [GENERIC "a", GENERIC "a"] bool
+
+zeq          = fun2 zeq_fun
+mzeq         = typ_fun2 zeq_fun
 zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool
 ztrue        = Const [] "true"  bool
 zfalse       = Const [] "false" bool

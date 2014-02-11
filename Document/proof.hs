@@ -12,6 +12,7 @@ import UnitB.AST
 import UnitB.PO
 
 import Logic.Calculation hiding ( context )
+import Logic.Classes
 import Logic.Expr
 import Logic.Const
 import Logic.Genericity
@@ -26,6 +27,7 @@ import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader )
 import qualified Control.Monad.Trans.RWS as RWS
 
+import           Data.Char
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
 import           Data.Monoid (Monoid)
@@ -49,6 +51,7 @@ data ProofParam = ProofParam
     { hypotheses :: Map Label Expr
     , locals     :: Map String Var
     , ctx        :: Context
+    , po         :: Sequent
     }
 
 empty_pr = ProofParam M.empty M.empty
@@ -142,6 +145,54 @@ add_local v pr = pr { ctx =             Context M.empty
                                             M.empty M.empty M.empty
                             `merge_ctx` ctx pr }
 
+change_goal pr g = pr { po = Sequent ctx hyps g }
+    where
+        Sequent ctx hyps _ = po pr
+
+forall_goal :: ProofParam -> String
+            -> EitherT [Error] (RWS LineInfo [Error] System) Expr
+forall_goal pr from = do
+            let Sequent _ _ goal = po pr 
+            li <- ask
+            case goal of
+                Binder Forall vs rexp texp -> do
+                    if from `elem` map name vs then do
+                        let new_vars = L.filter (\v -> name v /= from) vs
+                        if not $ L.null new_vars then
+                            return $ Binder Forall new_vars rexp texp
+                        else
+                            return $ zimplies rexp texp
+                    else left [Error (format "{0} is not a bound variable" from) li]
+                _ -> left [Error "goal is not a universal quantification" li]
+
+match_equal pr = do
+            let Sequent _ _ goal = po pr
+            li <- ask
+            let msg = ("expecting an equality in the proof goal:\n" ++ pretty_print' goal)
+            case goal of
+                FunApp f [x,y] -> do
+                    if name f == "=" then
+                        return (x,y)
+                    else left [Error msg li]
+                _ -> left [Error msg li]
+
+indirect_eq_thm dir op t = do
+        li <- ask
+        let (x,x_decl) = var "x" t
+            (y,y_decl) = var "y" t
+            (z,z_decl) = var "z" t
+        x <- hoistEither x
+        y <- hoistEither y
+        z <- hoistEither z
+        let equiv = indirect_eq dir op x y z
+        hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
+                    (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
+
+indirect_eq dir op x y z = do
+                case map toLower dir of
+                    "left"  -> mk_expr op z x `mzeq` mk_expr op z y
+                    "right" -> mk_expr op x z `mzeq` mk_expr op y z
+                    _       -> Left "invalid inequality side, expecting 'left' or 'right': "
 
 find_proof_step :: Monad m
                 => ProofParam
@@ -162,12 +213,16 @@ find_proof_step pr m = visit_doc
         ,   (   "free:var"
             ,   EnvBlock $ \(String from,String to,()) xs proofs -> do
                     li    <- lift $ ask
-                    let Context _ _ _ _ dums = ctx pr
+                    let Context _ _ _ _ dums  = ctx pr
+                    let Sequent ctx hyps _ = po pr 
+                    goal <- forall_goal pr from
                     v@(Var _ t) <- maybe 
                             (left [Error (format "cannot infer the type of '{0}'" to) li])
                             return
                             (M.lookup to dums)
-                    p     <- collect_proof_step (add_local [v] pr) m xs
+                    p     <- collect_proof_step (add_local [v] pr) 
+                            { po = Sequent ctx hyps goal }
+                            m xs
                     set_proof (Proof $ FreeGoal from to t p li) proofs
             )
         ,   (   "by:cases"
@@ -195,27 +250,27 @@ find_proof_step pr m = visit_doc
                         (left [Error ("invalid dummy: " ++ zVar) li])
                         return
                         $ M.lookup zVar vars
-                    let (x,x_decl) = var "x" t
-                        (y,y_decl) = var "y" t
-                        (z,z_decl) = var "z" t
-                    x <- hoistEither x
-                    y <- hoistEither y
-                    z <- hoistEither z
                     op <- focusT def_opt
                         $ parse_oper 
                             (context m)
                             (all_notation m)
                             (concatMap flatten_li rel) 
-                    let equiv = case dir of
-                                "left"  -> mk_expr op z x `mzeq` mk_expr op z y
-                                "right" -> mk_expr op x z `mzeq` mk_expr op y z
-                                _       -> Left "invalid inequality side, expecting 'left' or 'right': "
-                    expr <- hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
-                                (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
-                    p <- collect_proof_step (add_local [Var zVar t] pr) m xs
+                    thm <- indirect_eq_thm dir op t
+                    (lhs,rhs) <- match_equal pr
+                    let (z,z_decl) = var "z" t
+                    z <- hoistEither z
+                    expr <- hoistEither $ with_li li $ indirect_eq dir op lhs rhs z
+                    symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
+                    let new_pr = add_local [Var zVar t] pr
+                    p <- collect_proof_step new_pr m xs
                     set_proof (Proof $ Assertion 
-                            (M.singleton (label "indirect:eq") (expr, Proof $ Easy li))
-                            (Proof $ FreeGoal "z" zVar t p li)
+                            (M.fromList [ (label "indirect:eq", (thm, Proof $ Easy li))
+                                        , (label "new:goal", ( (zforall [z_decl] ztrue expr)
+                                                             , (Proof $ FreeGoal "z" zVar t p li))) 
+                                        , (label "symb:eq", ( symb_eq, Proof $ Ignore li ))
+                                        ] )
+                                (-- Proof $ Prune 2 $ 
+                                    Proof $ Easy li)
                             li) proofs
             )
         ] [ (   "\\easy"
@@ -235,8 +290,11 @@ find_cases pr m = visit_doc
         [   (   "case"
             ,   EnvBlock $ \(lbl,formula,()) xs cases -> do
                     expr      <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
+                    let (Sequent ctx old_hyps goal) = po pr
+                        new_po = Sequent ctx (expr:old_hyps) goal
                     p         <- collect_proof_step 
-                            (pr { hypotheses = insert lbl expr hyps }) 
+                            (pr { hypotheses = insert lbl expr hyps
+                                , po = new_po }) 
                             m xs
                     return ((lbl, expr, p):cases) 
             )
@@ -254,7 +312,9 @@ find_parts pr m = visit_doc
         [   (   "part:a"
             ,   EnvBlock (\(formula,()) xs cases -> do
                     expr      <- get_predicate m (par_ctx pr) WithoutFreeDummies formula
-                    p         <- collect_proof_step pr m xs
+                    let (Sequent ctx hyps _) = po pr
+                        new_po = Sequent ctx hyps expr
+                    p         <- collect_proof_step (pr { po = new_po }) m xs
                     return ((expr, p):cases))
             )
         ] []
@@ -266,10 +326,14 @@ collect_proof_step :: Monad m
                    -> EitherT [Error] (RWST LineInfo [Error] System m) Proof
 collect_proof_step pr m xs = do
         let hyps = hypotheses pr
-        step@(Step asrt _ asm _ _) <- toEither $ find_assumptions m pr xs empty_step
-        let pr2 = pr { hypotheses = asrt `union` asm `union` hyps }
-        step <- toEither $ find_proof_step pr2 m xs step
+        step@(Step asrt _ asm ng _) <- toEither $ find_assumptions m pr xs empty_step
         li   <- lift $ ask
+        let (Sequent ctx hyp goal) = po pr
+            new_goal = maybe goal id ng
+            new_po = Sequent ctx (M.elems asrt ++ M.elems asm ++ hyp) new_goal
+        let pr2 = pr { hypotheses = asrt `union` asm `union` hyps
+                     , po = new_po }
+        step <- toEither $ find_proof_step pr2 m xs step
         case step of
             Step assrt prfs asm ng (Just p) -> do
                 let f k x = (x, prfs ! k)

@@ -837,11 +837,11 @@ collect_proofs = visit_doc
                             , format "a proof for {0} already exists" lbl )
                         ] 
                     li <- lift $ ask
-                    Sequent ctx _ _ <- maybe
+                    s@(Sequent ctx _ _) <- maybe
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
                             return
                             (M.lookup lbl $ raw_machine_pos m)
-                    p           <- collect_proof_step (empty_pr ctx) m xs 
+                    p           <- collect_proof_step (empty_pr ctx s) m xs 
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 

@@ -41,6 +41,12 @@ data Proof = forall a. ProofRule a => Proof a
 instance Eq Proof where
     Proof x == Proof y = x `h_equal` y
 
+data Ignore = Ignore LineInfo
+    deriving (Eq,Typeable)
+
+data Prune = Prune Int Proof
+    deriving (Eq,Typeable)
+
 data FreeGoal   = FreeGoal String String Type Proof LineInfo
     deriving (Eq,Typeable)
 
@@ -85,6 +91,12 @@ instance Syntactic Easy where
 
 instance Syntactic FreeGoal where
     line_info (FreeGoal _ _ _ _ li)   = li
+
+instance Syntactic Prune where
+    line_info (Prune _ p) = line_info p
+
+instance Syntactic Ignore where
+    line_info (Ignore li) = li
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
 chain n x y 

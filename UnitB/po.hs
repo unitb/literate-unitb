@@ -527,6 +527,13 @@ instance ProofRule Assertion where
                     $ Sequent ctx asm g )
             return (pos1 ++ concat pos2)
 
+instance ProofRule Prune where
+    proof_po th (Prune n p) lbl (Sequent ctx asm goal) = 
+            proof_po th p lbl (Sequent ctx (drop (length asm - n) asm) goal)
+
+instance ProofRule Ignore where
+    proof_po _ _ _ _ = Right []
+
 are_fresh :: [String] -> Sequent -> Bool
 are_fresh vs (Sequent _ asm goal) = 
             S.fromList vs `S.intersection` (S.map name $ S.unions $ map used_var (goal:asm))
