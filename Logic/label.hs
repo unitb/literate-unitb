@@ -15,6 +15,7 @@ data Label = Lbl String
 instance Show Label where
     show (Lbl s) = s
 
+label :: String -> Label
 label s = Lbl s
 
 symbol_table :: Named a => [a] -> Map String a

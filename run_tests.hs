@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import Config
@@ -14,22 +15,27 @@ import System.Process
 
 import Text.Printf
 
+p_system :: String -> IO ExitCode
 p_system cmd
 	| is_os_windows = system cmd
 	| otherwise     = system $ "./" ++ cmd
 
+runRaw :: (MonadIO m, MonadError [Char] m) 
+       => [Char] -> String -> [String] -> m ()
 runRaw phase cmd args  = do
     c <- liftIO $ rawSystem cmd args
     case c of
         ExitSuccess -> return ()
         ExitFailure _ -> throwError ("phase '" ++ phase ++ "' failed")
 
+run :: (MonadIO m, MonadError [Char] m)
+    => [Char] -> String -> m ()
 run phase cmd  = do
     c <- liftIO $ system cmd
     case c of
         ExitSuccess -> return ()
         ExitFailure _ -> throwError ("phase '" ++ phase ++ "' failed")
-
+general :: IO ExitCode
 general = do
         let compile x = readProcessWithExitCode "ghc" (x ++ 
                         [ "--make"
@@ -115,6 +121,7 @@ specific mod_name fun_name = do
             Just x  -> x
             Nothing -> "test"
 
+main :: IO ()
 main = do
     xs <- getArgs
     case xs of

@@ -15,10 +15,12 @@ import UnitB.PO
 
 import Utilities.Syntactic
 
+check_one :: Machine -> IO [Char]
 check_one m = do
         (s,_,_)   <- str_verify_machine m
         return ("> machine " ++ show (_name m) ++ ":\n" ++ s)        
 
+check_file :: FilePath -> IO ()
 check_file path = do
         r <- parse_machine path
         case r of
@@ -33,6 +35,7 @@ check_file path = do
         f xs = unlines $ filter p $ lines xs
         p ln = take 4 ln /= "  o "
 
+main :: IO ()
 main = do
         args <- getArgs
         case args of

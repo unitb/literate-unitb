@@ -32,8 +32,10 @@ instance Show a => Show (SCC a) where
 
 type Matrix a b = Map (a,a) b
 
+cycles :: Ord a => [(a,a)] -> [SCC a]
 cycles xs = cycles_with [] xs
 
+cycles_with :: Ord a => [a] -> [(a,a)] -> [SCC a]
 cycles_with ys xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
     where
         f xs  = (fst $ head xs, fst $ head xs, L.map snd xs)
@@ -117,6 +119,7 @@ m_closure_with vs es = fromList $ do
         h m vs = vs ++ concatMap (g m) vs
         result      = foldl f list order
 
+as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs
 
 as_matrix_with :: Ord a => [a] -> [(a,a)] -> Matrix a Bool

@@ -33,8 +33,10 @@ subst xs n z
 data Tree a = Node a (Tree a) (Tree a) | Leaf
     deriving Show
 
+test_case :: ([Char], IO Bool, Bool)
 test_case = ("Formatting utilities", test, True)
 
+test :: IO Bool
 test = test_cases
         [ StringCase "test 0" 
                     (return $ format "hello {0} name is {1} and I'm {2} years old" "my" "Simon" 28) 

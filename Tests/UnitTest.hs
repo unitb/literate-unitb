@@ -18,6 +18,7 @@ data TestCase =
     | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
 
+diff :: [Char] -> [Char] -> [Char]
 diff xs ys = p6
     where
         p0 = take (length p7 - 3) p7
@@ -55,14 +56,17 @@ dropl n (x:xs)
     | otherwise      = dropl (n-length x) xs
 dropl _ [] = []
  
+longest_prefix :: Eq a => [a] -> [a] -> [a]
 longest_prefix [] _ = []
 longest_prefix _ [] = []
 longest_prefix (x:xs) (y:ys)
     | x == y    = x : longest_prefix xs ys
     | otherwise = []
 
+longest_suffix :: Eq a => [a] -> [a] -> [a]
 longest_suffix xs ys = reverse $ longest_prefix (reverse xs) (reverse ys)
 
+interleave :: [[Char]] -> [[Char]] -> [[Char]]
 interleave [] xs = xs
 interleave xs [] = xs
 interleave (x:xs) (y:ys) = x:y:d : interleave xs ys
@@ -71,6 +75,7 @@ interleave (x:xs) (y:ys) = x:y:d : interleave xs ys
         f True = ' '
         f False = '-'
 
+quote :: [Char] -> [Char]
 quote [] = []
 quote (x:xs)
     | x == ' '  = "_." ++ quote xs
@@ -78,8 +83,8 @@ quote (x:xs)
     | x == '\n' = "\\n\n" ++ quote xs
     | True      = x : quote xs
 
-margin = unsafePerformIO $ newIORef 0
- 
+margin :: IORef Int
+margin = unsafePerformIO $ newIORef 0 
  
 test_suite :: Show a => [(String, IO a, a)] -> IO Bool
 test_suite xs = test_suite_string $ map f xs 

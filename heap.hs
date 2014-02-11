@@ -30,5 +30,10 @@ new x m = do
         y <- m
         HeapT $ modify $ insert x y
 
+execHeapT :: Monad m
+          => HeapT a1 b m a -> m (Map a1 b)
 execHeapT m = execStateT (runHeapT m) empty
+
+evalHeapT :: Monad m
+          => HeapT a1 b m a -> m a
 evalHeapT m = evalStateT (runHeapT m) empty

@@ -20,8 +20,11 @@ data State = State
     , extensions :: [String]
     }
 
+init_state :: State
 init_state = State empty [".hs",".lhs"]
 
+get_files :: MonadIO m
+          => FilePath -> WriterT [FilePath] (StateT State m) ()
 get_files path = do
         xs <- liftIO $ getDirectoryContents path
         let ys = map (combine path) xs
@@ -42,6 +45,8 @@ get_time_stamps = do
         ts <- forM files $ liftIO . getModificationTime
         return $ fromList $ zip files ts
 
+set_extensions :: Monad m
+               => [String] -> StateT State m ()
 set_extensions exts = modify $ \s -> s { extensions = exts }
 
 didAnythingChange :: (MonadIO m) => StateT State m Bool

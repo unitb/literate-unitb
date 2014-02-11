@@ -61,7 +61,7 @@ main = do
                                         "ghc" 
                                         (x ++ 
                                 [ "--make"
-                                , "-W"
+                                , "-W" --, "-fwarn-missing-signatures"
                                 , "-Werror"
                                 , "-hidir", "interface"
                                 , "-odir", "bin"]) ""

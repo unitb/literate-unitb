@@ -24,6 +24,7 @@ data Expr =
 data Quantifier = Forall | Exists | Lambda
     deriving (Eq, Ord, Generic)
 
+type_of :: Expr -> Type
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t
 type_of (FunApp (Fun _ _ _ t) _) = t
@@ -32,10 +33,13 @@ type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
         tuple = ztuple $ map Word vs
 type_of (Binder _ _ _ e)          = type_of e
 
+ztuple_type :: [Type] -> Type
 ztuple_type []          = null_type
 ztuple_type [x]         = x
 ztuple_type [x0,x1]     = pair_type x0 $ pair_type x1 null_type
 ztuple_type (x0:x1:xs)  = pair_type x0 $ ztuple_type (x1:xs)
+
+ztuple :: [Expr] -> Expr
 ztuple []           = unit
 ztuple [x]          = x
 ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
@@ -47,26 +51,40 @@ ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" 
 --        pair_type = USER_DEFINED pair_sort [tx,txs]
 --        tail = ztuple xs
 
+pair_sort :: Sort
 pair_sort = Sort "Pair" "Pair" 2
+
+pair_type :: Type -> Type -> Type
 pair_type x y = USER_DEFINED pair_sort [x,y]
 
+null_sort :: Sort
 null_sort = Sort "Null" "Null" 2
+
+null_type :: Type
 null_type = USER_DEFINED null_sort []
 
+unit :: Expr
 unit = Const [] "null" null_type
 
+pair :: Expr -> Expr -> Expr
 pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
     where
         t0 = type_of x
         t1 = type_of y
 
+maybe_sort :: Sort
 maybe_sort   = Sort "\\maybe" "Maybe" 1
+
+maybe_type :: Type -> Type
 maybe_type t = USER_DEFINED maybe_sort [t]
 
+fun_sort :: Sort
 fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (maybe_type $ GENERIC "b"))
 
+fun_type :: Type -> Type -> Type
 fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
 
+merge_range :: Quantifier -> StrList
 merge_range Forall = Str "=>"
 merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
@@ -128,6 +146,7 @@ data Sort =
         | Sort String String Int --[String]
     deriving (Eq, Ord, Show, Generic)
 
+z3_name :: Sort -> String
 z3_name (BoolSort) = "Bool"
 z3_name (IntSort) = "Int"
 z3_name (RealSort) = "Real"
@@ -135,6 +154,7 @@ z3_name (Sort _ x _) = x
 z3_name (DefSort _ x _ _) = x
 
     -- replace it everywhere
+z3_fun_name :: Fun -> String
 z3_fun_name (Fun xs ys _ _) = ys ++ concatMap z3_decoration xs
 
 data Decl = 
@@ -282,12 +302,17 @@ instance Symbol Context where
             ++  concatMap decl (elems fun) 
             ++  concatMap decl (elems defs) 
 
+
+merge :: (Ord k, Eq a, Show k, Show a)
+          => Map k a -> Map k a -> Map k a
 merge m0 m1 = unionWithKey f m0 m1
     where
         f k x y
             | x == y 	= x
 			| otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
+merge_all :: (Ord k, Eq a, Show k, Show a)
+          => [Map k a] -> Map k a
 merge_all ms = foldl (unionWithKey f) empty ms
     where
         f k x y
@@ -320,8 +345,10 @@ mk_context (x:xs) =
                     Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
 mk_context [] = Context empty empty empty empty empty
 
+empty_ctx :: Context
 empty_ctx = Context empty empty empty empty empty
 
+merge_ctx :: Context -> Context -> Context
 merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
         Context 
             (ss0 `merge` ss1) 
@@ -329,6 +356,7 @@ merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) =
             (fs0 `merge` fs1) 
             (ds0 `merge` ds1)
             (dum0 `merge` dum1)
+merge_all_ctx :: [Context] -> Context
 merge_all_ctx cs = Context 
         (merge_all $ map f0 cs) 
         (merge_all $ map f1 cs)
@@ -342,6 +370,7 @@ merge_all_ctx cs = Context
         f3 (Context _ _ _ x _) = x
         f4 (Context _ _ _ _ x) = x
 
+used_var :: Expr -> S.Set Var
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr

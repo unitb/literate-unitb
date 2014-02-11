@@ -37,6 +37,7 @@ import Text.Printf
 
 import Utilities.Syntactic
 
+with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
         let fn = path param ++ ".state'"
         b <- doesFileExist fn
@@ -136,6 +137,7 @@ options =
             "monitor input files and reverify when they change"
     ]
 
+main :: IO ()
 main = do
         rawargs <- getArgs
         let (opts,args,_) = getOpt Permute options rawargs

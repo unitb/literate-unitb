@@ -9,7 +9,7 @@ import qualified Utilities.Test as UT
 
 import Tests.UnitTest
 
---test_cases :: [(IO Bool, String)]
+test_case :: IO Bool
 test_case = test_suite 
         [  DOC.test_case
         ,  UB.test_case
@@ -19,6 +19,7 @@ test_case = test_suite
         ,  UT.test_case
         ]
 
+main :: IO ()
 main = do
     b <- test_case
     if b 
