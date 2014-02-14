@@ -7,6 +7,8 @@ import Config
 	
 import Document.Document
 
+import Logic.Label
+
 import UnitB.AST
 import UnitB.PO
 

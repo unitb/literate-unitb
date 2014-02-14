@@ -15,6 +15,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Genericity
 import Logic.Label
+import Logic.Sequent
 
     -- Libraries
 import Control.Monad.Trans.Either

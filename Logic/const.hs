@@ -64,6 +64,9 @@ zor x y      = zsome [x,y]
 
 zeq_fun      = Fun [] "="   [GENERIC "a", GENERIC "a"] bool
 
+zeq_symb     = fun2 $ Fun [GENERIC "a"] "eq" [GENERIC "a", GENERIC "a"] bool
+mzeq_symb    = typ_fun2 $ Fun [GENERIC "a"] "eq" [GENERIC "a", GENERIC "a"] bool
+
 zeq          = fun2 zeq_fun
 mzeq         = typ_fun2 zeq_fun
 zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool

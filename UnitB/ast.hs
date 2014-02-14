@@ -1,9 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
 module UnitB.AST 
-    ( Label
-    , label
-    , composite_label
-    , Theory  (..)
+    ( Theory  (..)
     , Machine (..)
     , Event   (..)
     , empty_event
@@ -62,6 +59,7 @@ import Logic.Calculation
 import Logic.Classes
 import Logic.Label
 import Logic.Operator
+import Logic.Sequent
 
 import Theories.Theory as Th
 import Theories.SetTheory
@@ -705,8 +703,3 @@ ps_union_proofs (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS _ _ _ _ _ _ _ h1) =
         return $ PS a0 b0 c0 d0 e0 f0 g0 h2
     where
         f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
-
-
-composite_label xs = Lbl $ intercalate "/" $ map str xs
-    where
-        str (Lbl s) = s

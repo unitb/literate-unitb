@@ -18,6 +18,7 @@ import Logic.Const
 import Logic.Genericity
 import Logic.Label
 import Logic.Operator
+import Logic.Sequent
 
     -- Libraries
 import           Control.Monad hiding ( guard )
@@ -41,11 +42,12 @@ import Utilities.Trace
 context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
 
 data ProofStep = Step 
-        (Map Label Expr)    -- assertions
-        (Map Label Proof)   -- proofs of assertions
-        (Map Label Expr)    -- assumptions
-        (Maybe Expr)        -- new_goal
-        (Maybe Proof)       -- main proof        
+       { assertions  :: (Map Label Expr)    -- assertions
+       , subproofs   :: (Map Label Proof)   -- proofs of assertions
+       , assumptions :: (Map Label Expr)    -- assumptions
+       , new_goal    :: (Maybe Expr)        -- new_goal
+       , main_proof  :: (Maybe Proof)       -- main proof        
+       }
 
 data ProofParam = ProofParam 
     { hypotheses :: Map Label Expr
@@ -239,7 +241,12 @@ find_proof_step pr m = visit_doc
             )
         ,   (   "subproof"
             ,   EnvBlock $ \(lbl,()) xs proofs -> do
-                    p <- collect_proof_step pr m xs
+                    li <- ask
+                    new_goal <- maybe 
+                            (left [Error (format "invalid subproof label: {0}" lbl) li])
+                            return
+                            (M.lookup lbl $ assertions proofs)
+                    p <- collect_proof_step (change_goal pr new_goal) m xs
                     add_proof lbl p proofs
             )
         ,   (   "indirect:equality"
@@ -261,7 +268,7 @@ find_proof_step pr m = visit_doc
                     z <- hoistEither z
                     expr <- hoistEither $ with_li li $ indirect_eq dir op lhs rhs z
                     symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
-                    let new_pr = add_local [Var zVar t] pr
+                    let new_pr = add_local [Var zVar t] (change_goal pr expr)
                     p <- collect_proof_step new_pr m xs
                     set_proof (Proof $ Assertion 
                             (M.fromList [ (label "indirect:eq", (thm, Proof $ Easy li))

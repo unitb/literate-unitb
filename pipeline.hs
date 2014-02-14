@@ -12,6 +12,8 @@ import Observable
 
 import Serialize
 
+import Logic.Label
+
 import UnitB.AST
 import UnitB.PO
 

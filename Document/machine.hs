@@ -14,6 +14,8 @@ import Latex.Parser
 import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore ( ExprStore )
+import Logic.Sequent
+import Logic.Label
 
 import SummaryGen
 
@@ -617,6 +619,12 @@ collect_expr = visit_doc
                     let ctx = context m
                     let dum = S.fromList (elems $ free_vars ctx p) 
                                 `S.union` S.fromList (elems $ free_vars ctx q)
+                    traceM $ show lbl
+                    traceM $ show $ S.toList dum
+                    traceM $ pretty_print' p
+                    traceM $ pretty_print' q
+                    traceM $ pretty_print' $ q `zimplies` p
+                    traceM $ "\n" ++ (pretty_print' $ zforall (S.toList dum) ztrue $ q `zimplies` p)
                     let new_prop = LeadsTo (S.elems dum) p q
                     return m { props = (props m) 
                         { progress   = insert lbl new_prop $ prop 

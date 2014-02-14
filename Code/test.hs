@@ -167,7 +167,7 @@ result5 = unlines
             , "9^3 = 729" ]
 
 case5 = do  xs <- runEitherT $ do
-                m <- EitherT $ parse path0
+                m  <- EitherT $ parse path0
                 xs <- EitherT $ return $ source_file "find_cubes" m $ n `zeq` bigN
                 lift $ do 
                     writeFile "tests/code.hs" $ unlines

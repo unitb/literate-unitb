@@ -9,6 +9,7 @@ import Document.Document
 
 import Logic.Const
 import Logic.Expr
+import Logic.Label
 
 import Theories.FunctionTheory
 

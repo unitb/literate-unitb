@@ -31,6 +31,7 @@ import Logic.Classes
 import Logic.Const
 import Logic.Label
 import Logic.Lambda
+import Logic.Sequent
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
@@ -40,7 +41,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 
-import           Data.Char
 import           Data.Function
 import           Data.List hiding (union)
 import           Data.Map as M hiding (map,filter,foldl, (\\))
@@ -49,8 +49,6 @@ import           Data.Typeable
 
 import           System.Exit
 import           System.Process
-
-import Utilities.Format
 
 z3_path = "z3"
 
@@ -102,24 +100,6 @@ data Satisfiability = Sat | Unsat | SatUnknown
 
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
-
-instance Show Sequent where
-    show (Sequent (Context ss vs fs ds _) as g) =
-            unlines (
-                   map (" " ++)
-                (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
-                ++ (map show $ elems fs)
-                ++ (map show $ elems ds)
-                ++ (map show $ elems vs)
-                ++ map show as)
-                ++ ["|----"," " ++ show g] )
-        where
-            f (_, IntSort) = ""
-            f (_, BoolSort) = ""
-            f (_, RealSort) = ""
-            f (x, DefSort y z xs _) = f (x, Sort y z $ length xs)
-            f (_, Sort _ z 0) = z
-            f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
 free_vars :: Context -> Expr -> Map String Var
 free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
@@ -245,26 +225,3 @@ verify xs = do
             return $ Right SatUnknown
         return r
 
-entailment  
-    (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 
-    (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 xp1) = 
-            (po0,po1)
-    where
-        po0 = Sequent 
-            (Context 
-                (srt0 `merge` srt1) 
-                (cons0 `merge` cons1) 
-                (fun0 `merge` fun1) 
-                (def0 `merge` def1)
-                (dum0 `merge` dum1))
-            [xp0]
-            xp1 
-        po1 = Sequent 
-            (Context 
-                (srt0 `merge` srt1) 
-                (cons0 `merge` cons1) 
-                (fun0 `merge` fun1) 
-                (def0 `merge` def1)
-                (dum0 `merge` dum1))
-            xs1
-            (zall xs0)

@@ -104,9 +104,6 @@ data Context = Context
         (Map String Var)  -- dummies
     deriving (Show,Eq,Generic)
 
-data Sequent = Sequent Context [Expr] Expr
-    deriving (Eq, Generic)
-
 class Symbol a where
     decl :: a -> [Decl]
 

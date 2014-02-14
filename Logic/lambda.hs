@@ -10,6 +10,7 @@ import Logic.Classes
 import Logic.Const
 import Logic.Expr
 import Logic.Genericity
+import Logic.Sequent
 
     -- Libraries
 import Control.Monad.State

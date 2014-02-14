@@ -33,6 +33,7 @@ import Document.TypeList
 import Latex.Parser
 
 import Logic.ExpressionStore
+import Logic.Label
 
 import UnitB.AST
 

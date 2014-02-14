@@ -2,12 +2,12 @@ module Serialize where
 
 	-- Modules
 import Logic.Expr
+import Logic.Label
+import Logic.Sequent
 
-import UnitB.AST
 import UnitB.PO
 
 	-- Libraries
-
 import Codec.Compression.Zlib
 	
 import Control.Monad
