@@ -159,18 +159,19 @@
 |  +- test1: code for the {event}
 |  +- test2: code for the {initialization}
 |  +- test3: code for the {procedure + loop}
-|  +- test3: {whole source file}
-|  +- [ Success: 5 / 5 ]
+|  +- test4: {whole source file}
+|  +- test5: run {source file}
+|  +- [ Success: 6 / 6 ]
 +- [ Success: 7 / 7 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   15496 total
+   15534 total
     1450 Document/Tests/trainstation.hs
      909 Document/machine.hs
      745 Document/Tests/lambdas.hs
      711 UnitB/ast.hs
      641 UnitB/po.hs
-Time: 09:34:46
+Time: 14:52:13

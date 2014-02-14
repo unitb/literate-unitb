@@ -160,7 +160,8 @@ machine_code name m exit = do
         inits <- init_code m
         let new_inits = indent 8 $ inits
         return $ format (unlines 
-                    [ "{0}{1} = flip execState s' $ fix $ \\proc' ->"
+                    [ "{0}{1} = flip execState s' $ fix $ \\proc' -> do"
+                    , "                      (State { .. }) <- get"
                     , "                      if {2} then return ()"
                     , "                      else do"
                     , "{3}" ++
