@@ -90,7 +90,7 @@ struct m = do
         attr = do 
             code <- mapM decl $ 
                            L.map ("v",) (M.elems $ variables m) 
-                        ++ L.map ("c",) (M.elems $ consts $ theory m)
+--                        ++ L.map ("c",) (M.elems $ consts $ theory m)
             return $ intercalate "\n    , " code
         decl (pre,Var y t) = do
             code <- type_code t
@@ -160,7 +160,7 @@ machine_code name m exit = do
         inits <- init_code m
         let new_inits = indent 8 $ inits
         return $ format (unlines 
-                    [ "{0}{1} = flip execState s' $ fix \\proc' ->"
+                    [ "{0}{1} = flip execState s' $ fix $ \\proc' ->"
                     , "                      if {2} then return ()"
                     , "                      else do"
                     , "{3}" ++
@@ -168,3 +168,18 @@ machine_code name m exit = do
                     , "    where"
                     , "{4}"
                     ] ) name args exitc prog new_inits
+
+source_file :: String -> Machine -> Expr -> Either String String
+source_file name m exit = do
+        str <- struct m
+        mch <- machine_code name m exit
+        return $ format (unlines
+                    [ "{-# LANGUAGE RecordWildCards #-}"
+                    , "import Data.Map as M"
+                    , "import Data.Set as S"
+                    , "import Control.Monad.State"
+                    , ""
+                    , "{0}"
+                    , ""
+                    , "{1}"
+                    ]) str mch 
