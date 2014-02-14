@@ -6,6 +6,7 @@ import qualified Z3.Test as ZT
 import qualified Document.Test as DOC
 import qualified Utilities.Format as FMT
 import qualified Utilities.Test as UT
+import qualified Code.Test as Code
 
 import Tests.UnitTest
 
@@ -17,6 +18,7 @@ test_case = test_suite
         ,  ZT.test_case
         ,  FMT.test_case
         ,  UT.test_case
+        ,  Code.test_case
         ]
 
 main :: IO ()
