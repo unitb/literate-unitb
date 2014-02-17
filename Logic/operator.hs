@@ -7,7 +7,6 @@ import Logic.Expr
 import Logic.Const
 
     -- Libraries
-import Data.Array as A
 import Data.Either
 import Data.Function
 import Data.List as L
@@ -15,26 +14,11 @@ import Data.Map as M hiding ( foldl )
 import Data.Tuple
 import Data.Typeable
 
-import Utilities.Format
-import Utilities.Graph
+import           Utilities.Format
+import           Utilities.Graph hiding ( Matrix )
+import qualified Utilities.Graph as G ( Matrix ) 
 
-data XUnaryOperator = Negation
-    deriving (Eq, Ord)
-
-data XBinOperator = 
-        SetDiff
-        | Apply
-        | Plus  | Mult | Power
-        | Equal | Leq | Geq
-        | Less | Greater
-        | Membership | Union 
-        | Overload | DomSubt | DomRest
-        | MkFunction
-        | TotalFunction
-        | And | Or
-        | Implies | Follows 
-        | Equiv
-    deriving (Eq,Ord,Show,Enum,Ix,Typeable)
+type Matrix a b = G.Matrix a b
 
     -- NOTE: All the instructions below can now be done in 
     -- the theories
@@ -52,26 +36,6 @@ mk_unary (UnaryOperator _ _ f) x = f $ Right x
 
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving (Show,Eq,Typeable)
-
-associativity :: [([XBinOperator],Assoc)]
-associativity = 
-        [ ([Apply],LeftAssoc)
-        , ([Power],Ambiguous)
-        , ([Mult],LeftAssoc)
-        , ([Plus],LeftAssoc)
-        , ([MkFunction],Ambiguous)
-        , ([Overload],LeftAssoc)
-        , ([Union],LeftAssoc)
-        , ([SetDiff],Ambiguous)
-        , ([TotalFunction],Ambiguous)
-        , ([DomRest,DomSubt],LeftAssoc)
-        , ([ Equal,Leq,Less
-           , Membership,Geq,Greater],Ambiguous)
-        , ([And],LeftAssoc)
-        , ([Or],LeftAssoc)
-        , ([Implies,Follows],Ambiguous) 
-        , ([Equiv],LeftAssoc)
-        ]
 
 data Notation = Notation
     { new_ops :: [Operator]
@@ -167,12 +131,6 @@ left_assoc_graph ops  = assoc_graph (rights $ new_ops ops) $ left_assoc ops
 right_assoc_graph :: Notation -> Matrix BinOperator Bool
 right_assoc_graph ops = assoc_graph (rights $ new_ops ops) $ right_assoc ops
 
-bin_op_range :: (XBinOperator, XBinOperator)
-bin_op_range = (x,y)
-    where
-        x = toEnum 0
-        y = last $ enumFrom x
-
 assoc_graph :: [BinOperator] -> [[BinOperator]] -> Matrix BinOperator Bool
 assoc_graph rs xss = as_matrix_with rs ys
     where
@@ -218,22 +176,6 @@ assoc' ops
 --            | lm M.! (i,j) = LeftAssoc
 --            | rm M.! (i,j) = RightAssoc
 --            | otherwise    = Ambiguous
-
-logical x = x `elem` [Implies, Follows, And, Or, Equiv]
-
-prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]
-
-pairs = fromList (concat (do
-            ((x,_),xs) <- zip a $ tail $ tails a
-            (y,_)      <- xs
-            a          <- x
-            b          <- y
-            return [
-                ((a,b),LeftAssoc),
-                ((b,a),RightAssoc) ])
-        ++ concatMap prod a    )
-    where
-        a = associativity
 
     -- Basic functions
 apply = BinOperator "apply" "."     zapply

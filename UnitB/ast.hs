@@ -77,8 +77,8 @@ import qualified Data.Set as S
 import           Data.Typeable
 
 import Utilities.Format
-import Utilities.Graph
 import Utilities.HeterogenousEquality
+import Utilities.Graph hiding ( Matrix )
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (elems $ extends th)) 

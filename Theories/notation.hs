@@ -2,6 +2,7 @@ module Theories.Notation where
 
     -- Modules
 import Logic.Operator
+import Logic.OldOperator
 
 import Theories.Arithmetic
 import Theories.FunctionTheory

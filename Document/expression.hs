@@ -16,9 +16,7 @@ import Logic.Operator
 
 import Theories.SetTheory
 import Theories.FunctionTheory
---import Theories.Notation
 
-import Utilities.Graph
 import Utilities.Syntactic
 
     -- Libraries

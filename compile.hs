@@ -47,7 +47,6 @@ main = do
         if b then do
             ys <- liftIO $ do
 --                forM_ (take 20 $ repeat "") putStrLn
-                clearScreen
                 let f cmd = do
                         x <- cmd
                         case x of 
@@ -74,6 +73,8 @@ main = do
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
                     , ["run_tests.hs","-threaded"] ]
+                clearScreen
+                hFlush stdout
                 let (cs,xs,yss) = unzip3 rs
                 let c = foldl success ExitSuccess cs
                 let ys = concat yss

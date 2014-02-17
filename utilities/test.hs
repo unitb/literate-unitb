@@ -2,6 +2,7 @@ module Utilities.Test where
 
     -- Modules
 import Logic.Operator
+import Logic.OldOperator
 
 import Theories.Arithmetic
 import Theories.Notation
