@@ -217,6 +217,7 @@ infer_goal (Calc _ _ s0 xs _) n = do
         f (_,y,_,_) = y
         g (x,_,_,_) = x
 
+show_proof :: Calculation -> String
 show_proof (Calc _ g fs ss _) = 
         unlines ( [
                 show g,
@@ -228,6 +229,7 @@ show_proof (Calc _ g fs ss _) =
                    (L.map ("      | " ++) $ L.map show h)
                 ++ [ "    " ++ show s ] )
 
+goal_po :: Calculation -> Sequent
 goal_po c = Sequent (context c) xs (goal c)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
@@ -275,6 +277,8 @@ steps_po th ctx (Calc d _ e0 es _) = f e0 es
                         expr
                     ) : tail)
 
+entails_goal_po :: Theory -> Context 
+                -> Calculation -> Either [Error] Sequent
 entails_goal_po th ctx (Calc d g e0 es li) = do
             a <- with_li li assume
             let ts = S.unions $ L.map used_types $ g : a

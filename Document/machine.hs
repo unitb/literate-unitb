@@ -154,6 +154,8 @@ produce_summaries sys =
         f ':' = '-'
         f x   = x
         
+read_document :: [LatexDoc]
+              -> EitherT [Error] (RWS () [Error] System) (Map String Machine)
 read_document xs = do
             traceM "step A"
             ms <- foldM gather empty xs 
@@ -646,6 +648,7 @@ scope ctx xp vs = do
     else left [Error (format "Undeclared variables: {0}" 
                       (intercalate ", " undecl_v)) li]
 
+remove_ref :: [Char] -> [Char]
 remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
 remove_ref ('}':xs) = remove_ref xs
 remove_ref (x:xs)   = x:remove_ref xs
@@ -857,6 +860,9 @@ collect_proofs = visit_doc
             )
         ] []
 
+deduct_schedule_ref_struct :: Monad m
+                           => LineInfo -> Machine
+                           -> RWST r [Error] System m ()
 deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans

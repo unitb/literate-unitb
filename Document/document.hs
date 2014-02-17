@@ -11,6 +11,7 @@ import Latex.Parser
 
     -- Libraries
 
+tex_to_string :: [LatexDoc] -> String
 tex_to_string d = unlines $ concatMap (aux 0) d
     where
         aux n d =

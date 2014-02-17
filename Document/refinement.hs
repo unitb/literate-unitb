@@ -30,8 +30,9 @@ import Data.Typeable
 
 import Utilities.Format
 import Utilities.Syntactic
---add_proof_edge :: (Monad m)
---               => Label -> [Label] -> RWS LineInfo [Error] System ()
+
+add_proof_edge :: MonadState System m 
+               => Label -> [Label] -> m ()
 add_proof_edge x xs = do
         RWS.modify (\x -> x { proof_struct = edges ++ proof_struct x } )
     where
@@ -131,12 +132,20 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
                 return
                 $ M.lookup x saf
 
+
+parse :: RuleParser a
+      => a -> String -> RuleParserParameter
+      -> EitherT [Error] (RWS LineInfo [Error] System) Rule
 parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
+assert :: Machine -> String -> Expr -> [(Label, Sequent)]
 assert m suff prop = assert_hyp m suff M.empty [] prop
 
+assert_hyp :: Machine -> String 
+           -> Map String Var -> [Expr] 
+           -> Expr -> [(Label, Sequent)]
 assert_hyp m suff cnst hyps prop = 
         [ ( po_lbl
             , (Sequent 
@@ -197,6 +206,8 @@ mk_discharge p tr [s] = Discharge p tr $ Just s
 mk_discharge p tr []  = Discharge p tr Nothing
 mk_discharge _ _ _    = error "expecting at most one safety property" 
 
+parse_discharge :: String -> RuleParserParameter
+                -> EitherT [Error] (RWS LineInfo [Error] System) Rule
 parse_discharge rule params@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
     li <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
@@ -337,6 +348,9 @@ instance RefRule Induction where
                         (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
                         ))
 
+parse_induction :: (Monad m)
+                => String -> RuleParserParameter
+                -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
 parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
         li <- ask
         toEither $ error_list

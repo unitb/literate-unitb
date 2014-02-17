@@ -39,6 +39,7 @@ import Utilities.Format
 import Utilities.Syntactic hiding (line)
 import Utilities.Trace
 
+context :: Machine -> Context
 context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
 
 data ProofStep = Step 
@@ -56,8 +57,10 @@ data ProofParam = ProofParam
     , po         :: Sequent
     }
 
+empty_pr :: Context -> Sequent -> ProofParam
 empty_pr = ProofParam M.empty M.empty
 
+par_ctx :: ProofParam -> Context
 par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
 
 set_proof :: Monad m => Proof -> ProofStep -> EitherT [Error] m ProofStep
@@ -101,6 +104,7 @@ add_proof lbl prf (Step a b c d e)
             left [Error (format "a proof for assertion {0} already exists" lbl) li]
     | otherwise         = return $ Step a (insert lbl prf b) c d e
 
+empty_step :: ProofStep
 empty_step = Step empty empty empty Nothing Nothing
 
 find_assumptions :: Monad m
@@ -142,11 +146,13 @@ find_assumptions m pr = visit_doc
             )
         ]
 
+add_local :: [Var] -> ProofParam -> ProofParam
 add_local v pr = pr { ctx =             Context M.empty 
                                             (symbol_table v)
                                             M.empty M.empty M.empty
                             `merge_ctx` ctx pr }
 
+change_goal :: ProofParam -> Expr -> ProofParam
 change_goal pr g = pr { po = Sequent ctx hyps g }
     where
         Sequent ctx hyps _ = po pr
@@ -167,6 +173,9 @@ forall_goal pr from = do
                     else left [Error (format "{0} is not a bound variable" from) li]
                 _ -> left [Error "goal is not a universal quantification" li]
 
+
+match_equal :: MonadReader LineInfo m 
+            => ProofParam -> EitherT [Error] m (Expr, Expr)
 match_equal pr = do
             let Sequent _ _ goal = po pr
             li <- ask
@@ -178,6 +187,9 @@ match_equal pr = do
                     else left [Error msg li]
                 _ -> left [Error msg li]
 
+indirect_eq_thm :: MonadReader LineInfo m 
+                => Either () () -> BinOperator 
+                -> Type -> EitherT [Error] m Expr
 indirect_eq_thm dir op t = do
         li <- ask
         let (x,x_decl) = var "x" t
@@ -190,6 +202,9 @@ indirect_eq_thm dir op t = do
         hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
                     (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
 
+indirect_eq :: Either () () -> BinOperator 
+            -> Expr -> Expr -> Expr 
+            -> Either String Expr
 indirect_eq dir op x y z = do
                 case map toLower dir of
                     "left"  -> mk_expr op z x `mzeq` mk_expr op z y
@@ -423,6 +438,9 @@ parse_calc pr m xs =
                     err $ M.lookup xs $ action ev
 
     -- assoc' n
+get_table :: ( Monad m, Monoid b ) 
+          => Machine
+          -> EitherT [Error] (RWST LineInfo b System m) (Matrix Operator Assoc)
 get_table m = with_tracingM $ do
         let key = sort $ M.keys $ extends $ theory m
 --        traceM $ "KEY: " ++ show key
@@ -505,6 +523,11 @@ get_predicate m ctx opt ys = do
         xs    = drop_blank_text ys
         msg   = "type of {0} is ill-defined: {1}"
 
+
+get_assert :: ( Monad m, Monoid b ) 
+           => Machine
+           -> [LatexDoc] 
+           -> EitherT [Error] (RWST LineInfo b (System) m) Expr
 get_assert m ys = get_predicate m empty_ctx WithoutFreeDummies ys
 
 get_evt_part :: ( Monad m, Monoid b ) 
@@ -519,6 +542,9 @@ get_evt_part m e ys = get_predicate m
                         WithoutFreeDummies
                         ys
 
+get_assert_with_free :: ( Monad m, Monoid b ) 
+                     => Machine -> [LatexDoc] 
+                     -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_assert_with_free m ys = get_predicate m 
                         (context m)
                         WithFreeDummies
