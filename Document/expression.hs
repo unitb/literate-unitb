@@ -11,7 +11,7 @@ import Latex.Parser
 import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore as ES
-import Logic.Genericity hiding (unsafePerformIO)
+import Logic.Genericity 
 import Logic.Operator
 
 import Theories.SetTheory

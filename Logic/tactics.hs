@@ -21,12 +21,6 @@ import Data.Map  as M hiding (map)
 import Utilities.Format
 import Utilities.Syntactic
 
-infixr 6 :+
---infixr 5 >>>=
-
-data Null = Null
-data (:+) a b = (:+) a b 
-
 data Tactic m a = Tactic { unTactic :: EitherT [Error] (ReaderT (Sequent, LineInfo) m) a }
 
 with_goal :: Monad m => Expr -> Tactic m a -> Tactic m a
@@ -52,6 +46,11 @@ get_goal :: Monad m => Tactic m Expr
 get_goal = Tactic $ do
         Sequent _ _ goal <- liftM fst $ lift ask
         return goal
+
+get_hypothesis :: Monad m => Tactic m [Expr]
+get_hypothesis = Tactic $ do
+        Sequent _ hyps _ <- liftM fst $ lift ask
+        return hyps
 
 is_fresh :: Monad m => Var -> Tactic m Bool
 is_fresh v = Tactic $ do
@@ -129,6 +128,32 @@ free_goal v0 v1 m = do
         let t = type_of (Word v1)
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
+instantiate_hyp :: Monad m 
+                => Expr -> [(Var,Expr)] 
+                -> Tactic m Proof
+                -> Tactic m Proof
+instantiate_hyp hyp ps proof = do
+        hyps <- get_hypothesis
+        li   <- get_line_info
+        if hyp `elem` hyps then do
+            newh <- case hyp of
+                Binder Forall vs r t 
+                    | all (`elem` vs) (map fst ps) -> do
+                        let new_vs = L.foldl (flip L.delete) vs (map fst ps)
+                            re     = substitute (fromList ps) r
+                            te     = substitute (fromList ps) t
+                        if L.null new_vs
+                            then return $ zimplies re te
+                            else return $ zforall new_vs re te
+                _ -> fail $ "hypothesis is not a universal quantification:\n" 
+                        ++ pretty_print' hyp
+            p <- with_hypotheses [newh] proof
+            return $ Proof $ InstantiateHyp hyp (fromList ps) p li
+        else
+            fail $ "formula is not an hypothesis:\n" 
+                ++ pretty_print' hyp
+
+
 make_expr :: Monad m
           => Either String a
           -> Tactic m a
@@ -151,65 +176,3 @@ instance Monad m => Monad (Tactic m) where
 
 instance MonadTrans Tactic where
     lift m = Tactic $ lift $ lift m
-
---fork_ :: [(Sequent, Tactic ())] -> Tactic ()
---fork_ xs = mapM_ f xs
---    where
---        f (x,Tactic y) = Tactic $ local (const x) y
---
---class Append a b c where
---    append :: a -> b -> c
---
---instance Append (a :+ b) Null (a :+ b) where
---    append x _ = x
---
---instance Append Null (a :+ b) (a :+ b) where
---    append _ x = x
---
---instance Append Null Null Null where
---    append _ _ = Null
---
---instance Append as bs cs => Append (a :+ as) bs (a :+ cs) where
---    append (x :+ xs) ys = x :+ append xs ys
---
---class Zip as bs cs where
---    zip_tuple :: as -> bs -> cs
---
---instance Zip Null Null Null where
---    zip_tuple _ _ = Null
---
---instance Zip as bs cs => Zip (a :+ as) (b :+ bs) ((a,b) :+ cs) where
---    zip_tuple (x :+ xs) (y :+ ys) = (x,y) :+ zip_tuple xs ys
---
---class Apply as bs cs where
---
---
---instance Apply Null Null Null where
---
---instance Apply as bs cs => 
---    Apply (Sequent :+ as) ( Tactic b :+ bs ) (c :+ cs) where
---
---class StringList xs where
---    string_list :: xs -> [String]
---
---instance StringList (Null,()) where
---    string_list _ = []
---
---instance (Show a, StringList (as,())) => StringList (a :+ as,()) where
---    string_list (x :+ xs, ()) = show x : string_list (xs,())
---
---instance StringList (as,()) => Show as where
---    show xs = "[ " ++ intercalate ", " (string_list (xs,())) ++ " ]"
---
---test0 = zip_tuple (a1 :+ a2 :+ Null) (b1 :+ b2 :+ Null) :: (Int,Int) :+ (Int,Int) :+ Null
---    where
---        (a1,a2,b1,b2) = (1,2,3,4) :: (Int,Int,Int,Int)
---
-----class Concat as bs where
-----    append_all :: as -> bs
-----
-----instance Concat Null Null where
-----    append_all _ = Null
-----
-----instance (Append a bs cs, Concat as bs) => Concat (a :+ as) cs where
-----    append_all (x :+ xs) = append x (append_all xs :: bs)

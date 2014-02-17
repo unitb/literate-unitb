@@ -16,7 +16,10 @@ import Theories.Theory
 import Control.Monad
 
 import Data.List as L
-import Data.Map as M (Map, lookup, fromList, elems, toList, empty, singleton, mapKeys)
+import Data.Map as M 
+                ( Map, lookup, fromList
+                , elems, toList, empty
+                , singleton, mapKeys, keys)
 import Data.Maybe
 import Data.Set as S 
 import Data.String.Utils as SU
@@ -70,6 +73,9 @@ data ByParts    = ByParts [(Expr,Proof)]           LineInfo
 data Assertion  = Assertion (Map Label (Expr,Proof)) Proof LineInfo
     deriving (Eq,Typeable)
 
+data InstantiateHyp = InstantiateHyp Expr (Map Var Expr) Proof LineInfo
+    deriving (Eq,Typeable)
+
 class (Syntactic a, Typeable a, Eq a) => ProofRule a where
     proof_po :: Theory -> a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
@@ -105,6 +111,9 @@ instance Syntactic Prune where
 
 instance Syntactic Ignore where
     line_info (Ignore li) = li
+
+instance Syntactic InstantiateHyp where
+    line_info (InstantiateHyp _ _ _ li) = li
 
 instance ProofRule Calculation where
     proof_po th c lbl po@(Sequent ctx _ _) = do
@@ -193,6 +202,26 @@ instance ProofRule Prune where
 
 instance ProofRule Ignore where
     proof_po _ _ _ _ = Right []
+
+instance ProofRule InstantiateHyp where
+    proof_po    th  (InstantiateHyp hyp ps proof li) 
+             	lbl (Sequent ctx hyps goal) = do
+        if hyp `elem` hyps then do
+            newh <- case hyp of
+                Binder Forall vs r t 
+                    | all (`elem` vs) (M.keys ps) -> do
+                        let new_vs = L.foldl (flip L.delete) vs (M.keys ps)
+                            re     = substitute ps r
+                            te     = substitute ps t
+                        if L.null new_vs
+                            then return $ zimplies re te
+                            else return $ zforall new_vs re te
+                _ -> Left [Error ("hypothesis is not a universal quantification:\n" 
+                        ++ pretty_print' hyp) li]
+            proof_po th proof lbl (Sequent ctx (newh:hyps) goal)
+        else
+            Left [Error ("formula is not an hypothesis:\n" 
+                ++ pretty_print' hyp) li]
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
 chain n x y 

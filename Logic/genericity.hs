@@ -8,23 +8,18 @@ import Logic.Classes
     -- Libraries
 import Control.Monad
 
--- import Data.Foldable as F
-    -- hiding ( foldl, forM_, mapM_, toList )
-import Data.List as L hiding ( (\\), union )
-import Data.Map as M 
-    hiding ( foldl, map, union, unions, (\\) )
-import qualified Data.Map as M
-import Data.Set as S ( (\\) )
-import qualified Data.Set as S 
-    hiding ( map, fromList, insert, foldl )
-
 import qualified Data.Graph as G
+import           Data.List as L hiding ( (\\), union )
+import           Data.Map as M 
+                    hiding ( foldl, map, union, unions, (\\) )
+import qualified Data.Map as M
+import           Data.Set as S ( (\\) )
+import qualified Data.Set as S 
+                    hiding ( map, fromList, insert, foldl )
 
 import Prelude as L
 
 import Utilities.Format
-
-import qualified System.IO.Unsafe as Unsafe
 
 instance Show a => Show (G.SCC a) where
     show (G.AcyclicSCC v) = "AcyclicSCC " ++ show v
@@ -35,9 +30,9 @@ data Unification = Uni
     , edges  :: [(String,String)]
     }
 
---unsafePerformIO x = ()
-unsafePerformIO = Unsafe.unsafePerformIO
+type ExprP = Either String Expr
 
+empty_u :: Unification
 empty_u = Uni empty []
 
 zcast :: Type -> Either String Expr -> Either String Expr
@@ -50,12 +45,6 @@ zcast t me = do
             , "  type annotation: {2} "
             ]) e (type_of e) t :: String }
         u <- maybe (Left err_msg) Right $ unify t $ type_of e
---        let !() = unsafePerformIO (do
---                putStrLn "> > > cast"
---                print t
---                print $ type_of e
---                print u
---                print $ specialize_right u e)
         return $ specialize_right u e
 
 suffix_generics :: String -> Type -> Type
@@ -124,6 +113,7 @@ check_type f@(Fun _ n ts t) mxs = do
                     n ts t args :: String
         maybe (Left err_msg) Right $ check_args xs f
 
+typ_fun1 :: Fun -> ExprP -> ExprP
 typ_fun1 f@(Fun _ n ts t) mx        = do
         x <- mx
         let err_msg = format (unlines 
@@ -135,6 +125,8 @@ typ_fun1 f@(Fun _ n ts t) mx        = do
                     n ts t 
                     x (type_of x) :: String
         maybe (Left err_msg) Right $ check_args [x] f
+
+typ_fun2 :: Fun -> ExprP -> ExprP -> ExprP
 typ_fun2 f@(Fun _ n ts t) mx my     = do
         x <- mx
         y <- my
@@ -149,9 +141,9 @@ typ_fun2 f@(Fun _ n ts t) mx my     = do
                     n ts t 
                     x (type_of x) 
                     y (type_of y) :: String
---        let !() = unsafePerformIO (putStrLn ("x: " ++ show x))
---        let !() = unsafePerformIO (putStrLn ("y: " ++ show y))
         maybe (Left err_msg) Right $ check_args [x,y] f
+
+typ_fun3 :: Fun -> ExprP -> ExprP -> ExprP -> ExprP
 typ_fun3 f@(Fun _ n ts t) mx my mz  = do
         x <- mx
         y <- my
@@ -187,9 +179,6 @@ unify_aux (GENERIC x) t1 u
                 }
     where
         fv = S.toList $ generics t1
---        !() = unsafePerformIO (do
---                putStrLn ("> matching: " ++ if (x `member` l_to_r u) then "already mapped" else "new mapping")
---                print (t0,t1))
 unify_aux t0 t1@(GENERIC _) u = unify_aux t1 t0 u
 unify_aux (VARIABLE x) (VARIABLE y) u
         | x == y                = Just u
@@ -199,7 +188,6 @@ unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | otherwise                        = Nothing
     where
         f u (x, y) = unify_aux x y u
---unify_aux (SET t0) (SET t1) u = unify_aux t0 t1 u
 unify_aux (ARRAY t0 t1) (ARRAY t2 t3) u = do
         u <- unify_aux t0 t2 u
         unify_aux t1 t3 u
@@ -241,8 +229,6 @@ unify t0 t1 = do
         foldM (\m cc -> 
                 case cc of
                     G.AcyclicSCC v ->
---                        let !() = unsafePerformIO (putStrLn "hello")
---                        in
                         if v `member` m
                             then return $ M.map (instantiate $ singleton v (m ! v)) m
                             else return m
@@ -356,41 +342,15 @@ normalize_generics expr = specialize renaming expr
                 n        = S.size free_gen
         renaming = fst $ visit f (empty, map GENERIC gen) expr
 
---     Apply a type substitution to (partially)
---     instantiate a type
---instantiate :: Map String Type -> Type -> Type
---instantiate m t = f t
---    where
---        f t0@(GENERIC x) = 
---            case M.lookup x m of
---                Just t1  -> t1
---                Nothing  -> t0
---        f t           = rewrite f t
-
+instantiate_left :: Map String Type -> Type -> Type
 instantiate_left m t = instantiate m (suffix_generics "1" t)
 
+instantiate_right :: Map String Type -> Type -> Type
 instantiate_right m t = instantiate m (suffix_generics "2" t)
-
---substitute_type_vars_left m e = substitute_type_vars m (substitute_types (suffix_generics "1") e)
---substitute_type_vars_right m e = substitute_type_vars m (substitute_types (suffix_generics "2") e)
 
     -- apply a type substitution to an expression
 specialize :: Map String Type -> Expr -> Expr
 specialize = instantiate
---    where
---        f (Const gs x t)    = Const (map g gs) x $ g t
---        f (Word x)          = Word $ h x
---        f (FunApp fun args) 
---                = rewrite f $ FunApp (instantiate m fun) (map (specialize m) args)
---        f (Binder q vs r e) 
---                = rewrite f $ Binder q (map h vs) r e
---        g t     = instantiate m t
---        h (Var x t) = Var x $ g t
 
 specialize_left m e  = specialize m (rewrite_types "1" e)
 specialize_right m e = specialize m (rewrite_types "2" e)
-
-make_gen_param_unique e = f 0 e
-    where
-        f e = rewrite f e
-

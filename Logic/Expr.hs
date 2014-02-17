@@ -342,6 +342,12 @@ mk_context (x:xs) =
                     Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
 mk_context [] = Context empty empty empty empty empty
 
+substitute :: Map Var Expr -> Expr -> Expr
+substitute m e = f e
+    where
+        f e@(Word v) = maybe e id $ M.lookup v m
+        f e = rewrite f e
+
 empty_ctx :: Context
 empty_ctx = Context empty empty empty empty empty
 

@@ -16,8 +16,6 @@ import           Data.Map
 import           Data.List as L
 
 ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
-    where
-        !() = unsafePerformIO (putStrLn "tfun")
 
 zdom = typ_fun1 (Fun [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
 

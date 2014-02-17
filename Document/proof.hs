@@ -188,20 +188,20 @@ match_equal pr = do
                     else left [Error msg li]
                 _ -> left [Error msg li]
 
-indirect_eq_thm :: MonadReader LineInfo m 
-                => Either () () -> BinOperator 
-                -> Type -> EitherT [Error] m Expr
-indirect_eq_thm dir op t = do
-        li <- ask
-        let (x,x_decl) = var "x" t
-            (y,y_decl) = var "y" t
-            (z,z_decl) = var "z" t
-        x <- hoistEither x
-        y <- hoistEither y
-        z <- hoistEither z
-        let equiv = indirect_eq dir op x y z
-        hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
-                    (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
+--indirect_eq_thm :: MonadReader LineInfo m 
+--                => Either () () -> BinOperator 
+--                -> Type -> EitherT [Error] m Expr
+--indirect_eq_thm dir op t = do
+--        li <- ask
+--        let (x,x_decl) = var "x" t
+--            (y,y_decl) = var "y" t
+--            (z,z_decl) = var "z" t
+--        x <- hoistEither x
+--        y <- hoistEither y
+--        z <- hoistEither z
+--        let equiv = indirect_eq dir op x y z
+--        hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
+--                    (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
 
 indirect_eq :: Either () () -> BinOperator 
             -> Expr -> Expr -> Expr 
@@ -239,11 +239,12 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                         [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
                         , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
                                 free_goal z_decl zVar proof) ]
-                        easy                                    -- lhs = rhs
-                                                                -- | we could instantiate indirect
-                                                                -- | inequality explicitly
-                                                                -- | for that, we need hypotheses
-                                                                -- | to be named in sequents
+                        $ instantiate_hyp                       -- lhs = rhs
+                            thm                                 -- | we could instantiate indirect
+                            [ (x_decl,lhs)                      -- | inequality explicitly 
+                            , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
+                            easy                                -- | to be named in sequents
+                                                              
             _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
 
 find_proof_step :: Monad m

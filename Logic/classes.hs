@@ -29,11 +29,12 @@ fold_map f s0 (x:xs) = (s2,y:ys)
         (s1,y)  = f s0 x
         (s2,ys) = fold_map f s1 xs
 
-visit    :: Tree a => (b -> a -> b) -> b -> a -> b
+visit :: Tree a => (b -> a -> b) -> b -> a -> b
 visit f s x = fst $ rewrite' g s x
     where
         g s0 y = (f s0 y, y)
-rewrite  :: Tree a => (a -> a) -> a -> a
+
+rewrite :: Tree a => (a -> a) -> a -> a
 rewrite f x = snd $ rewrite' g () x
     where
         g () x = ((), f x)

@@ -4,7 +4,7 @@ module Pipeline
 where
 
     -- Modules
-import Browser
+--import Browser
     
 import Document.Document
 
@@ -23,28 +23,24 @@ import Z3.Z3
 
     -- Libraries
 import Control.Concurrent
---import Control.Concurrent.STM.TChan
 
 import Control.Monad
---import Control.Monad.STM
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import           Data.Char
-import           Data.IORef
+--import           Data.IORef
 import           Data.Map as M 
                     ( Map
                     , insert, keys
                     , fromList
                     , toList, unions )
 import qualified Data.Map as M 
---import           Data.Maybe
-import           Data.Set as S 
-                    ( Set )
+--import           Data.Set as S 
+--                    ( Set )
 
-import Foreign
---import Foreign.C.String
+--import Foreign
 
 import System.Directory
 import System.Console.ANSI
@@ -84,13 +80,13 @@ data Shared = Shared
         -- , io      :: MVar String
         }
             
-data Display = Display
-        { result :: Map (Label,Label) (Seq,Bool)
-        , labels :: Set (Label,Label)
-        , errors :: [Error]
-        , error_msg  :: MVar [Reference]
-        , failed_po :: MVar [Reference]
-        }
+--data Display = Display
+--        { result :: Map (Label,Label) (Seq,Bool)
+--        , labels :: Set (Label,Label)
+--        , errors :: [Error]
+--        , error_msg  :: MVar [Reference]
+--        , failed_po :: MVar [Reference]
+--        }
 
 --console io = forever $ do
 --    xs <- takeMVar io
@@ -299,10 +295,10 @@ keyboard sh@(Shared { .. }) = do
             putStrLn $ format "Invalid command: '{0}'" xs
             keyboard sh
 
-data InterfaceStyle = 
-        Terminal 
-        | GUI ( MVar [Reference], MVar [Reference] )
-    deriving Eq
+--data InterfaceStyle = 
+--        Terminal 
+--        | GUI ( MVar [Reference], MVar [Reference] )
+--    deriving Eq
 
 run_pipeline fname = do
 --        pos     <- newMVar M.empty
@@ -338,39 +334,40 @@ run_pipeline fname = do
         mapM_ killThread ts
 --        return sh
 
-type Verifier = StablePtr (Shared)
+--type Verifier = StablePtr (Shared)
 
---run_verifier :: CString -> IO Verifier
---run_verifier fname = do
---    fname <- peekCString fname
---    sh <- run_pipeline fname
---    newStablePtr sh
-
---            merr <- gets error_msg
---            mpos <- gets failed_po
---            liftIO $ swapMVar mpos $ concatMap g $ toList res
---        g ((x,y),(p,b))
---            | not b     = [Ref fname (show y) (1,1)]
---            | otherwise = []
-
-get_error_list :: Verifier -> IO CErrList
-get_error_list v = do
-        Shared { .. } <- deRefStablePtr v
-        err <- read_obs error_list
-        let xs = map f err
-        r  <- newIORef (RL [] xs)
-        newStablePtr r
-    where
-        f (Error x (LI fname i j)) = Ref fname x (i,j)
-
-get_proof_obligations :: Verifier -> IO CErrList
-get_proof_obligations v = do
-        Shared { .. } <- deRefStablePtr v
-        pos <- read_obs pr_obl
-        let ys = concatMap (g fname) $ toList pos
-        r  <- newIORef (RL [] ys)
-        newStablePtr r
-    where
-        g fname ((_,y),(_,b))
-            | b == Just False = [Ref fname (show y) (1,1)]
-            | otherwise       = []
+--
+----run_verifier :: CString -> IO Verifier
+----run_verifier fname = do
+----    fname <- peekCString fname
+----    sh <- run_pipeline fname
+----    newStablePtr sh
+--
+----            merr <- gets error_msg
+----            mpos <- gets failed_po
+----            liftIO $ swapMVar mpos $ concatMap g $ toList res
+----        g ((x,y),(p,b))
+----            | not b     = [Ref fname (show y) (1,1)]
+----            | otherwise = []
+--
+--get_error_list :: Verifier -> IO CErrList
+--get_error_list v = do
+--        Shared { .. } <- deRefStablePtr v
+--        err <- read_obs error_list
+--        let xs = map f err
+--        r  <- newIORef (RL [] xs)
+--        newStablePtr r
+--    where
+--        f (Error x (LI fname i j)) = Ref fname x (i,j)
+--
+--get_proof_obligations :: Verifier -> IO CErrList
+--get_proof_obligations v = do
+--        Shared { .. } <- deRefStablePtr v
+--        pos <- read_obs pr_obl
+--        let ys = concatMap (g fname) $ toList pos
+--        r  <- newIORef (RL [] ys)
+--        newStablePtr r
+--    where
+--        g fname ((_,y),(_,b))
+--            | b == Just False = [Ref fname (show y) (1,1)]
+--            | otherwise       = []
