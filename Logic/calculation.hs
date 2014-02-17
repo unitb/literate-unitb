@@ -153,10 +153,10 @@ instance ProofRule FreeGoal where
             new_ctx = merge_ctx (Context M.empty (M.singleton u (Var u t)) M.empty M.empty M.empty)
                                 ctx
             free_vars (Binder Forall ds r expr) 
-                    | are_fresh [u] po = return (zforall (L.filter ((v /=) . name) ds) 
+                    | are_fresh [u] po = return $ zforall (L.filter ((v /=) . name) ds) 
                                                 (rename v u r)
-                                                $ rename v u expr)
-                    | otherwise          = Left $ [Error (format "variable can't be freed: {0}" u) li]
+                                                (rename v u expr)
+                    | otherwise        = Left $ [Error (format "variable can't be freed: {0}" u) li]
                 where
             free_vars expr = return expr
     --        step_lbls = map (("case "++) . show) [1..]

@@ -2,7 +2,69 @@
 |  +- basic syntax and scopes
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
-|  |  +- [ Success: 1 / 1 ]
+|  |   xxx m0/INIT/INV/inv0/assertion/indirect:eq/easy 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/goal 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/hypotheses 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/relation 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/step 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/step 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/step 
+|  |    o  m0/INIT/INV/inv0/assertion/new:goal/step|___|18
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > _.\n
+|  |    < _.\n
+|  |    -     
+|  |    > _.xxx_.m0/INIT/INV/inv0/main_.goal/easy_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv0/main_.goal/easy_.\n
+|  |    -   ---  ----- ------------------------------
+|  |    > _._.o_._.m0/INIT/INV/inv1/completeness_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/completeness_.\n
+|  |    -                                           
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.1/easy_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.1/easy_.\n
+|  |    -                                           
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/goal_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/goal_.\n
+|  |    -                                           
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/hypotheses_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/hypotheses_.\n
+|  |    -                                                 
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/new_.assumption_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/new_.assumption_.\n
+|  |    -                                                      
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/relation_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/relation_.\n
+|  |    -                                               
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    -                                           
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    -                                           
+|  |    > _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    < _._.o_._.m0/INIT/INV/inv1/part_.2/step_.\n
+|  |    -                                           
+|  |    > passed_.16_./_.
+|  |    < passed_.17_./_.
+|  |    -          -     
+|  |  ]
+|  |  +- [ Success: 0 / 1 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -100,7 +162,18 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 10 / 10 ]
+|  +- [ Success: 9 / 10 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -162,15 +235,15 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 7 / 7 ]
++- [ Success: 6 / 7 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   15594 total
+   15876 total
     1450 Document/Tests/trainstation.hs
-     917 Document/machine.hs
+     923 Document/machine.hs
      746 Document/Tests/lambdas.hs
      705 UnitB/ast.hs
-     576 Document/expression.hs
+     595 Document/proof.hs

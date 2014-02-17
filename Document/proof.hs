@@ -19,6 +19,7 @@ import Logic.Genericity
 import Logic.Label
 import Logic.Operator
 import Logic.Sequent
+import Logic.Tactics
 
     -- Libraries
 import           Control.Monad hiding ( guard )
@@ -206,10 +207,44 @@ indirect_eq :: Either () () -> BinOperator
             -> Expr -> Expr -> Expr 
             -> Either String Expr
 indirect_eq dir op x y z = do
-                case map toLower dir of
-                    "left"  -> mk_expr op z x `mzeq` mk_expr op z y
-                    "right" -> mk_expr op x z `mzeq` mk_expr op y z
-                    _       -> Left "invalid inequality side, expecting 'left' or 'right': "
+                case dir of
+                    Left()  -> mk_expr op z x `mzeq` mk_expr op z y
+                    Right() -> mk_expr op x z `mzeq` mk_expr op y z
+
+indirect_equality :: Monad m 
+                  => Either () () 
+                  -> BinOperator 
+                  -> Var
+                  -> Tactic m Proof
+                  -> Tactic m Proof
+indirect_equality dir op zVar@(Var _ t) proof = do 
+        x_decl <- new_fresh "x" t
+        y_decl <- new_fresh "y" t
+        z_decl <- new_fresh "z" t
+        let x       = Word x_decl
+            y       = Word y_decl
+            z       = Word z_decl
+            rel     = mk_expr op
+            rel_z   = case dir of
+                        Left ()  -> rel z
+                        Right () -> flip rel z
+            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x `mzeq` rel_z y
+        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ Right (zeq x y) `mzeq` thm_rhs x y
+        goal <- get_goal
+        case goal of
+            FunApp f [lhs,rhs] 
+                | name f == "=" -> do
+                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
+                    assert 
+                        [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
+                        , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
+                                free_goal z_decl zVar proof) ]
+                        easy                                    -- lhs = rhs
+                                                                -- | we could instantiate indirect
+                                                                -- | inequality explicitly
+                                                                -- | for that, we need hypotheses
+                                                                -- | to be named in sequents
+            _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
 
 find_proof_step :: Monad m
                 => ProofParam
@@ -277,23 +312,31 @@ find_proof_step pr m = visit_doc
                             (context m)
                             (all_notation m)
                             (concatMap flatten_li rel) 
-                    thm <- indirect_eq_thm dir op t
+                    dir <- case map toLower dir of
+                                "left"  -> return $ Left ()
+                                "right" -> return $ Right ()
+                                _ -> left [Error "invalid inequality side, expecting 'left' or 'right': " li]
+--                    thm <- indirect_eq_thm dir op t
                     (lhs,rhs) <- match_equal pr
-                    let (z,z_decl) = var "z" t
+                    let (z,_) = var "z" t
                     z <- hoistEither z
                     expr <- hoistEither $ with_li li $ indirect_eq dir op lhs rhs z
-                    symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
+--                    symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
                     let new_pr = add_local [Var zVar t] (change_goal pr expr)
                     p <- collect_proof_step new_pr m xs
-                    set_proof (Proof $ Assertion 
-                            (M.fromList [ (label "indirect:eq", (thm, Proof $ Easy li))
-                                        , (label "new:goal", ( (zforall [z_decl] ztrue expr)
-                                                             , (Proof $ FreeGoal "z" zVar t p li))) 
-                                        , (label "symb:eq", ( symb_eq, Proof $ Ignore li ))
-                                        ] )
-                                (-- Proof $ Prune 2 $ 
-                                    Proof $ Easy li)
-                            li) proofs
+                    p <- EitherT $ runTactic li (po pr) $ indirect_equality dir op 
+                            (Var zVar t) 
+                            (return p)
+                    set_proof p proofs
+--                    set_proof (Proof $ Assertion 
+--                            (M.fromList [ (label "indirect:eq", (thm, Proof $ Easy li))
+--                                        , (label "new:goal", ( (zforall [z_decl] ztrue expr)
+--                                                             , (Proof $ FreeGoal "z" zVar t p li))) 
+--                                        , (label "symb:eq", ( symb_eq, Proof $ Ignore li ))
+--                                        ] )
+--                                (-- Proof $ Prune 2 $ 
+--                                    Proof $ Easy li)
+--                            li) proofs
             )
         ] [ (   "\\easy"
             ,   CmdBlock $ \() proofs -> do
