@@ -32,7 +32,6 @@ import Data.List as L
 import Data.Map as M hiding ( map )
 
 import Utilities.Format
-import Utilities.Trace
 
 data Param = Param 
     { context :: Context
@@ -70,19 +69,16 @@ get_table = Parser $ R.asks table
 get_vars :: Parser (Map String Var)
 get_vars = Parser $ R.asks variables
 
+with_vars :: [(String, Var)] -> Parser b -> Parser b
 with_vars vs cmd = do
         x <- get_params
-        traceM $ format "New variables: {0}" vs
-        zs <- get_vars
-        traceM $ format "old variables: {0}" $ M.keys zs
         liftP $ runParserWith (f x) $ do
-                vs <- get_vars
-                traceM $ format "With new variables: {0}" $ M.keys vs
                 cmd
     where
         f s@(Param { .. }) =
                 s { variables = fromList vs `M.union` variables }
 
+get_params :: Parser Param
 get_params = Parser R.ask
 
 liftP :: Scanner Char a -> Parser a
@@ -93,6 +89,7 @@ liftHOF f m = do
         x <- get_params
         liftP $ f $ runParserWith x m
 
+match_char :: (a -> Bool) -> Scanner a ()
 match_char p = read_if p (\_ -> return ()) (fail "") >> return ()
 
 eat_spaceP :: Parser ()
@@ -121,6 +118,7 @@ eat_space = do
 --space_cmd :: Scanner a ()
 --space_cmd = return ()
 
+isWord :: Char -> Bool
 isWord x = isAlphaNum x || x == '_'
 
 read_ifP :: (Char -> Bool) -> (Char -> Parser a) -> Parser a -> Parser a 
@@ -168,7 +166,8 @@ read_list xs = do
         case x of
             Just x -> return x
             Nothing -> fail ("expecting: " ++ show xs)
-            
+
+word_or_command :: Parser String            
 word_or_command = 
     read_ifP (== '\\')
             (\_ -> do
@@ -374,6 +373,7 @@ term = do
                 eat_spaceP
                 return $ Right (Const [] xs $ USER_DEFINED IntSort []))
 
+dummy_types :: [String] -> Context -> Maybe [Var]
 dummy_types vs (Context _ _ _ _ dums) = mapM f vs
     where
         f x = M.lookup x dums

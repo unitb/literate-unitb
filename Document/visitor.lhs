@@ -24,7 +24,8 @@ module Document.Visitor
     , focus, def_opt, expr_opt
     , proof_opt
     , Opt ( .. )
-    , Focus(..) )
+    , Focus(..)
+    , visitor )
 where
 
     -- Modules
@@ -40,7 +41,8 @@ import UnitB.AST
     -- Libraries
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local, writer, reader )
 import qualified Control.Monad.Trans.RWS as RWS
-import           Control.Monad.Reader hiding ( reader )
+import           Control.Monad.Reader       hiding ( reader )
+--import           Control.Monad.Reader.Class hiding ( reader )
 import           Control.Monad.State.Class (MonadState)
 import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
@@ -50,11 +52,10 @@ import Data.Monoid
 import Data.Set hiding (map)
 import Data.String.Utils
 
---import System.IO.Unsafe
-
 import Utilities.Syntactic
 import Utilities.Format 
 
+trim :: [Char] -> [Char]
 trim xs = reverse $ f $ reverse $ f xs
     where
         f = dropWhile isSpace
@@ -192,6 +193,7 @@ drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
 drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
 drop_blank_text xs = xs
 
+trim_blank_text :: [LatexDoc] -> [LatexDoc]
 trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
 
 skip_blanks :: [LatexToken] -> [LatexToken]
@@ -238,6 +240,9 @@ focus opt m = RWST $ \r s1 -> do
         (x,s2,w) <- runRWST m (reader opt r) (getter opt s1)
         return (x,setter opt s2 s1, writer opt w)
 
+focusT :: Monad m
+       => Opt r1 r2 w1 w2 s1 s2
+       -> EitherT e (RWST r2 w2 s2 m) a -> EitherT e (RWST r1 w1 s1 m) a
 focusT opt m = EitherT $ focus opt $ runEitherT m
 
 focus_es :: Monad m
@@ -251,12 +256,15 @@ data Opt a b c d f e = Opt
         , setter :: e -> f -> f
         , getter :: f -> e }
 
-def_opt  = Opt id id (flip $ const id) id
+def_opt :: Opt b b c c f f
+def_opt = Opt id id (flip $ const id) id
 
+proof_opt :: Opt b b c c (System, t) ExprStore
 proof_opt = Opt id id set (expr_store . fst)
     where
         set x (a,b) = (a { expr_store = x }, b)
 
+expr_opt :: Opt b b c c System ExprStore
 expr_opt = Opt id id set expr_store
     where
         set x a = a { expr_store = x }
@@ -288,14 +296,19 @@ instance (Monad m)
 instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
     focus' cmd = EitherT $ focus' $ runEitherT cmd
 
-type Node s = EitherT [Error] (RWS LineInfo [Error] s)
---type NodeT s m = EitherT [Error] (RWST (Int,Int) [Error] s m)
+--type Node s = EitherT [Error] (RWS LineInfo [Error] s)
+type NodeT s m = EitherT [Error] (RWST LineInfo [Error] s m)
 
 data EnvBlock s a = 
-            forall t. TypeList t => EnvBlock (t -> [LatexDoc] -> a -> Node s a)
+            forall t. TypeList t => EnvBlock (forall m. Monad m => t -> [LatexDoc] -> a -> NodeT s m a)
 
 data CmdBlock s a =
-            forall t. TypeList t => CmdBlock (t -> a -> Node s a)
+            forall t. TypeList t => CmdBlock (forall m. Monad m => t -> a -> NodeT s m a)
+
+data VEnvBlock m = forall t. TypeList t => VEnvBlock (t -> [LatexDoc] -> VisitorT m ())
+
+data VCmdBlock m =
+            forall t. TypeList t => VCmdBlock (t -> VisitorT m ())
 
 --type MEither a = RWS () [a] ()
 
@@ -305,9 +318,9 @@ type MSEither a s = RWS () [a] s
 
 type MSEitherT a s m = RWST () [a] s m
 
-data Param s a = Param 
-    { blocks :: [(String, EnvBlock s a)]
-    , cmds   :: [(String, CmdBlock s a)] }
+--data Param s a = Param 
+--    { blocks :: [(String, EnvBlock s a)]
+--    , cmds   :: [(String, CmdBlock s a)] }
 
 fromEither :: Monad m => a -> EitherT [b] (RWST c [b] d m) a -> RWST c [b] d m a
 fromEither y m = do
@@ -340,35 +353,102 @@ error_list ( (b,msg):xs ) =
                 RWS.tell [Error msg li]
                 error_list xs
 
+data ParamT m = ParamT
+    { blocksT :: [(String, VEnvBlock m)]
+    , cmdsT   :: [(String, VCmdBlock m)] 
+    }
+
+data VisitorT m a = VisitorT { unVisitor :: RWST (LineInfo, [LatexDoc]) [Error] () m a }
+
+instance Monad m => Monad (VisitorT m) where
+    VisitorT cmd >>= f = VisitorT $ cmd >>= (unVisitor . f)
+    return = VisitorT . return
+
+instance MonadTrans VisitorT where
+    lift = VisitorT . lift
+
+instance Monad m => MonadReader (LineInfo,[LatexDoc]) (VisitorT m) where
+    ask = VisitorT $ ask -- fst
+--    local f (VisitorT cmd) = VisitorT $ local (\(x,y) -> (f x, y)) cmd
+    local f (VisitorT cmd) = VisitorT $ local f cmd
+
+--instance Monad m => MonadReader (ParamT m) (VisitorT m) where
+
+run_visitor :: Monad m 
+            => LineInfo
+            -> [LatexDoc]
+            -> VisitorT m ()
+            -> m [Error]
+run_visitor li xs (VisitorT cmd) = do
+        ((),(),w) <- runRWST cmd (li,xs) ()
+        return w
+
+visitor :: Monad m 
+        => [(String,VEnvBlock m)] 
+        -> [(String,VCmdBlock m)] 
+        -> VisitorT m ()
+visitor blks cmds = do
+        unless (all (\(x,_) -> take 1 x == "\\") cmds) 
+            $ error $ format ("Document.Visitor.visitor: "
+                    ++ "all commands must start with '\\': {0}")
+                $ map fst cmds
+        xs <- VisitorT $ asks snd
+        ((),(),w) <- runRWST (do
+            forM_ xs ff
+            gg xs
+            ) (ParamT blks cmds) ()
+        VisitorT $ RWS.tell w
+--        forM 
+
 visit_doc :: Monad m 
           => [(String,EnvBlock s a)] 
           -> [(String,CmdBlock s a)] 
           -> [LatexDoc] -> a 
           -> RWST b [Error] s m a
 visit_doc blks cmds cs x = do
-        s0 <- RWS.get
+--        s0 <- RWS.get
         unless (all (\(x,_) -> take 1 x == "\\") cmds) 
             $ error $ format ("Document.Visitor.visit_doc: "
                     ++ "all commands must start with '\\': {0}")
                 $ map fst cmds
-        let (r,s1,w) = runRWS (do
-                        x <- foldM (f blks) x cs
-                        g x cs)
-                        (Param blks cmds) s0
-        RWS.put s1
-        RWS.tell w
-        return r
+        (err,x) <- flip ST.runStateT x $ run_visitor (line_info cs) cs $ visitor 
+            (map f blks) 
+            (map g cmds)
+        RWS.tell err
+        return x
+    where
+        f (x,EnvBlock g) = (x,VEnvBlock $ \y z -> VisitorT $ do
+                    li <- asks fst
+                    lift $ do
+                        x <- ST.get
+                        x <- lift $ fromEither x $ run li $ g y z x
+                        ST.put x)
+        g (x,CmdBlock f) = (x,VCmdBlock $ \x -> VisitorT $ do
+                    li <- asks fst
+                    lift $ do
+                        y <- ST.get
+                        y <- lift $ fromEither y $ run li $ f x y
+                        ST.put y)
+--        let (r,s1,w) = runRWS (do
+--                        x <- foldM (f blks) x cs
+--                        g x cs)
+--                        (Param blks cmds) s0
+--        RWS.put s1
+--        RWS.tell w
+--        return r
 
-run :: Monoid c
+run :: (Monoid c, Monad m)
     => LineInfo
-    -> EitherT [Error] (RWS LineInfo c d) a
-    -> EitherT [Error] (RWS b c d) a
+    -> EitherT [Error] (RWST LineInfo c d m) a
+    -> EitherT [Error] (RWST b c d m) a
 run li m = EitherT $ do 
         s <- get
-        x <- withRWS (const (const (li,s))) $ runEitherT m
+        x <- withRWST (const (const (li,s))) $ runEitherT m
         return x
 
-pushEither :: Monoid c => e -> EitherT c (RWS a c d) e -> RWS a c d e
+pushEither :: (Monoid c, Monad m)
+           => e -> EitherT c (RWST a c d m) e 
+           -> RWST a c d m e
 pushEither y m = do
         x <- runEitherT m
         case x of
@@ -377,47 +457,82 @@ pushEither y m = do
                 RWS.tell xs
                 return y
 
-f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
-  -> RWS (Param s a) [Error] s a
-f ((name,EnvBlock g):cs) x e@(Env s li xs _)
-        | name == s = do
-                pushEither x $ run li $ do
-                    (args,xs) <- get_tuple xs 
-                    g args xs x
-        | otherwise = f cs x e
-f [] x (Env _ _ xs _)  = do
-        blks <- asks blocks
-        x    <- foldM (f blks) x xs
-        g x xs
-f _ x (Bracket _ _ cs _)     = do
-        blks <- asks blocks
-        x    <- foldM (f blks) x cs
-        g x cs
-f _ x (Text _)               = return x
+ff :: Monad m
+   => LatexDoc 
+   -> RWST (ParamT m) [Error] () (VisitorT m) ()
+ff (Env s li xs _) = do
+            r <- asks $ lookup s . blocksT
+            case r of
+                Just (VEnvBlock g)  -> pushEither () $ do
+                    (args,xs) <- run li $ get_tuple xs
+                    lift $ lift $ local (const (li,xs)) $ g args xs
+                Nothing -> do
+                    forM_ xs ff
+                    gg xs
+ff (Bracket _ _ cs _) = do
+            forM_ cs ff
+            gg cs
+ff (Text _) = return ()
 
-g :: a -> [LatexDoc] 
-  -> RWS (Param s a) [Error] s a
-g x (Text xs : ts) = do
+--f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
+--  -> RWS (Param s a) [Error] s a
+--f ((name,EnvBlock g):cs) x e@(Env s li xs _)
+--        | name == s = do
+--                pushEither x $ run li $ do
+--                    (args,xs) <- get_tuple xs 
+--                    g args xs x
+--        | otherwise = f cs x e
+--f [] x (Env _ _ xs _)  = do
+--        blks <- asks blocks
+--        x    <- foldM (f blks) x xs
+--        g x xs
+--f _ x (Bracket _ _ cs _)     = do
+--        blks <- asks blocks
+--        x    <- foldM (f blks) x cs
+--        g x cs
+--f _ x (Text _)               = return x
+
+gg :: Monad m => [LatexDoc] 
+   -> RWST (ParamT m) [Error] () (VisitorT m) ()
+gg (Text xs : ts) = do
     case trim_blanks $ reverse xs of
         Command c li:_   -> do
-                cmds <- asks cmds
-                h cmds x c ts li
-        _                   -> g x ts
-g x (_ : ts) = g x ts
-g x [] = return x
+                r <- asks $ lookup c . cmdsT
+                case r of
+                    Just (VCmdBlock f) -> do
+                        pushEither () $ do
+                            (args,_) <- run li $ get_tuple ts
+                            lift $ lift $ local (const (li,[])) $ f args 
+                        r <- gg ts
+                        return r
+                    Nothing -> gg ts
+        _                   -> gg ts
+gg (_ : ts) = gg ts
+gg [] = return ()
 
-h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
-  -> LineInfo -> RWS (Param s a) [Error] s a
-h ((name,c):cs) x cmd ts li
-    | name == cmd   =
-            case c of 
-                CmdBlock f -> do
-                    x <- pushEither x $ run li $ do
-                        (args,_) <- get_tuple ts
-                        f args x 
-                    r <- g x ts
-                    return r
-    | otherwise     = h cs x cmd ts li
-h [] x _ ts _       = g x ts 
+--g :: a -> [LatexDoc] 
+--  -> RWS (Param s a) [Error] s a
+--g x (Text xs : ts) = do
+--    case trim_blanks $ reverse xs of
+--        Command c li:_   -> do
+--                cmds <- asks cmds
+--                h cmds x c ts li
+--        _                   -> g x ts
+--g x (_ : ts) = g x ts
+--g x [] = return x
+
+--h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
+--  -> LineInfo -> RWS (Param s a) [Error] s a
+--h ((name,c):cs) x cmd ts li
+--    | name == cmd   =
+--            case c of 
+--                CmdBlock f -> do
+--                    x <- pushEither x $ run li $ do
+--                        (args,_) <- get_tuple ts
+--                        f args x 
+--                    r <- g x ts
+--                    return r
+--    | otherwise     = h cs x cmd ts li
+--h [] x _ ts _       = g x ts 
 
 \end{code}

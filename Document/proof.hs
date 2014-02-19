@@ -158,8 +158,8 @@ change_goal pr g = pr { po = Sequent ctx hyps g }
     where
         Sequent ctx hyps _ = po pr
 
-forall_goal :: ProofParam -> String
-            -> EitherT [Error] (RWS LineInfo [Error] System) Expr
+forall_goal :: (Monad m) => ProofParam -> String
+            -> EitherT [Error] (RWST LineInfo [Error] System m) Expr
 forall_goal pr from = do
             let Sequent _ _ goal = po pr 
             li <- ask

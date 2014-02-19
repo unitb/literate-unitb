@@ -43,6 +43,7 @@ import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
+import qualified Data.Map  as M
 import           Data.Maybe as M ( maybeToList, isJust, isNothing ) 
 import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
@@ -175,6 +176,7 @@ read_document xs = do
             ms <- toEither $ foldM (f declarations) ms xs
             ms <- trickle_down refs ms merge_decl li
             traceM "step M"
+            traceM $ show $ M.map (M.elems . variables) ms
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
@@ -621,12 +623,6 @@ collect_expr = visit_doc
                     let ctx = context m
                     let dum = S.fromList (elems $ free_vars ctx p) 
                                 `S.union` S.fromList (elems $ free_vars ctx q)
-                    traceM $ show lbl
-                    traceM $ show $ S.toList dum
-                    traceM $ pretty_print' p
-                    traceM $ pretty_print' q
-                    traceM $ pretty_print' $ q `zimplies` p
-                    traceM $ "\n" ++ (pretty_print' $ zforall (S.toList dum) ztrue $ q `zimplies` p)
                     let new_prop = LeadsTo (S.elems dum) p q
                     return m { props = (props m) 
                         { progress   = insert lbl new_prop $ prop 
@@ -760,7 +756,6 @@ collect_refinement = visit_doc []
                         new_event = old_event 
                                     { sched_ref = rule : sched_ref old_event }
                         po_lbl    = composite_label [evt,label "SCH",_name m,label $ show n]
-                    traceM $ show po_lbl
                     return m 
                       { events = insert evt new_event $ events m
                       , props = (props m) { 
