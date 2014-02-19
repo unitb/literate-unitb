@@ -7,13 +7,26 @@ import Logic.Expr
 import Logic.Genericity
 import Logic.Label
 import Logic.Operator
+import Logic.Theory
 
-import Theories.Theory
 import Theories.SetTheory hiding ( dec )
 
     -- Libraries
 import           Data.Map
 import           Data.List as L
+
+ztfun   :: ExprP -> ExprP -> ExprP
+zdom    :: ExprP -> ExprP
+zran    :: ExprP -> ExprP
+zdomsubt    :: ExprP -> ExprP -> ExprP
+zdomrest    :: ExprP -> ExprP -> ExprP
+zrep_select :: ExprP -> ExprP -> ExprP
+zovl        :: ExprP -> ExprP -> ExprP
+zmk_fun     :: ExprP -> ExprP -> ExprP
+zset        :: ExprP -> ExprP
+zempty_fun  :: Expr
+zlambda     :: [Var] -> ExprP -> ExprP -> ExprP
+zstore      :: ExprP -> ExprP -> ExprP -> ExprP
 
 ztfun = typ_fun2 (Fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
@@ -50,11 +63,14 @@ zstore        = typ_fun3 $ Fun [] "store" [
 
 --zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 
+fun_set :: Type -> Type -> Type
+t0 :: Type
+t1 :: Type
+
 fun_set t0 t1 = set_type (fun_type t0 t1)
 
 t0 = VARIABLE "t0"
 t1 = VARIABLE "t1"
-
 
 function_theory :: Theory 
 function_theory = Theory { .. }
@@ -441,12 +457,19 @@ function_theory = Theory { .. }
 --        dec (t0,t1) x = x ++ z3_decoration t0 ++ z3_decoration t1
 --
     -- notation
+overload    :: BinOperator
+mk_fun      :: BinOperator
+total_fun   :: BinOperator
+domrest     :: BinOperator
+domsubt     :: BinOperator
+
 overload    = BinOperator "overload" "|"        zovl
 mk_fun      = BinOperator "mk-fun" "\\tfun"     zmk_fun
 total_fun   = BinOperator "total-fun" "\\tfun"  ztfun
 domrest     = BinOperator "dom-rest" "\\domres" zdomrest
 domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
 
+function_notation :: Notation
 function_notation = Notation
     { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
     , prec = [ L.map (L.map Right) 

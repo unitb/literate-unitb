@@ -32,7 +32,7 @@ import           Control.Monad.State as ST
 import           Data.IntMap 
             ( (!), fromListWith
             , assocs, insert, elems
-            , IntMap, fromList )
+            , IntMap, fromList, Key )
 import qualified Data.Map as M
 import           Data.Monoid ( mappend )
 import qualified Data.Set as S
@@ -43,6 +43,7 @@ conjuncts xs =
           FunApp (Fun _ "and" _ _) xs -> xs
           _ -> xs
 
+get_partition :: [Var] -> [Expr] -> ([(Key, Int)], [(Var, Int)], [(Expr, Int)])
 get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not implemented"
         runPartitionWith [0..m+n-1] $ do
             forM_ (M.assocs me) $ \(e,i) -> 
@@ -98,6 +99,7 @@ data Partition = Partition { getMap :: IntMap Int }
 
 type PartitionT = ST.State Partition
 
+p_fromList :: [Key] -> Partition
 p_fromList xs = Partition $ fromList $ zip xs xs
 
 runPartitionWith :: [Int] -> PartitionT a -> a
@@ -123,8 +125,12 @@ root x = do
             modify $ Partition . (insert x z) . getMap
             return z
 
+parent :: MonadState Partition m
+       => Key -> m Int
 parent x = gets ((!x) . getMap)
 
+set_parent :: MonadState Partition m 
+           => Key -> Int -> m ()
 set_parent x y = modify (Partition . insert x y . getMap)
 
 compress :: PartitionT ()

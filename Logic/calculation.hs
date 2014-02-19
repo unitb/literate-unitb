@@ -9,8 +9,7 @@ import Logic.Genericity
 import Logic.Operator
 import Logic.Label
 import Logic.Sequent
-
-import Theories.Theory
+import Logic.Theory
 
     -- Libraries
 import Control.Monad

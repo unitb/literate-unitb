@@ -50,6 +50,7 @@ import           Data.Typeable
 import           System.Exit
 import           System.Process
 
+z3_path :: String
 z3_path = "z3"
 
 instance Tree Command where
@@ -152,6 +153,7 @@ data Prover = Prover
         , n_workers :: Int
         }
 
+new_prover :: Int -> IO Prover
 new_prover n_workers = do
         inCh  <- newChan
         outCh <- newChan
@@ -169,13 +171,16 @@ new_prover n_workers = do
                     Nothing -> do
                         MaybeT $ return Nothing
 
+destroy_prover :: Prover -> IO ()
 destroy_prover (Prover { .. }) = do
         forM_ [1 .. n_workers] $ \_ ->
             writeChan inCh Nothing
 
+discharge_on :: Prover -> (Int,Sequent) -> IO ()
 discharge_on (Prover { .. }) po = do
         writeChan inCh $ Just po
 
+read_result :: Prover -> IO (Int,Validity)
 read_result (Prover { .. }) = 
         readChan outCh
 

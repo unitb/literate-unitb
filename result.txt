@@ -168,7 +168,7 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   16001 total
+   15960 total
     1450 Document/Tests/trainstation.hs
      918 Document/machine.hs
      746 Document/Tests/lambdas.hs

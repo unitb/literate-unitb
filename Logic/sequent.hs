@@ -35,6 +35,7 @@ instance Show Sequent where
             f (_, Sort _ z 0) = z
             f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
+entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment  
     (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 
     (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 xp1) = 

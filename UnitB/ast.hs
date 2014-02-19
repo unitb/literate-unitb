@@ -60,8 +60,8 @@ import Logic.Classes
 import Logic.Label
 import Logic.Operator
 import Logic.Sequent
+import Logic.Theory as Th
 
-import Theories.Theory as Th
 import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic

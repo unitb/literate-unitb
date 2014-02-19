@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 module Logic.Lambda 
     ( delambdify
     , CanonicalLambda ( .. )
@@ -27,19 +27,20 @@ data CanonicalLambda = CL
         Type        -- return type
     deriving (Eq, Ord, Typeable, Show)
 
---array_type (CL fv bv r t rt) = ARRAY 
---        (type_of $ ztuple $ map Word fv)
---        (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
-
+arg_type :: CanonicalLambda -> [Type]
 arg_type (CL vs _ _ _ _) = map (type_of . Word) vs
 
+return_type :: CanonicalLambda -> Type
 return_type (CL _ bv _ _ rt) = 
         (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
+can_bound_vars :: [String]
 can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
 
+can_free_vars :: [String]
 can_free_vars  = map ( ("@@fv@@_" ++) . show ) [0..]
 
+can_local_vars :: [String]
 can_local_vars = map ( ("@@lv@@_" ++) . show ) [0..]
 
 data CanonicalRewriter = CR 
@@ -55,19 +56,8 @@ free_vars = gets g
         g s = (map fst (f s), map snd (f s))
         f s = sort $ map swap $ exprs s
 
---        [String]            -- free_vars names
---        (Map Expr Var)      -- expressions containing no bound variables
-
---with_locals ls act = do
---        s@(CR lv ns) <- get
---        put (CR 
---            (drop (length ls) lv) 
-----            bv
---            (union (fromList $ zip ls vs) ns))
---        e <- act
---        put (CR lb ns) 
---        return e
-
+rename :: MonadState CanonicalRewriter m
+       => Var -> m Var
 rename v@(Var n t) = do
         m <- gets renaming
         case M.lookup n m of
@@ -82,15 +72,6 @@ expr_name e = do
             es <- gets exprs
             modify (\m -> m { exprs = (e, v):es } )
             return v
---        es <- gets exprs
---        case M.lookup e es of
---            Just v  -> return v
---            Nothing -> do
---                n:ns <- gets free_gen
---                modify (\m -> m { free_gen = ns }) 
---                let v = Var n $ type_of e
---                modify (\m -> m { exprs = M.insert e v es } )
---                return v
 
 canonical :: [Var] -> Expr -> Expr -> (CanonicalLambda, [Expr])
 canonical vs r t = do

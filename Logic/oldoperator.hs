@@ -47,6 +47,7 @@ associativity =
         , ([Equiv],LeftAssoc)
         ]
 
+logical :: XBinOperator -> Bool
 logical x = x `elem` [Implies, Follows, And, Or, Equiv]
 
 bin_op_range :: (XBinOperator, XBinOperator)
@@ -55,6 +56,7 @@ bin_op_range = (x,y)
         x = toEnum 0
         y = last $ enumFrom x
 
+pairs :: Map (XBinOperator, XBinOperator) Assoc
 pairs = fromList (concat (do
             ((x,_),xs) <- zip a $ tail $ tails a
             (y,_)      <- xs
@@ -67,4 +69,5 @@ pairs = fromList (concat (do
     where
         a = associativity
 
+prod :: ([a],b) -> [((a,a),b)]
 prod (xs,z) = [ ((x,y),z) | x <- xs, y <- xs ]

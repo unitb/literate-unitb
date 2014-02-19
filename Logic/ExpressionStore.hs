@@ -12,7 +12,6 @@ import Logic.Const
 import Control.Monad.State.Class
 
 import Data.Map as M ( insertWith, Map, empty, lookup ) --, (!) )
---import Data.List ( splitAt )
 
 data UntypedExpr = UE Expr
 
@@ -54,6 +53,7 @@ instance Ord UntypedExpr where
 data ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
     deriving Eq
 
+empty_store :: ExprStore
 empty_store = ExprStore empty
 
 insert :: ( Monad m

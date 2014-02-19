@@ -16,6 +16,7 @@ import           Data.IORef
 
 import System.IO.Unsafe
 
+notations :: Notation
 notations = flip precede logic $ foldl combine empty_notation
     [ functions
     , arith
@@ -27,6 +28,7 @@ assoc x y = unsafePerformIO $ do
     r <- readIORef assoc_table
     return $ r M.! (Right x,Right y)
 
+assoc_table :: IORef (Matrix Operator Assoc)
 assoc_table = unsafePerformIO $ newIORef (assoc' notations)
 
 --chain x y 
@@ -47,6 +49,7 @@ assoc0 = fromList (zip (L.map xbin_to_bin xs) $ L.map (pairs M.!) xs)
         rs    = double bin_op_range
         xs    = A.range rs
 
+xbin_to_bin :: (XBinOperator,XBinOperator) -> (Operator,Operator)
 xbin_to_bin (x,y) = (m x, m y)
     where
         m Equal         = Right equal

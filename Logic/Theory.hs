@@ -1,4 +1,4 @@
-module Theories.Theory where
+module Logic.Theory where
 
 import Logic.Expr
 import Logic.Label

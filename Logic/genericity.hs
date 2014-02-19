@@ -30,8 +30,6 @@ data Unification = Uni
     , edges  :: [(String,String)]
     }
 
-type ExprP = Either String Expr
-
 empty_u :: Unification
 empty_u = Uni empty []
 
@@ -352,5 +350,8 @@ instantiate_right m t = instantiate m (suffix_generics "2" t)
 specialize :: Map String Type -> Expr -> Expr
 specialize = instantiate
 
+specialize_left :: Map String Type -> Expr -> Expr
 specialize_left m e  = specialize m (rewrite_types "1" e)
+
+specialize_right :: Map String Type -> Expr -> Expr
 specialize_right m e = specialize m (rewrite_types "2" e)

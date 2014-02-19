@@ -17,7 +17,10 @@ import Test.QuickCheck
 
 import Tests.UnitTest
 
+left :: Type -> Type
 left  = suffix_generics "1"
+
+right :: Type -> Type
 right = suffix_generics "2"
 
 prop_yield_same_type :: (Type,Type) -> Maybe (Type,Type)
@@ -28,6 +31,7 @@ prop_yield_same_type (t0,t1) =
             let ct1 = instantiate un $ right t1
             return (ct0 == ct1))
 
+prop_unifying_yields_unified_type :: (Type, Type) -> Property
 prop_unifying_yields_unified_type (t0,t1) = 
         match ==>
         maybe True (const False) (prop_yield_same_type (t0,t1))
@@ -43,13 +47,14 @@ mapping_acyclic (t0,t1) =
             un <- unify t0 t1
             return $ S.null (keysSet un `S.intersection` S.unions (map generics $ elems un)))
 
+prop_type_mapping_acyclic :: (Type, Type) -> Property
 prop_type_mapping_acyclic (t0,t1) = 
         match ==>
         maybe True (const False) (mapping_acyclic (t0,t1))
     where
         match = unify t0 t1 /= Nothing
         
-
+check_prop :: Testable prop => prop -> IO Bool
 check_prop p = do
         r <- quickCheckResult p
         case r of
@@ -106,12 +111,15 @@ instance Arbitrary Type where
                 , GENERIC "c"
                 ]
 
+test_case :: TestCase
 test_case = Case "genericity" test True
 
+unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
     [   (ARRAY real (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
+test :: IO Bool
 test = test_cases (
         [  Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
         ,  Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
@@ -152,6 +160,12 @@ test = test_cases (
         gtype2   = USER_DEFINED fun_sort [set_type gA, gA]
         gA = GENERIC "a"
 
+case3   :: IO Expr
+result3 :: Expr
+case5   :: IO Expr
+result5 :: Expr
+case6   :: IO Expr
+result6 :: Expr
 ( case3,result3,case5,result5,case6,result6 ) = ( 
                     return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
                     , FunApp (Fun [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
@@ -176,6 +190,8 @@ test = test_cases (
         p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
         q = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type gA,set_type gA] $ set_type gA) [x3,x4]]
 
+case7   :: IO ExprP
+result7 :: ExprP
 (case7, result7) = 
         ( return (x `zelem` Right zempty_set)
         , Right $ FunApp (Fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]

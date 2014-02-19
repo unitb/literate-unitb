@@ -6,14 +6,22 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
+import Logic.Theory
 
-import Theories.Theory
 import Theories.FunctionTheory
 
     -- Libraries
 import Data.List as L
 
     -- arithmetic
+power   :: BinOperator
+mult    :: BinOperator
+plus    :: BinOperator
+less    :: BinOperator
+greater :: BinOperator
+leq     :: BinOperator
+geq     :: BinOperator
+
 power   = BinOperator "power" "^"       mzpow
 mult    = BinOperator "mult" "\\cdot"   mztimes
 plus    = BinOperator "plus" "+"        mzplus
@@ -22,10 +30,12 @@ greater = BinOperator "greater" ">"     (flip mzless)
 leq     = BinOperator "le" "\\le"       mzle
 geq     = BinOperator "ge" "\\ge"       (flip mzle)
 
+arithmetic :: Theory
 arithmetic = empty_theory { 
         types = symbol_table [IntSort,RealSort]
         , notation = arith }
 
+arith :: Notation
 arith = Notation
     { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]
     , prec = [ L.map (L.map Right)

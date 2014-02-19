@@ -24,6 +24,8 @@ data Expr =
 data Quantifier = Forall | Exists | Lambda
     deriving (Eq, Ord, Generic)
 
+type ExprP = Either String Expr 
+
 type_of :: Expr -> Type
 type_of (Word (Var _ t))          = t
 type_of (Const _ _ t)             = t

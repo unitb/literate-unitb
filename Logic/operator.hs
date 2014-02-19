@@ -29,6 +29,7 @@ type Matrix a b = G.Matrix a b
     -- o add a token for it in data type Operator
     -- o create a function that generates an expression
     --      from the token
+mk_expr :: BinOperator -> Expr -> Expr -> Either String Expr
 mk_expr (BinOperator _ _ f) x y = f (Right x) (Right y)
 
 mk_unary :: UnaryOperator -> Expr -> Either String Expr
@@ -46,6 +47,7 @@ data Notation = Notation
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
     } deriving (Eq,Show)
 
+empty_notation :: Notation
 empty_notation = Notation 
     { new_ops = []
     , prec = []
@@ -54,6 +56,7 @@ empty_notation = Notation
     , relations = []
     , chaining = [] }
 
+combine :: Notation -> Notation -> Notation
 combine x y 
     | L.null $ new_ops x `intersect` new_ops y = Notation
         { new_ops      = new_ops x ++ new_ops y
@@ -69,8 +72,9 @@ combine x y
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ new_ops x `intersect` new_ops y
 
+precede :: Notation -> Notation -> Notation
 precede x y 
-    | L.null $ new_ops x `intersect` new_ops y = 
+        | L.null $ new_ops x `intersect` new_ops y = 
         let z = (combine x y) in
             z { 
                 prec = prec z ++ [ xs ++ ys | xs <- prec x, ys <- prec y ] }
@@ -79,15 +83,12 @@ precede x y
 --        , prec         =  ++ prec x ++ prec y
 --        , left_assoc   = left_assoc x ++ left_assoc y
 --        , right_assoc  = right_assoc x ++ right_assoc y }
-    | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
+        | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
     where
         f (Right (BinOperator x _ _)) = x
         f (Left _)                  = "negation"
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ new_ops x `intersect` new_ops y
-
---type Reduce = Either String Expr -> Either String Expr -> Either String Expr
-type ExprP = Either String Expr 
 
 data UnaryOperator = UnaryOperator String String (ExprP -> ExprP)
     deriving Typeable
@@ -119,6 +120,7 @@ instance Show BinOperator where
 
 type Operator = Either UnaryOperator BinOperator
 
+precedence :: Notation -> Matrix Operator Bool
 precedence ops = m_closure_with (new_ops ops)
         $ concatMap g $ prec ops
     where
@@ -178,9 +180,13 @@ assoc' ops
 --            | otherwise    = Ambiguous
 
     -- Basic functions
+apply :: BinOperator
+equal :: BinOperator
+
 apply = BinOperator "apply" "."     zapply
 equal = BinOperator "equal" "="     mzeq
 
+functions :: Notation
 functions = Notation
     { new_ops     = L.map Right [equal,apply]
     , prec = [ L.map (L.map Right)
@@ -192,6 +198,13 @@ functions = Notation
     , chaining    = [] }
 
     -- logic
+disj    :: BinOperator
+conj    :: BinOperator
+implies :: BinOperator
+follows :: BinOperator
+equiv   :: BinOperator
+neg     :: UnaryOperator
+
 disj    = BinOperator "or" "\\lor"          mzor
 conj    = BinOperator "and" "\\land"        mzand
 implies = BinOperator "implies" "\\implies" mzimplies
@@ -199,6 +212,7 @@ follows = BinOperator "follows" "\\follows" (flip mzimplies)
 equiv   = BinOperator "implies" "\\equiv"   mzeq
 neg     = UnaryOperator "neg" "\\neg"       mznot
 
+logic :: Notation
 logic = Notation
     { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
     , prec = [    [Left neg] 
@@ -218,4 +232,5 @@ logic = Notation
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
 
+double :: (a,b) -> ((a,a),(b,b))
 double (x,y) = ((x,x),(y,y))
