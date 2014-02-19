@@ -211,12 +211,11 @@ indirect_eq dir op x y z = do
                     Left()  -> mk_expr op z x `mzeq` mk_expr op z y
                     Right() -> mk_expr op x z `mzeq` mk_expr op y z
 
-indirect_equality :: Monad m 
-                  => Either () () 
+indirect_equality :: Either () () 
                   -> BinOperator 
                   -> Var
-                  -> Tactic m Proof
-                  -> Tactic m Proof
+                  -> Tactic Proof
+                  -> Tactic Proof
 indirect_equality dir op zVar@(Var _ t) proof = do 
         x_decl <- new_fresh "x" t
         y_decl <- new_fresh "y" t
@@ -325,7 +324,7 @@ find_proof_step pr m = visit_doc
 --                    symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
                     let new_pr = add_local [Var zVar t] (change_goal pr expr)
                     p <- collect_proof_step new_pr m xs
-                    p <- EitherT $ runTactic li (po pr) $ indirect_equality dir op 
+                    p <- EitherT $ return $ runTactic li (po pr) $ indirect_equality dir op 
                             (Var zVar t) 
                             (return p)
                     set_proof p proofs

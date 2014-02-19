@@ -10,57 +10,54 @@ import Logic.Sequent
 
     -- Libraries
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.Reader
 import Control.Monad.Trans.Either
-import Control.Monad.Trans.Reader
 
-import Data.Function
 import Data.List as L
 import Data.Map  as M hiding (map)
 
 import Utilities.Format
 import Utilities.Syntactic
 
-data Tactic m a = Tactic { unTactic :: EitherT [Error] (ReaderT (Sequent, LineInfo) m) a }
+data Tactic a = Tactic { unTactic :: EitherT [Error] (Reader (Sequent, LineInfo)) a }
 
-with_goal :: Monad m => Expr -> Tactic m a -> Tactic m a
+with_goal :: Expr -> Tactic a -> Tactic a
 with_goal e (Tactic cmd) = Tactic $ do
     (Sequent ctx hyps _, li) <- lift ask 
     EitherT $ local (const (Sequent ctx hyps e, li)) $ runEitherT cmd
 
-with_hypotheses :: Monad m => [Expr] -> Tactic m Proof -> Tactic m Proof
+with_hypotheses :: [Expr] -> Tactic Proof -> Tactic Proof
 with_hypotheses es (Tactic cmd) = Tactic $ do
     (Sequent ctx hyps g, li) <- lift ask 
     EitherT $ local (const (Sequent ctx (hyps ++ es) g, li)) $ runEitherT cmd
 
-with_variables :: Monad m => [Var] -> Tactic m Proof -> Tactic m Proof
+with_variables :: [Var] -> Tactic Proof -> Tactic Proof
 with_variables vs (Tactic cmd) = Tactic $ do
     (Sequent (Context sorts vars funs defs dums) hyps g, li) <- lift ask 
     let new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
     EitherT $ local (const (Sequent new_ctx hyps g, li)) $ runEitherT cmd
 
-get_line_info :: Monad m => Tactic m LineInfo
+get_line_info :: Tactic LineInfo
 get_line_info = Tactic $ liftM snd $ lift ask
 
-get_goal :: Monad m => Tactic m Expr
+get_goal :: Tactic Expr
 get_goal = Tactic $ do
         Sequent _ _ goal <- liftM fst $ lift ask
         return goal
 
-get_hypothesis :: Monad m => Tactic m [Expr]
+get_hypothesis :: Tactic [Expr]
 get_hypothesis = Tactic $ do
         Sequent _ hyps _ <- liftM fst $ lift ask
         return hyps
 
-is_fresh :: Monad m => Var -> Tactic m Bool
+is_fresh :: Var -> Tactic Bool
 is_fresh v = Tactic $ do
         s <- liftM fst $ lift ask
         return $ are_fresh [name v] s
 
-assert :: Monad m 
-       => [(Label,Expr,Tactic m Proof)] 
-       -> Tactic m Proof 
-       -> Tactic m Proof
+assert :: [(Label,Expr,Tactic Proof)] 
+       -> Tactic Proof 
+       -> Tactic Proof
 assert xs proof = do
         li <- get_line_info
         ys <- forM xs $ \(lbl,x,m) -> do
@@ -69,20 +66,18 @@ assert xs proof = do
         p  <- with_hypotheses (map (fst . snd) ys) proof
         return $ Proof $ Assertion (fromList ys) p li
 
-assume :: Monad m
-       => [(Label,Expr)]
+assume :: [(Label,Expr)]
        -> Expr
-       -> Tactic m Proof        
-       -> Tactic m Proof
+       -> Tactic Proof        
+       -> Tactic Proof
 assume xs new_g proof = do
         li <- get_line_info
         p  <- with_hypotheses (map snd xs) 
             $ with_goal new_g proof
         return $ Proof $ Assume (fromList xs) new_g p li
 
-by_cases :: Monad m
-         => [(Label, Expr, Tactic m Proof)]
-         -> Tactic m Proof
+by_cases :: [(Label, Expr, Tactic Proof)]
+         -> Tactic Proof
 by_cases cs = do
         li <- get_line_info
         ps <- forM cs $ \(lbl,e,m) -> do
@@ -90,15 +85,13 @@ by_cases cs = do
             return (lbl,e,p)
         return $ Proof $ ByCases ps li
 
-easy :: Monad m
-     => Tactic m Proof
+easy :: Tactic Proof
 easy = do
         li <- get_line_info
         return $ Proof $ Easy li
 
-new_fresh :: Monad m 
-          => String -> Type 
-          -> Tactic m Var
+new_fresh :: String -> Type 
+          -> Tactic Var
 new_fresh name t = do
         fix (\rec n suf -> do
             let v = Var (name ++ suf) t
@@ -108,10 +101,9 @@ new_fresh name t = do
                 rec (n+1) (show n)
             ) 0 ""
 
-free_goal :: Monad m
-          => Var -> Var 
-          -> Tactic m Proof 
-          -> Tactic m Proof
+free_goal :: Var -> Var 
+          -> Tactic Proof 
+          -> Tactic Proof
 free_goal v0 v1 m = do
         li   <- get_line_info
         goal <- get_goal 
@@ -128,10 +120,9 @@ free_goal v0 v1 m = do
         let t = type_of (Word v1)
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
-instantiate_hyp :: Monad m 
-                => Expr -> [(Var,Expr)] 
-                -> Tactic m Proof
-                -> Tactic m Proof
+instantiate_hyp :: Expr -> [(Var,Expr)] 
+                -> Tactic Proof
+                -> Tactic Proof
 instantiate_hyp hyp ps proof = do
         hyps <- get_hypothesis
         li   <- get_line_info
@@ -154,25 +145,20 @@ instantiate_hyp hyp ps proof = do
                 ++ pretty_print' hyp
 
 
-make_expr :: Monad m
-          => Either String a
-          -> Tactic m a
+make_expr :: Either String a
+          -> Tactic a
 make_expr e = do
         li <- get_line_info
         let f xs = Left [Error xs li]
         Tactic $ hoistEither (either f Right e)
 
-runTactic :: Monad m 
-          => LineInfo -> Sequent
-          -> Tactic m a -> m (Either [Error] a)
-runTactic li s (Tactic tac) = runReaderT (runEitherT tac) (s,li)
+runTactic :: LineInfo -> Sequent
+          -> Tactic a -> Either [Error] a
+runTactic li s (Tactic tac) = runReader (runEitherT tac) (s,li)
           
-instance Monad m => Monad (Tactic m) where
+instance Monad Tactic where
     Tactic m >>= f = Tactic $ m >>= (unTactic . f)
     return x       = Tactic $ return x
     fail msg       = do
             li <- get_line_info
             Tactic $ left [Error msg li]
-
-instance MonadTrans Tactic where
-    lift m = Tactic $ lift $ lift m
