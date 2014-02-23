@@ -124,16 +124,12 @@ data Command = Decl Decl | Assert Expr | CheckSat | GetModel | Push | Pop
 z3_code :: Sequent -> [Command]
 z3_code po = 
     (      []
-        ++ map Decl
+        ++ map Decl (concatMap decl
                [ Datatype ["a"] "Maybe" 
                     [ ("Just", [("fromJust", GENERIC "a")])
                     , ("Nothing", []) ]
-               , Datatype ["a","b"] "Pair" 
-                    [ ("pair", 
-                        [ ("first",  GENERIC "a")
-                        , ("second", GENERIC "b") ]) ]
                , Datatype [] "Null"
-                    [ ("null", []) ] ] 
+                    [ ("null", []) ] ] )
         ++ map Decl (decl d)
         ++ map Assert assume 
         ++ [Assert (znot assert)]

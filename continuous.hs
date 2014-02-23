@@ -19,14 +19,15 @@ import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
 
-import Data.Map as M ( elems )
 import Data.Time
 
 import qualified Data.ByteString as BS
+import qualified Data.Map as M
 import           Data.Map as M 
-    ( Map,lookup
-    , empty
+    ( Map
+    , empty 
     , insert
+    , toList
     )
 import qualified Data.Serialize as Ser
 
@@ -38,6 +39,7 @@ import System.Locale
 import Text.Printf
 
 import Utilities.Syntactic
+import Utilities.Trace
 
 with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
@@ -94,6 +96,22 @@ check_one m = do
         put (param { pos = insert (_name m) po $ pos param })
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
+check_theory :: (MonadIO m, MonadState Params m) 
+             => (String,Theory) -> m (Int,String)
+check_theory (name,th) = with_tracingM $ do
+--        param <- get
+--        let p = M.lookup (_name m) $ pos param
+--        let po = maybe empty id p
+        let po = theory_po th
+        res    <- liftIO $ verify_all po
+--        let report = M.fromList $ zip (M.keys po) $ zip (M.elems res) (M.elems po)
+--        put (param { pos = insert (label name) report $ pos param })
+        let s = unlines $ map (\(k,r) -> success r ++ show k) $ toList res
+        return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
+    where
+        success True  = "  o  "
+        success False = " xxx "
+
 clear :: (MonadIO m, MonadState Params m) 
       => m ()
 clear = do
@@ -110,12 +128,18 @@ check_file = do
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
             lift $ produce_summaries s
-            return $ M.elems $ machines s
+            return (M.elems $ machines s, M.toList $ theories s)
         case r of
-            Right ms -> do
+            Right (ms,ts) -> with_tracingM $ do
                 xs <- forM ms check_one
                 clear
+                traceM $ show $ map fst $ take 10 ts
                 forM_ xs $ \(n,xs) -> liftIO $ do
+                    forM_ (filter p $ lines xs) 
+                        putStrLn
+                    putStrLn $ "Redid " ++ show n ++ " proofs"
+                ys <- forM ts check_theory
+                forM_ ys $ \(n,xs) -> liftIO $ do
                     forM_ (filter p $ lines xs) 
                         putStrLn
                     putStrLn $ "Redid " ++ show n ++ " proofs"

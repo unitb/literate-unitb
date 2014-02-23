@@ -85,6 +85,7 @@ instance Arbitrary Type where
                             return []
                         BoolSort -> 
                             return []
+                        Datatype _ _ _ -> error "Type.arbitrary: impossible"
                     return $ USER_DEFINED s ts
                 , do
                     t <- arbitrary

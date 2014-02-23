@@ -8,11 +8,8 @@ import Control.Monad.Error
 import GHC.IO.Exception
 
 import System.IO
---import System.Posix
 import System.Environment
 import System.Process
-
---import Control.Concurrent
 
 import Text.Printf
 

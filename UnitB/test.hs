@@ -126,7 +126,7 @@ result_train_m0 = unlines [
     "  o  train_m0/leave/SCH",
     "  o  train_m0/leave/TR/TR0",
     "passed 9 / 9"]
-
+ 
 result_example0_tr_en_po = unlines [
     " sort: pfun [a,b], set [a]",
     " x: Int",
@@ -137,7 +137,7 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_po = unlines 
     [ -- " sort: , , , pfun [a,b], set [a]"
-      " sort: , , "
+      " sort: Pair [a,b], , , "
     , " st: (Array Int Bool)"
     , " st@prime: (Array Int Bool)"
     , " t: Int"

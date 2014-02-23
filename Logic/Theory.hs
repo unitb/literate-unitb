@@ -5,7 +5,8 @@ import Logic.Label
 import Logic.Operator
 
     -- Libraries
-import Data.Map hiding ( map )
+import Data.Map as M hiding ( map )
+import Data.Set as S hiding ( map )
 
     -- the use of gen_param is tricky. Be careful
     -- generic functions should have type variables in them
@@ -24,12 +25,13 @@ data Theory = Theory
         , consts    :: Map String Var
         , fact      :: Map Label Expr
         , dummies   :: Map String Var 
+        , theorems  :: Set Label
         , notation  :: Notation }
     deriving (Eq, Show)
 
 basic_theory :: Theory
 basic_theory = empty_theory 
-        { types = symbol_table [BoolSort]
+        { types = symbol_table [BoolSort, pair_sort]
 --        , gen_param = Just gT
 --        , funs  = symbol_table [Fun [gT] "eq" [gT,gT] bool]
 --        , fact  = fromList 
@@ -44,7 +46,6 @@ basic_theory = empty_theory
 --                mzeq x y `mzeq` mzeq_symb x y
 
 empty_theory :: Theory
-empty_theory = Theory empty Nothing
-    empty empty empty empty 
-    empty empty_notation
-
+empty_theory = Theory M.empty Nothing
+    M.empty M.empty M.empty M.empty 
+    M.empty S.empty empty_notation

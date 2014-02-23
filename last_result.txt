@@ -2,7 +2,8 @@
 |  +- basic syntax and scopes
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
-|  |  +- [ Success: 1 / 1 ]
+|  |  +- verify theory
+|  |  +- [ Success: 2 / 2 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -168,10 +169,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   15960 total
+   16068 total
     1450 Document/Tests/trainstation.hs
-     918 Document/machine.hs
+     941 Document/machine.hs
      746 Document/Tests/lambdas.hs
-     705 UnitB/ast.hs
-     595 Document/proof.hs
-Time: 00:03:21
+     713 UnitB/ast.hs
+     604 Document/proof.hs
+Time: 16:30:50

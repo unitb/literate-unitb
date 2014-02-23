@@ -1,9 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 module UnitB.PO 
-    ( proof_obligation, step_ctx, evt_live_ctx
+    ( proof_obligation, theory_po
+    , step_ctx, evt_live_ctx
     , theory_ctx, theory_facts, dummy_ctx
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
+    , verify_all
     , check, verify_changes, verify_machine
     , smoke_test_machine, dump, used_types )
 where
@@ -160,6 +162,21 @@ ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
         f x
             | show x == "" = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\n" (name m) lbl (rule_name r)) $ composite_label [label $ name m, lbl,label "REF",rule_name r]
             | otherwise    = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\nx: {3}\n" (name m) lbl (rule_name r) x) $ composite_label [label $ name m, lbl,label "REF",rule_name r,x]
+
+theory_po :: Theory -> Map Label Sequent
+theory_po th = mapKeys keys $ M.map (f . g) thm
+    where
+--        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
+        (thm,axm) = M.partitionWithKey p $ fact th
+        p k _ = k `S.member` theorems th
+        g x = Sequent empty_ctx (M.elems axm) x
+        keys k = composite_label [label "THM",k]
+        f (Sequent a b d) = Sequent 
+                (a `merge_ctx` theory_ctx ts th)
+                (concatMap (M.elems . theory_facts ts) (elems $ extends th) ++ b) 
+                d
+          where
+            ts = S.unions $ map used_types $ d : b
 
 init_fis_po :: Machine -> Map Label Sequent
 init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 

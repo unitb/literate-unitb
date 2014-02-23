@@ -482,16 +482,16 @@ parse_calc pr m xs =
 
     -- assoc' n
 get_table :: ( Monad m, Monoid b ) 
-          => Machine
+          => Theory
           -> EitherT [Error] (RWST LineInfo b System m) (Matrix Operator Assoc)
-get_table m = with_tracingM $ do
-        let key = sort $ M.keys $ extends $ theory m
+get_table th = with_tracingM $ do
+        let key = sort $ M.keys $ extends th
 --        traceM $ "KEY: " ++ show key
         tb <- lift $ RWS.gets parse_table
         case M.lookup key tb of
             Just x -> return x
             Nothing -> do
-                let x   = assoc' $ all_notation m
+                let x   = assoc' $ th_notation th
                     new = insert key x tb
                 lift $ RWS.modify $ \s -> s { parse_table = new }
                 return x
@@ -507,7 +507,7 @@ get_expr_with_ctx :: ( Monad m, Monoid b )
                   -> [LatexDoc] 
                   -> EitherT [Error] (RWST LineInfo b (System) m)  Expr
 get_expr_with_ctx m ctx ys = do
-        tb <- get_table m
+        tb <- get_table $ theory m
         y  <- focusT expr_opt
             $ parse_expr 
                 (context m `merge_ctx` ctx) 
@@ -543,14 +543,23 @@ get_predicate :: ( Monad m, Monoid b )
            -> [LatexDoc] 
            -> EitherT [Error] (RWST LineInfo b (System) m) Expr
 get_predicate m ctx opt ys = do
-        tb <- get_table m
+        let th = theory m
         let d_ctx = case opt of
                         WithFreeDummies -> dummy_ctx m
                         WithoutFreeDummies -> empty_ctx
+        get_predicate' th (ctx `merge_ctx` d_ctx `merge_ctx` context m) ys
+
+get_predicate' :: ( Monad m, Monoid b ) 
+           => Theory
+           -> Context
+           -> [LatexDoc] 
+           -> EitherT [Error] (RWST LineInfo b (System) m) Expr
+get_predicate' th ctx ys = do
+        tb <- get_table th
         x  <- focusT expr_opt
             $ parse_expr 
-                (ctx `merge_ctx` d_ctx `merge_ctx` context m)
-                (all_notation m) tb
+                ctx
+                (th_notation th) tb
                 (concatMap flatten_li xs)
         li <- if L.null xs
             then ask

@@ -54,7 +54,12 @@ ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" 
 --        tail = ztuple xs
 
 pair_sort :: Sort
-pair_sort = Sort "Pair" "Pair" 2
+pair_sort = -- Sort "Pair" "Pair" 2
+               Datatype ["a","b"] "Pair" 
+                    [ ("pair", 
+                        [ ("first",  GENERIC "a")
+                        , ("second", GENERIC "b") ]) ]
+
 
 pair_type :: Type -> Type -> Type
 pair_type x y = USER_DEFINED pair_sort [x,y]
@@ -143,14 +148,19 @@ data Sort =
         BoolSort | IntSort | RealSort 
         | DefSort String String [String] Type
         | Sort String String Int --[String]
+        | Datatype 
+            [String]    -- Parameters
+            String      -- type name
+            [(String, [(String,Type)])] -- alternatives and named components
     deriving (Eq, Ord, Show, Generic)
 
 z3_name :: Sort -> String
 z3_name (BoolSort) = "Bool"
-z3_name (IntSort) = "Int"
+z3_name (IntSort)  = "Int"
 z3_name (RealSort) = "Real"
-z3_name (Sort _ x _) = x
-z3_name (DefSort _ x _ _) = x
+z3_name (Sort _ x _)       = x
+z3_name (DefSort _ x _ _)  = x
+z3_name (Datatype _ x _)   = x
 
     -- replace it everywhere
 z3_fun_name :: Fun -> String
@@ -160,10 +170,6 @@ data Decl =
         FunDecl [Type] String [Type] Type 
         | ConstDecl String Type
         | FunDef [Type] String [Var] Type Expr
-        | Datatype 
-            [String]    -- Parameters
-            String      -- type name
-            [(String, [(String,Type)])] -- alternatives and named components
         | SortDecl Sort
 
 data Fun = Fun [Type] String [Type] Type
@@ -226,15 +232,6 @@ instance Tree Decl where
                 (List $ map as_tree dom), 
                 (as_tree ran),
                 (as_tree val) ]
-    as_tree (Datatype xs n alt) =
-            List 
-                [ Str "declare-datatypes"
-                , List $ map Str xs
-                , List [List (Str n : map f alt)] ]
-        where
-            f (x,[])    = Str x
-            f (x,xs)    = List (Str x : map g xs)
-            g (n,t)     = List [Str n, as_tree t]
     as_tree (SortDecl IntSort)  = Str "; comment: we don't need to declare the sort Int"
     as_tree (SortDecl BoolSort) = Str "; comment: we don't need to declare the sort Bool" 
     as_tree (SortDecl RealSort) = Str "; comment: we don't need to declare the sort Real"
@@ -250,6 +247,15 @@ instance Tree Decl where
                 , List $ map Str xs
                 , as_tree def 
                 ]
+    as_tree (SortDecl (Datatype xs n alt)) =
+            List 
+                [ Str "declare-datatypes"
+                , List $ map Str xs
+                , List [List (Str n : map f alt)] ]
+        where
+            f (x,[])    = Str x
+            f (x,xs)    = List (Str x : map g xs)
+            g (n,t)     = List [Str n, as_tree t]
     rewriteM' = id
     
 instance Tree Var where
@@ -341,7 +347,7 @@ mk_context (x:xs) =
                             ss vs fs 
                             (M.insert n (Def gs n ps t e) defs) 
                             dums
-                    Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
+--                    Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
 mk_context [] = Context empty empty empty empty empty
 
 substitute :: Map Var Expr -> Expr -> Expr
@@ -389,6 +395,7 @@ instance Named Var where
 instance Named Sort where
     name (Sort x _ _) = x
     name (DefSort x _ _ _) = x
+    name (Datatype _ x _)  = x
     name BoolSort   = "\\Bool"
     name IntSort    = "\\Int"
     name RealSort   = "\\Real"

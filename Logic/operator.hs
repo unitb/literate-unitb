@@ -209,7 +209,7 @@ disj    = BinOperator "or" "\\lor"          mzor
 conj    = BinOperator "and" "\\land"        mzand
 implies = BinOperator "implies" "\\implies" mzimplies
 follows = BinOperator "follows" "\\follows" (flip mzimplies)
-equiv   = BinOperator "implies" "\\equiv"   mzeq
+equiv   = BinOperator "equiv" "\\equiv"   mzeq
 neg     = UnaryOperator "neg" "\\neg"       mznot
 
 logic :: Notation

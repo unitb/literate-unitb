@@ -31,7 +31,8 @@ instance Show Sequent where
             f (_, IntSort) = ""
             f (_, BoolSort) = ""
             f (_, RealSort) = ""
-            f (x, DefSort y z xs _) = f (x, Sort y z $ length xs)
+            f (x, Datatype args n _) = f (x, Sort n n $ length args)
+            f (x, DefSort y z xs _)  = f (x, Sort y z $ length xs)
             f (_, Sort _ z 0) = z
             f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 

@@ -476,7 +476,7 @@ expr = do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
-                Ambiguous ->  fail $ format "ambiguous expression: {0} and {1} are not associative" op0 op1
+                Ambiguous ->  fail $ format "ambiguous expression: '{0}' and '{1}' are not associative" op0 op1
         reduce xs (u:us) e0 op0             = do
             r <- binds u op0
             case r of

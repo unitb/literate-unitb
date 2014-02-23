@@ -105,4 +105,18 @@
 
 \end{machine}
 
+\begin{context}{ctx0}
+
+\newset{G}{\G}
+
+\dummy{x,y,z: \G}
+\with{functions}
+
+\operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
+
+\axiom{axm0}{ \qforall{x,y}{}{ (x \le y) \1\land (y \le x) \2\equiv x = y } }
+\theorem{thm0}{ \qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
+
+\end{context}
+
 \end{document}

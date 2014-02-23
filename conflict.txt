@@ -1,3 +1,65 @@
-:1:Logic/operator.hs:import :2:Theories.FunctionTheory
-:1:Logic/operator.hs:import :2:Theories.SetTheory
 Code/synthesis.hs:import :3:UnitB.AST
+document/document.hs:import :1:Latex.Parser
+document/document.hs:import :4:Document.Machine
+document/expression.hs:--import :2:Theories.Notation
+document/expression.hs:import :0:Utilities.Format
+document/expression.hs:import :0:Utilities.Graph
+document/expression.hs:import :0:Utilities.Syntactic
+document/expression.hs:import :1:Latex.Parser
+document/expression.hs:import :1:Latex.Scanner
+document/expression.hs:import :1:Logic.Const
+document/expression.hs:import :1:Logic.Expr
+document/expression.hs:import :1:Logic.ExpressionStore as ES
+document/expression.hs:import :1:Logic.Genericity hiding (unsafePerformIO)
+document/expression.hs:import :1:Logic.Operator
+document/expression.hs:import :2:Theories.FunctionTheory
+document/expression.hs:import :2:Theories.SetTheory
+document/expression.hs:import :2:Z3.Z3
+document/machine.hs:import :0:Utilities.Format
+document/machine.hs:import :0:Utilities.Syntactic
+document/machine.hs:import :0:Utilities.Trace
+document/machine.hs:import :1:Latex.Parser
+document/machine.hs:import :1:Logic.Const
+document/machine.hs:import :1:Logic.Expr
+document/machine.hs:import :1:Logic.ExpressionStore ( ExprStore )
+document/machine.hs:import :2:Theories.Arithmetic
+document/machine.hs:import :2:Theories.FunctionTheory
+document/machine.hs:import :2:Theories.SetTheory
+document/machine.hs:import :2:Z3.Z3 
+document/machine.hs:import :3:UnitB.AST
+document/machine.hs:import :3:UnitB.PO
+document/machine.hs:import :4:Document.Expression
+document/machine.hs:import :4:Document.Proof -- hiding ( context )
+document/machine.hs:import :4:Document.Refinement hiding ( parse_rule )
+document/machine.hs:import :4:Document.Visitor
+document/proof.hs:import :0:Utilities.Format
+document/proof.hs:import :0:Utilities.Syntactic
+document/proof.hs:import :0:Utilities.Trace
+document/proof.hs:import :1:Latex.Parser
+document/proof.hs:import :1:Logic.Calculation hiding ( context )
+document/proof.hs:import :1:Logic.Const
+document/proof.hs:import :1:Logic.Expr
+document/proof.hs:import :1:Logic.Genericity
+document/proof.hs:import :1:Logic.Operator
+document/proof.hs:import :3:UnitB.AST
+document/proof.hs:import :3:UnitB.PO
+document/proof.hs:import :4:Document.Expression
+document/proof.hs:import :4:Document.Visitor
+document/refinement.hs:import :0:Utilities.Format
+document/refinement.hs:import :0:Utilities.Syntactic
+document/refinement.hs:import :1:Latex.Parser
+document/refinement.hs:import :1:Logic.Const
+document/refinement.hs:import :1:Logic.Expr
+document/refinement.hs:import :1:Logic.Genericity
+document/refinement.hs:import :3:UnitB.AST
+document/refinement.hs:import :3:UnitB.PO
+document/refinement.hs:import :4:Document.Proof
+document/refinement.hs:import :4:Document.Visitor
+document/typelist.hs:import :0:Utilities.Syntactic
+document/typelist.hs:import :1:Latex.Parser
+document/visitor.lhs:import :0:Utilities.Format 
+document/visitor.lhs:import :0:Utilities.Syntactic
+document/visitor.lhs:import :1:Latex.Parser
+document/visitor.lhs:import :1:Logic.ExpressionStore
+document/visitor.lhs:import :3:UnitB.AST
+document/visitor.lhs:import :4:Document.TypeList

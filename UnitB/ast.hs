@@ -48,6 +48,7 @@ module UnitB.AST
     , all_notation
     , remove_guard
     , add_guard
+    , th_notation
     ) 
 where
  
@@ -156,6 +157,13 @@ empty_system = Sys [] M.empty empty_store M.empty
             , ("functions",function_theory)
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
+
+th_notation th = res
+    where
+        ths = th : elems (extends th)
+        res = flip precede logic
+            $ L.foldl combine empty_notation 
+            $ map Th.notation ths
 
 all_notation m = flip precede logic 
         $ L.foldl combine empty_notation 

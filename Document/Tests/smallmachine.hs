@@ -115,7 +115,7 @@ case3 = do
         x -> return $ show x
 
 result4 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " x@prime: Int"
       , " y: Int"
@@ -141,7 +141,7 @@ show_po path lbl = do
 case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
 result5 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " x@prime: Int"
       , " y: Int"
@@ -180,7 +180,7 @@ case6 = do
         x -> return $ show x
 
 result7 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " y: Int"
       , " (= x (* 2 y))"
@@ -192,7 +192,7 @@ case7 = show_po path6 $ label "m0/inc/SCH"
 
 path8 = "Tests/small_machine_t4.tex"
 result8 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " y: Int"
       , " (= x (* 2 y))"
@@ -203,7 +203,7 @@ result8 = unlines [
 case8 = show_po path8 $ label "m0/inc/SCH"
 
 result9 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " x@prime: Int"
       , " y: Int"
@@ -218,7 +218,7 @@ result9 = unlines [
 case9 = show_po path6 $ label "m0/inc/SCH/m0/1/REF/weaken"
 
 result10 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " x@prime: Int"
       , " y: Int"
@@ -230,7 +230,7 @@ result10 = unlines [
 case10 = show_po path6 $ label "m0/inc/TR/tr0/EN"
 
 result11 = unlines [
-        " sort: , , "
+        " sort: Pair [a,b], , , "
       , " x: Int"
       , " x@prime: Int"
       , " y: Int"

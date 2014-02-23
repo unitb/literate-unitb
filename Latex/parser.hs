@@ -58,13 +58,17 @@ flatten_li (Bracket b li0 ct li1)
             then ('{', '}')
             else ('[', ']')
 
-fold_doc f x (Env _ _ c _)     = foldl f x c
-fold_doc f x (Bracket _ _ c _) = foldl f x c
-fold_doc _ x (Text _)          = x
+fold_doc f x doc  = foldl f x $ contents doc
 
-fold_docM f x (Env _ _ c _)     = foldM f x c
-fold_docM f x (Bracket _ _ c _) = foldM f x c
-fold_docM _ x (Text _)          = return x
+fold_docM f x doc = foldM f x $ contents doc
+
+map_doc f doc = map f $ contents doc
+
+map_docM f doc = mapM f $ contents doc
+
+contents (Env _ _ c _)     = c
+contents (Bracket _ _ c _) = c
+contents (Text _)          = []
 
 data LatexToken =
         Command String LineInfo

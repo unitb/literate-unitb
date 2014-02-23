@@ -291,8 +291,8 @@ check_sat = [ format ("(check-sat-using (or-else"
 
 train_decl b ind = 
         [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
-        , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
         , "(declare-datatypes () ((Null null)))"
+        , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
         , "(declare-sort BLK 0)"
         , "; comment: we don't need to declare the sort Bool"
         , "; comment: we don't need to declare the sort Int"

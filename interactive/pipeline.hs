@@ -29,15 +29,12 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import           Data.Char
---import           Data.IORef
 import           Data.Map as M 
                     ( Map
                     , insert, keys
                     , fromList
                     , toList, unions )
 import qualified Data.Map as M 
---import           Data.Set as S 
---                    ( Set )
 
 --import Foreign
 
@@ -120,15 +117,22 @@ parser (Shared { .. })  = return $ do
         g lbl (x,y) = ((lbl,x),y)
         parse = do
 --                ms <- parse_machine fname
-                (xs) <- liftIO $ runEitherT $ do
+                xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
                     traceM "parser step A"
-                    xs <- hoistEither $ mapM f $ M.elems $ machines s
+                    ms <- hoistEither $ mapM f $ M.elems $ machines s
                     traceM "parser step B"
-                    return (xs, s)
+                    let cs = M.fromList $ map (uncurry g) $ do
+                                (x,ys) <- toList 
+                                    $ M.mapKeys label 
+                                    $ M.map theory_po 
+                                    $ theories s
+                                y <- toList ys
+                                return (x,y)
+                    return (ms, cs, s)
                 case xs of
-                    Right (ms,s) -> do
-                        let new_pos = unions ms
+                    Right (ms,cs,s) -> do
+                        let new_pos = unions (cs : ms) :: Map Key Seq
                             f (s0,b0) (s1,b1)
                                 | s0 == s1  = (s0,b0)
                                 | otherwise = (s1,b1)
@@ -211,6 +215,7 @@ proof_report outs es b = xs ++
         xs = concatMap f (toList outs)
         f ((m,lbl),(_,r))
             | r == Just False = [format " x {0} - {1}" m lbl]
+            | r == Just True  = [format "   {0} - {1}" m lbl]
             | otherwise = []
 
 run_all xs = do

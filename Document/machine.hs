@@ -8,6 +8,7 @@ import Document.Expression
 import Document.Visitor
 import Document.Proof -- hiding ( context )
 import Document.Refinement hiding ( parse_rule )
+import Document.Context
 
 import Latex.Parser
 
@@ -163,6 +164,7 @@ read_document xs = do
             lift $ RWS.modify (\s -> s { 
                 machines = ms })
             ms <- toEither $ foldM (f type_decl) ms xs
+            toEither $ forM_ xs (g ctx_type_decl)
             refs  <- lift $ RWS.gets ref_struct
             let li = line_info xs
             check_acyclic "refinement structure" (toList refs) li
@@ -170,10 +172,13 @@ read_document xs = do
 
                 -- take actual generic parameter from `type_decl'
             ms <- toEither $ foldM (f imports) ms xs
+            toEither $ mapM_ (g ctx_imports) xs
             ms <- trickle_down refs ms merge_import li
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
+            toEither $ mapM_ (g ctx_operators) xs
+            toEither $ mapM_ (g ctx_declarations) xs
             ms <- trickle_down refs ms merge_decl li
             traceM "step M"
             traceM $ show $ M.map (M.elems . variables) ms
@@ -181,6 +186,7 @@ read_document xs = do
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
+            toEither $ mapM_ (g ctx_collect_expr) xs
             ms <- trickle_down refs ms merge_exprs li
             traceM "step Q"
             
@@ -209,6 +215,13 @@ read_document xs = do
                     (name,_) <- with_line_info li $ get_1_lbl c
                     let m           = empty_machine name
                     return (insert name m ms)
+                | n == "context"    = do
+                    (name,_) <- with_line_info li $ get_1_lbl c
+                    let c           = empty_theory 
+                                { extends = fromList [("basic",basic_theory)] }
+                    lift $ modify $ \s -> s 
+                        { theories = insert name c $ theories s }
+                    return ms
                 | otherwise         = foldM gather ms c
         gather ms x                 = fold_docM gather ms x
         f pass ms (Env n _ c li)     
@@ -219,6 +232,16 @@ read_document xs = do
                         return (insert name m ms))
                 | otherwise         = foldM (f pass) ms c
         f pass ms x                 = fold_docM (f pass) ms x
+        g pass (Env n _ c li)     
+                | n == "context"    = do
+                    fromEither () (do
+                        (name,cont) <- with_line_info li $ get_1_lbl c
+                        c           <- lift $ gets $ (! name) . theories
+                        c           <- toEither $ pass cont c
+                        lift $ modify $ \s -> s 
+                            { theories = insert name c $ theories s } )
+                | otherwise         = mapM_ (g pass) c
+        g pass x                 = map_docM (g pass) x >> return ()
 
 type_decl :: [LatexDoc] -> Machine -> MSEither Error System Machine
 type_decl = visit_doc []

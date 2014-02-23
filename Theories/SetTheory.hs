@@ -12,6 +12,7 @@ import Logic.Theory
     -- Libraries
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
+import Data.Set as S ( empty )
 
 import Utilities.Format
 
@@ -84,6 +85,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         (s2,s2_decl) = var "s2" $ set_type t
 --            dec x  = x ++ z3_decoration t
         dec' x = "@set@@_" ++ x
+        
+        theorems = S.empty
 
 zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: Expr

@@ -2,9 +2,11 @@ module Document.Tests.IndirectEq where
 
 import Document.Document
 
+import UnitB.AST
 import UnitB.PO
 
     -- Libraries
+import Data.Map hiding (split, map)
 import Data.String.Utils
 
 import Tests.UnitTest
@@ -14,6 +16,7 @@ test_case = Case "train station example, with sets" test True
 
 test = test_cases
             [ Case "verify proof with galois connections" (verify 0 path0) result0
+            , Case "verify theory" case1 result1
             ]
 
 path0 = "tests/indirect-equality.tex"
@@ -39,6 +42,21 @@ result0 = unlines
 	, "  o  m0/INIT/INV/inv1/part 2/step "
 	, "passed 17 / 18" ]
 	
+result1 = unlines
+    [ " xxx THM/thm0" ]
+
+case1 = do
+        r <- parse_system path0
+        case r of
+            Right s -> do
+                let po = theory_po $ theories s ! "ctx0"
+                res <- verify_all po
+                return $ unlines $ map (\(k,r) -> success r ++ show k) $ toList res
+            Left x -> return $ show x
+    where
+        success True  = "  o  "
+        success False = " xxx "
+
 verify n path = do
     r <- parse_machine path
     case r of
