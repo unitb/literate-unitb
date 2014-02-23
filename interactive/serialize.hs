@@ -1,4 +1,4 @@
-module Serialize where
+module Interactive.Serialize where
 
 	-- Modules
 import Logic.Expr

@@ -2,8 +2,8 @@
 module Main where
 
     -- Modules
-import Pipeline
-import Config
+import Interactive.Pipeline
+import Interactive.Config
 	
 import Document.Document
 

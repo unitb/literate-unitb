@@ -1,4 +1,4 @@
-module BuildSystem 
+module Tools.BuildSystem 
     ( didAnythingChange
     , set_extensions
     , init_state )

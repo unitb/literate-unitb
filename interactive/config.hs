@@ -1,4 +1,4 @@
-module Config where
+module Interactive.Config where
 
 import Control.Monad
 

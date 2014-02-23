@@ -1,6 +1,6 @@
 module Main where
 
-import BuildSystem
+import Tools.BuildSystem
 
 import Control.Monad
 import Control.Monad.Trans
@@ -24,14 +24,6 @@ data Time = Minutes Int | Seconds Int
 microseconds :: Time -> Int
 microseconds (Minutes x) = x * 60000000
 microseconds (Seconds x) = x * 1000000
-
---break_errs xs = concatMap f $ lines xs
---    where
---        f [] = [Just []]
---        f ys@(x:xs)
---            | isAlpha x       = [Nothing, Just ys]
---            | not $ isAlpha x = [Just ys]
-
 
 repeatWhile :: (Monad m) => m Bool -> m ()
 repeatWhile m = do

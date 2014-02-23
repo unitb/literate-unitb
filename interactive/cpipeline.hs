@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module CPipeline where
+module Interactive.CPipeline where
 
 import Browser
 

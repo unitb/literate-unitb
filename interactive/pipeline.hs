@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Pipeline 
+module Interactive.Pipeline 
 --    ( run_pipeline )
 where
 
@@ -8,9 +8,8 @@ where
     
 import Document.Document
 
-import Observable
-
-import Serialize
+import Interactive.Observable
+import Interactive.Serialize
 
 import Logic.Label
 

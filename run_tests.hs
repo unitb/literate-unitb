@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Main where
 
-import Config
+import Interactive.Config
+
 import Control.Monad.Error
 
 import GHC.IO.Exception

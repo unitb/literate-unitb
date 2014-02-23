@@ -1,7 +1,7 @@
 module Main where
 
-import BuildSystem
-import Heap
+import Tools.BuildSystem
+import Tools.Heap
 
 import Control.Concurrent
 
