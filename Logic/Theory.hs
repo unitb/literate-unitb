@@ -1,12 +1,20 @@
+{-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
 module Logic.Theory where
 
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
 
+import Logic.Sequent
+
     -- Libraries
+import Data.List as L
 import Data.Map as M hiding ( map )
-import Data.Set as S hiding ( map )
+import Data.Typeable
+
+import Utilities.Syntactic
+import Utilities.HeterogenousEquality
+
 
     -- the use of gen_param is tricky. Be careful
     -- generic functions should have type variables in them
@@ -25,7 +33,7 @@ data Theory = Theory
         , consts    :: Map String Var
         , fact      :: Map Label Expr
         , dummies   :: Map String Var 
-        , theorems  :: Set Label
+        , theorems  :: Map Label (Maybe Proof)
         , notation  :: Notation }
     deriving (Eq, Show)
 
@@ -48,4 +56,23 @@ basic_theory = empty_theory
 empty_theory :: Theory
 empty_theory = Theory M.empty Nothing
     M.empty M.empty M.empty M.empty 
-    M.empty S.empty empty_notation
+    M.empty M.empty empty_notation
+
+data Proof = forall a. ProofRule a => Proof a
+    deriving Typeable
+
+instance Eq Proof where
+    Proof x == Proof y = x `h_equal` y
+
+class (Syntactic a, Typeable a, Eq a) => ProofRule a where
+    proof_po :: Theory -> a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
+
+instance Show Proof where
+    show _ = "[..]"
+
+th_notation th = res
+    where
+        ths = th : elems (extends th)
+        res = flip precede logic
+            $ L.foldl combine empty_notation 
+            $ map notation ths

@@ -26,7 +26,6 @@ import Data.Typeable
 
 import Utilities.Format
 import Utilities.Syntactic
-import Utilities.HeterogenousEquality
 
 embed :: Either a b -> (b -> IO c) -> IO (Either a c)
 embed em f = do
@@ -44,12 +43,6 @@ data Calculation = Calc
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
     deriving (Eq, Typeable)
-
-data Proof = forall a. ProofRule a => Proof a
-    deriving Typeable
-
-instance Eq Proof where
-    Proof x == Proof y = x `h_equal` y
 
 data Ignore = Ignore LineInfo
     deriving (Eq,Typeable)
@@ -74,9 +67,6 @@ data Assertion  = Assertion (Map Label (Expr,Proof)) Proof LineInfo
 
 data InstantiateHyp = InstantiateHyp Expr (Map Var Expr) Proof LineInfo
     deriving (Eq,Typeable)
-
-class (Syntactic a, Typeable a, Eq a) => ProofRule a where
-    proof_po :: Theory -> a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
 instance ProofRule Proof where
     proof_po y (Proof x) z a = proof_po y x z a

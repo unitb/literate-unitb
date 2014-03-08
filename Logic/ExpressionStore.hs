@@ -56,10 +56,8 @@ data ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
 empty_store :: ExprStore
 empty_store = ExprStore empty
 
-insert :: ( Monad m
-          , MonadState ExprStore m )
-       => Expr -> String -> m ()
-insert e str = modify $ ExprStore . insertWith (++) (UE e) [str] . getMap
+insert :: Expr -> String -> ExprStore -> ExprStore
+insert e str (ExprStore st) = ExprStore $ insertWith (++) (UE e) [str] st
 
 get_string :: ( Monad m
               , MonadState ExprStore m )

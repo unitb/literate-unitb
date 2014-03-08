@@ -17,6 +17,7 @@ import Logic.Expr
 import Logic.ExpressionStore ( ExprStore )
 import Logic.Sequent
 import Logic.Label
+import Logic.Tactics hiding ( with_line_info )
 
 import SummaryGen
 
@@ -37,6 +38,7 @@ import           Control.Monad.Trans.State ( runStateT )
 import qualified Control.Monad.Reader.Class as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Trans.State ( StateT )
 
@@ -667,12 +669,6 @@ scope ctx xp vs = do
     else left [Error (format "Undeclared variables: {0}" 
                       (intercalate ", " undecl_v)) li]
 
-remove_ref :: [Char] -> [Char]
-remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
-remove_ref ('}':xs) = remove_ref xs
-remove_ref (x:xs)   = x:remove_ref xs
-remove_ref []       = []
-
 collect_refinement :: Monad m 
                    => [LatexDoc] 
                    -> Machine
@@ -857,10 +853,11 @@ collect_proofs :: Monad m
                -> MSEitherT Error System m Machine
 collect_proofs = visit_doc
         [   (   "proof"
-            ,   EnvBlock $ \(po,()) xs m -> do
+            ,   EnvBlock $ \(po,()) xs m -> do -- with_tracingM $ do
                         -- This should be moved to its own phase
                     let po_lbl = label $ remove_ref $ concatMap flatten po
-                    let lbl = composite_label [ _name m, po_lbl ]
+                        lbl = composite_label [ _name m, po_lbl ]
+                        th  = theory m
                     toEither $ error_list 
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
@@ -870,7 +867,16 @@ collect_proofs = visit_doc
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
                             return
                             (M.lookup lbl $ raw_machine_pos m)
-                    p           <- collect_proof_step (empty_pr ctx s) m xs 
+                    !tb <- lift $ gets parse_table
+                    traceM $ seq tb "> before"                    
+                    p <- runReaderT (
+                            runEitherT $
+                            run_visitor li xs $ 
+                            collect_proof_step (empty_pr ctx s) m 
+                            ) th
+                    p <- EitherT $ return p
+                    p <- EitherT $ return $ runTactic li s p
+                    traceM "> after"
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 

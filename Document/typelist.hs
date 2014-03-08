@@ -10,6 +10,7 @@ import Utilities.Syntactic
 import Control.Monad.Reader.Class
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
+import Control.Monad.Trans.Reader ( runReaderT )
 
 class Readable a where
     read_args :: (Monad m, MonadReader LineInfo m)
@@ -18,6 +19,13 @@ class Readable a where
 class TypeList a where
     get_tuple :: (Monad m, MonadReader LineInfo m)
               => [LatexDoc] -> EitherT [Error] m (a, [LatexDoc])
+
+get_tuple' :: (Monad m, TypeList a)
+           => [LatexDoc] -> LineInfo 
+           -> EitherT [Error] m (a, [LatexDoc])
+get_tuple' xs li = EitherT $ do
+        x <- runReaderT (runEitherT $ get_tuple xs) li
+        return x
 
 instance TypeList () where
     get_tuple = runStateT $ return ()

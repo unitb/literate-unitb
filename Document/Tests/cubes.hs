@@ -10,6 +10,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Calculation
+import Logic.Theory
 
 import UnitB.AST
 import UnitB.PO

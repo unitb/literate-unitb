@@ -56,7 +56,6 @@ where
 import Logic.Expr hiding (merge)
 import Logic.Const 
 import Logic.ExpressionStore
-import Logic.Calculation
 import Logic.Classes
 import Logic.Label
 import Logic.Operator
@@ -79,7 +78,7 @@ import           Data.Typeable
 
 import Utilities.Format
 import Utilities.HeterogenousEquality
-import Utilities.Graph hiding ( Matrix )
+import Utilities.Graph  (cycles)
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (elems $ extends th)) 
@@ -157,13 +156,6 @@ empty_system = Sys [] M.empty empty_store M.empty
             , ("functions",function_theory)
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
-
-th_notation th = res
-    where
-        ths = th : elems (extends th)
-        res = flip precede logic
-            $ L.foldl combine empty_notation 
-            $ map Th.notation ths
 
 all_notation m = flip precede logic 
         $ L.foldl combine empty_notation 

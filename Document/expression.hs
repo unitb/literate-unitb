@@ -14,6 +14,8 @@ import Logic.ExpressionStore as ES
 import Logic.Genericity 
 import Logic.Operator
 
+import UnitB.AST ( System ( .. ) )
+
 import Theories.SetTheory
 import Theories.FunctionTheory
 
@@ -32,6 +34,7 @@ import Data.List as L
 import Data.Map as M hiding ( map )
 
 import Utilities.Format
+import Utilities.Graph as G ( empty, (!) )
 
 data Param = Param 
     { context :: Context
@@ -234,7 +237,7 @@ get_variables :: (Monad m, MonadReader LineInfo m)
 get_variables ctx n cs = do
         LI fn i j <- lift $ ask
         xs <- hoistEither $ read_tokens 
-            (runParser ctx n M.empty M.empty vars) 
+            (runParser ctx n (G.empty Ambiguous) M.empty vars) 
             fn m (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
@@ -343,7 +346,7 @@ term = do
                                     [ ("\\qforall",Binder Forall)
                                     , ("\\qexists",Binder Exists)
                                     , ("\\qfun",Binder Lambda) 
-                                    , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] ! xs }
+                                    , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] M.! xs }
                                 return $ Right (quant vs r t)
                         else if xs == "\\oftype"
                         then do
@@ -500,12 +503,12 @@ expr = do
 assoc :: BinOperator -> BinOperator -> Parser Assoc
 assoc x0 x1 = do
         tb <- get_table
-        return $ tb ! (Right x0, Right x1)
+        return $ tb G.! (Right x0, Right x1)
 
 binds :: UnaryOperator -> BinOperator -> Parser Assoc
 binds x0 x1 = do
         tb <- get_table
-        return $ tb ! (Left x0, Right x1)
+        return $ tb G.! (Left x0, Right x1)
 
 apply_unary :: UnaryOperator -> Term -> Parser Term
 apply_unary op e = do
@@ -542,7 +545,7 @@ apply_op op x0 x1 = do
     -- Too many arguments
 parse_expr :: ( Monad m
               , MonadReader LineInfo m
-              , MonadState ExprStore m) 
+              , MonadState System m) 
            => Context 
            -> Notation
            -> Matrix Operator Assoc 
@@ -555,7 +558,9 @@ parse_expr ctx@(Context _ vars _ _ _)  n assoc input = do
             (file_name li) 
             input 
             (line li, column li)
-        ES.insert e (map fst input)
+        es <- gets expr_store
+        modify $ \s -> s 
+            { expr_store = ES.insert e (map fst input) es }
         return e
 
 parse_oper :: ( Monad m
@@ -567,7 +572,7 @@ parse_oper :: ( Monad m
 parse_oper ctx n c = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx n M.empty M.empty
+            (runParser ctx n (G.empty Ambiguous) M.empty
                 $ do eat_spaceP ; x <- oper ; eat_spaceP ; return x) 
             (file_name li) 
             c (line li, column li)

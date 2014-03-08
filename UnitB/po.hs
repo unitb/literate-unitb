@@ -16,6 +16,7 @@ import Logic.Classes
 import Logic.Const
 import Logic.Expr
 import Logic.Label
+import Logic.Theory
 
 import UnitB.AST
 import UnitB.Feasibility
@@ -168,7 +169,7 @@ theory_po th = mapKeys keys $ M.map (f . g) thm
     where
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
         (thm,axm) = M.partitionWithKey p $ fact th
-        p k _ = k `S.member` theorems th
+        p k _ = k `M.member` theorems th
         g x = Sequent empty_ctx (M.elems axm) x
         keys k = composite_label [label "THM",k]
         f (Sequent a b d) = Sequent 

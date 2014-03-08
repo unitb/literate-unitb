@@ -12,6 +12,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
+--import Logic.Sequent
 
 import UnitB.AST
 import UnitB.PO
@@ -193,6 +194,32 @@ ctx_collect_expr = visit_doc
                             (theory_ctx S.empty th) xs
                         return th 
                             { fact = insert lbl thm $ fact th
-                            , theorems = S.insert lbl $ theorems th }
+                            , theorems = insert lbl Nothing $ theorems th }
             )
         ]
+
+--ctx_collect_proofs :: Monad m 
+--               => [LatexDoc] 
+--               -> Theory
+--               -> MSEitherT Error System m Theory
+--ctx_collect_proofs = visit_doc
+--        [   (   "proof"
+--            ,   EnvBlock $ \(po,()) xs th -> do
+--                        -- This should be moved to its own phase
+--                    let po_lbl = label $ remove_ref $ concatMap flatten po
+--                    let lbl = composite_label [ _name m, po_lbl ]
+--                    toEither $ error_list 
+--                        [   ( lbl `member` theorems th
+--                            , format "a proof for {0} already exists" lbl )
+--                        ] 
+--                    li <- lift $ ask
+--                    s@(Sequent ctx _ _) <- maybe
+--                            (left [Error (format "proof obligation does not exist: {0} {1}" 
+--                                lbl 
+--                                $ M.keys $ theory_po th) li])
+--                            return
+--                            (M.lookup lbl $ theory_po th)
+--                    p           <- collect_proof_step (empty_pr ctx s) m xs 
+--                    return th { theorems = insert lbl (Just p) $ theorems th }
+--            )
+--        ] []

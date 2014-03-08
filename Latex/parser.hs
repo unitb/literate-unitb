@@ -21,7 +21,7 @@ import System.IO.Unsafe
 import System.FilePath
 
 import Utilities.Format
-import Utilities.Graph
+import Utilities.Graph hiding ( map, empty )
 import Utilities.Syntactic
 
 data LatexDoc = 

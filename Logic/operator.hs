@@ -10,13 +10,12 @@ import Logic.Const
 import Data.Either
 import Data.Function
 import Data.List as L
-import Data.Map as M hiding ( foldl )
-import Data.Tuple
+--import Data.Map as M hiding ( foldl )
 import Data.Typeable
 
 import           Utilities.Format
 import           Utilities.Graph hiding ( Matrix )
-import qualified Utilities.Graph as G ( Matrix ) 
+import qualified Utilities.Graph as G 
 
 type Matrix a b = G.Matrix a b
 
@@ -142,14 +141,14 @@ assoc' :: Notation -> Matrix Operator Assoc
 assoc' ops 
 --		| not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
-        | otherwise   = foldl (unionWith join) M.empty
-                  [ M.map (f LeftAssoc) pm
-                  , M.map (f RightAssoc) $ mapKeys swap pm
-                  , M.map (f LeftAssoc) $ mapKeys g lm
-                  , M.map (f RightAssoc) $ mapKeys g rm ]
+        | otherwise   = foldl (G.unionWith join) (G.empty Ambiguous)
+                  [ G.map (f LeftAssoc) pm :: Matrix Operator Assoc
+                  , G.map (f RightAssoc) $ G.transpose pm
+                  , G.map (f LeftAssoc) $ G.mapKeys g lm
+                  , G.map (f RightAssoc) $ G.mapKeys g rm ]
             -- fromList (zip bs $ L.map g bs)
     where
-        cycles = L.filter (\x -> pm M.! (x,x)) (new_ops ops)
+        cycles = L.filter (\x -> pm G.! (x,x)) (new_ops ops)
 --        complete = all_ops L.\\ (nub $ new_ops ops)
 --        all_ops = nub $	concat (concat (prec ops) 
 --					 ++ L.map (L.map Right) (left_assoc ops)
