@@ -14,7 +14,6 @@ import Theories.SetTheory hiding ( dec )
     -- Libraries
 import           Data.Map
 import           Data.List as L
-import qualified Data.Set as S ( empty )
 
 ztfun   :: ExprP -> ExprP -> ExprP
 zdom    :: ExprP -> ExprP
@@ -97,7 +96,7 @@ function_theory = Theory { .. }
         
         consts = empty
         dummies = empty
-        theorems = S.empty
+        theorems = empty
         
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)

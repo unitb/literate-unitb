@@ -3,7 +3,33 @@
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
 |  |  +- verify theory
-|  |  +- [ Success: 2 / 2 ]
+|  |   xxx THM/t|___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > hm0\n
+|  |    < hm0/goal\n
+|  |    -    --
+|  |    < _._.o_._.THM/thm0/hypothesis\n
+|  |    < _._.o_._.THM/thm0/step_.\n
+|  |    < _._.o_._.THM/thm0/step_.\n
+|  |    < _._.o_._.THM/thm0/step_.\n
+|  |  ]
+|  |  +- [ Success: 1 / 2 ]
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > False
+|    < True
+|    - ----
+|  ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -101,7 +127,18 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 10 / 10 ]
+|  +- [ Success: 9 / 10 ]
+|___|
+
+
+Comparison:[
+  > Actual
+  < Expected
+  - ------
+  > False
+  < True
+  - ----
+]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -144,17 +181,18 @@
 |  +- canonical lambdas
 |  +- canonical lambdas with quantifier
 |  +- [ Success: 7 / 7 ]
-+- Formatting utilities
-|  +- test 0
-|  +- test 1
-|  +- [ Success: 2 / 2 ]
 +- Graphs and operator grammars
 |  +- case 0 - complete domain of matrices
 |  +- case 1 - operator grammar discrepancy
 |  +- case 2 - new ambiguities
 |  +- case 3 - transitive closures
 |  +- case 4 - transitive closures in linear time
-|  +- [ Success: 5 / 5 ]
+|  +- Formatting utilities
+|  |  +- test 0
+|  |  +- test 1
+|  |  +- [ Success: 2 / 2 ]
+|  +- case 5 - error monad
+|  +- [ Success: 7 / 7 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -163,15 +201,15 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 7 / 7 ]
++- [ Success: 5 / 6 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   16068 total
-    1450 Document/Tests/trainstation.hs
-     941 Document/machine.hs
+   16764 total
+    1451 Document/Tests/trainstation.hs
+     947 Document/machine.hs
+     799 Document/proof.hs
      746 Document/Tests/lambdas.hs
-     713 UnitB/ast.hs
-     604 Document/proof.hs
+     705 UnitB/ast.hs

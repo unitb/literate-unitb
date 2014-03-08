@@ -1,5 +1,13 @@
 {-# LANGUAGE TypeOperators, MultiParamTypeClasses, FlexibleInstances, UndecidableInstances #-}
-module Logic.Tactics where
+module Logic.Tactics 
+    ( Tactic, TacticT, get_line_info, get_context
+    , get_goal, by_parts
+    , is_fresh, get_hypotheses, assert, assume
+    , by_cases, easy, new_fresh, free_goal
+    , instantiate_hyp, with_line_info
+    , runTactic, runTacticT, make_expr
+    )
+where
 
 import Logic.Calculation
 import Logic.Classes
@@ -7,57 +15,95 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Sequent
+import Logic.Theory
+
+--import Latex.Parser
 
     -- Libraries
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.State.Class
 import Control.Monad.Trans.Either
 
+import Control.Monad.Identity
 import Data.List as L
 import Data.Map  as M hiding (map)
 
+import Utilities.Error
 import Utilities.Format
-import Utilities.Syntactic
+import Utilities.Syntactic ( Error (..), LineInfo )
 
-data Tactic a = Tactic { unTactic :: EitherT [Error] (Reader (Sequent, LineInfo)) a }
+data TacticParam = TacticParam 
+    { sequent :: Sequent
+    , line_info :: LineInfo
+    }
 
-with_goal :: Expr -> Tactic a -> Tactic a
-with_goal e (Tactic cmd) = Tactic $ do
-    (Sequent ctx hyps _, li) <- lift ask 
-    EitherT $ local (const (Sequent ctx hyps e, li)) $ runEitherT cmd
+data TacticT m a = TacticT { unTactic :: ErrorT (ReaderT TacticParam m) a }
 
-with_hypotheses :: [Expr] -> Tactic Proof -> Tactic Proof
-with_hypotheses es (Tactic cmd) = Tactic $ do
-    (Sequent ctx hyps g, li) <- lift ask 
-    EitherT $ local (const (Sequent ctx (hyps ++ es) g, li)) $ runEitherT cmd
+type Tactic = TacticT Identity
 
-with_variables :: [Var] -> Tactic Proof -> Tactic Proof
-with_variables vs (Tactic cmd) = Tactic $ do
-    (Sequent (Context sorts vars funs defs dums) hyps g, li) <- lift ask 
-    let new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
-    EitherT $ local (const (Sequent new_ctx hyps g, li)) $ runEitherT cmd
+with_line_info :: Monad m => LineInfo -> TacticT m a -> TacticT m a
+with_line_info li (TacticT cmd) = 
+        TacticT $ ErrorT $ local (\p -> p { line_info = li }) $ runErrorT cmd
 
-get_line_info :: Tactic LineInfo
-get_line_info = Tactic $ liftM snd $ lift ask
+with_goal :: Monad m => Expr -> TacticT m a -> TacticT m a
+with_goal e (TacticT cmd) = TacticT $ do
+    Sequent ctx hyps _ <- lift $ asks sequent
+    param              <- lift ask
+    ErrorT $ local (const (param { sequent = Sequent ctx hyps e })) 
+        $ runErrorT cmd
 
-get_goal :: Tactic Expr
-get_goal = Tactic $ do
-        Sequent _ _ goal <- liftM fst $ lift ask
+with_hypotheses :: Monad m
+                => [Expr] -> TacticT m Proof 
+                -> TacticT m Proof
+with_hypotheses es (TacticT cmd) = TacticT $ do
+    Sequent ctx hyps g <- lift $ asks sequent 
+    param              <- lift ask
+    ErrorT $ local (const (param { sequent = Sequent ctx (hyps ++ es) g })) 
+        $ runErrorT cmd
+
+with_variables :: Monad m
+               => [Var] -> TacticT m Proof -> TacticT m Proof
+with_variables vs (TacticT cmd) = TacticT $ do
+    (Sequent ctx hyps g) <- lift $ asks sequent
+    param              <- lift ask
+    let (Context sorts vars funs defs dums) = ctx
+        new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
+    ErrorT $ local (const (param { sequent = Sequent new_ctx hyps g })) $ 
+        runErrorT cmd
+
+get_line_info :: Monad m
+              => TacticT m LineInfo
+get_line_info = TacticT $ lift $ asks line_info
+
+get_goal :: Monad m
+         => TacticT m Expr
+get_goal = TacticT $ do
+        Sequent _ _ goal <- lift $ asks sequent
         return goal
 
-get_hypothesis :: Tactic [Expr]
-get_hypothesis = Tactic $ do
-        Sequent _ hyps _ <- liftM fst $ lift ask
+get_hypotheses :: Monad m
+               => TacticT m [Expr]
+get_hypotheses = TacticT $ do
+        Sequent _ hyps _ <- lift $ asks sequent
         return hyps
 
-is_fresh :: Var -> Tactic Bool
-is_fresh v = Tactic $ do
-        s <- liftM fst $ lift ask
+get_context :: Monad m
+            => TacticT m Context
+get_context = TacticT $ do
+        Sequent ctx _ _ <- lift $ asks sequent
+        return ctx
+
+is_fresh :: Monad m
+         => Var -> TacticT m Bool
+is_fresh v = TacticT $ do
+        s <- lift $ asks sequent
         return $ are_fresh [name v] s
 
-assert :: [(Label,Expr,Tactic Proof)] 
-       -> Tactic Proof 
-       -> Tactic Proof
+assert :: Monad m
+       => [(Label,Expr,TacticT m Proof)] 
+       -> TacticT m Proof 
+       -> TacticT m Proof
 assert xs proof = do
         li <- get_line_info
         ys <- forM xs $ \(lbl,x,m) -> do
@@ -66,18 +112,20 @@ assert xs proof = do
         p  <- with_hypotheses (map (fst . snd) ys) proof
         return $ Proof $ Assertion (fromList ys) p li
 
-assume :: [(Label,Expr)]
+assume :: Monad m
+       => [(Label,Expr)]
        -> Expr
-       -> Tactic Proof        
-       -> Tactic Proof
+       -> TacticT m Proof        
+       -> TacticT m Proof
 assume xs new_g proof = do
         li <- get_line_info
         p  <- with_hypotheses (map snd xs) 
             $ with_goal new_g proof
         return $ Proof $ Assume (fromList xs) new_g p li
 
-by_cases :: [(Label, Expr, Tactic Proof)]
-         -> Tactic Proof
+by_cases :: Monad m
+         => [(Label, Expr, TacticT m Proof)]
+         -> TacticT m Proof
 by_cases cs = do
         li <- get_line_info
         ps <- forM cs $ \(lbl,e,m) -> do
@@ -85,13 +133,25 @@ by_cases cs = do
             return (lbl,e,p)
         return $ Proof $ ByCases ps li
 
-easy :: Tactic Proof
+by_parts :: Monad m
+         => [(Expr, TacticT m Proof)]
+         -> TacticT m Proof
+by_parts cs = do
+        li <- get_line_info
+        ps <- forM cs $ \(e,m) -> do
+            p <- with_goal e m 
+            return (e,p)
+        return $ Proof $ ByParts ps li
+
+easy :: Monad m
+     => TacticT m Proof
 easy = do
         li <- get_line_info
         return $ Proof $ Easy li
 
-new_fresh :: String -> Type 
-          -> Tactic Var
+new_fresh :: Monad m
+          => String -> Type 
+          -> TacticT m Var
 new_fresh name t = do
         fix (\rec n suf -> do
             let v = Var (name ++ suf) t
@@ -101,9 +161,10 @@ new_fresh name t = do
                 rec (n+1) (show n)
             ) 0 ""
 
-free_goal :: Var -> Var 
-          -> Tactic Proof 
-          -> Tactic Proof
+free_goal :: Monad m
+          => Var -> Var 
+          -> TacticT m Proof 
+          -> TacticT m Proof
 free_goal v0 v1 m = do
         li   <- get_line_info
         goal <- get_goal 
@@ -120,11 +181,12 @@ free_goal v0 v1 m = do
         let t = type_of (Word v1)
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
-instantiate_hyp :: Expr -> [(Var,Expr)] 
-                -> Tactic Proof
-                -> Tactic Proof
+instantiate_hyp :: Monad m
+                => Expr -> [(Var,Expr)] 
+                -> TacticT m Proof
+                -> TacticT m Proof
 instantiate_hyp hyp ps proof = do
-        hyps <- get_hypothesis
+        hyps <- get_hypotheses
         li   <- get_line_info
         if hyp `elem` hyps then do
             newh <- case hyp of
@@ -144,21 +206,50 @@ instantiate_hyp hyp ps proof = do
             fail $ "formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp
 
-
-make_expr :: Either String a
-          -> Tactic a
+make_expr :: Monad m
+          => Either String a
+          -> TacticT m a
 make_expr e = do
         li <- get_line_info
         let f xs = Left [Error xs li]
-        Tactic $ hoistEither (either f Right e)
+        TacticT $ fromEitherT $ hoistEither (either f Right e)
 
-runTactic :: LineInfo -> Sequent
-          -> Tactic a -> Either [Error] a
-runTactic li s (Tactic tac) = runReader (runEitherT tac) (s,li)
+runTacticT :: Monad m
+           => LineInfo -> Sequent
+           -> TacticT m a -> m (Either [Error] a)
+runTacticT li s (TacticT tac) = do
+        x <- runReaderT (runErrorT tac) (TacticParam s li)
+        case x of
+            Right (x,[])  -> return $ Right x
+            Right (_,err) -> return $ Left err
+            Left err -> return $ Left err
+
+runTactic li s tac = runIdentity (runTacticT li s tac)
           
-instance Monad Tactic where
-    Tactic m >>= f = Tactic $ m >>= (unTactic . f)
-    return x       = Tactic $ return x
+instance Monad m => Monad (TacticT m) where
+    TacticT m >>= f = TacticT $ m >>= (unTactic . f)
+    return x       = TacticT $ return x
     fail msg       = do
             li <- get_line_info
-            Tactic $ left [Error msg li]
+            TacticT $ hard_error [Error msg li]
+
+instance MonadState s m => MonadState s (TacticT m) where
+    get = lift get
+    put x = lift $ put x
+
+instance MonadReader r m => MonadReader r (TacticT m) where
+    ask = lift $ ask
+    local f (TacticT (ErrorT (ReaderT cmd))) = TacticT $ 
+            ErrorT $ 
+            ReaderT $ \r ->
+            local f $ cmd r
+
+instance MonadTrans TacticT where
+    lift cmd = TacticT $ lift $ lift cmd
+
+instance Monad m => MonadError (TacticT m) where
+    soft_error e = TacticT $ soft_error e
+    hard_error e = TacticT $ hard_error e
+    make_hard (TacticT cmd) = TacticT $ make_hard cmd
+    make_soft x (TacticT cmd) = TacticT $ make_soft x cmd
+

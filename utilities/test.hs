@@ -9,7 +9,7 @@ import Theories.Notation
 import Theories.SetTheory
 import Theories.FunctionTheory
 
-import Utilities.Graph
+import Utilities.Graph (matrix_of_with, closure, m_closure_with, as_map)
 
     -- Libraries
 import Data.Array 
@@ -19,7 +19,13 @@ import qualified Data.Map as M
 
 import Tests.UnitTest
 
+import Utilities.Format
+import Utilities.Syntactic
+import Utilities.Error
+
 import System.IO.Unsafe
+
+--as_map = id
 
 test_case :: (String, IO Bool, Bool) 
 test_case = ("Graphs and operator grammars", test, True)
@@ -30,7 +36,9 @@ test = test_cases
     , Case "case 1 - operator grammar discrepancy" case1 result1
     , Case "case 2 - new ambiguities" case2 result2
     , Case "case 3 - transitive closures" case3 result3
-    , Case "case 4 - transitive closures in linear time" case4 result4 ]
+    , Case "case 4 - transitive closures in linear time" case4 result4
+    , Case "Formatting utilities" test' True
+    , Case "case 5 - error monad" case5 result5 ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do
@@ -250,7 +258,7 @@ case1 = do
         return $ result
     where
         result = sortBy (compare `on` fst3) $ zip3 xs (map (g0 M.!) xs) (map (g1 M.!) xs)
-        g0   = assoc' notations
+        g0   = as_map $ assoc' notations
         g1   = assoc0
         rs   = M.keys assoc0
         eq x = g0 `lu` x /= g1 `lu` x
@@ -288,7 +296,7 @@ result3 = sort
     , (5,3) ] 
 
 case4 :: IO [(Int,Int)]
-case4 = return $ sort (M.keys $ M.filter id $ m_closure_with [0..5] xs)
+case4 = return $ sort (M.keys $ M.filter id $ as_map $ m_closure_with [0..5] xs)
     where
         xs :: [(Int,Int)]
         xs = [ (0,1),(1,2),(2,3)
@@ -300,3 +308,40 @@ result4 = sort
     , (1,3),(0,2),(0,3)
     , (0,4),(1,4),(5,2)
     , (5,3) ] 
+
+data Tree a = Node a (Tree a) (Tree a) | Leaf
+    deriving Show
+
+test' :: IO Bool
+test' = test_cases
+        [ StringCase "test 0" 
+                    (return $ format "hello {0} name is {1} and I'm {2} years old" "my" "Simon" 28) 
+                    ("hello my name is Simon and I'm 28 years old")
+        , StringCase "test 1"
+                    (return $ format "this is a tree {0}, its second leaf is {1}" t4 t2)
+                    (   "this is a tree Node \"Candide+Paul-Henri\" (Node \"Yves+Sylvie\" Leaf Leaf) "
+                     ++ "(Node \"Danielle+Louis\" (Node \"Francois+Elsa\" Leaf Leaf) "
+                     ++       "(Node \"Emilie+Vincent\" Leaf Leaf)), its second leaf is "
+                     ++       "Node \"Francois+Elsa\" Leaf Leaf")
+        ]
+    where
+        t0 = Node "Yves+Sylvie" Leaf Leaf
+        t1 = Node "Danielle+Louis" t2 t3
+        t2 = Node "Francois+Elsa" Leaf Leaf
+        t3 = Node "Emilie+Vincent" Leaf Leaf
+        t4 = Node "Candide+Paul-Henri" t0 t1
+
+(case5,result5) = (test,result)
+    where
+        test = runErrorT $ do
+            soft_error [e0]
+            make_soft () $ do
+                soft_error [e2]
+                hard_error [e0]
+            li <- hard_error [e1]
+            soft_error [Error "error d" li]
+        result = Left [e0,e2,e0,e1]
+        li = LI "file.ext" 1 2
+        e0 = Error "error a" li
+        e1 = Error "error b" li
+        e2 = Error "error c" li

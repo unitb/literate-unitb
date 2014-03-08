@@ -43,7 +43,11 @@ result0 = unlines
 	, "passed 17 / 18" ]
 	
 result1 = unlines
-    [ " xxx THM/thm0" ]
+    [ " xxx THM/thm0/goal"
+    , "  o  THM/thm0/hypothesis"
+    , "  o  THM/thm0/step "
+    , "  o  THM/thm0/step "
+    , "  o  THM/thm0/step " ]
 
 case1 = do
         r <- parse_system path0

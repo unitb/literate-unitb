@@ -16,6 +16,8 @@ import           Data.IORef
 
 import System.IO.Unsafe
 
+import qualified Utilities.Graph as G ( (!) )
+
 notations :: Notation
 notations = flip precede logic $ foldl combine empty_notation
     [ functions
@@ -26,7 +28,7 @@ notations = flip precede logic $ foldl combine empty_notation
 assoc :: BinOperator -> BinOperator -> Assoc
 assoc x y = unsafePerformIO $ do
     r <- readIORef assoc_table
-    return $ r M.! (Right x,Right y)
+    return $ r G.! (Right x,Right y)
 
 assoc_table :: IORef (Matrix Operator Assoc)
 assoc_table = unsafePerformIO $ newIORef (assoc' notations)
@@ -41,7 +43,7 @@ assoc_table = unsafePerformIO $ newIORef (assoc' notations)
 binds :: UnaryOperator -> BinOperator -> Assoc
 binds x y = unsafePerformIO $ do
     r <- readIORef assoc_table 
-    return $ r M.! (Left x,Right y)
+    return $ r G.! (Left x,Right y)
 
 assoc0 :: Map (Operator, Operator) Assoc
 assoc0 = fromList (zip (L.map xbin_to_bin xs) $ L.map (pairs M.!) xs)

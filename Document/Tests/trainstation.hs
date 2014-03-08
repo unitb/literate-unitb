@@ -11,6 +11,7 @@ import Logic.Calculation
 import Logic.Const
 import Logic.Expr
 import Logic.Label
+import Logic.Theory
 
 import UnitB.AST
 import UnitB.PO
@@ -27,7 +28,7 @@ import qualified Data.Set as S
 
 import Tests.UnitTest
 
-import Utilities.Format hiding (test,test_case)
+import Utilities.Format
 import Utilities.Syntactic
 
 test_case = Case "train station example" test True

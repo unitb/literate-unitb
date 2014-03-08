@@ -3,26 +3,35 @@ module Utilities.Graph
     ( Composition, cycles, cycles_with
     , Min(..), closure
     , m_closure, m_closure_with
-    , m_closure_with'
+--    , m_closure_with'
     , as_matrix, as_matrix_with
-    , matrix_of_with, Matrix )
+    , matrix_of_with, Matrix, map
+    , (!), unionWith, transpose
+    , mapKeys, empty, as_map, size )
 where
 
 import Control.Monad
 
-import Data.Array as A -- hiding ( (!) )
+import           Data.Array as A ( bounds, Array, (//), array, ixmap )
+import qualified Data.Array as A -- hiding ( (!) )
 --import Data.Array.IArray hiding ( (!) )
 import Data.Array.ST
 import Data.Function
 import Data.Graph
-import Data.List as L hiding ( union, (\\) )
+import Data.List as L hiding ( union, (\\), transpose, map )
+import qualified Data.List as L
 import Data.Map  as M 
     ( Map, fromList, fromListWith
-    , toList, adjust
-    , mapKeys, (!)
-    , union )
+--    , toList
+    , toList )
+import qualified Data.Map  as M 
+--    ( (!) , empty
+--    , unionWith, map -- , elems, keys
+--    
+--    )
+import Data.Tuple
 
-import Prelude hiding ( seq )
+import Prelude hiding ( seq, map )
 
 instance Show a => Show (SCC a) where
     show (AcyclicSCC x) = show x
@@ -30,7 +39,50 @@ instance Show a => Show (SCC a) where
 
 --type Array a b = 
 
-type Matrix a b = Map (a,a) b
+data Matrix a b = Matrix (Map a (Map a b)) [a] b
+    deriving (Eq, Show)
+
+empty x = Matrix M.empty [] x
+
+(Matrix m _ x) ! (y,z) = maybe x (M.findWithDefault x z) (M.lookup y m)
+
+unionWith g (Matrix m0 xs x) (Matrix m1 ys _) = Matrix (M.unionWith f m0 m1) (nub $ xs ++ ys) x
+    where
+        f m0 m1 = M.unionWith g m0 m1
+
+transpose m = mapKeys swap m
+
+mapKeys :: Ord b => ((a,a) -> (b,b)) -> Matrix a c -> Matrix b c 
+mapKeys f (Matrix m xs x) = Matrix result (nub ys) x
+    where
+        result = M.map fromList 
+            $ fromListWith (++) $ do
+                (x,xs) <- toList $ M.map toList m
+                (y,k)  <- xs
+                let (x',y') = f (x,y)
+                return (x',[(y',k)])
+        ys = do
+                x <- xs
+                y <- xs
+                let (x',y') = f (x,y)
+                [x',y']
+
+as_map g@(Matrix m _ x) = M.union result other
+    where
+        other = M.fromList $ zip (keys g) $ repeat x
+        result = fromList $ do
+            (x,xs) <- toList m
+            (y,k)  <- toList xs
+            return ((x,y),k)
+
+map f (Matrix m xs x) = Matrix m' xs (f x)
+    where
+        m' = M.map (M.map f) m
+
+keys (Matrix _ xs _) = [ (x,y) | x <- xs, y <- xs ]
+    -- x <- M.keys m, y <- concat (M.elems $ M.map M.keys m) ]
+
+size (Matrix m _ _)  = sum $ L.map M.size $ M.elems m
 
 cycles :: Ord a => [(a,a)] -> [SCC a]
 cycles xs = cycles_with [] xs
@@ -97,19 +149,20 @@ m_closure xs = ixmap (g m, g n) f $ closure_ ar
 --        g (i,j)    = (m1 ! i, m1 ! j) 
 --        (m,n)      = bounds ar
 
-m_closure_with' :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
-m_closure_with' rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
-    where
-        (_,m1,ar) = matrix_of_with rs xs
-        g (i,j)    = (m1 A.! i, m1 A.! j) 
+--m_closure_with' :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
+--m_closure_with' rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
+--    where
+--        (_,m1,ar) = matrix_of_with rs xs
+--        g (i,j)    = (m1 A.! i, m1 A.! j) 
 
 m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
-m_closure_with vs es = fromList $ do
-        (x,xs) <- toList result
-        y      <- vs
-        return ((x,y),y `elem` xs)
+m_closure_with vs es = Matrix (M.map (fromList . (`zip` repeat True)) result) vs False
+--fromList $ do
+--        (x,xs) <- toList result
+--        y      <- vs
+--        return ((x,y),y `elem` xs)
     where
-        list        = fromListWith (++) $ map m_v vs ++ map m_e es
+        list        = fromListWith (++) $ L.map m_v vs ++ L.map m_e es
         m_v v       = (v,[])
         m_e (v0,v1) = (v0,[v1])
         order       = cycles_with vs es
@@ -123,9 +176,11 @@ as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs
 
 as_matrix_with :: Ord a => [a] -> [(a,a)] -> Matrix a Bool
-as_matrix_with rs es = fromList $ zip cs (repeat False) ++ zip es (repeat True)
+as_matrix_with vs es = Matrix (M.map fromList $ fromListWith (++) zs) vs False
+        -- zip cs (repeat False) ++ zip es (repeat True)
     where
-        cs = [ (x,y) | x <- rs, y <- rs ]
+--        cs = [ (x,y) | x <- rs, y <- rs ]
+        zs = [ (x,[(y,True)]) | (x,y) <- es ]
 
 --as_matrix_with :: (Ix a, Ord a) => [a] -> [(a,a)] -> Array (a,a) Bool
 --as_matrix_with rs xs = ixmap (g m, g n) f ar
