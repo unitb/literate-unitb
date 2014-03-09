@@ -173,10 +173,9 @@ get_cmd_tr_po em = return (do
 get_tr_po :: Either [Error] Machine -> IO String
 get_tr_po em = case (do
         m <- em
-        let lbl = composite_label [_name m, label "leave/TR/TR0"]
         pos <- proof_obligation m
-        let po = pos ! lbl
---        let cmd = z3_code po
+        let lbl = composite_label [_name m, label "leave/TR/TR0"]
+            po = pos ! lbl
         return $ show po) of
             Right xs -> return xs
             Left xs  -> return $ show_err xs
