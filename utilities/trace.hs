@@ -29,7 +29,7 @@ turn_tracing_off = modifyMVar_ trace_switch $ \sw -> do
 
 trace xs x = unsafePerformIO $ do
         tid <- myThreadId
-        b <- is_tracing_on
+        b   <- is_tracing_on
         if b then
             return (DT.trace (format "({0}) {1}" tid xs) x)
         else

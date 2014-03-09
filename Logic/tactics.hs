@@ -1,11 +1,14 @@
-{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE UndecidableInstances   #-}
 module Logic.Tactics 
     ( Tactic, TacticT, get_line_info, get_context
     , get_goal, by_parts
     , is_fresh, get_hypotheses, assert, assume
     , by_cases, easy, new_fresh, free_goal
     , instantiate_hyp, with_line_info
-    , runTactic, runTacticT, make_expr
+    , runTactic, runTacticT, make_expr, fresh_label
     )
 where
 
@@ -48,28 +51,29 @@ with_line_info li (TacticT cmd) =
 
 with_goal :: Monad m => Expr -> TacticT m a -> TacticT m a
 with_goal e (TacticT cmd) = TacticT $ do
-    Sequent ctx hyps _ <- lift $ asks sequent
+    Sequent ctx asm hyps _ <- lift $ asks sequent
     param              <- lift ask
-    ErrorT $ local (const (param { sequent = Sequent ctx hyps e })) 
+    ErrorT $ local (const (param { sequent = Sequent ctx asm hyps e })) 
         $ runErrorT cmd
 
 with_hypotheses :: Monad m
-                => [Expr] -> TacticT m Proof 
+                => [(Label, Expr)] -> TacticT m Proof 
                 -> TacticT m Proof
 with_hypotheses es (TacticT cmd) = TacticT $ do
-    Sequent ctx hyps g <- lift $ asks sequent 
+    Sequent ctx asm hyps g <- lift $ asks sequent 
     param              <- lift ask
-    ErrorT $ local (const (param { sequent = Sequent ctx (hyps ++ es) g })) 
+    let new_hyp = (M.fromList es `M.union` hyps)
+    ErrorT $ local (const (param { sequent = Sequent ctx asm new_hyp g })) 
         $ runErrorT cmd
 
 with_variables :: Monad m
                => [Var] -> TacticT m Proof -> TacticT m Proof
 with_variables vs (TacticT cmd) = TacticT $ do
-    (Sequent ctx hyps g) <- lift $ asks sequent
+    (Sequent ctx asm hyps g) <- lift $ asks sequent
     param              <- lift ask
     let (Context sorts vars funs defs dums) = ctx
         new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
-    ErrorT $ local (const (param { sequent = Sequent new_ctx hyps g })) $ 
+    ErrorT $ local (const (param { sequent = Sequent new_ctx asm hyps g })) $ 
         runErrorT cmd
 
 get_line_info :: Monad m
@@ -79,19 +83,19 @@ get_line_info = TacticT $ lift $ asks line_info
 get_goal :: Monad m
          => TacticT m Expr
 get_goal = TacticT $ do
-        Sequent _ _ goal <- lift $ asks sequent
+        Sequent _ _ _ goal <- lift $ asks sequent
         return goal
 
 get_hypotheses :: Monad m
                => TacticT m [Expr]
 get_hypotheses = TacticT $ do
-        Sequent _ hyps _ <- lift $ asks sequent
-        return hyps
+        Sequent _ asm hyps _ <- lift $ asks sequent
+        return $ asm ++ elems hyps
 
 get_context :: Monad m
             => TacticT m Context
 get_context = TacticT $ do
-        Sequent ctx _ _ <- lift $ asks sequent
+        Sequent ctx _ _ _ <- lift $ asks sequent
         return ctx
 
 is_fresh :: Monad m
@@ -104,13 +108,14 @@ assert :: Monad m
        => [(Label,Expr,TacticT m Proof)] 
        -> TacticT m Proof 
        -> TacticT m Proof
-assert xs proof = do
+assert xs proof = make_hard $ do
         li <- get_line_info
         ys <- forM xs $ \(lbl,x,m) -> do
-            y <- with_goal x m
-            return (lbl,(x,y))
-        p  <- with_hypotheses (map (fst . snd) ys) proof
-        return $ Proof $ Assertion (fromList ys) p li
+            p <- easy
+            y <- make_soft p $ with_goal x m
+            return ((lbl,x),(lbl,(x,y)))
+        p  <- with_hypotheses (map fst ys) proof
+        return $ Proof $ Assertion (fromList $ map snd ys) p li
 
 assume :: Monad m
        => [(Label,Expr)]
@@ -119,17 +124,18 @@ assume :: Monad m
        -> TacticT m Proof
 assume xs new_g proof = do
         li <- get_line_info
-        p  <- with_hypotheses (map snd xs) 
+        p  <- with_hypotheses xs
             $ with_goal new_g proof
         return $ Proof $ Assume (fromList xs) new_g p li
 
 by_cases :: Monad m
          => [(Label, Expr, TacticT m Proof)]
          -> TacticT m Proof
-by_cases cs = do
+by_cases cs = make_hard $ do
         li <- get_line_info
         ps <- forM cs $ \(lbl,e,m) -> do
-            p <- with_hypotheses [e] m 
+            p <- easy
+            p <- make_soft p $ with_hypotheses [(lbl,e)] m 
             return (lbl,e,p)
         return $ Proof $ ByCases ps li
 
@@ -161,6 +167,20 @@ new_fresh name t = do
                 rec (n+1) (show n)
             ) 0 ""
 
+is_label_fresh :: Monad m => Label -> TacticT m Bool
+is_label_fresh lbl = do
+        Sequent _ _ hyps _ <- TacticT $ asks sequent
+        return $ not $ lbl `member` hyps
+
+fresh_label name = do
+        fix (\rec n suf -> do
+            let v = label (name ++ suf)
+            b <- is_label_fresh v
+            if b then return v
+            else do
+                rec (n+1) (show n)
+            ) 0 ""
+
 free_goal :: Monad m
           => Var -> Var 
           -> TacticT m Proof 
@@ -182,10 +202,10 @@ free_goal v0 v1 m = do
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
 instantiate_hyp :: Monad m
-                => Expr -> [(Var,Expr)] 
+                => Expr -> Label -> [(Var,Expr)] 
                 -> TacticT m Proof
                 -> TacticT m Proof
-instantiate_hyp hyp ps proof = do
+instantiate_hyp hyp lbl ps proof = do
         hyps <- get_hypotheses
         li   <- get_line_info
         if hyp `elem` hyps then do
@@ -200,7 +220,7 @@ instantiate_hyp hyp ps proof = do
                             else return $ zforall new_vs re te
                 _ -> fail $ "hypothesis is not a universal quantification:\n" 
                         ++ pretty_print' hyp
-            p <- with_hypotheses [newh] proof
+            p <- with_hypotheses [(lbl,newh)] proof
             return $ Proof $ InstantiateHyp hyp (fromList ps) p li
         else
             fail $ "formula is not an hypothesis:\n" 

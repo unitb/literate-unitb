@@ -1,7 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module Document.Test 
-    ( test, test_case ) 
-where
+module Document.Test where
 
 import Control.Monad
 
@@ -33,6 +31,7 @@ test_case = ("Unit-B Document", test, True)
 test :: IO Bool
 test = test_cases 
         [ StringCase "basic syntax and scopes" case1 result1
+        , StringCase "Contextual predicate visibility rules" case2 result2
         , Ind.test_case
         , SMch.test_case
         , Cubes.test_case
@@ -62,6 +61,18 @@ case1 = do
             (s,_,_)   <- str_verify_machine m
             return s
         x -> return $ show x
+
+result2 = unlines [
+        "Error (23,1): Undefined predicate: a1"
+    ]
+
+path2 = "Tests/new_syntax-err0.tex"
+case2 = do
+    r <- parse_machine path1
+    case r of
+        Right _ -> do
+            return "ok"
+        Left x -> return $ show x
 
 --prop_parser_exc_free xs = 
 --    classify (depth xs < 5) "shallow" $

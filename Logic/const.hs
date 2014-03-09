@@ -1,5 +1,4 @@
-module Logic.Const
-where
+module Logic.Const where
 
     -- Modules    
 import Logic.Expr

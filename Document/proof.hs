@@ -20,7 +20,6 @@ import Logic.Const
 import Logic.Genericity
 import Logic.Label
 import Logic.Operator
-import Logic.Sequent
 import Logic.Tactics as Tac
 import Logic.Theory
 
@@ -31,7 +30,6 @@ import           Control.Monad.State.Class as ST
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader, local )
-import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.State as ST ( StateT, evalStateT )
 import           Control.Monad.Trans.Writer
@@ -45,15 +43,7 @@ import qualified Data.Set as S
 
 import           Utilities.Error
 import           Utilities.Format
-import qualified Utilities.Graph as G ( size )
 import           Utilities.Syntactic hiding (line)
-import           Utilities.Trace
-
---type StateT s m = RWST () () s m
-
---class (MonadState System m, MonadReader Theory m) => MonadProofParser m where
-
---instance (MonadState System m, MonadReader Theory m) => MonadProofParser m where
 
 context :: Machine -> Context
 context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
@@ -68,16 +58,29 @@ data ProofStep = Step
 
 data ProofParam = ProofParam 
     { hypotheses :: Map Label (Tactic Expr)
-    , locals     :: Map String Var
-    , ctx        :: Context
-    , po         :: Sequent
+    , notat      :: Notation
     }
 
-empty_pr :: Context -> Sequent -> ProofParam
-empty_pr = ProofParam M.empty M.empty
+empty_pr :: Machine -> ProofParam
+empty_pr m = ProofParam hyps (all_notation m)
+    where
+        p0 = props m
+        p1 = inh_props m
+        hyps = M.map return $ M.unions $
+                [ inv p0
+                , inv_thm p0
+                , inv p1
+                , inv_thm p1
+                , inits m
+                , fact $ theory m
+                ] ++ map g (elems $ events m)
+        g ev = M.unions
+            [ coarse $ new_sched ev
+            , new_guard ev
+            , action ev ]
 
-par_ctx :: ProofParam -> Context
-par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
+--par_ctx :: ProofParam -> Context
+--par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
 
 set_proof :: ( Monad m
              , MonadReader LineInfo m
@@ -189,46 +192,6 @@ find_assumptions = visitor
             )
         ]
 
-add_local :: [Var] -> ProofParam -> ProofParam
-add_local v pr = pr { ctx =             Context M.empty 
-                                            (symbol_table v)
-                                            M.empty M.empty M.empty
-                            `merge_ctx` ctx pr }
-
-change_goal :: ProofParam -> Expr -> ProofParam
-change_goal pr g = pr { po = Sequent ctx hyps g }
-    where
-        Sequent ctx hyps _ = po pr
-
-forall_goal :: (MonadError m, MonadReader LineInfo m) => ProofParam -> String
-            -> m Expr -- EitherT [Error] (RWST LineInfo [Error] System m) Expr
-forall_goal pr from = do
-            let Sequent _ _ goal = po pr 
-            li <- ask
-            case goal of
-                Binder Forall vs rexp texp -> do
-                    if from `elem` map name vs then do
-                        let new_vars = L.filter (\v -> name v /= from) vs
-                        if not $ L.null new_vars then
-                            return $ Binder Forall new_vars rexp texp
-                        else
-                            return $ zimplies rexp texp
-                    else hard_error [Error (format "{0} is not a bound variable" from) li]
-                _ -> hard_error [Error "goal is not a universal quantification" li]
-
-
-match_equal :: (MonadReader LineInfo m, MonadError m)
-            => ProofParam -> m (Expr, Expr)
-match_equal pr = do
-            let Sequent _ _ goal = po pr
-            li <- ask
-            let msg = ("expecting an equality in the proof goal:\n" ++ pretty_print' goal)
-            case goal of
-                FunApp f [x,y] -> do
-                    if name f == "=" then
-                        return (x,y)
-                    else hard_error [Error msg li]
-                _ -> hard_error [Error msg li]
 
 --indirect_eq_thm :: MonadReader LineInfo m 
 --                => Either () () -> BinOperator 
@@ -281,41 +244,28 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                         [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
                         , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
                                 free_goal z_decl zVar proof) ]
-                        $ instantiate_hyp                       -- lhs = rhs
-                            thm                                 -- | we could instantiate indirect
-                            [ (x_decl,lhs)                      -- | inequality explicitly 
-                            , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
-                            easy                                -- | to be named in sequents
+                        $ do
+                            lbl <- fresh_label "inst"
+                            instantiate_hyp                       -- lhs = rhs
+                                thm lbl                             -- | we could instantiate indirect
+                                [ (x_decl,lhs)                      -- | inequality explicitly 
+                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
+                                easy                                -- | to be named in sequents
                                                               
             _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
 
-run_inner_tactic :: (Monad m)
-                 => Sequent -> LineInfo
-                 -> RWST a [Error] c Tactic d 
-                 -> EitherT [Error] (RWST a [Error] c m) d
-run_inner_tactic po li cmd = do
-        (x,s',w) <- EitherT $ do
-            r <- ask
-            s <- RWS.get
-            return $ runTactic li po $ runRWST cmd r s
-        unless (L.null w) $ lift $ RWS.tell w
-        lift $ RWS.put s'
-        return x
 
 find_proof_step :: (MonadState System m, MonadReader Theory m, Monad m)
                 => ProofParam
-                -> Machine
---                -> [LatexDoc] 
---                -> ProofStep
                 -> VisitorT (StateT ProofStep m) ()
-find_proof_step pr m = visitor
+find_proof_step pr = visitor
         [   (   "calculation"
             ,   VEnvBlock $ \() _ -> do
                     li <- ask
-                    cc <- lift_i $ parse_calc pr m
+                    cc <- lift_i $ parse_calc pr
                     set_proof $ Tac.with_line_info li $ do
                         cc <- cc
-                        case infer_goal cc (all_notation m) of
+                        case infer_goal cc (notat pr) of
                             Right cc_goal -> do
                                     return (Proof $ cc { goal = cc_goal })
                             Left msg      -> hard_error [Error (format "type error: {0}" msg) li]
@@ -325,26 +275,23 @@ find_proof_step pr m = visitor
         ,   (   "free:var"
             ,   VEnvBlock $ \(String from,String to,()) _ -> do
                     li    <- ask
-                    let Context _ _ _ _ dums  = ctx pr
-                    let Sequent ctx hyps _ = po pr 
-                    goal <- forall_goal pr from
-                    v@(Var _ t) <- maybe 
-                            (hard_error [Error (format "cannot infer the type of '{0}'" to) li])
-                            return
-                            (M.lookup to dums)
-                    p     <- lift_i $ collect_proof_step (add_local [v] pr) 
-                            { po = Sequent ctx hyps goal }
-                            m
-                    set_proof $ Tac.with_line_info li $ 
-                        free_goal (Var from t) (Var to t) p
-                    --(Proof $ FreeGoal from to t p li)
+                    proof <- lift_i $ collect_proof_step pr
+                    set_proof $ Tac.with_line_info li $ do
+                        ctx <- get_context
+                        let Context _ _ _ _ dums  = ctx
+                        Var _ t <- maybe 
+                                (hard_error [Error (format "cannot infer the type of '{0}'" to) li])
+                                return
+                                (M.lookup to dums)
+                        free_goal (Var from t) (Var to t)
+                            proof
             )
         ,   (   "by:cases"
             ,   VEnvBlock $ \() _ -> do
                     li         <- ask
-                    ((),cases) <- lift_i $ add_writer $ find_cases pr m
 --                    cases <- toEither $ find_cases pr m xs []
 --                    set_proof (Proof $ ByCases (reverse cases) li) proofs )
+                    ((),cases) <- lift_i $ add_writer $ find_cases pr
                     set_proof $ Tac.with_line_info li $ do
                         xs <- forM cases $ \(lbl,xp,pr) -> do
                             x <- xp
@@ -354,7 +301,7 @@ find_proof_step pr m = visitor
         ,   (   "by:parts"
             ,   VEnvBlock $ \() _ -> do
                     li    <- ask
-                    ((),cases) <- lift_i $ add_writer $ find_parts pr m
+                    ((),cases) <- lift_i $ add_writer $ find_parts pr
                     set_proof $ Tac.with_line_info li $ do
                         xs <- forM cases $ \(xp,pr) -> do
                             x <- xp
@@ -368,45 +315,31 @@ find_proof_step pr m = visitor
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
                             (hard_error [Error (format "invalid subproof label: {0}" lbl) li])
-                    p <- lift_i $ collect_proof_step pr m -- (change_goal pr new_goal) m
+                    p <- lift_i $ collect_proof_step pr-- (change_goal pr new_goal) m
                     add_proof lbl p
             )
         ,   (   "indirect:equality"
             ,   VEnvBlock $ \(String dir,rel,String zVar,()) _ -> do
-                    let Context _ _ _ _ vars = par_ctx pr
                     li <- ask
-                    Var _ t <- maybe 
-                        (hard_error [Error ("invalid dummy: " ++ zVar) li])
-                        return
-                        $ M.lookup zVar vars
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
-                            (context m)
-                            (all_notation m)
+                            (notat pr)
                             (concatMap flatten_li rel) 
                     dir <- case map toLower dir of
                                 "left"  -> return $ Left ()
                                 "right" -> return $ Right ()
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
---                    thm <- indirect_eq_thm dir op t
-                    (lhs,rhs) <- match_equal pr
-                    let z = Word $ Var "z" t
-                    expr <- fromEitherM $ hoistEither $ with_li li $ indirect_eq dir op lhs rhs z
---                    symb_eq <- hoistEither $ with_li li $ mzeq (Right lhs) (Right rhs) 
-                    let new_pr = add_local [Var zVar t] (change_goal pr expr)
-                    p <- lift_i $ collect_proof_step new_pr m
-                    set_proof $ indirect_equality dir op 
-                            (Var zVar t) 
-                            p
---                    set_proof (Proof $ Assertion 
---                            (M.fromList [ (label "indirect:eq", (thm, Proof $ Easy li))
---                                        , (label "new:goal", ( (zforall [z_decl] ztrue expr)
---                                                             , (Proof $ FreeGoal "z" zVar t p li))) 
---                                        , (label "symb:eq", ( symb_eq, Proof $ Ignore li ))
---                                        ] )
---                                (-- Proof $ Prune 2 $ 
---                                    Proof $ Easy li)
---                            li) proofs
+                    p <- lift_i $ collect_proof_step pr
+                    set_proof $ Tac.with_line_info li $ do
+                        ctx <- get_context
+                        let Context _ _ _ _ vars = ctx
+                        Var _ t <- maybe 
+                            (hard_error [Error ("invalid dummy: " ++ zVar) li])
+                            return
+                            $ M.lookup zVar vars
+                        indirect_equality dir op 
+                                (Var zVar t) 
+                                p
             )
         ] [ (   "\\easy"
             ,   VCmdBlock $ \() -> do
@@ -417,21 +350,13 @@ find_proof_step pr m = visitor
 
 find_cases :: (MonadState System m, MonadReader Theory m)
            => ProofParam
-           -> Machine
---           -> [LatexDoc] 
---           -> [(Label,Expr,Proof)]
            -> VisitorT (WriterT [(Label,Tactic Expr,Tactic Proof)] m) ()
-find_cases pr m = visitor 
+find_cases pr = visitor 
         [   (   "case"
             ,   VEnvBlock $ \(lbl,formula :: [LatexDoc],()) _ -> do
                     expr      <- lift_i $ get_expression (Just bool) formula 
---                        get_predicate m (par_ctx pr) WithoutFreeDummies formula
---                    let (Sequent ctx old_hyps goal) = po pr
---                        new_po = Sequent ctx (expr:old_hyps) goal
                     p         <- lift_i $ collect_proof_step 
                             (pr { hypotheses = insert lbl expr hyps })
---                                , po = new_po }) 
-                            m
                     lift $ tell [(lbl, expr, p)]
             )
         ] []
@@ -440,18 +365,12 @@ find_cases pr m = visitor
 
 find_parts :: (MonadState System m, MonadReader Theory m)
            => ProofParam
-           -> Machine
---           -> [LatexDoc] 
---           -> [(Expr,Proof)]
            -> VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
-find_parts pr m = visitor 
+find_parts pr = visitor 
         [   (   "part:a"
             ,   VEnvBlock $ \(formula :: [LatexDoc],()) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
---                        get_predicate m (par_ctx pr) WithoutFreeDummies formula
---                    let (Sequent ctx hyps _) = po pr
---                        new_po = Sequent ctx hyps expr
-                    p         <- lift_i $ collect_proof_step pr m -- (pr { po = new_po }) m
+                    p         <- lift_i $ collect_proof_step pr -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]
                     return ()
             )
@@ -459,22 +378,15 @@ find_parts pr m = visitor
 
 collect_proof_step :: (MonadState System m, MonadReader Theory m)
                    => ProofParam
-                   -> Machine 
                    -> VisitorT m (Tactic Proof)
-collect_proof_step pr m = do
+collect_proof_step pr = do
         let hyps = hypotheses pr
         ((),step@(Step asrt _ asm _ _)) <- make_hard $ add_state empty_step $ find_assumptions
---        let step@(Step asrt _ asm ng _) = empty_step
         li   <- ask
---        let (Sequent ctx hyp goal) = po pr
---            new_goal = maybe goal id ng
---            new_po = Sequent ctx (M.elems asrt ++ M.elems asm ++ hyp) new_goal
         let pr2 = pr { hypotheses = asrt `union` asm `union` hyps }
-                     -- , po = new_po } 
-        (_,step) <- add_state step $ find_proof_step pr2 m
+        (_,step) <- add_state step $ find_proof_step pr2
         case step of
             Step assrt prfs asm ng (Just p) -> do
---                let f k x = (x, prfs ! k)
                 p <- if M.null assrt && M.null prfs
                     then return p
                     else if keysSet assrt == keysSet prfs
@@ -484,7 +396,6 @@ collect_proof_step pr m = do
                             let p = prfs ! lbl
                             return (lbl,xp,p)
                         assert assrt p
-                        -- Proof $ Assertion (M.mapWithKey f assrt) p li
                     else hard_error [Error "assertion labels and proofs mismatch" li]
                 case ng of
                     Just g  -> return $ Tac.with_line_info li $ do
@@ -493,7 +404,6 @@ collect_proof_step pr m = do
                             x <- x
                             return (lbl,x)
                         assume asm g p
-                        -- $ Proof $ Assume asm g p li
                     Nothing -> 
                         if M.null asm 
                         then return p
@@ -501,8 +411,6 @@ collect_proof_step pr m = do
             _   -> hard_error [Error "expecting a single proof step" li]         
 
 hint :: Monad m
---     => [LatexDoc] 
---     -> [(Label, LineInfo)]
      => VisitorT (WriterT [(Label, LineInfo)] m) ()
 hint = visitor []
         [ ( "\\ref", VCmdBlock f ), ( "\\eqref", VCmdBlock f ) ]
@@ -513,24 +421,21 @@ hint = visitor []
 
 parse_calc :: ( MonadState System m, MonadReader Theory m )
            => ProofParam 
-           -> Machine 
            -> VisitorT m (Tactic Calculation)
-parse_calc pr m = do
+parse_calc pr = do
     xs <- get_content
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (step,kw,[rel,tx_hint],remainder)    -> do
             xp <- get_expression Nothing step
-                    -- get_expr_with_ctx m (par_ctx pr) a
             op <- make_soft equal $ fromEitherM
                 $ parse_oper 
-                    (context m)
-                    (all_notation m)
+                    (notat pr)
                     (concatMap flatten_li rel) 
             li  <- ask
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
             hyp <- make_soft [] (do
                 mapM find hs)
-            r   <- with_content li remainder $ parse_calc pr m
+            r   <- with_content li remainder $ parse_calc pr
             return $ Tac.with_line_info li $ do
                 xp  <- make_soft ztrue xp
                 r   <- r
@@ -542,9 +447,10 @@ parse_calc pr m = do
             li <- ask
             xp <- get_expression Nothing xs
             return $ do
-                xp <- make_soft ztrue xp
+                ctx <- get_context
+                xp  <- make_soft ztrue xp
                 -- fromEither ztrue $ get_expr_with_ctx m (par_ctx pr) xs
-                return $ Calc (context m) ztrue xp [] li
+                return $ Calc ctx ztrue xp [] li
         _               -> do
             li <- ask
             soft_error [Error "invalid hint" li]
@@ -552,67 +458,31 @@ parse_calc pr m = do
                 ctx <- get_context
                 return $ Calc ctx ztrue ztrue [] li
     where
+--        m    = mch pr
         hyps = hypotheses pr
---        find :: Map Label Expr -> Machine -> (Label,LineInfo) -> Either [Error] Expr
         find (xs,li) = maybe (hard_error [err_msg xs]) return 
-            $ M.lookup xs $ M.union hyps $ M.map return $ M.unions $
-                [ inv p0
-                , inv_thm p0
-                , inv p1
-                , inv_thm p1
-                , inits m
-                , fact $ theory m
-                ] ++ map g (elems $ events m)
---                foldM f [err_msg] $ elems $ events m
---                
-----                either Right Left (do
---                err $ M.lookup xs $ hyps
---                err $ M.lookup xs $ inv p0
---                err $ M.lookup xs $ inv_thm p0
---                err $ M.lookup xs $ inv p1
---                err $ M.lookup xs $ inv_thm p1
---                err $ M.lookup xs $ inits m
---                err $ M.lookup xs $ fact $ theory m
---                foldM f [err_msg] $ elems $ events m
---                )
+                $ M.lookup xs hyps
             where
-                p0 = props m
-                p1 = inh_props m
---                err (Just x) = Left x
---                err Nothing  = Right [err_msg]
                 err_msg lbl      = Error (format "predicate is undefined: '{0}'" lbl) li
-                g ev = M.unions
-                    [ coarse $ new_sched ev
-                    , new_guard ev
-                    , action ev ]
---                f :: [Error] -> Event -> Either Expr [Error]
---                f _ ev = do
---                    err (M.lookup xs $ coarse $ new_sched ev)
---                    err $ M.lookup xs $ new_guard ev
---                    err $ M.lookup xs $ action ev
 
-    -- assoc' n
 get_table :: ( MonadState System m, MonadReader LineInfo m ) 
           => Theory
           -> EitherT [Error] m (Matrix Operator Assoc)
 get_table th = do -- with_tracingM $ do
         let key = sort $ M.keys $ extends th
-        traceM $ "KEY: " ++ show key
-        !_ <- lift $ ST.get
-        traceM $ "one more step!" -- show $ notation sys
         !tb <- lift $ ST.gets parse_table
-        traceM $ "exists?"
+--        traceM $ "exists?"
         case M.lookup key tb of
             Just x -> do
-                traceM "lookup: ..."
+--                traceM "lookup: ..."
                 return x
             Nothing -> do
-                traceM "compute"
+--                traceM "compute"
                 let !x   = assoc' $ th_notation th
                     !new = insert key x tb
 --                traceM $ show $ th_notation th
                 lift $ ST.modify $ \s -> s { parse_table = new }
-                traceM $ "end: " ++ show (G.size x)
+--                traceM $ "end: " ++ show (G.size x)
                 return x
                                 
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies

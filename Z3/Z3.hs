@@ -58,6 +58,7 @@ instance Tree Command where
     as_tree (Pop)         = List [Str "pop"]
     as_tree (Decl d)      = as_tree d
     as_tree (Assert xp)   = List [Str "assert", as_tree xp]
+    as_tree (Comment str) = Str $ intercalate "\n" $ map ("; " ++) $ lines str
     as_tree (CheckSat)    = List [Str "check-sat-using", 
                                     strat
                                          [ Str "qe" 
@@ -119,7 +120,10 @@ var_decl s (Context _ m _ _ d) =
 --from_decl (ConstDecl n t)      = Right (Var n t)
 --from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
 
-data Command = Decl Decl | Assert Expr | CheckSat | GetModel | Push | Pop
+data Command = Decl Decl | Assert Expr | CheckSat 
+    | GetModel 
+    | Push | Pop 
+    | Comment String
 
 z3_code :: Sequent -> [Command]
 z3_code po = 
@@ -131,17 +135,19 @@ z3_code po =
                , Datatype [] "Null"
                     [ ("null", []) ] ] )
         ++ map Decl (decl d)
-        ++ map Assert assume 
+        ++ map Assert (assume) 
+        ++ concatMap f (toList hyps)
         ++ [Assert (znot assert)]
         ++ [CheckSat]
         ++ [] )
     where
 --        !() = unsafePerformIO (p
-        (Sequent d assume assert) = delambdify po
+        (Sequent d assume hyps assert) = delambdify po
+        f (lbl,xp) = [Comment $ show lbl, Assert xp]
 
 smoke_test :: Sequent -> IO Validity
-smoke_test (Sequent a b _) =
-    discharge $ Sequent a b zfalse
+smoke_test (Sequent a b c _) =
+    discharge $ Sequent a b c zfalse
 
 data Prover = Prover
         { inCh  :: Chan (Maybe (Int,Sequent))

@@ -149,9 +149,14 @@ lambda_def = do
                 return $ res
 
 delambdify :: Sequent -> Sequent
-delambdify (Sequent ctx asm goal) = 
+delambdify (Sequent ctx asm hyps goal) = 
         evalState (do
-            asm'  <- forM asm lambdas
+            asm'   <- forM asm lambdas
+            hyps'  <- fromList `liftM` forM (toList hyps) (
+                \(lbl,xp) -> do
+                    xp <- lambdas xp
+                    return (lbl,xp)
+                )
             goal' <- lambdas goal
             defs  <- lambda_def
             decl  <- lambda_decl
@@ -159,6 +164,7 @@ delambdify (Sequent ctx asm goal) =
                 (            ctx 
                  `merge_ctx` mk_context decl) 
                 (defs ++ asm')
+                hyps'
                 goal'
             ) empty
 

@@ -39,6 +39,7 @@ import System.IO
 
 import Utilities.Format
 import Utilities.Syntactic
+--import Utilities.Trace
 
     -- 
     --
@@ -100,17 +101,17 @@ skip_event m = empty_event { action =
             $ M.elems $ variables m) }
 
 invariants m = 
-            M.elems (inv p0) 
-        ++  M.elems (inv_thm p0) 
-        ++  M.elems (inv p1)
-        ++  M.elems (inv_thm p1)
+                   (inv p0) 
+        `M.union` (inv_thm p0) 
+        `M.union` (inv p1)
+        `M.union` (inv_thm p1)
     where
         p0 = props m
         p1 = inh_props m
 
 invariants_only m = 
-            M.elems (inv p0) 
-        ++  M.elems (inv p1)
+                   (inv p0) 
+        `M.union` (inv p1)
     where
         p0 = props m
         p1 = inh_props m 
@@ -128,12 +129,13 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
-        f (Sequent a b d) = Sequent 
+        f (Sequent a b c d) = Sequent 
                 (a `merge_ctx` theory_ctx ts (theory m))
                 (M.elems (theory_facts ts (theory m))++b) 
+                c
                 d
           where
-            ts = S.unions $ map used_types $ d : b
+            ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
@@ -153,16 +155,12 @@ proof_obligation m = do
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
 
-my_trace :: Show a => String -> a -> a
---my_trace x y = trace (format "{0}\n value: {1}\n" x y) y
-my_trace _ y = y
-
 ref_po :: Machine -> Label -> Rule -> Map Label Sequent
 ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
     where
         f x
-            | show x == "" = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\n" (name m) lbl (rule_name r)) $ composite_label [label $ name m, lbl,label "REF",rule_name r]
-            | otherwise    = my_trace (format "name: {0}\nlabel: {1}\nrule: {2}\nx: {3}\n" (name m) lbl (rule_name r) x) $ composite_label [label $ name m, lbl,label "REF",rule_name r,x]
+            | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
+            | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
 theory_po :: Theory -> Map Label Sequent
 theory_po th = mapKeys keys $ M.map (f . g) thm
@@ -170,21 +168,22 @@ theory_po th = mapKeys keys $ M.map (f . g) thm
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
         (thm,axm) = M.partitionWithKey p $ fact th
         p k _ = k `M.member` theorems th
-        g x = Sequent empty_ctx (M.elems axm) x
+        g x = Sequent empty_ctx [] axm x
         keys k = composite_label [label "THM",k]
-        f (Sequent a b d) = Sequent 
+        f (Sequent a b c d) = Sequent 
                 (a `merge_ctx` theory_ctx ts th)
                 (concatMap (M.elems . theory_facts ts) (elems $ extends th) ++ b) 
+                c
                 d
           where
-            ts = S.unions $ map used_types $ d : b
+            ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 init_fis_po :: Machine -> Map Label Sequent
 init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 
             ( composite_label $ [_name m, init_fis_lbl] ++ map (label . name) vs
             , po $ goal vs es)
     where
-        po = Sequent (assert_ctx m) []
+        po = Sequent (assert_ctx m) [] M.empty
         clauses = partition_expr (M.elems $ variables m) (M.elems $ inits m)
         goal vs es = (zexists vs ztrue $ zall es)
  
@@ -193,18 +192,18 @@ prop_tr :: Machine -> Label -> Transient -> Map Label Sequent
 prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) = 
     M.fromList 
         $ if M.null ind0 then 
-            [ po [label "EN"] xp0
-            , po [label "NEG"] xp1
+            [ po0
+            , po1
             ] ++ map (uncurry po) xps
           else
             [ po [] $ exist_ind $ zall $ xp0:xp1:map snd xps ]
     where
 --        thm  = inv_thm p
-        grd  = M.elems $ new_guard evt
-        sch0 = M.elems $ coarse $ new_sched evt
-        sch1 = map snd $ maybeToList $ fine $ new_sched evt
-        sch  = sch0 ++ sch1
-        act  = M.elems $ action evt
+        grd  = new_guard evt
+        sch0 = coarse $ new_sched evt
+        sch1 = fromList $ maybeToList $ fine $ new_sched evt
+        sch  = sch0 `M.union` sch1
+        act  = action evt
         evt  = events m ! evt_lbl
         ind  = indices evt
         ind0 = indices evt `M.difference` hint
@@ -212,28 +211,40 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
         new_defs = flip map (M.toList ind1) 
                 $ \(x,Var n t) -> (n ++ "@param", Def [] (n ++ "@param") [] t $ hint ! x)
         def_ctx = Context M.empty M.empty M.empty (M.fromList new_defs) M.empty
+        param_ctx = Context M.empty (params evt) M.empty M.empty M.empty
         dummy = Context M.empty fv M.empty  M.empty  M.empty    
         exist_ind xp = zexists 
                     (map (add_suffix "@param") $ M.elems ind0) 
                     ztrue xp
-        po lbl xp = 
-          ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname] ++ lbl)
-            , Sequent 
-                (           assert_ctx m 
+        ctx = (           assert_ctx m 
                 `merge_ctx` step_ctx m 
                 `merge_ctx` dummy
                 `merge_ctx` def_ctx) 
+        po lbl xp = 
+          ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname] ++ lbl)
+            , Sequent 
+                ctx
+                []
                 (invariants m)
                 xp)
-        xp0 = (xp `zimplies` (new_dummy ind $ zall sch0))
+        xp0 = (xp `zimplies` (new_dummy ind $ zall (M.elems sch0)))
+        po0 = po [label "EN"] xp0
+        po1 = 
+            ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname, label "NEG"])
+            , Sequent 
+                (ctx `merge_ctx` param_ctx)
+                []
+                (          invariants m 
+                 `M.union` M.map (new_dummy ind) (M.unions [sch,grd,act]))
+                $ xp `zimplies` (znot $ primed (variables m) xp) )
         xp1 = (zforall  
                     (M.elems $ params evt)
-                    (xp `zand` (new_dummy ind $ zall (sch ++ grd ++ act)))
+                    (xp `zand` (new_dummy ind $ zall (M.elems $ M.unions [sch, grd, act])))
                     (znot $ primed (variables m) xp) )
         xps = case (lt_fine, fine $ new_sched evt) of
                 (Just lbl, Just (_,fsch)) ->
                     let (LeadsTo vs p q) = (progress (props m) `M.union` progress (inh_props m)) ! lbl in
-                        [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall sch0 `zimplies` p)
+                        [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall (M.elems sch0) `zimplies` p)
                         , ([label "EN/leadsto/rhs"],zforall vs ztrue $ q `zimplies` fsch) 
                         ]
                 (Nothing,Nothing) -> []
@@ -254,13 +265,14 @@ prop_co m pname (Co fv xp) =
         po _ evt = 
                 (Sequent 
                     (step_ctx m `merge_ctx` dummy_ctx m) 
+                    []
                     hyp
                     goal )
             where
-                grd  = M.elems $ new_guard evt
-                act  = M.elems $ action evt
+                grd  = new_guard evt
+                act  = action evt
                 forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
-                hyp  = invariants m ++ grd ++ act
+                hyp  = invariants m `M.union` grd `M.union` act
                 goal = forall_fv xp
         po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
 
@@ -269,24 +281,25 @@ inv_po m pname xp =
             (mapKeys po_name $ mapWithKey po (events m))
             (M.singleton 
                 (composite_label [_name m, inv_init_lbl, pname])
-                (Sequent (assert_ctx m) hyp xp))
+                (Sequent (assert_ctx m) [] hyp xp))
     where
         po _ evt = 
                 (Sequent 
                     (            step_ctx m 
                      `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
-                    (invariants m ++ grd ++ act)
+                    []
+                    (invariants m `M.union` grd `M.union` act)
                     (primed (variables m) xp))
             where
-                grd = M.elems $ new_guard evt
-                act = M.elems $ action evt
+                grd = new_guard evt
+                act = action evt
                 ind = indices evt `merge` params evt
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
-        hyp  = M.elems $ inits m
+        hyp  = inits m
 
 fis_po m lbl evt = M.fromList $ map f pos 
     where
-        grd  = M.elems $ new_guard evt
+        grd  = new_guard evt
         pvar = map prime $ M.elems $ variables m
         ind  = indices evt `merge` params evt
         pos  = partition_expr pvar $ M.elems $ action evt
@@ -294,10 +307,11 @@ fis_po m lbl evt = M.fromList $ map f pos
             ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
               Sequent 
                 (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
+                []
                 hyp
                 goal)
           where
-            hyp  = invariants m ++ grd
+            hyp  = invariants m `M.union` grd
             goal = zexists pvar ztrue $ zall acts
 
     -- todo: partition the existential quantifier
@@ -308,22 +322,25 @@ sch_po m lbl evt = M.singleton
             (           assert_ctx m 
             `merge_ctx` evt_live_ctx evt
             `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
+            []
             hyp
             goal)
     where
         grd   = M.elems $ new_guard evt
-        c_sch = M.elems $ coarse $ new_sched evt
-        f_sch = map snd $ maybeToList $ fine $ new_sched evt
+        c_sch = coarse $ new_sched evt
+        f_sch = M.fromList $ maybeToList $ fine $ new_sched evt
         param = params evt
         ind   = indices evt `merge` params evt
         exist_param xp = zexists (M.elems param) ztrue xp
-        hyp   = invariants m ++ f_sch ++ c_sch
+        hyp   = invariants m `M.union` f_sch `M.union` c_sch
         goal  = exist_param $ zall grd
 
+thm_po :: Machine -> Label -> Expr -> Map Label Sequent
 thm_po m lbl xp = M.singleton
         (composite_label [_name m, lbl, thm_lbl])
         (Sequent
             (assert_ctx m)
+            []
             inv
             xp)
     where
@@ -343,7 +360,7 @@ check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
 check th c = embed 
             (obligations th empty_ctx c) 
             (\pos -> do
-        rs <- forM pos discharge :: IO [Validity]
+        rs <- forM pos discharge
         let ln = filter ((/= Valid) . fst) $ zip rs [0..] :: [(Validity, Int)]
         return ln)
 

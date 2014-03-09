@@ -147,8 +147,8 @@ result_train_m0_tr_po = unlines
           ++   " (and true"
           ++   " (and (=> (select st t) (select st t@param))"
           ++        " (=> (and (select st t)"
-          ++                 " (select st t@param)"
-          ++                 " (= st@prime (store st t@param false)))"
+          ++                 " (= st@prime (store st t@param false))"
+          ++                 " (select st t@param))"
           ++            " (not (select st@prime t))))))"
     ]
 

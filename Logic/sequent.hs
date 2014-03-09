@@ -3,6 +3,7 @@ module Logic.Sequent where
 
     -- Modules
 import Logic.Expr
+import Logic.Label
 import Logic.Const
 
     -- Libraries
@@ -14,18 +15,18 @@ import GHC.Generics
 
 import Utilities.Format
 
-data Sequent = Sequent Context [Expr] Expr
+data Sequent = Sequent Context [Expr] (Map Label Expr) Expr
     deriving (Eq, Generic)
 
 instance Show Sequent where
-    show (Sequent (Context ss vs fs ds _) as g) =
+    show (Sequent (Context ss vs fs ds _) as hs g) =
             unlines (
                    map (" " ++)
                 (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
                 ++ (map show $ elems fs)
                 ++ (map show $ elems ds)
                 ++ (map show $ elems vs)
-                ++ map show as)
+                ++ map show (as ++ elems hs))
                 ++ ["|----"," " ++ show g] )
         where
             f (_, IntSort) = ""
@@ -38,8 +39,8 @@ instance Show Sequent where
 
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment  
-    (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 xp0) 
-    (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 xp1) = 
+    (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 hs0 xp0) 
+    (Sequent (Context srt1 cons1 fun1 def1 dum1) xs1 hs1 xp1) = 
             (po0,po1)
     where
         po0 = Sequent 
@@ -49,8 +50,9 @@ entailment
                 (fun0 `merge` fun1) 
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
-            [xp0]
-            xp1 
+            []
+            empty
+            $ xp0 `zimplies` xp1 
         po1 = Sequent 
             (Context 
                 (srt0 `merge` srt1) 
@@ -59,4 +61,5 @@ entailment
                 (def0 `merge` def1)
                 (dum0 `merge` dum1))
             xs1
-            (zall xs0)
+            hs1
+            (zall $ xs0 ++ elems hs0)

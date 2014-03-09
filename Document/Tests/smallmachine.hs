@@ -120,9 +120,9 @@ result4 = unlines [
       , " x@prime: Int"
       , " y: Int"
       , " y@prime: Int"
-      , " (= x (* 2 y))"
       , " (= x@prime (+ x 2))"
       , " (= y@prime (+ y 1))"
+      , " (= x (* 2 y))"
       , "|----"
       , " (= x@prime (* 2 y@prime))"]
 
@@ -146,9 +146,9 @@ result5 = unlines [
       , " x@prime: Int"
       , " y: Int"
       , " y@prime: Int"
-      , " (= x (* 2 y))"
       , " (= x@prime x)"
       , " (= y@prime y)"
+      , " (= x (* 2 y))"
       , "|----"
       , " (=> (= x 2) (= x@prime 4))"]
 
@@ -183,8 +183,8 @@ result7 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
       , " y: Int"
-      , " (= x (* 2 y))"
       , " (= x y)"
+      , " (= x (* 2 y))"
       , "|----"
       , " (= x y)"]
 
@@ -195,8 +195,8 @@ result8 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
       , " y: Int"
-      , " (= x (* 2 y))"
       , " false"
+      , " (= x (* 2 y))"
       , "|----"
       , " (= x y)"]
 
@@ -235,13 +235,13 @@ result11 = unlines [
       , " x@prime: Int"
       , " y: Int"
       , " y@prime: Int"
+      , " (= x@prime (+ x 2))" 
+      , " (= y@prime (+ y 1))" 
+      , " (= x y)" 
+      , " (= x y)" 
       , " (= x (* 2 y))"
       , "|----"
-      , " (=> (and (= x y)" ++
-                 " (= x y)" ++
-                 " (= x y)" ++
-                 " (= x@prime (+ x 2))" ++
-                 " (= y@prime (+ y 1)))" ++
+      , " (=> (= x y)" ++
             " (not (= x@prime y@prime)))" ]
 
 case11 = show_po path6 $ label "m0/inc/TR/tr0/NEG"

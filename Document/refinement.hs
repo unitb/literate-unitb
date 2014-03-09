@@ -141,10 +141,10 @@ parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
 assert :: Machine -> String -> Expr -> [(Label, Sequent)]
-assert m suff prop = assert_hyp m suff M.empty [] prop
+assert m suff prop = assert_hyp m suff M.empty M.empty prop
 
 assert_hyp :: Machine -> String 
-           -> Map String Var -> [Expr] 
+           -> Map String Var -> Map Label Expr
            -> Expr -> [(Label, Sequent)]
 assert_hyp m suff cnst hyps prop = 
         [ ( po_lbl
@@ -152,7 +152,8 @@ assert_hyp m suff cnst hyps prop =
                 (           assert_ctx m 
                 `merge_ctx` step_ctx m
                 `merge_ctx` ctx)
-                (invariants m ++ hyps)
+                []
+                (invariants m `M.union` hyps)
                 prop))
         ]
     where
@@ -450,7 +451,7 @@ instance RefRule ScheduleChange where
                  )
             RemoveGuard lbl -> 
                 M.fromList $ 
-                    assert_hyp m "" param (M.elems $ new_guard evt) $ old_guard evt ! lbl 
+                    assert_hyp m "" param (new_guard evt) $ old_guard evt ! lbl 
             AddGuard _ -> M.empty
         where
             param = params evt `M.union` indices evt

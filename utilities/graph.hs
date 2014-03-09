@@ -14,22 +14,16 @@ import Control.Monad
 
 import           Data.Array as A ( bounds, Array, (//), array, ixmap )
 import qualified Data.Array as A -- hiding ( (!) )
---import Data.Array.IArray hiding ( (!) )
-import Data.Array.ST
-import Data.Function
-import Data.Graph
-import Data.List as L hiding ( union, (\\), transpose, map )
+import           Data.Array.ST
+import           Data.Function
+import           Data.Graph
+import           Data.List as L hiding ( union, (\\), transpose, map )
 import qualified Data.List as L
-import Data.Map  as M 
+import           Data.Map  as M 
     ( Map, fromList, fromListWith
---    , toList
     , toList )
 import qualified Data.Map  as M 
---    ( (!) , empty
---    , unionWith, map -- , elems, keys
---    
---    )
-import Data.Tuple
+import           Data.Tuple
 
 import Prelude hiding ( seq, map )
 

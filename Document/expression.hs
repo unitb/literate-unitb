@@ -565,14 +565,13 @@ parse_expr ctx@(Context _ vars _ _ _)  n assoc input = do
 
 parse_oper :: ( Monad m
               , MonadReader LineInfo m) 
-           => Context 
-           -> Notation
+           => Notation
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m BinOperator
-parse_oper ctx n c = do
+parse_oper n c = do
         li <- lift $ ask
         !e <- hoistEither $ read_tokens 
-            (runParser ctx n (G.empty Ambiguous) M.empty
+            (runParser empty_ctx n (G.empty Ambiguous) M.empty
                 $ do eat_spaceP ; x <- oper ; eat_spaceP ; return x) 
             (file_name li) 
             c (line li, column li)

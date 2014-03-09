@@ -13,6 +13,8 @@ import UnitB.PO
 import UnitB.AST
 
     -- Libraries
+import Data.Map as M ( empty )
+
 import Utilities.Syntactic
 
 import Tests.UnitTest
@@ -70,6 +72,7 @@ sample_quant = [
 sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
         [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
+        M.empty
         (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
         f           = maybe1 $ fun1 ff

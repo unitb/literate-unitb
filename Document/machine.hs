@@ -863,16 +863,16 @@ collect_proofs = visit_doc
                             , format "a proof for {0} already exists" lbl )
                         ] 
                     li <- lift $ ask
-                    s@(Sequent ctx _ _) <- maybe
+                    s  <- maybe
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
                             return
                             (M.lookup lbl $ raw_machine_pos m)
-                    !tb <- lift $ gets parse_table
+                    tb <- lift $ gets parse_table
                     traceM $ seq tb "> before"                    
                     p <- runReaderT (
                             runEitherT $
                             run_visitor li xs $ 
-                            collect_proof_step (empty_pr ctx s) m 
+                            collect_proof_step (empty_pr m) 
                             ) th
                     p <- EitherT $ return p
                     p <- EitherT $ return $ runTactic li s p
