@@ -200,6 +200,49 @@ indirect_eq dir op x y z = do
                     Left()  -> mk_expr op z x `mzeq` mk_expr op z y
                     Right() -> mk_expr op x z `mzeq` mk_expr op y z
 
+indirect_inequality :: Monad m
+                    => Either () () 
+                    -> BinOperator 
+                    -> Var
+                    -> TacticT m Proof
+                    -> TacticT m Proof
+indirect_inequality dir op zVar@(Var _ t) proof = do 
+        x_decl <- new_fresh "x" t
+        y_decl <- new_fresh "y" t
+        z_decl <- new_fresh "z" t
+        let x         = Word x_decl
+            y         = Word y_decl
+            z         = Word z_decl
+            rel       = mk_expr op
+            rel_z x y = case dir of
+                        Left ()  -> rel z x `mzimplies` rel z y
+                        Right () -> rel y z `mzimplies` rel x z
+            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x y
+        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ rel x y `mzeq` thm_rhs x y
+        goal <- get_goal
+        let is_op f x y = either (const False) id $ do
+                            xp <- mk_expr op x y
+                            return $ FunApp f [x,y] == xp
+        case goal of
+            FunApp f [lhs,rhs] 
+                | is_op f x y -> do
+                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
+                    g_lbl   <- fresh_label "new:goal"
+                    thm_lbl <- fresh_label "indirect:ineq"
+                    assert 
+                        [ (thm_lbl, thm, easy)       -- (Ax,y:: x = y == ...)
+                        , (g_lbl, new_goal, do       -- (Az:: z ≤ lhs => z ≤ rhs)
+                                free_goal z_decl zVar proof) ]
+                        $ do
+                            lbl <- fresh_label "inst"
+                            instantiate_hyp                       -- lhs = rhs
+                                thm lbl                             -- | we could instantiate indirect
+                                [ (x_decl,lhs)                      -- | inequality explicitly 
+                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
+                                easy                                -- | to be named in sequents
+                                                              
+            _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
+
 indirect_equality :: Monad m
                   => Either () () 
                   -> BinOperator 
@@ -319,6 +362,29 @@ find_proof_step pr = visitor
                             return
                             $ M.lookup zVar vars
                         indirect_equality dir op 
+                                (Var zVar t) 
+                                p
+            )
+        ,   (   "indirect:inequality"
+            ,   VEnvBlock $ \(String dir,rel,String zVar,()) _ -> do
+                    li <- ask
+                    op <- make_soft equal $ fromEitherM
+                        $ parse_oper 
+                            (notat pr)
+                            (concatMap flatten_li rel) 
+                    dir <- case map toLower dir of
+                                "left"  -> return $ Left ()
+                                "right" -> return $ Right ()
+                                _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
+                    p <- lift_i $ collect_proof_step pr
+                    set_proof $ Tac.with_line_info li $ do
+                        ctx <- get_context
+                        let Context _ _ _ _ vars = ctx
+                        Var _ t <- maybe 
+                            (hard_error [Error ("invalid dummy: " ++ zVar) li])
+                            return
+                            $ M.lookup zVar vars
+                        indirect_inequality dir op 
                                 (Var zVar t) 
                                 p
             )
@@ -493,9 +559,6 @@ get_expression t ys = do
                 else return $ line_info xs
             th  <- lift $ ask            
             tb  <- fromEitherM $ get_table th
---            traceM $ show tb
---            traceM $ show ctx
---            traceM $ show xs
             sys <- lift $ ST.get
             return $ Tac.with_line_info li $ do
                 ctx <- get_context
@@ -517,7 +580,6 @@ get_expression t ys = do
                     $ map (\x -> Error (format msg x (type_of x)) li)
                         $ ambiguities x
                 return x
---            return $ either (const ztrue) id x
         where
             xs    = drop_blank_text ys
             msg   = "type of {0} is ill-defined: {1}"

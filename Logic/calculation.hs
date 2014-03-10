@@ -19,7 +19,7 @@ import Data.Map as M
                 ( Map, lookup, fromList
                 , elems, toList, empty
                 , singleton, mapKeys
-                , keys )
+                , keys, difference )
 import Data.Maybe
 import Data.Set as S 
 import Data.String.Utils as SU
@@ -292,12 +292,14 @@ steps_po th ctx (Calc d _ e0 es _) = f e0 es
         f e0 ((r0, e1, a0,li):es) = do
                 expr <- with_li li $ mk_expr r0 e0 e1
                 let ts = S.unions $ L.map used_types $ expr : a0
+                    unnamed = theory_facts ts th `M.difference` named_f
+                    named_f = theory_facts ts th { extends = M.empty }
                 tail <- f e1 es
                 return (
                     ( label ("step " ++ show li)
                     , Sequent 
                         (ctx `merge_ctx` d `merge_ctx` theory_ctx ts th) 
-                        (a0 ++ M.elems (theory_facts ts th)) 
+                        (a0 ++ M.elems unnamed) 
                         M.empty
                         expr
                     ) : tail)

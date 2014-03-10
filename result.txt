@@ -3,23 +3,63 @@
 |  +- Contextual predicate visibility rules
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
-|  |  +- verify theory
-|  |   xxx THM/t|___|
+|  |  +- verify theory 1: indirect (in)equality
+|  |  +- verify theory 2: lattices
+|  |    o  THM/thm3/goal (213,1)
+|  |    o  THM/thm3/hypotheses (213,1)
+|  |    o  THM/thm3/relation (213,1)
+|  |    o  THM/thm3/step (216,1)
+|  |    o  THM/thm3/step (219,1)
+|  |    o  THM/thm3/step (221,1)
+|  |    o  THM/thm4/assertion/indirect:eq/easy (236,24)
+|  |    o  THM/thm4/assertion/new:goal/goal (237,41)
+|  |    o  THM/thm4/assertion/new:goal/hypotheses (237,41|___|M/thm5/step (267,1)
+|  |    o  THM/thm5/step (269,1)
+|  |    o  THM/thm5/step (271,1)
 |  |  
 |  |  
 |  |  Comparison:[
 |  |    > Actual
 |  |    < Expected
 |  |    - ------
-|  |    > hm0\n
-|  |    < hm0/goal\n
-|  |    -    --
-|  |    < _._.o_._.THM/thm0/hypothesis\n
-|  |    < _._.o_._.THM/thm0/step_.\n
-|  |    < _._.o_._.THM/thm0/step_.\n
-|  |    < _._.o_._.THM/thm0/step_.\n
+|  |    > )\n
+|  |    < )\n
+|  |    -    
+|  |    > _.xxx_.THM/thm4/assertion/new:goal/relation_.(237,41)\n
+|  |    < _._.o_._.THM/thm4/assertion/new:goal/relation_.(237,41)\n
+|  |    -   ---  ------------------- ----------------------------
+|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(240,1)\n
+|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(240,1)\n
+|  |    -                                                     
+|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(242,1)\n
+|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(242,1)\n
+|  |    -                                                     
+|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
+|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
+|  |    -                                                     
+|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(246,1)\n
+|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(246,1)\n
+|  |    -                                                     
+|  |    > _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
+|  |    < _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
+|  |    -                                              
+|  |    > _._.o_._.THM/thm5/goal_.(262,1)\n
+|  |    < _._.o_._.THM/thm5/goal_.(262,1)\n
+|  |    -                                  
+|  |    > _._.o_._.THM/thm5/hypotheses_.(262,1)\n
+|  |    < _._.o_._.THM/thm5/hypotheses_.(262,1)\n
+|  |    -                                        
+|  |    > _._.o_._.THM/thm5/relation_.(262,1)\n
+|  |    < _._.o_._.THM/thm5/relation_.(262,1)\n
+|  |    -                                      
+|  |    > _._.o_._.THM/thm5/step_.(265,1)\n
+|  |    < _._.o_._.THM/thm5/step_.(265,1)\n
+|  |    -                                  
+|  |    > _.xxx_.TH
+|  |    < _._.o_._.TH
+|  |    -   ---  --
 |  |  ]
-|  |  +- [ Success: 1 / 2 ]
+|  |  +- [ Success: 2 / 3 ]
 |  |___|
 |  
 |  
@@ -208,9 +248,9 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   17019 total
+   17139 total
     1604 Document/Tests/trainstation.hs
-     947 Document/machine.hs
+     948 Document/machine.hs
      746 Document/Tests/lambdas.hs
      705 UnitB/ast.hs
-     644 Document/proof.hs
+     685 Document/proof.hs

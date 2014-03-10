@@ -47,8 +47,6 @@
 \invariant{inv0}{ \qforall{x_0,x_1}{}{ f.(x_0 \bunion x_1) \1 = f.x_0 \bunion f.x_1 } }
 \end{align*}
 
-\newenvironment{indirect:equality}[3]{}{}
-
 \begin{proof}{INIT/INV/\ref{inv0}}
 	\begin{free:var}{x_0}{x_0}
 	\begin{free:var}{x_1}{x_1}
@@ -110,39 +108,46 @@
 
 \newset{G}{\G}
 
-\dummy{x,y,y_0,y_1,z: \G}
+\[ \dummy{x,y,y_0,y_1,z: \G} \]
 \with{functions}
 
 \operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
 
 \begin{align}
-\axiom{axm0}{ \qforall{x,y}{}{ (x \le y) \1\land (y \le x) \2\equiv x = y } } \\
-\theorem{thm0}{ \qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
+\axiom{axm0}{ 
+	\qforall{x,y}{}{ x \le y \1\land y \le x \2\equiv x = y } } \\
+\axiom{axm1}{ 
+	\qforall{x,y,z}{}{ x \le y \1\land y \le z \2\implies x \le z } } \\
+\theorem{thm0}{ 
+	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
+\\
+\theorem{thm1}{ 
+	\qforall{x,y}{}{ x \le y \2\equiv \qforall{z}{}{ z \le x \1\implies z \le y } } }
 \end{align}
 
 \begin{proof}{THM/\ref{thm0}}
-	\begin{free:var}{x}{y_0}
-	\begin{free:var}{y}{y_1}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
 	\begin{by:parts} \\
-		\begin{part:a}{y_0 = y_1 \2\implies \qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z }}
+		\begin{part:a}{x = y \2\implies \qforall{z}{}{ x \le z \1\equiv y \le z }}
 		\easy 
 %		It's easy: check this out
 %		banana
 		\end{part:a}
 
-		\begin{part:a}{ \qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z } \2\implies y_0 = y_1 }
+		\begin{part:a}{ \qforall{z}{}{ x \le z \1\equiv y \le z } \2\implies x = y }
 		\begin{align}
-		\assume{hyp0}{\qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z }} \\
-		\goal{ y_0 = y_1 }
+		\assume{hyp0}{\qforall{z}{}{ x \le z \1\equiv y \le z }} \\
+		\goal{ x = y }
 		\end{align}
 		\begin{calculation}
-			y_0 = y_1
-		\hint{=}{ antisymmetry of $\le$ }
-			y_0 \le y_1 \1\land y_1 \le y_0
+			x = y
+		\hint{=}{ antisymmetry of $\le$ \eqref{axm0} }
+			x \le y \1\land y \le x
 		\hint{=}{ \eqref{hyp0} }
 %		\hint{=}{  }
-			y_1 \le y_1 \1\land y_0 \le y_0
-		\hint{=}{ reflexivity of $\le$ }
+			y \le y \1\land x \le x
+		\hint{=}{ reflexivity of $\le$ \eqref{axm0} }
 			\true
 		\end{calculation}
 		\end{part:a}
@@ -151,6 +156,127 @@
 	\end{free:var}
 \end{proof}
 
+\begin{proof}{THM/\ref{thm1}}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+	\begin{by:parts} \\
+	\begin{part:a}{ \qforall{z}{}{x \le y \2\implies (z \le x \1\implies z \le y) } }
+	\begin{free:var}{z}{z}
+		\begin{calculation}
+			z \le x \1\implies z \le y
+		\hint{\follows}{ \eqref{axm1} }
+			x \le y
+		\end{calculation}
+	\end{free:var}
+	\end{part:a}
+	\begin{part:a}{x \le y \2\follows \qforall{z}{}{ z \le x \1\implies z \le y } }
+		\begin{calculation}
+			\qforall{z}{}{ z \le x \1\implies z \le y }
+		\hint{\implies}{ instantiation with $z := x$ }
+			x \le x \1\implies x \le y
+		\hint{=}{ \eqref{axm0} }
+			x \le y
+		\end{calculation}
+	\end{part:a}
+	\end{by:parts}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
 \end{context}
+
+\begin{context}{ctx1}
+
+\newset{G}{\G}
+
+\[ \dummy{x,y,y_0,y_1,z,k: \G} \]
+\with{functions}
+
+\operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
+\operator{\uparrow}{ up : Pair [ \G, \G ] \pfun \G }
+
+\begin{align}
+\axiom{axm0}{ 
+	\qforall{x,y}{}{ x \le y \1\land y \le x \2\equiv x = y } } 
+\\ \axiom{axm1}{ 
+	\qforall{x,y,z}{}{ x \le z \1\land y \le z \2\equiv 
+		(x \uparrow y) \le z } }
+\\ \axiom{axm2}{ 
+	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
+\\ \axiom{axm3}{ 
+	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ x \le z \1\equiv y \le z } } }
+\\ \theorem{thm3}{ \qforall{x,y}{}{ y \le (x \uparrow y) } }
+\end{align}
+
+\begin{proof}{THM/\ref{thm3}}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+%\begin{indirect:equality}{right}{\le}{z}
+\begin{calculation}
+		y \le (x \uparrow y)
+	\hint{\follows}{ pred. calc. }
+		x \le (x \uparrow y)
+	\2\land	y \le (x \uparrow y)
+	\hint{=}{ \eqref{axm1} }
+		(x \uparrow y) \le (x \uparrow y)
+	\hint{=}{ \eqref{axm0} }
+		\true
+\end{calculation}
+%\end{indirect:equality}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\begin{align}
+\theorem{thm4}{ \qforall{x,y,z}{}{ ((x \uparrow y) \uparrow z) = (x \uparrow (y \uparrow z)) } }
+\end{align}
+
+\begin{proof}{THM/\ref{thm4}}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+	\begin{free:var}{z}{z}
+\begin{indirect:equality}{right}{\le}{k}
+\begin{calculation}
+		((x \uparrow y) \uparrow z) \1\le k
+	\hint{=}{ \eqref{axm1} }
+		(x \uparrow y) \1\le k \2\land z  \1\le k
+	\hint{=}{ \eqref{axm1} }
+		x \le k \2\land y \le k \2\land z  \le k
+	\hint{=}{ \eqref{axm1} }
+		x \1\le k \2\land (y \uparrow z) \1\le k
+	\hint{=}{ \eqref{axm1} }
+		(x \uparrow (y \uparrow z)) \1\le k
+\end{calculation}
+\end{indirect:equality}
+	\end{free:var}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\begin{align}
+\theorem{thm5}{ \qforall{x,y}{}{ (x \uparrow y) = y \2\equiv x \le y } }
+\end{align}
+
+\begin{proof}{THM/\ref{thm5}}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+%\begin{indirect:equality}{right}{\le}{k}
+\begin{calculation}
+		(x \uparrow y) = y
+	\hint{=}{ \eqref{axm0} }
+		(x \uparrow y) \le y \2\land y \le (x \uparrow y)
+	\hint{=}{ \qref{thm3} }
+		(x \uparrow y) \le y
+	\hint{=}{ \eqref{axm1} }
+		x  \le y \2\land y \le y
+	\hint{=}{ \eqref{axm0} }
+		x  \le y
+\end{calculation}
+%\end{indirect:equality}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\end{context}
+
 
 \end{document}

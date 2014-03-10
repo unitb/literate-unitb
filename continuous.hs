@@ -98,14 +98,9 @@ check_one m = do
 
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
-check_theory (name,th) = with_tracingM $ do
---        param <- get
---        let p = M.lookup (_name m) $ pos param
---        let po = maybe empty id p
+check_theory (name,th) = do
         let po = theory_po th
         res    <- liftIO $ verify_all $ either undefined id po
---        let report = M.fromList $ zip (M.keys po) $ zip (M.elems res) (M.elems po)
---        put (param { pos = insert (label name) report $ pos param })
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ toList res
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where
@@ -130,7 +125,7 @@ check_file = do
             lift $ produce_summaries s
             return (M.elems $ machines s, M.toList $ theories s)
         case r of
-            Right (ms,ts) -> with_tracingM $ do
+            Right (ms,ts) -> do
                 xs <- forM ms check_one
                 clear
                 traceM $ show $ map fst $ take 10 ts

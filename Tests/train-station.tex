@@ -23,7 +23,7 @@
 
 %\section{}
 %\subsection{}
-
+\newcommand{\TRAIN}{\text{TRAIN}}\newcommand{\BLK}{\text{BLK}}\newcommand{\LOC}{\text{LOC}}
 \begin{machine}{train0}
 
 \newset{TRAIN}{\TRAIN}
@@ -40,9 +40,9 @@
 %}
 %
 
-\newevent{enter}
+\newevent{enter}{enter}
 
-\newevent{leave}
+\newevent{leave}{leave}
 
 \begin{align*}
 \transient{leave}{tr0}
@@ -380,14 +380,14 @@
 	\hint{=}{ } % step 4
 		t_0 \in in \land \neg t_0  = t 
 		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
-	\hint{=}{  } % step 5
+	\hint{=}{ \ref{asm2}, \ref{asm4}, \ref{asm3} } % step 5
 		t_0 \in in \land \neg t_0  = t \land \neg loc.t_0 = ext
 	\hint{=}{  \ref{grd0} } % step 6
 	 	t_0 \in in \land \neg loc.t_0 = ext \land loc.t = ext
-	\hint{\follows}{  \ref{grd0} } % step 7
+	\hint{\follows}{  \ref{grd0}, \ref{asm2} } % step 7
 %		\true
 	 	t_0 \in in \land loc.t_0 = ent 
-	\hint{=}{   } % step 8
+	\hint{=}{ \ref{asm2}  } % step 8
 	 	t_0 \in in \land loc.t_0 = ent  \land \neg loc.t_0 \in PLF 
 	\end{calculation}
 	\end{free:var}

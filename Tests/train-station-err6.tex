@@ -268,14 +268,14 @@
 	\hint{=}{ } % step 4
 		t0 \in in \land \neg t0  = t 
 		\land ( loc.t0 \in PLF \lor  loc.t0 = ent)
-	\hint{=}{  } % step 5
+	\hint{=}{ \ref{asm2}, \ref{asm4}, \ref{asm3} } % step 5
 		t0 \in in \land \neg t0  = t \land \neg loc.t0 = ext
 	\hint{=}{  \ref{grd0} } % step 6
 	 	t0 \in in \land \neg loc.t0 = ext \land loc.t = ext
-	\hint{\follows}{  \ref{grd0} } % step 7
+	\hint{\follows}{  \ref{grd0}, \ref{asm2} } % step 7
 %		\true
 	 	t0 \in in \land loc.t0 = ent 
-	\hint{=}{   } % step 8
+	\hint{=}{ \ref{asm2}  } % step 8
 	 	t0 \in in \land loc.t0 = ent  \land \neg loc.t0 \in PLF 
 	\end{calculation}
 	\end{free:var}

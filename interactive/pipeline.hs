@@ -213,7 +213,7 @@ proof_report outs es b = xs ++
         xs = concatMap f (toList outs)
         f ((m,lbl),(_,r))
             | r == Just False = [format " x {0} - {1}" m lbl]
-            | r == Just True  = [format "   {0} - {1}" m lbl]
+--            | r == Just True  = [format "   {0} - {1}" m lbl]
             | otherwise = []
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
