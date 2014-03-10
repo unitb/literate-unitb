@@ -31,8 +31,10 @@ import Tests.UnitTest
 import Utilities.Format
 import Utilities.Syntactic
 
+test_case :: TestCase
 test_case = Case "train station example" test True
 
+test :: IO Bool
 test = test_cases
             [ Case "part 0" part0 True
             , Case "part 1" part1 True
@@ -41,9 +43,11 @@ test = test_cases
             , Case "part 4" part4 True
             , Case "part 5" part5 True
             ]
+part0 :: IO Bool
 part0 = test_cases
             [ (Case "test 0, syntax" case0 $ Right [machine0])
             ]
+part1 :: IO Bool
 part1 = test_cases
             [ (StringCase "test 1, verification" case1 result1)
             , (StringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
@@ -52,22 +56,26 @@ part1 = test_cases
             , (StringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
             ]
+part2 :: IO Bool
 part2 = test_cases
             [ (StringCase "test 5, proof obligation, leave/en/tr0" case5 result5)
             , (Case "test 7, undeclared symbol" case7 result7)
             , (Case "test 8, undeclared event (wrt transient)" case8 result8)
             , (Case "test 9, undeclared event (wrt c sched)" case9 result9)
             ]
+part3 :: IO Bool
 part3 = test_cases
             [ (Case "test 10, undeclared event (wrt indices)" case10 result10)
             , (Case "test 11, undeclared event (wrt assignment)" case11 result11)
             , (StringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
             ]
+part4 :: IO Bool
 part4 = test_cases
             [ (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
             , (StringCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (StringCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
+part5 :: IO Bool
 part5 = test_cases
             [ (StringCase "test 16, verification, proof by parts" case16 result16)
             , (StringCase "test 17, ill-defined types" case17 result17)
@@ -89,14 +97,28 @@ blk_sort = Sort "\\BLK" "BLK" 0
 blk_type :: Type
 blk_type = USER_DEFINED blk_sort []
 
+train    :: ExprP
+loc_cons :: ExprP
+ent      :: ExprP
+ext      :: ExprP
+plf      :: ExprP
+train_var :: Var
+loc_var   :: Var
+ent_var   :: Var
+ext_var   :: Var
+plf_var   :: Var
+
 (train,train_var) = (var "TRAIN" $ set_type train_type)
 (loc_cons,loc_var)   = (var "LOC" $ set_type loc_type)
 (ent,ent_var)   = (var "ent" $ blk_type)
 (ext,ext_var)   = (var "ext" $ blk_type)
 (plf,plf_var)   = (var "PLF" $ set_type blk_type)
 
+block :: ExprP
+block_var :: Var
 (block, block_var) = var "BLK" $ set_type blk_type
 
+machine0 :: Machine
 machine0 = (empty_machine "train0") 
     {  theory = empty_theory 
             {  extends = fromList
@@ -175,6 +197,8 @@ machine0 = (empty_machine "train0")
             where
                 (x_at, x_at_decl) = var "x@@" loc_type
       --    	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
+
+props0 :: PropertySet
 props0 = empty_property_set
     {  constraint = fromList 
             [   ( label "co0"
@@ -232,19 +256,11 @@ props0 = empty_property_set
             ]
     ,  safety = fromList
             []
---               ( label "s0"
---                , Unless [t_decl] 
---                        (fromJust $ mznot (t `zelem` in_var)) 
---                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent ))) )
---            ,   ( label "s1"
---                , Unless [t_decl] 
---                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `mzeq` ent )))
---                        (fromJust ((t `zelem` in_var) `mzand` ( (loc `zapply` t) `zelem` plf ))) )
---            ]
     }
     where 
         li = LI "" 0 0
 
+enter_evt :: Event
 enter_evt = empty_event
     {  indices = symbol_table [t_decl]
     ,  guards = fromList
@@ -256,6 +272,8 @@ enter_evt = empty_event
             ,  (label "a2", (fromJust (loc' `mzeq` (loc `zovl` zmk_fun t ent))))
             ]
     }
+
+leave_evt :: Event
 leave_evt = empty_event 
     {  indices   = symbol_table [t_decl]
     ,  scheds    = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
@@ -275,11 +293,23 @@ leave_evt = empty_event
             ] 
     }
 
+p        :: ExprP
+p_decl   :: Var
+t        :: ExprP
+t_decl   :: Var
+in_var   :: ExprP
+in_var'  :: ExprP
+in_decl  :: Var
+loc      :: ExprP
+loc'     :: ExprP
+loc_decl :: Var
+
 (p, p_decl) = var "p" blk_type
 (t, t_decl) = var "t" train_type
 (in_var, in_var', in_decl) = prog_var "in" (set_type train_type)
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
-    
+
+check_sat :: [String]    
 check_sat = [ format ("(check-sat-using (or-else"
                         ++ " (then qe smt)"
                         ++ " (then simplify smt)"
@@ -290,6 +320,7 @@ check_sat = [ format ("(check-sat-using (or-else"
             ]
 
 
+train_decl :: Bool -> Bool -> [String]
 train_decl b ind = 
         [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
         , "(declare-datatypes () ((Null null)))"
@@ -333,6 +364,7 @@ train_decl b ind =
                 ,  "(declare-const loc (pfun TRAIN BLK))"
                 ]
 
+set_decl_smt2 :: [AxiomOption] -> [String]
 set_decl_smt2 xs = 
         when (WithPFun `elem` xs)
         [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"
@@ -595,8 +627,9 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
 data AxiomOption = WithPFun
     deriving Eq
 
+comp_facts :: [AxiomOption] -> [String]
 comp_facts xs = 
-             map (\x -> "(assert " ++ x ++ ")") $
+           ( map (\x -> "(assert " ++ x ++ ")") $
              map snd    (     (if (WithPFun `elem` xs) then
                                concatMap set_facts 
                                 [ --  ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
@@ -609,17 +642,25 @@ comp_facts xs =
                                 [   ("BLK","@BLK")
                                 ,   ("LOC","@LOC")
                                 ,   ("TRAIN","@TRAIN")
+                                ] ) )
+                            ++ map f
+                                [ ( "; \\BLK-def"
+                                ,   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))" )
+                                , ( "; \\LOC-def"
+                                ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))" )
+                                , ( "; \\TRAIN-def"
+                                ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))" )
                                 ]
-                            ++ map ((,) "")
-                                [   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))"
-                                ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))"
-                                ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))"
-                                ]
-                            )
+    where
+        f (x,y) = x ++ "\n(assert " ++ y ++ ")"
 
+path0 :: String
 path0 = "Tests/train-station.tex"
+
+case0 :: IO (Either [Error] [Machine])
 case0 = parse_machine path0
 
+result1 :: String
 result1 = unlines 
         [  "  o  train0/INIT/FIS/in"
         ,  "  o  train0/INIT/FIS/loc"
@@ -718,6 +759,7 @@ result1 = unlines
         ,  "passed 93 / 94"
         ]
 
+case1 :: IO String
 case1 = do
     r <- parse_machine path0
     case r of
@@ -726,23 +768,29 @@ case1 = do
             return s
         x -> return $ show x
 
+result2 :: String
 result2 = unlines (
         push
      ++ train_decl False False
      ++ set_decl_smt2 []
      ++ comp_facts [] ++ -- set_decl_smt2 ++
-     [  "(assert (and (not (= ent ext))"
+     [  "; asm2"
+     ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
+     ,  "; asm3"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ext))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "; asm4"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ent))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "; asm5"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (or (= p ent) (= p ext))"
             ++         " (not (elem@@BLK p PLF))))))"
+     ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((in (set TRAIN))) (and true" ++ 
             " (= in empty-set@@TRAIN)))))"
@@ -750,9 +798,13 @@ result2 = unlines (
      ++ check_sat
      ++ pop )
 
+pop :: [String]
 pop = []
+
+push :: [String]
 push = []
 
+case2 :: IO String
 case2 = do
         pos <- list_file_obligations path0
         case pos of
@@ -762,23 +814,29 @@ case2 = do
                 return cmd
             x -> return $ show x
 
+result20 :: String
 result20 = unlines (
         push
      ++ train_decl False False
      ++ set_decl_smt2 [WithPFun]
      ++ comp_facts [WithPFun] ++ 
-     [  "(assert (and (not (= ent ext))"
+     [  "; asm2"
+     ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
+     ,  "; asm3"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ext))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "; asm4"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ent))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "; asm5"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (or (= p ent) (= p ext))"
             ++         " (not (elem@@BLK p PLF))))))"
+     ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "(assert (not (exists ((loc (pfun TRAIN BLK))) (and true" ++ 
             " (= loc empty-fun@@TRAIN@@BLK)))))"
@@ -786,6 +844,7 @@ result20 = unlines (
      ++ check_sat
      ++ pop )
 
+case20 :: IO String
 case20 = do
         pos <- list_file_obligations path0
         case pos of
@@ -795,23 +854,29 @@ case20 = do
                 return cmd
             x -> return $ show x
             
+result3 :: String
 result3 = unlines (
      push ++
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
-     [  "(assert (and (not (= ent ext))"
+     [  "; asm2"
+     ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
+     ,  "; asm3"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ext))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "; asm4"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ent))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "; asm5"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (or (= p ent) (= p ext))"
             ++         " (not (elem@@BLK p PLF))))))"
+     ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "; grd0"
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
@@ -827,6 +892,7 @@ result3 = unlines (
      check_sat ++
      pop )
 
+case3 :: IO String
 case3 = do
         pos <- list_file_obligations path0
         case pos of
@@ -836,23 +902,29 @@ case3 = do
                 return cmd
             x -> return $ show x
 
+result19 :: String
 result19 = unlines (
      push ++ 
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
-     [  "(assert (and (not (= ent ext))"
+     [  "; asm2"
+     ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
             ++      " (not (elem@@BLK ext PLF))))"
+     ,  "; asm3"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ext))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "; asm4"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (not (= p ent))"
             ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "; asm5"
      ,  "(assert (forall ((p BLK)) (=> true"
             ++      " (= (or (= p ent) (= p ext))"
             ++         " (not (elem@@BLK p PLF))))))"
+     ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
      ,  "; grd0"
      ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
@@ -868,6 +940,7 @@ result19 = unlines (
      check_sat ++
      pop )
 
+case19 :: IO String
 case19 = do
         pos <- list_file_obligations path0
         case pos of
@@ -877,23 +950,29 @@ case19 = do
                 return cmd
             x -> return $ show x
 
+result4 :: String
 result4 = unlines ( 
         push ++
         train_decl False True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
-        [ "(assert (and (not (= ent ext))"
-               ++      " (not (elem@@BLK ent PLF))"
-               ++      " (not (elem@@BLK ext PLF))))"
+        [ "; asm2"
+        , "(assert (and (not (= ent ext))"
+              ++      " (not (elem@@BLK ent PLF))"
+              ++      " (not (elem@@BLK ext PLF))))"
+        , "; asm3"
         , "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ext))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+              ++      " (= (not (= p ext))"
+              ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+        , "; asm4"
         , "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ent))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+              ++      " (= (not (= p ent))"
+              ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+        , "; asm5"
         , "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (or (= p ent) (= p ext))"
-               ++         " (not (elem@@BLK p PLF))))))"
+              ++      " (= (or (= p ent) (= p ext))"
+              ++         " (not (elem@@BLK p PLF))))))"
+        , "; axm0"
         , "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         , "; c0"
         , "(assert (elem@@TRAIN t in))"
@@ -908,6 +987,7 @@ result4 = unlines (
         check_sat ++
         pop )
 
+case4 :: IO String
 case4 = do
         pos <- list_file_obligations path0
         case pos of
@@ -917,24 +997,29 @@ case4 = do
                 return cmd
             x -> return $ show x
 
-
+result5 :: String
 result5 = unlines ( 
         push ++
         train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
-        [  "(assert (and (not (= ent ext))"
+        [  "; asm2"
+        ,  "(assert (and (not (= ent ext))"
                ++      " (not (elem@@BLK ent PLF))"
                ++      " (not (elem@@BLK ext PLF))))"
+        ,  "; asm3"
         ,  "(assert (forall ((p BLK)) (=> true"
                ++      " (= (not (= p ext))"
                ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+        ,  "; asm4"
         ,  "(assert (forall ((p BLK)) (=> true"
                ++      " (= (not (= p ent))"
                ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+        ,  "; asm5"
         ,  "(assert (forall ((p BLK)) (=> true"
                ++      " (= (or (= p ent) (= p ext))"
                ++         " (not (elem@@BLK p PLF))))))"
+        ,  "; axm0"
         ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "; inv1"
         ,  "(assert (forall ((t TRAIN))"
@@ -955,6 +1040,7 @@ result5 = unlines (
         check_sat ++
         pop  )
 
+case5 :: IO String
 case5 = do
         pos <- list_file_obligations path0
         case pos of
@@ -991,28 +1077,34 @@ case5 = do
 --                return cmd
 --            x -> return $ show x
 
+result12 :: String
 result12 = unlines ( 
         push ++
         train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
-        [  "(assert (and (not (= ent ext))"
-            ++      " (not (elem@@BLK ent PLF))"
-            ++      " (not (elem@@BLK ext PLF))))"
-        ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ext))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
-        ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ent))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
-        ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (or (= p ent) (= p ext))"
-            ++         " (not (elem@@BLK p PLF))))))"
-        ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-        ,  "; a0"
+        [  "; a0"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "; a3"
         ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
+        ,  "; asm2"
+        ,  "(assert (and (not (= ent ext))"
+               ++      " (not (elem@@BLK ent PLF))"
+               ++      " (not (elem@@BLK ext PLF))))"
+        ,  "; asm3"
+        ,  "(assert (forall ((p BLK)) (=> true"
+               ++      " (= (not (= p ext))"
+               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+        ,  "; asm4"
+        ,  "(assert (forall ((p BLK)) (=> true"
+               ++      " (= (not (= p ent))"
+               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+        ,  "; asm5"
+        ,  "(assert (forall ((p BLK)) (=> true"
+               ++      " (= (or (= p ent) (= p ext))"
+               ++         " (not (elem@@BLK p PLF))))))"
+        ,  "; axm0"
+        ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
         ,  "; grd0"
         ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
                 ++     " (elem@@TRAIN t in)))"
@@ -1027,6 +1119,7 @@ result12 = unlines (
         check_sat ++
         pop )
 
+case12 :: IO String
 case12 = do
         r <- parse_machine path0
         case r of
@@ -1039,33 +1132,55 @@ case12 = do
     --------------------
     -- Error handling --
     --------------------
-
+result7 :: Either [Error] a
 result7 = Left [Error "undeclared variable: t" (LI path7 54 3)]
 
+path7 :: String
 path7 = "Tests/train-station-err0.tex"
+
+case7 :: IO (Either [Error] [Machine])
 case7 = parse_machine path7
 
+result8 :: Either [Error] a
 result8 = Left [Error "event 'leave' is undeclared" (LI path8 42 15)]
 
+path8 :: String
 path8 = "Tests/train-station-err1.tex"
+
+case8 :: IO (Either [Error] [Machine])
 case8 = parse_machine path8
 
+result9 :: Either [Error] a
 result9 = Left [Error "event 'leave' is undeclared" (LI path9 51 15)]
 
+path9 :: String
 path9 = "Tests/train-station-err2.tex"
+
+case9 :: IO (Either [Error] [Machine])
 case9 = parse_machine path9
 
+result10 :: Either [Error] a
 result10 = Left [Error "event 'leave' is undeclared" (LI path10 55 15)]
 
+path10 :: String
 path10 = "Tests/train-station-err3.tex"
+
+case10 :: IO (Either [Error] [Machine])
 case10 = parse_machine path10
 
+result11 :: Either [Error] a
 result11 = Left [Error "event 'leave' is undeclared" (LI path11 59 15)]
 
+path11 :: String
 path11 = "Tests/train-station-err4.tex"
+
+case11 :: IO (Either [Error] [Machine])
 case11 = parse_machine path11
 
+path13 :: String
 path13 = "Tests/train-station-err5.tex"
+
+result13 :: String
 result13 = unlines
         [  "  o  train0/INIT/FIS/in"
         ,  "  o  train0/INIT/FIS/loc"
@@ -1138,7 +1253,8 @@ result13 = unlines
         ,  "  o  train0/leave/TR/tr0"
         ,  "passed 64 / 69"
         ]
-        
+
+case13 :: IO String        
 case13 = do
     r <- parse_machine path13
     case r of
@@ -1147,7 +1263,10 @@ case13 = do
             return s
         x -> return $ show x
 
+path14 :: String
 path14 = "Tests/train-station-err6.tex"
+
+result14 :: String
 result14 = unlines
         [  "  o  train0/INIT/FIS/in"
         ,  "  o  train0/INIT/FIS/loc"
@@ -1214,6 +1333,7 @@ result14 = unlines
         ,  "passed 60 / 62"
         ]
         
+case14 :: IO String
 case14 = do
     r <- parse_machine path14
     case r of
@@ -1222,7 +1342,10 @@ case14 = do
             return s
         x -> return $ show x
 
+path15 :: String
 path15 = "Tests/train-station-err7.tex"
+
+result15 :: String
 result15 = unlines
         [  "  o  train0/INIT/FIS/in"
         ,  "  o  train0/INIT/FIS/loc"
@@ -1295,6 +1418,7 @@ result15 = unlines
         ,  "passed 65 / 68"
         ]
         
+case15 :: IO String
 case15 = do
     r <- parse_machine path15
     case r of
@@ -1303,7 +1427,10 @@ case15 = do
             return s
         x -> return $ show x
 
+path16 :: String
 path16 = "Tests/train-station-t2.tex"
+
+result16 :: String
 result16 = unlines 
         [  "  o  train0/INIT/FIS/in"
         ,  "  o  train0/INIT/FIS/loc"
@@ -1395,6 +1522,7 @@ result16 = unlines
         ,  "passed 86 / 87"
         ]
 
+case16 :: IO String
 case16 = do
     r <- parse_machine path16
     case r of
@@ -1403,13 +1531,17 @@ case16 = do
             return s
         x -> return $ show x
 
+path17 :: String
 path17 = "Tests/train-station-err8.tex"
+
+result17 :: String
 result17 = unlines 
         [  "error (75,3): type of empty-fun@@TRAIN@@a is ill-defined: pfun [TRAIN,_a]"
         ,  "error (75,3): type of empty-fun@@TRAIN@@b is ill-defined: pfun [TRAIN,_b]"
         ,  "error (77,2): type of empty-fun@@TRAIN@@a is ill-defined: pfun [TRAIN,_a]"
         ]
 
+case17 :: IO String
 case17 = do
         r <- parse_machine path17
         case r of
@@ -1417,7 +1549,10 @@ case17 = do
                 return "successful verification"
             Left xs -> return $ unlines $ map format_error xs
         
+path18 :: String
 path18 = "Tests/train-station-err9.tex"
+
+result18 :: String
 result18 = unlines 
         [  "error (68,2): expression has type incompatible with its type annotation:"
         ,  "  expression: (dom@@TRAIN@@BLK loc)"
@@ -1441,6 +1576,7 @@ result18 = unlines
         ,  ""
         ]
 
+case18 :: IO String
 case18 = do
         r <- parse_machine path18
         case r of
@@ -1464,4 +1600,5 @@ case18 = do
 --                forM_ (map show $ keys $ pos) putStrLn
 --            _ -> return () -- $ show x
 
+format_error :: Error -> String
 format_error (Error x (LI _ i j)) = format "error {0}: {1}" (i, j) (x :: String) :: String

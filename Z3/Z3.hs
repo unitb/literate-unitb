@@ -211,7 +211,7 @@ discharge po = do
 
 verify :: [Command] -> IO (Either String Satisfiability)
 verify xs = do
-        let !code = (unlines $ map (show . as_tree) xs)
+        let !code = (unlines $ map (show . as_tree) xs) -- $ [Push] ++ xs ++ [Pop])
         (_,out,err) <- feed_z3 code
         let ln = lines out
         r <- if ln == [] || 

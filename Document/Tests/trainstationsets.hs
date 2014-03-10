@@ -9,9 +9,10 @@ import Data.String.Utils
 
 import Tests.UnitTest
 
-
+test_case :: TestCase
 test_case = Case "train station example, with sets" test True
 
+test :: IO Bool
 test = test_cases
             [ Case "verify machine m0" (verify 0 path0) result0
             , Case "verify machine m1" (verify 1 path0) result1
@@ -21,6 +22,7 @@ test = test_cases
             , Case "verify machine m3 error (wandering free variable)" (verify 3 path4) result4
             ]
 
+result0 :: String
 result0 = unlines
      [ "  o  m0/INIT/FIS/in"
      , "  o  m0/m0:enter/FIS/in@prime"
@@ -34,6 +36,7 @@ result0 = unlines
      , "passed 9 / 9"
      ]
 
+result1 :: String
 result1 = unlines
      [ "  o  m1/INIT/FIS/in"
      , "  o  m1/INIT/FIS/loc"
@@ -98,6 +101,7 @@ result1 = unlines
      , "passed 60 / 60"
      ]
 
+result2 :: String
 result2 = unlines
 	[ "  o  m2/INIT/FIS/in"
 	, "  o  m2/INIT/FIS/loc"
@@ -188,8 +192,10 @@ result2 = unlines
   	, "passed 85 / 86"
 	]
 
+path0 :: String
 path0 = "Tests/train-station-set.tex"
 
+result3 :: String
 result3 = concat
     [ "Left [Error \"type error: expression has type incompatible with its type annotation:\\n"
     , "  expression: ent\\n"
@@ -198,20 +204,26 @@ result3 = concat
     , "\" (295,54)]"
     ]
 
+path3 :: String
 path3 = "Tests/train-station-set-err0.tex"
 
+case3 :: IO String
 case3 = do
     r <- parse_machine path3
     return $ show r
 
+path4 :: String
 path4 = "Tests/train-station-set-err1.tex"
 
+case4 :: IO String
 case4 = do
     r <- parse_machine path4
     return $ show r
 
+result4 :: String
 result4 = "Left [Error \"undeclared variable: t\" (494,26)]"
 
+result5 :: String
 result5 = unlines
 	[ "  o  m3/INIT/FIS/in"
 	, "  o  m3/INIT/FIS/isgn"
@@ -232,7 +244,7 @@ result5 = unlines
 	, "  o  m3/m0:enter/INV/m3:inv0"
 	, "  o  m3/m0:enter/INV/m3:inv1"
 	, "  o  m3/m0:enter/INV/m3:inv2"
-	, "  o  m3/m0:enter/INV/m3:inv3"
+	, " xxx m3/m0:enter/INV/m3:inv3"
 	, "  o  m3/m0:enter/SCH"
 	, "  o  m3/m0:leave/CO/m3:saf0"
 	, "  o  m3/m0:leave/CO/m3:saf1"
@@ -291,8 +303,9 @@ result5 = unlines
 	, "  o  m3/m3:prog0/REF/discharge/saf/lhs"
 	, "  o  m3/m3:prog0/REF/discharge/saf/rhs"
 	, "  o  m3/m3:prog0/REF/discharge/tr"
-	, "passed 73 / 78" ]
+	, "passed 72 / 78" ]
 
+verify :: Int -> String -> IO String
 verify n path = do
     r <- parse_machine path
     case r of

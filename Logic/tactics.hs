@@ -9,9 +9,11 @@ module Logic.Tactics
     , by_cases, easy, new_fresh, free_goal
     , instantiate_hyp, with_line_info
     , runTactic, runTacticT, make_expr, fresh_label
+    , last_step, add_step
     )
 where
 
+import Logic.Operator
 import Logic.Calculation
 import Logic.Classes
 import Logic.Const
@@ -92,6 +94,18 @@ get_hypotheses = TacticT $ do
         Sequent _ asm hyps _ <- lift $ asks sequent
         return $ asm ++ elems hyps
 
+lookup_hypothesis :: Monad m
+                  => (Label, LineInfo)
+                  -> TacticT m Expr
+lookup_hypothesis (hyp,li) = do
+        Sequent _ _ hyps _ <- TacticT $ lift $ asks sequent
+        maybe 
+            (hard_error [err_msg])
+            return
+            $ M.lookup hyp hyps
+    where
+        err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
+
 get_context :: Monad m
             => TacticT m Context
 get_context = TacticT $ do
@@ -155,6 +169,27 @@ easy = do
         li <- get_line_info
         return $ Proof $ Easy li
 
+add_step :: Monad m
+         => Expr
+         -> BinOperator
+         -> [(Label,LineInfo)]
+         -> TacticT m Calculation
+         -> TacticT m Calculation
+add_step step op hint calc = make_hard $ do
+        hyp     <- forM hint $ make_soft ztrue . lookup_hypothesis
+        trivial <- last_step ztrue
+        r       <- make_soft trivial calc
+        li      <- get_line_info
+        return r { 
+            first_step = step,
+            following  = (op,first_step r,hyp,li):following r }
+
+last_step :: Monad m => Expr -> TacticT m Calculation
+last_step xp = do
+        li  <- get_line_info
+        ctx <- get_context
+        return $ Calc ctx ztrue xp [] li
+
 new_fresh :: Monad m
           => String -> Type 
           -> TacticT m Var
@@ -172,6 +207,8 @@ is_label_fresh lbl = do
         Sequent _ _ hyps _ <- TacticT $ asks sequent
         return $ not $ lbl `member` hyps
 
+fresh_label :: Monad m
+            => String -> TacticT m Label
 fresh_label name = do
         fix (\rec n suf -> do
             let v = label (name ++ suf)
@@ -209,19 +246,19 @@ instantiate_hyp hyp lbl ps proof = do
         hyps <- get_hypotheses
         li   <- get_line_info
         if hyp `elem` hyps then do
-            newh <- case hyp of
+            case hyp of
                 Binder Forall vs r t 
                     | all (`elem` vs) (map fst ps) -> do
                         let new_vs = L.foldl (flip L.delete) vs (map fst ps)
                             re     = substitute (fromList ps) r
                             te     = substitute (fromList ps) t
-                        if L.null new_vs
-                            then return $ zimplies re te
-                            else return $ zforall new_vs re te
+                            newh   = if L.null new_vs
+                                     then zimplies re te
+                                     else zforall new_vs re te
+                        p <- with_hypotheses [(lbl,newh)] proof
+                        return $ Proof $ InstantiateHyp hyp (fromList ps) p li
                 _ -> fail $ "hypothesis is not a universal quantification:\n" 
                         ++ pretty_print' hyp
-            p <- with_hypotheses [(lbl,newh)] proof
-            return $ Proof $ InstantiateHyp hyp (fromList ps) p li
         else
             fail $ "formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp
@@ -244,6 +281,7 @@ runTacticT li s (TacticT tac) = do
             Right (_,err) -> return $ Left err
             Left err -> return $ Left err
 
+runTactic :: LineInfo -> Sequent -> Tactic a -> Either [Error] a
 runTactic li s tac = runIdentity (runTacticT li s tac)
           
 instance Monad m => Monad (TacticT m) where
