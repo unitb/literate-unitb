@@ -65,6 +65,15 @@ import Utilities.Syntactic
     -- add theorem POs
     --      problem: In what order do we prove the theorems?
 
+tr_lbl            :: Label
+co_lbl            :: Label
+inv_lbl           :: Label
+inv_init_lbl      :: Label
+init_fis_lbl      :: Label
+fis_lbl           :: Label
+sch_lbl           :: Label
+thm_lbl           :: Label
+
 tr_lbl            = label "TR"
 co_lbl            = label "CO"
 inv_lbl           = label "INV"
@@ -94,12 +103,14 @@ evt_live_ctx evt = Context M.empty (indices evt) M.empty M.empty M.empty
 dummy_ctx :: Machine -> Context
 dummy_ctx m = Context M.empty (dummies $ theory m) M.empty M.empty M.empty
 
+skip_event :: Machine -> Event
 skip_event m = empty_event { action = 
     M.fromList $ zip 
         (map (\i -> label ("S" ++ show i)) [0 ..])
         (map (\v -> primed (variables m) (Word v) `zeq` (Word v))  
             $ M.elems $ variables m) }
 
+invariants :: Machine -> Map Label Expr
 invariants m = 
                    (inv p0) 
         `M.union` (inv_thm p0) 
@@ -109,6 +120,7 @@ invariants m =
         p0 = props m
         p1 = inh_props m
 
+invariants_only :: Machine -> Map Label Expr
 invariants_only m = 
                    (inv p0) 
         `M.union` (inv p1)
@@ -131,10 +143,12 @@ raw_machine_pos m = pos
         p = props m
         f (Sequent a b c d) = Sequent 
                 (a `merge_ctx` theory_ctx ts (theory m))
-                (M.elems (theory_facts ts (theory m))++b) 
-                c
+                (M.elems unnamed ++ b) 
+                (named_f `M.union` c)
                 d
           where
+            unnamed = theory_facts ts (theory m) `M.difference` named_f
+            named_f = theory_facts ts (theory m) { extends = M.empty }
             ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
@@ -268,14 +282,15 @@ prop_co m pname (Co fv xp) =
                     []
                     hyp
                     goal )
-            where
-                grd  = new_guard evt
-                act  = action evt
-                forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
-                hyp  = invariants m `M.union` grd `M.union` act
-                goal = forall_fv xp
+          where
+            grd  = new_guard evt
+            act  = action evt
+            forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
+            hyp  = invariants m `M.union` grd `M.union` act
+            goal = forall_fv xp
         po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
 
+inv_po :: Machine -> Label -> Expr -> Map Label Sequent
 inv_po m pname xp = 
         M.union 
             (mapKeys po_name $ mapWithKey po (events m))
@@ -297,6 +312,7 @@ inv_po m pname xp =
         po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
         hyp  = inits m
 
+fis_po :: Machine -> Label -> Event -> Map Label Sequent
 fis_po m lbl evt = M.fromList $ map f pos 
     where
         grd  = new_guard evt
@@ -346,8 +362,10 @@ thm_po m lbl xp = M.singleton
     where
         inv = invariants_only m
 
+add_suffix :: String -> Var -> Var
 add_suffix suf (Var n t) = Var (n ++ suf) t
 
+new_dummy :: Map String Var -> Expr -> Expr
 new_dummy = make_unique "@param"
 
 verify_machine :: Machine -> IO (Int, Int)

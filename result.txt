@@ -1,17 +1,6 @@
 +- Unit-B Document
 |  +- basic syntax and scopes
 |  +- Contextual predicate visibility rules
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > ok
-|    < Error_.(23,1):_.Undefined_.predicate:_.a1\n
-|    - --
-|  ]
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
 |  |  +- verify theory
@@ -139,7 +128,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 9 / 11 ]
+|  +- [ Success: 10 / 11 ]
 |___|
 
 
@@ -219,9 +208,9 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   16825 total
-    1467 Document/Tests/trainstation.hs
+   17019 total
+    1604 Document/Tests/trainstation.hs
      947 Document/machine.hs
      746 Document/Tests/lambdas.hs
      705 UnitB/ast.hs
-     669 Document/proof.hs
+     644 Document/proof.hs

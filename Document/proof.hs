@@ -289,8 +289,6 @@ find_proof_step pr = visitor
         ,   (   "by:cases"
             ,   VEnvBlock $ \() _ -> do
                     li         <- ask
---                    cases <- toEither $ find_cases pr m xs []
---                    set_proof (Proof $ ByCases (reverse cases) li) proofs )
                     ((),cases) <- lift_i $ add_writer $ find_cases pr
                     set_proof $ Tac.with_line_info li $ do
                         xs <- forM cases $ \(lbl,xp,pr) -> do
@@ -307,7 +305,6 @@ find_proof_step pr = visitor
                             x <- xp
                             return (x,pr)
                         by_parts xs
---                    (Proof $ ByParts (reverse cases) li)
             )
         ,   (   "subproof"
             ,   VEnvBlock $ \(lbl,()) _ -> do
@@ -431,58 +428,36 @@ parse_calc pr = do
                 $ parse_oper 
                     (notat pr)
                     (concatMap flatten_li rel) 
-            li  <- ask
+            li      <- ask
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
-            hyp <- make_soft [] (do
-                mapM find hs)
-            r   <- with_content li remainder $ parse_calc pr
-            return $ Tac.with_line_info li $ do
+            calc    <- with_content li remainder $ parse_calc pr
+            return $ Tac.with_line_info (line_info kw) $ do
                 xp  <- make_soft ztrue xp
-                r   <- r
-                hyp <- sequence hyp
-                return r { 
-                    first_step = xp,
-                    following  = (op,first_step r,hyp,line_info kw):following r }
+                add_step xp op hs calc
         Nothing         -> do
             li <- ask
             xp <- get_expression Nothing xs
-            return $ do
-                ctx <- get_context
+            return $ Tac.with_line_info li $ do
                 xp  <- make_soft ztrue xp
-                -- fromEither ztrue $ get_expr_with_ctx m (par_ctx pr) xs
-                return $ Calc ctx ztrue xp [] li
-        _               -> do
+                last_step xp
+        _ -> do
             li <- ask
             soft_error [Error "invalid hint" li]
-            return $ do
-                ctx <- get_context
-                return $ Calc ctx ztrue ztrue [] li
-    where
---        m    = mch pr
-        hyps = hypotheses pr
-        find (xs,li) = maybe (hard_error [err_msg xs]) return 
-                $ M.lookup xs hyps
-            where
-                err_msg lbl      = Error (format "predicate is undefined: '{0}'" lbl) li
+            return $ Tac.with_line_info li $ last_step ztrue
 
 get_table :: ( MonadState System m, MonadReader LineInfo m ) 
           => Theory
           -> EitherT [Error] m (Matrix Operator Assoc)
-get_table th = do -- with_tracingM $ do
+get_table th = do 
         let key = sort $ M.keys $ extends th
         !tb <- lift $ ST.gets parse_table
---        traceM $ "exists?"
         case M.lookup key tb of
             Just x -> do
---                traceM "lookup: ..."
                 return x
             Nothing -> do
---                traceM "compute"
                 let !x   = assoc' $ th_notation th
                     !new = insert key x tb
---                traceM $ show $ th_notation th
                 lift $ ST.modify $ \s -> s { parse_table = new }
---                traceM $ "end: " ++ show (G.size x)
                 return x
                                 
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies

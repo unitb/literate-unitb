@@ -26,6 +26,7 @@ import UnitB.PO
 
 import Utilities.Syntactic
 
+test_case :: (String, IO Bool, Bool)
 test_case = ("Unit-B Document", test, True)
 
 test :: IO Bool
@@ -43,7 +44,8 @@ test = test_cases
         , all_properties
         ]
 
-result1 = (unlines [
+result1 :: String
+result1 = unlines [
         "  o  m/INIT/FIS/in",
 	    "  o  m/enter/FIS/in@prime",
         "  o  m/enter/SCH/goal (21,1)",
@@ -51,9 +53,12 @@ result1 = (unlines [
         "  o  m/enter/SCH/relation (21,1)",
         "  o  m/enter/SCH/step (23,1)",
         "passed 6 / 6"
-    ])
+    ]
 
+path1 :: String
 path1 = "Tests/new_syntax.tex"
+
+case1 :: IO String
 case1 = do
     r <- parse_machine path1
     case r of
@@ -62,13 +67,17 @@ case1 = do
             return s
         x -> return $ show x
 
-result2 = unlines [
-        "Error (23,1): Undefined predicate: a1"
+result2 :: String
+result2 = concat [
+        "[Error \"predicate is undefined: 'a1'\" (23,11)]"
     ]
 
+path2 :: String
 path2 = "Tests/new_syntax-err0.tex"
+
+case2 :: IO String
 case2 = do
-    r <- parse_machine path1
+    r <- parse_machine path2
     case r of
         Right _ -> do
             return "ok"
@@ -150,9 +159,11 @@ instance Arbitrary LatexDoc where
 --                ,   "\\eqref"
 --                ]
 
+all_properties :: TestCase
 all_properties = Case "the parser is exception free" 
     (return (all_machines tree) >> return ()) ()
 
+tree0 :: [LatexDoc]
 tree0 =         [   Env "machine" (li 0 0) 
                     [   Bracket False (li 0 0) [] (li 0 0)
                     ,   Bracket True (li 0 0) 
@@ -193,6 +204,7 @@ tree0 =         [   Env "machine" (li 0 0)
                     ] (li 0 0)
                 ]
 
+tree :: [LatexDoc]
 tree = 
     [   Env "fschedule" (li 0 0) 
         [   Text 
@@ -266,4 +278,5 @@ tree =
         ] (li 0 0)
     ]
 
+li :: Int -> Int -> LineInfo
 li i j = LI "" i j
