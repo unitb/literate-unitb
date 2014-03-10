@@ -103,7 +103,7 @@ check_theory (name,th) = with_tracingM $ do
 --        let p = M.lookup (_name m) $ pos param
 --        let po = maybe empty id p
         let po = theory_po th
-        res    <- liftIO $ verify_all po
+        res    <- liftIO $ verify_all $ either undefined id po
 --        let report = M.fromList $ zip (M.keys po) $ zip (M.elems res) (M.elems po)
 --        put (param { pos = insert (label name) report $ pos param })
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ toList res

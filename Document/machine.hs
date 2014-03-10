@@ -201,6 +201,7 @@ read_document xs = do
                 -- use the label of expressions from `collect_expr' 
                 -- and the refinement rules
                 -- in hints.
+            toEither $ mapM_ (g ctx_collect_proofs) xs
             ms <- toEither $ foldM (f collect_proofs) ms xs
             traceM "step R"
             ms <- trickle_down refs ms merge_proofs li
@@ -872,7 +873,7 @@ collect_proofs = visit_doc
                     p <- runReaderT (
                             runEitherT $
                             run_visitor li xs $ 
-                            collect_proof_step (empty_pr m) 
+                            collect_proof_step (empty_pr th) 
                             ) th
                     p <- EitherT $ return p
                     p <- EitherT $ return $ runTactic li s p

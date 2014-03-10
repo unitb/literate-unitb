@@ -176,20 +176,30 @@ ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
             | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
             | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
 
-theory_po :: Theory -> Map Label Sequent
-theory_po th = mapKeys keys $ M.map (f . g) thm
+theory_po :: Theory -> Either [Error] (Map Label Sequent)
+theory_po th = do
+        xs <- mapM (uncurry f) $ toList $ M.map g thm
+        return $ fromList $ concat xs
     where
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
         (thm,axm) = M.partitionWithKey p $ fact th
-        p k _ = k `M.member` theorems th
-        g x = Sequent empty_ctx [] axm x
-        keys k = composite_label [label "THM",k]
-        f (Sequent a b c d) = Sequent 
-                (a `merge_ctx` theory_ctx ts th)
-                (concatMap (M.elems . theory_facts ts) (elems $ extends th) ++ b) 
-                c
-                d
+        p k _     = k `M.member` theorems th
+
+        g x       = Sequent empty_ctx [] axm x
+        keys k    = composite_label [label "THM",k]
+        f lbl (Sequent a b c d) = result
           where
+            result = case keys lbl `M.lookup` theorems th of
+                        Just (Just proof) -> do
+                            xs <- proof_po th proof (keys lbl) po
+                            return xs
+                        _ -> return [(keys lbl, po)]
+            po = Sequent 
+                (a `merge_ctx` theory_ctx ts th)
+                (concatMap 
+                    (M.elems . theory_facts ts) 
+                    (elems $ extends th) ++ b) 
+                c d
             ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 init_fis_po :: Machine -> Map Label Sequent

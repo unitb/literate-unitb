@@ -550,3 +550,11 @@
 	
 	% Theories
 \newcommand{\with}[1]{ }
+\newenvironment{context}[1]
+{	\renewcommand{\curmachine}{#1}
+	\noindent \textbf{context}~#1 }
+{ 	
+	\noindent (\textbf{end} \curmachine) }
+\newcommand{\operator}[2]{}
+\newassertion{\axiom}{}
+\newassertion{\theorem}{}

@@ -110,13 +110,46 @@
 
 \newset{G}{\G}
 
-\dummy{x,y,z: \G}
+\dummy{x,y,y_0,y_1,z: \G}
 \with{functions}
 
 \operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
 
-\axiom{axm0}{ \qforall{x,y}{}{ (x \le y) \1\land (y \le x) \2\equiv x = y } }
+\begin{align}
+\axiom{axm0}{ \qforall{x,y}{}{ (x \le y) \1\land (y \le x) \2\equiv x = y } } \\
 \theorem{thm0}{ \qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
+\end{align}
+
+\begin{proof}{THM/\ref{thm0}}
+	\begin{free:var}{x}{y_0}
+	\begin{free:var}{y}{y_1}
+	\begin{by:parts} \\
+		\begin{part:a}{y_0 = y_1 \2\implies \qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z }}
+		\easy 
+%		It's easy: check this out
+%		banana
+		\end{part:a}
+
+		\begin{part:a}{ \qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z } \2\implies y_0 = y_1 }
+		\begin{align}
+		\assume{hyp0}{\qforall{z}{}{ y_0 \le z \1\equiv y_1 \le z }} \\
+		\goal{ y_0 = y_1 }
+		\end{align}
+		\begin{calculation}
+			y_0 = y_1
+		\hint{=}{ antisymmetry of $\le$ }
+			y_0 \le y_1 \1\land y_1 \le y_0
+		\hint{=}{ \eqref{hyp0} }
+%		\hint{=}{  }
+			y_1 \le y_1 \1\land y_0 \le y_0
+		\hint{=}{ reflexivity of $\le$ }
+			\true
+		\end{calculation}
+		\end{part:a}
+	\end{by:parts}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
 
 \end{context}
 

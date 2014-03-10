@@ -12,7 +12,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
---import Logic.Sequent
+import Logic.Tactics hiding ( with_line_info )
 
 import UnitB.AST
 import UnitB.PO
@@ -23,6 +23,7 @@ import Theories.Arithmetic
 
     -- Libraries
 import Control.Monad.Trans
+import Control.Monad.Trans.Reader ( runReaderT )
 import Control.Monad.Trans.RWS
 import Control.Monad.Trans.Either
 
@@ -198,28 +199,37 @@ ctx_collect_expr = visit_doc
             )
         ]
 
---ctx_collect_proofs :: Monad m 
---               => [LatexDoc] 
---               -> Theory
---               -> MSEitherT Error System m Theory
---ctx_collect_proofs = visit_doc
---        [   (   "proof"
---            ,   EnvBlock $ \(po,()) xs th -> do
---                        -- This should be moved to its own phase
---                    let po_lbl = label $ remove_ref $ concatMap flatten po
---                    let lbl = composite_label [ _name m, po_lbl ]
---                    toEither $ error_list 
---                        [   ( lbl `member` theorems th
---                            , format "a proof for {0} already exists" lbl )
---                        ] 
---                    li <- lift $ ask
---                    s@(Sequent ctx _ _) <- maybe
---                            (left [Error (format "proof obligation does not exist: {0} {1}" 
---                                lbl 
---                                $ M.keys $ theory_po th) li])
+ctx_collect_proofs :: Monad m 
+                   => [LatexDoc] 
+                   -> Theory
+                   -> MSEitherT Error System m Theory
+ctx_collect_proofs = visit_doc
+        [   (   "proof"
+            ,   EnvBlock $ \(po,()) xs th -> do 
+                        -- This should be moved to its own phase
+                    let po_lbl = label $ remove_ref $ concatMap flatten po
+                        lbl = composite_label [ po_lbl ]
+                    toEither $ error_list 
+                        [   ( lbl `member` theorems th
+                            , format "a proof for {0} already exists" lbl )
+                        ] 
+                    li <- lift $ ask
+                    pos <- hoistEither $ theory_po th
+                    s  <- maybe
+                            (left [Error (format "proof obligation does not exist: {0} {1}" lbl 
+                                $ M.keys pos) li])
+                            return
+--                            (left [Error (format "proof obligation does not exist: {0}" lbl) li])
 --                            return
---                            (M.lookup lbl $ theory_po th)
---                    p           <- collect_proof_step (empty_pr ctx s) m xs 
---                    return th { theorems = insert lbl (Just p) $ theorems th }
---            )
---        ] []
+                            (M.lookup lbl pos)
+                    p <- runReaderT (
+                            runEitherT $
+                            run_visitor li xs $ 
+                            collect_proof_step (empty_pr th) 
+                            ) th
+                    p <- EitherT $ return p
+                    p <- EitherT $ return $ runTactic li s p
+                    return th { 
+                            theorems = insert lbl (Just p) $ theorems th } 
+            )
+        ] []

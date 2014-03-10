@@ -57,27 +57,11 @@ data ProofStep = Step
        }
 
 data ProofParam = ProofParam 
-    { hypotheses :: Map Label (Tactic Expr)
-    , notat      :: Notation
+    { notat      :: Notation
     }
 
-empty_pr :: Machine -> ProofParam
-empty_pr m = ProofParam hyps (all_notation m)
-    where
-        p0 = props m
-        p1 = inh_props m
-        hyps = M.map return $ M.unions $
-                [ inv p0
-                , inv_thm p0
-                , inv p1
-                , inv_thm p1
-                , inits m
-                , fact $ theory m
-                ] ++ map g (elems $ events m)
-        g ev = M.unions
-            [ coarse $ new_sched ev
-            , new_guard ev
-            , action ev ]
+empty_pr :: Theory -> ProofParam
+empty_pr th = ProofParam (th_notation th)
 
 --par_ctx :: ProofParam -> Context
 --par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
@@ -352,13 +336,10 @@ find_cases pr = visitor
         [   (   "case"
             ,   VEnvBlock $ \(lbl,formula :: [LatexDoc],()) _ -> do
                     expr      <- lift_i $ get_expression (Just bool) formula 
-                    p         <- lift_i $ collect_proof_step 
-                            (pr { hypotheses = insert lbl expr hyps })
+                    p         <- lift_i $ collect_proof_step pr
                     lift $ tell [(lbl, expr, p)]
             )
         ] []
-    where
-        hyps = hypotheses pr 
 
 find_parts :: (MonadState System m, MonadReader Theory m)
            => ProofParam
@@ -377,11 +358,9 @@ collect_proof_step :: (MonadState System m, MonadReader Theory m)
                    => ProofParam
                    -> VisitorT m (Tactic Proof)
 collect_proof_step pr = do
-        let hyps = hypotheses pr
-        ((),step@(Step asrt _ asm _ _)) <- make_hard $ add_state empty_step $ find_assumptions
+        ((),step) <- make_hard $ add_state empty_step $ find_assumptions
         li   <- ask
-        let pr2 = pr { hypotheses = asrt `union` asm `union` hyps }
-        (_,step) <- add_state step $ find_proof_step pr2
+        (_,step) <- add_state step $ find_proof_step pr
         case step of
             Step assrt prfs asm ng (Just p) -> do
                 p <- if M.null assrt && M.null prfs

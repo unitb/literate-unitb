@@ -122,11 +122,9 @@ parser (Shared { .. })  = return $ do
                     traceM "parser step A"
                     ms <- hoistEither $ mapM f $ M.elems $ machines s
                     traceM "parser step B"
+                    pos <- hoistEither $ mapM theory_po $ M.elems $ theories s
                     let cs = M.fromList $ map (uncurry g) $ do
-                                (x,ys) <- toList 
-                                    $ M.mapKeys label 
-                                    $ M.map theory_po 
-                                    $ theories s
+                                (x,ys) <- zip (map label (keys $ theories s)) pos
                                 y <- toList ys
                                 return (x,y)
                     return (ms, cs, s)
@@ -218,6 +216,7 @@ proof_report outs es b = xs ++
             | r == Just True  = [format "   {0} - {1}" m lbl]
             | otherwise = []
 
+run_all :: [IO (IO ())] -> IO [ThreadId]
 run_all xs = do
         ys <- sequence xs
         mapM f ys
@@ -260,6 +259,7 @@ display (Shared { .. }) = do
             takeMVar tok
 --        poll_result (Shared { .. })
 
+serialize :: Shared -> IO (IO ())
 serialize (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
@@ -277,6 +277,7 @@ serialize (Shared { .. }) = do
             (fname ++ ".report") 
             (unlines $ proof_report out es False)
 
+summary :: Shared -> IO (IO ())
 summary (Shared { .. }) = do
         v <- newEmptyMVar
         observe system v
@@ -286,7 +287,8 @@ summary (Shared { .. }) = do
             takeMVar v
             s <- read_obs system
             produce_summaries s
-        
+
+keyboard :: Shared -> IO ()
 keyboard sh@(Shared { .. }) = do
         xs <- getLine
         if map toLower xs == "quit" 
@@ -304,6 +306,7 @@ keyboard sh@(Shared { .. }) = do
 --        | GUI ( MVar [Reference], MVar [Reference] )
 --    deriving Eq
 
+run_pipeline :: FilePath -> IO ()
 run_pipeline fname = do
 --        pos     <- newMVar M.empty
 --        lbls    <- newEmptyMVar

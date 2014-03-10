@@ -4,33 +4,7 @@
 |  +- train station example, with sets
 |  |  +- verify proof with galois connections
 |  |  +- verify theory
-|  |   xxx THM/t|___|
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > hm0\n
-|  |    < hm0/goal\n
-|  |    -    --
-|  |    < _._.o_._.THM/thm0/hypothesis\n
-|  |    < _._.o_._.THM/thm0/step_.\n
-|  |    < _._.o_._.THM/thm0/step_.\n
-|  |    < _._.o_._.THM/thm0/step_.\n
-|  |  ]
-|  |  +- [ Success: 1 / 2 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- [ Success: 2 / 2 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -128,18 +102,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 10 / 11 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  +- [ Success: 11 / 11 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -202,16 +165,16 @@ Comparison:[
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 5 / 6 ]
++- [ Success: 6 / 6 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   17019 total
+   17113 total
     1604 Document/Tests/trainstation.hs
-     947 Document/machine.hs
+     948 Document/machine.hs
      746 Document/Tests/lambdas.hs
      705 UnitB/ast.hs
-     644 Document/proof.hs
-Time: 01:11:04
+     699 Document/proof.hs
+Time: 02:49:23
