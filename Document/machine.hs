@@ -179,7 +179,7 @@ read_document xs = do
     
                 -- take the types from `imports' and `type_decl`
             ms <- toEither $ foldM (f declarations) ms xs
-            toEither $ mapM_ (g ctx_operators) xs
+--            toEither $ mapM_ (g ctx_operators) xs
             toEither $ mapM_ (g ctx_declarations) xs
             ms <- trickle_down refs ms merge_decl li
             traceM "step M"
@@ -240,7 +240,7 @@ read_document xs = do
                     fromEither () (do
                         (name,cont) <- with_line_info li $ get_1_lbl c
                         c           <- lift $ gets $ (! name) . theories
-                        c           <- toEither $ pass cont c
+                        c           <- toEither $ pass name cont c
                         lift $ modify $ \s -> s 
                             { theories = insert name c $ theories s } )
                 | otherwise         = mapM_ (g pass) c
@@ -868,8 +868,6 @@ collect_proofs = visit_doc
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
                             return
                             (M.lookup lbl $ raw_machine_pos m)
-                    tb <- lift $ gets parse_table
-                    traceM $ seq tb "> before"                    
                     p <- runReaderT (
                             runEitherT $
                             run_visitor li xs $ 
@@ -877,7 +875,6 @@ collect_proofs = visit_doc
                             ) th
                     p <- EitherT $ return p
                     p <- EitherT $ return $ runTactic li s p
-                    traceM "> after"
                     return m { 
                         props = (props m) { 
                             proofs = insert lbl p $ 

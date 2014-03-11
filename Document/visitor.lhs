@@ -65,6 +65,10 @@ import Data.Monoid
 import Data.Set hiding (map)
 import Data.String.Utils
 
+import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
+
+import GHC.Read
+
 import Utilities.Error
 import Utilities.Syntactic
 import Utilities.Format 
@@ -134,6 +138,27 @@ instance Readable [Label] where
         ST.put ts
         return $ map label $ comma_sep (concatMap flatten arg)
 
+instance Readable [[Str]] where
+    read_args = do
+        ts <- ST.get
+        ([arg],ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        case reads $ concatMap flatten arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                li <- lift ask
+                left [Error (format "invalid integer: '{0}'" arg) li]
+
+instance Read Str where
+    readPrec = do
+        c <- RP.get
+        when (c == ',' || c == ']') $ RP.pfail
+        fix (\rec xs -> do
+            (do c <- RP.get
+                when (c == ',' || c == ']') $ RP.pfail
+                rec (c:xs)) RP.<++
+                return (String $ reverse xs)) [c]
+    
 instance Readable (Set Label) where
     read_args = do
         ts <- ST.get

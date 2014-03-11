@@ -70,6 +70,7 @@ class (Syntactic a, Typeable a, Eq a) => ProofRule a where
 instance Show Proof where
     show _ = "[..]"
 
+th_notation :: Theory -> Notation
 th_notation th = res
     where
         ths = th : elems (extends th)

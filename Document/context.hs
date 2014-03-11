@@ -7,6 +7,7 @@ import Document.Proof
 
 import Latex.Parser
 
+import Logic.Classes
 import Logic.Genericity
 import Logic.Const
 import Logic.Expr
@@ -27,15 +28,17 @@ import Control.Monad.Trans.Reader ( runReaderT )
 import Control.Monad.Trans.RWS
 import Control.Monad.Trans.Either
 
-import           Data.List as L ( map )
+import           Data.List as L ( map, lookup )
 import           Data.Map as M
 import qualified Data.Set as S
+import           Data.String.Utils
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.Trace
 
-ctx_type_decl :: [LatexDoc] -> Theory -> MSEither Error System Theory
-ctx_type_decl = visit_doc []
+ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Error System Theory
+ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag,()) th -> do
                     let new_sort = Sort tag name 0
@@ -68,10 +71,11 @@ ctx_type_decl = visit_doc []
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
 ctx_declarations :: Monad m
-                 => [LatexDoc] 
+                 => String
+                 -> [LatexDoc] 
                  -> Theory 
                  -> MSEitherT Error System m Theory
-ctx_declarations = visit_doc []
+ctx_declarations _ = visit_doc []
         [   (   "\\constant"
             ,   CmdBlock $ \(xs,()) th -> do
                         vs <- get_variables 
@@ -92,29 +96,20 @@ ctx_declarations = visit_doc []
                                     (fromListWith (error "repeated definition") vs) 
                                     (dummies th) }
             )
-        ,   (   "\\operator"
-            ,   CmdBlock $ \(String name,optype,()) th -> do
-                        li <- lift $ ask
-                        var <- get_variables 
-                            (theory_ctx S.empty th) 
-                            (th_notation th) optype
-                        case var of
-                            [(v,Var _ (USER_DEFINED s [USER_DEFINED p [t0, t1],t2]))]
-                                |    s == fun_sort 
-                                  && p == pair_sort -> do    
-                                    let fun           = Fun [] v [t0,t1] t2
-                                        mk_expr e0 e1 = typ_fun2 fun e0 e1
-                                        notat         = notation th
-                                        oper          = BinOperator v name mk_expr
-                                    return th 
-                                        { notation = notat
-                                            { new_ops = Right oper : (new_ops notat)
-                                            , prec = [[[Right apply],[Right oper],[Right equal]]] 
-                                            }
-                                        , funs = insert v fun $ funs th
-                                        }
-                            [(_,Var _ t)] -> left [Error (format "Invalid type for binary operator: {0}" t) li]
-                            vs -> left [Error (format "Invalid binary operator declaration: {0}" $ L.map fst vs) li]
+        ,   (   "\\precedence"
+            ,   CmdBlock $ \(ops,()) th -> do  -- with_tracingM $ do
+                    li <- lift $ ask
+                    let f x   = (name x, x)
+                        notat = notation th
+                        xs    = L.map f $ new_ops notat
+                        g (String x) = maybe (left [Error ("invalid operator: '" ++ x ++ "'") li])
+                                    return $ L.lookup (strip x) xs
+                    ops <- toEither $ mapM (mapM $ fromEither undefined . g) ops
+                    traceM $ show ops
+                    traceM $ show $ prec notat
+                    return th {
+                        notation = notat {
+                            prec = ops : prec notat } }
             )
         ]
 
@@ -146,10 +141,11 @@ ctx_operators = visit_doc [] []
 --        ]
 
 ctx_imports :: Monad m 
-        => [LatexDoc] 
+        => String
+        -> [LatexDoc] 
         -> Theory 
         -> MSEitherT Error System m Theory
-ctx_imports = visit_doc []
+ctx_imports _ = visit_doc []
             [   ( "\\with"
                 , CmdBlock $ \(String th_name,()) th -> do
                     toEither $ error_list
@@ -164,13 +160,38 @@ ctx_imports = visit_doc []
                     return th {
                                 extends = insert th_name new_th $ extends th }
                 )
-            ]
+        ,   (   "\\operator"
+            ,   CmdBlock $ \(String name,optype,()) th -> do
+                        li <- lift $ ask
+                        var <- get_variables 
+                            (theory_ctx S.empty th) 
+                            (th_notation th) optype
+                        case var of
+                            [(v,Var _ (USER_DEFINED s [USER_DEFINED p [t0, t1],t2]))]
+                                |    s == fun_sort 
+                                  && p == pair_sort -> do    
+                                    let fun           = Fun [] v [t0,t1] t2
+                                        mk_expr e0 e1 = typ_fun2 fun e0 e1
+                                        notat         = notation th
+                                        oper          = BinOperator v name mk_expr
+                                    return th 
+                                        { notation = notat
+                                            { new_ops = Right oper : (new_ops notat)
+                                            , prec = [[Right apply],[Right oper],[Right equal]] : prec notat
+                                            }
+                                        , funs = insert v fun $ funs th
+                                        }
+                            [(_,Var _ t)] -> left [Error (format "Invalid type for binary operator: {0}" t) li]
+                            vs -> left [Error (format "Invalid binary operator declaration: {0}" $ L.map fst vs) li]
+            )
+        ]
 
 ctx_collect_expr :: Monad m
-                 => [LatexDoc] 
+                 => String
+                 -> [LatexDoc] 
                  -> Theory
                  -> MSEitherT Error System m Theory
-ctx_collect_expr = visit_doc 
+ctx_collect_expr name = visit_doc 
         [] [(   "\\axiom"
             ,   CmdBlock $ \(lbl, xs,()) th -> do
                         toEither $ error_list
@@ -179,7 +200,7 @@ ctx_collect_expr = visit_doc
                             ]
                         thm   <- get_predicate' 
 --                            (empty_theory { extends = singleton "" th }) 
-                            (empty_theory { extends = insert "" th $ extends th }) 
+                            (empty_theory { extends = insert name th $ extends th }) 
                             (theory_ctx S.empty th) xs
                         return th { fact = insert lbl thm $ fact th }
             )
@@ -189,9 +210,10 @@ ctx_collect_expr = visit_doc
                             [ ( (lbl `member` fact th)
                               , format "a statement named '{0}' is already declared" lbl )
                             ]
+                        traceM $ show $ assoc' $ th_notation th
                         thm   <- get_predicate' 
 --                            (empty_theory { extends = singleton "" th }) 
-                            (empty_theory { extends = insert "" th $ extends th }) 
+                            (empty_theory { extends = insert name th $ extends th }) 
                             (theory_ctx S.empty th) xs
                         return th 
                             { fact = insert lbl thm $ fact th
@@ -200,10 +222,11 @@ ctx_collect_expr = visit_doc
         ]
 
 ctx_collect_proofs :: Monad m 
-                   => [LatexDoc] 
+                   => String
+                   -> [LatexDoc] 
                    -> Theory
                    -> MSEitherT Error System m Theory
-ctx_collect_proofs = visit_doc
+ctx_collect_proofs name = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(po,()) xs th -> do 
                         -- This should be moved to its own phase
@@ -215,18 +238,19 @@ ctx_collect_proofs = visit_doc
                         ] 
                     li <- lift $ ask
                     pos <- hoistEither $ theory_po th
-                    s  <- maybe
+                    s  <- maybe 
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl 
                                 $ M.keys pos) li])
                             return
 --                            (left [Error (format "proof obligation does not exist: {0}" lbl) li])
 --                            return
                             (M.lookup lbl pos)
+                    let new_th = (empty_theory { extends = insert name th $ extends th }) 
                     p <- runReaderT (
                             runEitherT $
                             run_visitor li xs $ 
-                            collect_proof_step (empty_pr th) 
-                            ) th
+                            collect_proof_step (empty_pr new_th) 
+                            ) new_th
                     p <- EitherT $ return p
                     p <- EitherT $ return $ runTactic li s p
                     return th { 

@@ -1,10 +1,13 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
 module Logic.Operator where
 
     -- Modules
 import Logic.Expr
 import Logic.Const
+import Logic.Classes
 
     -- Libraries
 import Data.Either
@@ -102,6 +105,10 @@ instance Show UnaryOperator where
     show (UnaryOperator x _ _) = x -- format str x y
 --        where
 --            str = "Unary { token = {0}, lexeme = {1} }"
+
+instance Named Operator where
+    name (Right (BinOperator _ xs _))  = xs
+    name (Left (UnaryOperator _ xs _)) = xs
 
 data BinOperator = BinOperator String String (ExprP -> ExprP -> ExprP)
     deriving Typeable

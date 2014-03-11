@@ -248,9 +248,9 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   17170 total
+   17246 total
     1604 Document/Tests/trainstation.hs
-     948 Document/machine.hs
+     945 Document/machine.hs
      746 Document/Tests/lambdas.hs
-     705 UnitB/ast.hs
+     723 UnitB/ast.hs
      692 Document/proof.hs

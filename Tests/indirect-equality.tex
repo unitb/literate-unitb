@@ -193,18 +193,18 @@
 
 \operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
 \operator{\uparrow}{ up : Pair [ \G, \G ] \pfun \G }
-
+\precedence{[[\uparrow],[\le]]}
 \begin{align}
 \axiom{axm0}{ 
 	\qforall{x,y}{}{ x \le y \1\land y \le x \2\equiv x = y } } 
 \\ \axiom{axm1}{ 
 	\qforall{x,y,z}{}{ x \le z \1\land y \le z \2\equiv 
-		(x \uparrow y) \le z } }
+		x \uparrow y \le z } }
 \\ \axiom{axm2}{ 
 	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
 \\ \axiom{axm3}{ 
 	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ x \le z \1\equiv y \le z } } }
-\\ \theorem{thm3}{ \qforall{x,y}{}{ y \le (x \uparrow y) } }
+\\ \theorem{thm3}{ \qforall{x,y}{}{ y \le x \uparrow y } }
 \end{align}
 
 \begin{proof}{THM/\ref{thm3}}
@@ -212,12 +212,12 @@
 	\begin{free:var}{y}{y}
 %\begin{indirect:equality}{right}{\le}{z}
 \begin{calculation}
-		y \le (x \uparrow y)
+		y \le x \uparrow y
 	\hint{\follows}{ pred. calc. }
-		x \le (x \uparrow y)
-	\2\land	y \le (x \uparrow y)
+		x \le x \uparrow y
+	\2\land	y \le x \uparrow y
 	\hint{=}{ \eqref{axm1} }
-		(x \uparrow y) \le (x \uparrow y)
+		x \uparrow y \1\le x \uparrow y
 	\hint{=}{ \eqref{axm0} }
 		\true
 \end{calculation}
@@ -227,7 +227,7 @@
 \end{proof}
 
 \begin{align}
-\theorem{thm4}{ \qforall{x,y,z}{}{ ((x \uparrow y) \uparrow z) = (x \uparrow (y \uparrow z)) } }
+\theorem{thm4}{ \qforall{x,y,z}{}{ (x \uparrow y) \uparrow z \1= x \uparrow (y \uparrow z) } }
 \end{align}
 
 \begin{proof}{THM/\ref{thm4}}
@@ -236,15 +236,15 @@
 	\begin{free:var}{z}{z}
 \begin{indirect:equality}{right}{\le}{k}
 \begin{calculation}
-		((x \uparrow y) \uparrow z) \1\le k
+		(x \uparrow y) \uparrow z \1\le k
 	\hint{=}{ \eqinst{axm1}{ \subst{x}{x \uparrow y}, \subst{y}{z} and \subst{z}{k} } }
 		(x \uparrow y) \1\le k \2\land z  \1\le k
 	\hint{=}{ \eqref{axm1} }
 		x \le k \2\land y \le k \2\land z  \le k
 	\hint{=}{ \eqref{axm1} }
-		x \1\le k \2\land (y \uparrow z) \1\le k
+		x \1\le k \2\land y \uparrow z \1\le k
 	\hint{=}{ \eqinst{axm1}{ \subst{x}{x \uparrow y}, 			\subst{y}{z} and \subst{z}{k} } }
-		(x \uparrow (y \uparrow z)) \1\le k
+		x \uparrow (y \uparrow z) \1\le k
 \end{calculation}
 \end{indirect:equality}
 	\end{free:var}
@@ -253,7 +253,7 @@
 \end{proof}
 
 \begin{align}
-\theorem{thm5}{ \qforall{x,y}{}{ (x \uparrow y) = y \2\equiv x \le y } }
+\theorem{thm5}{ \qforall{x,y}{}{ x \uparrow y = y \2\equiv x \le y } }
 \end{align}
 
 \begin{proof}{THM/\ref{thm5}}
@@ -261,11 +261,11 @@
 	\begin{free:var}{y}{y}
 %\begin{indirect:equality}{right}{\le}{k}
 \begin{calculation}
-		(x \uparrow y) = y
+		x \uparrow y = y
 	\hint{=}{ \inst{axm0}{ \subst{x}{x \uparrow y} } }
-		(x \uparrow y) \le y \2\land y \le (x \uparrow y)
+		x \uparrow y \le y \2\land y \le x \uparrow y
 	\hint{=}{ \qref{thm3} }
-		(x \uparrow y) \le y
+		x \uparrow y \le y
 	\hint{=}{ \inst{axm1}{ \subst{z}{y} } }
 		x  \le y \2\land y \le y
 	\hint{=}{ \inst{axm0}{ \subst{x}{y}, \subst{y}{y}} }
