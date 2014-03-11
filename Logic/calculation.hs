@@ -312,8 +312,9 @@ entails_goal_po th ctx (Calc d g e0 es li) = do
             return $ Sequent 
                 ( ctx `merge_ctx` 
                   d `merge_ctx` 
-                  theory_ctx ts th) 
-                (a ++ (M.elems $ theory_facts ts th))
+                  theory_ctx ts th)
+                a 
+--                (a ++ (M.elems $ theory_facts ts th))
                 M.empty 
                 g
     where
