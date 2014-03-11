@@ -9,7 +9,8 @@ module Logic.Tactics
     , by_cases, easy, new_fresh, free_goal
     , instantiate_hyp, with_line_info
     , runTactic, runTacticT, make_expr, fresh_label
-    , last_step, add_step
+    , last_step, add_step, TheoremRef ( .. )
+    , get_dummy
     )
 where
 
@@ -21,8 +22,6 @@ import Logic.Expr
 import Logic.Label
 import Logic.Sequent
 import Logic.Theory
-
---import Latex.Parser
 
     -- Libraries
 import Control.Monad
@@ -78,6 +77,18 @@ with_variables vs (TacticT cmd) = TacticT $ do
     ErrorT $ local (const (param { sequent = Sequent new_ctx asm hyps g })) $ 
         runErrorT cmd
 
+get_dummy :: Monad m
+          => String -> TacticT m Var
+get_dummy var = do
+        ctx <- get_context
+        li  <- get_line_info
+        let Context _ _ _ _ vars = ctx
+        maybe 
+            (hard_error [Error ("invalid dummy: " ++ var) li])
+            return
+            $ M.lookup var vars
+
+
 get_line_info :: Monad m
               => TacticT m LineInfo
 get_line_info = TacticT $ lift $ asks line_info
@@ -95,14 +106,15 @@ get_hypotheses = TacticT $ do
         return $ asm ++ elems hyps
 
 lookup_hypothesis :: Monad m
-                  => (Label, LineInfo)
+                  => (TheoremRef, LineInfo)
                   -> TacticT m Expr
-lookup_hypothesis (hyp,li) = do
+lookup_hypothesis (ThmRef hyp inst,li) = do
         Sequent _ _ hyps _ <- TacticT $ lift $ asks sequent
-        maybe 
+        x <- maybe 
             (hard_error [err_msg])
             return
             $ M.lookup hyp hyps
+        instantiate x inst
     where
         err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
 
@@ -169,10 +181,12 @@ easy = do
         li <- get_line_info
         return $ Proof $ Easy li
 
+data TheoremRef = ThmRef Label [(Var,Expr)]
+
 add_step :: Monad m
          => Expr
          -> BinOperator
-         -> [(Label,LineInfo)]
+         -> [(TheoremRef,LineInfo)]
          -> TacticT m Calculation
          -> TacticT m Calculation
 add_step step op hint calc = make_hard $ do
@@ -238,6 +252,26 @@ free_goal v0 v1 m = do
         let t = type_of (Word v1)
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
+instantiate :: Monad m
+                => Expr -> [(Var,Expr)] 
+                -> TacticT m Expr
+instantiate hyp ps = do
+        case hyp of
+            Binder Forall vs r t 
+                | all (`elem` vs) (map fst ps) -> do
+                    let new_vs = L.foldl (flip L.delete) vs (map fst ps)
+                        re     = substitute (fromList ps) r
+                        te     = substitute (fromList ps) t
+                        newh   = if L.null new_vs
+                                    then zimplies re te
+                                    else zforall new_vs re te
+                    return newh
+            _ 
+                | not $ L.null ps -> fail $ "predicate is not a universal quantification:\n" 
+                    ++ pretty_print' hyp
+            _  -> return hyp
+
+
 instantiate_hyp :: Monad m
                 => Expr -> Label -> [(Var,Expr)] 
                 -> TacticT m Proof
@@ -246,19 +280,9 @@ instantiate_hyp hyp lbl ps proof = do
         hyps <- get_hypotheses
         li   <- get_line_info
         if hyp `elem` hyps then do
-            case hyp of
-                Binder Forall vs r t 
-                    | all (`elem` vs) (map fst ps) -> do
-                        let new_vs = L.foldl (flip L.delete) vs (map fst ps)
-                            re     = substitute (fromList ps) r
-                            te     = substitute (fromList ps) t
-                            newh   = if L.null new_vs
-                                     then zimplies re te
-                                     else zforall new_vs re te
-                        p <- with_hypotheses [(lbl,newh)] proof
-                        return $ Proof $ InstantiateHyp hyp (fromList ps) p li
-                _ -> fail $ "hypothesis is not a universal quantification:\n" 
-                        ++ pretty_print' hyp
+            newh <- instantiate hyp ps
+            p    <- with_hypotheses [(lbl,newh)] proof
+            return $ Proof $ InstantiateHyp hyp (fromList ps) p li
         else
             fail $ "formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp

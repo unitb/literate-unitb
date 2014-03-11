@@ -355,15 +355,9 @@ find_proof_step pr = visitor
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
                     p <- lift_i $ collect_proof_step pr
                     set_proof $ Tac.with_line_info li $ do
-                        ctx <- get_context
-                        let Context _ _ _ _ vars = ctx
-                        Var _ t <- maybe 
-                            (hard_error [Error ("invalid dummy: " ++ zVar) li])
-                            return
-                            $ M.lookup zVar vars
+                        var <- get_dummy zVar
                         indirect_equality dir op 
-                                (Var zVar t) 
-                                p
+                                var p
             )
         ,   (   "indirect:inequality"
             ,   VEnvBlock $ \(String dir,rel,String zVar,()) _ -> do
@@ -378,15 +372,9 @@ find_proof_step pr = visitor
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
                     p <- lift_i $ collect_proof_step pr
                     set_proof $ Tac.with_line_info li $ do
-                        ctx <- get_context
-                        let Context _ _ _ _ vars = ctx
-                        Var _ t <- maybe 
-                            (hard_error [Error ("invalid dummy: " ++ zVar) li])
-                            return
-                            $ M.lookup zVar vars
+                        var <- get_dummy zVar
                         indirect_inequality dir op 
-                                (Var zVar t) 
-                                p
+                                var p
             )
         ] [ (   "\\easy"
             ,   VCmdBlock $ \() -> do
@@ -452,14 +440,32 @@ collect_proof_step pr = do
                         else hard_error [Error "assumptions must be accompanied by a new goal" li]
             _   -> hard_error [Error "expecting a single proof step" li]         
 
-hint :: Monad m
-     => VisitorT (WriterT [(Label, LineInfo)] m) ()
+hint :: (MonadReader Theory m, MonadState System m)
+     => VisitorT (WriterT [Tactic (TheoremRef, LineInfo)] m) ()
 hint = visitor []
-        [ ( "\\ref", VCmdBlock f ), ( "\\eqref", VCmdBlock f ) ]
+        [ ( "\\ref", VCmdBlock f )
+        , ( "\\eqref", VCmdBlock f )
+        , ( "\\inst", VCmdBlock g )
+        , ( "\\eqinst", VCmdBlock g )
+        ]
     where
+        g (lbl,subst,()) = do
+                li <- ask
+                ((),w) <- with_content li subst $ add_writer $ visitor []
+                    [ ( "\\subst", VCmdBlock $ \(String var, expr,()) -> do
+                            expr <- get_expression Nothing expr
+                            lift $ tell [do
+                                dum <- get_dummy var
+                                xp  <- expr
+                                return (dum,xp)]  
+                            return ()
+                      ) ]
+                lift $ tell [do
+                    w <- sequence w 
+                    return (ThmRef lbl w,li)]
         f (b,()) = do
             li <- ask
-            lift $ tell [(b,li)]
+            lift $ tell [return (ThmRef b [],li)]
 
 parse_calc :: ( MonadState System m, MonadReader Theory m )
            => ProofParam 
@@ -477,6 +483,7 @@ parse_calc pr = do
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
             calc    <- with_content li remainder $ parse_calc pr
             return $ Tac.with_line_info (line_info kw) $ do
+                hs  <- sequence hs
                 xp  <- make_soft ztrue xp
                 add_step xp op hs calc
         Nothing         -> do

@@ -37,9 +37,9 @@
 |  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
 |  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
 |  |    -                                                     
-|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(246,1)\n
-|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(246,1)\n
-|  |    -                                                     
+|  |    > _.xxx_.THM/thm4/assertion/new:goal/step_.(246,1)\n
+|  |    < _.xxx_.THM/thm4/assertion/new:goal/step_.(246,1)\n
+|  |    -                                                   
 |  |    > _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
 |  |    < _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
 |  |    -                                              
@@ -248,10 +248,10 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   17139 total
+   17170 total
     1604 Document/Tests/trainstation.hs
      948 Document/machine.hs
      746 Document/Tests/lambdas.hs
      705 UnitB/ast.hs
-     685 Document/proof.hs
-Time: 14:39:11
+     692 Document/proof.hs
+Time: 00:45:25

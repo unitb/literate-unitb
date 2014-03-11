@@ -105,7 +105,7 @@ result2 = unlines
     , "  o  THM/thm4/assertion/new:goal/step (240,1)"
     , "  o  THM/thm4/assertion/new:goal/step (242,1)"
     , "  o  THM/thm4/assertion/new:goal/step (244,1)"
-    , "  o  THM/thm4/assertion/new:goal/step (246,1)"
+    , " xxx THM/thm4/assertion/new:goal/step (246,1)"
     , "  o  THM/thm4/main goal/easy (236,24)"
     , "  o  THM/thm5/goal (262,1)"
     , "  o  THM/thm5/hypotheses (262,1)"
