@@ -89,6 +89,7 @@ data Schedule = Schedule
         }
     deriving (Eq, Show)
 
+empty_schedule :: Schedule
 empty_schedule = Schedule default_schedule Nothing
 
 data Event = Event 
@@ -157,6 +158,7 @@ empty_system = Sys [] M.empty empty_store M.empty
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
 
+all_notation :: Machine -> Notation
 all_notation m = flip precede logic 
         $ L.foldl combine empty_notation 
         $ map Th.notation th
@@ -225,6 +227,7 @@ merge_struct m0 m1 = toEither $ do
             , events = evts
             }
 
+merge_import :: Machine -> Machine -> Either [String] Machine
 merge_import m0 m1 = toEither $ do
         th   <- fromEither empty_theory $ merge_th_struct
                     (theory m0)
@@ -440,6 +443,7 @@ skip m = Event
     where
         f v@(Var n _) = (label ("SKIP:" ++ n), primed (variables m) (Word v) `zeq` Word v)
 
+default_schedule :: Map Label Expr
 default_schedule = fromList [(label "default", zfalse)]
 
 primed :: Map String Var -> Expr -> Expr
@@ -487,14 +491,17 @@ data Variant =
         IntegerVariant Var Expr Expr Direction
     deriving (Eq,Show)
 
+variant_equals_dummy :: Variant -> Expr
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
 
+variant_decreased :: Variant -> Expr
 --variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
 variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` var
 --variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
 variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 
+variant_bounded :: Variant -> Expr
 --variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
@@ -568,20 +575,31 @@ data ScheduleRule =
             -- old expr, new label, new expr, proof
     deriving (Show,Eq)
 
+weaken :: Label -> ScheduleChange
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
 
+replace :: Label -> (Label, ProgressProp) -> (Label, SafetyProp) -> ScheduleChange
 replace lbl prog saf = ScheduleChange lbl 
         S.empty S.empty S.empty 
         (Replace prog saf)
 
+replace_fine :: Label
+             -> Expr
+             -> Maybe Label
+             -> Expr
+             -> (Label, ProgressProp)
+             -> ScheduleChange
 replace_fine lbl old tag new prog = 
     ScheduleChange lbl S.empty S.empty S.empty 
         (ReplaceFineSch old tag new prog)
 
+add_guard :: Label -> Label -> ScheduleChange
 add_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (AddGuard lbl)
 
+remove_guard :: Label -> Label -> ScheduleChange
 remove_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (RemoveGuard lbl)
 
+new_fine_sched :: Maybe (Label, Expr) -> ScheduleChange -> Maybe (Label, Expr)
 new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ (Just n_lbl) n_expr _ }) = Just (n_lbl,n_expr)
 new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ Nothing _ _ }) = Nothing
 new_fine_sched x _ = x

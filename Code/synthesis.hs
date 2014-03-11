@@ -149,6 +149,8 @@ init_code m = do
                 , "       { {0} }" 
                 ]) (intercalate "\n       , " $ concat acts)
                 
+
+indent :: Int -> String -> String
 indent n xs = unlines $ L.map (take n (repeat ' ') ++) $ lines xs
 
 machine_code :: String -> Machine -> Expr -> Either String String

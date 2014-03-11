@@ -331,6 +331,9 @@ test' = test_cases
         t3 = Node "Emilie+Vincent" Leaf Leaf
         t4 = Node "Candide+Paul-Henri" t0 t1
 
+case5   :: IO (Either [Error] ((), [Error]))
+result5 :: Either [Error] ((), [Error])
+
 (case5,result5) = (test,result)
     where
         test = runErrorT $ do
