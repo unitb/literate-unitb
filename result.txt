@@ -13,7 +13,17 @@
 |  |    o  THM/thm3/step (221,1)
 |  |    o  THM/thm4/assertion/indirect:eq/easy (236,24)
 |  |    o  THM/thm4/assertion/new:goal/goal (237,41)
-|  |    o  THM/thm4/assertion/new:goal/hypotheses (237,41|___|M/thm5/step (267,1)
+|  |    o  THM/thm4/assertion/new:goal/hypotheses (237,41)
+|  |    o  THM/thm4/assertion/new:goal/relation (237,41)
+|  |    o  THM/thm4/assertion/new:goal/step (240,1)
+|  |    o  THM/thm4/assertion/new:goal/step (242,1)
+|  |    o  THM/thm4/assertion/new:goal/step (244,1)
+|  |   xxx THM/thm4/assertion/new:goal/step (246,1)
+|  |    o  THM/thm4/main goal/easy (236,24)
+|  |    o  THM/thm5/goal (262,1)
+|  |    o  THM/thm5/hypotheses (262,1)
+|  |    o  THM/thm5/relation (262,1)
+|  |    o  THM/thm5/step (265,1|___|M/thm5/step (267,1)
 |  |    o  THM/thm5/step (269,1)
 |  |    o  THM/thm5/step (271,1)
 |  |  
@@ -25,36 +35,6 @@
 |  |    > )\n
 |  |    < )\n
 |  |    -    
-|  |    > _.xxx_.THM/thm4/assertion/new:goal/relation_.(237,41)\n
-|  |    < _._.o_._.THM/thm4/assertion/new:goal/relation_.(237,41)\n
-|  |    -   ---  ------------------- ----------------------------
-|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(240,1)\n
-|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(240,1)\n
-|  |    -                                                     
-|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(242,1)\n
-|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(242,1)\n
-|  |    -                                                     
-|  |    > _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
-|  |    < _._.o_._.THM/thm4/assertion/new:goal/step_.(244,1)\n
-|  |    -                                                     
-|  |    > _.xxx_.THM/thm4/assertion/new:goal/step_.(246,1)\n
-|  |    < _.xxx_.THM/thm4/assertion/new:goal/step_.(246,1)\n
-|  |    -                                                   
-|  |    > _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
-|  |    < _._.o_._.THM/thm4/main_.goal/easy_.(236,24)\n
-|  |    -                                              
-|  |    > _._.o_._.THM/thm5/goal_.(262,1)\n
-|  |    < _._.o_._.THM/thm5/goal_.(262,1)\n
-|  |    -                                  
-|  |    > _._.o_._.THM/thm5/hypotheses_.(262,1)\n
-|  |    < _._.o_._.THM/thm5/hypotheses_.(262,1)\n
-|  |    -                                        
-|  |    > _._.o_._.THM/thm5/relation_.(262,1)\n
-|  |    < _._.o_._.THM/thm5/relation_.(262,1)\n
-|  |    -                                      
-|  |    > _._.o_._.THM/thm5/step_.(265,1)\n
-|  |    < _._.o_._.THM/thm5/step_.(265,1)\n
-|  |    -                                  
 |  |    > _.xxx_.TH
 |  |    < _._.o_._.TH
 |  |    -   ---  --
@@ -248,7 +228,7 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   17246 total
+   17234 total
     1604 Document/Tests/trainstation.hs
      945 Document/machine.hs
      746 Document/Tests/lambdas.hs

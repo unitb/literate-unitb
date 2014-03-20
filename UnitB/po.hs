@@ -11,15 +11,16 @@ module UnitB.PO
 where
 
     -- Modules
-import Logic.Calculation
+import Logic.Calculation hiding ( context )
 import Logic.Classes
 import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Theory
 
-import UnitB.AST
-import UnitB.Feasibility
+import           UnitB.AST
+import           UnitB.POGenerator hiding ( variables )
+import qualified UnitB.POGenerator as POG
 
 import Z3.Z3
 
@@ -203,14 +204,12 @@ theory_po th = do
             ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 init_fis_po :: Machine -> Map Label Sequent
-init_fis_po m = M.fromList $ flip map clauses $ \(vs,es) -> 
-            ( composite_label $ [_name m, init_fis_lbl] ++ map (label . name) vs
-            , po $ goal vs es)
-    where
-        po = Sequent (assert_ctx m) [] M.empty
-        clauses = partition_expr (M.elems $ variables m) (M.elems $ inits m)
-        goal vs es = (zexists vs ztrue $ zall es)
- 
+init_fis_po m = eval_generator $ with 
+        (do prefix_label $ _name m
+            context (assert_ctx m))
+        (emit_exist_goal [init_fis_lbl] 
+            (M.elems $ variables m) 
+            (M.elems $ inits m))
 
 prop_tr :: Machine -> Label -> Transient -> Map Label Sequent
 prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) = 
@@ -279,66 +278,54 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
                     pname evt_lbl (isJust lt_fine) (isJust $ fine $ new_sched evt)
 
 prop_co :: Machine -> Label -> Constraint -> Map Label Sequent
-prop_co m pname (Co fv xp) = 
-        mapKeys po_name $ mapWithKey po 
-            (M.insert 
+prop_co m pname (Co fv xp) = eval_generator $ with
+        (do prefix_label $ _name m
+            context $ step_ctx m
+            context $ dummy_ctx m
+            named_hyps $ invariants m)
+        $ forM_ evts $ \(evt_lbl,evt) -> do
+            let grd  = new_guard evt
+                act  = action evt
+            with 
+                (do named_hyps $ grd
+                    named_hyps $ act)
+                (emit_goal [evt_lbl,co_lbl,pname] $ forall_fv xp)
+    where
+        evts = toList (M.insert 
                 (label "SKIP") 
                 (skip_event $ m) 
                 (events $ m))
-    where
-        po _ evt = 
-                (Sequent 
-                    (step_ctx m `merge_ctx` dummy_ctx m) 
-                    []
-                    hyp
-                    goal )
-          where
-            grd  = new_guard evt
-            act  = action evt
-            forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
-            hyp  = invariants m `M.union` grd `M.union` act
-            goal = forall_fv xp
-        po_name evt_lbl = composite_label [_name m, evt_lbl, co_lbl, pname]
+        forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
 
 inv_po :: Machine -> Label -> Expr -> Map Label Sequent
-inv_po m pname xp = 
-        M.union 
-            (mapKeys po_name $ mapWithKey po (events m))
-            (M.singleton 
-                (composite_label [_name m, inv_init_lbl, pname])
-                (Sequent (assert_ctx m) [] hyp xp))
-    where
-        po _ evt = 
-                (Sequent 
-                    (            step_ctx m 
-                     `merge_ctx` Context M.empty ind M.empty M.empty M.empty) 
-                    []
-                    (invariants m `M.union` grd `M.union` act)
-                    (primed (variables m) xp))
-            where
-                grd = new_guard evt
-                act = action evt
-                ind = indices evt `merge` params evt
-        po_name evt_lbl = composite_label [_name m, evt_lbl, inv_lbl, pname]
-        hyp  = inits m
+inv_po m pname xp = eval_generator $ 
+    do  with (do prefix_label $ _name m
+                 context $ step_ctx m
+                 named_hyps $ invariants m)
+            $ forM_ (toList $ events m) $ \(evt_lbl,evt) -> do
+                let grd  = new_guard evt
+                    act  = action evt
+                with 
+                    (do named_hyps $ grd
+                        named_hyps $ act
+                        POG.variables $ indices evt
+                        POG.variables $ params evt)
+                    (emit_goal [evt_lbl,inv_lbl,pname] 
+                        (primed (variables m) xp))
+        with (do context $ assert_ctx m
+                 named_hyps $ inits m)
+            $ emit_goal [_name m, inv_init_lbl, pname] xp
 
 fis_po :: Machine -> Label -> Event -> Map Label Sequent
-fis_po m lbl evt = M.fromList $ map f pos 
+fis_po m lbl evt = eval_generator $
+        with (do context $ assert_ctx m
+                 POG.variables $ indices evt
+                 POG.variables $ params evt
+                 named_hyps $ invariants m
+                 named_hyps $ new_guard evt)
+        (emit_exist_goal [_name m, lbl, fis_lbl] pvar $ M.elems $ action evt)
     where
-        grd  = new_guard evt
         pvar = map prime $ M.elems $ variables m
-        ind  = indices evt `merge` params evt
-        pos  = partition_expr pvar $ M.elems $ action evt
-        f (pvar, acts) =
-            ( composite_label $ [_name m, lbl, fis_lbl] ++ map (label . name) pvar,
-              Sequent 
-                (assert_ctx m `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-                []
-                hyp
-                goal)
-          where
-            hyp  = invariants m `M.union` grd
-            goal = zexists pvar ztrue $ zall acts
 
     -- todo: partition the existential quantifier
 sch_po :: Machine -> Label -> Event -> Map Label Sequent

@@ -80,6 +80,7 @@ precede x y
         let z = (combine x y) in
             z { 
                 prec = prec z ++ [ xs ++ ys | xs <- prec x, ys <- prec y ] }
+--                              ++ [ [[xs], [ys]] | xs <- new_ops x, ys <- new_ops y ] }
 --        Notation
 --        { new_ops      = new_ops x ++ new_ops y
 --        , prec         =  ++ prec x ++ prec y
@@ -87,8 +88,8 @@ precede x y
 --        , right_assoc  = right_assoc x ++ right_assoc y }
         | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
     where
-        f (Right (BinOperator x _ _)) = x
-        f (Left _)                  = "negation"
+        f (Right x) = show x
+        f (Left y)  = show y
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ new_ops x `intersect` new_ops y
 
@@ -102,9 +103,7 @@ instance Ord UnaryOperator where
     compare (UnaryOperator x0 x1 _) (UnaryOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
 instance Show UnaryOperator where
-    show (UnaryOperator x _ _) = x -- format str x y
---        where
---            str = "Unary { token = {0}, lexeme = {1} }"
+    show (UnaryOperator x y _) = show (x,y) -- format str x y
 
 instance Named Operator where
     name (Right (BinOperator _ xs _))  = xs
@@ -120,7 +119,7 @@ instance Ord BinOperator where
     compare (BinOperator x0 x1 _) (BinOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
 instance Show BinOperator where
-    show (BinOperator x _ _) = x -- format str x y
+    show (BinOperator x y _) = show (x,y) -- format str x y
 --        where
 --            str = "Binary { token = {0}, lexeme = {1} }"
 
