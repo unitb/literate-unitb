@@ -217,16 +217,6 @@ Comparison:[
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
-|  +- test2: code for the {initialization}
-|  +- test3: code for the {procedure + loop}
-|  +- test4: {whole source file}
-|  +- test5: run {source file}
-|  +- [ Success: 6 / 6 ]
-+- [ Success: 5 / 6 ]
-
-***************
-*** FAILURE ***
-***************
 Lines of Haskell code:
    17247 total
     1604 Document/Tests/trainstation.hs
@@ -234,4 +224,4 @@ Lines of Haskell code:
      746 Document/Tests/lambdas.hs
      723 UnitB/ast.hs
      692 Document/proof.hs
-Time: 12:05:13
+Time: 12:29:04
