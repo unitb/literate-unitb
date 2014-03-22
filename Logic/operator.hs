@@ -5,7 +5,7 @@
 module Logic.Operator where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding ( pair )
 import Logic.Const
 import Logic.Classes
 
@@ -190,14 +190,16 @@ equal :: BinOperator
 
 apply = BinOperator "apply" "."     zapply
 equal = BinOperator "equal" "="     mzeq
+pair  = BinOperator "pair"  "\\mapsto" mzpair
 
 functions :: Notation
 functions = Notation
-    { new_ops     = L.map Right [equal,apply]
+    { new_ops     = L.map Right [equal,apply,pair]
     , prec = [ L.map (L.map Right)
                      [ [apply]
+                     , [pair]
                      , [equal] ]]
-    , left_assoc  = [[apply]]
+    , left_assoc  = [[apply],[pair]]
     , right_assoc = []
     , relations   = []
     , chaining    = [] }

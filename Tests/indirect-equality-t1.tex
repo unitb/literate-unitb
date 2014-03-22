@@ -312,16 +312,15 @@
 	\begin{case}{hyp3}{i = k \lor j = k}
 		By symmetry on $i$ and $j$.
 		\begin{by:symmetry}{hyp3}{[i,j]}
-		\easy
-%		\begin{calculation}
-%			swap.((i \mapsto j) \mapsto k) \le k
-%		\hint{=}{ \eqref{hyp3} }
-%			swap.((i \mapsto j) \mapsto i) \le k
-%		\hint{=}{ \eqref{axm1} }
-%			j \le k
-%		\hint{=}{ \eqref{hyp0} }
-%			\true
-%		\end{calculation}
+		\begin{calculation}
+			swap.((i \mapsto j) \mapsto k) \le k
+		\hint{=}{ \eqref{hyp3} }
+			swap.((i \mapsto j) \mapsto i) \le k
+		\hint{=}{ \eqref{axm1} }
+			j \le k
+		\hint{=}{ \eqref{hyp0} }
+			\true
+		\end{calculation}
 		\end{by:symmetry} \\
 	\noindent \end{case} \\
 	\end{by:cases}

@@ -138,6 +138,17 @@ instance Readable [Label] where
         ST.put ts
         return $ map label $ comma_sep (concatMap flatten arg)
 
+instance Readable [Str] where
+    read_args = do
+        ts <- ST.get
+        ([arg],ts) <- lift $ cmd_params 1 ts
+        ST.put ts
+        case reads $ concatMap flatten arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                li <- lift ask
+                left [Error (format "invalid list of strings: '{0}'" arg) li]
+
 instance Readable [[Str]] where
     read_args = do
         ts <- ST.get
@@ -147,7 +158,7 @@ instance Readable [[Str]] where
             [(n,"")] -> return n
             _ -> lift $ do
                 li <- lift ask
-                left [Error (format "invalid integer: '{0}'" arg) li]
+                left [Error (format "invalid list of strings: '{0}'" arg) li]
 
 instance Read Str where
     readPrec = do

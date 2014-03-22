@@ -40,6 +40,7 @@ import qualified Data.Map as M
 import           Data.Monoid (Monoid)
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
+import           Data.Tuple
 
 import           Utilities.Error
 import           Utilities.Format
@@ -199,6 +200,59 @@ indirect_eq dir op x y z = do
                 case dir of
                     Left()  -> mk_expr op z x `mzeq` mk_expr op z y
                     Right() -> mk_expr op x z `mzeq` mk_expr op y z
+
+intersectionsWith :: Ord a => (b -> b -> b) -> [Map a b] -> Map a b
+intersectionsWith _ [] = error "intersection of an empty list of sets"
+intersectionsWith f (x:xs) = L.foldl (intersectionWith f) x xs
+
+intersections :: Ord a => [Map a b] -> Map a b
+intersections = intersectionsWith const
+
+by_symmetry :: Monad m
+            => [Var]
+            -> Label
+--            -> [(Expr, TacticT m Proof)]
+            -> Maybe Label
+            -> TacticT m Proof
+            -> TacticT m Proof
+by_symmetry vs hyp mlbl proof = do
+        cs <- lookup_hypothesis (ThmRef hyp [])
+        let err0 = format "expecting a disjunction\n{0}: {1}" hyp $ pretty_print' cs
+--            err1 cs = format "the clauses of {0} do not match those of the proof by case:\n{1}" hyp 
+--                        $ unlines $ map f $ L.filter p $ zip (sort cs) $ sort $ map fst cases
+--            p (x,y) = x /= y
+--            f (x,y) = format "clause from '{0}': {1}\nproof clause: {2}" hyp x y
+        lbl  <- maybe (fresh_label "symmetry") return mlbl
+        goal <- get_goal
+        case cs of
+            FunApp f cs
+                | name f /= "or" -> fail err0
+--                | sort cs /= sort (map fst cases) -> fail $ err1 cs
+                | otherwise -> do
+                    ps <- forM (permutations vs) $ \us -> do
+                        hyp <- get_named_hyps
+                        asm <- get_nameless_hyps
+                        let rn = zip vs us
+                            new_hyp = M.filter p $ M.map f hyp 
+                            new_asm = L.filter p $ L.map f asm
+                            f h = rename_all rn h
+                            p h = any (`S.member` used_var h) vs
+                        new_asm <- forM new_asm $ \x -> do
+                            lbl <- fresh_label "H"
+                            return (x,lbl)
+                        return $ M.fromList $ map swap (toList new_hyp) ++ new_asm
+                    let common = (head cs,hyp) : M.toList (intersections ps)
+                        named  = map swap common
+                        thm = zforall vs (zall $ map fst common) goal
+                        f xs = zip vs $ map Word xs
+                    cs <- forM cs $ \x -> return (hyp,x,easy)
+                    assert [(lbl,thm,clear_vars vs $ do
+                            us <- forM vs $ \(Var n t) -> new_fresh n t
+                            free_vars_goal (zip vs us) -- proof)] $
+                              $ assume named goal proof)] $
+                        instantiate_hyp_with thm (map f $ permutations vs) $ 
+                            by_cases cs
+            _ -> fail err0
 
 indirect_inequality :: Monad m
                     => Either () () 
@@ -375,6 +429,14 @@ find_proof_step pr = visitor
                         var <- get_dummy zVar
                         indirect_inequality dir op 
                                 var p
+            )
+        ,   (   "by:symmetry"
+            ,   VEnvBlock $ \(lbl,vars,()) _ -> do
+                    li <- ask
+                    p <- lift_i $ collect_proof_step pr
+                    set_proof $ Tac.with_line_info li $ do
+                        vs <- mapM (get_dummy . toString) vars 
+                        by_symmetry vs lbl Nothing p
             )
         ] [ (   "\\easy"
             ,   VCmdBlock $ \() -> do

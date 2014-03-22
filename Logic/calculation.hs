@@ -18,7 +18,7 @@ import Data.List as L
 import Data.Map as M 
                 ( Map, lookup, fromList
                 , elems, toList, empty
-                , singleton, mapKeys
+                , singleton, mapKeys, union
                 , keys, difference )
 import Data.Maybe
 import Data.Set as S 
@@ -59,14 +59,20 @@ data ByCases    = ByCases   [(Label, Expr, Proof)] LineInfo
 
 data Easy       = Easy                             LineInfo
     deriving (Eq,Typeable)
+
 data Assume     = Assume (Map Label Expr) Expr Proof LineInfo
     deriving (Eq,Typeable)
+
 data ByParts    = ByParts [(Expr,Proof)]           LineInfo
     deriving (Eq,Typeable)
+
 data Assertion  = Assertion (Map Label (Expr,Proof)) Proof LineInfo
     deriving (Eq,Typeable)
 
 data InstantiateHyp = InstantiateHyp Expr (Map Var Expr) Proof LineInfo
+    deriving (Eq,Typeable)
+
+data Keep = Keep Context [Expr] (Map Label Expr) Proof LineInfo
     deriving (Eq,Typeable)
 
 instance ProofRule Proof where
@@ -104,6 +110,9 @@ instance Syntactic Ignore where
 
 instance Syntactic InstantiateHyp where
     line_info (InstantiateHyp _ _ _ li) = li
+
+instance Syntactic Keep where
+    line_info (Keep _ _ _ _ li) = li
 
 instance ProofRule Calculation where
     proof_po th c lbl po@(Sequent ctx _ _ _) = do
@@ -155,7 +164,7 @@ instance ProofRule FreeGoal where
                     | are_fresh [u] po = return $ zforall (L.filter ((v /=) . name) ds) 
                                                 (rename v u r)
                                                 (rename v u expr)
-                    | otherwise        = Left $ [Error (format "variable can't be freed: {0}" u) li]
+                    | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
                 where
             free_vars expr = return expr
     --        step_lbls = map (("case "++) . show) [1..]
@@ -171,10 +180,10 @@ instance ProofRule Easy where
 instance ProofRule Assume where
     proof_po    th  (Assume new_asm new_goal p (LI _ i j))
                 lbl (Sequent ctx asm hyps goal) = do
-            pos <- proof_po th p lbl $ Sequent ctx (M.elems new_asm ++ asm) hyps new_goal
+            pos <- proof_po th p lbl $ Sequent ctx asm (new_asm `M.union` hyps) new_goal
             return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
-                     , Sequent ctx [] hyps (           zimplies (zall $ M.elems new_asm) new_goal 
-                                            `zimplies` goal) )
+                     , Sequent ctx [] M.empty (           zimplies (zall $ M.elems new_asm) new_goal 
+                                               `zimplies` goal) )
                    : pos)
 
 instance ProofRule Assertion where
@@ -213,6 +222,11 @@ instance ProofRule InstantiateHyp where
         else
             Left [Error ("formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp) li]
+
+instance ProofRule Keep where
+    proof_po    th  (Keep ctx unnamed named proof _) 
+             	lbl (Sequent _ _ _ goal) = do
+        proof_po th proof lbl (Sequent ctx unnamed named goal)
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
 chain n x y 
@@ -275,6 +289,13 @@ are_fresh vs (Sequent _ asm hyps goal) =
                 )
          == S.empty 
 
+rename_all :: [(Var,Var)] -> Expr -> Expr
+rename_all [] e = e
+rename_all vs e@(Word v) = maybe e Word $ L.lookup v vs
+rename_all vs (Binder q ds r xp) = Binder q ds (rename_all us r) (rename_all us xp)
+    where
+        us = L.filter (\(x,_) -> not $ x `elem` ds) vs
+rename_all vs e = rewrite (rename_all vs) e 
 
 rename :: String -> String -> Expr -> Expr
 rename x y e@(Word (Var vn t))

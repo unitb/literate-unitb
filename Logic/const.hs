@@ -225,6 +225,9 @@ mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 mzint :: Int -> ExprP
 mzint n       = Right $ zint n
 
+mzpair :: ExprP -> ExprP -> ExprP
+mzpair = typ_fun2 $ Fun [] "pair" [gA,gB] (pair_type gA gB)
+
 gena :: Type
 gena = GENERIC "a"
 gA :: Type

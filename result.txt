@@ -39,7 +39,9 @@
 |  |    < _._.o_._.TH
 |  |    -   ---  --
 |  |  ]
-|  |  +- [ Success: 2 / 3 ]
+|  |  +- proofs by symmetry: PO
+|  |  +- proofs by symmetry: hypotheses labels
+|  |  +- [ Success: 4 / 5 ]
 |  |___|
 |  
 |  
@@ -228,9 +230,9 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   17234 total
+   17874 total
     1604 Document/Tests/trainstation.hs
      945 Document/machine.hs
+     754 Document/proof.hs
      746 Document/Tests/lambdas.hs
      723 UnitB/ast.hs
-     692 Document/proof.hs

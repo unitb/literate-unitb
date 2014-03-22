@@ -10,7 +10,9 @@ module Logic.Tactics
     , instantiate_hyp, with_line_info
     , runTactic, runTacticT, make_expr, fresh_label
     , last_step, add_step, TheoremRef ( .. )
-    , get_dummy
+    , get_dummy, lookup_hypothesis, clear_vars
+    , free_vars_goal, instantiate_hyp_with
+    , get_named_hyps, get_nameless_hyps
     )
 where
 
@@ -30,8 +32,10 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Either
 
 import Control.Monad.Identity
-import Data.List as L
-import Data.Map  as M hiding (map)
+
+import           Data.List as L
+import           Data.Map  as M hiding (map)
+import qualified Data.Set  as S
 
 import Utilities.Error
 import Utilities.Format
@@ -46,6 +50,12 @@ data TacticT m a = TacticT { unTactic :: ErrorT (ReaderT TacticParam m) a }
 
 type Tactic = TacticT Identity
 
+tac_local :: Monad m
+          => TacticParam
+          -> TacticT m a
+          -> TacticT m a
+tac_local x (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ local (const x) cmd
+
 with_line_info :: Monad m => LineInfo -> TacticT m a -> TacticT m a
 with_line_info li (TacticT cmd) = 
         TacticT $ ErrorT $ local (\p -> p { line_info = li }) $ runErrorT cmd
@@ -58,14 +68,16 @@ with_goal e (TacticT cmd) = TacticT $ do
         $ runErrorT cmd
 
 with_hypotheses :: Monad m
-                => [(Label, Expr)] -> TacticT m Proof 
+                => [(Label, Expr)] 
+                -> TacticT m Proof 
                 -> TacticT m Proof
-with_hypotheses es (TacticT cmd) = TacticT $ do
-    Sequent ctx asm hyps g <- lift $ asks sequent 
-    param              <- lift ask
+with_hypotheses es cmd = do
+    param              <- TacticT $ lift ask
+    let Sequent ctx asm hyps g = sequent param
     let new_hyp = (M.fromList es `M.union` hyps)
-    ErrorT $ local (const (param { sequent = Sequent ctx asm new_hyp g })) 
-        $ runErrorT cmd
+    tac_local (param { sequent = Sequent ctx asm new_hyp g }) cmd
+--    ErrorT $ local (const (param { sequent = Sequent ctx asm new_hyp g })) 
+--        $ runErrorT cmd
 
 with_variables :: Monad m
                => [Var] -> TacticT m Proof -> TacticT m Proof
@@ -99,6 +111,18 @@ get_goal = TacticT $ do
         Sequent _ _ _ goal <- lift $ asks sequent
         return goal
 
+get_named_hyps :: Monad m
+               => TacticT m (Map Label Expr)
+get_named_hyps = TacticT $ do 
+        Sequent _ _ hyps _ <- lift $ asks sequent
+        return hyps
+
+get_nameless_hyps :: Monad m
+                  => TacticT m [Expr]
+get_nameless_hyps = TacticT $ do 
+        Sequent _ asm _ _ <- lift $ asks sequent
+        return asm
+
 get_hypotheses :: Monad m
                => TacticT m [Expr]
 get_hypotheses = TacticT $ do
@@ -106,17 +130,17 @@ get_hypotheses = TacticT $ do
         return $ asm ++ elems hyps
 
 lookup_hypothesis :: Monad m
-                  => (TheoremRef, LineInfo)
+                  => TheoremRef
                   -> TacticT m Expr
-lookup_hypothesis (ThmRef hyp inst,li) = do
+lookup_hypothesis (ThmRef hyp inst) = do
+        li <- get_line_info
+        let err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
         Sequent _ _ hyps _ <- TacticT $ lift $ asks sequent
         x <- maybe 
             (hard_error [err_msg])
             return
             $ M.lookup hyp hyps
         instantiate x inst
-    where
-        err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
 
 get_context :: Monad m
             => TacticT m Context
@@ -154,6 +178,27 @@ assume xs new_g proof = do
             $ with_goal new_g proof
         return $ Proof $ Assume (fromList xs) new_g p li
 
+clear_vars :: Monad m
+           => [Var]
+           -> TacticT m Proof
+           -> TacticT m Proof
+clear_vars vars proof = do
+        param <- TacticT $ lift $ ask
+        let Sequent ctx asm hyp g = sequent param
+            new_asm = flip L.filter asm $ \x -> 
+                        not $ any (`S.member` used_var x) vars 
+            new_hyp = flip M.filter hyp $ \x -> 
+                        not $ any (`S.member` used_var x) vars
+            Context a old_vars b c d = ctx
+            new_vars = L.foldl (flip M.delete) old_vars (map name vars)
+            new_ctx  = Context a new_vars b c d
+        li <- get_line_info
+        p  <- tac_local 
+            (param { sequent = Sequent new_ctx new_asm new_hyp g }) 
+            proof
+        return $ Proof $ Keep new_ctx new_asm new_hyp p li
+        
+
 by_cases :: Monad m
          => [(Label, Expr, TacticT m Proof)]
          -> TacticT m Proof
@@ -190,7 +235,8 @@ add_step :: Monad m
          -> TacticT m Calculation
          -> TacticT m Calculation
 add_step step op hint calc = make_hard $ do
-        hyp     <- forM hint $ make_soft ztrue . lookup_hypothesis
+        hyp     <- forM hint $ \(ref,li) -> 
+            with_line_info li $ make_soft ztrue $ lookup_hypothesis ref
         trivial <- last_step ztrue
         r       <- make_soft trivial calc
         li      <- get_line_info
@@ -232,6 +278,15 @@ fresh_label name = do
                 rec (n+1) (show n)
             ) 0 ""
 
+free_vars_goal :: Monad m
+               => [(Var,Var)]
+               -> TacticT m Proof
+               -> TacticT m Proof
+free_vars_goal [] proof = proof
+free_vars_goal ((v0,v1):vs) proof = do
+        free_goal v0 v1 $
+            free_vars_goal vs proof
+
 free_goal :: Monad m
           => Var -> Var 
           -> TacticT m Proof 
@@ -253,8 +308,8 @@ free_goal v0 v1 m = do
         return $ Proof $ FreeGoal (name v0) (name v1) t p li
 
 instantiate :: Monad m
-                => Expr -> [(Var,Expr)] 
-                -> TacticT m Expr
+            => Expr -> [(Var,Expr)] 
+            -> TacticT m Expr
 instantiate hyp ps = do
         case hyp of
             Binder Forall vs r t 
@@ -271,9 +326,20 @@ instantiate hyp ps = do
                     ++ pretty_print' hyp
             _  -> return hyp
 
+instantiate_hyp_with :: Monad m
+                     => Expr 
+                     -> [[(Var,Expr)]] 
+                     -> TacticT m Proof
+                     -> TacticT m Proof    
+instantiate_hyp_with _ [] proof = proof
+instantiate_hyp_with hyp (p:ps) proof = do
+        lbl <- fresh_label "H"
+        instantiate_hyp hyp lbl p $
+            instantiate_hyp_with hyp ps proof
 
 instantiate_hyp :: Monad m
-                => Expr -> Label -> [(Var,Expr)] 
+                => Expr -> Label 
+                -> [(Var,Expr)] 
                 -> TacticT m Proof
                 -> TacticT m Proof
 instantiate_hyp hyp lbl ps proof = do
