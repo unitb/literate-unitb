@@ -8,6 +8,7 @@ import Control.Concurrent
 import Control.Monad
 import Control.Monad.Trans
 
+import Data.List
 import Data.Time
 
 import System.Directory
@@ -37,10 +38,10 @@ data Monitor = HaskellMon | LaTeXMon
 main :: IO ()
 main = do
     xs <- getArgs
-    if not $ length xs <= 1 then 
-        putStrLn "usage: run_test [module_name]"
+    if not $ length xs <= 2 then 
+        putStrLn "usage: periodic [module_name [function_name]]"
     else do
-        let args = concat xs
+        let args = intercalate " " xs
         evalHeapT $ do
             new HaskellMon $ return init_state
             new LaTeXMon $ return init_state
@@ -50,10 +51,10 @@ main = do
                 t0 <- liftIO $ getModificationTime "test"
                 t1 <- liftIO $ getModificationTime "last_result.txt"
                 lift $ if (t1 <= t0) || b3 then do
+                    putStr $ take 80 (repeat '\b') ++ "Testing..."
+                    hFlush stdout
+                    t2 <- getCurrentTime
                     if null args then do
-                        putStr $ take 80 (repeat '\b') ++ "Testing..."
-                        hFlush stdout
-                        t2 <- getCurrentTime
                         system $ "./run_tests 2>&1 >> /dev/null"
                         system "cp result.txt last_result.txt"
                         tz <- getCurrentTimeZone
@@ -66,7 +67,7 @@ main = do
                             void $ system "touch test"
                         else return ()
                         void $ system "cat last_result.txt"
-                    else
+                    else do
                         void $ system $ "./run_tests \"" ++ args ++ "\""
                 else return ()
                 lift $ threadDelay (microseconds retry_interval)

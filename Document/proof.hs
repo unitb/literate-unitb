@@ -248,7 +248,7 @@ by_symmetry vs hyp mlbl proof = do
                     cs <- forM cs $ \x -> return (hyp,x,easy)
                     assert [(lbl,thm,clear_vars vs $ do
                             us <- forM vs $ \(Var n t) -> new_fresh n t
-                            free_vars_goal (zip vs us) -- proof)] $
+                            free_vars_goal (zip vs us) 
                               $ assume named goal proof)] $
                         instantiate_hyp_with thm (map f $ permutations vs) $ 
                             by_cases cs

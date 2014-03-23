@@ -46,7 +46,6 @@ import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map  as M hiding ( map, foldl, (\\) )
-import qualified Data.Map  as M
 import           Data.Maybe as M ( maybeToList, isJust, isNothing ) 
 import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
@@ -161,7 +160,7 @@ produce_summaries sys =
 read_document :: [LatexDoc]
               -> EitherT [Error] (RWS () [Error] System) (Map String Machine)
 read_document xs = do
-            traceM "step A"
+--            traceM "step A"
             ms <- foldM gather empty xs 
             lift $ RWS.modify (\s -> s { 
                 machines = ms })
@@ -182,20 +181,20 @@ read_document xs = do
 --            toEither $ mapM_ (g ctx_operators) xs
             toEither $ mapM_ (g ctx_declarations) xs
             ms <- trickle_down refs ms merge_decl li
-            traceM "step M"
-            traceM $ show $ M.map (M.elems . variables) ms
+--            traceM "step M"
+--            traceM $ show $ M.map (M.elems . variables) ms
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
             ms <- toEither $ foldM (f collect_expr) ms xs
             toEither $ mapM_ (g ctx_collect_expr) xs
             ms <- trickle_down refs ms merge_exprs li
-            traceM "step Q"
+--            traceM "step Q"
             
                 -- use the label of expressions from `collect_expr' 
                 -- and properties
             ms <- toEither $ foldM (f collect_refinement) ms xs
-            traceM "step QR"
+--            traceM "step QR"
             ms <- trickle_down refs ms merge_refinements li
             
                 -- use the label of expressions from `collect_expr' 
@@ -203,14 +202,14 @@ read_document xs = do
                 -- in hints.
             toEither $ mapM_ (g ctx_collect_proofs) xs
             ms <- toEither $ foldM (f collect_proofs) ms xs
-            traceM "step R"
+--            traceM "step R"
             ms <- trickle_down refs ms merge_proofs li
-            traceM "step T"
+--            traceM "step T"
             toEither $ forM_ (M.elems ms) 
                 $ deduct_schedule_ref_struct li
             s  <- lift $ RWS.gets proof_struct
             check_acyclic "proof of liveness" s li
-            traceM "step Z"
+--            traceM "step Z"
             return ms
     where
         gather ms (Env n _ c li)     

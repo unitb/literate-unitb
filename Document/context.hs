@@ -35,7 +35,6 @@ import           Data.String.Utils
 
 import Utilities.Format
 import Utilities.Syntactic
-import Utilities.Trace
 
 ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Error System Theory
 ctx_type_decl _ = visit_doc []
@@ -105,8 +104,8 @@ ctx_declarations _ = visit_doc []
                         g (String x) = maybe (left [Error ("invalid operator: '" ++ x ++ "'") li])
                                     return $ L.lookup (strip x) xs
                     ops <- toEither $ mapM (mapM $ fromEither undefined . g) ops
-                    traceM $ show ops
-                    traceM $ show $ prec notat
+--                    traceM $ show ops
+--                    traceM $ show $ prec notat
                     return th {
                         notation = notat {
                             prec = ops : prec notat } }
@@ -210,7 +209,7 @@ ctx_collect_expr name = visit_doc
                             [ ( (lbl `member` fact th)
                               , format "a statement named '{0}' is already declared" lbl )
                             ]
-                        traceM $ show $ assoc' $ th_notation th
+--                        traceM $ show $ assoc' $ th_notation th
                         thm   <- get_predicate' 
 --                            (empty_theory { extends = singleton "" th }) 
                             (empty_theory { extends = insert name th $ extends th }) 
@@ -238,12 +237,12 @@ ctx_collect_proofs name = visit_doc
                         ] 
                     li <- lift $ ask
                     pos <- hoistEither $ theory_po th
+--                            (left [Error (format "proof obligation does not exist: {0}" lbl) li])
+--                            return
                     s  <- maybe 
                             (left [Error (format "proof obligation does not exist: {0} {1}" lbl 
                                 $ M.keys pos) li])
                             return
---                            (left [Error (format "proof obligation does not exist: {0}" lbl) li])
---                            return
                             (M.lookup lbl pos)
                     let new_th = (empty_theory { extends = insert name th $ extends th }) 
                     p <- runReaderT (
