@@ -392,6 +392,7 @@
 	\begin{free:var}{x}{x}
 	\begin{free:var}{y}{y}
 	\begin{align}
+	\assume{hyp2}{ \qforall{x,y}{}{ x \uparrow y \1= y \uparrow x } }
 	\assume{hyp1}{ z \le x \1\lor z\le y } 
 	\end{align}
 	\hide{ \goal{ z \le x \uparrow y } }
@@ -401,7 +402,9 @@
 		x \uparrow y \1\le k
 	\hint{=}{ \eqref{ctx1:axm1} }
 		x \le k \1\land y \le k
-	\hint{=}{ }
+	\hint{\implies}{ weakening }
+		x \le k
+	\hint{\implies}{ \eqref{hyp1} with \eqref{ctx1:thm6} }
 		z \le k
 \end{calculation}
 \end{indirect:inequality}

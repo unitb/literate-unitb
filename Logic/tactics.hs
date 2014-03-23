@@ -64,6 +64,15 @@ tac_local :: Monad m
           -> TacticT m a
 tac_local x (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ local (const x) cmd
 
+tac_listen :: Monad m
+           => TacticT m a
+           -> TacticT m (a, [Label])
+tac_listen (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ do
+        (x,w) <- listen cmd
+        case x of
+            Right (x,y) -> return $ Right ((x,w),y)
+            Left x -> return $ Left x
+
 with_line_info :: Monad m => LineInfo -> TacticT m a -> TacticT m a
 with_line_info li (TacticT cmd) = 
         TacticT $ ErrorT $ local (\p -> p { line_info = li }) $ runErrorT cmd
@@ -192,8 +201,8 @@ clear_vars vars proof = do
             Context a old_vars b c d = ctx
             new_vars = L.foldl (flip M.delete) old_vars (map name vars)
             new_ctx  = Context a new_vars b c d
-        li <- get_line_info
-        p  <- tac_local 
+        li    <- get_line_info
+        (p,w) <- tac_listen $ tac_local 
             (param { sequent = Sequent new_ctx new_asm new_hyp g }) $
             do  (lbls,ids)  <- TacticT $ lift $ get
                 let new_ids = ids `S.difference` S.fromList (map name vars)
@@ -201,7 +210,8 @@ clear_vars vars proof = do
                 p           <- proof
                 TacticT $ lift $ put (lbls,ids)
                 return p
-        return $ Proof $ Keep new_ctx new_asm new_hyp p li
+        let thm = theorems param `intersection` fromList (zip w $ repeat ())
+        return $ Proof $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
         
 
 by_cases :: Monad m

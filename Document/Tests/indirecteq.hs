@@ -148,18 +148,19 @@ result2 = unlines
     , "  o  THM/ctx1:thm8/part 2/relation (372,27)"
     , "  o  THM/ctx1:thm8/part 2/step (375,1)"
     , "  o  THM/ctx1:thm8/part 2/step (377,1)"
-    , " xxx THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy (398,33)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal (399,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses (399,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation (399,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (402,1)"
-    , " xxx THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (404,1)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/main goal/easy (398,33)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/new assumption (397,38)"
-    , "  o  THM/ctx1:thm9/main goal/case 1/easy (397,38)"
-    , " xxx THM/ctx1:thm9/main goal/case 2/easy (397,38)"
-    , "  o  THM/ctx1:thm9/main goal/completeness (397,38)"
-    , "  o  THM/ctx1:thm9/new assumption (393,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy (399,33)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal (400,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses (400,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation (400,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (403,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (405,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (407,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/main goal/easy (399,33)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/new assumption (398,38)"
+    , "  o  THM/ctx1:thm9/main goal/case 1/easy (398,38)"
+    , "  o  THM/ctx1:thm9/main goal/case 2/easy (398,38)"
+    , "  o  THM/ctx1:thm9/main goal/completeness (398,38)"
+    , " xxx THM/ctx1:thm9/new assumption (393,1)"
     ]
 
 case3 :: IO String
@@ -183,7 +184,7 @@ result3 = unlines
     ]
 
 case4 :: IO (Either [Error] String)
-case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (450,2)"
+case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (453,2)"
 
 result4 :: Either a String
 result4 = Right $ unlines
