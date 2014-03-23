@@ -179,14 +179,17 @@ ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
 
 theory_po :: Theory -> Either [Error] (Map Label Sequent)
 theory_po th = do
-        xs <- mapM (uncurry f) $ toList $ M.map g thm
+        xs <- mapM (uncurry f) $ toList $ M.mapWithKey g thm
         return $ fromList $ concat xs
     where
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
+        dep       = M.map M.fromList $ M.fromListWith (++) 
+                        [ (x,[(y,())]) | (x,y) <- thm_depend th ]
+        depend x  = thm `M.intersection` findWithDefault M.empty x dep
         (thm,axm) = M.partitionWithKey p $ fact th
         p k _     = k `M.member` theorems th
 
-        g x       = Sequent empty_ctx [] axm x
+        g lbl x   = Sequent empty_ctx [] (depend lbl `M.union` axm) x
         keys k    = composite_label [label "THM",k]
         f lbl (Sequent a b c d) = result
           where

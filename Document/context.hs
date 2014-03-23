@@ -231,6 +231,7 @@ ctx_collect_proofs name = visit_doc
                         -- This should be moved to its own phase
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                         lbl = composite_label [ po_lbl ]
+                        thm = last $ to_list lbl
                     toEither $ error_list 
                         [   ( lbl `member` theorems th
                             , format "a proof for {0} already exists" lbl )
@@ -250,9 +251,11 @@ ctx_collect_proofs name = visit_doc
                             run_visitor li xs $ 
                             collect_proof_step (empty_pr new_th) 
                             ) new_th
-                    p <- EitherT $ return p
-                    p <- EitherT $ return $ runTactic li s p
-                    return th { 
-                            theorems = insert lbl (Just p) $ theorems th } 
+                    p        <- EitherT $ return p
+                    (p,lbls) <- EitherT $ return $ runTacticWithTheorems li s 
+                            (fact th `intersection` theorems th) p
+                    return th 
+                        { theorems   = insert lbl (Just p) $ theorems th 
+                        , thm_depend = [ (thm,dep) | dep <- lbls ] ++ thm_depend th } 
             )
         ] []

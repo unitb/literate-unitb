@@ -117,7 +117,9 @@ function_theory = Theory { .. }
             where
                 t0 = GENERIC "t0"
                 t1 = GENERIC "t1"
-            
+
+        thm_depend = []
+
         fact = fromList 
                 [ (label $ dec' "00", axm0)
                 , (label $ dec' "01", axm1)

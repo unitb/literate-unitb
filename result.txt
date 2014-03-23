@@ -5,54 +5,9 @@
 |  |  +- verify proof with galois connections
 |  |  +- verify theory 1: indirect (in)equality
 |  |  +- verify theory 2: lattices
-|  |    o  THM/thm3/goal (213,1)
-|  |    o  THM/thm3/hypotheses (213,1)
-|  |    o  THM/thm3/relation (213,1)
-|  |    o  THM/thm3/step (216,1)
-|  |    o  THM/thm3/step (219,1)
-|  |    o  THM/thm3/step (221,1)
-|  |    o  THM/thm4/assertion/indirect:eq/easy (236,24)
-|  |    o  THM/thm4/assertion/new:goal/goal (237,41)
-|  |    o  THM/thm4/assertion/new:goal/hypotheses (237,41)
-|  |    o  THM/thm4/assertion/new:goal/relation (237,41)
-|  |    o  THM/thm4/assertion/new:goal/step (240,1)
-|  |    o  THM/thm4/assertion/new:goal/step (242,1)
-|  |    o  THM/thm4/assertion/new:goal/step (244,1)
-|  |   xxx THM/thm4/assertion/new:goal/step (246,1)
-|  |    o  THM/thm4/main goal/easy (236,24)
-|  |    o  THM/thm5/goal (262,1)
-|  |    o  THM/thm5/hypotheses (262,1)
-|  |    o  THM/thm5/relation (262,1)
-|  |    o  THM/thm5/step (265,1|___|M/thm5/step (267,1)
-|  |    o  THM/thm5/step (269,1)
-|  |    o  THM/thm5/step (271,1)
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > )\n
-|  |    < )\n
-|  |    -    
-|  |    > _.xxx_.TH
-|  |    < _._.o_._.TH
-|  |    -   ---  --
-|  |  ]
 |  |  +- proofs by symmetry: PO
 |  |  +- proofs by symmetry: hypotheses labels
-|  |  +- [ Success: 4 / 5 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- [ Success: 5 / 5 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -150,18 +105,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 10 / 11 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
+|  +- [ Success: 11 / 11 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -224,15 +168,15 @@ Comparison:[
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 5 / 6 ]
++- [ Success: 6 / 6 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   17874 total
+   17952 total
     1604 Document/Tests/trainstation.hs
-     945 Document/machine.hs
+     944 Document/machine.hs
      754 Document/proof.hs
      746 Document/Tests/lambdas.hs
      723 UnitB/ast.hs

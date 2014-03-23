@@ -26,15 +26,16 @@ import Utilities.HeterogenousEquality
     -- the type variables. The generic type (rather than
     -- the type variable) is also used in function types.
 data Theory = Theory 
-        { extends   :: Map String Theory
-        , gen_param :: Maybe Type
-        , types     :: Map String Sort
-        , funs      :: Map String Fun
-        , consts    :: Map String Var
-        , fact      :: Map Label Expr
-        , dummies   :: Map String Var 
-        , theorems  :: Map Label (Maybe Proof)
-        , notation  :: Notation }
+        { extends    :: Map String Theory
+        , gen_param  :: Maybe Type
+        , types      :: Map String Sort
+        , funs       :: Map String Fun
+        , consts     :: Map String Var
+        , fact       :: Map Label Expr
+        , dummies    :: Map String Var 
+        , theorems   :: Map Label (Maybe Proof)
+        , thm_depend :: [ (Label,Label) ]
+        , notation   :: Notation }
     deriving (Eq, Show)
 
 basic_theory :: Theory
@@ -56,7 +57,7 @@ basic_theory = empty_theory
 empty_theory :: Theory
 empty_theory = Theory M.empty Nothing
     M.empty M.empty M.empty M.empty 
-    M.empty M.empty empty_notation
+    M.empty M.empty [] empty_notation
 
 data Proof = forall a. ProofRule a => Proof a
     deriving Typeable

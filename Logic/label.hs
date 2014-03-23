@@ -6,8 +6,10 @@ import Logic.Classes
 
     -- Libraries
 import GHC.Generics 
+
 import Data.List
-import Data.Map hiding ( map )
+import Data.Map hiding ( map, split )
+import Data.String.Utils ( split )
 import Data.Typeable
 
 data Label = Lbl String
@@ -25,3 +27,6 @@ symbol_table xs = fromList $ map as_pair xs
 composite_label xs = Lbl $ intercalate "/" $ map str xs
     where
         str (Lbl s) = s
+
+to_list :: Label -> [Label]
+to_list (Lbl xs) = map Lbl $ split "/" xs

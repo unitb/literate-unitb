@@ -8,11 +8,14 @@ module Logic.Tactics
     , is_fresh, get_hypotheses, assert, assume
     , by_cases, easy, new_fresh, free_goal
     , instantiate_hyp, with_line_info
-    , runTactic, runTacticT, make_expr, fresh_label
+    , runTactic, runTacticT
+    , runTacticWithTheorems, runTacticTWithTheorems
+    , make_expr, fresh_label
     , last_step, add_step, TheoremRef ( .. )
     , get_dummy, lookup_hypothesis, clear_vars
     , free_vars_goal, instantiate_hyp_with
     , get_named_hyps, get_nameless_hyps
+    , get_used_vars, get_allocated_vars
     )
 where
 
@@ -23,12 +26,12 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Sequent
-import Logic.Theory
+import Logic.Theory hiding ( theorems )
 
     -- Libraries
 import Control.Monad
-import Control.Monad.Reader
-import Control.Monad.State.Class
+import Control.Monad.RWS
+--import Control.Monad.State.Class
 import Control.Monad.Trans.Either
 
 import Control.Monad.Identity
@@ -44,9 +47,15 @@ import Utilities.Syntactic ( Error (..), LineInfo )
 data TacticParam = TacticParam 
     { sequent :: Sequent
     , line_info :: LineInfo
+    , theorems  :: Map Label Expr
     }
 
-data TacticT m a = TacticT { unTactic :: ErrorT (ReaderT TacticParam m) a }
+data TacticT m a = TacticT 
+        { unTactic :: ErrorT 
+                (RWST 
+                    TacticParam 
+                    [Label] 
+                    (S.Set Label,S.Set String) m) a }
 
 type Tactic = TacticT Identity
 
@@ -69,15 +78,13 @@ with_goal e (TacticT cmd) = TacticT $ do
 
 with_hypotheses :: Monad m
                 => [(Label, Expr)] 
-                -> TacticT m Proof 
-                -> TacticT m Proof
+                -> TacticT m a 
+                -> TacticT m a
 with_hypotheses es cmd = do
     param              <- TacticT $ lift ask
     let Sequent ctx asm hyps g = sequent param
     let new_hyp = (M.fromList es `M.union` hyps)
     tac_local (param { sequent = Sequent ctx asm new_hyp g }) cmd
---    ErrorT $ local (const (param { sequent = Sequent ctx asm new_hyp g })) 
---        $ runErrorT cmd
 
 with_variables :: Monad m
                => [Var] -> TacticT m Proof -> TacticT m Proof
@@ -148,12 +155,6 @@ get_context = TacticT $ do
         Sequent ctx _ _ _ <- lift $ asks sequent
         return ctx
 
-is_fresh :: Monad m
-         => Var -> TacticT m Bool
-is_fresh v = TacticT $ do
-        s <- lift $ asks sequent
-        return $ are_fresh [name v] s
-
 assert :: Monad m
        => [(Label,Expr,TacticT m Proof)] 
        -> TacticT m Proof 
@@ -194,8 +195,13 @@ clear_vars vars proof = do
             new_ctx  = Context a new_vars b c d
         li <- get_line_info
         p  <- tac_local 
-            (param { sequent = Sequent new_ctx new_asm new_hyp g }) 
-            proof
+            (param { sequent = Sequent new_ctx new_asm new_hyp g }) $
+            do  (lbls,ids)  <- TacticT $ lift $ get
+                let new_ids = ids `S.difference` S.fromList (map name vars)
+                TacticT $ lift $ put (lbls,new_ids)
+                p           <- proof
+                TacticT $ lift $ put (lbls,ids)
+                return p
         return $ Proof $ Keep new_ctx new_asm new_hyp p li
         
 
@@ -235,20 +241,51 @@ add_step :: Monad m
          -> TacticT m Calculation
          -> TacticT m Calculation
 add_step step op hint calc = make_hard $ do
-        hyp     <- forM hint $ \(ref,li) -> 
-            with_line_info li $ make_soft ztrue $ lookup_hypothesis ref
-        trivial <- last_step ztrue
-        r       <- make_soft trivial calc
-        li      <- get_line_info
-        return r { 
-            first_step = step,
-            following  = (op,first_step r,hyp,li):following r }
+        thms     <- TacticT $ lift $ asks theorems
+        thms     <- liftM concat $ forM hint $ \(ThmRef lbl _, _) -> do
+            hyps <- get_named_hyps
+            case lbl `M.lookup` thms of
+                Just e 
+                    | not $ lbl `M.member` hyps -> do
+                        TacticT $ lift $ tell [lbl]
+                        return [(lbl,e)]
+                _ -> return []
+        with_hypotheses thms $ do
+            hyp     <- forM hint $ \(ref,li) -> 
+                with_line_info li $ make_soft ztrue $ lookup_hypothesis ref
+            trivial <- last_step ztrue
+            r       <- make_soft trivial calc
+            li      <- get_line_info
+            return r { 
+                first_step = step,
+                following  = (op,first_step r,hyp,li):following r }
 
 last_step :: Monad m => Expr -> TacticT m Calculation
 last_step xp = do
         li  <- get_line_info
         ctx <- get_context
         return $ Calc ctx ztrue xp [] li
+
+get_used_vars :: Monad m
+              => TacticT m [Var]
+get_used_vars = do
+        Sequent _ asm hyp g <- TacticT $ lift $ asks sequent
+        return $ S.toList $ S.unions $ 
+               used_var g
+             : map used_var asm 
+            ++ map used_var (M.elems hyp)
+
+get_allocated_vars :: Monad m
+                   => TacticT m [String]
+get_allocated_vars = do
+        (_,ids) <- TacticT $ lift $ get
+        return $ S.toList ids
+
+is_fresh :: Monad m
+         => Var -> TacticT m Bool
+is_fresh v = TacticT $ do
+        s       <- lift $ asks sequent
+        return $    are_fresh [name v] s
 
 new_fresh :: Monad m
           => String -> Type 
@@ -257,7 +294,11 @@ new_fresh name t = do
         fix (\rec n suf -> do
             let v = Var (name ++ suf) t
             b <- is_fresh v
-            if b then return v
+            (lbls,ids) <- TacticT $ lift $ get
+            if b && not (name `S.member` ids)
+            then TacticT $ do
+                lift $ put (lbls,S.insert (name ++ suf) ids)
+                return v
             else do
                 rec (n+1) (show n)
             ) 0 ""
@@ -265,15 +306,21 @@ new_fresh name t = do
 is_label_fresh :: Monad m => Label -> TacticT m Bool
 is_label_fresh lbl = do
         Sequent _ _ hyps _ <- TacticT $ asks sequent
-        return $ not $ lbl `member` hyps
+        thm                <- TacticT $ asks theorems
+        return $   (not $ lbl `member` hyps) 
+                && (not $ lbl `member` thm)
 
 fresh_label :: Monad m
             => String -> TacticT m Label
 fresh_label name = do
         fix (\rec n suf -> do
             let v = label (name ++ suf)
-            b <- is_label_fresh v
-            if b then return v
+            b           <- is_label_fresh v
+            (lbls, ids) <- TacticT $ get
+            if b && not (v `S.member` lbls) 
+            then TacticT $ do
+                lift $ put (S.insert v lbls,ids)
+                return v
             else do
                 rec (n+1) (show n)
             ) 0 ""
@@ -365,14 +412,30 @@ runTacticT :: Monad m
            => LineInfo -> Sequent
            -> TacticT m a -> m (Either [Error] a)
 runTacticT li s (TacticT tac) = do
-        x <- runReaderT (runErrorT tac) (TacticParam s li)
+        (x,_,_) <- runRWST (runErrorT tac) (TacticParam s li M.empty) (S.empty,S.empty)
         case x of
             Right (x,[])  -> return $ Right x
             Right (_,err) -> return $ Left err
             Left err -> return $ Left err
 
+runTacticTWithTheorems :: Monad m
+                       => LineInfo -> Sequent
+                       -> Map Label Expr
+                       -> TacticT m a -> m (Either [Error] (a,[Label]))
+runTacticTWithTheorems li s thms (TacticT tac) = do
+        (x,_,thms) <- runRWST (runErrorT tac) (TacticParam s li thms) (S.empty,S.empty)
+        case x of
+            Right (x,[])  -> return $ Right (x,thms)
+            Right (_,err) -> return $ Left err
+            Left err -> return $ Left err
+
 runTactic :: LineInfo -> Sequent -> Tactic a -> Either [Error] a
 runTactic li s tac = runIdentity (runTacticT li s tac)
+
+runTacticWithTheorems :: LineInfo -> Sequent 
+                      -> Map Label Expr
+                      -> Tactic a -> Either [Error] (a, [Label])
+runTacticWithTheorems li s thms tac = runIdentity (runTacticTWithTheorems li s thms tac)
           
 instance Monad m => Monad (TacticT m) where
     TacticT m >>= f = TacticT $ m >>= (unTactic . f)
@@ -387,10 +450,10 @@ instance MonadState s m => MonadState s (TacticT m) where
 
 instance MonadReader r m => MonadReader r (TacticT m) where
     ask = lift $ ask
-    local f (TacticT (ErrorT (ReaderT cmd))) = TacticT $ 
+    local f (TacticT (ErrorT (RWST cmd))) = TacticT $ 
             ErrorT $ 
-            ReaderT $ \r ->
-            local f $ cmd r
+            RWST $ \r s ->
+            local f $ cmd r s
 
 instance MonadTrans TacticT where
     lift cmd = TacticT $ lift $ lift cmd
