@@ -36,14 +36,19 @@ instance Show a => Show (SCC a) where
 data Matrix a b = Matrix (Map a (Map a b)) [a] b
     deriving (Eq, Show)
 
+empty :: b -> Matrix a b
 empty x = Matrix M.empty [] x
 
+(!) :: Ord k => Matrix k b -> (k,k) -> b
 (Matrix m _ x) ! (y,z) = maybe x (M.findWithDefault x z) (M.lookup y m)
 
-unionWith g (Matrix m0 xs x) (Matrix m1 ys _) = Matrix (M.unionWith f m0 m1) (nub $ xs ++ ys) x
+unionWith :: Ord k => (a -> a -> a) 
+          -> Matrix k a -> Matrix k a -> Matrix k a
+unionWith g (Matrix m0 xs x) (Matrix m1 ys y) = Matrix (M.unionWith f m0 m1) (nub $ xs ++ ys) (g x y)
     where
         f m0 m1 = M.unionWith g m0 m1
 
+transpose :: Ord a => Matrix a b -> Matrix a b
 transpose m = mapKeys swap m
 
 mapKeys :: Ord b => ((a,a) -> (b,b)) -> Matrix a c -> Matrix b c 
@@ -61,6 +66,7 @@ mapKeys f (Matrix m xs x) = Matrix result (nub ys) x
                 let (x',y') = f (x,y)
                 [x',y']
 
+as_map :: Ord t => Matrix t a -> Map (t,t) a
 as_map g@(Matrix m _ x) = M.union result other
     where
         other = M.fromList $ zip (keys g) $ repeat x
@@ -69,13 +75,16 @@ as_map g@(Matrix m _ x) = M.union result other
             (y,k)  <- toList xs
             return ((x,y),k)
 
+map :: (a -> b) -> Matrix k a -> Matrix k b
 map f (Matrix m xs x) = Matrix m' xs (f x)
     where
         m' = M.map (M.map f) m
 
+keys :: Matrix k a -> [(k,k)]
 keys (Matrix _ xs _) = [ (x,y) | x <- xs, y <- xs ]
     -- x <- M.keys m, y <- concat (M.elems $ M.map M.keys m) ]
 
+size :: Matrix k a -> Int
 size (Matrix m _ _)  = sum $ L.map M.size $ M.elems m
 
 cycles :: Ord a => [(a,a)] -> [SCC a]

@@ -187,6 +187,7 @@ assoc' ops
     -- Basic functions
 apply :: BinOperator
 equal :: BinOperator
+pair  :: BinOperator
 
 apply = BinOperator "apply" "."     zapply
 equal = BinOperator "equal" "="     mzeq

@@ -30,6 +30,7 @@ data LatexDoc =
         | Text [LatexToken]
     deriving (Eq)
 
+flatten :: LatexDoc -> [Char]
 flatten (Env s _ ct _) = 
            "\\begin{" ++ s ++ "}"
         ++ concatMap flatten ct
@@ -41,8 +42,10 @@ flatten (Bracket b _ ct _) = b0 ++ concatMap flatten ct ++ b1
             else ("[", "]")
 flatten (Text xs) = concatMap lexeme xs
 
+whole_line :: LineInfo -> [LineInfo]
 whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
 
+uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (x,y,z) = f x y z
 
 flatten_li :: LatexDoc -> [(Char,LineInfo)]
@@ -58,14 +61,25 @@ flatten_li (Bracket b li0 ct li1)
             then ('{', '}')
             else ('[', ']')
 
+fold_doc :: (a -> LatexDoc -> a)
+         -> a -> LatexDoc -> a
 fold_doc f x doc  = foldl f x $ contents doc
 
+fold_docM :: Monad m
+          => (a -> LatexDoc -> m a)
+          -> a -> LatexDoc -> m a
 fold_docM f x doc = foldM f x $ contents doc
 
+map_doc :: (LatexDoc -> b)
+        -> LatexDoc -> [b]
 map_doc f doc = map f $ contents doc
 
+map_docM :: Monad m 
+         => (LatexDoc -> m b)
+         -> LatexDoc -> m [b]
 map_docM f doc = mapM f $ contents doc
 
+contents :: LatexDoc -> [LatexDoc]
 contents (Env _ _ c _)     = c
 contents (Bracket _ _ c _) = c
 contents (Text _)          = []
@@ -99,9 +113,11 @@ instance Syntactic LatexDoc where
 instance Syntactic a => Syntactic [a] where
     line_info xs = line_info $ head xs
 
+source :: LatexDoc -> String
 source (Text xs) = concatMap lexeme xs
 source x         = show x
 
+lexeme :: LatexToken -> String
 lexeme (Command xs _)   = xs
 lexeme (TextBlock xs _) = xs
 lexeme (Blank xs _)     = xs
@@ -112,9 +128,13 @@ lexeme (Close b _)
     | b                 = "}"
     | otherwise         = "]"
 
+lexeme_li :: LatexToken -> [(Char, LineInfo)]
 lexeme_li x = zip (lexeme x) $ whole_line li
     where
         li    = line_info x
+
+begin_kw :: String
+end_kw   :: String
 
 begin_kw = "\\begin"
 end_kw   = "\\end"
@@ -125,6 +145,7 @@ is_identifier (x:xs)
     | isAlpha x     = Just (1 + length (takeWhile isAlphaNum xs))
     | otherwise     = Nothing 
 
+is_command :: String -> Maybe Int
 is_command []       = Nothing
 is_command (x:xs)   
     | x == '\\'     =
@@ -212,6 +233,7 @@ content_token t = do
 opt_args :: Scanner LatexToken [[LatexDoc]]
 opt_args = return []
 
+skip_blank :: Scanner LatexToken ()
 skip_blank = do
         xs <- peek
         case xs of
@@ -295,6 +317,8 @@ scan_file fname xs = do
         
 --        read_tokens latex_content ys (1,1)
 
+do_while :: Monad m
+         => m Bool -> m ()
 do_while cmd = do
         b <- cmd
         if b then
@@ -376,9 +400,11 @@ latex_structure fn xs = do
         ys <- read_lines tex_tokens fn (uncomment xs)
         read_tokens latex_content fn ys (1,1)
 
+is_prefix :: Eq a => [a] -> [a] -> Bool
 is_prefix xs ys = xs == take (length xs) ys
 
 uncomment :: String -> String
 uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 
+with_print :: Show a => a -> a
 with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
