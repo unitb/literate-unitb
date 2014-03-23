@@ -383,31 +383,33 @@
 	\end{free:var}
 \end{proof}
 
-%\begin{align}
-%\theorem{ctx1:thm9}{ \qforall{x,y,z}{ }{ z \1\le x \uparrow y \2\follows z \le x \1\lor z\le y  } }
-%\end{align}
-%
-%\begin{proof}{THM/\ref{ctx1:thm9}}
-%	\begin{free:var}{z}{z}
-%	\begin{free:var}{x}{x}
-%	\begin{free:var}{y}{y}
-%	\begin{align}
-%	\assume{hyp1}{ z \le x \1\lor z\le y } 
-%	\end{align}
-%	\hide{ \goal{ z \le x \uparrow y } }
-%\begin{by:symmetry}{hyp1}{[x,y]}
-%\begin{indirect:equality}{right}{\le}{k}
-%\begin{calculation}
-%		x \uparrow y \1\le k
-%	\hint{=}{ \eqref{ctx1:axm1} }
-%		x \le k \1\land y \le k
-%\end{calculation}
-%\end{indirect:equality}
-%\end{by:symmetry}
-%	\end{free:var}
-%	\end{free:var}
-%	\end{free:var}
-%\end{proof}
+\begin{align}
+\theorem{ctx1:thm9}{ \qforall{x,y,z}{ }{ z \1\le x \uparrow y \2\follows z \le x \1\lor z\le y  } }
+\end{align}
+
+\begin{proof}{THM/\ref{ctx1:thm9}}
+	\begin{free:var}{z}{z}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+	\begin{align}
+	\assume{hyp1}{ z \le x \1\lor z\le y } 
+	\end{align}
+	\hide{ \goal{ z \le x \uparrow y } }
+\begin{by:symmetry}{hyp1}{[x,y]}
+\begin{indirect:inequality}{right}{\le}{k}
+\begin{calculation}
+		x \uparrow y \1\le k
+	\hint{=}{ \eqref{ctx1:axm1} }
+		x \le k \1\land y \le k
+	\hint{=}{ }
+		z \le k
+\end{calculation}
+\end{indirect:inequality}
+\end{by:symmetry}
+	\end{free:var}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
 
 \end{context}
 

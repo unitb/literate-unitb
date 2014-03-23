@@ -295,7 +295,7 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
                                 , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
                                 easy                                -- | to be named in sequents
                                                               
-            _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
+            _ -> fail $ "expecting an inequality:\n" ++ pretty_print' goal
 
 indirect_equality :: Monad m
                   => Either () () 

@@ -31,7 +31,6 @@ import Logic.Theory hiding ( theorems )
     -- Libraries
 import Control.Monad
 import Control.Monad.RWS
---import Control.Monad.State.Class
 import Control.Monad.Trans.Either
 
 import Control.Monad.Identity
@@ -295,7 +294,7 @@ new_fresh name t = do
             let v = Var (name ++ suf) t
             b <- is_fresh v
             (lbls,ids) <- TacticT $ lift $ get
-            if b && not (name `S.member` ids)
+            if b && not ((name ++ suf) `S.member` ids)
             then TacticT $ do
                 lift $ put (lbls,S.insert (name ++ suf) ids)
                 return v
