@@ -19,6 +19,7 @@ import Control.Monad.Trans.Either
 
 import Tests.UnitTest
 
+import Utilities.Format
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -99,28 +100,55 @@ case2 = verify_thy path0 "ctx1"
 
 result2 :: String
 result2 = unlines
-    [ "  o  THM/thm3/goal (213,1)"
-    , "  o  THM/thm3/hypotheses (213,1)"
-    , "  o  THM/thm3/relation (213,1)"
-    , "  o  THM/thm3/step (216,1)"
-    , "  o  THM/thm3/step (219,1)"
-    , "  o  THM/thm3/step (221,1)"
-    , "  o  THM/thm4/assertion/indirect:eq/easy (236,24)"
-    , "  o  THM/thm4/assertion/new:goal/goal (237,41)"
-    , "  o  THM/thm4/assertion/new:goal/hypotheses (237,41)"
-    , "  o  THM/thm4/assertion/new:goal/relation (237,41)"
-    , "  o  THM/thm4/assertion/new:goal/step (240,1)"
-    , "  o  THM/thm4/assertion/new:goal/step (242,1)"
-    , "  o  THM/thm4/assertion/new:goal/step (244,1)"
-    , " xxx THM/thm4/assertion/new:goal/step (246,1)"
-    , "  o  THM/thm4/main goal/easy (236,24)"
-    , "  o  THM/thm5/goal (262,1)"
-    , "  o  THM/thm5/hypotheses (262,1)"
-    , "  o  THM/thm5/relation (262,1)"
-    , "  o  THM/thm5/step (265,1)"
-    , "  o  THM/thm5/step (267,1)"
-    , "  o  THM/thm5/step (269,1)"
-    , "  o  THM/thm5/step (271,1)" ]
+    [ "  o  THM/ctx1:thm3/goal (213,1)"
+    , "  o  THM/ctx1:thm3/hypotheses (213,1)"
+    , "  o  THM/ctx1:thm3/relation (213,1)"
+    , "  o  THM/ctx1:thm3/step (216,1)"
+    , "  o  THM/ctx1:thm3/step (219,1)"
+    , "  o  THM/ctx1:thm3/step (221,1)"
+    , "  o  THM/ctx1:thm4/assertion/indirect:eq/easy (236,24)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/goal (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/hypotheses (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/relation (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (240,1)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (242,1)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (244,1)"
+    , " xxx THM/ctx1:thm4/assertion/new:goal/step (246,1)"
+    , "  o  THM/ctx1:thm4/main goal/easy (236,24)"
+    , "  o  THM/ctx1:thm5/goal (263,1)"
+    , "  o  THM/ctx1:thm5/hypotheses (263,1)"
+    , "  o  THM/ctx1:thm5/relation (263,1)"
+    , "  o  THM/ctx1:thm5/step (266,1)"
+    , "  o  THM/ctx1:thm5/step (268,1)"
+    , "  o  THM/ctx1:thm5/step (270,1)"
+    , "  o  THM/ctx1:thm5/step (272,1)"
+    , "  o  THM/ctx1:thm6/goal (288,1)"
+    , "  o  THM/ctx1:thm6/hypotheses (288,1)"
+    , "  o  THM/ctx1:thm6/relation (288,1)"
+    , "  o  THM/ctx1:thm6/step (291,1)"
+    , "  o  THM/ctx1:thm6/step (293,1)"
+    , "  o  THM/ctx1:thm6/step (295,1)"
+    , "  o  THM/ctx1:thm6/step (297,1)"
+    , "  o  THM/ctx1:thm7/goal (324,1)"
+    , "  o  THM/ctx1:thm7/hypotheses (324,1)"
+    , "  o  THM/ctx1:thm7/new assumption (313,1)"
+    , "  o  THM/ctx1:thm7/relation (324,1)"
+    , "  o  THM/ctx1:thm7/step (327,1)"
+    , "  o  THM/ctx1:thm7/step (329,1)"
+    , "  o  THM/ctx1:thm7/step (331,1)"
+    , "  o  THM/ctx1:thm7/step (333,1)"
+    , "  o  THM/ctx1:thm8/completeness (349,27)"
+    , "  o  THM/ctx1:thm8/part 1/goal (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/hypotheses (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/relation (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/step (360,1)"
+    , "  o  THM/ctx1:thm8/part 2/goal (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/hypotheses (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/new assumption (366,13)"
+    , "  o  THM/ctx1:thm8/part 2/relation (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/step (375,1)"
+    , "  o  THM/ctx1:thm8/part 2/step (377,1)"
+    ]
 
 case3 :: IO String
 case3 = verify_thy path1 "ctx2"
@@ -143,7 +171,7 @@ result3 = unlines
     ]
 
 case4 :: IO (Either [Error] String)
-case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (315,2)"
+case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (448,2)"
 
 result4 :: Either a String
 result4 = Right $ unlines
@@ -505,7 +533,8 @@ get_po name lbl = runEitherT $ do
             s   <- EitherT $ parse_system path0
             pos <- hoistEither $ theory_po $ theories s ! name
             p   <- maybe 
-                    (left $ [Error "unknown proof obligation" $ LI path0 0 0]) 
+                    (left $ [Error (format "unknown proof obligation: {0}" $ keys pos) 
+                          $ LI path0 0 0]) 
                     right 
                     (M.lookup lbl pos)
             return $ concatMap pretty_print' $ z3_code p
@@ -515,6 +544,10 @@ parse path = do
         makeReport $ do
             EitherT $ parse_system path
             return "ok"
+--        case r of
+--            Right r -> do
+--                return r
+--            Left x -> return $ show x
 
 verify_thy :: FilePath -> String -> IO String
 verify_thy path name = do
