@@ -7,7 +7,8 @@
 |  |  +- verify theory 2: lattices
 |  |  +- proofs by symmetry: PO
 |  |  +- proofs by symmetry: hypotheses labels
-|  |  +- [ Success: 5 / 5 ]
+|  |  +- cyclic references between proofs
+|  |  +- [ Success: 6 / 6 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -174,9 +175,9 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   17952 total
+   17982 total
     1604 Document/Tests/trainstation.hs
-     944 Document/machine.hs
+     950 Document/machine.hs
      754 Document/proof.hs
      746 Document/Tests/lambdas.hs
      723 UnitB/ast.hs

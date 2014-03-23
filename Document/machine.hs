@@ -202,6 +202,12 @@ read_document xs = do
                 -- in hints.
             toEither $ mapM_ (g ctx_collect_proofs) xs
             ms <- toEither $ foldM (f collect_proofs) ms xs
+            cs <- lift $ gets theories
+            toEither $ forM_ (toList cs) $ \(name,ctx) -> do
+                let li = line_info xs
+                fromEither () $ check_acyclic 
+                    ("proofs of " ++ name)
+                    (thm_depend ctx) li
 --            traceM "step R"
             ms <- trickle_down refs ms merge_proofs li
 --            traceM "step T"

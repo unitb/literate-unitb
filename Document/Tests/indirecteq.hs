@@ -26,11 +26,12 @@ test_case = Case "train station example, with sets" test True
 
 test :: IO Bool
 test = test_cases
-            [ Case "verify proof with galois connections" (verify 0 path0) result0
+            [ Case "verify proof with galois connections" case0 result0
             , Case "verify theory 1: indirect (in)equality" case1 result1
             , Case "verify theory 2: lattices" case2 result2
             , Case "proofs by symmetry: PO" case3 result3
             , Case "proofs by symmetry: hypotheses labels" case4 result4
+            , Case "cyclic references between proofs" case5 result5
             ]
 
 path0 :: String
@@ -39,6 +40,11 @@ path0 = "tests/indirect-equality.tex"
 path1 :: String
 path1 = "tests/indirect-equality-t1.tex"
 
+path2 :: String
+path2 = "tests/indirect-equality-t2.tex"
+
+case0 :: IO String
+case0 = verify 0 path0
 
 result0 :: String
 result0 = unlines 
@@ -62,6 +68,9 @@ result0 = unlines
 	, "  o  m0/INIT/INV/inv1/part 2/step "
 	, "passed 17 / 18" ]
 	
+case1 :: IO String
+case1 = verify_thy path0 "ctx0"
+
 result1 :: String
 result1 = unlines
     [ "  o  THM/thm0/completeness (131,1)"
@@ -85,23 +94,8 @@ result1 = unlines
     , "  o  THM/thm1/part 2/step (177,2)"
     ]
 
-verify_thy :: FilePath -> String -> IO String
-verify_thy path name = do
-        r <- runEitherT $ do
-            s <- EitherT $ parse_system path
-            pos <- hoistEither $ theory_po $ theories s ! name
-            res <- lift $ verify_all pos
-            return $ unlines $ map (\(k,r) -> success r ++ show k) $ toList res        
-        case r of
-            Right r -> do
-                return r
-            Left x -> return $ show x
-    where
-        success True  = "  o  "
-        success False = " xxx "
-
-case1 :: IO String
-case1 = verify_thy path0 "ctx0"
+case2 :: IO String
+case2 = verify_thy path0 "ctx1"
 
 result2 :: String
 result2 = unlines
@@ -128,8 +122,8 @@ result2 = unlines
     , "  o  THM/thm5/step (269,1)"
     , "  o  THM/thm5/step (271,1)" ]
 
-case2 :: IO String
-case2 = verify_thy path0 "ctx1"
+case3 :: IO String
+case3 = verify_thy path1 "ctx2"
 
 result3 :: String
 result3 = unlines
@@ -148,9 +142,10 @@ result3 = unlines
     , "  o  THM/thm4/new assumption (300,23)"
     ]
 
-case3 :: IO String
-case3 = verify_thy path1 "ctx2"
+case4 :: IO (Either [Error] String)
+case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (315,2)"
 
+result4 :: Either a String
 result4 = Right $ unlines
     [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
@@ -499,8 +494,13 @@ result4 = Right $ unlines
     , "                          (then (using-params simplify :expand-power true) smt)))"
     ]
 
-case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (315,2)"
+case5 :: IO String
+case5 = parse path2
 
+result5 :: String
+result5 = "Left error (1,1): A cycle exists in the proofs of ctx1: thm3, thm5\n"
+
+get_po :: FilePath -> Label -> IO (Either [Error] String)
 get_po name lbl = runEitherT $ do
             s   <- EitherT $ parse_system path0
             pos <- hoistEither $ theory_po $ theories s ! name
@@ -510,6 +510,26 @@ get_po name lbl = runEitherT $ do
                     (M.lookup lbl pos)
             return $ concatMap pretty_print' $ z3_code p
 
+parse :: FilePath -> IO String
+parse path = do
+        makeReport $ do
+            EitherT $ parse_system path
+            return "ok"
+
+verify_thy :: FilePath -> String -> IO String
+verify_thy path name = do
+        r <- runEitherT $ do
+            s <- EitherT $ parse_system path
+            pos <- hoistEither $ theory_po $ theories s ! name
+            res <- lift $ verify_all pos
+            return $ unlines $ map (\(k,r) -> success r ++ show k) $ toList res        
+        case r of
+            Right r -> do
+                return r
+            Left x -> return $ show x
+    where
+        success True  = "  o  "
+        success False = " xxx "
 
 verify :: Int -> FilePath -> IO String
 verify n path = do
