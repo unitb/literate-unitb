@@ -195,19 +195,19 @@
 \operator{\uparrow}{ up : Pair [ \G, \G ] \pfun \G }
 \precedence{[[\uparrow],[\le]]}
 \begin{align}
-\axiom{ctx1:axm0}{ 
+\axiom{axm0}{ 
 	\qforall{x,y}{}{ x \le y \1\land y \le x \2\equiv x = y } } 
-\\ \axiom{ctx1:axm1}{ 
+\\ \axiom{axm1}{ 
 	\qforall{x,y,z}{}{ x \le z \1\land y \le z \2\equiv 
 		x \uparrow y \le z } }
-\\ \axiom{ctx1:axm2}{ 
+\\ \axiom{axm2}{ 
 	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ z \le x \1\equiv z \le y } } }
-\\ \axiom{ctx1:axm3}{ 
+\\ \axiom{axm3}{ 
 	\qforall{x,y}{}{ x = y \2\equiv \qforall{z}{}{ x \le z \1\equiv y \le z } } }
-\\ \theorem{ctx1:thm3}{ \qforall{x,y}{}{ y \le x \uparrow y } }
+\\ \theorem{thm3}{ \qforall{x,y}{}{ y \le x \uparrow y } }
 \end{align}
 
-\begin{proof}{THM/\ref{ctx1:thm3}}
+\begin{proof}{THM/\ref{thm3}}
 	\begin{free:var}{x}{x}
 	\begin{free:var}{y}{y}
 %\begin{indirect:equality}{right}{\le}{z}
@@ -216,9 +216,9 @@
 	\hint{\follows}{ pred. calc. }
 		x \le x \uparrow y
 	\2\land	y \le x \uparrow y
-	\hint{=}{ \eqref{ctx1:axm1} }
+	\hint{=}{ \eqref{axm1} \eqref{thm5} }
 		x \uparrow y \1\le x \uparrow y
-	\hint{=}{ \eqref{ctx1:axm0} }
+	\hint{=}{ \eqref{axm0} }
 		\true
 \end{calculation}
 %\end{indirect:equality}
@@ -227,23 +227,23 @@
 \end{proof}
 
 \begin{align}
-\theorem{ctx1:thm4}{ \qforall{x,y,z}{}{ (x \uparrow y) \uparrow z \1= x \uparrow (y \uparrow z) } }
+\theorem{thm4}{ \qforall{x,y,z}{}{ (x \uparrow y) \uparrow z \1= x \uparrow (y \uparrow z) } }
 \end{align}
 
-\begin{proof}{THM/\ref{ctx1:thm4}}
+\begin{proof}{THM/\ref{thm4}}
 	\begin{free:var}{x}{x}
 	\begin{free:var}{y}{y}
 	\begin{free:var}{z}{z}
 \begin{indirect:equality}{right}{\le}{k}
 \begin{calculation}
 		(x \uparrow y) \uparrow z \1\le k
-	\hint{=}{ \eqinst{ctx1:axm1}{ \subst{x}{x \uparrow y}, \subst{y}{z} and \subst{z}{k} } }
+	\hint{=}{ \eqinst{axm1}{ \subst{x}{x \uparrow y}, \subst{y}{z} and \subst{z}{k} } }
 		(x \uparrow y) \1\le k \2\land z  \1\le k
-	\hint{=}{ \eqref{ctx1:axm1} }
+	\hint{=}{ \eqref{axm1} }
 		x \le k \2\land y \le k \2\land z  \le k
-	\hint{=}{ \eqref{ctx1:axm1} }
+	\hint{=}{ \eqref{axm1} }
 		x \1\le k \2\land y \uparrow z \1\le k
-	\hint{=}{ \eqinst{ctx1:axm1}{ \subst{x}{x \uparrow y}, 
+	\hint{=}{ \eqinst{axm1}{ \subst{x}{x \uparrow y}, 	
 			\subst{y}{z} and \subst{z}{k} } }
 		x \uparrow (y \uparrow z) \1\le k
 \end{calculation}
@@ -254,170 +254,28 @@
 \end{proof}
 
 \begin{align}
-\theorem{ctx1:thm5}{ \qforall{x,y}{}{ x \uparrow y = y \2\equiv x \le y } }
+\theorem{thm5}{ \qforall{x,y}{}{ x \uparrow y = y \2\equiv x \le y } }
 \end{align}
 
-\begin{proof}{THM/\ref{ctx1:thm5}}
+\begin{proof}{THM/\ref{thm5}}
 	\begin{free:var}{x}{x}
 	\begin{free:var}{y}{y}
 %\begin{indirect:equality}{right}{\le}{k}
 \begin{calculation}
 		x \uparrow y = y
-	\hint{=}{ \inst{ctx1:axm0}{ \subst{x}{x \uparrow y} } }
+	\hint{=}{ \inst{axm0}{ \subst{x}{x \uparrow y} } }
 		x \uparrow y \le y \2\land y \le x \uparrow y
-	\hint{=}{ \eqref{ctx1:thm3} }
+	\hint{=}{ \eqref{thm3} }
 		x \uparrow y \le y
-	\hint{=}{ \inst{ctx1:axm1}{ \subst{z}{y} } }
+	\hint{=}{ \inst{axm1}{ \subst{z}{y} } }
 		x  \le y \2\land y \le y
-	\hint{=}{ \eqinst{ctx1:axm0}{ \subst{x}{y}, \subst{y}{y}} }
+	\hint{=}{ \inst{axm0}{ \subst{x}{y}, \subst{y}{y}} }
 		x  \le y
 \end{calculation}
 %\end{indirect:equality}
 	\end{free:var}
 	\end{free:var}
 \end{proof}
-
-\begin{align}
-\theorem{ctx1:thm6}{ \qforall{x,y,z}{x\le y \land y \le z}{ x \le z } }
-\end{align}
-
-\begin{proof}{THM/\ref{ctx1:thm6}}
-	\begin{free:var}{x}{x}
-	\begin{free:var}{y}{y}
-	\begin{free:var}{z}{z}
-%\begin{indirect:equality}{right}{\le}{k}
-\begin{calculation}
-		y \le z \1\implies x \le z
-	\hint{=}{ pred. calc. }
-		x \le z \1\land y \le z \2\equiv y \le z
-	\hint{=}{ \eqinst{ctx1:axm1}{ \subst{x}{x}, \subst{y}{y} and \subst{z}{z}  } }
-		x \uparrow y \le z \2\equiv y \le z
-	\hint{\follows}{ Leibniz }
-		x \uparrow y = y
-	\hint{=}{ \eqref{ctx1:thm5} }
-		x  \le y
-\end{calculation}
-%\end{indirect:equality}
-	\end{free:var}
-	\end{free:var}
-	\end{free:var}
-\end{proof}
-
-\[ \dummy{ f : \G \pfun \G } \]
-%
-\begin{align}
-\theorem{ctx1:thm7}{ \qforall{f}{\qforall{x,y}{}{ f.(x \uparrow y) = f.x \uparrow f.y } }{ \qforall{x,y}{ x \le y }{ f.x \le f.y } } }
-\end{align}
-
-\begin{proof}{THM/\ref{ctx1:thm7}}
-	\begin{free:var}{f}{f}
-	\begin{align}
-	\assume{ctx1:thm7:hyp0}{ \qforall{x,y}{}{ 
-		f.(x \uparrow y) \1= f.x \uparrow f.y } } 
-	\hide{ \goal{ \qforall{x,y}{ x \le y }{ f.x \le f.y } } }
-	\end{align}
-	\begin{free:var}{x}{x}
-	\begin{free:var}{y}{y}
-%	\begin{align}
-%	\assume{ctx1:thm7:hyp1}{ x\le y } 
-%	\end{align}
-%\begin{indirect:equality}{right}{\le}{k}
-\begin{calculation}
-		f.x \le f.y
-	\hint{=}{ \eqref{ctx1:thm5} }
-		f.x \uparrow f.y \1= f.y
-	\hint{=}{ \eqref{ctx1:thm7:hyp0} }
-		f.(x \uparrow y) \1 = f.y
-	\hint{\follows}{ Leibniz }
-		x \uparrow y \1= y
-	\hint{=}{ \eqref{ctx1:thm5} }
-		x  \le y
-\end{calculation}
-%\end{indirect:equality}
-	\end{free:var}
-	\end{free:var}
-	\end{free:var}
-\end{proof}
-
-\begin{align}
-\theorem{ctx1:thm8}{ \qforall{x,y}{}{ x\le y \2\equiv 
-	\qforall{z}{}{x \le z \1\follows y \le z } } }
-\end{align}
-
-\begin{proof}{THM/\ref{ctx1:thm8}}
-	\begin{free:var}{x}{x}
-	\begin{free:var}{y}{y} \\
-\begin{by:parts}
-\begin{part:a}{ x\le y \2\implies 
-		\qforall{z}{}{x \le z \1\follows y \le z } }
-%	\begin{align}
-%	\assume{ctx1:thm8:hyp5}{ x\le y }
-%	\end{align}
-%	\hide{ \goal{ \qforall{z}{}{x \le z \1\follows y \le z } } }
-%\begin{free:var}{z}{z}
-\begin{calculation}
-		\qforall{z}{}{y \le z \1\implies x \le z}
-	\hint{\follows}{ \eqref{ctx1:thm6} }
-		x  \le y
-%	\hint{=}{ \eqref{ctx1:thm8:hyp5} }
-%		\true
-\end{calculation}
-%\end{free:var}
-\end{part:a}
-\begin{part:a}{ x \le y \2\follows
-		\qforall{z}{}{x \le z \1\follows y \le z } }
-	\begin{align}
-	\assume{ctx1:thm8:hyp6}{ \qforall{z}{}{x \le z \1\follows y \le z } }
-	\end{align}
-	\hide{ \goal{ x \le y } }
-\begin{calculation}
-		x \le y
-	\hint{\follows}{ \eqref{ctx1:thm8:hyp6} }
-		y  \le y
-	\hint{=}{ \eqref{ctx1:axm0} }
-		\true
-\end{calculation}
-\end{part:a}
-\end{by:parts}
-	\end{free:var}
-	\end{free:var}
-\end{proof}
-
-\begin{align}
-\theorem{ctx1:thm9}{ \qforall{x,y,z}{ }{ z \1\le x \uparrow y \2\follows z \le x \1\lor z\le y  } }
-\end{align}
-
-\begin{proof}{THM/\ref{ctx1:thm9}}
-	\begin{free:var}{z}{z}
-	\begin{free:var}{x}{x}
-	\begin{free:var}{y}{y}
-	\begin{align}
-%	\assume{hyp2}{  } \\
-	\assume{ctx1:thm9:hyp1}{ z \le x \1\lor z\le y } 
-	\end{align}
-	\hide{ \goal{ z \le x \uparrow y }
-		\using{ \eqref{ctx1:thm10} } }
-\begin{by:symmetry}{ctx1:thm9:hyp1}{[x,y]}
-\begin{indirect:inequality}{right}{\le}{k}
-\begin{calculation}
-		x \uparrow y \1\le k
-	\hint{=}{ \eqref{ctx1:axm1} }
-		x \le k \1\land y \le k
-	\hint{\implies}{ weakening }
-		x \le k
-	\hint{\implies}{ \eqref{ctx1:thm9:hyp1} with \eqref{ctx1:thm6} }
-		z \le k
-\end{calculation}
-\end{indirect:inequality}
-\end{by:symmetry}
-	\end{free:var}
-	\end{free:var}
-	\end{free:var}
-\end{proof}
-
-\begin{align}
-\theorem{ctx1:thm10}{ \qforall{x,y}{}{ x \uparrow y \1= y \uparrow x } }
-\end{align}
 
 \end{context}
 
@@ -443,26 +301,26 @@
 \begin{free:var}{j}{j}
 \begin{free:var}{k}{k}
 	\begin{align}
-	\assume{ctx2:thm4:hyp0}{i \le k} \\
-	\assume{ctx2:thm4:hyp1}{j \le k} \\
+	\assume{hyp0}{i \le k} \\
+	\assume{hyp1}{j \le k} \\
 	\goal{ swap.((i \mapsto j) \mapsto k) \le k }
 	\end{align}
 	\noindent
 	\begin{by:cases} \\
-	\begin{case}{ctx2:thm4:hyp2}{\neg i = k \land \neg j = k}
+	\begin{case}{hyp2}{\neg i = k \land \neg j = k}
 		\easy
 	\end{case} \\
-	\begin{case}{ctx2:thm4:hyp3}{i = k \lor j = k}
+	\begin{case}{hyp3}{i = k \lor j = k}
 		By symmetry on $i$ and $j$.
-		\begin{by:symmetry}{ctx2:thm4:hyp3}{[i,j]}
+		\begin{by:symmetry}{hyp3}{[i,j]}
 		\easy
 %		\begin{calculation}
 %			swap.((i \mapsto j) \mapsto k) \le k
-%		\hint{=}{ \eqref{ctx2:thm4:hyp3} }
+%		\hint{=}{ \eqref{hyp3} }
 %			swap.((i \mapsto j) \mapsto i) \le k
 %		\hint{=}{ \eqref{axm1} }
 %			j \le k
-%		\hint{=}{ \eqref{ctx2:thm4:hyp0} }
+%		\hint{=}{ \eqref{hyp0} }
 %			\true
 %		\end{calculation}
 		\end{by:symmetry} \\

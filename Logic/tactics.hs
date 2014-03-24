@@ -16,6 +16,7 @@ module Logic.Tactics
     , free_vars_goal, instantiate_hyp_with
     , get_named_hyps, get_nameless_hyps
     , get_used_vars, get_allocated_vars
+    , use_theorems
     )
 where
 
@@ -35,12 +36,15 @@ import Control.Monad.Trans.Either
 
 import Control.Monad.Identity
 
+import           Data.Graph
 import           Data.List as L
+import qualified Data.List.Ordered as OL
 import           Data.Map  as M hiding (map)
 import qualified Data.Set  as S
 
 import Utilities.Error
 import Utilities.Format
+import Utilities.Graph hiding ( map )
 import Utilities.Syntactic ( Error (..), LineInfo )
 
 data TacticParam = TacticParam 
@@ -72,6 +76,12 @@ tac_listen (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ do
         case x of
             Right (x,y) -> return $ Right ((x,w),y)
             Left x -> return $ Left x
+
+tac_censor :: Monad m
+           => ([Label] -> [Label])
+           -> TacticT m a
+           -> TacticT m a
+tac_censor f (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ censor f cmd
 
 with_line_info :: Monad m => LineInfo -> TacticT m a -> TacticT m a
 with_line_info li (TacticT cmd) = 
@@ -163,18 +173,45 @@ get_context = TacticT $ do
         Sequent ctx _ _ _ <- lift $ asks sequent
         return ctx
 
+add_theorems :: Monad m
+             => [(Label,Expr)] 
+             -> TacticT m Proof 
+             -> TacticT m (Proof, [Label])
+add_theorems thms proof = do
+        param <- TacticT $ lift ask
+        let new_thm = fromList thms
+            f xs = sort xs `OL.minus` keys new_thm
+        tac_censor f $ tac_listen $ tac_local 
+            (param { theorems = new_thm `M.union` theorems param })
+            proof
+        
+
 assert :: Monad m
        => [(Label,Expr,TacticT m Proof)] 
        -> TacticT m Proof 
        -> TacticT m Proof
 assert xs proof = make_hard $ do
         li <- get_line_info
-        ys <- forM xs $ \(lbl,x,m) -> do
-            p <- easy
-            y <- make_soft p $ with_goal x m
-            return ((lbl,x),(lbl,(x,y)))
-        p  <- with_hypotheses (map fst ys) proof
-        return $ Proof $ Assertion (fromList $ map snd ys) p li
+        let thm       = map f xs
+            f (x,y,_) = (x,y)
+        ps <- forM xs $ \(lbl,x,m) -> do
+            p     <- easy
+            (p,r) <- add_theorems thm 
+                $ make_soft p 
+                $ with_goal x m
+            return ((lbl,x),(lbl,(x,p)),(map (\x -> (lbl,x)) r))
+        let (xs,ys,zs) = unzip3 ps
+            -- (xs,ys,zs) =
+            -- (new hypotheses
+            -- , assertions with proof objects
+            -- , dependencies between assertions)
+        make_hard $ forM_ (cycles $ concat zs) $ \x ->
+            let msg = "a cycle exists between the proofs of the assertions {0}" in
+            case x of
+                AcyclicSCC _ -> return ()
+                CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ map show cs) li]
+        p  <- with_hypotheses xs proof
+        return $ Proof $ Assertion (fromList ys) (concat zs) p li
 
 assume :: Monad m
        => [(Label,Expr)]
@@ -194,10 +231,9 @@ clear_vars :: Monad m
 clear_vars vars proof = do
         param <- TacticT $ lift $ ask
         let Sequent ctx asm hyp g = sequent param
-            new_asm = flip L.filter asm $ \x -> 
-                        not $ any (`S.member` used_var x) vars 
-            new_hyp = flip M.filter hyp $ \x -> 
-                        not $ any (`S.member` used_var x) vars
+            new_asm = L.filter f asm
+            new_hyp = M.filter f hyp
+            f x     = not $ any (`S.member` used_var x) vars
             Context a old_vars b c d = ctx
             new_vars = L.foldl (flip M.delete) old_vars (map name vars)
             new_ctx  = Context a new_vars b c d
@@ -210,7 +246,7 @@ clear_vars vars proof = do
                 p           <- proof
                 TacticT $ lift $ put (lbls,ids)
                 return p
-        let thm = theorems param `intersection` fromList (zip w $ repeat ())
+        let thm = M.filter f $ theorems param `intersection` fromList (zip w $ repeat ())
         return $ Proof $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
         
 
@@ -243,13 +279,11 @@ easy = do
 
 data TheoremRef = ThmRef Label [(Var,Expr)]
 
-add_step :: Monad m
-         => Expr
-         -> BinOperator
-         -> [(TheoremRef,LineInfo)]
-         -> TacticT m Calculation
-         -> TacticT m Calculation
-add_step step op hint calc = make_hard $ do
+use_theorems :: Monad m
+             => [(TheoremRef,LineInfo)]
+             -> TacticT m a
+             -> TacticT m a
+use_theorems hint cmd = do
         thms     <- TacticT $ lift $ asks theorems
         thms     <- liftM concat $ forM hint $ \(ThmRef lbl _, _) -> do
             hyps <- get_named_hyps
@@ -259,7 +293,16 @@ add_step step op hint calc = make_hard $ do
                         TacticT $ lift $ tell [lbl]
                         return [(lbl,e)]
                 _ -> return []
-        with_hypotheses thms $ do
+        with_hypotheses thms cmd
+
+add_step :: Monad m
+         => Expr
+         -> BinOperator
+         -> [(TheoremRef,LineInfo)]
+         -> TacticT m Calculation
+         -> TacticT m Calculation
+add_step step op hint calc = make_hard $ do
+        use_theorems hint $ do
             hyp     <- forM hint $ \(ref,li) -> 
                 with_line_info li $ make_soft ztrue $ lookup_hypothesis ref
             trivial <- last_step ztrue

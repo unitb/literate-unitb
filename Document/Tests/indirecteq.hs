@@ -33,6 +33,7 @@ test = test_cases
             , Case "proofs by symmetry: PO" case3 result3
             , Case "proofs by symmetry: hypotheses labels" case4 result4
             , Case "cyclic references between proofs" case5 result5
+            , Case "referring to theorems in automatic proofs (failure)" case6 result6
             ]
 
 path0 :: String
@@ -43,6 +44,9 @@ path1 = "tests/indirect-equality-t1.tex"
 
 path2 :: String
 path2 = "tests/indirect-equality-t2.tex"
+
+path3 :: String
+path3 = "tests/indirect-equality-t3.tex"
 
 case0 :: IO String
 case0 = verify 0 path0
@@ -100,7 +104,8 @@ case2 = verify_thy path0 "ctx1"
 
 result2 :: String
 result2 = unlines
-    [ "  o  THM/ctx1:thm3/goal (213,1)"
+    [ " xxx THM/ctx1:thm10"
+    , "  o  THM/ctx1:thm3/goal (213,1)"
     , "  o  THM/ctx1:thm3/hypotheses (213,1)"
     , "  o  THM/ctx1:thm3/relation (213,1)"
     , "  o  THM/ctx1:thm3/step (216,1)"
@@ -148,19 +153,19 @@ result2 = unlines
     , "  o  THM/ctx1:thm8/part 2/relation (372,27)"
     , "  o  THM/ctx1:thm8/part 2/step (375,1)"
     , "  o  THM/ctx1:thm8/part 2/step (377,1)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy (399,33)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal (400,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses (400,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation (400,43)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (403,1)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (405,1)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (407,1)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/main goal/easy (399,33)"
-    , "  o  THM/ctx1:thm9/assertion/symmetry/new assumption (398,38)"
-    , "  o  THM/ctx1:thm9/main goal/case 1/easy (398,38)"
-    , "  o  THM/ctx1:thm9/main goal/case 2/easy (398,38)"
-    , "  o  THM/ctx1:thm9/main goal/completeness (398,38)"
-    , " xxx THM/ctx1:thm9/new assumption (393,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy (400,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (404,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (406,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (408,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/main goal/easy (400,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/new assumption (399,33)"
+    , "  o  THM/ctx1:thm9/main goal/case 1/easy (399,33)"
+    , "  o  THM/ctx1:thm9/main goal/case 2/easy (399,33)"
+    , "  o  THM/ctx1:thm9/main goal/completeness (399,33)"
+    , "  o  THM/ctx1:thm9/new assumption (393,1)"
     ]
 
 case3 :: IO String
@@ -184,7 +189,7 @@ result3 = unlines
     ]
 
 case4 :: IO (Either [Error] String)
-case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (453,2)"
+case4 = get_po "ctx2" $ label "THM/thm4/case 2/assertion/symmetry/easy (458,2)"
 
 result4 :: Either a String
 result4 = Right $ unlines
@@ -521,11 +526,11 @@ result4 = Right $ unlines
     , "                (=> (and (not (= k i)) (not (= k j)))"
     , "                    (= (apply@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int swap (pair (pair i j) k))"
     , "                       k))))"
-    , "; hyp0"
+    , "; ctx2:thm4:hyp0"
     , "(assert (<= i k))"
-    , "; hyp1"
+    , "; ctx2:thm4:hyp1"
     , "(assert (<= j k))"
-    , "; hyp3"
+    , "; ctx2:thm4:hyp3"
     , "(assert (= i k))"
     , "(assert (not (<= (apply@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int swap (pair (pair i j) k))"
     , "                 k)))"
@@ -540,6 +545,75 @@ case5 = parse path2
 
 result5 :: String
 result5 = "Left error (1,1): A cycle exists in the proofs of ctx1: thm3, thm5\n"
+
+case6 :: IO String
+case6 = verify_thy path3 "ctx1"
+
+result6 :: String
+result6 = unlines
+    [ " xxx THM/ctx1:thm10"
+    , "  o  THM/ctx1:thm3/goal (213,1)"
+    , "  o  THM/ctx1:thm3/hypotheses (213,1)"
+    , "  o  THM/ctx1:thm3/relation (213,1)"
+    , "  o  THM/ctx1:thm3/step (216,1)"
+    , "  o  THM/ctx1:thm3/step (219,1)"
+    , "  o  THM/ctx1:thm3/step (221,1)"
+    , "  o  THM/ctx1:thm4/assertion/indirect:eq/easy (236,24)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/goal (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/hypotheses (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/relation (237,41)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (240,1)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (242,1)"
+    , "  o  THM/ctx1:thm4/assertion/new:goal/step (244,1)"
+    , " xxx THM/ctx1:thm4/assertion/new:goal/step (246,1)"
+    , "  o  THM/ctx1:thm4/main goal/easy (236,24)"
+    , "  o  THM/ctx1:thm5/goal (263,1)"
+    , "  o  THM/ctx1:thm5/hypotheses (263,1)"
+    , "  o  THM/ctx1:thm5/relation (263,1)"
+    , "  o  THM/ctx1:thm5/step (266,1)"
+    , "  o  THM/ctx1:thm5/step (268,1)"
+    , "  o  THM/ctx1:thm5/step (270,1)"
+    , "  o  THM/ctx1:thm5/step (272,1)"
+    , "  o  THM/ctx1:thm6/goal (288,1)"
+    , "  o  THM/ctx1:thm6/hypotheses (288,1)"
+    , "  o  THM/ctx1:thm6/relation (288,1)"
+    , "  o  THM/ctx1:thm6/step (291,1)"
+    , "  o  THM/ctx1:thm6/step (293,1)"
+    , "  o  THM/ctx1:thm6/step (295,1)"
+    , "  o  THM/ctx1:thm6/step (297,1)"
+    , "  o  THM/ctx1:thm7/goal (324,1)"
+    , "  o  THM/ctx1:thm7/hypotheses (324,1)"
+    , "  o  THM/ctx1:thm7/new assumption (313,1)"
+    , "  o  THM/ctx1:thm7/relation (324,1)"
+    , "  o  THM/ctx1:thm7/step (327,1)"
+    , "  o  THM/ctx1:thm7/step (329,1)"
+    , "  o  THM/ctx1:thm7/step (331,1)"
+    , "  o  THM/ctx1:thm7/step (333,1)"
+    , "  o  THM/ctx1:thm8/completeness (349,27)"
+    , "  o  THM/ctx1:thm8/part 1/goal (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/hypotheses (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/relation (357,1)"
+    , "  o  THM/ctx1:thm8/part 1/step (360,1)"
+    , "  o  THM/ctx1:thm8/part 2/goal (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/hypotheses (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/new assumption (366,13)"
+    , "  o  THM/ctx1:thm8/part 2/relation (372,27)"
+    , "  o  THM/ctx1:thm8/part 2/step (375,1)"
+    , "  o  THM/ctx1:thm8/part 2/step (377,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy (400,33)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation (401,43)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (404,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (406,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step (408,1)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/main goal/easy (400,33)"
+    , "  o  THM/ctx1:thm9/assertion/symmetry/new assumption (399,1)"
+    , "  o  THM/ctx1:thm9/main goal/case 1/easy (399,1)"
+    , " xxx THM/ctx1:thm9/main goal/case 2/easy (399,1)"
+    , "  o  THM/ctx1:thm9/main goal/completeness (399,1)"
+    , "  o  THM/ctx1:thm9/new assumption (393,1)"
+    ]
 
 get_po :: FilePath -> Label -> IO (Either [Error] String)
 get_po name lbl = runEitherT $ do

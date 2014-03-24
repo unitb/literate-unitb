@@ -165,15 +165,16 @@ m_closure_with vs es = Matrix (M.map (fromList . (`zip` repeat True)) result) vs
 --        y      <- vs
 --        return ((x,y),y `elem` xs)
     where
-        list        = fromListWith (++) $ L.map m_v vs ++ L.map m_e es
+            -- adjacency list
+        al          = fromListWith (++) $ L.map m_v vs ++ L.map m_e es
         m_v v       = (v,[])
         m_e (v0,v1) = (v0,[v1])
         order       = cycles_with vs es
         f m (AcyclicSCC v) = M.adjust (++ g m v) v m
         f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
-        g m v  = list M.! v ++ concatMap (m M.!) (list M.! v)
+        g m v  = al M.! v ++ concatMap (m M.!) (al M.! v)
         h m vs = vs ++ concatMap (g m) vs
-        result      = foldl f list order
+        result      = foldl f al order
 
 as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs

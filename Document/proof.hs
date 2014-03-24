@@ -27,6 +27,7 @@ import Logic.Theory
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Reader.Class hiding ( reader )
 import           Control.Monad.State.Class as ST
+import qualified Control.Monad.Writer.Class as W
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader, local )
@@ -53,6 +54,7 @@ data ProofStep = Step
        { assertions  :: Map Label (Tactic Expr)    -- assertions
        , subproofs   :: Map Label (Tactic Proof)   -- proofs of assertions
        , assumptions :: Map Label (Tactic Expr)    -- assumptions
+       , theorem_ref :: [Tactic (TheoremRef, LineInfo)]
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal
        , main_proof  :: Maybe (Tactic Proof)       -- main proof        
        }
@@ -73,9 +75,9 @@ set_proof :: ( Monad m
              , MonadState ProofStep m)
           => Tactic Proof -> m ()
 set_proof p = do
-        (Step a b c d mg) <- ST.get
-        case mg of
-            Nothing -> ST.put $ Step a b c d $ Just p
+        s <- ST.get
+        case main_proof s of
+            Nothing -> ST.put $ s { main_proof = Just p }
             Just _  -> do
                 li <- ask
                 hard_error [Error "too many proofs" li]
@@ -87,13 +89,20 @@ set_goal :: ( Monad m
          => Tactic Expr
          -> m ()
 set_goal g = do
-        (Step a b c goal d) <- ST.get
-        case goal of       
+        s <- ST.get
+        case new_goal s of       
             Nothing ->
-                ST.put $ Step a b c (Just g) d
+                ST.put $ s { new_goal = Just g }
             Just _ -> do
                 li    <- ask
                 hard_error [Error ("too many goals") li]
+
+add_refs :: ( Monad m
+                  , MonadReader LineInfo m
+                  , MonadError m
+                  , MonadState ProofStep m)
+         => [Tactic (TheoremRef,LineInfo)] -> m ()
+add_refs xs = ST.modify $ \p -> p { theorem_ref = xs ++ theorem_ref p }
 
 add_assumption :: ( Monad m
                   , MonadReader LineInfo m
@@ -102,11 +111,11 @@ add_assumption :: ( Monad m
                => Label -> Tactic Expr
                -> m ()
 add_assumption lbl asm = do
-        (Step a b c d e) <- ST.get
-        if lbl `member` c then do
+        s <- ST.get
+        if lbl `member` assumptions s then do
             li    <- ask
             hard_error [Error (format "an assumption {0} already exists" lbl) li]
-        else ST.put $ Step a b (insert lbl asm c) d e
+        else ST.put $ s { assumptions = insert lbl asm $ assumptions s }
 
 add_assert :: ( Monad m
               , MonadReader LineInfo m
@@ -115,11 +124,11 @@ add_assert :: ( Monad m
            => Label -> Tactic Expr
            -> m ()
 add_assert lbl asrt = do
-        (Step a b c d e) <- ST.get
-        if lbl `member` a then do
+        s <- ST.get
+        if lbl `member` assertions s then do
             li    <- ask
             hard_error [Error (format "an assertion {0} already exists" lbl) li]
-        else ST.put $ Step (insert lbl asrt a) b c d e
+        else ST.put $ s { assertions = insert lbl asrt $ assertions s }
 
 add_proof :: ( Monad m
              , MonadReader LineInfo m
@@ -128,19 +137,18 @@ add_proof :: ( Monad m
           => Label -> Tactic Proof
           -> m ()
 add_proof lbl prf = do
-        (Step a b c d e) <- ST.get
-        if lbl `member` b then do
+        s <- ST.get
+        if lbl `member` subproofs s then do
             li    <- ask
             hard_error [Error (format "a proof for assertion {0} already exists" lbl) li]
         else
-            ST.put $ Step a (insert lbl prf b) c d e
+            ST.put $ s { subproofs = insert lbl prf $ subproofs s }
 
 empty_step :: ProofStep
-empty_step = Step empty empty empty Nothing Nothing
+empty_step = Step empty empty empty [] Nothing Nothing
 
 find_assumptions :: (MonadState System m, MonadReader Theory m)
-                 => VisitorT (StateT ProofStep m) () -- ProofStep
---                 -> RWST LineInfo [Error] System m ProofStep
+                 => VisitorT (StateT ProofStep m) () 
 find_assumptions = visitor
         [   (   "calculation"
             ,   VEnvBlock $ \() _ -> return ()
@@ -160,38 +168,27 @@ find_assumptions = visitor
         ] [ (   "\\assume"
             ,   VCmdBlock $ \(lbl,formula :: [LatexDoc],()) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
---                        get_predicate m (par_ctx pr) WithoutFreeDummies formula 
                     add_assumption lbl expr 
             )
         ,   (   "\\assert"
             ,   VCmdBlock $ \(lbl,formula :: [LatexDoc],()) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
---                        get_predicate m (par_ctx pr) WithoutFreeDummies formula
                     add_assert lbl expr
             )
         ,   (   "\\goal"
             ,   VCmdBlock $ \(formula :: [LatexDoc],()) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
---                        get_predicate m (par_ctx pr) WithoutFreeDummies formula
                     set_goal expr
             )
+        ,   (   "\\using"
+            ,   VCmdBlock $ \(refs,()) -> do
+                    li      <- ask
+                    s       <- lift $ lift $ ST.get
+                    (((),hs),s) <- add_state s $ add_writer $ with_content li refs hint
+                    lift $ lift $ ST.put s
+                    add_refs hs
+            )       
         ]
-
-
---indirect_eq_thm :: MonadReader LineInfo m 
---                => Either () () -> BinOperator 
---                -> Type -> EitherT [Error] m Expr
---indirect_eq_thm dir op t = do
---        li <- ask
---        let (x,x_decl) = var "x" t
---            (y,y_decl) = var "y" t
---            (z,z_decl) = var "z" t
---        x <- hoistEither x
---        y <- hoistEither y
---        z <- hoistEither z
---        let equiv = indirect_eq dir op x y z
---        hoistEither $ with_li li $ mzforall [x_decl,y_decl] mztrue $
---                    (Right x `mzeq` Right y) `mzeq` mzforall [z_decl] mztrue equiv
 
 indirect_eq :: Either () () -> BinOperator 
             -> Expr -> Expr -> Expr 
@@ -211,23 +208,17 @@ intersections = intersectionsWith const
 by_symmetry :: Monad m
             => [Var]
             -> Label
---            -> [(Expr, TacticT m Proof)]
             -> Maybe Label
             -> TacticT m Proof
             -> TacticT m Proof
 by_symmetry vs hyp mlbl proof = do
         cs <- lookup_hypothesis (ThmRef hyp [])
         let err0 = format "expecting a disjunction\n{0}: {1}" hyp $ pretty_print' cs
---            err1 cs = format "the clauses of {0} do not match those of the proof by case:\n{1}" hyp 
---                        $ unlines $ map f $ L.filter p $ zip (sort cs) $ sort $ map fst cases
---            p (x,y) = x /= y
---            f (x,y) = format "clause from '{0}': {1}\nproof clause: {2}" hyp x y
         lbl  <- maybe (fresh_label "symmetry") return mlbl
         goal <- get_goal
         case cs of
             FunApp f cs
                 | name f /= "or" -> fail err0
---                | sort cs /= sort (map fst cases) -> fail $ err1 cs
                 | otherwise -> do
                     ps <- forM (permutations vs) $ \us -> do
                         hyp <- get_named_hyps
@@ -477,33 +468,44 @@ collect_proof_step pr = do
         ((),step) <- make_hard $ add_state empty_step $ find_assumptions
         li   <- ask
         (_,step) <- add_state step $ find_proof_step pr
-        case step of
-            Step assrt prfs asm ng (Just p) -> do
+        case main_proof step of
+            Just p -> do
+                let assrt   = assertions step
+                    prfs    = subproofs step
+                    asm     = assumptions step
+                    ng      = new_goal step
+                    thm_ref = theorem_ref step
                 p <- if M.null assrt && M.null prfs
                     then return p
                     else if keysSet assrt == keysSet prfs
                     then return $ Tac.with_line_info li $ do
-                        assrt <- forM (toList assrt) $ \(lbl,xp) -> do
-                            xp <- xp
-                            let p = prfs ! lbl
-                            return (lbl,xp,p)
-                        assert assrt p
+                        thm <- sequence thm_ref
+                        use_theorems thm $ do
+                            assrt <- forM (toList assrt) $ \(lbl,xp) -> do
+                                xp <- xp
+                                let p = prfs ! lbl
+                                return (lbl,xp,p)
+                            assert assrt p
                     else hard_error [Error "assertion labels and proofs mismatch" li]
                 case ng of
                     Just g  -> return $ Tac.with_line_info li $ do
-                        g <- g
-                        asm <- forM (toList asm) $ \(lbl,x) -> do
-                            x <- x
-                            return (lbl,x)
-                        assume asm g p
+                        thm <- sequence thm_ref
+                        use_theorems thm $ do
+                            g <- g
+                            asm <- forM (toList asm) $ \(lbl,x) -> do
+                                x <- x
+                                return (lbl,x)
+                            assume asm g p
                     Nothing -> 
                         if M.null asm 
                         then return p
                         else hard_error [Error "assumptions must be accompanied by a new goal" li]
             _   -> hard_error [Error "expecting a single proof step" li]         
 
-hint :: (MonadReader Theory m, MonadState System m)
-     => VisitorT (WriterT [Tactic (TheoremRef, LineInfo)] m) ()
+hint :: ( MonadReader Theory m
+        , MonadState System m
+        , W.MonadWriter [Tactic (TheoremRef, LineInfo)] m)
+     => VisitorT m ()
 hint = visitor []
         [ ( "\\ref", VCmdBlock f )
         , ( "\\eqref", VCmdBlock f )
@@ -516,18 +518,18 @@ hint = visitor []
                 ((),w) <- with_content li subst $ add_writer $ visitor []
                     [ ( "\\subst", VCmdBlock $ \(String var, expr,()) -> do
                             expr <- get_expression Nothing expr
-                            lift $ tell [do
+                            lift $ W.tell [do
                                 dum <- get_dummy var
                                 xp  <- expr
                                 return (dum,xp)]  
                             return ()
                       ) ]
-                lift $ tell [do
+                lift $ W.tell [do
                     w <- sequence w 
                     return (ThmRef lbl w,li)]
         f (b,()) = do
             li <- ask
-            lift $ tell [return (ThmRef b [],li)]
+            lift $ W.tell [return (ThmRef b [],li)]
 
 parse_calc :: ( MonadState System m, MonadReader Theory m )
            => ProofParam 

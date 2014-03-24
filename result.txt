@@ -1,0 +1,184 @@
++- Unit-B Document
+|  +- basic syntax and scopes
+|  +- Contextual predicate visibility rules
+|  +- train station example, with sets
+|  |  +- verify proof with galois connections
+|  |  +- verify theory 1: indirect (in)equality
+|  |  +- verify theory 2: lattices
+|  |  +- proofs by symmetry: PO
+|  |  +- proofs by symmetry: hypotheses labels
+|  |  +- cyclic references between proofs
+|  |  +- referring to theorems in automatic proofs (failure)
+|  |  +- [ Success: 7 / 7 ]
+|  +- small machine example
+|  |  +- test 0
+|  |  +- test 1 (separate machine blocks)
+|  |  +- test 2 (verification, one failure)
+|  |  +- test 3 (verification)
+|  |  +- test 4 (proof obligation, invariance)
+|  |  +- test 5 (co, 'skip' proof obligation)
+|  |  +- test 6 (verification, coarse schedule stronger than guard)
+|  |  +- test 7 (schedulability proof obligation)
+|  |  +- test 8 (schedulability without selecting schedules (trivially true))
+|  |  +- test 9 (coarse schedule weakening, PO)
+|  |  +- test 10 (transient PO, enablement)
+|  |  +- test 11 (transient PO, negation)
+|  |  +- [ Success: 12 / 12 ]
+|  +- table of cubes example
+|  |  +- test 0 (syntax)
+|  |  +- test 1 (verification)
+|  |  +- test 2 (init/fis po)
+|  |  +- proof of inv0
+|  |  +- empty proof
+|  |  +- [ Success: 5 / 5 ]
+|  +- train station example
+|  |  +- part 0
+|  |  |  +- test 0, syntax
+|  |  |  +- [ Success: 1 / 1 ]
+|  |  +- part 1
+|  |  |  +- test 1, verification
+|  |  |  +- test 2, proof obligation, INIT/fis, in
+|  |  |  +- test 20, proof obligation, INIT/fis, loc
+|  |  |  +- test 3, proof obligation, leave/fis, in'
+|  |  |  +- test 19, proof obligation, leave/fis, loc'
+|  |  |  +- test 4, proof obligation, leave/sch
+|  |  |  +- [ Success: 6 / 6 ]
+|  |  +- part 2
+|  |  |  +- test 5, proof obligation, leave/en/tr0
+|  |  |  +- test 7, undeclared symbol
+|  |  |  +- test 8, undeclared event (wrt transient)
+|  |  |  +- test 9, undeclared event (wrt c sched)
+|  |  |  +- [ Success: 4 / 4 ]
+|  |  +- part 3
+|  |  |  +- test 10, undeclared event (wrt indices)
+|  |  |  +- test 11, undeclared event (wrt assignment)
+|  |  |  +- test 12, proof obligation leave/INV/inv2
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 4
+|  |  |  +- test 13, verification, name clash between dummy and index
+|  |  |  +- test 14, verification, non-exhaustive case analysis
+|  |  |  +- test 15, verification, incorrect new assumption
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 5
+|  |  |  +- test 16, verification, proof by parts
+|  |  |  +- test 17, ill-defined types
+|  |  |  +- test 18, assertions have type bool
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- [ Success: 6 / 6 ]
+|  +- lambda expressions in the cube example
+|  |  +- part 0
+|  |  |  +- test 0, verification, lambda vs empty-fun
+|  |  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  |  +- test 2, verification, lambda vs apply
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 1
+|  |  |  +- test 3, verification, set comprehension, failed proof
+|  |  |  +- test 4, adding a progress property
+|  |  |  +- test 5, unless properties
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 2
+|  |  |  +- test 6, verify progress refinement
+|  |  |  +- test 7, verify refinement rules
+|  |  |  +- test 8, verify refinement rules
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 3
+|  |  |  +- test 9, verify disjunction rule
+|  |  |  +- test 10, error: cyclic proof
+|  |  |  +- [ Success: 2 / 2 ]
+|  |  +- [ Success: 4 / 4 ]
+|  +- refinement relations in the phase example
+|  |  +- test 0, cyclic refinement relation between machines
+|  |  +- test 1, valid references to variables and event declared in ancester
+|  |  +- [ Success: 2 / 2 ]
+|  +- train station example, with refinement
+|  |  +- verify machine m0
+|  |  +- verify machine m1
+|  |  +- verify machine m2
+|  |  +- verify machine m2, in many files
+|  |  +- cyclic proof of liveness through 3 refinements
+|  |  +- refinement of undefined machine
+|  |  +- [ Success: 6 / 6 ]
+|  +- train station example, with sets
+|  |  +- verify machine m0
+|  |  +- verify machine m1
+|  |  +- verify machine m2
+|  |  +- verify machine m3
+|  |  +- type checking of boolean expressions
+|  |  +- verify machine m3 error (wandering free variable)
+|  |  +- [ Success: 6 / 6 ]
+|  +- the parser is exception free
+|  +- [ Success: 11 / 11 ]
++- Unit-B
+|  +- 'x eventually increases' verifies
+|  +- train, model 0, verification
+|  +- train, m0 transient / falsification PO
+|  +- Feasibility and partitioning
+|  +- Debugging the partitioning
+|  +- genericity
+|  |  +- unification, t0
+|  |  +- unification, t1
+|  |  +- unification, t2
+|  |  +- unification, t3
+|  |  +- unification, t4
+|  |  +- unification, t5
+|  |  +- unification, t6
+|  |  +- type instantiation
+|  |  +- type inference 1
+|  |  +- type inference 3
+|  |  +- type inference 4
+|  |  +- type inference 5
+|  |  +- instantiation of unified types is unique
++++ OK, passed 100 tests.
+|  |  +- instantiation of unified types is unique (counter examples)
+|  |  +- type mapping are acyclic
++++ OK, passed 100 tests.
+|  |  +- [ Success: 15 / 15 ]
+|  +- [ Success: 6 / 6 ]
++- latex parser
+|  +- sample.tex
+|  +- sorted seq err.tex
+|  +- reconstitute sample.tex
+|  +- reconstitute integers.tex
+|  +- reconstitute sorted seq.tex
+|  +- [ Success: 5 / 5 ]
++- Z3 test
+|  +- sample_quant
+|  +- sample_quant2
+|  +- sample_quant3
+|  +- sample proof
+|  +- check sample calc
+|  +- canonical lambdas
+|  +- canonical lambdas with quantifier
+|  +- [ Success: 7 / 7 ]
++- Graphs and operator grammars
+|  +- case 0 - complete domain of matrices
+|  +- case 1 - operator grammar discrepancy
+|  +- case 2 - new ambiguities
+|  +- case 3 - transitive closures
+|  +- case 4 - transitive closures in linear time
+|  +- Formatting utilities
+|  |  +- test 0
+|  |  +- test 1
+|  |  +- [ Success: 2 / 2 ]
+|  +- case 5 - error monad
+|  +- [ Success: 7 / 7 ]
++- code generation in the cube example
+|  +- test0: code for the {state}
+|  +- test1: code for the {event}
+|  +- test2: code for the {initialization}
+|  +- test3: code for the {procedure + loop}
+|  +- test4: {whole source file}
+|  +- test5: run {source file}
+|  +- [ Success: 6 / 6 ]
++- [ Success: 6 / 6 ]
+
+***************
+*** SUCCESS ***
+***************
+Lines of Haskell code:
+   18200 total
+    1604 Document/Tests/trainstation.hs
+     955 Document/machine.hs
+     759 Document/proof.hs
+     746 Document/Tests/lambdas.hs
+     723 UnitB/ast.hs

@@ -312,21 +312,21 @@
 \begin{proof}{THM/\ref{ctx1:thm7}}
 	\begin{free:var}{f}{f}
 	\begin{align}
-	\assume{ctx1:thm7:hyp0}{ \qforall{x,y}{}{ 
+	\assume{hyp0}{ \qforall{x,y}{}{ 
 		f.(x \uparrow y) \1= f.x \uparrow f.y } } 
 	\hide{ \goal{ \qforall{x,y}{ x \le y }{ f.x \le f.y } } }
 	\end{align}
 	\begin{free:var}{x}{x}
 	\begin{free:var}{y}{y}
 %	\begin{align}
-%	\assume{ctx1:thm7:hyp1}{ x\le y } 
+%	\assume{hyp1}{ x\le y } 
 %	\end{align}
 %\begin{indirect:equality}{right}{\le}{k}
 \begin{calculation}
 		f.x \le f.y
 	\hint{=}{ \eqref{ctx1:thm5} }
 		f.x \uparrow f.y \1= f.y
-	\hint{=}{ \eqref{ctx1:thm7:hyp0} }
+	\hint{=}{ \eqref{hyp0} }
 		f.(x \uparrow y) \1 = f.y
 	\hint{\follows}{ Leibniz }
 		x \uparrow y \1= y
@@ -351,7 +351,7 @@
 \begin{part:a}{ x\le y \2\implies 
 		\qforall{z}{}{x \le z \1\follows y \le z } }
 %	\begin{align}
-%	\assume{ctx1:thm8:hyp5}{ x\le y }
+%	\assume{hyp5}{ x\le y }
 %	\end{align}
 %	\hide{ \goal{ \qforall{z}{}{x \le z \1\follows y \le z } } }
 %\begin{free:var}{z}{z}
@@ -359,7 +359,7 @@
 		\qforall{z}{}{y \le z \1\implies x \le z}
 	\hint{\follows}{ \eqref{ctx1:thm6} }
 		x  \le y
-%	\hint{=}{ \eqref{ctx1:thm8:hyp5} }
+%	\hint{=}{ \eqref{hyp5} }
 %		\true
 \end{calculation}
 %\end{free:var}
@@ -367,12 +367,12 @@
 \begin{part:a}{ x \le y \2\follows
 		\qforall{z}{}{x \le z \1\follows y \le z } }
 	\begin{align}
-	\assume{ctx1:thm8:hyp6}{ \qforall{z}{}{x \le z \1\follows y \le z } }
+	\assume{hyp6}{ \qforall{z}{}{x \le z \1\follows y \le z } }
 	\end{align}
 	\hide{ \goal{ x \le y } }
 \begin{calculation}
 		x \le y
-	\hint{\follows}{ \eqref{ctx1:thm8:hyp6} }
+	\hint{\follows}{ \eqref{hyp6} }
 		y  \le y
 	\hint{=}{ \eqref{ctx1:axm0} }
 		\true
@@ -393,11 +393,11 @@
 	\begin{free:var}{y}{y}
 	\begin{align}
 %	\assume{hyp2}{  } \\
-	\assume{ctx1:thm9:hyp1}{ z \le x \1\lor z\le y } 
+	\assume{hyp1}{ z \le x \1\lor z\le y } 
 	\end{align}
-	\hide{ \goal{ z \le x \uparrow y }
-		\using{ \eqref{ctx1:thm10} } }
-\begin{by:symmetry}{ctx1:thm9:hyp1}{[x,y]}
+	\hide{ \goal{ z \le x \uparrow y } }
+%	\using{ \eqref{ctx1:thm10} }
+\begin{by:symmetry}{hyp1}{[x,y]}
 \begin{indirect:inequality}{right}{\le}{k}
 \begin{calculation}
 		x \uparrow y \1\le k
@@ -405,7 +405,7 @@
 		x \le k \1\land y \le k
 	\hint{\implies}{ weakening }
 		x \le k
-	\hint{\implies}{ \eqref{ctx1:thm9:hyp1} with \eqref{ctx1:thm6} }
+	\hint{\implies}{ \eqref{hyp1} with \eqref{ctx1:thm6} }
 		z \le k
 \end{calculation}
 \end{indirect:inequality}
@@ -443,26 +443,26 @@
 \begin{free:var}{j}{j}
 \begin{free:var}{k}{k}
 	\begin{align}
-	\assume{ctx2:thm4:hyp0}{i \le k} \\
-	\assume{ctx2:thm4:hyp1}{j \le k} \\
+	\assume{hyp0}{i \le k} \\
+	\assume{hyp1}{j \le k} \\
 	\goal{ swap.((i \mapsto j) \mapsto k) \le k }
 	\end{align}
 	\noindent
 	\begin{by:cases} \\
-	\begin{case}{ctx2:thm4:hyp2}{\neg i = k \land \neg j = k}
+	\begin{case}{hyp2}{\neg i = k \land \neg j = k}
 		\easy
 	\end{case} \\
-	\begin{case}{ctx2:thm4:hyp3}{i = k \lor j = k}
+	\begin{case}{hyp3}{i = k \lor j = k}
 		By symmetry on $i$ and $j$.
-		\begin{by:symmetry}{ctx2:thm4:hyp3}{[i,j]}
+		\begin{by:symmetry}{hyp3}{[i,j]}
 		\easy
 %		\begin{calculation}
 %			swap.((i \mapsto j) \mapsto k) \le k
-%		\hint{=}{ \eqref{ctx2:thm4:hyp3} }
+%		\hint{=}{ \eqref{hyp3} }
 %			swap.((i \mapsto j) \mapsto i) \le k
 %		\hint{=}{ \eqref{axm1} }
 %			j \le k
-%		\hint{=}{ \eqref{ctx2:thm4:hyp0} }
+%		\hint{=}{ \eqref{hyp0} }
 %			\true
 %		\end{calculation}
 		\end{by:symmetry} \\

@@ -16,10 +16,8 @@ import Control.Monad
 
 import Data.List as L
 import Data.Map as M 
-                ( Map, lookup, fromList
-                , elems, toList, empty
-                , singleton, mapKeys, union
-                , keys, difference )
+                ( Map, mapKeys )
+import qualified Data.Map as M 
 import Data.Maybe
 import Data.Set as S 
 import Data.String.Utils as SU
@@ -66,7 +64,7 @@ data Assume     = Assume (Map Label Expr) Expr Proof LineInfo
 data ByParts    = ByParts [(Expr,Proof)]           LineInfo
     deriving (Eq,Typeable)
 
-data Assertion  = Assertion (Map Label (Expr,Proof)) Proof LineInfo
+data Assertion  = Assertion (Map Label (Expr,Proof)) [(Label,Label)] Proof LineInfo
     deriving (Eq,Typeable)
 
 data InstantiateHyp = InstantiateHyp Expr (Map Var Expr) Proof LineInfo
@@ -94,7 +92,7 @@ instance Syntactic ByParts where
     line_info (ByParts _ li)        = li
 
 instance Syntactic Assertion where
-    line_info (Assertion _ _ li)    = li
+    line_info (Assertion _ _ _ li)  = li
 
 instance Syntactic Easy where
     line_info (Easy li)             = li
@@ -187,13 +185,17 @@ instance ProofRule Assume where
                    : pos)
 
 instance ProofRule Assertion where
-    proof_po    th  (Assertion lemma p _)
+    proof_po    th  (Assertion lemma dep p _)
                 lbl (Sequent ctx asm hyps goal) = do
+            let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
+                f (x,y) = (x,[(y,())])
             pos1 <- proof_po th p ( composite_label [lbl,label "main goal"] )
                 $ Sequent ctx (asm ++ L.map fst (M.elems lemma)) hyps goal
-            pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) ->
+            pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) -> do
+                let used = maybe M.empty id $ lbl2 `M.lookup` depend
+                    thm  = (M.map fst lemma) `M.intersection` used
                 proof_po th p (composite_label [lbl,label "assertion",lbl2]) 
-                    $ Sequent ctx asm hyps g )
+                    $ Sequent ctx asm (thm `M.union` hyps) g )
             return (pos1 ++ concat pos2)
 
 --instance ProofRule Prune where
