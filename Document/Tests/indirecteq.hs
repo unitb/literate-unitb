@@ -104,7 +104,16 @@ case2 = verify_thy path0 "ctx1"
 
 result2 :: String
 result2 = unlines
-    [ " xxx THM/ctx1:thm10"
+    [ "  o  THM/ctx1:thm10/assertion/indirect:eq/easy (482,24)"
+    , "  o  THM/ctx1:thm10/assertion/new:goal/goal (483,41)"
+    , "  o  THM/ctx1:thm10/assertion/new:goal/hypotheses (483,41)"
+    , "  o  THM/ctx1:thm10/assertion/new:goal/relation (483,41)"
+    , "  o  THM/ctx1:thm10/assertion/new:goal/step (485,20)"
+    , "  o  THM/ctx1:thm10/main goal/easy (482,24)"
+    , "  o  THM/ctx1:thm11/completeness (506,24)"
+    , "  o  THM/ctx1:thm11/new assumption (498,1)"
+    , "  o  THM/ctx1:thm11/part 1/easy (514,1)"
+    , " xxx THM/ctx1:thm11/part 2/easy (518,1)"
     , "  o  THM/ctx1:thm3/goal (213,1)"
     , "  o  THM/ctx1:thm3/hypotheses (213,1)"
     , "  o  THM/ctx1:thm3/relation (213,1)"

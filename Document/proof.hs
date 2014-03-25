@@ -190,13 +190,6 @@ find_assumptions = visitor
             )       
         ]
 
-indirect_eq :: Either () () -> BinOperator 
-            -> Expr -> Expr -> Expr 
-            -> Either String Expr
-indirect_eq dir op x y z = do
-                case dir of
-                    Left()  -> mk_expr op z x `mzeq` mk_expr op z y
-                    Right() -> mk_expr op x z `mzeq` mk_expr op y z
 
 intersectionsWith :: Ord a => (b -> b -> b) -> [Map a b] -> Map a b
 intersectionsWith _ [] = error "intersection of an empty list of sets"
@@ -475,10 +468,8 @@ collect_proof_step pr = do
                     asm     = assumptions step
                     ng      = new_goal step
                     thm_ref = theorem_ref step
-                p <- if M.null assrt && M.null prfs
-                    then return p
-                    else if keysSet assrt == keysSet prfs
-                    then return $ Tac.with_line_info li $ do
+                p <- if keysSet assrt == keysSet prfs
+                     then return $ Tac.with_line_info li $ do
                         thm <- sequence thm_ref
                         use_theorems thm $ do
                             assrt <- forM (toList assrt) $ \(lbl,xp) -> do
