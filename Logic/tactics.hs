@@ -190,28 +190,31 @@ assert :: Monad m
        => [(Label,Expr,TacticT m Proof)] 
        -> TacticT m Proof 
        -> TacticT m Proof
-assert xs proof = make_hard $ do
-        li <- get_line_info
-        let thm       = map f xs
-            f (x,y,_) = (x,y)
-        ps <- forM xs $ \(lbl,x,m) -> do
-            p     <- easy
-            (p,r) <- add_theorems thm 
-                $ make_soft p 
-                $ with_goal x m
-            return ((lbl,x),(lbl,(x,p)),(map (\x -> (lbl,x)) r))
-        let (xs,ys,zs) = unzip3 ps
-            -- (xs,ys,zs) =
-            -- (new hypotheses
-            -- , assertions with proof objects
-            -- , dependencies between assertions)
-        make_hard $ forM_ (cycles $ concat zs) $ \x ->
-            let msg = "a cycle exists between the proofs of the assertions {0}" in
-            case x of
-                AcyclicSCC _ -> return ()
-                CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ map show cs) li]
-        p  <- with_hypotheses xs proof
-        return $ Proof $ Assertion (fromList ys) (concat zs) p li
+assert xs proof = make_hard $ 
+        if L.null xs
+        then proof
+        else do
+            li <- get_line_info
+            let thm       = map f xs
+                f (x,y,_) = (x,y)
+            ps <- forM xs $ \(lbl,x,m) -> do
+                p     <- easy
+                (p,r) <- add_theorems thm 
+                    $ make_soft p 
+                    $ with_goal x m
+                return ((lbl,x),(lbl,(x,p)),(map (\x -> (lbl,x)) r))
+            let (xs,ys,zs) = unzip3 ps
+                -- (xs,ys,zs) =
+                -- (new hypotheses
+                -- , assertions with proof objects
+                -- , dependencies between assertions)
+            make_hard $ forM_ (cycles $ concat zs) $ \x ->
+                let msg = "a cycle exists between the proofs of the assertions {0}" in
+                case x of
+                    AcyclicSCC _ -> return ()
+                    CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ map show cs) li]
+            p  <- with_hypotheses xs proof
+            return $ Proof $ Assertion (fromList ys) (concat zs) p li
 
 assume :: Monad m
        => [(Label,Expr)]
@@ -278,14 +281,23 @@ easy = do
         return $ Proof $ Easy li
 
 data TheoremRef = ThmRef Label [(Var,Expr)]
+    deriving Show
 
 use_theorems :: Monad m
              => [(TheoremRef,LineInfo)]
-             -> TacticT m a
-             -> TacticT m a
+             -> TacticT m Proof
+             -> TacticT m Proof
 use_theorems hint cmd = do
+        thms <- derive_theorems hint
+        with_hypotheses thms $
+            instantiate_all hint cmd
+
+derive_theorems :: Monad m
+                => [(TheoremRef,LineInfo)]
+                -> TacticT m [(Label, Expr)]
+derive_theorems hint = do
         thms     <- TacticT $ lift $ asks theorems
-        thms     <- liftM concat $ forM hint $ \(ThmRef lbl _, _) -> do
+        thms     <- forM hint $ \(ThmRef lbl _, _) -> do
             hyps <- get_named_hyps
             case lbl `M.lookup` thms of
                 Just e 
@@ -293,6 +305,14 @@ use_theorems hint cmd = do
                         TacticT $ lift $ tell [lbl]
                         return [(lbl,e)]
                 _ -> return []
+        return $ concat thms
+
+use_theorems' :: Monad m
+              => [(TheoremRef,LineInfo)]
+              -> TacticT m a
+              -> TacticT m a
+use_theorems' hint cmd = do
+        thms <- derive_theorems hint
         with_hypotheses thms cmd
 
 add_step :: Monad m
@@ -302,7 +322,7 @@ add_step :: Monad m
          -> TacticT m Calculation
          -> TacticT m Calculation
 add_step step op hint calc = make_hard $ do
-        use_theorems hint $ do
+        use_theorems' hint $ do
             hyp     <- forM hint $ \(ref,li) -> 
                 with_line_info li $ make_soft ztrue $ lookup_hypothesis ref
             trivial <- last_step ztrue
@@ -421,9 +441,25 @@ instantiate hyp ps = do
                                     else zforall new_vs re te
                     return newh
             _ 
-                | not $ L.null ps -> fail $ "predicate is not a universal quantification:\n" 
-                    ++ pretty_print' hyp
-            _  -> return hyp
+                | not $ L.null ps -> 
+                    fail $ "predicate is not a universal quantification:\n" 
+                        ++ pretty_print' hyp
+                | otherwise  -> return hyp
+
+instantiate_all :: Monad m
+                => [(TheoremRef,LineInfo)]
+                -> TacticT m Proof
+                -> TacticT m Proof
+instantiate_all [] proof = proof
+instantiate_all ((ThmRef lbl ps, li):rs) proof = do
+        hyps    <- get_named_hyps -- _hypotheses
+        new_lbl <- fresh_label $ show lbl
+        h <- maybe
+            (hard_error [Error (format "unexistant hypothesis: {0}" lbl) li])
+            return 
+            (lbl `M.lookup` hyps)
+        instantiate_hyp h new_lbl ps $
+            instantiate_all rs proof
 
 instantiate_hyp_with :: Monad m
                      => Expr 

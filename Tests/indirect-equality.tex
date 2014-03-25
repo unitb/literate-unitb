@@ -188,7 +188,7 @@
 
 \newset{G}{\G}
 
-\[ \dummy{x,y,y_0,y_1,z,k: \G} \]
+\[ \dummy{x,y,y_0,y_1,z,k,p,q: \G} \]
 \with{functions}
 
 \operator{\le}{ le : Pair [ \G, \G ] \pfun \Bool }
@@ -471,6 +471,56 @@
 \end{free:var}
 \end{free:var}
 \end{free:var}
+\end{proof}
+
+\end{context}
+
+\begin{context}{ctx1}
+
+\begin{proof}{THM/\ref{ctx1:thm10}}
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+\begin{indirect:equality}{right}{\le}{z}
+\begin{calculation}
+	x \uparrow y \le z
+\hint{=}{ \eqref{ctx1:axm1} }
+	y \uparrow x \le z
+\end{calculation}
+\end{indirect:equality}
+	\end{free:var}
+	\end{free:var}
+\end{proof}
+
+\begin{align}
+\theorem{ctx1:thm11}{ & \qforall{p,q}{}{ p \le q \1\lor q \le p } \\
+\3\implies & \qforall{x,y,z}{}{ z \1\le x \uparrow y \2\equiv z \le x \1\lor z \le y  }  } \notag
+\end{align}
+
+\begin{proof}{THM/\ref{ctx1:thm11}}
+	\begin{align}
+	\assume{ctx1:thm11:hyp0}{ \qforall{p,q}{}{ p \le q \1\lor q \le p } }
+	\end{align}
+	\hide{ \goal{\qforall{x,y,z}{}{ z \1\le x \uparrow y \2\equiv z \le x \1\lor z \le y  } } }
+	\begin{free:var}{x}{x}
+	\begin{free:var}{y}{y}
+	\begin{free:var}{z}{z}
+\begin{by:parts}
+\begin{part:a}{ z \1\le x \uparrow y \2\follows z \le x \1\lor z \le y }
+	% this should discharge automatically
+		% and z \1\le x \uparrow y 
+		%	\2\follows z \le x \1\lor z \le y
+		% should appear in the assumptions
+	\using{ \eqinst{ctx1:thm9}{ \subst{x}{x} \subst{y}{y} \subst{z}{z} }  }
+	\easy
+\end{part:a}
+\begin{part:a}{ z \1\le x \uparrow y \2\implies z \le x \1\lor z \le y }
+	
+	\easy
+\end{part:a}
+\end{by:parts}
+	\end{free:var} 
+	\end{free:var} 
+	\end{free:var} 
 \end{proof}
 
 \end{context}
