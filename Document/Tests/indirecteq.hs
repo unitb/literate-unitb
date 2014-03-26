@@ -633,7 +633,7 @@ result6 = unlines
     ]
 
 case7 :: IO (Either [Error] String)
-case7 = get_po path0 (label "THM/ctx1:thm11/part 2/step (528,1)")
+case7 = get_po "ctx1" (label "THM/ctx1:thm11/part 2/step (528,1)")
 
 result7 :: Either a String
 result7 = Right $ unlines
@@ -826,13 +826,19 @@ result7 = Right $ unlines
 get_po :: FilePath -> Label -> IO (Either [Error] String)
 get_po name lbl = runEitherT $ do
             s   <- EitherT $ parse_system path0
-            pos <- hoistEither $ theory_po $ theories s ! name
+            th  <- maybe 
+                    (left [Error (format "unknown theory: {0} {1}" name $ keys $ theories s) li])
+                    return
+                    $ name `M.lookup` theories s
+            pos <- hoistEither $ theory_po th
             p   <- maybe 
-                    (left $ [Error (format "unknown proof obligation: {0}" $ keys pos) 
-                          $ LI path0 0 0]) 
+                    (left $ [Error (format "unknown proof obligation: {0} {1}" lbl $ keys pos) 
+                          $ li]) 
                     right 
                     (M.lookup lbl pos)
             return $ concatMap pretty_print' $ z3_code p
+        where
+            li = LI path0 0 0
 
 parse :: FilePath -> IO String
 parse path = do

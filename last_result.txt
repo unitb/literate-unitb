@@ -9,7 +9,8 @@
 |  |  +- proofs by symmetry: hypotheses labels
 |  |  +- cyclic references between proofs
 |  |  +- referring to theorems in automatic proofs (failure)
-|  |  +- [ Success: 7 / 7 ]
+|  |  +- partial instantiation of theorems in calc. hints
+|  |  +- [ Success: 8 / 8 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -176,11 +177,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   18240 total
+   18561 total
     1604 Document/Tests/trainstation.hs
      955 Document/machine.hs
+     875 Document/Tests/indirecteq.hs
      754 Document/proof.hs
-     746 Document/Tests/lambdas.hs
-     723 UnitB/ast.hs
-Time: 02:39:55
-Time: 02:42:17
+     750 Document/Tests/lambdas.hs
+Time: 13:43:38
