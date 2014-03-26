@@ -55,7 +55,6 @@ import qualified Data.Set as S
 
 import Utilities.Format
 import Utilities.Syntactic
-import Utilities.Trace
 
 list_file_obligations :: FilePath
                        -> IO (Either [Error] [(Machine, Map Label Sequent)])
@@ -761,8 +760,7 @@ collect_refinement = visit_doc []
                       }
             )
         ,   (   "\\weakento"
-            ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label,()) m -> 
-                    traceBlock "weaken" $ do
+            ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label,()) m -> do
                     toEither $ error_list
                         [ ( not (evt `member` events m)
                             , format "event '{0}' is undeclared" evt )

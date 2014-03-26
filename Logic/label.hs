@@ -24,6 +24,7 @@ label s = Lbl s
 symbol_table :: Named a => [a] -> Map String a
 symbol_table xs = fromList $ map as_pair xs
 
+composite_label :: [Label] -> Label
 composite_label xs = Lbl $ intercalate "/" $ map str xs
     where
         str (Lbl s) = s

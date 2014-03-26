@@ -17,6 +17,7 @@ data ErrorT m a = ErrorT { runErrorT :: m (Either [Error] (a,[Error])) }
 
 type ErrorM = ErrorT Identity
 
+runErrorM :: ErrorT Identity a -> Either [Error] (a, [Error])
 runErrorM = runIdentity . runErrorT
 
 instance (Monad m) => Monad (ErrorT m) where

@@ -39,7 +39,6 @@ import System.Locale
 import Text.Printf
 
 import Utilities.Syntactic
-import Utilities.Trace
 
 with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
@@ -128,7 +127,6 @@ check_file = do
             Right (ms,ts) -> do
                 xs <- forM ms check_one
                 clear
-                traceM $ show $ map fst $ take 10 ts
                 forM_ xs $ \(n,xs) -> liftIO $ do
                     forM_ (filter p $ lines xs) 
                         putStrLn

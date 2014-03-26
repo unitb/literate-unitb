@@ -34,12 +34,9 @@ show_err xs = unlines $ map f xs
 class Syntactic a where
     line_info :: a -> LineInfo
 
-
+with_li :: LineInfo -> Either String b -> Either [Error] b
 with_li li = either (\x -> Left [Error x li]) Right
 
-with_li_t (i,j) x = EitherT $ do
-    x <- runEitherT x
-    either (\x -> Left [(x,i,j)]) Right x
 
 report :: Error -> String
 report (Error msg (LI _ i j)) = format "error ({0},{1}): {2}" i j msg
