@@ -505,17 +505,39 @@
 	\begin{free:var}{y}{y}
 	\begin{free:var}{z}{z}
 \begin{by:parts}
+
 \begin{part:a}{ z \1\le x \uparrow y \2\follows z \le x \1\lor z \le y }
 	% this should discharge automatically
 		% and z \1\le x \uparrow y 
 		%	\2\follows z \le x \1\lor z \le y
 		% should appear in the assumptions
-	\using{ \eqinst{ctx1:thm9}{ \subst{x}{x} \subst{y}{y} \subst{z}{z} }  }
+
+	This part follows directly from \using{\eqinst{ctx1:thm9}{ \subst{x}{x}, \subst{y}{y} and \subst{z}{z}}}.
 	\easy
+
 \end{part:a}
 \begin{part:a}{ z \1\le x \uparrow y \2\implies z \le x \1\lor z \le y }
-	
-	\easy
+
+Assuming
+	\begin{align}
+	\assume{ctx1:thm11:hyp1}{ z \1\le x \uparrow y  } 
+	\end{align}
+	\hide{ \goal{ z \le x \lor z \le y } }	
+	\begin{calculation}
+		\true
+	\hint{=}{ assumption 
+			\eqinst{ctx1:thm11:hyp0}{\subst{q}{x}}
+			in order to preserve the symmetry
+			between $x$ and $y$ }
+		x \le y \1\lor y \le x
+	\hint{=}{ \eqref{ctx1:thm5} in order to introduce $x \uparrow y$\hide{ and symmetry \eqref{ctx1:thm10} } }
+		x \uparrow y = y \1\lor x \uparrow y = x
+	\hint{\implies}{ weakening with \eqref{ctx1:axm0} }
+		x \uparrow y \le y \1\lor x \uparrow y \le x
+	\hint{\implies}{ \eqref{ctx1:thm11:hyp1} and transitivity 
+			\eqref{ctx1:thm6} }
+		z \le y \1\lor z \le x
+	\end{calculation}
 \end{part:a}
 \end{by:parts}
 	\end{free:var} 
