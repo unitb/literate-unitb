@@ -83,6 +83,7 @@ eval_expr m e =
                     return $ format "(M.singleton {0} {1})" c0 c1
             _ -> Left $ format "unrecognized expression: {0}" e
 
+struct :: Machine -> Either String [Char]
 struct m = do
         code <- attr
         return $ "data State = State\n    { " ++ code ++ " }"
@@ -96,6 +97,7 @@ struct m = do
             code <- type_code t
             return $ format "{2}_{0} :: {1}" y code (pre :: String)
 
+assign_code :: Machine -> Expr -> Either String [String]
 assign_code m e =
         case e of
             FunApp f [Word (Var n _),e0]
@@ -112,6 +114,7 @@ assign_code m e =
                         return $ concat rs
             _ -> Left $ format "assignment is not in a canonical form: {0}" e
 
+init_value_code :: Machine -> Expr -> Either String [String]
 init_value_code m e =
         case e of
             FunApp f [Word (Var n _),e0]

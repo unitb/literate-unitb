@@ -27,6 +27,7 @@ turn_tracing_off = modifyMVar_ trace_switch $ \sw -> do
         tid <- myThreadId
         return $ delete tid sw
 
+trace :: String -> a -> a
 trace xs x = unsafePerformIO $ do
         tid <- myThreadId
         b   <- is_tracing_on

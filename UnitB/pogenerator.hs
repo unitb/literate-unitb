@@ -54,6 +54,7 @@ context new_ctx = do
 with :: State POParam () -> POGen a -> POGen a
 with f cmd = local (execState f) cmd
 
+prefix_label :: Label -> State POParam ()
 prefix_label lbl = do
         tag <- gets tag
         modify $ \p -> p { tag = tag ++ [lbl] }

@@ -33,7 +33,7 @@ data Unification = Uni
 empty_u :: Unification
 empty_u = Uni empty []
 
-zcast :: Type -> Either String Expr -> Either String Expr
+zcast :: Type -> ExprP -> ExprP
 zcast t me = do
         e <- me
         let { err_msg = format (unlines
@@ -95,7 +95,7 @@ check_args xp (Fun gs name ts t) = do
             let expr = FunApp (Fun gs2 name us u) $ args2 
             return expr
 
-check_type :: Fun -> [Either String Expr] -> Either String Expr
+check_type :: Fun -> [ExprP] -> ExprP
 check_type f@(Fun _ n ts t) mxs = do
         xs <- forM mxs id
         let args = unlines $ map (\(i,x) -> format (unlines

@@ -21,8 +21,10 @@ import Data.Typeable
 
 import Utilities.Syntactic
 
+test_case :: TestCase
 test_case = Case "table of cubes example" test True
 
+test :: IO Bool
 test = test_cases
         [ (Case "test 0 (syntax)" 
                 case6 $ Right [machine6])
@@ -36,6 +38,15 @@ test = test_cases
              case10 result10) 
         ]
 
+var_a  :: Var
+var_b  :: Var 
+var_c  :: Var
+var_n  :: Var
+var_a' :: Var
+var_b' :: Var 
+var_c' :: Var
+var_n' :: Var
+
 var_a = Var "a" int
 var_b = Var "b" int
 var_c = Var "c" int
@@ -46,6 +57,7 @@ var_b' = Var "b@prime" int
 var_c' = Var "c@prime" int
 var_n' = Var "n@prime" int
 
+machine6 :: Machine
 machine6 = (empty_machine "m0") 
         {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
         ,  inits = fromList
@@ -65,6 +77,7 @@ machine6 = (empty_machine "m0")
         z1 = zint 1
         z6 = zint 6
 
+prop_set6 :: PropertySet
 prop_set6 = empty_property_set {
         proofs = fromList [ 
                     (label "m0/evt/INV/inv0", calc),
@@ -86,6 +99,7 @@ prop_set6 = empty_property_set {
         z6 = zint 6
         calc = Proof $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
+event6_evt :: Event
 event6_evt = empty_event {
         action = fromList $ zip 
             (map label ["a1", "a0", "a2", "a3"])
@@ -103,6 +117,9 @@ event6_evt = empty_event {
         c  = Word var_c
         c' = Word var_c'
     
+path6 :: FilePath
+--case6 :: IO 
+
 path6    = "Tests/integers.tex"
 case6    = parse_machine path6
 

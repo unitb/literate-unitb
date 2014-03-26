@@ -20,8 +20,10 @@ import Tests.UnitTest
 
 import Utilities.Syntactic
 
+test_case :: TestCase
 test_case = Case "small machine example" test True
 
+test :: IO Bool
 test = test_cases [
         (Case "test 0" 
             case0 $ 
@@ -252,10 +254,12 @@ var_y = Var "y" int
 var_x' = Var "x@prime" int
 var_y' = Var "y@prime" int
 
+inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
     action = fromList [
                 (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
+inc_event_m1 :: Event
 inc_event_m1 = empty_event 
         { sched_ref = [sc]
         , scheds = fromList 
@@ -270,28 +274,33 @@ inc_event_m1 = empty_event
         x = Word var_x
         y = Word var_y
 
+sc :: ScheduleChange
 sc = (weaken (label "inc"))
         { add = S.singleton (label "c0")
         , remove = S.singleton (label "default")
         }
 
+m0_machine :: Machine
 m0_machine = (empty_machine "m0") { 
         props = m0_props,
         events = singleton (label "inc") inc_event_m0,
         variables = fromList [("x", var_x), ("y", var_y)] }
 
+m1_machine :: Machine
 m1_machine = (empty_machine "m0") 
         { props = m1_props
         , events = singleton (label "inc") inc_event_m1
         , variables = fromList [("x", var_x), ("y", var_y)] 
         }
 
+m0_props :: PropertySet
 m0_props = empty_property_set {
         inv = singleton (label "inv0") (x `zeq` (zint 2 `ztimes` y)) }
     where
         x = Word var_x
         y = Word var_y
 
+m1_props :: PropertySet
 m1_props = m0_props
         { transient = fromList [
             (label "tr0", Transient empty (x `zeq` y) (label "inc") empty Nothing) ]

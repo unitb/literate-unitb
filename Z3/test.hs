@@ -28,14 +28,18 @@ test = test_cases
 
 test_case = ("Z3 test", test, True)
 
+case0 :: TestCase
 case0 = Case "sample_quant" (verify sample_quant) $ Right Sat
+case1 :: TestCase
 case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
+case2 :: TestCase
 case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
+case3 :: TestCase
 case3 = Case "sample proof" (discharge sample_proof) Valid
-
+case4 :: TestCase
 case4 = Case "check sample calc" (check empty_theory sample_calc) (Right [])
 
-
+sample :: String
 sample = unlines [
     "(declare-const a Int)",
     "(declare-fun f (Int Bool) Int)",
@@ -51,6 +55,7 @@ a        = Word (Var "a" int)
 (x,x')   = var "x" int
 ff       = Fun [] "f" [int, bool] int
 
+sample_ast :: [Command]
 sample_ast = [
         Decl (ConstDecl "a" int),
         Decl (FunDecl [] "f" [int, bool] int),
@@ -60,6 +65,7 @@ sample_ast = [
     where
         f       = fun2 ff
 
+sample_quant :: [Command]
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -69,6 +75,7 @@ sample_quant = [
         ff          = Fun [] "f" [int] int
         f           = maybe1 $ (\x -> FunApp ff [x])
 
+sample_proof :: Sequent
 sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
         [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
@@ -77,6 +84,7 @@ sample_proof = Sequent
     where
         f           = maybe1 $ fun1 ff
 
+sample_quant2 :: [Command]
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -85,6 +93,7 @@ sample_quant2 = [
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
 
+sample_quant3 :: [Command]
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
         Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
@@ -93,7 +102,7 @@ sample_quant3 = [
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
         
-
+sample_calc :: Calculation
 sample_calc = (Calc  
         ( mk_context [ FunDecl [] "f" [bool] bool,
               FunDef [] "follows" [x',y'] 
@@ -117,17 +126,12 @@ sample_calc = (Calc
         f           = maybe1 $ fun1 $ Fun [] "f" [bool] bool
         li          = LI "" (-1) (-1)
 
+indent :: String -> String
 indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
-   
---main = do
---        s1 <- verify sample_quant
---        s2 <- verify sample_quant2
---        s3 <- discharge sample_proof
---        s4 <- check empty_theory sample_calc
---        return (s1,s2,s3,s4)
 
+result5 :: (CanonicalLambda, [Expr])
 result5 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl] [x_decl] 
                 (x `zle` fv0) ( (x `zplus` fv1) `zle` fv2 ) 
@@ -141,6 +145,7 @@ result5 = ( CL
         (Right y,_) = var "y" int
         (Right z,_) = var "z" int
 
+case5 :: IO (CanonicalLambda, [Expr])
 case5 = do
         return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
@@ -148,6 +153,7 @@ case5 = do
         (Right y,_) = var "y" int
         (Right z,_) = var "z" int
 
+result6 :: (CanonicalLambda, [Expr])
 result6 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl,fv3_decl] 
                 [x_decl] 
@@ -167,6 +173,7 @@ result6 = ( CL
         (Right y,_) = var "y" int
 --        (Right z,z_decl) = var "z" int
 
+case6 :: IO (CanonicalLambda, [Expr])
 case6 = do
         return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
             (x `zle` zplus (zint 3) y)

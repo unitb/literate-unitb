@@ -27,22 +27,26 @@ import Utilities.Syntactic
 
 test_case = Case "lambda expressions in the cube example" test True
 
+test :: IO Bool
 test = test_cases
             [ (Case "part 0" part0 True)
             , (Case "part 1" part1 True) 
             , (Case "part 2" part2 True) 
             , (Case "part 3" part3 True) 
             ]            
+part0 :: IO Bool
 part0 = test_cases
             [ (StringCase "test 0, verification, lambda vs empty-fun" (verify path0) result0)
             , (StringCase "test 1, verification, lambda vs ovl, mk-fun" (verify path1) result1)
             , (StringCase "test 2, verification, lambda vs apply" (verify path2) result2)
             ]            
+part1 :: IO Bool
 part1 = test_cases
             [ (StringCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
             ]            
+part2 :: IO Bool
 part2 = test_cases
             [ (StringCase "test 6, verify progress refinement" (verify path6) result6)
             , (StringCase "test 7, verify refinement rules" (verify path7) result7)

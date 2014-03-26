@@ -8,7 +8,7 @@ where
 import Control.Concurrent
 import Control.Monad
 
-import Utilities.Trace
+--import Utilities.Trace
 
 data Observable a = Obs (MVar a) (MVar [IO ()])
 
@@ -41,7 +41,8 @@ modify_obs (Obs v vs) f = do
             return ()
 
 observe :: Observable a -> MVar () -> IO ()
-observe (Obs _ vs) v = traceBlock "observe" $ do
+observe (Obs _ vs) v = do
+--    traceBlock "observe" $ do
         modifyMVar_ vs $ \vs -> do
             return $ void (tryPutMVar v ()) : vs
         

@@ -43,7 +43,7 @@ import System.Console.ANSI
 
 import Utilities.Format
 import Utilities.Syntactic
-import Utilities.Trace
+--import Utilities.Trace
 
     -- The pipeline is made of three processes:
     --  o the parser
@@ -91,7 +91,7 @@ data Shared = Shared
 parser :: Shared
        -> IO (IO ())
 parser (Shared { .. })  = return $ do
-        liftIO $ traceM "parser started"
+--        liftIO $ traceM "parser started"
         t <- getModificationTime fname
         parse
         evalStateT (forever $ do
@@ -99,17 +99,18 @@ parser (Shared { .. })  = return $ do
             liftIO $ threadDelay 1000000
 --            liftIO $ putStrLn "time out"
             t0 <- get
-            traceM $ "parser 0" ++ show t0
+--            traceM $ "parser 0" ++ show t0
             t1 <- liftIO $ getModificationTime fname
-            traceM "parser 1"
-            if t0 == t1 then traceM "parser 3"
+--            traceM "parser 1"
+            if t0 == t1 then return ()
+--                traceM "parser 3"
             else do
 --                liftIO $ putStrLn "parser 2"
                 put t1
-                liftIO $ traceM "parse"
-                liftIO $ parse
+--                liftIO $ traceM "parse"
+--                liftIO $ parse
             ) t
-        liftIO $ traceM "parsed"
+--        liftIO $ traceM "parsed"
     where
         f m = do
             x <- proof_obligation m
@@ -119,9 +120,9 @@ parser (Shared { .. })  = return $ do
 --                ms <- parse_machine fname
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
-                    traceM "parser step A"
+--                    traceM "parser step A"
                     ms <- hoistEither $ mapM f $ M.elems $ machines s
-                    traceM "parser step B"
+--                    traceM "parser step B"
                     pos <- hoistEither $ mapM theory_po $ M.elems $ theories s
                     let cs = M.fromList $ map (uncurry g) $ do
                                 (x,ys) <- zip (map label (keys $ theories s)) pos
@@ -222,7 +223,7 @@ run_all xs = do
         mapM f ys
     where
         f cmd = do
-            traceM "start"
+--            traceM "start"
             forkIO $ cmd
 
 display :: Shared
@@ -264,7 +265,7 @@ serialize (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
     return $ forever $ do
-        traceM "serialize"
+--        traceM "serialize"
         threadDelay 10000000
         takeMVar tok
         pos <- read_obs pr_obl
@@ -282,7 +283,7 @@ summary (Shared { .. }) = do
         v <- newEmptyMVar
         observe system v
         return $ forever $ do
-            traceM "summary"
+--            traceM "summary"
             threadDelay 10000000
             takeMVar v
             s <- read_obs system
@@ -313,7 +314,7 @@ run_pipeline fname = do
 --        tok     <- newEmptyMVar
 --        ser     <- newEmptyMVar
 --        status  <- newTChanIO
-        traceM "begin"
+--        traceM "begin"
         system     <- new_obs empty_system
         working    <- new_obs 0
         error_list <- new_obs []
@@ -323,17 +324,22 @@ run_pipeline fname = do
         -- io      <- newEmptyMVar
 --        working <- newMVar 0
         let sh = Shared { .. }
-        traceM "begin"
+--        traceM "begin"
         ts <- run_all 
-            [ do    traceM "summary"
+            [ do    
+--                    traceM "summary"
                     summary sh
-            , do    traceM "prover"
+            , do    
+--                    traceM "prover"
                     prover sh -- (M.map f m)
-            , do    traceM "serialize"
+            , do    
+--                    traceM "serialize"
                     serialize sh
-            , do    traceM "parser"
+            , do    
+--                    traceM "parser"
                     parser sh
-            , do    traceM "display"
+            , do    
+--                    traceM "display"
                     display sh 
             ]
         keyboard sh

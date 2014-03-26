@@ -69,8 +69,8 @@ combine x y
         , chaining     = chaining x ++ chaining y }
     | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
     where
-        f (Right (BinOperator x _ _)) = x
-        f (Left _)                  = "negation"
+        f (Right (BinOperator x _ _))  = x
+        f (Left (UnaryOperator x _ _)) = x
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ new_ops x `intersect` new_ops y
 

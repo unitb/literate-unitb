@@ -180,6 +180,10 @@ get_tr_po em = case (do
             Right xs -> return xs
             Left xs  -> return $ show_err xs
 
+case3 :: IO [([Var], [Expr])]
+result3 :: [([Var], [Expr])]
+case4 :: IO ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
+result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 (case3, result3, case4, result4) = fromJust $ do
 			e0 <- a
 			e1 <- d `mzplus` b
