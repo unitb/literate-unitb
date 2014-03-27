@@ -91,38 +91,25 @@ data Shared = Shared
 parser :: Shared
        -> IO (IO ())
 parser (Shared { .. })  = return $ do
---        liftIO $ traceM "parser started"
         t <- getModificationTime fname
         parse
         evalStateT (forever $ do
---            liftIO $ putStrLn "parser loop"
             liftIO $ threadDelay 1000000
---            liftIO $ putStrLn "time out"
             t0 <- get
---            traceM $ "parser 0" ++ show t0
             t1 <- liftIO $ getModificationTime fname
---            traceM "parser 1"
             if t0 == t1 then return ()
---                traceM "parser 3"
             else do
---                liftIO $ putStrLn "parser 2"
                 put t1
---                liftIO $ traceM "parse"
---                liftIO $ parse
             ) t
---        liftIO $ traceM "parsed"
     where
         f m = do
             x <- proof_obligation m
             return $ fromList $ map (g $ _name m) $ toList $ x
         g lbl (x,y) = ((lbl,x),y)
         parse = do
---                ms <- parse_machine fname
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
---                    traceM "parser step A"
                     ms <- hoistEither $ mapM f $ M.elems $ machines s
---                    traceM "parser step B"
                     pos <- hoistEither $ mapM theory_po $ M.elems $ theories s
                     let cs = M.fromList $ map (uncurry g) $ do
                                 (x,ys) <- zip (map label (keys $ theories s)) pos
@@ -140,14 +127,8 @@ parser (Shared { .. })  = return $ do
                         write_obs error_list []
                         modify_obs pr_obl $ \pos -> do
                             return $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
---                        swapMVar pos pos_list
---                        tryTakeMVar lbls
---                        putMVar lbls (Right $ keysSet pos_list)
---                        tryPutMVar tok ()
                         return ()
                     Left es   -> do
---                        tryTakeMVar lbls
---                        putMVar lbls (Left es)
                         write_obs error_list es
                         return ()
 
@@ -158,38 +139,17 @@ prover (Shared { .. }) = do
     req <- newEmptyMVar
     forM_ [1..8] $ \p -> forkOn p $ worker req 
     return $ forever $ do
---        putStrLn "prover loop"
         takeMVar tok
         inc 200
         po <- read_obs pr_obl
---        renew po
---        po <- get
         forM_ (keys po) $ \k -> do
             po <- reads_obs pr_obl $ M.lookup k
             case po of
                 Just (po,Nothing) -> do
                     liftIO $ putMVar req (k,po)
                 _               -> return ()
---            update_state
         dec 200
     where
---        update_state = do
---            b <- liftIO $ isEmptyMVar tok
---            if b then return ()
---            else do
---                po <- liftIO $ readMVar pos
---                renew po
---                return ()
---        renew :: Map (Label,Label) Seq
---              -> StateT (Map (Label,Label) (Seq,Bool)) IO ()
---        renew pos = do
---            st <- get
---            put $ M.mapWithKey (f st) pos
---        f st k v = case M.lookup k st of
---            Just (po,r)
---                | v == po && not r -> (po,False)
---                | otherwise        -> (v, True)
---            Nothing -> (v,True)
         inc x = modify_obs working (return . (+x))
         dec x = modify_obs working (return . (+ (-x)))            
         worker req = forever $ do
@@ -239,7 +199,6 @@ display (Shared { .. }) = do
 --            lbls <- read_obs labels
             es   <- read_obs error_list
             w    <- read_obs working
-            liftIO $ do
 --                tryTakeMVar ser
 --                putMVar ser ((outs,lbls),es)
                 -- xs <- forM (toList outs) $ \((m,lbl),(_,r)) -> do
@@ -309,12 +268,6 @@ keyboard sh@(Shared { .. }) = do
 
 run_pipeline :: FilePath -> IO ()
 run_pipeline fname = do
---        pos     <- newMVar M.empty
---        lbls    <- newEmptyMVar
---        tok     <- newEmptyMVar
---        ser     <- newEmptyMVar
---        status  <- newTChanIO
---        traceM "begin"
         system     <- new_obs empty_system
         working    <- new_obs 0
         error_list <- new_obs []
@@ -326,21 +279,11 @@ run_pipeline fname = do
         let sh = Shared { .. }
 --        traceM "begin"
         ts <- run_all 
-            [ do    
---                    traceM "summary"
-                    summary sh
-            , do    
---                    traceM "prover"
-                    prover sh -- (M.map f m)
-            , do    
---                    traceM "serialize"
-                    serialize sh
-            , do    
---                    traceM "parser"
-                    parser sh
-            , do    
---                    traceM "display"
-                    display sh 
+            [ summary sh
+            , prover sh -- (M.map f m)
+            , serialize sh
+            , parser sh
+            , display sh 
             ]
         keyboard sh
         putStrLn "received a 'quit' command"
