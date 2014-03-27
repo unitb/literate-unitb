@@ -98,8 +98,16 @@ check_one m = do
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
 check_theory (name,th) = do
-        let po = theory_po th
-        res    <- liftIO $ verify_all $ either undefined id po
+        param <- get
+        let old_po = maybe empty id $ M.lookup (label name) $ pos param
+            po = either undefined id $ theory_po th
+            new_po = po `M.difference` old_po
+            ch_po  = po `M.intersection` old_po
+            ch = M.filterWithKey (\k x -> snd (old_po M.! k) /= x) ch_po
+        res    <- liftIO $ verify_all (new_po `M.union` ch)
+        let p_r = M.mapWithKey f po
+            f k x = maybe (old_po M.! k) (\b -> (b,x)) $ M.lookup k res
+        put param { pos = insert (label name) p_r $ pos param }
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ toList res
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where

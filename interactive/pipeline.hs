@@ -40,6 +40,7 @@ import qualified Data.Map as M
 
 import System.Directory
 import System.Console.ANSI
+import System.TimeIt
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -62,44 +63,37 @@ wait m = do
             else wait m
             
 data Shared = Shared
---        { pos     :: MVar (Map (Label,Label) Seq)
---        , tok     :: MVar ()
---        , lbls    :: MVar (Either [Error] (Set (Label,Label)))
---        , status  :: TChan (Label,Label,Seq,Bool)
         { working    :: Observable Int
---        , ser     :: MVar ((Map (Label,Label) (Seq,Bool), Set (Label,Label)),[Error])
         , system     :: Observable System
         , error_list :: Observable [Error]
         , pr_obl     :: Observable (Map (Label,Label) (Seq,Maybe Bool))
         , fname      :: FilePath
         , exit_code  :: MVar ()
-        -- , io      :: MVar String
+        , parser_state :: Observable ParserState
         }
-            
---data Display = Display
---        { result :: Map (Label,Label) (Seq,Bool)
---        , labels :: Set (Label,Label)
---        , errors :: [Error]
---        , error_msg  :: MVar [Reference]
---        , failed_po :: MVar [Reference]
---        }
 
---console io = forever $ do
---    xs <- takeMVar io
---    putStrLn xs
-            
+data ParserState = Idle Double | Parsing
+    deriving (Eq, Show)
+
 parser :: Shared
        -> IO (IO ())
 parser (Shared { .. })  = return $ do
         t <- getModificationTime fname
-        parse
+        write_obs parser_state Parsing
+        (dt,()) <- timeItT $ parse
+        write_obs parser_state (Idle dt)
         evalStateT (forever $ do
-            liftIO $ threadDelay 1000000
+            liftIO $ do
+                threadDelay 5000000
             t0 <- get
             t1 <- liftIO $ getModificationTime fname
             if t0 == t1 then return ()
             else do
                 put t1
+                liftIO $ do
+                    write_obs parser_state Parsing
+                    (t,()) <- timeItT $ parse
+                    write_obs parser_state (Idle t)
             ) t
     where
         f m = do
@@ -158,7 +152,6 @@ prover (Shared { .. }) = do
             r      <- discharge po
             dec 1
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
---            atomically $ writeTChan status (fst k,snd k,po,r == Valid)
 
 proof_report :: Map (Label,Label) (Seq,Maybe Bool) 
              -> [Error] -> Bool 
@@ -182,9 +175,7 @@ run_all xs = do
         ys <- sequence xs
         mapM f ys
     where
-        f cmd = do
---            traceM "start"
-            forkIO $ cmd
+        f cmd = forkIO $ cmd
 
 display :: Shared
         -> IO (IO ())
@@ -193,38 +184,29 @@ display (Shared { .. }) = do
     observe pr_obl tok
     observe error_list tok
     observe working tok
-    liftIO $ clearScreen
+    observe parser_state tok
+    clearScreen
     return $ forever $ do
             outs <- read_obs pr_obl
---            lbls <- read_obs labels
             es   <- read_obs error_list
             w    <- read_obs working
---                tryTakeMVar ser
---                putMVar ser ((outs,lbls),es)
-                -- xs <- forM (toList outs) $ \((m,lbl),(_,r)) -> do
-                    -- if not r then
-                        -- liftIO $ putMVar io $ format "{0}{1} - {2}" x m lbl
-                        -- return [format " x {0} - {1}" m lbl]
-                    -- else return []
-                let ys = proof_report outs es (w /= 0)
-                cursorUpLine $ length ys
-                clearFromCursorToScreenBeginning
-                forM_ ys $ \x -> do
-                    -- clearLine
-                    putStr x
-                    clearFromCursorToLineEnd 
-                    putStrLn ""
-                putStrLn $ format "n workers: {0}" w
-            liftIO $ threadDelay 500000
+            let ys = proof_report outs es (w /= 0)
+            cursorUpLine $ length ys
+            clearFromCursorToScreenBeginning
+            forM_ ys $ \x -> do
+                putStr x
+                clearFromCursorToLineEnd 
+                putStrLn ""
+            st <- read_obs parser_state
+            putStrLn $ format "n workers: {0} parser: {1}" w st
+            threadDelay 500000
             takeMVar tok
---        poll_result (Shared { .. })
 
 serialize :: Shared -> IO (IO ())
 serialize (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
     return $ forever $ do
---        traceM "serialize"
         threadDelay 10000000
         takeMVar tok
         pos <- read_obs pr_obl
@@ -242,7 +224,6 @@ summary (Shared { .. }) = do
         v <- newEmptyMVar
         observe system v
         return $ forever $ do
---            traceM "summary"
             threadDelay 10000000
             takeMVar v
             s <- read_obs system
@@ -261,11 +242,6 @@ keyboard sh@(Shared { .. }) = do
             putStrLn $ format "Invalid command: '{0}'" xs
             keyboard sh
 
---data InterfaceStyle = 
---        Terminal 
---        | GUI ( MVar [Reference], MVar [Reference] )
---    deriving Eq
-
 run_pipeline :: FilePath -> IO ()
 run_pipeline fname = do
         system     <- new_obs empty_system
@@ -274,10 +250,8 @@ run_pipeline fname = do
         exit_code  <- newEmptyMVar 
         m          <- load_pos fname M.empty
         pr_obl     <- new_obs m
-        -- io      <- newEmptyMVar
---        working <- newMVar 0
+        parser_state <- new_obs (Idle 0)
         let sh = Shared { .. }
---        traceM "begin"
         ts <- run_all 
             [ summary sh
             , prover sh -- (M.map f m)

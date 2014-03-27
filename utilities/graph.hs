@@ -19,6 +19,7 @@ import           Data.Function
 import           Data.Graph
 import           Data.List as L hiding ( union, (\\), transpose, map )
 import qualified Data.List as L
+import qualified Data.List.Ordered as OL
 import           Data.Map  as M 
     ( Map, fromList, fromListWith
     , toList )
@@ -159,22 +160,22 @@ m_closure xs = ixmap (g m, g n) f $ closure_ ar
 --        g (i,j)    = (m1 A.! i, m1 A.! j) 
 
 m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
-m_closure_with vs es = Matrix (M.map (fromList . (`zip` repeat True)) result) vs False
---fromList $ do
---        (x,xs) <- toList result
---        y      <- vs
---        return ((x,y),y `elem` xs)
+m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repeat True)) result) vs False
     where
             -- adjacency list
-        al          = fromListWith (++) $ L.map m_v vs ++ L.map m_e es
+        (tr,tr')    = (fromList $ zip [0..] $ nub vs, fromList $ zip (nub vs) [0..])
+        vs'         = L.map (tr' M.!) vs
+        es'         = L.map (\(x,y) -> (tr' M.! x, tr' M.! y)) es
+        al          = M.map sort $ fromListWith (++) $ L.map m_v vs' ++ L.map m_e es'
         m_v v       = (v,[])
         m_e (v0,v1) = (v0,[v1])
-        order       = cycles_with vs es
+        order       = cycles_with vs' es'
         f m (AcyclicSCC v) = M.adjust (++ g m v) v m
         f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
-        g m v  = al M.! v ++ concatMap (m M.!) (al M.! v)
+        g m v  = OL.nub $ sort $ al M.! v ++ concatMap (m M.!) (al M.! v)
         h m vs = vs ++ concatMap (g m) vs
-        result      = foldl f al order
+        result      = M.mapKeys convert $ foldl f al order
+        convert x   = tr M.! x
 
 as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs
