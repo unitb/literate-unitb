@@ -44,7 +44,7 @@ with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
         let fn = path param ++ ".state'"
         b <- doesFileExist fn
-        param <- if b then do
+        param <- if b && not (no_verif param) then do
             xs <- BS.readFile fn
             either 
                 (\_ -> return param) 
@@ -55,11 +55,15 @@ with_po_map act param = do
 		
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
-        p    <- gets pos
-        file <- gets path         
-        let fn = file ++ ".state'"
---        liftIO $ Ser.dump_pos file p
-        liftIO $ BS.writeFile fn $ Ser.encode p
+        d <- gets no_dump
+        v <- gets no_verif
+        if not d && not v then do
+            p    <- gets pos
+            file <- gets path   
+            let fn = file ++ ".state'"
+    --        liftIO $ Ser.dump_pos file p
+            liftIO $ BS.writeFile fn $ Ser.encode p
+        else return ()
 
 monitor :: (Monad m, Eq s) 
         => m s -> m () 
@@ -82,6 +86,8 @@ data Params = Params
         { path :: FilePath
         , verbose :: Bool
         , continuous :: Bool
+        , no_dump :: Bool
+        , no_verif :: Bool
         , pos :: Map Label (Map Label (Bool,Sequent))
         }
 
@@ -133,17 +139,19 @@ check_file = do
             return (M.elems $ machines s, M.toList $ theories s)
         case r of
             Right (ms,ts) -> do
-                xs <- forM ms check_one
-                clear
-                forM_ xs $ \(n,xs) -> liftIO $ do
-                    forM_ (filter p $ lines xs) 
-                        putStrLn
-                    putStrLn $ "Redid " ++ show n ++ " proofs"
-                ys <- forM ts check_theory
-                forM_ ys $ \(n,xs) -> liftIO $ do
-                    forM_ (filter p $ lines xs) 
-                        putStrLn
-                    putStrLn $ "Redid " ++ show n ++ " proofs"
+                if no_verif param then return ()
+                else do
+                    xs <- forM ms check_one
+                    clear
+                    forM_ xs $ \(n,xs) -> liftIO $ do
+                        forM_ (filter p $ lines xs) 
+                            putStrLn
+                        putStrLn $ "Redid " ++ show n ++ " proofs"
+                    ys <- forM ts check_theory
+                    forM_ ys $ \(n,xs) -> liftIO $ do
+                        forM_ (filter p $ lines xs) 
+                            putStrLn
+                        putStrLn $ "Redid " ++ show n ++ " proofs"
             Left xs -> do
                 clear
                 forM_ xs (\(Error x (LI _ i j)) -> liftIO $ 
@@ -153,7 +161,7 @@ check_file = do
         t  <- liftIO (getCurrentTime :: IO UTCTime)
         liftIO $ putStrLn $ formatTime defaultTimeLocale "Time: %H:%M:%S" $ utcToLocalTime tz t
 
-data Option = Verbose | Continuous
+data Option = Verbose | Continuous | NoDump | NoVerif
     deriving Eq
 
 options :: [OptDescr Option]
@@ -162,6 +170,10 @@ options =
             "display all successful proof obligations" 
     , Option ['c'] ["continuous"] (NoArg Continuous) 
             "monitor input files and reverify when they change"
+    , Option ['d'] ["nodump"] (NoArg NoDump) 
+            "do not serialize the proof obligations after verification"
+    , Option ['v'] ["noverif"] (NoArg NoVerif) 
+            "do not generate and discharge the proof obligations"
     ]
 
 main :: IO ()
@@ -176,6 +188,8 @@ main = do
                     let { param = Params 
                             { path = xs
                             , pos = empty
+                            , no_dump    = NoDump `elem` opts
+                            , no_verif   = NoVerif `elem` opts
                             , verbose    = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
                             } }

@@ -160,11 +160,13 @@ m_closure xs = ixmap (g m, g n) f $ closure_ ar
 --        g (i,j)    = (m1 A.! i, m1 A.! j) 
 
 m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
-m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repeat True)) result) vs False
+m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repeat True)) result) new_vs False
     where
             -- adjacency list
-        (tr,tr')    = (fromList $ zip [0..] $ nub vs, fromList $ zip (nub vs) [0..])
-        vs'         = L.map (tr' M.!) vs
+        tr          = fromList $ zip [0..] $ nub new_vs
+        tr'         = fromList $ zip new_vs [0..]
+        new_vs      = OL.nubSort $ vs ++ L.map fst es ++ L.map snd es
+        vs'         = OL.nubSort $ L.map (tr' M.!) new_vs
         es'         = L.map (\(x,y) -> (tr' M.! x, tr' M.! y)) es
         al          = M.map sort $ fromListWith (++) $ L.map m_v vs' ++ L.map m_e es'
         m_v v       = (v,[])
