@@ -7,7 +7,8 @@ module Utilities.Graph
     , as_matrix, as_matrix_with
     , matrix_of_with, Matrix, map
     , (!), unionWith, transpose
-    , mapKeys, empty, as_map, size )
+    , mapKeys, empty, as_map, size
+    , unions )
 where
 
 import Control.Monad
@@ -24,6 +25,7 @@ import           Data.Map  as M
     ( Map, fromList, fromListWith
     , toList )
 import qualified Data.Map  as M 
+import           Data.Maybe
 import           Data.Tuple
 
 import Prelude hiding ( seq, map )
@@ -172,10 +174,10 @@ m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repe
         m_v v       = (v,[])
         m_e (v0,v1) = (v0,[v1])
         order       = cycles_with vs' es'
-        f m (AcyclicSCC v) = M.adjust (++ g m v) v m
+        f m (AcyclicSCC v) = M.adjust (`OL.union` g m v) v m
         f m (CyclicSCC vs) = fromList (zip vs $ repeat $ h m vs) `M.union` m
-        g m v  = OL.nub $ sort $ al M.! v ++ concatMap (m M.!) (al M.! v)
-        h m vs = vs ++ concatMap (g m) vs
+        g m v  = unions $ (al M.! v) : L.map (m M.!) (al M.! v)
+        h m vs = unions $ vs : L.map (g m) vs
         result      = M.mapKeys convert $ foldl f al order
         convert x   = tr M.! x
 
@@ -228,6 +230,23 @@ closure_ ar = runSTArray $ do
         return ar
     where
         ((_,m),(_,n)) = bounds ar
+
+unions :: Ord a => [[a]] -> [a]
+unions xs = unions_aux $ sortBy (compare `on` listToMaybe) xs
+
+unions_aux :: Ord a => [[a]] -> [a]
+unions_aux [] = []
+unions_aux ([]:xs) = unions xs
+unions_aux ((x:xs):ys) = unions_aux' x $ insertBy (compare `on` listToMaybe) xs ys
+
+unions_aux' :: Ord a => a -> [[a]] -> [a]
+unions_aux' x [] = [x]
+unions_aux' x ([]:ys) = unions_aux' x ys
+unions_aux' x ws@((y:ys):zs)
+    | x < y     = x : unions_aux ws
+    | otherwise = unions_aux' x $ insertBy (compare `on` listToMaybe) ys zs
+--    | x == y    = unions_aux' x $ insertBy (compare `on` listToMaybe) ys zs
+--    | otherwise = error "the input lists have to be sorted"
 
 --top_sort xs 
 --    where

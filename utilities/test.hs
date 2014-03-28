@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Utilities.Test where
 
     -- Modules
@@ -9,15 +11,21 @@ import Theories.Notation
 import Theories.SetTheory
 import Theories.FunctionTheory
 
-import Utilities.Graph (matrix_of_with, closure, m_closure_with, as_map)
+import Utilities.Graph 
+        ( matrix_of_with, closure
+        , m_closure_with, as_map
+        , unions )
 
     -- Libraries
-import Data.Array 
-import Data.Function
-import Data.List
+import           Data.Array 
+import           Data.Function
+import           Data.List
+import           Data.List.Ordered as OL
 import qualified Data.Map as M
+import           Data.Typeable
 
 import Tests.UnitTest
+import Test.QuickCheck
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -38,7 +46,9 @@ test = test_cases
     , Case "case 3 - transitive closures" case3 result3
     , Case "case 4 - transitive closures in linear time" case4 result4
     , Case "Formatting utilities" test' True
-    , Case "case 5 - error monad" case5 result5 ]
+    , Case "case 5 - error monad" case5 result5
+    , Case "case 6 - union of a list of {sorted} list" case6 result6
+    , Case "case 7 - union of a list of {unsorted} list" case7 result7  ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do
@@ -348,3 +358,31 @@ result5 :: Either [Error] ((), [Error])
         e0 = Error "error a" li
         e1 = Error "error b" li
         e2 = Error "error c" li
+
+data SortedList a = SL { unSL :: [a] }
+    deriving Show
+
+deriving instance Typeable Result
+--    typeRep (Result 
+
+instance (Ord a, Arbitrary a) => Arbitrary (SortedList a) where
+    arbitrary = do
+        xs <- arbitrary
+        return $ SL $ sort xs
+
+case6 = prop_valueOnSorted
+
+result6 = Success 100 [] "+++ OK, passed 100 tests.\n"
+
+case7 = prop_value
+
+result7 = Success 100 [] "+++ OK, passed 100 tests.\n"
+
+prop_valueOnSorted = quickCheckResult $ \xs -> 
+    let ys = map unSL xs :: [[Int]] in 
+        unions ys == OL.nub (foldl OL.union [] ys)
+
+prop_value = quickCheckResult $ \xs -> 
+    let ys = map id xs :: [[Int]] in 
+        unions ys == OL.nub (foldl OL.union [] ys)
+

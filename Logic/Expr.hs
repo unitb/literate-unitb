@@ -27,8 +27,8 @@ data Quantifier = Forall | Exists | Lambda
 type ExprP = Either String Expr 
 
 type_of :: Expr -> Type
-type_of (Word (Var _ t))          = t
-type_of (Const _ _ t)             = t
+type_of (Word (Var _ t))         = t
+type_of (Const _ _ t)            = t
 type_of (FunApp (Fun _ _ _ t) _) = t
 type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
     where

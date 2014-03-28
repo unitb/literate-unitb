@@ -183,4 +183,4 @@ Lines of Haskell code:
      875 Document/Tests/indirecteq.hs
      754 Document/proof.hs
      750 Document/Tests/lambdas.hs
-Time: 22:03:14
+Time: 13:30:20
