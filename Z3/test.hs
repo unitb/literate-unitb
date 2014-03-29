@@ -19,6 +19,7 @@ import Utilities.Syntactic
 
 import Tests.UnitTest
 
+test :: IO Bool
 test = test_cases 
         [ case0, case1
         , case2, case3
@@ -26,6 +27,7 @@ test = test_cases
         , Case "canonical lambdas" case5 result5
         , Case "canonical lambdas with quantifier" case6 result6]
 
+test_case :: ([Char], IO Bool, Bool)
 test_case = ("Z3 test", test, True)
 
 case0 :: TestCase
@@ -50,6 +52,11 @@ sample = unlines [
     "(assert (< a 10))",
     "(check-sat)",
     "(get-model)"]
+
+a :: Expr
+x :: Either a Expr
+x' :: Var
+ff :: Fun
 
 a        = Word (Var "a" int)
 (x,x')   = var "x" int
@@ -182,3 +189,4 @@ case6 = do
         (Right x,x_decl) = var "x" int
         (Right y,_) = var "y" int
         (Right z,z_decl) = var "z" int
+

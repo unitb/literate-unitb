@@ -24,6 +24,7 @@ import Tests.UnitTest
 
 import Utilities.Syntactic
 
+test :: IO Bool
 test = test_cases 
         [  Case "'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  Case "train, model 0, verification" (check_mch train_m0) (result_train_m0)
@@ -33,6 +34,7 @@ test = test_cases
         ,  Gen.test_case
         ]
 
+example0 :: Either [Error] Machine
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
         let (y,y',y_decl) = prog_var "y" int
@@ -73,6 +75,7 @@ example0 = do
                 , props = ps }
         return m
 
+train_m0 :: Either [Error] Machine
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (ARRAY int bool)
             (t,t_decl) = var "t" int
@@ -101,6 +104,7 @@ train_m0 = do
                         , events = fromList [enter, leave] }
         return m
 
+result_example0 :: String
 result_example0 = unlines [
     "  o  m0/INIT/FIS/x",
     "  o  m0/INIT/FIS/y",
@@ -115,6 +119,7 @@ result_example0 = unlines [
     "  o  m0/evt/TR/TR0/NEG",
     "passed 11 / 11"]
 
+result_train_m0 :: String
 result_train_m0 = unlines [
     "  o  train_m0/INIT/FIS/st",
     "  o  train_m0/INIT/INV/J0",
@@ -127,6 +132,7 @@ result_train_m0 = unlines [
     "  o  train_m0/leave/TR/TR0",
     "passed 9 / 9"]
  
+result_example0_tr_en_po :: String
 result_example0_tr_en_po = unlines [
     " sort: pfun [a,b], set [a]",
     " x: Int",
@@ -135,6 +141,7 @@ result_example0_tr_en_po = unlines [
     "|----",
     " (=> (= x 0) (= x y))"]
 
+result_train_m0_tr_po :: String
 result_train_m0_tr_po = unlines 
     [ -- " sort: , , , pfun [a,b], set [a]"
       " sort: Pair [a,b], , , "
@@ -152,6 +159,7 @@ result_train_m0_tr_po = unlines
           ++            " (not (select st@prime t))))))"
     ]
 
+test_case :: ([Char], IO Bool, Bool)
 test_case = ("Unit-B", test, True)
 
 check_mch :: Either [Error] Machine -> IO String
@@ -162,6 +170,9 @@ check_mch em = do
             return xs
         Left x -> return (show_err x)
 
+get_cmd_tr_po :: Monad m 
+              => Either [Error] Machine 
+              -> m (Either [Error] String)
 get_cmd_tr_po em = return (do
         m <- em
         let lbl = composite_label [_name m, label "leave/TR/TR0"]
