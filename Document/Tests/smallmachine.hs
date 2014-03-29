@@ -259,6 +259,7 @@ result10 = unlines [
       , "|----"
       , " (=> (= x y) (= x y))" ]
 
+case10 :: IO String
 case10 = show_po path6 $ label "m0/inc/TR/tr0/EN"
 
 result11 :: String

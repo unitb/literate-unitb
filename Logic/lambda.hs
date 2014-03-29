@@ -32,7 +32,7 @@ arg_type (CL vs _ _ _ _) = map (type_of . Word) vs
 
 return_type :: CanonicalLambda -> Type
 return_type (CL _ bv _ _ rt) = 
-        (ARRAY (type_of $ ztuple $ map Word bv) $ maybe_type rt)
+        (array (type_of $ ztuple $ map Word bv) $ maybe_type rt)
 
 can_bound_vars :: [String]
 can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]

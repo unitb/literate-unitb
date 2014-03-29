@@ -70,7 +70,7 @@ instance Arbitrary Type where
                 [ do
                     t0 <- arbitrary
                     t1 <- arbitrary
-                    return $ ARRAY t0 t1
+                    return $ array t0 t1
                 , oneof gen_prm
                 , do
                     s  <- oneof sorts
@@ -101,7 +101,7 @@ instance Arbitrary Type where
                 , Sort "B" "" 1
                 , Sort "C" "" 1
                 , Sort "D" "" 2
-                , DefSort "E" "" ["a","b"] $ ARRAY (GENERIC "a") (GENERIC "b")
+                , DefSort "E" "" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
                 , BoolSort
                 , IntSort
                 , RealSort
@@ -117,7 +117,7 @@ test_case = Case "genericity" test True
 
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
-    [   (ARRAY real (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
+    [   (array real (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
 test :: IO Bool

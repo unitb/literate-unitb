@@ -370,18 +370,24 @@ instance (Ord a, Arbitrary a) => Arbitrary (SortedList a) where
         xs <- arbitrary
         return $ SL $ sort xs
 
+case6 :: IO Result
 case6 = prop_valueOnSorted
 
+result6 :: Result
 result6 = Success 100 [] "+++ OK, passed 100 tests.\n"
 
+case7 :: IO Result
 case7 = prop_value
 
+result7 :: Result
 result7 = Success 100 [] "+++ OK, passed 100 tests.\n"
 
+prop_valueOnSorted :: IO Result
 prop_valueOnSorted = quickCheckResult $ \xs -> 
     let ys = map unSL xs :: [[Int]] in 
         unions ys == OL.nub (foldl OL.union [] ys)
 
+prop_value :: IO Result
 prop_value = quickCheckResult $ \xs -> 
     let ys = map id xs :: [[Int]] in 
         unions ys == OL.nub (foldl OL.union [] ys)

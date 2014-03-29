@@ -25,6 +25,7 @@ import Tests.UnitTest
 
 import Utilities.Syntactic
 
+test_case :: TestCase
 test_case = Case "lambda expressions in the cube example" test True
 
 test :: IO Bool
@@ -52,11 +53,13 @@ part2 = test_cases
             , (StringCase "test 7, verify refinement rules" (verify path7) result7)
             , (StringCase "test 8, verify refinement rules" (verify path8) result8)
             ]            
+part3 :: IO Bool
 part3 = test_cases
             [ (StringCase "test 9, verify disjunction rule" (verify path9) result9)
             , (StringCase "test 10, error: cyclic proof" (verify path10) result10)
             ]
 
+result0 :: String
 result0 = unlines 
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -101,8 +104,10 @@ result0 = unlines
      , "passed 39 / 40"
      ]
 
+path0 :: String
 path0 = "tests/cubes-t0.tex"
 
+result1 :: String
 result1 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -157,8 +162,10 @@ result1 = unlines
      , "passed 50 / 50"
      ]
 
+path1 :: String
 path1 = "tests/cubes-t1.tex"
 
+result2 :: String
 result2 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -223,8 +230,10 @@ result2 = unlines
      , "passed 58 / 59"
      ]
 
+path2 :: String
 path2 = "tests/cubes-t2.tex"
 
+result3 :: String
 result3 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -291,8 +300,10 @@ result3 = unlines
      , "passed 59 / 61"
      ]
 
+path3 :: String
 path3 = "tests/cubes-t3.tex"
 
+result4 :: Either [Error] (Map Label ProgressProp)
 result4 = either g Right (do
         q0 <- f `mzeq` zlambda [i_decl] 
             (mzle (mzint 0) i `mzand` mzless i bigN) 
@@ -321,14 +332,17 @@ result4 = either g Right (do
         (bigN,_)   = var "N" int
         g x = Left [Error x (LI path4 0 0)]
 
+path4 :: String
 path4 = "tests/cubes-t6.tex"
 
+case4 :: IO (Either [Error] (Map Label ProgressProp))
 case4 = runEitherT (do
     ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ progress $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
+result5 :: Either [Error] (Map Label SafetyProp)
 result5 = either g Right (do
         q0  <- bigN `mzeq` n
         p0  <- (k `mzle` n)
@@ -347,12 +361,14 @@ result5 = either g Right (do
         (bigN,_)   = var "N" int
         g x = Left [Error x (LI path4 0 0)]
 
+case5 :: IO (Either [Error] (Map Label SafetyProp))
 case5 = runEitherT (do
     ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ safety $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
+result6 :: String
 result6 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -443,8 +459,10 @@ result6 = unlines
      , "passed 79 / 84"
      ]
 
+path6 :: String
 path6 = "tests/cubes-t5.tex"
 
+result7 :: String
 result7 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -539,8 +557,10 @@ result7 = unlines
      , "passed 76 / 88"
      ]
 
+path7 :: String
 path7 = "tests/cubes-t4.tex"
 
+result8 :: String
 result8 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -634,8 +654,10 @@ result8 = unlines
      , "passed 85 / 87"
      ]
      
+path8 :: String
 path8 = "tests/cubes-t7.tex"
 
+result9 :: String
 result9 = unlines
      [ "  o  m0/INIT/FIS/a"
      , "  o  m0/INIT/FIS/b"
@@ -735,12 +757,16 @@ result9 = unlines
      , "passed 87 / 92"
      ]
      
+path9 :: String
 path9 = "tests/cubes-t8.tex"
      
+path10 :: String
 path10 = "tests/cubes-t9.tex"
 
+result10 :: String
 result10 = "Left [Error \"A cycle exists in the proof of liveness: prog0, prog1, prog2, prog3\" (1,1)]"
 
+verify :: FilePath -> IO String
 verify path = do
     r <- parse_machine path
     case r of
@@ -748,3 +774,4 @@ verify path = do
             (s,_,_) <- str_verify_machine m
             return s
         x -> return $ show x
+

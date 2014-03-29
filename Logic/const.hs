@@ -196,7 +196,7 @@ ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow :: Expr -> Expr -> Expr
 zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect :: ExprP -> ExprP -> ExprP
-zselect      = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
+zselect      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
 zint :: Int -> Expr
 zint n       = Const [] (show n) int
  

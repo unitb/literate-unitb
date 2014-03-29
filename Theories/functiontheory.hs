@@ -57,9 +57,9 @@ zlambda xs mx my = do
         return $ Binder Lambda xs x y
 
 zstore        = typ_fun3 $ Fun [] "store" [
-        ARRAY (gB) $ gA, 
+        array (gB) $ gA, 
         gB, gA] $ 
-    ARRAY gB gA
+    array gB gA
 
 --zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 

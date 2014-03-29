@@ -49,7 +49,6 @@ suffix_generics :: String -> Type -> Type
 suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
-suffix_generics xs (ARRAY t0 t1)       = ARRAY (suffix_generics xs t0) (suffix_generics xs t1)
 
 rewrite_types :: String -> Expr -> Expr
 rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
@@ -186,9 +185,6 @@ unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
         | otherwise                        = Nothing
     where
         f u (x, y) = unify_aux x y u
-unify_aux (ARRAY t0 t1) (ARRAY t2 t3) u = do
-        u <- unify_aux t0 t2 u
-        unify_aux t1 t3 u
 unify_aux _ _ _               = Nothing
 
 
@@ -266,7 +262,6 @@ class Generic a where
     
 instance Generic Type where
     generics (GENERIC s)         = S.singleton s
-    generics (ARRAY t0 t1)       = generics t0 `S.union` generics t1
     generics (VARIABLE _)        = S.empty
     generics (USER_DEFINED _ ts) = S.unions $ map generics ts
     substitute_types f t = rewrite (substitute_types f) t

@@ -16,7 +16,7 @@ import Data.Map as M hiding ( foldl )
 import Utilities.Format
 
 set_sort :: Sort
-set_sort = DefSort "\\set" "set" ["a"] (ARRAY (GENERIC "a") bool)
+set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 
 set_type :: Type -> Type
 set_type t = USER_DEFINED set_sort [t]

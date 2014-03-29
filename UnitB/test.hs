@@ -77,7 +77,7 @@ example0 = do
 
 train_m0 :: Either [Error] Machine
 train_m0 = do
-        let (st,st',st_decl) = prog_var "st" (ARRAY int bool)
+        let (st,st',st_decl) = prog_var "st" (array int bool)
             (t,t_decl) = var "t" int
         let li = LI "" 0 0
         inv0 <- with_li li (mzforall [t_decl] mztrue $

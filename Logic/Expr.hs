@@ -86,7 +86,7 @@ maybe_type :: Type -> Type
 maybe_type t = USER_DEFINED maybe_sort [t]
 
 fun_sort :: Sort
-fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (ARRAY (GENERIC "a") (maybe_type $ GENERIC "b"))
+fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ GENERIC "b"))
 
 fun_type :: Type -> Type -> Type
 fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
@@ -97,8 +97,7 @@ merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
 
 data Type = 
-        ARRAY Type Type 
-        | GENERIC String 
+        GENERIC String 
         | VARIABLE String
         | USER_DEFINED Sort [Type]
     deriving (Eq, Ord, Typeable, Generic)
@@ -115,22 +114,16 @@ class Symbol a where
     decl :: a -> [Decl]
 
 instance Show Type where
-    show (ARRAY t0 t1)       = format "ARRAY {0}" [t0,t1]
     show (GENERIC n)         = format "_{0}" n 
     show (VARIABLE n)        = format "'{0}" n 
     show (USER_DEFINED s []) = (z3_name s)
     show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
 
 instance Tree Type where
-    as_tree (ARRAY t0 t1) = List [Str "Array", as_tree t0, as_tree t1]
     as_tree (GENERIC x)   = Str x
     as_tree (VARIABLE n)  = Str $ "_" ++ n
     as_tree (USER_DEFINED s []) = Str $ z3_name s
     as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
-    rewriteM' f s0 (ARRAY t0 t1) = do
-            (s1,t2) <- f s0 t0
-            (s2,t3) <- f s1 t1
-            return (s2,ARRAY t2 t3)
     rewriteM' _ s x@(VARIABLE _) = return (s,x)
     rewriteM' _ s x@(GENERIC _)  = return (s,x)
     rewriteM' f s0 (USER_DEFINED s xs) = do
@@ -153,6 +146,12 @@ data Sort =
             String      -- type name
             [(String, [(String,Type)])] -- alternatives and named components
     deriving (Eq, Ord, Show, Generic)
+
+array_sort :: Sort
+array_sort = Sort "Array" "Array" 2
+
+array :: Type -> Type -> Type
+array t0 t1 = USER_DEFINED array_sort [t0,t1]
 
 z3_name :: Sort -> String
 z3_name (BoolSort) = "Bool"
