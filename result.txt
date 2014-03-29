@@ -162,7 +162,11 @@
 |  |  +- test 1
 |  |  +- [ Success: 2 / 2 ]
 |  +- case 5 - error monad
-|  +- [ Success: 7 / 7 ]
+|  +- case 6 - union of a list of {sorted} list
++++ OK, passed 100 tests.
+|  +- case 7 - union of a list of {unsorted} list
++++ OK, passed 100 tests.
+|  +- [ Success: 9 / 9 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -177,7 +181,7 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   18492 total
+   18639 total
     1604 Document/Tests/trainstation.hs
      954 Document/machine.hs
      875 Document/Tests/indirecteq.hs

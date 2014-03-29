@@ -52,15 +52,21 @@ test = test_cases [
         (StringCase "test 11 (transient PO, negation)" 
             case11 result11)  ]
 
-
+path0 :: String
 path0 = "Tests/small_machine_t0.tex"
+
+case0 :: IO (Either [Error] [Machine])
 case0 = do
     parse_machine path0
     
+path1 :: String
 path1 = "Tests/small_machine_t1.tex"
+
+case1 :: IO (Either [Error] [Machine])
 case1 = do
     parse_machine path1
 
+result2 :: String
 result2 = (unlines 
 	  [ "  o  m0/INIT/FIS/x"
       , "  o  m0/INIT/FIS/y"
@@ -82,7 +88,9 @@ result2 = (unlines
       , "passed 14 / 17"
     ])
 
+path2 :: String
 path2 = "Tests/small_machine_t2.tex"
+case2 :: IO String
 case2 = do
     r <- parse_machine path2
     case r of
@@ -91,6 +99,7 @@ case2 = do
             return s
         x -> return $ show x
 
+result3 :: String
 result3 = (unlines 
       [ "  o  m0/INIT/FIS/x"
       , "  o  m0/INIT/FIS/y"
@@ -107,7 +116,10 @@ result3 = (unlines
       , "passed 11 / 12"
     ])
 
+path3 :: String
 path3 = "Tests/small_machine.tex"
+
+case3 :: IO String
 case3 = do
     r <- parse_machine path3
     case r of
@@ -116,6 +128,7 @@ case3 = do
             return s
         x -> return $ show x
 
+result4 :: String
 result4 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -128,6 +141,7 @@ result4 = unlines [
       , "|----"
       , " (= x@prime (* 2 y@prime))"]
 
+show_po :: FilePath -> Label -> IO String
 show_po path lbl = do
         m <- parse_machine path
         r <- return (do
@@ -140,8 +154,10 @@ show_po path lbl = do
             Left x -> return $ show_err x
 
 
+case4 :: IO String
 case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
+result5 :: String
 result5 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -154,8 +170,10 @@ result5 = unlines [
       , "|----"
       , " (=> (= x 2) (= x@prime 4))"]
 
+case5 :: IO String
 case5 = show_po path3 $ label "m0/SKIP/CO/c0"
 
+result6 :: String
 result6 = (unlines 
       [ "  o  m0/INIT/FIS/x"
       , "  o  m0/INIT/FIS/y"
@@ -172,7 +190,10 @@ result6 = (unlines
       , "passed 11 / 12"
     ])
 
+path6 :: String
 path6 = "Tests/small_machine_t3.tex"
+
+case6 :: IO String
 case6 = do
     r <- parse_machine path6
     case r of
@@ -181,6 +202,7 @@ case6 = do
             return s
         x -> return $ show x
 
+result7 :: String
 result7 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -190,9 +212,13 @@ result7 = unlines [
       , "|----"
       , " (= x y)"]
 
+case7 :: IO String
 case7 = show_po path6 $ label "m0/inc/SCH"
 
+path8 :: FilePath
 path8 = "Tests/small_machine_t4.tex"
+
+result8 :: String
 result8 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -202,8 +228,10 @@ result8 = unlines [
       , "|----"
       , " (= x y)"]
 
+case8 :: IO String
 case8 = show_po path8 $ label "m0/inc/SCH"
 
+result9 :: String
 result9 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -217,8 +245,10 @@ result9 = unlines [
 --        " (=> false (= x y))"]
         " true"]
 
+case9 :: IO String
 case9 = show_po path6 $ label "m0/inc/SCH/m0/1/REF/weaken"
 
+result10 :: String
 result10 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -231,6 +261,7 @@ result10 = unlines [
 
 case10 = show_po path6 $ label "m0/inc/TR/tr0/EN"
 
+result11 :: String
 result11 = unlines [
         " sort: Pair [a,b], , , "
       , " x: Int"
@@ -246,7 +277,13 @@ result11 = unlines [
       , " (=> (= x y)" ++
             " (not (= x@prime y@prime)))" ]
 
+case11 :: IO String
 case11 = show_po path6 $ label "m0/inc/TR/tr0/NEG"
+
+var_x :: Var
+var_y :: Var
+var_x' :: Var
+var_y' :: Var
 
 var_x = Var "x" int
 var_y = Var "y" int
@@ -318,3 +355,4 @@ m1_props = m0_props
         x' = Word var_x'
         z1 = zint 1
         z2 = zint 2
+

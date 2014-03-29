@@ -37,6 +37,7 @@ import Logic.Sequent
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
@@ -151,7 +152,7 @@ smoke_test (Sequent a b c _) =
 
 data Prover = Prover
         { inCh  :: Chan (Maybe (Int,Sequent))
-        , outCh :: Chan (Int,Validity)
+        , outCh :: Chan (Int,Either String Validity)
         , n_workers :: Int
         }
 
@@ -168,8 +169,10 @@ new_prover n_workers = do
                 cmd <- lift $ readChan inCh
                 case cmd of
                     Just (tid, po) -> lift $ do
-                        r <- discharge po
-                        writeChan outCh (tid,r)
+                        r <- try (discharge po)
+                        let f e = Left $ show (e :: SomeException)
+                            r'  = either f Right r
+                        writeChan outCh (tid,r')
                     Nothing -> do
                         MaybeT $ return Nothing
 
@@ -182,7 +185,7 @@ discharge_on :: Prover -> (Int,Sequent) -> IO ()
 discharge_on (Prover { .. }) po = do
         writeChan inCh $ Just po
 
-read_result :: Prover -> IO (Int,Validity)
+read_result :: Prover -> IO (Int,Either String Validity)
 read_result (Prover { .. }) = 
         readChan outCh
 
@@ -195,6 +198,11 @@ discharge_all xs = do
         rs <- forM ys $ \_ ->
             read_result pr
         destroy_prover pr
+        rs <- forM rs $ \(i,r) -> 
+            either 
+                error 
+                (\x -> return (i,x)) 
+                r
         return $ map snd $ sortBy (compare `on` fst) rs
 
 discharge :: Sequent -> IO Validity

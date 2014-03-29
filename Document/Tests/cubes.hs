@@ -118,11 +118,12 @@ event6_evt = empty_event {
         c' = Word var_c'
     
 path6 :: FilePath
---case6 :: IO 
-
 path6    = "Tests/integers.tex"
+
+case6 :: IO (Either [Error] [Machine])
 case6    = parse_machine path6
 
+result7 :: String
 result7 = unlines 
       [ "  o  m0/INIT/FIS/a"
       , "  o  m0/INIT/FIS/b"
@@ -162,6 +163,7 @@ result7 = unlines
       , "  o  m0/evt/SCH"
       , "passed 36 / 36"]
 
+case7 :: IO String
 case7 = do
     r <- parse_machine path6
     case r of
@@ -170,13 +172,17 @@ case7 = do
             return s
         x -> return $ show x
 
+path8 :: String
 path8   = "Tests/integers_t8.tex"
+
+result8 :: String
 result8 = unlines [
         " sort: Pair [a,b], , , ",
         " x: Int",
         "|----",
         " (exists ((x Int)) (and true true))"]
 
+case8 :: IO String
 case8 = do
         m <- parse_machine path8
         let r = (do 
@@ -189,18 +195,7 @@ case8 = do
             x -> 
                 return $ show x
 
---pos = do
---        m <- parse_machine path8
---        let r = (do 
---                [m] <- m
---                pos  <- proof_obligation m
---                return (pos ! label "m0/evt/INV/inv0"))
---        case r of
---            Right po -> 
---                return $ show po
---            x -> 
---                return $ show x
-
+result9 :: String
 result9 = unlines [
         "m0/evt/INV/inv0:",
         "(= (^ n@prime 3) a@prime)",
@@ -220,6 +215,8 @@ result9 = unlines [
         "      | (= a@prime (+ a b))",
         "    a@prime"
     ]
+
+case9 :: IO String
 case9 = do
         r <- parse_machine path6
         case r of
@@ -238,8 +235,13 @@ case9 = do
                                    ++ " proofs")
             x -> return $ show x
 
+path10 :: FilePath
 path10   = "Tests/integers_t10.tex"
+
+result10 :: String
 result10 = "Left [Error \"type error: a calculation must include at least one reasoning step\" (31,1)]"
+
+case10 :: IO String
 case10 = do
     r <- parse_machine path10
     case r of

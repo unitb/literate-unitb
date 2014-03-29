@@ -16,10 +16,12 @@ import Z3.Z3
 
     -- Libraries
 import Control.Monad
+import Control.Exception
 import Control.Monad.State
 import Control.Monad.Trans.Either 
 
 import Data.Time
+import Data.Typeable
 
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
@@ -62,6 +64,8 @@ dump_pos = do
             file <- gets path   
             let fn = file ++ ".state'"
     --        liftIO $ Ser.dump_pos file p
+            liftIO $ forM_ (toList p) $ \(n,p) -> do
+                dump (show n) (M.map snd p)
             liftIO $ BS.writeFile fn $ Ser.encode p
         else return ()
 
@@ -109,8 +113,20 @@ check_theory (name,th) = do
             po = either undefined id $ theory_po th
             new_po = po `M.difference` old_po
             ch_po  = po `M.intersection` old_po
-            ch = M.filterWithKey (\k x -> snd (old_po M.! k) /= x) ch_po
-        res    <- liftIO $ verify_all (new_po `M.union` ch)
+            ch     = M.filterWithKey (\k x -> snd (old_po M.! k) /= x) ch_po
+            all_po = new_po `M.union` ch
+--            handle :: ErrorCall -> IO (Map Label Bool)
+                -- revise: do not return empty
+            handle (SomeException e) = do
+                    putStrLn "> error" 
+                    print (typeOf e) 
+                    print e
+                    return $ M.map (const False) all_po 
+        liftIO $ putStrLn "before"
+        res    <- liftIO $ catch 
+                    (verify_all all_po)
+                    handle
+        liftIO $ putStrLn "after"
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po M.! k) (\b -> (b,x)) $ M.lookup k res
         put param { pos = insert (label name) p_r $ pos param }
