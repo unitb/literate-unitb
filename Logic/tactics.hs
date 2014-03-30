@@ -28,6 +28,7 @@ import Logic.Expr
 import Logic.Label
 import Logic.Sequent
 import Logic.Theory hiding ( theorems )
+import Logic.Type
 
     -- Libraries
 import Control.Monad

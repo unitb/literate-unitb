@@ -1,9 +1,12 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE BangPatterns         #-}
 module Logic.Genericity where
 
     -- Modules
 import Logic.Expr
 import Logic.Classes
+import Logic.Type
 
     -- Libraries
 import Control.Monad
@@ -26,29 +29,17 @@ instance Show a => Show (G.SCC a) where
     show (G.CyclicSCC vs) = "CyclicSCC " ++ show vs 
 
 data Unification = Uni
-    { l_to_r :: Map String Type
+    { l_to_r :: Map String GenericType
     , edges  :: [(String,String)]
     }
 
 empty_u :: Unification
 empty_u = Uni empty []
 
-zcast :: Type -> ExprP -> ExprP
-zcast t me = do
-        e <- me
-        let { err_msg = format (unlines
-            [ "expression has type incompatible with its type annotation:"
-            , "  expression: {0}"
-            , "  type: {1}"
-            , "  type annotation: {2} "
-            ]) e (type_of e) t :: String }
-        u <- maybe (Left err_msg) Right $ unify t $ type_of e
-        return $ specialize_right u e
-
-suffix_generics :: String -> Type -> Type
+suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
-suffix_generics xs (USER_DEFINED s ts) = USER_DEFINED s $ map (suffix_generics xs) ts
+suffix_generics xs (Gen (USER_DEFINED s ts)) = Gen $ USER_DEFINED s $ map (suffix_generics xs) ts
 
 rewrite_types :: String -> Expr -> Expr
 rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
@@ -72,8 +63,31 @@ rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_arg
         new_args    = map fe args
 rewrite_types xs e@(Binder _ _ _ _)            = rewrite (rewrite_types xs) e
 
-check_args :: [Expr] -> Fun -> Maybe (Expr) 
-check_args xp (Fun gs name ts t) = do
+class TypeSystem t => TypeSystem2 t where
+    check_args :: [AbsExpr t] 
+               -> AbsFun t 
+               -> Maybe (AbsExpr t) 
+    zcast :: t -> ExprPG t 
+          -> ExprPG t
+
+instance TypeSystem2 FOType where
+    check_args xp f@(Fun _ _ ts _) = do
+            guard (map type_of xp == ts)
+            return $ FunApp f xp
+    zcast t me = do
+            e <- me
+            let { err_msg = format (unlines
+                [ "expression has type incompatible with its type annotation:"
+                , "  expression: {0}"
+                , "  type: {1}"
+                , "  type annotation: {2} "
+                ]) e (type_of e) t :: String }
+            unless (type_of e == t)
+                $  Left err_msg
+            return e
+
+instance TypeSystem2 GenericType where
+    check_args xp (Fun gs name ts t) = do
             guard (length xp == length ts)
             let n       = length ts
             let xs      = zip (L.map show [1..n]) xp
@@ -81,18 +95,27 @@ check_args xp (Fun gs name ts t) = do
             let targs   = L.map type_of args
             let rt      = GENERIC ("a@" ++ show (n+1))
                 -- t0 and t1 are type tuples for the sake of unification
-            let t0      = USER_DEFINED IntSort (t:ts) 
-            let t1      = USER_DEFINED IntSort (rt:targs)
+            let t0      = Gen $ USER_DEFINED IntSort (t:ts) 
+            let t1      = Gen $ USER_DEFINED IntSort (rt:targs)
             uni <- unify t0 t1
             let fe x   = specialize uni . rewrite_types x
             let ft x   = instantiate uni . suffix_generics x
             let gs2   = map (ft "1") gs
             let us    = L.map (ft "1") ts
             let u     = ft "1" t
-            -- let !args1 = map (rewrite_types "2") args
             let args2 = map (fe "2") args
             let expr = FunApp (Fun gs2 name us u) $ args2 
             return expr
+    zcast t me = do
+            e <- me
+            let { err_msg = format (unlines
+                [ "expression has type incompatible with its type annotation:"
+                , "  expression: {0}"
+                , "  type: {1}"
+                , "  type annotation: {2} "
+                ]) e (type_of e) t :: String }
+            u <- maybe (Left err_msg) Right $ unify t $ type_of e
+            return $ specialize_right u e
 
 check_type :: Fun -> [ExprP] -> ExprP
 check_type f@(Fun _ n ts t) mxs = do
@@ -110,7 +133,9 @@ check_type f@(Fun _ n ts t) mxs = do
                     n ts t args :: String
         maybe (Left err_msg) Right $ check_args xs f
 
-typ_fun1 :: Fun -> ExprP -> ExprP
+typ_fun1 :: TypeSystem2 t
+         => AbsFun t 
+         -> ExprPG t -> ExprPG t
 typ_fun1 f@(Fun _ n ts t) mx        = do
         x <- mx
         let err_msg = format (unlines 
@@ -123,7 +148,9 @@ typ_fun1 f@(Fun _ n ts t) mx        = do
                     x (type_of x) :: String
         maybe (Left err_msg) Right $ check_args [x] f
 
-typ_fun2 :: Fun -> ExprP -> ExprP -> ExprP
+typ_fun2 :: TypeSystem2 t
+         => AbsFun t -> ExprPG t
+         -> ExprPG t -> ExprPG t
 typ_fun2 f@(Fun _ n ts t) mx my     = do
         x <- mx
         y <- my
@@ -140,7 +167,10 @@ typ_fun2 f@(Fun _ n ts t) mx my     = do
                     y (type_of y) :: String
         maybe (Left err_msg) Right $ check_args [x,y] f
 
-typ_fun3 :: Fun -> ExprP -> ExprP -> ExprP -> ExprP
+typ_fun3 :: TypeSystem2 t
+         => AbsFun t -> ExprPG t
+         -> ExprPG t -> ExprPG t
+         -> ExprPG t
 typ_fun3 f@(Fun _ n ts t) mx my mz  = do
         x <- mx
         y <- my
@@ -161,7 +191,7 @@ typ_fun3 f@(Fun _ n ts t) mx my mz  = do
                     z (type_of z) :: String
         maybe (Left err_msg) Right $ check_args [x,y,z] f
 
-unify_aux :: Type -> Type -> Unification -> Maybe Unification
+unify_aux :: GenericType -> GenericType -> Unification -> Maybe Unification
 unify_aux (GENERIC x) t1 u
         | not (x `member` l_to_r u)   = Just u 
                 { l_to_r = M.insert x t1 $ l_to_r u
@@ -180,7 +210,7 @@ unify_aux t0 t1@(GENERIC _) u = unify_aux t1 t0 u
 unify_aux (VARIABLE x) (VARIABLE y) u
         | x == y                = Just u
         | otherwise             = Nothing
-unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
+unify_aux (Gen (USER_DEFINED x xs)) (Gen (USER_DEFINED y ys)) u
         | x == y && length xs == length ys = foldM f u (zip xs ys)
         | otherwise                        = Nothing
     where
@@ -188,7 +218,7 @@ unify_aux (USER_DEFINED x xs) (USER_DEFINED y ys) u
 unify_aux _ _ _               = Nothing
 
 
-unify :: Type -> Type -> Maybe (Map String Type)
+unify :: GenericType -> GenericType -> Maybe (Map String GenericType)
 unify t0 t1 = do
         u <- unify_aux (suffix_generics "1" t0) (suffix_generics "2" t1) empty_u
         let es = edges u
@@ -239,7 +269,7 @@ unify t0 t1 = do
         g x = (x,[])
 
     -- merge type instances
-merge_inst :: Map String Type -> Map String Type -> Maybe (Map String Type)
+merge_inst :: Map String GenericType -> Map String GenericType -> Maybe (Map String GenericType)
 merge_inst r0 r1 = foldWithKey h (Just M.empty) (M.map Just r0 `union` M.map Just r1)
     where
         union xs ys = unionWith g xs ys
@@ -251,19 +281,76 @@ merge_inst r0 r1 = foldWithKey h (Just M.empty) (M.map Just r0 `union` M.map Jus
         h k (Just x) (Just m) = Just $ M.insert k x m
         h _ _ _               = Nothing
 
+strip_generics :: Expr -> Maybe FOExpr
+strip_generics (Word v)    = do
+    v <- var_strip_generics v
+    return (Word v)
+strip_generics (Const ts m t) = do
+    t  <- type_strip_generics t
+    ts <- mapM type_strip_generics ts
+    return (Const ts m t)
+strip_generics (FunApp f xs) = do
+    f  <- fun_strip_generics f
+    xs <- mapM strip_generics xs
+    return (FunApp f xs)
+strip_generics (Binder q vs r t) = do
+    vs <- mapM var_strip_generics vs
+    r  <- strip_generics r
+    t  <- strip_generics t
+    return (Binder q vs r t)
+
+type_strip_generics :: Type -> Maybe FOType
+type_strip_generics (Gen (USER_DEFINED s ts)) = do
+    ts <- mapM type_strip_generics ts
+    return (FOT $ USER_DEFINED s ts)
+type_strip_generics _       = Nothing
+
+fun_strip_generics :: Fun -> Maybe FOFun
+fun_strip_generics (Fun ts n ps rt) = do
+    ts <- mapM type_strip_generics ts
+    ps <- mapM type_strip_generics ps
+    rt <- type_strip_generics rt
+    return (Fun ts n ps rt)
+
+def_strip_generics :: Def -> Maybe FODef
+def_strip_generics (Def ts n ps rt val) = do
+    ts  <- mapM type_strip_generics ts
+    ps  <- mapM var_strip_generics ps
+    rt  <- type_strip_generics rt
+    val <- strip_generics val
+    return (Def ts n ps rt val)
+
+var_strip_generics :: Var -> Maybe FOVar
+var_strip_generics (Var n t) = do
+    t <- type_strip_generics t
+    return (Var n t)
+
+ctx_strip_generics :: Context -> Maybe FOContext
+ctx_strip_generics (Context a b c d e) = do
+    bs <- mapM var_strip_generics $ M.elems b
+    cs <- mapM fun_strip_generics $ M.elems c
+    ds <- mapM def_strip_generics $ M.elems d
+    es <- mapM var_strip_generics $ M.elems e
+    return $ Context
+        a 
+        (fromList $ zip (keys b) bs)
+        (fromList $ zip (keys c) cs)
+        (fromList $ zip (keys d) ds)
+        (fromList $ zip (keys e) es)
+
 class Generic a where
     generics :: a -> S.Set String
-    substitute_types :: (Type -> Type) -> a -> a
-    instantiate :: Map String Type -> a -> a
-    substitute_type_vars :: Map String Type -> a -> a
+    substitute_types :: (GenericType -> GenericType) -> a -> a
+    instantiate :: Map String GenericType -> a -> a
+    substitute_type_vars :: Map String GenericType -> a -> a
 
     instantiate m x = substitute_types (instantiate m) x
     substitute_type_vars m x = substitute_types (substitute_type_vars m) x
     
-instance Generic Type where
+instance Generic GenericType where
     generics (GENERIC s)         = S.singleton s
     generics (VARIABLE _)        = S.empty
-    generics (USER_DEFINED _ ts) = S.unions $ map generics ts
+    generics (Gen (USER_DEFINED _ ts)) = S.unions $ map generics ts
     substitute_types f t = rewrite (substitute_types f) t
     instantiate m t = f t
         where
@@ -335,18 +422,18 @@ normalize_generics expr = specialize renaming expr
                 n        = S.size free_gen
         renaming = fst $ visit f (empty, map GENERIC gen) expr
 
-instantiate_left :: Map String Type -> Type -> Type
+instantiate_left :: Map String GenericType -> GenericType -> GenericType
 instantiate_left m t = instantiate m (suffix_generics "1" t)
 
-instantiate_right :: Map String Type -> Type -> Type
+instantiate_right :: Map String GenericType -> GenericType -> GenericType
 instantiate_right m t = instantiate m (suffix_generics "2" t)
 
     -- apply a type substitution to an expression
-specialize :: Map String Type -> Expr -> Expr
+specialize :: Map String GenericType -> Expr -> Expr
 specialize = instantiate
 
-specialize_left :: Map String Type -> Expr -> Expr
+specialize_left :: Map String GenericType -> Expr -> Expr
 specialize_left m e  = specialize m (rewrite_types "1" e)
 
-specialize_right :: Map String Type -> Expr -> Expr
+specialize_right :: Map String GenericType -> Expr -> Expr
 specialize_right m e = specialize m (rewrite_types "2" e)

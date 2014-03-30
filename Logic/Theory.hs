@@ -4,8 +4,8 @@ module Logic.Theory where
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
-
 import Logic.Sequent
+import Logic.Type
 
     -- Libraries
 import Data.List as L

@@ -3,10 +3,10 @@ module Theories.Arithmetic where
 
     -- Modules
 import Logic.Const
-import Logic.Expr
 import Logic.Label
 import Logic.Operator
 import Logic.Theory
+import Logic.Type
 
 import Theories.FunctionTheory
 

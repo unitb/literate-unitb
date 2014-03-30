@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
 
 module Z3.Z3 
-    ( Sequent ( .. )
+    ( Sequent
     , Validity ( .. )
     , Satisfiability ( .. )
     , discharge_all
     , discharge, verify
-    , Context ( .. )
+    , Context
     , entailment
     , var_decl 
     , free_vars
@@ -29,9 +29,11 @@ where
 import Logic.Expr
 import Logic.Classes
 import Logic.Const
+import Logic.Genericity
 import Logic.Label
 import Logic.Lambda
 import Logic.Sequent
+import Logic.Type
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )
@@ -46,10 +48,13 @@ import           Data.Function
 import           Data.List hiding (union)
 import           Data.Map as M hiding (map,filter,foldl, (\\))
 import qualified Data.Map as M
+import qualified Data.Maybe as M ( fromJust )
 import           Data.Typeable 
 
 import           System.Exit
 import           System.Process
+
+import           Utilities.Format
 
 z3_path :: String
 z3_path = "z3"
@@ -121,7 +126,7 @@ var_decl s (Context _ m _ _ d) =
 --from_decl (ConstDecl n t)      = Right (Var n t)
 --from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
 
-data Command = Decl Decl | Assert Expr | CheckSat 
+data Command = Decl FODecl | Assert FOExpr | CheckSat 
     | GetModel 
     | Push | Pop 
     | Comment String
@@ -143,7 +148,7 @@ z3_code po =
         ++ [] )
     where
 --        !() = unsafePerformIO (p
-        (Sequent d assume hyps assert) = delambdify po
+        (Sequent d assume hyps assert) = remove_type_vars $ delambdify po
         f (lbl,xp) = [Comment $ show lbl, Assert xp]
 
 smoke_test :: Sequent -> IO Validity
@@ -204,6 +209,35 @@ discharge_all xs = do
                 (\x -> return (i,x)) 
                 r
         return $ map snd $ sortBy (compare `on` fst) rs
+
+--subexpr :: TypeSystem t => AbsExpr t -> [AbsExpr t]
+--subexpr e = reverse $ f [] e
+--    where
+--        f xs e = visit f (e:xs) e
+
+funapps :: TypeSystem t => AbsExpr t -> [(AbsExpr t, AbsFun t)]
+funapps e = reverse $ f [] e
+    where
+        f xs e@(FunApp fun _) = visit f ((e,fun):xs) e
+        f xs e                 = visit f xs e
+
+mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
+mk_error f x = 
+        case f x of
+            Just y -> Just y
+            Nothing -> error $ format "failed to strip type variables: {0}\n{1}" x ys
+    where
+        xs = funapps x
+        g (x,y) = format "{0} :: {1} ; {2}\n" x (type_of x) y :: String
+        ys = concatMap g xs
+
+remove_type_vars :: Sequent -> FOSequent
+remove_type_vars (Sequent ctx asm hyp g) = M.fromJust $ do
+    ctx <- ctx_strip_generics ctx
+    asm <- mapM (mk_error strip_generics) asm
+    h   <- mapM (mk_error strip_generics) $ elems hyp
+    g   <- mk_error strip_generics g
+    return (Sequent ctx asm (fromList $ zip (keys hyp) h) g)
 
 discharge :: Sequent -> IO Validity
 discharge po = do

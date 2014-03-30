@@ -13,6 +13,7 @@ import Logic.Expr
 import Logic.ExpressionStore as ES
 import Logic.Genericity 
 import Logic.Operator
+import Logic.Type
 
 import UnitB.AST ( System ( .. ) )
 
@@ -195,7 +196,7 @@ type_t = do
             else return []
         ctx <- get_context
         t <- case get_type ctx t of
-            Just s -> return $ USER_DEFINED s ts
+            Just s -> return $ Gen (USER_DEFINED s ts)
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
         b2 <- liftHOF look_ahead $ read_listP "\\pfun"                
         if b2 
@@ -374,7 +375,7 @@ term = do
             (do 
                 xs <- number
                 eat_spaceP
-                return $ Right (Const [] xs $ USER_DEFINED IntSort []))
+                return $ Right (Const [] xs $ Gen $ USER_DEFINED IntSort []))
 
 dummy_types :: [String] -> Context -> Maybe [Var]
 dummy_types vs (Context _ _ _ _ dums) = mapM f vs

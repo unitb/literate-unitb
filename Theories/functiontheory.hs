@@ -8,6 +8,7 @@ import Logic.Genericity
 import Logic.Label
 import Logic.Operator
 import Logic.Theory
+import Logic.Type
 
 import Theories.SetTheory hiding ( dec )
 

@@ -14,6 +14,7 @@ import Logic.Expr
 import Logic.Label
 import Logic.Operator
 import Logic.Tactics hiding ( with_line_info )
+import Logic.Type
 
 import UnitB.AST
 import UnitB.PO
@@ -41,7 +42,7 @@ ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag,()) th -> do
                     let new_sort = Sort tag name 0
-                    let new_type = USER_DEFINED new_sort []
+                    let new_type = Gen $ USER_DEFINED new_sort []
                     toEither $ error_list
                         [ ( tag `member` all_types th
                           , format "a sort with name '{0}' is already declared" tag )
@@ -166,7 +167,7 @@ ctx_imports _ = visit_doc []
                             (theory_ctx S.empty th) 
                             (th_notation th) optype
                         case var of
-                            [(v,Var _ (USER_DEFINED s [USER_DEFINED p [t0, t1],t2]))]
+                            [(v,Var _ (Gen (USER_DEFINED s [Gen (USER_DEFINED p [t0, t1]),t2])))]
                                 |    s == fun_sort 
                                   && p == pair_sort -> do    
                                     let fun           = Fun [] v [t0,t1] t2

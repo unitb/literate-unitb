@@ -12,6 +12,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Theory
+import Logic.Type
 
 import UnitB.AST
 import UnitB.PO
@@ -85,17 +86,17 @@ part5 = test_cases
 train_sort :: Sort
 train_sort = Sort "\\TRAIN" "TRAIN" 0
 train_type :: Type
-train_type = USER_DEFINED train_sort []
+train_type = Gen $ USER_DEFINED train_sort []
 
 loc_sort :: Sort
 loc_sort = Sort "\\LOC" "LOC" 0
 loc_type :: Type
-loc_type = USER_DEFINED loc_sort []
+loc_type = Gen $ USER_DEFINED loc_sort []
 
 blk_sort :: Sort
 blk_sort = Sort "\\BLK" "BLK" 0
 blk_type :: Type
-blk_type = USER_DEFINED blk_sort []
+blk_type = Gen $ USER_DEFINED blk_sort []
 
 train    :: ExprP
 loc_cons :: ExprP

@@ -1,24 +1,34 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, DefaultSignatures #-}
+{-# LANGUAGE DeriveDataTypeable     #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 module Logic.Expr where
 
     -- Module
 import Logic.Classes
+import Logic.Type
 
     -- library
 import           GHC.Generics
 
-import           Data.List
+import           Data.List as L
 import           Data.Map as M hiding (map,filter,foldl)
 import qualified Data.Set as S
 import           Data.Typeable
 
 import Utilities.Format
 
-data Expr = 
-        Word Var 
-        | Const [Type] String Type
-        | FunApp Fun [Expr]
-        | Binder Quantifier [Var] Expr Expr
+type Expr = AbsExpr GenericType
+
+type FOExpr = AbsExpr FOType
+
+data AbsExpr t = 
+        Word (AbsVar t) 
+        | Const [t] String t
+        | FunApp (AbsFun t) [AbsExpr t]
+        | Binder Quantifier [AbsVar t] (AbsExpr t) (AbsExpr t)
     deriving (Eq, Ord, Typeable, Generic)
 
 data Quantifier = Forall | Exists | Lambda
@@ -26,7 +36,9 @@ data Quantifier = Forall | Exists | Lambda
 
 type ExprP = Either String Expr 
 
-type_of :: Expr -> Type
+type ExprPG t = Either String (AbsExpr t)
+
+type_of :: TypeSystem t => AbsExpr t -> t
 type_of (Word (Var _ t))         = t
 type_of (Const _ _ t)            = t
 type_of (FunApp (Fun _ _ _ t) _) = t
@@ -35,13 +47,13 @@ type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
         tuple = ztuple $ map Word vs
 type_of (Binder _ _ _ e)          = type_of e
 
-ztuple_type :: [Type] -> Type
+ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
 ztuple_type [x]         = x
 ztuple_type [x0,x1]     = pair_type x0 $ pair_type x1 null_type
 ztuple_type (x0:x1:xs)  = pair_type x0 $ ztuple_type (x1:xs)
 
-ztuple :: [Expr] -> Expr
+ztuple :: TypeSystem t => [AbsExpr t] -> AbsExpr t
 ztuple []           = unit
 ztuple [x]          = x
 ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
@@ -61,19 +73,19 @@ pair_sort = -- Sort "Pair" "Pair" 2
                         , ("second", GENERIC "b") ]) ]
 
 
-pair_type :: Type -> Type -> Type
-pair_type x y = USER_DEFINED pair_sort [x,y]
+pair_type :: TypeSystem t => t -> t -> t
+pair_type x y = make_type pair_sort [x,y]
 
 null_sort :: Sort
 null_sort = Sort "Null" "Null" 2
 
-null_type :: Type
-null_type = USER_DEFINED null_sort []
+null_type :: TypeSystem t => t
+null_type = make_type null_sort []
 
-unit :: Expr
+unit :: TypeSystem t => AbsExpr t
 unit = Const [] "null" null_type
 
-pair :: Expr -> Expr -> Expr
+pair :: TypeSystem t => AbsExpr t -> AbsExpr t -> AbsExpr t
 pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
     where
         t0 = type_of x
@@ -82,102 +94,81 @@ pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
 maybe_sort :: Sort
 maybe_sort   = Sort "\\maybe" "Maybe" 1
 
-maybe_type :: Type -> Type
-maybe_type t = USER_DEFINED maybe_sort [t]
+maybe_type :: TypeSystem t => t -> t
+maybe_type t = make_type maybe_sort [t]
 
 fun_sort :: Sort
 fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ GENERIC "b"))
 
-fun_type :: Type -> Type -> Type
-fun_type t0 t1 = USER_DEFINED fun_sort [t0,t1] --ARRAY t0 t1
+fun_type :: TypeSystem t => t -> t -> t
+fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
 
 merge_range :: Quantifier -> StrList
 merge_range Forall = Str "=>"
 merge_range Exists = Str "and"
 merge_range Lambda = Str "PRE"
 
-data Type = 
-        GENERIC String 
-        | VARIABLE String
-        | USER_DEFINED Sort [Type]
-    deriving (Eq, Ord, Typeable, Generic)
+type Context = AbsContext GenericType
 
-data Context = Context 
+type FOContext = AbsContext FOType
+
+data AbsContext t = Context 
         (Map String Sort) -- sorts
-        (Map String Var)  -- constants
-        (Map String Fun)  -- functions and operators
-        (Map String Def)  -- transparent definitions
-        (Map String Var)  -- dummies
+        (Map String (AbsVar t))  -- constants
+        (Map String (AbsFun t))  -- functions and operators
+        (Map String (AbsDef t))  -- transparent definitions
+        (Map String (AbsVar t))  -- dummies
     deriving (Show,Eq,Generic)
 
-class Symbol a where
-    decl :: a -> [Decl]
+class Symbol a t where
+    decl :: a -> [AbsDecl t]
 
-instance Show Type where
-    show (GENERIC n)         = format "_{0}" n 
-    show (VARIABLE n)        = format "'{0}" n 
-    show (USER_DEFINED s []) = (z3_name s)
-    show (USER_DEFINED s ts) = format "{0} {1}" (z3_name s) ts
-
-instance Tree Type where
-    as_tree (GENERIC x)   = Str x
-    as_tree (VARIABLE n)  = Str $ "_" ++ n
-    as_tree (USER_DEFINED s []) = Str $ z3_name s
-    as_tree (USER_DEFINED s xs) = List (Str (z3_name s) : map as_tree xs)
-    rewriteM' _ s x@(VARIABLE _) = return (s,x)
-    rewriteM' _ s x@(GENERIC _)  = return (s,x)
-    rewriteM' f s0 (USER_DEFINED s xs) = do
-            (s1,ys) <- fold_mapM f s0 xs
-            return (s1, USER_DEFINED s ys)
-
-z3_decoration :: Type -> String
+z3_decoration :: TypeSystem t => t -> String
 z3_decoration t = f $ as_tree t :: String
     where
         f (List ys) = format "@Open{0}@Close" xs
             where xs = concatMap f ys :: String
         f (Str y)   = format "@@{0}" y
 
-data Sort =
-        BoolSort | IntSort | RealSort 
-        | DefSort String String [String] Type
-        | Sort String String Int --[String]
-        | Datatype 
-            [String]    -- Parameters
-            String      -- type name
-            [(String, [(String,Type)])] -- alternatives and named components
-    deriving (Eq, Ord, Show, Generic)
-
 array_sort :: Sort
 array_sort = Sort "Array" "Array" 2
 
-array :: Type -> Type -> Type
-array t0 t1 = USER_DEFINED array_sort [t0,t1]
-
-z3_name :: Sort -> String
-z3_name (BoolSort) = "Bool"
-z3_name (IntSort)  = "Int"
-z3_name (RealSort) = "Real"
-z3_name (Sort _ x _)       = x
-z3_name (DefSort _ x _ _)  = x
-z3_name (Datatype _ x _)   = x
+array :: TypeSystem t => t -> t -> t
+array t0 t1 = make_type array_sort [t0,t1]
 
     -- replace it everywhere
 z3_fun_name :: Fun -> String
 z3_fun_name (Fun xs ys _ _) = ys ++ concatMap z3_decoration xs
 
-data Decl = 
-        FunDecl [Type] String [Type] Type 
-        | ConstDecl String Type
-        | FunDef [Type] String [Var] Type Expr
+type Decl = AbsDecl GenericType
+
+type FODecl = AbsDecl FOType
+
+data AbsDecl t = 
+        FunDecl [t] String [t] t
+        | ConstDecl String t
+        | FunDef [t] String [AbsVar t] t (AbsExpr t)
         | SortDecl Sort
 
-data Fun = Fun [Type] String [Type] Type
+type Fun = AbsFun GenericType
+
+type FOFun = AbsFun FOType
+
+data AbsFun t = Fun [t] String [t] t
     deriving (Eq, Ord, Generic)
 
-data Var = Var String Type
+type Var = AbsVar GenericType
+
+type FOVar = AbsVar FOType
+
+data AbsVar t = Var String t
     deriving (Eq,Ord,Generic,Typeable)
 
-data Def = Def [Type] String [Var] Type Expr
+type FODef = AbsDef FOType
+
+type Def = AbsDef GenericType
+
+data AbsDef t = Def [t] String [AbsVar t] t (AbsExpr t)
     deriving (Eq,Generic)
 
 instance Show StrList where
@@ -189,7 +180,7 @@ instance Show Quantifier where
     show Exists = "exists"
     show Lambda = "lambda"
 
-instance Tree Expr where
+instance TypeSystem t => Tree (AbsExpr t) where
     as_tree (Word (Var xs _))    = Str xs
     as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
     as_tree (Const ys xs _)        = Str (xs ++ concatMap z3_decoration ys)
@@ -214,10 +205,10 @@ instance Tree Expr where
             (s2,y)  <- f s1 x
             return (s2,Binder q xs r1 y)
 
-instance Show Expr where
+instance TypeSystem t => Show (AbsExpr t) where
     show e = show $ as_tree e
 
-instance Tree Decl where
+instance TypeSystem t => Tree (AbsDecl t) where
     as_tree (FunDecl ts name dom ran) =
             List [ Str "declare-fun", 
                 Str $ name ++ concatMap z3_decoration ts, 
@@ -257,48 +248,37 @@ instance Tree Decl where
             g (n,t)     = List [Str n, as_tree t]
     rewriteM' = id
     
-instance Tree Var where
+instance TypeSystem t => Tree (AbsVar t) where
     as_tree (Var vn vt) = List [Str vn, as_tree vt]
     rewriteM' = id
 
--- instance Tree Sort where
-	-- as_tree B
-    -- as_tree (DefSort _ x xs def) = 
-            -- List 
-                -- [ Str x
-                -- , List $ map Str xs
-                -- , as_tree def
-                -- ]
-    -- as_tree (Sort _ x n) = List [Str x, Str $ show n]
-    -- rewriteM' = id
-
-instance Show Var where
+instance TypeSystem t => Show (AbsVar t) where
     show (Var n t) = n ++ ": " ++ show (as_tree t)
 
-instance Show Fun where
+instance TypeSystem t => Show (AbsFun t) where
     show (Fun xs n ts t) = n ++ show xs ++ ": " 
         ++ intercalate " x " (map (show . as_tree) ts)
         ++ " -> " ++ show (as_tree t)
 
-instance Show Def where
+instance TypeSystem t => Show (AbsDef t) where
     show (Def xs n ps t e) = n ++ show xs ++  ": " 
         ++ intercalate " x " (map (show . as_tree) ps)
         ++ " -> " ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
 
-instance Symbol Sort where
+instance Symbol Sort t where
     decl s = [SortDecl s]
 
-instance Symbol Fun where
+instance Symbol (AbsFun t) t where
     decl (Fun xs name params ret) = [FunDecl xs name params ret]
 
-instance Symbol Var where
+instance Symbol (AbsVar t) t where
     decl (Var name typ)        = [ConstDecl name typ]
 
-instance Symbol Def where
+instance Symbol (AbsDef t) t where
     decl (Def xs name ps typ ex)  = [FunDef xs name ps typ ex]
 
-instance Symbol Context where
+instance Symbol (AbsContext t) t where
     decl (Context sorts cons fun defs _) = -- dums) = 
                 concatMap decl (elems sorts)
 --            ++  concatMap decl (elems (cons `merge` dums)) 
@@ -323,7 +303,7 @@ merge_all ms = foldl (unionWithKey f) empty ms
             | x == y    = x
             | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
-mk_context :: [Decl] -> Context
+mk_context :: TypeSystem t => [AbsDecl t] -> AbsContext t
 mk_context (x:xs) = 
         case mk_context xs of
             Context ss vs fs defs dums -> 
@@ -346,7 +326,6 @@ mk_context (x:xs) =
                             ss vs fs 
                             (M.insert n (Def gs n ps t e) defs) 
                             dums
---                    Datatype _ _ _ -> error "Z3.Def.mk_context: datatypes are not supported"
 mk_context [] = Context empty empty empty empty empty
 
 substitute :: Map Var Expr -> Expr -> Expr
@@ -385,10 +364,10 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
-instance Named Fun where
+instance Named (AbsFun t) where
     name (Fun _ x _ _) = x
 
-instance Named Var where
+instance Named (AbsVar t) where
     name (Var x _) = x
 
 instance Named Sort where

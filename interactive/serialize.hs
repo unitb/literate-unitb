@@ -1,9 +1,12 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
 module Interactive.Serialize where
 
     -- Modules
 import Logic.Expr
 import Logic.Label
 import Logic.Sequent
+import Logic.Type
 
 import UnitB.PO
 
@@ -29,6 +32,7 @@ instance Serialize Label where
 instance Serialize Sort where
 instance Serialize Var where
 instance Serialize Type where
+instance Serialize (TypeCons Type) where
 instance Serialize Fun where
 instance Serialize Def where
 instance Serialize Quantifier where

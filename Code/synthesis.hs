@@ -5,6 +5,7 @@ module Code.Synthesis where
 import Logic.Const
 import Logic.Expr
 import Logic.Classes
+import Logic.Type
 
 import Theories.SetTheory
 
@@ -29,14 +30,14 @@ data Program =
 type_code :: Type -> Either String String
 type_code t = 
             case t of
-                USER_DEFINED s []
+                Gen (USER_DEFINED s [])
                     | s == IntSort ->  return "Int"
                     | s == BoolSort -> return "Bool"
-                USER_DEFINED s [t]
+                Gen (USER_DEFINED s [t])
                     | s == set_sort -> do
                         c <- type_code t
                         return $ format "S.Set ({0})" c
-                USER_DEFINED s [t0,t1]
+                Gen (USER_DEFINED s [t0,t1])
                     | s == fun_sort -> do
                         c0 <- type_code t0
                         c1 <- type_code t1

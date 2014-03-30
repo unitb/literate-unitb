@@ -1,9 +1,11 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module Logic.TestGenericity where
 
     -- Modules
 import Logic.Const
 import Logic.Expr
 import Logic.Genericity
+import Logic.Type
 
 import Theories.SetTheory
 
@@ -86,7 +88,7 @@ instance Arbitrary Type where
                         BoolSort -> 
                             return []
                         Datatype _ _ _ -> error "Type.arbitrary: impossible"
-                    return $ USER_DEFINED s ts
+                    return $ Gen $ USER_DEFINED s ts
                 , do
                     t <- arbitrary
                     return $ set_type t
@@ -117,7 +119,7 @@ test_case = Case "genericity" test True
 
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
-    [   (array real (USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
+    [   (array real (Gen $ USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
 test :: IO Bool
@@ -150,15 +152,15 @@ test = test_cases (
         ] )
     where
         fun_sort = Sort "\\tfun" "fun" 2
-        gtype    = USER_DEFINED fun_sort [GENERIC "c", set_type $ GENERIC "b"]
+        gtype    = Gen $ USER_DEFINED fun_sort [GENERIC "c", set_type $ GENERIC "b"]
         
-        stype0   = USER_DEFINED fun_sort [int, set_type real]
-        stype1   = USER_DEFINED fun_sort [set_type int, set_type real]
-        stype2   = USER_DEFINED fun_sort [set_type int, real]
+        stype0   = Gen $ USER_DEFINED fun_sort [int, set_type real]
+        stype1   = Gen $ USER_DEFINED fun_sort [set_type int, set_type real]
+        stype2   = Gen $ USER_DEFINED fun_sort [set_type int, real]
         
-        gtype0   = USER_DEFINED fun_sort [gA, set_type real]
-        gtype1   = USER_DEFINED fun_sort [set_type int, set_type gA]
-        gtype2   = USER_DEFINED fun_sort [set_type gA, gA]
+        gtype0   = Gen $ USER_DEFINED fun_sort [gA, set_type real]
+        gtype1   = Gen $ USER_DEFINED fun_sort [set_type int, set_type gA]
+        gtype2   = Gen $ USER_DEFINED fun_sort [set_type gA, gA]
         gA = GENERIC "a"
 
 case3   :: IO Expr
@@ -198,6 +200,6 @@ result7 :: ExprP
         , Right $ FunApp (Fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
-        train = USER_DEFINED (Sort "\train" "train" 0) []
+        train = Gen $ USER_DEFINED (Sort "\train" "train" 0) []
         (x,_) = var "x" train
         empty_set_of_train = Const [train] "empty-set" $ set_type train

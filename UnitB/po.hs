@@ -17,6 +17,7 @@ import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Theory
+import Logic.Sequent
 
 import           UnitB.AST
 import           UnitB.POGenerator hiding ( variables )

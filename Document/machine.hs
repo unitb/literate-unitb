@@ -18,6 +18,7 @@ import Logic.ExpressionStore ( ExprStore )
 import Logic.Sequent
 import Logic.Label
 import Logic.Tactics hiding ( with_line_info )
+import Logic.Type
 
 import SummaryGen
 
@@ -256,7 +257,7 @@ type_decl = visit_doc []
                ,  CmdBlock $ \(String name, String tag,()) m -> do
                     let th = theory m
                     let new_sort = Sort tag name 0
-                    let new_type = USER_DEFINED new_sort []
+                    let new_type = Gen $ USER_DEFINED new_sort []
                     toEither $ error_list
                         [ ( tag `member` all_types th
                           , format "a sort with name '{0}' is already declared" tag )

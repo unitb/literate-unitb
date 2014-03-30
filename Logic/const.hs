@@ -3,6 +3,7 @@ module Logic.Const where
     -- Modules    
 import Logic.Expr
 import Logic.Genericity
+import Logic.Type
 
     -- Libraries
 import Control.Monad
@@ -10,9 +11,13 @@ import Control.Monad
 import Utilities.Format
 import Utilities.Syntactic
 
-fun1 :: Fun -> Expr -> Expr
+fun1 :: TypeSystem t 
+     => AbsFun t 
+     -> AbsExpr t -> AbsExpr t
 fun1 f x           = FunApp f [x]
-fun2 :: Fun -> Expr -> Expr -> Expr
+fun2 :: TypeSystem t 
+     => AbsFun t -> AbsExpr t 
+     -> AbsExpr t -> AbsExpr t
 fun2 f x y         = FunApp f [x,y]
 
 typed_fun1 :: (Type -> Either String Fun) 
@@ -23,75 +28,86 @@ typed_fun1 f mx           = do
         fn <- f $ type_of x
         return $ FunApp fn [x]
 
-typed_fun2 :: (Type -> Type -> Either String Fun) 
-           -> ExprP
-           -> ExprP
-           -> ExprP
+typed_fun2 :: TypeSystem t 
+           => (t -> t -> Either String (AbsFun t)) 
+           -> ExprPG t
+           -> ExprPG t
+           -> ExprPG t
 typed_fun2 f mx my         = do
         x  <- mx
         y  <- my
         fn <- f (type_of x) (type_of y)
         return $ FunApp fn [x,y]
 
-maybe1 :: (Expr -> Expr)
-       -> ExprP -> ExprP
+maybe1 :: TypeSystem t 
+       => (AbsExpr t -> AbsExpr t)
+       -> ExprPG t -> ExprPG t
 maybe1 f mx = do
-        x <- mx :: Either String Expr
+        x <- mx
         return $ f x
-maybe2 :: (Expr -> Expr -> Expr)
-       -> ExprP -> ExprP
-       -> ExprP
+maybe2 :: TypeSystem t 
+       => (AbsExpr t -> AbsExpr t -> AbsExpr t)
+       -> ExprPG t -> ExprPG t
+       -> ExprPG t
 maybe2 f mx my = do
-        x <- mx :: Either String Expr
-        y <- my :: Either String Expr
+        x <- mx
+        y <- my
         return $ f x y
-maybe3 :: (Expr -> Expr -> Expr -> Expr)
-       -> ExprP -> ExprP
-       -> ExprP -> ExprP
+maybe3 :: TypeSystem t
+       => (   AbsExpr t -> AbsExpr t 
+           -> AbsExpr t -> AbsExpr t)
+       -> ExprPG t -> ExprPG t
+       -> ExprPG t -> ExprPG t
 maybe3 f mx my mz = do
-        x <- mx :: Either String Expr
-        y <- my :: Either String Expr
-        z <- mz :: Either String Expr
+        x <- mx
+        y <- my
+        z <- mz
         return $ f x y z
+
+no_errors2 :: TypeSystem t 
+           => (   ExprPG t -> ExprPG t
+               -> ExprPG t )
+           -> (AbsExpr t -> AbsExpr t -> AbsExpr t)
+no_errors2 f x y = either error id $ f (Right x) (Right y)
 
 toErrors :: LineInfo -> ExprP -> Either [Error] Expr
 toErrors li m = case m of
         Right x -> Right x
         Left xs -> Left [Error xs li]
 
-znot :: Expr -> Expr
+znot :: TypeSystem2 t => AbsExpr t -> AbsExpr t
 znot         = fun1 $ Fun [] "not" [bool] bool
-zimplies :: Expr -> Expr -> Expr
+zimplies :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zimplies x y
     | x == ztrue  = y
     | y == ztrue  = ztrue
     | x == zfalse = ztrue
     | y == zfalse = znot x 
     | otherwise   = fun2 (Fun [] "=>"  [bool,bool] bool) x y
-zand :: Expr -> Expr -> Expr
+zand :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zand x y     = zall [x,y]
-zor :: Expr -> Expr -> Expr
+zor :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zor x y      = zsome [x,y]
 
 zeq_fun :: Fun
-zeq_fun      = Fun [] "="   [GENERIC "a", GENERIC "a"] bool
+zeq_fun      = Fun [] "="   [gA, gA] bool
 
 zeq_symb :: Expr -> Expr -> Expr
-zeq_symb     = fun2 $ Fun [GENERIC "a"] "eq" [GENERIC "a", GENERIC "a"] bool
+zeq_symb     = no_errors2 mzeq_symb
 mzeq_symb :: ExprP -> ExprP -> ExprP
-mzeq_symb    = typ_fun2 $ Fun [GENERIC "a"] "eq" [GENERIC "a", GENERIC "a"] bool
+mzeq_symb    = typ_fun2 $ Fun [gA] "eq" [gA, gA] bool
 
 zeq :: Expr -> Expr -> Expr
-zeq          = fun2 zeq_fun
+zeq          = no_errors2 mzeq
 mzeq :: ExprP -> ExprP -> ExprP
 mzeq         = typ_fun2 zeq_fun
-zfollows :: Expr -> Expr -> Expr
+zfollows :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool
-ztrue :: Expr
+ztrue :: TypeSystem2 t => AbsExpr t
 ztrue        = Const [] "true"  bool
-zfalse :: Expr
+zfalse :: TypeSystem2 t => AbsExpr t
 zfalse       = Const [] "false" bool
-zall :: [Expr] -> Expr
+zall :: TypeSystem2 t => [AbsExpr t] -> AbsExpr t
 zall xs      = 
         case concatMap f xs of
             []  -> ztrue
@@ -103,7 +119,7 @@ zall xs      =
         f x
             | x == ztrue = []
             | otherwise   = [x]
-zsome :: [Expr] -> Expr
+zsome :: TypeSystem2 t => [AbsExpr t] -> AbsExpr t
 zsome xs      = 
         case concatMap f xs of
             []  -> ztrue
@@ -115,13 +131,21 @@ zsome xs      =
         f x
             | x == zfalse = []
             | otherwise   = [x]
-zforall :: [Var] -> Expr -> Expr -> Expr
+zforall :: TypeSystem2 t 
+        => [AbsVar t] 
+        -> AbsExpr t 
+        -> AbsExpr t 
+        -> AbsExpr t
 zforall [] x y  = zimplies x y
 zforall vs x w@(Binder Forall us y z) 
     | x == ztrue = zforall (vs ++ us) y z
     | otherwise  = Binder Forall vs x w
 zforall vs x w   = Binder Forall vs x w
-zexists :: [Var] -> Expr -> Expr -> Expr
+zexists :: TypeSystem2 t 
+        => [AbsVar t] 
+        -> AbsExpr t 
+        -> AbsExpr t 
+        -> AbsExpr t
 zexists [] x y = zand x y
 zexists vs x w@(Binder Exists us y z) 
     | x == ztrue = zexists (vs ++ us) y z
@@ -137,41 +161,45 @@ zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
 znothing :: ExprP
 znothing   = Right (Const [] "Nothing" $ maybe_type gA)
 
-mznot :: ExprP -> ExprP
+mznot :: TypeSystem2 t => ExprPG t -> ExprPG t
 mznot         = maybe1 znot
-mzimplies :: ExprP -> ExprP -> ExprP
+mzimplies :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzimplies     = maybe2 zimplies
-mzand :: ExprP -> ExprP -> ExprP
+mzand :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzand x y     = mzall [x,y]
-mzor :: ExprP -> ExprP -> ExprP
+mzor :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzor x y      = mzsome [x,y]
-mzfollows :: ExprP -> ExprP -> ExprP
+mzfollows :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzfollows     = maybe2 zfollows
-mztrue :: ExprP
+mztrue :: TypeSystem2 t
+       => ExprPG t
 mztrue        = Right ztrue
-mzfalse :: ExprP
+mzfalse :: TypeSystem2 t
+        => ExprPG t
 mzfalse       = Right zfalse
-mzall :: [ExprP] -> ExprP
+mzall :: TypeSystem2 t => [ExprPG t] -> ExprPG t
 mzall []      = mztrue
 mzall [x]     = x
 mzall xs      = do
         xs <- forM xs $ zcast bool 
         return $ zall xs
 
-mzsome :: [ExprP] -> ExprP
+mzsome :: TypeSystem2 t => [ExprPG t] -> ExprPG t
 mzsome []     = mzfalse
 mzsome [x]    = x
 mzsome xs     = do
         xs <- forM xs $ zcast bool
         return $ zsome xs
 
-mzforall :: [Var] -> ExprP -> ExprP -> ExprP
+mzforall :: TypeSystem2 t => [AbsVar t] 
+         -> ExprPG t -> ExprPG t -> ExprPG t
 mzforall xs mx my = do
         x <- zcast bool mx
         y <- zcast bool my
         return $ zforall xs x y
 
-mzexists :: [Var] -> ExprP -> ExprP -> ExprP
+mzexists :: TypeSystem2 t => [AbsVar t] 
+         -> ExprPG t -> ExprPG t -> ExprPG t
 mzexists xs mx my = do
         x <- zcast bool mx
         y <- zcast bool my
@@ -200,26 +228,26 @@ zselect      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
 zint :: Int -> Expr
 zint n       = Const [] (show n) int
  
-int :: Type
-int  = USER_DEFINED IntSort []
-real :: Type
-real = USER_DEFINED RealSort []
-bool :: Type
-bool = USER_DEFINED BoolSort []
+int :: TypeSystem2 t => t
+int  = make_type IntSort []
+real :: TypeSystem2 t => t
+real = make_type RealSort []
+bool :: TypeSystem2 t => t
+bool = make_type BoolSort []
 
-mzless :: ExprP -> ExprP -> ExprP
+mzless :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
-mzle :: ExprP -> ExprP -> ExprP
+mzle :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] bool
-mzplus :: ExprP -> ExprP -> ExprP
+mzplus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
-mzminus :: ExprP -> ExprP -> ExprP
+mzminus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
-mzopp :: ExprP -> ExprP
+mzopp :: TypeSystem2 t => ExprPG t -> ExprPG t
 mzopp         = typ_fun1 $ Fun [] "-" [int] int
-mztimes :: ExprP -> ExprP -> ExprP
+mztimes :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mztimes       = typ_fun2 $ Fun [] "*" [int,int] int
-mzpow :: ExprP -> ExprP -> ExprP
+mzpow :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 
 mzint :: Int -> ExprP
@@ -228,8 +256,6 @@ mzint n       = Right $ zint n
 mzpair :: ExprP -> ExprP -> ExprP
 mzpair = typ_fun2 $ Fun [] "pair" [gA,gB] (pair_type gA gB)
 
-gena :: Type
-gena = GENERIC "a"
 gA :: Type
 gA = GENERIC "a"
 gB :: Type

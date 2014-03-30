@@ -21,8 +21,8 @@ where
 
     -- Modules
 import Logic.Expr
-            ( Expr(..), Var, used_var 
-            , Fun (..) )
+            ( Expr, AbsExpr(..), Var, used_var 
+            , AbsFun (..) )
 import Logic.Const
 
     -- Libraries

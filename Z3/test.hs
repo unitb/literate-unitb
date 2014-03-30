@@ -8,12 +8,15 @@ import Logic.Const
 import Logic.Expr
 import Logic.Lambda
 import Logic.Operator
+import Logic.Sequent
+import Logic.Genericity
 
 import UnitB.PO
 import UnitB.AST
 
     -- Libraries
 import Data.Map as M ( empty )
+import qualified Data.Maybe as M ( fromJust )
 
 import Utilities.Syntactic
 
@@ -66,8 +69,8 @@ sample_ast :: [Command]
 sample_ast = [
         Decl (ConstDecl "a" int),
         Decl (FunDecl [] "f" [int, bool] int),
-        Assert (a `zgreater` zint 10),
-        Assert (f a ztrue `zless` zint 10),
+        Assert $ M.fromJust $ strip_generics (a `zgreater` zint 10),
+        Assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
     where
         f       = fun2 ff
@@ -75,8 +78,8 @@ sample_ast = [
 sample_quant :: [Command]
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
+        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat ]
     where
         ff          = Fun [] "f" [int] int
@@ -94,8 +97,8 @@ sample_proof = Sequent
 sample_quant2 :: [Command]
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
@@ -103,9 +106,9 @@ sample_quant2 = [
 sample_quant3 :: [Command]
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
-        CheckSat]
+        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        Assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        CheckSat] 
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
         

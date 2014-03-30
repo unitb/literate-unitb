@@ -1,10 +1,13 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Logic.Sequent where
 
     -- Modules
 import Logic.Expr
 import Logic.Label
 import Logic.Const
+import Logic.Type
 
     -- Libraries
 import Data.Char
@@ -15,7 +18,11 @@ import GHC.Generics
 
 import Utilities.Format
 
-data Sequent = Sequent Context [Expr] (Map Label Expr) Expr
+type Sequent = AbsSequent GenericType
+
+type FOSequent = AbsSequent FOType
+
+data AbsSequent t = Sequent (AbsContext t) [AbsExpr t] (Map Label (AbsExpr t)) (AbsExpr t)
     deriving (Eq, Generic)
 
 instance Show Sequent where

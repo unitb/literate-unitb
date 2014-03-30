@@ -10,6 +10,7 @@ import Logic.Operator
 import Logic.Label
 import Logic.Sequent
 import Logic.Theory
+import Logic.Type
 
     -- Libraries
 import Control.Monad

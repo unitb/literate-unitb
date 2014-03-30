@@ -22,6 +22,7 @@ import Logic.Label
 import Logic.Operator
 import Logic.Tactics as Tac
 import Logic.Theory
+import Logic.Type
 
     -- Libraries
 import           Control.Monad hiding ( guard )

@@ -10,7 +10,9 @@ import Logic.Classes
 import Logic.Const
 import Logic.Expr
 import Logic.Genericity
+import Logic.Label
 import Logic.Sequent
+import Logic.Type
 
     -- Libraries
 import Control.Monad.State
@@ -132,11 +134,10 @@ get_lambda_term t = do
                 put (M.insert t term m)
                 return term 
 
-lambda_decl :: Monad m => StateT TermStore m [Decl] 
+lambda_decl :: Monad m => StateT TermStore m Context
 lambda_decl = do
             xs <- gets toList 
-            liftM concat $ forM xs $ \(_,v) ->
-                return $ decl v -- $ Var n $ array_type cl
+            return $ Context empty empty (symbol_table $ map snd xs) empty empty
 
 lambda_def :: Monad m => StateT TermStore m [Expr]
 lambda_def = do
@@ -162,7 +163,7 @@ delambdify (Sequent ctx asm hyps goal) =
             decl  <- lambda_decl
             return $ Sequent
                 (            ctx 
-                 `merge_ctx` mk_context decl) 
+                 `merge_ctx` decl) 
                 (defs ++ asm')
                 hyps'
                 goal'

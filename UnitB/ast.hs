@@ -61,6 +61,7 @@ import Logic.Label
 import Logic.Operator
 import Logic.Sequent
 import Logic.Theory as Th
+import Logic.Type
 
 import Theories.SetTheory
 import Theories.FunctionTheory

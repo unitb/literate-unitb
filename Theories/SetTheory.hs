@@ -8,6 +8,7 @@ import Logic.Genericity
 import Logic.Label
 import Logic.Operator
 import Logic.Theory
+import Logic.Type
 
     -- Libraries
 import Data.List as L
@@ -19,7 +20,7 @@ set_sort :: Sort
 set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 
 set_type :: Type -> Type
-set_type t = USER_DEFINED set_sort [t]
+set_type t = Gen $ USER_DEFINED set_sort [t]
 
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
@@ -32,7 +33,6 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         consts  = M.empty
         dummies = M.empty
         types = symbol_table [set_sort]
-        set_type t = USER_DEFINED set_sort [t]
         funs = M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table [
                 Fun [gT] "intersect" [set_type gT,set_type gT] $ set_type gT,
@@ -118,7 +118,7 @@ dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t
 
 item_type :: Type -> Either String Type
-item_type t0@(USER_DEFINED s [t]) 
+item_type t0@(Gen (USER_DEFINED s [t]))
         | s == set_sort         = Right t
         | otherwise             = Left $ format " {0} is not a set " t0
 item_type t0                    = Left $ format " {0} is not a set " t0
