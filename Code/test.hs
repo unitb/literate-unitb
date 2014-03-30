@@ -21,8 +21,10 @@ import Tests.UnitTest
 import System.Directory
 import System.Process
 
+test_case :: (String, IO Bool, Bool)
 test_case = ( "code generation in the cube example", test, True )
 
+test :: IO Bool
 test = test_cases
             [ (StringCase "test0: code for the {state}" case0 result0)
             , (StringCase "test1: code for the {event}" case1 result1)
@@ -32,6 +34,7 @@ test = test_cases
             , (StringCase "test5: run {source file}" case5 result5) ]
 
 
+result0 :: String
 result0 = intercalate "\n"
         [ "data State = State"
         , "    { v_a :: Int" 
@@ -39,16 +42,18 @@ result0 = intercalate "\n"
         , "    , v_c :: Int"
         , "    , v_f :: M.Map (Int) (Int)" 
         , "    , v_n :: Int }" ]
---        , "    , c_N :: Int }" ]
 
+path0 :: String
 path0 = "tests/cubes-t8.tex"
 
+case0 :: IO String
 case0 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ struct m
            return $ either id id x    
         
 
+result1 :: String
 result1 = unlines
         [ "modify $ \\s'@(State { .. }) ->"
         , "  if (v_n < c_N) then"
@@ -59,11 +64,13 @@ result1 = unlines
         , "       , v_f = (M.insert v_n v_a v_f) }" 
         , "  else s'" ]
      
+case1 :: IO String
 case1 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ event_code m $ events m ! label "evt"
            return $ either id id x    
 
+result2 :: String
 result2 = unlines
         [ "s' = State"
         , "       { v_b = 1"
@@ -72,11 +79,13 @@ result2 = unlines
         , "       , v_a = 0"
         , "       , v_f = M.empty }" ]
      
+case2 :: IO String
 case2 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ init_code m
            return $ either id id x    
 
+result3 :: String
 result3 = unlines
         [ "find_cubes c_N = flip execState s' $ fix $ \\proc' -> do"
         , "                      (State { .. }) <- get"
@@ -100,6 +109,7 @@ result3 = unlines
         , "               , v_f = M.empty }" 
         , "" ]
 
+case3 :: IO String
 case3 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ machine_code "find_cubes" m $ n `zeq` bigN
@@ -108,6 +118,7 @@ case3 = do x <- runEitherT $ do
         (n)      = fromJust $ fst $ var "n" int
         (bigN)   = fromJust $ fst $ var "N" int
      
+result4 :: String
 result4 = unlines
         [ "{-# LANGUAGE RecordWildCards #-}"
         , "import Data.Map as M"
@@ -146,6 +157,7 @@ result4 = unlines
         , "" ]
 
 
+case4 :: IO String
 case4 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ source_file "find_cubes" m $ n `zeq` bigN
@@ -154,6 +166,7 @@ case4 = do x <- runEitherT $ do
         (n)      = fromJust $ fst $ var "n" int
         (bigN)   = fromJust $ fst $ var "N" int
 
+result5 :: String
 result5 = unlines
             [ "0^3 = 0"
             , "1^3 = 1"
@@ -166,6 +179,7 @@ result5 = unlines
             , "8^3 = 512"
             , "9^3 = 729" ]
 
+case5 :: IO String
 case5 = do  xs <- runEitherT $ do
                 m  <- EitherT $ parse path0
                 xs <- EitherT $ return $ source_file "find_cubes" m $ n `zeq` bigN
@@ -184,6 +198,7 @@ case5 = do  xs <- runEitherT $ do
         (n)      = fromJust $ fst $ var "n" int
         (bigN)   = fromJust $ fst $ var "N" int
 
+parse :: FilePath -> IO (Either String Machine)
 parse path = do
     r <- parse_machine path
     case r of

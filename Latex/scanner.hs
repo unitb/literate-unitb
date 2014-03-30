@@ -51,27 +51,32 @@ read_if p left right = do
             else
                 right
 
+line_number :: String -> String -> [(Char, LineInfo)]
 line_number fn xs     = concatMap f ys
     where
         f (n, xs)  = map (g n) xs
         g n (i, x) = (x, LI fn n i)
         ys         = zip [1..] $ map (zip [1..] . (++ "\n")) $ lines xs
 
+peek :: Scanner a [a]
 peek = Scanner f
     where
         f s@(State xs _) = Right (map g xs, s)
         g (x,_) = x
 
+eof :: Scanner a ()
 eof = do
         b <- is_eof
         if b 
             then return ()
             else fail "Expected end of file"
             
+is_eof :: Scanner a Bool
 is_eof = do
         xs <- peek
         return (null xs)
             
+read_char :: Scanner b b
 read_char = Scanner f
     where
         f (State ((x,LI fn i j):xs) _) 
@@ -199,3 +204,4 @@ read_ xs = do
         case x of
             Just _  -> return ()
             Nothing -> fail ("expecting: " ++ xs)
+            

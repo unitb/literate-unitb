@@ -15,8 +15,10 @@ import Data.String.Utils
 import Utilities.Format (format)
 import Utilities.Syntactic
 
+test_case :: TestCase
 test_case = Case "train station example, with refinement" test True
 
+test :: IO Bool
 test = test_cases
             [ Case "verify machine m0" (verify 0 path0) result0
             , Case "verify machine m1" (verify 1 path0) result1
@@ -26,6 +28,7 @@ test = test_cases
             , StringCase "refinement of undefined machine" (parse path4) result4
             ]
 
+result0 :: String
 result0 = unlines
      [ "  o  m0/INIT/FIS/in"
      , "  o  m0/m0:enter/FIS/in@prime"
@@ -39,6 +42,7 @@ result0 = unlines
      , "passed 9 / 9" 
      ]
 
+result1 :: String
 result1 = unlines
      [ "  o  m1/INIT/FIS/in"
      , "  o  m1/INIT/FIS/loc"
@@ -103,6 +107,7 @@ result1 = unlines
      , "passed 60 / 60"
      ]
 
+result2 :: String
 result2 = unlines
 	[ "  o  m2/INIT/FIS/in"
 	, "  o  m2/INIT/FIS/loc"
@@ -191,29 +196,37 @@ result2 = unlines
   	, "passed 83 / 84"
 	]
 
+path0 :: String
 path0 = "Tests/train-station-ref.tex"
 
+path1 :: String
 path1 = "Tests/train-station-ref/main.tex"
 
+path3 :: String
 path3 = "Tests/train-station-ref-err0.tex"
 
+result3 :: String
 result3 = concat 
     [ "error (1,1): A cycle exists in the proof of liveness: "
     , "m0/evt/SCH, m1/evt/SCH, p0, tr0\n"
     ]
 
+path4 :: String
 path4 = "Tests/train-station-ref-err1.tex"
 
+result4 :: String
 result4 = concat 
     [ "error (30,20): Machine m0 refines a non-existant machine: mm\n"
     ]
 
+parse :: FilePath -> IO String
 parse path = do
     r <- parse_machine path
     return $ case r of
         Right _ -> "ok"
         Left xs -> unlines $ map (\(Error x (LI _ i j)) -> format "error ({0},{1}): {2}" i j x) xs
 
+verify :: Int -> FilePath -> IO String
 verify n path = do
     r <- parse_machine path
     case r of
