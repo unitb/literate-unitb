@@ -33,6 +33,7 @@ test :: IO Bool
 test = test_cases 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
+        , CC.test_case
         , Ind.test_case
         , SMch.test_case
         , Cubes.test_case

@@ -17,7 +17,7 @@ import Control.Monad
 
 import Data.List as L
 import Data.Map as M 
-                ( Map, mapKeys )
+                ( Map )
 import qualified Data.Map as M 
 import Data.Maybe
 import Data.Set as S 
@@ -366,7 +366,7 @@ theory_ctx used_ts th =
         new_fun = case tparam of
             Just t -> M.fromList $ do
                 m' <- mapMaybe (unify t) $ S.elems used_ts
-                let m = mapKeys (reverse . drop 2 . reverse) m'
+                let m = M.mapKeys (reverse . drop 2 . reverse) m'
                 (tag,f)   <- M.toList fun
                 let new_f = instantiate m f
                 return (tag ++ concatMap z3_decoration (M.elems m), new_f)
@@ -386,7 +386,7 @@ theory_facts ts th =
         new_fact = case tparam of
             Just t -> M.fromList $ do
                 m' <- mapMaybe (unify t) $ S.elems ts
-                let m = mapKeys (reverse . drop 2 . reverse) m'
+                let m = M.mapKeys (reverse . drop 2 . reverse) m'
                 (tag, f) <- M.toList facts
                 let (name,nb) = case SU.split "@@" $ show tag of
                                     [name,nb] -> (name,nb)
@@ -397,12 +397,3 @@ theory_facts ts th =
             Nothing -> facts
         ref_ts = S.unions $ ts : L.map used_types fm
         fm = M.elems new_fact
-
-used_types :: Expr -> Set Type
-used_types e = visit (flip $ S.union . used_types) (
-        case e of
-            Binder _ vs e0 e1 -> S.fromList $ type_of e0 : type_of e1 : L.map f vs
-            _ -> S.singleton $ type_of e
-            ) e
-    where
-        f (Var _ t) = t

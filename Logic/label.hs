@@ -7,7 +7,7 @@ import Logic.Classes
     -- Libraries
 import GHC.Generics 
 
-import Data.List
+import Data.List as L
 import Data.Map hiding ( map, split )
 import Data.String.Utils ( split )
 import Data.Typeable
@@ -24,8 +24,11 @@ label s = Lbl s
 symbol_table :: Named a => [a] -> Map String a
 symbol_table xs = fromList $ map as_pair xs
 
+decorated_table :: Named a => [a] -> Map String a
+decorated_table xs = fromList $ map (\x -> (decorated_name x, x)) xs
+
 composite_label :: [Label] -> Label
-composite_label xs = Lbl $ intercalate "/" $ map str xs
+composite_label xs = Lbl $ intercalate "/" $ L.filter (not . L.null) $ map str xs
     where
         str (Lbl s) = s
 

@@ -22,6 +22,9 @@ module Z3.Z3
     , read_result
     , pretty_print
     , pretty_print'
+    , to_fol_ctx
+    , patterns
+    , match_all
     )
 where
 
@@ -45,16 +48,19 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 
 import           Data.Function
-import           Data.List hiding (union)
+import           Data.List as L hiding (union)
+import           Data.List.Ordered as OL hiding (member)
 import           Data.Map as M hiding (map,filter,foldl, (\\))
 import qualified Data.Map as M
-import qualified Data.Maybe as M ( fromJust )
+import qualified Data.Maybe as M ( fromJust, catMaybes, maybeToList )
+import qualified Data.Set as S
 import           Data.Typeable 
 
 import           System.Exit
 import           System.Process
 
 import           Utilities.Format
+import           Utilities.Trace
 
 z3_path :: String
 z3_path = "z3"
@@ -98,9 +104,9 @@ instance Tree Command where
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 
-feed_z3 :: String -> IO (ExitCode, String, String)
-feed_z3 xs = do
-        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:2"] xs
+feed_z3 :: String -> Int -> IO (ExitCode, String, String)
+feed_z3 xs n = do
+        (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:" ++ show n] xs
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
@@ -165,21 +171,20 @@ new_prover :: Int -> IO Prover
 new_prover n_workers = do
         inCh  <- newChan
         outCh <- newChan
+        let worker = void $ do
+                runMaybeT $ forever $ do
+                    cmd <- lift $ readChan inCh
+                    case cmd of
+                        Just (tid, po) -> lift $ do
+                            r <- try (discharge' (Just 9) po)
+                            let f e = Left $ show (e :: SomeException)
+                                r'  = either f Right r
+                            writeChan outCh (tid,r')
+                        Nothing -> do
+                            MaybeT $ return Nothing
         forM_ [1 .. n_workers] $ \p ->
-            forkOn p $ worker inCh outCh
+            forkOn p $ worker
         return Prover { .. }
-    where
-        worker inCh outCh = void $ do
-            runMaybeT $ forever $ do
-                cmd <- lift $ readChan inCh
-                case cmd of
-                    Just (tid, po) -> lift $ do
-                        r <- try (discharge po)
-                        let f e = Left $ show (e :: SomeException)
-                            r'  = either f Right r
-                        writeChan outCh (tid,r')
-                    Nothing -> do
-                        MaybeT $ return Nothing
 
 destroy_prover :: Prover -> IO ()
 destroy_prover (Prover { .. }) = do
@@ -215,34 +220,144 @@ discharge_all xs = do
 --    where
 --        f xs e = visit f (e:xs) e
 
-funapps :: TypeSystem t => AbsExpr t -> [(AbsExpr t, AbsFun t)]
-funapps e = reverse $ f [] e
-    where
-        f xs e@(FunApp fun _) = visit f ((e,fun):xs) e
-        f xs e                 = visit f xs e
+--funapps :: TypeSystem t => AbsExpr t -> [(AbsExpr t, AbsFun t)]
+--funapps e = reverse $ f [] e
+--    where
+--        f xs e@(FunApp fun _) = visit f ((e,fun):xs) e
+--        f xs e                 = visit f xs e
 
-mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
-mk_error f x = 
+--mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
+mk_error :: (Show a, Show c) => c -> (a -> Maybe b) -> a -> b
+mk_error z f x = 
         case f x of
-            Just y -> Just y
-            Nothing -> error $ format "failed to strip type variables: {0}\n{1}" x ys
+            Just y -> y
+            Nothing -> error $ format "failed to strip type variables: {0}\n{1}" x z
     where
-        xs = funapps x
-        g (x,y) = format "{0} :: {1} ; {2}\n" x (type_of x) y :: String
-        ys = concatMap g xs
+--        xs = funapps x
+--        g (x,y) = format "{0} :: {1} ; {2}\n" x (type_of x) y :: String
+--        ys = concatMap g xs
 
 remove_type_vars :: Sequent -> FOSequent
 remove_type_vars (Sequent ctx asm hyp g) = M.fromJust $ do
-    ctx <- ctx_strip_generics ctx
-    asm <- mapM (mk_error strip_generics) asm
-    h   <- mapM (mk_error strip_generics) $ elems hyp
-    g   <- mk_error strip_generics g
-    return (Sequent ctx asm (fromList $ zip (keys hyp) h) g)
+    let vars  = variables g
+        (Context sorts' _ _ _ _) = ctx
+        sorts = M.keys sorts'
+        as_type n = Gen $ USER_DEFINED (Sort n n 0) []
+            -- new sorts are replacements for all the type variables
+            -- present in the goal
+        new_sorts = map as_type $ map (("G" ++) . show) [0..] `minus` sorts
+        varm = M.fromList $ zip (S.elems vars) new_sorts
+    g   <- return $ mk_error () strip_generics (substitute_type_vars varm g)
+    let types = M.catMaybes $ map type_strip_generics 
+                    $ S.elems $ S.unions 
+                    $ map used_types $ asm ++ elems hyp
+        types' = S.fromList $ types `OL.union` S.elems (used_types g)
+    ctx <- return $ to_fol_ctx types' ctx
+    asm <- return $ map snd $ concatMap (gen_to_fol types' (label "")) asm
+    h   <- return $ fromList $ concat $ elems $ mapWithKey (gen_to_fol types') hyp
+    return (Sequent ctx asm h g)
+
+
+consistent :: (Eq b, Ord k) 
+           => Map k b -> Map k b -> Bool
+consistent x y = x `intersection` y == y `intersection` x
+
+match_all :: [Type] -> [FOType] -> [Map String FOType]
+match_all pat types = 
+        foldM (\x p -> do
+                t  <- types'
+                m  <- M.maybeToList $ unify p t
+                ms <- M.maybeToList $ mapM type_strip_generics (elems m) 
+                let m' = M.fromList $ zip (keys m) ms
+                let m  = M.mapKeys (reverse . drop 2 . reverse) m'
+                guard $ consistent m x
+                return (m `M.union` x)
+            ) empty pat'
+    where
+        pat' = L.map f pat
+        f (VARIABLE s) = GENERIC s
+        f t = rewrite f t
+        types' = map as_generic types
+
+
+    -- instantiation patterns
+patterns :: Generic a => a -> [Type]
+patterns ts = pat
+    where
+        types = L.map g $ S.elems $ types_of ts
+        pat  = L.map (substitute_type_vars gen) $ L.filter hg types
+        hg x = not $ S.null $ variables x
+            -- has generics
+        gen = M.fromList $ L.map f $ S.elems $ S.unions $ L.map variables types
+        f x = (x, GENERIC x)
+        g (GENERIC s) = VARIABLE s
+        g t = rewrite g t
+
+    -- generic to first order
+gen_to_fol :: S.Set FOType -> Label -> Expr -> [(Label,FOExpr)]
+gen_to_fol types lbl e = zip ys $ map inst xs
+    where
+        inst m = M.fromJust $ strip_generics $ substitute_type_vars (M.map as_generic m) e
+        xs     = match_all pat (S.elems types)
+        ys     = map f xs
+        f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
+        pat    = patterns e
+
+to_fol_ctx :: S.Set FOType -> Context -> FOContext
+to_fol_ctx types (Context s vars funs defs dums) = 
+    with_tracing $ 
+--    trace (show types) $
+        Context s vars' funs' defs' dums'
+    where
+        vars' = M.map fv  vars
+        funs' = decorated_table $ concatMap ff $ M.elems funs
+        defs' = decorated_table $ concatMap fdf $ M.elems defs
+        dums' = M.map fdm dums
+        fv    = mk_error () var_strip_generics
+        ff fun = map inst xs
+            where
+                pat    = patterns fun
+                xs     = L.map (M.map as_generic) 
+                            $ match_all pat (S.elems types)
+                inst m = mk_error m fun_strip_generics $ substitute_type_vars m fun'
+                fun' = substitute_types f fun
+                f (GENERIC s) = VARIABLE s
+                f t = rewrite f t
+        fdf def = map inst xs -- M.fromJust . def_strip_generics
+            where
+                pat    = patterns def
+                xs     = L.map (M.map as_generic) 
+                            $ match_all pat (S.elems types)
+                inst m = mk_error m def_strip_generics $ substitute_type_vars m def'
+                def' = substitute_types f def
+                f (GENERIC s) = VARIABLE s
+                f t = rewrite f t
+        fdm = M.fromJust . var_strip_generics
+
+--statement :: Expr -> Statement
+--statement e = Statement pat e
+--    where
+--        types = S.elems $ used_types e
+--        pat  = L.map (substitute_type_vars gen) $ L.filter hg pat
+--        hg x = not $ S.null $ variables x
+--            -- has generics
+--        gen = M.fromList $ L.map f $ S.elems $ S.unions $ L.map variables types
+--        f x = (x, GENERIC x)
+--        
+--specialize_stmt :: S.Set Type -> Statement -> Map Label Expr
+--specialize_stmt types (Statement pat e) = fromList $ zip ys $ map (flip substitute_type_vars e) xs
+--    where
+--        xs = match_all pat (S.elems types)
+--        ys = map f xs
+--        f xs = label $ concatMap z3_decoration $ M.elems xs
 
 discharge :: Sequent -> IO Validity
-discharge po = do
+discharge po = discharge' Nothing po
+
+discharge' :: Maybe Int -> Sequent -> IO Validity
+discharge' n po = do
         let code = z3_code po
-        s <- verify code
+        s <- verify code (maybe 3 id n)
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
@@ -251,10 +366,10 @@ discharge po = do
             Left xs -> do
                 fail $ "discharge: " ++ xs
 
-verify :: [Command] -> IO (Either String Satisfiability)
-verify xs = do
+verify :: [Command] -> Int -> IO (Either String Satisfiability)
+verify xs n = do
         let !code = (unlines $ map (show . as_tree) xs) -- $ [Push] ++ xs ++ [Pop])
-        (_,out,err) <- feed_z3 code
+        (_,out,err) <- feed_z3 code n
         let ln = lines out
         r <- if ln == [] || 
                 (      ln /= ["sat"]

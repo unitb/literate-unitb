@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
 module Logic.Theory where
 
+--import Logic.Const
 import Logic.Expr
 import Logic.Label
 import Logic.Operator
@@ -41,6 +42,7 @@ data Theory = Theory
 basic_theory :: Theory
 basic_theory = empty_theory 
         { types = symbol_table [BoolSort, pair_sort]
+--        , funs = symbol_table [everywhere_fun]
 --        , gen_param = Just gT
 --        , funs  = symbol_table [Fun [gT] "eq" [gT,gT] bool]
 --        , fact  = fromList 

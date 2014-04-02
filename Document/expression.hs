@@ -11,7 +11,7 @@ import Latex.Parser
 import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore as ES
-import Logic.Genericity 
+import Logic.Genericity hiding ( variables )
 import Logic.Operator
 import Logic.Type
 
@@ -279,11 +279,16 @@ oper = do
 data FunOperator = Domain | Range
     deriving Show
 
-apply_fun_op :: FunOperator -> Expr -> Parser Term
-apply_fun_op fop x = liftP $
-        case f fop $ Right x of
-            Right e -> return $ Right e
+check_types :: ExprP -> Parser Expr
+check_types e = 
+        case e of
+            Right e -> return e
             Left xs -> fail $ format "type error: {0}" xs
+
+apply_fun_op :: FunOperator -> Expr -> Parser Term
+apply_fun_op fop x = do
+        e <- check_types $ f fop $ Right x
+        return $ Right e
     where
         f Domain = zdom
         f Range  = zran
@@ -349,6 +354,17 @@ term = do
                                     , ("\\qfun",Binder Lambda) 
                                     , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] M.! xs }
                                 return $ Right (quant vs r t)
+                        else if xs == "\\ew"
+                        then do
+                            eat_spaceP
+                            read_listP "{"
+                            eat_spaceP
+                            e <- expr
+                            eat_spaceP
+                            read_listP "}"
+                            eat_spaceP
+                            e <- check_types $ zeverywhere $ Right e
+                            return $ Right e
                         else if xs == "\\oftype"
                         then do
                             eat_spaceP
@@ -445,9 +461,8 @@ expr = do
                                 rs <- sep1P expr comma
                                 close_curly
                                 eat_spaceP
-                                case zset_enum $ map Right rs of
-                                    Right e -> read_op xs us $ Right e 
-                                    Left xs -> fail (format "type error: {0}" xs)
+                                e <- check_types $ zset_enum $ map Right rs
+                                read_op xs us $ Right e 
                             ) $ (do
                                 t <- term
                                 read_op xs us t))
@@ -514,11 +529,9 @@ binds x0 x1 = do
 apply_unary :: UnaryOperator -> Term -> Parser Term
 apply_unary op e = do
         case e of 
-            Right e ->
-                case mk_unary op e of
-                    Right x2 -> return $ Right x2
-                    Left xs -> 
-                        fail (format "type error: {0}" xs)
+            Right e -> do
+                x2 <- check_types $ mk_unary op e
+                return $ Right x2
             Left oper -> fail $ format 
                     err_msg oper op
     where
@@ -529,11 +542,9 @@ apply_op op x0 x1 = do
         case x1 of
             Right e1 -> do
                 case x0 of
-                    Right e0 ->
-                        case mk_expr op e0 e1 of
-                            (Right e2) -> return $ Right e2
-                            Left xs  -> 
-                                fail (format "type error: {0}" xs)
+                    Right e0 -> do
+                        e2 <- check_types $ mk_expr op e0 e1
+                        return $ Right e2
                     Left oper ->
                         if op == apply then
                             apply_fun_op oper e1

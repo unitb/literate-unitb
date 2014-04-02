@@ -181,6 +181,19 @@ ctx_imports _ = visit_doc []
                                             }
                                         , funs = insert v fun $ funs th
                                         }
+                            [(v,Var _ (Gen (USER_DEFINED s [t0, t1])))]
+                                | s == fun_sort -> do
+                                    let fun         = Fun [] v [t0] t1
+                                        mk_expr e0  = typ_fun1 fun e0
+                                        notat       = notation th
+                                        oper        = UnaryOperator v name mk_expr
+                                    return th
+                                        { notation = notat
+                                            { new_ops = Left oper : (new_ops notat)
+                                            , prec = [[Right apply],[Left oper],[Right equal]] : prec notat
+                                            }
+                                        , funs = insert v fun $ funs th
+                                        }
                             [(_,Var _ t)] -> left [Error (format "Invalid type for binary operator: {0}" t) li]
                             vs -> left [Error (format "Invalid binary operator declaration: {0}" $ L.map fst vs) li]
             )

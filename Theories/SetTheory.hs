@@ -19,8 +19,8 @@ import Utilities.Format
 set_sort :: Sort
 set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 
-set_type :: Type -> Type
-set_type t = Gen $ USER_DEFINED set_sort [t]
+set_type :: TypeSystem t => t -> t
+set_type t = make_type set_sort [t]
 
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty

@@ -6,17 +6,22 @@ import Z3.Z3 as Z
 import Logic.Calculation
 import Logic.Const
 import Logic.Expr
+import Logic.Type
+import Logic.Label
 import Logic.Lambda
 import Logic.Operator
 import Logic.Sequent
 import Logic.Genericity
 
+import Theories.SetTheory
+
 import UnitB.PO
 import UnitB.AST
 
     -- Libraries
-import Data.Map as M ( empty )
-import qualified Data.Maybe as M ( fromJust )
+import qualified Data.Map as M
+import qualified Data.Maybe as M
+import qualified Data.Set as S
 
 import Utilities.Syntactic
 
@@ -28,17 +33,19 @@ test = test_cases
         , case2, case3
         , case4
         , Case "canonical lambdas" case5 result5
-        , Case "canonical lambdas with quantifier" case6 result6]
+        , Case "canonical lambdas with quantifier" case6 result6
+        , Case "conversion to first order typing (no type variables)" case7 result7
+        , Case "conversion to first order typing" case8 result8 ]
 
 test_case :: ([Char], IO Bool, Bool)
 test_case = ("Z3 test", test, True)
 
 case0 :: TestCase
-case0 = Case "sample_quant" (verify sample_quant) $ Right Sat
+case0 = Case "sample_quant" (verify sample_quant 2) $ Right Sat
 case1 :: TestCase
-case1 = Case "sample_quant2" (verify sample_quant2) $ Right Sat
+case1 = Case "sample_quant2" (verify sample_quant2 2) $ Right Sat
 case2 :: TestCase
-case2 = Case "sample_quant3" (verify sample_quant3) $ Right Unsat
+case2 = Case "sample_quant3" (verify sample_quant3 2) $ Right Unsat
 case3 :: TestCase
 case3 = Case "sample proof" (discharge sample_proof) Valid
 case4 :: TestCase
@@ -192,4 +199,47 @@ case6 = do
         (Right x,x_decl) = var "x" int
         (Right y,_) = var "y" int
         (Right z,z_decl) = var "z" int
+
+case7 :: IO (Maybe FOContext)
+case7 = return $ Just $ to_fol_ctx S.empty ctx
+    where
+        fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
+        ctx = Context M.empty M.empty fun M.empty M.empty
+        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
+        m = M.singleton "t" t
+
+result7 :: Maybe FOContext
+result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
+    where 
+        fun = decorated_table $ M.elems $ M.map f $ funs set_theory
+        f = instantiate m . substitute_type_vars m
+        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
+        m = M.singleton "t" t
+
+fun = head $ M.elems (funs set_theory)
+pat    = patterns fun
+xs     = map (M.map as_generic) 
+                            $ match_all pat (S.elems ts)
+ts  = S.fromList $ M.catMaybes $ map type_strip_generics [ set_type int, int ]
+
+case8 :: IO (Maybe FOContext)
+case8 = return $ Just $ to_fol_ctx types ctx
+    where
+        fun   = funs set_theory
+        ctx   = Context M.empty M.empty fun M.empty M.empty
+        types = S.fromList [int, set_type int, set_type $ set_type int]
+
+result8 :: Maybe FOContext
+result8 = ctx_strip_generics ctx
+    where
+        ctx = Context M.empty M.empty fun M.empty M.empty
+        fun = -- M.fromList $ map g 
+                decorated_table $ concatMap M.elems [ M.map (f m) $ funs set_theory | m <- ms ]
+        f m = instantiate m . substitute_type_vars m
+        t0 = int
+        t1 = set_type int
+        ms  = map (M.singleton "t") [t0, t1]
+
+
+
 

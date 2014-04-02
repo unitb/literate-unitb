@@ -23,7 +23,7 @@ import Utilities.Format
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "train station example, with sets" test True
+test_case = Case "theories and proofs" test True
 
 test :: IO Bool
 test = test_cases
@@ -226,6 +226,11 @@ result4 = Right $ unlines
     , "             ( (pfun (Pair (Pair Int Int) Int) Int)"
     , "               (Pair (Pair Int Int) Int) )"
     , "             Int)"
+    , "(declare-fun bunion@@Int ( (set Int)   (set Int) ) (set Int))"
+    , "(declare-fun bunion@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close"
+    , "             ( (set (Pair (Pair Int Int) Int))"
+    , "               (set (Pair (Pair Int Int) Int)) )"
+    , "             (set (Pair (Pair Int Int) Int)))"
     , "(declare-fun dom-rest@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int"
     , "             ( (set (Pair (Pair Int Int) Int))"
     , "               (pfun (Pair (Pair Int Int) Int) Int) )"
@@ -289,11 +294,6 @@ result4 = Right $ unlines
     , "             ( (set (Pair (Pair Int Int) Int))"
     , "               (set Int) )"
     , "             (set (pfun (Pair (Pair Int Int) Int) Int)))"
-    , "(declare-fun bunion@@Int ( (set Int)   (set Int) ) (set Int))"
-    , "(declare-fun bunion@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close"
-    , "             ( (set (Pair (Pair Int Int) Int))"
-    , "               (set (Pair (Pair Int Int) Int)) )"
-    , "             (set (Pair (Pair Int Int) Int)))"
     , "(assert (forall ( (f1 (pfun (Pair (Pair Int Int) Int) Int))"
     , "                  (f2 (pfun (Pair (Pair Int Int) Int) Int)) )"
     , "                (=> true"
@@ -635,6 +635,9 @@ result6 = unlines
 case7 :: IO (Either [Error] String)
 case7 = get_po "ctx1" (label "THM/ctx1:thm11/part 2/step (528,1)")
 
+--let proc = case4 >>= \(Right xs) -> let (Right ys) = result4 in writeFile "expected.txt" ys >> writeFile "actual.txt" xs
+
+
 result7 :: Either a String
 result7 = Right $ unlines
     [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -649,6 +652,7 @@ result7 = Right $ unlines
     , "(declare-const y G)"
     , "(declare-const z G)"
     , "(declare-fun apply@@G@@G ( (pfun G G)   G ) G)"
+    , "(declare-fun bunion@@G ( (set G)   (set G) ) (set G))"
     , "(declare-fun dom-rest@@G@@G"
     , "             ( (set G)"
     , "               (pfun G G) )"
@@ -671,7 +675,6 @@ result7 = Right $ unlines
     , "(declare-fun set@@G@@G ( (pfun G G) ) (set G))"
     , "(declare-fun subset@@G ( (set G)   (set G) ) Bool)"
     , "(declare-fun tfun@@G@@G ( (set G)   (set G) ) (set (pfun G G)))"
-    , "(declare-fun bunion@@G ( (set G)   (set G) ) (set G))"
     , "(declare-fun up (G G) G)"
         -- This is the line of importance. It is the partially
         -- instantiated property of linearity

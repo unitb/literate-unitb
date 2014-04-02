@@ -118,7 +118,7 @@ data AbsContext t = Context
         (Map String (AbsFun t))  -- functions and operators
         (Map String (AbsDef t))  -- transparent definitions
         (Map String (AbsVar t))  -- dummies
-    deriving (Show,Eq,Generic)
+    deriving (Show,Eq,Generic,Typeable)
 
 class Symbol a t where
     decl :: a -> [AbsDecl t]
@@ -364,8 +364,15 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
-instance Named (AbsFun t) where
+instance TypeSystem t => Named (AbsFun t) where
     name (Fun _ x _ _) = x
+    decorated_name (Fun ts x _ _) = 
+            x ++ concatMap z3_decoration ts
+
+instance TypeSystem t => Named (AbsDef t) where
+    name (Def _ x _ _ _) = x
+    decorated_name (Def ts x _ _ _) = 
+            x ++ concatMap z3_decoration ts
 
 instance Named (AbsVar t) where
     name (Var x _) = x
@@ -402,3 +409,12 @@ pretty_print (List ys@(x:xs)) =
                 y0:y1:ys -> reverse ( (y1++y0):ys )
                 _        -> xs
         one_line = concatMap (uncurry (++)) $ zip (repeat " ") $ concatMap pretty_print xs
+
+used_types :: TypeSystem t => AbsExpr t -> S.Set t
+used_types e = visit (flip $ S.union . used_types) (
+        case e of
+            Binder _ vs e0 e1 -> S.fromList $ type_of e0 : type_of e1 : L.map f vs
+            _ -> S.singleton $ type_of e
+            ) e
+    where
+        f (Var _ t) = t

@@ -18,7 +18,6 @@ import           Data.Map as M
 import qualified Data.Map as M
 import           Data.Set as S ( (\\) )
 import qualified Data.Set as S 
-                    hiding ( map, fromList, insert, foldl )
 
 import Prelude as L
 
@@ -339,11 +338,15 @@ ctx_strip_generics (Context a b c d e) = do
         (fromList $ zip (keys e) es)
 
 class Generic a where
-    generics :: a -> S.Set String
-    substitute_types :: (GenericType -> GenericType) -> a -> a
-    instantiate :: Map String GenericType -> a -> a
-    substitute_type_vars :: Map String GenericType -> a -> a
-
+    generics    :: a -> S.Set String
+    variables   :: a -> S.Set String
+    substitute_types     :: (Type -> Type) -> a -> a
+    instantiate :: Map String Type -> a -> a
+    substitute_type_vars :: Map String Type -> a -> a
+    types_of    :: a -> S.Set Type
+ 
+    generics x  = S.unions $ map generics $ S.toList $ types_of x
+    variables x = S.unions $ map variables $ S.toList $ types_of x
     instantiate m x = substitute_types (instantiate m) x
     substitute_type_vars m x = substitute_types (substitute_type_vars m) x
     
@@ -351,6 +354,10 @@ instance Generic GenericType where
     generics (GENERIC s)         = S.singleton s
     generics (VARIABLE _)        = S.empty
     generics (Gen (USER_DEFINED _ ts)) = S.unions $ map generics ts
+    variables (VARIABLE s)         = S.singleton s
+    variables (GENERIC _)        = S.empty
+    variables (Gen (USER_DEFINED _ ts)) = S.unions $ map variables ts
+    types_of t = S.singleton t
     substitute_types f t = rewrite (substitute_types f) t
     instantiate m t = f t
         where
@@ -369,18 +376,25 @@ instance Generic GenericType where
 
 
 instance Generic Fun where
-    generics (Fun _ _ ts t) = S.unions (generics t : map generics ts)
+    types_of (Fun _ _ ts t) = S.fromList $ t : ts
     substitute_types f (Fun gs n ts t) = Fun (map f gs) n (map f ts) $ f t
 
+instance Generic Def where
+    types_of (Def _ _ ts t e) = S.unions $ S.singleton t : types_of e : map types_of ts
+    substitute_types f (Def gs n ts t e) = 
+            Def (map f gs) n 
+                (map (substitute_types f) ts) 
+                (f t) (substitute_types f e)
+ 
 instance Generic Var where
-    generics (Var _ t)  = generics t
+    types_of (Var _ t)  = S.singleton t
     substitute_types f (Var x t) = Var x $ f t
-
+ 
 instance Generic Expr where
-    generics (Word (Var _ t)) = generics t
-    generics (Const ts _ t)   = S.unions $ map generics (t : ts)
-    generics (FunApp f xp)    = S.unions (generics f : map generics xp)
-    generics (Binder _ vs r xp) = S.unions (generics r : generics xp : map generics vs)
+    types_of (Word (Var _ t)) = S.singleton t
+    types_of (Const ts _ t)   = S.fromList $ t : ts
+    types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
+    types_of (Binder _ vs r xp) = S.unions $ types_of r : types_of xp : map types_of vs
     substitute_types g x = f x
       where
         f (Const gs x t)    = Const (map g gs) x $ g t

@@ -368,8 +368,14 @@ train_decl b ind =
 set_decl_smt2 :: [AxiomOption] -> [String]
 set_decl_smt2 xs = 
         when (WithPFun `elem` xs)
-        [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"
-        ,  "(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
+        [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"]
+     ++ [  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
+        ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
+        ,  "(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
+--        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
+        ]    
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
         ,  "(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
         ,  "(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))"]
      ++ [  "(declare-fun elem@@BLK (BLK (set BLK)) Bool)"
@@ -407,12 +413,7 @@ set_decl_smt2 xs =
 --        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"]
-     ++ [  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
-        ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
---        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
-        ]    
-  where
+    where
         when b xs = if b then xs else []
 
 set_facts :: (String,String) -> [(String,String)]
