@@ -27,7 +27,6 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
     where
         t  = VARIABLE "t"
         gT = GENERIC "t"
-        gen_param = Just $ set_type gT
 
         extends = M.empty
         consts  = M.empty
@@ -50,6 +49,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 , (label $ dec' "4", axm4)
                 , (label $ dec' "5", axm5)
                 , (label $ dec' "6", axm6)
+                , (label $ dec' "7", axm7)
                 ]
         thm_depend = []
         notation   = set_notation
@@ -79,6 +79,11 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
                         ( s1 `zsubset` s2 )
                     `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
+            -- antisymmetry
+        axm7 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+                        mzand ( s1 `zsubset` s2 )
+                              ( s2 `zsubset` s1 )
+                    `mzeq` (s1 `mzeq` s2)
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" $ set_type t

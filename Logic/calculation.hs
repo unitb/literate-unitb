@@ -5,7 +5,7 @@ module Logic.Calculation where
 import Logic.Classes
 import Logic.Const
 import Logic.Expr
-import Logic.Genericity
+--import Logic.Genericity
 import Logic.Operator
 import Logic.Label
 import Logic.Sequent
@@ -19,9 +19,9 @@ import Data.List as L
 import Data.Map as M 
                 ( Map )
 import qualified Data.Map as M 
-import Data.Maybe
+--import Data.Maybe
 import Data.Set as S 
-import Data.String.Utils as SU
+--import Data.String.Utils as SU
 import Data.Typeable
 
 import Utilities.Format
@@ -334,8 +334,8 @@ entails_goal_po th ctx (Calc d g e0 es li) = do
             a <- with_li li assume
             let ts = S.unions $ L.map used_types $ g : a
             return $ Sequent 
-                ( ctx `merge_ctx` 
-                  d `merge_ctx` 
+                ( ctx   `merge_ctx` 
+                  d     `merge_ctx` 
                   theory_ctx ts th)
                 a 
 --                (a ++ (M.elems $ theory_facts ts th))
@@ -357,20 +357,11 @@ theory_ctx used_ts th =
             (Context ts c new_fun M.empty dums) : L.map (theory_ctx ref_ts) (M.elems d)
     where
         d      = extends th
-        tparam = gen_param th
         ts     = types th
         fun    = funs th
         c      = consts th
         dums   = dummies th
-        
-        new_fun = case tparam of
-            Just t -> M.fromList $ do
-                m' <- mapMaybe (unify t) $ S.elems used_ts
-                let m = M.mapKeys (reverse . drop 2 . reverse) m'
-                (tag,f)   <- M.toList fun
-                let new_f = instantiate m f
-                return (tag ++ concatMap z3_decoration (M.elems m), new_f)
-            Nothing -> fun
+        new_fun = fun
         ref_ts = S.unions $ used_ts : L.map used_types fm
         fm = M.elems $ theory_facts used_ts th
 
@@ -380,20 +371,7 @@ theory_facts ts th =
         merge_all (new_fact : L.map (theory_facts ref_ts) (M.elems d))
     where
         d      = extends th
-        tparam = gen_param th
         facts  = fact th
-
-        new_fact = case tparam of
-            Just t -> M.fromList $ do
-                m' <- mapMaybe (unify t) $ S.elems ts
-                let m = M.mapKeys (reverse . drop 2 . reverse) m'
-                (tag, f) <- M.toList facts
-                let (name,nb) = case SU.split "@@" $ show tag of
-                                    [name,nb] -> (name,nb)
-                                    xs -> error $ "theory_fact: " ++ show xs
-                let new_f = substitute_type_vars m f
-                return (label $ name ++ concatMap z3_decoration (M.elems m) ++ nb, 
-                     new_f)
-            Nothing -> facts
+        new_fact = facts
         ref_ts = S.unions $ ts : L.map used_types fm
         fm = M.elems new_fact

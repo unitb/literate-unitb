@@ -25,6 +25,7 @@ module Z3.Z3
     , to_fol_ctx
     , patterns
     , match_all
+    , match_some
     )
 where
 
@@ -52,7 +53,8 @@ import           Data.List as L hiding (union)
 import           Data.List.Ordered as OL hiding (member)
 import           Data.Map as M hiding (map,filter,foldl, (\\))
 import qualified Data.Map as M
-import qualified Data.Maybe as M ( fromJust, catMaybes, maybeToList )
+import qualified Data.Maybe as M ( fromJust, catMaybes
+                                 , maybeToList, isJust )
 import qualified Data.Set as S
 import           Data.Typeable 
 
@@ -159,10 +161,11 @@ z3_code po =
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b c _) =
-    discharge $ Sequent a b c zfalse
+    discharge (Sequent a b c zfalse)
 
 data Prover = Prover
         { inCh  :: Chan (Maybe (Int,Sequent))
+--        , secCh :: Chan (Maybe (Int,Sequent))
         , outCh :: Chan (Int,Either String Validity)
         , n_workers :: Int
         }
@@ -170,26 +173,43 @@ data Prover = Prover
 new_prover :: Int -> IO Prover
 new_prover n_workers = do
         inCh  <- newChan
+--        secCh <- newChan
         outCh <- newChan
         let worker = void $ do
                 runMaybeT $ forever $ do
                     cmd <- lift $ readChan inCh
                     case cmd of
                         Just (tid, po) -> lift $ do
-                            r <- try (discharge' (Just 9) po)
+                            r <- try (discharge' (Just 3) po)
                             let f e = Left $ show (e :: SomeException)
                                 r'  = either f Right r
                             writeChan outCh (tid,r')
                         Nothing -> do
                             MaybeT $ return Nothing
+--            worker' = void $ do
+--                runMaybeT $ forever $ do
+--                    cmd <- lift $ readChan inCh
+--                    case cmd of
+--                        Just (tid, po) -> lift $ do
+--                            r <- try (discharge po)
+--                            let f e = Left $ show (e :: SomeException)
+--                                r'  = either f Right r
+--                            if r' == Right Valid then 
+--                                writeChan outCh (tid,r')
+--                            else
+--                                writeChan secCh $ Just (tid,po)
+--                        Nothing -> do
+--                            MaybeT $ return Nothing
         forM_ [1 .. n_workers] $ \p ->
             forkOn p $ worker
+--        forkIO worker
         return Prover { .. }
 
 destroy_prover :: Prover -> IO ()
 destroy_prover (Prover { .. }) = do
         forM_ [1 .. n_workers] $ \_ ->
             writeChan inCh Nothing
+--        writeChan secCh Nothing
 
 discharge_on :: Prover -> (Int,Sequent) -> IO ()
 discharge_on (Prover { .. }) po = do
@@ -201,6 +221,7 @@ read_result (Prover { .. }) =
 
 discharge_all :: [Sequent] -> IO [Validity]
 discharge_all xs = do
+--        forM xs discharge
         let ys = zip [0..] xs
         pr <- new_prover 8
         forkIO $ forM_ ys $ \task -> 
@@ -252,15 +273,21 @@ remove_type_vars (Sequent ctx asm hyp g) = M.fromJust $ do
                     $ S.elems $ S.unions 
                     $ map used_types $ asm ++ elems hyp
         types' = S.fromList $ types `OL.union` S.elems (used_types g)
-    ctx <- return $ to_fol_ctx types' ctx
     asm <- return $ map snd $ concatMap (gen_to_fol types' (label "")) asm
     h   <- return $ fromList $ concat $ elems $ mapWithKey (gen_to_fol types') hyp
+    let types = S.unions $ map used_types $ g : asm ++ elems h
+    ctx <- return $ to_fol_ctx types ctx
     return (Sequent ctx asm h g)
 
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool
 consistent x y = x `intersection` y == y `intersection` x
+
+is_maybe :: Type -> Bool
+is_maybe t = M.isJust (unify t (maybe_type gA))
+    where
+        gA = GENERIC "a"
 
 match_all :: [Type] -> [FOType] -> [Map String FOType]
 match_all pat types = 
@@ -274,11 +301,40 @@ match_all pat types =
                 return (m `M.union` x)
             ) empty pat'
     where
-        pat' = L.map f pat
+        pat' = filter (not . is_maybe) $ L.map f pat
         f (VARIABLE s) = GENERIC s
         f t = rewrite f t
         types' = map as_generic types
 
+match_some :: [Type] -> [FOType] -> [Map String FOType]
+match_some pat types = nubSort $ do -- map (M.map head) ms -- do
+        ms <- foldM (\x (_,xs) -> do
+                m <- xs
+                guard $ consistent m x
+                return (m `M.union` x)
+            ) empty (toList ms')
+--        ms <- forM (toList ms') $ \(k,xs) -> do
+--            x <- xs
+--            return (k,x)
+--        let ms' = fromList ms
+        guard $ keysSet ms == vars
+        return ms
+    where
+        pat' = L.map f pat
+        f (VARIABLE s) = GENERIC s
+        f t = rewrite f t
+        types' = map as_generic types
+        vars = S.unions $ map generics pat'
+        ms' = unionsWith (++) ms
+--        ms :: [Map String [FOType]]
+        ms :: [Map String [Map String FOType]]
+        ms = do
+            p  <- pat'
+            t  <- types'
+            m  <- M.maybeToList $ unify p t
+            ms <- M.maybeToList $ mapM type_strip_generics (elems m) 
+            let ms' = M.fromList $ zip (map (reverse . drop 2 . reverse) $ keys m) ms
+            return $ M.map (const [ms']) ms' 
 
     -- instantiation patterns
 patterns :: Generic a => a -> [Type]
@@ -295,9 +351,11 @@ patterns ts = pat
 
     -- generic to first order
 gen_to_fol :: S.Set FOType -> Label -> Expr -> [(Label,FOExpr)]
-gen_to_fol types lbl e = zip ys $ map inst xs
+gen_to_fol types lbl e = -- with_tracing $ trace (show xs) $ 
+        zip ys $ map inst xs
     where
-        inst m = M.fromJust $ strip_generics $ substitute_type_vars (M.map as_generic m) e
+        inst m = mk_error (S.unions $ map generics pat)
+                    strip_generics $ substitute_type_vars (M.map as_generic m) e
         xs     = match_all pat (S.elems types)
         ys     = map f xs
         f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
@@ -324,7 +382,7 @@ to_fol_ctx types (Context s vars funs defs dums) =
                 f (GENERIC s) = VARIABLE s
                 f t = rewrite f t
         fdf def = map inst xs -- M.fromJust . def_strip_generics
-            where
+            where 
                 pat    = patterns def
                 xs     = L.map (M.map as_generic) 
                             $ match_all pat (S.elems types)

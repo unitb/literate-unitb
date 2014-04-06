@@ -184,6 +184,12 @@ mzall xs      = do
         xs <- forM xs $ zcast bool 
         return $ zall xs
 
+everywhere_fun :: Fun
+everywhere_fun = Fun [gA] "ew" [gA] bool
+
+zeverywhere :: ExprP -> ExprP
+zeverywhere = typ_fun1 everywhere_fun
+
 mzsome :: TypeSystem2 t => [ExprPG t] -> ExprPG t
 mzsome []     = mzfalse
 mzsome [x]    = x
@@ -224,7 +230,7 @@ ztimes       = fun2 $ Fun [] "*" [int,int] int
 zpow :: Expr -> Expr -> Expr
 zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect :: ExprP -> ExprP -> ExprP
-zselect      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
+zselect      = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 zint :: Int -> Expr
 zint n       = Const [] (show n) int
  

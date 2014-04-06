@@ -2,10 +2,13 @@ module Document.Tests.TrainStationSets where
 
 import Document.Document
 
+import Logic.Sequent
+import Logic.Label
+
 import UnitB.PO
 
     -- Libraries
-import Data.String.Utils
+import Data.Map
 
 import Tests.UnitTest
 
@@ -14,12 +17,12 @@ test_case = Case "train station example, with sets" test True
 
 test :: IO Bool
 test = test_cases
-            [ Case "verify machine m0" (verify 0 path0) result0
-            , Case "verify machine m1" (verify 1 path0) result1
-            , Case "verify machine m2" (verify 2 path0) result2
-            , Case "verify machine m3" (verify 3 path0) result5
+            [ POCase "verify machine m0" (verify 0 path0) result0
+            , POCase "verify machine m1" (verify 1 path0) result1
+            , POCase "verify machine m2" (verify 2 path0) result2
+            , POCase "verify machine m3" (verify 3 path0) result5
             , Case "type checking of boolean expressions" case3 result3
-            , Case "verify machine m3 error (wandering free variable)" (verify 3 path4) result4
+            , POCase "verify machine m3 error (wandering free variable)" (verify 3 path4) result4
             ]
 
 result0 :: String
@@ -103,78 +106,78 @@ result1 = unlines
 
 result2 :: String
 result2 = unlines
-	[ "  o  m2/INIT/FIS/in"
-	, "  o  m2/INIT/FIS/loc"
-	, "  o  m2/INIT/INV/m2:inv0"
-	, "  o  m2/SKIP/CO/m2:saf0"
-	, "  o  m2/SKIP/CO/m2:saf1"
-	, "  o  m2/SKIP/CO/m2:saf2"
-	, "  o  m2/m0:enter/CO/m2:saf0"
+    [ "  o  m2/INIT/FIS/in"
+    , "  o  m2/INIT/FIS/loc"
+    , "  o  m2/INIT/INV/m2:inv0"
+    , "  o  m2/SKIP/CO/m2:saf0"
+    , "  o  m2/SKIP/CO/m2:saf1"
+    , "  o  m2/SKIP/CO/m2:saf2"
+    , "  o  m2/m0:enter/CO/m2:saf0"
     , "  o  m2/m0:enter/CO/m2:saf1"
     , "  o  m2/m0:enter/CO/m2:saf2"
-	, "  o  m2/m0:enter/FIS/in@prime"
-	, "  o  m2/m0:enter/FIS/loc@prime"
-	, "  o  m2/m0:enter/INV/m2:inv0"
-	, "  o  m2/m0:enter/SCH"
-	, "  o  m2/m0:leave/CO/m2:saf0"
-	, "  o  m2/m0:leave/CO/m2:saf1"
-	, "  o  m2/m0:leave/CO/m2:saf2"
-	, "  o  m2/m0:leave/FIS/in@prime"
-	, "  o  m2/m0:leave/FIS/loc@prime"
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy "
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy "
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy "
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy "
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/goal " 
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses "
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/relation " 
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/main goal/step " 
-	, "  o  m2/m0:leave/INV/m2:inv0/new assumption " 
-	, "  o  m2/m0:leave/SCH"
-	, "  o  m2/m0:leave/TR/m2:tr0"
-	, " xxx m2/m1:movein/CO/m2:saf0"
-	, "  o  m2/m1:movein/CO/m2:saf1"
-	, "  o  m2/m1:movein/CO/m2:saf2"
-	, "  o  m2/m1:movein/FIS/in@prime"
-	, "  o  m2/m1:movein/FIS/loc@prime"
-	, "  o  m2/m1:movein/INV/m2:inv0"
-	, "  o  m2/m1:movein/SCH"
-	, "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/lhs"
-	, "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/rhs"
-	, "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/lhs"
-	, "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/rhs"
-	, "  o  m2/m1:moveout/CO/m2:saf0"
-	, "  o  m2/m1:moveout/CO/m2:saf1"
-	, "  o  m2/m1:moveout/CO/m2:saf2"
-	, "  o  m2/m1:moveout/FIS/in@prime"
-	, "  o  m2/m1:moveout/FIS/loc@prime"
-	, "  o  m2/m1:moveout/INV/m2:inv0"
-	, "  o  m2/m1:moveout/SCH"
-	, "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/lhs"
-	, "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/rhs"
-	, "  o  m2/m1:moveout/SCH/m2/1/REF/replace/str"
-	, "  o  m2/m1:moveout/TR/m2:tr1/EN"
-	, "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/lhs"
-	, "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/rhs"
-	, "  o  m2/m1:moveout/TR/m2:tr1/NEG"
-	, "  o  m2/m2:prog0/REF/trading/lhs"
-	, "  o  m2/m2:prog0/REF/trading/rhs"
-	, "  o  m2/m2:prog1/REF/trading/lhs"
-	, "  o  m2/m2:prog1/REF/trading/rhs"
+    , "  o  m2/m0:enter/FIS/in@prime"
+    , "  o  m2/m0:enter/FIS/loc@prime"
+    , "  o  m2/m0:enter/INV/m2:inv0"
+    , "  o  m2/m0:enter/SCH"
+    , "  o  m2/m0:leave/CO/m2:saf0"
+    , "  o  m2/m0:leave/CO/m2:saf1"
+    , "  o  m2/m0:leave/CO/m2:saf2"
+    , "  o  m2/m0:leave/FIS/in@prime"
+    , "  o  m2/m0:leave/FIS/loc@prime"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy (332,26)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy (333,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy (334,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy (335,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal (339,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses (339,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation (339,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (341,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (343,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (345,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal (350,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses (350,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation (350,8)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (352,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (354,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (356,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/goal (319,7)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses (319,7)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/relation (319,7)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (321,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (323,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (326,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/new assumption (303,6)"
+    , "  o  m2/m0:leave/SCH"
+    , "  o  m2/m0:leave/TR/m2:tr0"
+    , " xxx m2/m1:movein/CO/m2:saf0"
+    , "  o  m2/m1:movein/CO/m2:saf1"
+    , "  o  m2/m1:movein/CO/m2:saf2"
+    , "  o  m2/m1:movein/FIS/in@prime"
+    , "  o  m2/m1:movein/FIS/loc@prime"
+    , "  o  m2/m1:movein/INV/m2:inv0"
+    , "  o  m2/m1:movein/SCH"
+    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/lhs"
+    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/rhs"
+    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/lhs"
+    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/rhs"
+    , "  o  m2/m1:moveout/CO/m2:saf0"
+    , "  o  m2/m1:moveout/CO/m2:saf1"
+    , "  o  m2/m1:moveout/CO/m2:saf2"
+    , "  o  m2/m1:moveout/FIS/in@prime"
+    , "  o  m2/m1:moveout/FIS/loc@prime"
+    , "  o  m2/m1:moveout/INV/m2:inv0"
+    , "  o  m2/m1:moveout/SCH"
+    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/lhs"
+    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/rhs"
+    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/str"
+    , "  o  m2/m1:moveout/TR/m2:tr1/EN"
+    , "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/lhs"
+    , "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/rhs"
+    , "  o  m2/m1:moveout/TR/m2:tr1/NEG"
+    , "  o  m2/m2:prog0/REF/trading/lhs"
+    , "  o  m2/m2:prog0/REF/trading/rhs"
+    , "  o  m2/m2:prog1/REF/trading/lhs"
+    , "  o  m2/m2:prog1/REF/trading/rhs"
     , "  o  m2/m2:prog2/REF/disjunction/lhs"
     , "  o  m2/m2:prog2/REF/disjunction/rhs"
     , "  o  m2/m2:prog3/REF/discharge/saf/lhs"
@@ -189,8 +192,7 @@ result2 = unlines
     , "  o  m2/m2:prog7/REF/discharge/saf/lhs"
     , "  o  m2/m2:prog7/REF/discharge/saf/rhs"
     , "  o  m2/m2:prog7/REF/discharge/tr"
-  	, "passed 85 / 86"
-	]
+    , "passed 85 / 86"	]
 
 path0 :: String
 path0 = "Tests/train-station-set.tex"
@@ -244,7 +246,7 @@ result5 = unlines
 	, "  o  m3/m0:enter/INV/m3:inv0"
 	, "  o  m3/m0:enter/INV/m3:inv1"
 	, "  o  m3/m0:enter/INV/m3:inv2"
-	, " xxx m3/m0:enter/INV/m3:inv3"
+	, "  o  m3/m0:enter/INV/m3:inv3"
 	, "  o  m3/m0:enter/SCH"
 	, "  o  m3/m0:leave/CO/m3:saf0"
 	, "  o  m3/m0:leave/CO/m3:saf1"
@@ -303,13 +305,13 @@ result5 = unlines
 	, "  o  m3/m3:prog0/REF/discharge/saf/lhs"
 	, "  o  m3/m3:prog0/REF/discharge/saf/rhs"
 	, "  o  m3/m3:prog0/REF/discharge/tr"
-	, "passed 72 / 78" ]
+	, "passed 73 / 78" ]
 
-verify :: Int -> String -> IO String
+verify :: Int -> FilePath -> IO (String, Map Label Sequent)
 verify n path = do
-    r <- parse_machine path
+    r <- list_file_obligations path
     case r of
         Right ms -> do
-            (s,_,_) <- str_verify_machine $ ms !! n
-            return $ unlines $ map (head . split "(") $ lines s
-        x -> return $ show x
+            (s,_,_) <- str_verify_machine $ fst $ ms !! n
+            return (s, snd $ ms !! n)
+        x -> return (show x, empty)
