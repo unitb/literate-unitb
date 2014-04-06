@@ -1,20 +1,33 @@
 {-# LANGUAGE ExistentialQuantification #-} 
 module Tests.UnitTest where
 
+    -- Modules
+import Logic.Sequent
+import Logic.Label
+
+import Z3.Z3
+
+    -- Libraries
 import Control.Exception
 import Control.Monad
 
-import Data.Char
-import Data.IORef   
-import Data.List
-import Data.Typeable
+import           Data.Char
+import           Data.IORef   
+import           Data.List
+import qualified Data.Map as M
+import           Data.Tuple
+import           Data.Typeable
 
 import Prelude
 
+import Utilities.Format
+
+import System.IO
 import System.IO.Unsafe
 
 data TestCase = 
       forall a . (Show a, Typeable a) => Case String (IO a) a
+    | POCase String (IO (String, M.Map Label Sequent)) String
     | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
 
@@ -85,47 +98,104 @@ quote (x:xs)
 
 margin :: IORef Int
 margin = unsafePerformIO $ newIORef 0 
- 
-test_suite :: Show a => [(String, IO a, a)] -> IO Bool
-test_suite xs = test_suite_string $ map f xs 
+
+log_failures :: IORef Bool
+log_failures = unsafePerformIO $ newIORef True
+
+failure_number :: IORef Int
+failure_number = unsafePerformIO $ newIORef 0
+
+new_failure :: String -> String -> String -> IO ()
+new_failure name actual expected = do
+    b <- readIORef log_failures
+    if b then do
+        n <- readIORef failure_number
+        writeIORef failure_number $ n+1
+        withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
+            hPutStrLn h $ "; " ++ name
+            hPutStrLn h actual
+        withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
+            hPutStrLn h $ "; " ++ name
+            hPutStrLn h expected
+    else return ()
+
+test_suite :: (Typeable a, Show a) => [(String, IO a, a)] -> IO Bool
+test_suite xs = test_cases $ map f xs 
     where
-        f (x,y,z) = (x, (do a <- y ; return $ show a), show z)
+        f (x,y,z) = Case x y z
 
 test_cases :: [TestCase] -> IO Bool
 test_cases xs = 
         mapM f xs >>= test_suite_string
     where
-        f (Case x y z) = return (x, (do a <- y ; return $ disp a), disp z)
+        f (Case x y z) = return ( Nothing
+                                , x
+                                , (do a <- y ; return $ disp a)
+                                , disp z
+                                , cast z == (Nothing :: Maybe Bool))
         f (CalcCase x y z) = do 
                 r <- z
-                return (x, (do a <- y ; return $ disp a), disp r)
-        f (StringCase x y z) = return (x, y, z)
+                return ( Nothing
+                       , x
+                       , (do a <- y ; return $ disp a)
+                       , disp r
+                       , True  )
+        f (StringCase x y z) = return (Nothing, x, y, z, True)
+        f (POCase x y z)     = return (Just $ snd `liftM` y, x, fst `liftM` y, z, True)
 
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = maybe (show x) id (cast x)
 
-test_suite_string :: [(String, IO String, String)] -> IO Bool
+print_po :: Maybe (IO (M.Map Label Sequent)) -> String -> String -> String -> IO ()
+print_po pos name actual expected = do
+        let ma = f actual
+            me = f expected
+            f xs = M.map (== "  o  ") $ M.fromList $ map (swap . splitAt 5) $ lines xs
+            mr = M.keys $ M.filter not $ M.unionWith (==) (me `M.intersection` ma) ma
+        case pos of
+            Just pos -> do
+                pos <- pos
+                n <- readIORef failure_number
+                forM_ (zip [0..] mr) $ \(i,po) -> do
+--                    hPutStrLn stderr $ "writing po file: " 
+--                    forM_ (M.keys ma) $ hPutStrLn stderr . show
+--                    hPutStrLn stderr $ "---"
+--                    forM_ (M.keys me) $ hPutStrLn stderr . show
+                    if label po `M.member` pos then do
+                        withFile (format "po-{0}-{1}.z3" n i) WriteMode $ \h -> do
+                            hPutStrLn h $ "; " ++ name
+                            hPutStrLn h $ "; " ++ po
+                            hPutStrLn h $ concatMap pretty_print' $ z3_code $ pos M.! label po
+                    else return ()
+            Nothing  -> return ()
+
+test_suite_string :: [(Maybe (IO (M.Map Label Sequent)), String, IO String, String, Bool)] -> IO Bool
 test_suite_string xs = do
         n  <- readIORef margin
         let bars = concat $ take n $ repeat "|  "
         let putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
         writeIORef margin (n+1)
-        xs <- forM xs (\(x,y,z) -> do
+        xs <- forM xs (\(s,x,y,z,b) -> do
             putLn ("+- " ++ x)
-            r <- catch (do r <- y; return $ Right r) (\e -> return $ Left $ show (e :: ErrorCall))
+            r <- catch 
+                (do r <- y; return $ Right r) 
+                (\e -> return $ Left $ show (e :: SomeException))
             case r of
                 Right r -> 
                     if (r == z)
-                        then return True
-                        else do
-                            putLn $ diff r z
-                            return False 
+                    then return True
+                    else if b then do
+                         print_po s x r z
+                         new_failure x r z
+                         putLn $ diff r z
+                         return False 
+                    else return False
                 Left m -> do
                     putLn ("   Exception:  " ++ m)
                     return False )
         let x = length xs
         let y = length $ filter id xs
         writeIORef margin n
-        putLn ("+- [ Success: " ++ show y ++ " / " ++ show x ++ " ]")
+        putLn (format "+- [ Success: {0} / {1} ]" y x)
         return (and xs)

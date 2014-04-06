@@ -46,7 +46,7 @@ with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
         let fn = path param ++ ".state'"
         b <- doesFileExist fn
-        param <- if b && not (no_verif param) then do
+        param <- if b && not (no_verif param) && not (reset param) then do
             xs <- BS.readFile fn
             either 
                 (\_ -> return param) 
@@ -92,6 +92,7 @@ data Params = Params
         , continuous :: Bool
         , no_dump :: Bool
         , no_verif :: Bool
+        , reset :: Bool
         , pos :: Map Label (Map Label (Bool,Sequent))
         }
 
@@ -122,11 +123,9 @@ check_theory (name,th) = do
                     print (typeOf e) 
                     print e
                     return $ M.map (const False) all_po 
-        liftIO $ putStrLn "before"
         res    <- liftIO $ catch 
                     (verify_all all_po)
                     handle
-        liftIO $ putStrLn "after"
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po M.! k) (\b -> (b,x)) $ M.lookup k res
         put param { pos = insert (label name) p_r $ pos param }
@@ -177,7 +176,7 @@ check_file = do
         t  <- liftIO (getCurrentTime :: IO UTCTime)
         liftIO $ putStrLn $ formatTime defaultTimeLocale "Time: %H:%M:%S" $ utcToLocalTime tz t
 
-data Option = Verbose | Continuous | NoDump | NoVerif
+data Option = Verbose | Continuous | NoDump | NoVerif | Reset
     deriving Eq
 
 options :: [OptDescr Option]
@@ -190,6 +189,8 @@ options =
             "do not serialize the proof obligations after verification"
     , Option ['v'] ["noverif"] (NoArg NoVerif) 
             "do not generate and discharge the proof obligations"
+    , Option ['r'] ["reset"] (NoArg Reset)
+            "discard the previous results of verification"
     ]
 
 main :: IO ()
@@ -208,6 +209,7 @@ main = do
                             , no_verif   = NoVerif `elem` opts
                             , verbose    = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
+                            , reset      = Reset `elem` opts
                             } }
                     if continuous param then do
                     	run_pipeline xs

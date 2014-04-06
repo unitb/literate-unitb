@@ -8,6 +8,8 @@ import qualified Document.Test as DOC
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 
+import System.Process
+
 import Tests.UnitTest
 
 test_case :: IO Bool
@@ -23,6 +25,7 @@ test_case = test_suite
 
 main :: IO ()
 main = do
+    system "rm actual-*.txt expected-*.txt po-*.z3"
     b <- test_case
     if b 
     then do
