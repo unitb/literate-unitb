@@ -4,6 +4,9 @@ class Named n where
     name    :: n -> String
     as_pair :: n -> (String, n)
     as_pair n = (name n, n)
+    
+    decorated_name :: n -> String
+    decorated_name = name
 
 class Tree a where
     as_tree   :: a -> StrList

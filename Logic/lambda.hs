@@ -34,7 +34,7 @@ arg_type (CL vs _ _ _ _) = map (type_of . Word) vs
 
 return_type :: CanonicalLambda -> Type
 return_type (CL _ bv _ _ rt) = 
-        (array (type_of $ ztuple $ map Word bv) $ maybe_type rt)
+        (fun_type (type_of $ ztuple $ map Word bv) rt)
 
 can_bound_vars :: [String]
 can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
@@ -177,9 +177,7 @@ lambdas expr = f expr
             t' <- f t
             let (can, param) = canonical vs r' t'
             fun <- get_lambda_term can
---            let array = Const [] name (array_type can)
             let select = fromJust (check_type fun $ map Right param)
---                FunApp fun (Right $ ztuple param)
                 -- careful here! we expect this expression to be type checked already 
             return select
         f e = rewriteM f e

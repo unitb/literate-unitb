@@ -28,7 +28,6 @@ import Utilities.HeterogenousEquality
     -- the type variable) is also used in function types.
 data Theory = Theory 
         { extends    :: Map String Theory
-        , gen_param  :: Maybe Type
         , types      :: Map String Sort
         , funs       :: Map String Fun
         , consts     :: Map String Var
@@ -57,7 +56,7 @@ basic_theory = empty_theory
 --                mzeq x y `mzeq` mzeq_symb x y
 
 empty_theory :: Theory
-empty_theory = Theory M.empty Nothing
+empty_theory = Theory M.empty 
     M.empty M.empty M.empty M.empty 
     M.empty M.empty [] empty_notation
 

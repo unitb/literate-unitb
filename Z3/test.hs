@@ -35,7 +35,8 @@ test = test_cases
         , Case "canonical lambdas" case5 result5
         , Case "canonical lambdas with quantifier" case6 result6
         , Case "conversion to first order typing (no type variables)" case7 result7
-        , Case "conversion to first order typing" case8 result8 ]
+        , Case "conversion to first order typing" case8 result8
+        , Case "instantiating type variables by matching some generic types" case9 result9 ]
 
 test_case :: ([Char], IO Bool, Bool)
 test_case = ("Z3 test", test, True)
@@ -240,6 +241,20 @@ result8 = ctx_strip_generics ctx
         t1 = set_type int
         ms  = map (M.singleton "t") [t0, t1]
 
+case9 :: IO [ M.Map String FOType ]
+case9 = return $ match_some pat types
+    where
+        types = [set_type int, set_type $ set_type int, fun_type int int]
+        var0  = VARIABLE "a"
+        var1  = VARIABLE "b"
+        var2  = VARIABLE "c"
+        pat   = [fun_type var1 var0, set_type var2, var1]
+--        pat   = [var0, set_type var1]
 
+result9 :: [ M.Map String FOType ]
+result9 = 
+        [ M.fromList [ ("a", int), ("b", int), ("c", int) ]
+        , M.fromList [ ("a", int), ("b", int), ("c", set_type int) ]
+        ]
 
 

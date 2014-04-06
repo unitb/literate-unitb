@@ -4,6 +4,7 @@ module UnitB.Test where
 import           Logic.Classes
 import           Logic.Const
 import           Logic.Expr
+import           Logic.Genericity hiding ( variables )
 import           Logic.Label
 import qualified Logic.TestGenericity as Gen
 
@@ -75,6 +76,9 @@ example0 = do
                 , props = ps }
         return m
 
+select :: ExprP -> ExprP -> ExprP
+select      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
+
 train_m0 :: Either [Error] Machine
 train_m0 = do
         let (st,st',st_decl) = prog_var "st" (array int bool)
@@ -82,7 +86,7 @@ train_m0 = do
         let li = LI "" 0 0
         inv0 <- with_li li (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
-        c0   <- with_li li (st `zselect` t)
+        c0   <- with_li li (st `select` t)
         a0   <- with_li li (st' `mzeq` zstore st t mzfalse)
         let inv = fromList [(label "J0",inv0)]
             sch_ref0 = (weaken $ label "evt")
@@ -95,7 +99,7 @@ train_m0 = do
                     ,   scheds  = insert (label "C0") c0 $ default_schedule
                     ,   action  = fromList [(label "A0", a0)]
                     })
-        tr <- with_li li (st `zselect` t)
+        tr <- with_li li (st `select` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty Nothing)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 

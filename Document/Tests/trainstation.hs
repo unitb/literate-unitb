@@ -1,8 +1,4 @@
-module Document.Tests.TrainStation
---    ( test_case, test
---    , part0, part1, part2
---    , part3, part4, part5 )
-where
+module Document.Tests.TrainStation where
 
     -- Modules
 import Document.Document as Doc
@@ -411,14 +407,17 @@ set_decl_smt2 xs =
         ,  "(declare-fun subset@@LOC ((set LOC) (set LOC)) Bool)"
         ,  "(declare-fun subset@@TRAIN ((set TRAIN) (set TRAIN)) Bool)"]
 --        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
-     ++ when (WithPFun `elem` xs)
-        [  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"]
+--     ++ when (WithPFun `elem` xs)
+--        [  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"]
     where
         when b xs = if b then xs else []
 
-set_facts :: (String,String) -> [(String,String)]
-set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
-        [   ( "{0}0"
+set_facts :: [(String,String)] -> [(String,String)]
+set_facts xs = [ f x y | y <- ys, x <- xs ]
+  where
+    f :: (String, String) -> (String, String) -> (String, String)
+    f (x0,x1) (x,y) = (format x x1, format y x0 x1)
+    ys =[   ( "{0}0"
             , "(forall ((x {0}) (y {0})) (=> true" ++
                        " (= (elem@{1} x (mk-set@{1} y))" ++
                           " (= x y))))"
@@ -475,6 +474,11 @@ set_facts (x0,x1) = map (\(x,y) -> (format x x1, format y x0 x1))
                                    " (=> (elem@{1} x s1)" ++ 
                                        " (elem@{1} x s2)))))))"
             )
+        ,   ( "{0}7"
+            , "(forall ((s1 (set {0})) (s2 (set {0}))) (=> true"  ++
+                        " (= (and (subset@{1} s1 s2) (subset@{1} s2 s1))"   ++
+                           " (= s1 s2))))"
+            )
         ]
 
 
@@ -502,8 +506,8 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
 --                            (x `zelem` zdom f2) 
 --                `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
         , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})) (x {0})) (=> true"
-                     ++     " (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1)"
-                     ++                                   " (dom@{1}@{3} f2)))"
+                     ++     " (=> (and (elem@{1} x (dom@{1}@{3} f1))"
+                     ++              " (not (elem@{1} x (dom@{1}@{3} f2))))"
                      ++         " (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
                      ++            " (apply@{1}@{3} f1 x)))))"
 --        axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
@@ -523,7 +527,7 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
 --                (zmk_fun x y `zapply` x) `mzeq` y )
 --            -- dom-rest and apply
         , "(forall ((f1 (pfun {0} {2})) (s1 (set {0})) (x {0})) (=> true"
-                     ++      " (=> (elem@{1} x (intersect@{1} s1 (dom@{1}@{3} f1)))"
+                     ++      " (=> (and (elem@{1} x s1) (elem@{1} x (dom@{1}@{3} f1)))"
                      ++          " (= (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x)"
                      ++             " (apply@{1}@{3} f1 x)))))"
 --        axm13 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
@@ -596,6 +600,10 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1
             ++              " (=> (not (= x x2))"
             ++                  " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2)"
             ++                     " (apply@{1}@{3} f1 x2)))))"
+        ,   "(forall ((f1 (pfun {0} {2})) (x {0}) (y {2}))"
+            ++          " (=> true"
+            ++              " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x)"
+            ++                 " y)))"
             -- ran and empty-fun
 --        axm21 = fromJust $  
 --                   zran (zcast (fun_type t0 t1) $ Right zempty_fun) 
@@ -640,7 +648,7 @@ comp_facts xs =
                                 [  (("TRAIN","@TRAIN"),("BLK","@BLK"))
                                 ] 
                                else [])
-                            ++ concatMap set_facts 
+                            ++ set_facts 
                                 [   ("BLK","@BLK")
                                 ,   ("LOC","@LOC")
                                 ,   ("TRAIN","@TRAIN")

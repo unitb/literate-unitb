@@ -14,6 +14,7 @@ import qualified Document.Tests.Phase as Phase
 import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.IndirectEq as Ind
+import qualified Document.Tests.CompCalc as CC
 
 import Latex.Parser
 import Latex.Scanner

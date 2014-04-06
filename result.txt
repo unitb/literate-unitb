@@ -3,21 +3,10 @@
 |  +- Contextual predicate visibility rules
 |  +- theories with new notation: comp calc
 |  |  +- proving a theorem with the everywhere operator
-|  |     Exception:  user error (discharge: error: (error "line 37 column 65: unknown function/constant ew@@G")
+|  |     Exception:  user error (discharge: error: (error "line 38 column 65: unknown function/constant ew@@G")
 |  |  unknown
 |  |  )
 |  |  +- [ Success: 0 / 1 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
 |  +- theories and proofs
 |  |  +- verify proof with galois connections
 |  |  +- verify theory 1: indirect (in)equality
@@ -88,98 +77,14 @@
 |  |  |  +- test 0, verification, lambda vs empty-fun
 |  |  |  +- test 1, verification, lambda vs ovl, mk-fun
 |  |  |  +- test 2, verification, lambda vs apply
-|  |  |    o  m0/INIT/FIS/a
-|  |  |    o  m0/INIT/FIS/b
-|  |  |    o  m0/INIT/FIS/c
-|  |  |    o  m0/INIT/FIS/f
-|  |  |    o  m0/INIT/FIS/n
-|  |  |    o  m0/INIT/INV/inv0
-|  |  |    o  m0/INIT/INV/inv1
-|  |  |    o  m0/INIT/INV/inv2
-|  |  |    o  m0/INIT/INV/inv3/goal (222,1)
-|  |  |    o  m0/INIT/INV/inv3/hypotheses (222,1)
-|  |  |    o  m0/INIT/INV/inv3/relation (222,1)
-|  |  |    o  m0/INIT/INV/inv3/step (224,1)
-|  |  |    o  m0/INIT/INV/inv3/step (226,1)
-|  |  |    o  m0/INIT/INV/inv3/step (230,1)
-|  |  |    o  m0/INIT/INV/inv4
-|  |  |    o  m0/INIT/INV/inv5
-|  |  |    o  m0/evt/FIS/a@prime
-|  |  |    o  m0/evt/FIS/b@prime
-|  |  |    o  m0/evt/FIS/c@prime
-|  |  |    o  m0/evt/FIS/f@prime
-|  |  |    o  m0/evt/FIS/n@prime
-|  |  |    o  m0/evt/INV/inv0/goal (64,1)
-|  |  |    o  m0/evt/INV/inv0/hypotheses (64,1)
-|  |  |    o  m0/evt/INV/inv0/relation (64,1)
-|  |  |    o  m0/evt/INV/inv0/step (66,1)
-|  |  |    o  m0/evt/INV/inv0/step (68,1)
-|  |  |    o  m0/evt/INV/inv0/step (70,1)
-|  |  |    o  m0/evt/INV/inv0/step (72,1)
-|  |  |    o  m0/evt/INV/inv0/step (74,1)
-|  |  |    o  m0/evt/INV/inv1/goal (142,1)
-|  |  |    o  m0/evt/INV/inv1/hypotheses (142,1)
-|  |  |    o  m0/evt/INV/inv1/relation (142,1)
-|  |  |    o  m0/evt/INV/inv1/step (144,1)
-|  |  |    o  m0/evt/INV/inv1/step (146,1)
-|  |  |    o  m0/evt/INV/inv1/step (148,1)
-|  |  |    o  m0/evt/INV/inv1/step (150,1)
-|  |  |    o  m0/evt/INV/inv1/step (152,1)
-|  |  |    o  m0/evt/INV/inv1/step (154,1)
-|  |  |    o  m0/evt/INV/inv1/step (156,1)
-|  |  |    o  m0/evt/INV/inv2/easy (191,1)
-|  |  |    o  m0/evt/INV/inv3/goal (241,1)
-|  |  |    o  m0/evt/INV/inv3/hypotheses (241,1)
-|  |  |    o  m0/evt/INV/inv3/relation (241,1)
-|  |  |    o  m0/evt/INV/inv3/step (243,1)
-|  |  |    o  m0/evt/INV/inv3/step (245,1)
-|  |  |    o  m0/evt/INV/inv3/step (247,1)
-|  |  |    o  m0/evt/INV/inv3/step (253,1)
-|  |  |    o  m0/evt/INV/inv3/step (255,1)
-|  |  |    o  m0/evt/INV/inv4
-|  |  |    o  m0/evt/INV/inv5/assertion/asm0/easy (298,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/goal (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/hypotheses (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/relation (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/step (281,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/step (283,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/step (285,1|___|59
-|  |  |  
-|  |  |  
-|  |  |  Comparison:[
-|  |  |    > Actual
-|  |  |    < Expected
-|  |  |    - ------
-|  |  |    > )\n
-|  |  |    < )\n
-|  |  |    -    
-|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
-|  |  |    < _.xxx_.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
-|  |  |    -   ---  ------------------------------------------
-|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(290,1)\n
-|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(290,1)\n
-|  |  |    -                                                    
-|  |  |    > _._.o_._.m0/evt/SCH\n
-|  |  |    < _._.o_._.m0/evt/SCH\n
-|  |  |    -                      
-|  |  |    > passed_.59_./_.
-|  |  |    < passed_.58_./_.
-|  |  |    -          -     
-|  |  |  ]
-|  |  |  +- [ Success: 2 / 3 ]
-|  |  |___|
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > False
-|  |    < True
-|  |    - ----
-|  |  ]
+|  |  |  +- [ Success: 3 / 3 ]
 |  |  +- part 1
 |  |  |  +- test 3, verification, set comprehension, failed proof
+|  |  |  +- test 4, adding a progress property
+|  |  |  +- test 5, unless properties
+|  |  |  +- [ Success: 3 / 3 ]
+|  |  +- part 2
+|  |  |  +- test 6, verify progress refinement
 |  |  |    o  m0/INIT/FIS/a
 |  |  |    o  m0/INIT/FIS/b
 |  |  |    o  m0/INIT/FIS/c
@@ -188,55 +93,58 @@
 |  |  |    o  m0/INIT/INV/inv0
 |  |  |    o  m0/INIT/INV/inv1
 |  |  |    o  m0/INIT/INV/inv2
-|  |  |    o  m0/INIT/INV/inv3/goal (222,1)
-|  |  |    o  m0/INIT/INV/inv3/hypotheses (222,1)
-|  |  |    o  m0/INIT/INV/inv3/relation (222,1)
-|  |  |    o  m0/INIT/INV/inv3/step (224,1)
+|  |  |    o  m0/INIT/INV/inv3/goal (224,7)
+|  |  |    o  m0/INIT/INV/inv3/hypotheses (224,7)
+|  |  |    o  m0/INIT/INV/inv3/relation (224,7)
 |  |  |    o  m0/INIT/INV/inv3/step (226,1)
-|  |  |    o  m0/INIT/INV/inv3/step (230,1)
+|  |  |    o  m0/INIT/INV/inv3/step (228,1)
+|  |  |    o  m0/INIT/INV/inv3/step (232,1)
 |  |  |    o  m0/INIT/INV/inv4
 |  |  |    o  m0/INIT/INV/inv5
 |  |  |    o  m0/INIT/INV/inv6
+|  |  |   xxx m0/INIT/INV/inv8
+|  |  |    o  m0/SKIP/CO/saf0
+|  |  |    o  m0/evt/CO/saf0
 |  |  |    o  m0/evt/FIS/a@prime
 |  |  |    o  m0/evt/FIS/b@prime
 |  |  |    o  m0/evt/FIS/c@prime
 |  |  |    o  m0/evt/FIS/f@prime
 |  |  |    o  m0/evt/FIS/n@prime
-|  |  |    o  m0/evt/INV/inv0/goal (64,1)
-|  |  |    o  m0/evt/INV/inv0/hypotheses (64,1)
-|  |  |    o  m0/evt/INV/inv0/relation (64,1)
-|  |  |    o  m0/evt/INV/inv0/step (66,1)
+|  |  |    o  m0/evt/INV/inv0/goal (66,7)
+|  |  |    o  m0/evt/INV/inv0/hypotheses (66,7)
+|  |  |    o  m0/evt/INV/inv0/relation (66,7)
 |  |  |    o  m0/evt/INV/inv0/step (68,1)
 |  |  |    o  m0/evt/INV/inv0/step (70,1)
 |  |  |    o  m0/evt/INV/inv0/step (72,1)
 |  |  |    o  m0/evt/INV/inv0/step (74,1)
-|  |  |    o  m0/evt/INV/inv1/goal (142,1)
-|  |  |    o  m0/evt/INV/inv1/hypotheses (142,1)
-|  |  |    o  m0/evt/INV/inv1/relation (142,1)
-|  |  |    o  m0/evt/INV/inv1/step (144,1)
+|  |  |    o  m0/evt/INV/inv0/step (76,1)
+|  |  |    o  m0/evt/INV/inv1/goal (144,7)
+|  |  |    o  m0/evt/INV/inv1/hypotheses (144,7)
+|  |  |    o  m0/evt/INV/inv1/relation (144,7)
 |  |  |    o  m0/evt/INV/inv1/step (146,1)
 |  |  |    o  m0/evt/INV/inv1/step (148,1)
 |  |  |    o  m0/evt/INV/inv1/step (150,1)
 |  |  |    o  m0/evt/INV/inv1/step (152,1)
 |  |  |    o  m0/evt/INV/inv1/step (154,1)
 |  |  |    o  m0/evt/INV/inv1/step (156,1)
-|  |  |    o  m0/evt/INV/inv2/easy (191,1)
-|  |  |    o  m0/evt/INV/inv3/goal (241,1)
-|  |  |    o  m0/evt/INV/inv3/hypotheses (241,1)
-|  |  |    o  m0/evt/INV/inv3/relation (241,1)
-|  |  |    o  m0/evt/INV/inv3/step (243,1)
+|  |  |    o  m0/evt/INV/inv1/step (158,1)
+|  |  |    o  m0/evt/INV/inv2/easy (193,1)
+|  |  |    o  m0/evt/INV/inv3/goal (243,7)
+|  |  |    o  m0/evt/INV/inv3/hypotheses (243,7)
+|  |  |    o  m0/evt/INV/inv3/relation (243,7)
 |  |  |    o  m0/evt/INV/inv3/step (245,1)
 |  |  |    o  m0/evt/INV/inv3/step (247,1)
-|  |  |    o  m0/evt/INV/inv3/step (253,1)
+|  |  |    o  m0/evt/INV/inv3/step (249,1)
 |  |  |    o  m0/evt/INV/inv3/step (255,1)
+|  |  |    o  m0/evt/INV/inv3/step (257,1)
 |  |  |    o  m0/evt/INV/inv4
-|  |  |    o  m0/evt/INV/inv5/assertion/asm0/easy (298,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/goal (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/hypotheses (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/relation (279,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/step (281,1)
+|  |  |    o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)
+|  |  |    o  m0/evt/INV/inv5/main goal/goal (281,7)
+|  |  |    o  m0/evt/INV/inv5/main goal/hypotheses (281,7)
+|  |  |    o  m0/evt/INV/inv5/main goal/relation (281,7)
 |  |  |    o  m0/evt/INV/inv5/main goal/step (283,1)
-|  |  |    o  m0/evt/INV/inv5/main goal/step (285,1|___|61
+|  |  |    o  m0/evt/INV/inv5/main goal/step (285,1)
+|  |  |    o  m0/evt/INV/inv5/main goal/step (287,1|___|84
 |  |  |  
 |  |  |  
 |  |  |  Comparison:[
@@ -246,57 +154,249 @@
 |  |  |    > )\n
 |  |  |    < )\n
 |  |  |    -    
-|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
-|  |  |    < _.xxx_.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
+|  |  |    > _.xxx_.m0/evt/INV/inv5/main_.goal/step_.(289,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(289,1)\n
 |  |  |    -   ---  ------------------------------------------
-|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(290,1)\n
-|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(290,1)\n
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(292,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(292,1)\n
 |  |  |    -                                                    
-|  |  |    > _.xxx_.m0/evt/INV/inv6\n
-|  |  |    < _.xxx_.m0/evt/INV/inv6\n
-|  |  |    -                         
+|  |  |    > _._.o_._.m0/evt/INV/inv6/goal_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/goal_.(310,7)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,7)\n
+|  |  |    -                                               
+|  |  |    > _._.o_._.m0/evt/INV/inv6/relation_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/relation_.(310,7)\n
+|  |  |    -                                             
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    -                                       
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(320,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(320,1)\n
+|  |  |    -                                       
+|  |  |    > _._.o_._.m0/evt/INV/inv8\n
+|  |  |    < _._.o_._.m0/evt/INV/inv8\n
+|  |  |    -                           
 |  |  |    > _._.o_._.m0/evt/SCH\n
 |  |  |    < _._.o_._.m0/evt/SCH\n
 |  |  |    -                      
-|  |  |    > passed_.60_./_.
-|  |  |    < passed_.59_./_.
-|  |  |    -         --     
+|  |  |    > _._.o_._.m0/evt/SCH/m0/1/REF/weaken\n
+|  |  |    < _._.o_._.m0/evt/SCH/m0/1/REF/weaken\n
+|  |  |    -                                      
+|  |  |    > _._.o_._.m0/evt/TR/tr0/EN\n
+|  |  |    < _._.o_._.m0/evt/TR/tr0/EN\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/evt/TR/tr0/NEG\n
+|  |  |    < _._.o_._.m0/evt/TR/tr0/NEG\n
+|  |  |    -                             
+|  |  |    > _._.o_._.m0/prog0/REF/monotonicity/lhs\n
+|  |  |    < _._.o_._.m0/prog0/REF/monotonicity/lhs\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/prog0/REF/monotonicity/rhs\n
+|  |  |    < _._.o_._.m0/prog0/REF/monotonicity/rhs\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/prog1/REF/add\n
+|  |  |    < _.xxx_.m0/prog1/REF/add\n
+|  |  |    -                          
+|  |  |    > _._.o_._.m0/prog2/REF/trading/lhs\n
+|  |  |    < _._.o_._.m0/prog2/REF/trading/lhs\n
+|  |  |    -                                    
+|  |  |    > _._.o_._.m0/prog2/REF/trading/rhs\n
+|  |  |    < _._.o_._.m0/prog2/REF/trading/rhs\n
+|  |  |    -                                    
+|  |  |    > _._.o_._.m0/prog3/REF/PSP/lhs\n
+|  |  |    < _._.o_._.m0/prog3/REF/PSP/lhs\n
+|  |  |    -                                
+|  |  |    > _._.o_._.m0/prog3/REF/PSP/rhs\n
+|  |  |    < _._.o_._.m0/prog3/REF/PSP/rhs\n
+|  |  |    -                                
+|  |  |    > _._.o_._.m0/prog4/REF/discharge/tr/lhs\n
+|  |  |    < _._.o_._.m0/prog4/REF/discharge/tr/lhs\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/prog4/REF/discharge/tr/rhs\n
+|  |  |    < _.xxx_.m0/prog4/REF/discharge/tr/rhs\n
+|  |  |    -                                       
+|  |  |    > passed_.78_./_.
+|  |  |    < passed_.79_./_.
+|  |  |    -          -     
 |  |  |  ]
-|  |  |  +- test 4, adding a progress property
-|  |  |  +- test 5, unless properties
-|  |  |  +- [ Success: 2 / 3 ]
-|  |  |___|
-|  |  
-|  |  
-|  |  Comparison:[
-|  |    > Actual
-|  |    < Expected
-|  |    - ------
-|  |    > False
-|  |    < True
-|  |    - ----
-|  |  ]
-|  |  +- part 2
-|  |  |  +- test 6, verify progress refinement
 |  |  |  +- test 7, verify refinement rules
+|  |  |    o  m0/INIT/FIS/a
+|  |  |    o  m0/INIT/FIS/b
+|  |  |    o  m0/INIT/FIS/c
+|  |  |    o  m0/INIT/FIS/f
+|  |  |    o  m0/INIT/FIS/n
+|  |  |    o  m0/INIT/INV/inv0
+|  |  |    o  m0/INIT/INV/inv1
+|  |  |    o  m0/INIT/INV/inv2
+|  |  |    o  m0/INIT/INV/inv3/goal (224,7)
+|  |  |    o  m0/INIT/INV/inv3/hypotheses (224,7)
+|  |  |    o  m0/INIT/INV/inv3/relation (224,7)
+|  |  |    o  m0/INIT/INV/inv3/step (226,1)
+|  |  |    o  m0/INIT/INV/inv3/step (228,1)
+|  |  |    o  m0/INIT/INV/inv3/step (232,1)
+|  |  |    o  m0/INIT/INV/inv4
+|  |  |    o  m0/INIT/INV/inv5
+|  |  |    o  m0/INIT/INV/inv6
+|  |  |    o  m0/SKIP/CO/saf0
+|  |  |    o  m0/evt/CO/saf0
+|  |  |    o  m0/evt/FIS/a@prime
+|  |  |    o  m0/evt/FIS/b@prime
+|  |  |    o  m0/evt/FIS/c@prime
+|  |  |    o  m0/evt/FIS/f@prime
+|  |  |    o  m0/evt/FIS/n@prime
+|  |  |    o  m0/evt/INV/inv0/goal (66,7)
+|  |  |    o  m0/evt/INV/inv0/hypotheses (66,7)
+|  |  |    o  m0/evt/INV/inv0/relation (66,7)
+|  |  |    o  m0/evt/INV/inv0/step (68,1)
+|  |  |    o  m0/evt/INV/inv0/step (70,1)
+|  |  |    o  m0/evt/INV/inv0/step (72,1)
+|  |  |    o  m0/evt/INV/inv0/step (74,1)
+|  |  |    o  m0/evt/INV/inv0/step (76,1)
+|  |  |    o  m0/evt/INV/inv1/goal (144,7)
+|  |  |    o  m0/evt/INV/inv1/hypotheses (144,7)
+|  |  |    o  m0/evt/INV/inv1/relation (144,7)
+|  |  |    o  m0/evt/INV/inv1/step (146,1)
+|  |  |    o  m0/evt/INV/inv1/step (148,1)
+|  |  |    o  m0/evt/INV/inv1/step (150,1)
+|  |  |    o  m0/evt/INV/inv1/step (152,1)
+|  |  |    o  m0/evt/INV/inv1/step (154,1)
+|  |  |    o  m0/evt/INV/inv1/step (156,1)
+|  |  |    o  m0/evt/INV/inv1/step (158,1)
+|  |  |    o  m0/evt/INV/inv2/easy (193,1)
+|  |  |    o  m0/evt/INV/inv3/goal (243,7)
+|  |  |    o  m0/evt/INV/inv3/hypotheses (243,7)
+|  |  |    o  m0/evt/INV/inv3/relation (243,7)
+|  |  |    o  m0/evt/INV/inv3/step (245,1)
+|  |  |    o  m0/evt/INV/inv3/step (247,1)
+|  |  |    o  m0/evt/INV/inv3/step (249,1)
+|  |  |    o  m0/evt/INV/inv3/step (255,1)
+|  |  |    o  m0/evt/INV/inv3/step (257,1)
+|  |  |    o  m0/evt/INV/inv4
+|  |  |    o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)
+|  |  |    o  m0/evt/INV/inv5/main goal/goal (281,7)
+|  |  |    o  m0/evt/INV/inv5/main goal/hypotheses (281,7)
+|  |  |    o  m0/evt/INV/inv5/main goal/relation (281,7)
+|  |  |    o  m0/evt/INV/inv5/main goal/step (283,1)
+|  |  |    o  m0/evt/INV/inv5/main goal/step (285,1)
+|  |  |    o  m0/evt/INV/inv5/main goal/step (287,1|___|88
+|  |  |  
+|  |  |  
+|  |  |  Comparison:[
+|  |  |    > Actual
+|  |  |    < Expected
+|  |  |    - ------
+|  |  |    > )\n
+|  |  |    < )\n
+|  |  |    -    
+|  |  |    > _.xxx_.m0/evt/INV/inv5/main_.goal/step_.(289,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(289,1)\n
+|  |  |    -   ---  ------------------------------------------
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(292,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(292,1)\n
+|  |  |    -                                                    
+|  |  |    > _._.o_._.m0/evt/INV/inv6/goal_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/goal_.(310,7)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,7)\n
+|  |  |    -                                               
+|  |  |    > _._.o_._.m0/evt/INV/inv6/relation_.(310,7)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/relation_.(310,7)\n
+|  |  |    -                                             
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    -                                       
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(320,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(320,1)\n
+|  |  |    -                                       
+|  |  |    > _._.o_._.m0/evt/SCH\n
+|  |  |    < _._.o_._.m0/evt/SCH\n
+|  |  |    -                      
+|  |  |    > _._.o_._.m0/prog0/REF/monotonicity/lhs\n
+|  |  |    < _._.o_._.m0/prog0/REF/monotonicity/lhs\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/prog0/REF/monotonicity/rhs\n
+|  |  |    < _._.o_._.m0/prog0/REF/monotonicity/rhs\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/prog1/REF/add\n
+|  |  |    < _.xxx_.m0/prog1/REF/add\n
+|  |  |    -                          
+|  |  |    > _.xxx_.m0/prog10/REF/add\n
+|  |  |    < _.xxx_.m0/prog10/REF/add\n
+|  |  |    -                           
+|  |  |    > _.xxx_.m0/prog2/REF/trading/lhs\n
+|  |  |    < _.xxx_.m0/prog2/REF/trading/lhs\n
+|  |  |    -                                  
+|  |  |    > _._.o_._.m0/prog2/REF/trading/rhs\n
+|  |  |    < _._.o_._.m0/prog2/REF/trading/rhs\n
+|  |  |    -                                    
+|  |  |    > _.xxx_.m0/prog3/REF/PSP/lhs\n
+|  |  |    < _.xxx_.m0/prog3/REF/PSP/lhs\n
+|  |  |    -                              
+|  |  |    > _.xxx_.m0/prog3/REF/PSP/rhs\n
+|  |  |    < _.xxx_.m0/prog3/REF/PSP/rhs\n
+|  |  |    -                              
+|  |  |    > _.xxx_.m0/prog4/REF/add\n
+|  |  |    < _.xxx_.m0/prog4/REF/add\n
+|  |  |    -                          
+|  |  |    > _.xxx_.m0/prog5/REF/transitivity/lhs\n
+|  |  |    < _.xxx_.m0/prog5/REF/transitivity/lhs\n
+|  |  |    -                                       
+|  |  |    > _._.o_._.m0/prog5/REF/transitivity/mhs\n
+|  |  |    < _._.o_._.m0/prog5/REF/transitivity/mhs\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/prog5/REF/transitivity/rhs\n
+|  |  |    < _._.o_._.m0/prog5/REF/transitivity/rhs\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/prog6/REF/add\n
+|  |  |    < _.xxx_.m0/prog6/REF/add\n
+|  |  |    -                          
+|  |  |    > _.xxx_.m0/prog7/REF/add\n
+|  |  |    < _.xxx_.m0/prog7/REF/add\n
+|  |  |    -                          
+|  |  |    > _._.o_._.m0/prog8/REF/transitivity/lhs\n
+|  |  |    < _._.o_._.m0/prog8/REF/transitivity/lhs\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/prog8/REF/transitivity/mhs\n
+|  |  |    < _._.o_._.m0/prog8/REF/transitivity/mhs\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/prog8/REF/transitivity/rhs\n
+|  |  |    < _._.o_._.m0/prog8/REF/transitivity/rhs\n
+|  |  |    -                                         
+|  |  |    > _.xxx_.m0/prog9/REF/add\n
+|  |  |    < _.xxx_.m0/prog9/REF/add\n
+|  |  |    -                          
+|  |  |    > passed_.75_./_.
+|  |  |    < passed_.76_./_.
+|  |  |    -          -     
+|  |  |  ]
 |  |  |  +- test 8, verify refinement rules
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  +- [ Success: 1 / 3 ]
 |  |  +- part 3
 |  |  |  +- test 9, verify disjunction rule
 |  |  |  +- test 10, error: cyclic proof
 |  |  |  +- [ Success: 2 / 2 ]
-|  |  +- [ Success: 2 / 4 ]
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > False
-|    < True
-|    - ----
-|  ]
+|  |  +- [ Success: 3 / 4 ]
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
 |  |  +- test 1, valid references to variables and event declared in ancester
@@ -319,17 +419,6 @@
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
 |  +- [ Success: 10 / 12 ]
-|___|
-
-
-Comparison:[
-  > Actual
-  < Expected
-  - ------
-  > False
-  < True
-  - ----
-]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -373,7 +462,8 @@ Comparison:[
 |  +- canonical lambdas with quantifier
 |  +- conversion to first order typing (no type variables)
 |  +- conversion to first order typing
-|  +- [ Success: 9 / 9 ]
+|  +- instantiating type variables by matching some generic types
+|  +- [ Success: 10 / 10 ]
 +- Graphs and operator grammars
 |  +- case 0 - complete domain of matrices
 |  +- case 1 - operator grammar discrepancy
@@ -404,9 +494,9 @@ Comparison:[
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   18917 total
-    1606 Document/Tests/trainstation.hs
+   19099 total
+    1614 Document/Tests/trainstation.hs
      955 Document/machine.hs
-     878 Document/Tests/indirecteq.hs
-     777 Document/Tests/lambdas.hs
+     886 Document/Tests/indirecteq.hs
+     786 Document/Tests/lambdas.hs
      755 Document/proof.hs
