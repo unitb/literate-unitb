@@ -413,7 +413,23 @@ discharge :: Sequent -> IO Validity
 discharge po = discharge' Nothing po
 
 discharge' :: Maybe Int -> Sequent -> IO Validity
-discharge' n po = do
+discharge' n po@(Sequent ctx asm h g) = do
+        r <- prove n po
+        case r of
+            ValUnknown -> do
+                case g of
+                    FunApp f [Binder Forall vs r0 t0, Binder Forall us r1 t1]
+                        | (name f == "=" || name f == "=>") && vs == us -> do
+                            discharge' n (Sequent ctx asm h (zforall vs ztrue $ 
+                                FunApp f [zimplies r0 t0, zimplies r1 t1]))
+                    _ -> return r
+            _ -> return r
+            
+
+prove :: Maybe Int      -- Timeout in seconds
+      -> Sequent        -- 
+      -> IO Validity
+prove n po = do
         let code = z3_code po
         s <- verify code (maybe 3 id n)
         case s of

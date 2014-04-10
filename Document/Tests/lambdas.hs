@@ -224,11 +224,11 @@ result2 = unlines
      , "  o  m0/evt/INV/inv5/main goal/step (281,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
-     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
---     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
+--     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
      , "  o  m0/evt/SCH"
-     , "passed 58 / 59"
+     , "passed 59 / 59"
      ]
 
 path2 :: String
@@ -293,12 +293,12 @@ result3 = unlines
      , "  o  m0/evt/INV/inv5/main goal/step (281,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
-     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
---     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
+--     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
+     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
      , " xxx m0/evt/INV/inv6"
      , "  o  m0/evt/SCH"
-     , "passed 59 / 61"
+     , "passed 60 / 61"
      ]
 
 path3 :: String
