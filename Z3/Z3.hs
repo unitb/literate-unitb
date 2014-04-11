@@ -412,15 +412,17 @@ to_fol_ctx types (Context s vars funs defs dums) =
 discharge :: Sequent -> IO Validity
 discharge po = discharge' Nothing po
 
-differs_by_one :: Eq a => [a] -> [a] -> Maybe (a,a)
-differs_by_one [] [] = Nothing
-differs_by_one (x:xs) (y:ys)
-    | x == y        = differs_by_one xs ys
-    | xs == ys      = Just (x,y)
-differs_by_one _ _ = Nothing
+differs_by_one :: Eq a => [a] -> [a] -> Maybe (Int,a,a)
+differs_by_one xs ys = f $ zip [0..] $ zip xs ys
+    where
+        f [] = Nothing
+        f ((i,(x,y)):xs) 
+            | x == y        = f xs
+            | all (uncurry (==) . snd) xs = Just (i,x,y)
+            | otherwise     = Nothing
 
 discharge' :: Maybe Int -> Sequent -> IO Validity
-discharge' n po@(Sequent ctx asm h g) = do
+discharge' to po@(Sequent ctx asm h g) = do
         case g of
             Binder Forall (Var nam t:vs) rs ts -> do
                 let (Context ss vars funs defs dums) = ctx
@@ -430,63 +432,56 @@ discharge' n po@(Sequent ctx asm h g) = do
                         | L.null vs = rs `zimplies` ts
                         | otherwise = zforall vs rs ts
                     ctx' = Context ss (M.insert (name v) v vars) funs defs dums
-                discharge' n (Sequent ctx' (znot g : asm) h (rename nam (name v) g'))
+                discharge' to (Sequent ctx' (znot g : asm) h (rename nam (name v) g'))
             FunApp f [lhs, rhs]
                 | (name f == "=" || name f == "=>") -> do
                     case (lhs,rhs) of
                         (Binder Forall vs r0 t0, Binder Forall us r1 t1) 
                             | vs == us -> do
-                                discharge' n (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                                discharge' to (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
                                     FunApp f [zimplies r0 t0, zimplies r1 t1]))
                         (Binder Exists vs r0 t0, Binder Exists us r1 t1) 
                             | vs == us -> do
-                                discharge' n (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                                discharge' to (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
                                     FunApp f [zand r0 t0, zand r1 t1]))
                         (FunApp g0 xs, FunApp g1 ys)
-                            | length xs /= length ys || g0 /= g1 -> prove n po
-                            | name g0 `elem` ["and","or"] ->
+                            | length xs /= length ys || g0 /= g1 -> prove to po
+                            | name g0 `elem` ["and","or","not","=>"] -> do
+                                    -- and(0,1), or(0,1), 
+                                    --      =>(1)       -> f.x => f.y -> x => y
+                                    -- not (0), =>(0)   -> f.x => f.y -> y => x
+                                    --| arithmetic relations are not implement
+                                    -- <=(0)            -> f.x => f.y -> y <= x
+                                    -- <=(1)            -> f.x => f.y -> x <= y
+                                    -- +(0,1),-(0)      -> f.x <= f.y -> x <= y
+                                    -- -(1)             -> f.x <= f.y -> y <= x
+                                    --| How would we treat the case of:
+                                    --| context => a+b+x R a+b+y
+                                    --| we need a means to distinguish an 
+                                    --| implication that introduces contextual
+                                    --| information
+                                let op = name g0
+                                    mono i xs
+                                        | (op `elem` ["and","or"]) ||
+                                          (op == "=>" && i == 1)     = FunApp f xs
+                                        |  op == "not" ||
+                                          (op == "=>" && i == 0)     = FunApp f $ reverse xs
+                                        | otherwise                  = error $ "Z3.discharge': unexpected operator / position pair: " ++ op ++ ", " ++ show i
                                 case differs_by_one xs ys of
-                                    Just (x,y) -> 
-                                        discharge' n (Sequent ctx (znot g : asm) h $ 
-                                            FunApp f [x, y])
+                                    Just (i,x,y) -> do
+                                        discharge' to (Sequent ctx (znot g : asm) h $ 
+                                            mono i [x, y])
                                     Nothing -> 
-                                        prove n po
-                            | name g0 `elem` ["=>"] -> do
-                                let (xs',ys') = if xs !! 0 == ys !! 0
-                                                then (xs, ys)
-                                                else (ys, xs)
-                                if xs' !! 0 == ys' !! 0 then
-                                    discharge' n (Sequent ctx (znot g : asm) h $ 
-                                            FunApp f [xs' !! 1, ys' !! 1])
-                                else prove n po
-                            | name g0 `elem` ["not"] ->
-                                case differs_by_one xs ys of
-                                    Just (x,y) -> 
-                                        discharge' n (Sequent ctx (znot g : asm) h $ 
-                                            FunApp f [y, x])
-                                                --    _  _
-                                    Nothing -> 
-                                        prove n po
+                                        prove to po
                             | name f == "=" ->
                                 case differs_by_one xs ys of
-                                    Just (x,y) -> 
-                                        discharge' n (Sequent ctx (znot g : asm) h $ 
+                                    Just (_,x,y) -> 
+                                        discharge' to (Sequent ctx (znot g : asm) h $ 
                                             FunApp f [x, y])
                                     Nothing -> 
-                                        prove n po
-                        _ -> prove n po
-            _ -> prove n po
-
---        r <- prove n po
---        case r of
---            ValUnknown -> do
---                case g of
---                    FunApp f [Binder Forall vs r0 t0, Binder Forall us r1 t1]
---                        | (name f == "=" || name f == "=>") && vs == us -> do
---                            discharge' n (Sequent ctx asm h (zforall vs ztrue $ 
---                                FunApp f [zimplies r0 t0, zimplies r1 t1]))
---                    _ -> return r
---            _ -> return r
+                                        prove to po
+                        _ -> prove to po
+            _ -> prove to po
             
 
 prove :: Maybe Int      -- Timeout in seconds

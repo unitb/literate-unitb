@@ -190,7 +190,7 @@
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   19262 total
+   19261 total
     1614 Document/Tests/trainstation.hs
      955 Document/machine.hs
      885 Document/Tests/indirecteq.hs

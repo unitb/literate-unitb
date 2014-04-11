@@ -1,5 +1,7 @@
 module Main where
 
+import Control.Monad
+
 import qualified UnitB.Test as UB
 import qualified Latex.Test_Latex_Parser as LT
 import qualified Z3.Test as ZT
@@ -9,6 +11,7 @@ import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 
 import System.Process
+import System.Directory
 
 import Tests.UnitTest
 
@@ -25,7 +28,14 @@ test_case = test_suite
 
 main :: IO ()
 main = do
-    system "rm actual-*.txt expected-*.txt po-*.z3"
+    xs <- getDirectoryContents "."
+    let prefix ys = ys `elem` map (take $ length ys) xs
+    when (prefix "actual-") $
+        void $ system "rm actual-*.txt"
+    when (prefix "expected-") $
+        void $ system "rm expected-*.txt"
+    when (prefix "po-") $
+        void $ system "rm po-*.z3"
     b <- test_case
     if b 
     then do
