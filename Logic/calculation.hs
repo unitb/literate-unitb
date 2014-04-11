@@ -300,15 +300,6 @@ rename_all vs (Binder q ds r xp) = Binder q ds (rename_all us r) (rename_all us 
         us = L.filter (\(x,_) -> not $ x `elem` ds) vs
 rename_all vs e = rewrite (rename_all vs) e 
 
-rename :: String -> String -> Expr -> Expr
-rename x y e@(Word (Var vn t))
-        | vn == x   = Word (Var y t)
-        | otherwise = e
-rename x y e@(Binder q vs r xp)
-        | x `elem` L.map name vs  = e
-        | otherwise             = Binder q vs (rename x y r) $ rename x y xp
-rename x y e = rewrite (rename x y) e 
-
 steps_po :: Theory -> Context -> Calculation -> Either [Error] [(Label, Sequent)]
 steps_po th ctx (Calc d _ e0 es _) = f e0 es
     where

@@ -359,10 +359,19 @@ merge_all_ctx cs = Context
         f3 (Context _ _ _ x _) = x
         f4 (Context _ _ _ _ x) = x
 
-used_var :: Expr -> S.Set Var
+used_var :: TypeSystem t => AbsExpr t -> S.Set (AbsVar t)
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
+
+used_fun :: TypeSystem t => AbsExpr t -> S.Set (AbsFun t)
+used_fun e = visit f s e
+    where
+        f x y = S.union x (used_fun y)
+        s = case e of
+                FunApp f _ -> S.singleton f
+                Const ts n t -> S.singleton $ Fun ts n [] t
+                _          -> S.empty
 
 instance TypeSystem t => Named (AbsFun t) where
     name (Fun _ x _ _) = x
@@ -418,3 +427,12 @@ used_types e = visit (flip $ S.union . used_types) (
             ) e
     where
         f (Var _ t) = t
+
+rename :: String -> String -> Expr -> Expr
+rename x y e@(Word (Var vn t))
+        | vn == x   = Word (Var y t)
+        | otherwise = e
+rename x y e@(Binder q vs r xp)
+        | x `elem` L.map name vs  = e
+        | otherwise             = Binder q vs (rename x y r) $ rename x y xp
+rename x y e = rewrite (rename x y) e 

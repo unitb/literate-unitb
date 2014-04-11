@@ -166,6 +166,9 @@ print_po pos name actual expected = do
                         withFile (format "po-{0}-{1}.z3" n i) WriteMode $ \h -> do
                             hPutStrLn h $ "; " ++ name
                             hPutStrLn h $ "; " ++ po
+                            hPutStrLn h $ "; " ++ if not $ ma M.! po 
+                                                  then  "does {not discharge} automatically"
+                                                  else  "{discharges} automatically"
                             hPutStrLn h $ concatMap pretty_print' $ z3_code $ pos M.! label po
                     else return ()
             Nothing  -> return ()

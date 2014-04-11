@@ -8,7 +8,7 @@ where
     -- Modules
 import Logic.Classes
 import Logic.Const
-import Logic.Expr
+import Logic.Expr   hiding ( rename )
 import Logic.Genericity
 import Logic.Label
 import Logic.Sequent

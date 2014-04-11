@@ -414,7 +414,7 @@ verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Seq
 verify_changes m old_pos = do
         case proof_obligation m of
             Right pos -> do
-                dump (show $ _name m) pos
+--                dump (show $ _name m) pos
                 let new_pos = differenceWith f pos old_pos
                 res <- verify_all new_pos
                 let { h k p0 = (
@@ -436,7 +436,7 @@ str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
         case proof_obligation m of
             Right pos -> do
-                dump (show $ _name m) pos
+--                dump (show $ _name m) pos
                 xs <- verify_all pos
                 format_result xs
             Left msgs -> return (unlines $ map f msgs,0,0)

@@ -180,7 +180,7 @@ new_prover n_workers = do
                     cmd <- lift $ readChan inCh
                     case cmd of
                         Just (tid, po) -> lift $ do
-                            r <- try (discharge' (Just 3) po)
+                            r <- try (discharge' (Just 2) po)
                             let f e = Left $ show (e :: SomeException)
                                 r'  = either f Right r
                             writeChan outCh (tid,r')
@@ -412,18 +412,81 @@ to_fol_ctx types (Context s vars funs defs dums) =
 discharge :: Sequent -> IO Validity
 discharge po = discharge' Nothing po
 
+differs_by_one :: Eq a => [a] -> [a] -> Maybe (a,a)
+differs_by_one [] [] = Nothing
+differs_by_one (x:xs) (y:ys)
+    | x == y        = differs_by_one xs ys
+    | xs == ys      = Just (x,y)
+differs_by_one _ _ = Nothing
+
 discharge' :: Maybe Int -> Sequent -> IO Validity
 discharge' n po@(Sequent ctx asm h g) = do
-        r <- prove n po
-        case r of
-            ValUnknown -> do
-                case g of
-                    FunApp f [Binder Forall vs r0 t0, Binder Forall us r1 t1]
-                        | (name f == "=" || name f == "=>") && vs == us -> do
-                            discharge' n (Sequent ctx asm h (zforall vs ztrue $ 
-                                FunApp f [zimplies r0 t0, zimplies r1 t1]))
-                    _ -> return r
-            _ -> return r
+        case g of
+            Binder Forall (Var nam t:vs) rs ts -> do
+                let (Context ss vars funs defs dums) = ctx
+                    vs' = nam : map (\x -> nam ++ show x) [0..]
+                    v   = Var (head $ vs' \\ keys vars) t
+                    g'
+                        | L.null vs = rs `zimplies` ts
+                        | otherwise = zforall vs rs ts
+                    ctx' = Context ss (M.insert (name v) v vars) funs defs dums
+                discharge' n (Sequent ctx' (znot g : asm) h (rename nam (name v) g'))
+            FunApp f [lhs, rhs]
+                | (name f == "=" || name f == "=>") -> do
+                    case (lhs,rhs) of
+                        (Binder Forall vs r0 t0, Binder Forall us r1 t1) 
+                            | vs == us -> do
+                                discharge' n (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                                    FunApp f [zimplies r0 t0, zimplies r1 t1]))
+                        (Binder Exists vs r0 t0, Binder Exists us r1 t1) 
+                            | vs == us -> do
+                                discharge' n (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                                    FunApp f [zand r0 t0, zand r1 t1]))
+                        (FunApp g0 xs, FunApp g1 ys)
+                            | length xs /= length ys || g0 /= g1 -> prove n po
+                            | name g0 `elem` ["and","or"] ->
+                                case differs_by_one xs ys of
+                                    Just (x,y) -> 
+                                        discharge' n (Sequent ctx (znot g : asm) h $ 
+                                            FunApp f [x, y])
+                                    Nothing -> 
+                                        prove n po
+                            | name g0 `elem` ["=>"] -> do
+                                let (xs',ys') = if xs !! 0 == ys !! 0
+                                                then (xs, ys)
+                                                else (ys, xs)
+                                if xs' !! 0 == ys' !! 0 then
+                                    discharge' n (Sequent ctx (znot g : asm) h $ 
+                                            FunApp f [xs' !! 1, ys' !! 1])
+                                else prove n po
+                            | name g0 `elem` ["not"] ->
+                                case differs_by_one xs ys of
+                                    Just (x,y) -> 
+                                        discharge' n (Sequent ctx (znot g : asm) h $ 
+                                            FunApp f [y, x])
+                                                --    _  _
+                                    Nothing -> 
+                                        prove n po
+                            | name f == "=" ->
+                                case differs_by_one xs ys of
+                                    Just (x,y) -> 
+                                        discharge' n (Sequent ctx (znot g : asm) h $ 
+                                            FunApp f [x, y])
+                                    Nothing -> 
+                                        prove n po
+                        _ -> prove n po
+            _ -> prove n po
+
+--        r <- prove n po
+--        case r of
+--            ValUnknown -> do
+--                case g of
+--                    FunApp f [Binder Forall vs r0 t0, Binder Forall us r1 t1]
+--                        | (name f == "=" || name f == "=>") && vs == us -> do
+--                            discharge' n (Sequent ctx asm h (zforall vs ztrue $ 
+--                                FunApp f [zimplies r0 t0, zimplies r1 t1]))
+--                    _ -> return r
+--            _ -> return r
             
 
 prove :: Maybe Int      -- Timeout in seconds
@@ -431,7 +494,7 @@ prove :: Maybe Int      -- Timeout in seconds
       -> IO Validity
 prove n po = do
         let code = z3_code po
-        s <- verify code (maybe 3 id n)
+        s <- verify code (maybe 2 id n)
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
