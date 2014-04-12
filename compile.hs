@@ -7,11 +7,15 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
+import System.Directory
+import System.FilePath
 import System.Timeout
 import System.Console.ANSI
 import System.Exit
 import System.IO 
 import System.Process
+
+import Utilities.Format
 
 interval :: Time
 interval = Minutes 1
@@ -47,15 +51,30 @@ main = do
                     g cmd = do
                         x <- cmd
                         return $ either (:[]) id x
-                    compile x = EitherT $ f 
-                                    $ readProcessWithExitCode 
-                                        "ghc" 
-                                        (x ++ 
-                                [ "--make"
-                                , "-W" --, "-fwarn-missing-signatures"
-                                , "-Werror"
-                                , "-hidir", "interface"
-                                , "-odir", "bin"]) ""
+                    compile x = EitherT $ f $ do
+                            let src_file = head x
+                                obj_file = addExtension (dropExtension $ src_file) "o"
+                            b <- doesFileExist src_file
+                            if b then do
+                                b <- doesFileExist obj_file
+                                when b $
+                                    void $ system $ format "mv bin/{0} bin/Main.o" obj_file
+                                r <- readProcessWithExitCode 
+                                            "ghc" 
+                                            (x ++ 
+                                    [ "--make"
+                                    , "-W", "-fwarn-missing-signatures"
+                                    , "-Werror", "-rtsopts"
+                                    , "-hidir", "interface"
+                                    , "-fbreak-on-error"
+    --                                , "-prof", "-caf-all", "-auto-all", "-O2"
+                                          -- these are usable with +RTS -p
+                                    , "-odir", "bin"]) ""
+                                b <- doesFileExist "bin/Main.o"
+                                when b $
+                                    void $ system $ format "mv bin/Main.o bin/{0}" obj_file
+                                return r
+                            else return (ExitSuccess,"","")
                 putStr "compiling..."
                 hFlush stdout
                 rs <- g $ runEitherT $ mapM compile 
@@ -64,7 +83,8 @@ main = do
                     , ["test.hs","-threaded"]
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
-                    , ["run_tests.hs","-threaded"] ]
+                    , ["run_tests.hs","-threaded"]
+                    , ["test_tmp.hs","-threaded"] ]
                 clearScreen
                 hFlush stdout
                 let (cs,xs,yss) = unzip3 rs

@@ -3,11 +3,13 @@ module Main where
 
 import Interactive.Config
 
+import Control.Concurrent
 import Control.Monad.Error
 
 import GHC.IO.Exception
 
 import System.IO
+import System.Directory
 import System.Environment
 import System.Process
 
@@ -93,27 +95,27 @@ general = do
 
 specific :: String -> Maybe String -> IO ()
 specific mod_name fun_name = do
+        b <- doesFileExist "test_tmp"
+        when b $ void $ p_system "rm test_tmp"
         h <- openFile "test_tmp.hs" WriteMode
         hPrintf h test_prog mod_name
         hClose h
-        c0 <- rawSystem "ghc" ["test_tmp.hs", "--make"
-                                , "-W"
-                                , "-Werror"
-                                , "-hidir", "interface"
-                                , "-odir", "bin"]
-        case c0 of
-            ExitSuccess -> do
-                putStrLn "Running test ..."
-                hFlush stdout
-                void $ p_system "test_tmp"
-            ExitFailure _ -> do
-                putStrLn "\n***************"
-                putStrLn   "*** FAILURE ***"
-                putStrLn   "***************"
+        fix $ \rec -> do
+            b <- doesFileExist "test_tmp"
+            threadDelay 50000
+            if b 
+                then return ()
+                else do
+                    rec
+        putStrLn "Running test ..."
+        hFlush stdout
+        void $ p_system "test_tmp"
+        hFlush stdout
     where
         test_prog = unlines 
             [ "module Main where"
             , "import %s "
+            , "main :: IO Bool"
             , "main = " ++ fun 
             ]
         fun = case fun_name of

@@ -130,10 +130,6 @@ var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 
     M.lookup s m <|> M.lookup s d
 
---from_decl (FunDecl xs n ps r)  = Left (Fun xs n ps r)
---from_decl (ConstDecl n t)      = Right (Var n t)
---from_decl (FunDef xs n ps r _) = Left (Fun xs n (map (\(Var _ t) -> t) ps) r)
-
 data Command = Decl FODecl | Assert FOExpr | CheckSat 
     | GetModel 
     | Push | Pop 
@@ -156,7 +152,9 @@ z3_code po =
         ++ [] )
     where
 --        !() = unsafePerformIO (p
-        (Sequent d assume hyps assert) = remove_type_vars $ delambdify po
+        (Sequent d assume hyps assert) = remove_type_vars 
+                    $ delambdify
+                    $ apply_monotonicity po
         f (lbl,xp) = [Comment $ show lbl, Assert xp]
 
 smoke_test :: Sequent -> IO Validity
@@ -408,6 +406,12 @@ to_fol_ctx types (Context s vars funs defs dums) =
 --        xs = match_all pat (S.elems types)
 --        ys = map f xs
 --        f xs = label $ concatMap z3_decoration $ M.elems xs
+--
+fresh :: String -> S.Set String -> String
+fresh name xs = head $ ys `minus` S.elems xs
+    where
+        ys = name : map f [0..]
+        f x = name ++ show x
 
 discharge :: Sequent -> IO Validity
 discharge po = discharge' Nothing po
@@ -421,73 +425,103 @@ differs_by_one xs ys = f $ zip [0..] $ zip xs ys
             | all (uncurry (==) . snd) xs = Just (i,x,y)
             | otherwise     = Nothing
 
-discharge' :: Maybe Int -> Sequent -> IO Validity
-discharge' to po@(Sequent ctx asm h g) = do
+apply_monotonicity :: Sequent -> Sequent
+apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
+        let 
+            h' = h
+--            h' = M.insert (label $ fresh "~goal" $ S.map show $ keysSet h) (znot g) h 
+            asm' = znot g : asm
+        in
         case g of
             Binder Forall (Var nam t:vs) rs ts -> do
                 let (Context ss vars funs defs dums) = ctx
-                    vs' = nam : map (\x -> nam ++ show x) [0..]
-                    v   = Var (head $ vs' \\ keys vars) t
+                    v   = Var (fresh nam $ 
+                                      keysSet vars 
+                            `S.union` keysSet funs
+                            `S.union` keysSet defs) t
                     g'
                         | L.null vs = rs `zimplies` ts
                         | otherwise = zforall vs rs ts
                     ctx' = Context ss (M.insert (name v) v vars) funs defs dums
-                discharge' to (Sequent ctx' (znot g : asm) h (rename nam (name v) g'))
-            FunApp f [lhs, rhs]
-                | (name f == "=" || name f == "=>") -> do
-                    case (lhs,rhs) of
-                        (Binder Forall vs r0 t0, Binder Forall us r1 t1) 
-                            | vs == us -> do
-                                discharge' to (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                return $ apply_monotonicity $ Sequent ctx' asm' h' 
+                    (rename nam (name v) g')
+            FunApp f [lhs, rhs] ->
+                case (lhs,rhs) of
+                    (Binder Forall vs r0 t0, Binder Forall us r1 t1) 
+                        | vs == us && name f `elem` ["=","=>"] -> 
+                            return $ apply_monotonicity (Sequent ctx asm' h' 
+                                (zforall vs ztrue $ 
                                     FunApp f [zimplies r0 t0, zimplies r1 t1]))
-                        (Binder Exists vs r0 t0, Binder Exists us r1 t1) 
-                            | vs == us -> do
-                                discharge' to (Sequent ctx (znot g : asm) h (zforall vs ztrue $ 
+                    (Binder Exists vs r0 t0, Binder Exists us r1 t1) 
+                        | vs == us && name f `elem` ["=","=>"] -> 
+                            return $ apply_monotonicity (Sequent ctx asm' h' 
+                                (zforall vs ztrue $ 
                                     FunApp f [zand r0 t0, zand r1 t1]))
-                        (FunApp g0 xs, FunApp g1 ys)
-                            | length xs /= length ys || g0 /= g1 -> prove to po
-                            | name g0 `elem` ["and","or","not","=>"] -> do
-                                    -- and(0,1), or(0,1), 
-                                    --      =>(1)       -> f.x => f.y -> x => y
-                                    -- not (0), =>(0)   -> f.x => f.y -> y => x
-                                    --| arithmetic relations are not implement
-                                    -- <=(0)            -> f.x => f.y -> y <= x
-                                    -- <=(1)            -> f.x => f.y -> x <= y
-                                    -- +(0,1),-(0)      -> f.x <= f.y -> x <= y
-                                    -- -(1)             -> f.x <= f.y -> y <= x
-                                    --| How would we treat the case of:
-                                    --| context => a+b+x R a+b+y
-                                    --| we need a means to distinguish an 
-                                    --| implication that introduces contextual
-                                    --| information
-                                let op = name g0
-                                    mono i xs
-                                        | (op `elem` ["and","or"]) ||
-                                          (op == "=>" && i == 1)     = FunApp f xs
-                                        |  op == "not" ||
-                                          (op == "=>" && i == 0)     = FunApp f $ reverse xs
-                                        | otherwise                  = error $ "Z3.discharge': unexpected operator / position pair: " ++ op ++ ", " ++ show i
-                                case differs_by_one xs ys of
-                                    Just (i,x,y) -> do
-                                        discharge' to (Sequent ctx (znot g : asm) h $ 
-                                            mono i [x, y])
-                                    Nothing -> 
-                                        prove to po
-                            | name f == "=" ->
-                                case differs_by_one xs ys of
-                                    Just (_,x,y) -> 
-                                        discharge' to (Sequent ctx (znot g : asm) h $ 
-                                            FunApp f [x, y])
-                                    Nothing -> 
-                                        prove to po
-                        _ -> prove to po
-            _ -> prove to po
-            
+                    (FunApp g0 xs, FunApp g1 ys)
+                        | length xs /= length ys || g0 /= g1 -> Nothing
+                        | name f == "=" -> do
+                            (_,x,y) <- differs_by_one xs ys
+                            return $ apply_monotonicity (Sequent ctx asm' h' $ 
+                                FunApp f [x, y])
+                        | name g0 `elem` ["and","or","not","=>"] &&
+                          name f == "=>" -> do
+                                -- and(0,1), or(0,1), 
+                                --      =>(1)       -> f.x => f.y -> x => y
+                                -- not (0), =>(0)   -> f.x => f.y -> y => x
+                                -- | arithmetic relations are not implement
+                                -- <=(0)            -> f.x => f.y -> y <= x
+                                -- <=(1)            -> f.x => f.y -> x <= y
+                                -- +(0,1),-(0)      -> f.x <= f.y -> x <= y
+                                -- -(1)             -> f.x <= f.y -> y <= x
+                                -- | How would we treat the case of:
+                                -- | context => a+b+x R a+b+y
+                                -- | we need a means to distinguish an 
+                                -- | implication that introduces contextual
+                                -- | information
+                            x <- mono (name f) (name g0) xs ys
+                            return $ apply_monotonicity (Sequent ctx asm' h' x)
+--                            let op = name g0
+--                                mono i xs
+--                                    | (op `elem` ["and","or"]) ||
+--                                        (op == "=>" && i == 1)     = FunApp f xs
+--                                    |  op == "not" ||
+--                                        (op == "=>" && i == 0)     = FunApp f $ reverse xs
+--                                    | otherwise                  = error $ "Z3.discharge': unexpected operator / position pair: " ++ op ++ ", " ++ show i
+--                            in case differs_by_one xs ys of
+--                                Just (i,x,y) -> 
+--                                    apply_monotonicity (Sequent ctx asm h' $ 
+--                                        mono i [x, y])
+--                                Nothing -> 
+--                                    po
+                    _ -> Nothing
+            _ -> Nothing
+    where
+        mono :: String -> String -> [Expr] -> [Expr] -> Maybe Expr
+        mono rel fun xs ys = do
+            f       <- M.lookup (rel, fun) m
+            (i,x,y) <- differs_by_one xs ys
+            g       <- f i
+            return $ g x y
+        m = fromList $
+            [ (("=>","and"),const $ Just zimplies)
+            , (("=>","or"),const $ Just zimplies)
+            , (("=>","not"),const $ Just $ flip zimplies)
+            , (("=>","=>"), \i -> Just $ if i == 0 
+                                         then flip zimplies 
+                                         else zimplies)
+            , (("=>","<="), \i -> Just $ if i == 0 
+                                         then flip zle 
+                                         else zle)
+            , (("<=","+"),const $ Just zle)
+            , (("<=","-"), \i -> Just $ if i == 0 
+                                         then flip zle 
+                                         else zle)
+            ]
 
-prove :: Maybe Int      -- Timeout in seconds
-      -> Sequent        -- 
-      -> IO Validity
-prove n po = do
+discharge' :: Maybe Int      -- Timeout in seconds
+           -> Sequent        -- 
+           -> IO Validity
+discharge' n po = do
         let code = z3_code po
         s <- verify code (maybe 2 id n)
         case s of
