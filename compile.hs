@@ -7,6 +7,8 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
+import Data.Char
+
 import System.Directory
 import System.FilePath
 import System.Timeout
@@ -94,6 +96,21 @@ main = do
                 putStr $ concat xs
                 putStr ys 
                 putStrLn $ (take 60 $ cycle "\b") ++ show c ++ "       "
+                let fnames =    map (break (== ':')) $ 
+                                    -- 
+                                filter (any isLetter . (take 1)) $      
+                                    -- to keep only the first line of each error
+                                    -- messages
+                                takeWhile ((/= "<") . (take 1)) $     
+                                    -- in order to break after the 
+                                    -- <no location info> note in the error 
+                                    -- messages
+                                lines ys
+                    lno  = map (takeWhile (/= ':') . drop 1 . snd) fnames
+                    cmds = map (\(ln,fn) -> "edit +" ++ ln ++ " \"" ++ fn ++ "\" --wait") $ 
+                                zip lno $ map fst fnames
+                writeFile "open_errors.bash" $ 
+                    unlines (reverse cmds) ++ "\n"
                 hFlush stdout
                 return ys
             lift $ put ys
