@@ -12,17 +12,21 @@ import System.IO.Unsafe
 
 import Utilities.Format
 
+trace_switch :: MVar (Set a)
 trace_switch = unsafePerformIO (newMVar empty)
 
+is_tracing_on :: IO Bool
 is_tracing_on = do
         sw  <- readMVar trace_switch
         tid <- myThreadId
         return $ tid `member` sw
 
+turn_tracing_on :: IO ()
 turn_tracing_on = modifyMVar_ trace_switch $ \sw -> do
         tid <- myThreadId
         return $ insert tid sw
 
+turn_tracing_off :: IO ()
 turn_tracing_off = modifyMVar_ trace_switch $ \sw -> do
         tid <- myThreadId
         return $ delete tid sw
@@ -39,6 +43,7 @@ trace xs x = unsafePerformIO $ do
 traceM :: Monad m => String -> m ()
 traceM xs = trace xs (return ())
 
+traceIO :: MonadIO m => String -> m ()
 traceIO xs = do
         tid <- liftIO $ myThreadId
         b <- liftIO $ is_tracing_on
@@ -61,6 +66,7 @@ traceBlockIO xs cmd = do
         traceIO $ "end " ++ xs
         return r
 
+with_tracing :: a -> a
 with_tracing x = unsafePerformIO $ do
         b <- is_tracing_on
         if b 
@@ -72,6 +78,7 @@ with_tracing x = unsafePerformIO $ do
             else turn_tracing_off
         return r
 
+with_tracingM :: Monad m => m b -> m b
 with_tracingM cmd = do
         b <- return $ unsafePerformIO is_tracing_on
         let !() = if b 
@@ -83,6 +90,7 @@ with_tracingM cmd = do
                 else unsafePerformIO turn_tracing_off
         return r
 
+with_tracingIO :: MonadIO m => m a -> m a
 with_tracingIO cmd = do
         b <- liftIO $ is_tracing_on
         if b 

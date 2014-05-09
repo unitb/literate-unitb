@@ -30,7 +30,7 @@ get_files path = do
         let ys = map (combine path) xs
         subdirs <- flip filterM ys $ \f -> do
             b <- liftIO $ doesDirectoryExist f
-            return $ b && not (takeFileName f `elem` [".",".."])
+            return $ b && not (takeFileName f `elem` [".","..",".git",".svn"])
         exts <- lift $ gets extensions
         forM_ ys $ \f -> do
             if takeExtension f `elem` exts

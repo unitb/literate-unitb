@@ -51,6 +51,7 @@ observe_with (Obs _ vs) ch t = do
         modifyMVar_ vs $ \vs -> do
             return $ writeChan ch t : vs
 
+test :: IO ()
 test = do
         ch <- newChan :: IO (Chan String)
         o1 <- new_obs (3 :: Int)

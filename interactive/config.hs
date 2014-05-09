@@ -16,8 +16,10 @@ import System.Info
 	-- else
 		-- putStrLn "z3 hasn't been found"
 
+is_os_windows :: Bool
 is_os_windows = "mingw" == take 5 os 
-		
+
+z3_installed :: IO Bool		
 z3_installed = do
 	path <- getEnv "PATH"
 	xs   <- if is_os_windows then do

@@ -118,7 +118,7 @@ seq_to_iseq pos = (a,b)
         (a,b) = runState (compress_map pos) empty
         
 dump_pos :: FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
-dump_pos file pos = do
+dump_pos file pos = do 
         let fn     = file ++ ".state"
             new_po = seq_to_iseq pos
         BS.writeFile fn $ compress $ encodeLazy new_po

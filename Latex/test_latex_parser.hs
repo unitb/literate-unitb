@@ -12,10 +12,14 @@ import Tests.UnitTest
 import Utilities.Format
 import Utilities.Syntactic
 
+path1 :: FilePath
 path1 = "/Users/simonhudon/Documents/ecole/EventB/eventb/trunk/thesis 2/"
     ++ "progress/unit-b-papers/2013-iFM/source/contribution.tex"
 
+path2 :: FilePath
 path2 = "tests/sample.tex"
+
+result2 :: String
 result2 = concat ["Right (fromList [",
             "(\"align\",[]),",
             "(\"calculation\",",
@@ -28,12 +32,19 @@ result2 = concat ["Right (fromList [",
             "(\"theorem\",[])",
             "])"]
 
+path3 :: String
 path3 = "tests/sorted_sequences_err.tex"
+
+result3 :: String
 result3 = "Left [Error \"expected \\\\end{equation}, read '}'\" (29,13)]"
 
+path4 :: String
 path4 = "tests/sorted_sequences.tex"
+
+path5 :: String
 path5 = "tests/integers.tex"
 
+sections :: [String]
 sections = [
     "calculation",
     "theorem",
@@ -43,12 +54,15 @@ sections = [
     "invariant",
     "machine"]
 
+extract_structure :: String -> Either [Error] (M.Map String [LatexDoc])
 extract_structure ct = do
     xs <- latex_structure "" ct
     return (find_env sections xs)
 
+test_case :: (String, IO Bool, Bool)
 test_case = ("latex parser", cases, True)
 
+cases :: IO Bool
 cases = test_cases [
     (Case "sample.tex" (main path2) result2),
     (Case "sorted seq err.tex" (main path3) result3),
@@ -70,10 +84,12 @@ find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) xs
             | otherwise        = fold_doc f m t
         f m t                  = fold_doc f m t
 
+main :: FilePath -> IO String
 main path = do
         ct <- readFile path
         return $ show $ extract_structure ct
 
+tests :: FilePath -> IO String
 tests path = do
         ct <- readFile path
         let x = (do

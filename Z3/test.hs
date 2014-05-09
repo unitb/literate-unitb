@@ -217,6 +217,11 @@ result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
         t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
         m = M.singleton "t" t
 
+fun :: Fun
+pat :: [Type]
+xs  :: [M.Map String GenericType]
+ts  :: S.Set FOType
+
 fun = head $ M.elems (funs set_theory)
 pat    = patterns fun
 xs     = map (M.map as_generic) 
