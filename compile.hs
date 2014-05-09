@@ -1,6 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Tools.BuildSystem
+
+import Control.Concurrent
 
 import Control.Monad
 import Control.Monad.Trans
@@ -8,10 +11,13 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import Data.Char
+import Data.String
+
+import Shelly hiding ( get, put )
 
 import System.Directory
 import System.FilePath
-import System.Timeout
+-- import System.Timeout
 import System.Console.ANSI
 import System.Exit
 import System.IO 
@@ -38,8 +44,33 @@ repeatWhile m = do
         then repeatWhile m
         else return ()
 
+data Event = Timeout | Line String
+    deriving Eq
+        
+keyboard :: MVar Event -> IO ()
+keyboard v = forever $ do
+        xs <- getLine
+        putMVar v $ Line xs
+
+timeout :: MVar () -> MVar Event -> IO ()
+timeout start v = forever $ do
+        () <- takeMVar start
+        threadDelay $ microseconds retry_interval
+        putMVar v $ Timeout
+        
 main :: IO ()
 main = do
+    delay <- newEmptyMVar
+    waitv <- newEmptyMVar
+    forkIO $ keyboard waitv
+    forkIO $ timeout delay waitv
+    let wait = do
+            x <- tryTakeMVar waitv
+            maybe (do
+                putMVar delay ()
+                takeMVar waitv)
+                return
+                x
     flip evalStateT [] $ flip evalStateT init_state $ forever $ do
         b <- didAnythingChange
         if b then do
@@ -60,7 +91,8 @@ main = do
                             if b then do
                                 b <- doesFileExist obj_file
                                 when b $
-                                    void $ system $ format "mv bin/{0} bin/Main.o" obj_file
+                                    void $ shelly $ do
+                                        mv (fromText $ fromString $ format "bin/{0}" obj_file) $ fromText "bin/Main.o"
                                 r <- readProcessWithExitCode 
                                             "ghc" 
                                             (x ++ 
@@ -72,9 +104,11 @@ main = do
     --                                , "-prof", "-caf-all", "-auto-all", "-O2"
                                           -- these are usable with +RTS -p
                                     , "-odir", "bin"]) ""
-                                b <- doesFileExist "bin/Main.o"
+                                b  <- doesFileExist "bin/Main.o"
                                 when b $
-                                    void $ system $ format "mv bin/Main.o bin/{0}" obj_file
+                                    void $ shelly $ do
+                                        mv (fromText "bin/Main.o")
+                                            $ fromText $ fromString (format "bin/{0}" obj_file)
                                 return r
                             else return (ExitSuccess,"","")
                 putStr "compiling..."
@@ -82,6 +116,8 @@ main = do
                 rs <- g $ runEitherT $ mapM compile 
                     [ ["periodic.hs"]
                     , ["compile.hs"]
+                    , ["open_errors.hs"]
+                    , ["find.hs"]
                     , ["test.hs","-threaded"]
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
@@ -107,21 +143,28 @@ main = do
                                     -- messages
                                 lines ys
                     lno  = map (takeWhile (/= ':') . drop 1 . snd) fnames
-                    cmds = map (\(ln,fn) -> "edit +" ++ ln ++ " \"" ++ fn ++ "\" --wait") $ 
+                    is_nb x = case reads x :: [(Int,String)] of
+                                [(_,"")] -> True
+                                _ -> False
+                    cmds = map (\(ln,fn) -> "(" ++ ln ++ ", " ++ show fn ++ ")") $ 
+                                filter (is_nb . fst) $
                                 zip lno $ map fst fnames
-                writeFile "open_errors.bash" $ 
-                    unlines (reverse cmds) ++ "\n"
+                writeFile "compile_errors.txt" $ 
+                    unlines (reverse cmds)
                 hFlush stdout
                 return ys
             lift $ put ys
         else return ()
         ys <- lift $ get
         liftIO $ do
-            xs <- timeout (microseconds retry_interval) getLine
-            if xs == Just "less" then do
+            xs <- wait
+            if xs == Line "less" then do
                 writeFile "errors.txt" ys
                 pc <- runCommand "less errors.txt"
                 void $ waitForProcess pc
+            else if xs == Line "quit" then do
+                t <- myThreadId
+                killThread t
             else return ()
 --            delay (microseconds retry_interval)
         return True

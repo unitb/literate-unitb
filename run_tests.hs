@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Interactive.Config
@@ -8,8 +9,10 @@ import Control.Monad.Error
 
 import GHC.IO.Exception
 
+import Shelly
+
 import System.IO
-import System.Directory
+import System.Directory hiding ( executable )
 import System.Environment
 import System.Process
 
@@ -95,13 +98,14 @@ general = do
 
 specific :: String -> Maybe String -> IO ()
 specific mod_name fun_name = do
-        b <- doesFileExist "test_tmp"
-        when b $ void $ p_system "rm test_tmp"
+        b <- doesFileExist $ executable "test_tmp"
+        when b $ shelly $ do
+            rm_f $ fromText $ executable "test_tmp"
         h <- openFile "test_tmp.hs" WriteMode
         hPrintf h test_prog mod_name
         hClose h
         fix $ \rec -> do
-            b <- doesFileExist "test_tmp"
+            b <- doesFileExist $ executable "test_tmp"
             threadDelay 50000
             if b 
                 then return ()
