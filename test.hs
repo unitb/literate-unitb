@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Monad
@@ -10,7 +11,8 @@ import qualified Document.Test as DOC
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 
-import System.Process
+import Shelly
+
 import System.Directory
 
 import Tests.UnitTest
@@ -31,11 +33,11 @@ main = do
     xs <- getDirectoryContents "."
     let prefix ys = ys `elem` map (take $ length ys) xs
     when (prefix "actual-") $
-        void $ system "rm actual-*.txt"
+        shelly $ rm_f "actual-*.txt"
     when (prefix "expected-") $
-        void $ system "rm expected-*.txt"
+        shelly $ rm_f "expected-*.txt"
     when (prefix "po-") $
-        void $ system "rm po-*.z3"
+        shelly $ rm_f "po-*.z3"
     b <- test_case
     if b 
     then do

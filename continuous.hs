@@ -4,7 +4,7 @@ module Main where
     -- Modules
 import Interactive.Pipeline
 import Interactive.Config
-	
+
 import Document.Document
 
 import Logic.Label
@@ -54,7 +54,7 @@ with_po_map act param = do
                 $ Ser.decode xs
         else return param
         void $ execStateT act param
-		
+
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         d <- gets no_dump
@@ -212,12 +212,12 @@ main = do
                             , reset      = Reset `elem` opts
                             } }
                     if continuous param then do
-                    	run_pipeline xs
-                    	return ()
+                        run_pipeline xs
+                        return ()
                     else
-                    	with_po_map (do
-                    		check_file
-                    		dump_pos) param
+                        with_po_map (do
+                            check_file
+                            dump_pos) param
                     -- with_po_map (do
                         -- check_file
                         -- dump_pos

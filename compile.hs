@@ -98,8 +98,11 @@ main = do
                                             (x ++ 
                                     [ "--make"
                                     , "-W", "-fwarn-missing-signatures"
+                                    , "-fwarn-missing-methods"
+                                    , "-fwarn-tabs"
                                     , "-Werror", "-rtsopts"
                                     , "-hidir", "interface"
+                                    , "-o", dropExtension (head x)
                                     , "-fbreak-on-error"
     --                                , "-prof", "-caf-all", "-auto-all", "-O2"
                                           -- these are usable with +RTS -p
@@ -118,6 +121,9 @@ main = do
                     , ["compile.hs"]
                     , ["open_errors.hs"]
                     , ["find.hs"]
+                    , ["diff_fail.hs"]
+                    , ["modulestruct.hs"]
+                    , ["find_case.hs"]
                     , ["test.hs","-threaded"]
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
@@ -151,6 +157,10 @@ main = do
                                 zip lno $ map fst fnames
                 writeFile "compile_errors.txt" $ 
                     unlines (reverse cmds)
+                xs <- getDirectoryContents "bin"
+                forM_ (filter ((`elem` ["",".exe"]) . takeExtension) xs) $ \x -> do
+                    b <- doesFileExist x
+                    when b $ shelly $ cp (fromString x) "."
                 hFlush stdout
                 return ys
             lift $ put ys

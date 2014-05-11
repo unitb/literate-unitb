@@ -20,8 +20,8 @@ import Text.Printf
 
 p_system :: String -> IO ExitCode
 p_system cmd
-	| is_os_windows = system cmd
-	| otherwise     = system $ "./" ++ cmd
+    | is_os_windows = system cmd
+    | otherwise     = system $ "./" ++ cmd
 
 runRaw :: (MonadIO m, MonadError [Char] m) 
        => [Char] -> String -> [String] -> m ()

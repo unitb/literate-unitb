@@ -30,6 +30,7 @@ data TestCase =
     | POCase String (IO (String, M.Map Label Sequent)) String
     | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
+    | LineSetCase String (IO String) String
 
 diff :: [Char] -> [Char] -> [Char]
 diff xs ys = p6
@@ -142,6 +143,9 @@ test_cases xs =
                        , True  )
         f (StringCase x y z) = return (Nothing, x, y, z, True)
         f (POCase x y z)     = return (Just $ snd `liftM` y, x, fst `liftM` y, z, True)
+        f (LineSetCase x y z) = f (StringCase x 
+                                    ((unlines . sort . lines) `liftM` y) 
+                                    (unlines $ sort $ lines z))
 
 
 disp :: (Typeable a, Show a) => a -> String
