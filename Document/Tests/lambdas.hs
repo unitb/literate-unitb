@@ -60,7 +60,7 @@ part3 :: IO Bool
 part3 = test_cases
             [ (POCase "test 9, verify disjunction rule" (verify path9) result9)
             , (POCase "test 10, error: cyclic proof" (verify path10) result10)
-            , (Case   "test 11, intermediate goals of monotonic simplification" case11 result11)
+            , (LineSetCase   "test 11, intermediate goals of monotonic simplification" case11 result11)
             ]
 
 result0 :: String
@@ -133,7 +133,7 @@ result1 = unlines
      , "  o  m0/evt/FIS/c@prime"
      , "  o  m0/evt/FIS/f@prime"
      , "  o  m0/evt/FIS/n@prime"
-	 , "  o  m0/evt/INV/inv0/goal (63,7)"
+     , "  o  m0/evt/INV/inv0/goal (63,7)"
      , "  o  m0/evt/INV/inv0/hypotheses (63,7)"
      , "  o  m0/evt/INV/inv0/relation (63,7)"
      , "  o  m0/evt/INV/inv0/step (65,1)"
@@ -300,9 +300,10 @@ result3 = unlines
 --     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
-     , " xxx m0/evt/INV/inv6"
+     , "  o  m0/evt/INV/inv6"
+     -- , " xxx m0/evt/INV/inv6"
      , "  o  m0/evt/SCH"
-     , "passed 60 / 61"
+     , "passed 61 / 61"
      ]
 
 path3 :: String

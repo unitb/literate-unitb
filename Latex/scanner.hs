@@ -13,6 +13,11 @@ instance Monad (Scanner a) where
     f >>= gF = comb f gF
     fail s   = Scanner (\(State _ li) -> Left [(Error s li)])
     return x = Scanner (\s -> Right (x,s))
+
+change_errors :: ([Error] -> [Error]) -> Scanner a b -> Scanner a b
+change_errors f (Scanner g) = Scanner h
+    where
+        h s = either (Left . f) Right (g s)
     
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
 comb (Scanner f) gF = Scanner h
@@ -128,7 +133,10 @@ read_tokens :: Scanner a b
             -> (Int,Int) 
             -> Either [Error] b
 read_tokens (Scanner f) fn xs (i,j) = 
-        do  (r, State xs li) <- f (State xs (LI fn i j))
+        do  li <- case xs of 
+                (_,li):_ -> return li
+                _ -> return (LI fn i j)
+            (r, State xs li) <- f (State xs li)
             case xs of 
                 [] -> return r
                 _ -> Left [(Error "expected end of input" li)]

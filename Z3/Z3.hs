@@ -430,7 +430,7 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
         let 
             h' = h
 --            h' = M.insert (label $ fresh "~goal" $ S.map show $ keysSet h) (znot g) h 
-            asm' = znot g : asm
+            asm' = asm ++ [znot g]
         in
         case g of
             Binder Forall (Var nam t:vs) rs ts -> do
@@ -533,8 +533,11 @@ discharge' n po = do
                 fail $ "discharge: " ++ xs
 
 verify :: [Command] -> Int -> IO (Either String Satisfiability)
-verify xs n = do
-        let !code = (unlines $ map (show . as_tree) xs) -- $ [Push] ++ xs ++ [Pop])
+verify ys n = do
+        let xs = concat $ map reverse $ groupBy eq ys
+            !code = (unlines $ map (show . as_tree) xs) -- $ [Push] ++ xs ++ [Pop])
+            eq (Assert _) (Assert _) = True
+            eq _ _                   = False
         (_,out,err) <- feed_z3 code n
         let ln = lines out
         r <- if ln == [] || 
