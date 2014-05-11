@@ -22,7 +22,7 @@ notations :: Notation
 notations = flip precede logic $ foldl combine empty_notation
     [ functions
     , arith
-	, function_notation
+    , function_notation
     , set_notation ] 
 
 assoc :: BinOperator -> BinOperator -> Assoc

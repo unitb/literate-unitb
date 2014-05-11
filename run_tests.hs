@@ -7,6 +7,8 @@ import Interactive.Config
 import Control.Concurrent
 import Control.Monad.Error
 
+import Data.List.Ordered
+
 import GHC.IO.Exception
 
 import Shelly
@@ -83,9 +85,19 @@ general = do
 --                    waitForProcess p2
 --                c1 <- waitForProcess ps
                 c1 <- p_system "test > result.txt"
-                system "echo \"Lines of Haskell code:\" >> result.txt"
-                system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"
-                rawSystem "cat" ["result.txt"]
+                ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
+                zs' <- mapM (liftM (length . lines) . readFile) ys'
+                let ys = "total" : ys'
+                    zs = sum zs' : zs'
+                    n = maximum $ map (length . show) zs
+                    pad xs = replicate (3 + n - length xs) ' ' ++ xs ++ " "
+                    f (n,xs) = pad (show n) ++ xs
+                appendFile "result.txt"
+                    $ unlines 
+                    $ "Lines of Haskell code:"
+                      : (take 6 $ map f $ reverse $ sortOn fst $ zip zs ys)
+                xs <- readFile "result.txt"
+                putStrLn xs
                 return c1
             ExitFailure _ -> do
                 putStrLn "\n***************"

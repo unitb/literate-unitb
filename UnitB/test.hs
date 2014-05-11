@@ -200,27 +200,27 @@ result3 :: [([Var], [Expr])]
 case4 :: IO ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 (case3, result3, case4, result4) = fromJust $ do
-			e0 <- a
-			e1 <- d `mzplus` b
-			e2 <- b `mzplus` c
-			e3 <- c `mzplus` d
-			let arg0 = [a_decl,b_decl,c_decl,d_decl] 
-			let arg1 = [e0,e1,e2,e3]
-			return 
-				( return $ map f $ partition_expr arg0 arg1
-				, [([a_decl],[e0]),([b_decl,c_decl,d_decl],[e2,e3,e1])]
-				, return $ get_partition arg0 arg1
-				, ( [ (0,0), (1,1)
-				    , (2,1), (3,1)
-				    , (4,0), (5,1)
-				    , (6,1), (7,1)]
-				  , [ (a_decl,0), (b_decl,1)
-				    , (c_decl,2), (d_decl,3)]
-				  , [ (e0,4), (e2,6), (e3,7)
-				    , (e1,5)]) )
-	where
-		(a,a_decl) = var "a" int
-		(b,b_decl) = var "b" int
-		(c,c_decl) = var "c" int
-		(d,d_decl) = var "d" int
-		f (xs,ys) = (sort xs, sort ys)
+            e0 <- a
+            e1 <- d `mzplus` b
+            e2 <- b `mzplus` c
+            e3 <- c `mzplus` d
+            let arg0 = [a_decl,b_decl,c_decl,d_decl] 
+            let arg1 = [e0,e1,e2,e3]
+            return 
+                ( return $ map f $ partition_expr arg0 arg1
+                , [([a_decl],[e0]),([b_decl,c_decl,d_decl],[e2,e3,e1])]
+                , return $ get_partition arg0 arg1
+                , ( [ (0,0), (1,1)
+                    , (2,1), (3,1)
+                    , (4,0), (5,1)
+                    , (6,1), (7,1)]
+                , [ (a_decl,0), (b_decl,1)
+                  , (c_decl,2), (d_decl,3)]
+                , [ (e0,4), (e2,6), (e3,7)
+                    , (e1,5)]) )
+    where
+        (a,a_decl) = var "a" int
+        (b,b_decl) = var "b" int
+        (c,c_decl) = var "c" int
+        (d,d_decl) = var "d" int
+        f (xs,ys) = (sort xs, sort ys)

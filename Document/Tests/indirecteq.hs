@@ -54,26 +54,26 @@ case0 = verify 0 path0
 
 result0 :: String
 result0 = unlines 
-	[ " xxx m0/INIT/INV/inv0/assertion/indirect:eq/easy (53,7)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/goal (55,7)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/hypotheses (55,7)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/relation (55,7)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/step (57,1)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/step (59,1)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/step (61,1)"
-	, "  o  m0/INIT/INV/inv0/assertion/new:goal/step (63,1)"
-	, "  o  m0/INIT/INV/inv0/main goal/easy (53,7)"
-	, "  o  m0/INIT/INV/inv1/completeness (78,7)"
-	, "  o  m0/INIT/INV/inv1/part 1/easy (80,2)"
-	, "  o  m0/INIT/INV/inv1/part 2/goal (89,8)"
-	, "  o  m0/INIT/INV/inv1/part 2/hypotheses (89,8)"
-	, "  o  m0/INIT/INV/inv1/part 2/new assumption (84,8)"
-	, "  o  m0/INIT/INV/inv1/part 2/relation (89,8)"
-	, "  o  m0/INIT/INV/inv1/part 2/step (91,2)"
-	, "  o  m0/INIT/INV/inv1/part 2/step (93,2)"
-	, "  o  m0/INIT/INV/inv1/part 2/step (96,2)"
-	, "passed 17 / 18" ]
-	
+    [ " xxx m0/INIT/INV/inv0/assertion/indirect:eq/easy (53,7)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/goal (55,7)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/hypotheses (55,7)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/relation (55,7)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/step (57,1)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/step (59,1)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/step (61,1)"
+    , "  o  m0/INIT/INV/inv0/assertion/new:goal/step (63,1)"
+    , "  o  m0/INIT/INV/inv0/main goal/easy (53,7)"
+    , "  o  m0/INIT/INV/inv1/completeness (78,7)"
+    , "  o  m0/INIT/INV/inv1/part 1/easy (80,2)"
+    , "  o  m0/INIT/INV/inv1/part 2/goal (89,8)"
+    , "  o  m0/INIT/INV/inv1/part 2/hypotheses (89,8)"
+    , "  o  m0/INIT/INV/inv1/part 2/new assumption (84,8)"
+    , "  o  m0/INIT/INV/inv1/part 2/relation (89,8)"
+    , "  o  m0/INIT/INV/inv1/part 2/step (91,2)"
+    , "  o  m0/INIT/INV/inv1/part 2/step (93,2)"
+    , "  o  m0/INIT/INV/inv1/part 2/step (96,2)"
+    , "passed 17 / 18" ]
+    
 case1 :: IO (String, Map Label Sequent)
 case1 = verify_thy path0 "ctx0"
 

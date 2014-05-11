@@ -208,7 +208,7 @@ instance ProofRule Ignore where
 
 instance ProofRule InstantiateHyp where
     proof_po    th  (InstantiateHyp hyp ps proof li) 
-             	lbl (Sequent ctx asm hyps goal) = do
+                lbl (Sequent ctx asm hyps goal) = do
         if hyp `elem` M.elems hyps || hyp `elem` asm then do
             newh <- case hyp of
                 Binder Forall vs r t 
@@ -228,7 +228,7 @@ instance ProofRule InstantiateHyp where
 
 instance ProofRule Keep where
     proof_po    th  (Keep ctx unnamed named proof _) 
-             	lbl (Sequent _ _ _ goal) = do
+                lbl (Sequent _ _ _ goal) = do
         proof_po th proof lbl (Sequent ctx unnamed named goal)
 
 chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator

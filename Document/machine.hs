@@ -721,7 +721,7 @@ collect_refinement = visit_doc []
                                 (zor 
                                     (zimplies (zand p $ znot q) $ primed (variables m) (zor p q))
                                     (zall $  (elems $ new_guard event)
-                                    	  ++ (elems $ action    event))))                                    
+                                          ++ (elems $ action    event))))                                    
                             (constraint $ props m) } } 
             )
         ,   (   "\\replace"

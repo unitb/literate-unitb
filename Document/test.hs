@@ -49,7 +49,7 @@ test = test_cases
 result1 :: String
 result1 = unlines [
         "  o  m/INIT/FIS/in",
-	    "  o  m/enter/FIS/in@prime",
+        "  o  m/enter/FIS/in@prime",
         "  o  m/enter/SCH/goal (21,1)",
         "  o  m/enter/SCH/hypotheses (21,1)",
         "  o  m/enter/SCH/relation (21,1)",

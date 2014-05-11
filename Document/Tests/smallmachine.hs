@@ -68,7 +68,7 @@ case1 = do
 
 result2 :: String
 result2 = (unlines 
-	  [ "  o  m0/INIT/FIS/x"
+      [ "  o  m0/INIT/FIS/x"
       , "  o  m0/INIT/FIS/y"
       , "  o  m0/INIT/INV/inv0"
       , "  o  m0/INIT/INV/inv1"
