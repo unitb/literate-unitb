@@ -58,7 +58,7 @@ basic_theory = empty_theory
 empty_theory :: Theory
 empty_theory = Theory M.empty 
     M.empty M.empty M.empty M.empty 
-    M.empty M.empty [] empty_notation
+    M.empty M.empty [] (with_assoc empty_notation)
 
 data Proof = forall a. ProofRule a => Proof a
     deriving Typeable

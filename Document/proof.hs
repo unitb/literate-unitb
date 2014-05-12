@@ -552,25 +552,8 @@ parse_calc pr = do
             li <- ask
             soft_error [Error "invalid hint" li]
             return $ Tac.with_line_info li $ last_step ztrue
-
-get_table :: ( MonadState System m, MonadReader LineInfo m ) 
-          => Theory
-          -> EitherT [Error] m (Matrix Operator Assoc)
-get_table th = do 
-        let key = sort $ M.keys $ extends th
-        !tb <- lift $ ST.gets parse_table
-        case M.lookup key tb of
-            Just x -> do
-                return x
-            Nothing -> do
-                let !x   = assoc' $ th_notation th
-                    !new = insert key x tb
-                lift $ ST.modify $ \s -> s { parse_table = new }
-                return x
-                                
+                               
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
-
---withProofParam cmd = EitherT $ mapRWST (\r (s0,s1) -> (r,(s0,s1))) $ runEitherT cmd
 
 remove_ref :: [Char] -> [Char]
 remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
@@ -582,12 +565,11 @@ get_expr_with_ctx :: ( Monad m, Monoid b )
                   => Machine
                   -> Context
                   -> [LatexDoc] 
-                  -> EitherT [Error] (RWST LineInfo b (System) m)  Expr
+                  -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_expr_with_ctx m ctx ys = do
-        tb <- get_table $ theory m
         y  <- parse_expr 
                 (context m `merge_ctx` ctx) 
-                (all_notation m) tb
+                (all_notation m)
                 (concatMap flatten_li xs)
         let x = normalize_generics y
         li <- if L.null xs
@@ -612,7 +594,8 @@ get_expr m opt ys = do
                     WithoutFreeDummies -> empty_ctx
         get_expr_with_ctx m ctx ys
 
-get_expression :: (MonadState System m, MonadReader Theory m)
+get_expression :: ( MonadReader Theory m
+                  , MonadState System m )
                => Maybe Type
                -> [LatexDoc]
                -> VisitorT m (Tactic Expr)
@@ -621,7 +604,6 @@ get_expression t ys = do
                 then ask
                 else return $ line_info xs
             th  <- lift $ ask            
-            tb  <- fromEitherM $ get_table th
             sys <- lift $ ST.get
             return $ Tac.with_line_info li $ do
                 ctx <- get_context
@@ -629,7 +611,7 @@ get_expression t ys = do
                         flip evalStateT sys $ 
                         runEitherT $ 
                         parse_expr 
-                            ctx (th_notation th) tb
+                            ctx (th_notation th)
                             (concatMap flatten_li xs)
                 x <- either hard_error return x
                 let cast x = case t of
@@ -667,10 +649,8 @@ get_predicate' :: ( Monad m, Monoid b )
            -> [LatexDoc] 
            -> EitherT [Error] (RWST LineInfo b System m) Expr
 get_predicate' th ctx ys = do
-        tb <- get_table th
-        x  <- parse_expr 
-                ctx
-                (th_notation th) tb
+        x  <- parse_expr ctx
+                (th_notation th)
                 (concatMap flatten_li xs)
         li <- if L.null xs
             then ask
@@ -720,16 +700,14 @@ lift2 cmd = lift $ lift cmd
 predicate :: Maybe Type 
           -> [LatexDoc] 
           -> Notation
-          -> Matrix Operator Assoc
           -> EitherT [Error] (RWST LineInfo () System Tactic) Expr
-predicate t ys n tb = do
+predicate t ys n = do
         ctx <- lift2 $ get_context
         li <- lift $ lift $ if L.null xs
             then get_line_info
             else return $ line_info xs
         x <- parse_expr 
-                ctx
-                n tb
+                ctx n
                 (concatMap flatten_li xs)
         x <- maybe 
             (return $ Right x)

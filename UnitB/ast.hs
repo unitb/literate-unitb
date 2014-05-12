@@ -146,13 +146,12 @@ data System = Sys
         ,  ref_struct   :: Map Label Label
         ,  expr_store   :: ExprStore
         ,  machines     :: Map String Machine
-        ,  parse_table  :: Map [String] (Matrix Operator Assoc)
         ,  theories     :: Map String Theory
         }
     deriving Eq
 
 empty_system :: System
-empty_system = Sys [] M.empty empty_store M.empty 
+empty_system = Sys [] M.empty empty_store 
         M.empty $ M.fromList 
             [ ("sets",set_theory)
             , ("functions",function_theory)

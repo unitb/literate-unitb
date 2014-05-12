@@ -268,7 +268,7 @@ case1 = do
         return $ result
     where
         result = sortBy (compare `on` fst3) $ zip3 xs (map (g0 M.!) xs) (map (g1 M.!) xs)
-        g0   = as_map $ assoc' notations
+        g0   = as_map $ struct notations
         g1   = assoc0
         rs   = M.keys assoc0
         eq x = g0 `lu` x /= g1 `lu` x

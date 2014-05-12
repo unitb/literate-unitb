@@ -8,6 +8,7 @@ import System.Process
 
 import Utilities.Format
 
+main :: IO ()
 main = do
     ls <- getDirectoryContents "."
     let xs = filter (f "actual-") ls

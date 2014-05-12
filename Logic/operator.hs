@@ -47,6 +47,7 @@ data Notation = Notation
     , right_assoc :: [[BinOperator]]
     , relations :: [BinOperator]
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
+    , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
 
 empty_notation :: Notation
@@ -56,11 +57,15 @@ empty_notation = Notation
     , left_assoc = []
     , right_assoc = [] 
     , relations = []
-    , chaining = [] }
+    , chaining = []
+    , struct = undefined }
 
+with_assoc :: Notation -> Notation
+with_assoc n = n { struct = assoc_table n }
+    
 combine :: Notation -> Notation -> Notation
 combine x y 
-    | L.null $ new_ops x `intersect` new_ops y = Notation
+    | L.null $ new_ops x `intersect` new_ops y = with_assoc empty_notation
         { new_ops      = new_ops x ++ new_ops y
         , prec         = prec x ++ prec y
         , left_assoc   = left_assoc x ++ left_assoc y
@@ -78,7 +83,7 @@ precede :: Notation -> Notation -> Notation
 precede x y 
         | L.null $ new_ops x `intersect` new_ops y = 
         let z = (combine x y) in
-            z { 
+            with_assoc z { 
                 prec = prec z ++ [ xs ++ ys | xs <- prec x, ys <- prec y ] }
 --                              ++ [ [[xs], [ys]] | xs <- new_ops x, ys <- new_ops y ] }
 --        Notation
@@ -143,8 +148,8 @@ assoc_graph rs xss = as_matrix_with rs ys
     where
         ys = concatMap (\xs -> [ (x,y) | x <- xs, y <- xs ]) xss
 
-assoc' :: Notation -> Matrix Operator Assoc
-assoc' ops 
+assoc_table :: Notation -> Matrix Operator Assoc
+assoc_table ops 
 --		| not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
         | otherwise   = foldl (G.unionWith join) (G.empty Ambiguous)
@@ -194,7 +199,7 @@ equal = BinOperator "equal" "="     mzeq
 pair  = BinOperator "pair"  "\\mapsto" mzpair
 
 functions :: Notation
-functions = Notation
+functions = with_assoc empty_notation
     { new_ops     = L.map Right [equal,apply,pair]
     , prec = [ L.map (L.map Right)
                      [ [apply]
@@ -221,7 +226,7 @@ equiv   = BinOperator "equiv" "\\equiv"   mzeq
 neg     = UnaryOperator "neg" "\\neg"       mznot
 
 logic :: Notation
-logic = Notation
+logic = with_assoc empty_notation
     { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
     , prec = [    [Left neg] 
                 : L.map (L.map Right)

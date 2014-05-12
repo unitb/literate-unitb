@@ -36,7 +36,7 @@ arithmetic = empty_theory {
         , notation = arith }
 
 arith :: Notation
-arith = Notation
+arith = with_assoc empty_notation
     { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]
     , prec = [ L.map (L.map Right)
                      [ [apply]

@@ -27,11 +27,11 @@ notations = flip precede logic $ foldl combine empty_notation
 
 assoc :: BinOperator -> BinOperator -> Assoc
 assoc x y = unsafePerformIO $ do
-    r <- readIORef assoc_table
+    r <- readIORef assoc_table'
     return $ r G.! (Right x,Right y)
 
-assoc_table :: IORef (Matrix Operator Assoc)
-assoc_table = unsafePerformIO $ newIORef (assoc' notations)
+assoc_table' :: IORef (Matrix Operator Assoc)
+assoc_table' = unsafePerformIO $ newIORef (struct notations)
 
 --chain x y 
 --    | x == equal = y
@@ -42,7 +42,7 @@ assoc_table = unsafePerformIO $ newIORef (assoc' notations)
 
 binds :: UnaryOperator -> BinOperator -> Assoc
 binds x y = unsafePerformIO $ do
-    r <- readIORef assoc_table 
+    r <- readIORef assoc_table' 
     return $ r G.! (Left x,Right y)
 
 assoc0 :: Map (Operator, Operator) Assoc

@@ -272,7 +272,7 @@ domrest     = BinOperator "dom-rest" "\\domres" zdomrest
 domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
 
 function_notation :: Notation
-function_notation = Notation
+function_notation = with_assoc empty_notation
     { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
     , prec = [ L.map (L.map Right) 
                  [ [apply]

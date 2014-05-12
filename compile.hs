@@ -86,13 +86,14 @@ main = do
                         return $ either (:[]) id x
                     compile x = EitherT $ f $ do
                             let src_file = head x
-                                obj_file = addExtension (dropExtension $ src_file) "o"
+                                obj_file = format "bin/{0}" $ addExtension (dropExtension $ src_file) "o"
                             b <- doesFileExist src_file
                             if b then do
                                 b <- doesFileExist obj_file
                                 when b $
                                     void $ shelly $ do
-                                        mv (fromText $ fromString $ format "bin/{0}" obj_file) $ fromText "bin/Main.o"
+                                        mv (fromText $ fromString $ obj_file) 
+                                            $ fromText "bin/Main.o"
                                 r <- readProcessWithExitCode 
                                             "ghc" 
                                             (x ++ 
@@ -111,7 +112,7 @@ main = do
                                 when b $
                                     void $ shelly $ do
                                         mv (fromText "bin/Main.o")
-                                            $ fromText $ fromString (format "bin/{0}" obj_file)
+                                            $ fromText $ fromString obj_file
                                 return r
                             else return (ExitSuccess,"","")
                 putStr "compiling..."

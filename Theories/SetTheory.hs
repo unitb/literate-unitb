@@ -146,7 +146,7 @@ st_subset   = BinOperator "st-subset"   "\\subset" zsubset
 st_superset = BinOperator "st-superset" "\\supset" (flip zsubset)
 
 set_notation :: Notation
-set_notation = Notation
+set_notation = with_assoc empty_notation
     { new_ops     = L.map Right 
                     [ set_union,set_diff,membership
                     , subset,superset,st_subset,st_superset]

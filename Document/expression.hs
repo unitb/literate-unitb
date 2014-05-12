@@ -37,12 +37,11 @@ import Data.Map as M hiding ( map )
 import Data.Monoid
 
 import Utilities.Format
-import Utilities.Graph as G ( empty, (!) )
+import Utilities.Graph as G ( (!) )
 
 data Param = Param 
     { context :: Context
     , notation :: Notation
-    , table :: Matrix Operator Assoc
     , variables :: Map String Var
     }
 
@@ -66,11 +65,10 @@ instance Monad Parser where
     fail x   = Parser $ fail x
 
 runParser :: Context -> Notation 
-          -> Matrix Operator Assoc 
           -> Map String Var
           -> Parser a 
           -> Scanner ExprToken a
-runParser x y z w m = R.runReaderT (fromParser m) (Param x y z w)
+runParser x y w m = R.runReaderT (fromParser m) (Param x y w)
 
 runParserWith :: Param -> Parser a -> Scanner ExprToken a
 runParserWith x m = R.runReaderT (fromParser m) x
@@ -82,7 +80,7 @@ get_notation :: Parser Notation
 get_notation = Parser $ R.asks notation
 
 get_table :: Parser (Matrix Operator Assoc)
-get_table = Parser $ R.asks table
+get_table = Parser $ R.asks (struct . notation)
 
 get_vars :: Parser (Map String Var)
 get_vars = Parser $ R.asks variables
@@ -217,9 +215,10 @@ get_variables :: (Monad m, MonadReader LineInfo m)
               -> EitherT [Error] m [(String, Var)]
 get_variables ctx n cs = do
         LI fn i j <- lift $ ask
-        toks <- hoistEither $ read_tokens (scan_expr n) fn m (i,j)
+        toks <- hoistEither $ read_tokens 
+            (scan_expr n) fn m (i,j)
         xs   <- hoistEither $ read_tokens 
-            (runParser ctx n (G.empty Ambiguous) M.empty vars) 
+            (runParser ctx n M.empty vars) 
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
@@ -579,16 +578,15 @@ parse_expr :: ( Monad m
               , MonadState System m) 
            => Context 
            -> Notation
-           -> Matrix Operator Assoc 
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m Expr
-parse_expr ctx@(Context _ vars _ _ _)  n assoc input = do
+parse_expr ctx@(Context _ vars _ _ _)  n input = do
         li <- lift $ ask
         toks <- hoistEither $ read_tokens (scan_expr n)
             (file_name li) 
             input (line li, column li)
         !e <- hoistEither $ read_tokens 
-            (runParser ctx n assoc vars expr) 
+            (runParser ctx n vars expr) 
             (file_name li) 
             toks 
             (line li, column li)
@@ -608,7 +606,7 @@ parse_oper n c = do
             (file_name li) 
             c (line li, column li)
         !e   <- hoistEither $ read_tokens 
-            (runParser empty_ctx n (G.empty Ambiguous) M.empty
+            (runParser empty_ctx n M.empty
                 oper) 
             (file_name li) 
             toks (line li, column li)
