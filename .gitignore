@@ -9,6 +9,10 @@
 *.so
 *.exe
 .*
+actual-*
+expected-*
+po-*
+*.prof*
 Tests/unitb.synctex.gz(busy)
 bin/
 continuous

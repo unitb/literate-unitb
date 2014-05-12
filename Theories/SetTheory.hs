@@ -158,6 +158,7 @@ set_notation = with_assoc empty_notation
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []
+    , commands    = [Command "\\emptyset" "emptyset" 0 $ const $ Right zempty_set]
     , chaining    = [ ((subset,subset),subset) 
                     , ((subset,st_subset),st_subset)
                     , ((st_subset,subset),st_subset)

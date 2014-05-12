@@ -6,7 +6,7 @@ where
 
     -- Modules
 import Latex.Scanner
-import Latex.Parser hiding (Close,Open)
+import Latex.Parser hiding (Close,Open,Command)
 
 import Logic.Const
 import Logic.Expr
@@ -267,15 +267,12 @@ check_types e =
             Right e -> return e
             Left xs -> fail $ format "type error: {0}" xs
 
-apply_fun_op :: FunOperator -> Expr -> Parser Term
-apply_fun_op fop x = do
-        e <- check_types $ f fop $ Right x
+apply_fun_op :: Command -> Expr -> Parser Term
+apply_fun_op (Command _ _ _ fop) x = do
+        e <- check_types $ fop [Right x]
         return $ Right e
-    where
-        f Domain = zdom
-        f Range  = zran
 
-type Term = Either FunOperator Expr
+type Term = Either Command Expr
 
 primed :: String -> Bool
 primed xs = drop (length xs - 1) xs == "'"
@@ -294,14 +291,24 @@ term = do
                     return "@prime"
                 else
                     return ""
+                n <- get_notation
+                let cmds = zip (map token (commands n)) (commands n)
                 case xs `L.lookup` 
-                        [ ("\\true",Right ztrue)
-                        , ("\\false",Right zfalse)
-                        , ("\\emptyset", Right zempty_set)
-                        , ("\\emptyfun", Right zempty_fun) 
-                        , ("\\dom", Left Domain)
-                        , ("\\ran", Left Range) ] of
-                    Just e  -> return e 
+                        cmds of
+                    Just c@(Command _ _ n f)  -> do
+                        if n == 1 then do
+                            tryP (read_listP [Open Curly])
+                                (\_ -> do
+                                    e <- expr
+                                    read_listP [Close Curly]
+                                    e <- check_types $ f [Right e]
+                                    return $ Right e)
+                                (return $ Left c)
+                        else do
+                            args <- forM [1..n] $ \_ -> do
+                                brackets Curly expr
+                            e <- check_types $ f $ map Right args
+                            return $ Right e
                     Nothing ->
                         if xs `elem` 
                             [ "\\qforall"

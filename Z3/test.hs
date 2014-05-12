@@ -9,7 +9,7 @@ import Logic.Expr
 import Logic.Type
 import Logic.Label
 import Logic.Lambda
-import Logic.Operator
+import Logic.Operator hiding ( Command )
 import Logic.Sequent
 import Logic.Genericity
 

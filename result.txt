@@ -191,7 +191,7 @@
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   19994 total
+   20047 total
     1614 Document/Tests/trainstation.hs
     1044 Document/Tests/lambdas.hs
      956 Document/machine.hs

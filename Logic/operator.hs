@@ -47,6 +47,7 @@ data Notation = Notation
     , right_assoc :: [[BinOperator]]
     , relations :: [BinOperator]
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
+    , commands :: [Command]
     , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
 
@@ -58,6 +59,7 @@ empty_notation = Notation
     , right_assoc = [] 
     , relations = []
     , chaining = []
+    , commands = []
     , struct = undefined }
 
 with_assoc :: Notation -> Notation
@@ -65,18 +67,22 @@ with_assoc n = n { struct = assoc_table n }
     
 combine :: Notation -> Notation -> Notation
 combine x y 
-    | L.null $ new_ops x `intersect` new_ops y = with_assoc empty_notation
+    | L.null (new_ops x `intersect` new_ops y)
+        && L.null (commands x `intersect` commands y)
+        = with_assoc empty_notation
         { new_ops      = new_ops x ++ new_ops y
         , prec         = prec x ++ prec y
         , left_assoc   = left_assoc x ++ left_assoc y
         , right_assoc  = right_assoc x ++ right_assoc y 
         , relations    = relations x ++ relations y
+        , commands     = commands x ++ commands y
         , chaining     = chaining x ++ chaining y }
     | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
     where
         f (Right (BinOperator x _ _))  = x
         f (Left (UnaryOperator x _ _)) = x
-        intersect = intersectBy ((==) `on` f)
+        intersect :: Input a => [a] -> [a] -> [a]
+        intersect = intersectBy ((==) `on` token)
         common = L.map f $ new_ops x `intersect` new_ops y
 
 precede :: Notation -> Notation -> Notation
@@ -85,12 +91,6 @@ precede x y
         let z = (combine x y) in
             with_assoc z { 
                 prec = prec z ++ [ xs ++ ys | xs <- prec x, ys <- prec y ] }
---                              ++ [ [[xs], [ys]] | xs <- new_ops x, ys <- new_ops y ] }
---        Notation
---        { new_ops      = new_ops x ++ new_ops y
---        , prec         =  ++ prec x ++ prec y
---        , left_assoc   = left_assoc x ++ left_assoc y
---        , right_assoc  = right_assoc x ++ right_assoc y }
         | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
     where
         f (Right x) = show x
@@ -130,6 +130,31 @@ instance Show BinOperator where
 
 type Operator = Either UnaryOperator BinOperator
 
+data Command = Command String String Int ([ExprP] -> ExprP)
+
+instance Show Command where
+    show (Command x y n _) = show (x,y,n) -- format str x y
+
+instance Eq Command where
+    (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =
+        (x0,y0,n0) == (x1,y1,n1)
+    
+class Input a where
+    token :: a -> String
+
+instance Input BinOperator where
+    token (BinOperator tok _ _) = tok
+
+instance Input UnaryOperator where
+    token (UnaryOperator tok _ _) = tok
+
+instance Input Command where
+    token (Command tok _ _ _) = tok
+    
+instance Input Operator where
+    token (Left x) = token x
+    token (Right x) = token x
+    
 precedence :: Notation -> Matrix Operator Bool
 precedence ops = m_closure_with (new_ops ops)
         $ concatMap g $ prec ops
@@ -236,6 +261,9 @@ logic = with_assoc empty_notation
     , left_assoc  = [[equiv],[disj],[conj]]
     , right_assoc = []
     , relations   = [equiv,implies,follows]
+    , commands    = 
+        [ Command "\\true" "true" 0 $ const mztrue
+        , Command "\\false" "false" 0 $ const mzfalse ]
     , chaining    = 
         [ ((equiv,implies),implies)
         , ((implies,equiv),implies)
@@ -247,3 +275,4 @@ logic = with_assoc empty_notation
 
 double :: (a,b) -> ((a,a),(b,b))
 double (x,y) = ((x,x),(y,y))
+

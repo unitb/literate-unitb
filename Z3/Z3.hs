@@ -178,7 +178,7 @@ new_prover n_workers = do
                     cmd <- lift $ readChan inCh
                     case cmd of
                         Just (tid, po) -> lift $ do
-                            r <- try (discharge' (Just 2) po)
+                            r <- try (discharge' (Just 4) po)
                             let f e = Left $ show (e :: SomeException)
                                 r'  = either f Right r
                             writeChan outCh (tid,r')
@@ -523,7 +523,7 @@ discharge' :: Maybe Int      -- Timeout in seconds
            -> IO Validity
 discharge' n po = do
         let code = z3_code po
-        s <- verify code (maybe 2 id n)
+        s <- verify code (maybe 4 id n)
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
