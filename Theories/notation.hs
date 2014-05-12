@@ -33,13 +33,6 @@ assoc x y = unsafePerformIO $ do
 assoc_table' :: IORef (Matrix Operator Assoc)
 assoc_table' = unsafePerformIO $ newIORef (struct notations)
 
---chain x y 
---    | x == equal = y
---    | y == equal = x
---    | otherwise  = case M.lookup (x,y) $ fromList (chaining notations) of
---                    Just z -> z
---                    Nothing -> error $ format "chain: operators {0} and {1} don't chain" x y
-
 binds :: UnaryOperator -> BinOperator -> Assoc
 binds x y = unsafePerformIO $ do
     r <- readIORef assoc_table' 

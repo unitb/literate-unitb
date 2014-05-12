@@ -282,5 +282,10 @@ function_notation = with_assoc empty_notation
                  , [ equal ] ]]
     , left_assoc  = [[overload]]
     , right_assoc = [[domrest,domsubt]]
+    , commands    = 
+                [ Command "\\emptyfun" "emptyfun" 0 $ const $ Right zempty_fun
+                , Command "\\dom" "dom" 1 $ zdom . head
+                , Command "\\ran" "ran" 1 $ zran . head
+                ]
     , relations   = []
     , chaining    = []  } 
