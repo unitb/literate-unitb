@@ -19,7 +19,8 @@ test_case = Case "theories with new notation: comp calc" test True
 
 test :: IO Bool
 test = test_cases
-            [ (Case "proving a theorem with the everywhere operator" case0 result0)
+            [ (Case "proving a theorem with the everywhere operator" 
+                case0 result0)
             ]            
 
 path0 :: FilePath

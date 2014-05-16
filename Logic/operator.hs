@@ -83,7 +83,9 @@ combine x y
         f (Left (UnaryOperator x _ _)) = x
         intersect :: Input a => [a] -> [a] -> [a]
         intersect = intersectBy ((==) `on` token)
-        common = L.map f $ new_ops x `intersect` new_ops y
+        common1 = L.map f $ new_ops x `intersect` new_ops y
+        common2 = L.map token $ commands x `intersect` commands y
+        common = common1 `union` common2
 
 precede :: Notation -> Notation -> Notation
 precede x y 
@@ -175,7 +177,7 @@ assoc_graph rs xss = as_matrix_with rs ys
 
 assoc_table :: Notation -> Matrix Operator Assoc
 assoc_table ops 
---		| not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
+--      | not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
         | otherwise   = foldl (G.unionWith join) (G.empty Ambiguous)
                   [ G.map (f LeftAssoc) pm :: Matrix Operator Assoc
@@ -186,11 +188,11 @@ assoc_table ops
     where
         cycles = L.filter (\x -> pm G.! (x,x)) (new_ops ops)
 --        complete = all_ops L.\\ (nub $ new_ops ops)
---        all_ops = nub $	concat (concat (prec ops) 
---					 ++ L.map (L.map Right) (left_assoc ops)
---					 ++ L.map (L.map Right) (right_assoc ops)
---					 ++ L.map (\((x,y),z) -> L.map Right [x,y,z]) (chaining ops))
---				++ L.map Right (relations ops)
+--        all_ops = nub $   concat (concat (prec ops) 
+--                   ++ L.map (L.map Right) (left_assoc ops)
+--                   ++ L.map (L.map Right) (right_assoc ops)
+--                   ++ L.map (\((x,y),z) -> L.map Right [x,y,z]) (chaining ops))
+--              ++ L.map Right (relations ops)
         pm = precedence ops
         lm = left_assoc_graph ops
         rm = right_assoc_graph ops

@@ -1,8 +1,4 @@
-module Document.Tests.Lambdas 
---    ( test_case, test
---    , part0, part1
---    , part2, part3 )
-where
+module Document.Tests.Lambdas where
 
     -- Modules
 import Document.Document
@@ -40,13 +36,17 @@ test = test_cases
             ]            
 part0 :: IO Bool
 part0 = test_cases
-            [ (POCase "test 0, verification, lambda vs empty-fun" (verify path0) result0)
-            , (POCase "test 1, verification, lambda vs ovl, mk-fun" (verify path1) result1)
-            , (POCase "test 2, verification, lambda vs apply" (verify path2) result2)
+            [ (POCase "test 0, verification, lambda vs empty-fun" 
+                (verify path0) result0)
+            , (POCase "test 1, verification, lambda vs ovl, mk-fun" 
+                (verify path1) result1)
+            , (POCase "test 2, verification, lambda vs apply" 
+                (verify path2) result2)
             ]            
 part1 :: IO Bool
 part1 = test_cases
-            [ (POCase "test 3, verification, set comprehension, failed proof" (verify path3) result3)
+            [ (POCase "test 3, verification, set comprehension, failed proof" 
+                (verify path3) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
             ]            
@@ -60,7 +60,8 @@ part3 :: IO Bool
 part3 = test_cases
             [ (POCase "test 9, verify disjunction rule" (verify path9) result9)
             , (POCase "test 10, error: cyclic proof" (verify path10) result10)
-            , (LineSetCase   "test 11, intermediate goals of monotonic simplification" case11 result11)
+            , (LineSetCase   "test 11, intermediate goals of monotonic \
+                              \simplification" case11 result11)
             ]
 
 result0 :: String
@@ -300,10 +301,10 @@ result3 = unlines
 --     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
      , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
-     , "  o  m0/evt/INV/inv6"
-     -- , " xxx m0/evt/INV/inv6"
+     -- , "  o  m0/evt/INV/inv6"
+     , " xxx m0/evt/INV/inv6"
      , "  o  m0/evt/SCH"
-     , "passed 61 / 61"
+     , "passed 60 / 61"
      ]
 
 path3 :: String
@@ -779,7 +780,8 @@ path10 :: String
 path10 = "tests/cubes-t9.tex"
 
 result10 :: String
-result10 = "Left [Error \"A cycle exists in the proof of liveness: prog0, prog1, prog2, prog3\" (1,1)]"
+result10 = "Left [Error \"A cycle exists in the proof of liveness: \
+            \prog0, prog1, prog2, prog3\" (1,1)]"
 
 case11 :: IO String
 case11 = do
@@ -872,7 +874,8 @@ result11 = unlines
     , "(assert (forall ( (f1 (pfun Int Int))"
     , "                  (f2 (pfun Int Int)) )"
     , "                (=> true"
-    , "                    (= (bunion@@Int (dom@@Int@@Int f1) (dom@@Int@@Int f2))"
+    , "                    (= (bunion@@Int (dom@@Int@@Int f1) \
+                                          \(dom@@Int@@Int f2))"
     , "                       (dom@@Int@@Int (ovl@@Int@@Int f1 f2))))))"
     , "(assert (= (dom@@Int@@Int empty-fun@@Int@@Int)"
     , "           empty-set@@Int))"
@@ -909,15 +912,20 @@ result11 = unlines
     , "                  (s1 (set Int))"
     , "                  (x Int) )"
     , "                (=> true"
-    , "                    (=> (and (elem@@Int x s1) (elem@@Int x (dom@@Int@@Int f1)))"
-    , "                        (= (apply@@Int@@Int (dom-rest@@Int@@Int s1 f1) x)"
+    , "                    (=> (and (elem@@Int x s1) \
+                                   \(elem@@Int x (dom@@Int@@Int f1)))"
+    , "                        (= (apply@@Int@@Int (dom-rest@@Int@@Int s1 f1)\
+                                                  \ x)"
     , "                           (apply@@Int@@Int f1 x))))))"
     , "(assert (forall ( (f1 (pfun Int Int))"
     , "                  (s1 (set Int))"
     , "                  (x Int) )"
     , "                (=> true"
-    , "                    (=> (elem@@Int x (set-diff@@Int (dom@@Int@@Int f1) s1))"
-    , "                        (= (apply@@Int@@Int (dom-subt@@Int@@Int s1 f1) x)"
+    , "                    (=> (elem@@Int x\
+                                       \ (set-diff@@Int (dom@@Int@@Int f1)\
+                                                       \ s1))"
+    , "                        (= (apply@@Int@@Int (dom-subt@@Int@@Int s1 f1)\
+                                                  \ x)"
     , "                           (apply@@Int@@Int f1 x))))))"
     , "(assert (forall ( (x Int) )"
     , "                (=> true"
@@ -928,7 +936,9 @@ result11 = unlines
     , "                  (y Int) )"
     , "                (=> true"
     , "                    (= (select (mk-fun@@Int@@Int x y) x2)"
-    , "                       (ite (= x x2) (Just y) (as Nothing (Maybe Int)))))))"
+    , "                       (ite (= x x2)\
+                                 \ (Just y)\
+                                 \ (as Nothing (Maybe Int)))))))"
     , "(assert (forall ( (x Int)"
     , "                  (f1 (pfun Int Int))"
     , "                  (f2 (pfun Int Int)) )"
@@ -941,7 +951,8 @@ result11 = unlines
     , "                  (f1 (pfun Int Int)) )"
     , "                (=> true"
     , "                    (= (select (dom@@Int@@Int f1) x)"
-    , "                       (not (= (select f1 x) (as Nothing (Maybe Int))))))))"
+    , "                       (not (= (select f1 x)\
+                                    \ (as Nothing (Maybe Int))))))))"
     , "(assert (forall ( (y Int)"
     , "                  (f1 (pfun Int Int)) )"
     , "                (=> true"
@@ -962,13 +973,19 @@ result11 = unlines
     , "                  (y Int) )"
     , "                (=> true"
     , "                    (=> (not (= x x2))"
-    , "                        (= (apply@@Int@@Int (ovl@@Int@@Int f1 (mk-fun@@Int@@Int x y)) x2)"
+    , "                        (= (apply@@Int@@Int\
+                                  \ (ovl@@Int@@Int\
+                                     \ f1\
+                                     \ (mk-fun@@Int@@Int x y))\
+                                  \ x2)"
     , "                           (apply@@Int@@Int f1 x2))))))"
     , "(assert (forall ( (f1 (pfun Int Int))"
     , "                  (x Int)"
     , "                  (y Int) )"
     , "                (=> true"
-    , "                    (= (apply@@Int@@Int (ovl@@Int@@Int f1 (mk-fun@@Int@@Int x y)) x)"
+    , "                    (= (apply@@Int@@Int\
+                              \ (ovl@@Int@@Int f1 (mk-fun@@Int@@Int x y))\
+                              \ x)"
     , "                       y))))"
     , "(assert (= (ran@@Int@@Int empty-fun@@Int@@Int)"
     , "           empty-set@@Int))"
@@ -978,8 +995,11 @@ result11 = unlines
     , "                    (= (elem@@Int y (ran@@Int@@Int f1))"
     , "                       (exists ( (x Int) )"
     , "                               (and true"
-    , "                                    (and (elem@@Int x (dom@@Int@@Int f1))"
-    , "                                         (= (apply@@Int@@Int f1 x) y))))))))"
+    , "                                    (and (elem@@Int\
+                                                \ x\
+                                                \ (dom@@Int@@Int f1))"
+    , "                                         (= (apply@@Int@@Int f1 x)\
+                                                 \ y))))))))"
     , "(assert (forall ( (x Int)"
     , "                  (y Int) )"
     , "                (=> true"
@@ -989,7 +1009,8 @@ result11 = unlines
     , "                  (f2 (pfun Int Int)) )"
     , "                (=> true"
     , "                    (subset@@Int (ran@@Int@@Int (ovl@@Int@@Int f1 f2))"
-    , "                                 (bunion@@Int (ran@@Int@@Int f1) (ran@@Int@@Int f2))))))"
+    , "                                 (bunion@@Int (ran@@Int@@Int f1)\
+                                                   \ (ran@@Int@@Int f2))))))"
     , "(assert (forall ( (x Int)"
     , "                  (y Int) )"
     , "                (=> true (= (elem@@Int x (mk-set@@Int y)) (= x y)))))"
@@ -1021,7 +1042,8 @@ result11 = unlines
     , "                (=> true"
     , "                    (= (subset@@Int s1 s2)"
     , "                       (forall ( (x Int) )"
-    , "                               (=> true (=> (elem@@Int x s1) (elem@@Int x s2))))))))"
+    , "                               (=> true (=> (elem@@Int x s1)\
+                                                 \ (elem@@Int x s2))))))))"
     , "(assert (forall ( (s1 (set Int))"
     , "                  (s2 (set Int)) )"
     , "                (=> true"
@@ -1031,7 +1053,11 @@ result11 = unlines
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
-    , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "                          (then (using-params\
+                                      \ simplify\
+                                      \ :expand-power\
+                                      \ true)\
+                                     \ smt)))"
     ]
 
 verify :: FilePath -> IO (String, Map Label Sequent)

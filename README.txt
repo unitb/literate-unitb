@@ -35,7 +35,7 @@ In order to compile Literate Unit-B, you need a number of Haskell libraries whic
 	
 The command to install the libraries is:
 
-	cabal install either MissingH cereal ansi-terminal data-ordlist timeit zlib
+	cabal install either MissingH cereal ansi-terminal data-ordlist timeit zlib shelly
 	
 Z3
 ==

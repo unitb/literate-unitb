@@ -67,6 +67,9 @@ import           Utilities.Trace
 z3_path :: String
 z3_path = "z3"
 
+default_timeout :: Int
+default_timeout = 15
+
 instance Tree Command where
     as_tree (Push)        = List [Str "push"]
     as_tree (Pop)         = List [Str "pop"]
@@ -178,7 +181,7 @@ new_prover n_workers = do
                     cmd <- lift $ readChan inCh
                     case cmd of
                         Just (tid, po) -> lift $ do
-                            r <- try (discharge' (Just 4) po)
+                            r <- try (discharge' (Just default_timeout) po)
                             let f e = Left $ show (e :: SomeException)
                                 r'  = either f Right r
                             writeChan outCh (tid,r')
@@ -431,6 +434,7 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
             h' = h
 --            h' = M.insert (label $ fresh "~goal" $ S.map show $ keysSet h) (znot g) h 
             asm' = asm ++ [znot g]
+            --asm' = znot g : asm
         in
         case g of
             Binder Forall (Var nam t:vs) rs ts -> do
@@ -523,7 +527,7 @@ discharge' :: Maybe Int      -- Timeout in seconds
            -> IO Validity
 discharge' n po = do
         let code = z3_code po
-        s <- verify code (maybe 4 id n)
+        s <- verify code (maybe default_timeout id n)
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid

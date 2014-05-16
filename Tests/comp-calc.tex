@@ -31,20 +31,21 @@
 
 \newset{G}{\G}
 
-\with{functions}
-\dummy{ x,s,t : \G }
-\operator{;}{ seq : Pair [\G, \G] \pfun \G }
-\operator{\pneg}{ pneg : \G \pfun \G }
-\operator{\por}{ por : Pair [\G, \G] \pfun \G }
-\operator{\pand}{ pand : Pair [\G, \G] \pfun \G }
-\operator{\pimplies}{ pimplies : Pair [\G, \G] \pfun \G }
-\operator{\pequiv}{ pequiv : Pair [\G, \G] \pfun \G } 
-\precedence{[[\pequiv],[\pimplies],[\por,\pand],[\pneg],[;]]}
- 
-\constant{ one, pfalse, ptrue, F, E : \G }
+\with{functions} \with{predcalc}
+\dummy{ x,s,t : \pred[\G] }
+\operator{;}{ seq : Pair [\pred[\G], \pred[\G]] \pfun \pred[\G] }
+% \operator{\pneg}{ pneg : \G \pfun \G }
+% \operator{\por}{ por : Pair [\G, \G] \pfun \G }
+% \operator{\pand}{ pand : Pair [\G, \G] \pfun \G }
+% \operator{\pimplies}{ pimplies : Pair [\G, \G] \pfun \G }
+% \operator{\pequiv}{ pequiv : Pair [\G, \G] \pfun \G } 
+% \precedence{[[\pequiv],[\pimplies],[\por,\pand],[\pneg],[;]]}
+\precedence{[[;],[\pneg],[\por,\pand],[\pimplies],[\pequiv]]}
+% 
+\constant{ one, F, E : \pred [\G] }
 
 \axiom{axm0}{ \qforall{x}{}{ \ew{ x ; one \1\pimplies x } } }
-\theorem{CC:10i}{ \qforall{s}{}{ s ; pfalse = s \pand E } }
+\theorem{CC:10i}{ \qforall{s}{}{ \ew{ s ; \pfalse \pequiv s \pand E } } }
 
 \end{context}
 

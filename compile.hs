@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
@@ -120,11 +121,11 @@ main = do
                 rs <- g $ runEitherT $ mapM compile 
                     [ ["periodic.hs"]
                     , ["compile.hs"]
-                    , ["open_errors.hs"]
+                    , ["open_errors.hs","-threaded"]
                     , ["find.hs"]
                     , ["diff_fail.hs"]
                     , ["modulestruct.hs"]
-                    , ["find_case.hs"]
+                    , ["find_case.hs","-threaded"]
                     , ["test.hs","-threaded"]
                     , ["continuous.hs","-threaded"]
                     , ["verify.hs"]
@@ -153,7 +154,7 @@ main = do
                     is_nb x = case reads x :: [(Int,String)] of
                                 [(_,"")] -> True
                                 _ -> False
-                    cmds = map (\(ln,fn) -> "(" ++ ln ++ ", " ++ show fn ++ ")") $ 
+                    cmds = map (\(ln,fn) -> "(" ++ show fn ++ ", " ++ ln ++ ")") $ 
                                 filter (is_nb . fst) $
                                 zip lno $ map fst fnames
                 writeFile "compile_errors.txt" $ 

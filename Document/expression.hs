@@ -1,12 +1,13 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards    #-}
 module Document.Expression 
     ( parse_expr, oper
     , get_variables, parse_oper )
 where
 
     -- Modules
-import Latex.Scanner
-import Latex.Parser hiding (Close,Open,Command)
+import Latex.Scanner -- hiding (many)
+import Latex.Parser  hiding (Close,Open,Command)
 
 import Logic.Const
 import Logic.Expr
@@ -28,6 +29,7 @@ import           Control.Monad.Reader.Class
 import           Control.Monad.State.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Maybe
 import qualified Control.Monad.Trans.Reader as R
 
 import Data.Char
@@ -45,7 +47,7 @@ data Param = Param
     , variables :: Map String Var
     }
 
-data Parser a = Parser { fromParser :: (R.ReaderT Param (Scanner ExprToken) a) }
+data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
 
 data Bracket = Curly | QuotedCurly | Round | Square
     deriving (Eq, Show)
@@ -62,28 +64,34 @@ data ExprToken =
 instance Monad Parser where
     Parser m0 >>= f = Parser $ m0 >>= (fromParser . f)
     return x = Parser $ return x
-    fail x   = Parser $ fail x
+    fail x   = Parser $ lift $ fail x
 
+instance MonadPlus Parser where
+    Parser m0 `mplus` Parser m1 = Parser $ m0 `mplus` m1
+    mzero = Parser mzero
+    
 runParser :: Context -> Notation 
           -> Map String Var
           -> Parser a 
           -> Scanner ExprToken a
-runParser x y w m = R.runReaderT (fromParser m) (Param x y w)
+runParser x y w m = runParserWith (Param x y w) m
 
 runParserWith :: Param -> Parser a -> Scanner ExprToken a
-runParserWith x m = R.runReaderT (fromParser m) x
+runParserWith x m = do
+        x <- R.runReaderT (runMaybeT $ fromParser m) x
+        maybe (fail "runParserWith: unmatched lookahead") return x
 
 get_context :: Parser Context 
-get_context = Parser $ R.asks context
+get_context = context `liftM` get_params
 
 get_notation :: Parser Notation
-get_notation = Parser $ R.asks notation
+get_notation = notation `liftM` get_params
 
 get_table :: Parser (Matrix Operator Assoc)
-get_table = Parser $ R.asks (struct . notation)
+get_table = (struct . notation) `liftM` get_params
 
 get_vars :: Parser (Map String Var)
-get_vars = Parser $ R.asks variables
+get_vars = variables `liftM` get_params
 
 with_vars :: [(String, Var)] -> Parser b -> Parser b
 with_vars vs cmd = do
@@ -95,15 +103,34 @@ with_vars vs cmd = do
                 s { variables = fromList vs `M.union` variables }
 
 get_params :: Parser Param
-get_params = Parser R.ask
+get_params = Parser $ lift R.ask
+
+look_aheadP :: Parser a -> Parser Bool
+look_aheadP = liftHOF look_ahead
 
 liftP :: Scanner ExprToken a -> Parser a
-liftP = Parser . lift
+liftP = Parser . lift . lift
 
-liftHOF :: (Scanner ExprToken a -> Scanner ExprToken b) -> Parser a -> Parser b
+-- many :: Parser a -> Parser [a]
+-- many m = do
+
+liftHOF :: (   Scanner ExprToken a
+            -> Scanner ExprToken b )
+        -> Parser a -> Parser b
 liftHOF f m = do
         x <- get_params
         liftP $ f $ runParserWith x m
+
+tryP :: Parser a -> (a -> Parser b) -> Parser b -> Parser b
+tryP m0 m1 m2 = do
+        x <- get_params
+        let run m = R.runReaderT (runMaybeT $ fromParser m) x
+        Parser $ MaybeT $ R.ReaderT $ const $ try 
+            (run m0) 
+            (\k -> case k of
+                    Just x  -> run $ m1 x
+                    Nothing -> run m2)
+            (run m2)
 
 match_char :: (a -> Bool) -> Scanner a a
 match_char p = read_if p return (fail "")
@@ -167,7 +194,7 @@ word_or_command = do
 type_t :: Parser Type
 type_t = do
         t  <- word_or_command
-        b1 <- liftHOF look_ahead $ read_listP [Open Square]
+        b1 <- look_aheadP $ read_listP [Open Square]
         ts <- if b1
             then do
                 read_listP [Open Square]
@@ -179,7 +206,7 @@ type_t = do
         t <- case get_type ctx t of
             Just s -> return $ Gen (USER_DEFINED s ts)
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
-        b2 <- liftHOF look_ahead $ read_listP [ Ident "\\pfun" ]               
+        b2 <- look_aheadP $ read_listP [ Ident "\\pfun" ]               
         if b2 
         then do
             maybe 
@@ -339,11 +366,6 @@ term = do
                                     , ("\\qfun",Binder Lambda) 
                                     , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] M.! xs }
                                 return $ Right (quant vs r t)
-                        else if xs == "\\ew"
-                        then do
-                            e <- brackets Curly expr
-                            e <- check_types $ zeverywhere $ Right e
-                            return $ Right e
                         else if xs == "\\oftype"
                         then do
                             e <- brackets Curly expr
@@ -384,14 +406,6 @@ open_curly = read_listP [Open QuotedCurly]
 close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
 
-tryP :: Parser a -> (a -> Parser b) -> Parser b -> Parser b
-tryP m0 m1 m2 = do
-        x <- get_params
-        liftP $ try 
-            (runParserWith x m0)
-            (\k -> runParserWith x (m1 k))
-            (runParserWith x m2)
-
 sep1P :: Parser a -> Parser b -> Parser [a]
 sep1P m0 m1 = do
         x <- get_params
@@ -399,10 +413,10 @@ sep1P m0 m1 = do
             (runParserWith x m0)
             (runParserWith x m1)
 
-choose_la :: [(Parser b, Parser a)] -> Parser a -> Parser a
-choose_la ((x,y):xs) cmd = do
-        tryP x (const y) $ choose_la xs cmd
-choose_la [] cmd = cmd
+choose_la :: [Parser a] -> Parser a
+choose_la (x:xs) = do
+        x `mplus` choose_la xs
+choose_la [] = mzero
 
 add_context :: String -> Parser a -> Parser a
 -- add_context msg cmd = do
@@ -410,6 +424,12 @@ add_context :: String -> Parser a -> Parser a
     -- let e = Error msg li
     -- liftHOF (change_errors (e:)) cmd
 add_context _ cmd = cmd
+
+attempt :: Parser a -> Parser a
+attempt cmd = do
+        tryP cmd 
+            return 
+            (Parser $ fail (error "Expression.attempt: shouldn't be evaluated"))
             
 expr :: Parser Expr
 expr = do
@@ -423,31 +443,32 @@ expr = do
         read_term xs = do
             us <- liftHOF many unary
             choose_la 
-                [ (     open_brack
-                  , do  e <- expr
+                [ do    attempt open_brack
+                        e <- expr
                         close_brack
                         add_context "parsing (" $
-                            read_op xs us (Right e) )
-                , (     open_curly
-                  , do  rs <- sep1P expr comma
+                            read_op xs us (Right e) 
+                , do    attempt open_curly
+                        rs <- sep1P expr comma
                         close_curly
                         e <- check_types $ zset_enum $ map Right rs
                         add_context "parsing \\{" $
-                            read_op xs us $ Right e ) ]
-                (   add_context ("ready for <term>: " ++ show xs) $
-                    do  t <- term
-                        add_context ("parsed <term>: " ++ show t) $
-                            read_op xs us t)
+                            read_op xs us $ Right e 
+                ,   add_context ("ready for <term>: " ++ show xs) $
+                        do  t <- term
+                            add_context ("parsed <term>: " ++ show t) $
+                                read_op xs us t
+                ]
         read_op :: [([UnaryOperator], Term, BinOperator)] 
                 -> [UnaryOperator] 
                 -> Term 
                 -> Parser Term
         read_op xs us e0 = do
             b1 <- liftP $ is_eof
-            b2 <- liftHOF look_ahead close_brack
-            b3 <- liftHOF look_ahead close_curly
-            b4 <- liftHOF look_ahead comma
-            b5 <- liftHOF look_ahead (read_listP [Close Curly])
+            b2 <- look_aheadP close_brack
+            b3 <- look_aheadP close_curly
+            b4 <- look_aheadP comma
+            b5 <- look_aheadP (read_listP [Close Curly])
             if b1 || b2 || b3 || b4 || b5
             then do
                 reduce_all xs us e0

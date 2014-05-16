@@ -22,6 +22,7 @@ import UnitB.PO
 import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
+import Theories.PredCalc
 
     -- Libraries
 import Control.Monad.Trans
@@ -97,12 +98,13 @@ ctx_declarations _ = visit_doc []
                                     (dummies th) }
             )
         ,   (   "\\precedence"
-            ,   CmdBlock $ \(ops,()) th -> do  -- with_tracingM $ do
-                    li <- lift $ ask
-                    let f x   = (name x, x)
+            ,   CmdBlock $ \(ops,()) th -> do
+                    li <- lift ask
+                    let msg   = "invalid operator: '{0}'"
+                        f x   = (name x, x)
                         notat = notation th
-                        xs    = L.map f $ new_ops notat
-                        g (String x) = maybe (left [Error ("invalid operator: '" ++ x ++ "'") li])
+                        xs    = L.map f $ new_ops $ th_notation th
+                        g (String x) = maybe (left [Error (format msg x) li])
                                     return $ L.lookup (strip x) xs
                     ops <- toEither $ mapM (mapM $ fromEither undefined . g) ops
 --                    traceM $ show ops
@@ -148,17 +150,18 @@ ctx_imports :: Monad m
 ctx_imports _ = visit_doc []
             [   ( "\\with"
                 , CmdBlock $ \(String th_name,()) th -> do
-                    toEither $ error_list
-                        [ ( not (th_name `elem` ["sets","functions","arithmetic"])
-                          , format "Undefined theory {0} " th_name )
-                        ]
-                    let new_th = case th_name of
-                                "sets"       -> set_theory
-                                "functions"  -> function_theory
-                                "arithmetic" -> arithmetic
-                                _ -> error "imports"
-                    return th {
-                                extends = insert th_name new_th $ extends th }
+                    let all_th = [ ("sets"       , set_theory)
+                                 , ("functions"  , function_theory)
+                                 , ("arithmetic" , arithmetic)
+                                 , ("predcalc"   , pred_calc) ]
+                        msg = "Undefined theory {0} "
+                    li <- lift $ ask
+                    case th_name `L.lookup` all_th of
+                        Nothing -> left [Error (format msg th_name) li]
+                        Just new_th -> 
+                            return th {
+                                        extends = insert th_name new_th 
+                                            $ extends th }
                 )
         ,   (   "\\operator"
             ,   CmdBlock $ \(String name,optype,()) th -> do

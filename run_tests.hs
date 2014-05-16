@@ -8,6 +8,7 @@ import Control.Concurrent
 import Control.Monad.Error
 
 import Data.List.Ordered
+import Data.Time
 
 import GHC.IO.Exception
 
@@ -19,6 +20,8 @@ import System.Environment
 import System.Process
 
 import Text.Printf
+
+import Utilities.Format
 
 p_system :: String -> IO ExitCode
 p_system cmd
@@ -40,6 +43,7 @@ run phase cmd  = do
     case c of
         ExitSuccess -> return ()
         ExitFailure _ -> throwError ("phase '" ++ phase ++ "' failed")
+
 general :: IO ExitCode
 general = do
 --        let compile x = readProcessWithExitCode "ghc" (x ++ 
@@ -84,7 +88,9 @@ general = do
 --                        hFlush h
 --                    waitForProcess p2
 --                c1 <- waitForProcess ps
+                t0 <- getCurrentTime
                 c1 <- p_system "test > result.txt"
+                t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
                 zs' <- mapM (liftM (length . lines) . readFile) ys'
                 let ys = "total" : ys'
@@ -92,10 +98,14 @@ general = do
                     n = maximum $ map (length . show) zs
                     pad xs = replicate (3 + n - length xs) ' ' ++ xs ++ " "
                     f (n,xs) = pad (show n) ++ xs
+                -- map (pad . show) 
                 appendFile "result.txt"
                     $ unlines 
                     $ "Lines of Haskell code:"
-                      : (take 6 $ map f $ reverse $ sortOn fst $ zip zs ys)
+                       : (take 6 $ map f $ reverse $ sortOn fst $ zip zs ys)
+                      ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) 60 in 
+                                format "{0}m {1}s" m s)]
+                -- system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"
                 xs <- readFile "result.txt"
                 putStrLn xs
                 return c1

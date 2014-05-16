@@ -24,7 +24,7 @@ main = do
                     let p (_,ln) = xs `isInfixOf` ln
                     return $ zip (map fst $ filter p zs) $ repeat f)
                 forM_ ys $ \(n,fn) -> do
-                    edit n fn
+                    open_at n fn
                     fix $ \rec -> do
                         xs <- getLine
                         if xs /= ":q" then do

@@ -264,7 +264,7 @@ unify t0 t1 = do
 
         same_soure (x,_) (y,_) = x == y 
         f ( (x,y):xs ) = (x,y:map snd xs)
-        f [] 		   = error "Genericity.unify.f: expecting non empty argument"
+        f []           = error "Genericity.unify.f: expecting non empty argument"
         g x = (x,[])
 
     -- merge type instances

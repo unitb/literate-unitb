@@ -292,8 +292,8 @@ merge :: (Ord k, Eq a, Show k, Show a)
 merge m0 m1 = unionWithKey f m0 m1
     where
         f k x y
-            | x == y 	= x
-			| otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
+            | x == y    = x
+            | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
 merge_all :: (Ord k, Eq a, Show k, Show a)
           => [Map k a] -> Map k a

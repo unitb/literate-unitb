@@ -17,5 +17,5 @@ goto_definition scope symbol = do
             p x   = take (length ys) x == ys
             zs    = map (drop $ length ys) $ filter p $ lines xs
             f xs  = reverse $ take 2 $ split ":" xs 
-            cmd xs = edit (read $ xs !! 0) (xs !! 1)
+            cmd xs = open_at (read $ xs !! 0) (xs !! 1)
         mapM_  (cmd . f) zs

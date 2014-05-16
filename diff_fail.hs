@@ -3,8 +3,9 @@ module Main where
 import Data.Function
 import Data.List
 
+import Interactive.Config
+
 import System.Directory
-import System.Process
 
 import Utilities.Format
 
@@ -23,8 +24,7 @@ main = do
             b1 <- doesFileExist file1
             b2 <- doesFileExist file2
             if b1 && b2 then do
-                system $ format "fc {0} {1}" file1 file2
-                getLine
+                diff file1 file2
                 return ()
             else return ()
             proc (n+1) (delete file1 xs) (delete file2 ys)

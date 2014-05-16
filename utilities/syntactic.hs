@@ -40,7 +40,7 @@ with_li li = either (\x -> Left [Error x li]) Right
 
 report :: Error -> String
 report (Error msg (LI _ i j)) = format "error ({0},{1}): {2}" i j msg
-	
+
 makeReport :: MonadIO m => EitherT [Error] m String -> m String
 makeReport m = eitherT f return m
     where    

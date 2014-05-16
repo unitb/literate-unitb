@@ -16,7 +16,7 @@ import Data.Typeable
 import Utilities.Syntactic
 import Utilities.HeterogenousEquality
 
-
+    -- Obsolete doc:
     -- the use of gen_param is tricky. Be careful
     -- generic functions should have type variables in them
     -- to match those type variables, we use the generic 
