@@ -751,27 +751,24 @@ collect_refinement = visit_doc []
             )
         ,   (   "\\replace"
             ,   CmdBlock $ \(evt,del,add,keep,prog,saf,()) m -> do
-                    toEither $ error_list
-                        [ ( not (evt `member` events m)
-                            , format "event '{0}' is undeclared" evt )
-                        ]
-                    let old_event = events m ! evt
-                        sc        = scheds old_event
+                    old_event <- bind
+                        (format "event '{0}' is undeclared" evt)
+                        $ evt `M.lookup` events m
+                    let sc        = scheds old_event
                         lbls      = (S.elems $ add `S.union` del `S.union` keep)
                         progs     = progress (props m) `union` progress (inh_props m)
                         safs      = safety (props m) `union` safety (inh_props m)
-                    toEither $ do
-                        error_list $ flip map lbls $ \lbl ->
-                            ( not $ lbl `member` sc
-                                , format "'{0}' is not a valid schedule" lbl )
-                        error_list
-                            [ ( not $ prog `member` progs
-                              , format "'{0}' is not a valid progress property" prog )
-                            , ( not $ saf `member` safs
-                              , format "'{0}' is not a valid safety property" saf )
-                            ]
+                    _     <- bind_all lbls
+                        (format "'{0}' is not a valid schedule")
+                        $ (`M.lookup` sc)
+                    pprop <- bind 
+                        (format "'{0}' is not a valid progress property" prog)
+                        $ prog `M.lookup` progs
+                    sprop <- bind
+                        (format "'{0}' is not a valid safety property" saf)
+                        $ saf `M.lookup` safs
                     let n         = length $ sched_ref old_event
-                        rule      = (replace evt (prog,progs!prog) (saf,safs!saf)) 
+                        rule      = (replace evt (prog,pprop) (saf,sprop)) 
                                     { remove = del
                                     , add = add
                                     , keep = keep }
@@ -787,17 +784,14 @@ collect_refinement = visit_doc []
             )
         ,   (   "\\weakento"
             ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label,()) m -> do
-                    toEither $ error_list
-                        [ ( not (evt `member` events m)
-                            , format "event '{0}' is undeclared" evt )
-                        ]
-                    let old_event = events m ! evt
-                        sc        = scheds old_event
+                    old_event <- bind
+                        (format "event '{0}' is undeclared" evt)
+                        $ evt `M.lookup` events m
+                    let sc        = scheds old_event
                         lbls      = (S.elems $ add `S.union` del)
-                    toEither $ do
-                        error_list $ flip map lbls $ \lbl ->
-                            ( not $ lbl `member` sc
-                                , format "'{0}' is not a valid schedule" lbl )
+                    _     <- bind_all lbls
+                        (format "'{0}' is not a valid schedule")
+                        $ (`M.lookup` sc)
                     let n         = length $ sched_ref old_event
                         rule      = (weaken evt)
                                     { remove = del
@@ -815,26 +809,25 @@ collect_refinement = visit_doc []
             )
         ,   (   "\\replacefine"
             ,   CmdBlock $ \(evt, keep, old, new, prog, ()) m -> do
-                    toEither $ error_list
-                        [ ( not (evt `member` events m)
-                            , format "event '{0}' is undeclared" evt )
-                        ]
-                    let old_event = events m ! evt
-                        sc        = scheds old_event
-                        lbls      = (maybeToList new ++ maybeToList old ++ S.elems keep)
+                    old_event <- bind
+                        (format "event '{0}' is undeclared" evt)
+                        $ evt `M.lookup` events m
+                    let sc        = scheds old_event
                         progs     = progress (props m) `union` progress (inh_props m)
-                    toEither $ do
-                        error_list $ flip map lbls $ \lbl ->
-                            ( not $ lbl `member` sc
-                                , format "'{0}' is not a valid schedule" lbl )
-                        error_list
-                            [ ( not $ prog `member` progs
-                              , format "'{0}' is not a valid progress property" prog )
-                            ]
+                    _     <- bind_all (S.elems keep)
+                        (format "'{0}' is not a valid schedule")
+                        $ (`M.lookup` sc)
+                    pprop <- bind 
+                        (format "'{0}' is not a valid progress property" prog)
+                        $ prog `M.lookup` progs
+                    old_exp <- bind
+                        (format "'{0}' is not a valid schedule" $ M.fromJust old)
+                        $ maybe (Just ztrue) (`M.lookup` sc) old
+                    new_exp <- bind 
+                        (format "'{0}' is not a valid schedule" $ M.fromJust new)
+                        $ maybe (Just ztrue) (`M.lookup` sc) new
                     let n         = length $ sched_ref old_event
-                        old_exp   = maybe ztrue (sc !) old
-                        new_exp   = maybe ztrue (sc !) new
-                        rule      = (replace_fine evt old_exp new new_exp (prog,progs!prog))
+                        rule      = (replace_fine evt old_exp new new_exp (prog,pprop))
 --                                    { add = S.fromList $ maybeToList new
 --                                    , remove = S.fromList $ maybeToList old 
 --                                    , keep = keep }
@@ -851,12 +844,10 @@ collect_refinement = visit_doc []
             )
         ,   (   "\\removeguard"
             ,   CmdBlock $ \(evt, lbls, ()) m -> do
-                    toEither $ error_list
-                        [ ( not (evt `member` events m)
-                            , format "event '{0}' is undeclared" evt )
-                        ]
-                    let old_event = events m ! evt
-                        grd       = guards old_event
+                    old_event <- bind
+                        (format "event '{0}' is undeclared" evt)
+                        $ evt `M.lookup` events m
+                    let grd       = guards old_event
                     toEither $ do
                         error_list $ flip map lbls $ \lbl ->
                             ( not $ lbl `member` grd
@@ -893,10 +884,11 @@ collect_proofs = visit_doc
                             , format "a proof for {0} already exists" lbl )
                         ] 
                     li <- lift $ ask
-                    s  <- maybe
-                            (left [Error (format "proof obligation does not exist: {0} {1}" lbl $ M.keys $ raw_machine_pos m) li])
-                            return
-                            (M.lookup lbl $ raw_machine_pos m)
+                    s  <- bind 
+                        (format "proof obligation does not exist: {0} {1}" 
+                                lbl 
+                                (M.keys $ raw_machine_pos m))
+                        $ lbl `M.lookup` raw_machine_pos m
                     p <- runReaderT (
                             runEitherT $
                             run_visitor li xs $ 

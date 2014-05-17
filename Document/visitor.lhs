@@ -35,7 +35,8 @@ module Document.Visitor
     , run_visitor
     , add_state
     , add_writer
-    , lift_i, bind
+    , lift_i
+    , bind, bind_all
     , insert_new
     , get_content
     , with_content )
@@ -64,6 +65,7 @@ import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
 import           Data.Char
 import           Data.List as L
 import qualified Data.Map as M
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Set hiding (map)
 import           Data.String.Utils
@@ -401,6 +403,22 @@ bind msg Nothing = do
         li <- ask
         left [Error msg li]
 bind _ (Just x) = return x
+
+bind_all :: Monad m
+         => [a]
+         -> (a -> String) 
+         -> (a -> Maybe b)
+         -> EitherT [Error] (RWST LineInfo [Error] s m) [b]
+bind_all xs msgs lu = do
+            let ys = map lu xs
+                zs = map (msgs . fst) 
+                    $ L.filter (isNothing . snd) 
+                    $ zip xs ys
+            li <- lift $ ask
+            toEither $ forM_ zs $ \msg ->  
+                RWS.tell [Error msg li]
+            return $ catMaybes ys
+
 
 insert_new :: Ord a 
            => a -> b -> M.Map a b 

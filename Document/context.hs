@@ -249,19 +249,14 @@ ctx_collect_proofs name = visit_doc
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                         lbl = composite_label [ po_lbl ]
                         thm = last $ to_list lbl
-                    toEither $ error_list 
-                        [   ( lbl `member` theorems th
-                            , format "a proof for {0} already exists" lbl )
-                        ] 
                     li <- lift $ ask
                     pos <- hoistEither $ theory_po th
 --                            (left [Error (format "proof obligation does not exist: {0}" lbl) li])
 --                            return
-                    s  <- maybe 
-                            (left [Error (format "proof obligation does not exist: {0} {1}" lbl 
-                                $ M.keys pos) li])
-                            return
-                            (M.lookup lbl pos)
+                    s  <- bind
+                        (format "proof obligation does not exist: {0} {1}" lbl 
+                                $ M.keys pos)
+                        (M.lookup lbl pos)
                     let new_th = (empty_theory { extends = insert name th $ extends th }) 
                     p <- runReaderT (
                             runEitherT $
@@ -271,8 +266,11 @@ ctx_collect_proofs name = visit_doc
                     p        <- EitherT $ return p
                     (p,lbls) <- EitherT $ return $ runTacticWithTheorems li s 
                             (fact th `intersection` theorems th) p
+                    new_thms <- bind
+                        (format "a proof for {0} already exists" lbl)
+                        $ insert_new lbl (Just p) $ theorems th
                     return th 
-                        { theorems   = insert lbl (Just p) $ theorems th 
+                        { theorems   = new_thms
                         , thm_depend = [ (thm,dep) | dep <- lbls ] ++ thm_depend th } 
             )
         ] []
