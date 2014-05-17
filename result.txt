@@ -60,248 +60,15 @@
 |  |  |  +- [ Success: 3 / 3 ]
 |  |  +- part 4
 |  |  |  +- test 13, verification, name clash between dummy and index
-|  |  |    o  train0/INIT/FIS/in
-|  |  |    o  train0/INIT/FIS/loc
-|  |  |    o  train0/INIT/INV/inv1
-|  |  |    o  train0/INIT/INV/inv2
-|  |  |    o  train0/SKIP/CO/co0
-|  |  |    o  train0/SKIP/CO/co1
-|  |  |    o  train0/SKIP/CO/s0
-|  |  |    o  train0/SKIP/CO/s1
-|  |  |    o  train0/enter/CO/co0/goal (220,7)
-|  |  |    o  train0/enter/CO/co0/hypotheses (220,7)
-|  |  |    o  train0/enter/CO/co0/relation (220,7)
-|  |  |    o  train0/enter/CO/co0/step (227,1)
-|  |  |    o  train0/enter/CO/co0/step (229,1)
-|  |  |    o  train0/enter/CO/co0/step (232,1)
-|  |  |    o  train0/enter/CO/co0/step (235,1)
-|  |  |    o  train0/enter/CO/co0/step (238,1)
-|  |  |    o  train0/enter/CO/co0/step (240,1)
-|  |  |    o  train0/enter/CO/co0/step (242,1)
-|  |  |    o  train0/enter/CO/co0/step (244,1)
-|  |  |    o  train0/enter/CO/co1
-|  |  |    o  train0/enter/CO/s0
-|  |  |    o  train0/enter/CO/s1
-|  |  |    o  train0/enter/FIS/in@prime
-|  |  |    o  train0/enter/FIS/loc@prime
-|  |  |    o  train0/enter/INV/inv1
-|  |  |    o  train0/enter/INV/inv2/goal (77,7)
-|  |  |    o  train0/enter/INV/inv2/hypotheses (77,7)
-|  |  |    o  train0/enter/INV/inv2/relation (77,7)
-|  |  |    o  train0/enter/INV/inv2/step (79,1)
-|  |  |    o  train0/enter/INV/inv2/step (81,1)
-|  |  |    o  train0/enter/INV/inv2/step (83,1)
-|  |  |    o  train0/enter/INV/inv2/step (85,1)
-|  |  |    o  train0/enter/INV/inv2/step (87,1)
-|  |  |    o  train0/enter/SCH
-|  |  |   xxx train0/leave/CO/co0/goal (173,7)
-|  |  |    o  train0/leave/CO/co0/hypotheses (173,7)
-|  |  |    o  train0/leave/CO/co0/relation (173,7)
-|  |  |   xxx train0/leave/CO/co0/step (175,1)
-|  |  |    o  train0/leave/CO/co0/step (177,1)
-|  |  |    o  train0/leave/CO/co0/step (179,1)
-|  |  |   xxx train0/leave/CO/co0/step (181,1)
-|  |  |    o  train0/leave/CO/co0/step (183,1)
-|  |  |    o  train0/leave/CO/co0/step (185,1)
-|  |  |   xxx train0/leave/CO/co1/goal (250,7)
-|  |  |    o  train0/leave/CO/co1/hypotheses (250,7)
-|  |  |    o  train0/leave/CO/co1/relation (250,7)
-|  |  |    o  train0/leave/CO/co1/step (252,1)
-|  |  |    o  train0/leave/CO/co1/step (255,1)
-|  |  |    o  train0/leave/CO/co1/step (260,1)
-|  |  |    o  train0/leave/CO/co1/step (263,1|___|69
-|  |  |  
-|  |  |  
-|  |  |  Comparison:[
-|  |  |    > Actual
-|  |  |    < Expected
-|  |  |    - ------
-|  |  |    > )\n
-|  |  |    < )\n
-|  |  |    -    
-|  |  |    > _.xxx_.train0/leave/CO/co1/step_.(266,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(266,1)\n
-|  |  |    -   ---  -----------------------------------
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(268,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(268,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(270,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(270,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(273,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(273,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/s0\n
-|  |  |    < _._.o_._.train0/leave/CO/s0\n
-|  |  |    -                              
-|  |  |    > _._.o_._.train0/leave/CO/s1\n
-|  |  |    < _._.o_._.train0/leave/CO/s1\n
-|  |  |    -                              
-|  |  |    > _._.o_._.train0/leave/FIS/in@prime\n
-|  |  |    < _._.o_._.train0/leave/FIS/in@prime\n
-|  |  |    -                                     
-|  |  |    > _._.o_._.train0/leave/FIS/loc@prime\n
-|  |  |    < _._.o_._.train0/leave/FIS/loc@prime\n
-|  |  |    -                                      
-|  |  |    > _._.o_._.train0/leave/INV/inv1\n
-|  |  |    < _._.o_._.train0/leave/INV/inv1\n
-|  |  |    -                                 
-|  |  |    > _._.o_._.train0/leave/INV/inv2/goal_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/goal_.(98,7)\n
-|  |  |    -                                              
-|  |  |    > _._.o_._.train0/leave/INV/inv2/hypotheses_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/hypotheses_.(98,7)\n
-|  |  |    -                                                    
-|  |  |    > _._.o_._.train0/leave/INV/inv2/relation_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/relation_.(98,7)\n
-|  |  |    -                                                  
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(100,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(100,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(102,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(102,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(104,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(104,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(106,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(106,1)\n
-|  |  |    -                                               
-|  |  |    > _.xxx_.train0/leave/SCH\n
-|  |  |    < _.xxx_.train0/leave/SCH\n
-|  |  |    -                          
-|  |  |    > _._.o_._.train0/leave/SCH/train0/1/REF/weaken\n
-|  |  |    < _._.o_._.train0/leave/SCH/train0/1/REF/weaken\n
-|  |  |    -                                                
-|  |  |    > _._.o_._.train0/leave/TR/tr0\n
-|  |  |    < _._.o_._.train0/leave/TR/tr0\n
-|  |  |    -                               
-|  |  |    > passed_.63_./_.
-|  |  |    < passed_.64_./_.
-|  |  |    -          -     
-|  |  |  ]
 |  |  |  +- test 14, verification, non-exhaustive case analysis
-|  |  |    o  train0/INIT/FIS/in
-|  |  |    o  train0/INIT/FIS/loc
-|  |  |    o  train0/INIT/INV/inv1
-|  |  |    o  train0/INIT/INV/inv2
-|  |  |    o  train0/SKIP/CO/co0
-|  |  |    o  train0/SKIP/CO/co1
-|  |  |    o  train0/SKIP/CO/s0
-|  |  |    o  train0/SKIP/CO/s1
-|  |  |    o  train0/enter/CO/co0/case 1/goal (222,7)
-|  |  |    o  train0/enter/CO/co0/case 1/hypotheses (222,7)
-|  |  |    o  train0/enter/CO/co0/case 1/relation (222,7)
-|  |  |    o  train0/enter/CO/co0/case 1/step (224,1)
-|  |  |    o  train0/enter/CO/co0/case 1/step (226,1)
-|  |  |   xxx train0/enter/CO/co0/completeness (220,7)
-|  |  |    o  train0/enter/CO/co1
-|  |  |    o  train0/enter/CO/s0
-|  |  |    o  train0/enter/CO/s1
-|  |  |    o  train0/enter/FIS/in@prime
-|  |  |    o  train0/enter/FIS/loc@prime
-|  |  |    o  train0/enter/INV/inv1
-|  |  |    o  train0/enter/INV/inv2/goal (77,7)
-|  |  |    o  train0/enter/INV/inv2/hypotheses (77,7)
-|  |  |    o  train0/enter/INV/inv2/relation (77,7)
-|  |  |    o  train0/enter/INV/inv2/step (79,1)
-|  |  |    o  train0/enter/INV/inv2/step (81,1)
-|  |  |    o  train0/enter/INV/inv2/step (83,1)
-|  |  |    o  train0/enter/INV/inv2/step (85,1)
-|  |  |    o  train0/enter/INV/inv2/step (87,1)
-|  |  |    o  train0/enter/SCH
-|  |  |    o  train0/leave/CO/co0/goal (172,7)
-|  |  |    o  train0/leave/CO/co0/hypotheses (172,7)
-|  |  |    o  train0/leave/CO/co0/relation (172,7)
-|  |  |    o  train0/leave/CO/co0/step (174,1)
-|  |  |    o  train0/leave/CO/co0/step (176,1)
-|  |  |    o  train0/leave/CO/co0/step (180,1)
-|  |  |    o  train0/leave/CO/co0/step (182,1)
-|  |  |    o  train0/leave/CO/co1/goal (255,7)
-|  |  |    o  train0/leave/CO/co1/hypotheses (255,7)
-|  |  |    o  train0/leave/CO/co1/relation (255,7)
-|  |  |    o  train0/leave/CO/co1/step (257,1)
-|  |  |    o  train0/leave/CO/co1/step (260,1)
-|  |  |    o  train0/leave/CO/co1/step (265,1)
-|  |  |    o  train0/leave/CO/co1/step (268,1|___|62
-|  |  |  
-|  |  |  
-|  |  |  Comparison:[
-|  |  |    > Actual
-|  |  |    < Expected
-|  |  |    - ------
-|  |  |    > )\n
-|  |  |    < )\n
-|  |  |    -    
-|  |  |    > _.xxx_.train0/leave/CO/co1/step_.(271,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(271,1)\n
-|  |  |    -   ---  ------------------------------- ---
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(273,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(273,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(275,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(275,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/co1/step_.(278,1)\n
-|  |  |    < _._.o_._.train0/leave/CO/co1/step_.(278,1)\n
-|  |  |    -                                             
-|  |  |    > _._.o_._.train0/leave/CO/s0\n
-|  |  |    < _._.o_._.train0/leave/CO/s0\n
-|  |  |    -                              
-|  |  |    > _._.o_._.train0/leave/CO/s1\n
-|  |  |    < _._.o_._.train0/leave/CO/s1\n
-|  |  |    -                              
-|  |  |    > _._.o_._.train0/leave/FIS/in@prime\n
-|  |  |    < _._.o_._.train0/leave/FIS/in@prime\n
-|  |  |    -                                     
-|  |  |    > _._.o_._.train0/leave/FIS/loc@prime\n
-|  |  |    < _._.o_._.train0/leave/FIS/loc@prime\n
-|  |  |    -                                      
-|  |  |    > _._.o_._.train0/leave/INV/inv1\n
-|  |  |    < _._.o_._.train0/leave/INV/inv1\n
-|  |  |    -                                 
-|  |  |    > _._.o_._.train0/leave/INV/inv2/goal_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/goal_.(98,7)\n
-|  |  |    -                                              
-|  |  |    > _._.o_._.train0/leave/INV/inv2/hypotheses_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/hypotheses_.(98,7)\n
-|  |  |    -                                                    
-|  |  |    > _._.o_._.train0/leave/INV/inv2/relation_.(98,7)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/relation_.(98,7)\n
-|  |  |    -                                                  
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(100,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(100,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(102,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(102,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(104,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(104,1)\n
-|  |  |    -                                               
-|  |  |    > _._.o_._.train0/leave/INV/inv2/step_.(106,1)\n
-|  |  |    < _._.o_._.train0/leave/INV/inv2/step_.(106,1)\n
-|  |  |    -                                               
-|  |  |    > _.xxx_.train0/leave/SCH\n
-|  |  |    < _.xxx_.train0/leave/SCH\n
-|  |  |    -                          
-|  |  |    > _._.o_._.train0/leave/SCH/train0/1/REF/weaken\n
-|  |  |    < _._.o_._.train0/leave/SCH/train0/1/REF/weaken\n
-|  |  |    -                                                
-|  |  |    > _._.o_._.train0/leave/TR/tr0\n
-|  |  |    < _._.o_._.train0/leave/TR/tr0\n
-|  |  |    -                               
-|  |  |    > passed_.59_./_.
-|  |  |    < passed_.60_./_.
-|  |  |    -         --     
-|  |  |  ]
 |  |  |  +- test 15, verification, incorrect new assumption
-|  |  |  +- [ Success: 1 / 3 ]
+|  |  |  +- [ Success: 3 / 3 ]
 |  |  +- part 5
 |  |  |  +- test 16, verification, proof by parts
 |  |  |  +- test 17, ill-defined types
 |  |  |  +- test 18, assertions have type bool
 |  |  |  +- [ Success: 3 / 3 ]
-|  |  +- [ Success: 5 / 6 ]
+|  |  +- [ Success: 6 / 6 ]
 |  +- lambda expressions in the cube example
 |  |  +- part 0
 |  |  |  +- test 0, verification, lambda vs empty-fun
@@ -345,7 +112,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 11 / 12 ]
+|  +- [ Success: 12 / 12 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -415,16 +182,16 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 5 / 6 ]
++- [ Success: 6 / 6 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   20414 total
+   20365 total
     1599 Document/Tests/trainstation.hs
     1070 Document/Tests/lambdas.hs
-     989 Document/machine.hs
+     975 Document/machine.hs
      885 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 5m 12s
+Run time: 0m 50s

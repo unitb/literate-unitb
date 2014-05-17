@@ -151,9 +151,13 @@ specific mod_name fun_name = do
 main :: IO ()
 main = do
     xs <- getArgs
-    case xs of
-        []    -> general >> return ()
-        [x]   -> specific x Nothing
-        [x,y] -> specific x $ Just y
-        _   -> putStrLn "usage: run_test [module_name [function_name]]"
+    v <- z3_version
+    if v == "2ca14b49fe45" then 
+        case xs of
+            []    -> general >> return ()
+            [x]   -> specific x Nothing
+            [x,y] -> specific x $ Just y
+            _   -> putStrLn "usage: run_test [module_name [function_name]]"
+    else
+        putStrLn "Expecting z3 version 4.3.2, hashcode 2ca14b49fe45"
     

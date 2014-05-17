@@ -35,7 +35,8 @@ module Document.Visitor
     , run_visitor
     , add_state
     , add_writer
-    , lift_i
+    , lift_i, bind
+    , insert_new
     , get_content
     , with_content )
 where
@@ -60,10 +61,12 @@ import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
 
-import Data.Char
-import Data.Monoid
-import Data.Set hiding (map)
-import Data.String.Utils
+import           Data.Char
+import           Data.List as L
+import qualified Data.Map as M
+import           Data.Monoid
+import           Data.Set hiding (map)
+import           Data.String.Utils
 
 import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
 
@@ -392,6 +395,20 @@ toEither m = EitherT $ mapRWST f $ do
     where
         f m = m >>= \(x,y,_) -> return (x,y,[])
 
+bind :: MonadReader LineInfo m
+     => String -> Maybe a -> EitherT [Error] m a
+bind msg Nothing = do
+        li <- ask
+        left [Error msg li]
+bind _ (Just x) = return x
+
+insert_new :: Ord a 
+           => a -> b -> M.Map a b 
+           -> Maybe (M.Map a b)
+insert_new x y m
+    | x `M.member` m    = Nothing
+    | otherwise         = Just $ M.insert x y m
+
 error_list :: Monad m
            => [(Bool, String)] -> RWST LineInfo [Error] s m ()
 error_list [] = return ()
@@ -517,8 +534,8 @@ visit_doc blks cmds cs x = do
         (err,x) <- flip ST.runStateT x $ 
             runEitherT $ 
             run_visitor (line_info cs) cs $ visitor 
-                (map f blks) 
-                (map g cmds)
+                (L.map f blks) 
+                (L.map g cmds)
         either RWS.tell return err
         return x
     where
@@ -578,7 +595,7 @@ ff :: Monad m
    => LatexDoc 
    -> ReaderT (ParamT m) (VisitorT m) ()
 ff (Env s li xs _) = do
-            r <- asks $ lookup s . blocksT
+            r <- asks $ L.lookup s . blocksT
             case r of
                 Just (VEnvBlock g)  -> do
                     (args,xs) <- lift $ VisitorT $ fromEitherT $ get_tuple' xs li
@@ -614,7 +631,7 @@ gg :: Monad m => [LatexDoc]
 gg (Text xs : ts) = do
     case trim_blanks $ reverse xs of
         Command c li:_   -> do
-                r <- asks $ lookup c . cmdsT
+                r <- asks $ L.lookup c . cmdsT
                 case r of
                     Just (VCmdBlock f) -> do
                         (args,_) <- lift $ VisitorT $ fromEitherT $ get_tuple' ts li

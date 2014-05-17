@@ -68,7 +68,7 @@ z3_path :: String
 z3_path = "z3"
 
 default_timeout :: Int
-default_timeout = 15
+default_timeout = 1
 
 instance Tree Command where
     as_tree (Push)        = List [Str "push"]

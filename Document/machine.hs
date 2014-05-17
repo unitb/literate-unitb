@@ -358,12 +358,10 @@ declarations = visit_doc []
                         vs <- get_variables 
                             (context m) 
                             (all_notation m) xs
-                        toEither $ error_list
-                            [ ( not (evt `member` events m) 
-                              , format "event '{0}' is undeclared" evt )
-                            ]
-                        let old_event = events m ! evt
-                            var_names = map fst vs
+                        old_event <- bind 
+                            (format "event '{0}' is undeclared" evt)
+                            $ evt `M.lookup` events m
+                        let var_names = map fst vs
                             inter = S.fromList var_names `S.intersection` 
                                     (           keysSet (params old_event) 
                                       `S.union` keysSet (indices old_event) )
@@ -381,12 +379,10 @@ declarations = visit_doc []
                         vs <- get_variables 
                             (context m) 
                             (all_notation m) xs
-                        toEither $ error_list
-                            [ ( not (evt `member` events m) 
-                              , format "event '{0}' is undeclared" evt )
-                            ]
-                        let old_event = events m ! evt
-                            var_names = map fst vs
+                        old_event <- bind
+                            (format "event '{0}' is undeclared" evt)
+                            $ evt `M.lookup` events m
+                        let var_names = map fst vs
                             inter = S.fromList var_names `S.intersection` 
                                     (           keysSet (params old_event) 
                                       `S.union` keysSet (indices old_event) )
@@ -433,7 +429,9 @@ tr_hint :: Monad m
 tr_hint m vs lbl = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs, ()) (ys,z) -> do
-                let evt = events m ! lbl
+                evt <- bind
+                    (format "'{0}' is not an event of '{1}'" lbl $ _name m)
+                    $ lbl `M.lookup` events m
                 expr <- get_expr_with_ctx m 
                     (Context M.empty vs M.empty M.empty M.empty) xs
                 toEither $ error_list 
@@ -468,21 +466,19 @@ collect_expr = visit_doc
         [] [(   "\\evassignment"
             ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
                         let msg = "{0} is already used for another assignment"
+                        old_event <- bind
+                            (format "event '{0}' is undeclared" ev)
+                            $ ev `M.lookup` events m
                         toEither $ error_list
-                            [ ( not (ev `member` events m)
-                              , format "event '{0}' is undeclared" ev )
-                            ]
-                        toEither $ error_list
-                            [ ( lbl `member` action (events m ! ev)
+                            [ ( lbl `member` action old_event
                               , format msg lbl )
                             ]
-                        let old_event = events m ! ev
-                        act   <- get_evt_part m old_event xs
-                        let new_event = old_event { 
-                                    action = insertWith 
-                                        (error "name clash")  
-                                        lbl act
-                                        (action old_event) }
+                        act     <- get_evt_part m old_event xs
+                        new_act <- bind 
+                            (format msg lbl)
+                            $ insert_new lbl act (action old_event)
+                        let new_event = old_event 
+                                    { action = new_act }
                         scope (context m) act (        params old_event 
                                                `merge` indices old_event)
                         return m {          
@@ -494,8 +490,10 @@ collect_expr = visit_doc
                             [   ( not (evt `member` events m)
                                 , format "event '{0}' is undeclared" evt )
                             ]
-                        let old_event = events m ! evt
-                            grds = guards old_event
+                        old_event <- bind
+                            ( format "event '{0}' is undeclared" evt )
+                            $ evt `M.lookup` events m
+                        let grds = guards old_event
                             msg = "{0} is already used for another guard"
                         toEither $ error_list
                             [   ( evt `member` grds
@@ -521,42 +519,32 @@ collect_expr = visit_doc
             )
         ,   (   "\\cschedule"
             ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
-                        toEither $ error_list
-                            [ ( not (evt `member` events m)
-                                , format "event '{0}' is undeclared" evt )
-                            ]
-                        let sc = scheds (events m ! evt)
-                            msg = "{0} is already used for another schedule"
-                        toEither $ error_list
-                            [ ( lbl `member` sc
-                                , format msg lbl )
-                            ]
-                        let old_event = events m ! evt
+                        old_event <- bind 
+                            ( format "event '{0}' is undeclared" evt )
+                            $ evt `M.lookup` events m
+                        let msg = "{0} is already used for another schedule"
                         sch <- get_evt_part m old_event xs
+                        new_sched <- bind
+                            (format msg lbl)
+                            $ insert_new lbl sch $ scheds old_event
                         let new_event = old_event { 
-                                    scheds = insert lbl sch
-                                            ( scheds old_event ) }
+                                    scheds = new_sched }
                         scope (context m) sch (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
             )
         ,   (   "\\fschedule"
             ,   CmdBlock $ \(evt, lbl :: Label, xs,()) m -> do
-                        toEither $ error_list
-                            [ ( not (evt `member` events m)
-                                , format "event '{0}' is undeclared" evt )
-                            ]
-                        let sc = scheds (events m ! evt)
-                            msg = "{0} is already used for another schedule"
-                        toEither $ error_list
-                            [ ( lbl `member` sc
-                                , format msg lbl )
-                            ]
-                        let old_event = events m ! evt
-                        sch <- get_evt_part m old_event xs
+                        old_event <- bind
+                            (format "event '{0}' is undeclared" evt)
+                            $ evt `M.lookup` events m
+                        let msg = "{0} is already used for another schedule"
+                        sch       <- get_evt_part m old_event xs
+                        new_sched <- bind 
+                            (format msg lbl)
+                            $ insert_new lbl sch $ scheds old_event
                         let new_event = old_event { 
-                                    scheds = insert lbl sch
-                                            ( scheds old_event ) }
+                                    scheds = new_sched }
                         scope (context m) sch (indices old_event) 
                         return m {          
                                 events  = insert evt new_event $ events m } 
@@ -733,12 +721,10 @@ collect_refinement = visit_doc []
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
                         -- Why is this here instead of the expression collector?
-                    toEither $ error_list
-                        [ ( not (evt `member` events m)
-                            , format "event '{0}' is undeclared" evt )
-                        ]
-                    let event = events m ! evt 
-                        prop = safety $ props m
+                    event <- bind
+                        (format "event '{0}' is undeclared" evt)
+                        $ evt `M.lookup` events m
+                    let prop = safety $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert m pCt
                         q    <- fromEither ztrue $ get_assert m qCt
