@@ -12,6 +12,8 @@ import Data.Map
 
 import Tests.UnitTest
 
+import Utilities.Format
+
 test_case :: TestCase
 test_case = Case "train station example, with sets" test True
 
@@ -223,7 +225,12 @@ case4 = do
     return $ show r
 
 result4 :: String
-result4 = "Left [Error \"undeclared variable: t\" (494,25)]"
+result4 = format "Left [Error {0} (494,25)]" $ 
+            show $ unlines 
+                [ "unrecognized term: t"
+                , "Perhaps you meant:"
+                , "ent (variable)"
+                , "ext (variable)" ]
 
 result5 :: String
 result5 = unlines

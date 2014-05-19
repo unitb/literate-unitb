@@ -1,7 +1,8 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts         #-}
+{-# LANGUAGE RecordWildCards, FlexibleInstances     #-}
+{-# LANGUAGE OverlappingInstances, TemplateHaskell  #-}
 module Document.Expression 
-    ( parse_expr, oper
+    ( parse_expr, oper, run_test
     , get_variables, parse_oper )
 where
 
@@ -31,12 +32,16 @@ import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Maybe
 import qualified Control.Monad.Trans.Reader as R
+import           Control.Monad.Trans.State (evalStateT)
 
-import Data.Char
-import Data.Either
-import Data.List as L
-import Data.Map as M hiding ( map )
-import Data.Monoid
+import           Data.Char
+import           Data.Either
+import           Data.List as L
+import           Data.Map as M hiding ( map )
+import qualified Data.Map as M
+import           Data.Monoid
+
+import Test.QuickCheck
 
 import Utilities.Format
 import Utilities.Graph as G ( (!) )
@@ -278,7 +283,8 @@ oper = do
             (map f $ rights $ new_ops n)
             (do
                 xs <- liftP peek
-                fail $ "expecting a binary operator, read: " ++ show (take 1 xs))            
+                fail $ "expecting a binary operator, read: " 
+                    ++ show (take 1 xs))            
             return
     where
         f op@(BinOperator _ tok _) = do
@@ -299,6 +305,81 @@ apply_fun_op (Command _ _ _ fop) x = do
         e <- check_types $ fop [Right x]
         return $ Right e
 
+suggestion :: String -> Map String String -> [String]
+suggestion xs m = map (\(x,y) -> x ++ " (" ++ y ++ ")") $ toList ws
+    where
+        p ys _ = 2 * dist xs ys <= (length xs `max` length ys) + 1
+        ws = M.filterWithKey p m
+
+dist :: Eq a => [a] -> [a] -> Int
+dist a b 
+    = last (if lab == 0 then mainDiag
+        else if lab > 0 then lowers !! (lab - 1)
+         else{- < 0 -}   uppers !! (-1 - lab))
+    where 
+      mainDiag = oneDiag a b (head uppers) (-1 : head lowers)
+      uppers = eachDiag a b (mainDiag : uppers) -- upper diagonals
+      lowers = eachDiag b a (mainDiag : lowers) -- lower diagonals
+      eachDiag _a [] _diags = []
+      eachDiag a (_bch:bs) (lastDiag:diags) = oneDiag a bs nextDiag lastDiag : eachDiag a bs diags
+          where 
+            nextDiag = head (tail diags)
+      eachDiag _ (_bch:_bs) [] = error "Document.Expression.dist"
+      oneDiag a b diagAbove diagBelow = thisdiag
+          where 
+            doDiag [] _b _nw _n _w = []
+            doDiag _a [] _nw _n _w = []
+            doDiag (ach:as) (bch:bs) nw n w = me : (doDiag as bs me (tail n) (tail w))
+              where 
+                me = if ach == bch then nw else 1 + min3 (head w) nw (head n)
+            firstelt = 1 + head diagBelow
+            thisdiag = firstelt : doDiag a b firstelt diagAbove (tail diagBelow)
+      lab = length a - length b
+      min3 x y z = if x < y then x else min y z
+
+instance Arbitrary a => Arbitrary ([Change a], [a]) where
+    arbitrary = do
+            xs <- arbitrary
+            n  <- arbitrary
+            ys <- flip evalStateT xs $ replicateM n $ do
+                    xs <- get
+                    k  <- lift $ oneof
+                        [ do 
+                            i <- choose (0,length xs)
+                            x <- arbitrary
+                            return $ Insert i x
+                        , do 
+                            i <- choose (0,length xs-1)
+                            return $ Delete i
+                        , do 
+                            i <- choose (0,length xs-1)
+                            x <- arbitrary
+                            return $ Replace i x
+                        ]
+                    put $ effect k xs
+                    return k
+            return (ys,xs)
+
+data Change a = Insert Int a | Delete Int | Replace Int a
+    deriving Show
+
+effect :: Change a -> [a] -> [a]
+effect (Insert i x) xs  = take i xs ++ [x] ++ drop i xs
+effect (Delete i) xs    = take i xs ++ drop (i+1) xs
+effect (Replace i x) xs = take i xs ++ [x] ++ drop (i+1) xs
+
+effects :: Eq a => [Change a] -> [a] -> [a]
+effects ks xs = L.foldl (flip effect) xs ks 
+
+prop_d :: Eq a => ([Change a],[a]) -> Bool
+prop_d (ks,xs) = dist xs (effects ks xs) <= length ks
+
+prop_c :: Eq a => [a] -> [a] -> Bool
+prop_c xs ys = abs (length xs - length ys) <= dist xs ys
+
+run_test :: IO Bool
+run_test = $quickCheckAll 
+
 type Term = Either Command Expr
 
 primed :: String -> Bool
@@ -311,76 +392,77 @@ unprimed xs
 
 term :: Parser Term
 term = do
-        tryP word_or_command
-            (\xs' -> add_context xs' $ do 
+    n <- get_notation
+    let cmds = zip (map token (commands n)) (commands n)
+        quants = [ ("\\qforall",Binder Forall)
+                 , ("\\qexists",Binder Exists)
+                 , ("\\qfun",Binder Lambda) 
+                 , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ]
+        oftype = [("\\oftype",())]
+    choose_la 
+        [ do    c@(Command _ _ n f) <- from cmds
+                if n == 1 then do
+                    tryP (read_listP [Open Curly])
+                        (\_ -> do
+                            e <- expr
+                            read_listP [Close Curly]
+                            e <- check_types $ f [Right e]
+                            return $ Right e)
+                        (return $ Left c)
+                else do
+                    args <-replicateM n $
+                        brackets Curly expr
+                    e <- check_types $ f $ map Right args
+                    return $ Right e
+        , do    quant <- from quants 
+                ns <- brackets Curly
+                    $ sep1P word_or_command comma
+                ctx <- get_context
+                vs  <- case dummy_types ns ctx of
+                    Just vs -> return vs
+                    Nothing -> fail ("bound variables are not typed")
+                with_vars (zip ns vs) $ do
+                    read_listP [Open Curly]
+                    r <- tryP (read_listP [Close Curly]) 
+                        (\_ -> return ztrue)
+                        (do r <- expr
+                            read_listP [Close Curly]
+                            return r)
+                    t <- brackets Curly expr
+                    return $ Right (quant vs r t)
+        , do    from oftype
+                e <- brackets Curly expr
+                t <- brackets Curly type_t
+                case zcast t (Right e) of
+                    Right new_e -> return $ Right new_e
+                    Left msg -> fail msg
+        , attempt $ do    
+                xs' <- word_or_command
                 let xs = unprimed xs'
                 prime <- if primed xs' then 
                     return "@prime"
                 else
                     return ""
-                n <- get_notation
-                let cmds = zip (map token (commands n)) (commands n)
-                case xs `L.lookup` 
-                        cmds of
-                    Just c@(Command _ _ n f)  -> do
-                        if n == 1 then do
-                            tryP (read_listP [Open Curly])
-                                (\_ -> do
-                                    e <- expr
-                                    read_listP [Close Curly]
-                                    e <- check_types $ f [Right e]
-                                    return $ Right e)
-                                (return $ Left c)
-                        else do
-                            args <- forM [1..n] $ \_ -> do
-                                brackets Curly expr
-                            e <- check_types $ f $ map Right args
-                            return $ Right e
-                    Nothing ->
-                        if xs `elem` 
-                            [ "\\qforall"
-                            , "\\qexists"
-                            , "\\qfun"
-                            , "\\qset" ]
-                        then do
-                            ns <- brackets Curly
-                                $ sep1P word_or_command comma
-
-                            ctx <- get_context
-                            vs  <- case dummy_types ns ctx of
-                                Just vs -> return vs
-                                Nothing -> fail ("bound variables are not typed")
-                            with_vars (zip ns vs) $ do
-                                read_listP [Open Curly]
-                                r <- tryP (read_listP [Close Curly]) 
-                                    (\_ -> return ztrue)
-                                    (do r <- expr
-                                        read_listP [Close Curly]
-                                        return r)
-                                
-                                t <- brackets Curly 
-                                    expr
-                                let { quant = fromList 
-                                    [ ("\\qforall",Binder Forall)
-                                    , ("\\qexists",Binder Exists)
-                                    , ("\\qfun",Binder Lambda) 
-                                    , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ] M.! xs }
-                                return $ Right (quant vs r t)
-                        else if xs == "\\oftype"
-                        then do
-                            e <- brackets Curly expr
-                            t <- brackets Curly type_t
-                            case zcast t (Right e) of
-                                Right new_e -> return $ Right new_e
-                                Left msg -> fail msg
-                        else do
-                            vs <- get_vars
-                            case M.lookup xs vs of
-                                Just (Var v t) -> return $ Right (Word $ Var (v ++ prime) t) 
-                                Nothing -> fail ("undeclared variable: " ++ xs))
-            (do 
-                xs <- number
-                return $ Right (Const [] xs int))
+                vs <- get_vars
+                case M.lookup xs vs of
+                    Just (Var v t) -> return $ Right (Word $ Var (v ++ prime) t) 
+                    Nothing -> fail ""
+        , do    xs <- attempt word_or_command
+                vs <- get_vars
+                let oftype' = M.map (const "keyword")  $ fromList oftype
+                    quants' = M.map (const "quantifier") $ fromList quants
+                    cmd'    = M.map (const "command")  $ fromList cmds
+                    vars'   = M.map (const "variable") $ vs
+                    sug     = suggestion xs $ M.unions 
+                            [ cmd', quants'
+                            , oftype', vars' ]
+                fail (   "unrecognized term: "
+                      ++ xs ++ if not $ L.null sug then
+                            "\nPerhaps you meant:\n"
+                      ++ unlines sug else "")
+        , do    xs <- number
+                return $ Right (Const [] xs int)
+        ]
 
 dummy_types :: [String] -> Context -> Maybe [Var]
 dummy_types vs (Context _ _ _ _ dums) = mapM f vs
@@ -392,7 +474,7 @@ number = liftP $ do
             x <- read_char 
             case x of
                 Number xs -> return xs
-                _ -> fail "expecting a number"
+                _ -> fail $ "expecting a number: " ++ show x
                 
 open_brack :: Parser [ExprToken]
 open_brack  = read_listP [Open Round]
@@ -424,6 +506,13 @@ add_context :: String -> Parser a -> Parser a
     -- let e = Error msg li
     -- liftHOF (change_errors (e:)) cmd
 add_context _ cmd = cmd
+
+from :: [(String,a)] -> Parser a
+from m = attempt $ do
+        x <- word_or_command
+        case x `L.lookup` m of
+                Nothing -> fail ""
+                Just x  -> return x
 
 attempt :: Parser a -> Parser a
 attempt cmd = do

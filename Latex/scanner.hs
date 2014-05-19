@@ -2,6 +2,8 @@ module Latex.Scanner where
 
 import Control.Monad
 
+import Data.Maybe
+
 import Utilities.Syntactic
 
 data State a = State [(a,LineInfo)] LineInfo
@@ -199,12 +201,15 @@ sepBy1 b s = do
         xs <- sepBy b s
         return (x,xs)
 
-look_ahead :: Scanner a b -> Scanner a Bool
-look_ahead (Scanner f) = Scanner g
+look_ahead' :: Scanner a b -> Scanner a (Maybe b)
+look_ahead' (Scanner f) = Scanner g
     where
         g x = case f x of
-                Right _ -> Right (True,x)
-                Left  _ -> Right (False,x)
+                Right (y,_) -> Right (Just y,x)
+                Left  _ -> Right (Nothing,x)
+
+look_ahead :: Scanner a b -> Scanner a Bool
+look_ahead cmd = isJust `liftM` look_ahead' cmd
 
 read_ :: String -> Scanner Char ()
 read_ xs = do

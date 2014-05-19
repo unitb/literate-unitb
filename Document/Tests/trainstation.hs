@@ -1143,7 +1143,7 @@ case12 = do
     -- Error handling --
     --------------------
 result7 :: Either [Error] a
-result7 = Left [Error "undeclared variable: t" (LI path7 54 3)]
+result7 = Left [Error "unrecognized term: t" (LI path7 54 3)]
 
 path7 :: String
 path7 = "Tests/train-station-err0.tex"
