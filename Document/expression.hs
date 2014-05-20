@@ -34,6 +34,7 @@ import           Control.Monad.Trans.Maybe
 import qualified Control.Monad.Trans.Reader as R
 import           Control.Monad.Trans.State (evalStateT)
 
+import qualified Data.Array as A
 import           Data.Char
 import           Data.Either
 import           Data.List as L
@@ -307,35 +308,82 @@ apply_fun_op (Command _ _ _ fop) x = do
 
 suggestion :: String -> Map String String -> [String]
 suggestion xs m = map (\(x,y) -> x ++ " (" ++ y ++ ")") $ toList ws
-    where
-        p ys _ = 2 * dist xs ys <= (length xs `max` length ys) + 1
-        ws = M.filterWithKey p m
+  where
+    xs' = map toLower xs
+    p ys _ = 2 * dist xs' ys' <= (length xs' `max` length ys') + 1
+      where
+        ys' = map toLower ys
+    ws = M.filterWithKey p m
+
 
 dist :: Eq a => [a] -> [a] -> Int
-dist a b 
-    = last (if lab == 0 then mainDiag
-        else if lab > 0 then lowers !! (lab - 1)
-         else{- < 0 -}   uppers !! (-1 - lab))
-    where 
-      mainDiag = oneDiag a b (head uppers) (-1 : head lowers)
-      uppers = eachDiag a b (mainDiag : uppers) -- upper diagonals
-      lowers = eachDiag b a (mainDiag : lowers) -- lower diagonals
-      eachDiag _a [] _diags = []
-      eachDiag a (_bch:bs) (lastDiag:diags) = oneDiag a bs nextDiag lastDiag : eachDiag a bs diags
-          where 
-            nextDiag = head (tail diags)
-      eachDiag _ (_bch:_bs) [] = error "Document.Expression.dist"
-      oneDiag a b diagAbove diagBelow = thisdiag
-          where 
-            doDiag [] _b _nw _n _w = []
-            doDiag _a [] _nw _n _w = []
-            doDiag (ach:as) (bch:bs) nw n w = me : (doDiag as bs me (tail n) (tail w))
-              where 
-                me = if ach == bch then nw else 1 + min3 (head w) nw (head n)
-            firstelt = 1 + head diagBelow
-            thisdiag = firstelt : doDiag a b firstelt diagAbove (tail diagBelow)
-      lab = length a - length b
-      min3 x y z = if x < y then x else min y z
+dist xs ys = 
+        --ar A.! (m-1, n-1)
+        ar A.! (m-1, n-1)
+    where
+        m = length xs
+        n = length ys
+        f (-1,j) = j+1
+        f (i,-1) = i+1
+        f (i,j)  = minimum $
+                        [  (1 + ar A.! (i,j-1))
+                        ,  (1 + ar A.! (i-1,j))
+                        ,  (cost + ar A.! (i-1,j-1)) ]
+                        ++ swap
+          where
+            cost 
+              | xs !! i == ys !! j  = 0
+              | otherwise           = 1
+            swap 
+              |    0 < i && 0 < j  
+                &&     (xs !! (i-1), xs !! i) 
+                    == (ys !! j    , ys !! (j-1)) 
+                = [ar A.! (i-2,j-2) + cost]
+              | otherwise       = []
+        --bnds = ( ( -1, -1)
+        --       , (m-1,n-1))
+        --ar = A.listArray bnds (map f $ A.range bnds) 
+        bnds = ( ( -1 , -1)
+               , (m-1 ,n-1))
+        ar = A.listArray bnds 
+                         (map f $ A.range bnds)
+
+diff :: Eq a => [a] -> [a] -> [Change a]
+diff xs ys = 
+        --ar A.! (m-1, n-1)
+        ar A.! (m-1, n-1)
+    where
+        m = length xs
+        n = length ys
+        f (-1,j) = map (uncurry Insert) $ zip [0..j] ys
+        f (i,-1) = reverse $ map Delete [0..i]
+        f (i,j)  = min_ $  [ Insert (i+1) (ys !! j) : ar A.! (i,j-1)
+                           , Delete i : (ar A.! (i-1,j))
+                           , cost ++ ar A.! (i-1,j-1) ]
+                        ++ swap
+          where
+            cost 
+              | xs !! i == ys !! j  = []
+              | otherwise           = [Replace i (ys !! j)]
+            swap 
+              |    0 < i && 0 < j  
+                &&     (xs !! (i-1), xs !! i) 
+                    == (ys !! j    , ys !! (j-1)) 
+                = [ar A.! (i-2,j-2) ++ cost]
+              | otherwise       = []
+        min_ (x0:x1:xs) = x0 `_min_` min_ (x1:xs)
+        min_ [x0]       = x0
+        min_ []         = undefined
+        _min_ xs ys
+            | length xs <= length ys = xs
+            | otherwise              = ys
+        --bnds = ( ( -1, -1)
+        --       , (m-1,n-1))
+        --ar = A.listArray bnds (map f $ A.range bnds) 
+        bnds = ( ( -1, -1)
+               , (m-1,n-1) )
+        ar = A.listArray bnds 
+                         (map f (A.range bnds))
 
 instance Arbitrary a => Arbitrary ([Change a], [a]) where
     arbitrary = do
@@ -355,18 +403,28 @@ instance Arbitrary a => Arbitrary ([Change a], [a]) where
                             i <- choose (0,length xs-1)
                             x <- arbitrary
                             return $ Replace i x
+                        , do
+                            i <- choose (0,length xs-2)
+                            return $ Swap i
                         ]
                     put $ effect k xs
                     return k
             return (ys,xs)
 
-data Change a = Insert Int a | Delete Int | Replace Int a
+data Change a = 
+        Insert Int a 
+        | Delete Int 
+        | Replace Int a
+        | Swap Int
     deriving Show
 
 effect :: Change a -> [a] -> [a]
 effect (Insert i x) xs  = take i xs ++ [x] ++ drop i xs
 effect (Delete i) xs    = take i xs ++ drop (i+1) xs
 effect (Replace i x) xs = take i xs ++ [x] ++ drop (i+1) xs
+effect (Swap i) xs      = take i xs ++ ys ++ drop (i+2) xs 
+    where
+        ys = reverse $ take 2 $ drop i xs
 
 effects :: Eq a => [Change a] -> [a] -> [a]
 effects ks xs = L.foldl (flip effect) xs ks 
@@ -376,6 +434,12 @@ prop_d (ks,xs) = dist xs (effects ks xs) <= length ks
 
 prop_c :: Eq a => [a] -> [a] -> Bool
 prop_c xs ys = abs (length xs - length ys) <= dist xs ys
+
+prop_b :: Eq a => [a] -> [a] -> Bool
+prop_b xs ys = length (diff xs ys) == dist xs ys
+
+prop_a :: Eq a => [a] -> [a] -> Bool
+prop_a xs ys = effects (diff xs ys) xs == ys
 
 run_test :: IO Bool
 run_test = $quickCheckAll 
