@@ -15,6 +15,7 @@ import Utilities.Graph
         ( matrix_of_with, closure
         , m_closure_with, as_map
         , unions )
+import Utilities.EditDistance
 
     -- Libraries
 import           Data.Array 
@@ -48,7 +49,9 @@ test = test_cases
     , Case "Formatting utilities" test' True
     , Case "case 5 - error monad" case5 result5
     , Case "case 6 - union of a list of {sorted} list" case6 result6
-    , Case "case 7 - union of a list of {unsorted} list" case7 result7  ]
+    , Case "case 7 - union of a list of {unsorted} list" case7 result7  
+    , Case "case 8 - edit distance, random testing" case8 True
+    , Case "case 9 - edit distance, regression test from random testing" case9 0]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do
@@ -392,3 +395,17 @@ prop_value = quickCheckResult $ \xs ->
     let ys = map id xs :: [[Int]] in 
         unions ys == OL.nub (foldl OL.union [] ys)
 
+case8 :: IO Bool
+case8 = run_test
+
+case9 :: IO Int
+case9 = return $ length $ filter not
+            [ prop_a [26,27,0,-23,43] [0,43,-23]
+            , prop_a [0,5,-2] [0,-2,5]
+            , prop_d 
+                ( [Replace 4 70,Swap 5,Swap 1,Insert 6 (-11)]
+                , [-29,14,43,42,-78,45,-46]) 
+            , prop_d 
+                ( [Swap 4,Delete 15,Swap 14,Insert 5 24,Insert 5 14,Delete 11,Delete 0]
+                , [7,4,1,1,5,8,5,1,8,4,7,2,4,4,5,1,4,10,5,2,2])
+            ]

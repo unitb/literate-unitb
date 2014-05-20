@@ -173,7 +173,41 @@
 +++ OK, passed 100 tests.
 |  +- case 7 - union of a list of {unsorted} list
 +++ OK, passed 100 tests.
-|  +- [ Success: 9 / 9 ]
+|  +- case 8 - edit distance, random testing
+=== prop_d from ./Utilities/EditDistance.hs:129 ===
++++ OK, passed 100 tests.
+
+=== prop_c from ./Utilities/EditDistance.hs:132 ===
++++ OK, passed 100 tests.
+
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
++++ OK, passed 100 tests.
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
++++ OK, passed 100 tests.
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
++++ OK, passed 100 tests.
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
++++ OK, passed 100 tests.
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
++++ OK, passed 100 tests.
+
+|  +- case 9 - edit distance, regression test from random testing
+|  |___|
+|  
+|  
+|  Comparison:[
+|    > Actual
+|    < Expected
+|    - ------
+|    > 2
+|    < 0
+|    - -
+|  ]
+|  +- [ Success: 10 / 11 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -182,16 +216,16 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 6 / 6 ]
++- [ Success: 5 / 6 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   20570 total
+   20598 total
     1599 Document/Tests/trainstation.hs
     1070 Document/Tests/lambdas.hs
      967 Document/machine.hs
      885 Document/Tests/indirecteq.hs
-     819 Document/expression.hs
+     733 Document/proof.hs
 Run time: 0m 52s
