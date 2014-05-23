@@ -62,6 +62,8 @@ part3 = test_cases
             , (POCase "test 10, error: cyclic proof" (verify path10) result10)
             , (LineSetCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)
+            , (Case "test 12, bound variable with ambiguous type"
+                case12 result12)
             ]
 
 result0 :: String
@@ -1059,6 +1061,23 @@ result11 = unlines
                                       \ true)\
                                      \ smt)))"
     ]
+
+path12 :: String
+path12 = "Tests/cubes-t10.tex"
+
+result12 :: String
+result12 = unlines 
+        [  "error (274,2): type of j is ill-defined: _a"
+        ]
+
+case12 :: IO String
+case12 = do
+        r <- parse_machine path12
+        case r of
+            Right _ -> do
+                return "successful verification"
+            Left xs -> return $ unlines $ map format_error xs
+
 
 verify :: FilePath -> IO (String, Map Label Sequent)
 verify path = do

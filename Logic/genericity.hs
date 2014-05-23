@@ -418,7 +418,12 @@ ambiguities e@(FunApp f xp)
         | otherwise                 = []
     where
         children = L.concatMap ambiguities xp
-ambiguities (Binder _ _ r xp) = ambiguities r ++ ambiguities xp
+ambiguities (Binder _ vs r xp) = x ++ ambiguities r ++ ambiguities xp
+    where
+        vs' = L.filter (not . S.null . generics . type_of . Word) vs
+        x 
+            | not $ L.null vs' = map Word vs'
+            | otherwise        = []
 
 common :: GenericType -> GenericType -> Maybe GenericType
 common t1 t2 = do

@@ -1594,6 +1594,3 @@ case18 = do
 --            Right [(_,pos)] -> do   
 --                forM_ (map show $ keys $ pos) putStrLn
 --            _ -> return () -- $ show x
-
-format_error :: Error -> String
-format_error (Error x (LI _ i j)) = format "error {0}: {1}" (i, j) (x :: String) :: String

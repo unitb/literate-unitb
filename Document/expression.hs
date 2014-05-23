@@ -363,18 +363,21 @@ term = do
                     t <- brackets Curly expr
                     let vars = used_var r `S.union` used_var t
                         v_type = id -- L.filter ((1 <) . S.size . snd) 
-                                    $ zip ns 
+                                    $ zip3 ns vs
                                     $ map f ns 
                         f = (`S.filter` vars) . (. name) . (==)
-                    ts <- forM v_type $ \(x,xs) -> do
+                    ts <- forM v_type $ \(x,(Var _ t),xs) -> do
                         let ys = L.map (type_of . Word) $ S.toList xs
-                        t <- maybe 
+                        t' <- maybe 
                             (fail $ format "Inconsistent type for {0}: {1}" 
                                     x
                                     $ intercalate "," $ map show ys)
                             return
                             $ foldM common gA ys
-                        return (x, Var x t)
+                        t' <- if t' == gA 
+                            then return t
+                            else return t'
+                        return (x, Var x t')
                     let ts' = M.map Word $ fromList ts
                         r' = substitute ts' r
                         t' = substitute ts' t

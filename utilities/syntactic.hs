@@ -47,3 +47,6 @@ makeReport m = eitherT f return m
 --        f :: [Error] -> IO String
         f x = return $ ("Left " ++ show_err x)
 
+format_error :: Error -> String
+format_error (Error x (LI _ i j)) = format "error {0}: {1}" 
+        (i, j) (x :: String) :: String

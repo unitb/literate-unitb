@@ -89,7 +89,8 @@
 |  |  |  +- test 9, verify disjunction rule
 |  |  |  +- test 10, error: cyclic proof
 |  |  |  +- test 11, intermediate goals of monotonic simplification
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  +- test 12, bound variable with ambiguous type
+|  |  |  +- [ Success: 4 / 4 ]
 |  |  +- [ Success: 4 / 4 ]
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
@@ -213,10 +214,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   20668 total
-    1599 Document/Tests/trainstation.hs
-    1070 Document/Tests/lambdas.hs
+   20676 total
+    1596 Document/Tests/trainstation.hs
+    1089 Document/Tests/lambdas.hs
      967 Document/machine.hs
      885 Document/Tests/indirecteq.hs
-     736 Document/proof.hs
-Run time: 0m 54s
+     733 Document/proof.hs
+Run time: 0m 55s
