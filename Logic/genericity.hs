@@ -41,7 +41,7 @@ suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (Gen (USER_DEFINED s ts)) = Gen $ USER_DEFINED s $ map (suffix_generics xs) ts
 
 rewrite_types :: String -> Expr -> Expr
-rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name $ ft u)
+rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name u)
     where
         fe          = rewrite_types xs
         ft          = suffix_generics xs
@@ -76,10 +76,10 @@ instance TypeSystem2 FOType where
     zcast t me = do
             e <- me
             let { err_msg = format (unlines
-                [ "expression has type incompatible with its type annotation:"
+                [ "expression has type incompatible with its expected type:"
                 , "  expression: {0}"
-                , "  type: {1}"
-                , "  type annotation: {2} "
+                , "  actual type: {1}"
+                , "  expected type: {2} "
                 ]) e (type_of e) t :: String }
             unless (type_of e == t)
                 $  Left err_msg
@@ -108,10 +108,10 @@ instance TypeSystem2 GenericType where
     zcast t me = do
             e <- me
             let { err_msg = format (unlines
-                [ "expression has type incompatible with its type annotation:"
+                [ "expression has type incompatible with its expected type:"
                 , "  expression: {0}"
-                , "  type: {1}"
-                , "  type annotation: {2} "
+                , "  actual type: {1}"
+                , "  expected type: {2} "
                 ]) e (type_of e) t :: String }
             u <- maybe (Left err_msg) Right $ unify t $ type_of e
             return $ specialize_right u e
@@ -420,21 +420,25 @@ ambiguities e@(FunApp f xp)
         children = L.concatMap ambiguities xp
 ambiguities (Binder _ _ r xp) = ambiguities r ++ ambiguities xp
 
+common :: GenericType -> GenericType -> Maybe GenericType
+common t1 t2 = do
+        m <- unify t1 t2 
+        return $ normalize_generics $ instantiate_left m t1
 
     -- Change the name of generic parameters
     -- to follow alphabetical order: 
     -- a .. z ; aa .. az ; ba .. bz ...
-normalize_generics :: Expr -> Expr
-normalize_generics expr = specialize renaming expr
+normalize_generics :: (Tree t, Generic t) => t -> t
+normalize_generics expr = instantiate renaming expr
     where
         letters = map (:[]) [ 'a' .. 'z' ]
         gen = (letters ++ [ x ++ y | x <- gen, y <- letters ])
-        f (m,names) e = (M.union renaming m, drop n names)
+        f (m,names) e = visit f (M.union renaming m, drop n names) e
             where
                 free_gen = generics e \\ keysSet m
                 renaming = fromList $ zip (S.toList free_gen) names
                 n        = S.size free_gen
-        renaming = fst $ visit f (empty, map GENERIC gen) expr
+        renaming = fst $ f (empty, map GENERIC gen) expr
 
 instantiate_left :: Map String GenericType -> GenericType -> GenericType
 instantiate_left m t = instantiate m (suffix_generics "1" t)

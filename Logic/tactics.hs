@@ -435,8 +435,9 @@ instantiate hyp ps = do
             Binder Forall vs r t 
                 | all (`elem` vs) (map fst ps) -> do
                     let new_vs = L.foldl (flip L.delete) vs (map fst ps)
-                        re     = substitute (fromList ps) r
-                        te     = substitute (fromList ps) t
+                        ps'    = M.mapKeys name $ fromList ps
+                        re     = substitute ps' r
+                        te     = substitute ps' t
                         newh   = if L.null new_vs
                                     then zimplies re te
                                     else zforall new_vs re te
@@ -456,7 +457,7 @@ instantiate_all ((ThmRef lbl ps, li):rs) proof = do
         hyps    <- get_named_hyps -- _hypotheses
         new_lbl <- fresh_label $ show lbl
         h <- maybe
-            (hard_error [Error (format "unexistant hypothesis: {0}" lbl) li])
+            (hard_error [Error (format "inexistant hypothesis: {0}" lbl) li])
             return 
             (lbl `M.lookup` hyps)
         instantiate_hyp h new_lbl ps $

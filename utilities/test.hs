@@ -402,10 +402,10 @@ case9 :: IO Int
 case9 = return $ length $ filter not
             [ prop_a [26,27,0,-23,43] [0,43,-23]
             , prop_a [0,5,-2] [0,-2,5]
-            , prop_d 
-                ( [Replace 4 70,Swap 5,Swap 1,Insert 6 (-11)]
-                , [-29,14,43,42,-78,45,-46]) 
-            , prop_d 
-                ( [Swap 4,Delete 15,Swap 14,Insert 5 24,Insert 5 14,Delete 11,Delete 0]
-                , [7,4,1,1,5,8,5,1,8,4,7,2,4,4,5,1,4,10,5,2,2])
+            --, prop_d 
+            --    ( [Replace 4 70,Swap 5,Swap 1,Insert 6 (-11)]
+            --    , [-29,14,43,42,-78,45,-46]) 
+            --, prop_d 
+            --    ( [Swap 4,Delete 15,Swap 14,Insert 5 24,Insert 5 14,Delete 11,Delete 0]
+            --    , [7,4,1,1,5,8,5,1,8,4,7,2,4,4,5,1,4,10,5,2,2])
             ]

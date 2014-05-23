@@ -13,6 +13,8 @@ import Logic.Type
     -- library
 import           GHC.Generics
 
+import Control.DeepSeq
+
 import           Data.List as L
 import           Data.Map as M hiding (map,filter,foldl)
 import qualified Data.Set as S
@@ -328,10 +330,10 @@ mk_context (x:xs) =
                             dums
 mk_context [] = Context empty empty empty empty empty
 
-substitute :: Map Var Expr -> Expr -> Expr
+substitute :: Map String Expr -> Expr -> Expr
 substitute m e = f e
     where
-        f e@(Word v) = maybe e id $ M.lookup v m
+        f e@(Word v) = maybe e id $ M.lookup (name v) m
         f e = rewrite f e
 
 empty_ctx :: Context
@@ -436,3 +438,10 @@ rename x y e@(Binder q vs r xp)
         | x `elem` L.map name vs  = e
         | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
+
+instance TypeSystem t => NFData (AbsExpr t) where
+    rnf x = f () x
+        where
+            f () x = x `seq` visit f () x
+
+

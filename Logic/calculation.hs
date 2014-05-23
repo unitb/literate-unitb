@@ -214,8 +214,9 @@ instance ProofRule InstantiateHyp where
                 Binder Forall vs r t 
                     | all (`elem` vs) (M.keys ps) -> do
                         let new_vs = L.foldl (flip L.delete) vs (M.keys ps)
-                            re     = substitute ps r
-                            te     = substitute ps t
+                            ps'    = M.mapKeys name ps
+                            re     = substitute ps' r
+                            te     = substitute ps' t
                         if L.null new_vs
                             then return $ zimplies re te
                             else return $ zforall new_vs re te

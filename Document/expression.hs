@@ -10,6 +10,7 @@ where
 import Latex.Scanner -- hiding (many)
 import Latex.Parser  hiding (Close,Open,Command)
 
+import Logic.Classes
 import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore as ES
@@ -39,6 +40,7 @@ import           Data.List as L
 import           Data.Map as M hiding ( map )
 import qualified Data.Map as M
 import           Data.Monoid
+import qualified Data.Set as S
 
 import Utilities.Format
 import Utilities.Graph as G ( (!) )
@@ -350,9 +352,7 @@ term = do
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
                 ctx <- get_context
-                vs  <- case dummy_types ns ctx of
-                    Just vs -> return vs
-                    Nothing -> fail ("bound variables are not typed")
+                let vs = dummy_types ns ctx
                 with_vars (zip ns vs) $ do
                     read_listP [Open Curly]
                     r <- tryP (read_listP [Close Curly]) 
@@ -361,7 +361,26 @@ term = do
                             read_listP [Close Curly]
                             return r)
                     t <- brackets Curly expr
-                    return $ Right (quant vs r t)
+                    let vars = used_var r `S.union` used_var t
+                        v_type = id -- L.filter ((1 <) . S.size . snd) 
+                                    $ zip ns 
+                                    $ map f ns 
+                        f = (`S.filter` vars) . (. name) . (==)
+                    ts <- forM v_type $ \(x,xs) -> do
+                        let ys = L.map (type_of . Word) $ S.toList xs
+                        t <- maybe 
+                            (fail $ format "Inconsistent type for {0}: {1}" 
+                                    x
+                                    $ intercalate "," $ map show ys)
+                            return
+                            $ foldM common gA ys
+                        return (x, Var x t)
+                    let ts' = M.map Word $ fromList ts
+                        r' = substitute ts' r
+                        t' = substitute ts' t
+                        vs' = map snd ts
+                    let k = Right (quant vs' r' t')
+                    return k
         , do    from oftype
                 e <- brackets Curly expr
                 t <- brackets Curly type_t
@@ -396,10 +415,10 @@ term = do
                 return $ Right (Const [] xs int)
         ]
 
-dummy_types :: [String] -> Context -> Maybe [Var]
-dummy_types vs (Context _ _ _ _ dums) = mapM f vs
+dummy_types :: [String] -> Context -> [Var]
+dummy_types vs (Context _ _ _ _ dums) = map f vs
     where
-        f x = M.lookup x dums
+        f x = maybe (Var x gA) id $ M.lookup x dums
 
 number :: Parser String
 number = liftP $ do
@@ -433,10 +452,10 @@ choose_la (x:xs) = do
 choose_la [] = mzero
 
 add_context :: String -> Parser a -> Parser a
--- add_context msg cmd = do
-    -- li <- liftP $ get_line_info
-    -- let e = Error msg li
-    -- liftHOF (change_errors (e:)) cmd
+--add_context msg cmd = do       
+--    li <- liftP $ get_line_info
+--    let e = Error msg li
+--    liftHOF (change_errors (e:)) cmd
 add_context _ cmd = cmd
 
 from :: [(String,a)] -> Parser a
@@ -457,7 +476,7 @@ expr = do
         r <- read_term []
         case r of
             Right e -> return e
-            Left op -> fail $ format "unused functional operator: {0}" op
+            Left op -> fail $ format "unapplied functional operator: {0}" op
     where
         read_term :: [([UnaryOperator], Term, BinOperator)] 
                   -> Parser Term

@@ -134,10 +134,12 @@
 |  |  +- type inference 5
 |  |  +- instantiation of unified types is unique
 +++ OK, passed 100 tests.
+|  |  +- common type is symmetric
++++ OK, passed 100 tests.
 |  |  +- instantiation of unified types is unique (counter examples)
 |  |  +- type mapping are acyclic
 +++ OK, passed 100 tests.
-|  |  +- [ Success: 15 / 15 ]
+|  |  +- [ Success: 16 / 16 ]
 |  +- [ Success: 6 / 6 ]
 +- latex parser
 |  +- sample.tex
@@ -196,18 +198,7 @@
 +++ OK, passed 100 tests.
 
 |  +- case 9 - edit distance, regression test from random testing
-|  |___|
-|  
-|  
-|  Comparison:[
-|    > Actual
-|    < Expected
-|    - ------
-|    > 2
-|    < 0
-|    - -
-|  ]
-|  +- [ Success: 10 / 11 ]
+|  +- [ Success: 11 / 11 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -216,16 +207,16 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 5 / 6 ]
++- [ Success: 6 / 6 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   20598 total
+   20668 total
     1599 Document/Tests/trainstation.hs
     1070 Document/Tests/lambdas.hs
      967 Document/machine.hs
      885 Document/Tests/indirecteq.hs
-     733 Document/proof.hs
-Run time: 0m 52s
+     736 Document/proof.hs
+Run time: 0m 54s

@@ -201,10 +201,10 @@ path0 = "Tests/train-station-set.tex"
 
 result3 :: String
 result3 = concat
-    [ "Left [Error \"type error: expression has type incompatible with its type annotation:\\n"
+    [ "Left [Error \"type error: expression has type incompatible with its expected type:\\n"
     , "  expression: ent\\n"
-    , "  type: BLK\\n"
-    , "  type annotation: Bool \\n"
+    , "  actual type: BLK\\n"
+    , "  expected type: Bool \\n"
     , "\" (295,48)]"
     ]
 

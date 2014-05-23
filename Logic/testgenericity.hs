@@ -30,7 +30,7 @@ prop_yield_same_type (t0,t1) =
         maybe (Just (t0,t1)) (const Nothing) (do
             un <- unify t0 t1
             let ct0 = instantiate un $ left t0
-            let ct1 = instantiate un $ right t1
+                ct1 = instantiate un $ right t1
             return (ct0 == ct1))
 
 prop_unifying_yields_unified_type :: (Type, Type) -> Property
@@ -39,7 +39,10 @@ prop_unifying_yields_unified_type (t0,t1) =
         maybe True (const False) (prop_yield_same_type (t0,t1))
     where
         match = unify t0 t1 /= Nothing
-        
+
+prop_common_symm :: GenericType -> GenericType -> Bool
+prop_common_symm t0 t1 = common t0 t1 == common t1 t0 
+
 prop_type_unifies_with_self :: Type -> Bool
 prop_type_unifies_with_self t = unify t t /= Nothing
 
@@ -141,6 +144,7 @@ test = test_cases (
         ,  Case "type inference 4" case6 result6
         ,  Case "type inference 5" case7 result7
         , Case "instantiation of unified types is unique" (check_prop prop_unifying_yields_unified_type) True
+        , Case "common type is symmetric" (check_prop prop_common_symm) True
         ] ++
         map (\ce -> Case 
                 "instantiation of unified types is unique (counter examples)" 
