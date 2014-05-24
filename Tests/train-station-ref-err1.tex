@@ -128,7 +128,7 @@
 \evassignment{m0:leave}{lv:a2}
 	{ loc' &= \{ t \} \domsub loc }
 \\ \evassignment{m0:enter}{a3}
-	{ loc' &= loc \1| t \tfun ent }
+	{ loc' &= loc \1| t \fun ent }
 \\ \initialization{in0}
 	{ loc \, &= \emptyfun }
 \end{align*}
@@ -228,7 +228,7 @@ We adjust \ref{m1:moveout} to satisfy \ref{m1:tr0}.
 \weakento{m1:moveout}{default}{c1}{}
 
 \begin{align*}
-\evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \tfun ext }
+\evassignment{m1:moveout}{a2}{ loc' = loc \1 | t \fun ext }
 \\ \assumption{asm2}
 	{ \qexists{b}{}{b \in plf} }
 \\ \cschedule{m1:moveout}{c1}{ t \in in \land loc.t \in plf }
@@ -247,7 +247,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 
 \begin{align*}
 \evassignment{m1:movein}{mi:a2}
-	{ loc' &= loc \1| t \tfun b }
+	{ loc' &= loc \1| t \fun b }
 \\ \assumption{asm3}
 	{ \neg ent &\in plf }
 \\ \cschedule{m1:movein}{mi:c1}{ t &\in in } 

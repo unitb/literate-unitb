@@ -27,6 +27,7 @@ import UnitB.PO
 
 import Theories.Arithmetic
 import Theories.FunctionTheory
+import Theories.IntervalTheory
 import Theories.PredCalc
 import Theories.SetTheory
 
@@ -319,8 +320,10 @@ imports = visit_doc []
                     let th = [ ("sets"       , set_theory)
                              , ("functions"  , function_theory)
                              , ("arithmetic" , arithmetic)
-                             , ("predcalc"   , pred_calc) ]
-                        msg = "Undefined theory {0} "
+                             , ("predcalc"   , pred_calc)
+                             , ("intervals"  , interval_theory) ]
+                        msg = "Undefined theory: {0} "
+                            -- add suggestions
                     li <- lift $ ask
                     case th_name `L.lookup` th of
                         Nothing -> left [Error (format msg th_name) li]

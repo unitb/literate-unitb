@@ -133,6 +133,7 @@ function_theory = Theory { .. }
                 , (label $ dec' "18", axm22)
                 , (label $ dec' "19", axm23)
                 , (label $ dec' "20", axm24)
+                , (label $ dec' "21", axm26)
                 ]
 
         notation = function_notation
@@ -246,6 +247,9 @@ function_theory = Theory { .. }
 --                       zite (mzeq (zrep_select f1 x) znothing)
 --                            (zrep_select f2 x)
 --                            (zrep_select f1 x) )
+        axm26 = fromJust $ mzforall [f1_decl,s1_decl,s2_decl] mztrue $
+                        (f1 `zelem` ztfun s1 s2)
+                `mzeq`  ( (s1 `mzeq` zdom f1) `mzand` (zran f1 `zsubset` s2))
         as_fun e = zcast (fun_type t0 t1) e
     
         (x,x_decl) = var "x" t0
@@ -254,6 +258,7 @@ function_theory = Theory { .. }
         (f1,f1_decl) = var "f1" $ fun_type t0 t1
         (f2,f2_decl) = var "f2" $ fun_type t0 t1
         (s1,s1_decl) = var "s1" $ set_type t0
+        (s2,s2_decl) = var "s2" $ set_type t1
         -- (s2,s2_decl) = var "s2" $ set_type t1
 --        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
         dec' x = "@function@@_" ++ x
@@ -266,20 +271,26 @@ domrest     :: BinOperator
 domsubt     :: BinOperator
 
 overload    = BinOperator "overload" "|"        zovl
-mk_fun      = BinOperator "mk-fun" "\\tfun"     zmk_fun
+mk_fun      = BinOperator "mk-fun" "\\fun"      zmk_fun
 total_fun   = BinOperator "total-fun" "\\tfun"  ztfun
 domrest     = BinOperator "dom-rest" "\\domres" zdomrest
 domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
 
 function_notation :: Notation
 function_notation = with_assoc empty_notation
-    { new_ops     = L.map Right [overload,mk_fun,total_fun,domrest,domsubt]
+    { new_ops     = L.map Right 
+                [ overload,mk_fun
+                , total_fun,domrest
+                , domsubt]
     , prec = [ L.map (L.map Right) 
                  [ [apply]
                  , [mk_fun]
                  , [overload]
                  , [domrest,domsubt] 
-                 , [ equal ] ]]
+                 , [ equal ] ]
+             , L.map (L.map Right)
+               [ [ total_fun ]
+               , [ membership ]] ]
     , left_assoc  = [[overload]]
     , right_assoc = [[domrest,domsubt]]
     , commands    = 

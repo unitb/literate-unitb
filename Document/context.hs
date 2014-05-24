@@ -23,6 +23,7 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
 import Theories.PredCalc
+import Theories.IntervalTheory
 
     -- Libraries
 import Control.Monad.Trans
@@ -153,8 +154,10 @@ ctx_imports _ = visit_doc []
                     let all_th = [ ("sets"       , set_theory)
                                  , ("functions"  , function_theory)
                                  , ("arithmetic" , arithmetic)
-                                 , ("predcalc"   , pred_calc) ]
-                        msg = "Undefined theory {0} "
+                                 , ("predcalc"   , pred_calc)
+                                 , ("intervals"  , interval_theory) ]
+                        msg = "Undefined theory: {0} "
+                            -- add suggestions
                     li <- lift $ ask
                     case th_name `L.lookup` all_th of
                         Nothing -> left [Error (format msg th_name) li]

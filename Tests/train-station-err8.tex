@@ -64,7 +64,7 @@
 
 \begin{align*}
 \invariant{inv2}
-%	loc \in in \tfun \BLK
+%	loc \in in \fun \BLK
 {	\dom . loc = in }
 \end{align*}
 
@@ -93,9 +93,9 @@
 	\hint{=}{ \ref{inv2} }
 		\dom.loc \bunion \{ t \}
 	\hint{=}{ function calculus }
-		\dom.loc \bunion \dom.(t \tfun ent)
+		\dom.loc \bunion \dom.(t \fun ent)
 	\hint{=}{ $\dom$ over $|$ }
-		\dom.(loc  \1 |   t \tfun ent)
+		\dom.(loc  \1 |   t \fun ent)
 	\hint{=}{ \ref{a2} }
 		\dom. loc' 
 	\end{calculation}
@@ -103,7 +103,7 @@
 
 \begin{align*}
 \evassignment{enter}{a2}
-{	loc' = loc  \1| (t \tfun ent)	}
+{	loc' = loc  \1| (t \fun ent)	}
 \end{align*}
 
 \begin{proof}{leave/INV/inv2}
@@ -276,7 +276,7 @@
 		\begin{calculation}
 			loc'.t_0 = ent
 		\hint{=}{ \ref{a2} }
-			(loc | t \tfun ent).t_0 = ent
+			(loc | t \fun ent).t_0 = ent
 		\hint{=}{ \eqref{hyp4} }
 			\true
 		\end{calculation}
@@ -285,12 +285,12 @@
 
 		\begin{case}{hyp5}{ \neg t_0 = t}
 		\begin{align}
-		\assert{hyp6}{ t_0 \in \dom.loc \setminus \dom.(t \tfun ent) }
+		\assert{hyp6}{ t_0 \in \dom.loc \setminus \dom.(t \fun ent) }
 		\end{align}
 		\begin{calculation}
 			loc'.t_0 = ent
 		\hint{=}{ \ref{a2} }
-			(loc | t \tfun ent).t_0 = ent
+			(loc | t \fun ent).t_0 = ent
 		\hint{=}{ \eqref{hyp5} \eqref{hyp6} }
 			loc.t_0 = ent
 		\hint{=}{ \eqref{hyp3} }

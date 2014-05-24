@@ -17,6 +17,7 @@ import Data.List as L
 power   :: BinOperator
 mult    :: BinOperator
 plus    :: BinOperator
+minus   :: BinOperator
 less    :: BinOperator
 greater :: BinOperator
 leq     :: BinOperator
@@ -25,6 +26,7 @@ geq     :: BinOperator
 power   = BinOperator "power" "^"       mzpow
 mult    = BinOperator "mult" "\\cdot"   mztimes
 plus    = BinOperator "plus" "+"        mzplus
+minus   = BinOperator "minus" "-"       mzminus
 less    = BinOperator "less" "<"        mzless
 greater = BinOperator "greater" ">"     (flip mzless)
 leq     = BinOperator "le" "\\le"       mzle
@@ -37,12 +39,13 @@ arithmetic = empty_theory {
 
 arith :: Notation
 arith = with_assoc empty_notation
-    { new_ops     = L.map Right [power,mult,plus,leq,geq,less,greater]
+    { new_ops     = L.map Right [power,mult,plus,leq,geq
+                                ,less,greater,minus]
     , prec = [ L.map (L.map Right)
                      [ [apply]
                      , [power]
                      , [mult]
-                     , [plus]
+                     , [plus,minus]
                      , [mk_fun]
                      , [ equal,leq
                        , less

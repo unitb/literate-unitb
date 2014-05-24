@@ -64,7 +64,7 @@
 
 \begin{align*}
 \invariant{inv2}
-%	loc \in in \tfun \BLK
+%	loc \in in \fun \BLK
 {	\dom . loc = in	}
 \end{align*}
 
@@ -81,9 +81,9 @@
 	\hint{=}{ \ref{inv2} }
 		\dom.loc \bunion \{ t \}
 	\hint{=}{ function calculus }
-		\dom.loc \bunion \dom.(t \tfun ent)
+		\dom.loc \bunion \dom.(t \fun ent)
 	\hint{=}{ $\dom$ over $|$ }
-		\dom.(loc   |   t \tfun ent)
+		\dom.(loc   |   t \fun ent)
 	\hint{=}{ \ref{a2} }
 		\dom. ( loc' )
 	\end{calculation}
@@ -91,7 +91,7 @@
 
 \begin{align*}
 \evassignment{enter}{a2}
-{	loc' = loc | (t \tfun ent)	}
+{	loc' = loc | (t \fun ent)	}
 \end{align*}
 
 \begin{proof}{leave/INV/inv2}
@@ -220,7 +220,7 @@
 	\begin{calculation}
 %		t0 \in in' \implies  loc'.t0 = ent
 %	\hint{=}{ \ref{a2} \ref{a1} }
-%		t0 \in in \bunion \{ t \} \implies  (loc |t \tfun ent).t0 = ent
+%		t0 \in in \bunion \{ t \} \implies  (loc |t \fun ent).t0 = ent
 %	\hint{\follows}{ }
 %		\neg t0 \in in
 		\qforall{t0}{\neg t0 \in in}{ t0 \in in' \implies  loc'.t0 = ent }
@@ -233,12 +233,12 @@
 		(\neg t \in in \land t \in in' \implies  loc'.t = ent )
 	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in' \implies  loc'.t0 = ent }
 	\hint{=}{ \ref{a1} and \ref{a2} }
-		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t = ent )
-%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \tfun ent).t0 = ent }
+		(\neg t \in in \land t \in in \bunion \{ t \} \implies  (loc | t \fun ent).t = ent )
+%	\land	\qforall{t0}{\neg t0 \in in \land \neg  t0 = t}{ t0 \in in \bunion \{ t \} \implies  (loc | t \fun ent).t0 = ent }
 	\hint{=}{  }
-		\neg t \in in \implies  (loc | t \tfun ent).t = ent 
+		\neg t \in in \implies  (loc | t \fun ent).t = ent 
 	\hint{=}{  }
-		\neg t \in in \implies  (t \tfun ent).t = ent 
+		\neg t \in in \implies  (t \fun ent).t = ent 
 	\hint{=}{  }
 		\neg t \in in \implies  ent = ent 
 	\hint{=}{  }

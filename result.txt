@@ -1,6 +1,10 @@
 +- Unit-B Document
 |  +- basic syntax and scopes
 |  +- Contextual predicate visibility rules
+|  +- lambda expressions in the cube example
+|  |  +- test 0, verification, lambda vs empty-fun
+|  |  +- test 1, verification, lambda vs ovl, mk-fun
+|  |  +- [ Success: 2 / 2 ]
 |  +- theories with new notation: comp calc
 |  |  +- proving a theorem with the everywhere operator
 |  |  +- [ Success: 1 / 1 ]

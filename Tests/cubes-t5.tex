@@ -245,15 +245,15 @@ Invariant \ref{inv2} is easy to satisfy initially:
 	\hint{=}{ \ref{a0} }
 		\qfun{i}{ 0 \le i \1\land i < n+1 }{ i^3 }
 	\hint{=}{ split range with \ref{inv4} (see below) }
-		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | n \tfun n^3
+		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | n \fun n^3
 	\hint{=}{ \ref{inv3} }
 %		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \3 | \qfun{i}{ i = n }{ i^3 }
 %	\hint{=}{ one-point rule }
-%		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \2 | n \tfun n^3
+%		\qfun{i}{ 0 \le i \1\land i < n }{ i^3 } \2 | n \fun n^3
 %	\hint{=}{ \ref{inv3} }
-		f \1 | n \tfun n^3
+		f \1 | n \fun n^3
 	\hint{=}{ \ref{inv0} }
-		f \1 | n \tfun a
+		f \1 | n \fun a
 	\hint{=}{ \ref{a4} }
 		f'
 	\end{calculation}
@@ -266,7 +266,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 
 \begin{align*}
 \evassignment{evt}{a4}
-{ f' \2 = f \1 | n \tfun a }
+{ f' \2 = f \1 | n \fun a }
 \end{align*}
 
 \begin{align*}
@@ -291,7 +291,7 @@ Invariant \ref{inv2} is easy to satisfy initially:
 			{ f.i = i^3 } 
 	\hint{=}{ \ref{inv5} }
 %		\qforall{i}{0 \le i \1\land i < n 
-%			\1\land i \in \dom.f \setminus \dom.(n \tfun a) }
+%			\1\land i \in \dom.f \setminus \dom.(n \fun a) }
 %			{ f'.i = i^3 } 
 %	\hint{=}{  }
 		\true

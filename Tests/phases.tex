@@ -65,7 +65,7 @@
 
 \begin{align*}
 \cschedule{step}{c0}{\true} \\
-\evassignment{step}{a0}{ pc' \2= pc \2| p \tfun (pc.p + 1) }
+\evassignment{step}{a0}{ pc' \2= pc \2| p \fun (pc.p + 1) }
 \end{align*}
 
 \weakento{step}{c0}
@@ -85,7 +85,7 @@
 %		\begin{calculation}
 %			k \le pc'.p_0
 %		\hint{=}{  \ref{a0} }
-%			k \le (pc \1 | p \1\tfun pc.p \0+ 1).p_0
+%			k \le (pc \1 | p \1\fun pc.p \0+ 1).p_0
 %		\hint{=}{  \eqref{hyp1} }
 %			k \le pc.p_0
 %		\end{calculation}
@@ -99,7 +99,7 @@
 %	\begin{free:var}{k}{k}
 %	\begin{free:var}{p}{p_0}
 \begin{align}
-	\assume{hyp1}{ pc' &\1= pc \1| p \tfun pc.p\0+1 } \\
+	\assume{hyp1}{ pc' &\1= pc \1| p \fun pc.p\0+1 } \\
 	\goal{\neg ~ pc'.p  &= pc.p}
 %	\goal{
 \end{align}
@@ -108,7 +108,7 @@
 %	\begin{calculation}
 %		pc'.p = pc.p
 %	\hint{=}{ \ref{hyp1} }
-%		(pc \1| p \tfun pc.p + 1).p = pc.p 
+%		(pc \1| p \fun pc.p + 1).p = pc.p 
 %	\hint{=}{ function application }
 %		pc.p + 1 = pc.p
 %	\hint{=}{ function application }
@@ -123,7 +123,7 @@
 %		\begin{calculation}
 %			k \le pc'.p_0
 %		\hint{=}{  \ref{a0} }
-%			k \le (pc \1 | p \1\tfun pc.p \0+ 1).p_0
+%			k \le (pc \1 | p \1\fun pc.p \0+ 1).p_0
 %		\hint{=}{  \eqref{hyp1} }
 %			k \le pc.p_0
 %		\end{calculation}
