@@ -117,7 +117,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 12 / 12 ]
+|  +- [ Success: 13 / 13 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -167,7 +167,6 @@
 |  +- [ Success: 10 / 10 ]
 +- Graphs and operator grammars
 |  +- case 0 - complete domain of matrices
-|  +- case 1 - operator grammar discrepancy
 |  +- case 2 - new ambiguities
 |  +- case 3 - transitive closures
 |  +- case 4 - transitive closures in linear time
@@ -203,7 +202,7 @@
 +++ OK, passed 100 tests.
 
 |  +- case 9 - edit distance, regression test from random testing
-|  +- [ Success: 11 / 11 ]
+|  +- [ Success: 10 / 10 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -218,10 +217,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   20676 total
+   20859 total
     1596 Document/Tests/trainstation.hs
     1089 Document/Tests/lambdas.hs
-     967 Document/machine.hs
+     970 Document/machine.hs
      885 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 0m 55s
+Run time: 0m 56s
