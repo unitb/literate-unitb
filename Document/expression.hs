@@ -24,8 +24,11 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 
 import Utilities.Syntactic
+--import Utilities.Trace
 
     -- Libraries
+--import Control.DeepSeq
+
 import           Control.Monad
 import           Control.Monad.Reader.Class
 import           Control.Monad.State.Class
@@ -599,6 +602,7 @@ option cmd = do
 scan_expr :: Notation -> Scanner Char [(ExprToken,LineInfo)] 
 scan_expr n = do
         eat_space
+        ys <- peek
         b <- is_eof
         if not b then do
             li <- get_line_info
@@ -614,7 +618,6 @@ scan_expr n = do
                 , read_list ":" >> return Colon
                 , read_list "," >> return Comma
                 , match_char (`elem` ['.',';']) >>= \x -> return $ Operator [x]
-                , match_char isSymbol >>= \x -> return $ Operator [x]
                 , do
                     ws <- option $ read_list "\\"
                     x  <- match_char isAlpha
@@ -624,6 +627,8 @@ scan_expr n = do
                     if zs `elem` map f (new_ops n)
                         then return $ Operator zs
                         else return $ Ident zs
+                , match_char isSymbol >>= \x -> return $ Operator [x]
+                , match_char isPunctuation >>= \x -> return $ Operator [x]
                 , do
                     x  <- match_char isDigit
                     xs <- many $ match_char isDigit
@@ -634,7 +639,11 @@ scan_expr n = do
                     return $ Number $ x : xs ]
                 (do 
                     cs <- peek
-                    fail $ "invalid token: '" ++ take 5 cs ++ "'")
+                    let b  = take 5 ys == take 5 cs 
+                        zs
+                            | b         = ""
+                            | otherwise = " '" ++ take 5 ys ++ "'"
+                    fail $ "invalid token: '" ++ take 5 cs ++ "'" ++ zs)
                 return
             xs <- scan_expr n
             return $ (x,li) : xs

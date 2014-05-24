@@ -1,0 +1,576 @@
+%%%%%
+% Package for Unit-B.
+%%%%%
+%%%%%
+% Change logs
+%
+% 2011/03/28:
+% - Initial version.
+%%%%%
+%%%% Unit-B style %%%%
+\NeedsTeXFormat{LaTeX2e}\relax
+\ProvidesPackage{unitb}[2013/01/14]
+
+%%%%% Require packages
+\RequirePackage{eventB}
+\RequirePackage{xifthen}
+\RequirePackage{ifthen}
+\RequirePackage{amsmath}
+\RequirePackage[retainorgcmds]{IEEEtrantools}
+
+
+%%%%% Macros for Unit-B
+\newcommand{\unitb}{Unit-B\xspace}
+
+
+%%%% Anotation for discharging  %%%%%
+%%%% proof obligations               %%%%%
+
+%\newcommand{\satisfies}[2]{
+%	\begin{align*}
+%		#1 \quad &  \textbf{satisfies} \\
+%			& \begin{array}{ll}
+%			#2
+%			\end{array}
+%	\end{align*} }
+%% todo: factor out common layout
+%\newcommand{\subsume}[2]{
+%	\begin{align*}
+%		#1 \quad &  \textbf{imply} \\
+%			& \begin{array}{ll}
+%			#2
+%			\end{array}
+%	\end{align*} }
+%
+%
+%
+%\newcommand{\Prog}{P}
+%\newcommand{\schedule}[2]{
+%  \def\inputcs{#1}
+%  \def\inputfs{#2}
+%  \ifx\inputcs\@empty
+%    \ifx\inputfs\@empty
+%    \else
+%       \left[\!\left[
+%          \{\inputfs\}
+%       \right]\!\right]
+%     \fi
+%   \else
+%      \ifx\inputfs\@empty
+%         \left[\!\left[
+%            \inputcs
+%         \right]\!\right]
+%      \else
+%         \left[\!\left[
+%             \inputcs \{\inputfs\}
+%         \right]\!\right]
+%       \fi
+%     \fi
+%}
+%
+%\newcommand{\action}[4]{
+%  \def\inputgrd{#1}
+%  \def\inputact{#2}
+%  \ifx\inputgrd\@empty
+%  \def\prettygrd{}
+%  \else
+%  \def\prettygrd{\inputgrd \rightarrow}
+%  \fi
+%  \prettygrd  #2 \schedule{#3}{#4}
+%}
+%
+\newcommand{\Bwkf}[1]{\mathbf{#1}}
+\newcommand{\Bstf}[1]{\mathbf{#1}}
+\newcommand{\Bprg}[1]{\textbf{#1}}
+\newcommand{\Bsaf}[1]{\textbf{#1}}
+
+\newcommand{\Bduring}{\Bkeyword{during}}
+\newcommand{\Bupon}{\Bkeyword{upon}}
+
+\newcommand{\ubprops}[1]{
+\textbf{property}
+\begin{align*}
+#1
+\end{align*}
+}
+
+\newcommand{\ubproperty}[3]{
+	#1 \label{#3} \tag{#2}
+}
+
+\newcommand{\ubeventinline}[6]{
+  % \setlength{\B@oldfboxsep}{\fboxsep}
+  % \setlength{\fboxsep}{2ex}
+  % \fbox{
+    \ensuremath{
+      \UB@eventinline{#1}{#2}{#3}{#4}{#5}{#6}
+    }
+  % }
+  % \setlength{\fboxsep}{\B@oldfboxsep}
+}
+
+\newcommand{\ubevent}[6]{
+  % \setlength{\B@oldfboxsep}{\fboxsep}
+  % \setlength{\fboxsep}{2ex}
+  % \fbox{
+    \ensuremath{
+      \UB@event{#1}{#2}{#3}{#4}{#5}{#6}
+    }
+    % }
+    %   \setlength{\fboxsep}{\B@oldfboxsep}
+}
+
+
+%%%%% Pretty print an general Unit-B event
+%%%%% Arguments:
+%%%%% 1. Name of the event.
+%%%%% 2. (Comma-separated) list of parameters.
+%%%%% 3. (Newline(\\)-separated) list of guards.
+%%%%% 4. (Newline(\\)-separated) list of coarse-schedule.
+%%%%% 5. (Newline(\\)-separated) list of fine-schedule.
+%%%%% 6. (Newline(\\)-separated) list of assignments.
+%%%%%
+%%%%% Usage: \UB@event{evt}{x,y}{G1(v,x,y)\\G2(v,x,y)}{S1(v,x,y)\\S2(w,x,y)}{C(v,x,y)}{F(v,x,y)}
+%%%%%       will produce the following
+%%%%%
+%%%%%       conc
+%%%%%       any x,y where
+%%%%%         G1(v,x,y)
+%%%%%         G2(v,x,y)
+%%%%%       during
+%%%%%         C(v,x,y)
+%%%%%       upon
+%%%%%         F(v,x,y)
+%%%%%       then
+%%%%%         S1(v,x,y)
+%%%%%         S2(w,x,y)
+%%%%%       end
+%%%%%
+%%%%% Special case:
+%%%%% - Empty parameters, empty guards --> begin ... end
+%%%%% - Empty parameters --> when ... then ... end
+%%%%% - Empty actions --> \SKIP
+%%%%% - Empty coarse schedule --> during is omitted
+%%%%% - Empty fine schedule --> upon is omitted
+\newcommand{\UB@event}[6]{
+  \def\evt@name{#1}
+  \def\evt@pars{#2}
+  \def\evt@grds{#3}
+  \def\evt@crss{#4}
+  \def\evt@fins{#5}
+  \def\evt@acts{#6}
+  % Pretty-print parameters
+  \ifx\evt@pars\@empty
+  \def\pretty@pars{}
+  \else
+  \def\pretty@pars{\Bsep\Bany \Bsep \evt@pars \Bsep \Bwhere \\}
+  \fi
+  % Pretty-print guards
+  \ifx\evt@grds\@empty
+  \def\pretty@grds{}
+  \else
+  \def\evt@grds@tmp{
+    \begin{array}{@{\Bsep\Bsep}l@{\Bsep}l}
+      \evt@grds
+    \end{array}\\
+  }
+  \ifx\evt@pars\@empty
+  \def\pretty@grds{
+    \Bsep \Bwhen \\
+    \evt@grds@tmp
+  }
+  \else
+  \def\pretty@grds{\evt@grds@tmp}
+  \fi
+  \fi
+  % Pretty-print coarse schedule
+  \ifx\evt@crss\@empty
+  \def\pretty@crss{}
+  \else
+  \def\pretty@crss{
+    \Bsep\Bduring\\
+    \begin{array}{@{\Bsep\Bsep}ll}
+      \evt@crss
+    \end{array}\\
+  }
+  \fi
+  % Pretty-print fine schedule
+  \ifx\evt@fins\@empty
+  \def\pretty@fins{}
+  \else
+  \def\pretty@fins{
+    \Bsep\Bupon\\
+    \begin{array}{@{\Bsep\Bsep}ll}
+      \evt@fins
+    \end{array}\\
+  }
+  \fi
+  % Pretty-print actions
+  \ifx\evt@acts\@empty
+  \def\evt@acts{\SKIP}
+  \else
+  \fi
+  \def\evt@acts@tmp{
+    \begin{array}{@{\Bsep\Bsep}l@{\Bsep}l}
+      \evt@acts
+    \end{array}\\
+  }
+  \def\evt@acts@keyword{\Bsep\Bthen \\}
+  \ifx\evt@pars\@empty
+  \ifx\evt@grds\@empty
+  \def\evt@acts@keyword{\Bsep\Bbegin \\}
+  \else
+  \fi
+  \else
+  \fi
+  \def\pretty@acts{
+    \evt@acts@keyword
+    \evt@acts@tmp
+  }
+  % Really do it now
+  \begin{array}{l}
+    \Bevt{\evt@name} \\
+    \pretty@pars
+    \pretty@grds
+    \pretty@crss
+    \pretty@fins
+    \pretty@acts
+    \Bsep\Bend
+  \end{array}
+}
+
+\newcommand{\UB@eventinline}[6]{
+  \def\evt@name{#1}
+  \def\evt@pars{#2}
+  \def\evt@grds{#3}
+  \def\evt@crss{#4}
+  \def\evt@fins{#5}
+  \def\evt@acts{#6}
+  % Pretty-print parameters
+  \ifx\evt@pars\@empty
+  \def\pretty@pars{}
+  \else
+  \def\pretty@pars{~\Bany ~ \evt@pars ~ \Bwhere ~}
+  \fi
+  % Pretty-print guards
+  \ifx\evt@grds\@empty
+  \def\pretty@grds{}
+  \else
+  \def\evt@grds@tmp{
+      \evt@grds
+  }
+  \ifx\evt@pars\@empty
+  \def\pretty@grds{
+    ~ \Bwhen ~
+    \evt@grds@tmp
+  }
+  \else
+  \def\pretty@grds{\evt@grds@tmp}
+  \fi
+  \fi
+  % Pretty-print coarse schedule
+  \ifx\evt@crss\@empty
+  \def\pretty@crss{}
+  \else
+  \def\pretty@crss{
+    ~\Bduring~ \evt@crss ~
+  }
+  \fi
+  % Pretty-print fine schedule
+  \ifx\evt@fins\@empty
+  \def\pretty@fins{}
+  \else
+  \def\pretty@fins{
+    ~\Bupon~ \evt@fins~
+  }
+  \fi
+  % Pretty-print actions
+  \ifx\evt@acts\@empty
+  \def\evt@acts{\SKIP}
+  \else
+  \fi
+  \def\evt@acts@tmp{
+      \evt@acts~
+  }
+  \def\evt@acts@keyword{~\Bthen ~}
+  \ifx\evt@pars\@empty
+  \ifx\evt@grds\@empty
+  \def\evt@acts@keyword{~\Bbegin ~}
+  \else
+  \fi
+  \else
+  \fi
+  \def\pretty@acts{
+    \evt@acts@keyword
+    \evt@acts@tmp
+  }
+  % Really do it now
+  \begin{array}{l}
+    \Bevt{\evt@name} ~ \widehat{=}~
+    \pretty@pars
+    \pretty@grds
+    \pretty@crss
+    \pretty@fins
+    \pretty@acts
+    ~\Bend
+  \end{array}
+}
+
+% \newcommand{\act}{as}
+% \newcommand{\grd}{gd}
+% \newcommand{\wkf}{cs}
+% \newcommand{\stf}{fs}
+\newcommand{\execution}{\mathit{ex}}
+\newcommand{\Prog}{\text{P}}
+\newcommand{\Prop}{\text{S}}
+%\newcommand{\guard}{\mathit{guard}}
+\newcommand{\action}{\mathit{act}}
+
+%%%% Generic model %%%%
+\newBevt[evt]{e}
+\newcommand{\guard}{g}
+\newcommand{\csched}{c}
+\newcommand{\fsched}{f}
+\newcommand{\assignment}{s}
+\newcommand{\Action}{\mathbf{S}}
+\newBevt[cncevt]{f}
+\newcommand{\cncguard}{h}
+\newcommand{\cnccsched}{d}
+\newcommand{\cncfsched}{e}
+\newcommand{\cncassignment}{r}
+\newcommand{\CncAction}{\mathbf{R}}
+
+%%%% Semantics
+%\newcommand{\safety}{\mathit{saf}}
+%\newcommand{\liveness}{\mathit{live}}
+%\newcommand{\step}{\mathit{step}}
+%\newcommand{\schedule}{\mathit{sched}}
+%\newcommand{\wf}{\text{wf}}
+%\newcommand{\strf}{\text{sf}}
+
+%%%% Additional symbols
+%\newcommand{\sneg}{\sim}
+
+%%%%% Pretty print invariants
+%%%%% Arguments:
+%%%%% 1. (Newline(\\)-separated) list of invariants.
+%%%%%
+%%%%% Usage: \invariants{\Binv{inv0\_1:} & x \in \nat \\
+%%%%%                    \Binv{inv0\_2:} & y \in \nat \\[2ex]}
+\newcommand{\properties}[2][]{
+  \Bsection[#1]{properties}{#2}
+}
+
+%\newenvironment{assumption}{\begin{align*}}{\end{align*}}
+%\newenvironment{statement}{\begin{equation}}{\end{equation}}
+\newcommand{\hide}[1]{}
+\newcommand{\igref}[1]{\ref{#1}}
+\newcommand{\igeqref}[1]{\eqref{#1}}
+
+\newcounter{prop}
+\setcounter{prop}{-1}
+%\newcommand{\proptag}{}
+\newcommand{\assertion}[4] % {tag prefix}{counter}{label}{expr}
+{	%\renewcommand{\proptag}{#1}
+	\label{#3}
+	\ifthenelse{\isempty{#2}} 
+	{	\stepcounter{prop}
+		\tag{#1\arabic{prop}} }
+	{	\stepcounter{#2}
+		\tag{\ref{#2}/#1\arabic{#2}} }
+	#4 } 
+
+\newcommand{\newassertion}[2] % {\invariant}{J}
+{ 	%\newcounter{cnt:#1}
+	\newcommand{#1}
+	{	\assertion{#2}{} } } % {label}{expr}
+%\newcommand{\newdeclaration}
+\newcommand{\newcompound}[1] % {evt}
+{	\newcounter{#1}
+	\setcounter{#1}{-1} }
+\newcommand{\newcomponent}[2] % {assignment}{A}
+{ 	%\newcounter{cnt:#1}
+	\newcommand{#1}
+	{	\assertion{#2} } } % {counter}{label}{expr}
+
+\newcommand{\curmachine}{}
+\newenvironment{machine}[1]
+{	\renewcommand{\curmachine}{#1}
+	\noindent \textbf{machine}~#1 }
+{ 	
+	\noindent (\textbf{end} \curmachine) }
+\newcommand{\variable}[1]
+{	#1 }
+\newcommand{\refines}[1]{\noindent \textbf{refines} #1}
+\newcommand{\dummy}[1]
+{	#1 
+	}
+\newcommand{\param}[2]
+{	#2
+	}
+\newcommand{\indices}[2]
+{	#2 
+	}
+\newcommand{\constant}[1]
+{	#1 
+	}
+\newcommand{\safety}[3]
+{		#2 \textbf{\quad un\quad} #3
+		\stepcounter{prop}
+		\tag{S\arabic{prop}} 
+		\label{#1} 	}
+\newcommand{\safetyB}[4]
+{		#3 \textbf{\quad un\quad} #4 \textbf{\quad except\quad} \text{\ref{#2}}
+		\stepcounter{prop}
+		\tag{S\arabic{prop}} 
+		\label{#1} 	}
+\newcommand{\progress}[3]
+	% \progress{label}{p}{q} means 
+	%			label: p |-> q
+{		#2 \quad \mapsto\quad #3
+		\stepcounter{prop}
+		\tag{P\arabic{prop}} 
+		\label{#1} 	}
+
+	% 
+	% PROOF STRUCTURE
+	%
+\newenvironment{free:var}[2]{}{}
+\newenvironment{by:cases}
+{	\noindent \textbf{begin} case distinction }
+{	\noindent (\textbf{end} case distinction) }
+\newenvironment{case}[2]
+{	\noindent \textbf{case }\begin{align}  #2 \label{#1} \end{align} }
+{	\noindent (\textbf{end} case) }
+\newenvironment{by:parts}{}{}
+\newenvironment{part:a}[1]
+{	\noindent \textbf{subgoal:} 
+	$ #1 $ }
+{	\noindent (\textbf{end} subgoal) \\ }
+\newcommand{\easy}{ }
+\newenvironment{subproof}[1]{ ~ }{ }
+
+\newassertion{\assume}{}
+%\newcommand{\assume}[2]
+%{	%	\noindent \textbf{assume} 
+%	#2 \label{#1} 
+%	}
+\newcommand{\goal}[1]
+{	#1
+	}
+\newcommand{\assert}[2]
+{	#2 \label{#1} 
+	}
+
+	% 
+	% IMPORT
+	%	
+\newenvironment{use:set}[1]{}{}
+\newenvironment{use:fun}[2]{}{}
+\newcommand{\newset}[2]
+{ 	% \end{machine}
+%	\newcommand{#2}{\text{#1}}
+%	\begin{machine}{\curmachine}
+	\noindent \textbf{set}: #1 
+	}
+
+%%%%%%%
+% constants
+%
+\newcommand{\emptyfun}{\epsilon}
+
+%%%%%
+% types
+%
+\newcommand{\newtype}[2]{\newcommand{#1}{\textbf{#2}}}
+
+\newtype{\Int}{int}
+\newtype{\Real}{real}
+\newtype{\set}{set}
+
+\renewcommand{\oftype}[2]{ #1 }
+
+\newcommand{\newevent}[2]
+{	\begin{align*} \textbf{event}~\tag{#2}\label{#1} 
+	\end{align*}
+	\newcompound{#1} 
+	}
+
+%%%%%%%%%
+% Assertions
+%
+%\newcomponent
+\newassertion{\invariant}{J}
+\newassertion{\initialization}{IN}
+\newassertion{\constraint}{CO}
+\newassertion{\assumption}{ASM}
+\newcommand{\transientB}[3] % {evt}{label}{ instantiation }{expr}
+{	\transientBackEnd{#1}{#2}
+	}
+\newcommand{\transient}[2] % {evt}{label}{expr}
+{	\transientBackEnd{#1}{#2}
+	}
+\newcomponent{\transientBackEnd}{TR}
+\newcomponent{\evguard}{G}
+\newcomponent{\fschedule}{F}
+\newcomponent{\cschedule}{C}
+\newcomponent{\evassignment}{A}
+
+%%%%%%%%%%%%%%%%%%
+% Proof obligations and refinement
+%
+\newcommand{\discharge}[2]	
+	% \discharge{P0}{T0} 
+	%	-- transient predicate T0 implements P0
+{	\noindent \textbf{discharge} \ref{#1} 
+	\textbf{with} \ref{#2} \\	}
+
+\newcommand{\refine}[4]
+	% \refine{prop}{rule}{new props}{ comment }{<notag>}
+{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}#4 }\right\} \\ }
+\newcommand{\var}[3]{$#1$, #2 to $#3$}
+
+%\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
+
+\newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
+\newcommand{\replace}[6]{}
+\newcommand{\replacefine}[5]{}
+\newcommand{\removeguard}[2]{}
+
+\newenvironment{block}
+{	\begin{list}{}
+	{	\setlength\itemsep{0.00in}
+		\settowidth{\labelwidth}{00}
+ 		\setlength{\leftmargin}{\labelwidth}
+ 		\addtolength{\leftmargin}{\labelsep}
+ 		\renewcommand{\makelabel}[1]{##1\hfil}
+		}
+	}
+{	\end{list}
+	}
+  % operator
+\newcommand{\fun}{\tfun} % singleton functions
+\newcommand{\intervalR}[2]{ [#1,#2) }
+\newcommand{\betweenR}[3]{ #1 \le #2 < #3 }
+
+	% Theories
+\newcommand{\with}[1]{ }
+\newenvironment{context}[1]
+{	\renewcommand{\curmachine}{#1}
+	\noindent \textbf{context}~#1 }
+{ 	
+	\noindent (\textbf{end} \curmachine) }
+\newcommand{\operator}[2]{}
+\newcommand{\precedence}[1]{\noindent\textbf{precedence rule:  } \[#1\]}
+\newassertion{\axiom}{}
+\newassertion{\theorem}{}
+
+	% Tactics
+\newenvironment{indirect:equality}[3]{}{}
+\newenvironment{indirect:inequality}[3]{}{}
+\newenvironment{by:symmetry}[2]{}{} 
+\newcommand{\using}[1]{#1}
+\newcommand{\inst}[2]{\ref{#1} with #2}
+\newcommand{\eqinst}[2]{\eqref{#1} with #2}
+\newcommand{\subst}[2]{$#1 := #2$}
+

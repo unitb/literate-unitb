@@ -15,6 +15,7 @@ import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.CompCalc as CC
+import qualified Document.Tests.LockFreeDeque as LFD
 
 import Latex.Parser
 import Latex.Scanner
@@ -34,6 +35,7 @@ test :: IO Bool
 test = test_cases 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
+        , LFD.test_case
         , CC.test_case
         , Ind.test_case
         , SMch.test_case
