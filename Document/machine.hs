@@ -472,10 +472,6 @@ collect_expr = visit_doc
                         old_event <- bind
                             (format "event '{0}' is undeclared" ev)
                             $ ev `M.lookup` events m
-                        toEither $ error_list
-                            [ ( lbl `member` action old_event
-                              , format msg lbl )
-                            ]
                         act     <- get_evt_part m old_event xs
                         new_act <- bind 
                             (format msg lbl)
@@ -489,25 +485,19 @@ collect_expr = visit_doc
             )
         ,   (   "\\evguard"
             ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
-                        toEither $ error_list
-                            [   ( not (evt `member` events m)
-                                , format "event '{0}' is undeclared" evt )
-                            ]
                         old_event <- bind
                             ( format "event '{0}' is undeclared" evt )
                             $ evt `M.lookup` events m
                         let grds = guards old_event
-                            msg = "{0} is already used for another guard"
-                        toEither $ error_list
-                            [   ( evt `member` grds
-                                , format msg lbl )
-                            ]
-                        grd      <- get_evt_part m old_event xs
+                            msg = "'{0}' is already used for another guard"
+                        grd       <- get_evt_part m old_event xs
+                        new_guard <- bind (format msg lbl)
+                            $ insert_new lbl grd grds 
                         let n         = length $ sched_ref old_event
                             rule      = add_guard evt lbl
                             new_event = old_event
                                         { sched_ref = rule : sched_ref old_event
-                                        , guards  =  insert lbl grd grds  }
+                                        , guards    = new_guard  }
                             po_lbl    = composite_label 
                                         [ evt, label "GRD"
                                         , _name m, label $ show n]
@@ -525,7 +515,7 @@ collect_expr = visit_doc
                         old_event <- bind 
                             ( format "event '{0}' is undeclared" evt )
                             $ evt `M.lookup` events m
-                        let msg = "{0} is already used for another schedule"
+                        let msg = "'{0}'' is already used for another schedule"
                         sch <- get_evt_part m old_event xs
                         new_sched <- bind
                             (format msg lbl)
@@ -558,72 +548,61 @@ collect_expr = visit_doc
         ,   (   "\\assumption"
             ,   CmdBlock $ \(lbl,xs,()) m -> do
                         let th = theory m
-                            msg = "{0} is already used for another assertion"
-                        toEither $ error_list
-                            [ ( lbl `member` fact th
-                              , format msg lbl )
-                            ]
-                        axm <- get_assert m xs
+                            msg = "'{0}' is already used for another assertion"
+                        axm      <- get_assert m xs
+                        new_fact <- bind (format msg lbl)
+                            $ insert_new lbl axm $ fact th
                         return m { 
-                            theory = th { fact = insert lbl axm $ fact th } } 
+                            theory = th { fact = new_fact } } 
             )
                 --------------------------
                 --  Program properties  --
                 --------------------------
         ,   (   "\\initialization"
             ,   CmdBlock $ \(lbl,xs,()) m -> do
-                        let msg = "{0} is already used for another invariant"
-                        initp         <- get_assert m xs
-                        toEither $ error_list
-                            [ ( lbl `member` inits m
-                              , format msg lbl )
-                            ]
+                        let msg = "'{0}' is already used for another invariant"
+                        initp     <- get_assert m xs
+                        new_inits <- bind (format msg lbl)
+                            $ insert_new lbl initp $ inits m
                         return m {
-                                inits = insert lbl initp $ inits m } 
+                                inits = new_inits } 
             )
         ,   (   "\\invariant"
             ,   CmdBlock $ \(lbl,xs,()) m -> do
-                        let msg = "{0} is already used for another invariant"
-                        toEither $ error_list
-                            [ ( lbl `member` inv (props m)
-                              , format msg lbl )
-                            ]
-                        invar         <- get_assert m xs
+                        let msg = "'{0}' is already used for another invariant"
+                        invar   <- get_assert m xs
+                        new_inv <- bind (format msg lbl)
+                            $ insert_new lbl invar $ inv $ props m
                         return m { 
                             props = (props m) { 
-                                inv = insert lbl invar $ inv $ props m } } 
+                                inv = new_inv } } 
             )
         ,   (   "\\transient"      
             ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
-                        let msg = "{0} is already used for another\
+                        let msg = "'{0}' is already used for another\
                                   \ program property"
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
-                            , ( lbl `member` transient (props m)
-                              , format msg lbl )
                             ]
                         tr            <- get_assert_with_free m xs
                         let prop = Transient 
                                     (free_vars (context m) tr) 
                                     tr ev empty Nothing
                             old_prog_prop = transient $ props m
-                            new_props     = insert lbl prop $ old_prog_prop
+                        new_props     <- bind (format msg lbl)
+                            $ insert_new lbl prop $ old_prog_prop
                         return m {
                             props = (props m) {
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
             ,   CmdBlock $ \(ev, lbl, hint, xs,()) m -> do
-                        let msg = "{0} is already used for\
+                        let msg = "'{0}' is already used for\
                                   \ another program property"
                         toEither $ error_list
                             [ ( not (ev `member` events m)
                               , format "event '{0}' is undeclared" ev )
-                            ]
-                        toEither $ error_list
-                            [   ( lbl `member` transient (props m)
-                                , format msg lbl )
                             ]
                         tr            <- get_assert_with_free m xs
                         let fv = (free_vars (context m) tr)
@@ -631,44 +610,47 @@ collect_expr = visit_doc
                                             m fv ev hint ([],Nothing)
                         let prop = Transient fv tr ev (fromList hints) lt
                             old_prog_prop = transient $ props m
-                            new_props     = insert lbl prop $ old_prog_prop
+                        new_props  <- bind (format msg lbl)
+                                $ insert_new lbl prop $ old_prog_prop
                         return m {
                             props = (props m) {
                                 transient = new_props } } 
             )
         ,   (   "\\constraint"
             ,   CmdBlock $ \(lbl,xs,()) m -> do
-                        let msg = "{0} is already used for another invariant"
-                        toEither $ error_list
-                            [ ( lbl `member` constraint (props m)
-                              , format msg lbl )
-                            ]
+                        let msg = "'{0}' is already used for another safety property"
                         pre <- get_predicate m empty_ctx WithFreeDummies xs
                         let vars = elems $ free_vars (context m) pre
+                        new_cons <- bind (format msg lbl)
+                                $ insert_new lbl (Co vars pre) 
+                                    $ constraint $ props m
                         return m { 
                             props = (props m) { 
-                                constraint = insert lbl (Co vars pre) 
-                                    $ constraint $ props m } } 
+                                constraint = new_cons } } 
             )
         ,   (   "\\safety"
             ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
-                    let prop = safety $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert_with_free m pCt
                         q    <- fromEither ztrue $ get_assert_with_free m qCt
-                        error_list 
-                            [   ( lbl `member` prop
-                                , format "safety property {0} already exists" lbl )
-                            ] 
                         return (p,q))
                     let ctx = context m
-                    let dum = free_vars ctx p `union` free_vars ctx q
-                    let new_prop = Unless (M.elems dum) p q Nothing
+                        dum = free_vars ctx p `union` free_vars ctx q
+                        new_prop = Unless (M.elems dum) p q Nothing
+                        new_saf  = Co (M.elems dum) (zimplies 
+                                        (zand p $ znot q) 
+                                        $ primed (variables m) (zor p q))
+                    new_cons <- bind (format "safety property '{0}' already exists" lbl)
+                        $ insert_new lbl 
+                                new_saf
+                                (constraint $ props m)
+                    new_saf_props <- bind (format "safety property '{0}' already exists" lbl)
+                        $ insert_new lbl 
+                                new_prop
+                                (safety $ props m)
                     return m { props = (props m) 
-                        { safety = insert lbl new_prop $ prop 
-                        , constraint = insert lbl 
-                            (Co (M.elems dum) (zimplies (zand p $ znot q) $ primed (variables m) (zor p q)))
-                            (constraint $ props m) } } 
+                        { safety = new_saf_props
+                        , constraint = new_cons } } 
             )
         ,   (   "\\progress"
             ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
@@ -676,18 +658,18 @@ collect_expr = visit_doc
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert_with_free m pCt
                         q    <- fromEither ztrue $ get_assert_with_free m qCt
-                        error_list 
-                            [   ( lbl `member` prop
-                                , format "progress property {0} already exists" lbl )
-                            ] 
                         return (p,q))
                     let ctx = context m
-                    let dum = S.fromList (elems $ free_vars ctx p) 
+                        dum = S.fromList (elems $ free_vars ctx p) 
                                 `S.union` S.fromList (elems $ free_vars ctx q)
-                    let new_prop = LeadsTo (S.elems dum) p q
+                        new_prop = LeadsTo (S.elems dum) p q
+                    new_prog <- bind (format "progress property '{0}' already exists" lbl)
+                        $ insert_new lbl new_prop $ prop 
+                    new_deriv <- bind (format "proof step '{0}' already exists" lbl)
+                        $ insert_new lbl (Rule Add) $ derivation $ props m
                     return m { props = (props m) 
-                        { progress   = insert lbl new_prop $ prop 
-                        , derivation = insert lbl (Rule Add) $ derivation $ props m
+                        { progress   = new_prog
+                        , derivation = new_deriv
                         } } 
             )
         ]
@@ -733,7 +715,7 @@ collect_refinement = visit_doc []
                         q    <- fromEither ztrue $ get_assert m qCt
                         error_list 
                             [   ( lbl `member` prop
-                                , format "safety property {0} already exists" lbl )
+                                , format "safety property '{0}' already exists" lbl )
                             ] 
                         return (p,q))
                     let ctx = context m

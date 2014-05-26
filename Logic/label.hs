@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Logic.Label where
 
     -- Module
@@ -9,6 +10,7 @@ import GHC.Generics
 
 import Data.List as L
 import Data.Map hiding ( map, split )
+import Data.String
 import Data.String.Utils ( split )
 import Data.Typeable
 
@@ -17,6 +19,9 @@ data Label = Lbl String
 
 instance Show Label where
     show (Lbl s) = s
+
+instance IsString Label where
+    fromString x = label x
 
 label :: String -> Label
 label s = Lbl s

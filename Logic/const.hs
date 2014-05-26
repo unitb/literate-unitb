@@ -112,7 +112,9 @@ zall xs      =
         case concatMap f xs of
             []  -> ztrue
             [x] -> x
-            xs  -> FunApp (Fun [] "and" (take n $ repeat bool) bool) xs
+            xs  
+                | zfalse `elem` xs -> zfalse
+                | otherwise -> FunApp (Fun [] "and" (take n $ repeat bool) bool) xs
     where
         n = length xs
         f (FunApp (Fun [] "and" _ _) xs) = concatMap f xs
@@ -124,7 +126,9 @@ zsome xs      =
         case concatMap f xs of
             []  -> ztrue
             [x] -> x
-            xs  -> FunApp (Fun [] "or" (take n $ repeat bool) bool) xs
+            xs
+                | ztrue `elem` xs -> ztrue
+                | otherwise        -> FunApp (Fun [] "or" (take n $ repeat bool) bool) xs
     where
         n = length xs
         f (FunApp (Fun [] "or" _ _) xs) = concatMap f xs

@@ -1,10 +1,11 @@
 +- Unit-B Document
 |  +- basic syntax and scopes
 |  +- Contextual predicate visibility rules
-|  +- lambda expressions in the cube example
-|  |  +- test 0, verification, lambda vs empty-fun
-|  |  +- test 1, verification, lambda vs ovl, mk-fun
-|  |  +- [ Success: 2 / 2 ]
+|  +- Specification and refinement of a lock-free algorithm
+|  |  +- test 0, verification, specification with intervals
+|  |  +- test 1, verification, failed proof with intervals
+|  |  +- test 2, error message name clash in guards
+|  |  +- [ Success: 3 / 3 ]
 |  +- theories with new notation: comp calc
 |  |  +- proving a theorem with the everywhere operator
 |  |  +- [ Success: 1 / 1 ]
@@ -217,10 +218,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   20859 total
+   21013 total
     1596 Document/Tests/trainstation.hs
     1089 Document/Tests/lambdas.hs
-     970 Document/machine.hs
+     952 Document/machine.hs
      885 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 0m 56s
+Run time: 1m 30s

@@ -25,14 +25,13 @@ module Z3.Z3
     , to_fol_ctx
     , patterns
     , match_all
-    , match_some
-    )
+    , match_some )
 where
 
     -- Modules
-import Logic.Expr
 import Logic.Classes
 import Logic.Const
+import Logic.Expr
 import Logic.Genericity
 import Logic.Label
 import Logic.Lambda
