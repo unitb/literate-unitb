@@ -681,9 +681,12 @@ result1 = unlines
     , "  o  train0/INIT/INV/inv2/step (424,1)"
     , "  o  train0/INIT/INV/inv2/step (426,1)"
     , "  o  train0/INIT/INV/inv2/step (428,1)"
+    , "  o  train0/INIT/WD"
+    , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
-    , "  o  train0/WD/INV"
+    , "  o  train0/co0/CO/WD"
+    , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (335,7)"
     , "  o  train0/enter/CO/co0/case 1/hypotheses (335,7)"
     , "  o  train0/enter/CO/co0/case 1/relation (335,7)"
@@ -775,7 +778,8 @@ result1 = unlines
     , "  o  train0/leave/WD/C_SCH"
     , "  o  train0/leave/WD/F_SCH"
     , "  o  train0/leave/WD/GRD"
-    , "passed 102 / 103"
+    , "  o  train0/tr0/TR/WD"
+    , "passed 106 / 107"
     ]
 
 case1 :: IO (String, Map Label Sequent)
@@ -1205,11 +1209,14 @@ result13 = unlines
     , "  o  train0/INIT/FIS/loc"
     , "  o  train0/INIT/INV/inv1"
     , "  o  train0/INIT/INV/inv2"
+    , "  o  train0/INIT/WD"
+    , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
     , "  o  train0/SKIP/CO/s0"
     , "  o  train0/SKIP/CO/s1"
-    , "  o  train0/WD/INV"
+    , "  o  train0/co0/CO/WD"
+    , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/goal (220,7)"
     , "  o  train0/enter/CO/co0/hypotheses (220,7)"
     , "  o  train0/enter/CO/co0/relation (220,7)"
@@ -1279,7 +1286,10 @@ result13 = unlines
     , "  o  train0/leave/WD/C_SCH"
     , "  o  train0/leave/WD/F_SCH"
     , "  o  train0/leave/WD/GRD"
-    , "passed 73 / 78"
+    , "  o  train0/s0/CO/WD"
+    , "  o  train0/s1/CO/WD"
+    , "  o  train0/tr0/TR/WD"
+    , "passed 79 / 84"
     ]
 
 case13 :: IO (String, Map Label Sequent)
@@ -1303,11 +1313,14 @@ result14 = unlines
     , "  o  train0/INIT/FIS/loc"
     , "  o  train0/INIT/INV/inv1"
     , "  o  train0/INIT/INV/inv2"
+    , "  o  train0/INIT/WD"
+    , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
     , "  o  train0/SKIP/CO/s0"
     , "  o  train0/SKIP/CO/s1"
-    , "  o  train0/WD/INV"
+    , "  o  train0/co0/CO/WD"
+    , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (222,7)"
     , "  o  train0/enter/CO/co0/case 1/hypotheses (222,7)"
     , "  o  train0/enter/CO/co0/case 1/relation (222,7)"
@@ -1370,7 +1383,10 @@ result14 = unlines
     , "  o  train0/leave/WD/C_SCH"
     , "  o  train0/leave/WD/F_SCH"
     , "  o  train0/leave/WD/GRD"
-    , "passed 69 / 71"
+    , "  o  train0/s0/CO/WD"
+    , "  o  train0/s1/CO/WD"
+    , "  o  train0/tr0/TR/WD"
+    , "passed 75 / 77"
     ]
         
 case14 :: IO (String, Map Label Sequent)
@@ -1385,11 +1401,14 @@ result15 = unlines
     , "  o  train0/INIT/FIS/loc"
     , "  o  train0/INIT/INV/inv1"
     , "  o  train0/INIT/INV/inv2"
+    , "  o  train0/INIT/WD"
+    , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
     , "  o  train0/SKIP/CO/s0"
     , "  o  train0/SKIP/CO/s1"
-    , "  o  train0/WD/INV"
+    , "  o  train0/co0/CO/WD"
+    , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (234,7)"
     , "  o  train0/enter/CO/co0/case 1/hypotheses (234,7)"
     , "  o  train0/enter/CO/co0/case 1/relation (234,7)"
@@ -1458,9 +1477,12 @@ result15 = unlines
     , "  o  train0/leave/WD/C_SCH"
     , "  o  train0/leave/WD/F_SCH"
     , "  o  train0/leave/WD/GRD"
-    , "passed 74 / 77"
+    , "  o  train0/s0/CO/WD"
+    , "  o  train0/s1/CO/WD"
+    , "  o  train0/tr0/TR/WD"
+    , "passed 80 / 83"
     ]
-        
+       
 case15 :: IO (String, Map Label Sequent)
 case15 = verify path15
 
@@ -1473,11 +1495,14 @@ result16 = unlines
     , "  o  train0/INIT/FIS/loc"
     , "  o  train0/INIT/INV/inv1"
     , "  o  train0/INIT/INV/inv2"
+    , "  o  train0/INIT/WD"
+    , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
     , "  o  train0/SKIP/CO/s0"
     , "  o  train0/SKIP/CO/s1"
-    , "  o  train0/WD/INV"
+    , "  o  train0/co0/CO/WD"
+    , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (292,7)"
     , "  o  train0/enter/CO/co0/case 1/hypotheses (292,7)"
     , "  o  train0/enter/CO/co0/case 1/relation (292,7)"
@@ -1565,7 +1590,10 @@ result16 = unlines
     , "  o  train0/leave/WD/C_SCH"
     , "  o  train0/leave/WD/F_SCH"
     , "  o  train0/leave/WD/GRD"
-    , "passed 95 / 96"
+    , "  o  train0/s0/CO/WD"
+    , "  o  train0/s1/CO/WD"
+    , "  o  train0/tr0/TR/WD"
+    , "passed 101 / 102"
     ]
 
 case16 :: IO (String, Map Label Sequent)

@@ -132,7 +132,8 @@ result7 = unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
-    , "  o  m0/WD/INV"
+    , "  o  m0/INIT/WD"
+    , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -166,7 +167,7 @@ result7 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 41 / 41"
+    , "passed 42 / 42"
     ]
 
 case7 :: IO String

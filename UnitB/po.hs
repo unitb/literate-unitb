@@ -144,6 +144,10 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ fis_po m) $ M.toList $ events m)
             ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
             ++ [inv_wd_po m]
+            ++ [init_wd_po m]
+            ++ (map (uncurry $ tr_wd_po m) $ M.toList $ transient p)
+            ++ (map (uncurry $ co_wd_po m) $ M.toList $ constraint p)
+            ++ (map (uncurry $ prog_wd_po m) $ M.toList $ progress p)
             ++ (map (uncurry $ evt_wd_po m) $ M.toList $ events m)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
@@ -336,21 +340,59 @@ fis_po m lbl evt = eval_generator $
     where
         pvar = map prime $ M.elems $ variables m
 
+tr_wd_po :: Machine -> Label -> Transient -> Map Label Sequent
+tr_wd_po  m lbl (Transient vs p _ _ _) = eval_generator $
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label "TR"
+                 context $ step_ctx m
+                 named_hyps $ invariants m) $
+        do  emit_goal ["WD"]
+                $ well_definedness $ zforall (elems vs) ztrue p
+
+prog_wd_po :: Machine -> Label -> ProgressProp -> Map Label Sequent
+prog_wd_po m lbl (LeadsTo vs p q) = eval_generator $
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label "PROG"
+                 context $ step_ctx m
+                 named_hyps $ invariants m) $
+        do  emit_goal ["WD","lhs"]
+                $ well_definedness $ zforall vs ztrue p
+            emit_goal ["WD","rhs"]
+                $ well_definedness $ zforall vs ztrue q
+
+co_wd_po :: Machine -> Label -> Constraint -> Map Label Sequent
+co_wd_po m lbl (Co vs p) = eval_generator $
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label "CO"
+                 context $ step_ctx m
+                 nameless_hyps $ M.elems $
+                    M.map (primed $ variables m) $ invariants m
+                 named_hyps $ invariants m)
+         $ emit_goal ["WD"]
+            $ well_definedness $ zforall vs ztrue p
+
 inv_wd_po :: Machine -> Map Label Sequent
 inv_wd_po m = eval_generator $ 
         with (do prefix_label $ _name m
                  context $ assert_ctx m
                  named_hyps $ inv $ inh_props m
                  named_hyps $ inv_thm $ inh_props m)
-        $ emit_goal ["WD", "INV"] 
-            -- $ zall $ elems $ invariants m
+        $ emit_goal ["INV", "WD"] 
             $ well_definedness $ zall $ elems $ invariants m
 
-    --singleton (label "INV/WD") 
+init_wd_po :: Machine -> Map Label Sequent
+init_wd_po m = eval_generator $
+        with (do prefix_label $ _name m
+                 context $ assert_ctx m
+                 named_hyps $ inv $ inh_props m
+                 named_hyps $ inv_thm $ inh_props m)
+        $ emit_goal ["INIT", "WD"] 
+            $ well_definedness $ zall $ elems $ inits m
 
---evt_wd_po :: a
 evt_wd_po :: Machine -> Label -> Event -> Map Label Sequent
---evt_wd_po _ _ _ = empty
 evt_wd_po m lbl evt = eval_generator $ 
         with (do prefix_label $ _name m
                  prefix_label lbl

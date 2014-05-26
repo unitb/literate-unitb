@@ -67,7 +67,6 @@
 \end{align*}
 
 \newevent{m0:pop:left}{pop\_left}
-\param{m0:pop:left}{x : \G}
 
 \begin{align*}
 \evassignment{m0:pop:left}{m0:act0}{ qe' &\1= \{ p \} \domsub qe }
@@ -77,14 +76,12 @@
 \end{align*}
 
 \newevent{m0:pop:right}{pop\_right}
-\param{m0:pop:right}{ x : \G }
 
 \begin{align*}
 \evassignment{m0:pop:right}{m0:act0}{ qe' &\1= \{ q-1 \} \domsub qe }
 \\ \evassignment{m0:pop:right}{m0:act1}{ p' &\1= p }
 \\ \evassignment{m0:pop:right}{m0:act2}{ q' &\1= q-1 }
 \\ \evguard{m0:pop:right}{m0:grd0}{ p < q }
-\\ \evguard{m0:pop:right}{m0:grd1}{ qe.p = x }
 \end{align*}
 
 \end{machine}

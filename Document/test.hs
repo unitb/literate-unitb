@@ -49,19 +49,20 @@ test = test_cases
         ]
 
 result1 :: String
-result1 = unlines [
-        "  o  m/INIT/FIS/in",
-        "  o  m/WD/INV",
-        "  o  m/enter/FIS/in@prime",
-        "  o  m/enter/SCH/goal (21,1)",
-        "  o  m/enter/SCH/hypotheses (21,1)",
-        "  o  m/enter/SCH/relation (21,1)",
-        "  o  m/enter/SCH/step (23,1)",
-        "  o  m/enter/WD/ACT",
-        "  o  m/enter/WD/C_SCH",
-        "  o  m/enter/WD/F_SCH",
-        "  o  m/enter/WD/GRD",
-        "passed 11 / 11"
+result1 = unlines 
+    [ "  o  m/INIT/FIS/in"
+    , "  o  m/INIT/WD"
+    , "  o  m/INV/WD"
+    , "  o  m/enter/FIS/in@prime"
+    , "  o  m/enter/SCH/goal (21,1)"
+    , "  o  m/enter/SCH/hypotheses (21,1)"
+    , "  o  m/enter/SCH/relation (21,1)"
+    , "  o  m/enter/SCH/step (23,1)"
+    , "  o  m/enter/WD/ACT"
+    , "  o  m/enter/WD/C_SCH"
+    , "  o  m/enter/WD/F_SCH"
+    , "  o  m/enter/WD/GRD"
+    , "passed 12 / 12"
     ]
 
 path1 :: String

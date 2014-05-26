@@ -20,10 +20,10 @@ test_case = Case "train station example, with refinement" test True
 
 test :: IO Bool
 test = test_cases
-            [ Case "verify machine m0" (verify 0 path0) result0
-            , Case "verify machine m1" (verify 1 path0) result1
-            , Case "verify machine m2" (verify 2 path0) result2
-            , Case "verify machine m2, in many files" (verify 2 path1) result2
+            [ Case "verify machine m0 (ref)" (verify 0 path0) result0
+            , Case "verify machine m1 (ref)" (verify 1 path0) result1
+            , Case "verify machine m2 (ref)" (verify 2 path0) result2
+            , Case "verify machine m2 (ref), in many files" (verify 2 path1) result2
             , StringCase "cyclic proof of liveness through 3 refinements" (parse path3) result3
             , StringCase "refinement of undefined machine" (parse path4) result4
             ]
@@ -31,7 +31,8 @@ test = test_cases
 result0 :: String
 result0 = unlines
     [ "  o  m0/INIT/FIS/in"
-    , "  o  m0/WD/INV"
+    , "  o  m0/INIT/WD"
+    , "  o  m0/INV/WD"
     , "  o  m0/m0:enter/FIS/in@prime"
     , "  o  m0/m0:enter/SCH"
     , "  o  m0/m0:enter/WD/ACT"
@@ -46,9 +47,12 @@ result0 = unlines
     , "  o  m0/m0:leave/WD/C_SCH"
     , "  o  m0/m0:leave/WD/F_SCH"
     , "  o  m0/m0:leave/WD/GRD"
+    , "  o  m0/m0:prog0/PROG/WD/lhs"
+    , "  o  m0/m0:prog0/PROG/WD/rhs"
     , "  o  m0/m0:prog0/REF/discharge/tr/lhs"
     , "  o  m0/m0:prog0/REF/discharge/tr/rhs"
-    , "passed 18 / 18"
+    , "  o  m0/m0:tr0/TR/WD"
+    , "passed 22 / 22"
     ]
 
 result1 :: String
@@ -56,11 +60,12 @@ result1 = unlines
     [ "  o  m1/INIT/FIS/in"
     , "  o  m1/INIT/FIS/loc"
     , "  o  m1/INIT/INV/inv0"
+    , "  o  m1/INIT/WD"
+    , "  o  m1/INV/WD"
     , "  o  m1/SKIP/CO/m1:saf0"
     , "  o  m1/SKIP/CO/m1:saf1"
     , "  o  m1/SKIP/CO/m1:saf2"
     , "  o  m1/SKIP/CO/m1:saf3"
-    , "  o  m1/WD/INV"
     , "  o  m1/m0:enter/CO/m1:saf0"
     , "  o  m1/m0:enter/CO/m1:saf1"
     , "  o  m1/m0:enter/CO/m1:saf2"
@@ -118,19 +123,35 @@ result1 = unlines
     , "  o  m1/m1:moveout/WD/C_SCH"
     , "  o  m1/m1:moveout/WD/F_SCH"
     , "  o  m1/m1:moveout/WD/GRD"
+    , "  o  m1/m1:prog0/PROG/WD/lhs"
+    , "  o  m1/m1:prog0/PROG/WD/rhs"
     , "  o  m1/m1:prog0/REF/disjunction/lhs"
     , "  o  m1/m1:prog0/REF/disjunction/rhs"
+    , "  o  m1/m1:prog1/PROG/WD/lhs"
+    , "  o  m1/m1:prog1/PROG/WD/rhs"
     , "  o  m1/m1:prog1/REF/transitivity/lhs"
     , "  o  m1/m1:prog1/REF/transitivity/mhs"
     , "  o  m1/m1:prog1/REF/transitivity/rhs"
+    , "  o  m1/m1:prog2/PROG/WD/lhs"
+    , "  o  m1/m1:prog2/PROG/WD/rhs"
     , "  o  m1/m1:prog2/REF/implication"
+    , "  o  m1/m1:prog3/PROG/WD/lhs"
+    , "  o  m1/m1:prog3/PROG/WD/rhs"
     , "  o  m1/m1:prog3/REF/discharge/saf/lhs"
     , "  o  m1/m1:prog3/REF/discharge/saf/rhs"
     , "  o  m1/m1:prog3/REF/discharge/tr"
+    , "  o  m1/m1:prog4/PROG/WD/lhs"
+    , "  o  m1/m1:prog4/PROG/WD/rhs"
     , "  o  m1/m1:prog4/REF/discharge/saf/lhs"
     , "  o  m1/m1:prog4/REF/discharge/saf/rhs"
     , "  o  m1/m1:prog4/REF/discharge/tr"
-    , "passed 77 / 77"
+    , "  o  m1/m1:saf0/CO/WD"
+    , "  o  m1/m1:saf1/CO/WD"
+    , "  o  m1/m1:saf2/CO/WD"
+    , "  o  m1/m1:saf3/CO/WD"
+    , "  o  m1/m1:tr0/TR/WD"
+    , "  o  m1/m1:tr1/TR/WD"
+    , "passed 94 / 94"
     ]
 
 result2 :: String
@@ -138,10 +159,11 @@ result2 = unlines
     [ "  o  m2/INIT/FIS/in"
     , "  o  m2/INIT/FIS/loc"
     , "  o  m2/INIT/INV/m2:inv0"
+    , "  o  m2/INIT/WD"
+    , "  o  m2/INV/WD"
     , "  o  m2/SKIP/CO/m2:saf0"
     , "  o  m2/SKIP/CO/m2:saf1"
     , "  o  m2/SKIP/CO/m2:saf2"
-    , "  o  m2/WD/INV"
     , "  o  m2/m0:enter/CO/m2:saf0"
     , "  o  m2/m0:enter/CO/m2:saf1"
     , "  o  m2/m0:enter/CO/m2:saf2"
@@ -220,23 +242,42 @@ result2 = unlines
     , "  o  m2/m1:moveout/WD/C_SCH"
     , "  o  m2/m1:moveout/WD/F_SCH"
     , "  o  m2/m1:moveout/WD/GRD"
+    , "  o  m2/m2:prog0/PROG/WD/lhs"
+    , "  o  m2/m2:prog0/PROG/WD/rhs"
     , "  o  m2/m2:prog0/REF/trading/lhs"
     , "  o  m2/m2:prog0/REF/trading/rhs"
+    , "  o  m2/m2:prog1/PROG/WD/lhs"
+    , "  o  m2/m2:prog1/PROG/WD/rhs"
     , "  o  m2/m2:prog1/REF/trading/lhs"
     , "  o  m2/m2:prog1/REF/trading/rhs"
+    , "  o  m2/m2:prog2/PROG/WD/lhs"
+    , "  o  m2/m2:prog2/PROG/WD/rhs"
     , "  o  m2/m2:prog2/REF/disjunction/lhs"
     , "  o  m2/m2:prog2/REF/disjunction/rhs"
+    , "  o  m2/m2:prog3/PROG/WD/lhs"
+    , "  o  m2/m2:prog3/PROG/WD/rhs"
     , "  o  m2/m2:prog3/REF/discharge/saf/lhs"
     , "  o  m2/m2:prog3/REF/discharge/saf/rhs"
     , "  o  m2/m2:prog3/REF/discharge/tr"
+    , "  o  m2/m2:prog4/PROG/WD/lhs"
+    , "  o  m2/m2:prog4/PROG/WD/rhs"
     , "  o  m2/m2:prog4/REF/monotonicity/lhs"
     , "  o  m2/m2:prog4/REF/monotonicity/rhs"
+    , "  o  m2/m2:prog5/PROG/WD/lhs"
+    , "  o  m2/m2:prog5/PROG/WD/rhs"
     , "  o  m2/m2:prog5/REF/disjunction/lhs"
     , "  o  m2/m2:prog5/REF/disjunction/rhs"
+    , "  o  m2/m2:prog6/PROG/WD/lhs"
+    , "  o  m2/m2:prog6/PROG/WD/rhs"
     , "  o  m2/m2:prog6/REF/discharge/saf/lhs"
     , "  o  m2/m2:prog6/REF/discharge/saf/rhs"
     , "  o  m2/m2:prog6/REF/discharge/tr"
-    , "passed 100 / 101"
+    , " xxx m2/m2:saf0/CO/WD"
+    , " xxx m2/m2:saf1/CO/WD"
+    , " xxx m2/m2:saf2/CO/WD"
+    , "  o  m2/m2:tr0/TR/WD"
+    , "  o  m2/m2:tr1/TR/WD"
+    , "passed 117 / 121"
     ]
 
 path0 :: String

@@ -72,8 +72,10 @@ result0 = unlines
     , "  o  m0/INIT/INV/inv1/part 2/step (91,2)"
     , "  o  m0/INIT/INV/inv1/part 2/step (93,2)"
     , "  o  m0/INIT/INV/inv1/part 2/step (96,2)"
-    , " xxx m0/WD/INV"
-    , "passed 17 / 19" ]
+    , "  o  m0/INIT/WD"
+    , " xxx m0/INV/WD"
+    , "passed 18 / 20"
+    ]
     
 case1 :: IO (String, Map Label Sequent)
 case1 = verify_thy path0 "ctx0"
