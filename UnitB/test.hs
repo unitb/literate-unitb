@@ -109,32 +109,48 @@ train_m0 = do
         return m
 
 result_example0 :: String
-result_example0 = unlines [
-    "  o  m0/INIT/FIS/x",
-    "  o  m0/INIT/FIS/y",
-    "  o  m0/INIT/INV/J0",
-    "  o  m0/SKIP/CO/CO0",
-    "  o  m0/evt/CO/CO0",
-    "  o  m0/evt/FIS/x@prime",
-    "  o  m0/evt/FIS/y@prime",
-    "  o  m0/evt/INV/J0",
-    "  o  m0/evt/SCH",
-    "  o  m0/evt/TR/TR0/EN",
-    "  o  m0/evt/TR/TR0/NEG",
-    "passed 11 / 11"]
+result_example0 = unlines 
+    [ "  o  m0/INIT/FIS/x"
+    , "  o  m0/INIT/FIS/y"
+    , "  o  m0/INIT/INV/J0"
+    , "  o  m0/SKIP/CO/CO0"
+    , "  o  m0/WD/INV"
+    , "  o  m0/evt/CO/CO0"
+    , "  o  m0/evt/FIS/x@prime"
+    , "  o  m0/evt/FIS/y@prime"
+    , "  o  m0/evt/INV/J0"
+    , "  o  m0/evt/SCH"
+    , "  o  m0/evt/TR/TR0/EN"
+    , "  o  m0/evt/TR/TR0/NEG"
+    , "  o  m0/evt/WD/ACT"
+    , "  o  m0/evt/WD/C_SCH"
+    , "  o  m0/evt/WD/F_SCH"
+    , "  o  m0/evt/WD/GRD"
+    , "passed 16 / 16"
+    ]
 
 result_train_m0 :: String
-result_train_m0 = unlines [
-    "  o  train_m0/INIT/FIS/st",
-    "  o  train_m0/INIT/INV/J0",
-    "  o  train_m0/enter/FIS/st@prime",
-    "  o  train_m0/enter/INV/J0",
-    "  o  train_m0/enter/SCH",
-    "  o  train_m0/leave/FIS/st@prime",
-    "  o  train_m0/leave/INV/J0",
-    "  o  train_m0/leave/SCH",
-    "  o  train_m0/leave/TR/TR0",
-    "passed 9 / 9"]
+result_train_m0 = unlines 
+    [ "  o  train_m0/INIT/FIS/st"
+    , "  o  train_m0/INIT/INV/J0"
+    , "  o  train_m0/WD/INV"
+    , "  o  train_m0/enter/FIS/st@prime"
+    , "  o  train_m0/enter/INV/J0"
+    , "  o  train_m0/enter/SCH"
+    , "  o  train_m0/enter/WD/ACT"
+    , "  o  train_m0/enter/WD/C_SCH"
+    , "  o  train_m0/enter/WD/F_SCH"
+    , "  o  train_m0/enter/WD/GRD"
+    , "  o  train_m0/leave/FIS/st@prime"
+    , "  o  train_m0/leave/INV/J0"
+    , "  o  train_m0/leave/SCH"
+    , "  o  train_m0/leave/TR/TR0"
+    , "  o  train_m0/leave/WD/ACT"
+    , "  o  train_m0/leave/WD/C_SCH"
+    , "  o  train_m0/leave/WD/F_SCH"
+    , "  o  train_m0/leave/WD/GRD"
+    , "passed 18 / 18"
+    ]
  
 result_example0_tr_en_po :: String
 result_example0_tr_en_po = unlines [

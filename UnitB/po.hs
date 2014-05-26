@@ -1,4 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE OverloadedStrings #-}
 module UnitB.PO 
     ( proof_obligation, theory_po
     , step_ctx, evt_live_ctx
@@ -18,6 +19,7 @@ import Logic.Expr
 import Logic.Label
 import Logic.Theory
 import Logic.Sequent
+import Logic.WellDefinedness
 
 import           UnitB.AST
 import           UnitB.POGenerator hiding ( variables )
@@ -141,6 +143,8 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ sch_po m) $ M.toList $ events m)
             ++ (map (uncurry $ fis_po m) $ M.toList $ events m)
             ++ (map (uncurry $ thm_po m) $ M.toList $ inv_thm p)
+            ++ [inv_wd_po m]
+            ++ (map (uncurry $ evt_wd_po m) $ M.toList $ events m)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
         f (Sequent a b c d) = Sequent 
@@ -175,8 +179,8 @@ ref_po :: Machine -> Label -> Rule -> Map Label Sequent
 ref_po m lbl (Rule r) = mapKeys f $ refinement_po r m
     where
         f x
-            | show x == "" = composite_label [label $ name m, lbl,label "REF",rule_name r]
-            | otherwise    = composite_label [label $ name m, lbl,label "REF",rule_name r,x]
+            | show x == "" = composite_label [label $ name m, lbl,"REF",rule_name r]
+            | otherwise    = composite_label [label $ name m, lbl,"REF",rule_name r,x]
 
 theory_po :: Theory -> Either [Error] (Map Label Sequent)
 theory_po th = do
@@ -191,7 +195,7 @@ theory_po th = do
         p k _     = k `M.member` theorems th
 
         g lbl x   = Sequent empty_ctx [] (depend lbl `M.union` axm) x
-        keys k    = composite_label [label "THM",k]
+        keys k    = composite_label ["THM",k]
         f lbl (Sequent a b c d) = result
           where
             result = case keys lbl `M.lookup` theorems th of
@@ -255,9 +259,9 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
                 (invariants m)
                 xp)
         xp0 = (xp `zimplies` (new_dummy ind $ zall (M.elems sch0)))
-        po0 = po [label "EN"] xp0
+        po0 = po ["EN"] xp0
         po1 = 
-            ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname, label "NEG"])
+            ( (composite_label $ [_name m, evt_lbl, tr_lbl, pname, "NEG"])
             , Sequent 
                 (ctx `merge_ctx` param_ctx)
                 []
@@ -271,8 +275,8 @@ prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) =
         xps = case (lt_fine, fine $ new_sched evt) of
                 (Just lbl, Just (_,fsch)) ->
                     let (LeadsTo vs p q) = (progress (props m) `M.union` progress (inh_props m)) ! lbl in
-                        [ ([label "EN/leadsto/lhs"],zforall vs ztrue $ zall (M.elems sch0) `zimplies` p)
-                        , ([label "EN/leadsto/rhs"],zforall vs ztrue $ q `zimplies` fsch) 
+                        [ (["EN/leadsto/lhs"],zforall vs ztrue $ zall (M.elems sch0) `zimplies` p)
+                        , (["EN/leadsto/rhs"],zforall vs ztrue $ q `zimplies` fsch) 
                         ]
                 (Nothing,Nothing) -> []
                 _                 -> error $ format (
@@ -296,7 +300,7 @@ prop_co m pname (Co fv xp) = eval_generator $ with
                 (emit_goal [evt_lbl,co_lbl,pname] $ forall_fv xp)
     where
         evts = toList (M.insert 
-                (label "SKIP") 
+                ("SKIP") 
                 (skip_event $ m) 
                 (events $ m))
         forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
@@ -327,9 +331,49 @@ fis_po m lbl evt = eval_generator $
                  POG.variables $ params evt
                  named_hyps $ invariants m
                  named_hyps $ new_guard evt)
-        (emit_exist_goal [_name m, lbl, fis_lbl] pvar $ M.elems $ action evt)
+        (emit_exist_goal [_name m, lbl, fis_lbl] pvar 
+            $ M.elems $ action evt)
     where
         pvar = map prime $ M.elems $ variables m
+
+inv_wd_po :: Machine -> Map Label Sequent
+inv_wd_po m = eval_generator $ 
+        with (do prefix_label $ _name m
+                 context $ assert_ctx m
+                 named_hyps $ inv $ inh_props m
+                 named_hyps $ inv_thm $ inh_props m)
+        $ emit_goal ["WD", "INV"] 
+            -- $ zall $ elems $ invariants m
+            $ well_definedness $ zall $ elems $ invariants m
+
+    --singleton (label "INV/WD") 
+
+--evt_wd_po :: a
+evt_wd_po :: Machine -> Label -> Event -> Map Label Sequent
+--evt_wd_po _ _ _ = empty
+evt_wd_po m lbl evt = eval_generator $ 
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label "WD"
+                 context $ assert_ctx m
+                 POG.variables $ indices evt
+                 named_hyps $ invariants m)
+            (do emit_goal ["C_SCH"] 
+                    $ well_definedness $ zall $ elems 
+                    $ coarse $ new_sched evt
+                emit_goal ["F_SCH"]
+                    $ well_definedness $ zall $ map snd $ maybeToList 
+                    $ fine $ new_sched evt
+                with (POG.variables $ params evt)
+                    (do emit_goal ["GRD"]
+                            $ well_definedness $ zall $ elems
+                            $ new_guard evt
+                        with (do named_hyps $ new_guard evt
+                                 context $ step_ctx m)
+                            $ emit_goal ["ACT"]
+                                $ well_definedness $ zall $ elems
+                                $ action evt)
+                )
 
     -- todo: partition the existential quantifier
 sch_po :: Machine -> Label -> Event -> Map Label Sequent

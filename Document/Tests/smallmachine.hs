@@ -72,6 +72,7 @@ result2 = (unlines
       , "  o  m0/INIT/FIS/y"
       , "  o  m0/INIT/INV/inv0"
       , "  o  m0/INIT/INV/inv1"
+      , "  o  m0/WD/INV"
       , "  o  m0/inc/FIS/x@prime" 
       , "  o  m0/inc/FIS/y@prime" 
       , "  o  m0/inc/INV/inv0"
@@ -84,8 +85,12 @@ result2 = (unlines
       , "  o  m0/inc/TR/tr0/EN/leadsto/lhs"
       , "  o  m0/inc/TR/tr0/EN/leadsto/rhs"
       , "  o  m0/inc/TR/tr0/NEG"
+      , "  o  m0/inc/WD/ACT"
+      , "  o  m0/inc/WD/C_SCH"
+      , "  o  m0/inc/WD/F_SCH"
+      , "  o  m0/inc/WD/GRD"
       , " xxx m0/prog0/REF/add"
-      , "passed 14 / 17"
+      , "passed 19 / 22"
     ])
 
 path2 :: String
@@ -105,6 +110,7 @@ result3 = (unlines
       , "  o  m0/INIT/FIS/y"
       , "  o  m0/INIT/INV/inv0"
       , " xxx m0/SKIP/CO/c0"
+      , "  o  m0/WD/INV"
       , "  o  m0/inc/CO/c0"
       , "  o  m0/inc/FIS/x@prime" 
       , "  o  m0/inc/FIS/y@prime" 
@@ -113,7 +119,11 @@ result3 = (unlines
       , "  o  m0/inc/SCH/m0/0/REF/weaken"
       , "  o  m0/inc/TR/tr0/EN"
       , "  o  m0/inc/TR/tr0/NEG"
-      , "passed 11 / 12"
+      , "  o  m0/inc/WD/ACT"
+      , "  o  m0/inc/WD/C_SCH"
+      , "  o  m0/inc/WD/F_SCH"
+      , "  o  m0/inc/WD/GRD"
+      , "passed 16 / 17"
     ])
 
 path3 :: String
@@ -174,21 +184,26 @@ case5 :: IO String
 case5 = show_po path3 $ label "m0/SKIP/CO/c0"
 
 result6 :: String
-result6 = (unlines 
-      [ "  o  m0/INIT/FIS/x"
-      , "  o  m0/INIT/FIS/y"
-      , "  o  m0/INIT/INV/inv0"
-      , " xxx m0/SKIP/CO/c0"
-      , "  o  m0/inc/CO/c0"
-      , "  o  m0/inc/FIS/x@prime" 
-      , "  o  m0/inc/FIS/y@prime" 
-      , "  o  m0/inc/INV/inv0"
-      , "  o  m0/inc/SCH"
-      , "  o  m0/inc/SCH/m0/1/REF/weaken"
-      , "  o  m0/inc/TR/tr0/EN"
-      , "  o  m0/inc/TR/tr0/NEG"
-      , "passed 11 / 12"
-    ])
+result6 = unlines 
+    [ "  o  m0/INIT/FIS/x"
+    , "  o  m0/INIT/FIS/y"
+    , "  o  m0/INIT/INV/inv0"
+    , " xxx m0/SKIP/CO/c0"
+    , "  o  m0/WD/INV"
+    , "  o  m0/inc/CO/c0"
+    , "  o  m0/inc/FIS/x@prime"
+    , "  o  m0/inc/FIS/y@prime"
+    , "  o  m0/inc/INV/inv0"
+    , "  o  m0/inc/SCH"
+    , "  o  m0/inc/SCH/m0/1/REF/weaken"
+    , "  o  m0/inc/TR/tr0/EN"
+    , "  o  m0/inc/TR/tr0/NEG"
+    , "  o  m0/inc/WD/ACT"
+    , "  o  m0/inc/WD/C_SCH"
+    , "  o  m0/inc/WD/F_SCH"
+    , "  o  m0/inc/WD/GRD"
+    , "passed 16 / 17"
+    ]
 
 path6 :: String
 path6 = "Tests/small_machine_t3.tex"

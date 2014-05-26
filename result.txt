@@ -99,7 +99,7 @@
 |  |  +- [ Success: 4 / 4 ]
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
-|  |  +- test 1, valid references to variables and event declared in ancester
+|  |  +- test 1, valid references to variables and event declared in ancestor
 |  |  +- [ Success: 2 / 2 ]
 |  +- train station example, with refinement
 |  |  +- verify machine m0
@@ -218,10 +218,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   21013 total
-    1596 Document/Tests/trainstation.hs
-    1089 Document/Tests/lambdas.hs
+   21294 total
+    1641 Document/Tests/trainstation.hs
+    1129 Document/Tests/lambdas.hs
      952 Document/machine.hs
-     885 Document/Tests/indirecteq.hs
+     886 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 1m 30s
+Run time: 1m 33s

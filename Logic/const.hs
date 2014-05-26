@@ -144,7 +144,10 @@ zforall [] x y  = zimplies x y
 zforall vs x w@(Binder Forall us y z) 
     | x == ztrue = zforall (vs ++ us) y z
     | otherwise  = Binder Forall vs x w
-zforall vs x w   = Binder Forall vs x w
+zforall vs x w   
+    |    x `elem` [ztrue, zfalse]
+      && w `elem` [ztrue, zfalse] = zimplies x w
+    | otherwise                   = Binder Forall vs x w
 zexists :: TypeSystem2 t 
         => [AbsVar t] 
         -> AbsExpr t 
@@ -154,7 +157,10 @@ zexists [] x y = zand x y
 zexists vs x w@(Binder Exists us y z) 
     | x == ztrue = zexists (vs ++ us) y z
     | otherwise  = Binder Exists vs x w
-zexists vs x w   = Binder Exists vs x w
+zexists vs x w   
+    |    x `elem` [ztrue, zfalse]
+      && w `elem` [ztrue, zfalse] = zand x w
+    | otherwise                   = Binder Exists vs x w
 
 
 zite :: ExprP -> ExprP -> ExprP -> ExprP
