@@ -138,6 +138,7 @@ raw_machine_pos m = pos
         pos = M.map f $ M.unions (
                (map (uncurry $ prop_tr m) $ M.toList $ transient p)
             ++ (map (uncurry $ prop_co m) $ M.toList $ constraint p)
+            ++ (map (uncurry $ prop_saf m) $ M.toList $ safety p)
             ++ [init_fis_po m]
             ++ (map (uncurry $ inv_po m) $ M.toList $ inv p) 
             ++ (map (uncurry $ sch_po m) $ M.toList $ events m)
@@ -147,6 +148,7 @@ raw_machine_pos m = pos
             ++ [init_wd_po m]
             ++ (map (uncurry $ tr_wd_po m) $ M.toList $ transient p)
             ++ (map (uncurry $ co_wd_po m) $ M.toList $ constraint p)
+            ++ (map (uncurry $ saf_wd_po m) $ M.toList $ safety p)
             ++ (map (uncurry $ prog_wd_po m) $ M.toList $ progress p)
             ++ (map (uncurry $ evt_wd_po m) $ M.toList $ events m)
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
@@ -300,7 +302,9 @@ prop_co m pname (Co fv xp) = eval_generator $ with
                 act  = action evt
             with 
                 (do named_hyps $ grd
-                    named_hyps $ act)
+                    named_hyps $ act
+                    POG.variables $ indices evt
+                    POG.variables $ params evt)
                 (emit_goal [evt_lbl,co_lbl,pname] $ forall_fv xp)
     where
         evts = toList (M.insert 
@@ -308,6 +312,28 @@ prop_co m pname (Co fv xp) = eval_generator $ with
                 (skip_event $ m) 
                 (events $ m))
         forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
+
+prop_saf :: Machine -> Label -> SafetyProp -> Map Label Sequent
+prop_saf m pname (Unless fv p q _) = eval_generator $ with
+        (do prefix_label $ _name m
+            context $ step_ctx m
+            context $ dummy_ctx m
+            named_hyps $ invariants m)
+        $ forM_ evts $ \(evt_lbl,evt) -> do
+            let grd  = new_guard evt
+                act  = action evt
+            with 
+                (do named_hyps $ grd
+                    named_hyps $ act
+                    POG.variables $ indices evt
+                    POG.variables $ params evt)
+                (emit_goal [evt_lbl,"SAF",pname] $ 
+                    zforall fv 
+                        (p `zand` znot q) 
+                        (primed vars $ p `zor` q))
+    where
+        evts = toList $ events $ m
+        vars = variables m
 
 inv_po :: Machine -> Label -> Expr -> Map Label Sequent
 inv_po m pname xp = eval_generator $ 
@@ -362,6 +388,18 @@ prog_wd_po m lbl (LeadsTo vs p q) = eval_generator $
             emit_goal ["WD","rhs"]
                 $ well_definedness $ zforall vs ztrue q
 
+saf_wd_po :: Machine -> Label -> SafetyProp -> Map Label Sequent
+saf_wd_po m lbl (Unless vs p q _) = eval_generator $
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label "SAF"
+                 context $ step_ctx m
+                 named_hyps $ invariants m) $
+        do  emit_goal ["WD","lhs"]
+                $ zforall vs ztrue $ (znot q) `zimplies` (well_definedness p)
+            emit_goal ["WD","rhs"]
+                $ well_definedness $ zforall vs ztrue q
+
 co_wd_po :: Machine -> Label -> Constraint -> Map Label Sequent
 co_wd_po m lbl (Co vs p) = eval_generator $
         with (do prefix_label $ _name m
@@ -410,11 +448,15 @@ evt_wd_po m lbl evt = eval_generator $
                     (do emit_goal ["GRD"]
                             $ well_definedness $ zall $ elems
                             $ new_guard evt
-                        with (do named_hyps $ new_guard evt
-                                 context $ step_ctx m)
-                            $ emit_goal ["ACT"]
-                                $ well_definedness $ zall $ elems
-                                $ action evt)
+                        with (do prefix_label "ACT"
+                                 named_hyps $ new_guard evt
+                                 context $ step_ctx m) $
+                            forM_ (toList $ M.map well_definedness 
+                                    $ action evt) 
+                                $ uncurry $ emit_goal . (:[]))
+                            -- $ emit_goal ["ACT"]
+                            --     $ well_definedness $ zall $ elems
+                            --     $ action evt)
                 )
 
     -- todo: partition the existential quantifier

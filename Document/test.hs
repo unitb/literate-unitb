@@ -16,6 +16,7 @@ import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.LockFreeDeque as LFD
+import qualified Document.Tests.UnlessExcept as UE
 
 import Latex.Parser
 import Latex.Scanner
@@ -35,6 +36,7 @@ test :: IO Bool
 test = test_cases 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
+        , UE.test_case
         , LFD.test_case
         , CC.test_case
         , Ind.test_case
@@ -58,7 +60,7 @@ result1 = unlines
     , "  o  m/enter/SCH/hypotheses (21,1)"
     , "  o  m/enter/SCH/relation (21,1)"
     , "  o  m/enter/SCH/step (23,1)"
-    , "  o  m/enter/WD/ACT"
+    , "  o  m/enter/WD/ACT/a1"
     , "  o  m/enter/WD/C_SCH"
     , "  o  m/enter/WD/F_SCH"
     , "  o  m/enter/WD/GRD"

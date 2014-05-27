@@ -163,11 +163,14 @@ result7 = unlines
     , "  o  m0/evt/INV/inv2/step (184,1)"
     , "  o  m0/evt/INV/inv2/step (186,1)"
     , "  o  m0/evt/SCH"
-    , "  o  m0/evt/WD/ACT"
+    , "  o  m0/evt/WD/ACT/a0"
+    , "  o  m0/evt/WD/ACT/a1"
+    , "  o  m0/evt/WD/ACT/a2"
+    , "  o  m0/evt/WD/ACT/a3"
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 42 / 42"
+    , "passed 45 / 45"
     ]
 
 case7 :: IO String

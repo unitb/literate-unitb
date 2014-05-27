@@ -637,20 +637,12 @@ collect_expr = visit_doc
                     let ctx = context m
                         dum = free_vars ctx p `union` free_vars ctx q
                         new_prop = Unless (M.elems dum) p q Nothing
-                        new_saf  = Co (M.elems dum) (zimplies 
-                                        (zand p $ znot q) 
-                                        $ primed (variables m) (zor p q))
-                    new_cons <- bind (format "safety property '{0}' already exists" lbl)
-                        $ insert_new lbl 
-                                new_saf
-                                (constraint $ props m)
                     new_saf_props <- bind (format "safety property '{0}' already exists" lbl)
                         $ insert_new lbl 
                                 new_prop
                                 (safety $ props m)
                     return m { props = (props m) 
-                        { safety = new_saf_props
-                        , constraint = new_cons } } 
+                        { safety = new_saf_props } } 
             )
         ,   (   "\\progress"
             ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
@@ -711,8 +703,8 @@ collect_refinement = visit_doc []
                         $ evt `M.lookup` events m
                     let prop = safety $ props m
                     (p,q)    <- toEither (do
-                        p    <- fromEither ztrue $ get_assert m pCt
-                        q    <- fromEither ztrue $ get_assert m qCt
+                        p    <- fromEither ztrue $ get_assert_with_free m pCt
+                        q    <- fromEither ztrue $ get_assert_with_free m qCt
                         error_list 
                             [   ( lbl `member` prop
                                 , format "safety property '{0}' already exists" lbl )
@@ -726,13 +718,7 @@ collect_refinement = visit_doc []
                     let new_prop = Unless (M.elems dum) p q (Just evt)
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 
-                        , constraint = insert lbl 
-                            (Co (M.elems dum) 
-                                (zor 
-                                    (zimplies (zand p $ znot q) $ primed (variables m) (zor p q))
-                                    (zall $  (elems $ new_guard event)
-                                          ++ (elems $ action    event))))                                    
-                            (constraint $ props m) } } 
+                        } } 
             )
         ,   (   "\\replace"
             ,   CmdBlock $ \(evt,del,add,keep,prog,saf,()) m -> do

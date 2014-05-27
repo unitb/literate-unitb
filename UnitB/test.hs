@@ -125,11 +125,12 @@ result_example0 = unlines
     , "  o  m0/evt/SCH"
     , "  o  m0/evt/TR/TR0/EN"
     , "  o  m0/evt/TR/TR0/NEG"
-    , "  o  m0/evt/WD/ACT"
+    , "  o  m0/evt/WD/ACT/S0"
+    , "  o  m0/evt/WD/ACT/S1"
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 19 / 19"
+    , "passed 20 / 20"
     ]
 
 result_train_m0 :: String
@@ -142,7 +143,6 @@ result_train_m0 = unlines
     , "  o  train_m0/enter/FIS/st@prime"
     , "  o  train_m0/enter/INV/J0"
     , "  o  train_m0/enter/SCH"
-    , "  o  train_m0/enter/WD/ACT"
     , "  o  train_m0/enter/WD/C_SCH"
     , "  o  train_m0/enter/WD/F_SCH"
     , "  o  train_m0/enter/WD/GRD"
@@ -150,11 +150,11 @@ result_train_m0 = unlines
     , "  o  train_m0/leave/INV/J0"
     , "  o  train_m0/leave/SCH"
     , "  o  train_m0/leave/TR/TR0"
-    , "  o  train_m0/leave/WD/ACT"
+    , "  o  train_m0/leave/WD/ACT/A0"
     , "  o  train_m0/leave/WD/C_SCH"
     , "  o  train_m0/leave/WD/F_SCH"
     , "  o  train_m0/leave/WD/GRD"
-    , "passed 20 / 20"
+    , "passed 19 / 19"
     ]
  
 result_example0_tr_en_po :: String

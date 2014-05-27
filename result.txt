@@ -2,6 +2,41 @@
 |  +- basic syntax and scopes
 |  +- Contextual predicate visibility rules
 |  +- Specification and refinement of a lock-free algorithm
+|  |  +- test 0, unless/except without indices
+|  |    o  m0/INIT/FIS/p
+|  |    o  m0/INIT/WD
+|  |    o  m0/INV/WD
+|  |    o  m0/evt0/FIS/p@prim|___|/evt0/SAF/saf0
+|  |    o  m0/evt0/SCH
+|  |    o  m0/evt0/WD/ACT/m0:act0
+|  |    o  m0/evt0/WD/C_SCH
+|  |    o  m0/evt0/WD/F_SCH
+|  |    o  m0/evt0/WD/GRD
+|  |    o  m0/evt1/FIS/p@prime
+|  |    o  m0/evt1/SAF/saf0
+|  |    o  m0/evt1/SCH
+|  |    o  m0/evt1/WD/ACT/m0:act0
+|  |    o  m0/evt1/WD/C_SCH
+|  |    o  m0/evt1/WD/F_SCH
+|  |    o  m0/evt1/WD/GRD
+|  |    o  m0/saf0/SAF/WD/lhs
+|  |    o  m0/saf0/SAF/WD/rhs
+|  |  passed 18 / 19
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > e\n
+|  |    < e\n
+|  |    -    
+|  |    > _.xxx_.m0
+|  |    < _._.o_._.m0
+|  |    -   ---  --
+|  |  ]
+|  |  +- [ Success: 0 / 1 ]
+|  +- Specification and refinement of a lock-free algorithm
 |  |  +- test 0, verification, specification with intervals
 |  |  +- test 1, verification, failed proof with intervals
 |  |  +- test 2, error message name clash in guards
@@ -119,7 +154,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- the parser is exception free
-|  +- [ Success: 13 / 13 ]
+|  +- [ Success: 13 / 14 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -213,16 +248,16 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 6 / 6 ]
++- [ Success: 5 / 6 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   21596 total
-    1669 Document/Tests/trainstation.hs
-    1193 Document/Tests/lambdas.hs
-     952 Document/machine.hs
+   21812 total
+    1679 Document/Tests/trainstation.hs
+    1234 Document/Tests/lambdas.hs
+     953 Document/machine.hs
      888 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 1m 56s
+Run time: 1m 7s
