@@ -214,7 +214,7 @@ result2 = unlines
     , "  o  m2/m1:movein/FIS/in@prime"
     , "  o  m2/m1:movein/FIS/loc@prime"
     , "  o  m2/m1:movein/INV/m2:inv0"
-    , " xxx m2/m1:movein/SAF/m2:saf0"
+    , "  o  m2/m1:movein/SAF/m2:saf0"
     , "  o  m2/m1:movein/SAF/m2:saf1"
     , "  o  m2/m1:movein/SAF/m2:saf2"
     , "  o  m2/m1:movein/SCH"
@@ -288,7 +288,7 @@ result2 = unlines
     , "  o  m2/m2:saf2/SAF/WD/rhs"
     , "  o  m2/m2:tr0/TR/WD"
     , "  o  m2/m2:tr1/TR/WD"
-    , "passed 128 / 129"
+    , "passed 129 / 129"
     ]
 
 path0 :: String

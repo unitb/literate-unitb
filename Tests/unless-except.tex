@@ -48,9 +48,38 @@
 \dummy{ k : \Int }
 \begin{align*}
 \safetyB{saf0}{evt0}{ p \le k }{ \false }
+\\ \safety{saf1}{ p \le k }{ \false }
 \end{align*}
 
 \end{machine}
 
+\begin{machine}{m1}
+
+\with{functions}
+\with{sets}
+% \with{intervals}
+\newset{G}{\G}
+
+\begin{align*}
+\variable{ f : \Int \pfun \Int } \\
+\end{align*}
+
+\newevent{evt0}{event\_0}
+\newevent{evt1}{event\_1}
+\indices{evt0}{ i : \Int }
+\indices{evt1}{ i : \Int }
+
+\begin{align*}
+\evassignment{evt0}{m0:act0}{ f' = f | i \fun f.i - 1 | i+1 \fun f.(i+1) +1 }
+\\ \evassignment{evt1}{m0:act0}{ f' = f | i \fun f.i + 1 }
+\end{align*}
+
+\dummy{ i,k : \Int }
+\begin{align*}
+\safetyB{saf0}{evt0}{ k \le f.i }{ \false }
+\\ \safety{saf1}{ k \le f.i }{ \false }
+\end{align*}
+
+\end{machine}
 
 \end{document}

@@ -698,7 +698,7 @@ collect_refinement = visit_doc []
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
                         -- Why is this here instead of the expression collector?
-                    event <- bind
+                    _  <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
                     let prop = safety $ props m
@@ -711,10 +711,8 @@ collect_refinement = visit_doc []
                             ] 
                         return (p,q))
                     let ctx = context m
-                    let dum =       free_vars ctx p 
+                        dum =       free_vars ctx p 
                             `union` free_vars ctx q
-                            `union` params event 
-                            `union` indices event
                     let new_prop = Unless (M.elems dum) p q (Just evt)
                     return m { props = (props m) 
                         { safety = insert lbl new_prop $ prop 

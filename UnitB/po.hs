@@ -314,7 +314,7 @@ prop_co m pname (Co fv xp) = eval_generator $ with
         forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
 
 prop_saf :: Machine -> Label -> SafetyProp -> Map Label Sequent
-prop_saf m pname (Unless fv p q _) = eval_generator $ with
+prop_saf m pname (Unless fv p q excp) = eval_generator $ with
         (do prefix_label $ _name m
             context $ step_ctx m
             context $ dummy_ctx m
@@ -322,18 +322,29 @@ prop_saf m pname (Unless fv p q _) = eval_generator $ with
         $ forM_ evts $ \(evt_lbl,evt) -> do
             let grd  = new_guard evt
                 act  = action evt
+                ind = maybe M.empty (indices . (events m !)) excp
+                fvs = symbol_table fv 
+                neq x = znot $ Word x `zeq` Word (suff x)
+                rng = maybe ztrue 
+                        (const $ zsome $ map neq $ elems inter)
+                        excp
+                inter = fvs `M.intersection` ind
+                diff  = fvs `M.difference` ind
             with 
                 (do named_hyps $ grd
                     named_hyps $ act
                     POG.variables $ indices evt
                     POG.variables $ params evt)
                 (emit_goal [evt_lbl,"SAF",pname] $ 
-                    zforall fv 
-                        (p `zand` znot q) 
-                        (primed vars $ p `zor` q))
+                    zforall (elems diff ++ map suff (elems ind))
+                        rng
+                        $ new_dummy inter $
+                            zimplies (p `zand` znot q) 
+                                     (primed vars $ p `zor` q))
     where
         evts = toList $ events $ m
         vars = variables m
+        suff = add_suffix "@param"
 
 inv_po :: Machine -> Label -> Expr -> Map Label Sequent
 inv_po m pname xp = eval_generator $ 

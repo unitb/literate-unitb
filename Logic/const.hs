@@ -124,7 +124,7 @@ zall xs      =
 zsome :: TypeSystem2 t => [AbsExpr t] -> AbsExpr t
 zsome xs      = 
         case concatMap f xs of
-            []  -> ztrue
+            []  -> zfalse
             [x] -> x
             xs
                 | ztrue `elem` xs -> ztrue

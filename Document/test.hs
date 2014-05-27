@@ -6,16 +6,16 @@ import Control.Monad
 import Data.List as L
 import Document.Document
 
+import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes
+import qualified Document.Tests.IndirectEq as Ind
+import qualified Document.Tests.Lambdas as Lambdas
+import qualified Document.Tests.LockFreeDeque as LFD
+import qualified Document.Tests.Phase as Phase
 import qualified Document.Tests.SmallMachine as SMch
 import qualified Document.Tests.TrainStation as Train
-import qualified Document.Tests.Lambdas as Lambdas
-import qualified Document.Tests.Phase as Phase
 import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
-import qualified Document.Tests.IndirectEq as Ind
-import qualified Document.Tests.CompCalc as CC
-import qualified Document.Tests.LockFreeDeque as LFD
 import qualified Document.Tests.UnlessExcept as UE
 
 import Latex.Parser

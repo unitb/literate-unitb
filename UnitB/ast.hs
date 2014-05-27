@@ -449,7 +449,11 @@ default_schedule = fromList [(label "default", zfalse)]
 primed :: Map String Var -> Expr -> Expr
 primed vs e = make_unique "@prime" vs e
 
-make_unique :: String -> Map String Var -> Expr -> Expr
+
+make_unique :: String           -- suffix to be added to the name of variables
+            -> Map String Var   -- set of variables that must renamed
+            -> Expr             -- expression to rewrite
+            -> Expr
 make_unique suf vs w@(Word (Var vn vt)) 
         | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
         | otherwise           = w
