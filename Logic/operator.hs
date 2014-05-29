@@ -2,7 +2,6 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Logic.Operator where
 
     -- Modules
@@ -278,14 +277,3 @@ logic = with_assoc empty_notation
 
 double :: (a,b) -> ((a,a),(b,b))
 double (x,y) = ((x,x),(y,y))
-
-class FromList a b where
-    from_list :: a -> [b] -> b
-
-instance FromList a a where
-    from_list x [] = x
-    from_list _ _  = error "from_list: too many arguments"
-
-instance FromList a b => FromList (b -> a) b where
-    from_list f (x:xs) = from_list (f x) xs
-    from_list _ [] = error "from_list: not enough arguments"

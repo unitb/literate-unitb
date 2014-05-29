@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances     #-}
 module Logic.Classes where
 
 class Named n where
@@ -57,3 +59,15 @@ rewriteM f t = do
         g () x = do
             y <- f x
             return ((),y)
+
+class FromList a b where
+    from_list :: a -> [b] -> b
+
+instance FromList a a where
+    from_list x [] = x
+    from_list _ _  = error "from_list: too many arguments"
+
+instance FromList a b => FromList (b -> a) b where
+    from_list f (x:xs) = from_list (f x) xs
+    from_list _ [] = error "from_list: not enough arguments"
+

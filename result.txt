@@ -122,8 +122,12 @@
 |  |  +- type checking of boolean expressions
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
+|  +- QuickCheck spec of machine parser
+=== prop_parseOk from ./Document/MachineSpec.hs:33 ===
++++ OK, passed 100 tests.
+
 |  +- the parser is exception free
-|  +- [ Success: 14 / 14 ]
+|  +- [ Success: 15 / 15 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -223,10 +227,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   21867 total
+   22089 total
     1679 Document/Tests/trainstation.hs
     1234 Document/Tests/lambdas.hs
      957 Document/machine.hs
      888 Document/Tests/indirecteq.hs
      733 Document/proof.hs
-Run time: 1m 8s
+Run time: 1m 18s
