@@ -81,10 +81,60 @@
 \evassignment{m0:pop:right}{m0:act0}{ qe' &\1= \{ q-1 \} \domsub qe }
 \\ \evassignment{m0:pop:right}{m0:act1}{ p' &\1= p }
 \\ \evassignment{m0:pop:right}{m0:act2}{ q' &\1= q-1 }
-\\ \evguard{m0:pop:right}{m0:grd0}{ p < q }
+\\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
 \end{align*}
 
 \end{machine}
 
+\newcommand{\REQ}{\text{REQ}}
+
+\begin{machine}{m1}
+\refines{m0} \\
+\newset{REQ}{\REQ}
+
+\[ \variable{pshL,pshR : \REQ \pfun \G} \]
+
+\hide{ \dummy{r : \REQ}; \dummy{x : \G} }
+\begin{align*}
+\progress{m1:prog0}
+	{ r \in \dom.pshL \1\land pshL.r = x }
+	{ p < q \land qe.p = x }
+\\ \progress{m1:prog1}
+	{ r \in \dom.pshR \1\land pshR.r = x }
+	{ p < q \land qe.(q-1) = x }
+\end{align*}
+
+\indices{m0:push:left}{ r : \REQ }
+\indices{m0:push:right}{ r : \REQ }
+
+\refine{m1:prog0}{discharge}{m0:tr0,m0:saf0}{}
+\transientB{m0:push:left}{m0:tr0}
+	{ \index{r}{r} }
+	{		 r \in \dom.pshL \1\land pshL.r = x
+	\1\land (p < q \1\implies \neg qe.p = x) 
+	}
+\safety{m0:saf0}{ r \in \dom.pshL \1\land pshL.r = x }{ p < q \land qe.p = x }
+\evassignment{m0:push:left}{m1:a0}{ pshL' = \{ r \} \domsub pshL }
+\evassignment{m0:push:left}{m1:a1}{ pshR' = pshR }
+\evassignment{m0:push:right}{m1:a0}{ pshR' = \{ r \} \domsub pshR }
+\evassignment{m0:push:right}{m1:a1}{ pshL' = pshL }
+\evguard{m0:push:left}{m1:grd0}{ x = pshL.r }
+\evguard{m0:push:left}{m1:grd1}{ r \in \dom.pshL }
+\cschedule{m0:push:left}{m1:sch0}{ r \in \dom.pshL }
+\weakento{m0:push:left}{default}{m1:sch0}
+\end{machine}
 
 \end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+

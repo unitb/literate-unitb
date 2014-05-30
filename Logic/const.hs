@@ -1,12 +1,17 @@
 module Logic.Const where
 
-    -- Modules    
+    -- Modules   
+import Logic.Classes 
 import Logic.Expr
 import Logic.Genericity
 import Logic.Type
 
     -- Libraries
 import Control.Monad
+
+import           Data.List as L
+import qualified Data.Map as M
+import           Data.Maybe
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -291,3 +296,22 @@ fromJust (Left msg) = error $ format "error: {0}" (msg :: String)
 zapply :: ExprP -> ExprP -> ExprP
 zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
+one_point_rule :: Expr -> Expr
+one_point_rule (Binder Exists vs r t) = rewrite one_point_rule e
+    where
+        e  = zexists (vs \\ M.keys inst) ztrue 
+            $ zall $ map (substitute $ M.mapKeys name inst) ts
+        inst = M.unions $ map f ts
+        f (FunApp f xs)
+                | name f == "=" = M.fromList $ rs
+            where
+                rs = do (i,j) <- [(0,1),(1,0)]
+                        k <- maybeToList 
+                            $ (xs !! i) `lookup` zip (map Word vs) vs
+                        return (k, xs !! j)
+        f _ = M.empty
+        ts = conjuncts r ++ conjuncts t
+        conjuncts (FunApp f xs) 
+            | name f == "and" = xs
+        conjuncts x = [x]
+one_point_rule e = rewrite one_point_rule e

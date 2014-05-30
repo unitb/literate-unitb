@@ -69,15 +69,19 @@ latex_of m = do
             show_t t = M.findWithDefault "<unknown>" t type_map
             show_e v@(Word _) = show v
             show_e (FunApp f xs)
-                    | name f == "+" = format "( {0} + {1} )" (show_e x) (show_e y)
+                    | name f == "+" = format "{0} + {1}" (show_e x) (as_sum y)
                     | name f == "=" = format "{0} = {1}" (show_e x) (show_e y)
                     | name f == "<=" = format "{0} \\le {1}" (show_e x) (show_e y)
-                    | name f == "elem" = format "{0} \\in {1}" (show_e x) (show_e y)
+                    | name f == "elem" = format "{0} \\in {1}" (as_sum x) (show_e y)
                     | otherwise = "<unknown function: " ++ show (name f) ++ ">"
                 where
                     x = xs !! 0
                     y = xs !! 1
             show_e _ = "<unknown expression>"
+            as_sum x@(FunApp f _)
+                    | name f == "+" = format "({0})" (show_e x)
+                    | otherwise     = show_e x
+            as_sum x = show_e x
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")

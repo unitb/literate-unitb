@@ -472,24 +472,21 @@ evt_wd_po m lbl evt = eval_generator $
 
     -- todo: partition the existential quantifier
 sch_po :: Machine -> Label -> Event -> Map Label Sequent
-sch_po m lbl evt = M.singleton
-        (composite_label [_name m, lbl, sch_lbl])
-        (Sequent 
-            (           assert_ctx m 
-            `merge_ctx` evt_live_ctx evt
-            `merge_ctx` Context M.empty ind M.empty M.empty M.empty)
-            []
-            hyp
-            goal)
+sch_po m lbl evt = eval_generator $
+    with (do prefix_label $ _name m
+             prefix_label lbl
+             context $ assert_ctx m
+             context $ evt_live_ctx evt
+             POG.variables ind
+             named_hyps hyp)
+         $ emit_goal [sch_lbl] $ zexists (M.elems param) ztrue $ zall grd
     where
         grd   = M.elems $ new_guard evt
         c_sch = coarse $ new_sched evt
         f_sch = M.fromList $ maybeToList $ fine $ new_sched evt
         param = params evt
         ind   = indices evt `merge` params evt
-        exist_param xp = zexists (M.elems param) ztrue xp
         hyp   = invariants m `M.union` f_sch `M.union` c_sch
-        goal  = exist_param $ zall grd
 
 thm_po :: Machine -> Label -> Expr -> Map Label Sequent
 thm_po m lbl xp = M.singleton

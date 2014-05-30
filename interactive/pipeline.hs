@@ -194,11 +194,15 @@ display (Shared { .. }) = do
             cursorUpLine $ length ys
             clearFromCursorToScreenBeginning
             forM_ ys $ \x -> do
-                putStr x
-                clearFromCursorToLineEnd 
-                putStrLn ""
+                let lns = lines x
+                forM_ lns $ \x -> do
+                    putStr x
+                    clearFromCursorToLineEnd 
+                    putStrLn ""
             st <- read_obs parser_state
-            putStrLn $ format "n workers: {0} parser: {1}" w st
+            putStr $ format "n workers: {0} parser: {1}" w st
+            clearFromCursorToLineEnd 
+            putStrLn ""
             threadDelay 500000
             takeMVar tok
 

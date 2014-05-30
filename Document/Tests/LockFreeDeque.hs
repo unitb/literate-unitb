@@ -235,7 +235,8 @@ verify :: FilePath -> IO (String, Map Label Sequent)
 verify path = do
     r <- list_file_obligations path
     case r of
-        Right [(m,pos)] -> do
+        Right ms -> do
+            let (m,pos) = ms !! 0
             (s,_,_) <- str_verify_machine m
             return (s, pos)
         x -> return (show x, empty)

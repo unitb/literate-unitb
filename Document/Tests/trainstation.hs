@@ -817,8 +817,7 @@ result2 = unlines (
             ++         " (not (elem@@BLK p PLF))))))"
      ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-     ,  "(assert (not (exists ((in (set TRAIN))) (and true" ++ 
-            " (= in empty-set@@TRAIN)))))"
+     ,  "(assert (not (= empty-set@@TRAIN empty-set@@TRAIN)))"
      ] 
      ++ check_sat
      ++ pop )
@@ -863,8 +862,7 @@ result20 = unlines (
             ++         " (not (elem@@BLK p PLF))))))"
      ,  "; axm0"
      ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-     ,  "(assert (not (exists ((loc (pfun TRAIN BLK))) (and true" ++ 
-            " (= loc empty-fun@@TRAIN@@BLK)))))"
+     ,  "(assert (not (= empty-fun@@TRAIN@@BLK empty-fun@@TRAIN@@BLK)))"
      ] 
      ++ check_sat
      ++ pop )
@@ -911,8 +909,8 @@ result3 = unlines (
             ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
      ,  "; inv2"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-     ,  "(assert (not (exists ((in@prime (set TRAIN))) (and true"
-            ++              " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))))))"
+     ,  "(assert (not (= (set-diff@@TRAIN in (mk-set@@TRAIN t))"
+                    ++ " (set-diff@@TRAIN in (mk-set@@TRAIN t)))))"
      ] ++ 
      check_sat ++
      pop )
@@ -959,8 +957,8 @@ result19 = unlines (
             ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
      ,  "; inv2"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-     ,  "(assert (not (exists ((loc@prime (pfun TRAIN BLK))) (and true"
-            ++                   " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))"
+     ,  "(assert (not (= (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)"
+                    ++ " (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))"
      ] ++ 
      check_sat ++
      pop )

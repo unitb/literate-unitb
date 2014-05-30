@@ -77,19 +77,24 @@ instance Tree Command where
     as_tree (Comment str) = Str $ intercalate "\n" $ map ("; " ++) $ lines str
     as_tree (CheckSat)    = List [Str "check-sat-using", 
                                     strat
-                                         [ Str "qe" 
-                                         , Str "simplify"
-                                         , Str "skip"
+                                         [ [ Str "qe"
+                                           , Str "smt" ]
+                                         , [Str "simplify", Str "smt"]
+                                         , [Str "skip", Str "smt"]
 --                                         , Str "der"
-                                         , List 
-                                             [ Str "using-params"
-                                             , Str "simplify"
-                                             , Str ":expand-power"
-                                             , Str "true"] ] ] 
+                                         , [using_param 
+                                              (Str "simplify")
+                                              ":expand-power"
+                                              "true" 
+                                           , Str "smt"] ] ]
         where
 --            strat ts = List $ Str "or-else" : map f ts ++ [List (map Str ["then", "simplify", "bit-blast", "sat"])]
+            using_param str param val = List [ Str "using-params"
+                                             , str
+                                             , Str param
+                                             , Str val]
             strat ts = List $ Str "or-else" : map f ts
-            f t = List [Str "then", t, Str "smt"]
+            f t = List $ Str "then" : t --, Str "smt"]
 --            strat ts = List [Str "then", List $ Str "repeat" : [List $ Str "or-else" : ts], Str "smt"]
 --    as_tree (CheckSat)    = List [Str "check-sat-using", 
 --                                    List ( Str "or-else" 
@@ -155,9 +160,11 @@ z3_code po =
     where
 --        !() = unsafePerformIO (p
         (Sequent d assume hyps assert) = remove_type_vars 
+                    $ one_point
                     $ delambdify
                     $ apply_monotonicity po
         f (lbl,xp) = [Comment $ show lbl, Assert xp]
+        one_point (Sequent a b c g) = Sequent a b c $ one_point_rule g
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b c _) =
