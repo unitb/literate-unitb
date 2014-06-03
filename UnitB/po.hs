@@ -6,7 +6,7 @@ module UnitB.PO
     , theory_ctx, theory_facts, dummy_ctx
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
-    , verify_all
+    , verify_all, prop_saf, prop_tr
     , check, verify_changes, verify_machine
     , smoke_test_machine, dump, used_types )
 where
@@ -226,7 +226,7 @@ init_fis_po m = eval_generator $ with
             (M.elems $ inits m))
 
 prop_tr :: Machine -> Label -> Transient -> Map Label Sequent
-prop_tr m pname (Transient fv xp evt_lbl hint lt_fine) = 
+prop_tr m pname (Transient fv xp evt_lbl (TrHint hint lt_fine)) = 
     M.fromList 
         $ if M.null ind0 then 
             [ po0
@@ -378,7 +378,7 @@ fis_po m lbl evt = eval_generator $
         pvar = map prime $ M.elems $ variables m
 
 tr_wd_po :: Machine -> Label -> Transient -> Map Label Sequent
-tr_wd_po  m lbl (Transient vs p _ _ _) = eval_generator $
+tr_wd_po  m lbl (Transient vs p _ _) = eval_generator $
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "TR"

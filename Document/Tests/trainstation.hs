@@ -228,7 +228,7 @@ props0 = empty_property_set
             [   ( label "tr0"
                 , Transient
                     (symbol_table [t_decl])
-                    (fromJust (t `zelem` in_var)) (label "leave") empty Nothing)
+                    (fromJust (t `zelem` in_var)) (label "leave") empty_hint)
             ]
     ,  inv = fromList 
             [   (label "inv2",fromJust (zdom loc `mzeq` in_var))

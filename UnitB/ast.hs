@@ -6,6 +6,8 @@ module UnitB.AST
     , empty_event
     , empty_machine
     , empty_theory
+    , TrHint (..)
+    , empty_hint
     , Transient   (..)
     , Constraint  (..)
     , ProgressProp(..)
@@ -471,21 +473,21 @@ data Constraint =
         Co [Var] Expr
     deriving (Eq, Show)
 
+data TrHint = TrHint (Map String Expr) (Maybe Label)
+    deriving (Eq, Show)
+
+empty_hint :: TrHint
+empty_hint = TrHint empty Nothing
+
 data Transient = 
         Transient 
             (Map String Var)     -- Free variables
             Expr                 -- Predicate
             Label                -- Event, Schedule 
-            (Map String Expr)    -- Index substitution
-            (Maybe Label)        -- Progress Property for fine schedule
---      | Grd thm
---      | Sch thm
+            TrHint               -- Hints for instantiation
+            -- (Map String Expr)    -- Index substitution
+            -- (Maybe Label)        -- Progress Property for fine schedule
     deriving (Eq,Show)
-
---data Derivation = Deriv 
---        Label Rule 
---        [LivenessDerivation] 
---        [Label] 
 
 data Direction = Up | Down
     deriving (Eq,Show)

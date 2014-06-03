@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable, IncoherentInstances #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Document.Refinement where
 
     -- Module
@@ -54,17 +55,26 @@ instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ m = M.fromList $ assert m "" zfalse
 
+type ERWS = EitherT [Error] (RWS LineInfo [Error] System)
+
 class RuleParser a where
     parse_rule :: a -> [Label] -> String 
                -> RuleParserParameter 
-               -> EitherT [Error] (RWS LineInfo [Error] b) Rule
+               -> ERWS Rule
 
-instance RefRule a => RuleParser (a,()) where
-    parse_rule (x,_) [] _ _ = return $ Rule x
+instance RefRule a => RuleParser (ERWS a,()) where
+    parse_rule (cmd,_) [] _ _ = do 
+            x <- cmd
+            return $ Rule x
     parse_rule _ hyps_lbls _ _ = do
         li <- lift $ ask
         left [Error (format "too many hypotheses in the application of the rule: {0}" 
                           $ intercalate "," $ map show hyps_lbls) li]
+
+instance RefRule a => RuleParser (a,()) where
+    parse_rule (x,()) xs y z = do
+            let cmd = return x :: ERWS a
+            parse_rule (cmd,()) xs y z
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ prog _ _ _ _) = do
@@ -98,6 +108,18 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
     parse_rule _ [] rule _ = do
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
+
+instance RuleParser (a,()) => RuleParser (Label -> Event -> a, ()) where
+    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
+        case M.lookup x $ events m of
+            Just evt -> parse_rule (f x evt,()) xs rule param
+            Nothing -> do
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): {1} should be an event" rule x) li]
+    parse_rule _ [] rule _ = do
+                li <- lift $ ask
+                left [Error (format "refinement ({0}): expecting an event" rule) li]
+
 
 --instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
 --    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
@@ -162,6 +184,18 @@ assert_hyp m suff cnst hyps prop =
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
 
+data Ensure = Ensure ProgressProp Label Event TrHint
+    deriving (Eq,Typeable,Show)
+
+instance RefRule Ensure where
+    rule_name _ = "ensure"
+    refinement_po (Ensure (LeadsTo vs p q) lbl _ hint) m =
+        M.unions $ [ prop_saf m "" (Unless vs p q Nothing)
+                   , prop_tr m "" (Transient (symbol_table vs) 
+                                             (p `zand` znot q) lbl 
+                                             hint )
+                    ]
+
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
 
@@ -174,7 +208,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _ _)
+                    (Transient fv1 p1 _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
         m = fromList $
             assert m "saf/lhs" (
@@ -192,7 +226,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _ _)
+                    (Transient fv1 p1 _ _)
                     Nothing)
             m = fromList $
                 assert m "tr/lhs" (

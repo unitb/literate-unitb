@@ -190,9 +190,6 @@
 |  +- case 7 - union of a list of {unsorted} list
 +++ OK, passed 100 tests.
 |  +- case 8 - edit distance, random testing
-=== prop_d from ./Utilities/EditDistance.hs:129 ===
-+++ OK, passed 100 tests.
-
 === prop_c from ./Utilities/EditDistance.hs:132 ===
 +++ OK, passed 100 tests.
 
@@ -227,10 +224,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   22112 total
-    1685 Document/Tests/trainstation.hs
+   22179 total
+    1677 Document/Tests/trainstation.hs
     1234 Document/Tests/lambdas.hs
-     937 Document/machine.hs
+     963 Document/machine.hs
      888 Document/Tests/indirecteq.hs
      733 Document/proof.hs
 Run time: 1m 10s

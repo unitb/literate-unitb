@@ -1,4 +1,6 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts, TupleSections, ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns, FlexibleContexts     #-}
+{-# LANGUAGE TupleSections, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances                  #-}
 module Document.Machine where
 
     --
@@ -7,7 +9,7 @@ module Document.Machine where
 import Document.Expression
 import Document.Visitor
 import Document.Proof -- hiding ( context )
-import Document.Refinement hiding ( parse_rule )
+import Document.Refinement as Ref
 import Document.Context
 
 import Latex.Parser
@@ -81,11 +83,11 @@ list_machines fn ct = do
         ms <- all_machines xs
         return $ map snd $ toList $ machines ms
         
-parse_rule :: (Monad m)
-           => String
-           -> RuleParserParameter
-           -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
-parse_rule rule param = do
+parse_rule' :: (Monad m)
+            => String
+            -> RuleParserParameter
+            -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
+parse_rule' rule param = do
     li <- lift $ ask
     case M.lookup rule refinement_parser of
         Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
@@ -104,8 +106,23 @@ refinement_parser = fromList
     ,   ("trading", parse (NegateDisjunct, ()))
     ,   ("transitivity", parse (Transitivity, ()))
     ,   ("psp", parse (PSP, ()))
+    ,   ("ensure", parse (ensure, ()))
     ,   ("induction", parse_induction)
     ]
+
+data HintBuilder = HintBuilder [LatexDoc] Machine
+
+ensure :: ProgressProp 
+       -> Label -> Event 
+       -> HintBuilder
+       -> EitherT [Error] (RWS LineInfo [Error] System) Ensure
+ensure prog@(LeadsTo fv _ _) lbl evt (HintBuilder thint m) = do
+        hint <- toEither $ tr_hint m (symbol_table fv) lbl thint empty_hint
+        return $ Ensure prog lbl evt hint
+
+instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
+    parse_rule (f,_) xs rule param@(RuleParserParameter m _ _ _ _ hint) = do
+        parse_rule (f (HintBuilder hint m),()) xs rule param
 
 check_acyclic :: (Monad m) => String 
               -> [(Label,Label)] 
@@ -427,11 +444,11 @@ tr_hint :: Monad m
         -> Map String Var
         -> Label
         -> [LatexDoc]
-        -> ( [(String,Expr)], Maybe Label )
-        -> RWST LineInfo [Error] System m ( [(String,Expr)], Maybe Label )
+        -> TrHint
+        -> RWST LineInfo [Error] System m TrHint
 tr_hint m vs lbl = visit_doc []
         [ ( "\\index"
-          , CmdBlock $ \(String x, xs, ()) (ys,z) -> do
+          , CmdBlock $ \(String x, xs, ()) (TrHint ys z) -> do
                 evt <- bind
                     (format "'{0}' is not an event of '{1}'" lbl $ _name m)
                     $ lbl `M.lookup` events m
@@ -441,15 +458,15 @@ tr_hint m vs lbl = visit_doc []
                     [ ( not $ x `member` indices evt 
                       , format "'{0}' is not an index of '{1}'" x lbl )
                     ]
-                return $ ((x,expr):ys,z))
+                return $ TrHint (insert x expr ys) z)
         , ( "\\lt"
-          , CmdBlock $ \(prog,()) (ys,z) -> do
+          , CmdBlock $ \(prog,()) (TrHint ys z) -> do
                 let msg = "Only one progress property needed for '{0}'"
                 toEither $ error_list 
                     [ ( not $ isNothing z
                       , format msg lbl )
                     ]
-                return (ys,Just prog))
+                return $ TrHint ys (Just prog))
         ]
     
 
@@ -588,7 +605,7 @@ collect_expr = visit_doc
                         tr            <- get_assert_with_free m xs
                         let prop = Transient 
                                     (free_vars (context m) tr) 
-                                    tr ev empty Nothing
+                                    tr ev empty_hint
                             old_prog_prop = transient $ props m
                         new_props     <- bind (format msg lbl)
                             $ insert_new lbl prop $ old_prog_prop
@@ -606,9 +623,9 @@ collect_expr = visit_doc
                             ]
                         tr            <- get_assert_with_free m xs
                         let fv = (free_vars (context m) tr)
-                        (hints,lt)    <- toEither $ tr_hint 
-                                            m fv ev hint ([],Nothing)
-                        let prop = Transient fv tr ev (fromList hints) lt
+                        hint <- toEither $ tr_hint 
+                                            m fv ev hint empty_hint
+                        let prop = Transient fv tr ev hint
                             old_prog_prop = transient $ props m
                         new_props  <- bind (format msg lbl)
                                 $ insert_new lbl prop $ old_prog_prop
@@ -684,27 +701,28 @@ collect_refinement :: Monad m
                    -> Machine
                    -> MSEitherT Error System m Machine 
 collect_refinement = visit_doc []
-        [ (   "\\refine"
-            ,   CmdBlock $ \(goal,String rule,hyps,hint,()) m -> do
+        [   (   "\\refine"
+            ,   CmdBlock $ \(goal, String rule, hyps, hint, ()) m -> do
                     toEither $ error_list
                         [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
                             , format "the goal is an undefined progress property {0}" goal )
                         ]
                     let prog = progress (props m) `union` progress (inh_props m)
                         saf  = safety (props m) `union` safety (inh_props m)
-                    r <- parse_rule (map toLower rule) (RuleParserParameter m prog saf goal hyps hint)
+                    r <- parse_rule' (map toLower rule) 
+                        (RuleParserParameter m prog saf goal hyps hint)
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
             )
         ,   (   "\\safetyB"
-            ,   CmdBlock $ \(lbl, evt, pCt, qCt,()) m -> do
+            ,   CmdBlock $ \(lbl, evt, pCt, qCt, ()) m -> do
                         -- Why is this here instead of the expression collector?
                     _  <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
                     let prop = safety $ props m
-                    (p,q)    <- toEither (do
-                        p    <- fromEither ztrue $ get_assert_with_free m pCt
-                        q    <- fromEither ztrue $ get_assert_with_free m qCt
+                    (p,q) <- toEither (do
+                        p <- fromEither ztrue $ get_assert_with_free m pCt
+                        q <- fromEither ztrue $ get_assert_with_free m qCt
                         error_list 
                             [   ( lbl `member` prop
                                 , format "safety property '{0}' already exists" lbl )
@@ -723,10 +741,10 @@ collect_refinement = visit_doc []
                     old_event <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
-                    let sc        = scheds old_event
-                        lbls      = (S.elems $ add `S.union` del `S.union` keep)
-                        progs     = progress (props m) `union` progress (inh_props m)
-                        safs      = safety (props m) `union` safety (inh_props m)
+                    let sc    = scheds old_event
+                        lbls  = (S.elems $ add `S.union` del `S.union` keep)
+                        progs = progress (props m) `union` progress (inh_props m)
+                        safs  = safety (props m) `union` safety (inh_props m)
                     _     <- bind_all lbls
                         (format "'{0}' is not a valid schedule")
                         $ (`M.lookup` sc)
@@ -879,7 +897,7 @@ deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans
     where
-        check_trans (lbl,Transient _ _ evt _ lt)  = do
+        check_trans (lbl,Transient _ _ evt (TrHint _ lt))  = do
                 add_proof_edge lbl [g evt $ _name m]
                 let f_sch = fine $ new_sched (events m ! evt)
                     progs = progress (props m) `union` progress (inh_props m) 

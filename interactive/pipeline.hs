@@ -8,6 +8,7 @@ where
     
 import Document.Document
 
+import Interactive.Config hiding ( wait )
 import Interactive.Observable
 import Interactive.Serialize
 
@@ -73,7 +74,11 @@ data Shared = Shared
         }
 
 data ParserState = Idle Double | Parsing
-    deriving (Eq, Show)
+    deriving Eq
+
+instance Show ParserState where
+    show (Idle x) = format "Idle {0}ms" $ show $ round $ x * 1000
+    show Parsing  = "Parsing"
 
 parser :: Shared
        -> IO (IO ())
@@ -84,7 +89,7 @@ parser (Shared { .. })  = return $ do
         write_obs parser_state (Idle dt)
         evalStateT (forever $ do
             liftIO $ do
-                threadDelay 5000000
+                threadDelay 250000
             t0 <- get
             t1 <- liftIO $ getModificationTime fname
             if t0 == t1 then return ()
@@ -236,9 +241,17 @@ summary (Shared { .. }) = do
 keyboard :: Shared -> IO ()
 keyboard sh@(Shared { .. }) = do
         xs <- getLine
-        if map toLower xs == "quit" 
+        let xs' = map toLower xs
+        if xs' == "quit" 
         then return ()
-        else if map toLower xs == "reset" then do
+        else if xs' == "goto" then do
+            xs <- read_obs error_list
+            case xs of
+                (Error _ (LI fn i _)):_ -> do
+                    open_at i fn
+                [] -> return ()
+            keyboard sh
+        else if xs' == "reset" then do
             modify_obs pr_obl $ \m -> 
                 return $ M.map (\(x,_) -> (x,Nothing)) m
             keyboard sh

@@ -48,7 +48,7 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (x' `mzeq` (x `mzplus` mzint 2))
         s1     <- with_li li (y' `mzeq` (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt") empty Nothing
+        let tr0 = Transient empty tr (label "evt") empty_hint
             co0 = Co [] co
             ps = empty_property_set {
                 transient = 
@@ -100,7 +100,7 @@ train_m0 = do
                     ,   action  = fromList [(label "A0", a0)]
                     })
         tr <- with_li li (st `select` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty Nothing)] 
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty_hint)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps

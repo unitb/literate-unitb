@@ -135,7 +135,7 @@ type Operator = Either UnaryOperator BinOperator
 data Command = Command String String Int ([ExprP] -> ExprP)
 
 instance Show Command where
-    show (Command x y n _) = show (x,y,n) -- format str x y
+    show (Command x y _ _) = show (x,y) -- format str x y
 
 instance Eq Command where
     (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =

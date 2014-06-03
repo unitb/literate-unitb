@@ -369,7 +369,7 @@ m0_props = empty_property_set {
 m1_props :: PropertySet
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc") empty Nothing) ]
+            (label "tr0", Transient empty (x `zeq` y) (label "inc") empty_hint) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 
