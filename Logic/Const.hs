@@ -12,6 +12,7 @@ import Control.Monad
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe
+import qualified Data.Set as S
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -133,7 +134,7 @@ zsome xs      =
             [x] -> x
             xs
                 | ztrue `elem` xs -> ztrue
-                | otherwise        -> FunApp (Fun [] "or" (take n $ repeat bool) bool) xs
+                | otherwise        -> FunApp (Fun [] "or" (replicate n bool) bool) xs
     where
         n = length xs
         f (FunApp (Fun [] "or" _ _) xs) = concatMap f xs
@@ -297,21 +298,35 @@ zapply :: ExprP -> ExprP -> ExprP
 zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
 one_point_rule :: Expr -> Expr
-one_point_rule (Binder Exists vs r t) = rewrite one_point_rule e
+one_point_rule (Binder Exists vs r t) = e
     where
-        e  = zexists (vs \\ M.keys inst) ztrue 
-            $ zall $ map (substitute $ M.mapKeys name inst) ts
-        inst = M.unions $ map f ts
-        f (FunApp f xs)
+        e  = zsome [ f $ zexists (filter (`S.member` fv) vs \\ M.keys inst) ztrue 
+                        $ zall $ map (substitute 
+                                        $ M.mapKeys name inst) ts
+                   | (inst,ts,fv) <- insts ]
+        insts = [ (M.unions $ map subst ts,ts,S.unions $ map used_var ts) | ts <- ts' ]
+        subst (FunApp f xs)
                 | name f == "=" = M.fromList $ rs
             where
                 rs = do (i,j) <- [(0,1),(1,0)]
                         k <- maybeToList 
                             $ (xs !! i) `lookup` zip (map Word vs) vs
                         return (k, xs !! j)
-        f _ = M.empty
+        subst _ = M.empty
+        f x
+            | length ts' == 1   = rewrite one_point_rule x
+            | otherwise         = one_point_rule x
         ts = conjuncts r ++ conjuncts t
-        conjuncts (FunApp f xs) 
-            | name f == "and" = xs
-        conjuncts x = [x]
+        ts' = forM (map disjuncts ts) id
 one_point_rule e = rewrite one_point_rule e
+
+conjuncts :: TypeSystem t => AbsExpr t -> [AbsExpr t]
+conjuncts (FunApp f xs) 
+    | name f == "and" = xs
+conjuncts x = [x]
+
+disjuncts :: TypeSystem2 t => AbsExpr t -> [AbsExpr t]
+disjuncts (FunApp f xs)
+    | name f == "or"  = xs
+    -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
+disjuncts x = [x]

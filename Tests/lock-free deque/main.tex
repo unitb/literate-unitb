@@ -34,8 +34,10 @@
 \newset{G}{\G}
 
 \begin{align*}
-\variable{p,q : \Int } \\
-\variable{qe : \Int \pfun \G }
+& \variable{p,q : \Int } 
+\\ & \variable{qe : \Int \pfun \G }
+\\ & \variable{ emp : \Bool }
+\\ & \variable{ res : \G }
 \end{align*}
 
 \begin{align*}
@@ -55,6 +57,8 @@
 \evassignment{m0:push:left}{m0:act0}{ qe' &\2= qe \2| p\0-1 \fun x }
 \\ \evassignment{m0:push:left}{m0:act1}{ p' &\1= p-1 }
 \\ \evassignment{m0:push:left}{m0:act2}{ q' &\1= q }
+\\ \evassignment{m0:push:left}{m0:act3}{ res' = res }
+\\ \evassignment{m0:push:left}{m0:act4}{ emp' = emp }
 \end{align*}
 
 \newevent{m0:push:right}{push\_right}
@@ -64,6 +68,8 @@
 \evassignment{m0:push:right}{m0:act0}{ qe' &\2= qe \2| q \fun x }
 \\ \evassignment{m0:push:right}{m0:act1}{ p' & \1= p }
 \\ \evassignment{m0:push:right}{m0:act2}{ q' & \1= q+1 }
+\\ \evassignment{m0:push:right}{m0:act3}{ res' = res }
+\\ \evassignment{m0:push:right}{m0:act4}{ emp' = emp }
 \end{align*}
 
 \newevent{m0:pop:left}{pop\_left}
@@ -73,6 +79,8 @@
 \\ \evassignment{m0:pop:left}{m0:act1}{ p' &\1= p+1 }
 \\ \evassignment{m0:pop:left}{m0:act2}{ q' &\1= q }
 \\ \evguard{m0:pop:left}{m0:grd0}{ p < q }
+\\ \evassignment{m0:pop:left}{m0:act3}{ (p = q \land res' = res) \lor (p < q \land res' = qe.p) }
+\\ \evassignment{m0:pop:left}{m0:act4}{ emp' = (p = q) }
 \end{align*}
 
 \newevent{m0:pop:right}{pop\_right}
@@ -82,6 +90,8 @@
 \\ \evassignment{m0:pop:right}{m0:act1}{ p' &\1= p }
 \\ \evassignment{m0:pop:right}{m0:act2}{ q' &\1= q-1 }
 \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
+\\ \evassignment{m0:pop:right}{m0:act3}{ (p = q \land res' = res) \lor (p < q \land res' = qe.(q\1-1)) }
+\\ \evassignment{m0:pop:right}{m0:act4}{ emp' = (p = q) }
 \end{align*}
 
 \end{machine}
@@ -152,8 +162,6 @@
 
 \begin{align*}
 \variable{ popR, popL : \set [\REQ]}
-\\ \variable{ emp : \Bool }
-\\ \variable{ res : \G }
 \end{align*}
 
 \begin{align*}

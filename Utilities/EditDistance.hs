@@ -126,8 +126,8 @@ effect (Swap i) xs      = take i xs ++ ys ++ drop (i+2) xs
 effects :: Eq a => [Change a] -> [a] -> [a]
 effects ks xs = L.foldl (flip effect) xs ks 
 
-prop_d :: Eq a => ([Change a],[a]) -> Bool
-prop_d (ks,xs) = dist xs (effects ks xs) <= length ks
+-- prop_d :: Eq a => ([Change a],[a]) -> Bool
+-- prop_d (ks,xs) = dist xs (effects ks xs) <= length ks
 
 prop_c :: Eq a => [Small a] -> [Small a] -> Bool
 prop_c xs' ys' = abs (length xs - length ys) <= dist xs ys

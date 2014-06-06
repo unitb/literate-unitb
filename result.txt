@@ -154,7 +154,8 @@
 |  |  +- instantiation of unified types is unique (counter examples)
 |  |  +- type mapping are acyclic
 +++ OK, passed 100 tests.
-|  |  +- [ Success: 16 / 16 ]
+|  |  +- one-point rule simplification on existentials
+|  |  +- [ Success: 17 / 17 ]
 |  +- [ Success: 6 / 6 ]
 +- latex parser
 |  +- sample.tex
@@ -224,10 +225,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   22179 total
-    1677 Document/Tests/trainstation.hs
-    1234 Document/Tests/lambdas.hs
-     963 Document/machine.hs
-     888 Document/Tests/indirecteq.hs
-     733 Document/proof.hs
-Run time: 1m 10s
+   22264 total
+    1707 Document/Tests/TrainStation.hs
+    1234 Document/Tests/Lambdas.hs
+     954 Document/Machine.hs
+     888 Document/Tests/IndirectEq.hs
+     733 Document/Proof.hs
+Run time: 1m 9s

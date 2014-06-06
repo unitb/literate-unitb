@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
@@ -152,6 +153,7 @@ main :: IO ()
 main = do
     xs <- getArgs
     v <- z3_version
+    system "rm actual* expected* po-*"
     if v == "2ca14b49fe45" then 
         case xs of
             []    -> general >> return ()

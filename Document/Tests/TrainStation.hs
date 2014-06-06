@@ -653,14 +653,16 @@ comp_facts xs =
                                 ,   ("LOC","@LOC")
                                 ,   ("TRAIN","@TRAIN")
                                 ] ) )
-                            ++ map f
-                                [ ( "; \\BLK-def"
-                                ,   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))" )
-                                , ( "; \\LOC-def"
-                                ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))" )
-                                , ( "; \\TRAIN-def"
-                                ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))" )
-                                ]
+named_facts :: [String]
+named_facts = 
+        map f
+            [ ( "; \\BLK-def"
+            ,   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))" )
+            , ( "; \\LOC-def"
+            ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))" )
+            , ( "; \\TRAIN-def"
+            ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))" )
+            ]
     where
         f (x,y) = x ++ "\n(assert " ++ y ++ ")"
 
@@ -799,6 +801,9 @@ result2 = unlines (
      ++ train_decl False False
      ++ set_decl_smt2 []
      ++ comp_facts [] ++ -- set_decl_smt2 ++
+     [  "(assert (not (exists ((in (set TRAIN)))"
+                         ++ " (and true (= in empty-set@@TRAIN)))))" ]
+     ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
@@ -844,6 +849,9 @@ result20 = unlines (
      ++ train_decl False False
      ++ set_decl_smt2 [WithPFun]
      ++ comp_facts [WithPFun] ++ 
+     [  "(assert (not (exists ((loc (pfun TRAIN BLK)))"
+                         ++ " (and true (= loc empty-fun@@TRAIN@@BLK)))))" ]
+     ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
@@ -883,6 +891,11 @@ result3 = unlines (
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
+     [  "(assert (not (exists ((in@prime (set TRAIN)))"
+                        ++  " (and true (= in@prime"
+                        ++               " (set-diff@@TRAIN in"
+                        ++                                " (mk-set@@TRAIN t)))))))" ]
+     ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
@@ -931,6 +944,9 @@ result19 = unlines (
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
+     [  "(assert (not (exists ((loc@prime (pfun TRAIN BLK)))"
+                         ++ " (and true (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))" ]
+     ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
             ++      " (not (elem@@BLK ent PLF))"
@@ -979,6 +995,7 @@ result4 = unlines (
         train_decl False True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
+        named_facts ++
         [ "; asm2"
         , "(assert (and (not (= ent ext))"
               ++      " (not (elem@@BLK ent PLF))"
@@ -1026,6 +1043,17 @@ result5 = unlines (
         train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
+        [  "(assert (not (exists ((t@param TRAIN))"
+                            ++ " (and true (and (=> (elem@@TRAIN t in)"
+                            ++                    " (elem@@TRAIN t@param in))"
+                            ++                " (=> (and (elem@@TRAIN t in)"
+                            ++                         " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
+                            ++                         " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
+                            ++                         " (elem@@TRAIN t@param in)"
+                            ++                         " (= (apply@@TRAIN@@BLK loc t@param) ext)"
+                            ++                         " (elem@@TRAIN t@param in))"
+                            ++                    " (not (elem@@TRAIN t in@prime))))))))" ]
+        ++ named_facts ++
         [  "; asm2"
         ,  "(assert (and (not (= ent ext))"
                ++      " (not (elem@@BLK ent PLF))"
@@ -1051,7 +1079,8 @@ result5 = unlines (
         ,  "; inv2"
         ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
         ,  "(assert (not (exists ((t@param TRAIN)) (and true"
-                ++ " (and (=> (elem@@TRAIN t in) (elem@@TRAIN t@param in))"
+                ++ " (and (=> (elem@@TRAIN t in)"
+                ++          " (elem@@TRAIN t@param in))"
                 ++      " (=> (and (elem@@TRAIN t in)"
                 ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
                 ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
@@ -1106,6 +1135,7 @@ result12 = unlines (
         train_decl True True ++ 
         set_decl_smt2 [WithPFun] ++ 
         comp_facts [WithPFun] ++
+        named_facts ++
         [  "; a0"
         ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
         ,  "; a3"

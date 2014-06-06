@@ -7,6 +7,7 @@
 module Logic.Expr where
 
     -- Module
+import Logic.Label
 import Logic.Classes
 import Logic.Type
 
@@ -16,7 +17,7 @@ import           GHC.Generics
 import Control.DeepSeq
 
 import           Data.List as L
-import           Data.Map as M hiding (map,filter,foldl)
+import qualified Data.Map as M hiding (map,foldl)
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -115,11 +116,11 @@ type Context = AbsContext GenericType
 type FOContext = AbsContext FOType
 
 data AbsContext t = Context 
-        (Map String Sort) -- sorts
-        (Map String (AbsVar t))  -- constants
-        (Map String (AbsFun t))  -- functions and operators
-        (Map String (AbsDef t))  -- transparent definitions
-        (Map String (AbsVar t))  -- dummies
+        (M.Map String Sort) -- sorts
+        (M.Map String (AbsVar t))  -- constants
+        (M.Map String (AbsFun t))  -- functions and operators
+        (M.Map String (AbsDef t))  -- transparent definitions
+        (M.Map String (AbsVar t))  -- dummies
     deriving (Show,Eq,Generic,Typeable)
 
 class Symbol a t where
@@ -282,24 +283,24 @@ instance Symbol (AbsDef t) t where
 
 instance Symbol (AbsContext t) t where
     decl (Context sorts cons fun defs _) = -- dums) = 
-                concatMap decl (elems sorts)
+                concatMap decl (M.elems sorts)
 --            ++  concatMap decl (elems (cons `merge` dums)) 
-            ++  concatMap decl (elems cons) 
-            ++  concatMap decl (elems fun) 
-            ++  concatMap decl (elems defs) 
+            ++  concatMap decl (M.elems cons) 
+            ++  concatMap decl (M.elems fun) 
+            ++  concatMap decl (M.elems defs) 
 
 
 merge :: (Ord k, Eq a, Show k, Show a)
-          => Map k a -> Map k a -> Map k a
-merge m0 m1 = unionWithKey f m0 m1
+          => M.Map k a -> M.Map k a -> M.Map k a
+merge m0 m1 = M.unionWithKey f m0 m1
     where
         f k x y
             | x == y    = x
             | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
 merge_all :: (Ord k, Eq a, Show k, Show a)
-          => [Map k a] -> Map k a
-merge_all ms = foldl (unionWithKey f) empty ms
+          => [M.Map k a] -> M.Map k a
+merge_all ms = foldl (M.unionWithKey f) M.empty ms
     where
         f k x y
             | x == y    = x
@@ -328,16 +329,18 @@ mk_context (x:xs) =
                             ss vs fs 
                             (M.insert n (Def gs n ps t e) defs) 
                             dums
-mk_context [] = Context empty empty empty empty empty
+mk_context [] = empty_ctx
 
-substitute :: Map String Expr -> Expr -> Expr
+substitute :: M.Map String Expr -> Expr -> Expr
 substitute m e = f e
     where
         f e@(Word v) = maybe e id $ M.lookup (name v) m
+        f e@(Binder _ vs _ _) = rewrite (substitute $ subst vs) e
         f e = rewrite f e
+        subst vs = m M.\\ symbol_table vs
 
-empty_ctx :: Context
-empty_ctx = Context empty empty empty empty empty
+empty_ctx :: AbsContext t
+empty_ctx = Context M.empty M.empty M.empty M.empty M.empty
 
 merge_ctx :: Context -> Context -> Context
 merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 

@@ -153,6 +153,7 @@ test = test_cases (
             ) unicity_counter_example ++ 
 --        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
         [ Case "type mapping are acyclic" (check_prop prop_type_mapping_acyclic) True
+        , StringCase "one-point rule simplification on existentials" case8 result8
         ] )
     where
         fun_sort = Sort "\\tfun" "fun" 2
@@ -207,3 +208,37 @@ result7 :: ExprP
         train = Gen $ USER_DEFINED (Sort "\train" "train" 0) []
         (x,_) = var "x" train
         empty_set_of_train = Const [train] "empty-set" $ set_type train
+
+result8 :: String
+result8 = unlines
+    [ "(and p q)"
+    , "(and p (= 87 87))"
+    , "(and (or (and p q)"
+    , "         (and p (= 87 87))"
+    , "         (and (= 7 7) q)"
+    , "         (and (= 7 7) (= 7 87)))"
+    , "     q)"
+    , "(and (or (and p q)"
+    , "         (and p (= 87 87))"
+    , "         (and (= 7 7) q)"
+    , "         (and (= 7 7) (= 7 87)))"
+    , "     (= 87 87))"
+    , "(and (= 7 7) q)"
+    , "(and (= 7 7) (= 7 87))"
+    ]
+
+case8 :: IO String
+case8 = return $ concatMap pretty_print' $ disjuncts e'
+    where
+        (z,z_decl) = var "z" int
+        z7  = mzint 7
+        z87 = mzint 87
+        (p,_) = var "p" bool
+        (q,_) = var "q" bool
+        e0 = mzexists [z_decl] mztrue $ 
+                            (p `mzor` (mzeq z z7)) 
+                    `mzand` (q `mzor` (mzeq z z87))
+        (Right e) = mzexists [z_decl] mztrue $ 
+                            (p `mzor` e0 `mzor` (mzeq z z7)) 
+                    `mzand` (q `mzor` (mzeq z z87))
+        e' = one_point_rule e

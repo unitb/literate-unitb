@@ -43,7 +43,7 @@ empty :: b -> Matrix a b
 empty x = Matrix M.empty [] x
 
 (!) :: Ord k => Matrix k b -> (k,k) -> b
-(Matrix m _ x) ! (y,z) = maybe x (M.findWithDefault x z) (M.lookup y m)
+(!) (Matrix m _ x) (y,z) = maybe x (M.findWithDefault x z) (M.lookup y m)
 
 unionWith :: Ord k => (a -> a -> a) 
           -> Matrix k a -> Matrix k a -> Matrix k a

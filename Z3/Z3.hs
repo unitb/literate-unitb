@@ -163,8 +163,13 @@ z3_code po =
                     $ one_point
                     $ delambdify
                     $ apply_monotonicity po
-        f (lbl,xp) = [Comment $ show lbl, Assert xp]
-        one_point (Sequent a b c g) = Sequent a b c $ one_point_rule g
+        f (lbl,xp) = [Comment $ show lbl, Assert xp Nothing]
+        one_point (Sequent a b c g) = Sequent a asm c g'
+            where
+                asm
+                    | g == g'   = b
+                    | otherwise = b ++ [znot g]
+                g' = one_point_rule g
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b c _) =

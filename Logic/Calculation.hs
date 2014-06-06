@@ -164,12 +164,7 @@ instance ProofRule FreeGoal where
                                                 (rename v u r)
                                                 (rename v u expr)
                     | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
-                where
             free_vars expr = return expr
-    --        step_lbls = map (("case "++) . show) [1..]
-    --        lbls      = map f ("completeness" : step_lbls)
-    --        f x       = composite_label [lbl,label x]
-    --        g x       = name x /= v
 
 instance ProofRule Easy where
     proof_po    _  (Easy (LI _ i j)) 

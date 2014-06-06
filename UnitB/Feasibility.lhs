@@ -21,8 +21,7 @@ where
 
     -- Modules
 import Logic.Expr
-            ( Expr, AbsExpr(..), Var, used_var 
-            , AbsFun (..) )
+            ( Expr, Var, used_var )
 import Logic.Const
 
     -- Libraries
@@ -36,12 +35,6 @@ import           Data.IntMap
 import qualified Data.Map as M
 import           Data.Monoid ( mappend )
 import qualified Data.Set as S
-
-conjuncts :: [Expr] -> [Expr]
-conjuncts xs = 
-     case zall xs of 
-          FunApp (Fun _ "and" _ _) xs -> xs
-          _ -> xs
 
 get_partition :: [Var] -> [Expr] -> ([(Key, Int)], [(Var, Int)], [(Expr, Int)])
 get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not implemented"
@@ -58,7 +51,7 @@ get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not impleme
     where
         m = length vs
         n = length cs
-        cs = conjuncts es
+        cs = concatMap conjuncts es
         mv = M.fromList $ zip vs [0..]
             -- map variable
         me = M.fromList $ zip cs [m..]
@@ -86,7 +79,7 @@ partition_expr vs es = do
     where
         m = length vs
         n = length cs
-        cs = conjuncts es
+        cs = concatMap conjuncts es
         mv = M.fromList $ zip vs [0..]
             -- map variable
         me = M.fromList $ zip cs [m..]
