@@ -1,4 +1,4 @@
-
+#!/usr/bin/env runhaskell
 import Control.Concurrent
 import Control.Monad.Fix
 

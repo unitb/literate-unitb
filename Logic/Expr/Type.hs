@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module Logic.Type where
+module Logic.Expr.Type where
 
     -- Modules
-import Logic.Classes
+import Logic.Expr.Classes
 
     -- Libraries
 import           Data.Typeable

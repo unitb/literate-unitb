@@ -7,23 +7,18 @@ import Document.Proof
 
 import Latex.Parser
 
-import Logic.Classes
-import Logic.Genericity
-import Logic.Const
 import Logic.Expr
-import Logic.Label
 import Logic.Operator
-import Logic.Tactics hiding ( with_line_info )
-import Logic.Type
+import Logic.Proof hiding ( with_line_info )
 
 import UnitB.AST
 import UnitB.PO
 
-import Theories.SetTheory
-import Theories.FunctionTheory
 import Theories.Arithmetic
-import Theories.PredCalc
+import Theories.FunctionTheory
 import Theories.IntervalTheory
+import Theories.PredCalc
+import Theories.SetTheory
 
     -- Libraries
 import Control.Monad.Trans
@@ -31,10 +26,9 @@ import Control.Monad.Trans.Reader ( runReaderT )
 import Control.Monad.Trans.RWS
 import Control.Monad.Trans.Either
 
-import           Data.List as L ( map, lookup )
-import           Data.Map as M
-import qualified Data.Set as S
-import           Data.String.Utils
+import Data.List as L ( map, lookup )
+import Data.Map as M
+import Data.String.Utils
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -81,7 +75,7 @@ ctx_declarations _ = visit_doc []
         [   (   "\\constant"
             ,   CmdBlock $ \(xs,()) th -> do
                         vs <- get_variables 
-                            (theory_ctx S.empty th) 
+                            (theory_ctx th) 
                             (th_notation th) xs
                         return th { 
                                 consts = merge 
@@ -91,7 +85,7 @@ ctx_declarations _ = visit_doc []
         ,   (   "\\dummy"
             ,   CmdBlock $ \(xs,()) th -> do
                         vs <- get_variables 
-                            (theory_ctx S.empty th) 
+                            (theory_ctx th) 
                             (th_notation th) xs
                         return th { 
                                 dummies = merge 
@@ -170,7 +164,7 @@ ctx_imports _ = visit_doc []
             ,   CmdBlock $ \(String name,optype,()) th -> do
                         li <- lift $ ask
                         var <- get_variables 
-                            (theory_ctx S.empty th) 
+                            (theory_ctx th) 
                             (th_notation th) optype
                         case var of
                             [(v,Var _ (Gen (USER_DEFINED s [Gen (USER_DEFINED p [t0, t1]),t2])))]
@@ -220,7 +214,7 @@ ctx_collect_expr name = visit_doc
                         thm   <- get_predicate' 
 --                            (empty_theory { extends = singleton "" th }) 
                             (empty_theory { extends = insert name th $ extends th }) 
-                            (theory_ctx S.empty th) xs
+                            (theory_ctx th) xs
                         return th { fact = insert lbl thm $ fact th }
             )
         ,   (   "\\theorem"
@@ -233,7 +227,7 @@ ctx_collect_expr name = visit_doc
                         thm   <- get_predicate' 
 --                            (empty_theory { extends = singleton "" th }) 
                             (empty_theory { extends = insert name th $ extends th }) 
-                            (theory_ctx S.empty th) xs
+                            (theory_ctx th) xs
                         return th 
                             { fact = insert lbl thm $ fact th
                             , theorems = insert lbl Nothing $ theorems th }

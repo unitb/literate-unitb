@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 {-# LANGUAGE FlexibleContexts #-}
 module Main where
 
@@ -7,7 +8,7 @@ import Interactive.Config
 
 import Document.Document
 
-import Logic.Label
+import Logic.Expr
 
 import UnitB.AST
 import UnitB.PO

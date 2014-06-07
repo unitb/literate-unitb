@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 module Main where
 
 import Data.Function
@@ -6,6 +7,7 @@ import Data.List
 import Interactive.Config
 
 import System.Directory
+import System.Process
 
 import Utilities.Format
 
@@ -24,6 +26,7 @@ main = do
             b1 <- doesFileExist file1
             b2 <- doesFileExist file2
             if b1 && b2 then do
+                system $ "./quote.hs \"" ++ file1 ++ "\" | pbcopy"
                 diff file1 file2
                 return ()
             else return ()

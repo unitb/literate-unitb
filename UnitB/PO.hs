@@ -12,13 +12,9 @@ module UnitB.PO
 where
 
     -- Modules
-import Logic.Calculation hiding ( context )
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
-import Logic.Label
+import Logic.Proof
 import Logic.Theory
-import Logic.Sequent
 import Logic.WellDefinedness
 
 import           UnitB.AST
@@ -29,6 +25,8 @@ import Z3.Z3
 
     -- Libraries
 import Control.Monad hiding (guard)
+import Control.Monad.Trans
+import Control.Monad.Trans.Either
 
 import           Data.Map as M hiding 
                     ( map, foldl, foldr
@@ -37,13 +35,11 @@ import           Data.Map as M hiding
 import qualified Data.Map as M
 import           Data.Maybe as MM ( maybeToList, isJust ) 
 import           Data.List as L hiding (inits, union,insert)
-import qualified Data.Set as S
 
 import System.IO
 
 import Utilities.Format
 import Utilities.Syntactic
---import Utilities.Trace
 
     -- 
     --
@@ -154,14 +150,13 @@ raw_machine_pos m = pos
             ++ (map (uncurry $ ref_po m) $ M.toList $ derivation p))
         p = props m
         f (Sequent a b c d) = Sequent 
-                (a `merge_ctx` theory_ctx ts (theory m))
+                (a `merge_ctx` theory_ctx (theory m))
                 (M.elems unnamed ++ b) 
                 (named_f `M.union` c)
                 d
           where
-            unnamed = theory_facts ts (theory m) `M.difference` named_f
-            named_f = theory_facts ts (theory m) { extends = M.empty }
-            ts = S.unions $ map used_types $ d : M.elems c ++ b
+            unnamed = theory_facts (theory m) `M.difference` named_f
+            named_f = theory_facts (theory m) { extends = M.empty }
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
@@ -176,7 +171,7 @@ proof_obligation m = do
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl $ proofs $ props $ m of
                 Just c ->
-                    proof_po (theory m) c lbl po
+                    proof_po c lbl po
                 Nothing -> 
                     return [(lbl,po)])
         return $ M.fromList $ concat xs
@@ -206,16 +201,15 @@ theory_po th = do
           where
             result = case keys lbl `M.lookup` theorems th of
                         Just (Just proof) -> do
-                            xs <- proof_po th proof (keys lbl) po
+                            xs <- proof_po proof (keys lbl) po
                             return xs
                         _ -> return [(keys lbl, po)]
             po = Sequent 
-                (a `merge_ctx` theory_ctx ts th)
+                (a `merge_ctx` theory_ctx th)
                 (concatMap 
-                    (M.elems . theory_facts ts) 
+                    (M.elems . theory_facts) 
                     (elems $ extends th) ++ b) 
                 c d
-            ts = S.unions $ map used_types $ d : M.elems c ++ b
 
 init_fis_po :: Machine -> Map Label Sequent
 init_fis_po m = eval_generator $ with 
@@ -511,13 +505,12 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-check :: Theory -> Calculation -> IO (Either [Error] [(Validity, Int)])
-check th c = embed 
-            (obligations th empty_ctx c) 
-            (\pos -> do
-        rs <- forM pos discharge
-        let ln = filter ((/= Valid) . fst) $ zip rs [0..] :: [(Validity, Int)]
-        return ln)
+check :: Calculation -> IO (Either [Error] [(Validity, Int)])
+check c = runEitherT $ do
+        pos <- hoistEither $ obligations empty_ctx empty_sequent c
+        rs  <- lift $ forM pos discharge
+        let ln = filter ((/= Valid) . fst) $ zip rs [0..]
+        return ln
 
 dump :: String -> Map Label Sequent -> IO ()
 dump name pos = do

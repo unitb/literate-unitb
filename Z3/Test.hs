@@ -3,20 +3,15 @@ module Z3.Test where
     -- Modules
 import Z3.Z3 as Z
 
-import Logic.Calculation
-import Logic.Const
 import Logic.Expr
-import Logic.Type
-import Logic.Label
 import Logic.Lambda
 import Logic.Operator hiding ( Command )
-import Logic.Sequent
-import Logic.Genericity
+import Logic.Proof hiding ( assert )
+import Logic.Theory
 
 import Theories.SetTheory
 
 import UnitB.PO
-import UnitB.AST
 
     -- Libraries
 import qualified Data.Map as M
@@ -50,7 +45,7 @@ case2 = Case "sample_quant3" (verify sample_quant3 2) $ Right Unsat
 case3 :: TestCase
 case3 = Case "sample proof" (discharge sample_proof) Valid
 case4 :: TestCase
-case4 = Case "check sample calc" (check empty_theory sample_calc) (Right [])
+case4 = Case "check sample calc" (check sample_calc) (Right [])
 
 sample :: String
 sample = unlines [
@@ -122,11 +117,7 @@ sample_quant3 = [
         
 sample_calc :: Calculation
 sample_calc = (Calc  
-        ( mk_context [ FunDecl [] "f" [bool] bool,
-              FunDef [] "follows" [x',y'] 
-                bool (fromJust (y `mzimplies` x)),
-              ConstDecl "x" bool,
-              ConstDecl "y" bool ] )
+        ctx
         (  fromJust  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
                    ( fromJust (f x `mzimplies` f y) )
         [ (equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li)
@@ -136,6 +127,11 @@ sample_calc = (Calc
         ]
         li )
     where
+        ctx = mk_context [ FunDecl [] "f" [bool] bool,
+                  FunDef [] "follows" [x',y'] 
+                    bool (fromJust (y `mzimplies` x)),
+                  ConstDecl "x" bool,
+                  ConstDecl "y" bool ]
         hyp         = fromJust $ mzforall 
             [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )

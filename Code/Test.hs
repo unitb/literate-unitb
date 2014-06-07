@@ -4,8 +4,7 @@ import Code.Synthesis
 
 import Document.Machine
 
-import Logic.Label
-import Logic.Const
+import Logic.Expr
 
 import UnitB.AST
 

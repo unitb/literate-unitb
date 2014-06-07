@@ -1,10 +1,10 @@
-module Logic.Const where
+module Logic.Expr.Const where
 
     -- Modules   
-import Logic.Classes 
-import Logic.Expr
-import Logic.Genericity
-import Logic.Type
+import Logic.Expr.Classes 
+import Logic.Expr.Expr
+import Logic.Expr.Genericity
+import Logic.Expr.Type
 
     -- Libraries
 import Control.Monad

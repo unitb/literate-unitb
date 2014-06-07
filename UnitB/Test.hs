@@ -1,11 +1,7 @@
 module UnitB.Test where 
 
     -- Modules
-import           Logic.Classes
-import           Logic.Const
 import           Logic.Expr
-import           Logic.Genericity hiding ( variables )
-import           Logic.Label
 import qualified Logic.TestGenericity as Gen
 
 import Theories.FunctionTheory

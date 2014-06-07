@@ -29,14 +29,10 @@ module Z3.Z3
 where
 
     -- Modules
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
-import Logic.Genericity
-import Logic.Label
 import Logic.Lambda
-import Logic.Sequent
-import Logic.Type
+import Logic.Expr.Genericity ( Generic, variables )
+import Logic.Proof
 
     -- Libraries
 import Control.Applicative hiding ( empty, Const )

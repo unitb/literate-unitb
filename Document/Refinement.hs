@@ -12,11 +12,8 @@ import UnitB.PO
 
 import Latex.Parser
 
-import Logic.Const
 import Logic.Expr
-import Logic.Genericity
-import Logic.Label
-import Logic.Sequent
+import Logic.Proof hiding ( assert )
 
     -- Libraries
 import Control.Monad.Trans.Either

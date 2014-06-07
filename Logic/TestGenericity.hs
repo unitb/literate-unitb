@@ -2,10 +2,7 @@
 module Logic.TestGenericity where
 
     -- Modules
-import Logic.Const
 import Logic.Expr
-import Logic.Genericity
-import Logic.Type
 
 import Theories.SetTheory
 

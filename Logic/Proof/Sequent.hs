@@ -1,18 +1,15 @@
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-module Logic.Sequent where
+module Logic.Proof.Sequent where
 
     -- Modules
 import Logic.Expr
-import Logic.Label
-import Logic.Const
-import Logic.Type
 
     -- Libraries
 import Data.Char
-import Data.List
-import Data.Map hiding ( map )
+import Data.List as L
+import Data.Map  as M hiding ( map )
 
 import GHC.Generics
 
@@ -24,6 +21,9 @@ type FOSequent = AbsSequent FOType
 
 data AbsSequent t = Sequent (AbsContext t) [AbsExpr t] (Map Label (AbsExpr t)) (AbsExpr t)
     deriving (Eq, Generic)
+
+empty_sequent :: TypeSystem2 t => AbsSequent t
+empty_sequent = (Sequent empty_ctx [] M.empty ztrue)
 
 instance Show Sequent where
     show (Sequent (Context ss vs fs ds _) as hs g) =

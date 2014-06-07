@@ -47,8 +47,8 @@ import Document.TypeList
 
 import Latex.Parser
 
+import Logic.Expr
 import Logic.ExpressionStore
-import Logic.Label
 
 import UnitB.AST
 

@@ -6,8 +6,6 @@ module Logic.Operator where
 
     -- Modules
 import Logic.Expr hiding ( pair )
-import Logic.Const
-import Logic.Classes
 
     -- Libraries
 import Data.Either

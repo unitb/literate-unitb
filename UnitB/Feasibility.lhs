@@ -21,8 +21,7 @@ where
 
     -- Modules
 import Logic.Expr
-            ( Expr, Var, used_var )
-import Logic.Const
+            ( Expr, Var, used_var, conjuncts )
 
     -- Libraries
 import           Control.Monad 

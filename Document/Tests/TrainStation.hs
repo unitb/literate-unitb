@@ -3,12 +3,9 @@ module Document.Tests.TrainStation where
     -- Modules
 import Document.Document as Doc
 
-import Logic.Calculation
-import Logic.Const
 import Logic.Expr
-import Logic.Label
+import Logic.Proof
 import Logic.Theory
-import Logic.Type
 
 import UnitB.AST
 import UnitB.PO
@@ -237,19 +234,19 @@ props0 = empty_property_set
             ]
     ,  proofs = fromList
             [   ( label "train0/enter/INV/inv2"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/INV/inv2"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/INIT/INV/inv2"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co0"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/enter/CO/co1"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co0"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/CO/co1"
-                , Proof $ Calc empty_ctx ztrue ztrue [] li)
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ]
     ,  safety = fromList
             []

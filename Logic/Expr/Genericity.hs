@@ -1,12 +1,12 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE BangPatterns         #-}
-module Logic.Genericity where
+module Logic.Expr.Genericity where
 
     -- Modules
-import Logic.Expr
-import Logic.Classes
-import Logic.Type
+import Logic.Expr.Expr
+import Logic.Expr.Classes
+import Logic.Expr.Type
 
     -- Libraries
 import Control.Monad

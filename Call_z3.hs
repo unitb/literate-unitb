@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 import Control.Monad
 
 import Data.Function

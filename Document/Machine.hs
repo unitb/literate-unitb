@@ -8,19 +8,15 @@ module Document.Machine where
     --
 import Document.Expression
 import Document.Visitor
-import Document.Proof -- hiding ( context )
+import Document.Proof
 import Document.Refinement as Ref
 import Document.Context
 
 import Latex.Parser
 
-import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore ( ExprStore )
-import Logic.Sequent
-import Logic.Label
-import Logic.Tactics hiding ( with_line_info )
-import Logic.Type
+import Logic.Proof hiding ( with_line_info )
 
 import SummaryGen
 

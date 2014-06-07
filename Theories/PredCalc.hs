@@ -2,13 +2,9 @@
 module Theories.PredCalc where
 
     -- Modules
-import Logic.Const
 import Logic.Expr
-import Logic.Genericity
-import Logic.Label
 import Logic.Operator
 import Logic.Theory
-import Logic.Type
 
     -- Libraries
 import qualified Data.Map as M

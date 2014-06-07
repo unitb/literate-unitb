@@ -5,9 +5,7 @@ where
     -- Modules
 import Document.Document
 
-import Logic.Const
 import Logic.Expr
-import Logic.Label
 
 import UnitB.AST
 import UnitB.PO

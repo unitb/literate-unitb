@@ -5,8 +5,6 @@ where
 
     -- Modules
 import Logic.Expr
-import Logic.Classes
-import Logic.Const
 
     -- Libraries
 import Control.Monad.State.Class

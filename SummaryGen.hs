@@ -1,10 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module SummaryGen where
 
-import Logic.Classes
-import Logic.ExpressionStore
-import Logic.Label
 import Logic.Expr
+import Logic.ExpressionStore
 
 import UnitB.AST
 

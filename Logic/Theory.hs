@@ -1,20 +1,14 @@
 {-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
 module Logic.Theory where
 
---import Logic.Const
+    -- Modules
 import Logic.Expr
-import Logic.Label
 import Logic.Operator
-import Logic.Sequent
-import Logic.Type
+import Logic.Proof
 
     -- Libraries
-import Data.List as L
-import Data.Map as M hiding ( map )
-import Data.Typeable
-
-import Utilities.Syntactic
-import Utilities.HeterogenousEquality
+import           Data.List as L
+import           Data.Map as M hiding ( map )
 
     -- Obsolete doc:
     -- the use of gen_param is tricky. Be careful
@@ -60,18 +54,6 @@ empty_theory = Theory M.empty
     M.empty M.empty M.empty M.empty 
     M.empty M.empty [] (with_assoc empty_notation)
 
-data Proof = forall a. ProofRule a => Proof a
-    deriving Typeable
-
-instance Eq Proof where
-    Proof x == Proof y = x `h_equal` y
-
-class (Syntactic a, Typeable a, Eq a) => ProofRule a where
-    proof_po :: Theory -> a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
-
-instance Show Proof where
-    show _ = "[..]"
-
 th_notation :: Theory -> Notation
 th_notation th = res
     where
@@ -79,3 +61,24 @@ th_notation th = res
         res = flip precede logic
             $ L.foldl combine empty_notation 
             $ map notation ths
+
+theory_ctx :: Theory -> Context
+theory_ctx th = 
+        merge_all_ctx $
+            (Context ts c new_fun M.empty dums) : L.map theory_ctx (M.elems d)
+    where
+        d      = extends th
+        ts     = types th
+        fun    = funs th
+        c      = consts th
+        dums   = dummies th
+        new_fun = fun
+
+    -- todo: prefix name of theorems of a z3_decoration
+theory_facts :: Theory -> Map Label Expr
+theory_facts th = 
+        merge_all (new_fact : L.map theory_facts (M.elems d))
+    where
+        d      = extends th
+        facts  = fact th
+        new_fact = facts

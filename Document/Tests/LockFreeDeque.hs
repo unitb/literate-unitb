@@ -3,8 +3,8 @@ module Document.Tests.LockFreeDeque where
     -- Modules
 import Document.Document
 
-import Logic.Label
-import Logic.Sequent
+import Logic.Expr
+import Logic.Proof
 
 import UnitB.PO
 

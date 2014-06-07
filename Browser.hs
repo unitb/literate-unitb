@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 module Browser where
 
 import Data.IORef

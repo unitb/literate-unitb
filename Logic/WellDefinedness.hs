@@ -2,8 +2,6 @@ module Logic.WellDefinedness where
 
     -- Modules
 import Logic.Expr
-import Logic.Classes
-import Logic.Const
 
 import Theories.FunctionTheory
 import Theories.SetTheory

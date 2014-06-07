@@ -10,13 +10,9 @@ where
 import Latex.Scanner -- hiding (many)
 import Latex.Parser  hiding (Close,Open,Command)
 
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
 import Logic.ExpressionStore as ES
-import Logic.Genericity hiding ( variables )
 import Logic.Operator
-import Logic.Type
 
 import UnitB.AST ( System ( .. ) )
 

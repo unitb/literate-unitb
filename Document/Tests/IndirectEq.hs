@@ -5,9 +5,8 @@ import Document.Document
 import UnitB.AST
 import UnitB.PO
 
-import Logic.Label
 import Logic.Expr
-import Logic.Sequent
+import Logic.Proof
 
 import Z3.Z3 ( z3_code )
 

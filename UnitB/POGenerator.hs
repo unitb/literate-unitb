@@ -4,11 +4,8 @@ module UnitB.POGenerator
     , nameless_hyps, variables, emit_exist_goal )
 where
 
-import Logic.Label
 import Logic.Expr
-import Logic.Sequent
-import Logic.Const
-import Logic.Classes
+import Logic.Proof
 
 import UnitB.Feasibility
 

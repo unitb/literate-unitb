@@ -56,14 +56,10 @@ where
  
     -- Modules
 import Logic.Expr hiding (merge)
-import Logic.Const 
 import Logic.ExpressionStore
-import Logic.Classes
-import Logic.Label
 import Logic.Operator
-import Logic.Sequent
+import Logic.Proof
 import Logic.Theory as Th
-import Logic.Type
 
 import Theories.SetTheory
 import Theories.FunctionTheory

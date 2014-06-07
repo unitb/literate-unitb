@@ -6,13 +6,8 @@ module Logic.Lambda
 where
 
     -- Modules
-import Logic.Classes
-import Logic.Const
 import Logic.Expr   hiding ( rename )
-import Logic.Genericity
-import Logic.Label
-import Logic.Sequent
-import Logic.Type
+import Logic.Proof
 
     -- Libraries
 import Control.Monad.State

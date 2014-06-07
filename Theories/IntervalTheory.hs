@@ -2,11 +2,7 @@
 module Theories.IntervalTheory where
 
     -- Modules
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
-import Logic.Genericity
-import Logic.Label
 import Logic.Operator
 import Logic.Theory
 

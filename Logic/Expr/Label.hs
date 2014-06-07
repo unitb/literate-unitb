@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Logic.Label where
+module Logic.Expr.Label where
 
     -- Module
-import Logic.Classes
+import Logic.Expr.Classes
 
     -- Libraries
 import GHC.Generics 

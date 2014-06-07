@@ -2,10 +2,7 @@
 module Code.Synthesis where
 
     -- Modules
-import Logic.Const
 import Logic.Expr
-import Logic.Classes
-import Logic.Type
 
 import Theories.SetTheory
 

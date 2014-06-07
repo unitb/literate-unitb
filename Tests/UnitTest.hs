@@ -2,8 +2,8 @@
 module Tests.UnitTest where
 
     -- Modules
-import Logic.Sequent
-import Logic.Label
+import Logic.Expr
+import Logic.Proof
 
 import Z3.Z3
 

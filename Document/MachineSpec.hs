@@ -6,11 +6,7 @@ import Document.Machine
 
 import Latex.Parser
 
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
-import Logic.Label
-import Logic.Type
 
 import Theories.Arithmetic
 import Theories.FunctionTheory

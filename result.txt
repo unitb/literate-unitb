@@ -123,7 +123,7 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- QuickCheck spec of machine parser
-=== prop_parseOk from ./Document/MachineSpec.hs:33 ===
+=== prop_parseOk from ./Document/MachineSpec.hs:29 ===
 +++ OK, passed 100 tests.
 
 |  +- the parser is exception free
@@ -225,10 +225,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   22264 total
-    1707 Document/Tests/TrainStation.hs
-    1234 Document/Tests/Lambdas.hs
-     954 Document/Machine.hs
-     888 Document/Tests/IndirectEq.hs
-     733 Document/Proof.hs
-Run time: 1m 9s
+   22183 total
+    1723 Document/Tests/TrainStation.hs
+    1236 Document/Tests/Lambdas.hs
+     950 Document/Machine.hs
+     887 Document/Tests/IndirectEq.hs
+     729 Document/Proof.hs
+Run time: 1m 13s

@@ -2,11 +2,9 @@
 module Theories.Arithmetic where
 
     -- Modules
-import Logic.Const
-import Logic.Label
+import Logic.Expr
 import Logic.Operator
 import Logic.Theory
-import Logic.Type
 
 import Theories.FunctionTheory
 

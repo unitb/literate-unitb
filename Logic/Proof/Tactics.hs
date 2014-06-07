@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Logic.Tactics 
+module Logic.Proof.Tactics 
     ( Tactic, TacticT, get_line_info, get_context
     , get_goal, by_parts
     , is_fresh, get_hypotheses, assert, assume
@@ -20,15 +20,10 @@ module Logic.Tactics
     )
 where
 
+import Logic.Expr hiding ( instantiate )
 import Logic.Operator
-import Logic.Calculation
-import Logic.Classes
-import Logic.Const
-import Logic.Expr
-import Logic.Label
-import Logic.Sequent
-import Logic.Theory hiding ( theorems )
-import Logic.Type
+import Logic.Proof.ProofTree
+import Logic.Proof.Sequent
 
     -- Libraries
 import Control.Monad
@@ -206,7 +201,7 @@ assert xs proof = make_hard $
                 return ((lbl,x),(lbl,(x,p)),(map (\x -> (lbl,x)) r))
             let (xs,ys,zs) = unzip3 ps
                 -- (xs,ys,zs) =
-                -- (new hypotheses
+                -- ( new hypotheses
                 -- , assertions with proof objects
                 -- , dependencies between assertions)
             make_hard $ forM_ (cycles $ concat zs) $ \x ->
@@ -215,7 +210,7 @@ assert xs proof = make_hard $
                     AcyclicSCC _ -> return ()
                     CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ map show cs) li]
             p  <- with_hypotheses xs proof
-            return $ Proof $ Assertion (fromList ys) (concat zs) p li
+            return $ Assertion (fromList ys) (concat zs) p li
 
 assume :: Monad m
        => [(Label,Expr)]
@@ -226,7 +221,7 @@ assume xs new_g proof = do
         li <- get_line_info
         p  <- with_hypotheses xs
             $ with_goal new_g proof
-        return $ Proof $ Assume (fromList xs) new_g p li
+        return $ Assume (fromList xs) new_g p li
 
 clear_vars :: Monad m
            => [Var]
@@ -251,7 +246,7 @@ clear_vars vars proof = do
                 TacticT $ lift $ put (lbls,ids)
                 return p
         let thm = M.filter f $ theorems param `intersection` fromList (zip w $ repeat ())
-        return $ Proof $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
+        return $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
         
 
 by_cases :: Monad m
@@ -263,7 +258,7 @@ by_cases cs = make_hard $ do
             p <- easy
             p <- make_soft p $ with_hypotheses [(lbl,e)] m 
             return (lbl,e,p)
-        return $ Proof $ ByCases ps li
+        return $ ByCases ps li
 
 by_parts :: Monad m
          => [(Expr, TacticT m Proof)]
@@ -273,16 +268,13 @@ by_parts cs = do
         ps <- forM cs $ \(e,m) -> do
             p <- with_goal e m 
             return (e,p)
-        return $ Proof $ ByParts ps li
+        return $ ByParts ps li
 
 easy :: Monad m
      => TacticT m Proof
 easy = do
         li <- get_line_info
-        return $ Proof $ Easy li
-
-data TheoremRef = ThmRef Label [(Var,Expr)]
-    deriving Show
+        return $ Easy li
 
 use_theorems :: Monad m
              => [(TheoremRef,LineInfo)]
@@ -425,7 +417,7 @@ free_goal v0 v1 m = do
             _ -> fail $ "goal is not a universal quantification:\n" ++ pretty_print' goal
         p <- with_variables [v1] $ with_goal new m
         let t = type_of (Word v1)
-        return $ Proof $ FreeGoal (name v0) (name v1) t p li
+        return $ FreeGoal (name v0) (name v1) t p li
 
 instantiate :: Monad m
             => Expr -> [(Var,Expr)] 
@@ -485,7 +477,7 @@ instantiate_hyp hyp lbl ps proof = do
         if hyp `elem` hyps then do
             newh <- instantiate hyp ps
             p    <- with_hypotheses [(lbl,newh)] proof
-            return $ Proof $ InstantiateHyp hyp (fromList ps) p li
+            return $ InstantiateHyp hyp (fromList ps) p li
         else
             fail $ "formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp

@@ -12,7 +12,7 @@ import Interactive.Config hiding ( wait )
 import Interactive.Observable
 import Interactive.Serialize
 
-import Logic.Label
+import Logic.Expr
 
 import UnitB.AST
 import UnitB.PO

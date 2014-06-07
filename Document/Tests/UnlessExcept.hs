@@ -3,8 +3,8 @@ module Document.Tests.UnlessExcept where
 
 import Document.Machine
 
-import Logic.Label
-import Logic.Sequent
+import Logic.Expr
+import Logic.Proof
 
 import UnitB.PO
 

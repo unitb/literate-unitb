@@ -13,16 +13,9 @@ import Latex.Parser
 import UnitB.AST
 import UnitB.PO
 
-import Logic.Calculation hiding ( context )
-import Logic.Classes
 import Logic.Expr
-import Logic.Const
-import Logic.Genericity
-import Logic.Label
 import Logic.Operator
-import Logic.Tactics as Tac
-import Logic.Theory
-import Logic.Type
+import Logic.Proof as LP
 
     -- Libraries
 import           Control.Monad hiding ( guard )
@@ -49,7 +42,7 @@ import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
 
 context :: Machine -> Context
-context m = step_ctx m `merge_ctx` theory_ctx S.empty (theory m)
+context m = step_ctx m `merge_ctx` theory_ctx (theory m)
 
 data ProofStep = Step 
        { assertions  :: Map Label (Tactic Expr)    -- assertions
@@ -188,6 +181,10 @@ find_assumptions = visitor
                     (((),hs),s) <- add_state s $ add_writer $ with_content li refs hint
                     lift $ lift $ ST.put s
                     add_refs hs
+--                    li <- ask 
+--                    lift $ do
+--                        ((),hs) <- lift $ runWriterT $ run_visitor li refs $ hint
+--                        add_refs hs                    
             )       
         ]
 
@@ -320,6 +317,9 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                                                               
             _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
 
+--by_antisymmetry :: Monad m 
+--                => BinOperator 
+--                -> 
 
 find_proof_step :: (MonadState System m, MonadReader Theory m, Monad m)
                 => ProofParam
@@ -329,11 +329,11 @@ find_proof_step pr = visitor
             ,   VEnvBlock $ \() _ -> do
                     li <- ask
                     cc <- lift_i $ parse_calc pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         cc <- cc
                         case infer_goal cc (notat pr) of
                             Right cc_goal -> do
-                                    return (Proof $ cc { goal = cc_goal })
+                                    return (ByCalc $ cc { goal = cc_goal })
                             Left msg      -> hard_error [Error (format "type error: {0}" msg) li]
                     return ()
             )
@@ -342,7 +342,7 @@ find_proof_step pr = visitor
             ,   VEnvBlock $ \(String from,String to,()) _ -> do
                     li    <- ask
                     proof <- lift_i $ collect_proof_step pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         ctx <- get_context
                         let Context _ _ _ _ dums  = ctx
                         Var _ t <- maybe 
@@ -356,7 +356,7 @@ find_proof_step pr = visitor
             ,   VEnvBlock $ \() _ -> do
                     li         <- ask
                     ((),cases) <- lift_i $ add_writer $ find_cases pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         xs <- forM cases $ \(lbl,xp,pr) -> do
                             x <- xp
                             return (lbl,x,pr)
@@ -366,7 +366,7 @@ find_proof_step pr = visitor
             ,   VEnvBlock $ \() _ -> do
                     li    <- ask
                     ((),cases) <- lift_i $ add_writer $ find_parts pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         xs <- forM cases $ \(xp,pr) -> do
                             x <- xp
                             return (x,pr)
@@ -393,7 +393,7 @@ find_proof_step pr = visitor
                                 "right" -> return $ Right ()
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
                     p <- lift_i $ collect_proof_step pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         var <- get_dummy zVar
                         indirect_equality dir op 
                                 var p
@@ -410,7 +410,7 @@ find_proof_step pr = visitor
                                 "right" -> return $ Right ()
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
                     p <- lift_i $ collect_proof_step pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         var <- get_dummy zVar
                         indirect_inequality dir op 
                                 var p
@@ -419,14 +419,14 @@ find_proof_step pr = visitor
             ,   VEnvBlock $ \(lbl,vars,()) _ -> do
                     li <- ask
                     p <- lift_i $ collect_proof_step pr
-                    set_proof $ Tac.with_line_info li $ do
+                    set_proof $ LP.with_line_info li $ do
                         vs <- mapM (get_dummy . toString) vars 
                         by_symmetry vs lbl Nothing p
             )
         ] [ (   "\\easy"
             ,   VCmdBlock $ \() -> do
                     li <- ask        
-                    set_proof $ Tac.with_line_info li easy
+                    set_proof $ LP.with_line_info li easy
             )
         ] 
 
@@ -470,7 +470,7 @@ collect_proof_step pr = do
                     ng      = new_goal step
                     thm_ref = theorem_ref step
                 p <- if keysSet assrt == keysSet prfs
-                     then return $ Tac.with_line_info li $ do
+                     then return $ LP.with_line_info li $ do
                         thm <- sequence thm_ref
                         use_theorems thm $ do
                             assrt <- forM (toList assrt) $ \(lbl,xp) -> do
@@ -480,7 +480,7 @@ collect_proof_step pr = do
                             assert assrt p
                     else hard_error [Error "assertion labels and proofs mismatch" li]
                 case ng of
-                    Just g  -> return $ Tac.with_line_info li $ do
+                    Just g  -> return $ LP.with_line_info li $ do
                         thm <- sequence thm_ref
                         use_theorems thm $ do
                             g <- g
@@ -538,20 +538,20 @@ parse_calc pr = do
             li      <- ask
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
             calc    <- with_content li remainder $ parse_calc pr
-            return $ Tac.with_line_info (line_info kw) $ do
+            return $ LP.with_line_info (line_info kw) $ do
                 hs  <- sequence hs
                 xp  <- make_soft ztrue xp
                 add_step xp op hs calc
         Nothing         -> do
             li <- ask
             xp <- get_expression Nothing xs
-            return $ Tac.with_line_info li $ do
+            return $ LP.with_line_info li $ do
                 xp  <- make_soft ztrue xp
                 last_step xp
         _ -> do
             li <- ask
             soft_error [Error "invalid hint" li]
-            return $ Tac.with_line_info li $ last_step ztrue
+            return $ LP.with_line_info li $ last_step ztrue
                                
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
 
@@ -605,7 +605,7 @@ get_expression t ys = do
                 else return $ line_info xs
             th  <- lift $ ask            
             sys <- lift $ ST.get
-            return $ Tac.with_line_info li $ do
+            return $ LP.with_line_info li $ do
                 ctx <- get_context
                 x   <- lift $ flip runReaderT li $ 
                         flip evalStateT sys $ 
@@ -679,7 +679,7 @@ get_evt_part :: ( Monad m, Monoid b )
              -> EitherT [Error] (RWST LineInfo b System m)  Expr
 get_evt_part m e ys = get_predicate m 
                         (            step_ctx m 
-                         `merge_ctx` theory_ctx S.empty (theory m)
+                         `merge_ctx` theory_ctx (theory m)
                          `merge_ctx` evt_live_ctx e
                          `merge_ctx` evt_saf_ctx  e)
                         WithoutFreeDummies

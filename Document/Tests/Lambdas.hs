@@ -3,10 +3,8 @@ module Document.Tests.Lambdas where
     -- Modules
 import Document.Document
 
-import Logic.Const
 import Logic.Expr
-import Logic.Label
-import Logic.Sequent
+import Logic.Proof
 
 import Theories.FunctionTheory
 
@@ -60,7 +58,7 @@ part3 :: IO Bool
 part3 = test_cases
             [ (POCase "test 9, verify disjunction rule" (verify path9) result9)
             , (POCase "test 10, error: cyclic proof" (verify path10) result10)
-            , (LineSetCase   "test 11, intermediate goals of monotonic \
+            , (StringCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)
             , (Case "test 12, bound variable with ambiguous type"
                 case12 result12)
@@ -989,30 +987,6 @@ result11 = unlines
     , "(declare-fun set-diff@@Int ( (set Int)   (set Int) ) (set Int))"
     , "(declare-fun set@@Int@@Int ( (pfun Int Int) ) (set Int))"
     , "(declare-fun subset@@Int ( (set Int)   (set Int) ) Bool)"
---    , "; ~goal3"
-    , "(assert (not (= (apply@@Int@@Int f@prime i) (apply@@Int@@Int f i))))"
---    , "; ~goal2"
-    , "(assert (not (= (= (apply@@Int@@Int f@prime i) (^ i 3))"
-    , "                (= (apply@@Int@@Int f i) (^ i 3)))))"
---    , "; ~goal1"
-    , "(assert (not (= (=> (and (<= 0 i) (< i n))"
-    , "                    (= (apply@@Int@@Int f@prime i) (^ i 3)))"
-    , "                (=> (and (<= 0 i) (< i n))"
-    , "                    (= (apply@@Int@@Int f i) (^ i 3))))))"
---    , "; ~goal0"
-    , "(assert (not (forall ( (i Int) )"
-    , "                     (=> true"
-    , "                         (= (=> (and (<= 0 i) (< i n))"
-    , "                                (= (apply@@Int@@Int f@prime i) (^ i 3)))"
-    , "                            (=> (and (<= 0 i) (< i n))"
-    , "                                (= (apply@@Int@@Int f i) (^ i 3))))))))"
---    , "; ~goal"
-    , "(assert (not (= (forall ( (i Int) )"
-    , "                        (=> (and (<= 0 i) (< i n))"
-    , "                            (= (apply@@Int@@Int f@prime i) (^ i 3))))"
-    , "                (forall ( (i Int) )"
-    , "                        (=> (and (<= 0 i) (< i n))"
-    , "                            (= (apply@@Int@@Int f i) (^ i 3)))))))"
     , "(assert (forall ( (i Int) )"
     , "                (=> true"
     , "                    (= (elem@@Int i (dom@@Int@@Int f))"
@@ -1196,6 +1170,34 @@ result11 = unlines
     , "                (=> true"
     , "                    (= (and (subset@@Int s1 s2) (subset@@Int s2 s1))"
     , "                       (= s1 s2)))))"
+    , "(assert (forall ( (i Int) )"
+    , "                (=> true"
+    , "                    (= (elem@@Int i (dom@@Int@@Int f))"
+    , "                       (and (<= 0 i) (< i n))))))"
+--    , "; ~goal0"
+    , "(assert (not (= (forall ( (i Int) )"
+    , "                        (=> (and (<= 0 i) (< i n))"
+    , "                            (= (apply@@Int@@Int f@prime i) (^ i 3))))"
+    , "                (forall ( (i Int) )"
+    , "                        (=> (and (<= 0 i) (< i n))"
+    , "                            (= (apply@@Int@@Int f i) (^ i 3)))))))"
+--    , "; ~goal1"
+    , "(assert (not (forall ( (i Int) )"
+    , "                     (=> true"
+    , "                         (= (=> (and (<= 0 i) (< i n))"
+    , "                                (= (apply@@Int@@Int f@prime i) (^ i 3)))"
+    , "                            (=> (and (<= 0 i) (< i n))"
+    , "                                (= (apply@@Int@@Int f i) (^ i 3))))))))"
+    , "(assert (not (= (=> (and (<= 0 i) (< i n))"
+    , "                    (= (apply@@Int@@Int f@prime i) (^ i 3)))"
+    , "                (=> (and (<= 0 i) (< i n))"
+    , "                    (= (apply@@Int@@Int f i) (^ i 3))))))"
+--    , "; ~goal2"
+    , "(assert (not (= (= (apply@@Int@@Int f@prime i) (^ i 3))"
+    , "                (= (apply@@Int@@Int f i) (^ i 3)))))"
+--    , "; ~goal3"
+    , "(assert (not (= (apply@@Int@@Int f@prime i) (apply@@Int@@Int f i))))"
+--    , "; ~goal4"
     , "(assert (not (= f@prime f)))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"

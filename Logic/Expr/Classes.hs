@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances     #-}
-module Logic.Classes where
+module Logic.Expr.Classes where
 
 class Named n where
     name    :: n -> String

@@ -2,8 +2,8 @@ module Document.Tests.TrainStationSets where
 
 import Document.Document
 
-import Logic.Sequent
-import Logic.Label
+import Logic.Expr
+import Logic.Proof
 
 import UnitB.PO
 

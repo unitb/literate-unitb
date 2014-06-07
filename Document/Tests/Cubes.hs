@@ -5,12 +5,8 @@ import Document.Document
 
 import Tests.UnitTest
 
-import Logic.Classes
-import Logic.Const
 import Logic.Expr
-import Logic.Label
-import Logic.Calculation
-import Logic.Theory
+import Logic.Proof
 
 import UnitB.AST
 import UnitB.PO
@@ -97,7 +93,7 @@ prop_set6 = empty_property_set {
         n = Word var_n
         z3 = zint 3
         z6 = zint 6
-        calc = Proof $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
+        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
 event6_evt :: Event
 event6_evt = empty_event {
@@ -232,7 +228,7 @@ case9 = do
         case r of
             Right [m] -> do
                 case toList $ proofs $ props m of
-                    (lbl,Proof calc):_ -> 
+                    (lbl,ByCalc calc):_ -> 
                         case cast calc of
                             Just calc ->
                                 return (show lbl ++ ":\n" ++ show_proof calc)

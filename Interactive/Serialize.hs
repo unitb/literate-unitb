@@ -4,9 +4,7 @@ module Interactive.Serialize where
 
     -- Modules
 import Logic.Expr
-import Logic.Label
-import Logic.Sequent
-import Logic.Type
+import Logic.Proof
 
 import UnitB.PO
 

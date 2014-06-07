@@ -1,4 +1,4 @@
-
+#!/usr/bin/env runhaskell
 import Tools.Source
 
 import System.Environment
