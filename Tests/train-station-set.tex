@@ -271,7 +271,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \subsection{New Requirement}
 \begin{align*}
 \invariant{m2:inv0}
-	{	\qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	}
+	{	\injective.loc } % \qforall{t_0,t_1}{t_0 \in in \land t_1 \in in \land loc.t_0 = loc.t_1}{t_0 = t_1}	
 \end{align*}
 %
 \subsection{Design}
@@ -297,9 +297,9 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 	{	\neg ext \in \ran.loc 	}
 \end{align*}
 %
-
-\begin{proof}{\ref{m0:leave}/INV/\ref{m2:inv0}}
-\begin{free:var}{t_0}{t_0}
+\begin{proof}{\ref{m0:leave}/INV/\ref{m2:inv0}} 
+\assert{goal0}{\qforall{t_0,t_1}{t_0 \in in' \land t_1 \in in' \land loc'.t_0 = loc'.t_1}{t_0 = t_1}	}
+\begin{subproof}{goal0} \begin{free:var}{t_0}{t_0}
 \begin{free:var}{t_1}{t_1}
 	\begin{align}
 	\assume{hyp0}{\neg t_0 = t_1}
@@ -359,7 +359,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 		\end{subproof}
 		}
 \end{free:var}
-\end{free:var}
+\end{free:var} \end{subproof} \easy
 \end{proof}
 
 \replacefine{m1:moveout}{}{}{mo:f0}{m2:prog1} 

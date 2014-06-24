@@ -20,24 +20,45 @@ import Control.Monad
 import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.List as L
+import qualified Data.Set as S
 
 import Test.QuickCheck hiding (label)
 
 import Utilities.Format
 import Utilities.Syntactic
 
-prop_parseOk :: CorrectMachineInput -> Bool
-prop_parseOk (CorrectMachineInput mch tex) = 
+prop_parseOk :: Property
+prop_parseOk = forAll correct_machine $ \(mch,Tex tex) ->
         (M.elems . machines) `liftM` (all_machines tex) == Right [mch]
 
-data CorrectMachineInput = CorrectMachineInput Machine [LatexDoc]
+prop_type_error :: Property
+prop_type_error = forAll (liftM snd mch_with_type_error) $ \(Tex tex) ->
+        either (all is_type_error) (const False) (all_machines tex) 
 
+data MachineInput = MachineInput Machine [LatexDoc]
 
-instance Arbitrary CorrectMachineInput where
-    arbitrary = do
-        m   <- arbitrary
+is_type_error :: Error -> Bool
+is_type_error (Error msg _) = 
+            "type error:" `L.isInfixOf` msg
+        ||  "expected type:" `L.isInfixOf` msg
+
+correct_machine :: Gen (Machine, Tex)
+correct_machine = machine_input arbitrary
+
+mch_with_type_error :: Gen (Machine, Tex)
+mch_with_type_error = machine_input with_type_error
+
+machine_input :: Gen Machine -> Gen (Machine, Tex)
+machine_input cmd = do
+        m   <- cmd
         tex <- latex_of m
-        return $ CorrectMachineInput m tex
+        return (m,Tex tex)
+
+-- instance Arbitrary MachineInput where
+--     arbitrary = do
+--         m   <- arbitrary
+--         tex <- latex_of m
+--         return $ CorrectMachineInput m tex
 
 perm :: Int -> Gen [Int]
 perm n = permute [0..n-1]
@@ -102,14 +123,50 @@ latex_of m = do
         li = LI "" 0 0
         blank = Text [Blank "\n" li]
 
+expressions :: Machine -> [Expr]
+expressions m = M.elems $ inv $ props m
+
+with_type_error :: Gen Machine
+with_type_error = do
+        m <- suchThat arbitrary
+             (\m -> not $ L.null $ range m)
+        (Var n t) <- elements $ range m
+        t'        <- other_type t
+        return m { variables = M.insert n (Var n t') $ variables m }
+    where
+        range m = M.elems vars `L.intersect` S.elems fv
+            where
+                vars  = variables m
+                fv    = S.unions $ map used_var $ expressions m
+
+choose_type :: Gen Type
+choose_type = do
+        elements [int,bool
+                 ,set_type int
+                 ,fun_type int int
+                 ]
+
+other_type :: Type -> Gen Type
+other_type t = do
+        elements $ L.delete t 
+                 [int,bool
+                 ,set_type int
+                 ,fun_type int int
+                 ]
+
+data Tex = Tex { unTex :: [LatexDoc] }
+
+instance Show Tex where
+    show (Tex tex) = unlines
+            [ "" -- show m
+            , concatMap flatten tex]
+
+
+
 instance Arbitrary Machine where
     arbitrary = do
             nvar  <- choose (0,5)
-            types <- L.sort `liftM` vectorOf nvar 
-                    (elements [int,bool
-                        ,set_type int
-                        ,fun_type int int
-                        ])
+            types <- L.sort `liftM` vectorOf nvar choose_type
             let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
                 mch = empty_machine "m0"
                 inv_lbl = map (\x -> label $ "inv" ++ show x) [0..]
@@ -168,19 +225,14 @@ expr_type vars t = sized $ \n ->do
 
             -- else 
 
-instance Show CorrectMachineInput where
-    show (CorrectMachineInput _ tex) = unlines
-            [ "" -- show m
-            , concatMap flatten tex]
-
 run_spec :: IO Bool
 run_spec = $quickCheckAll
 
-main :: IO ()
-main = do
-        xs <- sample' arbitrary
-        let (CorrectMachineInput mch tex) = head 
-                $ filter (not . prop_parseOk) xs
-            mch' = (M.elems . machines) `liftM` (all_machines tex)
-        writeFile "actual.txt" (show mch')
-        writeFile "expect.txt" (show [mch])
+-- main :: IO ()
+-- main = do
+--         xs <- sample' correct_machine
+--         let (mch,tex) = head 
+--                 $ filter (not . prop_parseOk) xs
+--             mch' = (M.elems . machines) `liftM` (all_machines tex)
+--         writeFile "actual.txt" (show mch')
+--         writeFile "expect.txt" (show [mch])

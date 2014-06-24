@@ -72,8 +72,8 @@ sample_ast :: [Command]
 sample_ast = [
         Decl (ConstDecl "a" int),
         Decl (FunDecl [] "f" [int, bool] int),
-        Assert $ M.fromJust $ strip_generics (a `zgreater` zint 10),
-        Assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
+        assert $ M.fromJust $ strip_generics (a `zgreater` zint 10),
+        assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
     where
         f       = fun2 ff
@@ -81,8 +81,8 @@ sample_ast = [
 sample_quant :: [Command]
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
+        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat ]
     where
         ff          = Fun [] "f" [int] int
@@ -100,8 +100,8 @@ sample_proof = Sequent
 sample_quant2 :: [Command]
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
@@ -109,12 +109,15 @@ sample_quant2 = [
 sample_quant3 :: [Command]
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        Assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        Assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat] 
     where
         f           = maybe1 $ fun1 $ Fun [] "f" [int] int
         
+assert :: FOExpr -> Command
+assert x = Assert x Nothing
+
 sample_calc :: Calculation
 sample_calc = (Calc  
         ctx
@@ -152,20 +155,20 @@ result5 = ( CL
                 bool
             , [y,z `zplus` y,z `zplus` y])
     where
-        (Right x,x_decl) = var "@@bv@@_0" int
-        (Right fv0,fv0_decl) = var "@@fv@@_0" int
-        (Right fv1,fv1_decl) = var "@@fv@@_1" int
-        (Right fv2,fv2_decl) = var "@@fv@@_2" int
-        (Right y,_) = var "y" int
-        (Right z,_) = var "z" int
+        (x,x_decl) = var' "@@bv@@_0" int
+        (fv0,fv0_decl) = var' "@@fv@@_0" int
+        (fv1,fv1_decl) = var' "@@fv@@_1" int
+        (fv2,fv2_decl) = var' "@@fv@@_2" int
+        (y,_) = var' "y" int
+        (z,_) = var' "z" int
 
 case5 :: IO (CanonicalLambda, [Expr])
 case5 = do
         return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
-        (Right x,x_decl) = var "x" int
-        (Right y,_) = var "y" int
-        (Right z,_) = var "z" int
+        (x,x_decl) = var' "x" int
+        (y,_) = var' "y" int
+        (z,_) = var' "z" int
 
 result6 :: (CanonicalLambda, [Expr])
 result6 = ( CL 
@@ -178,14 +181,17 @@ result6 = ( CL
                 bool
             , [y,zplus (zint 3) y,y,y])
     where
-        (Right x,x_decl) = var "@@bv@@_0" int
-        (Right fv0,fv0_decl) = var "@@fv@@_0" int
-        (Right fv1,fv1_decl) = var "@@fv@@_1" int
-        (Right fv2,fv2_decl) = var "@@fv@@_2" int
-        (Right fv3,fv3_decl) = var "@@fv@@_3" int
-        (Right lv0,lv0_decl) = var "@@lv@@_0" int
-        (Right y,_) = var "y" int
+        (x,x_decl) = var' "@@bv@@_0" int
+        (fv0,fv0_decl) = var' "@@fv@@_0" int
+        (fv1,fv1_decl) = var' "@@fv@@_1" int
+        (fv2,fv2_decl) = var' "@@fv@@_2" int
+        (fv3,fv3_decl) = var' "@@fv@@_3" int
+        (lv0,lv0_decl) = var' "@@lv@@_0" int
+        (y,_) = var' "y" int
 --        (Right z,z_decl) = var "z" int
+
+var' :: String -> Type -> (Expr, Var)
+var' x t = (Word (Var x t), Var x t)
 
 case6 :: IO (CanonicalLambda, [Expr])
 case6 = do
@@ -193,9 +199,11 @@ case6 = do
             (x `zle` zplus (zint 3) y)
             ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
     where
-        (Right x,x_decl) = var "x" int
-        (Right y,_) = var "y" int
-        (Right z,z_decl) = var "z" int
+        x_decl = Var "x" int
+        x = Word x_decl
+        y = Word (Var "y" int)
+        z_decl = Var "z" int
+        z = Word z_decl
 
 case7 :: IO (Maybe FOContext)
 case7 = return $ Just $ to_fol_ctx S.empty ctx

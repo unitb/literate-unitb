@@ -372,7 +372,7 @@
 %\newcommand{\proptag}{}
 \newcommand{\assertion}[4] % {tag prefix}{counter}{label}{expr}
 {	%\renewcommand{\proptag}{#1}
-	\label{#3}
+	\label{#2#3}
 	\ifthenelse{\isempty{#2}} 
 	{	\stepcounter{prop}
 		\tag{#1\arabic{prop}} }
@@ -527,7 +527,7 @@
 
 \newcommand{\refine}[4]
 	% \refine{prop}{rule}{new props}{ comment }{<notag>}
-{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}#4 }\right\} \\ }
+{	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}\text{#4} }\right\} \\ }
 \newcommand{\var}[3]{$#1$, #2 to $#3$}
 
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
@@ -574,3 +574,4 @@
 \newcommand{\eqinst}[2]{\eqref{#1} with #2}
 \newcommand{\subst}[2]{$#1 := #2$}
 
+% \renewcommand{\index}[2]{ with $$#1 := #2$ }

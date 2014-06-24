@@ -46,26 +46,28 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 , (label $ dec' "5", axm5)
                 , (label $ dec' "6", axm6)
                 , (label $ dec' "7", axm7)
+                , (label $ dec' "8", axm8)
                 ]
         thm_depend = []
         notation   = set_notation
                 
             -- elem and mk-set
-        Right axm0 = mzforall [x_decl,y_decl] mztrue ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
+        axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue 
+                    ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
             -- elem over set-diff
-        Right axm1 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
+        axm1 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
                             (x `zelem` (s1 `zsetdiff` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzand` mznot (x `zelem` s2) ))
             -- elem over intersect
-        Right axm2 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
+        axm2 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
                             (x `zelem` (s1 `zintersect` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzand` (x `zelem` s2) ))
             -- elem over union
-        Right axm3 = mzforall [x_decl,s1_decl,s2_decl] mztrue (
+        axm3 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
                             (x `zelem` (s1 `zunion` s2)) 
                     `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
             -- elem over empty-set
-        Right axm4 = mzforall [x_decl] mztrue (
+        axm4 = fromJust $ mzforall [x_decl] mztrue (
                             mznot (x `zelem` Right zempty_set)  )
         axm5 = fromJust $ mzforall [x_decl,s1_decl] mztrue (
                             mzeq (zelem x s1)
@@ -80,6 +82,10 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                         mzand ( s1 `zsubset` s2 )
                               ( s2 `zsubset` s1 )
                     `mzeq` (s1 `mzeq` s2)
+        axm8 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+                        ( (s1 `zintersect` s2) `mzeq` Right zempty_set )
+                    `mzeq` (mzforall [x_decl] mztrue $
+                        mznot (x `zelem` s1) `mzor` mznot (x `zelem` s2))
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" $ set_type t
@@ -126,6 +132,7 @@ item_type t0                    = Left $ format " {0} is not a set " t0
 
     -- set theory
 set_union   :: BinOperator
+set_intersect :: BinOperator
 set_diff    :: BinOperator
 membership  :: BinOperator
 subset      :: BinOperator
@@ -133,22 +140,23 @@ superset    :: BinOperator
 st_subset   :: BinOperator
 st_superset :: BinOperator
 
-set_union   = BinOperator "union" "\\bunion"        zunion
-set_diff    = BinOperator "set-diff" "\\setminus"   zsetdiff
-membership  = BinOperator "membership" "\\in"       zelem
-subset      = BinOperator "subset"     "\\subseteq" zsubset
-superset    = BinOperator "superset"   "\\supseteq" (flip zsubset)
-st_subset   = BinOperator "st-subset"   "\\subset" zsubset
-st_superset = BinOperator "st-superset" "\\supset" (flip zsubset)
+set_union       = BinOperator "union" "\\bunion"        zunion
+set_intersect   = BinOperator "intersect" "\\binter" zintersect
+set_diff        = BinOperator "set-diff" "\\setminus"   zsetdiff
+membership      = BinOperator "membership" "\\in"       zelem
+subset          = BinOperator "subset"     "\\subseteq" zsubset
+superset        = BinOperator "superset"   "\\supseteq" (flip zsubset)
+st_subset       = BinOperator "st-subset"   "\\subset" zsubset
+st_superset     = BinOperator "st-superset" "\\supset" (flip zsubset)
 
 set_notation :: Notation
 set_notation = with_assoc empty_notation
     { new_ops     = L.map Right 
-                    [ set_union,set_diff,membership
+                    [ set_union,set_diff,membership,set_intersect
                     , subset,superset,st_subset,st_superset]
     , prec = [ L.map (L.map Right)
                  [ [apply]
-                 , [set_union,set_diff]
+                 , [set_union,set_diff,set_intersect]
                  , [ equal
                    , membership, subset ] ]]
     , left_assoc  = [[set_union]]

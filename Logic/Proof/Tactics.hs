@@ -26,11 +26,11 @@ import Logic.Proof.ProofTree
 import Logic.Proof.Sequent
 
     -- Libraries
-import Control.Monad
-import Control.Monad.RWS
+import Control.Monad hiding ( guard )
+import Control.Monad.RWS hiding ( guard )
 import Control.Monad.Trans.Either
 
-import Control.Monad.Identity
+import Control.Monad.Identity hiding ( guard )
 
 import           Data.Graph
 import           Data.List as L
@@ -290,14 +290,17 @@ derive_theorems :: Monad m
                 -> TacticT m [(Label, Expr)]
 derive_theorems hint = do
         thms     <- TacticT $ lift $ asks theorems
-        thms     <- forM hint $ \(ThmRef lbl _, _) -> do
-            hyps <- get_named_hyps
-            case lbl `M.lookup` thms of
-                Just e 
-                    | not $ lbl `M.member` hyps -> do
-                        TacticT $ lift $ tell [lbl]
-                        return [(lbl,e)]
-                _ -> return []
+        thms     <- forM hint $ \ref -> 
+            case ref of
+                (ThmRef lbl _, _) -> do
+                    hyps <- get_named_hyps
+                    case lbl `M.lookup` thms of
+                        Just e 
+                            | not $ lbl `M.member` hyps -> do
+                                TacticT $ lift $ tell [lbl]
+                                return [(lbl,e)]
+                        _ -> return []
+                -- (Lemma _, _) -> return []
         return $ concat thms
 
 use_theorems' :: Monad m
@@ -347,23 +350,23 @@ get_allocated_vars = do
         return $ S.toList ids
 
 is_fresh :: Monad m
-         => Var -> TacticT m Bool
+         => String -> TacticT m Bool
 is_fresh v = TacticT $ do
         s       <- lift $ asks sequent
-        return $    are_fresh [name v] s
+        return $    are_fresh [v] s
 
 new_fresh :: Monad m
           => String -> Type 
           -> TacticT m Var
 new_fresh name t = do
         fix (\rec n suf -> do
-            let v = Var (name ++ suf) t
+            let v = (name ++ suf)
             b <- is_fresh v
             (lbls,ids) <- TacticT $ lift $ get
             if b && not ((name ++ suf) `S.member` ids)
             then TacticT $ do
                 lift $ put (lbls,S.insert (name ++ suf) ids)
-                return v
+                return $ Var v t
             else do
                 rec (n+1) (show n)
             ) 0 ""
@@ -391,7 +394,7 @@ fresh_label name = do
             ) 0 ""
 
 free_vars_goal :: Monad m
-               => [(Var,Var)]
+               => [(String,String)]
                -> TacticT m Proof
                -> TacticT m Proof
 free_vars_goal [] proof = proof
@@ -399,25 +402,38 @@ free_vars_goal ((v0,v1):vs) proof = do
         free_goal v0 v1 $
             free_vars_goal vs proof
 
+bind :: Monad m => String -> Maybe a -> TacticT m a
+bind _ (Just x)  = return x
+bind msg Nothing = fail msg
+
+guard :: Monad m => String -> Bool -> m ()
+guard msg b = unless b $ fail msg
+
 free_goal :: Monad m
-          => Var -> Var 
+          => String -> String
           -> TacticT m Proof 
           -> TacticT m Proof
 free_goal v0 v1 m = do
-        li   <- get_line_info
-        goal <- get_goal 
-        b    <- is_fresh v1
-        new  <- rename (name v0) (name v1) `liftM` case goal of 
-            Binder Forall bv r t
-                | not b         -> fail $ format "'{0}' is not a fresh variable" v1
-                | [v0] == bv    -> return $ r `zimplies` t
-                |  v0 `elem` bv -> return $ Binder Forall (L.delete v0 bv) r t
-                | otherwise     -> fail $ format "'{0}' is not a bound variable in:\n{1}"
-                                    v0 $ pretty_print' goal
+        li    <- get_line_info
+        goal  <- get_goal 
+        fresh <- is_fresh v1
+        (new,t) <- case goal of 
+            Binder Forall bv r t -> do
+                  guard (format "'{0}' is not a fresh variable" v1)
+                      fresh
+                  v0'@(Var _ tt) <- bind 
+                      (format "'{0}' is not a bound variable in:\n{1}"
+                                v0 $ pretty_print' goal)
+                      $ L.lookup v0 (zip bv' bv)
+                  return
+                      ( rename v0 v1 
+                          $ zforall (L.delete v0' bv) r t
+                      , tt)
+                where
+                  bv' = map name bv
             _ -> fail $ "goal is not a universal quantification:\n" ++ pretty_print' goal
-        p <- with_variables [v1] $ with_goal new m
-        let t = type_of (Word v1)
-        return $ FreeGoal (name v0) (name v1) t p li
+        p <- with_variables [Var v1 t] $ with_goal new m
+        return $ FreeGoal v0 v1 t p li
 
 instantiate :: Monad m
             => Expr -> [(Var,Expr)] 

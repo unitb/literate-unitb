@@ -133,7 +133,8 @@ instance ProofRule Proof where
     proof_po    (FreeGoal v u t p li) 
                 lbl po@(Sequent ctx asm hyps goal) = do
             new_goal <- free_vars goal
-            proof_po p lbl $ Sequent new_ctx asm hyps new_goal
+            xs <- proof_po p lbl $ Sequent new_ctx asm hyps new_goal
+            return xs
         where
             new_ctx = merge_ctx (Context M.empty (M.singleton u (Var u t)) M.empty M.empty M.empty)
                                 ctx

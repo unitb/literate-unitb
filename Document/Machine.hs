@@ -18,7 +18,7 @@ import Logic.Expr
 import Logic.ExpressionStore ( ExprStore )
 import Logic.Proof hiding ( with_line_info )
 
-import SummaryGen
+import Documentation.SummaryGen
 
 import UnitB.AST
 import UnitB.PO
@@ -53,6 +53,8 @@ import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
 --import Debug.Trace
+
+import System.FilePath
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -141,7 +143,9 @@ trickle_down
         -> LineInfo
         -> EitherT [Error] m (Map String a)
 trickle_down s ms f li = do
-            let rs = map (\(AcyclicSCC v) -> v) $ cycles $ toList s
+            let g (AcyclicSCC v) = v
+                g (CyclicSCC _)  = error "trickle_down: the input graph should be acyclic"
+                rs = map g $ cycles $ toList s
             foldM (\ms n -> 
                     case M.lookup n s of
                         Just anc  -> do
@@ -159,14 +163,14 @@ all_machines xs = do
     where
         (x,s,_) = runRWS (runEitherT $ read_document xs) () empty_system
 
-produce_summaries :: System -> IO ()
-produce_summaries sys = 
+produce_summaries :: FilePath -> System -> IO ()
+produce_summaries path sys = 
         void $ runStateT (do
             let ms = machines sys
             forM_ (M.elems ms) $ \m -> 
                 forM_ (toList $ events m) $ \(lbl,evt) -> do
                     xs <- focus' (summary lbl evt :: (StateT ExprStore IO) String)
-                    liftIO $ writeFile (show (_name m) ++ "_" ++ rename lbl ++ ".tex") xs
+                    liftIO $ writeFile (path </> show (_name m) ++ "_" ++ rename lbl ++ ".tex") xs
             ) sys
     where
         rename lbl = map f $ show lbl
@@ -480,21 +484,23 @@ collect_expr = visit_doc
                 --  Events  --
                 --------------
         [] [(   "\\evassignment"
-            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(evs, lbl, xs,()) m -> do
                         let msg = "{0} is already used for another assignment"
-                        old_event <- bind
-                            (format "event '{0}' is undeclared" ev)
-                            $ ev `M.lookup` events m
-                        act     <- get_evt_part m old_event xs
-                        new_act <- bind 
-                            (format msg lbl)
-                            $ insert_new lbl act (action old_event)
-                        let new_event = old_event 
-                                    { action = new_act }
-                        scope (context m) act (        params old_event 
-                                               `merge` indices old_event)
+                        evs <- forM evs $ \ev -> do
+                            old_event <- bind
+                                (format "event '{0}' is undeclared" ev)
+                                $ ev `M.lookup` events m
+                            act     <- get_evt_part m old_event xs
+                            new_act <- bind 
+                                (format msg lbl)
+                                $ insert_new lbl act (action old_event)
+                            let new_event = old_event 
+                                        { action = new_act }
+                            scope (context m) act (        params old_event 
+                                                   `merge` indices old_event)
+                            return (ev,new_event)
                         return m {          
-                                events  = insert ev new_event $ events m } 
+                                events  = union (fromList evs) $ events m } 
             )
         ,   (   "\\evguard"
             ,   CmdBlock $ \(evt, lbl, xs,()) m -> do

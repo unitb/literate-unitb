@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Interactive.Pipeline 
---    ( run_pipeline )
+   ( run_pipeline, Params (..) )
 where
 
     -- Modules
@@ -10,12 +10,12 @@ import Document.Document
 
 import Interactive.Config hiding ( wait )
 import Interactive.Observable
-import Interactive.Serialize
+import Interactive.Serialize 
 
 import Logic.Expr
 
-import UnitB.AST
-import UnitB.PO
+import UnitB.AST 
+import UnitB.PO hiding (dump)
 
 import Z3.Z3 
         ( discharge
@@ -23,6 +23,9 @@ import Z3.Z3
 
     -- Libraries
 import Control.Concurrent
+import Control.Concurrent.STM
+
+import Control.Exception
 
 import Control.Monad
 import Control.Monad.Trans
@@ -36,11 +39,15 @@ import           Data.Map as M
                     , fromList
                     , toList, unions )
 import qualified Data.Map as M 
+import           Data.Maybe
+import qualified Data.List as L
 
 --import Foreign
 
-import System.Directory
 import System.Console.ANSI
+import System.Directory
+import System.FilePath
+-- import System.IO
 import System.TimeIt
 
 import Utilities.Format
@@ -55,14 +62,7 @@ import Utilities.Syntactic
     -- The prover and the parser _share_ a map of proof obligations
     -- The prover and the parser _share_ a list of PO labels
     -- The 
-    
-wait :: Monad m => m Bool -> m ()
-wait m = do
-        b <- m
-        if b 
-            then return ()
-            else wait m
-            
+                
 data Shared = Shared
         { working    :: Observable Int
         , system     :: Observable System
@@ -71,10 +71,24 @@ data Shared = Shared
         , fname      :: FilePath
         , exit_code  :: MVar ()
         , parser_state :: Observable ParserState
+        , focus :: Observable (Maybe String)
+        , dump_cmd :: Observable (Maybe (Maybe Label))
+        , redraw   :: Observable Bool
         }
 
 data ParserState = Idle Double | Parsing
     deriving Eq
+
+data Params = Params
+        { path :: FilePath
+        , verbose :: Bool
+        , continuous :: Bool
+        , no_dump :: Bool
+        , no_verif :: Bool
+        , reset :: Bool
+        , pos :: Map Label (Map Label (Bool,Seq))
+        , init_focus :: Maybe String
+        }
 
 instance Show ParserState where
     show (Idle x) = format "Idle {0}ms" $ show $ round $ x * 1000
@@ -135,45 +149,65 @@ prover :: Shared -> IO (IO ())
 prover (Shared { .. }) = do
     tok <- newEmptyMVar
     observe pr_obl tok
-    req <- newEmptyMVar
+    -- req <- newEmptyMVar
+    req <- newTBQueueIO 20
     forM_ [1..8] $ \p -> forkOn p $ worker req 
     return $ forever $ do
         takeMVar tok
-        inc 200
+        inc 1
         po <- read_obs pr_obl
         forM_ (keys po) $ \k -> do
             po <- reads_obs pr_obl $ M.lookup k
             case po of
                 Just (po,Nothing) -> do
-                    liftIO $ putMVar req (k,po)
+                    liftIO $ atomically $ writeTBQueue req (k,po)
+                    -- liftIO $ putMVar req (k,po)
                 _               -> return ()
-        dec 200
+        dec 1
     where
         inc x = modify_obs working (return . (+x))
         dec x = modify_obs working (return . (+ (-x)))            
+        -- handler :: 
+        handler lbl (ErrorCall msg) = 
+            error (format "During {0}: {1}" lbl msg)
         worker req = forever $ do
-            (k,po) <- takeMVar req
+            -- (k,po) <- takeMVar req
+            (k,po) <- atomically $ readTBQueue req
             inc 1
-            r      <- discharge po
+            r      <- catch (discharge po) (handler k)
             dec 1
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
-proof_report :: Map (Label,Label) (Seq,Maybe Bool) 
+proof_report :: Maybe String
+             -> Map (Label,Label) (Seq,Maybe Bool) 
              -> [Error] -> Bool 
              -> [String]
-proof_report outs es b = xs ++ 
+proof_report pattern outs es b = 
+                     header ++
+                     ys ++ 
                      ( if null es then []
                        else "> errors" : map report es ) ++
+                     footer ++
                      [ if b
                        then "> working ..."
                        else ""
-                     ] 
+                     ]
     where
-        xs = concatMap f (toList outs)
-        f ((m,lbl),(_,r))
-            | r == Just False = [format " x {0} - {1}" m lbl]
---            | r == Just True  = [format "   {0} - {1}" m lbl]
-            | otherwise = []
+        header  = maybe [] head pattern
+        footer  = maybe [] foot pattern
+        head pat = 
+                [ "#"
+                , "# Restricted to " ++ pat
+                , "#"
+                ]
+        foot _ = 
+                [ format "# hidden: {0} failures" (length xs - length ys)
+                ]
+        xs = filter (failure . snd) (zip [0..] $ toList outs)
+        ys = map f $ filter (match . snd) xs
+        match xs  = maybe True (\f -> f `L.isInfixOf` map toLower (show $ snd $ fst xs)) pattern
+        failure x = maybe False not $ snd $ snd x
+        f (n,((m,lbl),(_,_))) = format " x {0} - {1}  ({2})" m lbl n
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
 run_all xs = do
@@ -190,12 +224,16 @@ display (Shared { .. }) = do
     observe error_list tok
     observe working tok
     observe parser_state tok
+    observe focus tok
+    observe redraw tok
+    observe dump_cmd tok
     clearScreen
     return $ forever $ do
             outs <- read_obs pr_obl
             es   <- read_obs error_list
             w    <- read_obs working
-            let ys = proof_report outs es (w /= 0)
+            fil  <- read_obs focus
+            let ys = proof_report fil outs es (w /= 0)
             cursorUpLine $ length ys
             clearFromCursorToScreenBeginning
             forM_ ys $ \x -> do
@@ -205,9 +243,13 @@ display (Shared { .. }) = do
                     clearFromCursorToLineEnd 
                     putStrLn ""
             st <- read_obs parser_state
-            putStr $ format "n workers: {0} parser: {1}" w st
+            du <- isJust `liftM` read_obs dump_cmd
+            putStr $ format "n workers: {0}; parser: {1}; dumping: {2}" w st du
             clearFromCursorToLineEnd 
+            -- hFlush stdout
             putStrLn ""
+            -- cursorDown 1
+            -- putStr "-salut-"
             threadDelay 500000
             takeMVar tok
 
@@ -223,10 +265,23 @@ serialize (Shared { .. }) = do
 --        (pos@(out,_),es) <- takeMVar ser
         es <- read_obs error_list
         dump_pos fname pos
-        dump_z3 fname pos
         writeFile 
             (fname ++ ".report") 
-            (unlines $ proof_report out es False)
+            (unlines $ proof_report Nothing out es False)
+
+dump :: Shared -> IO (IO b)
+dump (Shared { .. }) = do
+    tok <- newEmptyMVar
+    observe dump_cmd tok
+    return $ forever $ do
+        takeMVar tok
+        pat <- read_obs dump_cmd 
+        case pat of 
+            Just pat -> do
+                pos <- read_obs pr_obl
+                dump_z3 pat fname pos
+                write_obs dump_cmd Nothing
+            Nothing -> return ()
 
 summary :: Shared -> IO (IO ())
 summary (Shared { .. }) = do
@@ -236,31 +291,49 @@ summary (Shared { .. }) = do
             threadDelay 10000000
             takeMVar v
             s <- read_obs system
-            produce_summaries s
+            produce_summaries (takeDirectory fname) s
 
 keyboard :: Shared -> IO ()
 keyboard sh@(Shared { .. }) = do
+        modify_obs redraw $ return . not
         xs <- getLine
         let xs' = map toLower xs
+            ws  = words xs'
         if xs' == "quit" 
         then return ()
-        else if xs' == "goto" then do
-            xs <- read_obs error_list
-            case xs of
-                (Error _ (LI fn i _)):_ -> do
-                    open_at i fn
-                [] -> return ()
-            keyboard sh
-        else if xs' == "reset" then do
-            modify_obs pr_obl $ \m -> 
-                return $ M.map (\(x,_) -> (x,Nothing)) m
-            keyboard sh
         else do
-            putStrLn $ format "Invalid command: '{0}'" xs
+            if xs' == "goto" then do
+                xs <- read_obs error_list
+                case xs of
+                    (Error _ (LI fn i _)):_ -> do
+                        open_at i fn
+                    [] -> return ()
+            else if xs' == "reset" then do
+                modify_obs pr_obl $ \m -> 
+                    return $ M.map (\(x,_) -> (x,Nothing)) m
+            else if xs' == "unfocus" then do
+                write_obs focus Nothing
+            else if take 1 ws == ["dump"]
+                    && length ws == 2  
+                    && all isDigit (ws !! 1) then do
+                modify_obs dump_cmd $ \st -> do
+                    if isNothing st then do
+                        pos <- read_obs pr_obl
+                        return $ Just $ Just $ snd $ keys pos !! (read $ ws !! 1)
+                    else return Nothing
+            else if xs == "dumpall" then do
+                modify_obs dump_cmd $ \st -> do
+                    if isNothing st then
+                        return $ Just Nothing
+                    else return st
+            else if take 1 ws == ["focus"] && length ws == 2 then do
+                write_obs focus $ Just (ws !! 1)
+            else do
+                putStrLn $ format "Invalid command: '{0}'" xs
             keyboard sh
 
-run_pipeline :: FilePath -> IO ()
-run_pipeline fname = do
+run_pipeline :: FilePath -> Params -> IO ()
+run_pipeline fname (Params {..}) = do
         system     <- new_obs empty_system
         working    <- new_obs 0
         error_list <- new_obs []
@@ -268,14 +341,19 @@ run_pipeline fname = do
         m          <- load_pos fname M.empty
         pr_obl     <- new_obs m
         parser_state <- new_obs (Idle 0)
+        focus      <- new_obs init_focus
+        dump_cmd   <- new_obs Nothing
+        redraw     <- new_obs True
         let sh = Shared { .. }
-        ts <- run_all 
+        ts <- run_all $
             [ summary sh
             , prover sh -- (M.map f m)
             , serialize sh
             , parser sh
+            , dump sh
             , display sh 
-            ]
+            ] ++ 
+            (guard (not no_verif) >> [prover sh])
         keyboard sh
         putStrLn "received a 'quit' command"
         mapM_ killThread ts

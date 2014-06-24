@@ -59,6 +59,11 @@ zstore        = typ_fun3 $ Fun [] "store" [
         gB, gA] $ 
     array gB gA
 
+zinjective :: ExprP -> ExprP
+zinjective  = typ_fun1 $ Fun [gA,gB] "injective" [fun_type gA gB] bool
+
+-- zsurjective = typ_fun1 $ Fun [gA,gB] "surjective" 
+
 --zselect = typ_fun2 (Fun [] "select" [ARRAY gA gB, gA] gB)
 
 fun_set :: Type -> Type -> Type
@@ -93,6 +98,7 @@ function_theory = Theory { .. }
                 ,  Fun [t0,t1] "dom-subt" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
                 ,  Fun [t0,t1] "mk-fun" [t0,t1] $ fun_type t0 t1 
                 ,  Fun [t0,t1] "tfun" [set_type t0,set_type t1] $ fun_set t0 t1
+                ,  Fun [t0,t1] "injective" [fun_type t0 t1] bool
                 ,  Fun [t0,t1] "set" [fun_type t0 t1] $ set_type t1
                 ]
             where
@@ -101,35 +107,16 @@ function_theory = Theory { .. }
 
         thm_depend = []
 
-        fact = fromList 
-                [ (label $ dec' "00", axm0)
-                , (label $ dec' "01", axm1)
---                , (label $ dec "2", axm2)
---                , (label $ dec "3", axm3)
-                , (label $ dec' "02", axm4)
---                , (label $ dec "5", axm5)
-                , (label $ dec' "03", axm6)
-                , (label $ dec' "04", axm7)
---                , (label $ dec' "5", axm8)
---                , (label $ dec "3", axm9)
-                , (label $ dec' "05", axm10)
-                , (label $ dec' "06", axm11)
-                , (label $ dec' "07", axm12)
-                , (label $ dec' "08", axm13)
-                    -- encoding of dom rest, dom subt, dom, apply, empty-fun, mk-fun
-                , (label $ dec' "09", axm14)
-                , (label $ dec' "10", axm15)
-                , (label $ dec' "11", axm16)
-                , (label $ dec' "12", axm17)
-                , (label $ dec' "13", axm18)
-                , (label $ dec' "14", axm19)
-                , (label $ dec' "15", axm20)
-                , (label $ dec' "16", axm25)
-                , (label $ dec' "17", axm21)
-                , (label $ dec' "18", axm22)
-                , (label $ dec' "19", axm23)
-                , (label $ dec' "20", axm24)
-                , (label $ dec' "21", axm26)
+        fact = fromList $ zip (L.map (label . dec') [0..])
+                [ axm0, axm1, axm4, axm6
+                , axm7, axm10, axm11, axm12
+                , axm13, axm14, axm15, axm16
+                , axm17, axm18, axm19, axm20
+                , axm25, axm21, axm22, axm23
+                , axm24, axm26, axm27, axm28
+                , axm29, axm30, axm31, axm32
+                , axm33, axm34, axm35, axm36
+                , axm37
                 ]
 
         notation = function_notation
@@ -246,6 +233,67 @@ function_theory = Theory { .. }
         axm26 = fromJust $ mzforall [f1_decl,s1_decl,s2_decl] mztrue $
                         (f1 `zelem` ztfun s1 s2)
                 `mzeq`  ( (s1 `mzeq` zdom f1) `mzand` (zran f1 `zsubset` s2))
+            -- definition of injective
+        axm27 = fromJust $ mzforall [f1_decl] mztrue $
+                        zinjective f1
+                `mzeq`  (mzforall [x_decl,x2_decl] 
+                                    (mzand  (x `zelem` zdom f1) 
+                                            (x2 `zelem` zdom f1))
+                            $ (zapply f1 x `mzeq` zapply f1 x2) 
+                            `mzimplies` (x `mzeq` x2) )
+            -- injective, domsubt and ran (with mk_set)
+        axm28 = fromJust $ mzforall [f1_decl,x_decl] 
+                        (zinjective f1 `mzand` (x `zelem` zdom f1))
+                        (       zran (zmk_set x `zdomsubt` f1)
+                        `mzeq`  (zran f1 `zsetdiff` zmk_set (zapply f1 x))
+                            ) 
+            -- domsub, apply and mk-set
+        axm29 = fromJust $ mzforall [f1_decl,x_decl,x2_decl] 
+                        ((mznot $ x `mzeq` x2) `mzand` (x2 `zelem` zdom f1)) $
+                        (       zapply (zmk_set x `zdomsubt` f1) x2
+                        `mzeq`  zapply f1 x2
+                            )
+            -- domrest, apply and mk-set
+        axm30 = fromJust $ mzforall [f1_decl,x_decl] 
+                        (x `zelem` zdom f1) $
+                        (       zapply (zmk_set x `zdomrest` f1) x
+                        `mzeq`  zapply f1 x
+                            )
+            -- domsub, apply 
+        axm31 = fromJust $ mzforall [f1_decl,x_decl,s1_decl] 
+                        ((mznot $ x `zelem` s1) `mzand` (x `zelem` zdom f1)) $
+                        (       zapply (s1 `zdomsubt` f1) x
+                        `mzeq`  zapply f1 x
+                            )
+            -- domrest, apply
+        axm32 = fromJust $ mzforall [f1_decl,x_decl,s1_decl] 
+                        ((x `zelem` s1) `mzand` (x `zelem` zdom f1)) $
+                        (       zapply (s1 `zdomrest` f1) x
+                        `mzeq`  zapply f1 x                
+                            )
+            -- '.', '\in', 'ran'
+        axm33 = fromJust $ mzforall [f1_decl,x_decl] 
+                        ( x `zelem` zdom f1 ) $
+                        zapply f1 x `zelem` zran f1
+            -- '.', '\in', 'ran', 'domsub'
+        axm34 = fromJust $ mzforall [f1_decl,x_decl,s1_decl] 
+                        ( x `zelem` (zdom f1 `zsetdiff` s1) ) $
+                        zapply f1 x `zelem` zran (s1 `zdomsubt` f1)
+            -- '.', '\in', 'ran', 'domrest'
+        axm35 = fromJust $ mzforall [f1_decl,x_decl,s1_decl] 
+                        ( x `zelem` (zdom f1 `zintersect` s1) ) $
+                        zapply f1 x `zelem` zran (s1 `zdomrest` f1)
+            -- ran.(f | x -> _) with f injective and x in dom.f
+        axm36 = fromJust $ mzforall [f1_decl,x_decl,y_decl] 
+                        ( (x `zelem` zdom f1) `mzand` zinjective f1 ) $
+                                (zran $ f1 `zovl` zmk_fun x y)
+                        `mzeq`  (         (zran f1 `zsetdiff` zmk_set (f1 `zapply` x))
+                                 `zunion` zmk_set y)
+            -- ran.(f | x -> _) with x not in dom.f
+        axm37 = fromJust $ mzforall [f1_decl,x_decl,y_decl] 
+                        ( mznot $ x `zelem` zdom f1 ) $
+                                (zran $ f1 `zovl` zmk_fun x y)
+                        `mzeq`  (zran f1 `zunion` zmk_set y)
         as_fun e = zcast (fun_type t0 t1) e
     
         (x,x_decl) = var "x" t0
@@ -257,7 +305,9 @@ function_theory = Theory { .. }
         (s2,s2_decl) = var "s2" $ set_type t1
         -- (s2,s2_decl) = var "s2" $ set_type t1
 --        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
-        dec' x = "@function@@_" ++ x
+        dec' x = "@function@@_" ++ pad ++ show x
+          where
+            pad = if x < 10 then "0" else ""
         
     -- notation
 overload    :: BinOperator
@@ -293,6 +343,7 @@ function_notation = with_assoc empty_notation
                 [ Command "\\emptyfun" "emptyfun" 0 $ const $ Right zempty_fun
                 , Command "\\dom" "dom" 1 $ zdom . head
                 , Command "\\ran" "ran" 1 $ zran . head
+                , Command "\\injective" "injective" 1 $ zinjective . head
                 ]
     , relations   = []
     , chaining    = []  } 

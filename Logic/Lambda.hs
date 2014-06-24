@@ -159,7 +159,7 @@ delambdify (Sequent ctx asm hyps goal) =
             return $ Sequent
                 (            ctx 
                  `merge_ctx` decl) 
-                (defs ++ asm')
+                (asm' ++ defs)
                 hyps'
                 goal'
             ) empty

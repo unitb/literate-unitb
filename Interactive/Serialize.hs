@@ -121,6 +121,10 @@ dump_pos file pos = do
             new_po = seq_to_iseq pos
         BS.writeFile fn $ compress $ encodeLazy new_po
 
-dump_z3 :: FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
-dump_z3 file pos = dump file (M.map fst $ mapKeys snd pos)
+dump_z3 :: Maybe Label -> FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
+dump_z3 pat file pos = dump file (M.map fst 
+        $ M.filterWithKey (const . matches) 
+        $ mapKeys snd pos)
+    where
+        matches = maybe (const True) (==) pat
 

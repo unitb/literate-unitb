@@ -230,7 +230,8 @@ by_symmetry vs hyp mlbl proof = do
                     cs <- forM cs $ \x -> return (hyp,x,easy)
                     assert [(lbl,thm,clear_vars vs $ do
                             us <- forM vs $ \(Var n t) -> new_fresh n t
-                            free_vars_goal (zip vs us) 
+                            free_vars_goal (zip (map name vs) 
+                                                (map name us)) 
                               $ assume named goal proof)] $
                         instantiate_hyp_with thm (map f $ permutations vs) $ 
                             by_cases cs
@@ -268,7 +269,7 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
                     assert 
                         [ (thm_lbl, thm, easy)       -- (Ax,y:: x = y == ...)
                         , (g_lbl, new_goal, do       -- (Az:: z ≤ lhs => z ≤ rhs)
-                                free_goal z_decl zVar proof) ]
+                                free_goal (name z_decl) (name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
                             instantiate_hyp                       -- lhs = rhs
@@ -306,7 +307,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                     assert 
                         [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
                         , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
-                                free_goal z_decl zVar proof) ]
+                                free_goal (name z_decl) (name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
                             instantiate_hyp                       -- lhs = rhs
@@ -343,14 +344,7 @@ find_proof_step pr = visitor
                     li    <- ask
                     proof <- lift_i $ collect_proof_step pr
                     set_proof $ LP.with_line_info li $ do
-                        ctx <- get_context
-                        let Context _ _ _ _ dums  = ctx
-                        Var _ t <- maybe 
-                                (hard_error [Error (format "cannot infer the type of '{0}'" to) li])
-                                return
-                                (M.lookup to dums)
-                        free_goal (Var from t) (Var to t)
-                            proof
+                        free_goal from to proof
             )
         ,   (   "by:cases"
             ,   VEnvBlock $ \() _ -> do

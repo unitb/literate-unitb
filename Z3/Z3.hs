@@ -69,7 +69,41 @@ instance Tree Command where
     as_tree (Push)        = List [Str "push"]
     as_tree (Pop)         = List [Str "pop"]
     as_tree (Decl d)      = as_tree d
-    as_tree (Assert xp)   = List [Str "assert", as_tree xp]
+    as_tree (SetOption name b) = List 
+                        [ Str "set-option"
+                        , Str $ ':' : name
+                        , Str $ map toLower $ show b]
+    as_tree GetUnsatCore  = List [Str "get-unsat-core"]
+    as_tree (Assert xp _n) = List [Str "assert", f $ g xp]
+        where
+            g (Binder Forall vs r t) = 
+                    List 
+                        [ Str "forall"
+                        , List $ map as_tree vs
+                        , List 
+                            [ Str "!"
+                            , as_tree $ r `zimplies` t
+                            , Str ":pattern"
+                            , List $ map as_tree $ lhs vs (head t)
+                            ]
+                        ]
+            g e = as_tree e
+            lhs vs (FunApp f xs)
+                | name f `elem` ["and","or","not"]
+                       = concatMap (lhs vs) xs
+            lhs vs (FunApp f [x,_])
+                | name f == "="     = lhs vs x
+            lhs _ (Word (Var _ _)) = []
+            lhs vs e 
+                | S.fromList vs `S.isSubsetOf` used_var e = [e]
+                | otherwise                               = []
+            head (FunApp f [_,y])
+                | name f == "=>"    = head y
+            head e = e
+            f x = x
+            -- f x = case n of 
+            --         Nothing -> x
+            --         Just n  -> List [Str "!",x,Str ":named",Str n]
     as_tree (Comment str) = Str $ intercalate "\n" $ map ("; " ++) $ lines str
     as_tree (CheckSat)    = List [Str "check-sat-using", 
                                     strat
@@ -133,7 +167,11 @@ var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 
     M.lookup s m <|> M.lookup s d
 
-data Command = Decl FODecl | Assert FOExpr | CheckSat 
+data Command = Decl FODecl 
+    | Assert FOExpr (Maybe String)
+    | SetOption String Bool
+    | CheckSat 
+    | GetUnsatCore
     | GetModel 
     | Push | Pop 
     | Comment String
@@ -148,9 +186,10 @@ z3_code po =
                , Datatype [] "Null"
                     [ ("null", []) ] ] )
         ++ map Decl (decl d)
-        ++ map Assert (assume) 
-        ++ concatMap f (toList hyps)
-        ++ [Assert (znot assert)]
+        ++ map (\(x,y) -> Assert x $ Just $ "s" ++ show y) 
+               (zip assume [0..])
+        ++ concatMap f (zip (toList hyps) [0..])
+        ++ [Assert (znot assert) $ Just "goal"]
         ++ [CheckSat]
         ++ [] )
     where
@@ -159,7 +198,8 @@ z3_code po =
                     $ one_point
                     $ delambdify
                     $ apply_monotonicity po
-        f (lbl,xp) = [Comment $ show lbl, Assert xp Nothing]
+        f ((lbl,xp),n) = [ Comment $ show lbl
+                     , Assert xp $ Just $ "h" ++ show n]
         one_point (Sequent a b c g) = Sequent a asm c g'
             where
                 asm
@@ -239,10 +279,19 @@ discharge_all xs = do
         destroy_prover pr
         rs <- forM rs $ \(i,r) -> 
             either 
-                error 
+                (throwIO . Z3Exception i) 
                 (\x -> return (i,x)) 
                 r
         return $ map snd $ sortBy (compare `on` fst) rs
+
+data Z3Exception = Z3Exception Int String
+    deriving (Show,Typeable)
+
+instance Exception Z3Exception
+
+map_failures :: (Int -> Label) -> IO a -> IO a
+map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
+        fail $ format "during verification of {0}:\n{1}" (po_name i) msg 
 
 --subexpr :: TypeSystem t => AbsExpr t -> [AbsExpr t]
 --subexpr e = reverse $ f [] e

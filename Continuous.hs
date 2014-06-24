@@ -13,7 +13,7 @@ import Logic.Expr
 import UnitB.AST
 import UnitB.PO
 
-import Z3.Z3
+-- import Z3.Z3
 
     -- Libraries
 import Control.Monad
@@ -26,18 +26,15 @@ import Data.Typeable
 
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
-import           Data.Map as M 
-    ( Map
-    , empty 
-    , insert
-    , toList
-    )
+import           Data.Maybe
 import qualified Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory
+import System.FilePath
 import System.Environment
 import System.Locale
+import System.TimeIt
 
 import Text.Printf
 
@@ -59,15 +56,19 @@ with_po_map act param = do
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         d <- gets no_dump
-        v <- gets no_verif
-        if not d && not v then do
+        if not d then do
             p    <- gets pos
             file <- gets path   
             let fn = file ++ ".state'"
     --        liftIO $ Ser.dump_pos file p
-            liftIO $ forM_ (toList p) $ \(n,p) -> do
+            liftIO $ putStrLn "Producing Z3 file:"
+            (dt,()) <- liftIO $ timeItT $ forM_ (M.toList p) $ \(n,p) -> do
                 dump (show n) (M.map snd p)
-            liftIO $ BS.writeFile fn $ Ser.encode p
+            liftIO $ do
+                print dt
+                putStrLn "Serializing state:"
+            (dt',()) <- liftIO $ timeItT $ BS.writeFile fn $ Ser.encode p
+            liftIO $ print dt'
         else return ()
 
 monitor :: (Monad m, Eq s) 
@@ -87,31 +88,20 @@ monitor measure delay act = do
             lift delay)) t
     return ()
 
-data Params = Params
-        { path :: FilePath
-        , verbose :: Bool
-        , continuous :: Bool
-        , no_dump :: Bool
-        , no_verif :: Bool
-        , reset :: Bool
-        , pos :: Map Label (Map Label (Bool,Sequent))
-        }
-
 check_one :: (MonadIO m, MonadState Params m) 
           => Machine -> m (Int,String)
 check_one m = do
         param <- get
-        let p = M.lookup (_name m) $ pos param
-        let po = maybe empty id p
+        let po = M.findWithDefault M.empty (_name m) $ pos param
         (po,s,n)    <- liftIO $ verify_changes m po
-        put (param { pos = insert (_name m) po $ pos param })
+        put (param { pos = M.insert (_name m) po $ pos param })
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
 check_theory (name,th) = do
         param <- get
-        let old_po = maybe empty id $ M.lookup (label name) $ pos param
+        let old_po = M.findWithDefault M.empty (label name) $ pos param
             po = either undefined id $ theory_po th
             new_po = po `M.difference` old_po
             ch_po  = po `M.intersection` old_po
@@ -129,8 +119,8 @@ check_theory (name,th) = do
                     handle
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po M.! k) (\b -> (b,x)) $ M.lookup k res
-        put param { pos = insert (label name) p_r $ pos param }
-        let s = unlines $ map (\(k,r) -> success r ++ show k) $ toList res
+        put param { pos = M.insert (label name) p_r $ pos param }
+        let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toList res
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where
         success True  = "  o  "
@@ -151,7 +141,7 @@ check_file = do
         let { p ln = verbose param || take 4 ln /= "  o " }
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
-            lift $ produce_summaries s
+            lift $ produce_summaries (takeDirectory $ path param) s
             return (M.elems $ machines s, M.toList $ theories s)
         case r of
             Right (ms,ts) -> do
@@ -177,7 +167,10 @@ check_file = do
         t  <- liftIO (getCurrentTime :: IO UTCTime)
         liftIO $ putStrLn $ formatTime defaultTimeLocale "Time: %H:%M:%S" $ utcToLocalTime tz t
 
-data Option = Verbose | Continuous | NoDump | NoVerif | Reset
+data Option = 
+        Verbose | Continuous 
+        | NoDump | NoVerif | Reset
+        | Focus String
     deriving Eq
 
 options :: [OptDescr Option]
@@ -192,7 +185,14 @@ options =
             "do not generate and discharge the proof obligations"
     , Option ['r'] ["reset"] (NoArg Reset)
             "discard the previous results of verification"
+    , Option ['f'] ["focus"] (ReqArg Focus "PATTERN")
+            "only display the verification results of proof obligations \
+            \matching the `pattern'"
     ]
+
+focus :: Option -> Maybe String
+focus (Focus x) = Just x
+focus _ = Nothing
 
 main :: IO ()
 main = do
@@ -205,20 +205,23 @@ main = do
                 if b1 && b2 then do
                     let { param = Params 
                             { path = xs
-                            , pos = empty
+                            , pos = M.empty
                             , no_dump    = NoDump `elem` opts
                             , no_verif   = NoVerif `elem` opts
                             , verbose    = Verbose `elem` opts
                             , continuous = Continuous `elem` opts
                             , reset      = Reset `elem` opts
+                            , init_focus = listToMaybe $ catMaybes $ map focus opts
                             } }
                     if continuous param then do
-                        run_pipeline xs
+                        run_pipeline xs param
                         return ()
                     else
                         with_po_map (do
                             check_file
-                            dump_pos) param
+                            lift $ putStrLn "moving on to dump:"
+                            dump_pos
+                            lift $ putStrLn "done dumping") param
                     -- with_po_map (do
                         -- check_file
                         -- dump_pos

@@ -14,7 +14,7 @@ import Control.Monad.Trans.State
 import Data.Char
 import Data.String
 
-import Shelly hiding ( get, put )
+import Shelly hiding ( get, put, (</>) )
 
 import System.Directory
 import System.FilePath
@@ -23,8 +23,6 @@ import System.Console.ANSI
 import System.Exit
 import System.IO 
 import System.Process
-
-import Utilities.Format
 
 interval :: Time
 interval = Minutes 1
@@ -87,32 +85,37 @@ main = do
                         return $ either (:[]) id x
                     compile x = EitherT $ f $ do
                             let src_file = head x
-                                obj_file = format "bin/{0}" $ addExtension (dropExtension $ src_file) "o"
+                                bin_dir  = "/Users/Simon/Haskell/bin"
+                                inf_dir  = "/Users/Simon/Haskell/interface"
+                                main_o :: IsString a => a
+                                main_o   = fromString $ bin_dir </> "Main.o"
+                                obj_file = bin_dir </> addExtension (dropExtension $ src_file) "o"
                             b <- doesFileExist src_file
                             if b then do
                                 b <- doesFileExist obj_file
                                 when b $
                                     void $ shelly $ do
                                         mv (fromText $ fromString $ obj_file) 
-                                            $ fromText "bin/Main.o"
+                                            $ fromText main_o
                                 r <- readProcessWithExitCode 
                                             "ghc" 
                                             (x ++ 
                                     [ "--make"
                                     , "-W", "-fwarn-missing-signatures"
+                                    , "-fwarn-incomplete-uni-patterns"
                                     , "-fwarn-missing-methods"
                                     , "-fwarn-tabs"
                                     , "-Werror", "-rtsopts"
-                                    , "-hidir", "interface"
+                                    , "-hidir", inf_dir
                                     , "-o", dropExtension (head x)
                                     , "-fbreak-on-error"
     --                                , "-prof", "-caf-all", "-auto-all", "-O2"
                                           -- these are usable with +RTS -p
-                                    , "-odir", "bin"]) ""
-                                b  <- doesFileExist "bin/Main.o"
+                                    , "-odir", bin_dir]) ""
+                                b  <- doesFileExist main_o
                                 when b $
                                     void $ shelly $ do
-                                        mv (fromText "bin/Main.o")
+                                        mv (fromText main_o)
                                             $ fromText $ fromString obj_file
                                 return r
                             else return (ExitSuccess,"","")

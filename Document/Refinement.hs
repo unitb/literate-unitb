@@ -390,7 +390,7 @@ parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
                 , format "too many hypotheses in the application of the rule: {0}" 
                     $ intercalate "," $ map show hyps_lbls)
             ]
-        let [h0] = hyps_lbls
+        let h0 = head hyps_lbls
         toEither $ error_list
             [   ( not (goal_lbl `member` prog)
                 , format "refinement ({0}): {1} should be a progress property" rule goal_lbl )

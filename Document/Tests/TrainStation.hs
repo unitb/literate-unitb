@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Document.Tests.TrainStation where
 
     -- Modules
@@ -17,6 +18,9 @@ import Theories.Arithmetic
 import Z3.Z3 hiding ( verify )
 
     -- Libraries
+import Control.Exception ( SomeException, handle )
+
+import           Data.List ( intercalate )
 import           Data.Map hiding ( map )
 import qualified Data.Set as S
 
@@ -304,21 +308,18 @@ loc_decl :: Var
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
 
 check_sat :: [String]    
-check_sat = [ format ("(check-sat-using (or-else"
-                        ++ " (then qe smt)"
-                        ++ " (then simplify smt)"
-                        ++ " (then skip smt)"
---                        ++ " (then der smt)"
-                        ++ " (then (using-params simplify :expand-power true) smt)))") 
-              400
+check_sat = [ "(check-sat-using (or-else (then qe smt)"
+            , "                          (then simplify smt)"
+            , "                          (then skip smt)"
+            , "                          (then (using-params simplify :expand-power true) smt)))"
             ]
 
 
 train_decl :: Bool -> Bool -> [String]
 train_decl b ind = 
-        [ "(declare-datatypes (a) ((Maybe (Just (fromJust a)) Nothing)))"
-        , "(declare-datatypes () ((Null null)))"
-        , "(declare-datatypes (a b) ((Pair (pair (first a) (second b)))))"
+        [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+        , "(declare-datatypes () ( (Null null) ))"
+        , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
         , "(declare-sort BLK 0)"
         , "; comment: we don't need to declare the sort Bool"
         , "; comment: we don't need to declare the sort Int"
@@ -361,16 +362,28 @@ train_decl b ind =
 set_decl_smt2 :: [AxiomOption] -> [String]
 set_decl_smt2 xs = 
         when (WithPFun `elem` xs)
-        [  "(declare-fun apply@@TRAIN@@BLK ((pfun TRAIN BLK) TRAIN) BLK)"]
-     ++ [  "(declare-fun bunion@@BLK ((set BLK) (set BLK)) (set BLK))"
-        ,  "(declare-fun bunion@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun bunion@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"
+        [ "(declare-fun apply@@TRAIN@@BLK"
+        , "             ( (pfun TRAIN BLK)"
+        , "               TRAIN )"
+        , "             BLK)"]
+     ++ [ "(declare-fun bunion@@BLK ( (set BLK)   (set BLK) ) (set BLK))"
+        , "(declare-fun bunion@@LOC ( (set LOC)   (set LOC) ) (set LOC))"
+        , "(declare-fun bunion@@TRAIN"
+        , "             ( (set TRAIN)"
+        , "               (set TRAIN) )"
+        , "             (set TRAIN))"
 --        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
         ]    
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun dom-rest@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun dom-subt@@TRAIN@@BLK ((set TRAIN) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun dom@@TRAIN@@BLK ((pfun TRAIN BLK)) (set TRAIN))"]
+        [  "(declare-fun dom-rest@@TRAIN@@BLK"
+        ,  "             ( (set TRAIN)"
+        ,  "               (pfun TRAIN BLK) )"
+        ,  "             (pfun TRAIN BLK))"
+        ,  "(declare-fun dom-subt@@TRAIN@@BLK"
+        ,  "             ( (set TRAIN)"
+        ,  "               (pfun TRAIN BLK) )"
+        ,  "             (pfun TRAIN BLK))"
+        ,  "(declare-fun dom@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set TRAIN))"]
      ++ [  "(declare-fun elem@@BLK (BLK (set BLK)) Bool)"
         ,  "(declare-fun elem@@LOC (LOC (set LOC)) Bool)"
         ,  "(declare-fun elem@@TRAIN (TRAIN (set TRAIN)) Bool)"]
@@ -379,11 +392,22 @@ set_decl_smt2 xs =
         [  "(declare-fun empty-fun@@TRAIN@@BLK () (pfun TRAIN BLK))"]
      ++ [  "(declare-fun empty-set@@BLK () (set BLK))"
         ,  "(declare-fun empty-set@@LOC () (set LOC))"
-        ,  "(declare-fun empty-set@@TRAIN () (set TRAIN))"
+        ,  "(declare-fun empty-set@@TRAIN () (set TRAIN))" ]
 --        ,  "(declare-fun empty-set@Open@@pfun@@TRAIN@@BLK@Close () (set (pfun TRAIN BLK)))"
-        ,  "(declare-fun intersect@@BLK ((set BLK) (set BLK)) (set BLK))"
-        ,  "(declare-fun intersect@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun intersect@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))"]
+     ++ when (WithPFun `elem` xs)
+        [  "(declare-fun injective@@TRAIN@@BLK ( (pfun TRAIN BLK) ) Bool)" ]
+     ++ [  "(declare-fun intersect@@BLK"
+        ,  "             ( (set BLK)"
+        ,  "               (set BLK) )"
+        ,  "             (set BLK))"
+        ,  "(declare-fun intersect@@LOC"
+        ,  "             ( (set LOC)"
+        ,  "               (set LOC) )"
+        ,  "             (set LOC))"
+        ,  "(declare-fun intersect@@TRAIN"
+        ,  "             ( (set TRAIN)"
+        ,  "               (set TRAIN) )"
+        ,  "             (set TRAIN))" ]
 --        ,  "(declare-fun intersect@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))"]
@@ -392,17 +416,23 @@ set_decl_smt2 xs =
         ,  "(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))"]
 --        ,  "(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun ovl@@TRAIN@@BLK ((pfun TRAIN BLK) (pfun TRAIN BLK)) (pfun TRAIN BLK))"
-        ,  "(declare-fun ran@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"]
-     ++ [  "(declare-fun set-diff@@BLK ((set BLK) (set BLK)) (set BLK))"
-        ,  "(declare-fun set-diff@@LOC ((set LOC) (set LOC)) (set LOC))"
-        ,  "(declare-fun set-diff@@TRAIN ((set TRAIN) (set TRAIN)) (set TRAIN))" ]
+        [  "(declare-fun ovl@@TRAIN@@BLK"
+        ,  "             ( (pfun TRAIN BLK)"
+        ,  "               (pfun TRAIN BLK) )"
+        ,  "             (pfun TRAIN BLK))"
+        ,  "(declare-fun ran@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
+     ++ [  "(declare-fun set-diff@@BLK ( (set BLK)   (set BLK) ) (set BLK))"
+        ,  "(declare-fun set-diff@@LOC ( (set LOC)   (set LOC) ) (set LOC))"
+        ,  "(declare-fun set-diff@@TRAIN"
+        ,  "             ( (set TRAIN)"
+        ,  "               (set TRAIN) )"
+        ,  "             (set TRAIN))" ]
 --        ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun set@@TRAIN@@BLK ((pfun TRAIN BLK)) (set BLK))"]
-     ++ [  "(declare-fun subset@@BLK ((set BLK) (set BLK)) Bool)"
-        ,  "(declare-fun subset@@LOC ((set LOC) (set LOC)) Bool)"
-        ,  "(declare-fun subset@@TRAIN ((set TRAIN) (set TRAIN)) Bool)"]
+        [  "(declare-fun set@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
+     ++ [  "(declare-fun subset@@BLK ( (set BLK)   (set BLK) ) Bool)"
+        ,  "(declare-fun subset@@LOC ( (set LOC)   (set LOC) ) Bool)"
+        ,  "(declare-fun subset@@TRAIN ( (set TRAIN)   (set TRAIN) ) Bool)"]
 --        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
 --     ++ when (WithPFun `elem` xs)
 --        [  "(declare-fun tfun@@TRAIN@@BLK ((set TRAIN) (set BLK)) (set (pfun TRAIN BLK)))"]
@@ -414,67 +444,99 @@ set_facts xs = [ f x y | y <- ys, x <- xs ]
   where
     f :: (String, String) -> (String, String) -> (String, String)
     f (x0,x1) (x,y) = (format x x1, format y x0 x1)
-    ys =[   ( "{0}0"
-            , "(forall ((x {0}) (y {0})) (=> true" ++
-                       " (= (elem@{1} x (mk-set@{1} y))" ++
-                          " (= x y))))"
+    unlines = intercalate "\n"
+    ys =[   ( "{0}0", unlines
+                [ "(assert (forall ( (x {0})"
+                , "                  (y {0}) )"
+                , "                (! (= (elem@{1} x (mk-set@{1} y)) (= x y))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x (mk-set@{1} y)) ))))"]
             )
-        ,   ( "{0}1"
-            , "(forall ((x {0}) (s1 (set {0})) (s2 (set {0}))) (=> true" ++
-                        " (= (elem@{1} x (set-diff@{1} s1 s2))" ++
-                           " (and (elem@{1} x s1)" ++
-                                " (not (elem@{1} x s2))))))"
+        ,   ( "{0}1", unlines
+                [ "(assert (forall ( (x {0})"
+                , "                  (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (elem@{1} x (set-diff@{1} s1 s2))"
+                , "                      (and (elem@{1} x s1) (not (elem@{1} x s2))))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x (set-diff@{1} s1 s2)) ))))"]
             )
 --            -- elem over intersection
 --        Right axm2 = mzforall [x_decl,s1_decl,s2_decl] (
 --                          (x `zelem` (s1 `zintersect` s2)) 
 --                    `mzeq` ( (x `zelem` s1) `mzand` (x `zelem` s2) ))
-        ,   ( "{0}2"
-            , "(forall ((x {0}) (s1 (set {0})) (s2 (set {0}))) (=> true"  ++
-                        " (= (elem@{1} x (intersect@{1} s1 s2))" ++
-                           " (and (elem@{1} x s1)"               ++
-                                " (elem@{1} x s2)))))"
+        ,   ( "{0}2", unlines
+                [ "(assert (forall ( (x {0})"
+                , "                  (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (elem@{1} x (intersect@{1} s1 s2))"
+                , "                      (and (elem@{1} x s1) (elem@{1} x s2)))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x (intersect@{1} s1 s2)) ))))"]
             )
 --            -- elem over union
 --        Right axm3 = mzforall [x_decl,s1_decl,s2_decl] (
 --                          (x `zelem` (s1 `zunion` s2)) 
 --                    `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
-        ,   ( "{0}3"
-            , "(forall ((x {0}) (s1 (set {0})) (s2 (set {0}))) (=> true"  ++
-                        " (= (elem@{1} x (bunion@{1} s1 s2))" ++
-                           " (or (elem@{1} x s1)"               ++
-                               " (elem@{1} x s2)))))"
+        ,   ( "{0}3", unlines
+                [ "(assert (forall ( (x {0})"
+                , "                  (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (elem@{1} x (bunion@{1} s1 s2))"
+                , "                      (or (elem@{1} x s1) (elem@{1} x s2)))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x (bunion@{1} s1 s2)) ))))"]
             )
 --            -- elem over empty-set
 --        Right axm4 = mzforall [x_decl,s1_decl,s2_decl] (
 --                          mznot (x `zelem` Right zempty_set)  )
-        ,   ( "{0}4"
-            , "(forall ((x {0})) (=> true"  ++
-                        " (not (elem@{1} x empty-set@{1}))))"
+        ,   ( "{0}4", unlines
+                [ "(assert (forall ( (x {0}) )"
+                , "                (! (not (elem@{1} x empty-set@{1}))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x empty-set@{1}) ))))"]
             )
 --        axm5 = fromJust $ mzforall [x_decl,s1_decl] mztrue (
 --                          mzeq (zelem x s1)
 --                               (zset_select s1 x)  )
-        ,   ( "{0}5"
-            , "(forall ((x {0}) (s1 (set {0}))) (=> true"  ++
-                        " (= (elem@{1} x s1)"   ++
-                           " (select s1 x))))"
+        ,   ( "{0}5", unlines
+                [ "(assert (forall ( (x {0})"
+                , "                  (s1 (set {0})) )"
+                , "                (! (= (elem@{1} x s1) (select s1 x))"
+                , "                   :pattern"
+                , "                   ( (elem@{1} x s1) ))))" ]
             )
             -- subset extensionality
 --        axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
 --                        ( s1 `zsubset` s2 )
 --                 `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
-        ,   ( "{0}6"
-            , "(forall ((s1 (set {0})) (s2 (set {0}))) (=> true"  ++
-                        " (= (subset@{1} s1 s2)"   ++
-                           " (forall ((x {0})) (=> true"         ++
-                                   " (=> (elem@{1} x s1)" ++ 
-                                       " (elem@{1} x s2)))))))"
+        ,   ( "{0}6", unlines
+                [ "(assert (forall ( (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (subset@{1} s1 s2)"
+                , "                      (forall ( (x {0}) )"
+                , "                              (=> true (=> (elem@{1} x s1) (elem@{1} x s2)))))"
+                , "                   :pattern"
+                , "                   ( (subset@{1} s1 s2) ))))" ]
             )
-        ,   ( "{0}7"
-            , "(forall ((s1 (set {0})) (s2 (set {0}))) (=> true"  ++
-                        " (= (and (subset@{1} s1 s2) (subset@{1} s2 s1))"   ++
-                           " (= s1 s2))))"
+        ,   ( "{0}7", unlines
+                [ "(assert (forall ( (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (and (subset@{1} s1 s2) (subset@{1} s2 s1))"
+                , "                      (= s1 s2))"
+                , "                   :pattern"
+                , "                   ( (subset@{1} s1 s2)"
+                , "                     (subset@{1} s2 s1) ))))" ]
+            )
+        ,   ( "{0}8", unlines
+                [ "(assert (forall ( (s1 (set {0}))"
+                , "                  (s2 (set {0})) )"
+                , "                (! (= (= (intersect@{1} s1 s2) empty-set@{1})"
+                , "                      (forall ( (x {0}) )"
+                , "                              (=> true"
+                , "                                  (or (not (elem@{1} x s1)) (not (elem@{1} x s2))))))"
+                , "                   :pattern"
+                , "                   ( (intersect@{1} s1 s2) ))))" ]
             )
         ]
 
@@ -483,161 +545,253 @@ set_facts xs = [ f x y | y <- ys, x <- xs ]
 fun_facts :: (String,String) -> (String,String) -> [(String,String)]
 fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1, format y x0 x1 y0 y1)) $
                             zip (map (("{0}{1}" ++) . show) [0..]) 
-        [ "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2}))) (=> true"
-                     ++ " (= (bunion@{1} (dom@{1}@{3} f1)"
-                     ++                " (dom@{1}@{3} f2))"
-                     ++    " (dom@{1}@{3} (ovl@{1}@{3} f1 f2)))))"
-        , "(= (dom@{1}@{3} empty-fun@{1}@{3}) empty-set@{1})"
-        , "(forall ((x {0}) (y {2})) (=> true"
-                     ++ " (= (dom@{1}@{3} (mk-fun@{1}@{3} x y))"
-                     ++                 " (mk-set@{1} x))))"
---        , "(forall ((s2 (set {2})))"
---                     ++ " (elem@Open@@pfun@{1}@{3}@Close"
---                     ++                 " empty-fun@{1}@{3}"
---                     ++                 " (tfun@{1}@{3} empty-set@{1} s2)))"
-        , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})) (x {0})) (=> true"
-                     ++     " (=> (elem@{1} x (dom@{1}@{3} f2))"
-                     ++         " (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
-                     ++            " (apply@{1}@{3} f2 x)))))"
---        axm6 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
---                            (x `zelem` zdom f2) 
---                `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f2 x))
-        , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2})) (x {0})) (=> true"
-                     ++     " (=> (and (elem@{1} x (dom@{1}@{3} f1))"
-                     ++              " (not (elem@{1} x (dom@{1}@{3} f2))))"
-                     ++         " (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
-                     ++            " (apply@{1}@{3} f1 x)))))"
---        axm7 = fromJust $ mzforall [f1_decl,f2_decl,x_decl] ( 
---                        (x `zelem` (zdom f2 `zsetdiff` zdom f1))
---            `mzimplies` (zapply (f1 `zovl` f2) x `mzeq` zapply f1 x))
---            -- apply and mk-fun
-        , "(forall ((f1 (pfun TRAIN BLK)) (s1 (set TRAIN))) (=> true"
-                     ++      " (= (dom@@TRAIN@@BLK (dom-subt@@TRAIN@@BLK s1 f1))"
-                     ++         " (set-diff@@TRAIN (dom@@TRAIN@@BLK f1) s1))))"
---        axm12 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
---                        (x `zelem` (s1 `zintersect` zdom f1))
---            `mzimplies` (zapply (s1 `zdomrest` f1) x `mzeq` zapply f1 x) )
---            -- dom-subst and apply
-        , "(forall ((x {0}) (y {2})) (=> true"
-                     ++      " (= (apply@{1}@{3} (mk-fun@{1}@{3} x y) x) y)))"
---        axm11 = fromJust $ mzforall [x_decl,y_decl] ( 
---                (zmk_fun x y `zapply` x) `mzeq` y )
---            -- dom-rest and apply
-        , "(forall ((f1 (pfun {0} {2})) (s1 (set {0})) (x {0})) (=> true"
-                     ++      " (=> (and (elem@{1} x s1) (elem@{1} x (dom@{1}@{3} f1)))"
-                     ++          " (= (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x)"
-                     ++             " (apply@{1}@{3} f1 x)))))"
---        axm13 = fromJust $ mzforall [f1_decl,s1_decl,x_decl] (
---                        (x `zelem` (zdom f1 `zsetdiff` s1))
---            `mzimplies` (zapply (s1 `zdomsubt` f1
-        , "(forall ((f1 (pfun {0} {2})) (s1 (set {0})) (x {0})) (=> true"
-                     ++      " (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1) s1))"
-                     ++          " (= (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x)"
-                     ++             " (apply@{1}@{3} f1 x)))))"
---            -- empty-fun
---        axm14 = fromJust $ mzforall [x_decl] mztrue 
---                (      zrep_select (Right zempty_fun) x
---                `mzeq` zcast (maybe_type t1) znothing )
-        , "(forall ((x {0}))"
-            ++    " (=> true"
-            ++        " (= (select empty-fun@{1}@{3} x)"
-            ++           " (as Nothing (Maybe {2})))))"
---            -- mk-fun
---        axm15 = fromJust $ mzforall [x_decl,x2_decl,y_decl] mztrue 
---                (      zrep_select (zmk_fun x y) x2
---                `mzeq` zite (mzeq x x2) (zjust y) znothing )
-        , "(forall ((x {0}) (x2 {0}) (y {2}))"
-            ++    " (=> true"
-            ++        " (= (select (mk-fun@{1}@{3} x y) x2)"
-            ++           " (ite (= x x2)"
-            ++                " (Just y)"
-            ++                " (as Nothing (Maybe {2}))))))"
---            -- apply
---        axm16 = fromJust $ mzforall [x_decl,f1_decl,f2_decl] mztrue 
---                (      zrep_select (zovl f1 f2) x
---                `mzeq` zite (mzeq (zrep_select f1 x) znothing)
---                            (zrep_select f2 x)
---                            (zrep_select f1 x) )
-        , "(forall ((x {0}) (f1 (pfun {0} {2})) (f2 (pfun {0} {2})))"
-            ++    " (=> true"
-            ++        " (= (select (ovl@{1}@{3} f1 f2) x)"
-            ++           " (ite (= (select f2 x) (as Nothing (Maybe {2})))"
-            ++                " (select f1 x)"
-            ++                " (select f2 x)))))"
---        axm17 = fromJust $ mzforall [x_decl,f1_decl] mztrue 
---                (      zset_select (zdom f1) x
---                `mzeq` mznot (zrep_select f1 x `mzeq` znothing))
-        , "(forall ((x {0}) (f1 (pfun {0} {2})))"
-            ++    " (=> true"
-            ++        " (= (select (dom@{1}@{3} f1) x)"
-            ++           " (not (= (select f1 x) (as Nothing (Maybe {2})))))))"
---        axm18 = fromJust $ mzforall [y_decl,f1_decl] mztrue 
---                (      zelem y (zset f1)
---                `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
---                            (zapply f1 x `mzeq` y)))
-        ,   "(forall ((y {2}) (f1 (pfun {0} {2}))) (=> true"  ++
-                        " (= (elem@{3} y (set@{1}@{3} f1))"   ++
-                           " (exists ((x {0}))"               ++
-                                   " (and (elem@{1} x (dom@{1}@{3} f1))"     ++
-                                        " (= (apply@{1}@{3} f1 x) y))))))"
---        axm19 = fromJust $ mzforall [x_decl,y_decl,f1_decl] mztrue 
---                (      (zelem x (zdom f1) `mzand` (zapply f1 x `mzeq` y))
---                `mzeq` (zrep_select f1 x `mzeq` zjust y))
-        ,   "(forall ((x {0}) (y {2}) (f1 (pfun {0} {2}))) (=> true"
-            ++      " (= (and (elem@{1} x (dom@{1}@{3} f1))"
-            ++              " (= (apply@{1}@{3} f1 x)"
-            ++                 " y))"
-            ++         " (= (select f1 x)"
-            ++            " (Just y)))))"
---        axm20 = fromJust $ mzforall [f1_decl,x2_decl,x_decl,y_decl] mztrue ( 
---                        mznot (x `mzeq` x2)
---            `mzimplies` (zapply (f1 `zovl` zmk_fun x y) x2 `mzeq` zapply f1 x2))
-        ,   "(forall ((f1 (pfun {0} {2})) (x2 {0}) (x {0}) (y {2}))"
-            ++          " (=> true"
-            ++              " (=> (not (= x x2))"
-            ++                  " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2)"
-            ++                     " (apply@{1}@{3} f1 x2)))))"
-        ,   "(forall ((f1 (pfun {0} {2})) (x {0}) (y {2}))"
-            ++          " (=> true"
-            ++              " (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x)"
-            ++                 " y)))"
-            -- ran and empty-fun
---        axm21 = fromJust $  
---                   zran (zcast (fun_type t0 t1) $ Right zempty_fun) 
---            `mzeq` Right zempty_set
-        ,  "(= (ran@{1}@{3} empty-fun@{1}@{3}) empty-set@{3})"
-            -- ran and elem
---        axm22 = fromJust $ mzforall [f1_decl,y_decl] mztrue (
---                        ( y `zelem` zran f1 ) 
---                 `mzeq` ( mzexists [x_decl] mztrue 
---                            ( (x `zelem` zdom f1) `mzand` (zapply f1 x `mzeq` y))))
-        , "(forall ((f1 (pfun {0} {2})) (y {2}))"
-            ++              " (=> true"
-            ++                  " (= (elem@{3} y (ran@{1}@{3} f1))"
-            ++                     " (exists ((x {0}))"
-            ++                             " (and true"
-            ++                                  " (and (elem@{1} x (dom@{1}@{3} f1))"
-            ++                                       " (= (apply@{1}@{3} f1 x) y)))))))"
-            -- ran mk-fun
---        axm23 = fromJust $ mzforall [x_decl,y_decl] mztrue $
---                        zran (zmk_fun x y) `mzeq` zmk_set y
-        , "(forall ((x {0}) (y {2})) (=> true"
-            ++              " (= (ran@{1}@{3} (mk-fun@{1}@{3} x y)) (mk-set@{3} y))))"
-            -- ran ovl
---        axm24 = fromJust $ mzforall [f1_decl,f2_decl] mztrue $
---                        zran (f1 `zovl` f2) `zsubset` (zran f1 `zunion` zran f2)
-        , "(forall ((f1 (pfun {0} {2})) (f2 (pfun {0} {2}))) (=> true"
-            ++            " (subset@{3} (ran@{1}@{3} (ovl@{1}@{3} f1 f2))"
-            ++                        " (bunion@{3} (ran@{1}@{3} f1) (ran@{1}@{3} f2)))))"
-        ]
+        [ "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (f2 (pfun {0} {2})) )"
+        , "                (! (= (bunion@{1} (dom@{1}@{3} f1) (dom@{1}@{3} f2))"
+        , "                      (dom@{1}@{3} (ovl@{1}@{3} f1 f2)))"
+        , "                   :pattern"
+        , "                   ( (bunion@{1} (dom@{1}@{3} f1) (dom@{1}@{3} f2)) ))))"
+        , "(assert (= (dom@{1}@{3} empty-fun@{1}@{3})"
+        , "           empty-set@{1}))"
+        , "(assert (forall ( (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (= (dom@{1}@{3} (mk-fun@{1}@{3} x y))"
+        , "                      (mk-set@{1} x))"
+        , "                   :pattern"
+        , "                   ( (dom@{1}@{3} (mk-fun@{1}@{3} x y)) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (f2 (pfun {0} {2}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (elem@{1} x (dom@{1}@{3} f2))"
+        , "                       (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
+        , "                          (apply@{1}@{3} f2 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (f2 (pfun {0} {2}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                            (not (elem@{1} x (dom@{1}@{3} f2))))"
+        , "                       (= (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (ovl@{1}@{3} f1 f2) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (s1 (set {0})) )"
+        , "                (! (= (dom@{1}@{3} (dom-subt@{1}@{3} s1 f1))"
+        , "                      (set-diff@{1} (dom@{1}@{3} f1) s1))"
+        , "                   :pattern"
+        , "                   ( (dom@{1}@{3} (dom-subt@{1}@{3} s1 f1)) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (= (apply@{1}@{3} (mk-fun@{1}@{3} x y) x) y)"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (mk-fun@{1}@{3} x y) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (s1 (set {0}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (and (elem@{1} x s1)"
+        , "                            (elem@{1} x (dom@{1}@{3} f1)))"
+        , "                       (= (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (s1 (set {0}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1) s1))"
+        , "                       (= (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x) ))))"
+        , "(assert (forall ( (x {0}) )"
+        , "                (! (= (select empty-fun@{1}@{3} x)"
+        , "                      (as Nothing (Maybe {2})))"
+        , "                   :pattern"
+        , "                   ( (select empty-fun@{1}@{3} x) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (x2 {0})"
+        , "                  (y {2}) )"
+        , "                (! (= (select (mk-fun@{1}@{3} x y) x2)"
+        , "                      (ite (= x x2) (Just y) (as Nothing (Maybe {2}))))"
+        , "                   :pattern"
+        , "                   ( (select (mk-fun@{1}@{3} x y) x2) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (f1 (pfun {0} {2}))"
+        , "                  (f2 (pfun {0} {2})) )"
+        , "                (! (= (select (ovl@{1}@{3} f1 f2) x)"
+        , "                      (ite (= (select f2 x) (as Nothing (Maybe {2})))"
+        , "                           (select f1 x)"
+        , "                           (select f2 x)))"
+        , "                   :pattern"
+        , "                   ( (select (ovl@{1}@{3} f1 f2) x) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (f1 (pfun {0} {2})) )"
+        , "                (! (= (select (dom@{1}@{3} f1) x)"
+        , "                      (not (= (select f1 x) (as Nothing (Maybe {2})))))"
+        , "                   :pattern"
+        , "                   ( (select (dom@{1}@{3} f1) x) ))))"
+        , "(assert (forall ( (y {2})"
+        , "                  (f1 (pfun {0} {2})) )"
+        , "                (! (= (elem@{3} y (set@{1}@{3} f1))"
+        , "                      (exists ( (x {0}) )"
+        , "                              (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                                   (= (apply@{1}@{3} f1 x) y))))"
+        , "                   :pattern"
+        , "                   ( (elem@{3} y (set@{1}@{3} f1)) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (y {2})"
+        , "                  (f1 (pfun {0} {2})) )"
+        , "                (! (= (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                           (= (apply@{1}@{3} f1 x) y))"
+        , "                      (= (select f1 x) (Just y)))"
+        , "                   :pattern"
+        , "                   ())))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x2 {0})"
+        , "                  (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (=> (not (= x x2))"
+        , "                       (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2)"
+        , "                          (apply@{1}@{3} f1 x2)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x2) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (= (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x)"
+        , "                      y)"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)) x) ))))"
+        , "(assert (= (ran@{1}@{3} empty-fun@{1}@{3})"
+        , "           empty-set@{3}))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (y {2}) )"
+        , "                (! (= (elem@{3} y (ran@{1}@{3} f1))"
+        , "                      (exists ( (x {0}) )"
+        , "                              (and true"
+        , "                                   (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                                        (= (apply@{1}@{3} f1 x) y)))))"
+        , "                   :pattern"
+        , "                   ( (elem@{3} y (ran@{1}@{3} f1)) ))))"
+        , "(assert (forall ( (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (= (ran@{1}@{3} (mk-fun@{1}@{3} x y))"
+        , "                      (mk-set@{3} y))"
+        , "                   :pattern"
+        , "                   ( (ran@{1}@{3} (mk-fun@{1}@{3} x y)) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (f2 (pfun {0} {2})) )"
+        , "                (! (subset@{3} (ran@{1}@{3} (ovl@{1}@{3} f1 f2))"
+        , "                                (bunion@{3} (ran@{1}@{3} f1) (ran@{1}@{3} f2)))"
+        , "                   :pattern"
+        , "                   ( (subset@{3} (ran@{1}@{3} (ovl@{1}@{3} f1 f2))"
+        , "                                  (bunion@{3} (ran@{1}@{3} f1) (ran@{1}@{3} f2))) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2})) )"
+        , "                (! (= (injective@{1}@{3} f1)"
+        , "                      (forall ( (x {0})"
+        , "                                (x2 {0}) )"
+        , "                              (=> (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                                       (elem@{1} x2 (dom@{1}@{3} f1)))"
+        , "                                  (=> (= (apply@{1}@{3} f1 x)"
+        , "                                         (apply@{1}@{3} f1 x2))"
+        , "                                      (= x x2)))))"
+        , "                   :pattern"
+        , "                   ( (injective@{1}@{3} f1) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (and (injective@{1}@{3} f1)"
+        , "                            (elem@{1} x (dom@{1}@{3} f1)))"
+        , "                       (= (ran@{1}@{3} (dom-subt@{1}@{3} (mk-set@{1} x) f1))"
+        , "                          (set-diff@{3} (ran@{1}@{3} f1)"
+        , "                                         (mk-set@{3} (apply@{1}@{3} f1 x)))))"
+        , "                   :pattern"
+        , "                   ( (ran@{1}@{3} (dom-subt@{1}@{3} (mk-set@{1} x) f1)) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (x2 {0}) )"
+        , "                (! (=> (and (not (= x x2))"
+        , "                            (elem@{1} x2 (dom@{1}@{3} f1)))"
+        , "                       (= (apply@{1}@{3} (dom-subt@{1}@{3} (mk-set@{1} x) f1) x2)"
+        , "                          (apply@{1}@{3} f1 x2)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-subt@{1}@{3} (mk-set@{1} x) f1) x2) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (elem@{1} x (dom@{1}@{3} f1))"
+        , "                       (= (apply@{1}@{3} (dom-rest@{1}@{3} (mk-set@{1} x) f1) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-rest@{1}@{3} (mk-set@{1} x) f1) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (s1 (set {0})) )"
+        , "                (! (=> (and (not (elem@{1} x s1))"
+        , "                            (elem@{1} x (dom@{1}@{3} f1)))"
+        , "                       (= (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-subt@{1}@{3} s1 f1) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (s1 (set {0})) )"
+        , "                (! (=> (and (elem@{1} x s1)"
+        , "                            (elem@{1} x (dom@{1}@{3} f1)))"
+        , "                       (= (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x)"
+        , "                          (apply@{1}@{3} f1 x)))"
+        , "                   :pattern"
+        , "                   ( (apply@{1}@{3} (dom-rest@{1}@{3} s1 f1) x) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0}) )"
+        , "                (! (=> (elem@{1} x (dom@{1}@{3} f1))"
+        , "                       (elem@{3} (apply@{1}@{3} f1 x) (ran@{1}@{3} f1)))"
+        , "                   :pattern"
+        , "                   ( (elem@{3} (apply@{1}@{3} f1 x) (ran@{1}@{3} f1)) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (s1 (set {0})) )"
+        , "                (! (=> (elem@{1} x (set-diff@{1} (dom@{1}@{3} f1) s1))"
+        , "                       (elem@{3} (apply@{1}@{3} f1 x)"
+        , "                                  (ran@{1}@{3} (dom-subt@{1}@{3} s1 f1))))"
+        , "                   :pattern"
+        , "                   ( (elem@{3} (apply@{1}@{3} f1 x)"
+        , "                                (ran@{1}@{3} (dom-subt@{1}@{3} s1 f1))) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (s1 (set {0})) )"
+        , "                (! (=> (elem@{1} x (intersect@{1} (dom@{1}@{3} f1) s1))"
+        , "                       (elem@{3} (apply@{1}@{3} f1 x)"
+        , "                                  (ran@{1}@{3} (dom-rest@{1}@{3} s1 f1))))"
+        , "                   :pattern"
+        , "                   ( (elem@{3} (apply@{1}@{3} f1 x)"
+        , "                                (ran@{1}@{3} (dom-rest@{1}@{3} s1 f1))) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (=> (and (elem@{1} x (dom@{1}@{3} f1))"
+        , "                            (injective@{1}@{3} f1))"
+        , "                       (= (ran@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)))"
+        , "                          (bunion@{3} (set-diff@{3} (ran@{1}@{3} f1)"
+        , "                                                      (mk-set@{3} (apply@{1}@{3} f1 x)))"
+        , "                                       (mk-set@{3} y))))"
+        , "                   :pattern"
+        , "                   ( (ran@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y))) ))))"
+        , "(assert (forall ( (f1 (pfun {0} {2}))"
+        , "                  (x {0})"
+        , "                  (y {2}) )"
+        , "                (! (=> (not (elem@{1} x (dom@{1}@{3} f1)))"
+        , "                       (= (ran@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y)))"
+        , "                          (bunion@{3} (ran@{1}@{3} f1) (mk-set@{3} y))))"
+        , "                   :pattern"
+        , "                   ( (ran@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y))) ))))"
+        ] -- 27
 
 data AxiomOption = WithPFun
     deriving Eq
 
 comp_facts :: [AxiomOption] -> [String]
 comp_facts xs = 
-           ( map (\x -> "(assert " ++ x ++ ")") $
-             map snd    (     (if (WithPFun `elem` xs) then
+           ( map snd    (     (if (WithPFun `elem` xs) then
                                concatMap set_facts 
                                 [ --  ("(pfun TRAIN BLK)", "Open@@pfun@@TRAIN@@BLK@Close")
                                 ]
@@ -652,16 +806,22 @@ comp_facts xs =
                                 ] ) )
 named_facts :: [String]
 named_facts = 
-        map f
-            [ ( "; \\BLK-def"
-            ,   "(forall ((x@@ BLK)) (=> true (elem@@BLK x@@ BLK)))" )
-            , ( "; \\LOC-def"
-            ,   "(forall ((x@@ LOC)) (=> true (elem@@LOC x@@ LOC)))" )
-            , ( "; \\TRAIN-def"
-            ,   "(forall ((x@@ TRAIN)) (=> true (elem@@TRAIN x@@ TRAIN)))" )
-            ]
-    where
-        f (x,y) = x ++ "\n(assert " ++ y ++ ")"
+        [ "; \\BLK-def"
+        , "(assert (forall ( (x@@ BLK) )"
+        , "                (! (elem@@BLK x@@ BLK)"
+        , "                   :pattern"
+        , "                   ( (elem@@BLK x@@ BLK) ))))"
+        , "; \\LOC-def"
+        , "(assert (forall ( (x@@ LOC) )"
+        , "                (! (elem@@LOC x@@ LOC)"
+        , "                   :pattern"
+        , "                   ( (elem@@LOC x@@ LOC) ))))"
+        , "; \\TRAIN-def"
+        , "(assert (forall ( (x@@ TRAIN) )"
+        , "                (! (elem@@TRAIN x@@ TRAIN)"
+        , "                   :pattern"
+        , "                   ( (elem@@TRAIN x@@ TRAIN) ))))" ]
+
 
 path0 :: String
 path0 = "Tests/train-station.tex"
@@ -788,8 +948,11 @@ case1 = do
     r <- list_file_obligations path0
     case r of
         Right [m] -> do
-            (s,_,_) <- str_verify_machine $ fst m
-            return (s, snd m)
+            let h :: SomeException -> IO (String, Map Label Sequent)
+                h x = return (show x, snd m)
+            handle h $ do
+                (s,_,_) <- str_verify_machine $ fst m
+                return (s, snd m)
         x -> return (show x, empty)
         
 result2 :: String
@@ -798,27 +961,34 @@ result2 = unlines (
      ++ train_decl False False
      ++ set_decl_smt2 []
      ++ comp_facts [] ++ -- set_decl_smt2 ++
-     [  "(assert (not (exists ((in (set TRAIN)))"
-                         ++ " (and true (= in empty-set@@TRAIN)))))" ]
+     [  "(assert (not (exists ( (in (set TRAIN)) )"
+     ,  "                     (and true (= in empty-set@@TRAIN)))))" ]
      ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
-            ++      " (not (elem@@BLK ent PLF))"
-            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "             (not (elem@@BLK ent PLF))"
+     ,  "             (not (elem@@BLK ext PLF))))"
      ,  "; asm3"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ext))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ext))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm4"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ent))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ent))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm5"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (or (= p ent) (= p ext))"
-            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; axm0"
-     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (= BLK"
+     ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+     ,  "                        PLF)))"
      ,  "(assert (not (= empty-set@@TRAIN empty-set@@TRAIN)))"
      ] 
      ++ check_sat
@@ -836,7 +1006,7 @@ case2 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/INIT/FIS/in"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 
@@ -846,27 +1016,34 @@ result20 = unlines (
      ++ train_decl False False
      ++ set_decl_smt2 [WithPFun]
      ++ comp_facts [WithPFun] ++ 
-     [  "(assert (not (exists ((loc (pfun TRAIN BLK)))"
-                         ++ " (and true (= loc empty-fun@@TRAIN@@BLK)))))" ]
+     [  "(assert (not (exists ( (loc (pfun TRAIN BLK)) )"
+     ,  "                     (and true (= loc empty-fun@@TRAIN@@BLK)))))" ]
      ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
-            ++      " (not (elem@@BLK ent PLF))"
-            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "             (not (elem@@BLK ent PLF))"
+     ,  "             (not (elem@@BLK ext PLF))))"
      ,  "; asm3"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ext))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ext))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm4"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ent))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ent))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm5"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (or (= p ent) (= p ext))"
-            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; axm0"
-     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (= BLK"
+     ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+     ,  "                        PLF)))"
      ,  "(assert (not (= empty-fun@@TRAIN@@BLK empty-fun@@TRAIN@@BLK)))"
      ] 
      ++ check_sat
@@ -878,7 +1055,7 @@ case20 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/INIT/FIS/loc"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
             
@@ -888,39 +1065,48 @@ result3 = unlines (
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
-     [  "(assert (not (exists ((in@prime (set TRAIN)))"
-                        ++  " (and true (= in@prime"
-                        ++               " (set-diff@@TRAIN in"
-                        ++                                " (mk-set@@TRAIN t)))))))" ]
+     [  "(assert (not (exists ( (in@prime (set TRAIN)) )"
+     ,  "                     (and true"
+     ,  "                          (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t)))))))" ]
      ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
-            ++      " (not (elem@@BLK ent PLF))"
-            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "             (not (elem@@BLK ent PLF))"
+     ,  "             (not (elem@@BLK ext PLF))))"
      ,  "; asm3"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ext))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ext))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm4"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ent))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ent))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm5"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (or (= p ent) (= p ext))"
-            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; axm0"
-     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (= BLK"
+     ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+     ,  "                        PLF)))"
      ,  "; grd0"
-     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
+     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
+     ,  "             (elem@@TRAIN t in)))"
      ,  "; inv1"
-     ,  "(assert (forall ((t TRAIN))"
-            ++        " (=> (elem@@TRAIN t in)"
-            ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
+     ,  "(assert (forall ( (t TRAIN) )"
+     ,  "                (! (=> (elem@@TRAIN t in)"
+     ,  "                       (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))"
+     ,  "                   :pattern"
+     ,  "                   ( (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK) ))))"
      ,  "; inv2"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
      ,  "(assert (not (= (set-diff@@TRAIN in (mk-set@@TRAIN t))"
-                    ++ " (set-diff@@TRAIN in (mk-set@@TRAIN t)))))"
+     ,  "                (set-diff@@TRAIN in (mk-set@@TRAIN t)))))"
      ] ++ 
      check_sat ++
      pop )
@@ -931,7 +1117,7 @@ case3 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/leave/FIS/in@prime"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 
@@ -941,37 +1127,49 @@ result19 = unlines (
      train_decl False True ++ 
      set_decl_smt2 [WithPFun] ++ 
      comp_facts [WithPFun] ++
-     [  "(assert (not (exists ((loc@prime (pfun TRAIN BLK)))"
-                         ++ " (and true (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))" ]
+     [  "(assert (not (exists ( (loc@prime (pfun TRAIN BLK)) )"
+     ,  "                     (and true"
+     ,  "                          (= loc@prime"
+     ,  "                             (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))))" ]
      ++ named_facts ++
      [  "; asm2"
      ,  "(assert (and (not (= ent ext))"
-            ++      " (not (elem@@BLK ent PLF))"
-            ++      " (not (elem@@BLK ext PLF))))"
+     ,  "             (not (elem@@BLK ent PLF))"
+     ,  "             (not (elem@@BLK ext PLF))))"
      ,  "; asm3"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ext))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ext))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm4"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (not (= p ent))"
-            ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (not (= p ent))"
+     ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; asm5"
-     ,  "(assert (forall ((p BLK)) (=> true"
-            ++      " (= (or (= p ent) (= p ext))"
-            ++         " (not (elem@@BLK p PLF))))))"
+     ,  "(assert (forall ( (p BLK) )"
+     ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+     ,  "                   :pattern"
+     ,  "                   ())))"
      ,  "; axm0"
-     ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
+     ,  "(assert (= BLK"
+     ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+     ,  "                        PLF)))"
      ,  "; grd0"
-     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in)))"
+     ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
+     ,  "             (elem@@TRAIN t in)))"
      ,  "; inv1"
-     ,  "(assert (forall ((t TRAIN))"
-            ++        " (=> (elem@@TRAIN t in)"
-            ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
+     ,  "(assert (forall ( (t TRAIN) )"
+     ,  "                (! (=> (elem@@TRAIN t in)"
+     ,  "                       (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))"
+     ,  "                   :pattern"
+     ,  "                   ( (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK) ))))"
      ,  "; inv2"
      ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
      ,  "(assert (not (= (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)"
-                    ++ " (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))"
+     ,  "                (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc))))"
      ] ++ 
      check_sat ++
      pop )
@@ -982,47 +1180,57 @@ case19 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/leave/FIS/loc@prime"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 
 result4 :: String
 result4 = unlines ( 
-        push ++
-        train_decl False True ++ 
-        set_decl_smt2 [WithPFun] ++ 
-        comp_facts [WithPFun] ++
-        named_facts ++
-        [ "; asm2"
-        , "(assert (and (not (= ent ext))"
-              ++      " (not (elem@@BLK ent PLF))"
-              ++      " (not (elem@@BLK ext PLF))))"
-        , "; asm3"
-        , "(assert (forall ((p BLK)) (=> true"
-              ++      " (= (not (= p ext))"
-              ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
-        , "; asm4"
-        , "(assert (forall ((p BLK)) (=> true"
-              ++      " (= (not (= p ent))"
-              ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
-        , "; asm5"
-        , "(assert (forall ((p BLK)) (=> true"
-              ++      " (= (or (= p ent) (= p ext))"
-              ++         " (not (elem@@BLK p PLF))))))"
-        , "; axm0"
-        , "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-        , "; c0"
-        , "(assert (elem@@TRAIN t in))"
-        , "; inv1"
-        , "(assert (forall ((t TRAIN))"
-                ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
-        , "; inv2"
-        , "(assert (= (dom@@TRAIN@@BLK loc) in))"
-        , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext) (elem@@TRAIN t in))))"
-        ] ++ 
-        check_sat ++
-        pop )
+    push ++
+    train_decl False True ++ 
+    set_decl_smt2 [WithPFun] ++ 
+    comp_facts [WithPFun] ++
+    named_facts ++
+    [ "; asm2"
+    , "(assert (and (not (= ent ext))"
+    , "             (not (elem@@BLK ent PLF))"
+    , "             (not (elem@@BLK ext PLF))))"
+    , "; asm3"
+    , "(assert (forall ( (p BLK) )"
+    , "                (! (= (not (= p ext))"
+    , "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+    , "                   :pattern"
+    , "                   ())))"
+    , "; asm4"
+    , "(assert (forall ( (p BLK) )"
+    , "                (! (= (not (= p ent))"
+    , "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+    , "                   :pattern"
+    , "                   ())))"
+    , "; asm5"
+    , "(assert (forall ( (p BLK) )"
+    , "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+    , "                   :pattern"
+    , "                   ())))"
+    , "; axm0"
+    , "(assert (= BLK"
+    , "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+    , "                        PLF)))"
+    , "; c0"
+    , "(assert (elem@@TRAIN t in))"
+    , "; inv1"
+    , "(assert (forall ( (t TRAIN) )"
+    , "                (! (=> (elem@@TRAIN t in)"
+    , "                       (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))"
+    , "                   :pattern"
+    , "                   ( (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK) ))))"
+    , "; inv2"
+    , "(assert (= (dom@@TRAIN@@BLK loc) in))"
+    , "(assert (not (and (= (apply@@TRAIN@@BLK loc t) ext)"
+    , "                  (elem@@TRAIN t in))))"
+    ] ++ 
+    check_sat ++
+    pop )
 
 case4 :: IO String
 case4 = do
@@ -1030,64 +1238,77 @@ case4 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/leave/SCH"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 
 result5 :: String
 result5 = unlines ( 
-        push ++
-        train_decl True True ++ 
-        set_decl_smt2 [WithPFun] ++ 
-        comp_facts [WithPFun] ++
-        [  "(assert (not (exists ((t@param TRAIN))"
-                            ++ " (and true (and (=> (elem@@TRAIN t in)"
-                            ++                    " (elem@@TRAIN t@param in))"
-                            ++                " (=> (and (elem@@TRAIN t in)"
-                            ++                         " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
-                            ++                         " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
-                            ++                         " (elem@@TRAIN t@param in)"
-                            ++                         " (= (apply@@TRAIN@@BLK loc t@param) ext)"
-                            ++                         " (elem@@TRAIN t@param in))"
-                            ++                    " (not (elem@@TRAIN t in@prime))))))))" ]
-        ++ named_facts ++
-        [  "; asm2"
-        ,  "(assert (and (not (= ent ext))"
-               ++      " (not (elem@@BLK ent PLF))"
-               ++      " (not (elem@@BLK ext PLF))))"
-        ,  "; asm3"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ext))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
-        ,  "; asm4"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ent))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
-        ,  "; asm5"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (or (= p ent) (= p ext))"
-               ++         " (not (elem@@BLK p PLF))))))"
-        ,  "; axm0"
-        ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-        ,  "; inv1"
-        ,  "(assert (forall ((t TRAIN))"
-                ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
-        ,  "; inv2"
-        ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-        ,  "(assert (not (exists ((t@param TRAIN)) (and true"
-                ++ " (and (=> (elem@@TRAIN t in)"
-                ++          " (elem@@TRAIN t@param in))"
-                ++      " (=> (and (elem@@TRAIN t in)"
-                ++               " (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
-                ++               " (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
-                ++               " (elem@@TRAIN t@param in)"
-                ++               " (= (apply@@TRAIN@@BLK loc t@param) ext)"
-                ++               " (elem@@TRAIN t@param in))"
-                ++          " (not (elem@@TRAIN t in@prime))))))))"
-        ] ++ 
-        check_sat ++
-        pop  )
+    push ++
+    train_decl True True ++ 
+    set_decl_smt2 [WithPFun] ++ 
+    comp_facts [WithPFun] ++
+    [  "(assert (not (exists ( (t@param TRAIN) )"
+    ,  "                     (and true"
+    ,  "                          (and (=> (elem@@TRAIN t in) (elem@@TRAIN t@param in))"
+    ,  "                               (=> (and (elem@@TRAIN t in)"
+    ,  "                                        (= in@prime"
+    ,  "                                           (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
+    ,  "                                        (= loc@prime"
+    ,  "                                           (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
+    ,  "                                        (elem@@TRAIN t@param in)"
+    ,  "                                        (= (apply@@TRAIN@@BLK loc t@param) ext)"
+    ,  "                                        (elem@@TRAIN t@param in))"
+    ,  "                                   (not (elem@@TRAIN t in@prime))))))))" ]
+    ++ named_facts ++
+    [  "; asm2"
+    ,  "(assert (and (not (= ent ext))"
+    ,  "             (not (elem@@BLK ent PLF))"
+    ,  "             (not (elem@@BLK ext PLF))))"
+    ,  "; asm3"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (not (= p ext))"
+    ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; asm4"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (not (= p ent))"
+    ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; asm5"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; axm0"
+    ,  "(assert (= BLK"
+    ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+    ,  "                        PLF)))"
+    ,  "; inv1"
+    ,  "(assert (forall ( (t TRAIN) )"
+    ,  "                (! (=> (elem@@TRAIN t in)"
+    ,  "                       (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))"
+    ,  "                   :pattern"
+    ,  "                   ( (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK) ))))"
+    ,  "; inv2"
+    ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
+    ,  "(assert (not (exists ( (t@param TRAIN) )"
+    ,  "                     (and true"
+    ,  "                          (and (=> (elem@@TRAIN t in) (elem@@TRAIN t@param in))"
+    ,  "                               (=> (and (elem@@TRAIN t in)"
+    ,  "                                        (= in@prime"
+    ,  "                                           (set-diff@@TRAIN in (mk-set@@TRAIN t@param)))"
+    ,  "                                        (= loc@prime"
+    ,  "                                           (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t@param) loc))"
+    ,  "                                        (elem@@TRAIN t@param in)"
+    ,  "                                        (= (apply@@TRAIN@@BLK loc t@param) ext)"
+    ,  "                                        (elem@@TRAIN t@param in))"
+    ,  "                                   (not (elem@@TRAIN t in@prime))))))))"
+    ] ++ 
+    check_sat ++
+    pop  )
 
 case5 :: IO String
 case5 = do
@@ -1095,7 +1316,7 @@ case5 = do
         case pos of
             Right [(_,pos)] -> do
                 let po = pos ! label "train0/leave/TR/tr0"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 
@@ -1128,46 +1349,56 @@ case5 = do
 
 result12 :: String
 result12 = unlines ( 
-        push ++
-        train_decl True True ++ 
-        set_decl_smt2 [WithPFun] ++ 
-        comp_facts [WithPFun] ++
-        named_facts ++
-        [  "; a0"
-        ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
-        ,  "; a3"
-        ,  "(assert (= loc@prime (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
-        ,  "; asm2"
-        ,  "(assert (and (not (= ent ext))"
-               ++      " (not (elem@@BLK ent PLF))"
-               ++      " (not (elem@@BLK ext PLF))))"
-        ,  "; asm3"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ext))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF))))))"
-        ,  "; asm4"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (not (= p ent))"
-               ++         " (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF))))))"
-        ,  "; asm5"
-        ,  "(assert (forall ((p BLK)) (=> true"
-               ++      " (= (or (= p ent) (= p ext))"
-               ++         " (not (elem@@BLK p PLF))))))"
-        ,  "; axm0"
-        ,  "(assert (= BLK (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext)) PLF)))"
-        ,  "; grd0"
-        ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
-                ++     " (elem@@TRAIN t in)))"
-        ,  "; inv1"
-        ,  "(assert (forall ((t TRAIN))"
-                ++        " (=> (elem@@TRAIN t in)"
-                ++            " (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))))"
-        ,  "; inv2"
-        ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
-        ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
-        ] ++ 
-        check_sat ++
-        pop )
+    push ++
+    train_decl True True ++ 
+    set_decl_smt2 [WithPFun] ++ 
+    comp_facts [WithPFun] ++
+    named_facts ++
+    [  "; a0"
+    ,  "(assert (= in@prime (set-diff@@TRAIN in (mk-set@@TRAIN t))))"
+    ,  "; a3"
+    ,  "(assert (= loc@prime"
+    ,  "           (dom-subt@@TRAIN@@BLK (mk-set@@TRAIN t) loc)))"
+    ,  "; asm2"
+    ,  "(assert (and (not (= ent ext))"
+    ,  "             (not (elem@@BLK ent PLF))"
+    ,  "             (not (elem@@BLK ext PLF))))"
+    ,  "; asm3"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (not (= p ext))"
+    ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ent) PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; asm4"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (not (= p ent))"
+    ,  "                      (elem@@BLK p (bunion@@BLK (mk-set@@BLK ext) PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; asm5"
+    ,  "(assert (forall ( (p BLK) )"
+    ,  "                (! (= (or (= p ent) (= p ext)) (not (elem@@BLK p PLF)))"
+    ,  "                   :pattern"
+    ,  "                   ())))"
+    ,  "; axm0"
+    ,  "(assert (= BLK"
+    ,  "           (bunion@@BLK (bunion@@BLK (mk-set@@BLK ent) (mk-set@@BLK ext))"
+    ,  "                        PLF)))"
+    ,  "; grd0"
+    ,  "(assert (and (= (apply@@TRAIN@@BLK loc t) ext)"
+    ,  "             (elem@@TRAIN t in)))"
+    ,  "; inv1"
+    ,  "(assert (forall ( (t TRAIN) )"
+    ,  "                (! (=> (elem@@TRAIN t in)"
+    ,  "                       (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK))"
+    ,  "                   :pattern"
+    ,  "                   ( (elem@@BLK (apply@@TRAIN@@BLK loc t) BLK) ))))"
+    ,  "; inv2"
+    ,  "(assert (= (dom@@TRAIN@@BLK loc) in))"
+    ,  "(assert (not (= (dom@@TRAIN@@BLK loc@prime) in@prime)))"
+    ] ++ 
+    check_sat ++
+    pop )
 
 case12 :: IO String
 case12 = do
@@ -1175,7 +1406,7 @@ case12 = do
         case r of
             Right [m] -> do
                 let po = raw_machine_pos m ! label "train0/leave/INV/inv2"
-                let cmd = unlines $ map (show . as_tree) $ z3_code po
+                let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
 

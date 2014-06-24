@@ -78,5 +78,5 @@ to_latex (FunApp (Fun _ "=" _ _) [Word (Var x _),Word (Var y _)])
             where
                 (prefix, suffix) = splitAt (length x - length prime) x
 to_latex e 
-    | e == zfalse = "\false " ++ generated_by
+    | e == zfalse = "\\false " ++ generated_by
     | otherwise   = error $ "ExprStore.to_latex: cannot convert expression to LaTeX: " ++ show e

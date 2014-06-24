@@ -15,7 +15,7 @@ main = do
         forM_ xs $ \fn -> do
             putStrLn fn
             system (format "head -n 2 {0}" fn)
-            system (format "time z3 -smt2 -T:10 {0}" fn)
+            system (format "time z3 -smt2 -T:30 {0}" fn)
     where
         f x xs = x == take (length x) xs
 

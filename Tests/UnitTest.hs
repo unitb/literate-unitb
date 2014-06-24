@@ -181,7 +181,7 @@ test_suite_string :: [(Maybe (IO (M.Map Label Sequent)), String, IO String, Stri
 test_suite_string xs = do
         n  <- readIORef margin
         let bars = concat $ take n $ repeat "|  "
-        let putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
+            putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
         writeIORef margin (n+1)
         xs <- forM xs (\(s,x,y,z,b) -> do
             putLn ("+- " ++ x)
@@ -202,7 +202,7 @@ test_suite_string xs = do
                     putLn ("   Exception:  " ++ m)
                     return False )
         let x = length xs
-        let y = length $ filter id xs
+            y = length $ filter id xs
         writeIORef margin n
         putLn (format "+- [ Success: {0} / {1} ]" y x)
         return (and xs)

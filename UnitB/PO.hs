@@ -528,7 +528,8 @@ verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos = do
     let xs = M.toList pos
     let (lbls,pos) = unzip xs 
-    ys <- discharge_all pos
+    ys <- map_failures (lbls !!) 
+            $ discharge_all pos
     rs <- forM (zip lbls ys) $ \(lbl,r) -> do
 --    rs <- forM xs $ \(lbl, po) -> do
 --            r <- discharge po
@@ -560,7 +561,7 @@ verify_changes m old_pos = do
             | p0 == p1  = Nothing 
             | otherwise = Just p0
         g (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
-                
+                 
 str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
         case proof_obligation m of
