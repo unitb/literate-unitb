@@ -134,11 +134,18 @@ clear = do
         then liftIO $ putStr $ take 40 $ cycle "\n"
         else return ()
 
-check_file :: (MonadIO m, MonadState Params m) 
-           => m ()
+handle' :: Exception e => (e -> StateT a IO b) -> StateT a IO b -> StateT a IO b
+handle' h cmd = StateT $ \st -> do
+        handle (flip runStateT st . h) $ runStateT cmd st
+
+check_file :: StateT Params IO ()
+-- check_file :: (MonadIO m, MonadState Params m) 
+--            => m ()
 check_file = do
         param <- get
-        let { p ln = verbose param || take 4 ln /= "  o " }
+        let p ln = verbose param || take 4 ln /= "  o " 
+            h :: SomeException -> StateT a IO ()
+            h e = liftIO $ putStrLn $ "failed: " ++ path param ++ ", " ++ show e
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
             lift $ produce_summaries (takeDirectory $ path param) s
@@ -146,7 +153,7 @@ check_file = do
         case r of
             Right (ms,ts) -> do
                 if no_verif param then return ()
-                else do
+                else handle' h $ do
                     xs <- forM ms check_one
                     clear
                     forM_ xs $ \(n,xs) -> liftIO $ do

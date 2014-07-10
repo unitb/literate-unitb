@@ -52,6 +52,7 @@ rewrite_types xs (Const gs v t)             = rewrite fe $ Const gs2 v u
         ft          = suffix_generics xs
         u           = ft t
         gs2         = map ft gs
+rewrite_types xs (Cast kw e t) = Cast kw (rewrite_types xs e) (suffix_generics xs t)
 rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_args
     where
         fe          = rewrite_types xs
@@ -288,6 +289,10 @@ strip_generics (Const ts m t) = do
     t  <- type_strip_generics t
     ts <- mapM type_strip_generics ts
     return (Const ts m t)
+strip_generics (Cast kw e t) = do
+    e <- strip_generics e
+    t <- type_strip_generics t
+    return (Cast kw e t)
 strip_generics (FunApp f xs) = do
     f  <- fun_strip_generics f
     xs <- mapM strip_generics xs
@@ -393,12 +398,14 @@ instance Generic Var where
 instance Generic Expr where
     types_of (Word (Var _ t)) = S.singleton t
     types_of (Const ts _ t)   = S.fromList $ t : ts
+    types_of (Cast _ e t)     = S.insert t $ types_of e
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp) = S.unions $ types_of r : types_of xp : map types_of vs
     substitute_types g x = f x
       where
         f (Const gs x t)    = Const (map g gs) x $ g t
         f (Word x)          = Word $ h x
+        f (Cast kw e t)     = Cast kw (f e) (g t) 
         f (FunApp fun args) 
                 = rewrite f $ FunApp (substitute_types g fun) (map (substitute_types g) args)
         f (Binder q vs r e) 
@@ -412,6 +419,9 @@ ambiguities e@(Word (Var _ t))
 ambiguities e@(Const _ _ t)    
         | S.null $ generics t = []
         | otherwise           = [e]
+ambiguities e@(Cast _ e' t)
+        | not $ S.null $ generics t = [e]
+        | otherwise                 = ambiguities e'
 ambiguities e@(FunApp f xp)    
         | not $ L.null children     = children
         | not $ S.null $ generics f = [e]

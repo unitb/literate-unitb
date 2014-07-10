@@ -50,7 +50,8 @@ data Calculation = Calc
         ,  l_info     :: LineInfo }
     deriving (Eq, Typeable)
 
-data TheoremRef = ThmRef Label [(Var,Expr)]
+data TheoremRef = 
+        ThmRef Label [(Var,Expr)]
     deriving (Eq,Show)
 
 -- instance Eq Proof where

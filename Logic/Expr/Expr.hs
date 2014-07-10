@@ -32,6 +32,7 @@ data AbsExpr t =
         | Const [t] String t
         | FunApp (AbsFun t) [AbsExpr t]
         | Binder Quantifier [AbsVar t] (AbsExpr t) (AbsExpr t)
+        | Cast (Maybe String) (AbsExpr t) t
     deriving (Eq, Ord, Typeable, Generic)
 
 data Quantifier = Forall | Exists | Lambda
@@ -44,6 +45,7 @@ type ExprPG t = Either String (AbsExpr t)
 type_of :: TypeSystem t => AbsExpr t -> t
 type_of (Word (Var _ t))         = t
 type_of (Const _ _ t)            = t
+type_of (Cast _ _ t)             = t
 type_of (FunApp (Fun _ _ _ t) _) = t
 type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
     where
@@ -184,6 +186,9 @@ instance Show Quantifier where
     show Lambda = "lambda"
 
 instance TypeSystem t => Tree (AbsExpr t) where
+    as_tree (Cast Nothing e t)   = List [Str "as", as_tree e, as_tree t]
+    as_tree (Cast (Just kw) e t) = List [ List [Str "as", Str kw, as_tree t]
+                                        , as_tree e]
     as_tree (Word (Var xs _))    = Str xs
     as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
     as_tree (Const ys xs _)        = Str (xs ++ concatMap z3_decoration ys)
@@ -200,6 +205,7 @@ instance TypeSystem t => Tree (AbsExpr t) where
             , as_tree xp ] ]
     rewriteM' _ s x@(Word _)           = return (s,x)
     rewriteM' _ s x@(Const _ _ _)      = return (s,x)
+    rewriteM' f s (Cast _ e _)         = f s e 
     rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1,FunApp g ys)
@@ -219,9 +225,9 @@ instance TypeSystem t => Tree (AbsDecl t) where
                 (as_tree ran) ]
     as_tree (ConstDecl n t) =
             List [ Str "declare-const", Str n, as_tree t ]
-    as_tree (FunDef _ name dom ran val) =
+    as_tree (FunDef ts name dom ran val) =
             List [ Str "define-fun", 
-                Str name, 
+                Str $ name ++ concatMap z3_decoration ts, 
                 (List $ map as_tree dom), 
                 (as_tree ran),
                 (as_tree val) ]

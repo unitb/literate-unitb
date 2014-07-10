@@ -18,6 +18,14 @@ set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
+as_array :: TypeSystem t => t -> AbsExpr t -> AbsExpr t
+as_array t x = FunApp (Fun [] ("(as const " ++ show (as_tree t) ++ ")") [] t) [x]
+
+map_array :: String -> Type -> [ExprP] -> ExprP
+map_array name t xs = do
+    xs <- sequence xs
+    return $ FunApp (Fun [] ("(_ map " ++ name ++ ")") (L.map type_of xs) t) xs
+
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
     where
@@ -28,25 +36,26 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         consts  = M.empty
         dummies = M.empty
         types = symbol_table [set_sort]
-        funs = M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
+        defs = symbol_table 
+                [ Def [gT] "empty-set" [] (set_type gT) 
+                        (ztypecast "const" (set_type gT) zfalse)
+                , Def [gT] "elem" [x_decl, s1_decl] bool 
+                        (fromJust $ zset_select s1 x)
+                , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
+                        (fromJust $ s1 `zintersect` map_array "not" (set_type gT) [s2])
+                , Def [gT] "compl" [s1_decl] (set_type gT)
+                        (fromJust $ map_array "not" (set_type gT) [s1])
+                ]
+        funs = 
+            -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table [
-                Fun [gT] "intersect" [set_type gT,set_type gT] $ set_type gT,
-                Fun [gT] "empty-set" [] $ set_type gT,
-                Fun [gT] "elem" [gT,set_type gT] bool,
-                Fun [gT] "subset" [set_type gT,set_type gT] bool,
-                Fun [gT] "set-diff" [set_type gT,set_type gT] $ set_type gT,
                 Fun [gT] "mk-set" [gT] $ set_type gT ]
         fact :: Map Label Expr
         fact = fromList 
                 [ (label $ dec' "0", axm0)
-                , (label $ dec' "1", axm1)
-                , (label $ dec' "2", axm2)
-                , (label $ dec' "3", axm3)
-                , (label $ dec' "4", axm4)
-                , (label $ dec' "5", axm5)
-                , (label $ dec' "6", axm6)
-                , (label $ dec' "7", axm7)
-                , (label $ dec' "8", axm8)
+                -- , (label $ dec' "3", axm3)
+                -- , (label $ dec' "6", axm6)
+                -- , (label $ dec' "7", axm7)
                 ]
         thm_depend = []
         notation   = set_notation
@@ -54,38 +63,19 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             -- elem and mk-set
         axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue 
                     ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
-            -- elem over set-diff
-        axm1 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
-                            (x `zelem` (s1 `zsetdiff` s2)) 
-                    `mzeq` ( (x `zelem` s1) `mzand` mznot (x `zelem` s2) ))
-            -- elem over intersect
-        axm2 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
-                            (x `zelem` (s1 `zintersect` s2)) 
-                    `mzeq` ( (x `zelem` s1) `mzand` (x `zelem` s2) ))
             -- elem over union
-        axm3 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
-                            (x `zelem` (s1 `zunion` s2)) 
-                    `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
+        -- axm3 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
+        --                     (x `zelem` (s1 `zunion` s2)) 
+        --             `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
             -- elem over empty-set
-        axm4 = fromJust $ mzforall [x_decl] mztrue (
-                            mznot (x `zelem` Right zempty_set)  )
-        axm5 = fromJust $ mzforall [x_decl,s1_decl] mztrue (
-                            mzeq (zelem x s1)
-                                (zset_select s1 x)  )
 --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
-            -- subset extensionality
-        axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
-                        ( s1 `zsubset` s2 )
-                    `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
-            -- antisymmetry
-        axm7 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
-                        mzand ( s1 `zsubset` s2 )
-                              ( s2 `zsubset` s1 )
-                    `mzeq` (s1 `mzeq` s2)
-        axm8 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
-                        ( (s1 `zintersect` s2) `mzeq` Right zempty_set )
-                    `mzeq` (mzforall [x_decl] mztrue $
-                        mznot (x `zelem` s1) `mzor` mznot (x `zelem` s2))
+        -- axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+        --                 ( s1 `zsubset` s2 )
+        --             `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
+        -- axm7 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
+        --                 mzand ( s1 `zsubset` s2 )
+        --                       ( s2 `zsubset` s1 )
+        --             `mzeq` (s1 `mzeq` s2)
         (x,x_decl) = var "x" t
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" $ set_type t
@@ -101,6 +91,7 @@ zelem         :: ExprP -> ExprP -> ExprP
 zsubset       :: ExprP -> ExprP -> ExprP
 zsetdiff      :: ExprP -> ExprP -> ExprP
 zintersect    :: ExprP -> ExprP -> ExprP
+zcompl        :: ExprP -> ExprP
 
 zunion        :: ExprP -> ExprP -> ExprP
 zmk_set       :: ExprP -> ExprP
@@ -108,18 +99,22 @@ zset_enum     :: [ExprP] -> ExprP
 
 zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] bool)
 
-zempty_set   = Const [gA] "empty-set" $ set_type gA
-
 zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] bool)
-zsubset      = typ_fun2 (Fun [gA] "subset" [set_type gA,set_type gA] bool)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
-zintersect   = typ_fun2 (Fun [gA] "intersect" [set_type gA,set_type gA] $ set_type gA)
 
-zunion       = typ_fun2 (Fun [gA] "bunion" [set_type gA,set_type gA] $ set_type gA)
+
+zempty_set   = Const [gA] "empty-set" $ set_type gA
+zsubset      = typ_fun2 (Fun [] "subset" [set_type gA,set_type gA] bool)
+zintersect   = typ_fun2 (Fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
+zunion       = typ_fun2 (Fun [] "union" [set_type gA,set_type gA] $ set_type gA)
+zcompl       = typ_fun1 (Fun [gA] "compl" [set_type gA] $ set_type gA)
+
 zmk_set      = typ_fun1 (Fun [gA] "mk-set" [gA] $ set_type gA)
-zset_enum xs = foldl zunion y ys 
+zset_enum (x:xs) = foldl zunion y ys 
     where
-        (y:ys) = L.map zmk_set xs
+        y  = zmk_set x
+        ys = L.map zmk_set xs
+zset_enum [] = return zempty_set
 
 dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t
@@ -139,6 +134,7 @@ subset      :: BinOperator
 superset    :: BinOperator
 st_subset   :: BinOperator
 st_superset :: BinOperator
+compl       :: UnaryOperator
 
 set_union       = BinOperator "union" "\\bunion"        zunion
 set_intersect   = BinOperator "intersect" "\\binter" zintersect
@@ -148,13 +144,17 @@ subset          = BinOperator "subset"     "\\subseteq" zsubset
 superset        = BinOperator "superset"   "\\supseteq" (flip zsubset)
 st_subset       = BinOperator "st-subset"   "\\subset" zsubset
 st_superset     = BinOperator "st-superset" "\\supset" (flip zsubset)
+compl           = UnaryOperator "complement" "\\compl" zcompl
 
 set_notation :: Notation
 set_notation = with_assoc empty_notation
-    { new_ops     = L.map Right 
+    { new_ops     = Left compl : 
+                    L.map Right 
                     [ set_union,set_diff,membership,set_intersect
-                    , subset,superset,st_subset,st_superset]
-    , prec = [ L.map (L.map Right)
+                    , subset,superset,st_subset,st_superset
+                    ]
+    , prec = [   [ Left compl ]
+               : L.map (L.map Right)
                  [ [apply]
                  , [set_union,set_diff,set_intersect]
                  , [ equal

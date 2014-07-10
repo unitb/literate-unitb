@@ -25,6 +25,7 @@ module Z3.Z3
     , to_fol_ctx
     , patterns
     , match_all
+    , map_failures
     , match_some )
 where
 
@@ -43,6 +44,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 
+import           Data.Char
 import           Data.Function
 import           Data.List as L hiding (union)
 import           Data.List.Ordered as OL hiding (member)

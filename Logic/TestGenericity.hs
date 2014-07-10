@@ -224,6 +224,10 @@ result8 = unlines
     , "(and (= 7 7) (= 7 87))"
     ]
 
+fromRight :: Either a b -> b
+fromRight (Right x) = x
+fromRight _ = error "expecting right"
+
 case8 :: IO String
 case8 = return $ concatMap pretty_print' $ disjuncts e'
     where
@@ -235,7 +239,7 @@ case8 = return $ concatMap pretty_print' $ disjuncts e'
         e0 = mzexists [z_decl] mztrue $ 
                             (p `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))
-        (Right e) = mzexists [z_decl] mztrue $ 
+        e = fromRight $ mzexists [z_decl] mztrue $ 
                             (p `mzor` e0 `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))
         e' = one_point_rule e

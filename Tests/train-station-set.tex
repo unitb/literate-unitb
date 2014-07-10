@@ -151,7 +151,7 @@ This takes care of \eqref{m1:saf1}
 \\ \assumption{asm0}
 	{ \neg ext \in plf \1\land \neg ext = ent }
 \end{align*}
-
+\begin{align*} \assumption{asm7}{ (\{ ext \} \bunion plf = \compl \{ent\}) \land (\{ ent \} \bunion plf = \compl \{ext\}) \land \{ ext, ent \} = \compl plf } \end{align*}
 \subsubsection{Side conditions}
 
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
@@ -498,8 +498,8 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 \end{align*}
 
 \begin{align*} 
-	\invariant{m3:inv2}{ \qforall{t}{}{t \in in \land loc.t \in osgn \1\implies \neg \, ext \in \ran.loc } }
-\\	\invariant{m3:inv3}{ \qforall{p}{}{ p \in osgn \1\implies p \in \ran.loc } }
+	\invariant{m3:inv2}{ ext \in \ran.loc \implies osgn = \emptyset } % \qforall{t}{}{t \in in \land loc.t \in osgn \1\implies \neg \, ext \in \ran.loc } }
+\\	\invariant{m3:inv3}{ osgn \subseteq \ran.loc } %{ \qforall{p}{}{ p \in osgn \1\implies p \in \ran.loc } }
 \end{align*}
 
 \input{../m3_m1-moveout}

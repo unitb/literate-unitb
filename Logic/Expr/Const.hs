@@ -330,3 +330,6 @@ disjuncts (FunApp f xs)
     | name f == "or"  = xs
     -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
+
+ztypecast :: TypeSystem2 t => String -> t -> AbsExpr t -> AbsExpr t
+ztypecast kw t e = Cast (Just kw) e t

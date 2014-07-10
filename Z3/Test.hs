@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Z3.Test where
 
     -- Modules

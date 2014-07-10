@@ -87,6 +87,7 @@ function_theory = Theory { .. }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         types    = symbol_table [fun_sort]
+        defs = empty
         funs =
             symbol_table 
                 [  Fun [t0,t1] "empty-fun" [] $ fun_type t0 t1
@@ -116,7 +117,7 @@ function_theory = Theory { .. }
                 , axm24, axm26, axm27, axm28
                 , axm29, axm30, axm31, axm32
                 , axm33, axm34, axm35, axm36
-                , axm37
+                , axm37, axm38
                 ]
 
         notation = function_notation
@@ -153,8 +154,8 @@ function_theory = Theory { .. }
 --            ( as_fun (Right zempty_fun) `zelem` ztfun (as_dom $ Right zempty_set) s2 )
             -- dom and overload
         axm0 = fromJust $ mzforall [f1_decl,f2_decl] mztrue (
-                            (zdom f1 `zunion` zdom f2) 
-                    `mzeq` (zdom (f1 `zovl` f2)))
+                           (zdom (f1 `zovl` f2))
+                    `mzeq` (zdom f1 `zunion` zdom f2) )
             -- dom and tfun
             -- dom-rest and tfun
             -- dom-subst and tfun
@@ -294,6 +295,12 @@ function_theory = Theory { .. }
                         ( mznot $ x `zelem` zdom f1 ) $
                                 (zran $ f1 `zovl` zmk_fun x y)
                         `mzeq`  (zran f1 `zunion` zmk_set y)
+            -- 
+        axm38 = fromJust $ mzforall [f1_decl,y_decl] mztrue $
+                        ( zset f1 `mzeq` zmk_set y )
+                `mzeq`  mzforall [x_decl] mztrue
+                        (       (zrep_select f1 x `mzeq` zjust y) 
+                         `mzor` (zrep_select f1 x `mzeq` znothing) )
         as_fun e = zcast (fun_type t0 t1) e
     
         (x,x_decl) = var "x" t0

@@ -457,6 +457,7 @@ make_unique suf vs w@(Word (Var vn vt))
         | otherwise           = w
 make_unique _ _ c@(Const _ _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
+make_unique suf vs (Cast kw e t)     = Cast kw (make_unique suf vs e) t
 make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
     where
         local = (L.foldr M.delete vs (map name d))

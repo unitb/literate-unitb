@@ -142,7 +142,13 @@ test_cases xs =
                        , disp r
                        , True  )
         f (StringCase x y z) = return (Nothing, x, y, z, True)
-        f (POCase x y z)     = return (Just $ snd `liftM` y, x, fst `liftM` y, z, True)
+        f (POCase x y z)     = do
+                let cmd = catch (fst `liftM` y) f
+                    f x = putStrLn "*** EXCEPTION ***" >> return (show (x :: SomeException))
+                    get_po = catch (snd `liftM` y) g
+                    g :: SomeException -> IO (M.Map Label Sequent)
+                    g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
+                return (Just get_po, x, cmd, z, True)
         f (LineSetCase x y z) = f (StringCase x 
                                     ((unlines . sort . lines) `liftM` y) 
                                     (unlines $ sort $ lines z))

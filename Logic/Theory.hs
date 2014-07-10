@@ -24,6 +24,7 @@ data Theory = Theory
         { extends    :: Map String Theory
         , types      :: Map String Sort
         , funs       :: Map String Fun
+        , defs       :: Map String Def
         , consts     :: Map String Var
         , fact       :: Map Label Expr
         , dummies    :: Map String Var 
@@ -52,7 +53,8 @@ basic_theory = empty_theory
 empty_theory :: Theory
 empty_theory = Theory M.empty 
     M.empty M.empty M.empty M.empty 
-    M.empty M.empty [] (with_assoc empty_notation)
+    M.empty M.empty M.empty [] 
+    (with_assoc empty_notation)
 
 th_notation :: Theory -> Notation
 th_notation th = res
@@ -65,7 +67,7 @@ th_notation th = res
 theory_ctx :: Theory -> Context
 theory_ctx th = 
         merge_all_ctx $
-            (Context ts c new_fun M.empty dums) : L.map theory_ctx (M.elems d)
+            (Context ts c new_fun (defs th) dums) : L.map theory_ctx (M.elems d)
     where
         d      = extends th
         ts     = types th

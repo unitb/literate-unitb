@@ -168,8 +168,9 @@ prover (Shared { .. }) = do
         inc x = modify_obs working (return . (+x))
         dec x = modify_obs working (return . (+ (-x)))            
         -- handler :: 
-        handler lbl (ErrorCall msg) = 
-            error (format "During {0}: {1}" lbl msg)
+        handler lbl@(_,x) (ErrorCall msg) = do
+            write_obs dump_cmd $ Just $ Just x
+            fail (format "During {0}: {1}" lbl msg)
         worker req = forever $ do
             -- (k,po) <- takeMVar req
             (k,po) <- atomically $ readTBQueue req

@@ -24,6 +24,7 @@ well_definedness (Binder q vs r t) = zforall vs ztrue t'
                 Exists -> well_definedness $ r `zand` t
                 Lambda ->           well_definedness r
                             `zand` (r `zimplies` well_definedness t)
+well_definedness (Cast _ e _) = well_definedness e
 well_definedness (FunApp fun xs) 
         | name fun == "and"   = zsome $ map (f id) ys
         | name fun == "or"    = zsome $ map (f znot) ys
