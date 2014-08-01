@@ -11,7 +11,7 @@ import Control.Monad
 
 import           Data.List as L
 import qualified Data.Map as M
-import           Data.Maybe
+import           Data.Maybe hiding ( fromJust )
 import qualified Data.Set as S
 
 import Utilities.Format
@@ -26,49 +26,6 @@ fun2 :: TypeSystem t
      -> AbsExpr t -> AbsExpr t
 fun2 f x y         = FunApp f [x,y]
 
-typed_fun1 :: (Type -> Either String Fun) 
-           -> ExprP
-           -> ExprP
-typed_fun1 f mx           = do
-        x  <- mx
-        fn <- f $ type_of x
-        return $ FunApp fn [x]
-
-typed_fun2 :: TypeSystem t 
-           => (t -> t -> Either String (AbsFun t)) 
-           -> ExprPG t
-           -> ExprPG t
-           -> ExprPG t
-typed_fun2 f mx my         = do
-        x  <- mx
-        y  <- my
-        fn <- f (type_of x) (type_of y)
-        return $ FunApp fn [x,y]
-
-maybe1 :: TypeSystem t 
-       => (AbsExpr t -> AbsExpr t)
-       -> ExprPG t -> ExprPG t
-maybe1 f mx = do
-        x <- mx
-        return $ f x
-maybe2 :: TypeSystem t 
-       => (AbsExpr t -> AbsExpr t -> AbsExpr t)
-       -> ExprPG t -> ExprPG t
-       -> ExprPG t
-maybe2 f mx my = do
-        x <- mx
-        y <- my
-        return $ f x y
-maybe3 :: TypeSystem t
-       => (   AbsExpr t -> AbsExpr t 
-           -> AbsExpr t -> AbsExpr t)
-       -> ExprPG t -> ExprPG t
-       -> ExprPG t -> ExprPG t
-maybe3 f mx my mz = do
-        x <- mx
-        y <- my
-        z <- mz
-        return $ f x y z
 
 no_errors2 :: TypeSystem t 
            => (   ExprPG t -> ExprPG t
@@ -84,12 +41,7 @@ toErrors li m = case m of
 znot :: TypeSystem2 t => AbsExpr t -> AbsExpr t
 znot         = fun1 $ Fun [] "not" [bool] bool
 zimplies :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
-zimplies x y
-    | x == ztrue  = y
-    | y == ztrue  = ztrue
-    | x == zfalse = ztrue
-    | y == zfalse = znot x 
-    | otherwise   = fun2 (Fun [] "=>"  [bool,bool] bool) x y
+zimplies x y = fromJust $ mzimplies (Right x) (Right y)
 zand :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zand x y     = zall [x,y]
 zor :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
@@ -178,15 +130,23 @@ znothing :: ExprP
 znothing   = Right (Const [] "Nothing" $ maybe_type gA)
 
 mznot :: TypeSystem2 t => ExprPG t -> ExprPG t
-mznot         = maybe1 znot
+mznot         = typ_fun1 $ Fun [] "not" [bool] bool
 mzimplies :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
-mzimplies     = maybe2 zimplies
+mzimplies mx my = do
+        x <- mx
+        y <- my
+        if      x == ztrue  then Right y
+        else if y == ztrue  then Right ztrue
+        else if x == zfalse then Right ztrue
+        else if y == zfalse then Right $ znot x 
+        else typ_fun2 (Fun [] "=>"  [bool,bool] bool) 
+                (Right x) (Right y)
 mzand :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzand x y     = mzall [x,y]
 mzor :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzor x y      = mzsome [x,y]
 mzfollows :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
-mzfollows     = maybe2 zfollows
+mzfollows x y = mzimplies y x
 mztrue :: TypeSystem2 t
        => ExprPG t
 mztrue        = Right ztrue
@@ -243,7 +203,9 @@ zselect :: ExprP -> ExprP -> ExprP
 zselect      = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 zint :: Int -> Expr
 zint n       = Const [] (show n) int
- 
+zreal :: (Show a, Real a) => a -> Expr
+zreal n       = Const [] (show n) real
+
 int :: TypeSystem2 t => t
 int  = make_type IntSort []
 real :: TypeSystem2 t => t
@@ -253,8 +215,12 @@ bool = make_type BoolSort []
 
 mzless :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
+mzgreater :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzgreater        = typ_fun2 $ Fun [] ">" [int,int] bool
 mzle :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] bool
+mzge :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzge          = typ_fun2 $ Fun [] ">=" [int,int] bool
 mzplus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
 mzminus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
@@ -268,6 +234,9 @@ mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 
 mzint :: Int -> ExprP
 mzint n       = Right $ zint n
+
+mzreal :: Int -> ExprP
+mzreal x       = Right $ zreal x
 
 mzpair :: ExprP -> ExprP -> ExprP
 mzpair = typ_fun2 $ Fun [] "pair" [gA,gB] (pair_type gA gB)

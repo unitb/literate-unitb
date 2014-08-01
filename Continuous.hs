@@ -209,6 +209,7 @@ main = do
             [xs] -> do
                 b1 <- doesFileExist xs
                 b2 <- z3_installed
+                b3 <- if b2 then z3_version else return ""
                 if b1 && b2 then do
                     let { param = Params 
                             { path = xs
@@ -242,7 +243,10 @@ main = do
                         -- else return ()) param
                     return ()
                 else if not b2 then
-                    putStrLn ("a 'z3' executable hasn't been found in the path ")
+                    putStrLn ("A 'z3' executable hasn't been found in the path ")
+                else if b3 /= "2ca14b49fe45" then
+                    putStrLn "Expecting z3 version 4.3.2, hashcode 2ca14b49fe45"
                 else
                     putStrLn ("'" ++ xs ++ "' is not a valid file")
             _ -> putStrLn $ usageInfo "usage: continuous file [options]" options
+

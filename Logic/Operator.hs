@@ -2,7 +2,24 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE FlexibleInstances     #-}
-module Logic.Operator where
+module Logic.Operator 
+    (   Notation (..)
+    ,   BinOperator (..)
+    ,   UnaryOperator (..)
+    ,   Command (..)
+    ,   Assoc (..)
+    ,   Operator
+    ,   Matrix
+    ,   Input (..)
+    ,   with_assoc
+    ,   empty_notation
+    ,   logic, functions
+    ,   apply, equal, conj, disj
+    ,   implies, follows, equiv
+    ,   combine, precede
+    ,   mk_expr, mk_unary
+        )
+where
 
     -- Modules
 import Logic.Expr hiding ( pair )
@@ -248,7 +265,7 @@ conj    = BinOperator "and" "\\land"        mzand
 implies = BinOperator "implies" "\\implies" mzimplies
 follows = BinOperator "follows" "\\follows" (flip mzimplies)
 equiv   = BinOperator "equiv" "\\equiv"   mzeq
-neg     = UnaryOperator "neg" "\\neg"       mznot
+neg     = UnaryOperator "not" "\\neg"       mznot
 
 logic :: Notation
 logic = with_assoc empty_notation
@@ -272,6 +289,3 @@ logic = with_assoc empty_notation
         , ((equiv,follows),follows)
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
-
-double :: (a,b) -> ((a,a),(b,b))
-double (x,y) = ((x,x),(y,y))

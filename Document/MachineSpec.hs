@@ -7,6 +7,7 @@ import Document.Machine
 import Latex.Parser
 
 import Logic.Expr
+import Logic.Operator hiding (Command)
 
 import Theories.Arithmetic
 import Theories.FunctionTheory
@@ -17,6 +18,7 @@ import UnitB.AST
     -- Libraries
 import Control.Monad
 
+import           Data.Either
 import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.List as L
@@ -24,8 +26,9 @@ import qualified Data.Set as S
 
 import Test.QuickCheck hiding (label)
 
-import Utilities.Format
-import Utilities.Syntactic
+import           Utilities.Format
+import qualified Utilities.Graph as G 
+import           Utilities.Syntactic
 
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
@@ -89,22 +92,45 @@ latex_of m = do
                            [ Text [TextBlock (show $ _name m) li] ] 
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
+            root_op (FunApp f _) = find_op f
+            root_op _ = Nothing
+            find_op f = name f `M.lookup` m_ops 
+            m_ops = M.fromList $ zip (map token xs) xs
+                where
+                    xs = new_ops $ all_notation m
             show_e v@(Word _) = show v
-            show_e (FunApp f xs)
-                    | name f == "+" = format "{0} + {1}" (show_e x) (as_sum y)
-                    | name f == "=" = format "{0} = {1}" (show_e x) (show_e y)
-                    | name f == "<=" = format "{0} \\le {1}" (show_e x) (show_e y)
-                    | name f == "elem" = format "{0} \\in {1}" (as_sum x) (show_e y)
-                    | otherwise = "<unknown function: " ++ show (name f) ++ ">"
+            show_e (FunApp f xs) 
+                | length xs == 2 = format "{0} {1} {2}" 
+                                    (show_left_sub_e op x)
+                                    op_name
+                                    (show_right_sub_e op y)
+                | length xs == 1 = format "{0} {1}" 
+                                    op_name
+                                    (show_right_sub_e op x)
+                | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
+                                        (name f)
+                                        (L.intercalate ", " $ map show xs)
+                | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
                 where
                     x = xs !! 0
                     y = xs !! 1
+                    op = maybe (Right plus) id $ find_op f
+                    op_name = maybe unknown name $ find_op f
+                    unknown = "<unknown function: " ++ show (name f) ++ ">"
             show_e (Const _ n _) = n
             show_e _ = "<unknown expression>"
-            as_sum x@(FunApp f _)
-                    | name f == "+" = format "({0})" (show_e x)
-                    | otherwise     = show_e x
-            as_sum x = show_e x
+            show_left_sub_e op e = maybe (show_e e) f $ root_op e
+                where
+                    g op' = struct (all_notation m) G.! (op',op)
+                    f op'
+                        | g op' == LeftAssoc = show_e e
+                        | otherwise          = format "({0})" $ show_e e
+            show_right_sub_e op e = maybe (show_e e) f $ root_op e
+                where
+                    g op' = struct (all_notation m) G.! (op,op')
+                    f op'
+                        | g op' == RightAssoc = show_e e
+                        | otherwise           = format "({0})" $ show_e e
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")
@@ -224,13 +250,16 @@ expr_type b vars t = sized $ \n ->do
             [ (int, 
                 [ (from_list zplus, [int,int])])
             , (bool, 
-                [ (from_list zeq', [int,int]) 
+                -- [ (from_list zeq', [int,int]) 
                 -- , (from_list zeq, [bool,bool])
+                [ (from_list (zand :: Expr -> Expr -> Expr), [bool,bool])
+                , (from_list (zor :: Expr -> Expr -> Expr), [bool,bool])
+                , (from_list (znot :: Expr -> Expr), [bool])
                 , (from_list zle, [int,int])
                 , (from_list zelem', [int, set_type int] )])
             ]
         zelem' e0 e1 = FunApp (Fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
-        zeq' e0 e1 = FunApp (Fun [] "=" [int,int] bool) [e0,e1 :: Expr]
+        -- zeq' e0 e1 = FunApp (Fun [] "=" [int,int] bool) [e0,e1 :: Expr]
         choose_expr b t = sized $ \n -> do
             case M.lookup t fun_map of
                 Just xs -> do
@@ -253,11 +282,32 @@ run_spec = $quickCheckAll
 
 -- main = run_spec
 
+show_list :: Show a => [a] -> String
+show_list xs = format "[{0}]" $ L.intercalate "\n," $ surround " " " " ys
+    where
+        ys = map show xs
+        surround pre suf xs = map (\x -> pre ++ x ++ suf) xs
+
+subexpression :: Expr -> [(Expr, Type, String)]
+subexpression e = f [] e
+    where
+        f xs e = (e, type_of e, comment e) : visit f xs e
+        comment (FunApp (Fun act f argt rt) arg) = format "{0} {1} ({2}) : {3} -> {4}" act f arg argt rt
+        comment _ = "<>"
+
 main :: IO ()
 main = do
-        xs <- sample' mch_with_type_error
+        xs <- liftM concat $ replicateM 10 $ sample' mch_with_type_error
         let (mch,Tex tex) = head 
                 $ filter (not . f_prop_type_error . snd) xs
-            mch' = (M.elems . machines) `liftM` (all_machines tex)
+            mch'' = concat $ rights [mch']
+            mch'  = (M.elems . machines) `liftM` (all_machines tex)
+        writeFile "actual_exp.txt" (unlines $ map (show_list . subexpression) $ concatMap expressions mch'')
+        writeFile "expect_exp.txt" (unlines $ map (show_list . subexpression) $ expressions mch)
         writeFile "actual.txt" (show mch')
         writeFile "expect.txt" ("Right " ++ show [mch])
+        writeFile "tex.txt" (show $ Tex tex)
+        -- print $ zipWith (==) 
+        --     (concatMap subexpression $ expressions mch) 
+        --     (concatMap subexpression $ concatMap expressions mch')
+

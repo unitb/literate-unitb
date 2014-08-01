@@ -77,7 +77,7 @@ sample_ast = [
         assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
     where
-        f       = fun2 ff
+        f x y   = fromJust $ typ_fun2 ff (Right x) (Right y)
 
 sample_quant :: [Command]
 sample_quant = [
@@ -87,7 +87,7 @@ sample_quant = [
         CheckSat ]
     where
         ff          = Fun [] "f" [int] int
-        f           = maybe1 $ (\x -> FunApp ff [x])
+        f           = typ_fun1 ff
 
 sample_proof :: Sequent
 sample_proof = Sequent
@@ -96,7 +96,8 @@ sample_proof = Sequent
         M.empty
         (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
-        f           = maybe1 $ fun1 ff
+        ff          = Fun [] "f" [int] int
+        f           = typ_fun1 ff
 
 sample_quant2 :: [Command]
 sample_quant2 = [
@@ -105,7 +106,7 @@ sample_quant2 = [
         assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
-        f           = maybe1 $ fun1 $ Fun [] "f" [int] int
+        f           = typ_fun1 $ Fun [] "f" [int] int
 
 sample_quant3 :: [Command]
 sample_quant3 = [
@@ -114,7 +115,7 @@ sample_quant3 = [
         assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat] 
     where
-        f           = maybe1 $ fun1 $ Fun [] "f" [int] int
+        f           = typ_fun1 $ Fun [] "f" [int] int
         
 assert :: FOExpr -> Command
 assert x = Assert x Nothing
@@ -141,7 +142,7 @@ sample_calc = (Calc
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" bool
         (y,y')      = var "y" bool
-        f           = maybe1 $ fun1 $ Fun [] "f" [bool] bool
+        f           = typ_fun1 $ Fun [] "f" [bool] bool
         li          = LI "" (-1) (-1)
 
 indent :: String -> String

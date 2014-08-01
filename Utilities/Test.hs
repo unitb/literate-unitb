@@ -211,7 +211,7 @@ result0 = array ((0,0),(5,5))
 --            , ((Union,TotalFunction),Ambiguous,LeftAssoc)]
 
 result2 :: [((Operator,Operator),Assoc,Assoc)]
-result2 = zip3 (map xbin_to_bin xs) ys zs
+result2 = sortBy (compare `on` fst3) $ zip3 (map xbin_to_bin xs) ys zs
     where
         (xs,ys,zs) = unzip3
             [ ((And,Or),Ambiguous,LeftAssoc)

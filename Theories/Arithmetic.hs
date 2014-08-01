@@ -21,14 +21,14 @@ greater :: BinOperator
 leq     :: BinOperator
 geq     :: BinOperator
 
-power   = BinOperator "power" "^"       mzpow
-mult    = BinOperator "mult" "\\cdot"   mztimes
-plus    = BinOperator "plus" "+"        mzplus
-minus   = BinOperator "minus" "-"       mzminus
-less    = BinOperator "less" "<"        mzless
-greater = BinOperator "greater" ">"     (flip mzless)
-leq     = BinOperator "le" "\\le"       mzle
-geq     = BinOperator "ge" "\\ge"       (flip mzle)
+power   = BinOperator "^" "^"           mzpow
+mult    = BinOperator "*" "\\cdot"      mztimes
+plus    = BinOperator "+" "+"           mzplus
+minus   = BinOperator "-" "-"           mzminus
+less    = BinOperator "<" "<"           mzless
+greater = BinOperator ">" ">"           (flip mzless)
+leq     = BinOperator "<=" "\\le"       mzle
+geq     = BinOperator ">=" "\\ge"       (flip mzle)
 
 arithmetic :: Theory
 arithmetic = empty_theory { 

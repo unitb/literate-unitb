@@ -70,3 +70,5 @@ xbin_to_bin (x,y) = (m x, m y)
         m Follows       = Right follows
         m Equiv         = Right equiv
 
+double :: (a,b) -> ((a,a),(b,b))
+double (x,y) = ((x,x),(y,y))

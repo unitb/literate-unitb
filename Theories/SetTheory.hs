@@ -139,7 +139,7 @@ compl       :: UnaryOperator
 set_union       = BinOperator "union" "\\bunion"        zunion
 set_intersect   = BinOperator "intersect" "\\binter" zintersect
 set_diff        = BinOperator "set-diff" "\\setminus"   zsetdiff
-membership      = BinOperator "membership" "\\in"       zelem
+membership      = BinOperator "elem" "\\in"       zelem
 subset          = BinOperator "subset"     "\\subseteq" zsubset
 superset        = BinOperator "superset"   "\\supseteq" (flip zsubset)
 st_subset       = BinOperator "st-subset"   "\\subset" zsubset

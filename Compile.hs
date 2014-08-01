@@ -85,11 +85,25 @@ main = do
                         return $ either (:[]) id x
                     compile x = EitherT $ f $ do
                             let src_file = head x
-                                bin_dir  = "/Users/Simon/Haskell/bin"
-                                inf_dir  = "/Users/Simon/Haskell/interface"
+                                bin_dir  = "./bin"
+                                inf_dir  = "./interface"
                                 main_o :: IsString a => a
                                 main_o   = fromString $ bin_dir </> "Main.o"
-                                obj_file = bin_dir </> addExtension (dropExtension $ src_file) "o"
+                                obj_file = bin_dir </> addExtension (dropExtension src_file) ".o"
+                                args =  [ "--make"
+                                        , "-W", "-fwarn-missing-signatures"
+                                        , "-fwarn-incomplete-uni-patterns"
+                                        , "-fwarn-missing-methods"
+                                        , "-fwarn-tabs"
+                                        -- , "-v2"
+                                        , "-Werror", "-rtsopts"
+                                        , "-hidir", inf_dir
+                                        -- , "-osuf", "_" ++ dropExtension (head x)
+                                        , "-o", bin_dir </> dropExtension (head x)
+                                        , "-fbreak-on-error"
+        --                                , "-prof", "-caf-all", "-auto-all", "-O2"
+                                              -- these are usable with +RTS -p
+                                        , "-odir", bin_dir]
                             b <- doesFileExist src_file
                             if b then do
                                 b <- doesFileExist obj_file
@@ -99,19 +113,10 @@ main = do
                                             $ fromText main_o
                                 r <- readProcessWithExitCode 
                                             "ghc" 
-                                            (x ++ 
-                                    [ "--make"
-                                    , "-W", "-fwarn-missing-signatures"
-                                    , "-fwarn-incomplete-uni-patterns"
-                                    , "-fwarn-missing-methods"
-                                    , "-fwarn-tabs"
-                                    , "-Werror", "-rtsopts"
-                                    , "-hidir", inf_dir
-                                    , "-o", dropExtension (head x)
-                                    , "-fbreak-on-error"
-    --                                , "-prof", "-caf-all", "-auto-all", "-O2"
-                                          -- these are usable with +RTS -p
-                                    , "-odir", bin_dir]) ""
+                                            (x ++ args) ""
+                                -- putStr out
+                                -- putStr err
+                                -- hFlush stdout
                                 b  <- doesFileExist main_o
                                 when b $
                                     void $ shelly $ do
@@ -161,12 +166,15 @@ main = do
                     cmds = map (\(ln,fn) -> "(" ++ show fn ++ ", " ++ ln ++ ")") $ 
                                 filter (is_nb . fst) $
                                 zip lno $ map fst fnames
+                writeFile "ghc_errors.txt" $
+                    ys
                 writeFile "compile_errors.txt" $ 
                     unlines (reverse cmds)
                 xs <- getDirectoryContents "bin"
                 forM_ (filter ((`elem` ["",".exe"]) . takeExtension) xs) $ \x -> do
-                    b <- doesFileExist x
-                    when b $ shelly $ cp (fromString x) "."
+                    b <- doesFileExist $ "bin" </> x
+                    when b $ do
+                        shelly $ cp (fromString $ "bin" </> x) "."
                 hFlush stdout
                 return ys
             lift $ put ys
