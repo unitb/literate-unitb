@@ -1,6 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Utilities.Graph 
-    ( Composition, cycles, cycles_with
+    ( Composition(..), cycles, cycles_with
     , Min(..), closure
     , m_closure, m_closure_with
 --    , m_closure_with'
@@ -8,8 +10,10 @@ module Utilities.Graph
     , matrix_of_with, Matrix, map
     , (!), unionWith, transpose
     , mapKeys, empty, as_map, size
-    , unions )
+    , unions, times, vertices 
+    , uppest, run_tests, from_list )
 where
+-- 
 
 import Control.Monad
 
@@ -17,7 +21,7 @@ import           Data.Array as A ( bounds, Array, (//), array, ixmap )
 import qualified Data.Array as A -- hiding ( (!) )
 import           Data.Array.ST
 import           Data.Function
-import           Data.Graph
+import           Data.Graph hiding ( vertices )
 import           Data.List as L hiding ( union, (\\), transpose, map )
 import qualified Data.List as L
 import qualified Data.List.Ordered as OL
@@ -29,6 +33,8 @@ import           Data.Maybe
 import           Data.Tuple
 
 import Prelude hiding ( seq, map )
+
+import Test.QuickCheck
 
 instance Show a => Show (SCC a) where
     show (AcyclicSCC x) = show x
@@ -104,25 +110,120 @@ cycles_with ys xs = stronglyConnComp $ collapse $ sort $ alist ++ vs
             | x1 /= y1  = (x1,x2,xs) : collapse zs
         collapse xs = xs
 
-class Composition a where
+times :: (Ord a, Composition b)
+      => Matrix a b -> Matrix a b 
+      -> Matrix a b
+times (Matrix m0 xs x) (Matrix m1 ys y) = Matrix m2 zs z
+    where
+        -- f :: a -> a -> b
+        f x y = (m0 M.! x) M.! y
+        -- g :: a -> a -> b
+        g x y = m1 M.! x M.! y
+        -- m2 :: Map a (Map a b)
+        m2 = fromList $ do
+                x <- xs
+                let -- m :: Map a b
+                    m = fromList $ do
+                            y <- ys
+                            let xs' = L.map (x `f`) zs
+                                ys' = L.map (`g` y) zs
+                                zs' = zipWith seq xs' ys'
+                            [(y,uppest zs')]
+                [(x,m)]
+        -- zs :: [a]
+        zs = xs `L.union` ys
+        -- z :: b
+        z  = x `seq` y
+
+uppest :: Composition a => [a] -> a
+uppest = foldl up zero 
+
+vertices :: Matrix a b -> [a]
+vertices (Matrix _ vs _) = vs
+
+class Eq a => Composition a where
+    below :: a -> a -> Bool
+    zero :: a
     up  :: a -> a -> a
     seq    :: a -> a -> a
+    below x y = x `up` y == y
+    -- zero `up` x = x
+    -- zero `seq` x = zero
+    -- x `below` y  =  x `up` y == y
+
+data Type a = Type
+
+axm_comp_zero_and_up :: Composition a => a -> Bool
+axm_comp_zero_and_up x = zero `up` x == x
+
+axm_comp_zero_and_seq :: Composition a => a -> Bool
+axm_comp_zero_and_seq x = zero `seq` x == zero
+
+axm_comp_below_and_up :: Composition a => a -> a -> Bool
+axm_comp_below_and_up x y = x `below` y  ==  (x `up` y == y)
+
+axm_comp_below_refl :: Composition a => a -> Bool
+axm_comp_below_refl x = x `below` x
+
+axm_comp_below_trans :: Composition a => a -> a -> a -> Bool
+axm_comp_below_trans x y z = (x `below` y && y `below` z) ==> (x `below` z)
+    where
+        (==>) x y = not x || y
+
+axm_comp_below_antisym :: Composition a => a -> a -> Bool
+axm_comp_below_antisym x y = (x `below` y && y `below` x) ==> (x == y)
+    where
+        (==>) x y = not x || y
+
+properties :: forall a. (Arbitrary a, Composition a, Show a) 
+           => Type a -> Property
+properties Type = p0 .&&. p1 .&&. p2 .&&. p3 .&&. p4 .&&. p5
+    where
+        p0 :: a -> Bool
+        p0 = axm_comp_zero_and_up
+        p1 :: a -> Bool
+        p1 = axm_comp_zero_and_seq
+        p2 :: a -> a -> Bool
+        p2 = axm_comp_below_and_up
+        p3 :: a -> Bool
+        p3 = axm_comp_below_refl
+        p4 :: a -> a -> a -> Bool
+        p4 = axm_comp_below_trans
+        p5 :: a -> a -> Bool
+        p5 = axm_comp_below_antisym
+
+prop_all :: Property
+prop_all = properties (Type :: Type (Min Int))
+            .&&. properties (Type :: Type Bool)
 
 instance Composition Bool where
+    zero   = False
     up x y = x || y
     seq x y   = x && y
 
 data Min a = 
-    Min { unMin :: a }
-    | Infinite
+        Min { unMin :: a }
+        | Infinite
+    deriving Eq
 
 instance (Ord a, Num a) => Composition (Min a) where
+    zero = Infinite
     up (Min x) (Min y) = Min $ x `min` y
     up Infinite y      = y
     up x Infinite      = x
     seq (Min x) (Min y)   = Min $  x  +  y
     seq Infinite _        = Infinite
     seq _ Infinite        = Infinite
+
+instance Arbitrary a => Arbitrary (Min a) where
+    arbitrary = sized $ \sz -> do
+        frequency 
+            [ (1, return Infinite)
+            , (sz,liftM Min arbitrary)]
+
+instance Show a => Show (Min a) where
+    show (Min x)  = show x
+    show Infinite = "<inf>"
 
 closure :: (Ix a, Ord a) => [(a,a)] -> [(a,a)]
 closure xs = ys
@@ -166,7 +267,7 @@ m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repe
     where
             -- adjacency list
         tr          = fromList $ zip [0..] $ nub new_vs
-        tr'         = fromList $ zip new_vs [0..]
+        tr'         = fromList $ zip new_vs ([0..] :: [Int])
         new_vs      = OL.nubSort $ vs ++ L.map fst es ++ L.map snd es
         vs'         = OL.nubSort $ L.map (tr' M.!) new_vs
         es'         = L.map (\(x,y) -> (tr' M.! x, tr' M.! y)) es
@@ -183,6 +284,13 @@ m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repe
 
 as_matrix :: Ord a => [(a, a)] -> Matrix a Bool
 as_matrix xs = as_matrix_with [] xs
+
+from_list :: forall a b. (Eq b,Ord a) => [((a,a),b)] -> b -> Matrix a b
+from_list es def = Matrix zs' vs def
+    where 
+        zs  = [ (x,[(y,b)]) | ((x,y),b) <- es, b /= def ]
+        zs' = M.map fromList $ fromListWith (++) zs
+        vs  = nub $ L.map (fst . fst) es ++ L.map (snd . fst) es :: [a]
 
 as_matrix_with :: Ord a => [a] -> [(a,a)] -> Matrix a Bool
 as_matrix_with vs es = Matrix (M.map fromList $ fromListWith (++) zs) vs False
@@ -251,3 +359,6 @@ unions_aux' x ws@((y:ys):zs)
 --top_sort xs 
 --    where
 --        cycles xs
+return []
+run_tests :: IO Bool
+run_tests = $quickCheckAll

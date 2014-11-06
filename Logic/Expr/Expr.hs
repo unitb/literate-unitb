@@ -42,6 +42,8 @@ type ExprP = Either String Expr
 
 type ExprPG t = Either String (AbsExpr t)
 
+type ExprPC e = Either String e
+
 type_of :: TypeSystem t => AbsExpr t -> t
 type_of (Word (Var _ t))         = t
 type_of (Const _ _ t)            = t
@@ -404,6 +406,15 @@ instance Named Sort where
     name BoolSort   = "\\Bool"
     name IntSort    = "\\Int"
     name RealSort   = "\\Real"
+
+instance Convert (AbsVar t) (ExprPC (AbsExpr t)) where
+    convert_to = Right . Word
+    convert_from (Right (Word x)) = Just x
+    convert_from _        = Nothing
+
+instance Convert (AbsExpr t) (AbsExpr t) where
+    convert_to = id
+    convert_from = Just
 
 pretty_print' :: Tree t => t -> String
 pretty_print' t = unlines $ pretty_print $ as_tree t 

@@ -48,7 +48,8 @@ test = test_cases
         , Phase.test_case
         , Ref.test_case
         , Set.test_case
-        , Case "QuickCheck spec of machine parser" MSpec.run_spec True
+        , Case "QuickCheck spec of machine parser" 
+            MSpec.run_spec True
         , all_properties
         ]
 

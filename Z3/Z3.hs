@@ -41,7 +41,7 @@ import Control.Applicative hiding ( empty, Const )
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 
 import           Data.Char
@@ -65,7 +65,7 @@ z3_path :: String
 z3_path = "z3"
 
 default_timeout :: Int
-default_timeout = 1
+default_timeout = 2
 
 instance Tree Command where
     as_tree (Push)        = List [Str "push"]
@@ -222,6 +222,7 @@ data Prover = Prover
 
 new_prover :: Int -> IO Prover
 new_prover n_workers = do
+        setNumCapabilities 8
         inCh  <- newChan
 --        secCh <- newChan
         outCh <- newChan
@@ -273,7 +274,7 @@ discharge_all :: [Sequent] -> IO [Validity]
 discharge_all xs = do
 --        forM xs discharge
         let ys = zip [0..] xs
-        pr <- new_prover 8
+        pr <- new_prover 32
         forkIO $ forM_ ys $ \task -> 
             discharge_on pr task
         rs <- forM ys $ \_ ->

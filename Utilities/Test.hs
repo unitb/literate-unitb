@@ -11,11 +11,12 @@ import Theories.Notation
 import Theories.SetTheory
 import Theories.FunctionTheory
 
-import Utilities.Graph 
+import Utilities.Graph as G
         ( matrix_of_with, closure
         , m_closure_with, as_map
         , unions )
 import Utilities.EditDistance
+import qualified Utilities.GraphSpec as GSpec
 
     -- Libraries
 import           Data.Array 
@@ -40,7 +41,7 @@ test_case :: (String, IO Bool, Bool)
 test_case = ("Graphs and operator grammars", test, True)
 
 test :: IO Bool
-test = test_cases  
+test = test_cases $
     [ Case "case 0 - complete domain of matrices" case0 result0
     --, Case "case 1 - operator grammar discrepancy" case1 result1
     , Case "case 2 - new ambiguities" case2 result2
@@ -51,7 +52,8 @@ test = test_cases
     , Case "case 6 - union of a list of {sorted} list" case6 result6
     , Case "case 7 - union of a list of {unsorted} list" case7 result7  
     , Case "case 8 - edit distance, random testing" case8 True
-    , Case "case 9 - edit distance, regression test from random testing" case9 0]
+    , Case "case 9 - edit distance, regression test from random testing" case9 0
+    ] ++ GSpec.test_cases
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do

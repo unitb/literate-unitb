@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 module Logic.Expr.Const where
 
     -- Modules   
@@ -17,20 +19,38 @@ import qualified Data.Set as S
 import Utilities.Format
 import Utilities.Syntactic
 
-fun1 :: TypeSystem t 
-     => AbsFun t 
-     -> AbsExpr t -> AbsExpr t
-fun1 f x           = FunApp f [x]
-fun2 :: TypeSystem t 
-     => AbsFun t -> AbsExpr t 
-     -> AbsExpr t -> AbsExpr t
-fun2 f x y         = FunApp f [x,y]
+type OneExpr t = forall e0. 
+           Convert e0 (AbsExpr t)
+        => e0 -> AbsExpr t
 
+type TwoExpr t = forall e0 e1. 
+           (Convert e0 (AbsExpr t),Convert e1 (AbsExpr t))
+        => e0 -> e1 -> AbsExpr t
+
+fun1 :: ( TypeSystem t 
+        , Convert e (AbsExpr t) )
+     => AbsFun t 
+     -> e -> AbsExpr t
+fun1 f x           = FunApp f [convert_to x]
+fun2 :: ( TypeSystem t 
+        , Convert e0 (AbsExpr t)
+        , Convert e1 (AbsExpr t) )
+     => AbsFun t -> e0 
+     -> e1 -> AbsExpr t
+fun2 f x y         = FunApp f [convert_to x,convert_to y]
+
+-- fun1 :: TypeSystem t 
+--      => (ExprPG t -> ExprPG t)
+--      -> AbsExpr t -> AbsExpr t
+-- fun1 f x           = fromJust $ f (Right x)
+-- fun2 :: TypeSystem t 
+--      => (ExprPG t -> ExprPG t -> ExprPG t)
+--      -> AbsExpr t -> AbsExpr t -> AbsExpr t
+-- fun2 f x y         = fromJust $ f (Right x) (Right y)
 
 no_errors2 :: TypeSystem t 
-           => (   ExprPG t -> ExprPG t
-               -> ExprPG t )
-           -> (AbsExpr t -> AbsExpr t -> AbsExpr t)
+           => (TwoExprP t)
+           -> (TwoExpr t)
 no_errors2 f x y = either error id $ f (Right x) (Right y)
 
 toErrors :: LineInfo -> ExprP -> Either [Error] Expr
@@ -38,29 +58,31 @@ toErrors li m = case m of
         Right x -> Right x
         Left xs -> Left [Error xs li]
 
-znot :: TypeSystem2 t => AbsExpr t -> AbsExpr t
+znot :: TypeSystem2 t => OneExpr t
 znot         = fun1 $ Fun [] "not" [bool] bool
-zimplies :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
+-- znot         = fun1 mznot
+zimplies :: TypeSystem2 t => TwoExpr t
 zimplies x y = fromJust $ mzimplies (Right x) (Right y)
-zand :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
-zand x y     = zall [x,y]
-zor :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
-zor x y      = zsome [x,y]
+zand :: TypeSystem2 t => TwoExpr t
+zand x y     = zall [convert_to x, convert_to y]
+zor :: TypeSystem2 t => TwoExpr t
+zor x y      = zsome [convert_to x, convert_to y]
 
 zeq_fun :: Fun
 zeq_fun      = Fun [] "="   [gA, gA] bool
 
-zeq_symb :: Expr -> Expr -> Expr
+zeq_symb :: TwoExpr Type
 zeq_symb     = no_errors2 mzeq_symb
-mzeq_symb :: ExprP -> ExprP -> ExprP
+mzeq_symb :: TwoExprP Type
 mzeq_symb    = typ_fun2 $ Fun [gA] "eq" [gA, gA] bool
 
 zeq :: Expr -> Expr -> Expr
 zeq          = no_errors2 mzeq
-mzeq :: ExprP -> ExprP -> ExprP
+mzeq :: TwoExprP Type
 mzeq         = typ_fun2 zeq_fun
 zfollows :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool
+-- zfollows     = fun2 mzfollows
 ztrue :: TypeSystem2 t => AbsExpr t
 ztrue        = Const [] "true"  bool
 zfalse :: TypeSystem2 t => AbsExpr t
@@ -106,6 +128,19 @@ zforall vs x w
     |    x `elem` [ztrue, zfalse]
       && w `elem` [ztrue, zfalse] = zimplies x w
     | otherwise                   = Binder Forall vs x w
+-- zforall vs' x w@(Binder Forall us y z) 
+--         | x == ztrue = zforall (vs' ++ us') y z
+--         | otherwise  = Binder Forall vs x w
+--     where
+--         vs  = map var_of vs'
+--         us' = map Word us
+-- zforall vs' x w   
+--         |    x `elem` [ztrue, zfalse]
+--           && w `elem` [ztrue, zfalse] = zimplies x w
+--         | otherwise                   = Binder Forall vs x w
+--     where
+--         vs = map var_of vs'
+
 zexists :: TypeSystem2 t 
         => [AbsVar t] 
         -> AbsExpr t 
@@ -121,31 +156,31 @@ zexists vs x w
     | otherwise                   = Binder Exists vs x w
 
 
-zite :: ExprP -> ExprP -> ExprP -> ExprP
+zite :: ThreeExprP Type
 zite       = typ_fun3 (Fun [] "ite" [bool,gA,gA] gA)
 
-zjust :: ExprP -> ExprP
+zjust :: OneExprP Type
 zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
 znothing :: ExprP
 znothing   = Right (Const [] "Nothing" $ maybe_type gA)
 
-mznot :: TypeSystem2 t => ExprPG t -> ExprPG t
+mznot :: TypeSystem2 t => OneExprP t
 mznot         = typ_fun1 $ Fun [] "not" [bool] bool
-mzimplies :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzimplies :: TypeSystem2 t => TwoExprP t
 mzimplies mx my = do
-        x <- mx
-        y <- my
+        x <- liftM convert_to mx
+        y <- liftM convert_to my
         if      x == ztrue  then Right y
         else if y == ztrue  then Right ztrue
         else if x == zfalse then Right ztrue
         else if y == zfalse then Right $ znot x 
         else typ_fun2 (Fun [] "=>"  [bool,bool] bool) 
                 (Right x) (Right y)
-mzand :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
-mzand x y     = mzall [x,y]
-mzor :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
-mzor x y      = mzsome [x,y]
-mzfollows :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzand :: TypeSystem2 t => TwoExprP t
+mzand x y     = mzall [liftM convert_to x,liftM convert_to y]
+mzor :: TypeSystem2 t => TwoExprP t
+mzor x y      = mzsome [liftM convert_to x,liftM convert_to y]
+mzfollows :: TypeSystem2 t => TwoExprP t
 mzfollows x y = mzimplies y x
 mztrue :: TypeSystem2 t
        => ExprPG t
@@ -168,38 +203,47 @@ mzsome xs     = do
         return $ zsome xs
 
 mzforall :: TypeSystem2 t => [AbsVar t] 
-         -> ExprPG t -> ExprPG t -> ExprPG t
+         -> TwoExprP t
 mzforall xs mx my = do
-        x <- zcast bool mx
-        y <- zcast bool my
+        x <- zcast bool $ liftM convert_to mx
+        y <- zcast bool $ liftM convert_to my
         return $ zforall xs x y
 
 mzexists :: TypeSystem2 t => [AbsVar t] 
-         -> ExprPG t -> ExprPG t -> ExprPG t
+         -> TwoExprP t
 mzexists xs mx my = do
-        x <- zcast bool mx
-        y <- zcast bool my
+        x <- zcast bool $ liftM convert_to mx
+        y <- zcast bool $ liftM convert_to my
         return $ zexists xs x y
 
 zless :: Expr -> Expr -> Expr
 zless        = fun2 $ Fun [] "<" [int,int] bool
+-- zless        = fun2 mzless
 zgreater :: Expr -> Expr -> Expr
 zgreater     = fun2 $ Fun [] ">" [int,int] bool
+-- zgreater     = fun2 mzgreater
 zle :: Expr -> Expr -> Expr
 zle          = fun2 $ Fun [] "<=" [int,int] bool
+-- zle          = fun2 mzle
 zge :: Expr -> Expr -> Expr
 zge          = fun2 $ Fun [] ">=" [int,int] bool
+-- zge          = fun2 mzge
 zplus :: Expr -> Expr -> Expr
 zplus        = fun2 $ Fun [] "+" [int,int] int
+-- zplus        = fun2 mzplus
 zminus :: Expr -> Expr -> Expr
 zminus       = fun2 $ Fun [] "-" [int,int] int
+-- zminus       = fun2 mzminus
 zopp :: Expr -> Expr
 zopp         = fun1 $ Fun [] "-" [int] int
+-- zopp         = fun1 mzopp
 ztimes :: Expr -> Expr -> Expr
 ztimes       = fun2 $ Fun [] "*" [int,int] int
+-- ztimes       = fun2 mztimes
 zpow :: Expr -> Expr -> Expr
 zpow         = fun2 $ Fun [] "^" [int,int] int
-zselect :: ExprP -> ExprP -> ExprP
+-- zpow         = fun2 mzpow
+zselect :: TwoExprP Type
 zselect      = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 zint :: Int -> Expr
 zint n       = Const [] (show n) int
@@ -213,23 +257,23 @@ real = make_type RealSort []
 bool :: TypeSystem2 t => t
 bool = make_type BoolSort []
 
-mzless :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzless :: TypeSystem2 t => TwoExprP t
 mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
-mzgreater :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzgreater :: TypeSystem2 t => TwoExprP t
 mzgreater        = typ_fun2 $ Fun [] ">" [int,int] bool
-mzle :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzle :: TypeSystem2 t => TwoExprP t
 mzle          = typ_fun2 $ Fun [] "<=" [int,int] bool
-mzge :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzge :: TypeSystem2 t => TwoExprP t
 mzge          = typ_fun2 $ Fun [] ">=" [int,int] bool
-mzplus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzplus :: TypeSystem2 t => TwoExprP t
 mzplus        = typ_fun2 $ Fun [] "+" [int,int] int
-mzminus :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzminus :: TypeSystem2 t => TwoExprP t
 mzminus       = typ_fun2 $ Fun [] "-" [int,int] int
 mzopp :: TypeSystem2 t => ExprPG t -> ExprPG t
 mzopp         = typ_fun1 $ Fun [] "-" [int] int
-mztimes :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mztimes :: TypeSystem2 t => TwoExprP t
 mztimes       = typ_fun2 $ Fun [] "*" [int,int] int
-mzpow :: TypeSystem2 t => ExprPG t -> ExprPG t -> ExprPG t
+mzpow :: TypeSystem2 t => TwoExprP t
 mzpow         = typ_fun2 $ Fun [] "^" [int,int] int
 
 mzint :: Int -> ExprP
@@ -245,6 +289,10 @@ gA :: Type
 gA = GENERIC "a"
 gB :: Type
 gB = GENERIC "b"
+
+var_of :: AbsExpr t -> AbsVar t
+var_of (Word v) = v
+var_of _ = error "var_of: expecting a variable expression"
 
 var :: String -> Type -> (Either a Expr, Var)
 var n t      = (Right $ Word $ v, v)

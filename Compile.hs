@@ -7,14 +7,15 @@ import Tools.BuildSystem
 import Control.Concurrent
 
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import Data.Char
 import Data.String
 
-import Shelly hiding ( get, put, (</>) )
+import Shelly hiding ( get, put, (</>), liftIO )
 
 import System.Directory
 import System.FilePath
@@ -126,6 +127,7 @@ main = do
                             else return (ExitSuccess,"","")
                 putStr "compiling..."
                 hFlush stdout
+                writeFile "ghc_errors.txt" []
                 rs <- g $ runEitherT $ mapM compile 
                     [ ["periodic.hs"]
                     , ["compile.hs"]
@@ -166,8 +168,7 @@ main = do
                     cmds = map (\(ln,fn) -> "(" ++ show fn ++ ", " ++ ln ++ ")") $ 
                                 filter (is_nb . fst) $
                                 zip lno $ map fst fnames
-                writeFile "ghc_errors.txt" $
-                    ys
+                writeFile "ghc_errors.txt" (unlines $ lines ys ++ ["done"])
                 writeFile "compile_errors.txt" $ 
                     unlines (reverse cmds)
                 xs <- getDirectoryContents "bin"

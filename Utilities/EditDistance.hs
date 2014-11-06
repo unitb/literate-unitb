@@ -4,7 +4,7 @@
 module Utilities.EditDistance where
 
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 
 import Data.Array as A
@@ -166,5 +166,6 @@ prop_g xs' ys' zs' = dist xs zs <= dist xs ys + dist ys zs
         ys = map getSmall ys'
         zs = map getSmall zs'
 
+return []
 run_test :: IO Bool
 run_test = $quickCheckAll 

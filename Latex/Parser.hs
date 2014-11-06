@@ -5,7 +5,8 @@ import Latex.Scanner
 
     -- Libraries
 import Control.Monad
-import Control.Monad.Trans
+-- import Control.Monad.IO.Class
+import Control.Monad.Trans -- .Class
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
@@ -358,7 +359,7 @@ fill_holes fname m = do
 scan_doc :: String -> IO (Either [Error] [(LatexToken,LineInfo)])
 scan_doc fname = runEitherT $ do
     let dir = takeDirectory fname
-    fname <- liftIO $ canonicalizePath fname
+    fname  <- liftIO $ canonicalizePath fname
     (m,xs) <- flip execStateT (empty,[(fname,(LI fname 1 1))]) 
             $ fix $ \rec -> do
         (m,ys) <- get

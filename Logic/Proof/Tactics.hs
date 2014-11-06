@@ -26,6 +26,8 @@ import Logic.Proof.ProofTree
 import Logic.Proof.Sequent
 
     -- Libraries
+import Control.Applicative
+
 import Control.Monad hiding ( guard )
 import Control.Monad.RWS hiding ( guard )
 import Control.Monad.Trans.Either
@@ -535,6 +537,13 @@ runTacticWithTheorems :: LineInfo -> Sequent
                       -> Tactic a -> Either [Error] (a, [Label])
 runTacticWithTheorems li s thms tac = runIdentity (runTacticTWithTheorems li s thms tac)
           
+instance Monad m => Functor (TacticT m) where
+    fmap = liftM
+
+instance Monad m => Applicative (TacticT m) where
+    f <*> x = ap f x
+    pure x  = return x
+
 instance Monad m => Monad (TacticT m) where
     TacticT m >>= f = TacticT $ m >>= (unTactic . f)
     return x       = TacticT $ return x

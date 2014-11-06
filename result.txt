@@ -123,10 +123,13 @@
 |  |  +- verify machine m3 error (wandering free variable)
 |  |  +- [ Success: 6 / 6 ]
 |  +- QuickCheck spec of machine parser
-=== prop_parseOk from ./Document/MachineSpec.hs:33 ===
+=== prop_parseOk from ./Document/MachineSpec.hs:39 ===
 +++ OK, passed 100 tests.
 
-=== prop_type_error from ./Document/MachineSpec.hs:40 ===
+=== prop_type_error from ./Document/MachineSpec.hs:46 ===
++++ OK, passed 100 tests.
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
 +++ OK, passed 100 tests.
 
 |  +- the parser is exception free
@@ -213,7 +216,9 @@
 +++ OK, passed 100 tests.
 
 |  +- case 9 - edit distance, regression test from random testing
-|  +- [ Success: 10 / 10 ]
+|  +- QuickCheck spec of the graph library
+|  +- QuickCheck of graphs
+|  +- [ Success: 12 / 12 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -228,10 +233,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   23127 total
+   24026 total
     2013 Document/Tests/TrainStation.hs
     1376 Document/Tests/Lambdas.hs
      956 Document/Machine.hs
      913 Document/Tests/IndirectEq.hs
      730 Document/Proof.hs
-Run time: 1m 24s
+Run time: 1m 25s

@@ -3,6 +3,7 @@ module Document.MachineSpec where
     
     -- Modules
 import Document.Machine
+import Document.Expression
 
 import Latex.Parser
 
@@ -15,16 +16,21 @@ import Theories.SetTheory
 
 import UnitB.AST
 
+import Utilities.RandomTree
+
     -- Libraries
 import Control.Monad
+import Control.Monad.Reader
+-- import Control.Monad.State
+import Control.Monad.Trans.Either
 
-import           Data.Either
 import qualified Data.Map as M
-import           Data.Maybe
 import qualified Data.List as L
 import qualified Data.Set as S
 
-import Test.QuickCheck hiding (label)
+import Test.QuickCheck hiding (label, sized, elements)
+
+import Text.Printf
 
 import           Utilities.Format
 import qualified Utilities.Graph as G 
@@ -42,6 +48,36 @@ prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
 
 f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
+
+prop_expr_parser :: ExprNotation -> Bool
+prop_expr_parser (ExprNotation ctx n e) = e' == runReader (runEitherT $ parse_expr' ctx n (withLI $ showExpr n e)) li
+    where
+        e' = Right e
+        li = LI "" 0 0
+        withLI xs = map (\x -> (x,li)) xs
+
+data ExprNotation = ExprNotation Context Notation Expr
+
+instance Show ExprNotation where
+     show (ExprNotation _ _ e) = show e
+
+instance Arbitrary ExprNotation where
+    arbitrary = sized $ \n -> resize (n `min` 20) $ do
+        -- t     <- choose_type
+        (vars,e) <- fix (\retry n -> do
+            when (n == 0) $ fail "failed to generate ExprNotation"
+            vars  <- var_set
+            t     <- elements $ bool : (map (type_of . Word) $ M.elems vars)
+            e     <- expr_type False vars t
+            case e of
+                Just e  -> return (vars,e)
+                Nothing -> retry $ n-1
+            ) 10
+        let ctx = Context 
+                    M.empty vars M.empty
+                    M.empty M.empty 
+        return $ ExprNotation 
+                    ctx basic_notation e
 
 data MachineInput = MachineInput Machine [LatexDoc]
 
@@ -71,13 +107,13 @@ machine_input cmd = do
 perm :: Int -> Gen [Int]
 perm n = permute [0..n-1]
 
-permute :: [a] -> Gen [a]
-permute xs = permute_aux (length xs) xs
+permute :: MonadGen m => [a] -> m [a]
+permute xs = liftGen $ permute_aux (length xs) xs
 
 permute_aux :: Int -> [a] -> Gen [a]
 permute_aux 0 _  = return []
 permute_aux n xs = sized $ \size -> do
-        let s_size = round (sqrt $ fromIntegral size) `max` 2
+        let s_size = round (sqrt $ fromIntegral size :: Double) `max` 2
             buck   = (n `div` s_size) `max` 1
         i  <- choose (0,n-1)
         let ys = drop i xs ++ take i xs
@@ -85,6 +121,50 @@ permute_aux n xs = sized $ \size -> do
         zs <- permute_aux (n-1) (drop buck ys)
         return $ z ++ zs
 
+showExpr :: TypeSystem t => Notation -> AbsExpr t -> String
+showExpr notation e = show_e e
+    where
+        root_op (FunApp f _) = find_op f
+        root_op _ = Nothing
+        find_op f = name f `M.lookup` m_ops 
+        show_e v@(Word _) = show v
+        show_e (FunApp f xs) 
+            | length xs == 2 = printf "%s %s %s" 
+                                (show_left_sub_e op x)
+                                op_name
+                                (show_right_sub_e op y)
+            | length xs == 1 = printf "%s %s" 
+                                op_name
+                                (show_right_sub_e op x)
+            | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
+                                    (name f)
+                                    (L.intercalate ", " $ map show xs)
+            | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
+            where
+                x = xs !! 0
+                y = xs !! 1
+                op = maybe (Right plus) id $ find_op f
+                op_name = maybe unknown name $ find_op f
+                unknown = printf "<unknown function: %s %s>" 
+                            (show (name f)) 
+                            (show $ M.keys m_ops)
+        show_e (Const _ n _) = n
+        show_e _ = "<unknown expression>"
+        m_ops = M.fromList $ zip (map token xs) xs
+            where
+                xs = new_ops notation
+        show_left_sub_e op e = maybe (show_e e) f $ root_op e
+            where
+                g op' = struct notation G.! (op',op)
+                f op'
+                    | g op' == LeftAssoc = show_e e
+                    | otherwise          = printf "(%s)" $ show_e e
+        show_right_sub_e op e = maybe (show_e e) f $ root_op e
+            where
+                g op' = struct notation G.! (op,op')
+                f op'
+                    | g op' == RightAssoc = show_e e
+                    | otherwise           = printf "(%s)" $ show_e e
 
 latex_of :: Machine -> Gen [LatexDoc]
 latex_of m = do
@@ -92,45 +172,9 @@ latex_of m = do
                            [ Text [TextBlock (show $ _name m) li] ] 
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
-            root_op (FunApp f _) = find_op f
-            root_op _ = Nothing
-            find_op f = name f `M.lookup` m_ops 
-            m_ops = M.fromList $ zip (map token xs) xs
-                where
-                    xs = new_ops $ all_notation m
-            show_e v@(Word _) = show v
-            show_e (FunApp f xs) 
-                | length xs == 2 = format "{0} {1} {2}" 
-                                    (show_left_sub_e op x)
-                                    op_name
-                                    (show_right_sub_e op y)
-                | length xs == 1 = format "{0} {1}" 
-                                    op_name
-                                    (show_right_sub_e op x)
-                | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
-                                        (name f)
-                                        (L.intercalate ", " $ map show xs)
-                | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
-                where
-                    x = xs !! 0
-                    y = xs !! 1
-                    op = maybe (Right plus) id $ find_op f
-                    op_name = maybe unknown name $ find_op f
-                    unknown = "<unknown function: " ++ show (name f) ++ ">"
-            show_e (Const _ n _) = n
-            show_e _ = "<unknown expression>"
-            show_left_sub_e op e = maybe (show_e e) f $ root_op e
-                where
-                    g op' = struct (all_notation m) G.! (op',op)
-                    f op'
-                        | g op' == LeftAssoc = show_e e
-                        | otherwise          = format "({0})" $ show_e e
-            show_right_sub_e op e = maybe (show_e e) f $ root_op e
-                where
-                    g op' = struct (all_notation m) G.! (op,op')
-                    f op'
-                        | g op' == RightAssoc = show_e e
-                        | otherwise           = format "({0})" $ show_e e
+            -- m_ops = M.fromList $ zip (map token xs) xs
+            --     where
+            --         xs = new_ops $ all_notation m
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")
@@ -143,7 +187,7 @@ latex_of m = do
             var_decl (Var n t) = cmd "\\variable" [(n ++ " : " ++ show_t t)]
             decls = map var_decl $ M.elems $ variables m
             imp_stat xs = cmd "\\with" [xs]
-            inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, show_e xs]
+            inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
             invs        = map inv_decl $ M.toList $ inv $ props m
             imports = map imp_stat $ filter (/= "basic") 
                         $ M.keys $ extends $ theory m
@@ -193,94 +237,128 @@ instance Show Tex where
             [ "" -- show m
             , concatMap flatten tex]
 
-gen_machine :: Bool -> Gen Machine
-gen_machine b = do
-            nvar  <- choose (0,5)
-            types <- L.sort `liftM` vectorOf nvar choose_type
-            let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
-                mch = empty_machine "m0"
-                inv_lbl = map (\x -> label $ "inv" ++ show x) [0..]
-            ninv <- choose (0,5)
-            bs   <- mk_errors b ninv
-            invs <- forM bs 
-                    (\b -> resize 5 $ expr_type b (symbol_table vars) bool)
-            let bk = or (map (\(x,y) -> isJust x && y) $ zip invs bs)
-            inv <- if not bk && b then do
-                x <- elements [0,5]
-                return $ zint x : catMaybes invs
-            else return $ catMaybes invs
-            return $ (empty_machine "m0")
-                { theory = (theory mch) { extends = M.fromList 
+var_set :: Gen (M.Map String Var)
+var_set = do
+    nvar  <- choose (0,5)
+    types <- L.sort `liftM` vectorOf nvar choose_type
+    let vars = zipWith (Var . (:[])) ['a'..] types
+    -- let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
+    return $ symbol_table vars
+            
+basic_notation :: Notation
+basic_notation = th_notation $ empty_theory
+                    { extends = M.fromList 
                         [ ("sets", set_theory) 
                         , ("functions", function_theory) 
                         , ("arithmetic", arithmetic)
                         , ("basic", basic_theory)] }
-                , variables = symbol_table vars
-                , props = empty_property_set
-                        { inv = M.fromList $ zip inv_lbl inv } }
+
+
+gen_machine :: Bool -> Gen Machine
+gen_machine b = fix (\retry n -> do
+            when (n == 0) $ fail "failed to produce Machine"
+            -- nvar  <- choose (0,5)
+            -- types <- L.sort `liftM` vectorOf nvar choose_type
+            vars <- var_set
+            -- let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
+            let mch = empty_machine "m0"
+                inv_lbl = map (label . printf "inv%d") ([0..] :: [Int])
+                            -- map (\x -> label $ "inv" ++ show x) [0..]
+            ninv <- choose (0,5)
+            bs   <- mk_errors b ninv
+            inv <- sequence `liftM` forM bs 
+                    (\b -> resize 5 $ expr_type b vars bool)
+            -- let bk = or (zipWith (\x y -> isJust x && y) invs bs)
+            -- inv <- if not bk && b then do
+            --     x <- choose (0,5)
+            --     return $ zint x : catMaybes invs
+            -- else 
+            -- return $ catMaybes invs
+            case inv of
+                Just inv ->
+                    return $ (empty_machine "m0")
+                        { theory = (theory mch) { extends = M.fromList 
+                                [ ("sets", set_theory) 
+                                , ("functions", function_theory) 
+                                , ("arithmetic", arithmetic)
+                                , ("basic", basic_theory)] }
+                        , variables = vars
+                        , props = empty_property_set
+                                { inv = M.fromList $ zip inv_lbl inv } }
+                Nothing -> retry $ n-1
+            ) 10
 
 instance Arbitrary Machine where
     arbitrary = gen_machine False
 
-mk_errors :: Bool -> Int -> Gen [Bool]
+mk_errors :: MonadGen m => Bool -> Int -> m [Bool]
 mk_errors False n = return $ replicate n False
 mk_errors True n = do
-    xs <- replicateM (n-1) arbitrary
+    xs <- liftGen $ replicateM (n-1) arbitrary
     permute $ True : xs
 
-expr_type :: Bool -> (M.Map String Var) -> Type -> Gen (Maybe Expr)
-expr_type b vars t = sized $ \n ->do
-        if n == 0 then 
-            choose_var b t
-        else do
-            oneof 
+expr_type :: Bool -> M.Map String Var -> Type -> Gen (Maybe Expr)
+expr_type b vars t = runReaderT (runRec $ expr_type' b t) t_map
+    where
+        t_map = M.fromListWith (++) $ map f $ M.elems vars
+        f v@(Var _ t) = (t,[v])
+
+type EGen = RecT (ReaderT (M.Map Type [Var]) Gen)
+
+
+
+expr_type' :: Bool -> Type -> EGen Expr
+expr_type' b t = do
+            choice 
                 [ choose_var b t
                 , choose_expr b t
                 ]
     where
-        t_map = M.fromListWith (++) $ map f $ M.elems vars
-        f v@(Var _ t) = (t,[v])
-        choose_var b t = do
-            t' <- if b then other_type t else return t
-            maybe
-                (return Nothing)
-                (((Just . Word) `liftM`) . elements)
-                $ M.lookup t' t_map
-        fun_map = M.fromList
-            [ (int, 
-                [ (from_list zplus, [int,int])])
-            , (bool, 
-                -- [ (from_list zeq', [int,int]) 
-                -- , (from_list zeq, [bool,bool])
-                [ (from_list (zand :: Expr -> Expr -> Expr), [bool,bool])
-                , (from_list (zor :: Expr -> Expr -> Expr), [bool,bool])
-                , (from_list (znot :: Expr -> Expr), [bool])
-                , (from_list zle, [int,int])
-                , (from_list zelem', [int, set_type int] )])
-            ]
-        zelem' e0 e1 = FunApp (Fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
+
+choose_var :: Bool -> Type -> EGen Expr
+choose_var b t = do
+    t' <- if b then liftGen $ other_type t else return t
+    t_map <- lift ask
+    maybe
+        (fail "")
+        ((Word `liftM`) . elements)
+        $ M.lookup t' t_map
+
+fun_map :: M.Map Type [([Expr] -> Expr, [Type])]
+fun_map = M.fromList
+    [ (int, 
+        [ (from_list zplus, [int,int])])
+    , (bool, 
+        -- [ (from_list zeq', [int,int]) 
+        -- , (from_list zeq, [bool,bool])
+        [ (from_list (zand :: Expr -> Expr -> Expr), [bool,bool])
+        , (from_list (zor :: Expr -> Expr -> Expr), [bool,bool])
+        , (from_list (znot :: Expr -> Expr), [bool])
+        , (from_list zle, [int,int])
+        , (from_list zelem', [int, set_type int] )])
+    ]
+
+zelem' :: Expr -> Expr -> Expr
+zelem' e0 e1 = FunApp (Fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
         -- zeq' e0 e1 = FunApp (Fun [] "=" [int,int] bool) [e0,e1 :: Expr]
-        choose_expr b t = sized $ \n -> do
-            case M.lookup t fun_map of
-                Just xs -> do
-                    (f,ts) <- elements xs
-                    bs     <- mk_errors b $ length ts
-                    es     <- forM (zip bs ts) $ \(b,t) -> resize (n-1) $ expr_type b vars t
-                    if (all isJust es) then
-                        return $ Just $ f $ catMaybes es
-                    else 
-                        resize (n-1) $ expr_type b vars t
-                Nothing -> return Nothing
-        --     if t == int then
 
-        --     else if t == bool then
+choose_expr :: Bool -> Type -> EGen Expr
+choose_expr b t = do
+    case M.lookup t fun_map of
+        Just xs -> do
+            (f,ts) <- elements xs
+            bs     <- mk_errors b $ length ts
+            -- es     <- forM (zip bs ts) $ \(b,t) -> resize (n-1) $ expr_type' b t
+            es     <- recForM (zip bs ts) $ \(b,t) -> try $ expr_type' b t
+            let es' = sequence es
+            case es' of
+                Just es -> return $ f es
+                Nothing -> consume $ expr_type' b t
+        Nothing -> fail ""
 
-            -- else 
-
+return []
 run_spec :: IO Bool
 run_spec = $quickCheckAll
-
--- main = run_spec
 
 show_list :: Show a => [a] -> String
 show_list xs = format "[{0}]" $ L.intercalate "\n," $ surround " " " " ys
@@ -297,16 +375,23 @@ subexpression e = f [] e
 
 main :: IO ()
 main = do
-        xs <- liftM concat $ replicateM 10 $ sample' mch_with_type_error
-        let (mch,Tex tex) = head 
-                $ filter (not . f_prop_type_error . snd) xs
-            mch'' = concat $ rights [mch']
-            mch'  = (M.elems . machines) `liftM` (all_machines tex)
-        writeFile "actual_exp.txt" (unlines $ map (show_list . subexpression) $ concatMap expressions mch'')
-        writeFile "expect_exp.txt" (unlines $ map (show_list . subexpression) $ expressions mch)
-        writeFile "actual.txt" (show mch')
-        writeFile "expect.txt" ("Right " ++ show [mch])
-        writeFile "tex.txt" (show $ Tex tex)
+        xs <- liftM concat $ replicateM 10 $ sample' arbitrary
+        let (ExprNotation ctx n e) = head 
+                $ filter (not . prop_expr_parser) xs
+            txt = showExpr n e
+            txt' = map (\x -> (x,li)) txt
+            li  = LI "" 0 0
+            e'  = runReader (runEitherT $ parse_expr' ctx n txt') li
+            -- mch'' = concat $ rights [mch']
+            -- mch'  = (M.elems . machines) `liftM` (all_machines tex)
+                
+        writeFile "actual_exp.txt" $ show e'
+        writeFile "expect_exp.txt" $ unlines
+            [ txt
+            , show e ]
+        -- writeFile "actual.txt" (show mch')
+        -- writeFile "expect.txt" ("Right " ++ show [mch])
+        -- writeFile "tex.txt" (show $ Tex tex)
         -- print $ zipWith (==) 
         --     (concatMap subexpression $ expressions mch) 
         --     (concatMap subexpression $ concatMap expressions mch')

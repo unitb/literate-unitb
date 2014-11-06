@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE RankNTypes           #-}
 module Logic.Expr.Genericity where
 
     -- Modules
@@ -119,13 +121,13 @@ instance TypeSystem2 GenericType where
 
 check_type :: Fun -> [ExprP] -> ExprP
 check_type f@(Fun _ n ts t) mxs = do
-        xs <- forM mxs id
+        xs <- sequence mxs
         let args = unlines $ map (\(i,x) -> format (unlines
                             [ "   argument {0}:  {1}"
                             , "   type:          {2}" ] )
                             i x (type_of x))
                         (zip [0..] xs) 
-        let err_msg = format (unlines 
+            err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
                     ,  "{3}"
@@ -133,11 +135,34 @@ check_type f@(Fun _ n ts t) mxs = do
                     n ts t args :: String
         maybe (Left err_msg) Right $ check_args xs f
 
-typ_fun1 :: TypeSystem2 t
-         => AbsFun t 
-         -> ExprPG t -> ExprPG t
+type OneExprP t = forall e0. 
+           Convert e0 (AbsExpr t)
+        => ExprPC e0 -> ExprPG t
+
+type TwoExprP t = forall e0 e1. 
+           (Convert e0 (AbsExpr t),Convert e1 (AbsExpr t))
+        => ExprPC e0 -> ExprPC e1 -> ExprPG t
+
+type ThreeExprP t = forall e0 e1 e2. 
+           ( Convert e0 (AbsExpr t)
+           , Convert e1 (AbsExpr t)
+           , Convert e2 (AbsExpr t))
+        => ExprPC e0 -> ExprPC e1 -> ExprPC e2 -> ExprPG t
+
+type FourExprP t = forall e0 e1 e2 e3. 
+           ( Convert e0 (AbsExpr t)
+           , Convert e1 (AbsExpr t)
+           , Convert e2 (AbsExpr t)
+           , Convert e3 (AbsExpr t))
+        => ExprPC e0 -> ExprPC e1 
+        -> ExprPC e2 -> ExprPC e3
+        -> ExprPG t    
+
+typ_fun1 :: ( TypeSystem2 t )
+         => AbsFun t
+         -> OneExprP t
 typ_fun1 f@(Fun _ n ts t) mx        = do
-        x <- mx
+        x <- liftM convert_to mx
         let err_msg = format (unlines 
                     [  "argument of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
@@ -148,12 +173,14 @@ typ_fun1 f@(Fun _ n ts t) mx        = do
                     x (type_of x) :: String
         maybe (Left err_msg) Right $ check_args [x] f
 
-typ_fun2 :: TypeSystem2 t
-         => AbsFun t -> ExprPG t
-         -> ExprPG t -> ExprPG t
+typ_fun2 :: ( TypeSystem2 t
+            , Convert e0 (AbsExpr t)
+            , Convert e1 (AbsExpr t))
+         => AbsFun t  -> ExprPC e0
+         -> ExprPC e1 -> ExprPG t
 typ_fun2 f@(Fun _ n ts t) mx my     = do
-        x <- mx
-        y <- my
+        x <- liftM convert_to mx
+        y <- liftM convert_to my
         let err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
@@ -167,14 +194,17 @@ typ_fun2 f@(Fun _ n ts t) mx my     = do
                     y (type_of y) :: String
         maybe (Left err_msg) Right $ check_args [x,y] f
 
-typ_fun3 :: TypeSystem2 t
-         => AbsFun t -> ExprPG t
-         -> ExprPG t -> ExprPG t
+typ_fun3 :: ( TypeSystem2 t
+            , Convert e0 (AbsExpr t)
+            , Convert e1 (AbsExpr t)
+            , Convert e2 (AbsExpr t))
+         => AbsFun t  -> ExprPC e0
+         -> ExprPC e1 -> ExprPC e2
          -> ExprPG t
 typ_fun3 f@(Fun _ n ts t) mx my mz  = do
-        x <- mx
-        y <- my
-        z <- mz
+        x <- liftM convert_to mx
+        y <- liftM convert_to my
+        z <- liftM convert_to mz
         let err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"

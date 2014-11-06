@@ -6,6 +6,8 @@ module Utilities.Error where
 
 import Utilities.Syntactic
 
+import Control.Applicative
+
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
@@ -19,6 +21,13 @@ type ErrorM = ErrorT Identity
 
 runErrorM :: ErrorT Identity a -> Either [Error] (a, [Error])
 runErrorM = runIdentity . runErrorT
+
+instance Monad m => Functor (ErrorT m) where
+    fmap = liftM
+
+instance Monad m => Applicative (ErrorT m) where
+    f <*> x = ap f x
+    pure x  = return x
 
 instance (Monad m) => Monad (ErrorT m) where
     ErrorT cmd >>= f = ErrorT $ do

@@ -151,7 +151,7 @@ prover (Shared { .. }) = do
     observe pr_obl tok
     -- req <- newEmptyMVar
     req <- newTBQueueIO 20
-    forM_ [1..8] $ \p -> forkOn p $ worker req 
+    forM_ [1..32] $ \p -> forkOn p $ worker req 
     return $ forever $ do
         takeMVar tok
         inc 1
@@ -348,7 +348,7 @@ run_pipeline fname (Params {..}) = do
         let sh = Shared { .. }
         ts <- run_all $
             [ summary sh
-            , prover sh -- (M.map f m)
+            -- , prover sh -- (M.map f m)
             , serialize sh
             , parser sh
             , dump sh

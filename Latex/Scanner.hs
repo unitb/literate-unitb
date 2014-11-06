@@ -1,5 +1,7 @@
 module Latex.Scanner where
 
+import Control.Applicative hiding ( many )
+
 import Control.Monad
 
 import Data.Maybe
@@ -10,6 +12,13 @@ data State a = State [(a,LineInfo)] LineInfo
 
 data Scanner a b = 
     Scanner (State a -> Either [Error] (b, State a))
+
+instance Functor (Scanner a) where
+    fmap = liftM
+
+instance Applicative (Scanner a) where
+    f <*> x = ap f x
+    pure x  = return x
 
 instance Monad (Scanner a) where
     f >>= gF = comb f gF

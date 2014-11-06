@@ -53,7 +53,10 @@ import Logic.ExpressionStore
 import UnitB.AST
 
     -- Libraries
-import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, local, writer, reader )
+import           Control.Applicative
+import           Control.Monad.Reader.Class hiding (reader)
+import           Control.Monad.Trans.RWS 
+        hiding ( ask, tell, asks, local, writer, reader )
 import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Reader       hiding ( reader )
 --import           Control.Monad.Reader.Class hiding ( reader )
@@ -444,6 +447,13 @@ data ParamT m = ParamT
     }
 
 data VisitorT m a = VisitorT { unVisitor :: ErrorT (ReaderT (LineInfo, [LatexDoc]) m) a }
+
+instance Monad m => Functor (VisitorT m) where
+    fmap = liftM
+
+instance Monad m => Applicative (VisitorT m) where
+    (<*>) = ap
+    pure = return
 
 instance Monad m => Monad (VisitorT m) where
     VisitorT cmd >>= f = VisitorT $ cmd >>= (unVisitor . f)

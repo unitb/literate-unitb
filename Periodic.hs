@@ -7,7 +7,8 @@ import Tools.Heap
 import Control.Concurrent
 
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 
 import Data.List
 import Data.Time

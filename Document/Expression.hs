@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances     #-}
 {-# LANGUAGE OverlappingInstances, TemplateHaskell  #-}
 module Document.Expression 
-    ( parse_expr, oper, run_test
+    ( parse_expr, parse_expr' , oper, run_test
     , get_variables, parse_oper )
 where
 
@@ -23,7 +23,7 @@ import Utilities.Syntactic
 --import Utilities.Trace
 
     -- Libraries
---import Control.DeepSeq
+import qualified Control.Applicative as A 
 
 import           Control.Monad
 import           Control.Monad.Reader.Class
@@ -64,6 +64,17 @@ data ExprToken =
         | Operator String
         | Comma | Colon
     deriving (Show, Eq)
+
+instance Functor Parser where
+    fmap = liftM
+
+instance A.Applicative Parser where
+    f <*> x = f `ap` x
+    pure = return
+
+instance A.Alternative Parser where
+    m0 <|> m1 = m0 `mplus` m1
+    empty     = mzero
 
 instance Monad Parser where
     Parser m0 >>= f = Parser $ m0 >>= (fromParser . f)
@@ -648,6 +659,24 @@ scan_expr n = do
         f (Right (BinOperator _ tok _)) = tok
         f (Left (UnaryOperator _ tok _)) = tok
 
+parse_expr' :: ( Monad m
+               , MonadReader LineInfo m ) 
+            => Context 
+            -> Notation
+            -> [(Char, LineInfo)] 
+            -> EitherT [Error] m Expr
+parse_expr' ctx@(Context _ vars _ _ _)  n input = do
+        li   <- lift $ ask
+        toks <- hoistEither $ read_tokens (scan_expr n)
+            (file_name li) 
+            input (line li, column li)
+        !e   <- hoistEither $ read_tokens 
+            (runParser ctx n vars expr) 
+            (file_name li) 
+            toks 
+            (line li, column li)
+        return e
+
     -- Too many arguments
 parse_expr :: ( Monad m
               , MonadReader LineInfo m
@@ -656,18 +685,10 @@ parse_expr :: ( Monad m
            -> Notation
            -> [(Char, LineInfo)] 
            -> EitherT [Error] m Expr
-parse_expr ctx@(Context _ vars _ _ _)  n input = do
-        li <- lift $ ask
-        toks <- hoistEither $ read_tokens (scan_expr n)
-            (file_name li) 
-            input (line li, column li)
-        !e <- hoistEither $ read_tokens 
-            (runParser ctx n vars expr) 
-            (file_name li) 
-            toks 
-            (line li, column li)
-        es <- gets expr_store
-        modify $ \s -> s 
+parse_expr ctx n input = do
+        e  <- parse_expr' ctx n input
+        es <- lift $ gets expr_store
+        lift $ modify $ \s -> s 
             { expr_store = ES.insert e (map fst input) es }
         return e
 
