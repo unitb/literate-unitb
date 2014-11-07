@@ -7,29 +7,79 @@ import Logic.ExpressionStore
 import UnitB.AST
 
     -- Libraries
-import Control.Monad ( forM )
-import Control.Monad.State.Class
+import Control.Monad.Reader
+import Control.Monad.Trans.Writer
 
 import Data.List (intercalate)
 import Data.Map as M (null,elems,toList,fromList,Map)
+import Data.Maybe
 
 import Utilities.Format
 
-summary :: MonadState ExprStore m
-        => Label -> Event -> m String
-summary lbl e = do
-    xs <- sequence
-        [ index_sum lbl e
-        , return ["\\begin{block}"]
-        , csched_sum lbl e
-        , fsched_sum lbl e
-        , param_sum e
-        , guard_sum lbl e
-        , act_sum lbl e
-        , return ["\\item \\textbf{end} \\\\"]
-        , return ["\\end{block}"]
-        ]
-    return $ unlines $ concat xs
+type M = WriterT [String] (Reader ExprStore)
+
+machine_summary :: Machine -> ExprStore -> String
+machine_summary m = runReader $ do
+    let prop = props m
+    xs <- execWriterT $ do
+        invariant_sum prop
+        liveness_sum prop
+        safety_sum prop
+    --     [ 
+    --     ]
+    return $ unlines xs
+
+event_summary :: Label -> Event -> ExprStore -> String
+event_summary lbl e = runReader $ do
+    xs <- execWriterT $ do
+        index_sum lbl e
+        block $ do
+            csched_sum lbl e
+            fsched_sum lbl e
+            param_sum e
+            guard_sum lbl e
+            act_sum lbl e
+            tell ["\\item \\textbf{end} \\\\"]
+        -- ]
+    return $ unlines xs
+
+block :: M () -> M ()
+block cmd = do
+    tell ["\\begin{block}"]
+    cmd
+    tell ["\\end{block}"]
+
+invariant_sum :: PropertySet -> M ()
+invariant_sum prop = do
+        section kw_inv (label "") (inv prop) 
+        section kw_thm (label "") (inv_thm prop)
+    where
+        kw_inv = "\\textbf{invariants}"
+        kw_thm = "\\textbf{invariants} (theorems)"
+    -- forM_ (M.toList $ invariants prop) $ \(lbl,inv) -> do
+
+liveness_sum :: PropertySet -> M ()
+liveness_sum prop = do
+        section' kw (label "") (progress prop) toString
+    where
+        kw = "\\textbf{progress}"
+        toString (LeadsTo _ p q) = do
+            p' <- get_string' p
+            q' <- get_string' q
+            return $ format "{0} \\quad \\mapsto\\quad {1}" p' q'
+
+safety_sum :: PropertySet -> M ()
+safety_sum prop = do
+        section' kw (label "") (safety prop) toString
+    where
+        kw = "\\textbf{safety}"
+        toString (Unless _ p q exc) = do
+            p' <- get_string' p
+            q' <- get_string' q
+            let exc' = case exc of
+                        Nothing -> ""
+                        Just exc -> format "\\qquad  \\text{(except {0})}" exc
+            return $ format "{0} \\textbf{\\quad unless \\quad} {1}{2}" p' q' exc'
 
 add_comments :: String -> String
 add_comments str = intercalate "\n" $ map (++ " %") $ lines $ "$" ++ f str ++ "$"
@@ -38,76 +88,71 @@ add_comments str = intercalate "\n" $ map (++ " %") $ lines $ "$" ++ f str ++ "$
         g '&' = ""
         g x = [x]
 
-put_expr :: MonadState ExprStore m => Label -> (Label,Expr) -> m String
-put_expr pre (s,e) = do
-        str <- get_string e
-        return $ format "\\item[ \\eqref{{0}} ]{1}" 
-            (show pre ++ show s)
-            (add_comments str)
+get_string' :: Expr -> M String
+get_string' e = do
+    es <- lift $ ask
+    return $ get_string es e
 
-put_all_expr :: MonadState ExprStore m
-             => Label -> Map Label Expr -> m [String]
-put_all_expr pre xs = do
-        let begin = "\\begin{block}"
-            end   = "\\end{block}"
-        xs <- forM (toList xs) $ put_expr pre
-        return $ [begin] ++ xs ++ [end] 
+put_expr :: (a -> M String) -> Label -> (Label,a) -> M ()
+put_expr toString pre (s,e) = do
+        str <- toString e
+        tell [format "\\item[ \\eqref{{0}} ]{1}" 
+                    (show pre ++ show s)
+                    (add_comments str)]
 
-index_sum :: MonadState ExprStore m
-          => Label -> Event -> m [String]
-index_sum lbl e = return ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\textbf{event}"]
+put_all_expr :: (a -> M String) -> Label -> Map Label a -> M ()
+put_all_expr toString pre xs = do
+        block $ forM_ (toList xs) $ put_expr toString pre
+
+section' :: String -> Label -> Map Label a -> (a -> M String) -> M ()
+section' kw pre xs toString = do
+    if M.null xs 
+        then return ()
+        else do
+            tell [kw]
+            put_all_expr toString pre xs
+
+section :: String -> Label -> Map Label Expr -> M ()
+section kw pre xs = section' kw pre xs get_string'
+
+index_sum :: Label -> Event -> M ()
+index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\textbf{event}"]
     where
         ind 
             | M.null $ indices e = ""
             | otherwise          = "[" ++ intercalate "," (map name $ M.elems $ indices e) ++ "]"
 
-csched_sum :: MonadState ExprStore m
-           => Label -> Event -> m [String]
-csched_sum lbl e
-        | M.null $ coarse $ new_sched e = return []
-        | otherwise                = do
-            xs <- put_all_expr lbl $ coarse $ new_sched e
-            return $ kw:xs
+csched_sum :: Label -> Event -> M ()
+csched_sum lbl e = section kw lbl $ coarse $ new_sched e
     where
         kw = "\\item \\textbf{during}"    
 
-fsched_sum :: MonadState ExprStore m
-           => Label -> Event -> m [String]
-fsched_sum lbl e = 
-    case fine $ new_sched e of
-        Nothing  -> return []
-        Just sch -> do
-            xs <- put_all_expr lbl $ fromList [sch]
-            let kw = "\\item \\textbf{upon}"
+fsched_sum :: Label -> Event -> M ()
+fsched_sum lbl e = section kw lbl $ fromList xs
+    where
+        kw = "\\item \\textbf{upon}"
+        xs = maybeToList (fine $ new_sched e)
+            
+            
 --                begin = "\\begin{block}"
 --                end   = "\\end{block}"
 --            str <- get_string $ sch
 --            return [kw,begin,"\\item" ++ add_comments str,end]
-            return $ kw:xs
 
-param_sum :: MonadState ExprStore m
-          => Event -> m [String]
+param_sum :: Event -> M ()
 param_sum e
-    | M.null $ params e  = return []
+    | M.null $ params e  = return ()
     | otherwise          = do
-        return ["\\item \\textbf{any} " 
+        tell ["\\item \\textbf{any} " 
             ++ intercalate "," (map name $ M.elems $ params e)]
 
-guard_sum :: MonadState ExprStore m
-          => Label -> Event -> m [String]
-guard_sum lbl e
-    | M.null $ new_guard e = return []
-    | otherwise            = do
-        let kw = "\\item \\textbf{when}"
-        xs <- put_all_expr lbl $ new_guard e
-        return $ kw:xs
+guard_sum :: Label -> Event -> M ()
+guard_sum lbl e = section kw lbl $ new_guard e
+    where
+        kw = "\\item \\textbf{when}"
 
-act_sum :: MonadState ExprStore m
-        => Label -> Event -> m [String]
-act_sum lbl e
-    | M.null $ action e  = return []
-    | otherwise          = do
-        let kw = "\\item \\textbf{begin}"
-        xs <- put_all_expr lbl $ action e
-        return $ kw:xs
+act_sum :: Label -> Event -> M ()
+act_sum lbl e = section kw lbl $ action e
+    where 
+        kw = "\\item \\textbf{begin}"
 

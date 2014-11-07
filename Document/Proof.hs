@@ -441,7 +441,7 @@ find_parts :: (MonadState System m, MonadReader Theory m)
            -> VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
 find_parts pr = visitor 
         [   (   "part:a"
-            ,   VEnvBlock $ \(formula :: [LatexDoc],()) _ -> do -- xs cases -> do
+            ,   VEnvBlock $ \(One (formula :: [LatexDoc])) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
                     p         <- lift_i $ collect_proof_step pr -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]

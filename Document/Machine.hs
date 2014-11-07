@@ -15,7 +15,6 @@ import Document.Context
 import Latex.Parser
 
 import Logic.Expr
-import Logic.ExpressionStore ( ExprStore )
 import Logic.Proof hiding ( with_line_info )
 
 import Documentation.SummaryGen
@@ -41,7 +40,6 @@ import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS
-import           Control.Monad.Trans.State ( StateT )
 
 import           Data.Char
 import           Data.Functor.Identity
@@ -167,10 +165,13 @@ produce_summaries :: FilePath -> System -> IO ()
 produce_summaries path sys = 
         void $ runStateT (do
             let ms = machines sys
-            forM_ (M.elems ms) $ \m -> 
+                st = expr_store sys
+            forM_ (M.elems ms) $ \m -> do
+                let mch = machine_summary m st
+                liftIO $ writeFile (path </> "machine_" ++ show (_name m) <.> "tex") mch
                 forM_ (toList $ events m) $ \(lbl,evt) -> do
-                    xs <- focus' (summary lbl evt :: (StateT ExprStore IO) String)
-                    liftIO $ writeFile (path </> show (_name m) ++ "_" ++ rename lbl ++ ".tex") xs
+                    let xs = event_summary lbl evt st
+                    liftIO $ writeFile (path </> (show (_name m) ++ "_" ++ rename lbl) <.> "tex") xs
             ) sys
     where
         rename lbl = map f $ show lbl

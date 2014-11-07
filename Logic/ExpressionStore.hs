@@ -6,9 +6,6 @@ where
     -- Modules
 import Logic.Expr
 
-    -- Libraries
-import Control.Monad.State.Class
-
 import Data.Map as M ( insertWith, Map, empty, lookup ) --, (!) )
 
 data UntypedExpr = UE Expr
@@ -57,10 +54,8 @@ empty_store = ExprStore empty
 insert :: Expr -> String -> ExprStore -> ExprStore
 insert e str (ExprStore st) = ExprStore $ insertWith (++) (UE e) [str] st
 
-get_string :: ( Monad m
-              , MonadState ExprStore m )
-           => Expr -> m String
-get_string e = gets $ maybe (to_latex e) head . (M.lookup $ UE e) . getMap
+get_string :: ExprStore -> Expr -> String
+get_string es e = maybe (to_latex e) head $ (M.lookup $ UE e) $ getMap es
 
 --(!) x y = maybe (error $ "ExprStore: expression not found: " ++ show y) id $ M.lookup y x
 
