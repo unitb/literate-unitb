@@ -345,6 +345,7 @@ run_pipeline fname (Params {..}) = do
         focus      <- new_obs init_focus
         dump_cmd   <- new_obs Nothing
         redraw     <- new_obs True
+        setNumCapabilities 8
         let sh = Shared { .. }
         ts <- run_all $
             [ summary sh

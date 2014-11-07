@@ -233,10 +233,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   24026 total
+   24221 total
     2013 Document/Tests/TrainStation.hs
     1376 Document/Tests/Lambdas.hs
      956 Document/Machine.hs
      913 Document/Tests/IndirectEq.hs
      730 Document/Proof.hs
-Run time: 1m 25s
+Run time: 1m 30s

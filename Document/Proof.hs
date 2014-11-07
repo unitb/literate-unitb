@@ -148,7 +148,7 @@ find_assumptions = visitor
             ,   VEnvBlock $ \() _ -> return ()
             )
         ,   (   "free:var"
-            ,   VEnvBlock $ \(_ :: Label,_ :: Label,()) _ -> return ()
+            ,   VEnvBlock $ \(_ :: Label,_ :: Label) _ -> return ()
             )
         ,   (   "by:cases"
             ,   VEnvBlock $ \() _ -> return ()
@@ -157,25 +157,25 @@ find_assumptions = visitor
             ,   VEnvBlock $ \() _ -> return ()
             )
         ,   (   "subproof"
-            ,   VEnvBlock $ \(_ :: Label,()) _ -> return ()
+            ,   VEnvBlock $ \(One (_ :: Label)) _ -> return ()
             )
         ] [ (   "\\assume"
-            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc],()) -> do
+            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc]) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     add_assumption lbl expr 
             )
         ,   (   "\\assert"
-            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc],()) -> do
+            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc]) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     add_assert lbl expr
             )
         ,   (   "\\goal"
-            ,   VCmdBlock $ \(formula :: [LatexDoc],()) -> do
+            ,   VCmdBlock $ \(One (formula :: [LatexDoc])) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     set_goal expr
             )
         ,   (   "\\using"
-            ,   VCmdBlock $ \(refs,()) -> do
+            ,   VCmdBlock $ \(One refs) -> do
                     li      <- ask
                     s       <- lift $ lift $ ST.get
                     (((),hs),s) <- add_state s $ add_writer $ with_content li refs hint
@@ -340,7 +340,7 @@ find_proof_step pr = visitor
             )
                 -- TODO: make into a command
         ,   (   "free:var"
-            ,   VEnvBlock $ \(String from,String to,()) _ -> do
+            ,   VEnvBlock $ \(String from,String to) _ -> do
                     li    <- ask
                     proof <- lift_i $ collect_proof_step pr
                     set_proof $ LP.with_line_info li $ do
@@ -367,7 +367,7 @@ find_proof_step pr = visitor
                         by_parts xs
             )
         ,   (   "subproof"
-            ,   VEnvBlock $ \(lbl,()) _ -> do
+            ,   VEnvBlock $ \(One lbl) _ -> do
                     li     <- ask
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
@@ -376,7 +376,7 @@ find_proof_step pr = visitor
                     add_proof lbl p
             )
         ,   (   "indirect:equality"
-            ,   VEnvBlock $ \(String dir,rel,String zVar,()) _ -> do
+            ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
                     li <- ask
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
@@ -393,7 +393,7 @@ find_proof_step pr = visitor
                                 var p
             )
         ,   (   "indirect:inequality"
-            ,   VEnvBlock $ \(String dir,rel,String zVar,()) _ -> do
+            ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
                     li <- ask
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
@@ -410,7 +410,7 @@ find_proof_step pr = visitor
                                 var p
             )
         ,   (   "by:symmetry"
-            ,   VEnvBlock $ \(lbl,vars,()) _ -> do
+            ,   VEnvBlock $ \(lbl,vars) _ -> do
                     li <- ask
                     p <- lift_i $ collect_proof_step pr
                     set_proof $ LP.with_line_info li $ do
@@ -429,7 +429,7 @@ find_cases :: (MonadState System m, MonadReader Theory m)
            -> VisitorT (WriterT [(Label,Tactic Expr,Tactic Proof)] m) ()
 find_cases pr = visitor 
         [   (   "case"
-            ,   VEnvBlock $ \(lbl,formula :: [LatexDoc],()) _ -> do
+            ,   VEnvBlock $ \(lbl,formula :: [LatexDoc]) _ -> do
                     expr      <- lift_i $ get_expression (Just bool) formula 
                     p         <- lift_i $ collect_proof_step pr
                     lift $ tell [(lbl, expr, p)]
@@ -499,10 +499,10 @@ hint = visitor []
         , ( "\\eqinst", VCmdBlock g )
         ]
     where
-        g (lbl,subst,()) = do
+        g (lbl,subst) = do
                 li <- ask
                 ((),w) <- with_content li subst $ add_writer $ visitor []
-                    [ ( "\\subst", VCmdBlock $ \(String var, expr,()) -> do
+                    [ ( "\\subst", VCmdBlock $ \(String var, expr) -> do
                             expr <- get_expression Nothing expr
                             lift $ W.tell [do
                                 dum <- get_dummy var
@@ -513,7 +513,7 @@ hint = visitor []
                 lift $ W.tell [do
                     w <- sequence w 
                     return (ThmRef lbl w,li)]
-        f (b,()) = do
+        f (One b) = do
             li <- ask
             lift $ W.tell [return (ThmRef b [],li)]
 

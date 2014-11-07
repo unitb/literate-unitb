@@ -15,10 +15,8 @@ import Control.Monad.Fix
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.State
 
 import Data.List
-import Data.Maybe
 
 import Text.Printf
 
@@ -28,7 +26,7 @@ import qualified Test.QuickCheck as QC
 
 import Utilities.QuickCheckReport
 
-import Utilities.Tuple
+-- import Utilities.Tuple
 
 data Tree a = Tree a [Tree a]
     deriving Eq
@@ -75,16 +73,16 @@ instance MonadGen m => MonadGen (RecT m) where
 elements :: MonadGen m => [a] -> m a
 elements = liftGen . QC.elements
 
-recurse :: forall a b. TupleOf b a => Rec a -> Rec b
-recurse cmd = do
-    n <- RecT ask
-    let m = tLength (error "nuts" :: b)
-    unless (m <= n) (fail "insufficient budget")
-    bs <- lift $ putInBins (n - m) m
-    flip evalStateT bs $ forAllM $ do
-        x <- gets head
-        modify tail
-        lift $ RecT $ local (const x) (runRecT cmd)
+-- recurse :: forall a b. TupleOf b a => Rec a -> Rec b
+-- recurse cmd = do
+--     n <- RecT ask
+--     let m = tLength (error "nuts" :: b)
+--     unless (m <= n) (fail "insufficient budget")
+--     bs <- lift $ putInBins (n - m) m
+--     flip evalStateT bs $ forAllM $ do
+--         x <- gets head
+--         modify tail
+--         lift $ RecT $ local (const x) (runRecT cmd)
 
 recForM :: MonadGen m => [a] -> (a -> RecT m b) -> RecT m [b]
 recForM xs f = do
@@ -139,30 +137,30 @@ runRec cmd = sized $ \n -> do
 data MyTree = MyLeaf | TwoSubtrees MyTree MyTree | SomeSubtress [MyTree]
     deriving Show
 
-tree :: Gen MyTree
-tree = fromJust `liftM` runRec f
-    where
-        f = choice 
-            [ return MyLeaf
-            , do
-                t0 :+: t1 :+: () <- recurse f
-                return $ TwoSubtrees t0 t1
-            , do 
-                ts <- recListFromTo 3 7 f
-                return $ SomeSubtress ts
-            ] 
+-- tree :: Gen MyTree
+-- tree = fromJust `liftM` runRec f
+--     where
+--         f = choice 
+--             [ return MyLeaf
+--             , do
+--                 t0 :+: t1 :+: () <- recurse f
+--                 return $ TwoSubtrees t0 t1
+--             , do 
+--                 ts <- recListFromTo 3 7 f
+--                 return $ SomeSubtress ts
+--             ] 
 
-class Tuple a => TupleOf a b where
-    forAllM :: Monad m => m b -> m a
+-- class Tuple a => TupleOf a b where
+--     forAllM :: Monad m => m b -> m a
 
-instance TupleOf () a where
-    forAllM _ = return ()
+-- instance TupleOf () a where
+--     forAllM _ = return ()
 
-instance TupleOf as a => TupleOf (a :+: as) a where
-    forAllM cmd = do
-        x  <- cmd
-        xs <- forAllM cmd
-        return (x :+: xs)
+-- instance TupleOf as a => TupleOf (a :+: as) a where
+--     forAllM cmd = do
+--         x  <- cmd
+--         xs <- forAllM cmd
+--         return (x :+: xs)
 
 instance Show a => Show (Tree a) where
     show (Tree x []) = show x

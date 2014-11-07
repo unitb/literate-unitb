@@ -7,8 +7,9 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE TypeOperators              #-}
 module Document.Visitor 
-    ( module Document.TypeList 
+    ( module Utilities.Tuple
     , fromEither
     , find_cmd_arg 
     , visit_doc 
@@ -43,7 +44,6 @@ module Document.Visitor
 where
 
     -- Modules
-import Document.TypeList
 
 import Latex.Parser
 
@@ -78,8 +78,33 @@ import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
 import GHC.Read
 
 import Utilities.Error
-import Utilities.Syntactic
 import Utilities.Format 
+import Utilities.Syntactic
+import Utilities.Tuple
+
+class Readable a where
+    read_args :: (Monad m, MonadReader LineInfo m)
+              => ST.StateT [LatexDoc] (EitherT [Error] m) a
+
+get_tuple' :: (Monad m, IsTuple a, AllReadable (TypeList a))
+           => [LatexDoc] -> LineInfo 
+           -> EitherT [Error] m (a, [LatexDoc])
+get_tuple' xs li = EitherT $ do
+        x <- runReaderT (runEitherT $ ST.runStateT get_tuple xs) li
+        return $ liftM (\(x,y) -> (fromTuple x,y)) x
+
+class AllReadable a where
+    get_tuple :: (Monad m, MonadReader LineInfo m) 
+              => ST.StateT [LatexDoc] (EitherT [Error] m) a
+
+instance AllReadable () where
+    get_tuple = return () 
+
+instance (AllReadable as, Readable a) => AllReadable (a :+: as) where
+    get_tuple = do
+        x  <- read_args 
+        xs <- get_tuple
+        return (x :+: xs)
 
 trim :: [Char] -> [Char]
 trim xs = reverse $ f $ reverse $ f xs
@@ -358,15 +383,19 @@ instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
 type NodeT s m = EitherT [Error] (RWST LineInfo [Error] s m)
 
 data EnvBlock s a = 
-            forall t. TypeList t => EnvBlock (forall m. Monad m => t -> [LatexDoc] -> a -> NodeT s m a)
+            forall t. (IsTuple t, AllReadable (TypeList t))
+         => EnvBlock (forall m. Monad m => t -> [LatexDoc] -> a -> NodeT s m a)
 
 data CmdBlock s a =
-            forall t. TypeList t => CmdBlock (forall m. Monad m => t -> a -> NodeT s m a)
+            forall t. (IsTuple t, AllReadable (TypeList t))
+         => CmdBlock (forall m. Monad m => t -> a -> NodeT s m a)
 
-data VEnvBlock m = forall t. TypeList t => VEnvBlock (t -> [LatexDoc] -> VisitorT m ())
+data VEnvBlock m = forall t. (IsTuple t, AllReadable (TypeList t))
+                => VEnvBlock (t -> [LatexDoc] -> VisitorT m ())
 
 data VCmdBlock m =
-            forall t. TypeList t => VCmdBlock (t -> VisitorT m ())
+               forall t. (IsTuple t, AllReadable (TypeList t))
+            => VCmdBlock (t -> VisitorT m ())
 
 --type MEither a = RWS () [a] ()
 

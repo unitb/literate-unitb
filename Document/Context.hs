@@ -36,7 +36,7 @@ import Utilities.Syntactic
 ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Error System Theory
 ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
-               ,  CmdBlock $ \(String name, String tag,()) th -> do
+               ,  CmdBlock $ \(String name, String tag) th -> do
                     let new_sort = Sort tag name 0
                     let new_type = Gen $ USER_DEFINED new_sort []
                     toEither $ error_list
@@ -73,7 +73,7 @@ ctx_declarations :: Monad m
                  -> MSEitherT Error System m Theory
 ctx_declarations _ = visit_doc []
         [   (   "\\constant"
-            ,   CmdBlock $ \(xs,()) th -> do
+            ,   CmdBlock $ \(One xs) th -> do
                         vs <- get_variables 
                             (theory_ctx th) 
                             (th_notation th) xs
@@ -83,7 +83,7 @@ ctx_declarations _ = visit_doc []
                                     (consts th) } 
             )
         ,   (   "\\dummy"
-            ,   CmdBlock $ \(xs,()) th -> do
+            ,   CmdBlock $ \(One xs) th -> do
                         vs <- get_variables 
                             (theory_ctx th) 
                             (th_notation th) xs
@@ -93,7 +93,7 @@ ctx_declarations _ = visit_doc []
                                     (dummies th) }
             )
         ,   (   "\\precedence"
-            ,   CmdBlock $ \(ops,()) th -> do
+            ,   CmdBlock $ \(One ops) th -> do
                     li <- lift ask
                     let msg   = "invalid operator: '{0}'"
                         f x   = (name x, x)
@@ -144,7 +144,7 @@ ctx_imports :: Monad m
         -> MSEitherT Error System m Theory
 ctx_imports _ = visit_doc []
             [   ( "\\with"
-                , CmdBlock $ \(String th_name,()) th -> do
+                , CmdBlock $ \(One (String th_name)) th -> do
                     let all_th = [ ("sets"       , set_theory)
                                  , ("functions"  , function_theory)
                                  , ("arithmetic" , arithmetic)
@@ -161,7 +161,7 @@ ctx_imports _ = visit_doc []
                                             $ extends th }
                 )
         ,   (   "\\operator"
-            ,   CmdBlock $ \(String name,optype,()) th -> do
+            ,   CmdBlock $ \(String name,optype) th -> do
                         li <- lift $ ask
                         var <- get_variables 
                             (theory_ctx th) 
@@ -206,7 +206,7 @@ ctx_collect_expr :: Monad m
                  -> MSEitherT Error System m Theory
 ctx_collect_expr name = visit_doc 
         [] [(   "\\axiom"
-            ,   CmdBlock $ \(lbl, xs,()) th -> do
+            ,   CmdBlock $ \(lbl, xs) th -> do
                         toEither $ error_list
                             [ ( (lbl `member` fact th)
                               , format "a statement named '{0}' is already declared" lbl )
@@ -218,7 +218,7 @@ ctx_collect_expr name = visit_doc
                         return th { fact = insert lbl thm $ fact th }
             )
         ,   (   "\\theorem"
-            ,   CmdBlock $ \(lbl, xs,()) th -> do
+            ,   CmdBlock $ \(lbl, xs) th -> do
                         toEither $ error_list
                             [ ( (lbl `member` fact th)
                               , format "a statement named '{0}' is already declared" lbl )
@@ -241,7 +241,7 @@ ctx_collect_proofs :: Monad m
                    -> MSEitherT Error System m Theory
 ctx_collect_proofs name = visit_doc
         [   (   "proof"
-            ,   EnvBlock $ \(po,()) xs th -> do 
+            ,   EnvBlock $ \(One po) xs th -> do 
                         -- This should be moved to its own phase
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                         lbl = composite_label [ po_lbl ]

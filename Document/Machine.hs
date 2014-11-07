@@ -279,7 +279,7 @@ read_document xs = do
 type_decl :: [LatexDoc] -> Machine -> MSEither Error System Machine
 type_decl = visit_doc []
             [  (  "\\newset"
-               ,  CmdBlock $ \(String name, String tag,()) m -> do
+               ,  CmdBlock $ \(String name, String tag) m -> do
                     let th = theory m
                     let new_sort = Sort tag name 0
                     let new_type = Gen $ USER_DEFINED new_sort []
@@ -308,7 +308,7 @@ type_decl = visit_doc []
                     return m { theory = hd } 
                )
             ,  (  "\\newevent"
-               ,  CmdBlock $ \(evt,()) m -> do 
+               ,  CmdBlock $ \(One evt) m -> do 
                         toEither $ error_list
                             [ ( evt `member` events m
                               , format "event '{0}' is already defined" evt )
@@ -316,7 +316,7 @@ type_decl = visit_doc []
                         return m { events = insert evt (empty_event) $ events m } 
                )
             ,  (  "\\refines"
-               ,  CmdBlock $ \(mch,()) m -> do
+               ,  CmdBlock $ \(One mch) m -> do
                         anc   <- lift $ gets ref_struct
                         sys   <- lift $ gets machines
                         li    <- lift $ ask
@@ -333,7 +333,7 @@ imports :: Monad m
         -> MSEitherT Error System m Machine 
 imports = visit_doc []
             [   ( "\\with"
-                , CmdBlock $ \(String th_name,()) m -> do
+                , CmdBlock $ \(One (String th_name)) m -> do
                     let th = [ ("sets"       , set_theory)
                              , ("functions"  , function_theory)
                              , ("arithmetic" , arithmetic)
@@ -359,7 +359,7 @@ declarations :: Monad m
              -> MSEitherT Error System m Machine
 declarations = visit_doc []
         [   (   "\\variable"
-            ,   CmdBlock $ \(xs,()) m -> do
+            ,   CmdBlock $ \(One xs) m -> do
                         let msg = "repeated declaration: {0}"
                         vs <- get_variables 
                             (context m) 
@@ -373,7 +373,7 @@ declarations = visit_doc []
                         return m { variables = fromList vs `union` variables m} 
             )
         ,   (   "\\indices"
-            ,   CmdBlock $ \(evt,xs,()) m -> do
+            ,   CmdBlock $ \(evt,xs) m -> do
                         let msg = "repeated declaration: {0}"
                         vs <- get_variables 
                             (context m) 
@@ -394,7 +394,7 @@ declarations = visit_doc []
                         return m { events = insert evt new_event $ events m } 
             )
         ,   (   "\\param"
-            ,   CmdBlock $ \(evt,xs,()) m -> do
+            ,   CmdBlock $ \(evt,xs) m -> do
                         
                         vs <- get_variables 
                             (context m) 
@@ -416,7 +416,7 @@ declarations = visit_doc []
                         return m { events = insert evt new_event $ events m } 
             )
         ,   (   "\\constant"
-            ,   CmdBlock $ \(xs,()) m -> do
+            ,   CmdBlock $ \(One xs) m -> do
                         let err = "repeated definition"
                         vs <- get_variables 
                             (context m) 
@@ -427,7 +427,7 @@ declarations = visit_doc []
                                     (consts $ theory m) } } 
             )
         ,   (   "\\dummy"
-            ,   CmdBlock $ \(xs,()) m -> do
+            ,   CmdBlock $ \(One xs) m -> do
                         let err = "repeated definition"
                         vs <- get_variables 
                             (context m) 
@@ -448,7 +448,7 @@ tr_hint :: Monad m
         -> RWST LineInfo [Error] System m TrHint
 tr_hint m vs lbl = visit_doc []
         [ ( "\\index"
-          , CmdBlock $ \(String x, xs, ()) (TrHint ys z) -> do
+          , CmdBlock $ \(String x, xs) (TrHint ys z) -> do
                 evt <- bind
                     (format "'{0}' is not an event of '{1}'" lbl $ _name m)
                     $ lbl `M.lookup` events m
@@ -460,7 +460,7 @@ tr_hint m vs lbl = visit_doc []
                     ]
                 return $ TrHint (insert x expr ys) z)
         , ( "\\lt"
-          , CmdBlock $ \(prog,()) (TrHint ys z) -> do
+          , CmdBlock $ \(One prog) (TrHint ys z) -> do
                 let msg = "Only one progress property needed for '{0}'"
                 toEither $ error_list 
                     [ ( not $ isNothing z
@@ -484,7 +484,7 @@ collect_expr = visit_doc
                 --  Events  --
                 --------------
         [] [(   "\\evassignment"
-            ,   CmdBlock $ \(evs, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(evs, lbl, xs) m -> do
                         let msg = "{0} is already used for another assignment"
                         evs <- forM evs $ \ev -> do
                             old_event <- bind
@@ -503,7 +503,7 @@ collect_expr = visit_doc
                                 events  = union (fromList evs) $ events m } 
             )
         ,   (   "\\evguard"
-            ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(evt, lbl, xs) m -> do
                         old_event <- bind
                             ( format "event '{0}' is undeclared" evt )
                             $ evt `M.lookup` events m
@@ -530,7 +530,7 @@ collect_expr = visit_doc
                               , events  = insert evt new_event $ events m } 
             )
         ,   (   "\\cschedule"
-            ,   CmdBlock $ \(evt, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(evt, lbl, xs) m -> do
                         old_event <- bind 
                             ( format "event '{0}' is undeclared" evt )
                             $ evt `M.lookup` events m
@@ -546,7 +546,7 @@ collect_expr = visit_doc
                                 events  = insert evt new_event $ events m } 
             )
         ,   (   "\\fschedule"
-            ,   CmdBlock $ \(evt, lbl :: Label, xs,()) m -> do
+            ,   CmdBlock $ \(evt, lbl :: Label, xs) m -> do
                         old_event <- bind
                             (format "event '{0}' is undeclared" evt)
                             $ evt `M.lookup` events m
@@ -565,7 +565,7 @@ collect_expr = visit_doc
                 --  Theory Properties  --
                 -------------------------
         ,   (   "\\assumption"
-            ,   CmdBlock $ \(lbl,xs,()) m -> do
+            ,   CmdBlock $ \(lbl,xs) m -> do
                         let th = theory m
                             msg = "'{0}' is already used for another assertion"
                         axm      <- get_assert m xs
@@ -578,7 +578,7 @@ collect_expr = visit_doc
                 --  Program properties  --
                 --------------------------
         ,   (   "\\initialization"
-            ,   CmdBlock $ \(lbl,xs,()) m -> do
+            ,   CmdBlock $ \(lbl,xs) m -> do
                         let msg = "'{0}' is already used for another invariant"
                         initp     <- get_assert m xs
                         new_inits <- bind (format msg lbl)
@@ -587,7 +587,7 @@ collect_expr = visit_doc
                                 inits = new_inits } 
             )
         ,   (   "\\invariant"
-            ,   CmdBlock $ \(lbl,xs,()) m -> do
+            ,   CmdBlock $ \(lbl,xs) m -> do
                         let msg = "'{0}' is already used for another invariant"
                         invar   <- get_assert m xs
                         new_inv <- bind (format msg lbl)
@@ -597,7 +597,7 @@ collect_expr = visit_doc
                                 inv = new_inv } } 
             )
         ,   (   "\\transient"      
-            ,   CmdBlock $ \(ev, lbl, xs,()) m -> do
+            ,   CmdBlock $ \(ev, lbl, xs) m -> do
                         let msg = "'{0}' is already used for another\
                                   \ program property"
                         toEither $ error_list
@@ -616,7 +616,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
-            ,   CmdBlock $ \(ev, lbl, hint, xs,()) m -> do
+            ,   CmdBlock $ \(ev, lbl, hint, xs) m -> do
                         let msg = "'{0}' is already used for\
                                   \ another program property"
                         toEither $ error_list
@@ -636,7 +636,7 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\constraint"
-            ,   CmdBlock $ \(lbl,xs,()) m -> do
+            ,   CmdBlock $ \(lbl,xs) m -> do
                         let msg = "'{0}' is already used for another safety property"
                         pre <- get_predicate m empty_ctx WithFreeDummies xs
                         let vars = elems $ free_vars (context m) pre
@@ -648,7 +648,7 @@ collect_expr = visit_doc
                                 constraint = new_cons } } 
             )
         ,   (   "\\safety"
-            ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
+            ,   CmdBlock $ \(lbl, pCt, qCt) m -> do
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert_with_free m pCt
                         q    <- fromEither ztrue $ get_assert_with_free m qCt
@@ -664,7 +664,7 @@ collect_expr = visit_doc
                         { safety = new_saf_props } } 
             )
         ,   (   "\\progress"
-            ,   CmdBlock $ \(lbl, pCt, qCt,()) m -> do
+            ,   CmdBlock $ \(lbl, pCt, qCt) m -> do
                     let prop = progress $ props m
                     (p,q)    <- toEither (do
                         p    <- fromEither ztrue $ get_assert_with_free m pCt
@@ -704,7 +704,7 @@ collect_refinement :: Monad m
                    -> MSEitherT Error System m Machine 
 collect_refinement = visit_doc []
         [   (   "\\refine"
-            ,   CmdBlock $ \(goal, String rule, hyps, hint, ()) m -> do
+            ,   CmdBlock $ \(goal, String rule, hyps, hint) m -> do
                     toEither $ error_list
                         [   ( not (goal `member` (progress (props m) `union` progress (inh_props m)))
                             , format "the goal is an undefined progress property {0}" goal )
@@ -716,7 +716,7 @@ collect_refinement = visit_doc []
                     return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
             )
         ,   (   "\\safetyB"
-            ,   CmdBlock $ \(lbl, evt, pCt, qCt, ()) m -> do
+            ,   CmdBlock $ \(lbl, evt, pCt, qCt) m -> do
                         -- Why is this here instead of the expression collector?
                     _  <- bind
                         (format "event '{0}' is undeclared" evt)
@@ -739,7 +739,7 @@ collect_refinement = visit_doc []
                         } } 
             )
         ,   (   "\\replace"
-            ,   CmdBlock $ \(evt,del,add,keep,prog,saf,()) m -> do
+            ,   CmdBlock $ \(evt,del,add,keep,prog,saf) m -> do
                     old_event <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
@@ -772,7 +772,7 @@ collect_refinement = visit_doc []
                       }
             )
         ,   (   "\\weakento"
-            ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label,()) m -> do
+            ,   CmdBlock $ \(evt :: Label,del :: S.Set Label,add :: S.Set Label) m -> do
                     old_event <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
@@ -797,7 +797,7 @@ collect_refinement = visit_doc []
                       }
             )
         ,   (   "\\replacefine"
-            ,   CmdBlock $ \(evt, keep, old, new, prog, ()) m -> do
+            ,   CmdBlock $ \(evt, keep, old, new, prog) m -> do
                     old_event <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
@@ -832,7 +832,7 @@ collect_refinement = visit_doc []
                       }
             )
         ,   (   "\\removeguard"
-            ,   CmdBlock $ \(evt, lbls, ()) m -> do
+            ,   CmdBlock $ \(evt, lbls) m -> do
                     old_event <- bind
                         (format "event '{0}' is undeclared" evt)
                         $ evt `M.lookup` events m
@@ -863,7 +863,7 @@ collect_proofs :: Monad m
                -> MSEitherT Error System m Machine
 collect_proofs = visit_doc
         [   (   "proof"
-            ,   EnvBlock $ \(po,()) xs m -> do -- with_tracingM $ do
+            ,   EnvBlock $ \(One po) xs m -> do -- with_tracingM $ do
                         -- This should be moved to its own phase
                     let po_lbl = label $ remove_ref $ concatMap flatten po
                         lbl = composite_label [ _name m, po_lbl ]
