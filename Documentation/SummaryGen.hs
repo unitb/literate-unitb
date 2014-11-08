@@ -31,7 +31,7 @@ type M = WriterT [String] Doc
 produce_summaries :: FilePath -> System -> IO ()
 produce_summaries path sys = runReaderT (do
             forM_ (M.elems ms) $ \m -> do
-                machine_summary m
+                machine_summary sys m
                 properties_summary m
                 forM_ (toList $ events m) $ \(lbl,evt) -> do
                     event_summary m lbl evt
@@ -49,10 +49,11 @@ make_file fn cmd = do
 keyword :: String -> String
 keyword kw = format "\\textbf{{0}}" kw
 
-machine_summary :: Machine -> Doc ()
-machine_summary m = make_file fn $ 
+machine_summary :: System -> Machine -> Doc ()
+machine_summary sys m = make_file fn $ 
         block $ do
             item $ tell [keyword "machine" ++ " " ++ show (_name m)]
+            item $ refines_clause sys m
             item $ variable_sum m
             unless (M.null $ inv $ props m) 
                 $ item $ input $ inv_file m
@@ -144,6 +145,12 @@ event_summary m lbl e = make_file fn $ do
             item $ kw_end
     where
         fn = event_file_name m lbl
+
+refines_clause :: System -> Machine -> M ()
+refines_clause sys m = do
+    case _name m `M.lookup` ref_struct sys of
+        Nothing -> return ()
+        Just anc -> tell [keyword "refines" ++ " " ++ show anc]
 
 block :: M () -> M ()
 block cmd = do
