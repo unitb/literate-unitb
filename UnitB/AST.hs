@@ -51,6 +51,7 @@ module UnitB.AST
     , remove_guard
     , add_guard
     , th_notation
+    , DocItem (..)
     ) 
 where
  
@@ -123,8 +124,23 @@ data Machine =
         , inits      :: Map Label Expr
         , events     :: Map Label Event
         , inh_props  :: PropertySet
-        , props      :: PropertySet }
+        , props      :: PropertySet
+        , comments   :: Map DocItem String }
     deriving (Eq, Show, Typeable)
+
+data DocItem = 
+        DocVar String 
+        | DocEvent Label 
+        | DocInv Label
+        | DocProg Label
+    deriving (Eq,Ord)
+
+instance Show DocItem where
+    show (DocVar xs) = format "{0} (variable)" xs
+    show (DocEvent xs) = format "{0} (event)" xs
+    show (DocInv xs) = format "{0} (invariant)" xs
+    show (DocProg xs) = format "{0} (progress)" xs
+
 
 class (Typeable a, Eq a, Show a) => RefRule a where
     refinement_po :: a -> Machine -> Map Label Sequent
@@ -138,6 +154,7 @@ empty_machine n = Mch (Lbl n)
         empty empty empty 
         empty_property_set 
         empty_property_set
+        empty
 
 data System = Sys 
         {  proof_struct :: [(Label,Label)]

@@ -409,3 +409,10 @@ uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 
 with_print :: Show a => a -> a
 with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
+
+remove_ref :: [Char] -> [Char]
+remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
+remove_ref ('}':xs) = remove_ref xs
+remove_ref (x:xs)   = x:remove_ref xs
+remove_ref []       = []
+

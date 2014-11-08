@@ -8,6 +8,8 @@ import Interactive.Config
 
 import Document.Document
 
+import Documentation.SummaryGen
+
 import Logic.Expr
 
 import UnitB.AST

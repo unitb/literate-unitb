@@ -17,7 +17,6 @@ import Latex.Parser
 import Logic.Expr
 import Logic.Proof hiding ( with_line_info )
 
-import Documentation.SummaryGen
 
 import UnitB.AST
 import UnitB.PO
@@ -34,7 +33,6 @@ import Z3.Z3
     -- Libraries
     --
 import           Control.Monad hiding ( guard )
-import           Control.Monad.Trans.State ( runStateT )
 import qualified Control.Monad.Reader.Class as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
@@ -52,7 +50,6 @@ import qualified Data.Set as S
 
 --import Debug.Trace
 
-import System.FilePath
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -160,23 +157,6 @@ all_machines xs = do
         return $ s { machines = ms }
     where
         (x,s,_) = runRWS (runEitherT $ read_document xs) () empty_system
-
-produce_summaries :: FilePath -> System -> IO ()
-produce_summaries path sys = 
-        void $ runStateT (do
-            let ms = machines sys
-                st = expr_store sys
-            forM_ (M.elems ms) $ \m -> do
-                let mch = machine_summary m st
-                liftIO $ writeFile (path </> "machine_" ++ show (_name m) <.> "tex") mch
-                forM_ (toList $ events m) $ \(lbl,evt) -> do
-                    let xs = event_summary lbl evt st
-                    liftIO $ writeFile (path </> (show (_name m) ++ "_" ++ rename lbl) <.> "tex") xs
-            ) sys
-    where
-        rename lbl = map f $ show lbl
-        f ':' = '-'
-        f x   = x
         
 read_document :: [LatexDoc]
               -> EitherT [Error] (RWS () [Error] System) (Map String Machine)
@@ -891,7 +871,39 @@ collect_proofs = visit_doc
                             proofs = insert lbl p $ 
                                     proofs $ props m } } 
             )
-        ] []
+        ] [
+            ( "\\comment"
+            , CmdBlock $ \(item',cmt') m -> do
+                li <- lift $ ask
+                let cmt = concatMap flatten cmt'
+                    item = L.filter (/= '$') $ remove_ref $ concatMap flatten item'
+                    prop = props m
+                    is_inv = label item `member` inv prop
+                    is_prog = label item `member` progress prop
+                    is_event = label item `member` events m
+                    is_var = item `member` variables m
+                    lbl = label item
+                    conds = [is_inv,is_prog,is_event,is_var]
+                unless (length (L.filter id conds) <= 1)
+                    $ fail "collect_proofs: conditional not mutually exclusive"
+                key <- if is_inv then do
+                    return $ DocInv lbl
+                else if is_prog then do
+                    return $ DocProg lbl
+                else if is_event then do
+                    return $ DocEvent lbl
+                else if is_var then do
+                    return $ DocVar item
+                else do
+                    let msg = "`{0}` is not one of: a variable, an event, \
+                              \ an invariant or a progress property "
+                    unless (not $ or conds)
+                        $ fail "collect_proofs: conditional not exhaustive"
+                    left [Error (format msg item) li]
+                return $ m { comments = M.insert key cmt 
+                            $ comments m }
+            )
+        ]
 
 deduct_schedule_ref_struct :: Monad m
                            => LineInfo -> Machine

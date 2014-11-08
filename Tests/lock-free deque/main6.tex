@@ -1,0 +1,637 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newcommand{\stmt}[1]{ $#1$ }
+\newcommand{\comment}[2]{ 
+	% \begin{tabular}{|l|l|} 
+	% 	\hline
+		\begin{description}
+		\item[{#1}] ~ #2 
+		\end{description}
+	% 	\hline 
+	% \end{tabular} 
+	}
+\newcommand{\commentbox}[1]{ 
+	\begin{block} \item \small{ #1 } \end{block} }
+\newcommand{\G}{\text{Val}}
+% \renewcommand{\H}{\text{H}}
+
+\section{Initial model: A sequence of objects}
+\begin{machine}{m0}
+
+\with{functions}
+\with{sets}
+\with{intervals}
+\newset{Val}{\G}
+
+\begin{align*}
+& \variable{p,q : \Int } 
+\\ & \variable{qe : \Int \pfun \G }
+\\ & \variable{ emp : \Bool }
+\\ & \variable{ res : \G }
+\end{align*}
+
+\begin{align*}
+\invariant{m0:inv0}{ qe &\1\in \intervalR{p}{q} \tfun \G }
+% \invariant{m0:inv0}{ \dom.qe = \intervalR{p}{q} }
+\\ \invariant{m0:inv1}{ p &\1\le q }
+\end{align*}
+
+\begin{align*}
+\initialization{m0:init0}{p = 0 \land q = 0 \land qe = \emptyfun }
+\end{align*}
+
+\newevent{m0:push:left}{push\_left}
+\param{m0:push:left}{x : \G}
+
+\begin{align*}
+\evassignment{m0:push:left}{m0:act0}{ qe' &\2= qe \2| p\0-1 \fun x }
+\\ \evassignment{m0:push:left}{m0:act1}{ p' &\1= p-1 }
+\\ \evassignment{m0:push:left}{m0:act2}{ q' &\1= q }
+\\ \evassignment{m0:push:left}{m0:act3}{ res' = res }
+\\ \evassignment{m0:push:left}{m0:act4}{ emp' = emp }
+\end{align*}
+
+\newevent{m0:push:right}{push\_right}
+\param{m0:push:right}{ x : \G }
+
+\begin{align*}
+\evassignment{m0:push:right}{m0:act0}{ qe' &\2= qe \2| q \fun x }
+\\ \evassignment{m0:push:right}{m0:act1}{ p' & \1= p }
+\\ \evassignment{m0:push:right}{m0:act2}{ q' & \1= q+1 }
+\\ \evassignment{m0:push:right}{m0:act3}{ res' = res }
+\\ \evassignment{m0:push:right}{m0:act4}{ emp' = emp }
+\end{align*}
+
+\newevent{m0:pop:left:empty}{pop\_left\_empty}
+
+\begin{align*}
+\evguard{m0:pop:left:empty}{m0:grd0}
+	{ p = q }
+\\ \evassignment{m0:pop:left:empty}{m0:act0}
+	{ qe' &\1= \{ p \} \domsub qe }
+\\ \evassignment{m0:pop:left:empty}{m0:act1}
+	{ p' &= p }
+\\ \evassignment{m0:pop:left:empty}{m0:act2}
+	{ q' &\1= q }
+\\ \evassignment{m0:pop:left:empty}{m0:act3}
+	{ res' &= res }
+\\ \evassignment{m0:pop:left:empty}{m0:act4}
+	{ emp' &= \true }
+\end{align*}
+
+\newevent{m0:pop:left:non:empty}{pop\_left\_non-empty}
+
+\begin{align*}
+\evguard{m0:pop:left:non:empty}{m0:grd0}
+	{ p < q }
+\\ \evassignment{m0:pop:left:non:empty}{m0:act0}
+	{ qe' &\1= \{ p \} \domsub qe }
+\\ \evassignment{m0:pop:left:non:empty}{m0:act1}
+	{ p' &= p\0+1 }
+\\ \evassignment{m0:pop:left:non:empty}{m0:act2}
+	{ q' &\1= q }
+\\ \evassignment{m0:pop:left:non:empty}{m0:act3}
+	{ res' = qe.p }
+\\ \evassignment{m0:pop:left:non:empty}{m0:act4}
+	{ emp' = \false }
+\end{align*}
+
+
+\newevent{m0:pop:right:empty}{pop\_right}
+
+\begin{align*}
+\evguard{m0:pop:right:empty}{m0:grd0}
+	{ p = q }
+\\ \evassignment{m0:pop:right:empty}{m0:act0}
+	{ qe' &\1= \{ q-1 \} \domsub qe }
+\\ \evassignment{m0:pop:right:empty}{m0:act1}
+	{ p' ~&=~ p }
+\\ \evassignment{m0:pop:right:empty}{m0:act2}
+	{ q' &= q }
+% \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
+\\ \evassignment{m0:pop:right:empty}{m0:act3}
+	{ res' &= res }
+\\ \evassignment{m0:pop:right:empty}{m0:act4}
+	{ emp' &= (p = q) }
+\end{align*}
+
+\newevent{m0:pop:right:non:empty}{pop\_right}
+
+\begin{align*}
+\evguard{m0:pop:right:non:empty}{m0:grd0}
+	{ p < q }
+\\ \evassignment{m0:pop:right:non:empty}{m0:act0}
+	{ qe' &\1= \{ q-1 \} \domsub qe }
+\\ \evassignment{m0:pop:right:non:empty}{m0:act1}
+	{ p' ~&=~ p }
+\\ \evassignment{m0:pop:right:non:empty}{m0:act2}
+	{ q' = q\0-1 }
+% \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
+\\ \evassignment{m0:pop:right:non:empty}{m0:act3}
+	{ res' = qe.(q\1-1) }
+\\ \evassignment{m0:pop:right:non:empty}{m0:act4}
+	{ emp' &= (p = q) }
+\end{align*}
+
+% \begin{align*}
+\input{m0_m0-push-left}
+% \end{align*}
+
+\end{machine}
+
+\newcommand{\REQ}{\text{Req}}
+
+\begin{machine}{m1}
+\refines{m0} \\
+\newset{Req}{\REQ}
+
+\[ \variable{pshL,pshR : \REQ \pfun \G} \]
+
+\subsection{Liveness of push*}
+
+\hide{ \dummy{r : \REQ}; \dummy{x : \G} }
+\begin{align*}
+\progress{m1:prog0}
+	{ r \in \dom.pshL \1\land pshL.r = x }
+	{ p < q \land qe.p = x \1\land \neg r \in \dom.pshL }
+\\ \progress{m1:prog1}
+	{ r \in \dom.pshR \1\land pshR.r = x }
+	{ p < q \1\land qe.(q-1) = x \1\land \neg r \in \dom.pshR }
+\end{align*}
+
+\subsubsection{Proving \ref{m1:prog0}}
+\indices{m0:push:left}{ r : \REQ }
+\begin{align*}
+\refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r} }
+\end{align*}
+\begin{align*}
+\\ \evassignment{m0:push:left}{m1:a0}{ pshL' = \{ r \} \domsub pshL }
+\\ \evassignment{m0:push:left}{m1:a1}{ pshR' = pshR }
+\\ \evassignment{m0:push:right}{m1:a0}{ pshR' = \{ r \} \domsub pshR }
+\\ \evassignment{m0:push:right}{m1:a1}{ pshL' = pshL }
+\\ \evguard{m0:push:left}{m1:grd0}{ x = pshL.r }
+\\ \evguard{m0:push:left}{m1:grd1}{ r \in \dom.pshL }
+\\ \cschedule{m0:push:left}{m1:sch0}{ r \in \dom.pshL }
+\end{align*}
+\begin{align*}
+\weakento{m0:push:left}{default}{m1:sch0}
+\\ \evassignment{m0:pop:right:empty}{m1:a0}{ pshL' = pshL }
+\\ \evassignment{m0:pop:right:non:empty}{m1:a0}{ pshL' = pshL }
+\\ \evassignment{m0:pop:right:empty}{m1:a1}{ pshR' = pshR }
+\\ \evassignment{m0:pop:right:non:empty}{m1:a1}{ pshR' = pshR }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a0}
+	{ pshL' = pshL }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a1}
+	{ pshR' = pshR }
+\\ \evassignment{m0:pop:left:empty}{m1:a0}
+	{ pshL' = pshL }
+\\ \evassignment{m0:pop:left:empty}{m1:a1}
+	{ pshR' = pshR }
+\end{align*}
+
+\subsubsection{Proving \ref{m1:prog1}}
+\[ \indices{m0:push:right}{ r : \REQ } \]
+\begin{align*}
+\refine{m1:prog1}{ensure}{m0:push:right}{ \index{r}{r} }
+\end{align*}
+
+\begin{align*}
+\weakento{m0:push:right}{default}{m1:sch0}
+\\ \cschedule{m0:push:right}{m1:sch0}{ r \in \dom.pshR }
+\\ \evguard{m0:push:right}{m1:grd0}{ r \in \dom.pshR }
+\\ \evguard{m0:push:right}{m1:grd1}{ pshR.r = x }
+\end{align*}
+
+\subsection{Liveness on pop*}
+
+\begin{align*}
+\variable{ popR, popL : \set [\REQ]}
+\\ \variable{ resR, resL : \REQ \pfun \G }
+\\ \invariant{m1:inv0}{ \dom.resR \binter popR = \emptyset }
+\\ \invariant{m1:inv1}{ \dom.resL \binter popL = \emptyset }
+\end{align*}
+
+\begin{align*}
+\progress{m1:prog2}
+	{ r \in popR }
+	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
+\\ \progress{m1:prog3}
+	{ r \in popL }
+	{ \neg r \in popL \land (emp \lor (r \in \dom.resL \land resL.r = res))  }
+\end{align*}
+
+\subsubsection{Proving \ref{m1:prog2}}
+\begin{align*}
+	\refine{m1:prog2}{disjunction}{m1:prog4,m1:prog5}{ \index{r}{r} }
+\\  \progress{m1:prog4}
+	{ r \in popR \land p < q }
+	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
+\\  \progress{m1:prog5}
+	{ r \in popR \land p = q }
+	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
+\\	\refine{m1:prog4}{ensure}{m0:pop:right:non:empty}{ \index{r}{r} }		
+\\	\refine{m1:prog5}{ensure}{m0:pop:right:empty}{ \index{r}{r} }		
+\end{align*}
+% \refine{m1:prog3}{ensure}{m0:pop:left}{}
+\indices{m0:pop:right:non:empty}{ r : \REQ }
+\indices{m0:pop:right:empty}{ r : \REQ }
+\begin{align*}
+\cschedule{m0:pop:right:non:empty}{m1:sch0}{ r \in popR }
+\\ \cschedule{m0:pop:right:non:empty}{m1:sch1}{ p < q }
+\\ \cschedule{m0:pop:right:empty}{m1:sch0}{ r \in popR }
+\\ \cschedule{m0:pop:right:empty}{m1:sch1}{ p = q }
+\\ \weakento{m0:pop:right:non:empty}{default}{m1:sch0,m1:sch1}
+\\ \weakento{m0:pop:right:empty}{default}{m1:sch0,m1:sch1}
+\\ \evguard{m0:pop:right:non:empty}{m1:grd0}{ r \in popR }
+\\ \evassignment{m0:pop:right:non:empty}{m1:a2}
+	{ popR' = popR \setminus \{ r \} }
+\\ \evassignment{m0:pop:right:empty}{m1:a2}
+	{ popR' = popR \setminus \{ r \} }
+\\ \evassignment{m0:pop:right:non:empty}{m1:a3}
+	{ resR' = resR | r \fun qe.(q-1) }
+\\ \evassignment{m0:pop:right:empty}{m1:a3}
+	{ resR' = resR }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a2}
+	{ popR' = popR }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a3}
+	{ resR' = resR }
+\\ \evassignment{m0:pop:left:empty}{m1:a2}
+	{ popR' = popR }
+\\ \evassignment{m0:pop:left:empty}{m1:a3}
+	{ resR' = resR }
+\\ \evassignment{m0:push:left}{m1:a2}{ popR' = popR }
+\\ \evassignment{m0:push:left}{m1:a3}{ resR' = resR }
+\\ \evassignment{m0:push:right}{m1:a2}{ popR' = popR }
+\\ \evassignment{m0:push:right}{m1:a3}{ resR' = resR }
+\end{align*}
+
+
+\subsubsection{Proving \ref{m1:prog3}}
+\begin{align*}
+% \refine{m1:prog3}{disjunction}{m1:prog4,m1:prog5}{}
+% \\ \progress{m1:prog4}
+% 	{r \in popL \land p < q }
+% 	{ \neg r \in popL \land r \in \dom.resL \land resL.r = res }
+% \\ \progress{m1:prog5}
+% 	{r \in popL \land p = q }
+% 	{ \neg r \in popL \land emp  }
+% \\ \refine{m1:prog4}{ensure}{m0:pop:left}{ \index{r}{r} }
+\refine{m1:prog3}{ensure}{m0:pop:left:non:empty}{ \index{r}{r} }
+\end{align*}
+\indices{m0:pop:left:non:empty}{ r : \REQ }
+\indices{m0:pop:left:empty}{ r : \REQ }
+% theorem prover found that qe.(q-1) (from the event pop:right), should be 
+% changed for qe.p
+\begin{align*}
+\cschedule{m0:pop:left:non:empty}{m1:sch0}{ r \in popL }
+\\ \cschedule{m0:pop:left:non:empty}{m1:sch1}{ p < q }
+\\ \weakento{m0:pop:left:non:empty}{default}{m1:sch0,m1:sch1}
+\\ \evguard{m0:pop:left:non:empty}{m1:grd0}{ r \in popL }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a4}
+	{ popL' = popL \setminus \{ r \} }
+\\ \evassignment{m0:pop:left:empty}{m1:a4}
+	{ popL' = popL \setminus \{ r \} }
+\\ \evassignment{m0:pop:left:non:empty}{m1:a5}
+	{ 	 resL' = resL | r \fun qe.p }
+\\ \evassignment{m0:pop:left:empty}{m1:a5}
+	{ 	 resL' = resL }
+	%
+	%
+	% other events
+\hide{
+\\ \evassignment{m0:pop:right:empty,m0:pop:right:non:empty,m0:push:right,m0:push:left}{m1:a4}{ popL' = popL }
+\\ \evassignment{m0:pop:right:empty,m0:pop:right:non:empty,m0:push:right,m0:push:left}{m1:a5}{ resL' = resL } }
+\end{align*}
+
+\subsection{Initialization of \ref{m1:inv0} and \ref{m1:inv1}}
+
+\begin{align*}
+\initialization{m1:init0}{resR = \emptyfun}
+\\ \initialization{m1:init1}{resL = \emptyfun}
+\end{align*}
+
+\comment{\ref{m1:inv0}}{this is for fun}
+
+\comment{$emp$}{this encodes whether the last call to pop found the queue empty
+; more text, more text, still more text, and here's more text}
+
+\input{machine_m1}
+\end{machine}
+ 
+% \input{m1_m0-push-right}
+% \input{m1_m0-push-left}
+% \input{m1_m0-pop-left}
+
+% \section{Memory nodes}
+
+% \newcommand{\Cell}{\text{Cell}}
+% \begin{machine}{m2}
+% \refines{m1}
+
+% \newset{Cell}{\Cell}
+
+% \newcommand{\injective}{\text{injective}}
+
+% \begin{align*} 
+% 	\variable{ obj &: \Int \pfun \Cell } 
+% \\	\variable{ val &: \Cell \pfun \G } 
+% \\ 	\variable{ node, live &: \set [ \Cell ] }
+% \\ 	\invariant{m2:inv0}{ obj &\in \intervalR{p}{q} \tfun node }
+% \\ 	\invariant{m2:inv1}{ val &\in live \tfun \G }
+% \\ 	\invariant{m2:inv3}{ node &\subseteq live }
+% \\ 	\invariant{m2:inv4}{ \injective&.obj }
+% \end{align*}
+
+% Note: $obj$ should be injective and surjective.
+
+% Now \emph{la pi\`ece de r\'esistence}:
+
+% \begin{align*}
+% \invariant{m2:inv2}{ \qforall{i}{ \betweenR{p}{i}{q} }{ ~ qe.i = val.(obj.i) } }
+% \end{align*}
+
+% Notice that $i$ has not been declared as a dummy at this point; its type is simply inferred from the context.
+
+% Note: Invariant \ref{m2:inv3} has been dictated (at this point of writing the model) by a WD proof obligation.
+
+% \subsection{Invariance in \ref{m0:push:left}}
+
+% \param{m0:push:left}{ n : \Cell }
+
+% \ref{m2:inv0}:
+% \begin{align*}
+% \evassignment{m0:push:left}{m2:a0}{ obj' &= obj | (p-1) \fun n }
+% \\ \evassignment{m0:push:left}{m2:a1}{ node' &= node \bunion \{ n \} }
+% \end{align*}
+
+% \ref{m2:inv1}:
+% \begin{align*}
+% \evassignment{m0:push:left}{m2:a2}{ val' = val }
+% \\ \evassignment{m0:push:left}{m2:a3}{ live' = live }
+% \end{align*}
+
+% \ref{m2:inv3}
+% \begin{align*}
+% \evguard{m0:push:left}{m2:grd0}{ n \in live \setminus node }
+% \end{align*}
+
+% \ref{m2:inv2}:
+% \begin{align*}
+% \evguard{m0:push:left}{m2:grd1}{ val.n = x }
+% % \evassignment{m0:push:left}{m2:a4}{  }
+% \end{align*}
+
+% \ref{m2:inv4}:
+% \begin{align*}
+% % \evguard{m0:push:left}{m2:grd1}{ val.n = x }
+% % \evassignment{m0:push:left}{m2:a4}{  }
+% \end{align*}
+
+% Schedulability:
+% \begin{align*}
+% \cschedule{m0:push:left}{m2:sch0}{ pshL.r \in \ran.val }
+% \\ \cschedule{m0:push:left}{m2:sch1}
+% 	{ pshL.r \in \ran.(node \domsub val) }
+% \end{align*}
+% \replace{m0:push:left}{}{m2:sch0,m2:sch1}{m1:sch0}{m2:prog0}{m2:saf0}
+% \begin{align*}
+% \progress{m2:prog0}
+% 	{ r \in \dom.pshL }
+% 	{ r \in \dom.pshL \land pshL.r \in \ran.(node \domsub val) }
+% \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.(node \domsub val) }{ \neg r \in \dom.pshL }
+% \end{align*}
+
+% \[ \variable{insL : \REQ \pfun \Cell }  \]
+
+% \begin{align*}
+% 	\invariant{m2:inv5}{ insL \in (\dom.pshL) \tfun live }
+% \\	\invariant{m2:inv6}
+% 		{ \qforall{r}
+% 			{ r \in \dom.pshL }
+% 			{ pshL.r = val.(insL.r) } }
+% \\ 	\invariant{m2:inv7}{ \injective.insL }
+% \\ 	\invariant{m2:inv8}{ \ran.insL \binter node = \emptyset }
+% \\  \evassignment{m0:push:left}{m2:act0}{ insL' = \{ r \} \domsub insL }
+% \end{align*}
+
+% \newcommand{\finter}{\binter}
+% \begin{proof}[\ref{m0:push:left}/SAF/\ref{m2:saf0}]
+% 	\begin{free:var}{r}{r_0}
+% 	TODO: What are we actually proving?
+% 	\begin{by:cases}
+% 	The first case,
+% 	\begin{case}{hyp0}{r = r_0}
+% 		follows directly from the fact that \ref{m0:push:left} removes
+% 		$r$ from the domain of $pshL$ hence establishing the RHS of \eqref{m2:saf0}.
+% 		\easy
+% 	\end{case}		
+% 	\begin{case}{hyp1}{\neg r = r_0}
+% 		Assuming:
+% 		\begin{align*}
+% 		\assume{hyp2}{ & r_0 \in \dom.pshL}
+% 		% \\ \assume{hyp2}{ & r_0 \in \dom.pshL}
+% 		\end{align*}
+% 		We need to prove:
+% 		\begin{align*}
+% 		\\ \goal{& r_0 \in \dom.pshL' 
+% 		\\	\land ~ & pshL'.r_0 \in \ran.(node' \domsub val') }
+% 		\end{align*}
+% 		\begin{by:parts}
+% 		\begin{part:a}{ r_0 \in \dom.pshL' }
+% 		This follows from \eqref{hyp1} and the fact that \ref{m0:push:left} only changes the domain of $pshL'$ at $r$.
+% 			\easy
+% 		\end{part:a}
+% 		\begin{part:a}{pshL'.r_0 \in \ran.(node' \domsub val')}
+% 		% \easy
+% 		\begin{calculation}
+% 			pshL'.r_0 \in \ran.(node' \domsub val')
+% 		\hint{=}{ \eqref{m2:a2} }
+% 			pshL'.r_0 \in \ran.(node'  \domsub val)
+% 		\hint{=}{ \eqref{m1:a0} }
+% 			(\{ r \} \domsub pshL).r_0 \in 
+% 			\ran.(node' \domsub val)
+% 		\hint{=}{ \eqref{hyp1} }
+% 			pshL.r_0 \in \ran.(node' \domsub val)
+% 		\hint{=}{ \eqref{m2:inv6} with \eqref{hyp2} }
+% 			val.(insL.r_0) \in \ran.(node' \domsub val)
+% 		% \hint{\follows}{ $.$ and }
+% 		\hint{\follows}{  }
+% 			insL.r_0 \in \dom.val \setminus node'
+% 		\hint{=}{ \eqref{m2:a1} }
+% 			insL.r_0 \in 
+% 					\dom.val \setminus (node \bunion \{ n \}) 
+% 		\hint{=}{ \eqref{m2:inv1} ,
+% 				  \eqref{m2:inv6} ,
+% 				  \eqref{m2:grd2} }
+% 			insL.r_0 \in live \setminus (node \bunion \{ insL.r \}) 
+% 			% \neg insL.r_0 \1\in node \bunion \{ insL.r \}
+% 		\hint{=}{ 	\eqref{hyp2} ,
+% 					\eqref{m2:inv5} }
+% 			\neg insL.r_0 \in node \1\land \neg insL.r_0 = insL.r
+% 		\hint{=}{ \eqref{m2:inv7}, 
+% 				\eqref{hyp1}, 
+% 				\eqref{hyp2}, 
+% 				\eqref{m1:grd1},
+% 				\eqref{m2:inv5} }
+% 			\neg insL.r_0 \in node
+% 		\hint{\follows}{ \eqref{m2:inv8}; 
+% 				\eqref{hyp2}; 
+% 				\eqref{m2:inv5} }
+% 			\true
+% 		% \hint{=}{ \eqref{m2:a2} \eqref{m2:a1} }
+% 		% 	pshL'.r_0 \in \ran.((node\domsub val) \finter (\{ n \}\domsub val))
+% 		\end{calculation}
+% 		\end{part:a}
+% 		\end{by:parts}
+% 	\end{case}		
+% 	\end{by:cases}
+% 	\end{free:var}
+% \end{proof}
+
+% \begin{align*}
+% 	\evguard{m0:push:left}{m2:grd2}{ n = insL.r }
+% \end{align*}
+
+% We defer the proof of \ref{m2:prog0} to finish proving our initial invariants.
+
+% \subsection{Invariance in \ref{m0:pop:right}}
+
+% \param{m0:pop:right}{ n : \Cell }
+
+% \ref{m2:inv0}:
+% \begin{align*}
+% \evassignment{m0:pop:right}{m2:a0}
+% 	{ 	  (p = q \land obj' = obj)
+% 	&\lor (p < q \land obj' = \{ q-1 \} \domsub obj) }
+% \\ \evassignment{m0:pop:right}{m2:a1}
+% 	{ 	 (p = q \land node' = node)
+% 	&\lor (p < q \land node' = node \setminus \{ obj.(q\0-1) \}) }
+% \end{align*}
+
+% \ref{m2:inv1}:
+% \begin{align*}
+% \evassignment{m0:pop:right}{m2:a2}{ val' = val }
+% \\ \evassignment{m0:pop:right}{m2:a3}{ live' = live }
+% \end{align*}
+
+% \ref{m2:inv5}, \ref{m2:inv6}, \ref{m2:inv7} and \ref{m2:inv8}:
+% \begin{align*}
+% % \evguard{m0:pop:right}{m2:grd1}{ val.n = x }
+% \evassignment{m0:pop:right}{m2:a4}{ insL' = insL }
+% \end{align*}
+
+% \ref{m2:saf0}
+% \begin{align*}
+% % \evguard{m0:pop:right}{m2:grd1}{ val.n = x }
+% % \evassignment{m0:pop:right}{m2:a4}{ insL' = insL }
+% \end{align*}
+
+% \begin{proof}[\ref{m0:pop:right}/SAF/\ref{m2:saf0}]
+% \begin{free:var}{r}{r_0}
+% \begin{by:cases}
+% \begin{case}{pr2:hyp0}{p = q}
+% 	\easy
+% \end{case}
+% \begin{case}{pr2:hyp1}{\neg p = q}
+% 	Assuming:
+% 	\begin{align*}
+% 		\assume{pr2:hyp2}{r_0 & \in \dom.pshL}
+% 	\\  \assume{pr2:hyp3}{pshL.r_0 & \in \ran.(node \domsub val)}
+% 	\end{align*}
+% 	Prove:
+% 	\[ \goal{pshL'.r_0 \in \ran.(node' \domsub val')} \]
+% 	% \easy
+% 	\begin{calculation}
+% 		pshL'.r_0 \in \ran.(node' \domsub val')
+% 		% this step should not be marked as proved
+% 	\hint{=}{ \eqref{m1:a0} and \eqref{m2:a2} }
+% 		pshL.r_0 \in \ran.(node' \domsub val)
+% 	\hint{=}{ \eqref{m2:inv6} with \eqref{pr2:hyp2} }
+% 		val.(insL.r_0) \in \ran.(node' \domsub val)
+% 		% this step should not be marked as proved
+% 	\hint{\follows}{ $.$ and $\ran$ with \eqref{pr2:hyp2} }
+% 		insL.r_0 \in \dom.val \setminus node'
+% 	% \hint{=}{ \eqref{m2:inv5} }
+% 	% 	val.()
+% 	\hint{=}{ \eqref{m2:a1} }
+% 		insL.r_0 \in \dom.val \setminus (node \setminus \{ obj.(q\0-1) \})
+% 	\hint{=}{  }
+% 		insL.r_0 \in (\dom.val \setminus node) \bunion (\dom.val \binter \{ obj.(q\0-1) \})
+% 	% \hint{=}{ $obj.(q\0-1) \in \dom.val$ }
+% 	% 	insL.r_0 \in (\dom.val \setminus node) \bunion \{ obj.(q\0-1) \}
+% 	\hint{\follows}{  }
+% 		insL.r_0 \in \dom.val \setminus node
+% 	\hint{=}{ \stmt{insL.r_0 \in \dom.val} }
+% 		\true
+% 	\end{calculation}
+% \end{case}
+% \end{by:cases}
+% \end{free:var}
+% \end{proof}
+
+% Schedulability:
+% \begin{align*}
+% % \cschedule{m0:pop:right}{m2:sch0}{ pshL.r \in \ran.val }
+% \end{align*}
+% % \replace{m0:pop:right}{}{m2:sch0}{m1:sch0}{m2:prog0}{m2:saf0}
+% \begin{align*}
+% % \progress{m2:prog0}{ r \in \dom.pshL }{ r \in \dom.pshL \land pshL.r \in \ran.val }
+% % \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.val }{ \neg r \in \dom.pshL }
+% \end{align*}
+
+% \subsection{ Establishing the invariants }
+
+% \begin{align*}
+% 	\initialization{m2:init0}{ obj &= \emptyfun }
+% \\	\initialization{m2:init1}{ node &= \emptyset }
+% \\  \initialization{m2:init2}{ val &= \emptyfun }
+% \\	\initialization{m2:init3}{ live &= \emptyset }
+% \end{align*}
+
+
+% \subsection{\ref{m0:push:right} and \ref{m0:pop:left}}
+% Push right and pop left are the mirror image of push left and pop right and their proofs are left for an appendix.
+
+% TODO: add new events to m1 and m2
+
+% \end{machine}
+
+% \input{m2_m0-pop-right}
+% \input{m2_m0-push-left}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+

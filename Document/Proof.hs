@@ -549,12 +549,6 @@ parse_calc pr = do
                                
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
 
-remove_ref :: [Char] -> [Char]
-remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
-remove_ref ('}':xs) = remove_ref xs
-remove_ref (x:xs)   = x:remove_ref xs
-remove_ref []       = []
-
 get_expr_with_ctx :: ( Monad m, Monoid b ) 
                   => Machine
                   -> Context
