@@ -22,6 +22,7 @@
 \maketitle
 \tableofcontents
 
+\newcommand{\stmt}[1]{ $#1$ }
 \newcommand{\G}{\text{Val}}
 % \renewcommand{\H}{\text{H}}
 
@@ -54,48 +55,48 @@
 \param{m0:push:left}{x : \G}
 
 \begin{align*}
-\evassignment{m0:push:left}{m0:act0}{ qe' &\2= qe \2| p\0-1 \fun x }
-\\ \evassignment{m0:push:left}{m0:act1}{ p' &\1= p-1 }
-\\ \evassignment{m0:push:left}{m0:act2}{ q' &\1= q }
-\\ \evassignment{m0:push:left}{m0:act3}{ res' = res }
-\\ \evassignment{m0:push:left}{m0:act4}{ emp' = emp }
+\evbcmeq{m0:push:left}{m0:act0}{qe}{ qe \2| p\0-1 \fun x }
+\\ \evbcmeq{m0:push:left}{m0:act1}{p}{p-1}
+% \\ \evassignment{m0:push:left}{m0:act2}{ q' &\1= q }
+% \\ \evassignment{m0:push:left}{m0:act3}{ res' = res }
+% \\ \evassignment{m0:push:left}{m0:act4}{ emp' = emp }
 \end{align*}
 
 \newevent{m0:push:right}{push\_right}
 \param{m0:push:right}{ x : \G }
 
 \begin{align*}
-\evassignment{m0:push:right}{m0:act0}{ qe' &\2= qe \2| q \fun x }
-\\ \evassignment{m0:push:right}{m0:act1}{ p' & \1= p }
-\\ \evassignment{m0:push:right}{m0:act2}{ q' & \1= q+1 }
-\\ \evassignment{m0:push:right}{m0:act3}{ res' = res }
-\\ \evassignment{m0:push:right}{m0:act4}{ emp' = emp }
+\evbcmeq{m0:push:right}{m0:act0}{qe}{qe \2| q \fun x }
+% \\ \evassignment{m0:push:right}{m0:act1}{ p' & \1= p }
+\\ \evbcmeq{m0:push:right}{m0:act2}{q}{ q+1 }
+% \\ \evassignment{m0:push:right}{m0:act3}{ res' = res }
+% \\ \evassignment{m0:push:right}{m0:act4}{ emp' = emp }
 \end{align*}
 
 \newevent{m0:pop:left}{pop\_left}
 
 \begin{align*}
-\evassignment{m0:pop:left}{m0:act0}
-	{ qe' &\1= \{ p \} \domsub qe }
-\\ \evassignment{m0:pop:left}{m0:act1}
-	{ (p = q \land p' = p) \lor (p < q \land p' &= p\0+1) }
-\\ \evassignment{m0:pop:left}{m0:act2}
-	{ q' &\1= q }
-\\ \evassignment{m0:pop:left}{m0:act3}
+\evbcmeq{m0:pop:left}{m0:act0}
+	{qe}{ \{ p \} \domsub qe }
+\\ \evbcmsuch{m0:pop:left}{m0:act1}{p}
+	{ (p = q \land p' = p) \lor (p < q \land p' = p\0+1) }
+% \\ \evassignment{m0:pop:left}{m0:act2}
+% 	{ q' &\1= q }
+\\ \evbcmsuch{m0:pop:left}{m0:act3}{res}
 	{ (p = q \land res' = res) \lor (p < q \land res' = qe.p) }
-\\ \evassignment{m0:pop:left}{m0:act4}
-	{ emp' = (p = q) }
+\\ \evbcmeq{m0:pop:left}{m0:act4}{emp}
+	{ p = q }
 \end{align*}
 
 \newevent{m0:pop:right}{pop\_right}
 
 \begin{align*}
-\evassignment{m0:pop:right}{m0:act0}{ qe' &\1= \{ q-1 \} \domsub qe }
-\\ \evassignment{m0:pop:right}{m0:act1}{ p' ~&=~ p }
-\\ \evassignment{m0:pop:right}{m0:act2}{ (p = q \land q' = q) & \lor (p < q \land q' = q\0-1) }
+\evbcmeq{m0:pop:right}{m0:act0}{qe}{ \{ q-1 \} \domsub qe }
+% \\ \evassignment{m0:pop:right}{m0:act1}{ p' ~&=~ p }
+\\ \evbcmsuch{m0:pop:right}{m0:act2}{q}{ (p = q \land q' = q) \lor (p < q \land q' = q\0-1) }
 % \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
-\\ \evassignment{m0:pop:right}{m0:act3}{ (p = q \land res' = res) & \lor (p < q \land res' = qe.(q\1-1)) }
-\\ \evassignment{m0:pop:right}{m0:act4}{ emp' &= (p = q) }
+\\ \evbcmsuch{m0:pop:right}{m0:act3}{res}{ (p = q \land res' = res) \lor (p < q \land res' = qe.(q\1-1)) }
+\\ \evbcmeq{m0:pop:right}{m0:act4}{emp}{ (p = q) }
 \end{align*}
 
 % \begin{align*}
@@ -130,22 +131,22 @@
 \refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r} }
 \end{align*}
 \begin{align*}
-\\ \evassignment{m0:push:left}{m1:a0}{ pshL' = \{ r \} \domsub pshL }
-\\ \evassignment{m0:push:left}{m1:a1}{ pshR' = pshR }
-\\ \evassignment{m0:push:right}{m1:a0}{ pshR' = \{ r \} \domsub pshR }
-\\ \evassignment{m0:push:right}{m1:a1}{ pshL' = pshL }
+\\ \evbcmeq{m0:push:left}{m1:a0}{pshL}{ \{ r \} \domsub pshL }
+% \\ \evassignment{m0:push:left}{m1:a1}{pshR}{ pshR }
+\\ \evbcmeq{m0:push:right}{m1:a0}{pshR}{ \{ r \} \domsub pshR }
+% \\ \evassignment{m0:push:right}{m1:a1}{ pshL' = pshL }
 \\ \evguard{m0:push:left}{m1:grd0}{ x = pshL.r }
 \\ \evguard{m0:push:left}{m1:grd1}{ r \in \dom.pshL }
 \\ \cschedule{m0:push:left}{m1:sch0}{ r \in \dom.pshL }
 \end{align*}
 \begin{align*}
 \weakento{m0:push:left}{default}{m1:sch0}
-\\ \evassignment{m0:pop:right}{m1:a0}{ pshL' = pshL }
-\\ \evassignment{m0:pop:right}{m1:a1}{ pshR' = pshR }
-\\ \evassignment{m0:pop:left}{m1:a0}
-	{ pshL' = pshL }
-\\ \evassignment{m0:pop:left}{m1:a1}
-	{ pshR' = pshR }
+% \\ \evassignment{m0:pop:right}{m1:a0}{ pshL' = pshL }
+% \\ \evassignment{m0:pop:right}{m1:a1}{ pshR' = pshR }
+% \\ \evassignment{m0:pop:left}{m1:a0}
+% 	{ pshL' = pshL }
+% \\ \evassignment{m0:pop:left}{m1:a1}
+% 	{ pshR' = pshR }
 \end{align*}
 
 \subsubsection{Proving \ref{m1:prog1}}
@@ -185,17 +186,17 @@
 \cschedule{m0:pop:right}{m1:sch0}{ r \in popR }
 \\ \weakento{m0:pop:right}{default}{m1:sch0}
 \\ \evguard{m0:pop:right}{m1:grd0}{ r \in popR }
-\\ \evassignment{m0:pop:right}{m1:a2}{ popR' = popR \setminus \{ r \} }
-\\ \evassignment{m0:pop:right}{m1:a3}{ (p = q \land resR' = resR) 
+\\ \evbcmeq{m0:pop:right}{m1:a2}{popR}{ popR \setminus \{ r \} }
+\\ \evbcmsuch{m0:pop:right}{m1:a3}{resR}{ (p = q \land resR' = resR) 
 	\lor (p < q \land resR' = resR | r \fun qe.(q-1) ) }
-\\ \evassignment{m0:pop:left}{m1:a2}
-	{ popR' = popR }
-\\ \evassignment{m0:pop:left}{m1:a3}
-	{ resR' = resR }
-\\ \evassignment{m0:push:left}{m1:a2}{ popR' = popR }
-\\ \evassignment{m0:push:left}{m1:a3}{ resR' = resR }
-\\ \evassignment{m0:push:right}{m1:a2}{ popR' = popR }
-\\ \evassignment{m0:push:right}{m1:a3}{ resR' = resR }
+% \\ \evassignment{m0:pop:left}{m1:a2}
+% 	{ popR' = popR }
+% \\ \evassignment{m0:pop:left}{m1:a3}
+% 	{ resR' = resR }
+% \\ \evassignment{m0:push:left}{m1:a2}{ popR' = popR }
+% \\ \evassignment{m0:push:left}{m1:a3}{ resR' = resR }
+% \\ \evassignment{m0:push:right}{m1:a2}{ popR' = popR }
+% \\ \evassignment{m0:push:right}{m1:a3}{ resR' = resR }
 \end{align*}
 
 
@@ -218,17 +219,17 @@
 \cschedule{m0:pop:left}{m1:sch0}{ r \in popL }
 \\ \weakento{m0:pop:left}{default}{m1:sch0}
 \\ \evguard{m0:pop:left}{m1:grd0}{ r \in popL }
-\\ \evassignment{m0:pop:left}{m1:a4}
-	{ popL' = popL \setminus \{ r \} }
-\\ \evassignment{m0:pop:left}{m1:a5}
+\\ \evbcmeq{m0:pop:left}{m1:a4}
+	{popL}{ popL \setminus \{ r \} }
+\\ \evbcmsuch{m0:pop:left}{m1:a5}{resL}
 	{ 	 (p = q \land resL' = resL) 
 	\lor (p < q \land resL' = resL | r \fun qe.p) }
 	%
 	%
 	% other events
-\hide{
-\\ \evassignment{m0:pop:right,m0:push:right,m0:push:left}{m1:a4}{ popL' = popL }
-\\ \evassignment{m0:pop:right,m0:push:right,m0:push:left}{m1:a5}{ resL' = resL } }
+% \hide{
+% \\ \evassignment{m0:pop:right,m0:push:right,m0:push:left}{m1:a4}{ popL' = popL }
+% \\ \evassignment{m0:pop:right,m0:push:right,m0:push:left}{m1:a5}{ resL' = resL } }
 \end{align*}
 
 \subsection{Initialization of \ref{m1:inv0} and \ref{m1:inv1}}
@@ -282,15 +283,15 @@ Note: Invariant \ref{m2:inv3} has been dictated (at this point of writing the mo
 
 \ref{m2:inv0}:
 \begin{align*}
-\evassignment{m0:push:left}{m2:a0}{ obj' &= obj | (p-1) \fun n }
-\\ \evassignment{m0:push:left}{m2:a1}{ node' &= node \bunion \{ n \} }
+\evbcmeq{m0:push:left}{m2:a0}{obj}{ obj | (p-1) \fun n }
+\\ \evbcmeq{m0:push:left}{m2:a1}{node}{ node \bunion \{ n \} }
 \end{align*}
 
-\ref{m2:inv1}:
-\begin{align*}
-\evassignment{m0:push:left}{m2:a2}{ val' = val }
-\\ \evassignment{m0:push:left}{m2:a3}{ live' = live }
-\end{align*}
+\ref{m2:inv1}: skips on $val$ and $live$
+% \begin{align*}
+% \evassignment{m0:push:left}{m2:a2}{ val' = val }
+% \\ \evassignment{m0:push:left}{m2:a3}{ live' = live }
+% \end{align*}
 
 \ref{m2:inv3}
 \begin{align*}
@@ -333,7 +334,8 @@ Schedulability:
 			{ pshL.r = val.(insL.r) } }
 \\ 	\invariant{m2:inv7}{ \injective.insL }
 \\ 	\invariant{m2:inv8}{ \ran.insL \binter node = \emptyset }
-\\  \evassignment{m0:push:left}{m2:act0}{ insL' = \{ r \} \domsub insL }
+\\  \evbcmeq{m0:push:left}{m2:act0}
+		{insL}{ \{ r \} \domsub insL }
 \end{align*}
 
 \newcommand{\finter}{\binter}
@@ -367,9 +369,9 @@ Schedulability:
 		% \easy
 		\begin{calculation}
 			pshL'.r_0 \in \ran.(node' \domsub val')
-		\hint{=}{ \eqref{m2:a2} }
+		\hint{=}{ eqref{m2:a2} }
 			pshL'.r_0 \in \ran.(node'  \domsub val)
-		\hint{=}{ \eqref{m1:a0} }
+		\hint{=}{ {m1:a0} }
 			(\{ r \} \domsub pshL).r_0 \in 
 			\ran.(node' \domsub val)
 		\hint{=}{ \eqref{hyp1} }
@@ -422,31 +424,32 @@ We defer the proof of \ref{m2:prog0} to finish proving our initial invariants.
 
 \ref{m2:inv0}:
 \begin{align*}
-\evassignment{m0:pop:right}{m2:a0}
+\evbcmsuch{m0:pop:right}{m2:a0}{obj}
 	{ 	  (p = q \land obj' = obj)
 	&\lor (p < q \land obj' = \{ q-1 \} \domsub obj) }
-\\ \evassignment{m0:pop:right}{m2:a1}
+\\ \evbcmsuch{m0:pop:right}{m2:a1}{node}
 	{ 	 (p = q \land node' = node)
 	&\lor (p < q \land node' = node \setminus \{ obj.(q\0-1) \}) }
 \end{align*}
 
-\ref{m2:inv1}:
-\begin{align*}
-\evassignment{m0:pop:right}{m2:a2}{ val' = val }
-\\ \evassignment{m0:pop:right}{m2:a3}{ live' = live }
-\end{align*}
+\ref{m2:inv1}: skip on $val$ and $live$
+% \begin{align*}
+% \evassignment{m0:pop:right}{m2:a2}{ val' = val }
+% \\ \evbcmeq{m0:pop:right}{m2:a3}{ live' = live }
+% \end{align*}
 
 \ref{m2:inv5}, \ref{m2:inv6}, \ref{m2:inv7} and \ref{m2:inv8}:
-\begin{align*}
-% \evguard{m0:pop:right}{m2:grd1}{ val.n = x }
-\evassignment{m0:pop:right}{m2:a4}{ insL' = insL }
-\end{align*}
-
-\ref{m2:saf0}
-\begin{align*}
+skip on $insL$
+% \begin{align*}
 % \evguard{m0:pop:right}{m2:grd1}{ val.n = x }
 % \evassignment{m0:pop:right}{m2:a4}{ insL' = insL }
-\end{align*}
+% \end{align*}
+
+\ref{m2:saf0}
+% \begin{align*}
+% \evguard{m0:pop:right}{m2:grd1}{ val.n = x }
+% \evassignment{m0:pop:right}{m2:a4}{ insL' = insL }
+% \end{align*}
 
 \begin{proof}[\ref{m0:pop:right}/SAF/\ref{m2:saf0}]
 \begin{free:var}{r}{r_0}
@@ -466,7 +469,7 @@ We defer the proof of \ref{m2:prog0} to finish proving our initial invariants.
 	\begin{calculation}
 		pshL'.r_0 \in \ran.(node' \domsub val')
 		% this step should not be marked as proved
-	\hint{=}{ \eqref{m1:a0} and \eqref{m2:a2} }
+	\hint{=}{ eqref{m1:a0} and eqref{m2:a2} }
 		pshL.r_0 \in \ran.(node' \domsub val)
 	\hint{=}{ \eqref{m2:inv6} with \eqref{pr2:hyp2} }
 		val.(insL.r_0) \in \ran.(node' \domsub val)

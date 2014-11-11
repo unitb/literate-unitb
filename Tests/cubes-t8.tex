@@ -56,8 +56,8 @@
 %%
 %%
 \begin{align*}
-\evassignment{evt}{a0}
-{	n' = n + 1	}
+\evbcmeq{evt}{a0}
+	{n}{n + 1}
 \end{align*}
 %
 We use the proof obligation of \ref{inv0} to deduce a proper assignment to $a$:
@@ -92,8 +92,8 @@ We use the proof obligation of \ref{inv0} to deduce a proper assignment to $a$:
 %%%%%\end{invariant}
 %%%%
 \begin{align*}
-\evassignment{evt}{a1}
-{	a' = a + b	}
+\evbcmeq{evt}{a1}
+	{a}{ a + b }
 \end{align*}
 %
 We now have a new invariant to preserve. It is easy to see how to establish it initially:
@@ -171,8 +171,8 @@ We now have a new invariant to preserve. It is easy to see how to establish it i
 \end{align*} 
 %
 \begin{align*}
-\evassignment{evt}{a2}
-{	b' = b + c	}
+\evbcmeq{evt}{a2}
+	{b}{b + c}
 \end{align*}
 
 Invariant \ref{inv2} is easy to satisfy initially:
@@ -186,8 +186,8 @@ Invariant \ref{inv2} is easy to satisfy initially:
 
 	If we increase $c$ by 6, we can easily see that \ref{inv2} is preserved:
 \begin{align*}
-\evassignment{evt}{a3}
-{	c' = c + 6	}
+\evbcmeq{evt}{a3}
+	{c}{c + 6}
 \end{align*}
 
 	\easy
@@ -265,8 +265,8 @@ Invariant \ref{inv2} is easy to satisfy initially:
 \end{align*}
 
 \begin{align*}
-\evassignment{evt}{a4}
-{ f' \2 = f \1 | n \fun a }
+\evbcmeq{evt}{a4}
+	{f}{ f \1 | n \fun a }
 \end{align*}
 
 \begin{align*}

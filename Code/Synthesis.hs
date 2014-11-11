@@ -95,22 +95,12 @@ struct m = do
             code <- type_code t
             return $ format "{2}_{0} :: {1}" y code (pre :: String)
 
-assign_code :: Machine -> Expr -> Either String [String]
-assign_code m e =
-        case e of
-            FunApp f [Word (Var n _),e0]
-                    |      pre `M.member` variables m 
-                        && suff == "@prime"
-                        && name f == "=" -> do
-                                c0 <- eval_expr m e0
-                                return [format "v_{0} = {1}" pre c0]
-                where
-                    (pre,suff) = splitAt (length n - length "@prime") n
-            FunApp f es
-                    | name f == "and" -> do
-                        rs <- mapM (assign_code m) es
-                        return $ concat rs
-            _ -> Left $ format "assignment is not in a canonical form: {0}" e
+assign_code :: Machine -> Action -> Either String [String]
+assign_code m (Assign v e) = do
+        c0 <- eval_expr m e
+        return [format "v_{0} = {1}" (name v) c0]
+assign_code _ act@(BcmSuchThat _ _) = Left $ format "Action is non deterministic: {0}" act
+assign_code _ act@(BcmIn _ _) = Left $ format "Action is non deterministic: {0}" act
 
 init_value_code :: Machine -> Expr -> Either String [String]
 init_value_code m e =
@@ -132,7 +122,7 @@ event_code m e = do
         unless (M.null $ indices e) $ Left "non null number of indices"
         unless (isNothing $ fine $ new_sched e) $ Left "event has a fine schedule"
         grd  <- eval_expr m $ zall $ M.elems $ coarse $ new_sched e
-        acts <- mapM (assign_code m) $ M.elems $ action e
+        acts <- mapM (assign_code m) $ M.elems $ actions e
         return $ format 
             (unlines $
                 [ "modify $ \\s'@(State { .. }) ->" 

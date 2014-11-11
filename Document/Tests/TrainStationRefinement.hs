@@ -5,12 +5,15 @@ where
     -- Modules
 import Document.Machine
 
+import Logic.Expr
+import Logic.Proof
+
 import UnitB.PO
 
     -- Libraries
 import Tests.UnitTest
 
-import Data.String.Utils
+import Data.Map (Map,empty)
 
 import Utilities.Format (format)
 import Utilities.Syntactic
@@ -20,10 +23,10 @@ test_case = Case "train station example, with refinement" test True
 
 test :: IO Bool
 test = test_cases
-            [ Case "verify machine m0 (ref)" (verify 0 path0) result0
-            , Case "verify machine m1 (ref)" (verify 1 path0) result1
-            , Case "verify machine m2 (ref)" (verify 2 path0) result2
-            , Case "verify machine m2 (ref), in many files" (verify 2 path1) result2
+            [ POCase "verify machine m0 (ref)" (verify 0 path0) result0
+            , POCase "verify machine m1 (ref)" (verify 1 path0) result1
+            , POCase "verify machine m2 (ref)" (verify 2 path0) result2
+            , POCase "verify machine m2 (ref), in many files" (verify 2 path1) result2
             , StringCase "cyclic proof of liveness through 3 refinements" (parse path3) result3
             , StringCase "refinement of undefined machine" (parse path4) result4
             ]
@@ -103,7 +106,6 @@ result1 = unlines
     , "  o  m1/m1:movein/SCH/m1/3/REF/weaken"
     , "  o  m1/m1:movein/TR/m1:tr1/EN"
     , "  o  m1/m1:movein/TR/m1:tr1/NEG"
-    , "  o  m1/m1:movein/WD/ACT/SKIP:in"
     , "  o  m1/m1:movein/WD/ACT/mi:a2"
     , "  o  m1/m1:movein/WD/C_SCH"
     , "  o  m1/m1:movein/WD/F_SCH"
@@ -118,7 +120,6 @@ result1 = unlines
     , "  o  m1/m1:moveout/SCH"
     , "  o  m1/m1:moveout/SCH/m1/2/REF/weaken"
     , "  o  m1/m1:moveout/TR/m1:tr0"
-    , "  o  m1/m1:moveout/WD/ACT/SKIP:in"
     , "  o  m1/m1:moveout/WD/ACT/a2"
     , "  o  m1/m1:moveout/WD/C_SCH"
     , "  o  m1/m1:moveout/WD/F_SCH"
@@ -155,7 +156,7 @@ result1 = unlines
     , "  o  m1/m1:saf3/SAF/WD/rhs"
     , "  o  m1/m1:tr0/TR/WD"
     , "  o  m1/m1:tr1/TR/WD"
-    , "passed 98 / 98"
+    , "passed 96 / 96"
     ]
 
 result2 :: String
@@ -223,7 +224,6 @@ result2 = unlines
     , "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/rhs"
     , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/lhs"
     , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/rhs"
-    , "  o  m2/m1:movein/WD/ACT/SKIP:in"
     , "  o  m2/m1:movein/WD/ACT/mi:a2"
     , "  o  m2/m1:movein/WD/C_SCH"
     , "  o  m2/m1:movein/WD/F_SCH"
@@ -242,7 +242,6 @@ result2 = unlines
     , "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/lhs"
     , "  o  m2/m1:moveout/TR/m2:tr1/EN/leadsto/rhs"
     , "  o  m2/m1:moveout/TR/m2:tr1/NEG"
-    , "  o  m2/m1:moveout/WD/ACT/SKIP:in"
     , "  o  m2/m1:moveout/WD/ACT/a2"
     , "  o  m2/m1:moveout/WD/C_SCH"
     , "  o  m2/m1:moveout/WD/F_SCH"
@@ -285,7 +284,7 @@ result2 = unlines
     , "  o  m2/m2:saf2/SAF/WD/rhs"
     , "  o  m2/m2:tr0/TR/WD"
     , "  o  m2/m2:tr1/TR/WD"
-    , "passed 125 / 125"
+    , "passed 123 / 123"
     ]
 
 path0 :: String
@@ -318,11 +317,16 @@ parse path = do
         Right _ -> "ok"
         Left xs -> unlines $ map (\(Error x (LI _ i j)) -> format "error ({0},{1}): {2}" i j x) xs
 
-verify :: Int -> FilePath -> IO String
+strip_line_info :: String -> String
+strip_line_info xs = unlines $ map f $ lines xs
+    where
+        f xs = takeWhile (/= '(') xs
+
+verify :: Int -> FilePath -> IO (String, Map Label Sequent)
 verify n path = do
-    r <- parse_machine path
+    r <- list_file_obligations path
     case r of
         Right ms -> do
-            (s,_,_) <- str_verify_machine $ ms !! n
-            return $ unlines $ map (head . split "(") $ lines s
-        x -> return $ show x
+            (s,_,_) <- str_verify_machine $ fst $ ms !! n
+            return (strip_line_info s, snd $ ms !! n)
+        x -> return (show x, empty)

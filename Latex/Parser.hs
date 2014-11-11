@@ -80,6 +80,11 @@ map_docM :: Monad m
          -> LatexDoc -> m [b]
 map_docM f doc = mapM f $ contents doc
 
+map_docM_ :: Monad m 
+         => (LatexDoc -> m b)
+         -> LatexDoc -> m ()
+map_docM_ f doc = mapM_ f $ contents doc
+
 contents :: LatexDoc -> [LatexDoc]
 contents (Env _ _ c _)     = c
 contents (Bracket _ _ c _) = c

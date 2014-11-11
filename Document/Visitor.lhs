@@ -20,7 +20,6 @@ module Document.Visitor
     , VEnvBlock (..) 
     , VCmdBlock (..) 
     , error_list 
-    , MSEitherT 
     , MSEither 
     , with_line_info
     , drop_blank_text
@@ -176,11 +175,7 @@ instance Readable [Str] where
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        case reads $ concatMap flatten arg of 
-            [(n,"")] -> return n
-            _ -> lift $ do
-                li <- lift ask
-                left [Error (format "invalid list of strings: '{0}'" arg) li]
+        return $ map String $ comma_sep (concatMap flatten arg)        
 
 instance Readable [[Str]] where
     read_args = do
@@ -379,16 +374,15 @@ instance (Monad m)
 instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
     focus' cmd = EitherT $ focus' $ runEitherT cmd
 
---type Node s = EitherT [Error] (RWS LineInfo [Error] s)
-type NodeT s m = EitherT [Error] (RWST LineInfo [Error] s m)
+type Node s = EitherT [Error] (RWS LineInfo [Error] s)
 
 data EnvBlock s a = 
             forall t. (IsTuple t, AllReadable (TypeList t))
-         => EnvBlock (forall m. Monad m => t -> [LatexDoc] -> a -> NodeT s m a)
+         => EnvBlock (t -> [LatexDoc] -> a -> Node s a)
 
 data CmdBlock s a =
             forall t. (IsTuple t, AllReadable (TypeList t))
-         => CmdBlock (forall m. Monad m => t -> a -> NodeT s m a)
+         => CmdBlock (t -> a -> Node s a)
 
 data VEnvBlock m = forall t. (IsTuple t, AllReadable (TypeList t))
                 => VEnvBlock (t -> [LatexDoc] -> VisitorT m ())
@@ -397,17 +391,7 @@ data VCmdBlock m =
                forall t. (IsTuple t, AllReadable (TypeList t))
             => VCmdBlock (t -> VisitorT m ())
 
---type MEither a = RWS () [a] ()
-
---type MEitherT a m = RWST () [a] () m
-
-type MSEither a s = RWS () [a] s
-
-type MSEitherT a s m = RWST () [a] s m
-
---data Param s a = Param 
---    { blocks :: [(String, EnvBlock s a)]
---    , cmds   :: [(String, CmdBlock s a)] }
+type MSEither = RWS LineInfo [Error] System
 
 fromEither :: Monad m => a -> EitherT [b] (RWST c [b] d m) a -> RWST c [b] d m a
 fromEither y m = do
@@ -577,11 +561,10 @@ visitor blks cmds = do
 --        VisitorT $ RWS.tell w
 --        forM 
 
-visit_doc :: Monad m 
-          => [(String,EnvBlock s a)] 
+visit_doc :: [(String,EnvBlock s a)] 
           -> [(String,CmdBlock s a)] 
           -> [LatexDoc] -> a 
-          -> RWST b [Error] s m a
+          -> RWS b [Error] s a
 visit_doc blks cmds cs x = do
 --        s0 <- RWS.get
         unless (all (\(x,_) -> take 1 x == "\\") cmds) 

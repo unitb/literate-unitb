@@ -13,6 +13,9 @@ import UnitB.PO
 import Z3.Z3
 
     -- Libraries
+import Control.Monad
+
+import           Data.Either
 import           Data.List ( sort )
 import           Data.Map hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
@@ -23,8 +26,8 @@ import Utilities.Syntactic
 
 test :: IO Bool
 test = test_cases 
-        [  Case "'x eventually increases' verifies" (check_mch example0) (result_example0)
-        ,  Case "train, model 0, verification" (check_mch train_m0) (result_train_m0)
+        [  POCase "'x eventually increases' verifies" (check_mch example0) (result_example0)
+        ,  POCase "train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
         ,  Case "Feasibility and partitioning" case3 result3
         ,  Case "Debugging the partitioning" case4 result4
@@ -34,7 +37,7 @@ test = test_cases
 example0 :: Either [Error] Machine
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
-        let (y,y',y_decl) = prog_var "y" int
+        let (y,_,y_decl) = prog_var "y" int
         let li = LI "" 0 0
         inv0   <- with_li li (x `mzeq` (mzint 2 `mztimes` y))
         init0  <- with_li li (x `mzeq` mzint 0)
@@ -42,8 +45,8 @@ example0 = do
         tr     <- with_li li (x `mzeq` mzint 0)
         co     <- with_li li (x `mzle` x')
         csched <- with_li li (x `mzeq` y)
-        s0     <- with_li li (x' `mzeq` (x `mzplus` mzint 2))
-        s1     <- with_li li (y' `mzeq` (y `mzplus` mzint 1))
+        s0     <- with_li li (liftM (Assign x_decl) (x `mzplus` mzint 2))
+        s1     <- with_li li (liftM (Assign y_decl) (y `mzplus` mzint 1))
         let tr0 = Transient empty tr (label "evt") empty_hint
             co0 = Co [] co
             ps = empty_property_set {
@@ -60,7 +63,7 @@ example0 = do
             evt = empty_event
                     { sched_ref = [sch_ref0]
                     , scheds = insert (label "sch0") csched default_schedule
-                    , action = fromList [
+                    , actions = fromList [
                         (label "S0", s0),
                         (label "S1", s1) ] }
             m = (empty_machine "m0") 
@@ -77,13 +80,13 @@ select      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
 
 train_m0 :: Either [Error] Machine
 train_m0 = do
-        let (st,st',st_decl) = prog_var "st" (array int bool)
+        let (st,_,st_decl) = prog_var "st" (array int bool)
             (t,t_decl) = var "t" int
         let li = LI "" 0 0
         inv0 <- with_li li (mzforall [t_decl] mztrue $
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
         c0   <- with_li li (st `select` t)
-        a0   <- with_li li (st' `mzeq` zstore st t mzfalse)
+        a0   <- with_li li (liftM (Assign st_decl) $ zstore st t mzfalse)
         let inv = fromList [(label "J0",inv0)]
             sch_ref0 = (weaken $ label "evt")
                 { remove = S.singleton (label "default")
@@ -93,7 +96,7 @@ train_m0 = do
                     {   indices = symbol_table [t_decl]
                     ,   sched_ref = [sch_ref0]
                     ,   scheds  = insert (label "C0") c0 $ default_schedule
-                    ,   action  = fromList [(label "A0", a0)]
+                    ,   actions  = fromList [(label "A0", a0)]
                     })
         tr <- with_li li (st `select` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty_hint)] 
@@ -174,22 +177,23 @@ result_train_m0_tr_po = unlines
     , " (exists ((t@param Int))"
           ++   " (and true"
           ++   " (and (=> (select st t) (select st t@param))"
-          ++        " (=> (and (select st t)"
-          ++                 " (= st@prime (store st t@param false))"
+          ++        " (=> (and (= st@prime (store st t@param false))"
           ++                 " (select st t@param))"
-          ++            " (not (select st@prime t))))))"
+          ++            " (=> (select st t)"
+          ++                " (not (select st@prime t)))))))"
     ]
 
 test_case :: ([Char], IO Bool, Bool)
 test_case = ("Unit-B", test, True)
 
-check_mch :: Either [Error] Machine -> IO String
+check_mch :: Either [Error] Machine -> IO (String, Map Label Sequent)
 check_mch em = do
     case em of
         Right m -> do
+            let r = head $ rights [proof_obligation m]
             (xs,_,_) <- str_verify_machine m
-            return xs
-        Left x -> return (show_err x)
+            return (xs,r)
+        Left x -> return (show_err x, empty)
 
 get_cmd_tr_po :: Monad m 
               => Either [Error] Machine 

@@ -12,7 +12,7 @@ import UnitB.AST
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
-import Data.List
+import Data.List as L
 import Data.Map
 
 import Tests.UnitTest
@@ -203,5 +203,6 @@ parse path = do
     case r of
         Right [m] -> do
             return $ Right m
-        _ -> return $ Left "wrong number of machines"
+        Right _ -> return $ Left "wrong number of machines"
+        Left x  -> return $ Left $ unlines $ L.map show x
 

@@ -515,6 +515,13 @@
 \newcomponent{\fschedule}{F}
 \newcomponent{\cschedule}{C}
 \newcomponent{\evassignment}{A}
+\newcommand{\evbcmeq}[4] % {assignment}{A}
+{   %\newcounter{cnt:#1}
+  \assertion{A}{#1}{#2}{&#3 ~:=~ #4} }  % {counter}{label}{expr}
+\newcommand{\evbcmsuch}[4] % {assignment}{A}
+{   %\newcounter{cnt:#1}
+  \assertion{A}{#1}{#2}{&#3 ~:|~ #4} }  % {counter}{label}{expr}
+
 
 %%%%%%%%%%%%%%%%%%
 % Proof obligations and refinement

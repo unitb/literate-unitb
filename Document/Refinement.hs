@@ -9,11 +9,11 @@ import Document.Proof
 
 import UnitB.AST
 import UnitB.PO
+import UnitB.POGenerator as POG
 
 import Latex.Parser
 
 import Logic.Expr
-import Logic.Proof hiding ( assert )
 
     -- Libraries
 import Control.Monad.Trans.Either
@@ -50,7 +50,7 @@ data Add = Add
 
 instance RefRule Add where
     rule_name _       = label "add"
-    refinement_po _ m = M.fromList $ assert m "" zfalse
+    refinement_po _ m = assert m "" zfalse
 
 type ERWS = EitherT [Error] (RWS LineInfo [Error] System)
 
@@ -159,22 +159,20 @@ parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
-assert :: Machine -> String -> Expr -> [(Label, Sequent)]
+assert :: Machine -> String -> Expr -> POGen ()
 assert m suff prop = assert_hyp m suff M.empty M.empty prop
 
 assert_hyp :: Machine -> String 
            -> Map String Var -> Map Label Expr
-           -> Expr -> [(Label, Sequent)]
+           -> Expr -> POGen () 
 assert_hyp m suff cnst hyps prop = 
-        [ ( po_lbl
-            , (Sequent 
-                (           assert_ctx m 
-                `merge_ctx` step_ctx m
-                `merge_ctx` ctx)
-                []
-                (invariants m `M.union` hyps)
-                prop))
-        ]
+    with (do
+            POG.context $ assert_ctx m
+            POG.context $ step_ctx m
+            POG.context $ ctx
+            named_hyps $ invariants m
+            named_hyps hyps )
+        $ emit_goal [po_lbl] prop
     where
         ctx = Context M.empty cnst M.empty M.empty M.empty
         po_lbl 
@@ -186,12 +184,11 @@ data Ensure = Ensure ProgressProp Label Event TrHint
 
 instance RefRule Ensure where
     rule_name _ = "ensure"
-    refinement_po (Ensure (LeadsTo vs p q) lbl _ hint) m =
-        M.unions $ [ prop_saf m "" (Unless vs p q Nothing)
-                   , prop_tr m "" (Transient (symbol_table vs) 
+    refinement_po (Ensure (LeadsTo vs p q) lbl _ hint) m = do
+            prop_saf m ("", Unless vs p q Nothing)
+            prop_tr m ("", Transient (symbol_table vs) 
                                              (p `zand` znot q) lbl 
                                              hint )
-                    ]
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
@@ -207,16 +204,16 @@ instance RefRule Discharge where
                     (LeadsTo fv0 p0 q0)
                     (Transient fv1 p1 _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
-        m = fromList $
+        m = do
             assert m "saf/lhs" (
                 zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
                         p0 `zimplies` p2
                         ) )
-         ++ assert m "saf/rhs" (
+            assert m "saf/rhs" (
                 zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
                         q2 `zimplies` q0
                         ) )
-         ++ assert m "tr" (
+            assert m "tr" (
                 zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
                         zand p0 (znot q0) `zimplies` p1
                         ) )
@@ -225,11 +222,11 @@ instance RefRule Discharge where
                     (LeadsTo fv0 p0 q0)
                     (Transient fv1 p1 _ _)
                     Nothing)
-            m = fromList $
+            m = do
                 assert m "tr/lhs" (
                     zforall (fv0 ++ M.elems fv1) ztrue (
                              (p0 `zimplies` p1) ) )
-             ++ assert m "tr/rhs" (
+                assert m "tr/rhs" (
                     zforall (fv0 ++ M.elems fv1) ztrue (
                              (znot p1 `zimplies` q0) ) )
 
@@ -256,13 +253,13 @@ instance RefRule Monotonicity where
     refinement_po (Monotonicity 
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1))
-                  m = fromList ( 
+                  m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
                              (p0 `zimplies` p1))
-             ++ assert m "rhs" (
+                assert m "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
-                             (q1 `zimplies` q0)))
+                             (q1 `zimplies` q0))
 
 data Implication = Implication ProgressProp
     deriving (Eq,Typeable,Show)
@@ -271,7 +268,7 @@ instance RefRule Implication where
     rule_name _   = label "implication"
     refinement_po (Implication 
                     (LeadsTo fv1 p1 q1))
-                  m = fromList $ 
+                  m = 
                 assert m "" (
                     zforall fv1 ztrue $
                              (p1 `zimplies` q1))
@@ -283,13 +280,13 @@ instance RefRule Disjunction where
     rule_name _ = label "disjunction"
     refinement_po (Disjunction 
                     (LeadsTo fv0 p0 q0)
-                    ps) m = M.fromList (
+                    ps) m = do
                 assert m "lhs" (
                     zforall fv0 ztrue (
                         ( p0 `zimplies` zsome (map disj_p ps) ) ) )
-             ++ assert m "rhs" (
+                assert m "rhs" (
                     zforall fv0 ztrue (
-                        ( zsome (map disj_q ps) `zimplies` q0 ) ) ) )
+                        ( zsome (map disj_q ps) `zimplies` q0 ) ) )
         where
             disj_p ([], LeadsTo _ p1 _) = p1
             disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
@@ -311,11 +308,11 @@ instance RefRule NegateDisjunct where
             (NegateDisjunct
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1))
-            m = M.fromList $ 
+            m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
                                 (zand p0 (znot q0) `zimplies` p1))
-             ++ assert m "rhs" (
+                assert m "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
                                 (q1 `zimplies` q0))
         
@@ -329,15 +326,14 @@ instance RefRule Transitivity where
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
                     (LeadsTo fv2 p2 q2))
-            m = 
-              M.fromList $
+            m = do
                 assert m "lhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             p0 `zimplies` p1 )
-             ++ assert m "mhs" ( 
+                assert m "mhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q1 `zimplies` p2 )
-             ++ assert m "rhs" ( 
+                assert m "rhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q2 `zimplies` q0 )
 
@@ -351,13 +347,13 @@ instance RefRule PSP where
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1)
                     (Unless fv2 r b Nothing))
-            m = M.fromList (
+            m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                         (zand p1 r `zimplies` p0))
-             ++ assert m "rhs" (
+                assert m "rhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            (q0 `zimplies` zor (q1 `zand` r) b)))
+                            (q0 `zimplies` zor (q1 `zand` r) b))
     refinement_po (PSP _ _ (Unless _ _ _ (Just _))) _ 
         = error "PSP.refinement_po: invalid"
 
@@ -370,15 +366,15 @@ instance RefRule Induction where
             (Induction 
                     (LeadsTo fv0 p0 q0)
                     (LeadsTo fv1 p1 q1) v)
-            m = M.fromList (
+            m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
                         ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
                         )
-             ++ assert m "rhs" (
+                assert m "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
                         (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
-                        ))
+                        )
 
 parse_induction :: (Monad m)
                 => String -> RuleParserParameter
@@ -442,48 +438,44 @@ instance RefRule ScheduleChange where
             Replace (_,prog) (_,saf) ->
                 let LeadsTo vs p0 q0  = prog
                     Unless us p1 q1 _ = saf
-                in
-                  M.fromList (
+                in do
                     assert m "prog/lhs" (
                         zforall (vs ++ ind) ztrue $
                             zall (old_c ++ old_f) `zimplies` p0
                             )
-                 ++ assert m "prog/rhs" (
+                    assert m "prog/rhs" (
                         zforall (vs ++ ind) ztrue $
                             q0 `zimplies` new_part
                             )
-                 ++ assert m "saf/lhs" (
+                    assert m "saf/lhs" (
                         zforall (us ++ ind) ztrue $
                             p1 `zeq` new_part
                             )
-                 ++ assert m "saf/rhs" (
+                    assert m "saf/rhs" (
                         zforall (us ++ ind) ztrue $
                             q1 `zimplies` znot (zall $ old_c ++ old_f)
-                            ))
-            Weaken -> M.fromList $
+                            )
+            Weaken -> 
                 assert m "" $
                     zforall ind ztrue $ zall (old_f ++ old_c) `zimplies` new_part
             ReplaceFineSch _ _ _ (_,prog) -> 
                 let LeadsTo vs p0 q0 = prog
-                in
-                  M.fromList (
+                in do
                     assert m "prog/lhs" (
                         zforall (vs ++ ind) ztrue $
                             zall (old_c ++ old_f) `zimplies` p0
                             )
-                 ++ assert m "prog/rhs" (
+                    assert m "prog/rhs" (
                         zforall (vs ++ ind) ztrue $
                             q0 `zimplies` new_part
                             )
-                 ++ assert m "str" (
+                    assert m "str" (
                         zforall ind ztrue $
                             zall (new_c ++ new_f) `zimplies` old_part
                             )
-                 )
             RemoveGuard lbl -> 
-                M.fromList $ 
                     assert_hyp m "" param (new_guard evt) $ old_guard evt ! lbl 
-            AddGuard _ -> M.empty
+            AddGuard _ -> return ()
         where
             param = params evt `M.union` indices evt
             new_c = M.elems $ coarse $ new_sched evt

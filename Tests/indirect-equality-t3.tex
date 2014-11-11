@@ -397,7 +397,7 @@
 	\end{align}
 	\hide{ \goal{ z \le x \uparrow y } }
 %	\using{ \eqref{ctx1:thm10} }
-\begin{by:symmetry}{hyp1}{[x,y]}
+\begin{by:symmetry}{hyp1}{x,y}
 \begin{indirect:inequality}{right}{\le}{k}
 \begin{calculation}
 		x \uparrow y \1\le k
@@ -454,7 +454,7 @@
 	\end{case} \\
 	\begin{case}{hyp3}{i = k \lor j = k}
 		By symmetry on $i$ and $j$.
-		\begin{by:symmetry}{hyp3}{[i,j]}
+		\begin{by:symmetry}{hyp3}{i,j}
 		\easy
 %		\begin{calculation}
 %			swap.((i \mapsto j) \mapsto k) \le k

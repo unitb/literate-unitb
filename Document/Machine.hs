@@ -6,7 +6,7 @@ module Document.Machine where
     --
     -- Modules
     --
-import Document.Expression
+import Document.Expression hiding ( parse_expr' )
 import Document.Visitor
 import Document.Proof
 import Document.Refinement as Ref
@@ -33,47 +33,44 @@ import Z3.Z3
     -- Libraries
     --
 import           Control.Monad hiding ( guard )
-import qualified Control.Monad.Reader.Class as R
+import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS
+import qualified Control.Monad.Writer as W
 
 import           Data.Char
 import           Data.Functor.Identity
 import           Data.Graph
-import           Data.Map  as M hiding ( map, foldl, (\\) )
+import           Data.Map   as M hiding ( map, foldl, (\\) )
+import qualified Data.Map   as M
 import           Data.Maybe as M ( maybeToList, isJust, isNothing ) 
 import qualified Data.Maybe as M
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
---import Debug.Trace
-
-
 import Utilities.Format
 import Utilities.Syntactic
---import Utilities.Trace
 
 list_file_obligations :: FilePath
                        -> IO (Either [Error] [(Machine, Map Label Sequent)])
 list_file_obligations fn = do
-        ct <- readFile fn
-        return $ list_proof_obligations fn ct
+        runEitherT $ list_proof_obligations fn
 
-list_proof_obligations :: FilePath -> String
-                       -> Either [Error] [(Machine, Map Label Sequent)]
-list_proof_obligations fn ct = do
-        xs <- list_machines fn ct
-        forM xs $ \x -> do
+list_proof_obligations :: FilePath
+                       -> EitherT [Error] IO [(Machine, Map Label Sequent)]
+list_proof_obligations fn = do
+        xs <- list_machines fn
+        hoistEither $ forM xs $ \x -> do
             y <- proof_obligation x
             return (x,y)
 
-list_machines :: FilePath -> String 
-              -> Either [Error] [Machine]
-list_machines fn ct = do
-        xs <- latex_structure fn ct
-        ms <- all_machines xs
+list_machines :: FilePath
+              -> EitherT [Error] IO [Machine]
+list_machines fn = do
+        xs <- EitherT $ parse_latex_document fn
+        ms <- hoistEither $ all_machines xs
         return $ map snd $ toList $ machines ms
         
 parse_rule' :: (Monad m)
@@ -131,18 +128,17 @@ check_acyclic x es li = do
         msg = "A cycle exists in the {0}: {1}"
 
 trickle_down
-        :: Monad m
-        => Map Label Label 
-        -> Map String a 
-        -> (a -> a -> Either [String] a) 
+        :: (Machine -> Machine -> Either [String] Machine) 
         -> LineInfo
-        -> EitherT [Error] m (Map String a)
-trickle_down s ms f li = do
+        -> M ()
+trickle_down f li = do
+            ms   <- lift $ gets machines
+            refs <- lift $ RWS.gets ref_struct
             let g (AcyclicSCC v) = v
                 g (CyclicSCC _)  = error "trickle_down: the input graph should be acyclic"
-                rs = map g $ cycles $ toList s
-            foldM (\ms n -> 
-                    case M.lookup n s of
+                rs = map g $ cycles $ toList refs
+            ms <- foldM (\ms n -> 
+                    case M.lookup n refs of
                         Just anc  -> do
                             m <- hoistEither $ either 
                                 (Left . map (\x -> Error x li)) Right 
@@ -150,114 +146,122 @@ trickle_down s ms f li = do
                             return $ insert (show n) m ms
                         Nothing -> return ms
                     ) ms rs
+            lift $ modify $ \s -> s
+                { machines = ms }
 
 all_machines :: [LatexDoc] -> Either [Error] System
 all_machines xs = do
-        ms <- x
-        return $ s { machines = ms }
+        cmd
+        return s
     where
-        (x,s,_) = runRWS (runEitherT $ read_document xs) () empty_system
-        
-read_document :: [LatexDoc]
-              -> EitherT [Error] (RWS () [Error] System) (Map String Machine)
+        (cmd,s,_) = runRWS (runEitherT $ read_document xs) li empty_system
+        li = LI "" 1 1 
+
+data MachineTag = MTag String LineInfo [LatexDoc] LineInfo
+
+data ContextTag = CTag String LineInfo [LatexDoc] LineInfo
+
+get_components :: [LatexDoc] -> LineInfo 
+               -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
+get_components xs li = 
+        liftM g
+            $ R.runReader (runEitherT 
+                $ W.execWriterT (mapM_ f xs)
+                ) li
+
+    where
+        with_li li cmd = R.local (const li) cmd
+        get_name li xs = with_li li $ liftM fst $ lift $ get_1_lbl xs
+        f x@(Env tag li0 xs _li1) 
+            | tag == "machine" = do
+                    n <- get_name li0 xs
+                    W.tell ([(n,xs)],[])
+            | tag == "context" = do
+                    n <- get_name li0 xs
+                    W.tell ([],[(n,xs)])
+            | otherwise      = map_docM_ f x
+        f x = map_docM_ f x
+        g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
+
+all_contents :: [MachineTag] -> [LatexDoc]
+all_contents xs = concatMap f xs
+    where
+        f (MTag _ _ xs _) = xs
+
+read_document :: [LatexDoc] -> M ()
 read_document xs = do
---            traceM "step A"
-            ms <- foldM gather empty xs 
-            lift $ RWS.modify (\s -> s { 
-                machines = ms })
-            ms <- toEither $ foldM (f type_decl) ms xs
-            toEither $ forM_ xs (g ctx_type_decl)
-            refs  <- lift $ RWS.gets ref_struct
+            -- traceM "step A"
             let li = line_info xs
+            (ms,cs) <- hoistEither $ get_components xs li
+            -- ms <- foldM gather empty xs
+            let default_thy = empty_theory 
+                                { extends = fromList [("basic",basic_theory)] }
+                procM pass = do
+                    ms' <- lift $ gets machines 
+                    ms' <- toEither $ mapM (uncurry pass) 
+                        $ M.elems 
+                        $ M.intersectionWith (,) ms ms'
+                    lift $ modify $ \s -> s{ 
+                        machines = M.fromList $ zip (M.keys ms) ms' }
+                procC pass = do
+                    cs' <- lift $ gets theories
+                    cs' <- toEither $ zipWithM 
+                            (uncurry . pass) 
+                            (M.keys cs)
+                        $ M.elems 
+                        $ M.intersectionWith (,) cs cs'
+                    lift $ modify $ \s -> s 
+                        { theories = M.fromList (zip (M.keys cs) cs') 
+                                `M.union` theories s }
+            lift $ RWS.modify (\s -> s 
+                { machines = M.mapWithKey (\k _ -> empty_machine k) ms 
+                , theories = M.map (const default_thy) cs `M.union` theories s })
+            procM type_decl
+            procC ctx_type_decl
+            refs  <- lift $ RWS.gets ref_struct
             check_acyclic "refinement structure" (toList refs) li
-            ms <- trickle_down refs ms merge_struct li
+            trickle_down merge_struct li
 
                 -- take actual generic parameter from `type_decl'
-            ms <- toEither $ foldM (f imports) ms xs
-            toEither $ mapM_ (g ctx_imports) xs
-            ms <- trickle_down refs ms merge_import li
+            procM imports
+            procC ctx_imports
+            trickle_down merge_import li
     
                 -- take the types from `imports' and `type_decl`
-            ms <- toEither $ foldM (f declarations) ms xs
---            toEither $ mapM_ (g ctx_operators) xs
-            toEither $ mapM_ (g ctx_declarations) xs
-            ms <- trickle_down refs ms merge_decl li
---            traceM "step M"
---            traceM $ show $ M.map (M.elems . variables) ms
+            procM declarations
+            procC ctx_declarations
+            trickle_down merge_decl li
                 
                 -- use the `declarations' of variables to check the
                 -- type of expressions
-            ms <- toEither $ foldM (f collect_expr) ms xs
-            toEither $ mapM_ (g ctx_collect_expr) xs
-            ms <- trickle_down refs ms merge_exprs li
---            traceM "step Q"
+            procM collect_expr
+            procC ctx_collect_expr
+            trickle_down merge_exprs li
             
                 -- use the label of expressions from `collect_expr' 
                 -- and properties
-            ms <- toEither $ foldM (f collect_refinement) ms xs
---            traceM "step QR"
-            ms <- trickle_down refs ms merge_refinements li
+            procM collect_refinement
+            trickle_down merge_refinements li
             
                 -- use the label of expressions from `collect_expr' 
                 -- and the refinement rules
                 -- in hints.
-            toEither $ mapM_ (g ctx_collect_proofs) xs
-            ms <- toEither $ foldM (f collect_proofs) ms xs
+            procM collect_proofs
+            procC ctx_collect_proofs
             cs <- lift $ gets theories
             toEither $ forM_ (toList cs) $ \(name,ctx) -> do
                 let li = line_info xs
                 fromEither () $ check_acyclic 
                     ("proofs of " ++ name)
                     (thm_depend ctx) li
---            toEither $ forM_ (toList ms) $ \(name,m) -> do
---                let li = line_info xs
---                fromEither () $ check_acyclic 
---                    ("proofs of " ++ name)
---                    (thm_depend ctx) li
---            traceM "step R"
-            ms <- trickle_down refs ms merge_proofs li
---            traceM "step T"
+            trickle_down merge_proofs li
+            ms <- lift $ gets machines
             toEither $ forM_ (M.elems ms) 
                 $ deduct_schedule_ref_struct li
             s  <- lift $ RWS.gets proof_struct
             check_acyclic "proof of liveness" s li
---            traceM "step Z"
-            return ms
-    where
-        gather ms (Env n _ c li)     
-                | n == "machine"    = do
-                    (name,_) <- with_line_info li $ get_1_lbl c
-                    let m           = empty_machine name
-                    return (insert name m ms)
-                | n == "context"    = do
-                    (name,_) <- with_line_info li $ get_1_lbl c
-                    let c           = empty_theory 
-                                { extends = fromList [("basic",basic_theory)] }
-                    lift $ modify $ \s -> s 
-                        { theories = insert name c $ theories s }
-                    return ms
-                | otherwise         = foldM gather ms c
-        gather ms x                 = fold_docM gather ms x
-        f pass ms (Env n _ c li)     
-                | n == "machine"    = do
-                    fromEither ms (do
-                        (name,cont) <- with_line_info li $ get_1_lbl c
-                        m           <- toEither $ pass cont (ms ! name)
-                        return (insert name m ms))
-                | otherwise         = foldM (f pass) ms c
-        f pass ms x                 = fold_docM (f pass) ms x
-        g pass (Env n _ c li)     
-                | n == "context"    = do
-                    fromEither () (do
-                        (name,cont) <- with_line_info li $ get_1_lbl c
-                        c           <- lift $ gets $ (! name) . theories
-                        c           <- toEither $ pass name cont c
-                        lift $ modify $ \s -> s 
-                            { theories = insert name c $ theories s } )
-                | otherwise         = mapM_ (g pass) c
-        g pass x                 = map_docM (g pass) x >> return ()
 
-type_decl :: [LatexDoc] -> Machine -> MSEither Error System Machine
+type_decl :: [LatexDoc] -> Machine -> MSEither Machine
 type_decl = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag) m -> do
@@ -301,17 +305,17 @@ type_decl = visit_doc []
                         anc   <- lift $ gets ref_struct
                         sys   <- lift $ gets machines
                         li    <- lift $ ask
-                        unless (show mch `member` sys) $ left [Error (format "Machine {0} refines a non-existant machine: {1}" (_name m) mch) li]
-                        when (_name m `member` anc) $ left [Error (format "Machines can only refine one other machine") li]
+                        unless (show mch `member` sys) 
+                            $ left [Error (format "Machine {0} refines a non-existant machine: {1}" (_name m) mch) li]
+                        when (_name m `member` anc) 
+                            $ left [Error (format "Machines can only refine one other machine") li]
                         lift $ modify $ \x -> x { ref_struct = insert (_name m) mch $ ref_struct x }
                         return m
                )
             ]
 
-imports :: Monad m 
-        => [LatexDoc] 
-        -> Machine 
-        -> MSEitherT Error System m Machine 
+imports :: [LatexDoc] -> Machine 
+        -> MSEither Machine 
 imports = visit_doc []
             [   ( "\\with"
                 , CmdBlock $ \(One (String th_name)) m -> do
@@ -334,10 +338,8 @@ imports = visit_doc []
 
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
-declarations :: Monad m
-             => [LatexDoc] 
-             -> Machine 
-             -> MSEitherT Error System m Machine
+declarations :: [LatexDoc] -> Machine 
+             -> MSEither Machine
 declarations = visit_doc []
         [   (   "\\variable"
             ,   CmdBlock $ \(One xs) m -> do
@@ -420,13 +422,12 @@ declarations = visit_doc []
             )
         ]
 
-tr_hint :: Monad m
-        => Machine
+tr_hint :: Machine
         -> Map String Var
         -> Label
         -> [LatexDoc]
         -> TrHint
-        -> RWST LineInfo [Error] System m TrHint
+        -> RWS LineInfo [Error] System TrHint
 tr_hint m vs lbl = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs) (TrHint ys z) -> do
@@ -449,17 +450,19 @@ tr_hint m vs lbl = visit_doc []
                     ]
                 return $ TrHint ys (Just prog))
         ]
-    
+
+check_types :: Either String a -> EitherT [Error] (RWS LineInfo [Error] System) a    
+check_types c = EitherT $ do
+    li <- ask
+    return $ either (\x -> Left [Error x li]) Right c
 
     -- Todo: report an error if we create two assignments (or other events 
     -- elements)
     -- with the same name
     -- Todo: guard the `insert` statements with checks for name clashes
     -- Todo: check scopes
-collect_expr :: Monad m
-             => [LatexDoc] 
-             -> Machine 
-             -> MSEitherT Error System m Machine
+collect_expr :: [LatexDoc] -> Machine 
+             -> MSEither Machine
 collect_expr = visit_doc 
                 --------------
                 --  Events  --
@@ -468,20 +471,79 @@ collect_expr = visit_doc
             ,   CmdBlock $ \(evs, lbl, xs) m -> do
                         let msg = "{0} is already used for another assignment"
                         evs <- forM evs $ \ev -> do
+                                -- should revert back to only one event
                             old_event <- bind
                                 (format "event '{0}' is undeclared" ev)
                                 $ ev `M.lookup` events m
-                            act     <- get_evt_part m old_event xs
+                            pred    <- get_evt_part m old_event xs
+                            let frame = M.elems $ variables m `M.difference` abs_vars m
+                                act = BcmSuchThat frame pred
                             new_act <- bind 
                                 (format msg lbl)
-                                $ insert_new lbl act (action old_event)
+                                $ insert_new lbl act (actions old_event)
                             let new_event = old_event 
-                                        { action = new_act }
-                            scope (context m) act (        params old_event 
+                                        { actions = new_act }
+                            scope (context m) pred (        params old_event 
                                                    `merge` indices old_event)
                             return (ev,new_event)
                         return m {          
                                 events  = union (fromList evs) $ events m } 
+            )
+        ,   (   "\\evbcmeq"
+            ,   CmdBlock $ \(evt, lbl, String v, xs) m -> do
+                    let msg = "{0} is already used for another assignment"
+                    old_event <- bind
+                                (format "event '{0}' is undeclared" evt)
+                                $ evt `M.lookup` events m
+                    xp  <- parse_expr' (event_setting m old_event) 
+                            { expected_type = Nothing } xs
+                    var <- bind
+                        (format "variable '{0}' undeclared" v)
+                        $ v `M.lookup` variables m
+                    let act = Assign var xp
+                    check_types
+                        $ Right (Word var) `mzeq` Right xp
+                    new_act <- bind
+                        (format msg lbl)
+                        $ insert_new lbl act (actions old_event)
+                    let new_event = old_event { actions = new_act }
+                    return m { events = M.insert evt new_event $ events m }
+            )
+        ,   (   "\\evbcmsuch"
+            ,   CmdBlock $ \(evt, lbl, vs, xs) m -> do
+                    let msg = "{0} is already used for another assignment"
+                    old_event <- bind
+                                (format "event '{0}' is undeclared" evt)
+                                $ evt `M.lookup` events m
+                    xp  <- parse_expr' (event_setting m old_event) 
+                            { expected_type = Nothing } xs
+                    vars <- bind_all (map toString vs)
+                        (format "variable '{0}' undeclared")
+                        $ (`M.lookup` variables m)
+                    let act = BcmSuchThat vars xp
+                    new_act <- bind
+                        (format msg lbl)
+                        $ insert_new lbl act (actions old_event)
+                    let new_event = old_event { actions = new_act }
+                    return m { events = M.insert evt new_event $ events m }
+            )
+        ,   (   "\\evbcmin"
+            ,   CmdBlock $ \(evt, lbl, String v, xs) m -> do
+                    let msg = "{0} is already used for another assignment"
+                    old_event <- bind
+                                (format "event '{0}' is undeclared" evt)
+                                $ evt `M.lookup` events m
+                    xp  <- get_evt_part m old_event xs
+                    var <- bind
+                        (format "variable '{0}' undeclared" v)
+                        $ v `M.lookup` variables m
+                    let act = BcmIn var xp
+                    check_types $ Right (Word var) `zelem` Right xp
+                    new_act <- bind
+                        (format msg lbl)
+                        $ insert_new lbl act (actions old_event)
+                    let new_event = old_event { actions = new_act }
+                    return m { events = M.insert evt new_event $ events m }
             )
         ,   (   "\\evguard"
             ,   CmdBlock $ \(evt, lbl, xs) m -> do
@@ -679,10 +741,8 @@ scope ctx xp vs = do
     else left [Error (format "Undeclared variables: {0}" 
                       (intercalate ", " undecl_v)) li]
 
-collect_refinement :: Monad m 
-                   => [LatexDoc] 
-                   -> Machine
-                   -> MSEitherT Error System m Machine 
+collect_refinement :: [LatexDoc] -> Machine
+                   -> MSEither Machine 
 collect_refinement = visit_doc []
         [   (   "\\refine"
             ,   CmdBlock $ \(goal, String rule, hyps, hint) m -> do
@@ -838,10 +898,8 @@ collect_refinement = visit_doc []
             )
         ]
 
-collect_proofs :: Monad m 
-               => [LatexDoc] 
-               -> Machine
-               -> MSEitherT Error System m Machine
+collect_proofs :: [LatexDoc] -> Machine
+               -> MSEither Machine
 collect_proofs = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(One po) xs m -> do -- with_tracingM $ do
@@ -966,4 +1024,3 @@ parse_machine fn = runEitherT $ do
 
 
 
-        

@@ -5,7 +5,7 @@
 module Document.Proof where
 
     -- Modules
-import Document.Expression
+import Document.Expression hiding ( parse_expr' )
 import Document.Visitor
 
 import Latex.Parser 
@@ -40,6 +40,8 @@ import           Data.Tuple
 import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
+
+type M = EitherT [Error] (RWS LineInfo [Error] System)
 
 context :: Machine -> Context
 context m = step_ctx m `merge_ctx` theory_ctx (theory m)
@@ -336,6 +338,9 @@ find_proof_step pr = visitor
                             Right cc_goal -> do
                                     return (ByCalc $ cc { goal = cc_goal })
                             Left msg      -> hard_error [Error (format "type error: {0}" msg) li]
+                    -- cc <- lift_i $ parse_calc pr
+                    -- set_proof $ LP.with_line_info li $ do
+                    --     proof_of cc
                     return ()
             )
                 -- TODO: make into a command
@@ -497,8 +502,15 @@ hint = visitor []
         , ( "\\eqref", VCmdBlock f )
         , ( "\\inst", VCmdBlock g )
         , ( "\\eqinst", VCmdBlock g )
+        -- , ( "\\stmt", VCmdBlock h )
         ]
     where
+        -- h (expr,()) = do
+        --     xp <- get_expression Nothing expr
+        --     li <- ask
+        --     lift $ W.tell [do
+        --         p <- xp
+        --         return (Lemma p,li)]
         g (lbl,subst) = do
                 li <- ask
                 ((),w) <- with_content li subst $ add_writer $ visitor []
@@ -618,12 +630,12 @@ get_expression t ys = do
             msg   = "type of {0} is ill-defined: {1}"
 
 
-get_predicate :: ( Monad m, Monoid b ) 
+get_predicate :: ( Monad m ) 
            => Machine
            -> Context
            -> FreeVarOpt
            -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo b (System) m) Expr
+           -> EitherT [Error] (RWST LineInfo [b] (System) m) Expr
 get_predicate m ctx opt ys = do
         let th = theory m
         let d_ctx = case opt of
@@ -631,55 +643,109 @@ get_predicate m ctx opt ys = do
                         WithoutFreeDummies -> empty_ctx
         get_predicate' th (ctx `merge_ctx` d_ctx `merge_ctx` context m) ys
 
-get_predicate' :: ( Monad m, Monoid b ) 
-           => Theory
-           -> Context
-           -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo b System m) Expr
-get_predicate' th ctx ys = do
-        x  <- parse_expr ctx
-                (th_notation th)
+data ParserSetting = PSetting 
+    { language :: Notation
+    , decls :: Context
+    , primed_vars :: Context
+    , dum_ctx :: Context
+    , is_step :: Bool
+    , free_dummies :: Bool
+    , expected_type :: Maybe Type
+    }
+
+default_setting :: ParserSetting
+default_setting = PSetting 
+    { language = undefined
+    , decls = undefined
+    , primed_vars = empty_ctx
+    , dum_ctx = empty_ctx
+    , is_step = False
+    , free_dummies = False
+    , expected_type = (Just bool)
+    }
+
+theory_setting :: Theory -> ParserSetting
+theory_setting th = default_setting
+    { language = th_notation th
+    , decls = theory_ctx th }
+
+machine_setting :: Machine -> ParserSetting
+machine_setting m = default_setting
+    { language = th_notation $ theory m
+    , decls = assert_ctx m `merge_ctx` theory_ctx (theory m)
+    , primed_vars = step_ctx m
+    , dum_ctx = dummy_ctx m }
+
+schedule_setting :: Machine -> Event -> ParserSetting
+schedule_setting m evt = set { decls = evt_live_ctx evt `merge_ctx` decls set }
+    where
+        set = machine_setting m 
+
+event_setting :: Machine -> Event -> ParserSetting
+event_setting m evt = set 
+        { decls = evt_saf_ctx evt `merge_ctx` decls set }
+    where
+        set = schedule_setting m evt
+
+parse_expr' :: ( Monad m ) 
+            => ParserSetting
+            -> [LatexDoc] 
+            -> EitherT [Error] (RWST LineInfo [b] System m) Expr
+parse_expr' set ys = do
+        let ctx0
+                | is_step set = primed_vars set
+                | otherwise   = empty_ctx
+            ctx1 
+                | free_dummies set = dum_ctx set
+                | otherwise        = empty_ctx
+        x  <- parse_expr (decls set `merge_ctx` ctx0 `merge_ctx` ctx1)
+                (language set)
                 (concatMap flatten_li xs)
-        li <- if L.null xs
-            then ask
-            else return $ line_info xs
-        x <- either 
-            (\x -> left [Error x li]) 
-            (right . normalize_generics) $ zcast bool $ Right x
+        li <- get_line_info xs
+        x  <- case expected_type set of
+            Just t -> either 
+                (\x -> left [Error x li]) 
+                (right . normalize_generics) $ zcast t $ Right x
+            Nothing -> return x
         unless (L.null $ ambiguities x) $ left 
             $ map (\x -> Error (format msg x (type_of x)) li)
                 $ ambiguities x
         return x
     where
+        get_line_info xs
+            | L.null xs = ask
+            | otherwise = return $ line_info xs 
         xs    = drop_blank_text ys
         msg   = "type of {0} is ill-defined: {1}"
 
+get_predicate' :: ( Monad m ) 
+               => Theory
+               -> Context
+               -> [LatexDoc] 
+               -> EitherT [Error] (RWST LineInfo [b] System m) Expr
+get_predicate' th ctx ys = parse_expr' default_setting 
+        { language = th_notation th
+        , decls = ctx } ys
 
-get_assert :: ( Monad m, Monoid b ) 
+get_assert :: ( Monad m ) 
            => Machine
            -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo b (System) m) Expr
-get_assert m ys = get_predicate m empty_ctx WithoutFreeDummies ys
+           -> EitherT [Error] (RWST LineInfo [b] (System) m) Expr
+get_assert m ys = parse_expr' (machine_setting m) ys
 
-get_evt_part :: ( Monad m, Monoid b ) 
+get_evt_part :: ( Monad m ) 
              => Machine -> Event
              -> [LatexDoc] 
-             -> EitherT [Error] (RWST LineInfo b System m)  Expr
-get_evt_part m e ys = get_predicate m 
-                        (            step_ctx m 
-                         `merge_ctx` theory_ctx (theory m)
-                         `merge_ctx` evt_live_ctx e
-                         `merge_ctx` evt_saf_ctx  e)
-                        WithoutFreeDummies
+             -> EitherT [Error] (RWST LineInfo [b] System m)  Expr
+get_evt_part m e ys = parse_expr' 
+                        (event_setting m e) { is_step = True }
                         ys
 
-get_assert_with_free :: ( Monad m, Monoid b ) 
+get_assert_with_free :: ( Monad m ) 
                      => Machine -> [LatexDoc] 
-                     -> EitherT [Error] (RWST LineInfo b System m)  Expr
-get_assert_with_free m ys = get_predicate m 
-                        (context m)
-                        WithFreeDummies
-                        ys
+                     -> EitherT [Error] (RWST LineInfo [b] System m)  Expr
+get_assert_with_free m ys = parse_expr' (machine_setting m) { free_dummies = True } ys
+
 lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a
       -> t0 (t1 m) a

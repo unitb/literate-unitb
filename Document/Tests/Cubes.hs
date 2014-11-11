@@ -95,9 +95,12 @@ prop_set6 = empty_property_set {
         z6 = zint 6
         calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
+vars :: [Var]
+vars = [var_a,var_b,var_c,var_n] 
+
 event6_evt :: Event
 event6_evt = empty_event {
-        action = fromList $ zip 
+        actions = rel_action vars $ fromList $ zip 
             (map label ["a1", "a0", "a2", "a3"])
             [ a' `zeq` (a `zplus` b), 
               n' `zeq` (n `zplus` zint 1),
@@ -112,7 +115,7 @@ event6_evt = empty_event {
         b' = Word var_b'
         c  = Word var_c
         c' = Word var_c'
-    
+
 path6 :: FilePath
 path6    = "Tests/integers.tex"
 

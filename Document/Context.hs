@@ -33,7 +33,7 @@ import Data.String.Utils
 import Utilities.Format
 import Utilities.Syntactic
 
-ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Error System Theory
+ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Theory
 ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag) th -> do
@@ -66,11 +66,10 @@ ctx_type_decl _ = visit_doc []
 
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
-ctx_declarations :: Monad m
-                 => String
+ctx_declarations :: String
                  -> [LatexDoc] 
                  -> Theory 
-                 -> MSEitherT Error System m Theory
+                 -> MSEither Theory
 ctx_declarations _ = visit_doc []
         [   (   "\\constant"
             ,   CmdBlock $ \(One xs) th -> do
@@ -110,10 +109,8 @@ ctx_declarations _ = visit_doc []
             )
         ]
 
-ctx_operators :: Monad m
-              => [LatexDoc] 
-              -> Theory 
-              -> MSEitherT Error System m Theory
+ctx_operators :: [LatexDoc] -> Theory 
+              -> MSEither Theory
 ctx_operators = visit_doc [] []
 --        [   (   "\\operator"
 --            ,   CmdBlock $ \(String name,optype,()) th -> do
@@ -137,11 +134,10 @@ ctx_operators = visit_doc [] []
 --            )
 --        ]
 
-ctx_imports :: Monad m 
-        => String
+ctx_imports :: String
         -> [LatexDoc] 
         -> Theory 
-        -> MSEitherT Error System m Theory
+        -> MSEither Theory
 ctx_imports _ = visit_doc []
             [   ( "\\with"
                 , CmdBlock $ \(One (String th_name)) th -> do
@@ -199,11 +195,8 @@ ctx_imports _ = visit_doc []
             )
         ]
 
-ctx_collect_expr :: Monad m
-                 => String
-                 -> [LatexDoc] 
-                 -> Theory
-                 -> MSEitherT Error System m Theory
+ctx_collect_expr :: String -> [LatexDoc] -> Theory
+                 -> MSEither Theory
 ctx_collect_expr name = visit_doc 
         [] [(   "\\axiom"
             ,   CmdBlock $ \(lbl, xs) th -> do
@@ -234,11 +227,8 @@ ctx_collect_expr name = visit_doc
             )
         ]
 
-ctx_collect_proofs :: Monad m 
-                   => String
-                   -> [LatexDoc] 
-                   -> Theory
-                   -> MSEitherT Error System m Theory
+ctx_collect_proofs :: String -> [LatexDoc] -> Theory
+                   -> MSEither Theory
 ctx_collect_proofs name = visit_doc
         [   (   "proof"
             ,   EnvBlock $ \(One po) xs th -> do 

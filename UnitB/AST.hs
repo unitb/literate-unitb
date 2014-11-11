@@ -2,8 +2,13 @@
 module UnitB.AST 
     ( Theory  (..)
     , Machine (..)
+    , variableSet
     , Event   (..)
     , empty_event
+    , Action (..)
+    , ba_predicate
+    , ba_pred
+    , rel_action
     , empty_machine
     , empty_theory
     , TrHint (..)
@@ -66,6 +71,8 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
 
+import UnitB.POGenerator ( POGen )
+
     -- Libraries
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
@@ -92,6 +99,19 @@ data Schedule = Schedule
 empty_schedule :: Schedule
 empty_schedule = Schedule default_schedule Nothing
 
+data Action = 
+        Assign Var Expr 
+        | BcmSuchThat [Var] Expr
+        | BcmIn Var Expr
+    deriving Eq
+
+instance Show Action where
+    show (Assign v e) = format "{0} := {1}" (name v) (show e)
+    show (BcmIn v e) = format "{0} :∈ {1}" (name v) (show e)
+    show (BcmSuchThat vs e) = format "{0} :| {1}" 
+            (intercalate "," $ map name vs)
+            (show e)
+
 data Event = Event 
         { indices   :: Map String Var
         , sched_ref :: [ScheduleChange]
@@ -101,8 +121,10 @@ data Event = Event
         , params    :: Map String Var
         , old_guard :: Map Label Expr
         , guards    :: Map Label Expr
-        , action    :: Map Label Expr }
-    deriving (Eq, Show)
+        , actions  :: Map Label Action
+        , eql_vars :: S.Set Var
+        -- , ba_predicate :: Map Label Expr 
+        } deriving (Eq, Show)
 
 empty_event :: Event
 empty_event = Event 
@@ -113,20 +135,56 @@ empty_event = Event
         , params = empty
         , old_guard = empty
         , guards = empty 
-        , action = empty 
+        , actions = empty
+        , eql_vars = S.empty
         }
+
+frame :: Event -> S.Set Var
+frame evt = S.unions $ map f acts
+    where
+        f (Assign v _) = S.singleton v
+        f (BcmIn v _)  = S.singleton v
+        f (BcmSuchThat vs _) = S.fromList vs
+        acts = M.elems (actions evt)
+
+ba_pred :: Action -> Expr
+ba_pred (Assign v e) = Word (prime v) `zeq` e
+ba_pred (BcmIn v e) = either undefined id $ Right (Word (prime v)) `zelem` Right e
+ba_pred (BcmSuchThat _ e) = e
+
+rel_action :: [Var] -> Map Label Expr -> Map Label Action
+rel_action vs act = M.map (\x -> BcmSuchThat vars x) act
+    where
+        vars = vs
+
+keep' :: Map String Var -> Event -> S.Set Var
+keep' vars evt = S.fromList (M.elems vars) `S.difference` frame evt
+
+skip' :: S.Set Var -> M.Map Label Expr
+skip' keep = M.fromList $ map f $ S.toList keep
+    where
+        f v@(Var n _) = (label ("SKIP:" ++ n), Word (prime v) `zeq` Word v)
+
+ba_predicate :: Machine -> Event -> Map Label Expr
+ba_predicate m evt = M.map ba_pred (actions evt) `M.union` skip
+    where
+        skip = skip' $ keep' (variables m) evt
 
 data Machine = 
     Mch 
         { _name      :: Label
         , theory     :: Theory
         , variables  :: Map String Var
+        , abs_vars   :: Map String Var
         , inits      :: Map Label Expr
         , events     :: Map Label Event
         , inh_props  :: PropertySet
         , props      :: PropertySet
         , comments   :: Map DocItem String }
     deriving (Eq, Show, Typeable)
+
+variableSet :: Machine -> S.Set Var
+variableSet m = S.fromList $ M.elems $ variables m
 
 data DocItem = 
         DocVar String 
@@ -143,18 +201,23 @@ instance Show DocItem where
 
 
 class (Typeable a, Eq a, Show a) => RefRule a where
-    refinement_po :: a -> Machine -> Map Label Sequent
+    refinement_po :: a -> Machine -> POGen ()
     rule_name     :: a -> Label
     
 empty_machine :: String -> Machine
-empty_machine n = Mch (Lbl n) 
-        empty_theory { extends = fromList [
-            ("arithmetic",arithmetic), 
-            ("basic", basic_theory)] }
-        empty empty empty 
-        empty_property_set 
-        empty_property_set
-        empty
+empty_machine n = Mch 
+        { _name = (Lbl n) 
+        , theory = empty_theory { extends = fromList [
+                ("arithmetic",arithmetic), 
+                ("basic", basic_theory)] }
+        , variables = empty
+        , abs_vars  = empty
+        , inits     = empty
+        , events    = empty 
+        , inh_props = empty_property_set 
+        , props     = empty_property_set
+        , comments  = empty
+        }  
 
 data System = Sys 
         {  proof_struct :: [(Label,Label)]
@@ -266,6 +329,7 @@ merge_decl m0 m1 = toEither $ do
                     (events m1)
         return m0
                 { theory = th
+                , abs_vars = variables m1
                 , variables = vars
                 , events = evts
                 }
@@ -281,7 +345,7 @@ merge_exprs m0 m1 = toEither $ do
                     (inits m1)
         evts <- fromEither empty $ merge 
                     (skip m1)
-                    merge_evt_exprs
+                    (merge_evt_exprs m0)
                     (events m0)
                     (events m1)
         inh   <- fromEither empty_property_set 
@@ -387,8 +451,9 @@ merge_evt_decl e0 e1 = toEither $ do
         return e0 
             { indices = ind
             , params = prm }
-merge_evt_exprs :: Event -> Event -> Either [String] Event
-merge_evt_exprs e0 e1 = toEither $ do
+
+merge_evt_exprs :: Machine -> Event -> Event -> Either [String] Event
+merge_evt_exprs m e0 e1 = toEither $ do
         coarse_sch <- fromEither default_schedule $ do
                 cs <- foldM (\x y -> do
                         disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
@@ -402,12 +467,16 @@ merge_evt_exprs e0 e1 = toEither $ do
                 (guards e1)
         act <- fromEither empty $ disjoint_union
                 (\x -> ["multiple actions with the same label: " ++ show x ++ ""])
-                (action e0)
-                (action e1)
+                (actions e0)
+                (actions e1)
+        let abs_keep = keep' (abs_vars m) e1 `S.intersection` frame e0
+            -- The concrete actions must change no more abstract variables than 
+            -- what the abstract actions do
         return e0 
             { scheds = coarse_sch
             , guards = grd
-            , action = act }
+            , actions = act
+            , eql_vars = abs_keep }
 
 merge_evt_refinement :: Event -> Event -> Either [String] Event
 merge_evt_refinement e0 e1 = toEither $ do
@@ -447,16 +516,7 @@ merge_evt_refinement e0 e1 = toEither $ do
 --        return $ Theory es types funs consts fact dummies
 
 skip :: Machine -> Event
-skip m = Event 
-        M.empty [] 
-        empty_schedule
-        default_schedule 
-        M.empty
-        M.empty 
-        M.empty 
-        $ fromList $ map f $ M.elems $ variables m
-    where
-        f v@(Var n _) = (label ("SKIP:" ++ n), primed (variables m) (Word v) `zeq` Word v)
+skip _ = empty_event
 
 default_schedule :: Map Label Expr
 default_schedule = fromList [(label "default", zfalse)]

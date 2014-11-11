@@ -284,7 +284,16 @@ guard_sum lbl e = section kw $ put_all_expr lbl $ new_guard e
         kw = "\\textbf{when}"
 
 act_sum :: Label -> Event -> M ()
-act_sum lbl e = section kw $ put_all_expr lbl $ action e
+act_sum lbl e = section kw $ put_all_expr' put_assign lbl $ actions e
     where 
         kw = "\\textbf{begin}"
+        put_assign (Assign v e) = do
+            xs <- get_string' e
+            return $ format "{0} \\bcmeq {1}" (name v) xs
+        put_assign (BcmSuchThat vs e) = do
+            xs <- get_string' e
+            return $ format "{0} \\bcmsuch {1}" (intercalate "," $ map name vs) xs
+        put_assign (BcmIn v e) = do
+            xs <- get_string' e
+            return $ format "{0} \\bcmin {1}" (name v) xs
 

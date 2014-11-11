@@ -12,7 +12,7 @@ import UnitB.PO
 
     -- Libraries
 import           Data.Map hiding ( map )
-import qualified Data.Set as S ( singleton )
+import qualified Data.Set as S 
 
 import Tests.UnitTest
 
@@ -320,8 +320,9 @@ var_y' = Var "y@prime" int
 
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
-    action = fromList [
-                (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
+    actions = fromList [
+                (label "a0",BcmSuchThat (S.elems $ variableSet m0_machine) 
+                    $ Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
 
 inc_event_m1 :: Event
 inc_event_m1 = empty_event 
@@ -330,13 +331,14 @@ inc_event_m1 = empty_event
             [ (label "c0", x `zeq` y) 
             , (label "f0", x `zeq` y) ]
             `union` default_schedule
-        , action  = fromList [
-                    (label "a0",Word var_x' `zeq` (Word var_x `zplus` zint 2)),
-                    (label "a1",Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] 
+        , actions = fromList [
+                    (label "a0",BcmSuchThat vars $ Word var_x' `zeq` (Word var_x `zplus` zint 2)),
+                    (label "a1",BcmSuchThat vars $ Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] 
         }
     where
         x = Word var_x
         y = Word var_y
+        vars = S.elems $ variableSet m1_machine
 
 sc :: ScheduleChange
 sc = (weaken (label "inc"))

@@ -9,10 +9,11 @@ import Logic.Proof
 
 import UnitB.Feasibility
 
+import Control.Applicative
 import Control.Monad.RWS
 import Control.Monad.State
 
-import Data.Map hiding ( map )
+import Data.Map as M hiding ( map )
 
 data POParam = POP 
     { ctx :: Context
@@ -22,9 +23,20 @@ data POParam = POP
     }
 
 empty_param :: POParam
-empty_param = POP empty_ctx [] [] empty
+empty_param = POP empty_ctx [] [] M.empty
 
-type POGen = RWS POParam [(Label,Sequent)] ()
+newtype POGen a = POGen { runPOGen :: RWS POParam [(Label,Sequent)] () a }
+
+instance Applicative POGen where
+    (<*>) = ap
+    pure = return
+
+instance Functor POGen where
+    fmap = liftM
+
+instance Monad POGen where
+    POGen m >>= f = POGen $ m >>= runPOGen . f
+    return = POGen . return
 
 emit_exist_goal :: [Label] -> [Var] -> [Expr] -> POGen ()
 emit_exist_goal lbl vars es = with
@@ -36,7 +48,7 @@ emit_exist_goal lbl vars es = with
     
 
 emit_goal :: [Label] -> Expr -> POGen ()
-emit_goal lbl g = do
+emit_goal lbl g = POGen $ do
     ctx  <- asks ctx
     tag  <- asks tag
     asm  <- asks nameless
@@ -49,7 +61,7 @@ context new_ctx = do
     modify $ \p -> p { ctx = new_ctx `merge_ctx` ctx }
 
 with :: State POParam () -> POGen a -> POGen a
-with f cmd = local (execState f) cmd
+with f cmd = POGen $ local (execState f) $ runPOGen cmd
 
 prefix_label :: Label -> State POParam ()
 prefix_label lbl = do
@@ -72,9 +84,9 @@ nameless_hyps hyps = do
 variables :: Map String Var -> State POParam ()
 variables vars = do
         ctx <- gets ctx
-        let new_ctx = Context empty vars empty empty empty
+        let new_ctx = Context M.empty vars M.empty M.empty M.empty
         modify $ \p -> p 
             { ctx = new_ctx `merge_ctx` ctx }
 
 eval_generator :: POGen () -> Map Label Sequent
-eval_generator cmd = fromList $ snd $ evalRWS cmd empty_param ()
+eval_generator cmd = fromList $ snd $ evalRWS (runPOGen cmd) empty_param ()
