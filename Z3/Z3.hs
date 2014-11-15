@@ -20,7 +20,6 @@ module Z3.Z3
     , destroy_prover
     , discharge_on
     , read_result
-    , pretty_print
     , pretty_print'
     , to_fol_ctx
     , patterns

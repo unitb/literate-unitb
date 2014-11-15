@@ -370,10 +370,7 @@ train_decl b ind =
 set_decl_smt2 :: [AxiomOption] -> [String]
 set_decl_smt2 xs = 
         when (WithPFun `elem` xs)
-        [ "(declare-fun apply@@TRAIN@@BLK"
-        , "             ( (pfun TRAIN BLK)"
-        , "               TRAIN )"
-        , "             BLK)"]
+        [ "(declare-fun apply@@TRAIN@@BLK ( (pfun TRAIN BLK) TRAIN ) BLK)"]
 --        ,  "(declare-fun bunion@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun dom-rest@@TRAIN@@BLK"

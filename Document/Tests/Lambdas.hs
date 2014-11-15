@@ -959,7 +959,7 @@ result11 = unlines
     , "(declare-const i Int)"
     , "(declare-const n Int)"
     , "(declare-const n@prime Int)"
-    , "(declare-fun apply@@Int@@Int ( (pfun Int Int)   Int ) Int)"
+    , "(declare-fun apply@@Int@@Int ( (pfun Int Int) Int ) Int)"
     , "(declare-fun dom-rest@@Int@@Int"
     , "             ( (set Int)"
     , "               (pfun Int Int) )"
