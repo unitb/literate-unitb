@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
-{-# LANGUAGE DeriveDataTypeable, IncoherentInstances #-}
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts        #-}
+{-# LANGUAGE DeriveDataTypeable, IncoherentInstances    #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables     #-}
+{-# LANGUAGE BangPatterns                               #-}
 module Document.Refinement where
 
     -- Module
@@ -106,16 +107,19 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RuleParser (a,()) => RuleParser (Label -> Event -> a, ()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
-        case M.lookup x $ events m of
-            Just evt -> parse_rule (f x evt,()) xs rule param
-            Nothing -> do
-                li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be an event" rule x) li]
-    parse_rule _ [] rule _ = do
-                li <- lift $ ask
-                left [Error (format "refinement ({0}): expecting an event" rule) li]
+instance RefRule a => RuleParser ([Label] -> [Event] -> ERWS a, ()) where
+    parse_rule (f,_) es rule (RuleParserParameter m _ _ _ _ _) = do
+        -- evts <- bind_all x
+        evts <- bind_all es 
+            (format "event {0} is undeclared") 
+            (`M.lookup` events m)
+        -- let (es,ys) = span (`M.member` events m) xs
+            -- evts = map (events m !) es
+        li <- lift $ ask
+        when (L.null es) 
+            $ left [Error (format "refinement ({0}): at least one event is required" rule) li]
+        rule <- f es evts
+        return (Rule rule) -- ys rule param
 
 
 --instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
@@ -179,15 +183,15 @@ assert_hyp m suff cnst hyps prop =
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
 
-data Ensure = Ensure ProgressProp Label Event TrHint
+data Ensure = Ensure ProgressProp [Label] [Event] TrHint
     deriving (Eq,Typeable,Show)
 
 instance RefRule Ensure where
     rule_name _ = "ensure"
-    refinement_po (Ensure (LeadsTo vs p q) lbl _ hint) m = do
+    refinement_po (Ensure (LeadsTo vs p q) lbls _ hint) m = do
             prop_saf m ("", Unless vs p q Nothing)
             prop_tr m ("", Transient (symbol_table vs) 
-                                             (p `zand` znot q) lbl 
+                                             (p `zand` znot q) lbls 
                                              hint )
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
@@ -458,21 +462,28 @@ instance RefRule ScheduleChange where
             Weaken -> 
                 assert m "" $
                     zforall ind ztrue $ zall (old_f ++ old_c) `zimplies` new_part
-            ReplaceFineSch _ _ _ (_,prog) -> 
-                let LeadsTo vs p0 q0 = prog
-                in do
-                    assert m "prog/lhs" (
-                        zforall (vs ++ ind) ztrue $
-                            zall (old_c ++ old_f) `zimplies` p0
-                            )
-                    assert m "prog/rhs" (
-                        zforall (vs ++ ind) ztrue $
-                            q0 `zimplies` new_part
-                            )
+            ReplaceFineSch _ _ _ lt -> 
+                do  case lt of
+                        Just (_,prog) -> do
+                            let LeadsTo vs p0 q0 = prog
+                            assert m "prog/lhs" (
+                                zforall (vs ++ ind) ztrue $
+                                    zall (old_c ++ old_f) `zimplies` p0
+                                    )
+                            assert m "prog/rhs" (
+                                zforall (vs ++ ind) ztrue $
+                                    q0 `zimplies` new_part
+                                    )
+                        Nothing -> do
+                            assert m "prog/leadsto" (
+                                zforall ind ztrue $
+                                    zall (old_c ++ old_f) `zimplies` new_part
+                                    )
                     assert m "str" (
                         zforall ind ztrue $
                             zall (new_c ++ new_f) `zimplies` old_part
                             )
+
             RemoveGuard lbl -> 
                     assert_hyp m "" param (new_guard evt) $ old_guard evt ! lbl 
             AddGuard _ -> return ()

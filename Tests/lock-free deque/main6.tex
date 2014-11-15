@@ -1,5 +1,6 @@
 \documentclass[12pt]{amsart}
-\usepackage[margin=0.5in]{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage[margin=0.5in]{geometry} 
+	% see geometry.pdf on how to lay out the page. There's lots.
 \usepackage{bsymb}
 \usepackage{unitb}
 \usepackage{calculation}
@@ -9,7 +10,8 @@
 \geometry{a4paper} % or letter or a5paper or ... etc
 % \geometry{landscape} % rotated page geometry
 
-% See the ``Article customise'' template for some common customisations
+% See the ``Article customise'' template for some common
+% customisations
 
 \title{}
 \author{}
@@ -37,7 +39,7 @@
 \newcommand{\G}{\text{Val}}
 % \renewcommand{\H}{\text{H}}
 
-\section{Initial model: A sequence of objects}
+\section{Initial model --- A sequence of objects}
 \begin{machine}{m0}
 
 \with{functions}
@@ -66,22 +68,16 @@
 \param{m0:push:left}{x : \G}
 
 \begin{align*}
-\evassignment{m0:push:left}{m0:act0}{ qe' &\2= qe \2| p\0-1 \fun x }
-\\ \evassignment{m0:push:left}{m0:act1}{ p' &\1= p-1 }
-\\ \evassignment{m0:push:left}{m0:act2}{ q' &\1= q }
-\\ \evassignment{m0:push:left}{m0:act3}{ res' = res }
-\\ \evassignment{m0:push:left}{m0:act4}{ emp' = emp }
+\evbcmeq{m0:push:left}{m0:act0}{qe}{ qe \2| p\0-1 \fun x }
+\\ \evbcmeq{m0:push:left}{m0:act1}{p}{ p-1 }
 \end{align*}
 
 \newevent{m0:push:right}{push\_right}
 \param{m0:push:right}{ x : \G }
 
 \begin{align*}
-\evassignment{m0:push:right}{m0:act0}{ qe' &\2= qe \2| q \fun x }
-\\ \evassignment{m0:push:right}{m0:act1}{ p' & \1= p }
-\\ \evassignment{m0:push:right}{m0:act2}{ q' & \1= q+1 }
-\\ \evassignment{m0:push:right}{m0:act3}{ res' = res }
-\\ \evassignment{m0:push:right}{m0:act4}{ emp' = emp }
+\evbcmeq{m0:push:right}{m0:act0}{qe}{ qe \2| q \fun x }
+\\ \evbcmeq{m0:push:right}{m0:act2}{q}{ q+1 }
 \end{align*}
 
 \newevent{m0:pop:left:empty}{pop\_left\_empty}
@@ -89,16 +85,8 @@
 \begin{align*}
 \evguard{m0:pop:left:empty}{m0:grd0}
 	{ p = q }
-\\ \evassignment{m0:pop:left:empty}{m0:act0}
-	{ qe' &\1= \{ p \} \domsub qe }
-\\ \evassignment{m0:pop:left:empty}{m0:act1}
-	{ p' &= p }
-\\ \evassignment{m0:pop:left:empty}{m0:act2}
-	{ q' &\1= q }
-\\ \evassignment{m0:pop:left:empty}{m0:act3}
-	{ res' &= res }
-\\ \evassignment{m0:pop:left:empty}{m0:act4}
-	{ emp' &= \true }
+\\ \evbcmeq{m0:pop:left:empty}{m0:act4}
+	{emp}{ \true }
 \end{align*}
 
 \newevent{m0:pop:left:non:empty}{pop\_left\_non-empty}
@@ -106,63 +94,53 @@
 \begin{align*}
 \evguard{m0:pop:left:non:empty}{m0:grd0}
 	{ p < q }
-\\ \evassignment{m0:pop:left:non:empty}{m0:act0}
-	{ qe' &\1= \{ p \} \domsub qe }
-\\ \evassignment{m0:pop:left:non:empty}{m0:act1}
-	{ p' &= p\0+1 }
-\\ \evassignment{m0:pop:left:non:empty}{m0:act2}
-	{ q' &\1= q }
-\\ \evassignment{m0:pop:left:non:empty}{m0:act3}
-	{ res' = qe.p }
-\\ \evassignment{m0:pop:left:non:empty}{m0:act4}
-	{ emp' = \false }
+\\ \evbcmeq{m0:pop:left:non:empty}{m0:act0}
+	{qe}{ \{ p \} \domsub qe }
+\\ \evbcmeq{m0:pop:left:non:empty}{m0:act1}
+	{p}{ p\0+1 }
+\\ \evbcmeq{m0:pop:left:non:empty}{m0:act3}
+	{res}{ qe.p }
+\\ \evbcmeq{m0:pop:left:non:empty}{m0:act4}
+	{emp}{ \false }
 \end{align*}
 
 
-\newevent{m0:pop:right:empty}{pop\_right}
+\newevent{m0:pop:right:empty}{pop\_right\_empty}
 
 \begin{align*}
 \evguard{m0:pop:right:empty}{m0:grd0}
-	{ p = q }
-\\ \evassignment{m0:pop:right:empty}{m0:act0}
-	{ qe' &\1= \{ q-1 \} \domsub qe }
-\\ \evassignment{m0:pop:right:empty}{m0:act1}
-	{ p' ~&=~ p }
-\\ \evassignment{m0:pop:right:empty}{m0:act2}
-	{ q' &= q }
+	{ &p = q }
 % \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
-\\ \evassignment{m0:pop:right:empty}{m0:act3}
-	{ res' &= res }
-\\ \evassignment{m0:pop:right:empty}{m0:act4}
-	{ emp' &= (p = q) }
+\\ \evbcmeq{m0:pop:right:empty}{m0:act4}
+	{emp}{ \true }
 \end{align*}
 
-\newevent{m0:pop:right:non:empty}{pop\_right}
+\newevent{m0:pop:right:non:empty}{pop\_right\_non-empty}
 
 \begin{align*}
 \evguard{m0:pop:right:non:empty}{m0:grd0}
-	{ p < q }
-\\ \evassignment{m0:pop:right:non:empty}{m0:act0}
-	{ qe' &\1= \{ q-1 \} \domsub qe }
-\\ \evassignment{m0:pop:right:non:empty}{m0:act1}
-	{ p' ~&=~ p }
-\\ \evassignment{m0:pop:right:non:empty}{m0:act2}
-	{ q' = q\0-1 }
+	{ &p < q }
+\\ \evbcmeq{m0:pop:right:non:empty}{m0:act0}
+	{qe}{ \{ q-1 \} \domsub qe }
+\\ \evbcmeq{m0:pop:right:non:empty}{m0:act2}
+	{q}{ q\0-1 }
 % \\ \evguard{m0:pop:right}{m0:grd0}{ p &< q }
-\\ \evassignment{m0:pop:right:non:empty}{m0:act3}
-	{ res' = qe.(q\1-1) }
-\\ \evassignment{m0:pop:right:non:empty}{m0:act4}
-	{ emp' &= (p = q) }
+\\ \evbcmeq{m0:pop:right:non:empty}{m0:act3}
+	{res}{ qe.(q\1-1) }
+\\ \evbcmeq{m0:pop:right:non:empty}{m0:act4}
+	{emp}{ \false }
 \end{align*}
 
 % \begin{align*}
 \input{m0_m0-push-left}
 % \end{align*}
 
+\input{machine_m0}
 \end{machine}
 
 \newcommand{\REQ}{\text{Req}}
 
+\section{First Refinement --- Requests}
 \begin{machine}{m1}
 \refines{m0} \\
 \newset{Req}{\REQ}
@@ -187,29 +165,15 @@
 \refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r} }
 \end{align*}
 \begin{align*}
-\\ \evassignment{m0:push:left}{m1:a0}{ pshL' = \{ r \} \domsub pshL }
-\\ \evassignment{m0:push:left}{m1:a1}{ pshR' = pshR }
-\\ \evassignment{m0:push:right}{m1:a0}{ pshR' = \{ r \} \domsub pshR }
-\\ \evassignment{m0:push:right}{m1:a1}{ pshL' = pshL }
-\\ \evguard{m0:push:left}{m1:grd0}{ x = pshL.r }
-\\ \evguard{m0:push:left}{m1:grd1}{ r \in \dom.pshL }
-\\ \cschedule{m0:push:left}{m1:sch0}{ r \in \dom.pshL }
+\\ \evbcmeq{m0:push:left}{m1:a0}{pshL}{ \{ r \} \domsub pshL }
+\\ \evbcmeq{m0:push:right}{m1:a0}{pshR}{ \{ r \} \domsub pshR }
+\\ \evguard{m0:push:left}{m1:grd0}{ &x = pshL.r }
+\\ \evguard{m0:push:left}{m1:grd1}{ &r \in \dom.pshL }
+\\ \cschedule{m0:push:left}{m1:sch0}{ &r \in \dom.pshL }
 \end{align*}
-\begin{align*}
+% \begin{align*}
 \weakento{m0:push:left}{default}{m1:sch0}
-\\ \evassignment{m0:pop:right:empty}{m1:a0}{ pshL' = pshL }
-\\ \evassignment{m0:pop:right:non:empty}{m1:a0}{ pshL' = pshL }
-\\ \evassignment{m0:pop:right:empty}{m1:a1}{ pshR' = pshR }
-\\ \evassignment{m0:pop:right:non:empty}{m1:a1}{ pshR' = pshR }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a0}
-	{ pshL' = pshL }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a1}
-	{ pshR' = pshR }
-\\ \evassignment{m0:pop:left:empty}{m1:a0}
-	{ pshL' = pshL }
-\\ \evassignment{m0:pop:left:empty}{m1:a1}
-	{ pshR' = pshR }
-\end{align*}
+% \end{align*}
 
 \subsubsection{Proving \ref{m1:prog1}}
 \[ \indices{m0:push:right}{ r : \REQ } \]
@@ -236,58 +200,48 @@
 \begin{align*}
 \progress{m1:prog2}
 	{ r \in popR }
-	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
+	{ \neg r \in popR }
 \\ \progress{m1:prog3}
 	{ r \in popL }
-	{ \neg r \in popL \land (emp \lor (r \in \dom.resL \land resL.r = res))  }
+	{ \neg r \in popL  }
 \end{align*}
 
 \subsubsection{Proving \ref{m1:prog2}}
 \begin{align*}
-	\refine{m1:prog2}{disjunction}{m1:prog4,m1:prog5}{ \index{r}{r} }
-\\  \progress{m1:prog4}
-	{ r \in popR \land p < q }
-	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
-\\  \progress{m1:prog5}
-	{ r \in popR \land p = q }
-	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r = res))  }
-\\	\refine{m1:prog4}{ensure}{m0:pop:right:non:empty}{ \index{r}{r} }		
-\\	\refine{m1:prog5}{ensure}{m0:pop:right:empty}{ \index{r}{r} }		
+	\refine{m1:prog2}{ensure}{m0:pop:right:non:empty,m0:pop:right:empty
+	}{ \index{r}{r} }
+% \\  &\progress{m1:prog4}
+% 	{ r \in popR \land p < q }
+% 	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r
+% 	 \= res))  }
+% \\  &\progress{m1:prog5}
+% 	{ r \in popR \land p = q }
+% 	{ \neg r \in popR \land (emp \lor (r \in \dom.resR \land resR.r
+% 	 \= res))  }
+% \\	\refine{m1:prog4}{ensure}{m0:pop:right:non:empty}{ \index{r}{r} }
+% \\	\refine{m1:prog5}{ensure}{m0:pop:right:empty}{ \index{r}{r} }		
+	\\ \refine{m1:prog3}{ensure}{m0:pop:left:empty,m0:pop:left:non:empty}
+	{ \index{r}{r} }
 \end{align*}
-% \refine{m1:prog3}{ensure}{m0:pop:left}{}
+\replacefine{m0:pop:right:non:empty}{}{}{m1:sch1}{}
+\replacefine{m0:pop:right:empty}{}{}{m1:sch1}{}
 \indices{m0:pop:right:non:empty}{ r : \REQ }
 \indices{m0:pop:right:empty}{ r : \REQ }
 \begin{align*}
 \cschedule{m0:pop:right:non:empty}{m1:sch0}{ r \in popR }
-\\ \cschedule{m0:pop:right:non:empty}{m1:sch1}{ p < q }
+\\ \fschedule{m0:pop:right:non:empty}{m1:sch1}{ p < q }
 \\ \cschedule{m0:pop:right:empty}{m1:sch0}{ r \in popR }
-\\ \cschedule{m0:pop:right:empty}{m1:sch1}{ p = q }
-\\ \weakento{m0:pop:right:non:empty}{default}{m1:sch0,m1:sch1}
-\\ \weakento{m0:pop:right:empty}{default}{m1:sch0,m1:sch1}
+\\ \fschedule{m0:pop:right:empty}{m1:sch1}{ p = q }
+\\ \weakento{m0:pop:right:non:empty}{default}{m1:sch0}
+\\ \weakento{m0:pop:right:empty}{default}{m1:sch0}
 \\ \evguard{m0:pop:right:non:empty}{m1:grd0}{ r \in popR }
-\\ \evassignment{m0:pop:right:non:empty}{m1:a2}
-	{ popR' = popR \setminus \{ r \} }
-\\ \evassignment{m0:pop:right:empty}{m1:a2}
-	{ popR' = popR \setminus \{ r \} }
-\\ \evassignment{m0:pop:right:non:empty}{m1:a3}
-	{ resR' = resR | r \fun qe.(q-1) }
-\\ \evassignment{m0:pop:right:empty}{m1:a3}
-	{ resR' = resR }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a2}
-	{ popR' = popR }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a3}
-	{ resR' = resR }
-\\ \evassignment{m0:pop:left:empty}{m1:a2}
-	{ popR' = popR }
-\\ \evassignment{m0:pop:left:empty}{m1:a3}
-	{ resR' = resR }
-\\ \evassignment{m0:push:left}{m1:a2}{ popR' = popR }
-\\ \evassignment{m0:push:left}{m1:a3}{ resR' = resR }
-\\ \evassignment{m0:push:right}{m1:a2}{ popR' = popR }
-\\ \evassignment{m0:push:right}{m1:a3}{ resR' = resR }
+\\ \evbcmeq{m0:pop:right:non:empty}{m1:a2}
+	{popR}{ popR \setminus \{ r \} }
+\\ \evbcmeq{m0:pop:right:empty}{m1:a2}
+	{popR}{ popR \setminus \{ r \} }
+\\ \evbcmeq{m0:pop:right:non:empty}{m1:a3}
+	{resR}{ resR \1| r \fun qe.(q-1) }
 \end{align*}
-
-
 \subsubsection{Proving \ref{m1:prog3}}
 \begin{align*}
 % \refine{m1:prog3}{disjunction}{m1:prog4,m1:prog5}{}
@@ -298,31 +252,31 @@
 % 	{r \in popL \land p = q }
 % 	{ \neg r \in popL \land emp  }
 % \\ \refine{m1:prog4}{ensure}{m0:pop:left}{ \index{r}{r} }
-\refine{m1:prog3}{ensure}{m0:pop:left:non:empty}{ \index{r}{r} }
+% \refine{m1:prog3}{ensure}{m0:pop:left:non:empty}{ \index{r}{r} }
 \end{align*}
 \indices{m0:pop:left:non:empty}{ r : \REQ }
 \indices{m0:pop:left:empty}{ r : \REQ }
-% theorem prover found that qe.(q-1) (from the event pop:right), should be 
-% changed for qe.p
+% theorem prover found that qe.(q-1) (from the event pop:right),
+% should be changed for qe.p
+\replacefine{m0:pop:left:non:empty}{}{}{m1:sch1}{}
+\replacefine{m0:pop:left:empty}{}{}{m1:sch1}{}
 \begin{align*}
 \cschedule{m0:pop:left:non:empty}{m1:sch0}{ r \in popL }
-\\ \cschedule{m0:pop:left:non:empty}{m1:sch1}{ p < q }
-\\ \weakento{m0:pop:left:non:empty}{default}{m1:sch0,m1:sch1}
+\\ \cschedule{m0:pop:left:empty}{m1:sch0}{ r \in popL }
+\\ \fschedule{m0:pop:left:non:empty}{m1:sch1}{ p < q }
+\\ \fschedule{m0:pop:left:empty}{m1:sch1}{ p = q }
+\\ \weakento{m0:pop:left:non:empty}{default}{m1:sch0}
+\\ \weakento{m0:pop:left:empty}{default}{m1:sch0}
 \\ \evguard{m0:pop:left:non:empty}{m1:grd0}{ r \in popL }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a4}
-	{ popL' = popL \setminus \{ r \} }
-\\ \evassignment{m0:pop:left:empty}{m1:a4}
-	{ popL' = popL \setminus \{ r \} }
-\\ \evassignment{m0:pop:left:non:empty}{m1:a5}
-	{ 	 resL' = resL | r \fun qe.p }
-\\ \evassignment{m0:pop:left:empty}{m1:a5}
-	{ 	 resL' = resL }
+\\ \evbcmeq{m0:pop:left:non:empty}{m1:a4}
+	{popL}{ popL \setminus \{ r \} }
+\\ \evbcmeq{m0:pop:left:empty}{m1:a4}
+	{popL}{ popL \setminus \{ r \} }
+\\ \evbcmeq{m0:pop:left:non:empty}{m1:a5}
+	{resL}{ resL \1 | r \fun qe.p }
 	%
 	%
 	% other events
-\hide{
-\\ \evassignment{m0:pop:right:empty,m0:pop:right:non:empty,m0:push:right,m0:push:left}{m1:a4}{ popL' = popL }
-\\ \evassignment{m0:pop:right:empty,m0:pop:right:non:empty,m0:push:right,m0:push:left}{m1:a5}{ resL' = resL } }
 \end{align*}
 
 \subsection{Initialization of \ref{m1:inv0} and \ref{m1:inv1}}
@@ -334,8 +288,9 @@
 
 \comment{\ref{m1:inv0}}{this is for fun}
 
-\comment{$emp$}{this encodes whether the last call to pop found the queue empty
-; more text, more text, still more text, and here's more text}
+\comment{$emp$}{this encodes whether the last call to pop found the
+queue empty ; more text, more text, still more text, and here's more
+text}
 
 \input{machine_m1}
 \end{machine}
@@ -369,12 +324,15 @@
 % Now \emph{la pi\`ece de r\'esistence}:
 
 % \begin{align*}
-% \invariant{m2:inv2}{ \qforall{i}{ \betweenR{p}{i}{q} }{ ~ qe.i = val.(obj.i) } }
+% \invariant{m2:inv2}{ \qforall{i}{ \betweenR{p}{i}{q} }{ ~ qe.i =
+% val.(obj.i) } }
 % \end{align*}
 
-% Notice that $i$ has not been declared as a dummy at this point; its type is simply inferred from the context.
+% Notice that $i$ has not been declared as a dummy at this point; its
+% type is simply inferred from the context.
 
-% Note: Invariant \ref{m2:inv3} has been dictated (at this point of writing the model) by a WD proof obligation.
+% Note: Invariant \ref{m2:inv3} has been dictated (at this point of
+% writing the model) by a WD proof obligation.
 
 % \subsection{Invariance in \ref{m0:push:left}}
 
@@ -383,7 +341,8 @@
 % \ref{m2:inv0}:
 % \begin{align*}
 % \evassignment{m0:push:left}{m2:a0}{ obj' &= obj | (p-1) \fun n }
-% \\ \evassignment{m0:push:left}{m2:a1}{ node' &= node \bunion \{ n \} }
+% \\ \evassignment{m0:push:left}{m2:a1}{ node' &= node \bunion \{ n \}
+% }
 % \end{align*}
 
 % \ref{m2:inv1}:
@@ -415,12 +374,17 @@
 % \\ \cschedule{m0:push:left}{m2:sch1}
 % 	{ pshL.r \in \ran.(node \domsub val) }
 % \end{align*}
-% \replace{m0:push:left}{}{m2:sch0,m2:sch1}{m1:sch0}{m2:prog0}{m2:saf0}
+
+% \replace{m0:push:left}{}{m2:sch0,m2:sch1}{m1:sch0}{m2:prog0}
+% 	{m2:saf0}
+
 % \begin{align*}
 % \progress{m2:prog0}
 % 	{ r \in \dom.pshL }
 % 	{ r \in \dom.pshL \land pshL.r \in \ran.(node \domsub val) }
-% \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.(node \domsub val) }{ \neg r \in \dom.pshL }
+% \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.(node
+% \domsub val) }
+% 	{ \neg r \in \dom.pshL }
 % \end{align*}
 
 % \[ \variable{insL : \REQ \pfun \Cell }  \]
@@ -433,7 +397,8 @@
 % 			{ pshL.r = val.(insL.r) } }
 % \\ 	\invariant{m2:inv7}{ \injective.insL }
 % \\ 	\invariant{m2:inv8}{ \ran.insL \binter node = \emptyset }
-% \\  \evassignment{m0:push:left}{m2:act0}{ insL' = \{ r \} \domsub insL }
+% \\  \evassignment{m0:push:left}{m2:act0}
+%			{ insL' = \{ r \} \domsub insL }
 % \end{align*}
 
 % \newcommand{\finter}{\binter}
@@ -443,8 +408,9 @@
 % 	\begin{by:cases}
 % 	The first case,
 % 	\begin{case}{hyp0}{r = r_0}
-% 		follows directly from the fact that \ref{m0:push:left} removes
-% 		$r$ from the domain of $pshL$ hence establishing the RHS of \eqref{m2:saf0}.
+% 		follows directly from the fact that \ref{m0:push:left}
+% 		removes $r$ from the domain of $pshL$ hence establishing the
+% 		RHS of \eqref{m2:saf0}.
 % 		\easy
 % 	\end{case}		
 % 	\begin{case}{hyp1}{\neg r = r_0}
@@ -460,7 +426,9 @@
 % 		\end{align*}
 % 		\begin{by:parts}
 % 		\begin{part:a}{ r_0 \in \dom.pshL' }
-% 		This follows from \eqref{hyp1} and the fact that \ref{m0:push:left} only changes the domain of $pshL'$ at $r$.
+% 		This follows from \eqref{hyp1} and the fact that
+% 		\ref{m0:push:left} only changes the domain of $pshL'$ at
+% 		$r$.
 % 			\easy
 % 		\end{part:a}
 % 		\begin{part:a}{pshL'.r_0 \in \ran.(node' \domsub val')}
@@ -501,7 +469,8 @@
 % 				\eqref{m2:inv5} }
 % 			\true
 % 		% \hint{=}{ \eqref{m2:a2} \eqref{m2:a1} }
-% 		% 	pshL'.r_0 \in \ran.((node\domsub val) \finter (\{ n \}\domsub val))
+%		% 	pshL'.r_0 \in \ran.((node\domsub val) \finter (\{ n
+%		% 	\}\domsub val))
 % 		\end{calculation}
 % 		\end{part:a}
 % 		\end{by:parts}
@@ -514,7 +483,8 @@
 % 	\evguard{m0:push:left}{m2:grd2}{ n = insL.r }
 % \end{align*}
 
-% We defer the proof of \ref{m2:prog0} to finish proving our initial invariants.
+% We defer the proof of \ref{m2:prog0} to finish proving our initial
+% invariants.
 
 % \subsection{Invariance in \ref{m0:pop:right}}
 
@@ -578,7 +548,8 @@
 % 	\hint{=}{ \eqref{m2:a1} }
 % 		insL.r_0 \in \dom.val \setminus (node \setminus \{ obj.(q\0-1) \})
 % 	\hint{=}{  }
-% 		insL.r_0 \in (\dom.val \setminus node) \bunion (\dom.val \binter \{ obj.(q\0-1) \})
+		% insL.r_0 \in (\dom.val \setminus node) \bunion (\dom.val
+		% \binter \{ obj.(q\0-1) \})
 % 	% \hint{=}{ $obj.(q\0-1) \in \dom.val$ }
 % 	% 	insL.r_0 \in (\dom.val \setminus node) \bunion \{ obj.(q\0-1) \}
 % 	\hint{\follows}{  }
@@ -597,8 +568,11 @@
 % \end{align*}
 % % \replace{m0:pop:right}{}{m2:sch0}{m1:sch0}{m2:prog0}{m2:saf0}
 % \begin{align*}
-% % \progress{m2:prog0}{ r \in \dom.pshL }{ r \in \dom.pshL \land pshL.r \in \ran.val }
-% % \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.val }{ \neg r \in \dom.pshL }
+% % \progress{m2:prog0}{ r \in \dom.pshL }
+% %			 { r \in \dom.pshL \land pshL.r
+% %     \in \ran.val }
+% % \\ \safety{m2:saf0}{ r \in \dom.pshL \land pshL.r \in \ran.val }{
+% % \\ \\neg r \in \dom.pshL }
 % \end{align*}
 
 % \subsection{ Establishing the invariants }
@@ -612,7 +586,8 @@
 
 
 % \subsection{\ref{m0:push:right} and \ref{m0:pop:left}}
-% Push right and pop left are the mirror image of push left and pop right and their proofs are left for an appendix.
+% Push right and pop left are the mirror image of push left and pop
+% right and their proofs are left for an appendix.
 
 % TODO: add new events to m1 and m2
 

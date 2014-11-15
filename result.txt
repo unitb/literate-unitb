@@ -10,7 +10,14 @@
 |  |  +- test 1, verification, failed proof with intervals
 |  |  +- test 2, error message name clash in guards
 |  |  +- test 3, verification, looking up function outside of domain
-|  |  +- [ Success: 4 / 4 ]
+|  |  +- test 4, m1, liveness implemented with conditional behavior
+|  |  +- test 5, transient, two branches, enablement of non-empty
+|  |  +- test 6, transient, two branches, enablement of empty
+|  |  +- test 7, transient, two branches, negation of empty
+|  |  +- test 8, transient, two branches, negation of non-empty
+|  |  +- test 9, transient, two branches, follow and disjunction
+|  |  +- test 10, duplicate refinement of liveness properties
+|  |  +- [ Success: 11 / 11 ]
 |  +- theories with new notation: comp calc
 |  |  +- proving a theorem with the everywhere operator
 |  |  +- [ Success: 1 / 1 ]
@@ -233,10 +240,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   24120 total
-    2019 Document/Tests/TrainStation.hs
-    1376 Document/Tests/Lambdas.hs
-    1026 Document/Machine.hs
-     913 Document/Tests/IndirectEq.hs
-     803 UnitB/AST.hs
-Run time: 1m 28s
+   28418 total
+    1040 Document/Machine.hs
+     806 UnitB/AST.hs
+     780 Document/Proof.hs
+     711 Document/Visitor.lhs
+     710 Document/Expression.hs
+Run time: 1m 32s

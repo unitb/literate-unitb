@@ -372,9 +372,13 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \begin{align*}
 	& \true \2\mapsto \neg ext \in \ran. loc 
 \refine{m2:prog1}{trading}{m2:prog2}{}
-	& \progress{m2:prog2}{ext \in \ran. loc }{ \neg ext \in \ran. loc } 
+	& \progress{m2:prog2}
+		{ext \in \ran. loc }
+		{ \neg ext \in \ran. loc } 
 \refine{m2:prog2}{disjunction}{m2:prog3}{}
-	& \progress{m2:prog3}{ t \in in \land loc.t = ext }{\neg ext \in \ran. loc  } 
+	& \progress{m2:prog3}
+		{ t \in in \land loc.t = ext }
+		{\neg ext \in \ran. loc  } 
 %\\	& \progress{m2:prog3b}{ t \in in \land loc.t = ext }{ t \in in \land \neg loc.t = ext  } 
 \end{align*}
 %
@@ -387,7 +391,9 @@ We implement \eqref{m2:prog3} with the following:
 \begin{align*}
 	\transient{m0:leave}{m2:tr0}
 		{ t \in in \1\land loc.t = ext }
-\\	\safety{m2:saf1}{  t \in in \land loc.t = ext }{ \neg ext \in \ran. loc } 
+\\	\safety{m2:saf1}
+		{  t \in in \land loc.t = ext }
+		{ \neg ext \in \ran. loc } 
 \end{align*}
 
 %\begin{proof}{m1:movein/SCH/m2/0/REF/delay/prog/rhs}

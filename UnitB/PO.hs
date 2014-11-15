@@ -34,8 +34,9 @@ import           Data.Map as M hiding
                     , (\\), mapMaybe )
 import qualified Data.Map as M
 import qualified Data.Set as S
-import           Data.Maybe as MM ( maybeToList, isJust ) 
+import           Data.Maybe as MM 
 import           Data.List as L hiding (inits, union,insert)
+import           Data.List.Utils as LU (replace)
 
 import System.IO
 
@@ -128,22 +129,26 @@ raw_machine_pos m = pos
     where
         pos = M.map f $ 
                (eval_generator $ do
-                    mapM_ (prop_tr m) $ M.toList $ transient p
-                    mapM_ (prop_saf m) $ M.toList $ safety p
-                    mapM_ (prop_co m) $ M.toList $ constraint p
+                    forM_ (M.toList $ transient p) $ \tr -> do
+                        prop_tr m tr
+                        tr_wd_po m tr
+                    forM_ (M.toList $ safety p) $ \saf -> do
+                        prop_saf m saf
+                        saf_wd_po m saf
+                    forM_ (M.toList $ constraint p) $ \co -> do
+                        prop_co m co 
+                        co_wd_po m co
                     init_fis_po m
-                    mapM_ (inv_po m) $ M.toList $ inv p
-                    mapM_ (fis_po m) $ M.toList $ events m
-                    mapM_ (tr_wd_po m) $ M.toList $ transient p
                     inv_wd_po m
-                    mapM_ (co_wd_po m) $ M.toList $ constraint p
-                    mapM_ (saf_wd_po m) $ M.toList $ safety p
-                    mapM_ (prog_wd_po m) $ M.toList $ progress p
                     init_wd_po m
-                    mapM_ (evt_wd_po m) $ M.toList $ events m
-                    mapM_ (evt_eql_po m) $ M.toList $ events m
-                    mapM_ (sch_po m) $ M.toList $ events m
+                    mapM_ (inv_po m) $ M.toList $ inv p
                     mapM_ (thm_po m) $ M.toList $ inv_thm p
+                    forM_  (M.toList $ events m) $ \ev -> do
+                        fis_po m ev
+                        evt_wd_po m ev
+                        evt_eql_po m ev
+                        sch_po m ev
+                    mapM_ (prog_wd_po m) $ M.toList $ progress p
                     mapM_ (ref_po m) $ M.toList $ derivation p
                     )
         p = props m
@@ -222,61 +227,95 @@ init_fis_po m =
 
 type M = POGen
 
+expected_leadsto_po :: ProgressProp -> ProgressProp -> M ()
+expected_leadsto_po (LeadsTo vs p0 q0) (LeadsTo vs' p1 q1) = do
+        emit_goal ["lhs"] $ zforall (vs ++ vs') p0 p1
+        emit_goal ["rhs"] $ zforall (vs ++ vs') q1 q0
+
 prop_tr :: Machine -> (Label, Transient) -> M ()
-prop_tr m (pname, Transient fv xp evt_lbl (TrHint hint lt_fine)) = 
-        with (do
-                prefix_label $ composite_label [_name m, evt_lbl, tr_lbl, pname]
-                context ctx 
+prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
+            with (do
+                prefix_label $ _name m
+                prefix_label $ composite_label [tr_lbl, pname]
+                ctx 
                 named_hyps $ invariants m)
-            $ if M.null ind0 then do
-                  emit_goal ["EN"] enablement
-                  with (do context param_ctx
-                           named_hyps $ M.map (new_dummy ind) (M.unions [sch,grd,act]))
-                    $ emit_goal ["NEG"] $ negation
-                  mapM_ (uncurry emit_goal) following
-              else
-                emit_goal [] $ exist_ind (zall $ [enablement,fa_negation] ++ map snd following)
+            $ existential inds $ do
+                zipWithM_ stuff evt_lbl es
+                following
+                -- emit_goal [] $ exist_ind (zall $ [enablement,fa_negation] ++ map snd following)
     where
---        thm  = inv_thm p
-        grd  = new_guard evt
-        sch0 = coarse $ new_sched evt
-        sch1 = fromList $ maybeToList $ fine $ new_sched evt
-        sch  = sch0 `M.union` sch1
-        act  = ba_predicate m evt
-        evt  = events m ! evt_lbl
-        ind  = indices evt
-        ind0 = indices evt `M.difference` hint
-        ind1 = indices evt `M.intersection` hint
-        new_defs = flip map (M.toList ind1) 
-                $ \(x,Var n t) -> (n ++ "@param", Def [] (n ++ "@param") [] t $ hint ! x)
-        def_ctx = Context M.empty M.empty M.empty (M.fromList new_defs) M.empty
-        param_ctx = Context M.empty (params evt) M.empty M.empty M.empty
-        dummy = Context M.empty fv M.empty  M.empty  M.empty    
-        exist_ind xp = zexists 
-                    (map (add_suffix "@param") $ M.elems ind0) 
-                    ztrue xp
-        ctx = (           assert_ctx m 
-                `merge_ctx` step_ctx m 
-                `merge_ctx` dummy
-                `merge_ctx` def_ctx) 
-        enablement = (xp `zimplies` (new_dummy ind $ zall (M.elems sch0)))
-        negation = xp `zimplies` (znot $ primed (variables m) xp) 
-        fa_negation = (zforall  
-                    (M.elems $ params evt)
-                    (new_dummy ind $ zall (M.elems $ M.unions [sch, grd, act]))
-                    negation )
+        TrHint hint lt_fine = tr_hint
+        stuff evt_lbl evt = 
+            with def_ctx $ do
+                    enablement
+                    negation
+            where
+                grd  = new_guard evt
+                sch0 = coarse $ new_sched evt
+                sch1 = fromList $ maybeToList $ fine $ new_sched evt
+                sch  = sch0 `M.union` sch1
+                act  = ba_predicate m evt
+                ind  = indices evt
+                ind1 = indices evt `M.intersection` hint
+                param_ctx = POG.variables (params evt)
+                enablement = emit_goal [evt_lbl, "EN"] 
+                            (          xp 
+                            `zimplies` (new_dummy ind $ zall (M.elems sch0)))
+
+                new_defs = flip map (M.toList ind1) 
+                        $ \(x,Var n t) -> (n ++ "@param", Def [] (n ++ "@param") [] t $ hint ! x)
+                def_ctx = definitions (M.fromList new_defs)
+                negation = with (do param_ctx
+                                    named_hyps 
+                                        $ M.map 
+                                            (new_dummy ind) 
+                                            (M.unions [sch,grd,act]))
+                      $ emit_goal [evt_lbl,"NEG"] $ xp `zimplies` (znot $ primed (variables m) xp) 
+        all_ind = M.elems $ M.unions $ fv : zipWith local_ind evt_lbl es
+        inds    = map (add_suffix "@param") $ M.elems 
+                        $ M.unions (map indices es) `M.difference` hint
+        es      = map (events m !) evt_lbl
+        
+        local_ind :: Label -> Event -> Map String Var
+        local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ indices e
+            where
+                suff = mk_suff $ "@" ++ show lbl
+        new_ind :: Label -> Event -> Expr -> Expr
+        new_ind lbl e = make_unique suff (indices e)
+            where
+                suff = mk_suff $ "@" ++ show lbl
+            -- (M.elems ind) 
+        tagged_sched :: Label -> Event -> Map Label Expr
+        tagged_sched lbl e = M.map (new_ind lbl e) $ coarse $ new_sched e
+        all_csch  = concatMap M.elems $ zipWith tagged_sched evt_lbl es
+        all_fsch  = do
+            fs <- zipWithM (\lbl e -> (new_ind lbl e . snd) `liftM` fine (new_sched e)) evt_lbl es
+            return $ zsome fs :: Maybe Expr
+            -- fine $ new_sched evt
+        following = with (prefix_label "leadsto") $
+                case (lt_fine, all_fsch) of
+                    (Just lbl, Just fsch) ->
+                        expected_leadsto_po 
+                            (LeadsTo all_ind
+                                    (zall $ xp : all_csch) 
+                                    fsch) 
+                            (progs ! lbl)
+                    (Nothing,Just fsch) ->
+                        emit_goal [] $ zforall all_ind
+                                (zall $ xp : all_csch) 
+                                fsch
+                    (Nothing,Nothing) -> return ()
+                    _                 -> error $ format (
+                               "transient predicate {0}'s side condition doesn't "
+                            ++ "match the fine schedule of event {1}"
+                            ) pname (intercalate "," $ map show evt_lbl)
+        ctx = do
+                POG.context $ assert_ctx m 
+                POG.context $ step_ctx m 
+                dummy
+        dummy = POG.variables fv
         progs = progress (props m) `M.union` progress (inh_props m)
-        following = case (lt_fine, fine $ new_sched evt) of
-                (Just lbl, Just (_,fsch)) ->
-                    let (LeadsTo vs p q) = progs ! lbl in
-                            [ (["EN/leadsto/lhs"], zforall vs ztrue $ zall (M.elems sch0) `zimplies` p)
-                            , (["EN/leadsto/rhs"], zforall vs ztrue $ q `zimplies` fsch) ]
-                (Nothing,Nothing) -> []
-                _                 -> error $ format (
-                           "transient predicate {0}'s side condition doesn't "
-                        ++ "match the fine schedule of event {1} ({2},{3})"
-                        )
-                    pname evt_lbl (isJust lt_fine) (isJust $ fine $ new_sched evt)
+        mk_suff suff = LU.replace ":" "-" suff
 
 prop_co :: Machine -> (Label, Constraint) -> M ()
 prop_co m (pname, Co fv xp) = 
@@ -450,8 +489,9 @@ evt_wd_po m (lbl, evt) =
                             $ new_guard evt
                         with (do prefix_label "ACT"
                                  named_hyps $ new_guard evt
-                                 context $ step_ctx m) $
-                            forM_ (toList $ actions evt) $ \(tag,bap) -> 
+                                 context $ step_ctx m) $ do
+                            let p k _ = k `S.notMember` old_acts evt
+                            forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
                                 emit_goal [tag] 
                                     $ well_definedness $ ba_pred bap)
                             -- $ emit_goal ["ACT"]

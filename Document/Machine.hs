@@ -103,12 +103,12 @@ refinement_parser = fromList
 data HintBuilder = HintBuilder [LatexDoc] Machine
 
 ensure :: ProgressProp 
-       -> Label -> Event 
        -> HintBuilder
-       -> EitherT [Error] (RWS LineInfo [Error] System) Ensure
-ensure prog@(LeadsTo fv _ _) lbl evt (HintBuilder thint m) = do
-        hint <- toEither $ tr_hint m (symbol_table fv) lbl thint empty_hint
-        return $ Ensure prog lbl evt hint
+       -> [Label] -> [Event] 
+       -> ERWS Ensure
+ensure prog@(LeadsTo fv _ _) (HintBuilder thint m) lbls evts = do
+        hint <- toEither $ tr_hint m (symbol_table fv) lbls thint empty_hint
+        return $ Ensure prog lbls evts hint
 
 instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
     parse_rule (f,_) xs rule param@(RuleParserParameter m _ _ _ _ hint) = do
@@ -424,29 +424,29 @@ declarations = visit_doc []
 
 tr_hint :: Machine
         -> Map String Var
-        -> Label
+        -> [Label]
         -> [LatexDoc]
         -> TrHint
         -> RWS LineInfo [Error] System TrHint
-tr_hint m vs lbl = visit_doc []
+tr_hint m vs lbls = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, xs) (TrHint ys z) -> do
-                evt <- bind
-                    (format "'{0}' is not an event of '{1}'" lbl $ _name m)
-                    $ lbl `M.lookup` events m
+                evts <- bind_all lbls
+                    (format "'{1}' is not an event of '{0}'" $ _name m)
+                    (`M.lookup` events m)
                 expr <- get_expr_with_ctx m 
                     (Context M.empty vs M.empty M.empty M.empty) xs
-                toEither $ error_list 
-                    [ ( not $ x `member` indices evt 
-                      , format "'{0}' is not an index of '{1}'" x lbl )
-                    ]
+                toEither $ error_list $ map (\evt ->
+                    ( not $ x `member` indices evt 
+                    , format "'{0}' is not an index of '{1}'" x lbls )
+                    ) evts
                 return $ TrHint (insert x expr ys) z)
         , ( "\\lt"
           , CmdBlock $ \(One prog) (TrHint ys z) -> do
                 let msg = "Only one progress property needed for '{0}'"
                 toEither $ error_list 
                     [ ( not $ isNothing z
-                      , format msg lbl )
+                      , format msg lbls )
                     ]
                 return $ TrHint ys (Just prog))
         ]
@@ -640,17 +640,17 @@ collect_expr = visit_doc
                                 inv = new_inv } } 
             )
         ,   (   "\\transient"      
-            ,   CmdBlock $ \(ev, lbl, xs) m -> do
+            ,   CmdBlock $ \(evts, lbl, xs) m -> do
                         let msg = "'{0}' is already used for another\
                                   \ program property"
-                        toEither $ error_list
-                            [ ( not (ev `member` events m)
-                              , format "event '{0}' is undeclared" ev )
-                            ]
+                        toEither $ error_list $ map (\ev ->
+                            ( not (ev `member` events m)
+                            , format "event '{0}' is undeclared" ev )
+                            ) evts
                         tr            <- get_assert_with_free m xs
                         let prop = Transient 
                                     (free_vars (context m) tr) 
-                                    tr ev empty_hint
+                                    tr evts empty_hint
                             old_prog_prop = transient $ props m
                         new_props     <- bind (format msg lbl)
                             $ insert_new lbl prop $ old_prog_prop
@@ -659,18 +659,18 @@ collect_expr = visit_doc
                                 transient = new_props } } 
             )
         ,   (   "\\transientB"      
-            ,   CmdBlock $ \(ev, lbl, hint, xs) m -> do
+            ,   CmdBlock $ \(evts, lbl, hint, xs) m -> do
                         let msg = "'{0}' is already used for\
                                   \ another program property"
-                        toEither $ error_list
-                            [ ( not (ev `member` events m)
-                              , format "event '{0}' is undeclared" ev )
-                            ]
+                        toEither $ error_list $ map (\ev ->
+                            ( not (ev `member` events m)
+                            , format "event '{0}' is undeclared" ev )
+                            ) evts
                         tr            <- get_assert_with_free m xs
                         let fv = (free_vars (context m) tr)
                         hint <- toEither $ tr_hint 
-                                            m fv ev hint empty_hint
-                        let prop = Transient fv tr ev hint
+                                            m fv evts hint empty_hint
+                        let prop = Transient fv tr evts hint
                             old_prog_prop = transient $ props m
                         new_props  <- bind (format msg lbl)
                                 $ insert_new lbl prop $ old_prog_prop
@@ -752,9 +752,15 @@ collect_refinement = visit_doc []
                         ]
                     let prog = progress (props m) `union` progress (inh_props m)
                         saf  = safety (props m) `union` safety (inh_props m)
+                        rem_add ref
+                            | ref == Rule Add = Nothing
+                            | otherwise       = Just ref
                     r <- parse_rule' (map toLower rule) 
                         (RuleParserParameter m prog saf goal hyps hint)
-                    return m { props = (props m) { derivation = insert goal r $ derivation $ props m } } 
+                    new_der <- bind 
+                        (format "progress property {0} already has a refinement" goal)
+                        (insert_new goal r $ update rem_add goal $ derivation $ props m)
+                    return m { props = (props m) { derivation = new_der } } 
             )
         ,   (   "\\safetyB"
             ,   CmdBlock $ \(lbl, evt, pCt, qCt) m -> do
@@ -766,17 +772,16 @@ collect_refinement = visit_doc []
                     (p,q) <- toEither (do
                         p <- fromEither ztrue $ get_assert_with_free m pCt
                         q <- fromEither ztrue $ get_assert_with_free m qCt
-                        error_list 
-                            [   ( lbl `member` prop
-                                , format "safety property '{0}' already exists" lbl )
-                            ] 
                         return (p,q))
                     let ctx = context m
                         dum =       free_vars ctx p 
                             `union` free_vars ctx q
                     let new_prop = Unless (M.elems dum) p q (Just evt)
+                    new_saf <- bind 
+                        (format "safety property '{0}' already exists" lbl)
+                        $ insert_new lbl new_prop prop 
                     return m { props = (props m) 
-                        { safety = insert lbl new_prop $ prop 
+                        { safety = new_saf
                         } } 
             )
         ,   (   "\\replace"
@@ -847,9 +852,13 @@ collect_refinement = visit_doc []
                     _     <- bind_all (S.elems keep)
                         (format "'{0}' is not a valid schedule")
                         $ (`M.lookup` sc)
-                    pprop <- bind 
-                        (format "'{0}' is not a valid progress property" prog)
-                        $ prog `M.lookup` progs
+                    pprop <- case prog of
+                        Just prog -> do
+                            pprop <- bind 
+                                (format "'{0}' is not a valid progress property" prog)
+                                $ prog `M.lookup` progs
+                            return $ Just (prog,pprop)
+                        Nothing -> return Nothing
                     old_exp <- bind
                         (format "'{0}' is not a valid schedule" $ M.fromJust old)
                         $ maybe (Just ztrue) (`M.lookup` sc) old
@@ -857,7 +866,7 @@ collect_refinement = visit_doc []
                         (format "'{0}' is not a valid schedule" $ M.fromJust new)
                         $ maybe (Just ztrue) (`M.lookup` sc) new
                     let n         = length $ sched_ref old_event
-                        rule      = (replace_fine evt old_exp new new_exp (prog,pprop))
+                        rule      = (replace_fine evt old_exp new new_exp pprop)
 --                                    { add = S.fromList $ maybeToList new
 --                                    , remove = S.fromList $ maybeToList old 
 --                                    , keep = keep }
@@ -970,17 +979,18 @@ deduct_schedule_ref_struct li m = do
         forM_ (toList $ events m) check_sched
         forM_ (toList $ transient $ props m) check_trans
     where
-        check_trans (lbl,Transient _ _ evt (TrHint _ lt))  = do
-                add_proof_edge lbl [g evt $ _name m]
-                let f_sch = fine $ new_sched (events m ! evt)
-                    progs = progress (props m) `union` progress (inh_props m) 
-                unless (maybe True (flip member progs) lt)
-                    $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
-                unless (isJust f_sch == isJust lt)
-                    $ if isJust f_sch
-                    then tell [Error (format fmt0 lbl evt) li]
-                    else tell [Error (format fmt1 lbl evt) li]
-                add_proof_edge lbl $ maybeToList lt
+        check_trans (lbl,Transient _ _ evts (TrHint _ lt))  = do
+                add_proof_edge lbl $ map (\evt -> g evt $ _name m) evts
+                forM_ evts $ \evt -> do
+                    let f_sch = fine $ new_sched (events m ! evt)
+                        progs = progress (props m) `union` progress (inh_props m) 
+                    unless (maybe True (`member` progs) lt)
+                        $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
+                    unless (isJust f_sch == isJust lt)
+                        $ if isJust f_sch
+                        then tell [Error (format fmt0 lbl evt) li]
+                        else tell [Error (format fmt1 lbl evts) li]
+                    add_proof_edge lbl $ maybeToList lt
             where
                 fmt0 =    "transient predicate {0}: a leads-to property is required for "
                        ++ "transient predicates relying on events "
@@ -1000,8 +1010,10 @@ deduct_schedule_ref_struct li m = do
                 Weaken -> return ()
                 Replace (prog,_) (saf,_) -> 
                     add_proof_edge lbl [prog,saf]
-                ReplaceFineSch _ _ _ (prog,_) ->
+                ReplaceFineSch _ _ _ (Just (prog,_)) ->
                     add_proof_edge lbl [prog]
+                ReplaceFineSch _ _ _ Nothing ->
+                    return ()
                 RemoveGuard _ -> return ()
                 AddGuard _ -> return ()
         g lbl m = composite_label [m, lbl, label "SCH"]

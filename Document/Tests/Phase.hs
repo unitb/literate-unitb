@@ -2,6 +2,7 @@ module Document.Tests.Phase where
 
     -- Modules
 import Document.Document
+import Document.Tests.Suite
 
     -- Libraries
 import Tests.UnitTest
@@ -26,11 +27,9 @@ result0 = Left [Error "A cycle exists in the refinement structure: m0, m1" (LI "
 path1 :: String
 path1 = "tests/phases-t1.tex"
 
-case1 :: IO (Maybe [Error])
-case1 = do
-    r <- parse_machine path1 
-    return $ either Just (const Nothing) r
+case1 :: IO String
+case1 = find_errors path1 
 
-result1 :: Maybe a
-result1 = Nothing
+result1 :: String
+result1 = "no errors"
 

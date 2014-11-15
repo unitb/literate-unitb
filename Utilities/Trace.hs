@@ -12,7 +12,7 @@ import System.IO.Unsafe
 
 import Utilities.Format
 
-trace_switch :: MVar (Set a)
+trace_switch :: MVar (Set ThreadId)
 trace_switch = unsafePerformIO (newMVar empty)
 
 is_tracing_on :: IO Bool
@@ -81,13 +81,13 @@ with_tracing x = unsafePerformIO $ do
 with_tracingM :: Monad m => m b -> m b
 with_tracingM cmd = do
         b <- return $ unsafePerformIO is_tracing_on
-        let !() = if b 
+        let !_x = if b 
             then () 
             else unsafePerformIO turn_tracing_on
         !r <- cmd
-        let !() = if b 
-                then () 
-                else unsafePerformIO turn_tracing_off
+        let !_x = if b 
+            then () 
+            else unsafePerformIO turn_tracing_off
         return r
 
 with_tracingIO :: MonadIO m => m a -> m a

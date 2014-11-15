@@ -1,7 +1,8 @@
 module UnitB.POGenerator 
     ( POGen, context, emit_goal, eval_generator
     , with, prefix_label, prefix, named_hyps
-    , nameless_hyps, variables, emit_exist_goal )
+    , nameless_hyps, variables, emit_exist_goal
+    , definitions, existential )
 where
 
 import Logic.Expr
@@ -45,7 +46,27 @@ emit_exist_goal lbl vars es = with
             emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars es
-    
+
+existential :: [Var] -> POGen () -> POGen ()
+existential [] cmd = cmd
+existential vs (POGen cmd) = do
+        let g (_, Sequent ctx h0 h1 goal) = do
+                    vs <- f ctx
+                    return $ zforall vs ztrue $ zall (h0 ++ M.elems h1) `zimplies` goal
+            f (Context s vs fs def _) 
+                | not $ M.null s = error "existential: cannot add sorts in existentials"
+                -- |    not (M.null fs) 
+                --   || not (M.null def) = error "existential: cannot introduce new function symbols in existentials"
+                | otherwise = do
+                    modify (`merge_ctx` Context M.empty M.empty fs def M.empty)
+                    return $ M.elems vs
+            -- f xs = [(tag, zexists vs ztrue $ zall $ map snd xs)]
+        ss <- POGen 
+            $ censor (const []) $ listen 
+            $ local (const empty_param) cmd
+        let (ss',st) = runState (mapM g $ snd ss) empty_ctx
+        with (context st) 
+            $ emit_exist_goal [] vs ss'
 
 emit_goal :: [Label] -> Expr -> POGen ()
 emit_goal lbl g = POGen $ do
@@ -59,6 +80,11 @@ context :: Context -> State POParam ()
 context new_ctx = do
     ctx <- gets ctx
     modify $ \p -> p { ctx = new_ctx `merge_ctx` ctx }
+
+definitions :: Map String Def -> State POParam ()
+definitions new_defs = do
+    let new_ctx = Context M.empty M.empty M.empty new_defs M.empty
+    context new_ctx
 
 with :: State POParam () -> POGen a -> POGen a
 with f cmd = POGen $ local (execState f) $ runPOGen cmd

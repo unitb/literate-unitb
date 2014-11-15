@@ -8,6 +8,8 @@ import Interactive.Config
 import Control.Concurrent
 import Control.Monad.Error
 
+import Data.Char
+import Data.List
 import Data.List.Ordered
 import Data.Time
 
@@ -103,7 +105,9 @@ general = do
                 appendFile "result.txt"
                     $ unlines 
                     $ "Lines of Haskell code:"
-                       : (take 6 $ map f $ reverse $ sortOn fst $ zip zs ys)
+                       : (take 6 $ map f $ reverse 
+                            $ sortOn fst 
+                            $ filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs ys)
                       ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) 60 in 
                                 format "{0}m {1}s" m s)]
                 -- system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"

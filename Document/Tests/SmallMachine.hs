@@ -72,6 +72,10 @@ result2 = (unlines
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
+    , " xxx m0/TR/tr0/inc/EN"
+    , "  o  m0/TR/tr0/inc/NEG"
+    , "  o  m0/TR/tr0/leadsto/lhs"
+    , "  o  m0/TR/tr0/leadsto/rhs"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -80,10 +84,6 @@ result2 = (unlines
     , "  o  m0/inc/SCH/m0/0/REF/replace/prog/lhs"
     , "  o  m0/inc/SCH/m0/0/REF/replace/prog/rhs"
     , "  o  m0/inc/SCH/m0/0/REF/replace/str"
-    , " xxx m0/inc/TR/tr0/EN"
-    , "  o  m0/inc/TR/tr0/EN/leadsto/lhs"
-    , "  o  m0/inc/TR/tr0/EN/leadsto/rhs"
-    , "  o  m0/inc/TR/tr0/NEG"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -115,6 +115,8 @@ result3 = unlines
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/c0"
+    , "  o  m0/TR/tr0/inc/EN"
+    , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/c0/CO/WD"
     , "  o  m0/inc/CO/c0"
     , "  o  m0/inc/FIS/x@prime"
@@ -122,8 +124,6 @@ result3 = unlines
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH"
     , "  o  m0/inc/SCH/m0/0/REF/weaken"
-    , "  o  m0/inc/TR/tr0/EN"
-    , "  o  m0/inc/TR/tr0/NEG"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -198,6 +198,8 @@ result6 = unlines
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/c0"
+    , "  o  m0/TR/tr0/inc/EN"
+    , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/c0/CO/WD"
     , "  o  m0/inc/CO/c0"
     , "  o  m0/inc/FIS/x@prime"
@@ -205,8 +207,6 @@ result6 = unlines
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH"
     , "  o  m0/inc/SCH/m0/1/REF/weaken"
-    , "  o  m0/inc/TR/tr0/EN"
-    , "  o  m0/inc/TR/tr0/NEG"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -286,7 +286,7 @@ result10 = unlines [
       , " (=> (= x y) (= x y))" ]
 
 case10 :: IO String
-case10 = show_po path6 $ label "m0/inc/TR/tr0/EN"
+case10 = show_po path6 $ label "m0/TR/tr0/inc/EN"
 
 result11 :: String
 result11 = unlines [
@@ -305,7 +305,7 @@ result11 = unlines [
             " (not (= x@prime y@prime)))" ]
 
 case11 :: IO String
-case11 = show_po path6 $ label "m0/inc/TR/tr0/NEG"
+case11 = show_po path6 $ label "m0/TR/tr0/inc/NEG"
 
 var_x :: Var
 var_y :: Var
@@ -369,7 +369,7 @@ m0_props = empty_property_set {
 m1_props :: PropertySet
 m1_props = m0_props
         { transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) (label "inc") empty_hint) ]
+            (label "tr0", Transient empty (x `zeq` y) [label "inc"] empty_hint) ]
         , constraint = fromList [
             (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 

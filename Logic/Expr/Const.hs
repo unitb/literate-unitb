@@ -58,9 +58,16 @@ toErrors li m = case m of
         Right x -> Right x
         Left xs -> Left [Error xs li]
 
+not_fun :: TypeSystem2 t => AbsFun t
+not_fun = Fun [] "not" [bool] bool
+
 znot :: TypeSystem2 t => OneExpr t
-znot         = fun1 $ Fun [] "not" [bool] bool
--- znot         = fun1 mznot
+znot e = case convert_to e of 
+            FunApp f [x]
+                | f == not_fun -> x
+                | otherwise    -> fun1 not_fun e
+            e' -> fun1 not_fun e'
+    -- znot         = fun1 mznot
 zimplies :: TypeSystem2 t => TwoExpr t
 zimplies x y = fromJust $ mzimplies (Right x) (Right y)
 zand :: TypeSystem2 t => TwoExpr t
@@ -165,7 +172,12 @@ znothing :: ExprP
 znothing   = Right (Const [] "Nothing" $ maybe_type gA)
 
 mznot :: TypeSystem2 t => OneExprP t
-mznot         = typ_fun1 $ Fun [] "not" [bool] bool
+mznot me       = do
+        e <- me
+        case convert_to e of
+            FunApp f [x] 
+                | f == not_fun -> typ_fun1 not_fun (Right x)
+            e -> typ_fun1 not_fun (Right e)
 mzimplies :: TypeSystem2 t => TwoExprP t
 mzimplies mx my = do
         x <- liftM convert_to mx

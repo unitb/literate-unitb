@@ -121,6 +121,7 @@ data Event = Event
         , params    :: Map String Var
         , old_guard :: Map Label Expr
         , guards    :: Map Label Expr
+        , old_acts :: S.Set Label
         , actions  :: Map Label Action
         , eql_vars :: S.Set Var
         -- , ba_predicate :: Map Label Expr 
@@ -136,6 +137,7 @@ empty_event = Event
         , old_guard = empty
         , guards = empty 
         , actions = empty
+        , old_acts = S.empty
         , eql_vars = S.empty
         }
 
@@ -476,6 +478,7 @@ merge_evt_exprs m e0 e1 = toEither $ do
             { scheds = coarse_sch
             , guards = grd
             , actions = act
+            , old_acts = keysSet $ actions e1
             , eql_vars = abs_keep }
 
 merge_evt_refinement :: Event -> Event -> Either [String] Event
@@ -557,7 +560,7 @@ data Transient =
         Transient 
             (Map String Var)     -- Free variables
             Expr                 -- Predicate
-            Label                -- Event, Schedule 
+            [Label]              -- Event, Schedule 
             TrHint               -- Hints for instantiation
             -- (Map String Expr)    -- Index substitution
             -- (Maybe Label)        -- Progress Property for fine schedule
@@ -649,7 +652,7 @@ data ScheduleChange = ScheduleChange
 data ScheduleRule = 
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
-        | ReplaceFineSch Expr (Maybe Label) Expr (Label,ProgressProp) 
+        | ReplaceFineSch Expr (Maybe Label) Expr (Maybe (Label,ProgressProp))
         | RemoveGuard Label
         | AddGuard    Label
             -- old expr, new label, new expr, proof
@@ -667,7 +670,7 @@ replace_fine :: Label
              -> Expr
              -> Maybe Label
              -> Expr
-             -> (Label, ProgressProp)
+             -> Maybe (Label, ProgressProp)
              -> ScheduleChange
 replace_fine lbl old tag new prog = 
     ScheduleChange lbl S.empty S.empty S.empty 

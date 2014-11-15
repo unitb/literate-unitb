@@ -17,7 +17,7 @@ import Control.Monad
 
 import           Data.Either
 import           Data.List ( sort )
-import           Data.Map hiding (map)
+import           Data.Map as M hiding (map)
 import qualified Data.Set as S hiding (map, fromList, insert, empty)
 
 import Tests.UnitTest
@@ -47,7 +47,7 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (liftM (Assign x_decl) (x `mzplus` mzint 2))
         s1     <- with_li li (liftM (Assign y_decl) (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr (label "evt") empty_hint
+        let tr0 = Transient empty tr [label "evt"] empty_hint
             co0 = Co [] co
             ps = empty_property_set {
                 transient = 
@@ -99,7 +99,7 @@ train_m0 = do
                     ,   actions  = fromList [(label "A0", a0)]
                     })
         tr <- with_li li (st `select` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr (label "leave") empty_hint)] 
+        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr [label "leave"] empty_hint)] 
             ps    = empty_property_set { transient = props, inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps
@@ -116,14 +116,14 @@ result_example0 = unlines
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
     , "  o  m0/SKIP/CO/CO0"
+    , "  o  m0/TR/TR0/evt/EN"
+    , "  o  m0/TR/TR0/evt/NEG"
     , "  o  m0/TR0/TR/WD"
     , "  o  m0/evt/CO/CO0"
     , "  o  m0/evt/FIS/x@prime"
     , "  o  m0/evt/FIS/y@prime"
     , "  o  m0/evt/INV/J0"
     , "  o  m0/evt/SCH"
-    , "  o  m0/evt/TR/TR0/EN"
-    , "  o  m0/evt/TR/TR0/NEG"
     , "  o  m0/evt/WD/ACT/S0"
     , "  o  m0/evt/WD/ACT/S1"
     , "  o  m0/evt/WD/C_SCH"
@@ -138,6 +138,7 @@ result_train_m0 = unlines
     , "  o  train_m0/INIT/INV/J0"
     , "  o  train_m0/INIT/WD"
     , "  o  train_m0/INV/WD"
+    , "  o  train_m0/TR/TR0/t@param"
     , "  o  train_m0/TR0/TR/WD"
     , "  o  train_m0/enter/FIS/st@prime"
     , "  o  train_m0/enter/INV/J0"
@@ -148,7 +149,6 @@ result_train_m0 = unlines
     , "  o  train_m0/leave/FIS/st@prime"
     , "  o  train_m0/leave/INV/J0"
     , "  o  train_m0/leave/SCH"
-    , "  o  train_m0/leave/TR/TR0"
     , "  o  train_m0/leave/WD/ACT/A0"
     , "  o  train_m0/leave/WD/C_SCH"
     , "  o  train_m0/leave/WD/F_SCH"
@@ -200,7 +200,7 @@ get_cmd_tr_po :: Monad m
               -> m (Either [Error] String)
 get_cmd_tr_po em = return (do
         m <- em
-        let lbl = composite_label [_name m, label "leave/TR/TR0"]
+        let lbl = composite_label [_name m, label "TR/TR0/t@param"]
         pos <- proof_obligation m
         let po = pos ! lbl
         let cmd =  z3_code po
@@ -210,8 +210,8 @@ get_tr_po :: Either [Error] Machine -> IO String
 get_tr_po em = case (do
         m <- em
         pos <- proof_obligation m
-        let lbl = composite_label [_name m, label "leave/TR/TR0"]
-            po = pos ! lbl
+        let lbl = composite_label [_name m, label "TR/TR0/t@param"]
+            po = maybe (error $ show $ keys pos) id $ lbl `M.lookup` pos
         return $ show po) of
             Right xs -> return xs
             Left xs  -> return $ show_err xs

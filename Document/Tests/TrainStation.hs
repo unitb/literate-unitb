@@ -229,7 +229,7 @@ props0 = empty_property_set
             [   ( label "tr0"
                 , Transient
                     (symbol_table [t_decl])
-                    (fromJust (t `zelem` in_var)) (label "leave") empty_hint)
+                    (fromJust (t `zelem` in_var)) [label "leave"] empty_hint)
             ]
     ,  inv = fromList 
             [   (label "inv2",fromJust (zdom loc `mzeq` in_var))
@@ -817,6 +817,7 @@ result1 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
+    , "  o  train0/TR/tr0/t@param"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (335,1)"
@@ -906,7 +907,6 @@ result1 = unlines
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , " xxx train0/leave/SCH"
     , "  o  train0/leave/SCH/train0/1/REF/weaken"
-    , "  o  train0/leave/TR/tr0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1280,7 +1280,7 @@ case5 = do
         pos <- list_file_obligations path0
         case pos of
             Right [(_,pos)] -> do
-                let po  = pos ! label "train0/leave/TR/tr0"
+                let po  = pos ! label "train0/TR/tr0/t@param"
                 let cmd = concatMap pretty_print' $ z3_code po
                 return cmd
             x -> return $ show x
@@ -1435,6 +1435,7 @@ result13 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
+    , "  o  train0/TR/tr0/t@param"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/goal (220,1)"
@@ -1502,7 +1503,6 @@ result13 = unlines
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
     , "  o  train0/leave/SCH/train0/1/REF/weaken"
-    , "  o  train0/leave/TR/tr0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1541,6 +1541,7 @@ result14 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
+    , "  o  train0/TR/tr0/t@param"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (222,1)"
@@ -1601,7 +1602,6 @@ result14 = unlines
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
     , "  o  train0/leave/SCH/train0/1/REF/weaken"
-    , "  o  train0/leave/TR/tr0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1631,6 +1631,7 @@ result15 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
+    , "  o  train0/TR/tr0/t@param"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (234,1)"
@@ -1697,7 +1698,6 @@ result15 = unlines
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
     , "  o  train0/leave/SCH/train0/1/REF/weaken"
-    , "  o  train0/leave/TR/tr0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1727,6 +1727,7 @@ result16 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
+    , "  o  train0/TR/tr0/t@param"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal (292,1)"
@@ -1812,7 +1813,6 @@ result16 = unlines
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
     , "  o  train0/leave/SCH/train0/1/REF/weaken"
-    , "  o  train0/leave/TR/tr0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
