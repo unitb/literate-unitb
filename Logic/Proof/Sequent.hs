@@ -7,6 +7,8 @@ module Logic.Proof.Sequent where
 import Logic.Expr
 
     -- Libraries
+import Control.DeepSeq
+
 import Data.Char
 import Data.List as L
 import Data.Map  as M hiding ( map )
@@ -25,7 +27,7 @@ data AbsSequent t = Sequent (AbsContext t) [AbsExpr t] (Map Label (AbsExpr t)) (
 empty_sequent :: TypeSystem2 t => AbsSequent t
 empty_sequent = (Sequent empty_ctx [] M.empty ztrue)
 
-instance Show Sequent where
+instance TypeSystem t => Show (AbsSequent t) where
     show (Sequent (Context ss vs fs ds _) as hs g) =
             unlines (
                    map (" " ++)
@@ -43,6 +45,9 @@ instance Show Sequent where
             f (x, DefSort y z xs _)  = f (x, Sort y z $ length xs)
             f (_, Sort _ z 0) = z
             f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
+
+instance NFData t => NFData (AbsSequent t) where
+    rnf (Sequent ctx hyp asm g) = rnf (ctx,hyp,asm,g)
 
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment  

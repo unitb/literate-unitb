@@ -310,6 +310,9 @@ keyboard sh@(Shared { .. }) = do
                 case xs of
                     (Error _ (LI fn i _)):_ -> do
                         open_at i fn
+                    (MLError _ ((_,LI fn i _):_)):_ -> do
+                        open_at i fn
+                    (MLError _ []):_ -> return ()
                     [] -> return ()
             else if xs' == "reset" then do
                 modify_obs pr_obl $ \m -> 

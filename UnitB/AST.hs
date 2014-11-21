@@ -74,6 +74,8 @@ import Theories.Arithmetic
 import UnitB.POGenerator ( POGen )
 
     -- Libraries
+import Control.DeepSeq
+
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
@@ -96,6 +98,9 @@ data Schedule = Schedule
         }
     deriving (Eq, Show)
 
+instance NFData Schedule where
+    rnf (Schedule x0 x1) = rnf (x0,x1)
+
 empty_schedule :: Schedule
 empty_schedule = Schedule default_schedule Nothing
 
@@ -112,6 +117,11 @@ instance Show Action where
             (intercalate "," $ map name vs)
             (show e)
 
+instance NFData Action where
+    rnf (Assign x0 x1) = rnf (x0,x1)
+    rnf (BcmSuchThat xs xp) = rnf (xs,xp)
+    rnf (BcmIn x set) = rnf (x,set)
+
 data Event = Event 
         { indices   :: Map String Var
         , sched_ref :: [ScheduleChange]
@@ -126,6 +136,9 @@ data Event = Event
         , eql_vars :: S.Set Var
         -- , ba_predicate :: Map Label Expr 
         } deriving (Eq, Show)
+
+instance NFData Event where
+    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9) = x0 `deepseq` rnf (x1,x2,x3,x4,x5,x6,x7,x8,x9)
 
 empty_event :: Event
 empty_event = Event 
@@ -201,8 +214,13 @@ instance Show DocItem where
     show (DocInv xs) = format "{0} (invariant)" xs
     show (DocProg xs) = format "{0} (progress)" xs
 
+instance NFData DocItem where
+    rnf (DocVar x) = rnf x
+    rnf (DocEvent x) = rnf x
+    rnf (DocInv x) = rnf x
+    rnf (DocProg x) = rnf x
 
-class (Typeable a, Eq a, Show a) => RefRule a where
+class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
     refinement_po :: a -> Machine -> POGen ()
     rule_name     :: a -> Label
     
@@ -411,6 +429,10 @@ merge_th_decl t0 t1 = toEither $ do
                 (\x -> ["Name clash with function '" ++ x ++ "'"])
                 (funs t0)
                 (funs t1)
+        defs <- fromEither empty $ disjoint_union
+                (\x -> ["Name clash with definitions '" ++ x ++ "'"])
+                (defs t0)
+                (defs t1)
         consts <- fromEither empty $ disjoint_union
                 (\x -> ["Name clash with constant '" ++ x ++ "'"])
                 (consts t0)
@@ -421,6 +443,7 @@ merge_th_decl t0 t1 = toEither $ do
                 (dummies t1)
         return $ t0
             { funs = funs
+            , defs = defs
             , dummies = dummies
             , consts = consts
             }
@@ -546,12 +569,21 @@ make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
 instance Named Machine where
     name m = case _name m of Lbl s -> s
 
+instance NFData Machine where
+    rnf (Mch a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i)
+
 data Constraint = 
         Co [Var] Expr
     deriving (Eq, Show)
 
+instance NFData Constraint where
+    rnf (Co vs p) = rnf (vs,p)
+
 data TrHint = TrHint (Map String Expr) (Maybe Label)
     deriving (Eq, Show)
+
+instance NFData TrHint where
+    rnf (TrHint xs p) = rnf (xs,p)
 
 empty_hint :: TrHint
 empty_hint = TrHint empty Nothing
@@ -566,13 +598,21 @@ data Transient =
             -- (Maybe Label)        -- Progress Property for fine schedule
     deriving (Eq,Show)
 
+instance NFData Transient where
+    rnf (Transient vs p evt hint) = rnf (vs,p,evt,hint)
+
 data Direction = Up | Down
     deriving (Eq,Show)
+
+instance NFData Direction where
 
 data Variant = 
 --        SetVariant Var Expr Expr Direction
         IntegerVariant Var Expr Expr Direction
     deriving (Eq,Show)
+
+instance NFData Variant where
+    rnf (IntegerVariant vs p q d) = rnf (vs,p,q,d)
 
 variant_equals_dummy :: Variant -> Expr
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
@@ -597,6 +637,9 @@ instance Show Rule where
 instance Eq Rule where
     Rule x == Rule y = x `h_equal` y
 
+instance NFData Rule where
+    rnf (Rule r) = rnf r
+
 --data Liveness = Live (Map Label ProgressProp) 
 
 --data Schedule = Schedule [Var] Expr Expr Label
@@ -615,6 +658,12 @@ instance Show SafetyProp where
     show (Unless _ p q ev) = show p ++ "  UNLESS  " ++ show q ++ except
         where
             except = maybe "" (("  EXCEPT  " ++) . show) ev
+
+instance NFData ProgressProp where
+    rnf (LeadsTo vs p q) = rnf (vs,p,q)
+
+instance NFData SafetyProp where
+    rnf (Unless vs p q ev) = rnf (vs,p,q,ev)
 
 data PropertySet = PS
         { transient    :: Map Label Transient
@@ -640,6 +689,9 @@ instance Show PropertySet where
         , ("deduction steps", show $ derivation x)
         ]
 
+instance NFData PropertySet where
+    rnf (PS x0 x1 x2 x3 x4 x5 x6 x7) = rnf (x0,x1,x2,x3,x4,x5,x6,x7)
+
 data ScheduleChange = ScheduleChange 
         { event  :: Label
         , remove :: S.Set Label
@@ -649,6 +701,9 @@ data ScheduleChange = ScheduleChange
         }
     deriving (Show,Eq,Typeable)
 
+instance NFData ScheduleChange where
+    rnf (ScheduleChange x0 x1 x2 x3 x4) = rnf (x0,x1,x2,x3,x4)
+
 data ScheduleRule = 
         Replace (Label,ProgressProp) (Label,SafetyProp)
         | Weaken
@@ -657,6 +712,13 @@ data ScheduleRule =
         | AddGuard    Label
             -- old expr, new label, new expr, proof
     deriving (Show,Eq)
+
+instance NFData ScheduleRule where
+    rnf (Replace xs ys) = rnf (xs,ys)
+    rnf Weaken = ()
+    rnf (ReplaceFineSch x0 x1 x2 x3) = rnf (x0,x1,x2,x3)
+    rnf (RemoveGuard x) = rnf x
+    rnf (AddGuard x) = rnf x
 
 weaken :: Label -> ScheduleChange
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken

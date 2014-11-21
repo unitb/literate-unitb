@@ -494,9 +494,6 @@ evt_wd_po m (lbl, evt) =
                             forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
                                 emit_goal [tag] 
                                     $ well_definedness $ ba_pred bap)
-                            -- $ emit_goal ["ACT"]
-                            --     $ well_definedness $ zall $ elems
-                            --     $ action evt)
                 )
 
 evt_eql_po :: Machine -> (Label, Event) -> M ()
@@ -606,12 +603,11 @@ verify_changes m old_pos = do
                 (res,_,_) <- format_result (M.map fst all_pos)
                 return (all_pos,res, M.size new_pos)
             Left msgs -> 
-                return (old_pos,unlines $ map g msgs,0)
+                return (old_pos,unlines $ map report msgs,0)
     where
         f p0 (_,p1)
             | p0 == p1  = Nothing 
             | otherwise = Just p0
-        g (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
                  
 str_verify_machine :: Machine -> IO (String,Int,Int)
 str_verify_machine m = 
@@ -620,9 +616,7 @@ str_verify_machine m =
 --                dump (show $ _name m) pos
                 xs <- verify_all pos
                 format_result xs
-            Left msgs -> return (unlines $ map f msgs,0,0)
-    where
-        f (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+            Left msgs -> return (unlines $ map report msgs,0,0)
 
 smoke_test_machine :: Machine -> IO (String)
 smoke_test_machine m =
@@ -632,9 +626,7 @@ smoke_test_machine m =
                     r <- smoke_test po
                     return $ r == Valid
                 return $ unlines $ map (show . fst) rs
-            Left msgs -> return (unlines $ map f msgs)
-    where
-        f (Error xs (LI _ i j)) = format "error ({0},{1}): {2}" i j (xs :: String) :: String
+            Left msgs -> return (unlines $ map report msgs)
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs = do

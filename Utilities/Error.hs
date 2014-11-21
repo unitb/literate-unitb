@@ -15,7 +15,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Writer.Class
 
-data ErrorT m a = ErrorT { runErrorT :: m (Either [Error] (a,[Error])) }
+newtype ErrorT m a = ErrorT { runErrorT :: m (Either [Error] (a,[Error])) }
 
 type ErrorM = ErrorT Identity
 

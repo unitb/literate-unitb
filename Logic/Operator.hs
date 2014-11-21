@@ -25,10 +25,11 @@ where
 import Logic.Expr hiding ( pair )
 
     -- Libraries
+import Control.DeepSeq
+
 import Data.Either
 import Data.Function
 import Data.List as L
---import Data.Map as M hiding ( foldl )
 import Data.Typeable
 
 import           Utilities.Format
@@ -55,6 +56,8 @@ mk_unary (UnaryOperator _ _ f) x = f $ Right x
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving (Show,Eq,Typeable)
 
+instance NFData Assoc where
+
 data Notation = Notation
     { new_ops :: [Operator]
     , prec :: [[[Operator]]] 
@@ -65,6 +68,9 @@ data Notation = Notation
     , commands :: [Command]
     , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
+
+instance NFData Notation where
+    rnf (Notation a b c d e f g h) = rnf (a,b,c,d,e,f,g,h)
 
 empty_notation :: Notation
 empty_notation = Notation 
@@ -127,6 +133,9 @@ instance Ord UnaryOperator where
 instance Show UnaryOperator where
     show (UnaryOperator x y _) = show (x,y) -- format str x y
 
+instance NFData UnaryOperator where
+    rnf (UnaryOperator a b c) = rnf (a,b,c)
+
 instance Named Operator where
     name (Right (BinOperator _ xs _))  = xs
     name (Left (UnaryOperator _ xs _)) = xs
@@ -142,8 +151,9 @@ instance Ord BinOperator where
 
 instance Show BinOperator where
     show (BinOperator x y _) = show (x,y) -- format str x y
---        where
---            str = "Binary { token = {0}, lexeme = {1} }"
+
+instance NFData BinOperator where
+    rnf (BinOperator a b c) = rnf (a,b,c)
 
 type Operator = Either UnaryOperator BinOperator
 
@@ -156,6 +166,9 @@ instance Eq Command where
     (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =
         (x0,y0,n0) == (x1,y1,n1)
     
+instance NFData Command where
+    rnf (Command a b c d) = rnf (a,b,c,d)
+
 class Input a where
     token :: a -> String
 

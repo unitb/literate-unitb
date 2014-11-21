@@ -17,6 +17,8 @@ import Latex.Parser
 import Logic.Expr
 
     -- Libraries
+import Control.DeepSeq
+
 import Control.Monad.Trans.Either
 import Control.Monad.RWS as RWS
 
@@ -52,6 +54,8 @@ data Add = Add
 instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ m = assert m "" zfalse
+
+instance NFData Add where
 
 type ERWS = EitherT [Error] (RWS LineInfo [Error] System)
 
@@ -194,6 +198,9 @@ instance RefRule Ensure where
                                              (p `zand` znot q) lbls 
                                              hint )
 
+instance NFData Ensure where
+    rnf (Ensure x0 x1 x2 x3) = rnf (x0,x1,x2,x3)
+
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
 
@@ -234,6 +241,9 @@ instance RefRule Discharge where
                     zforall (fv0 ++ M.elems fv1) ztrue (
                              (znot p1 `zimplies` q0) ) )
 
+instance NFData Discharge where
+    rnf (Discharge p t u) = rnf (p,t,u)
+
 mk_discharge :: ProgressProp -> Transient -> [SafetyProp] -> Discharge
 mk_discharge p tr [s] = Discharge p tr $ Just s
 mk_discharge p tr []  = Discharge p tr Nothing
@@ -265,6 +275,9 @@ instance RefRule Monotonicity where
                     zforall (fv0 ++ fv1) ztrue $
                              (q1 `zimplies` q0))
 
+instance NFData Monotonicity where
+    rnf (Monotonicity p q) = rnf (p,q)
+
 data Implication = Implication ProgressProp
     deriving (Eq,Typeable,Show)
 
@@ -276,6 +289,9 @@ instance RefRule Implication where
                 assert m "" (
                     zforall fv1 ztrue $
                              (p1 `zimplies` q1))
+
+instance NFData Implication where
+    rnf (Implication p) = rnf p
 
 data Disjunction = Disjunction ProgressProp [([Var], ProgressProp)]
     deriving (Eq,Typeable,Show)
@@ -296,6 +312,9 @@ instance RefRule Disjunction where
             disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
             disj_q ([], LeadsTo _ _ q1) = q1
             disj_q (vs, LeadsTo _ _ q1) = zexists vs ztrue q1
+
+instance NFData Disjunction where
+    rnf (Disjunction p xs) = rnf (p,xs)
 
 disjunction :: ProgressProp -> [ProgressProp] -> Disjunction
 disjunction pr0@(LeadsTo fv0 _ _) ps = 
@@ -319,7 +338,10 @@ instance RefRule NegateDisjunct where
                 assert m "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
                                 (q1 `zimplies` q0))
-        
+
+instance NFData NegateDisjunct where
+    rnf (NegateDisjunct p q) = rnf (p,q)
+
 data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
     deriving (Eq,Typeable,Show)
 
@@ -341,6 +363,9 @@ instance RefRule Transitivity where
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q2 `zimplies` q0 )
 
+instance NFData Transitivity where
+    rnf (Transitivity p q r) = rnf (p,q,r)
+
 data PSP = PSP ProgressProp ProgressProp SafetyProp
     deriving (Eq,Typeable,Show)
 
@@ -361,6 +386,9 @@ instance RefRule PSP where
     refinement_po (PSP _ _ (Unless _ _ _ (Just _))) _ 
         = error "PSP.refinement_po: invalid"
 
+instance NFData PSP where
+    rnf (PSP p q r) = rnf (p,q,r)
+
 data Induction = Induction ProgressProp ProgressProp Variant
     deriving (Eq,Typeable,Show)
 
@@ -379,6 +407,9 @@ instance RefRule Induction where
                     zforall (fv0 ++ fv1) ztrue $
                         (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
                         )
+
+instance NFData Induction where
+    rnf (Induction p q v) = rnf (p,q,v)
 
 parse_induction :: (Monad m)
                 => String -> RuleParserParameter

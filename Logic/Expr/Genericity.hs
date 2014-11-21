@@ -383,7 +383,8 @@ class Generic a where
     generics x  = S.unions $ map generics $ S.toList $ types_of x
     variables x = S.unions $ map variables $ S.toList $ types_of x
     instantiate m x = substitute_types (instantiate m) x
-    substitute_type_vars m x = substitute_types (substitute_type_vars m) x
+    substitute_type_vars m x = 
+        substitute_types (substitute_type_vars m) x
     
 instance Generic GenericType where
     generics (GENERIC s)         = S.singleton s
@@ -419,7 +420,8 @@ instance Generic Def where
     substitute_types f (Def gs n ts t e) = 
             Def (map f gs) n 
                 (map (substitute_types f) ts) 
-                (f t) (substitute_types f e)
+                (f t) 
+                (substitute_types f e)
  
 instance Generic Var where
     types_of (Var _ t)  = S.singleton t

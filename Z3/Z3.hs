@@ -25,7 +25,9 @@ module Z3.Z3
     , patterns
     , match_all
     , map_failures
-    , match_some )
+    , match_some, one_point
+    , apply_monotonicity
+    , remove_type_vars )
 where
 
     -- Modules
@@ -35,6 +37,8 @@ import Logic.Expr.Genericity ( Generic, variables )
 import Logic.Proof
 
     -- Libraries
+import Control.DeepSeq
+
 import Control.Applicative hiding ( empty, Const )
     -- for the operator <|>
 import Control.Concurrent
@@ -47,10 +51,9 @@ import           Data.Char
 import           Data.Function
 import           Data.List as L hiding (union)
 import           Data.List.Ordered as OL hiding (member)
-import           Data.Map as M hiding (map,filter,foldl, (\\))
+import           Data.Map as M (Map)
 import qualified Data.Map as M
-import qualified Data.Maybe as M ( fromJust, catMaybes
-                                 , maybeToList, isJust )
+import qualified Data.Maybe as MM
 import qualified Data.Set as S
 import           Data.Typeable 
 
@@ -58,13 +61,12 @@ import           System.Exit
 import           System.Process
 
 import           Utilities.Format
-import           Utilities.Trace
 
 z3_path :: String
 z3_path = "z3"
 
 default_timeout :: Int
-default_timeout = 2
+default_timeout = 3
 
 instance Tree Command where
     as_tree (Push)        = List [Str "push"]
@@ -156,12 +158,12 @@ data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
 free_vars :: Context -> Expr -> Map String Var
-free_vars (Context _ _ _ _ dum) e = fromList $ f [] e
+free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
     where
         f xs (Word v@(Var n _))
-            | n `member` dum = (n,v):xs
+            | n `M.member` dum = (n,v):xs
             | otherwise      = xs
-        f xs v@(Binder _ vs _ _) = toList (fromList (visit f xs v) M.\\ symbol_table vs)
+        f xs v@(Binder _ vs _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
         f xs v = visit f xs v
 
 var_decl :: String -> Context -> Maybe Var
@@ -177,6 +179,17 @@ data Command = Decl FODecl
     | Push | Pop 
     | Comment String
 
+instance NFData Command where
+    rnf (SetOption xs b) = rnf (xs,b)
+    rnf (Decl d)     = rnf d 
+    rnf (Assert e s) = rnf (e,s)
+    rnf (CheckSat)   = ()
+    rnf GetUnsatCore = ()
+    rnf GetModel     = ()
+    rnf Push         = ()
+    rnf Pop          = ()
+    rnf (Comment xs) = rnf xs
+
 z3_code :: Sequent -> [Command]
 z3_code po = 
     (      []
@@ -189,7 +202,7 @@ z3_code po =
         ++ map Decl (decl d)
         ++ map (\(x,y) -> Assert x $ Just $ "s" ++ show y) 
                (zip assume [0..])
-        ++ concatMap f (zip (toList hyps) [0..])
+        ++ concatMap f (zip (M.toList hyps) [0..])
         ++ [Assert (znot assert) $ Just "goal"]
         ++ [CheckSat]
         ++ [] )
@@ -201,12 +214,14 @@ z3_code po =
                     $ apply_monotonicity po
         f ((lbl,xp),n) = [ Comment $ show lbl
                      , Assert xp $ Just $ "h" ++ show n]
-        one_point (Sequent a b c g) = Sequent a asm c g'
-            where
-                asm
-                    | g == g'   = b
-                    | otherwise = b ++ [znot g]
-                g' = one_point_rule g
+
+one_point :: Sequent -> Sequent
+one_point (Sequent a b c g) = Sequent a asm c g'
+    where
+        asm
+            | g == g'   = b
+            | otherwise = b ++ [znot g]
+        g' = one_point_rule g
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b c _) =
@@ -318,7 +333,7 @@ mk_error z f x =
 --        ys = concatMap g xs
 
 remove_type_vars :: Sequent -> FOSequent
-remove_type_vars (Sequent ctx asm hyp g) = M.fromJust $ do
+remove_type_vars (Sequent ctx asm hyp g) = MM.fromJust $ do
     let vars  = variables g
         (Context sorts' _ _ _ _) = ctx
         sorts = M.keys sorts'
@@ -328,23 +343,23 @@ remove_type_vars (Sequent ctx asm hyp g) = M.fromJust $ do
         new_sorts = map as_type $ map (("G" ++) . show) [0..] `minus` sorts
         varm = M.fromList $ zip (S.elems vars) new_sorts
     g   <- return $ mk_error () strip_generics (substitute_type_vars varm g)
-    let types = M.catMaybes $ map type_strip_generics 
+    let types = MM.catMaybes $ map type_strip_generics 
                     $ S.elems $ S.unions 
-                    $ map used_types $ asm ++ elems hyp
+                    $ map used_types $ asm ++ M.elems hyp
         types' = S.fromList $ types `OL.union` S.elems (used_types g)
-    asm <- return $ map snd $ concatMap (gen_to_fol types' (label "")) asm
-    h   <- return $ fromList $ concat $ elems $ mapWithKey (gen_to_fol types') hyp
-    let types = S.unions $ map used_types $ g : asm ++ elems h
-    ctx <- return $ to_fol_ctx types ctx
-    return (Sequent ctx asm h g)
+    _asm <- return $ map snd $ concatMap (gen_to_fol types' (label "")) asm
+    h   <- return $ M.fromList $ concat $ M.elems $ M.mapWithKey (gen_to_fol types') hyp
+    let types = S.unions $ map used_types $ g : _asm ++ M.elems h
+    _ctx <- return $ to_fol_ctx types $ ctx
+    return (Sequent _ctx _asm h g)
 
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool
-consistent x y = x `intersection` y == y `intersection` x
+consistent x y = x `M.intersection` y == y `M.intersection` x
 
 is_maybe :: Type -> Bool
-is_maybe t = M.isJust (unify t (maybe_type gA))
+is_maybe t = MM.isJust (unify t (maybe_type gA))
     where
         gA = GENERIC "a"
 
@@ -352,13 +367,13 @@ match_all :: [Type] -> [FOType] -> [Map String FOType]
 match_all pat types = 
         foldM (\x p -> do
                 t  <- types'
-                m  <- M.maybeToList $ unify p t
-                ms <- M.maybeToList $ mapM type_strip_generics (elems m) 
-                let m' = M.fromList $ zip (keys m) ms
-                let m  = M.mapKeys (reverse . drop 2 . reverse) m'
-                guard $ consistent m x
-                return (m `M.union` x)
-            ) empty pat'
+                m  <- MM.maybeToList $ unify p t
+                ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
+                let m' = M.fromList $ zip (M.keys m) ms
+                    m''  = M.mapKeys (reverse . drop 2 . reverse) m'
+                guard $ consistent m'' x
+                return (m'' `M.union` x)
+            ) M.empty pat'
     where
         pat' = filter (not . is_maybe) $ L.map f pat
         f (VARIABLE s) = GENERIC s
@@ -371,12 +386,12 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
                 m <- xs
                 guard $ consistent m x
                 return (m `M.union` x)
-            ) empty (toList ms')
+            ) M.empty (M.toList ms')
 --        ms <- forM (toList ms') $ \(k,xs) -> do
 --            x <- xs
 --            return (k,x)
 --        let ms' = fromList ms
-        guard $ keysSet ms == vars
+        guard $ M.keysSet ms == vars
         return ms
     where
         pat' = L.map f pat
@@ -384,15 +399,15 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
         f t = rewrite f t
         types' = map as_generic types
         vars = S.unions $ map generics pat'
-        ms' = unionsWith (++) ms
+        ms' = M.unionsWith (++) ms
 --        ms :: [Map String [FOType]]
         ms :: [Map String [Map String FOType]]
         ms = do
             p  <- pat'
             t  <- types'
-            m  <- M.maybeToList $ unify p t
-            ms <- M.maybeToList $ mapM type_strip_generics (elems m) 
-            let ms' = M.fromList $ zip (map (reverse . drop 2 . reverse) $ keys m) ms
+            m  <- MM.maybeToList $ unify p t
+            ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
+            let ms' = M.fromList $ zip (map (reverse . drop 2 . reverse) $ M.keys m) ms
             return $ M.map (const [ms']) ms' 
 
     -- instantiation patterns
@@ -422,8 +437,6 @@ gen_to_fol types lbl e = -- with_tracing $ trace (show xs) $
 
 to_fol_ctx :: S.Set FOType -> Context -> FOContext
 to_fol_ctx types (Context s vars funs defs dums) = 
-    with_tracing $ 
---    trace (show types) $
         Context s vars' funs' defs' dums'
     where
         vars' = M.map fv  vars
@@ -449,7 +462,7 @@ to_fol_ctx types (Context s vars funs defs dums) =
                 def' = substitute_types f def
                 f (GENERIC s) = VARIABLE s
                 f t = rewrite f t
-        fdm = M.fromJust . var_strip_generics
+        fdm = MM.fromJust . var_strip_generics
 
 --statement :: Expr -> Statement
 --statement e = Statement pat e
@@ -498,9 +511,9 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
             Binder Forall (Var nam t:vs) rs ts -> do
                 let (Context ss vars funs defs dums) = ctx
                     v   = Var (fresh nam $ 
-                                      keysSet vars 
-                            `S.union` keysSet funs
-                            `S.union` keysSet defs) t
+                                      M.keysSet vars 
+                            `S.union` M.keysSet funs
+                            `S.union` M.keysSet defs) t
                     g'
                         | L.null vs = rs `zimplies` ts
                         | otherwise = zforall vs rs ts
@@ -564,7 +577,7 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
             (i,x,y) <- differs_by_one xs ys
             g       <- f i
             return $ g x y
-        m = fromList $
+        m = M.fromList $
             [ (("=>","and"),const $ Just zimplies)
             , (("=>","or"),const $ Just zimplies)
             , (("=>","not"),const $ Just $ flip zimplies)

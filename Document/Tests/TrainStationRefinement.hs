@@ -15,7 +15,6 @@ import Tests.UnitTest
 
 import Data.Map (Map,empty)
 
-import Utilities.Format (format)
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -307,7 +306,7 @@ parse path = do
     r <- parse_machine path
     return $ case r of
         Right _ -> "ok"
-        Left xs -> unlines $ map (\(Error x (LI _ i j)) -> format "error ({0},{1}): {2}" i j x) xs
+        Left xs -> unlines $ map report xs
 
 strip_line_info :: String -> String
 strip_line_info xs = unlines $ map f $ lines xs

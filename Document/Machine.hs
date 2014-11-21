@@ -1,22 +1,24 @@
 {-# LANGUAGE BangPatterns, FlexibleContexts     #-}
 {-# LANGUAGE TupleSections, ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances                  #-}
+{-# LANGUAGE FlexibleInstances, Arrows          #-}
+{-# LANGUAGE TypeOperators, TypeFamilies        #-}
+{-# LANGUAGE MultiParamTypeClasses              #-}
 module Document.Machine where
 
     --
     -- Modules
     --
+import Document.Context
 import Document.Expression hiding ( parse_expr' )
-import Document.Visitor
+import Document.Pipeline
 import Document.Proof
 import Document.Refinement as Ref
-import Document.Context
+import Document.Visitor
 
 import Latex.Parser
 
 import Logic.Expr
 import Logic.Proof hiding ( with_line_info )
-
 
 import UnitB.AST
 import UnitB.PO
@@ -266,29 +268,20 @@ type_decl = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag) m -> do
                     let th = theory m
-                    let new_sort = Sort tag name 0
-                    let new_type = Gen $ USER_DEFINED new_sort []
-                    toEither $ error_list
-                        [ ( tag `member` all_types th
-                          , format "a sort with name '{0}' is already declared" tag )
-                        , ( tag `member` consts th
-                          , format "a constant with name '{0}' is already declared" tag )
-                        ]
-                    let dummy = Var "x@@" new_type
-                    let new_const = Var name $ set_type new_type
+                        new_sort = Sort tag name 0
+                        new_type = Gen $ USER_DEFINED new_sort []
+                        new_def = Def [] name [] (set_type new_type)
+                                    $ ztypecast "const" (set_type new_type) ztrue
+                    new_types  <- bind
+                        (format "a sort with name '{0}' is already declared" tag)
+                        $ insert_new tag new_sort (types th)
+                        -- this is not a user error
+                    new_defs <- bind
+                            (format "a constant with name '{0}' is already declared" tag)
+                            $ insert_new tag new_def (defs th)
                     let hd = th 
-                            {  types = insert 
-                                    tag
-                                    new_sort
-                                    (types th) 
-                            ,  consts = insert tag new_const $ consts th
-                            ,  fact = insert 
-                                    (label (tag ++ "-def"))
-                                    (fromJust $ mzforall [dummy] mztrue 
-                                        (zelem 
-                                            (Right $ Word dummy) 
-                                            (Right $ Word new_const)))
-                                    (fact th)
+                            {  types = new_types
+                            , defs = new_defs
                             }
                     return m { theory = hd } 
                )
@@ -516,7 +509,7 @@ collect_expr = visit_doc
                                 (format "event '{0}' is undeclared" evt)
                                 $ evt `M.lookup` events m
                     xp  <- parse_expr' (event_setting m old_event) 
-                            { expected_type = Nothing } xs
+                            { is_step = True } xs
                     vars <- bind_all (map toString vs)
                         (format "variable '{0}' undeclared")
                         $ (`M.lookup` variables m)

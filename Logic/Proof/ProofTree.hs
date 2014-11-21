@@ -7,15 +7,14 @@ import Logic.Operator
 import Logic.Proof.Sequent
 
     -- Libraries
+import Control.DeepSeq
 import Control.Monad
 
 import Data.List as L
 import Data.Map as M 
                 ( Map )
 import qualified Data.Map as M 
---import Data.Maybe
 import Data.Set as S 
---import Data.String.Utils as SU
 import Data.Typeable
 
 import Utilities.Format
@@ -42,6 +41,17 @@ data Proof =  FreeGoal String String Type Proof LineInfo
             | ByCalc Calculation
     deriving (Eq,Typeable)
 
+instance NFData Proof where
+    rnf (FreeGoal xs ys t p li) = rnf (xs,ys,t,p,li)
+    rnf (ByCases a b) = rnf (a,b)
+    rnf (Easy li) = rnf li
+    rnf (Assume a b c d) = rnf (a,b,c,d)
+    rnf (Assertion a b c d) = rnf (a,b,c,d)
+    rnf (ByParts a b) = rnf (a,b)
+    rnf (InstantiateHyp a b c d) = rnf (a,b,c,d)
+    rnf (Keep a b c d e) = rnf (a,b,c,d,e)
+    rnf (ByCalc a) = rnf a
+
 data Calculation = Calc 
         {  context    :: Context
         ,  goal       :: Expr
@@ -49,6 +59,9 @@ data Calculation = Calc
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
     deriving (Eq, Typeable)
+
+instance NFData Calculation where
+    rnf (Calc a b c d e) = rnf (a,b,c,d,e)
 
 data TheoremRef = 
         ThmRef Label [(Var,Expr)]

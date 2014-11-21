@@ -179,21 +179,6 @@ machine0 = (empty_machine "train0")
             mzforall [p_decl] mztrue $ (
                         (mzeq p ent `mzor` mzeq p ext)
                 `mzeq`  mznot (p `zelem` plf) )
-        axm6 = fromJust $ 
-                mzforall [x_at_decl] mztrue (
-                    x_at `zelem` train)
-            where
-                (x_at, x_at_decl) = var "x@@" train_type
-        axm7 = fromJust $ 
-                mzforall [x_at_decl] mztrue (
-                    x_at `zelem` block)
-            where
-                (x_at, x_at_decl) = var "x@@" blk_type
-        axm8 = fromJust $ 
-                mzforall [x_at_decl] mztrue (
-                    x_at `zelem` loc_cons)
-            where
-                (x_at, x_at_decl) = var "x@@" loc_type
       --    	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
 
 props0 :: PropertySet
@@ -337,9 +322,6 @@ train_decl b ind =
         , "(define-sort pfun (a b) (Array a (Maybe b)))"
         , "(define-sort set (a) (Array a Bool))"
         , "(declare-const PLF (set BLK))"
-        , "(declare-const BLK (set BLK))"
-        , "(declare-const LOC (set LOC))"
-        , "(declare-const TRAIN (set TRAIN))"
         , "(declare-const ent BLK)"
         , "(declare-const ext BLK)"
         ] ++ var_decl ++
@@ -392,25 +374,27 @@ set_decl_smt2 xs =
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun mk-fun@@TRAIN@@BLK (TRAIN BLK) (pfun TRAIN BLK))"]
      ++ [  "(declare-fun mk-set@@BLK (BLK) (set BLK))"
-        ,  "(declare-fun mk-set@@LOC (LOC) (set LOC))"
         ,  "(declare-fun mk-set@@TRAIN (TRAIN) (set TRAIN))"]
 --        ,  "(declare-fun mk-set@Open@@pfun@@TRAIN@@BLK@Close ((pfun TRAIN BLK)) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun ovl@@TRAIN@@BLK"
-        ,  "             ( (pfun TRAIN BLK)"
-        ,  "               (pfun TRAIN BLK) )"
-        ,  "             (pfun TRAIN BLK))"
-        ,  "(declare-fun ran@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
+        [ "(declare-fun ovl@@TRAIN@@BLK"
+        , "             ( (pfun TRAIN BLK)"
+        , "               (pfun TRAIN BLK) )"
+        , "             (pfun TRAIN BLK))"
+        , "(declare-fun ran@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
 --        ,  "(declare-fun set-diff@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) (set (pfun TRAIN BLK)))"
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun set@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
-     ++ [ "(define-fun compl@@BLK"
+        [ "(declare-fun set@@TRAIN@@BLK ( (pfun TRAIN BLK) ) (set BLK))"]
+     ++ [ "(define-fun BLK () (set BLK) ( (as const (set BLK)) true ))"
+        , "(define-fun LOC () (set LOC) ( (as const (set LOC)) true ))"
+        , "(define-fun TRAIN"
+        , "            ()"
+        , "            (set TRAIN)"
+        , "            ( (as const (set TRAIN))"
+        , "              true ))"
+        , "(define-fun compl@@BLK"
         , "            ( (s1 (set BLK)) )"
         , "            (set BLK)"
-        , "            ((_ map not) s1))"
-        , "(define-fun compl@@LOC"
-        , "            ( (s1 (set LOC)) )"
-        , "            (set LOC)"
         , "            ((_ map not) s1))"
         , "(define-fun compl@@TRAIN"
         , "            ( (s1 (set TRAIN)) )"
@@ -419,11 +403,6 @@ set_decl_smt2 xs =
         , "(define-fun elem@@BLK"
         , "            ( (x BLK)"
         , "              (s1 (set BLK)) )"
-        , "            Bool"
-        , "            (select s1 x))"
-        , "(define-fun elem@@LOC"
-        , "            ( (x LOC)"
-        , "              (s1 (set LOC)) )"
         , "            Bool"
         , "            (select s1 x))"
         , "(define-fun elem@@TRAIN"
@@ -436,11 +415,6 @@ set_decl_smt2 xs =
         , "            (set BLK)"
         , "            ( (as const (set BLK))"
         , "              false ))"
-        , "(define-fun empty-set@@LOC"
-        , "            ()"
-        , "            (set LOC)"
-        , "            ( (as const (set LOC))"
-        , "              false ))"
         , "(define-fun empty-set@@TRAIN"
         , "            ()"
         , "            (set TRAIN)"
@@ -450,11 +424,6 @@ set_decl_smt2 xs =
         , "            ( (s1 (set BLK))"
         , "              (s2 (set BLK)) )"
         , "            (set BLK)"
-        , "            (intersect s1 ((_ map not) s2)))"
-        , "(define-fun set-diff@@LOC"
-        , "            ( (s1 (set LOC))"
-        , "              (s2 (set LOC)) )"
-        , "            (set LOC)"
         , "            (intersect s1 ((_ map not) s2)))"
         , "(define-fun set-diff@@TRAIN"
         , "            ( (s1 (set TRAIN))"
@@ -473,7 +442,7 @@ set_facts xs = [ f x y | y <- ys, x <- xs ]
   where
     f :: (String, String) -> (String, String) -> (String, String)
     f (x0,x1) (x,y) = (format x x1, format y x0 x1)
-    unlines = intercalate "\n"
+    unlines = L.intercalate "\n"
     ys =[   ( "{0}0", unlines
                 [ "(assert (forall ( (x {0})"
                 , "                  (y {0}) )"
@@ -771,26 +740,10 @@ comp_facts xs =
                                else [])
                             ++ set_facts 
                                 [   ("BLK","@BLK")
-                                ,   ("LOC","@LOC")
                                 ,   ("TRAIN","@TRAIN")
                                 ] ) )
 named_facts :: [String]
-named_facts = 
-        [ "; \\BLK-def"
-        , "(assert (forall ( (x@@ BLK) )"
-        , "                (! (elem@@BLK x@@ BLK)"
-        , "                   :pattern"
-        , "                   ( (elem@@BLK x@@ BLK) ))))"
-        , "; \\LOC-def"
-        , "(assert (forall ( (x@@ LOC) )"
-        , "                (! (elem@@LOC x@@ LOC)"
-        , "                   :pattern"
-        , "                   ( (elem@@LOC x@@ LOC) ))))"
-        , "; \\TRAIN-def"
-        , "(assert (forall ( (x@@ TRAIN) )"
-        , "                (! (elem@@TRAIN x@@ TRAIN)"
-        , "                   :pattern"
-        , "                   ( (elem@@TRAIN x@@ TRAIN) ))))" ]
+named_facts = []
 
 
 path0 :: String
@@ -979,12 +932,26 @@ case2 = do
                 return cmd
             x -> return $ show x
 
+filterAssert :: (String -> Bool) -> [String] -> [String]
+filterAssert p xs = concatMap lines $ L.filter p $ groupBrack xs
+
 result20 :: String
-result20 = unlines (
+result20 = 
+    let f = filterAssert (not . (\x -> any (`L.isInfixOf` x) xs)) 
+        xs = [ "dom-rest@@TRAIN@@BLK"
+             , "dom-subt@@TRAIN@@BLK" 
+             , "dom@@TRAIN@@BLK" 
+             , "mk-set@@TRAIN"
+             , "compl@@TRAIN"
+             , "elem@@TRAIN"
+             , "empty-set@@TRAIN"
+             , "set-diff@@TRAIN" ]
+    in
+    unlines (
         push
      ++ train_decl False False
-     ++ set_decl_smt2 [WithPFun]
-     ++ comp_facts [WithPFun] ++ 
+     ++ f (set_decl_smt2 [WithPFun])
+     ++ f (comp_facts [WithPFun]) ++ 
      [  "(assert (not (exists ( (loc (pfun TRAIN BLK)) )"
      ,  "                     (and true (= loc empty-fun@@TRAIN@@BLK)))))" ]
      ++ named_facts ++

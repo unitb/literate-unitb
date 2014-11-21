@@ -42,7 +42,7 @@ prop_parseOk = forAll correct_machine $ f_prop_parseOk
 f_prop_parseOk :: (Machine, Tex) -> Bool
 f_prop_parseOk (mch,Tex tex) =
         (M.elems . machines) `liftM` (all_machines tex) == Right [mch]
-
+ 
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
 
@@ -82,9 +82,11 @@ instance Arbitrary ExprNotation where
 data MachineInput = MachineInput Machine [LatexDoc]
 
 is_type_error :: Error -> Bool
-is_type_error (Error msg _) = 
+is_type_error e = 
             "type error:" `L.isInfixOf` msg
         ||  "expected type:" `L.isInfixOf` msg
+    where
+        msg = message e
 
 correct_machine :: Gen (Machine, Tex)
 correct_machine = machine_input arbitrary

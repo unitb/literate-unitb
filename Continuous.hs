@@ -38,8 +38,6 @@ import System.Environment
 import System.Locale
 import System.TimeIt
 
-import Text.Printf
-
 import Utilities.Syntactic
 
 with_po_map :: StateT Params IO a -> Params -> IO ()
@@ -169,8 +167,8 @@ check_file = do
                         putStrLn $ "Redid " ++ show n ++ " proofs"
             Left xs -> do
                 clear
-                forM_ xs (\(Error x (LI _ i j)) -> liftIO $ 
-                    printf "error (%d,%d): %s\n" i j x)
+                forM_ xs $ \e -> liftIO $ 
+                    putStrLn $ report e
         liftIO $ putStrLn ""
         tz <- liftIO (getCurrentTimeZone)
         t  <- liftIO (getCurrentTime :: IO UTCTime)

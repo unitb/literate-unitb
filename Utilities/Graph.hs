@@ -15,6 +15,7 @@ module Utilities.Graph
 where
 -- 
 
+import Control.DeepSeq
 import Control.Monad
 
 import           Data.Array as A ( bounds, Array, (//), array, ixmap )
@@ -44,6 +45,9 @@ instance Show a => Show (SCC a) where
 
 data Matrix a b = Matrix (Map a (Map a b)) [a] b
     deriving (Eq, Show)
+
+instance (NFData a, NFData b) => NFData (Matrix a b) where
+    rnf (Matrix a b c) = rnf (a,b,c)
 
 empty :: b -> Matrix a b
 empty x = Matrix M.empty [] x

@@ -48,7 +48,7 @@ import Utilities.EditDistance
 data Param = Param 
     { context :: Context
     , notation :: Notation
-    , variables :: Map String Var
+    , variables :: Map String Expr
     }
 
 data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
@@ -86,7 +86,7 @@ instance MonadPlus Parser where
     mzero = Parser mzero
     
 runParser :: Context -> Notation 
-          -> Map String Var
+          -> Map String Expr
           -> Parser a 
           -> Scanner ExprToken a
 runParser x y w m = runParserWith (Param x y w) m
@@ -105,7 +105,7 @@ get_notation = notation `liftM` get_params
 get_table :: Parser (Matrix Operator Assoc)
 get_table = (struct . notation) `liftM` get_params
 
-get_vars :: Parser (Map String Var)
+get_vars :: Parser (Map String Expr)
 get_vars = variables `liftM` get_params
 
 with_vars :: [(String, Var)] -> Parser b -> Parser b
@@ -115,7 +115,7 @@ with_vars vs cmd = do
                 cmd
     where
         f s@(Param { .. }) =
-                s { variables = fromList vs `M.union` variables }
+                s { variables = M.map Word (fromList vs) `M.union` variables }
 
 get_params :: Parser Param
 get_params = Parser $ lift R.ask
@@ -326,14 +326,6 @@ suggestion xs m = map (\(x,y) -> x ++ " (" ++ y ++ ")") $ toList ws
 
 type Term = Either Command Expr
 
-primed :: String -> Bool
-primed xs = drop (length xs - 1) xs == "'"
-
-unprimed :: String -> String
-unprimed xs
-    | primed xs = take (length xs - 1) xs
-    | otherwise = xs
-
 term :: Parser Term
 term = do
     n <- get_notation
@@ -392,8 +384,7 @@ term = do
                         r' = substitute ts' r
                         t' = substitute ts' t
                         vs' = map snd ts
-                    let k = Right (quant vs' r' t')
-                    return k
+                    return $ Right (quant vs' r' t')
         , do    from oftype
                 e <- brackets Curly expr
                 t <- brackets Curly type_t
@@ -402,14 +393,9 @@ term = do
                     Left msg -> fail msg
         , attempt $ do    
                 xs' <- word_or_command
-                let xs = unprimed xs'
-                prime <- if primed xs' then 
-                    return "@prime"
-                else
-                    return ""
                 vs <- get_vars
-                case M.lookup xs vs of
-                    Just (Var v t) -> return $ Right (Word $ Var (v ++ prime) t) 
+                case M.lookup xs' vs of
+                    Just e -> return $ Right e
                     Nothing -> fail ""
         , do    xs <- attempt word_or_command
                 vs <- get_vars
@@ -665,13 +651,17 @@ parse_expr' :: ( Monad m
             -> Notation
             -> [(Char, LineInfo)] 
             -> EitherT [Error] m Expr
-parse_expr' ctx@(Context _ vars _ _ _)  n input = do
+parse_expr' ctx@(Context _ vars _ defs _)  n input = do
+        let vars' = M.map Word vars `M.union` M.mapMaybe f defs
+            f (Def xs n args t _e) = do
+                    guard (L.null args)
+                    Just $ Const xs n t
         li   <- lift $ ask
         toks <- hoistEither $ read_tokens (scan_expr n)
             (file_name li) 
             input (line li, column li)
         !e   <- hoistEither $ read_tokens 
-            (runParser ctx n vars expr) 
+            (runParser ctx n vars' expr) 
             (file_name li) 
             toks 
             (line li, column li)

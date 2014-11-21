@@ -9,7 +9,6 @@ import Tests.UnitTest
 
 --import Text.ParserCombinators.ReadP
 
-import Utilities.Format
 import Utilities.Syntactic
 
 path1 :: FilePath

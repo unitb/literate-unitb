@@ -6,6 +6,8 @@ module Logic.Expr.Type where
 import Logic.Expr.Classes
 
     -- Libraries
+import Control.DeepSeq
+
 import           Data.Typeable
 
 import           GHC.Generics
@@ -62,6 +64,17 @@ cons_to_tree :: Tree a => TypeCons a -> StrList
 cons_to_tree (USER_DEFINED s []) = Str $ z3_name s
 cons_to_tree (USER_DEFINED s ts) = List (Str (z3_name s) : map as_tree ts)
 
+instance NFData t => NFData (TypeCons t) where
+    rnf (USER_DEFINED s xs) = rnf (s,xs)
+
+instance NFData FOType where
+    rnf (FOT t) = rnf t
+
+instance NFData GenericType where
+    rnf (GENERIC xs)  = rnf xs 
+    rnf (VARIABLE xs) = rnf xs
+    rnf (Gen t)       = rnf t
+
 --instance Type t => Tree (TypeCons t) where
 ----    as_tree (GENERIC x)   = Str x
 ----    as_tree (VARIABLE n)  = Str $ "_" ++ n
@@ -92,6 +105,14 @@ instance Show GenericType where
     show (VARIABLE n)        = format "'{0}" n 
     show (Gen (USER_DEFINED s [])) = (z3_name s)
     show (Gen (USER_DEFINED s ts)) = format "{0} {1}" (z3_name s) ts
+
+instance NFData Sort where
+    rnf BoolSort = ()
+    rnf IntSort  = ()
+    rnf RealSort = ()
+    rnf (DefSort xs ys zs t) = rnf (xs,ys,zs,t) 
+    rnf (Sort xs ys n)       = rnf (xs,ys,n)
+    rnf (Datatype xs ys zs)  = rnf (xs,ys,zs)
 
 z3_name :: Sort -> String
 z3_name (BoolSort) = "Bool"

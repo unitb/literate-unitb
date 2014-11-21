@@ -6,13 +6,15 @@ module Logic.Expr.Label where
 import Logic.Expr.Classes
 
     -- Libraries
-import GHC.Generics 
+import Control.DeepSeq
 
 import Data.List as L
 import Data.Map hiding ( map, split )
 import Data.String
 import Data.String.Utils ( split )
 import Data.Typeable
+
+import GHC.Generics 
 
 data Label = Lbl String
     deriving (Ord, Eq, Typeable, Generic)
@@ -22,6 +24,9 @@ instance Show Label where
 
 instance IsString Label where
     fromString x = label x
+
+instance NFData Label where
+    rnf (Lbl xs) = rnf xs
 
 label :: String -> Label
 label s = Lbl s

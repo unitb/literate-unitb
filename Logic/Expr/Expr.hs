@@ -64,6 +64,8 @@ data AbsExpr t =
 data Quantifier = Forall | Exists | Lambda
     deriving (Eq, Ord, Generic)
 
+instance NFData Quantifier where
+
 type ExprP = Either String Expr 
 
 type ExprPG t = Either String (AbsExpr t)
@@ -91,12 +93,6 @@ ztuple []           = unit
 ztuple [x]          = x
 ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
 ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
---    where
---        tx  = type_of x
---        txs = type_of tail
---        pair_sort = Sort "Pair" "Pair" 2
---        pair_type = USER_DEFINED pair_sort [tx,txs]
---        tail = ztuple xs
 
 pair_sort :: Sort
 pair_sort = -- Sort "Pair" "Pair" 2
@@ -153,6 +149,9 @@ data AbsContext t = Context
         (M.Map String (AbsVar t))  -- dummies
     deriving (Show,Eq,Generic,Typeable)
 
+instance NFData t => NFData (AbsContext t) where
+    rnf (Context a b c d e) = rnf (a,b,c,d,e)
+
 class Symbol a t where
     decl :: a -> [AbsDecl t]
 
@@ -183,6 +182,12 @@ data AbsDecl t =
         | FunDef [t] String [AbsVar t] t (AbsExpr t)
         | SortDecl Sort
 
+instance NFData (AbsDecl FOType) where
+    rnf (FunDecl xs n args t) = rnf (xs,n,args,t)
+    rnf (ConstDecl n t) = rnf (n,t)
+    rnf (FunDef xs n args t e) = rnf (xs,n,args,t,e)
+    rnf (SortDecl s) = rnf s
+
 type Fun = AbsFun GenericType
 
 type FOFun = AbsFun FOType
@@ -190,12 +195,18 @@ type FOFun = AbsFun FOType
 data AbsFun t = Fun [t] String [t] t
     deriving (Eq, Ord, Generic)
 
+instance NFData t => NFData (AbsFun t) where
+    rnf (Fun xs n args t) = rnf (xs,n,args,t)
+
 type Var = AbsVar GenericType
 
 type FOVar = AbsVar FOType
 
 data AbsVar t = Var String t
     deriving (Eq,Ord,Generic,Typeable)
+
+instance NFData t => NFData (AbsVar t) where
+    rnf (Var xs t) = rnf (xs,t)
 
 type FODef = AbsDef FOType
 
@@ -299,9 +310,12 @@ instance TypeSystem t => Show (AbsFun t) where
 
 instance TypeSystem t => Show (AbsDef t) where
     show (Def xs n ps t e) = n ++ show xs ++  ": " 
-        ++ intercalate " x " (map (show . as_tree) ps)
-        ++ " -> " ++ show (as_tree t)
+        ++ args ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
+        where
+            args
+                | L.null ps = ""
+                | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
 
 instance Symbol Sort t where
     decl s = [SortDecl s]
@@ -323,6 +337,8 @@ instance Symbol (AbsContext t) t where
             ++  concatMap decl (M.elems fun) 
             ++  concatMap decl (M.elems defs) 
 
+instance NFData t => NFData (AbsDef t) where
+    rnf (Def xs n args t e) = rnf (xs,n,args,t,e)
 
 merge :: (Ord k, Eq a, Show k, Show a)
           => M.Map k a -> M.Map k a -> M.Map k a
@@ -562,9 +578,11 @@ rename x y e@(Binder q vs r xp)
         | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
 
-instance TypeSystem t => NFData (AbsExpr t) where
-    rnf x = f () x
-        where
-            f () x = x `seq` visit f () x
+instance NFData t => NFData (AbsExpr t) where
+    rnf (Word x) = rnf x
+    rnf (Const xs n t) = rnf (xs,n,t)
+    rnf (Cast x0 x1 x2) = rnf (x0,x1,x2)
+    rnf (FunApp f args) = rnf (f,args)
+    rnf (Binder q vs e0 e1) = rnf (q,vs,e0,e1)
 
 

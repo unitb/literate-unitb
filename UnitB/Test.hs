@@ -183,7 +183,7 @@ result_train_m0_tr_po = unlines
           ++                " (not (select st@prime t)))))))"
     ]
 
-test_case :: ([Char], IO Bool, Bool)
+test_case :: (String, IO Bool, Bool)
 test_case = ("Unit-B", test, True)
 
 check_mch :: Either [Error] Machine -> IO (String, Map Label Sequent)

@@ -38,13 +38,13 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         types = symbol_table [set_sort]
         defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
-                        (ztypecast "const" (set_type gT) zfalse)
+                        $ ztypecast "const" (set_type gT) zfalse
                 , Def [gT] "elem" [x_decl, s1_decl] bool 
-                        (fromJust $ zset_select s1 x)
+                        $ fromJust $ zset_select s1 x
                 , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
-                        (fromJust $ s1 `zintersect` map_array "not" (set_type gT) [s2])
+                        $ fromJust $ s1 `zintersect` map_array "not" (set_type gT) [s2]
                 , Def [gT] "compl" [s1_decl] (set_type gT)
-                        (fromJust $ map_array "not" (set_type gT) [s1])
+                        $ fromJust $ map_array "not" (set_type gT) [s1]
                 ]
         funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $

@@ -7,6 +7,7 @@ import Logic.Operator
 import Logic.Proof
 
     -- Libraries
+import Control.DeepSeq
 import           Data.List as L
 import           Data.Map as M hiding ( map )
 
@@ -84,3 +85,7 @@ theory_facts th =
         d      = extends th
         facts  = fact th
         new_fact = facts
+
+instance NFData Theory where
+    rnf (Theory a b c d e f g h i j) = 
+            a `deepseq` rnf (b,c,d,e,f,g,h,i,j)

@@ -63,7 +63,23 @@
 |  |  |  +- test 3, proof obligation, leave/fis, in'
 |  |  |  +- test 19, proof obligation, leave/fis, loc'
 |  |  |  +- test 4, proof obligation, leave/sch
-|  |  |  +- [ Success: 6 / 6 ]
+|  |  |  +- test 19, quickcheck brackets
+=== prop_brackets from ./Document/Tests/TrainStation.hs:62 ===
++++ OK, passed 100 tests.
+
+=== prop_open_brack from ./Document/Tests/TrainStation.hs:65 ===
++++ OK, passed 100 tests.
+
+=== prop_close_brack from ./Document/Tests/TrainStation.hs:68 ===
++++ OK, passed 100 tests.
+
+=== prop_open_close from ./Document/Tests/TrainStation.hs:71 ===
++++ OK, passed 100 tests.
+
+=== prop_close_open from ./Document/Tests/TrainStation.hs:74 ===
++++ OK, passed 100 tests.
+
+|  |  |  +- [ Success: 7 / 7 ]
 |  |  +- part 2
 |  |  |  +- test 5, proof obligation, leave/en/tr0
 |  |  |  +- test 7, undeclared symbol
@@ -240,10 +256,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   28418 total
-    1040 Document/Machine.hs
-     806 UnitB/AST.hs
+   29239 total
+    1261 Document/Machine.hs
+     868 UnitB/AST.hs
+     783 Document/Visitor.lhs
      780 Document/Proof.hs
-     711 Document/Visitor.lhs
-     710 Document/Expression.hs
-Run time: 1m 32s
+     719 Z3/Z3.hs
+Run time: 2m 7s
