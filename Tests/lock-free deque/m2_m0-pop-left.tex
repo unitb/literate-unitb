@@ -1,0 +1,22 @@
+\noindent \ref{m0:pop:left} [r] \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ \eqref{m0:pop:leftm1:sch0} ]$r \in popL $ %
+  \end{block}
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{m0:pop:leftm1:grd0} ]$r \in popL $ %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{m0:pop:leftm0:act0} ]$qe \bcmeq \{ p \} \domsub qe $ %
+  \item[ \eqref{m0:pop:leftm0:act1} ]$p \bcmsuch (p = q \land p' = p) \lor (p < q \land p' = p\0+1) $ %
+  \item[ \eqref{m0:pop:leftm0:act3} ]$res \bcmsuch (p = q \land res' = res) \lor (p < q \land res' = qe.p) $ %
+  \item[ \eqref{m0:pop:leftm0:act4} ]$emp \bcmeq (p = q) $ %
+  \item[ \eqref{m0:pop:leftm1:a4} ]$popL \bcmeq popL \setminus \{ r \} $ %
+  \item[ \eqref{m0:pop:leftm1:a5} ]$resL \bcmsuch (p = q \land resL' = resL)  %
+  	\lor (p < q \land resL' = resL | r \fun qe.p) $ %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

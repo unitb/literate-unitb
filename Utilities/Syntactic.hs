@@ -21,7 +21,7 @@ data LineInfo = LI
         { file_name :: FilePath
         , line :: Int
         , column :: Int }     
-     deriving Eq   
+     deriving (Eq,Ord)   
 
 instance Show LineInfo where
     show (LI _ i j) = show (i,j)

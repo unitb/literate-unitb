@@ -1,0 +1,28 @@
+\noindent \ref{m0:push:left} [r] \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ \eqref{m0:push:leftm1:sch0} ]$r \in \dom.pshL $ %
+  \item[ \eqref{m0:push:leftm2:sch0} ]$pshL.r \in \ran.val $ %
+  \item[ \eqref{m0:push:leftm2:sch1} ]$pshL.r \in \ran.(node \domsub val) $ %
+  \end{block}
+  \item   \textbf{any} n,x
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{m0:push:leftm1:grd0} ]$x = pshL.r $ %
+  \item[ \eqref{m0:push:leftm1:grd1} ]$r \in \dom.pshL $ %
+  \item[ \eqref{m0:push:leftm2:grd0} ]$n \in live \setminus node $ %
+  \item[ \eqref{m0:push:leftm2:grd1} ]$val.n = x $ %
+  \item[ \eqref{m0:push:leftm2:grd2} ]$n = insL.r $ %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{m0:push:leftm0:act0} ]$qe \bcmeq qe \2| p\0-1 \fun x $ %
+  \item[ \eqref{m0:push:leftm0:act1} ]$p \bcmeq p-1$ %
+  \item[ \eqref{m0:push:leftm1:a0} ]$pshL \bcmeq \{ r \} \domsub pshL $ %
+  \item[ \eqref{m0:push:leftm2:a0} ]$obj \bcmeq obj | (p-1) \fun n $ %
+  \item[ \eqref{m0:push:leftm2:a1} ]$node \bcmeq node \bunion \{ n \} $ %
+  \item[ \eqref{m0:push:leftm2:act0} ]$insL \bcmeq \{ r \} \domsub insL $ %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

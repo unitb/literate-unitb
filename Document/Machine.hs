@@ -20,7 +20,7 @@ import Latex.Parser
 import Logic.Expr
 import Logic.Proof hiding ( with_line_info )
 
-import UnitB.AST
+import UnitB.AST as AST
 import UnitB.PO
 
 import Theories.Arithmetic
@@ -29,30 +29,38 @@ import Theories.IntervalTheory
 import Theories.PredCalc
 import Theories.SetTheory
 
-import Z3.Z3 
-
     --
     -- Libraries
     --
-import           Control.Monad hiding ( guard )
+import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+
+import           Control.Monad 
+import           Control.Monad.State.Class 
+import           Control.Monad.Reader.Class 
+import           Control.Monad.Writer.Class 
 import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
+import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Reader ( runReaderT )
-import           Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Trans.RWS as RWS ( RWS, RWST, mapRWST, runRWS )
 import qualified Control.Monad.Writer as W
 
 import           Data.Char
+import           Data.Either
+import           Data.Either.Combinators
 import           Data.Functor.Identity
 import           Data.Graph
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import           Data.Maybe as M ( maybeToList, isJust, isNothing ) 
-import qualified Data.Maybe as M
+import qualified Data.Maybe as MM
+import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 
 import Utilities.Format
+import Utilities.Permutation
 import Utilities.Syntactic
 
 list_file_obligations :: FilePath
@@ -80,7 +88,7 @@ parse_rule' :: (Monad m)
             -> RuleParserParameter
             -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
 parse_rule' rule param = do
-    li <- lift $ ask
+    li <- lift ask
     case M.lookup rule refinement_parser of
         Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
             runEitherT $ f rule param
@@ -102,19 +110,35 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
-data HintBuilder = HintBuilder [LatexDoc] Machine
+    -- Remove alternatives
+data HintBuilder = 
+        HintBuilder [LatexDoc] Machine
+        | HintBuilderDecl [LatexDoc] MachineId Phase2
 
 ensure :: ProgressProp 
        -> HintBuilder
-       -> [Label] -> [Event] 
+       -> [Label]
        -> ERWS Ensure
-ensure prog@(LeadsTo fv _ _) (HintBuilder thint m) lbls evts = do
-        hint <- toEither $ tr_hint m (symbol_table fv) lbls thint empty_hint
-        return $ Ensure prog lbls evts hint
+ensure prog@(LeadsTo fv _ _) hint lbls = do
+        let vs = symbol_table fv
+        hint <- case hint of
+            HintBuilder thint m -> do
+                hint <- toEither $ tr_hint m vs lbls thint empty_hint
+                _    <- bind_all lbls
+                    (format "event {0} is undeclared") 
+                    (`M.lookup` events m)
+                return hint
+            HintBuilderDecl thint m p2 -> do
+                hint <- toEither $ tr_hint' p2 m vs lbls thint empty_hint
+                _    <- get_events p2 m lbls
+                return hint
+        return $ Ensure prog lbls hint
 
 instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
     parse_rule (f,_) xs rule param@(RuleParserParameter m _ _ _ _ hint) = do
         parse_rule (f (HintBuilder hint m),()) xs rule param
+    parse_rule (f,_) xs rule param@(RuleParserDecl p2 m _ _ _ _ _ hint _) = do
+        parse_rule (f (HintBuilderDecl hint m p2),()) xs rule param
 
 check_acyclic :: (Monad m) => String 
               -> [(Label,Label)] 
@@ -135,7 +159,7 @@ trickle_down
         -> M ()
 trickle_down f li = do
             ms   <- lift $ gets machines
-            refs <- lift $ RWS.gets ref_struct
+            refs <- lift $ gets ref_struct
             let g (AcyclicSCC v) = v
                 g (CyclicSCC _)  = error "trickle_down: the input graph should be acyclic"
                 rs = map g $ cycles $ toList refs
@@ -167,9 +191,7 @@ get_components :: [LatexDoc] -> LineInfo
                -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
 get_components xs li = 
         liftM g
-            $ R.runReader (runEitherT 
-                $ W.execWriterT (mapM_ f xs)
-                ) li
+            $ R.runReader (runEitherT $ W.execWriterT (mapM_ f xs)) li
 
     where
         with_li li cmd = R.local (const li) cmd
@@ -215,12 +237,12 @@ read_document xs = do
                     lift $ modify $ \s -> s 
                         { theories = M.fromList (zip (M.keys cs) cs') 
                                 `M.union` theories s }
-            lift $ RWS.modify (\s -> s 
+            lift $ modify (\s -> s 
                 { machines = M.mapWithKey (\k _ -> empty_machine k) ms 
                 , theories = M.map (const default_thy) cs `M.union` theories s })
             procM type_decl
             procC ctx_type_decl
-            refs  <- lift $ RWS.gets ref_struct
+            refs  <- lift $ gets ref_struct
             check_acyclic "refinement structure" (toList refs) li
             trickle_down merge_struct li
 
@@ -260,7 +282,7 @@ read_document xs = do
             ms <- lift $ gets machines
             toEither $ forM_ (M.elems ms) 
                 $ deduct_schedule_ref_struct li
-            s  <- lift $ RWS.gets proof_struct
+            s  <- lift $ gets proof_struct
             check_acyclic "proof of liveness" s li
 
 type_decl :: [LatexDoc] -> Machine -> MSEither Machine
@@ -297,7 +319,7 @@ type_decl = visit_doc []
                ,  CmdBlock $ \(One mch) m -> do
                         anc   <- lift $ gets ref_struct
                         sys   <- lift $ gets machines
-                        li    <- lift $ ask
+                        li    <- lift ask
                         unless (show mch `member` sys) 
                             $ left [Error (format "Machine {0} refines a non-existant machine: {1}" (_name m) mch) li]
                         when (_name m `member` anc) 
@@ -319,7 +341,7 @@ imports = visit_doc []
                              , ("intervals"  , interval_theory) ]
                         msg = "Undefined theory: {0} "
                             -- add suggestions
-                    li <- lift $ ask
+                    li <- lift ask
                     case th_name `L.lookup` th of
                         Nothing -> left [Error (format msg th_name) li]
                         Just th -> 
@@ -339,7 +361,7 @@ declarations = visit_doc []
                         let msg = "repeated declaration: {0}"
                         vs <- get_variables 
                             (context m) 
-                            (all_notation m) xs
+                            xs
                         let inter =                  S.fromList (map fst vs) 
                                     `S.intersection` keysSet (variables m)
                         toEither $ error_list 
@@ -353,7 +375,7 @@ declarations = visit_doc []
                         let msg = "repeated declaration: {0}"
                         vs <- get_variables 
                             (context m) 
-                            (all_notation m) xs
+                            xs
                         old_event <- bind 
                             (format "event '{0}' is undeclared" evt)
                             $ evt `M.lookup` events m
@@ -374,7 +396,7 @@ declarations = visit_doc []
                         
                         vs <- get_variables 
                             (context m) 
-                            (all_notation m) xs
+                            xs
                         old_event <- bind
                             (format "event '{0}' is undeclared" evt)
                             $ evt `M.lookup` events m
@@ -396,7 +418,7 @@ declarations = visit_doc []
                         let err = "repeated definition"
                         vs <- get_variables 
                             (context m) 
-                            (all_notation m) xs
+                            xs
                         return m { theory = (theory m) { 
                                 consts = merge 
                                     (fromListWith (error err) vs) 
@@ -407,12 +429,49 @@ declarations = visit_doc []
                         let err = "repeated definition"
                         vs <- get_variables 
                             (context m) 
-                            (all_notation m) xs
+                            xs
                         return m { theory = (theory m) { 
                                 dummies = merge 
                                     (fromListWith (error err) vs) 
                                     (dummies $ theory m) } } 
             )
+        ]
+
+tr_hint' :: Phase2
+         -> MachineId
+         -> Map String Var
+         -> [Label]
+         -> [LatexDoc]
+         -> TrHint
+         -> RWS LineInfo [Error] System TrHint
+tr_hint' p2 m vs lbls = visit_doc []
+        [ ( "\\index"
+          , CmdBlock $ \(String x, xs) (TrHint ys z) -> do
+                evs <- get_events p2 m lbls
+                -- evts <- bind_all lbls
+                --     (format "'{1}' is not an event of '{0}'" $ _name m)
+                --     (`M.lookup` events m)
+                expr <- parse_expr' 
+                    (machine_parser p2 m `with_vars` vs) 
+                    xs
+                -- expr <- get_expr_with_ctx m 
+                --     (Context M.empty vs M.empty M.empty M.empty) xs
+                _ <- bind_all evs 
+                    (format "'{0}' is not an index of '{1}'" x) 
+                    (\e -> x `M.lookup` (event_indices p2 m ! e))
+                -- toEither $ error_list $ map (\evt ->
+                --     ( not $ x `member` indices evt 
+                --     , format "'{0}' is not an index of '{1}'" x lbls )
+                --     ) evts
+                return $ TrHint (insert x expr ys) z)
+        , ( "\\lt"
+          , CmdBlock $ \(One prog) (TrHint ys z) -> do
+                let msg = "Only one progress property needed for '{0}'"
+                toEither $ error_list 
+                    [ ( not $ isNothing z
+                      , format msg lbls )
+                    ]
+                return $ TrHint ys (Just prog))
         ]
 
 tr_hint :: Machine
@@ -448,6 +507,24 @@ check_types :: Either String a -> EitherT [Error] (RWS LineInfo [Error] System) 
 check_types c = EitherT $ do
     li <- ask
     return $ either (\x -> Left [Error x li]) Right c
+
+get_event :: Phase2 -> MachineId -> Label -> M EventId
+get_event (Phase2 evts _ _ _ _ _ _ _ _) m ev_lbl = do
+            bind
+                (format "event '{0}' is undeclared" ev_lbl)
+                $ ev_lbl `M.lookup` (evts ! m)
+
+get_events :: Phase2 -> MachineId -> [Label] -> M [EventId]
+get_events (Phase2 evts _ _ _ _ _ _ _ _) m ev_lbl = do
+            bind_all ev_lbl
+                (format "event '{0}' is undeclared")
+                $ (`M.lookup` (evts ! m))
+
+machine_parser :: Phase2 -> MachineId -> ParserSetting
+machine_parser (Phase2 _ _ _ _ _ _ mch _ _) m = mch ! m
+
+event_indices :: Phase2 -> MachineId -> Map EventId (Map String Var)
+event_indices (Phase2 _ _ _ _ indices _ _ _ _) m = indices ! m
 
     -- Todo: report an error if we create two assignments (or other events 
     -- elements)
@@ -853,10 +930,10 @@ collect_refinement = visit_doc []
                             return $ Just (prog,pprop)
                         Nothing -> return Nothing
                     old_exp <- bind
-                        (format "'{0}' is not a valid schedule" $ M.fromJust old)
+                        (format "'{0}' is not a valid schedule" $ MM.fromJust old)
                         $ maybe (Just ztrue) (`M.lookup` sc) old
                     new_exp <- bind 
-                        (format "'{0}' is not a valid schedule" $ M.fromJust new)
+                        (format "'{0}' is not a valid schedule" $ MM.fromJust new)
                         $ maybe (Just ztrue) (`M.lookup` sc) new
                     let n         = length $ sched_ref old_event
                         rule      = (replace_fine evt old_exp new new_exp pprop)
@@ -913,7 +990,7 @@ collect_proofs = visit_doc
                         [   ( lbl `member` proofs (props m)
                             , format "a proof for {0} already exists" lbl )
                         ] 
-                    li <- lift $ ask
+                    li <- lift ask
                     s  <- bind 
                         (format "proof obligation does not exist: {0} {1}" 
                                 lbl 
@@ -934,7 +1011,7 @@ collect_proofs = visit_doc
         ] [
             ( "\\comment"
             , CmdBlock $ \(item',cmt') m -> do
-                li <- lift $ ask
+                li <- lift ask
                 let cmt = concatMap flatten cmt'
                     item = L.filter (/= '$') $ remove_ref $ concatMap flatten item'
                     prop = props m
@@ -978,7 +1055,7 @@ deduct_schedule_ref_struct li m = do
                     let f_sch = fine $ new_sched (events m ! evt)
                         progs = progress (props m) `union` progress (inh_props m) 
                     unless (maybe True (`member` progs) lt)
-                        $ tell [Error (format "'{0}' is not a progress property" $ M.fromJust lt) li]
+                        $ tell [Error (format "'{0}' is not a progress property" $ MM.fromJust lt) li]
                     unless (isJust f_sch == isJust lt)
                         $ if isJust f_sch
                         then tell [Error (format fmt0 lbl evt) li]

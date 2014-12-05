@@ -645,11 +645,12 @@ get_predicate m ctx opt ys = do
 
 data ParserSetting = PSetting 
     { language :: Notation
-    , decls :: Context
-    , primed_vars :: Context
-    , dum_ctx :: Context
-    , is_step :: Bool
-    , free_dummies :: Bool
+    , is_step  :: Bool
+    , sorts    :: Map String Sort
+    , decls    :: Map String Var
+    , dum_ctx  :: Map String Var
+    , primed_vars   :: Map String Var
+    , free_dummies  :: Bool
     , expected_type :: Maybe Type
     }
 
@@ -657,35 +658,61 @@ default_setting :: ParserSetting
 default_setting = PSetting 
     { language = undefined
     , decls = undefined
-    , primed_vars = empty_ctx
-    , dum_ctx = empty_ctx
+    , sorts = undefined
+    , primed_vars = M.empty
+    , dum_ctx = M.empty
     , is_step = False
     , free_dummies = False
     , expected_type = (Just bool)
     }
 
+setting_from_context :: Notation -> Context -> ParserSetting
+setting_from_context notation ctx = default_setting
+        { language = notation
+        , sorts = ss
+        , decls = vs `union` M.mapMaybe f ds
+        , dum_ctx = dums }
+    where
+        Context ss vs _ ds dums = ctx
+        f (Def [] n [] t _) = Just $ Var n t
+        f _ = Nothing
+
+with_vars :: ParserSetting -> Map String Var -> ParserSetting
+with_vars setting vs = setting { decls = vs `union` decls setting }
+
 theory_setting :: Theory -> ParserSetting
-theory_setting th = default_setting
-    { language = th_notation th
-    , decls = theory_ctx th }
+theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 machine_setting :: Machine -> ParserSetting
-machine_setting m = default_setting
-    { language = th_notation $ theory m
-    , decls = assert_ctx m `merge_ctx` theory_ctx (theory m)
-    , primed_vars = step_ctx m
-    , dum_ctx = dummy_ctx m }
+machine_setting m = setting
+        { decls = variables m `union` decls setting
+        , primed_vars = M.mapKeys (++ "'") $ M.map prime $ variables m }
+    where
+        setting = theory_setting (theory m)
 
 schedule_setting :: Machine -> Event -> ParserSetting
-schedule_setting m evt = set { decls = evt_live_ctx evt `merge_ctx` decls set }
+schedule_setting m evt = setting { decls = indices evt `union` decls setting }
     where
-        set = machine_setting m 
+        setting = machine_setting m 
 
 event_setting :: Machine -> Event -> ParserSetting
-event_setting m evt = set 
-        { decls = evt_saf_ctx evt `merge_ctx` decls set }
+event_setting m evt = setting
+        { decls = params evt `union` decls setting }
     where
-        set = schedule_setting m evt
+        setting = schedule_setting m evt
+
+mkSetting :: Notation 
+          -> Map String Sort    -- Types
+          -> Map String Var     -- Plain variables
+          -> Map String Var     -- Primed variables
+          -> Map String Var     -- Dummy variables
+          -> ParserSetting
+mkSetting notat sorts plVar prVar dumVar = default_setting
+        { language = notat 
+        , sorts = sorts
+        , decls = (plVar `union` prVar)
+        , primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
+        , dum_ctx = dumVar }
 
 parse_expr' :: ( Monad m ) 
             => ParserSetting
@@ -694,11 +721,12 @@ parse_expr' :: ( Monad m )
 parse_expr' set ys = do
         let ctx0
                 | is_step set = primed_vars set
-                | otherwise   = empty_ctx
+                | otherwise   = M.empty
             ctx1 
                 | free_dummies set = dum_ctx set
-                | otherwise        = empty_ctx
-        x  <- parse_expr (decls set `merge_ctx` ctx0 `merge_ctx` ctx1)
+                | otherwise        = M.empty
+            ctx = Context (sorts set) (unions [decls set, ctx0, ctx1]) M.empty M.empty (dum_ctx set)
+        x  <- parse_expr ctx
                 (language set)
                 (concatMap flatten_li xs)
         li <- get_line_info xs
@@ -723,9 +751,10 @@ get_predicate' :: ( Monad m )
                -> Context
                -> [LatexDoc] 
                -> EitherT [Error] (RWST LineInfo [b] System m) Expr
-get_predicate' th ctx ys = parse_expr' default_setting 
-        { language = th_notation th
-        , decls = ctx } ys
+get_predicate' th ctx ys = parse_expr' 
+        (setting_from_context 
+            (th_notation th) ctx)
+        ys
 
 get_assert :: ( Monad m ) 
            => Machine

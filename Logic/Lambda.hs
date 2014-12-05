@@ -6,7 +6,7 @@ module Logic.Lambda
 where
 
     -- Modules
-import Logic.Expr   hiding ( rename )
+import Logic.Expr   hiding ( rename, free_vars )
 import Logic.Proof
 
     -- Libraries

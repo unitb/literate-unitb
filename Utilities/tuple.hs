@@ -8,6 +8,7 @@
 module Utilities.Tuple where
 
     -- Libraries
+import Data.Monoid
 import Data.Typeable
 
 infixr 5 :+:
@@ -60,6 +61,8 @@ type instance Take () xs = ()
 type instance Take (S n) (x:+:xs) = x :+: Take n xs
 type instance Take n () = ()
 
+type Cons a b = Tuple (a :+: TypeList b)
+
 type family Drop a b :: *
 type instance Drop () xs = xs
 type instance Drop (S n) (x:+:xs) = Drop n xs
@@ -87,6 +90,10 @@ data S a = S a
     deriving Typeable
 
 data Tuple1 a = One a
+
+instance Monoid a => Monoid (Tuple1 a) where
+    mempty = One $ mempty
+    mappend (One x) (One y) = One $ x `mappend` y
 
 class Number a where
     value :: a -> Int
@@ -257,8 +264,13 @@ instance IsTuple (a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,
     toTuple (x0,x1,x2,x3,x4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29) = (x0:+:x1:+:x2:+:x3:+:x4:+:a5:+:a6:+:a7:+:a8:+:a9:+:a10:+:a11:+:a12:+:a13:+:a14:+:a15:+:a16:+:a17:+:a18:+:a19:+:a20:+:a21:+:a22:+:a23:+:a24:+:a25:+:a26:+:a27:+:a28:+:a29)
     fromTuple (x0:+:x1:+:x2:+:x3:+:x4:+:a5:+:a6:+:a7:+:a8:+:a9:+:a10:+:a11:+:a12:+:a13:+:a14:+:a15:+:a16:+:a17:+:a18:+:a19:+:a20:+:a21:+:a22:+:a23:+:a24:+:a25:+:a26:+:a27:+:a28:+:a29)= (x0,x1,x2,x3,x4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29) 
 
+cons :: (IsTuple a1, IsTuple a, TypeList a ~ (x :+: TypeList a1)) =>
+              x -> a1 -> a
+cons x xs = fromTuple (x :+: toTuple xs)
+
 class IsTypeList a where
     size :: a -> Length a
+    len  :: a -> Int
     append :: IsTypeList b => a -> b -> Append a b
     tmap :: (forall b. b -> f b) -> a -> TMap f a
     tfoldl :: (forall b c. b -> c -> f b c) -> k -> a -> TFoldL f k a
@@ -271,16 +283,19 @@ class IsTypeList a where
 
 instance IsTypeList () where
     size _ = ()
+    len _  = 0
     append _ x = x
     tmap _ _ = ()
     tfoldl _ x _ = x
     tfoldr _ x _ = x
+
     -- treverse _ = ()
     -- ttake _ _ = ()
     -- tdrop _ _ = ()
 
 instance IsTypeList xs => IsTypeList (x :+: xs) where
     size _ = S $ size (undefined :: xs)
+    len (_) = 1 + len (undefined :: xs)
     append (x :+: xs) ys = x :+: append xs ys
     tmap f (x :+: xs) = f x :+: tmap f xs
     tfoldl f x (y :+: ys) = f x (tfoldl f y ys)

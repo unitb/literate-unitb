@@ -1,0 +1,14 @@
+\textbf{invariants}
+\begin{block}
+\item[ \eqref{m2:inv0} ]$obj \in \intervalR{p}{q} \tfun node $ %
+\item[ \eqref{m2:inv1} ]$val \in live \tfun \G $ %
+\item[ \eqref{m2:inv2} ]$\qforall{i}{ \betweenR{p}{i}{q} }{ ~ qe.i = val.(obj.i) } $ %
+\item[ \eqref{m2:inv3} ]$node \subseteq live $ %
+\item[ \eqref{m2:inv4} ]$\injective.obj $ %
+\item[ \eqref{m2:inv5} ]$insL \in (\dom.pshL) \tfun live $ %
+\item[ \eqref{m2:inv6} ]$\qforall{r} %
+			{ r \in \dom.pshL } %
+			{ pshL.r = val.(insL.r) } $ %
+\item[ \eqref{m2:inv7} ]$\injective.insL $ %
+\item[ \eqref{m2:inv8} ]$\ran.insL \binter node = \emptyset $ %
+\end{block}

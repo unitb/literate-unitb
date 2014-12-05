@@ -75,7 +75,7 @@ ctx_declarations _ = visit_doc []
             ,   CmdBlock $ \(One xs) th -> do
                         vs <- get_variables 
                             (theory_ctx th) 
-                            (th_notation th) xs
+                            xs
                         return th { 
                                 consts = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -85,7 +85,7 @@ ctx_declarations _ = visit_doc []
             ,   CmdBlock $ \(One xs) th -> do
                         vs <- get_variables 
                             (theory_ctx th) 
-                            (th_notation th) xs
+                            xs
                         return th { 
                                 dummies = merge 
                                     (fromListWith (error "repeated definition") vs) 
@@ -161,7 +161,7 @@ ctx_imports _ = visit_doc []
                         li <- lift $ ask
                         var <- get_variables 
                             (theory_ctx th) 
-                            (th_notation th) optype
+                            optype
                         case var of
                             [(v,Var _ (Gen (USER_DEFINED s [Gen (USER_DEFINED p [t0, t1]),t2])))]
                                 |    s == fun_sort 

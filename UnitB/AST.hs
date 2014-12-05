@@ -126,7 +126,6 @@ data Event = Event
         { indices   :: Map String Var
         , sched_ref :: [ScheduleChange]
         , old_sched :: Schedule
---        , new_sched :: Schedule
         , scheds    :: Map Label Expr
         , params    :: Map String Var
         , old_guard :: Map Label Expr
@@ -134,7 +133,6 @@ data Event = Event
         , old_acts :: S.Set Label
         , actions  :: Map Label Action
         , eql_vars :: S.Set Var
-        -- , ba_predicate :: Map Label Expr 
         } deriving (Eq, Show)
 
 instance NFData Event where

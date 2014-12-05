@@ -1,0 +1,24 @@
+\noindent \ref{m1:moveout} [t] \textbf{event}
+\begin{block}
+\item \textbf{during}
+\begin{block}
+\item[ \eqref{c1} ]$t \in in  %
+		\1\land loc.t \in plf $ %
+\item[ \eqref{m3:mo:sch0} ]$loc.t \in osgn $ %
+\end{block}
+\item \textbf{when}
+\begin{block}
+\item[ \eqref{m3:mo:grd0} ]$loc.t \in osgn $ %
+\item[ \eqref{mo:g1} ]$t \in in $ %
+\item[ \eqref{mo:g2} ]$loc.t \in plf $ %
+\end{block}
+\item \textbf{begin}
+\begin{block}
+\item[ \eqref{SKIP:in} ]$in' = in$ %
+\item[ \eqref{a2} ]$loc' = loc \1 | t \fun ext $ %
+\item[ \eqref{m3:mo:act0} ]$isgn' = isgn$ %
+\item[ \eqref{m3:mo:act1} ]$osgn'  \2 = osgn  %
+	\setminus \{ loc.t \} $ %
+\end{block}
+\item \textbf{end} \\
+\end{block}

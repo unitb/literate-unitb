@@ -1,0 +1,26 @@
+\noindent \ref{m0:pop:left:non:empty} [r] \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ \eqref{m0:pop:left:non:emptym1:sch0} ]$r \in popL $ %
+  \end{block}
+  \item   \textbf{upon}
+  \begin{block}
+  \item[ \eqref{m0:pop:left:non:emptym1:sch1} ]$p < q $ %
+  \end{block}
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{m0:pop:left:non:emptym0:grd0} ]$p < q $ %
+  \item[ \eqref{m0:pop:left:non:emptym1:grd0} ]$r \in popL $ %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{m0:pop:left:non:emptym0:act0} ]$qe \bcmeq \{ p \} \domsub qe $ %
+  \item[ \eqref{m0:pop:left:non:emptym0:act1} ]$p \bcmeq p\0+1 $ %
+  \item[ \eqref{m0:pop:left:non:emptym0:act3} ]$res \bcmeq qe.p $ %
+  \item[ \eqref{m0:pop:left:non:emptym0:act4} ]$emp \bcmeq \false $ %
+  \item[ \eqref{m0:pop:left:non:emptym1:a4} ]$popL \bcmeq popL \setminus \{ r \} $ %
+  \item[ \eqref{m0:pop:left:non:emptym1:a5} ]$resL \bcmeq resL \1 | r \fun qe.p $ %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

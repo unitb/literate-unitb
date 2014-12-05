@@ -27,7 +27,8 @@ module Logic.Expr.Expr
     , fun_type, fun_sort
     , maybe_type
     , pair, pair_type, pair_sort
-    , pretty_print' 
+    , pretty_print', free_vars
+    , var_decl
     )
 where
 
@@ -36,9 +37,10 @@ import Logic.Expr.Label
 import Logic.Expr.Classes
 import Logic.Expr.Type
 
-    -- library
+    -- Library
 import           GHC.Generics
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq
 import Control.Monad.Reader
 
@@ -213,7 +215,7 @@ type FODef = AbsDef FOType
 type Def = AbsDef GenericType
 
 data AbsDef t = Def [t] String [AbsVar t] t (AbsExpr t)
-    deriving (Eq,Generic)
+    deriving (Eq,Ord,Generic)
 
 instance Show StrList where
     show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
@@ -418,6 +420,19 @@ used_var :: TypeSystem t => AbsExpr t -> S.Set (AbsVar t)
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
+
+free_vars :: Context -> Expr -> M.Map String Var
+free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
+    where
+        f xs (Word v@(Var n _))
+            | n `M.member` dum = (n,v):xs
+            | otherwise      = xs
+        f xs v@(Binder _ vs _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
+        f xs v = visit f xs v
+
+var_decl :: String -> Context -> Maybe Var
+var_decl s (Context _ m _ _ d) = 
+    M.lookup s m <|> M.lookup s d
 
 used_fun :: TypeSystem t => AbsExpr t -> S.Set (AbsFun t)
 used_fun e = visit f s e

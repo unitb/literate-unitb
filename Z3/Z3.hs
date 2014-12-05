@@ -39,8 +39,6 @@ import Logic.Proof
     -- Libraries
 import Control.DeepSeq
 
-import Control.Applicative hiding ( empty, Const )
-    -- for the operator <|>
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
@@ -156,19 +154,6 @@ data Satisfiability = Sat | Unsat | SatUnknown
 
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
-
-free_vars :: Context -> Expr -> Map String Var
-free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
-    where
-        f xs (Word v@(Var n _))
-            | n `M.member` dum = (n,v):xs
-            | otherwise      = xs
-        f xs v@(Binder _ vs _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
-        f xs v = visit f xs v
-
-var_decl :: String -> Context -> Maybe Var
-var_decl s (Context _ m _ _ d) = 
-    M.lookup s m <|> M.lookup s d
 
 data Command = Decl FODecl 
     | Assert FOExpr (Maybe String)
@@ -608,28 +593,30 @@ discharge' n po = do
                 fail $ "discharge: " ++ xs
 
 verify :: [Command] -> Int -> IO (Either String Satisfiability)
-verify ys n = do
-        let xs = concat $ map reverse $ groupBy eq ys
-            !code = (unlines $ map (show . as_tree) xs) -- $ [Push] ++ xs ++ [Pop])
-            eq (Assert _) (Assert _) = True
-            eq _ _                   = False
+verify xs n = do
+        let ys = concat $ map reverse $ groupBy eq xs
+            !code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
+            eq x y = is_assert x && is_assert y
+            is_assert (Assert _ _) = True
+            is_assert _            = False
         (_,out,err) <- feed_z3 code n
-        let ln = lines out
-        r <- if ln == [] || 
-                (      ln /= ["sat"]
-                    && ln /= ["unsat"]
-                    && ln /= ["unknown"]
-                    && ln /= ["timeout"]) then do
-            return $ Left ("error: " ++ err ++ out)
-        else if ln == ["sat"] then do
+        let lns = lines out
+            res = take 1 lns
+        if length lns == 0 ||
+            (length lns > 1 && lns !! 1 /= "timeout") ||
+                (      res /= ["sat"]
+                    && res /= ["unsat"]
+                    && res /= ["unknown"]
+                    && res /= ["timeout"]) then do
+            return $ Left ("error: \n" ++ err ++ out)
+        else if res == ["sat"] then do
             return $ Right Sat
-        else if ln == ["unsat"] then 
+        else if res == ["unsat"] then do
             return $ Right Unsat
-        else if ln == ["unknown"] then do
+        else if res == ["unknown"] then do
             return $ Right SatUnknown
-        else do
-            unless (ln == ["timeout"]) 
-                $ error "verify: incomplete conditional"
+        else if (res == ["timeout"]) then do
             return $ Right SatUnknown
-        return r
+        else
+            fail "verify: incomplete conditional"
 

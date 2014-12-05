@@ -3,7 +3,7 @@
 {-# LANGUAGE OverlappingInstances, TemplateHaskell  #-}
 module Document.Expression 
     ( parse_expr, parse_expr' , oper, run_test
-    , get_variables, parse_oper )
+    , get_variables, get_variables', parse_oper )
 where
 
     -- Modules
@@ -230,8 +230,7 @@ type_t = do
                 $ get_type ctx "\\pfun"
             read_listP [Ident "\\pfun"]
             t2 <- type_t
-            t  <- return $ fun_type t t2
-            return t
+            return $ fun_type t t2
         else return t
 
 get_type :: Context -> String -> Maybe Sort
@@ -248,19 +247,30 @@ vars :: Parser [(String,Type)]
 vars = do
         vs <- sep1P word_or_command comma
         colon
-        t <- type_t
+        t  <- type_t
         return (map (\x -> (x,t)) vs)     
 
+get_variables' :: (Monad m, MonadReader LineInfo m)
+               => Map String Sort
+               -> [LatexDoc] 
+               -> EitherT [Error] m [(String, Var)]
+get_variables' types cs = 
+        get_variables 
+            (Context types M.empty 
+                M.empty M.empty M.empty)
+            cs
+
 get_variables :: (Monad m, MonadReader LineInfo m)
-              => Context -> Notation
+              => Context
               -> [LatexDoc] 
               -> EitherT [Error] m [(String, Var)]
-get_variables ctx n cs = do
+get_variables ctx cs = do
         LI fn i j <- lift $ ask
         toks <- hoistEither $ read_tokens 
-            (scan_expr n) fn m (i,j)
+            (scan_expr Nothing) fn m (i,j)
         xs   <- hoistEither $ read_tokens 
-            (runParser ctx n M.empty vars) 
+            (runParser ctx
+                undefined M.empty vars) 
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
@@ -592,11 +602,11 @@ option cmd = do
             return
             (return mempty)
         
-scan_expr :: Notation -> Scanner Char [(ExprToken,LineInfo)] 
+scan_expr :: Maybe Notation -> Scanner Char [(ExprToken,LineInfo)] 
 scan_expr n = do
         eat_space
         ys <- peek
-        b <- is_eof
+        b  <- is_eof
         if not b then do
             li <- get_line_info
             x  <- choice 
@@ -617,7 +627,7 @@ scan_expr n = do
                     xs <- many $ match_char isWord
                     ys <- option $ read_list "\'"
                     let zs = ws ++ x : xs ++ ys
-                    if zs `elem` map f (new_ops n)
+                    if isOper n zs
                         then return $ Operator zs
                         else return $ Ident zs
                 , match_char isSymbol >>= \x -> return $ Operator [x]
@@ -635,13 +645,15 @@ scan_expr n = do
                     let b  = take 5 ys == take 5 cs 
                         zs
                             | b         = ""
-                            | otherwise = " '" ++ take 5 ys ++ "'"
-                    fail $ "invalid token: '" ++ take 5 cs ++ "'" ++ zs)
+                            | otherwise = format " '{0}'" (take 5 ys)
+                    fail $ format "invalid token: '{0}'{1}" (take 5 cs) zs)
                 return
             xs <- scan_expr n
             return $ (x,li) : xs
         else return []
     where
+        isOper (Just n) zs = zs `elem` map f (new_ops n)
+        isOper Nothing _ = False
         f (Right (BinOperator _ tok _)) = tok
         f (Left (UnaryOperator _ tok _)) = tok
 
@@ -657,7 +669,7 @@ parse_expr' ctx@(Context _ vars _ defs _)  n input = do
                     guard (L.null args)
                     Just $ Const xs n t
         li   <- lift $ ask
-        toks <- hoistEither $ read_tokens (scan_expr n)
+        toks <- hoistEither $ read_tokens (scan_expr $ Just n)
             (file_name li) 
             input (line li, column li)
         !e   <- hoistEither $ read_tokens 
@@ -689,7 +701,7 @@ parse_oper :: ( Monad m
            -> EitherT [Error] m BinOperator
 parse_oper n c = do
         li   <- lift $ ask
-        toks <- hoistEither $ read_tokens (scan_expr n)
+        toks <- hoistEither $ read_tokens (scan_expr $ Just n)
             (file_name li) 
             c (line li, column li)
         !e   <- hoistEither $ read_tokens 

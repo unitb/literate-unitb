@@ -5,8 +5,9 @@
 module Document.Refinement where
 
     -- Module
-import Document.Visitor
+import Document.Pipeline
 import Document.Proof
+import Document.Visitor
 
 import UnitB.AST
 import UnitB.PO
@@ -47,6 +48,16 @@ data RuleParserParameter =
         Label
         [Label]
         [LatexDoc]
+    | RuleParserDecl 
+        Phase2
+        MachineId
+        (Map Label ProgressProp)
+        (Map Label SafetyProp)
+        (Map Label Transient)
+        Label
+        [Label]
+        [LatexDoc]
+        ParserSetting
 
 data Add = Add
     deriving (Eq,Typeable,Show)
@@ -78,8 +89,37 @@ instance RefRule a => RuleParser (a,()) where
             let cmd = return x :: ERWS a
             parse_rule (cmd,()) xs y z
 
+getProgress :: RuleParserParameter -> Map Label ProgressProp
+getProgress (RuleParserParameter _ prog _ _ _ _) = prog
+getProgress (RuleParserDecl _ _ prog _ _ _ _ _ _) = prog
+
+getSafety :: RuleParserParameter -> Map Label SafetyProp
+getSafety (RuleParserParameter _ _ saf _ _ _) = saf
+getSafety (RuleParserDecl _ _ _ saf _ _ _ _ _) = saf
+
+getTransient :: RuleParserParameter -> Map Label Transient
+getTransient (RuleParserParameter m _ _ _ _ _) = transient $ props m
+getTransient (RuleParserDecl _ _ _ _ tr _ _ _ _) = tr
+
+getGoal :: RuleParserParameter -> Label
+getGoal (RuleParserParameter _ _ _ goal_lbl _ _) = goal_lbl
+getGoal (RuleParserDecl _ _ _ _ _ goal_lbl _ _ _) = goal_lbl
+
+getHypotheses :: RuleParserParameter -> [Label]
+getHypotheses (RuleParserParameter _ _ _ _ hyps_lbls _) = hyps_lbls
+getHypotheses (RuleParserDecl _ _ _ _ _ _ hyps_lbls _ _) = hyps_lbls
+
+getHint :: RuleParserParameter -> [LatexDoc]
+getHint (RuleParserParameter _ _ _ _ _ hint) = hint
+getHint (RuleParserDecl _ _ _ _ _ _ _ hint _) = hint
+
+getParser :: RuleParserParameter -> ParserSetting
+getParser (RuleParserParameter m _ _ _ _ _) = machine_setting m
+getParser (RuleParserDecl _ _ _ _ _ _ _ _ parser) = parser
+
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ prog _ _ _ _) = do
+    parse_rule (f,_) (x:xs) rule param = do
+        let prog = getProgress param
         case M.lookup x prog of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -90,7 +130,8 @@ instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter _ _ saf _ _ _) = do
+    parse_rule (f,_) (x:xs) rule param = do
+        let saf = getSafety param
         case M.lookup x saf of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
@@ -101,8 +142,9 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
-    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
-        case M.lookup x $ transient $ props m of
+    parse_rule (f,_) (x:xs) rule param = do
+        let tr = getTransient param
+        case M.lookup x tr of
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
@@ -111,18 +153,13 @@ instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RefRule a => RuleParser ([Label] -> [Event] -> ERWS a, ()) where
-    parse_rule (f,_) es rule (RuleParserParameter m _ _ _ _ _) = do
+instance RefRule a => RuleParser ([Label] -> ERWS a, ()) where
+    parse_rule (f,_) es rule _ = do
         -- evts <- bind_all x
-        evts <- bind_all es 
-            (format "event {0} is undeclared") 
-            (`M.lookup` events m)
-        -- let (es,ys) = span (`M.member` events m) xs
-            -- evts = map (events m !) es
         li <- lift $ ask
         when (L.null es) 
             $ left [Error (format "refinement ({0}): at least one event is required" rule) li]
-        rule <- f es evts
+        rule <- f es
         return (Rule rule) -- ys rule param
 
 
@@ -138,10 +175,11 @@ instance RefRule a => RuleParser ([Label] -> [Event] -> ERWS a, ()) where
 --                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
 instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
-    parse_rule (f,_) xs rule (RuleParserParameter _ prog _ _ _ _) = do
+    parse_rule (f,_) xs rule param = do
             xs <- forM xs g
             return $ Rule (f xs)        
         where
+            prog = getProgress param
             g x = maybe (do
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li] )
@@ -149,10 +187,11 @@ instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
                 $ M.lookup x prog
 
 instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
-    parse_rule (f,_) xs rule (RuleParserParameter _ _ saf _ _ _) = do
+    parse_rule (f,_) xs rule param = do
             xs <- forM xs g
             return $ Rule (f xs)        
         where
+            saf = getSafety param
             g x = maybe (do
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li] )
@@ -163,7 +202,9 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
 parse :: RuleParser a
       => a -> String -> RuleParserParameter
       -> EitherT [Error] (RWS LineInfo [Error] System) Rule
-parse rc n param@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
+parse rc n param = do
+        let goal_lbl = getGoal param
+            hyps_lbls = getHypotheses param
         add_proof_edge goal_lbl hyps_lbls
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
@@ -187,19 +228,19 @@ assert_hyp m suff cnst hyps prop =
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
 
-data Ensure = Ensure ProgressProp [Label] [Event] TrHint
+data Ensure = Ensure ProgressProp [Label] TrHint
     deriving (Eq,Typeable,Show)
 
 instance RefRule Ensure where
     rule_name _ = "ensure"
-    refinement_po (Ensure (LeadsTo vs p q) lbls _ hint) m = do
+    refinement_po (Ensure (LeadsTo vs p q) lbls hint) m = do
             prop_saf m ("", Unless vs p q Nothing)
             prop_tr m ("", Transient (symbol_table vs) 
                                              (p `zand` znot q) lbls 
                                              hint )
 
 instance NFData Ensure where
-    rnf (Ensure x0 x1 x2 x3) = rnf (x0,x1,x2,x3)
+    rnf (Ensure x0 x1 x2) = rnf (x0,x1,x2)
 
 data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
@@ -251,7 +292,9 @@ mk_discharge _ _ _    = error "expecting at most one safety property"
 
 parse_discharge :: String -> RuleParserParameter
                 -> EitherT [Error] (RWS LineInfo [Error] System) Rule
-parse_discharge rule params@(RuleParserParameter _ _ _ goal_lbl hyps_lbls _) = do
+parse_discharge rule params = do
+    let goal_lbl = getGoal params
+        hyps_lbls = getHypotheses params
     li <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
         $ left [Error (format "too many hypotheses in the application of the rule: {0}" 
@@ -414,7 +457,12 @@ instance NFData Induction where
 parse_induction :: (Monad m)
                 => String -> RuleParserParameter
                 -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
-parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
+parse_induction rule param = do
+        let prog = getProgress param
+            goal_lbl = getGoal param
+            hyps_lbls = getHypotheses param
+            hint = getHint param
+            parser = getParser param
         li <- ask
         toEither $ error_list
             [   ( length hyps_lbls /= 1
@@ -431,26 +479,22 @@ parse_induction rule (RuleParserParameter m prog _ goal_lbl hyps_lbls hint) = do
         let pr0@(LeadsTo fv0 _ _) = prog ! goal_lbl
             pr1@(LeadsTo fv1 _ _) = prog ! h0
         (dir,var,bound) <- case find_cmd_arg 3 ["\\var"] hint of
-            Just (_,_,[var,dir,bound],_) -> do
-                    var   <- get_expr_with_ctx m 
-                            (Context M.empty (symbol_table fv0) M.empty M.empty M.empty)
-                            var
-                    bound <- get_expr m WithFreeDummies bound
-                    dir  <- case map toLower $ concatMap flatten dir of
-                        "up"   -> return Up
-                        "down" -> return Down
-                        _      -> left [Error "expecting a direction for the variant" li]
-                    var <- hoistEither $ either
-                        (\x -> Left [Error x li]) 
-                        Right
-                        $ (zcast int)
-                        $ Right var
-                    bound <- hoistEither $ either
-                        (\x -> Left [Error x li])
-                        Right
-                        $ zcast int
-                        $ Right bound
-                    return (dir,var,bound)
+            Just (_,_,[var,dir,bound],_) -> toEither $ do
+                var   <- fromEither ztrue $ parse_expr' 
+                        (parser `with_vars` symbol_table fv0)
+                               { expected_type = Just int }
+                        var
+                bound <- fromEither ztrue $ parse_expr' -- m WithFreeDummies bound
+                        parser { free_dummies = True
+                               , expected_type = Just int }
+                        bound
+                dir  <- case map toLower $ concatMap flatten dir of
+                    "up"   -> return Up
+                    "down" -> return Down
+                    _      -> do
+                        tell [Error "expecting a direction for the variant" li]
+                        return (error "induction: unreadable")
+                return (dir,var,bound)
             Nothing -> left [Error "expecting a variant" li]
             _ -> left [Error "invalid variant" li]
         dum <- case fv1 \\ fv0 of

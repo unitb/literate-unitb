@@ -1,0 +1,27 @@
+\noindent \ref{m0:pop:left:succ} [r] \textbf{event}
+\begin{block}
+\item \textbf{during}
+\begin{block}
+\item[ \eqref{m0:pop:left:succm1:sch0} ]$r \in popL \land p < q $ %
+\end{block}
+\item \textbf{when}
+\begin{block}
+\item[ \eqref{m0:pop:left:succm0:grd0} ]$p < q $ %
+\item[ \eqref{m0:pop:left:succm1:grd0} ]$r \in popL $ %
+\end{block}
+\item \textbf{begin}
+\begin{block}
+\item[ \eqref{m0:pop:left:succm0:act0} ]$qe' \1= \{ p \} \domsub qe $ %
+\item[ \eqref{m0:pop:left:succm0:act1} ]$p' = p\0+1 $ %
+\item[ \eqref{m0:pop:left:succm0:act2} ]$q' \1= q $ %
+\item[ \eqref{m0:pop:left:succm0:act3} ]$res' = qe.p $ %
+\item[ \eqref{m0:pop:left:succm0:act4} ]$emp' = (p = q) $ %
+\item[ \eqref{m0:pop:left:succm1:a0} ]$pshL' = pshL $ %
+\item[ \eqref{m0:pop:left:succm1:a1} ]$pshR' = pshR $ %
+\item[ \eqref{m0:pop:left:succm1:a2} ]$popR' = popR $ %
+\item[ \eqref{m0:pop:left:succm1:a3} ]$resR' = resR $ %
+\item[ \eqref{m0:pop:left:succm1:a4} ]$popL' = popL \setminus \{ r \} $ %
+\item[ \eqref{m0:pop:left:succm1:a5} ]$resL' = resL | r \fun qe.p $ %
+\end{block}
+\item \textbf{end} \\
+\end{block}

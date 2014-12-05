@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
 module Document.Tests.TrainStation where
 
     -- Modules
@@ -19,15 +20,73 @@ import Z3.Z3 hiding ( verify )
 
     -- Libraries
 import Control.Exception ( SomeException, handle )
+import Control.Monad.State
 
-import           Data.List ( intercalate )
+import qualified Data.List as L -- ( intercalate, filter )
 import           Data.Map hiding ( map )
 import qualified Data.Set as S
 
 import Tests.UnitTest
+import Test.QuickCheck hiding (label)
 
 import Utilities.Format
 import Utilities.Syntactic
+
+brackets :: String -> (Int,Int)
+brackets ln = execState 
+        (forM_ ln $ \c -> do
+            (cl,op) <- get
+            if c == '(' then
+                put (cl,op+1)
+            else if c == ')' then
+                if op == 0 
+                    then put (cl+1,op)
+                    else put (cl,op-1)
+            else return ()
+        ) (0,0)
+
+combine :: (Int,Int) -> (Int,Int) -> (Int,Int)
+combine (o0,c0) (o1,c1) 
+    | c0 <= o1  = (o0 + o1 - c0, c1)
+    | otherwise = (o0, c1 + c0 - o1)
+
+groupBrack :: [String] -> [String]
+groupBrack [] = []
+groupBrack [x] = [x]
+groupBrack (x0:x1:xs)
+        | op == 0    = x0 : groupBrack (x1:xs)
+        | otherwise = groupBrack $ (x0 ++ "\n" ++ x1) : xs
+    where
+        (_,op) = brackets x0
+
+prop_brackets :: BrackString -> BrackString -> Bool
+prop_brackets (BrackString xs) (BrackString ys) = combine (brackets xs) (brackets ys) == brackets (xs ++ ys)
+
+prop_open_brack :: Bool
+prop_open_brack = brackets ")" == (1,0)
+
+prop_close_brack :: Bool
+prop_close_brack = brackets "(" == (0,1)
+
+prop_open_close :: Bool
+prop_open_close = brackets ")(" == (1,1)
+
+prop_close_open :: Bool
+prop_close_open = brackets "()" == (0,0)
+
+data BrackString = BrackString String
+
+instance Show BrackString where
+    show (BrackString xs) = show xs
+
+instance Arbitrary BrackString where
+    arbitrary = do
+        liftM BrackString $ listOf $ elements "(x)"
+
+return []
+
+runSpec :: IO Bool
+runSpec = $quickCheckAll
 
 test_case :: TestCase
 test_case = Case "train station example" test True
@@ -53,6 +112,7 @@ part1 = test_cases
             , (StringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
             , (StringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
+            , (Case "test 19, quickcheck brackets" runSpec True)
             ]
 part2 :: IO Bool
 part2 = test_cases
@@ -73,6 +133,7 @@ part4 = test_cases
             , (POCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (POCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
+
 part5 :: IO Bool
 part5 = test_cases
             [ (POCase "test 16, verification, proof by parts" case16 result16)
@@ -94,6 +155,16 @@ blk_sort :: Sort
 blk_sort = Sort "\\BLK" "BLK" 0
 blk_type :: Type
 blk_type = Gen $ USER_DEFINED blk_sort []
+
+universe :: Type -> Expr
+train_def :: Def
+loc_def :: Def
+block_def :: Def
+
+universe t = (ztypecast "const" (set_type t) ztrue)
+train_def = Def [] "TRAIN" [] (set_type train_type) (universe train_type)
+loc_def = Def [] "LOC" [] (set_type loc_type) (universe loc_type)
+block_def = Def [] "BLK" [] (set_type blk_type) (universe blk_type)
 
 train    :: ExprP
 loc_cons :: ExprP
@@ -126,6 +197,10 @@ machine0 = (empty_machine "train0")
                     ,  ("arithmetic", arithmetic)
 --                    ,  function_theory train_type loc_type
                     ]
+            ,  defs = fromList 
+                    [  ("\\TRAIN", train_def)
+                    ,  ("\\LOC", loc_def)
+                    ,  ("\\BLK", block_def) ]
             ,  types   = symbol_table 
                     [ train_sort
                     , loc_sort
@@ -137,20 +212,14 @@ machine0 = (empty_machine "train0")
                                ++ map (\t -> Var t $ blk_type) 
                                 [ "p","q" ])
             ,  fact    = fromList 
-                    [ (label "\\BLK-def", axm7)
-                    , (label "\\LOC-def", axm8) 
-                    , (label "\\TRAIN-def", axm6) 
-                    , (label "axm0", axm0)
+                    [ (label "axm0", axm0)
                     , (label "asm2", axm2)
                     , (label "asm3", axm3) 
                     , (label "asm4", axm4) 
                     , (label "asm5", axm5) 
                     ]
             ,  consts  = fromList
-                    [  ("\\TRAIN", train_var)
-                    ,  ("\\LOC", loc_var)
-                    ,  ("\\BLK", block_var)
-                    ,  ("ent", ent_var)
+                    [  ("ent", ent_var)
                     ,  ("ext", ext_var)
                     ,  ("PLF", plf_var)
                     ]
@@ -1861,3 +1930,4 @@ case18 = do
 --            Right [(_,pos)] -> do   
 --                forM_ (map show $ keys $ pos) putStrLn
 --            _ -> return () -- $ show x
+

@@ -96,4 +96,4 @@ tests path = do
             return (concatMap flatten tree))
         return (case x of
             Right xs -> xs
-            Left msgs -> error $ unlines $ map (\(Error xs (LI _ i j)) -> format "error ({0},{1}): {2}" i j xs) msgs)
+            Left msgs -> error $ unlines $ map report msgs)
