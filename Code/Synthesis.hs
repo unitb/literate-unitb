@@ -48,10 +48,10 @@ eval_expr m e =
             Word (Var n _)
                 | n `M.member` variables m -> return $ "v_" ++ n
                 | otherwise              -> return $ "c_" ++ n
-            Const _ n _    
-                | n == "empty-fun" -> return "M.empty"
-                | n == "empty-set" -> return "S.empty"
-                | otherwise        -> return n
+            Const n _    -> return $ show n
+            FunApp f [] 
+                | name f == "empty-fun" -> return "M.empty"
+                | name f == "empty-set" -> return "S.empty"
             FunApp f0 [e0,FunApp f1 [e1,e2]] 
                 | name f0 == "ovl" && name f1 == "mk-fun" -> do
                     c0 <- eval_expr m e0

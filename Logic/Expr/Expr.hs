@@ -5,13 +5,14 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 module Logic.Expr.Expr 
-    ( Expr, AbsExpr (..), FOExpr
-    , ExprP, ExprPG, ExprPC, type_of
+    ( Expr, AbsExpr, GenExpr (..), FOExpr
+    , UntypedExpr, ExprP, ExprPG, ExprPC
+    , Value(..), type_of
     , Quantifier(..)
     , Context, FOContext, AbsContext(..)
     , Decl, FODecl, AbsDecl(..)
     , Fun, FOFun, AbsFun(..)
-    , Var, FOVar, AbsVar(..)
+    , Var, FOVar, AbsVar(..), UntypedVar
     , Def, FODef, AbsDef(..)
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -55,29 +56,42 @@ type Expr = AbsExpr GenericType
 
 type FOExpr = AbsExpr FOType
 
-data AbsExpr t = 
+type AbsExpr t = GenExpr t t
+
+type UntypedExpr = GenExpr () GenericType
+
+data GenExpr t a = 
         Word (AbsVar t) 
-        | Const [t] String t
-        | FunApp (AbsFun t) [AbsExpr t]
-        | Binder Quantifier [AbsVar t] (AbsExpr t) (AbsExpr t)
-        | Cast (Maybe String) (AbsExpr t) t
+        | Const Value t
+        | FunApp (AbsFun t) [GenExpr t a]
+        | Binder Quantifier [AbsVar t] (GenExpr t a) (GenExpr t a)
+        | Cast (GenExpr t a) a
+        | Lift (GenExpr t a) a
     deriving (Eq, Ord, Typeable, Generic)
+
+data Value = RealVal Double | IntVal Int
+    deriving (Eq,Ord,Generic)
+
+instance Show Value where
+    show (RealVal v) = show v
+    show (IntVal v)  = show v
 
 data Quantifier = Forall | Exists | Lambda
     deriving (Eq, Ord, Generic)
 
 instance NFData Quantifier where
 
-type ExprP = Either String Expr 
+type ExprP = Either [String] Expr 
 
-type ExprPG t = Either String (AbsExpr t)
+type ExprPG t = Either [String] (AbsExpr t)
 
-type ExprPC e = Either String e
+type ExprPC e = Either [String] e
 
 type_of :: TypeSystem t => AbsExpr t -> t
 type_of (Word (Var _ t))         = t
-type_of (Const _ _ t)            = t
-type_of (Cast _ _ t)             = t
+type_of (Const _ t)              = t
+type_of (Cast _ t)               = t
+type_of (Lift _ t)               = t
 type_of (FunApp (Fun _ _ _ t) _) = t
 type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
     where
@@ -114,7 +128,7 @@ null_type :: TypeSystem t => t
 null_type = make_type null_sort []
 
 unit :: TypeSystem t => AbsExpr t
-unit = Const [] "null" null_type
+unit = FunApp (Fun [] "null" [] null_type) []
 
 pair :: TypeSystem t => AbsExpr t -> AbsExpr t -> AbsExpr t
 pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
@@ -200,6 +214,8 @@ data AbsFun t = Fun [t] String [t] t
 instance NFData t => NFData (AbsFun t) where
     rnf (Fun xs n args t) = rnf (xs,n,args,t)
 
+type UntypedVar = AbsVar ()
+
 type Var = AbsVar GenericType
 
 type FOVar = AbsVar FOType
@@ -227,12 +243,12 @@ instance Show Quantifier where
     show Lambda = "lambda"
 
 instance TypeSystem t => Tree (AbsExpr t) where
-    as_tree (Cast Nothing e t)   = List [Str "as", as_tree e, as_tree t]
-    as_tree (Cast (Just kw) e t) = List [ List [Str "as", Str kw, as_tree t]
+    as_tree (Cast e t)   = List [Str "as", as_tree e, as_tree t]
+    as_tree (Lift e t) = List [ List [Str "as", Str "const", as_tree t]
                                         , as_tree e]
     as_tree (Word (Var xs _))    = Str xs
-    as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
-    as_tree (Const ys xs _)        = Str (xs ++ concatMap z3_decoration ys)
+    -- as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
+    as_tree (Const xs _)         = Str $ show xs
     as_tree (FunApp (Fun xs name _ _) [])  = 
         Str (name ++ concatMap z3_decoration xs)
     as_tree (FunApp (Fun xs name _ _) ts)  = 
@@ -245,8 +261,13 @@ instance TypeSystem t => Tree (AbsExpr t) where
             , as_tree r
             , as_tree xp ] ]
     rewriteM' _ s x@(Word _)           = return (s,x)
-    rewriteM' _ s x@(Const _ _ _)      = return (s,x)
-    rewriteM' f s (Cast _ e _)         = f s e 
+    rewriteM' _ s x@(Const _ _)        = return (s,x)
+    rewriteM' f s (Lift e t)           = do
+            (x,e') <- f s e
+            return (x, Lift e' t)
+    rewriteM' f s (Cast e t)           = do
+            (x,e') <- f s e
+            return (x, Cast e' t)
     rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1,FunApp g ys)
@@ -440,7 +461,7 @@ used_fun e = visit f s e
         f x y = S.union x (used_fun y)
         s = case e of
                 FunApp f _ -> S.singleton f
-                Const ts n t -> S.singleton $ Fun ts n [] t
+                -- Const ts n t -> S.singleton $ Fun ts n [] t
                 _          -> S.empty
 
 instance TypeSystem t => Named (AbsFun t) where
@@ -595,9 +616,12 @@ rename x y e = rewrite (rename x y) e
 
 instance NFData t => NFData (AbsExpr t) where
     rnf (Word x) = rnf x
-    rnf (Const xs n t) = rnf (xs,n,t)
-    rnf (Cast x0 x1 x2) = rnf (x0,x1,x2)
+    rnf (Const n t) = rnf (n,t)
+    rnf (Cast x0 x1) = rnf (x0,x1)
+    rnf (Lift x0 x1) = rnf (x0,x1)
     rnf (FunApp f args) = rnf (f,args)
     rnf (Binder q vs e0 e1) = rnf (q,vs,e0,e1)
 
-
+instance NFData Value where
+    rnf (RealVal v) = rnf v
+    rnf (IntVal v)  = rnf v

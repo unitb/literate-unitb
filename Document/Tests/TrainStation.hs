@@ -161,7 +161,7 @@ train_def :: Def
 loc_def :: Def
 block_def :: Def
 
-universe t = (ztypecast "const" (set_type t) ztrue)
+universe t = (zlift (set_type t) ztrue)
 train_def = Def [] "TRAIN" [] (set_type train_type) (universe train_type)
 loc_def = Def [] "LOC" [] (set_type loc_type) (universe loc_type)
 block_def = Def [] "BLK" [] (set_type blk_type) (universe blk_type)

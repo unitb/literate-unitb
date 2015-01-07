@@ -5,45 +5,13 @@ where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.TypeChecking
 
 import Data.Map as M ( insertWith, Map, empty, lookup ) --, (!) )
 
-data UntypedExpr = UE Expr
 
-instance Show UntypedExpr where
-    show (UE e) = show e
 
-instance Eq UntypedExpr where
-    UE (Word (Var n0 _)) == UE (Word (Var n1 _)) = n0 == n1
-    UE (Const _ n0 _) == UE (Const _ n1 _)       = n0 == n1
-    UE (FunApp (Fun _ f0 _ _) arg0) 
-     == UE (FunApp (Fun _ f1 _ _) arg1)          = 
-            f0 == f1
-         && map UE arg0 == map UE arg1
-    UE (Binder q0 v0 r0 t0) 
-     == UE (Binder q1 v1 r1 t1)                  =
-            q0 == q1
-         && map name v0 == map name v1
-         && UE r0 == UE r1
-         && UE t0 == UE t1
-    _ == _ = False
 
-instance Ord UntypedExpr where
-    compare (UE (Word (Var n0 _))) (UE (Word (Var n1 _))) 
-        = compare n0 n1
-    compare (UE (Const _ n0 _)) (UE (Const _ n1 _))       
-        = compare n0 n1
-    compare (UE (FunApp (Fun _ f0 _ _) arg0)) 
-            (UE (FunApp (Fun _ f1 _ _) arg1))
-        = compare 
-             (f0,map UE arg0)
-             (f1,map UE arg1)
-    compare (UE (Binder q0 v0 r0 t0))
-            (UE (Binder q1 v1 r1 t1))
-        = compare 
-            (q0,map name v0,UE r0,UE t0)
-            (q1,map name v1,UE r1,UE t1)
-    compare (UE x) (UE y) = compare x y
 
 data ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
     deriving Eq
@@ -52,10 +20,10 @@ empty_store :: ExprStore
 empty_store = ExprStore empty
 
 insert :: Expr -> String -> ExprStore -> ExprStore
-insert e str (ExprStore st) = ExprStore $ insertWith (++) (UE e) [str] st
+insert e str (ExprStore st) = ExprStore $ insertWith (++) (stripTypes e) [str] st
 
 get_string :: ExprStore -> Expr -> String
-get_string es e = maybe (to_latex e) head $ (M.lookup $ UE e) $ getMap es
+get_string es e = maybe (to_latex e) head $ (M.lookup $ stripTypes e) $ getMap es
 
 --(!) x y = maybe (error $ "ExprStore: expression not found: " ++ show y) id $ M.lookup y x
 

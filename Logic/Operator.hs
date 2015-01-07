@@ -47,10 +47,10 @@ type Matrix a b = G.Matrix a b
     -- o add a token for it in data type Operator
     -- o create a function that generates an expression
     --      from the token
-mk_expr :: BinOperator -> Expr -> Expr -> Either String Expr
+mk_expr :: BinOperator -> Expr -> Expr -> Either [String] Expr
 mk_expr (BinOperator _ _ f) x y = f (Right x) (Right y)
 
-mk_unary :: UnaryOperator -> Expr -> Either String Expr
+mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = f $ Right x
 
 data Assoc = LeftAssoc | RightAssoc | Ambiguous

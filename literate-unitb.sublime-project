@@ -1,0 +1,22 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+			, "file_include_patterns": [ "*hs"]
+			, "folder_exclude_patterns": [".*","bin","interface","gui","eifgens","src"]
+		}
+	]
+	, "build_systems":
+	[
+		{
+			"name": "Haskell / Literate Unit-B",
+			"cmd" : ["runghc", "$project_path/display_errors.hs", "$file", "$project_path", "ghc_errors.txt"],
+		    // "cmd": ["cat", "/Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb/compile_errors.txt"],
+			"file_regex": "^([^\\s]..*?):([0-9]*):?([0-9]*)",
+		    // "file_regex": "\\(\"(?<filename>.*)\", (?<line>[0-9]*)\\)",
+			"working_dir": "${project_path}",
+			"selector": "source.haskell"
+		}
+	]
+}

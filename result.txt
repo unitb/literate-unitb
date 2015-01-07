@@ -256,10 +256,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   29239 total
-    1261 Document/Machine.hs
-     868 UnitB/AST.hs
-     810 Document/Proof.hs
-     783 Document/Visitor.lhs
+   29728 total
+    1108 Document/Machine.hs
+     867 UnitB/AST.hs
+     809 Document/Proof.hs
+     742 Utilities/permutation.hs
      712 Document/Expression.hs
-Run time: 1m 46s
+Run time: 2m 4s

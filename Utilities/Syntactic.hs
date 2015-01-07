@@ -35,8 +35,8 @@ show_err xs = unlines $ map report xs
 class Syntactic a where
     line_info :: a -> LineInfo
 
-with_li :: LineInfo -> Either String b -> Either [Error] b
-with_li li = either (\x -> Left [Error x li]) Right
+with_li :: LineInfo -> Either [String] b -> Either [Error] b
+with_li li = either (\x -> Left $ map (`Error` li) x) Right
 
 
 report :: Error -> String

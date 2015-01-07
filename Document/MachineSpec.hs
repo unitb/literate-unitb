@@ -150,7 +150,7 @@ showExpr notation e = show_e e
                 unknown = printf "<unknown function: %s %s>" 
                             (show (name f)) 
                             (show $ M.keys m_ops)
-        show_e (Const _ n _) = n
+        show_e (Const n _) = show n
         show_e _ = "<unknown expression>"
         m_ops = M.fromList $ zip (map token xs) xs
             where

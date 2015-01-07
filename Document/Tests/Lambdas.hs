@@ -376,7 +376,8 @@ result4 = either g Right (do
         (f,_)      = var "f" (fun_type int int)
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
-        g x = Left [Error x (LI path4 0 0)]
+        li         = LI path4 0 0
+        g xs = Left $ map (`Error` li) xs
 
 path4 :: String
 path4 = "tests/cubes-t6.tex"
@@ -405,7 +406,8 @@ result5 = either g Right (do
         (k,k_decl) = var "k" int
         (n,_)      = var "n" int
         (bigN,_)   = var "N" int
-        g x = Left [Error x (LI path4 0 0)]
+        li         = LI path4 0 0
+        g xs = Left $ map (`Error` li) xs
 
 case5 :: IO (Either [Error] (Map Label SafetyProp))
 case5 = runEitherT (do

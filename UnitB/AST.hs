@@ -556,9 +556,10 @@ make_unique :: String           -- suffix to be added to the name of variables
 make_unique suf vs w@(Word (Var vn vt)) 
         | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
         | otherwise           = w
-make_unique _ _ c@(Const _ _ _)    = c
+make_unique _ _ c@(Const _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
-make_unique suf vs (Cast kw e t)     = Cast kw (make_unique suf vs e) t
+make_unique suf vs (Cast e t)        = Cast (make_unique suf vs e) t
+make_unique suf vs (Lift e t)        = Lift (make_unique suf vs e) t
 make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
     where
         local = (L.foldr M.delete vs (map name d))

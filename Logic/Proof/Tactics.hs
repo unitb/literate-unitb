@@ -370,7 +370,7 @@ new_fresh name t = do
                 lift $ put (lbls,S.insert (name ++ suf) ids)
                 return $ Var v t
             else do
-                rec (n+1) (show n)
+                rec (n+1 :: Int) (show n)
             ) 0 ""
 
 is_label_fresh :: Monad m => Label -> TacticT m Bool
@@ -392,7 +392,7 @@ fresh_label name = do
                 lift $ put (S.insert v lbls,ids)
                 return v
             else do
-                rec (n+1) (show n)
+                rec (n+1 :: Int) (show n)
             ) 0 ""
 
 free_vars_goal :: Monad m
@@ -501,11 +501,11 @@ instantiate_hyp hyp lbl ps proof = do
                 ++ pretty_print' hyp
 
 make_expr :: Monad m
-          => Either String a
+          => Either [String] a
           -> TacticT m a
 make_expr e = do
         li <- get_line_info
-        let f xs = Left [Error xs li]
+        let f xs = Left $ map (`Error` li) xs
         TacticT $ fromEitherT $ hoistEither (either f Right e)
 
 runTacticT :: Monad m

@@ -293,7 +293,7 @@ type_decl = visit_doc []
                         new_sort = Sort tag name 0
                         new_type = Gen $ USER_DEFINED new_sort []
                         new_def = Def [] name [] (set_type new_type)
-                                    $ ztypecast "const" (set_type new_type) ztrue
+                                    $ zlift (set_type new_type) ztrue
                     new_types  <- bind
                         (format "a sort with name '{0}' is already declared" tag)
                         $ insert_new tag new_sort (types th)
@@ -503,10 +503,10 @@ tr_hint m vs lbls = visit_doc []
                 return $ TrHint ys (Just prog))
         ]
 
-check_types :: Either String a -> EitherT [Error] (RWS LineInfo [Error] System) a    
+check_types :: Either [String] a -> EitherT [Error] (RWS LineInfo [Error] System) a    
 check_types c = EitherT $ do
     li <- ask
-    return $ either (\x -> Left [Error x li]) Right c
+    return $ either (\xs -> Left $ map (`Error` li) xs) Right c
 
 get_event :: Phase2 -> MachineId -> Label -> M EventId
 get_event (Phase2 evts _ _ _ _ _ _ _ _) m ev_lbl = do
@@ -572,7 +572,7 @@ collect_expr = visit_doc
                         $ v `M.lookup` variables m
                     let act = Assign var xp
                     check_types
-                        $ Right (Word var) `mzeq` Right xp
+                        $ Right (Word var :: Expr) `mzeq` Right xp
                     new_act <- bind
                         (format msg lbl)
                         $ insert_new lbl act (actions old_event)

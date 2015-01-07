@@ -13,7 +13,7 @@ import Data.Map hiding ( map, filter )
 import Data.Time
 
 import System.Directory
--- import System.FilePath
+import System.FilePath
 import System.Process
 
 data State = State 
@@ -47,7 +47,7 @@ get_time_stamps = do
             -- This relies on a git repository
             -- 
         ext   <- gets extensions
-        let f xs = any ($ xs) $ map (\x fn -> drop (length fn - length x) fn == x) ext 
+        let f xs = takeExtension xs `elem` ext
         files <- (filter f . lines) `liftM` liftIO (readProcess "git" ["ls-files"] "")
         ts    <- forM files $ liftIO . getModificationTime
         return $ fromList $ zip files ts

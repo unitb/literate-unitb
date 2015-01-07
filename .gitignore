@@ -109,3 +109,4 @@ EIFGENs
 train-station.tex.report
 pbcopy
 *.report
+*.dyn_hi

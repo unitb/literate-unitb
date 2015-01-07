@@ -204,7 +204,7 @@ result7 :: ExprP
     where
         train = Gen $ USER_DEFINED (Sort "\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = Const [train] "empty-set" $ set_type train
+        empty_set_of_train = FunApp (Fun [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines

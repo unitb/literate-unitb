@@ -1,16 +1,9 @@
 module Document.Tests.UnlessExcept where
 
-
-import Document.Machine
-
-import Logic.Expr
-import Logic.Proof
-
-import UnitB.PO
+    -- Modules
+import Document.Tests.Suite
 
 import Tests.UnitTest
-
-import Data.Map
 
 test_case :: TestCase
 test_case = Case "Unless / except clause" test True
@@ -82,13 +75,3 @@ result1 = unlines
     , "  o  m1/saf1/SAF/WD/rhs"
     , "passed 18 / 23"
     ]
-
-verify :: FilePath -> Int -> IO (String, Map Label Sequent)
-verify path i = do
-    r <- list_file_obligations path
-    case r of
-        Right ms -> do
-            let (m,pos) = ms !! i
-            (s,_,_) <- str_verify_machine m
-            return (s, pos)
-        x -> return (show x, empty)

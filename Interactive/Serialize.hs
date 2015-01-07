@@ -37,6 +37,7 @@ instance Serialize Quantifier where
 instance Serialize Context where
 instance Serialize Expr where
 instance Serialize Sequent where
+instance Serialize Value where
 
 expr_number :: Expr -> State (Map Expr Int) Int
 expr_number expr = do

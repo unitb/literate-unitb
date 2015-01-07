@@ -337,7 +337,7 @@ find_proof_step pr = visitor
                         case infer_goal cc (notat pr) of
                             Right cc_goal -> do
                                     return (ByCalc $ cc { goal = cc_goal })
-                            Left msg      -> hard_error [Error (format "type error: {0}" msg) li]
+                            Left msgs      -> hard_error $ map (\x -> Error (format "type error: {0}" x) li) msgs
                     -- cc <- lift_i $ parse_calc pr
                     -- set_proof $ LP.with_line_info li $ do
                     --     proof_of cc
@@ -614,13 +614,13 @@ get_expression t ys = do
                             ctx (th_notation th)
                             (concatMap flatten_li xs)
                 x <- either hard_error return x
-                let cast x = case t of
-                                Just t -> zcast t x
-                                Nothing -> x                    
+                let typed_x = case t of
+                                Just t -> zcast t $ Right x
+                                Nothing -> Right x                    
                 x <- either
-                    fail
+                    (hard_error . map (`Error` li))
                     (return . normalize_generics) 
-                    $ cast $ Right x
+                    $ typed_x
                 unless (L.null $ ambiguities x) $ hard_error 
                     $ map (\x -> Error (format msg x (type_of x)) li)
                         $ ambiguities x
@@ -732,7 +732,7 @@ parse_expr' set ys = do
         li <- get_line_info xs
         x  <- case expected_type set of
             Just t -> either 
-                (\x -> left [Error x li]) 
+                (\xs -> left $ map (`Error` li) xs) 
                 (right . normalize_generics) $ zcast t $ Right x
             Nothing -> return x
         unless (L.null $ ambiguities x) $ left 
@@ -797,7 +797,7 @@ predicate t ys n = do
             (\t -> return $ zcast t $ Right x)
             t
         x <- either 
-            (\x -> left [Error x li]) 
+            (\xs -> left $ map (`Error` li) xs) 
             (right . normalize_generics) x
         unless (L.null $ ambiguities x) $ left 
             $ map (\x -> Error (format msg x (type_of x)) li)

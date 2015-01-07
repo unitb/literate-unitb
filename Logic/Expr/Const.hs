@@ -51,12 +51,12 @@ fun2 f x y         = FunApp f [convert_to x,convert_to y]
 no_errors2 :: TypeSystem t 
            => (TwoExprP t)
            -> (TwoExpr t)
-no_errors2 f x y = either error id $ f (Right x) (Right y)
+no_errors2 f x y = either (error . unlines) id $ f (Right x) (Right y)
 
 toErrors :: LineInfo -> ExprP -> Either [Error] Expr
 toErrors li m = case m of
         Right x -> Right x
-        Left xs -> Left [Error xs li]
+        Left xs -> Left $ map (`Error` li) xs
 
 not_fun :: TypeSystem2 t => AbsFun t
 not_fun = Fun [] "not" [bool] bool
@@ -91,9 +91,9 @@ zfollows :: TypeSystem2 t => AbsExpr t -> AbsExpr t -> AbsExpr t
 zfollows     = fun2 $ Fun [] "follows" [bool,bool] bool
 -- zfollows     = fun2 mzfollows
 ztrue :: TypeSystem2 t => AbsExpr t
-ztrue        = Const [] "true"  bool
+ztrue        = FunApp (Fun [] "true" [] bool) []
 zfalse :: TypeSystem2 t => AbsExpr t
-zfalse       = Const [] "false" bool
+zfalse       = FunApp (Fun [] "false" [] bool) []
 zall :: TypeSystem2 t => [AbsExpr t] -> AbsExpr t
 zall xs      = 
         case concatMap f xs of
@@ -169,7 +169,7 @@ zite       = typ_fun3 (Fun [] "ite" [bool,gA,gA] gA)
 zjust :: OneExprP Type
 zjust      = typ_fun1 (Fun [] "Just" [gA] (maybe_type gA))
 znothing :: ExprP
-znothing   = Right (Const [] "Nothing" $ maybe_type gA)
+znothing   = Right $ Cast (FunApp (Fun [] "Nothing" [] $ maybe_type gA) []) (maybe_type gA)
 
 mznot :: TypeSystem2 t => OneExprP t
 mznot me       = do
@@ -258,9 +258,9 @@ zpow         = fun2 $ Fun [] "^" [int,int] int
 zselect :: TwoExprP Type
 zselect      = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 zint :: Int -> Expr
-zint n       = Const [] (show n) int
-zreal :: (Show a, Real a) => a -> Expr
-zreal n       = Const [] (show n) real
+zint n       = Const (IntVal n) int
+zreal :: Double -> Expr
+zreal n      = Const (RealVal n) real
 
 int :: TypeSystem2 t => t
 int  = make_type IntSort []
@@ -292,7 +292,7 @@ mzint :: Int -> ExprP
 mzint n       = Right $ zint n
 
 mzreal :: Int -> ExprP
-mzreal x       = Right $ zreal x
+mzreal x       = Right $ zreal $ fromIntegral x
 
 mzpair :: ExprP -> ExprP -> ExprP
 mzpair = typ_fun2 $ Fun [] "pair" [gA,gB] (pair_type gA gB)
@@ -319,9 +319,9 @@ prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
 prime :: Var -> Var
 prime (Var n t) = Var (n ++ "@prime") t
 
-fromJust :: Either String a -> a
+fromJust :: Either [String] a -> a
 fromJust (Right x)  = x
-fromJust (Left msg) = error $ format "error: {0}" (msg :: String)
+fromJust (Left msg) = error $ unlines $ map (format "error: {0}") msg
 
 zapply :: ExprP -> ExprP -> ExprP
 zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
@@ -360,5 +360,5 @@ disjuncts (FunApp f xs)
     -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
 
-ztypecast :: TypeSystem2 t => String -> t -> AbsExpr t -> AbsExpr t
-ztypecast kw t e = Cast (Just kw) e t
+zlift :: TypeSystem2 t => t -> AbsExpr t -> AbsExpr t
+zlift t e = Lift e t

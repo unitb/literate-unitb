@@ -318,7 +318,7 @@ check_types :: ExprP -> Parser Expr
 check_types e = 
         case e of
             Right e -> return e
-            Left xs -> fail $ format "type error: {0}" xs
+            Left xs -> fail $ format "type error: {0}" $ intercalate "\n" xs
 
 apply_fun_op :: Command -> Expr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
@@ -400,7 +400,7 @@ term = do
                 t <- brackets Curly type_t
                 case zcast t (Right e) of
                     Right new_e -> return $ Right new_e
-                    Left msg -> fail msg
+                    Left msg -> fail $ unlines msg
         , attempt $ do    
                 xs' <- word_or_command
                 vs <- get_vars
@@ -421,7 +421,7 @@ term = do
                             "\nPerhaps you meant:\n"
                       ++ unlines sug else "")
         , do    xs <- number
-                return $ Right (Const [] xs int)
+                return $ Right $ zint $ read xs
         ]
 
 dummy_types :: [String] -> Context -> [Var]
@@ -667,7 +667,7 @@ parse_expr' ctx@(Context _ vars _ defs _)  n input = do
         let vars' = M.map Word vars `M.union` M.mapMaybe f defs
             f (Def xs n args t _e) = do
                     guard (L.null args)
-                    Just $ Const xs n t
+                    Just $ FunApp (Fun xs n [] t) []
         li   <- lift $ ask
         toks <- hoistEither $ read_tokens (scan_expr $ Just n)
             (file_name li) 

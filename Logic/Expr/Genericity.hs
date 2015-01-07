@@ -13,6 +13,7 @@ import Logic.Expr.Type
     -- Libraries
 import Control.Monad
 
+import           Data.Either
 import qualified Data.Graph as G
 import           Data.List as L hiding ( (\\), union )
 import           Data.Map as M 
@@ -48,13 +49,14 @@ rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name u)
         fe          = rewrite_types xs
         ft          = suffix_generics xs
         u           = ft t
-rewrite_types xs (Const gs v t)             = rewrite fe $ Const gs2 v u
+rewrite_types xs (Const v t)             = rewrite fe $ Const v t'
     where
         fe          = rewrite_types xs
         ft          = suffix_generics xs
-        u           = ft t
-        gs2         = map ft gs
-rewrite_types xs (Cast kw e t) = Cast kw (rewrite_types xs e) (suffix_generics xs t)
+        t'          = ft t
+        -- gs2         = map ft gs
+rewrite_types xs (Cast e t) = Cast (rewrite_types xs e) (suffix_generics xs t)
+rewrite_types xs (Lift e t) = Lift (rewrite_types xs e) (suffix_generics xs t)
 rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_args
     where
         fe          = rewrite_types xs
@@ -85,7 +87,7 @@ instance TypeSystem2 FOType where
                 , "  expected type: {2} "
                 ]) e (type_of e) t :: String }
             unless (type_of e == t)
-                $  Left err_msg
+                $  Left [err_msg]
             return e
 
 instance TypeSystem2 GenericType where
@@ -116,12 +118,17 @@ instance TypeSystem2 GenericType where
                 , "  actual type: {1}"
                 , "  expected type: {2} "
                 ]) e (type_of e) t :: String }
-            u <- maybe (Left err_msg) Right $ unify t $ type_of e
+            u <- maybe (Left [err_msg]) Right $ unify t $ type_of e
             return $ specialize_right u e
+
+check_all :: [Either [String] a] -> Either [String] [a]
+check_all xs 
+    | all isRight xs = Right $ rights xs
+    | otherwise      = Left $ concat $ lefts xs
 
 check_type :: Fun -> [ExprP] -> ExprP
 check_type f@(Fun _ n ts t) mxs = do
-        xs <- sequence mxs
+        xs <- check_all mxs
         let args = unlines $ map (\(i,x) -> format (unlines
                             [ "   argument {0}:  {1}"
                             , "   type:          {2}" ] )
@@ -133,7 +140,7 @@ check_type f@(Fun _ n ts t) mxs = do
                     ,  "{3}"
                     ] )
                     n ts t args :: String
-        maybe (Left err_msg) Right $ check_args xs f
+        maybe (Left [err_msg]) Right $ check_args xs f
 
 type OneExprP t = forall e0. 
            Convert e0 (AbsExpr t)
@@ -171,7 +178,7 @@ typ_fun1 f@(Fun _ n ts t) mx        = do
                     ] )
                     n ts t 
                     x (type_of x) :: String
-        maybe (Left err_msg) Right $ check_args [x] f
+        maybe (Left [err_msg]) Right $ check_args [x] f
 
 typ_fun2 :: ( TypeSystem2 t
             , Convert e0 (AbsExpr t)
@@ -192,7 +199,7 @@ typ_fun2 f@(Fun _ n ts t) mx my     = do
                     n ts t 
                     x (type_of x) 
                     y (type_of y) :: String
-        maybe (Left err_msg) Right $ check_args [x,y] f
+        maybe (Left [err_msg]) Right $ check_args [x,y] f
 
 typ_fun3 :: ( TypeSystem2 t
             , Convert e0 (AbsExpr t)
@@ -219,7 +226,7 @@ typ_fun3 f@(Fun _ n ts t) mx my mz  = do
                     x (type_of x) 
                     y (type_of y) 
                     z (type_of z) :: String
-        maybe (Left err_msg) Right $ check_args [x,y,z] f
+        maybe (Left [err_msg]) Right $ check_args [x,y,z] f
 
 unify_aux :: GenericType -> GenericType -> Unification -> Maybe Unification
 unify_aux (GENERIC x) t1 u
@@ -315,14 +322,17 @@ strip_generics :: Expr -> Maybe FOExpr
 strip_generics (Word v)    = do
     v <- var_strip_generics v
     return (Word v)
-strip_generics (Const ts m t) = do
+strip_generics (Const m t) = do
     t  <- type_strip_generics t
-    ts <- mapM type_strip_generics ts
-    return (Const ts m t)
-strip_generics (Cast kw e t) = do
+    return (Const m t)
+strip_generics (Cast e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
-    return (Cast kw e t)
+    return (Cast e t)
+strip_generics (Lift e t) = do
+    e <- strip_generics e
+    t <- type_strip_generics t
+    return (Lift e t)
 strip_generics (FunApp f xs) = do
     f  <- fun_strip_generics f
     xs <- mapM strip_generics xs
@@ -429,15 +439,17 @@ instance Generic Var where
  
 instance Generic Expr where
     types_of (Word (Var _ t)) = S.singleton t
-    types_of (Const ts _ t)   = S.fromList $ t : ts
-    types_of (Cast _ e t)     = S.insert t $ types_of e
+    types_of (Const _ t)   = S.singleton t
+    types_of (Cast e t)     = S.insert t $ types_of e
+    types_of (Lift e t)     = S.insert t $ types_of e
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp) = S.unions $ types_of r : types_of xp : map types_of vs
     substitute_types g x = f x
       where
-        f (Const gs x t)    = Const (map g gs) x $ g t
+        f (Const x t)    = Const x $ g t
         f (Word x)          = Word $ h x
-        f (Cast kw e t)     = Cast kw (f e) (g t) 
+        f (Cast e t)     = Cast (f e) (g t) 
+        f (Lift e t)     = Lift (f e) (g t) 
         f (FunApp fun args) 
                 = rewrite f $ FunApp (substitute_types g fun) (map (substitute_types g) args)
         f (Binder q vs r e) 
@@ -448,10 +460,13 @@ ambiguities :: Expr -> [Expr]
 ambiguities e@(Word (Var _ t))
         | S.null $ generics t = []
         | otherwise           = [e]
-ambiguities e@(Const _ _ t)    
+ambiguities e@(Const _ t)    
         | S.null $ generics t = []
         | otherwise           = [e]
-ambiguities e@(Cast _ e' t)
+ambiguities e@(Cast e' t)
+        | not $ S.null $ generics t = [e]
+        | otherwise                 = ambiguities e'
+ambiguities e@(Lift e' t)
         | not $ S.null $ generics t = [e]
         | otherwise                 = ambiguities e'
 ambiguities e@(FunApp f xp)    

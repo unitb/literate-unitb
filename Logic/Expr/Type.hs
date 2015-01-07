@@ -88,7 +88,11 @@ instance NFData GenericType where
 
 data Sort =
         BoolSort | IntSort | RealSort 
-        | DefSort String String [String] GenericType
+        | DefSort 
+            String   -- Latex name
+            String   -- Type name
+            [String] -- Generic Parameter
+            GenericType -- Type with variables
         | Sort String String Int --[String]
         | Datatype 
             [String]    -- Parameters

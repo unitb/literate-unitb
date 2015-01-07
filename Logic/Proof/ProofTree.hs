@@ -219,24 +219,24 @@ instance ProofRule Proof where
                 lbl (Sequent _ _ _ goal) = do
         proof_po proof lbl (Sequent ctx unnamed named goal)
 
-chain :: Notation -> BinOperator -> BinOperator -> Either String BinOperator
+chain :: Notation -> BinOperator -> BinOperator -> Either [String] BinOperator
 chain n x y 
     | x == equal = Right y
     | y == equal = Right x
     | otherwise  = case M.lookup (x,y) $ M.fromList (chaining n) of
                     Just z -> Right z
-                    Nothing -> Left $ format "chain: operators {0} and {1} don't chain" x y
+                    Nothing -> Left [format "chain: operators {0} and {1} don't chain" x y]
 
 
-infer_goal :: Calculation -> Notation -> Either String Expr
+infer_goal :: Calculation -> Notation -> Either [String] Expr
 infer_goal (Calc _ _ s0 xs _) n = do
         op <- mk_expr `fmap` foldM (chain n) equal (L.map g xs)
         case reverse $ L.map f xs of
             x:_ -> either 
-                        (\x -> Left (x)) --,i,j)) 
+                        (\x -> Left x) --,i,j)) 
                         Right 
                         (s0 `op` x)
-            []   -> Left ("a calculation must include at least one reasoning step") --,i,j)
+            []   -> Left ["a calculation must include at least one reasoning step"] --,i,j)
     where
 --        op = mk_expr $ foldl chain equal $ map g xs
         f (_,y,_,_) = y

@@ -11,6 +11,8 @@ import UnitB.PO
 import Z3.Z3
 
     -- Libraries
+import Control.Exception
+
 import Control.Monad.Trans.Either
 
 import Data.List as L
@@ -24,8 +26,10 @@ verify path i = do
     case r of
         Right ms -> do
             let (m,pos) = ms !! i
-            (s,_,_) <- str_verify_machine m
-            return (s, pos)
+            r <- try (str_verify_machine m)
+            case r of
+                Right (s,_,_) -> return (s, pos)
+                Left e -> return (show (e :: SomeException),pos)
         Left x -> return (unlines $ L.map show x, empty)
 
 proof_obligation :: FilePath -> String -> Int -> IO String

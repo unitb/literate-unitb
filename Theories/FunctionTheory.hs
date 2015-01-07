@@ -46,7 +46,7 @@ zmk_fun = typ_fun2 (Fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 zset = typ_fun1 (Fun [gA,gB] "set" [fun_type gA gB] $ set_type gB)
 --zset = typ_fun1 (Fun [gA,gB] "set" [array gA $ maybe_type gB] $ set_type gB)
 
-zempty_fun = Const [gA,gB] "empty-fun" $ fun_type gA gB
+zempty_fun = FunApp (Fun [gA,gB] "empty-fun" [] $ fun_type gA gB) []
 
     -- encoding is done on an expression per expression basis
 zlambda xs mx my = do

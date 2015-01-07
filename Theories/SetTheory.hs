@@ -38,7 +38,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         types = symbol_table [set_sort]
         defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
-                        $ ztypecast "const" (set_type gT) zfalse
+                        $ zlift (set_type gT) zfalse
                 , Def [gT] "elem" [x_decl, s1_decl] bool 
                         $ fromJust $ zset_select s1 x
                 , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
@@ -103,7 +103,7 @@ zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] bool)
 zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 
 
-zempty_set   = Const [gA] "empty-set" $ set_type gA
+zempty_set   = FunApp (Fun [gA] "empty-set" [] $ set_type gA) []
 zsubset      = typ_fun2 (Fun [] "subset" [set_type gA,set_type gA] bool)
 zintersect   = typ_fun2 (Fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
 zunion       = typ_fun2 (Fun [] "union" [set_type gA,set_type gA] $ set_type gA)
