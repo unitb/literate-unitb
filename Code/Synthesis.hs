@@ -6,23 +6,63 @@ import Logic.Expr
 
 import Theories.SetTheory
 
-import UnitB.AST
+import           UnitB.AST as UB hiding (Event)
+import qualified UnitB.AST as UB 
 
     -- Libraries
 import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Trans.RWS
 
 import Data.Maybe
 import Data.List as L hiding (inits)
 import Data.Map as M
-import Data.Set
+-- import Data.Set
 
 import Utilities.Format
 
 data Program = 
-        Event Event 
-        | Conditional (Set Expr) [(Expr, Program)]
-        | Sequence  (Set Expr) [([Expr], Program)]
-        | Loop (Set Expr) Expr Program Program
+        Event Label 
+            -- 
+        | Conditional [Expr] [(Expr, Program)]
+            -- Precondition, list of branches
+        | Sequence          [([Expr], Expr, Program)]
+            -- Precondition, list of guarded programs
+        | Loop    Expr [Expr] Program Termination
+            -- Exit Invariant Body Termination
+
+data Termination = Infinite | Finite
+
+type M = RWST Int [String] () (Either String)
+
+precondition :: Machine -> Program -> [Expr]
+precondition m (Event evt) = M.elems $ guards $ events m ! evt
+precondition _ (Conditional pre _) = pre
+precondition _ (Sequence ((pre,_,_):_)) = pre
+precondition _ (Sequence [])       = []
+precondition _ (Loop _ inv _ _)    = inv
+-- precondition _ (InfLoop _ inv _)   = inv
+
+default_cfg :: Machine -> Program
+default_cfg m = Loop g [] body Infinite
+    where
+        all_guard e = zall $ M.elems $ coarse $ new_sched e
+        g    = zsome $ L.map (znot . all_guard) $ M.elems $ events m
+        body = Sequence 
+            $ L.map (\(lbl,e) -> ([],all_guard e,Event lbl)) 
+            $ M.toList $ events m
+
+emit :: String -> M ()
+emit xs = do
+    n <- ask
+    forM_ (lines xs) $ \ln -> 
+        tell [replicate n ' ' ++ ln]
+
+emitAll :: [String] -> M ()
+emitAll = mapM_ emit
+
+indent :: Int -> M a -> M a
+indent n = local (n+)
 
 type_code :: Type -> Either String String
 type_code t = 
@@ -42,7 +82,7 @@ type_code t =
                             "M.Map ({0}) ({1})" c0 c1
                 _ -> Left $ format "unrecognized type: {0}" t
                     
-eval_expr :: Machine -> Expr -> Either String String
+eval_expr :: Machine -> Expr -> M String
 eval_expr m e =
         case e of
             Word (Var n _)
@@ -58,6 +98,10 @@ eval_expr m e =
                     c1 <- eval_expr m e1
                     c2 <- eval_expr m e2
                     return $ format "(M.insert {1} {2} {0})" c0 c1 c2
+            FunApp f [e]
+                | name f == "not" -> do
+                    c <- eval_expr m e
+                    return $ format "(not {0})" c
             FunApp f [e0,e1] 
                 | name f == "=" -> do
                     c0 <- eval_expr m e0
@@ -79,30 +123,29 @@ eval_expr m e =
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
                     return $ format "(M.singleton {0} {1})" c0 c1
-            _ -> Left $ format "unrecognized expression: {0}" e
+            _ -> report $ format "unrecognized expression: {0}" e
 
-struct :: Machine -> Either String [Char]
+struct :: Machine -> M ()
 struct m = do
-        code <- attr
-        return $ "data State = State\n    { " ++ code ++ " }"
+        code <- lift $ attr
+        emit $ "data State = State\n    { " ++ code ++ " }"
     where
         attr = do 
             code <- mapM decl $ 
                            L.map ("v",) (M.elems $ variables m) 
---                        ++ L.map ("c",) (M.elems $ consts $ theory m)
             return $ intercalate "\n    , " code
         decl (pre,Var y t) = do
             code <- type_code t
             return $ format "{2}_{0} :: {1}" y code (pre :: String)
 
-assign_code :: Machine -> Action -> Either String [String]
+assign_code :: Machine -> Action -> M String
 assign_code m (Assign v e) = do
         c0 <- eval_expr m e
-        return [format "v_{0} = {1}" (name v) c0]
-assign_code _ act@(BcmSuchThat _ _) = Left $ format "Action is non deterministic: {0}" act
-assign_code _ act@(BcmIn _ _) = Left $ format "Action is non deterministic: {0}" act
+        return $ format "v_{0} = {1}" (name v) c0
+assign_code _ act@(BcmSuchThat _ _) = report $ format "Action is non deterministic: {0}" act
+assign_code _ act@(BcmIn _ _) = report $ format "Action is non deterministic: {0}" act
 
-init_value_code :: Machine -> Expr -> Either String [String]
+init_value_code :: Machine -> Expr -> M [String]
 init_value_code m e =
         case e of
             FunApp f [Word (Var n _),e0]
@@ -114,66 +157,107 @@ init_value_code m e =
                     | name f == "and" -> do
                         rs <- mapM (init_value_code m) es
                         return $ concat rs
-            _ -> Left $ format "initialization is not in a canonical form: {0}" e
+            _ -> report $ format "initialization is not in a canonical form: {0}" e
 
-event_code :: Machine -> Event -> Either String String
-event_code m e = do
-        unless (M.null $ params e) $ Left "non null number of parameters"
-        unless (M.null $ indices e) $ Left "non null number of indices"
-        unless (isNothing $ fine $ new_sched e) $ Left "event has a fine schedule"
-        grd  <- eval_expr m $ zall $ M.elems $ coarse $ new_sched e
+event_body_code :: Machine -> UB.Event -> M ()
+event_body_code m e = do
         acts <- mapM (assign_code m) $ M.elems $ actions e
-        return $ format 
-            (unlines $
-                [ "modify $ \\s'@(State { .. }) ->" 
-                , "  if {0} then"
-                , "    s' { {1} }"
-                , "  else s'"
-                ]) grd (intercalate "\n       , " $ concat acts)
+        emit "modify $ \\s'@(State { .. }) ->"
+        indent 2 $ do
+            case acts of 
+                x:xs -> do
+                    emit $ format "s' { {0}" x
+                    indent 3 $ do
+                        mapM_ (emit . (", " ++)) xs
+                        emit "}"
+                []   -> emit "s'"
 
-init_code :: Machine -> Either String String
+report :: String -> M a
+report = lift . Left
+
+event_code :: Machine -> UB.Event -> M ()
+event_code m e = do
+        unless (M.null $ params e) $ report "non null number of parameters"
+        unless (M.null $ indices e) $ report "non null number of indices"
+        unless (isNothing $ fine $ new_sched e) $ report "event has a fine schedule"
+        grd  <- eval_expr m $ zall $ M.elems $ coarse $ new_sched e
+        emit $ format "if {0} then" grd
+        indent 2 $ event_body_code m e
+        emit $ "else return ()"
+
+init_code :: Machine -> M ()
 init_code m = do
-        acts <- mapM (init_value_code m) $ M.elems $ inits m
-        return $ format 
-            (unlines $ 
-                [ "s' = State"
-                , "       { {0} }" 
-                ]) (intercalate "\n       , " $ concat acts)
-                
+        acts <- liftM concat $ mapM (init_value_code m) $ M.elems $ inits m
+        emit "s' = State"
+        indent 5 $ do
+            emitAll $ zipWith (++) ("{ ":repeat ", ") acts
+            when (not $ L.null acts) 
+                $ emit "}"
 
-indent :: Int -> String -> String
-indent n xs = unlines $ L.map (take n (repeat ' ') ++) $ lines xs
-
-machine_code :: String -> Machine -> Expr -> Either String String
-machine_code name m exit = do
-        let args = concatMap (" c_" ++) $ M.keys $ consts $ theory m
+write_cfg :: Machine -> Program -> M ()
+write_cfg m (Event lbl)          = do
+    emit "(State { .. }) <- get"
+    event_body_code m (events m ! lbl)
+write_cfg m (Conditional _ ((c,b):cs)) = do
+    emit "(State { .. }) <- get"
+    expr <- eval_expr m c
+    emit $ format "if {0} then do" expr
+    indent 2 $ write_cfg m b
+    forM_ cs $ \(c,b) -> do
+        expr <- eval_expr m c
+        emit $ format "else if {0} then do" expr
+        indent 2 $ write_cfg m b
+    emit $ format "else fail \"incomplete conditional\""
+write_cfg _ (Conditional _ []) = emit "fail \"incomplete conditional\""
+write_cfg m (Sequence xs) = do
+    forM_ xs $ \(_p,g,b) -> do
+        emit "(State { .. }) <- get"
+        expr <- eval_expr m g
+        emit $ format "if {0} then do" expr
+        indent 2 $ write_cfg m b
+        emit $ format "else return ()"
+write_cfg m (Loop exit _inv b _) = do
+    emit "fix $ \\proc' -> do"
+    indent 2 $ do
+        emit "(State { .. }) <- get"
         exitc <- eval_expr m exit
-        evts  <- mapM (event_code m) $ M.elems $ events m
-        let prog = indent 25 $ concat evts
-        inits <- init_code m
-        let new_inits = indent 8 $ inits
-        return $ format (unlines 
-                    [ "{0}{1} = flip execState s' $ fix $ \\proc' -> do"
-                    , "                      (State { .. }) <- get"
-                    , "                      if {2} then return ()"
-                    , "                      else do"
-                    , "{3}" ++
-                      "                         proc'"
-                    , "    where"
-                    , "{4}"
-                    ] ) name args exitc prog new_inits
+        emit $ format "if {0} then return ()" exitc
+        emit "else do"
+        indent 2 $ do
+            write_cfg m b
+            emit "proc'"
+-- emit "(State { .. }) <- get"
+--             exitc <- eval_expr m exit
+--             emit $ format "if {0} then return ()" exitc
+--             emit "else do"
+--             indent 2 $ do
+--                 mapM (event_code m) $ M.elems $ events m
+--                 emit "proc'"
+
+machine_code :: String -> Machine -> Expr -> M ()
+machine_code name m _exit = do
+        let args = concatMap (" c_" ++) $ M.keys $ consts $ theory m
+            cfg  = default_cfg m
+        emit $ format "{0}{1} = flip execState s' $" name args
+        indent 22 $ do
+            write_cfg m cfg
+        indent 4 $ do
+            emit "where"
+            indent 4 $ init_code m
+
+run :: M () -> Either String String
+run cmd = liftM (unlines . snd) $ execRWST cmd 0 ()
 
 source_file :: String -> Machine -> Expr -> Either String String
-source_file name m exit = do
-        str <- struct m
-        mch <- machine_code name m exit
-        return $ format (unlines
-                    [ "{-# LANGUAGE RecordWildCards #-}"
-                    , "import Data.Map as M"
-                    , "import Data.Set as S"
-                    , "import Control.Monad.State"
-                    , ""
-                    , "{0}"
-                    , ""
-                    , "{1}"
-                    ]) str mch 
+source_file name m exit = 
+        run $ do
+            emitAll 
+                [ "{-# LANGUAGE RecordWildCards #-}"
+                , "import Data.Map as M"
+                , "import Data.Set as S"
+                , "import Control.Monad.State"
+                , "\n"
+                ]
+            struct m
+            emit "\n"
+            machine_code name m exit

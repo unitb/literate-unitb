@@ -34,7 +34,7 @@ test = test_cases
 
 
 result0 :: String
-result0 = intercalate "\n"
+result0 = unlines
         [ "data State = State"
         , "    { v_a :: Int" 
         , "    , v_b :: Int" 
@@ -48,70 +48,77 @@ path0 = "tests/cubes-t8.tex"
 case0 :: IO String
 case0 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
-                EitherT $ return $ struct m
+                EitherT $ return $ run $ struct m
            return $ either id id x    
         
 
 result1 :: String
 result1 = unlines
-        [ "modify $ \\s'@(State { .. }) ->"
-        , "  if (v_n < c_N) then"
+        [ "if (v_n < c_N) then"
+        , "  modify $ \\s'@(State { .. }) ->"
         , "    s' { v_n = (v_n + 1)"
         , "       , v_a = (v_a + v_b)"
         , "       , v_b = (v_b + v_c)"
         , "       , v_c = (v_c + 6)" 
-        , "       , v_f = (M.insert v_n v_a v_f) }" 
-        , "  else s'" ]
+        , "       , v_f = (M.insert v_n v_a v_f)" 
+        , "       }"
+        , "else return ()" ]
      
 case1 :: IO String
 case1 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
-                EitherT $ return $ event_code m $ events m ! label "evt"
+                EitherT $ return $ run $ event_code m $ events m ! label "evt"
            return $ either id id x    
 
 result2 :: String
 result2 = unlines
         [ "s' = State"
-        , "       { v_b = 1"
-        , "       , v_c = 6" 
-        , "       , v_n = 0"
-        , "       , v_a = 0"
-        , "       , v_f = M.empty }" ]
+        , "     { v_b = 1"
+        , "     , v_c = 6" 
+        , "     , v_n = 0"
+        , "     , v_a = 0"
+        , "     , v_f = M.empty"
+        , "     }" ]
      
 case2 :: IO String
 case2 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
-                EitherT $ return $ init_code m
+                EitherT $ return $ run $ init_code m
            return $ either id id x    
 
 result3 :: String
 result3 = unlines
-        [ "find_cubes c_N = flip execState s' $ fix $ \\proc' -> do"
-        , "                      (State { .. }) <- get"
-        , "                      if (v_n == c_N) then return ()"
-        , "                      else do"
-        , "                         modify $ \\s'@(State { .. }) ->"
-        , "                           if (v_n < c_N) then"
-        , "                             s' { v_n = (v_n + 1)"
-        , "                                , v_a = (v_a + v_b)"
-        , "                                , v_b = (v_b + v_c)"
-        , "                                , v_c = (v_c + 6)" 
-        , "                                , v_f = (M.insert v_n v_a v_f) }" 
-        , "                           else s'" 
-        , "                         proc'" 
+        [ "find_cubes c_N = flip execState s' $"
+        , "                      fix $ \\proc' -> do"
+        , "                        (State { .. }) <- get"
+        , "                        if (not (v_n < c_N)) then return ()"
+        , "                        else do"
+        , "                          (State { .. }) <- get"
+        , "                          if (v_n < c_N) then do"
+        , "                            (State { .. }) <- get"
+        , "                            modify $ \\s'@(State { .. }) ->"
+        , "                              s' { v_n = (v_n + 1)"
+        , "                                 , v_a = (v_a + v_b)"
+        , "                                 , v_b = (v_b + v_c)"
+        , "                                 , v_c = (v_c + 6)" 
+        , "                                 , v_f = (M.insert v_n v_a v_f)"
+        , "                                 }" 
+        , "                          else return ()" 
+        , "                          proc'" 
         , "    where"
         , "        s' = State"
-        , "               { v_b = 1"
-        , "               , v_c = 6" 
-        , "               , v_n = 0"
-        , "               , v_a = 0"
-        , "               , v_f = M.empty }" 
-        , "" ]
+        , "             { v_b = 1"
+        , "             , v_c = 6" 
+        , "             , v_n = 0"
+        , "             , v_a = 0"
+        , "             , v_f = M.empty"
+        , "             }" 
+        ]
 
 case3 :: IO String
 case3 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
-                EitherT $ return $ machine_code "find_cubes" m $ n `zeq` bigN
+                EitherT $ return $ run $ machine_code "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
         (n)      = fromJust $ fst $ var "n" int
@@ -132,28 +139,33 @@ result4 = unlines
         , "    , v_n :: Int }"
 --       , "    , c_N :: Int }" 
         , ""
-        , "find_cubes c_N = flip execState s' $ fix $ \\proc' -> do"
-        , "                      (State { .. }) <- get"
-        , "                      if (v_n == c_N) then return ()"
-        , "                      else do"
-        , "                         modify $ \\s'@(State { .. }) ->"
-        , "                           if (v_n < c_N) then"
-        , "                             s' { v_n = (v_n + 1)"
-        , "                                , v_a = (v_a + v_b)"
-        , "                                , v_b = (v_b + v_c)"
-        , "                                , v_c = (v_c + 6)" 
-        , "                                , v_f = (M.insert v_n v_a v_f) }" 
-        , "                           else s'" 
-        , "                         proc'" 
+        , "find_cubes c_N = flip execState s' $"
+        , "                      fix $ \\proc' -> do"
+        , "                        (State { .. }) <- get"
+        , "                        if (not (v_n < c_N)) then return ()"
+        , "                        else do"
+        , "                          (State { .. }) <- get"
+        , "                          if (v_n < c_N) then do"
+        , "                            (State { .. }) <- get"
+        , "                            modify $ \\s'@(State { .. }) ->"
+        , "                              s' { v_n = (v_n + 1)"
+        , "                                 , v_a = (v_a + v_b)"
+        , "                                 , v_b = (v_b + v_c)"
+        , "                                 , v_c = (v_c + 6)" 
+        , "                                 , v_f = (M.insert v_n v_a v_f)"
+        , "                                 }" 
+        , "                          else return ()" 
+        , "                          proc'" 
         , "    where"
         , "        s' = State"
-        , "               { v_b = 1"
-        , "               , v_c = 6" 
-        , "               , v_n = 0"
-        , "               , v_a = 0"
-        , "               , v_f = M.empty }" 
-        , ""
-        , "" ]
+        , "             { v_b = 1"
+        , "             , v_c = 6" 
+        , "             , v_n = 0"
+        , "             , v_a = 0"
+        , "             , v_f = M.empty"
+        , "             }" 
+        ]
+
 
 
 case4 :: IO String
