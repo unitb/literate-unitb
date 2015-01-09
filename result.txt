@@ -249,17 +249,18 @@
 |  +- test3: code for the {procedure + loop}
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
-|  +- [ Success: 6 / 6 ]
+|  +- test6: verify {control flow graph}
+|  +- [ Success: 7 / 7 ]
 +- [ Success: 6 / 6 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   29874 total
+   29951 total
     1108 Document/Machine.hs
      867 UnitB/AST.hs
      809 Document/Proof.hs
      742 Utilities/permutation.hs
      712 Document/Expression.hs
-Run time: 1m 58s
+Run time: 1m 56s

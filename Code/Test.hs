@@ -6,9 +6,12 @@ import Document.Machine
 
 import Logic.Expr
 
-import UnitB.AST
+import UnitB.AST hiding (safety)
+
+import Z3.Z3
 
     -- Libraries
+import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
@@ -30,7 +33,9 @@ test = test_cases
             , (StringCase "test2: code for the {initialization}" case2 result2) 
             , (StringCase "test3: code for the {procedure + loop}" case3 result3) 
             , (StringCase "test4: {whole source file}" case4 result4) 
-            , (StringCase "test5: run {source file}" case5 result5) ]
+            , (StringCase "test5: run {source file}" case5 result5) 
+            , (StringCase "test6: verify {control flow graph}" case6 result6) 
+            ]
 
 
 result0 :: String
@@ -193,7 +198,7 @@ result5 = unlines
 case5 :: IO String
 case5 = do  xs <- runEitherT $ do
                 m  <- EitherT $ parse path0
-                xs <- EitherT $ return $ source_file "find_cubes" m $ n `zeq` bigN
+                xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
                 lift $ do 
                     writeFile "tests/code.hs" $ unlines
                         [ xs
@@ -208,6 +213,21 @@ case5 = do  xs <- runEitherT $ do
     where
         (n)      = fromJust $ fst $ var "n" int
         (bigN)   = fromJust $ fst $ var "N" int
+
+result6 :: String
+result6 = unlines 
+    [ "(m0/body/0/0,Valid)" 
+    , "(m0/body/0/precondition/0,Valid)"
+    ]
+
+case6 :: IO String
+case6 = liftM (either id id) $ runEitherT $ do
+    m  <- EitherT $ parse path0
+    let cfg = default_cfg m
+        pos = safety m cfg
+    -- xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
+    xs <- lift $ discharge_all (elems pos)
+    return $ unlines $ L.map show $ zip (keys pos) xs
 
 parse :: FilePath -> IO (Either String Machine)
 parse path = do
