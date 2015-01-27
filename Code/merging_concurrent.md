@@ -41,7 +41,26 @@ Possible Input:
  5. The set of private variable of each 
 
 ## Automated Construction of Control Flow Graphs
+
+ * Break down schedules into atomic conjuncts and their negation
+ * Form a predicate lattice
+ * Predicate graphs 
+ 	1. link two predicates if they share a clause which is negated in one and not the other
+ 	2. link two predicates if they do not share an opposite clause but share other clauses
+ * Test stable predicates
+	 * predicate involving only local variables are trivially stable
+	 * test ahead of time or upon necessity?
+ * Make a bipartite graph with events and predicates
+	 * evt → P: { sch } evt { P }
+	 * P → evt: sch ⇒ P or P ⇒ ¬sch
+	 * (Hoare graph)
+ * Make and merge sequences
+	 * G₀ → evt₀ { P₁ } G₁ → evt₁
+	 	- { G₀ } evt₀ { P₁ }
+ 	 * the above with G₂ → evt₂ 
+
 ## Verifying the Control Flow Graphs
+### Definitions
 
 Precondition:
 :	The events are partitioned between processes
@@ -81,7 +100,7 @@ For event 'evt'
 Program:
 
 	{ P }
-	[ W ] G -> A
+	[ W ] G → A
 
 with
 :	* P: preassertion
@@ -236,7 +255,8 @@ sequence
 non-terminating loop
 conditional
 
-### Sequence
+### Old approach
+#### Sequence
 
 	evtA
 		during P0 ∧ C0
@@ -264,7 +284,7 @@ conditional
 		P1 ∧ C1  unless  ¬P0 ∨ ¬C0
 			(in other processes)
 
-### Introduce Terminating Loop
+#### Introduce Terminating Loop
 
 	evtA
 		during P0 ∧ W0 ∧ C0

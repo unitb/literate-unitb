@@ -3,7 +3,7 @@
 	[
 		{
 			"path": "."
-			, "file_include_patterns": [ "*hs"]
+			, "file_include_patterns": [ "*hs", "*.md"]
 			, "folder_exclude_patterns": [".*","bin","interface","gui","eifgens","src"]
 		}
 	]

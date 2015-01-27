@@ -1,5 +1,8 @@
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 module UnitB.POGenerator 
-    ( POGen, context, emit_goal, eval_generator
+    ( POGen, POGenT, context, emit_goal
+    , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
     , definitions, existential )
@@ -11,6 +14,8 @@ import Logic.Proof
 import UnitB.Feasibility
 
 import Control.Applicative
+import Control.Monad.Identity
+import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
 
@@ -26,20 +31,25 @@ data POParam = POP
 empty_param :: POParam
 empty_param = POP empty_ctx [] [] M.empty
 
-newtype POGen a = POGen { runPOGen :: RWS POParam [(Label,Sequent)] () a }
+type POGen = POGenT Identity
 
-instance Applicative POGen where
+newtype POGenT m a = POGen { runPOGen :: RWST POParam [(Label,Sequent)] () m a }
+
+instance Monad m => Applicative (POGenT m) where
     (<*>) = ap
     pure = return
 
-instance Functor POGen where
+instance Monad m => Functor (POGenT m) where
     fmap = liftM
 
-instance Monad POGen where
+instance Monad m => Monad (POGenT m) where
     POGen m >>= f = POGen $ m >>= runPOGen . f
     return = POGen . return
 
-emit_exist_goal :: [Label] -> [Var] -> [Expr] -> POGen ()
+instance MonadTrans POGenT where
+    lift = POGen . lift
+
+emit_exist_goal :: Monad m => [Label] -> [Var] -> [Expr] -> POGenT m ()
 emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses $ \(vs,es) -> 
@@ -47,7 +57,7 @@ emit_exist_goal lbl vars es = with
     where
         clauses = partition_expr vars es
 
-existential :: [Var] -> POGen () -> POGen ()
+existential :: Monad m => [Var] -> POGenT m () -> POGenT m ()
 existential [] cmd = cmd
 existential vs (POGen cmd) = do
         let g (_, Sequent ctx h0 h1 goal) = do
@@ -68,7 +78,7 @@ existential vs (POGen cmd) = do
         with (context st) 
             $ emit_exist_goal [] vs ss'
 
-emit_goal :: [Label] -> Expr -> POGen ()
+emit_goal :: Monad m => [Label] -> Expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
     ctx  <- asks ctx
     tag  <- asks tag
@@ -86,7 +96,7 @@ definitions new_defs = do
     let new_ctx = Context M.empty M.empty M.empty new_defs M.empty
     context new_ctx
 
-with :: State POParam () -> POGen a -> POGen a
+with :: Monad m => State POParam () -> POGenT m a -> POGenT m a
 with f cmd = POGen $ local (execState f) $ runPOGen cmd
 
 prefix_label :: Label -> State POParam ()
@@ -115,4 +125,8 @@ variables vars = do
             { ctx = new_ctx `merge_ctx` ctx }
 
 eval_generator :: POGen () -> Map Label Sequent
-eval_generator cmd = fromList $ snd $ evalRWS (runPOGen cmd) empty_param ()
+eval_generator cmd = runIdentity $ eval_generatorT cmd
+        -- fromList $ snd $ evalRWS (runPOGen cmd) empty_param ()
+
+eval_generatorT :: Monad m => POGenT m () -> m (Map Label Sequent)
+eval_generatorT cmd = liftM (fromList . snd) $ evalRWST (runPOGen cmd) empty_param ()

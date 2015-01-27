@@ -37,6 +37,9 @@ symbol_table xs = fromList $ map as_pair xs
 decorated_table :: Named a => [a] -> Map String a
 decorated_table xs = fromList $ map (\x -> (decorated_name x, x)) xs
 
+(</>) :: Label -> Label -> Label
+(</>) (Lbl x) (Lbl y) = Lbl $ x ++ "/" ++ y
+
 composite_label :: [Label] -> Label
 composite_label xs = Lbl $ intercalate "/" $ L.filter (not . L.null) $ map str xs
     where

@@ -1,6 +1,6 @@
 module Code.Test where
 
-import Code.Synthesis
+import Code.Synthesis hiding (M)
 
 import Document.Machine
 
@@ -11,16 +11,21 @@ import UnitB.AST hiding (safety)
 import Z3.Z3
 
     -- Libraries
+-- import Control.Arrow
+
 import Control.Monad
 import Control.Monad.Trans
+-- import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Either
 
+import Data.Either.Combinators
 import Data.List as L
 import Data.Map
 
 import Tests.UnitTest
 
 import System.Directory
+import System.IO.Unsafe
 import System.Process
 
 test_case :: (String, IO Bool, Bool)
@@ -35,6 +40,7 @@ test = test_cases
             , (StringCase "test4: {whole source file}" case4 result4) 
             , (StringCase "test5: run {source file}" case5 result5) 
             , (StringCase "test6: verify {control flow graph}" case6 result6) 
+            , (StringCase "test7: {concurrent} code" case7 result7)
             ]
 
 
@@ -47,32 +53,35 @@ result0 = unlines
         , "    , v_f :: M.Map (Int) (Int)" 
         , "    , v_n :: Int }" ]
 
+input :: Either String Machine
+input = unsafePerformIO $ parse path0
+
 path0 :: String
 path0 = "tests/cubes-t8.tex"
 
 case0 :: IO String
 case0 = do x <- runEitherT $ do
-                m <- EitherT $ parse path0
+                m <- hoistEither input
                 EitherT $ return $ run $ struct m
            return $ either id id x    
         
 
 result1 :: String
 result1 = unlines
-        [ "if (v_n < c_N) then"
-        , "  modify $ \\s'@(State { .. }) ->"
-        , "    s' { v_n = (v_n + 1)"
-        , "       , v_a = (v_a + v_b)"
-        , "       , v_b = (v_b + v_c)"
-        , "       , v_c = (v_c + 6)" 
-        , "       , v_f = (M.insert v_n v_a v_f)" 
-        , "       }"
-        , "else return ()" ]
+        [ "let s' = s"
+        , "        { v_n = (v_n + 1)"
+        , "        , v_a = (v_a + v_b)"
+        , "        , v_b = (v_b + v_c)"
+        , "        , v_c = (v_c + 6)" 
+        , "        , v_f = (M.insert v_n v_a v_f)"
+        , "        }" 
+        , "return s'"
+        ]
      
 case1 :: IO String
 case1 = do x <- runEitherT $ do
-                m <- EitherT $ parse path0
-                EitherT $ return $ run $ event_code m $ events m ! label "evt"
+                m <- hoistEither input
+                EitherT $ return $ run $ event_body_code m $ events m ! label "evt"
            return $ either id id x    
 
 result2 :: String
@@ -93,22 +102,24 @@ case2 = do x <- runEitherT $ do
 
 result3 :: String
 result3 = unlines
-        [ "find_cubes c_N = flip execState s' $"
+        [ "find_cubes c_N = flip execState s' $ do"
         , "                      fix $ \\proc' -> do"
         , "                        (State { .. }) <- get"
         , "                        if (not (v_n < c_N)) then return ()"
         , "                        else do"
-        , "                          (State { .. }) <- get"
-        , "                          if (v_n < c_N) then do"
-        , "                            (State { .. }) <- get"
-        , "                            modify $ \\s'@(State { .. }) ->"
-        , "                              s' { v_n = (v_n + 1)"
-        , "                                 , v_a = (v_a + v_b)"
-        , "                                 , v_b = (v_b + v_c)"
-        , "                                 , v_c = (v_c + 6)" 
-        , "                                 , v_f = (M.insert v_n v_a v_f)"
-        , "                                 }" 
-        , "                          else return ()" 
+        , "                          s@(State { .. }) <- get"
+        , "                          expr <- do"
+        , "                            if (v_n < c_N) then do"
+        , "                              let s' = s"
+        , "                                      { v_n = (v_n + 1)"
+        , "                                      , v_a = (v_a + v_b)"
+        , "                                      , v_b = (v_b + v_c)"
+        , "                                      , v_c = (v_c + 6)" 
+        , "                                      , v_f = (M.insert v_n v_a v_f)"
+        , "                                      }" 
+        , "                              return s'"
+        , "                            else return s" 
+        , "                          put expr"
         , "                          proc'" 
         , "    where"
         , "        s' = State"
@@ -134,7 +145,9 @@ result4 = unlines
         [ "{-# LANGUAGE RecordWildCards #-}"
         , "import Data.Map as M"
         , "import Data.Set as S"
-        , "import Control.Monad.State"
+        , "import Control.Monad"
+        , "import Control.Monad.Fix"
+        , "import Control.Monad.Trans.State"
         , ""
         , "data State = State"
         , "    { v_a :: Int" 
@@ -144,22 +157,24 @@ result4 = unlines
         , "    , v_n :: Int }"
 --       , "    , c_N :: Int }" 
         , ""
-        , "find_cubes c_N = flip execState s' $"
+        , "find_cubes c_N = flip execState s' $ do"
         , "                      fix $ \\proc' -> do"
         , "                        (State { .. }) <- get"
         , "                        if (not (v_n < c_N)) then return ()"
         , "                        else do"
-        , "                          (State { .. }) <- get"
-        , "                          if (v_n < c_N) then do"
-        , "                            (State { .. }) <- get"
-        , "                            modify $ \\s'@(State { .. }) ->"
-        , "                              s' { v_n = (v_n + 1)"
-        , "                                 , v_a = (v_a + v_b)"
-        , "                                 , v_b = (v_b + v_c)"
-        , "                                 , v_c = (v_c + 6)" 
-        , "                                 , v_f = (M.insert v_n v_a v_f)"
-        , "                                 }" 
-        , "                          else return ()" 
+        , "                          s@(State { .. }) <- get"
+        , "                          expr <- do"
+        , "                            if (v_n < c_N) then do"
+        , "                              let s' = s"
+        , "                                      { v_n = (v_n + 1)"
+        , "                                      , v_a = (v_a + v_b)"
+        , "                                      , v_b = (v_b + v_c)"
+        , "                                      , v_c = (v_c + 6)" 
+        , "                                      , v_f = (M.insert v_n v_a v_f)"
+        , "                                      }" 
+        , "                              return s'"
+        , "                            else return s" 
+        , "                          put expr"
         , "                          proc'" 
         , "    where"
         , "        s' = State"
@@ -177,6 +192,70 @@ case4 :: IO String
 case4 = do x <- runEitherT $ do
                 m <- EitherT $ parse path0
                 EitherT $ return $ source_file "find_cubes" m $ n `zeq` bigN
+           return $ either id id x    
+    where
+        (n)      = fromJust $ fst $ var "n" int
+        (bigN)   = fromJust $ fst $ var "N" int
+
+result7 :: String
+result7 = unlines
+        [ "{-# LANGUAGE RecordWildCards #-}"
+        , "import Data.Map as M"
+        , "import Data.Set as S"
+        , "import Control.Concurrent.STM"
+        , "import Control.Monad"
+        , "import Control.Monad.Fix"
+        , "import Control.Monad.Trans.State"
+        , ""
+        , "data Shared = Shared"
+        , "    { s_b :: TVar (Int)" 
+        , "    , s_f :: TVar (M.Map (Int) (Int))"
+        , "    , s_n :: TVar (Int) }"
+        , ""
+        , "data State = State"
+        , "    { v_a :: Int" 
+        , "    , v_c :: Int }"
+        , ""
+        , "find_cubes c_N = flip execStateT s' $ do"
+        , "                      s_b <- lift $ newTVarIO 1"
+        , "                      s_n <- lift $ newTVarIO 0"
+        , "                      s_f <- lift $ newTVarIO M.empty"
+        , "                      fix $ \\proc' -> do"
+        , "                        (State { .. }) <- get"
+        , "                        expr <- lift $ atomically $ do"
+        , "                          v_n <- readTVar s_n"
+        , "                          return (not (v_n < c_N))"
+        , "                        if expr then return ()"
+        , "                        else do"
+        , "                          s@(State { .. }) <- get"
+        , "                          expr <- lift $ atomically $ do"
+        , "                            v_n <- readTVar s_n"
+        , "                            if (v_n < c_N) then do"
+        , "                              v_b <- readTVar s_b"
+        , "                              v_f <- readTVar s_f"
+        , "                              v_n <- readTVar s_n"
+        , "                              let s' = s"
+        , "                                      { v_a = (v_a + v_b)"
+        , "                                      , v_c = (v_c + 6)" 
+        , "                                      }" 
+        , "                              writeTVar s_n (v_n + 1)"
+        , "                              writeTVar s_b (v_b + v_c)"
+        , "                              writeTVar s_f (M.insert v_n v_a v_f)"
+        , "                              return s'"
+        , "                            else return s" 
+        , "                          put expr" 
+        , "                          proc'" 
+        , "    where"
+        , "        s' = State"
+        , "             { v_c = 6" 
+        , "             , v_a = 0"
+        , "             }" 
+        ]
+
+case7 :: IO String
+case7 = do x <- runEitherT $ do
+                m <- EitherT $ parse path0
+                EitherT $ return $ source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
         (n)      = fromJust $ fst $ var "n" int
@@ -216,15 +295,17 @@ case5 = do  xs <- runEitherT $ do
 
 result6 :: String
 result6 = unlines 
-    [ "(m0/body/0/0,Valid)" 
-    , "(m0/body/0/precondition/0,Valid)"
+    [ "(m0/body/disabled/evt,Valid)"
+    , "(m0/body/forced,Valid)"
     ]
 
 case6 :: IO String
 case6 = liftM (either id id) $ runEitherT $ do
     m  <- EitherT $ parse path0
     let cfg = default_cfg m
-        pos = safety m cfg
+    pos <- hoistEither 
+        $ mapLeft unlines
+        $ safety m [] [] cfg
     -- xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
     xs <- lift $ discharge_all (elems pos)
     return $ unlines $ L.map show $ zip (keys pos) xs
@@ -238,3 +319,30 @@ parse path = do
         Right _ -> return $ Left "wrong number of machines"
         Left x  -> return $ Left $ unlines $ L.map show x
 
+-- data POLabel = 
+--             POLoop 
+--             | POSeq 
+--             | POEvent 
+--             | PONotEvent 
+--             | POCondition 
+--             | PoWait 
+--             | PONumber Int
+--     deriving (Eq)
+
+-- type M = ReaderT [Branch] (Either String)
+
+-- type Branch = ([POLabel],Either [Label] [Expr])
+
+-- make_cfg :: [Branch] -> Either String Program
+-- make_cfg bs 
+--         | valid     = 
+--             case bs' of
+--                 [b]:_ -> runReaderT (make_cfg' b) (L.map (first $ drop 1) bs)
+--         | otherwise = Left "make_cfg: invalid control flow tree"
+--     where
+--         bs' = L.map (take 1 . fst) bs
+--         valid = and $ zipWith (==) bs' (drop 1 bs')
+
+-- make_cfg' :: POLabel -> M Program
+-- make_cfg' POLoop = do
+--     return $ Loop _ _ _ _
