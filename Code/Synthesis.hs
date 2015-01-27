@@ -1,6 +1,7 @@
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes        #-}
 module Code.Synthesis where
 
     -- Modules
@@ -33,6 +34,8 @@ import Data.Map  as M
 -- import Data.Set  as S
 
 import Utilities.Format
+
+import Text.Printf
 
 data Program = 
         Event [Expr] Expr Expr Label 
@@ -104,31 +107,34 @@ shared_vars :: Concurrency -> Map String ()
 shared_vars (Concurrent s) = s
 shared_vars Sequential     = M.empty
 
-atomically' :: M () -> M String
-atomically' cmd = do
+atomically' :: (String -> M a) 
+            -> (forall a. (String -> M a) -> M a)
+            -> M a
+atomically' f cmd = do
     conc <- asks snd
     let e_name = "expr"
     case conc of
         Concurrent _ -> do
             emit $ format "{0} <- lift $ atomically $ do" e_name
-            indent 2 cmd
+            indent 2 (cmd $ emit . printf "return %s")
+            f e_name
         Sequential -> do
-            emit $ format "{0} <- do" e_name
-            indent 2 cmd
-    return e_name        
+            -- emit $ format "{0} <- do" e_name
+            cmd f
+    -- return e_name        
 
 atomically :: M String -> M String
-atomically cmd = do
-    conc <- asks snd
-    case conc of
-        Concurrent _ -> do
-            let e_name = "expr"
-            emit $ format "{0} <- lift $ atomically $ do" e_name
-            indent 2 $ do
-                e <- cmd
-                emit $ format "return {0}" e
-            return e_name
-        Sequential -> cmd
+atomically cmd = atomically' return $ \f -> cmd >>= f
+    -- conc <- asks snd
+    -- case conc of
+    --     Concurrent _ -> do
+    --         let e_name = "expr"
+    --         emit $ format "{0} <- lift $ atomically $ do" e_name
+    --         indent 2 $ do
+    --             e <- cmd
+    --             emit $ format "return {0}" e
+    --         return e_name
+    --     Sequential -> cmd
 
 evaluate :: Machine -> Expr -> M String
 evaluate m e = head `liftM` evaluate_all m [e]
@@ -464,7 +470,7 @@ runEval cmd = do
         emit $ format "v_{0} <- readTVar s_{1}" r r
     return e
 
-event_body_code :: Machine -> UB.Event -> M ()
+event_body_code :: Machine -> UB.Event -> M String
 event_body_code m e = do
         acts <- runEval $ mapM (assign_code m) $ M.elems $ actions e
         -- evaluate_all 
@@ -478,7 +484,7 @@ event_body_code m e = do
                     emit "}"
                 []   -> emit "s'"
         emitAll g_acts
-        emit "return s'"
+        return "s'"
         -- emit "modify $ \\s'@(State { .. }) ->"
         -- indent 2 $ do
         --     case acts of 
@@ -507,7 +513,7 @@ conc_init_code m = do
         acts' <- runEval $ liftM concat 
             $ mapM (init_value_code m) $ M.elems $ inits m
         let acts = L.map snd $ L.filter fst acts' 
-        emitAll $ L.map (\(v,e) -> format "s_{0} <- lift $ newTVarIO {1}" v e) acts
+        emitAll $ L.map (\(v,e) -> format "s_{0} <- newTVarIO {1}" v e) acts
 
 init_code :: Machine -> M ()
 init_code m = do
@@ -520,21 +526,34 @@ init_code m = do
             when (not $ L.null acts) 
                 $ emit "}"
 
+if_concurrent :: M () -> M ()
+if_concurrent cmd = do
+        conc <- asks snd
+        case conc of
+          Sequential -> return ()
+          Concurrent _ -> cmd
+
+
 write_seq_code :: Machine -> Program -> M ()
 write_seq_code m (Event _pre wait cond lbl)          
     | wait == ztrue = do
         emit "s@(State { .. }) <- get"
-        res <- atomically' $ do
+        if_concurrent $ emit "(Shared { .. }) <- ask"
+        let f = emit . printf "put %s"
+        atomically' f $ \f -> do
             expr <- evaluate m cond
             emit $ format "if {0} then do" expr
-            indent 2 $ event_body_code m (events m ! lbl)
-            emit $ format "else return s"    
-        emit $ format "put {0}" res
+            indent 2 $ do
+                s' <- event_body_code m (events m ! lbl)
+                f s'
+            emit $ format "else"    
+            indent 2 $ f "s"
     | otherwise = lift $ Left "Waiting is not allowed in sequential code"
 write_seq_code _ (NotEvent _ _) = return ()
 write_seq_code _ (Wait _ _)     = lift $ Left "Waiting is not allowed in sequential code"
 write_seq_code m (Conditional _ ((c,b):cs) eb) = do
     emit "(State { .. }) <- get"
+    if_concurrent $ emit "(Shared { .. }) <- ask"
     expr <- atomically $ evaluate m c
     emit $ format "if {0} then do" expr
     indent 2 $ write_seq_code m b
@@ -552,6 +571,7 @@ write_seq_code m (Loop exit _inv b _) = do
     emit "fix $ \\proc' -> do"
     indent 2 $ do
         emit "(State { .. }) <- get"
+        if_concurrent $ emit "(Shared { .. }) <- ask"
         exitc <- atomically $ evaluate m exit
         emit $ format "if {0} then return ()" exitc
         emit "else do"
@@ -571,17 +591,20 @@ machine_code name m _exit = do
         x <- asks snd
         let args = concatMap (" c_" ++) $ M.keys $ consts $ theory m
             cfg  = default_cfg m
-            trans :: String
+            trans :: String -> String -> String
             trans = case x of
-                     Sequential -> ""
-                     Concurrent _ -> "T"
-        emit $ format "{0}{1} = flip execState{2} s' $ do" name args trans
-        indent 22 $ do
+                     Sequential -> format "execState {0} {1}"
+                     Concurrent _ -> format "fst `liftM` (execRWST {0} (Shared { .. }) {1} :: IO (Main.State,()))"
+        emit $ format "{0}{1} = do" name args
+        indent 8 $ do
             conc_init_code m
-            write_seq_code m cfg
+            emit $ trans "proc" "s'" 
         indent 4 $ do
             emit "where"
-            indent 4 $ init_code m
+            indent 4 $ do
+                init_code m
+                emit "proc ="
+                indent 7 $ write_seq_code m cfg
 
 run' :: Concurrency -> M () -> Either String String
 run' c cmd = liftM (unlines . snd) $ execRWST cmd (0,c) ()
@@ -602,7 +625,10 @@ source_file' shared name m exit =
                 imp ++
                 [ "import Control.Monad"
                 , "import Control.Monad.Fix"
-                , "import Control.Monad.Trans.State"
+                , "import Control.Monad.State.Class"
+                , "import Control.Monad.Trans"
+                , "import Control.Monad.Trans.RWS   hiding (get,put)"
+                , "import Control.Monad.Trans.State hiding (get,put)"
                 , "\n"
                 ]
             struct m

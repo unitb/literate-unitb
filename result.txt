@@ -251,17 +251,18 @@
 |  +- test5: run {source file}
 |  +- test6: verify {control flow graph}
 |  +- test7: {concurrent} code
-|  +- [ Success: 8 / 8 ]
+|  +- test8: {run concurrent} code
+|  +- [ Success: 9 / 9 ]
 +- [ Success: 6 / 6 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   30437 total
+   30498 total
     1108 Document/Machine.hs
      867 UnitB/AST.hs
      809 Document/Proof.hs
      742 Utilities/permutation.hs
      712 Document/Expression.hs
-Run time: 1m 48s
+Run time: 1m 47s
