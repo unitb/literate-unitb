@@ -168,4 +168,4 @@ prop_g xs' ys' zs' = dist xs zs <= dist xs ys + dist ys zs
 
 return []
 run_test :: IO Bool
-run_test = $quickCheckAll 
+run_test = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })

@@ -86,7 +86,7 @@ instance Arbitrary BrackString where
 return []
 
 runSpec :: IO Bool
-runSpec = $quickCheckAll
+runSpec = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 test_case :: TestCase
 test_case = test

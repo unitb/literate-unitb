@@ -35,6 +35,7 @@ import Text.Printf
 import           Utilities.Format
 import qualified Utilities.Graph as G 
 import           Utilities.Syntactic
+-- import           Utilities.QuickCheckReport
 
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
@@ -360,7 +361,8 @@ choose_expr b t = do
 
 return []
 run_spec :: IO Bool
-run_spec = $quickCheckAll
+run_spec = -- test_report $forAllProperties 
+           $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 show_list :: Show a => [a] -> String
 show_list xs = format "[{0}]" $ L.intercalate "\n," $ surround " " " " ys

@@ -691,7 +691,7 @@ instance (Arbitrary a, Eq a) => Arbitrary (Graph a) where
 return []
 
 run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
     -- TODO:
     -- Mutable linked lists in top_sort 

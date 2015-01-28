@@ -284,13 +284,14 @@ case8 = do  xs <- runEitherT $ do
                 m  <- hoistEither input
                 xs <- hoistEither $ source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
                 lift $ do 
-                    writeFile "tests/code.hs" $ unlines
+                    file <- tempFile "tests/code.hs"
+                    writeFile file $ unlines
                         [ xs
                         , ""
                         , "main = do"
                         , "        print . v_a =<< find_cubes 10" ]
-                    (_,rs,_) <- readProcessWithExitCode "runghc" ["tests/code.hs"] ""
-                    -- removeFile "tests/code.hs"
+                    (rs) <- readProcess "runghc" [file] ""
+                    removeFile file
                     return rs
             return $ either id id xs    
     where
@@ -315,14 +316,15 @@ case5 = do  xs <- runEitherT $ do
                 m  <- hoistEither input
                 xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
                 lift $ do 
-                    writeFile "tests/code.hs" $ unlines
+                    file <- tempFile "tests/code.hs"
+                    writeFile file $ unlines
                         [ xs
                         , ""
                         , "main = do"
                         , "        forM_ (M.toList $ v_f $ find_cubes 10) $ \\(i,n) -> do"
                         , "            putStrLn $ show i ++ \"^3 = \" ++ show n" ]
-                    (_,rs,_) <- readProcessWithExitCode "runghc" ["tests/code.hs"] ""
-                    removeFile "tests/code.hs"
+                    (_,rs,_) <- readProcessWithExitCode "runghc" [file] ""
+                    removeFile file
                     return rs
             return $ either id id xs    
     where

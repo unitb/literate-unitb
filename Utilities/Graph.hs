@@ -365,4 +365,4 @@ unions_aux' x ws@((y:ys):zs)
 --        cycles xs
 return []
 run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })

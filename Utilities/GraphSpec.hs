@@ -35,11 +35,10 @@ axm_def m' = forAll arbitrary $ \(x,z) ->
 
 return []
 run_spec :: IO Bool
-run_spec = $quickCheckAll
+run_spec = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 test_cases :: [TestCase]
-test_cases = [ Case "QuickCheck spec of the graph library" run_spec True
-             , Case "QuickCheck of graphs" run_spec True ]
+test_cases = [ Case "QuickCheck of graphs" run_spec True ]
 
 main :: IO ()
 main = run_spec >> return ()

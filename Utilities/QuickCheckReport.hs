@@ -22,7 +22,7 @@ test_report tests = do
             $ modifyIORef success (+1)
         modifyIORef total (+1)
         return r
-    (tests $ (>>= inc) . quickCheckResult)
+    (tests $ (>>= inc) . quickCheckWithResult stdArgs {chatty = False})
     x <- readIORef success
     y <- readIORef total
     printf "success: %d / %d\n[ %s ]\n" 

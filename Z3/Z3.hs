@@ -40,13 +40,13 @@ import Logic.Proof
 import Control.DeepSeq
 
 import Control.Concurrent
+import Control.Concurrent.SSem
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 
 import           Data.Char
-import           Data.Function
 import           Data.List as L hiding (union)
 import           Data.List.Ordered as OL hiding (member)
 import           Data.Map as M (Map)
@@ -56,6 +56,7 @@ import qualified Data.Set as S
 import           Data.Typeable 
 
 import           System.Exit
+import           System.IO.Unsafe
 import           System.Process
 
 import           Utilities.Format
@@ -261,30 +262,38 @@ destroy_prover (Prover { .. }) = do
             writeChan inCh Nothing
 --        writeChan secCh Nothing
 
-discharge_on :: Prover -> (Int,Sequent) -> IO ()
-discharge_on (Prover { .. }) po = do
-        writeChan inCh $ Just po
+
+discharge_on :: Sequent -> IO (MVar (Either String Validity))
+discharge_on po = do
+    res <- newEmptyMVar
+    forkIO $ do
+        wait total_caps
+        r <- try (discharge' (Just default_timeout) po)
+        let f e = Left $ show (e :: SomeException)
+            r'  = either f Right r
+        signal total_caps
+        putMVar res r'
+    return res
 
 read_result :: Prover -> IO (Int,Either String Validity)
 read_result (Prover { .. }) = 
         readChan outCh
 
+total_caps :: SSem
+total_caps = unsafePerformIO $ new 64
+
 discharge_all :: [Sequent] -> IO [Validity]
 discharge_all xs = do
+        setNumCapabilities 8
 --        forM xs discharge
-        let ys = zip [0..] xs
-        pr <- new_prover 32
-        forkIO $ forM_ ys $ \task -> 
-            discharge_on pr task
-        rs <- forM ys $ \_ ->
-            read_result pr
-        destroy_prover pr
-        rs <- forM rs $ \(i,r) -> 
+        rs <- forM xs discharge_on
+        rs <- forM (zip [0..] rs) $ \(i,ref) -> do
+            res <- takeMVar ref
             either 
                 (throwIO . Z3Exception i) 
-                (\x -> return (i,x)) 
-                r
-        return $ map snd $ sortBy (compare `on` fst) rs
+                return
+                res
+        return rs
 
 data Z3Exception = Z3Exception Int String
     deriving (Show,Typeable)

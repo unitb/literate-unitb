@@ -81,6 +81,7 @@ main = do
         _errFile  = xs !! 2
         args opt file = 
                 [ flag,file
+                , "-j8"
                 , "-odir" ++ bin
                 , "-i" ++ inf
                 , "-W", "-fwarn-missing-signatures"

@@ -1,3 +1,25 @@
+=== prop_brackets from ./Document/Tests/TrainStation.hs:62 ===
+
+=== prop_open_brack from ./Document/Tests/TrainStation.hs:65 ===
+
+=== prop_close_brack from ./Document/Tests/TrainStation.hs:68 ===
+
+=== prop_open_close from ./Document/Tests/TrainStation.hs:71 ===
+
+=== prop_close_open from ./Document/Tests/TrainStation.hs:74 ===
+
+=== prop_parseOk from ./Document/MachineSpec.hs:40 ===
+
+=== prop_type_error from ./Document/MachineSpec.hs:47 ===
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
+
++++ OK, passed 100 tests.
+=== prop_c from ./Utilities/EditDistance.hs:132 ===
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
+
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -65,21 +87,6 @@
 |  |  |  |  +- test 19, proof obligation, leave/fis, loc'
 |  |  |  |  +- test 4, proof obligation, leave/sch
 |  |  |  |  +- test 19, quickcheck brackets
-=== prop_brackets from ./Document/Tests/TrainStation.hs:62 ===
-+++ OK, passed 100 tests.
-
-=== prop_open_brack from ./Document/Tests/TrainStation.hs:65 ===
-+++ OK, passed 100 tests.
-
-=== prop_close_brack from ./Document/Tests/TrainStation.hs:68 ===
-+++ OK, passed 100 tests.
-
-=== prop_open_close from ./Document/Tests/TrainStation.hs:71 ===
-+++ OK, passed 100 tests.
-
-=== prop_close_open from ./Document/Tests/TrainStation.hs:74 ===
-+++ OK, passed 100 tests.
-
 |  |  |  |  +- [ Success: 7 / 7 ]
 |  |  |  +- part 2
 |  |  |  |  +- test 5, proof obligation, leave/en/tr0
@@ -102,7 +109,7 @@
 |  |  |  |  +- test 17, ill-defined types
 |  |  |  |  +- test 18, assertions have type bool
 |  |  |  |  +- [ Success: 3 / 3 ]
-|  |  |  +- [ Success: 6 / 6 ]
+|  |  |  +- [ Success: 21 / 21 ]
 |  |  +- lambda expressions in the cube example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, verification, lambda vs empty-fun
@@ -125,7 +132,7 @@
 |  |  |  |  +- test 11, intermediate goals of monotonic simplification
 |  |  |  |  +- test 12, bound variable with ambiguous type
 |  |  |  |  +- [ Success: 4 / 4 ]
-|  |  |  +- [ Success: 4 / 4 ]
+|  |  |  +- [ Success: 13 / 13 ]
 |  |  +- refinement relations in the phase example
 |  |  |  +- test 0, cyclic refinement relation between machines
 |  |  |  +- test 1, valid references to variables and event declared in ancestor
@@ -142,22 +149,22 @@
 |  |  |  +- verify machine m0 (sets)
 |  |  |  +- verify machine m1 (sets)
 |  |  |  +- verify machine m2 (sets)
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
+
 |  |  |  +- verify machine m3 (sets)
 |  |  |  +- type checking of boolean expressions
 |  |  |  +- verify machine m3 error (wandering free variable)
 |  |  |  +- [ Success: 6 / 6 ]
 |  |  +- QuickCheck spec of machine parser
-=== prop_parseOk from ./Document/MachineSpec.hs:39 ===
-+++ OK, passed 100 tests.
-
-=== prop_type_error from ./Document/MachineSpec.hs:46 ===
-+++ OK, passed 100 tests.
-
-=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
-+++ OK, passed 100 tests.
-
 |  |  +- the parser is exception free
-|  |  +- [ Success: 15 / 15 ]
+|  |  +- [ Success: 91 / 91 ]
 |  +- Unit-B
 |  |  +- 'x eventually increases' verifies
 |  |  +- train, model 0, verification
@@ -178,16 +185,13 @@
 |  |  |  +- type inference 4
 |  |  |  +- type inference 5
 |  |  |  +- instantiation of unified types is unique
-+++ OK, passed 100 tests.
 |  |  |  +- common type is symmetric
-+++ OK, passed 100 tests.
 |  |  |  +- common type is symmetric (counter-example)
 |  |  |  +- instantiation of unified types is unique (counter examples)
 |  |  |  +- type mapping are acyclic
-+++ OK, passed 100 tests.
 |  |  |  +- one-point rule simplification on existentials
 |  |  |  +- [ Success: 18 / 18 ]
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- [ Success: 23 / 23 ]
 |  +- latex parser
 |  |  +- sample.tex
 |  |  +- sorted seq err.tex
@@ -218,30 +222,9 @@
 |  |  |  +- [ Success: 2 / 2 ]
 |  |  +- case 5 - error monad
 |  |  +- case 6 - union of a list of {sorted} list
-+++ OK, passed 100 tests.
 |  |  +- case 7 - union of a list of {unsorted} list
-+++ OK, passed 100 tests.
 |  |  +- case 8 - edit distance, random testing
-=== prop_c from ./Utilities/EditDistance.hs:132 ===
-+++ OK, passed 100 tests.
-
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
-+++ OK, passed 100 tests.
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
-+++ OK, passed 100 tests.
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
-+++ OK, passed 100 tests.
-
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
-+++ OK, passed 100 tests.
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
-+++ OK, passed 100 tests.
-
 |  |  +- case 9 - edit distance, regression test from random testing
-|  |  +- QuickCheck spec of the graph library
 |  |  +- QuickCheck of graphs
 |  |  +- [ Success: 12 / 12 ]
 |  +- code generation in the cube example
@@ -255,17 +238,17 @@
 |  |  +- test7: {concurrent} code
 |  |  +- test8: {run concurrent} code
 |  |  +- [ Success: 9 / 9 ]
-|  +- [ Success: 6 / 6 ]
-+- [ Success: 1 / 1 ]
+|  +- [ Success: 150 / 150 ]
++- [ Success: 150 / 150 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   30663 total
+   30761 total
     1108 Document/Machine.hs
      867 UnitB/AST.hs
      809 Document/Proof.hs
      742 Utilities/permutation.hs
      712 Document/Expression.hs
-Run time: 1m 45s
+Run time: 1m 3s

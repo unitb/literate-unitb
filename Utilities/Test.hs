@@ -389,12 +389,13 @@ result7 :: Result
 result7 = Success 100 [] "+++ OK, passed 100 tests.\n"
 
 prop_valueOnSorted :: IO Result
-prop_valueOnSorted = quickCheckResult $ \xs -> 
-    let ys = map unSL xs :: [[Int]] in 
-        unions ys == OL.nub (foldl OL.union [] ys)
+prop_valueOnSorted = quickCheckWithResult stdArgs { chatty = False }
+    $ \xs -> 
+        let ys = map unSL xs :: [[Int]] in 
+            unions ys == OL.nub (foldl OL.union [] ys)
 
 prop_value :: IO Result
-prop_value = quickCheckResult $ \xs -> 
+prop_value = quickCheckWithResult stdArgs { chatty = False } $ \xs -> 
     let ys = map id xs :: [[Int]] in 
         unions ys == OL.nub (foldl OL.union [] ys)
 

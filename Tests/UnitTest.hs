@@ -1,7 +1,11 @@
-{-# LANGUAGE ExistentialQuantification #-} 
-{-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE ExistentialQuantification  #-} 
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 module Tests.UnitTest 
-    ( TestCase(..), run_test_cases, test_cases )
+    ( TestCase(..), run_test_cases, test_cases 
+    , tempFile )
 where
 
     -- Modules
@@ -13,8 +17,11 @@ import Z3.Z3
     -- Libraries
 import Control.Arrow
 import Control.Concurrent
+import Control.Concurrent.SSem
 import Control.Exception
 import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Trans.RWS
 
 import           Data.Char
 import           Data.List
@@ -25,7 +32,9 @@ import           Data.Typeable
 import Prelude
 
 import Utilities.Format
+import Utilities.Indentation
 
+import System.FilePath
 import System.IO
 import System.IO.Unsafe
 
@@ -36,6 +45,16 @@ data TestCase =
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
     | Suite String [TestCase]
+
+type M = RWST Int [Either (MVar [String]) String] Int IO
+
+instance Indentation Int M where
+    -- func = 
+    margin_string = do
+        n <- margin
+        return $ concat $ replicate n "|  "
+    _margin _ = id
+            
 
 diff :: String -> String -> String
 diff xs ys = p6
@@ -102,8 +121,6 @@ quote (x:xs)
     | x == '\n' = "\\n\n" ++ quote xs
     | True      = x : quote xs
 
-margin :: MVar Int
-margin = unsafePerformIO $ newMVar 0 
 
 log_failures :: MVar Bool
 log_failures = unsafePerformIO $ newMVar True
@@ -111,16 +128,21 @@ log_failures = unsafePerformIO $ newMVar True
 failure_number :: MVar Int
 failure_number = unsafePerformIO $ newMVar 0
 
-new_failure :: String -> String -> String -> IO ()
+take_failure_number :: M ()
+take_failure_number = do
+    n <- lift $ takeMVar failure_number
+    lift $ putMVar failure_number $ n+1
+    put n
+
+new_failure :: String -> String -> String -> M ()
 new_failure name actual expected = do
-    b <- readMVar log_failures
+    b <- lift $ readMVar log_failures
     if b then do
-        n <- takeMVar failure_number
-        putMVar failure_number $ n+1
-        withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
+        n <- get
+        lift $ withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             hPutStrLn h actual
-        withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
+        lift $ withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             hPutStrLn h expected
     else return ()
@@ -136,8 +158,15 @@ data UnitTest = UT
     | Node { name :: String, _children :: [UnitTest] }
 
 run_test_cases :: TestCase -> IO Bool
-run_test_cases xs = 
-        f xs >>= test_suite_string . (:[])
+run_test_cases xs = do
+        swapMVar failure_number 0
+        c        <- f xs 
+        (b,_,w) <- runRWST (test_suite_string [c]) 0 undefined
+        forM_ w $ \ln -> do
+            case ln of
+                Right xs -> putStrLn xs
+                Left xs -> takeMVar xs >>= mapM_ putStrLn
+        uncurry (==) `liftM` takeMVar b
     where
         f (Case x y z) = return UT
                             { name = x
@@ -176,15 +205,16 @@ run_test_cases xs =
 disp :: (Typeable a, Show a) => a -> String
 disp x = maybe (show x) id (cast x)
 
-print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> IO ()
+print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
 print_po pos name actual expected = do
+    n <- get
+    lift $ do
         let ma = f actual
             me = f expected
             f xs = M.map (== "  o  ") $ M.fromList $ map (swap . splitAt 5) $ lines xs
             mr = M.keys $ M.filter not $ M.unionWith (==) (me `M.intersection` ma) ma
         case pos of
             Just pos -> do
-                n <- readMVar failure_number
                 forM_ (zip [0..] mr) $ \(i,po) -> do
 --                    hPutStrLn stderr $ "writing po file: " 
 --                    forM_ (M.keys ma) $ hPutStrLn stderr . show
@@ -201,37 +231,82 @@ print_po pos name actual expected = do
                     else return ()
             Nothing  -> return ()
 
-test_suite_string :: [UnitTest] -> IO Bool
+test_suite_string :: [UnitTest] -> M (MVar (Int,Int))
 test_suite_string xs = do
-        n  <- takeMVar margin
-        let bars = concat $ take n $ repeat "|  "
-            putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
-        putMVar margin (n+1)
+        let putLn xs = do
+                ys <- mk_lines xs
+                -- lift $ putStr $ unlines ys
+                tell $ map Right ys
         xs <- forM xs $ \ut -> do
             case ut of
-              (UT x y z b) -> do
+              (UT x y z b) -> forkTest $ do
                 putLn ("+- " ++ x)
-                r <- catch 
-                    (do r <- y; return $ Right r) 
+                r <- lift $ catch 
+                    (Right `liftM` y) 
                     (\e -> return $ Left $ show (e :: SomeException))
                 case r of
                     Right (r,s) -> 
                         if (r == z)
-                        then return True
+                        then return (1,1)
                         else if b then do
-                             print_po s x r z
-                             new_failure x r z
-                             putLn $ diff r z
-                             return False 
-                        else return False
+                            take_failure_number
+                            print_po s x r z
+                            new_failure x r z
+                            putLn $ diff r z
+                            return (0,1) 
+                        else return (0,1)
                     Left m -> do
                         putLn ("   Exception:  " ++ m)
-                        return False 
+                        return (0,1)
               Node n xs -> do
                 putLn ("+- " ++ n)
-                test_suite_string xs
-        let x = length xs
-            y = length $ filter id xs
-        swapMVar margin n
-        putLn (format "+- [ Success: {0} / {1} ]" y x)
-        return (and xs)
+                indent 1 $ test_suite_string xs
+        forkTest $ do
+            xs <- mergeAll id xs
+            let x = sum $ map snd xs
+                y = sum $ map fst xs
+            putLn (format "+- [ Success: {0} / {1} ]" y x)
+            return (y,x)
+
+capabilities :: SSem
+capabilities = unsafePerformIO $ new 16
+
+forkTest :: M a -> M (MVar a)
+forkTest cmd = do
+    result <- lift $ newEmptyMVar
+    output <- lift $ newEmptyMVar
+    r <- ask
+    lift $ wait capabilities
+    lift $ forkIO $ do
+        (x,_,w) <- runRWST cmd r (-1)
+        putMVar result x
+        xs <- forM w $ \ln -> do
+            either 
+                takeMVar 
+                (return . (:[])) 
+                ln
+        putMVar output $ concat xs
+        signal capabilities
+    tell [Left output]
+    return result
+
+mergeAll :: ([a] -> b) -> [MVar a] -> M b
+mergeAll f xs = lift $ do
+    rs <- forM xs takeMVar
+    return $ f rs
+
+tempFile_num :: MVar Int
+tempFile_num = unsafePerformIO $ newMVar 0
+
+tempFile :: FilePath -> IO FilePath
+tempFile path = do
+    n <- takeMVar tempFile_num
+    putMVar tempFile_num (n+1)
+    -- path <- canonicalizePath path
+    let path' = dropExtension path ++ "-" ++ show n <.> takeExtension path
+    --     finalize = do
+    --         b <- doesFileExist path'
+    --         when b $
+    --             removeFile path'
+    -- mkWeakPtr path' (Just finalize)
+    return path'
