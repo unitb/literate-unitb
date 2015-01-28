@@ -6,10 +6,11 @@ import Document.Tests.Suite
 import Tests.UnitTest
 
 test_case :: TestCase
-test_case = Case "Unless / except clause" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "Unless / except clause"
             [ (POCase "test 0, unless/except without indices" 
                 (verify path0 0) result0)
             , (POCase "test 1, unless/except with indices and free variables" 

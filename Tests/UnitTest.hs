@@ -1,18 +1,22 @@
 {-# LANGUAGE ExistentialQuantification #-} 
-module Tests.UnitTest where
+{-# LANGUAGE TupleSections             #-}
+module Tests.UnitTest 
+    ( TestCase(..), run_test_cases, test_cases )
+where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding ( name )
 import Logic.Proof
 
 import Z3.Z3
 
     -- Libraries
+import Control.Arrow
+import Control.Concurrent
 import Control.Exception
 import Control.Monad
 
 import           Data.Char
-import           Data.IORef   
 import           Data.List
 import qualified Data.Map as M
 import           Data.Tuple
@@ -31,8 +35,9 @@ data TestCase =
     | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
+    | Suite String [TestCase]
 
-diff :: [Char] -> [Char] -> [Char]
+diff :: String -> String -> String
 diff xs ys = p6
     where
         p0 = take (length p7 - 3) p7
@@ -80,7 +85,7 @@ longest_prefix (x:xs) (y:ys)
 longest_suffix :: Eq a => [a] -> [a] -> [a]
 longest_suffix xs ys = reverse $ longest_prefix (reverse xs) (reverse ys)
 
-interleave :: [[Char]] -> [[Char]] -> [[Char]]
+interleave :: [String] -> [String] -> [String]
 interleave [] xs = xs
 interleave xs [] = xs
 interleave (x:xs) (y:ys) = x:y:d : interleave xs ys
@@ -89,7 +94,7 @@ interleave (x:xs) (y:ys) = x:y:d : interleave xs ys
         f True = ' '
         f False = '-'
 
-quote :: [Char] -> [Char]
+quote :: String -> String
 quote [] = []
 quote (x:xs)
     | x == ' '  = "_." ++ quote xs
@@ -97,21 +102,21 @@ quote (x:xs)
     | x == '\n' = "\\n\n" ++ quote xs
     | True      = x : quote xs
 
-margin :: IORef Int
-margin = unsafePerformIO $ newIORef 0 
+margin :: MVar Int
+margin = unsafePerformIO $ newMVar 0 
 
-log_failures :: IORef Bool
-log_failures = unsafePerformIO $ newIORef True
+log_failures :: MVar Bool
+log_failures = unsafePerformIO $ newMVar True
 
-failure_number :: IORef Int
-failure_number = unsafePerformIO $ newIORef 0
+failure_number :: MVar Int
+failure_number = unsafePerformIO $ newMVar 0
 
 new_failure :: String -> String -> String -> IO ()
 new_failure name actual expected = do
-    b <- readIORef log_failures
+    b <- readMVar log_failures
     if b then do
-        n <- readIORef failure_number
-        writeIORef failure_number $ n+1
+        n <- takeMVar failure_number
+        putMVar failure_number $ n+1
         withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             hPutStrLn h actual
@@ -120,44 +125,58 @@ new_failure name actual expected = do
             hPutStrLn h expected
     else return ()
 
-test_suite :: (Typeable a, Show a) => [(String, IO a, a)] -> IO Bool
-test_suite xs = test_cases $ map f xs 
-    where
-        f (x,y,z) = Case x y z
+test_cases :: String -> [TestCase] -> TestCase
+test_cases = Suite
 
-test_cases :: [TestCase] -> IO Bool
-test_cases xs = 
-        mapM f xs >>= test_suite_string
+data UnitTest = UT 
+    { name :: String
+    , routine :: IO (String, Maybe (M.Map Label Sequent))
+    , outcome :: String
+    , is_unit :: Bool }
+    | Node { name :: String, _children :: [UnitTest] }
+
+run_test_cases :: TestCase -> IO Bool
+run_test_cases xs = 
+        f xs >>= test_suite_string . (:[])
     where
-        f (Case x y z) = return ( Nothing
-                                , x
-                                , (do a <- y ; return $ disp a)
-                                , disp z
-                                , cast z == (Nothing :: Maybe Bool))
+        f (Case x y z) = return UT
+                            { name = x
+                            , routine = do a <- y ; return (disp a,Nothing)
+                            , outcome = disp z
+                            , is_unit = cast z == (Nothing :: Maybe Bool) }
         f (CalcCase x y z) = do 
                 r <- z
-                return ( Nothing
-                       , x
-                       , (do a <- y ; return $ disp a)
-                       , disp r
-                       , True  )
-        f (StringCase x y z) = return (Nothing, x, y, z, True)
+                return UT
+                    { name = x
+                    , routine = do a <- y ; return (disp a, Nothing)
+                    , outcome = disp r
+                    , is_unit = True }
+        f (StringCase x y z) = return UT 
+                                { name = x
+                                , routine = (,Nothing) `liftM` y
+                                , outcome = z
+                                , is_unit = True }
         f (POCase x y z)     = do
-                let cmd = catch (fst `liftM` y) f
-                    f x = putStrLn "*** EXCEPTION ***" >> return (show (x :: SomeException))
-                    get_po = catch (snd `liftM` y) g
-                    g :: SomeException -> IO (M.Map Label Sequent)
-                    g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
-                return (Just get_po, x, cmd, z, True)
+                let cmd = catch (second Just `liftM` y) f
+                    f x = putStrLn "*** EXCEPTION ***" >> return (show (x :: SomeException), Nothing)
+                    -- get_po = catch (snd `liftM` y) g
+                    -- g :: SomeException -> IO (M.Map Label Sequent)
+                    -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
+                return UT
+                    { name = x
+                    , routine = cmd 
+                    , outcome = z 
+                    , is_unit = True }
         f (LineSetCase x y z) = f (StringCase x 
                                     ((unlines . sort . lines) `liftM` y) 
                                     (unlines $ sort $ lines z))
+        f (Suite n xs) = Node n `liftM` mapM f xs
 
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = maybe (show x) id (cast x)
 
-print_po :: Maybe (IO (M.Map Label Sequent)) -> String -> String -> String -> IO ()
+print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> IO ()
 print_po pos name actual expected = do
         let ma = f actual
             me = f expected
@@ -165,8 +184,7 @@ print_po pos name actual expected = do
             mr = M.keys $ M.filter not $ M.unionWith (==) (me `M.intersection` ma) ma
         case pos of
             Just pos -> do
-                pos <- pos
-                n <- readIORef failure_number
+                n <- readMVar failure_number
                 forM_ (zip [0..] mr) $ \(i,po) -> do
 --                    hPutStrLn stderr $ "writing po file: " 
 --                    forM_ (M.keys ma) $ hPutStrLn stderr . show
@@ -183,32 +201,37 @@ print_po pos name actual expected = do
                     else return ()
             Nothing  -> return ()
 
-test_suite_string :: [(Maybe (IO (M.Map Label Sequent)), String, IO String, String, Bool)] -> IO Bool
+test_suite_string :: [UnitTest] -> IO Bool
 test_suite_string xs = do
-        n  <- readIORef margin
+        n  <- takeMVar margin
         let bars = concat $ take n $ repeat "|  "
             putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
-        writeIORef margin (n+1)
-        xs <- forM xs (\(s,x,y,z,b) -> do
-            putLn ("+- " ++ x)
-            r <- catch 
-                (do r <- y; return $ Right r) 
-                (\e -> return $ Left $ show (e :: SomeException))
-            case r of
-                Right r -> 
-                    if (r == z)
-                    then return True
-                    else if b then do
-                         print_po s x r z
-                         new_failure x r z
-                         putLn $ diff r z
-                         return False 
-                    else return False
-                Left m -> do
-                    putLn ("   Exception:  " ++ m)
-                    return False )
+        putMVar margin (n+1)
+        xs <- forM xs $ \ut -> do
+            case ut of
+              (UT x y z b) -> do
+                putLn ("+- " ++ x)
+                r <- catch 
+                    (do r <- y; return $ Right r) 
+                    (\e -> return $ Left $ show (e :: SomeException))
+                case r of
+                    Right (r,s) -> 
+                        if (r == z)
+                        then return True
+                        else if b then do
+                             print_po s x r z
+                             new_failure x r z
+                             putLn $ diff r z
+                             return False 
+                        else return False
+                    Left m -> do
+                        putLn ("   Exception:  " ++ m)
+                        return False 
+              Node n xs -> do
+                putLn ("+- " ++ n)
+                test_suite_string xs
         let x = length xs
             y = length $ filter id xs
-        writeIORef margin n
+        swapMVar margin n
         putLn (format "+- [ Success: {0} / {1} ]" y x)
         return (and xs)

@@ -18,7 +18,8 @@ import System.Directory
 import Tests.UnitTest
 
 test_case :: IO Bool
-test_case = test_suite 
+test_case = run_test_cases $ test_cases 
+        "Literate Unit-B Test Suite" 
         [  DOC.test_case
         ,  UB.test_case
         ,  LT.test_case

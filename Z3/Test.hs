@@ -23,8 +23,12 @@ import Utilities.Syntactic
 
 import Tests.UnitTest
 
-test :: IO Bool
+test_case :: TestCase
+test_case = test
+
+test :: TestCase
 test = test_cases 
+        "Z3 test" 
         [ case0, case1
         , case2, case3
         , case4
@@ -33,9 +37,6 @@ test = test_cases
         , Case "conversion to first order typing (no type variables)" case7 result7
         , Case "conversion to first order typing" case8 result8
         , Case "instantiating type variables by matching some generic types" case9 result9 ]
-
-test_case :: ([Char], IO Bool, Bool)
-test_case = ("Z3 test", test, True)
 
 case0 :: TestCase
 case0 = Case "sample_quant" (verify sample_quant 2) $ Right Sat

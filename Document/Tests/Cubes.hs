@@ -18,10 +18,11 @@ import Data.Typeable
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "table of cubes example" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+        "table of cubes example"
         [ (Case "test 0 (syntax)" 
                 case6 $ Right [machine6])
         , (POCase "test 1 (verification)" 

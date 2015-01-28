@@ -23,17 +23,19 @@ import Tests.UnitTest
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "lambda expressions in the cube example" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
-            [ (Case "part 0" part0 True)
-            , (Case "part 1" part1 True) 
-            , (Case "part 2" part2 True) 
-            , (Case "part 3" part3 True) 
+            "lambda expressions in the cube example"
+            [ part0
+            , part1
+            , part2
+            , part3
             ]            
-part0 :: IO Bool
+part0 :: TestCase
 part0 = test_cases
+            "part 0"
             [ (POCase "test 0, verification, lambda vs empty-fun" 
                 (verify path0 0) result0)
             , (POCase "test 1, verification, lambda vs ovl, mk-fun" 
@@ -41,21 +43,24 @@ part0 = test_cases
             , (POCase "test 2, verification, lambda vs apply" 
                 (verify path2 0) result2)
             ]            
-part1 :: IO Bool
+part1 :: TestCase
 part1 = test_cases
+            "part 1"
             [ (POCase "test 3, verification, set comprehension, failed proof" 
                 (verify path3 0) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
             ]            
-part2 :: IO Bool
+part2 :: TestCase
 part2 = test_cases
+            "part 2"
             [ (POCase "test 6, verify progress refinement" case6 result6)
             , (POCase "test 7, verify refinement rules" case7 result7)
             , (POCase "test 8, verify refinement rules" case8 result8)
             ]            
-part3 :: IO Bool
+part3 :: TestCase
 part3 = test_cases
+            "part 3"
             [ (POCase "test 9, verify disjunction rule" (verify path9 0) result9)
             , (POCase "test 10, error: cyclic proof" (verify path10 0) result10)
             , (StringCase   "test 11, intermediate goals of monotonic \

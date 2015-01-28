@@ -138,16 +138,16 @@ instance Arbitrary Type where
         where
             t ts = (Gen (USER_DEFINED s ts))
 
-test_case :: TestCase
-test_case = Case "genericity" test True
-
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
     [   (array real (Gen $ USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
-test :: IO Bool
-test = test_cases (
+test_case :: TestCase
+test_case = test
+
+test :: TestCase
+test = test_cases "genericity" (
         [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
         , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
         , Case "unification, t2" (return $ unify gtype stype2) Nothing

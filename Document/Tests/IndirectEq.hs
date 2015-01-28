@@ -22,10 +22,11 @@ import Utilities.Format
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "theories and proofs" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "theories and proofs"
             [ POCase "verify proof with galois connections" case0 result0
             , POCase "verify theory 1: indirect (in)equality" case1 result1
             , POCase "verify theory 2: lattices" case2 result2

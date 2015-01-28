@@ -58,11 +58,11 @@ extract_structure ct = do
     xs <- latex_structure "" ct
     return (find_env sections xs)
 
-test_case :: (String, IO Bool, Bool)
-test_case = ("latex parser", cases, True)
+test_case :: TestCase
+test_case = cases
 
-cases :: IO Bool
-cases = test_cases [
+cases :: TestCase
+cases = test_cases "latex parser" [
     (Case "sample.tex" (main path2) result2),
     (Case "sorted seq err.tex" (main path3) result3),
     (CalcCase "reconstitute sample.tex" 

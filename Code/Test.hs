@@ -28,11 +28,12 @@ import System.Directory
 import System.IO.Unsafe
 import System.Process
 
-test_case :: (String, IO Bool, Bool)
-test_case = ( "code generation in the cube example", test, True )
+test_case :: TestCase
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "code generation in the cube example"
             [ (StringCase "test0: code for the {state}" case0 result0)
             , (StringCase "test1: code for the {event}" case1 result1)
             , (StringCase "test2: code for the {initialization}" case2 result2) 

@@ -19,10 +19,10 @@ import Tests.UnitTest
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "small machine example" test True
+test_case = test
 
-test :: IO Bool
-test = test_cases [
+test :: TestCase
+test = test_cases "small machine example" [
         (Case "test 0" 
             case0 $ 
             Right $ [m0_machine]),

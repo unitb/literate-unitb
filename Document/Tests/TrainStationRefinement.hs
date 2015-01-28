@@ -18,10 +18,11 @@ import Data.Map (Map,empty)
 import Utilities.Syntactic
 
 test_case :: TestCase
-test_case = Case "train station example, with refinement" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "train station example, with refinement"
             [ POCase "verify machine m0 (ref)" (verify 0 path0) result0
             , POCase "verify machine m1 (ref)" (verify 1 path0) result1
             , POCase "verify machine m2 (ref)" (verify 2 path0) result2

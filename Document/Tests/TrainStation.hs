@@ -89,23 +89,26 @@ runSpec :: IO Bool
 runSpec = $quickCheckAll
 
 test_case :: TestCase
-test_case = Case "train station example" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
-            [ Case "part 0" part0 True
-            , Case "part 1" part1 True
-            , Case "part 2" part2 True
-            , Case "part 3" part3 True
-            , Case "part 4" part4 True
-            , Case "part 5" part5 True
+            "train station example"
+            [ part0
+            , part1
+            , part2
+            , part3
+            , part4
+            , part5
             ]
-part0 :: IO Bool
+part0 :: TestCase
 part0 = test_cases
+            "part 0"
             [ (Case "test 0, syntax" case0 $ Right [machine0])
             ]
-part1 :: IO Bool
+part1 :: TestCase
 part1 = test_cases
+            "part 1"
             [ (POCase "test 1, verification" case1 result1)
             , (StringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
             , (StringCase "test 20, proof obligation, INIT/fis, loc" case20 result20)
@@ -114,28 +117,32 @@ part1 = test_cases
             , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
             , (Case "test 19, quickcheck brackets" runSpec True)
             ]
-part2 :: IO Bool
+part2 :: TestCase
 part2 = test_cases
+            "part 2"
             [ (StringCase "test 5, proof obligation, leave/en/tr0" case5 result5)
             , (Case "test 7, undeclared symbol" case7 result7)
             , (Case "test 8, undeclared event (wrt transient)" case8 result8)
             , (Case "test 9, undeclared event (wrt c sched)" case9 result9)
             ]
-part3 :: IO Bool
+part3 :: TestCase
 part3 = test_cases
+            "part 3"
             [ (Case "test 10, undeclared event (wrt indices)" case10 result10)
             , (Case "test 11, undeclared event (wrt assignment)" case11 result11)
             , (StringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
             ]
-part4 :: IO Bool
+part4 :: TestCase
 part4 = test_cases
+            "part 4"
             [ (POCase "test 13, verification, name clash between dummy and index" case13 result13)
             , (POCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (POCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
 
-part5 :: IO Bool
+part5 :: TestCase
 part5 = test_cases
+            "part 5"
             [ (POCase "test 16, verification, proof by parts" case16 result16)
             , (StringCase "test 17, ill-defined types" case17 result17)
             , (StringCase "test 18, assertions have type bool" case18 result18)

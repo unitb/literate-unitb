@@ -10,10 +10,11 @@ import Document.Tests.Suite
 import Tests.UnitTest
 
 test_case :: TestCase
-test_case = Case "Specification and refinement of a lock-free algorithm" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "Specification and refinement of a lock-free algorithm"
             [ (POCase "test 0, verification, specification with intervals" 
                 (verify path0 0) result0)
             , (POCase "test 1, verification, failed proof with intervals" 

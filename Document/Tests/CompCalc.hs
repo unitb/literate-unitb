@@ -14,10 +14,11 @@ import Data.Map as M hiding (split, map)
 import Tests.UnitTest
 
 test_case :: TestCase
-test_case = Case "theories with new notation: comp calc" test True
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases
+            "theories with new notation: comp calc"
             [ (POCase "proving a theorem with the everywhere operator" 
                 case0 result0)
             ]            

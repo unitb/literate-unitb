@@ -30,11 +30,12 @@ import UnitB.PO
 
 import Utilities.Syntactic
 
-test_case :: (String, IO Bool, Bool)
-test_case = ("Unit-B Document", test, True)
+test_case :: TestCase
+test_case = test
 
-test :: IO Bool
+test :: TestCase
 test = test_cases 
+        "Unit-B Document" 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
         , UE.test_case

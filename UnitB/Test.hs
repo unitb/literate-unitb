@@ -24,8 +24,12 @@ import Tests.UnitTest
 
 import Utilities.Syntactic
 
-test :: IO Bool
+test_case :: TestCase
+test_case = test
+
+test :: TestCase
 test = test_cases 
+        "Unit-B" 
         [  POCase "'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  POCase "train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
@@ -182,9 +186,6 @@ result_train_m0_tr_po = unlines
           ++            " (=> (select st t)"
           ++                " (not (select st@prime t)))))))"
     ]
-
-test_case :: (String, IO Bool, Bool)
-test_case = ("Unit-B", test, True)
 
 check_mch :: Either [Error] Machine -> IO (String, Map Label Sequent)
 check_mch em = do

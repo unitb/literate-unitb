@@ -37,17 +37,17 @@ import System.IO.Unsafe
 
 --as_map = id
 
-test_case :: (String, IO Bool, Bool) 
-test_case = ("Graphs and operator grammars", test, True)
+test_case :: TestCase
+test_case = test
 
-test :: IO Bool
-test = test_cases $
+test :: TestCase
+test = test_cases "Graphs and operator grammars" $
     [ Case "case 0 - complete domain of matrices" case0 result0
     --, Case "case 1 - operator grammar discrepancy" case1 result1
     , Case "case 2 - new ambiguities" case2 result2
     , Case "case 3 - transitive closures" case3 result3
     , Case "case 4 - transitive closures in linear time" case4 result4
-    , Case "Formatting utilities" test' True
+    , test'
     , Case "case 5 - error monad" case5 result5
     , Case "case 6 - union of a list of {sorted} list" case6 result6
     , Case "case 7 - union of a list of {unsorted} list" case7 result7  
@@ -327,8 +327,9 @@ result4 = sort
 data Tree a = Node a (Tree a) (Tree a) | Leaf
     deriving Show
 
-test' :: IO Bool
+test' :: TestCase
 test' = test_cases
+        "Formatting utilities"
         [ StringCase "test 0" 
                     (return $ format "hello {0} name is {1} and I'm {2} years old" "my" "Simon" 28) 
                     ("hello my name is Simon and I'm 28 years old")
