@@ -2,6 +2,7 @@ module Document.Tests.Lambdas where
 
     -- Modules
 import Document.Document
+import Document.Tests.Suite
 
 import Logic.Expr
 import Logic.Proof
@@ -9,7 +10,6 @@ import Logic.Proof
 import Theories.FunctionTheory
 
 import UnitB.AST
-import UnitB.PO
 
 import Z3.Z3 hiding ( verify )
 
@@ -35,16 +35,16 @@ test = test_cases
 part0 :: IO Bool
 part0 = test_cases
             [ (POCase "test 0, verification, lambda vs empty-fun" 
-                (verify path0) result0)
+                (verify path0 0) result0)
             , (POCase "test 1, verification, lambda vs ovl, mk-fun" 
-                (verify path1) result1)
+                (verify path1 0) result1)
             , (POCase "test 2, verification, lambda vs apply" 
-                (verify path2) result2)
+                (verify path2 0) result2)
             ]            
 part1 :: IO Bool
 part1 = test_cases
             [ (POCase "test 3, verification, set comprehension, failed proof" 
-                (verify path3) result3)
+                (verify path3 0) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
             ]            
@@ -56,8 +56,8 @@ part2 = test_cases
             ]            
 part3 :: IO Bool
 part3 = test_cases
-            [ (POCase "test 9, verify disjunction rule" (verify path9) result9)
-            , (POCase "test 10, error: cyclic proof" (verify path10) result10)
+            [ (POCase "test 9, verify disjunction rule" (verify path9 0) result9)
+            , (POCase "test 10, error: cyclic proof" (verify path10 0) result10)
             , (StringCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)
             , (Case "test 12, bound variable with ambiguous type"
@@ -384,7 +384,7 @@ path4 = "tests/cubes-t6.tex"
 
 case4 :: IO (Either [Error] (Map Label ProgressProp))
 case4 = runEitherT (do
-    ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
+    ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ progress $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
@@ -411,13 +411,13 @@ result5 = either g Right (do
 
 case5 :: IO (Either [Error] (Map Label SafetyProp))
 case5 = runEitherT (do
-    ms <- EitherT $ parse_machine path4 :: EitherT [Error] IO [Machine]
+    ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ safety $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 case6 :: IO (String, Map Label Sequent)
-case6 = verify path6
+case6 = verify path6 0
 
 result6 :: String
 result6 = unlines
@@ -536,7 +536,7 @@ path6 :: String
 path6 = "tests/cubes-t5.tex"
 
 case7 :: IO (String, Map Label Sequent)
-case7 = verify path7
+case7 = verify path7 0
 
 result7 :: String
 result7 = unlines
@@ -670,7 +670,7 @@ path7 :: String
 path7 = "tests/cubes-t4.tex"
 
 case8 :: IO (String, Map Label Sequent)
-case8 = verify path8
+case8 = verify path8 0
 
 result8 :: String
 result8 = unlines
@@ -927,8 +927,8 @@ path10 :: String
 path10 = "tests/cubes-t9.tex"
 
 result10 :: String
-result10 = "Left [Error \"A cycle exists in the proof of liveness: \
-            \prog0, prog1, prog2, prog3\" (1,1)]"
+result10 = "Error \"A cycle exists in the proof of liveness: \
+            \prog0, prog1, prog2, prog3\" (1,1)\n"
 
 case11 :: IO String
 case11 = do
@@ -1347,23 +1347,10 @@ path12 = "Tests/cubes-t10.tex"
 
 result12 :: String
 result12 = unlines 
-        [  "error (274,2): type of j is ill-defined: _a"
+        [  "Error \"type of j is ill-defined: _a\" (274,2)"
         ]
 
 case12 :: IO String
-case12 = do
-        r <- parse_machine path12
-        case r of
-            Right _ -> do
-                return "successful verification"
-            Left xs -> return $ unlines $ map format_error xs
+case12 = find_errors path12
 
 
-verify :: FilePath -> IO (String, Map Label Sequent)
-verify path = do
-    r <- list_file_obligations path
-    case r of
-        Right [(m,pos)] -> do
-            (s,_,_) <- str_verify_machine m
-            return (s, pos)
-        x -> return (show x, empty)

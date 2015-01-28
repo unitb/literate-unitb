@@ -3,7 +3,7 @@ module Documentation.SummaryGen
     ( produce_summaries )
 where
 
-import Logic.Expr
+import Logic.Expr hiding ((</>))
 import Logic.ExpressionStore
 
 import UnitB.AST

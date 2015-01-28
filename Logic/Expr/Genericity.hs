@@ -15,11 +15,10 @@ import Control.Monad
 
 import           Data.Either
 import qualified Data.Graph as G
-import           Data.List as L hiding ( (\\), union )
+import           Data.List as L hiding ( union )
 import           Data.Map as M 
                     hiding ( foldl, map, union, unions, (\\) )
 import qualified Data.Map as M
-import           Data.Set as S ( (\\) )
 import qualified Data.Set as S 
 
 import Prelude as L
@@ -389,18 +388,20 @@ class Generic a where
     instantiate :: Map String Type -> a -> a
     substitute_type_vars :: Map String Type -> a -> a
     types_of    :: a -> S.Set Type
+    genericsList :: a -> [String]
  
-    generics x  = S.unions $ map generics $ S.toList $ types_of x
+    generics x  = S.fromList $ genericsList x
+    genericsList x  = concatMap genericsList $ S.toList $ types_of x
     variables x = S.unions $ map variables $ S.toList $ types_of x
     instantiate m x = substitute_types (instantiate m) x
     substitute_type_vars m x = 
         substitute_types (substitute_type_vars m) x
     
 instance Generic GenericType where
-    generics (GENERIC s)         = S.singleton s
-    generics (VARIABLE _)        = S.empty
-    generics (Gen (USER_DEFINED _ ts)) = S.unions $ map generics ts
-    variables (VARIABLE s)         = S.singleton s
+    genericsList (GENERIC s)     = [s]
+    genericsList (VARIABLE _)    = []
+    genericsList (Gen (USER_DEFINED _ ts)) = concatMap genericsList ts
+    variables (VARIABLE s)       = S.singleton s
     variables (GENERIC _)        = S.empty
     variables (Gen (USER_DEFINED _ ts)) = S.unions $ map variables ts
     types_of t = S.singleton t
@@ -497,9 +498,9 @@ normalize_generics expr = instantiate renaming expr
         gen = (letters ++ [ x ++ y | x <- gen, y <- letters ])
         f (m,names) e = visit f (M.union renaming m, drop n names) e
             where
-                free_gen = generics e \\ keysSet m
-                renaming = fromList $ zip (S.toList free_gen) names
-                n        = S.size free_gen
+                free_gen = nub (genericsList e) L.\\ keys m
+                renaming = fromList $ zip free_gen names
+                n        = length free_gen
         renaming = fst $ f (empty, map GENERIC gen) expr
 
 instantiate_left :: Map String GenericType -> GenericType -> GenericType

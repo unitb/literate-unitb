@@ -180,11 +180,12 @@
 +++ OK, passed 100 tests.
 |  |  +- common type is symmetric
 +++ OK, passed 100 tests.
+|  |  +- common type is symmetric (counter-example)
 |  |  +- instantiation of unified types is unique (counter examples)
 |  |  +- type mapping are acyclic
 +++ OK, passed 100 tests.
 |  |  +- one-point rule simplification on existentials
-|  |  +- [ Success: 17 / 17 ]
+|  |  +- [ Success: 18 / 18 ]
 |  +- [ Success: 6 / 6 ]
 +- latex parser
 |  +- sample.tex
@@ -259,10 +260,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   30498 total
+   30571 total
     1108 Document/Machine.hs
      867 UnitB/AST.hs
      809 Document/Proof.hs
      742 Utilities/permutation.hs
      712 Document/Expression.hs
-Run time: 1m 47s
+Run time: 1m 46s

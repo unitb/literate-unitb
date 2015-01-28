@@ -221,22 +221,22 @@ read_document xs = do
             let default_thy = empty_theory 
                                 { extends = fromList [("basic",basic_theory)] }
                 procM pass = do
-                    ms' <- lift $ gets machines 
-                    ms' <- toEither $ mapM (uncurry pass) 
-                        $ M.elems 
-                        $ M.intersectionWith (,) ms ms'
-                    lift $ modify $ \s -> s{ 
-                        machines = M.fromList $ zip (M.keys ms) ms' }
+                     ms' <- lift $ gets machines 
+                     ms' <- toEither $ mapM (uncurry pass) 
+                         $ M.elems 
+                         $ M.intersectionWith (,) ms ms'
+                     lift $ modify $ \s -> s{ 
+                         machines = M.fromList $ zip (M.keys ms) ms' }
                 procC pass = do
-                    cs' <- lift $ gets theories
-                    cs' <- toEither $ zipWithM 
-                            (uncurry . pass) 
+                     cs' <- lift $ gets theories
+                     cs' <- toEither $ zipWithM 
+                             (uncurry . pass) 
                             (M.keys cs)
                         $ M.elems 
                         $ M.intersectionWith (,) cs cs'
-                    lift $ modify $ \s -> s 
+                     lift $ modify $ \s -> s 
                         { theories = M.fromList (zip (M.keys cs) cs') 
-                                `M.union` theories s }
+                                 `M.union` theories s }
             lift $ modify (\s -> s 
                 { machines = M.mapWithKey (\k _ -> empty_machine k) ms 
                 , theories = M.map (const default_thy) cs `M.union` theories s })

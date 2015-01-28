@@ -40,6 +40,23 @@ prop_unifying_yields_unified_type (t0,t1) =
 prop_common_symm :: GenericType -> GenericType -> Bool
 prop_common_symm t0 t1 = common t0 t1 == common t1 t0 
 
+counter_ex_common_symm :: Bool
+counter_ex_common_symm = prop_common_symm t0 t1
+    where
+        _a = GENERIC "a"
+        _b = GENERIC "b"
+        _c = GENERIC "c"
+        s2 = Sort "D" "D" 2
+        _s2 = DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+        empty x y = Gen (USER_DEFINED s2 [x,y])
+        t0 = fun_type _b _a
+        pfun = fun_type
+        set = set_type
+        t1 = (pfun (pfun int (pfun _c (set t3))) _c)
+        t2 = (array (empty real (array (array bool _b) _c)) bool)
+        t3 = (set (pfun real (set (set (array (pfun real t2) bool)))))
+
+
 prop_type_unifies_with_self :: Type -> Bool
 prop_type_unifies_with_self t = unify t t /= Nothing
 
@@ -78,9 +95,9 @@ instance Arbitrary Type where
                     s  <- oneof sorts
                     ts <- case s of
                         Sort _ _ n -> 
-                            forM [1 .. n] (\_ -> arbitrary)
+                            replicateM n arbitrary
                         DefSort _ _ args _ -> 
-                            forM [1 .. length args] (\_ -> arbitrary)
+                            replicateM (length args) arbitrary
                         IntSort -> 
                             return []
                         RealSort ->
@@ -99,11 +116,11 @@ instance Arbitrary Type where
                 ] ) )
         where
             sorts = map return
-                [ Sort "A" "" 0
-                , Sort "B" "" 1
-                , Sort "C" "" 1
-                , Sort "D" "" 2
-                , DefSort "E" "" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+                [ Sort "A" "A" 0
+                , Sort "B" "B" 1
+                , Sort "C" "C" 1
+                , Sort "D" "D" 2
+                , DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
                 , BoolSort
                 , IntSort
                 , RealSort
@@ -113,6 +130,13 @@ instance Arbitrary Type where
                 , GENERIC "b"
                 , GENERIC "c"
                 ]
+    shrink (GENERIC _)  = []
+    shrink (VARIABLE _) = []
+    shrink (Gen (USER_DEFINED s ts)) = ts ++ do
+            ts <- mapM shrink ts
+            return $ t ts
+        where
+            t ts = (Gen (USER_DEFINED s ts))
 
 test_case :: TestCase
 test_case = Case "genericity" test True
@@ -124,24 +148,25 @@ unicity_counter_example =
 
 test :: IO Bool
 test = test_cases (
-        [  Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
-        ,  Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
-        ,  Case "unification, t2" (return $ unify gtype stype2) Nothing
-        ,  Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [("a@1",set_type int), ("a@2",real)])
-        ,  Case "unification, t4" (return $ unify gtype1 gtype2) Nothing
-        ,  Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [("a@2",set_type real), ("a@1",set_type $ set_type real)])
-        ,  Case "unification, t6" (return $ unify int (GENERIC "c")) (Just $ fromList [("c@2",int)])
-        ,  Case "type instantiation" (return $ instantiate (fromList [("c", set_type int),("b",real)]) gtype) stype1
+        [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
+        , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
+        , Case "unification, t2" (return $ unify gtype stype2) Nothing
+        , Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [("a@1",set_type int), ("a@2",real)])
+        , Case "unification, t4" (return $ unify gtype1 gtype2) Nothing
+        , Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [("a@2",set_type real), ("a@1",set_type $ set_type real)])
+        , Case "unification, t6" (return $ unify int (GENERIC "c")) (Just $ fromList [("c@2",int)])
+        , Case "type instantiation" (return $ instantiate (fromList [("c", set_type int),("b",real)]) gtype) stype1
 --        ,  Case "type inference 0" case2 result2
-        ,  Case "type inference 1" case3 result3
---        ,  Case "type inference 2" case4 result4
+        , Case "type inference 1" case3 result3
+--        , Case "type inference 2" case4 result4
                 -- does not work because we cannot match 
                 -- a generic parameter to a generic expression
-        ,  Case "type inference 3" case5 result5
-        ,  Case "type inference 4" case6 result6
-        ,  Case "type inference 5" case7 result7
+        , Case "type inference 3" case5 result5
+        , Case "type inference 4" case6 result6
+        , Case "type inference 5" case7 result7
         , Case "instantiation of unified types is unique" (check_prop prop_unifying_yields_unified_type) True
         , Case "common type is symmetric" (check_prop prop_common_symm) True
+        , StringCase "common type is symmetric (counter-example)" (return $ show counter_ex_common_symm) "True"
         ] ++
         map (\ce -> Case 
                 "instantiation of unified types is unique (counter examples)" 

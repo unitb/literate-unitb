@@ -38,7 +38,6 @@ import           Data.Char
 import           Data.Map as M 
                     ( Map
                     , insert, keys
-                    , fromList
                     , toList, unions )
 import qualified Data.Map as M 
 import           Data.Maybe
@@ -119,14 +118,16 @@ parser (Shared { .. })  = return $ do
     where
         f m = do
             x <- proof_obligation m
-            return $ fromList $ map (g $ _name m) $ toList $ x
-        g lbl (x,y) = ((lbl,x),y)
+            -- return $ fromList $ map (g $ _name m) $ toList $ x
+            return $ M.mapKeys (g $ _name m) x
+        g lbl x = (lbl,x)
+        h lbl (x,y) = ((lbl,x),y)
         parse = do
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
                     ms <- hoistEither $ mapM f $ M.elems $ machines s
                     pos <- hoistEither $ mapM theory_po $ M.elems $ theories s
-                    let cs = M.fromList $ map (uncurry g) $ do
+                    let cs = M.fromList $ map (uncurry h) $ do
                                 (x,ys) <- zip (map label (keys $ theories s)) pos
                                 y <- toList ys
                                 return (x,y)

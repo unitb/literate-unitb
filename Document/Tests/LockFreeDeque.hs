@@ -3,11 +3,9 @@ module Document.Tests.LockFreeDeque
 where
 
     -- Modules
-import Document.Document
 import Document.Tests.Suite
 
     -- Libraries
-import Utilities.Syntactic
 
 import Tests.UnitTest
 
@@ -181,18 +179,13 @@ path2 :: String
 path2 = "tests/lock-free deque/main3.tex"
 
 case2 :: IO String
-case2 = do
-        r <- parse_machine path2
-        case r of
-            Right _ -> do
-                return "successful verification"
-            Left xs -> return $ unlines $ map format_error xs
+case2 = find_errors path2
 
 
 result2 :: String
 result2 = unlines
-        [ "error (44,3): 'm0:inv0' is already used for another invariant" 
-        , "error (87,3): 'm0:grd0' is already used for another guard" ]
+        [ "Error \"'m0:inv0' is already used for another invariant\" (44,3)" 
+        , "Error \"'m0:grd0' is already used for another guard\" (87,3)" ]
 
 path3 :: String
 path3 = "tests/lock-free deque/main4.tex"

@@ -1,6 +1,7 @@
 module Document.Tests.IndirectEq where
 
 import Document.Document
+import Document.Tests.Suite
 
 import UnitB.AST
 import UnitB.PO
@@ -13,7 +14,6 @@ import Z3.Z3 ( z3_code )
     -- Libraries
 import Data.Map as M hiding (split, map)
 
-import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 import Tests.UnitTest
@@ -49,7 +49,7 @@ path3 :: String
 path3 = "tests/indirect-equality-t3.tex"
 
 case0 :: IO (String, Map Label Sequent)
-case0 = verify 0 path0
+case0 = verify path0 0
 
 result0 :: String
 result0 = unlines 
@@ -590,10 +590,10 @@ result4 = unlines
     ]
 
 case5 :: IO String
-case5 = parse path2
+case5 = find_errors path2
 
 result5 :: String
-result5 = "Left error (1,1): A cycle exists in the proofs of ctx1: thm3, thm5\n"
+result5 = "Error \"A cycle exists in the proofs of ctx1: thm3, thm5\" (1,1)\n"
 
 case6 :: IO (String, Map Label Sequent)
 case6 = verify_thy path3 "ctx1"
@@ -888,26 +888,3 @@ parse path = do
 --                return r
 --            Left x -> return $ show x
 
-verify_thy :: FilePath -> String -> IO (String, Map Label Sequent)
-verify_thy path name = do
-        r <- runEitherT $ do
-            s <- EitherT $ parse_system path
-            pos <- hoistEither $ theory_po $ theories s ! name
-            res <- lift $ verify_all pos
-            return $ (unlines $ map (\(k,r) -> success r ++ show k) $ toList res, pos)
-        case r of
-            Right r -> do
-                return r
-            Left x -> return (show x, empty)
-    where
-        success True  = "  o  "
-        success False = " xxx "
-
-verify :: Int -> FilePath -> IO (String, Map Label Sequent)
-verify n path = do
-    r <- list_file_obligations path
-    case r of
-        Right ms -> do
-            (s,_,_) <- str_verify_machine $ fst $ ms !! n
-            return (s, snd $ ms !! n)
-        x -> return (show x, empty)
