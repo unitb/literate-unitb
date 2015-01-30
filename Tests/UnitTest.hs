@@ -125,6 +125,11 @@ test_suite xs = test_cases $ map f xs
     where
         f (x,y,z) = Case x y z
 
+strip_line_info :: String -> String
+strip_line_info xs = unlines $ map f $ lines xs
+    where
+        f xs = takeWhile (/= '(') xs
+
 test_cases :: [TestCase] -> IO Bool
 test_cases xs = 
         mapM f xs >>= test_suite_string
@@ -143,7 +148,8 @@ test_cases xs =
                        , True  )
         f (StringCase x y z) = return (Nothing, x, y, z, True)
         f (POCase x y z)     = do
-                let cmd = catch (fst `liftM` y) f
+                let strip = id
+                    cmd = catch ((strip . fst) `liftM` y) f
                     f x = putStrLn "*** EXCEPTION ***" >> return (show (x :: SomeException))
                     get_po = catch (snd `liftM` y) g
                     g :: SomeException -> IO (M.Map Label Sequent)
@@ -184,8 +190,9 @@ print_po pos name actual expected = do
             Nothing  -> return ()
 
 test_suite_string :: [(Maybe (IO (M.Map Label Sequent)), String, IO String, String, Bool)] -> IO Bool
-test_suite_string xs = do
-        n  <- readIORef margin
+test_suite_string xs = bracket 
+            (readIORef margin) 
+            (writeIORef margin) $ \n -> do
         let bars = concat $ take n $ repeat "|  "
             putLn xs = putStr $ unlines $ map (bars ++) $ lines xs 
         writeIORef margin (n+1)
@@ -209,6 +216,5 @@ test_suite_string xs = do
                     return False )
         let x = length xs
             y = length $ filter id xs
-        writeIORef margin n
         putLn (format "+- [ Success: {0} / {1} ]" y x)
         return (and xs)

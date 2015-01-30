@@ -20,17 +20,467 @@
 |  |  +- [ Success: 11 / 11 ]
 |  +- theories with new notation: comp calc
 |  |  +- proving a theorem with the everywhere operator
-|  |  +- [ Success: 1 / 1 ]
+|  |     Exception:  Map.!: given key is not an element in the map
+|  |  +- [ Success: 0 / 1 ]
 |  +- theories and proofs
 |  |  +- verify proof with galois connections
 |  |  +- verify theory 1: indirect (in)equality
+*** EXCEPTION ***
+EXCEPTION!!!
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Map.!:_.given_.key_.is_.not_.an_.element_.in_.the_.map
+|  |    < _._.o_._.THM/thm0/completeness_.(131,1)\n
+|  |    - --- -------------------------------------
+|  |    < _._.o_._.THM/thm0/part_.1/easy_.(133,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/goal_.(143,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/hypotheses_.(143,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/new_.assumption_.(138,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/relation_.(143,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/step_.(145,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/step_.(147,2)\n
+|  |    < _._.o_._.THM/thm0/part_.2/step_.(150,2)\n
+|  |    < _._.o_._.THM/thm1/completeness_.(162,1)\n
+|  |    < _._.o_._.THM/thm1/part_.1/goal_.(165,2)\n
+|  |    < _._.o_._.THM/thm1/part_.1/hypotheses_.(165,2)\n
+|  |    < _._.o_._.THM/thm1/part_.1/relation_.(165,2)\n
+|  |    < _._.o_._.THM/thm1/part_.1/step_.(167,2)\n
+|  |    < _._.o_._.THM/thm1/part_.2/goal_.(173,2)\n
+|  |    < _._.o_._.THM/thm1/part_.2/hypotheses_.(173,2)\n
+|  |    < _._.o_._.THM/thm1/part_.2/relation_.(173,2)\n
+|  |    < _._.o_._.THM/thm1/part_.2/step_.(175,2)\n
+|  |    < _._.o_._.THM/thm1/part_.2/step_.(177,2)\n
+|  |  ]
 |  |  +- verify theory 2: lattices
+*** EXCEPTION ***
+EXCEPTION!!!
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Map.!:_.given_.key_.is_.not_.an_.element_.in_.the_.map
+|  |    < _._.o_._.THM/ctx1:thm10/assertion/indirect:eq/easy_.(482,24)\n
+|  |    - --- --------------------------------------------------
+|  |    < _._.o_._.THM/ctx1:thm10/assertion/new:goal/goal_.(483,41)\n
+|  |    < _._.o_._.THM/ctx1:thm10/assertion/new:goal/hypotheses_.(483,41)\n
+|  |    < _._.o_._.THM/ctx1:thm10/assertion/new:goal/relation_.(483,41)\n
+|  |    < _._.o_._.THM/ctx1:thm10/assertion/new:goal/step_.(485,20)\n
+|  |    < _._.o_._.THM/ctx1:thm10/main_.goal/easy_.(482,24)\n
+|  |    < _._.o_._.THM/ctx1:thm11/completeness_.(506,24)\n
+|  |    < _._.o_._.THM/ctx1:thm11/new_.assumption_.(498,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.1/easy_.(516,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/goal_.(526,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/hypotheses_.(526,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/new_.assumption_.(518,13)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/relation_.(526,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/step_.(528,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/step_.(533,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/step_.(535,1)\n
+|  |    < _._.o_._.THM/ctx1:thm11/part_.2/step_.(537,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/goal_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/hypotheses_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/relation_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(216,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(219,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(221,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/indirect:eq/easy_.(236,24)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/goal_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/hypotheses_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/relation_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(240,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(242,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(244,1)\n
+|  |    < _.xxx_.THM/ctx1:thm4/assertion/new:goal/step_.(246,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/main_.goal/easy_.(236,24)\n
+|  |    < _._.o_._.THM/ctx1:thm5/goal_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/hypotheses_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/relation_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(266,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(268,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(270,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(272,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/goal_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/hypotheses_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/relation_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(291,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(293,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(295,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(297,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/goal_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/hypotheses_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/new_.assumption_.(313,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/relation_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(327,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(329,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(331,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(333,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/completeness_.(349,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/goal_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/hypotheses_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/relation_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/step_.(360,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/goal_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/hypotheses_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/new_.assumption_.(366,13)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/relation_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/step_.(375,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/step_.(377,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy_.(400,41
+|  |    < )\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal_.(401,43)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses_.(401,
+|  |    < 43)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation_.(401,43
+|  |    < )\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(404,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(406,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(408,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/main_.goal/easy_.(400,41)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/new_.assumption_.(399,33)\n
+|  |    < _._.o_._.THM/ctx1:thm9/main_.goal/case_.1/easy_.(399,33)\n
+|  |    < _._.o_._.THM/ctx1:thm9/main_.goal/case_.2/easy_.(399,33)\n
+|  |    < _._.o_._.THM/ctx1:thm9/main_.goal/completeness_.(399,33)\n
+|  |    < _._.o_._.THM/ctx1:thm9/new_.assumption_.(393,1)\n
+|  |  ]
 |  |  +- proofs by symmetry: PO
+*** EXCEPTION ***
+EXCEPTION!!!
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Map.!:_.given_.key_.is_.not_.an_.element_.in_.the_.map
+|  |    < _._.o_._.THM/thm4/case_.1/easy_.(310,2)\n
+|  |    - --- ------------------  -----------------
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/goal_.(315,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/hypotheses_.(315,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/new_.assumption_.(314,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/relation_.(315,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/step_.(317,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/assertion/symmetry/step_.(319,2)\n
+|  |    < _.xxx_.THM/thm4/case_.2/assertion/symmetry/step_.(321,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/main_.goal/case_.1/easy_.(314,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/main_.goal/case_.2/easy_.(314,2)\n
+|  |    < _._.o_._.THM/thm4/case_.2/main_.goal/completeness_.(314,2)\n
+|  |    < _._.o_._.THM/thm4/completeness_.(308,1)\n
+|  |    < _._.o_._.THM/thm4/new_.assumption_.(300,23)\n
+|  |  ]
 |  |  +- proofs by symmetry: hypotheses labels
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > error
+|  |    < (declare-datatypes_.(a)_.(_.(Maybe_.(Just_.(fromJust_.a))_.Nothing)_.))\n
+|  |    - -----
+|  |    < (declare-datatypes_.()_.(_.(Null_.null)_.))\n
+|  |    < (declare-datatypes_.(a_.b)_.(_.(Pair_.(pair_.(first_.a)_.(second_.b)))_.))\n
+|  |    < ;_.comment:_.we_.don't_.need_.to_.declare_.the_.sort_.Bool\n
+|  |    < ;_.comment:_.we_.don't_.need_.to_.declare_.the_.sort_.Int\n
+|  |    < ;_.comment:_.we_.don't_.need_.to_.declare_.the_.sort_.Real\n
+|  |    < (define-sort_.pfun_.(a_.b)_.(Array_.a_.(Maybe_.b)))\n
+|  |    < (define-sort_.set_.(a)_.(Array_.a_.Bool))\n
+|  |    < (declare-const_.i_.Int)\n
+|  |    < (declare-const_.j_.Int)\n
+|  |    < (declare-const_.k_.Int)\n
+|  |    < (declare-const_.swap_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < (declare-fun_.apply@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._.(_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int)\n
+|  |    < _._._._._._._._._._._._._._._.(Pair_.(Pair_.Int_.Int)_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._.Int)\n
+|  |    < (declare-fun_.empty-fun@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._.()\n
+|  |    < _._._._._._._._._._._._._.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < (declare-fun_.injective@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._.(_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._.Bool)\n
+|  |    < (declare-fun_.mk-fun@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._.(_.(Pair_.(Pair_.Int_.Int)_.Int)\n
+|  |    < _._._._._._._._._._._._._._._.Int_.)\n
+|  |    < _._._._._._._._._._._._._.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < (declare-fun_.ovl@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._.(_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int)\n
+|  |    < _._._._._._._._._._._._._._._.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < (assert_.(forall_.(_.(x_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(y_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@
+|  |    < Close@@Int@Close@@Int_.(mk-fun@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close
+|  |    < @@Int_.x_.y)\n
+|  |    < 
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.y)\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.(mk-fun@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@
+|  |    < @@Int_.x_.y)\n
+|  |    < 
+|  |    < (assert_.(forall_.(_.(x_.(Pair_.(Pair_.Int_.Int)_.Int))_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(select_.empty-fun@Open@@Pair@Open@@
+|  |    < Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.(as_.Nothing_.(Maybe_.Int)))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(select_.empty-fun@Open@@Pair@Open@@
+|  |    < Pair@@Int@@Int@Close@@Int@Close@@Int\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x)_.))))\n
+|  |    < (assert_.(forall_.(_.(x_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(x2_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(y_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(select_.(mk-fun@Open@@Pair@Open@@Pair
+|  |    < @@Int@@Int@Close@@Int@Close@@Int_.x_.y)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x2)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.(ite_.(=_.x_.x2)_.(Just_.y)_.(as_.
+|  |    < Nothing_.(Maybe_.Int))))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(select_.(mk-fun@Open@@Pair@Open@@Pair
+|  |    < @@Int@@Int@Close@@Int@Close@@Int_.x_.y)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x2)_.))))\n
+|  |    < (assert_.(forall_.(_.(x_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(f1_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.
+|  |    < Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(f2_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.
+|  |    < Int))_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(select_.(ovl@Open@@Pair@Open@@Pair@@
+|  |    < Int@@Int@Close@@Int@Close@@Int_.f1_.f2)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.(ite_.(=_.(select_.f2_.x)_.(as_.
+|  |    < Nothing_.(Maybe_.Int)))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._.(select_.f1_.x)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._.(select_.f2_.x)))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(select_.(ovl@Open@@Pair@Open@@Pair@@
+|  |    < Int@@Int@Close@@Int@Close@@Int_.f1_.f2)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._._._._.x)_.))))\n
+|  |    < (assert_.(forall_.(_.(f1_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(x2_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(x_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(y_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=>_.(not_.(=_.x_.x2))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._.(=_.(apply@Open@@Pair@Open@@Pair
+|  |    < @@Int@@Int@Close@@Int@Close@@Int_.(ovl@Open@@Pair@Open@@Pair@@Int@@Int@Close@@
+|  |    < @Close@@Int_.f1\n
+|  |    < 
+|  |    < 
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(apply@Open@@Pair@Open@@
+|  |    < Pair@@Int@@Int@Close@@Int@Close@@Int_.f1_.x2)))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.(ovl@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@
+|  |    < Int_.f1\n
+|  |    < 
+|  |    < 
+|  |    < (assert_.(forall_.(_.(f1_.(pfun_.(Pair_.(Pair_.Int_.Int)_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(x_.(Pair_.(Pair_.Int_.Int)_.Int))\n
+|  |    < _._._._._._._._._._._._._._._._._._.(y_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@
+|  |    < Close@@Int@Close@@Int_.(ovl@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@
+|  |    < Int_.f1\n
+|  |    < 
+|  |    < 
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.y)\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.(ovl@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@
+|  |    < Int_.f1\n
+|  |    < 
+|  |    < 
+|  |    < ;_.axm0\n
+|  |    < (assert_.(forall_.(_.(i_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(j_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(k_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@
+|  |    < Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.k))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.(apply@Open@@Pair@Open@@Pair@@Int@@
+|  |    < Int@Close@@Int@Close@@Int_.swap_.(pair_.(pair_.j_.i)_.k)))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.k))_.))))\n
+|  |    < ;_.axm1\n
+|  |    < (assert_.(forall_.(_.(i_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(j_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@
+|  |    < Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.i))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.j)\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.i))_.))))\n
+|  |    < ;_.axm2\n
+|  |    < (assert_.(forall_.(_.(i_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(j_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@
+|  |    < Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.j))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._.i)\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.j))_.))))\n
+|  |    < ;_.axm3\n
+|  |    < (assert_.(forall_.(_.(i_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(j_.Int)\n
+|  |    < _._._._._._._._._._._._._._._._._._.(k_.Int)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(=>_.(and_.(not_.(=_.k_.i))_.(not_.(=_.k_.j
+|  |    < )))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._.(=_.(apply@Open@@Pair@Open@@Pair
+|  |    < @@Int@@Int@Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.k))\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.k))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(apply@Open@@Pair@Open@@Pair@@Int@@Int
+|  |    < @Close@@Int@Close@@Int_.swap_.(pair_.(pair_.i_.j)_.k))_.))))\n
+|  |    < ;_.ctx2:thm4:hyp0\n
+|  |    < (assert_.(<=_.i_.k))\n
+|  |    < ;_.ctx2:thm4:hyp1\n
+|  |    < (assert_.(<=_.j_.k))\n
+|  |    < ;_.ctx2:thm4:hyp3\n
+|  |    < (assert_.(=_.i_.k))\n
+|  |    < (assert_.(not_.(<=_.(apply@Open@@Pair@Open@@Pair@@Int@@Int@Close@@Int@Close@@
+|  |    < Int_.swap_.(pair_.(pair_.i_.j)_.k))\n
+|  |    < _._._._._._._._._._._._._._._._._.k)))\n
+|  |    < (check-sat-using_.(or-else_.(then_.qe_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.simplify_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.skip_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.(using-params_.
+|  |    < simplify_.:expand-power_.true)_.smt)))\n
+|  |  ]
 |  |  +- cyclic references between proofs
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > ok
+|  |    < Left_.error_.(1,1):_.A_.cycle_.exists_.in_.the_.proofs_.of_.ctx1:_.thm3,_.thm5\
+|  |    - --
+|  |    < n
+|  |  ]
 |  |  +- referring to theorems in automatic proofs (failure)
+*** EXCEPTION ***
+EXCEPTION!!!
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > Map.!:_.given_.key_.is_.not_.an_.element_.in_.the_.map
+|  |    < _.xxx_.THM/ctx1:thm10\n
+|  |    - -----------------------
+|  |    < _._.o_._.THM/ctx1:thm3/goal_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/hypotheses_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/relation_.(213,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(216,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(219,1)\n
+|  |    < _._.o_._.THM/ctx1:thm3/step_.(221,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/indirect:eq/easy_.(236,24)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/goal_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/hypotheses_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/relation_.(237,41)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(240,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(242,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/assertion/new:goal/step_.(244,1)\n
+|  |    < _.xxx_.THM/ctx1:thm4/assertion/new:goal/step_.(246,1)\n
+|  |    < _._.o_._.THM/ctx1:thm4/main_.goal/easy_.(236,24)\n
+|  |    < _._.o_._.THM/ctx1:thm5/goal_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/hypotheses_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/relation_.(263,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(266,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(268,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(270,1)\n
+|  |    < _._.o_._.THM/ctx1:thm5/step_.(272,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/goal_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/hypotheses_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/relation_.(288,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(291,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(293,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(295,1)\n
+|  |    < _._.o_._.THM/ctx1:thm6/step_.(297,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/goal_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/hypotheses_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/new_.assumption_.(313,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/relation_.(324,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(327,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(329,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(331,1)\n
+|  |    < _._.o_._.THM/ctx1:thm7/step_.(333,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/completeness_.(349,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/goal_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/hypotheses_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/relation_.(357,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.1/step_.(360,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/goal_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/hypotheses_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/new_.assumption_.(366,13)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/relation_.(372,27)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/step_.(375,1)\n
+|  |    < _._.o_._.THM/ctx1:thm8/part_.2/step_.(377,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/indirect:ineq/easy_.(400,31
+|  |    < )\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/goal_.(401,43)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/hypotheses_.(401,
+|  |    < 43)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/relation_.(401,43
+|  |    < )\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(404,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(406,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/assertion/new:goal/step_.(408,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/main_.goal/easy_.(400,31)\n
+|  |    < _._.o_._.THM/ctx1:thm9/assertion/symmetry/new_.assumption_.(399,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/main_.goal/case_.1/easy_.(399,1)\n
+|  |    < _.xxx_.THM/ctx1:thm9/main_.goal/case_.2/easy_.(399,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/main_.goal/completeness_.(399,1)\n
+|  |    < _._.o_._.THM/ctx1:thm9/new_.assumption_.(393,1)\n
+|  |  ]
 |  |  +- partial instantiation of theorems in calc. hints
-|  |  +- [ Success: 8 / 8 ]
+|  |  |___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > error
+|  |    < (declare-datatypes_.(a)_.(_.(Maybe_.(Just_.(fromJust_.a))_.Nothing)_.))\n
+|  |    - -----
+|  |    < (declare-datatypes_.()_.(_.(Null_.null)_.))\n
+|  |    < (declare-datatypes_.(a_.b)_.(_.(Pair_.(pair_.(first_.a)_.(second_.b)))_.))\n
+|  |    < ;_.comment:_.we_.don't_.need_.to_.declare_.the_.sort_.Bool\n
+|  |    < (declare-sort_.G_.0)\n
+|  |    < (define-sort_.pfun_.(a_.b)_.(Array_.a_.(Maybe_.b)))\n
+|  |    < (define-sort_.set_.(a)_.(Array_.a_.Bool))\n
+|  |    < (declare-const_.G_.(set_.G))\n
+|  |    < (declare-const_.x_.G)\n
+|  |    < (declare-const_.y_.G)\n
+|  |    < (declare-const_.z_.G)\n
+|  |    < (declare-fun_.le_.(G_.G)_.Bool)\n
+|  |    < (declare-fun_.up_.(G_.G)_.G)\n
+|  |    < (assert_.(forall_.(_.(p_.G)_.)\n
+|  |    < _._._._._._._._._._._._._._._._.(!_.(or_.(le_.p_.x)_.(le_.x_.p))\n
+|  |    < _._._._._._._._._._._._._._._._._._._.:pattern\n
+|  |    < _._._._._._._._._._._._._._._._._._._.(_.(le_.p_.x)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._.(le_.x_.p)_.))))\n
+|  |    < (assert_.(not_.(=_.true_.(or_.(le_.x_.y)_.(le_.y_.x)))))\n
+|  |    < (check-sat-using_.(or-else_.(then_.qe_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.simplify_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.skip_.smt)\n
+|  |    < _._._._._._._._._._._._._._._._._._._._._._._._._._.(then_.(using-params_.
+|  |    < simplify_.:expand-power_.true)_.smt)))\n
+|  |  ]
+|  |  +- [ Success: 1 / 8 ]
 |  +- small machine example
 |  |  +- test 0
 |  |  +- test 1 (separate machine blocks)
@@ -44,7 +494,8 @@
 |  |  +- test 9 (coarse schedule weakening, PO)
 |  |  +- test 10 (transient PO, enablement)
 |  |  +- test 11 (transient PO, negation)
-|  |  +- [ Success: 12 / 12 ]
+|  |  +- test 12 name clash between coarse schedule and co properties
+|  |  +- [ Success: 13 / 13 ]
 |  +- table of cubes example
 |  |  +- test 0 (syntax)
 |  |  +- test 1 (verification)
@@ -55,7 +506,8 @@
 |  +- train station example
 |  |  +- part 0
 |  |  |  +- test 0, syntax
-|  |  |  +- [ Success: 1 / 1 ]
+|  |  |  +- test 21, multiple imports of sets
+|  |  |  +- [ Success: 2 / 2 ]
 |  |  +- part 1
 |  |  |  +- test 1, verification
 |  |  |  +- test 2, proof obligation, INIT/fis, in
@@ -64,19 +516,19 @@
 |  |  |  +- test 19, proof obligation, leave/fis, loc'
 |  |  |  +- test 4, proof obligation, leave/sch
 |  |  |  +- test 19, quickcheck brackets
-=== prop_brackets from ./Document/Tests/TrainStation.hs:62 ===
+=== prop_brackets from ./Document/Tests/TrainStation.hs:63 ===
 +++ OK, passed 100 tests.
 
-=== prop_open_brack from ./Document/Tests/TrainStation.hs:65 ===
+=== prop_open_brack from ./Document/Tests/TrainStation.hs:66 ===
 +++ OK, passed 100 tests.
 
-=== prop_close_brack from ./Document/Tests/TrainStation.hs:68 ===
+=== prop_close_brack from ./Document/Tests/TrainStation.hs:69 ===
 +++ OK, passed 100 tests.
 
-=== prop_open_close from ./Document/Tests/TrainStation.hs:71 ===
+=== prop_open_close from ./Document/Tests/TrainStation.hs:72 ===
 +++ OK, passed 100 tests.
 
-=== prop_close_open from ./Document/Tests/TrainStation.hs:74 ===
+=== prop_close_open from ./Document/Tests/TrainStation.hs:75 ===
 +++ OK, passed 100 tests.
 
 |  |  |  +- [ Success: 7 / 7 ]
@@ -115,16 +567,533 @@
 |  |  |  +- [ Success: 3 / 3 ]
 |  |  +- part 2
 |  |  |  +- test 6, verify progress refinement
+|  |  |    o  m0/INIT/FIS/a
+|  |  |    o  m0/INIT/FIS/b
+|  |  |    o  m0/INIT/FIS/c
+|  |  |    o  m0/INIT/FIS/f
+|  |  |    o  m0/INIT/FIS/n
+|  |  |    o  m0/INIT/INV/inv0
+|  |  |    o  m0/INIT/INV/inv1
+|  |  |    o  m0/INIT/INV/inv2
+|  |  |    o  m0/INIT/INV/inv3/goal |___|
+|  |  |    o  m0/evt/INV/inv8
+|  |  |    o  m0/evt/SAF/saf0
+|  |  |    o  m0/evt/SCH
+|  |  |    o  m0/evt/SCH/m0/0/REF/weaken
+|  |  |    o  m0/evt/WD/ACT/a0
+|  |  |    o  m0/evt/WD/ACT/a1
+|  |  |    o  m0/evt/WD/ACT/a2
+|  |  |    o  m0/evt/WD/ACT/a3
+|  |  |    o  m0/evt/WD/ACT/a4
+|  |  |    o  m0/evt/WD/C_SCH
+|  |  |    o  m0/evt/WD/F_SCH
+|  |  |    o  m0/evt/WD/GRD
+|  |  |    o  m0/prog0/PROG/WD/lhs
+|  |  |    o  m0/prog0/PROG/WD/rhs
+|  |  |    o  m0/prog0/REF/monotonicity/lhs
+|  |  |    o  m0/prog0/REF/monotonicity/rhs
+|  |  |    o  m0/prog1/PROG/WD/lhs
+|  |  |    o  m0/prog1/PROG/WD/rhs
+|  |  |   xxx m0/prog1/REF/add
+|  |  |    o  m0/prog2/PROG/WD/lhs
+|  |  |    o  m0/prog2/PROG/WD/rhs
+|  |  |    o  m0/prog2/REF/trading/lhs
+|  |  |    o  m0/prog2/REF/trading/rhs
+|  |  |    o  m0/prog3/PROG/WD/lhs
+|  |  |    o  m0/prog3/PROG/WD/rhs
+|  |  |    o  m0/prog3/REF/PSP/lhs
+|  |  |    o  m0/prog3/REF/PSP/rhs
+|  |  |    o  m0/prog4/PROG/WD/lhs
+|  |  |    o  m0/prog4/PROG/WD/rhs
+|  |  |    o  m0/prog4/REF/discharge/tr/lhs
+|  |  |   xxx m0/prog4/REF/discharge/tr/rhs
+|  |  |    o  m0/saf0/SAF/WD/lhs
+|  |  |    o  m0/saf0/SAF/WD/rhs
+|  |  |    o  m0/tr0/TR/WD
+|  |  |  passed 101 / 106
+|  |  |  
+|  |  |  
+|  |  |  Comparison:[
+|  |  |    > Actual
+|  |  |    < Expected
+|  |  |    - ------
+|  |  |    > (222,1)\n
+|  |  |    < (224,1)\n
+|  |  |    -    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/hypotheses_.(222,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/hypotheses_.(224,1)\n
+|  |  |    -                                          -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/relation_.(222,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/relation_.(224,1)\n
+|  |  |    -                                        -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(224,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(226,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(226,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(228,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(230,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(232,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv4\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv4\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/INV/inv5\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv5\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/INV/inv6\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv6\n
+|  |  |    -                            
+|  |  |    > _.xxx_.m0/INIT/INV/inv8\n
+|  |  |    < _.xxx_.m0/INIT/INV/inv8\n
+|  |  |    -                          
+|  |  |    > _._.o_._.m0/INIT/WD\n
+|  |  |    < _._.o_._.m0/INIT/WD\n
+|  |  |    -                      
+|  |  |    > _._.o_._.m0/INV/WD\n
+|  |  |    < _._.o_._.m0/INV/WD\n
+|  |  |    -                     
+|  |  |    > _._.o_._.m0/TR/tr0/evt/EN\n
+|  |  |    < _._.o_._.m0/TR/tr0/evt/EN\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/TR/tr0/evt/NEG\n
+|  |  |    < _._.o_._.m0/TR/tr0/evt/NEG\n
+|  |  |    -                             
+|  |  |    > _._.o_._.m0/evt/FIS/a@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/a@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/b@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/b@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/c@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/c@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/f@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/f@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/n@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/n@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/INV/inv0/goal_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/goal_.(66,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/hypotheses_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/hypotheses_.(66,1)\n
+|  |  |    -                                              
+|  |  |    > _._.o_._.m0/evt/INV/inv0/relation_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/relation_.(66,1)\n
+|  |  |    -                                            
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(68,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(68,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(70,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(70,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(72,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(72,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(74,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(74,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(76,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(76,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv1/goal_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/goal_.(144,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/hypotheses_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/hypotheses_.(144,1)\n
+|  |  |    -                                               
+|  |  |    > _._.o_._.m0/evt/INV/inv1/relation_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/relation_.(144,1)\n
+|  |  |    -                                             
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(146,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(146,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(148,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(148,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(150,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(150,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(152,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(152,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(154,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(154,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(156,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(156,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(158,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(158,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv2/easy_.(191,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv2/easy_.(193,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/goal_.(241,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/goal_.(243,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/hypotheses_.(241,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/hypotheses_.(243,1)\n
+|  |  |    -                                         -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/relation_.(241,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/relation_.(243,1)\n
+|  |  |    -                                       -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(243,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(245,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(245,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(247,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(247,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(249,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(253,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(255,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(255,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(257,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv4\n
+|  |  |    < _._.o_._.m0/evt/INV/inv4\n
+|  |  |    -                           
+|  |  |    > _._.o_._.m0/evt/INV/inv5/assertion/asm0/easy_.(298,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/assertion/asm0/easy_.(300,1)\n
+|  |  |    -                                                ---     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/goal_.(279,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/goal_.(281,1)\n
+|  |  |    -                                             --     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/hypotheses_.(279,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/hypotheses_.(281,1)\n
+|  |  |    -                                                   --     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/relation_.(279,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/relation_.(281,1)\n
+|  |  |    -                                                 --     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(281,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(283,1)\n
+|  |  |    -                                              -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(283,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(285,1)\n
+|  |  |    -                                              -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(285,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
+|  |  |    -                                              -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(287,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(289,1)\n
+|  |  |    -                                              -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(290,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/main_.goal/step_.(292,1)\n
+|  |  |    -                                              -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/goal_.(308,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/goal_.(310,1)\n
+|  |  |    -                                  --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/hypotheses_.(308,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,1)\n
+|  |  |    -                                        --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/relation_.(308,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/relation_.(310,1)\n
+|  |  |    -                                      --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(310,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    -                                   -     
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    -                                 -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    -                                   -     
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(318,1)
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(320,1)
+|  |  |    -                                --   
+|  |  |  ]
 |  |  |  +- test 7, verify refinement rules
 |  |  |  +- test 8, verify refinement rules
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  +- [ Success: 2 / 3 ]
 |  |  +- part 3
 |  |  |  +- test 9, verify disjunction rule
+|  |  |    o  m0/INIT/FIS/a
+|  |  |    o  m0/INIT/FIS/b
+|  |  |    o  m0/INIT/FIS/c
+|  |  |    o  m0/INIT/FIS/f
+|  |  |    o  m0/INIT/FIS/n
+|  |  |    o  m0/INIT/INV/inv0
+|  |  |    o  m0/INIT/INV/inv1
+|  |  |    o  m0/INIT/INV/inv2
+|  |  |    o  m0/INIT/INV/inv3/goal |___|
+|  |  |    o  m0/evt/INV/inv7
+|  |  |    o  m0/evt/SAF/saf0
+|  |  |    o  m0/evt/SAF/saf1
+|  |  |    o  m0/evt/SCH
+|  |  |    o  m0/evt/SCH/m0/0/REF/weaken
+|  |  |    o  m0/evt/WD/ACT/a0
+|  |  |    o  m0/evt/WD/ACT/a1
+|  |  |    o  m0/evt/WD/ACT/a2
+|  |  |    o  m0/evt/WD/ACT/a3
+|  |  |    o  m0/evt/WD/ACT/a4
+|  |  |    o  m0/evt/WD/C_SCH
+|  |  |    o  m0/evt/WD/F_SCH
+|  |  |    o  m0/evt/WD/GRD
+|  |  |    o  m0/prog0/PROG/WD/lhs
+|  |  |    o  m0/prog0/PROG/WD/rhs
+|  |  |    o  m0/prog0/REF/monotonicity/lhs
+|  |  |    o  m0/prog0/REF/monotonicity/rhs
+|  |  |    o  m0/prog1/PROG/WD/lhs
+|  |  |    o  m0/prog1/PROG/WD/rhs
+|  |  |    o  m0/prog1/REF/induction/lhs
+|  |  |    o  m0/prog1/REF/induction/rhs
+|  |  |    o  m0/prog2/PROG/WD/lhs
+|  |  |    o  m0/prog2/PROG/WD/rhs
+|  |  |    o  m0/prog2/REF/trading/lhs
+|  |  |    o  m0/prog2/REF/trading/rhs
+|  |  |    o  m0/prog3/PROG/WD/lhs
+|  |  |    o  m0/prog3/PROG/WD/rhs
+|  |  |    o  m0/prog3/REF/PSP/lhs
+|  |  |    o  m0/prog3/REF/PSP/rhs
+|  |  |    o  m0/prog4/PROG/WD/lhs
+|  |  |    o  m0/prog4/PROG/WD/rhs
+|  |  |    o  m0/prog4/REF/discharge/saf/lhs
+|  |  |    o  m0/prog4/REF/discharge/saf/rhs
+|  |  |    o  m0/prog4/REF/discharge/tr
+|  |  |    o  m0/prog5/PROG/WD/lhs
+|  |  |    o  m0/prog5/PROG/WD/rhs
+|  |  |    o  m0/prog5/REF/disjunction/lhs
+|  |  |    o  m0/prog5/REF/disjunction/rhs
+|  |  |    o  m0/prog6/PROG/WD/lhs
+|  |  |    o  m0/prog6/PROG/WD/rhs
+|  |  |   xxx m0/prog6/REF/add
+|  |  |    o  m0/prog7/PROG/WD/lhs
+|  |  |    o  m0/prog7/PROG/WD/rhs
+|  |  |   xxx m0/prog7/REF/add
+|  |  |    o  m0/prog8/PROG/WD/lhs
+|  |  |    o  m0/prog8/PROG/WD/rhs
+|  |  |   xxx m0/prog8/REF/add
+|  |  |    o  m0/saf0/SAF/WD/lhs
+|  |  |    o  m0/saf0/SAF/WD/rhs
+|  |  |    o  m0/saf1/SAF/WD/lhs
+|  |  |    o  m0/saf1/SAF/WD/rhs
+|  |  |    o  m0/tr0/TR/WD
+|  |  |  passed 118 / 123
+|  |  |  
+|  |  |  
+|  |  |  Comparison:[
+|  |  |    > Actual
+|  |  |    < Expected
+|  |  |    - ------
+|  |  |    > (223,1)\n
+|  |  |    < (224,1)\n
+|  |  |    -    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/hypotheses_.(223,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/hypotheses_.(224,1)\n
+|  |  |    -                                          -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/relation_.(223,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/relation_.(224,1)\n
+|  |  |    -                                        -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(225,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(226,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(227,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(228,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv3/step_.(231,1)\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv3/step_.(232,1)\n
+|  |  |    -                                    -     
+|  |  |    > _._.o_._.m0/INIT/INV/inv4\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv4\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/INV/inv5\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv5\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/INV/inv6\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv6\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/INV/inv7\n
+|  |  |    < _._.o_._.m0/INIT/INV/inv7\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/INIT/WD\n
+|  |  |    < _._.o_._.m0/INIT/WD\n
+|  |  |    -                      
+|  |  |    > _._.o_._.m0/INV/WD\n
+|  |  |    < _._.o_._.m0/INV/WD\n
+|  |  |    -                     
+|  |  |    > _._.o_._.m0/TR/tr0/evt/EN\n
+|  |  |    < _._.o_._.m0/TR/tr0/evt/EN\n
+|  |  |    -                            
+|  |  |    > _._.o_._.m0/TR/tr0/evt/NEG\n
+|  |  |    < _._.o_._.m0/TR/tr0/evt/NEG\n
+|  |  |    -                             
+|  |  |    > _._.o_._.m0/evt/FIS/a@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/a@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/b@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/b@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/c@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/c@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/f@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/f@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/FIS/n@prime\n
+|  |  |    < _._.o_._.m0/evt/FIS/n@prime\n
+|  |  |    -                              
+|  |  |    > _._.o_._.m0/evt/INV/inv0/goal_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/goal_.(66,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/hypotheses_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/hypotheses_.(66,1)\n
+|  |  |    -                                              
+|  |  |    > _._.o_._.m0/evt/INV/inv0/relation_.(66,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/relation_.(66,1)\n
+|  |  |    -                                            
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(68,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(68,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(70,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(70,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(72,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(72,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(74,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(74,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv0/step_.(76,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv0/step_.(76,1)\n
+|  |  |    -                                        
+|  |  |    > _._.o_._.m0/evt/INV/inv1/goal_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/goal_.(144,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/hypotheses_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/hypotheses_.(144,1)\n
+|  |  |    -                                               
+|  |  |    > _._.o_._.m0/evt/INV/inv1/relation_.(144,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/relation_.(144,1)\n
+|  |  |    -                                             
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(146,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(146,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(148,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(148,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(150,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(150,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(152,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(152,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(154,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(154,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(156,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(156,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv1/step_.(158,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv1/step_.(158,1)\n
+|  |  |    -                                         
+|  |  |    > _._.o_._.m0/evt/INV/inv2/easy_.(192,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv2/easy_.(193,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/goal_.(242,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/goal_.(243,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/hypotheses_.(242,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/hypotheses_.(243,1)\n
+|  |  |    -                                         -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/relation_.(242,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/relation_.(243,1)\n
+|  |  |    -                                       -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(244,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(245,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(246,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(247,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(248,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(249,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(254,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(255,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv3/step_.(256,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv3/step_.(257,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv4\n
+|  |  |    < _._.o_._.m0/evt/INV/inv4\n
+|  |  |    -                           
+|  |  |    > _._.o_._.m0/evt/INV/inv5/goal_.(280,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/goal_.(281,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/hypotheses_.(280,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/hypotheses_.(281,1)\n
+|  |  |    -                                         -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/relation_.(280,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/relation_.(281,1)\n
+|  |  |    -                                       -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/step_.(282,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/step_.(283,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/step_.(284,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/step_.(285,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/step_.(286,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/step_.(287,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/step_.(288,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/step_.(289,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv5/step_.(291,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv5/step_.(292,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/goal_.(309,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/goal_.(310,1)\n
+|  |  |    -                                  --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/hypotheses_.(309,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/hypotheses_.(310,1)\n
+|  |  |    -                                        --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/relation_.(309,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/relation_.(310,1)\n
+|  |  |    -                                      --     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(311,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(312,1)\n
+|  |  |    -                                   -     
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(313,1)\n
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(314,1)\n
+|  |  |    -                                 -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(315,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(316,1)\n
+|  |  |    -                                   -     
+|  |  |    > _._.o_._.m0/evt/INV/inv6/step_.(317,1)\n
+|  |  |    < _._.o_._.m0/evt/INV/inv6/step_.(318,1)\n
+|  |  |    -                                   -     
+|  |  |    > _.xxx_.m0/evt/INV/inv6/step_.(319,1)
+|  |  |    < _.xxx_.m0/evt/INV/inv6/step_.(320,1)
+|  |  |    -                                --   
+|  |  |  ]
 |  |  |  +- test 10, error: cyclic proof
+|  |  |  Lef|___|
+|  |  |  
+|  |  |  
+|  |  |  Comparison:[
+|  |  |    > Actual
+|  |  |    < Expected
+|  |  |    - ------
+|  |  |    > t_.[MLError_."A_.cycle_.exists_.in_.the_.liveness_.proof"_.[("Progress_.
+|  |  |    < t_.[Error_."A_.cycle_.exists_.in_.the_.proof_.of_.liveness:_.prog0,_.prog1,_.
+|  |  |    -     ---- -------- --------- --------------------------------------------
+|  |  |    > property_.prog0_.(refined_.in_.m0)",(338,68)),("Progress_.property_.prog1_.(
+|  |  |    < prog2,_.prog3"_.(1,1)]
+|  |  |    -    -------------------
+|  |  |    > _.m0)",(340,36)),("Progress_.property_.prog2_.(refined_.in_.m0)",(342,49)),("
+|  |  |    > Progress_.property_.prog3_.(refined_.in_.m0)",(346,26))]]
+|  |  |  ]
 |  |  |  +- test 11, intermediate goals of monotonic simplification
 |  |  |  +- test 12, bound variable with ambiguous type
-|  |  |  +- [ Success: 4 / 4 ]
-|  |  +- [ Success: 4 / 4 ]
+|  |  |  +- [ Success: 2 / 4 ]
+|  |  +- [ Success: 2 / 4 ]
 |  +- refinement relations in the phase example
 |  |  +- test 0, cyclic refinement relation between machines
 |  |  +- test 1, valid references to variables and event declared in ancestor
@@ -133,18 +1102,1240 @@
 |  |  +- verify machine m0 (ref)
 |  |  +- verify machine m1 (ref)
 |  |  +- verify machine m2 (ref)
+|  |    o  m2/INIT/FIS/in
+|  |    o  m2/INIT/FIS/loc
+|  |    o  m2/INIT/INV/m2:inv0
+|  |    o  m2/INIT/WD
+|  |    o  m2/INV/WD
+|  |    o  m2/TR/m2:|___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > tr0\n
+|  |    < tr0/t@param\n
+|  |    -    --
+|  |    > _._.o_._.m2/TR/m2:tr0/t@param\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    -                     - ---------
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    -                               -    
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    -                       -------------
+|  |    > _.xxx_.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    -   ---  ----------------------------
+|  |    > _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    < _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    -             ------- ---------------
+|  |    > _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    -                      --- ---------
+|  |    > _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    -                      ---    ---   
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:enter/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:enter/SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    < _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    -                ----- --------
+|  |    > _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy_.\n
+|  |    -                      --- -----------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy_.(331,26)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy_.(332,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy_.(333,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy_.(334,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal_.\n
+|  |    -                                               - ----  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal_.(338,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses_.\n
+|  |    -                                                 --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses_.(338,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation_.\n
+|  |    -                                                 ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation_.(338,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                 ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(340,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(342,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(344,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal_.\n
+|  |    -                                               - ----  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal_.(349,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses_.\n
+|  |    -                                                 --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses_.(349,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation_.\n
+|  |    -                                                 ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation_.(349,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                 ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(351,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(353,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(355,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/goal_.\n
+|  |    -                                  ------- -----------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/goal_.(318,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/hypotheses_.\n
+|  |    -                                             --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/hypotheses_.(318,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/relation_.\n
+|  |    -                                             ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/relation_.(318,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                             ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(320,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                                   --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(322,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                                   --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(325,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/new_.assumption_.\n
+|  |    -                                  ---------------  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/new_.assumption_.(301,27)\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    -                      ---    --- - 
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:leave/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:leave/SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    < _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    -              - --------------
+|  |    > _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    -                           ----------
+|  |    > _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    -                       --- ---------
+|  |    > _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    -                       ---    ---   
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:movein/SCH\n
+|  |    -                        ----
+|  |    > _._.o_._.m2/m1:movein/SCH\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    -                          --
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    -                                               -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    -                                          ---------
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    -                                              -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    < _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    -                       ----------
+|  |    > _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    -                          -      
+|  |    > _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    -                          -----
+|  |    > _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    -                    -----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    -                            ----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    -                        --- ---------
+|  |    > _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    -                        ---    ---   
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:moveout/SCH\n
+|  |    -                         ----
+|  |    > _._.o_._.m2/m1:moveout/SCH\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    -                           --
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    -                                                  -    
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    -                                             -----
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    < _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    -                        ----------
+|  |    > _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    -                           -      
+|  |    > _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    -                           -----
+|  |    > _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    -              - ---------- -----
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    -                                       -    
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    -                -----------------
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    -                -----------
+|  |    > _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    < _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    -                  -        
+|  |    > _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    < passed_.117_./_.117\n
+|  |    - ----------------- ---
+|  |    > passed_.117_./_.118\n
+|  |  ]
 |  |  +- verify machine m2 (ref), in many files
+|  |    o  m2/INIT/FIS/in
+|  |    o  m2/INIT/FIS/loc
+|  |    o  m2/INIT/INV/m2:inv0
+|  |    o  m2/INIT/WD
+|  |    o  m2/INV/WD
+|  |    o  m2/TR/m2:|___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > tr0\n
+|  |    < tr0/t@param\n
+|  |    -    --
+|  |    > _._.o_._.m2/TR/m2:tr0/t@param\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    -                     - ---------
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    -                               -    
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    -                       -------------
+|  |    > _.xxx_.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    -   ---  ----------------------------
+|  |    > _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    < _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    -             ------- ---------------
+|  |    > _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    -                      --- ---------
+|  |    > _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    -                      ---    ---   
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:enter/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:enter/SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    < _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    -                ----- --------
+|  |    > _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy_.\n
+|  |    -                      --- -----------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy_.(284,26)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy_.(285,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy_.(286,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy_.\n
+|  |    -                                               -       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy_.(287,25)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal_.\n
+|  |    -                                               - ----  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal_.(291,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses_.\n
+|  |    -                                                 --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses_.(291,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation_.\n
+|  |    -                                                 ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation_.(291,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                 ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(293,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(295,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp7/step_.(297,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal_.\n
+|  |    -                                               - ----  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal_.(302,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses_.\n
+|  |    -                                                 --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses_.(302,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation_.\n
+|  |    -                                                 ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation_.(302,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                 ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(304,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(306,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.\n
+|  |    -                                                       --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(308,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/goal_.\n
+|  |    -                                  ------- -----------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/goal_.(271,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/hypotheses_.\n
+|  |    -                                             --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/hypotheses_.(271,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/relation_.\n
+|  |    -                                             ---- -------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/relation_.(271,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                             ------- 
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(273,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                                   --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(275,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.\n
+|  |    -                                                   --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/step_.(278,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/new_.assumption_.\n
+|  |    -                                  ---------------  --
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/new_.assumption_.(254,27)\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    -                      ---    --- - 
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:leave/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:leave/SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    < _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    -              - --------------
+|  |    > _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    -                           ----------
+|  |    > _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    -                       --- ---------
+|  |    > _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    -                       ---    ---   
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:movein/SCH\n
+|  |    -                        ----
+|  |    > _._.o_._.m2/m1:movein/SCH\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    -                          --
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    -                                               -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    -                                          ---------
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    -                                              -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    < _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    -                       ----------
+|  |    > _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    -                          -      
+|  |    > _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    -                          -----
+|  |    > _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    -                    -----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    -                            ----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    -                        --- ---------
+|  |    > _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    -                        ---    ---   
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:moveout/SCH\n
+|  |    -                         ----
+|  |    > _._.o_._.m2/m1:moveout/SCH\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    -                           --
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    -                                                  -    
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    -                                             -----
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    < _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    -                        ----------
+|  |    > _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    -                           -      
+|  |    > _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    -                           -----
+|  |    > _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    -              - ---------- -----
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    -                                       -    
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog6/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    -                -----------------
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    -                -----------
+|  |    > _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    < _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    -                  -        
+|  |    > _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    < passed_.117_./_.117\n
+|  |    - ----------------- ---
+|  |    > passed_.117_./_.118\n
+|  |  ]
 |  |  +- cyclic proof of liveness through 3 refinements
 |  |  +- refinement of undefined machine
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- repeated imports
+|  |  +- [ Success: 5 / 7 ]
 |  +- train station example, with sets
 |  |  +- verify machine m0 (sets)
 |  |  +- verify machine m1 (sets)
 |  |  +- verify machine m2 (sets)
+|  |    o  m2/INIT/FIS/in
+|  |    o  m2/INIT/FIS/loc
+|  |    o  m2/INIT/INV/m2:inv0
+|  |    o  m2/INIT/WD
+|  |    o  m2/INV/WD
+|  |    o  m2/TR/m2:|___|
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > tr0\n
+|  |    < tr0/t@param\n
+|  |    -    --
+|  |    > _._.o_._.m2/TR/m2:tr0/t@param\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    -                     - ---------
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/lhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    -                               -    
+|  |    > _._.o_._.m2/TR/m2:tr1/leadsto/rhs\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    -                       -------------
+|  |    > _.xxx_.m2/TR/m2:tr1/m1:moveout/EN\n
+|  |    < _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    -   ---  ----------------------------
+|  |    > _._.o_._.m2/TR/m2:tr1/m1:moveout/NEG\n
+|  |    < _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    -             ------- ---------------
+|  |    > _._.o_._.m2/m0:enter/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:enter/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    -                      --- ---------
+|  |    > _._.o_._.m2/m0:enter/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    -                      ---    ---   
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:enter/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:enter/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:enter/SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:enter/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:enter/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:enter/WD/GRD\n
+|  |    < _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    -                ----- --------
+|  |    > _._.o_._.m2/m0:leave/FIS/in@prime\n
+|  |    < _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    -                          ----------
+|  |    > _._.o_._.m2/m0:leave/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp3/easy_.(332,26)\
+|  |    -                      --- -----------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp3/easy_.(332,26)\
+|  |    < n
+|  |    - -
+|  |    > n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp4/easy_.(333,25)\
+|  |    - -
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp4/easy_.(333,25)\
+|  |    < n
+|  |    - -
+|  |    > n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp5/easy_.(334,25)\
+|  |    - -
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp5/easy_.(334,25)\
+|  |    < n
+|  |    - -
+|  |    > n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp6/easy_.(335,25)\
+|  |    - -
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp6/easy_.(335,25)\
+|  |    < n
+|  |    - -
+|  |    > n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/goal_.(339,2)\n
+|  |    - -
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/goal_.(339,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/hypotheses_.(
+|  |    -                                                                 -------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/hypotheses_.(
+|  |    < 339,2)\n
+|  |    - --------
+|  |    > 339,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/relation_.(339,
+|  |    - --------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/relation_.(339,
+|  |    < 2)\n
+|  |    - ----
+|  |    > 2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(341,2)\n
+|  |    - ----
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(341,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(343,2)\n
+|  |    -                                                                          -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(343,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(345,2)\n
+|  |    -                                                                          -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp7/step_.(345,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/goal_.(350,2)\n
+|  |    -                                                               - ----    --     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/goal_.(350,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/hypotheses_.(
+|  |    -                                                                 -------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/hypotheses_.(
+|  |    < 350,2)\n
+|  |    - --------
+|  |    > 350,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/relation_.(350,
+|  |    - --------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/relation_.(350,
+|  |    < 2)\n
+|  |    - ----
+|  |    > 2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(352,2)\n
+|  |    - ----
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(352,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(354,2)\n
+|  |    -                                                                          -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(354,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(356,2)\n
+|  |    -                                                                          -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/assertion/hyp8/step_.(356,2)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/goal_.(319,1)\n
+|  |    -                                                  ------- ------------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/goal_.(319,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/hypotheses_.(319,1
+|  |    -                                                             ---------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/hypotheses_.(319,1
+|  |    < )\n
+|  |    - ---
+|  |    > )\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/relation_.(319,1)\n
+|  |    - ---
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/relation_.(319,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(321,1)\n
+|  |    -                                                             ---------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(321,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(323,1)\n
+|  |    -                                                                      -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(323,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(326,1)\n
+|  |    -                                                                      -     
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/main_.goal/step_.(326,1)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/new_.assumption_.(302,51)\n
+|  |    -                                                  ---------------    -- ----
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/goal0/new_.assumption_.(302,51)\n
+|  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/easy_.(362,30)\n
+|  |    -                                  ------- ---- --------------
+|  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/main_.goal/easy_.(362,30)\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    -                      ---    --- --
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    -                                -  
+|  |    > _._.o_._.m2/m0:leave/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m0:leave/SCH\n
+|  |    -                       ----
+|  |    > _._.o_._.m2/m0:leave/SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    -                      -----
+|  |    > _._.o_._.m2/m0:leave/WD/C_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    -                         -      
+|  |    > _._.o_._.m2/m0:leave/WD/F_SCH\n
+|  |    < _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    -                         -----
+|  |    > _._.o_._.m2/m0:leave/WD/GRD\n
+|  |    < _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    -              - --------------
+|  |    > _._.o_._.m2/m1:movein/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    -                           ----------
+|  |    > _._.o_._.m2/m1:movein/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    -                       --- ---------
+|  |    > _._.o_._.m2/m1:movein/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    -                       ---    ---   
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    -                                 -  
+|  |    > _._.o_._.m2/m1:movein/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:movein/SCH\n
+|  |    -                        ----
+|  |    > _._.o_._.m2/m1:movein/SCH\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    -                          --
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    -                                               -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    -                                          ---------
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs\n
+|  |    < _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    -                                              -    
+|  |    > _._.o_._.m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs\n
+|  |    < _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    -                       ----------
+|  |    > _._.o_._.m2/m1:movein/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    -                          -      
+|  |    > _._.o_._.m2/m1:movein/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    -                          -----
+|  |    > _._.o_._.m2/m1:movein/WD/GRD\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    -                    -----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/in@prime\n
+|  |    < _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    -                            ----------
+|  |    > _._.o_._.m2/m1:moveout/FIS/loc@prime\n
+|  |    < _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    -                        --- ---------
+|  |    > _._.o_._.m2/m1:moveout/INV/m2:inv0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    -                        ---    ---   
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf0\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf1\n
+|  |    < _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    -                                  -  
+|  |    > _._.o_._.m2/m1:moveout/SAF/m2:saf2\n
+|  |    < _._.o_._.m2/m1:moveout/SCH\n
+|  |    -                         ----
+|  |    > _._.o_._.m2/m1:moveout/SCH\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    -                           --
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    -                                                  -    
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs\n
+|  |    < _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    -                                             -----
+|  |    > _._.o_._.m2/m1:moveout/SCH/m2/0/REF/replace/str\n
+|  |    < _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    -                        ----------
+|  |    > _._.o_._.m2/m1:moveout/WD/C_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    -                           -      
+|  |    > _._.o_._.m2/m1:moveout/WD/F_SCH\n
+|  |    < _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    -                           -----
+|  |    > _._.o_._.m2/m1:moveout/WD/GRD\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    -              - ---------- -----
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog0/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog0/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog1/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/lhs\n
+|  |    < _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    -                                  -    
+|  |    > _._.o_._.m2/m2:prog1/REF/trading/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog2/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog2/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog3/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog3/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog4/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/lhs\n
+|  |    < _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    -                                       -    
+|  |    > _._.o_._.m2/m2:prog4/REF/monotonicity/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog5/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog5/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog6/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/disjunction/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog6/REF/disjunction/lhs\n
+|  |    < _._.o_._.m2/m2:prog6/REF/disjunction/rhs\n
+|  |    -                                      -    
+|  |    > _._.o_._.m2/m2:prog6/REF/disjunction/rhs\n
+|  |    < _._.o_._.m2/m2:prog7/PROG/WD/lhs\n
+|  |    -                    - -------------
+|  |    > _._.o_._.m2/m2:prog7/PROG/WD/lhs\n
+|  |    < _._.o_._.m2/m2:prog7/PROG/WD/rhs\n
+|  |    -                              -    
+|  |    > _._.o_._.m2/m2:prog7/PROG/WD/rhs\n
+|  |    < _._.o_._.m2/m2:prog7/REF/discharge/saf/lhs\n
+|  |    -                      -------------
+|  |    > _._.o_._.m2/m2:prog7/REF/discharge/saf/lhs\n
+|  |    < _._.o_._.m2/m2:prog7/REF/discharge/saf/rhs\n
+|  |    -                                        -    
+|  |    > _._.o_._.m2/m2:prog7/REF/discharge/saf/rhs\n
+|  |    < _._.o_._.m2/m2:prog7/REF/discharge/tr\n
+|  |    -                                    ----
+|  |    > _._.o_._.m2/m2:prog7/REF/discharge/tr\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    -                -----------------
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf0/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf1/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    -                   -        -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/lhs\n
+|  |    < _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    -                            -    
+|  |    > _._.o_._.m2/m2:saf2/SAF/WD/rhs\n
+|  |    < _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    -                -----------
+|  |    > _._.o_._.m2/m2:tr0/TR/WD\n
+|  |    < _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    -                  -        
+|  |    > _._.o_._.m2/m2:tr1/TR/WD\n
+|  |    < passed_.122_./_.122\n
+|  |    - ---------- ----------
+|  |    > passed_.122_./_.123\n
+|  |  ]
 |  |  +- verify machine m3 (sets)
+|  |    o  m3/INIT/FIS/in
+|  |    o  m3/INIT/FIS/isgn
+|  |    o  m3/INIT/FIS/loc
+|  |    o  m3/INIT/FIS/osgn
+|  |    o  m3/INIT/INV/m3:inv0
+|  |    o  m3/INIT/INV/m3:inv1
+|  |    o  m3/INIT/INV/m3:inv2
+|  |    o  m3/INIT/INV/m3:inv3
+|  |    o  m3/INIT/WD
+|  |    o  m3/INV/WD
+|  |   xxx m3/TR/m3:tr0/m3:ctr:plf/EN
+|  |    o  m3/TR/m3:tr0/m3:ctr:plf/NEG
+|  |    o  m3/m0:enter/FIS/in@prime
+|  |    o  m3/m0:enter/FIS/isgn@prime
+|  |    o  m3/m0:enter/FIS/loc@prime
+|  |    o  m3/m0:enter/FIS/osgn@prime
+|  |    o  m3/m0:enter/INV/m3:inv0
+|  |    o  m3/m0:enter/INV/m3:inv1
+|  |    o  m3/m0:enter/INV/m3:inv2
+|  |    o  m3/m0:enter/INV/m3:inv3
+|  |    o  m3/m0:enter/SAF/m3:saf0
+|  |    o  m3/m0:enter/SAF/m3:saf1
+|  |    o  m3/m0:enter/SCH
+|  |    o  m3/m0:enter/WD/ACT/m3:ent:act0
+|  |    o  m3/m0:enter/WD/ACT/m3:ent:act1
+|  |    o  m3/m0:enter/WD/C_SCH
+|  |    o  m3/m0:enter/WD/F_SCH
+|  |    o  m3/m0:enter/WD/GRD
+|  |    o  m3/m0:leave/FIS/in@prime
+|  |    o  m3/m0:leave/FIS/isgn@prime
+|  |    o  m3/m0:leave/FIS/loc@prime
+|  |    o  m3/m0:leave/FIS/osgn@prime
+|  |    o  m3/m0:leave/INV/m3:inv0
+|  |    o  m3/m0:leave/INV/m3:inv1
+|  |    o  m3/m0:leave/INV/m3:inv2
+|  |    o  m3/m0:leave/INV/m3:inv3
+|  |    o  m3/m0:leave/SAF/m3:saf0
+|  |    o  m3/m0:leave/SAF/m3:saf1
+|  |    o  m3/m0:leave/SCH
+|  |    o  m3/m0:leave/WD/ACT/m3:ext:act0
+|  |    o  m3/m0:leave/WD/ACT/m3:ext:act1
+|  |    o  m3/m0:leave/WD/C_SCH
+|  |    o  m3/m0:leave/WD/F_SCH
+|  |    o  m3/m0:leave/WD/GRD
+|  |    o  m3/m1:movein/FIS/in@prime
+|  |    o  m3/m1:movein/FIS/isgn@prime
+|  |    o  m3/m1:movein/FIS/loc@prime
+|  |    o  m3/m1:movein/FIS/osgn@prime
+|  |    o  m3/m1:movein/INV/m3:inv0
+|  |    o  m3/m1:movein/INV/m3:inv1
+|  |    o  m3/m1:movein/INV/m3:inv2
+|  |    o  m3/m1:movein/INV/m3:inv3
+|  |    o  m3/m1:movein/SAF/m3:saf0
+|  |    o  m3/m1:movein/SAF/m3:saf1
+|  |    o  m3/m1:movein/SCH
+|  |    o  m3/m1:movein/WD/ACT/m3:mi:act0
+|  |    o  m3/m1:movein/WD/ACT/m3:mi:act1
+|  |    o  m3/m1:movein/WD/C_SCH
+|  |    o  m3/m1:movein/WD/F_SCH
+|  |    o  m3/m1:movein/WD/GRD
+|  |    o  m3/m1:moveout/FIS/in@prime
+|  |    o  m3/m1:moveout/FIS/isgn@prime
+|  |    o  m3/m1:moveout/FIS/loc@prime
+|  |    o  m3/m1:moveout/FIS/osgn@prime
+|  |    o  m3/m1:moveout/INV/m3:inv0
+|  |    o  m3/m1:moveout/INV/m3:inv1
+|  |    o  m3/m1:moveout/INV/m3:inv2
+|  |    o  m3/m1:moveout/INV/m3:inv3
+|  |    o  m3/m1:moveout/SAF/m3:saf0
+|  |    o  m3/m1:moveout/SAF/m3:saf1
+|  |    o  m3/m1:moveout/SCH
+|  |    o  m3/m1:moveo|___|/0/REF/grd
+|  |    o  m3/m1:moveout/SCH/m3/1/REF/replace/prog/lhs
+|  |    o  m3/m1:moveout/SCH/m3/1/REF/replace/prog/rhs
+|  |    o  m3/m1:moveout/SCH/m3/1/REF/replace/str
+|  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/prog/lhs
+|  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/prog/rhs
+|  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/saf/lhs
+|  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/saf/rhs
+|  |    o  m3/m1:moveout/WD/ACT/m3:mo:act0
+|  |    o  m3/m1:moveout/WD/ACT/m3:mo:act1
+|  |    o  m3/m1:moveout/WD/C_SCH
+|  |    o  m3/m1:moveout/WD/F_SCH
+|  |    o  m3/m1:moveout/WD/GRD
+|  |    o  m3/m3:ctr:plf/FIS/in@prime
+|  |    o  m3/m3:ctr:plf/FIS/isgn@prime
+|  |    o  m3/m3:ctr:plf/FIS/loc@prime
+|  |    o  m3/m3:ctr:plf/FIS/osgn@prime
+|  |   xxx m3/m3:ctr:plf/INV/m3:inv0
+|  |   xxx m3/m3:ctr:plf/INV/m3:inv1
+|  |   xxx m3/m3:ctr:plf/INV/m3:inv2
+|  |   xxx m3/m3:ctr:plf/INV/m3:inv3
+|  |    o  m3/m3:ctr:plf/SAF/m3:saf0
+|  |    o  m3/m3:ctr:plf/SAF/m3:saf1
+|  |    o  m3/m3:ctr:plf/SCH
+|  |    o  m3/m3:ctr:plf/WD/ACT/m3:cp:act0
+|  |    o  m3/m3:ctr:plf/WD/C_SCH
+|  |    o  m3/m3:ctr:plf/WD/F_SCH
+|  |    o  m3/m3:ctr:plf/WD/GRD
+|  |    o  m3/m3:prog0/PROG/WD/lhs
+|  |    o  m3/m3:prog0/PROG/WD/rhs
+|  |    o  m3/m3:prog0/REF/discharge/saf/lhs
+|  |    o  m3/m3:prog0/REF/discharge/saf/rhs
+|  |    o  m3/m3:prog0/REF/discharge/tr
+|  |    o  m3/m3:saf0/SAF/WD/lhs
+|  |    o  m3/m3:saf0/SAF/WD/rhs
+|  |    o  m3/m3:saf1/SAF/WD/lhs
+|  |    o  m3/m3:saf1/SAF/WD/rhs
+|  |    o  m3/m3:tr0/TR/WD
+|  |  passed 104 / 109
+|  |  
+|  |  
+|  |  Comparison:[
+|  |    > Actual
+|  |    < Expected
+|  |    - ------
+|  |    > ut/SCH/m3
+|  |    < ut/GRD/m3
+|  |    -    ---   
+|  |  ]
 |  |  +- type checking of boolean expressions
 |  |  +- verify machine m3 error (wandering free variable)
-|  |  +- [ Success: 6 / 6 ]
+|  |  +- [ Success: 4 / 6 ]
 |  +- QuickCheck spec of machine parser
 === prop_parseOk from ./Document/MachineSpec.hs:39 ===
 +++ OK, passed 100 tests.
@@ -156,7 +2347,7 @@
 +++ OK, passed 100 tests.
 
 |  +- the parser is exception free
-|  +- [ Success: 15 / 15 ]
+|  +- [ Success: 10 / 15 ]
 +- Unit-B
 |  +- 'x eventually increases' verifies
 |  +- train, model 0, verification
@@ -241,7 +2432,147 @@
 |  +- case 9 - edit distance, regression test from random testing
 |  +- QuickCheck spec of the graph library
 |  +- QuickCheck of graphs
-|  +- [ Success: 12 / 12 ]
+|  +- case 11 - Relations, quickcheck
+=== prop_toList_fromList from ./Utilities/Relation.hs:194 ===
++++ OK, passed 100 tests.
+
+=== prop_fromList_toList from ./Utilities/Relation.hs:198 ===
++++ OK, passed 100 tests.
+
+=== prop_domain_def from ./Utilities/Relation.hs:202 ===
++++ OK, passed 100 tests.
+
+=== prop_range_def from ./Utilities/Relation.hs:205 ===
++++ OK, passed 100 tests.
+
+=== prop_empty_def from ./Utilities/Relation.hs:208 ===
++++ OK, passed 100 tests.
+
+=== prop_apply_def from ./Utilities/Relation.hs:212 ===
++++ OK, passed 100 tests.
+
+=== prop_compose_def from ./Utilities/Relation.hs:216 ===
++++ OK, passed 100 tests.
+
+=== prop_all_valid from ./Utilities/Relation.hs:235 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:261 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:264 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:273 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:276 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:282 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:297 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:300 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
++++ OK, passed 100 tests.
+
+=== prop_filterDom_def from ./Utilities/Relation.hs:330 ===
++++ OK, passed 100 tests.
+
+=== prop_filterRan_def from ./Utilities/Relation.hs:333 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
++++ OK, passed 100 tests.
+
+=== prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
++++ OK, passed 100 tests.
+
+|  +- case 12 - New graphs, quickcheck
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:390 ===
++++ OK, passed 100 tests.
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:401 ===
++++ OK, passed 100 tests.
+
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:406 ===
++++ OK, passed 100 tests.
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:417 ===
++++ OK, passed 100 tests.
+
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:429 ===
++++ OK, passed 100 tests.
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:436 ===
++++ OK, passed 100 tests.
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:442 ===
++++ OK, passed 100 tests.
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:447 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:479 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:482 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:487 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:493 ===
++++ OK, passed 100 tests.
+
+|  +- [ Success: 14 / 14 ]
 +- code generation in the cube example
 |  +- test0: code for the {state}
 |  +- test1: code for the {event}
@@ -250,16 +2581,16 @@
 |  +- test4: {whole source file}
 |  +- test5: run {source file}
 |  +- [ Success: 6 / 6 ]
-+- [ Success: 6 / 6 ]
++- [ Success: 5 / 6 ]
 
 ***************
-*** SUCCESS ***
+*** FAILURE ***
 ***************
 Lines of Haskell code:
-   29239 total
-    1261 Document/Machine.hs
-     868 UnitB/AST.hs
-     810 Document/Proof.hs
+   32506 total
+    2761 Document/Machine.hs
+     897 UnitB/AST.hs
+     806 Document/Proof.hs
      783 Document/Visitor.lhs
-     712 Document/Expression.hs
-Run time: 1m 46s
+     714 Z3/Z3.hs
+Run time: 2m 10s

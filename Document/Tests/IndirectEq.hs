@@ -1,6 +1,7 @@
 module Document.Tests.IndirectEq where
 
 import Document.Document
+import Document.Tests.Suite
 
 import UnitB.AST
 import UnitB.PO
@@ -49,7 +50,7 @@ path3 :: String
 path3 = "tests/indirect-equality-t3.tex"
 
 case0 :: IO (String, Map Label Sequent)
-case0 = verify 0 path0
+case0 = verify path0 0
 
 result0 :: String
 result0 = unlines 
@@ -903,11 +904,3 @@ verify_thy path name = do
         success True  = "  o  "
         success False = " xxx "
 
-verify :: Int -> FilePath -> IO (String, Map Label Sequent)
-verify n path = do
-    r <- list_file_obligations path
-    case r of
-        Right ms -> do
-            (s,_,_) <- str_verify_machine $ fst $ ms !! n
-            return (s, snd $ ms !! n)
-        x -> return (show x, empty)

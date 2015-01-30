@@ -1,14 +1,14 @@
 module Document.Tests.SmallMachine
-    ( test_case, test ) 
 where
 
     -- Modules
 import Document.Document
+import Document.Tests.Suite
 
 import Logic.Expr
+import Logic.Proof
 
 import UnitB.AST
-import UnitB.PO
 
     -- Libraries
 import           Data.Map hiding ( map )
@@ -29,15 +29,15 @@ test = test_cases [
         (Case "test 1 (separate machine blocks)" 
             case1 $ 
             Right $ [m1_machine]),
-        (StringCase "test 2 (verification, one failure)" 
+        (POCase "test 2 (verification, one failure)" 
             case2 result2),
-        (StringCase "test 3 (verification)" 
+        (POCase "test 3 (verification)" 
             case3 result3),
         (StringCase "test 4 (proof obligation, invariance)" 
             case4 result4),
         (StringCase "test 5 (co, 'skip' proof obligation)" 
             case5 result5),
-        (StringCase "test 6 (verification, coarse schedule stronger than guard)" 
+        (POCase "test 6 (verification, coarse schedule stronger than guard)" 
             case6 result6),
         (StringCase "test 7 (schedulability proof obligation)" 
             case7 result7),
@@ -48,7 +48,9 @@ test = test_cases [
         (StringCase "test 10 (transient PO, enablement)" 
             case10 result10), 
         (StringCase "test 11 (transient PO, negation)" 
-            case11 result11)  ]
+            case11 result11),
+        (StringCase "test 12 name clash between coarse schedule and co properties" 
+            case12 result12) ]
 
 path0 :: String
 path0 = "Tests/small_machine_t0.tex"
@@ -98,14 +100,8 @@ result2 = (unlines
 
 path2 :: String
 path2 = "Tests/small_machine_t2.tex"
-case2 :: IO String
-case2 = do
-    r <- parse_machine path2
-    case r of
-        Right [m] -> do
-            (s,_,_)   <- str_verify_machine m
-            return s
-        x -> return $ show x
+case2 :: IO (String, Map Label Sequent)
+case2 =  verify path2 0
 
 result3 :: String
 result3 = unlines 
@@ -114,11 +110,11 @@ result3 = unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
-    , " xxx m0/SKIP/CO/c0"
+    , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
     , "  o  m0/TR/tr0/inc/NEG"
-    , "  o  m0/c0/CO/WD"
-    , "  o  m0/inc/CO/c0"
+    , "  o  m0/co0/CO/WD"
+    , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -136,59 +132,67 @@ result3 = unlines
 path3 :: String
 path3 = "Tests/small_machine.tex"
 
-case3 :: IO String
-case3 = do
-    r <- parse_machine path3
-    case r of
-        Right [m] -> do
-            (s,_,_)   <- str_verify_machine m
-            return s
-        x -> return $ show x
+case3 :: IO (String, Map Label Sequent)
+case3 = verify path3 0
 
 result4 :: String
-result4 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " x@prime: Int"
-      , " y: Int"
-      , " y@prime: Int"
-      , " (= x@prime (+ x 2))"
-      , " (= y@prime (+ y 1))"
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (= x@prime (* 2 y@prime))"]
+result4 = unlines 
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const x@prime Int)"
+    , "(declare-const y Int)"
+    , "(declare-const y@prime Int)"
+    , "; a0"
+    , "(assert (= x@prime (+ x 2)))"
+    , "; a1"
+    , "(assert (= y@prime (+ y 1)))"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (= x@prime (* 2 y@prime))))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 show_po :: FilePath -> Label -> IO String
-show_po path lbl = do
-        m <- parse_machine path
-        r <- return (do
-            [m] <- m
-            po <- proof_obligation m 
-            return (po ! lbl) )
-        case r of
-            Right po -> do
-                return $ show po
-            Left x -> return $ show_err x
-
+show_po path lbl = proof_obligation path (show lbl) 0
 
 case4 :: IO String
 case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
 result5 :: String
-result5 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " x@prime: Int"
-      , " y: Int"
-      , " y@prime: Int"
-      , " (= x@prime x)"
-      , " (= y@prime y)"
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (=> (= x 2) (= x@prime 4))"]
+result5 = unlines
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const x@prime Int)"
+    , "(declare-const y Int)"
+    , "(declare-const y@prime Int)"
+    , "; SKIP:x"
+    , "(assert (= x@prime x))"
+    , "; SKIP:y"
+    , "(assert (= y@prime y))"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (=> (= x 2) (= x@prime 4))))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case5 :: IO String
-case5 = show_po path3 $ label "m0/SKIP/CO/c0"
+case5 = show_po path3 $ label "m0/SKIP/CO/co0"
 
 result6 :: String
 result6 = unlines 
@@ -197,16 +201,16 @@ result6 = unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
-    , " xxx m0/SKIP/CO/c0"
+    , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
     , "  o  m0/TR/tr0/inc/NEG"
-    , "  o  m0/c0/CO/WD"
-    , "  o  m0/inc/CO/c0"
+    , "  o  m0/co0/CO/WD"
+    , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH"
-    , "  o  m0/inc/SCH/m0/1/REF/weaken"
+    , "  o  m0/inc/SCH/m0/0/REF/weaken"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -219,24 +223,29 @@ result6 = unlines
 path6 :: String
 path6 = "Tests/small_machine_t3.tex"
 
-case6 :: IO String
-case6 = do
-    r <- parse_machine path6
-    case r of
-        Right [m] -> do
-            (s,_,_)   <- str_verify_machine m
-            return s
-        x -> return $ show x
+case6 :: IO (String, Map Label Sequent)
+case6 = verify path6 0
 
 result7 :: String
-result7 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " y: Int"
-      , " (= x y)"
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (= x y)"]
+result7 = unlines 
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const y Int)"
+    , "; c0"
+    , "(assert (= x y))"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (= x y)))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case7 :: IO String
 case7 = show_po path6 $ label "m0/inc/SCH"
@@ -245,64 +254,105 @@ path8 :: FilePath
 path8 = "Tests/small_machine_t4.tex"
 
 result8 :: String
-result8 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " y: Int"
-      , " false"
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (= x y)"]
+result8 = unlines 
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const y Int)"
+    , "; default"
+    , "(assert false)"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (= x y)))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case8 :: IO String
 case8 = show_po path8 $ label "m0/inc/SCH"
 
 result9 :: String
-result9 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " x@prime: Int"
-      , " y: Int"
-      , " y@prime: Int"
-      , " (= x (* 2 y))"
-      , "|----",
-            -- This should be the goal but it boils down to true
-            -- after Literate Unit-B has simplified it
---        " (=> false (= x y))"]
-        " true"]
+result9 = unlines
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const x@prime Int)"
+    , "(declare-const y Int)"
+    , "(declare-const y@prime Int)"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not true))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case9 :: IO String
-case9 = show_po path6 $ label "m0/inc/SCH/m0/1/REF/weaken"
+case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
 
 result10 :: String
-result10 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " x@prime: Int"
-      , " y: Int"
-      , " y@prime: Int"
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (=> (= x y) (= x y))" ]
+result10 = unlines 
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const x@prime Int)"
+    , "(declare-const y Int)"
+    , "(declare-const y@prime Int)"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (=> (= x y) (= x y))))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case10 :: IO String
 case10 = show_po path6 $ label "m0/TR/tr0/inc/EN"
 
 result11 :: String
-result11 = unlines [
-        " sort: Pair [a,b], , , "
-      , " x: Int"
-      , " x@prime: Int"
-      , " y: Int"
-      , " y@prime: Int"
-      , " (= x@prime (+ x 2))" 
-      , " (= y@prime (+ y 1))" 
-      , " (= x y)" 
-      , " (= x y)" 
-      , " (= x (* 2 y))"
-      , "|----"
-      , " (=> (= x y)" ++
-            " (not (= x@prime y@prime)))" ]
+result11 = unlines
+    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "; comment: we don't need to declare the sort Real"
+    , "(declare-const x Int)"
+    , "(declare-const x@prime Int)"
+    , "(declare-const y Int)"
+    , "(declare-const y@prime Int)"
+    , "; a0"
+    , "(assert (= x@prime (+ x 2)))"
+    , "; a1"
+    , "(assert (= y@prime (+ y 1)))"
+    , "; c0"
+    , "(assert (= x y))"
+    , "; grd0"
+    , "(assert (= x y))"
+    , "; inv0"
+    , "(assert (= x (* 2 y)))"
+    , "(assert (not (=> (= x y) (not (= x@prime y@prime)))))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    ]
 
 case11 :: IO String
 case11 = show_po path6 $ label "m0/TR/tr0/inc/NEG"
@@ -371,7 +421,7 @@ m1_props = m0_props
         { transient = fromList [
             (label "tr0", Transient empty (x `zeq` y) [label "inc"] empty_hint) ]
         , constraint = fromList [
-            (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
+            (label "co0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
@@ -384,4 +434,18 @@ m1_props = m0_props
         x' = Word var_x'
         z1 = zint 1
         z2 = zint 2
+
+path12 :: String
+path12 = "Tests/small_machine_t12.tex"
+
+case12 :: IO String
+case12 = do
+    find_errors path12
+
+result12 :: String
+result12 = unlines
+    [ "error: Multiple expressions with the label c0"
+    , "\tcoarse schedule (event inc): (40,15)"
+    , "\tco property: (45,15)\n" ]
+
 

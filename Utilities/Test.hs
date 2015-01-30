@@ -17,6 +17,8 @@ import Utilities.Graph as G
         , unions )
 import Utilities.EditDistance
 import qualified Utilities.GraphSpec as GSpec
+import qualified Utilities.Relation as Rel
+import qualified Utilities.Permutation as Perm
 
     -- Libraries
 import           Data.Array 
@@ -53,7 +55,9 @@ test = test_cases $
     , Case "case 7 - union of a list of {unsorted} list" case7 result7  
     , Case "case 8 - edit distance, random testing" case8 True
     , Case "case 9 - edit distance, regression test from random testing" case9 0
-    ] ++ GSpec.test_cases
+    ] ++ GSpec.test_cases ++
+    [ Case "case 11 - Relations, quickcheck" Rel.run_spec True
+    , Case "case 12 - New graphs, quickcheck" Perm.run_tests True  ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do

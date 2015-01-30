@@ -3,6 +3,7 @@ module UnitB.AST
     ( Theory  (..)
     , Machine (..)
     , variableSet
+    , EventId (..)
     , Event   (..)
     , empty_event
     , Action (..)
@@ -27,6 +28,7 @@ module UnitB.AST
     , variant_bounded
     , Direction (..)
     , RefRule (..)
+    , ProgId (..)
     , primed, make_unique
     , merge_struct
     , merge_import
@@ -108,7 +110,7 @@ data Action =
         Assign Var Expr 
         | BcmSuchThat [Var] Expr
         | BcmIn Var Expr
-    deriving Eq
+    deriving (Eq,Ord)
 
 instance Show Action where
     show (Assign v e) = format "{0} := {1}" (name v) (show e)
@@ -183,6 +185,18 @@ ba_predicate m evt = M.map ba_pred (actions evt) `M.union` skip
     where
         skip = skip' $ keep' (variables m) evt
 
+newtype EventId = EventId Label
+    deriving (Eq,Ord)
+
+instance Show EventId where
+    show (EventId x) = show x
+
+newtype ProgId = PId { getProgId :: Label }
+    deriving (Eq,Ord)
+
+instance Show ProgId where
+    show (PId x) = show x
+
 data Machine = 
     Mch 
         { _name      :: Label
@@ -221,6 +235,8 @@ instance NFData DocItem where
 class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
     refinement_po :: a -> Machine -> POGen ()
     rule_name     :: a -> Label
+    hyps_labels   :: a -> [ProgId]
+    supporting_evts :: a -> [EventId]
     
 empty_machine :: String -> Machine
 empty_machine n = Mch 
@@ -568,17 +584,20 @@ instance Named Machine where
     name m = case _name m of Lbl s -> s
 
 instance NFData Machine where
-    rnf (Mch a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i)
+    rnf (Mch a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i) `deepseq` () -- rnf j
+
+instance NFData EventId where
+    rnf (EventId lbl) = rnf lbl
 
 data Constraint = 
         Co [Var] Expr
-    deriving (Eq, Show)
+    deriving (Eq,Ord,Show)
 
 instance NFData Constraint where
     rnf (Co vs p) = rnf (vs,p)
 
 data TrHint = TrHint (Map String Expr) (Maybe Label)
-    deriving (Eq, Show)
+    deriving (Eq,Ord,Show)
 
 instance NFData TrHint where
     rnf (TrHint xs p) = rnf (xs,p)
@@ -594,7 +613,7 @@ data Transient =
             TrHint               -- Hints for instantiation
             -- (Map String Expr)    -- Index substitution
             -- (Maybe Label)        -- Progress Property for fine schedule
-    deriving (Eq,Show)
+    deriving (Eq,Ord,Show)
 
 instance NFData Transient where
     rnf (Transient vs p evt hint) = rnf (vs,p,evt,hint)
@@ -628,6 +647,7 @@ variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
 
 data Rule = forall r. RefRule r => Rule r
+    deriving Typeable
 
 instance Show Rule where
     show (Rule x) = show x
@@ -638,16 +658,22 @@ instance Eq Rule where
 instance NFData Rule where
     rnf (Rule r) = rnf r
 
+instance RefRule Rule where
+    refinement_po (Rule r) = refinement_po r
+    rule_name (Rule r) = rule_name r
+    hyps_labels (Rule r) = hyps_labels r
+    supporting_evts (Rule r) = supporting_evts r
+
 --data Liveness = Live (Map Label ProgressProp) 
 
 --data Schedule = Schedule [Var] Expr Expr Label
 --    deriving (Eq,Typeable)
 
 data ProgressProp = LeadsTo [Var] Expr Expr
-    deriving (Eq,Typeable)
+    deriving (Eq,Ord,Typeable)
 
 data SafetyProp = Unless [Var] Expr Expr (Maybe Label)
-    deriving (Eq,Typeable)
+    deriving (Eq,Ord,Typeable)
 
 instance Show ProgressProp where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q

@@ -4,9 +4,12 @@ module Utilities.Syntactic where
 
 import Control.DeepSeq
 
+import Control.Monad
 import Control.Monad.Trans.Either
 import Control.Monad.IO.Class
 
+import Data.List
+import Data.List.Ordered
 import Data.Typeable
 
 import Utilities.Format
@@ -30,10 +33,14 @@ instance NFData LineInfo where
     rnf (LI fn i j) = rnf (fn,i,j)
 
 show_err :: [Error] -> String
-show_err xs = unlines $ map report xs
+show_err xs = unlines $ map report $ sortOn line_info xs
 
 class Syntactic a where
     line_info :: a -> LineInfo
+
+instance Syntactic Error where
+    line_info (Error _ li) = li
+    line_info (MLError _ ls) = minimum $ map snd ls
 
 with_li :: LineInfo -> Either String b -> Either [Error] b
 with_li li = either (\x -> Left [Error x li]) Right
@@ -41,8 +48,10 @@ with_li li = either (\x -> Left [Error x li]) Right
 
 report :: Error -> String
 report (Error x (LI _ i j)) = format "error {0}: {1}" (i,j) (x :: String) :: String
-report (MLError xs ys) = format "error: {1}\n{2}" xs 
-                (unlines $ map (uncurry $ format "\t{1}: {2}") ys)
+report (MLError xs ys) = format "error: {0}\n{1}" xs 
+                (unlines 
+                    $ map (uncurry $ format "\t{0}: {1}") 
+                    $ sortOn snd ys)
 
 makeReport :: MonadIO m => EitherT [Error] m String -> m String
 makeReport m = eitherT f return m
@@ -57,3 +66,15 @@ message :: Error -> String
 message (Error msg _) = msg
 message (MLError msg _) = msg
 
+shrink_error_list :: [Error] -> [Error]
+shrink_error_list es = do
+        (xs,e,ys) <- zip3 (inits es) es (drop 1 $ tails es)
+        guard $ not $ any (e `less_specific`) $ xs ++ ys
+        return e
+    where
+        less_specific e0@(Error _ _) e1@(Error _ _) = e0 == e1
+        less_specific (MLError m0 ls0) (MLError m1 ls1) = m0 == m1 && ls0' `subset` ls1'
+            where
+                ls0' = sortOn snd ls0
+                ls1' = sortOn snd ls1
+        less_specific _ _ = False

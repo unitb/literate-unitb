@@ -5,7 +5,7 @@
 module Document.Refinement where
 
     -- Module
-import Document.Pipeline
+import Document.Phase
 import Document.Proof
 import Document.Visitor
 
@@ -18,6 +18,7 @@ import Latex.Parser
 import Logic.Expr
 
     -- Libraries
+import Control.Arrow (second)
 import Control.DeepSeq
 
 import Control.Monad.Trans.Either
@@ -65,6 +66,8 @@ data Add = Add
 instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ m = assert m "" zfalse
+    hyps_labels _     = []
+    supporting_evts _ = []
 
 instance NFData Add where
 
@@ -118,10 +121,17 @@ getParser (RuleParserParameter m _ _ _ _ _) = machine_setting m
 getParser (RuleParserDecl _ _ _ _ _ _ _ _ parser) = parser
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
+    parse_rule (f,_) xs rule param = do
+        let f' x = f
+                where
+                    _ = x :: Label
+        parse_rule (f',()) xs rule param 
+
+instance RuleParser (a,()) => RuleParser (Label -> ProgressProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
         let prog = getProgress param
         case M.lookup x prog of
-            Just p -> parse_rule (f p, ()) xs rule param
+            Just p -> parse_rule (f x p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li]
@@ -141,11 +151,11 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RuleParser (a,()) => RuleParser (Transient -> a,()) where
+instance RuleParser (a,()) => RuleParser (Label -> Transient -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
         let tr = getTransient param
         case M.lookup x tr of
-            Just p -> parse_rule (f p, ()) xs rule param
+            Just p -> parse_rule (f x p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
                 left [Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li]
@@ -174,10 +184,10 @@ instance RefRule a => RuleParser ([Label] -> ERWS a, ()) where
 --                li <- lift $ ask
 --                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RefRule a => RuleParser ([ProgressProp] -> a,()) where
+instance RefRule a => RuleParser ([(Label,ProgressProp)] -> a,()) where
     parse_rule (f,_) xs rule param = do
-            xs <- forM xs g
-            return $ Rule (f xs)        
+            ps <- forM xs g
+            return $ Rule (f $ zip xs ps)        
         where
             prog = getProgress param
             g x = maybe (do
@@ -238,23 +248,30 @@ instance RefRule Ensure where
             prop_tr m ("", Transient (symbol_table vs) 
                                              (p `zand` znot q) lbls 
                                              hint )
+    hyps_labels _ = []
+    supporting_evts (Ensure _ hyps _) = map EventId hyps
 
 instance NFData Ensure where
     rnf (Ensure x0 x1 x2) = rnf (x0,x1,x2)
 
-data Discharge = Discharge ProgressProp Transient (Maybe SafetyProp)
+data Discharge = Discharge ProgressProp Label Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
+    hyps_labels (Discharge _ lbl _ _) = [PId lbl]
+    supporting_evts (Discharge _ _ (Transient _ _ evts _hint) _) = map EventId evts
+        -- where
+        --     TrHint _ ev = hint
+            -- _ = _ ev
     refinement_po 
-            (Discharge _ _
+            (Discharge _ _ _
                 (Just (Unless _ _ _ (Just _)))) _
             = error "Discharge.refinement_po: should not reach this point" 
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _)
+                    _ (Transient fv1 p1 _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
         m = do
             assert m "saf/lhs" (
@@ -272,7 +289,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    (Transient fv1 p1 _ _)
+                    _ (Transient fv1 p1 _ _)
                     Nothing)
             m = do
                 assert m "tr/lhs" (
@@ -283,12 +300,12 @@ instance RefRule Discharge where
                              (znot p1 `zimplies` q0) ) )
 
 instance NFData Discharge where
-    rnf (Discharge p t u) = rnf (p,t,u)
+    rnf (Discharge p lbl t u) = rnf (p,lbl,t,u)
 
-mk_discharge :: ProgressProp -> Transient -> [SafetyProp] -> Discharge
-mk_discharge p tr [s] = Discharge p tr $ Just s
-mk_discharge p tr []  = Discharge p tr Nothing
-mk_discharge _ _ _    = error "expecting at most one safety property" 
+mk_discharge :: ProgressProp -> Label -> Transient -> [SafetyProp] -> Discharge
+mk_discharge p lbl tr [s] = Discharge p lbl tr $ Just s
+mk_discharge p lbl tr []  = Discharge p lbl tr Nothing
+mk_discharge _ _ _ _  = error "expecting at most one safety property" 
 
 parse_discharge :: String -> RuleParserParameter
                 -> EitherT [Error] (RWS LineInfo [Error] System) Rule
@@ -302,14 +319,16 @@ parse_discharge rule params = do
     add_proof_edge goal_lbl hyps_lbls
     parse (mk_discharge,()) rule params
 
-data Monotonicity = Monotonicity ProgressProp ProgressProp
+data Monotonicity = Monotonicity ProgressProp Label ProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule Monotonicity where
     rule_name _   = label "monotonicity"
+    hyps_labels (Monotonicity _ lbl _) = [PId lbl]
+    supporting_evts _ = []
     refinement_po (Monotonicity 
                     (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1))
+                    _ (LeadsTo fv1 p1 q1))
                   m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
@@ -319,31 +338,35 @@ instance RefRule Monotonicity where
                              (q1 `zimplies` q0))
 
 instance NFData Monotonicity where
-    rnf (Monotonicity p q) = rnf (p,q)
+    rnf (Monotonicity p lbl q) = rnf (p,lbl,q)
 
 data Implication = Implication ProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule Implication where
     rule_name _   = label "implication"
+    hyps_labels _ = []
     refinement_po (Implication 
                     (LeadsTo fv1 p1 q1))
                   m = 
                 assert m "" (
                     zforall fv1 ztrue $
                              (p1 `zimplies` q1))
+    supporting_evts _ = []
 
 instance NFData Implication where
     rnf (Implication p) = rnf p
 
-data Disjunction = Disjunction ProgressProp [([Var], ProgressProp)]
+data Disjunction = Disjunction ProgressProp [(Label,([Var], ProgressProp))]
     deriving (Eq,Typeable,Show)
 
 instance RefRule Disjunction where
     rule_name _ = label "disjunction"
+    hyps_labels (Disjunction _ xs) = map (PId . fst) xs
+    supporting_evts _ = []
     refinement_po (Disjunction 
                     (LeadsTo fv0 p0 q0)
-                    ps) m = do
+                    ps') m = do
                 assert m "lhs" (
                     zforall fv0 ztrue (
                         ( p0 `zimplies` zsome (map disj_p ps) ) ) )
@@ -351,6 +374,7 @@ instance RefRule Disjunction where
                     zforall fv0 ztrue (
                         ( zsome (map disj_q ps) `zimplies` q0 ) ) )
         where
+            ps = map snd ps'
             disj_p ([], LeadsTo _ p1 _) = p1
             disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
             disj_q ([], LeadsTo _ _ q1) = q1
@@ -359,21 +383,23 @@ instance RefRule Disjunction where
 instance NFData Disjunction where
     rnf (Disjunction p xs) = rnf (p,xs)
 
-disjunction :: ProgressProp -> [ProgressProp] -> Disjunction
+disjunction :: ProgressProp -> [(Label,ProgressProp)] -> Disjunction
 disjunction pr0@(LeadsTo fv0 _ _) ps = 
         let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
-            ps0 = map f ps
+            ps0 = map (second f) ps
         in (Disjunction pr0 ps0)
 
-data NegateDisjunct = NegateDisjunct ProgressProp ProgressProp
+data NegateDisjunct = NegateDisjunct ProgressProp Label ProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule NegateDisjunct where
     rule_name _   = label "trading"
+    hyps_labels (NegateDisjunct _ lbl _) = [PId lbl]
+    supporting_evts _ = []
     refinement_po 
             (NegateDisjunct
-                    (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1))
+                    (LeadsTo fv0 p0 q0) _
+                    (LeadsTo fv1 p1 q1) )
             m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
@@ -383,18 +409,20 @@ instance RefRule NegateDisjunct where
                                 (q1 `zimplies` q0))
 
 instance NFData NegateDisjunct where
-    rnf (NegateDisjunct p q) = rnf (p,q)
+    rnf (NegateDisjunct p lbl q) = rnf (p,lbl,q)
 
-data Transitivity = Transitivity ProgressProp ProgressProp ProgressProp
+data Transitivity = Transitivity ProgressProp Label ProgressProp Label ProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
+    hyps_labels (Transitivity _ l0 _ l1 _) = map PId [l0,l1]
+    supporting_evts _ = []
     refinement_po 
             (Transitivity
                     (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)
-                    (LeadsTo fv2 p2 q2))
+                    _ (LeadsTo fv1 p1 q1)
+                    _ (LeadsTo fv2 p2 q2))
             m = do
                 assert m "lhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
@@ -407,17 +435,19 @@ instance RefRule Transitivity where
                             q2 `zimplies` q0 )
 
 instance NFData Transitivity where
-    rnf (Transitivity p q r) = rnf (p,q,r)
+    rnf (Transitivity p l0 q l1 r) = rnf (p,l0,q,l1,r)
 
-data PSP = PSP ProgressProp ProgressProp SafetyProp
+data PSP = PSP ProgressProp Label ProgressProp SafetyProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule PSP where
     rule_name _ = label "PSP"
+    hyps_labels (PSP _ lbl _ _) = [PId lbl]
+    supporting_evts _ = []
     refinement_po 
             (PSP
                     (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1)
+                    _ (LeadsTo fv1 p1 q1)
                     (Unless fv2 r b Nothing))
             m = do
                 assert m "lhs" (
@@ -426,21 +456,23 @@ instance RefRule PSP where
                 assert m "rhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             (q0 `zimplies` zor (q1 `zand` r) b))
-    refinement_po (PSP _ _ (Unless _ _ _ (Just _))) _ 
+    refinement_po (PSP _ _ _ (Unless _ _ _ (Just _))) _ 
         = error "PSP.refinement_po: invalid"
 
 instance NFData PSP where
-    rnf (PSP p q r) = rnf (p,q,r)
+    rnf (PSP p lbl q r) = rnf (p,lbl,q,r)
 
-data Induction = Induction ProgressProp ProgressProp Variant
+data Induction = Induction ProgressProp Label ProgressProp Variant
     deriving (Eq,Typeable,Show)
 
 instance RefRule Induction where
     rule_name _ = label "induction"
+    hyps_labels (Induction _ lbl _ _) = [PId lbl]
+    supporting_evts _ = []
     refinement_po 
             (Induction 
                     (LeadsTo fv0 p0 q0)
-                    (LeadsTo fv1 p1 q1) v)
+                    _ (LeadsTo fv1 p1 q1) v)
             m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1) ztrue $
@@ -452,7 +484,7 @@ instance RefRule Induction where
                         )
 
 instance NFData Induction where
-    rnf (Induction p q v) = rnf (p,q,v)
+    rnf (Induction p lbl q v) = rnf (p,lbl,q,v)
 
 parse_induction :: (Monad m)
                 => String -> RuleParserParameter
@@ -502,7 +534,7 @@ parse_induction rule param = do
             _   -> left [Error (   "inductive formula should have one free "
                                 ++ "variable to record the variant") li]                    
         add_proof_edge goal_lbl [h0]
-        return $ Rule (Induction pr0 pr1 (IntegerVariant dum var bound dir))
+        return $ Rule (Induction pr0 h0 pr1 (IntegerVariant dum var bound dir))
 
 instance RefRule ScheduleChange where 
     rule_name     r = 
@@ -512,6 +544,13 @@ instance RefRule ScheduleChange where
             ReplaceFineSch _ _ _ _ -> label "replace"
             RemoveGuard _          -> label "grd"
             AddGuard _             -> label "add"
+    hyps_labels r = 
+        case rule r of
+            Replace (lbl,_) _ -> [PId lbl]
+            ReplaceFineSch _ _ _ (Just (lbl,_)) -> [PId lbl]
+            ReplaceFineSch _ _ _ Nothing -> []
+            _ -> []
+    supporting_evts _ = []
     refinement_po r m = 
         case rule r of
             Replace (_,prog) (_,saf) ->

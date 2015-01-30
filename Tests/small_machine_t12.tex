@@ -33,34 +33,32 @@ As an example, we look
 \end{align*}
 
 \begin{align*}
-\initialization{a3}
-{	x = 0	}
+\transient{inc}{tr0}
+{	x = y	}
 \end{align*}
-
-%\begin{invariant}{inv1}
-%	x
-%\end{invariant}
 
 \begin{align*}
 \cschedule{inc}{c0}
 {	x = y	}
 \end{align*}
 
-\end{machine}
+\begin{align*}
+\constraint{c0}
+{	x = 1 \implies x' = 2	}
+\end{align*}
 
-% \newline
+\begin{align*}
+\variable{	y: \Int}
+\end{align*}
+
+\end{machine}
 This is outside a machine's scope
 
 \begin{machine}{m0}
 
 \begin{align*}
-\constraint{co0}
-{	x = 2 \implies x' = 4	}
-\end{align*}
-
-\begin{align*}
-\initialization{a2}
-{	y = 0	}
+\fschedule{inc}{f0}
+{	x = y	}
 \end{align*}
 
 \begin{align*}
@@ -69,15 +67,15 @@ This is outside a machine's scope
 \end{align*}
 
 \begin{align*}
-\variable{	x,y: \Int}
+\variable{	x: \Int}
 \end{align*}
 
 \begin{align*}
-%\transient{inc}{tr0}
-%{	x = y	} \\
-\evguard{inc}{grd0}
-{	x = y }
+\invariant{inv1}
+{	x = x \cdot (y + 1)	}
 \end{align*}
+
+\weakento{inc}{default}{c0}
 
 \end{machine}
 \end{document}

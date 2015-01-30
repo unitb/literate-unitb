@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Document.Context where
 
     -- Module
@@ -30,6 +31,7 @@ import Data.List as L ( map, lookup )
 import Data.Map as M
 import Data.String.Utils
 
+import Utilities.Error
 import Utilities.Format
 import Utilities.Syntactic
 
@@ -100,7 +102,7 @@ ctx_declarations _ = visit_doc []
                         xs    = L.map f $ new_ops $ th_notation th
                         g (String x) = maybe (left [Error (format msg x) li])
                                     return $ L.lookup (strip x) xs
-                    ops <- toEither $ mapM (mapM $ fromEither undefined . g) ops
+                    ops <- toEither $ mapM (mapM $ fromEither ($myError) . g) ops
 --                    traceM $ show ops
 --                    traceM $ show $ prec notat
                     return th {
@@ -245,12 +247,15 @@ ctx_collect_proofs name = visit_doc
                                 $ M.keys pos)
                         (M.lookup lbl pos)
                     let new_th = (empty_theory { extends = insert name th $ extends th }) 
-                    p <- runReaderT (
-                            runEitherT $
-                            run_visitor li xs $ 
-                            collect_proof_step (empty_pr new_th) 
-                            ) new_th
-                    p        <- EitherT $ return p
+                        notat = th_notation new_th
+                    p <- mapEitherT (\cmd -> runReaderT cmd notat)
+                        $ run_visitor li xs collect_proof_step
+                    -- p <- runReaderT (
+                    --         runEitherT $
+                    --         run_visitor li xs 
+                    --         collect_proof_step
+                    --         ) notat
+                    -- p        <- EitherT $ return p
                     (p,lbls) <- EitherT $ return $ runTacticWithTheorems li s 
                             (fact th `intersection` theorems th) p
                     new_thms <- bind

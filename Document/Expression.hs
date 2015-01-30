@@ -19,6 +19,7 @@ import UnitB.AST ( System ( .. ) )
 import Theories.SetTheory
 import Theories.FunctionTheory
 
+import Utilities.Error
 import Utilities.Syntactic
 --import Utilities.Trace
 
@@ -270,7 +271,7 @@ get_variables ctx cs = do
             (scan_expr Nothing) fn m (i,j)
         xs   <- hoistEither $ read_tokens 
             (runParser ctx
-                undefined M.empty vars) 
+                ($myError) M.empty vars) 
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where

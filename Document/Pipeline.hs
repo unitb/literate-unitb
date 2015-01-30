@@ -2,14 +2,13 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Document.Pipeline where
 
     -- Modules
-import Document.Proof
 
 import Latex.Parser
 
-import Logic.Expr
 
     -- Libraries
 import Control.Arrow
@@ -17,27 +16,21 @@ import qualified Control.Category as C
 
 import Control.Monad.Writer
 
-import           Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.Set as S
 
+import Utilities.Syntactic
 import Utilities.Tuple
 
-data DocSpec = DocSpec (S.Set String) (M.Map String Int)
+data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 
 infixr <*
 
 empty_spec :: DocSpec
-empty_spec = DocSpec S.empty M.empty
+empty_spec = DocSpec M.empty M.empty
 
 instance Monoid DocSpec where
-    mappend (DocSpec xs0 ys0) (DocSpec xs1 ys1) = DocSpec (xs0 `unionS` xs1) (ys0 `unionM` ys1) 
+    mappend (DocSpec xs0 ys0) (DocSpec xs1 ys1) = DocSpec (xs0 `unionM` xs1) (ys0 `unionM` ys1) 
         where
-            unionS xs ys
-                    | S.null zs = S.union xs ys
-                    | otherwise = error $ "environment name clash: " ++ show (S.toList zs)
-                where
-                    zs = S.intersection xs ys
             unionM = M.unionWithKey (\k _ -> error $ "command name clash: " ++ k)
     mempty = empty_spec
 
@@ -51,8 +44,8 @@ instance Monad m => Arrow (Pipeline m) where
     arr f = Pipeline empty_spec empty_spec $ return . f
     first (Pipeline xs ys f) = Pipeline xs ys $ \(x,y) -> f x >>= \z -> return (z,y)
 
-newtype Env = BlockEnv { getEnvContent :: [LatexDoc] }
-newtype Cmd = BlockCmd { getCmdArgs :: [[LatexDoc]] }
+data Env = BlockEnv { getEnvArgs :: [[LatexDoc]], getEnvContent :: [LatexDoc], envLI :: LineInfo }
+data Cmd = BlockCmd { getCmdArgs :: [[LatexDoc]], cmdLI :: LineInfo }
 
 runPipeline :: [LatexDoc] 
             -> Pipeline m DocBlocks b 
@@ -97,24 +90,26 @@ getLatexBlocks :: DocSpec
                -> DocBlocks
 getLatexBlocks (DocSpec envs cmds) xs = execWriter (f xs)
     where
-        f (Env name _ ys _:xs) = do
-                if name `S.member` envs 
-                    then tell (DocBlocks (M.singleton name [BlockEnv ys]) M.empty) 
-                    else f ys
+        f (Env name li ys _:xs) = do
+                case name `M.lookup` envs of
+                    Just nargs -> do
+                        let (args,rest) = brackets nargs ys
+                        tell (DocBlocks (M.singleton name [BlockEnv args rest li]) M.empty) 
+                    Nothing -> f ys
                 f xs
         f (Bracket _ _ ys _:xs) = do
                 f ys
                 f xs
         f (Text []:xs) = f xs
-        f (Text (Command name _:ys):xs) = do
+        f (Text (Command name li:ys):xs) = do
                 case name `M.lookup` cmds of
                     Just nargs
                         | nargs == 0 || not (all isBlank ys) -> do
-                            tell (DocBlocks M.empty (M.singleton name [BlockCmd []]))
+                            tell (DocBlocks M.empty (M.singleton name [BlockCmd [] li]))
                             f (Text ys : xs)
                         | otherwise -> do
                             let (args,rest) = brackets nargs xs
-                            tell (DocBlocks M.empty (M.singleton name [BlockCmd args]))
+                            tell (DocBlocks M.empty (M.singleton name [BlockCmd args li]))
                             f rest
                     Nothing    -> f $ Text ys : xs
         f (Text (_:ys):xs) = f $ Text ys : xs
@@ -135,27 +130,4 @@ brackets _ [] = ([],[])
 
 isBlank :: LatexToken -> Bool
 isBlank (Blank _ _) = True
-isBlank _ = False
-
-data Phase2 = Phase2
-        (MTable (Map Label EventId))               -- 
-        (MTable (Map String Var))               -- machine variables
-        (MTable (Map String Var))               -- abstract machine variables
-        (MTable (Map String Var))               -- dummy variables
-        (MTable (Map EventId (Map String Var))) -- event indices
-        (MTable ParserSetting)                  -- parsing assumptions
-        (MTable ParserSetting)                  -- parsing invariants and properties
-        (MTable (Map EventId ParserSetting))    -- parsing schedule
-        (MTable (Map EventId ParserSetting))    -- parsing guards and actions
-
-newtype MachineId = MId { getMId :: String }
-    deriving (Eq,Ord)
-
-newtype ContextId = CId { getCId :: String }
-    deriving (Eq,Ord)
-
-newtype EventId = EventId Label
-    deriving (Eq,Ord,Show)
-
-type MTable = Map MachineId
-type CTable = Map ContextId
+isBlank _ = False 

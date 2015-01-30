@@ -17,6 +17,7 @@ import Data.List as L
 import Data.Map as M
 
 import Utilities.Format
+import Utilities.Syntactic
 
 verify :: FilePath -> Int -> IO (String, Map Label Sequent)
 verify path i = do
@@ -44,6 +45,6 @@ find_errors :: FilePath -> IO String
 find_errors path = do
     m <- parse_machine path
     return $ either 
-        (unlines . L.map show) 
+        (unlines . L.map report) 
         (const $ "no errors")
         m
