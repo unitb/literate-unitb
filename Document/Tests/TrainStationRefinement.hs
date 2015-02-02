@@ -3,19 +3,13 @@ module Document.Tests.TrainStationRefinement
 where
 
     -- Modules
-import Document.Machine
-
-import Logic.Expr
-import Logic.Proof
-
-import UnitB.PO
+-- import Document.Machine
+import Document.Tests.Suite
 
     -- Libraries
 import Tests.UnitTest
 
-import Data.Map (Map,empty)
-
-import Utilities.Syntactic
+-- import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test
@@ -23,12 +17,13 @@ test_case = test
 test :: TestCase
 test = test_cases
             "train station example, with refinement"
-            [ POCase "verify machine m0 (ref)" (verify 0 path0) result0
-            , POCase "verify machine m1 (ref)" (verify 1 path0) result1
-            , POCase "verify machine m2 (ref)" (verify 2 path0) result2
-            , POCase "verify machine m2 (ref), in many files" (verify 2 path1) result2
-            , StringCase "cyclic proof of liveness through 3 refinements" (parse path3) result3
-            , StringCase "refinement of undefined machine" (parse path4) result4
+            [ POCase "verify machine m0 (ref)" (verify path0 0) result0
+            , POCase "verify machine m1 (ref)" (verify path0 1) result1
+            , POCase "verify machine m2 (ref)" (verify path0 2) result2
+            , POCase "verify machine m2 (ref), in many files" (verify path1 2) result2
+            , StringCase "cyclic proof of liveness through 3 refinements" (find_errors path3) result3
+            , StringCase "refinement of undefined machine" (find_errors path4) result4
+            , StringCase "repeated imports" case5 result5
             ]
 
 result0 :: String
@@ -88,10 +83,10 @@ result1 = unlines
     , "  o  m1/m0:leave/SAF/m1:saf2"
     , "  o  m1/m0:leave/SAF/m1:saf3"
     , "  o  m1/m0:leave/SCH"
-    , "  o  m1/m0:leave/SCH/m1/2/REF/delay/prog/lhs"
-    , "  o  m1/m0:leave/SCH/m1/2/REF/delay/prog/rhs"
-    , "  o  m1/m0:leave/SCH/m1/2/REF/delay/saf/lhs"
-    , "  o  m1/m0:leave/SCH/m1/2/REF/delay/saf/rhs"
+    , "  o  m1/m0:leave/SCH/m1/0/REF/delay/prog/lhs"
+    , "  o  m1/m0:leave/SCH/m1/0/REF/delay/prog/rhs"
+    , "  o  m1/m0:leave/SCH/m1/0/REF/delay/saf/lhs"
+    , "  o  m1/m0:leave/SCH/m1/0/REF/delay/saf/rhs"
     , "  o  m1/m0:leave/WD/ACT/lv:a2"
     , "  o  m1/m0:leave/WD/C_SCH"
     , "  o  m1/m0:leave/WD/F_SCH"
@@ -104,7 +99,7 @@ result1 = unlines
     , "  o  m1/m1:movein/SAF/m1:saf2"
     , "  o  m1/m1:movein/SAF/m1:saf3"
     , "  o  m1/m1:movein/SCH"
-    , "  o  m1/m1:movein/SCH/m1/3/REF/weaken"
+    , "  o  m1/m1:movein/SCH/m1/0/REF/weaken"
     , "  o  m1/m1:movein/WD/ACT/mi:a2"
     , "  o  m1/m1:movein/WD/C_SCH"
     , "  o  m1/m1:movein/WD/F_SCH"
@@ -117,7 +112,7 @@ result1 = unlines
     , "  o  m1/m1:moveout/SAF/m1:saf2"
     , "  o  m1/m1:moveout/SAF/m1:saf3"
     , "  o  m1/m1:moveout/SCH"
-    , "  o  m1/m1:moveout/SCH/m1/2/REF/weaken"
+    , "  o  m1/m1:moveout/SCH/m1/0/REF/weaken"
     , "  o  m1/m1:moveout/WD/ACT/a2"
     , "  o  m1/m1:moveout/WD/C_SCH"
     , "  o  m1/m1:moveout/WD/F_SCH"
@@ -181,29 +176,29 @@ result2 = unlines
     , "  o  m2/m0:enter/WD/GRD"
     , "  o  m2/m0:leave/FIS/in@prime"
     , "  o  m2/m0:leave/FIS/loc@prime"
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/goal "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/relation "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step "
-    , "  o  m2/m0:leave/INV/m2:inv0/new assumption "
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp3/easy (284,26)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp4/easy (285,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp5/easy (286,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp6/easy (287,25)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/goal (291,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/hypotheses (291,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/relation (291,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (293,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (295,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp7/step (297,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/goal (302,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/hypotheses (302,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/relation (302,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (304,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (306,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/assertion/hyp8/step (308,2)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/goal (271,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/hypotheses (271,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/relation (271,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (273,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (275,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/main goal/step (278,1)"
+    , "  o  m2/m0:leave/INV/m2:inv0/new assumption (254,27)"
     , "  o  m2/m0:leave/SAF/m2:saf0"
     , "  o  m2/m0:leave/SAF/m2:saf1"
     , "  o  m2/m0:leave/SAF/m2:saf2"
@@ -218,10 +213,10 @@ result2 = unlines
     , "  o  m2/m1:movein/SAF/m2:saf1"
     , "  o  m2/m1:movein/SAF/m2:saf2"
     , "  o  m2/m1:movein/SCH"
-    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/lhs"
-    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/prog/rhs"
-    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/lhs"
-    , "  o  m2/m1:movein/SCH/m2/1/REF/delay/saf/rhs"
+    , "  o  m2/m1:movein/SCH/m2/0/REF/delay/prog/lhs"
+    , "  o  m2/m1:movein/SCH/m2/0/REF/delay/prog/rhs"
+    , "  o  m2/m1:movein/SCH/m2/0/REF/delay/saf/lhs"
+    , "  o  m2/m1:movein/SCH/m2/0/REF/delay/saf/rhs"
     , "  o  m2/m1:movein/WD/C_SCH"
     , "  o  m2/m1:movein/WD/F_SCH"
     , "  o  m2/m1:movein/WD/GRD"
@@ -232,9 +227,9 @@ result2 = unlines
     , "  o  m2/m1:moveout/SAF/m2:saf1"
     , "  o  m2/m1:moveout/SAF/m2:saf2"
     , "  o  m2/m1:moveout/SCH"
-    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/lhs"
-    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/prog/rhs"
-    , "  o  m2/m1:moveout/SCH/m2/1/REF/replace/str"
+    , "  o  m2/m1:moveout/SCH/m2/0/REF/replace/prog/lhs"
+    , "  o  m2/m1:moveout/SCH/m2/0/REF/replace/prog/rhs"
+    , "  o  m2/m1:moveout/SCH/m2/0/REF/replace/str"
     , "  o  m2/m1:moveout/WD/C_SCH"
     , "  o  m2/m1:moveout/WD/F_SCH"
     , "  o  m2/m1:moveout/WD/GRD"
@@ -289,9 +284,11 @@ path3 :: String
 path3 = "Tests/train-station-ref-err0.tex"
 
 result3 :: String
-result3 = concat 
-    [ "error (1,1): A cycle exists in the proof of liveness: "
-    , "m0/evt/SCH, m1/evt/SCH, p0, tr0\n"
+result3 = unlines
+    [ "error: A cycle exists in the liveness proof"
+    , "\tProgress property p0 (refined in m0): (41,1)"
+    , "\tEvent evt (refined in m1): (50,1)"
+    , ""
     ]
 
 path4 :: String
@@ -302,23 +299,30 @@ result4 = concat
     [ "error (30,20): Machine m0 refines a non-existant machine: mm\n"
     ]
 
-parse :: FilePath -> IO String
-parse path = do
-    r <- parse_machine path
-    return $ case r of
-        Right _ -> "ok"
-        Left xs -> unlines $ map report xs
+-- parse :: FilePath -> IO String
+-- parse path = do
+--     r <- parse_machine path
+--     return $ case r of
+--         Right _ -> "ok"
+--         Left xs -> unlines $ map report xs
 
-strip_line_info :: String -> String
-strip_line_info xs = unlines $ map f $ lines xs
-    where
-        f xs = takeWhile (/= '(') xs
+path5 :: FilePath
+path5 = "tests/train-station-ref-err2.tex"
 
-verify :: Int -> FilePath -> IO (String, Map Label Sequent)
-verify n path = do
-    r <- list_file_obligations path
-    case r of
-        Right ms -> do
-            (s,_,_) <- str_verify_machine $ fst $ ms !! n
-            return (strip_line_info s, snd $ ms !! n)
-        x -> return (show x, empty)
+result5 :: String
+result5 = unlines
+    [ "error: Theory imported multiple times"
+    , "\t\"sets\": (37,1)"
+    , "\t\"sets\": (87,1)"
+    , "\t\"sets\": (443,1)"
+    , "\t\"sets\": (444,12)"
+    , ""
+    , "error: Theory imported multiple times"
+    , "\t\"functions\": (88,12)"
+    , "\t\"functions\": (445,12)"
+    , ""
+    ]
+
+case5 :: IO String
+case5 = find_errors path5
+

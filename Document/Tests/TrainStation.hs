@@ -3,7 +3,8 @@
 module Document.Tests.TrainStation where
 
     -- Modules
-import Document.Document as Doc
+import Document.Document as Doc -- (list_file_obligations,parse_machine)
+import Document.Tests.Suite (verify,find_errors)
 
 import Logic.Expr
 import Logic.Proof
@@ -105,6 +106,7 @@ part0 :: TestCase
 part0 = test_cases
             "part 0"
             [ (Case "test 0, syntax" case0 $ Right [machine0])
+            , (StringCase "test 21, multiple imports of sets" case21 result21)
             ]
 part1 :: TestCase
 part1 = test_cases
@@ -278,13 +280,13 @@ props0 = empty_property_set
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
     ,   derivation = fromList 
-            [ ( label "leave/SCH/train0/1"
+            [ ( label "leave/SCH/train0/0"
               , Rule (weaken (label "leave"))
                     { remove = S.singleton (label "default")
                     , add    = S.singleton (label "c0") } )
-            , ( label "enter/GRD/train0/0"
+            , ( label "enter/GRD/train0/grd1"
               , Rule $ add_guard (label "enter") $ label "grd1" )
-            , ( label "leave/GRD/train0/0"
+            , ( label "leave/GRD/train0/grd0"
               , Rule $ add_guard (label "leave") $ label "grd0" ) ]
     ,   transient = fromList
             [   ( label "tr0"
@@ -340,7 +342,8 @@ leave_evt :: Event
 leave_evt = empty_event 
     {  indices   = symbol_table [t_decl]
     ,  scheds    = insert (label "c0") (fromJust (t `zelem` in_var)) default_schedule
-    ,  sched_ref = [ (weaken (label "leave"))
+    ,  sched_ref = reverse
+                   [ (weaken (label "leave"))
                      { remove = S.singleton (label "default")
                      , add    = S.singleton (label "c0") }
                    , add_guard (label "leave") $ label "grd0"
@@ -932,7 +935,7 @@ result1 = unlines
     , "  o  train0/leave/INV/inv2/step (104,1)"
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/1/REF/weaken"
+    , "  o  train0/leave/SCH/train0/0/REF/weaken"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1542,7 +1545,7 @@ result13 = unlines
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/1/REF/weaken"
+    , "  o  train0/leave/SCH/train0/0/REF/weaken"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1557,16 +1560,8 @@ result13 = unlines
     ]
 
 case13 :: IO (String, Map Label Sequent)
-case13 = verify path13
+case13 = verify path13 0
 
-verify :: FilePath -> IO (String, Map Label Sequent)
-verify path = do
-    r <- list_file_obligations path
-    case r of
-        Right [(m,pos)] -> do
-            (s,_,_) <- str_verify_machine m
-            return (s, pos)
-        x -> return (show x, empty)
 
 path14 :: String
 path14 = "Tests/train-station-err6.tex"
@@ -1641,7 +1636,7 @@ result14 = unlines
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/1/REF/weaken"
+    , "  o  train0/leave/SCH/train0/0/REF/weaken"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1656,7 +1651,7 @@ result14 = unlines
     ]
         
 case14 :: IO (String, Map Label Sequent)
-case14 = verify path14
+case14 = verify path14 0
     
 path15 :: String
 path15 = "Tests/train-station-err7.tex"
@@ -1737,7 +1732,7 @@ result15 = unlines
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/1/REF/weaken"
+    , "  o  train0/leave/SCH/train0/0/REF/weaken"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1752,7 +1747,7 @@ result15 = unlines
     ]
       
 case15 :: IO (String, Map Label Sequent)
-case15 = verify path15
+case15 = verify path15 0
 
 path16 :: String
 path16 = "Tests/train-station-t2.tex"
@@ -1852,7 +1847,7 @@ result16 = unlines
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
     , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/1/REF/weaken"
+    , "  o  train0/leave/SCH/train0/0/REF/weaken"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1867,7 +1862,7 @@ result16 = unlines
     ]
 
 case16 :: IO (String, Map Label Sequent)
-case16 = verify path16
+case16 = verify path16 0
 
 path17 :: String
 path17 = "Tests/train-station-err8.tex"
@@ -1921,6 +1916,20 @@ case18 = do
             Right _ -> do
                 return "successful verification"
             Left xs -> return $ unlines $ map format_error xs
+
+path21 :: FilePath
+path21 = "tests/train-station-err10.tex"
+
+case21 :: IO String
+case21 = find_errors path21
+
+result21 :: String
+result21 = unlines
+    [ "error: Theory imported multiple times"
+    , "\t\"sets\": (129,1)"
+    , "\t\"sets\": (130,12)"
+    , "\t\"sets\": (131,12)\n"
+    ]
 
 --get_proof_obl name = do
 --        pos <- list_file_obligations path0

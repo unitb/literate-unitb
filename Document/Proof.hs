@@ -55,12 +55,8 @@ data ProofStep = Step
        , main_proof  :: Maybe (Tactic Proof)       -- main proof        
        }
 
-data ProofParam = ProofParam 
-    { notat      :: Notation
-    }
-
-empty_pr :: Theory -> ProofParam
-empty_pr th = ProofParam (th_notation th)
+-- empty_pr :: Theory -> ProofParam
+-- empty_pr _ = () -- ProofParam (th_notation th)
 
 --par_ctx :: ProofParam -> Context
 --par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
@@ -143,7 +139,7 @@ add_proof lbl prf = do
 empty_step :: ProofStep
 empty_step = Step empty empty empty [] Nothing Nothing
 
-find_assumptions :: (MonadState System m, MonadReader Theory m)
+find_assumptions :: (MonadState System m, MonadReader Thy m)
                  => VisitorT (StateT ProofStep m) () 
 find_assumptions = visitor
         [   (   "calculation"
@@ -324,17 +320,17 @@ indirect_equality dir op zVar@(Var _ t) proof = do
 --                => BinOperator 
 --                -> 
 
-find_proof_step :: (MonadState System m, MonadReader Theory m, Monad m)
-                => ProofParam
-                -> VisitorT (StateT ProofStep m) ()
-find_proof_step pr = visitor
+find_proof_step :: (MonadState System m, MonadReader Thy m, Monad m)
+                => VisitorT (StateT ProofStep m) ()
+find_proof_step = visitor
         [   (   "calculation"
             ,   VEnvBlock $ \() _ -> do
                     li <- ask
-                    cc <- lift_i $ parse_calc pr
+                    cc <- lift_i $ parse_calc
+                    notat <- lift $ lift $ ask
                     set_proof $ LP.with_line_info li $ do
                         cc <- cc
-                        case infer_goal cc (notat pr) of
+                        case infer_goal cc notat of
                             Right cc_goal -> do
                                     return (ByCalc $ cc { goal = cc_goal })
                             Left msgs      -> hard_error $ map (\x -> Error (format "type error: {0}" x) li) msgs
@@ -347,14 +343,14 @@ find_proof_step pr = visitor
         ,   (   "free:var"
             ,   VEnvBlock $ \(String from,String to) _ -> do
                     li    <- ask
-                    proof <- lift_i $ collect_proof_step pr
+                    proof <- lift_i $ collect_proof_step
                     set_proof $ LP.with_line_info li $ do
                         free_goal from to proof
             )
         ,   (   "by:cases"
             ,   VEnvBlock $ \() _ -> do
                     li         <- ask
-                    ((),cases) <- lift_i $ add_writer $ find_cases pr
+                    ((),cases) <- lift_i $ add_writer find_cases
                     set_proof $ LP.with_line_info li $ do
                         xs <- forM cases $ \(lbl,xp,pr) -> do
                             x <- xp
@@ -364,7 +360,7 @@ find_proof_step pr = visitor
         ,   (   "by:parts"
             ,   VEnvBlock $ \() _ -> do
                     li    <- ask
-                    ((),cases) <- lift_i $ add_writer $ find_parts pr
+                    ((),cases) <- lift_i $ add_writer find_parts
                     set_proof $ LP.with_line_info li $ do
                         xs <- forM cases $ \(xp,pr) -> do
                             x <- xp
@@ -377,21 +373,22 @@ find_proof_step pr = visitor
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
                             (hard_error [Error (format "invalid subproof label: {0}" lbl) li])
-                    p <- lift_i $ collect_proof_step pr-- (change_goal pr new_goal) m
+                    p <- lift_i collect_proof_step-- (change_goal pr new_goal) m
                     add_proof lbl p
             )
         ,   (   "indirect:equality"
             ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
                     li <- ask
+                    notat <- lift $ lift ask
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
-                            (notat pr)
+                            notat
                             (concatMap flatten_li rel) 
                     dir <- case map toLower dir of
                                 "left"  -> return $ Left ()
                                 "right" -> return $ Right ()
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
-                    p <- lift_i $ collect_proof_step pr
+                    p <- lift_i collect_proof_step
                     set_proof $ LP.with_line_info li $ do
                         var <- get_dummy zVar
                         indirect_equality dir op 
@@ -400,15 +397,16 @@ find_proof_step pr = visitor
         ,   (   "indirect:inequality"
             ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
                     li <- ask
+                    notat <- lift $ lift ask
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
-                            (notat pr)
+                            notat
                             (concatMap flatten_li rel) 
                     dir <- case map toLower dir of
                                 "left"  -> return $ Left ()
                                 "right" -> return $ Right ()
                                 _ -> hard_error [Error "invalid inequality side, expecting 'left' or 'right': " li]
-                    p <- lift_i $ collect_proof_step pr
+                    p <- lift_i $ collect_proof_step
                     set_proof $ LP.with_line_info li $ do
                         var <- get_dummy zVar
                         indirect_inequality dir op 
@@ -417,7 +415,7 @@ find_proof_step pr = visitor
         ,   (   "by:symmetry"
             ,   VEnvBlock $ \(lbl,vars) _ -> do
                     li <- ask
-                    p <- lift_i $ collect_proof_step pr
+                    p <- lift_i collect_proof_step
                     set_proof $ LP.with_line_info li $ do
                         vs <- mapM (get_dummy . toString) vars 
                         by_symmetry vs lbl Nothing p
@@ -429,38 +427,37 @@ find_proof_step pr = visitor
             )
         ] 
 
-find_cases :: (MonadState System m, MonadReader Theory m)
-           => ProofParam
-           -> VisitorT (WriterT [(Label,Tactic Expr,Tactic Proof)] m) ()
-find_cases pr = visitor 
+find_cases :: (MonadState System m, MonadReader Thy m)
+           => VisitorT (WriterT [(Label,Tactic Expr,Tactic Proof)] m) ()
+find_cases = visitor 
         [   (   "case"
             ,   VEnvBlock $ \(lbl,formula :: [LatexDoc]) _ -> do
                     expr      <- lift_i $ get_expression (Just bool) formula 
-                    p         <- lift_i $ collect_proof_step pr
+                    p         <- lift_i collect_proof_step
                     lift $ tell [(lbl, expr, p)]
             )
         ] []
 
-find_parts :: (MonadState System m, MonadReader Theory m)
-           => ProofParam
-           -> VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
-find_parts pr = visitor 
+find_parts :: (MonadState System m, MonadReader Thy m)
+           => VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
+find_parts = visitor 
         [   (   "part:a"
             ,   VEnvBlock $ \(One (formula :: [LatexDoc])) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
-                    p         <- lift_i $ collect_proof_step pr -- (pr { po = new_po }) m
+                    p         <- lift_i collect_proof_step -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]
                     return ()
             )
         ] []
 
-collect_proof_step :: (MonadState System m, MonadReader Theory m)
-                   => ProofParam
-                   -> VisitorT m (Tactic Proof)
-collect_proof_step pr = do
-        ((),step) <- make_hard $ add_state empty_step $ find_assumptions
+type Thy = Notation
+
+collect_proof_step :: (MonadState System m, MonadReader Thy m)
+                   => VisitorT m (Tactic Proof)
+collect_proof_step = do
+        ((),step) <- make_hard $ add_state empty_step find_assumptions
         li   <- ask
-        (_,step) <- add_state step $ find_proof_step pr
+        (_,step) <- add_state step find_proof_step
         case main_proof step of
             Just p -> do
                 let assrt   = assertions step
@@ -493,7 +490,7 @@ collect_proof_step pr = do
                         else hard_error [Error "assumptions must be accompanied by a new goal" li]
             _   -> hard_error [Error "expecting a single proof step" li]         
 
-hint :: ( MonadReader Theory m
+hint :: ( MonadReader Thy m
         , MonadState System m
         , W.MonadWriter [Tactic (TheoremRef, LineInfo)] m)
      => VisitorT m ()
@@ -529,21 +526,21 @@ hint = visitor []
             li <- ask
             lift $ W.tell [return (ThmRef b [],li)]
 
-parse_calc :: ( MonadState System m, MonadReader Theory m )
-           => ProofParam 
-           -> VisitorT m (Tactic Calculation)
-parse_calc pr = do
+parse_calc :: ( MonadState System m, MonadReader Thy m )
+           => VisitorT m (Tactic Calculation)
+parse_calc = do
     xs <- get_content
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (step,kw,[rel,tx_hint],remainder)    -> do
             xp <- get_expression Nothing step
+            notat <- lift ask 
             op <- make_soft equal $ fromEitherM
                 $ parse_oper 
-                    (notat pr)
+                    notat
                     (concatMap flatten_li rel) 
             li      <- ask
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
-            calc    <- with_content li remainder $ parse_calc pr
+            calc    <- with_content li remainder parse_calc
             return $ LP.with_line_info (line_info kw) $ do
                 hs  <- sequence hs
                 xp  <- make_soft ztrue xp
@@ -594,7 +591,7 @@ get_expr m opt ys = do
                     WithoutFreeDummies -> empty_ctx
         get_expr_with_ctx m ctx ys
 
-get_expression :: ( MonadReader Theory m
+get_expression :: ( MonadReader Thy m
                   , MonadState System m )
                => Maybe Type
                -> [LatexDoc]
@@ -603,7 +600,7 @@ get_expression t ys = do
             li <- if L.null xs
                 then ask
                 else return $ line_info xs
-            th  <- lift $ ask            
+            notation  <- lift ask            
             sys <- lift $ ST.get
             return $ LP.with_line_info li $ do
                 ctx <- get_context
@@ -611,7 +608,7 @@ get_expression t ys = do
                         flip evalStateT sys $ 
                         runEitherT $ 
                         parse_expr 
-                            ctx (th_notation th)
+                            ctx notation
                             (concatMap flatten_li xs)
                 x <- either hard_error return x
                 let typed_x = case t of

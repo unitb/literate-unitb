@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE TemplateHaskell       #-}
 module Utilities.Error where
 
 import Utilities.Syntactic
@@ -14,6 +15,10 @@ import Control.Monad.State.Class
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Writer.Class
+
+import Language.Haskell.TH
+
+import Text.Printf
 
 newtype ErrorT m a = ErrorT { runErrorT :: m (Either [Error] (a,[Error])) }
 
@@ -104,6 +109,14 @@ instance MonadReader a m => MonadReader a (ErrorT m) where
 instance MonadState s m => MonadState s (ErrorT m) where
     get = lift get
     put x = lift $ put x
+
+myError :: Q Exp
+myError = do
+    loc <- location 
+    let (ln,pos) = loc_start loc
+        arg = LitE $ StringL $ printf "\n-%s:%d:%d:" (loc_filename loc) ln pos 
+        fun = VarE 'error -- _
+    return $ AppE fun arg
 
 --instance (MonadTrans t, MonadError m) => MonadError (t m) where
 --    soft_error x = lift $ soft_error x

@@ -3,6 +3,8 @@ module Main where
 
 import Control.Monad
 
+import Data.List
+
 import qualified UnitB.Test as UB
 import qualified Latex.Test_Latex_Parser as LT
 import qualified Z3.Test as ZT
@@ -32,7 +34,7 @@ test_case = run_test_cases $ test_cases
 main :: IO ()
 main = do
     xs <- getDirectoryContents "."
-    let prefix ys = ys `elem` map (take $ length ys) xs
+    let prefix ys = any (ys `isPrefixOf`) xs
     when (prefix "actual-") $
         shelly $ rm_f "actual-*.txt"
     when (prefix "expected-") $

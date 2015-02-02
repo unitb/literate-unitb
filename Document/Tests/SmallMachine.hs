@@ -1,5 +1,4 @@
 module Document.Tests.SmallMachine
-    ( test_case, test ) 
 where
 
     -- Modules
@@ -48,7 +47,9 @@ test = test_cases "small machine example" [
         (StringCase "test 10 (transient PO, enablement)" 
             case10 result10), 
         (StringCase "test 11 (transient PO, negation)" 
-            case11 result11)  ]
+            case11 result11),
+        (StringCase "test 12 name clash between coarse schedule and co properties" 
+            case12 result12) ]
 
 path0 :: String
 path0 = "Tests/small_machine_t0.tex"
@@ -99,8 +100,7 @@ result2 = (unlines
 path2 :: String
 path2 = "Tests/small_machine_t2.tex"
 case2 :: IO (String, Map Label Sequent)
-case2 = do
-    verify path2 0
+case2 =  verify path2 0
 
 result3 :: String
 result3 = unlines 
@@ -109,11 +109,11 @@ result3 = unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
-    , " xxx m0/SKIP/CO/c0"
+    , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
     , "  o  m0/TR/tr0/inc/NEG"
-    , "  o  m0/c0/CO/WD"
-    , "  o  m0/inc/CO/c0"
+    , "  o  m0/co0/CO/WD"
+    , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -132,8 +132,7 @@ path3 :: String
 path3 = "Tests/small_machine.tex"
 
 case3 :: IO (String, Map Label Sequent)
-case3 = do
-    verify path3 0
+case3 = verify path3 0
 
 result4 :: String
 result4 = unlines 
@@ -162,9 +161,7 @@ result4 = unlines
 
 
 show_po :: FilePath -> Label -> IO String
-show_po path lbl = do
-        proof_obligation path (show lbl) 0
-
+show_po path lbl = proof_obligation path (show lbl) 0
 
 case4 :: IO String
 case4 = show_po path3 $ label "m0/inc/INV/inv0"
@@ -195,7 +192,7 @@ result5 = unlines
     ]
 
 case5 :: IO String
-case5 = show_po path3 $ label "m0/SKIP/CO/c0"
+case5 = show_po path3 $ label "m0/SKIP/CO/co0"
 
 result6 :: String
 result6 = unlines 
@@ -204,16 +201,16 @@ result6 = unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
-    , " xxx m0/SKIP/CO/c0"
+    , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
     , "  o  m0/TR/tr0/inc/NEG"
-    , "  o  m0/c0/CO/WD"
-    , "  o  m0/inc/CO/c0"
+    , "  o  m0/co0/CO/WD"
+    , "  o  m0/inc/CO/co0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
     , "  o  m0/inc/SCH"
-    , "  o  m0/inc/SCH/m0/1/REF/weaken"
+    , "  o  m0/inc/SCH/m0/0/REF/weaken"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -227,8 +224,7 @@ path6 :: String
 path6 = "Tests/small_machine_t3.tex"
 
 case6 :: IO (String, Map Label Sequent)
-case6 = do
-    verify path6 0
+case6 = verify path6 0
 
 result7 :: String
 result7 = unlines 
@@ -259,7 +255,7 @@ path8 :: FilePath
 path8 = "Tests/small_machine_t4.tex"
 
 result8 :: String
-result8 = unlines
+result8 = unlines 
     [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -297,9 +293,6 @@ result9 = unlines
     , "(declare-const y@prime Int)"
     , "; inv0"
     , "(assert (= x (* 2 y)))"
-            -- This should be the goal but it boils down to true
-            -- after Literate Unit-B has simplified it
---        " (=> false (= x y))"]
     , "(assert (not true))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
@@ -308,7 +301,7 @@ result9 = unlines
     ]
 
 case9 :: IO String
-case9 = show_po path6 $ label "m0/inc/SCH/m0/1/REF/weaken"
+case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
 
 result10 :: String
 result10 = unlines 
@@ -335,7 +328,7 @@ case10 :: IO String
 case10 = show_po path6 $ label "m0/TR/tr0/inc/EN"
 
 result11 :: String
-result11 = unlines 
+result11 = unlines
     [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -430,7 +423,7 @@ m1_props = m0_props
         { transient = fromList [
             (label "tr0", Transient empty (x `zeq` y) [label "inc"] empty_hint) ]
         , constraint = fromList [
-            (label "c0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
+            (label "co0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
         , inv = insert 
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
@@ -443,4 +436,18 @@ m1_props = m0_props
         x' = Word var_x'
         z1 = zint 1
         z2 = zint 2
+
+path12 :: String
+path12 = "Tests/small_machine_t12.tex"
+
+case12 :: IO String
+case12 = do
+    find_errors path12
+
+result12 :: String
+result12 = unlines
+    [ "error: Multiple expressions with the label c0"
+    , "\tcoarse schedule (event inc): (40,15)"
+    , "\tco property: (45,15)\n" ]
+
 

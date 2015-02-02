@@ -39,7 +39,9 @@ module Document.Visitor
     , bind, bind_all
     , insert_new
     , get_content
-    , with_content )
+    , with_content
+    , Readable (..)
+    , AllReadable (..) )
 where
 
     -- Modules
@@ -84,6 +86,8 @@ import Utilities.Tuple
 class Readable a where
     read_args :: (Monad m, MonadReader LineInfo m)
               => ST.StateT [LatexDoc] (EitherT [Error] m) a
+    read_one :: (Monad m, MonadReader LineInfo m)
+             => ST.StateT [[LatexDoc]] (EitherT [Error] m) a
 
 get_tuple' :: (Monad m, IsTuple a, AllReadable (TypeList a))
            => [LatexDoc] -> LineInfo 
@@ -95,14 +99,26 @@ get_tuple' xs li = EitherT $ do
 class AllReadable a where
     get_tuple :: (Monad m, MonadReader LineInfo m) 
               => ST.StateT [LatexDoc] (EitherT [Error] m) a
+    read_all :: (Monad m, MonadReader LineInfo m) 
+             => ST.StateT [[LatexDoc]] (EitherT [Error] m) a
 
 instance AllReadable () where
     get_tuple = return () 
+    read_all = do
+        xs <- ST.get
+        li <- lift $ lift $ ask
+        unless (L.null xs) 
+            $ lift $ left [Error "too many arguments" li]
+        return ()
 
 instance (AllReadable as, Readable a) => AllReadable (a :+: as) where
     get_tuple = do
         x  <- read_args 
         xs <- get_tuple
+        return (x :+: xs)
+    read_all = do
+        x  <- read_one
+        xs <- read_all
         return (x :+: xs)
 
 trim :: [Char] -> [Char]
@@ -119,14 +135,36 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
 trim_blanks :: [LatexToken] -> [LatexToken]
 trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
 
+get_next :: (Monad m, MonadReader LineInfo m)
+         => ST.StateT [[LatexDoc]] (EitherT [Error] m) [LatexDoc]
+get_next = do
+    li <- lift $ lift $ ask
+    s  <- ST.get
+    case s of
+        x:xs -> ST.put xs >> return x
+        [] -> lift $ left [Error "expecting more arguments" li]
+
 instance Readable [LatexDoc] where
     read_args = do
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
         return arg
+    read_one = get_next
 
 data Str = String { toString :: String }
+
+read_label :: (Monad m, MonadReader LineInfo m)
+           => ST.StateT [[LatexDoc]] (EitherT [Error] m) String
+read_label = do
+    li <- lift $ lift $ ask
+    x  <- get_next    
+    lift $ case trim_blank_text x of
+        ([Text [TextBlock x _]]) 
+            -> right x
+        ([Text [Command x _]]) 
+            -> right x
+        _   -> left [Error "expecting a label" li]
 
 instance Readable Str where
     read_args = do
@@ -134,6 +172,9 @@ instance Readable Str where
         (arg,ts) <- lift $ get_1_lbl ts
         ST.put ts
         return $ String arg
+    read_one = do
+        x <- read_label
+        return $ String x
 
 instance Readable Int where
     read_args = do
@@ -141,6 +182,13 @@ instance Readable Int where
         (arg,ts) <- lift $ get_1_lbl ts
         ST.put ts
         case reads arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                li <- lift ask
+                left [Error (format "invalid integer: '{0}'" arg) li]
+    read_one = do
+        arg <- read_label
+        case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
                 li <- lift ask
@@ -155,6 +203,12 @@ instance Readable (Maybe Label) where
         if strip xs == "" then 
             return Nothing
         else return $ Just $ label xs
+    read_one = do
+        arg <- get_next
+        let xs = concatMap flatten arg
+        if strip xs == "" then
+            return Nothing
+        else return $ Just $ label xs
 
 instance Readable Label where
     read_args = do
@@ -162,6 +216,8 @@ instance Readable Label where
         (arg,ts) <- lift $ get_1_lbl ts
         ST.put ts
         return $ label arg
+    read_one = do
+        label `liftM` read_label
 
 instance Readable [Label] where
     read_args = do
@@ -169,19 +225,32 @@ instance Readable [Label] where
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
         return $ map label $ comma_sep (concatMap flatten arg)
+    read_one = do
+        arg <- get_next
+        return $ map label $ comma_sep (concatMap flatten arg)
 
 instance Readable [Str] where
     read_args = do
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        return $ map String $ comma_sep (concatMap flatten arg)        
+        return $ map String $ comma_sep (concatMap flatten arg)
+    read_one = do
+        arg <- get_next
+        return $ map String $ comma_sep (concatMap flatten arg)
 
 instance Readable [[Str]] where
     read_args = do
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
+        case reads $ concatMap flatten arg of 
+            [(n,"")] -> return n
+            _ -> lift $ do
+                li <- lift ask
+                left [Error (format "invalid list of strings: '{0}'" arg) li]
+    read_one = do
+        arg <- get_next
         case reads $ concatMap flatten arg of 
             [(n,"")] -> return n
             _ -> lift $ do
@@ -203,6 +272,9 @@ instance Readable (Set Label) where
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
+        return $ fromList $ map label $ comma_sep (concatMap flatten arg)
+    read_one = do
+        arg <- get_next
         return $ fromList $ map label $ comma_sep (concatMap flatten arg)
 
 --instance Readable a => Readable (Maybe a) where
@@ -230,7 +302,7 @@ cmd_params n xs     = do
             Bracket _ _ xs li : ys -> do
                 (ws, zs) <- local (const li) $ cmd_params (n-1) ys
                 right (xs:ws, zs)
-            _                 -> left [Error ("bad argument: " ++ show xs) li]
+            _                 -> left [Error ("Expecting one more argument") li]
 
 get_1_lbl :: (Monad m, MonadReader LineInfo m)
           => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])

@@ -23,7 +23,7 @@
 
 %\section{}
 %\subsection{}
-
+\newcommand{\TRAIN}{\text{TRAIN}}\newcommand{\BLK}{\text{BLK}}\newcommand{\LOC}{\text{LOC}}
 \begin{machine}{train0}
 
 \newset{TRAIN}{\TRAIN}
@@ -40,9 +40,9 @@
 %}
 %
 
-\newevent{enter}
+\newevent{enter}{enter}
 
-\newevent{leave}
+\newevent{leave}{leave}
 
 \begin{align*}
 \transient{leave}{tr0}
@@ -67,18 +67,6 @@
 %	loc \in in \fun \BLK
 {	\dom . loc = in }
 \end{align*}
-
-\begin{proof}{INIT/INV/inv2}
-	\begin{calculation}
-		\dom. loc
-	\hint{=}{ \ref{in1} }
-		 \oftype{ \dom . \emptyfun }{ \set[\TRAIN] } \bunion \dom . \emptyfun
-	\hint{=}{ empty functions }
-		\oftype{ \emptyset \bunion \dom . \emptyfun }{\set[\TRAIN]}
-	\hint{=}{ \ref{in0} }
-		in
-	\end{calculation}
-\end{proof}
 
 \begin{align*}
 \evassignment{enter}{a1}
@@ -139,9 +127,9 @@
 {	loc = \emptyfun	}
 \end{align*}
 
-% \with{sets}
 \with{sets}
-% \with{sets}
+\with{sets}
+\with{sets}
 \with{functions}
 %\with{functions}
 
@@ -170,8 +158,8 @@
 \begin{align*}
 \assumption{axm0}
 {	\BLK &= \{ ent, ext \} \bunion PLF	} \\
-\safety{s0}{ \neg t \in in & }{ t \in in \land loc.t = ent } \\
-\safety{s1}{ t \in in \land loc.t = ent & }{ t \in in \land loc.t \in PLF } \\
+%\safety{s0}{ \neg t \in in & }{ t \in in \land loc.t = ent } \\
+%\safety{s1}{ t \in in \land loc.t = ent & }{ t \in in \land loc.t \in PLF } \\
 \constraint{co0}
 {	\neg t \in in \land t \in in' & \2\implies  loc'.t = ent } % \lor \neg t \in in'
 \end{align*}
@@ -382,24 +370,24 @@
 		t_0 \in in \setminus \{ t \} 
 		\land ( (\{ t \} \domsub loc).t_0 \in PLF \lor (\{ t \} \domsub loc).t_0 = ent)
 	\hint{=}{ }	% step 2
-		( t_0 \in in \setminus \{ t \} 
-		\land  ( \{ t \} \domsub loc).t_0 \in PLF )
-			   \lor ( t_0 \in (in \setminus \{ t \} )
-		\land (\{ t \} \domsub loc).t_0 = ent)
+			( 		t_0 \in in \setminus \{ t \} 
+			 \land  ( \{ t \} \domsub loc).t_0 \in PLF )
+		\lor ( 		t_0 \in (in \setminus \{ t \} )
+			 \land (\{ t \} \domsub loc).t_0 = ent)
 	\hint{=}{ \ref{inv2} }	% step 3
 			t_0 \in in \setminus \{ t \} 
 		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
 	\hint{=}{ } % step 4
 		t_0 \in in \land \neg t_0  = t 
 		\land ( loc.t_0 \in PLF \lor  loc.t_0 = ent)
-	\hint{=}{  } % step 5
+	\hint{=}{ \ref{asm2}, \ref{asm4}, \ref{asm3} } % step 5
 		t_0 \in in \land \neg t_0  = t \land \neg loc.t_0 = ext
 	\hint{=}{  \ref{grd0} } % step 6
 	 	t_0 \in in \land \neg loc.t_0 = ext \land loc.t = ext
-	\hint{\follows}{  \ref{grd0} } % step 7
+	\hint{\follows}{  \ref{grd0}, \ref{asm2} } % step 7
 %		\true
 	 	t_0 \in in \land loc.t_0 = ent 
-	\hint{=}{   } % step 8
+	\hint{=}{ \ref{asm2}  } % step 8
 	 	t_0 \in in \land loc.t_0 = ent  \land \neg loc.t_0 \in PLF 
 	\end{calculation}
 	\end{free:var}
@@ -429,6 +417,20 @@
 \assumption{asm5}
 {	\qforall{p}{}{ p = ent \lor p = ext \equiv \neg p \in PLF }	}
 \end{align*}
+
+\begin{proof}{INIT/INV/inv2}
+	\begin{calculation}
+		\dom. loc
+	\hint{=}{ \ref{in1} }
+		 \dom . \oftype{ \emptyfun }{ \pfun[\TRAIN, \BLK] }  
+	\hint{=}{ empty functions }
+		\oftype{ \emptyset }{\set[\TRAIN]}
+	\hint{=}{ \ref{in0} }
+		in
+	\end{calculation}
+\end{proof}
+
+\weakento{leave}{default}{c0}
 
 \end{machine}
 

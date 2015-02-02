@@ -92,7 +92,7 @@ general = do
 --                    waitForProcess p2
 --                c1 <- waitForProcess ps
                 t0 <- getCurrentTime
-                c1 <- p_system "test > result.txt"
+                c1 <- p_system "bin/test > result.txt"
                 t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
                 zs' <- mapM (liftM (length . lines) . readFile) ys'

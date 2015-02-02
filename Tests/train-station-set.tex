@@ -85,7 +85,7 @@
 
 \newset{BLK}{\Blk}
 
-\with{sets}
+% \with{sets}
 \with{functions}
 
 \begin{align*}
@@ -362,7 +362,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \end{free:var} \end{subproof} \easy
 \end{proof}
 
-\replacefine{m1:moveout}{}{}{mo:f0}{m2:prog1} 
+\replacefine{m1:moveout}{}{mo:f0}{m2:prog1} 
 
 \begin{align*}
 \fschedule{m1:moveout}{mo:f0}{ \neg ext \in \ran.loc } 
@@ -462,9 +462,9 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 	\variable{osgn: \set [\Blk] } 
 \]
 
-\with{sets}
-\with{sets}
-\with{functions}
+% \with{sets}
+% \with{sets}
+% \with{functions}
 
 
 \begin{align*}
@@ -493,7 +493,7 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 
 \replace{m1:moveout}{}{m3:mo:sch0}{c1}{m3:prog0}{m3:saf0}
 	% it works because the PO is trivial p |-> true
-\replacefine{m1:moveout}{}{mo:f0}{}{m3:prog0}
+\replacefine{m1:moveout}{mo:f0}{}{m3:prog0}
 \removeguard{m1:moveout}{mo:g3}
 
 \begin{align*}

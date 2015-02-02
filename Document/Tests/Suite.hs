@@ -84,7 +84,7 @@ find_errors :: FilePath -> IO String
 find_errors path = do
     m <- fst `liftM` list_file_obligations' path
     return $ either 
-        (unlines . L.map show) 
+        (unlines . L.map report) 
         (const $ "no errors")
         m
 

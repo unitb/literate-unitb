@@ -379,24 +379,25 @@ subexpression e = f [] e
 
 main :: IO ()
 main = do
-        xs <- liftM concat $ replicateM 10 $ sample' arbitrary
-        let (ExprNotation ctx n e) = head 
-                $ filter (not . prop_expr_parser) xs
-            txt = showExpr n e
-            txt' = map (\x -> (x,li)) txt
-            li  = LI "" 0 0
-            e'  = runReader (runEitherT $ parse_expr' ctx n txt') li
-            -- mch'' = concat $ rights [mch']
-            -- mch'  = (M.elems . machines) `liftM` (all_machines tex)
+        xs <- liftM concat $ replicateM 100 $ sample' correct_machine
+        let (mch,tex) = head 
+                $ filter (not . f_prop_parseOk) xs
+            mch'  = (M.elems . machines) `liftM` (all_machines $ unTex tex)
+        -- print $ tex
+        -- print $ mch'
+        --     -- txt = showExpr n e
+        --     -- txt' = map (\x -> (x,li)) txt
+        --     -- mch'' = concat $ rights [mch']
+        --     -- mch'  = (M.elems . machines) `liftM` (all_machines tex)
                 
-        writeFile "actual_exp.txt" $ show e'
+        writeFile "actual_exp.txt" $ show mch'
         writeFile "expect_exp.txt" $ unlines
-            [ txt
-            , show e ]
-        -- writeFile "actual.txt" (show mch')
-        -- writeFile "expect.txt" ("Right " ++ show [mch])
-        -- writeFile "tex.txt" (show $ Tex tex)
-        -- print $ zipWith (==) 
-        --     (concatMap subexpression $ expressions mch) 
-        --     (concatMap subexpression $ concatMap expressions mch')
+            [ -- show tex
+            show $ (Right mch :: Either String Machine) ]
+        -- -- writeFile "actual.txt" (show mch')
+        -- -- writeFile "expect.txt" ("Right " ++ show [mch])
+        -- -- writeFile "tex.txt" (show $ Tex tex)
+        -- -- print $ zipWith (==) 
+        -- --     (concatMap subexpression $ expressions mch) 
+        -- --     (concatMap subexpression $ concatMap expressions mch')
 
