@@ -30,24 +30,17 @@ module UnitB.AST
     , RefRule (..)
     , ProgId (..)
     , primed, make_unique
-    , merge_struct
-    , merge_import
-    , merge_decl
-    , merge_exprs
-    , merge_refinements
-    , merge_proofs
     , all_types
     , basic_theory
     , disjoint_union
+    , keep', frame
     , cycles
     , ScheduleChange 
         ( add, remove
         , keep, event
         , rule)
     , replace, weaken
---    , last_schedule
     , ScheduleRule (..)
---    , list_schedules
     , new_sched
     , new_guard
     , default_schedule
@@ -154,13 +147,12 @@ empty_event = Event
         , eql_vars = S.empty
         }
 
-frame :: Event -> S.Set Var
-frame evt = S.unions $ map f acts
+frame :: Map Label Action -> S.Set Var
+frame acts = S.unions $ map f $ M.elems acts
     where
         f (Assign v _) = S.singleton v
         f (BcmIn v _)  = S.singleton v
         f (BcmSuchThat vs _) = S.fromList vs
-        acts = M.elems (actions evt)
 
 ba_pred :: Action -> Expr
 ba_pred (Assign v e) = Word (prime v) `zeq` e
@@ -172,8 +164,8 @@ rel_action vs act = M.map (\x -> BcmSuchThat vars x) act
     where
         vars = vs
 
-keep' :: Map String Var -> Event -> S.Set Var
-keep' vars evt = S.fromList (M.elems vars) `S.difference` frame evt
+keep' :: Map String Var -> Map Label Action -> S.Set Var
+keep' vars acts = S.fromList (M.elems vars) `S.difference` frame acts
 
 skip' :: S.Set Var -> M.Map Label Expr
 skip' keep = M.fromList $ map f $ S.toList keep
@@ -183,7 +175,7 @@ skip' keep = M.fromList $ map f $ S.toList keep
 ba_predicate :: Machine -> Event -> Map Label Expr
 ba_predicate m evt = M.map ba_pred (actions evt) `M.union` skip
     where
-        skip = skip' $ keep' (variables m) evt
+        skip = skip' $ keep' (variables m) (actions evt)
 
 newtype EventId = EventId Label
     deriving (Eq,Ord)
@@ -207,6 +199,7 @@ data Machine =
         , events     :: Map Label Event
         , inh_props  :: PropertySet
         , props      :: PropertySet
+        , derivation :: Map Label Rule         
         , comments   :: Map DocItem String }
     deriving (Eq, Show, Typeable)
 
@@ -250,6 +243,7 @@ empty_machine n = Mch
         , events    = empty 
         , inh_props = empty_property_set 
         , props     = empty_property_set
+        , derivation = empty
         , comments  = empty
         }  
 
@@ -285,23 +279,6 @@ all_notation m = flip precede logic
 --    , set_notation ] 
 
 
-merge :: (Eq c, Ord a, Monoid c) 
-      => b -> (b -> b -> Either c b) 
-      -> Map a b -> Map a b 
-      -> Either c (Map a b)
-merge w f m0 m1 = do
-        xs <- toEither $ forM (toList m3) $ \(x,z) ->
-            fromEither (x,z) $
-                case M.lookup x m0 of
-                    Just y  -> do
-                        y <- f y z
-                        return (x,y)
-                    Nothing -> do
-                        return (x,z)
-        return $ fromList xs
-    where
-        m2 = M.map (const w) m0
-        m3 = m1 `union` m2
 
 toEither :: (Eq a, Monoid a) => Writer a b -> Either a b
 toEither m
@@ -310,11 +287,6 @@ toEither m
     where
         (x,w) = runWriter m
 
-fromEither :: Monoid a => b -> Either a b -> Writer a b
-fromEither _ (Right y) = return y
-fromEither x (Left y)  = do
-        tell y
-        return x    
 
 disjoint_union :: (Monoid c, Eq c, Ord a) => (a -> c) -> Map a b -> Map a b -> Either c (Map a b)
 disjoint_union f x y = do
@@ -324,210 +296,7 @@ disjoint_union f x y = do
     where
         zs = S.toList (keysSet x `S.intersection` keysSet y)
 
-merge_struct :: Machine -> Machine -> Either [String] Machine
-merge_struct m0 m1 = toEither $ do
-        th   <- fromEither empty_theory $ merge_th_types
-                    (theory m0)
-                    (theory m1) 
-        evts <- fromEither empty $ merge 
-                    (skip m1)
-                    merge_evt_struct 
-                    (events m0)
-                    (events m1)
-        return m0 
-            { theory = th
-            , events = evts
-            }
-
-merge_import :: Machine -> Machine -> Either [String] Machine
-merge_import m0 m1 = toEither $ do
-        th   <- fromEither empty_theory $ merge_th_struct
-                    (theory m0)
-                    (theory m1) 
-        return m0
-            { theory = th }
-
-merge_decl :: Machine -> Machine -> Either [String] Machine
-merge_decl m0 m1 = toEither $ do
-        th   <- fromEither empty_theory $ merge_th_decl
-                    (theory m0)
-                    (theory m1) 
-        vars <- fromEither empty $ disjoint_union
-                    (\x -> ["Name clash with variable '" ++ x ++ "'"])
-                    (variables m0)
-                    (variables m1)
-        evts <- fromEither empty $ merge 
-                    (skip m1)
-                    merge_evt_decl
-                    (events m0)
-                    (events m1)
-        return m0
-                { theory = th
-                , abs_vars = variables m1
-                , variables = vars
-                , events = evts
-                }
-
-merge_exprs :: Machine -> Machine -> Either [String] Machine
-merge_exprs m0 m1 = toEither $ do
-        th   <- fromEither empty_theory $ merge_th_exprs
-                    (theory m0)
-                    (theory m1) 
-        init <- fromEither empty $ disjoint_union 
-                    (\x -> ["Name clash with initialization predicate '" ++ show x ++ "'"])
-                    (inits m0)
-                    (inits m1)
-        evts <- fromEither empty $ merge 
-                    (skip m1)
-                    (merge_evt_exprs m0)
-                    (events m0)
-                    (events m1)
-        inh   <- fromEither empty_property_set 
-                $ ps_union_expr (inh_props m0) (inh_props m1)
-        inh   <- fromEither empty_property_set 
-                $ ps_union_expr inh $ props m1
---        inh   <- fromEither empty_property_set 
---                $ foldM ps_union_expr empty_property_set
---                    [ inh_props m0
---                    , inh_props m1
---                    , props m1 ]
-        return m0
-            { theory = th
-            , inits = init
-            , events = evts
-            , inh_props = inh
-            }
-
-merge_refinements :: Machine -> Machine -> Either [String] Machine
-merge_refinements m0 m1 = toEither $ do
-        evts <- fromEither empty $ merge 
-                    (skip m1)
-                    merge_evt_refinement
-                    (events m0)
-                    (events m1)
-        return m0
-            { events = evts
-            }
-
-merge_proofs :: Machine -> Machine -> Either [String] Machine
-merge_proofs m0 m1 = toEither $ do
-        inh   <- fromEither empty_property_set 
-                $ ps_union_proofs (inh_props m0) (inh_props m1)
-        inh   <- fromEither empty_property_set 
-                $ ps_union_proofs inh $ props m1
---        inh   <- fromEither empty_property_set 
---                $ foldM ps_union_proofs empty_property_set
---                    [ inh_props m0
---                    , inh_props m1
---                    , props m1 ]
-        unless (inv (inh_props m0) `isSubmapOf` inv inh) 
-            $ tell ["incorrect inheritance"]
-        return m0
-            { inh_props = inh
-            }
-
-merge_th_types :: Theory -> Theory -> Either [String] Theory
-merge_th_types t0 t1 = toEither $ do
-        let es = extends t0 `union` extends t1
-        types <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with type '" ++ show x ++ "'"])
-                (types t0)
-                (types t1)
-        return $ t0
-            { extends = es
-            , types = types
-            }
-merge_th_decl :: Theory -> Theory -> Either [String] Theory
-merge_th_decl t0 t1 = toEither $ do
-        funs <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with function '" ++ x ++ "'"])
-                (funs t0)
-                (funs t1)
-        defs <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with definitions '" ++ x ++ "'"])
-                (defs t0)
-                (defs t1)
-        consts <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with constant '" ++ x ++ "'"])
-                (consts t0)
-                (consts t1)
-        dummies <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with dummy '" ++ x ++ "'"])
-                (dummies t0)
-                (dummies t1)
-        return $ t0
-            { funs = funs
-            , defs = defs
-            , dummies = dummies
-            , consts = consts
-            }
-merge_th_struct :: Theory -> Theory -> Either [String] Theory
-merge_th_struct t0 t1 = toEither $ do
-        let ext = (extends t0 `union` extends t1)
-        return t0
-            { extends = ext }
-merge_th_exprs :: Theory -> Theory -> Either [String] Theory
-merge_th_exprs t0 t1 = toEither $ do
-        fact <- fromEither empty $ disjoint_union
-                (\x -> ["Name clash with fact '" ++ show x ++ "'"])
-                (fact t0)
-                (fact t1)
-        return $ t0
-            { fact = fact }
-
-merge_evt_struct :: Event -> Event -> Either [String] Event
-merge_evt_struct e0 _ = return e0
-merge_evt_decl :: Event -> Event -> Either [String] Event
-merge_evt_decl e0 e1 = toEither $ do
-        ind <- fromEither empty $ disjoint_union
-                (\x -> ["multiple indices with the same name: " ++ x ++ ""])
-                (indices e0)
-                (indices e1)
-        prm <- fromEither empty $ disjoint_union
-                (\x -> ["multiple indices with the same name: " ++ x ++ ""])
-                (params e0)
-                (params e1)
-        return e0 
-            { indices = ind
-            , params = prm }
-
-merge_evt_exprs :: Machine -> Event -> Event -> Either [String] Event
-merge_evt_exprs m e0 e1 = toEither $ do
-        coarse_sch <- fromEither default_schedule $ do
-                cs <- foldM (\x y -> do
-                        disjoint_union (\x -> ["Two schedules have the same name: " ++ show x]) x y
-                    ) default_schedule
-                    [ scheds e0 `difference` default_schedule
-                    , scheds e1 `difference` default_schedule]
-                return cs
-        grd <- fromEither empty $ disjoint_union
-                (\x -> ["multiple guard with the same label: " ++ show x ++ ""])
-                (guards e0)
-                (guards e1)
-        act <- fromEither empty $ disjoint_union
-                (\x -> ["multiple actions with the same label: " ++ show x ++ ""])
-                (actions e0)
-                (actions e1)
-        let abs_keep = keep' (abs_vars m) e1 `S.intersection` frame e0
-            -- The concrete actions must change no more abstract variables than 
-            -- what the abstract actions do
-        return e0 
-            { scheds = coarse_sch
-            , guards = grd
-            , actions = act
-            , old_acts = keysSet $ actions e1
-            , eql_vars = abs_keep }
-
-merge_evt_refinement :: Event -> Event -> Either [String] Event
-merge_evt_refinement e0 e1 = toEither $ do
                 
---        ref <- fromEither empty $ disjoint_union
---                (\x -> ["multiple schedule refinement rules with the same index: " ++ show x ++ ""])
---                (sched_ref e0)
---                (sched_ref e1)
-        return e0 
-            { old_sched = new_sched e1
-            , old_guard = new_guard e1 }
 
 
 --merge_theory :: Theory -> Theory -> Either [String] Theory
@@ -555,8 +324,6 @@ merge_evt_refinement e0 e1 = toEither $ do
 --                (dummies t1)
 --        return $ Theory es types funs consts fact dummies
 
-skip :: Machine -> Event
-skip _ = empty_event
 
 default_schedule :: Map Label Expr
 default_schedule = fromList [(label "default", zfalse)]
@@ -585,7 +352,7 @@ instance Named Machine where
     name m = case _name m of Lbl s -> s
 
 instance NFData Machine where
-    rnf (Mch a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i) `deepseq` () -- rnf j
+    rnf (Mch a b c d e f g h i j) = rnf (a,b,c,d,e,f,g,h,i) `deepseq` rnf j
 
 instance NFData EventId where
     rnf (EventId lbl) = rnf lbl
@@ -699,7 +466,7 @@ data PropertySet = PS
         , progress     :: Map Label ProgressProp
 --        , schedule     :: Map Label Schedule
         , safety       :: Map Label SafetyProp
-        , derivation   :: Map Label Rule         }
+        }
     deriving Eq
 
 instance Show PropertySet where
@@ -711,11 +478,10 @@ instance Show PropertySet where
         , ("proofs", show $ keys $ proofs x)
         , ("progress", show $ progress x)
         , ("safety", show $ safety x)
-        , ("deduction steps", show $ derivation x)
         ]
 
 instance NFData PropertySet where
-    rnf (PS x0 x1 x2 x3 x4 x5 x6 x7) = rnf (x0,x1,x2,x3,x4,x5,x6,x7)
+    rnf (PS x0 x1 x2 x3 x4 x5 x6) = rnf (x0,x1,x2,x3,x4,x5,x6)
 
 data ScheduleChange = ScheduleChange 
         { event  :: Label
@@ -865,29 +631,5 @@ empty_property_set :: PropertySet
 empty_property_set = PS 
         empty empty empty 
         empty empty empty 
-        empty empty
+        empty
 
-ps_union_expr :: PropertySet -> PropertySet -> Either [String] PropertySet
-ps_union_expr (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS a1 b1 c1 d1 _ f1 g1 _) = 
-    toEither $ do
-        a2 <- fromEither empty $ disjoint_union (f "transient predicate") a0 a1
-        b2 <- fromEither empty $ disjoint_union (f "co predicate") b0 b1
-        c2 <- fromEither empty $ disjoint_union (f "invariant") c0 c1
-        d2 <- fromEither empty $ disjoint_union (f "theorem") d0 d1
---        e2 <- fromEither empty $ disjoint_union (f "proof") e0 e1
-        let e2 = e0
-        f2 <- fromEither empty $ disjoint_union (f "progress property") f0 f1
-        g2 <- fromEither empty $ disjoint_union (f "safety property") g0 g1
---        i2 <- fromEither empty $ disjoint_union (f "schedule") i0 i1
-        return $ PS a2 b2 c2 d2 e2 f2 g2 h0
-    where
-        f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         
-
-ps_union_proofs :: PropertySet -> PropertySet -> Either [String] PropertySet
---ps_union_proofs (PS a0 b0 c0 d0 e0 f0 i0 g0 h0) (PS a1 b1 c1 d1 e1 f1 i1 g1 h1) = 
-ps_union_proofs (PS a0 b0 c0 d0 e0 f0 g0 h0) (PS _ _ _ _ _ _ _ h1) = 
-    toEither $ do
-        h2 <- fromEither empty $ disjoint_union (f "deduction step") h0 h1
-        return $ PS a0 b0 c0 d0 e0 f0 g0 h2
-    where
-        f n x = [format "Name clash for {0} '{1}'" (n :: String) x]         

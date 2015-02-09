@@ -407,6 +407,7 @@ m0_machine = (empty_machine "m0") {
 m1_machine :: Machine
 m1_machine = (empty_machine "m0") 
         { props = m1_props
+        , derivation = singleton (label "inc/SCH/m0/0") (Rule sc)
         , events = singleton (label "inc") inc_event_m1
         , variables = fromList [("x", var_x), ("y", var_y)] 
         }
@@ -428,7 +429,6 @@ m1_props = m0_props
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
                 (inv m0_props)
-        , derivation = singleton (label "inc/SCH/m0/0") (Rule sc)
         }
     where
         x  = Word var_x

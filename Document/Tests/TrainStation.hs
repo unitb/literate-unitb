@@ -238,6 +238,15 @@ machine0 = (empty_machine "train0")
     ,  variables = symbol_table [in_decl,loc_decl]
     ,  events = fromList [(label "enter", enter_evt), (label "leave", leave_evt)]
     ,  props = props0
+    ,  derivation = fromList 
+            [ ( label "leave/SCH/train0/0"
+              , Rule (weaken (label "leave"))
+                    { remove = S.singleton (label "default")
+                    , add    = S.singleton (label "c0") } )
+            , ( label "enter/GRD/train0/grd1"
+              , Rule $ add_guard (label "enter") $ label "grd1" )
+            , ( label "leave/GRD/train0/grd0"
+              , Rule $ add_guard (label "leave") $ label "grd0" ) ]
     }
     where
         axm0 = fromJust (block `mzeq` (zset_enum [ent,ext] `zunion` plf)) 
@@ -279,15 +288,6 @@ props0 = empty_property_set
             ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-    ,   derivation = fromList 
-            [ ( label "leave/SCH/train0/0"
-              , Rule (weaken (label "leave"))
-                    { remove = S.singleton (label "default")
-                    , add    = S.singleton (label "c0") } )
-            , ( label "enter/GRD/train0/grd1"
-              , Rule $ add_guard (label "enter") $ label "grd1" )
-            , ( label "leave/GRD/train0/grd0"
-              , Rule $ add_guard (label "leave") $ label "grd0" ) ]
     ,   transient = fromList
             [   ( label "tr0"
                 , Transient

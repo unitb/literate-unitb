@@ -649,7 +649,7 @@ data ParserSetting = PSetting
     , primed_vars   :: Map String Var
     , free_dummies  :: Bool
     , expected_type :: Maybe Type
-    }
+    } deriving Show
 
 default_setting :: ParserSetting
 default_setting = PSetting 

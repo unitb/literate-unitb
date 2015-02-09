@@ -149,7 +149,7 @@ raw_machine_pos m = pos
                         evt_eql_po m ev
                         sch_po m ev
                     mapM_ (prog_wd_po m) $ M.toList $ progress p
-                    mapM_ (ref_po m) $ M.toList $ derivation p
+                    mapM_ (ref_po m) $ M.toList $ derivation m
                     )
         p = props m
         f (Sequent a b c d) = Sequent 

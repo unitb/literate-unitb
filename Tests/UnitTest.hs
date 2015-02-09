@@ -5,7 +5,8 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
-    , tempFile )
+    , tempFile, takeLeaves, leafCount
+    , selectLeaf, dropLeaves, leaves )
 where
 
     -- Modules
@@ -274,6 +275,41 @@ test_suite_string xs = do
             putLn (format "+- [ Success: {0} / {1} ]" y x)
             return (y,x)
 
+nameOf :: TestCase -> String
+nameOf (Suite n _) = n
+nameOf (Case n _ _) = n
+nameOf (POCase n _ _) = n
+nameOf (CalcCase n _ _) = n
+nameOf (StringCase n _ _) = n
+nameOf (LineSetCase n _ _) = n
+
+leaves :: TestCase -> [String]
+leaves (Suite _ xs) = concatMap leaves xs
+leaves t = [nameOf t]
+
+selectLeaf :: Int -> TestCase -> TestCase 
+selectLeaf n = takeLeaves (n+1) . dropLeaves n
+
+dropLeaves :: Int -> TestCase -> TestCase
+dropLeaves n (Suite name xs) = Suite name (drop (length ws) xs)
+    where
+        ys = map leafCount xs
+        zs = map sum $ inits ys
+        ws = dropWhile (<= n) zs
+dropLeaves _ x = x
+
+takeLeaves :: Int -> TestCase -> TestCase
+takeLeaves n (Suite name xs) = Suite name (take (length ws) xs)
+    where
+        ys = map leafCount xs
+        zs = map sum $ inits ys
+        ws = takeWhile (<= n) zs
+takeLeaves _ x = x
+
+leafCount :: TestCase -> Int
+leafCount (Suite _ xs) = sum $ map leafCount xs
+leafCount _ = 1
+
 capabilities :: SSem
 capabilities = unsafePerformIO $ new 16
 
@@ -284,15 +320,16 @@ forkTest cmd = do
     r <- ask
     lift $ wait capabilities
     lift $ forkIO $ do
-        (x,_,w) <- runRWST cmd r (-1)
-        putMVar result x
-        xs <- forM w $ \ln -> do
-            either 
-                takeMVar 
-                (return . (:[])) 
-                ln
-        putMVar output $ concat xs
-        signal capabilities
+        finally (do
+            (x,_,w) <- runRWST cmd r (-1)
+            putMVar result x
+            xs <- forM w $ \ln -> do
+                either 
+                    takeMVar 
+                    (return . (:[])) 
+                    ln
+            putMVar output $ concat xs)
+            (signal capabilities)
     tell [Left output]
     return result
 

@@ -11,23 +11,23 @@
 === prop_parseOk from ./Document/MachineSpec.hs:40 ===
 
 === prop_type_error from ./Document/MachineSpec.hs:47 ===
++++ OK, passed 100 tests.
 
 === prop_expr_parser from ./Document/MachineSpec.hs:53 ===
 +++ OK, passed 100 tests.
 +++ OK, passed 100 tests.
-
-+++ OK, passed 100 tests.
 === prop_c from ./Utilities/EditDistance.hs:132 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:194 ===
+
 +++ OK, passed 100 tests.
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:377 ===
 
 === prop_fromList_toList from ./Utilities/Relation.hs:198 ===
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:381 ===
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:202 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:377 ===
-
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:381 ===
 +++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:205 ===
@@ -40,6 +40,11 @@
 +++ OK, passed 100 tests.
 
 === prop_compose_def from ./Utilities/Relation.hs:216 ===
+
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
++++ OK, passed 100 tests.
+
+=== prop_all_valid from ./Utilities/Relation.hs:235 ===
 
 === prop_u_scc_disconnected from ./Utilities/Permutation.hs:386 ===
 +- Literate Unit-B Test Suite
@@ -151,9 +156,6 @@
 |  |  +- train station example, with refinement
 |  |  |  +- verify machine m0 (ref)
 |  |  |  +- verify machine m1 (ref)
-+++ OK, passed 100 tests.
-
-=== prop_all_valid from ./Utilities/Relation.hs:235 ===
 |  |  |  +- verify machine m2 (ref)
 |  |  |    o  m2/INIT/FIS/in
 |  |  |    o  m2/INIT/FIS/loc
@@ -615,9 +617,7 @@
 |  |  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(304,2)\n
 |  |  |    -                                                 ---------------
 |  |  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(304,2)\n
-
 |  |  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(306,2)\n
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
 |  |  |    -                                                          -     
 |  |  |    > _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(306,2)\n
 |  |  |    < _._.o_._.m2/m0:leave/INV/m2:inv0/assertion/hyp8/step_.(308,2)\n
@@ -1267,149 +1267,101 @@
 |  |  |    - ---------- ----------
 |  |  |    > passed_.122_./_.123\n
 |  |  |  ]
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:397 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:261 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:264 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:273 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:276 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:282 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:297 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:300 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
++++ OK, passed 100 tests.
+
+=== prop_filterDom_def from ./Utilities/Relation.hs:330 ===
++++ OK, passed 100 tests.
+
+=== prop_filterRan_def from ./Utilities/Relation.hs:333 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
++++ OK, passed 100 tests.
+
+=== prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
++++ OK, passed 100 tests.
+
 |  |  |  +- verify machine m3 (sets)
-|  |  |    o  m3/INIT/FIS/in
-|  |  |    o  m3/INIT/FIS/isgn
-|  |  |    o  m3/INIT/FIS/loc
-|  |  |    o  m3/INIT/FIS/osgn
-|  |  |    o  m3/INIT/INV/m3:inv0
-|  |  |    o  m3/INIT/INV/m3:inv1
-|  |  |    o  m3/INIT/INV/m3:inv2
-|  |  |    o  m3/INIT/INV/m3:inv3
-|  |  |    o  m3/INIT/WD
-|  |  |    o  m3/INV/WD
-|  |  |   xxx m3/TR/m3:tr0/m3:ctr:plf/EN
-|  |  |    o  m3/TR/m3:tr0/m3:ctr:plf/NEG
-|  |  |    o  m3/m0:enter/FIS/in@prime
-|  |  |    o  m3/m0:enter/FIS/isgn@prime
-|  |  |    o  m3/m0:enter/FIS/loc@prime
-|  |  |    o  m3/m0:enter/FIS/osgn@prime
-|  |  |    o  m3/m0:enter/INV/m3:inv0
-|  |  |    o  m3/m0:enter/INV/m3:inv1
-|  |  |    o  m3/m0:enter/INV/m3:inv2
-|  |  |    o  m3/m0:enter/INV/m3:inv3
-|  |  |    o  m3/m0:enter/SAF/m3:saf0
-|  |  |    o  m3/m0:enter/SAF/m3:saf1
-|  |  |    o  m3/m0:enter/SCH
-|  |  |    o  m3/m0:enter/WD/ACT/m3:ent:act0
-|  |  |    o  m3/m0:enter/WD/ACT/m3:ent:act1
-|  |  |    o  m3/m0:enter/WD/C_SCH
-|  |  |    o  m3/m0:enter/WD/F_SCH
-|  |  |    o  m3/m0:enter/WD/GRD
-|  |  |    o  m3/m0:leave/FIS/in@prime
-|  |  |    o  m3/m0:leave/FIS/isgn@prime
-|  |  |    o  m3/m0:leave/FIS/loc@prime
-|  |  |    o  m3/m0:leave/FIS/osgn@prime
-|  |  |    o  m3/m0:leave/INV/m3:inv0
-|  |  |    o  m3/m0:leave/INV/m3:inv1
-|  |  |    o  m3/m0:leave/INV/m3:inv2
-|  |  |    o  m3/m0:leave/INV/m3:inv3
-|  |  |    o  m3/m0:leave/SAF/m3:saf0
-|  |  |    o  m3/m0:leave/SAF/m3:saf1
-|  |  |    o  m3/m0:leave/SCH
-|  |  |    o  m3/m0:leave/WD/ACT/m3:ext:act0
-|  |  |    o  m3/m0:leave/WD/ACT/m3:ext:act1
-|  |  |    o  m3/m0:leave/WD/C_SCH
-|  |  |    o  m3/m0:leave/WD/F_SCH
-|  |  |    o  m3/m0:leave/WD/GRD
-|  |  |    o  m3/m1:movein/FIS/in@prime
-|  |  |    o  m3/m1:movein/FIS/isgn@prime
-|  |  |    o  m3/m1:movein/FIS/loc@prime
-|  |  |    o  m3/m1:movein/FIS/osgn@prime
-|  |  |    o  m3/m1:movein/INV/m3:inv0
-|  |  |    o  m3/m1:movein/INV/m3:inv1
-|  |  |    o  m3/m1:movein/INV/m3:inv2
-|  |  |    o  m3/m1:movein/INV/m3:inv3
-|  |  |    o  m3/m1:movein/SAF/m3:saf0
-|  |  |    o  m3/m1:movein/SAF/m3:saf1
-|  |  |    o  m3/m1:movein/SCH
-|  |  |    o  m3/m1:movein/WD/ACT/m3:mi:act0
-|  |  |    o  m3/m1:movein/WD/ACT/m3:mi:act1
-|  |  |    o  m3/m1:movein/WD/C_SCH
-|  |  |    o  m3/m1:movein/WD/F_SCH
-|  |  |    o  m3/m1:movein/WD/GRD
-|  |  |    o  m3/m1:moveout/FIS/in@prime
-|  |  |    o  m3/m1:moveout/FIS/isgn@prime
-|  |  |    o  m3/m1:moveout/FIS/loc@prime
-|  |  |    o  m3/m1:moveout/FIS/osgn@prime
-|  |  |    o  m3/m1:moveo|___|o  m3/m1:moveout/SCH/m3/1/REF/replace/prog/lhs
-|  |  |    o  m3/m1:moveout/SCH/m3/1/REF/replace/prog/rhs
-|  |  |    o  m3/m1:moveout/SCH/m3/1/REF/replace/str
-|  |  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/prog/lhs
-|  |  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/prog/rhs
-|  |  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/saf/lhs
-|  |  |    o  m3/m1:moveout/SCH/m3/2/REF/delay/saf/rhs
-|  |  |    o  m3/m1:moveout/WD/ACT/m3:mo:act0
-|  |  |    o  m3/m1:moveout/WD/ACT/m3:mo:act1
-|  |  |    o  m3/m1:moveout/WD/C_SCH
-|  |  |    o  m3/m1:moveout/WD/F_SCH
-|  |  |    o  m3/m1:moveout/WD/GRD
-|  |  |    o  m3/m3:ctr:plf/FIS/in@prime
-|  |  |    o  m3/m3:ctr:plf/FIS/isgn@prime
-|  |  |    o  m3/m3:ctr:plf/FIS/loc@prime
-|  |  |    o  m3/m3:ctr:plf/FIS/osgn@prime
-|  |  |   xxx m3/m3:ctr:plf/INV/m3:inv0
-|  |  |   xxx m3/m3:ctr:plf/INV/m3:inv1
-|  |  |   xxx m3/m3:ctr:plf/INV/m3:inv2
-|  |  |   xxx m3/m3:ctr:plf/INV/m3:inv3
-|  |  |    o  m3/m3:ctr:plf/SAF/m3:saf0
-|  |  |    o  m3/m3:ctr:plf/SAF/m3:saf1
-|  |  |    o  m3/m3:ctr:plf/SCH
-|  |  |    o  m3/m3:ctr:plf/WD/ACT/m3:cp:act0
-|  |  |    o  m3/m3:ctr:plf/WD/C_SCH
-|  |  |    o  m3/m3:ctr:plf/WD/F_SCH
-|  |  |    o  m3/m3:ctr:plf/WD/GRD
-|  |  |    o  m3/m3:prog0/PROG/WD/lhs
-|  |  |    o  m3/m3:prog0/PROG/WD/rhs
-|  |  |    o  m3/m3:prog0/REF/discharge/saf/lhs
-|  |  |    o  m3/m3:prog0/REF/discharge/saf/rhs
-|  |  |    o  m3/m3:prog0/REF/discharge/tr
-|  |  |    o  m3/m3:saf0/SAF/WD/lhs
-|  |  |    o  m3/m3:saf0/SAF/WD/rhs
-|  |  |    o  m3/m3:saf1/SAF/WD/lhs
-|  |  |    o  m3/m3:saf1/SAF/WD/rhs
-|  |  |    o  m3/m3:tr0/TR/WD
-|  |  |  passed 104 / 109
-|  |  |  
-|  |  |  
-|  |  |  Comparison:[
-|  |  |    > Actual
-|  |  |    < Expected
-|  |  |    - ------
-|  |  |    > ut/GRD/m3/0/REF/grd\n
-|  |  |    < ut/INV/m3:inv0\n
-|  |  |    -    ---   -------
-|  |  |    > _._.o_._.m3/m1:moveout/INV/m3:inv0\n
-|  |  |    < _._.o_._.m3/m1:moveout/INV/m3:inv1\n
-|  |  |    -                                  -  
-|  |  |    > _._.o_._.m3/m1:moveout/INV/m3:inv1\n
-|  |  |    < _._.o_._.m3/m1:moveout/INV/m3:inv2\n
-|  |  |    -                                  -  
-|  |  |    > _._.o_._.m3/m1:moveout/INV/m3:inv2\n
-|  |  |    < _._.o_._.m3/m1:moveout/INV/m3:inv3\n
-|  |  |    -                                  -  
-|  |  |    > _._.o_._.m3/m1:moveout/INV/m3:inv3\n
-|  |  |    < _._.o_._.m3/m1:moveout/SAF/m3:saf0\n
-|  |  |    -                        ---    ----  
-|  |  |    > _._.o_._.m3/m1:moveout/SAF/m3:saf0\n
-|  |  |    < _._.o_._.m3/m1:moveout/SAF/m3:saf1\n
-|  |  |    -                                  -  
-|  |  |    > _._.o_._.m3/m1:moveout/SAF/m3:saf1\n
-|  |  |    < _._.o_._.m3/m1:moveout/SCH\n
-|  |  |    -                         ----
-|  |  |    > _._.o_._.m3/m1:moveout/SCH\n
-|  |  |    < _._.o_._.m3/m1:moveout/GRD/m3/0/REF/grd\n
-|  |  |    -                        -----
-|  |  |    > _._.
-|  |  |    < _._.
-|  |  |    -     
-|  |  |  ]
 |  |  |  +- type checking of boolean expressions
 |  |  |  +- verify machine m3 error (wandering free variable)
-|  |  |  +- [ Success: 4 / 6 ]
+|  |  |  +- [ Success: 5 / 6 ]
 |  |  +- QuickCheck spec of machine parser
 |  |  +- the parser is exception free
-|  |  +- [ Success: 81 / 85 ]
+|  |  +- [ Success: 82 / 85 ]
 |  +- Unit-B
 |  |  +- 'x eventually increases' verifies
 |  |  +- train, model 0, verification
@@ -1469,117 +1421,29 @@
 |  |  +- case 6 - union of a list of {sorted} list
 |  |  +- case 7 - union of a list of {unsorted} list
 
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:397 ===
-+++ OK, passed 100 tests.
-
-=== prop_union_def from ./Utilities/Relation.hs:255 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:261 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:264 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:273 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:276 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:282 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
 
 === prop_top_sort_complete from ./Utilities/Permutation.hs:409 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:297 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:300 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
 
 === prop_top_sort_cycles from ./Utilities/Permutation.hs:416 ===
 
 === prop_top_sort_singles from ./Utilities/Permutation.hs:422 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
 
 === prop_top_sort_order from ./Utilities/Permutation.hs:427 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
 
 === prop_closure_complete from ./Utilities/Permutation.hs:459 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
 
 === prop_closure_contain_all_edges from ./Utilities/Permutation.hs:462 ===
 
 === prop_closure_closed from ./Utilities/Permutation.hs:467 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterDom_def from ./Utilities/Relation.hs:330 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterRan_def from ./Utilities/Relation.hs:333 ===
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:473 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
-+++ OK, passed 100 tests.
-
-=== prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
-
-+++ OK, passed 100 tests.
-
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
 
 |  |  +- case 8 - edit distance, random testing
 |  |  +- case 9 - edit distance, regression test from random testing
 |  |  +- QuickCheck of graphs
 |  |  +- case 11 - Relations, quickcheck
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:473 ===
+
 |  |  +- case 12 - New graphs, quickcheck
 |  |  +- [ Success: 14 / 14 ]
 |  +- code generation in the cube example
@@ -1593,17 +1457,17 @@
 |  |  +- test7: {concurrent} code
 |  |  +- test8: {run concurrent} code
 |  |  +- [ Success: 9 / 9 ]
-|  +- [ Success: 142 / 146 ]
-+- [ Success: 142 / 146 ]
+|  +- [ Success: 143 / 146 ]
++- [ Success: 143 / 146 ]
 
 ***************
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   33224 total
-    2765 Document/Machine.hs
-     893 UnitB/AST.hs
+   33462 total
+    2788 Document/Machine.hs
+     887 UnitB/AST.hs
      806 Document/Proof.hs
      783 Document/Visitor.lhs
      713 Document/Expression.hs
-Run time: 1m 20s
+Run time: 1m 14s

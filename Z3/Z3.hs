@@ -65,7 +65,7 @@ z3_path :: String
 z3_path = "z3"
 
 default_timeout :: Int
-default_timeout = 3
+default_timeout = 5
 
 instance Tree Command where
     as_tree (Push)        = List [Str "push"]
@@ -266,12 +266,10 @@ destroy_prover (Prover { .. }) = do
 discharge_on :: Sequent -> IO (MVar (Either String Validity))
 discharge_on po = do
     res <- newEmptyMVar
-    forkIO $ do
-        wait total_caps
+    forkIO $ withSem total_caps $ do
         r <- try (discharge' (Just default_timeout) po)
         let f e = Left $ show (e :: SomeException)
             r'  = either f Right r
-        signal total_caps
         putMVar res r'
     return res
 

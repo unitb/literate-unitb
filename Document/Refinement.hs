@@ -50,7 +50,7 @@ data RuleParserParameter =
         [Label]
         [LatexDoc]
     | RuleParserDecl 
-        Phase2
+        MachinePh2
         MachineId
         (Map Label ProgressProp)
         (Map Label SafetyProp)
