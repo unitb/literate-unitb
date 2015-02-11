@@ -11,96 +11,176 @@ import Control.Lens
 
 import Data.Char
 import Data.Data hiding (typeOf)
-import Data.List
+import Data.Graph
+import Data.List as L
+import Data.List.Ordered
+import Data.Map as M
 import Data.Maybe
--- import Data.Time
+import Data.Tuple
 
 import Language.Haskell.TH
 
 -- import System.Locale
+import System.Directory
 import System.IO
+import System.IO.Unsafe
 
 import Text.Printf
 
+import Utilities.Permutation
+
+templateFile :: FilePath
+templateFile = unsafePerformIO $ do
+    let fn = "template.txt"
+    ex <- doesFileExist fn
+    when ex $ removeFile fn
+    return fn
 
 makePolyClass :: Name -> DecsQ
 makePolyClass recName = do
     i <- reify recName
-    (_rec,fs) <- fieldList i
+    (args,_rec,fs) <- fieldList i
     let base = nameBase recName
         lens = mkName "Lens"
         fT   = mkName "f"
-        xT   = mkName "a"
-        yT   = mkName "b"
+        xT   = L.map (mkName . printf "a%d") [0..length args-1]
+        yT   = L.map (mkName . printf "b%d") [0..length args-1]
         fV = varT fT
-        xV = varT xT
-        yV = varT yT
-        ff x  = varT fT `appT` varT x
-        typ x = conT recName `appT` varT x
+        xV = L.map varT xT
+        -- yV = L.map varT yT
+        ff x  = appsT $ varT fT : L.map varT x
+        typ x = appsT $ conT recName : L.map varT x
         className  = mkName $ "Has" ++ base
-        methodName = mkName $ map toLower (take 1 base) ++ drop 1 base
+        methodName = mkName $ L.map toLower (take 1 base) ++ drop 1 base
         methodE = varE methodName
         fieldName (f,_)
             | "_" `isPrefixOf` nameBase f = mkName $ drop 1 $ nameBase f
             | otherwise          = f
     polyClass  <- classD (return []) className [PlainTV fT] [] 
-                    [ sigD methodName $ forallT [PlainTV xT, PlainTV yT] (return []) 
+                    [ sigD methodName $ forallT (L.map PlainTV $ xT ++ yT) (return []) 
                         $ appsT [conT lens,ff xT,ff yT,typ xT,typ yT]
                     ]
     polyInstance <- instanceD (return []) (appT (conT className) (conT recName))
         [ funD methodName [clause [] (normalB $ varE 'id) []] 
         ]
     fields <- liftM concat
-            $ forM (filter (("_" `isPrefixOf`) . nameBase . fst) fs) 
+            $ forM (L.filter (("_" `isPrefixOf`) . nameBase . fst) fs) 
             $ \f -> sequence $
         [ funD (fieldName f) [clause [] 
                 (normalB [e| $methodE . $(lensDecl recName (fst f)) |])
                 []
                 ]
-        , let t
-                | hasVars (snd f) = [t| Lens ($fV $xV) ($fV $yV) 
-                                            $(return $ substVars xT $ snd f) 
-                                            $(return $ substVars yT $ snd f) |]
-                | otherwise       = [t| Lens' ($fV $xV) $(return $ snd f) |]
-              typeVars
-                | hasVars (snd f) = map PlainTV [fT,xT,yT]
-                | otherwise       = map PlainTV [fT,xT]
+        , let 
+              mX = (zip args xT)
+              mY = (zip args yT)
+              zT = zipWith3 (\k x y -> if k `elem` fv then y else x) args xT yT
+              zV = L.map varT zT
+              fv = freeVars (snd f)
+              t = [t| Lens $(appsT $ fV : xV) $(appsT $ fV : zV) 
+                -- | hasVars (snd f) 
+                                            $(return $ substVars mX $ snd f) 
+                                            $(return $ substVars mY $ snd f) |]
+                -- | otherwise       = [t| Lens' $(appsT $ fV : xV) $(return $ snd f) |]
+              typeVars = L.map PlainTV $ fT : (nubSort $ xT++zT)
+                -- | hasVars (snd f) 
+                -- | otherwise       = L.map PlainTV $ fT : xT
           in 
           sigD (fieldName f) $ forallT typeVars
             (cxt [classP className [varT fT]]) t            
         ] -- substVars _ $ 
-    -- runIO $ do
-    --     h <- openFile "template.txt" AppendMode
-    --     hPrintf h "%s\n%s\n%s\n" 
-    --         (pprint polyClass)
-    --         (pprint polyInstance)
-    --         (unlines $ map pprint fields)
-    --     hClose h
+    runIO $ do
+        h <- openFile templateFile AppendMode
+        hPrintf h "Type params: %s\n" (show args)
+        hPrintf h "%s\n%s\n%s\n" 
+            (pprint polyClass)
+            (pprint polyInstance)
+            (unlines $ L.map pprint fields)
+        hClose h
     return $ polyClass:polyInstance:fields
+
+createHierarchy :: [(Name,Name)] -> DecsQ
+createHierarchy xs = do
+    let f (_,_,x) = constructor x
+    graph <- forM xs $ \(t,field) -> do
+        t' <- typeOf field
+        return (t,f $ fieldType t')
+    let vs = nubSort $ uncurry (++) $ unzip graph
+        ord = L.map flat $ top_sort vs graph
+        dropUS x = mkName $ drop 1 $ nameBase x
+        edges = fromListWith (++) $ zipWith (\(k,f) (_,t) -> (k,[(dropUS f,t)])) xs graph
+                    ++ zip vs (repeat [])
+        flat (AcyclicSCC v) = v
+        flat (CyclicSCC vs) = error $ printf "A cycle exists in the inheritance\
+                                    \ relation %s" $ intercalate "," (L.map show vs)
+        proc n m = adjust (\xs -> xs ++ concatMap ((m !) . snd) xs) n m
+        ancestors = L.foldr proc edges ord 
+    -- runIO $ do
+    --     forM_ (toList ancestors) $ \(k,xs) -> do
+    --         printf "%s: %s\n" (show k) (intercalate "," $ L.map (show . snd) xs)
+    decs <- liftM (concat . concat) $ sequence 
+        [ forM (toList $ M.map (L.map swap) ancestors) 
+            $ uncurry makeInstance 
+        , mapM makePolyClass $ keys ancestors ]
+    runIO $ do
+        h <- openFile templateFile AppendMode
+        -- hPrintf h "Type params: %s\n" (show args)
+        hPrintf h "%s\n" 
+            (unlines $ L.map pprint decs)
+        hClose h
+    return decs
+
+makeInstance :: Name -> [(Name, Name)] -> Q [Dec]
+makeInstance tn cs =
+    forM cs $ \(cn,fn) -> do
+        let base = nameBase cn
+            classNameT = conT $ mkName $ "Has" ++ base
+            typeName   = conT tn
+            methodName = mkName $ L.map toLower (take 1 base) ++ drop 1 base
+        ck <- typeKind cn
+        tk <- typeKind tn
+        let n = L.map (varT . mkName . (:[])) $ take (tk - ck) ['a'..]
+        instanceD (return []) [t| $classNameT $(appsT $ typeName : n) |]
+            [ funD methodName [clause [] (normalB $ varE fn) []] 
+            ]
 
 makeHierarchy :: Name -> [(Name,Name)] -> DecsQ
 makeHierarchy ls xs' = do
     let xs = reverse xs'
-        makeInstance (tn,fn) ns = do
+        makeInstance' (tn,fn) ns = do
             let ns' = uncurry zip $ (++ [ls]) *** (fn:) $ unzip ns
-            liftM id $ forM ns' $ \(cn,fn) -> do
-                let base = nameBase cn
-                    classNameT = conT $ mkName $ "Has" ++ base
-                    typeName   = conT tn
-                    methodName = mkName $ map toLower (take 1 base) ++ drop 1 base
-                instanceD (return []) [t| $classNameT $typeName |]
-                    [ funD methodName [clause [] (normalB $ varE fn) []] 
-                    ]
-    xs <- concat <$> zipWithM makeInstance xs (drop 1 $ tails xs)
+            makeInstance tn ns'
+    xs <- concat <$> zipWithM makeInstance' xs (drop 1 $ tails xs)
     -- runIO $ do
     --     printf "%s\n" 
     -- --         (pprint polyClass)
     -- --         (pprint polyInstance)
-    --         (unlines $ map pprint xs)
+    --         (unlines $ L.map pprint xs)
     return xs    
 
-substVars :: Name -> Type -> Type
-substVars n (VarT _) = VarT n
+classKind :: Name -> Q Int
+classKind n = do
+    i <- reify n
+    case i of 
+        ClassI (ClassD _ _ [KindedTV _ arg] _ _) _ -> return $ arity arg
+        ClassI (ClassD _ _ [PlainTV _] _ _) _ -> return 0
+        ClassI (ClassD _ _ [] _ _) _ -> fail "too many class parameters"
+        _ -> fail $ printf "invalid class: %s %s" (show n) (show i)
+    where
+        arity (AppT (AppT ArrowT _) k) = 1 + arity k
+        arity StarT = 0
+        arity _ = error "invalid kind"
+
+typeKind :: Name -> Q Int
+typeKind n = do
+    i <- reify n
+    case i of 
+        TyConI (DataD _ _ args _ _) -> return $ length args
+        TyConI (NewtypeD _ _ args _ _) -> return $ length args
+        _ -> fail $ "invalid type: " ++ show n
+
+
+substVars :: [(Name,Name)] -> Type -> Type
+substVars ns (VarT n) = VarT $ maybe n id (n `L.lookup` ns)
 substVars n t = runIdentity $ gfoldl f Identity t
     where
         f g t' = case cast t' of
@@ -108,12 +188,15 @@ substVars n t = runIdentity $ gfoldl f Identity t
                  Nothing -> g <*> Identity t'
 
 hasVars :: Type -> Bool
-hasVars (VarT _) = True
-hasVars t = getConst $ gfoldl f (const $ Const False) t
+hasVars = not . L.null . freeVars
+
+freeVars :: Type -> [Name]
+freeVars (VarT n) = [n]
+freeVars t = nubSort $ getConst $ gfoldl f (const $ Const []) t
     where
-        f (Const b) t' = case cast t' of
-                 Just t -> (Const $ b || hasVars t)
-                 Nothing -> Const b
+        f (Const xs) t' = case cast t' of
+                 Just t -> (Const $ freeVars t ++ xs)
+                 Nothing -> Const xs
 
 appsT :: [TypeQ] -> TypeQ
 appsT [] = error "empty type constructor"
@@ -125,17 +208,19 @@ fieldType (ForallT vs _ t) = (vs ++ ds,arg,ret)
     where
         (ds,arg,ret) = fieldType t
 fieldType (AppT (AppT ArrowT arg) ret) = ([],arg,ret)
-fieldType _ = error "invalid type"
+fieldType t = error $ "invalid type: " ++ show t
 
 constructor :: Type -> Name
 constructor (ConT n) = n
 constructor (AppT t _) = constructor t
-constructor _ = error "not a simple type"
+constructor t = error $ "not a simple type: " ++ show t
 
-fieldList :: Info -> Q (Name,[(Name,Type)])
-fieldList (TyConI (DataD _ _ _ [RecC n cs] _)) = return (n,map f cs)
+fieldList :: Info -> Q ([Name],Name,[(Name,Type)])
+fieldList (TyConI (DataD _ _ args [RecC n cs] _)) = return (L.map name args,n,L.map f cs)
     where
         f (n,_,t) = (n,t)
+        name (PlainTV n) = n
+        name (KindedTV n _) = n
 fieldList (TyConI (TySynD _ _ t)) =
         fieldList =<< reify (constructor t)
 fieldList _ = error "not a record type"
@@ -147,13 +232,13 @@ typeOf n = do
         VarI _ t _ _ -> return t
         _ -> error "not a variable"
 
-lensDecl :: Name -> Name -> Q Exp
+lensDecl :: Name -> Name -> ExpQ
 lensDecl t' n = do
     i <- reify t'
-    (rec,fs) <- fieldList i
-    let c = mkName "c"
-        x = mkName "x"
-        update c n x = appsE $ conE rec : map (f . fst) fs
+    (_,rec,fs) <- fieldList i
+    c <- newName "_c"
+    let x = mkName "x"
+        update c n x = appsE $ conE rec : L.map (f . fst) fs
             where
                 f n'
                     | n' == n   = varE x

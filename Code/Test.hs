@@ -2,7 +2,7 @@ module Code.Test where
 
 import Code.Synthesis hiding (M)
 
-import Document.Machine
+import Document.Document
 
 import Logic.Expr
 

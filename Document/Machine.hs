@@ -5,11 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses              #-}
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards, RankNTypes        #-}
-module Document.Machine 
-    ( read_document, parse_machine, parse_system
-    , list_file_obligations, list_proof_obligations
-    , all_machines )
-where
+module Document.Machine where
 
     --
     -- Modules
@@ -40,27 +36,23 @@ import Theories.SetTheory
     --
     -- Libraries
     --
-import Control.Parallel.Strategies
 
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 
 import           Control.Monad 
-import           Control.Monad.State.Class 
 import           Control.Monad.Reader.Class 
 import           Control.Monad.Writer.Class 
 import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
-import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Reader ( runReaderT )
-import           Control.Monad.Trans.RWS as RWS ( RWS, RWST, mapRWST, runRWS )
+import           Control.Monad.Trans.RWS as RWS ( RWS, RWST, mapRWST )
 import qualified Control.Monad.Writer as W
 
 import Control.Lens as L hiding (Action,(|>),(.>),(<|),indices,Context)
 -- import Control.Lens.TH
 
 import           Data.Char
-import           Data.Either
 import           Data.Either.Combinators
 import           Data.Functor
 import           Data.Graph
@@ -71,35 +63,14 @@ import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
-import           Data.List.Ordered (sortOn)
 import qualified Data.Set as S
 
 import Utilities.Error
 import Utilities.Format
-import Utilities.Permutation hiding (cycles)
 import Utilities.Relation (type(<->),(|>),(<|))
 import qualified Utilities.Relation as R
 import Utilities.Syntactic
-
-list_file_obligations :: FilePath
-                       -> IO (Either [Error] [(Machine, Map Label Sequent)])
-list_file_obligations fn = do
-        runEitherT $ list_proof_obligations fn
-
-list_proof_obligations :: FilePath
-                       -> EitherT [Error] IO [(Machine, Map Label Sequent)]
-list_proof_obligations fn = do
-        xs <- list_machines fn
-        hoistEither $ forM xs $ \x -> do
-            y <- proof_obligation x
-            return (x,y)
-
-list_machines :: FilePath
-              -> EitherT [Error] IO [Machine]
-list_machines fn = do
-        xs <- EitherT $ parse_latex_document fn
-        ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ machines ms
+import Utilities.Trace ()
         
 parse_rule' :: (Monad m)
             => String
@@ -199,14 +170,6 @@ inherit3 = inheritWith
             (++)
 
 
-all_machines :: [LatexDoc] -> Either [Error] System
-all_machines xs = do
-        cmd
-        return s
-    where
-        (cmd,s,_) = runRWS (runEitherT $ read_document xs) li empty_system
-        li = LI "" 1 1 
-
 
 
 get_components :: [LatexDoc] -> LineInfo 
@@ -230,15 +193,9 @@ get_components xs li =
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
 
 
-data Input = Input 
-    { getMachineInput :: M.Map MachineId DocBlocks
-    , _getContextInput :: M.Map ContextId DocBlocks
-    }
-
 run_phase1_types :: Pipeline MM 
                         (MTable MachinePh0)
                         ( Hierarchy MachineId
-                        -- , Either [Error] (MTable (Map String Def))
                         , MTable MachinePh1)
 run_phase1_types = proc p0 -> do
     ts <- set_decl      -< p0
@@ -287,6 +244,8 @@ make_phase1 :: MachinePh0
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachinePh1 { .. }
     where
         _pEvents    = M.map (uncurry EventPh1 . second (== Local)) evts ^. pFromEventId
+        _pContext   = TheoryP1 { .. }
+        _t0         = TheoryP0 ()
         -- _pNewEvents = M.map fst $ M.filter ((== Local) . snd) evts
 
 run_phase2_vars :: Pipeline MM 
@@ -317,12 +276,13 @@ make_phase2 :: MachinePh1
             -> MachinePh2 
 make_phase2 p1 vars = MachinePh2 { .. }
     where
+        _c1   = TheoryP2 (p1 ^. pContext)
         _e1   = EventPh2 <$> (p1 ^. pEvents) 
                           .> _pIndices `M.union` evtEmpty
                           .> _pParams  `M.union` evtEmpty
                           .> _pSchSynt 
                           .> _pEvtSynt 
-        _p1   = p1 & pEvents .~ _e1
+        _p1   = p1 & (pEvents .~ _e1) & (pContext .~ _c1)
         types = p1 ^. pTypes 
         imps  = p1 ^. pImports
         evtEmpty = M.map (const M.empty) evts
@@ -724,35 +684,9 @@ flipMap m = M.map fromList $ fromListWith (++) $ do
     (y,z)  <- xs
     return (y,[(x,z)])
 
-type MM = R.ReaderT Input M
 
 -- traceP :: Show a => String -> Pipeline MM a ()
 -- traceP m = Pipeline empty_spec empty_spec $ traceM . format "{0}: {1}" m
-
-read_document :: [LatexDoc] -> M ()
-read_document xs = bimapEitherT (sortOn line_info . shrink_error_list) id $ do
-            let li = line_info xs
-            (ms,cs) <- hoistEither $ get_components xs li
-            ms <- runPipeline' ms cs $ proc doc -> do
-                let mch = M.map (const ()) $ getMachineInput doc
-                    p0 = M.mapWithKey (const . MachinePh0 mch) mch
-                (r_ord,p1) <- run_phase1_types -<  p0
-                p2 <- run_phase2_vars   -< (r_ord, p1)
-                p3 <- run_phase3_exprs  -< (r_ord, p2)
-                p4 <- run_phase4_proofs -< (r_ord, p3)
-                let ms = M.mapWithKey make_machine p4 :: MTable (Either [Error] Machine)
-                One machines <- triggerP -< One (all_errors ms)
-                -- let refs' = M.mapKeys as_label $ M.map as_label $ P.edges $ r_ord
-                    -- map2maybe = fmap (as_label . fst) . (() `M.lookup`)
-                --     check0 = forM_ (keys mch) $ \m -> check_schedule_ref_struct
-                --                 refs' (as_label m)
-                --                 _ -- (prog_dep ! m)
-                --                 (events $ machines ! m)
-                --                 (transient $ props $ machines ! m)
-                --                 ((p4 ! m) ^. pProgress) -- exprs ! m)
-                -- liftP -< toEither check0
-                returnA -< machines
-            lift $ modify $ \s -> s { machines = M.mapKeys (\(MId s) -> s) ms }
 
 
 get_prop_set :: Map Label ExprScope -> PropertySet
@@ -924,45 +858,6 @@ getConstants _ = Nothing
 getIndices :: VarScope -> Maybe (Map EventId (Var,LineInfo))
 getIndices = getEventDecl Index
 
-class Trigger a where
-    type RetType a :: *
-    trigger' :: a -> Either [Error] (RetType a)
-
-instance Trigger () where
-    type RetType () = ()
-    trigger' () = return ()
-
-instance Trigger as => Trigger (Either [Error] a :+: as) where
-    type RetType (Either [Error] a :+: as) = a :+: RetType as
-    trigger' (x :+: xs) = 
-            case (x, trigger' xs) of
-                (Right x, Right xs) -> Right (x:+:xs)
-                (x,xs) -> Left $ f x ++ f xs
-        where
-            f (Left xs) = xs
-            f (Right _) = []
-
-trigger :: ( IsTuple a, Trigger (TypeList a)
-           , TypeList (Tuple (RetType (TypeList a)))
-                      ~ RetType (TypeList a)
-           , IsTuple (Tuple (RetType (TypeList a))))
-        => a -> Either [Error] (Tuple (RetType (TypeList a)))
-trigger x = fromTuple `liftM` trigger' (toTuple x)
-
-triggerM :: ( IsTuple a, Trigger (TypeList a)
-            ,   TypeList (Tuple (RetType (TypeList a)))
-              ~ RetType (TypeList a)
-            , IsTuple (Tuple (RetType (TypeList a))))
-         => a -> MM (Tuple (RetType (TypeList a)))
-triggerM x = lift $ hoistEither $ trigger x
-
-triggerP :: ( IsTuple a, Trigger (TypeList a)
-            ,   TypeList (Tuple (RetType (TypeList a)))
-              ~ RetType (TypeList a)
-            , IsTuple (Tuple (RetType (TypeList a))))
-         => Pipeline MM a (Tuple (RetType (TypeList a)))
-triggerP = Pipeline empty_spec empty_spec triggerM
-
 -- trigger_errors 
 
 type family ElementMap a :: *
@@ -985,73 +880,6 @@ instance ElementLists as => ElementLists (a:+:as) where
             f (x :+: _) = x
             g (_ :+: xs) = xs
 
-make_table' :: forall a b.
-               (Ord a, Show a, Scope b) 
-            => (a -> String) 
-            -> [(a,b)] 
-            -> Either [Error] (Map a b)
-make_table' f xs = all_errors $ M.mapWithKey g ws
-    where
-        g k ws
-                | all (\xs -> length xs <= 1) ws 
-                            = Right $ foldl merge_scopes (head xs) (tail xs)
-                | otherwise = Left $ map (\xs -> MLError (f k) $ map error_item xs) 
-                                    $ L.filter (\xs -> length xs > 1) ws
-            where
-                xs = concat ws             
-        zs = fromListWith (++) $ map (\(x,y) -> (x,[y])) xs
-        ws :: Map a [[b]]
-        ws = M.map (flip u_scc clashes) zs 
-
-make_table :: (Ord a, Show a) 
-           => (a -> String) 
-           -> [(a,b,LineInfo)] 
-           -> Either [Error] (Map a (b,LineInfo))
-make_table f xs = returnOrFail $ fromListWith add $ map mkCell xs
-    where
-        mkCell (x,y,z) = (x,Right (y,z))
-        sepError (x,y) = case y of
-                 Left z -> Left (x,z)
-                 Right (z,li) -> Right (x,(z,li))
-        returnOrFail m = failIf $ map sepError $ M.toList m
-        failIf xs 
-            | L.null ys = return $ fromList $ rights xs
-            | otherwise = Left $ map (uncurry err) ys
-            where
-                ys = lefts xs
-        err x li = MLError (f x) (map (show x,) li)
-        lis (Left xs)     = xs
-        lis (Right (_,z)) = [z]
-        add x y = Left $ lis x ++ lis y
-
-
-
-make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
-                 => (a -> String) 
-                 -> Map k [(a,b)] 
-                 -> Either [Error] (Map k (Map a b))
-make_all_tables' f xs = all_errors (M.map (make_table' f) xs) `using` parTraversable rseq
-
-make_all_tables :: (Show a, Ord a, Ord k) 
-                => (a -> String)
-                -> Map k [(a, b, LineInfo)] 
-                -> Either [Error] (Map k (Map a (b,LineInfo)))
-make_all_tables f xs = all_errors (M.map (make_table f) xs) `using` parTraversable rseq
-
-all_errors' :: [Either [e] a] -> Either [e] [a]
-all_errors' xs = do
-    let es = lefts xs
-    unless (L.null es)
-        $ Left $ concat es
-    return $ map fromRight' xs
-
-all_errors :: Ord k => Map k (Either [e] a) -> Either [e] (Map k a)
-all_errors m = do
-        let es = lefts $ M.elems m
-        unless (L.null es)
-            $ Left $ concat es
-        return $ M.map fromRight' m
-
 runPipeline' :: M.Map String [LatexDoc] 
              -> M.Map String [LatexDoc]
              -> Pipeline MM Input a 
@@ -1062,150 +890,6 @@ runPipeline' ms cs p = runReaderT (f input) input
         mch   = M.mapKeys MId $ M.map (getLatexBlocks m_spec) ms
         ctx   = M.mapKeys CId $ M.map (getLatexBlocks c_spec) cs
         Pipeline m_spec c_spec f = p
-
-instance Readable MachineId where
-    read_one = do
-        xs <- read_one
-        return $ MId $ show (xs :: Label)
-    read_args = do
-        xs <- read_args
-        return $ MId $ show (xs :: Label)
-
-instance Readable ProgId where
-    read_one  = liftM PId read_one
-    read_args = liftM PId read_args
-        
-instance Readable (Maybe ProgId) where
-    read_one  = liftM (fmap PId) read_one
-    read_args = liftM (fmap PId) read_args
-
-cmdSpec :: String -> Int -> DocSpec
-cmdSpec cmd nargs = DocSpec M.empty (M.singleton cmd nargs)
-
-envSpec :: String -> Int -> DocSpec
-envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
-
-parseArgs :: (IsTuple a, AllReadable (TypeList a))
-          => [[LatexDoc]]
-          -> M a
-parseArgs xs = do
-    (x,[]) <- ST.runStateT read_all xs
-    return $ fromTuple x
-
-machineCmd :: forall result args ctx. 
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
-           => String
-           -> (args -> MachineId -> ctx -> M result) 
-           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
-machineCmd cmd f = Pipeline m_spec empty_spec g
-    where
-        nargs = len ($myError :: TypeList args)
-        m_spec = cmdSpec cmd nargs
-        param = Collect 
-            { getList = getCmd
-            , tag = cmd
-            , getInput = getMachineInput
-            }
-        g = collect param (cmdFun f)
-
-
-cmdFun :: forall a b c d. 
-              ( IsTuple b, Ord c
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
-           => (b -> c -> d -> M a) 
-           -> Cmd
-           -> c -> (Map c d) -> M a
-cmdFun f xs m ctx = local (const $ cmdLI xs) $ do
-        x <- parseArgs (getCmdArgs xs)
-        f x m (ctx ! m)
-
-machineEnv :: forall result args ctx.
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
-           => String
-           -> (args -> [LatexDoc] -> MachineId -> ctx -> M result)
-           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
-machineEnv env f = Pipeline m_spec empty_spec g
-    where
-        nargs = len ($myError :: TypeList args)
-        m_spec = envSpec env nargs
-        param = Collect 
-            { getList = getEnv
-            , tag = env
-            , getInput = getMachineInput
-            }
-        g = collect param (envFun f)
-
-envFun :: forall a b c d. 
-              ( IsTuple b, Ord c
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
-           => (b -> [LatexDoc] -> c -> d -> M a) 
-           -> Env
-           -> c -> (Map c d) -> M a
-envFun f xs m ctx = local (const $ envLI xs) $ do
-        x <- parseArgs (getEnvArgs xs)
-        f x (getEnvContent xs) m (ctx ! m)
-
-_contextCmd :: forall a b c. 
-              ( Monoid a, IsTuple b
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
-           => String
-           -> (b -> ContextId -> c -> M a) 
-           -> Pipeline MM (CTable c) (Either [Error] (CTable a))
-_contextCmd cmd f = Pipeline empty_spec c_spec g
-    where
-        nargs = len ($myError :: TypeList b)
-        c_spec = cmdSpec cmd nargs
-        param = Collect 
-            { getList = getCmd
-            , tag = cmd
-            , getInput = _getContextInput
-            }
-        g = collect param (cmdFun f)
-
-_contextEnv :: forall result args ctx.
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
-           => String
-           -> (args -> [LatexDoc] -> ContextId -> ctx -> M result)
-           -> Pipeline MM (CTable ctx) (Either [Error] (CTable result))
-_contextEnv env f = Pipeline empty_spec c_spec g
-    where
-        nargs = len ($myError :: TypeList args)
-        c_spec = envSpec env nargs
-        param = Collect 
-            { getList = getEnv
-            , tag = env
-            , getInput = _getContextInput
-             }
-        g = collect param (envFun f)
-
-data Collect a b k t = Collect 
-    { getList :: a -> Map k [b] 
-    , getInput :: Input -> Map t a 
-    -- , getContent :: b -> a
-    , tag :: k }
-
-collect :: (Ord k, Monoid z, Ord c)
-        => Collect a b k c
-        -> (b -> c -> d -> M z) 
-        -> d
-        -> MM (Either [Error] (Map c z))
-collect p f arg = do
-            cmp <- ask
-            xs <- lift $ lift $ runEitherT $ toEither 
-                $ forM (M.toList $ getInput p cmp) $ \(mname, x) -> do
-                    xs <- forM (M.findWithDefault [] (tag p) $ getList p x) $ \e -> do
-                        fromEither mempty $ f e mname arg 
-                    return (mname, mconcat xs)
-            return $ fmap (fromListWith mappend) xs
 
     
                 
@@ -1385,13 +1069,14 @@ get_safety_prop p3 _m lbl =
                 (format "safety property '{0}' is undeclared" lbl)
                 $ lbl `M.lookup` (L.view pSafety p3)
 
-get_notation :: HasMachinePh2' phase => phase events -> Notation
+get_notation :: HasMachinePh2' phase => phase events thy -> Notation
 get_notation p2 = L.view pNotation p2
+    -- where MachinePh2 _ _ _ _ _ notation _ _ _ _ = ancestor p2
 
-machine_events :: HasMachinePh1 phase events => phase events -> Map Label EventId
+machine_events :: HasMachinePh1 phase events => phase events thy -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
 
-get_event :: HasMachinePh1 phase events => phase events -> Label -> M EventId
+get_event :: HasMachinePh1 phase events => phase events thy -> Label -> M EventId
 get_event p2 ev_lbl = do
         let evts = machine_events p2
         bind
@@ -1419,28 +1104,28 @@ get_invariants p3 = (p3 ^. pInvariant)
 progress_props :: MachinePh3 -> Map ProgId ProgressProp
 progress_props p3 = p3 ^. pProgress
 
-event_parser :: HasMachinePh2 phase events => phase events -> EventId -> ParserSetting
+event_parser :: HasMachinePh2 phase events => phase events thy -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
 
-schedule_parser :: HasMachinePh2 phase events => phase events -> EventId -> ParserSetting
+schedule_parser :: HasMachinePh2 phase events => phase events thy -> EventId -> ParserSetting
 schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 
-machine_parser :: HasMachinePh2 phase events => phase events -> ParserSetting
+machine_parser :: HasMachinePh2 phase events => phase events thy -> ParserSetting
 machine_parser p2 = L.view pMchSynt p2
 
-context_parser :: HasMachinePh2' phase => phase events -> ParserSetting
+context_parser :: HasMachinePh2' phase => phase events thy -> ParserSetting
 context_parser p2 = p2 ^. pCtxSynt
 
-state_variables :: HasMachinePh2' phase => phase events -> Map String Var
+state_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
 state_variables p2 = p2 ^. pStateVars
 
-abstract_variables :: HasMachinePh2' phase => phase events -> Map String Var
+abstract_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
 abstract_variables p2 = p2 ^. pAbstractVars
 
-dummy_vars :: HasMachinePh2' phase => phase events -> Map String Var
+dummy_vars :: HasMachinePh2' phase => phase events thy -> Map String Var
 dummy_vars p2 = p2 ^. pDummyVars
 
-event_indices :: HasMachinePh2 phase events => phase events -> Map EventId (Map String Var)
+event_indices :: HasMachinePh2 phase events => phase events thy -> Map EventId (Map String Var)
 event_indices p2 = p2 ^. pIndices
 
 free_vars' :: Map String Var -> Expr -> Map String Var
@@ -1843,16 +1528,6 @@ all_proofs = machineEnv "proof" $ \(One po) xs m p3 -> do
         return [(lbl,proof,li)]
 
 
-parse_system :: FilePath -> IO (Either [Error] System)
-parse_system fn = runEitherT $ do
-        xs <- EitherT $ parse_latex_document fn
-        hoistEither $ all_machines xs
-        
-parse_machine :: FilePath -> IO (Either [Error] [Machine])
-parse_machine fn = runEitherT $ do
-        xs <- EitherT $ parse_latex_document fn
-        ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ machines ms
 
 
 

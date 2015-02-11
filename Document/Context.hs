@@ -1,10 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE Arrows, RecordWildCards #-}
 module Document.Context where
 
     -- Module
 import Document.Expression
 import Document.Visitor
 import Document.Proof
+import Document.Pipeline
+import Document.Phase
+import Document.Scope
 
 import Latex.Parser
 
@@ -12,7 +16,7 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Proof hiding ( with_line_info )
 
-import UnitB.AST
+import UnitB.AST as AST
 import UnitB.PO
 
 import Theories.Arithmetic
@@ -22,6 +26,9 @@ import Theories.PredCalc
 import Theories.SetTheory
 
     -- Libraries
+import Control.Applicative
+import Control.Arrow hiding (left)
+
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader ( runReaderT )
 import Control.Monad.Trans.RWS
@@ -34,6 +41,63 @@ import Data.String.Utils
 import Utilities.Error
 import Utilities.Format
 import Utilities.Syntactic
+
+run_phase1_types :: Pipeline MM 
+                        (CTable TheoryP0)
+                        (CTable TheoryP1)
+run_phase1_types = proc p0 -> do
+        ts <- set_decl   -< p0
+        it <- imp_theory -< p0
+        let t = M.map fst <$> ts
+            sets = M.map snd <$> ts
+            types  = t  >>= make_all_tables (format "Multiple sets with the name {0}")
+            imp_th = it >>= make_all_tables (format "Theory imported multiple times")
+        (types,imp_th,sets) <- triggerP -< (types,imp_th,sets)
+        let imp_th' = M.map (M.map fst) imp_th
+            f th = M.unions $ L.map AST.types $ M.elems th
+            -- basic = fromList [ ("arithmetic",arithmetic)
+            --                  , ("basic",basic_theory) ]
+            all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th'
+        returnA -< make_phase1 <$> M.map (M.map fst) types 
+                                .> all_types
+                                .> imp_th'
+                                .> sets
+
+type CPipeline ph a = Pipeline MM (CTable ph) (Either [Error] (CTable a))
+
+make_phase1 :: Map String Sort
+            -> Map String Sort
+            -> Map String Theory
+            -> [(String,VarScope)] 
+            -> TheoryP1
+make_phase1 _pTypes _pAllTypes _pImports _pSetDecl = TheoryP1 { .. }
+    where
+        _t0 = TheoryP0 ()
+
+set_decl :: CPipeline TheoryP0 
+            ( [(String,Sort,LineInfo)]
+            , [(String,VarScope)] )
+set_decl = contextCmd "\\newset" $ \(String name, String tag) _m _ -> do
+            let new_sort = Sort tag name 0
+                new_type = Gen $ USER_DEFINED new_sort []
+                new_def  = Def [] name [] (set_type new_type)
+                                    $ zlift (set_type new_type) ztrue
+            li <- lift ask
+            return ([(tag,new_sort,li)],[(tag,TheoryDef new_def Local li)])
+
+imp_theory :: CPipeline TheoryP0 [(String, Theory, LineInfo)]
+imp_theory = contextCmd "\\with" $ \(One (String th_name)) _m _ -> do
+        let th = [ ("sets"       , set_theory)
+                 , ("functions"  , function_theory)
+                 , ("arithmetic" , arithmetic)
+                 , ("predcalc"   , pred_calc)
+                 , ("intervals"  , interval_theory) ]
+            msg = "Undefined theory: {0} "
+                -- add suggestions
+        li <- lift ask
+        case th_name `L.lookup` th of
+            Nothing -> left [Error (format msg th_name) li]
+            Just th -> return [(th_name,th,li)]
 
 ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Theory
 ctx_type_decl _ = visit_doc []

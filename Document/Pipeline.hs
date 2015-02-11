@@ -23,6 +23,17 @@ import Utilities.Tuple
 
 data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 
+data Input = Input 
+    { getMachineInput :: M.Map MachineId DocBlocks
+    , getContextInput :: M.Map ContextId DocBlocks
+    }
+
+newtype MachineId = MId { getMId :: String }
+    deriving (Eq,Ord)
+
+newtype ContextId = CId { getCId :: String }
+    deriving (Eq,Ord)
+
 infixr <*
 
 empty_spec :: DocSpec

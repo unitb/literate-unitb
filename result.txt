@@ -9,22 +9,23 @@
 === prop_close_open from ./Document/Tests/TrainStation.hs:75 ===
 
 === prop_parseOk from ./Document/MachineSpec.hs:40 ===
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
 
 === prop_type_error from ./Document/MachineSpec.hs:47 ===
-+++ OK, passed 100 tests.
 
 === prop_expr_parser from ./Document/MachineSpec.hs:53 ===
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
 === prop_c from ./Utilities/EditDistance.hs:132 ===
-=== prop_toList_fromList from ./Utilities/Relation.hs:194 ===
 
-+++ OK, passed 100 tests.
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
+=== prop_toList_fromList from ./Utilities/Relation.hs:194 ===
 === prop_evalList_is_identity from ./Utilities/Permutation.hs:377 ===
 
-=== prop_fromList_toList from ./Utilities/Relation.hs:198 ===
-
 === prop_u_scc_complete from ./Utilities/Permutation.hs:381 ===
++++ OK, passed 100 tests.
+
+=== prop_fromList_toList from ./Utilities/Relation.hs:198 ===
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:202 ===
@@ -40,13 +41,74 @@
 +++ OK, passed 100 tests.
 
 === prop_compose_def from ./Utilities/Relation.hs:216 ===
-
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
 +++ OK, passed 100 tests.
 
 === prop_all_valid from ./Utilities/Relation.hs:235 ===
 
 === prop_u_scc_disconnected from ./Utilities/Permutation.hs:386 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:397 ===
+
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:261 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:264 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:273 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:276 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:282 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:297 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:300 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -156,6 +218,12 @@
 |  |  +- train station example, with refinement
 |  |  |  +- verify machine m0 (ref)
 |  |  |  +- verify machine m1 (ref)
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
 |  |  |  +- verify machine m2 (ref)
 |  |  |    o  m2/INIT/FIS/in
 |  |  |    o  m2/INIT/FIS/loc
@@ -1268,80 +1336,22 @@
 |  |  |    > passed_.122_./_.123\n
 |  |  |  ]
 
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:397 ===
-+++ OK, passed 100 tests.
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
 
-=== prop_union_def from ./Utilities/Relation.hs:255 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:261 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:264 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:273 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:276 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:282 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:297 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:300 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:409 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:416 ===
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:330 ===
 +++ OK, passed 100 tests.
 
 === prop_filterRan_def from ./Utilities/Relation.hs:333 ===
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:422 ===
 +++ OK, passed 100 tests.
 
 === prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
@@ -1352,8 +1362,18 @@
 
 === prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
 
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
+=== prop_top_sort_order from ./Utilities/Permutation.hs:427 ===
 +++ OK, passed 100 tests.
+
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:459 ===
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:462 ===
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:467 ===
+
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:473 ===
 
 |  |  |  +- verify machine m3 (sets)
 |  |  |  +- type checking of boolean expressions
@@ -1420,30 +1440,10 @@
 |  |  +- case 5 - error monad
 |  |  +- case 6 - union of a list of {sorted} list
 |  |  +- case 7 - union of a list of {unsorted} list
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
-
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:409 ===
-
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:416 ===
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:422 ===
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:427 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:459 ===
-
-=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:462 ===
-
-=== prop_closure_closed from ./Utilities/Permutation.hs:467 ===
-
 |  |  +- case 8 - edit distance, random testing
 |  |  +- case 9 - edit distance, regression test from random testing
 |  |  +- QuickCheck of graphs
 |  |  +- case 11 - Relations, quickcheck
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:473 ===
-
 |  |  +- case 12 - New graphs, quickcheck
 |  |  +- [ Success: 14 / 14 ]
 |  +- code generation in the cube example
@@ -1464,10 +1464,10 @@
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   33462 total
-    2788 Document/Machine.hs
-     887 UnitB/AST.hs
+   33642 total
+    2460 Document/Machine.hs
      806 Document/Proof.hs
      783 Document/Visitor.lhs
+     742 Document/phase.hs
      713 Document/Expression.hs
-Run time: 1m 14s
+Run time: 1m 15s

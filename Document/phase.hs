@@ -1,16 +1,21 @@
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE RankNTypes, GADTs      #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE MultiParamTypeClasses          #-}
+{-# LANGUAGE TemplateHaskell                #-}
+{-# LANGUAGE FunctionalDependencies         #-}
+{-# LANGUAGE FlexibleInstances              #-}
+{-# LANGUAGE FlexibleContexts               #-}
+{-# LANGUAGE RankNTypes, GADTs              #-}
+{-# LANGUAGE ScopedTypeVariables            #-}
+{-# LANGUAGE TypeOperators,TypeFamilies     #-}
+{-# LANGUAGE TupleSections                  #-}
 module Document.Phase where
 
     -- Modules
+import Document.Pipeline
 import Document.Proof
 import Document.Scope
+import Document.Visitor
+
+import Latex.Parser
 
 import Logic.Expr
 import Logic.Operator (Notation)
@@ -21,12 +26,21 @@ import UnitB.AST
     -- Libraries
 -- import Control.Applicative
 import Control.Arrow
+import Control.Parallel.Strategies
 import Control.Lens as L hiding (Action)
 
+import Control.Monad.Reader.Class 
 import Control.Monad.State
+import Control.Monad.Trans.Either
+import Control.Monad.Trans.State  as ST
+import Control.Monad.Trans.Reader as R hiding (local,ask)
 
 -- import Data.Functor
+-- import Data.Monoid
+import Data.Either
+import Data.Either.Combinators
 import Data.Map as M
+import Data.Monoid
 import Data.List as L
 import Data.Set as S
 
@@ -34,8 +48,260 @@ import Utilities.Error
 -- import Utilities.Relation hiding ((!))
 import Utilities.Syntactic
 import Utilities.TH
+import Utilities.Permutation
 
 infixl 3 .>
+
+all_errors' :: [Either [e] a] -> Either [e] [a]
+all_errors' xs = do
+    let es = lefts xs
+    unless (L.null es)
+        $ Left $ concat es
+    return $ L.map fromRight' xs
+
+all_errors :: Ord k => Map k (Either [e] a) -> Either [e] (Map k a)
+all_errors m = do
+        let es = lefts $ M.elems m
+        unless (L.null es)
+            $ Left $ concat es
+        return $ M.map fromRight' m
+
+make_table' :: forall a b.
+               (Ord a, Show a, Scope b) 
+            => (a -> String) 
+            -> [(a,b)] 
+            -> Either [Error] (Map a b)
+make_table' f xs = all_errors $ M.mapWithKey g ws
+    where
+        g k ws
+                | all (\xs -> length xs <= 1) ws 
+                            = Right $ L.foldl merge_scopes (head xs) (tail xs)
+                | otherwise = Left $ L.map (\xs -> MLError (f k) $ L.map error_item xs) 
+                                    $ L.filter (\xs -> length xs > 1) ws
+            where
+                xs = concat ws             
+        zs = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) xs
+        ws :: Map a [[b]]
+        ws = M.map (flip u_scc clashes) zs 
+
+make_table :: (Ord a, Show a) 
+           => (a -> String) 
+           -> [(a,b,LineInfo)] 
+           -> Either [Error] (Map a (b,LineInfo))
+make_table f xs = returnOrFail $ fromListWith add $ L.map mkCell xs
+    where
+        mkCell (x,y,z) = (x,Right (y,z))
+        sepError (x,y) = case y of
+                 Left z -> Left (x,z)
+                 Right (z,li) -> Right (x,(z,li))
+        returnOrFail m = failIf $ L.map sepError $ M.toList m
+        failIf xs 
+            | L.null ys = return $ M.fromList $ rights xs
+            | otherwise = Left $ L.map (uncurry err) ys
+            where
+                ys = lefts xs
+        err x li = MLError (f x) (L.map (show x,) li)
+        lis (Left xs)     = xs
+        lis (Right (_,z)) = [z]
+        add x y = Left $ lis x ++ lis y
+
+make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
+                 => (a -> String) 
+                 -> Map k [(a,b)] 
+                 -> Either [Error] (Map k (Map a b))
+make_all_tables' f xs = all_errors (M.map (make_table' f) xs) `using` parTraversable rseq
+
+make_all_tables :: (Show a, Ord a, Ord k) 
+                => (a -> String)
+                -> Map k [(a, b, LineInfo)] 
+                -> Either [Error] (Map k (Map a (b,LineInfo)))
+make_all_tables f xs = all_errors (M.map (make_table f) xs) `using` parTraversable rseq
+
+trigger :: ( IsTuple a, Trigger (TypeList a)
+           , TypeList (Tuple (RetType (TypeList a)))
+                      ~ RetType (TypeList a)
+           , IsTuple (Tuple (RetType (TypeList a))))
+        => a -> Either [Error] (Tuple (RetType (TypeList a)))
+trigger x = fromTuple `liftM` trigger' (toTuple x)
+
+triggerM :: ( IsTuple a, Trigger (TypeList a)
+            ,   TypeList (Tuple (RetType (TypeList a)))
+              ~ RetType (TypeList a)
+            , IsTuple (Tuple (RetType (TypeList a))))
+         => a -> MM (Tuple (RetType (TypeList a)))
+triggerM x = lift $ hoistEither $ trigger x
+
+triggerP :: ( IsTuple a, Trigger (TypeList a)
+            ,   TypeList (Tuple (RetType (TypeList a)))
+              ~ RetType (TypeList a)
+            , IsTuple (Tuple (RetType (TypeList a))))
+         => Pipeline MM a (Tuple (RetType (TypeList a)))
+triggerP = Pipeline empty_spec empty_spec triggerM
+
+class Trigger a where
+    type RetType a :: *
+    trigger' :: a -> Either [Error] (RetType a)
+
+instance Trigger () where
+    type RetType () = ()
+    trigger' () = return ()
+
+instance Trigger as => Trigger (Either [Error] a :+: as) where
+    type RetType (Either [Error] a :+: as) = a :+: RetType as
+    trigger' (x :+: xs) = 
+            case (x, trigger' xs) of
+                (Right x, Right xs) -> Right (x:+:xs)
+                (x,xs) -> Left $ f x ++ f xs
+        where
+            f (Left xs) = xs
+            f (Right _) = []
+
+instance Readable MachineId where
+    read_one = do
+        xs <- read_one
+        return $ MId $ show (xs :: Label)
+    read_args = do
+        xs <- read_args
+        return $ MId $ show (xs :: Label)
+
+instance Readable ProgId where
+    read_one  = liftM PId read_one
+    read_args = liftM PId read_args
+        
+instance Readable (Maybe ProgId) where
+    read_one  = liftM (fmap PId) read_one
+    read_args = liftM (fmap PId) read_args
+
+cmdSpec :: String -> Int -> DocSpec
+cmdSpec cmd nargs = DocSpec M.empty (M.singleton cmd nargs)
+
+envSpec :: String -> Int -> DocSpec
+envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
+
+parseArgs :: (IsTuple a, AllReadable (TypeList a))
+          => [[LatexDoc]]
+          -> M a
+parseArgs xs = do
+    (x,[]) <- ST.runStateT read_all xs
+    return $ fromTuple x
+
+machineCmd :: forall result args ctx. 
+              ( Monoid result, IsTuple args
+              , IsTypeList  (TypeList args)
+              , AllReadable (TypeList args))
+           => String
+           -> (args -> MachineId -> ctx -> M result) 
+           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
+machineCmd cmd f = Pipeline m_spec empty_spec g
+    where
+        nargs = len ($myError :: TypeList args)
+        m_spec = cmdSpec cmd nargs
+        param = Collect 
+            { getList = getCmd
+            , tag = cmd
+            , getInput = getMachineInput
+            }
+        g = collect param (cmdFun f)
+
+-- type M' = RWS LineInfo [Error] System
+
+cmdFun :: forall a b c d. 
+              ( IsTuple b, Ord c
+              , IsTypeList  (TypeList b)
+              , AllReadable (TypeList b))
+           => (b -> c -> d -> M a) 
+           -> Cmd
+           -> c -> (Map c d) -> M a
+cmdFun f xs m ctx = local (const $ cmdLI xs) $ do
+        x <- parseArgs (getCmdArgs xs)
+        f x m (ctx ! m)
+
+machineEnv :: forall result args ctx.
+              ( Monoid result, IsTuple args
+              , IsTypeList  (TypeList args)
+              , AllReadable (TypeList args))
+           => String
+           -> (args -> [LatexDoc] -> MachineId -> ctx -> M result)
+           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
+machineEnv env f = Pipeline m_spec empty_spec g
+    where
+        nargs = len ($myError :: TypeList args)
+        m_spec = envSpec env nargs
+        param = Collect 
+            { getList = getEnv
+            , tag = env
+            , getInput = getMachineInput
+            }
+        g = collect param (envFun f)
+
+envFun :: forall a b c d. 
+              ( IsTuple b, Ord c
+              , IsTypeList  (TypeList b)
+              , AllReadable (TypeList b))
+           => (b -> [LatexDoc] -> c -> d -> M a) 
+           -> Env
+           -> c -> (Map c d) -> M a
+envFun f xs m ctx = local (const $ envLI xs) $ do
+        x <- parseArgs (getEnvArgs xs)
+        f x (getEnvContent xs) m (ctx ! m)
+
+contextCmd :: forall a b c. 
+              ( Monoid a, IsTuple b
+              , IsTypeList  (TypeList b)
+              , AllReadable (TypeList b))
+           => String
+           -> (b -> ContextId -> c -> M a) 
+           -> Pipeline MM (CTable c) (Either [Error] (CTable a))
+contextCmd cmd f = Pipeline empty_spec c_spec g
+    where
+        nargs = len ($myError :: TypeList b)
+        c_spec = cmdSpec cmd nargs
+        param = Collect 
+            { getList = getCmd
+            , tag = cmd
+            , getInput = getContextInput
+            }
+        g = collect param (cmdFun f)
+
+contextEnv :: forall result args ctx.
+              ( Monoid result, IsTuple args
+              , IsTypeList  (TypeList args)
+              , AllReadable (TypeList args))
+           => String
+           -> (args -> [LatexDoc] -> ContextId -> ctx -> M result)
+           -> Pipeline MM (CTable ctx) (Either [Error] (CTable result))
+contextEnv env f = Pipeline empty_spec c_spec g
+    where
+        nargs = len ($myError :: TypeList args)
+        c_spec = envSpec env nargs
+        param = Collect 
+            { getList = getEnv
+            , tag = env
+            , getInput = getContextInput
+             }
+        g = collect param (envFun f)
+
+data Collect a b k t = Collect 
+    { getList :: a -> Map k [b] 
+    , getInput :: Input -> Map t a 
+    -- , getContent :: b -> a
+    , tag :: k }
+
+collect :: (Ord k, Monoid z, Ord c)
+        => Collect a b k c
+        -> (b -> c -> d -> M z) 
+        -> d
+        -> MM (Either [Error] (Map c z))
+collect p f arg = do
+            cmp <- ask
+            xs <- lift $ lift $ runEitherT $ toEither 
+                $ forM (M.toList $ getInput p cmp) $ \(mname, x) -> do
+                    xs <- forM (M.findWithDefault [] (tag p) $ getList p x) $ \e -> do
+                        fromEither mempty $ f e mname arg 
+                    return (mname, mconcat xs)
+            return $ fmap (fromListWith mappend) xs
+
+type MM = R.ReaderT Input M
 
 type MachinePh0' a = MachinePh0
 
@@ -44,39 +310,35 @@ data MachinePh0 = MachinePh0
         , _pMachineId   :: MachineId }
     deriving Show
 
-type MachinePh1 = MachinePh1' EventPh1
+type MachinePh1 = MachinePh1' EventPh1 TheoryP1
 
-data MachinePh1' events = MachinePh1 
+data MachinePh1' events theory = MachinePh1 
     { _p0 :: MachinePh0
-    , _pImports   :: Map String Theory
-    , _pTypes     :: Map String Sort
-    , _pAllTypes  :: Map String Sort
-    , _pSetDecl   :: [(String, VarScope)]
     , _pEvents    :: Map EventId events
+    , _pContext   :: theory
     -- , _machinePh1'PEvents :: Map Label events
     -- , _pNewEvents :: Map Label EventId
-    }
-    deriving Show
+    } deriving Show
 
-type MachinePh2 = MachinePh2' EventPh2
+type MachinePh2 = MachinePh2' EventPh2 TheoryP2
 
-data MachinePh2' events = MachinePh2
-    { _p1 :: MachinePh1' events
+data MachinePh2' events theory = MachinePh2
+    { _p1 :: MachinePh1' events theory
     , _pDefinitions :: Map String Def
     , _pConstants :: Map String Var
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
     , _pDummyVars :: Map String Var             -- dummy variables
-    , _pNotation :: Notation
-    , _pCtxSynt :: ParserSetting                  -- parsing assumptions
-    , _pMchSynt :: ParserSetting                  -- parsing invariants and properties
+    , _pNotation  :: Notation
+    , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
+    , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
     } deriving Show
 
 
-type MachinePh3 = MachinePh3' EventPh3
+type MachinePh3 = MachinePh3' EventPh3 TheoryP2
 
-data MachinePh3' events = MachinePh3
-    { _p2 :: MachinePh2' events
+data MachinePh3' events theory = MachinePh3
+    { _p2 :: MachinePh2' events theory
     , _pProgress  :: Map ProgId ProgressProp
     , _pSafety    :: Map Label SafetyProp
     , _pTransient :: Map Label Transient
@@ -87,10 +349,10 @@ data MachinePh3' events = MachinePh3
     , _pNewPropSet  :: PropertySet
     } deriving Show
 
-type MachinePh4 = MachinePh4' EventPh4
+type MachinePh4 = MachinePh4' EventPh4 TheoryP2
 
-data MachinePh4' events = MachinePh4
-    { _p3 :: MachinePh3' events
+data MachinePh4' events theory = MachinePh4
+    { _p3 :: MachinePh3' events theory
     -- , _pEvtRef :: Abs EventId <-> Conc EventId
     -- , _pEvtRefProgA :: Abs EventId <-> Abs Label
     -- , _pEvtRefProgC :: Abs EventId <-> Conc Label
@@ -130,6 +392,22 @@ data EventPh4 = EventPh4
     , _eRefRule  :: [(Label,ScheduleChange)]
     }
 
+data TheoryP0 = TheoryP0
+    { _tNothing :: ()
+    }
+
+data TheoryP1 = TheoryP1
+    { _t0 :: TheoryP0
+    , _pImports   :: Map String Theory
+    , _pTypes     :: Map String Sort
+    , _pAllTypes  :: Map String Sort
+    , _pSetDecl   :: [(String, VarScope)]
+    }
+
+data TheoryP2 = TheoryP2
+    { _t1 :: TheoryP1 
+    }
+
 newtype Abs a = Abs { getAbstract :: a }
     deriving (Eq,Ord)
 
@@ -138,12 +416,6 @@ newtype Conc a = Conc { getConcrete :: a }
 
 class IsLabel a where
     as_label :: a -> Label
-
-newtype MachineId = MId { getMId :: String }
-    deriving (Eq,Ord)
-
-newtype ContextId = CId { getCId :: String }
-    deriving (Eq,Ord)
 
 instance Show MachineId where
     show = getMId
@@ -217,20 +489,12 @@ focus ln cmd = StateT $ Identity . f
 -- onMachine :: MachineId -> Lens' Phase2M Phase2I
 -- onMachine = _
 
-$(makeFields ''MachinePh1')
-
-$(makeClassy ''MachinePh0)
-
-$(makePolyClass ''MachinePh1')
-
--- $(makeClassy ''MachinePh1')
 
 
-$(makePolyClass ''MachinePh2')
 
-$(makePolyClass ''MachinePh3')
 
-$(makePolyClass ''MachinePh4')
+
+
 
 $(makeClassy ''EventPh1)
 
@@ -240,13 +504,17 @@ $(makeClassy ''EventPh3)
 
 $(makeClassy ''EventPh4)
 
-$(makeHierarchy 
-           ''MachinePh1'
-        [ (''MachinePh2' ,'p1)
-        , (''MachinePh3' ,'p2)
-        , (''MachinePh4' ,'p3)
+createHierarchy 
+        [ (''MachinePh1' ,'_p0)
+        , (''MachinePh2' ,'_p1)
+        , (''MachinePh3' ,'_p2)
+        , (''MachinePh4' ,'_p3)
+        -- , (''MachinePh1', '_pContext)
+        , (''TheoryP1, '_t0)
+        , (''TheoryP2, '_t1)
         -- , (''MachinePh0' ,undefined)
-        ] )
+        ]
+
 
 $(makeHierarchy
            ''EventPh1
@@ -255,11 +523,15 @@ $(makeHierarchy
         , (''EventPh4, 'e3)
         ] )
 
-pEventIds :: (HasEventPh1 events, HasMachinePh1' phase) 
-          => Lens' (phase events) (Map Label EventId)
-pEventIds = pEvents . from pFromEventId . onMap pEventId
+instance (HasMachinePh1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
+    theoryP1 = pContext . theoryP1
 
-type Getter' a b = (b -> Const b b) -> (a -> Const b a)
+instance (HasMachinePh1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
+    theoryP2 = pContext . theoryP2
+
+pEventIds :: (HasEventPh1 events, HasMachinePh1' phase) 
+          => Lens' (phase events t) (Map Label EventId)
+pEventIds = pEvents . from pFromEventId . onMap pEventId
 
 eGuards :: HasEventPh3 events => Getter events (Map Label Expr)
 eGuards = to getter
@@ -269,14 +541,14 @@ eGuards = to getter
                 old = L.view eOldGuards p
                 new = L.view eNewGuards p
 
-pGuards :: HasMachinePh3 phase events => Getter (phase events) (Map EventId (Map Label Expr))
+pGuards :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
 pGuards = pEvents . onMap' eGuards
         -- coerce $ f $ M.unionWith (M.unionWith $ error "pGuards: name clash") old new
     -- where
     --     old = L.view eOldGuards p
     --     new = L.view eNewGuards p
 
-pSchedules :: HasMachinePh3 phase events => Getter (phase events) (Map EventId (Map Label Expr))       
+pSchedules :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))       
 pSchedules f p = coerce $ f $ M.unionWith (M.unionWith $ error "pSchedules: name clash") csch fsch
     where
         csch = L.view pCoarseSched p
@@ -287,43 +559,43 @@ pFromEventId = iso
         (M.fromList . L.map (view pEventId &&& id) . M.elems) 
         (mapKeys as_label)
 
-pIndices  :: HasMachinePh2 mch event => Lens' (mch event) (Map EventId (Map String Var))
+pIndices  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
 pIndices = pEvents . onMap eIndices
-pParams   :: HasMachinePh2 mch event => Lens' (mch event) (Map EventId (Map String Var))
+pParams   :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
 pParams = pEvents . onMap eParams
-pSchSynt  :: HasMachinePh2 mch event => Lens' (mch event) (Map EventId ParserSetting)    
+pSchSynt  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
     -- parsing schedule
 pSchSynt = pEvents . onMap eSchSynt
-pEvtSynt  :: HasMachinePh2 mch event => Lens' (mch event) (Map EventId ParserSetting)    
+pEvtSynt  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
 pCoarseSched :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Expr))     -- Schedules
+             => Lens' (mch event t) (Map EventId (Map Label Expr))     -- Schedules
 pCoarseSched = pEvents . onMap eCoarseSched
 
 pFineSched   :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Expr))
+             => Lens' (mch event t) (Map EventId (Map Label Expr))
 pFineSched = pEvents . onMap eFineSched
 
 pOldGuards   :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Expr))
+             => Lens' (mch event t) (Map EventId (Map Label Expr))
 pOldGuards = pEvents . onMap eOldGuards
 
 pNewGuards   :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Expr))       -- Guards
+             => Lens' (mch event t) (Map EventId (Map Label Expr))       -- Guards
 pNewGuards = pEvents . onMap eNewGuards
 
 pOldActions  :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Action))    -- Actions
+             => Lens' (mch event t) (Map EventId (Map Label Action))    -- Actions
 pOldActions = pEvents . onMap eOldActions
 
 pAllActions  :: HasMachinePh3 mch event 
-             => Lens' (mch event) (Map EventId (Map Label Action))
+             => Lens' (mch event t) (Map EventId (Map Label Action))
 pAllActions = pEvents . onMap eAllActions
 
 pEventRefRule :: HasMachinePh4 mch event
-              => Lens' (mch event) (Map EventId [(Label,ScheduleChange)])
+              => Lens' (mch event t) (Map EventId [(Label,ScheduleChange)])
 pEventRefRule = pEvents . onMap eRefRule
 
 
@@ -362,8 +634,6 @@ instance ( HasMachinePh1' f, HasEventPh1 a
          , HasMachinePh4' f, HasEventPh4 a) 
     => HasMachinePh4 f a where
 
-instance HasMachinePh0 (MachinePh3' e) where
-    machinePh0 = p0
 
     -- func = 
 

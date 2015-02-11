@@ -1,7 +1,7 @@
 module Document.Tests.Suite where
 
     -- Modules
-import Document.Machine
+import Document.Document
 
 import Logic.Expr
 import Logic.Proof

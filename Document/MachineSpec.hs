@@ -2,7 +2,7 @@
 module Document.MachineSpec where
     
     -- Modules
-import Document.Machine
+import Document.Document
 import Document.Expression
 
 import Latex.Parser
