@@ -10,9 +10,11 @@ module Utilities.Permutation
     ( top_sort, closure, closure'
     , graph, graphWith, u_scc
     , GraphImp (..), run_tests 
-    , main, from_map, cycles
+    , from_map, cycles
     , topological_sort )
 where
+
+import Control.Exception
 
 import Control.Loop
 import Control.Monad
@@ -33,14 +35,10 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Tuple as T
 
-import System.Environment
-import System.Random
-import System.TimeIt
 
 import Test.QuickCheck hiding (frequency,elements)
 import qualified Test.QuickCheck as QC
 
-import Text.Printf
 
 class AllZero a where
     zeros :: a
@@ -348,27 +346,9 @@ u_scc xs e = runST $ do
         i2v = array (0,n-1) xs'
         xs' = zip [0..] xs
 
-choose_n :: forall a. Int -> [a] -> IO [a]
-choose_n n xs = do
-        let m = length xs
-        unless (n <= m) $ fail "choose_n: n bigger than list size"
-        ar <- newListArray (0,m-1) xs :: IO (IOArray Int a)
-        forM [0..n-1] $ \i -> do
-            j <- randomRIO (i,m-1)
-            swap i j ar
-            readArray ar i
         -- take n `liftM` getElems ar
 
-swap :: (MArray a e m) 
-     => Int -> Int -> a Int e -> m ()
-swap i j ar = do
-    x <- readArray ar i
-    y <- readArray ar j
-    writeArray ar i y
-    writeArray ar j x
 
-permIO :: [a] -> IO [a]
-permIO xs = choose_n (length xs) xs
 
 
 evalList :: [a] -> [a]
@@ -508,32 +488,3 @@ run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
     -- factor out the mutable operations of top_sort to reduce conversions
     --      in closure
     -- finish up the minimality property of closures
-main :: IO ()
-main = do
-    xs <- map read `liftM` getArgs
-    let n  = head xs
-        m  = 1000 :: Int
-        us = [0..m] 
-    vs <- replicateM n (permIO us)
-    let 
-        divides x y = y /= 0 && x `mod` y == 0 ;
-        -- edge = const $ const True
-        edge = divides
-        !es = evalList [(v0,v1) | v0 <- us, v1 <- us, edge v0 v1 ] ;
-    timeIt $ do
-        forM_ vs $ \vs -> do
-            let !_x = evalList $ map evalList $ u_scc vs
-                    (\x y -> x `edge` y || y `edge` x)
-            -- print $ last $ last _x
-            return ()
-    printf "expecting  %.2f\n" (0.57 / 20 * fromIntegral n :: Double)
-    timeIt $ forM_ vs $ \vs -> do
-        let !_x = evalList $ map (evalList . component) $ top_sort vs es
-        return ()
-    printf "expecting  %.2f\n" (23.95 / 20 * fromIntegral n :: Double)
-    timeIt $ forM_ vs $ \vs -> do
-        let !_x = evalList $ M.toList $ M.map evalList $ closure vs es
-        return ()
-    printf "expecting  %.2f\n" (36.45 / 20 * fromIntegral n :: Double)
-
-    return ()

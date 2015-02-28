@@ -6,9 +6,7 @@ import Control.Monad
 import Data.List as L
 import Document.Document
 
-import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes
-import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
 import qualified Document.Tests.Phase as Phase
@@ -40,8 +38,6 @@ test = test_cases
         , StringCase "Contextual predicate visibility rules" case2 result2
         , UE.test_case
         , LFD.test_case
-        , CC.test_case
-        , Ind.test_case
         , SMch.test_case
         , Cubes.test_case
         , Train.test_case
@@ -56,8 +52,8 @@ test = test_cases
 
 result1 :: String
 result1 = unlines 
-    [ "  o  m/INIT/FIS/in"
-    , "  o  m/INIT/WD"
+    -- [ "  o  m/INIT/FIS/in"
+    [ "  o  m/INIT/WD"
     , "  o  m/INV/WD"
     , "  o  m/enter/FIS/in@prime"
     , "  o  m/enter/SCH/goal (21,1)"
@@ -68,7 +64,7 @@ result1 = unlines
     , "  o  m/enter/WD/C_SCH"
     , "  o  m/enter/WD/F_SCH"
     , "  o  m/enter/WD/GRD"
-    , "passed 12 / 12"
+    , "passed 11 / 11"
     ]
 
 path1 :: String

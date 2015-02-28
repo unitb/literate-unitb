@@ -77,8 +77,7 @@ line_number fn xs     = concatMap f ys
 peek :: Scanner a [a]
 peek = Scanner f
     where
-        f s@(State xs _) = Right (map g xs, s)
-        g (x,_) = x
+        f s@(State xs _) = Right (map fst xs, s)
 
 eof :: Scanner a ()
 eof = do

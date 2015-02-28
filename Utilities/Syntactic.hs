@@ -32,6 +32,10 @@ instance Show LineInfo where
 instance NFData LineInfo where
     rnf (LI fn i j) = rnf (fn,i,j)
 
+instance NFData Error where
+    rnf (Error msg li) = rnf (msg,li)
+    rnf (MLError msg xs) = rnf (msg,xs)
+
 show_err :: [Error] -> String
 show_err xs = unlines $ map report $ sortOn line_info xs
 

@@ -7,14 +7,15 @@ where
 import Logic.Expr
 import Logic.Expr.TypeChecking
 
+    -- Libraries
+import Control.DeepSeq
 import Data.Map as M ( insertWith, Map, empty, lookup ) --, (!) )
 
-
-
-
-
-data ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
+newtype ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
     deriving Eq
+
+instance NFData ExprStore where
+    rnf (ExprStore x) = rnf x
 
 empty_store :: ExprStore
 empty_store = ExprStore empty

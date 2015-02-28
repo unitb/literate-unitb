@@ -36,7 +36,6 @@ import Theories.SetTheory
     --
     -- Libraries
     --
-
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 
 import           Control.Monad 
@@ -49,8 +48,7 @@ import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS ( RWS, RWST, mapRWST )
 import qualified Control.Monad.Writer as W
 
-import Control.Lens as L hiding (Action,(|>),(.>),(<|),indices,Context)
--- import Control.Lens.TH
+import Control.Lens as L hiding (Action,(|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
 import           Data.Either.Combinators
@@ -223,9 +221,10 @@ run_phase1_types = proc p0 -> do
         basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
         imp_th = M.map (union basic . M.map fst) imp_th'
         all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th
-        p1 = make_phase1 <$> p0 .> imp_th 
-                          .> (M.map (M.map fst) types) .> all_types 
-                          .> s .> evts'
+        p1 = make_phase1 <$> p0 <.> imp_th 
+                         <.> (M.map (M.map fst) types) 
+                         <.> all_types 
+                         <.> s <.> evts'
     -- traceP -< imp_th
     -- traceP -< all_types
     -- traceP -< s
@@ -264,7 +263,7 @@ run_phase2_vars = proc (r_ord, p1) -> do
                     $ inherit2 r_ord $ unionsWith (++) vs
                         
     One vars <- triggerP -< One vars
-    let p2 = make_phase2 <$> p1 .> vars
+    let p2 = make_phase2 <$> p1 <.> vars
         _  = vars :: MTable (Map String VarScope)
     returnA -< p2
 
@@ -276,12 +275,14 @@ make_phase2 :: MachinePh1
             -> MachinePh2 
 make_phase2 p1 vars = MachinePh2 { .. }
     where
+        -- _ = over :: Setting (->) s t a b -> (a -> b) -> s -> t
+        -- over ln f = runIdentity . ln (Identity . f)
         _c1   = TheoryP2 (p1 ^. pContext)
         _e1   = EventPh2 <$> (p1 ^. pEvents) 
-                          .> _pIndices `M.union` evtEmpty
-                          .> _pParams  `M.union` evtEmpty
-                          .> _pSchSynt 
-                          .> _pEvtSynt 
+                         <.> _pIndices `M.union` evtEmpty
+                         <.> _pParams  `M.union` evtEmpty
+                         <.> _pSchSynt 
+                         <.> _pEvtSynt 
         _p1   = p1 & (pEvents .~ _e1) & (pContext .~ _c1)
         types = p1 ^. pTypes 
         imps  = p1 ^. pImports
@@ -356,7 +357,7 @@ run_phase3_exprs = proc (r_ord,p2) -> do
                     $ inherit2 r_ord $ unionsWith (++) es
                         
         One exprs <- triggerP -< One exprs
-        let p3 = make_phase3 <$> p2 .> exprs
+        let p3 = make_phase3 <$> p2 <.> exprs
         returnA -< p3
 
 old :: Scope s => Map a s -> Map a s
@@ -369,12 +370,12 @@ make_phase3 :: MachinePh2 -> Map Label ExprScope -> MachinePh3
 make_phase3 p2 exprs = MachinePh3 { .. }
     where
         _e2 = EventPh3 <$> (p2 ^. pEvents) 
-                        .> _pCoarseSched  `M.union` evtEmpty
-                        .> _pFineSched    `M.union` evtEmpty
-                        .> _pOldGuards    `M.union` evtEmpty
-                        .> _pNewGuards    `M.union` evtEmpty
-                        .> _pOldActions   `M.union` evtEmpty
-                        .> _pAllActions   `M.union` evtEmpty
+                       <.> _pCoarseSched  `M.union` evtEmpty
+                       <.> _pFineSched    `M.union` evtEmpty
+                       <.> _pOldGuards    `M.union` evtEmpty
+                       <.> _pNewGuards    `M.union` evtEmpty
+                       <.> _pOldActions   `M.union` evtEmpty
+                       <.> _pAllActions   `M.union` evtEmpty
         evtEmpty :: Map EventId (Map k a)
         evtEmpty = M.map (const M.empty) (p2 ^. pEvents)
         _p2 = p2 & pEvents .~ _e2 -- (pEvents `over` M.map EventPh3) p2 
@@ -417,6 +418,15 @@ run_phase4_proofs = proc (r_ord,p3) -> do
         (evt_refs,prog_ref,comments,proofs) <- triggerP -< (evt_refs,prog_ref,comments,proofs)
         let _ = evt_refs :: MTable (Map EventId [((Label,ScheduleChange),LineInfo)])
             _ = prog_ref :: MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
+            sch_chg :: MTable (Map EventId [(Label,Change)])
+            sch_chg = M.map (M.map $ concatMap $ addRemove . snd . fst) evt_refs
+            addRemove sc = M.toList (fromSet (const AddC) $ add sc) ++ M.toList (fromSet (const RemoveC) $ remove sc)
+            old_sch = inheritWith 
+                    (M.map $ L.map $ first (,Local)) 
+                    -- _ _
+                    (M.map $ L.map $ first $ second $ const Inherited) 
+                    (M.unionWith (++)) 
+                    r_ord sch_chg
             evt_live :: MTable (EventId <-> ProgId)
             evt_live  = M.map (R.fromListMap . M.map (concatMap $ hyps_labels . snd . fst)) evt_refs
             live_evt :: MTable (ProgId <-> EventId)
@@ -431,10 +441,11 @@ run_phase4_proofs = proc (r_ord,p3) -> do
             distr (xs,y) = map (\x -> (x,y)) xs 
             hyps_table :: ((a,ScheduleChange),c) -> [(ProgId,c)]
             hyps_table = distr . first (hyps_labels . snd)
-            live_struct = LiveStruct <$> (M.map (view pMachineId) p3) .> evt_live .> live_live 
-                    .> live_evt .> evt_evt 
-                    .> M.mapWithKey (\k -> M.map (k,)) (M.map (M.map snd) prog_ref) 
-                    .> M.mapWithKey (\k -> M.map (k,)) (M.map (uncurryMap . M.map (M.fromList . concatMap hyps_table)) evt_refs)
+            live_struct = LiveStruct <$> (M.map (view pMachineId) p3) 
+                   <.> evt_live <.> live_live 
+                   <.> live_evt <.> evt_evt 
+                   <.> M.mapWithKey (\k -> M.map (k,)) (M.map (M.map snd) prog_ref) 
+                   <.> M.mapWithKey (\k -> M.map (k,)) (M.map (uncurryMap . M.map (M.fromList . concatMap hyps_table)) evt_refs)
             struct = all_errors $ 
                      M.map raiseStructError $ inheritWith 
                         Conc (Abs . getConcrete)
@@ -442,7 +453,10 @@ run_phase4_proofs = proc (r_ord,p3) -> do
                         r_ord live_struct
                     -- >>= make_all_tables' _
         One struct <- triggerP -< One struct
-        let p4 = make_phase4 <$> p3 .> evt_refs .> prog_ref .> comments .> proofs .> struct
+        let p4 = make_phase4 <$> p3 <.> evt_refs 
+                             <.> prog_ref <.> comments 
+                             <.> proofs <.> struct
+                             <.> old_sch
         returnA -< p4
 
 type LiveEvtId = Either EventId ProgId
@@ -461,7 +475,6 @@ mergeLiveness (Conc cl) (Abs al) = Conc LiveStruct
         , evt_info  = evt_info  cl
         }
     where
-        -- f x = trace (format "liveness structure {0}\n{1}" (live_live x) (live_evt x)) x
         remove_old_evt r = (            R.bimapMaybe as_live as_event r 
                             `R.compose` R.bimapMaybe as_event as_live r )
                     `R.union` R.bimapMaybe as_live as_live r
@@ -515,11 +528,15 @@ make_phase4 :: MachinePh3
             -> Map DocItem (String,LineInfo)
             -> Map Label (Tactic Proof, LineInfo) 
             -> LiveStruct
+            -> Map EventId [((Label,DeclSource),Change)]
             -> MachinePh4
-make_phase4 p3 evt_refs prog_ref comments proofs _ = MachinePh4 { .. }
+make_phase4 p3 evt_refs prog_ref comments proofs _ old_sch = MachinePh4 { .. }
     where
         _e3 = EventPh4 <$> (p3 ^. pEvents) 
-                        .> _pEventRefRule `M.union` evtEmpty
+                       <.> _pEventRefRule `M.union` evtEmpty
+                       <.> old_sch' `M.union` evtEmpty
+        old_sch' = M.map (  L.map (first fst) 
+                                  . L.filter ((Inherited==) . snd . fst)) old_sch
         evtEmpty :: Map EventId [a]
         evtEmpty = M.map (const []) (p3 ^. pEvents)
         _p3 = p3 & pEvents .~ _e3
@@ -657,20 +674,27 @@ make_machine (MId m) p4 = mch'
         g :: EventId -> EventPh4
           -> Event
         g (EventId name) evt
-            = empty_event
+            = Event
                 { indices = evt ^. eIndices
                 , params  = evt ^. eParams
                 , guards  = evt ^. eGuards
                 , old_guard = evt ^. eOldGuards
                 , actions = evt ^. eAllActions
-                , scheds  = (evt ^. eCoarseSched) `union` (evt ^. eFineSched)
+                , scheds  = c_sched `union` f_sched
                 , eql_vars = keep' ab_var (evt ^. eOldActions)
                              `S.intersection` frame (evt ^. eAllActions)
+                , old_sched = Schedule 
+                                    { coarse = c_sched `M.intersection` old_sched
+                                    , fine   = MM.listToMaybe $ M.toList $ f_sched `M.intersection` old_sched }
                 -- , old_guard = _
                 , sched_ref =  map (add_guard name) (keys $ evt ^. eNewGuards) 
                             ++ map snd (evt ^. eRefRule)
                 , old_acts = M.keysSet $ evt ^. eOldActions
                 }
+            where
+                old_sched = M.filter (== AddC) $ M.fromList $ ("default",AddC) : reverse (evt ^. eOldSched)
+                c_sched = (evt ^. eCoarseSched) 
+                f_sched = (evt ^. eFineSched)
 
 uncurryMap :: (Ord a,Ord b) => Map a (Map b c) -> Map (a,b) c
 uncurryMap m = fromList $ do

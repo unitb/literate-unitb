@@ -340,6 +340,7 @@ one_point_rule (Binder Exists vs r t) = e
                 rs = do (i,j) <- [(0,1),(1,0)]
                         k <- maybeToList 
                             $ (xs !! i) `lookup` zip (map Word vs) vs
+                        guard $ S.null $ S.intersection (S.fromList vs) (used_var $ xs !! j)
                         return (k, xs !! j)
         subst _ = M.empty
         f x

@@ -138,8 +138,7 @@ result_example0 = unlines
 
 result_train_m0 :: String
 result_train_m0 = unlines 
-    [ "  o  train_m0/INIT/FIS/st"
-    , "  o  train_m0/INIT/INV/J0"
+    [ "  o  train_m0/INIT/INV/J0"
     , "  o  train_m0/INIT/WD"
     , "  o  train_m0/INV/WD"
     , "  o  train_m0/TR/TR0/t@param"
@@ -157,7 +156,7 @@ result_train_m0 = unlines
     , "  o  train_m0/leave/WD/C_SCH"
     , "  o  train_m0/leave/WD/F_SCH"
     , "  o  train_m0/leave/WD/GRD"
-    , "passed 19 / 19"
+    , "passed 18 / 18"
     ]
  
 result_example0_tr_en_po :: String

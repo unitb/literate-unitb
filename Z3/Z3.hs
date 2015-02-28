@@ -47,6 +47,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 
 import           Data.Char
+import           Data.Either.Combinators
 import           Data.List as L hiding (union)
 import           Data.List.Ordered as OL hiding (member)
 import           Data.Map as M (Map)
@@ -268,8 +269,8 @@ discharge_on po = do
     res <- newEmptyMVar
     forkIO $ withSem total_caps $ do
         r <- try (discharge' (Just default_timeout) po)
-        let f e = Left $ show (e :: SomeException)
-            r'  = either f Right r
+        let f e = show (e :: SomeException)
+            r'  = mapLeft f r
         putMVar res r'
     return res
 

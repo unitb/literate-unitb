@@ -189,7 +189,7 @@ result8 = unlines
     , "; comment: we don't need to declare the sort Int"
     , "; comment: we don't need to declare the sort Real"
     , "(declare-const x Int)"
-    , "(assert (not true))"
+    , "(assert (not (exists ( (x Int) ) (and true (= x x)))))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
     , "                          (then skip smt)"

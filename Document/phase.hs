@@ -50,7 +50,7 @@ import Utilities.Syntactic
 import Utilities.TH
 import Utilities.Permutation
 
-infixl 3 .>
+infixl 3 <.>
 
 all_errors' :: [Either [e] a] -> Either [e] [a]
 all_errors' xs = do
@@ -390,7 +390,11 @@ data EventPh3 = EventPh3
 data EventPh4 = EventPh4 
     { _e3 :: EventPh3 
     , _eRefRule  :: [(Label,ScheduleChange)]
+    , _eOldSched :: [(Label,Change)]
     }
+
+data Change = AddC | RemoveC
+    deriving (Eq,Show)
 
 data TheoryP0 = TheoryP0
     { _tNothing :: ()
@@ -483,8 +487,8 @@ focus ln cmd = StateT $ Identity . f
     -- (<*>) (Map m)  (FMap f) = Map $ M.mapWithKey (\k g -> g $ f k) m
     -- (<*>) (Map m0) (Map m1) = Map $ M.intersectionWith id m0 m1
 
-(.>) :: (Ord a) => Map a (b -> c) -> Map a b -> Map a c
-(.>) mf mx = M.intersectionWith id mf mx
+(<.>) :: (Ord a) => Map a (b -> c) -> Map a b -> Map a c
+(<.>) mf mx = M.intersectionWith id mf mx
 
 -- onMachine :: MachineId -> Lens' Phase2M Phase2I
 -- onMachine = _

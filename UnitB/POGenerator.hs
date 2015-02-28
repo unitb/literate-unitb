@@ -19,6 +19,7 @@ import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
 
+import Data.List as L
 import Data.Map as M hiding ( map )
 
 data POParam = POP 
@@ -53,7 +54,8 @@ emit_exist_goal :: Monad m => [Label] -> [Var] -> [Expr] -> POGenT m ()
 emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses $ \(vs,es) -> 
-            emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
+            unless (L.null es) $
+                emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars es
 
@@ -110,7 +112,7 @@ prefix lbl = prefix_label $ label lbl
 named_hyps :: Map Label Expr -> State POParam ()
 named_hyps hyps = do
         h <- gets named
-        modify $ \p -> p { named = hyps `union` h }
+        modify $ \p -> p { named = hyps `M.union` h }
 
 nameless_hyps :: [Expr] -> State POParam ()
 nameless_hyps hyps = do

@@ -144,16 +144,16 @@ This takes care of \eqref{m1:saf2}:
 \end{align*}
 
 This takes care of \eqref{m1:saf1}
-
+\newcommand{\compl}{-}
 \begin{align*}
 \evguard{m0:leave}{lv:grd0}
 	{ t \in in }
 \\ \assumption{asm0}
-	{ \neg ext \in plf \1\land \neg ext = ent }
+	{ \neg ext \in plf \1\land \neg ext = ent } \\
+% 
+\assumption{asm7}{ (\{ ext \} \bunion plf = \compl \{ent\}) \land (\{ ent \} \bunion plf = \compl \{ext\}) \land \{ ext, ent \} = \compl plf } 
 \end{align*}
-\begin{align*} \assumption{asm7}{ (\{ ext \} \bunion plf = \compl \{ent\}) \land (\{ ent \} \bunion plf = \compl \{ext\}) \land \{ ext, ent \} = \compl plf } \end{align*}
 \subsubsection{Side conditions}
-
 In order to take care of the schedulability of \ref{m0:leave}, we need to strengthen the coarse schedule by adding \ref{c1}. The side conditions for schedule replacement requires us to prove \ref{m1:prog0} and \ref{m1:saf3} in order to prove refinement.
 \replace{m0:leave}{lv:c0}{lv:c0,lv:c1}{}{m1:prog0}{m1:saf3}
 
@@ -267,7 +267,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \begin{align*}
 \dummy{	t_0,t_1 : \Train}
 \end{align*}
-
+\newcommand{\injective}{\text{injective}}
 \subsection{New Requirement}
 \begin{align*}
 \invariant{m2:inv0}
@@ -298,7 +298,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \end{align*}
 %
 \begin{proof}{\ref{m0:leave}/INV/\ref{m2:inv0}} 
-\assert{goal0}{\qforall{t_0,t_1}{t_0 \in in' \land t_1 \in in' \land loc'.t_0 = loc'.t_1}{t_0 = t_1}	}
+\[ \assert{goal0}{\qforall{t_0,t_1}{t_0 \in in' \land t_1 \in in' \land loc'.t_0 = loc'.t_1}{t_0 = t_1}	} \]
 \begin{subproof}{goal0} \begin{free:var}{t_0}{t_0}
 \begin{free:var}{t_1}{t_1}
 	\begin{align}
@@ -315,7 +315,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 	\hide{
 		\assert{hyp7}{ t_0 \in \dom.loc \setminus \{ t \} }
 		\assert{hyp8}{ t_1 \in \dom.loc \setminus \{ t \} }
-		}
+		
 	\begin{calculation}
 		loc'.t_0 = loc'.t_1
 	\hint{=}{ \ref{lv:a2} \ref{m2:inv0} }
@@ -327,7 +327,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 			\eqref{hyp0} with \ref{m2:inv0} 
 			} 
 		\false
-	\end{calculation}
+	\end{calculation} }
 	\hide
 	{	\begin{subproof}{hyp3} \easy \end{subproof}
 		\begin{subproof}{hyp4} \easy \end{subproof}
@@ -433,6 +433,8 @@ We implement \eqref{m2:prog3} with the following:
 		{ b \in plf \1\land \qforall{t}{ t \in in }{ \neg loc.t = b } }
 \end{align*}
 
+\input{m2_m1-moveout.tex}
+
 In order to prove \ref{m1:moveout}, we need a need progress property, to make sure that the fine schedule becomes true infinitely often. We can use the same that we used to introduce the fine schedule \eqref{m2:prog1}.
 
 \subsection{Summary of the events} 
@@ -449,7 +451,7 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 \item[{}]
 \input{../m2_m0-leave}
 \end{block}
-
+\input{machine_m2}
 \end{machine}
 
 \section{Third refinement}
@@ -535,7 +537,7 @@ We should use intersection here:
 \end{align*}
 % EN should not pass this way
 %\weakento{m3:ctr:plf}{}{m3:cp:c0}
-
+\input{../m3_m1-moveout}
 \input{../m3_m3-ctr-plf}
 
 \end{machine}

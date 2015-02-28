@@ -351,6 +351,9 @@ make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
 instance Named Machine where
     name m = case _name m of Lbl s -> s
 
+instance NFData System where
+    rnf (Sys a b c d e) = rnf (a,b,c,d,e)
+
 instance NFData Machine where
     rnf (Mch a b c d e f g h i j) = rnf (a,b,c,d,e,f,g,h,i) `deepseq` rnf j
 

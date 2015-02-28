@@ -12,6 +12,8 @@ import qualified Document.Test as DOC
 --import qualified Utilities.Format as FMT
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
+import qualified Documentation.Test as Sum
+
 
 import Shelly
 
@@ -29,6 +31,7 @@ test_case = run_test_cases $ test_cases
 --        ,  FMT.test_case
         ,  UT.test_case
         ,  Code.test_case
+        ,  Sum.test_case
         ]
 
 main :: IO ()

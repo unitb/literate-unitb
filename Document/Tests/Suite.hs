@@ -41,12 +41,7 @@ list_file_obligations' path = do
     path <- canonicalizePath path
     t <- getModificationTime path
     m <- takeMVar pos
-    case path `M.lookup` m of
-        Just (r,t') 
-            | t' == t -> do
-                putMVar pos m
-                return r
-        _ -> do
+    do
             sys <- parse_system path
             let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
                 cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
@@ -68,13 +63,22 @@ verify path i = do
                 Left e -> return (show (e :: SomeException),pos)
         Left x -> return (unlines $ L.map show x, empty)
 
+all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
+all_proof_obligations path = runEitherT $ do
+        xs <- bimapEitherT show id
+            $ EitherT $ fst `liftM` list_file_obligations' path
+        let pos = M.elems $ M.map snd xs
+        let cmd = L.map (M.map $ concatMap pretty_print' . z3_code) pos
+        return cmd
+
 proof_obligation :: FilePath -> String -> Int -> IO String
-proof_obligation path lbl i = eitherT (return . show) return $ do
+proof_obligation path lbl i = eitherT (return) return $ do
         xs <- bimapEitherT show id
             $ EitherT $ fst `liftM` list_file_obligations' path
         let pos = snd $ snd $ i `elemAt` xs
         po <- maybe 
-                (left $ format "invalid label: {0}" lbl)
+                (left $ format "invalid label: {0}\n{1}" lbl $ 
+                    unlines $ L.map show $ keys pos)
                 right
             $ label lbl `M.lookup` pos
         let cmd = concatMap pretty_print' $ z3_code po

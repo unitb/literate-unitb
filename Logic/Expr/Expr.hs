@@ -614,7 +614,7 @@ rename x y e@(Binder q vs r xp)
         | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
 
-instance NFData t => NFData (AbsExpr t) where
+instance (NFData t, NFData t') => NFData (GenExpr t t') where
     rnf (Word x) = rnf x
     rnf (Const n t) = rnf (n,t)
     rnf (Cast x0 x1) = rnf (x0,x1)

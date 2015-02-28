@@ -1,6 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Documentation.SummaryGen 
-    ( produce_summaries )
+    ( produce_summaries
+    , event_summary' 
+    , getListing
+    , safety_sum
+    , liveness_sum )
 where
 
 import Logic.Expr hiding ((</>))
@@ -11,14 +15,12 @@ import UnitB.AST
     -- Libraries
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Writer
+import Control.Monad.Reader.Class
+import Control.Monad.RWS
+import Control.Monad.Trans.Reader (ReaderT,runReaderT)
 
 import Data.List (intercalate)
-import Data.Map as M (null,elems,toList,keys
-                     ,fromList,singleton, Map
-                     ,lookup)
+import Data.Map as M hiding (map)
 import Data.Maybe
 
 import System.FilePath
@@ -26,7 +28,7 @@ import System.FilePath
 import Utilities.Format
 
 type Doc = ReaderT (ExprStore,FilePath) IO
-type M = WriterT [String] Doc
+type M = RWS ExprStore [String] ()
 
 produce_summaries :: FilePath -> System -> IO ()
 produce_summaries path sys = runReaderT (do
@@ -42,8 +44,8 @@ produce_summaries path sys = runReaderT (do
 
 make_file :: FilePath -> M () -> Doc ()
 make_file fn cmd = do
-    path <- asks snd
-    xs   <- execWriterT cmd
+    (s,path) <- ask
+    let xs = snd $ execRWS cmd s ()
     liftIO $ writeFile (path </> fn) $ unlines xs
 
 keyword :: String -> String
@@ -63,6 +65,10 @@ machine_summary sys m = make_file fn $
                 $ item $ input $ live_file m
             unless (M.null $ safety $ props m) 
                 $ item $ input $ saf_file m
+            unless (M.null $ transient $ props m)
+                $ item $ input $ transient_file m
+            unless (M.null $ constraint $ props m)
+                $ item $ input $ constraint_file m
             item $ do
                 tell [keyword "events"]
                 block $ forM_ (keys $ events m) $ \k -> do
@@ -91,12 +97,16 @@ properties_summary m = do
         make_file (inv_file m) $ invariant_sum m
         make_file (inv_thm_file m) $ invariant_thm_sum prop
         make_file (live_file m) $ liveness_sum m
+        make_file (transient_file m) $ transient_sum m
         make_file (saf_file m) $ safety_sum prop
+        make_file (constraint_file m) $ constraint_sum m
         make_file fn $ block $ do
             item $ input $ inv_file m
             item $ input $ inv_thm_file m
             item $ input $ live_file m
             item $ input $ saf_file m
+            item $ input $ transient_file m
+            item $ input $ constraint_file m
     where
         fn = prop_file_name m
 
@@ -109,8 +119,17 @@ inv_thm_file m  = "machine_" ++ show (_name m) ++ "_thm" <.> "tex"
 live_file :: Machine -> String
 live_file m = "machine_" ++ show (_name m) ++ "_prog" <.> "tex"
 
+transient_file :: Machine -> String
+transient_file m = "machine_" ++ show (_name m) ++ "_trans" <.> "tex"
+
 saf_file :: Machine -> String
 saf_file m  = "machine_" ++ show (_name m) ++ "_saf" <.> "tex"
+
+constraint_file :: Machine -> String
+constraint_file m  = "machine_" ++ show (_name m) ++ "_co" <.> "tex"
+
+getListing :: System -> M () -> String
+getListing s cmd = unlines $ snd $ execRWS cmd (expr_store s) ()
 
 input :: String -> M ()
 input fn = tell [format "\\input{{0}}" $ dropExtension fn]
@@ -132,8 +151,8 @@ comment_of m key = do
             Just cmt -> block $ item $ tell [format "\\commentbox{{0}}" cmt]
             Nothing -> return ()
 
-event_summary :: Machine -> Label -> Event -> Doc ()
-event_summary m lbl e = make_file fn $ do
+event_summary' :: Machine -> Label -> Event -> M ()
+event_summary' m lbl e = do
         index_sum lbl e
         comment_of m (DocEvent lbl)
         block $ do
@@ -143,6 +162,10 @@ event_summary m lbl e = make_file fn $ do
             item $ guard_sum lbl e
             item $ act_sum lbl e
             item $ kw_end
+
+event_summary :: Machine -> Label -> Event -> Doc ()
+event_summary m lbl e = make_file fn $ 
+        event_summary' m lbl e
     where
         fn = event_file_name m lbl
 
@@ -181,7 +204,7 @@ invariant_thm_sum prop =
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
         let prop = props m
-        section kw $ put_all_expr_with_doc' (comment_of m . DocInv) toString (label "") (progress prop) 
+        section kw $ put_all_expr' toString (label "") (progress prop) 
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = do
@@ -199,8 +222,42 @@ safety_sum prop = do
             q' <- get_string' q
             let exc' = case exc of
                         Nothing -> ""
-                        Just exc -> format "\\qquad  \\text{(except {0})}" exc
+                        Just exc -> format "\\qquad  \\text{(except \\ref{{0}})}" exc
             return $ format "{0} \\textbf{\\quad unless \\quad} {1}{2}" p' q' exc'
+
+transient_sum :: Machine -> M ()
+transient_sum m = do
+        let prop = props m
+        section kw $ put_all_expr' toString (label "") (transient prop) 
+    where
+        kw = "\\textbf{transient}"
+        toString (Transient _ p evts hint) = do -- do
+            let TrHint sub lt = hint
+                evts' = intercalate "," $ map (format "\\ref{{0}}") evts
+            sub' <- forM (toList sub) $ \(v,p) -> do
+                p <- get_string' p
+                return (v,p)
+            let isNotIdent n (Word (Var n' _)) = n /= n'
+                isNotIdent _ _ = True
+                sub'' 
+                    | M.null $ M.filterWithKey isNotIdent sub = ""
+                    | otherwise  = format ": [{0}]" $ intercalate ", " $ map (uncurry $ format "{0} := {1}") $ sub'
+                lt' = maybe "" (format ", with \\eqref{{0}}") lt
+            p <- get_string' p
+            return $ format "{0} \\qquad \\text{({1}{2}{3})}" 
+                p evts' sub'' lt'
+            -- p' <- get_string' p
+            -- q' <- get_string' q
+            -- return $ format "{0} \\quad \\mapsto\\quad {1}" p' q'
+
+constraint_sum :: Machine -> M ()
+constraint_sum m = do
+        let prop = props m
+        section kw $ put_all_expr' toString (label "") (constraint prop)
+    where
+        kw = "\\textbf{safety}"
+        toString (Co _ p) = do
+            get_string' p
 
 add_comments :: String -> String
 add_comments str = intercalate "\n" $ map (++ " %") $ lines $ "$" ++ f str ++ "$"
@@ -211,7 +268,7 @@ add_comments str = intercalate "\n" $ map (++ " %") $ lines $ "$" ++ f str ++ "$
 
 get_string' :: Expr -> M String
 get_string' e = do
-    es <- lift $ asks fst
+    es <- ask
     return $ get_string es e
 
 put_expr :: (Label -> M ()) -> (a -> M String) -> Label -> (Label,a) -> M ()

@@ -47,11 +47,9 @@ test = test_cases
 
 result0 :: String
 result0 = unlines
-    [ "  o  m0/INIT/FIS/emp"
-    , "  o  m0/INIT/FIS/p"
+    [ "  o  m0/INIT/FIS/p"
     , "  o  m0/INIT/FIS/q"
     , "  o  m0/INIT/FIS/qe"
-    , "  o  m0/INIT/FIS/res"
     , "  o  m0/INIT/INV/m0:inv0"
     , "  o  m0/INIT/INV/m0:inv1"
     , "  o  m0/INIT/WD"
@@ -112,7 +110,7 @@ result0 = unlines
     , "  o  m0/m0:push:right/WD/C_SCH"
     , "  o  m0/m0:push:right/WD/F_SCH"
     , "  o  m0/m0:push:right/WD/GRD"
-    , "passed 65 / 65"
+    , "passed 63 / 63"
     ]
 
 path0 :: FilePath
@@ -263,15 +261,9 @@ path4 = "tests/lock-free deque/main6.tex"
 
 result4 :: String
 result4 = unlines
-    [ "  o  m1/INIT/FIS/emp"
-    , "  o  m1/INIT/FIS/p"
-    , "  o  m1/INIT/FIS/popL"
-    , "  o  m1/INIT/FIS/popR"
-    , "  o  m1/INIT/FIS/pshL"
-    , "  o  m1/INIT/FIS/pshR"
+    [ "  o  m1/INIT/FIS/p"
     , "  o  m1/INIT/FIS/q"
     , "  o  m1/INIT/FIS/qe"
-    , "  o  m1/INIT/FIS/res"
     , "  o  m1/INIT/FIS/resL"
     , "  o  m1/INIT/FIS/resR"
     , "  o  m1/INIT/INV/m1:inv0"
@@ -448,7 +440,7 @@ result4 = unlines
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:right:non:empty/SAF"
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:left/SAF"
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:right/SAF"
-    , "passed 185 / 185"
+    , "passed 179 / 179"
     ]
 
     -- enablement non-empty

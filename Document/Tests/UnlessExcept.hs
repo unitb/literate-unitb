@@ -22,8 +22,7 @@ path0 = "Tests/unless-except.tex"
 
 result0 :: String
 result0 = unlines
-    [ "  o  m0/INIT/FIS/p"
-    , "  o  m0/INIT/WD"
+    [ "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt0/FIS/p@prime"
     , "  o  m0/evt0/SAF/saf0"
@@ -45,14 +44,13 @@ result0 = unlines
     , "  o  m0/saf0/SAF/WD/rhs"
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
-    , "passed 22 / 23"
+    , "passed 21 / 22"
     ]
 
 
 result1 :: String
 result1 = unlines
-    [ "  o  m1/INIT/FIS/f"
-    , "  o  m1/INIT/WD"
+    [ "  o  m1/INIT/WD"
     , "  o  m1/INV/WD"
     , "  o  m1/evt0/FIS/f@prime"
     , "  o  m1/evt0/SAF/saf0"
@@ -74,5 +72,5 @@ result1 = unlines
     , "  o  m1/saf0/SAF/WD/rhs"
     , " xxx m1/saf1/SAF/WD/lhs"
     , "  o  m1/saf1/SAF/WD/rhs"
-    , "passed 18 / 23"
+    , "passed 17 / 22"
     ]

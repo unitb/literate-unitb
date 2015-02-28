@@ -90,7 +90,6 @@ result0 = unlines
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
-    , "  o  m0/evt/FIS/f@prime"
     , "  o  m0/evt/FIS/n@prime"
     , "  o  m0/evt/INV/inv0/goal (63,1)"
     , "  o  m0/evt/INV/inv0/hypotheses (63,1)"
@@ -120,7 +119,7 @@ result0 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 48 / 49"
+    , "passed 47 / 48"
     ]
 
 path0 :: String

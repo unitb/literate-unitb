@@ -57,7 +57,7 @@ args opt file =
         , "-W", "-fwarn-missing-signatures"
         , "-fwarn-incomplete-uni-patterns"
         , "-fwarn-missing-methods"
-        , "-threaded"
+        , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
         -- , "-v"
         ]
@@ -79,12 +79,18 @@ compile silent args = MaybeT $ do
         _ -> return Nothing
 compile_file :: MaybeT IO ()
 compile_file = compile True (args CompileFile file)             
+
 compile_test :: MaybeT IO FilePath
 compile_test = do
     compile False (args Make "test_tmp.hs")
     return "bin/test_tmp"
+
 compile_all :: MaybeT IO ()
 compile_all = compile False (args Make "test.hs")
+
+compile_app :: MaybeT IO ()
+compile_app = compile False (args Make "continuous.hs")
+
 run_test :: FilePath -> MaybeT IO ()
 run_test fp = lift $ void $ rawSystem fp []
 
@@ -107,6 +113,7 @@ main = do
         compile_test 
             -- >>= run_test
         compile_all
+        compile_app
     -- printf "%s\n" path
     -- putStrLn $ intercalate " " $ "ghc" : (args CompileFile file)
         -- putStrLn "File ok"

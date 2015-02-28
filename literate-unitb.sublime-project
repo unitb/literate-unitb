@@ -11,7 +11,7 @@
 	[
 		{
 			"name": "Haskell / Literate Unit-B",
-			"cmd" : ["runghc", "$project_path/display_errors.hs", "$file", "$project_path", "ghc_errors.txt"],
+			"cmd" : ["runghc", "$project_path/display_errors", "$file", "$project_path", "ghc_errors.txt"],
 		    // "cmd": ["cat", "/Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb/compile_errors.txt"],
 			"file_regex": "^([^\\s]..*?):([0-9]*):?([0-9]*)",
 		    // "file_regex": "\\(\"(?<filename>.*)\", (?<line>[0-9]*)\\)",

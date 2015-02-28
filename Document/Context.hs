@@ -59,9 +59,9 @@ run_phase1_types = proc p0 -> do
             --                  , ("basic",basic_theory) ]
             all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th'
         returnA -< make_phase1 <$> M.map (M.map fst) types 
-                                .> all_types
-                                .> imp_th'
-                                .> sets
+                               <.> all_types
+                               <.> imp_th'
+                               <.> sets
 
 type CPipeline ph a = Pipeline MM (CTable ph) (Either [Error] (CTable a))
 

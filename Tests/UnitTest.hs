@@ -194,7 +194,10 @@ run_test_cases xs = do
                                 }
         f (POCase x y z)     = do
                 let cmd = catch (second Just `liftM` y) f
-                    f x = putStrLn "*** EXCEPTION ***" >> return (show (x :: SomeException), Nothing)
+                    f x = do
+                        putStrLn "*** EXCEPTION ***"
+                        print x
+                        return (show (x :: SomeException), Nothing)
                     -- get_po = catch (snd `liftM` y) g
                     -- g :: SomeException -> IO (M.Map Label Sequent)
                     -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
