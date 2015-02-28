@@ -10,6 +10,7 @@ import qualified Document.Tests.Cubes as Cubes
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
 import qualified Document.Tests.Phase as Phase
+import qualified Document.Tests.Puzzle as Puz
 import qualified Document.Tests.SmallMachine as SMch
 import qualified Document.Tests.TrainStation as Train
 import qualified Document.Tests.TrainStationRefinement as Ref
@@ -36,6 +37,7 @@ test = test_cases
         "Unit-B Document" 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
+        , Puz.test_case
         , UE.test_case
         , LFD.test_case
         , SMch.test_case

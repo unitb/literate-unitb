@@ -225,12 +225,6 @@ run_phase1_types = proc p0 -> do
                          <.> (M.map (M.map fst) types) 
                          <.> all_types 
                          <.> s <.> evts'
-    -- traceP -< imp_th
-    -- traceP -< all_types
-    -- traceP -< s
-    -- traceP -< evts'
-    -- traceP -< p0
-    -- traceP -< it
     returnA -< (r_ord,p1)
 
 make_phase1 :: MachinePh0
@@ -312,7 +306,7 @@ make_phase2 p1 vars = MachinePh2 { .. }
 
         f :: Map EventId (Map String Var)
           -> EventId -> ParserSetting
-        f table e    = mkSetting _pNotation types (_pConstants `union` findE table e) _pStateVars _pDummyVars
+        f table e    = mkSetting _pNotation types (constants `union` findE table e) _pStateVars _pDummyVars
         
         event_namespace table = -- (fromList . map (f table) . M.elems) 
             M.mapWithKey (const . f table) evts 

@@ -1,0 +1,55 @@
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{bsymb}
+\usepackage{unitb}
+% \usepackage{eventb}
+\usepackage{calculation}
+
+\begin{document}
+	
+\begin{machine}{m0}
+	
+\[
+\variable{ b : \Bool }
+\]
+
+\newevent{term}{terminate}
+
+\begin{align}
+\initialization{in0}{b = \false} \\
+\progress{prog0}{\true}{b}
+\end{align}
+
+\begin{align}
+\refine{prog0}{ensure}{term}{} \\
+\weakento{term}{default}{sch0} \\
+\cschedule{term}{sch0}{\true} 
+\end{align}
+
+\begin{align}
+\evbcmeq{term}{act0}{b}{\true}
+\end{align}
+
+
+\end{machine}
+
+\newcommand{\Pcs}{\text{P}}
+
+\begin{machine}{m1}
+	\refines{m0}
+
+\with{sets}
+\begin{align*}	
+\newset{P}{\Pcs} \\
+\variable{ vs : \set[\Pcs] }
+\end{align*}
+
+\begin{align}
+	\invariant{inv0}{b \2\implies& vs = \Pcs} \\
+	\evguard{term}{grd0}{ vs =& \Pcs }
+\end{align}
+
+\end{machine}
+
+\end{document}

@@ -807,14 +807,6 @@ result6 = unlines
     , "                          (then (using-params simplify :expand-power true) smt)))"
     ]
 
-verify :: Int -> FilePath -> IO (String, Map Label Sequent)
-verify n path = do
-    r <- list_file_obligations path
-    case r of
-        Right ms -> do
-            (s,_,_) <- str_verify_machine $ fst $ ms !! n
-            return (s, snd $ ms !! n)
-        x -> return (show x, empty)
 case7 :: IO String
 case7 = proof_obligation path0 "m2/TR/m2:tr0/t@param" 2
 
