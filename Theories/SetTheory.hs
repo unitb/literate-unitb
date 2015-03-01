@@ -45,6 +45,9 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                         $ fromJust $ s1 `zintersect` map_array "not" (set_type gT) [s2]
                 , Def [gT] "compl" [s1_decl] (set_type gT)
                         $ fromJust $ map_array "not" (set_type gT) [s1]
+                , Def [gT] "st-subset" [s1_decl,s2_decl] bool
+                        $ fromJust $ (s1 `zsubset` s2)
+                            `mzand`  mznot (s1 `mzeq` s2)
                 ]
         funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
@@ -89,6 +92,7 @@ zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: Expr
 zelem         :: ExprP -> ExprP -> ExprP
 zsubset       :: ExprP -> ExprP -> ExprP
+zstsubset     :: ExprP -> ExprP -> ExprP
 zsetdiff      :: ExprP -> ExprP -> ExprP
 zintersect    :: ExprP -> ExprP -> ExprP
 zcompl        :: ExprP -> ExprP
@@ -105,6 +109,7 @@ zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_typ
 
 zempty_set   = FunApp (Fun [gA] "empty-set" [] $ set_type gA) []
 zsubset      = typ_fun2 (Fun [] "subset" [set_type gA,set_type gA] bool)
+zstsubset    = typ_fun2 (Fun [gA] "st-subset" [set_type gA,set_type gA] bool)
 zintersect   = typ_fun2 (Fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
 zunion       = typ_fun2 (Fun [] "union" [set_type gA,set_type gA] $ set_type gA)
 zcompl       = typ_fun1 (Fun [gA] "compl" [set_type gA] $ set_type gA)
@@ -142,8 +147,8 @@ set_diff        = BinOperator "set-diff" "\\setminus"   zsetdiff
 membership      = BinOperator "elem" "\\in"       zelem
 subset          = BinOperator "subset"     "\\subseteq" zsubset
 superset        = BinOperator "superset"   "\\supseteq" (flip zsubset)
-st_subset       = BinOperator "st-subset"   "\\subset" zsubset
-st_superset     = BinOperator "st-superset" "\\supset" (flip zsubset)
+st_subset       = BinOperator "st-subset"   "\\subset" zstsubset
+st_superset     = BinOperator "st-superset" "\\supset" (flip zstsubset)
 compl           = UnaryOperator "complement" "\\compl" zcompl
 
 set_notation :: Notation
@@ -158,7 +163,9 @@ set_notation = with_assoc empty_notation
                  [ [apply]
                  , [set_union,set_diff,set_intersect]
                  , [ equal
-                   , membership, subset ] ]]
+                   , membership, subset
+                   , st_subset, superset
+                   , st_superset ] ]]
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []

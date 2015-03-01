@@ -477,14 +477,6 @@ instance TypeSystem t => Named (AbsDef t) where
 instance Named (AbsVar t) where
     name (Var x _) = x
 
-instance Named Sort where
-    name (Sort x _ _) = x
-    name (DefSort x _ _ _) = x
-    name (Datatype _ x _)  = x
-    name BoolSort   = "\\Bool"
-    name IntSort    = "\\Int"
-    name RealSort   = "\\Real"
-
 instance Convert (AbsVar t) (ExprPC (AbsExpr t)) where
     convert_to = Right . Word
     convert_from (Right (Word x)) = Just x

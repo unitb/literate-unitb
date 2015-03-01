@@ -118,6 +118,14 @@ instance NFData Sort where
     rnf (Sort xs ys n)       = rnf (xs,ys,n)
     rnf (Datatype xs ys zs)  = rnf (xs,ys,zs)
 
+instance Named Sort where
+    name (Sort x _ _) = x
+    name (DefSort x _ _ _) = x
+    name (Datatype _ x _)  = x
+    name BoolSort   = "\\Bool"
+    name IntSort    = "\\Int"
+    name RealSort   = "\\Real"
+
 z3_name :: Sort -> String
 z3_name (BoolSort) = "Bool"
 z3_name (IntSort)  = "Int"

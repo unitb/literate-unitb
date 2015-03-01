@@ -42,13 +42,30 @@
 \with{sets}
 \begin{align*}	
 \newset{P}{\Pcs} \\
-\variable{ vs : \set[\Pcs] }
+\variable{ vs : \set[\Pcs] } \\
+\dummy{V : \set[\Pcs]}
 \end{align*}
 
 \begin{align}
 	\invariant{inv0}{b \2\implies& vs = \Pcs} \\
-	\evguard{term}{grd0}{ vs =& \Pcs }
+	\evguard{term}{grd0}{ vs &= \Pcs } \\
+	\cschedule{term}{sch1}{ vs &= \Pcs }
 \end{align}
+
+\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+
+\begin{align*}
+	\safety{saf1}{vs = \Pcs}{\false}
+\end{align*}
+	
+\begin{align*}
+	&\progress{prog1}{\true}{vs = \Pcs} 
+\refine{prog1}{induction}{prog2}
+		{ \var{\Pcs \setminus vs}{down}{\emptyset} }
+	&\progress{prog2}
+		{ \Pcs \setminus vs = V }
+		{ (\Pcs \setminus vs \subset V) \1\lor vs = \Pcs }
+\end{align*}
 
 \end{machine}
 

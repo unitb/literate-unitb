@@ -509,6 +509,16 @@ set_decl_smt2 xs =
         , "              (s2 (set TRAIN)) )"
         , "            (set TRAIN)"
         , "            (intersect s1 ((_ map not) s2)))"
+        , "(define-fun st-subset@@BLK"
+        , "            ( (s1 (set BLK))"
+        , "              (s2 (set BLK)) )"
+        , "            Bool"
+        , "            (and (subset s1 s2) (not (= s1 s2))))"
+        , "(define-fun st-subset@@TRAIN"
+        , "            ( (s1 (set TRAIN))"
+        , "              (s2 (set TRAIN)) )"
+        , "            Bool"
+        , "            (and (subset s1 s2) (not (= s1 s2))))"
         ]
 --        ,  "(declare-fun subset@Open@@pfun@@TRAIN@@BLK@Close ((set (pfun TRAIN BLK)) (set (pfun TRAIN BLK))) Bool)"
 --     ++ when (WithPFun `elem` xs)
@@ -1024,7 +1034,8 @@ result20 =
              , "compl@@TRAIN"
              , "elem@@TRAIN"
              , "empty-set@@TRAIN"
-             , "set-diff@@TRAIN" ]
+             , "set-diff@@TRAIN" 
+             , "st-subset@@TRAIN"]
     in
     unlines (
         push

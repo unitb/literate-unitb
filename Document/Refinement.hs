@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts        #-}
 {-# LANGUAGE DeriveDataTypeable, IncoherentInstances    #-}
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables     #-}
-{-# LANGUAGE BangPatterns                               #-}
+{-# LANGUAGE BangPatterns, TemplateHaskell              #-}
 module Document.Refinement where
 
     -- Module
@@ -18,6 +18,8 @@ import Latex.Parser
 
 import Logic.Expr
 
+import Theories.SetTheory
+
     -- Libraries
 import Control.Arrow (second)
 import Control.DeepSeq
@@ -26,6 +28,7 @@ import Control.Monad.Trans.Either
 import Control.Monad.RWS as RWS
 
 import Data.Char
+import Data.Either
 import Data.List as L ( intercalate, (\\), null )
 import Data.Map as M hiding ( map, (\\) )
 import Data.Maybe
@@ -34,6 +37,7 @@ import Data.Typeable
 
 import Utilities.Format
 import Utilities.Syntactic
+import Utilities.Error
 
 add_proof_edge :: MonadState System m 
                => Label -> [Label] -> m ()
@@ -511,31 +515,43 @@ parse_induction rule param = do
             ]
         let pr0@(LeadsTo fv0 _ _) = prog ! goal_lbl
             pr1@(LeadsTo fv1 _ _) = prog ! h0
-        (dir,var,bound) <- case find_cmd_arg 3 ["\\var"] hint of
+        dum <- case fv1 \\ fv0 of
+            [v] -> return v
+            _   -> left [Error (   "inductive formula should have one free "
+                                ++ "variable to record the variant") li]                    
+        var <- case find_cmd_arg 3 ["\\var"] hint of
             Just (_,_,[var,dir,bound],_) -> toEither $ do
-                var   <- fromEither ztrue $ parse_expr' 
-                        (parser `with_vars` symbol_table fv0)
-                               { expected_type = Just int }
-                        var
-                bound <- fromEither ztrue $ parse_expr' -- m WithFreeDummies bound
-                        parser { free_dummies = True
-                               , expected_type = Just int }
-                        bound
                 dir  <- case map toLower $ concatMap flatten dir of
                     "up"   -> return Up
                     "down" -> return Down
                     _      -> do
                         tell [Error "expecting a direction for the variant" li]
                         return (error "induction: unreadable")
-                return (dir,var,bound)
+                var   <- fromEither ztrue $ parse_expr' 
+                        (parser `with_vars` symbol_table fv0)
+                               { free_dummies = True
+                               , expected_type = Nothing }
+                        var
+                bound <- fromEither ztrue $ parse_expr' -- m WithFreeDummies bound
+                        parser { free_dummies = True
+                               , expected_type = Just (type_of var) }
+                        bound
+                let is_set = zcast (set_type gA) (Right var)
+                if type_of var == int then
+                    return (IntegerVariant dum var bound dir)
+                else if isRight is_set then
+                    return (SetVariant dum var bound dir)
+                else do
+                    tell [Error 
+                        (format "invalid variant type\n\tExpecting: set or integer\n\tActual:  {1}" 
+                            (type_of var))
+                        li]
+                    return ($myError)
+                -- return (dir,var,bound)
             Nothing -> left [Error "expecting a variant" li]
             _ -> left [Error "invalid variant" li]
-        dum <- case fv1 \\ fv0 of
-            [v] -> return v
-            _   -> left [Error (   "inductive formula should have one free "
-                                ++ "variable to record the variant") li]                    
         add_proof_edge goal_lbl [h0]
-        return $ Rule (Induction pr0 h0 pr1 (IntegerVariant dum var bound dir))
+        return $ Rule (Induction pr0 h0 pr1 var)
 
 instance RefRule ScheduleChange where 
     rule_name     r = 

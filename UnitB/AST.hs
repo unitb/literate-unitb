@@ -395,27 +395,31 @@ data Direction = Up | Down
 instance NFData Direction where
 
 data Variant = 
---        SetVariant Var Expr Expr Direction
-        IntegerVariant Var Expr Expr Direction
+        SetVariant     Var Expr Expr Direction
+      | IntegerVariant Var Expr Expr Direction
     deriving (Eq,Show)
 
 instance NFData Variant where
     rnf (IntegerVariant vs p q d) = rnf (vs,p,q,d)
+    rnf (SetVariant vs p q d) = rnf (vs,p,q,d)
 
 variant_equals_dummy :: Variant -> Expr
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
+variant_equals_dummy (SetVariant d var _ _) = Word d `zeq` var
 
 variant_decreased :: Variant -> Expr
---variant_decreased (SetVariant d var b Up)       = variant_decreased $ SetVariant d var b Down
+variant_decreased (SetVariant d var _ Up)       = fromJust $ Right (Word d) `zsubset` Right var
 variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` var
---variant_decreased (SetVariant d var _ Down)     = error "set variants unavailable"
+variant_decreased (SetVariant d var _ Down)     = fromJust $ Right var `zsubset` Right (Word d)
 variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 
 variant_bounded :: Variant -> Expr
 --variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
+variant_bounded (SetVariant _ var b Down) = fromJust $ Right b `zsubset` Right var
+variant_bounded (SetVariant _ var b Up)   = fromJust $ Right var `zsubset` Right b
 
 data Rule = forall r. RefRule r => Rule r
     deriving Typeable
