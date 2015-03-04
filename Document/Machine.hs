@@ -99,8 +99,7 @@ refinement_parser = fromList
 
     -- Remove alternatives
 data HintBuilder = 
-        HintBuilder [LatexDoc] Machine
-        | HintBuilderDecl [LatexDoc] MachineId MachinePh2
+        HintBuilderDecl [LatexDoc] MachineId MachinePh2
 
 ensure :: ProgressProp 
        -> HintBuilder
@@ -110,22 +109,12 @@ ensure prog@(LeadsTo fv _ _) hint lbls = do
         let vs = symbol_table fv
         lbls' <- bind  "Expected non empty list of events"
                     $ NE.nonEmpty lbls
-        hint <- case hint of
-            HintBuilder thint m -> do
-                hint <- toEither $ tr_hint m vs lbls thint empty_hint
-                _    <- bind_all lbls
-                    (format "event {0} is undeclared") 
-                    (`M.lookup` events m)
-                return hint
-            HintBuilderDecl thint m p2 -> do
-                hint <- toEither $ tr_hint' p2 m vs lbls' thint empty_hint
-                _    <- get_events p2 lbls
-                return hint
+        let HintBuilderDecl thint m p2 = hint
+        hint <- tr_hint p2 m vs lbls' thint
+        _    <- get_events p2 lbls
         return $ Ensure prog lbls hint
 
 instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
-    parse_rule (f,_) xs rule param@(RuleParserParameter m _ _ _ _ hint) = do
-        parse_rule (f (HintBuilder hint m),()) xs rule param
     parse_rule (f,_) xs rule param@(RuleParserDecl p2 m _ _ _ _ _ hint _) = do
         parse_rule (f (HintBuilderDecl hint m p2),()) xs rule param
 
@@ -1000,6 +989,24 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
                         
+tr_hint :: MachinePh2
+        -> MachineId
+        -> Map String Var
+        -> NonEmpty Label
+        -> [LatexDoc]
+        -> M TrHint
+tr_hint p2 m vs lbls thint = do
+    tr@(TrHint wit _)  <- toEither $ tr_hint' p2 m vs lbls thint empty_hint
+    evs <- get_events p2 $ NE.toList lbls
+    let vs = map (view pIndices p2 !) evs
+        err e ind = ( not $ M.null diff
+                    , format "A witness is needed for {0} in event '{1}'" 
+                        (intercalate "," $ keys diff) e)
+            where
+                diff = ind `M.difference` wit
+    toEither $ error_list 
+        $ zipWith err evs vs
+    return tr
 
 tr_hint' :: MachinePh2
          -> MachineId
@@ -1020,17 +1027,30 @@ tr_hint' p2 _m fv lbls = visit_doc []
                     (format "'{0}' is not an index of '{1}'" x) 
                     (\e -> x `M.lookup` (inds ! e))
                 let Var _ t = head vs
+                    ind = prime $ Var x t
                 expr <- parse_expr' 
                     (machine_parser p2 `with_vars` fv) 
                         { expected_type = Just t }
                     texExpr
-                -- expr <- get_expr_with_ctx m 
-                --     (Context M.empty vs M.empty M.empty M.empty) xs
-                -- toEither $ error_list $ map (\evt ->
-                --     ( not $ x `member` indices evt 
-                --     , format "'{0}' is not an index of '{1}'" x lbls )
-                --     ) evts
-                return $ TrHint (insert x expr ys) z)
+                return $ TrHint (insert x (t, Word ind `zeq` expr) ys) z)
+        , ( "\\witness"
+          , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
+                evs <- get_events p2 $ NE.toList lbls
+                -- evts <- bind_all lbls
+                --     (format "'{1}' is not an event of '{0}'" $ _name m)
+                --     (`M.lookup` events m)
+                let inds = event_indices p2
+                vs <- bind_all evs 
+                    (format "'{0}' is not an index of '{1}'" x) 
+                    (\e -> x `M.lookup` (inds ! e))
+                let Var _ t = head vs
+                    ind = prime $ Var x t
+                    x'  = x ++ "'"
+                expr <- parse_expr' 
+                    (machine_parser p2 `with_vars` insert x' ind fv) 
+                        -- { expected_type = Just t }
+                    texExpr
+                return $ TrHint (insert x (t, expr) ys) z)
         , ( "\\lt"
           , CmdBlock $ \(One prog) (TrHint ys z) -> do
                 let msg = "Only one progress property needed for '{0}'"
@@ -1041,34 +1061,6 @@ tr_hint' p2 _m fv lbls = visit_doc []
                 return $ TrHint ys (Just prog))
         ]
 
-tr_hint :: Machine
-        -> Map String Var
-        -> [Label]
-        -> [LatexDoc]
-        -> TrHint
-        -> RWS LineInfo [Error] System TrHint
-tr_hint m vs lbls = visit_doc []
-        [ ( "\\index"
-          , CmdBlock $ \(String x, xs) (TrHint ys z) -> do
-                evts <- bind_all lbls
-                    (format "'{1}' is not an event of '{0}'" $ _name m)
-                    (`M.lookup` events m)
-                expr <- get_expr_with_ctx m 
-                    (Context M.empty vs M.empty M.empty M.empty) xs
-                toEither $ error_list $ map (\evt ->
-                    ( not $ x `member` indices evt 
-                    , format "'{0}' is not an index of '{1}'" x lbls )
-                    ) evts
-                return $ TrHint (insert x expr ys) z)
-        , ( "\\lt"
-          , CmdBlock $ \(One prog) (TrHint ys z) -> do
-                let msg = "Only one progress property needed for '{0}'"
-                toEither $ error_list 
-                    [ ( not $ MM.isNothing z
-                      , format msg lbls )
-                    ]
-                return $ TrHint ys (Just prog))
-        ]
 
 check_types :: Either [String] a -> EitherT [Error] (RWS LineInfo [Error] System) a    
 check_types c = EitherT $ do
@@ -1282,8 +1274,7 @@ transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
                 ds = dummy_vars p2
             evts' <- bind "Expecting non-empty list of events"
                     $ NE.nonEmpty evts
-            hint  <- toEither $ tr_hint'
-                            p2 m fv evts' hint empty_hint
+            hint  <- tr_hint p2 m fv evts' hint
             let prop = Transient fv tr evts hint
             li <- lift ask
             return [(lbl,TransientProp prop Local li)]

@@ -43,6 +43,9 @@ test = test_cases
             , (StringCase "test 10, duplicate refinement of liveness properties"
                 (find_errors path10)
                 result10)
+            , StringCase "test 11, missing witness"
+                (find_errors path11)
+                result11
             ]            
 
 result0 :: String
@@ -396,6 +399,11 @@ result4 = unlines
     , "  o  m1/m0:push:right/WD/GRD"
     , "  o  m1/m1:prog0/PROG/WD/lhs"
     , "  o  m1/m1:prog0/PROG/WD/rhs"
+    , "  o  m1/m1:prog0/REF/ensure/m1/SAF/WD/lhs"
+    , "  o  m1/m1:prog0/REF/ensure/m1/SAF/WD/rhs"
+    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WD"
+    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WD/witness/r"
+    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WFIS/r/r@prime"
     , "  o  m1/m1:prog0/REF/ensure/m1/TR/m0:push:left/EN"
     , "  o  m1/m1:prog0/REF/ensure/m1/TR/m0:push:left/NEG"
     , "  o  m1/m1:prog0/REF/ensure/m1/m0:pop:left:empty/SAF"
@@ -406,6 +414,11 @@ result4 = unlines
     , "  o  m1/m1:prog0/REF/ensure/m1/m0:push:right/SAF"
     , "  o  m1/m1:prog1/PROG/WD/lhs"
     , "  o  m1/m1:prog1/PROG/WD/rhs"
+    , "  o  m1/m1:prog1/REF/ensure/m1/SAF/WD/lhs"
+    , "  o  m1/m1:prog1/REF/ensure/m1/SAF/WD/rhs"
+    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WD"
+    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WD/witness/r"
+    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WFIS/r/r@prime"
     , "  o  m1/m1:prog1/REF/ensure/m1/TR/m0:push:right/EN"
     , "  o  m1/m1:prog1/REF/ensure/m1/TR/m0:push:right/NEG"
     , "  o  m1/m1:prog1/REF/ensure/m1/m0:pop:left:empty/SAF"
@@ -416,6 +429,11 @@ result4 = unlines
     , "  o  m1/m1:prog1/REF/ensure/m1/m0:push:right/SAF"
     , "  o  m1/m1:prog2/PROG/WD/lhs"
     , "  o  m1/m1:prog2/PROG/WD/rhs"
+    , "  o  m1/m1:prog2/REF/ensure/m1/SAF/WD/lhs"
+    , "  o  m1/m1:prog2/REF/ensure/m1/SAF/WD/rhs"
+    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WD"
+    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WD/witness/r"
+    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WFIS/r/r@prime"
     , "  o  m1/m1:prog2/REF/ensure/m1/TR/leadsto"
     , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:empty/EN"
     , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:empty/NEG"
@@ -429,6 +447,11 @@ result4 = unlines
     , "  o  m1/m1:prog2/REF/ensure/m1/m0:push:right/SAF"
     , "  o  m1/m1:prog3/PROG/WD/lhs"
     , "  o  m1/m1:prog3/PROG/WD/rhs"
+    , "  o  m1/m1:prog3/REF/ensure/m1/SAF/WD/lhs"
+    , "  o  m1/m1:prog3/REF/ensure/m1/SAF/WD/rhs"
+    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WD"
+    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WD/witness/r"
+    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WFIS/r/r@prime"
     , "  o  m1/m1:prog3/REF/ensure/m1/TR/leadsto"
     , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/EN"
     , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
@@ -440,7 +463,7 @@ result4 = unlines
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:right:non:empty/SAF"
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:left/SAF"
     , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:right/SAF"
-    , "passed 179 / 179"
+    , "passed 199 / 199"
     ]
 
     -- enablement non-empty
@@ -523,6 +546,7 @@ result5 = unlines
     , "             ( (pfun Req Val)"
     , "               (pfun Req Val) )"
     , "             (pfun Req Val))"
+    , "(declare-fun r@param () Req)"
     , "(declare-fun ran@@Int@@Val ( (pfun Int Val) ) (set Val))"
     , "(declare-fun ran@@Req@@Val ( (pfun Req Val) ) (set Val))"
     , "(declare-fun set@@Int@@Val ( (pfun Int Val) ) (set Val))"
@@ -589,7 +613,6 @@ result5 = unlines
     , "            (set (pfun Int Val))"
     , "            ( (as const (set (pfun Int Val)))"
     , "              false ))"
-    , "(define-fun r@param () Req r)"
     , "(define-fun set-diff@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -1235,6 +1258,7 @@ result5 = unlines
     , "                          (intervalL m p)))"
     , "                   :pattern"
     , "                   ( (union (intervalL m n) (intervalL n p)) ))))"
+    , "(assert (= r@param r))"
     , "; m0:inv0"
     , "(assert (elem@Open@@pfun@@Int@@Val@Close qe (tfun@@Int@@Val (intervalR p q) Val)))"
     , "; m0:inv1"
@@ -1332,6 +1356,7 @@ result6 = unlines
     , "             ( (pfun Req Val)"
     , "               (pfun Req Val) )"
     , "             (pfun Req Val))"
+    , "(declare-fun r@param () Req)"
     , "(declare-fun ran@@Int@@Val ( (pfun Int Val) ) (set Val))"
     , "(declare-fun ran@@Req@@Val ( (pfun Req Val) ) (set Val))"
     , "(declare-fun set@@Int@@Val ( (pfun Int Val) ) (set Val))"
@@ -1398,7 +1423,6 @@ result6 = unlines
     , "            (set (pfun Int Val))"
     , "            ( (as const (set (pfun Int Val)))"
     , "              false ))"
-    , "(define-fun r@param () Req r)"
     , "(define-fun set-diff@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -2044,6 +2068,7 @@ result6 = unlines
     , "                          (intervalL m p)))"
     , "                   :pattern"
     , "                   ( (union (intervalL m n) (intervalL n p)) ))))"
+    , "(assert (= r@param r))"
     , "; m0:inv0"
     , "(assert (elem@Open@@pfun@@Int@@Val@Close qe (tfun@@Int@@Val (intervalR p q) Val)))"
     , "; m0:inv1"
@@ -2141,6 +2166,7 @@ result7 = unlines
     , "             ( (pfun Req Val)"
     , "               (pfun Req Val) )"
     , "             (pfun Req Val))"
+    , "(declare-fun r@param () Req)"
     , "(declare-fun ran@@Int@@Val ( (pfun Int Val) ) (set Val))"
     , "(declare-fun ran@@Req@@Val ( (pfun Req Val) ) (set Val))"
     , "(declare-fun set@@Int@@Val ( (pfun Int Val) ) (set Val))"
@@ -2207,7 +2233,6 @@ result7 = unlines
     , "            (set (pfun Int Val))"
     , "            ( (as const (set (pfun Int Val)))"
     , "              false ))"
-    , "(define-fun r@param () Req r)"
     , "(define-fun set-diff@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -2853,6 +2878,7 @@ result7 = unlines
     , "                          (intervalL m p)))"
     , "                   :pattern"
     , "                   ( (union (intervalL m n) (intervalL n p)) ))))"
+    , "(assert (= r@param r))"
     , "; SKIP:p"
     , "(assert (= p@prime p))"
     , "; SKIP:popR"
@@ -2979,6 +3005,7 @@ result8 = unlines
     , "             ( (pfun Req Val)"
     , "               (pfun Req Val) )"
     , "             (pfun Req Val))"
+    , "(declare-fun r@param () Req)"
     , "(declare-fun ran@@Int@@Val ( (pfun Int Val) ) (set Val))"
     , "(declare-fun ran@@Req@@Val ( (pfun Req Val) ) (set Val))"
     , "(declare-fun set@@Int@@Val ( (pfun Int Val) ) (set Val))"
@@ -3045,7 +3072,6 @@ result8 = unlines
     , "            (set (pfun Int Val))"
     , "            ( (as const (set (pfun Int Val)))"
     , "              false ))"
-    , "(define-fun r@param () Req r)"
     , "(define-fun set-diff@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -3691,6 +3717,7 @@ result8 = unlines
     , "                          (intervalL m p)))"
     , "                   :pattern"
     , "                   ( (union (intervalL m n) (intervalL n p)) ))))"
+    , "(assert (= r@param r))"
     , "; SKIP:p"
     , "(assert (= p@prime p))"
     , "; SKIP:popR"
@@ -4582,4 +4609,13 @@ result10 = unlines
     , "\tm1:prog3: (223,4)"
     , "\tm1:prog3: (254,1)"
     , ""
+    ]
+
+path11 :: FilePath 
+path11 = "tests/lock-free deque/main6-err1.tex"
+
+result11 :: String
+result11 = unlines
+    [ "error (223,4): A witness is needed for r in event 'm0:pop:left:empty'"
+    , "error (223,4): A witness is needed for r in event 'm0:pop:left:non:empty'"
     ]

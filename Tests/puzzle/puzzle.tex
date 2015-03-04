@@ -65,7 +65,26 @@
 	&\progress{prog2}
 		{ \Pcs \setminus vs = V }
 		{ (\Pcs \setminus vs \subset V) \1\lor vs = \Pcs }
+\refine{prog2}{psp}{prog3,saf2}{}
+	&\progress{prog3}
+		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
+		{\neg \Pcs \setminus vs = V} \\
+	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
+\refine{prog3}{ensure}{visit}{ [\witness{p}{\neg p' \in vs}] }
 \end{align*}
+
+\newevent{visit}{visit}
+
+\[ \indices{visit}{p : \Pcs} \]
+
+\begin{align}
+% 	\cschedule{visit}{sch0}{}
+	\evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
+\end{align}
+
+\weakento{visit}{default}{}
+
+\input{m1_visit}
 
 \end{machine}
 

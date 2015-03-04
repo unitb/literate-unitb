@@ -47,14 +47,7 @@ add_proof_edge x xs = do
         edges = zip (repeat x) xs
 
 data RuleParserParameter = 
-    RuleParserParameter
-        Machine 
-        (Map Label ProgressProp)
-        (Map Label SafetyProp)
-        Label
-        [Label]
-        [LatexDoc]
-    | RuleParserDecl 
+    RuleParserDecl 
         MachinePh2
         MachineId
         (Map Label ProgressProp)
@@ -98,31 +91,24 @@ instance RefRule a => RuleParser (a,()) where
             parse_rule (cmd,()) xs y z
 
 getProgress :: RuleParserParameter -> Map Label ProgressProp
-getProgress (RuleParserParameter _ prog _ _ _ _) = prog
 getProgress (RuleParserDecl _ _ prog _ _ _ _ _ _) = prog
 
 getSafety :: RuleParserParameter -> Map Label SafetyProp
-getSafety (RuleParserParameter _ _ saf _ _ _) = saf
 getSafety (RuleParserDecl _ _ _ saf _ _ _ _ _) = saf
 
 getTransient :: RuleParserParameter -> Map Label Transient
-getTransient (RuleParserParameter m _ _ _ _ _) = transient $ props m
 getTransient (RuleParserDecl _ _ _ _ tr _ _ _ _) = tr
 
 getGoal :: RuleParserParameter -> Label
-getGoal (RuleParserParameter _ _ _ goal_lbl _ _) = goal_lbl
 getGoal (RuleParserDecl _ _ _ _ _ goal_lbl _ _ _) = goal_lbl
 
 getHypotheses :: RuleParserParameter -> [Label]
-getHypotheses (RuleParserParameter _ _ _ _ hyps_lbls _) = hyps_lbls
 getHypotheses (RuleParserDecl _ _ _ _ _ _ hyps_lbls _ _) = hyps_lbls
 
 getHint :: RuleParserParameter -> [LatexDoc]
-getHint (RuleParserParameter _ _ _ _ _ hint) = hint
 getHint (RuleParserDecl _ _ _ _ _ _ _ hint _) = hint
 
 getParser :: RuleParserParameter -> ParserSetting
-getParser (RuleParserParameter m _ _ _ _ _) = machine_setting m
 getParser (RuleParserDecl _ _ _ _ _ _ _ _ parser) = parser
 
 instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
@@ -249,10 +235,14 @@ data Ensure = Ensure ProgressProp [Label] TrHint
 instance RefRule Ensure where
     rule_name _ = "ensure"
     refinement_po (Ensure (LeadsTo vs p q) lbls hint) m = do
-            prop_saf m ("", Unless vs p q Nothing)
-            prop_tr m ("", Transient (symbol_table vs) 
+            let saf = Unless vs p q Nothing
+                tr  = Transient (symbol_table vs) 
                                              (p `zand` znot q) lbls 
-                                             hint )
+                                             hint 
+            prop_tr m ("", tr)
+            tr_wd_po m ("",tr)
+            prop_saf m ("", saf)
+            saf_wd_po m ("", saf)
     hyps_labels _ = []
     supporting_evts (Ensure _ hyps _) = map EventId hyps
 

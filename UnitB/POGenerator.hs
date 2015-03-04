@@ -5,7 +5,7 @@ module UnitB.POGenerator
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
-    , definitions, existential )
+    , definitions, existential, functions )
 where
 
 import Logic.Expr
@@ -92,6 +92,10 @@ context :: Context -> State POParam ()
 context new_ctx = do
     ctx <- gets ctx
     modify $ \p -> p { ctx = new_ctx `merge_ctx` ctx }
+
+functions :: Map String Fun -> State POParam ()
+functions new_funs = do
+    context $ Context M.empty M.empty new_funs M.empty M.empty
 
 definitions :: Map String Def -> State POParam ()
 definitions new_defs = do

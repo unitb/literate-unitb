@@ -7,6 +7,7 @@ module UnitB.PO
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , verify_all, prop_saf, prop_tr
+    , tr_wd_po, saf_wd_po
     , check, verify_changes, verify_machine
     , smoke_test_machine, dump, used_types )
 where
@@ -239,10 +240,13 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                 prefix_label $ composite_label [tr_lbl, pname]
                 ctx 
                 named_hyps $ invariants m)
-            $ existential inds $ do
-                zipWithM_ stuff evt_lbl es
-                following
-                -- emit_goal [] $ exist_ind (zall $ [enablement,fa_negation] ++ map snd following)
+            $ do
+                with (named_hyps $ singleton pname xp) $
+                    forM_ (toList hint) $ \(v,(t,e)) -> do
+                        emit_exist_goal ["WFIS",label v] [prime $ Var v t] [e]
+                existential inds $ do
+                    zipWithM_ stuff evt_lbl es
+                    following
     where
         TrHint hint lt_fine = tr_hint
         stuff evt_lbl evt = 
@@ -262,9 +266,13 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                             (          xp 
                             `zimplies` (new_dummy ind $ zall (M.elems sch0)))
 
-                new_defs = flip map (M.toList ind1) 
-                        $ \(x,Var n t) -> (n ++ "@param", Def [] (n ++ "@param") [] t $ hint ! x)
-                def_ctx = definitions (M.fromList new_defs)
+                new_defs = flip map (M.elems ind1) 
+                        $ \(Var n t) -> (n ++ "@param", Fun [] (n ++ "@param") [] t)
+                new_hyps = flip map (M.toList hint)
+                        $ \(x,(_,e)) -> rename (x ++ "@prime") (x ++ "@param") e
+                def_ctx = do
+                    POG.functions (M.fromList new_defs)
+                    POG.nameless_hyps new_hyps
                 negation = with (do param_ctx
                                     named_hyps 
                                         $ M.map 
@@ -406,7 +414,7 @@ fis_po m (lbl, evt) =
         pvar = map prime $ M.elems $ variables m
 
 tr_wd_po :: Machine -> (Label, Transient) -> M ()
-tr_wd_po  m (lbl, Transient vs p _ _) = 
+tr_wd_po  m (lbl, Transient vs p _ (TrHint wit _)) = 
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "TR"
@@ -414,6 +422,15 @@ tr_wd_po  m (lbl, Transient vs p _ _) =
                  named_hyps $ invariants m) $
             do  emit_goal ["WD"]
                     $ well_definedness $ zforall (elems vs) ztrue p
+                forM_ (toList wit) $ \(n,(t,e)) -> 
+                    with (do
+                        POG.variables $ 
+                                    symbol_table [prime $ Var n t]
+                            `M.union` vs
+                        POG.named_hyps $ singleton lbl p
+                        ) $
+                    emit_goal ["WD","witness",label n] $ 
+                        well_definedness e
 
 prog_wd_po :: Machine -> (Label, ProgressProp) -> M ()
 prog_wd_po m (lbl, LeadsTo vs p q) = 

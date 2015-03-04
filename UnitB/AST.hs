@@ -367,7 +367,7 @@ data Constraint =
 instance NFData Constraint where
     rnf (Co vs p) = rnf (vs,p)
 
-data TrHint = TrHint (Map String Expr) (Maybe Label)
+data TrHint = TrHint (Map String (Type,Expr)) (Maybe Label)
     deriving (Eq,Ord,Show)
 
 instance NFData TrHint where

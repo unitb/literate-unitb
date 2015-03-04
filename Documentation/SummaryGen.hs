@@ -21,6 +21,7 @@ import Control.Monad.Trans.Reader (ReaderT,runReaderT)
 
 import Data.List (intercalate)
 import Data.Map as M hiding (map)
+import qualified Data.Map as M
 import Data.Maybe
 
 import System.FilePath
@@ -235,12 +236,12 @@ transient_sum m = do
             let TrHint sub lt = hint
                 evts' = intercalate "," $ map (format "\\ref{{0}}") evts
             sub' <- forM (toList sub) $ \(v,p) -> do
-                p <- get_string' p
+                p <- get_string' $ snd p
                 return (v,p)
             let isNotIdent n (Word (Var n' _)) = n /= n'
                 isNotIdent _ _ = True
                 sub'' 
-                    | M.null $ M.filterWithKey isNotIdent sub = ""
+                    | M.null $ M.filterWithKey isNotIdent $ M.map snd sub = ""
                     | otherwise  = format ": [{0}]" $ intercalate ", " $ map (uncurry $ format "{0} := {1}") $ sub'
                 lt' = maybe "" (format ", with \\eqref{{0}}") lt
             p <- get_string' p

@@ -60,6 +60,7 @@ result1 = unlines
     , "  o  m1/INIT/WD"
     , "  o  m1/INV/WD"
     , "  o  m1/TR/m1:tr0/t@param"
+    , "  o  m1/TR/m1:tr1/WFIS/t/t@prime"
     , "  o  m1/TR/m1:tr1/m1:movein/EN"
     , "  o  m1/TR/m1:tr1/m1:movein/NEG"
     , "  o  m1/m0:enter/FIS/in@prime"
@@ -148,7 +149,8 @@ result1 = unlines
     , "  o  m1/m1:saf3/SAF/WD/rhs"
     , "  o  m1/m1:tr0/TR/WD"
     , "  o  m1/m1:tr1/TR/WD"
-    , "passed 94 / 94"
+    , "  o  m1/m1:tr1/TR/WD/witness/t"
+    , "passed 96 / 96"
     ]
 
 result2 :: String
@@ -159,6 +161,7 @@ result2 = unlines
     , "  o  m2/INIT/WD"
     , "  o  m2/INV/WD"
     , "  o  m2/TR/m2:tr0/t@param"
+    , "  o  m2/TR/m2:tr1/WFIS/t/t@prime"
     , "  o  m2/TR/m2:tr1/leadsto/lhs"
     , "  o  m2/TR/m2:tr1/leadsto/rhs"
     , "  o  m2/TR/m2:tr1/m1:moveout/EN"
@@ -270,7 +273,8 @@ result2 = unlines
     , "  o  m2/m2:saf2/SAF/WD/rhs"
     , "  o  m2/m2:tr0/TR/WD"
     , "  o  m2/m2:tr1/TR/WD"
-    , "passed 117 / 117"
+    , "  o  m2/m2:tr1/TR/WD/witness/t"
+    , "passed 119 / 119"
     ]
 
 path0 :: String
