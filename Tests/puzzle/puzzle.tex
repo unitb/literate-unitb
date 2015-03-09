@@ -85,6 +85,101 @@
 \weakento{visit}{default}{}
 
 \input{m1_visit}
+\input{m1_term}
+
+\end{machine}
+
+\begin{machine}{m2}
+\refines{m1}
+
+\[ \variable{ts : \set [\Pcs] } \]
+
+\begin{align}
+	\cschedule{term}{sch2}{ ts = \Pcs }
+\end{align}
+
+\replace{term}{sch1}{sch2}{}{prog4}{saf3}
+
+\begin{align}
+	\safety{saf3}{ ts = \Pcs }{ \neg vs = \Pcs } \\
+	\progress{prog4}{ \true }{ ts = \Pcs } \\
+	\invariant{inv1}{ ts \subseteq vs } \\
+	\initialization{in1}{ ts = \emptyset }
+\end{align}
+
+\[ \variable{ cs : \set [\Pcs] } \]
+
+\begin{align*}
+	\refine{prog4}{transitivity}{prog10,prog9}{}
+& \progress{prog10}{ \true }{ cs = \emptyset } \\
+& \progress{prog9}{ cs = \emptyset }{ ts = \Pcs }
+	\refine{prog9}{induction}{prog5}{ \var{ts}{up}{\Pcs} }
+& \progress{prog5}
+	 	{ cs = \emptyset \land ts = V }
+	 	{ (cs = \emptyset \land V \subset ts) \lor ts = \Pcs }
+	\refine{prog5}{PSP}{prog8,saf8}{}
+& \progress{prog8}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs }
+		{ cs = \emptyset \land \neg ts = V }
+\\& \safety{saf8}{ V \subseteq ts }{ ts = \Pcs }
+	\refine{prog8}{transitivity}{prog11,prog6,prog7}{}
+& \progress{prog11}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs }
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs } \\
+& \progress{prog6}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs }
+		{ ts = V \land \neg cs = \emptyset \land cs \subseteq \Pcs \setminus ts } \\
+& \progress{prog7}
+		{ ts = V \land \neg cs = \emptyset 
+				 \land cs \subseteq \Pcs \setminus ts }
+		{ cs = \emptyset \land \neg ts = V }
+	\refine{prog6}{ensure}{flick}{ \witness{p}{p' \in vs \setminus ts} }
+	\refine{prog7}{ensure}{count}{} % \witness{p}{ p' \in cs } }
+\end{align*}
+
+\begin{align*}
+	% \refine{prog10}{trading}{prog11}{}
+% & \progress{prog11}{ \neg cs = \emptyset }{ cs = \emptyset }
+	\refine{prog10}{ensure}{count}{} % \witness{p}{ p' \in cs } }
+\end{align*}
+
+\newevent{flick}{flick}
+\newevent{count}{count}
+
+\[ \indices{flick}{p : \Pcs} \]
+
+\begin{align}
+	\cschedule{flick}{sch0}{ cs = \emptyset } \\
+	\cschedule{flick}{sch1}{ \neg p \in ts } \\
+	\evguard{flick}{grd0}{ \neg p \in ts } \\
+	\evbcmeq{flick}{act0}{cs}{ \{ p \} }
+\end{align}
+
+\weakento{flick}{default}{sch0,sch1,sch2}
+
+\input{m2_term}
+\input{m2_flick}
+
+% \[ \indices{count}{p : \Pcs} \]
+
+\begin{align}
+	\invariant{inv2}{cs \subseteq vs} \\
+	\initialization{in2}{ cs = \emptyset } \\
+	\cschedule{count}{sch0}{ \neg cs = \emptyset } \\
+	% \cschedule{count}{sch1}{ cs \subseteq vs } \\
+	% \evguard{count}{grd0}{ cs \subseteq vs } \\
+	\evbcmeq{count}{act0}{cs}{\emptyset} \\
+	\evbcmeq{count}{act1}{ts}{ ts \bunion cs }
+\end{align}
+
+\weakento{count}{default}{sch0}
+
+\input{m2_count}
+
+\begin{align*}
+	\evguard{flick}{grd1}{p \in vs} \\
+	\cschedule{flick}{sch2}{p \in vs}
+\end{align*}
 
 \end{machine}
 

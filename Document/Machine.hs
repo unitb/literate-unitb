@@ -1160,12 +1160,12 @@ bcmeq_assgn :: MPipeline MachinePh2
 bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
             let _ = lbl :: Label
             ev <- get_event p2 ev_lbl
-            var <- bind
+            var@(Var _ t) <- bind
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (state_variables p2)
             xp <- parse_expr' 
                 (event_parser p2 ev) 
-                { expected_type = Nothing } xs
+                { expected_type = Just t } xs
             check_types
                 $ Right (Word var :: Expr) `mzeq` Right xp
             let act = Assign var xp
@@ -1189,11 +1189,11 @@ bcmin_assgn :: MPipeline MachinePh2
                     [(Label,ExprScope)]
 bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             ev <- get_event p2 evt
-            xp  <- parse_expr' (event_parser p2 ev)
-                    { expected_type = Nothing } xs
-            var <- bind
+            var@(Var _ t) <- bind
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (state_variables p2)
+            xp  <- parse_expr' (event_parser p2 ev)
+                    { expected_type = Just (set_type t) } xs
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right xp
             li <- lift ask

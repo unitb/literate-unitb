@@ -124,7 +124,7 @@ result1 = unlines
     , "  o  m1/m1:prog1/PROG/WD/lhs"
     , "  o  m1/m1:prog1/PROG/WD/rhs"
     , "  o  m1/m1:prog1/REF/transitivity/lhs"
-    , "  o  m1/m1:prog1/REF/transitivity/mhs"
+    , "  o  m1/m1:prog1/REF/transitivity/mhs/m1:prog4/m1:prog3"
     , "  o  m1/m1:prog1/REF/transitivity/rhs"
     , "  o  m1/m1:prog2/PROG/WD/lhs"
     , "  o  m1/m1:prog2/PROG/WD/rhs"

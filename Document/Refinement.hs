@@ -30,14 +30,15 @@ import Control.Monad.RWS as RWS
 import Data.Char
 import Data.Either
 import Data.List as L ( intercalate, (\\), null )
+import qualified Data.List.NonEmpty as NE
 import Data.Map as M hiding ( map, (\\) )
 import Data.Maybe
 import Data.Set as S hiding ( fromList, member, map, (\\) )
 import Data.Typeable
 
+import Utilities.Error
 import Utilities.Format
 import Utilities.Syntactic
-import Utilities.Error
 
 add_proof_edge :: MonadState System m 
                => Label -> [Label] -> m ()
@@ -174,6 +175,15 @@ instance RefRule a => RuleParser ([Label] -> ERWS a, ()) where
 --    parse_rule _ [] rule _ = do
 --                li <- lift $ ask
 --                left [Error (format "refinement ({0}): expecting more properties" rule) li]
+
+instance RefRule a => RuleParser (NE.NonEmpty (Label,ProgressProp) -> a,()) where
+    parse_rule (f,_) xs rule param = do
+            li <- ask
+            when (L.null xs)
+                $ left [Error (format "refinement ({0}): expecting at least one progress property" rule) li]
+            parse_rule (g,()) xs rule param
+        where
+            g = f . NE.fromList
 
 instance RefRule a => RuleParser ([(Label,ProgressProp)] -> a,()) where
     parse_rule (f,_) xs rule param = do
@@ -406,31 +416,39 @@ instance RefRule NegateDisjunct where
 instance NFData NegateDisjunct where
     rnf (NegateDisjunct p lbl q) = rnf (p,lbl,q)
 
-data Transitivity = Transitivity ProgressProp Label ProgressProp Label ProgressProp
+data Transitivity = Transitivity ProgressProp (NE.NonEmpty (Label,ProgressProp))
     deriving (Eq,Typeable,Show)
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
-    hyps_labels (Transitivity _ l0 _ l1 _) = map PId [l0,l1]
+    hyps_labels (Transitivity _ xs) = map (PId . fst) $ NE.toList xs
     supporting_evts _ = []
     refinement_po 
             (Transitivity
                     (LeadsTo fv0 p0 q0)
-                    _ (LeadsTo fv1 p1 q1)
-                    _ (LeadsTo fv2 p2 q2))
+                    xs )
+                    -- (NonEmpty firstLT xs))
+                    -- _ (LeadsTo fv1 p1 q1)
+                    -- _ (LeadsTo fv2 p2 q2))
             m = do
+                let (LeadsTo fv1 p1 _) = snd $ NE.head xs
+                    (LeadsTo fv2 _ q2) = snd $ NE.last xs
+                    conseq = zip (NE.toList xs) (drop 1 $ NE.toList xs)
                 assert m "lhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             p0 `zimplies` p1 )
-                assert m "mhs" ( 
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            q1 `zimplies` p2 )
+                forM_ conseq $ \(p,q) -> do
+                    let (l1, LeadsTo fv1 _ q1) = p
+                        (l2, LeadsTo fv2 p2 _) = q
+                    assert m (show $ "mhs" </> l1 </> l2) ( 
+                        zforall (fv0 ++ fv1 ++ fv2) ztrue $
+                                q1 `zimplies` p2 )
                 assert m "rhs" ( 
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q2 `zimplies` q0 )
 
 instance NFData Transitivity where
-    rnf (Transitivity p l0 q l1 r) = rnf (p,l0,q,l1,r)
+    rnf (Transitivity p xs) = rnf (p,xs)
 
 data PSP = PSP ProgressProp Label ProgressProp SafetyProp
     deriving (Eq,Typeable,Show)
