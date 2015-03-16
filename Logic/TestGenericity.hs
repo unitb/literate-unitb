@@ -16,8 +16,6 @@ import Test.QuickCheck
 
 import Tests.UnitTest
 
-import Utilities.Trace
-
 left :: Type -> Type
 left  = suffix_generics "1"
 
@@ -44,17 +42,11 @@ prop_common_symm t0 t1 = common t0 t1 == common t1 t0
 
 counter_ex2_common_symm :: Bool
 counter_ex2_common_symm = 
-        trace (show $ common t0 t1) $
-        trace (show $ common t1 t0) $
         prop_common_symm t0 t1
     where
         _a = GENERIC "a"
-        -- t0 = _
-        -- t1 = _
-        -- Array [_a,_a]
         pfun = fun_type
         t0 = array _a _a
-        -- Array [_a,pfun [pfun [_a,Int],Real]]
         t1 = array _a (pfun (pfun _a int) real)
 
 

@@ -33,7 +33,7 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Lambda
-import Logic.Expr.Genericity ( Generic, variables )
+import Logic.Expr.Genericity
 import Logic.Proof
 
     -- Libraries

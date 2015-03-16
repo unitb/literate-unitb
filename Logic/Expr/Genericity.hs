@@ -3,7 +3,19 @@
 {-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes           #-}
-module Logic.Expr.Genericity where
+module Logic.Expr.Genericity 
+    ( TypeSystem2(..)
+    , typ_fun1, typ_fun2, typ_fun3
+    , common, check_type
+    , unify, normalize_generics
+    , ambiguities, suffix_generics
+    , specialize
+    , Generic(..)
+    , strip_generics, var_strip_generics
+    , fun_strip_generics, def_strip_generics
+    , ctx_strip_generics, type_strip_generics
+    , OneExprP, TwoExprP, ThreeExprP, FourExprP )
+where
 
     -- Modules
 import Logic.Expr.Expr
@@ -11,6 +23,7 @@ import Logic.Expr.Classes
 import Logic.Expr.Type
 
     -- Libraries
+import Control.Arrow
 import Control.Monad
 
 import           Data.Either
@@ -28,14 +41,6 @@ import Utilities.Format
 instance Show a => Show (G.SCC a) where
     show (G.AcyclicSCC v) = "AcyclicSCC " ++ show v
     show (G.CyclicSCC vs) = "CyclicSCC " ++ show vs 
-
-data Unification = Uni
-    { l_to_r :: Map String GenericType
-    , edges  :: [(String,String)]
-    }
-
-empty_u :: Unification
-empty_u = Uni empty []
 
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
@@ -117,7 +122,8 @@ instance TypeSystem2 GenericType where
                 , "  actual type: {1}"
                 , "  expected type: {2} "
                 ]) e (type_of e) t :: String }
-            u <- maybe (Left [err_msg]) Right $ unify t $ type_of e
+            u <- maybe (Left [err_msg]) Right $ 
+                unify t $ type_of e
             return $ specialize_right u e
 
 check_all :: [Either [String] a] -> Either [String] [a]
@@ -227,95 +233,28 @@ typ_fun3 f@(Fun _ n ts t) mx my mz  = do
                     z (type_of z) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y,z] f
 
-unify_aux :: GenericType -> GenericType -> Unification -> Maybe Unification
-unify_aux (GENERIC x) t1 u
-        | not (x `member` l_to_r u)   = Just u 
-                { l_to_r = M.insert x t1 $ l_to_r u
-                , edges = [ (x,y) | y <- fv ] ++ edges u
-                }
-        | x `member` l_to_r u         = do
-            new_u <- unify_aux t1 (l_to_r u ! x) u
-            let new_t = instantiate (l_to_r new_u) t1
-            return new_u 
-                { l_to_r = M.insert x new_t $ l_to_r $ new_u 
-                , edges = [ (x,y) | y <- fv ] ++ edges u
-                }
-    where
-        fv = S.toList $ generics t1
-unify_aux t0 t1@(GENERIC _) u = unify_aux t1 t0 u
-unify_aux (VARIABLE x) (VARIABLE y) u
-        | x == y                = Just u
-        | otherwise             = Nothing
-unify_aux (Gen (USER_DEFINED x xs)) (Gen (USER_DEFINED y ys)) u
-        | x == y && length xs == length ys = foldM f u (zip xs ys)
-        | otherwise                        = Nothing
-    where
-        f u (x, y) = unify_aux x y u
-unify_aux _ _ _               = Nothing
-
+unify_aux :: [(GenericType,GenericType)] -> Maybe (Map String Type)
+unify_aux ( (GENERIC x, t1) : xs ) 
+        | t1 == GENERIC x = unify_aux xs
+        | x `S.member` generics t1 = Nothing
+        | otherwise       = do
+            let s = singleton x t1
+            r <- unify_aux $ map (instantiate s *** instantiate s) xs
+            -- let s' = singleton x $ instantiate r t1
+            return $ M.insert x (instantiate r t1) r
+unify_aux ( (t0, t1@(GENERIC _)) : xs ) = unify_aux $ (t1,t0) : xs
+unify_aux ( (VARIABLE x, VARIABLE y) : xs ) = do
+    guard (x == y)
+    unify_aux xs
+unify_aux ( (Gen (USER_DEFINED x xs), Gen (USER_DEFINED y ys)) : zs ) = do
+    guard $ x == y &&
+        length xs == length ys
+    unify_aux $ zip xs ys ++ zs
+unify_aux [] = return empty
+unify_aux _  = Nothing
 
 unify :: GenericType -> GenericType -> Maybe (Map String GenericType)
-unify t0 t1 = do
-        u <- unify_aux (suffix_generics "1" t0) (suffix_generics "2" t1) empty_u
-        let es = edges u
-        let vs = L.nub $ L.concat [ [x,y] | (x,y) <- es ]
-        let adj_list = toAdjList es
-            -- build an adjacency list. Excludes vertices with no neighbors
-
-        let compl    = map final $ toAdjList (adj_list ++ map g vs) -- :: [(String,String,[String])]
-            -- add the vertices with no neighbors
-
-        let m = l_to_r u
-        let top_order = reverse $ G.stronglyConnComp compl
-        
-            -- this is a loop that makes sure that a type
-            -- instantiation map can be applied in any 
-            -- order equivalently. If the result of unify_aux
-            -- gives a, b := f.X, g.a, with a,b type variables,
-            -- g and f type constructors and X a constant type,
-            -- the loop above replaces it with a, b := f.X, g.(f.X)
-            -- so that the application of the substitution 
-            -- eliminate a and b completely from a type.
-            --
-            -- the data structure is a graph with type
-            -- variables as vertices. There is an edge from a
-            -- to b if `m` maps a to a type that contains 
-            -- variable b.
-            --
-            -- the loop below traverses the graph in topological
-            -- order and modify `m', the result of unify_aux
-            -- so that, for each visited type variable, there is
-            -- no reference to it left in any of the types in `m'
-        foldM (\m cc -> 
-                case cc of
-                    G.AcyclicSCC v ->
-                        if v `member` m
-                            then return $ M.map (instantiate $ singleton v (m ! v)) m
-                            else return m
-                    _ -> Nothing
-            ) m top_order
-    where
-        final (x,xs) = (x, x, L.concat xs)
-        toAdjList xs = map f $ groupBy same_soure $ sort xs
-            -- from a list of edges, form a list of vertex adjacency
-
-        same_soure (x,_) (y,_) = x == y 
-        f ( (x,y):xs ) = (x,y:map snd xs)
-        f []           = error "Genericity.unify.f: expecting non empty argument"
-        g x = (x,[])
-
-    -- merge type instances
-merge_inst :: Map String GenericType -> Map String GenericType -> Maybe (Map String GenericType)
-merge_inst r0 r1 = foldWithKey h (Just M.empty) (M.map Just r0 `union` M.map Just r1)
-    where
-        union xs ys = unionWith g xs ys
-        g mx my = do
-                x <- mx
-                y <- my
-                guard (x == y)
-                return x
-        h k (Just x) (Just m) = Just $ M.insert k x m
-        h _ _ _               = Nothing
+unify t0 t1 = unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
 
 strip_generics :: Expr -> Maybe FOExpr
 strip_generics (Word v)    = do
@@ -506,15 +445,15 @@ normalize_generics expr = instantiate renaming expr
 instantiate_left :: Map String GenericType -> GenericType -> GenericType
 instantiate_left m t = instantiate m (suffix_generics "1" t)
 
-instantiate_right :: Map String GenericType -> GenericType -> GenericType
-instantiate_right m t = instantiate m (suffix_generics "2" t)
+_instantiate_right :: Map String GenericType -> GenericType -> GenericType
+_instantiate_right m t = instantiate m (suffix_generics "2" t)
 
     -- apply a type substitution to an expression
 specialize :: Map String GenericType -> Expr -> Expr
 specialize = instantiate
 
-specialize_left :: Map String GenericType -> Expr -> Expr
-specialize_left m e  = specialize m (rewrite_types "1" e)
+_specialize_left :: Map String GenericType -> Expr -> Expr
+_specialize_left m e  = specialize m (rewrite_types "1" e)
 
 specialize_right :: Map String GenericType -> Expr -> Expr
 specialize_right m e = specialize m (rewrite_types "2" e)

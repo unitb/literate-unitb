@@ -59,6 +59,10 @@ args opt file =
         , "-fwarn-missing-methods"
         , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
+        , "-package", "either-4.3"
+        , "-package", "mtl-2.1.3.1"
+        , "-package", "transformers-0.3.0.0"
+        , "-package", "exceptions-0.6.1"
         -- , "-v"
         ]
     where

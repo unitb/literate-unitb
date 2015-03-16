@@ -27,7 +27,7 @@ import UnitB.AST
 -- import Control.Applicative
 import Control.Arrow
 import Control.Parallel.Strategies
-import Control.Lens as L hiding (Action)
+import Control.Lens as L
 
 import Control.Monad.Reader.Class 
 import Control.Monad.State

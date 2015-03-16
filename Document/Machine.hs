@@ -48,7 +48,7 @@ import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS ( RWS, RWST, mapRWST )
 import qualified Control.Monad.Writer as W
 
-import Control.Lens as L hiding (Action,(|>),(<.>),(<|),indices,Context)
+import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
 import           Data.Either.Combinators

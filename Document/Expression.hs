@@ -8,7 +8,7 @@ where
 
     -- Modules
 import Latex.Scanner -- hiding (many)
-import Latex.Parser  hiding (Close,Open,Command)
+import Latex.Parser  hiding (Close,Open,BracketType(..),Command)
 
 import Logic.Expr
 import Logic.ExpressionStore as ES

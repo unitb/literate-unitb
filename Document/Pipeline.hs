@@ -128,13 +128,13 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f xs)
 
 brackets :: Int -> [LatexDoc] -> ([[LatexDoc]],[LatexDoc])
 brackets 0 xs = ([],xs)
-brackets n (Bracket True _ ys _:xs) = (ys:args,r)
+brackets n (Bracket Curly _ ys _:xs) = (ys:args,r)
     where
         (args,r) = brackets (n-1) xs
 brackets n zs@(Text xs:ys)
     | all isBlank xs = brackets n ys
     | otherwise      = ([],zs)
-brackets _ zs@(Bracket False _ _ _:_) = ([],zs)
+brackets _ zs@(Bracket Square _ _ _:_) = ([],zs)
 brackets _ zs@(Env _ _ _ _:_) = ([],zs)
 brackets _ [] = ([],[])
 

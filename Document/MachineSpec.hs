@@ -171,7 +171,7 @@ showExpr notation e = show_e e
 
 latex_of :: Machine -> Gen [LatexDoc]
 latex_of m = do
-        let m_name = Bracket True li 
+        let m_name = Bracket Curly li 
                            [ Text [TextBlock (show $ _name m) li] ] 
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
@@ -185,7 +185,7 @@ latex_of m = do
                         , (fun_type int int, "\\Int \\pfun \\Int")
                         ]
             cmd n args = Text [Command n li] : concatMap farg args
-            farg x = [ Bracket True li [ Text [TextBlock x li]
+            farg x = [ Bracket Curly li [ Text [TextBlock x li]
                                     ] li, blank ]
             var_decl (Var n t) = cmd "\\variable" [(n ++ " : " ++ show_t t)]
             decls = map var_decl $ M.elems $ variables m

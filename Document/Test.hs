@@ -132,7 +132,7 @@ instance Arbitrary LatexDoc where
                     return $ Env name (li 0 0) xs (li 0 0)
             else if n == 2
                 then do
-                    b  <- arbitrary :: Gen Bool
+                    b  <- elements [Curly,Square]
                     m    <- choose (0,6) :: Gen Int
                     xs   <- forM [1..m] (\_ -> arbitrary :: Gen LatexDoc)
                     return $ Bracket b (li 0 0) xs (li 0 0)
@@ -179,8 +179,8 @@ all_properties = Case "the parser is exception free"
 
 tree0 :: [LatexDoc]
 tree0 =         [   Env "machine" (li 0 0) 
-                    [   Bracket False (li 0 0) [] (li 0 0)
-                    ,   Bracket True (li 0 0) 
+                    [   Bracket Square (li 0 0) [] (li 0 0)
+                    ,   Bracket Curly (li 0 0) 
                         [   Text 
                             [   TextBlock "\FS1" (li 0 0)
                             ,   Blank "\n" (li 1 2)
@@ -191,13 +191,13 @@ tree0 =         [   Env "machine" (li 0 0)
                             [   TextBlock "N\183T\241N" (li 0 0)
                             ,   Blank "\n" (li 1 5)
                             ]
-                        ,   Bracket True (li 0 0) [] (li 0 0)
+                        ,   Bracket Curly (li 0 0) [] (li 0 0)
                         ,   Env "=F\129\216\RS\DC3\USG!0\150`\b\DC2I=}'\DC10\\\196-e9\STX\168\166Nt" (li 0 0) 
                             [   Env "\239\n\132\&0\DC4X\nNr>#a\EOT;\183\188\162\231!l\DC1\STXf\FS" (li 0 0) 
                                 [] (li 0 0)
                             ,   Text 
                                 [   TextBlock "9\"" (li 0 0)
-                                ,   Open False (li 1 2)
+                                ,   Open Square (li 1 2)
                                 ,   TextBlock "\178\179\&6\190s\155\ETB`" (li 1 3)
                                 ,   Blank "\n" (li 1 11)
                                 ]
@@ -211,7 +211,7 @@ tree0 =         [   Env "machine" (li 0 0)
                         [   TextBlock "\198\&6fH\231e" (li 0 0)
                         ,   Command "\\\203" (li 1 6)
                         ,   TextBlock "#" (li 1 8)
-                        ,   Open False (li 1 9)
+                        ,   Open Square (li 1 9)
                         ,   TextBlock "\167\SOH\242\&7\137iS" (li 1 10)
                         ,   Blank "\n" (li 1 17)
                         ]
@@ -238,13 +238,13 @@ tree =
             ]
         ,   Text 
             [   TextBlock "\198\&7\230m'\SIq7" (li 0 0)
-            ,   Close False (li 1 8)
+            ,   Close Square (li 1 8)
             ,   TextBlock "\177" (li 1 9)
-            ,   Close True (li 1 10)
+            ,   Close Curly (li 1 10)
             ,   TextBlock "1\173\180Bu\aHBJ\SI\ETX" (li 1 11)
             ,   Blank "\n" (li 1 22)
             ]
-        ,   Bracket False (li 0 0) 
+        ,   Bracket Square (li 0 0) 
         [   Text 
             [   TextBlock "\FSI" (li 0 0)
             ,   Blank " " (li 1 2)
@@ -254,7 +254,7 @@ tree =
         ,   Text 
             [   Blank "\t" (li 0 0)
             ,   TextBlock "pL/5\212\SOH\164\152),\SUBD\213\US~\199" (li 1 1)
-            ,   Close True (li 1 17)
+            ,   Close Curly (li 1 17)
             ,   TextBlock "s\209\184\228\239m\DC4" (li 1 18)
             ,   Blank "\n" (li 1 25)
             ]
@@ -274,7 +274,7 @@ tree =
                     ]
                 ,   Text 
                     [   TextBlock "c8\136\230\&3H%\SOHi\154wyu\143pc" (li 0 0)
-                    ,   Close False (li 1 16)
+                    ,   Close Square (li 1 16)
                     ,   TextBlock "9\147" (li 1 17)
                     ,   Blank "\r" (li 1 19)
                     ,   TextBlock "\224iZO\169\223" (li 1 20)
@@ -284,7 +284,7 @@ tree =
                 ] (li 0 0)
             ,   Text 
                 [   TextBlock "\186z;\139\254\SIk1wr\a~\131" (li 0 0)
-                ,   Close False (li 1 13)
+                ,   Close Square (li 1 13)
                 ,   TextBlock "l_\192!\170" (li 1 14)
                 ,   Blank "\n" (li 1 19)
                 ]

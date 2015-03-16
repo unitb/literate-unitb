@@ -5,7 +5,7 @@ import Latex.Scanner
 
     -- Libraries
 import Control.Monad
--- import Control.Monad.IO.Class
+import Control.Monad.IO.Class
 import Control.Monad.Trans -- .Class
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
@@ -27,9 +27,12 @@ import Utilities.Syntactic
 
 data LatexDoc = 
         Env String LineInfo [LatexDoc] LineInfo
-        | Bracket Bool LineInfo [LatexDoc] LineInfo
+        | Bracket BracketType LineInfo [LatexDoc] LineInfo
         | Text [LatexToken]
     deriving (Eq)
+
+data BracketType = Curly | Square
+    deriving (Eq,Show)
 
 flatten :: LatexDoc -> [Char]
 flatten (Env s _ ct _) = 
@@ -38,9 +41,9 @@ flatten (Env s _ ct _) =
         ++ "\\end{" ++ s ++ "}"
 flatten (Bracket b _ ct _) = b0 ++ concatMap flatten ct ++ b1
     where
-        (b0,b1) = if b
-            then ("{", "}")
-            else ("[", "]")
+        (b0,b1) = case b of
+            Curly -> ("{", "}")
+            Square -> ("[", "]")
 flatten (Text xs) = concatMap lexeme xs
 
 whole_line :: LineInfo -> [LineInfo]
@@ -58,9 +61,9 @@ flatten_li (Text xs)        = concatMap lexeme_li xs
 flatten_li (Bracket b li0 ct li1) 
         = (b0,li0) : concatMap flatten_li ct ++ [(b1,li1)]
     where
-        (b0,b1) = if b
-            then ('{', '}')
-            else ('[', ']')
+        (b0,b1) = case b of
+            Curly -> ('{', '}')
+            Square -> ('[', ']')
 
 fold_doc :: (a -> LatexDoc -> a)
          -> a -> LatexDoc -> a
@@ -94,15 +97,15 @@ data LatexToken =
         Command String LineInfo
         | TextBlock String LineInfo
         | Blank String LineInfo
-        | Open Bool LineInfo
-        | Close Bool LineInfo
+        | Open BracketType LineInfo
+        | Close BracketType LineInfo
     deriving (Eq, Show)
 
 instance Show LatexDoc where
     show (Env b _ xs _) = "Env{" ++ b ++ "} (" ++ show (length xs) ++ ")"
     show (Text xs)      = "Text (" ++ show (take 10 xs) ++ "...)"
-    show (Bracket True _ c _)  = "Bracket {" ++ show c ++ "} "
-    show (Bracket False _ c _) = "Bracket [" ++ show c ++ "] "
+    show (Bracket Curly _ c _)  = "Bracket {" ++ show c ++ "} "
+    show (Bracket Square _ c _) = "Bracket [" ++ show c ++ "] "
 
 instance Syntactic LatexToken where
     line_info (Command _ li)    = li
@@ -127,12 +130,10 @@ lexeme :: LatexToken -> String
 lexeme (Command xs _)   = xs
 lexeme (TextBlock xs _) = xs
 lexeme (Blank xs _)     = xs
-lexeme (Open b _)
-    | b                 = "{"
-    | otherwise         = "["
-lexeme (Close b _)
-    | b                 = "}"
-    | otherwise         = "]"
+lexeme (Open Curly _)   = "{"
+lexeme (Open Square _)  = "["
+lexeme (Close Curly _)  = "}"
+lexeme (Close Square _) = "]"
 
 lexeme_li :: LatexToken -> [(Char, LineInfo)]
 lexeme_li x = zip (lexeme x) $ whole_line li
@@ -179,10 +180,10 @@ tex_tokens = do
             c <- match_first [
                     (is_space, \xs -> return $ Just $ Blank xs li),
                     (is_command, \xs -> return $ Just $ Command xs li),
-                    (match_string "{", (\_ -> return (Just $ Open True li))),
-                    (match_string "}", (\_ -> return (Just $ Close True li))),
-                    (match_string "[", (\_ -> return (Just $ Open False li))),
-                    (match_string "]", (\_ -> return (Just $ Close False li))) ]
+                    (match_string "{", (\_ -> return (Just $ Open Curly li))),
+                    (match_string "}", (\_ -> return (Just $ Close Curly li))),
+                    (match_string "[", (\_ -> return (Just $ Open Square li))),
+                    (match_string "]", (\_ -> return (Just $ Close Square li))) ]
                     (return Nothing)
             li <- get_line_info
             case c of
@@ -251,12 +252,12 @@ argument = do
         skip_blank
         xs <- peek
         case xs of
-            Open True _:_ -> do  
+            Open Curly _:_ -> do  
                 read_char
                 ct <- latex_content
                 close <- read_char
                 case close of
-                    Close True _ -> return ct
+                    Close Curly _ -> return ct
                     _ -> fail "expecting closing bracket '}'"        
             _ -> fail "expecting opening bracket '{'"            
 
@@ -296,15 +297,15 @@ find_input_cmd = do
                     ts <- peek
                     fn <- case ts of
                         Blank _ _ 
-                            : Open True _ 
+                            : Open Curly _ 
                             : TextBlock fn _
-                            : Close True _
+                            : Close Curly _
                             : _ -> do
                                 forM_ [1..4]  $ const $ read_char
                                 return fn
-                        Open True _ 
+                        Open Curly _ 
                             : TextBlock fn _
-                            : Close True _
+                            : Close Curly _
                             : _ -> do
                                 forM_ [1..3] $ const $ read_char
                                 return fn

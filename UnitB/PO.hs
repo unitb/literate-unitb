@@ -26,7 +26,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Monad hiding (guard)
-import Control.Monad.Trans.Class
+import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 import           Data.Map as M hiding 
