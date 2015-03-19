@@ -1,3 +1,16 @@
+What you need to do
+===================
+
+* Get Haskell Platform
+* Get Z3
+* Get the Literate Unit-B source
+* Run the test suite
+
+Getting a Haskell Platform
+==========================
+
+Download the Haskell platform at https://www.haskell.org/
+
 Compiling and Running the Tests
 ===============================
 
@@ -48,3 +61,23 @@ Z3
 Z3 can be obtained from http://z3.codeplex.com/ and should be placed
 in the PATH. Be sure to get version 4.3.2, hashcode 2ca14b49fe45.
 
+Using Literate Unit-B
+=====================
+
+In a terminal, launch
+
+	continuous -c source-file.tex
+
+This will lauch Literate Unit-B in continuous (or interactive) mode.
+As source-file.tex (or any file it inputs) gets updated, Literate
+Unit-B regenerates the proof obligations and tries any new one.
+
+The command
+
+	continuous source-file.tex
+
+will launch one verification and terminate.
+
+The suggested workflow is to integrate Literate Unit-B to a LaTeX 
+creation workflow and to keep the terminal in sight to see failed 
+verification.
