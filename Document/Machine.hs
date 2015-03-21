@@ -956,7 +956,9 @@ constant_decl = machine_var_decl TheoryConst "\\constant"
 
 dummy_decl :: MPipeline MachinePh1
                     [(String,VarScope)]
-dummy_decl = machine_var_decl (\v source li -> Evt $ singleton Nothing (v,Param,source,li)) "\\dummy"
+dummy_decl = machine_var_decl 
+        (\v source li -> Evt $ singleton Nothing (v,Param,source,li)) 
+        "\\dummy"
 
 machine_var_decl :: (Var -> DeclSource -> LineInfo -> VarScope)
                  -> String

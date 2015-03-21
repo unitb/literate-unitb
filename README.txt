@@ -88,7 +88,9 @@ Machine Syntax
 Use the style-sheet unitb.sty provided in Tests/
 
 \begin{machine}{<machine-name>}
+		--
 		-- Structural declaration
+		--
 	\refines{<machine-name>}
 	\newset{<name>}
 		name can be a command
@@ -101,12 +103,84 @@ Use the style-sheet unitb.sty provided in Tests/
 			* arithmetic
 			* predcalc
 			* intervals
+		--
 		-- Symbol declaration
+		--
+	\variable{ sym1, .., symN : Type }
+		declares sym1 to symN as variables of the enclosing machine
+	\constant{ sym1, .., symN : Type }
+		declares sym1 to symN as variables of the context of the machine
+	\dummy{ sym1, .., symN : Type }
+		declares sym1 to symN as dummies and gives them types in quantifiers
+		when the context does not make the type of bound variables clear
+	\indices{<event-label>}{ sym1, .., symN : Type }
+	\param{<event-label>}{ sym1, .., symN : Type }
+		declare sym1 to symN as indices (or parameters) of event <event-label>
+		--
+		-- New expressions
+		--
+		# Context
+	\assumption{<label>}{<bool-expression>}
+		# Machine expressions
+	\initialization{<label>}{<bool-expression>}
+	\invariant{<label>}{<bool-expression>}
+	\transient{<event-label>}{<label>}{<bool-expression>}
+	\transientB{<event-label>}{<label>}{<hint>}{<bool-expression>}
+			hints can contain:
+				\index{<index>}{<expression>}
+					for example \index{pid}{head.queue} would choose an
+					event whose index is at the head of a queue
+				\witness{<index>}{<bool-expression>}
+					\witness{pid}{pid' \in free} chooses any free process
+					id to falsify the transient predicate
+				\lt{<prog-label>}
+					When \transientB names an event with a fine schedule,
+					the progress property ensures that the fine schedule 
+					is true infinitely often if the transient predicate
+					remains true continually.
+	\constraint{<label>}{<bool-expression-with-primes>}
+	\safety{<label>}{<bool-expression>}{<bool-expression>}
+		\safety{lbl}{p}{q} declares the property p unless q
+	\safetyB{<label>}{<event-label>}{<bool-expression>}{<bool-expression>}	
+		\safetyB{lbl}{evt}{p}{q} declares the property p unless q except evt
+	\progress{<label>}{<bool-expression>}{<bool-expression>}
+		# Event expressions
+	\evguard{<event-label>}{<guard-label>}{<bool-expression>}
+	\cschedule{<event-label>}{<guard-label>}{<bool-expression>}
+	\fschedule{<event-label>}{<guard-label>}{<bool-expression>}
+	\evassignment{<event-label>}{<action-label>}{<boolean expression with primes>}
+	\evbcmeq{<event-label>}{<action-label>}{<variable>}{<expression>}
+	\evbcmsuch{<event-label>}{<action-label>}{<variable-list>}{<bool-expression-with-primes>}
+	\evbcmin{<event-label>}{<action-label>}{<variable>}{<set-expression>}
+		# Refinement and Proofs
+	\refine{<target-prog>}{<rule-name>}{<list-of-hypothesis>}{<hints>}
+	\replace{<event-label>}{<list-of-old-coarse-schedules>}{<list-of-new-coarse-schedules>}{<list-of-supporting-schedules>}{<progress-property-label>}{<safety-property-label>}
+		\replace{evt}{old}{new}{supp}{prog}{saf} removes old, replace them with
+		new and uses supp in the proof. prog and saf have to establish:
+			old ∧ supp |-> new ∧ supp
+			new ∧ supp  unless  ¬(old ∧ supp)
+	\weakento{<event-label>}{<list-of-old-coarse-schedules>}{<list-of-new-coarse-schedules>}
+		Deletes the old coarse schedules and replace them with the new 
+		weaker ones. When designing a new scheduled event, the "default" 
+		schedule, false, has to be weakened in order to apply fairness
+		to the new event.
+	\replacefine{<event-label>}{<old-fine-schedule>}{<new-fine-schedule>}{<optional-progress-property>}
+	\removeguard{<event-label>}{<list-of-guard-labels>}
+		# Comments
+	\comment{<item>}{<string>}
+		item can be the label of an invariant, a progress property, an event
+		or a variable's name. The comment will be attached to the item in 
+		the generated summaries.
+	\begin{proof}{<proof-obligation-label>}
+		see the proof syntax
 
 Proof Syntax
 ============
 
 In machines and theories ...
+
+Refinement of Progress Properties
+=================================
 
 Expression Syntax
 =================
