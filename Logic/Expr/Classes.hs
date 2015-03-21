@@ -3,18 +3,32 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module Logic.Expr.Classes where
 
+import Control.Monad.Reader
+
+import Data.List
+import Data.List.Utils
+
 class Named n where
     name    :: n -> String
     as_pair :: n -> (String, n)
     as_pair n = (name n, n)
     
     decorated_name :: n -> String
-    decorated_name = name
+    decorated_name x = runReader (decorated_name' x) ProverOutput
+
+    decorated_name' :: n -> Reader OutputMode String
+
+    z3_name :: n -> String
+    z3_name x = z3_escape (name x)
+
+data OutputMode = ProverOutput | UserOutput
 
 class Tree a where
     as_tree   :: a -> StrList
+    as_tree'  :: a -> Reader OutputMode StrList
     rewriteM' :: Monad m => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
     rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
+    as_tree x = runReader (as_tree' x) ProverOutput
     rewrite' f x t = (rewriteM' g x t) ()
         where
             g x t () = f x t
@@ -76,3 +90,5 @@ instance FromList a b => FromList (b -> a) b where
     from_list f (x:xs) = from_list (f x) xs
     from_list _ [] = error "from_list: not enough arguments"
 
+z3_escape :: String -> String
+z3_escape xs = intercalate "sl@" $ split "\\" xs

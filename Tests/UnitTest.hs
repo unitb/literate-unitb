@@ -6,7 +6,8 @@
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
-    , selectLeaf, dropLeaves, leaves )
+    , selectLeaf, dropLeaves, leaves
+    , allLeaves, nameOf )
 where
 
     -- Modules
@@ -17,6 +18,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Arrow
+import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.SSem
 import Control.Exception
@@ -173,7 +175,8 @@ run_test_cases xs = do
             case ln of
                 Right xs -> putStrLn xs
                 Left xs -> takeMVar xs >>= mapM_ putStrLn
-        uncurry (==) `liftM` takeMVar b
+        x <- fmap (uncurry (==)) <$> takeMVar b
+        either throw return x
     where
         f (Case x y z) = return UT
                             { name = x
@@ -241,7 +244,7 @@ print_po pos name actual expected = do
                     else return ()
             Nothing  -> return ()
 
-test_suite_string :: [UnitTest] -> M (MVar (Int,Int))
+test_suite_string :: [UnitTest] -> M (MVar (Either SomeException (Int,Int)))
 test_suite_string xs = do
         let putLn xs = do
                 ys <- mk_lines xs
@@ -271,8 +274,8 @@ test_suite_string xs = do
                 putLn ("+- " ++ n)
                 indent 1 $ test_suite_string xs
         forkTest $ do
-            xs <- mergeAll xs
-            let _ = xs :: [(Int,Int)]
+            xs' <- mergeAll xs
+            let xs = map (either (const (0,1)) id) xs' :: [(Int,Int)]
                 x = sum $ map snd xs
                 y = sum $ map fst xs
             putLn (format "+- [ Success: {0} / {1} ]" y x)
@@ -289,6 +292,20 @@ nameOf (LineSetCase n _ _) = n
 leaves :: TestCase -> [String]
 leaves (Suite _ xs) = concatMap leaves xs
 leaves t = [nameOf t]
+
+setName :: String -> TestCase -> TestCase
+setName n (Suite _ xs) = Suite n xs
+setName n (Case _ x y) = Case n x y
+setName n (POCase _ x y) = POCase n x y
+setName n (CalcCase _ x y) = CalcCase n x y
+setName n (StringCase _ x y) = StringCase n x y
+setName n (LineSetCase _ x y) = LineSetCase n x y
+
+allLeaves :: TestCase -> [TestCase]
+allLeaves = allLeaves' ""
+    where
+        allLeaves' n (Suite n' xs) = concatMap (allLeaves' (n ++ n' ++ "/")) xs
+        allLeaves' n t = [setName (n ++ nameOf t) t]
 
 selectLeaf :: Int -> TestCase -> TestCase 
 selectLeaf n = takeLeaves (n+1) . dropLeaves n
@@ -316,16 +333,19 @@ leafCount _ = 1
 capabilities :: SSem
 capabilities = unsafePerformIO $ new 16
 
-forkTest :: M a -> M (MVar a)
+forkTest :: M a -> M (MVar (Either SomeException a))
 forkTest cmd = do
     result <- lift $ newEmptyMVar
     output <- lift $ newEmptyMVar
     r <- ask
     lift $ wait capabilities
+    let handler e = do
+        putMVar result $ Left e
+        putMVar output $ [show e]
     lift $ forkIO $ do
-        finally (do
+        finally (handle handler $ do
             (x,_,w) <- runRWST cmd r (-1)
-            putMVar result x
+            putMVar result (Right x)
             xs <- forM w $ \ln -> do
                 either 
                     takeMVar 

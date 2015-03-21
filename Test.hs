@@ -21,8 +21,8 @@ import System.Directory
 
 import Tests.UnitTest
 
-test_case :: IO Bool
-test_case = run_test_cases $ test_cases 
+test_case :: TestCase
+test_case = test_cases 
         "Literate Unit-B Test Suite" 
         [  DOC.test_case
         ,  UB.test_case
@@ -44,7 +44,7 @@ main = do
         shelly $ rm_f "expected-*.txt"
     when (prefix "po-") $
         shelly $ rm_f "po-*.z3"
-    b <- test_case
+    b <- run_test_cases test_case
     if b 
     then do
         putStrLn "\n***************"

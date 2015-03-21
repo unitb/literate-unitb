@@ -81,3 +81,35 @@ will launch one verification and terminate.
 The suggested workflow is to integrate Literate Unit-B to a LaTeX 
 creation workflow and to keep the terminal in sight to see failed 
 verification.
+
+Machine Syntax
+==============
+
+Use the style-sheet unitb.sty provided in Tests/
+
+\begin{machine}{<machine-name>}
+		-- Structural declaration
+	\refines{<machine-name>}
+	\newset{<name>}
+		name can be a command
+	\newevent{<label>}{<displayed-name>}
+		we use <label> to refer to the event when adding assignments and 
+	\with{<theory>}
+		available theories:
+			* sets
+			* functions
+			* arithmetic
+			* predcalc
+			* intervals
+		-- Symbol declaration
+
+Proof Syntax
+============
+
+In machines and theories ...
+
+Expression Syntax
+=================
+
+Documentation Generation
+========================

@@ -908,8 +908,9 @@ type MPipeline ph a = Pipeline MM (MTable ph) (Either [Error] (MTable a))
 set_decl :: MPipeline MachinePh0 
             ( [(String,Sort,LineInfo)]
             , [(String,VarScope)] )
-set_decl = machineCmd "\\newset" $ \(String name, String tag) _m _ -> do
-            let new_sort = Sort tag name 0
+set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
+            let name     = tag 
+                new_sort = Sort tag (z3_escape name) 0
                 new_type = Gen $ USER_DEFINED new_sort []
                 new_def = Def [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue

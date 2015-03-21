@@ -69,6 +69,7 @@ default_timeout :: Int
 default_timeout = 5
 
 instance Tree Command where
+    as_tree' = return . as_tree
     as_tree (Push)        = List [Str "push"]
     as_tree (Pop)         = List [Str "pop"]
     as_tree (Decl d)      = as_tree d

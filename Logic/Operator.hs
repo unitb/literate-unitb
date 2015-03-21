@@ -139,6 +139,7 @@ instance NFData UnaryOperator where
 instance Named Operator where
     name (Right (BinOperator _ xs _))  = xs
     name (Left (UnaryOperator _ xs _)) = xs
+    decorated_name' = return . name
 
 data BinOperator = BinOperator String String (ExprP -> ExprP -> ExprP)
     deriving Typeable

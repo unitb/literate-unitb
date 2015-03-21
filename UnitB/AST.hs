@@ -350,6 +350,7 @@ make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
 
 instance Named Machine where
     name m = case _name m of Lbl s -> s
+    decorated_name' = return . name
 
 instance NFData System where
     rnf (Sys a b c d e) = rnf (a,b,c,d,e)

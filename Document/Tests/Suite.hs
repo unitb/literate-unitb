@@ -12,7 +12,7 @@ import UnitB.PO as PO
 import Z3.Z3
 
     -- Libraries
-
+import Control.Applicative ((<$>))
 import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception
@@ -113,3 +113,9 @@ verify_thy path name = do
     where
         success True  = "  o  "
         success False = " xxx "
+
+get_system :: FilePath -> EitherT String IO System
+get_system path = do
+    EitherT $ either (Left . show_err) Right 
+        <$> parse_system path
+

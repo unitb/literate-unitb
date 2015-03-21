@@ -28,7 +28,7 @@ module Logic.Expr.Expr
     , fun_type, fun_sort
     , maybe_type
     , pair, pair_type, pair_sort
-    , pretty_print', free_vars
+    , free_vars
     , var_decl
     )
 where
@@ -41,7 +41,7 @@ import Logic.Expr.Type
     -- Library
 import           GHC.Generics
 
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>),(<$>))
 import Control.DeepSeq
 import Control.Monad.Reader
 
@@ -172,7 +172,14 @@ class Symbol a t where
     decl :: a -> [AbsDecl t]
 
 z3_decoration :: TypeSystem t => t -> String
-z3_decoration t = f $ as_tree t :: String
+z3_decoration t = runReader (z3_decoration' t) ProverOutput
+
+z3_decoration' :: TypeSystem t => t -> Reader OutputMode String
+z3_decoration' t = do
+        opt <- ask 
+        case opt of
+            ProverOutput -> f <$> as_tree' t
+            UserOutput -> return ""
     where
         f (List ys) = format "@Open{0}@Close" xs
             where xs = concatMap f ys :: String
@@ -243,23 +250,36 @@ instance Show Quantifier where
     show Lambda = "lambda"
 
 instance TypeSystem t => Tree (AbsExpr t) where
-    as_tree (Cast e t)   = List [Str "as", as_tree e, as_tree t]
-    as_tree (Lift e t) = List [ List [Str "as", Str "const", as_tree t]
-                                        , as_tree e]
-    as_tree (Word (Var xs _))    = Str xs
+    -- as_tree' t = return $ as_tree t
+    as_tree' (Cast e t)   = do
+        t' <- as_tree' t
+        e' <- as_tree' e
+        return $ List [Str "as", e', t']
+    as_tree' (Lift e t) = do
+        t' <- as_tree' t
+        e' <- as_tree' e
+        return $ List [ List [Str "as", Str "const", t']
+                             , e']
+    as_tree' (Word (Var xs _))    = return $ Str $ z3_escape xs
     -- as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
-    as_tree (Const xs _)         = Str $ show xs
-    as_tree (FunApp (Fun xs name _ _) [])  = 
-        Str (name ++ concatMap z3_decoration xs)
-    as_tree (FunApp (Fun xs name _ _) ts)  = 
-        List (Str (name ++ concatMap z3_decoration xs) : (map as_tree ts))
-    as_tree (Binder q xs r xp)  = List 
-        [ Str $ show q
-        , List $ map as_tree xs
-        , List 
-            [ merge_range q
-            , as_tree r
-            , as_tree xp ] ]
+    as_tree' (Const xs _)         = return $ Str $ show xs
+    as_tree' (FunApp f [])  = do
+        f   <- decorated_name' f
+        return $ Str f
+    as_tree' (FunApp f ts)  = do
+        ts' <- mapM as_tree' ts
+        f   <- decorated_name' f
+        return $ List (Str f : ts')
+    as_tree' (Binder q xs r xp)  = do
+        xs' <- mapM as_tree' xs
+        r'  <- as_tree' r
+        xp' <- as_tree' xp
+        return $ List [ Str $ show q
+                      , List xs'
+                      , List 
+                          [ merge_range q
+                          , r'
+                          , xp' ] ]
     rewriteM' _ s x@(Word _)           = return (s,x)
     rewriteM' _ s x@(Const _ _)        = return (s,x)
     rewriteM' f s (Lift e t)           = do
@@ -277,50 +297,78 @@ instance TypeSystem t => Tree (AbsExpr t) where
             return (s2,Binder q xs r1 y)
 
 instance TypeSystem t => Show (AbsExpr t) where
-    show e = show $ as_tree e
+    show e = show $ runReader (as_tree' e) UserOutput
+
+instance TypeSystem t => Named (AbsDecl t) where
+    name (FunDecl _ n _ _)  = n
+    name (ConstDecl n _)    = n
+    name (FunDef _ n _ _ _) = n
+    name (SortDecl s)       = name s
+    decorated_name x = runReader (decorated_name' x) ProverOutput
+    decorated_name' d@(FunDef ts _ _ _ _) = do
+        ts' <- mapM z3_decoration' ts
+        return $ z3_name d ++ concat ts'
+    decorated_name' d@(FunDecl ts _ _ _)  = do
+        ts' <- mapM z3_decoration' ts
+        return $ z3_name d ++ concat ts'
+    decorated_name' (ConstDecl n _)     = return n
+    decorated_name' (SortDecl s) = decorated_name' s
 
 instance TypeSystem t => Tree (AbsDecl t) where
-    as_tree (FunDecl ts name dom ran) =
-            List [ Str "declare-fun", 
-                Str $ name ++ concatMap z3_decoration ts, 
-                (List $ map as_tree dom), 
-                (as_tree ran) ]
-    as_tree (ConstDecl n t) =
-            List [ Str "declare-const", Str n, as_tree t ]
-    as_tree (FunDef ts name dom ran val) =
-            List [ Str "define-fun", 
-                Str $ name ++ concatMap z3_decoration ts, 
-                (List $ map as_tree dom), 
-                (as_tree ran),
-                (as_tree val) ]
-    as_tree (SortDecl IntSort)  = Str "; comment: we don't need to declare the sort Int"
-    as_tree (SortDecl BoolSort) = Str "; comment: we don't need to declare the sort Bool" 
-    as_tree (SortDecl RealSort) = Str "; comment: we don't need to declare the sort Real"
-    as_tree (SortDecl (Sort _ name n)) = 
-            List [ 
+    as_tree' d@(FunDecl _ _ dom ran) = do
+            argt <- mapM as_tree' dom
+            t    <- as_tree' ran
+            n    <- decorated_name' d
+            return $ List [ Str "declare-fun", 
+                Str n, 
+                (List argt), t ]
+    as_tree' (ConstDecl n t) = do
+            t' <- as_tree' t
+            return $ List [ Str "declare-const", Str n, t' ]
+    as_tree' d@(FunDef _ _ dom ran val) = do
+            argt <- mapM as_tree' dom
+            rt   <- as_tree' ran
+            def  <- as_tree' val
+            n    <- decorated_name' d
+            return $ List [ Str "define-fun", 
+                Str n, (List argt), 
+                rt, def ]
+    as_tree' (SortDecl IntSort)  = return $ Str "; comment: we don't need to declare the sort Int"
+    as_tree' (SortDecl BoolSort) = return $ Str "; comment: we don't need to declare the sort Bool" 
+    as_tree' (SortDecl RealSort) = return $ Str "; comment: we don't need to declare the sort Real"
+    as_tree' (SortDecl s@(Sort _ _ n)) = do
+            return $ List [ 
                 Str "declare-sort",
-                Str name,
+                Str (z3_name s),
                 Str $ show n ]
-    as_tree (SortDecl (DefSort _ name xs def)) = 
-            List 
+    as_tree' (SortDecl s@(DefSort _ _ xs def)) = do
+            def' <- as_tree' def 
+            return $ List 
                 [ Str "define-sort"
-                , Str name
+                , Str (z3_name s)
                 , List $ map Str xs
-                , as_tree def 
+                , def'
                 ]
-    as_tree (SortDecl (Datatype xs n alt)) =
-            List 
+    as_tree' (SortDecl (Datatype xs n alt)) = do
+            alt' <- mapM f alt
+            return $ List 
                 [ Str "declare-datatypes"
                 , List $ map Str xs
-                , List [List (Str n : map f alt)] ]
+                , List [List (Str n : alt')] ]
         where
-            f (x,[])    = Str x
-            f (x,xs)    = List (Str x : map g xs)
-            g (n,t)     = List [Str n, as_tree t]
+            f (x,[])    = return $ Str x
+            f (x,xs)    = do
+                ys <- mapM g xs
+                return $ List (Str x : ys)
+            g (n,t)     = do
+                t' <- as_tree' t
+                return $ List [Str n, t']
     rewriteM' = id
     
 instance TypeSystem t => Tree (AbsVar t) where
-    as_tree (Var vn vt) = List [Str vn, as_tree vt]
+    as_tree' (Var vn vt) = do
+        t <- as_tree' vt
+        return $ List [Str vn, t]
     rewriteM' = id
 
 instance TypeSystem t => Show (AbsVar t) where
@@ -466,16 +514,20 @@ used_fun e = visit f s e
 
 instance TypeSystem t => Named (AbsFun t) where
     name (Fun _ x _ _) = x
-    decorated_name (Fun ts x _ _) = 
-            x ++ concatMap z3_decoration ts
+    decorated_name f = runReader (decorated_name' f) ProverOutput
+    decorated_name' (Fun ts x _ _) = do
+            ts' <- mapM z3_decoration' ts
+            return $ x ++ concat ts'
 
 instance TypeSystem t => Named (AbsDef t) where
     name (Def _ x _ _ _) = x
-    decorated_name (Def ts x _ _ _) = 
-            x ++ concatMap z3_decoration ts
+    decorated_name' (Def ts x _ _ _) = do
+            ts' <- mapM z3_decoration' ts
+            return $ x ++ concat ts'
 
 instance Named (AbsVar t) where
     name (Var x _) = x
+    decorated_name' = return . name
 
 instance Convert (AbsVar t) (ExprPC (AbsExpr t)) where
     convert_to = Right . Word
@@ -485,108 +537,6 @@ instance Convert (AbsVar t) (ExprPC (AbsExpr t)) where
 instance Convert (AbsExpr t) (AbsExpr t) where
     convert_to = id
     convert_from = Just
-
-pretty_print' :: Tree t => t -> String
--- pretty_print' t = unlines $ pretty_print $ as_tree t 
-pretty_print' t = unlines $ map toString $ as_list $ fst $ runReader (pretty_print_aux $ as_tree t) ""
-
-data Line = Line String String
-
-toString :: Line -> String
-toString (Line xs ys) = xs ++ ys
-
-line :: Line -> String
-line (Line _ ys) = ys
-
-type M = Reader String
-type X = (List Line,Int)
-
-data List a = Ls [a] a
-
-appendL :: List a -> List a -> List a
-appendL (Ls xs x) (Ls ys y) = Ls (xs ++ [x] ++ ys) y
-
-tell' :: String -> M X
-tell' xs = do
-    ys <- ask
-    return $ (Ls [] $ Line ys xs,length xs+1)
-
-appendall :: [(List a, Int)] -> (List a, Int)
-appendall ((x0,n):(x1,m):xs) = appendall $ (appendL x0 x1, m+n) : xs
-appendall [x] = x
-appendall _ = error "appendall: empty list"
-
-cons :: a -> [a] -> List a
-cons x xs = Ls (init ys) (last ys)
-    where
-        ys = x:xs
-
-uncons :: List a -> (a -> [a] -> b) -> b
-uncons (Ls xs x) f = f (head zs) (tail zs)
-    where
-        zs = xs ++ [x]
-
-as_list :: List a -> [a]
-as_list (Ls xs x) = xs ++ [x]
-
-pretty_print_aux :: StrList -> M X
-pretty_print_aux (Str xs) = tell' xs
-pretty_print_aux (List []) = tell' "()"
-pretty_print_aux (List ys@(x:xs)) = 
-        case x of
-            Str y    -> do
-                zz <- mapM pretty_print_aux xs
-                let one_line' = concatMap (" " ++) $ concatMap (map line . as_list . fst) zz
-                    k = sum $ map snd zz
-                if k <= 50
-                then tell' $ "(" ++ y ++ one_line' ++ ")"
-                else do
-                    zs <- prefix_first ("(" ++ y ++ " ") $
-                        mapM pretty_print_aux xs
-                    return $ add_to_last ")" $ appendall zs
-            List _ -> do
-                zs <- prefix_first "( " $
-                    mapM pretty_print_aux ys
-                return $ add_to_last " )" $ appendall zs
-    where
-        prefix_first :: String -> M [X] -> M [X]
-        prefix_first xs cmd = do
-            let k = length xs
-            ys <- indent k cmd 
-            case ys of
-                [] -> (:[]) `liftM` tell' xs
-                (ls, n):ys -> 
-                    uncons ls $ \(Line m y) zs ->
-                    return $ (cons (Line (take (length m - k) m) (xs ++ y)) zs, n+k):ys
-        indent n cmd = do
-            local (margin n ++) cmd
-        margin n = replicate n ' '
-        add_to_last suff (Ls xs (Line x y),k) = (Ls xs (Line x $ y++suff),k)
-  
--- pretty_print :: StrList -> [String]
--- pretty_print (Str xs) = [xs]
--- pretty_print (List []) = ["()"]
--- pretty_print (List ys@(x:xs)) = 
---         case x of
---             Str y    -> 
---                 if length one_line <= 50
---                 then ["(" ++ y ++ " " ++ one_line ++ ")"]
---                 else
---                     zipWith (++)
---                         (("(" ++ y ++ " "):repeat (margin (length y + 2)))
---                         (add_to_last ")" zs)
---             List _ -> zipWith (++)
---                 ("( ":repeat (margin 2))
---                 (add_to_last " )" zs')
---     where
---         margin n = replicate n ' '
---         add_to_last suff xs = 
---             case reverse xs of
---                 y:ys -> reverse ( (y++suff):ys )
---                 []        -> [suff]
---         zs = concatMap pretty_print xs
---         zs' = concatMap pretty_print ys
---         one_line = intercalate " " zs
 
 used_types :: TypeSystem t => AbsExpr t -> S.Set t
 used_types e = visit (flip $ S.union . used_types) (
