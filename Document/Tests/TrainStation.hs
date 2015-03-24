@@ -460,6 +460,8 @@ set_decl_smt2 xs =
         ,  "             ()"
         ,  "             (pfun sl@TRAIN sl@BLK))"]
 --        ,  "(declare-fun empty-set@Open@@pfun@@sl@TRAIN@@sl@BLK@Close () (set (pfun sl@TRAIN sl@BLK)))"
+     ++ [ "(declare-fun finite@@sl@BLK ( (set sl@BLK) ) Bool)" 
+        , "(declare-fun finite@@sl@TRAIN ( (set sl@TRAIN) ) Bool)" ]
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun injective@@sl@TRAIN@@sl@BLK"
         ,  "             ( (pfun sl@TRAIN sl@BLK) )"
@@ -1085,6 +1087,7 @@ result20 =
              , "elem@@sl@TRAIN"
              , "empty-set@@sl@TRAIN"
              , "set-diff@@sl@TRAIN" 
+             , "finite@@sl@TRAIN" 
              , "st-subset@@sl@TRAIN"]
     in
     unlines (

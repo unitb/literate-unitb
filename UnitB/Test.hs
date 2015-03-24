@@ -172,6 +172,7 @@ result_train_m0_tr_po :: String
 result_train_m0_tr_po = unlines 
     [ -- " sort: , , , pfun [a,b], set [a]"
       " sort: Pair [a,b], , , "
+    , " qsum[_a]: (pfun a Int) -> Int"
     , " st: (Array Int Bool)"
     , " st@prime: (Array Int Bool)"
     , " t: Int"

@@ -26,6 +26,9 @@ map_array name t xs = do
     xs <- sequence xs
     return $ FunApp (Fun [] ("(_ map " ++ name ++ ")") (L.map type_of xs) t) xs
 
+finite :: ExprP -> ExprP
+finite = typ_fun1 $ Fun [gA] "finite" [set_type gA] bool
+
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
     where
@@ -51,8 +54,10 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 ]
         funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
-            symbol_table [
-                Fun [gT] "mk-set" [gT] $ set_type gT ]
+            symbol_table
+                [ Fun [gT] "mk-set" [gT] $ set_type gT 
+                , Fun [gT] "finite" [set_type gT] $ bool
+                ]
         fact :: Map Label Expr
         fact = fromList 
                 [ (label $ dec' "0", axm0)
@@ -179,3 +184,4 @@ set_notation = with_assoc empty_notation
                     , ((st_superset,superset),st_superset)
                     , ((st_superset,st_superset),st_superset)
                     ]  }
+

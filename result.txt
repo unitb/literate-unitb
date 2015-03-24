@@ -13,22 +13,25 @@
 === prop_open_open from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Document/Tests/TrainStation.hs:81 ===
 
 === prop_parseOk from ./Document/MachineSpec.hs:40 ===
+
+=== prop_type_error from ./Document/MachineSpec.hs:47 ===
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
++++ OK, passed 100 tests.
 +++ OK, passed 100 tests.
 === prop_c from ./Utilities/EditDistance.hs:132 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:194 ===
 === prop_evalList_is_identity from ./Utilities/Permutation.hs:385 ===
++++ OK, passed 100 tests.
 
 === prop_u_scc_complete from ./Utilities/Permutation.hs:389 ===
-+++ OK, passed 100 tests.
+
 +++ OK, passed 100 tests.
 
 === prop_fromList_toList from ./Utilities/Relation.hs:198 ===
 +++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:202 ===
-
-=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:394 ===
 +++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:205 ===
@@ -42,14 +45,20 @@
 
 === prop_compose_def from ./Utilities/Relation.hs:216 ===
 
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:394 ===
 +++ OK, passed 100 tests.
 
 === prop_all_valid from ./Utilities/Relation.hs:235 ===
 
-=== prop_type_error from ./Document/MachineSpec.hs:47 ===
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
 
 === prop_u_scc_valid_components from ./Utilities/Permutation.hs:405 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -159,12 +168,6 @@
 |  |  |  +- part 3
 +++ OK, passed 100 tests.
 
-=== prop_union_def from ./Utilities/Relation.hs:255 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
-+++ OK, passed 100 tests.
-
 === prop_difference_def from ./Utilities/Relation.hs:261 ===
 +++ OK, passed 100 tests.
 
@@ -193,8 +196,6 @@
 +++ OK, passed 100 tests.
 
 === prop_symmetric_def from ./Utilities/Relation.hs:288 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
 +++ OK, passed 100 tests.
 
 === prop_transitive_def from ./Utilities/Relation.hs:291 ===
@@ -211,12 +212,10 @@
 
 === prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
 
-=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
 +++ OK, passed 100 tests.
 
 === prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
 +++ OK, passed 100 tests.
 
 === prop_mapRange_def from ./Utilities/Relation.hs:311 ===
@@ -226,19 +225,19 @@
 
 === prop_top_sort_complete from ./Utilities/Permutation.hs:417 ===
 
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
+
 === prop_top_sort_cycles from ./Utilities/Permutation.hs:424 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
 
 === prop_top_sort_singles from ./Utilities/Permutation.hs:430 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:330 ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
 +++ OK, passed 100 tests.
 
 === prop_filterRan_def from ./Utilities/Relation.hs:333 ===
@@ -253,17 +252,14 @@
 +++ OK, passed 100 tests.
 
 === prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
-
 +++ OK, passed 100 tests.
 
 
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
-
 === prop_closure_contain_all_edges from ./Utilities/Permutation.hs:470 ===
 
-=== prop_closure_closed from ./Utilities/Permutation.hs:475 ===
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
 
-=== prop_closure_minimal from ./Utilities/Permutation.hs:481 ===
+=== prop_closure_closed from ./Utilities/Permutation.hs:475 ===
 |  |  |  |  +- test 9, verify disjunction rule
 |  |  |  |  +- test 10, error: cyclic proof
 |  |  |  |  +- test 11, intermediate goals of monotonic simplification
@@ -358,6 +354,10 @@
 |  |  +- case 6 - union of a list of {sorted} list
 |  |  +- case 7 - union of a list of {unsorted} list
 
+=== prop_closure_minimal from ./Utilities/Permutation.hs:481 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
+
 
 |  |  +- case 8 - edit distance, random testing
 |  |  +- case 9 - edit distance, regression test from random testing
@@ -389,10 +389,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   35651 total
-    1592 Document/Machine.hs
+   35751 total
+    1594 Document/Machine.hs
      806 Document/Proof.hs
      783 Document/Visitor.lhs
      746 Document/phase.hs
-     713 Document/Expression.hs
-Run time: 1m 13s
+     710 Document/Expression.hs
+Run time: 1m 16s

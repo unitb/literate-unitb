@@ -166,13 +166,13 @@ Use the style-sheet unitb.sty provided in Tests/
 		to the new event.
 	\replacefine{<event-label>}{<old-fine-schedule>}{<new-fine-schedule>}{<optional-progress-property>}
 	\removeguard{<event-label>}{<list-of-guard-labels>}
+	\begin{proof}{<proof-obligation-label>}
+		see the proof syntax
 		# Comments
 	\comment{<item>}{<string>}
 		item can be the label of an invariant, a progress property, an event
 		or a variable's name. The comment will be attached to the item in 
 		the generated summaries.
-	\begin{proof}{<proof-obligation-label>}
-		see the proof syntax
 
 Proof Syntax
 ============
