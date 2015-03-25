@@ -272,6 +272,7 @@ case8 = return $ concatMap pretty_print' $ disjuncts e'
         z87 = mzint 87
         (p,_) = var "p" bool
         (q,_) = var "q" bool
+        e0 :: ExprP
         e0 = mzexists [z_decl] mztrue $ 
                             (p `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))

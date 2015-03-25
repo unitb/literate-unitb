@@ -33,10 +33,6 @@ class Tree a where
         where
             g x t () = f x t
  
-class Convert a b | a -> b where
-    convert_to :: a -> b
-    convert_from :: b -> Maybe a
-
 data StrList = List [StrList] | Str String
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])

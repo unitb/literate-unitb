@@ -61,8 +61,8 @@ sample = unlines [
     "(check-sat)",
     "(get-model)"]
 
-a :: Expr
-x :: Either a Expr
+a :: AbsExpr Type q
+x :: Either a (AbsExpr Type q)
 x' :: Var
 ff :: Fun
 
@@ -151,7 +151,7 @@ indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
 
-result5 :: (CanonicalLambda, [Expr])
+result5 :: (CanonicalLambda, [Expr'])
 result5 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl] [x_decl] 
                 (x `zle` fv0) ( (x `zplus` fv1) `zle` fv2 ) 
@@ -165,7 +165,7 @@ result5 = ( CL
         (y,_) = var' "y" int
         (z,_) = var' "z" int
 
-case5 :: IO (CanonicalLambda, [Expr])
+case5 :: IO (CanonicalLambda, [Expr'])
 case5 = do
         return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
@@ -173,7 +173,7 @@ case5 = do
         (y,_) = var' "y" int
         (z,_) = var' "z" int
 
-result6 :: (CanonicalLambda, [Expr])
+result6 :: (CanonicalLambda, [Expr'])
 result6 = ( CL 
                 [fv0_decl,fv1_decl,fv2_decl,fv3_decl] 
                 [x_decl] 
@@ -193,10 +193,10 @@ result6 = ( CL
         (y,_) = var' "y" int
 --        (Right z,z_decl) = var "z" int
 
-var' :: String -> Type -> (Expr, Var)
+var' :: String -> Type -> (Expr', Var)
 var' x t = (Word (Var x t), Var x t)
 
-case6 :: IO (CanonicalLambda, [Expr])
+case6 :: IO (CanonicalLambda, [Expr'])
 case6 = do
         return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
             (x `zle` zplus (zint 3) y)
@@ -208,7 +208,7 @@ case6 = do
         z_decl = Var "z" int
         z = Word z_decl
 
-case7 :: IO (Maybe FOContext)
+case7 :: IO (Maybe (AbsContext FOType Quantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
         fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
@@ -216,7 +216,7 @@ case7 = return $ Just $ to_fol_ctx S.empty ctx
         t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
         m = M.singleton "t" t
 
-result7 :: Maybe FOContext
+result7 :: Maybe (AbsContext FOType Quantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
     where 
         fun = decorated_table $ M.elems $ M.map f $ funs set_theory
@@ -235,14 +235,14 @@ xs     = map (M.map as_generic)
                             $ match_all pat (S.elems ts)
 ts  = S.fromList $ M.catMaybes $ map type_strip_generics [ set_type int, int ]
 
-case8 :: IO (Maybe FOContext)
+case8 :: IO (Maybe (AbsContext FOType Quantifier))
 case8 = return $ Just $ to_fol_ctx types ctx
     where
         fun   = funs set_theory
         ctx   = Context M.empty M.empty fun M.empty M.empty
         types = S.fromList [int, set_type int, set_type $ set_type int]
 
-result8 :: Maybe FOContext
+result8 :: Maybe (AbsContext FOType Quantifier)
 result8 = ctx_strip_generics ctx
     where
         ctx = Context M.empty M.empty fun M.empty M.empty

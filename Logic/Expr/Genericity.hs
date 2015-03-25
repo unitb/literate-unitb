@@ -47,7 +47,9 @@ suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
 suffix_generics xs (Gen (USER_DEFINED s ts)) = Gen $ USER_DEFINED s $ map (suffix_generics xs) ts
 
-rewrite_types :: String -> Expr -> Expr
+rewrite_types :: IsQuantifier q
+              => String 
+              -> AbsExpr Type q -> AbsExpr Type q
 rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name u)
     where
         fe          = rewrite_types xs
@@ -72,11 +74,13 @@ rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_arg
 rewrite_types xs e@(Binder _ _ _ _)            = rewrite (rewrite_types xs) e
 
 class TypeSystem t => TypeSystem2 t where
-    check_args :: [AbsExpr t] 
+    check_args :: IsQuantifier q
+               => [AbsExpr t q] 
                -> AbsFun t 
-               -> Maybe (AbsExpr t) 
-    zcast :: t -> ExprPG t 
-          -> ExprPG t
+               -> Maybe (AbsExpr t q) 
+    zcast :: IsQuantifier q 
+          => t -> ExprPG t q
+          -> ExprPG t q
 
 instance TypeSystem2 FOType where
     check_args xp f@(Fun _ _ ts _) = do
@@ -131,7 +135,8 @@ check_all xs
     | all isRight xs = Right $ rights xs
     | otherwise      = Left $ concat $ lefts xs
 
-check_type :: Fun -> [ExprP] -> ExprP
+check_type :: IsQuantifier q => Fun 
+           -> [ExprPG Type q] -> ExprPG Type q
 check_type f@(Fun _ n ts t) mxs = do
         xs <- check_all mxs
         let args = unlines $ map (\(i,x) -> format (unlines
@@ -147,34 +152,17 @@ check_type f@(Fun _ n ts t) mxs = do
                     n ts t args :: String
         maybe (Left [err_msg]) Right $ check_args xs f
 
-type OneExprP t = forall e0. 
-           Convert e0 (AbsExpr t)
-        => ExprPC e0 -> ExprPG t
+type OneExprP t q   = IsQuantifier q => ExprPG t q -> ExprPG t q
+type TwoExprP t q   = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q
+type ThreeExprP t q = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q
+type FourExprP t q  = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q
 
-type TwoExprP t = forall e0 e1. 
-           (Convert e0 (AbsExpr t),Convert e1 (AbsExpr t))
-        => ExprPC e0 -> ExprPC e1 -> ExprPG t
-
-type ThreeExprP t = forall e0 e1 e2. 
-           ( Convert e0 (AbsExpr t)
-           , Convert e1 (AbsExpr t)
-           , Convert e2 (AbsExpr t))
-        => ExprPC e0 -> ExprPC e1 -> ExprPC e2 -> ExprPG t
-
-type FourExprP t = forall e0 e1 e2 e3. 
-           ( Convert e0 (AbsExpr t)
-           , Convert e1 (AbsExpr t)
-           , Convert e2 (AbsExpr t)
-           , Convert e3 (AbsExpr t))
-        => ExprPC e0 -> ExprPC e1 
-        -> ExprPC e2 -> ExprPC e3
-        -> ExprPG t    
 
 typ_fun1 :: ( TypeSystem2 t )
          => AbsFun t
-         -> OneExprP t
+         -> OneExprP t q
 typ_fun1 f@(Fun _ n ts t) mx        = do
-        x <- liftM convert_to mx
+        x <- mx
         let err_msg = format (unlines 
                     [  "argument of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
@@ -186,13 +174,11 @@ typ_fun1 f@(Fun _ n ts t) mx        = do
         maybe (Left [err_msg]) Right $ check_args [x] f
 
 typ_fun2 :: ( TypeSystem2 t
-            , Convert e0 (AbsExpr t)
-            , Convert e1 (AbsExpr t))
-         => AbsFun t  -> ExprPC e0
-         -> ExprPC e1 -> ExprPG t
+            )
+         => AbsFun t  -> TwoExprP t q
 typ_fun2 f@(Fun _ n ts t) mx my     = do
-        x <- liftM convert_to mx
-        y <- liftM convert_to my
+        x <- mx
+        y <- my
         let err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
@@ -206,17 +192,13 @@ typ_fun2 f@(Fun _ n ts t) mx my     = do
                     y (type_of y) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y] f
 
-typ_fun3 :: ( TypeSystem2 t
-            , Convert e0 (AbsExpr t)
-            , Convert e1 (AbsExpr t)
-            , Convert e2 (AbsExpr t))
-         => AbsFun t  -> ExprPC e0
-         -> ExprPC e1 -> ExprPC e2
-         -> ExprPG t
+typ_fun3 :: ( TypeSystem2 t )
+         => AbsFun t
+         -> ThreeExprP t q
 typ_fun3 f@(Fun _ n ts t) mx my mz  = do
-        x <- liftM convert_to mx
-        y <- liftM convert_to my
-        z <- liftM convert_to mz
+        x <- mx
+        y <- my
+        z <- mz
         let err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
                     ,  "   signature: {1} -> {2}"
@@ -256,7 +238,7 @@ unify_aux _  = Nothing
 unify :: GenericType -> GenericType -> Maybe (Map String GenericType)
 unify t0 t1 = unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
 
-strip_generics :: Expr -> Maybe FOExpr
+strip_generics :: AbsExpr Type q -> Maybe (AbsExpr FOType q)
 strip_generics (Word v)    = do
     v <- var_strip_generics v
     return (Word v)
@@ -294,7 +276,7 @@ fun_strip_generics (Fun ts n ps rt) = do
     rt <- type_strip_generics rt
     return (Fun ts n ps rt)
 
-def_strip_generics :: Def -> Maybe FODef
+def_strip_generics :: AbsDef Type q -> Maybe (AbsDef FOType q)
 def_strip_generics (Def ts n ps rt val) = do
     ts  <- mapM type_strip_generics ts
     ps  <- mapM var_strip_generics ps
@@ -307,7 +289,7 @@ var_strip_generics (Var n t) = do
     t <- type_strip_generics t
     return (Var n t)
 
-ctx_strip_generics :: Context -> Maybe FOContext
+ctx_strip_generics :: Context -> Maybe (AbsContext FOType Quantifier)
 ctx_strip_generics (Context a b c d e) = do
     bs <- mapM var_strip_generics $ M.elems b
     cs <- mapM fun_strip_generics $ M.elems c
@@ -365,7 +347,7 @@ instance Generic Fun where
     types_of (Fun _ _ ts t) = S.fromList $ t : ts
     substitute_types f (Fun gs n ts t) = Fun (map f gs) n (map f ts) $ f t
 
-instance Generic Def where
+instance IsQuantifier q => Generic (AbsDef Type q) where
     types_of (Def _ _ ts t e) = S.unions $ S.singleton t : types_of e : map types_of ts
     substitute_types f (Def gs n ts t e) = 
             Def (map f gs) n 
@@ -377,7 +359,7 @@ instance Generic Var where
     types_of (Var _ t)  = S.singleton t
     substitute_types f (Var x t) = Var x $ f t
  
-instance Generic Expr where
+instance IsQuantifier q => Generic (AbsExpr Type q) where
     types_of (Word (Var _ t)) = S.singleton t
     types_of (Const _ t)   = S.singleton t
     types_of (Cast e t)     = S.insert t $ types_of e
@@ -417,7 +399,7 @@ ambiguities e@(FunApp f xp)
         children = L.concatMap ambiguities xp
 ambiguities (Binder _ vs r xp) = x ++ ambiguities r ++ ambiguities xp
     where
-        vs' = L.filter (not . S.null . generics . type_of . Word) vs
+        vs' = L.filter (not . S.null . generics . var_type) vs
         x 
             | not $ L.null vs' = map Word vs'
             | otherwise        = []
@@ -449,11 +431,17 @@ _instantiate_right :: Map String GenericType -> GenericType -> GenericType
 _instantiate_right m t = instantiate m (suffix_generics "2" t)
 
     -- apply a type substitution to an expression
-specialize :: Map String GenericType -> Expr -> Expr
+specialize :: IsQuantifier q
+           => Map String GenericType 
+           -> AbsExpr Type q -> AbsExpr Type q
 specialize = instantiate
 
-_specialize_left :: Map String GenericType -> Expr -> Expr
+_specialize_left :: IsQuantifier q 
+                 => Map String GenericType 
+                 -> AbsExpr Type q -> AbsExpr Type q
 _specialize_left m e  = specialize m (rewrite_types "1" e)
 
-specialize_right :: Map String GenericType -> Expr -> Expr
+specialize_right :: IsQuantifier q
+                 => Map String GenericType 
+                 -> AbsExpr Type q -> AbsExpr Type q
 specialize_right m e = specialize m (rewrite_types "2" e)

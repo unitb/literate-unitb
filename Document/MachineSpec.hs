@@ -68,7 +68,7 @@ instance Arbitrary ExprNotation where
         (vars,e) <- fix (\retry n -> do
             when (n == 0) $ fail "failed to generate ExprNotation"
             vars  <- var_set
-            t     <- elements $ bool : (map (type_of . Word) $ M.elems vars)
+            t     <- elements $ bool : (map var_type $ M.elems vars)
             e     <- expr_type False vars t
             case e of
                 Just e  -> return (vars,e)
@@ -124,7 +124,7 @@ permute_aux n xs = sized $ \size -> do
         zs <- permute_aux (n-1) (drop buck ys)
         return $ z ++ zs
 
-showExpr :: TypeSystem t => Notation -> AbsExpr t -> String
+showExpr :: (TypeSystem t, IsQuantifier q) => Notation -> AbsExpr t q -> String
 showExpr notation e = show_e e
     where
         root_op (FunApp f _) = find_op f
@@ -330,14 +330,14 @@ choose_var b t = do
 fun_map :: M.Map Type [([Expr] -> Expr, [Type])]
 fun_map = M.fromList
     [ (int, 
-        [ (from_list zplus, [int,int])])
+        [ (from_list (zplus :: Expr -> Expr -> Expr), [int,int])])
     , (bool, 
         -- [ (from_list zeq', [int,int]) 
         -- , (from_list zeq, [bool,bool])
         [ (from_list (zand :: Expr -> Expr -> Expr), [bool,bool])
         , (from_list (zor :: Expr -> Expr -> Expr), [bool,bool])
         , (from_list (znot :: Expr -> Expr), [bool])
-        , (from_list zle, [int,int])
+        , (from_list (zle :: Expr -> Expr -> Expr), [int,int])
         , (from_list zelem', [int, set_type int] )])
     ]
 

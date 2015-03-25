@@ -18,7 +18,7 @@ set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
-as_array :: TypeSystem t => t -> AbsExpr t -> AbsExpr t
+as_array :: TypeSystem t => t -> AbsExpr t q -> AbsExpr t q
 as_array t x = FunApp (Fun [] ("(as const " ++ show (as_tree t) ++ ")") [] t) [x]
 
 map_array :: String -> Type -> [ExprP] -> ExprP
