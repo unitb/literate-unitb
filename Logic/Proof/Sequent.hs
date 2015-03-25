@@ -17,17 +17,17 @@ import GHC.Generics
 
 import Utilities.Format
 
-type Sequent = AbsSequent GenericType
+type Sequent = AbsSequent GenericType HOQuantifier
 
 type FOSequent = AbsSequent FOType
 
-data AbsSequent t = Sequent (AbsContext t) [AbsExpr t] (Map Label (AbsExpr t)) (AbsExpr t)
+data AbsSequent t q = Sequent (AbsContext t q) [AbsExpr t q] (Map Label (AbsExpr t q)) (AbsExpr t q)
     deriving (Eq, Generic)
 
-empty_sequent :: TypeSystem2 t => AbsSequent t
+empty_sequent :: TypeSystem2 t => AbsSequent t q
 empty_sequent = (Sequent empty_ctx [] M.empty ztrue)
 
-instance TypeSystem t => Show (AbsSequent t) where
+instance (TypeSystem t, IsQuantifier q) => Show (AbsSequent t q) where
     show (Sequent (Context ss vs fs ds _) as hs g) =
             unlines (
                    map (" " ++)
@@ -46,7 +46,7 @@ instance TypeSystem t => Show (AbsSequent t) where
             f (_, Sort _ z 0) = z
             f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
-instance NFData t => NFData (AbsSequent t) where
+instance (NFData t,NFData q) => NFData (AbsSequent t q) where
     rnf (Sequent ctx hyp asm g) = rnf (ctx,hyp,asm,g)
 
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)

@@ -18,7 +18,7 @@ import qualified Data.Set as S
 
 import Text.Printf
 
-stripTypes :: GenExpr t0 t1 -> GenExpr () t1
+stripTypes :: GenExpr t0 t1 q -> GenExpr () t1 q
 stripTypes (Word (Var n _))  = Word (Var n ())
 stripTypes (Const n _)       = Const n ()
 stripTypes (FunApp fun args) = FunApp fun' (map stripTypes args)
@@ -121,7 +121,7 @@ checkTypes c' (Binder q vs' r t) = do
                     $ map f ns 
         f x = S.filter (\y -> x == name y) vars
     ts <- forM v_type $ \((Var x t),xs) -> do
-        let ys = map (type_of . Word) $ S.toList xs
+        let ys = map var_type $ S.toList xs
         t' <- maybe 
             (fail $ printf "Inconsistent type for %s: %s" 
                     x

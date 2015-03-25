@@ -4,16 +4,21 @@
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Logic.Expr.Expr 
-    ( Expr, AbsExpr, GenExpr (..), FOExpr
+    ( Expr, Expr', AbsExpr, GenExpr (..), FOExpr
     , UntypedExpr, ExprP, ExprPG, ExprPC
-    , Value(..), type_of
-    , Quantifier(..)
+    , Value(..)
+    , HOQuantifier(..)
+    , FOQuantifier(..)
     , Context, FOContext, AbsContext(..)
     , Decl, FODecl, AbsDecl(..)
     , Fun, FOFun, AbsFun(..)
     , Var, FOVar, AbsVar(..), UntypedVar
     , Def, FODef, AbsDef(..)
+    , IsQuantifier(..)
+    , rewriteExpr
+    , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
     , mk_context, empty_ctx
@@ -52,21 +57,23 @@ import           Data.Typeable
 
 import Utilities.Format
 
-type Expr = AbsExpr GenericType
+type Expr = AbsExpr GenericType HOQuantifier
 
-type FOExpr = AbsExpr FOType
+type FOExpr = AbsExpr FOType FOQuantifier
 
-type AbsExpr t = GenExpr t t
+type AbsExpr t q = GenExpr t t q
 
-type UntypedExpr = GenExpr () GenericType
+type Expr' = AbsExpr Type FOQuantifier
 
-data GenExpr t a = 
+type UntypedExpr = GenExpr () GenericType HOQuantifier
+
+data GenExpr t a q = 
         Word (AbsVar t) 
         | Const Value t
-        | FunApp (AbsFun t) [GenExpr t a]
-        | Binder Quantifier [AbsVar t] (GenExpr t a) (GenExpr t a)
-        | Cast (GenExpr t a) a
-        | Lift (GenExpr t a) a
+        | FunApp (AbsFun t) [GenExpr t a q]
+        | Binder q [AbsVar t] (GenExpr t a q) (GenExpr t a q)
+        | Cast (GenExpr t a q) a
+        | Lift (GenExpr t a q) a
     deriving (Eq, Ord, Typeable, Generic)
 
 data Value = RealVal Double | IntVal Int
@@ -76,27 +83,34 @@ instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
 
-data Quantifier = Forall | Exists | Lambda
-    deriving (Eq, Ord, Generic)
+data HOQuantifier = Forall | Exists | Lambda
+    deriving (Eq, Ord, Generic,Typeable)
 
-instance NFData Quantifier where
+data FOQuantifier = FOForall | FOExists 
+    deriving (Eq,Ord,Generic,Typeable)
+
+instance NFData HOQuantifier where
+
+instance NFData FOQuantifier where
 
 type ExprP = Either [String] Expr 
 
-type ExprPG t = Either [String] (AbsExpr t)
+type ExprPG t q = Either [String] (AbsExpr t q)
 
 type ExprPC e = Either [String] e
 
-type_of :: TypeSystem t => AbsExpr t -> t
+var_type :: AbsVar t -> t
+var_type (Var _ t) = t
+
+type_of :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> t
 type_of (Word (Var _ t))         = t
 type_of (Const _ t)              = t
 type_of (Cast _ t)               = t
 type_of (Lift _ t)               = t
 type_of (FunApp (Fun _ _ _ t) _) = t
-type_of (Binder Lambda vs _ e)   = fun_type (type_of tuple) $ type_of e
+type_of (Binder q vs _ e)   = qType q tuple (type_of e)
     where
-        tuple = ztuple $ map Word vs
-type_of (Binder _ _ _ e)          = type_of e
+        tuple = ztuple_type $ map var_type vs
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -104,7 +118,7 @@ ztuple_type [x]         = x
 ztuple_type [x0,x1]     = pair_type x0 $ pair_type x1 null_type
 ztuple_type (x0:x1:xs)  = pair_type x0 $ ztuple_type (x1:xs)
 
-ztuple :: TypeSystem t => [AbsExpr t] -> AbsExpr t
+ztuple :: (TypeSystem t, IsQuantifier q) => [AbsExpr t q] -> AbsExpr t q
 ztuple []           = unit
 ztuple [x]          = x
 ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
@@ -127,10 +141,10 @@ null_sort = Sort "Null" "Null" 2
 null_type :: TypeSystem t => t
 null_type = make_type null_sort []
 
-unit :: TypeSystem t => AbsExpr t
+unit :: TypeSystem t => AbsExpr t q
 unit = FunApp (Fun [] "null" [] null_type) []
 
-pair :: TypeSystem t => AbsExpr t -> AbsExpr t -> AbsExpr t
+pair :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
     where
         t0 = type_of x
@@ -148,28 +162,47 @@ fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ 
 fun_type :: TypeSystem t => t -> t -> t
 fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
 
-merge_range :: Quantifier -> StrList
-merge_range Forall = Str "=>"
-merge_range Exists = Str "and"
-merge_range Lambda = Str "PRE"
+class (Eq q, Show q) => IsQuantifier q where
+    merge_range :: q -> StrList
+    qType :: TypeSystem t => q -> t -> t -> t
+    qForall :: q
+    qExists :: q
 
-type Context = AbsContext GenericType
+instance IsQuantifier HOQuantifier where
+    merge_range Forall = Str "=>"
+    merge_range Exists = Str "and"
+    merge_range Lambda = Str "PRE"
+    qType Lambda arg term = fun_type arg term
+    qType Forall _ t = t
+    qType Exists _ t = t
+    qForall = Forall
+    qExists = Exists
 
-type FOContext = AbsContext FOType
+instance IsQuantifier FOQuantifier where
+    merge_range FOForall = Str "=>"
+    merge_range FOExists   = Str "and"
+    qType FOForall _ t = t
+    qType FOExists _ t = t
+    qForall = FOForall
+    qExists = FOExists
 
-data AbsContext t = Context 
+type Context = AbsContext GenericType HOQuantifier
+
+type FOContext = AbsContext FOType FOQuantifier
+
+data AbsContext t q = Context 
         (M.Map String Sort) -- sorts
         (M.Map String (AbsVar t))  -- constants
         (M.Map String (AbsFun t))  -- functions and operators
-        (M.Map String (AbsDef t))  -- transparent definitions
+        (M.Map String (AbsDef t q))  -- transparent definitions
         (M.Map String (AbsVar t))  -- dummies
     deriving (Show,Eq,Generic,Typeable)
 
-instance NFData t => NFData (AbsContext t) where
+instance (NFData t, NFData q) => NFData (AbsContext t q) where
     rnf (Context a b c d e) = rnf (a,b,c,d,e)
 
-class Symbol a t where
-    decl :: a -> [AbsDecl t]
+class Symbol a t q where
+    decl :: a -> [AbsDecl t q]
 
 z3_decoration :: TypeSystem t => t -> String
 z3_decoration t = runReader (z3_decoration' t) ProverOutput
@@ -199,13 +232,13 @@ type Decl = AbsDecl GenericType
 
 type FODecl = AbsDecl FOType
 
-data AbsDecl t = 
+data AbsDecl t q = 
         FunDecl [t] String [t] t
         | ConstDecl String t
-        | FunDef [t] String [AbsVar t] t (AbsExpr t)
+        | FunDef [t] String [AbsVar t] t (AbsExpr t q)
         | SortDecl Sort
 
-instance NFData (AbsDecl FOType) where
+instance NFData q => NFData (AbsDecl FOType q) where
     rnf (FunDecl xs n args t) = rnf (xs,n,args,t)
     rnf (ConstDecl n t) = rnf (n,t)
     rnf (FunDef xs n args t e) = rnf (xs,n,args,t,e)
@@ -233,23 +266,28 @@ data AbsVar t = Var String t
 instance NFData t => NFData (AbsVar t) where
     rnf (Var xs t) = rnf (xs,t)
 
-type FODef = AbsDef FOType
+type FODef = AbsDef FOType HOQuantifier
 
-type Def = AbsDef GenericType
+type Def = AbsDef GenericType HOQuantifier
 
-data AbsDef t = Def [t] String [AbsVar t] t (AbsExpr t)
+data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
     deriving (Eq,Ord,Generic)
 
 instance Show StrList where
     show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
     show (Str s)   = s
 
-instance Show Quantifier where
+instance Show HOQuantifier where
     show Forall = "forall"
     show Exists = "exists"
     show Lambda = "lambda"
 
-instance TypeSystem t => Tree (AbsExpr t) where
+instance Show FOQuantifier where
+    show FOForall = "forall"
+    show FOExists = "exists"
+
+instance (TypeSystem t, IsQuantifier q, Tree t') 
+        => Tree (GenExpr t t' q) where
     -- as_tree' t = return $ as_tree t
     as_tree' (Cast e t)   = do
         t' <- as_tree' t
@@ -296,10 +334,10 @@ instance TypeSystem t => Tree (AbsExpr t) where
             (s2,y)  <- f s1 x
             return (s2,Binder q xs r1 y)
 
-instance TypeSystem t => Show (AbsExpr t) where
+instance (TypeSystem t, IsQuantifier q) => Show (AbsExpr t q) where
     show e = show $ runReader (as_tree' e) UserOutput
 
-instance TypeSystem t => Named (AbsDecl t) where
+instance TypeSystem t => Named (AbsDecl t q) where
     name (FunDecl _ n _ _)  = n
     name (ConstDecl n _)    = n
     name (FunDef _ n _ _ _) = n
@@ -314,7 +352,7 @@ instance TypeSystem t => Named (AbsDecl t) where
     decorated_name' (ConstDecl n _)     = return n
     decorated_name' (SortDecl s) = decorated_name' s
 
-instance TypeSystem t => Tree (AbsDecl t) where
+instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
     as_tree' d@(FunDecl _ _ dom ran) = do
             argt <- mapM as_tree' dom
             t    <- as_tree' ran
@@ -379,7 +417,7 @@ instance TypeSystem t => Show (AbsFun t) where
         ++ intercalate " x " (map (show . as_tree) ts)
         ++ " -> " ++ show (as_tree t)
 
-instance TypeSystem t => Show (AbsDef t) where
+instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
     show (Def xs n ps t e) = n ++ show xs ++  ": " 
         ++ args ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
@@ -388,19 +426,19 @@ instance TypeSystem t => Show (AbsDef t) where
                 | L.null ps = ""
                 | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
 
-instance Symbol Sort t where
+instance Symbol Sort t q where
     decl s = [SortDecl s]
 
-instance Symbol (AbsFun t) t where
+instance Symbol (AbsFun t) t q where
     decl (Fun xs name params ret) = [FunDecl xs name params ret]
 
-instance Symbol (AbsVar t) t where
+instance Symbol (AbsVar t) t q where
     decl (Var name typ)        = [ConstDecl name typ]
 
-instance Symbol (AbsDef t) t where
+instance Symbol (AbsDef t q) t q where
     decl (Def xs name ps typ ex)  = [FunDef xs name ps typ ex]
 
-instance Symbol (AbsContext t) t where
+instance Symbol (AbsContext t q) t q where
     decl (Context sorts cons fun defs _) = -- dums) = 
                 concatMap decl (M.elems sorts)
 --            ++  concatMap decl (elems (cons `merge` dums)) 
@@ -408,7 +446,7 @@ instance Symbol (AbsContext t) t where
             ++  concatMap decl (M.elems fun) 
             ++  concatMap decl (M.elems defs) 
 
-instance NFData t => NFData (AbsDef t) where
+instance (NFData t, NFData q) => NFData (AbsDef t q) where
     rnf (Def xs n args t e) = rnf (xs,n,args,t,e)
 
 merge :: (Ord k, Eq a, Show k, Show a)
@@ -427,7 +465,7 @@ merge_all ms = foldl (M.unionWithKey f) M.empty ms
             | x == y    = x
             | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
-mk_context :: TypeSystem t => [AbsDecl t] -> AbsContext t
+mk_context :: TypeSystem t => [AbsDecl t q] -> AbsContext t q
 mk_context (x:xs) = 
         case mk_context xs of
             Context ss vs fs defs dums -> 
@@ -452,7 +490,9 @@ mk_context (x:xs) =
                             dums
 mk_context [] = empty_ctx
 
-substitute :: M.Map String Expr -> Expr -> Expr
+substitute :: (TypeSystem t, IsQuantifier q)
+           => M.Map String (AbsExpr t q) 
+           -> (AbsExpr t q) -> (AbsExpr t q)
 substitute m e = f e
     where
         f e@(Word v) = maybe e id $ M.lookup (name v) m
@@ -460,10 +500,12 @@ substitute m e = f e
         f e = rewrite f e
         subst vs = m M.\\ symbol_table vs
 
-empty_ctx :: AbsContext t
+empty_ctx :: AbsContext t q
 empty_ctx = Context M.empty M.empty M.empty M.empty M.empty
 
-merge_ctx :: Context -> Context -> Context
+merge_ctx :: (TypeSystem t, IsQuantifier q)
+          => AbsContext t q -> AbsContext t q 
+          -> AbsContext t q
 merge_ctx (Context ss0 vs0 fs0 ds0 dum0) (Context ss1 vs1 fs1 ds1 dum1) = 
         Context 
             (ss0 `merge` ss1) 
@@ -485,7 +527,7 @@ merge_all_ctx cs = Context
         f3 (Context _ _ _ x _) = x
         f4 (Context _ _ _ _ x) = x
 
-used_var :: TypeSystem t => AbsExpr t -> S.Set (AbsVar t)
+used_var :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set (AbsVar t)
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
@@ -503,7 +545,7 @@ var_decl :: String -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 
     M.lookup s m <|> M.lookup s d
 
-used_fun :: TypeSystem t => AbsExpr t -> S.Set (AbsFun t)
+used_fun :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set (AbsFun t)
 used_fun e = visit f s e
     where
         f x y = S.union x (used_fun y)
@@ -519,7 +561,7 @@ instance TypeSystem t => Named (AbsFun t) where
             ts' <- mapM z3_decoration' ts
             return $ x ++ concat ts'
 
-instance TypeSystem t => Named (AbsDef t) where
+instance TypeSystem t => Named (AbsDef t q) where
     name (Def _ x _ _ _) = x
     decorated_name' (Def ts x _ _ _) = do
             ts' <- mapM z3_decoration' ts
@@ -529,16 +571,10 @@ instance Named (AbsVar t) where
     name (Var x _) = x
     decorated_name' = return . name
 
-instance Convert (AbsVar t) (ExprPC (AbsExpr t)) where
-    convert_to = Right . Word
-    convert_from (Right (Word x)) = Just x
-    convert_from _        = Nothing
 
-instance Convert (AbsExpr t) (AbsExpr t) where
-    convert_to = id
-    convert_from = Just
 
-used_types :: TypeSystem t => AbsExpr t -> S.Set t
+
+used_types :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set t
 used_types e = visit (flip $ S.union . used_types) (
         case e of
             Binder _ vs e0 e1 -> S.fromList $ type_of e0 : type_of e1 : L.map f vs
@@ -556,7 +592,7 @@ rename x y e@(Binder q vs r xp)
         | otherwise             = Binder q vs (rename x y r) $ rename x y xp
 rename x y e = rewrite (rename x y) e 
 
-instance (NFData t, NFData t') => NFData (GenExpr t t') where
+instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
     rnf (Word x) = rnf x
     rnf (Const n t) = rnf (n,t)
     rnf (Cast x0 x1) = rnf (x0,x1)

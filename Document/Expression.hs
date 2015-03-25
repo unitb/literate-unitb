@@ -17,7 +17,6 @@ import Logic.Operator
 import UnitB.AST ( System ( .. ) )
 
 import Theories.SetTheory
-import Theories.FunctionTheory
 
 import Utilities.Error
 import Utilities.Syntactic
@@ -25,6 +24,7 @@ import Utilities.Syntactic
 
     -- Libraries
 import qualified Control.Applicative as A 
+import Control.Applicative ((<$>))
 
 import           Control.Monad
 import           Control.Monad.Reader.Class
@@ -341,10 +341,7 @@ term :: Parser Term
 term = do
     n <- get_notation
     let cmds = zip (map token (commands n)) (commands n)
-        quants = [ ("\\qforall",Binder Forall)
-                 , ("\\qexists",Binder Exists)
-                 , ("\\qfun",Binder Lambda) 
-                 , ("\\qset", \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) ]
+        quants = quantifiers n
         oftype = [("\\oftype",())]
     choose_la 
         [ do    c@(Command _ _ n f) <- from cmds
@@ -361,7 +358,7 @@ term = do
                         brackets Curly expr
                     e <- check_types $ f $ map Right args
                     return $ Right e
-        , do    quant <- from quants 
+        , do    quant <- getQuantifier <$> from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
                 ctx <- get_context
@@ -380,7 +377,7 @@ term = do
                                     $ map f ns 
                         f = (`S.filter` vars) . (. name) . (==)
                     ts <- forM v_type $ \(x,(Var _ t),xs) -> do
-                        let ys = L.map (type_of . Word) $ S.toList xs
+                        let ys = L.map var_type $ S.toList xs
                         t' <- maybe 
                             (fail $ format "Inconsistent type for {0}: {1}" 
                                     x

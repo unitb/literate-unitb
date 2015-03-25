@@ -80,7 +80,7 @@ instance Tree Command where
     as_tree GetUnsatCore  = List [Str "get-unsat-core"]
     as_tree (Assert xp _n) = List [Str "assert", f $ g xp]
         where
-            g (Binder Forall vs r t) = 
+            g (Binder FOForall vs r t) = 
                     List 
                         [ Str "forall"
                         , List $ map as_tree vs
@@ -158,7 +158,7 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
-data Command = Decl FODecl 
+data Command = Decl (FODecl FOQuantifier) 
     | Assert FOExpr (Maybe String)
     | SetOption String Bool
     | CheckSat 
@@ -203,7 +203,7 @@ z3_code po =
         f ((lbl,xp),n) = [ Comment $ show lbl
                      , Assert xp $ Just $ "h" ++ show n]
 
-one_point :: Sequent -> Sequent
+one_point :: (IsQuantifier q, TypeSystem2 t) => AbsSequent t q -> AbsSequent t q
 one_point (Sequent a b c g) = Sequent a asm c g'
     where
         asm
@@ -326,7 +326,7 @@ mk_error z f x =
 --        g (x,y) = format "{0} :: {1} ; {2}\n" x (type_of x) y :: String
 --        ys = concatMap g xs
 
-remove_type_vars :: Sequent -> FOSequent
+remove_type_vars :: AbsSequent Type FOQuantifier -> FOSequent FOQuantifier
 remove_type_vars (Sequent ctx asm hyp g) = MM.fromJust $ do
     let vars  = variables g
         (Context sorts' _ _ _ _) = ctx
@@ -337,7 +337,8 @@ remove_type_vars (Sequent ctx asm hyp g) = MM.fromJust $ do
         new_sorts = map as_type $ map (("G" ++) . show) [0..] `minus` sorts
         varm = M.fromList $ zip (S.elems vars) new_sorts
     g   <- return $ mk_error () strip_generics (substitute_type_vars varm g)
-    let types = MM.catMaybes $ map type_strip_generics 
+    let _ = g :: FOExpr
+        types = MM.catMaybes $ map type_strip_generics 
                     $ S.elems $ S.unions 
                     $ map used_types $ asm ++ M.elems hyp
         types' = S.fromList $ types `OL.union` S.elems (used_types g)
@@ -418,7 +419,7 @@ patterns ts = pat
         g t = rewrite g t
 
     -- generic to first order
-gen_to_fol :: S.Set FOType -> Label -> Expr -> [(Label,FOExpr)]
+gen_to_fol :: IsQuantifier q => S.Set FOType -> Label -> AbsExpr Type q -> [(Label,AbsExpr FOType q)]
 gen_to_fol types lbl e = -- with_tracing $ trace (show xs) $ 
         zip ys $ map inst xs
     where
@@ -429,7 +430,10 @@ gen_to_fol types lbl e = -- with_tracing $ trace (show xs) $
         f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
         pat    = patterns e
 
-to_fol_ctx :: S.Set FOType -> Context -> FOContext
+to_fol_ctx :: IsQuantifier q 
+           => S.Set FOType 
+           -> AbsContext Type q 
+           -> AbsContext FOType q
 to_fol_ctx types (Context s vars funs defs dums) = 
         Context s vars' funs' defs' dums'
     where

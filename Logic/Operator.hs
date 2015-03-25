@@ -8,7 +8,7 @@ module Logic.Operator
     ,   UnaryOperator (..)
     ,   Command (..)
     ,   Assoc (..)
-    ,   Operator
+    ,   Operator, Quant(..)
     ,   Matrix
     ,   Input (..)
     ,   with_assoc
@@ -66,11 +66,23 @@ data Notation = Notation
     , relations :: [BinOperator]
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
     , commands :: [Command]
+    , quantifiers :: [(String,Quant)]
     , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
 
+newtype Quant = Quantifier { getQuantifier :: [Var] -> Expr -> Expr -> Expr }
+
+instance Eq Quant where
+    _ == _ = True
+
+instance Show Quant where
+    show _ = "quantifier"
+
+instance NFData Quant where
+    rnf (Quantifier f) = rnf f
+
 instance NFData Notation where
-    rnf (Notation a b c d e f g h) = rnf (a,b,c,d,e,f,g,h)
+    rnf (Notation a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i)
 
 empty_notation :: Notation
 empty_notation = Notation 
@@ -81,6 +93,7 @@ empty_notation = Notation
     , relations = []
     , chaining = []
     , commands = []
+    , quantifiers = []
     , struct = undefined }
 
 with_assoc :: Notation -> Notation
@@ -97,6 +110,7 @@ combine x y
         , right_assoc  = right_assoc x ++ right_assoc y 
         , relations    = relations x ++ relations y
         , commands     = commands x ++ commands y
+        , quantifiers  = quantifiers x ++ quantifiers y
         , chaining     = chaining x ++ chaining y }
     | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
     where
@@ -264,6 +278,8 @@ functions = with_assoc empty_notation
     , left_assoc  = [[apply],[pair]]
     , right_assoc = []
     , relations   = []
+    , quantifiers = [ ("\\qforall", Quantifier $ Binder Forall)
+                    , ("\\qexists", Quantifier $ Binder Exists) ]
     , chaining    = [] }
 
     -- logic

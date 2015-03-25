@@ -352,5 +352,8 @@ function_notation = with_assoc empty_notation
                 , Command "\\ran" "ran" 1 $ zran . head
                 , Command "\\injective" "injective" 1 $ zinjective . head
                 ]
+    , quantifiers = [ ("\\qfun",Quantifier $ Binder Lambda) 
+                    , ("\\qset",Quantifier $ \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) 
+                    ]
     , relations   = []
     , chaining    = []  } 

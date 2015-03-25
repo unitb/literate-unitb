@@ -125,7 +125,8 @@
 	\refine{prog8}{transitivity}{prog11,prog6,prog7}{}
 & \progress{prog11}
 		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs }
-		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs } \\
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs 
+			\land \neg ts = vs } \\
 & \progress{prog6}
 		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs }
 		{ ts = V \land \neg cs = \emptyset \land cs \subseteq \Pcs \setminus ts } \\
@@ -135,6 +136,7 @@
 		{ cs = \emptyset \land \neg ts = V }
 	\refine{prog6}{ensure}{flick}{ \witness{p}{p' \in vs \setminus ts} }
 	\refine{prog7}{ensure}{count}{} % \witness{p}{ p' \in cs } }
+	\refine{prog11}{ensure}{visit}{ \witness{p}{ \neg p' \in vs} }
 \end{align*}
 
 \begin{align*}
@@ -181,6 +183,24 @@
 	\cschedule{flick}{sch2}{p \in vs}
 \end{align*}
 
+\input{machine_m2}
+
+\end{machine}
+
+\begin{machine}{m3}
+	\refines{m2}
+	\[ \variable{ c : \Bool } \]
+	\begin{align}
+		\invariant{m3:inv0}{ c \2\equiv cs = \emptyset } \\
+		\initialization{m3:in0}{ c = \true } \\ 
+		\evbcmeq{count}{m3:act0}{c}{\true} \\
+		\evbcmeq{flick}{m3:act0}{c}{\false}
+	\end{align}
+	\[ \variable{ n : \Int } \]
+	\begin{align}
+		% \invariant{m3:inv1}{ n = \qsum{p}{p \in \Pcs}{1} }
+	\end{align}
+	\input{machine_m3}
 \end{machine}
 
 \end{document}
