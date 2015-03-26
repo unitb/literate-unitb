@@ -20,7 +20,6 @@ zdomrest    :: ExprP -> ExprP -> ExprP
 zrep_select :: ExprP -> ExprP -> ExprP
 zovl        :: ExprP -> ExprP -> ExprP
 zmk_fun     :: ExprP -> ExprP -> ExprP
-zset        :: ExprP -> ExprP
 zempty_fun  :: Expr
 zlambda     :: [Var] -> ExprP -> ExprP -> ExprP
 zstore      :: ExprP -> ExprP -> ExprP -> ExprP
@@ -43,16 +42,20 @@ zovl    = typ_fun2 (Fun [gA,gB] "ovl" [ft,ft] ft)
 
 zmk_fun = typ_fun2 (Fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 
-zset = typ_fun1 (Fun [gA,gB] "set" [fun_type gA gB] $ set_type gB)
 --zset = typ_fun1 (Fun [gA,gB] "set" [array gA $ maybe_type gB] $ set_type gB)
 
 zempty_fun = FunApp (Fun [gA,gB] "empty-fun" [] $ fun_type gA gB) []
 
-    -- encoding is done on an expression per expression basis
-zlambda xs mx my = do
-        x <- zcast bool mx
-        y <- my
-        return $ Binder Lambda xs x y
+zlambda = zquantifier qlambda
+
+lambda :: ExprP -> ExprP -> ExprP
+lambda = typ_fun2 lambda_fun
+
+lambda_fun :: Fun
+lambda_fun = Fun [gA,gB] "lambda" [array gA bool,array gA gB] $ fun_type gA gB
+
+qlambda :: HOQuantifier
+qlambda = UDQuant lambda_fun gA (QT fun_type) InfiniteWD
 
 zstore        = typ_fun3 $ Fun [] "store" [
         array (gB) $ gA, 
@@ -90,7 +93,8 @@ function_theory = Theory { .. }
         defs = empty
         funs =
             symbol_table 
-                [  Fun [t0,t1] "empty-fun" [] $ fun_type t0 t1
+                [  lambda_fun
+                ,  Fun [t0,t1] "empty-fun" [] $ fun_type t0 t1
                 ,  Fun [t0,t1] "dom"    [fun_type t0 t1] $ set_type t0
                 ,  Fun [t0,t1] "ran"    [fun_type t0 t1] $ set_type t1
                 ,  Fun [t0,t1] "apply"  [fun_type t0 t1,t0] t1
@@ -100,7 +104,6 @@ function_theory = Theory { .. }
                 ,  Fun [t0,t1] "mk-fun" [t0,t1] $ fun_type t0 t1 
                 ,  Fun [t0,t1] "tfun" [set_type t0,set_type t1] $ fun_set t0 t1
                 ,  Fun [t0,t1] "injective" [fun_type t0 t1] bool
-                ,  Fun [t0,t1] "set" [fun_type t0 t1] $ set_type t1
                 ]
             where
                 t0 = GENERIC "t0"
@@ -112,12 +115,12 @@ function_theory = Theory { .. }
                 [ axm0, axm1, axm4, axm6
                 , axm7, axm10, axm11, axm12
                 , axm13, axm14, axm15, axm16
-                , axm17, axm18, axm19, axm20
+                , axm17, axm19, axm20
                 , axm25, axm21, axm22, axm23
                 , axm24, axm26, axm27, axm28
                 , axm29, axm30, axm31, axm32
                 , axm33, axm34, axm35, axm36
-                , axm37, axm38
+                , axm37, axm39
                 ]
 
         notation = function_notation
@@ -164,6 +167,10 @@ function_theory = Theory { .. }
             -- dom-subst and dom
         axm10 = fromJust $ mzforall [f1_decl,s1_decl] mztrue ((zdom (s1 `zdomsubt` f1)) `mzeq` (zdom f1 `zsetdiff` s1))
         
+        axm39 = fromJust $ mzforall [r1_decl,term_decl,x_decl] mztrue $
+                           zrep_select (lambda r term) x
+                    `mzeq` zite (zselect r x) (zjust $ zselect term x) znothing
+
 --        axm14 = fromJust $ mzforall [f1_decl] mztrue (
 --                    mzeq (zlambda [x_decl] mzfalse (zapply f1 x))
 --                         $ Right zempty_fun)
@@ -194,10 +201,6 @@ function_theory = Theory { .. }
                 (      zset_select (zdom f1) x
                 `mzeq` mznot (zrep_select f1 x `mzeq` znothing))
             -- set comprehension
-        axm18 = fromJust $ mzforall [y_decl,f1_decl] mztrue 
-                (      zelem y (zset f1)
-                `mzeq` (mzexists [x_decl] (x `zelem` zdom f1)
-                            (zapply f1 x `mzeq` y)))
 
         axm19 = fromJust $ mzforall [x_decl,y_decl,f1_decl] mztrue 
                 (      (zelem x (zdom f1) `mzand` (zapply f1 x `mzeq` y))
@@ -296,11 +299,6 @@ function_theory = Theory { .. }
                                 (zran $ f1 `zovl` zmk_fun x y)
                         `mzeq`  (zran f1 `zunion` zmk_set y)
             -- 
-        axm38 = fromJust $ mzforall [f1_decl,y_decl] mztrue $
-                        ( zset f1 `mzeq` zmk_set y )
-                `mzeq`  mzforall [x_decl] mztrue
-                        (       (zrep_select f1 x `mzeq` zjust y) 
-                         `mzor` (zrep_select f1 x `mzeq` znothing) )
         as_fun e = zcast (fun_type t0 t1) e
     
         (x,x_decl) = var "x" t0
@@ -310,6 +308,8 @@ function_theory = Theory { .. }
         (f2,f2_decl) = var "f2" $ fun_type t0 t1
         (s1,s1_decl) = var "s1" $ set_type t0
         (s2,s2_decl) = var "s2" $ set_type t1
+        (term,term_decl) = var "t" $ array t0 t1
+        (r,r1_decl) = var "r" $ array t0 bool
         -- (s2,s2_decl) = var "s2" $ set_type t1
 --        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
         dec' x = "@function@@_" ++ pad ++ show x
@@ -352,8 +352,6 @@ function_notation = with_assoc empty_notation
                 , Command "\\ran" "ran" 1 $ zran . head
                 , Command "\\injective" "injective" 1 $ zinjective . head
                 ]
-    , quantifiers = [ ("\\qfun",Quantifier $ Binder Lambda) 
-                    , ("\\qset",Quantifier $ \x y z -> fromJust $ zset (Right $ Binder Lambda x y z) ) 
-                    ]
+    , quantifiers = [ ("\\qfun",qlambda) ]
     , relations   = []
     , chaining    = []  } 

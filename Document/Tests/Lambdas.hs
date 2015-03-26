@@ -494,7 +494,7 @@ result6 = unlines
     , "  o  m0/evt/INV/inv6/hypotheses (308,1)"
     , "  o  m0/evt/INV/inv6/relation (308,1)"
     , "  o  m0/evt/INV/inv6/step (310,1)"
-    , " xxx m0/evt/INV/inv6/step (312,1)"
+    , "  o  m0/evt/INV/inv6/step (312,1)"
     , "  o  m0/evt/INV/inv6/step (314,1)"
 --     , " xxx m0/evt/INV/inv6/step (318,1)"
     , "  o  m0/evt/INV/inv6/step (316,1)"
@@ -533,7 +533,7 @@ result6 = unlines
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 101 / 106"
+    , "passed 102 / 106"
     ]
 
 path6 :: String
@@ -609,7 +609,7 @@ result7 = unlines
     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
     , "  o  m0/evt/INV/inv6/relation (310,1)"
     , "  o  m0/evt/INV/inv6/step (312,1)"
-    , " xxx m0/evt/INV/inv6/step (314,1)"
+    , "  o  m0/evt/INV/inv6/step (314,1)"
     , "  o  m0/evt/INV/inv6/step (316,1)"
     , "  o  m0/evt/INV/inv6/step (318,1)"
     , " xxx m0/evt/INV/inv6/step (320,1)"
@@ -665,7 +665,7 @@ result7 = unlines
     , " xxx m0/prog9/REF/add"
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
-    , "passed 109 / 121"
+    , "passed 110 / 121"
     ]
 
 path7 :: String
@@ -745,7 +745,7 @@ result8 = unlines
     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
     , "  o  m0/evt/INV/inv6/relation (310,1)"
     , "  o  m0/evt/INV/inv6/step (312,1)"
-    , " xxx m0/evt/INV/inv6/step (314,1)"
+    , "  o  m0/evt/INV/inv6/step (314,1)"
     , "  o  m0/evt/INV/inv6/step (316,1)"
     , "  o  m0/evt/INV/inv6/step (318,1)"
     , " xxx m0/evt/INV/inv6/step (320,1)"
@@ -788,7 +788,7 @@ result8 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 108 / 110"
+    , "passed 109 / 110"
     ]
   
 path8 :: String
@@ -863,7 +863,7 @@ result9 = unlines
     , "  o  m0/evt/INV/inv6/hypotheses (309,1)"
     , "  o  m0/evt/INV/inv6/relation (309,1)"
     , "  o  m0/evt/INV/inv6/step (311,1)"
-    , " xxx m0/evt/INV/inv6/step (313,1)"
+    , "  o  m0/evt/INV/inv6/step (313,1)"
     , "  o  m0/evt/INV/inv6/step (315,1)"
     , "  o  m0/evt/INV/inv6/step (317,1)"
     , " xxx m0/evt/INV/inv6/step (319,1)"
@@ -919,7 +919,7 @@ result9 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 118 / 123"
+    , "passed 119 / 123"
     ]
 
 path9 :: String
@@ -988,9 +988,7 @@ result11 = unlines
     , "             ( (pfun Int Int)"
     , "               (pfun Int Int) )"
     , "             (pfun Int Int))"
-    , "(declare-fun qsum@@Int ( (pfun Int Int) ) Int)"
     , "(declare-fun ran@@Int@@Int ( (pfun Int Int) ) (set Int))"
-    , "(declare-fun set@@Int@@Int ( (pfun Int Int) ) (set Int))"
     , "(define-fun compl@@Int"
     , "            ( (s1 (set Int)) )"
     , "            (set Int)"
@@ -1106,14 +1104,6 @@ result11 = unlines
     , "                      (not (= (select f1 x) (as Nothing (Maybe Int)))))"
     , "                   :pattern"
     , "                   ( (select (dom@@Int@@Int f1) x) ))))"
-    , "(assert (forall ( (y Int)"
-    , "                  (f1 (pfun Int Int)) )"
-    , "                (! (= (elem@@Int y (set@@Int@@Int f1))"
-    , "                      (exists ( (x Int) )"
-    , "                              (and (elem@@Int x (dom@@Int@@Int f1))"
-    , "                                   (= (apply@@Int@@Int f1 x) y))))"
-    , "                   :pattern"
-    , "                   ( (elem@@Int y (set@@Int@@Int f1)) ))))"
     , "(assert (forall ( (x Int)"
     , "                  (y Int)"
     , "                  (f1 (pfun Int Int)) )"
@@ -1256,15 +1246,6 @@ result11 = unlines
     , "                          (union (ran@@Int@@Int f1) (mk-set@@Int y))))"
     , "                   :pattern"
     , "                   ( (ran@@Int@@Int (ovl@@Int@@Int f1 (mk-fun@@Int@@Int x y))) ))))"
-    , "(assert (forall ( (f1 (pfun Int Int))"
-    , "                  (y Int) )"
-    , "                (! (= (= (set@@Int@@Int f1) (mk-set@@Int y))"
-    , "                      (forall ( (x Int) )"
-    , "                              (=> true"
-    , "                                  (or (= (select f1 x) (Just y))"
-    , "                                      (= (select f1 x) (as Nothing (Maybe Int)))))))"
-    , "                   :pattern"
-    , "                   ())))"
     , "(assert (forall ( (x Int)"
     , "                  (y Int) )"
     , "                (! (= (elem@@Int x (mk-set@@Int y)) (= x y))"

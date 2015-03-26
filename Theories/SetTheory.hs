@@ -26,13 +26,17 @@ map_array name t xs = do
     xs <- sequence xs
     return $ FunApp (Fun [] ("(_ map " ++ name ++ ")") (L.map type_of xs) t) xs
 
-finite :: ExprP -> ExprP
-finite = typ_fun1 $ Fun [gA] "finite" [set_type gA] bool
+mzfinite :: ExprP -> ExprP
+mzfinite = typ_fun1 $ Fun [gA] "finite" [set_type gA] bool
+
+zfinite :: Expr -> Expr
+zfinite e = fromJust $ mzfinite $ Right e
 
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
     where
         t  = VARIABLE "t"
+        t0  = VARIABLE "t0"
         gT = GENERIC "t"
 
         extends = M.empty
@@ -55,7 +59,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table
-                [ Fun [gT] "mk-set" [gT] $ set_type gT 
+                [ comprehension_fun
+                , Fun [gT] "mk-set" [gT] $ set_type gT 
                 , Fun [gT] "finite" [set_type gT] $ bool
                 ]
         fact :: Map Label Expr
@@ -63,6 +68,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 [ (label $ dec' "0", axm0)
                 -- , (label $ dec' "3", axm3)
                 -- , (label $ dec' "6", axm6)
+                , (label $ dec' "3", axm18)
+                , (label $ dec' "6", axm38)
                 -- , (label $ dec' "7", axm7)
                 ]
         thm_depend = []
@@ -71,6 +78,14 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             -- elem and mk-set
         axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue 
                     ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
+        axm18 = fromJust $ mzforall [y_decl,r1_decl,term_decl] mztrue 
+                (      zelem y (zset r1 term)
+                `mzeq` (mzexists [x'_decl] (zselect r1 x')
+                            (zselect term x' `mzeq` y)))
+        axm38 = fromJust $ mzforall [r1_decl,term_decl,y_decl] mztrue $
+                        ( zset r1 term `mzeq` zmk_set y )
+                `mzeq`  mzforall [x'_decl] (zselect r1 x')
+                        (       (zselect term x' `mzeq` y) )
             -- elem over union
         -- axm3 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
         --                     (x `zelem` (s1 `zunion` s2)) 
@@ -85,9 +100,12 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         --                       ( s2 `zsubset` s1 )
         --             `mzeq` (s1 `mzeq` s2)
         (x,x_decl) = var "x" t
+        (x',x'_decl) = var "x" t0
         (y,y_decl) = var "y" t
         (s1,s1_decl) = var "s1" $ set_type t
         (s2,s2_decl) = var "s2" $ set_type t
+        (r1,r1_decl) = var "r1" $ array t0 bool
+        (term,term_decl) = var "term" $ array t0 t
 --            dec x  = x ++ z3_decoration t
         dec' x = "@set@@_" ++ x
         
@@ -105,6 +123,18 @@ zcompl        :: ExprP -> ExprP
 zunion        :: ExprP -> ExprP -> ExprP
 zmk_set       :: ExprP -> ExprP
 zset_enum     :: [ExprP] -> ExprP
+
+comprehension :: HOQuantifier
+comprehension = UDQuant comprehension_fun gA (QT $ const set_type) InfiniteWD
+
+comprehension_fun :: Fun
+comprehension_fun = Fun [gA,gB] "set" [array gA bool, array gA gB] $ set_type gB
+
+zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
+zcomprehension = zquantifier comprehension
+
+zset :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
+zset = typ_fun2 comprehension_fun
 
 zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] bool)
 
@@ -174,6 +204,8 @@ set_notation = with_assoc empty_notation
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []
+    , quantifiers = [ ("\\qset",comprehension) ]
+
     , commands    = [Command "\\emptyset" "emptyset" 0 $ const $ Right zempty_set]
     , chaining    = [ ((subset,subset),subset) 
                     , ((subset,st_subset),st_subset)

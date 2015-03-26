@@ -80,7 +80,7 @@ instance Tree Command where
     as_tree GetUnsatCore  = List [Str "get-unsat-core"]
     as_tree (Assert xp _n) = List [Str "assert", f $ g xp]
         where
-            g (Binder FOForall vs r t) = 
+            g (Binder FOForall vs r t _) = 
                     List 
                         [ Str "forall"
                         , List $ map as_tree vs
@@ -506,7 +506,7 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
             --asm' = znot g : asm
         in
         case g of
-            Binder Forall (Var nam t:vs) rs ts -> do
+            Binder Forall (Var nam t:vs) rs ts _ -> do
                 let (Context ss vars funs defs dums) = ctx
                     v   = Var (fresh nam $ 
                                       M.keysSet vars 
@@ -520,12 +520,12 @@ apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
                     (rename nam (name v) g')
             FunApp f [lhs, rhs] ->
                 case (lhs,rhs) of
-                    (Binder Forall vs r0 t0, Binder Forall us r1 t1) 
+                    (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
                         | vs == us && name f `elem` ["=","=>"] -> 
                             return $ apply_monotonicity (Sequent ctx asm' h' 
                                 (zforall vs ztrue $ 
                                     FunApp f [zimplies r0 t0, zimplies r1 t1]))
-                    (Binder Exists vs r0 t0, Binder Exists us r1 t1) 
+                    (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
                         | vs == us && name f `elem` ["=","=>"] -> 
                             return $ apply_monotonicity (Sequent ctx asm' h' 
                                 (zforall vs ztrue $ 

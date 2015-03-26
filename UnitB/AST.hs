@@ -343,7 +343,7 @@ make_unique _ _ c@(Const _ _)    = c
 make_unique suf vs (FunApp f xs)     = FunApp f $ map (make_unique suf vs) xs
 make_unique suf vs (Cast e t)        = Cast (make_unique suf vs e) t
 make_unique suf vs (Lift e t)        = Lift (make_unique suf vs e) t
-make_unique suf vs (Binder q d r xp) = Binder q d (f r) (f xp)
+make_unique suf vs (Binder q d r xp t) = Binder q d (f r) (f xp) t
     where
         local = (L.foldr M.delete vs (map name d))
         f = make_unique suf local

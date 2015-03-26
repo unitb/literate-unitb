@@ -26,7 +26,7 @@ stripTypes (FunApp fun args) = FunApp fun' (map stripTypes args)
         f = map $ const ()
         fun' = Fun (f ts) n (f targs) ()
         Fun ts n targs _rt = fun
-stripTypes (Binder q vs r t) = Binder q (f vs) (stripTypes r) (stripTypes t)
+stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) ()
     where
         f = map (\(Var n _) -> (Var n ()))
 stripTypes (Cast e t) = Cast (stripTypes e) t
@@ -108,13 +108,13 @@ checkTypes c (Lift e t) = do
     elt <- getElementType t
     e'  <- zcast elt $ checkTypes c e
     return (Lift e' t)
-checkTypes c' (Binder q vs' r t) = do
+checkTypes c' (Binder q vs' r t _) = do
     let c  = newContext vs' c'
         ns = map name vs' :: [String]
         vs = M.elems $ newDummies vs' c'
     (r'',t'') <- parCheck 
         (zcast bool $ checkTypes c r) 
-        (checkTypes c t)
+        (zcast (termType q) $ checkTypes c t)
     let vars = used_var r'' `S.union` used_var t''
         v_type = id -- L.filter ((1 <) . S.size . snd) 
                     $ zip vs
@@ -136,7 +136,8 @@ checkTypes c' (Binder q vs' r t) = do
         r' = substitute ts' r''
         t' = substitute ts' t''
         vs' = map snd ts
-    return (Binder q vs' r' t')
+        tuple = ztuple_type $ map var_type vs'
+    return (Binder q vs' r' t' (exprType q tuple (type_of t')))
 
     -- return $ FunApp _ _
 -- checkTypes c (Const xs n ()) = do

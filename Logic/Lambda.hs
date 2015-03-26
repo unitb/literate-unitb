@@ -22,25 +22,25 @@ import Data.Typeable
 
 data CanonicalLambda = CL 
         [Var] [Var]   -- free vars, bound vars
-        Expr'  Expr'  -- range, term
+        Expr'         -- range or term
         Type          -- return type
     deriving (Eq, Ord, Typeable, Show)
 
 arg_type :: CanonicalLambda -> [Type]
-arg_type (CL vs _ _ _ _) = map var_type vs
+arg_type (CL vs _ _ _) = map var_type vs
 
 return_type :: CanonicalLambda -> Type
-return_type (CL _ bv _ _ rt) = 
-        (fun_type (ztuple_type $ map var_type bv) rt)
+return_type (CL _ bv _ rt) = 
+        (array (ztuple_type $ map var_type bv) rt)
 
-can_bound_vars :: [String]
-can_bound_vars = map ( ("@@bv@@_" ++) . show ) [0..]
+can_bound_vars :: () -> [String]
+can_bound_vars _ = map ( ("@@bv@@_" ++) . show ) [0..]
 
-can_free_vars :: [String]
-can_free_vars  = map ( ("@@fv@@_" ++) . show ) [0..]
+can_free_vars :: () -> [String]
+can_free_vars _ = map ( ("@@fv@@_" ++) . show ) [0..]
 
-can_local_vars :: [String]
-can_local_vars = map ( ("@@lv@@_" ++) . show ) [0..]
+can_local_vars :: () -> [String]
+can_local_vars _ = map ( ("@@lv@@_" ++) . show ) [0..]
 
 data CanonicalRewriter = CR 
         {  local_gen :: [String]            -- locals
@@ -72,20 +72,19 @@ expr_name e = do
             modify (\m -> m { exprs = (e, v):es } )
             return v
 
-canonical :: [Var] -> Expr' -> Expr' -> (CanonicalLambda, [Expr'])
-canonical vs r t = do
+canonical :: [Var] -> Expr' -> (CanonicalLambda, [Expr'])
+canonical vs e = do
         let { state = CR
-            { local_gen = can_local_vars
-            , free_gen  = can_free_vars
-            , renaming  = fromList $ zip (map name vs) can_bound_vars 
+            { local_gen = can_local_vars ()
+            , free_gen  = can_free_vars ()
+            , renaming  = fromList $ zip (map name vs) (can_bound_vars ())
             , exprs     = [] 
             } }
         evalState (do
-            r'      <- findFreeVars (S.fromList vs) r
-            t'      <- findFreeVars (S.fromList vs) t
+            e'      <- findFreeVars (S.fromList vs) e
             us      <- forM vs rename
             (fv,es) <- free_vars
-            return (CL fv us r' t' $ type_of t', es)) 
+            return (CL fv us e' $ type_of e', es)) 
             state
 
 findFreeVars :: S.Set Var -> Expr' -> State CanonicalRewriter Expr'
@@ -96,7 +95,7 @@ findFreeVars ls e
             return (Word v)
     | otherwise = do
         case e of
-            Binder q vs r t -> do
+            Binder q vs r t et -> do
                 let dums = S.fromList vs `S.union` ls
                 ls  <- gets local_gen
                 ren <- gets renaming
@@ -111,7 +110,7 @@ findFreeVars ls e
                 modify (\m -> m 
                     { local_gen = ls
                     , renaming  = ren } )
-                return (Binder q us r' t')
+                return (Binder q us r' t' et)
             Word v          -> 
                 Word <$> rename v
             _               ->
@@ -126,7 +125,7 @@ get_lambda_term t = do
             Just s -> return s
             Nothing -> do
                 let n = size m
-                let term = Fun [] ("@@lambda@@_" ++ show n) (arg_type t) (return_type t)
+                    term = Fun [] ("@@lambda@@_" ++ show n) (arg_type t) (return_type t)
                 put (M.insert t term m)
                 return term 
 
@@ -138,12 +137,12 @@ lambda_decl = do
 lambda_def :: Monad m => StateT TermStore m [Expr']
 lambda_def = do
             xs <- gets toList
-            forM xs $ \(CL vs us r t _,fun) -> do
+            forM xs $ \(CL vs us e _,fun) -> do
                 let sel :: ExprPG Type FOQuantifier
                     sel = check_type fun $ map (Right . Word) vs
                     app = zselect sel (Right $ ztuple $ map Word us)
                     eq :: ExprPG Type FOQuantifier
-                    eq  = mzeq app $ zite (Right r) (zjust $ Right t) znothing
+                    eq  = mzeq app (Right e)
                     res :: Expr'
                     res = fromJust $ mzforall (vs ++ us) mztrue eq
                 return $ res
@@ -175,22 +174,26 @@ delambdify (Sequent ctx asm hyps goal) =
             ) empty
 
 lambdas :: Expr -> State TermStore Expr'
-lambdas (Binder Lambda vs r t) = do
+lambdas (Binder (UDQuant fun _ _ _) vs r t _) = do
     r' <- lambdas r
     t' <- lambdas t
-    let (can, param) = canonical vs r' t'
-    fun <- get_lambda_term can
-    let select = fromJust (check_type fun $ map Right param)
+    let (can_r, param_r) = canonical vs r'
+        (can_t, param_t) = canonical vs t'
+    fun_r <- get_lambda_term can_r
+    fun_t <- get_lambda_term can_t
+    let select_r = check_type fun_r $ map Right param_r
+        select_t = check_type fun_t $ map Right param_t
+        select = fromJust $ check_type fun [select_r,select_t]
         -- careful here! we expect this expression to be type checked already 
     return select
-lambdas (Binder Forall vs r t) = do
+lambdas (Binder Forall vs r t et) = do
     r' <- lambdas r
     t' <- lambdas t
-    return $ Binder FOForall vs r' t'
-lambdas (Binder Exists vs r t) = do
+    return $ Binder FOForall vs r' t' et
+lambdas (Binder Exists vs r t et) = do
     r' <- lambdas r
     t' <- lambdas t
-    return $ Binder FOExists vs r' t'
+    return $ Binder FOExists vs r' t' et
 lambdas (Word v) = return (Word v)
 lambdas (Const v t) = return (Const v t)
 lambdas (FunApp fun args) = do

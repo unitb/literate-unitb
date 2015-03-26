@@ -358,7 +358,7 @@ term = do
                         brackets Curly expr
                     e <- check_types $ f $ map Right args
                     return $ Right e
-        , do    quant <- getQuantifier <$> from quants 
+        , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
                 ctx <- get_context
@@ -392,7 +392,7 @@ term = do
                         r' = substitute ts' r
                         t' = substitute ts' t
                         vs' = map snd ts
-                    return $ Right (quant vs' r' t')
+                    Right <$> check_types (zquantifier quant vs' (Right r') (Right t'))
         , do    from oftype
                 e <- brackets Curly expr
                 t <- brackets Curly type_t

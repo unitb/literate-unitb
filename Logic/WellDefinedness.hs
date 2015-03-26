@@ -9,21 +9,20 @@ import Theories.SetTheory
     -- Libraries
 import Data.List
 
---well_definedness :: ExprP -> ExprP
---well_definedness x = do
---        x' <- x
---        well_definedness_aux x'
-
 well_definedness :: Expr -> Expr
 well_definedness (Word _) = ztrue
 well_definedness (Const _ _) = ztrue
-well_definedness (Binder q vs r t) = zforall vs ztrue t'
+well_definedness (Binder q vs r t _) = (zforall vs ztrue t') `zand` fin
     where
         t' = case q of
-                Forall -> well_definedness $ r `zimplies` t
+                Forall -> well_definedness $ r `zimplies` t 
                 Exists -> well_definedness $ r `zand` t
-                Lambda ->           well_definedness r
-                            `zand` (r `zimplies` well_definedness t)
+                UDQuant _ _ _ _ ->
+                                   well_definedness r
+                            `zand` (r `zimplies` well_definedness t)        
+        fin = case finiteness q of
+                FiniteWD -> fromJust $ mzfinite $ zcomprehension vs (Right r) (Right $ ztuple $ map Word vs)
+                InfiniteWD -> ztrue
 well_definedness (Cast e _) = well_definedness e
 well_definedness (Lift e _) = well_definedness e
 well_definedness (FunApp fun xs) 

@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable     #-}
-{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE DeriveGeneric, RankNTypes #-}
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE FlexibleInstances      #-}
@@ -11,13 +11,14 @@ module Logic.Expr.Expr
     , Value(..)
     , HOQuantifier(..)
     , FOQuantifier(..)
+    , QuantifierType(..)
+    , QuantifierWD(..)
     , Context, FOContext, AbsContext(..)
     , Decl, FODecl, AbsDecl(..)
     , Fun, FOFun, AbsFun(..)
     , Var, FOVar, AbsVar(..), UntypedVar
     , Def, FODef, AbsDef(..)
     , IsQuantifier(..)
-    , rewriteExpr
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -31,10 +32,12 @@ module Logic.Expr.Expr
     , decl, Symbol
     , ztuple_type, ztuple
     , fun_type, fun_sort
+    , bool
     , maybe_type
     , pair, pair_type, pair_sort
     , free_vars
     , var_decl
+    , finiteness
     )
 where
 
@@ -71,7 +74,7 @@ data GenExpr t a q =
         Word (AbsVar t) 
         | Const Value t
         | FunApp (AbsFun t) [GenExpr t a q]
-        | Binder q [AbsVar t] (GenExpr t a q) (GenExpr t a q)
+        | Binder q [AbsVar t] (GenExpr t a q) (GenExpr t a q) t
         | Cast (GenExpr t a q) a
         | Lift (GenExpr t a q) a
     deriving (Eq, Ord, Typeable, Generic)
@@ -83,7 +86,26 @@ instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
 
-data HOQuantifier = Forall | Exists | Lambda
+newtype QuantifierType = QT (Type -> Type -> Type)
+
+data QuantifierWD  = FiniteWD | InfiniteWD
+
+instance Eq QuantifierType where
+    _ == _ = True
+
+instance Ord QuantifierType where
+    compare _ _ = EQ
+
+instance Eq QuantifierWD where
+    _ == _ = True
+
+instance Ord QuantifierWD where
+    compare _ _ = EQ
+
+data HOQuantifier = 
+        Forall 
+        | Exists 
+        | UDQuant Fun Type QuantifierType QuantifierWD
     deriving (Eq, Ord, Generic,Typeable)
 
 data FOQuantifier = FOForall | FOExists 
@@ -108,9 +130,7 @@ type_of (Const _ t)              = t
 type_of (Cast _ t)               = t
 type_of (Lift _ t)               = t
 type_of (FunApp (Fun _ _ _ t) _) = t
-type_of (Binder q vs _ e)   = qType q tuple (type_of e)
-    where
-        tuple = ztuple_type $ map var_type vs
+type_of (Binder _ _ _ _ t)   = t
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -162,27 +182,42 @@ fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ 
 fun_type :: TypeSystem t => t -> t -> t
 fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
 
+bool :: TypeSystem t => t
+bool = make_type BoolSort []
+    
+finiteness :: HOQuantifier -> QuantifierWD
+finiteness Forall = InfiniteWD
+finiteness Exists = InfiniteWD
+finiteness (UDQuant _ _ _ fin) = fin
+
 class (Eq q, Show q) => IsQuantifier q where
     merge_range :: q -> StrList
-    qType :: TypeSystem t => q -> t -> t -> t
+    termType :: q -> Type
+    exprType :: q -> Type -> Type -> Type
     qForall :: q
-    qExists :: q
+    qExists :: q    
 
 instance IsQuantifier HOQuantifier where
     merge_range Forall = Str "=>"
     merge_range Exists = Str "and"
-    merge_range Lambda = Str "PRE"
-    qType Lambda arg term = fun_type arg term
-    qType Forall _ t = t
-    qType Exists _ t = t
+    merge_range (UDQuant _ _ _ _) = Str "PRE"
+    termType Forall = bool
+    termType Exists = bool
+    termType (UDQuant _ t _ _) = t
+    exprType Forall _ _ = bool
+    exprType Exists _ _ = bool
+    exprType (UDQuant _ _ (QT f) _) arg term = f arg term
     qForall = Forall
     qExists = Exists
+
 
 instance IsQuantifier FOQuantifier where
     merge_range FOForall = Str "=>"
     merge_range FOExists   = Str "and"
-    qType FOForall _ t = t
-    qType FOExists _ t = t
+    termType FOForall = bool
+    termType FOExists = bool
+    exprType FOForall _ _ = bool
+    exprType FOExists _ _ = bool
     qForall = FOForall
     qExists = FOExists
 
@@ -280,7 +315,7 @@ instance Show StrList where
 instance Show HOQuantifier where
     show Forall = "forall"
     show Exists = "exists"
-    show Lambda = "lambda"
+    show (UDQuant f _ _ _) = name f
 
 instance Show FOQuantifier where
     show FOForall = "forall"
@@ -308,7 +343,7 @@ instance (TypeSystem t, IsQuantifier q, Tree t')
         ts' <- mapM as_tree' ts
         f   <- decorated_name' f
         return $ List (Str f : ts')
-    as_tree' (Binder q xs r xp)  = do
+    as_tree' (Binder q xs r xp _)  = do
         xs' <- mapM as_tree' xs
         r'  <- as_tree' r
         xp' <- as_tree' xp
@@ -329,10 +364,10 @@ instance (TypeSystem t, IsQuantifier q, Tree t')
     rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1,FunApp g ys)
-    rewriteM' f s0 (Binder q xs r0 x)  = do
+    rewriteM' f s0 (Binder q xs r0 x t)  = do
             (s1,r1) <- f s0 r0
             (s2,y)  <- f s1 x
-            return (s2,Binder q xs r1 y)
+            return (s2,Binder q xs r1 y t)
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsExpr t q) where
     show e = show $ runReader (as_tree' e) UserOutput
@@ -496,7 +531,7 @@ substitute :: (TypeSystem t, IsQuantifier q)
 substitute m e = f e
     where
         f e@(Word v) = maybe e id $ M.lookup (name v) m
-        f e@(Binder _ vs _ _) = rewrite (substitute $ subst vs) e
+        f e@(Binder _ vs _ _ _) = rewrite (substitute $ subst vs) e
         f e = rewrite f e
         subst vs = m M.\\ symbol_table vs
 
@@ -529,7 +564,7 @@ merge_all_ctx cs = Context
 
 used_var :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set (AbsVar t)
 used_var (Word v) = S.singleton v
-used_var (Binder _ vs r expr) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
+used_var (Binder _ vs r expr _) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
 free_vars :: Context -> Expr -> M.Map String Var
@@ -538,7 +573,7 @@ free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
         f xs (Word v@(Var n _))
             | n `M.member` dum = (n,v):xs
             | otherwise      = xs
-        f xs v@(Binder _ vs _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
+        f xs v@(Binder _ vs _ _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
         f xs v = visit f xs v
 
 var_decl :: String -> Context -> Maybe Var
@@ -572,12 +607,10 @@ instance Named (AbsVar t) where
     decorated_name' = return . name
 
 
-
-
 used_types :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set t
 used_types e = visit (flip $ S.union . used_types) (
         case e of
-            Binder _ vs e0 e1 -> S.fromList $ type_of e0 : type_of e1 : L.map f vs
+            Binder _ vs e0 e1 t -> S.fromList $ t : type_of e0 : type_of e1 : L.map f vs
             _ -> S.singleton $ type_of e
             ) e
     where
@@ -587,9 +620,9 @@ rename :: String -> String -> Expr -> Expr
 rename x y e@(Word (Var vn t))
         | vn == x   = Word (Var y t)
         | otherwise = e
-rename x y e@(Binder q vs r xp)
+rename x y e@(Binder q vs r xp t)
         | x `elem` L.map name vs  = e
-        | otherwise             = Binder q vs (rename x y r) $ rename x y xp
+        | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
 instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
@@ -598,8 +631,9 @@ instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
     rnf (Cast x0 x1) = rnf (x0,x1)
     rnf (Lift x0 x1) = rnf (x0,x1)
     rnf (FunApp f args) = rnf (f,args)
-    rnf (Binder q vs e0 e1) = rnf (q,vs,e0,e1)
+    rnf (Binder q vs e0 e1 t) = rnf (q,vs,e0,e1,t)
 
 instance NFData Value where
     rnf (RealVal v) = rnf v
     rnf (IntVal v)  = rnf v
+

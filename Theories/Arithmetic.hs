@@ -30,8 +30,8 @@ greater = BinOperator ">" ">"           (flip mzless)
 leq     = BinOperator "<=" "\\le"       mzle
 geq     = BinOperator ">=" "\\ge"       (flip mzle)
 
-zsum :: ExprP -> ExprP
-zsum = typ_fun1 $ Fun [gT] "qsum" [fun_type gT int] int
+zsum :: [Var] -> ExprP -> ExprP -> ExprP
+zsum = zquantifier qsum
 
 gT :: Type
 gT = VARIABLE "t"
@@ -40,8 +40,14 @@ arithmetic :: Theory
 arithmetic = empty_theory { 
         types = symbol_table [IntSort,RealSort]
         , funs = symbol_table 
-            [ Fun [gA] "qsum" [fun_type gA int] int ]
+            [ sum_fun ]
         , notation = arith }
+
+sum_fun :: Fun
+sum_fun = Fun [gA] "qsum" [array gA bool, array gA int] int
+
+qsum :: HOQuantifier
+qsum = UDQuant sum_fun int (QT $ const $ const int) FiniteWD
 
 arith :: Notation
 arith = with_assoc empty_notation
@@ -70,6 +76,6 @@ arith = with_assoc empty_notation
           , ((greater,greater),greater) ] 
     , quantifiers = 
         [ ("\\qsum"
-          , Quantifier $ \vs x y -> fromJust $ zsum $ Right $ Binder Lambda vs x y)]
+          , qsum)]
     }
           

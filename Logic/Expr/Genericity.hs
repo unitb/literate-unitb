@@ -50,28 +50,26 @@ suffix_generics xs (Gen (USER_DEFINED s ts)) = Gen $ USER_DEFINED s $ map (suffi
 rewrite_types :: IsQuantifier q
               => String 
               -> AbsExpr Type q -> AbsExpr Type q
-rewrite_types xs (Word (Var name t))        = rewrite fe $ Word (Var name u)
+rewrite_types xs e = 
+    case e of
+        Word (Var name t) -> rewrite fe $ Word (Var name u)
+          where
+            u           = ft t
+        Const v t         -> rewrite fe $ Const v t'
+          where
+            t'          = ft t
+        Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
+        Lift e t -> Lift (rewrite_types xs e) (suffix_generics xs t)
+        FunApp (Fun gs f ts t) args -> FunApp (Fun gs2 f us u) new_args
+          where
+            gs2         = map ft gs
+            us          = map ft ts
+            u           = ft t
+            new_args    = map fe args
+        Binder q vs r term t -> rewrite (rewrite_types xs) (Binder q vs r term (ft t))
     where
         fe          = rewrite_types xs
         ft          = suffix_generics xs
-        u           = ft t
-rewrite_types xs (Const v t)             = rewrite fe $ Const v t'
-    where
-        fe          = rewrite_types xs
-        ft          = suffix_generics xs
-        t'          = ft t
-        -- gs2         = map ft gs
-rewrite_types xs (Cast e t) = Cast (rewrite_types xs e) (suffix_generics xs t)
-rewrite_types xs (Lift e t) = Lift (rewrite_types xs e) (suffix_generics xs t)
-rewrite_types xs (FunApp (Fun gs f ts t) args) = FunApp (Fun gs2 f us u) new_args
-    where
-        fe          = rewrite_types xs
-        ft          = suffix_generics xs
-        us          = map ft ts
-        u           = ft t
-        gs2         = map ft gs
-        new_args    = map fe args
-rewrite_types xs e@(Binder _ _ _ _)            = rewrite (rewrite_types xs) e
 
 class TypeSystem t => TypeSystem2 t where
     check_args :: IsQuantifier q
@@ -100,10 +98,9 @@ instance TypeSystem2 FOType where
 
 instance TypeSystem2 GenericType where
     check_args xp (Fun gs name ts t) = do
-            guard (length xp == length ts)
             let n       = length ts
-            let xs      = zip (L.map show [1..n]) xp
-            let args    = L.map (uncurry rewrite_types) xs
+            guard (n == length ts)
+            let args    = zipWith rewrite_types (L.map show [1..n]) xp
             let targs   = L.map type_of args
             let rt      = GENERIC ("a@" ++ show (n+1))
                 -- t0 and t1 are type tuples for the sake of unification
@@ -142,7 +139,7 @@ check_type f@(Fun _ n ts t) mxs = do
         let args = unlines $ map (\(i,x) -> format (unlines
                             [ "   argument {0}:  {1}"
                             , "   type:          {2}" ] )
-                            i x (type_of x))
+                            (i :: Int) x (type_of x))
                         (zip [0..] xs) 
             err_msg = format (unlines 
                     [  "arguments of '{0}' do not match its signature:"
@@ -257,11 +254,12 @@ strip_generics (FunApp f xs) = do
     f  <- fun_strip_generics f
     xs <- mapM strip_generics xs
     return (FunApp f xs)
-strip_generics (Binder q vs r t) = do
+strip_generics (Binder q vs r t et) = do
     vs <- mapM var_strip_generics vs
     r  <- strip_generics r
     t  <- strip_generics t
-    return (Binder q vs r t)
+    et' <- type_strip_generics et
+    return (Binder q vs r t et')
 
 type_strip_generics :: Type -> Maybe FOType
 type_strip_generics (Gen (USER_DEFINED s ts)) = do
@@ -365,7 +363,7 @@ instance IsQuantifier q => Generic (AbsExpr Type q) where
     types_of (Cast e t)     = S.insert t $ types_of e
     types_of (Lift e t)     = S.insert t $ types_of e
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
-    types_of (Binder _ vs r xp) = S.unions $ types_of r : types_of xp : map types_of vs
+    types_of (Binder _ vs r xp t) = S.unions $ S.insert t (types_of r) : types_of xp : map types_of vs
     substitute_types g x = f x
       where
         f (Const x t)    = Const x $ g t
@@ -374,8 +372,8 @@ instance IsQuantifier q => Generic (AbsExpr Type q) where
         f (Lift e t)     = Lift (f e) (g t) 
         f (FunApp fun args) 
                 = rewrite f $ FunApp (substitute_types g fun) (map (substitute_types g) args)
-        f (Binder q vs r e) 
-                = rewrite f $ Binder q (map h vs) r e
+        f (Binder q vs r e t) 
+                = rewrite f $ Binder q (map h vs) r e (g t)
         h (Var x t) = Var x $ g t
 
 ambiguities :: Expr -> [Expr]
@@ -397,12 +395,15 @@ ambiguities e@(FunApp f xp)
         | otherwise                 = []
     where
         children = L.concatMap ambiguities xp
-ambiguities (Binder _ vs r xp) = x ++ ambiguities r ++ ambiguities xp
+ambiguities e@(Binder _ vs r xp t) = x ++ y ++ ambiguities r ++ ambiguities xp
     where
         vs' = L.filter (not . S.null . generics . var_type) vs
         x 
             | not $ L.null vs' = map Word vs'
             | otherwise        = []
+        y 
+            | not $ S.null (generics t) = [e]
+            | otherwise                 = []
 
 common :: GenericType -> GenericType -> Maybe GenericType
 common t1 t2 = do

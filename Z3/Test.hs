@@ -32,8 +32,10 @@ test = test_cases
         [ case0, case1
         , case2, case3
         , case4
-        , Case "canonical lambdas" case5 result5
-        , Case "canonical lambdas with quantifier" case6 result6
+        , Case "canonical lambdas part a" case5a result5a
+        , Case "canonical lambdas part b" case5b result5b
+        , Case "canonical lambdas with quantifier part a" case6a result6a
+        , Case "canonical lambdas with quantifier part b" case6b result6b
         , Case "conversion to first order typing (no type variables)" case7 result7
         , Case "conversion to first order typing" case8 result8
         , Case "instantiating type variables by matching some generic types" case9 result9 ]
@@ -151,54 +153,88 @@ indent xs = unlines (map (">  " ++) (lines xs))
 
 type Result = (Either String Satisfiability, Either String Satisfiability, Validity, [(Validity, Int)])
 
-result5 :: (CanonicalLambda, [Expr'])
-result5 = ( CL 
-                [fv0_decl,fv1_decl,fv2_decl] [x_decl] 
-                (x `zle` fv0) ( (x `zplus` fv1) `zle` fv2 ) 
+result5a :: (CanonicalLambda, [Expr'])
+result5a = ( CL 
+                [fv0_decl] [x_decl] 
+                (x `zle` fv0)
                 bool
-            , [y,z `zplus` y,z `zplus` y])
+            , [y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
         (fv0,fv0_decl) = var' "@@fv@@_0" int
-        (fv1,fv1_decl) = var' "@@fv@@_1" int
-        (fv2,fv2_decl) = var' "@@fv@@_2" int
+        (y,_) = var' "y" int
+
+result5b :: (CanonicalLambda, [Expr'])
+result5b = ( CL 
+                [fv1_decl,fv2_decl] [x_decl] 
+                ( (x `zplus` fv1) `zle` fv2 ) 
+                bool
+            , [z `zplus` y,z `zplus` y])
+    where
+        (x,x_decl) = var' "@@bv@@_0" int
+        (fv1,fv1_decl) = var' "@@fv@@_0" int
+        (fv2,fv2_decl) = var' "@@fv@@_1" int
         (y,_) = var' "y" int
         (z,_) = var' "z" int
 
-case5 :: IO (CanonicalLambda, [Expr'])
-case5 = do
-        return (canonical [x_decl] (x `zle` y) ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
+case5a :: IO (CanonicalLambda, [Expr'])
+case5a = do
+        return (canonical [x_decl] (x `zle` y))
+    where
+        (x,x_decl) = var' "x" int
+        (y,_) = var' "y" int
+
+case5b :: IO (CanonicalLambda, [Expr'])
+case5b = do
+        return (canonical [x_decl] ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
         (x,x_decl) = var' "x" int
         (y,_) = var' "y" int
         (z,_) = var' "z" int
 
-result6 :: (CanonicalLambda, [Expr'])
-result6 = ( CL 
-                [fv0_decl,fv1_decl,fv2_decl,fv3_decl] 
+var' :: String -> Type -> (Expr', Var)
+var' x t = (Word (Var x t), Var x t)
+
+result6a :: (CanonicalLambda, [Expr'])
+result6a = ( CL 
+                [fv0_decl] 
                 [x_decl] 
                 (x `zle` fv0) 
+                bool
+            , [y])
+    where
+        (x,x_decl) = var' "@@bv@@_0" int
+        (fv0,fv0_decl) = var' "@@fv@@_0" int
+        (y,_) = var' "y" int
+
+case6a :: IO (CanonicalLambda, [Expr'])
+case6a = do
+        return (canonical [x_decl] (x `zle` y))
+    where
+        x_decl = Var "x" int
+        x = Word x_decl
+        y = Word (Var "y" int)
+
+result6b :: (CanonicalLambda, [Expr'])
+result6b = ( CL 
+                [fv1_decl,fv2_decl,fv3_decl] 
+                [x_decl] 
                 ( (zforall [lv0_decl] 
                     (x `zle` fv1)
                     ((x `zplus` (lv0 `zplus` fv2)) `zle` (lv0 `zplus` fv3) )) ) 
                 bool
-            , [y,zplus (zint 3) y,y,y])
+            , [zplus (zint 3) y,y,y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
-        (fv0,fv0_decl) = var' "@@fv@@_0" int
-        (fv1,fv1_decl) = var' "@@fv@@_1" int
-        (fv2,fv2_decl) = var' "@@fv@@_2" int
-        (fv3,fv3_decl) = var' "@@fv@@_3" int
+        (fv1,fv1_decl) = var' "@@fv@@_0" int
+        (fv2,fv2_decl) = var' "@@fv@@_1" int
+        (fv3,fv3_decl) = var' "@@fv@@_2" int
         (lv0,lv0_decl) = var' "@@lv@@_0" int
         (y,_) = var' "y" int
---        (Right z,z_decl) = var "z" int
 
-var' :: String -> Type -> (Expr', Var)
-var' x t = (Word (Var x t), Var x t)
-
-case6 :: IO (CanonicalLambda, [Expr'])
-case6 = do
-        return (canonical [x_decl] (x `zle` y) (zforall [z_decl] 
+case6b :: IO (CanonicalLambda, [Expr'])
+case6b = do
+        return (canonical [x_decl] (zforall [z_decl] 
             (x `zle` zplus (zint 3) y)
             ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
     where
@@ -214,7 +250,7 @@ case7 = return $ Just $ to_fol_ctx S.empty ctx
         fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
         ctx = Context M.empty M.empty fun M.empty M.empty
         t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
-        m = M.singleton "t" t
+        m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
 
 result7 :: Maybe (AbsContext FOType HOQuantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
@@ -222,7 +258,7 @@ result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
         fun = decorated_table $ M.elems $ M.map f $ funs set_theory
         f = instantiate m . substitute_type_vars m
         t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
-        m = M.singleton "t" t
+        m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
 
 fun :: Fun
 pat :: [Type]
@@ -240,7 +276,15 @@ case8 = return $ Just $ to_fol_ctx types ctx
     where
         fun   = funs set_theory
         ctx   = Context M.empty M.empty fun M.empty M.empty
-        types = S.fromList [int, set_type int, set_type $ set_type int]
+        types = S.fromList 
+                [ int
+                , set_type int
+                , set_type $ set_type int
+                , array int int
+                , array int bool
+                , array (set_type int) (set_type int)
+                , array (set_type int) bool
+                ]
 
 result8 :: Maybe (AbsContext FOType HOQuantifier)
 result8 = ctx_strip_generics ctx
@@ -251,7 +295,7 @@ result8 = ctx_strip_generics ctx
         f m = instantiate m . substitute_type_vars m
         t0 = int
         t1 = set_type int
-        ms  = map (M.singleton "t") [t0, t1]
+        ms  = [ M.fromList [ (tj,ti) | tj <- ["a","b","t"] ] | ti <- [t0, t1] ]
 
 case9 :: IO [ M.Map String FOType ]
 case9 = return $ match_some pat types

@@ -420,7 +420,7 @@ free_goal v0 v1 m = do
         goal  <- get_goal 
         fresh <- is_fresh v1
         (new,t) <- case goal of 
-            Binder Forall bv r t -> do
+            Binder Forall bv r t _ -> do
                   guard (format "'{0}' is not a fresh variable" v1)
                       fresh
                   v0'@(Var _ tt) <- bind 
@@ -442,7 +442,7 @@ instantiate :: Monad m
             -> TacticT m Expr
 instantiate hyp ps = do
         case hyp of
-            Binder Forall vs r t 
+            Binder Forall vs r t _
                 | all (`elem` vs) (map fst ps) -> do
                     let new_vs = L.foldl (flip L.delete) vs (map fst ps)
                         ps'    = M.mapKeys name $ fromList ps

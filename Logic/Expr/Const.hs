@@ -122,26 +122,14 @@ zforall :: (TypeSystem2 t, IsQuantifier q)
         -> AbsExpr t q
         -> AbsExpr t q
 zforall [] x y  = zimplies x y
-zforall vs x w@(Binder q us y z) 
+zforall vs x w@(Binder q us y z _) 
     | q == qForall = if x == ztrue
             then zforall (vs ++ us) y z
-            else Binder qForall vs x w
+            else Binder qForall vs x w bool
 zforall vs x w   
     |    x `elem` [ztrue, zfalse]
       && w `elem` [ztrue, zfalse] = zimplies x w
-    | otherwise                   = Binder qForall vs x w
--- zforall vs' x w@(Binder Forall us y z) 
---         | x == ztrue = zforall (vs' ++ us') y z
---         | otherwise  = Binder Forall vs x w
---     where
---         vs  = map var_of vs'
---         us' = map Word us
--- zforall vs' x w   
---         |    x `elem` [ztrue, zfalse]
---           && w `elem` [ztrue, zfalse] = zimplies x w
---         | otherwise                   = Binder Forall vs x w
---     where
---         vs = map var_of vs'
+    | otherwise                   = Binder qForall vs x w bool
 
 zexists :: (TypeSystem2 t, IsQuantifier q)
         => [AbsVar t] 
@@ -149,15 +137,22 @@ zexists :: (TypeSystem2 t, IsQuantifier q)
         -> AbsExpr t q
         -> AbsExpr t q
 zexists [] x y = zand x y
-zexists vs x w@(Binder q us y z) 
+zexists vs x w@(Binder q us y z _) 
     | q == qExists = if x == ztrue 
                         then zexists (vs ++ us) y z
-                        else Binder qExists vs x w
+                        else Binder qExists vs x w bool
 zexists vs x w   
     |    x `elem` [ztrue, zfalse]
       && w `elem` [ztrue, zfalse] = zand x w
-    | otherwise                   = Binder qExists vs x w
+    | otherwise                   = Binder qExists vs x w bool
 
+zquantifier :: HOQuantifier -> [Var] -> ExprP -> ExprP -> ExprP
+zquantifier q vs r t = do
+    r' <- zcast bool r
+    t' <- zcast (termType q) t
+    let tuple = ztuple_type (map var_type vs)
+        rt    = exprType q tuple (type_of t')
+    return $ Binder q vs r' t' rt
 
 zite :: ThreeExprP Type q
 zite       = typ_fun3 (Fun [] "ite" [bool,gA,gA] gA)
@@ -255,18 +250,16 @@ zpow :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zpow         = fun2 $ Fun [] "^" [int,int] int
 -- zpow         = fun2 mzpow
 zselect :: TwoExprP Type q
-zselect      = typ_fun2 (Fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
+zselect      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
 zint :: TypeSystem2 t => Int -> AbsExpr t q
 zint n       = Const (IntVal n) int
 zreal :: TypeSystem2 t => Double -> AbsExpr t q
 zreal n      = Const (RealVal n) real
 
-int :: TypeSystem2 t => t
+int :: TypeSystem t => t
 int  = make_type IntSort []
-real :: TypeSystem2 t => t
+real :: TypeSystem t => t
 real = make_type RealSort []
-bool :: TypeSystem2 t => t
-bool = make_type BoolSort []
 
 mzless :: TypeSystem2 t => TwoExprP t q
 mzless        = typ_fun2 $ Fun [] "<" [int,int] bool
@@ -327,7 +320,7 @@ zapply  = typ_fun2 (Fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
 
 one_point_rule :: forall t q. (IsQuantifier q, TypeSystem2 t) 
                => AbsExpr t q -> AbsExpr t q
-one_point_rule (Binder q vs r t) 
+one_point_rule (Binder q vs r t _) 
         | q == qExists = e
     where
         e  = zsome [ f $ zexists (filter (`S.member` fv) vs \\ M.keys inst) ztrue 

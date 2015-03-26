@@ -483,10 +483,6 @@ set_decl_smt2 xs =
         , "             ( (pfun sl@TRAIN sl@BLK) )"
         , "             (set sl@BLK))"]
 --        ,  "(declare-fun set-diff@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((set (pfun sl@TRAIN sl@BLK)) (set (pfun sl@TRAIN sl@BLK))) (set (pfun sl@TRAIN sl@BLK)))"
-     ++ when (WithPFun `elem` xs)
-        [ "(declare-fun set@@sl@TRAIN@@sl@BLK"
-        , "             ( (pfun sl@TRAIN sl@BLK) )"
-        , "             (set sl@BLK))"]
      ++ [ "(define-fun sl@BLK"
         , "            ()"
         , "            (set sl@BLK)"
@@ -687,14 +683,6 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1
         , "                      (not (= (select f1 x) (as Nothing (Maybe {2})))))"
         , "                   :pattern"
         , "                   ( (select (dom@{1}@{3} f1) x) ))))"
-        , "(assert (forall ( (y {2})"
-        , "                  (f1 (pfun {0} {2})) )"
-        , "                (! (= (elem@{3} y (set@{1}@{3} f1))"
-        , "                      (exists ( (x {0}) )"
-        , "                              (and (elem@{1} x (dom@{1}@{3} f1))"
-        , "                                   (= (apply@{1}@{3} f1 x) y))))"
-        , "                   :pattern"
-        , "                   ( (elem@{3} y (set@{1}@{3} f1)) ))))"
         , "(assert (forall ( (x {0})"
         , "                  (y {2})"
         , "                  (f1 (pfun {0} {2})) )"
@@ -853,15 +841,6 @@ fun_facts (x0,x1) (y0,y1) = map (\(x,y) -> (format x x1 y1
         , "                          (union (ran@{1}@{3} f1) (mk-set@{3} y))))"
         , "                   :pattern"
         , "                   ( (ran@{1}@{3} (ovl@{1}@{3} f1 (mk-fun@{1}@{3} x y))) ))))"
-        , "(assert (forall ( (f1 (pfun {0} {2}))"
-        , "                  (y {2}) )"
-        , "                (! (= (= (set@{1}@{3} f1) (mk-set@{3} y))"
-        , "                      (forall ( (x {0}) )"
-        , "                              (=> true"
-        , "                                  (or (= (select f1 x) (Just y))"
-        , "                                      (= (select f1 x) (as Nothing (Maybe {2})))))))"
-        , "                   :pattern"
-        , "                   ())))"
         ] -- 27
 
 data AxiomOption = WithPFun

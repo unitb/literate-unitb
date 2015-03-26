@@ -8,7 +8,7 @@ module Logic.Operator
     ,   UnaryOperator (..)
     ,   Command (..)
     ,   Assoc (..)
-    ,   Operator, Quant(..)
+    ,   Operator
     ,   Matrix
     ,   Input (..)
     ,   with_assoc
@@ -66,20 +66,9 @@ data Notation = Notation
     , relations :: [BinOperator]
     , chaining :: [((BinOperator,BinOperator),BinOperator)]
     , commands :: [Command]
-    , quantifiers :: [(String,Quant)]
+    , quantifiers :: [(String,HOQuantifier)]
     , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
-
-newtype Quant = Quantifier { getQuantifier :: [Var] -> Expr -> Expr -> Expr }
-
-instance Eq Quant where
-    _ == _ = True
-
-instance Show Quant where
-    show _ = "quantifier"
-
-instance NFData Quant where
-    rnf (Quantifier f) = rnf f
 
 instance NFData Notation where
     rnf (Notation a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i)
@@ -278,8 +267,8 @@ functions = with_assoc empty_notation
     , left_assoc  = [[apply],[pair]]
     , right_assoc = []
     , relations   = []
-    , quantifiers = [ ("\\qforall", Quantifier $ Binder Forall)
-                    , ("\\qexists", Quantifier $ Binder Exists) ]
+    , quantifiers = [ ("\\qforall", Forall)
+                    , ("\\qexists", Exists) ]
     , chaining    = [] }
 
     -- logic

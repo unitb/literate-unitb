@@ -152,7 +152,7 @@ instance ProofRule Proof where
         where
             new_ctx = merge_ctx (Context M.empty (M.singleton u (Var u t)) M.empty M.empty M.empty)
                                 ctx
-            free_vars (Binder Forall ds r expr) 
+            free_vars (Binder Forall ds r expr _) 
                     | are_fresh [u] po = return $ zforall (L.filter ((v /=) . name) ds) 
                                                 (rename v u r)
                                                 (rename v u expr)
@@ -199,7 +199,7 @@ instance ProofRule Proof where
                 lbl (Sequent ctx asm hyps goal) = do
         if hyp `elem` M.elems hyps || hyp `elem` asm then do
             newh <- case hyp of
-                Binder Forall vs r t 
+                Binder Forall vs r t _
                     | all (`elem` vs) (M.keys ps) -> do
                         let new_vs = L.foldl (flip L.delete) vs (M.keys ps)
                             ps'    = M.mapKeys name ps
@@ -283,7 +283,7 @@ are_fresh vs (Sequent _ asm hyps goal) =
 rename_all :: [(Var,Var)] -> Expr -> Expr
 rename_all [] e = e
 rename_all vs e@(Word v) = maybe e Word $ L.lookup v vs
-rename_all vs (Binder q ds r xp) = Binder q ds (rename_all us r) (rename_all us xp)
+rename_all vs (Binder q ds r xp t) = Binder q ds (rename_all us r) (rename_all us xp) t
     where
         us = L.filter (\(x,_) -> not $ x `elem` ds) vs
 rename_all vs e = rewrite (rename_all vs) e 
