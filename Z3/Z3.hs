@@ -46,6 +46,7 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 
+import Data.ConfigFile
 import           Data.Char
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
@@ -56,17 +57,53 @@ import qualified Data.Maybe as MM
 import qualified Data.Set as S
 import           Data.Typeable 
 
+import Interactive.Config
+
+import           System.Directory
+import           System.Environment
 import           System.Exit
+import           System.FilePath as F
 import           System.IO.Unsafe
 import           System.Process
 
 import           Utilities.Format
 
 z3_path :: String
-z3_path = "z3"
+z3_path = z3c_path z3_config
 
 default_timeout :: Int
-default_timeout = 5
+default_timeout = z3c_timeout z3_config
+
+total_caps :: SSem
+total_caps = unsafePerformIO $ new $ z3c_capacity z3_config
+
+data Z3Config = Z3Config 
+    { z3c_path :: FilePath
+    , z3c_timeout :: Int
+    , z3c_capacity :: Int }
+    deriving Show
+
+z3_config :: Z3Config
+z3_config = unsafePerformIO $ do
+    let fn = "z3_config.conf"
+    lc   <- doesFileExist fn
+    path <- getExecutablePath
+    gc   <- doesFileExist $ path </> fn
+    cp <- if lc then do
+        readfile emptyCP fn
+    else if gc then do
+        readfile emptyCP fn
+    else
+        return $ return emptyCP
+    let option :: Get_C a => a -> String -> a
+        option x name = fromRight x $ do
+            cp <- cp
+            get cp "DEFAULT" name
+    print $ option (5 :: Int) "timeout"
+    return $ Z3Config
+        { z3c_path = option "z3" "z3_path" 
+        , z3c_timeout = option 5 "timeout"
+        , z3c_capacity = option 32 "capacity" }
 
 instance Tree Command where
     as_tree' = return . as_tree
@@ -147,8 +184,29 @@ instance Tree Command where
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
 
+check_z3_bin :: IO Bool
+check_z3_bin = do
+    b <- z3_installed
+    if b then do
+        (v,h) <- z3_version
+        let versions = [ ("4.3.2","2ca14b49fe45")
+                       , ("4.3.2","784307fc3001")
+                       , ("4.3.2","5e72cf0123f6")
+                       , ("4.4.0","0482e7fe727c")]
+        if (v,h) `elem` versions then
+            return True
+        else do
+            printf "Expecting z3 %s\n" $ intercalate " or\n"
+                $ map (uncurry $ printf "z3 version %s, hashcode %s") versions
+            return False
+    else do
+        putStrLn ("A 'z3' executable has not been found in the path ")
+        return False
 feed_z3 :: String -> Int -> IO (ExitCode, String, String)
-feed_z3 xs n = do
+feed_z3 = unsafePerformIO $ do
+    b <- check_z3_bin
+    unless b $ fail "bad z3 setup"
+    return $ \xs n -> do
         (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:" ++ show n] xs
         return (st, out, err)
         

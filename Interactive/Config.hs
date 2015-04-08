@@ -95,11 +95,12 @@ executable fn
 is_os_windows :: Bool
 is_os_windows = "mingw" == take 5 os 
 
-z3_version :: IO String
+z3_version :: IO (String,String)
 z3_version = do
         xs <- (words . head . lines) `liftM` readProcess "z3" ["--help"] ""
-        let ys = dropWhile (/= "hashcode") xs 
-        return $ filter isHexDigit $ ys !! 1
+        let hashcode = dropWhile (/= "hashcode") xs !! 1
+            version = dropWhile (/= "[version") xs !! 1
+        return (version, filter isHexDigit hashcode)
 
 
 z3_installed :: IO Bool        
