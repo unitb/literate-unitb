@@ -30,7 +30,9 @@ result0 :: String
 result0 = unlines
     [ "  o  m0/INIT/WD"
     , "  o  m0/INV/WD"
-    , "  o  m0/TR/m0:tr0/t@param"
+    , "  o  m0/TR/m0:tr0/WFIS/t/t@prime"
+    , "  o  m0/TR/m0:tr0/m0:leave/EN"
+    , "  o  m0/TR/m0:tr0/m0:leave/NEG"
     , "  o  m0/m0:enter/FIS/in@prime"
     , "  o  m0/m0:enter/SCH"
     , "  o  m0/m0:enter/WD/ACT/a1"
@@ -49,7 +51,8 @@ result0 = unlines
     , "  o  m0/m0:prog0/REF/discharge/tr/lhs"
     , "  o  m0/m0:prog0/REF/discharge/tr/rhs"
     , "  o  m0/m0:tr0/TR/WD"
-    , "passed 21 / 21"
+    , "  o  m0/m0:tr0/TR/WD/witness/t"
+    , "passed 24 / 24"
     ]
 
 result1 :: String
@@ -59,7 +62,9 @@ result1 = unlines
     , "  o  m1/INIT/INV/inv0"
     , "  o  m1/INIT/WD"
     , "  o  m1/INV/WD"
-    , "  o  m1/TR/m1:tr0/t@param"
+    , "  o  m1/TR/m1:tr0/WFIS/t/t@prime"
+    , "  o  m1/TR/m1:tr0/m1:moveout/EN"
+    , "  o  m1/TR/m1:tr0/m1:moveout/NEG"
     , "  o  m1/TR/m1:tr1/WFIS/t/t@prime"
     , "  o  m1/TR/m1:tr1/m1:movein/EN"
     , "  o  m1/TR/m1:tr1/m1:movein/NEG"
@@ -148,9 +153,10 @@ result1 = unlines
     , "  o  m1/m1:saf3/SAF/WD/lhs"
     , "  o  m1/m1:saf3/SAF/WD/rhs"
     , "  o  m1/m1:tr0/TR/WD"
+    , "  o  m1/m1:tr0/TR/WD/witness/t"
     , "  o  m1/m1:tr1/TR/WD"
     , "  o  m1/m1:tr1/TR/WD/witness/t"
-    , "passed 96 / 96"
+    , "passed 99 / 99"
     ]
 
 result2 :: String
@@ -160,7 +166,9 @@ result2 = unlines
     , "  o  m2/INIT/INV/m2:inv0"
     , "  o  m2/INIT/WD"
     , "  o  m2/INV/WD"
-    , "  o  m2/TR/m2:tr0/t@param"
+    , "  o  m2/TR/m2:tr0/WFIS/t/t@prime"
+    , "  o  m2/TR/m2:tr0/m0:leave/EN"
+    , "  o  m2/TR/m2:tr0/m0:leave/NEG"
     , "  o  m2/TR/m2:tr1/WFIS/t/t@prime"
     , "  o  m2/TR/m2:tr1/leadsto/lhs"
     , "  o  m2/TR/m2:tr1/leadsto/rhs"
@@ -272,9 +280,10 @@ result2 = unlines
     , "  o  m2/m2:saf2/SAF/WD/lhs"
     , "  o  m2/m2:saf2/SAF/WD/rhs"
     , "  o  m2/m2:tr0/TR/WD"
+    , "  o  m2/m2:tr0/TR/WD/witness/t"
     , "  o  m2/m2:tr1/TR/WD"
     , "  o  m2/m2:tr1/TR/WD/witness/t"
-    , "passed 119 / 119"
+    , "passed 122 / 122"
     ]
 
 path0 :: String

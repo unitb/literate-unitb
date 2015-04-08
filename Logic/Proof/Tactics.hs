@@ -99,7 +99,7 @@ with_hypotheses :: Monad m
 with_hypotheses es cmd = do
     param              <- TacticT $ lift ask
     let Sequent ctx asm hyps g = sequent param
-    let new_hyp = (M.fromList es `M.union` hyps)
+        new_hyp = (M.fromList es `M.union` hyps)
     tac_local (param { sequent = Sequent ctx asm new_hyp g }) cmd
 
 with_variables :: Monad m

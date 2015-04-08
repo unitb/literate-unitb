@@ -104,7 +104,7 @@ ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag) th -> do
                     let new_sort = Sort tag name 0
-                    let new_type = Gen $ USER_DEFINED new_sort []
+                        new_type = Gen $ USER_DEFINED new_sort []
                     toEither $ error_list
                         [ ( tag `member` all_types th
                           , format "a sort with name '{0}' is already declared" tag )
@@ -112,7 +112,7 @@ ctx_type_decl _ = visit_doc []
                           , format "a constant with name '{0}' is already declared" tag )
                         ]
                     let dummy = Var "x@@" new_type
-                    let new_const = Var name $ set_type new_type
+                        new_const = Var name $ set_type new_type
                     return th 
                             {  types = insert 
                                     tag
@@ -121,7 +121,7 @@ ctx_type_decl _ = visit_doc []
                             ,  consts = insert tag new_const $ consts th
                             ,  fact = insert 
                                     (label (tag ++ "-def"))
-                                    (fromJust $ mzforall [dummy] mztrue 
+                                    (($fromJust) $ mzforall [dummy] mztrue 
                                         (zelem 
                                             (Right $ Word dummy) 
                                             (Right $ Word new_const)))
@@ -188,7 +188,7 @@ ctx_operators = visit_doc [] []
 --                            Var _ (USER_DEFINED s [USER_DEFINED p [t0, t1],t2])
 --                                |    s == fun_sort 
 --                                  && p == pair_sort -> do    
---                                    let fun           = Fun [] v [t0,t1] t2
+--                                    let fun           = mk_fun [] v [t0,t1] t2
 --                                        mk_expr e0 e1 = typ_fun2 fun e0 e1
 --                                        notat         = notation th
 --                                        oper          = BinOperator name v mk_expr
@@ -232,7 +232,7 @@ ctx_imports _ = visit_doc []
                             [(v,Var _ (Gen (USER_DEFINED s [Gen (USER_DEFINED p [t0, t1]),t2])))]
                                 |    s == fun_sort 
                                   && p == pair_sort -> do    
-                                    let fun           = Fun [] v [t0,t1] t2
+                                    let fun           = mk_fun [] v [t0,t1] t2
                                         mk_expr e0 e1 = typ_fun2 fun e0 e1
                                         notat         = notation th
                                         oper          = BinOperator v name mk_expr
@@ -245,7 +245,7 @@ ctx_imports _ = visit_doc []
                                         }
                             [(v,Var _ (Gen (USER_DEFINED s [t0, t1])))]
                                 | s == fun_sort -> do
-                                    let fun         = Fun [] v [t0] t1
+                                    let fun         = mk_fun [] v [t0] t1
                                         mk_expr e0  = typ_fun1 fun e0
                                         notat       = notation th
                                         oper        = UnaryOperator v name mk_expr

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Z3.Test where
 
     -- Modules
@@ -70,7 +70,7 @@ ff :: Fun
 
 a        = Word (Var "a" int)
 (x,x')   = var "x" int
-ff       = Fun [] "f" [int, bool] int
+ff       = mk_fun [] "f" [int, bool] int
 
 sample_ast :: [Command]
 sample_ast = [
@@ -80,45 +80,45 @@ sample_ast = [
         assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
     where
-        f x y   = fromJust $ typ_fun2 ff (Right x) (Right y)
+        f x y   = ($fromJust) $ typ_fun2 ff (Right x) (Right y)
 
 sample_quant :: [Command]
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat ]
     where
-        ff          = Fun [] "f" [int] int
+        ff          = mk_fun [] "f" [int] int
         f           = typ_fun1 ff
 
 sample_proof :: Sequent
 sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
-        [fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
+        [($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         M.empty
-        (fromJust $ mzforall [x'] mztrue (f x `mzless` mzint 12))
+        (($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
-        ff          = Fun [] "f" [int] int
+        ff          = mk_fun [] "f" [int] int
         f           = typ_fun1 ff
 
 sample_quant2 :: [Command]
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
-        f           = typ_fun1 $ Fun [] "f" [int] int
+        f           = typ_fun1 $ mk_fun [] "f" [int] int
 
 sample_quant3 :: [Command]
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ fromJust (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ fromJust $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($fromJust) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat] 
     where
-        f           = typ_fun1 $ Fun [] "f" [int] int
+        f           = typ_fun1 $ mk_fun [] "f" [int] int
         
 assert :: FOExpr -> Command
 assert x = Assert x Nothing
@@ -126,26 +126,26 @@ assert x = Assert x Nothing
 sample_calc :: Calculation
 sample_calc = (Calc  
         ctx
-        (  fromJust  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
-                   ( fromJust (f x `mzimplies` f y) )
-        [ (equal,    fromJust (f x `mzeq` (f x `mzand` f y)),  [], li)
-        , (equal,    fromJust ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
-        , (follows,  fromJust ( x `mzeq` (x `mzand` y) ), [], li)
-        , (equal,    fromJust ( x `mzimplies` y ),        [], li) 
+        (  ($fromJust)  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
+                   ( ($fromJust) (f x `mzimplies` f y) )
+        [ (equal,    ($fromJust) (f x `mzeq` (f x `mzand` f y)),  [], li)
+        , (equal,    ($fromJust) ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
+        , (follows,  ($fromJust) ( x `mzeq` (x `mzand` y) ), [], li)
+        , (equal,    ($fromJust) ( x `mzimplies` y ),        [], li) 
         ]
         li )
     where
         ctx = mk_context [ FunDecl [] "f" [bool] bool,
                   FunDef [] "follows" [x',y'] 
-                    bool (fromJust (y `mzimplies` x)),
+                    bool (($fromJust) (y `mzimplies` x)),
                   ConstDecl "x" bool,
                   ConstDecl "y" bool ]
-        hyp         = fromJust $ mzforall 
+        hyp         = ($fromJust) $ mzforall 
             [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" bool
         (y,y')      = var "y" bool
-        f           = typ_fun1 $ Fun [] "f" [bool] bool
+        f           = typ_fun1 $ mk_fun [] "f" [bool] bool
         li          = LI "" (-1) (-1)
 
 indent :: String -> String
@@ -157,7 +157,7 @@ result5a :: (CanonicalLambda, [Expr'])
 result5a = ( CL 
                 [fv0_decl] [x_decl] 
                 (x `zle` fv0)
-                bool
+                (Just bool)
             , [y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
@@ -168,7 +168,7 @@ result5b :: (CanonicalLambda, [Expr'])
 result5b = ( CL 
                 [fv1_decl,fv2_decl] [x_decl] 
                 ( (x `zplus` fv1) `zle` fv2 ) 
-                bool
+                (Just bool)
             , [z `zplus` y,z `zplus` y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
@@ -179,14 +179,14 @@ result5b = ( CL
 
 case5a :: IO (CanonicalLambda, [Expr'])
 case5a = do
-        return (canonical [x_decl] (x `zle` y))
+        return (canonical Term [x_decl] (x `zle` y))
     where
         (x,x_decl) = var' "x" int
         (y,_) = var' "y" int
 
 case5b :: IO (CanonicalLambda, [Expr'])
 case5b = do
-        return (canonical [x_decl] ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
+        return (canonical Term [x_decl] ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
         (x,x_decl) = var' "x" int
         (y,_) = var' "y" int
@@ -200,7 +200,7 @@ result6a = ( CL
                 [fv0_decl] 
                 [x_decl] 
                 (x `zle` fv0) 
-                bool
+                (Just bool)
             , [y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
@@ -209,7 +209,7 @@ result6a = ( CL
 
 case6a :: IO (CanonicalLambda, [Expr'])
 case6a = do
-        return (canonical [x_decl] (x `zle` y))
+        return (canonical Term [x_decl] (x `zle` y))
     where
         x_decl = Var "x" int
         x = Word x_decl
@@ -222,7 +222,7 @@ result6b = ( CL
                 ( (zforall [lv0_decl] 
                     (x `zle` fv1)
                     ((x `zplus` (lv0 `zplus` fv2)) `zle` (lv0 `zplus` fv3) )) ) 
-                bool
+                (Just bool)
             , [zplus (zint 3) y,y,y])
     where
         (x,x_decl) = var' "@@bv@@_0" int
@@ -234,7 +234,7 @@ result6b = ( CL
 
 case6b :: IO (CanonicalLambda, [Expr'])
 case6b = do
-        return (canonical [x_decl] (zforall [z_decl] 
+        return (canonical Term [x_decl] (zforall [z_decl] 
             (x `zle` zplus (zint 3) y)
             ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
     where
@@ -247,15 +247,17 @@ case6b = do
 case7 :: IO (Maybe (AbsContext FOType HOQuantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
+        fun :: M.Map String Fun
         fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
         ctx = Context M.empty M.empty fun M.empty M.empty
-        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
+        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])        
         m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
 
 result7 :: Maybe (AbsContext FOType HOQuantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
     where 
         fun = decorated_table $ M.elems $ M.map f $ funs set_theory
+        f :: Fun -> Fun
         f = instantiate m . substitute_type_vars m
         t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
         m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]

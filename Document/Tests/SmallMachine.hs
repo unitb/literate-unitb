@@ -136,7 +136,9 @@ case3 = verify path3 0
 
 result4 :: String
 result4 = unlines 
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/inc/INV/inv0"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -157,8 +159,8 @@ result4 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/inc/INV/inv0"
     ]
-
 
 show_po :: FilePath -> Label -> IO String
 show_po path lbl = proof_obligation path (show lbl) 0
@@ -168,7 +170,9 @@ case4 = show_po path3 $ label "m0/inc/INV/inv0"
 
 result5 :: String
 result5 = unlines 
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/SKIP/CO/co0"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -189,6 +193,7 @@ result5 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/SKIP/CO/co0"
     ]
 
 case5 :: IO String
@@ -228,7 +233,9 @@ case6 = verify path6 0
 
 result7 :: String
 result7 = unlines 
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/inc/SCH"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -245,8 +252,8 @@ result7 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/inc/SCH"
     ]
-
 
 case7 :: IO String
 case7 = show_po path6 $ label "m0/inc/SCH"
@@ -256,7 +263,9 @@ path8 = "Tests/small_machine_t4.tex"
 
 result8 :: String
 result8 = unlines 
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/inc/SCH"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -273,15 +282,17 @@ result8 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/inc/SCH"
     ]
-
 
 case8 :: IO String
 case8 = show_po path8 $ label "m0/inc/SCH"
 
 result9 :: String
 result9 = unlines
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/inc/SCH/m0/0/REF/weaken"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -298,6 +309,7 @@ result9 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/inc/SCH/m0/0/REF/weaken"
     ]
 
 case9 :: IO String
@@ -305,7 +317,9 @@ case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
 
 result10 :: String
 result10 = unlines 
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/TR/tr0/inc/EN"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -322,6 +336,7 @@ result10 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/TR/tr0/inc/EN"
     ]
 
 case10 :: IO String
@@ -329,7 +344,9 @@ case10 = show_po path6 $ label "m0/TR/tr0/inc/EN"
 
 result11 :: String
 result11 = unlines
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/TR/tr0/inc/NEG"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -354,6 +371,7 @@ result11 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/TR/tr0/inc/NEG"
     ]
 
 case11 :: IO String

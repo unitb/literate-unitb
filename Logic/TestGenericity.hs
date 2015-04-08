@@ -209,7 +209,7 @@ case6   :: IO Expr
 result6 :: Expr
 ( case3,result3,case5,result5,case6,result6 ) = ( 
                     return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
-                    , FunApp (Fun [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
+                    , FunApp (mk_fun [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
                     , return p
                     , q
                     , return pp
@@ -224,23 +224,23 @@ result6 :: Expr
         x4 = Word $ Var "x3" (set_type $ set_type int)
         -- y  = Word $ Var "y" int
         -- z  = Word $ Var "z" real
-        union  = Fun [gA] "union" [set_type gA,set_type gA] $ set_type gA
-        member = Fun [gA] "member" [gA, set_type gA] bool
+        union  = mk_fun [gA] "union" [set_type gA,set_type gA] $ set_type gA
+        member = mk_fun [gA] "member" [gA, set_type gA] bool
         pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
-        qq = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gB) [x3,x4]]
+        qq = FunApp member [FunApp union [x1,x2], FunApp (mk_fun [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gB) [x3,x4]]
         p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
-        q = FunApp member [FunApp union [x1,x2], FunApp (Fun [set_type gA] "union" [set_type gA,set_type gA] $ set_type gA) [x3,x4]]
+        q = FunApp member [FunApp union [x1,x2], FunApp (mk_fun [set_type gA] "union" [set_type gA,set_type gA] $ set_type gA) [x3,x4]]
 
 case7   :: IO ExprP
 result7 :: ExprP
 (case7, result7) = 
-        ( return (x `zelem` Right zempty_set)
-        , Right $ FunApp (Fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
+        ( return (x `zelem` zempty_set)
+        , Right $ FunApp (mk_fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
         train = Gen $ USER_DEFINED (Sort "\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = FunApp (Fun [train] "empty-set" [] $ set_type train) []
+        empty_set_of_train = FunApp (mk_fun [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines
@@ -265,7 +265,7 @@ fromRight (Right x) = x
 fromRight _ = error "expecting right"
 
 case8 :: IO String
-case8 = return $ concatMap pretty_print' $ disjuncts e'
+case8 = return $ unlines $ map pretty_print' $ disjuncts e'
     where
         (z,z_decl) = var "z" int
         z7  = mzint 7

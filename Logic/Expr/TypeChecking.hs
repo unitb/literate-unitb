@@ -24,13 +24,13 @@ stripTypes (Const n _)       = Const n ()
 stripTypes (FunApp fun args) = FunApp fun' (map stripTypes args)
     where
         f = map $ const ()
-        fun' = Fun (f ts) n (f targs) ()
-        Fun ts n targs _rt = fun
+        fun' = Fun (f ts) n lf (f targs) ()
+        Fun ts n lf targs _rt = fun
 stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) ()
     where
         f = map (\(Var n _) -> (Var n ()))
 stripTypes (Cast e t) = Cast (stripTypes e) t
-stripTypes (Lift e t) = Cast (stripTypes e) t
+stripTypes (Lift e t) = Lift (stripTypes e) t
 
 constants :: Context -> M.Map String Var
 constants (Context _ vs _ _ _) = vs
@@ -96,7 +96,7 @@ checkTypes _ (Const n ()) = do
              IntVal _  -> int
     return (Const n t)
 checkTypes c (FunApp f args) = do
-    let Fun _ n _ _ = f ;
+    let Fun _ n _ _ _ = f ;
         targs = map (checkTypes c) args
     tfun <- bind (n `M.lookup` functions c)
         (printf "%s is undeclared" ) ;

@@ -73,6 +73,10 @@
 \refine{prog3}{ensure}{visit}{ [\witness{p}{\neg p' \in vs}] }
 \end{align*}
 
+\begin{align*}
+	\assumption{asm0}{ \finite.\Pcs }
+\end{align*}
+
 \newevent{visit}{visit}
 
 \[ \indices{visit}{p : \Pcs} \]
@@ -189,16 +193,24 @@
 
 \begin{machine}{m3}
 	\refines{m2}
-	\[ \variable{ c : \Bool } \]
+	\[ \variable{ c : \Int } \]
 	\begin{align}
-		\invariant{m3:inv0}{ c \2\equiv cs = \emptyset } \\
-		\initialization{m3:in0}{ c = \true } \\ 
-		\evbcmeq{count}{m3:act0}{c}{\true} \\
-		\evbcmeq{flick}{m3:act0}{c}{\false}
+		\invariant{m3:inv5}{ c \in \{0,1\} } \\
+		\invariant{m3:inv0}{ c = \card.cs } \\
+		\initialization{m3:in0}{ c = 0 } \\ 
+		\evbcmeq{count}{m3:act0}{c}{0} \\
+		\evbcmeq{flick}{m3:act0}{c}{1}
 	\end{align}
 	\[ \variable{ n : \Int } \]
 	\begin{align}
-		% \invariant{m3:inv1}{ n = \qsum{p}{p \in \Pcs}{1} }
+		\invariant{m3:inv1}{ n = \qsum{p}{p \in ts}{1} } \\
+		\invariant{m3:inv2}{ \finite.ts }\\
+		\invariant{m3:inv3}{ \finite.cs } \\
+		\initialization{m3:in1}{ n = 0 }  \\
+		% \invariant{m3:inv4}{ \qsum{p}{p \in ts \bunion cs}{1} = n + c }\\
+		\invariant{m3:inv6}{ ts \binter cs = \emptyset } \\
+		\evbcmeq{count}{m3:act1}{n}{n+1} \\
+		\evguard{count}{m3:grd0}{ c = 1 }
 	\end{align}
 	\input{machine_m3}
 \end{machine}

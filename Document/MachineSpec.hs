@@ -245,7 +245,6 @@ var_set = do
     nvar  <- choose (0,5)
     types <- L.sort `liftM` vectorOf nvar choose_type
     let vars = zipWith (Var . (:[])) ['a'..] types
-    -- let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
     return $ symbol_table vars
             
 basic_notation :: Notation
@@ -342,8 +341,8 @@ fun_map = M.fromList
     ]
 
 zelem' :: Expr -> Expr -> Expr
-zelem' e0 e1 = FunApp (Fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
-        -- zeq' e0 e1 = FunApp (Fun [] "=" [int,int] bool) [e0,e1 :: Expr]
+zelem' e0 e1 = FunApp (mk_fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
+        -- zeq' e0 e1 = FunApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
 choose_expr :: Bool -> Type -> EGen Expr
 choose_expr b t = do
@@ -374,7 +373,7 @@ subexpression :: Expr -> [(Expr, Type, String)]
 subexpression e = f [] e
     where
         f xs e = (e, type_of e, comment e) : visit f xs e
-        comment (FunApp (Fun act f argt rt) arg) = format "{0} {1} ({2}) : {3} -> {4}" act f arg argt rt
+        comment (FunApp (Fun act f _ argt rt) arg) = format "{0} {1} ({2}) : {3} -> {4}" act f arg argt rt
         comment _ = "<>"
 
 main :: IO ()

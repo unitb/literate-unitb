@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RecordWildCards #-}
+{-# LANGUAGE BangPatterns, RecordWildCards, TemplateHaskell #-}
 module Theories.SetTheory where
 
     -- Modules
@@ -18,19 +18,19 @@ set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
-as_array :: TypeSystem t => t -> AbsExpr t q -> AbsExpr t q
-as_array t x = FunApp (Fun [] ("(as const " ++ show (as_tree t) ++ ")") [] t) [x]
+as_array :: TypeSystem t => t -> String -> AbsExpr t q
+as_array t x = FunApp (mk_lifted_fun [] x [] t) []
 
 map_array :: String -> Type -> [ExprP] -> ExprP
 map_array name t xs = do
     xs <- sequence xs
-    return $ FunApp (Fun [] ("(_ map " ++ name ++ ")") (L.map type_of xs) t) xs
+    return $ FunApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
 
 mzfinite :: ExprP -> ExprP
-mzfinite = typ_fun1 $ Fun [gA] "finite" [set_type gA] bool
+mzfinite = typ_fun1 $ mk_fun [gA] "finite" [set_type gA] bool
 
 zfinite :: Expr -> Expr
-zfinite e = fromJust $ mzfinite $ Right e
+zfinite e = ($fromJust) (mzfinite $ Right e)
 
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
@@ -47,73 +47,88 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 [ Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
                 , Def [gT] "elem" [x_decl, s1_decl] bool 
-                        $ fromJust $ zset_select s1 x
+                        $ ($fromJust) (zset_select s1 x)
                 , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
-                        $ fromJust $ s1 `zintersect` map_array "not" (set_type gT) [s2]
+                        $ ($fromJust) $ s1 `zintersect` map_array "not" (set_type gT) [s2]
                 , Def [gT] "compl" [s1_decl] (set_type gT)
-                        $ fromJust $ map_array "not" (set_type gT) [s1]
+                        $ ($fromJust) $ map_array "not" (set_type gT) [s1]
                 , Def [gT] "st-subset" [s1_decl,s2_decl] bool
-                        $ fromJust $ (s1 `zsubset` s2)
+                        $ ($fromJust) $ (s1 `zsubset` s2)
                             `mzand`  mznot (s1 `mzeq` s2)
                 ]
         funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table
                 [ comprehension_fun
-                , Fun [gT] "mk-set" [gT] $ set_type gT 
-                , Fun [gT] "finite" [set_type gT] $ bool
+                , mk_fun [gT] "mk-set" [gT] $ set_type gT 
+                , mk_fun [gT] "finite" [set_type gT] $ bool
                 ]
         fact :: Map Label Expr
-        fact = fromList 
-                [ (label $ dec' "0", axm0)
-                -- , (label $ dec' "3", axm3)
-                -- , (label $ dec' "6", axm6)
-                , (label $ dec' "3", axm18)
-                , (label $ dec' "6", axm38)
-                -- , (label $ dec' "7", axm7)
-                ]
+        fact = "set" `axioms` do
+                -- elem and mk-set
+            $axiom $  (x `zelem` zmk_set y) .==  x .= y
+                -- comprehension
+            $axiom $       zelem y (zset r1 term)
+                      .== (mzexists [x'_decl] (x' `zelem` r1)
+                                (zselect term x' .= y))
+                    -- with empty set
+            $axiom $     zset r1 term .= zmk_set y
+                    .==  mzforall [x'_decl] (zelem x' r1)
+                                 (       (zselect term x' `mzeq` y) )
+                -- finite
+            $axiom $      mzfinite s1
+                     .=> (mzfinite $ s1 `zsetdiff` s2)
+            $axiom $     mzfinite s1 /\ mzfinite s2
+                     .=> (mzfinite $ s1 `zunion` s2)
+            $axiom $ mzfinite $ zmk_set x
+            $axiom $ mzfinite $ zcast (set_type t) zempty_set
+
+            $axiom $ zset r1 zident .= r1
+                -- elem over union
+            -- $axiom $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
+            --                     (x `zelem` (s1 `zunion` s2)) 
+            --             `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
+                -- elem over empty-set
+    --        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
+            -- $axiom $ mzforall [s1_decl,s2_decl] mztrue $
+            --                 ( s1 `zsubset` s2 )
+            --             `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
+            -- $axiom $ mzforall [s1_decl,s2_decl] mztrue $
+            --                 mzand ( s1 `zsubset` s2 )
+            --                       ( s2 `zsubset` s1 )
+            --             `mzeq` (s1 `mzeq` s2)
+
+            -- fromList 
+            --     [ (label $ dec' "0", axm0)
+            --     -- , (label $ dec' "3", axm3)
+            --     -- , (label $ dec' "6", axm6)
+            --     , (label $ dec' "3", axm18)
+            --     , (label $ dec' "6", axm38)
+            --     , (label $ dec' "7", axm1)
+            --     , (label $ dec' "8", axm2)
+            --     , (label $ dec' "9", axm3)
+            --     , (label $ dec' "10", axm4)
+            --     -- , (label $ dec' "7", axm7)
+            --     ]
         thm_depend = []
         notation   = set_notation
                 
-            -- elem and mk-set
-        axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue 
-                    ((x `zelem` zmk_set y) `mzeq` (x `mzeq` y))
-        axm18 = fromJust $ mzforall [y_decl,r1_decl,term_decl] mztrue 
-                (      zelem y (zset r1 term)
-                `mzeq` (mzexists [x'_decl] (zselect r1 x')
-                            (zselect term x' `mzeq` y)))
-        axm38 = fromJust $ mzforall [r1_decl,term_decl,y_decl] mztrue $
-                        ( zset r1 term `mzeq` zmk_set y )
-                `mzeq`  mzforall [x'_decl] (zselect r1 x')
-                        (       (zselect term x' `mzeq` y) )
-            -- elem over union
-        -- axm3 = fromJust $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
-        --                     (x `zelem` (s1 `zunion` s2)) 
-        --             `mzeq` ( (x `zelem` s1) `mzor` (x `zelem` s2) ))
-            -- elem over empty-set
---        Right axm2 = mzforall [x_decl,s1_decl] (mznot (x `zelem` zempty_set))
-        -- axm6 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
-        --                 ( s1 `zsubset` s2 )
-        --             `mzeq` (mzforall [x_decl] mztrue ( zelem x s1 `mzimplies` zelem x s2 ))
-        -- axm7 = fromJust $ mzforall [s1_decl,s2_decl] mztrue $
-        --                 mzand ( s1 `zsubset` s2 )
-        --                       ( s2 `zsubset` s1 )
-        --             `mzeq` (s1 `mzeq` s2)
+
         (x,x_decl) = var "x" t
         (x',x'_decl) = var "x" t0
-        (y,y_decl) = var "y" t
+        (y,_y_decl) = var "y" t
         (s1,s1_decl) = var "s1" $ set_type t
         (s2,s2_decl) = var "s2" $ set_type t
-        (r1,r1_decl) = var "r1" $ array t0 bool
-        (term,term_decl) = var "term" $ array t0 t
+        (r1,_r1_decl) = var "r1" $ set_type t0
+        (term,_term_decl) = var "term" $ array t0 t
 --            dec x  = x ++ z3_decoration t
-        dec' x = "@set@@_" ++ x
+        -- dec' x = "@set@@_" ++ x
         
         theorems = M.empty
 
 zset_select   :: ExprP -> ExprP -> ExprP
-zempty_set    :: Expr
-zelem         :: ExprP -> ExprP -> ExprP
+zempty_set    :: ExprP
+zelem         :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
 zsubset       :: ExprP -> ExprP -> ExprP
 zstsubset     :: ExprP -> ExprP -> ExprP
 zsetdiff      :: ExprP -> ExprP -> ExprP
@@ -125,10 +140,10 @@ zmk_set       :: ExprP -> ExprP
 zset_enum     :: [ExprP] -> ExprP
 
 comprehension :: HOQuantifier
-comprehension = UDQuant comprehension_fun gA (QT $ const set_type) InfiniteWD
+comprehension = UDQuant comprehension_fun gA (QTTerm set_sort) InfiniteWD
 
 comprehension_fun :: Fun
-comprehension_fun = Fun [gA,gB] "set" [array gA bool, array gA gB] $ set_type gB
+comprehension_fun = mk_fun [gA,gB] "set" [set_type gA, array gA gB] $ set_type gB
 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
@@ -136,25 +151,25 @@ zcomprehension = zquantifier comprehension
 zset :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
 zset = typ_fun2 comprehension_fun
 
-zset_select = typ_fun2 (Fun [] "select" [set_type gA, gA] bool)
+zset_select = typ_fun2 (mk_fun [] "select" [set_type gA, gA] bool)
 
-zelem        = typ_fun2 (Fun [gA] "elem" [gA,set_type gA] bool)
-zsetdiff     = typ_fun2 (Fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
+zelem        = typ_fun2 (mk_fun [gA] "elem" [gA,set_type gA] bool)
+zsetdiff     = typ_fun2 (mk_fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 
 
-zempty_set   = FunApp (Fun [gA] "empty-set" [] $ set_type gA) []
-zsubset      = typ_fun2 (Fun [] "subset" [set_type gA,set_type gA] bool)
-zstsubset    = typ_fun2 (Fun [gA] "st-subset" [set_type gA,set_type gA] bool)
-zintersect   = typ_fun2 (Fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
-zunion       = typ_fun2 (Fun [] "union" [set_type gA,set_type gA] $ set_type gA)
-zcompl       = typ_fun1 (Fun [gA] "compl" [set_type gA] $ set_type gA)
+zempty_set   = Right $ FunApp (mk_fun [gA] "empty-set" [] $ set_type gA) []
+zsubset      = typ_fun2 (mk_fun [] "subset" [set_type gA,set_type gA] bool)
+zstsubset    = typ_fun2 (mk_fun [gA] "st-subset" [set_type gA,set_type gA] bool)
+zintersect   = typ_fun2 (mk_fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
+zunion       = typ_fun2 (mk_fun [] "union" [set_type gA,set_type gA] $ set_type gA)
+zcompl       = typ_fun1 (mk_fun [gA] "compl" [set_type gA] $ set_type gA)
 
-zmk_set      = typ_fun1 (Fun [gA] "mk-set" [gA] $ set_type gA)
+zmk_set      = typ_fun1 (mk_fun [gA] "mk-set" [gA] $ set_type gA)
 zset_enum (x:xs) = foldl zunion y ys 
     where
         y  = zmk_set x
         ys = L.map zmk_set xs
-zset_enum [] = return zempty_set
+zset_enum [] = zempty_set
 
 dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t
@@ -206,7 +221,8 @@ set_notation = with_assoc empty_notation
     , relations   = []
     , quantifiers = [ ("\\qset",comprehension) ]
 
-    , commands    = [Command "\\emptyset" "emptyset" 0 $ const $ Right zempty_set]
+    , commands    = [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
+                    , Command "\\finite" "finite" 1 $ from_list mzfinite]
     , chaining    = [ ((subset,subset),subset) 
                     , ((subset,st_subset),st_subset)
                     , ((st_subset,subset),st_subset)

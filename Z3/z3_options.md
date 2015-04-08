@@ -1,3 +1,5 @@
+z3 -p parameter list
+z3 -pp:opt full description of parameter opt
 ## combinators:
     - (and-then <tactic>+) executes the given tactics sequencially.
     - (or-else <tactic>+) tries the given tactics in sequence until one of them succeeds.

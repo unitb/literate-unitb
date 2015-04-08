@@ -74,7 +74,7 @@ compile :: Bool -> [String] -> MaybeT IO ()
 compile silent args = MaybeT $ do
     r <- if silent then do
         (r,_out,err) <- readProcessWithExitCode "ghc" args []
-        -- putStrLn $ unlines $ filter ("[" `isPrefixOf`) $ lines _out
+        -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
         putStrLn err
         return r
     else rawSystem "ghc" args

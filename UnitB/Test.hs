@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module UnitB.Test where 
 
     -- Modules
@@ -41,8 +42,8 @@ test = test_cases
 example0 :: Either [Error] Machine
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
-        let (y,_,y_decl) = prog_var "y" int
-        let li = LI "" 0 0
+            (y,_,y_decl) = prog_var "y" int
+            li = LI "" 0 0
         inv0   <- with_li li (x `mzeq` (mzint 2 `mztimes` y))
         init0  <- with_li li (x `mzeq` mzint 0)
         init1  <- with_li li (y `mzeq` mzint 0)
@@ -80,7 +81,7 @@ example0 = do
         return m
 
 select :: ExprP -> ExprP -> ExprP
-select      = typ_fun2 (Fun [] "select" [array gA gB, gA] gB)
+select      = typ_fun2 (mk_fun [] "select" [array gA gB, gA] gB)
 
 train_m0 :: Either [Error] Machine
 train_m0 = do
@@ -170,21 +171,22 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_po :: String
 result_train_m0_tr_po = unlines 
-    [ -- " sort: , , , pfun [a,b], set [a]"
-      " sort: Pair [a,b], , , "
-    , " qsum[_a]: (Array a Bool) x (Array a Int) -> Int"
+    [ " sort: Pair [a,b], , , "
+    , " const[_a,_b]: b -> (Array a b)"
+    , " ident[_a]:  -> (Array a a)"
+    , " qsum[_a]: (set a) x (Array a Int) -> Int"
     , " st: (Array Int Bool)"
     , " st@prime: (Array Int Bool)"
     , " t: Int"
-    , " (forall ((t \\Int)) (=> true (= (store st t false) (store st t false))))"
+    , " (forall ( (t Int) )"
+    , "        (=> true (= (store st t false) (store st t false))))"
     , "|----"
-    , " (exists ((t@param \\Int))"
-          ++   " (and true"
-          ++   " (and (=> (select st t) (select st t@param))"
-          ++        " (=> (and (= st@prime (store st t@param false))"
-          ++                 " (select st t@param))"
-          ++            " (=> (select st t)"
-          ++                " (not (select st@prime t)))))))"
+    , " (exists ( (t@param Int) )"
+    , "        (and true"
+    , "             (and (=> (select st t) (select st t@param))"
+    , "                  (=> (and (= st@prime (store st t@param false))"
+    , "                           (select st t@param))"
+    , "                      (=> (select st t) (not (select st@prime t)))))))"
     ]
 
 check_mch :: Either [Error] Machine -> IO (String, Map Label Sequent)
@@ -204,30 +206,28 @@ get_cmd_tr_po em = return (do
         let lbl = composite_label [_name m, label "TR/TR0/t@param"]
         pos <- proof_obligation m
         let po = pos ! lbl
-        let cmd =  z3_code po
-        return $ unlines $ map (show . as_tree) cmd)
+            cmd =  z3_code po
+        return $ unlines $ map pretty_print' cmd)
     
 get_tr_po :: Either [Error] Machine -> IO String
-get_tr_po em = case (do
+get_tr_po em = either (return . show_err) return $ do
         m <- em
         pos <- proof_obligation m
         let lbl = composite_label [_name m, label "TR/TR0/t@param"]
             po = maybe (error $ show $ keys pos) id $ lbl `M.lookup` pos
-        return $ show po) of
-            Right xs -> return xs
-            Left xs  -> return $ show_err xs
+        return $ show po
 
 case3 :: IO [([Var], [Expr])]
 result3 :: [([Var], [Expr])]
 case4 :: IO ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
-(case3, result3, case4, result4) = fromJust $ do
+(case3, result3, case4, result4) = ($fromJust) $ do
             e0 <- a
             e1 <- d `mzplus` b
             e2 <- b `mzplus` c
             e3 <- c `mzplus` d
             let arg0 = [a_decl,b_decl,c_decl,d_decl] 
-            let arg1 = [e0,e1,e2,e3]
+                arg1 = [e0,e1,e2,e3]
             return 
                 ( return $ map f $ partition_expr arg0 arg1
                 , [([a_decl],[e0]),([b_decl,c_decl,d_decl],[e2,e3,e1])]

@@ -267,7 +267,7 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                             `zimplies` (new_dummy ind $ zall (M.elems sch0)))
 
                 new_defs = flip map (M.elems ind1) 
-                        $ \(Var n t) -> (n ++ "@param", Fun [] (n ++ "@param") [] t)
+                        $ \(Var n t) -> (n ++ "@param", mk_fun [] (n ++ "@param") [] t)
                 new_hyps = flip map (M.toList hint)
                         $ \(x,(_,e)) -> rename (x ++ "@prime") (x ++ "@param") e
                 def_ctx = do
@@ -590,9 +590,9 @@ dump name pos = do
         f x = pretty_print' x
 
 verify_all :: Map Label Sequent -> IO (Map Label Bool)
-verify_all pos = do
-    let xs = M.toList pos
-    let (lbls,pos) = unzip xs 
+verify_all pos' = do
+    let xs         = M.toList pos'
+        (lbls,pos) = unzip xs 
     ys <- map_failures (lbls !!) 
             $ discharge_all pos
     rs <- forM (zip lbls ys) $ \(lbl,r) -> do
@@ -646,12 +646,12 @@ smoke_test_machine m =
             Left msgs -> return (unlines $ map report msgs)
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
-format_result xs = do
-        let rs    = map f $ M.toList xs
-        let total = length rs
-        let passed = length $ filter fst rs
-        let xs = "passed " ++ (show passed) ++ " / " ++ show total
-        let ys = map snd rs ++ [xs]
+format_result xs' = do
+        let rs    = map f $ M.toList xs'
+            total = length rs
+            passed = length $ filter fst rs
+            xs = "passed " ++ (show passed) ++ " / " ++ show total
+            ys = map snd rs ++ [xs]
         return (unlines ys, passed, total)
     where
         f (y,True)  = (True, "  o  " ++ show y)

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
+{-# LANGUAGE TemplateHaskell #-} 
 module UnitB.AST 
     ( Theory  (..)
     , Machine (..)
@@ -270,15 +271,6 @@ all_notation m = flip precede logic
         $ map Th.notation th
     where
         th = theory m : elems (extends $ theory m)
---        names = keys (extends $ theory m)
-
---all_notation _ = flip precede logic $ L.foldl combine empty_notation
---    [ functions
---    , arith
---	, function_notation
---    , set_notation ] 
-
-
 
 toEither :: (Eq a, Monoid a) => Writer a b -> Either a b
 toEither m
@@ -295,35 +287,6 @@ disjoint_union f x y = do
         return (x `union` y)
     where
         zs = S.toList (keysSet x `S.intersection` keysSet y)
-
-                
-
-
---merge_theory :: Theory -> Theory -> Either [String] Theory
---merge_theory t0 t1 = toEither $ do
---        let es = extends t0 ++ extends t1
---        types <- fromEither empty $ disjoint_union
---                (\x -> ["Name clash with type '" ++ show x ++ "'"])
---                (types t0)
---                (types t1)
---        funs <- fromEither empty $ disjoint_union
---                (\x -> ["Name clash with function '" ++ show x ++ "'"])
---                (funs t0)
---                (funs t1)
---        consts <- fromEither empty $ disjoint_union
---                (\x -> ["Name clash with constant '" ++ show x ++ "'"])
---                (consts t0)
---                (consts t1)
---        fact <- fromEither empty $ disjoint_union
---                (\x -> ["Name clash with fact '" ++ show x ++ "'"])
---                (fact t0)
---                (fact t1)
---        dummies <- fromEither empty $ disjoint_union
---                (\x -> ["Name clash with dummy '" ++ show x ++ "'"])
---                (dummies t0)
---                (dummies t1)
---        return $ Theory es types funs consts fact dummies
-
 
 default_schedule :: Map Label Expr
 default_schedule = fromList [(label "default", zfalse)]
@@ -410,17 +373,21 @@ variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` var
 variant_equals_dummy (SetVariant d var _ _) = Word d `zeq` var
 
 variant_decreased :: Variant -> Expr
-variant_decreased (SetVariant d var _ Up)       = fromJust $ Right (Word d) `zsubset` Right var
+variant_decreased (SetVariant d var _ Up)       = ($fromJust) $ Right (Word d) `zsubset` Right var
 variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` var
-variant_decreased (SetVariant d var _ Down)     = fromJust $ Right var `zsubset` Right (Word d)
+variant_decreased (SetVariant d var _ Down)     = ($fromJust) $ Right var `zsubset` Right (Word d)
 variant_decreased (IntegerVariant d var _ Down) = var `zless` Word d
 
 variant_bounded :: Variant -> Expr
 --variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = b `zle` var
 variant_bounded (IntegerVariant _ var b Up)   = var `zle` b
-variant_bounded (SetVariant _ var b Down) = fromJust $ Right b `zsubset` Right var
-variant_bounded (SetVariant _ var b Up)   = fromJust $ Right var `zsubset` Right b
+variant_bounded (SetVariant _ var b Down) = ($fromJust) $ 
+    mzand (Right b `zsubset` Right var)
+          (mzfinite $ Right var `zsetdiff` Right b)
+variant_bounded (SetVariant _ var b Up)   = ($fromJust) $ 
+    mzand (Right var `zsubset` Right b)
+          (mzfinite $ Right b `zsetdiff` Right var)
 
 data Rule = forall r. RefRule r => Rule r
     deriving Typeable
@@ -548,29 +515,6 @@ new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ (Just n_lbl) n_expr _
 new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ Nothing _ _ }) = Nothing
 new_fine_sched x _ = x
 
---apply m0 (m1,x) ref = (M.filterWithKey (p ref) m0 `union` M.filterWithKey (q ref) m1, y)
---    where
---        p ref k _    = k `S.member` after ref 
---        q ref k _    = not $ k `S.member` before ref 
---        y = case rule ref of
---                ReplaceFineSch _ lbl p _ -> Just (lbl, p)
---                _ -> x
-
---list_schedules :: Event -> Map Int (Map Label Expr, Maybe (Label, Expr))
---list_schedules evt = list_schedules' (sched_ref evt) $ sched evt
-
---list_schedules' :: S.Set ScheduleChange -> S.Set ScheduleChange
---list_schedules' :: Map Int ScheduleChange -> Map Label Expr -> Map Int (Map Label Expr, Maybe (Label, Expr))
---list_schedules' r m0 = 
---        fromAscList $ scanl f first (toAscList r)
---    where
---        f (_,m1) (i,ref) = (i, apply m0 m1 ref)
---        first_index
---            | not $ M.null r = fst (findMin r)-1
---            | otherwise      = 0
---        first                = (first_index,(fromList [(label "default",zfalse)],Nothing))
---list_schedules' = undefined
-
 new_sched :: Event -> Schedule
 new_sched e = Schedule new_c_sched new_f_sched
     where
@@ -593,47 +537,6 @@ new_guard e = L.foldl f old ref
         f m (AddGuard lbl)    = M.insert lbl (grd ! lbl) m
         f m (RemoveGuard lbl) = M.delete lbl m
         f m _ = m
-
---last_schedule :: Event -> (Map Label Expr, Maybe (Label, Expr))
---last_schedule evt = sch
---    where
---        ls_sch = list_schedules evt
---        sch    = fst $ M.fromJust
---                    $ M.maxView 
---                    $ ls_sch
-
-
---before x = keep x `S.union` remove x
---after x = keep x `S.union` add x
-
---linearize :: [ScheduleChange] -> Either [[ScheduleChange]] [ScheduleChange]
---linearize xs = toEither $ mapM g comp
---    where
---        g (Node x []) = return $ vertex_fn x
---        g other@(Node x _) = do
---                tell [dec other []] 
---                return (vertex_fn x)
---          where
---            dec (Node v ts) vs = vertex_fn v : L.foldr dec vs ts        
---        comp     = scc graph
---        graph    = buildG (1,length xs) edges
---        pairs    = [ (x,y) | x <- vertices, y <- vertices, fst x /= fst y ]
---        vertex_fn x = fromList vertices ! x
---        vertices = zip [1..] xs
---        edges    = concatMap (uncurry f) pairs 
---        f (i,x) (j,y)
---            | S.null (after x `S.intersection` before y)    = []
---            | otherwise                                     = [(i,j)]
---
---first_schedule :: [ScheduleChange] -> S.Set Label -> S.Set Label
---first_schedule xs x = L.foldl f x $ reverse xs
---    where
---        f x y = (x `S.difference` after y) `S.union` before y
---
---all_schedules :: [ScheduleChange] -> S.Set Label -> [S.Set Label]
---all_schedules xs x = reverse $ L.foldl f [first_schedule xs x] xs
---    where
---        f xs@(x:_) y = ((x `S.difference` after y) `S.union` before y):xs
 
 empty_property_set :: PropertySet
 empty_property_set = PS 

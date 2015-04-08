@@ -635,7 +635,7 @@ get_predicate :: ( Monad m )
            -> EitherT [Error] (RWST LineInfo [b] (System) m) Expr
 get_predicate m ctx opt ys = do
         let th = theory m
-        let d_ctx = case opt of
+            d_ctx = case opt of
                         WithFreeDummies -> dummy_ctx m
                         WithoutFreeDummies -> empty_ctx
         get_predicate' th (ctx `merge_ctx` d_ctx `merge_ctx` context m) ys

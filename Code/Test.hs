@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Code.Test where
 
 import Code.Synthesis hiding (M)
@@ -139,8 +140,8 @@ case3 = do let x = do
                 run $ machine_code "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = fromJust $ fst $ var "n" int
-        (bigN)   = fromJust $ fst $ var "N" int
+        (n)      = ($fromJust) $ fst $ var "n" int
+        (bigN)   = ($fromJust) $ fst $ var "N" int
      
 result4 :: String
 result4 = unlines
@@ -200,8 +201,8 @@ case4 = do let x = do
                 source_file "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = fromJust $ fst $ var "n" int
-        (bigN)   = fromJust $ fst $ var "N" int
+        (n)      = ($fromJust) $ fst $ var "n" int
+        (bigN)   = ($fromJust) $ fst $ var "N" int
 
 result7 :: String
 result7 = unlines
@@ -272,8 +273,8 @@ case7 = do let x = do
                 source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = fromJust $ fst $ var "n" int
-        (bigN)   = fromJust $ fst $ var "N" int
+        (n)      = ($fromJust) $ fst $ var "n" int
+        (bigN)   = ($fromJust) $ fst $ var "N" int
 
 result8 :: String
 result8 = unlines 
@@ -295,8 +296,8 @@ case8 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = fromJust $ fst $ var "n" int
-        (bigN)   = fromJust $ fst $ var "N" int
+        (n)      = ($fromJust) $ fst $ var "n" int
+        (bigN)   = ($fromJust) $ fst $ var "N" int
 
 result5 :: String
 result5 = unlines
@@ -328,8 +329,8 @@ case5 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = fromJust $ fst $ var "n" int
-        (bigN)   = fromJust $ fst $ var "N" int
+        (n)      = ($fromJust) $ fst $ var "n" int
+        (bigN)   = ($fromJust) $ fst $ var "N" int
 
 result6 :: String
 result6 = unlines 

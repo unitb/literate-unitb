@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
 module Theories.Arithmetic where
 
     -- Modules
@@ -6,6 +6,7 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Theory
 
+import Theories.SetTheory
 import Theories.FunctionTheory
 
     -- Libraries
@@ -33,6 +34,9 @@ geq     = BinOperator ">=" "\\ge"       (flip mzle)
 zsum :: [Var] -> ExprP -> ExprP -> ExprP
 zsum = zquantifier qsum
 
+zcard :: ExprP -> ExprP
+zcard x = typ_fun2 sum_fun x (zconst $ mzint 1)
+
 gT :: Type
 gT = VARIABLE "t"
 
@@ -41,13 +45,72 @@ arithmetic = empty_theory {
         types = symbol_table [IntSort,RealSort]
         , funs = symbol_table 
             [ sum_fun ]
+        , fact = "arithmetic" `axioms` do
+                $axiom $ 
+                    asum zempty_set term `mzeq` mzint 0
+
+                $axiom $ 
+                    (mznot $ x `zelem` r) .=>
+                        asum (r `zunion` zmk_set x) term  
+                    .= (asum r term .+ zselect term x)
+
+                $axiom $ 
+                    (r `zintersect` r' .= zempty_set) .=>
+                        asum (r `zunion` r') term 
+                    .= (asum r term .+ asum r' term)
+
+                $axiom $ mzfinite r .=>
+                    mzint 0 .<= zcard r
+
+                $axiom $ 
+                    zcard r .= mzint 0  .==  r .= zempty_set
+
+                $axiom $ 
+                    zcard (zmk_set x) .= mzint 1
+
+                $axiom $
+                        zcard r .= mzint 1
+                    .== mzexists [x_decl] mztrue (r .= zmk_set x)
+
+                    -- dangerous!
+                -- $axiom $ 
+                --     mznot (x `zelem` r) .=>
+                --         zcard (r `zunion` zmk_set x)
+                --     .=  zcard r .+ mzint 1
+
+                $axiom $ 
+                    r `zintersect` r' .= zempty_set .=>
+                        zcard (r `zunion` r')
+                    .=  zcard r .+ zcard r'            
+
+            -- fromList $ L.map (first $ label . dec')
+            -- [ ("0",axm1) 
+            -- , ("1",axm2)
+            -- , ("2",axm3)
+            -- , ("3",axm4)
+            -- -- , ("4",axm5)
+            -- , ("5",axm6) 
+            -- , ("6",axm7)
+            -- , ("7",axm8)
+            -- -- , ("8",axm9)
+            -- -- , ("9",axm10)
+            -- ]
         , notation = arith }
+    where
+        -- cast = zcast (set_type gT)
+        asum = typ_fun2 sum_fun
+        (term,_term_decl) = var "term" (array gT int)
+        (r,_r_decl) = var "r" (set_type gT)
+        (r',_r'_decl) = var "r0" (set_type gT)
+        (x,x_decl) = var "x" gT
+        
+
 
 sum_fun :: Fun
-sum_fun = Fun [gA] "qsum" [array gA bool, array gA int] int
+sum_fun = mk_fun [gA] "qsum" [set_type gA, array gA int] int
 
 qsum :: HOQuantifier
-qsum = UDQuant sum_fun int (QT $ const $ const int) FiniteWD
+qsum = UDQuant sum_fun int (QTConst int) FiniteWD
 
 arith :: Notation
 arith = with_assoc empty_notation
@@ -58,7 +121,7 @@ arith = with_assoc empty_notation
                      , [power]
                      , [mult]
                      , [plus,minus]
-                     , [mk_fun]
+                     , [mk_fun_op]
                      , [ equal,leq
                        , less
                        , geq,greater]]]
@@ -74,6 +137,7 @@ arith = with_assoc empty_notation
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
+    , commands = [Command "\\card" "card" 1 $ from_list zcard]
     , quantifiers = 
         [ ("\\qsum"
           , qsum)]

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies       #-}
 module Logic.Expr.Type where
 
     -- Modules
@@ -9,13 +10,23 @@ import Logic.Expr.Classes
 import Control.DeepSeq
 import Control.Monad.Reader
 
+import qualified Data.Set as S
 import           Data.Typeable
 
 import           GHC.Generics
 
 import           Utilities.Format
 
-class (Ord a, Tree a, Show a) => TypeSystem a where
+class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
+    type TypeOf a :: *
+
+referenced_types :: FOType -> S.Set FOType
+referenced_types t@(FOT (USER_DEFINED _ ts)) = S.insert t $ S.unions $ map referenced_types ts
+
+instance Typed GenericType where
+    type TypeOf GenericType = GenericType
+
+class (Ord a, Tree a, Show a, Typed a, TypeOf a ~ a) => TypeSystem a where
     type_cons :: a -> Maybe (TypeCons a)
     make_type :: Sort -> [a] -> a
 
@@ -23,6 +34,9 @@ instance TypeSystem GenericType where
     type_cons (Gen x) = Just x
     type_cons _       = Nothing
     make_type s ts    = Gen (USER_DEFINED s ts)
+
+instance Typed FOType where
+    type TypeOf FOType = FOType
 
 instance TypeSystem FOType where
     type_cons (FOT x) = Just x

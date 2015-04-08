@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleInstances, IncoherentInstances #-}
 module Utilities.Format 
-    ( format, Formatter, fargs
+    ( format, Formatter, fargs, substAll
     ) 
 where
+
+import Control.Applicative
 
 format :: Formatter a => String -> a
 format xs = fargs xs 0
@@ -27,3 +29,6 @@ subst xs n z
     where
         fn = "{" ++ show n ++ "}"
         m = length fn
+
+substAll :: String -> [String] -> String
+substAll xs ys = foldl (uncurry <$> subst) xs $ zip [0..] ys

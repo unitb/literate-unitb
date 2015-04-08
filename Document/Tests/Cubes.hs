@@ -182,7 +182,9 @@ path8   = "Tests/integers_t8.tex"
 
 result8 :: String
 result8 = unlines
-    [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    [ "; m0/INIT/FIS/x"
+    , "(set-option :auto-config false)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
     , "; comment: we don't need to declare the sort Bool"
@@ -194,6 +196,7 @@ result8 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m0/INIT/FIS/x"
     ]
 
 case8 :: IO String

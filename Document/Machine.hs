@@ -1261,6 +1261,11 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             _evs <- get_events p2 evts
             tr   <- parse_expr' (machine_parser p2) 
                     { free_dummies = True } xs
+            let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) _evs
+            toEither $ error_list 
+                [ ( not $ L.null withInd
+                  , format "event(s) {0} have indices and require witnesses" 
+                        $ intercalate "," $ map show withInd) ]
             let vs = symbol_table $ S.elems $ used_var tr
                 fv = vs `M.intersection` dummy_vars p2
                 prop = Transient fv tr evts empty_hint

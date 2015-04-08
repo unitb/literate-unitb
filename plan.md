@@ -1,6 +1,12 @@
 Todo:
 	document syntax and options
 
+    * sum
+        * generate constant lambda calls
+    * modular decomposition
+
+    * context
+
 * Literate Unit-B
     * Make it possible to refine without explicitly calling on refinement rules
         * just using cschedule{..} could be enough .. (at least for the first model)

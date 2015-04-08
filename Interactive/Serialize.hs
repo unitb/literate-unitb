@@ -10,18 +10,20 @@ import UnitB.PO
 
     -- Libraries
 import Codec.Compression.Zlib
-    
+
+import Control.Exception    
 import Control.Monad
 import Control.Monad.State
 
 import           Data.ByteString.Lazy as BS
         ( writeFile, readFile )
+import           Data.ByteString.Lazy (toStrict,fromStrict)
 import           Data.Map as M 
         ( Map, insert 
         , (!), fromList, toList
         , empty, mapKeys )
 import qualified Data.Map as M 
-import           Data.Serialize ( Serialize, encodeLazy, decodeLazy )
+import           Data.Serialize ( Serialize, encode, decode )
 import           Data.Tuple
 
 import System.Directory
@@ -33,7 +35,9 @@ instance Serialize Type where
 instance Serialize (TypeCons Type) where
 instance Serialize Fun where
 instance Serialize Def where
-instance Serialize Quantifier where
+instance Serialize HOQuantifier where
+instance Serialize QuantifierType where
+instance Serialize QuantifierWD where
 instance Serialize Context where
 instance Serialize Expr where
 instance Serialize Sequent where
@@ -93,13 +97,17 @@ load_pos :: FilePath
 load_pos file pos = do
         let fname = file ++ ".state"
         b <- doesFileExist fname
+        let handler :: SomeException -> IO (Map Key (Seq,Maybe Bool))
+            handler _ = return pos
         if b then do
             xs <- BS.readFile $ fname
-            either 
-                (const $ return pos) 
-                (return . iseq_to_seq)
-                -- return 
-                $ decodeLazy $ decompress xs
+            catch (do
+                either 
+                    (const $ return pos) 
+                    (evaluate . iseq_to_seq)
+                    $ decode $ toStrict $ decompress xs)
+                handler
+
         else return pos
 
 type FileStruct = (IntMap,Map Expr Int) 
@@ -120,7 +128,7 @@ dump_pos :: FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
 dump_pos file pos = do 
         let fn     = file ++ ".state"
             new_po = seq_to_iseq pos
-        BS.writeFile fn $ compress $ encodeLazy new_po
+        BS.writeFile fn $ compress $ fromStrict $ encode new_po
 
 dump_z3 :: Maybe Label -> FilePath -> Map Key (Seq,Maybe Bool) -> IO ()
 dump_z3 pat file pos = dump file (M.map fst 

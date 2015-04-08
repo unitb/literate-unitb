@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
 module Theories.PredCalc where
 
     -- Modules
@@ -12,7 +12,7 @@ import qualified Data.Map as M
 import Prelude hiding ( pred )
 
 everywhere_fun :: Fun
-everywhere_fun = Fun [gA] "ew" [pred_type gA] bool
+everywhere_fun = mk_fun [gA] "ew" [pred_type gA] bool
 
 zew :: ExprP -> ExprP
 zew = typ_fun1 everywhere_fun
@@ -21,19 +21,19 @@ pred :: Type
 pred = pred_type gA
 
 implies_fun :: Fun
-implies_fun = Fun [] "(_ map =>)" [pred,pred] pred
+implies_fun = mk_lifted_fun [] "=>" [pred,pred] pred
 
 equiv_fun :: Fun
-equiv_fun = Fun [] "(_ map equiv)" [pred,pred] pred
+equiv_fun = mk_lifted_fun [] "equiv" [pred,pred] pred
 
 and_fun :: Fun
-and_fun = Fun [] "(_ map and)" [pred,pred] pred
+and_fun = mk_lifted_fun [] "and" [pred,pred] pred
 
 or_fun :: Fun
-or_fun = Fun [] "(_ map or)" [pred,pred] pred
+or_fun = mk_lifted_fun [] "or" [pred,pred] pred
 
 neg_fun :: Fun
-neg_fun = (Fun [] "(_ map not)" [pred] pred)
+neg_fun = (mk_lifted_fun [] "not" [pred] pred)
 
 zpimplies :: ExprP -> ExprP -> ExprP
 zpimplies = typ_fun2 implies_fun
@@ -69,10 +69,10 @@ pneg :: UnaryOperator
 pneg = UnaryOperator "pneg" "\\pneg" zpneg
 
 ptrue_fun :: Fun
-ptrue_fun = Fun [gA] "ptrue" [] (pred_type gA)
+ptrue_fun = mk_fun [gA] "ptrue" [] (pred_type gA)
 
 pfalse_fun :: Fun
-pfalse_fun = Fun [gA] "pfalse" [] (pred_type gA)
+pfalse_fun = mk_fun [gA] "pfalse" [] (pred_type gA)
 
 ptrue :: ExprP
 ptrue   = Right $ FunApp ptrue_fun []
@@ -87,13 +87,13 @@ pred_type :: TypeSystem t => t -> t
 pred_type t = make_type pred_sort [t]
 
 zrep_select :: ExprP -> ExprP -> ExprP
-zrep_select = typ_fun2 (Fun [] "select" [pred_type gA, gA] bool)
+zrep_select = typ_fun2 (mk_fun [] "select" [pred_type gA, gA] bool)
 
 pred_calc :: Theory
 pred_calc = empty_theory 
         { types = symbol_table [pred_sort]
         , funs  = symbol_table [everywhere_fun, ptrue_fun, pfalse_fun]
-        , fact = M.singleton (label "pred_ew") $ fromJust $ 
+        , fact = M.singleton (label "pred_ew") $ ($fromJust) $ 
                 mzforall [x_decl] mztrue $ 
                         (zew x)
                     `mzeq` (mzforall [y_decl] mztrue $ zrep_select x y) 

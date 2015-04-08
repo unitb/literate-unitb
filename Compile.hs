@@ -146,8 +146,8 @@ main = do
                 clearScreen
                 hFlush stdout
                 let (cs,xs,yss) = unzip3 rs
-                let c = foldl success ExitSuccess cs
-                let ys = concat yss
+                    c = foldl success ExitSuccess cs
+                    ys = concat yss
                 putStr (take 60 $ cycle "\b") 
                 putStr $ concat xs
                 putStr ys 

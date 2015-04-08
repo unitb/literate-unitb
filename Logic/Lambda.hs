@@ -1,20 +1,23 @@
-{-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts, TemplateHaskell #-}
 module Logic.Lambda 
     ( delambdify
     , CanonicalLambda ( .. )
-    , canonical )
+    , canonical
+    , Role(..) )
 where
 
     -- Modules
 import Logic.Expr   hiding ( rename, free_vars )
 import Logic.Proof
 
+import Theories.SetTheory
+
     -- Libraries
 import Control.Applicative ((<$>))
 import Control.Monad.State
 
-import Data.List hiding (union)
-import Data.Map as M hiding (map,filter,foldl)
+import Data.List as L hiding (union)
+import Data.Map  as M hiding (map,filter,foldl)
 import qualified Data.Set as S
 import Data.Traversable (traverse)
 import Data.Tuple
@@ -23,7 +26,7 @@ import Data.Typeable
 data CanonicalLambda = CL 
         [Var] [Var]   -- free vars, bound vars
         Expr'         -- range or term
-        Type          -- return type
+        (Maybe Type)  -- return type, nothing if the type is boolean because of range
     deriving (Eq, Ord, Typeable, Show)
 
 arg_type :: CanonicalLambda -> [Type]
@@ -31,7 +34,12 @@ arg_type (CL vs _ _ _) = map var_type vs
 
 return_type :: CanonicalLambda -> Type
 return_type (CL _ bv _ rt) = 
-        (array (ztuple_type $ map var_type bv) rt)
+        case rt of
+            Just rt ->
+                (array tuple rt)
+            Nothing -> set_type tuple
+    where
+        tuple = ztuple_type $ map var_type bv
 
 can_bound_vars :: () -> [String]
 can_bound_vars _ = map ( ("@@bv@@_" ++) . show ) [0..]
@@ -72,8 +80,10 @@ expr_name e = do
             modify (\m -> m { exprs = (e, v):es } )
             return v
 
-canonical :: [Var] -> Expr' -> (CanonicalLambda, [Expr'])
-canonical vs e = do
+data Role = Range | Term
+
+canonical :: Role -> [Var] -> Expr' -> (CanonicalLambda, [Expr'])
+canonical role vs e = do
         let { state = CR
             { local_gen = can_local_vars ()
             , free_gen  = can_free_vars ()
@@ -81,10 +91,13 @@ canonical vs e = do
             , exprs     = [] 
             } }
         evalState (do
-            e'      <- findFreeVars (S.fromList vs) e
-            us      <- forM vs rename
-            (fv,es) <- free_vars
-            return (CL fv us e' $ type_of e', es)) 
+                e'      <- findFreeVars (S.fromList vs) e
+                us      <- forM vs rename
+                (fv,es) <- free_vars
+                let t' = case role of
+                            Term ->  Just $ type_of e'
+                            Range -> Nothing
+                return (CL fv us e' t', es)) 
             state
 
 findFreeVars :: S.Set Var -> Expr' -> State CanonicalRewriter Expr'
@@ -119,17 +132,23 @@ findFreeVars ls e
 type TermStore = Map CanonicalLambda Fun
 
 get_lambda_term :: Monad m => CanonicalLambda -> StateT TermStore m Fun
-get_lambda_term t = do
+get_lambda_term t@(CL vs us e t') = do
         m <- get
         case M.lookup t m of
             Just s -> return s
             Nothing -> do
-                let n = size m
-                    term = Fun [] ("@@lambda@@_" ++ show n) (arg_type t) (return_type t)
-                put (M.insert t term m)
-                return term 
+                case t' of
+                  Just _
+                    | map Word vs == [e] -> return const_fun
+                    | L.null vs && 
+                        ztuple (map Word us) == e -> return ident_fun
+                  _ -> do
+                    let n = size m
+                        term = mk_fun [] ("@@lambda@@_" ++ show n) (arg_type t) (return_type t)
+                    put (M.insert t term m)
+                    return term 
 
-lambda_decl :: Monad m => StateT TermStore m (AbsContext Type FOQuantifier)
+lambda_decl :: Monad m => StateT TermStore m Context'
 lambda_decl = do
             xs <- gets toList 
             return $ Context empty empty (symbol_table $ map snd xs) empty empty
@@ -137,17 +156,20 @@ lambda_decl = do
 lambda_def :: Monad m => StateT TermStore m [Expr']
 lambda_def = do
             xs <- gets toList
-            forM xs $ \(CL vs us e _,fun) -> do
+            forM xs $ \(CL vs us e t,fun) -> do
                 let sel :: ExprPG Type FOQuantifier
                     sel = check_type fun $ map (Right . Word) vs
-                    app = zselect sel (Right $ ztuple $ map Word us)
+                    tuple = Right $ ztuple $ map Word us
+                    app = case t of
+                            Just _ -> zselect sel tuple
+                            Nothing -> tuple `zelem` sel
                     eq :: ExprPG Type FOQuantifier
                     eq  = mzeq app (Right e)
                     res :: Expr'
-                    res = fromJust $ mzforall (vs ++ us) mztrue eq
+                    res = ($fromJust) $ mzforall (vs ++ us) mztrue eq
                 return $ res
 
-delambdify :: Sequent -> AbsSequent Type FOQuantifier
+delambdify :: Sequent -> Sequent'
 delambdify (Sequent ctx asm hyps goal) = 
         evalState (do
             asm'   <- forM asm lambdas
@@ -177,13 +199,13 @@ lambdas :: Expr -> State TermStore Expr'
 lambdas (Binder (UDQuant fun _ _ _) vs r t _) = do
     r' <- lambdas r
     t' <- lambdas t
-    let (can_r, param_r) = canonical vs r'
-        (can_t, param_t) = canonical vs t'
+    let (can_r, param_r) = canonical Range vs r'
+        (can_t, param_t) = canonical Term vs t'
     fun_r <- get_lambda_term can_r
     fun_t <- get_lambda_term can_t
     let select_r = check_type fun_r $ map Right param_r
         select_t = check_type fun_t $ map Right param_t
-        select = fromJust $ check_type fun [select_r,select_t]
+        select = ($fromJust) $ check_type fun [select_r,select_t]
         -- careful here! we expect this expression to be type checked already 
     return select
 lambdas (Binder Forall vs r t et) = do

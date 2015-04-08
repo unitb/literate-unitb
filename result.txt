@@ -1,61 +1,54 @@
-=== prop_brackets from ./Document/Tests/TrainStation.hs:63 ===
+5
+=== prop_brackets from ./Document/Tests/TrainStation.hs:60 ===
 
-=== prop_open_brack from ./Document/Tests/TrainStation.hs:66 ===
+=== prop_open_brack from ./Document/Tests/TrainStation.hs:63 ===
 
-=== prop_close_brack from ./Document/Tests/TrainStation.hs:69 ===
+=== prop_close_brack from ./Document/Tests/TrainStation.hs:66 ===
 
-=== prop_open_close from ./Document/Tests/TrainStation.hs:72 ===
+=== prop_open_close from ./Document/Tests/TrainStation.hs:69 ===
 
-=== prop_close_open from ./Document/Tests/TrainStation.hs:75 ===
+=== prop_close_open from ./Document/Tests/TrainStation.hs:72 ===
 
-=== prop_close_close from ./Document/Tests/TrainStation.hs:78 ===
+=== prop_close_close from ./Document/Tests/TrainStation.hs:75 ===
 
-=== prop_open_open from ./Document/Tests/TrainStation.hs:81 ===
+=== prop_open_open from ./Document/Tests/TrainStation.hs:78 ===
 
 === prop_parseOk from ./Document/MachineSpec.hs:40 ===
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
-
-=== prop_type_error from ./Document/MachineSpec.hs:47 ===
-
-=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
 === prop_c from ./Utilities/EditDistance.hs:132 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:194 ===
 +++ OK, passed 100 tests.
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:385 ===
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:389 ===
++++ OK, passed 100 tests.
 
 === prop_fromList_toList from ./Utilities/Relation.hs:198 ===
+
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:394 ===
+
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
++++ OK, passed 100 tests.
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:202 ===
 +++ OK, passed 100 tests.
++++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:205 ===
-
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
 +++ OK, passed 100 tests.
 
 === prop_empty_def from ./Utilities/Relation.hs:208 ===
 +++ OK, passed 100 tests.
 
 === prop_apply_def from ./Utilities/Relation.hs:212 ===
-
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:385 ===
-
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:389 ===
 +++ OK, passed 100 tests.
 
 === prop_compose_def from ./Utilities/Relation.hs:216 ===
-+++ OK, passed 100 tests.
-
-=== prop_all_valid from ./Utilities/Relation.hs:235 ===
-
-=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:394 ===
 
 === prop_u_scc_valid_components from ./Utilities/Permutation.hs:405 ===
 +++ OK, passed 100 tests.
 
-=== prop_union_def from ./Utilities/Relation.hs:255 ===
+=== prop_all_valid from ./Utilities/Relation.hs:235 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -69,7 +62,10 @@
 |  |  |  +- puzzle, visit negation, PO
 |  |  |  +- puzzle, remove default with weakento
 |  |  |  +- puzzle, m2
-|  |  |  +- [ Success: 8 / 8 ]
+|  |  |  +- puzzle, m3
+|  |  |  +- puzzle m3, wd of sums
+|  |  |  +- puzzle m3, proofs with sums
+|  |  |  +- [ Success: 11 / 11 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
 |  |  |  +- test 1, unless/except with indices and free variables
@@ -125,11 +121,13 @@
 |  |  |  |  +- test 19, quickcheck brackets
 |  |  |  |  +- [ Success: 7 / 7 ]
 |  |  |  +- part 2
-|  |  |  |  +- test 5, proof obligation, leave/en/tr0
+|  |  |  |  +- test 5, proof obligation, leave/en/tr0/WFIS
+|  |  |  |  +- test 23, proof obligation, leave/en/tr0/EN
+|  |  |  |  +- test 24, proof obligation, leave/en/tr0/NEG
 |  |  |  |  +- test 7, undeclared symbol
 |  |  |  |  +- test 8, undeclared event (wrt transient)
 |  |  |  |  +- test 9, undeclared event (wrt c sched)
-|  |  |  |  +- [ Success: 4 / 4 ]
+|  |  |  |  +- [ Success: 6 / 6 ]
 |  |  |  +- part 3
 |  |  |  |  +- test 10, undeclared event (wrt indices)
 |  |  |  |  +- test 11, undeclared event (wrt assignment)
@@ -144,8 +142,9 @@
 |  |  |  |  +- test 16, verification, proof by parts
 |  |  |  |  +- test 17, ill-defined types
 |  |  |  |  +- test 18, assertions have type bool
-|  |  |  |  +- [ Success: 3 / 3 ]
-|  |  |  +- [ Success: 22 / 22 ]
+|  |  |  |  +- test 22, missing witness
+|  |  |  |  +- [ Success: 4 / 4 ]
+|  |  |  +- [ Success: 25 / 25 ]
 |  |  +- lambda expressions in the cube example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, verification, lambda vs empty-fun
@@ -187,8 +186,18 @@
 |  |  |  +- verify machine m1 (sets)
 |  |  |  +- verify machine m2 (sets)
 |  |  |  +- m2, enablement proof obligation
-|  |  |  +- m2, transient proof obligation, no dummy
+|  |  |  +- m2, transient proof obligation, feasibility
+|  |  |  +- m2, transient proof obligation, enablement
+|  |  |  +- m2, transient proof obligation, negation
 |  |  |  +- m2, safety property of schedule replacement
+|  |  |  +- verify machine m3 (sets)
+|  |  |  +- type checking of boolean expressions
+|  |  |  +- verify machine m3 error (wandering free variable)
+|  |  |  +- witness well definedness PO
+|  |  |  +- [ Success: 12 / 12 ]
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
 +++ OK, passed 100 tests.
 
 === prop_intersection_def from ./Utilities/Relation.hs:258 ===
@@ -204,12 +213,16 @@
 +++ OK, passed 100 tests.
 
 === prop_ranRestr from ./Utilities/Relation.hs:270 ===
+
+=== prop_type_error from ./Document/MachineSpec.hs:47 ===
 +++ OK, passed 100 tests.
 
 === prop_domSubt from ./Utilities/Relation.hs:273 ===
 +++ OK, passed 100 tests.
 
 === prop_domRestr from ./Utilities/Relation.hs:276 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
 +++ OK, passed 100 tests.
 
 === prop_transpose_def from ./Utilities/Relation.hs:279 ===
@@ -219,8 +232,6 @@
 +++ OK, passed 100 tests.
 
 === prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
 +++ OK, passed 100 tests.
 
 === prop_symmetric_def from ./Utilities/Relation.hs:288 ===
@@ -239,22 +250,32 @@
 +++ OK, passed 100 tests.
 
 === prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
 
 === prop_e from ./Utilities/EditDistance.hs:150 ===
 +++ OK, passed 100 tests.
 
+=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
++++ OK, passed 100 tests.
+
 === prop_mapRange_def from ./Utilities/Relation.hs:311 ===
+
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:417 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:424 ===
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
 
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:430 ===
+
 === prop_f from ./Utilities/EditDistance.hs:156 ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:330 ===
@@ -264,42 +285,30 @@
 +++ OK, passed 100 tests.
 
 === prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:467 ===
 +++ OK, passed 100 tests.
 
 === prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
 +++ OK, passed 100 tests.
 
 === prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
-
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:417 ===
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
 +++ OK, passed 100 tests.
 
 
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:424 ===
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:430 ===
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:467 ===
-
 === prop_closure_contain_all_edges from ./Utilities/Permutation.hs:470 ===
-
 
 === prop_closure_closed from ./Utilities/Permutation.hs:475 ===
 
 === prop_closure_minimal from ./Utilities/Permutation.hs:481 ===
 
-|  |  |  +- verify machine m3 (sets)
-|  |  |  +- type checking of boolean expressions
-|  |  |  +- verify machine m3 error (wandering free variable)
-|  |  |  +- witness well definedness PO
-|  |  |  +- [ Success: 10 / 10 ]
+
+
 |  |  +- QuickCheck spec of machine parser
 |  |  +- the parser is exception free
-|  |  +- [ Success: 98 / 98 ]
+|  |  +- [ Success: 106 / 106 ]
 |  +- Unit-B
 |  |  +- 'x eventually increases' verifies
 |  |  +- train, model 0, verification
@@ -384,17 +393,17 @@
 |  |  +- safety properties of m2
 |  |  +- progress properties of m2
 |  |  +- [ Success: 4 / 4 ]
-|  +- [ Success: 166 / 166 ]
-+- [ Success: 166 / 166 ]
+|  +- [ Success: 174 / 174 ]
++- [ Success: 174 / 174 ]
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   35910 total
-    1594 Document/Machine.hs
+   36078 total
+    1599 Document/Machine.hs
      806 Document/Proof.hs
      783 Document/Visitor.lhs
+     752 Logic/Expr/Expr.hs
      746 Document/phase.hs
-     710 Logic/Expr/Expr.hs
-Run time: 1m 10s
+Run time: 1m 21s

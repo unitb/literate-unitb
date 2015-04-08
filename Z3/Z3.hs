@@ -15,11 +15,7 @@ module Z3.Z3
     , Symbol ( .. )
     , Command ( .. )
     , smoke_test
-    , Prover
-    , new_prover
-    , destroy_prover
     , discharge_on
-    , read_result
     , pretty_print'
     , to_fol_ctx
     , patterns
@@ -27,33 +23,31 @@ module Z3.Z3
     , map_failures
     , match_some, one_point
     , apply_monotonicity
-    , remove_type_vars )
+    , remove_type_vars
+    , check_z3_bin )
 where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding ((</>))
 import Logic.Lambda
-import Logic.Expr.Genericity
 import Logic.Proof
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 
 import Control.Concurrent
 import Control.Concurrent.SSem
+
 import Control.Exception
 import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Maybe
+import Control.Monad.Reader
 
 import Data.ConfigFile
 import           Data.Char
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
-import           Data.List.Ordered as OL hiding (member)
-import           Data.Map as M (Map)
 import qualified Data.Map as M
-import qualified Data.Maybe as MM
 import qualified Data.Set as S
 import           Data.Typeable 
 
@@ -65,6 +59,8 @@ import           System.Exit
 import           System.FilePath as F
 import           System.IO.Unsafe
 import           System.Process
+
+import Text.Printf
 
 import           Utilities.Format
 
@@ -125,19 +121,10 @@ instance Tree Command where
                             [ Str "!"
                             , as_tree $ r `zimplies` t
                             , Str ":pattern"
-                            , List $ map as_tree $ lhs vs (head t)
+                            , List $ map as_tree $ z3_pattern (S.fromList vs) (head t)
                             ]
                         ]
             g e = as_tree e
-            lhs vs (FunApp f xs)
-                | name f `elem` ["and","or","not"]
-                       = concatMap (lhs vs) xs
-            lhs vs (FunApp f [x,_])
-                | name f == "="     = lhs vs x
-            lhs _ (Word (Var _ _)) = []
-            lhs vs e 
-                | S.fromList vs `S.isSubsetOf` used_var e = [e]
-                | otherwise                               = []
             head (FunApp f [_,y])
                 | name f == "=>"    = head y
             head e = e
@@ -202,6 +189,36 @@ check_z3_bin = do
     else do
         putStrLn ("A 'z3' executable has not been found in the path ")
         return False
+
+z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
+z3_pattern vs e = runReader (lhs vs e) False
+    where
+            lhs vs (FunApp f xs)
+                | name f `elem` ["and","or","not"]
+                    && vs `S.isSubsetOf` S.unions (map used_var xs) 
+                    = do
+                        ps <- concat <$> mapM (lhs S.empty) xs
+                        return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
+                            then ps 
+                            else []
+            lhs vs (FunApp f xs@[x,_])
+                | name f == "="     = do
+                    b  <- ask
+                    x' <- lhs vs x 
+                    local (const True) $
+                        if (b || null x') then do
+                            ps <- concat <$> mapM (lhs S.empty) xs
+                            return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
+                                then ps 
+                                else []
+                        else
+                            return x'
+            lhs _ (Word (Var _ _)) = return []
+            lhs vs e 
+                | vs `S.isSubsetOf` used_var e = return [e]
+                | otherwise                    = return []
+
+
 feed_z3 :: String -> Int -> IO (ExitCode, String, String)
 feed_z3 = unsafePerformIO $ do
     b <- check_z3_bin
@@ -238,7 +255,9 @@ instance NFData Command where
 
 z3_code :: Sequent -> [Command]
 z3_code po = 
-    (      []
+    (      [] -- SetOption "smt.mbqi" False]
+        ++ [SetOption "auto-config" False]
+        -- ++ [SetOption "smt.mbqi" False]
         ++ map Decl (concatMap decl
                [ Datatype ["a"] "Maybe" 
                     [ ("Just", [("fromJust", GENERIC "a")])
@@ -259,68 +278,12 @@ z3_code po =
                     $ delambdify
                     $ apply_monotonicity po
         f ((lbl,xp),n) = [ Comment $ show lbl
-                     , Assert xp $ Just $ "h" ++ show n]
-
-one_point :: (IsQuantifier q, TypeSystem2 t) => AbsSequent t q -> AbsSequent t q
-one_point (Sequent a b c g) = Sequent a asm c g'
-    where
-        asm
-            | g == g'   = b
-            | otherwise = b ++ [znot g]
-        g' = one_point_rule g
+                         , Assert xp $ Just $ "h" ++ show n]
 
 smoke_test :: Sequent -> IO Validity
 smoke_test (Sequent a b c _) =
     discharge (Sequent a b c zfalse)
 
-data Prover = Prover
-        { inCh  :: Chan (Maybe (Int,Sequent))
---        , secCh :: Chan (Maybe (Int,Sequent))
-        , outCh :: Chan (Int,Either String Validity)
-        , n_workers :: Int
-        }
-
-new_prover :: Int -> IO Prover
-new_prover n_workers = do
-        setNumCapabilities 8
-        inCh  <- newChan
---        secCh <- newChan
-        outCh <- newChan
-        let worker = void $ do
-                runMaybeT $ forever $ do
-                    cmd <- lift $ readChan inCh
-                    case cmd of
-                        Just (tid, po) -> lift $ do
-                            r <- try (discharge' (Just default_timeout) po)
-                            let f e = Left $ show (e :: SomeException)
-                                r'  = either f Right r
-                            writeChan outCh (tid,r')
-                        Nothing -> do
-                            MaybeT $ return Nothing
---            worker' = void $ do
---                runMaybeT $ forever $ do
---                    cmd <- lift $ readChan inCh
---                    case cmd of
---                        Just (tid, po) -> lift $ do
---                            r <- try (discharge po)
---                            let f e = Left $ show (e :: SomeException)
---                                r'  = either f Right r
---                            if r' == Right Valid then 
---                                writeChan outCh (tid,r')
---                            else
---                                writeChan secCh $ Just (tid,po)
---                        Nothing -> do
---                            MaybeT $ return Nothing
-        forM_ [1 .. n_workers] $ \p ->
-            forkOn p $ worker
---        forkIO worker
-        return Prover { .. }
-
-destroy_prover :: Prover -> IO ()
-destroy_prover (Prover { .. }) = do
-        forM_ [1 .. n_workers] $ \_ ->
-            writeChan inCh Nothing
---        writeChan secCh Nothing
 
 
 discharge_on :: Sequent -> IO (MVar (Either String Validity))
@@ -333,12 +296,6 @@ discharge_on po = do
         putMVar res r'
     return res
 
-read_result :: Prover -> IO (Int,Either String Validity)
-read_result (Prover { .. }) = 
-        readChan outCh
-
-total_caps :: SSem
-total_caps = unsafePerformIO $ new 64
 
 discharge_all :: [Sequent] -> IO [Validity]
 discharge_all xs = do
@@ -373,153 +330,6 @@ map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
 --        f xs e@(FunApp fun _) = visit f ((e,fun):xs) e
 --        f xs e                 = visit f xs e
 
---mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
-mk_error :: (Show a, Show c) => c -> (a -> Maybe b) -> a -> b
-mk_error z f x = 
-        case f x of
-            Just y -> y
-            Nothing -> error $ format "failed to strip type variables: {0}\n{1}" x z
-    where
---        xs = funapps x
---        g (x,y) = format "{0} :: {1} ; {2}\n" x (type_of x) y :: String
---        ys = concatMap g xs
-
-remove_type_vars :: AbsSequent Type FOQuantifier -> FOSequent FOQuantifier
-remove_type_vars (Sequent ctx asm hyp g) = MM.fromJust $ do
-    let vars  = variables g
-        (Context sorts' _ _ _ _) = ctx
-        sorts = M.keys sorts'
-        as_type n = Gen $ USER_DEFINED (Sort n n 0) []
-            -- new sorts are replacements for all the type variables
-            -- present in the goal
-        new_sorts = map as_type $ map (("G" ++) . show) [0..] `minus` sorts
-        varm = M.fromList $ zip (S.elems vars) new_sorts
-    g   <- return $ mk_error () strip_generics (substitute_type_vars varm g)
-    let _ = g :: FOExpr
-        types = MM.catMaybes $ map type_strip_generics 
-                    $ S.elems $ S.unions 
-                    $ map used_types $ asm ++ M.elems hyp
-        types' = S.fromList $ types `OL.union` S.elems (used_types g)
-    _asm <- return $ map snd $ concatMap (gen_to_fol types' (label "")) asm
-    h   <- return $ M.fromList $ concat $ M.elems $ M.mapWithKey (gen_to_fol types') hyp
-    let types = S.unions $ map used_types $ g : _asm ++ M.elems h
-    _ctx <- return $ to_fol_ctx types $ ctx
-    return (Sequent _ctx _asm h g)
-
-
-consistent :: (Eq b, Ord k) 
-           => Map k b -> Map k b -> Bool
-consistent x y = x `M.intersection` y == y `M.intersection` x
-
-is_maybe :: Type -> Bool
-is_maybe t = MM.isJust (unify t (maybe_type gA))
-    where
-        gA = GENERIC "a"
-
-match_all :: [Type] -> [FOType] -> [Map String FOType]
-match_all pat types = 
-        foldM (\x p -> do
-                t  <- types'
-                m  <- MM.maybeToList $ unify p t
-                ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
-                let m' = M.fromList $ zip (M.keys m) ms
-                    m''  = M.mapKeys (reverse . drop 2 . reverse) m'
-                guard $ consistent m'' x
-                return (m'' `M.union` x)
-            ) M.empty pat'
-    where
-        pat' = filter (not . is_maybe) $ L.map f pat
-        f (VARIABLE s) = GENERIC s
-        f t = rewrite f t
-        types' = map as_generic types
-
-match_some :: [Type] -> [FOType] -> [Map String FOType]
-match_some pat types = nubSort $ do -- map (M.map head) ms -- do
-        ms <- foldM (\x (_,xs) -> do
-                m <- xs
-                guard $ consistent m x
-                return (m `M.union` x)
-            ) M.empty (M.toList ms')
---        ms <- forM (toList ms') $ \(k,xs) -> do
---            x <- xs
---            return (k,x)
---        let ms' = fromList ms
-        guard $ M.keysSet ms == vars
-        return ms
-    where
-        pat' = L.map f pat
-        f (VARIABLE s) = GENERIC s
-        f t = rewrite f t
-        types' = map as_generic types
-        vars = S.unions $ map generics pat'
-        ms' = M.unionsWith (++) ms
---        ms :: [Map String [FOType]]
-        ms :: [Map String [Map String FOType]]
-        ms = do
-            p  <- pat'
-            t  <- types'
-            m  <- MM.maybeToList $ unify p t
-            ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
-            let ms' = M.fromList $ zip (map (reverse . drop 2 . reverse) $ M.keys m) ms
-            return $ M.map (const [ms']) ms' 
-
-    -- instantiation patterns
-patterns :: Generic a => a -> [Type]
-patterns ts = pat
-    where
-        types = L.map g $ S.elems $ types_of ts
-        pat  = L.map (substitute_type_vars gen) $ L.filter hg types
-        hg x = not $ S.null $ variables x
-            -- has generics
-        gen = M.fromList $ L.map f $ S.elems $ S.unions $ L.map variables types
-        f x = (x, GENERIC x)
-        g (GENERIC s) = VARIABLE s
-        g t = rewrite g t
-
-    -- generic to first order
-gen_to_fol :: IsQuantifier q => S.Set FOType -> Label -> AbsExpr Type q -> [(Label,AbsExpr FOType q)]
-gen_to_fol types lbl e = -- with_tracing $ trace (show xs) $ 
-        zip ys $ map inst xs
-    where
-        inst m = mk_error (S.unions $ map generics pat)
-                    strip_generics $ substitute_type_vars (M.map as_generic m) e
-        xs     = match_all pat (S.elems types)
-        ys     = map f xs
-        f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
-        pat    = patterns e
-
-to_fol_ctx :: IsQuantifier q 
-           => S.Set FOType 
-           -> AbsContext Type q 
-           -> AbsContext FOType q
-to_fol_ctx types (Context s vars funs defs dums) = 
-        Context s vars' funs' defs' dums'
-    where
-        vars' = M.map fv  vars
-        funs' = decorated_table $ concatMap ff $ M.elems funs
-        defs' = decorated_table $ concatMap fdf $ M.elems defs
-        dums' = M.map fdm dums
-        fv    = mk_error () var_strip_generics
-        ff fun = map inst xs
-            where
-                pat    = patterns fun
-                xs     = L.map (M.map as_generic) 
-                            $ match_all pat (S.elems types)
-                inst m = mk_error m fun_strip_generics $ substitute_type_vars m fun'
-                fun' = substitute_types f fun
-                f (GENERIC s) = VARIABLE s
-                f t = rewrite f t
-        fdf def = map inst xs -- M.fromJust . def_strip_generics
-            where 
-                pat    = patterns def
-                xs     = L.map (M.map as_generic) 
-                            $ match_all pat (S.elems types)
-                inst m = mk_error m def_strip_generics $ substitute_type_vars m def'
-                def' = substitute_types f def
-                f (GENERIC s) = VARIABLE s
-                f t = rewrite f t
-        fdm = MM.fromJust . var_strip_generics
-
 --statement :: Expr -> Statement
 --statement e = Statement pat e
 --    where
@@ -537,117 +347,9 @@ to_fol_ctx types (Context s vars funs defs dums) =
 --        ys = map f xs
 --        f xs = label $ concatMap z3_decoration $ M.elems xs
 --
-fresh :: String -> S.Set String -> String
-fresh name xs = head $ ys `minus` S.elems xs
-    where
-        ys = name : map f [0..]
-        f x = name ++ show x
 
 discharge :: Sequent -> IO Validity
 discharge po = discharge' Nothing po
-
-differs_by_one :: Eq a => [a] -> [a] -> Maybe (Int,a,a)
-differs_by_one xs ys = f $ zip [0..] $ zip xs ys
-    where
-        f [] = Nothing
-        f ((i,(x,y)):xs) 
-            | x == y        = f xs
-            | all (uncurry (==) . snd) xs = Just (i,x,y)
-            | otherwise     = Nothing
-
-apply_monotonicity :: Sequent -> Sequent
-apply_monotonicity po@(Sequent ctx asm h g) = maybe po id $
-        let 
-            h' = h
---            h' = M.insert (label $ fresh "~goal" $ S.map show $ keysSet h) (znot g) h 
-            asm' = asm ++ [znot g]
-            --asm' = znot g : asm
-        in
-        case g of
-            Binder Forall (Var nam t:vs) rs ts _ -> do
-                let (Context ss vars funs defs dums) = ctx
-                    v   = Var (fresh nam $ 
-                                      M.keysSet vars 
-                            `S.union` M.keysSet funs
-                            `S.union` M.keysSet defs) t
-                    g'
-                        | L.null vs = rs `zimplies` ts
-                        | otherwise = zforall vs rs ts
-                    ctx' = Context ss (M.insert (name v) v vars) funs defs dums
-                return $ apply_monotonicity $ Sequent ctx' asm' h' 
-                    (rename nam (name v) g')
-            FunApp f [lhs, rhs] ->
-                case (lhs,rhs) of
-                    (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
-                        | vs == us && name f `elem` ["=","=>"] -> 
-                            return $ apply_monotonicity (Sequent ctx asm' h' 
-                                (zforall vs ztrue $ 
-                                    FunApp f [zimplies r0 t0, zimplies r1 t1]))
-                    (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
-                        | vs == us && name f `elem` ["=","=>"] -> 
-                            return $ apply_monotonicity (Sequent ctx asm' h' 
-                                (zforall vs ztrue $ 
-                                    FunApp f [zand r0 t0, zand r1 t1]))
-                    (FunApp g0 xs, FunApp g1 ys)
-                        | length xs /= length ys || g0 /= g1 -> Nothing
-                        | name f == "=" -> do
-                            (_,x,y) <- differs_by_one xs ys
-                            return $ apply_monotonicity (Sequent ctx asm' h' $ 
-                                FunApp f [x, y])
-                        | name g0 `elem` ["and","or","not","=>"] &&
-                          name f == "=>" -> do
-                                -- and(0,1), or(0,1), 
-                                --      =>(1)       -> f.x => f.y -> x => y
-                                -- not (0), =>(0)   -> f.x => f.y -> y => x
-                                -- | arithmetic relations are not implement
-                                -- <=(0)            -> f.x => f.y -> y <= x
-                                -- <=(1)            -> f.x => f.y -> x <= y
-                                -- +(0,1),-(0)      -> f.x <= f.y -> x <= y
-                                -- -(1)             -> f.x <= f.y -> y <= x
-                                -- | How would we treat the case of:
-                                -- | context => a+b+x R a+b+y
-                                -- | we need a means to distinguish an 
-                                -- | implication that introduces contextual
-                                -- | information
-                            x <- mono (name f) (name g0) xs ys
-                            return $ apply_monotonicity (Sequent ctx asm' h' x)
---                            let op = name g0
---                                mono i xs
---                                    | (op `elem` ["and","or"]) ||
---                                        (op == "=>" && i == 1)     = FunApp f xs
---                                    |  op == "not" ||
---                                        (op == "=>" && i == 0)     = FunApp f $ reverse xs
---                                    | otherwise                  = error $ "Z3.discharge': unexpected operator / position pair: " ++ op ++ ", " ++ show i
---                            in case differs_by_one xs ys of
---                                Just (i,x,y) -> 
---                                    apply_monotonicity (Sequent ctx asm h' $ 
---                                        mono i [x, y])
---                                Nothing -> 
---                                    po
-                    _ -> Nothing
-            _ -> Nothing
-    where
-        mono :: String -> String -> [Expr] -> [Expr] -> Maybe Expr
-        mono rel fun xs ys = do
-            f       <- M.lookup (rel, fun) m
-            (i,x,y) <- differs_by_one xs ys
-            g       <- f i
-            return $ g x y
-        m = M.fromList $
-            [ (("=>","and"),const $ Just zimplies)
-            , (("=>","or"),const $ Just zimplies)
-            , (("=>","not"),const $ Just $ flip zimplies)
-            , (("=>","=>"), \i -> Just $ if i == 0 
-                                         then flip zimplies 
-                                         else zimplies)
-            , (("=>","<="), \i -> Just $ if i == 0 
-                                         then flip zle 
-                                         else zle)
-            , (("<=","+"),const $ Just zle)
-            , (("<=","-"), \i -> Just $ if i == 0 
-                                         then flip zle 
-                                         else zle)
-            ]
 
 discharge' :: Maybe Int      -- Timeout in seconds
            -> Sequent        -- 
@@ -666,20 +368,22 @@ discharge' n po = do
 verify :: [Command] -> Int -> IO (Either String Satisfiability)
 verify xs n = do
         let ys = concat $ map reverse $ groupBy eq xs
-            !code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
+            code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
             eq x y = is_assert x && is_assert y
             is_assert (Assert _ _) = True
             is_assert _            = False
         (_,out,err) <- feed_z3 code n
         let lns = lines out
-            res = take 1 lns
+            res = take 1 $ dropWhile ("WARNING" `isPrefixOf`) lns
         if length lns == 0 ||
             (length lns > 1 && lns !! 1 /= "timeout") ||
                 (      res /= ["sat"]
                     && res /= ["unsat"]
                     && res /= ["unknown"]
                     && res /= ["timeout"]) then do
-            return $ Left ("error: \n" ++ err ++ out)
+            writeFile "log1.z3" (concat $ map pretty_print' ys)
+            writeFile "log2.z3" code
+            return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" err out)
         else if res == ["sat"] then do
             return $ Right Sat
         else if res == ["unsat"] then do

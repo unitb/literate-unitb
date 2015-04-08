@@ -3,7 +3,7 @@
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE MultiParamTypeClasses, TemplateHaskell  #-}
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Logic.Expr.Expr 
     ( Expr, Expr', AbsExpr, GenExpr (..), FOExpr
@@ -13,21 +13,22 @@ module Logic.Expr.Expr
     , FOQuantifier(..)
     , QuantifierType(..)
     , QuantifierWD(..)
-    , Context, FOContext, AbsContext(..)
+    , Context', Context, FOContext, AbsContext(..)
     , Decl, FODecl, AbsDecl(..)
     , Fun, FOFun, AbsFun(..)
     , Var, FOVar, AbsVar(..), UntypedVar
-    , Def, FODef, AbsDef(..)
+    , Def, FODef, Def', AbsDef(..)
     , IsQuantifier(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
     , mk_context, empty_ctx
+    , mk_fun, mk_lifted_fun
+    , isLifted
     , used_var, used_fun, used_types
     , substitute, rename
     , z3_fun_name
     , z3_decoration
-    -- , pretty_print
     , array
     , decl, Symbol
     , ztuple_type, ztuple
@@ -37,7 +38,10 @@ module Logic.Expr.Expr
     , pair, pair_type, pair_sort
     , free_vars
     , var_decl
+    , target
     , finiteness
+    , fromJust, withLoc, locMsg
+    , rewriteExpr, rewriteExprM
     )
 where
 
@@ -49,14 +53,18 @@ import Logic.Expr.Type
     -- Library
 import           GHC.Generics
 
-import Control.Applicative ((<|>),(<$>))
+import Control.Arrow
+import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
 import Control.DeepSeq
 import Control.Monad.Reader
+import Control.Monad.Identity
 
 import           Data.List as L
 import qualified Data.Map as M hiding (map,foldl)
 import qualified Data.Set as S
 import           Data.Typeable
+
+import Language.Haskell.TH hiding (Type) -- (ExpQ,location,Loc)
 
 import Utilities.Format
 
@@ -79,6 +87,9 @@ data GenExpr t a q =
         | Lift (GenExpr t a q) a
     deriving (Eq, Ord, Typeable, Generic)
 
+data Lifting = Unlifted | Lifted
+    deriving (Eq,Ord)
+
 data Value = RealVal Double | IntVal Int
     deriving (Eq,Ord,Generic)
 
@@ -86,21 +97,11 @@ instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
 
-newtype QuantifierType = QT (Type -> Type -> Type)
+data QuantifierType = QTConst Type | QTSort Sort | QTTerm Sort
+    deriving (Eq,Ord,Generic)
 
 data QuantifierWD  = FiniteWD | InfiniteWD
-
-instance Eq QuantifierType where
-    _ == _ = True
-
-instance Ord QuantifierType where
-    compare _ _ = EQ
-
-instance Eq QuantifierWD where
-    _ == _ = True
-
-instance Ord QuantifierWD where
-    compare _ _ = EQ
+    deriving (Eq,Ord,Generic)
 
 data HOQuantifier = 
         Forall 
@@ -129,7 +130,7 @@ type_of (Word (Var _ t))         = t
 type_of (Const _ t)              = t
 type_of (Cast _ t)               = t
 type_of (Lift _ t)               = t
-type_of (FunApp (Fun _ _ _ t) _) = t
+type_of (FunApp (Fun _ _ _ _ t) _) = t
 type_of (Binder _ _ _ _ t)   = t
 
 ztuple_type :: TypeSystem t => [t] -> t
@@ -162,10 +163,10 @@ null_type :: TypeSystem t => t
 null_type = make_type null_sort []
 
 unit :: TypeSystem t => AbsExpr t q
-unit = FunApp (Fun [] "null" [] null_type) []
+unit = FunApp (mk_fun [] "null" [] null_type) []
 
 pair :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-pair x y = FunApp (Fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
+pair x y = FunApp (mk_fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
     where
         t0 = type_of x
         t1 = type_of y
@@ -206,7 +207,9 @@ instance IsQuantifier HOQuantifier where
     termType (UDQuant _ t _ _) = t
     exprType Forall _ _ = bool
     exprType Exists _ _ = bool
-    exprType (UDQuant _ _ (QT f) _) arg term = f arg term
+    exprType (UDQuant _ _ (QTConst t) _) _ _ = t
+    exprType (UDQuant _ _ (QTSort s) _) arg term = make_type s [arg,term]
+    exprType (UDQuant _ _ (QTTerm s) _) _ term = make_type s [term]
     qForall = Forall
     qExists = Exists
 
@@ -222,6 +225,8 @@ instance IsQuantifier FOQuantifier where
     qExists = FOExists
 
 type Context = AbsContext GenericType HOQuantifier
+
+type Context' = AbsContext GenericType FOQuantifier
 
 type FOContext = AbsContext FOType FOQuantifier
 
@@ -261,7 +266,7 @@ array t0 t1 = make_type array_sort [t0,t1]
 
     -- replace it everywhere
 z3_fun_name :: Fun -> String
-z3_fun_name (Fun xs ys _ _) = ys ++ concatMap z3_decoration xs
+z3_fun_name (Fun xs ys _ _ _) = ys ++ concatMap z3_decoration xs
 
 type Decl = AbsDecl GenericType
 
@@ -283,11 +288,18 @@ type Fun = AbsFun GenericType
 
 type FOFun = AbsFun FOType
 
-data AbsFun t = Fun [t] String [t] t
+data AbsFun t = 
+        Fun [t] String Lifting [t] t
     deriving (Eq, Ord, Generic)
 
+mk_fun :: [t] -> String -> [t] -> t -> AbsFun t
+mk_fun ps n ts t = Fun ps n Unlifted ts t
+
+mk_lifted_fun :: [t] -> String -> [t] -> t -> AbsFun t
+mk_lifted_fun ps n ts t = Fun ps n Lifted ts t
+
 instance NFData t => NFData (AbsFun t) where
-    rnf (Fun xs n args t) = rnf (xs,n,args,t)
+    rnf (Fun xs n lf args t) = rnf (xs,n,lf,args,t)
 
 type UntypedVar = AbsVar ()
 
@@ -301,9 +313,14 @@ data AbsVar t = Var String t
 instance NFData t => NFData (AbsVar t) where
     rnf (Var xs t) = rnf (xs,t)
 
+target :: AbsDef t q -> AbsExpr t q
+target (Def _ _ _ _ e) = e
+
 type FODef = AbsDef FOType HOQuantifier
 
 type Def = AbsDef GenericType HOQuantifier
+
+type Def' = AbsDef GenericType FOQuantifier
 
 data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
     deriving (Eq,Ord,Generic)
@@ -321,9 +338,11 @@ instance Show FOQuantifier where
     show FOForall = "forall"
     show FOExists = "exists"
 
+isLifted :: AbsFun t -> Bool
+isLifted (Fun _ _ lf _ _) = lf == Lifted
+
 instance (TypeSystem t, IsQuantifier q, Tree t') 
         => Tree (GenExpr t t' q) where
-    -- as_tree' t = return $ as_tree t
     as_tree' (Cast e t)   = do
         t' <- as_tree' t
         e' <- as_tree' e
@@ -334,15 +353,23 @@ instance (TypeSystem t, IsQuantifier q, Tree t')
         return $ List [ List [Str "as", Str "const", t']
                              , e']
     as_tree' (Word (Var xs _))    = return $ Str $ z3_escape xs
-    -- as_tree (Const [] "Nothing" t) = List [Str "as", Str "Nothing", as_tree t]
     as_tree' (Const xs _)         = return $ Str $ show xs
-    as_tree' (FunApp f [])  = do
-        f   <- decorated_name' f
-        return $ Str f
+    as_tree' (FunApp f@(Fun _ _ _ _ t) [])
+            | isLifted f =List <$> sequence   
+                               [ List 
+                                 <$> (map Str ["_","map"] ++) 
+                                 <$> mapM as_tree' [t]
+                               , Str <$> decorated_name' f
+                               ]
+            | otherwise  = Str <$> decorated_name' f
     as_tree' (FunApp f ts)  = do
         ts' <- mapM as_tree' ts
-        f   <- decorated_name' f
-        return $ List (Str f : ts')
+        f   <- if isLifted f 
+            then (List . map Str) 
+                            <$> (["_","map"] ++) 
+                            <$> mapM decorated_name' [f]
+            else Str <$> decorated_name' f
+        return $ List (f : ts')
     as_tree' (Binder q xs r xp _)  = do
         xs' <- mapM as_tree' xs
         r'  <- as_tree' r
@@ -361,13 +388,48 @@ instance (TypeSystem t, IsQuantifier q, Tree t')
     rewriteM' f s (Cast e t)           = do
             (x,e') <- f s e
             return (x, Cast e' t)
-    rewriteM' f s0 (FunApp g@(Fun _ _ _ _) xs)  = do
+    rewriteM' f s0 (FunApp g xs)  = do
             (s1,ys) <- fold_mapM f s0 xs
             return (s1,FunApp g ys)
     rewriteM' f s0 (Binder q xs r0 x t)  = do
             (s1,r1) <- f s0 r0
             (s2,y)  <- f s1 x
             return (s2,Binder q xs r1 y t)
+
+rewriteExpr :: (t0 -> t1)
+            -> (q0 -> q1)
+            -> (AbsExpr t0 q0 -> AbsExpr t1 q1)
+            -> AbsExpr t0 q0 -> AbsExpr t1 q1
+rewriteExpr fT fQ fE = runIdentity . rewriteExprM 
+        (return . fT) (return . fQ) (return . fE)
+
+rewriteExprM :: (Applicative m, Monad m)
+             => (t0 -> m t1)
+             -> (q0 -> m q1)
+             -> (AbsExpr t0 q0 -> m (AbsExpr t1 q1))
+             -> AbsExpr t0 q0 -> m (AbsExpr t1 q1)
+rewriteExprM fT fQ fE e = 
+        case e of
+            Word v -> Word <$> fvar v
+            Const v t -> Const v <$> fT t
+            FunApp f args -> 
+                FunApp <$> ffun f
+                       <*> mapM fE args
+            Binder q vs re te t ->
+                Binder <$> fQ q 
+                       <*> mapM fvar vs 
+                       <*> fE re
+                       <*> fE te
+                       <*> fT t
+            Cast e t -> Cast <$> fE e <*> fT t
+            Lift e t -> Lift <$> fE e <*> fT t
+    where
+        ffun (Fun ts n lf targs rt) = 
+                Fun <$> mapM fT ts 
+                    <*> pure n <*> pure lf
+                    <*> mapM fT targs 
+                    <*> fT rt
+        fvar (Var n t) = Var n <$> fT t
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsExpr t q) where
     show e = show $ runReader (as_tree' e) UserOutput
@@ -448,7 +510,7 @@ instance TypeSystem t => Show (AbsVar t) where
     show (Var n t) = n ++ ": " ++ show (as_tree t)
 
 instance TypeSystem t => Show (AbsFun t) where
-    show (Fun xs n ts t) = n ++ show xs ++ ": " 
+    show (Fun xs n _ ts t) = n ++ show xs ++ ": " 
         ++ intercalate " x " (map (show . as_tree) ts)
         ++ " -> " ++ show (as_tree t)
 
@@ -465,7 +527,8 @@ instance Symbol Sort t q where
     decl s = [SortDecl s]
 
 instance Symbol (AbsFun t) t q where
-    decl (Fun xs name params ret) = [FunDecl xs name params ret]
+    decl (Fun xs name Unlifted params ret) = [FunDecl xs name params ret]
+    decl _ = error "Symbol.decl: cannot declare lifted functions"
 
 instance Symbol (AbsVar t) t q where
     decl (Var name typ)        = [ConstDecl name typ]
@@ -516,7 +579,7 @@ mk_context (x:xs) =
                     FunDecl gs n ps t -> 
                         Context 
                             ss vs 
-                            (M.insert n (Fun gs n ps t) fs)
+                            (M.insert n (Fun gs n Unlifted ps t) fs)
                             defs dums
                     FunDef gs n ps t e -> 
                         Context 
@@ -590,9 +653,9 @@ used_fun e = visit f s e
                 _          -> S.empty
 
 instance TypeSystem t => Named (AbsFun t) where
-    name (Fun _ x _ _) = x
+    name (Fun _ x _ _ _) = x
     decorated_name f = runReader (decorated_name' f) ProverOutput
-    decorated_name' (Fun ts x _ _) = do
+    decorated_name' (Fun ts x _ _ _) = do
             ts' <- mapM z3_decoration' ts
             return $ x ++ concat ts'
 
@@ -616,7 +679,9 @@ used_types e = visit (flip $ S.union . used_types) (
     where
         f (Var _ t) = t
 
-rename :: String -> String -> Expr -> Expr
+rename :: (TypeSystem t, IsQuantifier q) 
+       => String -> String 
+       -> AbsExpr t q -> AbsExpr t q
 rename x y e@(Word (Var vn t))
         | vn == x   = Word (Var y t)
         | otherwise = e
@@ -624,6 +689,8 @@ rename x y e@(Binder q vs r xp t)
         | x `elem` L.map name vs  = e
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
+
+instance NFData Lifting where
 
 instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
     rnf (Word x) = rnf x
@@ -636,4 +703,33 @@ instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
 instance NFData Value where
     rnf (RealVal v) = rnf v
     rnf (IntVal v)  = rnf v
+
+fromEither :: Loc -> Either [String] a -> a
+fromEither _ (Right x)  = x
+fromEither loc (Left msg) = error $ unlines $ map (format "\n{0}\n{1}" loc') msg
+    where
+        loc' :: String
+        loc' = locMsg loc
+
+fromJust :: ExpQ
+fromJust = withLoc 'fromEither
+
+locMsg :: Loc -> String
+locMsg loc = format "{0}:{1}:{2}" (loc_filename loc) (fst $ loc_start loc) (snd $ loc_end loc)
+
+withLoc :: Name -> ExpQ
+withLoc fun = do
+    loc <- location
+    let litS f = LitE $ StringL $ f loc
+        litP f = TupE [LitE $ IntegerL x, LitE $ IntegerL y]
+            where
+                (x,y) = (toInteger *** toInteger) (f loc)
+    let e = AppE (VarE fun)  
+            (RecConE 'Loc
+                [ ('loc_filename,litS loc_filename)
+                , ('loc_package,litS loc_package)
+                , ('loc_module,litS loc_module)
+                , ('loc_start,litP loc_start)
+                , ('loc_end,litP loc_end) ])
+    return e
 

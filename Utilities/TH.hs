@@ -21,20 +21,11 @@ import Data.Tuple
 import Language.Haskell.TH
 
 -- import System.Locale
-import System.Directory
-import System.IO
-import System.IO.Unsafe
 
 import Text.Printf
 
 import Utilities.Permutation
 
-templateFile :: FilePath
-templateFile = unsafePerformIO $ do
-    let fn = "template.txt"
-    ex <- doesFileExist fn
-    when ex $ removeFile fn
-    return fn
 
 makePolyClass :: Name -> DecsQ
 makePolyClass recName = do
@@ -88,14 +79,6 @@ makePolyClass recName = do
           sigD (fieldName f) $ forallT typeVars
             (cxt [classP className [varT fT]]) t            
         ] -- substVars _ $ 
-    runIO $ do
-        h <- openFile templateFile AppendMode
-        hPrintf h "Type params: %s\n" (show args)
-        hPrintf h "%s\n%s\n%s\n" 
-            (pprint polyClass)
-            (pprint polyInstance)
-            (unlines $ L.map pprint fields)
-        hClose h
     return $ polyClass:polyInstance:fields
 
 createHierarchy :: [(Name,Name)] -> DecsQ
@@ -121,12 +104,6 @@ createHierarchy xs = do
         [ forM (toList $ M.map (L.map swap) ancestors) 
             $ uncurry makeInstance 
         , mapM makePolyClass $ keys ancestors ]
-    runIO $ do
-        h <- openFile templateFile AppendMode
-        -- hPrintf h "Type params: %s\n" (show args)
-        hPrintf h "%s\n" 
-            (unlines $ L.map pprint decs)
-        hClose h
     return decs
 
 makeInstance :: Name -> [(Name, Name)] -> Q [Dec]

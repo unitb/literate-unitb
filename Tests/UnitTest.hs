@@ -26,7 +26,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.RWS
 
-import           Data.Char
 import           Data.List
 import qualified Data.Map as M
 import           Data.Tuple
@@ -58,73 +57,6 @@ instance Indentation Int M where
         return $ concat $ replicate n "|  "
     _margin _ = id
             
-
-diff :: String -> String -> String
-diff xs ys = p6
-    where
-        p0 = take (length p7 - 3) p7
-        p1 = drop 3 p8
-        p7 = longest_prefix xs ys
-        p8 = longest_suffix xs ys
-        p2 = unlines $ concatMap break_line $ lines (p0 ++ "|___|" ++ p1)
-        m  = length p0
-        n  = length p1
-        p3 = map ("  > " ++) ("Actual" : (concatMap break_line $ lines $ quote $ drop m $ take (length xs - n) xs))
-        p4 = map ("  < " ++) ("Expected" : (concatMap break_line $ lines $ quote $ drop m $ take (length ys - n) ys))
-        p5 = unlines $ interleave p3 p4
-        p6 = p2 ++ "\n\nComparison:[\n" ++ p5 ++ "]"
-
-break_line :: String -> [String]
-break_line y =  map concat (
-        takel 80 x : (
-            takeWhile (not . null) 
-                [ takel 80 $ dropl (80*i) x  | i <- [1..] ]) )
-    where
-        x :: [String]
-        x       = groupBy f y
-        f x y   = p x == p y
-        p x     = (isSpace x, isAlphaNum x)
-
-takel :: Int -> [[a]] -> [[a]]
-takel n (x:xs)
-    | n <= length x  = []
-    | otherwise      = x:takel (n-length x) xs
-takel _ [] = []
-
-dropl :: Int -> [[a]] -> [[a]]
-dropl n (x:xs)
-    | n <= length x  = x:xs
-    | otherwise      = dropl (n-length x) xs
-dropl _ [] = []
- 
-longest_prefix :: Eq a => [a] -> [a] -> [a]
-longest_prefix [] _ = []
-longest_prefix _ [] = []
-longest_prefix (x:xs) (y:ys)
-    | x == y    = x : longest_prefix xs ys
-    | otherwise = []
-
-longest_suffix :: Eq a => [a] -> [a] -> [a]
-longest_suffix xs ys = reverse $ longest_prefix (reverse xs) (reverse ys)
-
-interleave :: [String] -> [String] -> [String]
-interleave [] xs = xs
-interleave xs [] = xs
-interleave (x:xs) (y:ys) = x:y:d : interleave xs ys
-    where
-        d = map (f . uncurry (==)) $ zip x y
-        f True = ' '
-        f False = '-'
-
-quote :: String -> String
-quote [] = []
-quote (x:xs)
-    | x == ' '  = "_." ++ quote xs
-    | x == '\t' = "\\t" ++ quote xs
-    | x == '\n' = "\\n\n" ++ quote xs
-    | True      = x : quote xs
-
-
 log_failures :: MVar Bool
 log_failures = unsafePerformIO $ newMVar True
 
@@ -178,6 +110,22 @@ run_test_cases xs = do
         x <- fmap (uncurry (==)) <$> takeMVar b
         either throw return x
     where
+        f (POCase x y z)     = do
+                let cmd = catch (second Just `liftM` y) f
+                    f x = do
+                        putStrLn "*** EXCEPTION ***"
+                        print x
+                        return (show (x :: SomeException), Nothing)
+                    -- get_po = catch (snd `liftM` y) g
+                    -- g :: SomeException -> IO (M.Map Label Sequent)
+                    -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
+                return UT
+                    { name = x
+                    , routine = cmd 
+                    , outcome = z 
+                    }
+        f (Suite n xs) = Node n `liftM` mapM f xs
+        -- f t = return (Node (nameOf t) [])
         f (Case x y z) = return UT
                             { name = x
                             , routine = do a <- y ; return (disp a,Nothing)
@@ -195,25 +143,9 @@ run_test_cases xs = do
                                 , routine = (,Nothing) `liftM` y
                                 , outcome = z
                                 }
-        f (POCase x y z)     = do
-                let cmd = catch (second Just `liftM` y) f
-                    f x = do
-                        putStrLn "*** EXCEPTION ***"
-                        print x
-                        return (show (x :: SomeException), Nothing)
-                    -- get_po = catch (snd `liftM` y) g
-                    -- g :: SomeException -> IO (M.Map Label Sequent)
-                    -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
-                return UT
-                    { name = x
-                    , routine = cmd 
-                    , outcome = z 
-                    }
         f (LineSetCase x y z) = f (StringCase x 
                                     ((unlines . sort . lines) `liftM` y) 
                                     (unlines $ sort $ lines z))
-        f (Suite n xs) = Node n `liftM` mapM f xs
-
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = maybe (show x) id (cast x)
@@ -240,7 +172,7 @@ print_po pos name actual expected = do
                             hPutStrLn h $ "; " ++ if not $ ma M.! po 
                                                   then  "does {not discharge} automatically"
                                                   else  "{discharges} automatically"
-                            hPutStrLn h $ concatMap pretty_print' $ z3_code $ pos M.! label po
+                            hPutStrLn h $ concat $ map pretty_print' (z3_code $ pos M.! label po) ++ ["; " ++ po]
                     else return ()
             Nothing  -> return ()
 
@@ -265,7 +197,7 @@ test_suite_string xs = do
                             take_failure_number
                             print_po s x r z
                             new_failure x r z
-                            putLn $ diff r z
+                            putLn "*** FAILED ***"
                             return (0,1) 
                     Left m -> do
                         putLn ("   Exception:  " ++ m)

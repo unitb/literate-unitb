@@ -60,7 +60,7 @@
 &	\safety{saf0}{k \le pc.p \land pc.p \le N}{N \le pc.p}
 \\ &	\progress{prog4}{pc.p = k}{\neg k = pc.p}
 \refine{prog4}{discharge}{tr0}{}
-&	\transient{step}{tr0}{ pc.p = k }\textbf{ is transient}
+&	\transientB{step}{tr0}{ \index{p}{p} }{ pc.p = k }\textbf{ is transient}
 \end{align*}
 
 \begin{align*}
@@ -93,7 +93,7 @@
 %	\end{free:var}
 %\end{proof}
 
-\begin{proof}{TR/tr0/p@param}
+\begin{proof}{TR/tr0/step/NEG}
 %	\begin{free:var}{k}{k}
 %	\begin{free:var}{p}{p_0}
 \begin{align}

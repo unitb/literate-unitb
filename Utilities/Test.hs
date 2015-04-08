@@ -293,7 +293,7 @@ case2 = do
         xs <- case1
         return $ filter h xs
     where
-        f ((x,y),_,_) = null $ [x,y] `intersect` map Right [total_fun,mk_fun]
+        f ((x,y),_,_) = null $ [x,y] `intersect` map Right [total_fun,mk_fun_op]
         g ((x,y),_,_) = not $ (x,y) `elem` combos
         h x = f x && g x
         combos = concat [ [(i,j),(j,i)] | i <- rel, j <- set ] 

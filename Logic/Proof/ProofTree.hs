@@ -132,7 +132,7 @@ instance ProofRule Proof where
 -- instance ProofRule ByParts where
     proof_po (ByParts xs li) lbl (Sequent ctx asm hyps goal) = do
             let conj = L.map (\(x,_) -> x) xs
-            let c  = completeness conj
+                c  = completeness conj
             cs <- mapM part $ zip [1..] xs
             return (c : concat cs)
         where

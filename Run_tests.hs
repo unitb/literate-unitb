@@ -1,4 +1,4 @@
-#!/usr/bin/env runhaskell
+#!/usr/bin/env runhaskell -W -Werror
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
@@ -25,6 +25,7 @@ import System.Process
 import Text.Printf
 
 import Utilities.Format
+import Z3.Z3
 
 p_system :: String -> IO ExitCode
 p_system cmd
@@ -63,7 +64,7 @@ general = do
 --            , ["compile.hs"]
 --            , ["run_tests.hs"] ]
 --        let (cs,_,xs) = unzip3 rs
---        let c1 = foldl success ExitSuccess cs
+--            c1 = foldl success ExitSuccess cs
 --        forM_ (concatMap lines xs) putStrLn
         let c1 = ExitSuccess
         case c1 of
@@ -156,14 +157,14 @@ specific mod_name fun_name = do
 main :: IO ()
 main = do
     xs <- getArgs
-    v <- z3_version
+    b <- check_z3_bin
     system "rm actual* expected* po-*"
-    if v == "2ca14b49fe45" then 
+    if b then 
         case xs of
             []    -> general >> return ()
             [x]   -> specific x Nothing
             [x,y] -> specific x $ Just y
             _   -> putStrLn "usage: run_test [module_name [function_name]]"
     else
-        putStrLn "Expecting z3 version 4.3.2, hashcode 2ca14b49fe45"
+        return ()
     

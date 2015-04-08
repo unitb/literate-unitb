@@ -874,7 +874,7 @@ get_po name lbl = do
                           $ li]) 
                     right 
                     (M.lookup lbl pos)
-            return $ concatMap pretty_print' $ z3_code p
+            return $ unlines $ map pretty_print' $ z3_code p
         return $ either (const "error") id r
     where
         li = LI path0 0 0

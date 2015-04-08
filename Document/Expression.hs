@@ -665,7 +665,7 @@ parse_expr' ctx@(Context _ vars _ defs _)  n input = do
         let vars' = M.map Word vars `M.union` M.mapMaybe f defs
             f (Def xs n args t _e) = do
                     guard (L.null args)
-                    Just $ FunApp (Fun xs n [] t) []
+                    Just $ FunApp (mk_fun xs n [] t) []
         li   <- lift $ ask
         toks <- hoistEither $ read_tokens (scan_expr $ Just n)
             (file_name li) 
