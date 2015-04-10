@@ -144,6 +144,7 @@ raw_machine_pos m = pos
                     mapM_ (inv_po m) $ M.toList $ inv p
                     mapM_ (thm_po m) $ M.toList $ inv_thm p
                     forM_  (M.toList $ events m) $ \ev -> do
+                        sim_po m ev
                         fis_po m ev
                         evt_wd_po m ev
                         evt_eql_po m ev
@@ -222,7 +223,7 @@ init_fis_po m =
         (do prefix_label $ _name m
             context (assert_ctx m))
         (emit_exist_goal [init_fis_lbl] 
-            (M.elems $ variables m) 
+            (M.elems $ variables m  `M.union` abs_vars m) 
             (M.elems $ inits m))
 
 type M = POGen
@@ -392,13 +393,29 @@ inv_po m (pname, xp) =
                 with 
                     (do named_hyps $ grd
                         named_hyps $ act
+                        named_hyps $ M.map ba_pred $ del_acts evt
                         POG.variables $ indices evt
                         POG.variables $ params evt)
                     (emit_goal [evt_lbl,inv_lbl,pname] 
-                        (primed (variables m) xp))
+                        (primed (variables m `M.union` abs_vars m) xp))
         with (do context $ assert_ctx m
                  named_hyps $ inits m)
             $ emit_goal [_name m, inv_init_lbl, pname] xp
+
+sim_po :: Machine -> (Label, Event) -> M ()
+sim_po m (lbl, evt) = 
+        with (do
+                context $ step_ctx m
+                POG.variables $ indices evt
+                POG.variables $ params evt
+                prefix_label $ _name m
+                prefix_label lbl
+                prefix_label "SIM"
+                named_hyps (new_guard evt)
+                named_hyps (ba_predicate m evt)
+                )
+            (forM_ (M.toList $ del_acts evt) $ \(albl,act) ->
+                emit_goal [albl] $ ba_pred act)
 
 fis_po :: Machine -> (Label, Event) -> M ()
 fis_po m (lbl, evt) = 
@@ -410,7 +427,7 @@ fis_po m (lbl, evt) =
             (emit_exist_goal [_name m, lbl, fis_lbl] pvar 
                 $ M.elems $ ba_predicate m evt)
     where
-        pvar = map prime $ M.elems $ variables m
+        pvar = map prime $ M.elems $ variables m `M.union` abs_vars m
 
 tr_wd_po :: Machine -> (Label, Transient) -> M ()
 tr_wd_po  m (lbl, Transient vs p _ (TrHint wit _)) = 

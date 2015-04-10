@@ -127,7 +127,7 @@ data Event = Event
         , old_guard :: Map Label Expr
         , guards    :: Map Label Expr
         , old_acts :: Map Label ()
-        , del_acts :: Map Label ()
+        , del_acts :: Map Label Action
         , actions  :: Map Label Action
         , eql_vars :: Map String Var
         } deriving (Eq, Show)
@@ -176,9 +176,9 @@ skip' keep = M.fromList $ map f $ M.toList keep
         f (n,v) = (label ("SKIP:" ++ n), Word (prime v) `zeq` Word v)
 
 ba_predicate :: Machine -> Event -> Map Label Expr
-ba_predicate m evt = M.map ba_pred (actions evt) `M.union` skip
+ba_predicate m evt = M.map ba_pred (actions evt `M.union` del_acts evt) `M.union` skip
     where
-        skip = skip' $ keep' (variables m) (actions evt)
+        skip = skip' $ keep' (variables m `M.union` abs_vars m) (actions evt `M.union` del_acts evt)
 
 newtype EventId = EventId Label
     deriving (Eq,Ord)

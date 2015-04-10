@@ -385,7 +385,7 @@ data EventPh3 = EventPh3
     , _eOldGuards   :: Map Label Expr
     , _eNewGuards   :: Map Label Expr       -- Guards
     , _eOldActions  :: Map Label Action    -- Actions
-    , _eDelActions  :: Map Label ()
+    , _eDelActions  :: Map Label Action
     , _eNewActions  :: Map Label Action
     } deriving Show
 
@@ -597,7 +597,7 @@ pOldActions  :: HasMachinePh3 mch event
 pOldActions = pEvents . onMap eOldActions
 
 pDelActions  :: HasMachinePh3 mch event 
-             => Lens' (mch event t) (Map EventId (Map Label ()))
+             => Lens' (mch event t) (Map EventId (Map Label Action))
 pDelActions = pEvents . onMap eDelActions
 
 pNewActions  :: HasMachinePh3 mch event 

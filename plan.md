@@ -3,11 +3,11 @@ Todo:
 
     * ~~sum~~
     * data refinement
+        * ~~test: the set of remaining actions after data refinement~~
+
         * (∀v,w,w': cAct(w,w') ∧ J(v,w): (∃v':: aAct(v,v') ∧ J(v',w')))
             * witness
             * simulation PO
-        * ~~test: the set of remaining actions after data refinement~~
-
         * Commit
         * removal of inital condition
         * reformulate schedule refinement with the new deletion mechanism

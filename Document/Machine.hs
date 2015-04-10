@@ -364,16 +364,18 @@ make_phase3 p2 exprs
         | otherwise   = Left errs
     where
         _msg = show (p2 ^. pMachineId) ++ " - " ++ show (M.map M.keys _pNewActions)
-        mk_err msg (eid,vs) = MLError (format "event '{0}' {1} deleted variables" eid (msg :: String)) vs
+        evt_err msg (eid,vs) = MLError (format "event '{0}' {1} deleted variables" eid (msg :: String)) vs
+        used_var' = symbol_table . S.toList . used_var
         uses_del :: String
                  -> (Map Label a -> Map String Var)
                  -> (Lens' EventPh3 (Map Label a))
                  -> [Error]
-        uses_del msg vars exprs = L.map (mk_err msg . second (M.toList . M.map snd)) $ M.toList 
-                $ M.filter (not . M.null)
+        uses_del msg vars exprs = 
+                  L.map (evt_err msg . second (M.toList . M.map snd)) 
+                $ M.toList $ M.filter (not . M.null)
                 $ M.map (M.intersection (p2 ^. pDelVars) . vars)
                 $ _e2 ^. onMap exprs
-        read_vars = M.unions . L.map (symbol_table . S.toList . used_var . ba_pred) . M.elems
+        read_vars = M.unions . L.map (used_var' . ba_pred) . M.elems
         errs :: [Error]
         errs =      uses_del "assigns to" frame eNewActions
                 ++  uses_del "reads" read_vars eNewActions
@@ -781,13 +783,13 @@ getEventActions :: Map Label EventId
                 -> Map EventId (Map Label Action)
 getEventActions = getEventExprs getAction
 
-getDelAction :: (EvtExprScope,DeclSource,LineInfo) -> Maybe ()
-getDelAction (DelAction _,_,_) = Just ()
+getDelAction :: (EvtExprScope,DeclSource,LineInfo) -> Maybe Action
+getDelAction (DelAction act,_,_) = act
 getDelAction _ = Nothing
 
 getEventDelActions :: Map Label EventId
                    -> Map Label ExprScope
-                   -> Map EventId (Map Label ())
+                   -> Map EventId (Map Label Action)
 getEventDelActions = getEventExprs getDelAction
 
 getCoarseSch :: (EvtExprScope,DeclSource,LineInfo) -> Maybe Expr

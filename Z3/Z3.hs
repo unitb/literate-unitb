@@ -96,10 +96,9 @@ z3_config = unsafePerformIO $ do
         option x name = fromRight x $ do
             cp <- cp
             get cp "DEFAULT" name
-    print $ option (5 :: Int) "timeout"
     return $ Z3Config
         { z3c_path = option "z3" "z3_path" 
-        , z3c_timeout = option 5 "timeout"
+        , z3c_timeout  = option 5 "timeout"
         , z3c_capacity = option 32 "capacity" }
 
 instance Tree Command where
