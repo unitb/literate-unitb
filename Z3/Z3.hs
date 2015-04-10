@@ -34,6 +34,7 @@ import Logic.Proof
 
     -- Libraries
 import Control.Applicative
+import Control.Arrow
 import Control.DeepSeq
 
 import Control.Concurrent
@@ -280,28 +281,28 @@ z3_code po =
         f ((lbl,xp),n) = [ Comment $ show lbl
                          , Assert xp $ Just $ "h" ++ show n]
 
-smoke_test :: Sequent -> IO Validity
-smoke_test (Sequent a b c _) =
-    discharge (Sequent a b c zfalse)
+smoke_test :: Label -> Sequent -> IO Validity
+smoke_test lbl (Sequent a b c _) =
+    discharge lbl (Sequent a b c zfalse)
 
 
 
-discharge_on :: Sequent -> IO (MVar (Either String Validity))
-discharge_on po = do
+discharge_on :: Label -> Sequent -> IO (MVar (Either String Validity))
+discharge_on lbl po = do
     res <- newEmptyMVar
     forkIO $ withSem total_caps $ do
-        r <- try (discharge' (Just default_timeout) po)
+        r <- try (discharge' (Just default_timeout) lbl po)
         let f e = show (e :: SomeException)
             r'  = mapLeft f r
         putMVar res r'
     return res
 
 
-discharge_all :: [Sequent] -> IO [Validity]
+discharge_all :: [(Label,Sequent)] -> IO [Validity]
 discharge_all xs = do
         setNumCapabilities 8
 --        forM xs discharge
-        rs <- forM xs discharge_on
+        rs <- forM xs $ uncurry discharge_on
         rs <- forM (zip [0..] rs) $ \(i,ref) -> do
             res <- takeMVar ref
             either 
@@ -348,15 +349,16 @@ map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
 --        f xs = label $ concatMap z3_decoration $ M.elems xs
 --
 
-discharge :: Sequent -> IO Validity
-discharge po = discharge' Nothing po
+discharge :: Label -> Sequent -> IO Validity
+discharge lbl po = discharge' Nothing lbl po
 
 discharge' :: Maybe Int      -- Timeout in seconds
+           -> Label
            -> Sequent        -- 
            -> IO Validity
-discharge' n po = do
+discharge' n lbl po = do
         let code = z3_code po
-        s <- verify code (maybe default_timeout id n)
+        s <- verify lbl code (maybe default_timeout id n)
         case s of
             Right Sat -> return Invalid
             Right Unsat -> return Valid
@@ -365,8 +367,11 @@ discharge' n po = do
             Left xs -> do
                 fail $ "discharge: " ++ xs
 
-verify :: [Command] -> Int -> IO (Either String Satisfiability)
-verify xs n = do
+log_count :: MVar Int
+log_count = unsafePerformIO $ newMVar 0
+
+verify :: Label -> [Command] -> Int -> IO (Either String Satisfiability)
+verify lbl xs n = do
         let ys = concat $ map reverse $ groupBy eq xs
             code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
             eq x y = is_assert x && is_assert y
@@ -381,8 +386,11 @@ verify xs n = do
                     && res /= ["unsat"]
                     && res /= ["unknown"]
                     && res /= ["timeout"]) then do
-            writeFile "log1.z3" (concat $ map pretty_print' ys)
-            writeFile "log2.z3" code
+            let header = Comment $ show lbl
+            n <- modifyMVar log_count $ 
+                return . ((1+) &&& id)
+            writeFile (format "log{0}-1.z3" n) (unlines $ map pretty_print' $ header : ys)
+            writeFile (format "log{0}-2.z3" n) code
             return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" err out)
         else if res == ["sat"] then do
             return $ Right Sat

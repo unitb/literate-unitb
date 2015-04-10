@@ -51,19 +51,15 @@ list_file_obligations' path = do
             return (ms,ts)
 
 verify :: FilePath -> Int -> IO (String, Map Label Sequent)
-verify path i = do
-    r <- fst <$> list_file_obligations' path
-    case r of
-      Right ms 
-        | i < size ms -> do
+verify path i = makeReport' empty $ do
+    ms <- EitherT $ fst <$> list_file_obligations' path
+    if i < size ms then do
             let (m,pos) = snd $ i `elemAt` ms
-            r <- try (str_verify_machine m)
+            r <- lift $ try (str_verify_machine m)
             case r of
                 Right (s,_,_) -> return (s, pos)
                 Left e -> return (show (e :: SomeException),pos)
-        | otherwise -> 
-            return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
-      Left x -> return (unlines $ L.map show x, empty)
+    else return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
 
 all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
 all_proof_obligations path = runEitherT $ do
@@ -74,28 +70,24 @@ all_proof_obligations path = runEitherT $ do
         return cmd
 
 raw_proof_obligation :: FilePath -> String -> Int -> IO String
-raw_proof_obligation path lbl i = do
-        r <- Doc.parse_machine path
-        case r of
-            Right ms -> do
-                let po = raw_machine_pos (ms !! i) ! label lbl
-                    cmd = unlines $ L.map pretty_print' $ z3_code po
-                return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
-            x -> return $ show x
+raw_proof_obligation path lbl i = makeReport $ do
+        ms <- EitherT $ Doc.parse_machine path
+        let po = raw_machine_pos (ms !! i) ! label lbl
+            cmd = unlines $ L.map pretty_print' $ z3_code po
+        return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
 
 proof_obligation :: FilePath -> String -> Int -> IO String
-proof_obligation path lbl i = eitherT (return) return $ do
-        xs <- bimapEitherT show id
-            $ EitherT $ fst <$> list_file_obligations' path
+proof_obligation path lbl i = makeReport $ do
+        xs <- EitherT $ fst <$> list_file_obligations' path
         if i < size xs then do
             let pos = snd $ snd $ i `elemAt` xs
-            po <- maybe 
-                    (left $ format "invalid label: {0}\n{1}" lbl $ 
-                        unlines $ L.map show $ keys pos)
-                    right
-                $ label lbl `M.lookup` pos
-            let cmd = unlines $ L.map pretty_print' $ z3_code po
-            return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
+            case label lbl `M.lookup` pos of
+                Just po -> do
+                    let cmd = unlines $ L.map pretty_print' $ z3_code po
+                    return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
+                Nothing ->
+                    return $ format "invalid label: {0}\n{1}" lbl $ 
+                        unlines $ L.map show $ keys pos
         else
             return $ format "accessing {0}th refinement out of {1}" i (size xs)            
 
@@ -115,18 +107,13 @@ parse path = do
     (fmap (elems . M.map fst) . fst) <$> list_file_obligations' path
 
 verify_thy :: FilePath -> String -> IO (String,Map Label Sequent)
-verify_thy path name = do
-        r <- runEitherT $ do
-            r <- EitherT $ snd <$> list_file_obligations' path
-            let pos = snd $ r ! name
-            res <- lift $ try (verify_all pos)
-            case res of
-                Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toList res, pos)
-                Left e -> return (show (e :: SomeException),pos)
-        case r of
-            Right r -> do
-                return r
-            Left x -> return (show x, M.empty)
+verify_thy path name = makeReport' empty $ do
+        r <- EitherT $ snd <$> list_file_obligations' path
+        let pos = snd $ r ! name
+        res <- lift $ try (verify_all pos)
+        case res of
+            Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toList res, pos)
+            Left e -> return (show (e :: SomeException),pos)
     where
         success True  = "  o  "
         success False = " xxx "

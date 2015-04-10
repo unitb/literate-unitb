@@ -59,6 +59,7 @@ import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.Identity
 
+import           Data.Serialize
 import           Data.List as L
 import qualified Data.Map as M hiding (map,foldl)
 import qualified Data.Set as S
@@ -88,7 +89,9 @@ data GenExpr t a q =
     deriving (Eq, Ord, Typeable, Generic)
 
 data Lifting = Unlifted | Lifted
-    deriving (Eq,Ord)
+    deriving (Eq,Ord, Generic)
+
+instance Serialize Lifting where
 
 data Value = RealVal Double | IntVal Int
     deriving (Eq,Ord,Generic)

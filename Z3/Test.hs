@@ -41,13 +41,13 @@ test = test_cases
         , Case "instantiating type variables by matching some generic types" case9 result9 ]
 
 case0 :: TestCase
-case0 = Case "sample_quant" (verify sample_quant 2) $ Right Sat
+case0 = Case "sample_quant" (verify (label "") sample_quant 2) $ Right Sat
 case1 :: TestCase
-case1 = Case "sample_quant2" (verify sample_quant2 2) $ Right Sat
+case1 = Case "sample_quant2" (verify (label "") sample_quant2 2) $ Right Sat
 case2 :: TestCase
-case2 = Case "sample_quant3" (verify sample_quant3 2) $ Right Unsat
+case2 = Case "sample_quant3" (verify (label "") sample_quant3 2) $ Right Unsat
 case3 :: TestCase
-case3 = Case "sample proof" (discharge sample_proof) Valid
+case3 = Case "sample proof" (discharge (label "") sample_proof) Valid
 case4 :: TestCase
 case4 = Case "check sample calc" (check sample_calc) (Right [])
 

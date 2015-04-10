@@ -247,7 +247,7 @@ path10 :: FilePath
 path10   = "Tests/integers_t10.tex"
 
 result10 :: String
-result10 = "Error \"type error: a calculation must include at least one reasoning step\" (31,1)\n"
+result10 = "Left error (31,1): type error: a calculation must include at least one reasoning step\n"
 
 case10 :: IO (String, Map Label Sequent)
 case10 = do

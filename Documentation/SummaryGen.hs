@@ -149,7 +149,7 @@ comment_of :: Machine -> DocItem -> M ()
 comment_of m key = do
     item $ do
         case key `M.lookup` comments m of
-            Just cmt -> block $ item $ tell [format "\\commentbox{{0}}" cmt]
+            Just cmt -> block $ item $ tell [format "{0}" cmt]
             Nothing -> return ()
 
 event_summary' :: Machine -> Label -> Event -> M ()
@@ -186,7 +186,7 @@ variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
     block $ 
         forM_ (keys $ variables m) $ \v -> do
-            item $ tell [v]
+            item $ tell [format "${0}$" v]
             comment_of m (DocVar v)
 
 invariant_sum :: Machine -> M ()

@@ -34,7 +34,6 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe )
 import qualified Data.Map as M
-import qualified Data.Set as S
 import           Data.Maybe as MM 
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.Utils as LU (replace)
@@ -88,11 +87,11 @@ thm_lbl           = label "THM"
 
 assert_ctx :: Machine -> Context
 assert_ctx m =
-          (Context M.empty (variables m) M.empty M.empty M.empty)
+          (Context M.empty (variables m `M.union` del_vars m) M.empty M.empty M.empty)
 step_ctx :: Machine -> Context
 step_ctx m = merge_all_ctx 
-        [  Context M.empty (prime_all $ variables m) M.empty M.empty M.empty
-        ,  Context M.empty (variables m) M.empty M.empty M.empty ]
+        [  Context M.empty (prime_all $ variables m `M.union` abs_vars m) M.empty M.empty M.empty
+        ,  assert_ctx m ]
     where
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
         prime_var (Var n t) = (Var (n ++ "@prime") t)
@@ -507,7 +506,7 @@ evt_wd_po m (lbl, evt) =
                         with (do prefix_label "ACT"
                                  named_hyps $ new_guard evt
                                  context $ step_ctx m) $ do
-                            let p k _ = k `S.notMember` old_acts evt
+                            let p k _ = k `M.notMember` old_acts evt
                             forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
                                 emit_goal [tag] 
                                     $ well_definedness $ ba_pred bap)
@@ -524,7 +523,7 @@ evt_eql_po  m (lbl, evt) =
              named_hyps $ invariants m
              named_hyps $ new_guard evt
              named_hyps $ ba_predicate m evt)
-        (forM_ (S.toList $ eql_vars evt) $ \v -> do
+        (forM_ (M.elems $ eql_vars evt) $ \v -> do
             emit_goal [label $ name v] 
                 $ Word (prime v) `zeq` Word v )
 
@@ -572,8 +571,8 @@ verify_machine m = do
 
 check :: Calculation -> IO (Either [Error] [(Validity, Int)])
 check c = runEitherT $ do
-        pos <- hoistEither $ obligations empty_ctx empty_sequent c
-        rs  <- lift $ forM pos discharge
+        pos <- hoistEither $ obligations' empty_ctx empty_sequent c
+        rs  <- lift $ forM pos $ uncurry discharge
         let ln = filter ((/= Valid) . fst) $ zip rs [0..]
         return ln
 
@@ -592,9 +591,9 @@ dump name pos = do
 verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos' = do
     let xs         = M.toList pos'
-        (lbls,pos) = unzip xs 
+        lbls       = map fst xs 
     ys <- map_failures (lbls !!) 
-            $ discharge_all pos
+            $ discharge_all xs
     rs <- forM (zip lbls ys) $ \(lbl,r) -> do
 --    rs <- forM xs $ \(lbl, po) -> do
 --            r <- discharge po
@@ -639,8 +638,8 @@ smoke_test_machine :: Machine -> IO (String)
 smoke_test_machine m =
         case proof_obligation m of 
             Right pos -> do
-                rs <- flip filterM (M.toList pos) $ \(_,po) -> do
-                    r <- smoke_test po
+                rs <- flip filterM (M.toList pos) $ \(lbl,po) -> do
+                    r <- smoke_test lbl po
                     return $ r == Valid
                 return $ unlines $ map (show . fst) rs
             Left msgs -> return (unlines $ map report msgs)

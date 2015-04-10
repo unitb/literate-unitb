@@ -158,7 +158,7 @@ main :: IO ()
 main = do
     xs <- getArgs
     b <- check_z3_bin
-    system "rm actual* expected* po-*"
+    system "rm actual* expected* po-* log*.z3"
     if b then 
         case xs of
             []    -> general >> return ()

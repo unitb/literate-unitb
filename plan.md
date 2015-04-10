@@ -1,11 +1,29 @@
 Todo:
-	document syntax and options
+	documentation for syntax and options
 
-    * sum
-        * generate constant lambda calls
-    * modular decomposition
+    * ~~sum~~
+    * data refinement
+        * (∀v,w,w': cAct(w,w') ∧ J(v,w): (∃v':: aAct(v,v') ∧ J(v',w')))
+            * witness
+            * simulation PO
+        * ~~test: the set of remaining actions after data refinement~~
 
+        * Commit
+        * removal of inital condition
+        * reformulate schedule refinement with the new deletion mechanism
+        * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?
+            * tentative answer: no
+        * Error message when schedule or guard refers to deleted variables
+        * Add error message when deleting non existing variable
+        * test: the set of remaining guards, coarse, fine schedules after data refinement
+    * puzzle
+
+    * shared variable decomposition
+    * finite and subset with instantiation pattern
     * context
+    * event splitting / merging
+    * feasibility should be tested only once 
+
 
 * Literate Unit-B
     * Make it possible to refine without explicitly calling on refinement rules

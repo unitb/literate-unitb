@@ -326,6 +326,7 @@ data MachinePh2' events theory = MachinePh2
     { _p1 :: MachinePh1' events theory
     , _pDefinitions :: Map String Def
     , _pConstants :: Map String Var
+    , _pDelVars   :: Map String (Var,LineInfo)
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
     , _pDummyVars :: Map String Var             -- dummy variables
@@ -384,7 +385,8 @@ data EventPh3 = EventPh3
     , _eOldGuards   :: Map Label Expr
     , _eNewGuards   :: Map Label Expr       -- Guards
     , _eOldActions  :: Map Label Action    -- Actions
-    , _eAllActions  :: Map Label Action
+    , _eDelActions  :: Map Label ()
+    , _eNewActions  :: Map Label Action
     } deriving Show
 
 data EventPh4 = EventPh4 
@@ -594,9 +596,13 @@ pOldActions  :: HasMachinePh3 mch event
              => Lens' (mch event t) (Map EventId (Map Label Action))    -- Actions
 pOldActions = pEvents . onMap eOldActions
 
-pAllActions  :: HasMachinePh3 mch event 
+pDelActions  :: HasMachinePh3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label ()))
+pDelActions = pEvents . onMap eDelActions
+
+pNewActions  :: HasMachinePh3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Action))
-pAllActions = pEvents . onMap eAllActions
+pNewActions = pEvents . onMap eNewActions
 
 pEventRefRule :: HasMachinePh4 mch event
               => Lens' (mch event t) (Map EventId [(Label,ScheduleChange)])

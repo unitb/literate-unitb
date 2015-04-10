@@ -1,5 +1,6 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Document.Tests.Puzzle 
-    ( test_case, path0 )
+    ( test_case, path0, case12 )
 where
 
     -- Modules
@@ -17,8 +18,11 @@ import Control.Monad
 import Control.Monad.Trans.Either
 
 import Data.Map
+import Data.Set as S (Set,fromList)
 
 import Tests.UnitTest
+
+import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test_cases 
@@ -34,6 +38,13 @@ test_case = test_cases
         , POCase "puzzle, m3" case8 result8
         , Case "puzzle m3, wd of sums" case9 result9
         , Case "puzzle m3, proofs with sums" case10 result10
+        , POCase "puzzle, m4" case11 result11
+        , Case "puzzle, deleted variables, m3" case12 result12
+        , Case "puzzle, deleted variables, m4" case13 result13
+        , StringCase "puzzle, error: invariant referring to deleted variable" case14 result14
+        , StringCase "puzzle, error: assignment to deleted variable" case15 result15
+        , Case "test 16, puzzle, removing actions, m3" case16 result16
+        , Case "test 17, puzzle, removed actions, m4" case17 result17
         ]
 
 path0 :: FilePath
@@ -1151,3 +1162,144 @@ result10 = unlines
     , "                          (then (using-params simplify :expand-power true) smt)))"
     , "; m3/INIT/INV/m3:inv1"
     ]
+
+case11 :: IO (String, Map Label Sequent)
+case11 = verify path0 4
+
+result11 :: String
+result11 = unlines
+    [ "  o  m4/INIT/FIS/b"
+    , "  o  m4/INIT/FIS/c"
+    , "  o  m4/INIT/FIS/cs"
+    , "  o  m4/INIT/FIS/n"
+    , "  o  m4/INIT/FIS/ts"
+    , "  o  m4/INIT/INV/m4:inv0"
+    , "  o  m4/INIT/WD"
+    , "  o  m4/INV/WD"
+    , "  o  m4/count/FIS/b@prime"
+    , "  o  m4/count/FIS/c@prime"
+    , "  o  m4/count/FIS/cs@prime"
+    , "  o  m4/count/FIS/n@prime"
+    , "  o  m4/count/FIS/ts@prime"
+    , "  o  m4/count/FIS/vs@prime"
+    , "  o  m4/count/INV/m4:inv0"
+    , "  o  m4/count/SCH"
+    , "  o  m4/count/WD/C_SCH"
+    , "  o  m4/count/WD/F_SCH"
+    , "  o  m4/count/WD/GRD"
+    , "  o  m4/flick/FIS/b@prime"
+    , "  o  m4/flick/FIS/c@prime"
+    , "  o  m4/flick/FIS/cs@prime"
+    , "  o  m4/flick/FIS/n@prime"
+    , "  o  m4/flick/FIS/ts@prime"
+    , "  o  m4/flick/FIS/vs@prime"
+    , "  o  m4/flick/INV/m4:inv0"
+    , "  o  m4/flick/SCH"
+    , "  o  m4/flick/WD/C_SCH"
+    , "  o  m4/flick/WD/F_SCH"
+    , "  o  m4/flick/WD/GRD"
+    , "  o  m4/term/FIS/b@prime"
+    , "  o  m4/term/FIS/c@prime"
+    , "  o  m4/term/FIS/cs@prime"
+    , "  o  m4/term/FIS/n@prime"
+    , "  o  m4/term/FIS/ts@prime"
+    , "  o  m4/term/FIS/vs@prime"
+    , "  o  m4/term/INV/m4:inv0"
+    , "  o  m4/term/SCH"
+    , "  o  m4/term/WD/C_SCH"
+    , "  o  m4/term/WD/F_SCH"
+    , "  o  m4/term/WD/GRD"
+    , "  o  m4/visit/FIS/b@prime"
+    , "  o  m4/visit/FIS/c@prime"
+    , "  o  m4/visit/FIS/cs@prime"
+    , "  o  m4/visit/FIS/n@prime"
+    , "  o  m4/visit/FIS/ts@prime"
+    , "  o  m4/visit/FIS/vs@prime"
+    , " xxx m4/visit/INV/m4:inv0"
+    , "  o  m4/visit/SCH"
+    , "  o  m4/visit/WD/C_SCH"
+    , "  o  m4/visit/WD/F_SCH"
+    , "  o  m4/visit/WD/GRD"
+    , "passed 52 / 52"
+    ]
+
+case12 :: IO (Either [Error] (Set String,Set String,Set String))
+case12 = runEitherT $ do
+    m <- EitherT $ parse_machine path0 3
+    return ( keysSet $ abs_vars m
+           , keysSet $ del_vars m
+           , keysSet $ variables m)
+
+result12 :: Either [Error] (Set String,Set String,Set String)
+result12 = Right ( S.fromList ["b","cs","ts","vs"]
+                 , S.fromList ["cs"]
+                 , S.fromList ["b","ts","vs","n","c"])
+
+case13 :: IO (Either [Error] (Set String,Set String,Set String))
+case13 = runEitherT $ do
+    m <- EitherT $ parse_machine path0 4
+    return ( keysSet $ abs_vars m
+           , keysSet $ del_vars m
+           , keysSet $ variables m)
+
+result13 :: Either [Error] (Set String,Set String,Set String)
+result13 = Right ( S.fromList ["b","ts","vs","n","c"]
+                 , S.fromList ["cs"]
+                 , S.fromList ["b","ts","vs","n","c"])
+
+path14 :: FilePath
+path14 = "Tests/puzzle/puzzle-err0.tex"
+
+case14 :: IO String
+case14 = find_errors path14
+
+result14 :: String
+result14 = "error (225,22): \
+            \unrecognized term: cs\nPerhaps you meant:\n\\Pcs \
+            \(variable)\nc (variable)\nts (variable)\nvs (variable)\n\n"
+
+path15 :: FilePath
+path15 = "Tests/puzzle/puzzle-err1.tex"
+
+case15 :: IO String
+case15 = find_errors path15
+
+result15 :: String
+result15 = unlines
+    [ "error: event 'count' assigns to deleted variables"
+    , "\tcs: (116,3)"
+    , ""
+    , "error: event 'count' reads deleted variables"
+    , "\tcs: (116,3)"
+    , ""
+    , "error: event 'flick' assigns to deleted variables"
+    , "\tcs: (116,3)"
+    , ""
+    ]
+
+
+case16 :: IO (Either [Error] (Set Label,Set Label,Set Label))
+case16 = runEitherT $ do
+    m <- EitherT $ parse_machine path0 3
+    let evt = events m ! "count"
+    return ( keysSet $ old_acts evt
+           , keysSet $ del_acts evt
+           , keysSet $ actions evt)
+
+result16 :: Either [Error] (Set Label,Set Label,Set Label)
+result16 = Right ( S.fromList ["act0","act1"]
+                 , S.fromList ["act0","act1"]
+                 , S.fromList ["m3:act0","m3:act1"])
+
+case17 :: IO (Either [Error] (Set Label,Set Label,Set Label))
+case17 = runEitherT $ do
+    m <- EitherT $ parse_machine path0 4
+    let evt = events m ! "count"
+    return ( keysSet $ old_acts evt
+           , keysSet $ del_acts evt
+           , keysSet $ actions evt)
+
+result17 :: Either [Error] (Set Label,Set Label,Set Label)
+result17 = Right ( S.fromList ["m3:act0","m3:act1"]
+                 , S.fromList []
+                 , S.fromList ["m3:act0","m3:act1"])

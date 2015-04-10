@@ -172,7 +172,7 @@ print_po pos name actual expected = do
                             hPutStrLn h $ "; " ++ if not $ ma M.! po 
                                                   then  "does {not discharge} automatically"
                                                   else  "{discharges} automatically"
-                            hPutStrLn h $ concat $ map pretty_print' (z3_code $ pos M.! label po) ++ ["; " ++ po]
+                            hPutStrLn h $ unlines $ map pretty_print' (z3_code $ pos M.! label po) ++ ["; " ++ po]
                     else return ()
             Nothing  -> return ()
 

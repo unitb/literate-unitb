@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Utilities.Trace where
 
+import Control.Arrow
 import Control.Concurrent
 import Control.Monad.IO.Class
 
@@ -39,6 +40,9 @@ trace xs x = unsafePerformIO $ do
             return (DT.trace (format "({0}) {1}" tid xs) x)
         else
             return x
+
+traceP :: (Show a, Arrow ar) => String -> ar a ()
+traceP m = arr $ \x -> trace (format "{0}: {1}" m x) ()
 
 traceM :: Monad m => String -> m ()
 traceM xs = trace xs (return ())

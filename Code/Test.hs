@@ -346,7 +346,7 @@ case6 = liftM (either id id) $ runEitherT $ do
         $ mapLeft unlines
         $ safety m [] [] cfg
     -- xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
-    xs <- lift $ discharge_all (elems pos)
+    xs <- lift $ discharge_all (toList pos)
     return $ unlines $ L.map show $ zip (keys pos) xs
 
 parse :: FilePath -> IO (Either String Machine)

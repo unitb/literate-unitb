@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, TupleSections #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Utilities.Syntactic where
 
@@ -16,7 +16,7 @@ import Utilities.Format
 
 --type Error = (String,Int,Int)
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Ord)
 --        { message :: String
 --        , line_info :: LineInfo }
 
@@ -58,10 +58,13 @@ report (MLError xs ys) = format "error: {0}\n{1}" xs
                     $ sortOn snd ys)
 
 makeReport :: MonadIO m => EitherT [Error] m String -> m String
-makeReport m = eitherT f return m
+makeReport = liftM fst . makeReport' () . liftM (,())
+
+makeReport' :: MonadIO m => a -> EitherT [Error] m (String,a) -> m (String,a)
+makeReport' def m = eitherT f return m
     where    
 --        f :: [Error] -> IO String
-        f x = return $ ("Left " ++ show_err x)
+        f x = return ("Left " ++ show_err x,def)
 
 format_error :: Error -> String
 format_error = report
@@ -71,7 +74,7 @@ message (Error msg _) = msg
 message (MLError msg _) = msg
 
 shrink_error_list :: [Error] -> [Error]
-shrink_error_list es = do
+shrink_error_list es' = do
         (xs,e,ys) <- zip3 (inits es) es (drop 1 $ tails es)
         guard $ not $ any (e `less_specific`) $ xs ++ ys
         return e
@@ -82,3 +85,4 @@ shrink_error_list es = do
                 ls0' = sortOn snd ls0
                 ls1' = sortOn snd ls1
         less_specific _ _ = False
+        es = nubSort es'

@@ -126,13 +126,14 @@ data Event = Event
         , params    :: Map String Var
         , old_guard :: Map Label Expr
         , guards    :: Map Label Expr
-        , old_acts :: S.Set Label
+        , old_acts :: Map Label ()
+        , del_acts :: Map Label ()
         , actions  :: Map Label Action
-        , eql_vars :: S.Set Var
+        , eql_vars :: Map String Var
         } deriving (Eq, Show)
 
 instance NFData Event where
-    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9) = x0 `deepseq` rnf (x1,x2,x3,x4,x5,x6,x7,x8,x9)
+    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) = rnf (x0,x1) `seq` rnf (x2,x3,x4,x5,x6,x7,x8,x9,x10)
 
 empty_event :: Event
 empty_event = Event 
@@ -144,20 +145,21 @@ empty_event = Event
         , old_guard = empty
         , guards = empty 
         , actions = empty
-        , old_acts = S.empty
-        , eql_vars = S.empty
+        , old_acts = empty
+        , del_acts = empty
+        , eql_vars = empty
         }
 
-frame :: Map Label Action -> S.Set Var
-frame acts = S.unions $ map f $ M.elems acts
+frame :: Map Label Action -> Map String Var
+frame acts = M.fromList $ concatMap f $ M.elems acts
     where
-        f (Assign v _) = S.singleton v
-        f (BcmIn v _)  = S.singleton v
-        f (BcmSuchThat vs _) = S.fromList vs
+        f (Assign v _) = [(name v, v)]
+        f (BcmIn v _)  = [(name v, v)]
+        f (BcmSuchThat vs _) = zip (map name vs) vs
 
 ba_pred :: Action -> Expr
-ba_pred (Assign v e) = Word (prime v) `zeq` e
-ba_pred (BcmIn v e) = either undefined id $ Right (Word (prime v)) `zelem` Right e
+ba_pred (Assign v e) = $fromJust $ Right (Word (prime v)) `mzeq` Right e
+ba_pred (BcmIn v e) = $fromJust $ Right (Word (prime v)) `zelem` Right e
 ba_pred (BcmSuchThat _ e) = e
 
 rel_action :: [Var] -> Map Label Expr -> Map Label Action
@@ -165,13 +167,13 @@ rel_action vs act = M.map (\x -> BcmSuchThat vars x) act
     where
         vars = vs
 
-keep' :: Map String Var -> Map Label Action -> S.Set Var
-keep' vars acts = S.fromList (M.elems vars) `S.difference` frame acts
+keep' :: Map String Var -> Map Label Action -> Map String Var
+keep' vars acts = vars `M.difference` frame acts
 
-skip' :: S.Set Var -> M.Map Label Expr
-skip' keep = M.fromList $ map f $ S.toList keep
+skip' :: Map String Var -> Map Label Expr
+skip' keep = M.fromList $ map f $ M.toList keep
     where
-        f v@(Var n _) = (label ("SKIP:" ++ n), Word (prime v) `zeq` Word v)
+        f (n,v) = (label ("SKIP:" ++ n), Word (prime v) `zeq` Word v)
 
 ba_predicate :: Machine -> Event -> Map Label Expr
 ba_predicate m evt = M.map ba_pred (actions evt) `M.union` skip
@@ -196,6 +198,7 @@ data Machine =
         , theory     :: Theory
         , variables  :: Map String Var
         , abs_vars   :: Map String Var
+        , del_vars   :: Map String Var
         , inits      :: Map Label Expr
         , events     :: Map Label Event
         , inh_props  :: PropertySet
@@ -226,12 +229,6 @@ instance NFData DocItem where
     rnf (DocInv x) = rnf x
     rnf (DocProg x) = rnf x
 
-class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
-    refinement_po :: a -> Machine -> POGen ()
-    rule_name     :: a -> Label
-    hyps_labels   :: a -> [ProgId]
-    supporting_evts :: a -> [EventId]
-    
 empty_machine :: String -> Machine
 empty_machine n = Mch 
         { _name = (Lbl n) 
@@ -240,6 +237,7 @@ empty_machine n = Mch
                 ("basic", basic_theory)] }
         , variables = empty
         , abs_vars  = empty
+        , del_vars  = empty
         , inits     = empty
         , events    = empty 
         , inh_props = empty_property_set 
@@ -247,6 +245,12 @@ empty_machine n = Mch
         , derivation = empty
         , comments  = empty
         }  
+
+class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
+    refinement_po :: a -> Machine -> POGen ()
+    rule_name     :: a -> Label
+    hyps_labels   :: a -> [ProgId]
+    supporting_evts :: a -> [EventId]
 
 data System = Sys 
         {  proof_struct :: [(Label,Label)]
@@ -319,7 +323,7 @@ instance NFData System where
     rnf (Sys a b c d e) = rnf (a,b,c,d,e)
 
 instance NFData Machine where
-    rnf (Mch a b c d e f g h i j) = rnf (a,b,c,d,e,f,g,h,i) `deepseq` rnf j
+    rnf (Mch a b c d e f g h i j k) = rnf (a,b,c,d,e,f,g,h,i) `seq` rnf (j,k)
 
 instance NFData EventId where
     rnf (EventId lbl) = rnf lbl

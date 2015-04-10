@@ -192,16 +192,14 @@
 \input{machine_m2}
 
 \end{machine}
+
 \begin{machine}{m3}
 	\refines{m2}
 	\[ \variable{ c : \Int } \]
 	\begin{description}
-\comment{flick}{stuff}
 		\comment{c}{ one-bit channel used to communicate }
 	\end{description}\removevar{cs}
-	\removeact{count}{act0,act1}
-	\removeact{flick}{act0}
-	\begin{align} 
+	\begin{align}
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\
 		\initialization{m3:in0}{ c = 0 } \\ 
@@ -224,7 +222,7 @@
 
 \begin{machine}{m4}
 	\refines{m3}
-	% \invariant{m4:inv0}{cs \subseteq cs}
+	\invariant{m4:inv0}{cs \subseteq cs}
 \end{machine}
 
 \end{document}

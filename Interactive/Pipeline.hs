@@ -47,7 +47,7 @@ import qualified Data.List as L
 
 import System.Console.ANSI
 import System.Directory
-import System.FilePath
+import System.FilePath hiding ((</>))
 -- import System.IO
 import System.TimeIt
 
@@ -177,8 +177,9 @@ prover (Shared { .. }) = do
         worker req = forever $ do
             -- (k,po) <- takeMVar req
             (k,po) <- atomically $ readTBQueue req
+            let k' = uncurry (</>) k
             inc 1
-            r      <- catch (discharge po) (handler k)
+            r      <- catch (discharge k' po) (handler k)
             dec 1
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 

@@ -4,7 +4,6 @@ module Main where
 
     -- Modules
 import Interactive.Pipeline
-import Interactive.Config
 
 import Document.Document
 
