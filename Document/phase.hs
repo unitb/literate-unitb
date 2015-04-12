@@ -384,6 +384,7 @@ data EventPh3 = EventPh3
     , _eFineSched   :: Map Label Expr
     , _eOldGuards   :: Map Label Expr
     , _eNewGuards   :: Map Label Expr       -- Guards
+    , _eWitness     :: Map Var Expr
     , _eOldActions  :: Map Label Action    -- Actions
     , _eDelActions  :: Map Label Action
     , _eNewActions  :: Map Label Action

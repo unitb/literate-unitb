@@ -231,33 +231,42 @@ make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachinePh1 { .. }
         _pEvents    = M.map (uncurry EventPh1 . second (== Local)) evts ^. pFromEventId
         _pContext   = TheoryP1 { .. }
         _t0         = TheoryP0 ()
+        -- _pImports
         -- _pNewEvents = M.map fst $ M.filter ((== Local) . snd) evts
+
+run_phase :: [Pipeline MM a (Either [e] b)]
+          -> Pipeline MM a (Either [e] [b])
+run_phase xs = run_phase_aux xs >>> arr (all_errors')
+
+run_phase_aux :: [Pipeline MM a b] -> Pipeline MM a [b]
+run_phase_aux [] = arr $ const []
+run_phase_aux (cmd:cs) = proc x -> do
+        y  <- cmd -< x
+        ys <- run_phase_aux cs -< x
+        returnA -< y:ys
 
 run_phase2_vars :: Pipeline MM 
                         (Hierarchy MachineId,MTable MachinePh1)
                         (MTable MachinePh2)
 run_phase2_vars = proc (r_ord, p1) -> do
-    v <- variable_decl -< p1
-    c <- constant_decl -< p1
-    d <- dummy_decl -< p1
-    ind <- index_decl -< p1
-    par <- param_decl -< p1
-    rm_v <- remove_var -< p1
-    let s = Right $ M.map (L.view pSetDecl) p1
-        vars    = do
-            vs <- all_errors' [v,c,d,ind,par,s,rm_v]
-            make_all_tables' (format "Multiple symbols with the name {0}") 
-                    $ inherit2 r_ord $ unionsWith (++) vs
-                        
+    vs <- run_phase
+        [ variable_decl
+        , constant_decl
+        , dummy_decl
+        , index_decl
+        , arr $ Right . M.map (L.view pSetDecl)
+        , param_decl
+        , remove_var ] -< p1
+    let vars    =      make_all_tables' err_msg
+                   =<< inherit2 r_ord 
+                   <$> unionsWith (++) <$> vs
+        err_msg = (format "Multiple symbols with the name {0}") 
     One vars <- triggerP -< One vars
     let p2 = make_phase2 <$> p1 <.> vars
         _  = vars :: MTable (Map String VarScope)
     returnA -< p2
 
 make_phase2 :: MachinePh1
-            -- -> Map String Sort
-            -- -> Map String (Theory,LineInfo)
-            -- -> Map Label EventId
             -> Map String VarScope
             -> MachinePh2 
 make_phase2 p1 vars = MachinePh2 { .. }
@@ -313,40 +322,44 @@ make_phase2 p1 vars = MachinePh2 { .. }
         _pEvtSynt :: Map EventId ParserSetting
         _pEvtSynt = event_namespace ind_param
 
+default_schedule_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+default_schedule_decl = arr $ \p2 -> 
+        Right $ M.map (map default_sch . elems . M.map (^. pEventId)) 
+              $ M.map (M.filter (^. pIsNew) . (^. pEvents)) p2
+    where
+        li = LI "default" 1 1
+        default_sch e = ( label "default",
+                          EventExpr 
+                            $ singleton e (CoarseSchedule zfalse,Inherited,li))
+
 run_phase3_exprs :: Pipeline MM (Hierarchy MachineId,MTable MachinePh2) (MTable MachinePh3)
 run_phase3_exprs = proc (r_ord,p2) -> do
-        ba    <- assignment -< p2
-        beq   <- bcmeq_assgn -< p2
-        bsuch <- bcmsuch_assgn -< p2
-        bin   <- bcmin_assgn -< p2
-        grd   <- guard_decl -< p2
-        fs    <- fine_sch_decl -< p2
-        cs    <- coarse_sch_decl -< p2
-        init  <- initialization -< p2
-        asm   <- assumption -< p2
-        inv   <- invariant  -< p2
-        tr    <- transient_prop -< p2
-        tr'   <- transientB_prop -< p2
-        co    <- constraint_prop -< p2
-        prog  <- progress_prop   -< p2
-        saf   <- safetyA_prop  -< p2
-        saf'  <- safetyB_prop  -< p2
-        rm_act <- remove_assgn -< p2
-        let li = LI "default" 1 1
-            default_sch e = ( label "default",
-                              EventExpr 
-                                $ singleton e (CoarseSchedule zfalse,Inherited,li))
-            exprs = do
-                es <- all_errors' 
-                    [ ba,beq,bsuch,bin
-                    , grd,fs,cs,init
-                    , asm,tr,inv,tr'
-                    , co,prog,saf,saf'
-                    , rm_act
-                    , Right $ M.map (map default_sch . elems . M.map (^. pEventId)) 
-                            $ M.map (M.filter (^. pIsNew) . (^. pEvents)) p2 ]
-                make_all_tables' (format "Multiple expressions with the label {0}") 
-                    $ inherit2 r_ord $ unionsWith (++) es
+        es <- run_phase 
+            [ assignment
+            , bcmeq_assgn
+            , bcmsuch_assgn
+            , bcmin_assgn
+            , guard_decl
+            , default_schedule_decl
+            , fine_sch_decl
+            , coarse_sch_decl
+            , initialization
+            , assumption
+            , invariant
+            , transient_prop
+            , transientB_prop
+            , constraint_prop
+            , progress_prop
+            , safetyA_prop
+            , safetyB_prop
+            , remove_assgn
+            , remove_init
+            , witness_decl ] -< p2
+        let exprs =     make_all_tables' err_msg
+                    =<< inherit2 r_ord 
+                    <$> unionsWith (++) <$> es
+            err_msg :: Label -> String
+            err_msg = (format "Multiple expressions with the label {0}") 
                         
         One exprs <- triggerP -< One exprs
         let p3 = all_errors $ make_phase3 <$> p2 <.> exprs
@@ -365,7 +378,13 @@ make_phase3 p2 exprs
     where
         _msg = show (p2 ^. pMachineId) ++ " - " ++ show (M.map M.keys _pNewActions)
         evt_err msg (eid,vs) = MLError (format "event '{0}' {1} deleted variables" eid (msg :: String)) vs
+        init_err (iid,vs) = MLError (format "initialization '{0}' refers to deleted variables" iid) vs
         used_var' = symbol_table . S.toList . used_var
+        init_uses_del = 
+                  L.map (init_err . second (M.toList . M.map snd)) 
+                $ M.toList $ M.filter (not . M.null)
+                $ M.map (M.intersection (p2 ^. pDelVars) . used_var')
+                $ _pInit
         uses_del :: String
                  -> (Map Label a -> Map String Var)
                  -> (Lens' EventPh3 (Map Label a))
@@ -379,11 +398,17 @@ make_phase3 p2 exprs
         errs :: [Error]
         errs =      uses_del "assigns to" frame eNewActions
                 ++  uses_del "reads" read_vars eNewActions
+                ++  init_uses_del
+        no_wit = (fromList' (M.elems delVars) `M.difference`)
+        fromList' = M.fromList . (map (,()))
+        delVars = (p2 ^. pAbstractVars) `M.difference` (p2 ^. pStateVars)
+
         _e2 = EventPh3 <$> (p2 ^. pEvents) 
                        <.> _pCoarseSched  `M.union` evtEmpty
                        <.> _pFineSched    `M.union` evtEmpty
                        <.> _pOldGuards    `M.union` evtEmpty
                        <.> _pNewGuards    `M.union` evtEmpty
+                       <.> _pWitness      `M.union` evtEmpty
                        <.> _pOldActions   `M.union` evtEmpty
                        <.> _pDelActions   `M.union` evtEmpty
                        <.> _pNewActions   `M.union` evtEmpty
@@ -400,6 +425,12 @@ make_phase3 p2 exprs
         _pFineSched   = getEventFineSch evts exprs
         _pOldGuards   = getEventGuards evts $ old exprs
         _pNewGuards   = getEventGuards evts $ new exprs
+        _pWitness'    = M.map (M.fromList . M.elems) $ getEventWitness evts exprs
+        f act vs = M.mapWithKey (\v _ -> zall $ M.elems $ M.filter (has_primed v) ps) vs
+            where 
+                has_primed v e = prime v `S.member` used_var e
+                ps = ba_predicate' (M.map fst $ p2 ^. pDelVars) act
+        _pWitness     = M.intersectionWith (\w a -> w `M.union` (f a $ no_wit w)) _pWitness' _pOldActions
         _pNewActions  = M.intersectionWith M.difference (getEventActions evts exprs) _pDelActions
         _pDelActions  = getEventDelActions evts $ new exprs
         _pOldActions  = getEventActions evts $ old exprs
@@ -409,17 +440,16 @@ make_phase3 p2 exprs
 
 run_phase4_proofs :: Pipeline MM (Hierarchy MachineId,MTable MachinePh3) (MTable MachinePh4)
 run_phase4_proofs = proc (r_ord,p3) -> do
+        refs   <- run_phase 
+            [ ref_replace_csched
+            , ref_weaken_csched
+            , ref_replace_fsched
+            , ref_remove_guard ] -< p3
         ref_p  <- refine_prog_prop -< p3
-        rep_c  <- ref_replace_csched -< p3
-        wk_c   <- ref_weaken_csched  -< p3
-        rep_f  <- ref_replace_fsched -< p3
-        rem_g  <- ref_remove_guard   -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
         let evt_refs :: Either [Error] (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
-            evt_refs = do
-                    refs <- all_errors' [rep_c,wk_c,rep_f,rem_g] 
-                    return $ M.map (fromListWith (++)) $ unionsWith (++) refs
+            evt_refs = M.map (fromListWith (++)) <$> unionsWith (++) <$> refs
             prog_ref :: Either [Error] (MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo)))
             prog_ref = ref_p >>= make_all_tables (format "Multiple refinement of progress property {0}")
             proofs = prfs >>= make_all_tables (format "Multiple proofs labeled {0}")
@@ -641,6 +671,7 @@ make_machine (MId m) p4 = mch'
                 { indices = evt ^. eIndices
                 , params  = evt ^. eParams
                 , guards  = evt ^. eGuards
+                , witness = evt ^. eWitness
                 , old_guard = evt ^. eOldGuards
                 , actions = evt ^. eNewActions
                 , del_acts = evt ^. eDelActions
@@ -741,6 +772,14 @@ getDefs :: VarScope -> Maybe Def
 getDefs (TheoryDef d _ _) = Just d
 getDefs _ = Nothing
 
+getWitness :: (EvtExprScope,DeclSource,LineInfo) -> Maybe (Var,Expr)
+getWitness (Witness v e,Local,_) = Just (v,e)
+getWitness _ = Nothing
+
+getEventWitness :: Map Label EventId
+                -> Map Label ExprScope
+                -> Map EventId (Map Label (Var,Expr))
+getEventWitness = getEventExprs getWitness
 
 getAssump :: ExprScope -> Maybe Expr
 getAssump (Axiom e _ _) = Just e
@@ -1198,11 +1237,25 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,EventExpr $ M.singleton ev $ (Action act,Local,li))]
 
+remove_init :: MPipeline MachinePh2 [(Label,ExprScope)]
+remove_init = machineCmd "\\removeinit" $ \(One lbls) _m _p2 -> do
+            li <- lift ask
+            return [(lbl,(DelInit Nothing Local li)) | lbl <- lbls ]
+
 remove_assgn :: MPipeline MachinePh2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
             return [(lbl,EventExpr $ M.singleton ev $ (DelAction Nothing,Local,li)) | lbl <- lbls ]
+
+witness_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
+            ev <- get_event p2 evt
+            p  <- parse_expr' (event_parser p2 ev) { is_step = True } xp
+            v  <- bind (format "'{0}' is not a disappearing variable" var)
+                (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
+            li <- lift ask
+            return [(label var,EventExpr $ M.singleton ev (Witness v p,Local,li))]
 
 guard_decl :: MPipeline MachinePh2
                     [(Label,ExprScope)]

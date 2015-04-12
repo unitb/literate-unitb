@@ -9,6 +9,7 @@ module UnitB.AST
     , empty_event
     , Action (..)
     , ba_predicate
+    , ba_predicate'
     , ba_pred
     , rel_action
     , empty_machine
@@ -124,6 +125,7 @@ data Event = Event
         , old_sched :: Schedule
         , scheds    :: Map Label Expr
         , params    :: Map String Var
+        , witness   :: Map Var Expr
         , old_guard :: Map Label Expr
         , guards    :: Map Label Expr
         , old_acts :: Map Label ()
@@ -133,7 +135,9 @@ data Event = Event
         } deriving (Eq, Show)
 
 instance NFData Event where
-    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) = rnf (x0,x1) `seq` rnf (x2,x3,x4,x5,x6,x7,x8,x9,x10)
+    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11) = 
+                  rnf (x0,x1,x11) 
+            `seq` rnf (x2,x3,x4,x5,x6,x7,x8,x9,x10)
 
 empty_event :: Event
 empty_event = Event 
@@ -142,6 +146,7 @@ empty_event = Event
         , old_sched = empty_schedule
         , scheds = default_schedule
         , params = empty
+        , witness = empty
         , old_guard = empty
         , guards = empty 
         , actions = empty
@@ -175,10 +180,15 @@ skip' keep = M.fromList $ map f $ M.toList keep
     where
         f (n,v) = (label ("SKIP:" ++ n), Word (prime v) `zeq` Word v)
 
-ba_predicate :: Machine -> Event -> Map Label Expr
-ba_predicate m evt = M.map ba_pred (actions evt `M.union` del_acts evt) `M.union` skip
+ba_predicate' :: Map String Var -> Map Label Action -> Map Label Expr
+ba_predicate' vars acts =           M.map ba_pred acts
+                          `M.union` skip
     where
-        skip = skip' $ keep' (variables m `M.union` abs_vars m) (actions evt `M.union` del_acts evt)
+        skip = skip' $ keep' vars acts
+
+ba_predicate :: Machine -> Event -> Map Label Expr
+ba_predicate m evt =          ba_predicate' (variables m) (actions evt)
+                    `M.union` M.mapKeys (label . name) (witness evt)
 
 newtype EventId = EventId Label
     deriving (Eq,Ord)

@@ -199,8 +199,10 @@
 \comment{flick}{stuff}
 		\comment{c}{ one-bit channel used to communicate }
 	\end{description}\removevar{cs}
-	\removeact{count}{act0,act1}
+	\removevar{ts}
+	\removeact{count}{act0,act1}\witness{count}{cs}{cs' = \emptyset}
 	\removeact{flick}{act0}
+	\removeinit{in2} \removeinit{in1}
 	\begin{align} 
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\

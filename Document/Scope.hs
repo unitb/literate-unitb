@@ -91,6 +91,7 @@ data EvtExprScope =
         CoarseSchedule Expr
         | FineSchedule Expr
         | Guard Expr
+        | Witness Var Expr
         | DelAction (Maybe Action)
         | Action Action
     deriving (Eq,Ord)
@@ -98,6 +99,7 @@ data EvtExprScope =
 instance Show EvtExprScope where
     show (CoarseSchedule _) = "coarse schedule"
     show (FineSchedule _) = "fine schedule"
+    show (Witness _ _) = "witness"
     show (Guard _) = "guard"
     show (Action _) = "action"
     show (DelAction _) = "delete action"
@@ -110,6 +112,7 @@ data ExprScope =
         | SafetyProp SafetyProp DeclSource LineInfo
         | ProgressProp ProgressProp DeclSource LineInfo
         | Initially Expr DeclSource LineInfo
+        | DelInit (Maybe Expr) DeclSource LineInfo
         | Axiom Expr DeclSource LineInfo
     deriving (Eq,Ord)
 
@@ -137,6 +140,7 @@ instance Scope ExprScope where
             f (SafetyProp _ s _) = s
             f (ProgressProp _ s _) = s
             f (Initially _ s _) = s
+            f (DelInit _ _ _) = Inherited
             f (Axiom _ s _) = s
             f (EventExpr _) = error "is_inherited Scope VarScope"
     make_inherited (Invariant x _ y) = Just $ Invariant x Inherited y
@@ -145,6 +149,7 @@ instance Scope ExprScope where
     make_inherited (SafetyProp x _ y) = Just $ SafetyProp x Inherited y
     make_inherited (ProgressProp x _ y) = Just $ ProgressProp x Inherited y
     make_inherited (Initially x _ y) = Just $ Initially x Inherited y
+    make_inherited (DelInit x _ y) = Just $ DelInit x Inherited y
     make_inherited (Axiom x _ y) = Just $ Axiom x Inherited y
     make_inherited (EventExpr m) = EventExpr <$> g (M.mapMaybe f m)
         where
@@ -155,6 +160,8 @@ instance Scope ExprScope where
             $ M.intersectionWith (curry $ is_del *** is_del) m0 m1
         where
             is_del (x,_,_) = case x of DelAction _ -> True ; _ -> False 
+    clashes (DelInit _ _ _) (Initially _ _ _) = False
+    clashes (Initially _ _ _) (DelInit _ _ _) = False
     clashes _ _ = True
     error_item (EventExpr m) = head' $ elems $ mapWithKey msg m
         where
@@ -167,10 +174,13 @@ instance Scope ExprScope where
     error_item (SafetyProp _ _ li) = ("safety property", li)
     error_item (ProgressProp _ _ li) = ("progress property", li)
     error_item (Initially _ _ li) = ("initialization", li)
+    error_item (DelInit _ _ li) = ("delete initialization", li)
     error_item (Axiom _ _ li) = ("assumtion", li)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith f m0 m1
         where
             f (DelAction _,y,li) (Action a,_,_) = (DelAction (Just a),y,li)
             f (Action a,_,_) (DelAction _,y,li) = (DelAction (Just a),y,li)
             f _ _ = (error "ExprScope Scope.merge_scopes: Evt, Evt")
+    merge_scopes (DelInit _ s li) (Initially e _ _) = DelInit (Just e) s li
+    merge_scopes (Initially e _ _) (DelInit _ s li) = DelInit (Just e) s li
     merge_scopes _ _ = error "ExprScope Scope.merge_scopes: _, _"

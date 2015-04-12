@@ -390,7 +390,7 @@ verify lbl xs n = do
                 return . ((1+) &&& id)
             writeFile (format "log{0}-1.z3" n) (unlines $ map pretty_print' $ header : ys)
             writeFile (format "log{0}-2.z3" n) code
-            return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" err out)
+            return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show err) (show out))
         else if res == ["sat"] then do
             return $ Right Sat
         else if res == ["unsat"] then do

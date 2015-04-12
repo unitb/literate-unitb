@@ -7,14 +7,21 @@ Todo:
 
         * (∀v,w,w': cAct(w,w') ∧ J(v,w): (∃v':: aAct(v,v') ∧ J(v',w')))
             * witness
+                * infer witnesses from BA pred
+                * WD of witnesses separately from FIS
+                * check scope: the free variables should be concrete variables plus a certain deleted variable
             * simulation PO
         * Commit
+
         * removal of inital condition
+        * Witness / sim of init removal
+        * Add error message when deleting non existing variable
+        * commit
+
         * reformulate schedule refinement with the new deletion mechanism
         * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?
             * tentative answer: no
         * Error message when schedule or guard refers to deleted variables
-        * Add error message when deleting non existing variable
         * test: the set of remaining guards, coarse, fine schedules after data refinement
     * puzzle
 
