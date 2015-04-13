@@ -72,6 +72,7 @@ result2 = (unlines
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , " xxx m0/TR/tr0/inc/EN"
     , "  o  m0/TR/tr0/inc/NEG"
@@ -90,11 +91,12 @@ result2 = (unlines
     , "  o  m0/inc/WD/C_SCH"
     , "  o  m0/inc/WD/F_SCH"
     , "  o  m0/inc/WD/GRD"
+    , "  o  m0/inc/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog0/REF/add"
     , "  o  m0/tr0/TR/WD"
-    , "passed 24 / 27"
+    , "passed 26 / 29"
     ])
 
 path2 :: String
@@ -108,6 +110,7 @@ result3 = unlines
     , "  o  m0/INIT/FIS/y"
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
@@ -124,8 +127,9 @@ result3 = unlines
     , "  o  m0/inc/WD/C_SCH"
     , "  o  m0/inc/WD/F_SCH"
     , "  o  m0/inc/WD/GRD"
+    , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
-    , "passed 20 / 21"
+    , "passed 22 / 23"
     ]
 
 path3 :: String
@@ -205,6 +209,7 @@ result6 = unlines
     , "  o  m0/INIT/FIS/y"
     , "  o  m0/INIT/INV/inv0"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/co0"
     , "  o  m0/TR/tr0/inc/EN"
@@ -221,8 +226,9 @@ result6 = unlines
     , "  o  m0/inc/WD/C_SCH"
     , "  o  m0/inc/WD/F_SCH"
     , "  o  m0/inc/WD/GRD"
+    , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
-    , "passed 20 / 21"
+    , "passed 22 / 23"
     ]
 
 path6 :: String

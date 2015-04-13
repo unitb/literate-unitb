@@ -7,15 +7,17 @@ Todo:
 
         * (∀v,w,w': cAct(w,w') ∧ J(v,w): (∃v':: aAct(v,v') ∧ J(v',w')))
             * witness
-                * infer witnesses from BA pred
-                * WD of witnesses separately from FIS
+                * ~~infer witnesses from BA pred~~
+                * ~~WD of witnesses separately from FIS~~
                 * check scope: the free variables should be concrete variables plus a certain deleted variable
-            * simulation PO
+            * ~~simulation PO~~
         * Commit
 
-        * removal of inital condition
-        * Witness / sim of init removal
+        * ~~removal of inital condition~~
+        * ~~Witness / sim of init removal~~
+        * Problem: name clash between witnesses of events vs init
         * Add error message when deleting non existing variable
+        * typesetting example
         * commit
 
         * reformulate schedule refinement with the new deletion mechanism

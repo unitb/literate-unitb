@@ -139,12 +139,17 @@ raw_machine_pos m = pos
                         prop_co m co 
                         co_wd_po m co
                     init_fis_po m
-                    inv_wd_po m
                     init_wd_po m
+                    init_sim_po m
+                    init_wit_wd_po m
+                    init_witness_fis_po m
+                    inv_wd_po m
                     mapM_ (inv_po m) $ M.toList $ inv p
                     mapM_ (thm_po m) $ M.toList $ inv_thm p
                     forM_  (M.toList $ events m) $ \ev -> do
                         sim_po m ev
+                        wit_wd_po m ev
+                        wit_fis_po m ev
                         fis_po m ev
                         evt_wd_po m ev
                         evt_eql_po m ev
@@ -216,6 +221,37 @@ theory_po th = do
                     (M.elems . theory_facts) 
                     (elems $ extends th) ++ b) 
                 c d
+
+init_sim_po :: Machine -> M ()
+init_sim_po m = 
+    with 
+        (do prefix_label $ _name m
+            prefix_label "INIT"
+            prefix_label "SIM"
+            context (assert_ctx m)
+            named_hyps $ inits m
+            named_hyps $ M.mapKeys (label . name) $ init_witness m)
+        (forM_ (M.toList $ del_inits m) $ \(lbl,p) -> do
+            emit_goal [lbl] p)
+
+init_wit_wd_po :: Machine -> M ()
+init_wit_wd_po m =
+    with 
+        (do prefix_label $ _name m
+            context (assert_ctx m)
+            named_hyps $ inits m)
+        (emit_goal ["INIT/WWD"] 
+            (well_definedness $ zall $ M.elems $ init_witness m))
+
+init_witness_fis_po :: Machine -> M ()
+init_witness_fis_po m =
+    with 
+        (do prefix_label $ _name m
+            context (assert_ctx m)
+            named_hyps $ inits m)
+        (emit_exist_goal ["INIT/WFIS"] 
+            (M.elems $ abs_vars m  `M.difference` variables m) 
+            (M.elems $ init_witness m))
 
 init_fis_po :: Machine -> M ()
 init_fis_po m = 
@@ -399,8 +435,37 @@ inv_po m (pname, xp) =
                     (emit_goal [evt_lbl,inv_lbl,pname] 
                         (primed (variables m `M.union` abs_vars m) xp))
         with (do context $ assert_ctx m
-                 named_hyps $ inits m)
+                 named_hyps $ inits m 
+                    `M.union` M.mapKeys (label . name) (init_witness m))
             $ emit_goal [_name m, inv_init_lbl, pname] xp
+
+wit_wd_po :: Machine -> (Label, Event) -> M ()
+wit_wd_po m (lbl, evt) = 
+        with (do context $ step_ctx m
+                 POG.variables $ indices evt
+                 POG.variables $ params evt
+                 named_hyps $ invariants m
+                 prefix_label $ _name m
+                 prefix_label lbl
+                 named_hyps $ new_guard evt
+                 named_hyps $ ba_predicate' (variables m) (actions evt))
+            (emit_goal ["WWD"] $ well_definedness $ zall 
+                $ M.elems $ witness evt)
+
+wit_fis_po :: Machine -> (Label, Event) -> M ()
+wit_fis_po m (lbl, evt) = 
+        with (do context $ step_ctx m
+                 POG.variables $ indices evt
+                 POG.variables $ params evt
+                 named_hyps $ invariants m
+                 prefix_label $ _name m
+                 prefix_label lbl
+                 named_hyps $ new_guard evt
+                 named_hyps $ ba_predicate' (variables m) (actions evt))
+            (emit_exist_goal ["WFIS"] pvar 
+                $ M.elems $ witness evt)
+    where
+        pvar = map prime $ M.elems $ abs_vars m `M.difference` variables m
 
 sim_po :: Machine -> (Label, Event) -> M ()
 sim_po m (lbl, evt) = 

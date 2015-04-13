@@ -54,8 +54,8 @@ test = test_cases
 
 result1 :: String
 result1 = unlines 
-    -- [ "  o  m/INIT/FIS/in"
     [ "  o  m/INIT/WD"
+    , "  o  m/INIT/WWD"
     , "  o  m/INV/WD"
     , "  o  m/enter/FIS/in@prime"
     , "  o  m/enter/SCH/goal (21,1)"
@@ -66,7 +66,8 @@ result1 = unlines
     , "  o  m/enter/WD/C_SCH"
     , "  o  m/enter/WD/F_SCH"
     , "  o  m/enter/WD/GRD"
-    , "passed 11 / 11"
+    , "  o  m/enter/WWD"
+    , "passed 13 / 13"
     ]
 
 path1 :: String

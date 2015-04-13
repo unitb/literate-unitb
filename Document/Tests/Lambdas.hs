@@ -86,6 +86,7 @@ result0 = unlines
     , "  o  m0/INIT/INV/inv3/step (225,1)"
     , "  o  m0/INIT/INV/inv3/step (229,1)"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -119,7 +120,8 @@ result0 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 47 / 48"
+    , "  o  m0/evt/WWD"
+    , "passed 49 / 50"
     ]
 
 path0 :: String
@@ -143,6 +145,7 @@ result1 = unlines
     , "  o  m0/INIT/INV/inv3/step (229,1)"
     , "  o  m0/INIT/INV/inv4"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -187,7 +190,8 @@ result1 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 60 / 60"
+    , "  o  m0/evt/WWD"
+    , "passed 62 / 62"
     ]
 
 path1 :: String
@@ -212,6 +216,7 @@ result2 = unlines
     , "  o  m0/INIT/INV/inv4"
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -253,8 +258,6 @@ result2 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step (281,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
---     , " xxx m0/evt/INV/inv5/main goal/step (287,1)"
-           -- as expected
     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
     , "  o  m0/evt/SCH"
@@ -266,7 +269,8 @@ result2 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 69 / 69"
+    , "  o  m0/evt/WWD"
+    , "passed 71 / 71"
     ]
 
 path2 :: String
@@ -292,6 +296,7 @@ result3 = unlines
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -345,7 +350,8 @@ result3 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 71 / 71"
+    , "  o  m0/evt/WWD"
+    , "passed 73 / 73"
     ]
 
 path3 :: String
@@ -442,6 +448,7 @@ result6 = unlines
     , "  o  m0/INIT/INV/inv6"
     , " xxx m0/INIT/INV/inv8"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
@@ -485,7 +492,6 @@ result6 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step (281,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (283,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
---     , " xxx m0/evt/INV/inv5/main goal/step (289,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
     , "  o  m0/evt/INV/inv6/goal (308,1)"
@@ -494,7 +500,6 @@ result6 = unlines
     , "  o  m0/evt/INV/inv6/step (310,1)"
     , "  o  m0/evt/INV/inv6/step (312,1)"
     , "  o  m0/evt/INV/inv6/step (314,1)"
---     , " xxx m0/evt/INV/inv6/step (318,1)"
     , "  o  m0/evt/INV/inv6/step (316,1)"
     , " xxx m0/evt/INV/inv6/step (318,1)"
     , "  o  m0/evt/INV/inv8"
@@ -509,6 +514,7 @@ result6 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
+    , "  o  m0/evt/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog0/REF/monotonicity/lhs"
@@ -531,7 +537,7 @@ result6 = unlines
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 102 / 106"
+    , "passed 104 / 108"
     ]
 
 path6 :: String
@@ -560,6 +566,7 @@ result7 = unlines
     , "  o  m0/INIT/INV/inv5"
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -621,6 +628,7 @@ result7 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
+    , "  o  m0/evt/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog0/REF/monotonicity/lhs"
@@ -663,7 +671,7 @@ result7 = unlines
     , " xxx m0/prog9/REF/add"
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
-    , "passed 110 / 121"
+    , "passed 112 / 123"
     ]
 
 path7 :: String
@@ -693,6 +701,7 @@ result8 = unlines
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/INV/inv7"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
@@ -729,7 +738,6 @@ result8 = unlines
     , "  o  m0/evt/INV/inv3/step (255,1)"
     , "  o  m0/evt/INV/inv3/step (257,1)"
     , "  o  m0/evt/INV/inv4"
---     , "  o  m0/evt/INV/inv5/assertion/asm0/easy (300,1)"
     , "  o  m0/evt/INV/inv5/goal (281,1)"
     , "  o  m0/evt/INV/inv5/hypotheses (281,1)"
     , "  o  m0/evt/INV/inv5/relation (281,1)"
@@ -737,7 +745,6 @@ result8 = unlines
     , "  o  m0/evt/INV/inv5/step (285,1)"
     , "  o  m0/evt/INV/inv5/step (287,1)"
     , "  o  m0/evt/INV/inv5/step (289,1)"
---     , " xxx m0/evt/INV/inv5/step (289,1)"
     , "  o  m0/evt/INV/inv5/step (292,1)"
     , "  o  m0/evt/INV/inv6/goal (310,1)"
     , "  o  m0/evt/INV/inv6/hypotheses (310,1)"
@@ -760,6 +767,7 @@ result8 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
+    , "  o  m0/evt/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog0/REF/monotonicity/lhs"
@@ -786,7 +794,7 @@ result8 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 109 / 110"
+    , "passed 111 / 112"
     ]
   
 path8 :: String
@@ -813,6 +821,7 @@ result9 = unlines
     , "  o  m0/INIT/INV/inv6"
     , "  o  m0/INIT/INV/inv7"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
@@ -878,6 +887,7 @@ result9 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
+    , "  o  m0/evt/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
     , "  o  m0/prog0/REF/monotonicity/lhs"
@@ -917,7 +927,7 @@ result9 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 119 / 123"
+    , "passed 121 / 125"
     ]
 
 path9 :: String

@@ -345,6 +345,8 @@ data MachinePh3' events theory = MachinePh3
     , _pTransient :: Map Label Transient
     , _pAssumptions :: Map Label Expr
     , _pInvariant   :: Map Label Expr                     -- Invariants
+    , _pInitWitness :: Map Var Expr
+    , _pDelInits    :: Map Label Expr
     , _pInit        :: Map Label Expr
     , _pOldPropSet  :: PropertySet
     , _pNewPropSet  :: PropertySet

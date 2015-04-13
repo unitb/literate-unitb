@@ -203,6 +203,8 @@
 	\removeact{count}{act0,act1}\witness{count}{cs}{cs' = \emptyset}
 	\removeact{flick}{act0}
 	\removeinit{in2} \removeinit{in1}
+	\initwitness{cs}{cs = \emptyset}
+	\initwitness{ts}{ts = \emptyset}
 	\begin{align} 
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\

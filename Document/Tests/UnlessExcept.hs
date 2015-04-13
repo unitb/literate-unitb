@@ -23,6 +23,7 @@ path0 = "Tests/unless-except.tex"
 result0 :: String
 result0 = unlines
     [ "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt0/FIS/p@prime"
     , "  o  m0/evt0/SAF/saf0"
@@ -32,6 +33,7 @@ result0 = unlines
     , "  o  m0/evt0/WD/C_SCH"
     , "  o  m0/evt0/WD/F_SCH"
     , "  o  m0/evt0/WD/GRD"
+    , "  o  m0/evt0/WWD"
     , "  o  m0/evt1/FIS/p@prime"
     , "  o  m0/evt1/SAF/saf0"
     , "  o  m0/evt1/SAF/saf1"
@@ -40,17 +42,19 @@ result0 = unlines
     , "  o  m0/evt1/WD/C_SCH"
     , "  o  m0/evt1/WD/F_SCH"
     , "  o  m0/evt1/WD/GRD"
+    , "  o  m0/evt1/WWD"
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
-    , "passed 21 / 22"
+    , "passed 24 / 25"
     ]
 
 
 result1 :: String
 result1 = unlines
     [ "  o  m1/INIT/WD"
+    , "  o  m1/INIT/WWD"
     , "  o  m1/INV/WD"
     , "  o  m1/evt0/FIS/f@prime"
     , "  o  m1/evt0/SAF/saf0"
@@ -60,6 +64,7 @@ result1 = unlines
     , "  o  m1/evt0/WD/C_SCH"
     , "  o  m1/evt0/WD/F_SCH"
     , "  o  m1/evt0/WD/GRD"
+    , "  o  m1/evt0/WWD"
     , "  o  m1/evt1/FIS/f@prime"
     , "  o  m1/evt1/SAF/saf0"
     , "  o  m1/evt1/SAF/saf1"
@@ -68,9 +73,10 @@ result1 = unlines
     , "  o  m1/evt1/WD/C_SCH"
     , "  o  m1/evt1/WD/F_SCH"
     , "  o  m1/evt1/WD/GRD"
+    , "  o  m1/evt1/WWD"
     , " xxx m1/saf0/SAF/WD/lhs"
     , "  o  m1/saf0/SAF/WD/rhs"
     , " xxx m1/saf1/SAF/WD/lhs"
     , "  o  m1/saf1/SAF/WD/rhs"
-    , "passed 17 / 22"
+    , "passed 20 / 25"
     ]

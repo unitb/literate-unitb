@@ -209,6 +209,8 @@ data Machine =
         , variables  :: Map String Var
         , abs_vars   :: Map String Var
         , del_vars   :: Map String Var
+        , init_witness :: Map Var Expr
+        , del_inits  :: Map Label Expr
         , inits      :: Map Label Expr
         , events     :: Map Label Event
         , inh_props  :: PropertySet
@@ -248,6 +250,8 @@ empty_machine n = Mch
         , variables = empty
         , abs_vars  = empty
         , del_vars  = empty
+        , init_witness = empty
+        , del_inits = empty
         , inits     = empty
         , events    = empty 
         , inh_props = empty_property_set 
@@ -333,7 +337,9 @@ instance NFData System where
     rnf (Sys a b c d e) = rnf (a,b,c,d,e)
 
 instance NFData Machine where
-    rnf (Mch a b c d e f g h i j k) = rnf (a,b,c,d,e,f,g,h,i) `seq` rnf (j,k)
+    rnf (Mch a b c d e f g h i j k l m) = 
+            rnf (a,b,c,d,e,f,g,h,i) 
+      `seq` rnf (j,k,l,m)
 
 instance NFData EventId where
     rnf (EventId lbl) = rnf lbl

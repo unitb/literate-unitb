@@ -133,6 +133,7 @@ result7 = unlines
     , "  o  m0/INIT/INV/inv1"
     , "  o  m0/INIT/INV/inv2"
     , "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
@@ -170,7 +171,8 @@ result7 = unlines
     , "  o  m0/evt/WD/C_SCH"
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
-    , "passed 45 / 45"
+    , "  o  m0/evt/WWD"
+    , "passed 47 / 47"
     ]
 
 case7 :: IO (String, Map Label Sequent)

@@ -105,7 +105,7 @@ instance Show EvtExprScope where
     show (DelAction _) = "delete action"
 
 data ExprScope = 
-        EventExpr (Map EventId (EvtExprScope,DeclSource,LineInfo))
+        EventExpr (Map (Maybe EventId) (EvtExprScope,DeclSource,LineInfo))
         | Invariant Expr DeclSource LineInfo
         | TransientProp Transient DeclSource LineInfo
         | ConstraintProp Constraint DeclSource LineInfo
@@ -167,7 +167,8 @@ instance Scope ExprScope where
         where
             head' [x] = x
             head' _ = error "Scope ExprScope: head'"
-            msg k (sc,_,li) = (format "{1} (event {0})" k sc :: String, li)
+            msg (Just k) (sc,_,li) = (format "{1} (event {0})" k sc :: String, li)
+            msg Nothing (sc,_,li) = (format "{0} (initialization)" sc :: String, li)
     error_item (Invariant _ _ li)   = ("invariant", li)
     error_item (TransientProp _ _ li) = ("transient predicate", li)
     error_item (ConstraintProp _ _ li) = ("co property", li)

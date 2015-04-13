@@ -324,7 +324,7 @@ make_phase2 p1 vars = MachinePh2 { .. }
 
 default_schedule_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
 default_schedule_decl = arr $ \p2 -> 
-        Right $ M.map (map default_sch . elems . M.map (^. pEventId)) 
+        Right $ M.map (map default_sch . elems . M.map Just . M.map (^. pEventId)) 
               $ M.map (M.filter (^. pIsNew) . (^. pEvents)) p2
     where
         li = LI "default" 1 1
@@ -354,6 +354,7 @@ run_phase3_exprs = proc (r_ord,p2) -> do
             , safetyB_prop
             , remove_assgn
             , remove_init
+            , init_witness_decl
             , witness_decl ] -< p2
         let exprs =     make_all_tables' err_msg
                     =<< inherit2 r_ord 
@@ -420,12 +421,14 @@ make_phase3 p2 exprs
         _pTransient   = M.mapMaybe get_transient exprs
         _pAssumptions = M.mapMaybe getAssump exprs
         _pInvariant   = M.mapMaybe getInvariant exprs
+        _pDelInits    = M.mapMaybe getDelInits exprs
         _pInit        = M.mapMaybe getInits exprs
         _pCoarseSched = getEventCoarseSch evts exprs 
         _pFineSched   = getEventFineSch evts exprs
         _pOldGuards   = getEventGuards evts $ old exprs
         _pNewGuards   = getEventGuards evts $ new exprs
-        _pWitness'    = M.map (M.fromList . M.elems) $ getEventWitness evts exprs
+        _pInitWitness = M.fromList $ M.elems $ M.mapMaybe getInitWitness $ new exprs
+        _pWitness'    = M.map (M.fromList . M.elems) $ getEventWitness evts $ new exprs
         f act vs = M.mapWithKey (\v _ -> zall $ M.elems $ M.filter (has_primed v) ps) vs
             where 
                 has_primed v e = prime v `S.member` used_var e
@@ -623,6 +626,8 @@ make_machine (MId m) p4 = mch'
             , variables = p4 ^. pStateVars
             , abs_vars = ab_var
             , del_vars = M.map fst $ p4 ^. pDelVars
+            , init_witness = p4 ^. pInitWitness
+            , del_inits = p4 ^. pDelInits
             , inits = p4 ^. pInit
             , props = props 
             , derivation = (ref_prog 
@@ -781,6 +786,13 @@ getEventWitness :: Map Label EventId
                 -> Map EventId (Map Label (Var,Expr))
 getEventWitness = getEventExprs getWitness
 
+getInitWitness :: ExprScope
+               -> Maybe (Var,Expr)
+getInitWitness (EventExpr m) = case Nothing `M.lookup` m of
+                                Just (Witness v p,_,_) -> Just (v,p)
+                                _ -> Nothing
+getInitWitness _ = Nothing
+
 getAssump :: ExprScope -> Maybe Expr
 getAssump (Axiom e _ _) = Just e
 getAssump _ = Nothing
@@ -789,6 +801,10 @@ getInits :: ExprScope -> Maybe Expr
 getInits (Initially e _ _) = Just e
 getInits _ = Nothing
 
+getDelInits :: ExprScope -> Maybe Expr
+getDelInits (DelInit e Local _) = e
+getDelInits _ = Nothing
+
 getEventExprs :: ((EvtExprScope, DeclSource, LineInfo) -> Maybe a) 
               -> Map Label EventId
               -> Map Label ExprScope
@@ -796,7 +812,9 @@ getEventExprs :: ((EvtExprScope, DeclSource, LineInfo) -> Maybe a)
 getEventExprs f evts exprs = M.map M.fromList $ M.unionsWith (++) $ empty : map swapName guards
     where
         empty  = M.fromList $ zip (elems evts) (repeat [])
-        guards = M.toList (M.mapMaybe getExprs exprs)
+        g (x,y) = (,y) <$> x
+        guards = L.map (second $ M.fromList . MM.catMaybes . L.map g . M.toList) 
+                $ M.toList (M.mapMaybe (getExprs) exprs)
         swapName (lbl,m) = M.map (\e -> [(lbl,e)]) m
         -- getExprs :: ExprScope -> Maybe (Map EventId Expr)
         getExprs (EventExpr m) = Just $ M.mapMaybe f m
@@ -1191,7 +1209,7 @@ assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             let frame = M.elems $ (state_variables p2) `M.difference` (abstract_variables p2) :: [Var] 
                 act = BcmSuchThat frame pred
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (Action act,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (Action act,Local,li))]
 
 bcmeq_assgn :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1208,7 +1226,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
                 $ Right (Word var :: Expr) `mzeq` Right xp
             let act = Assign var xp
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (Action act,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (Action act,Local,li))]
 
 bcmsuch_assgn :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1221,7 +1239,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
                 $ (`M.lookup` state_variables p2)
             let act = BcmSuchThat vars xp
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (Action act,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (Action act,Local,li))]
 
 bcmin_assgn :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1235,7 +1253,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right xp
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (Action act,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (Action act,Local,li))]
 
 remove_init :: MPipeline MachinePh2 [(Label,ExprScope)]
 remove_init = machineCmd "\\removeinit" $ \(One lbls) _m _p2 -> do
@@ -1246,7 +1264,7 @@ remove_assgn :: MPipeline MachinePh2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (DelAction Nothing,Local,li)) | lbl <- lbls ]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (DelAction Nothing,Local,li)) | lbl <- lbls ]
 
 witness_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
@@ -1255,7 +1273,16 @@ witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
             li <- lift ask
-            return [(label var,EventExpr $ M.singleton ev (Witness v p,Local,li))]
+            return [(label var,EventExpr $ M.singleton (Just ev) (Witness v p,Local,li))]
+
+init_witness_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
+            -- ev <- get_event p2 evt
+            p  <- parse_expr' (machine_parser p2) xp
+            v  <- bind (format "'{0}' is not a disappearing variable" var)
+                (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
+            li <- lift ask
+            return [(label var, EventExpr $ M.singleton Nothing (Witness v p,Local,li))]
 
 guard_decl :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1263,7 +1290,7 @@ guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (event_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (Guard xp,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (Guard xp,Local,li))]
  
 coarse_sch_decl :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1271,7 +1298,7 @@ coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (CoarseSchedule xp,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (CoarseSchedule xp,Local,li))]
 
 fine_sch_decl :: MPipeline MachinePh2
                     [(Label,ExprScope)]
@@ -1279,7 +1306,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,EventExpr $ M.singleton ev $ (FineSchedule xp,Local,li))]
+            return [(lbl,EventExpr $ M.singleton (Just ev) $ (FineSchedule xp,Local,li))]
 
         -------------------------
         --  Theory Properties  --
