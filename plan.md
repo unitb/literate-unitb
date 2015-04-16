@@ -11,14 +11,23 @@ Todo:
                 * ~~WD of witnesses separately from FIS~~
                 * check scope: the free variables should be concrete variables plus a certain deleted variable
             * ~~simulation PO~~
-        * Commit
+        * ~~Commit~~
 
         * ~~removal of inital condition~~
         * ~~Witness / sim of init removal~~
-        * Problem: name clash between witnesses of events vs init
-        * Add error message when deleting non existing variable
+        * ~~Problem: name clash between witnesses of events vs init~~
+        * ~~commit~~
+
+        * Add error message when 
+            * deleting non existing 
+                * ~~action / init~~
+                * variable
+            * providing witness for variable that isn't deleted
         * typesetting example
         * commit
+
+        * Turn EventId into (EventId s) in order to make tables of
+            events into total functions
 
         * reformulate schedule refinement with the new deletion mechanism
         * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?

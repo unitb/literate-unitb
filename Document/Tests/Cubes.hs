@@ -76,11 +76,11 @@ machine6 = (empty_machine "m0")
 
 prop_set6 :: PropertySet
 prop_set6 = empty_property_set {
-        proofs = fromList [ 
+        _proofs = fromList [ 
                     (label "m0/evt/INV/inv0", calc),
                     (label "m0/evt/INV/inv1", calc),
                     (label "m0/evt/INV/inv2", calc) ],
-        inv = fromList $ zip 
+        _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
                 [ (a `zeq` (n `zpow` z3)),
                   (b `zeq` ( (zint 3 `ztimes` (n `zpow` zint 2))
@@ -231,7 +231,7 @@ case9 = do
         r <- parse path6
         case r of
             Right [m] -> do
-                case toList $ proofs $ props m of
+                case toList $ _proofs $ props m of
                     (lbl,ByCalc calc):_ -> 
                         case cast calc of
                             Just calc ->

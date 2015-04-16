@@ -394,7 +394,7 @@ case4 :: IO (Either [Error] (Map Label ProgressProp))
 case4 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
-        [m] -> right $ progress $ props $ m
+        [m] -> right $ _progress $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 result5 :: Either [Error] (Map Label SafetyProp)
@@ -421,7 +421,7 @@ case5 :: IO (Either [Error] (Map Label SafetyProp))
 case5 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
-        [m] -> right $ safety $ props $ m
+        [m] -> right $ _safety $ props $ m
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 case6 :: IO (String, Map Label Sequent)

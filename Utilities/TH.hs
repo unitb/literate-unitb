@@ -11,6 +11,7 @@ import Control.Lens
 
 import Data.Char
 import Data.Data hiding (typeOf)
+import Data.Default
 import Data.Graph
 import Data.List as L
 import Data.List.Ordered
@@ -230,3 +231,34 @@ mkLens n = do
         t' = constructor at
     res <- lensDecl t' n  
     return res
+
+arrowType :: [Type] -> TypeQ -> TypeQ
+arrowType [] rt = rt
+arrowType (t:ts) rt = appsT [arrowT,return t,arrowType ts rt]
+
+mkCons :: Name -> DecsQ
+mkCons n = do
+    let cname = mkName $ "make" ++ nameBase n
+    mkCons' n cname
+
+mkCons' :: Name -> Name -> DecsQ
+mkCons' n cname = do
+    (ps,cons,fs) <- fieldList =<< reify n
+    let p = recover (return False) . isInstance ''Default . (:[]) . snd
+    defs <- filterM p fs
+    args <- filterM (fmap not . p) fs
+    let argNames = L.map (mkName . nameBase . fst) args
+    let dinit = L.map (second $ const $ VarE 'def) defs
+        arg_init = zip (L.map fst args) (L.map VarE argNames)
+        val = RecConE cons (dinit ++ arg_init)
+        decl = FunD cname [Clause (L.map VarP argNames) (NormalB val) []]
+    tdecl <- sigD cname (forallT (L.map PlainTV ps) (return []) 
+                $ arrowType (L.map snd args) (appsT $ conT n : L.map varT ps))
+    return [tdecl,decl]
+ 
+cons :: Name -> ExpQ
+cons n = do
+        xs <- L.map return <$> mkCons n 
+        letE xs (varE cname)
+    where
+        cname = mkName $ "make" ++ nameBase n

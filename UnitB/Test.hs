@@ -55,13 +55,13 @@ example0 = do
         let tr0 = Transient empty tr [label "evt"] empty_hint
             co0 = Co [] co
             ps = empty_property_set {
-                transient = 
+                _transient = 
                     fromList [
                         (label "TR0", tr0)],
-                constraint =
+                _constraint =
                     fromList [
                         (label "CO0", co0)],
-                inv = fromList [(label "J0", inv0)] }
+                _inv = fromList [(label "J0", inv0)] }
             sch_ref0 = (weaken $ label "evt")
                 { remove = S.singleton (label "default")
                 , add    = S.singleton (label "sch0") }
@@ -105,7 +105,7 @@ train_m0 = do
                     })
         tr <- with_li li (st `select` t)
         let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr [label "leave"] empty_hint)] 
-            ps    = empty_property_set { transient = props, inv = inv }
+            ps    = empty_property_set { _transient = props, _inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps
                         , variables = fromList $ map as_pair [st_decl]

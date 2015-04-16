@@ -108,18 +108,18 @@ dummy_ctx m = Context M.empty (dummies $ theory m) M.empty M.empty M.empty
 
 invariants :: Machine -> Map Label Expr
 invariants m = 
-                   (inv p0) 
-        `M.union` (inv_thm p0) 
-        `M.union` (inv p1)
-        `M.union` (inv_thm p1)
+                  (_inv p0) 
+        `M.union` (_inv_thm p0) 
+        `M.union` (_inv p1)
+        `M.union` (_inv_thm p1)
     where
         p0 = props m
         p1 = inh_props m
 
 invariants_only :: Machine -> Map Label Expr
 invariants_only m = 
-                   (inv p0) 
-        `M.union` (inv p1)
+                   (_inv p0) 
+        `M.union` (_inv p1)
     where
         p0 = props m
         p1 = inh_props m 
@@ -129,13 +129,13 @@ raw_machine_pos m = pos
     where
         pos = M.map f $ 
                (eval_generator $ do
-                    forM_ (M.toList $ transient p) $ \tr -> do
+                    forM_ (M.toList $ _transient p) $ \tr -> do
                         prop_tr m tr
                         tr_wd_po m tr
-                    forM_ (M.toList $ safety p) $ \saf -> do
+                    forM_ (M.toList $ _safety p) $ \saf -> do
                         prop_saf m saf
                         saf_wd_po m saf
-                    forM_ (M.toList $ constraint p) $ \co -> do
+                    forM_ (M.toList $ _constraint p) $ \co -> do
                         prop_co m co 
                         co_wd_po m co
                     init_fis_po m
@@ -144,8 +144,8 @@ raw_machine_pos m = pos
                     init_wit_wd_po m
                     init_witness_fis_po m
                     inv_wd_po m
-                    mapM_ (inv_po m) $ M.toList $ inv p
-                    mapM_ (thm_po m) $ M.toList $ inv_thm p
+                    mapM_ (inv_po m) $ M.toList $ _inv p
+                    mapM_ (thm_po m) $ M.toList $ _inv_thm p
                     forM_  (M.toList $ events m) $ \ev -> do
                         sim_po m ev
                         wit_wd_po m ev
@@ -154,7 +154,7 @@ raw_machine_pos m = pos
                         evt_wd_po m ev
                         evt_eql_po m ev
                         sch_po m ev
-                    mapM_ (prog_wd_po m) $ M.toList $ progress p
+                    mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     mapM_ (ref_po m) $ M.toList $ derivation m
                     )
         p = props m
@@ -170,7 +170,7 @@ raw_machine_pos m = pos
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
         let { pos = raw_machine_pos m }
-        forM_ (M.toList $ proofs $ props $ m) (\(lbl,p) -> do
+        forM_ (M.toList $ _proofs $ props $ m) (\(lbl,p) -> do
             let li = line_info p
             if lbl `M.member` pos
                 then return ()
@@ -178,7 +178,7 @@ proof_obligation m = do
                     (format "a proof is provided for non-existant proof obligation {0}" lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
-            case M.lookup lbl $ proofs $ props $ m of
+            case M.lookup lbl $ _proofs $ props $ m of
                 Just c ->
                     proof_po c lbl po
                 Nothing -> 
@@ -358,7 +358,7 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                 POG.context $ step_ctx m 
                 dummy
         dummy = POG.variables fv
-        progs = progress (props m) `M.union` progress (inh_props m)
+        progs = _progress (props m) `M.union` _progress (inh_props m)
         mk_suff suff = LU.replace ":" "-" suff
 
 prop_co :: Machine -> (Label, Constraint) -> M ()
@@ -553,8 +553,8 @@ inv_wd_po :: Machine -> M ()
 inv_wd_po m = 
         with (do prefix_label $ _name m
                  context $ assert_ctx m
-                 named_hyps $ inv $ inh_props m
-                 named_hyps $ inv_thm $ inh_props m)
+                 named_hyps $ _inv $ inh_props m
+                 named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
                 $ well_definedness $ zall $ elems $ invariants m
 
@@ -562,8 +562,8 @@ init_wd_po :: Machine -> M ()
 init_wd_po m = 
         with (do prefix_label $ _name m
                  context $ assert_ctx m
-                 named_hyps $ inv $ inh_props m
-                 named_hyps $ inv_thm $ inh_props m)
+                 named_hyps $ _inv $ inh_props m
+                 named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INIT", "WD"] 
                 $ well_definedness $ zall $ elems $ inits m
 

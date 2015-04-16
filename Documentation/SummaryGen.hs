@@ -58,17 +58,17 @@ machine_summary sys m = make_file fn $
             item $ tell [keyword "machine" ++ " " ++ show (_name m)]
             item $ refines_clause sys m
             item $ variable_sum m
-            unless (M.null $ inv $ props m) 
+            unless (M.null $ _inv $ props m) 
                 $ item $ input $ inv_file m
-            unless (M.null $ inv_thm $ props m) 
+            unless (M.null $ _inv_thm $ props m) 
                 $ item $ input $ inv_thm_file m
-            unless (M.null $ progress $ props m) 
+            unless (M.null $ _progress $ props m) 
                 $ item $ input $ live_file m
-            unless (M.null $ safety $ props m) 
+            unless (M.null $ _safety $ props m) 
                 $ item $ input $ saf_file m
-            unless (M.null $ transient $ props m)
+            unless (M.null $ _transient $ props m)
                 $ item $ input $ transient_file m
-            unless (M.null $ constraint $ props m)
+            unless (M.null $ _constraint $ props m)
                 $ item $ input $ constraint_file m
             item $ do
                 tell [keyword "events"]
@@ -192,20 +192,20 @@ variable_sum m = section (keyword "variables") $
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = props m
-        section kw_inv $ put_all_expr_with_doc (comment_of m . DocInv) (label "") (inv prop) 
+        section kw_inv $ put_all_expr_with_doc (comment_of m . DocInv) (label "") (_inv prop) 
     where
         kw_inv = "\\textbf{invariants}"
         
 invariant_thm_sum :: PropertySet -> M ()
 invariant_thm_sum prop = 
-        section kw_thm $ put_all_expr (label "") (inv_thm prop)
+        section kw_thm $ put_all_expr (label "") (_inv_thm prop)
     where
         kw_thm = "\\textbf{invariants} (theorems)"
 
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (progress prop) 
+        section kw $ put_all_expr' toString (label "") (_progress prop) 
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = do
@@ -215,7 +215,7 @@ liveness_sum m = do
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
-        section kw $ put_all_expr' toString (label "") (safety prop)
+        section kw $ put_all_expr' toString (label "") (_safety prop)
     where
         kw = "\\textbf{safety}"
         toString (Unless _ p q exc) = do
@@ -229,7 +229,7 @@ safety_sum prop = do
 transient_sum :: Machine -> M ()
 transient_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (transient prop) 
+        section kw $ put_all_expr' toString (label "") (_transient prop) 
     where
         kw = "\\textbf{transient}"
         toString (Transient _ p evts hint) = do -- do
@@ -254,7 +254,7 @@ transient_sum m = do
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (constraint prop)
+        section kw $ put_all_expr' toString (label "") (_constraint prop)
     where
         kw = "\\textbf{safety}"
         toString (Co _ p) = do

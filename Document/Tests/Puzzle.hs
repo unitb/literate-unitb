@@ -48,6 +48,8 @@ test_case = test_cases
         , StringCase "test 18, simulation proof obligation" case18 result18
         , StringCase "test 19, simulation proof obligation (init)" case19 result19
         , StringCase "test 20, crashing proof obligation of invariant with witness" case20 result20
+        , StringCase "test 21, deleting non-existant action" case21 result21
+        , StringCase "test 22, error providing a witness for non-deleted variable" case22 result22
         ]
 
 path0 :: FilePath
@@ -1287,17 +1289,21 @@ case15 = find_errors path15
 
 result15 :: String
 result15 = unlines
-    [ "error: event 'count' assigns to deleted variables"
-    , "\tcs: (116,3)"
+    [ "error: event 'count', action 'act0' assigns to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\taction act0: (179,1)"
     , ""
-    , "error: event 'count' reads deleted variables"
-    , "\tcs: (116,3)"
+    , "error: event 'count', action 'act1' refers to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\taction act1: (180,1)"
     , ""
-    , "error: event 'flick' assigns to deleted variables"
-    , "\tcs: (116,3)"
+    , "error: event 'flick', action 'act0' assigns to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\taction act0: (163,1)"
     , ""
-    , "error: initialization 'in2' refers to deleted variables"
-    , "\tcs: (116,3)"
+    , "error: initialization predicate 'in2' refers to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\tpredicate in2: (175,1)"
     , ""
     ]
 
@@ -1754,4 +1760,35 @@ result19 = unlines
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
     , "; m3/INIT/SIM/in2"
+    ]
+
+path21 :: FilePath
+path21 = "Tests/puzzle/puzzle-err2.tex"
+
+case21 :: IO String
+case21 = find_errors path21
+
+result21 :: String
+result21 = unlines
+    [ "error: event 'flick', action 'act0' assigns to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\taction act0: (163,1)"
+    , ""
+    , "error: initialization predicate 'in2' refers to deleted variables"
+    , "\tdeleted variable cs: (116,3)"
+    , "\tpredicate in2: (175,1)"
+    , ""
+    , "error (204,1): action 'act' of event 'flick' was deleted but does not exist"
+    , "error (205,1): initialization predicate 'in' was deleted but does not exist"
+    ]
+
+path22 :: FilePath
+path22 = "Tests/puzzle/puzzle-err3.tex"
+
+case22 :: IO String
+case22 = find_errors path22
+
+result22 :: String
+result22 = unlines
+    [ "error (227,1): 'c' is not a disappearing variable"
     ]

@@ -438,21 +438,21 @@ m1_machine = (empty_machine "m0")
 
 m0_props :: PropertySet
 m0_props = empty_property_set {
-        inv = singleton (label "inv0") (x `zeq` (zint 2 `ztimes` y)) }
+        _inv = singleton (label "inv0") (x `zeq` (zint 2 `ztimes` y)) }
     where
         x = Word var_x
         y = Word var_y
 
 m1_props :: PropertySet
 m1_props = m0_props
-        { transient = fromList [
+        { _transient = fromList [
             (label "tr0", Transient empty (x `zeq` y) [label "inc"] empty_hint) ]
-        , constraint = fromList [
+        , _constraint = fromList [
             (label "co0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
-        , inv = insert 
+        , _inv = insert 
                 (label "inv1") 
                 (x `zeq` (x `ztimes` (y `zplus` z1))) 
-                (inv m0_props)
+                (_inv m0_props)
         }
     where
         x  = Word var_x

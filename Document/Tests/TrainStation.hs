@@ -276,7 +276,7 @@ machine0 = (empty_machine "train0")
 
 props0 :: PropertySet
 props0 = empty_property_set
-    {  constraint = fromList 
+    {  _constraint = fromList 
             [   ( label "co0"
                 , Co [t_decl] 
                     $ ($fromJust) (mzimplies 
@@ -294,19 +294,19 @@ props0 = empty_property_set
             ]
         --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
         -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
-    ,   transient = fromList
+    ,   _transient = fromList
             [   ( label "tr0"
                 , Transient
                     (symbol_table [t_decl])
                     (($fromJust) (t `zelem` in_var)) [label "leave"] 
                     (TrHint (fromList [("t",(train_type, $fromJust $ t' .= t))]) Nothing) )
             ]
-    ,  inv = fromList 
+    ,  _inv = fromList 
             [   (label "inv2",($fromJust) (zdom loc .= in_var))
             ,   (label "inv1",($fromJust) $ mzforall [t_decl] (zelem t in_var)
                         ((zapply loc t `zelem` block)))
             ]
-    ,  proofs = fromList
+    ,  _proofs = fromList
             [   ( label "train0/enter/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ,   ( label "train0/leave/INV/inv2"
@@ -322,7 +322,7 @@ props0 = empty_property_set
             ,   ( label "train0/leave/CO/co1"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ]
-    ,  safety = fromList
+    ,  _safety = fromList
             []
     }
     where 

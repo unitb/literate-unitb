@@ -191,7 +191,7 @@ latex_of m = do
             decls = map var_decl $ M.elems $ variables m
             imp_stat xs = cmd "\\with" [xs]
             inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
-            invs        = map inv_decl $ M.toList $ inv $ props m
+            invs        = map inv_decl $ M.toList $ _inv $ props m
             imports = map imp_stat $ filter (/= "basic") 
                         $ M.keys $ extends $ theory m
         content <- concat `liftM` permute (decls ++ imports ++ invs)
@@ -203,7 +203,7 @@ latex_of m = do
         blank = Text [Blank "\n" li]
 
 expressions :: Machine -> [Expr]
-expressions m = M.elems $ inv $ props m
+expressions m = M.elems $ _inv $ props m
 
 with_type_error :: Gen Machine
 with_type_error = do
@@ -286,7 +286,7 @@ gen_machine b = fix (\retry n -> do
                                 , ("basic", basic_theory)] }
                         , variables = vars
                         , props = empty_property_set
-                                { inv = M.fromList $ zip inv_lbl inv } }
+                                { _inv = M.fromList $ zip inv_lbl inv } }
                 Nothing -> retry $ n-1
             ) 10
 

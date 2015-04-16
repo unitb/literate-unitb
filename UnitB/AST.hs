@@ -22,6 +22,9 @@ module UnitB.AST
     , Schedule    (..)
     , SafetyProp  (..) 
     , PropertySet (..) 
+    , inv_thm, inv, proofs
+    , progress, safety
+    , transient, constraint
     , empty_property_set
     , Rule (..)
     , Variant (..)
@@ -35,7 +38,7 @@ module UnitB.AST
     , all_types
     , basic_theory
     , disjoint_union
-    , keep', frame
+    , keep', frame, frame'
     , cycles
     , ScheduleChange 
         ( add, remove
@@ -76,6 +79,9 @@ import Control.DeepSeq
 import Control.Monad hiding ( guard )
 import Control.Monad.Writer hiding ( guard )
 
+import Control.Lens.TH
+import           Data.Default
+import           Data.DeriveTH
 import           Data.List as L hiding ( union, inits )
 import           Data.Map as M hiding (map)
 import qualified Data.Map as M
@@ -95,8 +101,6 @@ data Schedule = Schedule
         }
     deriving (Eq, Show)
 
-instance NFData Schedule where
-    rnf (Schedule x0 x1) = rnf (x0,x1)
 
 empty_schedule :: Schedule
 empty_schedule = Schedule default_schedule Nothing
@@ -114,10 +118,6 @@ instance Show Action where
             (intercalate "," $ map name vs)
             (show e)
 
-instance NFData Action where
-    rnf (Assign x0 x1) = rnf (x0,x1)
-    rnf (BcmSuchThat xs xp) = rnf (xs,xp)
-    rnf (BcmIn x set) = rnf (x,set)
 
 data Event = Event 
         { indices   :: Map String Var
@@ -134,10 +134,6 @@ data Event = Event
         , eql_vars :: Map String Var
         } deriving (Eq, Show)
 
-instance NFData Event where
-    rnf (Event x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11) = 
-                  rnf (x0,x1,x11) 
-            `seq` rnf (x2,x3,x4,x5,x6,x7,x8,x9,x10)
 
 empty_event :: Event
 empty_event = Event 
@@ -155,12 +151,13 @@ empty_event = Event
         , eql_vars = empty
         }
 
+frame' :: Action -> Map String Var
+frame' (Assign v _) = M.singleton (name v) v
+frame' (BcmIn v _)  = M.singleton (name v) v
+frame' (BcmSuchThat vs _) = M.fromList $ zip (map name vs) vs
+
 frame :: Map Label Action -> Map String Var
-frame acts = M.fromList $ concatMap f $ M.elems acts
-    where
-        f (Assign v _) = [(name v, v)]
-        f (BcmIn v _)  = [(name v, v)]
-        f (BcmSuchThat vs _) = zip (map name vs) vs
+frame acts = M.unions $ L.map frame' $ M.elems acts
 
 ba_pred :: Action -> Expr
 ba_pred (Assign v e) = $fromJust $ Right (Word (prime v)) `mzeq` Right e
@@ -235,11 +232,6 @@ instance Show DocItem where
     show (DocInv xs) = format "{0} (invariant)" xs
     show (DocProg xs) = format "{0} (progress)" xs
 
-instance NFData DocItem where
-    rnf (DocVar x) = rnf x
-    rnf (DocEvent x) = rnf x
-    rnf (DocInv x) = rnf x
-    rnf (DocProg x) = rnf x
 
 empty_machine :: String -> Machine
 empty_machine n = Mch 
@@ -333,29 +325,17 @@ instance Named Machine where
     name m = case _name m of Lbl s -> s
     decorated_name' = return . name
 
-instance NFData System where
-    rnf (Sys a b c d e) = rnf (a,b,c,d,e)
 
-instance NFData Machine where
-    rnf (Mch a b c d e f g h i j k l m) = 
-            rnf (a,b,c,d,e,f,g,h,i) 
-      `seq` rnf (j,k,l,m)
 
-instance NFData EventId where
-    rnf (EventId lbl) = rnf lbl
 
 data Constraint = 
         Co [Var] Expr
     deriving (Eq,Ord,Show)
 
-instance NFData Constraint where
-    rnf (Co vs p) = rnf (vs,p)
 
 data TrHint = TrHint (Map String (Type,Expr)) (Maybe Label)
     deriving (Eq,Ord,Show)
 
-instance NFData TrHint where
-    rnf (TrHint xs p) = rnf (xs,p)
 
 empty_hint :: TrHint
 empty_hint = TrHint empty Nothing
@@ -370,22 +350,16 @@ data Transient =
             -- (Maybe Label)        -- Progress Property for fine schedule
     deriving (Eq,Ord,Show)
 
-instance NFData Transient where
-    rnf (Transient vs p evt hint) = rnf (vs,p,evt,hint)
 
 data Direction = Up | Down
     deriving (Eq,Show)
 
-instance NFData Direction where
 
 data Variant = 
         SetVariant     Var Expr Expr Direction
       | IntegerVariant Var Expr Expr Direction
     deriving (Eq,Show)
 
-instance NFData Variant where
-    rnf (IntegerVariant vs p q d) = rnf (vs,p,q,d)
-    rnf (SetVariant vs p q d) = rnf (vs,p,q,d)
 
 variant_equals_dummy :: Variant -> Expr
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` var
@@ -418,8 +392,6 @@ instance Show Rule where
 instance Eq Rule where
     Rule x == Rule y = x `h_equal` y
 
-instance NFData Rule where
-    rnf (Rule r) = rnf r
 
 instance RefRule Rule where
     refinement_po (Rule r) = refinement_po r
@@ -446,37 +418,33 @@ instance Show SafetyProp where
         where
             except = maybe "" (("  EXCEPT  " ++) . show) ev
 
-instance NFData ProgressProp where
-    rnf (LeadsTo vs p q) = rnf (vs,p,q)
 
-instance NFData SafetyProp where
-    rnf (Unless vs p q ev) = rnf (vs,p,q,ev)
 
 data PropertySet = PS
-        { transient    :: Map Label Transient
-        , constraint   :: Map Label Constraint
-        , inv          :: Map Label Expr       -- inv
-        , inv_thm      :: Map Label Expr       -- inv thm
-        , proofs       :: Map Label Proof
-        , progress     :: Map Label ProgressProp
+        { _transient    :: Map Label Transient
+        , _constraint   :: Map Label Constraint
+        , _inv          :: Map Label Expr       -- inv
+        , _inv_thm      :: Map Label Expr       -- inv thm
+        , _proofs       :: Map Label Proof
+        , _progress     :: Map Label ProgressProp
 --        , schedule     :: Map Label Schedule
-        , safety       :: Map Label SafetyProp
+        , _safety       :: Map Label SafetyProp
         }
     deriving Eq
 
 instance Show PropertySet where
     show x = intercalate ", " $ map (\(x,y) -> x ++ " = " ++ y)
-        [ ("transient",  show $ transient x)
-        , ("constraint", show $ constraint x)
-        , ("inv", show $ inv x)
-        , ("inv_thm", show $ inv_thm x)
-        , ("proofs", show $ keys $ proofs x)
-        , ("progress", show $ progress x)
-        , ("safety", show $ safety x)
+        [ ("transient",  show $ _transient x)
+        , ("constraint", show $ _constraint x)
+        , ("inv", show $ _inv x)
+        , ("inv_thm", show $ _inv_thm x)
+        , ("proofs", show $ keys $ _proofs x)
+        , ("progress", show $ _progress x)
+        , ("safety", show $ _safety x)
         ]
 
-instance NFData PropertySet where
-    rnf (PS x0 x1 x2 x3 x4 x5 x6) = rnf (x0,x1,x2,x3,x4,x5,x6)
+instance Default PropertySet where
+    def = empty_property_set
 
 data ScheduleChange = ScheduleChange 
         { event  :: Label
@@ -487,8 +455,6 @@ data ScheduleChange = ScheduleChange
         }
     deriving (Show,Eq,Typeable)
 
-instance NFData ScheduleChange where
-    rnf (ScheduleChange x0 x1 x2 x3 x4) = rnf (x0,x1,x2,x3,x4)
 
 data ScheduleRule = 
         Replace (Label,ProgressProp) (Label,SafetyProp)
@@ -499,12 +465,6 @@ data ScheduleRule =
             -- old expr, new label, new expr, proof
     deriving (Show,Eq)
 
-instance NFData ScheduleRule where
-    rnf (Replace xs ys) = rnf (xs,ys)
-    rnf Weaken = ()
-    rnf (ReplaceFineSch x0 x1 x2 x3) = rnf (x0,x1,x2,x3)
-    rnf (RemoveGuard x) = rnf x
-    rnf (AddGuard x) = rnf x
 
 weaken :: Label -> ScheduleChange
 weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
@@ -564,3 +524,23 @@ empty_property_set = PS
         empty empty empty 
         empty
 
+makeLenses ''PropertySet
+
+derive makeNFData ''Event
+derive makeNFData ''DocItem
+derive makeNFData ''Machine
+derive makeNFData ''System
+derive makeNFData ''EventId
+derive makeNFData ''TrHint
+derive makeNFData ''Constraint
+derive makeNFData ''ScheduleChange
+derive makeNFData ''ScheduleRule
+derive makeNFData ''PropertySet
+derive makeNFData ''ProgressProp
+derive makeNFData ''SafetyProp
+derive makeNFData ''Schedule
+derive makeNFData ''Action
+derive makeNFData ''Rule
+derive makeNFData ''Transient
+derive makeNFData ''Variant
+derive makeNFData ''Direction

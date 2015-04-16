@@ -9,6 +9,7 @@ import Document.Context   as Ctx
 import Document.Machine   as Mch
 import Document.Pipeline
 import Document.Phase as P
+import Document.Scope
 import Document.Proof
 import Document.Visitor
 

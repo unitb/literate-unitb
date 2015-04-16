@@ -17,7 +17,7 @@ import Document.Visitor
 
 import Latex.Parser
 
-import Logic.Expr
+import Logic.Expr 
 import Logic.Operator (Notation)
 import Logic.Proof
 
@@ -25,8 +25,8 @@ import UnitB.AST
 
     -- Libraries
 -- import Control.Applicative
+import Control.Applicative
 import Control.Arrow
-import Control.Parallel.Strategies
 import Control.Lens as L
 
 import Control.Monad.Reader.Class 
@@ -34,12 +34,12 @@ import Control.Monad.State
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State  as ST
 import Control.Monad.Trans.Reader as R hiding (local,ask)
+import Control.Monad.Trans.RWS    as RWS hiding (local,ask)
 
 -- import Data.Functor
 -- import Data.Monoid
-import Data.Either
-import Data.Either.Combinators
 import Data.Map as M
+import Data.Maybe as M
 import Data.Monoid
 import Data.List as L
 import Data.Set as S
@@ -48,74 +48,12 @@ import Utilities.Error
 -- import Utilities.Relation hiding ((!))
 import Utilities.Syntactic
 import Utilities.TH
-import Utilities.Permutation
 
 infixl 3 <.>
 
-all_errors' :: [Either [e] a] -> Either [e] [a]
-all_errors' xs = do
-    let es = lefts xs
-    unless (L.null es)
-        $ Left $ concat es
-    return $ L.map fromRight' xs
+-- type MachinePh0 = MachinePh0' ()
 
-all_errors :: Ord k => Map k (Either [e] a) -> Either [e] (Map k a)
-all_errors m = do
-        let es = lefts $ M.elems m
-        unless (L.null es)
-            $ Left $ concat es
-        return $ M.map fromRight' m
-
-make_table' :: forall a b.
-               (Ord a, Show a, Scope b) 
-            => (a -> String) 
-            -> [(a,b)] 
-            -> Either [Error] (Map a b)
-make_table' f xs = all_errors $ M.mapWithKey g ws
-    where
-        g k ws
-                | all (\xs -> length xs <= 1) ws 
-                            = Right $ L.foldl merge_scopes (head xs) (tail xs)
-                | otherwise = Left $ L.map (\xs -> MLError (f k) $ L.map error_item xs) 
-                                    $ L.filter (\xs -> length xs > 1) ws
-            where
-                xs = concat ws             
-        zs = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) xs
-        ws :: Map a [[b]]
-        ws = M.map (flip u_scc clashes) zs 
-
-make_table :: (Ord a, Show a) 
-           => (a -> String) 
-           -> [(a,b,LineInfo)] 
-           -> Either [Error] (Map a (b,LineInfo))
-make_table f xs = returnOrFail $ fromListWith add $ L.map mkCell xs
-    where
-        mkCell (x,y,z) = (x,Right (y,z))
-        sepError (x,y) = case y of
-                 Left z -> Left (x,z)
-                 Right (z,li) -> Right (x,(z,li))
-        returnOrFail m = failIf $ L.map sepError $ M.toList m
-        failIf xs 
-            | L.null ys = return $ M.fromList $ rights xs
-            | otherwise = Left $ L.map (uncurry err) ys
-            where
-                ys = lefts xs
-        err x li = MLError (f x) (L.map (show x,) li)
-        lis (Left xs)     = xs
-        lis (Right (_,z)) = [z]
-        add x y = Left $ lis x ++ lis y
-
-make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
-                 => (a -> String) 
-                 -> Map k [(a,b)] 
-                 -> Either [Error] (Map k (Map a b))
-make_all_tables' f xs = all_errors (M.map (make_table' f) xs) `using` parTraversable rseq
-
-make_all_tables :: (Show a, Ord a, Ord k) 
-                => (a -> String)
-                -> Map k [(a, b, LineInfo)] 
-                -> Either [Error] (Map k (Map a (b,LineInfo)))
-make_all_tables f xs = all_errors (M.map (make_table f) xs) `using` parTraversable rseq
+-- data MachinePh0' a = MachinePh0
 
 trigger :: ( IsTuple a, Trigger (TypeList a)
            , TypeList (Tuple (RetType (TypeList a)))
@@ -532,6 +470,10 @@ $(makeHierarchy
         , (''EventPh4, 'e3)
         ] )
 
+mkCons ''MachinePh3'
+
+mkCons ''EventPh3
+
 instance (HasMachinePh1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
     theoryP1 = pContext . theoryP1
 
@@ -541,6 +483,15 @@ instance (HasMachinePh1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
 pEventIds :: (HasEventPh1 events, HasMachinePh1' phase) 
           => Lens' (phase events t) (Map Label EventId)
 pEventIds = pEvents . from pFromEventId . onMap pEventId
+
+getEvent :: (HasMachinePh1' phase)
+      => EventId
+      -> Lens' (phase events t) events
+getEvent eid = pEvents . at eid . (\f x -> Just <$> f (M.fromJust x))
+
+newDelVars :: HasMachinePh2' phase
+           => Getter (phase events t) (Map String Var)
+newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
 eGuards :: HasEventPh3 events => Getter events (Map Label Expr)
 eGuards = to getter
