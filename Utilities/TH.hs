@@ -150,19 +150,28 @@ classKind n = do
 
 typeKind :: Name -> Q Int
 typeKind n = do
-    i <- reify n
-    case i of 
-        TyConI (DataD _ _ args _ _) -> return $ length args
-        TyConI (NewtypeD _ _ args _ _) -> return $ length args
-        _ -> fail $ "invalid type: " ++ show n
-
+        i <- reify n
+        case i of 
+            TyConI (DataD _ _ args _ _) -> return $ length args
+            TyConI (NewtypeD _ _ args _ _) -> return $ length args
+            TyConI (TySynD _ _ t) -> do
+                n <- degree t
+                return n
+            _ -> fail $ "typeKind, invalid type: " ++ show n
+    where
+        degree (AppT t0 _) = (-1 +) <$> degree t0
+        degree (ConT n) = typeKind n
+        degree t = error $ "degree, invalid type: " ++ pprint t
 
 substVars :: [(Name,Name)] -> Type -> Type
-substVars ns (VarT n) = VarT $ maybe n id (n `L.lookup` ns)
-substVars n t = runIdentity $ gfoldl f Identity t
+substVars ns = substVars' $ L.map (second VarT) ns
+
+substVars' :: [(Name,Type)] -> Type -> Type
+substVars' ns (VarT n) = fromMaybe (VarT n) (n `L.lookup` ns)
+substVars' n t = runIdentity $ gfoldl f Identity t
     where
         f g t' = case cast t' of
-                 Just t  -> g <*> Identity (fromJust $ cast $ substVars n t)
+                 Just t  -> g <*> Identity (fromJust $ cast $ substVars' n t)
                  Nothing -> g <*> Identity t'
 
 hasVars :: Type -> Bool
@@ -186,12 +195,17 @@ fieldType (ForallT vs _ t) = (vs ++ ds,arg,ret)
     where
         (ds,arg,ret) = fieldType t
 fieldType (AppT (AppT ArrowT arg) ret) = ([],arg,ret)
-fieldType t = error $ "invalid type: " ++ show t
+fieldType t = error $ "fieldType, invalid type: " ++ show t
 
 constructor :: Type -> Name
 constructor (ConT n) = n
 constructor (AppT t _) = constructor t
 constructor t = error $ "not a simple type: " ++ show t
+
+constructor' :: Type -> (Name,[Type])
+constructor' (ConT n) = (n,[])
+constructor' (AppT t t') = second (++[t']) $ constructor' t
+constructor' t = error $ "not a simple type: " ++ show t
 
 fieldList :: Info -> Q ([Name],Name,[(Name,Type)])
 fieldList (TyConI (DataD _ _ args [RecC n cs] _)) = return (L.map name args,n,L.map f cs)
@@ -199,8 +213,14 @@ fieldList (TyConI (DataD _ _ args [RecC n cs] _)) = return (L.map name args,n,L.
         f (n,_,t) = (n,t)
         name (PlainTV n) = n
         name (KindedTV n _) = n
-fieldList (TyConI (TySynD _ _ t)) =
-        fieldList =<< reify (constructor t)
+fieldList (TyConI (TySynD _n args t)) = do
+        let (t',args') = constructor' t
+        (xs,n',fs) <- fieldList =<< reify t'
+        let sub = zip xs args'
+            ys = drop (length args') xs
+            name (KindedTV n _) = n
+            name (PlainTV n) = n
+        return $ (L.map name args ++ ys,n',L.map (second $ substVars' sub) fs)
 fieldList _ = error "not a record type"
 
 typeOf :: Name -> TypeQ
