@@ -27,6 +27,7 @@ import Logic.Expr hiding ( pair )
     -- Libraries
 import Control.DeepSeq
 
+import Data.Default
 import Data.Either
 import Data.Function
 import Data.List as L
@@ -84,6 +85,9 @@ empty_notation = Notation
     , commands = []
     , quantifiers = []
     , struct = undefined }
+
+instance Default Notation where
+    def = empty_notation
 
 with_assoc :: Notation -> Notation
 with_assoc n = n { struct = assoc_table n }

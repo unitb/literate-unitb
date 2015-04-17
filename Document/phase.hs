@@ -6,7 +6,8 @@
 {-# LANGUAGE RankNTypes, GADTs              #-}
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE TypeOperators,TypeFamilies     #-}
-{-# LANGUAGE TupleSections                  #-}
+{-# LANGUAGE TupleSections,RecordWildCards  #-}
+{-# LANGUAGE StandaloneDeriving             #-}
 module Document.Phase where
 
     -- Modules
@@ -262,26 +263,20 @@ type MachinePh2 = MachinePh2' EventPh2 TheoryP2
 
 data MachinePh2' events theory = MachinePh2
     { _p1 :: MachinePh1' events theory
-    , _pDefinitions :: Map String Def
-    , _pConstants :: Map String Var
     , _pDelVars   :: Map String (Var,LineInfo)
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
-    , _pDummyVars :: Map String Var             -- dummy variables
-    , _pNotation  :: Notation
-    , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
     } deriving Show
 
 
-type MachinePh3 = MachinePh3' EventPh3 TheoryP2
+type MachinePh3 = MachinePh3' EventPh3 TheoryP3
 
 data MachinePh3' events theory = MachinePh3
     { _p2 :: MachinePh2' events theory
     , _pProgress  :: Map ProgId ProgressProp
     , _pSafety    :: Map Label SafetyProp
     , _pTransient :: Map Label Transient
-    , _pAssumptions :: Map Label Expr
     , _pInvariant   :: Map Label Expr                     -- Invariants
     , _pInitWitness :: Map Var Expr
     , _pDelInits    :: Map Label Expr
@@ -290,7 +285,7 @@ data MachinePh3' events theory = MachinePh3
     , _pNewPropSet  :: PropertySet
     } deriving Show
 
-type MachinePh4 = MachinePh4' EventPh4 TheoryP2
+type MachinePh4 = MachinePh4' EventPh4 TheoryP3
 
 data MachinePh4' events theory = MachinePh4
     { _p3 :: MachinePh3' events theory
@@ -343,16 +338,28 @@ data TheoryP0 = TheoryP0
     { _tNothing :: ()
     }
 
+type PostponedDef = (Def,DeclSource,LineInfo)
+
 data TheoryP1 = TheoryP1
     { _t0 :: TheoryP0
     , _pImports   :: Map String Theory
     , _pTypes     :: Map String Sort
     , _pAllTypes  :: Map String Sort
-    , _pSetDecl   :: [(String, VarScope)]
+    , _pSetDecl   :: [(String, PostponedDef)]
     }
 
 data TheoryP2 = TheoryP2
     { _t1 :: TheoryP1 
+    , _pDefinitions :: Map String Def
+    , _pConstants :: Map String Var
+    , _pDummyVars :: Map String Var             -- dummy variables
+    , _pNotation  :: Notation
+    , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
+    }
+
+data TheoryP3 = TheoryP3
+    { _t2 :: TheoryP2
+    , _pAssumptions :: Map Label Expr
     }
 
 newtype Abs a = Abs { getAbstract :: a }
@@ -459,9 +466,9 @@ createHierarchy
         -- , (''MachinePh1', '_pContext)
         , (''TheoryP1, '_t0)
         , (''TheoryP2, '_t1)
+        , (''TheoryP3, '_t2)
         -- , (''MachinePh0' ,undefined)
         ]
-
 
 $(makeHierarchy
            ''EventPh1
@@ -469,6 +476,14 @@ $(makeHierarchy
         , (''EventPh3, 'e2)
         , (''EventPh4, 'e3)
         ] )
+
+mkCons ''TheoryP2
+
+mkCons ''MachinePh2'
+
+mkCons ''EventPh2
+
+mkCons ''TheoryP3
 
 mkCons ''MachinePh3'
 
@@ -479,6 +494,9 @@ instance (HasMachinePh1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
 
 instance (HasMachinePh1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
     theoryP2 = pContext . theoryP2
+
+instance (HasMachinePh1' m, HasTheoryP3 t) => HasTheoryP3 (m e t) where
+    theoryP3 = pContext . theoryP3
 
 pEventIds :: (HasEventPh1 events, HasMachinePh1' phase) 
           => Lens' (phase events t) (Map Label EventId)

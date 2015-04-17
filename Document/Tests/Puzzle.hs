@@ -50,6 +50,7 @@ test_case = test_cases
         , StringCase "test 20, crashing proof obligation of invariant with witness" case20 result20
         , StringCase "test 21, deleting non-existant action" case21 result21
         , StringCase "test 22, error providing a witness for non-deleted variable" case22 result22
+        , StringCase "test 23, error deleting non-existant variable" case23 result23
         ]
 
 path0 :: FilePath
@@ -1791,4 +1792,15 @@ case22 = find_errors path22
 result22 :: String
 result22 = unlines
     [ "error (227,1): 'c' is not a disappearing variable"
+    ]
+
+path23 :: FilePath
+path23 = "Tests/puzzle/puzzle-err4.tex"
+
+case23 :: IO String
+case23 = find_errors path23
+
+result23 :: String
+result23 = unlines
+    [ "error (227,1): deleted variable \'xyz\' does not exist"
     ]

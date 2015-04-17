@@ -157,36 +157,20 @@ instance IsExprScope ExprScope where
     parseExpr lbl (ExprScope x) = parseExpr lbl x
 
 instance Scope CoarseSchedule where
-    make_inherited = Just . set declSource Inherited
-    keep_from s x = guard (view declSource x == s) >> return x
     error_item x = (show x, view lineInfo x)
-    merge_scopes _ _ = error "CoarseSchedule Scope.merge_scopes: Evt, Evt"
-    clashes _ _ = True
 
 instance Scope FineSchedule where
-    make_inherited = Just . set declSource Inherited
-    keep_from s x = guard (view declSource x == s) >> return x
     error_item x = (show x, view lineInfo x)
-    merge_scopes _ _ = error "FineSchedule Scope.merge_scopes: Evt, Evt"
-    clashes _ _ = True
 
 instance Scope Guard where
-    make_inherited = Just . set declSource Inherited
-    keep_from s x = guard (view declSource x == s) >> return x
     error_item x = (show x, view lineInfo x)
-    merge_scopes _ _ = error "Guard Scope.merge_scopes: Evt, Evt"
-    clashes _ _ = True
 
 instance Scope Witness where
-    make_inherited = Just . set declSource Inherited
-    keep_from s x = guard (view declSource x == s) >> return x
     error_item x = (show x, view lineInfo x)
-    merge_scopes _ _ = error "Witness Scope.merge_scopes: Evt, Evt"
-    clashes _ _ = True
 
 instance Scope ActionDecl where
-    make_inherited = Just . set declSource Inherited
-    keep_from s x = guard (s == Inherited) >> return x
+    keep_from s x@(DelAction _ _ _) = guard (s == Inherited) >> return x
+    keep_from s x@(Action _ s' _) = guard (s == s') >> return x
     error_item x = (show x, view lineInfo x)
     clashes x y = f x == f y
         where

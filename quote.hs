@@ -10,6 +10,7 @@ escape xs = concatMap f xs
     where
         f '\t' = "\\t"
         f '\\' = "\\\\"
+        f '\"' = "\\\""
         f x    = [x]
 
 main :: IO ()

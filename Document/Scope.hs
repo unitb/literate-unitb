@@ -1,14 +1,23 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RankNTypes,TupleSections  #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
-module Document.Scope where
-
-    -- Modules
-import Logic.Expr hiding (Const)
-
-import UnitB.AST
+{-# LANGUAGE DefaultSignatures         #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE FlexibleContexts          #-}
+module Document.Scope 
+    ( Scope(..)
+    , HasDeclSource (..)
+    , make_table
+    , make_all_tables 
+    , make_all_tables'
+    , all_errors
+    , all_errors'
+    , is_inherited, is_local
+    , DeclSource(..)  )
+where
 
     -- Libraries
+import Control.Lens
 import Control.Monad.Identity
 import Control.Parallel.Strategies
 
@@ -17,82 +26,35 @@ import Data.Either.Combinators
 import Data.List as L
 import Data.Map as M
 
-import Utilities.Format
 import Utilities.Syntactic
 import Utilities.Permutation
 
     -- clashes is a symmetric, reflexive relation
 class Ord a => Scope a where
-    make_inherited :: a -> Maybe a
-    keep_from :: DeclSource -> a -> Maybe a
     error_item :: a -> (String,LineInfo)
+
+    keep_from :: DeclSource -> a -> Maybe a
+    default keep_from :: (HasDeclSource a DeclSource) => DeclSource -> a -> Maybe a
+    keep_from s x = guard (x ^. declSource == s) >> return x
+
+    make_inherited :: a -> Maybe a
+    default make_inherited :: (HasDeclSource a DeclSource) => a -> Maybe a
+    make_inherited x = Just $ x & declSource .~ Inherited
+
     clashes :: a -> a -> Bool
+    clashes _ _ = True
+
     merge_scopes :: a -> a -> a
+    merge_scopes _ _ = error "Scope.merge_scopes"
+
+class HasDeclSource a b where
+    declSource :: Lens' a b
 
 is_inherited :: Scope s => s -> Maybe s
 is_inherited = keep_from Inherited
 
 is_local :: Scope s => s -> Maybe s
 is_local = keep_from Local
-
-instance Scope VarScope where
-    keep_from s (Evt m) = Just $ Evt $ M.mapMaybe f m
-        where
-            f x@(_,_,s',_)
-                | s == s'   = Just x
-                | otherwise = Nothing
-    keep_from s x
-            | f x == s  = Just x
-            | otherwise = Nothing
-        where
-            f (TheoryDef _ s _) = s
-            f (TheoryConst _ s _) = s
-            f (Machine _ s _) = s
-            f (DelMch _ s _) = s
-            f (Evt _) = error "is_inherited Scope VarScope"
-    make_inherited (TheoryDef x _ y) = Just $ TheoryDef x Inherited y
-    make_inherited (TheoryConst x _ y) = Just $ TheoryConst x Inherited y
-    make_inherited (Machine x _ y) = Just $ Machine x Inherited y
-    make_inherited (DelMch x _ y)  = Just $ DelMch x Inherited y
-    make_inherited (Evt m) = Just $ Evt $ M.map f m
-        where
-            f (x,y,_,z) = (x,y,Inherited,z)
-    clashes (Evt m0) (Evt m1) = not $ M.null $ m0 `M.intersection` m1
-    clashes (DelMch _ _ _) (Machine _ Inherited _) = False
-    clashes (Machine _ Inherited _) (DelMch _ _ _) = False
-    clashes _ _ = True
-    error_item (Evt m) = head' $ elems $ mapWithKey msg m
-        where
-            head' [x] = x
-            head' _ = error "VarScope Scope VarScope: head'"
-            msg (Just k) (_v,sc,_,li) = (format "{1} (event {0})" k sc :: String, li)
-            msg Nothing (_v,_,_,li) = (format "dummy", li)
-    error_item (Machine _ _ li)   = ("state variable", li)
-    error_item (TheoryDef _ _ li) = ("constant", li)
-    error_item (TheoryConst _ _ li) = ("constant", li)
-    error_item (DelMch _ _ li)   = ("deleted variable", li)
-    merge_scopes (Evt m0) (Evt m1) = Evt $ unionWith (error "VarScope Scope.merge_scopes: Evt, Evt") m0 m1
-    merge_scopes (DelMch _ s _) (Machine v Inherited li) = DelMch (Just v) s li
-    merge_scopes (Machine v Inherited li) (DelMch _ s _) = DelMch (Just v) s li
-    merge_scopes _ _ = error "VarScope Scope.merge_scopes: _, _"
-
-data VarScope =
-        TheoryConst Var DeclSource LineInfo
-        | TheoryDef Def DeclSource LineInfo
-        | Machine Var DeclSource LineInfo
-        | DelMch (Maybe Var) DeclSource LineInfo
-        | Evt (Map (Maybe EventId) (Var,EvtScope,DeclSource,LineInfo))
-            -- in Evt, 'Nothing' stands for a dummy
-    deriving (Eq,Ord,Show)
-
--- instance NFData VarScope where
-
-data EvtScope = Param | Index
-    deriving (Eq,Ord)
-
-instance Show EvtScope where
-    show Param = "parameter"
-    show Index = "index"
 
 data DeclSource = Inherited | Local
     deriving (Eq,Ord,Show)

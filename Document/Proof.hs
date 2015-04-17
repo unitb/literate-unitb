@@ -30,6 +30,7 @@ import           Control.Monad.Trans.State as ST ( StateT, evalStateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
+import           Data.Default
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
 import           Data.Monoid (Monoid)
@@ -662,6 +663,9 @@ default_setting = PSetting
     , free_dummies = False
     , expected_type = (Just bool)
     }
+
+instance Default ParserSetting where
+    def = default_setting
 
 setting_from_context :: Notation -> Context -> ParserSetting
 setting_from_context notation ctx = default_setting

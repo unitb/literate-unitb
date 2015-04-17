@@ -17,6 +17,7 @@ import Document.Phase as P
 import Document.Proof
 import Document.Refinement as Ref
 import Document.Scope
+import Document.VarScope
 import Document.Visitor
 
 import Latex.Parser
@@ -53,6 +54,7 @@ import qualified Control.Monad.Writer as W
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
+import           Data.Either
 import           Data.Either.Combinators
 import           Data.Functor
 import           Data.Graph
@@ -225,7 +227,7 @@ make_phase1 :: MachinePh0
             -> Map String Theory
             -> Map String Sort
             -> Map String Sort
-            -> [(String, VarScope)]
+            -> [(String, PostponedDef)]
             -> Map Label (EventId, DeclSource)
             -> MachinePh1
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachinePh1 { .. }
@@ -251,75 +253,71 @@ run_phase2_vars :: Pipeline MM
                         (Hierarchy MachineId,MTable MachinePh1)
                         (MTable MachinePh2)
 run_phase2_vars = proc (r_ord, p1) -> do
-    vs <- run_phase
-        [ variable_decl
-        , constant_decl
-        , dummy_decl
-        , index_decl
-        , arr $ Right . M.map (L.view pSetDecl)
-        , param_decl
-        , remove_var ] -< p1
-    let vars    =      make_all_tables' err_msg
-                   =<< inherit2 r_ord 
-                   <$> unionsWith (++) <$> vs
-        err_msg = (format "Multiple symbols with the name {0}") 
-    One vars <- triggerP -< One vars
-    let p2 = make_phase2 <$> p1 <.> vars
-        _  = vars :: MTable (Map String VarScope)
-    returnA -< p2
+        vs <- run_phase
+            [ variable_decl
+            , constant_decl
+            , dummy_decl
+            , index_decl
+            , arr $ Right . M.map (wrap . L.view pSetDecl)
+            , param_decl
+            , remove_var ] -< p1
+        let vars    =      make_all_tables' err_msg
+                       =<< inherit2 r_ord 
+                       <$> unionsWith (++) <$> vs
+            err_msg = (format "Multiple symbols with the name {0}") 
+        One vars <- triggerP -< One vars
+        let p2 = all_errors $ make_phase2 <$> p1 <.> vars
+            _  = vars :: MTable (Map String VarScope)
+        liftP -< hoistEither p2
+    where
+        wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
 
 make_phase2 :: MachinePh1
             -> Map String VarScope
-            -> MachinePh2 
-make_phase2 p1 vars = MachinePh2 { .. }
+            -> Either [Error] MachinePh2 
+make_phase2 p1 vars
+        | L.null err = Right $ p2' & (pNotation .~ _pNotation)
+                                   & (pMchSynt .~ _pMchSynt)
+                                   & (pCtxSynt .~ _pCtxSynt)
+                                   & (pSchSynt .~ _pSchSynt)
+                                   & (pEvtSynt .~ _pEvtSynt)
+        | otherwise = Left err
     where
-        -- _ = over :: Setting (->) s t a b -> (a -> b) -> s -> t
-        -- over ln f = runIdentity . ln (Identity . f)
-        _c1   = TheoryP2 (p1 ^. pContext)
-        _e1   = EventPh2 <$> (p1 ^. pEvents) 
-                         <.> _pIndices `M.union` evtEmpty
-                         <.> _pParams  `M.union` evtEmpty
-                         <.> _pSchSynt 
-                         <.> _pEvtSynt 
-        _p1   = p1 & (pEvents .~ _e1) & (pContext .~ _c1)
-        types = p1 ^. pTypes 
-        imps  = p1 ^. pImports
-        _pDelVars = mapMaybe getDelVars vars
-        evtEmpty = M.map (const M.empty) evts
+        varGroup n (VarScope x) = VarGroup [(n,x)]
+        vars' = groupVars $ L.map (uncurry varGroup) $ M.toList vars
+        (p2',err) = execRWS (mapM_ f vars') () p2
+            where
+                p2 =   pContext `over` makeTheoryP2
+                     $ pEvents `over` M.map makeEventPh2
+                     $ makeMachinePh2' p1
+
+        f (VarGroup vs) = processDecl vs
+
         evts  = M.map (const ()) (p1 ^. pEvents)
-        -- vars = M.map (M.map fst) vars'
-        _pStateVars = fmap fst $ mapMaybe getStateVars vars
-        _pDefinitions = mapMaybe getDefs vars
-        _pIndices :: Map EventId (Map String Var)
-        _pIndices   = flipMap $ mapMaybe (fmap (M.map fst) . getIndices) vars
-        _pParams :: Map EventId (Map String Var)
-        _pParams    = getEventParams evts vars
-            -- flipMap $ mapMaybe (fmap (M.map fst) . getEventParams) vars
+
         ind_param :: Map EventId (Map String Var)
-        ind_param   = flipMap $ mapMaybe (fmap (M.map fst) . getParamInd) vars
-        _pAbstractVars = fmap fst $ mapMaybe getAbsVars vars
-        _pNotation  = th_notation $ empty_theory { extends = imps }
-        _pDummyVars = fmap fst $ mapMaybe getDummies vars
-        _pConstants = fmap fst $ mapMaybe getConstants vars
+        ind_param   = M.unionWith M.union (p2' ^. pIndices) (p2' ^. pParams)
 
-        constants = (_pConstants `M.union` (M.mapMaybe defToVar _pDefinitions))
+        _pNotation  = th_notation $ empty_theory { extends = p2' ^. pImports }
 
-        _pCtxSynt   = mkSetting _pNotation types constants M.empty _pDummyVars
-        _pMchSynt   = mkSetting _pNotation types constants refVars _pDummyVars
+        constants = (p2' ^. pConstants) `M.union` (M.mapMaybe defToVar $ p2' ^. pDefinitions)
+
+        _pCtxSynt   = mkSetting _pNotation (p2' ^. pTypes) constants M.empty (p2' ^. pDummyVars)
+        _pMchSynt   = mkSetting _pNotation (p2' ^. pTypes) constants refVars (p2' ^. pDummyVars)
         
-        refVars = _pAbstractVars `M.union` _pStateVars
+        refVars = (p2' ^. pAbstractVars) `M.union` (p2' ^. pStateVars)
 
         findE m e = findWithDefault M.empty e m :: Map String Var
 
-        f :: Map EventId (Map String Var)
-          -> EventId -> ParserSetting
-        f table e    = mkSetting _pNotation types (constants `union` findE table e) refVars _pDummyVars
+        parser :: Map EventId (Map String Var)
+               -> EventId -> ParserSetting
+        parser table e    = mkSetting _pNotation (p2' ^. pTypes) (constants `union` findE table e) refVars (p2' ^. pDummyVars)
         
-        event_namespace table = -- (fromList . map (f table) . M.elems) 
-            M.mapWithKey (const . f table) evts 
+        event_namespace table = 
+            M.mapWithKey (const . parser table) evts 
 
         _pSchSynt :: Map EventId ParserSetting
-        _pSchSynt = event_namespace _pIndices
+        _pSchSynt = event_namespace (p2' ^. pIndices)
 
         _pEvtSynt :: Map EventId ParserSetting
         _pEvtSynt = event_namespace ind_param
@@ -379,7 +377,9 @@ make_phase3 p2 exprs
         | L.null errs = Right p3''
         | otherwise   = Left errs
     where
-        p3 = over pEvents (M.map makeEventPh3) (makeMachinePh3' p2)
+        p3 =  over pContext makeTheoryP3
+            $ over pEvents (M.map makeEventPh3) 
+              (makeMachinePh3' p2)
         (p3',errs) = execRWS (mapM_ (uncurry parseExpr) $ M.toList exprs) () p3
         skip = M.fromList [ (v,Word (prime v) `zeq` Word v) | v <- M.elems $ view newDelVars p3']
         p3'' = over pEvents (M.map $ over eWitness (`M.union` skip)) p3'
@@ -673,78 +673,13 @@ instance (Monoid b, WithMap k b m) => WithMap k a (Map k b -> m) where
 
 
 
-getEventParams :: Map EventId ()
-               -> Map String VarScope 
-               -> Map EventId (Map String Var)
-getEventParams = getEventDecls Param
-
-getEventDecl :: EvtScope -> VarScope -> Maybe (Map EventId (Var, LineInfo))
-getEventDecl scope (Evt m) = Just $ fromList $ MM.mapMaybe f $ toList m
-    where
-        f (Just e,(v,s,_,li)) 
-            | s == scope = Just (e,(v,li))
-        f _ = Nothing
-getEventDecl _ _ = Nothing
-
-getEventDecls :: EvtScope
-              -> Map EventId ()
-              -> Map String VarScope
-              -> Map EventId (Map String Var)
-getEventDecls scope evts vars = M.map fromList $ M.unionsWith (++) $ empty : map moveName (M.toList decl)
-    where
-        empty :: Map EventId [(String,Var)]
-        empty = M.map (const []) evts
-        moveName :: (String,Map EventId (Var,LineInfo)) -> Map EventId [(String,Var)]
-        moveName (vn,m) = M.map (\(x,_) -> [(vn,x)]) m
-        decl = M.mapMaybe (getEventDecl scope) vars
-
-
-getParamInd :: VarScope -> Maybe (Map EventId (Var,LineInfo))
-getParamInd (Evt m) = Just $ fromList $ MM.mapMaybe f $ toList m
-    where
-        f (Just e,(v,_,_,li)) = Just (e,(v,li))
-        f _ = Nothing
-getParamInd _ = Nothing
-
-getDefs :: VarScope -> Maybe Def
-getDefs (TheoryDef d _ _) = Just d
-getDefs _ = Nothing
-
-getOrphanDelVars :: VarScope -> Maybe LineInfo
-getOrphanDelVars (DelMch Nothing Local li) = Just li
-getOrphanDelVars _ = Nothing
-
-
-getStateVars :: VarScope -> Maybe (Var,LineInfo)
-getStateVars (Machine v _ li) = Just (v,li)
-getStateVars _ = Nothing
-
-getDelVars :: VarScope -> Maybe (Var,LineInfo)
-getDelVars (DelMch v _ li) = (,li) <$> v
-getDelVars _ = Nothing
-
-getAbsVars :: VarScope -> Maybe (Var,LineInfo)
-getAbsVars (Machine v Inherited li) = Just (v,li)
-getAbsVars (DelMch v Local li)      = (,li) <$> v
-getAbsVars _ = Nothing
-
-
-getDummies :: VarScope -> Maybe (Var,LineInfo)
-getDummies (Evt m) = fmap (\(v,_,_,li) -> (v,li)) $ Nothing `M.lookup` m
-getDummies _ = Nothing
 
 defToVar :: Def -> Maybe Var
 defToVar (Def _ n [] t _) = Just (Var n t)
 defToVar (Def _ _ (_:_) _ _) = Nothing
 
-getConstants :: VarScope -> Maybe (Var,LineInfo)
--- getConstants (TheoryDef (Def [] n [] t _) _ li) = Just (Var n t,li)
-getConstants (TheoryConst v _ li) = Just (v,li)
-getConstants _ = Nothing
 
 
-getIndices :: VarScope -> Maybe (Map EventId (Var,LineInfo))
-getIndices = getEventDecl Index
 
 -- trigger_errors 
 
@@ -781,9 +716,14 @@ runPipeline' ms cs p = runReaderT (f input) input
 
 type MPipeline ph a = Pipeline MM (MTable ph) (Either [Error] (MTable a))
 
+instance IsVarScope TheoryDef where
+    processDecl xs = do
+        let xs' = M.fromList $ L.map (second thDef) xs
+        modify $ pDefinitions `over` M.union xs'
+
 set_decl :: MPipeline MachinePh0 
             ( [(String,Sort,LineInfo)]
-            , [(String,VarScope)] )
+            , [(String,PostponedDef)] )
 set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             let name     = tag 
                 new_sort = Sort tag (z3_escape name) 0
@@ -791,7 +731,7 @@ set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
                 new_def = Def [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask
-            return ([(tag,new_sort,li)],[(tag,TheoryDef new_def Local li)])
+            return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
 event_decl :: MPipeline MachinePh0 [(Label, EventId, LineInfo)]
 event_decl = machineCmd "\\newevent" $ \(One evt) _m _ -> do 
@@ -826,14 +766,41 @@ variable_decl :: MPipeline MachinePh1
                     [(String,VarScope)]
 variable_decl = machine_var_decl Machine "\\variable"
 
+instance IsVarScope TheoryConst where
+    processDecl xs = do
+        let xs' = M.fromList $ L.map (second thCons) xs
+        modify $ pConstants `over` M.union xs'
+
 constant_decl :: MPipeline MachinePh1
                     [(String,VarScope)]
 constant_decl = machine_var_decl TheoryConst "\\constant"
 
+instance IsVarScope MachineVar where
+    processDecl xs = do
+        let f :: (String,MachineVar) 
+              -> Either Error ( [(String,(Var,LineInfo))]
+                              , [(String,Var)]
+                              , [(String,Var)])
+            f (n,Machine v Local _) = Right ([],[],[(n,v)])
+            f (n,Machine v Inherited _) = Right ([],[(n,v)],[(n,v)])
+            f (n,DelMch (Just v) Local li) = Right ([(n,(v,li))],[(n,v)],[])
+            f (n,DelMch (Just v) Inherited li) = Right ([(n,(v,li))],[],[])
+            f (n,DelMch Nothing _ li) = Left $ Error (format "deleted variable '{0}' does not exist" n) li
+            ys = map f xs
+            (del,abst,st) = (_1 `over` M.fromList)
+                            $ (both `over` M.fromList) 
+                            $ mconcat $ rights ys
+            zs = lefts ys
+        tell zs
+        modify $ pDelVars `over` M.union del
+        modify $ pAbstractVars `over` M.union abst
+        modify $ pStateVars `over` M.union st
+
+
 remove_var :: MPipeline MachinePh1 [(String,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(One xs) _m _p1 -> do
         li <- lift ask
-        return $ map ((\x -> (x,DelMch Nothing Local li)) . toString) xs
+        return $ map ((\x -> (x,VarScope $ DelMch Nothing Local li)) . toString) xs
 
 dummy_decl :: MPipeline MachinePh1
                     [(String,VarScope)]
@@ -841,20 +808,41 @@ dummy_decl = machine_var_decl 
         (\v source li -> Evt $ singleton Nothing (v,Param,source,li)) 
         "\\dummy"
 
-machine_var_decl :: (Var -> DeclSource -> LineInfo -> VarScope)
+machine_var_decl :: IsVarScope var
+                 => (Var -> DeclSource -> LineInfo -> var)
                  -> String
                  -> MPipeline MachinePh1
                         [(String,VarScope)]
 machine_var_decl scope kw = machineCmd kw $ \(One xs) _m p1 -> do
             vs <- get_variables' (p1 ^. pAllTypes) xs
             li <- lift ask
-            return $ map (\(x,y) -> (x,scope y Local li)) vs
+            return $ map (\(x,y) -> (x,VarScope $ scope y Local li)) vs
 
 index_decl :: MPipeline MachinePh1 [(String,VarScope)]
 index_decl = event_var_decl Index "\\indices"
 
 param_decl :: MPipeline MachinePh1 [(String,VarScope)]
 param_decl = event_var_decl Param "\\param"
+
+type EventSym = (EventId,[(String,Var)])
+
+instance IsVarScope EvtDecl where
+    processDecl xs = do
+        let f (n,Evt m) = mconcat $ M.elems $ M.mapWithKey (g n) m
+            g :: String -> Maybe EventId 
+              -> (Var,EvtScope,DeclSource,LineInfo)
+              -> ([EventSym],[EventSym],[(String,Var)])
+            g n (Just eid) (v,Index,_,_) = ([(eid,[(n,v)])],[],[])  
+            g n (Just eid) (v,Param,_,_) = ([],[(eid,[(n,v)])],[])  
+            g n Nothing (v,_,_,_) = ([],[],[(n,v)])
+            (is,ps,ds) = 
+                      _1 `over` (M.map M.fromList . M.fromListWith (++)) 
+                    $ _2 `over` (M.map M.fromList . M.fromListWith (++)) 
+                    $ _3 `over` M.fromList
+                    $ mconcat $ map f xs
+        modify $ pIndices `over` M.unionWith M.union is
+        modify $ pParams `over` M.unionWith M.union ps
+        modify $ pDummyVars `over` M.union ds
 
 event_var_decl :: EvtScope
                -> String
@@ -868,7 +856,7 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
                 $ lbl `M.lookup` evts
             li <- lift ask
             vs <- get_variables' ts xs
-            return $ map (\(n,v) -> ((n,Evt $ M.singleton (Just evt) (v,escope,Local,li)))) vs
+            return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) (v,escope,Local,li)))) vs
 
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
@@ -963,9 +951,8 @@ get_safety_prop p3 _m lbl =
                 (format "safety property '{0}' is undeclared" lbl)
                 $ lbl `M.lookup` (L.view pSafety p3)
 
-get_notation :: HasMachinePh2' phase => phase events thy -> Notation
+get_notation :: HasTheoryP2 phase => phase -> Notation
 get_notation p2 = L.view pNotation p2
-    -- where MachinePh2 _ _ _ _ _ notation _ _ _ _ = ancestor p2
 
 machine_events :: HasMachinePh1 phase events => phase events thy -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
@@ -1007,7 +994,7 @@ schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 machine_parser :: HasMachinePh2 phase events => phase events thy -> ParserSetting
 machine_parser p2 = L.view pMchSynt p2
 
-context_parser :: HasMachinePh2' phase => phase events thy -> ParserSetting
+context_parser :: HasTheoryP2 phase => phase -> ParserSetting
 context_parser p2 = p2 ^. pCtxSynt
 
 state_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
@@ -1016,7 +1003,7 @@ state_variables p2 = p2 ^. pStateVars
 abstract_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
 abstract_variables p2 = p2 ^. pAbstractVars
 
-dummy_vars :: HasMachinePh2' phase => phase events thy -> Map String Var
+dummy_vars :: HasTheoryP2 phase => phase -> Map String Var
 dummy_vars p2 = p2 ^. pDummyVars
 
 event_indices :: HasMachinePh2 phase events => phase events thy -> Map EventId (Map String Var)
@@ -1481,7 +1468,9 @@ progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
 refine_prog_prop :: MPipeline MachinePh3
                 [(ProgId,(Rule,[(ProgId,ProgId)]),LineInfo)]
 refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3 -> do
-        let p2   = (pEvents `over` M.map (view e2)) (p3 ^. machinePh2')
+        let p2   =  (pContext `over` view t2)
+                    $ (pEvents `over` M.map (view e2)) 
+                      (p3 ^. machinePh2')
             prog = p3 ^. pProgress
             saf  = p3 ^. pSafety
             tr   = p3 ^. pTransient

@@ -51,7 +51,7 @@ run_phase1_types = proc p0 -> do
         let t = M.map fst <$> ts
             sets = M.map snd <$> ts
             types  = t  >>= make_all_tables (format "Multiple sets with the name {0}")
-            imp_th = it >>= make_all_tables (format "Theory imported multiple times")
+            imp_th = it >>= make_all_tables (format "Theory imported multiple times {0}")
         (types,imp_th,sets) <- triggerP -< (types,imp_th,sets)
         let imp_th' = M.map (M.map fst) imp_th
             f th = M.unions $ L.map AST.types $ M.elems th
@@ -68,7 +68,7 @@ type CPipeline ph a = Pipeline MM (CTable ph) (Either [Error] (CTable a))
 make_phase1 :: Map String Sort
             -> Map String Sort
             -> Map String Theory
-            -> [(String,VarScope)] 
+            -> [(String,PostponedDef)] 
             -> TheoryP1
 make_phase1 _pTypes _pAllTypes _pImports _pSetDecl = TheoryP1 { .. }
     where
@@ -76,14 +76,14 @@ make_phase1 _pTypes _pAllTypes _pImports _pSetDecl = TheoryP1 { .. }
 
 set_decl :: CPipeline TheoryP0 
             ( [(String,Sort,LineInfo)]
-            , [(String,VarScope)] )
+            , [(String,PostponedDef)] )
 set_decl = contextCmd "\\newset" $ \(String name, String tag) _m _ -> do
             let new_sort = Sort tag name 0
                 new_type = Gen $ USER_DEFINED new_sort []
                 new_def  = Def [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask
-            return ([(tag,new_sort,li)],[(tag,TheoryDef new_def Local li)])
+            return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
 imp_theory :: CPipeline TheoryP0 [(String, Theory, LineInfo)]
 imp_theory = contextCmd "\\with" $ \(One (String th_name)) _m _ -> do

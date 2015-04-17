@@ -18,14 +18,20 @@ Todo:
         * ~~Problem: name clash between witnesses of events vs init~~
         * ~~commit~~
 
-        * Add error message when 
-            * deleting non existing 
+        * ~~Add error message when~~
+            * ~~deleting non existing~~
                 * ~~action / init~~
-                * variable
-            * providing witness for variable that isn't deleted
-        * typesetting example
+                * ~~variable~~
+            * ~~providing witness for variable that isn't deleted~~
+        * ~~In phase 2, variable collection,~~
+            * ~~define the missing process decl~~
+            * ~~construct a notation object and some parsers~~
         * commit
 
+        * typesetting example
+        * aggregate expr scopes before adding in parser
+        * commit
+        
         * Turn EventId into (EventId s) in order to make tables of
             events into total functions
 
