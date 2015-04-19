@@ -188,7 +188,7 @@ ba_predicate m evt =          ba_predicate' (variables m) (actions evt)
                     `M.union` M.mapKeys (label . name) (witness evt)
 
 newtype EventId = EventId Label
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Typeable)
 
 instance Show EventId where
     show (EventId x) = show x

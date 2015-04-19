@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell,MultiParamTypeClasses   #-}
 {-# LANGUAGE FunctionalDependencies,FlexibleContexts #-}
 {-# LANGUAGE TypeSynonymInstances,FlexibleInstances  #-}
-{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE TypeFamilies, DefaultSignatures  #-}
 module Document.ExprScope where
 
     -- Modules
@@ -19,12 +19,15 @@ import Control.Applicative
 import Control.Lens
 import Control.Monad.RWS
 
-import Data.Map
+import Data.List as L (map)
+import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
 
-import Utilities.Syntactic
 import Utilities.HeterogenousEquality
+import Utilities.Syntactic
+import Utilities.TH
+import Utilities.Trace ()
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleEvtExpr :: Expr
@@ -91,18 +94,14 @@ addToEventTable ln lbl eid x = modify $ over (pEvents . at eid . inside . ln) (i
 
 newtype LensT a b = LensT { getLens :: Lens' a b }
 
+data EvtExprGroup = forall a. IsEvtExpr a => EvtExprGroup [(Maybe EventId,[(Label,a)])]
+
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
-      , HasEvtExpr a (ExprT a)
       , HasLineInfo a LineInfo
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
-    type ExprT a :: *
-    parseEvtExpr :: Label -> Maybe EventId -> a -> RWS () [Error] MachinePh3 ()
-    parseEvtExpr lbl (Just eid) x = 
-        forM_ (exprLens x) $ \ln ->
-            addToEventTable (getLens ln) lbl eid (x ^. evtExpr)
-    parseEvtExpr _ Nothing _ = error "IsEvtExpr: Nothing"
-    exprLens :: a -> [LensT EventPh3 (Map Label (ExprT a))]
+    parseEvtExpr :: [(Maybe EventId,[(Label,a)])] 
+                 -> RWS () [Error] MachinePh3 ()
 
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f (EvtExprScope x) = EvtExprScope <$> declSource f x
@@ -122,30 +121,62 @@ instance Show ActionDecl where
     show (Action _ _ _) = "action"
     show (DelAction _ _ _) = "delete action"
 
-data ExprScope = forall t. IsExprScope t => ExprScope t
-    deriving Typeable
-
 data EventExpr = EventExpr (Map (Maybe EventId) EvtExprScope)
     deriving (Eq,Ord,Typeable)
-data Invariant = Invariant Expr DeclSource LineInfo
+data Invariant = Invariant 
+        { _invariantMchExpr :: Expr
+        , _invariantDeclSource :: DeclSource
+        , _invariantLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data TransientProp = TransientProp Transient DeclSource LineInfo
+data TransientProp = TransientProp
+        { _transientPropMchExpr :: Transient
+        , _transientPropDeclSource :: DeclSource
+        , _transientPropLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data ConstraintProp = ConstraintProp Constraint DeclSource LineInfo
+data ConstraintProp = ConstraintProp
+        { _constraintPropMchExpr :: Constraint
+        , _constraintPropDeclSource :: DeclSource
+        , _constraintPropLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data SafetyDecl = SafetyProp SafetyProp DeclSource LineInfo
+data SafetyDecl = SafetyProp
+        { _safetyDeclMchExpr :: SafetyProp
+        , _safetyDeclDeclSource :: DeclSource
+        , _safetyDeclLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data ProgressDecl = ProgressProp ProgressProp DeclSource LineInfo
+data ProgressDecl = ProgressProp
+        { _progressDeclMchExpr :: ProgressProp
+        , _progressDeclDeclSource :: DeclSource
+        , _progressDeclLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data Initially =  
-        Initially Expr DeclSource LineInfo
-        | DelInit (Maybe Expr) DeclSource LineInfo
+data Initially = DelInit
+            { initiallyMMchExpr :: Maybe Expr
+            , _initiallyDeclSource :: DeclSource
+            , _initiallyLineInfo :: LineInfo }
+        | Initially
+            { initiallyMchExpr :: Expr
+            , _initiallyDeclSource :: DeclSource
+            , _initiallyLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data Axiom = Axiom Expr DeclSource LineInfo
+data Axiom = Axiom
+        { _axiomMchExpr :: Expr
+        , _axiomDeclSource :: DeclSource
+        , _axiomLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
 
-class (Scope a, Typeable a) => IsExprScope a where
-    parseExpr :: Label -> a -> RWS () [Error] MachinePh3 ()
+makeFields ''Axiom
+makeFields ''ProgressDecl
+makeFields ''Initially
+makeFields ''SafetyDecl
+makeFields ''ConstraintProp
+makeFields ''TransientProp
+makeFields ''Invariant
+
+class ( Scope a, Typeable a ) 
+        => IsExprScope a where
+    parseExpr :: [(Label, a)] -> RWS () [Error] MachinePh3 ()
+
+data ExprScope = forall t. IsExprScope t => ExprScope t
+    deriving Typeable
 
 instance Eq ExprScope where
     ExprScope x == ExprScope y = h_equal x y
@@ -153,8 +184,20 @@ instance Eq ExprScope where
 instance Ord ExprScope where
     compare (ExprScope x) (ExprScope y) = h_compare x y
 
-instance IsExprScope ExprScope where
-    parseExpr lbl (ExprScope x) = parseExpr lbl x
+data ExprGroup = forall a. IsExprScope a => ExprGroup [(Label,a)]
+
+existential ''EvtExprGroup
+existential ''ExprGroup
+existential ''ExprScope
+existential ''EvtExprScope
+
+parseExprScope :: Map Label ExprScope
+               -> MachinePh3
+               -> (MachinePh3,[Error])
+parseExprScope xs = execRWS (mapM_ g $ groupExprGroup (++) $ L.map f $ M.toList xs) ()
+    where
+        f (lbl,ExprScope x) = ExprGroup [(lbl,x)]
+        g (ExprGroup xs)    = parseExpr xs
 
 instance Scope CoarseSchedule where
     error_item x = (show x, view lineInfo x)
@@ -181,37 +224,20 @@ instance Scope ActionDecl where
     merge_scopes (Action a _ _) (DelAction Nothing y li) = DelAction (Just a) y li
     merge_scopes _ _ = error "ActionDecl Scope.merge_scopes: Evt, Evt"
 
-apply :: Functor f => (forall a. IsExprScope a => a -> f a) -> ExprScope -> f ExprScope
-apply f (ExprScope x) = ExprScope <$> f x
-
-apply2 :: Functor f 
-       => (forall a. IsExprScope a => a -> a -> f a) 
-       -> ExprScope -> ExprScope -> Maybe (f ExprScope)
-apply2 f (ExprScope x) (ExprScope y) = fmap ExprScope <$> f x <$> cast y
-
-apply' :: Functor f => (forall a. IsEvtExpr a => a -> f a) -> EvtExprScope -> f EvtExprScope
-apply' f (EvtExprScope x) = EvtExprScope <$> f x
-
-apply2' :: Functor f 
-       => (forall a. IsEvtExpr a => a -> a -> f a) 
-       -> EvtExprScope -> EvtExprScope -> Maybe (f EvtExprScope)
-apply2' f (EvtExprScope x) (EvtExprScope y) = fmap EvtExprScope <$> f x <$> cast y
-
-
 instance Scope EvtExprScope where
-    keep_from s x = apply' (keep_from s) x
-    make_inherited e = apply' make_inherited e
-    error_item e = getConst $ apply' (Const . error_item) e
-    clashes x y = fromMaybe True $ getConst <$> apply2' (fmap Const <$> clashes) x y
-    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2' (fmap Identity <$> merge_scopes) x y
+    keep_from s x = applyEvtExprScope (keep_from s) x
+    make_inherited e = applyEvtExprScope make_inherited e
+    error_item e = getConst $ applyEvtExprScope (Const . error_item) e
+    clashes x y = fromMaybe True $ getConst <$> apply2EvtExprScope (fmap Const <$> clashes) x y
+    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "EvtExprScope Scope.merge_scopes: _, _"
 
 instance Scope ExprScope where
-    keep_from s x = apply (keep_from s) x
-    make_inherited e = apply make_inherited e
-    error_item e = getConst $ apply (Const . error_item) e
-    clashes x y = fromMaybe True $ getConst <$> apply2 (fmap Const <$> clashes) x y
-    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2 (fmap Identity <$> merge_scopes) x y
+    keep_from s x = applyExprScope (keep_from s) x
+    make_inherited e = applyExprScope make_inherited e
+    error_item e = getConst $ applyExprScope (Const . error_item) e
+    clashes x y = fromMaybe True $ getConst <$> apply2ExprScope (fmap Const <$> clashes) x y
+    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2ExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "ExprScope Scope.merge_scopes: _, _"

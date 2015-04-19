@@ -401,12 +401,10 @@ type CTable = Map ContextId
     -- we want to encode phases as maps to 
     -- phase records and extract fields
     -- as maps to value
-onMap :: forall a b k. Ord k => Lens' a b -> Lens' (Map k a) (Map k b)
+onMap :: Ord k => Lens' a b -> Lens' (Map k a) (Map k b)
 onMap ln f ma = fmap (M.intersectionWith (flip $ set ln) ma) mb' -- write (_ $ read m) m
     where
-        _ = set ln :: b -> a -> a
-        _ = view ln :: a -> b
-        mb  = M.map (view ln) ma :: Map k b
+        mb  = M.map (view ln) ma -- :: Map k b
         mb' = f mb -- :: forall f. Applicative f => f (Map k b)
 
 onMap' :: forall a b k. Ord k => Getting b a b -> Getter (Map k a) (Map k b)
@@ -511,20 +509,14 @@ newDelVars :: HasMachinePh2' phase
            => Getter (phase events t) (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
-eGuards :: HasEventPh3 events => Getter events (Map Label Expr)
-eGuards = to getter
+eAddedGuards :: HasEventPh3 events => Getter events (Map Label Expr)
+eAddedGuards f p = coerce $ f $ M.difference new old
     where
-        getter p = (M.unionWith $ error "eGuards: name clash") old new
-            where
-                old = L.view eOldGuards p
-                new = L.view eNewGuards p
+        old = p ^. eOldGuards
+        new = p ^. eNewGuards
 
-pGuards :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
-pGuards = pEvents . onMap' eGuards
-        -- coerce $ f $ M.unionWith (M.unionWith $ error "pGuards: name clash") old new
-    -- where
-    --     old = L.view eOldGuards p
-    --     new = L.view eNewGuards p
+pAddedGuards :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
+pAddedGuards = pEvents . onMap' eAddedGuards
 
 pSchedules :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))       
 pSchedules f p = coerce $ f $ M.unionWith (M.unionWith $ error "pSchedules: name clash") csch fsch
@@ -580,6 +572,9 @@ pEventRefRule :: HasMachinePh4 mch event
               => Lens' (mch event t) (Map EventId [(Label,ScheduleChange)])
 pEventRefRule = pEvents . onMap eRefRule
 
+pWitness :: HasMachinePh3 mch event 
+         => Lens' (mch event t) (Map EventId (Map Var Expr))
+pWitness = pEvents . onMap eWitness
 
 -- asMap
 
@@ -615,19 +610,6 @@ instance ( HasMachinePh1' f, HasEventPh1 a
          , HasMachinePh3' f, HasEventPh3 a 
          , HasMachinePh4' f, HasEventPh4 a) 
     => HasMachinePh4 f a where
-
-
-    -- func = 
-
-
-
-
-
-
-
-
-
-
 
 data Hierarchy k = Hierarchy 
         { order :: [k]

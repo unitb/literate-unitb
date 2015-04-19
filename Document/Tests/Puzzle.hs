@@ -51,6 +51,7 @@ test_case = test_cases
         , StringCase "test 21, deleting non-existant action" case21 result21
         , StringCase "test 22, error providing a witness for non-deleted variable" case22 result22
         , StringCase "test 23, error deleting non-existant variable" case23 result23
+        , Case "test 24, inherited vs local invariants" case24 result24
         ]
 
 path0 :: FilePath
@@ -1804,3 +1805,13 @@ result23 :: String
 result23 = unlines
     [ "error (227,1): deleted variable \'xyz\' does not exist"
     ]
+
+case24 :: IO (Either [Error] (Set Label,Set Label))
+case24 = runEitherT $ do
+    m <- EitherT $ parse_machine path0 4
+    return ( keysSet $ _inv $ inh_props m
+           , keysSet $ _inv $ props m)
+
+result24 :: Either [Error] (Set Label,Set Label)
+result24 = Right ( S.fromList ["inv0","inv1","inv2","m3:inv0","m3:inv1","m3:inv2","m3:inv3","m3:inv5","m3:inv6"]
+                 , S.fromList [])

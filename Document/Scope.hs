@@ -7,6 +7,7 @@
 module Document.Scope 
     ( Scope(..)
     , HasDeclSource (..)
+    , HasLineInfo (..)
     , make_table
     , make_all_tables 
     , make_all_tables'
@@ -49,6 +50,9 @@ class Ord a => Scope a where
 
 class HasDeclSource a b where
     declSource :: Lens' a b
+
+class HasLineInfo a b where
+    lineInfo :: Lens' a b
 
 is_inherited :: Scope s => s -> Maybe s
 is_inherited = keep_from Inherited
