@@ -32,20 +32,24 @@ Todo:
         * ~~commit~~
 
         * ~~refactor: split UnitB.AST into Event and Machine~~
-        * refactor: rename MachinePh into MachineP and EventPh into EventP
+        * ~~refactor: rename MachinePh into MachineP and EventPh into EventP~~
+        * ~~typesetting example~~
         * ~~commit~~
 
-        * typesetting example
+        * error messages
         * commit
-        
-        * Turn EventId into (EventId s) in order to make tables of
-            events into total functions
 
         * reformulate schedule refinement with the new deletion mechanism
         * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?
             * tentative answer: no
         * Error message when schedule or guard refers to deleted variables
         * test: the set of remaining guards, coarse, fine schedules after data refinement
+
+        * make sure documentation lists variables as abs \/ conc and no old variables
+
+        * template haskell for test suites
+        * Turn EventId into (EventId s) in order to make tables of
+            events into total functions
     * puzzle
 
     * shared variable decomposition

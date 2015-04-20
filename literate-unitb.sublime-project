@@ -21,7 +21,7 @@
 		{
 			"file_include_patterns":
 			[
-				"*hs",
+				"*hs","*tex",
 				"*.md"
 			],
 			"folder_exclude_patterns":

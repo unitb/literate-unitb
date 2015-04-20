@@ -52,6 +52,7 @@ test_case = test_cases
         , StringCase "test 22, error providing a witness for non-deleted variable" case22 result22
         , StringCase "test 23, error deleting non-existant variable" case23 result23
         , Case "test 24, inherited vs local invariants" case24 result24
+        , StringCase "test 25, error: schedules and guards refer to deleted variables" case25 result25
         ]
 
 path0 :: FilePath
@@ -1299,9 +1300,17 @@ result15 = unlines
     , "\tdeleted variable cs: (116,3)"
     , "\taction act1: (180,1)"
     , ""
+    , "error: event 'count', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (176,1)"
+    , ""
     , "error: event 'flick', action 'act0' assigns to deleted variables"
     , "\tdeleted variable cs: (116,3)"
     , "\taction act0: (163,1)"
+    , ""
+    , "error: event 'flick', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (160,1)"
     , ""
     , "error: initialization predicate 'in2' refers to deleted variables"
     , "\tdeleted variable cs: (116,3)"
@@ -1772,9 +1781,29 @@ case21 = find_errors path21
 
 result21 :: String
 result21 = unlines
-    [ "error: event 'flick', action 'act0' assigns to deleted variables"
+    [ "error: event 'flick', coarse schedule 'sch1' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tcoarse schedule 'sch1': (161,1)"
+    , ""
+    , "error: event 'flick', guard 'grd0' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tguard 'grd0': (162,1)"
+    , ""
+    , "error: event 'term', coarse schedule 'sch2' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tcoarse schedule 'sch2': (104,1)"
+    , ""
+    , "error: event 'count', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (176,1)"
+    , ""
+    , "error: event 'flick', action 'act0' assigns to deleted variables"
     , "\tdeleted variable cs: (116,3)"
     , "\taction act0: (163,1)"
+    , ""
+    , "error: event 'flick', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (160,1)"
     , ""
     , "error: initialization predicate 'in2' refers to deleted variables"
     , "\tdeleted variable cs: (116,3)"
@@ -1815,3 +1844,33 @@ case24 = runEitherT $ do
 result24 :: Either [Error] (Set Label,Set Label)
 result24 = Right ( S.fromList ["inv0","inv1","inv2","m3:inv0","m3:inv1","m3:inv2","m3:inv3","m3:inv5","m3:inv6"]
                  , S.fromList [])
+
+path25 :: FilePath
+path25 = "Tests/puzzle/puzzle-err5.tex"
+
+case25 :: IO String
+case25 = find_errors path25
+
+result25 :: String
+result25 = unlines
+    [ "error: event 'flick', coarse schedule 'sch1' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tcoarse schedule 'sch1': (161,1)"
+    , ""
+    , "error: event 'flick', guard 'grd0' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tguard 'grd0': (162,1)"
+    , ""
+    , "error: event 'term', coarse schedule 'sch2' refers to deleted variables"
+    , "\tdeleted variable 'ts': (101,3)"
+    , "\tcoarse schedule 'sch2': (104,1)"
+    , ""
+    , "error: event 'count', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (176,1)"
+    , ""
+    , "error: event 'flick', coarse schedule 'sch0' refers to deleted variables"
+    , "\tdeleted variable 'cs': (116,3)"
+    , "\tcoarse schedule 'sch0': (160,1)"
+    , ""
+    ]

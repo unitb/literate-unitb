@@ -892,9 +892,6 @@ tr_hint' p2 _m fv lbls = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
                 evs <- get_events p2 $ NE.toList lbls
-                -- evts <- bind_all lbls
-                --     (format "'{1}' is not an event of '{0}'" $ _name m)
-                --     (`M.lookup` events m)
                 let inds = event_indices p2
                 vs <- bind_all evs 
                     (format "'{0}' is not an index of '{1}'" x) 
@@ -1132,14 +1129,35 @@ instance Scope EventExpr where
             msg Nothing sc = (format "{0} (initialization)" sc :: String, view lineInfo sc)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
 
+checkLocalExpr :: ( HasEvtExpr expr Expr
+                  , HasLineInfo expr LineInfo )
+               => String -> [(Maybe EventId, [(Label,expr)])] 
+               -> RWS () [Error] MachineP3 ()
+checkLocalExpr expKind xs = do
+        vs <- use pDelVars
+        let xs' = [ (eid,lbl,sch) | (e,ss) <- xs, (lbl,sch) <- ss, eid <- MM.maybeToList e ]
+        forM_ xs' $ \(eid,lbl,sch) -> do
+            let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
+                errs   = vs `M.intersection` used_var' (sch ^. evtExpr)
+                schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
+                varsLI = L.map (first $ format "deleted variable '{0}'" . name) (M.elems errs)
+            unless (M.null errs) 
+                $ tell [MLError msg $ schLI : varsLI]
+
 instance IsEvtExpr CoarseSchedule where
-    parseEvtExpr = parseEvtExpr' pCoarseSched fst
+    parseEvtExpr xs = do
+        parseEvtExpr' pCoarseSched fst xs
+        checkLocalExpr "coarse schedule" xs
 
 instance IsEvtExpr FineSchedule where
-    parseEvtExpr = parseEvtExpr' pFineSched fst
+    parseEvtExpr xs = do
+        parseEvtExpr' pFineSched fst xs
+        checkLocalExpr "fine schedule" xs
 
 instance IsEvtExpr Guard where
-    parseEvtExpr = parseEvtExprChoice pOldGuards pNewGuards fst
+    parseEvtExpr xs = do
+        parseEvtExprChoice pOldGuards pNewGuards fst xs
+        checkLocalExpr "guard" xs
 
 parseEvtExprChoice :: ( HasEvtExpr obj expr
                       , HasDeclSource obj DeclSource 

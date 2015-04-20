@@ -27,7 +27,6 @@ import Data.Typeable
 import Utilities.HeterogenousEquality
 import Utilities.Syntactic
 import Utilities.TH
-import Utilities.Trace ()
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleEvtExpr :: Expr
