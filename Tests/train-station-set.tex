@@ -70,7 +70,7 @@
 &\progress{m0:prog0}
 	{	t \in in }{ \neg t \in in }
 \refine{m0:prog0}{discharge}{m0:tr0}{}
-&\transientB{m0:leave}{m0:tr0}{ \index{t}{t} }
+&\transientB{m0:leave}{m0:tr0}{ \index{t}{t' = t} }
 	{	t \in in }
 \end{align*}
 
@@ -208,9 +208,9 @@ We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 	\refine{m1:prog4}{discharge}{m1:tr1,m1:saf1}{}
 }
 \begin{align*} 
-& \transientB{m1:movein}{m1:tr1}{ \index{t}{t} }
+& \transientB{m1:movein}{m1:tr1}{ \index{t}{t' = t} }
 	{ t \in in \1\land loc.t = ent }
-\\ & \transientB{m1:moveout}{m1:tr0}{ \index{t}{t} }
+\\ & \transientB{m1:moveout}{m1:tr0}{ \index{t}{t' = t} }
 	{ t \in in \1\land loc.t \in plf }
 \\ & \evguard{m1:movein}{mi:grd7}
 	{ b \in plf }
@@ -389,7 +389,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 We implement \eqref{m2:prog3} with the following:
 %	
 \begin{align*}
-	\transientB{m0:leave}{m2:tr0}{ \index{t}{t} }
+	\transientB{m0:leave}{m2:tr0}{ \index{t}{t' = t} }
 		{ t \in in \1\land loc.t = ext }
 \\	\safety{m2:saf1}
 		{  t \in in \land loc.t = ext }
@@ -427,7 +427,7 @@ We implement \eqref{m2:prog3} with the following:
 	}
 
 \begin{align*}
-	\transientB{m1:moveout}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
+	\transientB{m1:moveout}{m2:tr1}{ \lt{m2:prog1} \index{t}{t' = t} }
 		{ b \in plf \land t \in in \land loc.t = b }
 \\ 	\safety{m2:saf2}{ t \in in \land b \in plf \1\land  loc.t = b }
 		{ b \in plf \1\land \qforall{t}{ t \in in }{ \neg loc.t = b } }
@@ -521,7 +521,7 @@ In order to prove \ref{m1:moveout}, we need a need progress property, to make su
 		\1\land loc.t \in plf }\2\mapsto{ t \in in \land loc.t \in osgn }
 \refine{m3:prog0}{discharge}{m3:tr0,m3:saf1}{}
 	&\transientB{m3:ctr:plf}{m3:tr0}
-		{ \index{p}{loc.t} }
+		{ \index{p}{p' = loc.t} }
 		{  t \in in 
 			\1\land loc.t \in plf \setminus osgn }
 \\ 	& \safety{m3:saf1}{ t \in in 

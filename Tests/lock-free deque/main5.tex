@@ -121,7 +121,7 @@
 \indices{m0:push:left}{ r : \REQ }
 \indices{m0:push:right}{ r : \REQ }
 \begin{align*}
-\refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r} }
+\refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r'=r} }
 \end{align*}
 \begin{align*}
 \\ \evassignment{m0:push:left}{m1:a0}{ pshL' = \{ r \} \domsub pshL }
@@ -141,7 +141,7 @@
 \end{align*}
 
 \begin{align*}
-\refine{m1:prog1}{ensure}{m0:push:right}{ \index{r}{r} }
+\refine{m1:prog1}{ensure}{m0:push:right}{ \index{r}{r'=r} }
 \end{align*}
 
 \begin{align*}
@@ -160,7 +160,7 @@
 \\ \progress{m1:prog3}{ r \in popL }{ \neg r \in popL \land emp = (p = q) \land (emp \lor res = qe.p)  }
 \end{align*}
 \begin{align*}
-\refine{m1:prog2}{ensure}{m0:pop:right}{ \index{r}{r} }
+\refine{m1:prog2}{ensure}{m0:pop:right}{ \index{r}{r'=r} }
 \end{align*}
 % \refine{m1:prog3}{ensure}{m0:pop:left}{}
 \indices{m0:pop:right}{ r : \REQ }

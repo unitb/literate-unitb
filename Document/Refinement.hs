@@ -49,7 +49,7 @@ add_proof_edge x xs = do
 
 data RuleParserParameter = 
     RuleParserDecl 
-        MachinePh2
+        MachineP2
         MachineId
         (Map Label ProgressProp)
         (Map Label SafetyProp)

@@ -103,7 +103,7 @@ refinement_parser = fromList
 
     -- Remove alternatives
 data HintBuilder = 
-        HintBuilderDecl [LatexDoc] MachineId MachinePh2
+        HintBuilderDecl [LatexDoc] MachineId MachineP2
 
 ensure :: ProgressProp 
        -> HintBuilder
@@ -188,9 +188,9 @@ get_components xs li =
 
 
 run_phase1_types :: Pipeline MM 
-                        (MTable MachinePh0)
+                        (MTable MachineP0)
                         ( Hierarchy MachineId
-                        , MTable MachinePh1)
+                        , MTable MachineP1)
 run_phase1_types = proc p0 -> do
     ts <- set_decl      -< p0
     e  <- event_decl    -< p0
@@ -223,16 +223,16 @@ run_phase1_types = proc p0 -> do
                          <.> s <.> evts'
     returnA -< (r_ord,p1)
 
-make_phase1 :: MachinePh0
+make_phase1 :: MachineP0
             -> Map String Theory
             -> Map String Sort
             -> Map String Sort
             -> [(String, PostponedDef)]
             -> Map Label (EventId, DeclSource)
-            -> MachinePh1
-make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachinePh1 { .. }
+            -> MachineP1
+make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
     where
-        _pEvents    = M.map (uncurry EventPh1 . second (== Local)) evts ^. pFromEventId
+        _pEvents    = M.map (uncurry EventP1 . second (== Local)) evts ^. pFromEventId
         _pContext   = TheoryP1 { .. }
         _t0         = TheoryP0 ()
         -- _pImports
@@ -250,8 +250,8 @@ run_phase_aux (cmd:cs) = proc x -> do
         returnA -< y:ys
 
 run_phase2_vars :: Pipeline MM 
-                        (Hierarchy MachineId,MTable MachinePh1)
-                        (MTable MachinePh2)
+                        (Hierarchy MachineId,MTable MachineP1)
+                        (MTable MachineP2)
 run_phase2_vars = proc (r_ord, p1) -> do
         vs <- run_phase
             [ variable_decl
@@ -272,9 +272,9 @@ run_phase2_vars = proc (r_ord, p1) -> do
     where
         wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
 
-make_phase2 :: MachinePh1
+make_phase2 :: MachineP1
             -> Map String VarScope
-            -> Either [Error] MachinePh2 
+            -> Either [Error] MachineP2 
 make_phase2 p1 vars
         | L.null err = Right $ p2' & (pNotation .~ _pNotation)
                                    & (pMchSynt .~ _pMchSynt)
@@ -288,8 +288,8 @@ make_phase2 p1 vars
         (p2',err) = execRWS (mapM_ f vars') () p2
             where
                 p2 =   pContext `over` makeTheoryP2
-                     $ pEvents `over` M.map makeEventPh2
-                     $ makeMachinePh2' p1
+                     $ pEvents `over` M.map makeEventP2
+                     $ makeMachineP2' p1
 
         f (VarGroup vs) = processDecl vs
 
@@ -322,7 +322,7 @@ make_phase2 p1 vars
         _pEvtSynt :: Map EventId ParserSetting
         _pEvtSynt = event_namespace ind_param
 
-default_schedule_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+default_schedule_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 default_schedule_decl = arr $ \p2 -> 
         Right $ M.map (map default_sch . elems . M.map Just . M.map (^. pEventId)) 
               $ M.map (M.filter (^. pIsNew) . (^. pEvents)) p2
@@ -332,7 +332,7 @@ default_schedule_decl = arr $ \p2 ->
                           ExprScope $ EventExpr 
                             $ singleton e (EvtExprScope $ CoarseSchedule zfalse Inherited li))
 
-run_phase3_exprs :: Pipeline MM (Hierarchy MachineId,MTable MachinePh2) (MTable MachinePh3)
+run_phase3_exprs :: Pipeline MM (Hierarchy MachineId,MTable MachineP2) (MTable MachineP3)
 run_phase3_exprs = proc (r_ord,p2) -> do
         es <- run_phase 
             [ assignment
@@ -372,19 +372,19 @@ old = M.mapMaybe is_inherited
 new :: Scope s => Map a s -> Map a s
 new = M.mapMaybe is_local
 
-make_phase3 :: MachinePh2 -> Map Label ExprScope -> Either [Error] MachinePh3
+make_phase3 :: MachineP2 -> Map Label ExprScope -> Either [Error] MachineP3
 make_phase3 p2 exprs 
         | L.null errs = Right p3''
         | otherwise   = Left errs
     where
         p3 =  over pContext makeTheoryP3
-            $ over pEvents (M.map makeEventPh3) 
-              (makeMachinePh3' p2)
+            $ over pEvents (M.map makeEventP3) 
+              (makeMachineP3' p2)
         (p3',errs) = parseExprScope exprs p3
         skip = M.fromList [ (v,Word (prime v) `zeq` Word v) | v <- M.elems $ view newDelVars p3']
         p3'' = over pEvents (M.map $ over eWitness (`M.union` skip)) p3'
 
-run_phase4_proofs :: Pipeline MM (Hierarchy MachineId,MTable MachinePh3) (MTable MachinePh4)
+run_phase4_proofs :: Pipeline MM (Hierarchy MachineId,MTable MachineP3) (MTable MachineP4)
 run_phase4_proofs = proc (r_ord,p3) -> do
         refs   <- run_phase 
             [ ref_replace_csched
@@ -510,17 +510,17 @@ instance Monoid LiveStruct where
         }
     mappend = $myError
 
-make_phase4 :: MachinePh3 
+make_phase4 :: MachineP3 
             -> Map EventId [((Label, ScheduleChange), LineInfo)]
             -> Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
             -> Map DocItem (String,LineInfo)
             -> Map Label (Tactic Proof, LineInfo) 
             -> LiveStruct
             -> Map EventId [((Label,DeclSource),Change)]
-            -> MachinePh4
-make_phase4 p3 evt_refs prog_ref comments proofs _ old_sch = MachinePh4 { .. }
+            -> MachineP4
+make_phase4 p3 evt_refs prog_ref comments proofs _ old_sch = MachineP4 { .. }
     where
-        _e3 = EventPh4 <$> (p3 ^. pEvents) 
+        _e3 = EventP4 <$> (p3 ^. pEvents) 
                        <.> _pEventRefRule `M.union` evtEmpty
                        <.> old_sch' `M.union` evtEmpty
         old_sch' = M.map (  L.map (first fst) 
@@ -533,7 +533,7 @@ make_phase4 p3 evt_refs prog_ref comments proofs _ old_sch = MachinePh4 { .. }
         _pLiveRule = M.map (fst . fst) prog_ref
         _pComments = M.map fst comments
 
-make_machine :: MachineId -> MachinePh4
+make_machine :: MachineId -> MachineP4
              -> Either [Error] Machine
 make_machine (MId m) p4 = mch'
     where
@@ -613,7 +613,7 @@ make_machine (MId m) p4 = mch'
         events = p4 ^. pEvents
         evts = M.mapWithKey g events 
                 :: Map EventId Event
-        g :: EventId -> EventPh4
+        g :: EventId -> EventP4
           -> Event
         g (EventId name) evt
             = Event
@@ -722,7 +722,7 @@ instance IsVarScope TheoryDef where
         let xs' = M.fromList $ L.map (second thDef) xs
         pDefinitions %= M.union xs'
 
-set_decl :: MPipeline MachinePh0 
+set_decl :: MPipeline MachineP0 
             ( [(String,Sort,LineInfo)]
             , [(String,PostponedDef)] )
 set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
@@ -734,13 +734,13 @@ set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             li <- lift ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
-event_decl :: MPipeline MachinePh0 [(Label, EventId, LineInfo)]
+event_decl :: MPipeline MachineP0 [(Label, EventId, LineInfo)]
 event_decl = machineCmd "\\newevent" $ \(One evt) _m _ -> do 
             li <- lift ask 
             return [(evt,EventId evt,li)]
 
-refines_mch :: MPipeline MachinePh0 [((), MachineId, LineInfo)]
-refines_mch = machineCmd "\\refines" $ \(One amch) cmch (MachinePh0 ms _) -> do
+refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
+refines_mch = machineCmd "\\refines" $ \(One amch) cmch (MachineP0 ms _) -> do
             li <- lift ask
             unless (amch `M.member` ms) 
                 $ left [Error (format "Machine {0} refines a non-existant machine: {1}" cmch amch) li]
@@ -748,7 +748,7 @@ refines_mch = machineCmd "\\refines" $ \(One amch) cmch (MachinePh0 ms _) -> do
             return [((),amch,li)]
 
 
-import_theory :: MPipeline MachinePh0 [(String, Theory, LineInfo)]
+import_theory :: MPipeline MachineP0 [(String, Theory, LineInfo)]
 import_theory = machineCmd "\\with" $ \(One (String th_name)) _m _ -> do
         let th = [ ("sets"       , set_theory)
                  , ("functions"  , function_theory)
@@ -763,7 +763,7 @@ import_theory = machineCmd "\\with" $ \(One (String th_name)) _m _ -> do
             Just th -> return [(th_name,th,li)]
 
 
-variable_decl :: MPipeline MachinePh1
+variable_decl :: MPipeline MachineP1
                     [(String,VarScope)]
 variable_decl = machine_var_decl Machine "\\variable"
 
@@ -772,7 +772,7 @@ instance IsVarScope TheoryConst where
         let xs' = M.fromList $ L.map (second thCons) xs
         pConstants %= M.union xs'
 
-constant_decl :: MPipeline MachinePh1
+constant_decl :: MPipeline MachineP1
                     [(String,VarScope)]
 constant_decl = machine_var_decl TheoryConst "\\constant"
 
@@ -798,12 +798,12 @@ instance IsVarScope MachineVar where
         pStateVars %= M.union st
 
 
-remove_var :: MPipeline MachinePh1 [(String,VarScope)]
+remove_var :: MPipeline MachineP1 [(String,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(One xs) _m _p1 -> do
         li <- lift ask
         return $ map ((\x -> (x,VarScope $ DelMch Nothing Local li)) . toString) xs
 
-dummy_decl :: MPipeline MachinePh1
+dummy_decl :: MPipeline MachineP1
                     [(String,VarScope)]
 dummy_decl = machine_var_decl 
         (\v source li -> Evt $ singleton Nothing (v,Param,source,li)) 
@@ -812,17 +812,17 @@ dummy_decl = machine_var_decl 
 machine_var_decl :: IsVarScope var
                  => (Var -> DeclSource -> LineInfo -> var)
                  -> String
-                 -> MPipeline MachinePh1
+                 -> MPipeline MachineP1
                         [(String,VarScope)]
 machine_var_decl scope kw = machineCmd kw $ \(One xs) _m p1 -> do
             vs <- get_variables' (p1 ^. pAllTypes) xs
             li <- lift ask
             return $ map (\(x,y) -> (x,VarScope $ scope y Local li)) vs
 
-index_decl :: MPipeline MachinePh1 [(String,VarScope)]
+index_decl :: MPipeline MachineP1 [(String,VarScope)]
 index_decl = event_var_decl Index "\\indices"
 
-param_decl :: MPipeline MachinePh1 [(String,VarScope)]
+param_decl :: MPipeline MachineP1 [(String,VarScope)]
 param_decl = event_var_decl Param "\\param"
 
 type EventSym = (EventId,[(String,Var)])
@@ -847,7 +847,7 @@ instance IsVarScope EvtDecl where
 
 event_var_decl :: EvtScope
                -> String
-               -> MPipeline MachinePh1
+               -> MPipeline MachineP1
                     [(String,VarScope)]
 event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
             let ts   = L.view pTypes p1
@@ -862,7 +862,7 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
                         
-tr_hint :: MachinePh2
+tr_hint :: MachineP2
         -> MachineId
         -> Map String Var
         -> NonEmpty Label
@@ -881,7 +881,7 @@ tr_hint p2 m vs lbls thint = do
         $ zipWith err evs vs
     return tr
 
-tr_hint' :: MachinePh2
+tr_hint' :: MachineP2
          -> MachineId
          -> Map String Var
          -> NonEmpty Label
@@ -890,23 +890,6 @@ tr_hint' :: MachinePh2
          -> RWS LineInfo [Error] System TrHint
 tr_hint' p2 _m fv lbls = visit_doc []
         [ ( "\\index"
-          , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
-                evs <- get_events p2 $ NE.toList lbls
-                -- evts <- bind_all lbls
-                --     (format "'{1}' is not an event of '{0}'" $ _name m)
-                --     (`M.lookup` events m)
-                let inds = event_indices p2
-                vs <- bind_all evs 
-                    (format "'{0}' is not an index of '{1}'" x) 
-                    (\e -> x `M.lookup` (inds ! e))
-                let Var _ t = head vs
-                    ind = prime $ Var x t
-                expr <- parse_expr' 
-                    (machine_parser p2 `with_vars` fv) 
-                        { expected_type = Just t }
-                    texExpr
-                return $ TrHint (insert x (t, Word ind `zeq` expr) ys) z)
-        , ( "\\witness"
           , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
                 evs <- get_events p2 $ NE.toList lbls
                 -- evts <- bind_all lbls
@@ -940,13 +923,13 @@ check_types c = EitherT $ do
     li <- ask
     return $ either (\xs -> Left $ map (`Error` li) xs) Right c
 
-get_progress_prop :: MachinePh3 -> MachineId -> ProgId -> M ProgressProp
+get_progress_prop :: MachineP3 -> MachineId -> ProgId -> M ProgressProp
 get_progress_prop p3 _m lbl =  
             bind
                 (format "progress property '{0}' is undeclared" lbl)
                 $ lbl `M.lookup` (L.view pProgress p3)
 
-get_safety_prop :: MachinePh3 -> MachineId -> Label -> M SafetyProp
+get_safety_prop :: MachineP3 -> MachineId -> Label -> M SafetyProp
 get_safety_prop p3 _m lbl =  
             bind
                 (format "safety property '{0}' is undeclared" lbl)
@@ -955,59 +938,59 @@ get_safety_prop p3 _m lbl =
 get_notation :: HasTheoryP2 phase => phase -> Notation
 get_notation p2 = L.view pNotation p2
 
-machine_events :: HasMachinePh1 phase events => phase events thy -> Map Label EventId
+machine_events :: HasMachineP1 phase events => phase events thy -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
 
-get_event :: HasMachinePh1 phase events => phase events thy -> Label -> M EventId
+get_event :: HasMachineP1 phase events => phase events thy -> Label -> M EventId
 get_event p2 ev_lbl = do
         let evts = machine_events p2
         bind
             (format "event '{0}' is undeclared" ev_lbl)
             $ ev_lbl `M.lookup` evts
 
-get_events :: MachinePh2 -> [Label] -> M [EventId]
+get_events :: MachineP2 -> [Label] -> M [EventId]
 get_events p2 ev_lbl = do
             let evts = machine_events p2
             bind_all ev_lbl
                 (format "event '{0}' is undeclared")
                 $ (`M.lookup` evts)
 
-get_schedules :: MachinePh3 -> EventId -> M (Map Label Expr)
+get_schedules :: MachineP3 -> EventId -> M (Map Label Expr)
 get_schedules p3 evt = 
         return $ L.view pSchedules p3 ! evt
 
-get_guards :: MachinePh3 -> EventId -> M (Map Label Expr)
+get_guards :: MachineP3 -> EventId -> M (Map Label Expr)
 get_guards p3 evt = 
         return $ (p3 ^. pNewGuards) ! evt
 
-get_invariants :: MachinePh3 -> Map Label Expr
+get_invariants :: MachineP3 -> Map Label Expr
 get_invariants p3 = (p3 ^. pInvariant)
 
-progress_props :: MachinePh3 -> Map ProgId ProgressProp
+progress_props :: MachineP3 -> Map ProgId ProgressProp
 progress_props p3 = p3 ^. pProgress
 
-event_parser :: HasMachinePh2 phase events => phase events thy -> EventId -> ParserSetting
+event_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
 
-schedule_parser :: HasMachinePh2 phase events => phase events thy -> EventId -> ParserSetting
+schedule_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
 schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 
-machine_parser :: HasMachinePh2 phase events => phase events thy -> ParserSetting
+machine_parser :: HasMachineP2 phase events => phase events thy -> ParserSetting
 machine_parser p2 = L.view pMchSynt p2
 
 context_parser :: HasTheoryP2 phase => phase -> ParserSetting
 context_parser p2 = p2 ^. pCtxSynt
 
-state_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
+state_variables :: HasMachineP2' phase => phase events thy -> Map String Var
 state_variables p2 = p2 ^. pStateVars
 
-abstract_variables :: HasMachinePh2' phase => phase events thy -> Map String Var
+abstract_variables :: HasMachineP2' phase => phase events thy -> Map String Var
 abstract_variables p2 = p2 ^. pAbstractVars
 
 dummy_vars :: HasTheoryP2 phase => phase -> Map String Var
 dummy_vars p2 = p2 ^. pDummyVars
 
-event_indices :: HasMachinePh2 phase events => phase events thy -> Map EventId (Map String Var)
+event_indices :: HasMachineP2 phase events => phase events thy -> Map EventId (Map String Var)
 event_indices p2 = p2 ^. pIndices
 
 free_vars' :: Map String Var -> Expr -> Map String Var
@@ -1015,7 +998,7 @@ free_vars' ds e = vs `M.intersection` ds
     where
         vs = symbol_table $ S.elems $ used_var e
 
-assignment :: MPipeline MachinePh2
+assignment :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             ev <- get_event p2 ev_lbl
@@ -1027,7 +1010,7 @@ assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
 
-bcmeq_assgn :: MPipeline MachinePh2
+bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
 bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
             let _ = lbl :: Label
@@ -1044,7 +1027,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
 
-bcmsuch_assgn :: MPipeline MachinePh2
+bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
 bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
             ev <- get_event p2 evt
@@ -1057,7 +1040,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
 
-bcmin_assgn :: MPipeline MachinePh2
+bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
 bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             ev <- get_event p2 evt
@@ -1113,18 +1096,18 @@ instance IsExprScope Initially where
         pDelInits %= M.union (M.fromList zs)
         pInitWitness %= flip M.union (M.fromList ws)
 
-remove_init :: MPipeline MachinePh2 [(Label,ExprScope)]
+remove_init :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_init = machineCmd "\\removeinit" $ \(One lbls) _m _p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ DelInit Nothing Local li) | lbl <- lbls ]
 
-remove_assgn :: MPipeline MachinePh2 [(Label,ExprScope)]
+remove_assgn :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ DelAction Nothing Local li)) | lbl <- lbls ]
 
-witness_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
             ev <- get_event p2 evt
             p  <- parse_expr' (event_parser p2 ev) { is_step = True } xp
@@ -1161,23 +1144,23 @@ instance IsEvtExpr Guard where
 parseEvtExprChoice :: ( HasEvtExpr obj expr
                       , HasDeclSource obj DeclSource 
                       , Ord label)
-              => Lens' MachinePh3 (Map EventId (Map label expr))
-              -> Lens' MachinePh3 (Map EventId (Map label expr))
+              => Lens' MachineP3 (Map EventId (Map label expr))
+              -> Lens' MachineP3 (Map EventId (Map label expr))
               -> ((Label,obj) -> label)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseEvtExprChoice oldLn newLn f = parseEvtExprChoice' oldLn newLn newLn f (const False) 
 
 parseEvtExprChoice' :: ( HasEvtExpr obj expr
                       , HasDeclSource obj DeclSource 
                       , Ord label)
-              => Lens' MachinePh3 (Map EventId (Map label expr))
-              -> Lens' MachinePh3 (Map EventId (Map label expr))
-              -> Lens' MachinePh3 (Map EventId (Map label expr))
+              => Lens' MachineP3 (Map EventId (Map label expr))
+              -> Lens' MachineP3 (Map EventId (Map label expr))
+              -> Lens' MachineP3 (Map EventId (Map label expr))
               -> ((Label,obj) -> label)
               -> (obj -> Bool)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseEvtExprChoice' oldLn delLn newLn = parseEvtExprChoiceImp 
         (Just (LensT oldLn)) 
         (Just (LensT delLn))
@@ -1186,13 +1169,13 @@ parseEvtExprChoice' oldLn delLn newLn = parseEvtExprChoiceImp
 parseEvtExprChoiceImp :: ( HasEvtExpr obj expr
                       , HasDeclSource obj DeclSource 
                       , Ord label)
-              => Maybe (LensT MachinePh3 (Map EventId (Map label expr)))
-              -> Maybe (LensT MachinePh3 (Map EventId (Map label expr)))
-              -> Maybe (LensT MachinePh3 (Map EventId (Map label expr)))
+              => Maybe (LensT MachineP3 (Map EventId (Map label expr)))
+              -> Maybe (LensT MachineP3 (Map EventId (Map label expr)))
+              -> Maybe (LensT MachineP3 (Map EventId (Map label expr)))
               -> ((Label,obj) -> label)
               -> (obj -> Bool)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseEvtExprChoiceImp oldLn delLn newLn f is_del' xs = do
     let is_old x 
             | is_del' x = view declSource x == Local
@@ -1217,20 +1200,20 @@ doubleUnion :: (Ord k0,Ord k1)
 doubleUnion xs = M.unionWith M.union (M.map M.fromList $ M.fromListWith (++) xs)
 
 parseEvtExpr' :: (HasEvtExpr obj expr, Ord label)
-              => Lens' MachinePh3 (Map EventId (Map label expr))
+              => Lens' MachineP3 (Map EventId (Map label expr))
               -> ((Label,obj) -> label)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseEvtExpr' ln f xs = do
     let toEntry = f &&& (view evtExpr . snd)
         xs' = MM.mapMaybe (runKleisli $ Kleisli id *** arr (map toEntry)) xs
     ln %= doubleUnion xs'
 
 parseEvtExprDefault :: (HasEvtExpr obj expr, Ord label)
-              => Lens' MachinePh3 (Map EventId (Map label expr))
+              => Lens' MachineP3 (Map EventId (Map label expr))
               -> ((Label,obj) -> label)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseEvtExprDefault ln f xs = do
     let toEntry = f &&& (view evtExpr . snd)
         xs'  = MM.mapMaybe (runKleisli $ Kleisli id *** arr (map toEntry)) xs
@@ -1238,10 +1221,10 @@ parseEvtExprDefault ln f xs = do
     ln %= flip (M.unionWith M.union) xs''
 
 parseInitExpr :: (HasEvtExpr obj expr, Ord label)
-              => Lens' MachinePh3 (Map label expr)
+              => Lens' MachineP3 (Map label expr)
               -> ((Label,obj) -> label)
               -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachinePh3 ()
+              -> RWS () [Error] MachineP3 ()
 parseInitExpr ln f xs = do
 
     let toEntry = f &&& (view evtExpr . snd)
@@ -1298,7 +1281,7 @@ instance IsExprScope EventExpr where
             zs = groupEvtExprGroup (++) ys
             g (lbl,EventExpr m) = M.elems $ M.mapWithKey (\eid -> readEvtExprScope $ \e -> EvtExprGroup [(eid,[(lbl,e)])]) m
 
-init_witness_decl :: MPipeline MachinePh2 [(Label,ExprScope)]
+init_witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
             -- ev <- get_event p2 evt
             p  <- parse_expr' (machine_parser p2) xp
@@ -1307,7 +1290,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
             li <- lift ask
             return [(label var, ExprScope $ EventExpr $ M.singleton Nothing (EvtExprScope $ Witness v p Local li))]
 
-guard_decl :: MPipeline MachinePh2
+guard_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
@@ -1315,7 +1298,7 @@ guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Guard xp Local li))]
  
-coarse_sch_decl :: MPipeline MachinePh2
+coarse_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
@@ -1323,7 +1306,7 @@ coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ CoarseSchedule xp Local li))]
 
-fine_sch_decl :: MPipeline MachinePh2
+fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
@@ -1344,15 +1327,15 @@ instance Scope Axiom where
     error_item (Axiom _ _ li) = ("assumtion", li)
 
 parseExpr' :: (HasMchExpr b a, Ord label)
-           => Lens' MachinePh3 (Map label a) 
+           => Lens' MachineP3 (Map label a) 
            -> [(label,b)] 
-           -> RWS () [Error] MachinePh3 ()
+           -> RWS () [Error] MachineP3 ()
 parseExpr' ln xs = modify $ ln %~ M.union (M.fromList $ map (second $ view mchExpr) xs)
 
 instance IsExprScope Axiom where
     parseExpr = parseExpr' pAssumptions
 
-assumption :: MPipeline MachinePh2
+assumption :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
             xp <- parse_expr' (context_parser p2) xs
@@ -1363,7 +1346,7 @@ assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
         --  Program properties  --
         --------------------------
 
-initialization :: MPipeline MachinePh2
+initialization :: MPipeline MachineP2
                     [(Label,ExprScope)]
 initialization = machineCmd "\\initialization" $ \(lbl,xs) _m p2 -> do
             xp <- parse_expr' (machine_parser p2) xs
@@ -1380,7 +1363,7 @@ modifyProps :: ( HasMchExpr b a, HasDeclSource b DeclSource
                , Show a)
             => Lens' PropertySet (Map Label a)
             -> [(Label,b)]
-            -> RWS () [Error] MachinePh3 ()
+            -> RWS () [Error] MachineP3 ()
 modifyProps ln xs = do
     let 
         xs' = L.partition ((== Local) . view declSource . snd) xs
@@ -1393,7 +1376,7 @@ instance IsExprScope Invariant where
         parseExpr' pInvariant xs
         modifyProps inv xs
 
-invariant :: MPipeline MachinePh2
+invariant :: MPipeline MachineP2
                     [(Label,ExprScope)]
 invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
             xp <- parse_expr' (machine_parser p2) xs
@@ -1414,7 +1397,7 @@ instance IsExprScope TransientProp where
         parseExpr' pTransient xs
         modifyProps transient xs
 
-transient_prop :: MPipeline MachinePh2
+transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             _evs <- get_events p2 evts
@@ -1431,7 +1414,7 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ TransientProp prop Local li)]
 
-transientB_prop :: MPipeline MachinePh2
+transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
             _evs <- get_events p2 evts
@@ -1458,7 +1441,7 @@ instance Scope ConstraintProp where
             s' = case x of (ConstraintProp _ s _) -> s
     error_item (ConstraintProp _ _ li) = ("co property", li)
 
-constraint_prop :: MPipeline MachinePh2
+constraint_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 constraint_prop = machineCmd "\\constraint" $ \(lbl,xs) _m p2 -> do
             pre <- parse_expr' (machine_parser p2)
@@ -1488,7 +1471,7 @@ safety_prop :: Label -> Maybe Label
             -> [LatexDoc]
             -> [LatexDoc]
             -> MachineId
-            -> MachinePh2
+            -> MachineP2
             -> M [(Label,ExprScope)]
 safety_prop lbl evt pCt qCt _m p2 = do
             (p,q)  <- toEither (do
@@ -1515,12 +1498,12 @@ safety_prop lbl evt pCt qCt _m p2 = do
             li <- lift ask
             return [(lbl,ExprScope $ SafetyProp new_prop Local li)]
 
-safetyA_prop :: MPipeline MachinePh2
+safetyA_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 safetyA_prop = machineCmd "\\safety" 
                 $ \(lbl, pCt, qCt) -> safety_prop lbl Nothing pCt qCt
 
-safetyB_prop :: MPipeline MachinePh2
+safetyB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 safetyB_prop = machineCmd "\\safetyB" 
                 $ \(lbl, evt, pCt, qCt) -> safety_prop lbl evt pCt qCt
@@ -1538,7 +1521,7 @@ instance Scope ProgressDecl where
             s' = case x of (ProgressProp _ s _) -> s
     error_item (ProgressProp _ _ li) = ("progress property", li)
 
-progress_prop :: MPipeline MachinePh2
+progress_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
             (p,q)    <- toEither (do
@@ -1559,12 +1542,12 @@ progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ ProgressProp new_prop Local li)]
 
-refine_prog_prop :: MPipeline MachinePh3
+refine_prog_prop :: MPipeline MachineP3
                 [(ProgId,(Rule,[(ProgId,ProgId)]),LineInfo)]
 refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3 -> do
         let p2   =  (pContext `over` view t2)
                     $ (pEvents `over` M.map (view e2)) 
-                      (p3 ^. machinePh2')
+                      (p3 ^. machineP2')
             prog = p3 ^. pProgress
             saf  = p3 ^. pSafety
             tr   = p3 ^. pTransient
@@ -1588,7 +1571,7 @@ emit_event_ref' lbl ev (MId m) sch = do
     li <- lift ask
     return [(ev,[((po_lbl,sch),li)])]
 
-ref_replace_csched :: MPipeline MachinePh3 EventRef
+ref_replace_csched :: MPipeline MachineP3 EventRef
 ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m p3 -> do
         -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
         (sprop,pprop,evt) <- toEither $ do
@@ -1605,7 +1588,7 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m
                         , keep = keep }
         emit_event_ref evt m rule
 
-ref_weaken_csched :: MPipeline MachinePh3 EventRef
+ref_weaken_csched :: MPipeline MachineP3 EventRef
 ref_weaken_csched = machineCmd "\\weakento" $ \(evt_lbl,del,add) m p3 -> do
         let _ = evt_lbl :: Label
             _ = del :: S.Set Label
@@ -1617,7 +1600,7 @@ ref_weaken_csched = machineCmd "\\weakento" $ \(evt_lbl,del,add) m p3 -> do
         emit_event_ref evt m rule
 
 
-ref_replace_fsched :: MPipeline MachinePh3 EventRef
+ref_replace_fsched :: MPipeline MachineP3 EventRef
 ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,old,new,prog) m p3 -> do
         evt <- get_event p3 evt_lbl
         sc  <- get_schedules p3 evt
@@ -1635,7 +1618,7 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,old,new,prog) m p3 -
         let rule      = (replace_fine evt_lbl old_exp new new_exp $ fmap (first as_label) pprop)
         emit_event_ref evt m rule
 
-ref_remove_guard :: MPipeline MachinePh3 EventRef
+ref_remove_guard :: MPipeline MachineP3 EventRef
 ref_remove_guard = machineCmd "\\removeguard" $ \(evt_lbl,lbls) m p3 -> do
         evt  <- get_event p3 evt_lbl
         grds <- get_guards p3 evt
@@ -1646,7 +1629,7 @@ ref_remove_guard = machineCmd "\\removeguard" $ \(evt_lbl,lbls) m p3 -> do
             $ forM rules 
             $ emit_event_ref' "GRD" evt m
 
-all_comments :: MPipeline MachinePh3 [(DocItem, String, LineInfo)]
+all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
                 li <- lift ask
                 let cmt = concatMap flatten cmt'
@@ -1680,7 +1663,7 @@ all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
                     left [Error (format msg item) li]
                 return [(key,cmt,li)]
 
-all_proofs :: MPipeline MachinePh3 [(Label,Tactic Proof,LineInfo)]
+all_proofs :: MPipeline MachineP3 [(Label,Tactic Proof,LineInfo)]
 all_proofs = machineEnv "proof" $ \(One po) xs m p3 -> do
         li <- lift ask
         let notation = get_notation p3

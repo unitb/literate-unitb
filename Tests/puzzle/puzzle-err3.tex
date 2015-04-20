@@ -72,7 +72,7 @@
 		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
 		{\neg \Pcs \setminus vs = V} \\
 	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
-\refine{prog3}{ensure}{visit}{ [\witness{p}{\neg p' \in vs}] }
+\refine{prog3}{ensure}{visit}{ [\index{p}{\neg p' \in vs}] }
 \end{align*}
 
 \begin{align*}
@@ -140,15 +140,15 @@
 		{ ts = V \land \neg cs = \emptyset 
 				 \land cs \subseteq \Pcs \setminus ts }
 		{ cs = \emptyset \land \neg ts = V }
-	\refine{prog6}{ensure}{flick}{ \witness{p}{p' \in vs \setminus ts} }
-	\refine{prog7}{ensure}{count}{} % \witness{p}{ p' \in cs } }
-	\refine{prog11}{ensure}{visit}{ \witness{p}{ \neg p' \in vs} }
+	\refine{prog6}{ensure}{flick}{ \index{p}{p' \in vs \setminus ts} }
+	\refine{prog7}{ensure}{count}{} % \index{p}{ p' \in cs } }
+	\refine{prog11}{ensure}{visit}{ \index{p}{ \neg p' \in vs} }
 \end{align*}
 
 \begin{align*}
 	% \refine{prog10}{trading}{prog11}{}
 % & \progress{prog11}{ \neg cs = \emptyset }{ cs = \emptyset }
-	\refine{prog10}{ensure}{count}{} % \witness{p}{ p' \in cs } }
+	\refine{prog10}{ensure}{count}{} % \index{p}{ p' \in cs } }
 \end{align*}
 
 \newevent{flick}{flick}

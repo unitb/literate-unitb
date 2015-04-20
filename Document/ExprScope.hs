@@ -83,8 +83,8 @@ instance Ord EvtExprScope where
 instance Show EvtExprScope where
     show (EvtExprScope x) = show x
 
-addToEventTable :: (MonadState MachinePh3 m, Ord l)
-                => Lens' EventPh3 (Map l a)
+addToEventTable :: (MonadState MachineP3 m, Ord l)
+                => Lens' EventP3 (Map l a)
                 -> l -> EventId -> a -> m ()
 addToEventTable ln lbl eid x = modify $ over (pEvents . at eid . inside . ln) (insert lbl x)
     where
@@ -101,7 +101,7 @@ class ( Eq a, Ord a, Typeable a
       , HasLineInfo a LineInfo
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     parseEvtExpr :: [(Maybe EventId,[(Label,a)])] 
-                 -> RWS () [Error] MachinePh3 ()
+                 -> RWS () [Error] MachineP3 ()
 
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f (EvtExprScope x) = EvtExprScope <$> declSource f x
@@ -173,7 +173,7 @@ makeFields ''Invariant
 
 class ( Scope a, Typeable a ) 
         => IsExprScope a where
-    parseExpr :: [(Label, a)] -> RWS () [Error] MachinePh3 ()
+    parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
 
 data ExprScope = forall t. IsExprScope t => ExprScope t
     deriving Typeable
@@ -192,8 +192,8 @@ existential ''ExprScope
 existential ''EvtExprScope
 
 parseExprScope :: Map Label ExprScope
-               -> MachinePh3
-               -> (MachinePh3,[Error])
+               -> MachineP3
+               -> (MachineP3,[Error])
 parseExprScope xs = execRWS (mapM_ g $ groupExprGroup (++) $ L.map f $ M.toList xs) ()
     where
         f (lbl,ExprScope x) = ExprGroup [(lbl,x)]

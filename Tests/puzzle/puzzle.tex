@@ -72,7 +72,7 @@
 		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
 		{\neg \Pcs \setminus vs = V} \\
 	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
-\refine{prog3}{ensure}{visit}{ [\witness{p}{\neg p' \in vs}] }
+\refine{prog3}{ensure}{visit}{ [\index{p}{\neg p' \in vs}] }
 \end{align*}
 
 \begin{align*}
@@ -140,15 +140,15 @@
 		{ ts = V \land \neg cs = \emptyset 
 				 \land cs \subseteq \Pcs \setminus ts }
 		{ cs = \emptyset \land \neg ts = V }
-	\refine{prog6}{ensure}{flick}{ \witness{p}{p' \in vs \setminus ts} }
-	\refine{prog7}{ensure}{count}{} % \witness{p}{ p' \in cs } }
-	\refine{prog11}{ensure}{visit}{ \witness{p}{ \neg p' \in vs} }
+	\refine{prog6}{ensure}{flick}{ \index{p}{p' \in vs \setminus ts} }
+	\refine{prog7}{ensure}{count}{} % \index{p}{ p' \in cs } }
+	\refine{prog11}{ensure}{visit}{ \index{p}{ \neg p' \in vs} }
 \end{align*}
 
 \begin{align*}
 	% \refine{prog10}{trading}{prog11}{}
 % & \progress{prog11}{ \neg cs = \emptyset }{ cs = \emptyset }
-	\refine{prog10}{ensure}{count}{} % \witness{p}{ p' \in cs } }
+	\refine{prog10}{ensure}{count}{} % \index{p}{ p' \in cs } }
 \end{align*}
 
 \newevent{flick}{flick}
@@ -198,13 +198,17 @@
 	\begin{description}
 \comment{flick}{stuff}
 		\comment{c}{ one-bit channel used to communicate }
-	\end{description}\removevar{cs}
-	\removevar{ts}
-	\removeact{count}{act0,act1}\witness{count}{cs}{cs' = \emptyset}
-	\removeact{flick}{act0}
-	\removeinit{in2} \removeinit{in1}
-	\initwitness{cs}{cs = \emptyset}
-	\initwitness{ts}{ts = \emptyset}
+	\end{description}
+	\begin{itemize}
+		\item \removevar{cs}
+		\item \removevar{ts}
+		\item \removeact{count}{act0,act1}
+		\item $\witness{count}{cs}{cs' = \emptyset}$
+		\item \removeact{flick}{act0}
+		\item \removeinit{in2} \removeinit{in1}
+		\item $\initwitness{cs}{cs = \emptyset} $
+		\item $\initwitness{ts}{ts = \emptyset}$
+	\end{itemize}
 	\begin{align} 
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\

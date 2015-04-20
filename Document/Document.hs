@@ -45,7 +45,7 @@ read_document xs = bimapEitherT (sortOn line_info . shrink_error_list) id $ do
             ms <- runPipeline' ms cs $ proc doc -> do
                 let mch = M.map (const ()) $ getMachineInput doc
                     ctx = M.map (const ()) $ getContextInput doc
-                    m0 = M.mapWithKey (const . MachinePh0 mch) mch
+                    m0 = M.mapWithKey (const . MachineP0 mch) mch
                     c0 = M.map (const $ TheoryP0 ()) ctx
                 (r_ord,m1) <- Mch.run_phase1_types -<  m0
                 _c1 <- Ctx.run_phase1_types -< c0

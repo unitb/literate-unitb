@@ -52,9 +52,9 @@ import Utilities.TH
 
 infixl 3 <.>
 
--- type MachinePh0 = MachinePh0' ()
+-- type MachineP0 = MachineP0' ()
 
--- data MachinePh0' a = MachinePh0
+-- data MachineP0' a = MachineP0
 
 trigger :: ( IsTuple a, Trigger (TypeList a)
            , TypeList (Tuple (RetType (TypeList a)))
@@ -242,27 +242,27 @@ collect p f arg = do
 
 type MM = R.ReaderT Input M
 
-type MachinePh0' a = MachinePh0
+type MachineP0' a = MachineP0
 
-data MachinePh0 = MachinePh0
+data MachineP0 = MachineP0
         { _pAllMachines :: MTable ()
         , _pMachineId   :: MachineId }
     deriving Show
 
-type MachinePh1 = MachinePh1' EventPh1 TheoryP1
+type MachineP1 = MachineP1' EventP1 TheoryP1
 
-data MachinePh1' events theory = MachinePh1 
-    { _p0 :: MachinePh0
+data MachineP1' events theory = MachineP1 
+    { _p0 :: MachineP0
     , _pEvents    :: Map EventId events
     , _pContext   :: theory
-    -- , _machinePh1'PEvents :: Map Label events
+    -- , _machineP1'PEvents :: Map Label events
     -- , _pNewEvents :: Map Label EventId
     } deriving Show
 
-type MachinePh2 = MachinePh2' EventPh2 TheoryP2
+type MachineP2 = MachineP2' EventP2 TheoryP2
 
-data MachinePh2' events theory = MachinePh2
-    { _p1 :: MachinePh1' events theory
+data MachineP2' events theory = MachineP2
+    { _p1 :: MachineP1' events theory
     , _pDelVars   :: Map String (Var,LineInfo)
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
@@ -270,10 +270,10 @@ data MachinePh2' events theory = MachinePh2
     } deriving Show
 
 
-type MachinePh3 = MachinePh3' EventPh3 TheoryP3
+type MachineP3 = MachineP3' EventP3 TheoryP3
 
-data MachinePh3' events theory = MachinePh3
-    { _p2 :: MachinePh2' events theory
+data MachineP3' events theory = MachineP3
+    { _p2 :: MachineP2' events theory
     , _pProgress  :: Map ProgId ProgressProp
     , _pSafety    :: Map Label SafetyProp
     , _pTransient :: Map Label Transient
@@ -285,10 +285,10 @@ data MachinePh3' events theory = MachinePh3
     , _pNewPropSet  :: PropertySet
     } deriving Show
 
-type MachinePh4 = MachinePh4' EventPh4 TheoryP3
+type MachineP4 = MachineP4' EventP4 TheoryP3
 
-data MachinePh4' events theory = MachinePh4
-    { _p3 :: MachinePh3' events theory
+data MachineP4' events theory = MachineP4
+    { _p3 :: MachineP3' events theory
     -- , _pEvtRef :: Abs EventId <-> Conc EventId
     -- , _pEvtRefProgA :: Abs EventId <-> Abs Label
     -- , _pEvtRefProgC :: Abs EventId <-> Conc Label
@@ -300,21 +300,21 @@ data MachinePh4' events theory = MachinePh4
     , _pComments :: Map DocItem String
     } 
 
-data EventPh1 = EventPh1
+data EventP1 = EventP1
         { _pEventId :: EventId
         , _pIsNew :: Bool }
     deriving Show
 
-data EventPh2 = EventPh2 
-    { _e1 :: EventPh1 
+data EventP2 = EventP2 
+    { _e1 :: EventP1 
     , _eIndices :: Map String Var
     , _eParams  :: Map String Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting
     } deriving Show
 
-data EventPh3 = EventPh3 
-    { _e2 :: EventPh2 
+data EventP3 = EventP3 
+    { _e2 :: EventP2 
     , _eCoarseSched :: Map Label Expr     -- Schedules
     , _eFineSched   :: Map Label Expr
     , _eOldGuards   :: Map Label Expr
@@ -325,8 +325,8 @@ data EventPh3 = EventPh3
     , _eNewActions  :: Map Label Action
     } deriving Show
 
-data EventPh4 = EventPh4 
-    { _e3 :: EventPh3 
+data EventP4 = EventP4 
+    { _e3 :: EventP3 
     , _eRefRule  :: [(Label,ScheduleChange)]
     , _eOldSched :: [(Label,Change)]
     }
@@ -396,7 +396,7 @@ type CTable = Map ContextId
 -- type Phase3M = Phase3 MTable
 
 -- type Phase2I = Phase2 Identity
--- type Phase3I = MachinePh3 Identity
+-- type Phase3I = MachineP3 Identity
 
     -- we want to encode phases as maps to 
     -- phase records and extract fields
@@ -441,175 +441,168 @@ focus ln cmd = StateT $ Identity . f
 -- onMachine :: MachineId -> Lens' Phase2M Phase2I
 -- onMachine = _
 
+$(makeClassy ''EventP1)
 
+$(makeClassy ''EventP2)
 
+$(makeClassy ''EventP3)
 
-
-
-
-
-$(makeClassy ''EventPh1)
-
-$(makeClassy ''EventPh2)
-
-$(makeClassy ''EventPh3)
-
-$(makeClassy ''EventPh4)
+$(makeClassy ''EventP4)
 
 createHierarchy 
-        [ (''MachinePh1' ,'_p0)
-        , (''MachinePh2' ,'_p1)
-        , (''MachinePh3' ,'_p2)
-        , (''MachinePh4' ,'_p3)
-        -- , (''MachinePh1', '_pContext)
+        [ (''MachineP1' ,'_p0)
+        , (''MachineP2' ,'_p1)
+        , (''MachineP3' ,'_p2)
+        , (''MachineP4' ,'_p3)
+        -- , (''MachineP1', '_pContext)
         , (''TheoryP1, '_t0)
         , (''TheoryP2, '_t1)
         , (''TheoryP3, '_t2)
-        -- , (''MachinePh0' ,undefined)
+        -- , (''MachineP0' ,undefined)
         ]
 
 $(makeHierarchy
-           ''EventPh1
-        [ (''EventPh2, 'e1)
-        , (''EventPh3, 'e2)
-        , (''EventPh4, 'e3)
+           ''EventP1
+        [ (''EventP2, 'e1)
+        , (''EventP3, 'e2)
+        , (''EventP4, 'e3)
         ] )
 
 mkCons ''TheoryP2
 
-mkCons ''MachinePh2'
+mkCons ''MachineP2'
 
-mkCons ''EventPh2
+mkCons ''EventP2
 
 mkCons ''TheoryP3
 
-mkCons ''MachinePh3'
+mkCons ''MachineP3'
 
-mkCons ''EventPh3
+mkCons ''EventP3
 
-instance (HasMachinePh1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
+instance (HasMachineP1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
     theoryP1 = pContext . theoryP1
 
-instance (HasMachinePh1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
+instance (HasMachineP1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
     theoryP2 = pContext . theoryP2
 
-instance (HasMachinePh1' m, HasTheoryP3 t) => HasTheoryP3 (m e t) where
+instance (HasMachineP1' m, HasTheoryP3 t) => HasTheoryP3 (m e t) where
     theoryP3 = pContext . theoryP3
 
-pEventIds :: (HasEventPh1 events, HasMachinePh1' phase) 
+pEventIds :: (HasEventP1 events, HasMachineP1' phase) 
           => Lens' (phase events t) (Map Label EventId)
 pEventIds = pEvents . from pFromEventId . onMap pEventId
 
-getEvent :: (HasMachinePh1' phase)
+getEvent :: (HasMachineP1' phase)
       => EventId
       -> Lens' (phase events t) events
 getEvent eid = pEvents . at eid . (\f x -> Just <$> f (M.fromJust x))
 
-newDelVars :: HasMachinePh2' phase
+newDelVars :: HasMachineP2' phase
            => Getter (phase events t) (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
-eAddedGuards :: HasEventPh3 events => Getter events (Map Label Expr)
+eAddedGuards :: HasEventP3 events => Getter events (Map Label Expr)
 eAddedGuards f p = coerce $ f $ M.difference new old
     where
         old = p ^. eOldGuards
         new = p ^. eNewGuards
 
-pAddedGuards :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
+pAddedGuards :: HasMachineP3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
 pAddedGuards = pEvents . onMap' eAddedGuards
 
-pSchedules :: HasMachinePh3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))       
+pSchedules :: HasMachineP3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))       
 pSchedules f p = coerce $ f $ M.unionWith (M.unionWith $ error "pSchedules: name clash") csch fsch
     where
         csch = L.view pCoarseSched p
         fsch = L.view pFineSched p
 
-pFromEventId :: HasEventPh1 event => Iso' (Map Label event) (Map EventId event)
+pFromEventId :: HasEventP1 event => Iso' (Map Label event) (Map EventId event)
 pFromEventId = iso 
         (M.fromList . L.map (view pEventId &&& id) . M.elems) 
         (mapKeys as_label)
 
-pIndices  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
+pIndices  :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
 pIndices = pEvents . onMap eIndices
-pParams   :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
+pParams   :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
 pParams = pEvents . onMap eParams
-pSchSynt  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
+pSchSynt  :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
     -- parsing schedule
 pSchSynt = pEvents . onMap eSchSynt
-pEvtSynt  :: HasMachinePh2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
+pEvtSynt  :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId ParserSetting)    
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
-pCoarseSched :: HasMachinePh3 mch event 
+pCoarseSched :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))     -- Schedules
 pCoarseSched = pEvents . onMap eCoarseSched
 
-pFineSched   :: HasMachinePh3 mch event 
+pFineSched   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))
 pFineSched = pEvents . onMap eFineSched
 
-pOldGuards   :: HasMachinePh3 mch event 
+pOldGuards   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))
 pOldGuards = pEvents . onMap eOldGuards
 
-pNewGuards   :: HasMachinePh3 mch event 
+pNewGuards   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))       -- Guards
 pNewGuards = pEvents . onMap eNewGuards
 
-pOldActions  :: HasMachinePh3 mch event 
+pOldActions  :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Action))    -- Actions
 pOldActions = pEvents . onMap eOldActions
 
-pDelActions  :: HasMachinePh3 mch event 
+pDelActions  :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Action))
 pDelActions = pEvents . onMap eDelActions
 
-pNewActions  :: HasMachinePh3 mch event 
+pNewActions  :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Action))
 pNewActions = pEvents . onMap eNewActions
 
-pEventRefRule :: HasMachinePh4 mch event
+pEventRefRule :: HasMachineP4 mch event
               => Lens' (mch event t) (Map EventId [(Label,ScheduleChange)])
 pEventRefRule = pEvents . onMap eRefRule
 
-pWitness :: HasMachinePh3 mch event 
+pWitness :: HasMachineP3 mch event 
          => Lens' (mch event t) (Map EventId (Map Var Expr))
 pWitness = pEvents . onMap eWitness
 
 -- asMap
 
--- instance HasMachinePh0 MachinePh3 where
---     machinePh0 = p0
+-- instance HasMachineP0 MachineP3 where
+--     machineP0 = p0
     -- func = 
 
--- class HasMachinePh1 phase where
---     p1' :: phase events -> MachinePh1' events
+-- class HasMachineP1 phase where
+--     p1' :: phase events -> MachineP1' events
 
-class (HasMachinePh1' f, HasEventPh1 a) => HasMachinePh1 f a where
+class (HasMachineP1' f, HasEventP1 a) => HasMachineP1 f a where
 
-instance (HasMachinePh1' f, HasEventPh1 a) => HasMachinePh1 f a where
+instance (HasMachineP1' f, HasEventP1 a) => HasMachineP1 f a where
 
-class (HasMachinePh2' f, HasEventPh2 a, HasMachinePh1 f a) => HasMachinePh2 f a where
+class (HasMachineP2' f, HasEventP2 a, HasMachineP1 f a) => HasMachineP2 f a where
 
-instance ( HasMachinePh1' f, HasEventPh1 a
-         , HasMachinePh2' f, HasEventPh2 a) 
-    => HasMachinePh2 f a where
+instance ( HasMachineP1' f, HasEventP1 a
+         , HasMachineP2' f, HasEventP2 a) 
+    => HasMachineP2 f a where
 
-class (HasMachinePh3' f, HasEventPh3 a, HasMachinePh2 f a) => HasMachinePh3 f a where
+class (HasMachineP3' f, HasEventP3 a, HasMachineP2 f a) => HasMachineP3 f a where
 
-instance ( HasMachinePh1' f, HasEventPh1 a
-         , HasMachinePh2' f, HasEventPh2 a
-         , HasMachinePh3' f, HasEventPh3 a) 
-    => HasMachinePh3 f a where
+instance ( HasMachineP1' f, HasEventP1 a
+         , HasMachineP2' f, HasEventP2 a
+         , HasMachineP3' f, HasEventP3 a) 
+    => HasMachineP3 f a where
 
-class ( HasMachinePh4' f, HasEventPh4 a
-      , HasMachinePh3 f a) => HasMachinePh4 f a where
+class ( HasMachineP4' f, HasEventP4 a
+      , HasMachineP3 f a) => HasMachineP4 f a where
 
-instance ( HasMachinePh1' f, HasEventPh1 a
-         , HasMachinePh2' f, HasEventPh2 a
-         , HasMachinePh3' f, HasEventPh3 a 
-         , HasMachinePh4' f, HasEventPh4 a) 
-    => HasMachinePh4 f a where
+instance ( HasMachineP1' f, HasEventP1 a
+         , HasMachineP2' f, HasEventP2 a
+         , HasMachineP3' f, HasEventP3 a 
+         , HasMachineP4' f, HasEventP4 a) 
+    => HasMachineP4 f a where
 
 data Hierarchy k = Hierarchy 
         { order :: [k]

@@ -128,7 +128,7 @@
 \subsubsection{Proving \ref{m1:prog0}}
 \indices{m0:push:left}{ r : \REQ }
 \begin{align*}
-\refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r} }
+\refine{m1:prog0}{ensure}{m0:push:left}{ \index{r}{r' = r} }
 \end{align*}
 \begin{align*}
 \\ \evbcmeq{m0:push:left}{m1:a0}{pshL}{ \{ r \} \domsub pshL }
@@ -152,7 +152,7 @@
 \subsubsection{Proving \ref{m1:prog1}}
 \[ \indices{m0:push:right}{ r : \REQ } \]
 \begin{align*}
-\refine{m1:prog1}{ensure}{m0:push:right}{ \index{r}{r} }
+\refine{m1:prog1}{ensure}{m0:push:right}{ \index{r}{r' = r} }
 \end{align*}
 
 \begin{align*}
@@ -178,7 +178,7 @@
 
 \subsubsection{Proving \ref{m1:prog2}}
 \begin{align*}
-\refine{m1:prog2}{ensure}{m0:pop:right}{ \index{r}{r} }
+\refine{m1:prog2}{ensure}{m0:pop:right}{ \index{r}{r' = r} }
 \end{align*}
 % \refine{m1:prog3}{ensure}{m0:pop:left}{}
 \indices{m0:pop:right}{ r : \REQ }
@@ -210,7 +210,7 @@
 % 	{r \in popL \land p = q }
 % 	{ \neg r \in popL \land emp  }
 % \\ \refine{m1:prog4}{ensure}{m0:pop:left}{ \index{r}{r} }
-\refine{m1:prog3}{ensure}{m0:pop:left}{ \index{r}{r} }
+\refine{m1:prog3}{ensure}{m0:pop:left}{ \index{r}{r' = r} }
 \end{align*}
 \indices{m0:pop:left}{ r : \REQ }
 % theorem prover found that qe.(q-1) (from the event pop:right), should be 

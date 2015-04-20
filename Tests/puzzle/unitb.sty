@@ -535,7 +535,7 @@
 {	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}#4 }\right\} \\ }
 \newcommand{\var}[3]{$#1$, #2 to $#3$}
 % \newcommand{\index}[2]{$#1 := #2$}
-\newcommand{\witness}[2]{$#1 := #1' ~ | ~ #2$}
+\newcommand{\witness}[3]{$#2 := #2' ~ | ~ #3$ \eqref{#1}}
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
 
 \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
@@ -583,3 +583,10 @@
 \newcommand{\subst}[2]{$#1 := #2$}
 
 \newcommand{\comment}[2]{ \item[#1] #2 }
+
+
+
+\newcommand{\initwitness}[2]{}
+% \newcommand{\removeact}
+\newcommand{\removeinit}[1]{}
+% \newcommand{\removevar}

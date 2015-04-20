@@ -208,7 +208,7 @@ We introduce new events to satisfy \eqref{m1:prog3} and \eqref{m1:prog4}
 	\refine{m1:prog4}{discharge}{m1:tr1,m1:saf1}{}
 }
 \begin{align*} 
-& \transientB{m1:movein}{m1:tr1}{ \index{t}{t} }
+& \transientB{m1:movein}{m1:tr1}{ \index{t}{t' = t} }
 	{ t \in in \1\land loc.t = ent }
 \\ & \transient{m1:moveout}{m1:tr0}
 	{ t \in in \1\land loc.t \in plf }
@@ -407,7 +407,7 @@ We implement \eqref{m2:prog3} with the following:
 	}
 
 \begin{align*}
-	\transientB{m1:moveout}{m2:tr1}{ \lt{m2:prog1} \index{t}{t} }
+	\transientB{m1:moveout}{m2:tr1}{ \lt{m2:prog1} \index{t}{t' = t} }
 		{ b \in plf \land t \in in \land loc.t = b }
 \\ 	\safety{m2:saf2}{ b \in plf \land t \in in \land loc.t = b }{ b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} }
 \end{align*}
