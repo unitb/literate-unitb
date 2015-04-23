@@ -63,6 +63,9 @@ data PropertySet = PS
         }
     deriving Eq
 
+newtype ProgId = PId { getProgId :: Label }
+    deriving (Eq,Ord)
+
 data ProgressProp = LeadsTo [Var] Expr Expr
     deriving (Eq,Ord,Typeable)
 

@@ -169,7 +169,7 @@ instance ProofRule Proof where
                 lbl (Sequent ctx asm hyps goal) = do
             pos <- proof_po p lbl $ Sequent ctx asm (new_asm `M.union` hyps) new_goal
             return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
-                     , Sequent ctx [] M.empty (           zimplies (zall $ M.elems new_asm) new_goal 
+                     , Sequent ctx [] M.empty (           zimplies (zall new_asm) new_goal 
                                                `zimplies` goal) )
                    : pos)
 

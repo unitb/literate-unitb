@@ -277,6 +277,12 @@ instance Readable (Set Label) where
         arg <- get_next
         return $ fromList $ map label $ comma_sep (concatMap flatten arg)
 
+instance Readable (M.Map Label ()) where
+    read_args = do
+        M.fromSet (const ()) <$> read_args
+    read_one = do
+        M.fromSet (const ()) <$> read_one
+
 --instance Readable a => Readable (Maybe a) where
 --    read_args = do
 --        ts <- ST.get

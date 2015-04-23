@@ -1,6 +1,28 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-module UnitB.Event where
+{-# LANGUAGE DeriveGeneric      #-}
+module UnitB.Event
+    ( EventId (..)
+    , Event   (..)
+    , empty_event
+    , all_guards
+    , Action (..)
+    , ba_predicate'
+    , ba_pred
+    , rel_action, primed
+    , keep', frame, frame'
+    , deleted_sched
+    , added_sched
+    , kept_sched
+    , deleted_guard
+    , Schedule    (..)
+    , ScheduleChange (..)
+    , replace
+    , hyps_label
+    , default_schedule
+    , empty_schedule
+    )
+where
 
     -- Modules
 import Logic.Expr
@@ -17,19 +39,18 @@ import Data.DeriveTH
 import Data.List as L
 import Data.Map  as M
 import Data.Typeable
-import Data.Set as S
 
 import Utilities.Format
 import Utilities.TH
 
 data Schedule = Schedule
         { coarse :: Map Label Expr
-        , fine   :: Maybe (Label, Expr)
+        , fine   :: Map Label Expr
         }
     deriving (Eq, Show)
 
 empty_schedule :: Schedule
-empty_schedule = Schedule default_schedule Nothing
+empty_schedule = Schedule default_schedule M.empty
 
 instance Default Schedule where
     def = empty_schedule
@@ -49,13 +70,14 @@ instance Show Action where
 
 data Event = Event 
         { indices   :: Map String Var
-        , sched_ref :: [ScheduleChange]
+        , c_sched_ref :: [ScheduleChange]
+        , f_sched_ref :: Maybe (Label,ProgressProp)
         , old_sched :: Schedule
-        , scheds    :: Map Label Expr
+        , new_sched :: Schedule
         , params    :: Map String Var
         , witness   :: Map Var Expr
         , old_guard :: Map Label Expr
-        , guards    :: Map Label Expr
+        , new_guard :: Map Label Expr
         , old_acts :: Map Label ()
         , del_acts :: Map Label Action
         , actions  :: Map Label Action
@@ -65,28 +87,25 @@ data Event = Event
 default_schedule :: Map Label Expr
 default_schedule = M.fromList [(label "default", zfalse)]
 
+all_guards :: Event -> Map Label Expr
+all_guards evt = old_guard evt `M.union` new_guard evt
+
 data ScheduleChange = ScheduleChange 
-        { event  :: Label
-        , remove :: S.Set Label
-        , add    :: S.Set Label
-        , keep   :: S.Set Label
-        , rule   :: ScheduleRule
+        { remove :: Map Label ()
+        , add    :: Map Label ()
+        , keep   :: Map Label ()
+        , sch_prog :: (Label,ProgressProp) 
+        , sch_saf  :: (Label,SafetyProp)
         }
     deriving (Show,Eq,Typeable)
 
-data ScheduleRule = 
-        Replace (Label,ProgressProp) (Label,SafetyProp)
-        | Weaken
-        | ReplaceFineSch Expr (Maybe Label) Expr (Maybe (Label,ProgressProp))
-        | RemoveGuard Label
-        | AddGuard    Label
-            -- old expr, new label, new expr, proof
-    deriving (Show,Eq)
+hyps_label :: ScheduleChange -> ProgId
+hyps_label = PId . fst . sch_prog
 
 mkCons ''Event
 
 empty_event :: Event
-empty_event = makeEvent { scheds = default_schedule }
+empty_event = makeEvent
 
 frame' :: Action -> Map String Var
 frame' (Assign v _) = M.singleton (name v) v
@@ -130,61 +149,29 @@ instance Show EventId where
 primed :: Map String Var -> Expr -> Expr
 primed vs e = make_unique "@prime" vs e
 
-weaken :: Label -> ScheduleChange
-weaken lbl = ScheduleChange lbl S.empty S.empty S.empty Weaken
+deleted_sched :: Event -> Schedule
+deleted_sched e = Schedule 
+        { fine = fine (old_sched e) `M.difference` fine (new_sched e)
+        , coarse = coarse (old_sched e) `M.difference` coarse (new_sched e) }
 
-replace :: Label -> (Label, ProgressProp) -> (Label, SafetyProp) -> ScheduleChange
-replace lbl prog saf = ScheduleChange lbl 
-        S.empty S.empty S.empty 
-        (Replace prog saf)
+added_sched :: Event -> Schedule
+added_sched e = Schedule 
+        { fine = fine (new_sched e) `M.difference` fine (old_sched e)
+        , coarse = coarse (new_sched e) `M.difference` coarse (old_sched e) }
 
-replace_fine :: Label
-             -> Expr
-             -> Maybe Label
-             -> Expr
-             -> Maybe (Label, ProgressProp)
-             -> ScheduleChange
-replace_fine lbl old tag new prog = 
-    ScheduleChange lbl S.empty S.empty S.empty 
-        (ReplaceFineSch old tag new prog)
+kept_sched :: Event -> Schedule
+kept_sched e = Schedule 
+        { fine = fine (new_sched e) `M.intersection` fine (old_sched e)
+        , coarse = coarse (new_sched e) `M.intersection` coarse (old_sched e) }
 
-add_guard :: Label -> Label -> ScheduleChange
-add_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (AddGuard lbl)
+deleted_guard :: Event -> Map Label Expr
+deleted_guard e = old_guard e `M.difference` new_guard e
 
-remove_guard :: Label -> Label -> ScheduleChange
-remove_guard evt lbl = ScheduleChange evt S.empty S.empty S.empty (RemoveGuard lbl)
-
-new_fine_sched :: Maybe (Label, Expr) -> ScheduleChange -> Maybe (Label, Expr)
-new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ (Just n_lbl) n_expr _ }) = Just (n_lbl,n_expr)
-new_fine_sched _ (ScheduleChange { rule = ReplaceFineSch _ Nothing _ _ }) = Nothing
-new_fine_sched x _ = x
-
-new_sched :: Event -> Schedule
-new_sched e = Schedule new_c_sched new_f_sched
-    where
-        new_c_sched = M.filterWithKey f_out c_sch `M.union` M.filterWithKey f_in sched
-        f_out k _ = not $ k `S.member` r_set
-        f_in  k _ = k `S.member` a_set
-        new_f_sched = L.foldl new_fine_sched f_sch ref
-        Schedule c_sch f_sch = old_sched e 
-        ref   = sched_ref e
-        sched = scheds e 
-        r_set = L.foldl S.union S.empty $ L.map remove ref
-        a_set = L.foldl S.union S.empty $ L.map add ref
-
-new_guard :: Event -> Map Label Expr
-new_guard e = L.foldl f old ref
-    where
-        ref = L.map rule $ sched_ref e
-        grd = guards e
-        old = old_guard e
-        f m (AddGuard lbl)    = M.insert lbl (grd ! lbl) m
-        f m (RemoveGuard lbl) = M.delete lbl m
-        f m _ = m
+replace :: (Label, ProgressProp) -> (Label, SafetyProp) -> ScheduleChange
+replace prog saf = ScheduleChange def def def prog saf
 
 derive makeNFData ''Event
 derive makeNFData ''Action
 derive makeNFData ''EventId
 derive makeNFData ''Schedule
 derive makeNFData ''ScheduleChange
-derive makeNFData ''ScheduleRule

@@ -16,7 +16,7 @@ import UnitB.AST
 
     -- Libraries
 import Control.Applicative
-import Control.Lens
+import Control.Lens hiding (from,to)
 import Control.Monad.RWS
 
 import Data.List as L (map)
@@ -29,17 +29,17 @@ import Utilities.Syntactic
 import Utilities.TH
 
 data CoarseSchedule = CoarseSchedule 
-        { _coarseScheduleEvtExpr :: Expr
+        { _coarseScheduleInhStatus :: InhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
         , _coarseScheduleLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
 data FineSchedule = FineSchedule 
-        { _fineScheduleEvtExpr :: Expr
+        { _fineScheduleInhStatus :: InhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
         , _fineScheduleLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
 data Guard = Guard 
-        { _guardEvtExpr :: Expr
+        { _guardInhStatus :: InhStatus Expr
         , _guardDeclSource :: DeclSource
         , _guardLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
@@ -49,12 +49,9 @@ data Witness = Witness
         , _witnessDeclSource :: DeclSource
         , _witnessLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data ActionDecl = DelAction 
-        { _actionOptEventExpr :: Maybe Action
-        , _actionDeclDeclSource :: DeclSource
-        , _actionDeclLineInfo :: LineInfo }
-    | Action 
-        { _actionEventExpr :: Action
+data ActionDecl = 
+     Action 
+        { _actionDeclInhStatus :: InhStatus Action
         , _actionDeclDeclSource :: DeclSource
         , _actionDeclLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
@@ -66,9 +63,6 @@ makeFields ''Guard
 makeFields ''ActionDecl
 makeFields ''Witness
 
-instance HasEvtExpr ActionDecl Action where
-    evtExpr f (Action x y z) = (\x -> Action x y z) <$> f x
-    evtExpr f (DelAction x y z) = (\x -> DelAction (Just x) y z) <$> f (M.fromJust x)
 
 data EvtExprScope = forall a. IsEvtExpr a => EvtExprScope a
     deriving (Typeable)
@@ -109,16 +103,19 @@ instance HasLineInfo EvtExprScope LineInfo where
     lineInfo f (EvtExprScope x) = EvtExprScope <$> lineInfo f x
 
 instance Show CoarseSchedule where
+    show (CoarseSchedule (InhDelete _) _ _) = "delete coarse schedule"
     show (CoarseSchedule _ _ _) = "coarse schedule"
 instance Show FineSchedule where
+    show (FineSchedule (InhDelete _) _ _) = "delete fine schedule"
     show (FineSchedule _ _ _) = "fine schedule"
 instance Show Witness where
     show (Witness _ _ _ _) = "witness"
 instance Show Guard where
+    show (Guard (InhDelete _) _ _) = "delete guard"
     show (Guard _ _ _) = "guard"
 instance Show ActionDecl where
+    show (Action (InhDelete _) _ _) = "delete action"
     show (Action _ _ _) = "action"
-    show (DelAction _ _ _) = "delete action"
 
 data EventExpr = EventExpr (Map (Maybe EventId) EvtExprScope)
     deriving (Eq,Ord,Typeable)
@@ -126,6 +123,11 @@ data Invariant = Invariant
         { _invariantMchExpr :: Expr
         , _invariantDeclSource :: DeclSource
         , _invariantLineInfo :: LineInfo }
+    deriving (Eq,Ord,Typeable)
+data Theorem = Theorem 
+        { _theoremMchExpr :: Expr
+        , _theoremDeclSource :: DeclSource
+        , _theoremLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
 data TransientProp = TransientProp
         { _transientPropMchExpr :: Transient
@@ -169,6 +171,16 @@ makeFields ''SafetyDecl
 makeFields ''ConstraintProp
 makeFields ''TransientProp
 makeFields ''Invariant
+makeFields ''Theorem
+
+instance Show Invariant where
+    show _ = "invariant"
+
+instance Show Theorem where
+    show _ = "theorem"
+
+instance Show TransientProp where
+    show _ = "transient predicate"
 
 class ( Scope a, Typeable a ) 
         => IsExprScope a where
@@ -199,29 +211,18 @@ parseExprScope xs = execRWS (mapM_ g $ groupExprGroup (++) $ L.map f $ M.toList 
         g (ExprGroup xs)    = parseExpr xs
 
 instance Scope CoarseSchedule where
-    error_item x = (show x, view lineInfo x)
+    type Impl CoarseSchedule = WithDelete CoarseSchedule
 
 instance Scope FineSchedule where
-    error_item x = (show x, view lineInfo x)
+    type Impl FineSchedule = WithDelete FineSchedule
 
 instance Scope Guard where
-    error_item x = (show x, view lineInfo x)
+    type Impl Guard = WithDelete Guard
 
 instance Scope Witness where
-    error_item x = (show x, view lineInfo x)
 
 instance Scope ActionDecl where
-    keep_from s x@(DelAction _ _ _) = guard (s == Inherited) >> return x
-    keep_from s x@(Action _ s' _) = guard (s == s') >> return x
-    error_item x = (show x, view lineInfo x)
-    clashes x y = f x == f y
-        where
-            f (DelAction Nothing _ _) = False
-            f (DelAction (Just _) _ _) = True
-            f (Action _ _ _) = True
-    merge_scopes (DelAction Nothing y li) (Action a _ _) = DelAction (Just a) y li
-    merge_scopes (Action a _ _) (DelAction Nothing y li) = DelAction (Just a) y li
-    merge_scopes _ _ = error "ActionDecl Scope.merge_scopes: Evt, Evt"
+    type Impl ActionDecl = WithDelete ActionDecl
 
 instance Scope EvtExprScope where
     keep_from s x = applyEvtExprScope (keep_from s) x

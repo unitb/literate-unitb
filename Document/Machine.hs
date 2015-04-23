@@ -20,7 +20,7 @@ import Document.Scope
 import Document.VarScope
 import Document.Visitor
 
-import Latex.Parser
+import Latex.Parser hiding (contents)
 
 import Logic.Expr
 import Logic.Operator (Notation)
@@ -54,6 +54,7 @@ import qualified Control.Monad.Writer as W
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
+import           Data.Default
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.Functor
@@ -67,7 +68,6 @@ import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 
-import Utilities.Error
 import Utilities.Format
 import Utilities.Relation (type(<->),(|>),(<|))
 import qualified Utilities.Relation as R
@@ -324,13 +324,13 @@ make_phase2 p1 vars
 
 default_schedule_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 default_schedule_decl = arr $ \p2 -> 
-        Right $ M.map (map default_sch . elems . M.map Just . M.map (^. pEventId)) 
-              $ M.map (M.filter (^. pIsNew) . (^. pEvents)) p2
+        Right $ M.map (map default_sch . elems . M.map Just . M.map (^. eEventId)) 
+              $ M.map (M.filter (^. eIsNew) . (^. pEvents)) p2
     where
         li = LI "default" 1 1
         default_sch e = ( label "default",
                           ExprScope $ EventExpr 
-                            $ singleton e (EvtExprScope $ CoarseSchedule zfalse Inherited li))
+                            $ singleton e (EvtExprScope $ CoarseSchedule (InhAdd zfalse) Inherited li))
 
 run_phase3_exprs :: Pipeline MM (Hierarchy MachineId,MTable MachineP2) (MTable MachineP3)
 run_phase3_exprs = proc (r_ord,p2) -> do
@@ -340,12 +340,16 @@ run_phase3_exprs = proc (r_ord,p2) -> do
             , bcmsuch_assgn
             , bcmin_assgn
             , guard_decl
+            , guard_removal
+            , coarse_removal
+            , fine_removal
             , default_schedule_decl
             , fine_sch_decl
             , coarse_sch_decl
             , initialization
             , assumption
             , invariant
+            , mch_theorem
             , transient_prop
             , transientB_prop
             , constraint_prop
@@ -388,14 +392,24 @@ run_phase4_proofs :: Pipeline MM (Hierarchy MachineId,MTable MachineP3) (MTable 
 run_phase4_proofs = proc (r_ord,p3) -> do
         refs   <- run_phase 
             [ ref_replace_csched
-            , ref_weaken_csched
-            , ref_replace_fsched
-            , ref_remove_guard ] -< p3
+            , ref_replace_fsched ] -< p3
         ref_p  <- refine_prog_prop -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
-        let evt_refs :: Either [Error] (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
-            evt_refs = M.map (fromListWith (++)) <$> unionsWith (++) <$> refs
+        let c_evt_refs :: Either [Error] (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
+            c_evt_refs = M.map (M.fromListWith (++)) 
+                     <$> M.unionsWith (++) 
+                     <$> L.map (M.map coarseRef) <$> refs 
+            f_evt_refs' :: Either [Error] (MTable (Map EventId [((ProgId,ProgressProp),LineInfo)]))
+            f_evt_refs' = M.map (M.fromListWith (++)) 
+                     <$> M.unionsWith (++)
+                     <$> L.map (M.map fineRef) <$> refs
+            only_one _ []   = Right Nothing
+            only_one _ [x]  = Right (Just x)
+            only_one eid xs = Left [MLError (format "Multiple refinement provided for the fine schedule of {0}" eid) 
+                                    $ L.map (first $ show . fst) xs]
+            f_evt_refs :: Either [Error] (MTable (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo))))
+            f_evt_refs = join $ (all_errors . M.map (all_errors . M.mapWithKey only_one)) <$> f_evt_refs'
             prog_ref :: Either [Error] (MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo)))
             prog_ref = ref_p >>= make_all_tables (format "Multiple refinement of progress property {0}")
             proofs = prfs >>= make_all_tables (format "Multiple proofs labeled {0}")
@@ -403,48 +417,42 @@ run_phase4_proofs = proc (r_ord,p3) -> do
                     c <- comm
                     make_all_tables (format "Multiple comments for {0}")
                         $ inherit r_ord c
-        (evt_refs,prog_ref,comments,proofs) <- triggerP -< (evt_refs,prog_ref,comments,proofs)
-        let _ = evt_refs :: MTable (Map EventId [((Label,ScheduleChange),LineInfo)])
+        (c_evt_refs,f_evt_refs,prog_ref,comments,proofs) <- triggerP -< (c_evt_refs,f_evt_refs,prog_ref,comments,proofs)
+        let _ = c_evt_refs :: MTable (Map EventId [((Label,ScheduleChange),LineInfo)])
+            _ = f_evt_refs :: MTable (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
             _ = prog_ref :: MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
-            sch_chg :: MTable (Map EventId [(Label,Change)])
-            sch_chg = M.map (M.map $ concatMap $ addRemove . snd . fst) evt_refs
-            addRemove sc = M.toList (fromSet (const AddC) $ add sc) ++ M.toList (fromSet (const RemoveC) $ remove sc)
-            old_sch = inheritWith 
-                    (M.map $ L.map $ first (,Local)) 
-                    -- _ _
-                    (M.map $ L.map $ first $ second $ const Inherited) 
-                    (M.unionWith (++)) 
-                    r_ord sch_chg
+            evt_ref_props :: MTable (Map EventId [(ProgId,LineInfo)])
+            evt_ref_props = M.unionWith (M.unionWith (++)) 
+                        (M.map (M.map $ L.map $ first $ hyps_label . snd) c_evt_refs) 
+                        (M.map (M.map $ L.map (first fst) . MM.maybeToList) f_evt_refs)
             evt_live :: MTable (EventId <-> ProgId)
-            evt_live  = M.map (R.fromListMap . M.map (concatMap $ hyps_labels . snd . fst)) evt_refs
+            evt_live  = M.map R.fromListMap $ M.map (M.map $ L.map fst) evt_ref_props
             live_evt :: MTable (ProgId <-> EventId)
             live_evt  = M.map (R.fromListMap . M.map (supporting_evts . fst . fst)) prog_ref
                 -- 
             evt_evt :: MTable (Map EventId EventId)
-            evt_evt   = M.map (M.mapWithKey const) evt_refs 
+            evt_evt   = M.map (view $ pOldEvents . to (M.mapWithKey const)) p3 -- evt_refs 
             live_live :: MTable (LiveEvtId <-> LiveEvtId)
             live_live = M.map (R.bimap Right Right) $
                         M.map (R.fromListMap . M.map (L.map snd . snd . fst)) prog_ref
-            distr :: ([a],b) -> [(a,b)]
-            distr (xs,y) = map (\x -> (x,y)) xs 
-            hyps_table :: ((a,ScheduleChange),c) -> [(ProgId,c)]
-            hyps_table = distr . first (hyps_labels . snd)
+            uncurryMap m = M.fromList [((eid,p),li) | (eid,xs) <- M.toList m, (p,li) <- xs ]
             live_struct = LiveStruct <$> (M.map (view pMachineId) p3) 
                    <.> evt_live <.> live_live 
                    <.> live_evt <.> evt_evt 
                    <.> M.mapWithKey (\k -> M.map (k,)) (M.map (M.map snd) prog_ref) 
-                   <.> M.mapWithKey (\k -> M.map (k,)) (M.map (uncurryMap . M.map (M.fromList . concatMap hyps_table)) evt_refs)
+                   <.> M.mapWithKey (\k -> M.map (k,)) 
+                            (M.map uncurryMap evt_ref_props) --evt_refs)
             struct = all_errors $ 
                      M.map raiseStructError $ inheritWith 
                         Conc (Abs . getConcrete)
                         mergeLiveness 
                         r_ord live_struct
                     -- >>= make_all_tables' _
-        One struct <- triggerP -< One struct
-        let p4 = make_phase4 <$> p3 <.> evt_refs 
+        One _struct <- triggerP -< One struct
+        let p4 = make_phase4 <$> p3 
+                             <.> c_evt_refs <.> f_evt_refs -- evt_refs 
                              <.> prog_ref <.> comments 
-                             <.> proofs <.> struct
-                             <.> old_sch
+                             <.> proofs 
         returnA -< p4
 
 type LiveEvtId = Either EventId ProgId
@@ -498,38 +506,27 @@ data LiveStruct = LiveStruct
     , evt_info  :: Map (EventId,ProgId) (MachineId,LineInfo)
     } 
 
-instance Monoid LiveStruct where
-    mempty = LiveStruct
-        { machine_id = $myError
-        , evt_live = R.empty
-        , live_live = R.empty
-        , live_evt = R.empty
-        , evt_evt = M.empty
-        , live_info = M.empty
-        , evt_info = M.empty
-        }
-    mappend = $myError
 
 make_phase4 :: MachineP3 
             -> Map EventId [((Label, ScheduleChange), LineInfo)]
+            -> Map EventId (Maybe ((ProgId,ProgressProp),LineInfo))
             -> Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
             -> Map DocItem (String,LineInfo)
             -> Map Label (Tactic Proof, LineInfo) 
-            -> LiveStruct
-            -> Map EventId [((Label,DeclSource),Change)]
             -> MachineP4
-make_phase4 p3 evt_refs prog_ref comments proofs _ old_sch = MachineP4 { .. }
+make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs 
+        = MachineP4 { .. }
     where
         _e3 = EventP4 <$> (p3 ^. pEvents) 
-                       <.> _pEventRefRule `M.union` evtEmpty
-                       <.> old_sch' `M.union` evtEmpty
-        old_sch' = M.map (  L.map (first fst) 
-                                  . L.filter ((Inherited==) . snd . fst)) old_sch
-        evtEmpty :: Map EventId [a]
-        evtEmpty = M.map (const []) (p3 ^. pEvents)
+                      <.> _pCoarseRef `M.union` evtEmpty
+                      <.> _pFineRef `M.union` evtEmpty
+                       -- <.> old_sch' `M.union` evtEmpty
+        evtEmpty :: Default a => Map EventId a
+        evtEmpty = M.map (const def) (p3 ^. pEvents)
         _p3 = p3 & pEvents .~ _e3
         _pProofs = proofs
-        _pEventRefRule = M.map (L.map fst) evt_refs
+        _pCoarseRef = M.map (L.map fst) coarse_refs
+        _pFineRef =  M.map (fmap fst) fine_refs
         _pLiveRule = M.map (fst . fst) prog_ref
         _pComments = M.map fst comments
 
@@ -540,8 +537,6 @@ make_machine (MId m) p4 = mch'
         types   = p4 ^. pTypes
         -- evtSet  = p4 ^. pEvents
         imp_th  = p4 ^. pImports
-        evt_refs :: Map EventId [(Label,ScheduleChange)]
-        evt_refs = p4 ^. pEventRefRule 
         ref_prog :: Map Label Rule
         ref_prog = M.mapKeys as_label $ p4 ^. pLiveRule
         proofs   = p4 ^. pProofs
@@ -559,10 +554,6 @@ make_machine (MId m) p4 = mch'
             -- , notation =  empty_notation
             , fact = p4 ^. pAssumptions }
         props = p4 ^. pNewPropSet
-        evt_grd_po (evt,lbl) = composite_label 
-                                        [ as_label evt
-                                        , label "GRD"
-                                        , label m, lbl]
         mch = Mch 
             { _name  = label m
             , theory = ctx
@@ -574,11 +565,7 @@ make_machine (MId m) p4 = mch'
             , inits = p4 ^. pInit
             , props = props 
             , derivation = (ref_prog 
-                    `union` M.mapKeys evt_grd_po (uncurryMap $ M.mapWithKey 
-                            (\k -> M.mapWithKey $ \l _ -> Rule (add_guard (as_label k) l)) 
-                            (p4 ^. pAddedGuards))
                     `union` M.map (const $ Rule Add) (_progress props)) 
-                    `union` fromList (concat $ elems $ M.mapWithKey evtr2der evt_refs)
             , inh_props = p4 ^. pOldPropSet
             , comments = p4 ^. pComments
             , events = M.mapKeys as_label evts 
@@ -606,38 +593,31 @@ make_machine (MId m) p4 = mch'
             return mch 
                 { AST.props = (AST.props mch) 
                     { _proofs = fromList xs } }
-        evtr2der :: EventId -> [(Label,ScheduleChange)] -> [(Label,Rule)]
-        evtr2der (EventId evt) xs = zipWith f xs [0..]
-            where
-                f (lbl,ref) n = (composite_label [evt,lbl,label $ show n], Rule ref)
         events = p4 ^. pEvents
-        evts = M.mapWithKey g events 
-                :: Map EventId Event
-        g :: EventId -> EventP4
-          -> Event
-        g (EventId name) evt
+        evts = M.map g events 
+        g :: EventP4 -> Event
+        g evt
             = Event
                 { indices = evt ^. eIndices
                 , params  = evt ^. eParams
-                , guards  = evt ^. eNewGuards
+                , new_guard = evt ^. eNewGuards
                 , witness = evt ^. eWitness
                 , old_guard = evt ^. eOldGuards
                 , actions = evt ^. eNewActions
                 , del_acts = evt ^. eDelActions
-                , scheds  = c_sched `union` f_sched
                 , eql_vars = keep' ab_var (evt ^. eOldActions)
                              `M.intersection` frame (evt ^. eNewActions)
                 , old_sched = Schedule 
-                                    { coarse = c_sched `M.intersection` old_sched
-                                    , fine   = MM.listToMaybe $ M.toList $ f_sched `M.intersection` old_sched }
-                , sched_ref =  map (add_guard name) (keys $ evt ^. eAddedGuards) 
-                            ++ map snd (evt ^. eRefRule)
+                                    { coarse = evt ^. eOldCoarseSched
+                                    , fine   = evt ^. eOldFineSched }
+                , new_sched = Schedule 
+                                    { coarse = evt ^. eNewCoarseSched
+                                    , fine   = evt ^. eNewFineSched }
+                , c_sched_ref = map snd (evt ^. eCoarseRef)
+                , f_sched_ref = (first as_label) <$> evt ^. eFineRef
                 , old_acts = M.map (const ()) $ evt ^. eOldActions
                 }
             where
-                old_sched = M.filter (== AddC) $ M.fromList $ ("default",AddC) : reverse (evt ^. eOldSched)
-                c_sched = (evt ^. eCoarseSched) 
-                f_sched = (evt ^. eFineSched)
 
 uncurryMap :: (Ord a,Ord b) => Map a (Map b c) -> Map (a,b) c
 uncurryMap m = fromList $ do
@@ -729,7 +709,7 @@ set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             let name     = tag 
                 new_sort = Sort tag (z3_escape name) 0
                 new_type = Gen $ USER_DEFINED new_sort []
-                new_def = Def [] name [] (set_type new_type)
+                new_def = Def [] (z3_escape name) [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
@@ -952,9 +932,6 @@ get_events p2 ev_lbl = do
                 (format "event '{0}' is undeclared")
                 $ (`M.lookup` evts)
 
-get_schedules :: MachineP3 -> EventId -> M (Map Label Expr)
-get_schedules p3 evt = 
-        return $ L.view pSchedules p3 ! evt
 
 get_guards :: MachineP3 -> EventId -> M (Map Label Expr)
 get_guards p3 evt = 
@@ -1005,7 +982,7 @@ assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             let frame = M.elems $ (state_variables p2) `M.difference` (abstract_variables p2) :: [Var] 
                 act = BcmSuchThat frame pred
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -1022,7 +999,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
                 $ Right (Word var :: Expr) `mzeq` Right xp
             let act = Assign var xp
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -1035,7 +1012,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
                 $ (`M.lookup` state_variables p2)
             let act = BcmSuchThat vars xp
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -1049,7 +1026,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right xp
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action act Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 instance Scope Initially where
     clashes (DelInit _ _ _) (Initially _ _ _) = False
@@ -1102,7 +1079,7 @@ remove_assgn :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ DelAction Nothing Local li)) | lbl <- lbls ]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhDelete Nothing) Local li)) | lbl <- lbls ]
 
 witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
@@ -1129,86 +1106,105 @@ instance Scope EventExpr where
             msg Nothing sc = (format "{0} (initialization)" sc :: String, view lineInfo sc)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
 
-checkLocalExpr :: ( HasEvtExpr expr Expr
-                  , HasLineInfo expr LineInfo )
-               => String -> [(Maybe EventId, [(Label,expr)])] 
+checkLocalExpr :: ( HasInhStatus decl (InhStatus expr)
+                  , HasLineInfo decl LineInfo )
+               => String -> (expr -> Map String Var)
+               -> [(Maybe EventId, [(Label,decl)])] 
                -> RWS () [Error] MachineP3 ()
-checkLocalExpr expKind xs = do
+checkLocalExpr expKind free xs = do
         vs <- use pDelVars
         let xs' = [ (eid,lbl,sch) | (e,ss) <- xs, (lbl,sch) <- ss, eid <- MM.maybeToList e ]
         forM_ xs' $ \(eid,lbl,sch) -> do
-            let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
-                errs   = vs `M.intersection` used_var' (sch ^. evtExpr)
-                schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                varsLI = L.map (first $ format "deleted variable '{0}'" . name) (M.elems errs)
-            unless (M.null errs) 
-                $ tell [MLError msg $ schLI : varsLI]
+            case (sch ^. inhStatus) of
+                InhAdd expr -> do
+                    let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
+                        errs   = vs `M.intersection` free expr
+                        schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
+                        varsLI = L.map (first $ format "deleted variable '{0}'" . name) (M.elems errs)
+                    unless (M.null errs) 
+                        $ tell [MLError msg $ schLI : varsLI]
+                InhDelete Nothing -> do
+                    let msg = format "event '{1}', {2} '{0}' was deleted but does not exist" lbl eid expKind
+                        li  = sch ^. lineInfo
+                    tell [Error msg li]
+                _ -> return ()
 
 instance IsEvtExpr CoarseSchedule where
     parseEvtExpr xs = do
-        parseEvtExpr' pCoarseSched fst xs
-        checkLocalExpr "coarse schedule" xs
+        parseEvtExprChoice' pOldCoarseSched pDelCoarseSched pNewCoarseSched fst xs
+        checkLocalExpr "coarse schedule" used_var' xs
 
 instance IsEvtExpr FineSchedule where
     parseEvtExpr xs = do
-        parseEvtExpr' pFineSched fst xs
-        checkLocalExpr "fine schedule" xs
+        parseEvtExprChoice' pOldFineSched pDelFineSched pNewFineSched fst xs
+        checkLocalExpr "fine schedule" used_var' xs
 
 instance IsEvtExpr Guard where
     parseEvtExpr xs = do
-        parseEvtExprChoice pOldGuards pNewGuards fst xs
-        checkLocalExpr "guard" xs
+        parseEvtExprChoice' pOldGuards pDelGuards pNewGuards fst xs
+        checkLocalExpr "guard" used_var' xs
 
-parseEvtExprChoice :: ( HasEvtExpr obj expr
-                      , HasDeclSource obj DeclSource 
+type OneOrTwo a = Either (a,a) a
+
+fieldA :: Lens' (OneOrTwo a) a
+fieldA f (Left x) = Left <$> _1 f x
+fieldA f (Right x) = (Left . (,x)) <$> f x
+
+fieldB :: Lens' (OneOrTwo a) a
+fieldB f (Left x) = Left <$> _2 f x
+fieldB f (Right x) = (Left . (x,)) <$> f x
+
+parseEvtExprChoice :: ( HasInhStatus decl (InhStatus expr)
+                      , HasDeclSource decl DeclSource 
                       , Ord label)
               => Lens' MachineP3 (Map EventId (Map label expr))
               -> Lens' MachineP3 (Map EventId (Map label expr))
-              -> ((Label,obj) -> label)
-              -> [(Maybe EventId, [(Label, obj)])]
+              -> ((Label,decl) -> label)
+              -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
-parseEvtExprChoice oldLn newLn f = parseEvtExprChoice' oldLn newLn newLn f (const False) 
+parseEvtExprChoice oldLn newLn f = parseEvtExprChoice' oldLn newLn newLn f
 
-parseEvtExprChoice' :: ( HasEvtExpr obj expr
-                      , HasDeclSource obj DeclSource 
+parseEvtExprChoice' :: ( HasInhStatus decl (InhStatus expr)
+                      , HasDeclSource decl DeclSource 
                       , Ord label)
               => Lens' MachineP3 (Map EventId (Map label expr))
               -> Lens' MachineP3 (Map EventId (Map label expr))
               -> Lens' MachineP3 (Map EventId (Map label expr))
-              -> ((Label,obj) -> label)
-              -> (obj -> Bool)
-              -> [(Maybe EventId, [(Label, obj)])]
+              -> ((Label,decl) -> label)
+              -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
 parseEvtExprChoice' oldLn delLn newLn = parseEvtExprChoiceImp 
         (Just (LensT oldLn)) 
         (Just (LensT delLn))
         (Just (LensT newLn))
 
-parseEvtExprChoiceImp :: ( HasEvtExpr obj expr
-                      , HasDeclSource obj DeclSource 
+parseEvtExprChoiceImp :: ( HasInhStatus decl (InhStatus expr)
+                      , HasDeclSource decl DeclSource 
                       , Ord label)
               => Maybe (LensT MachineP3 (Map EventId (Map label expr)))
               -> Maybe (LensT MachineP3 (Map EventId (Map label expr)))
               -> Maybe (LensT MachineP3 (Map EventId (Map label expr)))
-              -> ((Label,obj) -> label)
-              -> (obj -> Bool)
-              -> [(Maybe EventId, [(Label, obj)])]
+              -> ((Label,decl) -> label)
+              -- -> (decl -> Bool)
+              -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
-parseEvtExprChoiceImp oldLn delLn newLn f is_del' xs = do
-    let is_old x 
-            | is_del' x = view declSource x == Local
-            | otherwise = view declSource x == Inherited
-        is_del x = is_del' x && x ^. declSource == Local
-        is_new x = not (is_del' x)
+parseEvtExprChoiceImp oldLn delLn newLn f xs = do
+    let route (Just k) x@(_,decl) = case (decl ^. inhStatus, decl ^. declSource) of
+                                (InhAdd _, Inherited) -> ([(k,[x])],[],[(k,[x])])
+                                (InhAdd _, Local)     -> ([],[],[(k,[x])])
+                                (InhDelete _, Inherited) -> ([],[],[])
+                                (InhDelete _, Local)     -> ([(k,[x])],[(k,[x])],[])
+        route Nothing _ = ([],[],[])
         -- is_new _ = True
-        old_xs   = map (second $ L.filter $ is_old . snd) xs
-        del_xs   = map (second $ L.filter $ is_del . snd) xs
-        new_xs   = map (second $ L.filter $ is_new . snd) xs
-        g        = MM.mapMaybe (runKleisli $ Kleisli id *** arr (map $ f &&& (view evtExpr . snd)))
+        (old_xs, del_xs, new_xs) = mconcat $ L.map (uncurry $ \k -> mconcat . map (route k)) xs
+        getLabelExpr = runKleisli $ arr f &&& Kleisli (contents . snd)
+        g        = L.map (second $ MM.mapMaybe getLabelExpr)
+            -- arr (map $ f &&& (view evtExpr . snd)))
         assign ln f = maybe (return ()) (\(LensT ln) -> ln %= f) ln
     oldLn `assign` doubleUnion (g old_xs)
     delLn `assign` doubleUnion (g del_xs)
     newLn `assign` doubleUnion (g new_xs)
+
 
 
 doubleUnion :: (Ord k0,Ord k1)
@@ -1217,20 +1213,11 @@ doubleUnion :: (Ord k0,Ord k1)
             -> Map k0 (Map k1 a)
 doubleUnion xs = M.unionWith M.union (M.map M.fromList $ M.fromListWith (++) xs)
 
-parseEvtExpr' :: (HasEvtExpr obj expr, Ord label)
-              => Lens' MachineP3 (Map EventId (Map label expr))
-              -> ((Label,obj) -> label)
-              -> [(Maybe EventId, [(Label, obj)])]
-              -> RWS () [Error] MachineP3 ()
-parseEvtExpr' ln f xs = do
-    let toEntry = f &&& (view evtExpr . snd)
-        xs' = MM.mapMaybe (runKleisli $ Kleisli id *** arr (map toEntry)) xs
-    ln %= doubleUnion xs'
 
-parseEvtExprDefault :: (HasEvtExpr obj expr, Ord label)
+parseEvtExprDefault :: (HasEvtExpr decl expr, Ord label)
               => Lens' MachineP3 (Map EventId (Map label expr))
-              -> ((Label,obj) -> label)
-              -> [(Maybe EventId, [(Label, obj)])]
+              -> ((Label,decl) -> label)
+              -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
 parseEvtExprDefault ln f xs = do
     let toEntry = f &&& (view evtExpr . snd)
@@ -1238,10 +1225,10 @@ parseEvtExprDefault ln f xs = do
         xs'' = M.map M.fromList $ M.fromListWith (++) xs'
     ln %= flip (M.unionWith M.union) xs''
 
-parseInitExpr :: (HasEvtExpr obj expr, Ord label)
+parseInitExpr :: (HasEvtExpr decl expr, Ord label)
               => Lens' MachineP3 (Map label expr)
-              -> ((Label,obj) -> label)
-              -> [(Maybe EventId, [(Label, obj)])]
+              -> ((Label,decl) -> label)
+              -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
 parseInitExpr ln f xs = do
 
@@ -1249,48 +1236,35 @@ parseInitExpr ln f xs = do
         ys' = concat $ MM.mapMaybe (\(x,y) -> guard (MM.isNothing x) >> return (map toEntry y)) xs
     ln %= M.union (M.fromList ys')
 
+mapA :: Monad m => Kleisli m b c -> Kleisli m [b] [c]
+mapA (Kleisli m) = Kleisli $ mapM m
+
 instance IsEvtExpr Witness where
-    parseEvtExpr = parseEvtExprChoiceImp 
-            Nothing Nothing 
-            (Just $ LensT pWitness) 
-            (_witnessVar . snd) ((== Inherited) . view declSource) 
+    parseEvtExpr xs = do
+        let toExpr = (_witnessVar &&& view evtExpr) . snd
+            -- isLocal x = x ^. declSource == Local
+            getLocalExpr = mapA (second $ Kleisli $ is_local) >>> arr (map toExpr)
+            withEvent    = Kleisli id
+            withoutEvent = Kleisli $ guard . MM.isNothing
+            xs' = MM.mapMaybe (runKleisli $ withEvent *** getLocalExpr) xs
+            ys' = MM.mapMaybe (runKleisli $ withoutEvent *** getLocalExpr >>> arr snd) xs
+        pWitness %= doubleUnion xs'
+        pInitWitness %= M.union (M.fromList $ concat ys')
 
 instance IsEvtExpr ActionDecl where
     parseEvtExpr xs = do
-            parseEvtExprChoice' pOldActions pDelActions pNewActions fst is_del xs
+            parseEvtExprChoice' pOldActions pDelActions pNewActions fst xs
             vs <- gets $ view pDelVars
             let xs' = map (uncurry $ \k -> (k,) . concat . MM.mapMaybe (g k)) xs
-                g (Just _) (lbl,DelAction (Just act) Local _) = do
+                g (Just _) (lbl,Action (InhDelete (Just act)) Local _) = do
                         let f = frame' act `M.intersection` vs
                             ns = [ (lbl,Witness v (ba_pred act) Local undefined) | v <- M.elems f ]
                         return ns
                 g _ _ = Nothing
             parseEvtExprDefault pWitness (_witnessVar . snd) xs'
-            forM_ xs $ \(eid,ys) ->
-                forM_ ys $ \(lbl,x) ->
-                    case (eid,x) of
-                      (Just eid,Action act _ li) -> do
-                        vs <- gets $ view pDelVars
-                        let msgR = format "event '{1}', action '{0}' refers to deleted variables" lbl eid
-                            msgW = format "event '{1}', action '{0}' assigns to deleted variables" lbl eid
-                            liAct = (format "action {0}" lbl,li)
-                            refs = L.map (first name) . M.elems 
-                            lisRead = refs $ vs `M.intersection` used_var' (ba_pred act)
-                            lisWrite = refs $ vs `M.intersection` frame (M.singleton "" act)
-                            lisRead' = L.map (first $ format "deleted variable {0}") lisRead
-                            lisWrite' = L.map (first $ format "deleted variable {0}") lisWrite
-                        unless (L.null lisRead')
-                            $ tell [MLError msgR $ liAct:lisRead']
-                        unless (L.null lisWrite')
-                            $ tell [MLError msgW $ liAct:lisWrite']
-                      (Just eid,DelAction Nothing _ li) ->
-                        tell [Error (format "action '{0}' of event '{1}' was deleted but does not exist" lbl eid) li]
-                      (Just _,DelAction _ _ _) -> return ()
-                      (Nothing,_) -> error "IsEvtExpr ActionDecl"
-
-        where
-            is_del (Action _ _ _) = False
-            is_del (DelAction _ _ _) = True
+            checkLocalExpr "action" 
+                (uncurry M.union . (frame' &&& used_var' . ba_pred)) 
+                xs
 
 instance IsExprScope EventExpr where
     parseExpr xs = mapM_ (readEvtExprGroup parseEvtExpr) zs
@@ -1314,15 +1288,33 @@ guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (event_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Guard xp Local li))]
- 
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Guard (InhAdd xp) Local li))]
+
+guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
+guard_removal = machineCmd "\\removeguard" $ \(evt_lbl,lbls) _m p2 -> do
+        ev  <- get_event p2 evt_lbl
+        li <- lift ask
+        return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Guard (InhDelete Nothing) Local li)) | lbl <- lbls ]
+
+coarse_removal :: MPipeline MachineP2 [(Label,ExprScope)]
+coarse_removal = machineCmd "\\removecoarse" $ \(evt_lbl,lbls) _m p2 -> do
+        ev  <- get_event p2 evt_lbl
+        li <- lift ask
+        return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ CoarseSchedule (InhDelete Nothing) Local li)) | lbl <- lbls ]
+
+fine_removal :: MPipeline MachineP2 [(Label,ExprScope)]
+fine_removal = machineCmd "\\removefine" $ \(evt_lbl,lbls) _m p2 -> do
+        ev  <- get_event p2 evt_lbl
+        li <- lift ask
+        return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ FineSchedule (InhDelete Nothing) Local li)) | lbl <- lbls ]
+
 coarse_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ CoarseSchedule xp Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ CoarseSchedule (InhAdd xp) Local li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -1330,7 +1322,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
-            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ FineSchedule xp Local li))]
+            return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ FineSchedule (InhAdd xp) Local li))]
 
         -------------------------
         --  Theory Properties  --
@@ -1371,10 +1363,6 @@ initialization = machineCmd "\\initialization" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ Initially xp Local li)]
 
-instance Scope Invariant where
-    merge_scopes _ _ = error "Invariant Scope.merge_scopes: _, _"
-    clashes _ _ = True
-    error_item (Invariant _ _ li)   = ("invariant", li)
 
 modifyProps :: ( HasMchExpr b a, HasDeclSource b DeclSource
                , Scope b
@@ -1389,6 +1377,7 @@ modifyProps ln xs = do
     pNewPropSet.ln %= M.union (M.fromList ys')
     pOldPropSet.ln %= M.union (M.fromList zs')
 
+instance Scope Invariant where
 instance IsExprScope Invariant where
     parseExpr xs = do
         parseExpr' pInvariant xs
@@ -1401,15 +1390,20 @@ invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ Invariant xp Local li)]
 
+instance Scope Theorem where
+instance IsExprScope Theorem where
+    parseExpr xs = do
+        parseExpr' pInvariant xs
+        modifyProps inv_thm xs
+
+mch_theorem :: MPipeline MachineP2
+                    [(Label,ExprScope)]
+mch_theorem = machineCmd "\\theorem" $ \(lbl,xs) _m p2 -> do
+            xp <- parse_expr' (machine_parser p2) xs
+            li <- lift ask
+            return [(lbl,ExprScope $ Theorem xp Local li)]
+
 instance Scope TransientProp where
-    merge_scopes _ _ = error "TransientProp Scope.merge_scopes: _, _"
-    clashes _ _ = True
-    keep_from s x = guard (s == s') >> return x
-        where
-            s' = case x of (TransientProp _ s _) -> s
-    error_item (TransientProp _ _ li) = ("transient predicate", li)
-
-
 instance IsExprScope TransientProp where
     parseExpr xs = do
         parseExpr' pTransient xs
@@ -1578,16 +1572,15 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3
         li <- ask
         return [(goal',(r,dep),li)]
 
-type EventRef = [(EventId,[((Label,ScheduleChange),LineInfo)])]
+data EventRef = EventRef 
+        { coarseRef :: [(EventId,[((Label,ScheduleChange),LineInfo)])]
+        , fineRef :: [(EventId,[((ProgId,ProgressProp),LineInfo)])] }
 
-emit_event_ref :: EventId -> MachineId -> ScheduleChange -> M EventRef
-emit_event_ref = emit_event_ref' "SCH"
+instance Monoid EventRef where
+    mempty = EventRef [] []
+    mappend (EventRef xs0 xs1) (EventRef ys0 ys1) = 
+            EventRef (xs0 ++ ys0) (xs1 ++ ys1)
 
-emit_event_ref' :: Label -> EventId -> MachineId -> ScheduleChange -> M EventRef
-emit_event_ref' lbl ev (MId m) sch = do
-    let po_lbl = composite_label [lbl,label m]            
-    li <- lift ask
-    return [(ev,[((po_lbl,sch),li)])]
 
 ref_replace_csched :: MPipeline MachineP3 EventRef
 ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m p3 -> do
@@ -1600,52 +1593,36 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m
             evt   <- fromEither (error "replace_csched: evt")
                         $ get_event p3 evt_lbl
             return (sprop,pprop,evt)
-        let rule = (replace evt_lbl (as_label prog,pprop) (saf,sprop)) 
-                        { remove = del
-                        , add = add
-                        , keep = keep }
-        emit_event_ref evt m rule
+        toEither $ do
+            _ <- fromEither undefined $ bind_all del 
+                    (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
+                    (`M.lookup` (p3 ^. getEvent evt . eDelCoarseSched))
+            _ <- fromEither undefined $ bind_all add 
+                    (format "'{1}' is not the label of a coarse schedule of '{0}' added during refinement" evt) 
+                    (`M.lookup` (p3 ^. getEvent evt . eAddedCoarseSched))
+            _ <- fromEither undefined $ bind_all keep 
+                    (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
+                    (`M.lookup` (p3 ^. getEvent evt . eKeptCoarseSched))
+            return ()
+        let rule = (replace (as_label prog,pprop) (saf,sprop)) 
+                        { remove = fromList' del
+                        , add  = fromList' add
+                        , keep = fromList' keep }
+            po_lbl = composite_label ["SCH",as_label m]            
+        li <- lift ask
+        return $ EventRef [(evt,[((po_lbl,rule),li)])] []
 
-ref_weaken_csched :: MPipeline MachineP3 EventRef
-ref_weaken_csched = machineCmd "\\weakento" $ \(evt_lbl,del,add) m p3 -> do
-        let _ = evt_lbl :: Label
-            _ = del :: S.Set Label
-            _ = add :: S.Set Label
-            rule   = (weaken evt_lbl)
-                        { remove = del
-                        , add = add }
-        evt <- get_event p3 evt_lbl
-        emit_event_ref evt m rule
+fromList' :: Ord a => [a] -> Map a ()
+fromList' xs = M.fromList $ zip xs $ repeat ()
 
 
 ref_replace_fsched :: MPipeline MachineP3 EventRef
-ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,old,new,prog) m p3 -> do
+ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
         evt <- get_event p3 evt_lbl
-        sc  <- get_schedules p3 evt
-        old_exp <- bind
-            (format "'{0}' is not a valid schedule" $ MM.fromJust old)
-            $ maybe (Just ztrue) (`M.lookup` sc) old
-        new_exp <- bind 
-            (format "'{0}' is not a valid schedule" $ MM.fromJust new)
-            $ maybe (Just ztrue) (`M.lookup` sc) new
-        pprop <- case prog of
-            Just prog -> do
-                pprop <- get_progress_prop p3 m prog
-                return $ Just (prog,pprop)
-            Nothing -> return Nothing
-        let rule      = (replace_fine evt_lbl old_exp new new_exp $ fmap (first as_label) pprop)
-        emit_event_ref evt m rule
-
-ref_remove_guard :: MPipeline MachineP3 EventRef
-ref_remove_guard = machineCmd "\\removeguard" $ \(evt_lbl,lbls) m p3 -> do
-        evt  <- get_event p3 evt_lbl
-        grds <- get_guards p3 evt
-        _ <- bind_all lbls (format "'{0}' is not a valid guard") 
-            (`M.lookup` grds)
-        let rules     = map (AST.remove_guard evt_lbl) lbls
-        liftM concat 
-            $ forM rules 
-            $ emit_event_ref' "GRD" evt m
+        pprop <- get_progress_prop p3 m prog
+        let rule      = (prog,pprop)
+        li <- lift ask
+        return $ EventRef [] [(evt,[(rule,li)])]
 
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do

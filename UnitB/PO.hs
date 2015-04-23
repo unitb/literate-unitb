@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+    -- Behavior hiding
 module UnitB.PO 
     ( proof_obligation, theory_po
     , step_ctx, evt_live_ctx
@@ -34,7 +36,6 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe )
 import qualified Data.Map as M
-import           Data.Maybe as MM 
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.Utils as LU (replace)
 
@@ -147,6 +148,10 @@ raw_machine_pos m = pos
                     mapM_ (inv_po m) $ M.toList $ _inv p
                     mapM_ (thm_po m) $ M.toList $ _inv_thm p
                     forM_  (M.toList $ events m) $ \ev -> do
+                        replace_csched_po m ev
+                        replace_fsched_po m ev
+                        weaken_csched_po m ev
+                        strengthen_guard_po m ev
                         sim_po m ev
                         wit_wd_po m ev
                         wit_fis_po m ev
@@ -241,7 +246,7 @@ init_wit_wd_po m =
             context (assert_ctx m)
             named_hyps $ inits m)
         (emit_goal ["INIT/WWD"] 
-            (well_definedness $ zall $ M.elems $ init_witness m))
+            (well_definedness $ zall $ init_witness m))
 
 init_witness_fis_po :: Machine -> M ()
 init_witness_fis_po m =
@@ -290,9 +295,9 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                     enablement
                     negation
             where
-                grd  = new_guard evt
+                grd  = all_guards evt
                 sch0 = coarse $ new_sched evt
-                sch1 = fromList $ maybeToList $ fine $ new_sched evt
+                sch1 = fine $ new_sched evt
                 sch  = sch0 `M.union` sch1
                 act  = ba_predicate m evt
                 ind  = indices evt
@@ -300,7 +305,7 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                 param_ctx = POG.variables (params evt)
                 enablement = emit_goal [evt_lbl, "EN"] 
                             (          xp 
-                            `zimplies` (new_dummy ind $ zall (M.elems sch0)))
+                            `zimplies` (new_dummy ind $ zall sch0))
 
                 new_defs = flip map (M.elems ind1) 
                         $ \(Var n t) -> (n ++ "@param", mk_fun [] (n ++ "@param") [] t)
@@ -332,27 +337,31 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
         tagged_sched :: Label -> Event -> Map Label Expr
         tagged_sched lbl e = M.map (new_ind lbl e) $ coarse $ new_sched e
         all_csch  = concatMap M.elems $ zipWith tagged_sched evt_lbl es
-        all_fsch  = do
-            fs <- zipWithM (\lbl e -> (new_ind lbl e . snd) `liftM` fine (new_sched e)) evt_lbl es
-            return $ zsome fs :: Maybe Expr
+            
+            -- we take the disjunction of the fine schedules of 
+            -- all the events involved in the transient predicate
+        all_fsch  =
+            zsome $ zipWith (\lbl e -> (new_ind lbl e . zall) $ fine (new_sched e)) evt_lbl es
             -- fine $ new_sched evt
         following = with (prefix_label "leadsto") $
-                case (lt_fine, all_fsch) of
-                    (Just lbl, Just fsch) ->
-                        expected_leadsto_po 
-                            (LeadsTo all_ind
-                                    (zall $ xp : all_csch) 
-                                    fsch) 
-                            (progs ! lbl)
-                    (Nothing,Just fsch) ->
-                        emit_goal [] $ zforall all_ind
-                                (zall $ xp : all_csch) 
-                                fsch
-                    (Nothing,Nothing) -> return ()
-                    _                 -> error $ format (
+                case lt_fine of
+                    Just lbl
+                        | not $ all_fsch == ztrue ->
+                            expected_leadsto_po 
+                                (LeadsTo all_ind
+                                        (zall $ xp : all_csch) 
+                                        all_fsch) 
+                                (progs ! lbl)
+                        | otherwise -> error $ format (
                                "transient predicate {0}'s side condition doesn't "
                             ++ "match the fine schedule of event {1}"
                             ) pname (intercalate "," $ map show evt_lbl)
+                    Nothing
+                        | not $ all_fsch == ztrue ->
+                            emit_goal [] $ zforall all_ind
+                                    (zall $ xp : all_csch) 
+                                    all_fsch
+                        | otherwise -> return ()
         ctx = do
                 POG.context $ assert_ctx m 
                 POG.context $ step_ctx m 
@@ -369,7 +378,7 @@ prop_co m (pname, Co fv xp) =
             context $ dummy_ctx m
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = new_guard evt
+            let grd  = all_guards evt
                 act  = ba_predicate m evt
             with 
                 (do named_hyps $ grd
@@ -392,7 +401,7 @@ prop_saf m (pname, Unless fv p q excp) =
             context $ dummy_ctx m
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = new_guard evt
+            let grd  = all_guards evt
                 act  = ba_predicate m evt
                 ind = maybe M.empty (indices . (events m !)) excp
                 fvs = symbol_table fv 
@@ -424,7 +433,7 @@ inv_po m (pname, xp) =
                  context $ step_ctx m
                  named_hyps $ invariants m)
             $ forM_ (toList $ events m) $ \(evt_lbl,evt) -> do
-                let grd  = new_guard evt
+                let grd  = all_guards evt
                     act  = ba_predicate m evt
                 with 
                     (do named_hyps $ grd
@@ -447,7 +456,7 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ invariants m
                  prefix_label $ _name m
                  prefix_label lbl
-                 named_hyps $ new_guard evt
+                 named_hyps $ all_guards evt
                  named_hyps $ ba_predicate' (variables m) (actions evt))
             (emit_goal ["WWD"] $ well_definedness $ zall 
                 $ M.elems $ witness evt)
@@ -460,12 +469,126 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ invariants m
                  prefix_label $ _name m
                  prefix_label lbl
-                 named_hyps $ new_guard evt
+                 named_hyps $ all_guards evt
                  named_hyps $ ba_predicate' (variables m) (actions evt))
             (emit_exist_goal ["WFIS"] pvar 
                 $ M.elems $ witness evt)
     where
         pvar = map prime $ M.elems $ abs_vars m `M.difference` variables m
+
+
+replace_csched_po :: Machine -> (Label,Event) -> M ()
+replace_csched_po m (lbl,evt) = do
+        with (do
+                prefix_label $ _name m
+                prefix_label lbl
+                prefix_label "CSCH/delay"
+                POG.context $ assert_ctx m
+                POG.context $ step_ctx m
+                POG.variables $ indices evt
+                named_hyps $ invariants m ) $ do
+        let old_c = coarse $ old_sched evt
+            old_f = fine $ old_sched evt
+        forM_ (zip [0..] $ c_sched_ref evt) $ \(i,ref) -> do
+            let prog = snd $ sch_prog ref
+                saf  = snd $ sch_saf ref
+                keep_c     = coarse (new_sched evt) `M.intersection` keep ref
+                new_part_c = (coarse (added_sched evt) `M.intersection` add ref) `M.union` keep_c
+                nb = label $ show (i :: Int)
+                LeadsTo vs p0 q0  = prog
+                Unless us p1 q1 _ = saf
+            with (do
+                    POG.variables $ symbol_table vs
+                    named_hyps old_c
+                    named_hyps old_f) $ 
+                emit_goal [nb,"prog/lhs"] p0
+            with (do
+                    POG.variables $ symbol_table vs) $
+                forM_ (toList new_part_c) $ \(lbl,sch) -> do
+                    emit_goal [nb,"prog/rhs",lbl] $ $fromJust$
+                        Right q0 .=> Right sch
+            with (do
+                    POG.variables $ symbol_table us) $ do
+                emit_goal [nb,"saf/lhs"] $ $fromJust$
+                        Right p1 .== mzall (M.map Right new_part_c)
+                emit_goal [nb,"saf/rhs"] $ $fromJust$
+                        Right q1 .=> mznot (mzall $ M.map Right $ old_c `M.union` old_f)
+
+weaken_csched_po :: Machine -> (Label,Event) -> M ()
+weaken_csched_po m (lbl,evt) = do
+        let weaken_sch = coarse (added_sched evt) `M.difference` M.unions (L.map add $ c_sched_ref evt)
+            old_c = coarse $ old_sched evt
+        with (do
+                prefix_label $ _name m
+                prefix_label lbl
+                prefix_label "CSCH/weaken"
+                POG.context $ assert_ctx m
+                POG.context $ step_ctx m
+                POG.variables $ indices evt
+                named_hyps $ invariants m 
+                    -- old version admits old_f as assumption
+                    -- why is it correct or needed?
+                    -- named_hyps old_f
+                named_hyps old_c) $ do
+        forM_ (M.toList weaken_sch) $ \(lbl,sch) -> do
+            emit_goal [lbl] sch
+
+replace_fsched_po :: Machine -> (Label,Event) -> M ()
+replace_fsched_po m (lbl,evt) = do
+        let old_c = coarse $ old_sched evt
+            new_c = coarse $ new_sched evt
+            old_f = fine $ old_sched evt
+            new_f = fine $ new_sched evt
+        with (do
+                prefix_label $ _name m
+                prefix_label lbl
+                prefix_label "FSCH/replace"
+                POG.context $ assert_ctx m
+                POG.context $ step_ctx m
+                POG.variables $ indices evt
+                named_hyps $ invariants m) $ do
+            case f_sched_ref evt of
+                Just (_,prog) -> do
+                    let LeadsTo vs p0 q0 = prog
+                    with (do
+                            POG.variables $ symbol_table vs) $ do
+                        with (do
+                                named_hyps old_c
+                                named_hyps old_f ) $
+                            emit_goal ["prog/lhs"] p0
+                        forM_ (M.toList new_f) $ \(lbl,sch) -> 
+                            emit_goal ["prog/rhs",lbl] $
+                                    q0 `zimplies` sch
+                    with (do
+                            named_hyps new_c
+                            named_hyps new_f ) $
+                        forM_ (M.toList $ fine $ deleted_sched evt) $ \(lbl,sch) ->
+                            emit_goal ["str",lbl] sch 
+                Nothing -> do
+                    let add_f = fine $ added_sched evt
+                        del_f = fine $ deleted_sched evt
+                        kept_f = fine $ kept_sched evt
+                    unless (new_f == old_f) $
+                        with (do
+                                named_hyps new_c
+                                named_hyps kept_f) $
+                            emit_goal ["eqv"] $ $fromJust$
+                                Right (zall add_f) .= Right (zall del_f)
+                                
+strengthen_guard_po :: Machine -> (Label,Event) -> M ()
+strengthen_guard_po m (lbl,evt) = 
+        with (do
+                prefix_label $ _name m
+                prefix_label lbl
+                prefix_label "GRD/str"
+                POG.context $ assert_ctx m
+                POG.context $ step_ctx m
+                POG.variables $ indices evt
+                POG.variables $ params evt
+                named_hyps $ invariants m 
+                named_hyps $ new_guard evt ) $ do
+        forM_ (toList $ deleted_guard evt) $ \(lbl,grd) -> do
+            emit_goal [lbl] grd
 
 sim_po :: Machine -> (Label, Event) -> M ()
 sim_po m (lbl, evt) = 
@@ -476,11 +599,10 @@ sim_po m (lbl, evt) =
                 prefix_label $ _name m
                 prefix_label lbl
                 prefix_label "SIM"
-                named_hyps (new_guard evt)
-                named_hyps (ba_predicate m evt)
-                )
-            (forM_ (M.toList $ del_acts evt) $ \(albl,act) ->
-                emit_goal [albl] $ ba_pred act)
+                named_hyps (all_guards evt)
+                named_hyps (ba_predicate m evt) ) $
+            forM_ (M.toList $ del_acts evt) $ \(albl,act) ->
+                emit_goal [albl] $ ba_pred act
 
 fis_po :: Machine -> (Label, Event) -> M ()
 fis_po m (lbl, evt) = 
@@ -488,7 +610,7 @@ fis_po m (lbl, evt) =
                  POG.variables $ indices evt
                  POG.variables $ params evt
                  named_hyps $ invariants m
-                 named_hyps $ new_guard evt)
+                 named_hyps $ all_guards evt)
             (emit_exist_goal [_name m, lbl, fis_lbl] pvar 
                 $ M.elems $ ba_predicate m evt)
     where
@@ -556,7 +678,7 @@ inv_wd_po m =
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
-                $ well_definedness $ zall $ elems $ invariants m
+                $ well_definedness $ zall $ invariants m
 
 init_wd_po :: Machine -> M ()
 init_wd_po m = 
@@ -565,7 +687,7 @@ init_wd_po m =
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INIT", "WD"] 
-                $ well_definedness $ zall $ elems $ inits m
+                $ well_definedness $ zall $ inits m
 
 evt_wd_po :: Machine -> (Label, Event) -> M ()
 evt_wd_po m (lbl, evt) = 
@@ -576,17 +698,17 @@ evt_wd_po m (lbl, evt) =
                  POG.variables $ indices evt
                  named_hyps $ invariants m)
             (do emit_goal ["C_SCH"] 
-                    $ well_definedness $ zall $ elems 
+                    $ well_definedness $ zall 
                     $ coarse $ new_sched evt
                 emit_goal ["F_SCH"]
-                    $ well_definedness $ zall $ map snd $ maybeToList 
+                    $ well_definedness $ zall
                     $ fine $ new_sched evt
                 with (POG.variables $ params evt)
                     (do emit_goal ["GRD"]
-                            $ well_definedness $ zall $ elems
+                            $ well_definedness $ zall
                             $ new_guard evt
                         with (do prefix_label "ACT"
-                                 named_hyps $ new_guard evt
+                                 named_hyps $ all_guards evt
                                  context $ step_ctx m) $ do
                             let p k _ = k `M.notMember` old_acts evt
                             forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
@@ -603,26 +725,37 @@ evt_eql_po  m (lbl, evt) =
              context $ evt_saf_ctx evt
              context $ step_ctx m
              named_hyps $ invariants m
-             named_hyps $ new_guard evt
+             named_hyps $ all_guards evt
              named_hyps $ ba_predicate m evt)
         (forM_ (M.elems $ eql_vars evt) $ \v -> do
             emit_goal [label $ name v] 
                 $ Word (prime v) `zeq` Word v )
 
-    -- todo: partition the existential quantifier
 sch_po :: Machine -> (Label, Event) -> M ()
 sch_po m (lbl, evt) = 
     with (do prefix_label $ _name m
              prefix_label lbl
+             prefix_label sch_lbl
              context $ assert_ctx m
              context $ evt_live_ctx evt
              POG.variables ind
              named_hyps hyp)
-         $ emit_goal [sch_lbl] $ zexists (M.elems param) ztrue $ zall grd
+         $ if M.null param
+                then if removed_c_sch || removed_f_sch 
+                    then forM_ (toList grd) $ \(lbl,grd) -> emit_goal [lbl] grd  
+                    else forM_ (toList $ grd `M.difference` old_guard evt) 
+                        $ \(lbl,grd) -> emit_goal [lbl] grd  
+            else if removed_c_sch || removed_f_sch || added_grd
+                then emit_exist_goal [] (M.elems param) (M.elems grd)
+                else return ()
     where
-        grd   = M.elems $ new_guard evt
+        grd   = new_guard evt
         c_sch = coarse $ new_sched evt
-        f_sch = M.fromList $ maybeToList $ fine $ new_sched evt
+        f_sch = fine $ new_sched evt
+        removed_sched sch = not $ M.null $ sch (old_sched evt) `M.difference` sch (new_sched evt)
+        removed_c_sch = removed_sched coarse
+        removed_f_sch = removed_sched fine
+        added_grd = not $ M.null $ new_guard evt `M.difference` old_guard evt
         param = params evt
         ind   = indices evt `merge` params evt
         hyp   = invariants m `M.union` f_sch `M.union` c_sch
@@ -663,7 +796,7 @@ dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
                 hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
-                hPutStrLn h (concat $ map f $ z3_code po)
+                hPutStrLn h (unlines $ map f $ z3_code po)
                 hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ show lbl)
                 ) )

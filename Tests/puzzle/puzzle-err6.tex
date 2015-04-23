@@ -28,7 +28,7 @@
 \weakento{term}{default}{sch0} \\
 \cschedule{term}{sch0}{\true} 
 \end{align}
-
+\removecoarse{term}{default}
 \begin{align}
 \evbcmeq{term}{act0}{b}{\true}
 \end{align}
@@ -55,7 +55,7 @@
 \end{align}\begin{description}
 \comment{\ref{inv0}}{ termination is characterized by everyone 
 	having visited }\end{description}
-\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+\replace{term}{sch0}{sch1}{}{prog1}{saf1} \removecoarse{term}{sch0}
 \begin{align*}
 	\safety{saf1}{vs = \Pcs}{\false}
 \end{align*}
@@ -72,7 +72,7 @@
 		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
 		{\neg \Pcs \setminus vs = V} \\
 	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
-\refine{prog3}{ensure}{visit}{ [\index{p}{\neg p' \in vs}] }
+\refine{prog3}{ensure}{visit}{ $[\index{p}{\neg p' \in vs}]$ }
 \end{align*}
 
 \begin{align*}
@@ -88,8 +88,8 @@
 	\evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
 \end{align}
 
-\weakento{visit}{default}{}
-
+% \weakento{visit}{default}{}
+\removecoarse{visit}{default}
 % \input{}
 \input{machine_m1}
 
@@ -103,7 +103,7 @@
 \begin{align}
 	\cschedule{term}{sch2}{ ts = \Pcs }
 \end{align}
-
+\removecoarse{term}{sch1}
 \replace{term}{sch1}{sch2}{}{prog4}{saf3}
 
 \begin{align}
@@ -140,9 +140,9 @@
 		{ ts = V \land \neg cs = \emptyset 
 				 \land cs \subseteq \Pcs \setminus ts }
 		{ cs = \emptyset \land \neg ts = V }
-	\refine{prog6}{ensure}{flick}{ \index{p}{p' \in vs \setminus ts} }
+	\refine{prog6}{ensure}{flick}{ $\index{p}{p' \in vs \setminus ts}$ }
 	\refine{prog7}{ensure}{count}{} % \index{p}{ p' \in cs } }
-	\refine{prog11}{ensure}{visit}{ \index{p}{ \neg p' \in vs} }
+	\refine{prog11}{ensure}{visit}{ $\index{p}{ \neg p' \in vs}$ }
 \end{align*}
 
 \begin{align*}
@@ -164,7 +164,7 @@
 \end{align}
 
 \weakento{flick}{default}{sch0,sch1,sch2}
-
+\removecoarse{flick}{default}
 \input{m2_term}
 \input{m2_flick}
 
@@ -181,7 +181,7 @@
 \end{align}
 
 \weakento{count}{default}{sch0}
-
+\removecoarse{count}{default}
 \input{m2_count}
 
 \begin{align*}
@@ -198,13 +198,20 @@
 	\begin{description}
 \comment{flick}{stuff}
 		\comment{c}{ one-bit channel used to communicate }
-	\end{description}\removevar{cs}
-	\removevar{ts}
-	\removeact{count}{act0,act1}\witness{count}{cs}{cs' = \emptyset}
-	\removeact{flick}{act0}
-	\removeinit{in2} \removeinit{in1}
-	\initwitness{cs}{cs = \emptyset}
-	\initwitness{ts}{ts = \emptyset}
+	\end{description}
+	% \begin{itemize}
+	\begin{align*}
+		\witness{count}{cs}{cs' = \emptyset} \\
+		\initwitness{cs}{cs = \emptyset} \\
+		\initwitness{ts}{ts = \emptyset}
+	\end{align*}
+\hide{
+		\item $\removevar{cs}$ x
+		\item $\removevar{ts}$ x
+		\item $\removeact{count}{act0,act1}$ x
+		\item $\removeact{flick}{act0}$ x
+		\item $\removeinit{in2} \removeinit{in1}$ x }
+	% \end{itemize}
 	\begin{align} 
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\
@@ -223,8 +230,11 @@
 		\evbcmeq{count}{m3:act1}{n}{n+1} \\
 		\evguard{count}{m3:grd0}{ c = 1 }
 	\end{align}
+	\removecoarse{count}{sch0}
+	\removecoarse{flick}{sch0,sch1}
+	\removeguard{flick}{grd0}
+	\removecoarse{term}{sch2}
 	\input{machine_m3}
-	\witness{count}{c}{c = 3}
 \end{machine}
 
 \begin{machine}{m4}

@@ -11,6 +11,7 @@ module Z3.Z3
     , var_decl 
     , free_vars
     , z3_code
+    , z3_version
     , Tree ( .. )
     , Symbol ( .. )
     , Command ( .. )
@@ -48,6 +49,7 @@ import Data.ConfigFile
 import           Data.Char
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
+import           Data.List.Utils as L
 import qualified Data.Map as M
 import qualified Data.Set as S
 import           Data.Typeable 
@@ -189,6 +191,25 @@ check_z3_bin = do
     else do
         putStrLn ("A 'z3' executable has not been found in the path ")
         return False
+
+z3_version :: IO (String,String)
+z3_version = do
+        xs <- (words . head . lines) `liftM` readProcess z3_path ["--help"] ""
+        let hashcode = dropWhile (/= "hashcode") xs !! 1
+            version = dropWhile (/= "[version") xs !! 1
+        return (version, filter isHexDigit hashcode)
+
+
+z3_installed :: IO Bool        
+z3_installed = do
+    path <- getEnv "PATH"
+    xs   <- if is_os_windows then do
+            let ps = L.split ";" path ++ ["."]
+            forM ps (doesFileExist . (`combine` "z3.exe"))
+    else do
+            let ps = L.split ":" path
+            forM ps (doesFileExist . (`combine` "z3"))
+    return $ or xs
 
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (lhs vs e) False

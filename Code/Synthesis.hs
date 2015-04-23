@@ -279,7 +279,7 @@ disabled :: [Expr] -> Label -> POGen ()
 disabled ps lbl = do
     evts <- lift $ asks $ events . machine
     entails ("disabled" </> lbl) ps 
-        [znot $ zall $ M.elems $ coarse $ new_sched $ evts ! lbl]
+        [znot $ zall $ coarse $ new_sched $ evts ! lbl]
 
 entails :: Label -> [Expr] -> [Expr] -> POGen ()
 entails lbl pre post = do
@@ -310,7 +310,7 @@ hoare_triple lbl pre evt_lbl post = do
 default_cfg :: Machine -> Program
 default_cfg m = Loop g [] body Infinite
     where
-        all_guard e = zall $ M.elems $ coarse $ new_sched e
+        all_guard e = zall $ coarse $ new_sched e
         g    = zsome $ L.map (znot . all_guard) $ M.elems $ events m
         branch (lbl,e) = Event [] ztrue (all_guard e) lbl
         body = Sequence 
@@ -503,7 +503,7 @@ report = lift . Left
 --         unless (M.null $ params e) $ report "non null number of parameters"
 --         unless (M.null $ indices e) $ report "non null number of indices"
 --         unless (isNothing $ fine $ new_sched e) $ report "event has a fine schedule"
---         grd  <- lift $ eval_expr m $ zall $ M.elems $ coarse $ new_sched e
+--         grd  <- lift $ eval_expr m $ zall $ coarse $ new_sched e
 --         emit $ format "if {0} then" grd
 --         indent 2 $ event_body_code m e
 --         emit $ "else return ()"

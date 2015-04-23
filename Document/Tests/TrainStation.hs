@@ -210,7 +210,6 @@ machine0 = (empty_machine "train0")
                     ,  ("sets", set_theory) -- blk_type
                     ,  ("basic", basic_theory)
                     ,  ("arithmetic", arithmetic)
---                    ,  function_theory train_type loc_type
                     ]
             ,  defs = fromList 
                     [  ("\\TRAIN", train_def)
@@ -227,11 +226,11 @@ machine0 = (empty_machine "train0")
                                ++ map (\t -> Var t $ blk_type) 
                                 [ "p","q" ])
             ,  fact    = fromList 
-                    [ (label "axm0", axm0)
-                    , (label "asm2", axm2)
-                    , (label "asm3", axm3) 
-                    , (label "asm4", axm4) 
-                    , (label "asm5", axm5) 
+                    [ ("axm0", axm0)
+                    , ("asm2", axm2)
+                    , ("asm3", axm3) 
+                    , ("asm4", axm4) 
+                    , ("asm5", axm5) 
                     ]
             ,  consts  = fromList
                     [  ("ent", ent_var)
@@ -242,17 +241,9 @@ machine0 = (empty_machine "train0")
     ,  inits = fromList $ zip (map (label . ("in" ++) . show . (1 -)) [0..])
             $ map ($fromJust) [loc .= zempty_fun, in_var .= zempty_set]
     ,  variables = symbol_table [in_decl,loc_decl]
-    ,  events = fromList [(label "enter", enter_evt), (label "leave", leave_evt)]
+    ,  events = fromList [("enter", enter_evt), ("leave", leave_evt)]
     ,  props = props0
-    ,  derivation = fromList 
-            [ ( label "leave/SCH/train0/0"
-              , Rule (weaken (label "leave"))
-                    { remove = S.singleton (label "default")
-                    , add    = S.singleton (label "c0") } )
-            , ( label "enter/GRD/train0/grd1"
-              , Rule $ add_guard (label "enter") $ label "grd1" )
-            , ( label "leave/GRD/train0/grd0"
-              , Rule $ add_guard (label "leave") $ label "grd0" ) ]
+    ,  derivation = fromList []
     }
     where
         axm0 = ($fromJust) (block .= (zset_enum [ent,ext] `zunion` plf)) 
@@ -272,17 +263,16 @@ machine0 = (empty_machine "train0")
             mzforall [p_decl] mztrue $ (
                         (mzeq p ent \/ mzeq p ext)
                     .=  mznot (p `zelem` plf) )
-      --    	\qforall{p}{}{ \neg p = ent \equiv p \in \{ext\} \bunion PLF }
 
 props0 :: PropertySet
 props0 = empty_property_set
     {  _constraint = fromList 
-            [   ( label "co0"
+            [   ( "co0"
                 , Co [t_decl] 
                     $ ($fromJust) (mzimplies 
                         (mzand (mznot (t `zelem` in_var)) (t `zelem` in_var')) 
                         (mzeq  (zapply loc' t) ent)) )
-            ,   ( label "co1"
+            ,   ( "co1"
                 , Co [t_decl] 
                     $ ($fromJust) (mzimplies 
                         (mzall [ (t `zelem` in_var), 
@@ -292,34 +282,32 @@ props0 = empty_property_set
                                ((zapply loc' t `zelem` plf) \/ ((loc' `zapply` t) 
                                .= ent)))) )
             ]
-        --    t \in in \land loc.t = ent  \land \neg loc.t \in PLF 
-        -- \implies t \in in' \land (loc'.t \in PLF \lor loc'.t = ent)
     ,   _transient = fromList
-            [   ( label "tr0"
+            [   ( "tr0"
                 , Transient
                     (symbol_table [t_decl])
-                    (($fromJust) (t `zelem` in_var)) [label "leave"] 
+                    (($fromJust) (t `zelem` in_var)) ["leave"] 
                     (TrHint (fromList [("t",(train_type, $fromJust $ t' .= t))]) Nothing) )
             ]
     ,  _inv = fromList 
-            [   (label "inv2",($fromJust) (zdom loc .= in_var))
-            ,   (label "inv1",($fromJust) $ mzforall [t_decl] (zelem t in_var)
+            [   ("inv2",($fromJust) (zdom loc .= in_var))
+            ,   ("inv1",($fromJust) $ mzforall [t_decl] (zelem t in_var)
                         ((zapply loc t `zelem` block)))
             ]
     ,  _proofs = fromList
-            [   ( label "train0/enter/INV/inv2"
+            [   ( "train0/enter/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/leave/INV/inv2"
+            ,   ( "train0/leave/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/INIT/INV/inv2"
+            ,   ( "train0/INIT/INV/inv2"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/enter/CO/co0"
+            ,   ( "train0/enter/CO/co0"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/enter/CO/co1"
+            ,   ( "train0/enter/CO/co1"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/leave/CO/co0"
+            ,   ( "train0/leave/CO/co0"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( label "train0/leave/CO/co1"
+            ,   ( "train0/leave/CO/co1"
                 , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
             ]
     ,  _safety = fromList
@@ -331,14 +319,13 @@ props0 = empty_property_set
 enter_evt :: Event
 enter_evt = empty_event
     {  indices = symbol_table [t_decl]
-    ,  guards = fromList
-            [  (label "grd1", ($fromJust) $ mznot (t `zelem` in_var))
+    ,  new_guard = fromList
+            [  ("grd1", ($fromJust) $ mznot (t `zelem` in_var))
             ]
-    ,  sched_ref = [add_guard (label "enter") $ label "grd1"]
     ,  actions = fromList
-            [  (label "a1", BcmSuchThat vars
+            [  ("a1", BcmSuchThat vars
                     (($fromJust) (in_var' .= (in_var `zunion` zmk_set t))))
-            ,  (label "a2", BcmSuchThat vars
+            ,  ("a2", BcmSuchThat vars
                     (($fromJust) (loc' .= (loc `zovl` zmk_fun t ent))))
             ]
     }
@@ -348,22 +335,17 @@ enter_evt = empty_event
 leave_evt :: Event
 leave_evt = empty_event 
     {  indices   = symbol_table [t_decl]
-    ,  scheds    = insert (label "c0") (($fromJust) (t `zelem` in_var)) default_schedule
-    ,  sched_ref = reverse
-                   [ (weaken (label "leave"))
-                     { remove = S.singleton (label "default")
-                     , add    = S.singleton (label "c0") }
-                   , add_guard (label "leave") $ label "grd0"
-                   ]
-    ,  guards = fromList
-            [  (label "grd0", ($fromJust) $ mzand 
-                                    (zapply loc t .= ext) 
-                                    (t `zelem` in_var) )
+    ,  new_sched = empty_schedule 
+                    { coarse = singleton "c0" (($fromJust) (t `zelem` in_var)) }
+    ,  new_guard = fromList
+            [  ("grd0", ($fromJust) $  
+                                       zapply loc t .= ext
+                                    /\ (t `zelem` in_var) )
             ]
     ,  actions = fromList 
-            [  (label "a0", BcmSuchThat vars
+            [  ("a0", BcmSuchThat vars
                     (($fromJust) (in_var' .= (in_var `zsetdiff` zmk_set t))))
-            ,  (label "a3", BcmSuchThat vars
+            ,  ("a3", BcmSuchThat vars
                     (($fromJust) (loc' .= (zmk_set t `zdomsubt` loc))))
             ] 
     }
@@ -1584,7 +1566,7 @@ case24 = proof_obligation path0 "train0/TR/tr0/leave/NEG" 0
 --        pos <- list_file_obligations path0
 --        case pos of
 --            Right [(_,pos)] -> do
---                let po = pos ! label "m0/leave/TR/NEG/tr0"
+--                let po = pos ! "m0/leave/TR/NEG/tr0"
 --                    cmd = unlines $ map (show . as_tree) $ z3_code po
 --                return cmd
 --            x -> return $ show x
@@ -2178,11 +2160,6 @@ result18 = unlines
 
 case18 :: IO String
 case18 = find_errors path18
-        -- r <- parse_machine path18
-        -- case r of
-        --     Right _ -> do
-        --         return "successful verification"
-        --     Left xs -> return $ unlines $ map format_error xs
 
 path21 :: FilePath
 path21 = "tests/train-station-err10.tex"
@@ -2197,20 +2174,3 @@ result21 = unlines
     , "\t\"sets\": (130,12)"
     , "\t\"sets\": (131,12)\n"
     ]
-
---get_proof_obl name = do
---        pos <- list_file_obligations path0
---        case pos of
---            Right [(_,pos)] -> do
---                let po = pos ! label name
---                    cmd = unlines $ map (show . as_tree) $ z3_code po
---                putStrLn cmd
---            x -> putStrLn $ show x
-
---list_proof_obl = do
---        pos <- list_file_obligations path0
---        case pos of
---            Right [(_,pos)] -> do   
---                forM_ (map show $ keys $ pos) putStrLn
---            _ -> return () -- $ show x
-

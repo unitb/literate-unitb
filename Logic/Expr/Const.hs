@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts, TemplateHaskell #-}
 {-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances            #-}
+{-# LANGUAGE FlexibleInstances               #-}
 module Logic.Expr.Const where
 
     -- Modules   
@@ -9,12 +11,14 @@ import Logic.Expr.Genericity
 import Logic.Expr.Type
 
     -- Libraries
-import Control.Monad
+import Control.Monad 
+import Control.Monad.Writer
 
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe hiding ( fromJust )
 import qualified Data.Set as S
+import Data.Traversable as T (Traversable,mapM)
 
 import Utilities.Syntactic
 
@@ -25,7 +29,8 @@ infixr 3 /\
 infix 4 .=
 infix 4 .<=
 infix 4 .<
-infix 5 .+
+infixr 5 .+
+infixr 6 .*
 
 type OneExpr t q = AbsExpr t q -> AbsExpr t q
 
@@ -93,8 +98,11 @@ ztrue :: TypeSystem2 t => AbsExpr t q
 ztrue        = FunApp (mk_fun [] "true" [] bool) []
 zfalse :: TypeSystem2 t => AbsExpr t q
 zfalse       = FunApp (mk_fun [] "false" [] bool) []
-zall :: (TypeSystem2 t, IsQuantifier q) => [AbsExpr t q] -> AbsExpr t q
-zall xs      = 
+toList :: Traversable f => f a -> [a]
+toList m = execWriter (T.mapM (tell . (:[])) m)
+zall :: (TypeSystem2 t, IsQuantifier q, Traversable list) 
+     => list (AbsExpr t q) -> AbsExpr t q
+zall xs'      = 
         case concatMap f xs of
             []  -> ztrue
             [x] -> x
@@ -102,14 +110,16 @@ zall xs      =
                 | zfalse `elem` xs -> zfalse
                 | otherwise -> FunApp (mk_fun [] "and" (take n $ repeat bool) bool) xs
     where
+        xs = toList xs'
         n = length xs
         f (FunApp fun@(Fun [] "and" _ _ _) xs)
             | not $ isLifted fun = concatMap f xs
         f x
             | x == ztrue = []
             | otherwise   = [x]
-zsome :: (TypeSystem2 t, IsQuantifier q) => [AbsExpr t q] -> AbsExpr t q
-zsome xs      = 
+zsome :: (TypeSystem2 t, IsQuantifier q, Traversable list) 
+      => list (AbsExpr t q) -> AbsExpr t q
+zsome xs'      = 
         case concatMap f xs of
             []  -> zfalse
             [x] -> x
@@ -117,6 +127,7 @@ zsome xs      =
                 | ztrue `elem` xs -> ztrue
                 | otherwise        -> FunApp (mk_fun [] "or" (replicate n bool) bool) xs
     where
+        xs = toList xs'
         n = length xs
         f (FunApp fun@(Fun [] "or" _ _ _) xs) 
             | not $ isLifted fun = concatMap f xs
@@ -210,17 +221,21 @@ mztrue        = Right ztrue
 mzfalse :: TypeSystem2 t
         => ExprPG t q
 mzfalse       = Right zfalse
-mzall :: (IsQuantifier q, TypeSystem2 t) => [ExprPG t q] -> ExprPG t q
-mzall []      = mztrue
-mzall [x]     = x
-mzall xs      = do
+mzall :: (IsQuantifier q, TypeSystem2 t, Traversable list) 
+      => list (ExprPG t q) -> ExprPG t q
+mzall xs = case toList xs of
+    []  -> mztrue
+    [x] -> x
+    xs  -> do
         xs <- forM xs $ zcast bool 
         return $ zall xs
 
-mzsome :: (IsQuantifier q, TypeSystem2 t) => [ExprPG t q] -> ExprPG t q
-mzsome []     = mzfalse
-mzsome [x]    = x
-mzsome xs     = do
+mzsome :: (IsQuantifier q, TypeSystem2 t, Traversable list) 
+       => list (ExprPG t q) -> ExprPG t q
+mzsome xs = case toList xs of
+    []  -> mzfalse
+    [x] -> x
+    xs  -> do
         xs <- forM xs $ zcast bool
         return $ zsome xs
 
@@ -270,8 +285,8 @@ zpow         = fun2 $ mk_fun [] "^" [int,int] int
 zselect :: TwoExprP Type q
 zselect      = typ_fun2 (mk_fun [] "select" [array gA gB, gA] gB)
 
-zint :: TypeSystem2 t => Int -> AbsExpr t q
-zint n       = Const (IntVal n) int
+zint :: (TypeSystem2 t, Integral n) => n -> AbsExpr t q
+zint n       = Const (IntVal $ fromIntegral n) int
 
 zreal :: TypeSystem2 t => Double -> AbsExpr t q
 zreal n      = Const (RealVal n) real
@@ -306,10 +321,12 @@ mzopp :: (TypeSystem2 t,IsQuantifier q) => ExprPG t q -> ExprPG t q
 mzopp         = typ_fun1 $ mk_fun [] "-" [int] int
 mztimes :: TypeSystem2 t => TwoExprP t q
 mztimes       = typ_fun2 $ mk_fun [] "*" [int,int] int
+(.*) :: TypeSystem2 t => TwoExprP t q
+(.*) = mztimes
 mzpow :: TypeSystem2 t => TwoExprP t q
 mzpow         = typ_fun2 $ mk_fun [] "^" [int,int] int
 
-mzint :: TypeSystem2 t => Int -> ExprPG t q 
+mzint :: (TypeSystem2 t, Integral n) => n -> ExprPG t q 
 mzint n       = Right $ zint n
 
 mzreal :: TypeSystem2 t => Int -> ExprPG t q
@@ -400,3 +417,12 @@ ident_fun = mk_fun [gA] "ident" [] (array gA gA)
 
 zident :: ExprP
 zident = Right $ FunApp ident_fun []
+
+instance Num ExprP where
+    (+) = mzplus
+    (*) = mztimes
+    abs = typ_fun1 $ mk_fun [] "abs" [int] int
+    signum x = zite (x .< 0) (-1) $ zite (0 .< x) 1 0
+    fromInteger = mzint
+    negate = mzopp
+

@@ -301,8 +301,8 @@ data MachineP4' events theory = MachineP4
     } 
 
 data EventP1 = EventP1
-        { _pEventId :: EventId
-        , _pIsNew :: Bool }
+        { _eEventId :: EventId
+        , _eIsNew :: Bool }
     deriving Show
 
 data EventP2 = EventP2 
@@ -315,9 +315,14 @@ data EventP2 = EventP2
 
 data EventP3 = EventP3 
     { _e2 :: EventP2 
-    , _eCoarseSched :: Map Label Expr     -- Schedules
-    , _eFineSched   :: Map Label Expr
+    , _eOldCoarseSched :: Map Label Expr     
+    , _eDelCoarseSched :: Map Label Expr     
+    , _eNewCoarseSched :: Map Label Expr     
+    , _eOldFineSched   :: Map Label Expr
+    , _eDelFineSched   :: Map Label Expr
+    , _eNewFineSched   :: Map Label Expr
     , _eOldGuards   :: Map Label Expr
+    , _eDelGuards   :: Map Label Expr
     , _eNewGuards   :: Map Label Expr       -- Guards
     , _eWitness     :: Map Var Expr
     , _eOldActions  :: Map Label Action    -- Actions
@@ -327,8 +332,8 @@ data EventP3 = EventP3
 
 data EventP4 = EventP4 
     { _e3 :: EventP3 
-    , _eRefRule  :: [(Label,ScheduleChange)]
-    , _eOldSched :: [(Label,Change)]
+    , _eCoarseRef  :: [(Label,ScheduleChange)]
+    , _eFineRef    :: Maybe (ProgId,ProgressProp)
     }
 
 data Change = AddC | RemoveC
@@ -491,7 +496,7 @@ instance (HasMachineP1' m, HasTheoryP3 t) => HasTheoryP3 (m e t) where
 
 pEventIds :: (HasEventP1 events, HasMachineP1' phase) 
           => Lens' (phase events t) (Map Label EventId)
-pEventIds = pEvents . from pFromEventId . onMap pEventId
+pEventIds = pEvents . from pFromEventId . onMap eEventId
 
 getEvent :: (HasMachineP1' phase)
       => EventId
@@ -502,24 +507,51 @@ newDelVars :: HasMachineP2' phase
            => Getter (phase events t) (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
+pNewEvents :: (HasMachineP1' phase, HasEventP1 events)
+           => Getter (phase events t) (Map EventId events)
+pNewEvents = pEvents . to (M.filter $ not . view eIsNew)
+
+pOldEvents :: (HasMachineP1' phase, HasEventP1 events)
+           => Getter (phase events t) (Map EventId events)
+pOldEvents = pEvents . to (M.filter $ view eIsNew)
+
 eAddedGuards :: HasEventP3 events => Getter events (Map Label Expr)
 eAddedGuards f p = coerce $ f $ M.difference new old
     where
         old = p ^. eOldGuards
         new = p ^. eNewGuards
 
+eAddedCoarseSched :: HasEventP3 events => Getter events (Map Label Expr)
+eAddedCoarseSched f p = coerce $ f $ M.difference new old
+    where
+        old = p ^. eOldCoarseSched
+        new = p ^. eNewCoarseSched
+
+eAddedFineSched :: HasEventP3 events => Getter events (Map Label Expr)
+eAddedFineSched f p = coerce $ f $ M.difference new old
+    where
+        old = p ^. eOldFineSched
+        new = p ^. eNewFineSched
+
+eKeptCoarseSched :: HasEventP3 events => Getter events (Map Label Expr)
+eKeptCoarseSched f p = coerce $ f $ M.intersection old new
+    where
+        old = p ^. eOldCoarseSched
+        new = p ^. eNewCoarseSched
+
+eKeptFineSched :: HasEventP3 events => Getter events (Map Label Expr)
+eKeptFineSched f p = coerce $ f $ M.intersection old new
+    where
+        old = p ^. eOldFineSched
+        new = p ^. eNewFineSched
+
 pAddedGuards :: HasMachineP3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))
 pAddedGuards = pEvents . onMap' eAddedGuards
 
-pSchedules :: HasMachineP3 phase events => Getter (phase events t) (Map EventId (Map Label Expr))       
-pSchedules f p = coerce $ f $ M.unionWith (M.unionWith $ error "pSchedules: name clash") csch fsch
-    where
-        csch = L.view pCoarseSched p
-        fsch = L.view pFineSched p
 
 pFromEventId :: HasEventP1 event => Iso' (Map Label event) (Map EventId event)
 pFromEventId = iso 
-        (M.fromList . L.map (view pEventId &&& id) . M.elems) 
+        (M.fromList . L.map (view eEventId &&& id) . M.elems) 
         (mapKeys as_label)
 
 pIndices  :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId (Map String Var))
@@ -533,13 +565,29 @@ pEvtSynt  :: HasMachineP2 mch event => Lens' (mch event t) (Map EventId ParserSe
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
-pCoarseSched :: HasMachineP3 mch event 
+pNewCoarseSched :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))     -- Schedules
-pCoarseSched = pEvents . onMap eCoarseSched
+pNewCoarseSched = pEvents . onMap eNewCoarseSched
 
-pFineSched   :: HasMachineP3 mch event 
+pNewFineSched   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))
-pFineSched = pEvents . onMap eFineSched
+pNewFineSched = pEvents . onMap eNewFineSched
+
+pOldCoarseSched :: HasMachineP3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label Expr))     -- Schedules
+pOldCoarseSched = pEvents . onMap eOldCoarseSched
+
+pOldFineSched   :: HasMachineP3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label Expr))
+pOldFineSched = pEvents . onMap eOldFineSched
+
+pDelCoarseSched :: HasMachineP3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label Expr))     -- Schedules
+pDelCoarseSched = pEvents . onMap eDelCoarseSched
+
+pDelFineSched   :: HasMachineP3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label Expr))
+pDelFineSched = pEvents . onMap eDelFineSched
 
 pOldGuards   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))
@@ -548,6 +596,10 @@ pOldGuards = pEvents . onMap eOldGuards
 pNewGuards   :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Expr))       -- Guards
 pNewGuards = pEvents . onMap eNewGuards
+
+pDelGuards   :: HasMachineP3 mch event 
+             => Lens' (mch event t) (Map EventId (Map Label Expr))       -- Guards
+pDelGuards = pEvents . onMap eDelGuards
 
 pOldActions  :: HasMachineP3 mch event 
              => Lens' (mch event t) (Map EventId (Map Label Action))    -- Actions
@@ -561,9 +613,13 @@ pNewActions  :: HasMachineP3 mch event
              => Lens' (mch event t) (Map EventId (Map Label Action))
 pNewActions = pEvents . onMap eNewActions
 
-pEventRefRule :: HasMachineP4 mch event
+pEventFineRef :: HasMachineP4 mch event
+              => Lens' (mch event t) (Map EventId (Maybe (ProgId, ProgressProp)))
+pEventFineRef = pEvents . onMap eFineRef
+
+pEventCoarseRef :: HasMachineP4 mch event
               => Lens' (mch event t) (Map EventId [(Label,ScheduleChange)])
-pEventRefRule = pEvents . onMap eRefRule
+pEventCoarseRef = pEvents . onMap eCoarseRef
 
 pWitness :: HasMachineP3 mch event 
          => Lens' (mch event t) (Map EventId (Map Var Expr))

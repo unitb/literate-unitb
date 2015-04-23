@@ -16,8 +16,6 @@ import UnitB.PO
 
 import Z3.Z3
 
--- import Z3.Z3
-
     -- Libraries
 import Control.Monad
 import Control.Exception
@@ -40,6 +38,8 @@ import System.Locale
 import System.TimeIt
 
 import Utilities.Syntactic
+
+import Text.Printf
 
 with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
@@ -221,6 +221,8 @@ main = do
                             , reset      = Reset `elem` opts
                             , init_focus = listToMaybe $ catMaybes $ map focus opts
                             } }
+                    (v,h) <- z3_version
+                    printf "using z3 version %s, hashcode %s" v h
                     if continuous param then do
                         run_pipeline xs param
                         return ()

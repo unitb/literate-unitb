@@ -21,6 +21,15 @@ import Shelly (shelly,rm_f)
 
 -- import Text.Printf
 
+compile_script :: MaybeT IO ()
+compile_script = do
+        compile_file
+        compile_test 
+            >>= run_test
+        compile_all
+        compile_app
+
+
 _wait :: IO Bool -> IO ()
 _wait cond = do
     b <- cond 
@@ -112,12 +121,7 @@ main = do
         rm_f "actual-*.txt"
         rm_f "expected-*.txt"
         rm_f "po-*.z3"
-    runMaybeT $ do
-        compile_file
-        compile_test 
-            -- >>= run_test
-        compile_all
-        compile_app
+    runMaybeT $ compile_script
     -- printf "%s\n" path
     -- putStrLn $ intercalate " " $ "ghc" : (args CompileFile file)
         -- putStrLn "File ok"

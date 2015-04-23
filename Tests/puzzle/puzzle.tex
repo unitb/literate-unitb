@@ -1,8 +1,9 @@
 \documentclass{article}
 \usepackage{geometry}
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{bsymb}
-\usepackage{unitb}
+\usepackage{../unitb}
 % \usepackage{eventb} 
 \usepackage{calculation}
 
@@ -28,7 +29,7 @@
 \weakento{term}{default}{sch0} \\
 \cschedule{term}{sch0}{\true} 
 \end{align}
-
+\removecoarse{term}{default}
 \begin{align}
 \evbcmeq{term}{act0}{b}{\true}
 \end{align}
@@ -55,7 +56,7 @@
 \end{align}\begin{description}
 \comment{\ref{inv0}}{ termination is characterized by everyone 
 	having visited }\end{description}
-\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+\replace{term}{sch0}{sch1}{}{prog1}{saf1} \removecoarse{term}{sch0}
 \begin{align*}
 	\safety{saf1}{vs = \Pcs}{\false}
 \end{align*}
@@ -72,7 +73,7 @@
 		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
 		{\neg \Pcs \setminus vs = V} \\
 	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
-\refine{prog3}{ensure}{visit}{ [\index{p}{\neg p' \in vs}] }
+\refine{prog3}{ensure}{visit}{ $[\index{p}{\neg p' \in vs}]$ }
 \end{align*}
 
 \begin{align*}
@@ -88,8 +89,8 @@
 	\evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
 \end{align}
 
-\weakento{visit}{default}{}
 
+\removecoarse{visit}{default}
 % \input{}
 \input{machine_m1}
 
@@ -103,7 +104,7 @@
 \begin{align}
 	\cschedule{term}{sch2}{ ts = \Pcs }
 \end{align}
-
+\removecoarse{term}{sch1}
 \replace{term}{sch1}{sch2}{}{prog4}{saf3}
 
 \begin{align}
@@ -114,7 +115,7 @@
 \end{align}
 
 \[ \variable{ cs : \set [\Pcs] } \]\begin{description}
-\comment{cs}{one-slot channel used to notify the counter of visitations} \end{description}
+\comment{cs}{one-slot channel used to notify the counter } \end{description}
 \begin{align*}
 	\refine{prog4}{transitivity}{prog10,prog9}{}
 & \progress{prog10}{ \true }{ cs = \emptyset } \\
@@ -140,9 +141,9 @@
 		{ ts = V \land \neg cs = \emptyset 
 				 \land cs \subseteq \Pcs \setminus ts }
 		{ cs = \emptyset \land \neg ts = V }
-	\refine{prog6}{ensure}{flick}{ \index{p}{p' \in vs \setminus ts} }
+	\refine{prog6}{ensure}{flick}{ $\index{p}{p' \in vs \setminus ts}$ }
 	\refine{prog7}{ensure}{count}{} % \index{p}{ p' \in cs } }
-	\refine{prog11}{ensure}{visit}{ \index{p}{ \neg p' \in vs} }
+	\refine{prog11}{ensure}{visit}{ $\index{p}{ \neg p' \in vs}$ }
 \end{align*}
 
 \begin{align*}
@@ -164,7 +165,7 @@
 \end{align}
 
 \weakento{flick}{default}{sch0,sch1,sch2}
-
+\removecoarse{flick}{default}
 \input{m2_term}
 \input{m2_flick}
 
@@ -181,7 +182,7 @@
 \end{align}
 
 \weakento{count}{default}{sch0}
-
+\removecoarse{count}{default} \\
 \input{m2_count}
 
 \begin{align*}
@@ -199,16 +200,19 @@
 \comment{flick}{stuff}
 		\comment{c}{ one-bit channel used to communicate }
 	\end{description}
-	\begin{itemize}
-		\item \removevar{cs}
-		\item \removevar{ts}
-		\item \removeact{count}{act0,act1}
-		\item $\witness{count}{cs}{cs' = \emptyset}$
-		\item \removeact{flick}{act0}
-		\item \removeinit{in2} \removeinit{in1}
-		\item $\initwitness{cs}{cs = \emptyset} $
-		\item $\initwitness{ts}{ts = \emptyset}$
-	\end{itemize}
+	% \begin{itemize}
+	\begin{align*}
+		\witness{count}{cs}{cs' = \emptyset} \\
+		\initwitness{cs}{cs = \emptyset} \\
+		\initwitness{ts}{ts = \emptyset}
+	\end{align*}
+\hide{
+		\item $\removevar{cs}$ x
+		\item $\removevar{ts}$ x
+		\item $\removeact{count}{act0,act1}$ x
+		\item $\removeact{flick}{act0}$ x
+		\item $\removeinit{in2} \removeinit{in1}$ x }
+	% \end{itemize}
 	\begin{align} 
 		\invariant{m3:inv5}{ c \in \{0,1\} } \\
 		\invariant{m3:inv0}{ c = \card.cs } \\
@@ -227,7 +231,43 @@
 		\evbcmeq{count}{m3:act1}{n}{n+1} \\
 		\evguard{count}{m3:grd0}{ c = 1 }
 	\end{align}
+	\removecoarse{count}{sch0}
+	\removecoarse{flick}{sch0,sch1}
+	\removeguard{flick}{grd0}
+	\removecoarse{term}{sch2}
+	\[ \variable{fs : \set[\Pcs] } \]
+	\begin{description} \comment{fs}{ $p \in fs$ if process $p$ has flicked the switch } \end{description}
+	\begin{align}
+		\invariant{m3:inv7}{ fs = ts \bunion cs } \\
+		\initialization{m3:in2}{ fs = \emptyset } \\
+		\evguard{flick}{m3:grd1}{ c = 0 } \\
+		\cschedule{flick}{m3:csch1}{ c = 0 } \\
+		\evguard{flick}{m3:grd2}{ \neg p \in fs } \\
+		\cschedule{flick}{m3:csch2}{ \neg p \in fs } \\
+		\evbcmeq{flick}{m3:act2}{fs}{ fs \bunion \{ p \} } \\
+		\cschedule{count}{sch1}{c = 1} \\
+		\cschedule{term}{sch3}{n = \card.\Pcs} \\
+		\theorem{thm0}{n = \card.\Pcs \3\equiv ts = \Pcs}
+	\end{align}
 	\input{machine_m3}
+	\begin{proof}{\ref{thm0}/THM}
+	\using{sch3}
+	\begin{calculation}	
+		n = \card.\Pcs
+	\hint{=}{ \eqref{m3:inv1} }
+		\card.ts = \card.\Pcs
+	\hint{=}{ }
+		\card.ts = \card.(ts \bunion (\Pcs \setminus ts))
+	\hint{=}{ }
+		\card.ts = \card.ts + \card.(\Pcs \setminus ts)
+	\hint{=}{ }
+		0 = \card.(\Pcs \setminus ts)
+	\hint{=}{ }
+		\emptyset = \Pcs \setminus ts
+	\hint{=}{ }
+		ts = \Pcs
+	\end{calculation}
+	\end{proof}
 \end{machine}
 
 \begin{machine}{m4}

@@ -1,5 +1,6 @@
-module Document.Tests.SmallMachine
-where
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module Document.Tests.SmallMachine where
 
     -- Modules
 import Document.Tests.Suite
@@ -10,6 +11,7 @@ import Logic.Proof
 import UnitB.AST
 
     -- Libraries
+import           Data.Default
 import           Data.Map hiding ( map )
 import qualified Data.Set as S 
 
@@ -170,7 +172,7 @@ show_po :: FilePath -> Label -> IO String
 show_po path lbl = proof_obligation path (show lbl) 0
 
 case4 :: IO String
-case4 = show_po path3 $ label "m0/inc/INV/inv0"
+case4 = show_po path3 "m0/inc/INV/inv0"
 
 result5 :: String
 result5 = unlines 
@@ -201,7 +203,7 @@ result5 = unlines
     ]
 
 case5 :: IO String
-case5 = show_po path3 $ label "m0/SKIP/CO/co0"
+case5 = show_po path3 "m0/SKIP/CO/co0"
 
 result6 :: String
 result6 = unlines 
@@ -262,7 +264,7 @@ result7 = unlines
     ]
 
 case7 :: IO String
-case7 = show_po path6 $ label "m0/inc/SCH"
+case7 = show_po path6 "m0/inc/SCH"
 
 path8 :: FilePath
 path8 = "Tests/small_machine_t4.tex"
@@ -292,7 +294,7 @@ result8 = unlines
     ]
 
 case8 :: IO String
-case8 = show_po path8 $ label "m0/inc/SCH"
+case8 = show_po path8 "m0/inc/SCH"
 
 result9 :: String
 result9 = unlines
@@ -319,7 +321,7 @@ result9 = unlines
     ]
 
 case9 :: IO String
-case9 = show_po path6 $ label "m0/inc/SCH/m0/0/REF/weaken"
+case9 = show_po path6 "m0/inc/SCH/m0/0/REF/weaken"
 
 result10 :: String
 result10 = unlines 
@@ -346,7 +348,7 @@ result10 = unlines
     ]
 
 case10 :: IO String
-case10 = show_po path6 $ label "m0/TR/tr0/inc/EN"
+case10 = show_po path6 "m0/TR/tr0/inc/EN"
 
 result11 :: String
 result11 = unlines
@@ -381,85 +383,68 @@ result11 = unlines
     ]
 
 case11 :: IO String
-case11 = show_po path6 $ label "m0/TR/tr0/inc/NEG"
+case11 = show_po path6 "m0/TR/tr0/inc/NEG"
 
 var_x :: Var
 var_y :: Var
-var_x' :: Var
-var_y' :: Var
+x :: ExprP
+y :: ExprP
+x' :: ExprP
+y' :: ExprP
 
-var_x = Var "x" int
-var_y = Var "y" int
-
-var_x' = Var "x@prime" int
-var_y' = Var "y@prime" int
+(x,x',var_x) = prog_var "x" int
+(y,y',var_y) = prog_var "x" int
 
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
     actions = fromList [
-                (label "a0",BcmSuchThat (S.elems $ variableSet m0_machine) 
-                    $ Word var_x' `zeq` (Word var_x `zplus` zint 2)) ] }
+                ("a0",BcmSuchThat (S.elems $ variableSet m0_machine) 
+                    $ $fromJust $ x' .= (x .+ 2)) ] }
 
 inc_event_m1 :: Event
 inc_event_m1 = empty_event 
-        { sched_ref = [sc]
-        , scheds = fromList 
-            [ (label "c0", x `zeq` y) 
-            , (label "f0", x `zeq` y) ]
-            `union` default_schedule
+        { new_sched = def { coarse = singleton "c0" $ $fromJust$ 
+                                x .= y
+                          , fine = singleton "f0" $ $fromJust$ 
+                                x .= y }
         , actions = fromList [
-                    (label "a0",BcmSuchThat vars $ Word var_x' `zeq` (Word var_x `zplus` zint 2)),
-                    (label "a1",BcmSuchThat vars $ Word var_y' `zeq` (Word var_y `zplus` zint 1)) ] 
+                    ("a0",BcmSuchThat vars $ $fromJust$ 
+                            x' .= x .+ 2),
+                    ("a1",BcmSuchThat vars $ $fromJust$
+                            y' .= y .+ 1) ] 
         }
     where
-        x = Word var_x
-        y = Word var_y
         vars = S.elems $ variableSet m1_machine
-
-sc :: ScheduleChange
-sc = (weaken (label "inc"))
-        { add = S.singleton (label "c0")
-        , remove = S.singleton (label "default")
-        }
 
 m0_machine :: Machine
 m0_machine = (empty_machine "m0") { 
         props = m0_props,
-        events = singleton (label "inc") inc_event_m0,
+        events = singleton "inc" inc_event_m0,
         variables = fromList [("x", var_x), ("y", var_y)] }
 
 m1_machine :: Machine
 m1_machine = (empty_machine "m0") 
         { props = m1_props
-        , derivation = singleton (label "inc/SCH/m0/0") (Rule sc)
-        , events = singleton (label "inc") inc_event_m1
+        , events = singleton "inc" inc_event_m1
         , variables = fromList [("x", var_x), ("y", var_y)] 
         }
 
 m0_props :: PropertySet
 m0_props = empty_property_set {
-        _inv = singleton (label "inv0") (x `zeq` (zint 2 `ztimes` y)) }
-    where
-        x = Word var_x
-        y = Word var_y
+        _inv = singleton "inv0" $
+                $fromJust$ (x .= 2 .* y) }
 
 m1_props :: PropertySet
 m1_props = m0_props
         { _transient = fromList [
-            (label "tr0", Transient empty (x `zeq` y) [label "inc"] empty_hint) ]
+            ("tr0", Transient empty ($fromJust$ x .= y) ["inc"] empty_hint) ]
         , _constraint = fromList [
-            (label "co0", Co [] ( (x `zeq` z1) `zimplies` (x' `zeq` z2) )) ]
+            ("co0", Co [] ($fromJust$ (x .= 1) .=> (x' .= 2) )) ]
         , _inv = insert 
-                (label "inv1") 
-                (x `zeq` (x `ztimes` (y `zplus` z1))) 
+                "inv1" 
+                ($fromJust$ x .= x .* (y .+ 1)) 
                 (_inv m0_props)
         }
-    where
-        x  = Word var_x
-        y  = Word var_y
-        x' = Word var_x'
-        z1 = zint 1
-        z2 = zint 2
 
 path12 :: String
 path12 = "Tests/small_machine_t12.tex"

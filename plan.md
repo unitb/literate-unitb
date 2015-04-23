@@ -36,14 +36,55 @@ Todo:
         * ~~typesetting example~~
         * ~~commit~~
 
-        * error messages
+        * ~~error messages for guards and schedules that mentions deleted variables~~
+        * ~~commit~~
+
+#### reformulate schedule refinement with the new deletion mechanism ####
+        * ~~verifying event schedule refinement~~
+            * ~~weakening / eqv PO by default~~
+            * ~~replacement based on Event anotations~~
+        * ~~In Event, have a list of coarse schedule refinements and one of fine schedule refinements~~
+        * ~~Reproving schedulability~~
+            * PO: coarse ∧ fine ⇒ added guards
+            * Problem: the whole PO is coarse ∧ fine ⇒ (∃params:: new guard)
+                * where did ∃ go?
+                * if param -> reverify completely when schedule is deleted or guard is added
+                * if ¬ param -> verify for every new guard and verify completely when schedules are deleted
+        * ~~Error message when schedule or guard refers to deleted variables~~
+        * ~~simplify event refinement rules:~~
+            * ~~replacefine: no need to name the schedules~~
+                * default: eqv rewrite
+            * ~~weakento: can be deleted~~
+                * default for when no refinement rule is given
+        * ~~complete the data refinement of puzzle.tex~~
+        * ~~commit~~
+
+        * fix the test suite
+        * make WD of events incremental
+        * Theorems
+            * Change theorems PO label
+            * WD
+        * incremental feasibility proof
+            * ba pred of deterministic assignment as assumption
+            * if two deterministic action assign to the same variable, equality proof
         * commit
 
-        * reformulate schedule refinement with the new deletion mechanism
+        * refinement of coarse schedule, give a latex command that replaces the whole schedule
+        * allow the synchronized addition and removal of schedules together with guards. Idea:
+            * coarse guard
+            * fine guard
+        * improve rendering of remove-tags
+        * give errors when refinement rules mention the wrong schedules
+            * write a test
+        * In UnitB.Event, create a data type with old and new as fields for old and new expressions
+        * test: the set of remaining guards, coarse, fine schedules after data refinement
+        * remove System from the state of the parser
+        * use an arrow to manage independent sources of errors
+
+        * Delete the up / down option for variants
+        * Flatten the expression namespace with the exception of witnesses
         * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?
             * tentative answer: no
-        * Error message when schedule or guard refers to deleted variables
-        * test: the set of remaining guards, coarse, fine schedules after data refinement
 
         * make sure documentation lists variables as abs \/ conc and no old variables
 

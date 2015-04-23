@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 module UnitB.Test where 
 
     -- Modules
@@ -19,7 +20,6 @@ import Control.Monad
 import           Data.Either
 import           Data.List ( sort )
 import           Data.Map as M hiding (map)
-import qualified Data.Set as S hiding (map, fromList, insert, empty)
 
 import Tests.UnitTest
 
@@ -52,31 +52,27 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (liftM (Assign x_decl) (x `mzplus` mzint 2))
         s1     <- with_li li (liftM (Assign y_decl) (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr [label "evt"] empty_hint
+        let tr0 = Transient empty tr ["evt"] empty_hint
             co0 = Co [] co
             ps = empty_property_set {
                 _transient = 
                     fromList [
-                        (label "TR0", tr0)],
+                        ("TR0", tr0)],
                 _constraint =
                     fromList [
-                        (label "CO0", co0)],
-                _inv = fromList [(label "J0", inv0)] }
-            sch_ref0 = (weaken $ label "evt")
-                { remove = S.singleton (label "default")
-                , add    = S.singleton (label "sch0") }
+                        ("CO0", co0)],
+                _inv = fromList [("J0", inv0)] }
             evt = empty_event
-                    { sched_ref = [sch_ref0]
-                    , scheds = insert (label "sch0") csched default_schedule
+                    { new_sched = empty_schedule { coarse = singleton "sch0" csched }
                     , actions = fromList [
-                        (label "S0", s0),
-                        (label "S1", s1) ] }
+                        ("S0", s0),
+                        ("S1", s1) ] }
             m = (empty_machine "m0") 
                 { variables = fromList $ map as_pair [x_decl,y_decl]
-                , events = singleton (label "evt") evt
+                , events = singleton "evt" evt
                 , inits = fromList 
-                    [ (label "init0", init0)
-                    , (label "init1", init1) ]
+                    [ ("init0", init0)
+                    , ("init1", init1) ]
                 , props = ps }
         return m
 
@@ -92,19 +88,15 @@ train_m0 = do
                    mzall [(zstore st t mzfalse `mzeq` zstore st t mzfalse)])
         c0   <- with_li li (st `select` t)
         a0   <- with_li li (liftM (Assign st_decl) $ zstore st t mzfalse)
-        let inv = fromList [(label "J0",inv0)]
-            sch_ref0 = (weaken $ label "evt")
-                { remove = S.singleton (label "default")
-                , add    = S.singleton (label "C0") }
-            enter = (label "enter", empty_event)
-            leave = (label "leave", empty_event 
+        let inv = fromList [("J0",inv0)]
+            enter = ("enter", empty_event)
+            leave = ("leave", empty_event 
                     {   indices = symbol_table [t_decl]
-                    ,   sched_ref = [sch_ref0]
-                    ,   scheds  = insert (label "C0") c0 $ default_schedule
-                    ,   actions  = fromList [(label "A0", a0)]
+                    ,   new_sched = empty_schedule { coarse = singleton "C0" c0 }
+                    ,   actions   = fromList [("A0", a0)]
                     })
         tr <- with_li li (st `select` t)
-        let props = fromList [(label "TR0", Transient (symbol_table [t_decl]) tr [label "leave"] empty_hint)] 
+        let props = fromList [("TR0", Transient (symbol_table [t_decl]) tr ["leave"] empty_hint)] 
             ps    = empty_property_set { _transient = props, _inv = inv }
             m     = (empty_machine "train_m0") 
                         { props = ps
@@ -208,7 +200,7 @@ get_cmd_tr_po :: Monad m
               -> m (Either [Error] String)
 get_cmd_tr_po em = return (do
         m <- em
-        let lbl = composite_label [_name m, label "TR/TR0/t@param"]
+        let lbl = composite_label [_name m, "TR/TR0/t@param"]
         pos <- proof_obligation m
         let po = pos ! lbl
             cmd =  z3_code po
@@ -218,7 +210,7 @@ get_tr_po :: Either [Error] Machine -> IO String
 get_tr_po em = either (return . show_err) return $ do
         m <- em
         pos <- proof_obligation m
-        let lbl = composite_label [_name m, label "TR/TR0/t@param"]
+        let lbl = composite_label [_name m, "TR/TR0/t@param"]
             po = maybe (error $ show $ keys pos) id $ lbl `M.lookup` pos
         return $ show po
 

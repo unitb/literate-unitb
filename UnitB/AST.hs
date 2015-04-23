@@ -4,14 +4,6 @@ module UnitB.AST
     ( Theory  (..)
     , Machine (..)
     , variableSet
-    , EventId (..)
-    , Event   (..)
-    , empty_event
-    , Action (..)
-    , ba_predicate
-    , ba_predicate'
-    , ba_pred
-    , rel_action
     , empty_machine
     , empty_theory
     , TrHint (..)
@@ -19,7 +11,6 @@ module UnitB.AST
     , Transient   (..)
     , Constraint  (..)
     , ProgressProp(..)
-    , Schedule    (..)
     , SafetyProp  (..) 
     , PropertySet (..) 
     , inv_thm, inv, proofs
@@ -34,29 +25,18 @@ module UnitB.AST
     , Direction (..)
     , RefRule (..)
     , ProgId (..)
-    , primed, make_unique
+    , make_unique
     , all_types
     , basic_theory
     , disjoint_union
-    , keep', frame, frame'
     , cycles
-    , ScheduleChange 
-        ( add, remove
-        , keep, event
-        , rule)
-    , replace, weaken
-    , ScheduleRule (..)
-    , new_sched
-    , new_guard
-    , default_schedule
     , System (..)
     , empty_system
-    , replace_fine
     , all_notation
-    , remove_guard
-    , add_guard
+    , ba_predicate
     , th_notation
     , DocItem (..)
+    , module UnitB.Event
     ) 
 where
  
@@ -93,9 +73,6 @@ import Utilities.Graph  (cycles)
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (types th : map all_types (elems $ extends th)) 
-
-newtype ProgId = PId { getProgId :: Label }
-    deriving (Eq,Ord)
 
 instance Show ProgId where
     show (PId x) = show x
@@ -158,7 +135,6 @@ empty_machine n = Mch
 class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
     refinement_po :: a -> Machine -> POGen ()
     rule_name     :: a -> Label
-    hyps_labels   :: a -> [ProgId]
     supporting_evts :: a -> [EventId]
 
 data System = Sys 
@@ -218,13 +194,7 @@ instance Eq Rule where
 instance RefRule Rule where
     refinement_po (Rule r) = refinement_po r
     rule_name (Rule r) = rule_name r
-    hyps_labels (Rule r) = hyps_labels r
     supporting_evts (Rule r) = supporting_evts r
-
---data Liveness = Live (Map Label ProgressProp) 
-
---data Schedule = Schedule [Var] Expr Expr Label
---    deriving (Eq,Typeable)
 
 ba_predicate :: Machine -> Event -> Map Label Expr
 ba_predicate m evt =          ba_predicate' (variables m) (actions evt)

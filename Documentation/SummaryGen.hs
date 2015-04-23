@@ -22,7 +22,6 @@ import Control.Monad.Trans.Reader (ReaderT,runReaderT)
 import Data.List (intercalate)
 import Data.Map as M hiding (map)
 import qualified Data.Map as M
-import Data.Maybe
 
 import System.FilePath
 
@@ -321,7 +320,7 @@ fsched_sum :: Label -> Event -> M ()
 fsched_sum lbl e = section kw $ put_all_expr lbl $ fromList xs
     where
         kw = "\\textbf{upon}"
-        xs = maybeToList (fine $ new_sched e)
+        xs = M.toList (fine $ new_sched e)
             
             
 --                begin = "\\begin{block}"

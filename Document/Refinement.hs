@@ -32,8 +32,6 @@ import Data.Either
 import Data.List as L ( intercalate, (\\), null )
 import qualified Data.List.NonEmpty as NE
 import Data.Map as M hiding ( map, (\\) )
-import Data.Maybe
-import Data.Set as S hiding ( fromList, member, map, (\\) )
 import Data.Typeable
 
 import Utilities.Error
@@ -65,7 +63,6 @@ data Add = Add
 instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ m = assert m "" zfalse
-    hyps_labels _     = []
     supporting_evts _ = []
 
 instance NFData Add where
@@ -253,7 +250,6 @@ instance RefRule Ensure where
             tr_wd_po m ("",tr)
             prop_saf m ("", saf)
             saf_wd_po m ("", saf)
-    hyps_labels _ = []
     supporting_evts (Ensure _ hyps _) = map EventId hyps
 
 instance NFData Ensure where
@@ -264,7 +260,6 @@ data Discharge = Discharge ProgressProp Label Transient (Maybe SafetyProp)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
-    hyps_labels (Discharge _ lbl _ _) = [PId lbl]
     supporting_evts (Discharge _ _ (Transient _ _ evts _hint) _) = map EventId evts
         -- where
         --     TrHint _ ev = hint
@@ -329,7 +324,6 @@ data Monotonicity = Monotonicity ProgressProp Label ProgressProp
 
 instance RefRule Monotonicity where
     rule_name _   = label "monotonicity"
-    hyps_labels (Monotonicity _ lbl _) = [PId lbl]
     supporting_evts _ = []
     refinement_po (Monotonicity 
                     (LeadsTo fv0 p0 q0)
@@ -350,7 +344,6 @@ data Implication = Implication ProgressProp
 
 instance RefRule Implication where
     rule_name _   = label "implication"
-    hyps_labels _ = []
     refinement_po (Implication 
                     (LeadsTo fv1 p1 q1))
                   m = 
@@ -367,7 +360,6 @@ data Disjunction = Disjunction ProgressProp [(Label,([Var], ProgressProp))]
 
 instance RefRule Disjunction where
     rule_name _ = label "disjunction"
-    hyps_labels (Disjunction _ xs) = map (PId . fst) xs
     supporting_evts _ = []
     refinement_po (Disjunction 
                     (LeadsTo fv0 p0 q0)
@@ -399,7 +391,6 @@ data NegateDisjunct = NegateDisjunct ProgressProp Label ProgressProp
 
 instance RefRule NegateDisjunct where
     rule_name _   = label "trading"
-    hyps_labels (NegateDisjunct _ lbl _) = [PId lbl]
     supporting_evts _ = []
     refinement_po 
             (NegateDisjunct
@@ -421,7 +412,6 @@ data Transitivity = Transitivity ProgressProp (NE.NonEmpty (Label,ProgressProp))
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
-    hyps_labels (Transitivity _ xs) = map (PId . fst) $ NE.toList xs
     supporting_evts _ = []
     refinement_po 
             (Transitivity
@@ -455,7 +445,6 @@ data PSP = PSP ProgressProp Label ProgressProp SafetyProp
 
 instance RefRule PSP where
     rule_name _ = label "PSP"
-    hyps_labels (PSP _ lbl _ _) = [PId lbl]
     supporting_evts _ = []
     refinement_po 
             (PSP
@@ -480,7 +469,6 @@ data Induction = Induction ProgressProp Label ProgressProp Variant
 
 instance RefRule Induction where
     rule_name _ = label "induction"
-    hyps_labels (Induction _ lbl _ _) = [PId lbl]
     supporting_evts _ = []
     refinement_po 
             (Induction 
@@ -561,90 +549,6 @@ parse_induction rule param = do
         add_proof_edge goal_lbl [h0]
         return $ Rule (Induction pr0 h0 pr1 var)
 
-instance RefRule ScheduleChange where 
-    rule_name     r = 
-        case rule r of 
-            Replace _ _      -> label "delay"
-            Weaken           -> label "weaken"
-            ReplaceFineSch _ _ _ _ -> label "replace"
-            RemoveGuard _          -> label "grd"
-            AddGuard _             -> label "add"
-    hyps_labels r = 
-        case rule r of
-            Replace (lbl,_) _ -> [PId lbl]
-            ReplaceFineSch _ _ _ (Just (lbl,_)) -> [PId lbl]
-            ReplaceFineSch _ _ _ Nothing -> []
-            _ -> []
-    supporting_evts _ = []
-    refinement_po r m = 
-        case rule r of
-            Replace (_,prog) (_,saf) ->
-                let LeadsTo vs p0 q0  = prog
-                    Unless us p1 q1 _ = saf
-                in do
-                    assert m "prog/lhs" (
-                        zforall (vs ++ ind) ztrue $
-                            zall (old_c ++ old_f) `zimplies` p0
-                            )
-                    assert m "prog/rhs" (
-                        zforall (vs ++ ind) ztrue $
-                            q0 `zimplies` new_part
-                            )
-                    assert m "saf/lhs" (
-                        zforall (us ++ ind) ztrue $
-                            p1 `zeq` new_part
-                            )
-                    assert m "saf/rhs" (
-                        zforall (us ++ ind) ztrue $
-                            q1 `zimplies` znot (zall $ old_c ++ old_f)
-                            )
-            Weaken -> 
-                assert m "" $
-                    zforall ind ztrue $ zall (old_f ++ old_c) `zimplies` new_part
-            ReplaceFineSch _ _ _ lt -> 
-                do  case lt of
-                        Just (_,prog) -> do
-                            let LeadsTo vs p0 q0 = prog
-                            assert m "prog/lhs" (
-                                zforall (vs ++ ind) ztrue $
-                                    zall (old_c ++ old_f) `zimplies` p0
-                                    )
-                            assert m "prog/rhs" (
-                                zforall (vs ++ ind) ztrue $
-                                    q0 `zimplies` new_part
-                                    )
-                        Nothing -> do
-                            assert m "prog/leadsto" (
-                                zforall ind ztrue $
-                                    zall (old_c ++ old_f) `zimplies` new_part
-                                    )
-                    assert m "str" (
-                        zforall ind ztrue $
-                            zall (new_c ++ new_f) `zimplies` old_part
-                            )
-
-            RemoveGuard lbl -> 
-                    assert_hyp m "" param (new_guard evt) $ old_guard evt ! lbl 
-            AddGuard _ -> return ()
-        where
-            param = params evt `M.union` indices evt
-            new_c = M.elems $ coarse $ new_sched evt
-            old_c = M.elems $ coarse $ old_sched evt
-            new_f = map snd $ maybeToList $ fine $ new_sched evt
-            old_f = map snd $ maybeToList $ fine $ old_sched evt
-            sch  =  scheds evt
-            evt = events m ! event r
-            ind = M.elems $ indices evt 
-            old_part = zall $ map (sch!) $ S.elems $ remove r `S.union` keep r
-            new_part = zall $ map (sch!) $ S.elems $ add r `S.union` keep r
---    refinement_po (n, r@(Weaken lbl _ _))    m = 
---            
---        where
---            sch  =  c_sched evt
---            evt = events m ! lbl
---            ind = M.elems $ indices evt
---            sch0 = zall $ map (sch!) $ S.elems $ remove r `S.union` keep r
---            sch1 = zall $ map (sch!) $ S.elems $ add r `S.union` keep r
 
 --data Cancellation = Cancellation ProgressProp ProgressProp ProgressProp
 --
