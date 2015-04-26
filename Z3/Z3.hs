@@ -123,13 +123,10 @@ instance Tree Command where
                             [ Str "!"
                             , as_tree $ r `zimplies` t
                             , Str ":pattern"
-                            , List $ map as_tree $ z3_pattern (S.fromList vs) (head t)
+                            , List $ map as_tree $ z3_pattern (S.fromList vs) t
                             ]
                         ]
             g e = as_tree e
-            head (FunApp f [_,y])
-                | name f == "=>"    = head y
-            head e = e
             f x = x
             -- f x = case n of 
             --         Nothing -> x
@@ -212,32 +209,40 @@ z3_installed = do
     return $ or xs
 
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
-z3_pattern vs e = runReader (lhs vs e) False
+z3_pattern vs e = runReader (head e) False
     where
-            lhs vs (FunApp f xs)
-                | name f `elem` ["and","or","not"]
-                    && vs `S.isSubsetOf` S.unions (map used_var xs) 
-                    = do
+        head e'@(FunApp f [_,y])
+            | name f == "=>"    = do
+                xs <- head y
+                if null xs 
+                    then lhs vs e'
+                    else return xs
+        head e = lhs vs e
+
+        lhs vs (FunApp f xs)
+            | name f `elem` ["and","or","not","=>"]
+                && vs `S.isSubsetOf` S.unions (map used_var xs) 
+                = do
+                    ps <- concat <$> mapM (lhs S.empty) xs
+                    return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
+                        then ps 
+                        else []
+        lhs vs (FunApp f xs@[x,_])
+            | name f == "="     = do
+                b  <- ask
+                x' <- lhs vs x 
+                local (const True) $
+                    if (b || null x') then do
                         ps <- concat <$> mapM (lhs S.empty) xs
                         return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
                             then ps 
                             else []
-            lhs vs (FunApp f xs@[x,_])
-                | name f == "="     = do
-                    b  <- ask
-                    x' <- lhs vs x 
-                    local (const True) $
-                        if (b || null x') then do
-                            ps <- concat <$> mapM (lhs S.empty) xs
-                            return $ if vs `S.isSubsetOf` S.unions (map used_var ps) 
-                                then ps 
-                                else []
-                        else
-                            return x'
-            lhs _ (Word (Var _ _)) = return []
-            lhs vs e 
-                | vs `S.isSubsetOf` used_var e = return [e]
-                | otherwise                    = return []
+                    else
+                        return x'
+        lhs _ (Word (Var _ _)) = return []
+        lhs vs e 
+            | vs `S.isSubsetOf` used_var e = return [e]
+            | otherwise                    = return []
 
 
 feed_z3 :: String -> Int -> IO (ExitCode, String, String)

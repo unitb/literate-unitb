@@ -28,6 +28,7 @@ import Control.Monad.Trans.Either
 import Control.Monad.RWS as RWS
 
 import Data.Char
+import Data.DeriveTH
 import Data.Either
 import Data.List as L ( intercalate, (\\), null )
 import qualified Data.List.NonEmpty as NE
@@ -64,9 +65,6 @@ instance RefRule Add where
     rule_name _       = label "add"
     refinement_po _ m = assert m "" zfalse
     supporting_evts _ = []
-
-instance NFData Add where
-
 
 class RuleParser a where
     parse_rule :: a -> [Label] -> String 
@@ -251,9 +249,6 @@ instance RefRule Ensure where
             saf_wd_po m ("", saf)
     supporting_evts (Ensure _ hyps _) = map EventId hyps
 
-instance NFData Ensure where
-    rnf (Ensure x0 x1 x2) = rnf (x0,x1,x2)
-
 data Discharge = Discharge ProgressProp Label Transient (Maybe SafetyProp)
     deriving (Eq,Typeable,Show)
 
@@ -298,9 +293,6 @@ instance RefRule Discharge where
                     zforall (fv0 ++ M.elems fv1) ztrue (
                              (znot p1 `zimplies` q0) ) )
 
-instance NFData Discharge where
-    rnf (Discharge p lbl t u) = rnf (p,lbl,t,u)
-
 mk_discharge :: ProgressProp -> Label -> Transient -> [SafetyProp] -> Discharge
 mk_discharge p lbl tr [s] = Discharge p lbl tr $ Just s
 mk_discharge p lbl tr []  = Discharge p lbl tr Nothing
@@ -335,9 +327,6 @@ instance RefRule Monotonicity where
                     zforall (fv0 ++ fv1) ztrue $
                              (q1 `zimplies` q0))
 
-instance NFData Monotonicity where
-    rnf (Monotonicity p lbl q) = rnf (p,lbl,q)
-
 data Implication = Implication ProgressProp
     deriving (Eq,Typeable,Show)
 
@@ -350,9 +339,6 @@ instance RefRule Implication where
                     zforall fv1 ztrue $
                              (p1 `zimplies` q1))
     supporting_evts _ = []
-
-instance NFData Implication where
-    rnf (Implication p) = rnf p
 
 data Disjunction = Disjunction ProgressProp [(Label,([Var], ProgressProp))]
     deriving (Eq,Typeable,Show)
@@ -375,9 +361,6 @@ instance RefRule Disjunction where
             disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
             disj_q ([], LeadsTo _ _ q1) = q1
             disj_q (vs, LeadsTo _ _ q1) = zexists vs ztrue q1
-
-instance NFData Disjunction where
-    rnf (Disjunction p xs) = rnf (p,xs)
 
 disjunction :: ProgressProp -> [(Label,ProgressProp)] -> Disjunction
 disjunction pr0@(LeadsTo fv0 _ _) ps = 
@@ -402,9 +385,6 @@ instance RefRule NegateDisjunct where
                 assert m "rhs" (
                     zforall (fv0 ++ fv1) ztrue $
                                 (q1 `zimplies` q0))
-
-instance NFData NegateDisjunct where
-    rnf (NegateDisjunct p lbl q) = rnf (p,lbl,q)
 
 data Transitivity = Transitivity ProgressProp (NE.NonEmpty (Label,ProgressProp))
     deriving (Eq,Typeable,Show)
@@ -436,9 +416,6 @@ instance RefRule Transitivity where
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q2 `zimplies` q0 )
 
-instance NFData Transitivity where
-    rnf (Transitivity p xs) = rnf (p,xs)
-
 data PSP = PSP ProgressProp Label ProgressProp SafetyProp
     deriving (Eq,Typeable,Show)
 
@@ -460,9 +437,6 @@ instance RefRule PSP where
     refinement_po (PSP _ _ _ (Unless _ _ _ (Just _))) _ 
         = error "PSP.refinement_po: invalid"
 
-instance NFData PSP where
-    rnf (PSP p lbl q r) = rnf (p,lbl,q,r)
-
 data Induction = Induction ProgressProp Label ProgressProp Variant
     deriving (Eq,Typeable,Show)
 
@@ -482,9 +456,6 @@ instance RefRule Induction where
                     zforall (fv0 ++ fv1) ztrue $
                         (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
                         )
-
-instance NFData Induction where
-    rnf (Induction p lbl q v) = rnf (p,lbl,q,v)
 
 parse_induction :: String 
                 -> RuleParserParameter
@@ -563,3 +534,14 @@ parse_induction rule param = do
 --         ++ assert m "q" (q1 `zimplies` 
 --         ++ assert m "r"
 --         ++ assert m "b"
+
+derive makeNFData ''Add
+derive makeNFData  ''Ensure
+derive makeNFData  ''Discharge
+derive makeNFData  ''Monotonicity
+derive makeNFData  ''Implication
+derive makeNFData  ''Disjunction
+derive makeNFData  ''NegateDisjunct
+derive makeNFData  ''Transitivity
+derive makeNFData  ''PSP
+derive makeNFData  ''Induction

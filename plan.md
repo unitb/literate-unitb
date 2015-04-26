@@ -59,8 +59,10 @@ Todo:
         * ~~complete the data refinement of puzzle.tex~~
         * ~~commit~~
 
-        * fix the test suite
-        * make WD of events incremental
+        * ~~fix the test suite~~
+        * ~~commit~~
+
+        * ~~make WD of events incremental~~
         * Theorems
             * Change theorems PO label
             * WD
@@ -69,13 +71,20 @@ Todo:
             * if two deterministic action assign to the same variable, equality proof
         * commit
 
+        * finite and subset with instantiation pattern
+        * subset and = # => =
+        * slow parser
+        * remove System from the state of the parser
+        * simplify the pipeline arrow and remove the line info from the parser phase specifications
+        * use an arrow to manage independent sources of errors
+        * commit
+
         * User experience: add line info into POs
             * upon verification failure, give a line number
             * allow filtering on events, properties and machine
                 * Use Haskell's config file library
             * In interactive mode, dump errors and verification failures in a file
         * \replace: merge all three schedule parameter lists
-        * slow parser
         * refinement of coarse schedule, give a latex command that replaces the whole schedule
         * allow the synchronized addition and removal of schedules together with guards. Idea:
             * coarse guard
@@ -85,9 +94,6 @@ Todo:
             * write a test
         * In UnitB.Event, create a data type with old and new as fields for old and new expressions
         * test: the set of remaining guards, coarse, fine schedules after data refinement
-        * remove System from the state of the parser
-        * simplify the pipeline arrow and remove the line info from the parser phase specifications
-        * use an arrow to manage independent sources of errors
 
         * Have the parser framework generate the syntax documentation
         * Delete the up / down option for variants
@@ -103,7 +109,6 @@ Todo:
     * puzzle
 
     * shared variable decomposition
-    * finite and subset with instantiation pattern
     * context
     * event splitting / merging
     * feasibility should be tested only once 

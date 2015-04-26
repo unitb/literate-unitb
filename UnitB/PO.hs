@@ -688,6 +688,24 @@ init_wd_po m =
             $ emit_goal ["INIT", "WD"] 
                 $ well_definedness $ zall $ inits m
 
+incremental_wd_po :: Label
+                  -> Map Label Expr  -- 
+                  -> Map Label Expr  -- 
+                  -> M ()
+incremental_wd_po lbl old new = do
+    let del  = old `M.difference` new
+        add  = new `M.difference` old
+    if M.null del then 
+        with (do
+                named_hyps old) $
+            emit_goal [lbl] 
+                $ well_definedness 
+                $ zall add
+    else
+        emit_goal [lbl] 
+            $ well_definedness 
+            $ zall new
+
 evt_wd_po :: Machine -> (Label, Event) -> M ()
 evt_wd_po m (lbl, evt) = 
         with (do prefix_label $ _name m
@@ -695,25 +713,24 @@ evt_wd_po m (lbl, evt) =
                  prefix_label "WD"
                  context $ assert_ctx m
                  POG.variables $ indices evt
-                 named_hyps $ invariants m)
-            (do emit_goal ["C_SCH"] 
-                    $ well_definedness $ zall 
-                    $ coarse $ new_sched evt
-                emit_goal ["F_SCH"]
-                    $ well_definedness $ zall
-                    $ fine $ new_sched evt
-                with (POG.variables $ params evt)
-                    (do emit_goal ["GRD"]
-                            $ well_definedness $ zall
-                            $ new_guard evt
-                        with (do prefix_label "ACT"
-                                 named_hyps $ all_guards evt
-                                 context $ step_ctx m) $ do
-                            let p k _ = k `M.notMember` old_acts evt
-                            forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
-                                emit_goal [tag] 
-                                    $ well_definedness $ ba_pred bap)
-                )
+                 named_hyps $ invariants m) $ do
+            incremental_wd_po "C_SCH"
+                (coarse $ old_sched evt)
+                (coarse $ new_sched evt)
+            with (named_hyps $ coarse $ new_sched evt) $
+                incremental_wd_po "F_SCH"
+                    (fine $ old_sched evt)
+                    (fine $ new_sched evt)
+            with (POG.variables $ params evt) $ do
+                incremental_wd_po "GRD" 
+                    (old_guard evt) (new_guard evt)
+                with (do prefix_label "ACT"
+                         named_hyps $ all_guards evt
+                         context $ step_ctx m) $ do
+                    let p k _ = k `M.notMember` old_acts evt
+                    forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
+                        emit_goal [tag] 
+                            $ well_definedness $ ba_pred bap
 
 evt_eql_po :: Machine -> (Label, Event) -> M ()
 evt_eql_po  m (lbl, evt) = 
