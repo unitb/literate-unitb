@@ -31,6 +31,7 @@ infix 4 .<=
 infix 4 .<
 infixr 5 .+
 infixr 6 .*
+infixl 7 .^
 
 type OneExpr t q = AbsExpr t q -> AbsExpr t q
 
@@ -323,8 +324,11 @@ mztimes :: TypeSystem2 t => TwoExprP t q
 mztimes       = typ_fun2 $ mk_fun [] "*" [int,int] int
 (.*) :: TypeSystem2 t => TwoExprP t q
 (.*) = mztimes
+
 mzpow :: TypeSystem2 t => TwoExprP t q
 mzpow         = typ_fun2 $ mk_fun [] "^" [int,int] int
+(.^) :: TypeSystem2 t => TwoExprP t q
+(.^) = mzpow
 
 mzint :: (TypeSystem2 t, Integral n) => n -> ExprPG t q 
 mzint n       = Right $ zint n

@@ -48,7 +48,7 @@ import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Reader ( runReaderT )
-import           Control.Monad.Trans.RWS as RWS ( execRWS, RWS, RWST, mapRWST )
+import           Control.Monad.Trans.RWS as RWS ( execRWS, RWS, mapRWST )
 import qualified Control.Monad.Writer as W
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
@@ -74,21 +74,20 @@ import qualified Utilities.Relation as R
 import Utilities.Syntactic
 import Utilities.Trace ()
         
-parse_rule' :: (Monad m)
-            => String
+parse_rule' :: String
             -> RuleParserParameter
-            -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
+            -> M Rule
 parse_rule' rule param = do
     li <- lift ask
     case M.lookup rule refinement_parser of
         Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
             runEitherT $ f rule param
-        Nothing -> left [Error (format "invalid refinement rule: {0}" rule) li]
+        Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
 
 refinement_parser :: Map String (
                   String
                -> RuleParserParameter
-               -> EitherT [Error] (RWS LineInfo [Error] System) Rule)
+               -> M Rule)
 refinement_parser = fromList 
     [   ("disjunction", parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
@@ -108,7 +107,7 @@ data HintBuilder =
 ensure :: ProgressProp 
        -> HintBuilder
        -> [Label]
-       -> ERWS Ensure
+       -> M Ensure
 ensure prog@(LeadsTo fv _ _) hint lbls = do
         let vs = symbol_table fv
         lbls' <- bind  "Expected non empty list of events"
@@ -124,21 +123,25 @@ instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
 
 
 topological_order :: Pipeline MM
-                     [(MachineId,MachineId)] 
+                     (Map MachineId (MachineId,LineInfo)) 
                      (Hierarchy MachineId)
-topological_order = Pipeline empty_spec empty_spec $ \es -> do
-        let cs = cycles es
-        vs <- lift $ toEither $ mapM cycl_err_msg cs
-        return $ Hierarchy vs $ M.fromList es
+topological_order = Pipeline empty_spec empty_spec $ \es' -> do
+        let es = M.map fst es'
+            lis = M.map snd es'
+            cs = cycles $ toList es
+        vs <- lift $ toEither $ mapM (cycl_err_msg lis) cs
+        return $ Hierarchy vs es
     where
         struct = "refinement structure" :: String
-        cycle_msg ys = format msg struct $ intercalate ", " (map show ys)
-        cycl_err_msg (AcyclicSCC v) = return v
-        cycl_err_msg (CyclicSCC vs) = do
-            li <- ask
-            tell [Error (cycle_msg vs) li] 
+        cycle_msg = format msg struct -- $ intercalate ", " (map show ys)
+        cycl_err_msg _ (AcyclicSCC v) = return v
+        cycl_err_msg lis (CyclicSCC vs) = do
+            -- li <- ask
+            tell [MLError cycle_msg 
+                $ L.map (first show) $ toList $ 
+                lis `M.intersection` fromList' vs ] 
             return (error "topological_order")
-        msg = "A cycle exists in the {0}: {1}"
+        msg = "A cycle exists in the {0}"
 
 inherit :: Hierarchy MachineId -> Map MachineId [b] -> Map MachineId [b]
 inherit = inheritWith id id (++)
@@ -163,9 +166,6 @@ inherit3 = inheritWith
             (L.map $ \(x,(y,_),z) -> (x,(y,Inherited),z))
             (++)
 
-
-
-
 get_components :: [LatexDoc] -> LineInfo 
                -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
 get_components xs li = 
@@ -186,28 +186,29 @@ get_components xs li =
         f x = map_docM_ f x
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
 
-
 run_phase1_types :: Pipeline MM 
                         (MTable MachineP0)
                         ( Hierarchy MachineId
                         , MTable MachineP1)
 run_phase1_types = proc p0 -> do
+    -- _  <- traceP $ format "step" -< ()
     ts <- set_decl      -< p0
     e  <- event_decl    -< p0
     r  <- refines_mch   -< p0
     it <- import_theory -< p0
     let refs  = r >>= make_all_tables (format "Multiple refinement clauses")
     One refs <- triggerP -< One refs
-    r_ord <- topological_order -< toList $ mapMaybe (liftM fst . M.lookup ()) refs
+    let _ = refs :: Map MachineId (Map () (MachineId,LineInfo))
+    r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
         s = M.map snd <$> ts
-        evts'  = inherit3 r_ord `liftM` e >>= make_all_tables (format "Multiple events with the name {0}")
-        types  = inherit r_ord `liftM` t  >>= make_all_tables (format "Multiple sets with the name {0}")
-        imp_th = inherit r_ord `liftM` it >>= make_all_tables (format "Theory imported multiple times")
+        evts'  = inherit3 r_ord <$> e  >>= make_all_tables (format "Multiple events with the name {0}")
+        types  = inherit r_ord  <$> t  >>= make_all_tables (format "Multiple sets with the name {0}")
+        imp_th = inherit r_ord  <$> it >>= make_all_tables (format "Theory imported multiple times")
         -- remove the liftM in the next line
     (types,s,evts',imp_th') <- triggerP -< 
                 ( types, s
-                , M.map (M.map fst) `liftM` evts'
+                , M.map (M.map fst) <$> evts'
                 , imp_th)
         -- BIG FLAG
         -- the creation of p1 won't detect clashes between type names, it will merely overshadow
@@ -362,10 +363,10 @@ run_phase3_exprs = proc (r_ord,p2) -> do
             , witness_decl ] -< p2
         let exprs =     make_all_tables' err_msg
                     =<< inherit2 r_ord 
-                    <$> unionsWith (++) <$> es
+                    <$> unionsWith (++) 
+                    <$> es
             err_msg :: Label -> String
             err_msg = (format "Multiple expressions with the label {0}") 
-                        
         One exprs <- triggerP -< One exprs
         let p3 = all_errors $ make_phase3 <$> p2 <.> exprs
         liftP -< hoistEither p3

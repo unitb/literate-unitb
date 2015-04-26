@@ -26,10 +26,10 @@
 
 \begin{align}
 \refine{prog0}{ensure}{term}{} \\
-\weakento{term}{default}{sch0} \\
+\removecoarse{term}{default} % \weakento{term}{default}{sch0} \\
 \cschedule{term}{sch0}{\true} 
 \end{align}
-\removecoarse{term}{default}
+% \removecoarse{term}{default}
 \begin{align}
 \evbcmeq{term}{act0}{b}{\true}
 \end{align}
@@ -164,8 +164,8 @@
 	\evbcmeq{flick}{act0}{cs}{ \{ p \} }
 \end{align}
 
-\weakento{flick}{default}{sch0,sch1,sch2}
-\removecoarse{flick}{default}
+\removecoarse{flick}{default} % \weakento{flick}{default}{sch0,sch1,sch2}
+% \removecoarse{flick}{default}
 \input{m2_term}
 \input{m2_flick}
 
@@ -181,8 +181,8 @@
 	\evbcmeq{count}{act1}{ts}{ ts \bunion cs }
 \end{align}
 
-\weakento{count}{default}{sch0}
-\removecoarse{count}{default} \\
+\removecoarse{count}{default} % \weakento{count}{default}{sch0}
+% \removecoarse{count}{default} \\
 \input{m2_count}
 
 \begin{align*}

@@ -30,7 +30,7 @@ module Document.Visitor
     , proof_opt
     , Opt ( .. )
     , Focus(..)
-    , visitor
+    , visitor, raise
     , VisitorT ( .. )
     , run_visitor
     , add_state
@@ -282,6 +282,9 @@ instance Readable (M.Map Label ()) where
         M.fromSet (const ()) <$> read_args
     read_one = do
         M.fromSet (const ()) <$> read_one
+
+raise :: Monad m => Error -> EitherT [Error] m a
+raise e = left [e]
 
 --instance Readable a => Readable (Maybe a) where
 --    read_args = do

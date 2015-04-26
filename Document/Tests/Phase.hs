@@ -21,7 +21,16 @@ path0 :: String
 path0 = "tests/phases-t0.tex"
 
 result0 :: String
-result0 = "error (1,1): A cycle exists in the refinement structure: m0, m1\n"
+result0 = unlines
+    [ "A cycle exists in the refinement structure"
+    , "error 173:1:"
+    , "\tm0"
+    , ""
+    , "error 179:1:"
+    , "\tm1"
+    , ""
+    , ""
+    ]
 
 path1 :: String
 path1 = "tests/phases-t1.tex"

@@ -43,17 +43,12 @@ import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.List as L
 
---import Foreign
-
 import System.Console.ANSI
 import System.Directory
-import System.FilePath hiding ((</>))
--- import System.IO
 import System.TimeIt
 
 import Utilities.Format
 import Utilities.Syntactic
---import Utilities.Trace
 
     -- The pipeline is made of three processes:
     --  o the parser
@@ -296,7 +291,7 @@ summary (Shared { .. }) = do
             threadDelay 10000000
             takeMVar v
             s <- read_obs system
-            produce_summaries (takeDirectory fname) s
+            produce_summaries fname s
 
 keyboard :: Shared -> IO ()
 keyboard sh@(Shared { .. }) = do

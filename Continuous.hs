@@ -1,6 +1,8 @@
 #!/usr/bin/env runhaskell
 {-# LANGUAGE FlexibleContexts #-}
-module Main where
+module Main 
+    (main)
+where
 
     -- Modules
 import Interactive.Pipeline
@@ -32,7 +34,6 @@ import qualified Data.Serialize as Ser
 
 import System.Console.GetOpt
 import System.Directory
-import System.FilePath
 import System.Environment
 import System.Locale
 import System.TimeIt
@@ -57,37 +58,20 @@ with_po_map act param = do
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         d <- gets no_dump
+        p    <- gets pos
+        file <- gets path   
+        let fn = file ++ ".state'"
         if not d then do
-            p    <- gets pos
-            file <- gets path   
-            let fn = file ++ ".state'"
     --        liftIO $ Ser.dump_pos file p
             liftIO $ putStrLn "Producing Z3 file:"
             (dt,()) <- liftIO $ timeItT $ forM_ (M.toList p) $ \(n,p) -> do
                 dump (show n) (M.map snd p)
-            liftIO $ do
-                print dt
-                putStrLn "Serializing state:"
-            (dt',()) <- liftIO $ timeItT $ BS.writeFile fn $ Ser.encode p
-            liftIO $ print dt'
+            liftIO $ print dt
         else return ()
-
-monitor :: (Monad m, Eq s) 
-        => m s -> m () 
-        -> m () -> m ()
-monitor measure delay act = do
-    t <- measure
-    runStateT (
-        forever (do
-            t0 <- get
-            t1 <- lift measure
-            if t0 == t1
-                then return ()
-                else do 
-                    put t1
-                    lift act
-            lift delay)) t
-    return ()
+        liftIO $ do
+            putStrLn "Serializing state:"
+        (dt',()) <- liftIO $ timeItT $ BS.writeFile fn $ Ser.encode p
+        liftIO $ print dt'
 
 check_one :: (MonadIO m, MonadState Params m) 
           => Machine -> m (Int,String)
@@ -140,8 +124,6 @@ handle' h cmd = StateT $ \st -> do
         handle (flip runStateT st . h) $ runStateT cmd st
 
 check_file :: StateT Params IO ()
--- check_file :: (MonadIO m, MonadState Params m) 
---            => m ()
 check_file = do
         param <- get
         let p ln = verbose param || take 4 ln /= "  o " 
@@ -149,7 +131,7 @@ check_file = do
             h e = liftIO $ putStrLn $ "failed: " ++ path param ++ ", " ++ show e
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
-            lift $ produce_summaries (takeDirectory $ path param) s
+            lift $ produce_summaries (path param) s
             return (M.elems $ machines s, M.toList $ theories s)
         case r of
             Right (ms,ts) -> do
@@ -222,7 +204,7 @@ main = do
                             , init_focus = listToMaybe $ catMaybes $ map focus opts
                             } }
                     (v,h) <- z3_version
-                    printf "using z3 version %s, hashcode %s" v h
+                    printf "using z3 version %s, hashcode %s\n" v h
                     if continuous param then do
                         run_pipeline xs param
                         return ()

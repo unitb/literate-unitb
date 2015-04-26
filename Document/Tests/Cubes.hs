@@ -1,4 +1,7 @@
-module Document.Tests.Cubes ( test_case, test ) where
+{-# LANGUAGE TemplateHaskell #-}
+module Document.Tests.Cubes 
+    ( test_case, test ) 
+where
 
 --import qualified Data.Map as M
 import Document.Tests.Suite
@@ -31,7 +34,7 @@ test = test_cases
              case8 result8)
         , (StringCase "proof of inv0" 
              case9 result9)
-        , (POCase "empty proof"
+        , (StringCase "empty proof"
              case10 result10) 
         ]
 
@@ -58,21 +61,18 @@ machine6 :: Machine
 machine6 = (empty_machine "m0") 
         {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
         ,  inits = fromList
-                [ (label "in2", c `zeq` z6)
-                , (label "in1", b `zeq` z1)
-                , (label "init0", (n `zeq` z0) `zand` (a `zeq` z0) )
+                [ (label "in2", $fromJust$ c .= 6)
+                , (label "in1", $fromJust$ b .= 1)
+                , (label "init0", $fromJust$ (n .= 0) /\ (a .= 0) )
                 ]
         ,  props = prop_set6
         ,  events = singleton (label "evt") event6_evt 
         }
     where
-        a = Word var_a
-        b = Word var_b
-        c = Word var_c
-        n = Word var_n
-        z0 = zint 0
-        z1 = zint 1
-        z6 = zint 6
+        a = Right $ Word var_a
+        b = Right $ Word var_b
+        c = Right $ Word var_c
+        n = Right $ Word var_n
 
 prop_set6 :: PropertySet
 prop_set6 = empty_property_set {
@@ -82,18 +82,16 @@ prop_set6 = empty_property_set {
                     (label "m0/evt/INV/inv2", calc) ],
         _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
-                [ (a `zeq` (n `zpow` z3)),
-                  (b `zeq` ( (zint 3 `ztimes` (n `zpow` zint 2))
-                     `zplus` (zint 3 `ztimes` n)
-                     `zplus` zint 1) ), 
-                  (c `zeq` ((z6 `ztimes` n) `zplus` z6)) ] }
+                [ $fromJust$ a .= (n .^ 3)
+                , $fromJust$ b .=    3 * (n .^ 2)
+                                   + 3 * n
+                                   + 1     
+                , $fromJust$ c .= 6 * n + 6 ] }
     where
-        a = Word var_a
-        b = Word var_b
-        c = Word var_c
-        n = Word var_n
-        z3 = zint 3
-        z6 = zint 6
+        a = Right $ Word var_a
+        b = Right $ Word var_b
+        c = Right $ Word var_c
+        n = Right $ Word var_n
         calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
 
 vars :: [Var]
@@ -163,7 +161,6 @@ result7 = unlines
     , "  o  m0/evt/INV/inv2/step (182,1)"
     , "  o  m0/evt/INV/inv2/step (184,1)"
     , "  o  m0/evt/INV/inv2/step (186,1)"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -172,7 +169,7 @@ result7 = unlines
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
     , "  o  m0/evt/WWD"
-    , "passed 47 / 47"
+    , "passed 46 / 46"
     ]
 
 case7 :: IO (String, Map Label Sequent)
@@ -238,9 +235,9 @@ case9 = do
                                 return (show lbl ++ ":\n" ++ show_proof calc)
                             _         ->
                                 return (
-                                      "error: incorrect proof type" ++ show (typeOf calc))
+                                      "incorrect proof type" ++ show (typeOf calc))
                     xs       -> return (
-                                      "error: found "
+                                      "found "
                                    ++ show (length xs) 
                                    ++ " proofs")
             x -> return $ show x
@@ -249,8 +246,8 @@ path10 :: FilePath
 path10   = "Tests/integers_t10.tex"
 
 result10 :: String
-result10 = "Left error (31,1): type error: a calculation must include at least one reasoning step\n"
+result10 = "error 31:1:\n    type error: a calculation must include at least one reasoning step\n"
 
-case10 :: IO (String, Map Label Sequent)
+case10 :: IO String
 case10 = do
-    verify path10 0
+    find_errors path10

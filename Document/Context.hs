@@ -96,7 +96,7 @@ imp_theory = contextCmd "\\with" $ \(One (String th_name)) _m _ -> do
                 -- add suggestions
         li <- lift ask
         case th_name `L.lookup` th of
-            Nothing -> left [Error (format msg th_name) li]
+            Nothing -> raise $ Error (format msg th_name) li
             Just th -> return [(th_name,th,li)]
 
 ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Theory
@@ -166,7 +166,7 @@ ctx_declarations _ = visit_doc []
                         xs    = L.map f $ new_ops $ th_notation th
                         g (String x) = maybe (left [Error (format msg x) li])
                                     return $ L.lookup (strip x) xs
-                    ops <- toEither $ mapM (mapM $ fromEither ($myError) . g) ops
+                    ops <- toEither $ mapM (mapM $ fromEither ($myError "") . g) ops
 --                    traceM $ show ops
 --                    traceM $ show $ prec notat
                     return th {

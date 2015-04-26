@@ -20,6 +20,7 @@ import qualified Data.Map as M
 
 import Utilities.Syntactic
 import Utilities.Tuple
+import Utilities.Trace
 
 data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 
@@ -54,6 +55,9 @@ instance Monad m => C.Category (Pipeline m) where
 instance Monad m => Arrow (Pipeline m) where
     arr f = Pipeline empty_spec empty_spec $ return . f
     first (Pipeline xs ys f) = Pipeline xs ys $ \(x,y) -> f x >>= \z -> return (z,y)
+
+instance Monad m => ArrowApply (Pipeline m) where
+    app = Pipeline empty_spec empty_spec $ \(Pipeline _ _ f, x) -> f x
 
 data Env = BlockEnv { getEnvArgs :: [[LatexDoc]], getEnvContent :: [LatexDoc], envLI :: LineInfo }
 data Cmd = BlockCmd { getCmdArgs :: [[LatexDoc]], cmdLI :: LineInfo }

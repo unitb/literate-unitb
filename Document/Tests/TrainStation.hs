@@ -177,9 +177,9 @@ loc_def :: Def
 block_def :: Def
 
 universe t = (zlift (set_type t) ztrue)
-train_def = Def [] "\\TRAIN" [] (set_type train_type) (universe train_type)
-loc_def = Def [] "\\LOC" [] (set_type loc_type) (universe loc_type)
-block_def = Def [] "\\BLK" [] (set_type blk_type) (universe blk_type)
+train_def = Def [] "sl@TRAIN" [] (set_type train_type) (universe train_type)
+loc_def = Def [] "sl@LOC" [] (set_type loc_type) (universe loc_type)
+block_def = Def [] "sl@BLK" [] (set_type blk_type) (universe blk_type)
 
 train    :: ExprP
 loc_cons :: ExprP
@@ -471,22 +471,7 @@ set_decl_smt2 xs =
         , "             (set sl@BLK))"
         ]
 --        ,  "(declare-fun set-diff@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((set (pfun sl@TRAIN sl@BLK)) (set (pfun sl@TRAIN sl@BLK))) (set (pfun sl@TRAIN sl@BLK)))"
-     ++ [ "(define-fun sl@BLK"
-        , "            ()"
-        , "            (set sl@BLK)"
-        , "            ( (as const (set sl@BLK))"
-        , "              true ))"
-        , "(define-fun sl@LOC"
-        , "            ()"
-        , "            (set sl@LOC)"
-        , "            ( (as const (set sl@LOC))"
-        , "              true ))"
-        , "(define-fun sl@TRAIN"
-        , "            ()"
-        , "            (set sl@TRAIN)"
-        , "            ( (as const (set sl@TRAIN))"
-        , "              true ))"
-        , "(define-fun compl@@sl@BLK"
+     ++ [ "(define-fun compl@@sl@BLK"
         , "            ( (s1 (set sl@BLK)) )"
         , "            (set sl@BLK)"
         , "            ( (_ map not)"
@@ -549,6 +534,21 @@ set_decl_smt2 xs =
         , "              (s2 (set sl@TRAIN)) )"
         , "            (set sl@TRAIN)"
         , "            (intersect s1 ( (_ map not) s2 )))"
+        , "(define-fun sl@BLK"
+        , "            ()"
+        , "            (set sl@BLK)"
+        , "            ( (as const (set sl@BLK))"
+        , "              true ))"
+        , "(define-fun sl@LOC"
+        , "            ()"
+        , "            (set sl@LOC)"
+        , "            ( (as const (set sl@LOC))"
+        , "              true ))"
+        , "(define-fun sl@TRAIN"
+        , "            ()"
+        , "            (set sl@TRAIN)"
+        , "            ( (as const (set sl@TRAIN))"
+        , "              true ))"
         , "(define-fun st-subset@@sl@BLK"
         , "            ( (s1 (set sl@BLK))"
         , "              (s2 (set sl@BLK)) )"
@@ -969,7 +969,7 @@ result1 = unlines
     , "  o  train0/enter/INV/inv2/step (83,1)"
     , "  o  train0/enter/INV/inv2/step (85,1)"
     , "  o  train0/enter/INV/inv2/step (87,1)"
-    , "  o  train0/enter/SCH"
+    , "  o  train0/enter/SCH/grd1"
     , "  o  train0/enter/WD/ACT/a1"
     , "  o  train0/enter/WD/ACT/a2"
     , "  o  train0/enter/WD/C_SCH"
@@ -1001,6 +1001,7 @@ result1 = unlines
     , "  o  train0/leave/CO/co1/step (385,1)"
     , "  o  train0/leave/CO/co1/step (387,1)"
     , "  o  train0/leave/CO/co1/step (390,1)"
+    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1011,8 +1012,7 @@ result1 = unlines
     , "  o  train0/leave/INV/inv2/step (102,1)"
     , "  o  train0/leave/INV/inv2/step (104,1)"
     , "  o  train0/leave/INV/inv2/step (106,1)"
-    , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/0/REF/weaken"
+    , " xxx train0/leave/SCH/grd0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1294,7 +1294,7 @@ case19 = proof_obligation path0 "train0/leave/FIS/loc@prime" 0
 
 result4 :: String
 result4 = unlines $
-    [ "; train0/leave/SCH" 
+    [ "; train0/leave/SCH/grd0" 
     , "(set-option :auto-config false)" ] ++
     push ++
     train_decl False True ++ 
@@ -1343,13 +1343,13 @@ result4 = unlines $
          ] ++ 
          check_sat ++
          pop ++
-         [ "; train0/leave/SCH" ] )
+         [ "; train0/leave/SCH/grd0" ] )
     where
         kw = [ "finite@@sl@LOC (mk-set" 
              , "(elem@@sl@LOC x (mk-set@@sl@LOC y))" ]
 
 case4 :: IO String
-case4 = proof_obligation path0 "train0/leave/SCH" 0
+case4 = proof_obligation path0 "train0/leave/SCH/grd0" 0
 
 result5 :: String
 result5 = unlines $
@@ -1728,7 +1728,7 @@ result13 = unlines
     , "  o  train0/enter/INV/inv2/step (87,1)"
     , "  o  train0/enter/SAF/s0"
     , "  o  train0/enter/SAF/s1"
-    , "  o  train0/enter/SCH"
+    , "  o  train0/enter/SCH/grd1"
     , "  o  train0/enter/WD/ACT/a1"
     , "  o  train0/enter/WD/ACT/a2"
     , "  o  train0/enter/WD/C_SCH"
@@ -1755,6 +1755,7 @@ result13 = unlines
     , "  o  train0/leave/CO/co1/step (268,1)"
     , "  o  train0/leave/CO/co1/step (270,1)"
     , "  o  train0/leave/CO/co1/step (273,1)"
+    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1767,8 +1768,7 @@ result13 = unlines
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
-    , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/0/REF/weaken"
+    , " xxx train0/leave/SCH/grd0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1827,7 +1827,7 @@ result14 = unlines
     , "  o  train0/enter/INV/inv2/step (87,1)"
     , "  o  train0/enter/SAF/s0"
     , "  o  train0/enter/SAF/s1"
-    , "  o  train0/enter/SCH"
+    , "  o  train0/enter/SCH/grd1"
     , "  o  train0/enter/WD/ACT/a1"
     , "  o  train0/enter/WD/ACT/a2"
     , "  o  train0/enter/WD/C_SCH"
@@ -1852,6 +1852,7 @@ result14 = unlines
     , "  o  train0/leave/CO/co1/step (273,1)"
     , "  o  train0/leave/CO/co1/step (275,1)"
     , "  o  train0/leave/CO/co1/step (278,1)"
+    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1864,8 +1865,7 @@ result14 = unlines
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
-    , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/0/REF/weaken"
+    , " xxx train0/leave/SCH/grd0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -1930,7 +1930,7 @@ result15 = unlines
     , "  o  train0/enter/INV/inv2/step (87,1)"
     , "  o  train0/enter/SAF/s0"
     , "  o  train0/enter/SAF/s1"
-    , "  o  train0/enter/SCH"
+    , "  o  train0/enter/SCH/grd1"
     , "  o  train0/enter/WD/ACT/a1"
     , "  o  train0/enter/WD/ACT/a2"
     , "  o  train0/enter/WD/C_SCH"
@@ -1954,6 +1954,7 @@ result15 = unlines
     , "  o  train0/leave/CO/co1/step (284,1)"
     , "  o  train0/leave/CO/co1/step (286,1)"
     , "  o  train0/leave/CO/co1/step (289,1)"
+    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1966,8 +1967,7 @@ result15 = unlines
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
-    , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/0/REF/weaken"
+    , " xxx train0/leave/SCH/grd0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -2050,7 +2050,7 @@ result16 = unlines
     , "  o  train0/enter/INV/inv2/step (87,1)"
     , "  o  train0/enter/SAF/s0"
     , "  o  train0/enter/SAF/s1"
-    , "  o  train0/enter/SCH"
+    , "  o  train0/enter/SCH/grd1"
     , "  o  train0/enter/WD/ACT/a1"
     , "  o  train0/enter/WD/ACT/a2"
     , "  o  train0/enter/WD/C_SCH"
@@ -2075,6 +2075,7 @@ result16 = unlines
     , "  o  train0/leave/CO/co1/step (342,1)"
     , "  o  train0/leave/CO/co1/step (344,1)"
     , "  o  train0/leave/CO/co1/step (347,1)"
+    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -2087,8 +2088,7 @@ result16 = unlines
     , "  o  train0/leave/INV/inv2/step (106,1)"
     , "  o  train0/leave/SAF/s0"
     , "  o  train0/leave/SAF/s1"
-    , " xxx train0/leave/SCH"
-    , "  o  train0/leave/SCH/train0/0/REF/weaken"
+    , " xxx train0/leave/SCH/grd0"
     , "  o  train0/leave/WD/ACT/a0"
     , "  o  train0/leave/WD/ACT/a3"
     , "  o  train0/leave/WD/C_SCH"
@@ -2112,9 +2112,9 @@ path17 = "Tests/train-station-err8.tex"
 
 result17 :: String
 result17 = unlines 
-        [  "error (75,3): type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
-        ,  "error (75,3): type of empty-fun is ill-defined: \\pfun [\\TRAIN,_b]"
-        ,  "error (77,2): type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
+        [  "error 75:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
+        ,  "error 75:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_b]"
+        ,  "error 77:2:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
         ]
 
 case17 :: IO String
@@ -2125,7 +2125,7 @@ path22 = "Tests/train-station-err11.tex"
 
 result22 :: String
 result22 = unlines 
-        [  "error (47,15): event(s) leave have indices and require witnesses"
+        [  "error 47:15:\n    event(s) leave have indices and require witnesses"
         ]
 
 case22 :: IO String
@@ -2136,22 +2136,22 @@ path18 = "Tests/train-station-err9.tex"
 
 result18 :: String
 result18 = unlines 
-        [  "error (68,2): expression has type incompatible with its expected type:"
+        [  "error 68:2:\n    expression has type incompatible with its expected type:"
         ,  "  expression: (dom loc)"
         ,  "  actual type: \\set [\\TRAIN]"
         ,  "  expected type: \\Bool "
         ,  ""
-        ,  "error (73,3): expression has type incompatible with its expected type:"
+        ,  "error 73:3:\n    expression has type incompatible with its expected type:"
         ,  "  expression: (union in (mk-set t))"
         ,  "  actual type: \\set [\\TRAIN]"
         ,  "  expected type: \\Bool "
         ,  ""
-        ,  "error (118,3): expression has type incompatible with its expected type:"
+        ,  "error 118:3:\n    expression has type incompatible with its expected type:"
         ,  "  expression: t"
         ,  "  actual type: \\TRAIN"
         ,  "  expected type: \\Bool "
         ,  ""
-        ,  "error (123,2): expression has type incompatible with its expected type:"
+        ,  "error 123:2:\n    expression has type incompatible with its expected type:"
         ,  "  expression: empty-set"
         ,  "  actual type: \\set [_a]"
         ,  "  expected type: \\Bool "
@@ -2169,8 +2169,8 @@ case21 = find_errors path21
 
 result21 :: String
 result21 = unlines
-    [ "error: Theory imported multiple times"
-    , "\t\"sets\": (129,1)"
-    , "\t\"sets\": (130,12)"
-    , "\t\"sets\": (131,12)\n"
+    [ "Theory imported multiple times"
+    , "error 129:1:\n\t\"sets\"\n"
+    , "error 130:12:\n\t\"sets\"\n"
+    , "error 131:12:\n\t\"sets\"\n\n"
     ]

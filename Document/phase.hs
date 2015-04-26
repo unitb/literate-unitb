@@ -133,7 +133,7 @@ machineCmd :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
 machineCmd cmd f = Pipeline m_spec empty_spec g
     where
-        nargs = len ($myError :: TypeList args)
+        nargs = len ($myError "" :: TypeList args)
         m_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -164,7 +164,7 @@ machineEnv :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
-        nargs = len ($myError :: TypeList args)
+        nargs = len ($myError "" :: TypeList args)
         m_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv
@@ -193,7 +193,7 @@ contextCmd :: forall a b c.
            -> Pipeline MM (CTable c) (Either [Error] (CTable a))
 contextCmd cmd f = Pipeline empty_spec c_spec g
     where
-        nargs = len ($myError :: TypeList b)
+        nargs = len ($myError "" :: TypeList b)
         c_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -211,7 +211,7 @@ contextEnv :: forall result args ctx.
            -> Pipeline MM (CTable ctx) (Either [Error] (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
-        nargs = len ($myError :: TypeList args)
+        nargs = len ($myError "" :: TypeList args)
         c_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv
@@ -670,7 +670,7 @@ aliases ln0 ln1 = lens getter $ flip setter
     where
         getter z
             | x == y    = x
-            | otherwise = $myError
+            | otherwise = $myError ""
             where
                 x = view ln0 z
                 y = view ln1 z

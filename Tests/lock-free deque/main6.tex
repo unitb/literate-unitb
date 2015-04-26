@@ -2,7 +2,7 @@
 \usepackage[margin=0.5in]{geometry} 
 	% see geometry.pdf on how to lay out the page. There's lots.
 \usepackage{bsymb}
-\usepackage{unitb}
+\usepackage{../unitb}
 \usepackage{calculation}
 \usepackage{ulem}
 \usepackage{hyperref}
@@ -24,6 +24,8 @@
 \maketitle
 \tableofcontents
 
+\input{machine_m1}
+\input{machine_m2}
 \newcommand{\stmt}[1]{ $#1$ }
 \newcommand{\comment}[2]{ 
 	% \begin{tabular}{|l|l|} 
@@ -172,7 +174,7 @@
 \\ \cschedule{m0:push:left}{m1:sch0}{ &r \in \dom.pshL }
 \end{align*}
 % \begin{align*}
-\weakento{m0:push:left}{default}{m1:sch0}
+\removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
 % \end{align*}
 
 \subsubsection{Proving \ref{m1:prog1}}
@@ -182,7 +184,7 @@
 \end{align*}
 
 \begin{align*}
-\weakento{m0:push:right}{default}{m1:sch0}
+\removecoarse{m0:push:right}{default} % \weakento{m0:push:right}{default}{m1:sch0}
 \\ \cschedule{m0:push:right}{m1:sch0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd1}{ pshR.r = x }
@@ -223,8 +225,8 @@
 	\\ \refine{m1:prog3}{ensure}{m0:pop:left:empty,m0:pop:left:non:empty}
 	{ \index{r}{r' = r} }
 \end{align*}
-\replacefine{m0:pop:right:non:empty}{}{m1:sch1}{}
-\replacefine{m0:pop:right:empty}{}{m1:sch1}{}
+% \replacefine{m0:pop:right:non:empty}{}{m1:sch1}{}
+% \replacefine{m0:pop:right:empty}{}{m1:sch1}{}
 \indices{m0:pop:right:non:empty}{ r : \REQ }
 \indices{m0:pop:right:empty}{ r : \REQ }
 \begin{align*}
@@ -232,8 +234,8 @@
 \\ \fschedule{m0:pop:right:non:empty}{m1:sch1}{ p < q }
 \\ \cschedule{m0:pop:right:empty}{m1:sch0}{ r \in popR }
 \\ \fschedule{m0:pop:right:empty}{m1:sch1}{ p = q }
-\\ \weakento{m0:pop:right:non:empty}{default}{m1:sch0}
-\\ \weakento{m0:pop:right:empty}{default}{m1:sch0}
+\\ \removecoarse{m0:pop:right:non:empty}{default} % \weakento{m0:pop:right:non:empty}{default}{m1:sch0}
+\\ \removecoarse{m0:pop:right:empty}{default} % \weakento{m0:pop:right:empty}{default}{m1:sch0}
 \\ \evguard{m0:pop:right:non:empty}{m1:grd0}{ r \in popR }
 \\ \evbcmeq{m0:pop:right:non:empty}{m1:a2}
 	{popR}{ popR \setminus \{ r \} }
@@ -258,15 +260,15 @@
 \indices{m0:pop:left:empty}{ r : \REQ }
 % theorem prover found that qe.(q-1) (from the event pop:right),
 % should be changed for qe.p
-\replacefine{m0:pop:left:non:empty}{}{m1:sch1}{}
-\replacefine{m0:pop:left:empty}{}{m1:sch1}{}
+% \replacefine{m0:pop:left:non:empty}{}{m1:sch1}{}
+% \replacefine{m0:pop:left:empty}{}{m1:sch1}{}
 \begin{align*}
 \cschedule{m0:pop:left:non:empty}{m1:sch0}{ r \in popL }
 \\ \cschedule{m0:pop:left:empty}{m1:sch0}{ r \in popL }
 \\ \fschedule{m0:pop:left:non:empty}{m1:sch1}{ p < q }
 \\ \fschedule{m0:pop:left:empty}{m1:sch1}{ p = q }
-\\ \weakento{m0:pop:left:non:empty}{default}{m1:sch0}
-\\ \weakento{m0:pop:left:empty}{default}{m1:sch0}
+\\ \removecoarse{m0:pop:left:non:empty}{default} % \weakento{m0:pop:left:non:empty}{default}{m1:sch0}
+\\ \removecoarse{m0:pop:left:empty}{default} % \weakento{m0:pop:left:empty}{default}{m1:sch0}
 \\ \evguard{m0:pop:left:non:empty}{m1:grd0}{ r \in popL }
 \\ \evbcmeq{m0:pop:left:non:empty}{m1:a4}
 	{popL}{ popL \setminus \{ r \} }

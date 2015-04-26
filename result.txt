@@ -15,15 +15,18 @@
 === prop_parseOk from ./Document/MachineSpec.hs:40 ===
 +++ OK, passed 100 tests.
 +++ OK, passed 100 tests.
++++ OK, passed 100 tests.
+
+=== prop_type_error from ./Document/MachineSpec.hs:47 ===
 === prop_c from ./Utilities/EditDistance.hs:132 ===
+
+=== prop_b from ./Utilities/EditDistance.hs:138 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:194 ===
 +++ OK, passed 100 tests.
 
 === prop_fromList_toList from ./Utilities/Relation.hs:198 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:385 ===
 
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:389 ===
-+++ OK, passed 100 tests.
+=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:202 ===
@@ -42,16 +45,89 @@
 +++ OK, passed 100 tests.
 
 === prop_all_valid from ./Utilities/Relation.hs:235 ===
++++ OK, passed 100 tests.
 
-=== prop_b from ./Utilities/EditDistance.hs:138 ===
+=== prop_union_def from ./Utilities/Relation.hs:255 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:261 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:264 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:273 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:276 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:282 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:385 ===
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:389 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:297 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:300 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
+
 
 === prop_u_scc_disconnected from ./Utilities/Permutation.hs:394 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:405 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
-|  |  *** FAILED ***
 |  |  +- Contextual predicate visibility rules
-|  |  *** FAILED ***
 |  |  +- The king and his advisors puzzle
 |  |  |  +- puzzle, m0
 |  |  |  +- puzzle, m1
@@ -80,316 +156,142 @@
 |  |  |  +- test 25, error: schedules and guards refer to deleted variables
 |  |  |  +- test 27, old guards / new guards
 |  |  |  +- test 27, illegal type application
-|  |  |  *** FAILED ***
-|  |  |  +- [ Success: 26 / 27 ]
+|  |  |  +- [ Success: 27 / 27 ]
 |  |  +- Unless / except clause
 |  |  |  +- test 0, unless/except without indices
-|  |  |  *** FAILED ***
 |  |  |  +- test 1, unless/except with indices and free variables
-|  |  |  *** FAILED ***
-|  |  |  +- [ Success: 0 / 2 ]
+|  |  |  +- [ Success: 2 / 2 ]
 |  |  +- Specification and refinement of a lock-free algorithm
 |  |  |  +- test 0, verification, specification with intervals
-|  |  |  *** FAILED ***
 |  |  |  +- test 1, verification, failed proof with intervals
-|  |  |  *** FAILED ***
 |  |  |  +- test 2, error message name clash in guards
 |  |  |  +- test 3, verification, looking up function outside of domain
-|  |  |  *** FAILED ***
 |  |  |  +- test 4, m1, liveness implemented with conditional behavior
-|  |  |  *** FAILED ***
 |  |  |  +- test 5, transient, two branches, enablement of non-empty
-|  |  |  *** FAILED ***
 |  |  |  +- test 6, transient, two branches, enablement of empty
-|  |  |  *** FAILED ***
 |  |  |  +- test 7, transient, two branches, negation of empty
-|  |  |  *** FAILED ***
 |  |  |  +- test 8, transient, two branches, negation of non-empty
-|  |  |  *** FAILED ***
 |  |  |  +- test 9, transient, two branches, follow and disjunction
-|  |  |  *** FAILED ***
 |  |  |  +- test 10, duplicate refinement of liveness properties
 |  |  |  +- test 11, missing witness
-|  |  |  +- [ Success: 3 / 12 ]
+|  |  |  +- [ Success: 12 / 12 ]
 |  |  +- small machine example
 |  |  |  +- test 0
-|  |  |  *** FAILED ***
 |  |  |  +- test 1 (separate machine blocks)
-|  |  |  *** FAILED ***
 |  |  |  +- test 2 (verification, one failure)
-|  |  |  *** FAILED ***
 |  |  |  +- test 3 (verification)
-|  |  |  *** FAILED ***
 |  |  |  +- test 4 (proof obligation, invariance)
 |  |  |  +- test 5 (co, 'skip' proof obligation)
 |  |  |  +- test 6 (verification, coarse schedule stronger than guard)
-|  |  |  *** FAILED ***
 |  |  |  +- test 7 (schedulability proof obligation)
-|  |  |  *** FAILED ***
 |  |  |  +- test 8 (schedulability without selecting schedules (trivially true))
-|  |  |  *** FAILED ***
 |  |  |  +- test 9 (coarse schedule weakening, PO)
-|  |  |  *** FAILED ***
 |  |  |  +- test 10 (transient PO, enablement)
-|  |  |  *** FAILED ***
 |  |  |  +- test 11 (transient PO, negation)
-|  |  |  *** FAILED ***
 |  |  |  +- test 12 name clash between coarse schedule and co properties
-|  |  |  +- [ Success: 3 / 13 ]
+|  |  |  +- [ Success: 13 / 13 ]
 |  |  +- table of cubes example
 |  |  |  +- test 0 (syntax)
 |  |  |  +- test 1 (verification)
-|  |  |  *** FAILED ***
 |  |  |  +- test 2 (init/fis po)
 |  |  |  +- proof of inv0
 |  |  |  +- empty proof
-|  |  |  +- [ Success: 4 / 5 ]
+|  |  |  +- [ Success: 5 / 5 ]
 |  |  +- train station example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, syntax
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 21, multiple imports of sets
-|  |  |  |  +- [ Success: 1 / 2 ]
+|  |  |  |  +- [ Success: 2 / 2 ]
 |  |  |  +- part 1
 |  |  |  |  +- test 1, verification
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 2, proof obligation, INIT/fis, in
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 20, proof obligation, INIT/fis, loc
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 3, proof obligation, leave/fis, in'
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 19, proof obligation, leave/fis, loc'
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 4, proof obligation, leave/sch
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 19, quickcheck brackets
-|  |  |  |  +- [ Success: 1 / 7 ]
+|  |  |  |  +- [ Success: 7 / 7 ]
 |  |  |  +- part 2
 |  |  |  |  +- test 5, proof obligation, leave/en/tr0/WFIS
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 23, proof obligation, leave/en/tr0/EN
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 24, proof obligation, leave/en/tr0/NEG
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 7, undeclared symbol
 |  |  |  |  +- test 8, undeclared event (wrt transient)
 |  |  |  |  +- test 9, undeclared event (wrt c sched)
-|  |  |  |  +- [ Success: 3 / 6 ]
+|  |  |  |  +- [ Success: 6 / 6 ]
 |  |  |  +- part 3
 |  |  |  |  +- test 10, undeclared event (wrt indices)
 |  |  |  |  +- test 11, undeclared event (wrt assignment)
 |  |  |  |  +- test 12, proof obligation leave/INV/inv2
-|  |  |  |  *** FAILED ***
-|  |  |  |  +- [ Success: 2 / 3 ]
+|  |  |  |  +- [ Success: 3 / 3 ]
 |  |  |  +- part 4
 |  |  |  |  +- test 13, verification, name clash between dummy and index
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 14, verification, non-exhaustive case analysis
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 15, verification, incorrect new assumption
-|  |  |  |  *** FAILED ***
-|  |  |  |  +- [ Success: 0 / 3 ]
+|  |  |  |  +- [ Success: 3 / 3 ]
 |  |  |  +- part 5
 |  |  |  |  +- test 16, verification, proof by parts
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 17, ill-defined types
 |  |  |  |  +- test 18, assertions have type bool
 |  |  |  |  +- test 22, missing witness
-|  |  |  |  +- [ Success: 3 / 4 ]
-|  |  |  +- [ Success: 10 / 25 ]
+|  |  |  |  +- [ Success: 4 / 4 ]
+|  |  |  +- [ Success: 25 / 25 ]
 |  |  +- lambda expressions in the cube example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, verification, lambda vs empty-fun
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 1, verification, lambda vs ovl, mk-fun
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 2, verification, lambda vs apply
-|  |  |  |  *** FAILED ***
-|  |  |  |  +- [ Success: 0 / 3 ]
+|  |  |  |  +- [ Success: 3 / 3 ]
 |  |  |  +- part 1
 |  |  |  |  +- test 3, verification, set comprehension, failed proof
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 4, adding a progress property
 |  |  |  |  +- test 5, unless properties
-|  |  |  |  +- [ Success: 2 / 3 ]
+|  |  |  |  +- [ Success: 3 / 3 ]
 |  |  |  +- part 2
 |  |  |  |  +- test 6, verify progress refinement
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 7, verify refinement rules
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 8, verify refinement rules
-|  |  |  |  *** FAILED ***
-|  |  |  |  +- [ Success: 0 / 3 ]
+|  |  |  |  +- [ Success: 3 / 3 ]
 |  |  |  +- part 3
 |  |  |  |  +- test 9, verify disjunction rule
-|  |  |  |  *** FAILED ***
 |  |  |  |  +- test 10, error: cyclic proof
 |  |  |  |  +- test 11, intermediate goals of monotonic simplification
 |  |  |  |  +- test 12, bound variable with ambiguous type
-|  |  |  |  +- [ Success: 3 / 4 ]
-|  |  |  +- [ Success: 5 / 13 ]
+|  |  |  |  +- [ Success: 4 / 4 ]
+|  |  |  +- [ Success: 13 / 13 ]
 |  |  +- refinement relations in the phase example
 |  |  |  +- test 0, cyclic refinement relation between machines
 |  |  |  +- test 1, valid references to variables and event declared in ancestor
 |  |  |  +- [ Success: 2 / 2 ]
 |  |  +- train station example, with refinement
 |  |  |  +- verify machine m0 (ref)
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m1 (ref)
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m2 (ref)
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m2 (ref), in many files
-|  |  |  *** FAILED ***
 |  |  |  +- cyclic proof of liveness through 3 refinements
-|  |  |  *** FAILED ***
 |  |  |  +- refinement of undefined machine
 |  |  |  +- repeated imports
-|  |  |  +- [ Success: 2 / 7 ]
+|  |  |  +- [ Success: 7 / 7 ]
 |  |  +- train station example, with sets
 |  |  |  +- verify machine m0 (sets)
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m1 (sets)
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m2 (sets)
-|  |  |  *** FAILED ***
 |  |  |  +- m2, enablement proof obligation
-|  |  |  *** FAILED ***
 |  |  |  +- m2, transient proof obligation, feasibility
-|  |  |  *** FAILED ***
 |  |  |  +- m2, transient proof obligation, enablement
-|  |  |  *** FAILED ***
 |  |  |  +- m2, transient proof obligation, negation
-|  |  |  *** FAILED ***
 |  |  |  +- m2, safety property of schedule replacement
-|  |  |  *** FAILED ***
 |  |  |  +- verify machine m3 (sets)
-|  |  |  *** FAILED ***
 |  |  |  +- type checking of boolean expressions
 |  |  |  +- verify machine m3 error (wandering free variable)
 |  |  |  +- witness well definedness PO
-|  |  |  *** FAILED ***
-|  |  |  +- [ Success: 2 / 12 ]
-
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:405 ===
-+++ OK, passed 100 tests.
-
-=== prop_union_def from ./Utilities/Relation.hs:255 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:258 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:261 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:264 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:267 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:270 ===
-
-=== prop_type_error from ./Document/MachineSpec.hs:47 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:273 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:276 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:279 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:282 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:285 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:288 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:291 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:294 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:297 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:300 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:303 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:308 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:311 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:314 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_maximal from ./Utilities/Relation.hs:319 ===
-
-=== prop_expr_parser from ./Document/MachineSpec.hs:53 ===
-
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:417 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterDom_def from ./Utilities/Relation.hs:330 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterRan_def from ./Utilities/Relation.hs:333 ===
-
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:424 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
-+++ OK, passed 100 tests.
-
-=== prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:430 ===
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
-+++ OK, passed 100 tests.
-
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:467 ===
-
-=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:470 ===
-
-=== prop_closure_closed from ./Utilities/Permutation.hs:475 ===
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:481 ===
-
+|  |  |  +- [ Success: 12 / 12 ]
 |  |  +- QuickCheck spec of machine parser
 |  |  +- the parser is exception free
-|  |  +- [ Success: 59 / 122 ]
+|  |  +- [ Success: 122 / 122 ]
 |  +- Unit-B
 |  |  +- 'x eventually increases' verifies
-|  |  *** FAILED ***
 |  |  +- train, model 0, verification
-|  |  *** FAILED ***
 |  |  +- train, m0 transient / falsification PO
 |  |  +- Feasibility and partitioning
 |  |  +- Debugging the partitioning
@@ -414,7 +316,7 @@
 |  |  |  +- type mapping are acyclic
 |  |  |  +- one-point rule simplification on existentials
 |  |  |  +- [ Success: 19 / 19 ]
-|  |  +- [ Success: 22 / 24 ]
+|  |  +- [ Success: 24 / 24 ]
 |  +- latex parser
 |  |  +- sample.tex
 |  |  +- sorted seq err.tex
@@ -448,11 +350,44 @@
 |  |  +- case 5 - error monad
 |  |  +- case 6 - union of a list of {sorted} list
 |  |  +- case 7 - union of a list of {unsorted} list
++++ OK, passed 100 tests.
+
+=== prop_filterDom_def from ./Utilities/Relation.hs:330 ===
++++ OK, passed 100 tests.
+
+=== prop_filterRan_def from ./Utilities/Relation.hs:333 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:336 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:341 ===
++++ OK, passed 100 tests.
+
+=== prop_bimapMaybe_def from ./Utilities/Relation.hs:346 ===
++++ OK, passed 100 tests.
+
+
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:417 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:424 ===
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:430 ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:435 ===
 
 |  |  +- case 8 - edit distance, random testing
 |  |  +- case 9 - edit distance, regression test from random testing
 |  |  +- QuickCheck of graphs
 |  |  +- case 11 - Relations, quickcheck
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:467 ===
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:470 ===
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:475 ===
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:481 ===
 
 |  |  +- case 12 - New graphs, quickcheck
 |  |  +- [ Success: 14 / 14 ]
@@ -461,38 +396,29 @@
 |  |  +- test1: code for the {event}
 |  |  +- test2: code for the {initialization}
 |  |  +- test3: code for the {procedure + loop}
-|  |  *** FAILED ***
 |  |  +- test4: {whole source file}
-|  |  *** FAILED ***
 |  |  +- test5: run {source file}
-|  |  *** FAILED ***
 |  |  +- test6: verify {control flow graph}
 |  |  +- test7: {concurrent} code
-|  |  *** FAILED ***
 |  |  +- test8: {run concurrent} code
-|  |  *** FAILED ***
-|  |  +- [ Success: 4 / 9 ]
+|  |  +- [ Success: 9 / 9 ]
 |  +- Documentation generation
 |  |  +- m2, event m1:moveout
-|  |  *** FAILED ***
 |  |  +- m3, event m1:moveout
-|  |  *** FAILED ***
 |  |  +- safety properties of m2
-|  |  *** FAILED ***
 |  |  +- progress properties of m2
-|  |  *** FAILED ***
-|  |  +- [ Success: 0 / 4 ]
-|  +- [ Success: 116 / 190 ]
-+- [ Success: 116 / 190 ]
+|  |  +- [ Success: 4 / 4 ]
+|  +- [ Success: 190 / 190 ]
++- [ Success: 190 / 190 ]
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   37593 total
-    1677 Document/Machine.hs
-     872 UnitB/PO.hs
+   37710 total
+    1695 Document/Machine.hs
+     878 UnitB/PO.hs
      810 Document/Proof.hs
-     789 Document/Visitor.lhs
-     755 Logic/Expr/Expr.hs
-Run time: 1m 12s
+     792 Document/Visitor.lhs
+     715 Document/Expression.hs
+Run time: 1m 28s

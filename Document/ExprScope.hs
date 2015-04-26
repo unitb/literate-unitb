@@ -118,7 +118,7 @@ instance Show ActionDecl where
     show (Action _ _ _) = "action"
 
 data EventExpr = EventExpr (Map (Maybe EventId) EvtExprScope)
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Invariant = Invariant 
         { _invariantMchExpr :: Expr
         , _invariantDeclSource :: DeclSource
@@ -138,17 +138,17 @@ data ConstraintProp = ConstraintProp
         { _constraintPropMchExpr :: Constraint
         , _constraintPropDeclSource :: DeclSource
         , _constraintPropLineInfo :: LineInfo }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data SafetyDecl = SafetyProp
         { _safetyDeclMchExpr :: SafetyProp
         , _safetyDeclDeclSource :: DeclSource
         , _safetyDeclLineInfo :: LineInfo }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data ProgressDecl = ProgressProp
         { _progressDeclMchExpr :: ProgressProp
         , _progressDeclDeclSource :: DeclSource
         , _progressDeclLineInfo :: LineInfo }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Initially = DelInit
             { initiallyMMchExpr :: Maybe Expr
             , _initiallyDeclSource :: DeclSource
@@ -157,12 +157,12 @@ data Initially = DelInit
             { initiallyMchExpr :: Expr
             , _initiallyDeclSource :: DeclSource
             , _initiallyLineInfo :: LineInfo }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Axiom = Axiom
         { _axiomMchExpr :: Expr
         , _axiomDeclSource :: DeclSource
         , _axiomLineInfo :: LineInfo }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 
 makeFields ''Axiom
 makeFields ''ProgressDecl
@@ -182,7 +182,7 @@ instance Show Theorem where
 instance Show TransientProp where
     show _ = "transient predicate"
 
-class ( Scope a, Typeable a ) 
+class ( Scope a, Typeable a, Show a ) 
         => IsExprScope a where
     parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
 
@@ -241,3 +241,6 @@ instance Scope ExprScope where
     merge_scopes x y = fromMaybe err $ runIdentity <$> apply2ExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "ExprScope Scope.merge_scopes: _, _"
+
+instance Show ExprScope where
+    show (ExprScope x) = show x

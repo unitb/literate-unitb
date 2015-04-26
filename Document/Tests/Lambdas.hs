@@ -112,7 +112,6 @@ result0 = unlines
     , "  o  m0/evt/INV/inv1/step (155,1)"
     , "  o  m0/evt/INV/inv2/easy (190,1)"
     , " xxx m0/evt/INV/inv3"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -121,7 +120,7 @@ result0 = unlines
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
     , "  o  m0/evt/WWD"
-    , "passed 49 / 50"
+    , "passed 48 / 49"
     ]
 
 path0 :: String
@@ -181,7 +180,6 @@ result1 = unlines
     , "  o  m0/evt/INV/inv3/step (250,1)"
     , "  o  m0/evt/INV/inv3/step (252,1)"
     , "  o  m0/evt/INV/inv4"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -191,7 +189,7 @@ result1 = unlines
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
     , "  o  m0/evt/WWD"
-    , "passed 62 / 62"
+    , "passed 61 / 61"
     ]
 
 path1 :: String
@@ -260,7 +258,6 @@ result2 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step (285,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -270,7 +267,7 @@ result2 = unlines
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
     , "  o  m0/evt/WWD"
-    , "passed 71 / 71"
+    , "passed 70 / 70"
     ]
 
 path2 :: String
@@ -341,7 +338,6 @@ result3 = unlines
     , "  o  m0/evt/INV/inv5/main goal/step (287,1)"
     , "  o  m0/evt/INV/inv5/main goal/step (290,1)"
     , "  o  m0/evt/INV/inv6"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -351,7 +347,7 @@ result3 = unlines
     , "  o  m0/evt/WD/F_SCH"
     , "  o  m0/evt/WD/GRD"
     , "  o  m0/evt/WWD"
-    , "passed 73 / 73"
+    , "passed 72 / 72"
     ]
 
 path3 :: String
@@ -452,6 +448,7 @@ result6 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
+    , "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -504,8 +501,7 @@ result6 = unlines
     , " xxx m0/evt/INV/inv6/step (318,1)"
     , "  o  m0/evt/INV/inv8"
     , "  o  m0/evt/SAF/saf0"
-    , "  o  m0/evt/SCH"
-    , "  o  m0/evt/SCH/m0/0/REF/weaken"
+    , "  o  m0/evt/SCH/grd0"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -619,7 +615,6 @@ result7 = unlines
     , "  o  m0/evt/INV/inv6/step (318,1)"
     , " xxx m0/evt/INV/inv6/step (320,1)"
     , "  o  m0/evt/SAF/saf0"
-    , "  o  m0/evt/SCH"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -671,7 +666,7 @@ result7 = unlines
     , " xxx m0/prog9/REF/add"
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
-    , "passed 112 / 123"
+    , "passed 111 / 122"
     ]
 
 path7 :: String
@@ -705,6 +700,7 @@ result8 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
+    , "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -757,8 +753,7 @@ result8 = unlines
     , "  o  m0/evt/INV/inv7"
     , "  o  m0/evt/SAF/saf0"
     , "  o  m0/evt/SAF/saf1"
-    , "  o  m0/evt/SCH"
-    , "  o  m0/evt/SCH/m0/0/REF/weaken"
+    , "  o  m0/evt/SCH/grd0"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -825,6 +820,7 @@ result9 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
+    , "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -877,8 +873,7 @@ result9 = unlines
     , "  o  m0/evt/INV/inv7"
     , "  o  m0/evt/SAF/saf0"
     , "  o  m0/evt/SAF/saf1"
-    , "  o  m0/evt/SCH"
-    , "  o  m0/evt/SCH/m0/0/REF/weaken"
+    , "  o  m0/evt/SCH/grd0"
     , "  o  m0/evt/WD/ACT/a0"
     , "  o  m0/evt/WD/ACT/a1"
     , "  o  m0/evt/WD/ACT/a2"
@@ -938,11 +933,11 @@ path10 = "tests/cubes-t9.tex"
 
 result10 :: String
 result10 = unlines
-    [ "error: A cycle exists in the liveness proof"
-    , "\tProgress property prog0 (refined in m0): (338,68)"
-    , "\tProgress property prog1 (refined in m0): (340,36)"
-    , "\tProgress property prog2 (refined in m0): (342,49)"
-    , "\tProgress property prog3 (refined in m0): (346,26)"
+    [ "A cycle exists in the liveness proof"
+    , "error 338:68:\n\tProgress property prog0 (refined in m0)\n"
+    , "error 340:36:\n\tProgress property prog1 (refined in m0)\n"
+    , "error 342:49:\n\tProgress property prog2 (refined in m0)\n"
+    , "error 346:26:\n\tProgress property prog3 (refined in m0)\n"
     , ""
     ]
 
@@ -1257,10 +1252,8 @@ path12 = "Tests/cubes-t10.tex"
 
 result12 :: String
 result12 = unlines 
-        [  "error (274,2): type of j is ill-defined: _a"
+        [  "error 274:2:\n    type of j is ill-defined: _a"
         ]
 
 case12 :: IO String
 case12 = find_errors path12
-
-

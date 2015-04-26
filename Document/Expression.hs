@@ -220,7 +220,12 @@ type_t = do
             else return []
         ctx <- get_context
         t <- case get_type ctx t of
-            Just s -> return $ Gen (USER_DEFINED s ts)
+            Just s -> do
+                unless (length ts == typeParams s)
+                    $ fail $ format "Parameter mismatch. Expecting {0} type parameters, received {1}." 
+                        (typeParams s) 
+                        (length ts)
+                return $ Gen (USER_DEFINED s ts)
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
         b2 <- look_aheadP $ read_listP [ Ident "\\pfun" ]               
         if b2 
@@ -271,7 +276,7 @@ get_variables ctx cs = do
             (scan_expr Nothing) fn m (i,j)
         xs   <- hoistEither $ read_tokens 
             (runParser ctx
-                ($myError) M.empty vars) 
+                ($myError "") M.empty vars) 
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where

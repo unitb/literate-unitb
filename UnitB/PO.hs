@@ -126,10 +126,11 @@ invariants_only m =
         p1 = inh_props m 
 
 raw_machine_pos :: Machine -> (Map Label Sequent)
-raw_machine_pos m = pos
-    where
-        pos = M.map f $ 
-               (eval_generator $ do
+raw_machine_pos m = eval_generator $ 
+                with (do
+                        context $ theory_ctx (theory m)
+                        nameless_hyps $ M.elems unnamed 
+                        named_hyps $ named_f) $ do
                     forM_ (M.toList $ _transient p) $ \tr -> do
                         prop_tr m tr
                         tr_wd_po m tr
@@ -161,16 +162,10 @@ raw_machine_pos m = pos
                         sch_po m ev
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     mapM_ (ref_po m) $ M.toList $ derivation m
-                    )
+    where            
         p = props m
-        f (Sequent a b c d) = Sequent 
-                (a `merge_ctx` theory_ctx (theory m))
-                (M.elems unnamed ++ b) 
-                (named_f `M.union` c)
-                d
-          where
-            unnamed = theory_facts (theory m) `M.difference` named_f
-            named_f = theory_facts (theory m) { extends = M.empty }
+        unnamed = theory_facts (theory m) `M.difference` named_f
+        named_f = theory_facts (theory m) { extends = M.empty }
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
@@ -482,7 +477,7 @@ replace_csched_po m (lbl,evt) = do
         with (do
                 prefix_label $ _name m
                 prefix_label lbl
-                prefix_label "CSCH/delay"
+                prefix_label "C_SCH/delay"
                 POG.context $ assert_ctx m
                 POG.context $ step_ctx m
                 POG.variables $ indices evt
@@ -490,8 +485,8 @@ replace_csched_po m (lbl,evt) = do
         let old_c = coarse $ old_sched evt
             old_f = fine $ old_sched evt
         forM_ (zip [0..] $ c_sched_ref evt) $ \(i,ref) -> do
-            let prog = snd $ sch_prog ref
-                saf  = snd $ sch_saf ref
+            let (plbl,prog) = sch_prog ref
+                (slbl,saf)  = sch_saf ref
                 keep_c     = coarse (new_sched evt) `M.intersection` keep ref
                 new_part_c = (coarse (added_sched evt) `M.intersection` add ref) `M.union` keep_c
                 nb = label $ show (i :: Int)
@@ -501,18 +496,21 @@ replace_csched_po m (lbl,evt) = do
                     POG.variables $ symbol_table vs
                     named_hyps old_c
                     named_hyps old_f) $ 
-                emit_goal [nb,"prog/lhs"] p0
+                emit_goal [nb,"prog",plbl,"lhs"] p0
             with (do
                     POG.variables $ symbol_table vs) $
                 forM_ (toList new_part_c) $ \(lbl,sch) -> do
-                    emit_goal [nb,"prog/rhs",lbl] $ $fromJust$
+                    emit_goal [nb,"prog",plbl,"rhs",lbl] $ $fromJust$
                         Right q0 .=> Right sch
             with (do
                     POG.variables $ symbol_table us) $ do
-                emit_goal [nb,"saf/lhs"] $ $fromJust$
+                emit_goal [nb,"saf",slbl,"lhs"] $ $fromJust$
                         Right p1 .== mzall (M.map Right new_part_c)
-                emit_goal [nb,"saf/rhs"] $ $fromJust$
-                        Right q1 .=> mznot (mzall $ M.map Right $ old_c `M.union` old_f)
+                emit_goal [nb,"saf",slbl,"rhs"] $ $fromJust$
+                        Right q1 .=> mznot (mzall $ M.map Right old_c)
+                    -- the above used to include .=> ... \/ not old_f
+                    -- it does not seem sound and I removed it
+                    -- it broke one of the test cases
 
 weaken_csched_po :: Machine -> (Label,Event) -> M ()
 weaken_csched_po m (lbl,evt) = do
@@ -521,7 +519,7 @@ weaken_csched_po m (lbl,evt) = do
         with (do
                 prefix_label $ _name m
                 prefix_label lbl
-                prefix_label "CSCH/weaken"
+                prefix_label "C_SCH/weaken"
                 POG.context $ assert_ctx m
                 POG.context $ step_ctx m
                 POG.variables $ indices evt
@@ -542,22 +540,22 @@ replace_fsched_po m (lbl,evt) = do
         with (do
                 prefix_label $ _name m
                 prefix_label lbl
-                prefix_label "FSCH/replace"
+                prefix_label "F_SCH/replace"
                 POG.context $ assert_ctx m
                 POG.context $ step_ctx m
                 POG.variables $ indices evt
                 named_hyps $ invariants m) $ do
             case f_sched_ref evt of
-                Just (_,prog) -> do
+                Just (plbl,prog) -> do
                     let LeadsTo vs p0 q0 = prog
                     with (do
                             POG.variables $ symbol_table vs) $ do
                         with (do
                                 named_hyps old_c
                                 named_hyps old_f ) $
-                            emit_goal ["prog/lhs"] p0
+                            emit_goal ["prog",plbl,"lhs"] p0
                         forM_ (M.toList new_f) $ \(lbl,sch) -> 
-                            emit_goal ["prog/rhs",lbl] $
+                            emit_goal ["prog",plbl,"rhs",lbl] $
                                     q0 `zimplies` sch
                     with (do
                             named_hyps new_c
@@ -571,6 +569,7 @@ replace_fsched_po m (lbl,evt) = do
                     unless (new_f == old_f) $
                         with (do
                                 named_hyps new_c
+                                named_hyps old_c -- is this sound?
                                 named_hyps kept_f) $
                             emit_goal ["eqv"] $ $fromJust$
                                 Right (zall add_f) .= Right (zall del_f)
@@ -742,7 +741,8 @@ sch_po m (lbl, evt) =
              named_hyps hyp)
          $ if M.null param
                 then if removed_c_sch || removed_f_sch 
-                    then forM_ (toList grd) $ \(lbl,grd) -> emit_goal [lbl] grd  
+                    then forM_ (toList grd) $ \(lbl,grd) -> 
+                        emit_goal [lbl] grd  
                     else forM_ (toList $ grd `M.difference` old_guard evt) 
                         $ \(lbl,grd) -> emit_goal [lbl] grd  
             else if removed_c_sch || removed_f_sch || added_grd

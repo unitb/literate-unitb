@@ -58,16 +58,15 @@ result1 = unlines
     , "  o  m/INIT/WWD"
     , "  o  m/INV/WD"
     , "  o  m/enter/FIS/in@prime"
-    , "  o  m/enter/SCH/goal (21,1)"
-    , "  o  m/enter/SCH/hypotheses (21,1)"
-    , "  o  m/enter/SCH/relation (21,1)"
-    , "  o  m/enter/SCH/step (23,1)"
     , "  o  m/enter/WD/ACT/a1"
     , "  o  m/enter/WD/C_SCH"
     , "  o  m/enter/WD/F_SCH"
-    , "  o  m/enter/WD/GRD"
+    , "  o  m/enter/WD/GRD/goal (21,1)"
+    , "  o  m/enter/WD/GRD/hypotheses (21,1)"
+    , "  o  m/enter/WD/GRD/relation (21,1)"
+    , "  o  m/enter/WD/GRD/step (23,1)"
     , "  o  m/enter/WWD"
-    , "passed 13 / 13"
+    , "passed 12 / 12"
     ]
 
 path1 :: String
@@ -147,7 +146,7 @@ instance Arbitrary LatexDoc where
                     case read_lines tex_tokens "" ys of
                         Right x -> return $ Text $ map fst x
                         Left _  -> return $ Text $ [TextBlock "x" (li 0 0)]
-            else error ""
+            else error "Document.Test"
         where
             kw =
                 [   "machine"

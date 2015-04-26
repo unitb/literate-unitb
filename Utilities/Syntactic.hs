@@ -48,13 +48,14 @@ instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
 
-
+showLiLong :: LineInfo -> String
+showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col
 
 report :: Error -> String
-report (Error x (LI _ i j)) = format "error {0}: {1}" (i,j) (x :: String) :: String
-report (MLError xs ys) = format "error: {0}\n{1}" xs 
+report (Error msg li) = format "{1}:\n    {0}" msg (showLiLong li)
+report (MLError msg ys) = format "{0}\n{1}" msg
                 (unlines 
-                    $ map (uncurry $ format "\t{0}: {1}") 
+                    $ map (\(msg,li) -> format "{1}:\n\t{0}\n" msg (showLiLong li)) 
                     $ sortOn snd ys)
 
 makeReport :: MonadIO m => EitherT [Error] m String -> m String
@@ -63,7 +64,6 @@ makeReport = liftM fst . makeReport' () . liftM (,())
 makeReport' :: MonadIO m => a -> EitherT [Error] m (String,a) -> m (String,a)
 makeReport' def m = eitherT f return m
     where    
---        f :: [Error] -> IO String
         f x = return ("Left " ++ show_err x,def)
 
 format_error :: Error -> String

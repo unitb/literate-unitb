@@ -14,6 +14,23 @@
 			"name": "Haskell / Literate Unit-B",
 			"selector": "source.haskell",
 			"working_dir": "${project_path}"
+		},
+		{
+			"cmd":
+			[
+				"bin/continuous",
+				// "$project_path/display_errors",
+				"$file", 
+				"-V", // Verbose
+				"-v", // no verification
+				"-d"  // no dumps
+				// "$project_path",
+				// "ghc_errors.txt"
+			],
+			"file_regex": "^([^\\s]..*?):([0-9]*):?([0-9]*)",
+			"name": "Literate Unit-B",
+			"selector": "text.tex.latex",
+			"working_dir": "${project_path}"
 		}
 	],
 	"folders":

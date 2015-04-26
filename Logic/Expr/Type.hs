@@ -125,6 +125,14 @@ data Sort =
             [(String, [(String,GenericType)])] -- alternatives and named components
     deriving (Eq, Ord, Show, Generic)
 
+typeParams :: Sort -> Int
+typeParams BoolSort = 0
+typeParams IntSort  = 0
+typeParams RealSort = 0
+typeParams (Sort _ _ n) = n
+typeParams (DefSort _ _ ps _) = length ps
+typeParams (Datatype xs _ _)  = length xs
+
 instance Show FOType where
     show (FOT (USER_DEFINED s [])) = (z3_name s)
     show (FOT (USER_DEFINED s ts)) = format "{0} {1}" (z3_name s) ts
@@ -162,3 +170,41 @@ instance Named Sort where
     z3_name BoolSort   = "Bool"
     z3_name IntSort    = "Int"
     z3_name RealSort   = "Real"
+
+pair_sort :: Sort
+pair_sort = -- Sort "Pair" "Pair" 2
+               Datatype ["a","b"] "Pair" 
+                    [ ("pair", 
+                        [ ("first",  GENERIC "a")
+                        , ("second", GENERIC "b") ]) ]
+
+
+pair_type :: TypeSystem t => t -> t -> t
+pair_type x y = make_type pair_sort [x,y]
+
+null_sort :: Sort
+null_sort = Sort "Null" "Null" 2
+
+null_type :: TypeSystem t => t
+null_type = make_type null_sort []
+
+maybe_sort :: Sort
+maybe_sort   = Sort "\\maybe" "Maybe" 1
+
+maybe_type :: TypeSystem t => t -> t
+maybe_type t = make_type maybe_sort [t]
+
+fun_sort :: Sort
+fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ GENERIC "b"))
+
+fun_type :: TypeSystem t => t -> t -> t
+fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
+
+bool :: TypeSystem t => t
+bool = make_type BoolSort []
+    
+array_sort :: Sort
+array_sort = Sort "Array" "Array" 2
+
+array :: TypeSystem t => t -> t -> t
+array t0 t1 = make_type array_sort [t0,t1]

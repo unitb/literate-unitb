@@ -110,12 +110,16 @@ instance MonadState s m => MonadState s (ErrorT m) where
     get = lift get
     put x = lift $ put x
 
+makeError :: String -> String -> a
+makeError li msg = error $ printf "\n%s\n\n%s\n" li msg
+
 myError :: Q Exp
 myError = do
     loc <- location 
     let (ln,pos) = loc_start loc
-        arg = LitE $ StringL $ printf "\n-%s:%d:%d:" (loc_filename loc) ln pos 
-        fun = VarE 'error -- _
+        arg = LitE $ StringL $ printf "%s:%d:%d:" (loc_filename loc) ln pos 
+
+        fun = VarE 'makeError -- _
     return $ AppE fun arg
 
 --instance (MonadTrans t, MonadError m) => MonadError (t m) where

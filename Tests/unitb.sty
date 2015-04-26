@@ -537,12 +537,16 @@
 % \newcommand{\index}[2]{$#1 := #2$}
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
 
-\newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
-\newcommand{\replace}[6]{}
-\newcommand{\replacefine}[5]{}
-\newcommand{\removeguard}[2]{}
-\newcommand{\removevar}[1]{#1}
-\newcommand{\removeact}[2]{#1}
+% \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
+\newcommand{\replace}[6]{}     % {event}{old,...}{new,...}{aux,...}
+                               %        {prog}{saf}
+\newcommand{\replacefine}[2]{} % {event}{progid}
+\newcommand{\removeguard}[2]{} % {event}{grd0,grd1,...}
+\newcommand{\removevar}[1]{#1}  % {var,...}
+\newcommand{\removeact}[2]{#1}  % {event}{lbl,...}
+\newcommand{\removecoarse}[2]{} % {event}{lbl,...}
+\newcommand{\removefine}[2]{}   % {event}{lbl,...}
+\newcommand{\removeinit}[1]{}   % {lbl}
 
 \newenvironment{block}
 {	\begin{list}{}
@@ -586,7 +590,4 @@
 
 \newcommand{\witness}[3]{#2 := #2' ~ | ~ #3 \tag{\ref{#1}/#2}}
 \newcommand{\initwitness}[2]{ \tag{INIT/#1} #2 }
-\newcommand{\removecoarse}[2]{}
-\newcommand{\removefine}[2]{}
-\newcommand{\removeinit}[1]{}
 % \newcommand{\removevar}

@@ -67,25 +67,24 @@ instance RefRule Add where
 
 instance NFData Add where
 
-type ERWS = EitherT [Error] (RWS LineInfo [Error] System)
 
 class RuleParser a where
     parse_rule :: a -> [Label] -> String 
                -> RuleParserParameter 
-               -> ERWS Rule
+               -> M Rule
 
-instance RefRule a => RuleParser (ERWS a,()) where
+instance RefRule a => RuleParser (M a,()) where
     parse_rule (cmd,_) [] _ _ = do 
             x <- cmd
             return $ Rule x
     parse_rule _ hyps_lbls _ _ = do
         li <- lift $ ask
-        left [Error (format "too many hypotheses in the application of the rule: {0}" 
-                          $ intercalate "," $ map show hyps_lbls) li]
+        raise $ Error (format "too many hypotheses in the application of the rule: {0}" 
+                          $ intercalate "," $ map show hyps_lbls) li
 
 instance RefRule a => RuleParser (a,()) where
     parse_rule (x,()) xs y z = do
-            let cmd = return x :: ERWS a
+            let cmd = return x :: M a
             parse_rule (cmd,()) xs y z
 
 getProgress :: RuleParserParameter -> Map Label ProgressProp
@@ -123,10 +122,10 @@ instance RuleParser (a,()) => RuleParser (Label -> ProgressProp -> a,()) where
             Just p -> parse_rule (f x p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li]
+                raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li
     parse_rule _ [] rule _ = do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): expecting more properties" rule) li]
+                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
 instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
@@ -135,10 +134,10 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
             Just p -> parse_rule (f p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li]
+                raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li
     parse_rule _ [] rule _ = do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): expecting more properties" rule) li]
+                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
 instance RuleParser (a,()) => RuleParser (Label -> Transient -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
@@ -147,17 +146,17 @@ instance RuleParser (a,()) => RuleParser (Label -> Transient -> a,()) where
             Just p -> parse_rule (f x p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li]
+                raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li
     parse_rule _ [] rule _ = do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): expecting more properties" rule) li]
+                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
-instance RefRule a => RuleParser ([Label] -> ERWS a, ()) where
+instance RefRule a => RuleParser ([Label] -> M a, ()) where
     parse_rule (f,_) es rule _ = do
         -- evts <- bind_all x
         li <- lift $ ask
         when (L.null es) 
-            $ left [Error (format "refinement ({0}): at least one event is required" rule) li]
+            $ raise $ Error (format "refinement ({0}): at least one event is required" rule) li
         rule <- f es
         return (Rule rule) -- ys rule param
 
@@ -177,7 +176,7 @@ instance RefRule a => RuleParser (NE.NonEmpty (Label,ProgressProp) -> a,()) wher
     parse_rule (f,_) xs rule param = do
             li <- ask
             when (L.null xs)
-                $ left [Error (format "refinement ({0}): expecting at least one progress property" rule) li]
+                $ raise $ Error (format "refinement ({0}): expecting at least one progress property" rule) li
             parse_rule (g,()) xs rule param
         where
             g = f . NE.fromList
@@ -190,7 +189,7 @@ instance RefRule a => RuleParser ([(Label,ProgressProp)] -> a,()) where
             prog = getProgress param
             g x = maybe (do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a progress property" rule x) li] )
+                raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li )
                 return
                 $ M.lookup x prog
 
@@ -202,14 +201,14 @@ instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
             saf = getSafety param
             g x = maybe (do
                 li <- lift $ ask
-                left [Error (format "refinement ({0}): {1} should be a safety property" rule x) li] )
+                raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li )
                 return
                 $ M.lookup x saf
 
 
 parse :: RuleParser a
       => a -> String -> RuleParserParameter
-      -> EitherT [Error] (RWS LineInfo [Error] System) Rule
+      -> M Rule
 parse rc n param = do
         let goal_lbl = getGoal param
             hyps_lbls = getHypotheses param
@@ -308,14 +307,14 @@ mk_discharge p lbl tr []  = Discharge p lbl tr Nothing
 mk_discharge _ _ _ _  = error "expecting at most one safety property" 
 
 parse_discharge :: String -> RuleParserParameter
-                -> EitherT [Error] (RWS LineInfo [Error] System) Rule
+                -> M Rule
 parse_discharge rule params = do
     let goal_lbl = getGoal params
         hyps_lbls = getHypotheses params
     li <- lift $ ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
-        $ left [Error (format "too many hypotheses in the application of the rule: {0}" 
-                            $ intercalate "," $ map show hyps_lbls) li]
+        $ raise $ Error (format "too many hypotheses in the application of the rule: {0}"
+                            $ intercalate "," $ map show hyps_lbls) li
     add_proof_edge goal_lbl hyps_lbls
     parse (mk_discharge,()) rule params
 
@@ -487,9 +486,9 @@ instance RefRule Induction where
 instance NFData Induction where
     rnf (Induction p lbl q v) = rnf (p,lbl,q,v)
 
-parse_induction :: (Monad m)
-                => String -> RuleParserParameter
-                -> EitherT [Error] (RWST LineInfo [Error] System m) Rule
+parse_induction :: String 
+                -> RuleParserParameter
+                -> M Rule
 parse_induction rule param = do
         let prog = getProgress param
             goal_lbl = getGoal param
@@ -513,8 +512,8 @@ parse_induction rule param = do
             pr1@(LeadsTo fv1 _ _) = prog ! h0
         dum <- case fv1 \\ fv0 of
             [v] -> return v
-            _   -> left [Error (   "inductive formula should have one free "
-                                ++ "variable to record the variant") li]                    
+            _   -> raise $ Error (   "inductive formula should have one free "
+                                ++ "variable to record the variant") li 
         var <- case find_cmd_arg 3 ["\\var"] hint of
             Just (_,_,[var,dir,bound],_) -> toEither $ do
                 dir  <- case map toLower $ concatMap flatten dir of
@@ -542,7 +541,7 @@ parse_induction rule param = do
                         (format "invalid variant type\n\tExpecting: set or integer\n\tActual:  {1}" 
                             (type_of var))
                         li]
-                    return ($myError)
+                    return ($myError "")
                 -- return (dir,var,bound)
             Nothing -> left [Error "expecting a variant" li]
             _ -> left [Error "invalid variant" li]

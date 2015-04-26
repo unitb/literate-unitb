@@ -41,11 +41,11 @@ trace xs x = unsafePerformIO $ do
         else
             return x
 
-traceP :: (Show a, Arrow ar) => String -> ar a ()
-traceP m = arr $ \x -> trace (format "{0}: {1}" m x) ()
-
 traceM :: Monad m => String -> m ()
 traceM xs = trace xs (return ())
+
+traceA :: ArrowApply arr => (a -> String) -> arr a ()
+traceA f = arr (\x -> (trace (f x) returnA, ())) >>> app
 
 traceIO :: MonadIO m => String -> m ()
 traceIO xs = do

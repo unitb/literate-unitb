@@ -68,7 +68,7 @@ case1 = do
     parse path1
 
 result2 :: String
-result2 = (unlines 
+result2 = unlines 
     [ "  o  m0/INIT/FIS/x"
     , "  o  m0/INIT/FIS/y"
     , "  o  m0/INIT/INV/inv0"
@@ -82,12 +82,10 @@ result2 = (unlines
     , "  o  m0/TR/tr0/leadsto/rhs"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
+    , "  o  m0/inc/F_SCH/replace/prog/prog0/lhs"
+    , "  o  m0/inc/F_SCH/replace/prog/prog0/rhs/f0"
     , "  o  m0/inc/INV/inv0"
     , " xxx m0/inc/INV/inv1"
-    , "  o  m0/inc/SCH"
-    , "  o  m0/inc/SCH/m0/0/REF/replace/prog/lhs"
-    , "  o  m0/inc/SCH/m0/0/REF/replace/prog/rhs"
-    , "  o  m0/inc/SCH/m0/0/REF/replace/str"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -98,8 +96,9 @@ result2 = (unlines
     , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog0/REF/add"
     , "  o  m0/tr0/TR/WD"
-    , "passed 26 / 29"
-    ])
+    , "passed 24 / 27"
+    ]
+
 
 path2 :: String
 path2 = "Tests/small_machine_t2.tex"
@@ -119,11 +118,10 @@ result3 = unlines
     , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
+    , "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
-    , "  o  m0/inc/SCH"
-    , "  o  m0/inc/SCH/m0/0/REF/weaken"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -131,7 +129,7 @@ result3 = unlines
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
-    , "passed 22 / 23"
+    , "passed 21 / 22"
     ]
 
 path3 :: String
@@ -218,11 +216,11 @@ result6 = unlines
     , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
+    , "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
-    , "  o  m0/inc/SCH"
-    , "  o  m0/inc/SCH/m0/0/REF/weaken"
+    , "  o  m0/inc/SCH/grd0"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -241,7 +239,7 @@ case6 = verify path6 0
 
 result7 :: String
 result7 = unlines 
-    [ "; m0/inc/SCH"
+    [ "; m0/inc/SCH/grd0"
     , "(set-option :auto-config false)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
@@ -260,18 +258,18 @@ result7 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m0/inc/SCH"
+    , "; m0/inc/SCH/grd0"
     ]
 
 case7 :: IO String
-case7 = show_po path6 "m0/inc/SCH"
+case7 = show_po path6 "m0/inc/SCH/grd0"
 
 path8 :: FilePath
 path8 = "Tests/small_machine_t4.tex"
 
 result8 :: String
 result8 = unlines 
-    [ "; m0/inc/SCH"
+    [ "; m0/inc/SCH/grd0"
     , "(set-option :auto-config false)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
@@ -281,6 +279,8 @@ result8 = unlines
     , "; comment: we don't need to declare the sort Real"
     , "(declare-const x Int)"
     , "(declare-const y Int)"
+    , "; c0"
+    , "(assert (= x y))"
     , "; default"
     , "(assert false)"
     , "; inv0"
@@ -290,15 +290,15 @@ result8 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m0/inc/SCH"
+    , "; m0/inc/SCH/grd0"
     ]
 
 case8 :: IO String
-case8 = show_po path8 "m0/inc/SCH"
+case8 = show_po path8 "m0/inc/SCH/grd0"
 
 result9 :: String
 result9 = unlines
-    [ "; m0/inc/SCH/m0/0/REF/weaken"
+    [ "; m0/inc/C_SCH/weaken/c0"
     , "(set-option :auto-config false)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
@@ -310,18 +310,20 @@ result9 = unlines
     , "(declare-const x@prime Int)"
     , "(declare-const y Int)"
     , "(declare-const y@prime Int)"
+    , "; default"
+    , "(assert false)"
     , "; inv0"
     , "(assert (= x (* 2 y)))"
-    , "(assert (not true))"
+    , "(assert (not (= x y)))"
     , "(check-sat-using (or-else (then qe smt)"
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m0/inc/SCH/m0/0/REF/weaken"
+    , "; m0/inc/C_SCH/weaken/c0"
     ]
 
 case9 :: IO String
-case9 = show_po path6 "m0/inc/SCH/m0/0/REF/weaken"
+case9 = show_po path6 "m0/inc/C_SCH/weaken/c0"
 
 result10 :: String
 result10 = unlines 
@@ -393,7 +395,7 @@ x' :: ExprP
 y' :: ExprP
 
 (x,x',var_x) = prog_var "x" int
-(y,y',var_y) = prog_var "x" int
+(y,y',var_y) = prog_var "y" int
 
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
@@ -455,8 +457,8 @@ case12 = do
 
 result12 :: String
 result12 = unlines
-    [ "error: Multiple expressions with the label c0"
-    , "\tcoarse schedule (event inc): (40,15)"
-    , "\tco property: (45,15)\n" ]
+    [ "Multiple expressions with the label c0"
+    , "error 40:15:\n\tcoarse schedule (event inc)\n"
+    , "error 45:15:\n\tco property\n\n" ]
 
 

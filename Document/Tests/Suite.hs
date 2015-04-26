@@ -21,6 +21,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 import Data.List as L
+import Data.List.Utils as L
 import Data.Map as M
 import Data.Time
 
@@ -93,9 +94,10 @@ proof_obligation path lbl i = makeReport $ do
 
 find_errors :: FilePath -> IO String 
 find_errors path = do
+    p <- canonicalizePath path
     m <- fst <$> list_file_obligations' path
     return $ either 
-        (unlines . L.map report) 
+        (L.replace (p ++ ":") "error " . unlines . L.map report) 
         (const $ "no errors")
         m
 

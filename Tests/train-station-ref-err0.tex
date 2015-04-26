@@ -31,7 +31,7 @@
 
 \newevent{evt}{evt}
 
-\weakento{evt}{default}{c0}
+\removecoarse{evt}{default} % \weakento{evt}{default}{c0}
 
 \cschedule{evt}{c0}{\true}
 
@@ -46,7 +46,7 @@
 \section{First refinement}
 \begin{machine}{m1}
 
-\refines{m0}
+\refines{m0}\removecoarse{evt}{c0}
 
 \replace{evt}{c0}{c1}{}{p0}{saf0}
 
@@ -62,7 +62,7 @@
 
 \refines{m1} 
 
-\replacefine{evt}{}{f2}{p0}
+\replacefine{evt}{p0}
 
 \fschedule{evt}{f2}{\true}
 

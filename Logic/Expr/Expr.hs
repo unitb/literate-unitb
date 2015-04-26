@@ -59,9 +59,10 @@ import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.Identity
 
-import           Data.Serialize
+import           Data.DeriveTH
 import           Data.List as L
 import qualified Data.Map as M hiding (map,foldl)
+import           Data.Serialize
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -115,10 +116,6 @@ data HOQuantifier =
 data FOQuantifier = FOForall | FOExists 
     deriving (Eq,Ord,Generic,Typeable)
 
-instance NFData HOQuantifier where
-
-instance NFData FOQuantifier where
-
 type ExprP = Either [String] Expr 
 
 type ExprPG t q = Either [String] (AbsExpr t q)
@@ -148,23 +145,6 @@ ztuple [x]          = x
 ztuple [x0,x1]      = pair x0 $ pair x1 unit    -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
 ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" [tx, txs] pair_type) [x,tail]
 
-pair_sort :: Sort
-pair_sort = -- Sort "Pair" "Pair" 2
-               Datatype ["a","b"] "Pair" 
-                    [ ("pair", 
-                        [ ("first",  GENERIC "a")
-                        , ("second", GENERIC "b") ]) ]
-
-
-pair_type :: TypeSystem t => t -> t -> t
-pair_type x y = make_type pair_sort [x,y]
-
-null_sort :: Sort
-null_sort = Sort "Null" "Null" 2
-
-null_type :: TypeSystem t => t
-null_type = make_type null_sort []
-
 unit :: TypeSystem t => AbsExpr t q
 unit = FunApp (mk_fun [] "null" [] null_type) []
 
@@ -174,21 +154,6 @@ pair x y = FunApp (mk_fun [] "pair" [t0,t1] $ pair_type t0 t1) [x,y]
         t0 = type_of x
         t1 = type_of y
 
-maybe_sort :: Sort
-maybe_sort   = Sort "\\maybe" "Maybe" 1
-
-maybe_type :: TypeSystem t => t -> t
-maybe_type t = make_type maybe_sort [t]
-
-fun_sort :: Sort
-fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ GENERIC "b"))
-
-fun_type :: TypeSystem t => t -> t -> t
-fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
-
-bool :: TypeSystem t => t
-bool = make_type BoolSort []
-    
 finiteness :: HOQuantifier -> QuantifierWD
 finiteness Forall = InfiniteWD
 finiteness Exists = InfiniteWD
@@ -241,9 +206,6 @@ data AbsContext t q = Context
         (M.Map String (AbsVar t))  -- dummies
     deriving (Show,Eq,Generic,Typeable)
 
-instance (NFData t, NFData q) => NFData (AbsContext t q) where
-    rnf (Context a b c d e) = rnf (a,b,c,d,e)
-
 class Symbol a t q where
     decl :: a -> [AbsDecl t q]
 
@@ -261,12 +223,6 @@ z3_decoration' t = do
             where xs = concatMap f ys :: String
         f (Str y)   = format "@@{0}" y
 
-array_sort :: Sort
-array_sort = Sort "Array" "Array" 2
-
-array :: TypeSystem t => t -> t -> t
-array t0 t1 = make_type array_sort [t0,t1]
-
     -- replace it everywhere
 z3_fun_name :: Fun -> String
 z3_fun_name (Fun xs ys _ _ _) = ys ++ concatMap z3_decoration xs
@@ -280,12 +236,6 @@ data AbsDecl t q =
         | ConstDecl String t
         | FunDef [t] String [AbsVar t] t (AbsExpr t q)
         | SortDecl Sort
-
-instance NFData q => NFData (AbsDecl FOType q) where
-    rnf (FunDecl xs n args t) = rnf (xs,n,args,t)
-    rnf (ConstDecl n t) = rnf (n,t)
-    rnf (FunDef xs n args t e) = rnf (xs,n,args,t,e)
-    rnf (SortDecl s) = rnf s
 
 type Fun = AbsFun GenericType
 
@@ -301,9 +251,6 @@ mk_fun ps n ts t = Fun ps n Unlifted ts t
 mk_lifted_fun :: [t] -> String -> [t] -> t -> AbsFun t
 mk_lifted_fun ps n ts t = Fun ps n Lifted ts t
 
-instance NFData t => NFData (AbsFun t) where
-    rnf (Fun xs n lf args t) = rnf (xs,n,lf,args,t)
-
 type UntypedVar = AbsVar ()
 
 type Var = AbsVar GenericType
@@ -312,9 +259,6 @@ type FOVar = AbsVar FOType
 
 data AbsVar t = Var String t
     deriving (Eq,Ord,Generic,Typeable)
-
-instance NFData t => NFData (AbsVar t) where
-    rnf (Var xs t) = rnf (xs,t)
 
 target :: AbsDef t q -> AbsExpr t q
 target (Def _ _ _ _ e) = e
@@ -518,10 +462,12 @@ instance TypeSystem t => Show (AbsFun t) where
         ++ " -> " ++ show (as_tree t)
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
-    show (Def xs n ps t e) = n ++ show xs ++  ": " 
+    show (Def xs n ps t e) = n ++ showL xs ++  ": " 
         ++ args ++ show (as_tree t)
         ++ "  =  " ++ show (as_tree e)
         where
+            showL [] = ""
+            showL xs = show xs ++ " "
             args
                 | L.null ps = ""
                 | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
@@ -546,9 +492,6 @@ instance Symbol (AbsContext t q) t q where
             ++  concatMap decl (M.elems cons) 
             ++  concatMap decl (M.elems fun) 
             ++  concatMap decl (M.elems defs) 
-
-instance (NFData t, NFData q) => NFData (AbsDef t q) where
-    rnf (Def xs n args t e) = rnf (xs,n,args,t,e)
 
 merge :: (Ord k, Eq a, Show k, Show a)
           => M.Map k a -> M.Map k a -> M.Map k a
@@ -693,19 +636,19 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
-instance NFData Lifting where
 
-instance (NFData t, NFData t', NFData q) => NFData (GenExpr t t' q) where
-    rnf (Word x) = rnf x
-    rnf (Const n t) = rnf (n,t)
-    rnf (Cast x0 x1) = rnf (x0,x1)
-    rnf (Lift x0 x1) = rnf (x0,x1)
-    rnf (FunApp f args) = rnf (f,args)
-    rnf (Binder q vs e0 e1 t) = rnf (q,vs,e0,e1,t)
-
-instance NFData Value where
-    rnf (RealVal v) = rnf v
-    rnf (IntVal v)  = rnf v
+derive makeNFData ''AbsFun
+derive makeNFData ''QuantifierType
+derive makeNFData ''QuantifierWD
+derive makeNFData ''Lifting
+derive makeNFData ''AbsDef
+derive makeNFData ''AbsVar
+derive makeNFData ''Value
+derive makeNFData ''GenExpr
+derive makeNFData ''AbsDecl
+derive makeNFData ''AbsContext
+derive makeNFData ''FOQuantifier
+derive makeNFData ''HOQuantifier
 
 fromEither :: Loc -> Either [String] a -> a
 fromEither _ (Right x)  = x
@@ -735,4 +678,3 @@ withLoc fun = do
                 , ('loc_start,litP loc_start)
                 , ('loc_end,litP loc_end) ])
     return e
-

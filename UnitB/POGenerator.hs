@@ -1,18 +1,23 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module UnitB.POGenerator 
     ( POGen, POGenT, context, emit_goal
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
-    , definitions, existential, functions )
+    , definitions, existential, functions 
+    , tracePOG )
 where
 
+    -- Modules
 import Logic.Expr
 import Logic.Proof
 
 import UnitB.Feasibility
 
+    -- Libraries
+import Control.Arrow
 import Control.Applicative
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
@@ -21,6 +26,11 @@ import Control.Monad.State
 
 import Data.List as L
 import Data.Map as M hiding ( map )
+
+import Utilities.Error
+import Utilities.Trace
+
+import Text.Printf
 
 data POParam = POP 
     { ctx :: Context
@@ -53,11 +63,12 @@ instance MonadTrans POGenT where
 emit_exist_goal :: Monad m => [Label] -> [Var] -> [Expr] -> POGenT m ()
 emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
-        $ forM_ clauses $ \(vs,es) -> 
+        $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
                 emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars es
+        clauses' = M.toList $ M.fromListWith (++) clauses
 
 existential :: Monad m => [Var] -> POGenT m () -> POGenT m ()
 existential [] cmd = cmd
@@ -134,5 +145,11 @@ eval_generator :: POGen () -> Map Label Sequent
 eval_generator cmd = runIdentity $ eval_generatorT cmd
         -- fromList $ snd $ evalRWS (runPOGen cmd) empty_param ()
 
+tracePOG :: Monad m => POGenT m () -> POGenT m ()
+tracePOG (POGen cmd) = POGen $ do
+    xs <- snd `liftM` listen cmd
+    let goal (Sequent _ _ _ g) = g
+    traceM $ unlines $ map (show . second goal) xs
+
 eval_generatorT :: Monad m => POGenT m () -> m (Map Label Sequent)
-eval_generatorT cmd = liftM (fromList . snd) $ evalRWST (runPOGen cmd) empty_param ()
+eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ printf "%s\n" $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()
