@@ -679,7 +679,7 @@ inv_wd_po m =
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
-                $ well_definedness $ zall $ invariants_only m
+                $ well_definedness $ zall $ _inv $ props m
 
 init_wd_po :: Machine -> M ()
 init_wd_po m = 

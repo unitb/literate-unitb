@@ -502,10 +502,10 @@ parse_induction rule param = do
                         parser { free_dummies = True
                                , expected_type = Just (type_of var) }
                         bound
-                let is_set = zcast (set_type gA) (Right var)
+                let is_set = isRight $ zcast (set_type gA) (Right var)
                 if type_of var == int then
                     return (IntegerVariant dum var bound dir)
-                else if isRight is_set then
+                else if is_set then
                     return (SetVariant dum var bound dir)
                 else do
                     tell [Error 

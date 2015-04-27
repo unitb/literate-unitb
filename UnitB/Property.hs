@@ -1,6 +1,22 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell    #-}
-module UnitB.Property where
+module UnitB.Property 
+    ( Transient   (..)
+    , Constraint  (..)
+    , ProgressProp(..)
+    , SafetyProp  (..) 
+    , PropertySet (..) 
+    , empty_property_set
+    , TrHint (..)
+    , empty_hint
+    , ProgId (..)
+    , variant_decreased
+    , variant_equals_dummy
+    , variant_bounded
+    , Variant (..)
+    , Direction (..)
+    , make_unique )
+where
 
     -- Modules
 import Logic.Expr

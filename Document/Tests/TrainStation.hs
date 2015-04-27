@@ -603,6 +603,13 @@ set_facts xs = concat $ L.transpose [ foo [x] ys | x <- xs ]
         , "                   :pattern"
         , "                   ( (finite@{1} (mk-set@{1} x)) ))))" 
         , "(assert (finite@{1} empty-set@{1}))"
+        , "(assert (forall ( (s1 (set {0}))"
+        , "                  (s2 (set {0})) )"
+        , "                (! (=> (subset s1 s2)"
+        , "                       (=> (finite@{1} s2) (finite@{1} s1)))"
+        , "                   :pattern"
+        , "                   ( (finite@{1} s2)"
+        , "                     (finite@{1} s1) ))))"
         ]
 
 foo :: [String] -> [String] -> [(String,String)]

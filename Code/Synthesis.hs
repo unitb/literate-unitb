@@ -24,7 +24,10 @@ import Control.Monad.State.Class
 import Control.Monad.Writer.Class
 
 import Control.Monad.Trans
-import Control.Monad.Trans.RWS    (RWS,RWST,runRWS,runRWST,execRWST)
+import Control.Monad.Trans.RWS    
+        (RWS,RWST
+        ,runRWS,runRWST
+        ,execRWST,execRWS)
 -- import Control.Monad.Trans.Reader (Reader,runReader)
 
 -- import Data.Maybe
@@ -87,7 +90,7 @@ natVariant var evt cmd = do
 runProgramMaker :: Machine -> ProgramMaker () -> Program
 runProgramMaker m cmd = seqP w
     where
-        (_,_,w) = runRWS cmd m [ "var" ++ show i | i <- [0..] ]
+        (_,w) = execRWS cmd m [ "var" ++ show i | i <- [0..] ]
 
 wait :: Expr -> ProgramMaker ()
 wait e = tell [Wait [] e]

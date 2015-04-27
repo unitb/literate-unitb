@@ -63,21 +63,27 @@ Todo:
         * ~~commit~~
 
         * ~~make WD of events incremental~~
-        * Theorems
-            * Change theorems PO label
-            * WD
+        * ~~Theorems~~
+            * ~~Change theorems PO label~~
+            * ~~WD~~
+        * ~~commit~~
+
+        * ~~finite and subset with instantiation pattern~~
+        * ~~commit~~
+
+        * simplify the pipeline arrow and remove the line info from the parser phase specifications
+        * In interactive mode, dump error messages and POs in a file
+            * (atomically)
+
+        * slow parser
+        * remove System from the state of the parser
+        * use an arrow to manage independent sources of errors
+        * commit
+
+        * subset and = # => =
         * incremental feasibility proof
             * ba pred of deterministic assignment as assumption
             * if two deterministic action assign to the same variable, equality proof
-        * commit
-
-        * finite and subset with instantiation pattern
-        * subset and = # => =
-        * slow parser
-        * remove System from the state of the parser
-        * simplify the pipeline arrow and remove the line info from the parser phase specifications
-        * use an arrow to manage independent sources of errors
-        * commit
 
         * User experience: add line info into POs
             * upon verification failure, give a line number
@@ -90,13 +96,10 @@ Todo:
             * coarse guard
             * fine guard
         * improve rendering of remove-tags
-        * give errors when refinement rules mention the wrong schedules
-            * write a test
         * In UnitB.Event, create a data type with old and new as fields for old and new expressions
-        * test: the set of remaining guards, coarse, fine schedules after data refinement
+        * ~~test: the set of remaining guards, coarse, fine schedules after data refinement~~
 
         * Have the parser framework generate the syntax documentation
-        * Delete the up / down option for variants
         * Flatten the expression namespace with the exception of witnesses
         * Question: Is it valid to define new invariants / transient predicates referring to deleted variables after the completion of the removal of said variables?
             * tentative answer: no

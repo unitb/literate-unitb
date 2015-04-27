@@ -82,7 +82,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                      .=> (mzfinite $ s1 `zunion` s2)
             $axiom $ mzfinite $ zmk_set x
             $axiom $ mzfinite $ zcast (set_type t) zempty_set
-
+            $axiom $ zsubset s1 s2 .=> (mzfinite s2 .=> mzfinite s1)
             $axiom $ zset r1 zident .= r1
                 -- elem over union
             -- $axiom $ mzforall [x_decl,s1_decl,s2_decl] mztrue (

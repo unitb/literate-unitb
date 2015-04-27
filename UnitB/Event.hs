@@ -135,8 +135,7 @@ skip' keep = M.mapKeys f $ M.map g keep
         g v = Word (prime v) `zeq` Word v
 
 ba_predicate' :: Map String Var -> Map Label Action -> Map Label Expr
-ba_predicate' vars acts =           M.map ba_pred acts
-                          `M.union` skip
+ba_predicate' vars acts = M.map ba_pred acts `M.union` skip
     where
         skip = skip' $ keep' vars acts
 

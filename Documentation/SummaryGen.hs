@@ -308,10 +308,13 @@ put_expr :: (Label -> M ())     -- Command to produce documentating comments
          -> (Label,a)           -- AST and its label
          -> M ()
 put_expr doc toString pre (lbl,e) = do
-        str  <- format_formula =<< toString e
-        tell [format "\\item[ \\eqref{{0}} ]{1}" 
-                    (show pre ++ show lbl)
-                    str]
+        let ref :: String
+            ref
+                | lbl == label "default" = format "(\\ref{{0}}/default)" pre
+                | otherwise = format "\\eqref{{0}}" (show pre ++ show lbl)
+        expr  <- format_formula =<< toString e
+        tell [format "\\item[ {0} ]{1}" 
+                    ref expr]
         doc lbl
 
 put_all_expr' :: (a -> M String) -> Label -> Map Label a -> M ()

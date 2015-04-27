@@ -6,26 +6,11 @@ module UnitB.AST
     , variableSet
     , empty_machine
     , empty_theory
-    , TrHint (..)
-    , empty_hint
-    , Transient   (..)
-    , Constraint  (..)
-    , ProgressProp(..)
-    , SafetyProp  (..) 
-    , PropertySet (..) 
     , inv_thm, inv, proofs
     , progress, safety
     , transient, constraint
-    , empty_property_set
     , Rule (..)
-    , Variant (..)
-    , variant_decreased
-    , variant_equals_dummy
-    , variant_bounded
-    , Direction (..)
     , RefRule (..)
-    , ProgId (..)
-    , make_unique
     , all_types
     , basic_theory
     , disjoint_union
@@ -37,6 +22,7 @@ module UnitB.AST
     , th_notation
     , DocItem (..)
     , module UnitB.Event
+    , module UnitB.Property
     ) 
 where
  
