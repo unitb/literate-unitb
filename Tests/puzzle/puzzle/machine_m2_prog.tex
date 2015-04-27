@@ -1,0 +1,14 @@
+%!TEX root=../puzzle.tex
+\textbf{progress}
+\begin{block}
+\item[ \eqref{prog10} ]{$\true  \quad \mapsto\quad cs = \emptyset$} %
+\item[ \eqref{prog11} ]{$cs = \emptyset \land ts = V \land \neg ts = \Pcs  \quad \mapsto\quad cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs $} %
+\item[ \eqref{prog4} ]{$\true  \quad \mapsto\quad ts = \Pcs $} %
+\item[ \eqref{prog5} ]{$cs = \emptyset \land ts = V  \quad \mapsto\quad (cs = \emptyset \land V \subset ts) \lor ts = \Pcs $} %
+\item[ \eqref{prog6} ]{$cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs  \quad \mapsto\quad ts = V \land \neg cs = \emptyset  %
+				 \land cs \subseteq \Pcs \setminus ts $} %
+\item[ \eqref{prog7} ]{$ts = V \land \neg cs = \emptyset  %
+				 \land cs \subseteq \Pcs \setminus ts  \quad \mapsto\quad cs = \emptyset \land \neg ts = V $} %
+\item[ \eqref{prog8} ]{$cs = \emptyset \land ts = V \land \neg ts = \Pcs  \quad \mapsto\quad cs = \emptyset \land \neg ts = V $} %
+\item[ \eqref{prog9} ]{$cs = \emptyset \quad \mapsto\quad ts = \Pcs $} %
+\end{block}

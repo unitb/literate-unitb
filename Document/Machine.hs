@@ -1391,8 +1391,8 @@ invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             return [(lbl,ExprScope $ Invariant xp Local li)]
 
-instance Scope Theorem where
-instance IsExprScope Theorem where
+instance Scope InvTheorem where
+instance IsExprScope InvTheorem where
     parseExpr xs = do
         parseExpr' pInvariant xs
         modifyProps inv_thm xs
@@ -1402,7 +1402,7 @@ mch_theorem :: MPipeline MachineP2
 mch_theorem = machineCmd "\\theorem" $ \(lbl,xs) _m p2 -> do
             xp <- parse_expr' (machine_parser p2) xs
             li <- lift ask
-            return [(lbl,ExprScope $ Theorem xp Local li)]
+            return [(lbl,ExprScope $ InvTheorem xp Local li)]
 
 instance Scope TransientProp where
 instance IsExprScope TransientProp where

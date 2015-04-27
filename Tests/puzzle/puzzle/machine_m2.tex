@@ -1,0 +1,34 @@
+%!TEX root=../puzzle.tex
+\begin{block}
+  \item   \textbf{machine} m2
+  \item   \textbf{variables}
+  \begin{block}
+    \item   $b$
+    \item   \begin{block}
+      \item    indicates termination of the process 
+    \end{block}
+    \item   $cs$
+    \item   \begin{block}
+      \item   one-slot channel used to notify the counter 
+    \end{block}
+    \item   $ts$
+    \item   \begin{block}
+      \item   set of process detected to have visited
+    \end{block}
+    \item   $vs$
+    \item   \begin{block}
+      \item   set of visited processes
+    \end{block}
+  \end{block}
+  \item   \input{puzzle/machine_m2_inv}
+  \item   \input{puzzle/machine_m2_prog}
+  \item   \input{puzzle/machine_m2_saf}
+  \item   \textbf{events}
+  \begin{block}
+    \item   \input{puzzle/m2_count}
+    \item   \input{puzzle/m2_flick}
+    \item   \input{puzzle/m2_term}
+    \item   \input{puzzle/m2_visit}
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

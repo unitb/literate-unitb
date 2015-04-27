@@ -146,6 +146,7 @@ raw_machine_pos m = eval_generator $
                     init_wit_wd_po m
                     init_witness_fis_po m
                     inv_wd_po m
+                    thm_wd_po m
                     mapM_ (inv_po m) $ M.toList $ _inv p
                     mapM_ (thm_po m) $ M.toList $ _inv_thm p
                     forM_  (M.toList $ events m) $ \ev -> do
@@ -183,7 +184,8 @@ proof_obligation m = do
                     proof_po c lbl po
                 Nothing -> 
                     return [(lbl,po)])
-        return $ M.fromList $ concat xs
+        ys <- theory_po (theory m)
+        return $ M.fromList (concat xs) `M.union` ys
 
 ref_po :: Machine -> (Label, Rule) -> M ()
 ref_po m (lbl, Rule r) = 
@@ -677,7 +679,7 @@ inv_wd_po m =
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
-                $ well_definedness $ zall $ invariants m
+                $ well_definedness $ zall $ invariants_only m
 
 init_wd_po :: Machine -> M ()
 init_wd_po m = 
@@ -777,12 +779,24 @@ sch_po m (lbl, evt) =
         ind   = indices evt `merge` params evt
         hyp   = invariants m `M.union` f_sch `M.union` c_sch
 
+thm_wd_po :: Machine -> M ()
+thm_wd_po m = 
+        with (do prefix_label $ _name m
+                 context $ assert_ctx m
+                 named_hyps $ _inv $ inh_props m
+                 named_hyps $ _inv_thm $ inh_props m
+                 named_hyps $ _inv $ props m) $ do
+            let wd = well_definedness $ zall $ _inv_thm $ props m
+            unless (wd == ztrue) $ 
+                emit_goal ["THM", "WD"] wd 
+
+
 thm_po :: Machine -> (Label, Expr) -> M ()
 thm_po m (lbl, xp) = 
     with (do
             prefix_label $ _name m
-            prefix_label lbl
             prefix_label thm_lbl
+            prefix_label lbl
             context $ assert_ctx m
             named_hyps inv)
         $ emit_goal [] xp

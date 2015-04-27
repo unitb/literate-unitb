@@ -33,7 +33,7 @@
 \begin{align}
 \evbcmeq{term}{act0}{b}{\true}
 \end{align}
-\input{machine_m0}
+\input{puzzle/machine_m0}
 
 \end{machine}
 
@@ -92,7 +92,7 @@
 
 \removecoarse{visit}{default}
 % \input{}
-\input{machine_m1}
+\input{puzzle/machine_m1}
 
 \end{machine}
 
@@ -166,8 +166,8 @@
 
 \removecoarse{flick}{default} % \weakento{flick}{default}{sch0,sch1,sch2}
 % \removecoarse{flick}{default}
-\input{m2_term}
-\input{m2_flick}
+\input{puzzle/m2_term}
+\input{puzzle/m2_flick}
 
 % \[ \indices{count}{p : \Pcs} \]
 
@@ -183,14 +183,14 @@
 
 \removecoarse{count}{default} % \weakento{count}{default}{sch0}
 % \removecoarse{count}{default} \\
-\input{m2_count}
+\input{puzzle/m2_count}
 
 \begin{align*}
 	\evguard{flick}{grd1}{p \in vs} \\
 	\cschedule{flick}{sch2}{p \in vs}
 \end{align*}
 
-\input{machine_m2}
+\input{puzzle/machine_m2}
 
 \end{machine}
 \begin{machine}{m3}
@@ -249,8 +249,8 @@
 		\cschedule{term}{sch3}{n = \card.\Pcs} \\
 		\theorem{thm0}{n = \card.\Pcs \3\equiv ts = \Pcs}
 	\end{align}
-	\input{machine_m3}
-	\begin{proof}{\ref{thm0}/THM}
+	\input{puzzle/machine_m3}
+	\begin{proof}{THM/\ref{thm0}}
 	\using{sch3}
 	\begin{calculation}	
 		n = \card.\Pcs

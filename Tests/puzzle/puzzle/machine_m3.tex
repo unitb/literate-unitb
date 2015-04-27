@@ -1,0 +1,42 @@
+%!TEX root=../puzzle.tex
+\begin{block}
+  \item   \textbf{machine} m3
+  \item   \textbf{variables}
+  \begin{block}
+    \item   $cs$\quad(removed)
+    \item   \begin{block}
+      \item   one-slot channel used to notify the counter 
+    \end{block}
+    \item   $ts$\quad(removed)
+    \item   \begin{block}
+      \item   set of process detected to have visited
+    \end{block}
+    \item   $b$
+    \item   \begin{block}
+      \item    indicates termination of the process 
+    \end{block}
+    \item   $c$
+    \item   \begin{block}
+      \item    one-bit channel used to communicate 
+    \end{block}
+    \item   $fs$
+    \item   \begin{block}
+      \item    $p \in fs$ if process $p$ has flicked the switch 
+    \end{block}
+    \item   $n$
+    \item   $vs$
+    \item   \begin{block}
+      \item   set of visited processes
+    \end{block}
+  \end{block}
+  \item   \input{puzzle/machine_m3_inv}
+  \item   \input{puzzle/machine_m3_thm}
+  \item   \textbf{events}
+  \begin{block}
+    \item   \input{puzzle/m3_count}
+    \item   \input{puzzle/m3_flick}
+    \item   \input{puzzle/m3_term}
+    \item   \input{puzzle/m3_visit}
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

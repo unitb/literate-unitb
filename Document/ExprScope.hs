@@ -124,10 +124,10 @@ data Invariant = Invariant
         , _invariantDeclSource :: DeclSource
         , _invariantLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
-data Theorem = Theorem 
-        { _theoremMchExpr :: Expr
-        , _theoremDeclSource :: DeclSource
-        , _theoremLineInfo :: LineInfo }
+data InvTheorem = InvTheorem 
+        { _invTheoremMchExpr :: Expr
+        , _invTheoremDeclSource :: DeclSource
+        , _invTheoremLineInfo :: LineInfo }
     deriving (Eq,Ord,Typeable)
 data TransientProp = TransientProp
         { _transientPropMchExpr :: Transient
@@ -171,12 +171,12 @@ makeFields ''SafetyDecl
 makeFields ''ConstraintProp
 makeFields ''TransientProp
 makeFields ''Invariant
-makeFields ''Theorem
+makeFields ''InvTheorem
 
 instance Show Invariant where
     show _ = "invariant"
 
-instance Show Theorem where
+instance Show InvTheorem where
     show _ = "theorem"
 
 instance Show TransientProp where
