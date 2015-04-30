@@ -71,9 +71,11 @@ Todo:
         * ~~finite and subset with instantiation pattern~~
         * ~~commit~~
 
+        * ~~Fix ExprStore~~
         * simplify the pipeline arrow and remove the line info from the parser phase specifications
-        * In the expression declaration classes, add methods for every field of the phase objects
         * [LatexDoc] should become a case of LatexDoc
+        * Improve line info
+        * In the expression declaration classes, add methods for every field of the phase objects
 
         * The parser for refinement rules has a writer to declare dependency remove it if it is not useful
         * Expressions and their LaTeX counterparts are no longer stored. Collect them somehow

@@ -26,11 +26,6 @@ module Document.Visitor
     , drop_blank_text'
     , get_1_lbl
     , System(..)
-    , focus_es, focusT
-    , focus, def_opt, expr_opt
-    , proof_opt
-    , Opt ( .. )
-    , Focus(..)
     , visitor, raise
     , VisitorT ( .. )
     , run_visitor
@@ -50,7 +45,6 @@ where
 import Latex.Parser
 
 import Logic.Expr
-import Logic.ExpressionStore
 
 import UnitB.AST
 
@@ -409,69 +403,9 @@ find_cmd_arg n cmds (x:xs) = do
                 (a,t,b,c) <- find_cmd_arg n cmds xs
                 return (x:a,t,b,c)
 
-focus :: Monad m 
-      => (Opt r1 r2 w1 w2 s1 s2) 
-      -> RWST r2 w2 s2 m a
-      -> RWST r1 w1 s1 m a
-focus opt m = RWST $ \r s1 -> do
-        (x,s2,w) <- runRWST m (reader opt r) (getter opt s1)
-        return (x,setter opt s2 s1, writer opt w)
-
-focusT :: Monad m
-       => Opt r1 r2 w1 w2 s1 s2
-       -> EitherT e (RWST r2 w2 s2 m) a -> EitherT e (RWST r1 w1 s1 m) a
-focusT opt m = EitherT $ focus opt $ runEitherT m
-
-focus_es :: Monad m
-         => EitherT e (RWST a1 b ExprStore m) a
-         -> EitherT e (RWST a1 b System m) a
-focus_es m = focusT expr_opt m
-
-data Opt a b c d f e = Opt 
-        { reader :: (a -> b)
-        , writer :: (d -> c)
-        , setter :: e -> f -> f
-        , getter :: f -> e }
-
-def_opt :: Opt b b c c f f
-def_opt = Opt id id (flip $ const id) id
-
-proof_opt :: Opt b b c c (System, t) ExprStore
-proof_opt = Opt id id set (expr_store . fst)
-    where
-        set x (a,b) = (a { expr_store = x }, b)
-
-expr_opt :: Opt b b c c System ExprStore
-expr_opt = Opt id id set expr_store
-    where
-        set x a = a { expr_store = x }
 
     -- Bad, bad... unify the monad system of refinement, proof and machine already!
-class ( S.MonadState ExprStore m0
-      , S.MonadState System m1 ) 
-   => Focus m0 m1 where
-    focus' :: m0 a -> m1 a
     
-instance (Monoid b, Monad m) 
-        => Focus (RWST a b ExprStore m) (RWST a b System m) where
-    focus' cmd = RWST $ \r s1 -> do
-            (x,s2,w) <- runRWST cmd r (get s1)
-            return (x,set s2 s1,w)
-        where
-            set x a = a { expr_store = x }
-            get = expr_store
-
-instance (Monad m) 
-        => Focus (ST.StateT ExprStore m) (ST.StateT System m) where
-    focus' cmd = ST.StateT $ \s1 -> do
-            (x,s2) <- ST.runStateT cmd (get s1)
-            return (x,set s2 s1)
-        where
-            set x a = a { expr_store = x }
-            get = expr_store
-
-instance (Focus m0 m1) => Focus (EitherT a m0) (EitherT a m1) where
-    focus' cmd = EitherT $ focus' $ runEitherT cmd
 
 type Node s = EitherT [Error] (RWS LineInfo [Error] s)
 

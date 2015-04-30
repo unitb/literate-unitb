@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Logic.ExpressionStore 
-    ( ExprStore, insert, empty_store, get_string )
+    ( ExprStore, insert, empty_store, get_string, fromList )
 where
 
     -- Modules
@@ -8,14 +8,19 @@ import Logic.Expr
 import Logic.Expr.TypeChecking
 
     -- Libraries
+import Control.Arrow
 import Control.DeepSeq
-import Data.Map as M ( insertWith, Map, empty, lookup ) --, (!) )
+
+import Data.Map as M ( insertWith, fromListWith, Map, empty, lookup ) --, (!) )
 
 newtype ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
     deriving Eq
 
 instance NFData ExprStore where
     rnf (ExprStore x) = rnf x
+
+fromList :: [(Expr,[String])] -> ExprStore
+fromList xs = ExprStore $ M.fromListWith (++) $ map (first stripTypes) xs
 
 empty_store :: ExprStore
 empty_store = ExprStore empty

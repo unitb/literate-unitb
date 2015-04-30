@@ -125,12 +125,8 @@ cmdFun f xs m ctx = case x of
                       Left es -> tell (w ++ es) >> return Nothing
     where
         (x,(),w) = runRWS (runEitherT $ do
-                        -- traceM "cmdFun begin"
                         x <- parseArgs (getCmdArgs xs)
-                        -- traceM "cmdFun middle"
-                        x <- f x m (ctx ! m)
-                        -- traceM "cmdFun end"
-                        return x)
+                        f x m (ctx ! m) )
                     (cmdLI xs) 
                     ()
 

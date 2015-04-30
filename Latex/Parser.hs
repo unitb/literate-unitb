@@ -38,7 +38,10 @@ data StringLi = StringLi LineInfo [(Char,LineInfo)]
 data BracketType = Curly | Square
     deriving (Eq,Show)
 
-flatten :: LatexDoc -> [Char]
+flatten' :: LatexDoc' -> String
+flatten' (LatexDoc' _ xs) = concatMap flatten xs
+
+flatten :: LatexDoc -> String
 flatten (Env s _ ct _) = 
            "\\begin{" ++ s ++ "}"
         ++ concatMap flatten ct

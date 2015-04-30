@@ -42,6 +42,17 @@ instance TypeSystem FOType where
     type_cons (FOT x) = Just x
     make_type s ts    = FOT (USER_DEFINED s ts)
 
+instance Tree () where
+    as_tree' () = return $ List []
+    rewriteM' f = f
+
+instance Typed () where
+    type TypeOf () = ()
+
+instance TypeSystem () where
+    type_cons () = Nothing
+    make_type _ _ = ()
+
 type Type = GenericType
 
 data GenericType = 

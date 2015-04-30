@@ -378,7 +378,7 @@ rewriteExprM fT fQ fE e =
                     <*> fT rt
         fvar (Var n t) = Var n <$> fT t
 
-instance (TypeSystem t, IsQuantifier q) => Show (AbsExpr t q) where
+instance (TypeSystem t, IsQuantifier q, Tree t') => Show (GenExpr t t' q) where
     show e = show $ runReader (as_tree' e) UserOutput
 
 instance TypeSystem t => Named (AbsDecl t q) where

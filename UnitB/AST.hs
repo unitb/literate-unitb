@@ -28,7 +28,7 @@ where
  
     -- Modules
 import Logic.Expr hiding (merge)
-import Logic.ExpressionStore
+import Logic.ExpressionStore (ExprStore, empty_store)
 import Logic.Operator
 import Logic.Theory as Th
 

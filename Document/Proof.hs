@@ -637,6 +637,20 @@ mkSetting notat sorts plVar prVar dumVar = default_setting
         , primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
         , dum_ctx = dumVar }
 
+parse_expr'' :: ParserSetting
+             -> LatexDoc'
+             -> M (Expr,[(Expr,[String])])
+parse_expr'' p xs = do
+        e <- hoistEither $ parse_expr' p xs
+        return (e, [(e,[flatten' $ drop_blank_text' xs])])
+
+unfail :: M a -> M (Maybe a)
+unfail cmd = do
+    x <- lift (runEitherT cmd)
+    case x of
+        Right x -> return $ Just x
+        Left es -> W.tell es >> return Nothing
+
 parse_expr' :: ParserSetting
             -> LatexDoc'
             -> Either [Error] Expr
@@ -721,5 +735,3 @@ lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a
       -> t0 (t1 m) a
 lift2 cmd = lift $ lift cmd
-
-

@@ -5,12 +5,9 @@ module Document.Document where
     --
     -- Modules
     --
-import Document.Context   as Ctx
 import Document.Machine   as Mch
 import Document.Pipeline
 import Document.Phase as P
-import Document.Scope
-import Document.Proof
 import Document.Visitor
 
 import Latex.Parser
@@ -20,7 +17,6 @@ import Logic.Proof hiding ( with_line_info )
 
 import UnitB.AST as AST
 import UnitB.PO
-
 
     --
     -- Libraries
@@ -33,6 +29,8 @@ import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS as RWS ( runRWS )
+import qualified Control.Monad.Writer as W
+
 import           Data.Either.Combinators
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
@@ -53,11 +51,13 @@ read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
                     _c0 = M.map (const $ TheoryP0 ()) _ctx
                 (r_ord,m1) <- Mch.run_phase1_types -<  m0
                 m2 <- Mch.run_phase2_vars   -< (r_ord, m1)
-                m3 <- Mch.run_phase3_exprs  -< (r_ord, m2)
+                (m3,es) <- Mch.run_phase3_exprs  -< (r_ord, m2)
                 m4 <- Mch.run_phase4_proofs -< (r_ord, m3)
                 ms <- liftP' $ fmap Just . T.sequence -< Just $ M.mapWithKey make_machine m4
                 machines <- triggerP -< ms
-                returnA -< empty_system { machines = M.mapKeys (\(MId s) -> s) machines }
+                returnA -< empty_system 
+                    { machines = M.mapKeys (\(MId s) -> s) machines 
+                    , expr_store = es }
 
 all_machines :: [LatexDoc] -> Either [Error] System
 all_machines xs = read_document xs
@@ -122,7 +122,6 @@ runPipeline' ms cs p = case x of
                             Just x
                                 | L.null w -> Right x
                                 | otherwise -> Left w 
-        -- _ $ runReaderT (f input) input
     where
         (x,(),w) = runRWS (runMaybeT $ f input) input ()
         input = Input mch ctx
