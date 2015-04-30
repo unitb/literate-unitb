@@ -31,6 +31,10 @@ data LatexDoc =
         | Text [LatexToken]
     deriving (Eq)
 
+data LatexDoc' = LatexDoc' LineInfo [LatexDoc]
+
+data StringLi = StringLi LineInfo [(Char,LineInfo)]
+
 data BracketType = Curly | Square
     deriving (Eq,Show)
 
@@ -51,6 +55,9 @@ whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
 
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (x,y,z) = f x y z
+
+flatten_li' :: LatexDoc' -> StringLi
+flatten_li' (LatexDoc' li xs) = StringLi li $ concatMap flatten_li xs
 
 flatten_li :: LatexDoc -> [(Char,LineInfo)]
 flatten_li (Env s li1 ct li0) = 
@@ -118,6 +125,9 @@ instance Syntactic LatexDoc where
     line_info (Env _ li _ _)     = li
     line_info (Bracket _ li _ _) = li
     line_info (Text xs)          = line_info $ head xs
+
+instance Syntactic LatexDoc' where
+    line_info (LatexDoc' li _) = li
 
 instance Syntactic a => Syntactic [a] where
     line_info xs = line_info $ head xs

@@ -33,9 +33,10 @@ import Control.Lens as L
 import Control.Monad.Reader.Class 
 import Control.Monad.State
 import Control.Monad.Trans.Either
+import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State  as ST
-import Control.Monad.Trans.Reader as R hiding (local,ask)
-import Control.Monad.Trans.RWS    as RWS hiding (local,ask)
+import Control.Monad.Trans.RWS    as RWS hiding (local,ask,tell)
+import Control.Monad.Writer.Class 
 
 -- import Data.Functor
 -- import Data.Monoid
@@ -56,44 +57,12 @@ infixl 3 <.>
 
 -- data MachineP0' a = MachineP0
 
-trigger :: ( IsTuple a, Trigger (TypeList a)
-           , TypeList (Tuple (RetType (TypeList a)))
-                      ~ RetType (TypeList a)
-           , IsTuple (Tuple (RetType (TypeList a))))
-        => a -> Either [Error] (Tuple (RetType (TypeList a)))
-trigger x = fromTuple `liftM` trigger' (toTuple x)
+triggerM :: Maybe a -> MM a
+triggerM x = MaybeT $ return x
 
-triggerM :: ( IsTuple a, Trigger (TypeList a)
-            ,   TypeList (Tuple (RetType (TypeList a)))
-              ~ RetType (TypeList a)
-            , IsTuple (Tuple (RetType (TypeList a))))
-         => a -> MM (Tuple (RetType (TypeList a)))
-triggerM x = lift $ hoistEither $ trigger x
-
-triggerP :: ( IsTuple a, Trigger (TypeList a)
-            ,   TypeList (Tuple (RetType (TypeList a)))
-              ~ RetType (TypeList a)
-            , IsTuple (Tuple (RetType (TypeList a))))
-         => Pipeline MM a (Tuple (RetType (TypeList a)))
+triggerP :: Pipeline MM (Maybe a) a
 triggerP = Pipeline empty_spec empty_spec triggerM
 
-class Trigger a where
-    type RetType a :: *
-    trigger' :: a -> Either [Error] (RetType a)
-
-instance Trigger () where
-    type RetType () = ()
-    trigger' () = return ()
-
-instance Trigger as => Trigger (Either [Error] a :+: as) where
-    type RetType (Either [Error] a :+: as) = a :+: RetType as
-    trigger' (x :+: xs) = 
-            case (x, trigger' xs) of
-                (Right x, Right xs) -> Right (x:+:xs)
-                (x,xs) -> Left $ f x ++ f xs
-        where
-            f (Left xs) = xs
-            f (Right _) = []
 
 instance Readable MachineId where
     read_one = do
@@ -130,7 +99,7 @@ machineCmd :: forall result args ctx.
               , AllReadable (TypeList args))
            => String
            -> (args -> MachineId -> ctx -> M result) 
-           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
+           -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineCmd cmd f = Pipeline m_spec empty_spec g
     where
         nargs = len ($myError "" :: TypeList args)
@@ -150,10 +119,20 @@ cmdFun :: forall a b c d.
               , AllReadable (TypeList b))
            => (b -> c -> d -> M a) 
            -> Cmd
-           -> c -> (Map c d) -> M a
-cmdFun f xs m ctx = local (const $ cmdLI xs) $ do
-        x <- parseArgs (getCmdArgs xs)
-        f x m (ctx ! m)
+           -> c -> (Map c d) -> MM (Maybe a)
+cmdFun f xs m ctx = case x of
+                      Right x -> tell w >> return (Just x)
+                      Left es -> tell (w ++ es) >> return Nothing
+    where
+        (x,(),w) = runRWS (runEitherT $ do
+                        -- traceM "cmdFun begin"
+                        x <- parseArgs (getCmdArgs xs)
+                        -- traceM "cmdFun middle"
+                        x <- f x m (ctx ! m)
+                        -- traceM "cmdFun end"
+                        return x)
+                    (cmdLI xs) 
+                    ()
 
 machineEnv :: forall result args ctx.
               ( Monoid result, IsTuple args
@@ -161,7 +140,7 @@ machineEnv :: forall result args ctx.
               , AllReadable (TypeList args))
            => String
            -> (args -> [LatexDoc] -> MachineId -> ctx -> M result)
-           -> Pipeline MM (MTable ctx) (Either [Error] (MTable result))
+           -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
         nargs = len ($myError "" :: TypeList args)
@@ -179,10 +158,16 @@ envFun :: forall a b c d.
               , AllReadable (TypeList b))
            => (b -> [LatexDoc] -> c -> d -> M a) 
            -> Env
-           -> c -> (Map c d) -> M a
-envFun f xs m ctx = local (const $ envLI xs) $ do
-        x <- parseArgs (getEnvArgs xs)
-        f x (getEnvContent xs) m (ctx ! m)
+           -> c -> (Map c d) -> MM (Maybe a)
+envFun f xs m ctx = case x of
+                      Right x -> tell w >> return (Just x)
+                      Left es -> tell (w ++ es) >> return Nothing
+    where
+        (x,(),w) = runRWS (runEitherT $ do
+                        x <- parseArgs (getEnvArgs xs)
+                        f x (getEnvContent xs) m (ctx ! m))
+                    (envLI xs) 
+                    ()
 
 contextCmd :: forall a b c. 
               ( Monoid a, IsTuple b
@@ -190,7 +175,7 @@ contextCmd :: forall a b c.
               , AllReadable (TypeList b))
            => String
            -> (b -> ContextId -> c -> M a) 
-           -> Pipeline MM (CTable c) (Either [Error] (CTable a))
+           -> Pipeline MM (CTable c) (Maybe (CTable a))
 contextCmd cmd f = Pipeline empty_spec c_spec g
     where
         nargs = len ($myError "" :: TypeList b)
@@ -208,7 +193,7 @@ contextEnv :: forall result args ctx.
               , AllReadable (TypeList args))
            => String
            -> (args -> [LatexDoc] -> ContextId -> ctx -> M result)
-           -> Pipeline MM (CTable ctx) (Either [Error] (CTable result))
+           -> Pipeline MM (CTable ctx) (Maybe (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
         nargs = len ($myError "" :: TypeList args)
@@ -226,21 +211,19 @@ data Collect a b k t = Collect
     -- , getContent :: b -> a
     , tag :: k }
 
-collect :: (Ord k, Monoid z, Ord c)
+collect :: (Ord k, Monoid z, Ord c, Show c)
         => Collect a b k c
-        -> (b -> c -> d -> M z) 
+        -> (b -> c -> d -> MM (Maybe z)) 
         -> d
-        -> MM (Either [Error] (Map c z))
+        -> MM (Maybe (Map c z))
 collect p f arg = do
             cmp <- ask
-            xs <- lift $ lift $ runEitherT $ toEither 
-                $ forM (M.toList $ getInput p cmp) $ \(mname, x) -> do
+            xs <- forM (M.toList $ getInput p cmp) $ \(mname, x) -> do
                     xs <- forM (M.findWithDefault [] (tag p) $ getList p x) $ \e -> do
-                        fromEither mempty $ f e mname arg 
-                    return (mname, mconcat xs)
-            return $ fmap (fromListWith mappend) xs
-
-type MM = R.ReaderT Input M
+                        f e mname arg 
+                    return (mname, mconcat <$> sequence xs)
+            return $  fromListWith mappend 
+                  <$> mapM (runKleisli $ second $ Kleisli id) xs
 
 type MachineP0' a = MachineP0
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances     #-}
 {-# LANGUAGE OverlappingInstances, TemplateHaskell  #-}
 module Document.Expression 
-    ( parse_expr, parse_expr' , oper, run_test
+    ( parse_expr , oper, run_test
     , get_variables, get_variables', parse_oper )
 where
 
@@ -11,10 +11,8 @@ import Latex.Scanner -- hiding (many)
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command)
 
 import Logic.Expr
-import Logic.ExpressionStore as ES
 import Logic.Operator
 
-import UnitB.AST ( System ( .. ) )
 
 import Theories.SetTheory
 
@@ -26,9 +24,10 @@ import Utilities.Syntactic
 import qualified Control.Applicative as A 
 import Control.Applicative ((<$>))
 
+import Safe
+
 import           Control.Monad
 import           Control.Monad.Reader.Class
-import           Control.Monad.State.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Maybe
@@ -660,42 +659,26 @@ scan_expr n = do
         f (Right (BinOperator _ tok _)) = tok
         f (Left (UnaryOperator _ tok _)) = tok
 
-parse_expr' :: ( Monad m
-               , MonadReader LineInfo m ) 
-            => Context 
-            -> Notation
-            -> [(Char, LineInfo)] 
-            -> EitherT [Error] m Expr
-parse_expr' ctx@(Context _ vars _ defs _)  n input = do
+parse_expr :: Context 
+           -> Notation
+           -> StringLi
+           -> Either [Error] Expr
+parse_expr ctx@(Context _ vars _ defs _)  n (StringLi _li' input) = do
         let vars' = M.map Word vars `M.union` M.mapMaybe f defs
             f (Def xs n args t _e) = do
                     guard (L.null args)
                     Just $ FunApp (mk_fun xs n [] t) []
-        li   <- lift $ ask
-        toks <- hoistEither $ read_tokens (scan_expr $ Just n)
+            li = headDef (LI "" 0 0) $ map snd input
+        toks <- read_tokens (scan_expr $ Just n)
             (file_name li) 
             input (line li, column li)
-        !e   <- hoistEither $ read_tokens 
+        !e   <- read_tokens 
             (runParser ctx n vars' expr) 
             (file_name li) 
             toks 
             (line li, column li)
         return e
 
-    -- Too many arguments
-parse_expr :: ( Monad m
-              , MonadReader LineInfo m
-              , MonadState System m) 
-           => Context 
-           -> Notation
-           -> [(Char, LineInfo)] 
-           -> EitherT [Error] m Expr
-parse_expr ctx n input = do
-        e  <- parse_expr' ctx n input
-        es <- lift $ gets expr_store
-        lift $ modify $ \s -> s 
-            { expr_store = ES.insert e (map fst input) es }
-        return e
 
 parse_oper :: ( Monad m
               , MonadReader LineInfo m) 

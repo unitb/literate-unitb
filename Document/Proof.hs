@@ -5,7 +5,7 @@
 module Document.Proof where
 
     -- Modules
-import Document.Expression hiding ( parse_expr' )
+import Document.Expression
 import Document.Visitor
 
 import Latex.Parser 
@@ -18,6 +18,8 @@ import Logic.Operator
 import Logic.Proof as LP
 
     -- Libraries
+import Control.Applicative ((<$>))
+
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Reader.Class hiding ( reader )
 import           Control.Monad.State.Class as ST
@@ -25,24 +27,26 @@ import qualified Control.Monad.Writer.Class as W
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader, local )
-import           Control.Monad.Trans.Reader ( runReaderT )
-import           Control.Monad.Trans.State as ST ( StateT, evalStateT )
+import           Control.Monad.Trans.State as ST ( StateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
 import           Data.Default
+import           Data.Either.Combinators
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
-import           Data.Monoid (Monoid)
+import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 import           Data.Tuple
+
+import Safe
 
 import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
 
-type M = EitherT [Error] (RWS LineInfo [Error] System)
+type M = EitherT [Error] (RWS LineInfo [Error] ())
 
 context :: Machine -> Context
 context m = step_ctx m `merge_ctx` theory_ctx (theory m)
@@ -140,7 +144,7 @@ add_proof lbl prf = do
 empty_step :: ProofStep
 empty_step = Step empty empty empty [] Nothing Nothing
 
-find_assumptions :: (MonadState System m, MonadReader Thy m)
+find_assumptions :: (MonadReader Thy m)
                  => VisitorT (StateT ProofStep m) () 
 find_assumptions = visitor
         [   (   "calculation"
@@ -159,26 +163,26 @@ find_assumptions = visitor
             ,   VEnvBlock $ \(One (_ :: Label)) _ -> return ()
             )
         ] [ (   "\\assume"
-            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc]) -> do
+            ,   VCmdBlock $ \(lbl,formula) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     add_assumption lbl expr 
             )
         ,   (   "\\assert"
-            ,   VCmdBlock $ \(lbl,formula :: [LatexDoc]) -> do
+            ,   VCmdBlock $ \(lbl,formula) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     add_assert lbl expr
             )
         ,   (   "\\goal"
-            ,   VCmdBlock $ \(One (formula :: [LatexDoc])) -> do
+            ,   VCmdBlock $ \(One formula) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     set_goal expr
             )
         ,   (   "\\using"
             ,   VCmdBlock $ \(One refs) -> do
                     li      <- ask
-                    s       <- lift $ lift $ ST.get
-                    (((),hs),s) <- add_state s $ add_writer $ with_content li refs hint
-                    lift $ lift $ ST.put s
+                    -- s       <- lift $ lift $ ST.get
+                    ((),hs) <- add_writer $ with_content li refs hint
+                    -- lift $ lift $ ST.put s
                     add_refs hs
 --                    li <- ask 
 --                    lift $ do
@@ -321,7 +325,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
 --                => BinOperator 
 --                -> 
 
-find_proof_step :: (MonadState System m, MonadReader Thy m, Monad m)
+find_proof_step :: (MonadReader Thy m, Monad m)
                 => VisitorT (StateT ProofStep m) ()
 find_proof_step = visitor
         [   (   "calculation"
@@ -428,22 +432,22 @@ find_proof_step = visitor
             )
         ] 
 
-find_cases :: (MonadState System m, MonadReader Thy m)
+find_cases :: (MonadReader Thy m)
            => VisitorT (WriterT [(Label,Tactic Expr,Tactic Proof)] m) ()
 find_cases = visitor 
         [   (   "case"
-            ,   VEnvBlock $ \(lbl,formula :: [LatexDoc]) _ -> do
+            ,   VEnvBlock $ \(lbl,formula) _ -> do
                     expr      <- lift_i $ get_expression (Just bool) formula 
                     p         <- lift_i collect_proof_step
                     lift $ tell [(lbl, expr, p)]
             )
         ] []
 
-find_parts :: (MonadState System m, MonadReader Thy m)
+find_parts :: (MonadReader Thy m)
            => VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
 find_parts = visitor 
         [   (   "part:a"
-            ,   VEnvBlock $ \(One (formula :: [LatexDoc])) _ -> do -- xs cases -> do
+            ,   VEnvBlock $ \(One formula) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
                     p         <- lift_i collect_proof_step -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]
@@ -453,7 +457,7 @@ find_parts = visitor
 
 type Thy = Notation
 
-collect_proof_step :: (MonadState System m, MonadReader Thy m)
+collect_proof_step :: (MonadReader Thy m)
                    => VisitorT m (Tactic Proof)
 collect_proof_step = do
         ((),step) <- make_hard $ add_state empty_step find_assumptions
@@ -492,7 +496,6 @@ collect_proof_step = do
             _   -> hard_error [Error "expecting a single proof step" li]         
 
 hint :: ( MonadReader Thy m
-        , MonadState System m
         , W.MonadWriter [Tactic (TheoremRef, LineInfo)] m)
      => VisitorT m ()
 hint = visitor []
@@ -527,19 +530,19 @@ hint = visitor []
             li <- ask
             lift $ W.tell [return (ThmRef b [],li)]
 
-parse_calc :: ( MonadState System m, MonadReader Thy m )
+parse_calc :: ( MonadReader Thy m )
            => VisitorT m (Tactic Calculation)
 parse_calc = do
     xs <- get_content
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (step,kw,[rel,tx_hint],remainder)    -> do
-            xp <- get_expression Nothing step
+            li <- (`headDef` map line_info step) <$> ask
+            xp <- local (const li) $ get_expression Nothing $ LatexDoc' li step
             notat <- lift ask 
             op <- make_soft equal $ fromEitherM
                 $ parse_oper 
                     notat
                     (concatMap flatten_li rel) 
-            li      <- ask
             ((),hs) <- add_writer $ with_content li tx_hint $ hint
             calc    <- with_content li remainder parse_calc
             return $ LP.with_line_info (line_info kw) $ do
@@ -548,7 +551,7 @@ parse_calc = do
                 add_step xp op hs calc
         Nothing         -> do
             li <- ask
-            xp <- get_expression Nothing xs
+            xp <- get_expression Nothing $ LatexDoc' li xs
             return $ LP.with_line_info li $ do
                 xp  <- make_soft ztrue xp
                 last_step xp
@@ -559,87 +562,6 @@ parse_calc = do
                                
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
 
-get_expr_with_ctx :: ( Monad m, Monoid b ) 
-                  => Machine
-                  -> Context
-                  -> [LatexDoc] 
-                  -> EitherT [Error] (RWST LineInfo b System m)  Expr
-get_expr_with_ctx m ctx ys = do
-        y  <- parse_expr 
-                (context m `merge_ctx` ctx) 
-                (all_notation m)
-                (concatMap flatten_li xs)
-        let x = normalize_generics y
-        li <- if L.null xs
-            then ask
-            else return $ line_info xs
-        unless (L.null $ ambiguities x) $ left 
-            $ map (\x -> Error (format msg x (type_of x)) li)
-                $ ambiguities x
-        return x
-    where
-        xs    = drop_blank_text ys
-        msg   = "type of {0} is ill-defined: {1}"
-
-get_expr :: ( Monad m, Monoid b ) 
-         => Machine
-         -> FreeVarOpt
-         -> [LatexDoc] 
-         -> EitherT [Error] (RWST LineInfo b (System) m)  Expr
-get_expr m opt ys = do
-        let ctx = case opt of
-                    WithFreeDummies -> dummy_ctx m
-                    WithoutFreeDummies -> empty_ctx
-        get_expr_with_ctx m ctx ys
-
-get_expression :: ( MonadReader Thy m
-                  , MonadState System m )
-               => Maybe Type
-               -> [LatexDoc]
-               -> VisitorT m (Tactic Expr)
-get_expression t ys = do
-            li <- if L.null xs
-                then ask
-                else return $ line_info xs
-            notation  <- lift ask            
-            sys <- lift $ ST.get
-            return $ LP.with_line_info li $ do
-                ctx <- get_context
-                x   <- lift $ flip runReaderT li $ 
-                        flip evalStateT sys $ 
-                        runEitherT $ 
-                        parse_expr 
-                            ctx notation
-                            (concatMap flatten_li xs)
-                x <- either hard_error return x
-                let typed_x = case t of
-                                Just t -> zcast t $ Right x
-                                Nothing -> Right x                    
-                x <- either
-                    (hard_error . map (`Error` li))
-                    (return . normalize_generics) 
-                    $ typed_x
-                unless (L.null $ ambiguities x) $ hard_error 
-                    $ map (\x -> Error (format msg x (type_of x)) li)
-                        $ ambiguities x
-                return x
-        where
-            xs    = drop_blank_text ys
-            msg   = "type of {0} is ill-defined: {1}"
-
-
-get_predicate :: ( Monad m ) 
-           => Machine
-           -> Context
-           -> FreeVarOpt
-           -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo [b] (System) m) Expr
-get_predicate m ctx opt ys = do
-        let th = theory m
-            d_ctx = case opt of
-                        WithFreeDummies -> dummy_ctx m
-                        WithoutFreeDummies -> empty_ctx
-        get_predicate' th (ctx `merge_ctx` d_ctx `merge_ctx` context m) ys
 
 data ParserSetting = PSetting 
     { language :: Notation
@@ -715,10 +637,9 @@ mkSetting notat sorts plVar prVar dumVar = default_setting
         , primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
         , dum_ctx = dumVar }
 
-parse_expr' :: ( Monad m ) 
-            => ParserSetting
-            -> [LatexDoc] 
-            -> EitherT [Error] (RWST LineInfo [b] System m) Expr
+parse_expr' :: ParserSetting
+            -> LatexDoc'
+            -> Either [Error] Expr
 parse_expr' set ys = do
         let ctx0
                 | is_step set = primed_vars set
@@ -727,84 +648,78 @@ parse_expr' set ys = do
                 | free_dummies set = dum_ctx set
                 | otherwise        = M.empty
             ctx = Context (sorts set) (unions [decls set, ctx0, ctx1]) M.empty M.empty (dum_ctx set)
+            li  = line_info xs
         x  <- parse_expr ctx
                 (language set)
-                (concatMap flatten_li xs)
-        li <- get_line_info xs
+                (flatten_li' xs)
         x  <- case expected_type set of
-            Just t -> either 
-                (\xs -> left $ map (`Error` li) xs) 
-                (right . normalize_generics) $ zcast t $ Right x
+            Just t -> mapBoth 
+                (\xs -> map (`Error` li) xs) 
+                (normalize_generics) $ zcast t $ Right x
             Nothing -> return x
-        unless (L.null $ ambiguities x) $ left 
+        unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> Error (format msg x (type_of x)) li)
                 $ ambiguities x
         return x
     where
-        get_line_info xs
-            | L.null xs = ask
-            | otherwise = return $ line_info xs 
-        xs    = drop_blank_text ys
+        xs    = drop_blank_text' ys
         msg   = "type of {0} is ill-defined: {1}"
 
-get_predicate' :: ( Monad m ) 
-               => Theory
+get_expression :: ( MonadReader Thy m )
+               => Maybe Type
+               -> LatexDoc'
+               -> VisitorT m (Tactic Expr)
+get_expression t ys = do
+            let li = line_info xs
+            notation  <- lift ask            
+            -- sys <- lift $ ST.get
+            return $ LP.with_line_info li $ do
+                ctx <- get_context
+                x   <- either hard_error return 
+                        $ parse_expr 
+                            ctx notation
+                            (flatten_li' xs)
+                let typed_x = fromMaybe id (zcast <$> t) (Right x)
+                x <- either
+                    (hard_error . map (`Error` li))
+                    (return . normalize_generics) 
+                    $ typed_x
+                unless (L.null $ ambiguities x) $ hard_error 
+                    $ map (\x -> Error (format msg x (type_of x)) li)
+                        $ ambiguities x
+                return x
+        where
+            xs    = drop_blank_text' ys
+            msg   = "type of {0} is ill-defined: {1}"
+
+get_predicate' :: Theory
                -> Context
-               -> [LatexDoc] 
-               -> EitherT [Error] (RWST LineInfo [b] System m) Expr
+               -> LatexDoc'
+               -> Either [Error] Expr
 get_predicate' th ctx ys = parse_expr' 
         (setting_from_context 
             (th_notation th) ctx)
         ys
 
-get_assert :: ( Monad m ) 
-           => Machine
-           -> [LatexDoc] 
-           -> EitherT [Error] (RWST LineInfo [b] (System) m) Expr
-get_assert m ys = parse_expr' (machine_setting m) ys
+get_assert :: Machine
+           -> LatexDoc'
+           -> Either [Error] Expr
+get_assert m = parse_expr' (machine_setting m)
 
-get_evt_part :: ( Monad m ) 
-             => Machine -> Event
-             -> [LatexDoc] 
-             -> EitherT [Error] (RWST LineInfo [b] System m)  Expr
-get_evt_part m e ys = parse_expr' 
-                        (event_setting m e) { is_step = True }
-                        ys
+get_evt_part :: Machine -> Event
+             -> LatexDoc'
+             -> Either [Error] Expr
+get_evt_part m e = parse_expr' (event_setting m e) { is_step = True }
+                        
 
-get_assert_with_free :: ( Monad m ) 
-                     => Machine -> [LatexDoc] 
-                     -> EitherT [Error] (RWST LineInfo [b] System m)  Expr
-get_assert_with_free m ys = parse_expr' (machine_setting m) { free_dummies = True } ys
+get_assert_with_free :: Machine 
+                     -> LatexDoc'
+                     -> Either [Error] Expr
+get_assert_with_free m = parse_expr' (machine_setting m) { free_dummies = True }
 
 lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a
       -> t0 (t1 m) a
 lift2 cmd = lift $ lift cmd
 
-predicate :: Maybe Type 
-          -> [LatexDoc] 
-          -> Notation
-          -> EitherT [Error] (RWST LineInfo () System Tactic) Expr
-predicate t ys n = do
-        ctx <- lift2 $ get_context
-        li <- lift $ lift $ if L.null xs
-            then get_line_info
-            else return $ line_info xs
-        x <- parse_expr 
-                ctx n
-                (concatMap flatten_li xs)
-        x <- maybe 
-            (return $ Right x)
-            (\t -> return $ zcast t $ Right x)
-            t
-        x <- either 
-            (\xs -> left $ map (`Error` li) xs) 
-            (right . normalize_generics) x
-        unless (L.null $ ambiguities x) $ left 
-            $ map (\x -> Error (format msg x (type_of x)) li)
-                $ ambiguities x
-        return x
-    where
-        xs    = drop_blank_text ys
-        msg   = "type of {0} is ill-defined: {1}"
 

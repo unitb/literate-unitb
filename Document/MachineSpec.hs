@@ -22,7 +22,6 @@ import Utilities.RandomTree
 import Control.Monad
 import Control.Monad.Reader
 -- import Control.Monad.State
-import Control.Monad.Trans.Either
 
 import qualified Data.Map as M
 import qualified Data.List as L
@@ -51,11 +50,11 @@ f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Bool
-prop_expr_parser (ExprNotation ctx n e) = e' == runReader (runEitherT $ parse_expr' ctx n (withLI $ showExpr n e)) li
+prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showExpr n e)
     where
         e' = Right e
         li = LI "" 0 0
-        withLI xs = map (\x -> (x,li)) xs
+        withLI xs = StringLi li $ map (\x -> (x,li)) xs
 
 data ExprNotation = ExprNotation Context Notation Expr
 

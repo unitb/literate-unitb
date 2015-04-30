@@ -6,21 +6,22 @@
 module Document.Pipeline where
 
     -- Modules
-
 import Latex.Parser
-
 
     -- Libraries
 import Control.Arrow
 import qualified Control.Category as C
 
+import Control.Monad.RWS
+import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
 import qualified Data.Map as M
 
 import Utilities.Syntactic
 import Utilities.Tuple
-import Utilities.Trace
+
+type MM = MaybeT (RWS Input [Error] ())
 
 data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 
@@ -62,10 +63,6 @@ instance Monad m => ArrowApply (Pipeline m) where
 data Env = BlockEnv { getEnvArgs :: [[LatexDoc]], getEnvContent :: [LatexDoc], envLI :: LineInfo }
 data Cmd = BlockCmd { getCmdArgs :: [[LatexDoc]], cmdLI :: LineInfo }
 
-runPipeline :: [LatexDoc] 
-            -> Pipeline m DocBlocks b 
-            -> m b
-runPipeline xs (Pipeline mch _ f) = f (getLatexBlocks mch xs)
 
 data DocBlocks = DocBlocks 
     { getEnv :: M.Map String [Env]

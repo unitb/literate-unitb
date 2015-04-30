@@ -63,7 +63,7 @@ run_phase1_types = proc p0 -> do
                                <.> imp_th'
                                <.> sets
 
-type CPipeline ph a = Pipeline MM (CTable ph) (Either [Error] (CTable a))
+type CPipeline ph a = Pipeline MM (CTable ph) (Maybe (CTable a))
 
 make_phase1 :: Map String Sort
             -> Map String Sort

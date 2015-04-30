@@ -23,6 +23,7 @@ module Document.Visitor
     , MSEither 
     , with_line_info
     , drop_blank_text
+    , drop_blank_text'
     , get_1_lbl
     , System(..)
     , focus_es, focusT
@@ -151,6 +152,15 @@ instance Readable [LatexDoc] where
         ST.put ts
         return arg
     read_one = get_next
+
+instance Readable LatexDoc' where
+    read_args = do
+        ts <- read_args
+        li <- ask
+        return $ LatexDoc' li ts
+    read_one = do
+        li <- ask
+        LatexDoc' li <$> get_next
 
 data Str = String { toString :: String }
 
@@ -351,6 +361,14 @@ drop_blank_text :: [LatexDoc] -> [LatexDoc]
 drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
 drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
 drop_blank_text xs = xs
+
+drop_blank_text' :: LatexDoc' -> LatexDoc'
+drop_blank_text' (LatexDoc' li xs) = drop_blank_text_aux li xs
+    where
+        drop_blank_text_aux li ( Text [] : ys ) = drop_blank_text_aux li ys
+        drop_blank_text_aux _ ( Text [Blank _ li] : ys ) = drop_blank_text_aux li ys
+        drop_blank_text_aux _ ( Text (Blank _ li : xs) : ys ) = drop_blank_text_aux li ( Text xs : ys )
+        drop_blank_text_aux li xs = LatexDoc' li xs
 
 trim_blank_text :: [LatexDoc] -> [LatexDoc]
 trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)

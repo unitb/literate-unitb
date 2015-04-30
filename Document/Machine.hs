@@ -10,7 +10,7 @@ module Document.Machine where
     --
     -- Modules
     --
-import Document.Expression hiding ( parse_expr' )
+import Document.Expression
 import Document.ExprScope
 import Document.Pipeline
 import Document.Phase as P
@@ -39,17 +39,17 @@ import Theories.SetTheory
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import qualified Control.Category as C
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
 import           Control.Monad.State.Class 
 import           Control.Monad.Writer.Class 
-import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS ( execRWS, RWS, mapRWST )
-import qualified Control.Monad.Writer as W
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
@@ -67,6 +67,7 @@ import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
+import qualified Data.Traversable as T
 
 import Utilities.Format
 import Utilities.Relation (type(<->),(|>),(<|))
@@ -129,18 +130,18 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         let es = M.map fst es'
             lis = M.map snd es'
             cs = cycles $ toList es
-        vs <- lift $ toEither $ mapM (cycl_err_msg lis) cs
+        vs <- MaybeT $ sequence <$> mapM (cycl_err_msg lis) cs
         return $ Hierarchy vs es
     where
         struct = "refinement structure" :: String
         cycle_msg = format msg struct -- $ intercalate ", " (map show ys)
-        cycl_err_msg _ (AcyclicSCC v) = return v
+        cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
             -- li <- ask
             tell [MLError cycle_msg 
                 $ L.map (first show) $ toList $ 
                 lis `M.intersection` fromList' vs ] 
-            return (error "topological_order")
+            return Nothing -- (error "topological_order")
         msg = "A cycle exists in the {0}"
 
 inherit :: Hierarchy MachineId -> Map MachineId [b] -> Map MachineId [b]
@@ -166,54 +167,39 @@ inherit3 = inheritWith
             (L.map $ \(x,(y,_),z) -> (x,(y,Inherited),z))
             (++)
 
-get_components :: [LatexDoc] -> LineInfo 
-               -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
-get_components xs li = 
-        liftM g
-            $ R.runReader (runEitherT $ W.execWriterT (mapM_ f xs)) li
-
-    where
-        with_li li cmd = R.local (const li) cmd
-        get_name li xs = with_li li $ liftM fst $ lift $ get_1_lbl xs
-        f x@(Env tag li0 xs _li1) 
-            | tag == "machine" = do
-                    n <- get_name li0 xs
-                    W.tell ([(n,xs)],[])
-            | tag == "context" = do
-                    n <- get_name li0 xs
-                    W.tell ([],[(n,xs)])
-            | otherwise      = map_docM_ f x
-        f x = map_docM_ f x
-        g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
-
 run_phase1_types :: Pipeline MM 
                         (MTable MachineP0)
                         ( Hierarchy MachineId
                         , MTable MachineP1)
 run_phase1_types = proc p0 -> do
-    -- _  <- traceP $ format "step" -< ()
+    -- traceA $ const "step A" -< ()
     ts <- set_decl      -< p0
+    -- traceA $ const "step B" -< ()
     e  <- event_decl    -< p0
+    -- traceA $ const "step C" -< ()
     r  <- refines_mch   -< p0
+    -- traceA $ const "step D" -< ()
     it <- import_theory -< p0
-    let refs  = r >>= make_all_tables (format "Multiple refinement clauses")
-    One refs <- triggerP -< One refs
+    -- let refs  = r >>= make_all_tables (format "Multiple refinement clauses")
+    -- let refs  = r >>= 
+    -- _  <- traceA $ format "step {0}" -< (ts,r,e,it)
+    refs <- triggerP <<< liftP' (make_all_tables refClash) -< r
+    -- refs <- triggerP -< refs
     let _ = refs :: Map MachineId (Map () (MachineId,LineInfo))
     r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
         s = M.map snd <$> ts
-        evts'  = inherit3 r_ord <$> e  >>= make_all_tables (format "Multiple events with the name {0}")
-        types  = inherit r_ord  <$> t  >>= make_all_tables (format "Multiple sets with the name {0}")
-        imp_th = inherit r_ord  <$> it >>= make_all_tables (format "Theory imported multiple times")
-        -- remove the liftM in the next line
-    (types,s,evts',imp_th') <- triggerP -< 
-                ( types, s
-                , M.map (M.map fst) <$> evts'
-                , imp_th)
-        -- BIG FLAG
-        -- the creation of p1 won't detect clashes between type names, it will merely overshadow
-        -- some types with (hopefully) the most local types
-        -- BIG FLAG
+    evts' <- liftP' $ make_all_tables evtClash -< inherit3 r_ord <$> e
+    types <- liftP' $ make_all_tables setClash -< inherit r_ord  <$> t
+    imp_th <- liftP' $ make_all_tables thyClash -< inherit r_ord  <$> it
+    evts'   <- triggerP -< M.map (M.map fst) <$> evts'    
+    types   <- triggerP -< types
+    imp_th' <- triggerP -< imp_th
+    s       <- triggerP -< s
+    --     -- BIG FLAG
+    --     -- the creation of p1 won't detect clashes between type names, it will merely overshadow
+    --     -- some types with (hopefully) the most local types
+    --     -- BIG FLAG
     let f th = M.unions $ map AST.types $ M.elems th
         basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
         imp_th = M.map (union basic . M.map fst) imp_th'
@@ -223,6 +209,11 @@ run_phase1_types = proc p0 -> do
                          <.> all_types 
                          <.> s <.> evts'
     returnA -< (r_ord,p1)
+  where
+    evtClash = format "Multiple events with the name {0}"
+    setClash = format "Multiple sets with the name {0}"
+    thyClash = format "Theory imported multiple times"
+    refClash = format "Multiple refinement clauses"
 
 make_phase1 :: MachineP0
             -> Map String Theory
@@ -239,9 +230,9 @@ make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
         -- _pImports
         -- _pNewEvents = M.map fst $ M.filter ((== Local) . snd) evts
 
-run_phase :: [Pipeline MM a (Either [e] b)]
-          -> Pipeline MM a (Either [e] [b])
-run_phase xs = run_phase_aux xs >>> arr (all_errors')
+run_phase :: [Pipeline MM a (Maybe b)]
+          -> Pipeline MM a (Maybe [b])
+run_phase xs = run_phase_aux xs >>> arr sequence
 
 run_phase_aux :: [Pipeline MM a b] -> Pipeline MM a [b]
 run_phase_aux [] = arr $ const []
@@ -253,36 +244,41 @@ run_phase_aux (cmd:cs) = proc x -> do
 run_phase2_vars :: Pipeline MM 
                         (Hierarchy MachineId,MTable MachineP1)
                         (MTable MachineP2)
-run_phase2_vars = proc (r_ord, p1) -> do
-        vs <- run_phase
+run_phase2_vars = second (C.id &&& symbols) >>> liftP wrapup
+    where
+        err_msg = format "Multiple symbols with the name {0}"
+        wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
+        symbols = run_phase
             [ variable_decl
             , constant_decl
             , dummy_decl
             , index_decl
-            , arr $ Right . M.map (wrap . L.view pSetDecl)
+            , arr $ Just . M.map (wrap . L.view pSetDecl)
             , param_decl
-            , remove_var ] -< p1
-        let vars    =      make_all_tables' err_msg
-                       =<< inherit2 r_ord 
-                       <$> unionsWith (++) <$> vs
-            err_msg = (format "Multiple symbols with the name {0}") 
-        One vars <- triggerP -< One vars
-        let p2 = all_errors $ make_phase2 <$> p1 <.> vars
-            _  = vars :: MTable (Map String VarScope)
-        liftP -< hoistEither p2
-    where
-        wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
+            , remove_var ]
+        wrapup (r_ord,(p1,vs)) = do
+            let vs' = inherit2 r_ord 
+                        <$> unionsWith (++)
+                        <$> vs
+            vars <- triggerM
+                =<< make_all_tables' err_msg 
+                =<< triggerM vs'
+                    
+            let _  = vars :: MTable (Map String VarScope)
+            T.sequence $ make_phase2 <$> p1 <.> vars
 
 make_phase2 :: MachineP1
             -> Map String VarScope
-            -> Either [Error] MachineP2 
-make_phase2 p1 vars
-        | L.null err = Right $ p2' & (pNotation .~ _pNotation)
-                                   & (pMchSynt .~ _pMchSynt)
-                                   & (pCtxSynt .~ _pCtxSynt)
-                                   & (pSchSynt .~ _pSchSynt)
-                                   & (pEvtSynt .~ _pEvtSynt)
-        | otherwise = Left err
+            -> MM MachineP2 
+make_phase2 p1 vars = do
+        tell err
+        unless (L.null err) $ MaybeT $ return Nothing
+        -- | L.null err = 
+        return $ p2' & (pNotation .~ _pNotation)
+                     & (pMchSynt .~ _pMchSynt)
+                     & (pCtxSynt .~ _pCtxSynt)
+                     & (pSchSynt .~ _pSchSynt)
+                     & (pEvtSynt .~ _pEvtSynt)
     where
         varGroup n (VarScope x) = VarGroup [(n,x)]
         vars' = groupVars $ L.map (uncurry varGroup) $ M.toList vars
@@ -325,7 +321,7 @@ make_phase2 p1 vars
 
 default_schedule_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 default_schedule_decl = arr $ \p2 -> 
-        Right $ M.map (map default_sch . elems . M.map Just . M.map (^. eEventId)) 
+        Just $ M.map (map default_sch . elems . M.map Just . M.map (^. eEventId)) 
               $ M.map (M.filter (^. eIsNew) . (^. pEvents)) p2
     where
         li = LI "default" 1 1
@@ -334,8 +330,17 @@ default_schedule_decl = arr $ \p2 ->
                             $ singleton e (EvtExprScope $ CoarseSchedule (InhAdd zfalse) Inherited li))
 
 run_phase3_exprs :: Pipeline MM (Hierarchy MachineId,MTable MachineP2) (MTable MachineP3)
-run_phase3_exprs = proc (r_ord,p2) -> do
-        es <- run_phase 
+run_phase3_exprs = second (C.id &&& expressions) >>> liftP (uncurry wrapup)
+    where
+        err_msg :: Label -> String
+        err_msg = format "Multiple expressions with the label {0}"
+        wrapup r_ord (p2,es) = do
+            let es' = inherit2 r_ord . unionsWith (++) <$> es
+            exprs <- triggerM
+                =<< make_all_tables' err_msg
+                =<< triggerM es'
+            T.sequence $ make_phase3 <$> p2 <.> exprs
+        expressions = run_phase 
             [ assignment
             , bcmeq_assgn
             , bcmsuch_assgn
@@ -360,16 +365,7 @@ run_phase3_exprs = proc (r_ord,p2) -> do
             , remove_assgn
             , remove_init
             , init_witness_decl
-            , witness_decl ] -< p2
-        let exprs =     make_all_tables' err_msg
-                    =<< inherit2 r_ord 
-                    <$> unionsWith (++) 
-                    <$> es
-            err_msg :: Label -> String
-            err_msg = (format "Multiple expressions with the label {0}") 
-        One exprs <- triggerP -< One exprs
-        let p3 = all_errors $ make_phase3 <$> p2 <.> exprs
-        liftP -< hoistEither p3
+            , witness_decl ]
 
 old :: Scope s => Map a s -> Map a s
 old = M.mapMaybe is_inherited
@@ -377,10 +373,11 @@ old = M.mapMaybe is_inherited
 new :: Scope s => Map a s -> Map a s
 new = M.mapMaybe is_local
 
-make_phase3 :: MachineP2 -> Map Label ExprScope -> Either [Error] MachineP3
-make_phase3 p2 exprs 
-        | L.null errs = Right p3''
-        | otherwise   = Left errs
+make_phase3 :: MachineP2 -> Map Label ExprScope -> MM MachineP3
+make_phase3 p2 exprs = do
+        tell errs
+        unless (L.null errs) $ fail ""
+        return p3''
     where
         p3 =  over pContext makeTheoryP3
             $ over pEvents (M.map makeEventP3) 
@@ -397,28 +394,25 @@ run_phase4_proofs = proc (r_ord,p3) -> do
         ref_p  <- refine_prog_prop -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
-        let c_evt_refs :: Either [Error] (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
+        let c_evt_refs :: Maybe (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
             c_evt_refs = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++) 
                      <$> L.map (M.map coarseRef) <$> refs 
-            f_evt_refs' :: Either [Error] (MTable (Map EventId [((ProgId,ProgressProp),LineInfo)]))
+            f_evt_refs' :: Maybe (MTable (Map EventId [((ProgId,ProgressProp),LineInfo)]))
             f_evt_refs' = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++)
                      <$> L.map (M.map fineRef) <$> refs
-            only_one _ []   = Right Nothing
-            only_one _ [x]  = Right (Just x)
-            only_one eid xs = Left [MLError (format "Multiple refinement provided for the fine schedule of {0}" eid) 
-                                    $ L.map (first $ show . fst) xs]
-            f_evt_refs :: Either [Error] (MTable (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo))))
-            f_evt_refs = join $ (all_errors . M.map (all_errors . M.mapWithKey only_one)) <$> f_evt_refs'
-            prog_ref :: Either [Error] (MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo)))
-            prog_ref = ref_p >>= make_all_tables (format "Multiple refinement of progress property {0}")
-            proofs = prfs >>= make_all_tables (format "Multiple proofs labeled {0}")
-            comments = do
-                    c <- comm
-                    make_all_tables (format "Multiple comments for {0}")
-                        $ inherit r_ord c
-        (c_evt_refs,f_evt_refs,prog_ref,comments,proofs) <- triggerP -< (c_evt_refs,f_evt_refs,prog_ref,comments,proofs)
+        f_evt_refs <- liftP' $ fmap Just . T.mapM (M.traverseWithKey only_one)
+            -< f_evt_refs'
+        prog_ref <- liftP' (make_all_tables refClash)   -< ref_p
+        proofs   <- liftP' (make_all_tables proofClash) -< prfs
+        comments <- liftP' (make_all_tables commClash)  -< inherit r_ord <$> comm
+        let 
+        f_evt_refs <- triggerP -< f_evt_refs
+        c_evt_refs <- triggerP -< c_evt_refs
+        prog_ref   <- triggerP -< prog_ref
+        proofs     <- triggerP -< proofs
+        comments   <- triggerP -< comments
         let _ = c_evt_refs :: MTable (Map EventId [((Label,ScheduleChange),LineInfo)])
             _ = f_evt_refs :: MTable (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
             _ = prog_ref :: MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
@@ -443,18 +437,27 @@ run_phase4_proofs = proc (r_ord,p3) -> do
                    <.> M.mapWithKey (\k -> M.map (k,)) (M.map (M.map snd) prog_ref) 
                    <.> M.mapWithKey (\k -> M.map (k,)) 
                             (M.map uncurryMap evt_ref_props) --evt_refs)
-            struct = all_errors $ 
-                     M.map raiseStructError $ inheritWith 
+        struct <- liftP' $ fmap Just . T.mapM (fromEither' . raiseStructError)
+            -< Just $ inheritWith 
                         Conc (Abs . getConcrete)
                         mergeLiveness 
                         r_ord live_struct
                     -- >>= make_all_tables' _
-        One _struct <- triggerP -< One struct
+        _struct <- triggerP -< struct
         let p4 = make_phase4 <$> p3 
                              <.> c_evt_refs <.> f_evt_refs -- evt_refs 
                              <.> prog_ref <.> comments 
                              <.> proofs 
         returnA -< p4
+    where
+        refClash   = format "Multiple refinement of progress property {0}"
+        commClash  = format "Multiple comments for {0}"
+        proofClash = format "Multiple proofs labeled {0}"
+        only_one _ []   = return Nothing
+        only_one _ [x]  = return (Just x)
+        only_one eid xs = tell [MLError (format "Multiple refinement provided for the fine schedule of {0}" eid) 
+                                    $ L.map (first $ show . fst) xs] >> return Nothing
+
 
 type LiveEvtId = Either EventId ProgId
 
@@ -532,7 +535,7 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
         _pComments = M.map fst comments
 
 make_machine :: MachineId -> MachineP4
-             -> Either [Error] Machine
+             -> MM Machine
 make_machine (MId m) p4 = mch'
     where
         types   = p4 ^. pTypes
@@ -586,11 +589,12 @@ make_machine (MId m) p4 = mch'
         pos = raw_machine_pos mch
         po_err = proofs `difference` pos
         mch' = do
-            all_errors' $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
+            all_errors $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
                 Left [Error (format "proof obligation does not exist: {0}" lbl) li]
-            xs <- all_errors' $ flip map (toList proofs) $ \(k,(tac,li)) -> do
+            xs <- all_errors $ flip map (toList proofs) $ \(k,(tac,li)) -> do
                 p <- runTactic li (pos ! k) tac
                 return (k,p)
+            xs <- triggerM xs
             return mch 
                 { AST.props = (AST.props mch) 
                     { _proofs = fromList xs } }
@@ -618,7 +622,6 @@ make_machine (MId m) p4 = mch'
                 , f_sched_ref = (first as_label) <$> evt ^. eFineRef
                 , old_acts = M.map (const ()) $ evt ^. eOldActions
                 }
-            where
 
 uncurryMap :: (Ord a,Ord b) => Map a (Map b c) -> Map (a,b) c
 uncurryMap m = fromList $ do
@@ -634,9 +637,14 @@ flipMap m = M.map fromList $ fromListWith (++) $ do
 
 -- type MM = R.ReaderT Input M
 
-liftP :: Pipeline MM (M a) a
-liftP = Pipeline empty_spec empty_spec lift
+liftP :: (a -> MM b) 
+      -> Pipeline MM a b
+liftP = Pipeline empty_spec empty_spec
 
+liftP' :: (a -> MM (Maybe b)) 
+       -> Pipeline MM (Maybe a) (Maybe b)
+liftP' f = Pipeline empty_spec empty_spec 
+        $ maybe (return Nothing) f
 
 class Ord k => WithMap k a m where
     type ElementOf k a m :: *
@@ -685,18 +693,7 @@ instance ElementLists as => ElementLists (a:+:as) where
             f (x :+: _) = x
             g (_ :+: xs) = xs
 
-runPipeline' :: M.Map String [LatexDoc] 
-             -> M.Map String [LatexDoc]
-             -> Pipeline MM Input a 
-             -> M a
-runPipeline' ms cs p = runReaderT (f input) input
-    where
-        input = Input mch ctx
-        mch   = M.mapKeys MId $ M.map (getLatexBlocks m_spec) ms
-        ctx   = M.mapKeys CId $ M.map (getLatexBlocks c_spec) cs
-        Pipeline m_spec c_spec f = p
-
-type MPipeline ph a = Pipeline MM (MTable ph) (Either [Error] (MTable a))
+type MPipeline ph a = Pipeline MM (MTable ph) (Maybe (MTable a))
 
 instance IsVarScope TheoryDef where
     processDecl xs = do
@@ -868,7 +865,7 @@ tr_hint' :: MachineP2
          -> NonEmpty Label
          -> [LatexDoc]
          -> TrHint
-         -> RWS LineInfo [Error] System TrHint
+         -> RWS LineInfo [Error] () TrHint
 tr_hint' p2 _m fv lbls = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
@@ -880,7 +877,7 @@ tr_hint' p2 _m fv lbls = visit_doc []
                 let Var _ t = head vs
                     ind = prime $ Var x t
                     x'  = x ++ "'"
-                expr <- parse_expr' 
+                expr <- hoistEither $ parse_expr' 
                     (machine_parser p2 `with_vars` insert x' ind fv) 
                         -- { expected_type = Just t }
                     texExpr
@@ -896,7 +893,7 @@ tr_hint' p2 _m fv lbls = visit_doc []
         ]
 
 
-check_types :: Either [String] a -> EitherT [Error] (RWS LineInfo [Error] System) a    
+check_types :: Either [String] a -> EitherT [Error] (RWS LineInfo [Error] ()) a    
 check_types c = EitherT $ do
     li <- ask
     return $ either (\xs -> Left $ map (`Error` li) xs) Right c
@@ -977,9 +974,10 @@ assignment :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             ev <- get_event p2 ev_lbl
-            pred <- parse_expr' 
+            pred <- hoistEither $ parse_expr' 
                 (event_parser p2 ev) 
-                { is_step = True } xs
+                { is_step = True } 
+                xs
             let frame = M.elems $ (state_variables p2) `M.difference` (abstract_variables p2) :: [Var] 
                 act = BcmSuchThat frame pred
             li <- lift ask
@@ -993,26 +991,28 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
             var@(Var _ t) <- bind
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (state_variables p2)
-            xp <- parse_expr' 
+            li <- lift ask
+            xp <- hoistEither $ parse_expr' 
                 (event_parser p2 ev) 
-                { expected_type = Just t } xs
+                { expected_type = Just t } 
+                xs
             check_types
                 $ Right (Word var :: Expr) `mzeq` Right xp
             let act = Assign var xp
-            li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
 bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
             ev <- get_event p2 evt
-            xp  <- parse_expr' (event_parser p2 ev)
-                    { is_step = True } xs
+            li <- lift ask
+            xp  <- hoistEither $ parse_expr' (event_parser p2 ev)
+                    { is_step = True } 
+                    xs
             vars <- bind_all (map toString vs)
                 (format "variable '{0}' undeclared")
                 $ (`M.lookup` state_variables p2)
             let act = BcmSuchThat vars xp
-            li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 bcmin_assgn :: MPipeline MachineP2
@@ -1022,11 +1022,12 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
             var@(Var _ t) <- bind
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (state_variables p2)
-            xp  <- parse_expr' (event_parser p2 ev)
-                    { expected_type = Just (set_type t) } xs
+            li  <- lift ask
+            xp  <- hoistEither $ parse_expr' (event_parser p2 ev)
+                    { expected_type = Just (set_type t) } 
+                    xs
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right xp
-            li <- lift ask
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Action (InhAdd act) Local li))]
 
 instance Scope Initially where
@@ -1085,10 +1086,10 @@ remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
 witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
             ev <- get_event p2 evt
-            p  <- parse_expr' (event_parser p2 ev) { is_step = True } xp
+            li <- lift ask
+            p  <- hoistEither $ parse_expr' (event_parser p2 ev) { is_step = True } xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            li <- lift ask
             return [(label var,ExprScope $ EventExpr $ M.singleton (Just ev) (EvtExprScope $ Witness v p Local li))]
 
 instance Scope EventExpr where
@@ -1277,18 +1278,18 @@ instance IsExprScope EventExpr where
 init_witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
             -- ev <- get_event p2 evt
-            p  <- parse_expr' (machine_parser p2) xp
+            li <- lift ask
+            p  <- hoistEither $ parse_expr' (machine_parser p2) xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            li <- lift ask
             return [(label var, ExprScope $ EventExpr $ M.singleton Nothing (EvtExprScope $ Witness v p Local li))]
 
 guard_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
-            xp <- parse_expr' (event_parser p2 ev) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (event_parser p2 ev) xs
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ Guard (InhAdd xp) Local li))]
 
 guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
@@ -1313,16 +1314,16 @@ coarse_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
-            xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (schedule_parser p2 ev) xs
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ CoarseSchedule (InhAdd xp) Local li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
-            xp <- parse_expr' (schedule_parser p2 ev) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (schedule_parser p2 ev) xs
             return [(lbl,ExprScope $ EventExpr $ M.singleton (Just ev) $ (EvtExprScope $ FineSchedule (InhAdd xp) Local li))]
 
         -------------------------
@@ -1349,8 +1350,8 @@ instance IsExprScope Axiom where
 assumption :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
-            xp <- parse_expr' (context_parser p2) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (context_parser p2) xs
             return [(lbl,ExprScope $ Axiom xp Local li)]
 
         --------------------------
@@ -1360,8 +1361,8 @@ assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
 initialization :: MPipeline MachineP2
                     [(Label,ExprScope)]
 initialization = machineCmd "\\initialization" $ \(lbl,xs) _m p2 -> do
-            xp <- parse_expr' (machine_parser p2) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (machine_parser p2) xs
             return [(lbl,ExprScope $ Initially xp Local li)]
 
 
@@ -1387,8 +1388,8 @@ instance IsExprScope Invariant where
 invariant :: MPipeline MachineP2
                     [(Label,ExprScope)]
 invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
-            xp <- parse_expr' (machine_parser p2) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (machine_parser p2) xs
             return [(lbl,ExprScope $ Invariant xp Local li)]
 
 instance Scope InvTheorem where
@@ -1400,8 +1401,8 @@ instance IsExprScope InvTheorem where
 mch_theorem :: MPipeline MachineP2
                     [(Label,ExprScope)]
 mch_theorem = machineCmd "\\theorem" $ \(lbl,xs) _m p2 -> do
-            xp <- parse_expr' (machine_parser p2) xs
             li <- lift ask
+            xp <- hoistEither $ parse_expr' (machine_parser p2) xs
             return [(lbl,ExprScope $ InvTheorem xp Local li)]
 
 instance Scope TransientProp where
@@ -1414,7 +1415,8 @@ transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             _evs <- get_events p2 evts
-            tr   <- parse_expr' (machine_parser p2) 
+            li   <- lift ask
+            tr   <- hoistEither $ parse_expr' (machine_parser p2) 
                     { free_dummies = True } xs
             let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) _evs
             toEither $ error_list 
@@ -1424,14 +1426,14 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             let vs = symbol_table $ S.elems $ used_var tr
                 fv = vs `M.intersection` dummy_vars p2
                 prop = Transient fv tr evts empty_hint
-            li <- lift ask
             return [(lbl,ExprScope $ TransientProp prop Local li)]
 
 transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
             _evs <- get_events p2 evts
-            tr   <- parse_expr' (machine_parser p2) 
+            li   <- lift ask
+            tr   <- hoistEither $ parse_expr' (machine_parser p2) 
                     { free_dummies = True } xs
             let fv = free_vars' ds tr
                 ds = dummy_vars p2
@@ -1439,7 +1441,6 @@ transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
                     $ NE.nonEmpty evts
             hint  <- tr_hint p2 m fv evts' hint
             let prop = Transient fv tr evts hint
-            li <- lift ask
             return [(lbl,ExprScope $ TransientProp prop Local li)]
 
 instance IsExprScope ConstraintProp where
@@ -1457,14 +1458,14 @@ instance Scope ConstraintProp where
 constraint_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 constraint_prop = machineCmd "\\constraint" $ \(lbl,xs) _m p2 -> do
-            pre <- parse_expr' (machine_parser p2)
+            li  <- lift ask
+            pre <- hoistEither $ parse_expr' (machine_parser p2)
                     { free_dummies = True
                     , is_step = True }
                     xs
             let vars = elems $ free_vars' ds pre
                 ds = dummy_vars p2
                 prop = Co vars pre
-            li <- lift ask
             return [(lbl,ExprScope $ ConstraintProp prop Local li)]
 
 instance IsExprScope SafetyDecl where
@@ -1481,12 +1482,13 @@ instance Scope SafetyDecl where
     error_item (SafetyProp _ _ li) = ("safety property", li)
 
 safety_prop :: Label -> Maybe Label
-            -> [LatexDoc]
-            -> [LatexDoc]
+            -> LatexDoc'
+            -> LatexDoc'
             -> MachineId
             -> MachineP2
             -> M [(Label,ExprScope)]
 safety_prop lbl evt pCt qCt _m p2 = do
+            li <- lift ask
             (p,q)  <- toEither (do
                 _  <- case evt of
                         Just evt -> do
@@ -1496,11 +1498,11 @@ safety_prop lbl evt pCt qCt _m p2 = do
                 -- _  <- bind
                 --     (format "event '{0}' is undeclared" evt)
                 --     $ evt `M.lookup` events m
-                p <- fromEither ztrue 
+                p <- fromEither ztrue $ hoistEither
                     $ parse_expr' (machine_parser p2) 
                         { free_dummies = True }
                         pCt
-                q <- fromEither ztrue 
+                q <- fromEither ztrue $ hoistEither
                     $ parse_expr' (machine_parser p2) 
                         { free_dummies = True } 
                         qCt
@@ -1508,7 +1510,6 @@ safety_prop lbl evt pCt qCt _m p2 = do
             let ds  = dummy_vars p2
                 dum = free_vars' ds p `union` free_vars' ds q
                 new_prop = Unless (M.elems dum) p q evt
-            li <- lift ask
             return [(lbl,ExprScope $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2
@@ -1537,12 +1538,13 @@ instance Scope ProgressDecl where
 progress_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
+            li <- lift ask
             (p,q)    <- toEither (do
-                p    <- fromEither ztrue 
+                p    <- fromEither ztrue $ hoistEither
                     $ parse_expr' (machine_parser p2) 
                         { free_dummies = True }
                         pCt
-                q    <- fromEither ztrue 
+                q    <- fromEither ztrue $ hoistEither
                     $ parse_expr' (machine_parser p2) 
                         { free_dummies = True } 
                         qCt
@@ -1552,7 +1554,6 @@ progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
                 new_prop = LeadsTo (M.elems dum) p q
 --             new_deriv <- bind (format "proof step '{0}' already exists" lbl)
 --                 $ insert_new lbl (Rule Add) $ derivation $ props m
-            li <- lift ask
             return [(lbl,ExprScope $ ProgressProp new_prop Local li)]
 
 refine_prog_prop :: MPipeline MachineP3

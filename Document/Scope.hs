@@ -18,7 +18,7 @@ module Document.Scope
     , make_all_tables 
     , make_all_tables'
     , all_errors
-    , all_errors'
+    , fromEither'
     , is_inherited, is_local
     , DeclSource(..)
     , InhStatus(..)
@@ -27,15 +27,21 @@ module Document.Scope
     )
 where
 
+    -- Modules
+import Document.Pipeline
+
     -- Libraries
+import Control.Applicative
+
 import Control.Lens as L 
 import Control.Monad.Identity
+import Control.Monad.RWS
 import Control.Parallel.Strategies
 
 import Data.Either
-import Data.Either.Combinators
 import Data.List as L
 import Data.Map as M
+import qualified Data.Traversable as T
 
 import Utilities.Syntactic
 import Utilities.Permutation
@@ -113,19 +119,14 @@ contents x = case x ^. inhStatus of
                 InhAdd x -> Just x
                 InhDelete x -> x
 
-all_errors' :: [Either [e] a] -> Either [e] [a]
-all_errors' xs = do
-    let es = lefts xs
-    unless (L.null es)
-        $ Left $ concat es
-    return $ L.map fromRight' xs
+fromEither' :: Either [Error] a -> MM (Maybe a)
+fromEither' (Left es) = tell es >> return Nothing
+fromEither' (Right x) = return $ Just x
 
-all_errors :: Ord k => Map k (Either [e] a) -> Either [e] (Map k a)
-all_errors m = do
-        let es = lefts $ M.elems m
-        unless (L.null es)
-            $ Left $ concat es
-        return $ M.map fromRight' m
+all_errors :: Traversable t 
+           => t (Either [Error] a) 
+           -> MM (Maybe (t a))
+all_errors m = T.mapM fromEither' m >>= (return . T.sequence)
 
 make_table :: (Ord a, Show a) 
            => (a -> String) 
@@ -151,20 +152,20 @@ make_table f xs = returnOrFail $ fromListWith add $ L.map mkCell xs
 make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
                  => (a -> String) 
                  -> Map k [(a,b)] 
-                 -> Either [Error] (Map k (Map a b))
-make_all_tables' f xs = all_errors (M.map (make_table' f) xs) `using` parTraversable rseq
+                 -> MM (Maybe (Map k (Map a b)))
+make_all_tables' f xs = T.sequence <$> T.sequence (M.map (make_table' f) xs `using` parTraversable rseq)
 
 make_all_tables :: (Show a, Ord a, Ord k) 
                 => (a -> String)
                 -> Map k [(a, b, LineInfo)] 
-                -> Either [Error] (Map k (Map a (b,LineInfo)))
-make_all_tables f xs = all_errors (M.map (make_table f) xs) `using` parTraversable rseq
+                -> MM (Maybe (Map k (Map a (b,LineInfo))))
+make_all_tables f xs = all_errors (M.map (make_table f) xs `using` parTraversable rseq)
 
 make_table' :: forall a b.
                (Ord a, Show a, Scope b) 
             => (a -> String) 
             -> [(a,b)] 
-            -> Either [Error] (Map a b)
+            -> MM (Maybe (Map a b))
 make_table' f xs = all_errors $ M.mapWithKey g ws
     where
         g k ws
