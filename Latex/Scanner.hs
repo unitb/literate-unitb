@@ -1,4 +1,12 @@
-module Latex.Scanner where
+module Latex.Scanner 
+    ( read_lines, read_tokens
+    , is_eof, peek, read_char
+    , get_line_info, Scanner
+    , match_first, match_string
+    , look_ahead, try, choice
+    , read_if, match, many
+    , sep1 )
+where
 
 import Control.Applicative hiding ( many )
 
@@ -25,10 +33,6 @@ instance Monad (Scanner a) where
     fail s   = Scanner (\(State _ li) -> Left [(Error s li)])
     return x = Scanner (\s -> Right (x,s))
 
-change_errors :: ([Error] -> [Error]) -> Scanner a b -> Scanner a b
-change_errors f (Scanner g) = Scanner h
-    where
-        h s = either (Left . f) Right (g s)
     
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
 comb (Scanner f) gF = Scanner h
@@ -50,9 +54,6 @@ try (Scanner bl) sc (Scanner fl) = Scanner ret
                 Left _ ->
                     fl x
 
-pick :: [(Scanner a b, b -> Scanner a c)] -> Scanner a c -> Scanner a c
-pick [] x = x
-pick ((a,b):xs) y = try a b $ pick xs y
 
 read_if :: (a -> Bool) -> (a -> Scanner a b) -> Scanner a b -> Scanner a b
 read_if p left right = do
@@ -79,12 +80,6 @@ peek = Scanner f
     where
         f s@(State xs _) = Right (map fst xs, s)
 
-eof :: Scanner a ()
-eof = do
-        b <- is_eof
-        if b 
-            then return ()
-            else fail "Expected end of file"
             
 is_eof :: Scanner a Bool
 is_eof = do
@@ -156,20 +151,12 @@ choice :: [Scanner a b] -> Scanner a c -> (b -> Scanner a c) -> Scanner a c
 choice [] f _ = f
 choice (x:xs) f s = try x s (choice xs f s)
 
-get_line_column :: Scanner a (Int, Int)
-get_line_column = Scanner f
-    where
-        f s@(State _ (LI _ i j)) = Right ((i,j), s)
 
 get_line_info :: Scanner a LineInfo
 get_line_info = Scanner f
     where
         f s@(State _ li) = Right (li, s)
 
-get_source_file :: Scanner a FilePath
-get_source_file = Scanner f
-    where
-        f s@(State _ (LI fn _ _)) = Right (fn, s)
 
 many :: Scanner a b -> Scanner a [b]
 many p = do
@@ -194,20 +181,6 @@ sep1 b s = do
         xs <- sep b s
         return (x:xs)
 
-sepBy :: Scanner a b -> Scanner a c -> Scanner a [(c,b)] 
-sepBy b s = do
-            try s 
-                (\x -> do
-                    y  <- b
-                    xs <- sepBy b s
-                    return ((x,y):xs)) 
-                (return [])
-
-sepBy1 :: Scanner a b -> Scanner a c -> Scanner a (b,[(c,b)]) 
-sepBy1 b s = do
-        x <- b
-        xs <- sepBy b s
-        return (x,xs)
 
 look_ahead' :: Scanner a b -> Scanner a (Maybe b)
 look_ahead' (Scanner f) = Scanner g
@@ -219,10 +192,4 @@ look_ahead' (Scanner f) = Scanner g
 look_ahead :: Scanner a b -> Scanner a Bool
 look_ahead cmd = isJust `liftM` look_ahead' cmd
 
-read_ :: String -> Scanner Char ()
-read_ xs = do
-        x <- match $ match_string xs
-        case x of
-            Just _  -> return ()
-            Nothing -> fail ("expecting: " ++ xs)
             

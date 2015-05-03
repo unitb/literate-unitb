@@ -40,8 +40,6 @@ import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 import           Data.Tuple
 
-import Safe
-
 import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
@@ -179,9 +177,8 @@ find_assumptions = visitor
             )
         ,   (   "\\using"
             ,   VCmdBlock $ \(One refs) -> do
-                    li      <- ask
                     -- s       <- lift $ lift $ ST.get
-                    ((),hs) <- add_writer $ with_content li refs hint
+                    ((),hs) <- add_writer $ with_content refs hint
                     -- lift $ lift $ ST.put s
                     add_refs hs
 --                    li <- ask 
@@ -331,7 +328,8 @@ find_proof_step = visitor
         [   (   "calculation"
             ,   VEnvBlock $ \() _ -> do
                     li <- ask
-                    cc <- lift_i $ parse_calc
+                    cc' <- lift_i $ parse_calc
+                    let cc = (\c -> c { l_info = li }) <$> cc'
                     notat <- lift $ lift $ ask
                     set_proof $ LP.with_line_info li $ do
                         cc <- cc
@@ -388,7 +386,7 @@ find_proof_step = visitor
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
                             notat
-                            (concatMap flatten_li rel) 
+                            (flatten_li' rel) 
                     dir <- case map toLower dir of
                                 "left"  -> return $ Left ()
                                 "right" -> return $ Right ()
@@ -406,7 +404,7 @@ find_proof_step = visitor
                     op <- make_soft equal $ fromEitherM
                         $ parse_oper 
                             notat
-                            (concatMap flatten_li rel) 
+                            (flatten_li' rel) 
                     dir <- case map toLower dir of
                                 "left"  -> return $ Left ()
                                 "right" -> return $ Right ()
@@ -514,7 +512,7 @@ hint = visitor []
         --         return (Lemma p,li)]
         g (lbl,subst) = do
                 li <- ask
-                ((),w) <- with_content li subst $ add_writer $ visitor []
+                ((),w) <- with_content subst $ add_writer $ visitor []
                     [ ( "\\subst", VCmdBlock $ \(String var, expr) -> do
                             expr <- get_expression Nothing expr
                             lift $ W.tell [do
@@ -536,22 +534,23 @@ parse_calc = do
     xs <- get_content
     case find_cmd_arg 2 ["\\hint"] xs of
         Just (step,kw,[rel,tx_hint],remainder)    -> do
-            li <- (`headDef` map line_info step) <$> ask
-            xp <- local (const li) $ get_expression Nothing $ LatexDoc' li step
+            let li = line_info step
+            xp <- local (const li) $ get_expression Nothing step
             notat <- lift ask 
             op <- make_soft equal $ fromEitherM
                 $ parse_oper 
                     notat
-                    (concatMap flatten_li rel) 
-            ((),hs) <- add_writer $ with_content li tx_hint $ hint
-            calc    <- with_content li remainder parse_calc
+                    (flatten_li' rel) 
+            ((),hs) <- add_writer $ with_content tx_hint $ hint
+            calc    <- with_content remainder parse_calc
             return $ LP.with_line_info (line_info kw) $ do
                 hs  <- sequence hs
                 xp  <- make_soft ztrue xp
-                add_step xp op hs calc
+                c   <- add_step xp op hs calc
+                return $ c { l_info = li }
         Nothing         -> do
             li <- ask
-            xp <- get_expression Nothing $ LatexDoc' li xs
+            xp <- get_expression Nothing xs
             return $ LP.with_line_info li $ do
                 xp  <- make_soft ztrue xp
                 last_step xp
@@ -638,7 +637,7 @@ mkSetting notat sorts plVar prVar dumVar = default_setting
         , dum_ctx = dumVar }
 
 parse_expr'' :: ParserSetting
-             -> LatexDoc'
+             -> LatexDoc
              -> M (Expr,[(Expr,[String])])
 parse_expr'' p xs = do
         e <- hoistEither $ parse_expr' p xs
@@ -652,7 +651,7 @@ unfail cmd = do
         Left es -> W.tell es >> return Nothing
 
 parse_expr' :: ParserSetting
-            -> LatexDoc'
+            -> LatexDoc
             -> Either [Error] Expr
 parse_expr' set ys = do
         let ctx0
@@ -681,7 +680,7 @@ parse_expr' set ys = do
 
 get_expression :: ( MonadReader Thy m )
                => Maybe Type
-               -> LatexDoc'
+               -> LatexDoc
                -> VisitorT m (Tactic Expr)
 get_expression t ys = do
             let li = line_info xs
@@ -708,7 +707,7 @@ get_expression t ys = do
 
 get_predicate' :: Theory
                -> Context
-               -> LatexDoc'
+               -> LatexDoc
                -> Either [Error] Expr
 get_predicate' th ctx ys = parse_expr' 
         (setting_from_context 
@@ -716,18 +715,18 @@ get_predicate' th ctx ys = parse_expr'
         ys
 
 get_assert :: Machine
-           -> LatexDoc'
+           -> LatexDoc
            -> Either [Error] Expr
 get_assert m = parse_expr' (machine_setting m)
 
 get_evt_part :: Machine -> Event
-             -> LatexDoc'
+             -> LatexDoc
              -> Either [Error] Expr
 get_evt_part m e = parse_expr' (event_setting m e) { is_step = True }
                         
 
 get_assert_with_free :: Machine 
-                     -> LatexDoc'
+                     -> LatexDoc
                      -> Either [Error] Expr
 get_assert_with_free m = parse_expr' (machine_setting m) { free_dummies = True }
 

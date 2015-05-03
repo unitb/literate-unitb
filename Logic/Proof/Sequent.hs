@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TemplateHaskell      #-}
 module Logic.Proof.Sequent where
 
     -- Modules
@@ -10,6 +11,7 @@ import Logic.Expr
 import Control.DeepSeq
 
 import Data.Char
+import Data.DeriveTH
 import Data.List as L
 import Data.List.Ordered as OL hiding (merge)
 import Data.Map  as M hiding ( map )
@@ -209,9 +211,6 @@ fresh name xs = head $ ys `minus` S.elems xs
         ys = name : map f [0..]
         f x = name ++ show x
 
-instance (NFData t,NFData q) => NFData (AbsSequent t q) where
-    rnf (Sequent ctx hyp asm g) = rnf (ctx,hyp,asm,g)
-
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment  
     (Sequent (Context srt0 cons0 fun0 def0 dum0) xs0 hs0 xp0) 
@@ -238,3 +237,5 @@ entailment
             xs1
             hs1
             (zall $ xs0 ++ elems hs0)
+
+derive makeNFData ''AbsSequent

@@ -76,6 +76,7 @@ Todo:
         * [LatexDoc] should become a case of LatexDoc
         * Improve line info
         * In the expression declaration classes, add methods for every field of the phase objects
+        * Convert Proof.ProofTree to the POGenerator monad
 
         * The parser for refinement rules has a writer to declare dependency remove it if it is not useful
         * Expressions and their LaTeX counterparts are no longer stored. Collect them somehow

@@ -105,7 +105,7 @@ refinement_parser = fromList
 
     -- Remove alternatives
 data HintBuilder = 
-        HintBuilderDecl [LatexDoc] MachineId MachineP2
+        HintBuilderDecl LatexDoc MachineId MachineP2
 
 ensure :: ProgressProp 
        -> HintBuilder
@@ -849,7 +849,7 @@ tr_hint :: MachineP2
         -> MachineId
         -> Map String Var
         -> NonEmpty Label
-        -> [LatexDoc]
+        -> LatexDoc
         -> M TrHint
 tr_hint p2 m vs lbls thint = do
     tr@(TrHint wit _)  <- toEither $ tr_hint' p2 m vs lbls thint empty_hint
@@ -868,7 +868,7 @@ tr_hint' :: MachineP2
          -> MachineId
          -> Map String Var
          -> NonEmpty Label
-         -> [LatexDoc]
+         -> LatexDoc
          -> TrHint
          -> RWS LineInfo [Error] () TrHint
 tr_hint' p2 _m fv lbls = visit_doc []
@@ -1476,8 +1476,8 @@ instance Scope SafetyDecl where
     error_item (SafetyProp _ _ li _) = ("safety property", li)
 
 safety_prop :: Label -> Maybe Label
-            -> LatexDoc'
-            -> LatexDoc'
+            -> LatexDoc
+            -> LatexDoc
             -> MachineId
             -> MachineP2
             -> M [(Label,ExprScope)]
@@ -1611,8 +1611,8 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
                 li <- lift ask
-                let cmt = concatMap flatten cmt'
-                    item = L.filter (/= '$') $ remove_ref $ concatMap flatten item'
+                let cmt = flatten' cmt'
+                    item = L.filter (/= '$') $ remove_ref $ flatten' item'
                     -- prop = props m
                     invs = get_invariants p3
                     is_inv = label item `member` invs
@@ -1646,7 +1646,7 @@ all_proofs :: MPipeline MachineP3 [(Label,Tactic Proof,LineInfo)]
 all_proofs = machineEnv "proof" $ \(One po) xs m p3 -> do
         li <- lift ask
         let notation = get_notation p3
-            po_lbl = label $ remove_ref $ concatMap flatten po
+            po_lbl = label $ remove_ref $ flatten' po
             lbl = composite_label [ as_label m, po_lbl ]
         proof <- mapEitherT 
             (\cmd -> runReaderT cmd notation) 

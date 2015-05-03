@@ -8,10 +8,11 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Monad
 
-import Data.Monoid
+import Data.DeriveTH
 import Data.List hiding (union,transpose,null)
-import Data.Tuple
 import qualified Data.List.Ordered as LO
+import Data.Monoid
+import Data.Tuple
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Set as S
@@ -33,9 +34,6 @@ data Relation a b = Rel (M.Map a (M.Map b ()))
     deriving Eq
 
 type (<->) a b = Relation a b
-
-instance (NFData a,NFData b) => NFData (Relation a b) where
-    rnf (Rel m) = rnf m
 
 instance (Show a, Show b) => Show (Relation a b) where
     show r = "fromList " ++ show (toList r)
@@ -357,3 +355,5 @@ run_spec = $quickCheckAll
 
 main :: IO Bool
 main = run_spec
+
+derive makeNFData ''Relation

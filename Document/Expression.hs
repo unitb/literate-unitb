@@ -24,8 +24,6 @@ import Utilities.Syntactic
 import qualified Control.Applicative as A 
 import Control.Applicative ((<$>))
 
-import Safe
-
 import           Control.Monad
 import           Control.Monad.Reader.Class
 import           Control.Monad.Trans
@@ -257,7 +255,7 @@ vars = do
 
 get_variables' :: (Monad m, MonadReader LineInfo m)
                => Map String Sort
-               -> [LatexDoc] 
+               -> LatexDoc
                -> EitherT [Error] m [(String, Var)]
 get_variables' types cs = 
         get_variables 
@@ -267,7 +265,7 @@ get_variables' types cs =
 
 get_variables :: (Monad m, MonadReader LineInfo m)
               => Context
-              -> [LatexDoc] 
+              -> LatexDoc
               -> EitherT [Error] m [(String, Var)]
 get_variables ctx cs = do
         LI fn i j <- lift $ ask
@@ -279,7 +277,7 @@ get_variables ctx cs = do
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
     where
-        m = concatMap flatten_li cs
+        m = getString $ flatten_li' cs
 
 unary :: Parser UnaryOperator
 unary = do
@@ -663,12 +661,12 @@ parse_expr :: Context
            -> Notation
            -> StringLi
            -> Either [Error] Expr
-parse_expr ctx@(Context _ vars _ defs _)  n (StringLi _li' input) = do
+parse_expr ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
         let vars' = M.map Word vars `M.union` M.mapMaybe f defs
             f (Def xs n args t _e) = do
                     guard (L.null args)
                     Just $ FunApp (mk_fun xs n [] t) []
-            li = headDef (LI "" 0 0) $ map snd input
+            li = line_info i
         toks <- read_tokens (scan_expr $ Just n)
             (file_name li) 
             input (line li, column li)
@@ -679,14 +677,12 @@ parse_expr ctx@(Context _ vars _ defs _)  n (StringLi _li' input) = do
             (line li, column li)
         return e
 
-
-parse_oper :: ( Monad m
-              , MonadReader LineInfo m) 
+parse_oper :: Monad m 
            => Notation
-           -> [(Char, LineInfo)] 
+           -> StringLi
            -> EitherT [Error] m BinOperator
-parse_oper n c = do
-        li   <- lift $ ask
+parse_oper n s@(StringLi c _) = do
+        let li = line_info s
         toks <- hoistEither $ read_tokens (scan_expr $ Just n)
             (file_name li) 
             c (line li, column li)

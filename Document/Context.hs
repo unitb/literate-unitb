@@ -99,7 +99,7 @@ imp_theory = contextCmd "\\with" $ \(One (String th_name)) _m _ -> do
             Nothing -> raise $ Error (format msg th_name) li
             Just th -> return [(th_name,th,li)]
 
-ctx_type_decl :: String -> [LatexDoc] -> Theory -> MSEither Theory
+ctx_type_decl :: String -> [LatexNode] -> Theory -> MSEither Theory
 ctx_type_decl _ = visit_doc []
             [  (  "\\newset"
                ,  CmdBlock $ \(String name, String tag) th -> do
@@ -133,7 +133,7 @@ ctx_type_decl _ = visit_doc []
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
 ctx_declarations :: String
-                 -> [LatexDoc] 
+                 -> [LatexNode] 
                  -> Theory 
                  -> MSEither Theory
 ctx_declarations _ = visit_doc []
@@ -175,7 +175,7 @@ ctx_declarations _ = visit_doc []
             )
         ]
 
-ctx_operators :: [LatexDoc] -> Theory 
+ctx_operators :: [LatexNode] -> Theory 
               -> MSEither Theory
 ctx_operators = visit_doc [] []
 --        [   (   "\\operator"
@@ -201,7 +201,7 @@ ctx_operators = visit_doc [] []
 --        ]
 
 ctx_imports :: String
-        -> [LatexDoc] 
+        -> [LatexNode] 
         -> Theory 
         -> MSEither Theory
 ctx_imports _ = visit_doc []
@@ -261,7 +261,7 @@ ctx_imports _ = visit_doc []
             )
         ]
 
-ctx_collect_expr :: String -> [LatexDoc] -> Theory
+ctx_collect_expr :: String -> [LatexNode] -> Theory
                  -> MSEither Theory
 ctx_collect_expr name = visit_doc 
         [] [(   "\\axiom"
@@ -293,7 +293,7 @@ ctx_collect_expr name = visit_doc
             )
         ]
 
-ctx_collect_proofs :: String -> [LatexDoc] -> Theory
+ctx_collect_proofs :: String -> [LatexNode] -> Theory
                    -> MSEither Theory
 ctx_collect_proofs name = visit_doc
         [   (   "proof"

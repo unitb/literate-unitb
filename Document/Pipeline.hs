@@ -60,8 +60,8 @@ instance Monad m => Arrow (Pipeline m) where
 instance Monad m => ArrowApply (Pipeline m) where
     app = Pipeline empty_spec empty_spec $ \(Pipeline _ _ f, x) -> f x
 
-data Env = BlockEnv { getEnvArgs :: [[LatexDoc]], getEnvContent :: [LatexDoc], envLI :: LineInfo }
-data Cmd = BlockCmd { getCmdArgs :: [[LatexDoc]], cmdLI :: LineInfo }
+data Env = BlockEnv { getEnvArgs :: [LatexDoc], getEnvContent :: LatexDoc, envLI :: LineInfo }
+data Cmd = BlockCmd { getCmdArgs :: [LatexDoc], cmdLI :: LineInfo }
 
 
 data DocBlocks = DocBlocks 
@@ -98,46 +98,46 @@ context_spec :: Pipeline m a b -> DocSpec
 context_spec (Pipeline _ c _) = c
 
 getLatexBlocks :: DocSpec
-               -> [LatexDoc] 
+               -> LatexDoc
                -> DocBlocks
 getLatexBlocks (DocSpec envs cmds) xs = execWriter (f xs)
     where
-        f (Env name li ys _:xs) = do
+        f (Doc (Env name li ys _:xs) li2) = do
                 case name `M.lookup` envs of
                     Just nargs -> do
                         let (args,rest) = brackets nargs ys
                         tell (DocBlocks (M.singleton name [BlockEnv args rest li]) M.empty) 
                     Nothing -> f ys
-                f xs
-        f (Bracket _ _ ys _:xs) = do
+                f $ Doc xs li2
+        f (Doc (Bracket _ _ ys _:xs) li1) = do
                 f ys
-                f xs
-        f (Text []:xs) = f xs
-        f (Text (Command name li:ys):xs) = do
+                f $ Doc xs li1
+        f (Doc (Text [] _:xs) li) = f $ Doc xs li
+        f (Doc (Text (Command name li:ys) li1:xs) li2) = do
                 case name `M.lookup` cmds of
                     Just nargs
                         | nargs == 0 || not (all isBlank ys) -> do
                             tell (DocBlocks M.empty (M.singleton name [BlockCmd [] li]))
-                            f (Text ys : xs)
+                            f (Doc (Text ys li1 : xs) li2)
                         | otherwise -> do
-                            let (args,rest) = brackets nargs xs
+                            let (args,rest) = brackets nargs $ Doc xs li2
                             tell (DocBlocks M.empty (M.singleton name [BlockCmd args li]))
                             f rest
-                    Nothing    -> f $ Text ys : xs
-        f (Text (_:ys):xs) = f $ Text ys : xs
-        f [] = return ()
+                    Nothing    -> f $ Doc (Text ys li1 : xs) li2
+        f (Doc (Text (_:ys) li0:xs) li1) = f $ Doc (Text ys li0 : xs) li1
+        f (Doc [] _) = return ()
 
-brackets :: Int -> [LatexDoc] -> ([[LatexDoc]],[LatexDoc])
+brackets :: Int -> LatexDoc -> ([LatexDoc],LatexDoc)
 brackets 0 xs = ([],xs)
-brackets n (Bracket Curly _ ys _:xs) = (ys:args,r)
+brackets n (Doc (Bracket Curly _ ys _:xs) li) = (ys:args,r)
     where
-        (args,r) = brackets (n-1) xs
-brackets n zs@(Text xs:ys)
-    | all isBlank xs = brackets n ys
-    | otherwise      = ([],zs)
-brackets _ zs@(Bracket Square _ _ _:_) = ([],zs)
-brackets _ zs@(Env _ _ _ _:_) = ([],zs)
-brackets _ [] = ([],[])
+        (args,r) = brackets (n-1) $ Doc xs li
+brackets n (Doc zs@(Text xs _:ys) li)
+    | all isBlank xs = brackets n (Doc ys li)
+    | otherwise      = ([],Doc zs li)
+brackets _ zs@(Doc (Bracket Square _ _ _:_) _) = ([],zs)
+brackets _ zs@(Doc (Env _ _ _ _:_) _) = ([],zs)
+brackets _ zs@(Doc [] _) = ([],zs)
 
 
 isBlank :: LatexToken -> Bool

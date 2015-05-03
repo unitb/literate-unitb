@@ -49,7 +49,7 @@ data RuleParserParameter =
         (Map Label Transient)
         Label
         [Label]
-        [LatexDoc]
+        LatexDoc
         ParserSetting
 
 data Add = Add
@@ -94,7 +94,7 @@ getGoal (RuleParserDecl _ _ _ _ _ goal_lbl _ _ _) = goal_lbl
 getHypotheses :: RuleParserParameter -> [Label]
 getHypotheses (RuleParserDecl _ _ _ _ _ _ hyps_lbls _ _) = hyps_lbls
 
-getHint :: RuleParserParameter -> [LatexDoc]
+getHint :: RuleParserParameter -> LatexDoc
 getHint (RuleParserDecl _ _ _ _ _ _ _ hint _) = hint
 
 getParser :: RuleParserParameter -> ParserSetting
@@ -475,7 +475,7 @@ parse_induction rule param = do
                                 ++ "variable to record the variant") li 
         var <- case find_cmd_arg 3 ["\\var"] hint of
             Just (_,_,[var,dir,bound],_) -> toEither $ do
-                dir  <- case map toLower $ concatMap flatten dir of
+                dir  <- case map toLower $ flatten' dir of
                     "up"   -> return Up
                     "down" -> return Down
                     _      -> do
@@ -487,12 +487,12 @@ parse_induction rule param = do
                         (parser `with_vars` symbol_table fv0)
                                { free_dummies = True
                                , expected_type = Nothing }
-                        (LatexDoc' li var)
+                        var
                 bound <- fromEither ztrue $ hoistEither $
                     parse_expr'
                         parser { free_dummies = True
                                , expected_type = Just (type_of var) }
-                        (LatexDoc' li bound)
+                        bound
                 let is_set = isRight $ zcast (set_type gA) (Right var)
                 if type_of var == int then
                     return (IntegerVariant dum var bound dir)

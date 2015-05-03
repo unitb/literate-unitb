@@ -1,13 +1,14 @@
 module Latex.Test_Latex_Parser where
 
-import qualified Data.Map as M 
-
---import Latex.Proof_Parser
+    -- Modules
 import Latex.Parser
 
-import Tests.UnitTest
+    -- Libraries
+import Control.Applicative
 
---import Text.ParserCombinators.ReadP
+import qualified Data.Map as M 
+
+import Tests.UnitTest
 
 import Utilities.Syntactic
 
@@ -53,7 +54,7 @@ sections = [
     "invariant",
     "machine"]
 
-extract_structure :: String -> Either [Error] (M.Map String [LatexDoc])
+extract_structure :: String -> Either [Error] (M.Map String [LatexNode])
 extract_structure ct = do
     xs <- latex_structure "" ct
     return (find_env sections xs)
@@ -67,16 +68,16 @@ cases = test_cases "latex parser" [
     (Case "sorted seq err.tex" (main path3) result3),
     (CalcCase "reconstitute sample.tex" 
         (tests path2) 
-        (fmap uncomment $ readFile path2)),
+        (uncomment <$> readFile path2)),
     (CalcCase "reconstitute integers.tex" 
         (tests path5) 
-        (fmap uncomment $ readFile path5)),
+        (uncomment <$> readFile path5)),
     (CalcCase "reconstitute sorted seq.tex" 
         (tests path4) 
-        (fmap uncomment $ readFile path4)) ]
+        (uncomment <$> readFile path4)) ]
 
-find_env :: [String] -> [LatexDoc] -> M.Map String [LatexDoc]
-find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) xs
+find_env :: [String] -> LatexDoc -> M.Map String [LatexNode]
+find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) $ contents' xs
     where
         f m (t@(Env name _ _ _))
             | name `elem` kw = M.insertWith (++) name [t] m
@@ -93,7 +94,7 @@ tests path = do
         ct <- readFile path
         let x = (do
             tree <- latex_structure path ct
-            return (concatMap flatten tree))
+            return (flatten' tree))
         return (case x of
             Right xs -> xs
             Left msgs -> error $ unlines $ map report msgs)

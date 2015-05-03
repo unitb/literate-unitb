@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
-
+{-# LANGUAGE TemplateHaskell      #-}
 module Z3.Z3 
     ( Sequent
     , Validity ( .. )
@@ -46,7 +46,8 @@ import Control.Monad
 import Control.Monad.Reader
 
 import Data.ConfigFile
-import           Data.Char
+import Data.Char
+import Data.DeriveTH
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
 import           Data.List.Utils as L
@@ -268,17 +269,6 @@ data Command = Decl (FODecl FOQuantifier)
     | Push | Pop 
     | Comment String
 
-instance NFData Command where
-    rnf (SetOption xs b) = rnf (xs,b)
-    rnf (Decl d)     = rnf d 
-    rnf (Assert e s) = rnf (e,s)
-    rnf (CheckSat)   = ()
-    rnf GetUnsatCore = ()
-    rnf GetModel     = ()
-    rnf Push         = ()
-    rnf Pop          = ()
-    rnf (Comment xs) = rnf xs
-
 z3_code :: Sequent -> [Command]
 z3_code po = 
     (      [] -- SetOption "smt.mbqi" False]
@@ -428,3 +418,4 @@ verify lbl xs n = do
         else
             fail "verify: incomplete conditional"
 
+derive makeNFData ''Command

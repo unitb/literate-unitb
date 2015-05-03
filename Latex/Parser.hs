@@ -1,7 +1,7 @@
 module Latex.Parser where
 
     -- Modules
-import Latex.Scanner
+import Latex.Scanner 
 
     -- Libraries
 import Control.Monad
@@ -17,6 +17,8 @@ import Data.Graph
 import Data.List ( intercalate )
 import Data.Map as M hiding ( foldl, map, null, (!) )
 
+import Safe
+
 import System.Directory
 import System.IO.Unsafe
 import System.FilePath
@@ -25,33 +27,34 @@ import Utilities.Format
 import Utilities.Graph hiding ( map, empty )
 import Utilities.Syntactic
 
-data LatexDoc = 
-        Env String LineInfo [LatexDoc] LineInfo
-        | Bracket BracketType LineInfo [LatexDoc] LineInfo
-        | Text [LatexToken]
+data LatexNode = 
+        Env String LineInfo LatexDoc LineInfo
+        | Bracket BracketType LineInfo LatexDoc LineInfo
+        | Text [LatexToken] LineInfo
     deriving (Eq)
 
-data LatexDoc' = LatexDoc' LineInfo [LatexDoc]
+data LatexDoc = Doc [LatexNode] LineInfo
+    deriving (Eq)
 
-data StringLi = StringLi LineInfo [(Char,LineInfo)]
+data StringLi = StringLi [(Char,LineInfo)] LineInfo
 
 data BracketType = Curly | Square
     deriving (Eq,Show)
 
-flatten' :: LatexDoc' -> String
-flatten' (LatexDoc' _ xs) = concatMap flatten xs
+flatten' :: LatexDoc -> String
+flatten' (Doc xs _) = concatMap flatten xs
 
-flatten :: LatexDoc -> String
+flatten :: LatexNode -> String
 flatten (Env s _ ct _) = 
            "\\begin{" ++ s ++ "}"
-        ++ concatMap flatten ct
+        ++ flatten' ct
         ++ "\\end{" ++ s ++ "}"
-flatten (Bracket b _ ct _) = b0 ++ concatMap flatten ct ++ b1
+flatten (Bracket b _ ct _) = b0 ++ flatten' ct ++ b1
     where
         (b0,b1) = case b of
             Curly -> ("{", "}")
             Square -> ("[", "]")
-flatten (Text xs) = concatMap lexeme xs
+flatten (Text xs _) = concatMap lexeme xs
 
 whole_line :: LineInfo -> [LineInfo]
 whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
@@ -59,49 +62,62 @@ whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (x,y,z) = f x y z
 
-flatten_li' :: LatexDoc' -> StringLi
-flatten_li' (LatexDoc' li xs) = StringLi li $ concatMap flatten_li xs
+flatten_li' :: LatexDoc -> StringLi
+flatten_li' (Doc xs li) = StringLi (concatMap flatten_li xs) li
 
-flatten_li :: LatexDoc -> [(Char,LineInfo)]
+getString :: StringLi -> [(Char,LineInfo)]
+getString (StringLi xs _) = xs
+
+flatten_li :: LatexNode -> [(Char,LineInfo)]
 flatten_li (Env s li1 ct li0) = 
            zip ("\\begin{" ++ s ++ "}") (whole_line li0)
-        ++ concatMap flatten_li ct
+        ++ getString (flatten_li' ct)
         ++ zip ("\\end{" ++ s ++ "}") (whole_line li1)
-flatten_li (Text xs)        = concatMap lexeme_li xs
+flatten_li (Text xs _)        = concatMap lexeme_li xs
 flatten_li (Bracket b li0 ct li1) 
-        = (b0,li0) : concatMap flatten_li ct ++ [(b1,li1)]
+        = (b0,li0) : getString (flatten_li' ct) ++ [(b1,li1)]
     where
         (b0,b1) = case b of
             Curly -> ('{', '}')
             Square -> ('[', ']')
 
-fold_doc :: (a -> LatexDoc -> a)
-         -> a -> LatexDoc -> a
-fold_doc f x doc  = foldl f x $ contents doc
+fold_doc :: (a -> LatexNode -> a)
+         -> a -> LatexNode -> a
+fold_doc f x doc  = foldl f x $ contents' $ contents doc
 
 fold_docM :: Monad m
-          => (a -> LatexDoc -> m a)
-          -> a -> LatexDoc -> m a
-fold_docM f x doc = foldM f x $ contents doc
+          => (a -> LatexNode -> m a)
+          -> a -> LatexNode -> m a
+fold_docM f x doc = foldM f x $ contents' $ contents doc
 
-map_doc :: (LatexDoc -> b)
-        -> LatexDoc -> [b]
-map_doc f doc = map f $ contents doc
+map_doc :: (LatexNode -> b)
+        -> LatexNode -> [b]
+map_doc f doc = map f $ contents' $ contents doc
 
 map_docM :: Monad m 
-         => (LatexDoc -> m b)
-         -> LatexDoc -> m [b]
-map_docM f doc = mapM f $ contents doc
+         => (LatexNode -> m b)
+         -> LatexNode -> m [b]
+map_docM f doc = mapM f $ contents' $ contents doc
 
 map_docM_ :: Monad m 
-         => (LatexDoc -> m b)
-         -> LatexDoc -> m ()
-map_docM_ f doc = mapM_ f $ contents doc
+         => (LatexNode -> m b)
+         -> LatexNode -> m ()
+map_docM_ f doc = mapM_ f $ contents' $ contents doc
 
-contents :: LatexDoc -> [LatexDoc]
+contents :: LatexNode -> LatexDoc
 contents (Env _ _ c _)     = c
 contents (Bracket _ _ c _) = c
-contents (Text _)          = []
+contents (Text _ li)          = Doc [] li
+
+contents' :: LatexDoc -> [LatexNode]
+contents' (Doc xs _) = xs
+
+unconsTex :: LatexDoc -> Maybe (LatexNode,LatexDoc)
+unconsTex (Doc (x:xs) li) = Just (x,Doc xs li)
+unconsTex (Doc [] _)      = Nothing
+
+consTex :: LatexNode -> LatexDoc -> LatexDoc
+consTex x (Doc xs li) = Doc (x:xs) li
 
 data LatexToken =
         Command String LineInfo
@@ -111,11 +127,14 @@ data LatexToken =
         | Close BracketType LineInfo
     deriving (Eq, Show)
 
-instance Show LatexDoc where
-    show (Env b _ xs _) = "Env{" ++ b ++ "} (" ++ show (length xs) ++ ")"
-    show (Text xs)      = "Text (" ++ show (take 10 xs) ++ "...)"
+instance Show LatexNode where
+    show (Env b _ xs _) = "Env{" ++ b ++ "} (" ++ show (length $ contents' xs) ++ ")"
+    show (Text xs _)    = "Text (" ++ show (take 10 xs) ++ "...)"
     show (Bracket Curly _ c _)  = "Bracket {" ++ show c ++ "} "
     show (Bracket Square _ c _) = "Bracket [" ++ show c ++ "] "
+
+instance Show LatexDoc where
+    show (Doc xs _) = show xs
 
 instance Syntactic LatexToken where
     line_info (Command _ li)    = li
@@ -124,20 +143,23 @@ instance Syntactic LatexToken where
     line_info (Open _ li)       = li
     line_info (Close _ li)      = li
 
-instance Syntactic LatexDoc where
+instance Syntactic LatexNode where
     line_info (Env _ li _ _)     = li
     line_info (Bracket _ li _ _) = li
-    line_info (Text xs)          = line_info $ head xs
+    line_info (Text xs li)          = headDef li $ map line_info xs
 
-instance Syntactic LatexDoc' where
-    line_info (LatexDoc' li _) = li
+instance Syntactic StringLi where
+    line_info (StringLi xs li) = headDef li (map snd xs)
+
+instance Syntactic LatexDoc where
+    line_info (Doc xs li) = headDef li (map line_info xs)
 
 instance Syntactic a => Syntactic [a] where
     line_info xs = line_info $ head xs
 
-source :: LatexDoc -> String
-source (Text xs) = concatMap lexeme xs
-source x         = show x
+source :: LatexNode -> String
+source (Text xs _) = concatMap lexeme xs
+source x           = show x
 
 lexeme :: LatexToken -> String
 lexeme (Command xs _)   = xs
@@ -212,11 +234,12 @@ tex_tokens = do
                             return ((TextBlock (d:ys) li,li):zs)
                         _ ->return ((TextBlock [d] li,li):xs)
 
-latex_content :: Scanner LatexToken [LatexDoc]
+latex_content :: Scanner LatexToken LatexDoc
 latex_content = do
-    b <- is_eof
+    b  <- is_eof
+    li <- get_line_info
     if b
-    then return []
+    then return $ Doc [] li
     else do
         c:_ <- peek
         case c of
@@ -232,25 +255,26 @@ latex_content = do
                         Close c1 _ -> do
                             unless (c0 == c1) $ fail "mismatched brackets"
                         _ -> fail "expected closing bracket"
-                    rest <- latex_content 
-                    return (Bracket c0 li0 ct li1:rest)
-            Close _ _ ->         return []
-            Command "\\end" _ -> return []
+                    Doc rest li <- latex_content 
+                    return $ Doc (Bracket c0 li0 ct li1:rest) li
+            Close _ _ ->         return $ Doc [] li
+            Command "\\end" _ -> return $ Doc [] li
             t@(Blank _ _)     -> content_token t
             t@(TextBlock _ _) -> content_token t
             t@(Command _ _)   -> content_token t
 
-content_token :: LatexToken -> Scanner LatexToken [LatexDoc]
+content_token :: LatexToken -> Scanner LatexToken LatexDoc
 content_token t = do
         read_char
+        li    <- get_line_info
         xs    <- latex_content
         case xs of
-            Text y:ys -> 
-                return (Text (t:y):ys)
-            _ -> 
-                return (Text [t]:xs)
+            Doc (Text y li:ys) li' -> 
+                return $ Doc (Text (t:y) li:ys) li'
+            Doc xs li' -> 
+                return $ Doc (Text [t] li:xs) li'
 
-opt_args :: Scanner LatexToken [[LatexDoc]]
+opt_args :: Scanner LatexToken [[LatexNode]]
 opt_args = return []
 
 skip_blank :: Scanner LatexToken ()
@@ -260,7 +284,7 @@ skip_blank = do
             (Blank _ _:_) -> do read_char ; return ()
             _  -> return ()
 
-argument :: Scanner LatexToken [LatexDoc]
+argument :: Scanner LatexToken LatexDoc
 argument = do
         skip_blank
         xs <- peek
@@ -274,7 +298,7 @@ argument = do
                     _ -> fail "expecting closing bracket '}'"        
             _ -> fail "expecting opening bracket '{'"            
 
-begin_block :: Scanner LatexToken [LatexDoc]
+begin_block :: Scanner LatexToken LatexDoc
 begin_block = do
     read_char
     li0 <- get_line_info
@@ -284,18 +308,18 @@ begin_block = do
     end   <- read_char
     li1   <- get_line_info
     unless (end == Command "\\end" (line_info end)) $ 
-        fail ("expected \\end{" ++ concatMap source args0 ++ "}, read \'" ++ lexeme end ++ "\'")
+        fail ("expected \\end{" ++ concatMap source (contents' args0) ++ "}, read \'" ++ lexeme end ++ "\'")
     args1 <- argument
     (begin, li2, end, li3) <- 
         case (args0, args1) of
-            ( [Text [TextBlock begin li0]],
-              [Text [TextBlock end li1]] ) -> do
+            ( Doc [Text [TextBlock begin li0] _] _ ,
+              Doc [Text [TextBlock end li1] _] _ ) -> do
                 return (begin, li0, end, li1)
             _  -> fail "name of a begin / end block must be a simple string"    
     unless (begin == end) $ 
         fail (format "begin / end do not match: {0} {1} / {2} {3}" begin li2 end li3)
-    rest <- latex_content 
-    return (Env begin li0 ct li1:rest)
+    Doc rest li <- latex_content 
+    return $ Doc (Env begin li0 ct li1:rest) li
 
 type DocWithHoles = Either (String,LineInfo) (LatexToken,LineInfo)
 
@@ -410,12 +434,12 @@ scan_doc fname = runEitherT $ do
     hoistEither $ fill_holes fname m
         
 
-parse_latex_document :: String -> IO (Either [Error] [LatexDoc])
+parse_latex_document :: String -> IO (Either [Error] LatexDoc)
 parse_latex_document fname = runEitherT $ do
         ys <- EitherT $ scan_doc fname 
         hoistEither $ read_tokens latex_content fname ys (1,1)
 
-latex_structure :: FilePath -> String -> Either [Error] [LatexDoc]
+latex_structure :: FilePath -> String -> Either [Error] LatexDoc
 latex_structure fn xs = do
         ys <- read_lines tex_tokens fn (uncomment xs)
         read_tokens latex_content fn ys (1,1)
@@ -429,9 +453,71 @@ uncomment xs = unlines $ map (takeWhile ('%' /=)) $ lines xs
 with_print :: Show a => a -> a
 with_print x = unsafePerformIO (do putStrLn $ show x ; return x)
 
-remove_ref :: [Char] -> [Char]
+remove_ref :: String -> String
 remove_ref ('\\':'r':'e':'f':'{':xs) = remove_ref xs
 remove_ref ('}':xs) = remove_ref xs
 remove_ref (x:xs)   = x:remove_ref xs
 remove_ref []       = []
+
+type T = State LineInfo
+
+makeTexDoc :: [T LatexNode] -> LatexDoc
+makeTexDoc cmd = evalState (do
+    xs <- sequence cmd
+    li <- get
+    return $ Doc xs li) (LI "" 1 1)
+
+addCol :: Int -> LineInfo -> LineInfo
+addCol n (LI fn i j) = LI fn i (j+n)
+
+env :: String -> [T LatexNode] -> T LatexNode
+env name xs = do
+    li  <- get
+    modify $ addCol (length $ "\\begin{" ++ name ++ "}")
+    ys  <- sequence xs
+    li' <- get
+    modify $ addCol (length $ "\\end{" ++ name ++ "}")
+    return $ Env name li (Doc ys li') li'
+
+bracket :: BracketType -> [T LatexNode] -> T LatexNode
+bracket b xs = do
+    li  <- get
+    modify $ addCol 1
+    ys  <- sequence xs
+    li' <- get
+    modify $ addCol 1
+    return $ Bracket b li (Doc ys li') li'
+
+text :: [T LatexToken] -> T LatexNode
+text xs = do
+    ys <- sequence xs
+    li <- get
+    return $ Text ys li
+
+tokens :: (a -> LineInfo -> LatexToken) 
+       -> a -> T LatexToken
+tokens f x = do
+    li@(LI fn i _) <- get
+    let y = f x li
+        ys = lexeme y
+        ln = lines ys
+        zs = zip ln $ li : [ LI fn (i+k) 1 | k <- [1..]]
+        zs' = [ LI fn i (length xs + j) | (xs,LI fn i j) <- zs ]
+    put $ lastDef li zs'
+    return y
+
+command :: String -> T LatexToken
+command = tokens Command
+
+textBlock :: String -> T LatexToken
+textBlock = tokens TextBlock
+
+blank :: String -> T LatexToken
+blank = tokens Blank
+
+open  :: BracketType -> T LatexToken
+open = tokens Open
+
+close :: BracketType -> T LatexToken
+close = tokens Close
 

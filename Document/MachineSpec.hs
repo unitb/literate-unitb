@@ -54,7 +54,7 @@ prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showE
     where
         e' = Right e
         li = LI "" 0 0
-        withLI xs = StringLi li $ map (\x -> (x,li)) xs
+        withLI xs = StringLi (map (\x -> (x,li)) xs) li
 
 data ExprNotation = ExprNotation Context Notation Expr
 
@@ -79,7 +79,7 @@ instance Arbitrary ExprNotation where
         return $ ExprNotation 
                     ctx basic_notation e
 
-data MachineInput = MachineInput Machine [LatexDoc]
+data MachineInput = MachineInput Machine [LatexNode]
 
 is_type_error :: Error -> Bool
 is_type_error e = 
@@ -168,10 +168,10 @@ showExpr notation e = show_e e
                     | g op' == RightAssoc = show_e e
                     | otherwise           = printf "(%s)" $ show_e e
 
-latex_of :: Machine -> Gen [LatexDoc]
+latex_of :: Machine -> Gen LatexDoc
 latex_of m = do
         let m_name = Bracket Curly li 
-                           [ Text [TextBlock (show $ _name m) li] ] 
+                           (Doc [ Text [TextBlock (show $ _name m) li] li ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
             -- m_ops = M.fromList $ zip (map token xs) xs
@@ -183,9 +183,8 @@ latex_of m = do
                         , (set_type int, "\\set[\\Int]")
                         , (fun_type int int, "\\Int \\pfun \\Int")
                         ]
-            cmd n args = Text [Command n li] : concatMap farg args
-            farg x = [ Bracket Curly li [ Text [TextBlock x li]
-                                    ] li, blank ]
+            cmd n args = Text [Command n li] li : concatMap farg args
+            farg x = [ Bracket Curly li (Doc [ Text [TextBlock x li] li ] li) li, blank ]
             var_decl (Var n t) = cmd "\\variable" [(n ++ " : " ++ show_t t)]
             decls = map var_decl $ M.elems $ variables m
             imp_stat xs = cmd "\\with" [xs]
@@ -194,12 +193,12 @@ latex_of m = do
             imports = map imp_stat $ filter (/= "basic") 
                         $ M.keys $ extends $ theory m
         content <- concat `liftM` permute (decls ++ imports ++ invs)
-        return [ Env "machine" li 
-                       ( [ m_name, blank ] ++ content)
-                       li ]
+        return $ Doc [ Env "machine" li 
+                       (Doc ([ m_name, blank ] ++ content) li)
+                       li ] li
     where
         li = LI "" 0 0
-        blank = Text [Blank "\n" li]
+        blank = Text [Blank "\n" li] li
 
 expressions :: Machine -> [Expr]
 expressions m = M.elems $ _inv $ props m
@@ -232,12 +231,12 @@ other_type t = do
                  ,fun_type int int
                  ]
 
-data Tex = Tex { unTex :: [LatexDoc] }
+data Tex = Tex { unTex :: LatexDoc }
 
 instance Show Tex where
     show (Tex tex) = unlines
             [ "" -- show m
-            , concatMap flatten tex]
+            , flatten' tex]
 
 var_set :: Gen (M.Map String Var)
 var_set = do

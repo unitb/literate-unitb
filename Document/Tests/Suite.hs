@@ -46,8 +46,8 @@ list_file_obligations' path = do
             let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
                 cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
                 -- ms :: Either 
-                ms = fmap machines sys >>= traverseWithKey (cmd PO.proof_obligation)
-                ts = fmap theories sys >>= traverseWithKey (cmd theory_po)
+                ms = machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
+                ts = theories <$> sys >>= traverseWithKey (cmd theory_po)
             putMVar pos $ M.insert path ((ms,ts),t) m
             return (ms,ts)
 

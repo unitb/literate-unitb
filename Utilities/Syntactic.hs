@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns, TupleSections #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell      #-}
 module Utilities.Syntactic where
 
 import Control.DeepSeq
@@ -8,17 +9,15 @@ import Control.Monad
 import Control.Monad.Trans.Either
 import Control.Monad.IO.Class
 
+import Data.DeriveTH
 import Data.List
 import Data.List.Ordered
 import Data.Typeable
 
 import Utilities.Format
 
---type Error = (String,Int,Int)
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord)
---        { message :: String
---        , line_info :: LineInfo }
 
 data LineInfo = LI 
         { file_name :: FilePath
@@ -28,13 +27,6 @@ data LineInfo = LI
 
 instance Show LineInfo where
     show (LI _ i j) = show (i,j)
-
-instance NFData LineInfo where
-    rnf (LI fn i j) = rnf (fn,i,j)
-
-instance NFData Error where
-    rnf (Error msg li) = rnf (msg,li)
-    rnf (MLError msg xs) = rnf (msg,xs)
 
 show_err :: [Error] -> String
 show_err xs = unlines $ map report $ sortOn line_info xs
@@ -86,3 +78,6 @@ shrink_error_list es' = do
                 ls1' = sortOn snd ls1
         less_specific _ _ = False
         es = nubSort es'
+
+derive makeNFData ''Error
+derive makeNFData ''LineInfo

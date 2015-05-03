@@ -16,6 +16,7 @@ import           UnitB.PO
 import qualified UnitB.POGenerator as PG
 
     -- Libraries
+import Control.Applicative hiding (Const)
 import Control.Arrow (first, (***))
 
 import Control.Monad
@@ -70,7 +71,7 @@ seqP xs  = Sequence $ xs
 
 loop :: Expr -> ProgramMaker () -> ProgramMaker ()
 loop term body = do
-    xs <- liftM snd $ censor (const []) $ listen body
+    xs <- snd <$> censor (const []) (listen body)
     let prog = seqP xs
         pre  = precondition prog
     tell [Loop term pre (seqP xs) Infinite]
@@ -140,7 +141,7 @@ atomically cmd = atomically' return $ \f -> cmd >>= f
     --     Sequential -> cmd
 
 evaluate :: Machine -> Expr -> M String
-evaluate m e = head `liftM` evaluate_all m [e]
+evaluate m e = head <$> evaluate_all m [e]
 
 evaluate_all :: Machine -> [Expr] -> M [String]
 evaluate_all m es = do

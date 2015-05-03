@@ -77,8 +77,8 @@ instance Readable ProgId where
     read_args = liftM PId read_args
         
 instance Readable (Maybe ProgId) where
-    read_one  = liftM (fmap PId) read_one
-    read_args = liftM (fmap PId) read_args
+    read_one  = fmap PId <$> read_one
+    read_args = fmap PId <$> read_args
 
 cmdSpec :: String -> Int -> DocSpec
 cmdSpec cmd nargs = DocSpec M.empty (M.singleton cmd nargs)
@@ -87,7 +87,7 @@ envSpec :: String -> Int -> DocSpec
 envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
 
 parseArgs :: (IsTuple a, AllReadable (TypeList a))
-          => [[LatexDoc]]
+          => [LatexDoc]
           -> M a
 parseArgs xs = do
     (x,[]) <- ST.runStateT read_all xs
@@ -135,7 +135,7 @@ machineEnv :: forall result args ctx.
               , IsTypeList  (TypeList args)
               , AllReadable (TypeList args))
            => String
-           -> (args -> [LatexDoc] -> MachineId -> ctx -> M result)
+           -> (args -> LatexDoc -> MachineId -> ctx -> M result)
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
@@ -152,7 +152,7 @@ envFun :: forall a b c d.
               ( IsTuple b, Ord c
               , IsTypeList  (TypeList b)
               , AllReadable (TypeList b))
-           => (b -> [LatexDoc] -> c -> d -> M a) 
+           => (b -> LatexDoc -> c -> d -> M a) 
            -> Env
            -> c -> (Map c d) -> MM (Maybe a)
 envFun f xs m ctx = case x of
@@ -188,7 +188,7 @@ contextEnv :: forall result args ctx.
               , IsTypeList  (TypeList args)
               , AllReadable (TypeList args))
            => String
-           -> (args -> [LatexDoc] -> ContextId -> ctx -> M result)
+           -> (args -> LatexDoc -> ContextId -> ctx -> M result)
            -> Pipeline MM (CTable ctx) (Maybe (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
@@ -386,16 +386,16 @@ type CTable = Map ContextId
     -- phase records and extract fields
     -- as maps to value
 onMap :: Ord k => Lens' a b -> Lens' (Map k a) (Map k b)
-onMap ln f ma = fmap (M.intersectionWith (flip $ set ln) ma) mb' -- write (_ $ read m) m
+onMap ln f ma = M.intersectionWith (flip $ set ln) ma <$> mb' 
     where
-        mb  = M.map (view ln) ma -- :: Map k b
-        mb' = f mb -- :: forall f. Applicative f => f (Map k b)
+        mb  = M.map (view ln) ma 
+        mb' = f mb 
 
 onMap' :: forall a b k. Ord k => Getting b a b -> Getter (Map k a) (Map k b)
 onMap' ln = to $ M.map $ view ln
 
 zoom :: Ord k => Set k -> Lens' (Map k a) (Map k a)
-zoom s f m = fmap (M.union m1) $ f m0
+zoom s f m = M.union m1 <$> f m0
     where
         (m0,m1) = M.partitionWithKey (const . (`S.member` s)) m
 

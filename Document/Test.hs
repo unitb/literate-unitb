@@ -27,6 +27,9 @@ import Tests.UnitTest
 
 import UnitB.PO
 
+    -- Libraries
+import Control.Applicative
+
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -61,10 +64,10 @@ result1 = unlines
     , "  o  m/enter/WD/ACT/a1"
     , "  o  m/enter/WD/C_SCH"
     , "  o  m/enter/WD/F_SCH"
-    , "  o  m/enter/WD/GRD/goal (21,1)"
-    , "  o  m/enter/WD/GRD/hypotheses (21,1)"
-    , "  o  m/enter/WD/GRD/relation (21,1)"
-    , "  o  m/enter/WD/GRD/step (23,1)"
+    , "  o  m/enter/WD/GRD/goal"
+    , "  o  m/enter/WD/GRD/hypotheses"
+    , "  o  m/enter/WD/GRD/relation"
+    , "  o  m/enter/WD/GRD/step 1"
     , "  o  m/enter/WWD"
     , "passed 12 / 12"
     ]
@@ -118,7 +121,7 @@ case2 = do
 --        f (Bracket _ _ xs _)  = 1 + depth xs
 --        f (Text _)          = 0
 
-instance Arbitrary LatexDoc where
+instance Arbitrary LatexNode where
     arbitrary = do
             n <- choose (1,7) :: Gen Int
             if n == 1 
@@ -128,13 +131,15 @@ instance Arbitrary LatexDoc where
                         then arbitrary :: Gen String
                         else return (kw !! n)
                     m    <- choose (0,6) :: Gen Int
-                    xs   <- forM [1..m] (\_ -> arbitrary :: Gen LatexDoc)
+                    xs   <- (`Doc` li 0 0) <$> forM [1..m] 
+                        (\_ -> arbitrary :: Gen LatexNode)
                     return $ Env name (li 0 0) xs (li 0 0)
             else if n == 2
                 then do
                     b  <- elements [Curly,Square]
                     m    <- choose (0,6) :: Gen Int
-                    xs   <- forM [1..m] (\_ -> arbitrary :: Gen LatexDoc)
+                    xs   <- (`Doc` li 0 0) <$> forM [1..m] 
+                        (\_ -> arbitrary :: Gen LatexNode)
                     return $ Bracket b (li 0 0) xs (li 0 0)
             else if 2 < n
                 then do
@@ -144,8 +149,8 @@ instance Arbitrary LatexDoc where
                         else xs
 --                    n <- choose (0,length cmd+1)
                     case read_lines tex_tokens "" ys of
-                        Right x -> return $ Text $ map fst x
-                        Left _  -> return $ Text $ [TextBlock "x" (li 0 0)]
+                        Right x -> return $ Text (map fst x) (li 0 0)
+                        Left _  -> return $ Text [TextBlock "x" (li 0 0)] (li 0 0)
             else error "Document.Test"
         where
             kw =
@@ -177,119 +182,122 @@ all_properties :: TestCase
 all_properties = Case "the parser is exception free" 
     (return (all_machines tree) >> return ()) ()
 
-tree0 :: [LatexDoc]
-tree0 =         [   Env "machine" (li 0 0) 
-                    [   Bracket Square (li 0 0) [] (li 0 0)
-                    ,   Bracket Curly (li 0 0) 
-                        [   Text 
-                            [   TextBlock "\FS1" (li 0 0)
-                            ,   Blank "\n" (li 1 2)
-                            ,   TextBlock "7\130\220.1\169" (li 1 3)
-                            ,   Blank "\n" (li 2 6)
+tree0' :: T LatexNode
+tree0' = env "machine"
+                    [   bracket Square []
+                    ,   bracket Curly
+                        [   text 
+                            [   textBlock "\FS1"
+                            ,   blank "\n"
+                            ,   textBlock "7\130\220.1\169"
+                            ,   blank "\n"
                             ]
-                        ,   Text 
-                            [   TextBlock "N\183T\241N" (li 0 0)
-                            ,   Blank "\n" (li 1 5)
+                        ,   text 
+                            [   textBlock "N\183T\241N"
+                            ,   blank "\n"
                             ]
-                        ,   Bracket Curly (li 0 0) [] (li 0 0)
-                        ,   Env "=F\129\216\RS\DC3\USG!0\150`\b\DC2I=}'\DC10\\\196-e9\STX\168\166Nt" (li 0 0) 
-                            [   Env "\239\n\132\&0\DC4X\nNr>#a\EOT;\183\188\162\231!l\DC1\STXf\FS" (li 0 0) 
-                                [] (li 0 0)
-                            ,   Text 
-                                [   TextBlock "9\"" (li 0 0)
-                                ,   Open Square (li 1 2)
-                                ,   TextBlock "\178\179\&6\190s\155\ETB`" (li 1 3)
-                                ,   Blank "\n" (li 1 11)
+                        ,   bracket Curly []
+                        ,   env "=F\129\216\RS\DC3\USG!0\150`\b\DC2I=}'\DC10\\\196-e9\STX\168\166Nt" 
+                            [   env "\239\n\132\&0\DC4X\nNr>#a\EOT;\183\188\162\231!l\DC1\STXf\FS" 
+                                []
+                            ,   text 
+                                [   textBlock "9\""
+                                ,   open Square
+                                ,   textBlock "\178\179\&6\190s\155\ETB`"
+                                ,   blank "\n"
                                 ]
-                            ] (li 0 0)
-                        ,   Text 
-                            [   TextBlock "\252\NUL0Sz,\215\255S\235\248\RSAu\251\217" (li 0 0)
-                            ,   Blank "\n" (li 1 16)
+                            ] 
+                        ,   text 
+                            [   textBlock "\252\NUL0Sz,\215\255S\235\248\RSAu\251\217"
+                            ,   blank "\n"
                             ]
-                        ] (li 0 0)
-                    ,   Text 
-                        [   TextBlock "\198\&6fH\231e" (li 0 0)
-                        ,   Command "\\\203" (li 1 6)
-                        ,   TextBlock "#" (li 1 8)
-                        ,   Open Square (li 1 9)
-                        ,   TextBlock "\167\SOH\242\&7\137iS" (li 1 10)
-                        ,   Blank "\n" (li 1 17)
                         ]
-                    ] (li 0 0)
-                ]
+                    ,   text 
+                        [   textBlock "\198\&6fH\231e"
+                        ,   command "\\\203"
+                        ,   textBlock "#"
+                        ,   open Square 
+                        ,   textBlock "\167\SOH\242\&7\137iS" 
+                        ,   blank "\n"
+                        ]
+                    ] 
+                
 
-tree :: [LatexDoc]
-tree = 
-    [   Env "fschedule" (li 0 0) 
-        [   Text 
-            [   TextBlock "ZK\DC3^\EOT<+\202\&0\144Ny\141;\129\242" (li 0 0)
-            ,   Blank "\n" (li 1 16)
+tree0 :: LatexDoc
+tree0 = makeTexDoc [tree0']
+
+tree :: LatexDoc
+tree = makeTexDoc
+    [   env "fschedule"  
+        [   text 
+            [   textBlock "ZK\DC3^\EOT<+\202\&0\144Ny\141;\129\242" 
+            ,   blank "\n" 
             ]
-        ,   Text 
-            [   Blank "\v" (li 0 0)
-            ,   TextBlock "@\252l\EOT\183\128\SOH\199" (li 1 1)
-            ,   Blank "\f" (li 1 9)
-            ,   TextBlock "\DC20\ETB\btT\199p9\248Q&\144\207\221u" (li 1 10)
-            ,   Blank "\n" (li 1 26)
+        ,   text 
+            [   blank "\v" 
+            ,   textBlock "@\252l\EOT\183\128\SOH\199"
+            ,   blank "\f"
+            ,   textBlock "\DC20\ETB\btT\199p9\248Q&\144\207\221u" 
+            ,   blank "\n" 
             ]
-        ,   Text 
-            [   TextBlock "\SOH\169\138H\168\&5Z;\EMs\243ddQV\193.\201\184zv\191T\DELm;" (li 0 0)
-            ,   Blank "\n" (li 1 26)
+        ,   text 
+            [   textBlock "\SOH\169\138H\168\&5Z;\EMs\243ddQV\193.\201\184zv\191T\DELm;" 
+            ,   blank "\n" 
             ]
-        ,   Text 
-            [   TextBlock "\198\&7\230m'\SIq7" (li 0 0)
-            ,   Close Square (li 1 8)
-            ,   TextBlock "\177" (li 1 9)
-            ,   Close Curly (li 1 10)
-            ,   TextBlock "1\173\180Bu\aHBJ\SI\ETX" (li 1 11)
-            ,   Blank "\n" (li 1 22)
+        ,   text 
+            [   textBlock "\198\&7\230m'\SIq7" 
+            ,   close Square 
+            ,   textBlock "\177" 
+            ,   close Curly 
+            ,   textBlock "1\173\180Bu\aHBJ\SI\ETX" 
+            ,   blank "\n" 
             ]
-        ,   Bracket Square (li 0 0) 
-        [   Text 
-            [   TextBlock "\FSI" (li 0 0)
-            ,   Blank " " (li 1 2)
-            ,   TextBlock "\175HD\US!0\174\242\DC2Nhx\199Z\143\238+\253?\181k\204?X" (li 1 3)
-            ,   Blank "\n" (li 1 27)
+        ,   bracket Square  
+        [   text 
+            [   textBlock "\FSI" 
+            ,   blank " " 
+            ,   textBlock "\175HD\US!0\174\242\DC2Nhx\199Z\143\238+\253?\181k\204?X" 
+            ,   blank "\n" 
             ]
-        ,   Text 
-            [   Blank "\t" (li 0 0)
-            ,   TextBlock "pL/5\212\SOH\164\152),\SUBD\213\US~\199" (li 1 1)
-            ,   Close Curly (li 1 17)
-            ,   TextBlock "s\209\184\228\239m\DC4" (li 1 18)
-            ,   Blank "\n" (li 1 25)
+        ,   text 
+            [   blank "\t" 
+            ,   textBlock "pL/5\212\SOH\164\152),\SUBD\213\US~\199" 
+            ,   close Curly 
+            ,   textBlock "s\209\184\228\239m\DC4" 
+            ,   blank "\n" 
             ]
-        ,   Env "fschedule" (li 0 0) 
-            [   Text 
-                [   TextBlock "x" (li 0 0)
-                ,   Blank "\n" (li 1 1)]
-                ,   Text 
-                    [   TextBlock "/\SYNu\203%/6\221Q\249\193" (li 0 0)
-                    ,   Blank " " (li 1 11)
-                    ,   TextBlock "gt\DC2\141" (li 1 12)
-                    ,   Blank "\n" (li 1 16)
+        ,   env "fschedule"  
+            [   text 
+                [   textBlock "x" 
+                ,   blank "\n" ]
+                ,   text 
+                    [   textBlock "/\SYNu\203%/6\221Q\249\193" 
+                    ,   blank " " 
+                    ,   textBlock "gt\DC2\141" 
+                    ,   blank "\n" 
                     ]
-                ,   Text 
-                    [   TextBlock "\214\162h\DC4!B5p\227\NUL9" (li 0 0)
-                    ,   Blank "\n" (li 1 11)
+                ,   text 
+                    [   textBlock "\214\162h\DC4!B5p\227\NUL9" 
+                    ,   blank "\n" 
                     ]
-                ,   Text 
-                    [   TextBlock "c8\136\230\&3H%\SOHi\154wyu\143pc" (li 0 0)
-                    ,   Close Square (li 1 16)
-                    ,   TextBlock "9\147" (li 1 17)
-                    ,   Blank "\r" (li 1 19)
-                    ,   TextBlock "\224iZO\169\223" (li 1 20)
-                    ,   Blank "\n" (li 1 26)
+                ,   text 
+                    [   textBlock "c8\136\230\&3H%\SOHi\154wyu\143pc" 
+                    ,   close Square 
+                    ,   textBlock "9\147" 
+                    ,   blank "\r" 
+                    ,   textBlock "\224iZO\169\223" 
+                    ,   blank "\n" 
                     ]
-                ,   head tree0
-                ] (li 0 0)
-            ,   Text 
-                [   TextBlock "\186z;\139\254\SIk1wr\a~\131" (li 0 0)
-                ,   Close Square (li 1 13)
-                ,   TextBlock "l_\192!\170" (li 1 14)
-                ,   Blank "\n" (li 1 19)
+                ,   tree0'
+                ] 
+            ,   text 
+                [   textBlock "\186z;\139\254\SIk1wr\a~\131" 
+                ,   close Square 
+                ,   textBlock "l_\192!\170" 
+                ,   blank "\n" 
                 ]
-            ] (li 0 0)
-        ] (li 0 0)
+            ] 
+        ] 
     ]
 
 li :: Int -> Int -> LineInfo

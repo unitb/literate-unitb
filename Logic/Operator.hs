@@ -2,6 +2,7 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE TemplateHaskell       #-}
 module Logic.Operator 
     (   Notation (..)
     ,   BinOperator (..)
@@ -27,6 +28,7 @@ import Logic.Expr hiding ( pair )
     -- Libraries
 import Control.DeepSeq
 
+import Data.DeriveTH
 import Data.Default
 import Data.Either
 import Data.Function
@@ -57,8 +59,6 @@ mk_unary (UnaryOperator _ _ f) x = f $ Right x
 data Assoc = LeftAssoc | RightAssoc | Ambiguous
     deriving (Show,Eq,Typeable)
 
-instance NFData Assoc where
-
 data Notation = Notation
     { new_ops :: [Operator]
     , prec :: [[[Operator]]] 
@@ -70,9 +70,6 @@ data Notation = Notation
     , quantifiers :: [(String,HOQuantifier)]
     , struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
-
-instance NFData Notation where
-    rnf (Notation a b c d e f g h i) = rnf (a,b,c,d,e,f,g,h,i)
 
 empty_notation :: Notation
 empty_notation = Notation 
@@ -140,9 +137,6 @@ instance Ord UnaryOperator where
 instance Show UnaryOperator where
     show (UnaryOperator x y _) = show (x,y) -- format str x y
 
-instance NFData UnaryOperator where
-    rnf (UnaryOperator a b c) = rnf (a,b,c)
-
 instance Named Operator where
     name (Right (BinOperator _ xs _))  = xs
     name (Left (UnaryOperator _ xs _)) = xs
@@ -160,9 +154,6 @@ instance Ord BinOperator where
 instance Show BinOperator where
     show (BinOperator x y _) = show (x,y) -- format str x y
 
-instance NFData BinOperator where
-    rnf (BinOperator a b c) = rnf (a,b,c)
-
 type Operator = Either UnaryOperator BinOperator
 
 data Command = Command String String Int ([ExprP] -> ExprP)
@@ -173,9 +164,6 @@ instance Show Command where
 instance Eq Command where
     (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =
         (x0,y0,n0) == (x1,y1,n1)
-    
-instance NFData Command where
-    rnf (Command a b c d) = rnf (a,b,c,d)
 
 class Input a where
     token :: a -> String
@@ -312,3 +300,9 @@ logic = with_assoc empty_notation
         , ((equiv,follows),follows)
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
+
+derive makeNFData ''Notation
+derive makeNFData ''UnaryOperator
+derive makeNFData ''Command
+derive makeNFData ''BinOperator
+derive makeNFData ''Assoc

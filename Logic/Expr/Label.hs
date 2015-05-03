@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Logic.Expr.Label where
 
     -- Module
@@ -8,6 +9,7 @@ import Logic.Expr.Classes
     -- Libraries
 import Control.DeepSeq
 
+import Data.DeriveTH
 import Data.List as L
 import Data.Map hiding ( map, split )
 import Data.String
@@ -24,9 +26,6 @@ instance Show Label where
 
 instance IsString Label where
     fromString x = label x
-
-instance NFData Label where
-    rnf (Lbl xs) = rnf xs
 
 label :: String -> Label
 label s = Lbl s
@@ -47,3 +46,5 @@ composite_label xs = Lbl $ intercalate "/" $ L.filter (not . L.null) $ map str x
 
 to_list :: Label -> [Label]
 to_list (Lbl xs) = map Lbl $ split "/" xs
+
+derive makeNFData ''Label

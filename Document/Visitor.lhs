@@ -49,7 +49,10 @@ import Logic.Expr
 import UnitB.AST
 
     -- Libraries
-import           Control.Applicative
+import Control.Applicative
+import Control.Arrow hiding (left,right)
+import Control.Lens
+
 import           Control.Monad.Reader.Class hiding (reader)
 import           Control.Monad.Trans.RWS 
         hiding ( ask, tell, asks, local, writer, reader )
@@ -79,23 +82,23 @@ import Utilities.Syntactic
 import Utilities.Tuple
 
 class Readable a where
-    read_args :: (Monad m, MonadReader LineInfo m)
-              => ST.StateT [LatexDoc] (EitherT [Error] m) a
-    read_one :: (Monad m, MonadReader LineInfo m)
-             => ST.StateT [[LatexDoc]] (EitherT [Error] m) a
+    read_args :: (Monad m)
+              => ST.StateT LatexDoc (EitherT [Error] m) a
+    read_one :: (Monad m)
+             => ST.StateT [LatexDoc] (EitherT [Error] m) a
 
 get_tuple' :: (Monad m, IsTuple a, AllReadable (TypeList a))
-           => [LatexDoc] -> LineInfo 
-           -> EitherT [Error] m (a, [LatexDoc])
+           => LatexDoc -> LineInfo 
+           -> EitherT [Error] m (a, LatexDoc)
 get_tuple' xs li = EitherT $ do
         x <- runReaderT (runEitherT $ ST.runStateT get_tuple xs) li
         return $ liftM (\(x,y) -> (fromTuple x,y)) x
 
 class AllReadable a where
     get_tuple :: (Monad m, MonadReader LineInfo m) 
-              => ST.StateT [LatexDoc] (EitherT [Error] m) a
+              => ST.StateT LatexDoc (EitherT [Error] m) a
     read_all :: (Monad m, MonadReader LineInfo m) 
-             => ST.StateT [[LatexDoc]] (EitherT [Error] m) a
+             => ST.StateT [LatexDoc] (EitherT [Error] m) a
 
 instance AllReadable () where
     get_tuple = return () 
@@ -127,48 +130,43 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
-trim_blanks :: [LatexToken] -> [LatexToken]
-trim_blanks xs = reverse $ skip_blanks $ reverse $ skip_blanks xs
+trim_blanks :: ([LatexToken],LineInfo) -> ([LatexToken],LineInfo)
+trim_blanks xs = first reverse $ skip_blanks_rev 
+    $ first (reverse . skip_blanks) xs
 
-get_next :: (Monad m, MonadReader LineInfo m)
-         => ST.StateT [[LatexDoc]] (EitherT [Error] m) [LatexDoc]
+get_next :: (Monad m)
+         => ST.StateT [LatexDoc] (EitherT [Error] m) LatexDoc
 get_next = do
-    li <- lift $ lift $ ask
     s  <- ST.get
     case s of
         x:xs -> ST.put xs >> return x
-        [] -> lift $ left [Error "expecting more arguments" li]
+        [] -> lift $ left [Error "expecting more arguments" $ line_info s]
 
-instance Readable [LatexDoc] where
+instance Readable LatexDoc where
     read_args = do
+        -- ts <- read_args
+        -- li <- ask
+        -- return $ LatexDoc ts li
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
         return arg
-    read_one = get_next
-
-instance Readable LatexDoc' where
-    read_args = do
-        ts <- read_args
-        li <- ask
-        return $ LatexDoc' li ts
     read_one = do
-        li <- ask
-        LatexDoc' li <$> get_next
+        get_next
 
 data Str = String { toString :: String }
 
-read_label :: (Monad m, MonadReader LineInfo m)
-           => ST.StateT [[LatexDoc]] (EitherT [Error] m) String
+read_label :: Monad m
+           => ST.StateT [LatexDoc] (EitherT [Error] m) String
 read_label = do
-    li <- lift $ lift $ ask
     x  <- get_next    
-    lift $ case trim_blank_text x of
-        ([Text [TextBlock x _]]) 
+    let x' = trim_blank_text' x
+    lift $ case x' of
+        (Doc [Text [TextBlock x _] _] _) 
             -> right x
-        ([Text [Command x _]]) 
+        (Doc [Text [Command x _] _] _) 
             -> right x
-        _   -> left [Error "expecting a label" li]
+        _   -> left [Error "expecting a label" $ line_info x']
 
 instance Readable Str where
     read_args = do
@@ -188,28 +186,27 @@ instance Readable Int where
         case reads arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                li <- lift ask
-                left [Error (format "invalid integer: '{0}'" arg) li]
+                left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
     read_one = do
+        ts  <- ST.get
         arg <- read_label
         case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
-                li <- lift ask
-                left [Error (format "invalid integer: '{0}'" arg) li]
+                left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
 
 instance Readable (Maybe Label) where
     read_args = do
         ts <- ST.get
         (arg,ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        let xs = (concatMap (concatMap flatten) arg)
+        let xs = (concatMap flatten' arg)
         if strip xs == "" then 
             return Nothing
         else return $ Just $ label xs
     read_one = do
         arg <- get_next
-        let xs = concatMap flatten arg
+        let xs = flatten' arg
         if strip xs == "" then
             return Nothing
         else return $ Just $ label xs
@@ -228,38 +225,36 @@ instance Readable [Label] where
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        return $ map label $ comma_sep (concatMap flatten arg)
+        return $ map label $ comma_sep (flatten' arg)
     read_one = do
         arg <- get_next
-        return $ map label $ comma_sep (concatMap flatten arg)
+        return $ map label $ comma_sep (flatten' arg)
 
 instance Readable [Str] where
     read_args = do
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        return $ map String $ comma_sep (concatMap flatten arg)
+        return $ map String $ comma_sep (flatten' arg)
     read_one = do
         arg <- get_next
-        return $ map String $ comma_sep (concatMap flatten arg)
+        return $ map String $ comma_sep (flatten' arg)
 
 instance Readable [[Str]] where
     read_args = do
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        case reads $ concatMap flatten arg of 
+        case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                li <- lift ask
-                left [Error (format "invalid list of strings: '{0}'" arg) li]
+                left [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
     read_one = do
         arg <- get_next
-        case reads $ concatMap flatten arg of 
+        case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                li <- lift ask
-                left [Error (format "invalid list of strings: '{0}'" arg) li]
+                left [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
 
 instance Read Str where
     readPrec = do
@@ -276,10 +271,10 @@ instance Readable (Set Label) where
         ts <- ST.get
         ([arg],ts) <- lift $ cmd_params 1 ts
         ST.put ts
-        return $ fromList $ map label $ comma_sep (concatMap flatten arg)
+        return $ fromList $ map label $ comma_sep (flatten' arg)
     read_one = do
         arg <- get_next
-        return $ fromList $ map label $ comma_sep (concatMap flatten arg)
+        return $ fromList $ map label $ comma_sep (flatten' arg)
 
 instance Readable (M.Map Label ()) where
     read_args = do
@@ -305,34 +300,33 @@ raise e = left [e]
 --         -> EitherT a m (Maybe b)
 --eitherTx m = lift $ eitherT (const $ return Nothing) (return . Just) m
 
-cmd_params :: (Monad m, MonadReader LineInfo m)
-           => Int -> [LatexDoc] 
-           -> EitherT [Error] m ([[LatexDoc]], [LatexDoc])
+cmd_params :: (Monad m)
+           => Int -> LatexDoc 
+           -> EitherT [Error] m ([LatexDoc], LatexDoc)
 cmd_params 0 xs     = right ([], xs)
 cmd_params n xs     = do
-        li <- lift $ ask
-        case drop_blank_text xs of
-            Bracket _ _ xs li : ys -> do
-                (ws, zs) <- local (const li) $ cmd_params (n-1) ys
+        let xs' = drop_blank_text' xs
+        case unconsTex xs' of
+            Just (Bracket _ _ xs _, ys) -> do
+                (ws, zs) <- cmd_params (n-1) ys
                 right (xs:ws, zs)
-            _                 -> left [Error ("Expecting one more argument") li]
+            _                 -> left [Error ("Expecting one more argument") $ line_info xs]
 
-get_1_lbl :: (Monad m, MonadReader LineInfo m)
-          => [LatexDoc] -> EitherT [Error] m (String, [LatexDoc])
+get_1_lbl :: (Monad m)
+          => LatexDoc -> EitherT [Error] m (String, LatexDoc)
 get_1_lbl xs = do 
         ([x],z) <- cmd_params 1 xs
-        case trim_blank_text x of
-            ([Text [TextBlock x _]]) 
+        let x' = trim_blank_text' x
+        case x' of
+            Doc [Text [TextBlock x _] _] _
                 -> right (x,z)
-            ([Text [Command x _]]) 
+            Doc [Text [Command x _] _] _
                 -> right (x,z)
-            _   -> err_msg (line_info xs)
+            _   -> err_msg x'
     where
-        err_msg li = left [Error "expecting a label" li]
+        err_msg x = left [Error "expecting a label" $ line_info x]
         
 --get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
---          => [LatexDoc] 
---          -> EitherT [Error] m (String, String, [LatexDoc])
 --get_2_lbl xs = do
 --        (lbl0,xs) <- get_1_lbl xs
 --        (lbl1,xs) <- get_1_lbl xs
@@ -351,25 +345,39 @@ get_1_lbl xs = do
 --        (lbl3,xs) <- get_1_lbl xs
 --        return (lbl0,lbl1,lbl2,lbl3,xs)
 
-drop_blank_text :: [LatexDoc] -> [LatexDoc]
-drop_blank_text ( Text [Blank _ _] : ys ) = drop_blank_text ys
-drop_blank_text ( Text (Blank _ _ : xs) : ys ) = drop_blank_text ( Text xs : ys )
+drop_blank_text :: [LatexNode] -> [LatexNode]
+drop_blank_text ( Text [Blank _ _] _ : ys ) = drop_blank_text ys
+drop_blank_text ( Text (Blank _ _ : xs) li : ys ) = drop_blank_text ( Text xs li : ys )
 drop_blank_text xs = xs
 
-drop_blank_text' :: LatexDoc' -> LatexDoc'
-drop_blank_text' (LatexDoc' li xs) = drop_blank_text_aux li xs
+drop_blank_text' :: LatexDoc -> LatexDoc
+drop_blank_text' (Doc xs li) = drop_blank_text_aux li xs
     where
-        drop_blank_text_aux li ( Text [] : ys ) = drop_blank_text_aux li ys
-        drop_blank_text_aux _ ( Text [Blank _ li] : ys ) = drop_blank_text_aux li ys
-        drop_blank_text_aux _ ( Text (Blank _ li : xs) : ys ) = drop_blank_text_aux li ( Text xs : ys )
-        drop_blank_text_aux li xs = LatexDoc' li xs
+        drop_blank_text_aux li ( Text [] _ : ys ) = drop_blank_text_aux li ys
+        drop_blank_text_aux _ ( Text [Blank _ li] _ : ys ) = drop_blank_text_aux li ys
+        drop_blank_text_aux _ ( Text (Blank _ li : xs) li' : ys ) = drop_blank_text_aux li ( Text xs li' : ys )
+        drop_blank_text_aux li xs = Doc xs li
 
-trim_blank_text :: [LatexDoc] -> [LatexDoc]
-trim_blank_text xs = reverse $ drop_blank_text (reverse $ drop_blank_text xs)
+
+trim_blank_text' :: LatexDoc -> LatexDoc
+trim_blank_text' xs = Doc xs' (lis !! length xs')
+    where
+        Doc ys li = drop_blank_text' xs
+        ys' = scanr (\x -> (allBlank x &&)) True ys
+        xs' = map fst $ takeWhile (not . snd) $ zip ys ys'
+        allBlank (Text xs _) = all isBlank xs
+        allBlank _ = False
+        isBlank (Blank _ _) = True
+        isBlank _ = False
+        lis = map line_info ys ++ [li]
 
 skip_blanks :: [LatexToken] -> [LatexToken]
-skip_blanks (Blank _ _ : xs) = xs
+skip_blanks (Blank _ _ : xs) = skip_blanks xs
 skip_blanks xs = xs 
+
+skip_blanks_rev :: ([LatexToken],LineInfo) -> ([LatexToken],LineInfo)
+skip_blanks_rev (Blank _ li : xs,_) = skip_blanks_rev (xs,li)
+skip_blanks_rev x = x
 
 with_line_info :: LineInfo -> EitherT a (ReaderT LineInfo m) b -> EitherT a m b
 with_line_info li cmd = 
@@ -379,29 +387,26 @@ with_line_info li cmd =
     -- Given a Latex document piece, find one instance
     -- of the given command, its arguments and the
     -- the parts surrounding it to the left and right
-find_cmd_arg :: Int -> [String] -> [LatexDoc] 
-             -> Maybe ([LatexDoc],LatexToken,[[LatexDoc]],[LatexDoc])
-find_cmd_arg n cmds (x@(Text xs) : cs) =
-        case (trim_blanks $ reverse xs) of
-            (t@(Command ys li):zs) -> 
-                    if ys `elem` cmds
-                    then eitherT
+find_cmd_arg :: Int -> [String] -> LatexDoc
+             -> Maybe (LatexDoc,LatexToken,[LatexDoc],LatexDoc)
+find_cmd_arg n cmds xs = -- (x@(Text xs _) : cs) =
+        case unconsTex xs of
+          Just (x@(Text xs li'), cs) ->
+            case (first reverse $ trim_blanks (xs,li')) of
+              (t@(Command ys li):zs,li')
+                | ys `elem` cmds ->
+                    eitherT
                             (\_       -> Nothing)
-                            (\(xs,ws) -> Just (f zs,t,xs,ws))
+                            (\(xs,ws) -> Just (f zs li',t,xs,ws))
                         $ with_line_info li
                         $ cmd_params n cs
-                    else continue
-            _    -> continue
+              _    -> do
+                _1 `over` consTex x <$> find_cmd_arg n cmds cs
+          Nothing -> Nothing
+          Just (x,xs) -> do
+                _1 `over` consTex x <$> find_cmd_arg n cmds xs
     where
-        continue = do
-                (a,t,b,c) <- find_cmd_arg n cmds cs
-                return (x:a,t,b,c)
-        f [] = []
-        f xs = [Text $ reverse xs]
-find_cmd_arg _ _ []     = Nothing
-find_cmd_arg n cmds (x:xs) = do
-                (a,t,b,c) <- find_cmd_arg n cmds xs
-                return (x:a,t,b,c)
+        f xs li = Doc [Text (reverse xs) li] li
 
 
     -- Bad, bad... unify the monad system of refinement, proof and machine already!
@@ -411,14 +416,14 @@ type Node s = EitherT [Error] (RWS LineInfo [Error] s)
 
 data EnvBlock s a = 
             forall t. (IsTuple t, AllReadable (TypeList t))
-         => EnvBlock (t -> [LatexDoc] -> a -> Node s a)
+         => EnvBlock (t -> LatexDoc -> a -> Node s a)
 
 data CmdBlock s a =
             forall t. (IsTuple t, AllReadable (TypeList t))
          => CmdBlock (t -> a -> Node s a)
 
 data VEnvBlock m = forall t. (IsTuple t, AllReadable (TypeList t))
-                => VEnvBlock (t -> [LatexDoc] -> VisitorT m ())
+                => VEnvBlock (t -> LatexDoc -> VisitorT m ())
 
 data VCmdBlock m =
                forall t. (IsTuple t, AllReadable (TypeList t))
@@ -492,7 +497,7 @@ data ParamT m = ParamT
     , cmdsT   :: [(String, VCmdBlock m)] 
     }
 
-data VisitorT m a = VisitorT { unVisitor :: ErrorT (ReaderT (LineInfo, [LatexDoc]) m) a }
+newtype VisitorT m a = VisitorT { unVisitor :: ErrorT (ReaderT (LineInfo, LatexDoc) m) a }
 
 instance Monad m => Functor (VisitorT m) where
     fmap = liftM
@@ -508,7 +513,6 @@ instance Monad m => Monad (VisitorT m) where
 instance MonadTrans VisitorT where
     lift = VisitorT . lift . lift
 
---instance Monad m => MonadReader (LineInfo,[LatexDoc]) (VisitorT m) where
 --    ask = VisitorT $ lift ask -- fst
 --    local f (VisitorT cmd) = VisitorT $ ErrorT $ do
 --            local f $ runErrorT cmd
@@ -524,13 +528,15 @@ instance S.MonadState s m => S.MonadState s (VisitorT m) where
     get = lift $ S.get
     put x = lift $ S.put x
 
-get_content :: Monad m => VisitorT m [LatexDoc]
+get_content :: Monad m => VisitorT m LatexDoc
 get_content = VisitorT $ lift $ asks snd
 
 with_content :: Monad m
-             => LineInfo -> [LatexDoc]
+             => LatexDoc
              -> VisitorT m a -> VisitorT m a
-with_content li xs (VisitorT cmd) = VisitorT $ local (const (li,xs)) cmd
+with_content xs (VisitorT cmd) = VisitorT $ local (const (li,xs)) cmd
+    where
+        li = line_info xs
 
 
 instance Monad m => MonadError (VisitorT m) where
@@ -567,7 +573,7 @@ lift_i (VisitorT cmd) = VisitorT $ ErrorT $ ReaderT $ \r -> do
 
 run_visitor :: Monad m 
             => LineInfo
-            -> [LatexDoc]
+            -> LatexDoc
             -> VisitorT m a
             -> EitherT [Error] m a
 run_visitor li xs (VisitorT cmd) = EitherT $ do
@@ -588,7 +594,7 @@ visitor blks cmds = do
                 $ map fst cmds
         xs <- VisitorT $ lift $ asks snd
         runReaderT (do
-            forM_ xs ff
+            forM_ (contents' xs) ff
             gg xs
             ) (ParamT blks cmds)
 --        VisitorT $ RWS.tell w
@@ -596,7 +602,7 @@ visitor blks cmds = do
 
 visit_doc :: [(String,EnvBlock s a)] 
           -> [(String,CmdBlock s a)] 
-          -> [LatexDoc] -> a 
+          -> LatexDoc -> a 
           -> RWS b [Error] s a
 visit_doc blks cmds cs x = do
 --        s0 <- RWS.get
@@ -665,23 +671,22 @@ run li m = EitherT $ do
 --                return y
 
 ff :: Monad m
-   => LatexDoc 
+   => LatexNode 
    -> ReaderT (ParamT m) (VisitorT m) ()
 ff (Env s li xs _) = do
             r <- asks $ L.lookup s . blocksT
             case r of
                 Just (VEnvBlock g)  -> do
                     (args,xs) <- lift $ VisitorT $ fromEitherT $ get_tuple' xs li
-                    lift $ with_content li xs $ g args xs
+                    lift $ with_content xs $ g args xs
                 Nothing -> do
-                    forM_ xs ff
+                    forM_ (contents' xs) ff
                     gg xs
 ff (Bracket _ _ cs _) = do
-            forM_ cs ff
+            forM_ (contents' cs) ff
             gg cs
-ff (Text _) = return ()
+ff (Text _ _) = return ()
 
---f :: [(String, EnvBlock s a)] -> a -> LatexDoc 
 --  -> RWS (Param s a) [Error] s a
 --f ((name,EnvBlock g):cs) x e@(Env s li xs _)
 --        | name == s = do
@@ -699,24 +704,26 @@ ff (Text _) = return ()
 --        g x cs
 --f _ x (Text _)               = return x
 
-gg :: Monad m => [LatexDoc] 
+gg :: Monad m => LatexDoc
    -> ReaderT (ParamT m) (VisitorT m) ()
-gg (Text xs : ts) = do
-    case trim_blanks $ reverse xs of
-        Command c li:_   -> do
-                r <- asks $ L.lookup c . cmdsT
-                case r of
-                    Just (VCmdBlock f) -> do
-                        (args,_) <- lift $ VisitorT $ fromEitherT $ get_tuple' ts li
-                        lift $ with_content li [] $ f args 
-                        r <- gg ts
-                        return r
-                    Nothing -> gg ts
-        _                   -> gg ts
-gg (_ : ts) = gg ts
-gg [] = return ()
+gg x =
+    case unconsTex x of
+      Just (Text xs li, ts) -> do
+        case first reverse $ trim_blanks (xs,li) of
+          (Command c li:_,_)   -> do
+            r <- asks $ L.lookup c . cmdsT
+            case r of
+                Just (VCmdBlock f) -> do
+                    (args,_) <- lift $ VisitorT $ fromEitherT $ get_tuple' ts li
+                    lift $ with_content (Doc [] li) 
+                        $ f args 
+                    r <- gg ts
+                    return r
+                Nothing -> gg ts
+          _             -> gg ts
+      Just (_, ts) -> gg ts
+      Nothing -> return ()
 
---g :: a -> [LatexDoc] 
 --  -> RWS (Param s a) [Error] s a
 --g x (Text xs : ts) = do
 --    case trim_blanks $ reverse xs of
@@ -727,7 +734,6 @@ gg [] = return ()
 --g x (_ : ts) = g x ts
 --g x [] = return x
 
---h :: [(String,CmdBlock s a)] -> a -> String -> [LatexDoc] 
 --  -> LineInfo -> RWS (Param s a) [Error] s a
 --h ((name,c):cs) x cmd ts li
 --    | name == cmd   =

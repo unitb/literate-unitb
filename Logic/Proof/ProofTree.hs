@@ -1,4 +1,7 @@
-{-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
+{-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE OverloadedStrings          #-}
 module Logic.Proof.ProofTree where
 
     -- Modules
@@ -7,9 +10,11 @@ import Logic.Operator
 import Logic.Proof.Sequent
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 import Control.Monad
 
+import Data.DeriveTH
 import Data.List as L
 import Data.Map as M 
                 ( Map )
@@ -26,9 +31,6 @@ data Ignore = Ignore LineInfo
 data Prune = Prune Int Proof
     deriving (Eq,Typeable)
 
--- instance ProofRule Proof where
---     proof_po y (Proof x) z a = proof_po y x z a
-
 data Proof =  FreeGoal String String Type Proof LineInfo
             | ByCases   [(Label, Expr, Proof)] LineInfo
             | Easy                             LineInfo
@@ -41,17 +43,6 @@ data Proof =  FreeGoal String String Type Proof LineInfo
             | ByCalc Calculation
     deriving (Eq,Typeable)
 
-instance NFData Proof where
-    rnf (FreeGoal xs ys t p li) = rnf (xs,ys,t,p,li)
-    rnf (ByCases a b) = rnf (a,b)
-    rnf (Easy li) = rnf li
-    rnf (Assume a b c d) = rnf (a,b,c,d)
-    rnf (Assertion a b c d) = rnf (a,b,c,d)
-    rnf (ByParts a b) = rnf (a,b)
-    rnf (InstantiateHyp a b c d) = rnf (a,b,c,d)
-    rnf (Keep a b c d e) = rnf (a,b,c,d,e)
-    rnf (ByCalc a) = rnf a
-
 data Calculation = Calc 
         {  context    :: Context
         ,  goal       :: Expr
@@ -59,9 +50,6 @@ data Calculation = Calc
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
     deriving (Eq, Typeable)
-
-instance NFData Calculation where
-    rnf (Calc a b c d e) = rnf (a,b,c,d,e)
 
 data TheoremRef = 
         ThmRef Label [(Var,Expr)]
@@ -80,26 +68,13 @@ instance Syntactic Calculation where
     line_info c = l_info c
 
 instance Syntactic Proof where
-    -- line_info (Proof x) = line_info x
--- instance Syntactic ByCases where
     line_info (ByCases _ li)        = li
--- instance Syntactic Assume where
     line_info (Assume _ _ _ li)     = li
--- instance Syntactic ByParts where
     line_info (ByParts _ li)        = li
--- instance Syntactic Assertion where
     line_info (Assertion _ _ _ li)  = li
--- instance Syntactic Easy where
     line_info (Easy li)             = li
--- instance Syntactic FreeGoal where
     line_info (FreeGoal _ _ _ _ li)   = li
--- instance Syntactic Prune where
-    -- line_info (Prune _ p) = line_info p
--- instance Syntactic Ignore where
-    -- line_info (Ignore li) = li
--- instance Syntactic InstantiateHyp where
     line_info (InstantiateHyp _ _ _ li) = li
--- instance Syntactic Keep where
     line_info (Keep _ _ _ _ li) = li
     line_info (ByCalc c) = line_info c
 
@@ -107,43 +82,40 @@ instance ProofRule Proof where
     proof_po (ByCalc c) lbl po@(Sequent ctx _ _ _) = do
             let (y0,y1) = entailment (goal_po c) po
             ys   <- obligations' ctx po c
-            return $ L.map f (  (with_li "goal ",y0) 
-                              : (with_li "hypotheses ",y1)
+            return $ L.map f (  ("goal",y0) 
+                              : ("hypotheses",y1)
                               : ys)
         where 
             f (x,y) = (composite_label [lbl, x],y)
-            with_li x = label (x ++ show li)
-            li  = line_info c
+            -- with_li x = label (x ++ show li)
+            -- li  = line_info c
 
--- instance ProofRule ByCases where
     proof_po (ByCases xs li) lbl (Sequent ctx asm hyps goal) = do
             dis <- toErrors li $ mzsome (L.map (\(_,x,_) -> Right x) xs)
             let c  = completeness dis
-            cs <- mapM case_a $ zip [1..] xs
+            cs <- zipWithM case_a [1..] xs
             return (c : concat cs)
         where
             completeness dis = 
-                    ( (f ("completeness " ++ show li)) 
+                    ( (f "completeness") 
                     , Sequent ctx asm hyps dis )
-            case_a (n,(_,x,p)) = proof_po p (f ("case " ++ show n))
+            case_a n (_,x,p) = proof_po p (f ("case " ++ show n))
                     $ Sequent ctx (x:asm) hyps goal
             f x     = composite_label [lbl,label x]
 
--- instance ProofRule ByParts where
-    proof_po (ByParts xs li) lbl (Sequent ctx asm hyps goal) = do
+    proof_po (ByParts xs _) lbl (Sequent ctx asm hyps goal) = do
             let conj = L.map (\(x,_) -> x) xs
                 c  = completeness conj
-            cs <- mapM part $ zip [1..] xs
+            cs <- zipWithM part [1..] xs
             return (c : concat cs)
         where
             completeness conj = 
-                    ( (f ("completeness " ++ show li)) 
+                    ( (f "completeness") 
                     , Sequent ctx conj hyps goal )
-            part (n,(x,p)) = proof_po p (f ("part " ++ show n))
+            part n (x,p) = proof_po p (f ("part " ++ show n))
                     $ Sequent ctx asm hyps x
             f x     = composite_label [lbl,label x]
 
--- instance ProofRule FreeGoal where
     proof_po    (FreeGoal v u t p li) 
                 lbl po@(Sequent ctx asm hyps goal) = do
             new_goal <- free_vars goal
@@ -159,21 +131,18 @@ instance ProofRule Proof where
                     | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
             free_vars expr = return expr
 
--- instance ProofRule Easy where
-    proof_po    (Easy (LI _ i j)) 
+    proof_po    (Easy _) 
                 lbl po = 
-            return [(composite_label [lbl, label ("easy " ++ show (i,j))],po)]
+            return [(composite_label [lbl, label "easy"],po)]
 
--- instance ProofRule Assume where
-    proof_po    (Assume new_asm new_goal p (LI _ i j))
+    proof_po    (Assume new_asm new_goal p _)
                 lbl (Sequent ctx asm hyps goal) = do
             pos <- proof_po p lbl $ Sequent ctx asm (new_asm `M.union` hyps) new_goal
-            return ( ( composite_label [lbl, label ("new assumption " ++ show (i,j))]
+            return ( ( composite_label [lbl, label "new assumption"]
                      , Sequent ctx [] M.empty (           zimplies (zall new_asm) new_goal 
                                                `zimplies` goal) )
                    : pos)
 
--- instance ProofRule Assertion where
     proof_po    (Assertion lemma dep p _)
                 lbl (Sequent ctx asm hyps goal) = do
             let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
@@ -187,14 +156,6 @@ instance ProofRule Proof where
                     $ Sequent ctx asm (thm `M.union` hyps) g )
             return (pos1 ++ concat pos2)
 
---instance ProofRule Prune where
---    proof_po th (Prune n p) lbl (Sequent ctx asm goal) = 
---            proof_po th p lbl (Sequent ctx (drop (length asm - n) asm) goal)
-
--- instance ProofRule Ignore where
---     proof_po _ _ _ _ = Right []
-
--- instance ProofRule InstantiateHyp where
     proof_po    (InstantiateHyp hyp ps proof li) 
                 lbl (Sequent ctx asm hyps goal) = do
         if hyp `elem` M.elems hyps || hyp `elem` asm then do
@@ -214,7 +175,7 @@ instance ProofRule Proof where
         else
             Left [Error ("formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp) li]
--- instance ProofRule Keep where
+
     proof_po    (Keep ctx unnamed named proof _) 
                 lbl (Sequent _ _ _ goal) = do
         proof_po proof lbl (Sequent ctx unnamed named goal)
@@ -230,7 +191,7 @@ chain n x y
 
 infer_goal :: Calculation -> Notation -> Either [String] Expr
 infer_goal (Calc _ _ s0 xs _) n = do
-        op <- mk_expr `fmap` foldM (chain n) equal (L.map g xs)
+        op <- mk_expr <$> foldM (chain n) equal (L.map g xs)
         case reverse $ L.map f xs of
             x:_ -> either 
                         (\x -> Left x) --,i,j)) 
@@ -261,13 +222,13 @@ goal_po c = Sequent (context c) xs M.empty (goal c)
 
 obligations :: Context -> Sequent -> Calculation -> Either [Error] [Sequent]
 obligations ctx s c = do
-        fmap (L.map snd) $ obligations' ctx s c
+        L.map snd <$> obligations' ctx s c
 
 obligations' :: Context -> Sequent -> Calculation -> Either [Error] [(Label, Sequent)]
 obligations' ctx s c = do
         x  <- entails_goal_po ctx c
         ys <- steps_po ctx s c
-        return ((label ("relation " ++ show (l_info c)),x):ys)
+        return (("relation",x):ys)
 
 --proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
@@ -289,15 +250,15 @@ rename_all vs (Binder q ds r xp t) = Binder q ds (rename_all us r) (rename_all u
 rename_all vs e = rewrite (rename_all vs) e 
 
 steps_po :: Context -> Sequent -> Calculation -> Either [Error] [(Label, Sequent)]
-steps_po ctx s (Calc d _ e0 es _) = f e0 es
+steps_po ctx s (Calc d _ e0 es _) = f e0 es [1..]
     where
-        f _ [] = return []
-        f e0 ((r0, e1, a0,li):es) = do
+        f _ [] _ = return []
+        f e0 ((r0, e1, a0,li):es) ns = do
                 expr <- with_li li $ mk_expr r0 e0 e1
-                tail <- f e1 es
+                tail <- f e1 es $ tail ns
                 let (Sequent _ asm _ _) = s
                 return (
-                    ( label ("step " ++ show li)
+                    ( label ("step " ++ show (head ns))
                     , Sequent 
                         (ctx `merge_ctx` d) 
                         (a0 ++ asm) 
@@ -317,11 +278,13 @@ entails_goal_po ctx (Calc d g e0 es li) = do
                 M.empty 
                 g
     where
-        assume = 
-                fmap reverse $ foldM f [] (L.map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
+        assume = reverse <$> foldM f [] (L.map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
         f xs mx = do 
             x <- mx
             return (x:xs)
         ys = L.map(\(_,x,_,_) -> x) es
         xs = take (length es) (e0:ys)
         rs = L.map(\(x,_,_,_) -> x) es
+
+derive makeNFData ''Proof
+derive makeNFData ''Calculation

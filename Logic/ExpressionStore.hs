@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell  #-}
 module Logic.ExpressionStore 
     ( ExprStore, insert, empty_store, get_string, fromList )
 where
@@ -11,13 +12,11 @@ import Logic.Expr.TypeChecking
 import Control.Arrow
 import Control.DeepSeq
 
+import Data.DeriveTH
 import Data.Map as M ( insertWith, fromListWith, Map, empty, lookup ) --, (!) )
 
 newtype ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }
     deriving Eq
-
-instance NFData ExprStore where
-    rnf (ExprStore x) = rnf x
 
 fromList :: [(Expr,[String])] -> ExprStore
 fromList xs = ExprStore $ M.fromListWith (++) $ map (first stripTypes) xs
@@ -49,3 +48,5 @@ to_latex (FunApp f@(Fun _ "=" _ _ _) [Word (Var x _),Word (Var y _)])
 to_latex e 
     | e == zfalse = "\\false " ++ generated_by
     | otherwise   = error $ "ExprStore.to_latex: cannot convert expression to LaTeX: " ++ show e
+
+derive makeNFData ''ExprStore

@@ -13,6 +13,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Monad.Writer
 
+import           Data.DeriveTH
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
@@ -131,6 +132,4 @@ axioms name cmd
         ls = lefts xs
         xs = execWriter cmd
 
-instance NFData Theory where
-    rnf (Theory a b c d e f g h i j) = 
-            a `deepseq` rnf (b,c,d,e,f,g,h,i,j)
+derive makeNFData ''Theory

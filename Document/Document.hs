@@ -34,13 +34,14 @@ import qualified Control.Monad.Writer as W
 import           Data.Either.Combinators
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
+import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.Ordered (sortOn)
 import qualified Data.Traversable as T
 
 import Utilities.Syntactic
 
-read_document :: [LatexDoc] -> Either [Error] System
+read_document :: LatexDoc -> Either [Error] System
 read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
             let li = line_info xs
             (ms,cs) <- get_components xs li
@@ -59,7 +60,7 @@ read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
                     { machines = M.mapKeys (\(MId s) -> s) machines 
                     , expr_store = es }
 
-all_machines :: [LatexDoc] -> Either [Error] System
+all_machines :: LatexDoc -> Either [Error] System
 all_machines xs = read_document xs
 
 list_machines :: FilePath
@@ -93,11 +94,12 @@ parse_machine fn = runEitherT $ do
         ms <- hoistEither $ all_machines xs
         return $ map snd $ toList $ machines ms
 
-get_components :: [LatexDoc] -> LineInfo 
+get_components :: LatexDoc -> LineInfo 
                -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
 get_components xs li = 
         liftM g
-            $ R.runReader (runEitherT $ W.execWriterT (mapM_ f xs)) li
+            $ R.runReader (runEitherT $ W.execWriterT 
+                    (mapM_ f $ contents' xs)) li
 
     where
         with_li li cmd = R.local (const li) cmd
@@ -105,15 +107,15 @@ get_components xs li =
         f x@(Env tag li0 xs _li1) 
             | tag == "machine" = do
                     n <- get_name li0 xs
-                    W.tell ([(n,xs)],[])
+                    W.tell ([(n,[xs])],[])
             | tag == "context" = do
                     n <- get_name li0 xs
-                    W.tell ([],[(n,xs)])
+                    W.tell ([],[(n,[xs])])
             | otherwise      = map_docM_ f x
         f x = map_docM_ f x
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
 
-runPipeline' :: M.Map String [LatexDoc] 
+runPipeline' :: M.Map String [LatexDoc]
              -> M.Map String [LatexDoc]
              -> Pipeline MM Input a 
              -> Either [Error] a
@@ -125,6 +127,6 @@ runPipeline' ms cs p = case x of
     where
         (x,(),w) = runRWS (runMaybeT $ f input) input ()
         input = Input mch ctx
-        mch   = M.mapKeys MId $ M.map (getLatexBlocks m_spec) ms
-        ctx   = M.mapKeys CId $ M.map (getLatexBlocks c_spec) cs
+        mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
+        ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs
         Pipeline m_spec c_spec f = p

@@ -21,6 +21,7 @@ import Control.Monad
 import           Data.Array as A ( bounds, Array, (//), array, ixmap )
 import qualified Data.Array as A -- hiding ( (!) )
 import           Data.Array.ST
+import           Data.DeriveTH
 import           Data.Function
 import           Data.Graph hiding ( vertices )
 import           Data.List as L hiding ( union, (\\), transpose, map )
@@ -33,7 +34,7 @@ import qualified Data.Map  as M
 import           Data.Maybe
 import           Data.Tuple
 
-import Prelude hiding ( seq, map )
+import Prelude hiding ( map )
 
 import Test.QuickCheck
 
@@ -45,9 +46,6 @@ instance Show a => Show (SCC a) where
 
 data Matrix a b = Matrix (Map a (Map a b)) [a] b
     deriving (Eq, Show)
-
-instance (NFData a, NFData b) => NFData (Matrix a b) where
-    rnf (Matrix a b c) = rnf (a,b,c)
 
 empty :: b -> Matrix a b
 empty x = Matrix M.empty [] x
@@ -131,13 +129,13 @@ times (Matrix m0 xs x) (Matrix m1 ys y) = Matrix m2 zs z
                             y <- ys
                             let xs' = L.map (x `f`) zs
                                 ys' = L.map (`g` y) zs
-                                zs' = zipWith seq xs' ys'
+                                zs' = zipWith seqC xs' ys'
                             [(y,uppest zs')]
                 [(x,m)]
         -- zs :: [a]
         zs = xs `L.union` ys
         -- z :: b
-        z  = x `seq` y
+        z  = x `seqC` y
 
 uppest :: Composition a => [a] -> a
 uppest = foldl up zero 
@@ -149,7 +147,7 @@ class Eq a => Composition a where
     below :: a -> a -> Bool
     zero :: a
     up  :: a -> a -> a
-    seq    :: a -> a -> a
+    seqC   :: a -> a -> a
     below x y = x `up` y == y
     -- zero `up` x = x
     -- zero `seq` x = zero
@@ -161,7 +159,7 @@ axm_comp_zero_and_up :: Composition a => a -> Bool
 axm_comp_zero_and_up x = zero `up` x == x
 
 axm_comp_zero_and_seq :: Composition a => a -> Bool
-axm_comp_zero_and_seq x = zero `seq` x == zero
+axm_comp_zero_and_seq x = zero `seqC` x == zero
 
 axm_comp_below_and_up :: Composition a => a -> a -> Bool
 axm_comp_below_and_up x y = x `below` y  ==  (x `up` y == y)
@@ -203,7 +201,7 @@ prop_all = properties (Type :: Type (Min Int))
 instance Composition Bool where
     zero   = False
     up x y = x || y
-    seq x y   = x && y
+    seqC x y   = x && y
 
 data Min a = 
         Min { unMin :: a }
@@ -215,9 +213,9 @@ instance (Ord a, Num a) => Composition (Min a) where
     up (Min x) (Min y) = Min $ x `min` y
     up Infinite y      = y
     up x Infinite      = x
-    seq (Min x) (Min y)   = Min $  x  +  y
-    seq Infinite _        = Infinite
-    seq _ Infinite        = Infinite
+    seqC (Min x) (Min y)   = Min $  x  +  y
+    seqC Infinite _        = Infinite
+    seqC _ Infinite        = Infinite
 
 instance Arbitrary a => Arbitrary (Min a) where
     arbitrary = sized $ \sz -> do
@@ -338,7 +336,7 @@ closure_ ar = runSTArray $ do
               x <- readArray ar (i,k)
               y <- readArray ar (k,j)
               z <- readArray ar (i,j)
-              writeArray ar (i,j) $ z `up` seq x y
+              writeArray ar (i,j) $ z `up` seqC x y
         return ar
     where
         ((_,m),(_,n)) = bounds ar
@@ -366,3 +364,5 @@ unions_aux' x ws@((y:ys):zs)
 return []
 run_tests :: IO Bool
 run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+
+derive makeNFData ''Matrix
