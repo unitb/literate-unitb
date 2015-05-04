@@ -30,6 +30,7 @@ where
 import Logic.Expr hiding (merge)
 import Logic.ExpressionStore (ExprStore, empty_store)
 import Logic.Operator
+import Logic.Proof.POGenerator ( POGen )
 import Logic.Theory as Th
 
 import Theories.SetTheory
@@ -37,7 +38,6 @@ import Theories.FunctionTheory
 import Theories.Arithmetic
 
 import UnitB.Event
-import UnitB.POGenerator ( POGen )
 import UnitB.Property
 
     -- Libraries

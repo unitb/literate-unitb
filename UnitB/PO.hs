@@ -17,12 +17,12 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Proof
+import           Logic.Proof.POGenerator hiding ( variables )
+import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
 
 import           UnitB.AST
-import           UnitB.POGenerator hiding ( variables )
-import qualified UnitB.POGenerator as POG
 
 import Z3.Z3
 

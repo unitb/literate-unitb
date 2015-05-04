@@ -72,19 +72,26 @@ Todo:
         * ~~commit~~
 
         * ~~Fix ExprStore~~
-        * simplify the pipeline arrow and remove the line info from the parser phase specifications
-        * [LatexDoc] should become a case of LatexDoc
-        * Improve line info
+        * ~~simplify the pipeline arrow and remove the line info from the parser phase specifications~~
+        * ~~[LatexDoc] should become a case of LatexDoc~~
+        * ~~Improve line info~~
+        * ~~The parser for refinement rules has a writer to declare dependency remove it if it is not useful~~
+        * ~~Expressions and their LaTeX counterparts are no longer stored. Collect them somehow~~
+        * ~~remove System from the state of the parser~~
+        * ~~commit~~
+
+        * Event splitting
+        * Do split events exist?
+        * split event in liveness graph
+        * commit
+
         * In the expression declaration classes, add methods for every field of the phase objects
         * Convert Proof.ProofTree to the POGenerator monad
 
-        * The parser for refinement rules has a writer to declare dependency remove it if it is not useful
-        * Expressions and their LaTeX counterparts are no longer stored. Collect them somehow
         * In interactive mode, dump error messages and POs in a file
             * (atomically)
 
         * slow parser
-        * remove System from the state of the parser
         * use an arrow to manage independent sources of errors
         * commit
 

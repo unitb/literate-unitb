@@ -1,0 +1,61 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+	% see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{../unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common
+% customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\input{machine_m1}
+\input{machine_m2}
+\newcommand{\stmt}[1]{ $#1$ }
+\newcommand{\comment}[2]{ 
+	% \begin{tabular}{|l|l|} 
+	% 	\hline
+		\begin{description}
+		\item[{#1}] ~ #2 
+		\end{description}
+	% 	\hline 
+	% \end{tabular} 
+	}
+\newcommand{\commentbox}[1]{ 
+	\begin{block} \item \small{ #1 } \end{block} }
+\newcommand{\G}{\text{Val}}
+\newcommand{\Req}{\text{Req}}
+% \renewcommand{\H}{\text{H}}
+
+\section{Initial model --- Requests}
+\begin{machine}{m0}
+
+\newset{\G} \newset{\Req}
+\newevent{evt}
+	\variable{v : \Int} \indices{evt}{p : \Int}
+	\evbcmeq{evt}{act0}{v}{7}
+\end{machine}
+\begin{machine}{m1}
+	\refines{m0}
+	\splitevent{evt}{evt0,evt1,evt2}
+	\evguard{evt1}{grd0}{v = 8}\indices{evt2}{q : \Int}
+\end{machine}
+\begin{machine}{m2}
+	\refines{m1}
+\end{machine}
+\end{document}

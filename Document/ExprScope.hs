@@ -257,20 +257,22 @@ instance Scope ActionDecl where
 instance Scope EvtExprScope where
     keep_from s x = applyEvtExprScope (keep_from s) x
     make_inherited e = applyEvtExprScope make_inherited e
-    error_item e = getConst $ applyEvtExprScope (Const . error_item) e
+    error_item e = readEvtExprScope error_item e
     clashes x y = fromMaybe True $ getConst <$> apply2EvtExprScope (fmap Const <$> clashes) x y
     merge_scopes x y = fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "EvtExprScope Scope.merge_scopes: _, _"
+    rename_events m = applyEvtExprScope (rename_events m)
 
 instance Scope ExprScope where
     keep_from s x = applyExprScope (keep_from s) x
     make_inherited e = applyExprScope make_inherited e
-    error_item e = getConst $ applyExprScope (Const . error_item) e
+    error_item e = readExprScope (error_item) e
     clashes x y = fromMaybe True $ getConst <$> apply2ExprScope (fmap Const <$> clashes) x y
     merge_scopes x y = fromMaybe err $ runIdentity <$> apply2ExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "ExprScope Scope.merge_scopes: _, _"
+    rename_events m = applyExprScope (rename_events m)
 
 instance Show ExprScope where
     show (ExprScope x) = show x

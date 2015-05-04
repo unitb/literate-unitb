@@ -192,6 +192,9 @@ array_sort = Sort "Array" "Array" 2
 array :: TypeSystem t => t -> t -> t
 array t0 t1 = make_type array_sort [t0,t1]
 
+set_sort :: Sort
+set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
+
 derive makeNFData ''TypeCons
 derive makeNFData ''FOType
 derive makeNFData ''GenericType

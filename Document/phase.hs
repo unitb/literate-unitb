@@ -234,8 +234,6 @@ data MachineP1' events theory = MachineP1
     { _p0 :: MachineP0
     , _pEvents    :: Map EventId events
     , _pContext   :: theory
-    -- , _machineP1'PEvents :: Map Label events
-    -- , _pNewEvents :: Map Label EventId
     } deriving Show
 
 type MachineP2 = MachineP2' EventP2 TheoryP2
@@ -268,12 +266,6 @@ type MachineP4 = MachineP4' EventP4 TheoryP3
 
 data MachineP4' events theory = MachineP4
     { _p3 :: MachineP3' events theory
-    -- , _pEvtRef :: Abs EventId <-> Conc EventId
-    -- , _pEvtRefProgA :: Abs EventId <-> Abs Label
-    -- , _pEvtRefProgC :: Abs EventId <-> Conc Label
-    -- , _pLiveProof   :: ProgId  <-> ProgId
-    -- , _pLiveImplA   :: Abs Label  <-> Abs EventId
-    -- , _pLiveImplC   :: Conc Label <-> Conc EventId
     , _pLiveRule :: Map ProgId Rule
     , _pProofs   :: Map Label (Tactic Proof, LineInfo)
     , _pComments :: Map DocItem String
@@ -281,7 +273,7 @@ data MachineP4' events theory = MachineP4
 
 data EventP1 = EventP1
         { _eEventId :: EventId
-        , _eIsNew :: Bool }
+        , _eAbsEvent :: [EventId] }
     deriving Show
 
 data EventP2 = EventP2 
@@ -302,9 +294,9 @@ data EventP3 = EventP3
     , _eNewFineSched   :: Map Label Expr
     , _eOldGuards   :: Map Label Expr
     , _eDelGuards   :: Map Label Expr
-    , _eNewGuards   :: Map Label Expr       -- Guards
+    , _eNewGuards   :: Map Label Expr       
     , _eWitness     :: Map Var Expr
-    , _eOldActions  :: Map Label Action    -- Actions
+    , _eOldActions  :: Map Label Action    
     , _eDelActions  :: Map Label Action
     , _eNewActions  :: Map Label Action
     } deriving Show
@@ -486,6 +478,9 @@ newDelVars :: HasMachineP2' phase
            => Getter (phase events t) (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
+eIsNew :: HasEventP1 event => Getter event Bool
+eIsNew = to $ \e -> L.null $ e ^. eAbsEvent
+
 pNewEvents :: (HasMachineP1' phase, HasEventP1 events)
            => Getter (phase events t) (Map EventId events)
 pNewEvents = pEvents . to (M.filter $ not . view eIsNew)
@@ -604,6 +599,12 @@ pWitness :: HasMachineP3 mch event
          => Lens' (mch event t) (Map EventId (Map Var Expr))
 pWitness = pEvents . onMap eWitness
 
+pEventRenaming :: HasMachineP1 mch event
+               => Getter (mch event thy) (Map EventId [EventId])
+pEventRenaming = pEvents . to (M.fromListWith (++) . f)
+    where
+        f es = [ (ae,[eid]) | (eid,aevts) <- M.toList es, ae <- aevts ^. eAbsEvent ]
+
 -- asMap
 
 -- instance HasMachineP0 MachineP3 where
@@ -655,15 +656,23 @@ aliases ln0 ln1 = lens getter $ flip setter
                 y = view ln1 z
         setter x = set ln0 x . set ln1 x
 
+inheritWith' :: Ord k 
+             => (base -> conc) 
+             -> (k -> conc -> abstr)
+             -> (conc -> abstr -> conc)
+             -> Hierarchy k 
+             -> Map k base -> Map k conc
+inheritWith' decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
+    where
+        f m v = case v `M.lookup` es of 
+                 Just u -> M.adjustWithKey (app $ m ! u) v m
+                 Nothing -> m
+        app ixs k dxs = dxs ++ inh k ixs
+
 inheritWith :: Ord k 
             => (base -> conc) 
             -> (conc -> abstr)
             -> (conc -> abstr -> conc)
             -> Hierarchy k 
             -> Map k base -> Map k conc
-inheritWith decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
-    where
-        f m v = case v `M.lookup` es of 
-                 Just u -> M.adjust (app $ m ! u) v m
-                 Nothing -> m
-        app ixs dxs = dxs ++ inh ixs
+inheritWith decl inh = inheritWith' decl (const inh)

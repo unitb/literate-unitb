@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE TemplateHaskell        #-}
-module UnitB.POGenerator 
+module Logic.Proof.POGenerator 
     ( POGen, POGenT, context, emit_goal
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
@@ -12,7 +12,7 @@ where
 
     -- Modules
 import Logic.Expr
-import Logic.Proof
+import Logic.Proof.Sequent
 
 import UnitB.Feasibility
 

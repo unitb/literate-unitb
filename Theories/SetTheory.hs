@@ -12,9 +12,6 @@ import Data.Map as M hiding ( foldl )
 
 import Utilities.Format
 
-set_sort :: Sort
-set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
-
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
@@ -42,7 +39,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         extends = M.empty
         consts  = M.empty
         dummies = M.empty
-        types = symbol_table [set_sort]
+        types = M.empty
         defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse

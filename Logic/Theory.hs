@@ -49,7 +49,7 @@ data Theory = Theory
 
 basic_theory :: Theory
 basic_theory = empty_theory 
-        { types = symbol_table [BoolSort, pair_sort]
+        { types = symbol_table [BoolSort, pair_sort, set_sort]
 --        , funs = symbol_table [everywhere_fun]
 --        , gen_param = Just gT
 --        , funs  = symbol_table [Fun [gT] "eq" [gT,gT] bool]

@@ -189,6 +189,7 @@ result8 = unlines
     , "; comment: we don't need to declare the sort Bool"
     , "; comment: we don't need to declare the sort Int"
     , "; comment: we don't need to declare the sort Real"
+    , "(define-sort set (a) (Array a Bool))"
     , "(declare-const x Int)"
     , "(assert (not (exists ( (x Int) ) (and true (= x x)))))"
     , "(check-sat-using (or-else (then qe smt)"

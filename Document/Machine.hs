@@ -150,49 +150,52 @@ inherit :: Hierarchy MachineId -> Map MachineId [b] -> Map MachineId [b]
 inherit = inheritWith id id (++)
 
 inherit2 :: Scope s
-         => Hierarchy MachineId
-         -> Map MachineId [(t, s)] 
-         -> Map MachineId [(t, s)]
-inherit2 = inheritWith 
+         => MTable (Map EventId [EventId])
+         -> Hierarchy MachineId
+         -> MTable [(t, s)] 
+         -> MTable [(t, s)]
+inherit2 evts = inheritWith'
             id
-            (MM.mapMaybe $ second' make_inherited)
+            (\m -> concatMap $ second' $ \s -> make_inherited' s >>= rename_events (evts ! m))
             (++)
     where
+        make_inherited' = MM.maybeToList . make_inherited
         second' = runKleisli . second . Kleisli
         _ = MM.mapMaybe :: (a -> Maybe a) -> [a] -> [a]
 
-inherit3 :: Hierarchy MachineId
-         -> Map MachineId [(t, t2, t1)]
-         -> Map MachineId [(t, (t2, DeclSource), t1)]
-inherit3 = inheritWith 
-            (L.map $ \(x,y,z) -> (x,(y,Local),z))
-            (L.map $ \(x,(y,_),z) -> (x,(y,Inherited),z))
-            (++)
+inheritEvents :: Hierarchy MachineId
+              -> Map MachineId [(Label, (EventId, [EventId]), t1)]
+              -> Map MachineId [(Label, (EventId, [EventId]), t1)]
+inheritEvents = inheritWith 
+            id
+            (L.map $ over _2 abstract)
+            combine
+    where
+        combine c a = c ++ L.filter unchanged a
+            where
+                c' = concatMap (view $ _2 . _2) c
+                unchanged (_,(x,_),_) = x `notElem` c'
+        abstract (eid,_) = (eid,[eid])
 
 run_phase1_types :: Pipeline MM 
                         (MTable MachineP0)
                         ( Hierarchy MachineId
                         , MTable MachineP1)
 run_phase1_types = proc p0 -> do
-    -- traceA $ const "step A" -< ()
     ts <- set_decl      -< p0
-    -- traceA $ const "step B" -< ()
-    e  <- event_decl    -< p0
-    -- traceA $ const "step C" -< ()
+    e <- arr (fmap $ unionsWith (++)) <<< run_phase 
+        [ event_splitting
+        , event_decl
+        , event_merging  ] -< p0
     r  <- refines_mch   -< p0
-    -- traceA $ const "step D" -< ()
     it <- import_theory -< p0
-    -- let refs  = r >>= make_all_tables (format "Multiple refinement clauses")
-    -- let refs  = r >>= 
-    -- _  <- traceA $ format "step {0}" -< (ts,r,e,it)
     refs <- triggerP <<< liftP' (make_all_tables refClash) -< r
-    -- refs <- triggerP -< refs
     let _ = refs :: Map MachineId (Map () (MachineId,LineInfo))
     r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
         s = M.map snd <$> ts
-    evts' <- liftP' $ make_all_tables evtClash -< inherit3 r_ord <$> e
-    types <- liftP' $ make_all_tables setClash -< inherit r_ord  <$> t
+    evts' <- liftP' $ make_all_tables evtClash  -< inheritEvents r_ord <$> e
+    types <- liftP' $ make_all_tables setClash  -< inherit r_ord  <$> t
     imp_th <- liftP' $ make_all_tables thyClash -< inherit r_ord  <$> it
     evts'   <- triggerP -< M.map (M.map fst) <$> evts'    
     types   <- triggerP -< types
@@ -202,7 +205,8 @@ run_phase1_types = proc p0 -> do
     --     -- the creation of p1 won't detect clashes between type names, it will merely overshadow
     --     -- some types with (hopefully) the most local types
     --     -- BIG FLAG
-    let f th = M.unions $ map AST.types $ M.elems th
+    let _ = evts' :: MTable (Map Label (EventId,[EventId]))
+        f th = M.unions $ map AST.types $ M.elems th
         basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
         imp_th = M.map (union basic . M.map fst) imp_th'
         all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th
@@ -222,11 +226,11 @@ make_phase1 :: MachineP0
             -> Map String Sort
             -> Map String Sort
             -> [(String, PostponedDef)]
-            -> Map Label (EventId, DeclSource)
+            -> Map Label (EventId, [EventId])
             -> MachineP1
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
     where
-        _pEvents    = M.map (uncurry EventP1 . second (== Local)) evts ^. pFromEventId
+        _pEvents    = M.map (uncurry EventP1) evts ^. pFromEventId
         _pContext   = TheoryP1 { .. }
         _t0         = TheoryP0 ()
         -- _pImports
@@ -259,7 +263,8 @@ run_phase2_vars = second (C.id &&& symbols) >>> liftP wrapup
             , param_decl
             , remove_var ]
         wrapup (r_ord,(p1,vs)) = do
-            let vs' = inherit2 r_ord 
+            let names = M.map (view pEventRenaming) p1
+                vs' = inherit2 names r_ord 
                         <$> unionsWith (++)
                         <$> vs
             vars <- triggerM
@@ -337,7 +342,8 @@ run_phase3_exprs = second (C.id &&& expressions) >>> liftP (uncurry wrapup)
         err_msg :: Label -> String
         err_msg = format "Multiple expressions with the label {0}"
         wrapup r_ord (p2,es) = do
-            let es' = inherit2 r_ord . unionsWith (++) <$> es
+            let names = M.map (view pEventRenaming) p2
+                es' = inherit2 names r_ord . unionsWith (++) <$> es
                 store = (St.fromList . concatMap (view exprStore . snd) . concat . M.elems) <$> es'
             exprs <- triggerM
                 =<< make_all_tables' err_msg
@@ -717,10 +723,24 @@ set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             li <- lift ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
-event_decl :: MPipeline MachineP0 [(Label, EventId, LineInfo)]
+event_splitting :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
+event_splitting = machineCmd "\\splitevent" $ \(aevt, cevts) _m _p0 -> do
+    let _ = aevt  :: Label
+        _ = cevts :: [Label]
+    li <- ask
+    return [(c,(EventId c,[EventId aevt]),li) | c <- cevts]
+
+event_merging :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
+event_merging = machineCmd "\\mergeevents" $ \(aevts, cevt) _m _p0 -> do
+    let _ = aevts :: [Label]
+        _ = cevt  :: Label
+    li <- ask
+    return [(cevt,(EventId cevt,map EventId aevts),li)]
+
+event_decl :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
 event_decl = machineCmd "\\newevent" $ \(One evt) _m _ -> do 
             li <- lift ask 
-            return [(evt,EventId evt,li)]
+            return [(evt,(EventId evt,[]),li)]
 
 refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
 refines_mch = machineCmd "\\refines" $ \(One amch) cmch (MachineP0 ms _) -> do
@@ -1111,6 +1131,11 @@ instance Scope EventExpr where
             msg (Just k) sc = (format "{1} (event {0})" k sc :: String, view lineInfo sc)
             msg Nothing sc = (format "{0} (initialization)" sc :: String, view lineInfo sc)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
+    rename_events m (EventExpr es) = map (EventExpr . M.fromList) $ map f $ toList es
+        where
+            lookup x = MM.fromMaybe [x] $ M.lookup x m
+            f (Just eid,x) = [ (Just e,x) | e <- lookup eid ]
+            f (Nothing,x) = [(Nothing,x)]
 
 checkLocalExpr :: ( HasInhStatus decl (InhStatus expr)
                   , HasLineInfo decl LineInfo )

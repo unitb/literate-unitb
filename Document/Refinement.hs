@@ -12,11 +12,11 @@ import Document.Visitor
 
 import UnitB.AST
 import UnitB.PO
-import UnitB.POGenerator as POG
 
 import Latex.Parser
 
 import Logic.Expr
+import Logic.Proof.POGenerator as POG
 
 import Theories.SetTheory
 

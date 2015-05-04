@@ -33,7 +33,7 @@ test = test_cases
         "Unit-B" 
         [  POCase "'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  POCase "train, model 0, verification" (check_mch train_m0) (result_train_m0)
-        ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) (result_train_m0_tr_po)
+        ,  Case "train, m0 transient / falsification PO" (get_tr_po train_m0) result_train_m0_tr_po
         ,  Case "Feasibility and partitioning" case3 result3
         ,  Case "Debugging the partitioning" case4 result4
         ,  Gen.test_case
@@ -167,7 +167,7 @@ result_example0_tr_en_po = unlines [
 
 result_train_m0_tr_po :: String
 result_train_m0_tr_po = unlines 
-    [ " sort: Pair [a,b], , , "
+    [ " sort: Pair [a,b], , , , set [a]"
     , " const[_a,_b]: b -> (Array a b)"
     , " ident[_a]:  -> (Array a a)"
     , " qsum[_a]: (set a) x (Array a Int) -> Int"

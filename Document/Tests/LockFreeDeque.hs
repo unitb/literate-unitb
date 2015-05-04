@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Document.Tests.LockFreeDeque 
     -- ( test_case, test, path4, result4 )
 where
@@ -5,9 +7,24 @@ where
     -- Modules
 import Document.Tests.Suite
 
+import Logic.Proof
+
+import UnitB.AST
+
     -- Libraries
+import Control.Applicative
+
+import Control.Lens hiding (indices)
+
+import Control.Monad.Trans.Either
+
+import Data.List as L
+import Data.Map as M
+import Data.Set as S
 
 import Tests.UnitTest
+
+import Utilities.TH
 
 test_case :: TestCase
 test_case = test
@@ -46,6 +63,16 @@ test = test_cases
             , StringCase "test 11, missing witness"
                 (find_errors path11)
                 result11
+            , POCase "test 12, carrier sets without using sets"
+                case12 result12
+            , POCase "test 13, event splitting"
+                case13 result13
+            , Case "test 14, event splitting, event sets"
+                case14 result14                
+            , Case "test 15, event splitting, expression sets"
+                case15 result15
+            , Case "test 16, event splitting, index decl"
+                case16 result16
             ]            
 
 result0 :: String
@@ -3682,3 +3709,67 @@ result11 = unlines
     [ "error 223:4:\n    A witness is needed for r in event 'm0:pop:left:empty'"
     , "error 223:4:\n    A witness is needed for r in event 'm0:pop:left:non:empty'"
     ]
+
+path12 :: FilePath
+path12 = "tests/lock-free deque/main7-err0.tex"
+
+case12 :: IO (String, Map Label Sequent)
+case12 = verify path12 0
+
+result12 :: String
+result12 = unlines
+    [ "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
+    , "  o  m0/INV/WD"
+    , "passed 3 / 3"
+    ]
+
+path13 :: FilePath
+path13 = "tests/lock-free deque/main7.tex"
+
+case13 :: IO (String, Map Label Sequent)
+case13 = verify path13 0
+
+result13 :: String
+result13 = ""
+
+case14 :: IO (Either String ([Label],[Label],[Label]))
+case14 = runEitherT $ do
+    ms <- machines <$> get_system path13
+    let m0 = ms ! "m0"
+        m1 = ms ! "m1"
+        m2 = ms ! "m2"
+    return $ (m0,m1,m2) & each %~ (keys . events)
+
+result14 :: Either String ([Label],[Label],[Label])
+result14 = Right (["evt"],["evt0","evt1","evt2"],["evt0","evt1","evt2"])
+
+type ExprSet = [(Label,[Label])]
+
+case15 :: IO (Either String (ExprSet,ExprSet,ExprSet))
+case15 = runEitherT $ do
+    ms <- machines <$> get_system path13
+    let m0 = ms ! "m0"
+        m1 = ms ! "m1"
+        m2 = ms ! "m2"
+        exprs e = S.toList $ keysSet (actions e) `S.union` keysSet (new_guard e)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . events)
+
+result15 :: Either String (ExprSet,ExprSet,ExprSet)
+result15 = Right ( [("evt",["act0"])]
+                 , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])]
+                 , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])])
+
+case16 :: IO (Either String (ExprSet,ExprSet,ExprSet))
+case16 = runEitherT $ do
+    ms <- machines <$> get_system path13
+    let m0 = ms ! "m0"
+        m1 = ms ! "m1"
+        m2 = ms ! "m2"
+        decls e = L.map label $ keys (indices e)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . events)
+
+result16 :: Either String (ExprSet,ExprSet,ExprSet)
+result16 = Right ( [("evt",["p"])]
+                 , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])]
+                 , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])])

@@ -30,6 +30,8 @@ where
     -- Modules
 import Document.Pipeline
 
+import UnitB.Event
+
     -- Libraries
 import Control.Applicative
 
@@ -71,6 +73,9 @@ class (Ord a) => Scope a where
     merge_scopes :: a -> a -> a
     default merge_scopes :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> a
     merge_scopes x y = mergeScopesImpl (x ^. asImpl :: Impl a) (y ^. asImpl) ^. L.from asImpl
+
+    rename_events :: Map EventId [EventId] -> a -> [a]
+    rename_events _ x = [x]
 
 newtype DefaultClashImpl a = DefaultClashImpl { getDefaultClashImpl :: a }
 

@@ -7,13 +7,11 @@ module Code.Synthesis where
     -- Modules
 import Logic.Expr
 import Logic.Proof
-
-import Theories.SetTheory
+import qualified Logic.Proof.POGenerator as PG
 
 import           UnitB.AST as UB hiding (Event)
 import qualified UnitB.AST as UB 
 import           UnitB.PO 
-import qualified UnitB.POGenerator as PG
 
     -- Libraries
 import Control.Applicative hiding (Const)
