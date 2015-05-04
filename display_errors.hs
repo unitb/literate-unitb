@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE LambdaCase         #-}
 module Main where
+
+import Build
+
 import Control.Concurrent
 
 import Control.Monad
@@ -21,7 +24,7 @@ import Shelly (shelly,rm_f)
 
 -- import Text.Printf
 
-compile_script :: MaybeT IO ()
+compile_script :: Build ()
 compile_script = do
         compile_file
         compile_test 
@@ -37,8 +40,6 @@ _wait cond = do
         threadDelay 250000
         _wait cond
 
-data CompileMode = Make | CompileFile
-
 file :: FilePath
 path :: FilePath
 _errFile :: FilePath
@@ -51,61 +52,12 @@ _errFile :: FilePath
 
 _o_file :: FilePath
 _o_file = replaceExtension file ".o"
-inf :: FilePath
-inf  = "interface"
-bin :: FilePath
-bin  = "bin"
 
-args :: CompileMode -> FilePath -> [FilePath]
-args opt file = 
-        flag ++
-        [ "-j8"
-        , "-odir" ++ bin
-        , "-i" ++ inf
-        , "-hidir" ++ inf
-        , "-W", "-fwarn-missing-signatures"
-        , "-fwarn-incomplete-uni-patterns"
-        , "-fwarn-missing-methods"
-        , "-threaded", "-fno-ignore-asserts"
-        , "-fwarn-tabs", "-Werror"
-        , "-package", "either-4.3"
-        , "-package", "mtl-2.1.3.1"
-        , "-package", "transformers-0.3.0.0"
-        , "-package", "exceptions-0.6.1"
-        -- , "-v"
-        ]
-    where
-        flag = case opt of 
-                    CompileFile -> ["-c",file]
-                    Make        -> ["--make",file,"-o",path </> "bin" </> dropExtension file]
-
-compile :: Bool -> [String] -> MaybeT IO ()
-compile silent args = MaybeT $ do
-    r <- if silent then do
-        (r,_out,err) <- readProcessWithExitCode "ghc" args []
-        -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
-        putStrLn err
-        return r
-    else rawSystem "ghc" args
-    case r of
-        ExitSuccess -> return $ Just ()
-        _ -> return Nothing
-compile_file :: MaybeT IO ()
+compile_file :: Build ()
 compile_file = compile True (args CompileFile file)             
 
-compile_test :: MaybeT IO FilePath
-compile_test = do
-    compile False (args Make "test_tmp.hs")
-    return "bin/test_tmp"
-
-compile_all :: MaybeT IO ()
-compile_all = compile False (args Make "test.hs")
-
-compile_app :: MaybeT IO ()
-compile_app = compile False (args Make "continuous.hs")
-
-run_test :: FilePath -> MaybeT IO ()
-run_test fp = lift $ void $ rawSystem fp []
+run_test :: FilePath -> Build ()
+run_test fp = lift $ lift $ void $ rawSystem fp []
 
 main :: IO ()
 main = do
@@ -121,7 +73,7 @@ main = do
         rm_f "actual-*.txt"
         rm_f "expected-*.txt"
         rm_f "po-*.z3"
-    runMaybeT $ compile_script
+    build path compile_script
     -- printf "%s\n" path
     -- putStrLn $ intercalate " " $ "ghc" : (args CompileFile file)
         -- putStrLn "File ok"

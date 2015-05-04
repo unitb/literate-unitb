@@ -1131,11 +1131,11 @@ instance Scope EventExpr where
             msg (Just k) sc = (format "{1} (event {0})" k sc :: String, view lineInfo sc)
             msg Nothing sc = (format "{0} (initialization)" sc :: String, view lineInfo sc)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
-    rename_events m (EventExpr es) = map (EventExpr . M.fromList) $ map f $ toList es
+    rename_events m (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
             lookup x = MM.fromMaybe [x] $ M.lookup x m
-            f (Just eid,x) = [ (Just e,x) | e <- lookup eid ]
-            f (Nothing,x) = [(Nothing,x)]
+            f (Just eid,x) = [ singleton (Just e) x | e <- lookup eid ]
+            f (Nothing,x) = [singleton Nothing x]
 
 checkLocalExpr :: ( HasInhStatus decl (InhStatus expr)
                   , HasLineInfo decl LineInfo )

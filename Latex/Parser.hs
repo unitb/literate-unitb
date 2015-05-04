@@ -154,8 +154,6 @@ instance Syntactic StringLi where
 instance Syntactic LatexDoc where
     line_info (Doc xs li) = headDef li (map line_info xs)
 
-instance Syntactic a => Syntactic [a] where
-    line_info xs = line_info $ head xs
 
 source :: LatexNode -> String
 source (Text xs _) = concatMap lexeme xs

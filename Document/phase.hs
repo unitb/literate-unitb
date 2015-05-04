@@ -87,10 +87,10 @@ envSpec :: String -> Int -> DocSpec
 envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
 
 parseArgs :: (IsTuple a, AllReadable (TypeList a))
-          => [LatexDoc]
+          => ([LatexDoc], LineInfo)
           -> M a
 parseArgs xs = do
-    (x,[]) <- ST.runStateT read_all xs
+    (x,([],_)) <- ST.runStateT read_all xs
     return $ fromTuple x
 
 machineCmd :: forall result args ctx. 

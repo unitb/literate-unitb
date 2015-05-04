@@ -5,7 +5,7 @@
 module UnitB.PO 
     ( proof_obligation, theory_po
     , step_ctx, evt_live_ctx
-    , theory_ctx, theory_facts, dummy_ctx
+    , theory_ctx, theory_facts
     , evt_saf_ctx, invariants, assert_ctx
     , str_verify_machine, raw_machine_pos
     , verify_all, prop_saf, prop_tr
@@ -103,8 +103,6 @@ evt_saf_ctx evt  = Context M.empty (params evt) M.empty M.empty M.empty
 evt_live_ctx :: Event -> Context
 evt_live_ctx evt = Context M.empty (indices evt) M.empty M.empty M.empty
 
-dummy_ctx :: Machine -> Context
-dummy_ctx m = Context M.empty (dummies $ theory m) M.empty M.empty M.empty
 
 
 invariants :: Machine -> Map Label Expr
@@ -372,7 +370,7 @@ prop_co m (pname, Co fv xp) =
     with
         (do prefix_label $ _name m
             context $ step_ctx m
-            context $ dummy_ctx m
+            POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
             let grd  = all_guards evt
@@ -395,7 +393,7 @@ prop_saf m (pname, Unless fv p q excp) =
     with
         (do prefix_label $ _name m
             context $ step_ctx m
-            context $ dummy_ctx m
+            POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
             let grd  = all_guards evt

@@ -54,12 +54,11 @@ import Control.Arrow hiding (left,right)
 import Control.Lens
 
 import           Control.Monad.Reader.Class hiding (reader)
-import           Control.Monad.Trans.RWS 
-        hiding ( ask, tell, asks, local, writer, reader )
+import           Control.Monad.Trans.RWS (RWS,RWST,mapRWST,withRWST)
 import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Reader       hiding ( reader )
 --import           Control.Monad.Reader.Class hiding ( reader )
-import qualified Control.Monad.State.Class as S
+import           Control.Monad.State.Class as S
 import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
@@ -85,7 +84,7 @@ class Readable a where
     read_args :: (Monad m)
               => ST.StateT LatexDoc (EitherT [Error] m) a
     read_one :: (Monad m)
-             => ST.StateT [LatexDoc] (EitherT [Error] m) a
+             => M m a
 
 get_tuple' :: (Monad m, IsTuple a, AllReadable (TypeList a))
            => LatexDoc -> LineInfo 
@@ -98,16 +97,15 @@ class AllReadable a where
     get_tuple :: (Monad m, MonadReader LineInfo m) 
               => ST.StateT LatexDoc (EitherT [Error] m) a
     read_all :: (Monad m, MonadReader LineInfo m) 
-             => ST.StateT [LatexDoc] (EitherT [Error] m) a
+             => M m a
 
 instance AllReadable () where
     get_tuple = return () 
     read_all = do
-        xs <- ST.get
-        li <- lift $ lift $ ask
-        unless (L.null xs) 
-            $ lift $ left [Error "too many arguments" li]
-        return ()
+        (xs,_) <- get
+        case xs of
+            x:_ -> lift $ left [Error "too many arguments" $ line_info x]
+            [] -> return ()
 
 instance (AllReadable as, Readable a) => AllReadable (a :+: as) where
     get_tuple = do
@@ -134,13 +132,17 @@ trim_blanks :: ([LatexToken],LineInfo) -> ([LatexToken],LineInfo)
 trim_blanks xs = first reverse $ skip_blanks_rev 
     $ first (reverse . skip_blanks) xs
 
+type M m = ST.StateT ([LatexDoc],LineInfo) (EitherT [Error] m)
+
 get_next :: (Monad m)
-         => ST.StateT [LatexDoc] (EitherT [Error] m) LatexDoc
+         => M m LatexDoc
 get_next = do
-    s  <- ST.get
+    (s,li)  <- get
     case s of
-        x:xs -> ST.put xs >> return x
-        [] -> lift $ left [Error "expecting more arguments" $ line_info s]
+      x:xs -> put (xs,li) >> return x
+      [] -> do
+        -- li <- ask
+        lift $ left [Error "expecting more arguments" li]
 
 instance Readable LatexDoc where
     read_args = do
@@ -157,15 +159,15 @@ instance Readable LatexDoc where
 data Str = String { toString :: String }
 
 read_label :: Monad m
-           => ST.StateT [LatexDoc] (EitherT [Error] m) String
+           => M m (String,LineInfo)
 read_label = do
     x  <- get_next    
     let x' = trim_blank_text' x
     lift $ case x' of
-        (Doc [Text [TextBlock x _] _] _) 
-            -> right x
-        (Doc [Text [Command x _] _] _) 
-            -> right x
+        (Doc [Text [TextBlock x li] _] _) 
+            -> right (x,li)
+        (Doc [Text [Command x li] _] _) 
+            -> right (x,li)
         _   -> left [Error "expecting a label" $ line_info x']
 
 instance Readable Str where
@@ -175,7 +177,7 @@ instance Readable Str where
         ST.put ts
         return $ String arg
     read_one = do
-        x <- read_label
+        (x,_) <- read_label
         return $ String x
 
 instance Readable Int where
@@ -188,12 +190,11 @@ instance Readable Int where
             _ -> lift $ do
                 left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
     read_one = do
-        ts  <- ST.get
-        arg <- read_label
+        (arg,li) <- read_label
         case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
-                left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
+                left [Error (format "invalid integer: '{0}'" arg) li]
 
 instance Readable (Maybe Label) where
     read_args = do
@@ -218,7 +219,7 @@ instance Readable Label where
         ST.put ts
         return $ label arg
     read_one = do
-        label `liftM` read_label
+        (label . fst) <$> read_label
 
 instance Readable [Label] where
     read_args = do

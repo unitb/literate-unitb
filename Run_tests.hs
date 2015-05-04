@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import Build
 import Interactive.Config
 
 import Control.Concurrent
@@ -15,7 +16,8 @@ import Data.Time
 
 import GHC.IO.Exception
 
-import Shelly
+
+import Shelly as Sh hiding (FilePath,(</>))
 
 import System.IO
 import System.Directory hiding ( executable )
@@ -69,6 +71,8 @@ general = do
         let c1 = ExitSuccess
         case c1 of
             ExitSuccess -> do
+                path <- getCurrentDirectory
+                build path compile_all
                 putStrLn "Running test ..."
                 hFlush stdout
 --                (_,hout,_,ps) <- runInteractiveCommand "./test"

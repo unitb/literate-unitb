@@ -1,0 +1,69 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+	% see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{../unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common
+% customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\input{main8/machine_m1}
+\input{main8/machine_m2}
+\newcommand{\stmt}[1]{ $#1$ }
+% \newcommand{\comment}[2]{ 
+% 	% \begin{tabular}{|l|l|} 
+% 	% 	\hline
+% 		\begin{description}
+% 		\item[{#1}] ~ #2 
+% 		\end{description}
+% 	% 	\hline 
+% 	% \end{tabular} 
+% 	}
+\newcommand{\commentbox}[1]{ 
+	\begin{block} \item \small{ #1 } \end{block} }
+\newcommand{\G}{\text{Val}}
+\newcommand{\Req}{\text{Req}}
+% \renewcommand{\H}{\text{H}}
+
+\section{Initial model --- Requests}
+\begin{machine}{m0}
+	\with{functions}
+	\newset{\G} \newset{\Req}
+	\newevent{req:push:left}{request\_push\_left}
+	\newevent{req:push:right}{request\_push\_right}
+	\newevent{req:pop:left}{request\_pop\_left}
+	\newevent{req:pop:right}{request\_pop\_right}
+	\newevent{resp:push:left}{request\_push\_left}
+	\newevent{resp:push:right}{request\_push\_right}
+	\newevent{resp:pop:left}{request\_pop\_left}
+	\newevent{resp:pop:right}{request\_pop\_right}
+	\[\variable{ppL,ppR : \set[\Req] } \]
+	\[\variable{psL,psR : \Req \pfun \G }\]
+	\[ \dummy{r : \Req} \]
+	\[ \param \]
+\end{machine}
+\section{First Refinement}
+\begin{machine}{m1}
+	\refines{m0}
+\end{machine}
+\begin{machine}{m2}
+	\refines{m1}
+\end{machine}
+\end{document}

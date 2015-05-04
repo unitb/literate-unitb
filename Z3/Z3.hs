@@ -101,7 +101,7 @@ z3_config = unsafePerformIO $ do
             get cp "DEFAULT" name
     return $ Z3Config
         { z3c_path = option "z3" "z3_path" 
-        , z3c_timeout  = option 5 "timeout"
+        , z3c_timeout  = option 6 "timeout"
         , z3c_capacity = option 32 "capacity" }
 
 instance Tree Command where

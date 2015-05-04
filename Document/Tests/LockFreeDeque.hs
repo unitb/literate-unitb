@@ -24,7 +24,7 @@ import Data.Set as S
 
 import Tests.UnitTest
 
-import Utilities.TH
+-- import Utilities.TH
 
 test_case :: TestCase
 test_case = test
@@ -73,6 +73,10 @@ test = test_cases
                 case15 result15
             , Case "test 16, event splitting, index decl"
                 case16 result16
+            , StringCase "test 17, empty parameter list"
+                case17 result17
+            , StringCase "test 18, empty list in VarScope"
+                case18 result18
             ]            
 
 result0 :: String
@@ -3731,7 +3735,18 @@ case13 :: IO (String, Map Label Sequent)
 case13 = verify path13 0
 
 result13 :: String
-result13 = ""
+result13 = unlines
+    [ "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
+    , "  o  m0/INV/WD"
+    , "  o  m0/evt/FIS/v@prime"
+    , "  o  m0/evt/WD/ACT/act0"
+    , "  o  m0/evt/WD/C_SCH"
+    , "  o  m0/evt/WD/F_SCH"
+    , "  o  m0/evt/WD/GRD"
+    , "  o  m0/evt/WWD"
+    , "passed 9 / 9"
+    ]
 
 case14 :: IO (Either String ([Label],[Label],[Label]))
 case14 = runEitherT $ do
@@ -3773,3 +3788,26 @@ result16 :: Either String (ExprSet,ExprSet,ExprSet)
 result16 = Right ( [("evt",["p"])]
                  , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])]
                  , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])])
+
+path17 :: FilePath
+path17 = "tests/lock-free deque/main8-err0.tex"
+
+case17 :: IO String
+case17 = find_errors path17
+
+result17 :: String
+result17 = unlines
+    [ "error 60:12:"
+    , "    expecting more arguments"
+    ]
+
+path18 :: FilePath
+path18 = "tests/lock-free deque/main8-err1.tex"
+
+case18 :: IO String
+case18 = find_errors path18
+
+result18 :: String
+result18 = concat
+    [ "no errors"
+    ]
