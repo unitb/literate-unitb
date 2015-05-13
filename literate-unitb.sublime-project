@@ -39,7 +39,7 @@
 			"file_include_patterns":
 			[
 				"*hs","*tex",
-				"*.md"
+				"*.md","*sty"
 			],
 			"folder_exclude_patterns":
 			[
@@ -50,7 +50,7 @@
 				"eifgens",
 				"src"
 			],
-			"path": "/Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen"
+			"path": "."
 		}
 	]
 }

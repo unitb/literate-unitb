@@ -14,8 +14,6 @@ module Utilities.Permutation
     , topological_sort )
 where
 
-import Control.Exception
-
 import Control.Loop
 import Control.Monad
 import Control.Monad.Fix

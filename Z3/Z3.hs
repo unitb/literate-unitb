@@ -392,7 +392,7 @@ verify lbl xs n = do
             eq x y = is_assert x && is_assert y
             is_assert (Assert _ _) = True
             is_assert _            = False
-        (_,out,err) <- feed_z3 code n
+        (_,out,_err) <- feed_z3 code n
         let lns = lines out
             res = take 1 $ dropWhile ("WARNING" `isPrefixOf`) lns
         if length lns == 0 ||
@@ -405,8 +405,9 @@ verify lbl xs n = do
             n <- modifyMVar log_count $ 
                 return . ((1+) &&& id)
             writeFile (format "log{0}-1.z3" n) (unlines $ map pretty_print' $ header : ys)
-            writeFile (format "log{0}-2.z3" n) code
-            return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show err) (show out))
+            -- writeFile (format "log{0}-2.z3" n) code
+            -- return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show err) (show out))
+            return $ Right SatUnknown
         else if res == ["sat"] then do
             return $ Right Sat
         else if res == ["unsat"] then do
