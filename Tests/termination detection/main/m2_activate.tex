@@ -1,0 +1,20 @@
+%!TEX root=../main.tex
+\noindent \ref{activate}  \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ (\ref{activate}/default) ]{$\false$} %
+  \end{block}
+  \item   \textbf{any} p,q
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{activatem1:grd0} ]{$(p \mapsto q) \in net $} %
+  \item[ \eqref{activatem1:grd1} ]{$st.q = active $} %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{activatem0:act0} ]{$st \bcmeq st \2| p \fun active $} %
+  \item[ \eqref{activatem2:act0} ]{$d \bcmeq d \setminus \{ p \}$} %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

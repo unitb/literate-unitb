@@ -1,0 +1,18 @@
+%!TEX root=../main8.tex
+\noindent \ref{req:push:left}  \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ (\ref{req:push:left}/default) ]{$\false $} %
+  \end{block}
+  \item   \textbf{any} r,x
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{req:push:leftm0:grd0} ]{$\neg r \in \dom.psL $} %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{req:push:leftm0:act0} ]{$psL \bcmeq psL \1| r \fun x $} %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

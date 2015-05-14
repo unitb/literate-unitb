@@ -31,6 +31,7 @@ import Utilities.Syntactic
 import System.Directory
 import System.IO.Unsafe
 
+type POResult = (String,Map Label Sequent)
 type POS a = Either [Error] (Map String (a, Map Label Sequent))
 
 pos :: MVar (Map FilePath ((POS Machine,POS Theory), UTCTime))
@@ -51,7 +52,7 @@ list_file_obligations' path = do
             putMVar pos $ M.insert path ((ms,ts),t) m
             return (ms,ts)
 
-verify :: FilePath -> Int -> IO (String, Map Label Sequent)
+verify :: FilePath -> Int -> IO POResult
 verify path i = makeReport' empty $ do
     ms <- EitherT $ fst <$> list_file_obligations' path
     if i < size ms then do
@@ -108,7 +109,7 @@ parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
     (fmap (elems . M.map fst) . fst) <$> list_file_obligations' path
 
-verify_thy :: FilePath -> String -> IO (String,Map Label Sequent)
+verify_thy :: FilePath -> String -> IO POResult
 verify_thy path name = makeReport' empty $ do
         r <- EitherT $ snd <$> list_file_obligations' path
         let pos = snd $ r ! name

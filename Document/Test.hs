@@ -17,6 +17,9 @@ import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.UnlessExcept as UE
 import qualified Document.MachineSpec as MSpec 
+import qualified Document.Tests.GarbageCollector as Gar
+import qualified Document.Tests.Parser as Parser
+import qualified Document.Tests.TerminationDetection as Term
 
 import Latex.Parser
 import Latex.Scanner
@@ -50,6 +53,9 @@ test = test_cases
         , Phase.test_case
         , Ref.test_case
         , Set.test_case
+        , Gar.test_case
+        , Term.test_case
+        , Parser.test_case
         , Case "QuickCheck spec of machine parser" 
             MSpec.run_spec True
         , all_properties

@@ -1,0 +1,160 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+    % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{../bsymb}
+\usepackage{../unitb}
+\usepackage{../calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common
+% customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+% \tableofcontents
+\input{main/machine_m0}
+\begin{machine}{m0}
+
+\newset{Pcs}
+\newset{State}
+\with{functions}
+\with{sets}
+\[\constant{idle,active: State}\]
+\[\variable{st : Pcs \pfun State}\]
+\begin{align}
+	\invariant{m0:inv0}{ st \in Pcs \tfun State } \\
+	\initialization{m0:in0}{ st = \qfun{p}{}{active} }
+\end{align}
+% \begin{proof}{INIT/FIS/st}
+% $st$ exists. Example:
+% 	\begin{align}
+% 	\assert{stmt0}{ \qfun{p}{}{idle} \in Pcs \tfun State }
+% 	\end{align}
+% 	\easy
+% 	\begin{subproof}{stmt0}
+% 		\easy
+% 	\end{subproof}
+% \end{proof}
+\[ \dummy{p:Pcs} ; 
+\param{stop}{p:Pcs} ; 
+\param{activate}{p:Pcs} \]
+\newevent{stop}{STOP}
+\newevent{activate}{ACTIVATE}
+\begin{align}
+	\evbcmeq{stop}{m0:act0}{st}{ st \2| p \fun idle } \\
+	\evbcmeq{activate}{m0:act0}{st}{ st \2| p \fun active }
+\end{align}
+\end{machine}
+\input{main/machine_m1}
+\begin{machine}{m1}
+	\refines{m0}
+
+	\[ \constant{ net : \set[ Pair[ Pcs,Pcs ] ] } \]
+\begin{align}
+	\assumption{asm0}{ \qforall{p_0,p_1}{}
+		{(p_0 \mapsto p_1) \in net
+		\3\equiv (p_1 \mapsto p_0) \in net} } \\
+	\safety{m1:saf0}{ \qforall{p}{}{st.p = idle} }{\false} \\
+	\evguard{activate}{m1:grd0}{ (p \mapsto q) \in net } \\
+	\evguard{activate}{m1:grd1}{ st.q = active } \\
+	\invariant{m1:inv0}{ term \implies \qforall{p}{}{st.p = idle} } \\
+	\initialization{m1:in0}{ term = \false } \\
+	\progress{m1:prog0}
+		{ \qforall{p}{}{st.p = idle} }
+		{ term } \\
+\end{align}
+	\[ \param{activate}{q : Pcs} \]
+	\[ \variable{term : \Bool} \]
+\newevent{detect}{DETECT}
+\begin{align}
+	\cschedule{detect}{m1:sch0}{ \qforall{p}{}{st.p = idle} } \\
+	\evguard{detect}{m1:grd0}{ \qforall{p}{}{st.p = idle} } \\
+	\evbcmeq{detect}{m1:act0}{term}{\true}
+	\refine{m1:prog0}{ensure}{detect}{}
+\end{align}
+	\removecoarse{detect}{default}
+\end{machine}
+
+\input{main/machine_m2}
+\begin{machine}{m2}
+	\refines{m1}
+
+	\[ \variable{d : \set [Pcs] } \]
+\begin{align}
+	\invariant{m2:inv0}{ \qforall{p}{p \in d}{st.p = idle} } \\
+	\evbcmeq{activate}{m2:act0}{d}{d \setminus \{ p \}} \\
+	\initialization{m2:in0}{ d = \emptyset }
+\end{align}
+	\removecoarse{detect}{m1:sch0}
+\begin{align}
+	\cschedule{detect}{m2:sch0}{d = Pcs} \\
+	\progress{m2:prog0}{ \qforall{p}{}{st.p = idle} }
+		{d = Pcs} \\
+	\safety{m2:saf0}{ d = Pcs }{ \false } \\
+	\assumption{m2:asm0}{ \neg active = idle } \\
+	\assumption{m2:asm1}{ \finite.Pcs }
+\end{align}
+	\replace{detect}{m1:sch0}{m2:sch0}{}{m2:prog0}{m2:saf0}
+\begin{align}
+\refine{m2:prog0}{induction}{m2:prog1}{ \var{d}{up}{Pcs} }
+	& \progress{m2:prog1}
+		{\qforall{p}{}{st.p = idle} \land d = D}
+		{(\qforall{p}{}{st.p = idle} \land D \subset d) \lor d = Pcs}
+\refine{m2:prog1}{ensure}{add}{ $\index{p}{\neg p' \in d}$ }
+\end{align}
+	\[ \dummy{D : \set[Pcs]} \]
+\newevent{add}{ADD}
+	\[ \indices{add}{p:Pcs} \]
+\begin{align}
+	\cschedule{add}{m2:sch0}{ st.p = idle } \\
+	\evguard{add}{m2:grd0}{ st.p = idle } \\
+	\evbcmeq{add}{m2:act0}{d}{d \bunion \{p\}}
+\end{align}
+	\removecoarse{add}{default}
+\end{machine}
+\input{main/machine_m3}
+\begin{machine}{m3}
+	\refines{m2}
+
+	\[ \variable{b : \set[Pcs]} \]
+	\[ \variable{delta : Pcs \pfun \set [Pcs]} \]
+\begin{align}
+	\invariant{m3:inv0}{ \dom.delta = Pcs } \\
+	\invariant{m3:inv1}{ b \2\subseteq d \setminus \qset{p,q}{q \in delta.p}{q} } \\
+	\initialization{m3:in0}{ b = \emptyset } \\
+	\initialization{m3:in1}{ delta = \qfun{p}{}{\emptyset} } \\
+	\evbcmeq{add}{m3:act0}{b}{(b\setminus delta.p) \bunion \{p\}} \\
+	\evbcmeq{add}{m3:act1}{delta}{delta \2| p \fun \emptyset }  \\
+	\evbcmeq{activate}{m3:act0}{delta}{delta \2| q \fun (delta.q \bunion \{p\})}
+\end{align}
+\begin{proof}{\ref{add}/INV/\ref{m3:inv1}}
+\begin{calculation}
+	d' \setminus \qset{p,q}{ q \in delta'.p }{q}
+\hint{=}{ \eqref{m3:act1} }
+	d' \setminus \qset{p_0,q}{ q \in (delta \1| p \fun \emptyset).p_0 }{q}
+\hint{=}{ function overriding }
+	d' \setminus (\qset{p_0,q}{ q \in delta.p_0 \land \neg p_0 = p }{q} \bunion \qset{p_0,q}{ \oftype{q}{Pcs} \in \emptyset \land p_0 = p }{q})
+\hint{=}{ empty range }
+	d' \setminus \qset{p_0,q}{ q \in delta.p_0 \land \neg p_0 = p }{q}
+\hint{=}{ set theory }
+	% need quantified union
+	d' \setminus \qset{q}{ \qexists{p_0}{}{ q \in delta.p_0 \land \neg p_0 = p } }{q}
+\hint{=}{ \eqref{m2:act0} }
+	(d \bunion \{p\}) \setminus \qset{p_0,q}{ q \in delta.p_0 \land \neg p_0 = p }{q}
+\hint{\supseteq}{}
+	b'
+\end{calculation}
+\end{proof}
+\end{machine}
+\end{document}

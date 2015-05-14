@@ -1,0 +1,12 @@
+%!TEX root=../train-station-set.tex
+\textbf{progress}
+\begin{block}
+\item[ \eqref{m2:prog0} ]{$\true \quad \mapsto\quad \neg ~ plf \subseteq \ran.loc $} %
+\item[ \eqref{m2:prog1} ]{$\true \quad \mapsto\quad \neg ext \in \ran. loc $} %
+\item[ \eqref{m2:prog2} ]{$ext \in \ran. loc  \quad \mapsto\quad \neg ext \in \ran. loc $} %
+\item[ \eqref{m2:prog3} ]{$t \in in \land loc.t = ext  \quad \mapsto\quad \neg ext \in \ran. loc $} %
+\item[ \eqref{m2:prog4} ]{$plf \subseteq \ran.loc \!\! \quad \mapsto\quad \neg ~ plf \subseteq \ran.loc $} %
+\item[ \eqref{m2:prog5} ]{$\qexists{b}{b \in plf}{ b \in \ran.loc } \quad \mapsto\quad \qexists{b}{}{ b \in plf \1\land \neg b \in \ran.loc } $} %
+\item[ \eqref{m2:prog6} ]{$\qexists{t}{t \in in}{ b \in plf \1\land  loc.t = b }  \quad \mapsto\quad b \in plf \land \neg b \in \ran.loc $} %
+\item[ \eqref{m2:prog7} ]{$t \in in \land b \in plf \1\land  loc.t = b  \quad \mapsto\quad b \in plf \land \neg b \in \ran.loc $} %
+\end{block}

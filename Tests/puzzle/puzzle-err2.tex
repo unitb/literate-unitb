@@ -1,0 +1,234 @@
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{bsymb}
+\usepackage{../unitb}
+% \usepackage{eventb} 
+\usepackage{calculation}
+
+\begin{document}
+	
+\begin{machine}{m0}
+	
+\[
+\variable{ b : \Bool }
+\]
+\begin{description}
+\comment{b}{ indicates termination of the process }
+\end{description}
+\newevent{term}{terminate}
+
+\begin{align}
+\initialization{in0}{b = \false} \\
+\progress{prog0}{\true}{b}
+\end{align}
+
+\begin{align}
+\refine{prog0}{ensure}{term}{} \\
+\removecoarse{term}{default} % \weakento{term}{default}{sch0} \\
+\cschedule{term}{sch0}{\true} 
+\end{align}
+
+\begin{align}
+\evbcmeq{term}{act0}{b}{\true}
+\end{align}
+\input{puzzle/machine_m0}
+
+\end{machine}
+
+\newcommand{\Pcs}{\text{P}}
+
+\begin{machine}{m1}
+	\refines{m0}
+
+\with{sets}
+\begin{align*}	
+\newset{\Pcs} \\
+\variable{ vs : \set[\Pcs] } \\
+\dummy{V : \set[\Pcs]}
+\end{align*}\begin{description}
+\comment{vs}{set of visited processes}\end{description}
+\begin{align}
+	\invariant{inv0}{b \2\implies& vs = \Pcs} \\
+	\evguard{term}{grd0}{ vs &= \Pcs } \\
+	\cschedule{term}{sch1}{ vs &= \Pcs }
+\end{align}\begin{description}
+\comment{\ref{inv0}}{ termination is characterized by everyone 
+	having visited }\end{description}
+\replace{term}{sch0}{sch1}{}{prog1}{saf1}
+\begin{align*}
+	\safety{saf1}{vs = \Pcs}{\false}
+\end{align*}
+	
+\begin{align*}
+	&\progress{prog1}{\true}{vs = \Pcs} 
+\refine{prog1}{induction}{prog2}
+		{ \var{\Pcs \setminus vs} }
+	&\progress{prog2}
+		{ \Pcs \setminus vs = V }
+		{ (\Pcs \setminus vs \subset V) \1\lor vs = \Pcs }
+\refine{prog2}{psp}{prog3,saf2}{}
+	&\progress{prog3}
+		{ \Pcs \setminus vs = V \land \neg vs = \Pcs}
+		{\neg \Pcs \setminus vs = V} \\
+	&\safety{saf2}{\Pcs \setminus vs \subseteq V}{vs = \Pcs}
+\refine{prog3}{ensure}{visit}{ [\index{p}{\neg p' \in vs}] }
+\end{align*}
+
+\begin{align*}
+	\assumption{asm0}{ \finite.\Pcs }
+\end{align*}
+
+\newevent{visit}{visit}
+
+\[ \indices{visit}{p : \Pcs} \]
+
+\begin{align}
+% 	\cschedule{visit}{sch0}{}
+	\evbcmeq{visit}{act1}{vs}{ vs \bunion \{ p \} }
+\end{align}
+
+\removecoarse{visit}{default} % \weakento{visit}{default}{}
+
+% \input{puzzle/}
+\input{puzzle/machine_m1}
+
+\end{machine}
+
+\begin{machine}{m2}
+\refines{m1}
+
+\[ \variable{ts : \set [\Pcs] } \]\begin{description}
+\comment{ts}{set of process detected to have visited} \end{description}
+\begin{align}
+	\cschedule{term}{sch2}{ ts = \Pcs }
+\end{align}
+
+\replace{term}{sch1}{sch2}{}{prog4}{saf3}
+
+\begin{align}
+	\safety{saf3}{ ts = \Pcs }{ \neg vs = \Pcs } \\
+	\progress{prog4}{ \true }{ ts = \Pcs } \\
+	\invariant{inv1}{ ts \subseteq vs } \\
+	\initialization{in1}{ ts = \emptyset }
+\end{align}
+
+\[ \variable{ cs : \set [\Pcs] } \]\begin{description}
+\comment{cs}{one-slot channel used to notify the counter of visitations} \end{description}
+\begin{align*}
+	\refine{prog4}{transitivity}{prog10,prog9}{}
+& \progress{prog10}{ \true }{ cs = \emptyset } \\
+& \progress{prog9}{ cs = \emptyset }{ ts = \Pcs }
+	\refine{prog9}{induction}{prog5}{ \var{\Pcs \setminus ts} }
+& \progress{prog5}
+	 	{ cs = \emptyset \land ts = V }
+	 	{ (cs = \emptyset \land V \subset ts) \lor ts = \Pcs }
+	\refine{prog5}{PSP}{prog8,saf8}{}
+& \progress{prog8}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs }
+		{ cs = \emptyset \land \neg ts = V }
+\\& \safety{saf8}{ V \subseteq ts }{ ts = \Pcs }
+	\refine{prog8}{transitivity}{prog11,prog6,prog7}{}
+& \progress{prog11}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs }
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs 
+			\land \neg ts = vs } \\
+& \progress{prog6}
+		{ cs = \emptyset \land ts = V \land \neg ts = \Pcs \land \neg ts = vs }
+		{ ts = V \land \neg cs = \emptyset \land cs \subseteq \Pcs \setminus ts } \\
+& \progress{prog7}
+		{ ts = V \land \neg cs = \emptyset 
+				 \land cs \subseteq \Pcs \setminus ts }
+		{ cs = \emptyset \land \neg ts = V }
+	\refine{prog6}{ensure}{flick}{ \index{p}{p' \in vs \setminus ts} }
+	\refine{prog7}{ensure}{count}{} % \index{p}{ p' \in cs } }
+	\refine{prog11}{ensure}{visit}{ \index{p}{ \neg p' \in vs} }
+\end{align*}
+
+\begin{align*}
+	% \refine{prog10}{trading}{prog11}{}
+% & \progress{prog11}{ \neg cs = \emptyset }{ cs = \emptyset }
+	\refine{prog10}{ensure}{count}{} % \index{p}{ p' \in cs } }
+\end{align*}
+
+\newevent{flick}{flick}
+\newevent{count}{count}
+
+\[ \indices{flick}{p : \Pcs} \]
+
+\begin{align}
+	\cschedule{flick}{sch0}{ cs = \emptyset } \\
+	\cschedule{flick}{sch1}{ \neg p \in ts } \\
+	\evguard{flick}{grd0}{ \neg p \in ts } \\
+	\evbcmeq{flick}{act0}{cs}{ \{ p \} }
+\end{align}
+
+\removecoarse{flick}{default} % \weakento{flick}{default}{sch0,sch1,sch2}
+
+\input{puzzle/m2_term}
+\input{puzzle/m2_flick}
+
+% \[ \indices{count}{p : \Pcs} \]
+
+\begin{align}
+	\invariant{inv2}{cs \subseteq vs} \\
+	\initialization{in2}{ cs = \emptyset } \\
+	\cschedule{count}{sch0}{ \neg cs = \emptyset } \\
+	% \cschedule{count}{sch1}{ cs \subseteq vs } \\
+	% \evguard{count}{grd0}{ cs \subseteq vs } \\
+	\evbcmeq{count}{act0}{cs}{\emptyset} \\
+	\evbcmeq{count}{act1}{ts}{ ts \bunion cs }
+\end{align}
+
+\removecoarse{count}{default} % \weakento{count}{default}{sch0}
+
+\input{puzzle/m2_count}
+
+\begin{align*}
+	\evguard{flick}{grd1}{p \in vs} \\
+	\cschedule{flick}{sch2}{p \in vs}
+\end{align*}
+
+\input{puzzle/machine_m2}
+
+\end{machine}
+\begin{machine}{m3}
+	\refines{m2}
+	\[ \variable{ c : \Int } \]
+	\begin{description}
+\comment{flick}{stuff}
+		\comment{c}{ one-bit channel used to communicate }
+	\end{description}\removevar{cs}
+	\removevar{ts}
+	\removeact{count}{act0,act1}\witness{count}{cs}{cs' = \emptyset}
+	\removeact{flick}{act}
+	\removeinit{in} \removeinit{in1}
+	\initwitness{cs}{cs = \emptyset}
+	\initwitness{ts}{ts = \emptyset}
+	\begin{align} 
+		\invariant{m3:inv5}{ c \in \{0,1\} } \\
+		\invariant{m3:inv0}{ c = \card.cs } \\
+		\initialization{m3:in0}{ c = 0 } \\ 
+		\evbcmeq{count}{m3:act0}{c}{0} \\
+		\evbcmeq{flick}{m3:act0}{c}{1}
+	\end{align}
+	\[ \variable{ n : \Int } \]
+	\begin{align}
+		\invariant{m3:inv1}{ n = \qsum{p}{p \in ts}{1} } \\
+		\invariant{m3:inv2}{ \finite.ts }\\
+		\invariant{m3:inv3}{ \finite.cs } \\
+		\initialization{m3:in1}{ n = 0 }  \\
+		% \invariant{m3:inv4}{ \qsum{p}{p \in ts \bunion cs}{1} = n + c }\\
+		\invariant{m3:inv6}{ ts \binter cs = \emptyset } \\
+		\evbcmeq{count}{m3:act1}{n}{n+1} \\
+		\evguard{count}{m3:grd0}{ c = 1 }
+	\end{align}
+	\input{puzzle/machine_m3}
+\end{machine}
+
+\begin{machine}{m4}
+	\refines{m3}
+	% \invariant{m4:inv0}{cs \subseteq cs}
+\end{machine}
+
+\end{document}

@@ -1,0 +1,65 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+    % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{../bsymb}
+\usepackage{../unitb}
+\usepackage{../calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common
+% customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+	\input{main/machine_m0}
+\begin{machine}{m0}
+	
+	\with{sets}
+	\newset{Node}
+	\[ \constant{ r : Node } \]
+	\[ \variable{ free,live: \set[Node] } \]
+\begin{align}
+	\invariant{m0:inv0}{r \in live} \\
+	\initialization{m0:in0}{ live = \{ r\} }
+\end{align}
+	\newevent{alloc}{ALLOCATE}
+	\newevent{free}{FREE}
+\begin{align}
+	\evbcmeq{alloc}{m0:act0}{live}{ live \bunion \{ p \} } \\
+	\evbcmeq{free}{m0:act0}{free}{ free \bunion \{ p \} } \\
+	\invariant{m0:inv1}{ Node = live \bunion free } \\
+	\initialization{m0:in1}{ free = Node \setminus \{r\} } \\
+	\invariant{m0:inv2}{ live \binter free = \emptyset } \\
+	\evbcmeq{alloc}{m0:act1}{free}{ free \setminus \{ p \} } \\
+	\evbcmeq{free}{m0:act1}{live}{ live \setminus \{ p \} } \\
+	\evguard{free}{m0:grd0}{ \neg p = r }
+\end{align}
+	\[ \param{alloc}{p : Node} \]
+	\[ \param{free}{p : Node} \]
+\end{machine}
+
+	\input{main/machine_m1}
+\begin{machine}{m1}
+	\refines{m0}
+
+	\with{functions}
+	\[ \variable{ptr: \set[Pair[Node,Node]]} \]
+	\[ \constant{star: \set[Pair[Node,Node]]\pfun \set[Pair[Node,Node]] } \]
+\begin{align}
+	\assumption{m1:asm0}{ \qforall{rel}{}{rel \in \dom.star} } \\
+	\progress{m1:prog0}{ p \in live \land \neg (r \mapsto p) \in star.ptr }{ p \in free }
+\refine{m1:prog0}{ensure}{free}{}
+\end{align}
+	\[ \dummy{ p : Node } \]
+	\removecoarse{free}{default}
+\end{machine}
+\end{document}

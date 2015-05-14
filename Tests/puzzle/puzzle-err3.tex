@@ -32,7 +32,7 @@
 \begin{align}
 \evbcmeq{term}{act0}{b}{\true}
 \end{align}
-\input{machine_m0}
+\input{puzzle/machine_m0}
 
 \end{machine}
 
@@ -91,7 +91,7 @@
 \removecoarse{visit}{default} % \weakento{visit}{default}{}
 
 % \input{}
-\input{machine_m1}
+\input{puzzle/machine_m1}
 
 \end{machine}
 
@@ -165,8 +165,8 @@
 
 \removecoarse{flick}{default} % \weakento{flick}{default}{sch0,sch1,sch2}
 
-\input{m2_term}
-\input{m2_flick}
+\input{puzzle/m2_term}
+\input{puzzle/m2_flick}
 
 % \[ \indices{count}{p : \Pcs} \]
 
@@ -182,14 +182,14 @@
 
 \removecoarse{count}{default} % \weakento{count}{default}{sch0}
 
-\input{m2_count}
+\input{puzzle/m2_count}
 
 \begin{align*}
 	\evguard{flick}{grd1}{p \in vs} \\
 	\cschedule{flick}{sch2}{p \in vs}
 \end{align*}
 
-\input{machine_m2}
+\input{puzzle/machine_m2}
 
 \end{machine}
 \begin{machine}{m3}
@@ -223,7 +223,7 @@
 		\evbcmeq{count}{m3:act1}{n}{n+1} \\
 		\evguard{count}{m3:grd0}{ c = 1 }
 	\end{align}
-	\input{machine_m3}
+	\input{puzzle/machine_m3}
 	\witness{count}{c}{c = 3}
 \end{machine}
 

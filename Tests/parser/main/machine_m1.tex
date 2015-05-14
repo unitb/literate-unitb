@@ -1,0 +1,38 @@
+%!TEX root=../main.tex
+\begin{block}
+  \item   \textbf{machine} m1
+  \item   \textbf{variables}
+  \begin{block}
+    \item   $ast$
+    \item   \begin{block}
+      \item    Internal syntax tree 
+    \end{block}
+    \item   $c$
+    \item   \begin{block}
+      \item   Current version of the internal AST
+    \end{block}
+    \item   $err$
+    \item   \begin{block}
+      \item    Is the input syntactically correct? 
+    \end{block}
+    \item   $in$
+    \item   \begin{block}
+      \item   Sequence of versions of the source files
+    \end{block}
+    \item   $nx$
+    \item   $v$
+    \item   \begin{block}
+      \item   Latest version of the source files
+    \end{block}
+  \end{block}
+  \item   \input{main/machine_m1_inv}
+  \item   \input{main/machine_m1_prog}
+  \item   \textbf{events}
+  \begin{block}
+    \item   \input{main/m1_choose}
+    \item   \input{main/m1_fail}
+    \item   \input{main/m1_input}
+    \item   \input{main/m1_parse}
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

@@ -1,0 +1,160 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+    % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{../bsymb}
+\usepackage{../unitb}
+\usepackage{../calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\normalem
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+
+% See the ``Article customise'' template for some common
+% customisations
+
+\title{}
+\author{}
+\date{} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\setcounter{tocdepth}{4}
+\begin{document}
+
+\maketitle
+% \tableofcontents
+\input{main/machine_m0}
+\begin{machine}{m0}
+
+\newset{FS} \newset{AST}
+    \with{functions}
+    \with{sets}
+    \with{intervals}
+
+\noindent \textbf{Constant:}
+    \[\constant{parse : FS \pfun AST}\]
+
+\noindent \textbf{Variables:}
+    \[\variable{in : \Int \pfun FS};~\variable{v : \Int} \]
+    \newevent{input}{INPUT}
+    \begin{align*}
+        \invariant{m0:inv0}{ &in \in \intervalL{0}{v} \tfun FS } \\
+        \initialization{m0:in0}{ &in = \emptyfun } \\
+        \initialization{m0:in1}{ &v = 0 } \\
+        \invariant{m0:inv1}{ &0 \le v } \\
+    \end{align*}
+    \begin{itemize}
+    \comment{v}{Latest version of the source files}
+    \comment{in}{Sequence of versions of the source files}
+    \end{itemize}
+    \[ \param{input}{file : FS} \]
+    \begin{align}
+        \evbcmeq{input}{m0:act0}{in}{ &in \2| (v\0+1 \fun file) } \\
+        \evbcmeq{input}{m0:act1}{v}{&v+1} \\
+        \dummy{V : \Int} \\
+        \safety{m0:saf0}{V \le v}{\false}
+    \end{align}
+        
+    \end{machine}
+    \input{main/machine_m1}
+    \begin{machine}{m1}
+    \refines{m0}
+    \[ \variable{c : \Int} \]
+    \begin{align}
+        \invariant{m1:inv0}{ &\between{0}{c}{v} } \\
+        \initialization{m1:in0}{ &c = 0 } 
+    \end{align}
+    \begin{itemize}
+    \comment{c}{Current version of the internal AST}
+    \end{itemize}
+    \begin{align}
+        \invariant{m1:inv1}{c > 0 \land in.c \in \dom.parse 
+            \2\implies ast = parse.(in.c) }
+    \end{align}
+    \[ \variable{ast : AST} \]
+    \begin{align}
+        \invariant{m1:inv2}{ err &\2\equiv c > 0 
+            \1\land \neg in.c \in \dom.parse } \\
+        \initialization{m1:in1}{ err &= \false }
+    \end{align}
+    \[ \variable{ err : \Bool } \]
+\noindent \textbf{variables}
+\begin{itemize}
+    \comment{err}{ Is the input syntactically correct? } 
+    \comment{ast}{ Internal syntax tree }
+\end{itemize}
+\[ \dummy{C : \Int} \]
+\noindent \textbf{requirement}
+\begin{align}
+    \progress{m1:prog0}{c = C}{c > C \1\lor c = v}
+\end{align}
+\newevent{parse}{PARSE}
+\newevent{fail}{FAIL}
+\newevent{choose}{READ}
+\[ \param{choose}{vv : \Int} ; \quad \variable{ nx : \Int } \]
+\begin{align}
+    \cschedule{parse}{m1:sch0}{&0 < nx} \\
+    \cschedule{parse}{m1:sch1}{&in.nx \in \dom.parse} \\
+    \evguard{parse}{m1:grd0}{&0 < nx} \\
+    \evguard{parse}{m1:grd1}{&in.nx \in \dom.parse} \\
+    \invariant{m1:inv3}{ &\between{c}{nx}{v} } \\
+    \initialization{m1:in2}{ &nx = 0 } \\
+    \evbcmeq{parse}{m1:act0}{ast}{ parse.(in.nx) } \\
+    \evbcmeq{parse}{m1:act1}{c}{nx} \\
+    \evbcmeq{parse}{m1:act2}{err}{\false}
+\end{align}
+\removecoarse{parse}{default}
+% trading
+\begin{align*}
+\refine{m1:prog0}{trading}{m1:prog1}{}
+& \progress{m1:prog1}{c = C \land \neg c = v}{C < c}
+\refine{m1:prog1}{transitivity}{m1:prog2,m1:prog3}{}
+& \progress{m1:prog2}
+    {c = C \land \neg c = v}
+    {\betweenR{0}{C}{nx}} \\
+& \progress{m1:prog3}{\betweenR{0}{C}{nx}}{C < c} 
+\refine{m1:prog3}{disjunction}{m1:prog4,m1:prog5}{}
+& \progress{m1:prog4}
+    {\betweenR{0}{C}{nx} \land in.nx \in \dom.parse}
+    {C < c} \\
+& \progress{m1:prog5}
+    {\betweenR{0}{C}{nx} \land \neg in.nx \in \dom.parse}
+    {C < c}
+\refine{m1:prog2}{ensure}{choose}{}
+\refine{m1:prog4}{ensure}{parse}{}
+\refine{m1:prog5}{ensure}{fail}{}
+\end{align*}
+\begin{align}
+    \cschedule{fail}{m1:sch0}{0 < nx} \\
+    \cschedule{fail}{m1:sch1}{\neg in.nx \in \dom.parse} \\
+    \evguard{fail}{m1:grd0}{0 < nx} \\
+    \evguard{fail}{m1:grd1}{\neg in.nx \in \dom.parse} \\
+    \evbcmeq{fail}{m1:act0}{c}{nx} \\
+    \evbcmeq{fail}{m1:act1}{err}{\true}
+\end{align}
+    \removecoarse{fail}{default}
+\begin{align}
+    \cschedule{choose}{m1:sch0}{c < v} \\
+    \evguard{choose}{m1:grd0}{\betweenL{c}{vv}{v}} \\
+    \cschedule{choose}{m1:sch1}{c = nx} \\
+    \evguard{choose}{m1:grd1}{c = nx} \\
+    \evbcmeq{choose}{m1:act0}{nx}{vv}
+\end{align}
+    \removecoarse{choose}{default}
+\end{machine}
+\input{main/machine_m2}
+\begin{machine}{m2}
+    \refines{m1}
+
+    \newset{Name}
+    \newset{Data}
+    \[\constant{data : FS \pfun Name \pfun Data}\]
+    \[\constant{dep : Data \pfun \set [Name] }\]
+    \[\constant{depG : FS \pfun \set [Pair[Name,Name]] }\]
+    \begin{align}
+        \assumption{asm0}{ \dom.data = FS } \\
+        \assumption{asm1}{ \qforall{f}{}{f \in \dom.depG \3\equiv \qforall{m}{m \in \dom.(data.f)}{data.f.m \in \dom.dep}} } \\
+        \assumption{asm2}{ \qforall{m}{m \implies \true}{m \lor \false} }
+    \end{align}
+\end{machine}
+\end{document}

@@ -1,0 +1,21 @@
+%!TEX root=../main.tex
+\noindent \ref{parse}  \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ \eqref{parsem1:sch0} ]{$0 < nx$} %
+  \item[ \eqref{parsem1:sch1} ]{$in.nx \in \dom.parse$} %
+  \end{block}
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{parsem1:grd0} ]{$0 < nx$} %
+  \item[ \eqref{parsem1:grd1} ]{$in.nx \in \dom.parse$} %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{parsem1:act0} ]{$ast \bcmeq parse.(in.nx) $} %
+  \item[ \eqref{parsem1:act1} ]{$c \bcmeq nx$} %
+  \item[ \eqref{parsem1:act2} ]{$err \bcmeq \false$} %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}
