@@ -114,7 +114,7 @@ data Sort =
             [String]    -- Parameters
             String      -- type name
             [(String, [(String,GenericType)])] -- alternatives and named components
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Typeable, Generic)
 
 typeParams :: Sort -> Int
 typeParams BoolSort = 0

@@ -225,7 +225,7 @@ machine0 = (empty_machine "train0")
                                 [ "t","t_0","t_1","t_2","t_3" ]
                                ++ map (\t -> Var t $ blk_type) 
                                 [ "p","q" ])
-            ,  fact    = fromList 
+            ,  _fact   = fromList 
                     [ ("axm0", axm0)
                     , ("asm2", axm2)
                     , ("asm3", axm3) 

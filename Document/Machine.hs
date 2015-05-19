@@ -34,6 +34,7 @@ import Theories.Arithmetic
 import Theories.FunctionTheory
 import Theories.IntervalTheory
 import Theories.PredCalc
+import Theories.RelationTheory
 import Theories.SetTheory
 
     --
@@ -567,7 +568,7 @@ make_machine (MId m) p4 = mch'
             , thm_depend = []
             , dummies  = p4 ^. pDummyVars
             -- , notation =  empty_notation
-            , fact = p4 ^. pAssumptions }
+            , _fact = p4 ^. pAssumptions }
         props = p4 ^. pNewPropSet
         mch = Mch 
             { _name  = label m
@@ -755,6 +756,7 @@ import_theory :: MPipeline MachineP0 [(String, Theory, LineInfo)]
 import_theory = machineCmd "\\with" $ \(One (String th_name)) _m _ -> do
         let th = [ ("sets"       , set_theory)
                  , ("functions"  , function_theory)
+                 , ("relations"  , relation_theory)
                  , ("arithmetic" , arithmetic)
                  , ("predcalc"   , pred_calc)
                  , ("intervals"  , interval_theory) ]

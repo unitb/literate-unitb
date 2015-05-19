@@ -327,13 +327,13 @@
 \newcommand{\action}{\mathit{act}}
 
 %%%% Generic model %%%%
-\newBevt[evt]{e}
+% \newBevt[evt]{e}
 \newcommand{\guard}{g}
 \newcommand{\csched}{c}
 \newcommand{\fsched}{f}
 \newcommand{\assignment}{s}
 \newcommand{\Action}{\mathbf{S}}
-\newBevt[cncevt]{f}
+% \newBevt[cncevt]{f}
 \newcommand{\cncguard}{h}
 \newcommand{\cnccsched}{d}
 \newcommand{\cncfsched}{e}
@@ -547,6 +547,7 @@
 \newcommand{\removecoarse}[2]{} % {event}{lbl,...}
 \newcommand{\removefine}[2]{}   % {event}{lbl,...}
 \newcommand{\removeinit}[1]{}   % {lbl}
+\newcommand{\splitevent}[2]{}
 
 \newenvironment{block}
 {	\begin{list}{}
@@ -560,9 +561,13 @@
 {	\end{list}
 	}
   % operator
-\newcommand{\fun}{\tfun} % singleton functions
+\renewcommand{\fun}{\tfun} % singleton functions
 \newcommand{\intervalR}[2]{ [#1,#2) }
+\newcommand{\intervalL}[2]{ (#1,#2] }
+\renewcommand{\between}[3]{ #1 \le #2 \le #3 }
 \newcommand{\betweenR}[3]{ #1 \le #2 < #3 }
+\newcommand{\betweenL}[3]{ #1 < #2 \le #3 }
+\newcommand{\betweenLR}[3]{ #1 < #2 < #3 }
 
 	% Theories
 \newcommand{\with}[1]{ }

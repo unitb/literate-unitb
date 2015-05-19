@@ -269,8 +269,8 @@ cons :: (IsTuple a1, IsTuple a, TypeList a ~ (x :+: TypeList a1)) =>
 cons x xs = fromTuple (x :+: toTuple xs)
 
 class IsTypeList a where
-    size :: a -> Length a
-    len  :: a -> Int
+    size :: Proxy a -> Length a
+    len  :: Proxy a -> Int
     append :: IsTypeList b => a -> b -> Append a b
     tmap :: (forall b. b -> f b) -> a -> TMap f a
     tfoldl :: (forall b c. b -> c -> f b c) -> k -> a -> TFoldL f k a
@@ -294,8 +294,8 @@ instance IsTypeList () where
     -- tdrop _ _ = ()
 
 instance IsTypeList xs => IsTypeList (x :+: xs) where
-    size _ = S $ size (undefined :: xs)
-    len (_) = 1 + len (undefined :: xs)
+    size _ = S $ size (Proxy :: Proxy xs)
+    len (_) = 1 + len (Proxy :: Proxy xs)
     append (x :+: xs) ys = x :+: append xs ys
     tmap f (x :+: xs) = f x :+: tmap f xs
     tfoldl f x (y :+: ys) = f x (tfoldl f y ys)

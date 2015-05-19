@@ -93,7 +93,7 @@ pred_calc :: Theory
 pred_calc = empty_theory 
         { types = symbol_table [pred_sort]
         , funs  = symbol_table [everywhere_fun, ptrue_fun, pfalse_fun]
-        , fact = M.singleton (label "pred_ew") $ ($fromJust) $ 
+        , _fact = M.singleton (label "pred_ew") $ ($fromJust) $ 
                 mzforall [x_decl] mztrue $ 
                         (zew x)
                     `mzeq` (mzforall [y_decl] mztrue $ zrep_select x y) 

@@ -91,8 +91,8 @@ function_theory = Theory { .. }
     where        
         extends =  singleton "set" set_theory
         
-        consts = empty
-        dummies = empty
+        consts   = empty
+        dummies  = empty
         theorems = empty
         
 --        set_ths  = 
@@ -145,7 +145,7 @@ function_theory = Theory { .. }
 
         thm_depend = []
 
-        fact = "function" `axioms` do
+        _fact = "function" `axioms` do
             $axiom $ zdom (as_fun zempty_fun) .= zempty_set
     --         $axiom $ zright m (zjust x) .= zjust x
     --         $axiom $ zright m znothing .= m

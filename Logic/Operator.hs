@@ -4,22 +4,22 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
 module Logic.Operator 
-    (   Notation (..)
-    ,   BinOperator (..)
-    ,   UnaryOperator (..)
-    ,   Command (..)
-    ,   Assoc (..)
-    ,   Operator
-    ,   Matrix
-    ,   Input (..)
-    ,   with_assoc
-    ,   empty_notation
-    ,   logic, functions
-    ,   apply, equal, conj, disj
-    ,   implies, follows, equiv
-    ,   combine, precede
-    ,   mk_expr, mk_unary
-        )
+    ( Notation (..)
+    , BinOperator (..)
+    , UnaryOperator (..)
+    , Command (..)
+    , Assoc (..)
+    , Operator
+    , Matrix
+    , Input (..)
+    , with_assoc
+    , empty_notation
+    , logic, functions
+    , apply, equal, conj, disj
+    , implies, follows, equiv
+    , combine, precede
+    , mk_expr, mk_unary
+    )
 where
 
     -- Modules
@@ -35,6 +35,7 @@ import Data.Function
 import Data.List as L
 import Data.Typeable
 
+import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Graph hiding ( Matrix )
 import qualified Utilities.Graph as G 
@@ -56,7 +57,7 @@ mk_expr (BinOperator _ _ f) x y = f (Right x) (Right y)
 mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = f $ Right x
 
-data Assoc = LeftAssoc | RightAssoc | Ambiguous
+data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable)
 
 data Notation = Notation
@@ -81,7 +82,7 @@ empty_notation = Notation
     , chaining = []
     , commands = []
     , quantifiers = []
-    , struct = undefined }
+    , struct = $myError "" }
 
 instance Default Notation where
     def = empty_notation
@@ -203,7 +204,7 @@ assoc_table :: Notation -> Matrix Operator Assoc
 assoc_table ops 
 --      | not $ L.null complete = error $ "assoc': all new operators are not declared: " ++ show complete
         | not $ L.null cycles   = error $ "assoc': cycles exist in the precedence graph" ++ show cycles
-        | otherwise   = foldl (G.unionWith join) (G.empty Ambiguous)
+        | otherwise   = foldl (G.unionWith join) (G.empty NoAssoc)
                   [ G.map (f LeftAssoc) pm :: Matrix Operator Assoc
                   , G.map (f RightAssoc) $ G.transpose pm
                   , G.map (f LeftAssoc) $ G.mapKeys g lm
@@ -228,17 +229,17 @@ assoc_table ops
             -- M.map (f RightAssoc) rm
         f a b 
             | b         = a
-            | otherwise = Ambiguous
+            | otherwise = NoAssoc
         g (x,y) = (Right x,Right y)
-        join x Ambiguous = x
-        join Ambiguous x = x
+        join x NoAssoc = x
+        join NoAssoc x = x
         join _ _ = error "operator parser: conflicting precedences"
 --        g (i,j)
 --            | pm M.! (i,j) = LeftAssoc
 --            | pm M.! (j,i) = RightAssoc
 --            | lm M.! (i,j) = LeftAssoc
 --            | rm M.! (i,j) = RightAssoc
---            | otherwise    = Ambiguous
+--            | otherwise    = NoAssoc
 
     -- Basic functions
 apply :: BinOperator

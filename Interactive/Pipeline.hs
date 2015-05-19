@@ -190,7 +190,7 @@ proof_report pattern outs es b =
                      footer ++
                      [ if b
                        then "> working ..."
-                       else ""
+                       else " "
                      ]
     where
         header  = maybe [] head pattern

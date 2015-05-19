@@ -27,6 +27,7 @@ import           UnitB.AST
 import Z3.Z3
 
     -- Libraries
+import Control.Lens ((^.))
 import Control.Monad hiding (guard)
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
@@ -203,7 +204,7 @@ theory_po th = do
         dep       = M.map M.fromList $ M.fromListWith (++) 
                         [ (x,[(y,())]) | (x,y) <- thm_depend th ]
         depend x  = thm `M.intersection` findWithDefault M.empty x dep
-        (thm,axm) = M.partitionWithKey p $ fact th
+        (thm,axm) = M.partitionWithKey p $ th ^. fact
         p k _     = k `M.member` theorems th
 
         g lbl x   = Sequent empty_ctx [] (depend lbl `M.union` axm) x

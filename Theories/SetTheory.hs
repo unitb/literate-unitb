@@ -57,11 +57,12 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table
                 [ comprehension_fun
+                , qunion_fun
                 , mk_fun [gT] "mk-set" [gT] $ set_type gT 
                 , mk_fun [gT] "finite" [set_type gT] $ bool
                 ]
-        fact :: Map Label Expr
-        fact = "set" `axioms` do
+        _fact :: Map Label Expr
+        _fact = "set" `axioms` do
                 -- elem and mk-set
             $axiom $  (x `zelem` zmk_set y) .==  x .= y
                 -- comprehension
@@ -81,6 +82,13 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             $axiom $ mzfinite $ zcast (set_type t) zempty_set
             $axiom $ zsubset s1 s2 .=> (mzfinite s2 .=> mzfinite s1)
             $axiom $ zset r1 zident .= r1
+                -- quantifier union
+            $axiom $ zunion_qu (zcast (set_type t0) zempty_set) terms .= zempty_set
+            $axiom $ zunion_qu (zmk_set x') terms .= zselect terms x'
+            $axiom $   zunion_qu (r1 `zunion` r2) terms 
+                    .= zunion_qu r1 terms `zunion` zunion_qu r2 terms 
+            $axiom $    mzforall [x'_decl] (x' `zelem` r1) ( zselect terms x' .= zselect terms' x' )
+                    .=> zunion_qu r1 terms .= zunion_qu r1 terms'
                 -- elem over union
             -- $axiom $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
             --                     (x `zelem` (s1 `zunion` s2)) 
@@ -117,7 +125,10 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         (s1,s1_decl) = var "s1" $ set_type t
         (s2,s2_decl) = var "s2" $ set_type t
         (r1,_r1_decl) = var "r1" $ set_type t0
+        (r2,_r2_decl) = var "r2" $ set_type t0
         (term,_term_decl) = var "term" $ array t0 t
+        (terms,_terms_decl) = var "terms" $ array t0 (set_type t)
+        (terms',_) = var "terms0" $ array t0 (set_type t)
 --            dec x  = x ++ z3_decoration t
         -- dec' x = "@set@@_" ++ x
         
@@ -137,13 +148,22 @@ zmk_set       :: ExprP -> ExprP
 zset_enum     :: [ExprP] -> ExprP
 
 comprehension :: HOQuantifier
-comprehension = UDQuant comprehension_fun gA (QTTerm set_sort) InfiniteWD
+comprehension = UDQuant comprehension_fun gA (QTFromTerm set_sort) InfiniteWD
 
 comprehension_fun :: Fun
 comprehension_fun = mk_fun [gA,gB] "set" [set_type gA, array gA gB] $ set_type gB
 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
+
+qunion :: HOQuantifier
+qunion = UDQuant qunion_fun (set_type gA) QTTerm InfiniteWD
+
+zunion_qu :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
+zunion_qu = typ_fun2 qunion_fun
+
+qunion_fun :: Fun
+qunion_fun = mk_fun [gA,gB] "qunion" [set_type gA, array gA (set_type gB)] (set_type gB)
 
 zset :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
 zset = typ_fun2 comprehension_fun
@@ -216,7 +236,8 @@ set_notation = with_assoc empty_notation
     , left_assoc  = [[set_union]]
     , right_assoc = []
     , relations   = []
-    , quantifiers = [ ("\\qset",comprehension) ]
+    , quantifiers = [ ("\\qset",comprehension)
+                    , ("\\qunion",qunion) ]
 
     , commands    = [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
                     , Command "\\finite" "finite" 1 $ from_list mzfinite]

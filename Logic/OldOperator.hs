@@ -30,20 +30,20 @@ data XBinOperator =
 associativity :: [([XBinOperator],Assoc)]
 associativity = 
         [ ([Apply],LeftAssoc)
-        , ([Power],Ambiguous)
+        , ([Power],NoAssoc)
         , ([Mult],LeftAssoc)
         , ([Plus],LeftAssoc)
-        , ([MkFunction],Ambiguous)
+        , ([MkFunction],NoAssoc)
         , ([Overload],LeftAssoc)
         , ([Union],LeftAssoc)
-        , ([SetDiff],Ambiguous)
-        , ([TotalFunction],Ambiguous)
+        , ([SetDiff],NoAssoc)
+        , ([TotalFunction],NoAssoc)
         , ([DomRest,DomSubt],LeftAssoc)
         , ([ Equal,Leq,Less
-           , Membership,Geq,Greater],Ambiguous)
+           , Membership,Geq,Greater],NoAssoc)
         , ([And],LeftAssoc)
         , ([Or],LeftAssoc)
-        , ([Implies,Follows],Ambiguous) 
+        , ([Implies,Follows],NoAssoc) 
         , ([Equiv],LeftAssoc)
         ]
 

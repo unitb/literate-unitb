@@ -244,7 +244,8 @@ unify_aux [] = return empty
 unify_aux _  = Nothing
 
 unify :: GenericType -> GenericType -> Maybe (Map String GenericType)
-unify t0 t1 = unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
+unify t0 t1 = 
+    unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
 
 strip_generics :: AbsExpr Type q -> Maybe (AbsExpr FOType q)
 strip_generics (Word v)    = do
@@ -511,13 +512,16 @@ patterns ts = map maybe_pattern pat
         -- ungen t = rewrite ungen t
 
     -- generic to first order
-gen_to_fol :: IsQuantifier q => S.Set FOType -> Label -> AbsExpr Type q -> [(Label,AbsExpr FOType q)]
-gen_to_fol types lbl e = zip ys $ map inst xs
+gen_to_fol :: IsQuantifier q 
+           => S.Set FOType 
+           -> Label 
+           -> AbsExpr Type q 
+           -> [(Label,AbsExpr FOType q)]
+gen_to_fol types lbl e = map (f &&& inst) xs
     where
         inst m = mk_error (pat, S.elems types, xs)
                     strip_generics $ substitute_type_vars (M.map as_generic m) e
         xs     = match_all pat (S.elems types)
-        ys     = map f xs
         f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
         pat    = patterns e
 
@@ -566,14 +570,13 @@ match_all pat types =
                 t  <- types'
                 m  <- MM.maybeToList $ unify p t
                 ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
-                let m' = M.fromList $ zip (M.keys m) ms
-                    m''  = M.mapKeys (reverse . drop 2 . reverse) m'
+                let m'  = M.fromList $ zip (M.keys m) ms
+                    m'' = M.mapKeys (reverse . drop 2 . reverse) m'
                 guard $ consistent m'' x
                 return (m'' `M.union` x)
             ) M.empty pat'
     where
         pat' = L.map f pat
-        -- pat' = L.map f pat
         f (VARIABLE s) = GENERIC s
         f t = rewrite f t
         types' = map as_generic types
@@ -660,5 +663,5 @@ vars_to_sorts_aux = rewriteExprM type_vars_to_sorts return vars_to_sorts_aux
 vars_to_sorts :: Map String Sort -> AbsExpr Type q -> AbsExpr FOType q
 vars_to_sorts sorts e = evalState (vars_to_sorts_aux e) (new_sorts, empty)
     where
-        new_sorts = map as_type $ map (("G" ++) . show) [0..] `minus` keys sorts
+        new_sorts = map as_type $ map (("G" ++) . show) [0 :: Int ..] `minus` keys sorts
         as_type n = make_type (Sort n n 0) []

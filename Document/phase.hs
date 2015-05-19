@@ -38,12 +38,12 @@ import Control.Monad.Trans.State  as ST
 import Control.Monad.Trans.RWS    as RWS hiding (local,ask,tell)
 import Control.Monad.Writer.Class 
 
--- import Data.Functor
 -- import Data.Monoid
+import Data.List as L
 import Data.Map as M
 import Data.Maybe as M
 import Data.Monoid
-import Data.List as L
+import Data.Proxy
 import Data.Set as S
 
 import Utilities.Error
@@ -102,7 +102,7 @@ machineCmd :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineCmd cmd f = Pipeline m_spec empty_spec g
     where
-        nargs = len ($myError "" :: TypeList args)
+        nargs = len (Proxy :: Proxy (TypeList args))
         m_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -139,7 +139,7 @@ machineEnv :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
-        nargs = len ($myError "" :: TypeList args)
+        nargs = len (Proxy :: Proxy (TypeList args))
         m_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv
@@ -174,7 +174,7 @@ contextCmd :: forall a b c.
            -> Pipeline MM (CTable c) (Maybe (CTable a))
 contextCmd cmd f = Pipeline empty_spec c_spec g
     where
-        nargs = len ($myError "" :: TypeList b)
+        nargs = len (Proxy :: Proxy (TypeList b))
         c_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -192,7 +192,7 @@ contextEnv :: forall result args ctx.
            -> Pipeline MM (CTable ctx) (Maybe (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
-        nargs = len ($myError "" :: TypeList args)
+        nargs = len (Proxy :: Proxy (TypeList args))
         c_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv

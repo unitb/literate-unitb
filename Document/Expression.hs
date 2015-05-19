@@ -537,7 +537,7 @@ expr = do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
-                Ambiguous ->  fail $ format "ambiguous expression: '{0}' and '{1}' are not associative" op0 op1
+                NoAssoc ->  fail $ format "ambiguous expression: '{0}' and '{1}' are not associative" op0 op1
         reduce xs (u:us) e0 op0             = do
             r <- binds u op0
             case r of
@@ -545,7 +545,7 @@ expr = do
                     e1 <- apply_unary u e0
                     reduce xs us e1 op0
                 RightAssoc  -> read_term ((u:us,e0,op0):xs)
-                Ambiguous   -> fail ("ambiguous expression: use parentheses")
+                NoAssoc   -> fail ("ambiguous expression: use parentheses")
         reduce_all :: [([UnaryOperator], Term, BinOperator)] 
                    -> [UnaryOperator] 
                    -> Term 

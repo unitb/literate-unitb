@@ -64,7 +64,7 @@ interval_theory = empty_theory
         , funs = symbol_table
             [ interval_r_fun, interval_l_fun
             , interval_lr_fun, interval_fun ]
-        , fact = M.mapKeys label $ M.fromList
+        , _fact = M.mapKeys label $ M.fromList
             [ ("axm0", ($fromJust) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval m n) 
                         `mzeq`  (zbetween mzle mzle m x n))

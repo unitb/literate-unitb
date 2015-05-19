@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, BangPatterns #-} 
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 module Document.Proof where
 
@@ -575,9 +576,9 @@ data ParserSetting = PSetting
 
 default_setting :: ParserSetting
 default_setting = PSetting 
-    { language = undefined
-    , decls = undefined
-    , sorts = undefined
+    { language = $myError ""
+    , decls = $myError ""
+    , sorts = $myError ""
     , primed_vars = M.empty
     , dum_ctx = M.empty
     , is_step = False

@@ -7,8 +7,8 @@ import Z3.Z3 as Z
 import Logic.Expr
 import Logic.Lambda
 import Logic.Operator hiding ( Command )
-import Logic.Proof hiding ( assert )
-import Logic.Theory
+import Logic.Proof    hiding ( assert )
+import Logic.Theory   hiding ( assert )
 
 import Theories.SetTheory
 
@@ -295,8 +295,8 @@ result8 = ctx_strip_generics ctx
         fun = -- M.fromList $ map g 
                 decorated_table $ concatMap M.elems [ M.map (f m) $ funs set_theory | m <- ms ]
         f m = instantiate m . substitute_type_vars m
-        t0 = int
-        t1 = set_type int
+        t0  = int
+        t1  = set_type int
         ms  = [ M.fromList [ (tj,ti) | tj <- ["a","b","t"] ] | ti <- [t0, t1] ]
 
 case9 :: IO [ M.Map String FOType ]

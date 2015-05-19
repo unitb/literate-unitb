@@ -101,7 +101,7 @@ instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
 
-data QuantifierType = QTConst Type | QTSort Sort | QTTerm Sort
+data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
     deriving (Eq,Ord,Generic)
 
 data QuantifierWD  = FiniteWD | InfiniteWD
@@ -177,7 +177,8 @@ instance IsQuantifier HOQuantifier where
     exprType Exists _ _ = bool
     exprType (UDQuant _ _ (QTConst t) _) _ _ = t
     exprType (UDQuant _ _ (QTSort s) _) arg term = make_type s [arg,term]
-    exprType (UDQuant _ _ (QTTerm s) _) _ term = make_type s [term]
+    exprType (UDQuant _ _ (QTFromTerm s) _) _ term = make_type s [term]
+    exprType (UDQuant _ _ QTTerm _) _ term = term
     qForall = Forall
     qExists = Exists
 
@@ -243,7 +244,7 @@ type FOFun = AbsFun FOType
 
 data AbsFun t = 
         Fun [t] String Lifting [t] t
-    deriving (Eq, Ord, Generic)
+    deriving (Eq, Ord, Generic, Typeable)
 
 mk_fun :: [t] -> String -> [t] -> t -> AbsFun t
 mk_fun ps n ts t = Fun ps n Unlifted ts t
@@ -270,7 +271,7 @@ type Def = AbsDef GenericType HOQuantifier
 type Def' = AbsDef GenericType FOQuantifier
 
 data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
-    deriving (Eq,Ord,Generic)
+    deriving (Eq,Ord,Generic,Typeable)
 
 instance Show StrList where
     show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"

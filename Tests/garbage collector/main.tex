@@ -18,6 +18,7 @@
 \date{} % delete this line to display the current date
 
 %%% BEGIN DOCUMENT
+\newcommand{\lookup}[2]{#1[#2]}
 \setcounter{tocdepth}{4}
 \begin{document}
 	\input{main/machine_m0}
@@ -44,22 +45,64 @@
 	\evguard{free}{m0:grd0}{ \neg p = r }
 \end{align}
 	\[ \param{alloc}{p : Node} \]
-	\[ \param{free}{p : Node} \]
+	\[ \indices{free}{p : Node} \]
 \end{machine}
 
 	\input{main/machine_m1}
 \begin{machine}{m1}
 	\refines{m0}
 
+	\with{relations}
 	\with{functions}
 	\[ \variable{ptr: \set[Pair[Node,Node]]} \]
-	\[ \constant{star: \set[Pair[Node,Node]]\pfun \set[Pair[Node,Node]] } \]
-\begin{align}
-	\assumption{m1:asm0}{ \qforall{rel}{}{rel \in \dom.star} } \\
-	\progress{m1:prog0}{ p \in live \land \neg (r \mapsto p) \in star.ptr }{ p \in free }
-\refine{m1:prog0}{ensure}{free}{}
-\end{align}
+	% \[ \constant{star: \set[Pair[Node,Node]]\pfun \set[Pair[Node,Node]] } \]
+\begin{align*}
+	% & \assumption{m1:asm0}{ \qforall{rel}{}{rel \in \dom.star} } \\
+	% & \assumption{m1:asm1}{ \qforall{r,x}{}
+		% {(x\mapsto x) \in star.r} } \\
+	& \progress{m1:prog0}{ p \in live \land \neg (r \mapsto p) \in \star{ptr} }{ p \in free }
+\refine{m1:prog0}{ensure}{free}{ $\index{p}{p' = p }$ }
+\end{align*}
 	\[ \dummy{ p : Node } \]
 	\removecoarse{free}{default}
+\begin{align}
+	\cschedule{free}{m1:sch0}{p \in live} \\
+	\cschedule{free}{m1:sch1}{ \neg (r \mapsto p) \in \star{ptr}}
+\end{align}
+	\newevent{add}{ADD\_EDGE}
+	\newevent{delete}{DELETE\_EDGE}
+\begin{align}
+	\evguard{add}{m1:grd0}{ (r \mapsto p) \in \star{ptr} } \\
+	\evguard{add}{m1:grd1}{ (r \mapsto q) \in \star{ptr} } \\
+	\evguard{delete}{m1:grd0}{ (r \mapsto p) \in \star{ptr} } \\
+	\evbcmeq{add}{m1:act0}{ptr}{ ptr \bunion \{ p \mapsto q \} } \\
+	\evbcmeq{delete}{m1:act0}{ptr}{ ptr \setminus \{ p \mapsto q \} } 
+	% \assumption{m1:asm2}{ \qforall{r_0,r_1}{}
+	% 	{ \star{(r_0 \setminus r_1)} \subseteq \star{r_0} } }
+	% relational theory with relational image
+	% \assumption{m1:asm3}{ \qforall{p,q,r,S}{}
+		% { star.(r_0 \setminus r_1) \subseteq star.r_0 } }
+\end{align}
+	\[ \param{add}{p,q : Node} \]
+	\[ \param{delete}{p,q : Node} \]
+\end{machine}
+
+	\input{main/machine_m2}
+
+\begin{machine}{m2}
+	\refines{m1}
+
+	\[ \variable{reach : \set[Node]} \]
+\begin{align}
+	\invariant{m2:inv0}{ r \in reach } \\
+	\initialization{m2:in0}{ reach = \{r\} }
+	% \invariant{m1}
+\end{align}
+	\removecoarse{free}{m1:sch1}
+\begin{align}
+	\cschedule{free}{m2:sch0}
+		{ \lookup{(\star{ptr})}{~reach~} = reach } \\
+	\cschedule{free}{m2:sch1}{ \neg p \in reach }
+\end{align}
 \end{machine}
 \end{document}

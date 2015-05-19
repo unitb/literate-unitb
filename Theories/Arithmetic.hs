@@ -45,7 +45,7 @@ arithmetic = empty_theory {
         types = symbol_table [IntSort,RealSort]
         , funs = symbol_table 
             [ sum_fun ]
-        , fact = "arithmetic" `axioms` do
+        , _fact = "arithmetic" `axioms` do
                 $axiom $ 
                     asum zempty_set term `mzeq` mzint 0
 
