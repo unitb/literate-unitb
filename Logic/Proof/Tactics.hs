@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE UndecidableInstances   #-}
@@ -17,16 +18,22 @@ module Logic.Proof.Tactics
     , get_named_hyps, get_nameless_hyps
     , get_used_vars, get_allocated_vars
     , use_theorems
+    , define
+    , by_symmetry
+    , indirect_inequality
+    , indirect_equality
     )
 where
 
 import Logic.Expr hiding ( instantiate )
 import Logic.Operator
+import Logic.WellDefinedness
 import Logic.Proof.ProofTree
 import Logic.Proof.Sequent
 
     -- Libraries
 import Control.Applicative
+import Control.Arrow
 
 import Control.Monad hiding ( guard )
 import Control.Monad.RWS hiding ( guard )
@@ -37,8 +44,9 @@ import Control.Monad.Identity hiding ( guard )
 import           Data.Graph
 import           Data.List as L
 import qualified Data.List.Ordered as OL
-import           Data.Map  as M hiding (map)
+import           Data.Map  as M
 import qualified Data.Set  as S
+import           Data.Tuple
 
 import Utilities.Error
 import Utilities.Format
@@ -102,6 +110,16 @@ with_hypotheses es cmd = do
         new_hyp = (M.fromList es `M.union` hyps)
     tac_local (param { sequent = Sequent ctx asm new_hyp g }) cmd
 
+with_nameless_hypotheses :: Monad m
+                => [Expr] 
+                -> TacticT m a 
+                -> TacticT m a
+with_nameless_hypotheses es cmd = do
+    param              <- TacticT $ lift ask
+    let Sequent ctx asm hyps g = sequent param
+        new_asm = (es ++ asm)
+    tac_local (param { sequent = Sequent ctx new_asm hyps g }) cmd
+
 with_variables :: Monad m
                => [Var] -> TacticT m Proof -> TacticT m Proof
 with_variables vs (TacticT cmd) = TacticT $ do
@@ -109,6 +127,15 @@ with_variables vs (TacticT cmd) = TacticT $ do
     param              <- lift ask
     let (Context sorts vars funs defs dums) = ctx
         new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
+        clashes = M.filter (1 <)
+            $ M.unionsWith (+)
+                [ M.fromListWith (+) $ L.map (name &&& const 1) vs
+                , M.map (const 1 :: a -> Int) vars
+                , M.map (const 1) funs
+                , M.map (const 1) defs ]
+    unless (M.null clashes) $ 
+        hard_error [Error (format "redefinition of {0}" $ intercalate "," $ keys clashes) 
+            $ line_info param]
     ErrorT $ local (const (param { sequent = Sequent new_ctx asm hyps g })) $ 
         runErrorT cmd
 
@@ -193,14 +220,14 @@ assert xs proof = make_hard $
         then proof
         else do
             li <- get_line_info
-            let thm       = map f xs
+            let thm       = L.map f xs
                 f (x,y,_) = (x,y)
             ps <- forM xs $ \(lbl,x,m) -> do
                 p     <- easy
                 (p,r) <- add_theorems thm 
                     $ make_soft p 
                     $ with_goal x m
-                return ((lbl,x),(lbl,(x,p)),(map (\x -> (lbl,x)) r))
+                return ((lbl,x),(lbl,(x,p)),(L.map (\x -> (lbl,x)) r))
             let (xs,ys,zs) = unzip3 ps
                 -- (xs,ys,zs) =
                 -- ( new hypotheses
@@ -210,7 +237,7 @@ assert xs proof = make_hard $
                 let msg = "a cycle exists between the proofs of the assertions {0}" in
                 case x of
                     AcyclicSCC _ -> return ()
-                    CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ map show cs) li]
+                    CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ L.map show cs) li]
             p  <- with_hypotheses xs proof
             return $ Assertion (fromList ys) (concat zs) p li
 
@@ -236,13 +263,13 @@ clear_vars vars proof = do
             new_hyp = M.filter f hyp
             f x     = not $ any (`S.member` used_var x) vars
             Context a old_vars b c d = ctx
-            new_vars = L.foldl (flip M.delete) old_vars (map name vars)
+            new_vars = L.foldl (flip M.delete) old_vars (L.map name vars)
             new_ctx  = Context a new_vars b c d
         li    <- get_line_info
         (p,w) <- tac_listen $ tac_local 
             (param { sequent = Sequent new_ctx new_asm new_hyp g }) $
             do  (lbls,ids)  <- TacticT $ lift $ get
-                let new_ids = ids `S.difference` S.fromList (map name vars)
+                let new_ids = ids `S.difference` S.fromList (L.map name vars)
                 TacticT $ lift $ put (lbls,new_ids)
                 p           <- proof
                 TacticT $ lift $ put (lbls,ids)
@@ -342,8 +369,8 @@ get_used_vars = do
         Sequent _ asm hyp g <- TacticT $ lift $ asks sequent
         return $ S.toList $ S.unions $ 
                used_var g
-             : map used_var asm 
-            ++ map used_var (M.elems hyp)
+             : L.map used_var asm 
+            ++ L.map used_var (M.elems hyp)
 
 get_allocated_vars :: Monad m
                    => TacticT m [String]
@@ -411,6 +438,23 @@ bind msg Nothing = fail msg
 guard :: Monad m => String -> Bool -> m ()
 guard msg b = unless b $ fail msg
 
+define :: Monad m
+       => [(String, Expr)]
+       -> TacticT m Proof
+       -> TacticT m Proof
+define xs proof = do
+    let po (v,e) = ("WD" </> label v,well_definedness e,easy)
+        vars = L.map (uncurry Var . second type_of) xs
+    li <- get_line_info
+    p  <- assert (L.map po xs) $ 
+      with_variables vars $
+        with_nameless_hypotheses 
+          (zipWith zeq (L.map Word vars) (L.map snd xs)) $
+          proof
+    return $ if L.null xs
+      then p
+      else Definition (fromList $ zip vars $ L.map snd xs) p li
+
 free_goal :: Monad m
           => String -> String
           -> TacticT m Proof 
@@ -432,7 +476,7 @@ free_goal v0 v1 m = do
                           $ zforall (L.delete v0' bv) r t
                       , tt)
                 where
-                  bv' = map name bv
+                  bv' = L.map name bv
             _ -> fail $ "goal is not a universal quantification:\n" ++ pretty_print' goal
         p <- with_variables [Var v1 t] $ with_goal new m
         return $ FreeGoal v0 v1 t p li
@@ -443,8 +487,8 @@ instantiate :: Monad m
 instantiate hyp ps = do
         case hyp of
             Binder Forall vs r t _
-                | all (`elem` vs) (map fst ps) -> do
-                    let new_vs = L.foldl (flip L.delete) vs (map fst ps)
+                | all (`elem` vs) (L.map fst ps) -> do
+                    let new_vs = L.foldl (flip L.delete) vs (L.map fst ps)
                         ps'    = M.mapKeys name $ fromList ps
                         re     = substitute ps' r
                         te     = substitute ps' t
@@ -505,7 +549,7 @@ make_expr :: Monad m
           -> TacticT m a
 make_expr e = do
         li <- get_line_info
-        let f xs = Left $ map (`Error` li) xs
+        let f xs = Left $ L.map (`Error` li) xs
         TacticT $ fromEitherT $ hoistEither (either f Right e)
 
 runTacticT :: Monad m
@@ -571,3 +615,136 @@ instance Monad m => MonadError (TacticT m) where
     make_hard (TacticT cmd) = TacticT $ make_hard cmd
     make_soft x (TacticT cmd) = TacticT $ make_soft x cmd
 
+
+by_symmetry :: Monad m
+            => [Var]
+            -> Label
+            -> Maybe Label
+            -> TacticT m Proof
+            -> TacticT m Proof
+by_symmetry vs hyp mlbl proof = do
+        cs <- lookup_hypothesis (ThmRef hyp [])
+        let err0 = format "expecting a disjunction\n{0}: {1}" hyp $ pretty_print' cs
+        lbl  <- maybe (fresh_label "symmetry") return mlbl
+        goal <- get_goal
+        case cs of
+            FunApp f cs
+                | name f /= "or" -> fail err0
+                | otherwise -> do
+                    ps <- forM (permutations vs) $ \us -> do
+                        hyp <- get_named_hyps
+                        asm <- get_nameless_hyps
+                        let rn = zip vs us
+                            new_hyp = M.filter p $ M.map f hyp 
+                            new_asm = L.filter p $ L.map f asm
+                            f h = rename_all rn h
+                            p h = any (`S.member` used_var h) vs
+                        new_asm <- forM new_asm $ \x -> do
+                            lbl <- fresh_label "H"
+                            return (x,lbl)
+                        return $ M.fromList $ L.map swap (toList new_hyp) ++ new_asm
+                    let common = (head cs,hyp) : M.toList (intersections ps)
+                        named  = L.map swap common
+                        thm = zforall vs (zall $ L.map fst common) goal
+                        f xs = zip vs $ L.map Word xs
+                    cs <- forM cs $ \x -> return (hyp,x,easy)
+                    assert [(lbl,thm,clear_vars vs $ do
+                            us <- forM vs $ \(Var n t) -> new_fresh n t
+                            free_vars_goal (zip (L.map name vs) 
+                                                (L.map name us)) 
+                              $ assume named goal proof)] $
+                        instantiate_hyp_with thm (L.map f $ permutations vs) $ 
+                            by_cases cs
+            _ -> fail err0
+
+indirect_inequality :: Monad m
+                    => Either () () 
+                    -> BinOperator 
+                    -> Var
+                    -> TacticT m Proof
+                    -> TacticT m Proof
+indirect_inequality dir op zVar@(Var _ t) proof = do 
+        x_decl <- new_fresh "x" t
+        y_decl <- new_fresh "y" t
+        z_decl <- new_fresh "z" t
+        let x         = Word x_decl
+            y         = Word y_decl
+            z         = Word z_decl
+            rel       = mk_expr op
+            rel_z x y = case dir of
+                        Left ()  -> rel z x `mzimplies` rel z y
+                        Right () -> rel y z `mzimplies` rel x z
+            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x y
+        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ rel x y `mzeq` thm_rhs x y
+        goal <- get_goal
+        let is_op f x y = either (const False) id $ do
+                            xp <- mk_expr op x y
+                            return $ FunApp f [x,y] == xp
+        case goal of
+            FunApp f [lhs,rhs] 
+                | is_op f x y -> do
+                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
+                    g_lbl   <- fresh_label "new:goal"
+                    thm_lbl <- fresh_label "indirect:ineq"
+                    assert 
+                        [ (thm_lbl, thm, easy)       -- (Ax,y:: x = y == ...)
+                        , (g_lbl, new_goal, do       -- (Az:: z ≤ lhs => z ≤ rhs)
+                                free_goal (name z_decl) (name zVar) proof) ]
+                        $ do
+                            lbl <- fresh_label "inst"
+                            instantiate_hyp                       -- lhs = rhs
+                                thm lbl                             -- | we could instantiate indirect
+                                [ (x_decl,lhs)                      -- | inequality explicitly 
+                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
+                                easy                                -- | to be named in sequents
+                                                              
+            _ -> fail $ "expecting an inequality:\n" ++ pretty_print' goal
+
+indirect_equality :: Monad m
+                  => Either () () 
+                  -> BinOperator 
+                  -> Var
+                  -> TacticT m Proof
+                  -> TacticT m Proof
+indirect_equality dir op zVar@(Var _ t) proof = do 
+        x_decl <- new_fresh "x" t
+        y_decl <- new_fresh "y" t
+        z_decl <- new_fresh "z" t
+        let x       = Word x_decl
+            y       = Word y_decl
+            z       = Word z_decl
+            rel     = mk_expr op
+            rel_z   = case dir of
+                        Left ()  -> rel z
+                        Right () -> flip rel z
+            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x `mzeq` rel_z y
+        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ Right (zeq x y) `mzeq` thm_rhs x y
+        goal <- get_goal
+        case goal of
+            FunApp f [lhs,rhs] 
+                | name f == "=" -> do
+                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
+                    assert 
+                        [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
+                        , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
+                                free_goal (name z_decl) (name zVar) proof) ]
+                        $ do
+                            lbl <- fresh_label "inst"
+                            instantiate_hyp                       -- lhs = rhs
+                                thm lbl                             -- | we could instantiate indirect
+                                [ (x_decl,lhs)                      -- | inequality explicitly 
+                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
+                                easy                                -- | to be named in sequents
+                                                              
+            _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
+
+intersectionsWith :: Ord a => (b -> b -> b) -> [Map a b] -> Map a b
+intersectionsWith _ [] = error "intersection of an empty list of sets"
+intersectionsWith f (x:xs) = L.foldl (intersectionWith f) x xs
+
+intersections :: Ord a => [Map a b] -> Map a b
+intersections = intersectionsWith const
+
+--by_antisymmetry :: Monad m 
+--                => BinOperator 
+--                -> 

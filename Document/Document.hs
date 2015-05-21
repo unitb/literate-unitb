@@ -13,7 +13,7 @@ import Document.Visitor
 import Latex.Parser
 
 import Logic.Expr
-import Logic.Proof hiding ( with_line_info )
+import Logic.Proof
 
 import UnitB.AST as AST
 import UnitB.PO

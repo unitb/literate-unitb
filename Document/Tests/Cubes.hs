@@ -16,7 +16,7 @@ import UnitB.PO (step_ctx)
 
     -- Libraries
 import Data.Map hiding ( map )
-import Data.Typeable
+import Data.List hiding (inits)
 
 import Utilities.Syntactic
 
@@ -183,6 +183,7 @@ result8 :: String
 result8 = unlines
     [ "; m0/INIT/FIS/x"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -231,17 +232,24 @@ case9 = do
             Right [m] -> do
                 case toList $ _proofs $ props m of
                     (lbl,ByCalc calc):_ -> 
-                        case cast calc of
-                            Just calc ->
-                                return (show lbl ++ ":\n" ++ show_proof calc)
-                            _         ->
-                                return (
-                                      "incorrect proof type" ++ show (typeOf calc))
-                    xs       -> return (
-                                      "found "
-                                   ++ show (length xs) 
-                                   ++ " proofs")
+                          return (show lbl ++ ":\n" ++ show_proof calc)
+                    xs -> return (
+                              "found "
+                           ++ intercalate "," (map (proof_kind . snd) xs) 
+                           ++ " proofs")
             x -> return $ show x
+
+proof_kind :: Proof -> String
+proof_kind (ByCalc _) = "calc"
+proof_kind (Easy _) = "easy"
+proof_kind (ByCases _ _) = "cases"
+proof_kind (ByParts _ _) = "parts"
+proof_kind (FreeGoal _ _ _ _ _) = "free goal"
+proof_kind (Keep _ _ _ _ _) = "keep"
+proof_kind (Assertion _ _ _ _) = "assertion"
+proof_kind (InstantiateHyp _ _ _ _) = "InstantiateHyp"
+proof_kind (Assume _ _ _ _) = "assume"
+proof_kind (Definition _ _ _) = "definition"
 
 path10 :: FilePath
 path10   = "Tests/integers_t10.tex"

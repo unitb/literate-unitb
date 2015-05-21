@@ -19,8 +19,8 @@ import System.IO.Unsafe
 import qualified Utilities.Graph as G ( (!) )
 
 notations :: Notation
-notations = flip precede logic $ foldl combine empty_notation
-    [ functions
+notations = flip precede logical_notation $ foldl combine empty_notation
+    [ functional_notation
     , arith
     , function_notation
     , set_notation ] 

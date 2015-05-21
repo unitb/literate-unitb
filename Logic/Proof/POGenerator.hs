@@ -2,17 +2,19 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 module Logic.Proof.POGenerator 
-    ( POGen, POGenT, context, emit_goal
+    ( POGen, POGenT, Logic.Proof.POGenerator.context
+    , emit_goal
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
-    , definitions, existential, functions 
-    , tracePOG )
+    , Logic.Proof.POGenerator.definitions
+    , Logic.Proof.POGenerator.functions 
+    , existential, tracePOG )
 where
 
     -- Modules
-import Logic.Expr
-import Logic.Proof.Sequent
+import Logic.Expr as E hiding ((.=))
+import Logic.Proof.Sequent as S
 
 import UnitB.Feasibility
 
@@ -23,6 +25,7 @@ import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
+import Control.Lens hiding (Context)
 
 import Data.List as L
 import Data.Map as M hiding ( map )
@@ -33,11 +36,13 @@ import Utilities.Trace
 import Text.Printf
 
 data POParam = POP 
-    { ctx :: Context
+    { _pOParamContext :: Context
     , tag :: [Label]
-    , nameless :: [Expr]
-    , named :: Map Label Expr
+    , _pOParamNameless :: [Expr]
+    , _pOParamNamed :: Map Label Expr
     }
+
+makeFields ''POParam
 
 empty_param :: POParam
 empty_param = POP empty_ctx [] [] M.empty
@@ -88,30 +93,31 @@ existential vs (POGen cmd) = do
             $ censor (const []) $ listen 
             $ local (const empty_param) cmd
         let (ss',st) = runState (mapM g $ snd ss) empty_ctx
-        with (context st) 
+        with (_context st) 
             $ emit_exist_goal [] vs ss'
 
 emit_goal :: Monad m => [Label] -> Expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
-    ctx  <- asks ctx
+    ctx  <- asks $ view S.context
     tag  <- asks tag
-    asm  <- asks nameless
-    hyps <- asks named
+    asm  <- asks $ view nameless
+    hyps <- asks $ view named
     tell [(composite_label $ tag ++ lbl, Sequent ctx asm hyps g)]
 
 context :: Context -> State POParam ()
-context new_ctx = do
-    ctx <- gets ctx
-    modify $ \p -> p { ctx = new_ctx `merge_ctx` ctx }
+context = _context
+
+_context :: Context -> State POParam ()
+_context new_ctx = do
+    S.context %= (new_ctx `merge_ctx`)
 
 functions :: Map String Fun -> State POParam ()
 functions new_funs = do
-    context $ Context M.empty M.empty new_funs M.empty M.empty
+    _context $ Context M.empty M.empty new_funs M.empty M.empty
 
 definitions :: Map String Def -> State POParam ()
 definitions new_defs = do
-    let new_ctx = Context M.empty M.empty M.empty new_defs M.empty
-    context new_ctx
+    S.context.E.definitions .= new_defs
 
 with :: Monad m => State POParam () -> POGenT m a -> POGenT m a
 with f cmd = POGen $ local (execState f) $ runPOGen cmd
@@ -126,20 +132,15 @@ prefix lbl = prefix_label $ label lbl
 
 named_hyps :: Map Label Expr -> State POParam ()
 named_hyps hyps = do
-        h <- gets named
-        modify $ \p -> p { named = hyps `M.union` h }
+        named %= M.union hyps
 
 nameless_hyps :: [Expr] -> State POParam ()
 nameless_hyps hyps = do
-        h <- gets nameless
-        modify $ \p -> p { nameless = h ++ hyps }
+        nameless %= (++hyps)
 
 variables :: Map String Var -> State POParam ()
 variables vars = do
-        ctx <- gets ctx
-        let new_ctx = Context M.empty vars M.empty M.empty M.empty
-        modify $ \p -> p 
-            { ctx = new_ctx `merge_ctx` ctx }
+        S.context.constants %= (vars `merge`)
 
 eval_generator :: POGen () -> Map Label Sequent
 eval_generator cmd = runIdentity $ eval_generatorT cmd

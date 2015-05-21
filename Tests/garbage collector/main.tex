@@ -60,21 +60,21 @@
 	% & \assumption{m1:asm0}{ \qforall{rel}{}{rel \in \dom.star} } \\
 	% & \assumption{m1:asm1}{ \qforall{r,x}{}
 		% {(x\mapsto x) \in star.r} } \\
-	& \progress{m1:prog0}{ p \in live \land \neg (r \mapsto p) \in \star{ptr} }{ p \in free }
+	& \progress{m1:prog0}{ p \in live \land \neg r \mapsto p \in \star ptr }{ p \in free }
 \refine{m1:prog0}{ensure}{free}{ $\index{p}{p' = p }$ }
 \end{align*}
 	\[ \dummy{ p : Node } \]
 	\removecoarse{free}{default}
 \begin{align}
 	\cschedule{free}{m1:sch0}{p \in live} \\
-	\cschedule{free}{m1:sch1}{ \neg (r \mapsto p) \in \star{ptr}}
+	\cschedule{free}{m1:sch1}{ \neg r \mapsto p \in \star ptr}
 \end{align}
 	\newevent{add}{ADD\_EDGE}
 	\newevent{delete}{DELETE\_EDGE}
 \begin{align}
-	\evguard{add}{m1:grd0}{ (r \mapsto p) \in \star{ptr} } \\
-	\evguard{add}{m1:grd1}{ (r \mapsto q) \in \star{ptr} } \\
-	\evguard{delete}{m1:grd0}{ (r \mapsto p) \in \star{ptr} } \\
+	\evguard{add}{m1:grd0}{ r \mapsto p \in \star ptr } \\
+	\evguard{add}{m1:grd1}{ r \mapsto q \in \star ptr } \\
+	\evguard{delete}{m1:grd0}{ r \mapsto p \in \star ptr } \\
 	\evbcmeq{add}{m1:act0}{ptr}{ ptr \bunion \{ p \mapsto q \} } \\
 	\evbcmeq{delete}{m1:act0}{ptr}{ ptr \setminus \{ p \mapsto q \} } 
 	% \assumption{m1:asm2}{ \qforall{r_0,r_1}{}
@@ -85,6 +85,52 @@
 \end{align}
 	\[ \param{add}{p,q : Node} \]
 	\[ \param{delete}{p,q : Node} \]
+\begin{proof}{\ref{m1:prog0}/REF/ensure/m1/\ref{add}/SAF}
+\begin{align}
+	\define{rr}{ \{ r \mapsto r \} } \\
+	\define{E}{ \{ p \mapsto q \} } \\
+	\assert{lmm0}{ rr;\star (ptr \0\bunion E) \2\subseteq rr ; \star ptr }
+\end{align}
+\begin{free:var}{p}{ref}
+\begin{align*}
+	\assert{lmm1}{ r \mapsto ref \in \star ptr'
+		\implies r \mapsto ref \in \star ptr }
+\end{align*}
+\easy
+\begin{subproof}{lmm1}
+\begin{calculation}
+	r \mapsto ref \in \star ptr'
+\hint{=}{ \eqref{m1:act0} }
+	r \mapsto ref \in \star (ptr \bunion E)
+\hint{=}{ identity }
+	r \mapsto ref \in \star (ptr \bunion E)
+\hint{=}{ aiming for $rr$ }
+	r \mapsto ref \in \{r\} \rdomres (\star (ptr \bunion E))
+\hint{=}{ }
+	r \mapsto ref \in \star ptr
+\end{calculation}
+\end{subproof}
+\end{free:var}
+\begin{subproof}{lmm0}
+	% * over \/ 
+	% unroll *
+	% ; over \/
+\begin{calculation}
+	rr;\star (ptr \0\bunion E)
+\hint{=}{ }
+	rr; \star (\star ptr ; E) ; \star ptr
+\hint{=}{ }
+	rr; (\star (\star ptr ; E) ; \star ptr) ; E ; \star ptr 
+	\2\bunion rr ; \id ; \star ptr
+\hint{\subseteq}{ }
+	rr; \all ; E ; \star ptr 
+	\2\bunion rr ; \id ; \star ptr
+\hint{=}{ }
+	rr ; \star ptr
+\end{calculation}	
+\end{subproof}
+\end{proof}
+
 \end{machine}
 
 	\input{main/machine_m2}
@@ -101,8 +147,9 @@
 	\removecoarse{free}{m1:sch1}
 \begin{align}
 	\cschedule{free}{m2:sch0}
-		{ \lookup{(\star{ptr})}{~reach~} = reach } \\
+		{ \lookup{(\star ptr)}{~reach~} = reach } \\
 	\cschedule{free}{m2:sch1}{ \neg p \in reach }
 \end{align}
+
 \end{machine}
 \end{document}

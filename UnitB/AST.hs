@@ -141,7 +141,7 @@ empty_system = Sys [] M.empty empty_store
             , ("basic",basic_theory)]
 
 all_notation :: Machine -> Notation
-all_notation m = flip precede logic 
+all_notation m = flip precede logical_notation 
         $ L.foldl combine empty_notation 
         $ map Th.notation th
     where

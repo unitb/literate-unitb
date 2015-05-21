@@ -38,11 +38,13 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
 
         extends = M.empty
         consts  = M.empty
-        dummies = M.empty
+        _theoryDummies = M.empty
         types = M.empty
         defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
+                , Def [gT] "all" [] (set_type gT) 
+                        $ zlift (set_type gT) ztrue
                 , Def [gT] "elem" [x_decl, s1_decl] bool 
                         $ ($fromJust) (zset_select s1 x)
                 , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
@@ -136,6 +138,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
 
 zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: ExprP
+zset_all      :: ExprP
 zelem         :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
 zsubset       :: ExprP -> ExprP -> ExprP
 zstsubset     :: ExprP -> ExprP -> ExprP
@@ -175,6 +178,7 @@ zsetdiff     = typ_fun2 (mk_fun [gA] "set-diff" [set_type gA,set_type gA] $ set_
 
 
 zempty_set   = Right $ FunApp (mk_fun [gA] "empty-set" [] $ set_type gA) []
+zset_all     = Right $ FunApp (mk_fun [gA] "all" [] $ set_type gA) []
 zsubset      = typ_fun2 (mk_fun [] "subset" [set_type gA,set_type gA] bool)
 zstsubset    = typ_fun2 (mk_fun [gA] "st-subset" [set_type gA,set_type gA] bool)
 zintersect   = typ_fun2 (mk_fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
@@ -228,7 +232,7 @@ set_notation = with_assoc empty_notation
     , prec = [   [ Left compl ]
                : L.map (L.map Right)
                  [ [apply]
-                 , [set_union,set_diff,set_intersect]
+                 , [pair_op,set_union,set_diff,set_intersect]
                  , [ equal
                    , membership, subset
                    , st_subset, superset
@@ -240,7 +244,8 @@ set_notation = with_assoc empty_notation
                     , ("\\qunion",qunion) ]
 
     , commands    = [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
-                    , Command "\\finite" "finite" 1 $ from_list mzfinite]
+                    , Command "\\all" "all" 0 $ const $ zset_all
+                    , Command "\\finite" "finite" 1 $ from_list mzfinite ]
     , chaining    = [ ((subset,subset),subset) 
                     , ((subset,st_subset),st_subset)
                     , ((st_subset,subset),st_subset)

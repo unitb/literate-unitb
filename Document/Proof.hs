@@ -14,12 +14,15 @@ import Latex.Parser
 import UnitB.AST
 import UnitB.PO
 
-import Logic.Expr
+import Logic.Expr hiding (sorts)
 import Logic.Operator
 import Logic.Proof as LP
+import Logic.Proof.Tactics as LP
 
     -- Libraries
 import Control.Applicative ((<$>))
+import Control.Arrow
+import Control.Lens hiding (Context,indices)
 
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Reader.Class hiding ( reader )
@@ -39,7 +42,6 @@ import qualified Data.Map as M
 import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
-import           Data.Tuple
 
 import           Utilities.Error
 import           Utilities.Format
@@ -54,6 +56,7 @@ data ProofStep = Step
        { assertions  :: Map Label (Tactic Expr)    -- assertions
        , subproofs   :: Map Label (Tactic Proof)   -- proofs of assertions
        , assumptions :: Map Label (Tactic Expr)    -- assumptions
+       , definition  :: [(String, Tactic Expr)] 
        , theorem_ref :: [Tactic (TheoremRef, LineInfo)]
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal
        , main_proof  :: Maybe (Tactic Proof)       -- main proof        
@@ -100,6 +103,16 @@ add_refs :: ( Monad m
          => [Tactic (TheoremRef,LineInfo)] -> m ()
 add_refs xs = ST.modify $ \p -> p { theorem_ref = xs ++ theorem_ref p }
 
+add_definition :: ( Monad m
+                  , MonadReader LineInfo m
+                  , MonadError m
+                  , MonadState ProofStep m)
+               => String -> Tactic Expr
+               -> m ()
+add_definition v e = do
+        s <- ST.get
+        ST.put $ s { definition = (v,e) : definition s }
+
 add_assumption :: ( Monad m
                   , MonadReader LineInfo m
                   , MonadError m
@@ -141,7 +154,7 @@ add_proof lbl prf = do
             ST.put $ s { subproofs = insert lbl prf $ subproofs s }
 
 empty_step :: ProofStep
-empty_step = Step empty empty empty [] Nothing Nothing
+empty_step = Step empty empty empty [] [] Nothing Nothing
 
 find_assumptions :: (MonadReader Thy m)
                  => VisitorT (StateT ProofStep m) () 
@@ -171,6 +184,11 @@ find_assumptions = visitor
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     add_assert lbl expr
             )
+        ,   (   "\\define"
+            ,   VCmdBlock $ \(String var,formula) -> do
+                    expr   <- lift_i $ get_expression Nothing formula 
+                    add_definition var expr
+            )
         ,   (   "\\goal"
             ,   VCmdBlock $ \(One formula) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
@@ -189,140 +207,6 @@ find_assumptions = visitor
             )       
         ]
 
-
-intersectionsWith :: Ord a => (b -> b -> b) -> [Map a b] -> Map a b
-intersectionsWith _ [] = error "intersection of an empty list of sets"
-intersectionsWith f (x:xs) = L.foldl (intersectionWith f) x xs
-
-intersections :: Ord a => [Map a b] -> Map a b
-intersections = intersectionsWith const
-
-by_symmetry :: Monad m
-            => [Var]
-            -> Label
-            -> Maybe Label
-            -> TacticT m Proof
-            -> TacticT m Proof
-by_symmetry vs hyp mlbl proof = do
-        cs <- lookup_hypothesis (ThmRef hyp [])
-        let err0 = format "expecting a disjunction\n{0}: {1}" hyp $ pretty_print' cs
-        lbl  <- maybe (fresh_label "symmetry") return mlbl
-        goal <- get_goal
-        case cs of
-            FunApp f cs
-                | name f /= "or" -> fail err0
-                | otherwise -> do
-                    ps <- forM (permutations vs) $ \us -> do
-                        hyp <- get_named_hyps
-                        asm <- get_nameless_hyps
-                        let rn = zip vs us
-                            new_hyp = M.filter p $ M.map f hyp 
-                            new_asm = L.filter p $ L.map f asm
-                            f h = rename_all rn h
-                            p h = any (`S.member` used_var h) vs
-                        new_asm <- forM new_asm $ \x -> do
-                            lbl <- fresh_label "H"
-                            return (x,lbl)
-                        return $ M.fromList $ map swap (toList new_hyp) ++ new_asm
-                    let common = (head cs,hyp) : M.toList (intersections ps)
-                        named  = map swap common
-                        thm = zforall vs (zall $ map fst common) goal
-                        f xs = zip vs $ map Word xs
-                    cs <- forM cs $ \x -> return (hyp,x,easy)
-                    assert [(lbl,thm,clear_vars vs $ do
-                            us <- forM vs $ \(Var n t) -> new_fresh n t
-                            free_vars_goal (zip (map name vs) 
-                                                (map name us)) 
-                              $ assume named goal proof)] $
-                        instantiate_hyp_with thm (map f $ permutations vs) $ 
-                            by_cases cs
-            _ -> fail err0
-
-indirect_inequality :: Monad m
-                    => Either () () 
-                    -> BinOperator 
-                    -> Var
-                    -> TacticT m Proof
-                    -> TacticT m Proof
-indirect_inequality dir op zVar@(Var _ t) proof = do 
-        x_decl <- new_fresh "x" t
-        y_decl <- new_fresh "y" t
-        z_decl <- new_fresh "z" t
-        let x         = Word x_decl
-            y         = Word y_decl
-            z         = Word z_decl
-            rel       = mk_expr op
-            rel_z x y = case dir of
-                        Left ()  -> rel z x `mzimplies` rel z y
-                        Right () -> rel y z `mzimplies` rel x z
-            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x y
-        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ rel x y `mzeq` thm_rhs x y
-        goal <- get_goal
-        let is_op f x y = either (const False) id $ do
-                            xp <- mk_expr op x y
-                            return $ FunApp f [x,y] == xp
-        case goal of
-            FunApp f [lhs,rhs] 
-                | is_op f x y -> do
-                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
-                    g_lbl   <- fresh_label "new:goal"
-                    thm_lbl <- fresh_label "indirect:ineq"
-                    assert 
-                        [ (thm_lbl, thm, easy)       -- (Ax,y:: x = y == ...)
-                        , (g_lbl, new_goal, do       -- (Az:: z ≤ lhs => z ≤ rhs)
-                                free_goal (name z_decl) (name zVar) proof) ]
-                        $ do
-                            lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
-                                thm lbl                             -- | we could instantiate indirect
-                                [ (x_decl,lhs)                      -- | inequality explicitly 
-                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
-                                easy                                -- | to be named in sequents
-                                                              
-            _ -> fail $ "expecting an inequality:\n" ++ pretty_print' goal
-
-indirect_equality :: Monad m
-                  => Either () () 
-                  -> BinOperator 
-                  -> Var
-                  -> TacticT m Proof
-                  -> TacticT m Proof
-indirect_equality dir op zVar@(Var _ t) proof = do 
-        x_decl <- new_fresh "x" t
-        y_decl <- new_fresh "y" t
-        z_decl <- new_fresh "z" t
-        let x       = Word x_decl
-            y       = Word y_decl
-            z       = Word z_decl
-            rel     = mk_expr op
-            rel_z   = case dir of
-                        Left ()  -> rel z
-                        Right () -> flip rel z
-            thm_rhs x y = mzforall [z_decl] mztrue $ rel_z x `mzeq` rel_z y
-        thm  <- make_expr $ mzforall [x_decl,y_decl] mztrue $ Right (zeq x y) `mzeq` thm_rhs x y
-        goal <- get_goal
-        case goal of
-            FunApp f [lhs,rhs] 
-                | name f == "=" -> do
-                    new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
-                    assert 
-                        [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
-                        , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
-                                free_goal (name z_decl) (name zVar) proof) ]
-                        $ do
-                            lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
-                                thm lbl                             -- | we could instantiate indirect
-                                [ (x_decl,lhs)                      -- | inequality explicitly 
-                                , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
-                                easy                                -- | to be named in sequents
-                                                              
-            _ -> fail $ "expecting an equality:\n" ++ pretty_print' goal
-
---by_antisymmetry :: Monad m 
---                => BinOperator 
---                -> 
-
 find_proof_step :: (MonadReader Thy m, Monad m)
                 => VisitorT (StateT ProofStep m) ()
 find_proof_step = visitor
@@ -336,7 +220,7 @@ find_proof_step = visitor
                         cc <- cc
                         case infer_goal cc notat of
                             Right cc_goal -> do
-                                    return (ByCalc $ cc { goal = cc_goal })
+                                    return (ByCalc $ cc & goal .~ cc_goal )
                             Left msgs      -> hard_error $ map (\x -> Error (format "type error: {0}" x) li) msgs
                     -- cc <- lift_i $ parse_calc pr
                     -- set_proof $ LP.with_line_info li $ do
@@ -448,7 +332,7 @@ find_parts = visitor
         [   (   "part:a"
             ,   VEnvBlock $ \(One formula) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
-                    p         <- lift_i collect_proof_step -- (pr { po = new_po }) m
+                    p     <- lift_i collect_proof_step -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]
                     return ()
             )
@@ -467,17 +351,21 @@ collect_proof_step = do
                 let assrt   = assertions step
                     prfs    = subproofs step
                     asm     = assumptions step
+                    defs    = definition step
                     ng      = new_goal step
                     thm_ref = theorem_ref step
-                p <- if keysSet assrt == keysSet prfs
+                p <- if keysSet prfs `S.isSubsetOf` keysSet assrt
                      then return $ LP.with_line_info li $ do
-                        thm <- sequence thm_ref
-                        use_theorems thm $ do
-                            assrt <- forM (toList assrt) $ \(lbl,xp) -> do
-                                xp <- xp
-                                let p = prfs ! lbl
-                                return (lbl,xp,p)
-                            assert assrt p
+                        defs <- forM defs $ 
+                            runKleisli $ second $ Kleisli id
+                        define defs $ do
+                            thm  <- sequence thm_ref
+                            use_theorems thm $ do
+                                assrt <- forM (toList assrt) $ \(lbl,xp) -> do
+                                    xp <- xp
+                                    let p = fromMaybe easy $ M.lookup lbl prfs
+                                    return (lbl,xp,p)
+                                assert assrt p
                     else hard_error [Error "assertion labels and proofs mismatch" li]
                 case ng of
                     Just g  -> return $ LP.with_line_info li $ do

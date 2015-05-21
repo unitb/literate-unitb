@@ -7,7 +7,7 @@ import Z3.Z3 as Z
 import Logic.Expr
 import Logic.Lambda
 import Logic.Operator hiding ( Command )
-import Logic.Proof    hiding ( assert )
+import Logic.Proof 
 import Logic.Theory   hiding ( assert )
 
 import Theories.SetTheory

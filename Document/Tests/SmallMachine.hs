@@ -142,6 +142,7 @@ result4 :: String
 result4 = unlines 
     [ "; m0/inc/INV/inv0"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -177,6 +178,7 @@ result5 :: String
 result5 = unlines 
     [ "; m0/SKIP/CO/co0"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -243,6 +245,7 @@ result7 :: String
 result7 = unlines 
     [ "; m0/inc/SCH/grd0"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -274,6 +277,7 @@ result8 :: String
 result8 = unlines 
     [ "; m0/inc/SCH/grd0"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -304,6 +308,7 @@ result9 :: String
 result9 = unlines
     [ "; m0/inc/C_SCH/weaken/c0"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -334,6 +339,7 @@ result10 :: String
 result10 = unlines 
     [ "; m0/TR/tr0/inc/EN"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -362,6 +368,7 @@ result11 :: String
 result11 = unlines
     [ "; m0/TR/tr0/inc/NEG"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"

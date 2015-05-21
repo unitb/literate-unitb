@@ -2,6 +2,9 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 module Logic.Proof.ProofTree where
 
     -- Modules
@@ -11,8 +14,10 @@ import Logic.Proof.Sequent
 
     -- Libraries
 import Control.Applicative
+import Control.Arrow
 import Control.DeepSeq
 import Control.Monad
+import Control.Lens hiding (Context,rewrite)
 
 import Data.DeriveTH
 import Data.List as L
@@ -38,18 +43,21 @@ data Proof =  FreeGoal String String Type Proof LineInfo
             | ByParts [(Expr,Proof)]           LineInfo
                 -- Too complex
             | Assertion (Map Label (Expr,Proof)) [(Label,Label)] Proof LineInfo
+            | Definition (Map Var Expr) Proof LineInfo
             | InstantiateHyp Expr (Map Var Expr) Proof LineInfo
             | Keep Context [Expr] (Map Label Expr) Proof LineInfo
             | ByCalc Calculation
     deriving (Eq,Typeable)
 
 data Calculation = Calc 
-        {  context    :: Context
-        ,  goal       :: Expr
+        {  _calculationContext :: Context
+        ,  _calculationGoal    :: Expr
         ,  first_step :: Expr
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
     deriving (Eq, Typeable)
+
+makeFields ''Calculation
 
 data TheoremRef = 
         ThmRef Label [(Var,Expr)]
@@ -71,6 +79,7 @@ instance Syntactic Proof where
     line_info (ByCases _ li)        = li
     line_info (Assume _ _ _ li)     = li
     line_info (ByParts _ li)        = li
+    line_info (Definition _ _ li)   = li
     line_info (Assertion _ _ _ li)  = li
     line_info (Easy li)             = li
     line_info (FreeGoal _ _ _ _ li)   = li
@@ -143,6 +152,15 @@ instance ProofRule Proof where
                                                `zimplies` goal) )
                    : pos)
 
+    proof_po (Definition defs p li) lbl s = do
+            let decl = symbols s
+                clashes = decl `M.intersection` M.mapKeys name defs
+                defs' = L.map (uncurry zeq . first Word) $ M.toList defs
+            unless (M.null clashes) $
+                Left [Error (format "Symbols {0} are already defined" $ intercalate "," $ M.keys clashes) li]
+            proof_po p lbl $ 
+                s & constants %~ (M.union $ symbol_table $ M.keys defs)
+                  & nameless  %~ (defs' ++)
     proof_po    (Assertion lemma dep p _)
                 lbl (Sequent ctx asm hyps goal) = do
             let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
@@ -216,7 +234,7 @@ show_proof (Calc _ g fs ss _) =
                 ++ [ "    " ++ show s ] )
 
 goal_po :: Calculation -> Sequent
-goal_po c = Sequent (context c) xs M.empty (goal c)
+goal_po c = Sequent (c^.context) xs M.empty (c^.goal)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 

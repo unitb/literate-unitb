@@ -127,7 +127,7 @@ invariants_only m =
 raw_machine_pos :: Machine -> (Map Label Sequent)
 raw_machine_pos m = eval_generator $ 
                 with (do
-                        context $ theory_ctx (theory m)
+                        POG.context $ theory_ctx (theory m)
                         nameless_hyps $ M.elems unnamed 
                         named_hyps $ named_f) $ do
                     forM_ (M.toList $ _transient p) $ \tr -> do
@@ -229,7 +229,7 @@ init_sim_po m =
         (do prefix_label $ _name m
             prefix_label "INIT"
             prefix_label "SIM"
-            context (assert_ctx m)
+            POG.context (assert_ctx m)
             named_hyps $ inits m
             named_hyps $ M.mapKeys (label . name) $ init_witness m)
         (forM_ (M.toList $ del_inits m) $ \(lbl,p) -> do
@@ -239,7 +239,7 @@ init_wit_wd_po :: Machine -> M ()
 init_wit_wd_po m =
     with 
         (do prefix_label $ _name m
-            context (assert_ctx m)
+            POG.context (assert_ctx m)
             named_hyps $ inits m)
         (emit_goal ["INIT/WWD"] 
             (well_definedness $ zall $ init_witness m))
@@ -248,7 +248,7 @@ init_witness_fis_po :: Machine -> M ()
 init_witness_fis_po m =
     with 
         (do prefix_label $ _name m
-            context (assert_ctx m)
+            POG.context (assert_ctx m)
             named_hyps $ inits m)
         (emit_exist_goal ["INIT/WFIS"] 
             (M.elems $ abs_vars m  `M.difference` variables m) 
@@ -258,7 +258,7 @@ init_fis_po :: Machine -> M ()
 init_fis_po m = 
     with 
         (do prefix_label $ _name m
-            context (assert_ctx m))
+            POG.context (assert_ctx m))
         (emit_exist_goal [init_fis_lbl] 
             (M.elems $ variables m  `M.union` abs_vars m) 
             (M.elems $ inits m))
@@ -370,7 +370,7 @@ prop_co :: Machine -> (Label, Constraint) -> M ()
 prop_co m (pname, Co fv xp) = 
     with
         (do prefix_label $ _name m
-            context $ step_ctx m
+            POG.context $ step_ctx m
             POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
@@ -393,7 +393,7 @@ prop_saf :: Machine -> (Label, SafetyProp) -> M ()
 prop_saf m (pname, Unless fv p q excp) = 
     with
         (do prefix_label $ _name m
-            context $ step_ctx m
+            POG.context $ step_ctx m
             POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
@@ -426,7 +426,7 @@ prop_saf m (pname, Unless fv p q excp) =
 inv_po :: Machine -> (Label, Expr) -> M ()
 inv_po m (pname, xp) = 
     do  with (do prefix_label $ _name m
-                 context $ step_ctx m
+                 POG.context $ step_ctx m
                  named_hyps $ invariants m)
             $ forM_ (toList $ events m) $ \(evt_lbl,evt) -> do
                 let grd  = all_guards evt
@@ -439,14 +439,14 @@ inv_po m (pname, xp) =
                         POG.variables $ params evt)
                     (emit_goal [evt_lbl,inv_lbl,pname] 
                         (primed (variables m `M.union` abs_vars m) xp))
-        with (do context $ assert_ctx m
+        with (do POG.context $ assert_ctx m
                  named_hyps $ inits m 
                     `M.union` M.mapKeys (label . name) (init_witness m))
             $ emit_goal [_name m, inv_init_lbl, pname] xp
 
 wit_wd_po :: Machine -> (Label, Event) -> M ()
 wit_wd_po m (lbl, evt) = 
-        with (do context $ step_ctx m
+        with (do POG.context $ step_ctx m
                  POG.variables $ indices evt
                  POG.variables $ params evt
                  named_hyps $ invariants m
@@ -459,7 +459,7 @@ wit_wd_po m (lbl, evt) =
 
 wit_fis_po :: Machine -> (Label, Event) -> M ()
 wit_fis_po m (lbl, evt) = 
-        with (do context $ step_ctx m
+        with (do POG.context $ step_ctx m
                  POG.variables $ indices evt
                  POG.variables $ params evt
                  named_hyps $ invariants m
@@ -593,7 +593,7 @@ strengthen_guard_po m (lbl,evt) =
 sim_po :: Machine -> (Label, Event) -> M ()
 sim_po m (lbl, evt) = 
         with (do
-                context $ step_ctx m
+                POG.context $ step_ctx m
                 POG.variables $ indices evt
                 POG.variables $ params evt
                 prefix_label $ _name m
@@ -606,7 +606,7 @@ sim_po m (lbl, evt) =
 
 fis_po :: Machine -> (Label, Event) -> M ()
 fis_po m (lbl, evt) = 
-        with (do context $ assert_ctx m
+        with (do POG.context $ assert_ctx m
                  POG.variables $ indices evt
                  POG.variables $ params evt
                  named_hyps $ invariants m
@@ -621,7 +621,7 @@ tr_wd_po  m (lbl, Transient vs p _ (TrHint wit _)) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "TR"
-                 context $ step_ctx m
+                 POG.context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD"]
                     $ well_definedness $ zforall (elems vs) ztrue p
@@ -640,7 +640,7 @@ prog_wd_po m (lbl, LeadsTo vs p q) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "PROG"
-                 context $ step_ctx m
+                 POG.context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD","lhs"]
                     $ well_definedness $ zforall vs ztrue p
@@ -652,7 +652,7 @@ saf_wd_po m (lbl, Unless vs p q _) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "SAF"
-                 context $ step_ctx m
+                 POG.context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD","lhs"]
                     $ zforall vs ztrue $ (znot q) `zimplies` (well_definedness p)
@@ -664,7 +664,7 @@ co_wd_po m (lbl, Co vs p) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "CO"
-                 context $ step_ctx m
+                 POG.context $ step_ctx m
                  nameless_hyps $ M.elems $
                     M.map (primed $ variables m) $ invariants m
                  named_hyps $ invariants m)
@@ -674,7 +674,7 @@ co_wd_po m (lbl, Co vs p) =
 inv_wd_po :: Machine -> M ()
 inv_wd_po m = 
         with (do prefix_label $ _name m
-                 context $ assert_ctx m
+                 POG.context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
@@ -683,7 +683,7 @@ inv_wd_po m =
 init_wd_po :: Machine -> M ()
 init_wd_po m = 
         with (do prefix_label $ _name m
-                 context $ assert_ctx m
+                 POG.context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INIT", "WD"] 
@@ -712,7 +712,7 @@ evt_wd_po m (lbl, evt) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "WD"
-                 context $ assert_ctx m
+                 POG.context $ assert_ctx m
                  POG.variables $ indices evt
                  named_hyps $ invariants m) $ do
             incremental_wd_po "C_SCH"
@@ -727,7 +727,7 @@ evt_wd_po m (lbl, evt) =
                     (old_guard evt) (new_guard evt)
                 with (do prefix_label "ACT"
                          named_hyps $ all_guards evt
-                         context $ step_ctx m) $ do
+                         POG.context $ step_ctx m) $ do
                     let p k _ = k `M.notMember` old_acts evt
                     forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
                         emit_goal [tag] 
@@ -738,9 +738,9 @@ evt_eql_po  m (lbl, evt) =
     with (do prefix_label $ _name m
              prefix_label lbl
              prefix_label "EQL"
-             context $ evt_live_ctx evt
-             context $ evt_saf_ctx evt
-             context $ step_ctx m
+             POG.context $ evt_live_ctx evt
+             POG.context $ evt_saf_ctx evt
+             POG.context $ step_ctx m
              named_hyps $ invariants m
              named_hyps $ all_guards evt
              named_hyps $ ba_predicate m evt)
@@ -753,8 +753,8 @@ sch_po m (lbl, evt) =
     with (do prefix_label $ _name m
              prefix_label lbl
              prefix_label sch_lbl
-             context $ assert_ctx m
-             context $ evt_live_ctx evt
+             POG.context $ assert_ctx m
+             POG.context $ evt_live_ctx evt
              POG.variables ind
              named_hyps hyp)
          $ if M.null param
@@ -781,7 +781,7 @@ sch_po m (lbl, evt) =
 thm_wd_po :: Machine -> M ()
 thm_wd_po m = 
         with (do prefix_label $ _name m
-                 context $ assert_ctx m
+                 POG.context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m
                  named_hyps $ _inv $ props m) $ do
@@ -796,7 +796,7 @@ thm_po m (lbl, xp) =
             prefix_label $ _name m
             prefix_label thm_lbl
             prefix_label lbl
-            context $ assert_ctx m
+            POG.context $ assert_ctx m
             named_hyps inv)
         $ emit_goal [] xp
     where

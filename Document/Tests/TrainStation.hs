@@ -220,7 +220,7 @@ machine0 = (empty_machine "train0")
                     , loc_sort
                     , blk_sort
                     ]
-            ,  dummies = symbol_table 
+            ,  _theoryDummies = symbol_table 
                             $ (map (\t -> Var t $ train_type) 
                                 [ "t","t_0","t_1","t_2","t_3" ]
                                ++ map (\t -> Var t $ blk_type) 
@@ -471,7 +471,22 @@ set_decl_smt2 xs =
         , "             (set sl@BLK))"
         ]
 --        ,  "(declare-fun set-diff@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((set (pfun sl@TRAIN sl@BLK)) (set (pfun sl@TRAIN sl@BLK))) (set (pfun sl@TRAIN sl@BLK)))"
-     ++ [ "(define-fun compl@@sl@BLK"
+     ++ [ "(define-fun all@@sl@BLK"
+        , "            ()"
+        , "            (set sl@BLK)"
+        , "            ( (as const (set sl@BLK))"
+        , "              true ))"
+        , "(define-fun all@@sl@LOC"
+        , "            ()"
+        , "            (set sl@LOC)"
+        , "            ( (as const (set sl@LOC))"
+        , "              true ))"
+        , "(define-fun all@@sl@TRAIN"
+        , "            ()"
+        , "            (set sl@TRAIN)"
+        , "            ( (as const (set sl@TRAIN))"
+        , "              true ))"
+        , "(define-fun compl@@sl@BLK"
         , "            ( (s1 (set sl@BLK)) )"
         , "            (set sl@BLK)"
         , "            ( (_ map not)"
@@ -1037,7 +1052,8 @@ case1 = verify path0 0
 result2 :: String
 result2 = unlines $
         [ "; train0/INIT/FIS/in"
-        , "(set-option :auto-config false)" ]
+        , "(set-option :auto-config false)"
+        , "(set-option :smt.timeout 3000)" ]
      ++ push
      ++ train_decl False False
      ++ filterAssert kw
@@ -1126,7 +1142,8 @@ result20 =
     in
     unlines $
         [ "; train0/INIT/FIS/loc" 
-        , "(set-option :auto-config false)" ]
+        , "(set-option :auto-config false)"
+        , "(set-option :smt.timeout 3000)" ]
      ++ push
      ++ train_decl False False
      ++ f (set_decl_smt2 [WithPFun])
@@ -1173,7 +1190,8 @@ case20 = proof_obligation path0 "train0/INIT/FIS/loc" 0
 result3 :: String
 result3 = unlines $
      [ "; train0/leave/FIS/in@prime" 
-     , "(set-option :auto-config false)" ] ++
+     , "(set-option :auto-config false)"
+     , "(set-option :smt.timeout 3000)" ] ++
      push ++
      train_decl False True ++ 
      filterAssert kw 
@@ -1238,7 +1256,8 @@ case3 = proof_obligation path0 "train0/leave/FIS/in@prime" 0
 result19 :: String
 result19 = unlines $
      [ "; train0/leave/FIS/loc@prime" 
-     , "(set-option :auto-config false)" ] ++
+     , "(set-option :auto-config false)"
+     , "(set-option :smt.timeout 3000)" ] ++
      push ++ 
      train_decl False True ++ 
      filterAssert kw (
@@ -1302,7 +1321,8 @@ case19 = proof_obligation path0 "train0/leave/FIS/loc@prime" 0
 result4 :: String
 result4 = unlines $
     [ "; train0/leave/SCH/grd0" 
-    , "(set-option :auto-config false)" ] ++
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)" ] ++
     push ++
     train_decl False True ++ 
     filterAssert kw (
@@ -1361,7 +1381,8 @@ case4 = proof_obligation path0 "train0/leave/SCH/grd0" 0
 result5 :: String
 result5 = unlines $
     [ "; train0/TR/tr0/WFIS/t/t@prime" 
-    , "(set-option :auto-config false)" ] ++
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)" ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1426,7 +1447,8 @@ addDecl y xs = x ++ y : z
 result23 :: String
 result23 = unlines $
     [ "; train0/TR/tr0/leave/EN" 
-    , "(set-option :auto-config false)" ] ++
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)" ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1484,7 +1506,8 @@ case23 = proof_obligation path0 "train0/TR/tr0/leave/EN" 0
 result24 :: String
 result24 = unlines $
     [ "; train0/TR/tr0/leave/NEG" 
-    , "(set-option :auto-config false)" ] ++
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)" ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1581,7 +1604,8 @@ case24 = proof_obligation path0 "train0/TR/tr0/leave/NEG" 0
 result12 :: String
 result12 = unlines $
     [ "; train0/leave/INV/inv2" 
-    , "(set-option :auto-config false)" ] ++
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)" ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (

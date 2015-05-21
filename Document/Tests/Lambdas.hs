@@ -954,6 +954,7 @@ result11 :: String
 result11 = unlines 
     [ "; m0/evt/INV/inv5/main goal/step 4"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -993,6 +994,7 @@ result11 = unlines
     , "               (pfun Int Int) )"
     , "             (pfun Int Int))"
     , "(declare-fun ran@@Int@@Int ( (pfun Int Int) ) (set Int))"
+    , "(define-fun all@@Int () (set Int) ( (as const (set Int)) true ))"
     , "(define-fun compl@@Int"
     , "            ( (s1 (set Int)) )"
     , "            (set Int)"
@@ -1273,6 +1275,7 @@ result13 :: String
 result13 = unlines
     [ "; m0/evt/INV/inv6"
     , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
     , "(declare-datatypes () ( (Null null) ))"
     , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -1324,6 +1327,7 @@ result13 = unlines
     , "             ( (set Int)"
     , "               (Array Int Int) )"
     , "             (set Int))"
+    , "(define-fun all@@Int () (set Int) ( (as const (set Int)) true ))"
     , "(define-fun compl@@Int"
     , "            ( (s1 (set Int)) )"
     , "            (set Int)"

@@ -14,7 +14,9 @@ module Logic.Operator
     , Input (..)
     , with_assoc
     , empty_notation
-    , logic, functions
+    , logical_notation
+    , functional_notation
+    , pair_op
     , apply, equal, conj, disj
     , implies, follows, equiv
     , combine, precede
@@ -23,7 +25,7 @@ module Logic.Operator
 where
 
     -- Modules
-import Logic.Expr hiding ( pair )
+import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
@@ -242,22 +244,22 @@ assoc_table ops
 --            | otherwise    = NoAssoc
 
     -- Basic functions
-apply :: BinOperator
-equal :: BinOperator
-pair  :: BinOperator
+apply   :: BinOperator
+equal   :: BinOperator
+pair_op :: BinOperator
 
-apply = BinOperator "apply" "."     zapply
-equal = BinOperator "equal" "="     mzeq
-pair  = BinOperator "pair"  "\\mapsto" mzpair
+apply   = BinOperator "apply" "."     zapply
+equal   = BinOperator "equal" "="     mzeq
+pair_op = BinOperator "pair"  "\\mapsto" mzpair
 
-functions :: Notation
-functions = with_assoc empty_notation
-    { new_ops     = L.map Right [equal,apply,pair]
+functional_notation :: Notation
+functional_notation = with_assoc empty_notation
+    { new_ops     = L.map Right [equal,apply,pair_op]
     , prec = [ L.map (L.map Right)
                      [ [apply]
-                     , [pair]
+                     , [pair_op]
                      , [equal] ]]
-    , left_assoc  = [[apply],[pair]]
+    , left_assoc  = [[apply],[pair_op]]
     , right_assoc = []
     , relations   = []
     , quantifiers = [ ("\\qforall", Forall)
@@ -279,8 +281,8 @@ follows = BinOperator "follows" "\\follows" (flip mzimplies)
 equiv   = BinOperator "equiv" "\\equiv"   mzeq
 neg     = UnaryOperator "not" "\\neg"       mznot
 
-logic :: Notation
-logic = with_assoc empty_notation
+logical_notation :: Notation
+logical_notation = with_assoc empty_notation
     { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
     , prec = [    [Left neg] 
                 : L.map (L.map Right)

@@ -14,41 +14,118 @@
 
 === prop_parseOk from ./Document/MachineSpec.hs:39 ===
 +++ OK, passed 100 tests.
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
 
 === prop_type_error from ./Document/MachineSpec.hs:46 ===
 
 === prop_expr_parser from ./Document/MachineSpec.hs:52 ===
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
-
 === prop_c from ./Utilities/EditDistance.hs:132 ===
 
 === prop_b from ./Utilities/EditDistance.hs:138 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:192 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:355 ===
-
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:359 ===
 +++ OK, passed 100 tests.
 
 === prop_fromList_toList from ./Utilities/Relation.hs:196 ===
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:200 ===
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:355 ===
 +++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:203 ===
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:359 ===
 +++ OK, passed 100 tests.
 
 === prop_empty_def from ./Utilities/Relation.hs:206 ===
+
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:364 ===
 +++ OK, passed 100 tests.
 
 === prop_apply_def from ./Utilities/Relation.hs:210 ===
+
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:375 ===
 +++ OK, passed 100 tests.
 
 === prop_compose_def from ./Utilities/Relation.hs:214 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:144 ===
 +++ OK, passed 100 tests.
 
 === prop_all_valid from ./Utilities/Relation.hs:233 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:253 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:150 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:259 ===
++++ OK, passed 100 tests
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:387 ===
+.
+
+=== prop_identity_def from ./Utilities/Relation.hs:262 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:394 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:156 ===
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:400 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:271 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:274 ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:405 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:280 ===
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:437 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:162 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:440 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:295 ===
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:445 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:298 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -222,8 +299,9 @@
 |  |  +- Garbage collector
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
+|  |  |  *** FAILED ***
 |  |  |  +- test2: verify m2
-|  |  |  +- [ Success: 3 / 3 ]
+|  |  |  +- [ Success: 2 / 3 ]
 |  |  +- Termination Detection
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
@@ -238,7 +316,7 @@
 |  |  |  +- [ Success: 3 / 3 ]
 |  |  +- QuickCheck spec of machine parser
 |  |  +- the parser is exception free
-|  |  +- [ Success: 141 / 141 ]
+|  |  +- [ Success: 140 / 141 ]
 |  +- Unit-B
 |  |  +- 'x eventually increases' verifies
 |  |  +- train, model 0, verification
@@ -302,118 +380,41 @@
 |  |  +- case 6 - union of a list of {sorted} list
 |  |  +- case 7 - union of a list of {unsorted} list
 
-=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:364 ===
-
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:375 ===
-+++ OK, passed 100 tests.
-
-=== prop_union_def from ./Utilities/Relation.hs:253 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:144 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:259 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:262 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:271 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:274 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:280 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:295 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:298 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:150 ===
+=== prop_closure_minimal from ./Utilities/Permutation.hs:451 ===
 +++ OK, passed 100 tests.
 
 === prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
 +++ OK, passed 100 tests.
 
 === prop_mapRange_def from ./Utilities/Relation.hs:309 ===
-
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:387 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
 
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:394 ===
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:400 ===
 +++ OK, passed 100 tests.
 
 === prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
 
-=== prop_top_sort_order from ./Utilities/Permutation.hs:405 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:156 ===
+|  |  +- case 8 - edit distance, random testing
+|  |  +- case 9 - edit distance, regression test from random testing
+|  |  +- QuickCheck of graphs
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:328 ===
 +++ OK, passed 100 tests.
 
 === prop_filterRan_def from ./Utilities/Relation.hs:331 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:437 ===
 +++ OK, passed 100 tests.
 
 === prop_mapMaybeDom_def from ./Utilities/Relation.hs:334 ===
 +++ OK, passed 100 tests.
 
 === prop_mapMaybeRan_def from ./Utilities/Relation.hs:339 ===
-
-=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:440 ===
-
-=== prop_g from ./Utilities/EditDistance.hs:162 ===
 +++ OK, passed 100 tests.
 
 === prop_bimapMaybe_def from ./Utilities/Relation.hs:344 ===
-
-=== prop_closure_closed from ./Utilities/Permutation.hs:445 ===
 +++ OK, passed 100 tests.
 
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:451 ===
-
-
-|  |  +- case 8 - edit distance, random testing
-|  |  +- case 9 - edit distance, regression test from random testing
-|  |  +- QuickCheck of graphs
 |  |  +- case 11 - Relations, quickcheck
 |  |  +- case 12 - New graphs, quickcheck
 |  |  +- [ Success: 14 / 14 ]
@@ -434,17 +435,17 @@
 |  |  +- safety properties of m2
 |  |  +- progress properties of m2
 |  |  +- [ Success: 4 / 4 ]
-|  +- [ Success: 208 / 209 ]
-+- [ Success: 208 / 209 ]
+|  +- [ Success: 207 / 209 ]
++- [ Success: 207 / 209 ]
 
 ***************
 *** FAILURE ***
 ***************
 Lines of Haskell code:
-   39623 total
-    1688 Document/Machine.hs
+   40128 total
+    1689 Document/Machine.hs
      902 UnitB/PO.hs
      751 Document/Visitor.lhs
-     737 Document/Proof.hs
-     694 Document/Expression.hs
-Run time: 1m 49s
+     750 Logic/Proof/Tactics.hs
+     697 Logic/Expr/Expr.hs
+Run time: 1m 52s

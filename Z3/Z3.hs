@@ -112,7 +112,7 @@ instance Tree Command where
     as_tree (SetOption name b) = List 
                         [ Str "set-option"
                         , Str $ ':' : name
-                        , Str $ map toLower $ show b]
+                        , Str $ map toLower b]
     as_tree GetUnsatCore  = List [Str "get-unsat-core"]
     as_tree (Assert xp _n) = List [Str "assert", f $ g xp]
         where
@@ -179,7 +179,8 @@ check_z3_bin = do
         let versions = [ ("4.3.2","2ca14b49fe45")
                        , ("4.3.2","784307fc3001")
                        , ("4.3.2","5e72cf0123f6")
-                       , ("4.4.0","0482e7fe727c")]
+                       , ("4.4.0","0482e7fe727c")
+                       , ("4.4.1","e8811748d39a")] -- trial
         if (v,h) `elem` versions then
             return True
         else do
@@ -262,7 +263,7 @@ data Validity = Valid | Invalid | ValUnknown
 
 data Command = Decl (FODecl FOQuantifier) 
     | Assert FOExpr (Maybe String)
-    | SetOption String Bool
+    | SetOption String String
     | CheckSat 
     | GetUnsatCore
     | GetModel 
@@ -272,7 +273,8 @@ data Command = Decl (FODecl FOQuantifier)
 z3_code :: Sequent -> [Command]
 z3_code po = 
     (      [] -- SetOption "smt.mbqi" False]
-        ++ [SetOption "auto-config" False]
+        ++ [SetOption "auto-config" "false"]
+        ++ [SetOption "smt.timeout" "3000"]
         -- ++ [SetOption "smt.mbqi" False]
         ++ map Decl (concatMap decl
                [ Datatype ["a"] "Maybe" 
@@ -406,7 +408,7 @@ verify lbl xs n = do
                 return . ((1+) &&& id)
             writeFile (format "log{0}-1.z3" n) (unlines $ map pretty_print' $ header : ys)
             -- writeFile (format "log{0}-2.z3" n) code
-            -- return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show err) (show out))
+            -- return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show _err) (show out))
             return $ Right SatUnknown
         else if res == ["sat"] then do
             return $ Right Sat

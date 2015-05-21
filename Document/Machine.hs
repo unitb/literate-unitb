@@ -25,7 +25,8 @@ import Latex.Parser hiding (contents)
 import Logic.Expr
 import qualified Logic.ExpressionStore as St
 import Logic.Operator (Notation)
-import Logic.Proof hiding ( with_line_info )
+import Logic.Proof
+import Logic.Proof.Tactics hiding ( with_line_info )
 
 import UnitB.AST as AST
 import UnitB.PO
@@ -566,7 +567,7 @@ make_machine (MId m) p4 = mch'
             , consts   = p4 ^. pConstants
             , theorems = M.empty
             , thm_depend = []
-            , dummies  = p4 ^. pDummyVars
+            , _theoryDummies = p4 ^. pDummyVars
             -- , notation =  empty_notation
             , _fact = p4 ^. pAssumptions }
         props = p4 ^. pNewPropSet

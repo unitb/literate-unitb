@@ -19,7 +19,6 @@ import Control.Monad.Writer
 import qualified Data.Map as M
 
 import Utilities.Syntactic
-import Utilities.Tuple
 
 type MM = MaybeT (RWS Input [Error] ())
 
@@ -36,7 +35,6 @@ newtype MachineId = MId { getMId :: String }
 newtype ContextId = CId { getCId :: String }
     deriving (Eq,Ord)
 
-infixr <*
 
 empty_spec :: DocSpec
 empty_spec = DocSpec M.empty M.empty
@@ -81,20 +79,10 @@ instance Monoid DocBlocks where
                 (M.unionWith (++) xs0 ys0)
                 (M.unionWith (++) xs1 ys1)
 
-ident :: Arrow arr => arr b ()
-ident = arr $ \_ -> ()
 
-(<*) :: Arrow arr => arr a b -> arr a bs -> arr a (b :+: bs)
-(<*) x y = combine x y
 
-combine :: Arrow arr => arr a b -> arr a bs -> arr a (b :+: bs)
-combine a0 a1 = (a0 &&& a1) >>> arr (uncurry (:+:))
 
-toTupleA :: (Arrow arr, IsTuple b) => arr (TypeList b) b
-toTupleA = arr fromTuple
 
-foo :: forall arr a b c d. Arrow arr => arr a b -> arr a c -> arr a d -> arr a (b,c,d)
-foo x y z = (x <* y <* z <* ident) >>> toTupleA
 
 machine_spec :: Pipeline m a b -> DocSpec
 machine_spec (Pipeline m _ _) = m

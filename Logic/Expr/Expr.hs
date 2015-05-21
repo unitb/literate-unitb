@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RankNTypes #-}
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses, TemplateHaskell  #-}
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
@@ -19,6 +20,8 @@ module Logic.Expr.Expr
     , Var, FOVar, AbsVar(..), UntypedVar
     , Def, FODef, Def', AbsDef(..)
     , IsQuantifier(..)
+    , HasAbsContext(..)
+    , HasDummies(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -38,7 +41,7 @@ module Logic.Expr.Expr
     , pair, pair_type, pair_sort
     , free_vars
     , var_decl
-    , target
+    , target, symbols
     , finiteness
     , fromJust, withLoc, locMsg
     , rewriteExpr, rewriteExprM
@@ -58,10 +61,12 @@ import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
 import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.Identity
+import Control.Lens hiding (rewrite,Context
+                           ,Const,Context')
 
 import           Data.DeriveTH
 import           Data.List as L
-import qualified Data.Map as M hiding (map,foldl)
+import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
 import           Data.Typeable
@@ -198,14 +203,6 @@ type Context = AbsContext GenericType HOQuantifier
 type Context' = AbsContext GenericType FOQuantifier
 
 type FOContext = AbsContext FOType FOQuantifier
-
-data AbsContext t q = Context 
-        (M.Map String Sort) -- sorts
-        (M.Map String (AbsVar t))  -- constants
-        (M.Map String (AbsFun t))  -- functions and operators
-        (M.Map String (AbsDef t q))  -- transparent definitions
-        (M.Map String (AbsVar t))  -- dummies
-    deriving (Show,Eq,Generic,Typeable)
 
 class Symbol a t q where
     decl :: a -> [AbsDecl t q]
@@ -472,6 +469,25 @@ instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
             args
                 | L.null ps = ""
                 | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
+
+data AbsContext t q = Context
+        { _sorts :: M.Map String Sort
+        , _constants :: M.Map String (AbsVar t)
+        , _functions :: M.Map String (AbsFun t)
+        , _definitions :: M.Map String (AbsDef t q)
+        , _absContextDummies :: M.Map String (AbsVar t)
+        }
+    deriving (Show,Eq,Generic,Typeable)
+
+makeFields ''AbsContext
+makeClassy ''AbsContext
+
+symbols :: HasAbsContext ctx t0 t1
+        => ctx -> M.Map String ()
+symbols ctx = M.unions [f a,f b,f c]
+    where
+        (Context _ a b c _) = ctx^.absContext
+        f = M.map (const ())
 
 instance Symbol Sort t q where
     decl s = [SortDecl s]

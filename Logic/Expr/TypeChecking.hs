@@ -10,6 +10,7 @@ import Logic.Expr.Label
 
     -- Libraries
 import Control.Monad.Reader
+import Control.Lens ((^.))
 
 import Data.Either
 import Data.List
@@ -31,12 +32,6 @@ stripTypes (Binder q vs r t _) = Binder q (f vs) (stripTypes r) (stripTypes t) (
         f = map (\(Var n _) -> (Var n ()))
 stripTypes (Cast e t) = Cast (stripTypes e) t
 stripTypes (Lift e t) = Lift (stripTypes e) t
-
-constants :: Context -> M.Map String Var
-constants (Context _ vs _ _ _) = vs
-
-functions :: Context -> M.Map String Fun
-functions (Context _ _ fs _ _) = fs
 
 bind :: Maybe a -> String -> Either [String] a
 bind (Just x) _  = Right x
@@ -87,7 +82,7 @@ newDummies us (Context _ _ _ _ dums) = vs'
 
 checkTypes :: Context -> UntypedExpr -> Either [String] Expr
 checkTypes c (Word (Var n ())) = do
-    v <- bind (n `M.lookup` constants c)
+    v <- bind (n `M.lookup` (c^.constants))
         (printf "%s is undeclared" )
     return $ Word v
 checkTypes _ (Const n ()) = do
@@ -98,7 +93,7 @@ checkTypes _ (Const n ()) = do
 checkTypes c (FunApp f args) = do
     let Fun _ n _ _ _ = f ;
         targs = map (checkTypes c) args
-    tfun <- bind (n `M.lookup` functions c)
+    tfun <- bind (n `M.lookup` (c^.functions))
         (printf "%s is undeclared" ) ;
     check_type tfun targs
 checkTypes c (Cast e t) = do

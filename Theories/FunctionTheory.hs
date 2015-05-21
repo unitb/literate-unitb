@@ -92,7 +92,7 @@ function_theory = Theory { .. }
         extends =  singleton "set" set_theory
         
         consts   = empty
-        dummies  = empty
+        _theoryDummies  = empty
         theorems = empty
         
 --        set_ths  = 

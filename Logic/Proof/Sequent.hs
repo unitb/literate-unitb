@@ -1,7 +1,9 @@
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Logic.Proof.Sequent where
 
     -- Modules
@@ -9,6 +11,7 @@ import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
+import Control.Lens (makeLenses,makeFields)
 
 import Data.Char
 import Data.DeriveTH
@@ -28,8 +31,21 @@ type Sequent' = AbsSequent GenericType FOQuantifier
 
 type FOSequent = AbsSequent FOType FOQuantifier
 
-data AbsSequent t q = Sequent (AbsContext t q) [AbsExpr t q] (Map Label (AbsExpr t q)) (AbsExpr t q)
+data AbsSequent t q = Sequent 
+        { _absSequentContext  :: AbsContext t q
+        , _absSequentNameless :: [AbsExpr t q] 
+        , _absSequentNamed :: Map Label (AbsExpr t q)
+        , _absSequentGoal  :: AbsExpr t q }
     deriving (Eq, Generic)
+
+-- class HasGoal a b | a -> b where
+--     goal :: Getter a b
+
+makeFields ''AbsSequent
+makeLenses ''AbsSequent
+
+instance HasAbsContext (AbsSequent a b) a b where
+    absContext = context
 
 empty_sequent :: TypeSystem2 t => AbsSequent t q
 empty_sequent = (Sequent empty_ctx [] M.empty ztrue)

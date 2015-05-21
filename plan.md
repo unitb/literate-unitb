@@ -1,6 +1,15 @@
 Todo:
 	documentation for syntax and options
 
+next:
+    Use lenses of context and sequent
+    remove dependency of Well-definedness on Theories
+    make ProofTree generate the WD side conditions
+
+    testing: every PO should be accompanied with expressions
+    only evaluated when the PO fails. This way, I can 
+    identify which PO's failure is never tested
+
     * ~~sum~~
     * data refinement
         * ~~test: the set of remaining actions after data refinement~~

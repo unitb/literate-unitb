@@ -21,6 +21,7 @@ import Latex.Parser
 import Logic.Expr 
 import Logic.Operator (Notation)
 import Logic.Proof
+import Logic.Proof.Tactics
 
 import UnitB.AST
 

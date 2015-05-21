@@ -24,10 +24,14 @@ module Logic.Theory
     , function
     , dummy
     , operator
+    , unary
     , Logic.Theory.sort
     , sort_def
     , type_param
     , assert
+    , precedence
+    , left_associativity
+    , right_associativity
     , axiom, axioms
     , th_notation
     , theory_ctx
@@ -38,6 +42,7 @@ where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Genericity (variables)
 import Logic.Operator
 import Logic.Proof (Proof)
 
@@ -46,8 +51,9 @@ import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
 import Control.Monad.RWS
+import Control.Monad.State
 import Control.Monad.Writer
-import Control.Lens hiding (Context,(.=),from,to)
+import Control.Lens hiding (Context,(.=),from,to,rewriteM)
 
 import           Data.DeriveTH
 import           Data.Either
@@ -57,13 +63,14 @@ import           Data.Map as M hiding ( map )
 import qualified Data.Set as S
 import           Data.Typeable
 
-import GHC.Generics hiding ((:+:))
+import GHC.Generics hiding ((:+:),prec)
 
 import Language.Haskell.TH hiding (Type)
 
+import Utilities.Error
 import Utilities.Format
 import Utilities.TH
-import Utilities.Tuple hiding (len)
+import Utilities.Tuple
 
     -- Obsolete doc:
     -- the use of gen_param is tricky. Be careful
@@ -82,14 +89,16 @@ data Theory = Theory
         , defs       :: Map String Def
         , consts     :: Map String Var
         , _fact      :: Map Label Expr
-        , dummies    :: Map String Var 
+        , _theoryDummies :: Map String Var 
         , theorems   :: Map Label (Maybe Proof)
         , thm_depend :: [ (Label,Label) ]
         , notation   :: Notation }
     deriving (Eq, Show, Typeable, Generic)
 
 makeLenses ''Theory
+makeFields ''Theory
 mkCons ''Theory
+
 
 basic_theory :: Theory
 basic_theory = empty_theory 
@@ -103,8 +112,9 @@ basic_theory = empty_theory
        , _fact  = fromList 
            [ (label "@basic@@_0", axm0) 
            , (label "@basic@@_1", axm1)]
-        , notation = functions }
+        , notation = functional_notation }
    where
+        _ = theoryDummies Identity
 --        t  = VARIABLE "t"
         t0 = VARIABLE "t0"
         t1 = VARIABLE "t1"
@@ -125,7 +135,7 @@ th_notation :: Theory -> Notation
 th_notation th = res
     where
         ths = th : elems (extends th)
-        res = flip precede logic
+        res = flip precede logical_notation
             $ L.foldl combine empty_notation 
             $ map notation ths
 
@@ -138,7 +148,7 @@ theory_ctx th =
         ts     = types th
         fun    = funs th
         c      = consts th
-        dums   = dummies th
+        dums   = th^.dummies
         new_fun = fun
 
     -- todo: prefix name of theorems of a z3_decoration
@@ -157,7 +167,7 @@ withForall :: ExprP -> ExprP
 withForall mx = do
     x <- mx
     let vs = S.toList $ used_var x
-    mzforall vs mztrue $ Right x
+    param_to_var <$> mzforall vs mztrue (Right x)
 
 axiom :: ExpQ
 axiom = withLoc 'declAxiom
@@ -214,7 +224,7 @@ class Signature s where
     type FunType s :: *
     funDecl' :: String -> [Type] -> s -> Fun
     utility' :: Fun -> Proxy s -> FunType s
-    len :: Proxy s -> Int
+    len' :: Proxy s -> Int
 
 class SignatureImpl ts where
     type FunTypeImpl ts :: *
@@ -258,13 +268,13 @@ funDecl name = funDecl' name []
 
 instance (IsTuple t, SignatureImpl (TypeList t)) => Signature (t,Type) where
     type FunType (t,Type) = FunTypeImpl (TypeList t)
-    len Proxy = 0
+    len' Proxy = tLength (Proxy :: Proxy t)
     funDecl' name tp (args,rt) = mk_fun (reverse tp) name (typeList $ toTuple args) rt
     utility' fun Proxy = utilityImpl fun [] (Proxy :: Proxy (TypeList t))
 
 instance Signature t => Signature (Type -> t) where
     type FunType (Type -> t) = FunType t
-    len Proxy = 1 + len (Proxy :: Proxy t)
+    len' Proxy = len' (Proxy :: Proxy t)
     funDecl' name tp f = funDecl' name (gP:tp) (f gP)
         where
             p = [toEnum $ fromEnum 'a' + length tp]
@@ -335,7 +345,7 @@ assert = withLoc 'assert'
 dummy :: VarSignature s => String -> s -> M ExprP
 dummy n s = M $ do
     let v = varDecl n s
-    tell [ empty_theory { dummies = singleton n v } ]
+    tell [ empty_theory & dummies .~ singleton n v ]
     return $ Right $ Word v
 
 command :: forall s. (FromList (FunType s) ExprP, Signature s)
@@ -343,7 +353,7 @@ command :: forall s. (FromList (FunType s) ExprP, Signature s)
 command n s = do
     f <- function n s
     let proxy = Proxy :: Proxy s
-        cmd = Command ('\\':n) n (len proxy) (from_list f)
+        cmd = Command ('\\':n) n (len' proxy) (from_list f)
     M $ tell [ empty_theory
         { notation = empty_notation { commands = [cmd] } } ]
     return f
@@ -355,13 +365,37 @@ function n s = M $ do
     return $ utility n s
 
 operator :: (Signature s, FunType s ~ (ExprP -> ExprP -> ExprP))
-         => String -> String -> s -> M (ExprP -> ExprP -> ExprP)
+         => String -> String -> s -> M (Operator,ExprP -> ExprP -> ExprP)
 operator op tag s = do
     f <- function tag s
     let binop = BinOperator tag op f
     M $ tell [empty_theory 
             { notation = empty_notation { new_ops = [Right binop] } } ]
-    return f
+    return (Right binop,f)
+
+unary :: (Signature s, FunType s ~ (ExprP -> ExprP))
+      => String -> String -> s -> M (Operator,ExprP -> ExprP)
+unary op tag s = do
+    f <- function tag s
+    let unop = UnaryOperator tag op f
+    M $ tell [empty_theory 
+            { notation = empty_notation { new_ops = [Left unop] } } ]
+    return (Left unop,f)
+
+left_associativity :: [Operator] -> M ()
+left_associativity ops = M $ tell [empty_theory
+    { notation = empty_notation { left_assoc = [L.map (fromRight $ $myError "") ops] } }]
+
+right_associativity :: [Operator] -> M ()
+right_associativity ops = M $ tell [empty_theory
+    { notation = empty_notation { right_assoc = [L.map (fromRight $ $myError "") ops] } }]
+
+precedence :: [Operator] 
+           -> [[Operator]]
+           -> [Operator]
+           -> M ()
+precedence vs ops us = M $ tell [empty_theory 
+    { notation = empty_notation { prec = [vs : ops ++ [us]] } }]
 
 type_param :: M Type
 type_param = M $ do
@@ -380,6 +414,45 @@ sort_def n f = M $ do
     let (r,s) = mkSortDef n f
     tell [empty_theory { types = singleton n s } ]
     return r    
+
+param_to_var :: Expr -> Expr
+param_to_var e = evalState (param_to_varE e) (0,variables e,M.empty)
+
+param_to_varE :: Expr -> State (Int,S.Set String,Map String String) Expr
+param_to_varE e = do
+    e' <- rewriteM param_to_varE e
+    case e' of
+        FunApp (Fun ps n lift args rt) xs -> do
+            FunApp <$> (Fun <$> mapM param_to_varT ps 
+                            <*> pure n 
+                            <*> pure lift 
+                            <*> mapM param_to_varT args 
+                            <*> param_to_varT rt) 
+                   <*> pure xs
+        _ -> return e'
+
+param_to_varT :: Type -> State (Int,S.Set String,Map String String) Type
+param_to_varT t@(VARIABLE _) = return t
+param_to_varT (GENERIC n) = do
+        ns <- use trans
+        case M.lookup n ns of
+            Just n' -> return $ VARIABLE n'
+            Nothing -> do
+                n' <- next_free
+                _3 %= M.insert n n'
+                return $ VARIABLE n'
+    where
+        count = _1
+        vars  = _2
+        trans = _3
+        next_free = do
+            i <- use count
+            _1 += 1 -- count
+            vs <- use vars 
+            if ("t" ++ show i) `S.member` vs 
+                then next_free
+                else return $ "t" ++ show i
+param_to_varT t = rewriteM param_to_varT t
 
 newtype M a = M { runM :: RWS () [Theory] Int a }
 
