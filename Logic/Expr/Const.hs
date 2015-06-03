@@ -197,8 +197,11 @@ mzimplies mx my = do
         else if y == ztrue  then Right ztrue
         else if x == zfalse then Right ztrue
         else if y == zfalse then Right $ znot x
-        else typ_fun2 (mk_fun [] "=>" [bool,bool] bool) 
+        else typ_fun2 implies_fun 
                 (Right x) (Right y)
+
+implies_fun :: TypeSystem t => AbsFun t
+implies_fun = mk_fun [] "=>" [bool,bool] bool
 
 (.=>) :: TypeSystem2 t => TwoExprP t q
 (.=>) = mzimplies
@@ -262,8 +265,11 @@ zless        = fun2 $ mk_fun [] "<" [int,int] bool
 zgreater :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zgreater     = fun2 $ mk_fun [] ">" [int,int] bool
 
+le_fun :: TypeSystem t => AbsFun t
+le_fun = mk_fun [] "<=" [int,int] bool
+
 zle :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zle          = fun2 $ mk_fun [] "<=" [int,int] bool
+zle          = fun2 le_fun
 
 zge :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zge          = fun2 $ mk_fun [] ">=" [int,int] bool

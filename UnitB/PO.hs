@@ -17,7 +17,7 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Proof
-import           Logic.Proof.POGenerator hiding ( variables )
+import           Logic.Proof.POGenerator hiding ( variables, context )
 import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
@@ -27,7 +27,7 @@ import           UnitB.AST
 import Z3.Z3
 
     -- Libraries
-import Control.Lens ((^.))
+import Control.Lens hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
@@ -37,6 +37,7 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe )
 import qualified Data.Map as M
+import           Data.Monoid
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.Utils as LU (replace)
 
@@ -128,6 +129,7 @@ raw_machine_pos :: Machine -> (Map Label Sequent)
 raw_machine_pos m = eval_generator $ 
                 with (do
                         POG.context $ theory_ctx (theory m)
+                        set_syntactic_props syn
                         nameless_hyps $ M.elems unnamed 
                         named_hyps $ named_f) $ do
                     forM_ (M.toList $ _transient p) $ \tr -> do
@@ -162,14 +164,15 @@ raw_machine_pos m = eval_generator $
                         sch_po m ev
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     mapM_ (ref_po m) $ M.toList $ derivation m
-    where            
+    where          
+        syn = mconcat $ L.map (view syntacticThm) $ all_theories $ theory m
         p = props m
         unnamed = theory_facts (theory m) `M.difference` named_f
         named_f = theory_facts (theory m) { extends = M.empty }
 
 proof_obligation :: Machine -> Either [Error] (Map Label Sequent)
 proof_obligation m = do
-        let { pos = raw_machine_pos m }
+        let pos = raw_machine_pos m
         forM_ (M.toList $ _proofs $ props $ m) (\(lbl,p) -> do
             let li = line_info p
             if lbl `M.member` pos
@@ -207,21 +210,20 @@ theory_po th = do
         (thm,axm) = M.partitionWithKey p $ th ^. fact
         p k _     = k `M.member` theorems th
 
-        g lbl x   = Sequent empty_ctx [] (depend lbl `M.union` axm) x
+        g lbl x   = empty_sequent & named .~ (depend lbl `M.union` axm) 
+                                  & goal .~ x
         keys k    = composite_label ["THM",k]
-        f lbl (Sequent a b c d) = result
+        f lbl po = result
           where
             result = case keys lbl `M.lookup` theorems th of
                         Just (Just proof) -> do
-                            xs <- proof_po proof (keys lbl) po
+                            xs <- proof_po proof (keys lbl) po'
                             return xs
-                        _ -> return [(keys lbl, po)]
-            po = Sequent 
-                (a `merge_ctx` theory_ctx th)
-                (concatMap 
-                    (M.elems . theory_facts) 
-                    (elems $ extends th) ++ b) 
-                c d
+                        _ -> return [(keys lbl, po')]
+            po' = po & context %~ (`merge_ctx` theory_ctx th)
+                    & nameless %~ (concatMap 
+                            (M.elems . theory_facts) 
+                            (elems $ extends th) ++) 
 
 init_sim_po :: Machine -> M ()
 init_sim_po m = 

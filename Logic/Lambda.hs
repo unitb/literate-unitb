@@ -14,12 +14,12 @@ import Theories.SetTheory
 
     -- Libraries
 import Control.Applicative ((<$>))
+import Control.Lens hiding (Context,Context',rewriteM,Const)
 import Control.Monad.State
 
 import Data.List as L hiding (union)
 import Data.Map  as M hiding (map,filter,foldl)
 import qualified Data.Set as S
-import Data.Traversable (traverse)
 import Data.Tuple
 import Data.Typeable
 
@@ -170,26 +170,27 @@ lambda_def = do
                 return $ res
 
 delambdify :: Sequent -> Sequent'
-delambdify (Sequent ctx asm hyps goal) = 
+delambdify po = -- (Sequent ctx asm hyps goal) = 
         evalState (do
-            asm'   <- forM asm lambdas
-            hyps'  <- fromList `liftM` forM (toList hyps) (
+            asm'   <- forM (po^.nameless) lambdas
+            hyps'  <- fromList `liftM` forM (toList $ po^.named) (
                 \(lbl,xp) -> do
                     xp <- lambdas xp
                     return (lbl,xp)
                 )
-            goal' <- lambdas goal
+            goal' <- lambdas $ po^.goal
             defs  <- lambda_def
             decl  <- lambda_decl
-            let Context ss vs fs ds dd = ctx
+            let Context ss vs fs _ dd = po^.context
             ds' <- traverse (\(Def tp fn arg rt e) -> do
                     e' <- lambdas e
                     return $ Def tp fn arg rt e'
-                ) ds
+                ) (po^.definitions)
             let ctx' = Context ss vs fs ds' dd
             return $ Sequent
                 (            ctx' 
                  `merge_ctx` decl) 
+                (po^.syntacticThm)
                 (asm' ++ defs)
                 hyps'
                 goal'

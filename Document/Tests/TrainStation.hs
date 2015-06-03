@@ -1053,7 +1053,8 @@ result2 :: String
 result2 = unlines $
         [ "; train0/INIT/FIS/in"
         , "(set-option :auto-config false)"
-        , "(set-option :smt.timeout 3000)" ]
+        , "(set-option :smt.timeout 3000)"
+        ]
      ++ push
      ++ train_decl False False
      ++ filterAssert kw
@@ -1143,7 +1144,8 @@ result20 =
     unlines $
         [ "; train0/INIT/FIS/loc" 
         , "(set-option :auto-config false)"
-        , "(set-option :smt.timeout 3000)" ]
+        , "(set-option :smt.timeout 3000)"
+        ]
      ++ push
      ++ train_decl False False
      ++ f (set_decl_smt2 [WithPFun])
@@ -1191,7 +1193,8 @@ result3 :: String
 result3 = unlines $
      [ "; train0/leave/FIS/in@prime" 
      , "(set-option :auto-config false)"
-     , "(set-option :smt.timeout 3000)" ] ++
+     , "(set-option :smt.timeout 3000)"
+     ] ++
      push ++
      train_decl False True ++ 
      filterAssert kw 
@@ -1257,7 +1260,8 @@ result19 :: String
 result19 = unlines $
      [ "; train0/leave/FIS/loc@prime" 
      , "(set-option :auto-config false)"
-     , "(set-option :smt.timeout 3000)" ] ++
+     , "(set-option :smt.timeout 3000)"
+     ] ++
      push ++ 
      train_decl False True ++ 
      filterAssert kw (
@@ -1322,7 +1326,8 @@ result4 :: String
 result4 = unlines $
     [ "; train0/leave/SCH/grd0" 
     , "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)" ] ++
+    , "(set-option :smt.timeout 3000)"
+    ] ++
     push ++
     train_decl False True ++ 
     filterAssert kw (
@@ -1382,7 +1387,8 @@ result5 :: String
 result5 = unlines $
     [ "; train0/TR/tr0/WFIS/t/t@prime" 
     , "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)" ] ++
+    , "(set-option :smt.timeout 3000)"
+    ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1448,7 +1454,8 @@ result23 :: String
 result23 = unlines $
     [ "; train0/TR/tr0/leave/EN" 
     , "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)" ] ++
+    , "(set-option :smt.timeout 3000)"
+    ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1507,7 +1514,8 @@ result24 :: String
 result24 = unlines $
     [ "; train0/TR/tr0/leave/NEG" 
     , "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)" ] ++
+    , "(set-option :smt.timeout 3000)"
+    ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (
@@ -1605,7 +1613,8 @@ result12 :: String
 result12 = unlines $
     [ "; train0/leave/INV/inv2" 
     , "(set-option :auto-config false)"
-    , "(set-option :smt.timeout 3000)" ] ++
+    , "(set-option :smt.timeout 3000)"
+    ] ++
     push ++
     train_decl True True ++ 
     filterAssert kw (

@@ -41,6 +41,10 @@ instance Serialize QuantifierWD where
 instance Serialize Context where
 instance Serialize Expr where
 instance Serialize Sequent where
+instance Serialize SyntacticProp where
+instance Serialize a => Serialize (ArgDep a) where
+instance Serialize Rel where
+instance Serialize Flipping where
 instance Serialize Value where
 
 expr_number :: Expr -> State (Map Expr Int) Int
@@ -54,20 +58,20 @@ expr_number expr = do
             return n
 
 decompress_seq :: SeqI -> ExprIndex Seq
-decompress_seq (ctx,as,hs,g') = do
+decompress_seq (ctx,m,as,hs,g') = do
         hyps <- forM hs $ \(x,y) -> do
                     y <- gets (! y)
                     return (x,y)
         asm  <- forM as $ \x -> gets (! x)
         g    <- gets (! g')
-        return (Sequent ctx asm (fromList hyps) g)
+        return (Sequent ctx m asm (fromList hyps) g)
             
 compress_seq :: Seq -> ExprStore SeqI
-compress_seq (Sequent ctx asm hyps g) = do
+compress_seq (Sequent ctx m asm hyps g) = do
         as <- forM asm  expr_number
         hs <- forM (M.elems hyps) expr_number
         g' <- expr_number g
-        return (ctx,as,zip (M.keys hyps) hs,g')
+        return (ctx,m,as,zip (M.keys hyps) hs,g')
 
 decompress_map :: IntMap -> ExprIndex (Map Key (Seq,Maybe Bool))
 decompress_map ms = do
@@ -84,7 +88,7 @@ compress_map m = do
         return $ unzip xs
         
 type Seq    = Sequent
-type SeqI   = (Context,[Int],[(Label,Int)],Int)
+type SeqI   = (Context,SyntacticProp,[Int],[(Label,Int)],Int)
 type Key    = (Label,Label)
 -- type IntMap = [(Key,(SeqI,Bool))]
 type IntMap = ([Key],[(SeqI,Maybe Bool)])

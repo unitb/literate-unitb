@@ -37,6 +37,7 @@ import Logic.Proof
 import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
+import Control.Lens hiding (Context,Context')
 
 import Control.Concurrent
 import Control.Concurrent.SSem
@@ -272,10 +273,10 @@ data Command = Decl (FODecl FOQuantifier)
 
 z3_code :: Sequent -> [Command]
 z3_code po = 
-    (      [] -- SetOption "smt.mbqi" False]
+    (      [] 
         ++ [SetOption "auto-config" "false"]
         ++ [SetOption "smt.timeout" "3000"]
-        -- ++ [SetOption "smt.mbqi" False]
+        -- ++ [SetOption "smt.mbqi" "false"]
         ++ map Decl (concatMap decl
                [ Datatype ["a"] "Maybe" 
                     [ ("Just", [("fromJust", GENERIC "a")])
@@ -291,7 +292,7 @@ z3_code po =
         ++ [] )
     where
 --        !() = unsafePerformIO (p
-        (Sequent d assume hyps assert) = remove_type_vars 
+        (Sequent d _ assume hyps assert) = remove_type_vars 
                     $ one_point
                     $ delambdify
                     $ apply_monotonicity po
@@ -299,8 +300,7 @@ z3_code po =
                          , Assert xp $ Just $ "h" ++ show n]
 
 smoke_test :: Label -> Sequent -> IO Validity
-smoke_test lbl (Sequent a b c _) =
-    discharge lbl (Sequent a b c zfalse)
+smoke_test lbl po = discharge lbl (po & goal .~ zfalse)
 
 
 

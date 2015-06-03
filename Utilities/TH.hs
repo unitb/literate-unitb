@@ -22,12 +22,9 @@ import qualified Data.Typeable as T (typeOf)
 
 import Language.Haskell.TH
 
--- import System.Locale
-
 import Text.Printf
 
 import Utilities.Permutation
-
 
 makePolyClass :: Name -> DecsQ
 makePolyClass recName = do
@@ -268,7 +265,14 @@ mkCons n = do
 mkCons' :: Name -> Name -> DecsQ
 mkCons' n cname = do
     (ps,cons,fs) <- fieldList =<< reify n
-    let p = recover (return False) . isInstance ''Default . (:[]) . snd
+    let allPar (VarT x) = [x]
+        allPar t = gmapQl (++) [] (maybe [] allPar . cast) t
+        withForall t
+                | L.null xs = t
+                | otherwise = ForallT xs [] t
+            where
+                xs = L.map PlainTV $ nubSort $ allPar t
+        p = recover (return False) . isInstance ''Default . (:[]) . withForall . snd
     defs <- filterM p fs
     args <- filterM (fmap not . p) fs
     let argNames = L.map (mkName . nameBase . fst) args

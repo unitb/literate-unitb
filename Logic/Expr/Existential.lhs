@@ -14,7 +14,7 @@ We implement it in \emph{partition\_expr} with a disjoint set data structure.
 
 \begin{code}
 {-# LANGUAGE FlexibleContexts #-}
-module UnitB.Feasibility 
+module Logic.Expr.Existential
     ( partition_expr
     , get_partition )
 where

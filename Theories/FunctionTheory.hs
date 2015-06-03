@@ -4,6 +4,7 @@ module Theories.FunctionTheory where
     -- Modules
 import Logic.Expr
 import Logic.Operator
+import Logic.Proof
 import Logic.Theory
 
 import Theories.SetTheory hiding ( dec )
@@ -14,17 +15,17 @@ import Theories.SetTheory hiding ( dec )
 import           Data.Map
 import           Data.List as L
 
-ztfun   :: ExprP -> ExprP -> ExprP
-zdom    :: ExprP -> ExprP
-zran    :: ExprP -> ExprP
-zdomsubt    :: ExprP -> ExprP -> ExprP
-zdomrest    :: ExprP -> ExprP -> ExprP
+ztfun :: ExprP -> ExprP -> ExprP
+zdom  :: ExprP -> ExprP
+zran  :: ExprP -> ExprP
+zovl  :: ExprP -> ExprP -> ExprP
+zdomsubt :: ExprP -> ExprP -> ExprP
+zdomrest :: ExprP -> ExprP -> ExprP
+zmk_fun  :: ExprP -> ExprP -> ExprP
+zlambda  :: [Var] -> ExprP -> ExprP -> ExprP
+zstore   :: ExprP -> ExprP -> ExprP -> ExprP
 zrep_select :: ExprP -> ExprP -> ExprP
-zovl        :: ExprP -> ExprP -> ExprP
-zmk_fun     :: ExprP -> ExprP -> ExprP
 zempty_fun  :: ExprP
-zlambda     :: [Var] -> ExprP -> ExprP -> ExprP
-zstore      :: ExprP -> ExprP -> ExprP -> ExprP
 
 ztfun = typ_fun2 (mk_fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
@@ -94,7 +95,8 @@ function_theory = Theory { .. }
         consts   = empty
         _theoryDummies  = empty
         theorems = empty
-        
+        _theorySyntacticThm = empty_monotonicity
+
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         types    = symbol_table [fun_sort]

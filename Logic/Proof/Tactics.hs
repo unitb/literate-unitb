@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Logic.Proof.Tactics 
     ( Tactic, TacticT, get_line_info, get_context
     , get_goal, by_parts
@@ -34,12 +35,11 @@ import Logic.Proof.Sequent
     -- Libraries
 import Control.Applicative
 import Control.Arrow
+import Control.Lens hiding (Context)
 
 import Control.Monad hiding ( guard )
 import Control.Monad.RWS hiding ( guard )
 import Control.Monad.Trans.Either
-
-import Control.Monad.Identity hiding ( guard )
 
 import           Data.Graph
 import           Data.List as L
@@ -54,10 +54,12 @@ import Utilities.Graph hiding ( map )
 import Utilities.Syntactic ( Error (..), LineInfo )
 
 data TacticParam = TacticParam 
-    { sequent :: Sequent
-    , line_info :: LineInfo
-    , theorems  :: Map Label Expr
+    { _sequent :: Sequent
+    , _line_info :: LineInfo
+    , _theorems  :: Map Label Expr
     }
+
+makeLenses ''TacticParam
 
 data TacticT m a = TacticT 
         { unTactic :: ErrorT 
@@ -69,10 +71,10 @@ data TacticT m a = TacticT
 type Tactic = TacticT Identity
 
 tac_local :: Monad m
-          => TacticParam
+          => (TacticParam -> TacticParam)
           -> TacticT m a
           -> TacticT m a
-tac_local x (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ local (const x) cmd
+tac_local f (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ local f cmd
 
 tac_listen :: Monad m
            => TacticT m a
@@ -91,52 +93,38 @@ tac_censor f (TacticT (ErrorT cmd)) = TacticT $ ErrorT $ censor f cmd
 
 with_line_info :: Monad m => LineInfo -> TacticT m a -> TacticT m a
 with_line_info li (TacticT cmd) = 
-        TacticT $ ErrorT $ local (\p -> p { line_info = li }) $ runErrorT cmd
+        TacticT $ ErrorT $ local (line_info .~ li) $ runErrorT cmd
 
 with_goal :: Monad m => Expr -> TacticT m a -> TacticT m a
-with_goal e (TacticT cmd) = TacticT $ do
-    Sequent ctx asm hyps _ <- lift $ asks sequent
-    param              <- lift ask
-    ErrorT $ local (const (param { sequent = Sequent ctx asm hyps e })) 
-        $ runErrorT cmd
+with_goal e = tac_local (sequent.goal .~ e)
+        -- $ runErrorT cmd
 
 with_hypotheses :: Monad m
                 => [(Label, Expr)] 
                 -> TacticT m a 
                 -> TacticT m a
 with_hypotheses es cmd = do
-    param              <- TacticT $ lift ask
-    let Sequent ctx asm hyps g = sequent param
-        new_hyp = (M.fromList es `M.union` hyps)
-    tac_local (param { sequent = Sequent ctx asm new_hyp g }) cmd
+    tac_local (sequent.named %~ (M.fromList es `M.union`)) cmd
 
 with_nameless_hypotheses :: Monad m
                 => [Expr] 
                 -> TacticT m a 
                 -> TacticT m a
 with_nameless_hypotheses es cmd = do
-    param              <- TacticT $ lift ask
-    let Sequent ctx asm hyps g = sequent param
-        new_asm = (es ++ asm)
-    tac_local (param { sequent = Sequent ctx new_asm hyps g }) cmd
+    tac_local (sequent.nameless %~ (es++)) cmd
 
 with_variables :: Monad m
                => [Var] -> TacticT m Proof -> TacticT m Proof
 with_variables vs (TacticT cmd) = TacticT $ do
-    (Sequent ctx asm hyps g) <- lift $ asks sequent
-    param              <- lift ask
-    let (Context sorts vars funs defs dums) = ctx
-        new_ctx = Context sorts (symbol_table vs `M.union` vars) funs defs dums
-        clashes = M.filter (1 <)
-            $ M.unionsWith (+)
-                [ M.fromListWith (+) $ L.map (name &&& const 1) vs
-                , M.map (const 1 :: a -> Int) vars
-                , M.map (const 1) funs
-                , M.map (const 1) defs ]
+    ctx   <- view $ sequent.context
+    let clashes = M.intersection
+                (M.fromList $ L.map (name &&& const ()) vs)
+                (symbols ctx)
+    li <- view line_info
     unless (M.null clashes) $ 
         hard_error [Error (format "redefinition of {0}" $ intercalate "," $ keys clashes) 
-            $ line_info param]
-    ErrorT $ local (const (param { sequent = Sequent new_ctx asm hyps g })) $ 
+            $ li]
+    ErrorT $ local (sequent.constants %~ (symbol_table vs `M.union`)) $ 
         runErrorT cmd
 
 get_dummy :: Monad m
@@ -153,30 +141,28 @@ get_dummy var = do
 
 get_line_info :: Monad m
               => TacticT m LineInfo
-get_line_info = TacticT $ lift $ asks line_info
+get_line_info = TacticT $ lift $ asks _line_info
 
 get_goal :: Monad m
          => TacticT m Expr
 get_goal = TacticT $ do
-        Sequent _ _ _ goal <- lift $ asks sequent
-        return goal
+        view $ sequent.goal
 
 get_named_hyps :: Monad m
                => TacticT m (Map Label Expr)
 get_named_hyps = TacticT $ do 
-        Sequent _ _ hyps _ <- lift $ asks sequent
-        return hyps
+        view $ sequent.named
 
 get_nameless_hyps :: Monad m
                   => TacticT m [Expr]
 get_nameless_hyps = TacticT $ do 
-        Sequent _ asm _ _ <- lift $ asks sequent
-        return asm
+        view $ sequent.nameless
 
 get_hypotheses :: Monad m
                => TacticT m [Expr]
 get_hypotheses = TacticT $ do
-        Sequent _ asm hyps _ <- lift $ asks sequent
+        asm  <- view $ sequent.nameless
+        hyps <- view $ sequent.named
         return $ asm ++ elems hyps
 
 lookup_hypothesis :: Monad m
@@ -185,7 +171,7 @@ lookup_hypothesis :: Monad m
 lookup_hypothesis (ThmRef hyp inst) = do
         li <- get_line_info
         let err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
-        Sequent _ _ hyps _ <- TacticT $ lift $ asks sequent
+        hyps <- TacticT $ view $ sequent.named
         x <- maybe 
             (hard_error [err_msg])
             return
@@ -195,19 +181,17 @@ lookup_hypothesis (ThmRef hyp inst) = do
 get_context :: Monad m
             => TacticT m Context
 get_context = TacticT $ do
-        Sequent ctx _ _ _ <- lift $ asks sequent
-        return ctx
+        view $ sequent.context
 
 add_theorems :: Monad m
              => [(Label,Expr)] 
              -> TacticT m Proof 
              -> TacticT m (Proof, [Label])
 add_theorems thms proof = do
-        param <- TacticT $ lift ask
         let new_thm = fromList thms
             f xs = sort xs `OL.minus` keys new_thm
         tac_censor f $ tac_listen $ tac_local 
-            (param { theorems = new_thm `M.union` theorems param })
+            (theorems %~ (new_thm `M.union`))
             proof
         
 
@@ -258,24 +242,30 @@ clear_vars :: Monad m
            -> TacticT m Proof
 clear_vars vars proof = do
         param <- TacticT $ lift $ ask
-        let Sequent ctx asm hyp g = sequent param
-            new_asm = L.filter f asm
-            new_hyp = M.filter f hyp
+        old_vars <- TacticT $ view $ sequent.constants
+        let -- Sequent ctx _ asm hyp g = sequent param
+            -- new_asm = L.filter f asm
+            -- new_hyp = M.filter f hyp
             f x     = not $ any (`S.member` used_var x) vars
-            Context a old_vars b c d = ctx
             new_vars = L.foldl (flip M.delete) old_vars (L.map name vars)
-            new_ctx  = Context a new_vars b c d
         li    <- get_line_info
-        (p,w) <- tac_listen $ tac_local 
-            (param { sequent = Sequent new_ctx new_asm new_hyp g }) $
+        tac_local 
+            (sequent %~ 
+                \s -> s & constants .~ new_vars 
+                        & nameless %~ L.filter f
+                        & named    %~ M.filter f) $
             do  (lbls,ids)  <- TacticT $ lift $ get
                 let new_ids = ids `S.difference` S.fromList (L.map name vars)
                 TacticT $ lift $ put (lbls,new_ids)
-                p           <- proof
-                TacticT $ lift $ put (lbls,ids)
-                return p
-        let thm = M.filter f $ theorems param `intersection` fromList (zip w $ repeat ())
-        return $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
+                (p,w)  <- tac_listen proof
+                TacticT $ do
+                  lift $ put (lbls,ids)
+                  let thm = M.filter f $ _theorems param 
+                        `intersection` fromList (zip w $ repeat ())
+                  new_ctx <- view $ sequent.context
+                  new_asm <- view $ sequent.nameless
+                  new_hyp <- view $ sequent.named
+                  return $ Keep new_ctx new_asm (thm `M.union` new_hyp) p li
         
 
 by_cases :: Monad m
@@ -318,7 +308,7 @@ derive_theorems :: Monad m
                 => [(TheoremRef,LineInfo)]
                 -> TacticT m [(Label, Expr)]
 derive_theorems hint = do
-        thms     <- TacticT $ lift $ asks theorems
+        thms     <- TacticT $ view theorems
         thms     <- forM hint $ \ref -> 
             case ref of
                 (ThmRef lbl _, _) -> do
@@ -366,11 +356,8 @@ last_step xp = do
 get_used_vars :: Monad m
               => TacticT m [Var]
 get_used_vars = do
-        Sequent _ asm hyp g <- TacticT $ lift $ asks sequent
-        return $ S.toList $ S.unions $ 
-               used_var g
-             : L.map used_var asm 
-            ++ L.map used_var (M.elems hyp)
+        es <- TacticT $ view $ sequent.expressions
+        return $ S.toList $ S.unions $ L.map used_var es
 
 get_allocated_vars :: Monad m
                    => TacticT m [String]
@@ -381,8 +368,7 @@ get_allocated_vars = do
 is_fresh :: Monad m
          => String -> TacticT m Bool
 is_fresh v = TacticT $ do
-        s       <- lift $ asks sequent
-        return $    are_fresh [v] s
+        are_fresh [v] <$> view sequent
 
 new_fresh :: Monad m
           => String -> Type 
@@ -401,9 +387,9 @@ new_fresh name t = do
             ) 0 ""
 
 is_label_fresh :: Monad m => Label -> TacticT m Bool
-is_label_fresh lbl = do
-        Sequent _ _ hyps _ <- TacticT $ asks sequent
-        thm                <- TacticT $ asks theorems
+is_label_fresh lbl = TacticT $ do
+        hyps <- view $ sequent.named
+        thm  <- view theorems
         return $   (not $ lbl `member` hyps) 
                 && (not $ lbl `member` thm)
 

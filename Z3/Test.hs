@@ -95,6 +95,7 @@ sample_quant = [
 sample_proof :: Sequent
 sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
+        empty_monotonicity
         [($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         M.empty
         (($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 12))

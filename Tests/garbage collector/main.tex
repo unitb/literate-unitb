@@ -87,7 +87,7 @@
 	\[ \param{delete}{p,q : Node} \]
 \begin{proof}{\ref{m1:prog0}/REF/ensure/m1/\ref{add}/SAF}
 \begin{align}
-	\define{rr}{ \{ r \mapsto r \} } \\
+	\define{rr}{ \asrel{\{r\}} } \\
 	\define{E}{ \{ p \mapsto q \} } \\
 	\assert{lmm0}{ rr;\star (ptr \0\bunion E) \2\subseteq rr ; \star ptr }
 \end{align}
@@ -102,18 +102,18 @@
 	r \mapsto ref \in \star ptr'
 \hint{=}{ \eqref{m1:act0} }
 	r \mapsto ref \in \star (ptr \bunion E)
-\hint{=}{ identity }
-	r \mapsto ref \in \star (ptr \bunion E)
-\hint{=}{ aiming for $rr$ }
-	r \mapsto ref \in \{r\} \rdomres (\star (ptr \bunion E))
+\hint{=}{ move $r$ into the relation }
+	r \mapsto ref \in rr \, ; \star (ptr \bunion E)
+\hint{=}{ \eqref{lmm0} }
+	r \mapsto ref \in rr \, ; \star ptr
 \hint{=}{ }
 	r \mapsto ref \in \star ptr
 \end{calculation}
 \end{subproof}
 \end{free:var}
 \begin{subproof}{lmm0}
-	% * over \/ 
-	% unroll *
+	% associativity in prover
+	% monotonicity of <: and ; in prover
 	% ; over \/
 \begin{calculation}
 	rr;\star (ptr \0\bunion E)
@@ -121,10 +121,19 @@
 	rr; \star (\star ptr ; E) ; \star ptr
 \hint{=}{ }
 	rr; (\star (\star ptr ; E) ; \star ptr) ; E ; \star ptr 
-	\2\bunion rr ; \id ; \star ptr
-\hint{\subseteq}{ }
-	rr; \all ; E ; \star ptr 
-	\2\bunion rr ; \id ; \star ptr
+	\2\bunion rr ; \star ptr
+\hint{\subseteq}{ $x \subseteq \all$ }
+	rr; (\all ; E) ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{=}{ }
+	rr ; \all ; \asrel{\{q\}} ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{=}{ }
+	\{ r \mapsto q \} ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{\subseteq}{ \eqref{m1:grd0} }
+	rr ; \star ptr ; \star ptr 
+	\2\bunion rr ; \star ptr
 \hint{=}{ }
 	rr ; \star ptr
 \end{calculation}	

@@ -1,23 +1,14 @@
 module Build where
 
--- import Control.Concurrent
-
--- import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Reader
 
 -- import Data.List
--- import Data.List.Utils
 
--- import System.Directory
--- import System.Environment
 import System.Exit
 import System.FilePath
 import System.Process
--- import System.IO.Unsafe
-
--- import Shelly (shelly,rm_f)
 
 data CompileMode = Make | CompileFile
 

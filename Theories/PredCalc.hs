@@ -20,8 +20,8 @@ zew = typ_fun1 everywhere_fun
 pred :: Type
 pred = pred_type gA
 
-implies_fun :: Fun
-implies_fun = mk_lifted_fun [] "=>" [pred,pred] pred
+pimplies_fun :: Fun
+pimplies_fun = mk_lifted_fun [] "=>" [pred,pred] pred
 
 equiv_fun :: Fun
 equiv_fun = mk_lifted_fun [] "equiv" [pred,pred] pred
@@ -36,7 +36,7 @@ neg_fun :: Fun
 neg_fun = (mk_lifted_fun [] "not" [pred] pred)
 
 zpimplies :: ExprP -> ExprP -> ExprP
-zpimplies = typ_fun2 implies_fun
+zpimplies = typ_fun2 pimplies_fun
 
 zpequiv :: ExprP -> ExprP -> ExprP
 zpequiv   = typ_fun2 equiv_fun

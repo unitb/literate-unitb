@@ -4,9 +4,11 @@ module Theories.SetTheory where
     -- Modules
 import Logic.Expr
 import Logic.Operator
-import Logic.Theory
+import Logic.Theory hiding (preserve)
+import Logic.Proof
 
     -- Libraries
+import Data.Default
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
 
@@ -40,6 +42,16 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         consts  = M.empty
         _theoryDummies = M.empty
         types = M.empty
+        _theorySyntacticThm = def
+            { _monotonicity = fromList $
+                   preserve subset_fun ["intersect","union"]
+                ++ preserve st_subset_fun ["intersect","union"]
+                ++ [ ( ("=>","subset")
+                     , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
+                   , ( ("=>","st-subset")
+                     , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
+                   ]
+                 }
         defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
@@ -179,8 +191,8 @@ zsetdiff     = typ_fun2 (mk_fun [gA] "set-diff" [set_type gA,set_type gA] $ set_
 
 zempty_set   = Right $ FunApp (mk_fun [gA] "empty-set" [] $ set_type gA) []
 zset_all     = Right $ FunApp (mk_fun [gA] "all" [] $ set_type gA) []
-zsubset      = typ_fun2 (mk_fun [] "subset" [set_type gA,set_type gA] bool)
-zstsubset    = typ_fun2 (mk_fun [gA] "st-subset" [set_type gA,set_type gA] bool)
+zsubset      = typ_fun2 subset_fun
+zstsubset    = typ_fun2 st_subset_fun
 zintersect   = typ_fun2 (mk_fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
 zunion       = typ_fun2 (mk_fun [] "union" [set_type gA,set_type gA] $ set_type gA)
 zcompl       = typ_fun1 (mk_fun [gA] "compl" [set_type gA] $ set_type gA)
@@ -191,6 +203,12 @@ zset_enum (x:xs) = foldl zunion y ys
         y  = zmk_set x
         ys = L.map zmk_set xs
 zset_enum [] = zempty_set
+
+st_subset_fun :: Fun
+st_subset_fun = mk_fun [gA] "st-subset" [set_type gA,set_type gA] bool
+
+subset_fun :: Fun
+subset_fun = mk_fun [] "subset" [set_type gA,set_type gA] bool
 
 dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t

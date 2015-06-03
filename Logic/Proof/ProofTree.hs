@@ -24,6 +24,7 @@ import Data.List as L
 import Data.Map as M 
                 ( Map )
 import qualified Data.Map as M 
+import Data.Maybe as M 
 import Data.Set as S 
 import Data.Typeable
 
@@ -88,8 +89,9 @@ instance Syntactic Proof where
     line_info (ByCalc c) = line_info c
 
 instance ProofRule Proof where
-    proof_po (ByCalc c) lbl po@(Sequent ctx _ _ _) = do
-            let (y0,y1) = entailment (goal_po c) po
+    proof_po (ByCalc c) lbl po = do
+            let ctx = po^.context
+                (y0,y1) = entailment (goal_po c) po
             ys   <- obligations' ctx po c
             return $ L.map f (  ("goal",y0) 
                               : ("hypotheses",y1)
@@ -99,7 +101,7 @@ instance ProofRule Proof where
             -- with_li x = label (x ++ show li)
             -- li  = line_info c
 
-    proof_po (ByCases xs li) lbl (Sequent ctx asm hyps goal) = do
+    proof_po (ByCases xs li) lbl po = do
             dis <- toErrors li $ mzsome (L.map (\(_,x,_) -> Right x) xs)
             let c  = completeness dis
             cs <- zipWithM case_a [1..] xs
@@ -107,12 +109,12 @@ instance ProofRule Proof where
         where
             completeness dis = 
                     ( (f "completeness") 
-                    , Sequent ctx asm hyps dis )
+                    , po & goal .~ dis )
             case_a n (_,x,p) = proof_po p (f ("case " ++ show n))
-                    $ Sequent ctx (x:asm) hyps goal
+                    $ po & nameless %~ (x:)
             f x     = composite_label [lbl,label x]
 
-    proof_po (ByParts xs _) lbl (Sequent ctx asm hyps goal) = do
+    proof_po (ByParts xs _) lbl po = do
             let conj = L.map (\(x,_) -> x) xs
                 c  = completeness conj
             cs <- zipWithM part [1..] xs
@@ -120,19 +122,17 @@ instance ProofRule Proof where
         where
             completeness conj = 
                     ( (f "completeness") 
-                    , Sequent ctx conj hyps goal )
+                    , po & nameless .~ conj )
             part n (x,p) = proof_po p (f ("part " ++ show n))
-                    $ Sequent ctx asm hyps x
+                    $ po & goal .~ x
             f x     = composite_label [lbl,label x]
 
-    proof_po    (FreeGoal v u t p li) 
-                lbl po@(Sequent ctx asm hyps goal) = do
-            new_goal <- free_vars goal
-            xs <- proof_po p lbl $ Sequent new_ctx asm hyps new_goal
+    proof_po (FreeGoal v u t p li) lbl po = do
+            new_goal <- free_vars $ po^.goal
+            xs <- proof_po p lbl $ po & constants %~ M.insert u (Var u t)
+                                      & goal .~ new_goal
             return xs
         where
-            new_ctx = merge_ctx (Context M.empty (M.singleton u (Var u t)) M.empty M.empty M.empty)
-                                ctx
             free_vars (Binder Forall ds r expr _) 
                     | are_fresh [u] po = return $ zforall (L.filter ((v /=) . name) ds) 
                                                 (rename v u r)
@@ -140,16 +140,17 @@ instance ProofRule Proof where
                     | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
             free_vars expr = return expr
 
-    proof_po    (Easy _) 
-                lbl po = 
+    proof_po (Easy _) lbl po = 
             return [(composite_label [lbl, label "easy"],po)]
 
-    proof_po    (Assume new_asm new_goal p _)
-                lbl (Sequent ctx asm hyps goal) = do
-            pos <- proof_po p lbl $ Sequent ctx asm (new_asm `M.union` hyps) new_goal
+    proof_po (Assume new_asm new_goal p _) lbl po = do
+            pos <- proof_po p lbl $ po & named %~ (new_asm `M.union`) 
+                                       & goal .~ new_goal
             return ( ( composite_label [lbl, label "new assumption"]
-                     , Sequent ctx [] M.empty (           zimplies (zall new_asm) new_goal 
-                                               `zimplies` goal) )
+                     , empty_sequent 
+                            & context .~ (po^.context)
+                            & goal .~ (           zimplies (zall new_asm) new_goal 
+                                       `zimplies` (po^.goal)) )
                    : pos)
 
     proof_po (Definition defs p li) lbl s = do
@@ -161,22 +162,23 @@ instance ProofRule Proof where
             proof_po p lbl $ 
                 s & constants %~ (M.union $ symbol_table $ M.keys defs)
                   & nameless  %~ (defs' ++)
-    proof_po    (Assertion lemma dep p _)
-                lbl (Sequent ctx asm hyps goal) = do
+    proof_po (Assertion lemma dep p _) lbl po = do
             let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
                 f (x,y) = (x,[(y,())])
             pos1 <- proof_po p ( composite_label [lbl,label "main goal"] )
-                $ Sequent ctx (asm ++ L.map fst (M.elems lemma)) hyps goal
+                $ po & nameless %~ (++ L.map fst (M.elems lemma))
             pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) -> do
-                let used = maybe M.empty id $ lbl2 `M.lookup` depend
+                let used = fromMaybe M.empty $ lbl2 `M.lookup` depend
                     thm  = (M.map fst lemma) `M.intersection` used
                 proof_po p (composite_label [lbl,label "assertion",lbl2]) 
-                    $ Sequent ctx asm (thm `M.union` hyps) g )
+                    $ po & named %~ (thm `M.union`)
+                         & goal  .~ g )
             return (pos1 ++ concat pos2)
 
     proof_po    (InstantiateHyp hyp ps proof li) 
-                lbl (Sequent ctx asm hyps goal) = do
-        if hyp `elem` M.elems hyps || hyp `elem` asm then do
+                lbl po = do -- (Sequent ctx asm hyps goal) = do
+        if hyp `elem` M.elems (po^.named) 
+                || hyp `elem` (po^.nameless) then do
             newh <- case hyp of
                 Binder Forall vs r t _
                     | all (`elem` vs) (M.keys ps) -> do
@@ -189,14 +191,17 @@ instance ProofRule Proof where
                             else return $ zforall new_vs re te
                 _ -> Left [Error ("hypothesis is not a universal quantification:\n" 
                         ++ pretty_print' hyp) li]
-            proof_po proof lbl (Sequent ctx (newh:asm) hyps goal)
+            proof_po proof lbl $
+                po & nameless %~ (newh:)
         else
             Left [Error ("formula is not an hypothesis:\n" 
                 ++ pretty_print' hyp) li]
 
-    proof_po    (Keep ctx unnamed named proof _) 
-                lbl (Sequent _ _ _ goal) = do
-        proof_po proof lbl (Sequent ctx unnamed named goal)
+    proof_po (Keep ctx unnamed' named' proof _) lbl po = do
+        proof_po proof lbl
+            $ po & context  .~ ctx
+                 & nameless .~ unnamed'
+                 & named    .~ named'
 
 chain :: Notation -> BinOperator -> BinOperator -> Either [String] BinOperator
 chain n x y 
@@ -234,7 +239,9 @@ show_proof (Calc _ g fs ss _) =
                 ++ [ "    " ++ show s ] )
 
 goal_po :: Calculation -> Sequent
-goal_po c = Sequent (c^.context) xs M.empty (c^.goal)
+goal_po c = empty_sequent & context .~ (c^.context)
+                          & nameless .~ xs
+                          & goal .~ (c^.goal)
     where
         xs = concatMap (\(_,_,x,_) -> x) $ following c
 
@@ -251,13 +258,13 @@ obligations' ctx s c = do
 --proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
 are_fresh :: [String] -> Sequent -> Bool
-are_fresh vs (Sequent _ asm hyps goal) = 
-            S.fromList vs `S.intersection` (
+are_fresh vs po = 
+        S.null $ S.fromList vs `S.intersection` (
                 S.map name $ 
                 S.unions $ 
-                L.map used_var (goal : asm ++ M.elems hyps)
-                )
-         == S.empty 
+                L.map used_var es)
+    where
+        es = (po^.goal) : (po^.nameless) ++ (M.elems $ po^.named)
 
 rename_all :: [(Var,Var)] -> Expr -> Expr
 rename_all [] e = e
@@ -273,28 +280,21 @@ steps_po ctx s (Calc d _ e0 es _) = f e0 es [1..]
         f _ [] _ = return []
         f e0 ((r0, e1, a0,li):es) ns = do
                 expr <- with_li li $ mk_expr r0 e0 e1
-                tail <- f e1 es $ tail ns
-                let (Sequent _ asm _ _) = s
-                return (
-                    ( label ("step " ++ show (head ns))
-                    , Sequent 
-                        (ctx `merge_ctx` d) 
-                        (a0 ++ asm) 
-                        M.empty
-                        expr
-                    ) : tail)
+                let step = ( label ("step " ++ show (head ns))
+                           , s & context  .~ (ctx `merge_ctx` d)
+                               & nameless %~ (a0++)
+                               & named .~ M.empty
+                               & goal  .~ expr )
+                (step:) <$> f e1 es (tail ns)
 
 entails_goal_po :: Context 
                 -> Calculation -> Either [Error] Sequent
 entails_goal_po ctx (Calc d g e0 es li) = do
             a <- with_li li assume
-            return $ Sequent 
-                ( ctx   `merge_ctx` 
-                  d)
-                a 
---                (a ++ (M.elems $ theory_facts ts th))
-                M.empty 
-                g
+            return $ empty_sequent
+                & context .~ (ctx `merge_ctx` d)
+                & nameless .~ a 
+                & goal .~ g
     where
         assume = reverse <$> foldM f [] (L.map (\(x,y,z) -> (mk_expr x y z)) $ zip3 rs xs ys)
         f xs mx = do 

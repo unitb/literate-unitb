@@ -20,6 +20,8 @@ module Logic.Theory
     , mzforall'
     , mzexists'
     , make_theory
+    , all_theories
+    , syntacticThm
     , command
     , function
     , dummy
@@ -32,6 +34,7 @@ module Logic.Theory
     , precedence
     , left_associativity
     , right_associativity
+    , preserve
     , axiom, axioms
     , th_notation
     , theory_ctx
@@ -44,7 +47,8 @@ where
 import Logic.Expr
 import Logic.Expr.Genericity (variables)
 import Logic.Operator
-import Logic.Proof (Proof)
+import Logic.Proof hiding (preserve) 
+import qualified Logic.Proof as P
 
     -- Libraries
 import Control.Applicative
@@ -59,7 +63,7 @@ import           Data.DeriveTH
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
-import           Data.Map as M hiding ( map )
+import           Data.Map as M 
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -90,6 +94,7 @@ data Theory = Theory
         , consts     :: Map String Var
         , _fact      :: Map Label Expr
         , _theoryDummies :: Map String Var 
+        , _theorySyntacticThm :: SyntacticProp
         , theorems   :: Map Label (Maybe Proof)
         , thm_depend :: [ (Label,Label) ]
         , notation   :: Notation }
@@ -99,6 +104,13 @@ makeLenses ''Theory
 makeFields ''Theory
 mkCons ''Theory
 
+all_theories :: Theory -> [Theory]
+all_theories th = th : M.elems (all_theories' th)
+    where
+        _ = set theorySyntacticThm
+
+all_theories' :: Theory -> Map String Theory
+all_theories' th = M.unions $ extends th : M.elems (M.map all_theories' $ extends th)
 
 basic_theory :: Theory
 basic_theory = empty_theory 
@@ -108,12 +120,20 @@ basic_theory = empty_theory
 --        , funs  = symbol_table [Fun [gT] "eq" [gT,gT] bool]
 --        , fact  = fromList 
 --            [ (label "@basic@@_0", axm0) ]
-       , funs  = symbol_table [const_fun,ident_fun]
-       , _fact  = fromList 
+        , funs  = symbol_table [const_fun,ident_fun]
+        , _fact  = fromList 
            [ (label "@basic@@_0", axm0) 
-           , (label "@basic@@_1", axm1)]
+           , (label "@basic@@_1", axm1) ]
+        , _theorySyntacticThm = empty_monotonicity
+            { _monotonicity = fromList $
+                P.preserve implies_fun ["and","or"] 
+             ++ [ (("=>","not"),Independent zfollows')
+                , (("=>","=>"), Side (Just zfollows')
+                                     (Just zimplies')) ] }
         , notation = functional_notation }
    where
+        zimplies' = Rel implies_fun Direct
+        zfollows' = Rel implies_fun Flipped
         _ = theoryDummies Identity
 --        t  = VARIABLE "t"
         t0 = VARIABLE "t0"
@@ -137,7 +157,7 @@ th_notation th = res
         ths = th : elems (extends th)
         res = flip precede logical_notation
             $ L.foldl combine empty_notation 
-            $ map notation ths
+            $ L.map notation ths
 
 theory_ctx :: Theory -> Context
 theory_ctx th = 
@@ -161,7 +181,7 @@ theory_facts th =
         new_fact = facts
 
 declAxiom :: Loc -> ExprP -> Writer [ExprP] ()
-declAxiom loc stmt = tell [mapLeft (map (locMsg loc ++)) $ zcast bool $ withForall stmt]
+declAxiom loc stmt = tell [mapLeft (L.map (locMsg loc ++)) $ zcast bool $ withForall stmt]
 
 withForall :: ExprP -> ExprP 
 withForall mx = do
@@ -178,7 +198,7 @@ axioms name cmd
         | otherwise = error $ unlines $ concat ls
     where
         n  = length rs
-        ns = map (pad . show) [1..n]
+        ns = L.map (pad . show) [1..n]
         pad ys = replicate (n - length ys) ' ' ++ ys
         rs = rights xs
         ls = lefts xs
@@ -197,7 +217,7 @@ instance (Show k, Ord k, Typeable a)
 instance GBuild (K1 i Notation) where
     gBuild _ xs = K1 $ with_assoc 
         $ L.foldl combine empty_notation 
-        $ map unK1 xs        
+        $ L.map unK1 xs        
 
 instance GBuild (K1 i a) where
     gBuild (K1 m) _ = K1 m
@@ -336,7 +356,7 @@ assert' loc stmt = M $ tell
         [ empty_theory 
             { _fact = singleton (label "") x }]
     where
-        x = either (error . unlines . map (locMsg loc ++)) id 
+        x = either (error . unlines . L.map (locMsg loc ++)) id 
             $ zcast bool $ withForall stmt
 
 assert :: ExpQ
@@ -381,6 +401,10 @@ unary op tag s = do
     M $ tell [empty_theory 
             { notation = empty_notation { new_ops = [Left unop] } } ]
     return (Left unop,f)
+
+preserve :: Fun -> [String] -> M ()
+preserve rel fun = M $ tell [empty_theory
+    & syntacticThm.monotonicity .~ M.fromList (P.preserve rel fun) ]
 
 left_associativity :: [Operator] -> M ()
 left_associativity ops = M $ tell [empty_theory
@@ -471,7 +495,7 @@ clash :: (Show a, Ord a)
       => (thy -> Map a b) -> [thy] -> Map a b
 clash f xs 
         | L.null es = M.unions $ L.map f xs
-        | otherwise = error $ format "Name clash with: {0}" $ intercalate "," (map show es)
+        | otherwise = error $ format "Name clash with: {0}" $ intercalate "," (L.map show es)
     where
         es = keys $ M.unions $ do
             (x,ys) <- zip xs $ drop 1 $ tails xs

@@ -4,6 +4,7 @@ module Theories.Arithmetic where
     -- Modules
 import Logic.Expr
 import Logic.Operator
+import Logic.Proof hiding (syntacticProp)
 import Logic.Theory
 
 import Theories.SetTheory
@@ -11,6 +12,7 @@ import Theories.FunctionTheory
 
     -- Libraries
 import Data.List as L
+import Data.Map
 
     -- arithmetic
 power   :: BinOperator
@@ -45,6 +47,13 @@ arithmetic = empty_theory {
         types = symbol_table [IntSort,RealSort]
         , funs = symbol_table 
             [ sum_fun ]
+        , _theorySyntacticThm = empty_monotonicity
+            { _monotonicity = fromList $
+              [ (("=>","<="), Side (Just zge' )
+                                   (Just zle'))
+              , (("<=","+"), Independent zle')
+              , (("<=","-"),  Side (Just zge') 
+                                   (Just zle')) ] }
         , _fact = "arithmetic" `axioms` do
                 $axiom $ 
                     asum zempty_set term `mzeq` mzint 0
@@ -97,6 +106,8 @@ arithmetic = empty_theory {
             -- ]
         , notation = arith }
     where
+        zle' = Rel le_fun Direct
+        zge' = Rel le_fun Flipped
         -- cast = zcast (set_type gT)
         asum = typ_fun2 sum_fun
         (term,_term_decl) = var "term" (array gT int)

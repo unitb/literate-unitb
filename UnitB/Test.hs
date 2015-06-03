@@ -4,12 +4,12 @@ module UnitB.Test where
 
     -- Modules
 import           Logic.Expr
+import           Logic.Expr.Existential
 import qualified Logic.TestGenericity as Gen
 
 import Theories.FunctionTheory
 
 import UnitB.AST
-import UnitB.Feasibility
 import UnitB.PO
 
 import Z3.Z3

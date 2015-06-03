@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 module Logic.Proof.POGenerator 
     ( POGen, POGenT, Logic.Proof.POGenerator.context
     , emit_goal
@@ -9,14 +10,14 @@ module Logic.Proof.POGenerator
     , nameless_hyps, variables, emit_exist_goal
     , Logic.Proof.POGenerator.definitions
     , Logic.Proof.POGenerator.functions 
+    , set_syntactic_props
     , existential, tracePOG )
 where
 
     -- Modules
 import Logic.Expr as E hiding ((.=))
+import Logic.Expr.Existential
 import Logic.Proof.Sequent as S
-
-import UnitB.Feasibility
 
     -- Libraries
 import Control.Arrow
@@ -31,6 +32,7 @@ import Data.List as L
 import Data.Map as M hiding ( map )
 
 import Utilities.Error
+import Utilities.TH (mkCons)
 import Utilities.Trace
 
 import Text.Printf
@@ -40,12 +42,14 @@ data POParam = POP
     , tag :: [Label]
     , _pOParamNameless :: [Expr]
     , _pOParamNamed :: Map Label Expr
+    , _pOParamSynProp :: SyntacticProp
     }
 
 makeFields ''POParam
+mkCons ''POParam
 
 empty_param :: POParam
-empty_param = POP empty_ctx [] [] M.empty
+empty_param = makePOParam empty_ctx
 
 type POGen = POGenT Identity
 
@@ -65,7 +69,7 @@ instance Monad m => Monad (POGenT m) where
 instance MonadTrans POGenT where
     lift = POGen . lift
 
-emit_exist_goal :: Monad m => [Label] -> [Var] -> [Expr] -> POGenT m ()
+emit_exist_goal :: (Monad m,Functor m) => [Label] -> [Var] -> [Expr] -> POGenT m ()
 emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
@@ -75,10 +79,10 @@ emit_exist_goal lbl vars es = with
         clauses = partition_expr vars es
         clauses' = M.toList $ M.fromListWith (++) clauses
 
-existential :: Monad m => [Var] -> POGenT m () -> POGenT m ()
+existential :: (Monad m,Functor m) => [Var] -> POGenT m () -> POGenT m ()
 existential [] cmd = cmd
 existential vs (POGen cmd) = do
-        let g (_, Sequent ctx h0 h1 goal) = do
+        let g (_, Sequent ctx _ h0 h1 goal) = do
                     vs <- f ctx
                     return $ zforall vs ztrue $ zall (h0 ++ M.elems h1) `zimplies` goal
             f (Context s vs fs def _) 
@@ -86,7 +90,8 @@ existential vs (POGen cmd) = do
                 -- |    not (M.null fs) 
                 --   || not (M.null def) = error "existential: cannot introduce new function symbols in existentials"
                 | otherwise = do
-                    modify (`merge_ctx` Context M.empty M.empty fs def M.empty)
+                    E.definitions %= merge def
+                    E.functions %= merge fs
                     return $ M.elems vs
             -- f xs = [(tag, zexists vs ztrue $ zall $ map snd xs)]
         ss <- POGen 
@@ -96,13 +101,18 @@ existential vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal [] vs ss'
 
-emit_goal :: Monad m => [Label] -> Expr -> POGenT m ()
+emit_goal :: (Functor m, Monad m) => [Label] -> Expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
-    ctx  <- asks $ view S.context
-    tag  <- asks tag
-    asm  <- asks $ view nameless
-    hyps <- asks $ view named
-    tell [(composite_label $ tag ++ lbl, Sequent ctx asm hyps g)]
+    tag <- asks tag 
+    po <- Sequent <$> view S.context 
+                  <*> view synProp
+                  <*> view nameless
+                  <*> view named
+                  <*> pure g
+    tell [(composite_label $ tag ++ lbl, po)]
+
+set_syntactic_props :: SyntacticProp -> State POParam ()
+set_syntactic_props s = synProp .= s
 
 context :: Context -> State POParam ()
 context = _context
@@ -149,8 +159,7 @@ eval_generator cmd = runIdentity $ eval_generatorT cmd
 tracePOG :: Monad m => POGenT m () -> POGenT m ()
 tracePOG (POGen cmd) = POGen $ do
     xs <- snd `liftM` listen cmd
-    let goal (Sequent _ _ _ g) = g
-    traceM $ unlines $ map (show . second goal) xs
+    traceM $ unlines $ map (show . second (view goal)) xs
 
 eval_generatorT :: Monad m => POGenT m () -> m (Map Label Sequent)
 eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ printf "%s\n" $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()
