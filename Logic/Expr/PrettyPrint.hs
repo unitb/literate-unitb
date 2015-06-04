@@ -12,7 +12,9 @@ import Data.List
 
 pretty_print' :: Tree t => t -> String
 -- pretty_print' t = unlines $ pretty_print $ as_tree t 
-pretty_print' t = intercalate "\n" $ map toString $ as_list $ fst $ runReader (pretty_print_aux $ as_tree t) ""
+pretty_print' t = intercalate "\n" 
+    $ map toString $ as_list $ fst 
+    $ runReader (pretty_print_aux $ as_tree t) ""
 
 data Line = Line String String
 

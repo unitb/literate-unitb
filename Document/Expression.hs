@@ -222,7 +222,7 @@ type_t = do
                     $ fail $ format "Parameter mismatch. Expecting {0} type parameters, received {1}." 
                         (typeParams s) 
                         (length ts)
-                return $ Gen (USER_DEFINED s ts)
+                return $ Gen s ts
             Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
         b2 <- look_aheadP $ read_listP [ Ident "\\pfun" ]               
         if b2 

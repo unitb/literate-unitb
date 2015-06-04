@@ -159,17 +159,17 @@ part5 = test_cases
 train_sort :: Sort
 train_sort = Sort "\\TRAIN" "sl@TRAIN" 0
 train_type :: Type
-train_type = Gen $ USER_DEFINED train_sort []
+train_type = Gen train_sort []
 
 loc_sort :: Sort
 loc_sort = Sort "\\LOC" "sl@LOC" 0
 loc_type :: Type
-loc_type = Gen $ USER_DEFINED loc_sort []
+loc_type = Gen loc_sort []
 
 blk_sort :: Sort
 blk_sort = Sort "\\BLK" "sl@BLK" 0
 blk_type :: Type
-blk_type = Gen $ USER_DEFINED blk_sort []
+blk_type = Gen blk_sort []
 
 universe :: Type -> Expr
 train_def :: Def

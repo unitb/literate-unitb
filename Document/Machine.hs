@@ -719,7 +719,7 @@ set_decl :: MPipeline MachineP0
 set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             let name     = tag 
                 new_sort = Sort tag (z3_escape name) 0
-                new_type = Gen $ USER_DEFINED new_sort []
+                new_type = Gen new_sort []
                 new_def = Def [] (z3_escape name) [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask

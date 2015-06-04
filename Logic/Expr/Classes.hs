@@ -1,12 +1,17 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DefaultSignatures      #-}
 module Logic.Expr.Classes where
 
 import Control.Monad.Reader
+import Control.Monad.State
 
+import Data.Data
 import Data.List
 import Data.List.Utils
+import Data.Maybe
+import Data.Tuple
 
 class Named n where
     name    :: n -> String
@@ -23,16 +28,29 @@ class Named n where
 
 data OutputMode = ProverOutput | UserOutput
 
+newtype Endo m a = Endo { fromEndo :: a -> m a }
+
 class Tree a where
     as_tree   :: a -> StrList
     as_tree'  :: a -> Reader OutputMode StrList
     rewriteM' :: Monad m => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
     rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
     as_tree x = runReader (as_tree' x) ProverOutput
+    default rewriteM' :: (Monad m, Data a) => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
+    rewriteM' f x t = liftM swap $ runStateT (gmapM (wrap g) t) x
+        where
+            g x y = liftM swap $ f y x
+                -- (Endo return) (gcast $ Endo $ \x -> StateT $ liftM swap . flip f x)
+
     rewrite' f x t = (rewriteM' g x t) ()
         where
             g x t () = f x t
- 
+
+wrap :: (Monad m, Typeable a, Typeable d) 
+     => (a -> b -> m (a,b)) 
+     -> d -> StateT b m d
+wrap f = fromEndo $ fromMaybe (Endo return) (gcast $ Endo $ StateT . f)
+
 data StrList = List [StrList] | Str String
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])

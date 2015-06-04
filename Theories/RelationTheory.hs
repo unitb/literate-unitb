@@ -72,6 +72,10 @@ relation_theory = make_theory "relation" $ do
     $assert $ zasrel (zmk_set x1) .= zmk_set (mzpair x1 x1)
         -- assoc of ;
     $assert $ (r1 `zseq` r3) `zseq` r5 .= r1 `zseq` (r3 `zseq` r5)
+        -- left monotonicity 
+    $assert $ r1 `zsubset` r2 .=> (r1 `zseq` r3) `zsubset` (r2 `zseq` r3)
+        -- right monotonicity 
+    $assert $ r1 `zsubset` r2 .=> (r4 `zseq` r1) `zsubset` (r4 `zseq` r2)
         -- <| and ; assoc
     -- $assert $ (s1 `zreldomres` r1) `zseq` r3 .= s1 `zreldomres` (r1 `zseq` r3)
         -- *(_ \/ _) to *(_ ; _)
@@ -85,6 +89,8 @@ relation_theory = make_theory "relation" $ do
     $assert $ r4 `zseq` (r1 `zunion` r2)  .= (r4 `zseq` r1) `zunion` (r4 `zseq` r2)
     $assert $ zmk_set p `zseq` zset_all .= zmk_set x1 `zreldomres` zset_all 
     -- $assert $ zstar (r1 `zseq` r6) .= ( r1 `zseq` zstar (r6 `zseq` r1) `zseq` r6 ) `zunion` zid
+    $assert $ zasrel (zmk_set x1) `zseq` zset_all `zseq` zasrel (zmk_set x2)
+              .= zmk_set (mzpair x1 x2)
 
     $assert $ mzpair x1 x1' `zelem` zid .== x1 .= x1'
     $assert $ zid `zseq` r1 .= r1

@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE RankNTypes  #-}
 {-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE GADTs  #-}
 module Logic.Theory 
     ( Theory(..)
@@ -219,8 +220,11 @@ instance GBuild (K1 i Notation) where
         $ L.foldl combine empty_notation 
         $ L.map unK1 xs        
 
-instance GBuild (K1 i a) where
-    gBuild (K1 m) _ = K1 m
+instance GBuild (K1 i SyntacticProp) where
+    gBuild _ ms = K1 $ mconcat $ L.map unK1 ms
+
+instance GBuild (K1 i [a]) where
+    gBuild _ ms = K1 $ concatMap unK1 ms
 
 instance GBuild a => GBuild (M1 i c a) where
     gBuild (M1 m) xs = M1 $ gBuild m $ L.map unM1 xs
@@ -478,18 +482,8 @@ param_to_varT (GENERIC n) = do
                 else return $ "t" ++ show i
 param_to_varT t = rewriteM param_to_varT t
 
-newtype M a = M { runM :: RWS () [Theory] Int a }
-
-instance Applicative M where
-    pure  = return
-    (<*>) = ap
-
-instance Functor M where
-    fmap = liftM
-
-instance Monad M where
-    x >>= f = M $ runM x >>= (runM . f)
-    return = M . return
+newtype M a = M (RWS () [Theory] Int a)
+    deriving (Applicative,Functor,Monad)
 
 clash :: (Show a, Ord a)
       => (thy -> Map a b) -> [thy] -> Map a b

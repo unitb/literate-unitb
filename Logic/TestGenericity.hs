@@ -58,7 +58,7 @@ counter_ex_common_symm = prop_common_symm t0 t1
         _c = GENERIC "c"
         s2 = Sort "D" "D" 2
         _s2 = DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
-        empty x y = Gen (USER_DEFINED s2 [x,y])
+        empty x y = Gen s2 [x,y]
         t0 = fun_type _b _a
         pfun = fun_type
         set = set_type
@@ -115,7 +115,7 @@ instance Arbitrary Type where
                         BoolSort -> 
                             return []
                         Datatype _ _ _ -> error "Type.arbitrary: impossible"
-                    return $ Gen $ USER_DEFINED s ts
+                    return $ Gen s ts
                 , do
                     t <- arbitrary
                     return $ set_type t
@@ -142,15 +142,15 @@ instance Arbitrary Type where
                 ]
     shrink (GENERIC _)  = []
     shrink (VARIABLE _) = []
-    shrink (Gen (USER_DEFINED s ts)) = ts ++ do
+    shrink (Gen s ts) = ts ++ do
             ts <- mapM shrink ts
             return $ t ts
         where
-            t ts = (Gen (USER_DEFINED s ts))
+            t ts = Gen s ts
 
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
-    [   (array real (Gen $ USER_DEFINED (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
+    [   (array real (Gen (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
     ]
 
 test_case :: TestCase
@@ -190,15 +190,15 @@ test = test_cases "genericity" (
         ] )
     where
         fun_sort = Sort "\\tfun" "fun" 2
-        gtype    = Gen $ USER_DEFINED fun_sort [GENERIC "c", set_type $ GENERIC "b"]
+        gtype    = Gen fun_sort [GENERIC "c", set_type $ GENERIC "b"]
         
-        stype0   = Gen $ USER_DEFINED fun_sort [int, set_type real]
-        stype1   = Gen $ USER_DEFINED fun_sort [set_type int, set_type real]
-        stype2   = Gen $ USER_DEFINED fun_sort [set_type int, real]
+        stype0   = Gen fun_sort [int, set_type real]
+        stype1   = Gen fun_sort [set_type int, set_type real]
+        stype2   = Gen fun_sort [set_type int, real]
         
-        gtype0   = Gen $ USER_DEFINED fun_sort [gA, set_type real]
-        gtype1   = Gen $ USER_DEFINED fun_sort [set_type int, set_type gA]
-        gtype2   = Gen $ USER_DEFINED fun_sort [set_type gA, gA]
+        gtype0   = Gen fun_sort [gA, set_type real]
+        gtype1   = Gen fun_sort [set_type int, set_type gA]
+        gtype2   = Gen fun_sort [set_type gA, gA]
         gA = GENERIC "a"
 
 case3   :: IO Expr
@@ -238,7 +238,7 @@ result7 :: ExprP
         , Right $ FunApp (mk_fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
-        train = Gen $ USER_DEFINED (Sort "\train" "train" 0) []
+        train = Gen (Sort "\train" "train" 0) []
         (x,_) = var "x" train
         empty_set_of_train = FunApp (mk_fun [train] "empty-set" [] $ set_type train) []
 

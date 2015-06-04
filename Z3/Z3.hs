@@ -284,8 +284,8 @@ z3_code po =
                , Datatype [] "Null"
                     [ ("null", []) ] ] )
         ++ map Decl (decl d)
-        ++ map (\(x,y) -> Assert x $ Just $ "s" ++ show y) 
-               (zip assume [0..])
+        ++ zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
+                assume [0..]
         ++ concatMap f (zip (M.toList hyps) [0..])
         ++ [Assert (znot assert) $ Just "goal"]
         ++ [CheckSat]

@@ -28,6 +28,7 @@ import Control.Monad.Trans.RWS
 
 import           Data.List
 import qualified Data.Map as M
+import           Data.Maybe
 import           Data.Tuple
 import           Data.Typeable
 
@@ -89,7 +90,7 @@ data UnitTest = UT
     { name :: String
     , routine :: IO (String, Maybe (M.Map Label Sequent))
     , outcome :: String
-    -- , is_unit :: Bool 
+    -- , _source :: FilePath
     }
     | Node { name :: String, _children :: [UnitTest] }
 
@@ -124,7 +125,7 @@ run_test_cases xs = do
                     , routine = cmd 
                     , outcome = z 
                     }
-        f (Suite n xs) = Node n `liftM` mapM f xs
+        f (Suite n xs) = Node n <$> mapM f xs
         -- f t = return (Node (nameOf t) [])
         f (Case x y z) = return UT
                             { name = x
@@ -143,12 +144,12 @@ run_test_cases xs = do
                                 , routine = (,Nothing) `liftM` y
                                 , outcome = z
                                 }
-        f (LineSetCase x y z) = f (StringCase x 
+        f (LineSetCase x y z) = f $ StringCase x 
                                     ((unlines . sort . lines) `liftM` y) 
-                                    (unlines $ sort $ lines z))
+                                    (unlines $ sort $ lines z)
 
 disp :: (Typeable a, Show a) => a -> String
-disp x = maybe (show x) id (cast x)
+disp x = fromMaybe (show x) (cast x)
 
 print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
 print_po pos name actual expected = do

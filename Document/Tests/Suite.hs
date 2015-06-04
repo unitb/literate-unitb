@@ -3,7 +3,7 @@ module Document.Tests.Suite where
     -- Modules
 import Document.Document as Doc
 
-import Logic.Expr
+import Logic.Expr as E
 import Logic.Proof
 
 import UnitB.AST
@@ -16,10 +16,12 @@ import Control.Applicative ((<$>))
 import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception
+import Control.Lens
 
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
+import Data.Either.Combinators
 import Data.List as L
 import Data.List.Utils as L
 import Data.Map as M
@@ -78,20 +80,46 @@ raw_proof_obligation path lbl i = makeReport $ do
             cmd = unlines $ L.map pretty_print' $ z3_code po
         return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
 
+stripAnnotation :: Expr -> Expr
+stripAnnotation e = E.rewrite stripAnnotation $ f e
+    where
+        strip = set annotation [] 
+        f (FunApp fun xs) = FunApp (strip fun) xs
+        f e = e
+
+proof_obligation_stripped :: FilePath -> String -> Int -> IO String
+proof_obligation_stripped = proof_obligation_with stripAnnotation
+
 proof_obligation :: FilePath -> String -> Int -> IO String
-proof_obligation path lbl i = makeReport $ do
-        xs <- EitherT $ fst <$> list_file_obligations' path
+proof_obligation = proof_obligation_with id
+
+sequent :: FilePath -> String 
+        -> Int -> IO (Either String Sequent)
+sequent path lbl i = runEitherT $ do
+        xs <- EitherT $ (mapLeft show_err . fst) 
+            <$> list_file_obligations' path
         if i < size xs then do
             let pos = snd $ snd $ i `elemAt` xs
             case label lbl `M.lookup` pos of
-                Just po -> do
-                    let cmd = unlines $ L.map pretty_print' $ z3_code po
-                    return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
+                Just po -> 
+                    return po
                 Nothing ->
-                    return $ format "invalid label: {0}\n{1}" lbl $ 
+                    left $ format "invalid label: {0}\n{1}" lbl $ 
                         unlines $ L.map show $ keys pos
         else
-            return $ format "accessing {0}th refinement out of {1}" i (size xs)            
+            left $ format "accessing {0}th refinement out of {1}" i (size xs)   
+
+proof_obligation_with :: (Expr -> Expr) 
+                      -> FilePath -> String 
+                      -> Int -> IO String
+proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
+    where
+        disp po = format "; {0}\n{1}; {2}\n" lbl (cmd po) lbl
+        cmd po = unlines $ L.map pretty_print' 
+                                  $ z3_code 
+                                  $ po & nameless %~ L.map f
+                                       & named %~ M.map f
+                                       & goal %~ f
 
 find_errors :: FilePath -> IO String 
 find_errors path = do

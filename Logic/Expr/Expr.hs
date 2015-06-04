@@ -45,6 +45,9 @@ module Logic.Expr.Expr
     , finiteness
     , fromJust, withLoc, locMsg
     , rewriteExpr, rewriteExprM
+        -- Lenses
+    , funName, arguments
+    , result, annotation
     )
 where
 
@@ -64,12 +67,13 @@ import Control.Monad.Identity
 import Control.Lens hiding (rewrite,Context
                            ,Const,Context')
 
+import           Data.Data
 import           Data.DeriveTH
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
-import           Data.Typeable
+import           Data.Traversable (sequenceA)
 
 import Language.Haskell.TH hiding (Type) -- (ExpQ,location,Loc)
 
@@ -92,34 +96,34 @@ data GenExpr t a q =
         | Binder q [AbsVar t] (GenExpr t a q) (GenExpr t a q) t
         | Cast (GenExpr t a q) a
         | Lift (GenExpr t a q) a
-    deriving (Eq, Ord, Typeable, Generic)
+    deriving (Eq, Ord, Typeable, Data, Generic)
 
 data Lifting = Unlifted | Lifted
-    deriving (Eq,Ord, Generic)
+    deriving (Eq,Ord, Generic, Data, Typeable)
 
 instance Serialize Lifting where
 
 data Value = RealVal Double | IntVal Int
-    deriving (Eq,Ord,Generic)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
 
 data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
-    deriving (Eq,Ord,Generic)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 data QuantifierWD  = FiniteWD | InfiniteWD
-    deriving (Eq,Ord,Generic)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 data HOQuantifier = 
         Forall 
         | Exists 
         | UDQuant Fun Type QuantifierType QuantifierWD
-    deriving (Eq, Ord, Generic,Typeable)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 data FOQuantifier = FOForall | FOExists 
-    deriving (Eq,Ord,Generic,Typeable)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 type ExprP = Either [String] Expr 
 
@@ -164,7 +168,7 @@ finiteness Forall = InfiniteWD
 finiteness Exists = InfiniteWD
 finiteness (UDQuant _ _ _ fin) = fin
 
-class (Eq q, Show q) => IsQuantifier q where
+class (Eq q, Show q, Data q) => IsQuantifier q where
     merge_range :: q -> StrList
     termType :: q -> Type
     exprType :: q -> Type -> Type -> Type
@@ -239,9 +243,26 @@ type Fun = AbsFun GenericType
 
 type FOFun = AbsFun FOType
 
-data AbsFun t = 
-        Fun [t] String Lifting [t] t
-    deriving (Eq, Ord, Generic, Typeable)
+data AbsFun t = Fun 
+        { _annotation :: [t]
+        , _funName :: String
+        , lifted :: Lifting
+        , _arguments :: [t]
+        , _result :: t }
+    deriving (Eq, Ord, Generic, Typeable, Data)
+
+instance (Data t,TypeSystem t) => Tree (AbsFun t) where
+    as_tree' f@(Fun _ _ _ argT rT) = List <$> sequenceA
+            [ Str <$> decorated_name' f 
+            , List <$> mapM as_tree' argT 
+            , as_tree' rT ]
+
+instance (Data t,Data q,TypeSystem t, IsQuantifier q) => Tree (AbsDef t q) where
+    as_tree' d@(Def _ _ argT rT e) = List <$> sequenceA
+            [ Str <$> decorated_name' d 
+            , List <$> mapM as_tree' argT 
+            , as_tree' rT 
+            , as_tree' e ]
 
 mk_fun :: [t] -> String -> [t] -> t -> AbsFun t
 mk_fun ps n ts t = Fun ps n Unlifted ts t
@@ -256,7 +277,7 @@ type Var = AbsVar GenericType
 type FOVar = AbsVar FOType
 
 data AbsVar t = Var String t
-    deriving (Eq,Ord,Generic,Typeable)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 target :: AbsDef t q -> AbsExpr t q
 target (Def _ _ _ _ e) = e
@@ -268,7 +289,7 @@ type Def = AbsDef GenericType HOQuantifier
 type Def' = AbsDef GenericType FOQuantifier
 
 data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
-    deriving (Eq,Ord,Generic,Typeable)
+    deriving (Eq,Ord,Generic,Typeable,Data)
 
 instance Show StrList where
     show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
@@ -666,6 +687,8 @@ derive makeNFData ''AbsDecl
 derive makeNFData ''AbsContext
 derive makeNFData ''FOQuantifier
 derive makeNFData ''HOQuantifier
+
+makeLenses ''AbsFun
 
 fromEither :: Loc -> Either [String] a -> a
 fromEither _ (Right x)  = x

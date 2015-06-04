@@ -334,14 +334,14 @@ indent n = local $ first (n+)
 type_code :: Type -> Either String String
 type_code t = 
             case t of
-                Gen (USER_DEFINED s [])
+                Gen s []
                     | s == IntSort ->  return "Int"
                     | s == BoolSort -> return "Bool"
-                Gen (USER_DEFINED s [t])
+                Gen s [t]
                     | s == set_sort -> do
                         c <- type_code t
                         return $ format "S.Set ({0})" c
-                Gen (USER_DEFINED s [t0,t1])
+                Gen s [t0,t1]
                     | s == fun_sort -> do
                         c0 <- type_code t0
                         c1 <- type_code t1

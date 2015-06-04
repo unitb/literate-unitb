@@ -58,13 +58,13 @@ getElementType t = runReaderT (getElementType_aux t t) 1
 getElementType_aux :: Type -> Type -> ReaderT Int (Either [String]) Type
 getElementType_aux orgt (VARIABLE _) = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
 getElementType_aux orgt (GENERIC _)  = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
-getElementType_aux _ (Gen (USER_DEFINED (Sort "Array" "Array" 2) [_x,y])) = return y
-getElementType_aux orgt (Gen (USER_DEFINED (DefSort _ _ args t) xs)) = do
+getElementType_aux _ (Gen (Sort "Array" "Array" 2) [_x,y]) = return y
+getElementType_aux orgt (Gen (DefSort _ _ args t) xs) = do
     n <- ask
     if n == 0 
         then lift $ Left [printf "Expecting array type but found %s" $ show orgt]
         else local (-1 +) $ getElementType_aux orgt $ instantiate (M.fromList $ zip args xs) t
-getElementType_aux orgt (Gen _) = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
+getElementType_aux orgt (Gen _ _) = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
 
 newContext :: [UntypedVar] -> Context -> Context
 newContext us c@(Context ss vs fs ds dums) = Context ss (M.union vs' vs) fs ds dums

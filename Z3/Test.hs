@@ -251,7 +251,7 @@ case7 = return $ Just $ to_fol_ctx S.empty ctx
         fun :: M.Map String Fun
         fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
         ctx = Context M.empty M.empty fun M.empty M.empty
-        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])        
+        t = Gen (Sort "G0" "G0" 0) []
         m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
 
 result7 :: Maybe (AbsContext FOType HOQuantifier)
@@ -260,7 +260,7 @@ result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
         fun = decorated_table $ M.elems $ M.map f $ funs set_theory
         f :: Fun -> Fun
         f = instantiate m . substitute_type_vars m
-        t = Gen (USER_DEFINED (Sort "G0" "G0" 0) [])
+        t = Gen (Sort "G0" "G0" 0) []
         m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
 
 fun :: Fun

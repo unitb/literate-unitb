@@ -11,9 +11,9 @@ import Logic.Expr.Classes
 import Control.DeepSeq
 import Control.Monad.Reader
 
+import           Data.Data
 import           Data.DeriveTH
 import qualified Data.Set as S
-import           Data.Typeable
 
 import           GHC.Generics
 
@@ -23,7 +23,7 @@ class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
 
 referenced_types :: FOType -> S.Set FOType
-referenced_types t@(FOT (USER_DEFINED _ ts)) = S.insert t $ S.unions $ map referenced_types ts
+referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 
 instance Typed GenericType where
     type TypeOf GenericType = GenericType
@@ -33,16 +33,16 @@ class (Ord a, Tree a, Show a, Typed a, TypeOf a ~ a) => TypeSystem a where
     make_type :: Sort -> [a] -> a
 
 instance TypeSystem GenericType where
-    type_cons (Gen x) = Just x
-    type_cons _       = Nothing
-    make_type s ts    = Gen (USER_DEFINED s ts)
+    type_cons (Gen s xs) = Just (USER_DEFINED s xs)
+    type_cons _          = Nothing
+    make_type    = Gen
 
 instance Typed FOType where
     type TypeOf FOType = FOType
 
 instance TypeSystem FOType where
-    type_cons (FOT x) = Just x
-    make_type s ts    = FOT (USER_DEFINED s ts)
+    type_cons (FOT s xs) = Just (USER_DEFINED s xs)
+    make_type = FOT
 
 instance Tree () where
     as_tree' () = return $ List []
@@ -58,35 +58,35 @@ instance TypeSystem () where
 type Type = GenericType
 
 data GenericType = 
-        Gen (TypeCons GenericType) 
+        Gen Sort [GenericType] 
         | GENERIC String
         | VARIABLE String
-    deriving (Eq, Ord, Typeable, Generic)
+    deriving (Eq, Ord, Typeable, Generic, Data)
 
-data FOType      = FOT (TypeCons FOType)
+data FOType      = FOT Sort [FOType]
     deriving (Eq, Ord, Typeable)
 
 data TypeCons a = USER_DEFINED Sort [a]
     deriving (Eq, Ord, Show, Generic, Typeable)
 
 instance Tree GenericType where
-    as_tree' (Gen t) = cons_to_tree t
+    as_tree' (Gen s ts) = cons_to_tree $ USER_DEFINED s ts
     as_tree' (GENERIC x)   = return $ Str x
     as_tree' (VARIABLE n)  = return $ Str $ "_" ++ n
-    rewriteM' f s0 (Gen (USER_DEFINED s ts)) = do
+    rewriteM' f s0 (Gen s ts) = do
             (s1,ys) <- fold_mapM f s0 ts
-            return (s1, Gen (USER_DEFINED s ys))
+            return (s1, Gen s ys)
     rewriteM' _ s x@(VARIABLE _) = return (s,x)
     rewriteM' _ s x@(GENERIC _)  = return (s,x)
 
 instance Tree FOType where
-    as_tree' (FOT t) = cons_to_tree t
-    rewriteM' f s0 (FOT (USER_DEFINED s ts)) = do
+    as_tree' (FOT s ts) = cons_to_tree $ USER_DEFINED s ts
+    rewriteM' f s0 (FOT s ts) = do
             (s1,ys) <- fold_mapM f s0 ts
-            return (s1, FOT (USER_DEFINED s ys))
+            return (s1, FOT s ys)
 
 as_generic :: FOType -> GenericType
-as_generic (FOT (USER_DEFINED s ts)) = Gen $ USER_DEFINED s (map as_generic ts)
+as_generic (FOT s ts) = Gen s (map as_generic ts)
 
 cons_to_tree :: Tree a => TypeCons a -> Reader OutputMode StrList
 cons_to_tree (USER_DEFINED s []) = do
@@ -114,7 +114,7 @@ data Sort =
             [String]    -- Parameters
             String      -- type name
             [(String, [(String,GenericType)])] -- alternatives and named components
-    deriving (Eq, Ord, Show, Typeable, Generic)
+    deriving (Eq, Ord, Show, Typeable, Data, Generic)
 
 typeParams :: Sort -> Int
 typeParams BoolSort = 0
@@ -125,14 +125,14 @@ typeParams (DefSort _ _ ps _) = length ps
 typeParams (Datatype xs _ _)  = length xs
 
 instance Show FOType where
-    show (FOT (USER_DEFINED s [])) = (z3_name s)
-    show (FOT (USER_DEFINED s ts)) = format "{0} {1}" (z3_name s) ts
+    show (FOT s []) = (z3_name s)
+    show (FOT s ts) = format "{0} {1}" (z3_name s) ts
 
 instance Show GenericType where
     show (GENERIC n)         = format "_{0}" n 
     show (VARIABLE n)        = format "'{0}" n 
-    show (Gen (USER_DEFINED s [])) = name s
-    show (Gen (USER_DEFINED s ts)) = format "{0} {1}" (name s) ts
+    show (Gen s []) = name s
+    show (Gen s ts) = format "{0} {1}" (name s) ts
 
 instance Named Sort where
     name (Sort x _ _) = x

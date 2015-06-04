@@ -6,6 +6,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE DeriveDataTypeable     #-}
 module Logic.Proof.Sequent where
 
     -- Modules
@@ -20,10 +21,11 @@ import Data.Default
 import Data.DeriveTH
 import Data.List as L
 import Data.List.Ordered as OL hiding (merge)
-import Data.Map  as M hiding ( map )
-import Data.Maybe as MM
+import Data.Map    as M hiding ( map )
+import Data.Maybe  as MM hiding (fromJust)
 import Data.Monoid as MM
 import qualified Data.Set  as S
+import Data.Typeable
 
 import GHC.Generics (Generic)
 
@@ -51,13 +53,13 @@ type Function = String
 type Relation = String
 
 data Flipping = Flipped | Direct
-    deriving (Eq,Show,Generic)
+    deriving (Eq,Show,Generic,Typeable)
 
 data Rel = Rel Fun Flipping
-    deriving (Eq,Show,Generic)
+    deriving (Eq,Show,Generic,Typeable)
 
 data ArgDep a = Side (Maybe a) (Maybe a) | Independent a
-    deriving (Eq,Generic,Show)
+    deriving (Eq,Generic,Show,Typeable)
 
 data ArgumentPos = RightArg | LeftArg | MiddleArg
 
@@ -96,9 +98,8 @@ middleMono (Independent m) = Just m
 middleMono _ = Nothing
 
 isMonotonic :: HasSyntacticProp m
-            => m
-            -> Relation -> Function 
-            -> ArgumentPos -> Maybe (Expr -> Expr -> Expr)
+            => m -> Relation -> Function 
+            -> ArgumentPos -> Maybe (ExprP -> ExprP -> ExprP)
 isMonotonic m rel fun pos = do
     r <- (rel,fun) `M.lookup` (m^.monotonicity)
     Rel rel fl <- case pos of
@@ -107,9 +108,9 @@ isMonotonic m rel fun pos = do
         MiddleArg -> middleMono r
     case fl of 
         Direct -> 
-            return $ fun2 rel
+            return $ typ_fun2 rel
         Flipped ->
-            return $ flip $ fun2 rel
+            return $ flip $ typ_fun2 rel
 
 instance HasAbsContext (AbsSequent a b) a b where
     absContext = context
@@ -197,9 +198,7 @@ apply_monotonicity po = fromMaybe po $
         let 
             g = po^.goal
             ctx = po^.context
---            h' = M.insert (label $ fresh "~goal" $ S.map show $ keysSet h) (znot g) h 
             po'  = po & nameless %~ (++ [znot g])
-            --asm' = znot g : asm
         in
         case g of
             Binder Forall (Var nam t:vs) rs ts _ -> do
@@ -244,8 +243,7 @@ apply_monotonicity po = fromMaybe po $
                             (_,x,y) <- differs_by_one xs ys
                             return $ apply_monotonicity $
                                 po' & goal .~ FunApp f [x, y]
-                        | name g0 `elem` ["and","or","not","=>"] &&
-                          name f == "=>" -> do
+                        | otherwise -> do
                                 -- and(0,1), or(0,1), 
                                 --      =>(1)       -> f.x => f.y -> x => y
                                 -- not (0), =>(0)   -> f.x => f.y -> y => x
@@ -283,7 +281,7 @@ apply_monotonicity po = fromMaybe po $
         mono rel fun xs ys = do
             (i,x,y) <- differs_by_one xs ys
             g       <- isMonotonic mm' rel fun i
-            return $ g x y
+            return ($fromJust $ g (Right x) (Right y))
         mm' = po^.syntacticThm
 
 fresh :: String -> Map String () -> String

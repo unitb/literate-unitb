@@ -220,8 +220,8 @@ theory_po th = do
                             xs <- proof_po proof (keys lbl) po'
                             return xs
                         _ -> return [(keys lbl, po')]
-            po' = po & context %~ (`merge_ctx` theory_ctx th)
-                    & nameless %~ (concatMap 
+            po' = po & context  %~ (`merge_ctx` theory_ctx th)
+                     & nameless %~ (concatMap 
                             (M.elems . theory_facts) 
                             (elems $ extends th) ++) 
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
@@ -29,6 +30,7 @@ where
 import Logic.Expr.Expr
 import Logic.Expr.Classes
 import Logic.Expr.Label
+import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
 
     -- Libraries
@@ -49,6 +51,7 @@ import qualified Data.Set as S
 
 import Prelude as L
 
+import Utilities.Error
 import Utilities.Format
 
 instance Show a => Show (G.SCC a) where
@@ -58,7 +61,7 @@ instance Show a => Show (G.SCC a) where
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
-suffix_generics xs (Gen (USER_DEFINED s ts)) = Gen $ USER_DEFINED s $ map (suffix_generics xs) ts
+suffix_generics xs (Gen s ts) = Gen s $ map (suffix_generics xs) ts
 
 rewrite_types :: IsQuantifier q
               => String 
@@ -115,8 +118,8 @@ instance TypeSystem2 GenericType where
                 targs   = L.map type_of args
                 rt      = GENERIC ("a@" ++ show (n+1))
                 -- t0 and t1 are type tuples for the sake of unification
-                t0      = Gen $ USER_DEFINED IntSort (t:ts) 
-                t1      = Gen $ USER_DEFINED IntSort (rt:targs)
+                t0      = Gen IntSort (t:ts) 
+                t1      = Gen IntSort (rt:targs)
             uni <- unify t0 t1
             let fe x   = specialize uni . rewrite_types x
                 ft x   = instantiate uni . suffix_generics x
@@ -236,7 +239,7 @@ unify_aux ( (t0, t1@(GENERIC _)) : xs ) = unify_aux $ (t1,t0) : xs
 unify_aux ( (VARIABLE x, VARIABLE y) : xs ) = do
     guard (x == y)
     unify_aux xs
-unify_aux ( (Gen (USER_DEFINED x xs), Gen (USER_DEFINED y ys)) : zs ) = do
+unify_aux ( (Gen x xs, Gen y ys) : zs ) = do
     guard $ x == y &&
         length xs == length ys
     unify_aux $ zip xs ys ++ zs
@@ -274,9 +277,9 @@ strip_generics (Binder q vs r t et) = do
     return (Binder q vs r t et')
 
 type_strip_generics :: Type -> Maybe FOType
-type_strip_generics (Gen (USER_DEFINED s ts)) = do
+type_strip_generics (Gen s ts) = do
     ts <- mapM type_strip_generics ts
-    return (FOT $ USER_DEFINED s ts)
+    return (FOT s ts)
 type_strip_generics _       = Nothing
 
 fun_strip_generics :: Fun -> Maybe FOFun
@@ -339,10 +342,10 @@ substitute_type_vars = substitute_type_vars'
 instance HasGenerics GenericType where
     genericsList (GENERIC s)     = [s]
     genericsList (VARIABLE _)    = []
-    genericsList (Gen (USER_DEFINED _ ts)) = concatMap genericsList ts
+    genericsList (Gen _ ts) = concatMap genericsList ts
     variables (VARIABLE s)       = S.singleton s
     variables (GENERIC _)        = S.empty
-    variables (Gen (USER_DEFINED _ ts)) = S.unions $ map variables ts
+    variables (Gen _ ts) = S.unions $ map variables ts
     types_of t = S.singleton t
 
 instance Generic GenericType GenericType where
@@ -519,8 +522,9 @@ gen_to_fol :: IsQuantifier q
            -> [(Label,AbsExpr FOType q)]
 gen_to_fol types lbl e = map (f &&& inst) xs
     where
-        inst m = mk_error (pat, S.elems types, xs)
-                    strip_generics $ substitute_type_vars (M.map as_generic m) e
+        inst m = mk_error ("gen_to_fol", types_of $ e' m)
+                    strip_generics $ e' m
+        e' m   = substitute_type_vars (M.map as_generic m) e
         xs     = match_all pat (S.elems types)
         f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
         pat    = patterns e
@@ -612,11 +616,11 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
             return $ M.map (const [ms']) ms' 
 
 --mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
-mk_error :: (Show a, Show c) => c -> (a -> Maybe b) -> a -> b
+mk_error :: (Show a, Show c, Tree a) => c -> (a -> Maybe b) -> a -> b
 mk_error z f x = 
         case f x of
             Just y -> y
-            Nothing -> error $ format "failed to strip type variables: {0}\n{1}" x z
+            Nothing -> $myError $ format "failed to strip type variables: \n{0}\n{1}" (pretty_print' x) z
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool
@@ -655,7 +659,7 @@ type_vars_to_sorts t =
                 modify $ tail *** M.insert n t
                 return t
           GENERIC _ -> fail "expecting no more generic parameters"
-          Gen (USER_DEFINED s ts) -> make_type s <$> mapM type_vars_to_sorts ts
+          Gen s ts  -> make_type s <$> mapM type_vars_to_sorts ts
 
 vars_to_sorts_aux :: AbsExpr Type q  -> State ([FOType],Map String FOType) (AbsExpr FOType q)
 vars_to_sorts_aux = rewriteExprM type_vars_to_sorts return vars_to_sorts_aux

@@ -214,7 +214,7 @@ dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t
 
 item_type :: Type -> Either String Type
-item_type t0@(Gen (USER_DEFINED s [t]))
+item_type t0@(Gen s [t])
         | s == set_sort         = Right t
         | otherwise             = Left $ format " {0} is not a set " t0
 item_type t0                    = Left $ format " {0} is not a set " t0
