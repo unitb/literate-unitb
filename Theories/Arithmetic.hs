@@ -48,7 +48,8 @@ arithmetic = empty_theory {
         , funs = symbol_table 
             [ sum_fun ]
         , _theorySyntacticThm = empty_monotonicity
-            { _monotonicity = fromList $
+            { _associative  = fromList [("+",mzint 0)] 
+            , _monotonicity = fromList $
               [ (("=>","<="), Side (Just zge' )
                                    (Just zle'))
               , (("<=","+"), Independent zle')
