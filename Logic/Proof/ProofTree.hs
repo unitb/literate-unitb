@@ -207,7 +207,7 @@ chain :: Notation -> BinOperator -> BinOperator -> Either [String] BinOperator
 chain n x y 
     | x == equal = Right y
     | y == equal = Right x
-    | otherwise  = case M.lookup (x,y) $ M.fromList (chaining n) of
+    | otherwise  = case M.lookup (x,y) $ M.fromList (n^.chaining) of
                     Just z -> Right z
                     Nothing -> Left [format "chain: operators {0} and {1} don't chain" x y]
 

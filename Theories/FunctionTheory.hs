@@ -10,7 +10,7 @@ import Logic.Theory
 import Theories.SetTheory hiding ( dec )
 
     -- Libraries
--- import Control.Applicative hiding (empty)
+import Control.Lens hiding ((.=))
 
 import           Data.Map
 import           Data.List as L
@@ -334,12 +334,12 @@ domrest     = BinOperator "dom-rest" "\\domres" zdomrest
 domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
 
 function_notation :: Notation
-function_notation = with_assoc empty_notation
-    { new_ops     = L.map Right 
+function_notation = empty_notation
+   & new_ops     .~ L.map Right 
                 [ overload,mk_fun_op
                 , total_fun,domrest
                 , domsubt]
-    , prec = [ L.map (L.map Right) 
+   & prec .~ [ L.map (L.map Right) 
                  [ [apply]
                  , [mk_fun_op]
                  , [overload]
@@ -348,14 +348,14 @@ function_notation = with_assoc empty_notation
              , L.map (L.map Right)
                [ [ total_fun ]
                , [ membership ]] ]
-    , left_assoc  = [[overload]]
-    , right_assoc = [[domrest,domsubt]]
-    , commands    = 
+   & left_assoc  .~ [[overload]]
+   & right_assoc .~ [[domrest,domsubt]]
+   & commands    .~ 
                 [ Command "\\emptyfun" "emptyfun" 0 $ const zempty_fun
                 , Command "\\dom" "dom" 1 $ zdom . head
                 , Command "\\ran" "ran" 1 $ zran . head
                 , Command "\\injective" "injective" 1 $ zinjective . head
                 ]
-    , quantifiers = [ ("\\qfun",qlambda) ]
-    , relations   = []
-    , chaining    = []  } 
+   & quantifiers .~ [ ("\\qfun",qlambda) ]
+   & relations   .~ []
+   & chaining    .~ []  

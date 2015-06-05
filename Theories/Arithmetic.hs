@@ -11,6 +11,8 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 
     -- Libraries
+import Control.Lens hiding ((.=))
+
 import Data.List as L
 import Data.Map
 
@@ -125,10 +127,10 @@ qsum :: HOQuantifier
 qsum = UDQuant sum_fun int (QTConst int) FiniteWD
 
 arith :: Notation
-arith = with_assoc empty_notation
-    { new_ops     = L.map Right [power,mult,plus,leq,geq
+arith = empty_notation
+   & new_ops     .~ L.map Right [power,mult,plus,leq,geq
                                 ,less,greater,minus]
-    , prec = [ L.map (L.map Right)
+   & prec .~ [ L.map (L.map Right)
                      [ [apply]
                      , [power]
                      , [mult]
@@ -137,10 +139,10 @@ arith = with_assoc empty_notation
                      , [ equal,leq
                        , less
                        , geq,greater]]]
-    , left_assoc  = [[mult],[plus]]
-    , right_assoc = []
-    , relations   = [equal,leq,geq,less,greater]
-    , chaining    = 
+   & left_assoc  .~ [[mult],[plus]]
+   & right_assoc .~ []
+   & relations   .~ [equal,leq,geq,less,greater]
+   & chaining    .~ 
           [ ((leq,leq),leq)
           , ((leq,less),less)
           , ((less,leq),less)
@@ -149,9 +151,8 @@ arith = with_assoc empty_notation
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
-    , commands = [Command "\\card" "card" 1 $ from_list zcard]
-    , quantifiers = 
+   & commands .~ [Command "\\card" "card" 1 $ from_list zcard]
+   & quantifiers .~ 
         [ ("\\qsum"
           , qsum)]
-    }
           

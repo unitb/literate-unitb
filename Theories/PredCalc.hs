@@ -7,6 +7,8 @@ import Logic.Operator
 import Logic.Theory
 
     -- Libraries
+import Control.Lens
+
 import qualified Data.Map as M
 
 import Prelude hiding ( pred )
@@ -105,26 +107,26 @@ pred_calc = empty_theory
     
     
 pred_not :: Notation
-pred_not = with_assoc empty_notation
-    { new_ops     = Left pneg : map Right [pconj,pdisj,pimplies,pfollows,pequiv]
-    , prec = [    [Right equal]
+pred_not = empty_notation
+   & new_ops     .~ Left pneg : map Right [pconj,pdisj,pimplies,pfollows,pequiv]
+   & prec .~ [    [Right equal]
                 : [Left  pneg ] 
                 : map (map Right)
                      [ [pdisj,pconj]
                      , [pimplies,pfollows]
                      , [pequiv] ]]
-    , left_assoc  = [[pequiv],[pdisj],[pconj]]
-    , right_assoc = []
-    , relations   = [pequiv,pimplies,pfollows]
-    , commands    = 
+   & left_assoc  .~ [[pequiv],[pdisj],[pconj]]
+   & right_assoc .~ []
+   & relations   .~ [pequiv,pimplies,pfollows]
+   & commands    .~ 
         [ Command "\\ptrue" "ptrue" 0 $ const ptrue
         , Command "\\pfalse" "pfalse" 0 $ const pfalse
         , Command "\\ew" "ew" 1 $ zew . head ]
-    , chaining    = 
+   & chaining    .~ 
         [ ((pequiv,pimplies),pimplies)
         , ((pimplies,pequiv),pimplies)
         , ((pimplies,pimplies),pimplies)
         , ((pequiv,pequiv),pequiv)
         , ((pequiv,pfollows),pfollows)
         , ((pfollows,pequiv),pfollows)
-        , ((pfollows,pfollows),pfollows) ]  }
+        , ((pfollows,pfollows),pfollows) ] 

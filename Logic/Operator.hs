@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
 module Logic.Operator 
-    ( Notation (..)
+    ( Notation
     , BinOperator (..)
     , UnaryOperator (..)
     , Command (..)
@@ -12,7 +12,7 @@ module Logic.Operator
     , Operator
     , Matrix
     , Input (..)
-    , with_assoc
+    -- , with_assoc
     , empty_notation
     , logical_notation
     , functional_notation
@@ -21,6 +21,16 @@ module Logic.Operator
     , implies, follows, equiv
     , combine, precede
     , mk_expr, mk_unary
+        -- Lenses
+    , new_ops 
+    , prec 
+    , left_assoc 
+    , right_assoc 
+    , relations 
+    , quantifiers
+    , chaining 
+    , commands 
+    , struct 
     )
 where
 
@@ -29,6 +39,7 @@ import Logic.Expr
 
     -- Libraries
 import Control.DeepSeq
+import Control.Lens
 
 import Data.DeriveTH
 import Data.Default
@@ -63,70 +74,89 @@ data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable)
 
 data Notation = Notation
-    { new_ops :: [Operator]
-    , prec :: [[[Operator]]] 
-    , left_assoc :: [[BinOperator]]
-    , right_assoc :: [[BinOperator]]
-    , relations :: [BinOperator]
-    , chaining :: [((BinOperator,BinOperator),BinOperator)]
-    , commands :: [Command]
-    , quantifiers :: [(String,HOQuantifier)]
-    , struct :: Matrix Operator Assoc
+    { _new_ops :: [Operator]
+    , _prec :: [[[Operator]]] 
+    , _left_assoc :: [[BinOperator]]
+    , _right_assoc :: [[BinOperator]]
+    , _relations :: [BinOperator]
+    , _chaining :: [((BinOperator,BinOperator),BinOperator)]
+    , _commands :: [Command]
+    , _quantifiers :: [(String,HOQuantifier)]
+    , _struct :: Matrix Operator Assoc
     } deriving (Eq,Show)
 
 empty_notation :: Notation
-empty_notation = Notation 
-    { new_ops = []
-    , prec = []
-    , left_assoc = []
-    , right_assoc = [] 
-    , relations = []
-    , chaining = []
-    , commands = []
-    , quantifiers = []
-    , struct = $myError "" }
+empty_notation = with_assoc $ Notation 
+    { _new_ops = []
+    , _prec = []
+    , _left_assoc = []
+    , _right_assoc = [] 
+    , _relations = []
+    , _chaining = []
+    , _commands = []
+    , _quantifiers = []
+    , _struct = $myError "" }
+
+new_ops :: Lens' Notation [Operator]
+new_ops = lens _new_ops (\n x -> with_assoc $ n { _new_ops = x })
+prec :: Lens' Notation [[[Operator]]]
+prec = lens _prec (\n x -> with_assoc $ n { _prec = x })
+left_assoc :: Lens' Notation [[BinOperator]]
+left_assoc = lens _left_assoc (\n x -> with_assoc $ n { _left_assoc = x })
+right_assoc :: Lens' Notation [[BinOperator]]
+right_assoc = lens _right_assoc (\n x -> with_assoc $ n { _right_assoc = x })
+relations :: Lens' Notation [BinOperator]
+relations = lens _relations (\n x -> with_assoc $ n { _relations = x })
+chaining :: Lens' Notation [((BinOperator,BinOperator),BinOperator)]
+chaining = lens _chaining (\n x -> with_assoc $ n { _chaining = x })
+commands :: Lens' Notation [Command]
+commands = lens _commands (\n x -> with_assoc $ n { _commands = x })
+quantifiers :: Lens' Notation [(String,HOQuantifier)]
+quantifiers = lens _quantifiers (\n x -> with_assoc $ n { _quantifiers = x })
+struct :: Getter Notation (Matrix Operator Assoc)
+struct = to _struct
 
 instance Default Notation where
     def = empty_notation
 
 with_assoc :: Notation -> Notation
-with_assoc n = n { struct = assoc_table n }
+with_assoc n = n { _struct = assoc_table n }
     
 combine :: Notation -> Notation -> Notation
 combine x y 
-    | L.null (new_ops x `intersect` new_ops y)
-        && L.null (commands x `intersect` commands y)
+    | L.null (_new_ops x `intersect` _new_ops y)
+        && L.null (_commands x `intersect` _commands y)
         = with_assoc empty_notation
-        { new_ops      = new_ops x ++ new_ops y
-        , prec         = prec x ++ prec y
-        , left_assoc   = left_assoc x ++ left_assoc y
-        , right_assoc  = right_assoc x ++ right_assoc y 
-        , relations    = relations x ++ relations y
-        , commands     = commands x ++ commands y
-        , quantifiers  = quantifiers x ++ quantifiers y
-        , chaining     = chaining x ++ chaining y }
+        { _new_ops      = _new_ops x ++ _new_ops y
+        , _prec         = _prec x ++ _prec y
+        , _left_assoc   = _left_assoc x  ++ _left_assoc y
+        , _right_assoc  = _right_assoc x ++ _right_assoc y 
+        , _relations    = _relations x ++ _relations y
+        , _commands     = _commands x  ++ _commands y
+        , _quantifiers  = _quantifiers x ++ _quantifiers y
+        , _chaining     = _chaining x  ++ _chaining y }
     | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
     where
         f (Right (BinOperator x _ _))  = x
         f (Left (UnaryOperator x _ _)) = x
         intersect :: Input a => [a] -> [a] -> [a]
         intersect = intersectBy ((==) `on` token)
-        common1 = L.map f $ new_ops x `intersect` new_ops y
-        common2 = L.map token $ commands x `intersect` commands y
+        common1 = L.map f $ _new_ops x `intersect` _new_ops y
+        common2 = L.map token $ _commands x `intersect` _commands y
         common = common1 `union` common2
 
 precede :: Notation -> Notation -> Notation
 precede x y 
-        | L.null $ new_ops x `intersect` new_ops y = 
+        | L.null $ _new_ops x `intersect` _new_ops y = 
         let z = (combine x y) in
             with_assoc z { 
-                prec = prec z ++ [ xs ++ ys | xs <- prec x, ys <- prec y ] }
+                _prec = _prec z ++ [ xs ++ ys | xs <- _prec x, ys <- _prec y ] }
         | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
     where
         f (Right x) = show x
         f (Left y)  = show y
         intersect = intersectBy ((==) `on` f)
-        common = L.map f $ new_ops x `intersect` new_ops y
+        common = L.map f $ _new_ops x `intersect` _new_ops y
 
 data UnaryOperator = UnaryOperator String String (ExprP -> ExprP)
     deriving Typeable
@@ -185,17 +215,17 @@ instance Input Operator where
     token (Right x) = token x
     
 precedence :: Notation -> Matrix Operator Bool
-precedence ops = m_closure_with (new_ops ops)
-        $ concatMap g $ prec ops
+precedence ops = m_closure_with (_new_ops ops)
+        $ concatMap g $ _prec ops
     where
         f (xs,ys) = [ (x,y) | x <- xs, y <- ys ]
         g xs = concatMap f $ zip xs (drop 1 xs)
 
 left_assoc_graph :: Notation -> Matrix BinOperator Bool
-left_assoc_graph ops  = assoc_graph (rights $ new_ops ops) $ left_assoc ops
+left_assoc_graph ops  = assoc_graph (rights $ _new_ops ops) $ _left_assoc ops
 
 right_assoc_graph :: Notation -> Matrix BinOperator Bool
-right_assoc_graph ops = assoc_graph (rights $ new_ops ops) $ right_assoc ops
+right_assoc_graph ops = assoc_graph (rights $ _new_ops ops) $ _right_assoc ops
 
 assoc_graph :: [BinOperator] -> [[BinOperator]] -> Matrix BinOperator Bool
 assoc_graph rs xss = as_matrix_with rs ys
@@ -213,7 +243,7 @@ assoc_table ops
                   , G.map (f RightAssoc) $ G.mapKeys g rm ]
             -- fromList (zip bs $ L.map g bs)
     where
-        cycles = L.filter (\x -> pm G.! (x,x)) (new_ops ops)
+        cycles = L.filter (\x -> pm G.! (x,x)) (_new_ops ops)
 --        complete = all_ops L.\\ (nub $ new_ops ops)
 --        all_ops = nub $   concat (concat (prec ops) 
 --                   ++ L.map (L.map Right) (left_assoc ops)
@@ -254,17 +284,17 @@ pair_op = BinOperator "pair"  "\\mapsto" mzpair
 
 functional_notation :: Notation
 functional_notation = with_assoc empty_notation
-    { new_ops     = L.map Right [equal,apply,pair_op]
-    , prec = [ L.map (L.map Right)
+    { _new_ops     = L.map Right [equal,apply,pair_op]
+    , _prec = [ L.map (L.map Right)
                      [ [apply]
                      , [pair_op]
                      , [equal] ]]
-    , left_assoc  = [[apply],[pair_op]]
-    , right_assoc = []
-    , relations   = []
-    , quantifiers = [ ("\\qforall", Forall)
-                    , ("\\qexists", Exists) ]
-    , chaining    = [] }
+    , _left_assoc  = [[apply],[pair_op]]
+    , _right_assoc = []
+    , _relations   = []
+    , _quantifiers = [ ("\\qforall", Forall)
+                     , ("\\qexists", Exists) ]
+    , _chaining    = [] }
 
     -- logic
 disj    :: BinOperator
@@ -283,19 +313,19 @@ neg     = UnaryOperator "not" "\\neg"       mznot
 
 logical_notation :: Notation
 logical_notation = with_assoc empty_notation
-    { new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
-    , prec = [    [Left neg] 
+    { _new_ops     = Left neg : L.map Right [conj,disj,implies,follows,equiv]
+    , _prec = [    [Left neg] 
                 : L.map (L.map Right)
                      [ [disj,conj]
                      , [implies,follows]
                      , [equiv] ]]
-    , left_assoc  = [[equiv],[disj],[conj]]
-    , right_assoc = []
-    , relations   = [equiv,implies,follows]
-    , commands    = 
+    , _left_assoc  = [[equiv],[disj],[conj]]
+    , _right_assoc = []
+    , _relations   = [equiv,implies,follows]
+    , _commands    = 
         [ Command "\\true" "true" 0 $ const mztrue
         , Command "\\false" "false" 0 $ const mzfalse ]
-    , chaining    = 
+    , _chaining    = 
         [ ((equiv,implies),implies)
         , ((implies,equiv),implies)
         , ((implies,implies),implies)

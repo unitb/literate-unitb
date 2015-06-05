@@ -23,6 +23,7 @@ import Utilities.Syntactic
     -- Libraries
 import qualified Control.Applicative as A 
 import Control.Applicative ((<$>))
+import Control.Lens hiding (Context,from)
 
 import           Control.Monad
 import           Control.Monad.Reader.Class
@@ -101,7 +102,7 @@ get_notation :: Parser Notation
 get_notation = notation `liftM` get_params
 
 get_table :: Parser (Matrix Operator Assoc)
-get_table = (struct . notation) `liftM` get_params
+get_table = (view struct . notation) <$> get_params
 
 get_vars :: Parser (Map String Expr)
 get_vars = variables `liftM` get_params
@@ -283,7 +284,7 @@ unary :: Parser UnaryOperator
 unary = do
         n <- get_notation
         choiceP
-            (map f $ lefts $ new_ops n)
+            (map f $ lefts $ n^.new_ops)
             (fail "expecting an unary operator")            
             return
     where
@@ -303,7 +304,7 @@ oper :: Parser BinOperator
 oper = do
         n <- get_notation
         choiceP
-            (map f $ rights $ new_ops n)
+            (map f $ rights $ n^.new_ops)
             (do
                 xs <- liftP peek
                 fail $ "expecting a binary operator, read: " 
@@ -342,8 +343,8 @@ type Term = Either Command Expr
 term :: Parser Term
 term = do
     n <- get_notation
-    let cmds = zip (map token (commands n)) (commands n)
-        quants = quantifiers n
+    let cmds = zip (map token (n^.commands)) (n^.commands)
+        quants = n^.quantifiers
         oftype = [("\\oftype",())]
     choose_la 
         [ do    c@(Command _ _ n f) <- from cmds
@@ -652,7 +653,7 @@ scan_expr n = do
             return $ (x,li) : xs
         else return []
     where
-        isOper (Just n) zs = zs `elem` map f (new_ops n)
+        isOper (Just n) zs = zs `elem` map f (n^.new_ops)
         isOper Nothing _ = False
         f (Right (BinOperator _ tok _)) = tok
         f (Left (UnaryOperator _ tok _)) = tok

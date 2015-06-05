@@ -19,6 +19,7 @@ import UnitB.AST
 import Utilities.RandomTree
 
     -- Libraries
+import Control.Lens hiding (Context,elements,Const)
 import Control.Monad
 import Control.Monad.Reader
 -- import Control.Monad.State
@@ -154,16 +155,16 @@ showExpr notation e = show_e e
         show_e _ = "<unknown expression>"
         m_ops = M.fromList $ zip (map token xs) xs
             where
-                xs = new_ops notation
+                xs = notation^.new_ops
         show_left_sub_e op e = maybe (show_e e) f $ root_op e
             where
-                g op' = struct notation G.! (op',op)
+                g op' = (notation^.struct) G.! (op',op)
                 f op'
                     | g op' == LeftAssoc = show_e e
                     | otherwise          = printf "(%s)" $ show_e e
         show_right_sub_e op e = maybe (show_e e) f $ root_op e
             where
-                g op' = struct notation G.! (op,op')
+                g op' = (notation^.struct) G.! (op,op')
                 f op'
                     | g op' == RightAssoc = show_e e
                     | otherwise           = printf "(%s)" $ show_e e

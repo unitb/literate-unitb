@@ -10,6 +10,8 @@ import Theories.Arithmetic
 import Theories.SetTheory
 
     -- Libraries
+import Control.Lens
+
 import qualified Data.Map as M
 
     -- arithmetic
@@ -125,7 +127,7 @@ interval_theory = empty_theory
         z1 = mzint 1
 
 interval_notation :: Notation
-interval_notation = with_assoc empty_notation
-    { commands    = [ between, between_l, between_r, between_lr
-                    , interval, interval_l, interval_r, interval_lr ] }
+interval_notation = empty_notation
+    & commands   .~ [ between, between_l, between_r, between_lr
+                    , interval, interval_l, interval_r, interval_lr ] 
           

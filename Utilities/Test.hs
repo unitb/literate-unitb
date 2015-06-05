@@ -21,6 +21,8 @@ import qualified Utilities.Relation as Rel
 import qualified Utilities.Permutation as Perm
 
     -- Libraries
+import Control.Lens
+
 import           Data.Array 
 import           Data.Function
 import           Data.List
@@ -136,7 +138,7 @@ case1 :: IO [((Operator,Operator),Assoc,Assoc)]
 case1 = return $ result
     where
         result = sortBy (compare `on` fst3) $ zip3 xs (map (g0 M.!) xs) (map (g1 M.!) xs)
-        g0   = as_map $ struct notations
+        g0   = as_map $ notations^.struct
         g1   = assoc0
         rs   = M.keys assoc0
         eq x = g0 `lu` x /= g1 `lu` x

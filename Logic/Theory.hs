@@ -155,7 +155,7 @@ basic_theory = empty_theory
 
 empty_theory :: Theory
 empty_theory = makeTheory
-    { notation = with_assoc empty_notation }
+    { notation = empty_notation }
 
 th_notation :: Theory -> Notation
 th_notation th = res
@@ -221,7 +221,7 @@ instance (Show k, Ord k, Typeable a)
     gBuild _ xs = K1 $ clash unK1 xs
 
 instance GBuild (K1 i Notation) where
-    gBuild _ xs = K1 $ with_assoc 
+    gBuild _ xs = K1 
         $ L.foldl combine empty_notation 
         $ L.map unK1 xs        
 
@@ -384,7 +384,7 @@ command n s = do
     let proxy = Proxy :: Proxy s
         cmd = Command ('\\':n) n (len' proxy) (from_list f)
     M $ tell [ empty_theory
-        { notation = empty_notation { commands = [cmd] } } ]
+        { notation = empty_notation & commands .~ [cmd] } ]
     return f
 
 function :: Signature s => String -> s -> M (FunType s)
@@ -399,7 +399,7 @@ operator op tag s = do
     f <- function tag s
     let binop = BinOperator tag op f
     M $ tell [empty_theory 
-            { notation = empty_notation { new_ops = [Right binop] } } ]
+            { notation = empty_notation & new_ops .~ [Right binop] } ]
     return (Right binop,f)
 
 unary :: (Signature s, FunType s ~ (ExprP -> ExprP))
@@ -408,7 +408,7 @@ unary op tag s = do
     f <- function tag s
     let unop = UnaryOperator tag op f
     M $ tell [empty_theory 
-            { notation = empty_notation { new_ops = [Left unop] } } ]
+            { notation = empty_notation & new_ops .~ [Left unop] } ]
     return (Left unop,f)
 
 preserve :: Fun -> [String] -> M ()
@@ -421,18 +421,18 @@ associativity fun e = M $ tell [empty_theory
 
 left_associativity :: [Operator] -> M ()
 left_associativity ops = M $ tell [empty_theory
-    { notation = empty_notation { left_assoc = [L.map (fromRight $ $myError "") ops] } }]
+    { notation = empty_notation & left_assoc .~ [L.map (fromRight $ $myError "") ops] }]
 
 right_associativity :: [Operator] -> M ()
 right_associativity ops = M $ tell [empty_theory
-    { notation = empty_notation { right_assoc = [L.map (fromRight $ $myError "") ops] } }]
+    { notation = empty_notation & right_assoc .~ [L.map (fromRight $ $myError "") ops] }]
 
 precedence :: [Operator] 
            -> [[Operator]]
            -> [Operator]
            -> M ()
 precedence vs ops us = M $ tell [empty_theory 
-    { notation = empty_notation { prec = [vs : ops ++ [us]] } }]
+    { notation = empty_notation & prec .~ [vs : ops ++ [us]] }]
 
 type_param :: M Type
 type_param = M $ do

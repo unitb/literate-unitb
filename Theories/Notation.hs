@@ -9,6 +9,8 @@ import Theories.FunctionTheory
 import Theories.SetTheory
 
     -- Libraries
+import Control.Lens
+
 import qualified Data.Array as A
 import           Data.List as L ( map )
 import           Data.Map as M hiding ( foldl )
@@ -31,7 +33,7 @@ assoc x y = unsafePerformIO $ do
     return $ r G.! (Right x,Right y)
 
 assoc_table' :: IORef (Matrix Operator Assoc)
-assoc_table' = unsafePerformIO $ newIORef (struct notations)
+assoc_table' = unsafePerformIO $ newIORef (notations^.struct)
 
 binds :: UnaryOperator -> BinOperator -> Assoc
 binds x y = unsafePerformIO $ do
