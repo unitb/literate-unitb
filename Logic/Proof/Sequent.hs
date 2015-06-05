@@ -13,6 +13,7 @@ module Logic.Proof.Sequent where
 import Logic.Expr
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (Context)
 
@@ -32,6 +33,7 @@ import GHC.Generics (Generic)
 import Utilities.Format
 import Utilities.Instances
 import Utilities.TH
+import Utilities.Trace
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
@@ -40,7 +42,7 @@ type Sequent' = AbsSequent GenericType FOQuantifier
 type FOSequent = AbsSequent FOType FOQuantifier
 
 data SyntacticProp = SyntacticProp  
-        { _associative  :: Map String () 
+        { _associative  :: Map String ExprP
         , _monotonicity :: Map (Relation,Function) (ArgDep Rel) }
             -- (rel,fun) --> rel
     deriving (Eq,Show,Generic)
@@ -62,6 +64,7 @@ data ArgDep a = Side (Maybe a) (Maybe a) | Independent a
     deriving (Eq,Generic,Show,Typeable)
 
 data ArgumentPos = RightArg | LeftArg | MiddleArg
+    deriving (Show)
 
 data AbsSequent t q = Sequent 
         { _absSequentContext  :: AbsContext t q
@@ -96,6 +99,9 @@ rightMono (Independent m) = Just m
 middleMono :: ArgDep a -> Maybe a
 middleMono (Independent m) = Just m
 middleMono _ = Nothing
+
+isAssociative :: SyntacticProp -> Fun -> Maybe ExprP
+isAssociative sp f = name f `M.lookup` (sp^.associative)
 
 isMonotonic :: HasSyntacticProp m
             => m -> Relation -> Function 
@@ -193,6 +199,35 @@ differs_by_one xs ys = f $ zip ws $ zip xs ys
             | all (uncurry (==) . snd) xs = Just (i,x,y)
             | otherwise     = Nothing
 
+flatten_assoc :: Fun -> [Expr] -> [Expr]
+flatten_assoc fun xs = concatMap f xs
+    where
+        f (FunApp fun' xs)
+            | fun == fun' = concatMap f xs
+        f e = [e]
+
+differs_by_segment :: Eq a => [a] -> [a] -> Maybe (ArgumentPos,[a],[a])
+differs_by_segment xs ys
+        | L.null ps && L.null qs = Nothing
+        | L.null ps = Just (LeftArg,xs'',ys'')
+        | L.null qs = Just (RightArg,xs'',ys'')
+        | otherwise = Just (MiddleArg,xs'',ys'')
+    where
+        (ps,xs',ys')   = longestCommonPrefix xs ys
+        (qs,xs'',ys'') = longestCommonSuffix xs' ys'
+
+longestCommonPrefix :: Eq a => [a] -> [a] -> ([a],[a],[a])
+longestCommonPrefix xs'@(x:xs) ys'@(y:ys)
+        | x == y    = longestCommonPrefix xs ys & _1 %~ (x:)
+        | otherwise = ([],xs',ys')
+longestCommonPrefix xs ys = ([],xs,ys)
+
+longestCommonSuffix :: Eq a => [a] -> [a] -> ([a],[a],[a])
+longestCommonSuffix xs ys = longestCommonPrefix 
+                                    (reverse xs) 
+                                    (reverse ys) 
+                                & each %~ reverse
+
 apply_monotonicity :: Sequent -> Sequent
 apply_monotonicity po = fromMaybe po $
         let 
@@ -238,9 +273,10 @@ apply_monotonicity po = fromMaybe po $
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs ztrue $ r0 `zeq` r1)
                     (FunApp g0 xs, FunApp g1 ys)
-                        | length xs /= length ys || g0 /= g1 -> Nothing
+                        | (length xs /= length ys && isNothing (isAssociative mm' g0))
+                            || g0 /= g1 -> Nothing
                         | name f == "=" -> do
-                            (_,x,y) <- differs_by_one xs ys
+                            (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
                                 po' & goal .~ FunApp f [x, y]
                         | otherwise -> do
@@ -257,7 +293,7 @@ apply_monotonicity po = fromMaybe po $
                                 -- | we need a means to distinguish an 
                                 -- | implication that introduces contextual
                                 -- | information
-                            x <- mono (name f) (name g0) xs ys
+                            x <- mono (name f) g0 xs ys
                             return $ apply_monotonicity $ po' & goal .~ x
 --                            let op = name g0
 --                                mono i xs
@@ -275,12 +311,22 @@ apply_monotonicity po = fromMaybe po $
                     _ -> Nothing
             _ -> Nothing
     where
+        difference g0 xs ys = 
+            differs_by_one xs ys <|> do
+                unit <- isAssociative mm' g0
+                (c,x,y) <- differs_by_segment 
+                    (flatten_assoc g0 xs) 
+                    (flatten_assoc g0 ys)
+                let f = typ_fun2 g0
+                    funApp (x:xs) = L.foldl f (Right x) $ L.map Right xs
+                    funApp [] = unit
+                return (c,$fromJust$ funApp x,$fromJust$ funApp y)
         shared :: Eq a => [a] -> [a] -> Bool
         shared xs ys = not $ L.null $ intersect xs ys
-        mono :: String -> String -> [Expr] -> [Expr] -> Maybe Expr
+        mono :: String -> Fun -> [Expr] -> [Expr] -> Maybe Expr
         mono rel fun xs ys = do
-            (i,x,y) <- differs_by_one xs ys
-            g       <- isMonotonic mm' rel fun i
+            (i,x,y) <- difference fun xs ys
+            g       <- isMonotonic mm' rel (name fun) i
             return ($fromJust $ g (Right x) (Right y))
         mm' = po^.syntacticThm
 

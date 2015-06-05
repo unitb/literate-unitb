@@ -43,13 +43,21 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         _theoryDummies = M.empty
         types = M.empty
         _theorySyntacticThm = def
-            { _monotonicity = fromList $
+            { _associative = fromList $ 
+                    [ ("intersect",zset_all)
+                    , ("union",zempty_set) ]
+            , _monotonicity = fromList $
                    preserve subset_fun ["intersect","union"]
-                ++ preserve st_subset_fun ["intersect","union"]
                 ++ [ ( ("=>","subset")
                      , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
                    , ( ("=>","st-subset")
                      , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
+                   , ( ("subset","compl")
+                     , Independent (Rel subset_fun Flipped))
+                   , ( ("st-subset","compl")
+                     , Independent (Rel subset_fun Flipped))
+                   , ( ("subset","set-diff")
+                     , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
         defs = symbol_table 

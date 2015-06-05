@@ -50,8 +50,11 @@ relation_theory = make_theory "relation" $ do
     x1  <- dummy "x1" t1
     x1' <- dummy "x3" t1
     x2  <- dummy "x2" t2
+    x3  <- dummy "x4" t3
+    x4  <- dummy "x5" t4
     s1  <- dummy "s1" $ set_type t1
-    preserve subset_fun ["seq"]
+    associativity "seq" zid
+    preserve subset_fun ["seq","star"]
     precedence  [] 
         [[star_op,plus_op],[seq_op]] 
         [Right set_union,Right set_diff,Right set_intersect]
@@ -59,6 +62,8 @@ relation_theory = make_theory "relation" $ do
         [seq_op] -- ranres
     let p  = mzpair x1 x1'
         p' = mzpair x1 x2
+        p1 = mzpair x3 x4
+        p2 = mzpair x1 x4
     -- $assert $   x1 `zelem` zreldom r1 
     --         .== mzexists' [x2] mztrue (mzpair x1 x2 `zelem` r1)
         -- def of dom
@@ -88,6 +93,7 @@ relation_theory = make_theory "relation" $ do
     $assert $ (r1 `zunion` r2) `zseq` r3 .= (r1 `zseq` r3) `zunion` (r2 `zseq` r3)
     $assert $ r4 `zseq` (r1 `zunion` r2)  .= (r4 `zseq` r1) `zunion` (r4 `zseq` r2)
     $assert $ zmk_set p `zseq` zset_all .= zmk_set x1 `zreldomres` zset_all 
+    $assert $ zmk_set p' `zseq` zset_all `zseq` zmk_set p1 .= zmk_set p2
     -- $assert $ zstar (r1 `zseq` r6) .= ( r1 `zseq` zstar (r6 `zseq` r1) `zseq` r6 ) `zunion` zid
     $assert $ zasrel (zmk_set x1) `zseq` zset_all `zseq` zasrel (zmk_set x2)
               .= zmk_set (mzpair x1 x2)

@@ -36,6 +36,7 @@ module Logic.Theory
     , left_associativity
     , right_associativity
     , preserve
+    , associativity
     , axiom, axioms
     , th_notation
     , theory_ctx
@@ -126,7 +127,11 @@ basic_theory = empty_theory
            [ (label "@basic@@_0", axm0) 
            , (label "@basic@@_1", axm1) ]
         , _theorySyntacticThm = empty_monotonicity
-            { _monotonicity = fromList $
+            { _associative = fromList 
+                    [("and",mztrue)
+                    ,("or", mzfalse)
+                    ,("=",  mztrue)]
+            , _monotonicity = fromList $
                 P.preserve implies_fun ["and","or"] 
              ++ [ (("=>","not"),Independent zfollows')
                 , (("=>","=>"), Side (Just zfollows')
@@ -409,6 +414,10 @@ unary op tag s = do
 preserve :: Fun -> [String] -> M ()
 preserve rel fun = M $ tell [empty_theory
     & syntacticThm.monotonicity .~ M.fromList (P.preserve rel fun) ]
+
+associativity :: String -> ExprP -> M ()
+associativity fun e = M $ tell [empty_theory
+    & syntacticThm.associative .~ M.singleton fun e] 
 
 left_associativity :: [Operator] -> M ()
 left_associativity ops = M $ tell [empty_theory

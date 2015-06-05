@@ -96,7 +96,7 @@ function_theory = Theory { .. }
         _theoryDummies  = empty
         theorems = empty
         _theorySyntacticThm = empty_monotonicity
-
+            { _associative = fromList [("zovl",zempty_fun)] }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         types    = symbol_table [fun_sort]
