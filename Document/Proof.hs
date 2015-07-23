@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, BangPatterns #-} 
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 module Document.Proof where
@@ -42,6 +43,7 @@ import qualified Data.Map as M
 import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
+import qualified Data.Traversable as T 
 
 import           Utilities.Error
 import           Utilities.Format
@@ -354,32 +356,30 @@ collect_proof_step = do
                     defs    = definition step
                     ng      = new_goal step
                     thm_ref = theorem_ref step
-                p <- if keysSet prfs `S.isSubsetOf` keysSet assrt
+                if keysSet prfs `S.isSubsetOf` keysSet assrt
                      then return $ LP.with_line_info li $ do
                         defs <- forM defs $ 
                             runKleisli $ second $ Kleisli id
                         define defs $ do
                             thm  <- sequence thm_ref
+                            let make_assert = use_theorems thm $ do
+                                    assrt <- forM (toList assrt) $ \(lbl,xp) -> do
+                                        xp <- xp
+                                        let p = fromMaybe easy $ M.lookup lbl prfs
+                                        return (lbl,xp,p)
+                                    assert assrt p
+                            -- thm <- sequence thm_ref
                             use_theorems thm $ do
-                                assrt <- forM (toList assrt) $ \(lbl,xp) -> do
-                                    xp <- xp
-                                    let p = fromMaybe easy $ M.lookup lbl prfs
-                                    return (lbl,xp,p)
-                                assert assrt p
+                                case ng of
+                                    Just g  -> LP.with_line_info li $ do
+                                        g <- g
+                                        asm <- toList <$> T.sequenceA asm
+                                        assume asm g make_assert
+                                    Nothing -> 
+                                        if M.null asm 
+                                        then make_assert
+                                        else hard_error [Error "assumptions must be accompanied by a new goal" li]
                     else hard_error [Error "assertion labels and proofs mismatch" li]
-                case ng of
-                    Just g  -> return $ LP.with_line_info li $ do
-                        thm <- sequence thm_ref
-                        use_theorems thm $ do
-                            g <- g
-                            asm <- forM (toList asm) $ \(lbl,x) -> do
-                                x <- x
-                                return (lbl,x)
-                            assume asm g p
-                    Nothing -> 
-                        if M.null asm 
-                        then return p
-                        else hard_error [Error "assumptions must be accompanied by a new goal" li]
             _   -> hard_error [Error "expecting a single proof step" li]         
 
 hint :: ( MonadReader Thy m

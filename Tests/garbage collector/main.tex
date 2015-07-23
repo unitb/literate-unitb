@@ -85,22 +85,36 @@
 \end{align}
 	\[ \param{add}{p,q : Node} \]
 	\[ \param{delete}{p,q : Node} \]
-\begin{proof}{\ref{m1:prog0}/REF/ensure/m1/\ref{add}/SAF}
+\begin{align}
+	\theorem{thm0}
+		{ \qforall{p_0,p_1,q}
+			{ r \mapsto p_1 \in \star ptr }
+			{ r \mapsto q \in 
+				\star (ptr \bunion \{ p_0 \mapsto p_1 \}) 
+			\2\implies r \mapsto q \in \star ptr } }
+\end{align}
+
+\begin{proof}{THM/\ref{thm0}}
+\begin{free:var}{p_0}{p}
+\begin{free:var}{p_1}{q}
+\begin{free:var}{q}{ref}
 \begin{align}
 	\define{rr}{ \asrel{\{r\}} } \\
 	\define{E}{ \{ p \mapsto q \} } \\
+	\assume{hyp0}{ r \mapsto q \in \star ptr } \\
 	\assert{lmm0}{ rr;\star (ptr \0\bunion E) \2\subseteq rr ; \star ptr }
-\end{align}
-\begin{free:var}{p}{ref}
-\begin{align*}
-	\assert{lmm1}{ r \mapsto ref \in \star ptr'
+	\goal{ r \mapsto ref \in \star (ptr \bunion \{p\mapsto q\})
 		\implies r \mapsto ref \in \star ptr }
-\end{align*}
-\easy
-\begin{subproof}{lmm1}
+\end{align}
+% \begin{align*}
+% 	\assert{lmm1}{ r \mapsto ref \in \star ptr'
+% 		\implies r \mapsto ref \in \star ptr }
+% \end{align*}
+% \easy
+% \begin{subproof}{lmm1}
 \begin{calculation}
-	r \mapsto ref \in \star ptr'
-\hint{=}{ \eqref{m1:act0} }
+	% r \mapsto ref \in \star ptr'
+% \hint{=}{ \eqref{m1:act0} }
 	r \mapsto ref \in \star (ptr \bunion E)
 \hint{=}{ move $r$ into the relation }
 	r \mapsto ref \in rr \, ; \star (ptr \bunion E)
@@ -109,8 +123,7 @@
 \hint{=}{ }
 	r \mapsto ref \in \star ptr
 \end{calculation}
-\end{subproof}
-\end{free:var}
+% \end{subproof}
 \begin{subproof}{lmm0}
 	% associativity in prover
 	% monotonicity of <: and ; in prover
@@ -131,14 +144,39 @@
 \hint{\subseteq}{ }
 	\{ r \mapsto q \} ; \star ptr 
 	\2\bunion rr ; \star ptr
-\hint{\subseteq}{ \eqref{m1:grd1} }
+\hint{\subseteq}{ \eqref{hyp0} }
 	rr ; \star ptr ; \star ptr 
 	\2\bunion rr ; \star ptr
 \hint{=}{ }
 	rr ; \star ptr
 \end{calculation}	
 \end{subproof}
+\end{free:var}
+\end{free:var}
+\end{free:var}
 \end{proof}
+\begin{calculation}
+	rr;\star (ptr \0\bunion E)
+\hint{=}{ iterated union to sequence }
+	rr; \star (\star ptr ; E) ; \star ptr
+\hint{=}{ unfold once }
+	rr; (\star (\star ptr ; E) ; \star ptr) ; E ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{\subseteq}{ $x \subseteq \all$ }
+	rr; \all ; E ; \star ptr 
+	\2\bunion rr ; \star ptr
+% \hint{=}{ }
+% 	rr ; \all ; \asrel{\{q\}} ; \star ptr 
+% 	\2\bunion rr ; \star ptr
+\hint{=}{ pairs on either side of $\all$ }
+	\{ r \mapsto q \} ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{\subseteq}{ \eqref{m1:grd1} }
+	rr ; \star ptr ; \star ptr 
+	\2\bunion rr ; \star ptr
+\hint{=}{ }
+	rr ; \star ptr
+\end{calculation}	
 
 \end{machine}
 
@@ -158,6 +196,24 @@
 	\cschedule{free}{m2:sch0}
 		{ \lookup{(\star ptr)}{~reach~} = reach } \\
 	\cschedule{free}{m2:sch1}{ \neg p \in reach }
+\end{align}
+
+\begin{align}
+	\progress{m2:prog0}
+		{ \neg r \mapsto p \in \star ptr 
+			\land p \in live }
+		{ \lookup{(\star ptr)}{~reach~} = reach 
+			\land \neg p \in reach  }
+\\	\progress{m2:prog1}
+		{ \true }
+		{ \lookup{(\star ptr)}{~reach~} = reach }
+\\	\progress{m2:prog2}
+		{ \true }
+		{ reach = \{ r \} }
+\\	\safety{m2:saf0}
+		{ \neg r \mapsto p \in \star ptr 
+			\land p \in live \setminus reach }
+		{ p \in free }
 \end{align}
 
 \end{machine}

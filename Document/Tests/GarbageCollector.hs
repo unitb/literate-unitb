@@ -78,6 +78,25 @@ result1 = unlines
     , "  o  m1/INIT/WD"
     , "  o  m1/INIT/WWD"
     , "  o  m1/INV/WD"
+    , "  o  m1/THM/thm0/assertion/WD/E/easy"
+    , "  o  m1/THM/thm0/assertion/WD/rr/easy"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/goal"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/hypotheses"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/relation"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 1"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 2"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 3"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 4"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 5"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 6"
+    , "  o  m1/THM/thm0/main goal/assertion/lmm0/step 7"
+    , " xxx m1/THM/thm0/main goal/main goal/goal"
+    , "  o  m1/THM/thm0/main goal/main goal/hypotheses"
+    , "  o  m1/THM/thm0/main goal/main goal/relation"
+    , "  o  m1/THM/thm0/main goal/main goal/step 1"
+    , "  o  m1/THM/thm0/main goal/main goal/step 2"
+    , "  o  m1/THM/thm0/main goal/main goal/step 3"
+    , "  o  m1/THM/thm0/main goal/new assumption"
     , "  o  m1/add/FIS/free@prime"
     , "  o  m1/add/FIS/live@prime"
     , "  o  m1/add/FIS/ptr@prime"
@@ -123,30 +142,11 @@ result1 = unlines
     , "  o  m1/m1:prog0/REF/ensure/m1/TR/WFIS/p/p@prime"
     , "  o  m1/m1:prog0/REF/ensure/m1/TR/free/EN"
     , "  o  m1/m1:prog0/REF/ensure/m1/TR/free/NEG"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/assertion/WD/E/easy"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/assertion/WD/rr/easy"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/goal"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/hypotheses"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/relation"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 1"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 2"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 3"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 4"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 5"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 6"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 7"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/goal"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/hypotheses"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/relation"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/step 1"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/step 2"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/step 3"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/assertion/lmm1/step 4"
-    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/main goal/main goal/easy"
+    , "  o  m1/m1:prog0/REF/ensure/m1/add/SAF"
     , "  o  m1/m1:prog0/REF/ensure/m1/alloc/SAF"
     , "  o  m1/m1:prog0/REF/ensure/m1/delete/SAF"
     , "  o  m1/m1:prog0/REF/ensure/m1/free/SAF"
-    , "passed 73 / 73"
+    , "passed 72 / 73"
     ]
 
 case2 :: IO POResult
@@ -166,6 +166,7 @@ result2 = unlines
     , "  o  m2/add/FIS/ptr@prime"
     , "  o  m2/add/FIS/reach@prime"
     , "  o  m2/add/INV/m2:inv0"
+    , "  o  m2/add/SAF/m2:saf0"
     , "  o  m2/add/WD/C_SCH"
     , "  o  m2/add/WD/F_SCH"
     , "  o  m2/add/WD/GRD"
@@ -175,6 +176,7 @@ result2 = unlines
     , "  o  m2/alloc/FIS/ptr@prime"
     , "  o  m2/alloc/FIS/reach@prime"
     , "  o  m2/alloc/INV/m2:inv0"
+    , "  o  m2/alloc/SAF/m2:saf0"
     , "  o  m2/alloc/WD/C_SCH"
     , "  o  m2/alloc/WD/F_SCH"
     , "  o  m2/alloc/WD/GRD"
@@ -184,6 +186,7 @@ result2 = unlines
     , "  o  m2/delete/FIS/ptr@prime"
     , "  o  m2/delete/FIS/reach@prime"
     , "  o  m2/delete/INV/m2:inv0"
+    , "  o  m2/delete/SAF/m2:saf0"
     , "  o  m2/delete/WD/C_SCH"
     , "  o  m2/delete/WD/F_SCH"
     , "  o  m2/delete/WD/GRD"
@@ -195,20 +198,32 @@ result2 = unlines
     , "  o  m2/free/FIS/ptr@prime"
     , "  o  m2/free/FIS/reach@prime"
     , "  o  m2/free/INV/m2:inv0"
+    , "  o  m2/free/SAF/m2:saf0"
     , "  o  m2/free/SCH/m0:grd0"
     , "  o  m2/free/WD/C_SCH"
     , "  o  m2/free/WD/F_SCH"
     , "  o  m2/free/WD/GRD"
     , "  o  m2/free/WWD"
-    , "passed 44 / 46"
+    , "  o  m2/m2:prog0/PROG/WD/lhs"
+    , "  o  m2/m2:prog0/PROG/WD/rhs"
+    , " xxx m2/m2:prog0/REF/add"
+    , "  o  m2/m2:prog1/PROG/WD/lhs"
+    , "  o  m2/m2:prog1/PROG/WD/rhs"
+    , " xxx m2/m2:prog1/REF/add"
+    , "  o  m2/m2:prog2/PROG/WD/lhs"
+    , "  o  m2/m2:prog2/PROG/WD/rhs"
+    , " xxx m2/m2:prog2/REF/add"
+    , "  o  m2/m2:saf0/SAF/WD/lhs"
+    , "  o  m2/m2:saf0/SAF/WD/rhs"
+    , "passed 56 / 61"
     ]
 
 case3 :: IO String
-case3 = proof_obligation_stripped path0 "m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 5" 1
+case3 = proof_obligation_stripped path0 "m1/THM/thm0/main goal/assertion/lmm0/step 5" 1
 
 result3 :: String
 result3 = unlines
-    [ "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 5"
+    [ "; m1/THM/thm0/main goal/assertion/lmm0/step 5"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -222,14 +237,12 @@ result3 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const E (set (Pair Node Node)))"
     , "(declare-const free (set Node))"
-    , "(declare-const free@prime (set Node))"
     , "(declare-const live (set Node))"
-    , "(declare-const live@prime (set Node))"
     , "(declare-const p Node)"
     , "(declare-const ptr (set (Pair Node Node)))"
-    , "(declare-const ptr@prime (set (Pair Node Node)))"
     , "(declare-const q Node)"
     , "(declare-const r Node)"
+    , "(declare-const ref Node)"
     , "(declare-const rr (set (Pair Node Node)))"
     , "(declare-fun asrel@@Node ( (set Node) ) (set (Pair Node Node)))"
     , "(declare-fun finite@@Node ( (set Node) ) Bool)"
@@ -563,13 +576,13 @@ result3 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 5"
+    , "; m1/THM/thm0/main goal/assertion/lmm0/step 5"
     ]
 
 case4 :: IO String
 case4 = do
     either id (unlines . L.map show . keys . (^.syntacticThm.monotonicity)) 
-        <$> sequent path0 "m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 5" 1
+        <$> sequent path0 "m1/THM/thm0/main goal/assertion/lmm0/step 5" 1
 
 result4 :: String
 result4 = unlines
@@ -605,11 +618,11 @@ result5 = unlines
 case6 :: IO String
 case6 = do
     proof_obligation_stripped path0 
-        "m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 6" 1
+        "m1/THM/thm0/main goal/assertion/lmm0/step 6" 1
 
 result6 :: String
 result6 = unlines
-    [ "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 6"
+    [ "; m1/THM/thm0/main goal/assertion/lmm0/step 6"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -623,14 +636,12 @@ result6 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const E (set (Pair Node Node)))"
     , "(declare-const free (set Node))"
-    , "(declare-const free@prime (set Node))"
     , "(declare-const live (set Node))"
-    , "(declare-const live@prime (set Node))"
     , "(declare-const p Node)"
     , "(declare-const ptr (set (Pair Node Node)))"
-    , "(declare-const ptr@prime (set (Pair Node Node)))"
     , "(declare-const q Node)"
     , "(declare-const r Node)"
+    , "(declare-const ref Node)"
     , "(declare-const rr (set (Pair Node Node)))"
     , "(declare-fun asrel@@Node ( (set Node) ) (set (Pair Node Node)))"
     , "(declare-fun finite@@Node ( (set Node) ) Bool)"
@@ -964,15 +975,15 @@ result6 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 6"
+    , "; m1/THM/thm0/main goal/assertion/lmm0/step 6"
     ]
 
 case7 :: IO String
-case7 = proof_obligation_stripped path0 "m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 3" 1
+case7 = proof_obligation_stripped path0 "m1/THM/thm0/main goal/assertion/lmm0/step 3" 1
 
 result7 :: String
 result7 = unlines
-    [ "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 3"
+    [ "; m1/THM/thm0/main goal/assertion/lmm0/step 3"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -986,14 +997,12 @@ result7 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const E (set (Pair Node Node)))"
     , "(declare-const free (set Node))"
-    , "(declare-const free@prime (set Node))"
     , "(declare-const live (set Node))"
-    , "(declare-const live@prime (set Node))"
     , "(declare-const p Node)"
     , "(declare-const ptr (set (Pair Node Node)))"
-    , "(declare-const ptr@prime (set (Pair Node Node)))"
     , "(declare-const q Node)"
     , "(declare-const r Node)"
+    , "(declare-const ref Node)"
     , "(declare-const rr (set (Pair Node Node)))"
     , "(declare-fun asrel@@Node ( (set Node) ) (set (Pair Node Node)))"
     , "(declare-fun finite@@Node ( (set Node) ) Bool)"
@@ -1333,15 +1342,15 @@ result7 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 3"
+    , "; m1/THM/thm0/main goal/assertion/lmm0/step 3"
     ]
 
 case8 :: IO String
-case8 = proof_obligation_stripped path0 "m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 4" 1
+case8 = proof_obligation_stripped path0 "m1/THM/thm0/main goal/assertion/lmm0/step 4" 1
 
 result8 :: String
 result8 = unlines
-    [ "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 4"
+    [ "; m1/THM/thm0/main goal/assertion/lmm0/step 4"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -1355,14 +1364,12 @@ result8 = unlines
     , "(define-sort set (a) (Array a Bool))"
     , "(declare-const E (set (Pair Node Node)))"
     , "(declare-const free (set Node))"
-    , "(declare-const free@prime (set Node))"
     , "(declare-const live (set Node))"
-    , "(declare-const live@prime (set Node))"
     , "(declare-const p Node)"
     , "(declare-const ptr (set (Pair Node Node)))"
-    , "(declare-const ptr@prime (set (Pair Node Node)))"
     , "(declare-const q Node)"
     , "(declare-const r Node)"
+    , "(declare-const ref Node)"
     , "(declare-const rr (set (Pair Node Node)))"
     , "(declare-fun asrel@@Node ( (set Node) ) (set (Pair Node Node)))"
     , "(declare-fun finite@@Node ( (set Node) ) Bool)"
@@ -1697,5 +1704,5 @@ result8 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog0/REF/ensure/m1/add/SAF/main goal/assertion/lmm0/step 4"
+    , "; m1/THM/thm0/main goal/assertion/lmm0/step 4"
     ]

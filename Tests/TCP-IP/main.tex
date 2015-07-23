@@ -1,0 +1,68 @@
+
+
+TCP: 
+	abstract
+
+variables
+	qe ∈ [p..q) → V
+	p,q ∈ N
+	out ∈ V
+
+invariant
+	p ≤ q
+
+send
+	any v
+	then
+		qe.q := v
+		q := q + 1
+	end
+
+receive
+	during
+		p ≠ q
+	then
+		out := qe.p
+		p := p + 1
+		qe := {p} <<| qe
+	end
+
+concrete
+	buf ∈ N ⇸ V
+	ch ⊆ V
+	pl ∈ V ⇸ N
+
+invariant
+	ran.buf ∪ ch = ran.qe
+	pl~ = qe
+	buf ⊆ qe
+
+receive
+	during
+		p ≠ q
+		p ∈ dom.buf
+	then
+		out := buf.p
+		p := p+1
+		buf := {p} <<| buf
+	end
+
+p ≠ q ↦ p ≠ q ∧ p ∈ dom.buf
+p ≠ q ∧ p ∈ dom.buf unless p = q except receive
+
+transmit [m]
+	during
+		m ∈ ch
+	then
+		ch := ch \ {m}
+		buf.(pl.m) := m
+	end
+
+send
+	any v
+	then
+		ch := ch ∪ {v}
+		q := q + 1
+		pl.v := q
+	end
+
