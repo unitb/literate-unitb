@@ -16,6 +16,7 @@ import Data.Function
 import Data.Graph
 import Data.List ( intercalate )
 import Data.Map as M hiding ( foldl, map, null, (!) )
+import Data.Semigroup
 
 import Safe
 
@@ -40,6 +41,9 @@ data StringLi = StringLi [(Char,LineInfo)] LineInfo
 
 data BracketType = Curly | Square
     deriving (Eq,Show)
+
+instance Semigroup LatexDoc where
+    (<>) (Doc xs _) (Doc ys li) = Doc (xs++ys) li
 
 flatten' :: LatexDoc -> String
 flatten' (Doc xs _) = concatMap flatten xs

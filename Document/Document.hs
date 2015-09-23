@@ -46,16 +46,24 @@ read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
             let li = line_info xs
             (ms,cs) <- get_components xs li
             runPipeline' ms cs $ proc doc -> do
-                let mch = M.map (const ()) $ getMachineInput doc
-                    _ctx = M.map (const ()) $ getContextInput doc
-                    m0 = M.mapWithKey (const . MachineP0 mch) mch
-                    _c0 = M.map (const $ TheoryP0 ()) _ctx
+                m0 <- run_phase0_blocks -< doc
                 (r_ord,m1) <- Mch.run_phase1_types -<  m0
+                -- _c1 <- Ctx.run_phase1_types -< c0
                 m2 <- Mch.run_phase2_vars   -< (r_ord, m1)
                 (m3,es) <- Mch.run_phase3_exprs  -< (r_ord, m2)
                 m4 <- Mch.run_phase4_proofs -< (r_ord, m3)
                 ms <- liftP' $ fmap Just . T.sequence -< Just $ M.mapWithKey make_machine m4
+                -- let ms = _ -- M.mapWithKey make_machine m4 :: MTable (Either [Error] Machine)
                 machines <- triggerP -< ms
+                -- let refs' = M.mapKeys as_label $ M.map as_label $ P.edges $ r_ord
+                    -- mam2maybe = fmap (as_label . fst) . (() `M.lookup`)
+                --     check0 = forM_ (keys mch) $ \m -> check_schedule_ref_struct
+                --                 refs' (as_label m)
+                --                 _ -- (prog_dep ! m)
+                --                 (events $ machines ! m)
+                --                 (transient $ props $ machines ! m)
+                --                 ((m4 ! m) ^. pProgress) -- exprs ! m)
+                -- liftP -< toEither check0
                 returnA -< empty_system 
                     { machines = M.mapKeys (\(MId s) -> s) machines 
                     , expr_store = es }
@@ -114,19 +122,3 @@ get_components xs li =
             | otherwise      = map_docM_ f x
         f x = map_docM_ f x
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
-
-runPipeline' :: M.Map String [LatexDoc]
-             -> M.Map String [LatexDoc]
-             -> Pipeline MM Input a 
-             -> Either [Error] a
-runPipeline' ms cs p = case x of
-                            Nothing -> Left w
-                            Just x
-                                | L.null w -> Right x
-                                | otherwise -> Left w 
-    where
-        (x,(),w) = runRWS (runMaybeT $ f input) input ()
-        input = Input mch ctx
-        mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
-        ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs
-        Pipeline m_spec c_spec f = p

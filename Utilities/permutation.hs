@@ -56,7 +56,8 @@ closure' g = runST $ do
                 :: ST s (STArray s Vertex (S.Set Vertex))
         forM_ top $ \xs -> do
             let ys  = S.fromList $ concatMap (i2e !) xs
-            zs <- forM (S.toList $ ys S.\\ S.fromList xs) $ readArray ar
+            zs <- forM (S.toList $ ys S.\\ S.fromList xs) $ 
+                readArray ar
             let set = S.unions $ ys : zs
             forM_ xs $ \i -> writeArray ar i set
         liftM M.fromList $ forM [V 0..V $ nn-1] $ \v -> do
@@ -320,7 +321,7 @@ getSets part@(Partition ar) = do
             ref <- newSTRef []
             forLoop (toEnum 0) (<= n) succ (void . root part)
             forLoop (toEnum 0) (<= n) succ $ \i -> do
-                j <- readArray ar i
+                j  <- readArray ar i
                 xs <- readArray res j
                 writeArray res j $ i:xs
                 modifySTRef ref (j:)

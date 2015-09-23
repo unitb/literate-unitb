@@ -5,6 +5,7 @@ module Utilities.TH where
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Control.Monad.Fix
 import Control.Lens
 -- import Control.Lens.TH
 -- import Control.Lens.Internal.FieldTH
@@ -390,3 +391,14 @@ existential tn = do
             return t
           _ -> fail $ "unsupported type: \n" ++ pprint d
       _ -> fail $ "unsupported decl: \n" ++ pprint i
+
+count_cases :: DecsQ
+count_cases = do
+    n <- fix (\rec i -> do
+        x <- lookupValueName $ "result" ++ show i
+        case x of
+            Just _  -> rec $ i + 1
+            Nothing -> return i
+        ) (0 :: Int)
+    runIO $ printf "%d test cases\n" n
+    return []

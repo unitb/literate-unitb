@@ -502,13 +502,13 @@ machine_setting m = setting
         setting = theory_setting (theory m)
 
 schedule_setting :: Machine -> Event -> ParserSetting
-schedule_setting m evt = setting { decls = indices evt `union` decls setting }
+schedule_setting m evt = setting { decls = (evt^.indices) `union` decls setting }
     where
         setting = machine_setting m 
 
 event_setting :: Machine -> Event -> ParserSetting
 event_setting m evt = setting
-        { decls = params evt `union` decls setting }
+        { decls = (evt^.params) `union` decls setting }
     where
         setting = schedule_setting m evt
 

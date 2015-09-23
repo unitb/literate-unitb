@@ -6,7 +6,9 @@ import Control.Monad
 import Data.List as L
 import Document.Document
 
+-- import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes
+-- import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
 import qualified Document.Tests.Phase as Phase
@@ -16,10 +18,12 @@ import qualified Document.Tests.TrainStation as Train
 import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.UnlessExcept as UE
+-- import qualified Document.Tests.Suite as Suite
 import qualified Document.MachineSpec as MSpec 
 import qualified Document.Tests.GarbageCollector as Gar
 import qualified Document.Tests.Parser as Parser
 import qualified Document.Tests.TerminationDetection as Term
+import qualified Document.Phase.Test as PhTest
 
 import Latex.Parser
 import Latex.Scanner
@@ -43,9 +47,12 @@ test = test_cases
         "Unit-B Document" 
         [ StringCase "basic syntax and scopes" case1 result1
         , StringCase "Contextual predicate visibility rules" case2 result2
+        , PhTest.test_case
         , Puz.test_case
         , UE.test_case
         , LFD.test_case
+        -- , CC.test_case
+        -- , Ind.test_case
         , SMch.test_case
         , Cubes.test_case
         , Train.test_case

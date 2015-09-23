@@ -3,8 +3,10 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 module Logic.Proof.POGenerator 
-    ( POGen, POGenT, Logic.Proof.POGenerator.context
+    ( POGen, POGenT -- Logic.Proof.POGenerator.context
     , emit_goal
+    , _context
+    , POCtx
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
@@ -54,6 +56,19 @@ empty_param = makePOParam empty_ctx
 type POGen = POGenT Identity
 
 newtype POGenT m a = POGen { runPOGen :: RWST POParam [(Label,Sequent)] () m a }
+
+newtype POCtx a = POCtx { runPOCxt :: State POParam a }
+
+instance Applicative POCtx where
+    (<*>) = ap
+    pure  = return
+
+instance Functor POCtx where
+    fmap = liftM
+
+instance Monad POCtx where
+    m >>= f = POCtx $ runPOCxt m >>= runPOCxt . f
+    return  = POCtx . return
 
 instance Monad m => Applicative (POGenT m) where
     (<*>) = ap
@@ -111,45 +126,43 @@ emit_goal lbl g = POGen $ do
                   <*> pure g
     tell [(composite_label $ tag ++ lbl, po)]
 
-set_syntactic_props :: SyntacticProp -> State POParam ()
-set_syntactic_props s = synProp .= s
+set_syntactic_props :: SyntacticProp -> POCtx ()
+set_syntactic_props s = POCtx $ synProp .= s
 
-context :: Context -> State POParam ()
-context = _context
 
-_context :: Context -> State POParam ()
-_context new_ctx = do
+_context :: Context -> POCtx ()
+_context new_ctx = POCtx $ do
     S.context %= (new_ctx `merge_ctx`)
 
-functions :: Map String Fun -> State POParam ()
+functions :: Map String Fun -> POCtx ()
 functions new_funs = do
     _context $ Context M.empty M.empty new_funs M.empty M.empty
 
-definitions :: Map String Def -> State POParam ()
-definitions new_defs = do
+definitions :: Map String Def -> POCtx ()
+definitions new_defs = POCtx $ do
     S.context.E.definitions .= new_defs
 
-with :: Monad m => State POParam () -> POGenT m a -> POGenT m a
-with f cmd = POGen $ local (execState f) $ runPOGen cmd
+with :: Monad m => POCtx () -> POGenT m a -> POGenT m a
+with f cmd = POGen $ local (execState $ runPOCxt f) $ runPOGen cmd
 
-prefix_label :: Label -> State POParam ()
-prefix_label lbl = do
+prefix_label :: Label -> POCtx ()
+prefix_label lbl = POCtx $ do
         tag <- gets tag
         modify $ \p -> p { tag = tag ++ [lbl] }
 
-prefix :: String -> State POParam ()
+prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: Map Label Expr -> State POParam ()
-named_hyps hyps = do
+named_hyps :: Map Label Expr -> POCtx ()
+named_hyps hyps = POCtx $ do
         named %= M.union hyps
 
-nameless_hyps :: [Expr] -> State POParam ()
-nameless_hyps hyps = do
+nameless_hyps :: [Expr] -> POCtx ()
+nameless_hyps hyps = POCtx $ do
         nameless %= (++hyps)
 
-variables :: Map String Var -> State POParam ()
-variables vars = do
+variables :: Map String Var -> POCtx ()
+variables vars = POCtx $ do
         S.context.constants %= (vars `merge`)
 
 eval_generator :: POGen () -> Map Label Sequent

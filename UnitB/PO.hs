@@ -17,9 +17,9 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Proof
-import           Logic.Proof.POGenerator hiding ( variables, context )
+import           Logic.Proof.POGenerator hiding ( variables )
 import qualified Logic.Proof.POGenerator as POG
-import Logic.Theory
+import Logic.Theory hiding (assert)
 import Logic.WellDefinedness
 
 import           UnitB.AST
@@ -27,6 +27,8 @@ import           UnitB.AST
 import Z3.Z3
 
     -- Libraries
+-- import Control.Arrow
+import Control.Exception
 import Control.Lens hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 import Control.Monad.Trans
@@ -39,7 +41,9 @@ import           Data.Map as M hiding
 import qualified Data.Map as M
 import           Data.Monoid
 import           Data.List as L hiding (inits, union,insert)
+import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)
+import qualified Data.Traversable as T
 
 import System.IO
 
@@ -88,6 +92,8 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
+-- forWithKeyM = flip traverse
+
 assert_ctx :: Machine -> Context
 assert_ctx m =
           (Context M.empty (variables m `M.union` del_vars m) M.empty M.empty M.empty)
@@ -99,11 +105,11 @@ step_ctx m = merge_all_ctx
         prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
         prime_var (Var n t) = (Var (n ++ "@prime") t)
 
-evt_saf_ctx :: Event -> Context
-evt_saf_ctx evt  = Context M.empty (params evt) M.empty M.empty M.empty
+evt_saf_ctx :: HasConcrEvent event => event -> Context
+evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
 
-evt_live_ctx :: Event -> Context
-evt_live_ctx evt = Context M.empty (indices evt) M.empty M.empty M.empty
+evt_live_ctx :: HasConcrEvent event => event -> Context
+evt_live_ctx evt = Context M.empty (evt^.new.indices) M.empty M.empty M.empty
 
 
 
@@ -128,7 +134,7 @@ invariants_only m =
 raw_machine_pos :: Machine -> (Map Label Sequent)
 raw_machine_pos m = eval_generator $ 
                 with (do
-                        POG.context $ theory_ctx (theory m)
+                        _context $ theory_ctx (theory m)
                         set_syntactic_props syn
                         nameless_hyps $ M.elems unnamed 
                         named_hyps $ named_f) $ do
@@ -150,18 +156,21 @@ raw_machine_pos m = eval_generator $
                     thm_wd_po m
                     mapM_ (inv_po m) $ M.toList $ _inv p
                     mapM_ (thm_po m) $ M.toList $ _inv_thm p
-                    forM_  (M.toList $ events m) $ \ev -> do
-                        replace_csched_po m ev
-                        replace_fsched_po m ev
-                        weaken_csched_po m ev
+                    forM_  (M.toList $ all_upwards m) $ \ev -> do
                         strengthen_guard_po m ev
-                        sim_po m ev
-                        wit_wd_po m ev
-                        wit_fis_po m ev
-                        fis_po m ev
                         evt_wd_po m ev
                         evt_eql_po m ev
                         sch_po m ev
+                    -- forM_ (all_refs m) $ \ev -> do
+                    forM_  (M.toList $ all_downwards m) $ \ev -> do
+                        replace_csched_po m ev
+                        weaken_csched_po  m ev
+                        replace_fsched_po m ev
+                    forM_ (all_refs m) $ sim_po m
+                    forM_  (M.toList $ all_upwards m) $ \ev -> do
+                        wit_wd_po m ev
+                        wit_fis_po m ev
+                        fis_po m ev
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
                     mapM_ (ref_po m) $ M.toList $ derivation m
     where          
@@ -200,8 +209,8 @@ ref_po m (lbl, Rule r) =
 
 theory_po :: Theory -> Either [Error] (Map Label Sequent)
 theory_po th = do
-        xs <- mapM (uncurry f) $ toList $ M.mapWithKey g thm
-        return $ fromList $ concat xs
+        xs <- mapM (uncurry f) $ M.toList $ M.mapWithKey g thm
+        return $ M.fromList $ concat xs
     where
 --        axm = M.filterKeys (not . (`S.member` theorems th)) $ fact th
         dep       = M.map M.fromList $ M.fromListWith (++) 
@@ -231,7 +240,7 @@ init_sim_po m =
         (do prefix_label $ _name m
             prefix_label "INIT"
             prefix_label "SIM"
-            POG.context (assert_ctx m)
+            _context (assert_ctx m)
             named_hyps $ inits m
             named_hyps $ M.mapKeys (label . name) $ init_witness m)
         (forM_ (M.toList $ del_inits m) $ \(lbl,p) -> do
@@ -241,7 +250,7 @@ init_wit_wd_po :: Machine -> M ()
 init_wit_wd_po m =
     with 
         (do prefix_label $ _name m
-            POG.context (assert_ctx m)
+            _context (assert_ctx m)
             named_hyps $ inits m)
         (emit_goal ["INIT/WWD"] 
             (well_definedness $ zall $ init_witness m))
@@ -250,7 +259,7 @@ init_witness_fis_po :: Machine -> M ()
 init_witness_fis_po m =
     with 
         (do prefix_label $ _name m
-            POG.context (assert_ctx m)
+            _context (assert_ctx m)
             named_hyps $ inits m)
         (emit_exist_goal ["INIT/WFIS"] 
             (M.elems $ abs_vars m  `M.difference` variables m) 
@@ -260,7 +269,7 @@ init_fis_po :: Machine -> M ()
 init_fis_po m = 
     with 
         (do prefix_label $ _name m
-            POG.context (assert_ctx m))
+            _context (assert_ctx m))
         (emit_exist_goal [init_fis_lbl] 
             (M.elems $ variables m  `M.union` abs_vars m) 
             (M.elems $ inits m))
@@ -272,8 +281,14 @@ expected_leadsto_po (LeadsTo vs p0 q0) (LeadsTo vs' p1 q1) = do
         emit_goal ["lhs"] $ zforall (vs ++ vs') p0 p1
         emit_goal ["rhs"] $ zforall (vs ++ vs') q1 q0
 
+assume_old_guard :: EventMerging -> POCtx ()
+assume_old_guard evt = do
+    case evt^.abstract_evts of
+        e :| [] -> named_hyps $ e^._2.old.guards
+        _ :| (_:_) -> return ()
+
 prop_tr :: Machine -> (Label, Transient) -> M ()
-prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
+prop_tr m (pname, Tr fv xp evt_lbl tr_hint) = do
             with (do
                 prefix_label $ _name m
                 prefix_label $ composite_label [tr_lbl, pname]
@@ -281,7 +296,7 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                 named_hyps $ invariants m)
             $ do
                 with (named_hyps $ singleton pname xp) $
-                    forM_ (toList hint) $ \(v,(t,e)) -> do
+                    forM_ (M.toList hint) $ \(v,(t,e)) -> do
                         emit_exist_goal ["WFIS",label v] [prime $ Var v t] [e]
                 existential inds $ do
                     zipWithM_ stuff evt_lbl es
@@ -293,53 +308,53 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                     enablement
                     negation
             where
-                grd  = all_guards evt
-                sch0 = coarse $ new_sched evt
-                sch1 = fine $ new_sched evt
-                sch  = sch0 `M.union` sch1
+                grd  = evt^.new.guards
+                sch0 = evt^.new.coarse_sched
+                -- sch1 = evt^.new.fine_sched
+                sch  = evt^.new.schedules
                 act  = ba_predicate m evt
-                ind  = indices evt
-                ind1 = indices evt `M.intersection` hint
-                param_ctx = POG.variables (params evt)
+                ind  = evt^.new.indices
+                ind1 = (evt^.new.indices) `M.intersection` hint
+                param_ctx = POG.variables (evt^.new.params)
                 enablement = emit_goal [evt_lbl, "EN"] 
                             (          xp 
                             `zimplies` (new_dummy ind $ zall sch0))
 
-                new_defs = flip map (M.elems ind1) 
+                new_defs = flip L.map (M.elems ind1) 
                         $ \(Var n t) -> (n ++ "@param", mk_fun [] (n ++ "@param") [] t)
-                new_hyps = flip map (M.toList hint)
+                new_hyps = flip L.map (M.toList hint)
                         $ \(x,(_,e)) -> rename (x ++ "@prime") (x ++ "@param") e
                 def_ctx = do
                     POG.functions (M.fromList new_defs)
                     POG.nameless_hyps new_hyps
                 negation = with (do param_ctx
-                                    named_hyps 
-                                        $ M.map 
-                                            (new_dummy ind) 
-                                            (M.unions [sch,grd,act]))
+                                    assume_old_guard evt
+                                    named_hyps $ M.map (new_dummy ind) sch
+                                    named_hyps $ M.map (new_dummy ind) act
+                                    named_hyps $ M.map (new_dummy ind) grd )
                       $ emit_goal [evt_lbl,"NEG"] $ xp `zimplies` (znot $ primed (variables m) xp) 
-        all_ind = M.elems $ M.unions $ fv : zipWith local_ind evt_lbl es
-        inds    = map (add_suffix "@param") $ M.elems 
-                        $ M.unions (map indices es) `M.difference` hint
-        es      = map (events m !) evt_lbl
+        all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind evt_lbl es
+        inds    = L.map (add_suffix "@param") $ M.elems 
+                        $ M.unions (L.map (view indices) es) `M.difference` hint
+        es      = L.map (upward_event m) evt_lbl
         
-        local_ind :: Label -> Event -> Map String Var
-        local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ indices e
+        local_ind :: Label -> EventMerging -> Map String Var
+        local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ e^.indices
             where
                 suff = mk_suff $ "@" ++ show lbl
-        new_ind :: Label -> Event -> Expr -> Expr
-        new_ind lbl e = make_unique suff (indices e)
+        new_ind :: Label -> EventMerging -> Expr -> Expr
+        new_ind lbl e = make_unique suff (e^.indices)
             where
                 suff = mk_suff $ "@" ++ show lbl
             -- (M.elems ind) 
-        tagged_sched :: Label -> Event -> Map Label Expr
-        tagged_sched lbl e = M.map (new_ind lbl e) $ coarse $ new_sched e
-        all_csch  = concatMap M.elems $ zipWith tagged_sched evt_lbl es
+        tagged_sched :: Label -> EventMerging -> Map Label Expr
+        tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched
+        all_csch  = concatMap M.elems $ L.zipWith tagged_sched evt_lbl es
             
             -- we take the disjunction of the fine schedules of 
             -- all the events involved in the transient predicate
         all_fsch  =
-            zsome $ zipWith (\lbl e -> (new_ind lbl e . zall) $ fine (new_sched e)) evt_lbl es
+            zsome $ L.zipWith (\lbl e -> (new_ind lbl e . zall) $ e^.new.fine_sched) evt_lbl es
             -- fine $ new_sched evt
         following = with (prefix_label "leadsto") $
                 case lt_fine of
@@ -353,7 +368,7 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                         | otherwise -> error $ format (
                                "transient predicate {0}'s side condition doesn't "
                             ++ "match the fine schedule of event {1}"
-                            ) pname (intercalate "," $ map show evt_lbl)
+                            ) pname (intercalate "," $ L.map show evt_lbl)
                     Nothing
                         | not $ all_fsch == ztrue ->
                             emit_goal [] $ zforall all_ind
@@ -361,8 +376,8 @@ prop_tr m (pname, Transient fv xp evt_lbl tr_hint) = do
                                     all_fsch
                         | otherwise -> return ()
         ctx = do
-                POG.context $ assert_ctx m 
-                POG.context $ step_ctx m 
+                _context $ assert_ctx m 
+                _context $ step_ctx m 
                 dummy
         dummy = POG.variables fv
         progs = _progress (props m) `M.union` _progress (inh_props m)
@@ -372,262 +387,314 @@ prop_co :: Machine -> (Label, Constraint) -> M ()
 prop_co m (pname, Co fv xp) = 
     with
         (do prefix_label $ _name m
-            POG.context $ step_ctx m
+            _context $ step_ctx m
             POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = all_guards evt
+            let grd  = evt^.new.guards
                 act  = ba_predicate m evt
             with 
                 (do named_hyps $ grd
                     named_hyps $ act
-                    POG.variables $ indices evt
-                    POG.variables $ params evt)
+                    -- nameless_hyps $ _ $ evt^.abstract_evts
+                    POG.variables $ evt^.indices
+                    POG.variables $ evt^.params)
                 (emit_goal [evt_lbl,co_lbl,pname] $ forall_fv xp)
     where
-        evts = toList (M.insert 
+        evts = M.toList (M.insert 
                 ("SKIP") 
-                empty_event 
-                (events $ m))
+                skip_event 
+                (conc_events m))
         forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
 
 prop_saf :: Machine -> (Label, SafetyProp) -> M ()
 prop_saf m (pname, Unless fv p q excp) = 
     with
         (do prefix_label $ _name m
-            POG.context $ step_ctx m
+            _context $ step_ctx m
             POG.variables $ symbol_table fv
             named_hyps $ invariants m)
         $ forM_ evts $ \(evt_lbl,evt) -> do
-            let grd  = all_guards evt
+            let grd  = evt^.new.guards
                 act  = ba_predicate m evt
-                ind = maybe M.empty (indices . (events m !)) excp
+                ind = maybe M.empty (view indices . (conc_events m !)) excp
                 fvs = symbol_table fv 
                 neq x = znot $ Word x `zeq` Word (suff x)
                 rng = maybe ztrue 
-                        (const $ zsome $ map neq $ elems inter)
+                        (const $ zsome $ L.map neq $ elems inter)
                         excp
                 inter = fvs `M.intersection` ind
                 diff  = fvs `M.difference` ind
             with 
                 (do named_hyps $ grd
                     named_hyps $ act
-                    POG.variables $ indices evt
-                    POG.variables $ params evt)
+                    -- nameless_hyps $ _ $ evt^.abstract_evts
+                    POG.variables $ evt^.new.indices
+                    POG.variables $ evt^.new.params)
                 (emit_goal [evt_lbl,"SAF",pname] $ 
-                    zforall (elems diff ++ map suff (elems ind))
+                    zforall (elems diff ++ L.map suff (elems ind))
                         rng
                         $ new_dummy inter $
                             zimplies (p `zand` znot q) 
                                      (primed vars $ p `zor` q))
     where
-        evts = toList $ events $ m
+        evts = M.toList $ all_upwards m
         vars = variables m
         suff = add_suffix "@param"
 
 inv_po :: Machine -> (Label, Expr) -> M ()
 inv_po m (pname, xp) = 
     do  with (do prefix_label $ _name m
-                 POG.context $ step_ctx m
+                 _context $ step_ctx m
                  named_hyps $ invariants m)
-            $ forM_ (toList $ events m) $ \(evt_lbl,evt) -> do
-                let grd  = all_guards evt
+            $ forM_ (M.toList $ all_upwards m) $ \(evt_lbl,evt) -> do
+                let grd  = evt^.new.guards
                     act  = ba_predicate m evt
                 with 
                     (do named_hyps $ grd
+                        assume_old_guard evt
                         named_hyps $ act
-                        named_hyps $ M.map ba_pred $ del_acts evt
-                        POG.variables $ indices evt
-                        POG.variables $ params evt)
+                        named_hyps $ M.map ba_pred $ evt^.deleted_actions
+                        POG.variables $ evt^.new.indices
+                        POG.variables $ evt^.new.params)
                     (emit_goal [evt_lbl,inv_lbl,pname] 
                         (primed (variables m `M.union` abs_vars m) xp))
-        with (do POG.context $ assert_ctx m
+        with (do _context $ assert_ctx m
                  named_hyps $ inits m 
-                    `M.union` M.mapKeys (label . name) (init_witness m))
+                 named_hyps $ M.mapKeys (label . name) (init_witness m))
             $ emit_goal [_name m, inv_init_lbl, pname] xp
 
-wit_wd_po :: Machine -> (Label, Event) -> M ()
+wit_wd_po :: Machine -> (Label, EventMerging) -> M ()
 wit_wd_po m (lbl, evt) = 
-        with (do POG.context $ step_ctx m
-                 POG.variables $ indices evt
-                 POG.variables $ params evt
+        with (do _context $ step_ctx m
+                 POG.variables $ evt^.new.indices
+                 POG.variables $ evt^.new.params
                  named_hyps $ invariants m
                  prefix_label $ _name m
                  prefix_label lbl
-                 named_hyps $ all_guards evt
-                 named_hyps $ ba_predicate' (variables m) (actions evt))
+                 named_hyps $ evt^.new.guards
+                 -- nameless_hyps $ _ $ evt^.abstract_evts
+                 named_hyps $ ba_predicate' (variables m) (evt^.new.actions))
             (emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.elems $ witness evt)
+                $ M.elems $ evt^.witness)
 
-wit_fis_po :: Machine -> (Label, Event) -> M ()
+wit_fis_po :: Machine -> (Label, EventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
-        with (do POG.context $ step_ctx m
-                 POG.variables $ indices evt
-                 POG.variables $ params evt
+        with (do _context $ step_ctx m
+                 POG.variables $ evt^.new.indices
+                 POG.variables $ evt^.new.params
                  named_hyps $ invariants m
                  prefix_label $ _name m
                  prefix_label lbl
-                 named_hyps $ all_guards evt
-                 named_hyps $ ba_predicate' (variables m) (actions evt))
+                 named_hyps $ evt^.new.guards
+                 -- nameless_hyps $ _ $ evt^.abstract_evts
+                 named_hyps $ ba_predicate' (variables m) (evt^.new.actions))
             (emit_exist_goal ["WFIS"] pvar 
-                $ M.elems $ witness evt)
+                $ M.elems $ evt^.witness)
     where
-        pvar = map prime $ M.elems $ abs_vars m `M.difference` variables m
+        pvar = L.map prime $ M.elems $ abs_vars m `M.difference` variables m
 
 
-replace_csched_po :: Machine -> (Label,Event) -> M ()
-replace_csched_po m (lbl,evt) = do
-        with (do
-                prefix_label $ _name m
-                prefix_label lbl
-                prefix_label "C_SCH/delay"
-                POG.context $ assert_ctx m
-                POG.context $ step_ctx m
-                POG.variables $ indices evt
-                named_hyps $ invariants m ) $ do
-        let old_c = coarse $ old_sched evt
-            old_f = fine $ old_sched evt
-        forM_ (zip [0..] $ c_sched_ref evt) $ \(i,ref) -> do
-            let (plbl,prog) = sch_prog ref
-                (slbl,saf)  = sch_saf ref
-                keep_c     = coarse (new_sched evt) `M.intersection` keep ref
-                new_part_c = (coarse (added_sched evt) `M.intersection` add ref) `M.union` keep_c
-                nb = label $ show (i :: Int)
-                LeadsTo vs p0 q0  = prog
-                Unless us p1 q1 _ = saf
+replace_csched_po :: Machine -> (Label,EventSplitting) -> M ()
+replace_csched_po m (lbl,evt') = do 
+        -- assert (L.null (L.drop 1 xs) 
+        -- || L.null (evt^.c_sched_ref)) $ do
+    case evt' of 
+        EvtS ae (ce :| []) -> do
+            let evt = EvtRef ae ce 
             with (do
-                    POG.variables $ symbol_table vs
-                    named_hyps old_c
-                    named_hyps old_f) $ 
-                emit_goal [nb,"prog",plbl,"lhs"] p0
-            with (do
-                    POG.variables $ symbol_table vs) $
-                forM_ (toList new_part_c) $ \(lbl,sch) -> do
-                    emit_goal [nb,"prog",plbl,"rhs",lbl] $ $fromJust$
-                        Right q0 .=> Right sch
-            with (do
-                    POG.variables $ symbol_table us) $ do
-                emit_goal [nb,"saf",slbl,"lhs"] $ $fromJust$
-                        Right p1 .== mzall (M.map Right new_part_c)
-                emit_goal [nb,"saf",slbl,"rhs"] $ $fromJust$
-                        Right q1 .=> mznot (mzall $ M.map Right old_c)
-                    -- the above used to include .=> ... \/ not old_f
-                    -- it does not seem sound and I removed it
-                    -- it broke one of the test cases
+                    prefix_label $ _name m
+                    prefix_label lbl
+                    prefix_label "C_SCH/delay"
+                    _context $ assert_ctx m
+                    _context $ step_ctx m
+                    POG.variables $ evt^.new.indices
+                    named_hyps $ invariants m ) $ do
+            let old_c = evt^.old.coarse_sched
+                old_f = evt^.old.fine_sched
+            forM_ (L.zip [0..] $ evt^.c_sched_ref) $ \(i,ref) -> do
+                let (plbl,prog) = sch_prog ref
+                    (slbl,saf)  = sch_saf ref
+                    keep_c      = (evt^.new.coarse_sched) `M.intersection` keep ref
+                    new_part_c  = ((evt^.added.coarse_sched) `M.intersection` add ref) `M.union` keep_c
+                    nb  = label $ show (i :: Int)
+                    LeadsTo vs p0 q0  = prog
+                    Unless us p1 q1 _ = saf
+                with (do
+                        POG.variables $ symbol_table vs
+                        named_hyps old_c
+                        named_hyps old_f) $ 
+                    emit_goal [nb,"prog",plbl,"lhs"] p0
+                with (do
+                        POG.variables $ symbol_table vs) $
+                    forM_ (M.toList new_part_c) $ \(lbl,sch) -> do
+                        emit_goal [nb,"prog",plbl,"rhs",lbl] $ $fromJust$
+                            Right q0 .=> Right sch
+                with (do
+                        POG.variables $ symbol_table us) $ do
+                    emit_goal [nb,"saf",slbl,"lhs"] $ $fromJust$
+                            Right p1 .== mzall (M.map Right new_part_c)
+                    emit_goal [nb,"saf",slbl,"rhs"] $ $fromJust$
+                            Right q1 .=> mznot (mzall $ M.map Right old_c)
+                        -- the above used to include .=> ... \/ not old_f
+                        -- it does not seem sound and I removed it
+                        -- it broke one of the test cases
+        _ -> assert (L.null (evt'^.c_sched_ref)) (return ())
 
-weaken_csched_po :: Machine -> (Label,Event) -> M ()
+weaken_csched_po :: Machine -> (Label,EventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
-        let weaken_sch = coarse (added_sched evt) `M.difference` M.unions (L.map add $ c_sched_ref evt)
-            old_c = coarse $ old_sched evt
-        with (do
-                prefix_label $ _name m
-                prefix_label lbl
-                prefix_label "C_SCH/weaken"
-                POG.context $ assert_ctx m
-                POG.context $ step_ctx m
-                POG.variables $ indices evt
-                named_hyps $ invariants m 
-                    -- old version admits old_f as assumption
-                    -- why is it correct or needed?
-                    -- named_hyps old_f
-                named_hyps old_c) $ do
-        forM_ (M.toList weaken_sch) $ \(lbl,sch) -> do
-            emit_goal [lbl] sch
+    -- case evt' of 
+    --     EvtS ae (ce :| []) -> do
+            let -- evt = EvtRef ae ce 
+                weaken_sch = do
+                        e <- evt^.evt_pairs
+                        return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map add $ e^.c_sched_ref)
+                -- weaken_sch  = case weaken_sch' of
+                --                 m :| [] -> _
+                --                 ms -> _
+                -- weaken_sch = (evt^.added.coarse_sched) `M.difference` M.unions (L.map add $ evt^.c_sched_ref)
 
-replace_fsched_po :: Machine -> (Label,Event) -> M ()
-replace_fsched_po m (lbl,evt) = do
-        let old_c = coarse $ old_sched evt
-            new_c = coarse $ new_sched evt
-            old_f = fine $ old_sched evt
-            new_f = fine $ new_sched evt
+                old_c = evt^.old.coarse_sched
+            with (do
+                    prefix_label $ _name m
+                    prefix_label lbl
+                    prefix_label "C_SCH/weaken"
+                    _context $ assert_ctx m
+                    _context $ step_ctx m
+                    T.forM (evt^.evt_pairs) $ \e -> -- indices
+                        POG.variables $ e^.added.indices
+                    named_hyps $ invariants m 
+                        -- old version admits old_f as assumption
+                        -- why is it correct or needed?
+                        -- named_hyps old_f
+                    named_hyps old_c) $ do
+                case weaken_sch of
+                    m :| [] -> 
+                        forM_ (M.toList m) $ \(lbl,sch) -> do
+                            emit_goal [lbl] sch
+                    ms -> 
+                        emit_goal [] $ zsome $ NE.map zall ms
+
+replace_fsched_po :: Machine -> (Label,EventSplitting) -> M ()
+replace_fsched_po m (lbl,aevt) = do
+        let evts   = aevt^.evt_pairs.to NE.toList
+            -- _ = _
+            evts'  = L.zip (NE.toList $ aevt^.multiConcrete.to (NE.map fst)) evts
+            -- evt   = _
+            old_c  = unions $ L.map (view $ old.coarse_sched) evts
+            new_c  = L.nub $ concatMap (elems . view (new.coarse_sched)) evts
+            old_f  = unions $ L.map (view $ old.fine_sched) evts
+            new_fs = L.map (view $ new.fine_sched) evts
         with (do
                 prefix_label $ _name m
                 prefix_label lbl
                 prefix_label "F_SCH/replace"
-                POG.context $ assert_ctx m
-                POG.context $ step_ctx m
-                POG.variables $ indices evt
-                named_hyps $ invariants m) $ do
-            case f_sched_ref evt of
-                Just (plbl,prog) -> do
-                    let LeadsTo vs p0 q0 = prog
+                -- POG.variables $ _^.new.indices
+                _context $ assert_ctx m
+                _context $ step_ctx m
+                named_hyps  $ invariants m) $ do
+            case aevt^.f_sched_ref of
+              Just (plbl,prog) -> do
+                let LeadsTo vs p0 q0 = prog
+                with (do
+                        POG.variables $ symbol_table vs
+                        named_hyps old_c
+                        named_hyps old_f ) $
+                    emit_goal ["prog",plbl,"lhs"] p0
+                forM_ evts' $ \(clbl,evt) -> 
+                    with (do
+                            named_hyps $ evt^.new.coarse_sched
+                            named_hyps $ evt^.new.fine_sched ) $
+                        forM_ (M.toList $ evt^.deleted.fine_sched) $ \(lbl,sch) ->
+                            emit_goal ["str",lbl,clbl] sch 
+                case new_fs of
+                  [new_f] -> do
                     with (do
                             POG.variables $ symbol_table vs) $ do
-                        with (do
-                                named_hyps old_c
-                                named_hyps old_f ) $
-                            emit_goal ["prog",plbl,"lhs"] p0
                         forM_ (M.toList new_f) $ \(lbl,sch) -> 
                             emit_goal ["prog",plbl,"rhs",lbl] $
                                     q0 `zimplies` sch
+                  _ -> do
                     with (do
-                            named_hyps new_c
-                            named_hyps new_f ) $
-                        forM_ (M.toList $ fine $ deleted_sched evt) $ \(lbl,sch) ->
-                            emit_goal ["str",lbl] sch 
-                Nothing -> do
-                    let add_f = fine $ added_sched evt
-                        del_f = fine $ deleted_sched evt
-                        kept_f = fine $ kept_sched evt
-                    unless (new_f == old_f) $
-                        with (do
-                                named_hyps new_c
-                                named_hyps old_c -- is this sound?
-                                named_hyps kept_f) $
-                            emit_goal ["eqv"] $ $fromJust$
-                                Right (zall add_f) .= Right (zall del_f)
-                                
-strengthen_guard_po :: Machine -> (Label,Event) -> M ()
+                            POG.variables $ symbol_table vs) $ do
+                        emit_goal ["prog",plbl,"rhs"] $
+                                q0 `zimplies` zsome (L.map zall new_fs)
+              Nothing -> do
+                let add_f  = L.map (zall . view (added.fine_sched)) evts
+                    del_f  = L.map (zall . view (deleted.fine_sched)) evts
+                    kept_f = intersections $ L.map (view $ kept.fine_sched) evts
+                unless (new_fs == [old_f]) $
+                    with (do
+                            nameless_hyps new_c
+                            named_hyps old_c -- is this sound?
+                            named_hyps kept_f) $
+                        emit_goal ["eqv"] $ $fromJust$
+                            Right (zsome add_f) .= Right (zsome del_f)
+
+intersections :: Ord k => [Map k a] -> Map k a
+intersections []  = error "intersection of empty list is undefined"
+intersections [x] = x
+intersections (x:xs) = x `intersection` intersections xs                                
+
+strengthen_guard_po :: Machine -> (Label,EventMerging) -> M ()
 strengthen_guard_po m (lbl,evt) = 
         with (do
-                prefix_label $ _name m
-                prefix_label lbl
-                prefix_label "GRD/str"
-                POG.context $ assert_ctx m
-                POG.context $ step_ctx m
-                POG.variables $ indices evt
-                POG.variables $ params evt
-                named_hyps $ invariants m 
-                named_hyps $ new_guard evt ) $ do
-        forM_ (toList $ deleted_guard evt) $ \(lbl,grd) -> do
-            emit_goal [lbl] grd
+            prefix_label $ _name m
+            prefix_label lbl
+            prefix_label "GRD/str"
+            _context $ assert_ctx m
+            _context $ step_ctx m
+            POG.variables $ evt^.new.indices
+            POG.variables $ evt^.new.params 
+            named_hyps $ invariants m 
+            named_hyps $ evt^.new.guards ) $ do
+        case evt^.evt_pairs of
+          evt :| [] ->
+            forM_ (M.toList $ evt^.deleted.guards) $ \(lbl,grd) -> do
+                emit_goal [lbl] grd
+          es -> emit_goal [] $ zsome $ NE.map (zall . M.elems . view (deleted.guards)) es
 
-sim_po :: Machine -> (Label, Event) -> M ()
-sim_po m (lbl, evt) = 
+sim_po :: Machine -> EventRef -> M ()
+sim_po m evt = 
         with (do
-                POG.context $ step_ctx m
-                POG.variables $ indices evt
-                POG.variables $ params evt
+                _context $ step_ctx m
+                POG.variables $ evt^.new.indices
+                POG.variables $ evt^.new.params 
                 prefix_label $ _name m
+                let lbl  = evt^.concrete._1
+                    lbl' = evt^.abstract._1
                 prefix_label lbl
+                prefix_label lbl'
                 prefix_label "SIM"
-                named_hyps (all_guards evt)
+                named_hyps (evt^.new.guards)
+                -- nameless_hyps $ _ $ evt^.abstract_evts
                 named_hyps (ba_predicate m evt) ) $
-            forM_ (M.toList $ del_acts evt) $ \(albl,act) ->
+            forM_ (M.toList $ evt^.deleted.actions) $ \(albl,act) ->
                 emit_goal [albl] $ ba_pred act
 
-fis_po :: Machine -> (Label, Event) -> M ()
+fis_po :: Machine -> (Label, EventMerging) -> M ()
 fis_po m (lbl, evt) = 
-        with (do POG.context $ assert_ctx m
-                 POG.variables $ indices evt
-                 POG.variables $ params evt
+        with (do _context $ assert_ctx m
+                 POG.variables $ evt^.indices
+                 POG.variables $ evt^.params 
                  named_hyps $ invariants m
-                 named_hyps $ all_guards evt)
+                 -- nameless_hyps $ _ $ evt^.abstract_evts
+                 named_hyps $ evt^.new.guards)
             (emit_exist_goal [_name m, lbl, fis_lbl] pvar 
                 $ M.elems $ ba_predicate m evt)
     where
-        pvar = map prime $ M.elems $ variables m `M.union` abs_vars m
+        pvar = L.map prime $ M.elems $ variables m `M.union` abs_vars m
 
 tr_wd_po :: Machine -> (Label, Transient) -> M ()
-tr_wd_po  m (lbl, Transient vs p _ (TrHint wit _)) = 
+tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) = 
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "TR"
-                 POG.context $ step_ctx m
+                 _context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD"]
                     $ well_definedness $ zforall (elems vs) ztrue p
-                forM_ (toList wit) $ \(n,(t,e)) -> 
+                forM_ (M.toList wit) $ \(n,(t,e)) -> 
                     with (do
                         POG.variables $ 
                                     symbol_table [prime $ Var n t]
@@ -642,7 +709,7 @@ prog_wd_po m (lbl, LeadsTo vs p q) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "PROG"
-                 POG.context $ step_ctx m
+                 _context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD","lhs"]
                     $ well_definedness $ zforall vs ztrue p
@@ -654,7 +721,7 @@ saf_wd_po m (lbl, Unless vs p q _) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "SAF"
-                 POG.context $ step_ctx m
+                 _context $ step_ctx m
                  named_hyps $ invariants m) $
             do  emit_goal ["WD","lhs"]
                     $ zforall vs ztrue $ (znot q) `zimplies` (well_definedness p)
@@ -666,7 +733,7 @@ co_wd_po m (lbl, Co vs p) =
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "CO"
-                 POG.context $ step_ctx m
+                 _context $ step_ctx m
                  nameless_hyps $ M.elems $
                     M.map (primed $ variables m) $ invariants m
                  named_hyps $ invariants m)
@@ -676,7 +743,7 @@ co_wd_po m (lbl, Co vs p) =
 inv_wd_po :: Machine -> M ()
 inv_wd_po m = 
         with (do prefix_label $ _name m
-                 POG.context $ assert_ctx m
+                 _context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INV", "WD"] 
@@ -685,7 +752,7 @@ inv_wd_po m =
 init_wd_po :: Machine -> M ()
 init_wd_po m = 
         with (do prefix_label $ _name m
-                 POG.context $ assert_ctx m
+                 _context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m)
             $ emit_goal ["INIT", "WD"] 
@@ -709,81 +776,96 @@ incremental_wd_po lbl old new = do
             $ well_definedness 
             $ zall new
 
-evt_wd_po :: Machine -> (Label, Event) -> M ()
-evt_wd_po m (lbl, evt) = 
+evt_wd_po :: Machine -> (Label, EventMerging) -> M ()
+evt_wd_po m (lbl, evts) = 
         with (do prefix_label $ _name m
                  prefix_label lbl
                  prefix_label "WD"
-                 POG.context $ assert_ctx m
-                 POG.variables $ indices evt
+                 _context $ assert_ctx m
+                 POG.variables $ evts^.new.indices
                  named_hyps $ invariants m) $ do
+            let f ln = case evts^.evt_pairs of
+                          evt :| [] -> evt^.ln
+                          _ -> M.empty
+            -- case evts^.evt_pairs of
+            --   evt :| [] -> do
             incremental_wd_po "C_SCH"
-                (coarse $ old_sched evt)
-                (coarse $ new_sched evt)
-            with (named_hyps $ coarse $ new_sched evt) $
+                (f $ old.coarse_sched)
+                (evts^.new.coarse_sched)
+            with (named_hyps $ evts^.new.coarse_sched) $
                 incremental_wd_po "F_SCH"
-                    (fine $ old_sched evt)
-                    (fine $ new_sched evt)
-            with (POG.variables $ params evt) $ do
+                    (f $ old.fine_sched)
+                    (evts^.new.fine_sched)
+            with (POG.variables $ evts^.new.params) $ do
                 incremental_wd_po "GRD" 
-                    (old_guard evt) (new_guard evt)
+                    (f $ old.guards) 
+                    (evts^.new.guards)
+              -- es -> _
+            with (POG.variables $ evts^.new.params) $ do
                 with (do prefix_label "ACT"
-                         named_hyps $ all_guards evt
-                         POG.context $ step_ctx m) $ do
-                    let p k _ = k `M.notMember` old_acts evt
-                    forM_ (toList $ M.filterWithKey p $ actions evt) $ \(tag,bap) -> 
+                         assume_old_guard evts
+                         named_hyps $ evts^.new.guards
+                         _context $ step_ctx m) $ do
+                    let p k _ = k `M.notMember` (evts^.old_actions)
+                    forM_ (M.toList $ M.filterWithKey p $ evts^.new.actions) $ \(tag,bap) -> 
                         emit_goal [tag] 
                             $ well_definedness $ ba_pred bap
 
-evt_eql_po :: Machine -> (Label, Event) -> M ()
-evt_eql_po  m (lbl, evt) = 
+evt_eql_po :: Machine -> (Label, EventMerging) -> M ()
+evt_eql_po  m (_lbl, evts) = 
     with (do prefix_label $ _name m
-             prefix_label lbl
-             prefix_label "EQL"
-             POG.context $ evt_live_ctx evt
-             POG.context $ evt_saf_ctx evt
-             POG.context $ step_ctx m
-             named_hyps $ invariants m
-             named_hyps $ all_guards evt
-             named_hyps $ ba_predicate m evt)
-        (forM_ (M.elems $ eql_vars evt) $ \v -> do
-            emit_goal [label $ name v] 
-                $ Word (prime v) `zeq` Word v )
+             _context $ step_ctx m
+             named_hyps $ invariants m ) $
+    void $ T.forM (evts^.evt_pairs) $ \evt -> 
+        with (do named_hyps $ evt^.total.guards
+                 named_hyps $ ba_predicate m evt
+                 prefix_label $ evt^.concrete._1
+                 prefix_label $ evt^.abstract._1
+                 prefix_label "EQL"
+                 _context $ evt_live_ctx evt
+                 _context $ evt_saf_ctx evt)
+            (forM_ (M.elems $ evt^.eql_vars) $ \v -> do
+                emit_goal [label $ name v] 
+                    $ Word (prime v) `zeq` Word v )
 
-sch_po :: Machine -> (Label, Event) -> M ()
-sch_po m (lbl, evt) = 
-    with (do prefix_label $ _name m
-             prefix_label lbl
-             prefix_label sch_lbl
-             POG.context $ assert_ctx m
-             POG.context $ evt_live_ctx evt
-             POG.variables ind
-             named_hyps hyp)
-         $ if M.null param
-                then if removed_c_sch || removed_f_sch 
-                    then forM_ (toList grd) $ \(lbl,grd) -> 
+sch_po :: Machine -> (Label, EventMerging) -> M ()
+sch_po m (lbl, evts) = 
+    forM_ (evts^.evt_pairs.to NE.toList) $ \evt ->
+        with (do prefix_label $ _name m
+                 prefix_label lbl
+                 prefix_label sch_lbl
+                 _context $ assert_ctx m
+                 _context $ evt_live_ctx evt
+                 POG.variables ind
+                 named_hyps hyp) $ do
+            let removed_sched sch = not $ M.null $ evt^.deleted.sch
+                added_grd = not $ M.null $ evt^.added.guards
+                removed_c_sch = removed_sched coarse_sched
+                removed_f_sch = removed_sched fine_sched
+            if M.null param
+                then do 
+                    when (removed_c_sch || removed_f_sch) $
+                        forM_ (M.toList $ evt^.kept.guards) 
+                            $ \(lbl,grd) -> 
+                            emit_goal [lbl] grd  
+                    forM_ (M.toList $ evt^.added.guards) 
+                        $ \(lbl,grd) -> 
                         emit_goal [lbl] grd  
-                    else forM_ (toList $ grd `M.difference` old_guard evt) 
-                        $ \(lbl,grd) -> emit_goal [lbl] grd  
             else if removed_c_sch || removed_f_sch || added_grd
-                then emit_exist_goal [] (M.elems param) (M.elems grd)
+                then emit_exist_goal [] (M.elems param) (M.elems $ evt^.new.guards)
                 else return ()
     where
-        grd   = new_guard evt
-        c_sch = coarse $ new_sched evt
-        f_sch = fine $ new_sched evt
-        removed_sched sch = not $ M.null $ sch (old_sched evt) `M.difference` sch (new_sched evt)
-        removed_c_sch = removed_sched coarse
-        removed_f_sch = removed_sched fine
-        added_grd = not $ M.null $ new_guard evt `M.difference` old_guard evt
-        param = params evt
-        ind   = indices evt `merge` params evt
+        -- grd   = evt^.new.guards
+        c_sch = evts^.new.coarse_sched
+        f_sch = evts^.new.fine_sched
+        param = evts^.new.params
+        ind   = (evts^.new.indices) `merge` (evts^.new.params)
         hyp   = invariants m `M.union` f_sch `M.union` c_sch
 
 thm_wd_po :: Machine -> M ()
 thm_wd_po m = 
         with (do prefix_label $ _name m
-                 POG.context $ assert_ctx m
+                 _context $ assert_ctx m
                  named_hyps $ _inv $ inh_props m
                  named_hyps $ _inv_thm $ inh_props m
                  named_hyps $ _inv $ props m) $ do
@@ -798,7 +880,7 @@ thm_po m (lbl, xp) =
             prefix_label $ _name m
             prefix_label thm_lbl
             prefix_label lbl
-            POG.context $ assert_ctx m
+            _context $ assert_ctx m
             named_hyps inv)
         $ emit_goal [] xp
     where
@@ -820,7 +902,7 @@ check :: Calculation -> IO (Either [Error] [(Validity, Int)])
 check c = runEitherT $ do
         pos <- hoistEither $ obligations' empty_ctx empty_sequent c
         rs  <- lift $ forM pos $ uncurry discharge
-        let ln = filter ((/= Valid) . fst) $ zip rs [0..]
+        let ln = L.filter ((/= Valid) . fst) $ L.zip rs [0..]
         return ln
 
 dump :: String -> Map Label Sequent -> IO ()
@@ -828,7 +910,7 @@ dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
                 hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
-                hPutStrLn h (unlines $ map f $ z3_code po)
+                hPutStrLn h (L.unlines $ L.map f $ z3_code po)
                 hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ show lbl)
                 ) )
@@ -838,10 +920,10 @@ dump name pos = do
 verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos' = do
     let xs         = M.toList pos'
-        lbls       = map fst xs 
+        lbls       = L.map fst xs 
     ys <- map_failures (lbls !!) 
             $ discharge_all xs
-    rs <- forM (zip lbls ys) $ \(lbl,r) -> do
+    rs <- forM (L.zip lbls ys) $ \(lbl,r) -> do
 --    rs <- forM xs $ \(lbl, po) -> do
 --            r <- discharge po
             case r of
@@ -866,7 +948,7 @@ verify_changes m old_pos = do
                 (res,_,_) <- format_result (M.map fst all_pos)
                 return (all_pos,res, M.size new_pos)
             Left msgs -> 
-                return (old_pos,unlines $ map report msgs,0)
+                return (old_pos,L.unlines $ L.map report msgs,0)
     where
         f p0 (_,p1)
             | p0 == p1  = Nothing 
@@ -879,7 +961,7 @@ str_verify_machine m =
 --                dump (show $ _name m) pos
                 xs <- verify_all pos
                 format_result xs
-            Left msgs -> return (unlines $ map report msgs,0,0)
+            Left msgs -> return (L.unlines $ L.map report msgs,0,0)
 
 smoke_test_machine :: Machine -> IO (String)
 smoke_test_machine m =
@@ -888,17 +970,17 @@ smoke_test_machine m =
                 rs <- flip filterM (M.toList pos) $ \(lbl,po) -> do
                     r <- smoke_test lbl po
                     return $ r == Valid
-                return $ unlines $ map (show . fst) rs
-            Left msgs -> return (unlines $ map report msgs)
+                return $ L.unlines $ L.map (show . fst) rs
+            Left msgs -> return (L.unlines $ L.map report msgs)
 
 format_result :: Map Label Bool -> IO (String,Int,Int)
 format_result xs' = do
-        let rs    = map f $ M.toList xs'
-            total = length rs
-            passed = length $ filter fst rs
+        let rs    = L.map f $ M.toList xs'
+            total = L.length rs
+            passed = L.length $ L.filter fst rs
             xs = "passed " ++ (show passed) ++ " / " ++ show total
-            ys = map snd rs ++ [xs]
-        return (unlines ys, passed, total)
+            ys = L.map snd rs ++ [xs]
+        return (L.unlines ys, passed, total)
     where
         f (y,True)  = (True, "  o  " ++ show y)
         f (y,False) = (False," xxx " ++ show y)

@@ -15,6 +15,7 @@ import UnitB.AST
 
     -- Libraries
 import Control.Arrow
+import Control.Lens hiding ((<.>),indices)
 
 import Control.Monad
 import Control.Monad.IO.Class
@@ -22,7 +23,9 @@ import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.Trans.Reader (ReaderT,runReaderT)
 
-import Data.List (intercalate)
+import Data.List as L ( intercalate,null
+                      , map,unlines,lines )
+import Data.List.NonEmpty as NE
 import Data.Map as M hiding (map)
 import qualified Data.Map as M
 
@@ -49,7 +52,7 @@ produce_summaries path sys = do
             forM_ (M.elems ms) $ \m -> do
                 machine_summary sys m
                 properties_summary m
-                forM_ (toList $ events m) $ \(lbl,evt) -> do
+                forM_ (M.toList $ all_upwards m) $ \(lbl,evt) -> do
                     event_summary m lbl evt
             ) (st,path)
     where
@@ -63,7 +66,7 @@ make_file fn cmd = do
     let xs = snd $ execRWS cmd (s,False) ()
         root = format "%!TEX root=../{0}" (takeFileName path)
     liftIO $ writeFile (dropExtension path </> fn) 
-        $ unlines $ root : xs
+        $ L.unlines $ root : xs
 
 keyword :: String -> String
 keyword kw = format "\\textbf{{0}}" kw
@@ -90,7 +93,7 @@ machine_summary sys m = do
                 $ item $ input path $ constraint_file m
             item $ do
                 tell [keyword "events"]
-                block $ forM_ (keys $ events m) $ \k -> do
+                block $ forM_ (keys $ conc_events m) $ \k -> do
                     item $ input path $ event_file_name m k
             item $ kw_end
     where
@@ -100,14 +103,14 @@ prop_file_name :: Machine -> String
 prop_file_name m = "machine_" ++ show (_name m) ++ "_props" <.> "tex"
 
 indent :: Int -> String -> String
-indent n xs = intercalate "\n" $ map (margin ++) $ lines xs
+indent n xs = intercalate "\n" $ L.map (margin ++) $ L.lines xs
     where
         margin = replicate n ' '
 
 item :: M () -> M ()
 item cmd = do
     let f [] = []
-        f xs = ["  \\item " ++ intercalate "\n" (map (indent 2) xs)]
+        f xs = ["  \\item " ++ intercalate "\n" (L.map (indent 2) xs)]
     censor f cmd
 
 properties_summary :: Machine -> Doc ()
@@ -149,7 +152,7 @@ constraint_file :: Machine -> String
 constraint_file m  = "machine_" ++ show (_name m) ++ "_co" <.> "tex"
 
 getListing :: System -> M () -> String
-getListing s cmd = unlines $ snd $ execRWS cmd (expr_store s, False) ()
+getListing s cmd = L.unlines $ snd $ execRWS cmd (expr_store s, False) ()
 
 input :: FilePath -> String -> M ()
 input path fn = do
@@ -161,7 +164,7 @@ kw_end = tell ["\\textbf{end} \\\\"]
 event_file_name :: Machine -> Label -> FilePath
 event_file_name m lbl = (show (_name m) ++ "_" ++ rename lbl) <.> "tex"
     where
-        rename lbl = map f $ show lbl
+        rename lbl = L.map f $ show lbl
         f ':' = '-'
         f x   = x
 
@@ -172,7 +175,7 @@ comment_of m key = do
             Just cmt -> block $ item $ tell [format "{0}" cmt]
             Nothing -> return ()
 
-event_summary' :: Machine -> Label -> Event -> M ()
+event_summary' :: Machine -> Label -> EventMerging -> M ()
 event_summary' m lbl e = do
         index_sum lbl e
         comment_of m (DocEvent lbl)
@@ -184,7 +187,7 @@ event_summary' m lbl e = do
             item $ act_sum lbl e
             item $ kw_end
 
-event_summary :: Machine -> Label -> Event -> Doc ()
+event_summary :: Machine -> Label -> EventMerging -> Doc ()
 event_summary m lbl e = make_file fn $ 
         event_summary' m lbl e
     where
@@ -216,20 +219,20 @@ variable_sum m = section (keyword "variables") $
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = props m
-        section kw_inv $ put_all_expr_with_doc (comment_of m . DocInv) (label "") (_inv prop) 
+        section kw_inv $ put_all_expr_with_doc (comment_of m . DocInv) (label "") (M.toList $ _inv prop) 
     where
         kw_inv = "\\textbf{invariants}"
         
 invariant_thm_sum :: PropertySet -> M ()
 invariant_thm_sum prop = 
-        section kw_thm $ put_all_expr (label "") (_inv_thm prop)
+        section kw_thm $ put_all_expr (label "") (M.toList $ _inv_thm prop)
     where
         kw_thm = "\\textbf{invariants} (theorems)"
 
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (_progress prop) 
+        section kw $ put_all_expr' toString (label "") (M.toList $ _progress prop) 
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = do
@@ -239,7 +242,7 @@ liveness_sum m = do
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
-        section kw $ put_all_expr' toString (label "") (_safety prop)
+        section kw $ put_all_expr' toString (label "") (M.toList $ _safety prop)
     where
         kw = "\\textbf{safety}"
         toString (Unless _ p q exc) = do
@@ -253,20 +256,20 @@ safety_sum prop = do
 transient_sum :: Machine -> M ()
 transient_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (_transient prop) 
+        section kw $ put_all_expr' toString (label "") (M.toList $ _transient prop) 
     where
         kw = "\\textbf{transient}"
-        toString (Transient _ p evts hint) = do -- do
+        toString (Tr _ p evts hint) = do -- do
             let TrHint sub lt = hint
-                evts' = intercalate "," $ map (format "\\ref{{0}}") evts
-            sub' <- forM (toList sub) $ \(v,p) -> do
+                evts' = intercalate "," $ L.map (format "\\ref{{0}}") evts
+            sub' <- forM (M.toList sub) $ \(v,p) -> do
                 p <- get_string' $ snd p
                 return (v,p)
             let isNotIdent n (Word (Var n' _)) = n /= n'
                 isNotIdent _ _ = True
                 sub'' 
                     | M.null $ M.filterWithKey isNotIdent $ M.map snd sub = ""
-                    | otherwise  = format ": [{0}]" $ intercalate ", " $ map (uncurry $ format "{0} := {0}'~|~{1}") $ sub'
+                    | otherwise  = format ": [{0}]" $ intercalate ", " $ L.map (uncurry $ format "{0} := {0}'~|~{1}") $ sub'
                 lt' = maybe "" (format ", with \\eqref{{0}}") lt
             p <- get_string' p
             return $ format "{0} \\qquad \\text{({1}${2}${3})}" 
@@ -278,7 +281,7 @@ transient_sum m = do
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
         let prop = props m
-        section kw $ put_all_expr' toString (label "") (_constraint prop)
+        section kw $ put_all_expr' toString (label "") (M.toList $ _constraint prop)
     where
         kw = "\\textbf{safety}"
         toString (Co _ p) = do
@@ -290,8 +293,8 @@ format_formula str = do
         let sout' 
                 | sout      = "\\sout"
                 | otherwise = ""
-        return $ intercalate "\n" $ map (++ " %") $ lines $ sout' ++ "{$" ++ f str ++ "$}"
-            -- what is the point of ending the lines with '%' ?
+        return $ intercalate "\n" $ L.map (++ " %") $ L.lines $ sout' ++ "{$" ++ f str ++ "$}"
+            -- what is the point of ending the L.lines with '%' ?
     where
         f xs = concatMap g xs
         g '&' = ""
@@ -317,19 +320,19 @@ put_expr doc toString pre (lbl,e) = do
                     ref expr]
         doc lbl
 
-put_all_expr' :: (a -> M String) -> Label -> Map Label a -> M ()
+put_all_expr' :: (a -> M String) -> Label -> [(Label, a)] -> M ()
 put_all_expr' = put_all_expr_with_doc' (const $ return ())
 
-put_all_expr_with_doc' :: (Label -> M ()) -> (a -> M String) -> Label -> Map Label a -> M ()
+put_all_expr_with_doc' :: (Label -> M ()) -> (a -> M String) -> Label -> [(Label, a)] -> M ()
 put_all_expr_with_doc' doc toString pre xs
-    | M.null xs = return ()
+    | L.null xs = return ()
     | otherwise = 
-        block $ forM_ (toList xs) $ put_expr doc toString pre
+        block $ forM_ xs $ put_expr doc toString pre
 
-put_all_expr :: Label -> Map Label Expr -> M ()
+put_all_expr :: Label -> [(Label,Expr)] -> M ()
 put_all_expr = put_all_expr' get_string'
 
-put_all_expr_with_doc :: (Label -> M ()) -> Label -> Map Label Expr -> M ()
+put_all_expr_with_doc :: (Label -> M ()) -> Label -> [(Label, Expr)] -> M ()
 put_all_expr_with_doc doc = put_all_expr_with_doc' doc get_string'
 
 section :: String -> M () -> M ()
@@ -338,14 +341,14 @@ section kw cmd = do
         f xs = kw:xs
     censor f cmd
 
-index_sum :: Label -> Event -> M ()
+index_sum :: Label -> EventMerging -> M ()
 index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\textbf{event}"]
     where
         ind 
-            | M.null $ indices e = ""
-            | otherwise          = "[" ++ intercalate "," (map name $ M.elems $ indices e) ++ "]"
+            | M.null $ e^.indices = ""
+            | otherwise           = "[" ++ intercalate "," (L.map name $ M.elems $ e^.indices) ++ "]"
 
-csched_sum :: Label -> Event -> M ()
+csched_sum :: Label -> EventMerging -> M ()
 csched_sum lbl e = do
         -- unless (sch == def) $ 
         section kw $ do
@@ -355,11 +358,11 @@ csched_sum lbl e = do
             put_all_expr lbl sch
     where
         kw = "\\textbf{during}"    
-        sch = coarse $ new_sched e
-        del_sch = coarse $ deleted_sched e
+        sch = M.toList $ e^.new.coarse_sched --coarse $ new_sched e
+        del_sch = concatMap (fmap M.toList $ view $ deleted.coarse_sched) $ e^.evt_pairs.to NE.toList
         -- def = M.singleton (label "default") zfalse
 
-fsched_sum :: Label -> Event -> M ()
+fsched_sum :: Label -> EventMerging -> M ()
 fsched_sum lbl e = section kw $ do
         when show_removals $
             local (second $ const True)
@@ -367,31 +370,31 @@ fsched_sum lbl e = section kw $ do
         put_all_expr lbl xs
     where
         kw = "\\textbf{upon}"
-        xs = fine $ new_sched e
-        del_sch = fine $ deleted_sched e
+        xs = e^.new' fine_sched -- fine $ new_sched e
+        del_sch = concatMap (fmap M.toList $ view $ deleted.fine_sched) $ e^.evt_pairs.to NE.toList -- fine $ deleted_sched e
 
-param_sum :: Event -> M ()
+param_sum :: EventMerging -> M ()
 param_sum e
-    | M.null $ params e  = return ()
-    | otherwise          = do
+    | M.null $ e^.params  = return ()
+    | otherwise           = do
         tell ["\\textbf{any} " 
-            ++ intercalate "," (map name $ M.elems $ params e)]
+            ++ intercalate "," (L.map name $ M.elems $ e^.params)]
 
-guard_sum :: Label -> Event -> M ()
+guard_sum :: Label -> EventMerging -> M ()
 guard_sum lbl e = section kw $ do
         when show_removals $
             local (second $ const True)
-                $ put_all_expr lbl $ deleted_guard e
-        put_all_expr lbl $ new_guard e
+                $ put_all_expr lbl $ e^.deleted' guards -- deleted_guard e
+        put_all_expr lbl $ e^.new' guards -- new_guard e
     where
         kw = "\\textbf{when}"
 
-act_sum :: Label -> Event -> M ()
+act_sum :: Label -> EventMerging -> M ()
 act_sum lbl e = section kw $ do
         when show_removals $
             local (second $ const True)
-                $ put_all_expr' put_assign lbl $ del_acts e
-        put_all_expr' put_assign lbl $ actions e
+                $ put_all_expr' put_assign lbl $ e^.deleted' actions -- del_acts e
+        put_all_expr' put_assign lbl $ M.toList $ e^.actions
     where 
         kw = "\\textbf{begin}"
         put_assign (Assign v e) = do
@@ -399,7 +402,7 @@ act_sum lbl e = section kw $ do
             return $ format "{0} \\bcmeq {1}" (name v) xs
         put_assign (BcmSuchThat vs e) = do
             xs <- get_string' e
-            return $ format "{0} \\bcmsuch {1}" (intercalate "," $ map name vs) xs
+            return $ format "{0} \\bcmsuch {1}" (intercalate "," $ L.map name vs) xs
         put_assign (BcmIn v e) = do
             xs <- get_string' e
             return $ format "{0} \\bcmin {1}" (name v) xs

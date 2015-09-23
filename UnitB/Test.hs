@@ -52,7 +52,7 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (liftM (Assign x_decl) (x `mzplus` mzint 2))
         s1     <- with_li li (liftM (Assign y_decl) (y `mzplus` mzint 1))
-        let tr0 = Transient empty tr ["evt"] empty_hint
+        let tr0 = Tr empty tr ["evt"] empty_hint
             co0 = Co [] co
             ps = empty_property_set {
                 _transient = 
@@ -63,13 +63,14 @@ example0 = do
                         ("CO0", co0)],
                 _inv = fromList [("J0", inv0)] }
             evt = empty_event
-                    { new_sched = empty_schedule { coarse = singleton "sch0" csched }
-                    , actions = fromList [
+                    { _coarse_sched = singleton "sch0" csched
+                    , _actions = fromList [
                         ("S0", s0),
                         ("S1", s1) ] }
-            m = (empty_machine "m0") 
-                { variables = fromList $ map as_pair [x_decl,y_decl]
-                , events = singleton "evt" evt
+            vs = fromList $ map as_pair [x_decl,y_decl]
+            m  = (empty_machine "m0") 
+                { variables = vs
+                , events = new_event_set vs $ singleton "evt" evt
                 , inits = fromList 
                     [ ("init0", init0)
                     , ("init1", init1) ]
@@ -91,17 +92,18 @@ train_m0 = do
         let inv = fromList [("J0",inv0)]
             enter = ("enter", empty_event)
             leave = ("leave", empty_event 
-                    {   indices = symbol_table [t_decl]
-                    ,   new_sched = empty_schedule { coarse = singleton "C0" c0 }
-                    ,   actions   = fromList [("A0", a0)]
+                    {   _indices = symbol_table [t_decl]
+                    ,   _coarse_sched = singleton "C0" c0
+                    ,   _actions   = fromList [("A0", a0)]
                     })
         tr <- with_li li (st `select` t)
-        let props = fromList [("TR0", Transient (symbol_table [t_decl]) tr ["leave"] empty_hint)] 
+        let props = fromList [("TR0", Tr (symbol_table [t_decl]) tr ["leave"] empty_hint)] 
             ps    = empty_property_set { _transient = props, _inv = inv }
+            vs    = fromList $ map as_pair [st_decl]
             m     = (empty_machine "train_m0") 
                         { props = ps
-                        , variables = fromList $ map as_pair [st_decl]
-                        , events = fromList [enter, leave] }
+                        , variables = vs
+                        , events = new_event_set vs $ fromList [enter, leave] }
         return m
 
 result_example0 :: String

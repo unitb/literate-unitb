@@ -1,0 +1,161 @@
+Proof of Splitting and Merging
+
+Splitting
+
+Splitting fine schedules
+
+prove
+  G (G •c ∧ G F;•f0 ⇒ F;f0;A;true)
+
+from
+(0)  G (G •c ∧ G F;•f1 ⇒ F;f1;A;true)
+(1)  G (G •c ∧ G F;•f2 ⇒ F;f2;A;true)
+
+f0 ↦ f1 ∨ f2
+(2)	G (•(f0∧c) ⇒ F;•(f1∨f2))
+(3) [ f1∨f2 ⇒ f0 ]
+
+  G •c ∧ G F;•f0
+=	{ persistence rule }
+  G •c ∧ G F;•(c∧f0)
+⇒	{ (2) }
+  G •c ∧ G F;•(f1∨f2)
+=	{ (?) }
+  G •c ∧ (G F;•f1 ∨ G F;•f2)
+⇒	{ (0) and (1) }
+  F;f1;A;true ∨ F;f2;A;true
+=	{ ; over ∨ }
+  F;(f1∨f2);A;true
+⇒	{ (3) }
+  F;f0;A;true
+
+QED
+
+Splitting coarse schedules
+
+prove
+  G (G •c0 ⇒ F;A;true)
+
+from
+  (0) G (G •c1 ⇒ F;A;true)
+  (1) G (G •c2 ⇒ F;A;true)
+  (2) G (•c0 ⇒ F;•(c1∨c2))
+  (3) G (•c1 ⇒ (•c1) K (¬•c0))
+  (4) G (•c2 ⇒ (•c2) K (¬•c0))
+      sKt = (νx :: (X;x ∧ s) ∨ t)
+  (X) sKt ⇒ G s ∨ F;t
+
+    G •c0
+  =   { (2) }
+    G •c0 ∧ G F;•(c1∨c2)
+  ⇒   { G is strengthening }
+    G •c0 ∧ F;•(c1∨c2)
+  ⇒   { (3),(4) with (X) }
+    G •c0 ∧ (F;G•c1 ∨ F;G•c2 ∨ F;¬•c0)
+  =   { ¬ over G }
+    G •c0 ∧ (F;G•c1 ∨ F;G•c2 ∨ ¬G •c0)
+  ⇒   { predicate calculus }
+    F;G•c1 ∨ F;G•c2
+QED
+
+Proof of (X)
+  (X) sKt ⇒ G s ∨ F;t
+
+    sKt = (νx :: (X;x ∧ s) ∨ t)
+    Gs = (νx:: (X;x ∨ 1) ∧ s)
+    g.x = X;x ∧ s
+    h.x = (X;x ∧ s) ∨ t
+    f.x = A ∨ x
+    A = (μx:: (X;x ∧ s) ∨ t)
+    A = (X;A ∧ s) ∨ t
+    sKt = Gs ∨ (μx:: (X;x ∧ s) ∨ t)
+
+By fixpoint fusion
+
+    f.(g.x) = h.(f.x)
+
+    A ∨ (X;x ∧ s) = (X;(A∨x) ∧ s) ∨ t
+
+      (X;(A∨x) ∧ s) ∨ t
+    =   { ; over ∨ }
+      ((X;A ∨ X;x) ∧ s) ∨ t
+    =   { predicate calculus }
+      (X;A ∧ s) ∨ (X;x ∧ s) ∨ t
+    =   { folding }
+      A ∨ (X;x ∧ s)
+
+    A ∨ (νx:: (X;x ∧ s)) ⇒ F;t ∨ G s
+QED
+
+(Y) G (F;s ⇒ F;t) = G (s ⇒ F;t)
+Proof
+
+Splitting coarse schedules in presence of fine schedules
+
+prove
+  G (G •(c ∧ c0) ∧ G F;•f0 ⇒ F;f0;A;true)
+
+from
+  (0) G (G •(c ∧ c1) ∧ G F;•f1 ⇒ F;f1;A;true)
+  (1) G (G •(c ∧ c2) ∧ G F;•f2 ⇒ F;f2;A;true)
+
+  (2) [ f1∨f2 ⇒ f0 ]
+  (3) G (•c1 ⇒ (•c1) K (¬•c0))
+  (4) G (•c2 ⇒ (•c2) K (¬•c0))
+  (5) G (•c0 ∧ •c ∧ •f0 ⇒ F;•((c1∧f1) ∨ (c2∧f2)))
+
+    G •(c∧c0) ∧ G F;•f0
+  =   { persistence }
+    G •(c∧c0) ∧ G F;•(c∧c0∧f0)
+  ⇒   { (5) }
+    G •(c∧c0) ∧ G F;•((c1∧f1)∨(c2∧f2))
+  =   { (3),(4) with (X) }
+    G •(c∧c0) ∧ (F;¬•c0 ∨ F;(G •c1) ∨ F;(G •c2)) ∧ G F;•f0
+  =   { complement of G •c0 }
+    G •(c∧c0) ∧ (F;(G •c1) ∨ F;(G •c2)) ∧ G F;•f0
+  =   { ∧ over ∨ ; heading for c∧c0∧c1∧f0 and c∧c0∧c2∧f0 }
+      (G •(c∧c0) ∧ F;(G •c1) ∧ G F;•f0) 
+    ∨ (G •(c∧c0) ∧ F;(G •c2) ∧ G F;•f0)
+  =   
+    F;(G •c1 ∧ G F;•f1) ∨ F;(G •c2 ∧ G F;•f2)
+
+
+
+Merging
+
+prove
+    G (G •c ∧ G F;•f1 ⇒ F;f1;A;true)
+    G (G •c ∧ G F;•f2 ⇒ F;f2;A;true)
+
+from
+  (1) G (G •c ∧ G F;•f0 ⇒ F;f0;A;true)
+  (2)	G (•(c∧(f1∨f2)) ⇒ F;•f0)
+  (3) [ f0 ⇒ f1∧f2 ]
+  			      ---
+
+  G •c ∧ G F;•f1
+=	  { persistence rule }
+  G •c ∧ G F;•(c∧f1)
+⇒	  { (2) }
+  G •c ∧ G F;•f0
+⇒ 	{ (1) }
+  F;f0;A;true
+⇒	  { (3) }
+  F;f1;A;true
+
+the other proof is identical
+
+QED
+
+prove
+    G (G •c1 ⇒ F;A)
+    G (G •c2 ⇒ F;A)
+
+from
+(1) G (G •c0 ⇒ F;A;true)
+(2) G (_ ⇒ F;•c0)
+
+  G (G •c1 ⇒ F;A) ∧ G (G •c2 ⇒ F;A)
+=   { G is conjunctive }
+  G (G •c1 ∨ G •c2 ⇒ F;A)
+  G (G •c0 ⇒ F;A)

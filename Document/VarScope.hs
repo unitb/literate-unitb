@@ -20,7 +20,6 @@ import UnitB.AST
     -- Libraries
 import Control.Applicative
 import Control.Monad.Identity
-import Control.Monad.RWS
 import Control.Lens
 
 import Data.List.Ordered as L
@@ -44,9 +43,13 @@ import Utilities.TH
 -- apply2 f (VarScope x) (VarScope y) = fmap VarScope <$> (f x <$> cast y)
 
 class (Typeable a,Scope a) => IsVarScope a where
-    processDecl :: [(String,a)] -> RWS () [Error] MachineP2 ()
+    toOldEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
+    toNewEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
+    toThyDecl :: String -> a -> [Either Error TheoryP2Field]
+    toMchDecl :: String -> a -> [Either Error (MachineP2'Field b c)]
 
 data VarScope = forall a. IsVarScope a => VarScope a
+    deriving (Typeable)
 
 data VarGroup = forall v. IsVarScope v => VarGroup [(String,v)]
 
@@ -60,6 +63,12 @@ instance Scope VarScope where
     merge_scopes = fmap (runIdentity . fromJust) . apply2VarScope (fmap Identity . merge_scopes)
     error_item = readVarScope error_item
     rename_events m = applyVarScope (rename_events m)
+
+instance IsVarScope VarScope where
+    toOldEventDecl s (VarScope v) = toOldEventDecl s v
+    toNewEventDecl s (VarScope v) = toNewEventDecl s v
+    toThyDecl s (VarScope v) = toThyDecl s v
+    toMchDecl s (VarScope v) = toMchDecl s v
 
 data TheoryConst = TheoryConst 
         { thCons :: Var

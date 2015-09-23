@@ -90,9 +90,28 @@ next:
         * ~~commit~~
 
         * Event splitting
+        * Encapsulate System phase information
+        * LatexNode = ... | Text [LatexToken]
+            * remove the list
         * Do split events exist?
         * split event in liveness graph
         * commit
+
+        * Lamport's structured proof format for liveness reasoning
+
+        * bug: the summary of machines without variables or events crashes
+        * In summary, put initialization
+        * add sets and axioms to summaries
+        * incremental feasibility
+        * relations
+        * In parameter declaration, forbid primes
+        * allow referring to parameters in schedules
+        * allow nested types: x +-> (y +-> z)
+
+        * Event labels as command: \evt3{m1:grd3}
+
+        * replace _ unless _ except _ with Singh's version with a variant
+            * nope: except is still needed
 
         * In the expression declaration classes, add methods for every field of the phase objects
         * Convert Proof.ProofTree to the POGenerator monad

@@ -24,8 +24,8 @@
 \maketitle
 \tableofcontents
 
-\input{main8/machine_m1}
-\input{main8/machine_m2}
+% \input{main8/machine_m1}
+% \input{main8/machine_m2}
 \newcommand{\stmt}[1]{ $#1$ }
 % \newcommand{\comment}[2]{ 
 % 	% \begin{tabular}{|l|l|} 
@@ -107,40 +107,72 @@
 \[ \indices{resp:pop:left}{r : \Req} \]
 \[ \indices{resp:push:right}{r : \Req} \]
 \[ \indices{resp:push:left}{r : \Req} \]
-\refine{m0:p0}{ensure}{resp:push:left}{ \index{r}{r' = r} }
 \begin{align}
-	\cschedule{resp:push:left}{m0:sch0}{ r \in \dom.psL }
+	\refine{m0:p0}{ensure}{resp:push:left}{ \index{r}{r' = r} }
+	\cschedule{resp:push:left}{m0:sch0}{ r \in \dom.psL } \\
 	\evbcmeq{resp:push:left}{m0:act0}{psL}{ \{r\} \domsub psL }
 \end{align}
 \removecoarse{resp:push:left}{default}
-\refine{m0:p2}{ensure}{resp:pop:left}{ \index{r}{r' = r} }
 \begin{align}
-	\cschedule{resp:pop:left}{m0:sch0}{ r \in ppL }
+	\refine{m0:p2}{ensure}{resp:pop:left}{ \index{r}{r' = r} }
+	\cschedule{resp:pop:left}{m0:sch0}{ r \in ppL } \\
 	\evbcmeq{resp:pop:left}{m0:act0}{ppL}{ ppL \setminus \{ r \} }
 \end{align}
 \removecoarse{resp:pop:left}{default}
-\refine{m0:p1}{ensure}{resp:push:right}{ \index{r}{r' = r} }
 \begin{align}
-	\cschedule{resp:push:right}{m0:sch0}{ r \in \dom.psR }
+	\refine{m0:p1}{ensure}{resp:push:right}{ \index{r}{r' = r} }
+	\cschedule{resp:push:right}{m0:sch0}{ r \in \dom.psR } \\
 	\evbcmeq{resp:push:right}{m0:act0}{psR}{ \{r\} \domsub psR }
 \end{align}
 \removecoarse{resp:push:right}{default}
-\refine{m0:p3}{ensure}{resp:pop:right}{ \index{r}{r' = r} }
 \begin{align}
-	\cschedule{resp:pop:right}{m0:sch0}{ r \in ppR }
+	\refine{m0:p3}{ensure}{resp:pop:right}{ \index{r}{r' = r} }
+	\cschedule{resp:pop:right}{m0:sch0}{ r \in ppR } \\
 	\evbcmeq{resp:pop:right}{m0:act0}{ppR}{ ppR \setminus \{ r \} }
 \end{align}
 \removecoarse{resp:pop:right}{default}
 \end{machine}
-\section{First Refinement}
+\section{First Refinement --- Sequence of Values}
+\input{main8/machine_m1}
 \begin{machine}{m1}
 	\refines{m0}
-	\splitevent{resp:pop:right}{resp:pop:right:empty,resp:pop:right}
-	\splitevent{resp:pop:left}{resp:pop:left:empty,resp:pop:left}
+	\with{intervals}
+\splitevent{resp:pop:right}{resp:pop:right:empty,resp:pop:right}
+\splitevent{resp:pop:left}{resp:pop:left:empty,resp:pop:left}
 	\[ \variable{p,q : \Int} \]
 	\[ \variable{qe : \Int \pfun \G} \]
 	\[ \variable{emp : \Bool } \]
-	% \[ \variable{ r : \G } ]
+	\[ \variable{ res : \G } \]
+\begin{align}
+	\invariant{m1:inv0}{ qe \in \intervalR{p}{q} \tfun \G } \\
+	\invariant{m1:inv1}{ p \le q } \\
+	\initialization{m1:init0}{ qe = \emptyfun } \\
+	\initialization{m1:init1}{ p = 0 \land q = 0 } \\
+	\evbcmeq{resp:push:right}{m1:act0}{q}{q+1} \\
+	\evguard{resp:push:right}{m1:grd0}{ r \in \dom.psR } \\
+	\evbcmeq{resp:push:right}{m1:act1}{qe}{ qe \1| q \fun psR.r } \\
+	\evbcmeq{resp:pop:right}{m1:act0}{q}{q-1} \\
+	\evguard{resp:pop:right}{m1:grd0}{\neg p = q} \\
+	\fschedule{resp:pop:right}{m1:sch0}{\neg p = q} \\
+	\evbcmeq{resp:pop:right}{m1:act1}{qe}{ \{ q\0-1 \} \domsub qe } \\
+	\evbcmeq{resp:pop:right}{m1:act2}{emp}{ \false } \\
+	\evbcmeq{resp:pop:right}{m1:act3}{res}{ qe.(q\0-1) } \\
+	\fschedule{resp:pop:right:empty}{m1:sch0}{ p = q } \\
+	\evguard{resp:pop:right:empty}{m1:grd0}{ p = q } \\
+	\evbcmeq{resp:pop:right:empty}{m1:act2}{emp}{ \true } \\
+	\evbcmeq{resp:push:left}{m1:act0}{p}{p-1} \\
+	\evguard{resp:push:left}{m1:grd0}{ r \in \dom.psL } \\
+	\evbcmeq{resp:push:left}{m1:act1}{qe}{qe \1| p\0-1 \fun psL.r} \\
+	\evbcmeq{resp:pop:left}{m1:act0}{p}{p+1} \\
+	\evguard{resp:pop:left}{m1:grd0}{\neg p = q} \\
+	\fschedule{resp:pop:left}{m1:sch0}{\neg p = q} \\
+	\evbcmeq{resp:pop:left}{m1:act1}{qe}{ \{ p \} \domsub qe } \\
+	\evbcmeq{resp:pop:left}{m1:act2}{emp}{ \false } \\
+	\evbcmeq{resp:pop:left}{m1:act3}{res}{ qe.p } \\
+	\fschedule{resp:pop:left:empty}{m1:sch0}{ p = q } \\
+	\evguard{resp:pop:left:empty}{m1:grd0}{ p = q } \\
+	\evbcmeq{resp:pop:left:empty}{m1:act2}{emp}{ \true } 
+\end{align}
 \end{machine}
 \begin{machine}{m2}
 	\refines{m1}

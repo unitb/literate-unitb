@@ -1,0 +1,720 @@
+(C0)		[ p  ⇒  G •p ]
+
+		   [ p  ⇒  G •p ]
+		⇐	{ Induction }
+		   [ p  ⇒  (X;p ∨ 1) ∧ •p ]
+		⇐	{ strengthening }
+		   [ p  ⇒  1 ∧ •p ]
+		=	{ state restriction }
+		   [ p ⇒ p ]
+		=	{ reflexivity }
+		   true
+
+(C1)		[ G •p  ≡  p ; (G •p) ]
+
+		   G p;true
+		=	{ G is strengthening }
+		   G p;true  ∧  p;true
+		=	{ State restriction }
+		   p ; (G p;true)
+
+(C2)		[ *s ; ∞s  ≡  ∞s ]
+
+ping (⇒)
+		   [ *s ; ∞s  ⇒  ∞s ]
+		=	{ Fix point }
+		   [ *s ; ∞s  ⇒〈ν x :: s ; x〉]
+		⇐	{ Induction }
+		   [ *s ; ∞s  ⇒  s ; *s ; ∞s ]
+
+		   s ; *s ; ∞s
+		=	{ rolling }
+		   *s ; s ; ∞s
+		=	{ folding }
+		   *s ; ∞s
+
+pong (⇐)
+		   *s ; ∞s
+		⇐	{ [ 1 ⇒ *s ] }
+		   1 ; ∞s
+		=	{ Identity }
+		   ∞s
+
+(C3)		[ (G •p) ; s   ≡   ∞(p;X)  ∨  *(p;X) ; p ; s ]
+
+	   (G •p) ; s
+	=	{ Fix point formulation }
+	 〈νx::  (X;x ∨ 1) ∧ •p〉;  s			
+	=	{ state restriction }
+	 〈νx::  p ; X ; x  ∨  p〉;  s			
+	=	{ Tail recursion (32) }
+	   ∞(p;X) ; s  ∨  *(p;X) ; p ; s
+	=	{ (10.ii) using (29) }
+	   ∞(p;X)  ∨  *(p;X) ; p ; s
+
+(C4)		[ (G •p) ; s    ≡  〈ν x :: p ; X ; x  ∨  p ; s〉]
+
+	   (G •p) ; s
+	=	{ (C3) }
+	   ∞(p;X)  ∨  *(p;X) ; p ; s
+	=	{ tail recursion }
+	 〈ν x :: p ; X ; x  ∨  p ; s〉 
+
+(C5)		[ G •p  ≡  (G •p) ; S ; (G •p) ]
+
+		   (G •p) ; S ; (G •p)
+		=	{ (C3) twice }
+		   ∞(p;X)  ∨  *(p;X) ; p ; S ; *(p;X) ; p  ∨  *(p;X) ; p ; S ; ∞(p;X)
+		=	{ (0) and (1) }
+		   ∞(p;X)  ∨  *(p;X);p
+		=	{ (C3) }
+		   G •p
+
+	(0)	   [ *(p;X) ; p ; S ; *(p;X) ; p   ≡   *(p;X) ; p ]
+
+		   *(p;X) ; p ; S ; *(p;X) ; p
+		=	{ S = X ∨ 1 }
+		   *(p;X) ; p ; *(p;X) ; p  ∨  *(p;X) ; p ; X ; *(p;X) ; p
+		=	{ Rolling and state restriction }
+		   *(p;X) ; *(p;X) ; p  ∨  *(p;X) ; *(p;X) ; p ; X ; p
+		=	{ Kleene algebra: *x ; *x = *x }
+		   *(p;X) ; p  ∨  *(p;X) ; p ; X ; p
+		=	{ Kleene algebra: *x = *x ∨ *x;x }
+		   *(p;X) ; p
+
+	(1)	[ *(p;X) ; p ; S ; ∞(p;X)   ≡   ∞(p;X) ]
+		
+		   *(p;X) ; p ; S ; ∞(p;X)
+		=	{ S = X ∨ 1 }
+		   *(p;X) ; p ; ∞(p;X)  ∨  *(p;X) ; p ; X ; ∞(p;X)
+		=	{ Rolling and folding }
+		   *(p;X) ; p ; p ; ∞(X;p)  ∨  *(p;X) ; ∞(p;X)
+		=	{ State restriction and rolling }
+		   *(p;X) ; ∞(p;X)
+		=	{ (C2) }
+		   ∞(p;X)
+
+(C6)		[ *(p;X) ∧ *(q;X)  ≡  *( (p∧q);X ) ; *(p;X)  ∨  *( (p∧q);X ) ; *(q;X) ]
+(C7)		[ *(p;X) ∧ ∞(q;X)  ≡  *( (p∧q);X ) ; ∞(q;X) ]
+	(* unused *)
+
+(C8)		[ u  ⇒  G s ]  ≡  [ u  ⇒  s ]
+	with u persistent 
+
+Mutual implication
+
+Ping:
+		   [ u  ⇒  G s ]
+		=	{ Fix point formulation }
+		   [ u  ⇒〈ν x :: (X;x ∨ 1) ∧ s〉]
+		⇐	{ Induction }
+		   [ u  ⇒  (X;u ∨ 1) ∧ s ]
+		=	{ Persistence rule (C9) }
+		   [ u  ⇒  (X;true ∨ 1) ∧ s ]
+		=	{ [ X;true ≢ 1 ] }
+		   [ u  ⇒  s ]
+
+Pong:
+		   [ u ⇒ G s ]
+		⇒	{ G is strengthening }
+		   [ u ⇒ s ]
+
+Alternative:
+
+		   [ u  ⇒  G s ]
+		=	{ u is persistent }
+		   [ G u  ⇒  G s ]
+		⇐	{ monotonicity }
+	(*)	   [ u ⇒ s ]
+		⇐	{ G is strengthening }
+		   [ u ⇒ G s ]
+
+(C9)			new persistence rule
+		[ u  ⇒  ( s ; t  ≡  s ; (t ∧ u) ) ]
+
+		   [ u  ⇒  ( s ; t  ≡  s ; (t ∧ u) ) ]
+		=	{ Predicate calculus }
+		   [ u  ⇒  ( s ; t  ⇒  s ; (t ∧ u) ) ] ∧ [ u  ⇒  ( s ; (t ∧ u)  ⇒  s ; t ) ]
+		=	{ Shunting ; monotonicity of ; }
+		   [ u  ∧ s ; t  ⇒  s ; (t ∧ u) ) ] ∧ [ u  ⇒  true ]
+		=	{ Persistence rule (48) ; predicate calculus }
+		   true
+
+(C10)		∞(F;A) is persistent
+		for [ A ⇒ X ]
+
+We use (50) of Computation Calculus
+
+proof:
+
+		   ∞(F;A)
+		=	{ unfolding }
+		   F ; A ; ∞(F;A)
+		=	{ unfolding }
+		   X ; F ; A ; ∞(F;A)  ∨  A ; ∞(F;A)
+		=	{ folding }
+		   X ; ∞(F;A)  ∨  A ; ∞(F;A)
+		=	{ [ A ⇒ X ] }
+		   X ; ∞(F;A)
+
+(C11)		[ S;false  ≡  false ]
+				for [ S ⇒ F ]
+		   S;false
+		=	{ (10) }
+		   S ∧ E
+		⇒	{ [ S ⇒ F ] }
+		   F ∧ E
+		=	{ (9) }
+		   false 
+
+(C12)		[ 〈∀ i:: F ; (G s.i)〉≡  F ;〈∀ i:: (G s.i)〉]
+	
+	 〈∀ i:: P.i〉∧  Q
+	⇒	{ predicate calculus }
+	 〈∀ i:: P.i ∧ Q〉
+	 
+ping ⇒
+
+We calculate with the negation of the implication and transform it into false
+
+		 〈∀ i:: F ; (G s.i)〉∧  ¬(F ;〈∀ i:: (G s.i)〉)
+		=	{ duals }
+		 〈∀ i:: F ; (G s.i)〉∧  G〈∃ i:: ¬(G s.i)〉
+		⇒	{ weaker form of ∧ over ∀ }
+		 〈∀ i:: F ; (G s.i)  ∧  G〈∃ j:: ¬(G s.j)〉〉
+		⇒	{ substitution }
+		 〈∀ i:: F ; ( (G s.i)  ∧〈∃ j:: ¬(G s.j)〉)〉
+		=	{ ∧ over ∃ }
+		 〈∀ i:: F  ;〈∃ j:: (G s.i)  ∧  ¬(G s.j)〉〉
+		=	{ predicate calculus }
+		 〈∀ i:: F  ;  false〉
+		=	{ (10.i) and (9) }
+		   false
+
+pong ⇐
+
+		   F ;〈∀ i:: (G s.i)〉
+		⇒	{ empty quantification }
+		 〈∀ j::  F ;〈∀ i:: (G s.i)〉〉
+		⇒	{ instantiation with i := j }
+		 〈∀ j:: F;(G s.j)〉
+
+(C13b)		[ F ; (G F;s) ≡ G F;s ]
+
+	  [ F ; (G F;s) ⇒ G F;s ] 
+	=	{ fixpoint formulation }
+	  [ F ; (G F;s) ⇒ (νx:: (X;x ∨ 1) ∧ F;s) ]
+	⇐	{ fixpoint induction }
+	  [ F ; (G F;s) ⇒ (X;F;(G F;s) ∨ 1) ∧ F;s ]
+	=	{ [ F ; (G F;s) ⇒ F;s ] }
+	  [ F ; (G F;s) ⇒ X;F;(G F;s) ∨ 1 ]
+	=	{ trading }
+	  [ F ; (G F;s) ∧ ¬1 ⇒ X;F;(G F;s) ]
+    =   { F = *X then unfolding; [ ¬1 ≡ X;true ] }
+      [ (X;F;(G F;s) ∨ G F;s) ∧ X;true ⇒ X;F;(G F;s) ]
+    ⇐	{ predicate calculus }
+      [ X;F;(G F;s) ∨ (G F;s ∧ X;true) ⇒ X;F;(G F;s) ]
+    ⇐	{ persistence rule }
+      [ X;F;(G F;s) ∨ X;(G F;s) ⇒ X;F;(G F;s) ]
+    =	{ [ 1 ⇒ F ] }
+      true
+
+(C13)		[ F ; (G F;A;true)  ≡  G F;A;true ]
+	with A atomic
+
+Note: it is quite useful to use with a formulation like G (F;a ⇒ G F;b) in order to use monotonicity to get rid of F;_ on the left. However, using G (F;a ⇒ F;b) instead as a formulation of fairness removes the necessity for us to invent a F;_ on the right in order to remove it with monotonicity.
+
+We use (C10) and (51) from RM Dijkstra's Computation Calculus to prove
+
+	(0)		∞(F;A)  =  G F;A;true
+
+		   F ; (G F;A;true)
+		=	{ (0) }
+		   F ; ∞(F;A)
+		=	{ rolling }
+		   F ; F ; ∞(A;F)
+		=	{ F = F;F }
+		   F ; ∞(A;F)
+		=	{ rolling }
+		   ∞(F;A)
+		=	{ (0) }
+		   G F;A;true
+
+(C14)		[ *(s;t);s  ≡  s;*(t;s) ]
+
+		  *(s;t);s
+		=	{ tail recursion }
+		〈μx:: s;t;x ∨ s〉
+		=	{ ; over ∨ }
+		〈μx:: s;(t;x ∨ 1)〉
+		=	{ fixpoint rolling with 
+			  f.x = s;x and g.x = t;x ∨ 1 }
+		  s  ;〈μx:: t;s;x ∨ 1〉
+		=	{ fixpoint formulation of *_ }
+		  s ; *(t;s)
+
+(C15) proof of tail recursion
+
+		  *x ; y
+		=	{ fixpoint formulation }
+		〈μz:: x;z ∨ 1〉;  y
+		=	{ fusion with f.z = z ; y and g.z = x;z ∨ 1 }
+
+			•	  f.(g.z)
+				=	{ defs }
+				   (x;z ∨ 1) ; y
+				=	{ ; over ∨ }
+				   x;z;y ∨ y
+				=	{ def of f }
+				   x ; (f.z) ∨ y
+				=	{ h.z = x;z ∨ y }
+				   h.(f.z)
+
+		•〈μz:: x;z ∨ y〉
+
+	second part by fixpoint fusion
+
+		 〈νx:: s;x ∨ t〉=  *s;t  ∨〈νx:: s;x〉
+
+		f.x  =  *s;t ∨ x
+			(universally conjunctive)
+		g.x  =  s;x
+
+		   f.(g.x)
+		=	{ definitions }
+		   *s;t ∨ s;x
+		=	{ unfold *_ (C18) }
+		   s;*s;t ∨ s;x ∨ t
+		=	{ ; over ∨ }
+		   s ; (*s;t ∨ x)  ∨  t
+		=	{ definition of f }
+		   s ; f.x  ∨  t
+		=	{ h.x = s;x ∨ t }
+		   h.(f.x)
+		
+
+(C16)	[ G (x ⇒ y)  ⇒  G (f.x ⇒ f.y) ]
+
+	f is a substitutable function:
+	(0)		[ G x  ⇒  (f.y  ≡  f.(y ∧ G x)) ]
+	f is monotonic
+	(1)		[ x ⇒ y ]  ⇒  [ f.x ⇒ f.y ]
+
+			   [ G (x ⇒ y)  ⇒  G (f.x ⇒ f.y) ]
+			=	{ G is an interior }
+			   [ G (x ⇒ y)  ⇒  (f.x  ⇒  f.y) ]
+			=	{ shunting }
+			   [ G (x ⇒ y) ∧ f.x   ⇒   f.y ]
+
+			   G (x ⇒ y) ∧ f.x
+			⇒	{ (0) }
+			   f.( x ∧ (x ⇒ y) )
+			=	{ absorption }
+			   f.( x ∧ y )
+			⇒	{ (1) with [ x ∧ y ⇒ y ] }
+			   f.y
+
+	(2)		[ G x=y  ⇒  G (f.x = f.y) ]
+	
+			  G (f.x = f.y) ∧ G x=y
+			=	{ (0) f.(x,y) := f.x = f.y }
+			  
+	
+	proof of (0)
+	
+			  G ( f.y  ≡  f.(y ∧ Gx) )
+			⇐	{ (2) }
+			  G ( y  ≡  y ∧ Gx )
+			=	{ predicate calculus }
+			  G ( y ⇒ Gx )
+			⇐	{ strengthening }
+			  G Gx
+			=	{ G is idempotent }
+			  G x
+	
+	
+
+(C17)	[ s ; ∞(t;s)  ≡   ∞(s;t) ]
+
+		   s ; ∞(t;s)
+		=	{ fixpoint formulation }
+		   s  ;〈νx:: t;s;x〉
+		=	{ rolling with f.x = s;x and g.x = t.x }
+		 〈νx:: s;t;x〉
+		=	{ fixpoint formulation }
+		   ∞(s;t)
+
+(C18)	[ s ; *s ∨ 1  ≡  *s ]
+	"folding" for iteration
+
+		   s ; *s ∨ 1
+		=	{ fixpoint formulation }
+		   s  ;〈μx::  s;x ∨ 1〉∨  1
+		=	{ folding with f.x = s;x ∨ 1 }
+		 〈μx::  s;x ∨ 1〉
+		=	{ iteration }
+		   *s
+
+(C19)	[ s ; ∞s  ≡  ∞s ]
+	Just apply folding to the fixpoint formulation
+
+(C20)	[ (G •p) ; p   ≡  G •p ]
+
+		   (G •p) ; p
+		=	{ (C3) }
+		   ∞(p;X)  ∨  *(p;X) ; p ; p
+		=	{ state predicates }
+		   ∞(p;X)  ∨  *(p;X) ; p
+		=	{ (C3) }
+		   G •p
+
+(C21)	[ *(x∨y)  ≡  *x;*(y;*x) ]
+
+		   *(x∨y)
+		=	{ fixpoint }
+		 〈μz:: (x∨y) ; z ∨ 1〉
+		=	{ diagonalization }
+		 〈μz::〈μw:: x;w ∨ y;z ∨ 1〉〉
+		=	{ tail recursion }
+		 〈μz::  *x ; (y;z ∨ 1)〉
+		=	{ fixpoint rolling with f.a =  *x ;  a 
+				g.a  =  y;a ∨ 1 }
+		   *x  ;〈μz::  y;*x;z ∨ 1〉
+		=	{ iteration }
+		   *x ; *(y ; *x)
+
+(C22)	[ ∞(x∨y)  ≡  *(*y;x);∞y ∨ ∞(*y;x) ]
+
+		   ∞(x∨y)
+		=	{ fixpoint }
+		 〈νz:: (x∨y);z〉
+		=	{ diagonalization }
+		 〈νz::〈νw::  x;z ∨ y;w〉〉
+		=	{ tail recursion }
+		 〈νz::  ∞y ∨ *y;x;z〉
+		=	{ tail recursion }
+		   *(*y;x);∞y ∨ ∞(*y;x)
+
+(C23)	¬(A;true)  =  ¬A;true ∨ 1
+	for atomic A
+
+ping ⇒
+
+		   [ ¬(A;true)  ⇒  ¬A;true ∨ 1 ]
+		=	{ shunting }
+		   [ ¬(A;true) ∧ ¬(¬A;true)  ⇒  1 ]
+		=	{ ¬ over ∨ }
+		   [ ¬(A;true ∨ ¬A;true)  ⇒  1 ]
+		=	{ ; over ∨ }
+		   [ ¬( (A ∨ ¬A);true )  ⇒  1 ]
+		=	{ excluded middle }
+		   [ ¬( true;true )  ⇒  1 ]
+		=	{ true;true = true }
+		   [ false  ⇒  1 ]
+
+pong ⇐
+
+		   [ ¬(A;true)  ⇐  ¬A;true ∨ 1 ]
+		=	{ shunting }
+		   [ false  ⇐  A;true ∧ (¬A;true ∨ 1) ]
+		=	{ ∧ over ∨ }
+		   [ false  ⇐  (A;true ∧ ¬A;true) ∨ (A;true ∧ 1) ]
+		=	{ abide rule and left zero of ; }
+		   [ false  ⇐  A;true ∧ 1 ]
+		=	{ A is atomic }
+		   [ false  ⇐  (A∧X);true ∧ 1 ]
+		=	{ abide rule }
+		   [ false  ⇐  A;true ∧ X;true ∧ 1 ]
+		=	{ contradiction (40i) }
+		   true
+
+(C24)	[〈∀i:: s.i〉;  p   ≡ 〈∀i:: s.i ; p〉]  
+			with p a state predicate and the type of i non-empty
+			that is: _ ; p is positively universally conjunctive
+
+	 〈∀i:: s.i〉;  p
+	=	{ state restriction }
+	 〈∀i:: s.i〉∧  true ; p
+	=	{ ∧ over ∀, with non empty range }
+	 〈∀i:: s.i  ∧  true ; p〉
+	=	{ state restriction }
+	 〈∀i:: s.i ; p〉
+
+(C25)	[ (G s);t  ⇒  G s;t ]
+			with t a state predicate
+
+ping (⇒)
+
+		 〈ν x :: (X;x ∨ 1) ∧ s〉;  t 
+		=	{ Knaster-Tarski }
+		 〈∃ x : [ x  ⇒  (X;x ∨ 1) ∧ s ] : x〉;  t
+		=	{ ; over ∨ }
+		 〈∃ x : [ x ⇒ (X;x ∨ 1) ∧ s ] : x;t〉
+		⇒	{ monotonicity }
+		 〈∃ x : [ x;t  ⇒  ((X;x ∨ 1) ∧ s);t ] : x;t〉
+		=	{ _;t over ∧, with t a state predicate }
+		 〈∃ x : [ x;t  ⇒  (X;x;t ∨ t) ∧ s;t ] : x;t〉
+		⇒	{ change of variable y = x;t }
+		 〈∃ y : [ y  ⇒  (X;y ∨ t) ∧ s;t ] : y〉
+		⇒	{ [ t ⇒ 1 ] }
+		 〈∃ y : [ y  ⇒  (X;y ∨ 1) ∧ s;t ] : y〉
+		=	{ Knaster-Tarski }
+		 〈ν x :: (X;x ∨ 1) ∧ s;t〉 
+
+pong (⇐)
+
+		   (G s);t
+		=	{ state restriction }
+		   (G s) ∧ true;t
+		⇐	{ G _ is strengthening }
+		   G s ∧ G true;t 
+		=	{ G _ is conjunctive }
+		   G (s ∧ true;t)
+		=	{ state restriction }
+		   G s;t
+
+(C26)	G (•q ⇒ G •p)  =  *(~q;X) ; G •p  ∨  G •~q
+
+We prove it by fixpoint fusion; we can prove f.(νg) = νh by proving 〈∀x:: f.(g.x) = h.(f.x)〉
+
+we have
+		G (•q  ⇒  G •p)  =〈ν x :: (X;x ∨ 1) ∧ (•q  ⇒  G •p)〉
+		G •~q  =〈ν x :: (X;x ∨ 1) ∧ •~q〉
+
+		a  =  G •p
+		b  =  *(~q;X) ; a
+		f.x  =  b ∨ x
+		g.x  =  (X;x ∨ 1) ∧ •~q
+		h.x  =  (X;x ∨ 1) ∧ (•~q ∨ a)
+
+We see, as in the requirement of the fusion theorem, f is universally conjunctive. We
+start calculating with f.( g.x ) and try to transform it into h.( f.x )
+
+		   b ∨ ((X;x ∨ 1) ∧ •~q)
+		=	{ unfold b once }
+		   a ∨ ~q;X;b ∨ ((X;x ∨ 1) ∧ •~q)
+		=	{ state restriction then ∧ over ∨ }
+		   a ∨ ( •~q ∧ (X;b ∨ X;x ∨ 1) )
+		=	{ ∨ over ∧ then ; over ∨ }
+		   (a ∨ •~q) ∧ (a ∨ X;(b ∨ x) ∨ 1)
+		=	{ [ a ⇒ X;(b ∨ x) ∨ 1 ] see below }
+		   (a ∨ •~q) ∧ (X;(b ∨ x) ∨ 1)
+
+Lemma 0	[ a ⇒ X;(b ∨ x) ∨ 1 ]
+
+		   a  ⇒  X;(b ∨ x) ∨ 1
+		=	{ shunting }
+		   a ∧ ¬1  ⇒  X;(b ∨ x)
+		=	{ (40i) }
+		   a ∧ X;true  ⇒  X;(b ∨ x)
+
+		   a ∧ X;true
+		⇒	{ a is persistent }
+		   X ; a
+		⇒	{ [ a ⇒ b ] }
+		   X ; b
+		⇒	{ weakening }
+		   X ; (b ∨ x)
+
+(C27)	b ; b  =  b
+	for b = G (•p ⇒ G •p)
+
+		   ( G(•p ⇒ G •p) )  ;  ( G(•p ⇒ G •p) )
+		=	{ (C26) twice }
+		      *(~p;X) ; (G •p) ; *(~p;X) ; G •p
+		   ∨ *(~p;X) ; (G •p) ; G •~p
+		   ∨ G •~p
+		=	{ Lemma 0 and 1 }
+		      *(~p;X) ; (G •p) ; G •p
+		   ∨ *(~p;X) ; (G •p ∧ E)
+		   ∨ G •~p
+		=	{ (C5) and monotonicity }
+		   *(~p;X) ; G •p  ∨  G •~p
+		=	{ (C26) }
+		   G (•p ⇒ G •p)
+
+Lemma 0	[ (G •p) ; *(~p;X) ; s  ≡  (G •p) ; s ]
+
+		   (G •p) ; *(~p;X) ; s
+		=	{ (C20) }
+		   (G •p) ; p ; *(~p;X) ; s
+		=	{ folding }
+		   (G •p) ; (p ; ~p ; X ; *(~p;X) ; s ∨ p ; s)
+		=	{ state restriction }
+		   (G •p) ; ( (X ; *(~p;X) ; s ∧ •p ∧ ¬•p) ∨ p ; s )
+		=	{ contradiction }
+		   (G •p) ; p ; s
+		=	{ (C20) }
+		   (G •p) ; s
+
+Lemma 1	[ (G •p) ; (G •~p)  ≡  G •p ∧ E ]
+
+		   (G •p) ; (G •~p)
+		=	{ (C20) and (C1) }
+		   (G •p) ; p ; ~p ; (G •~p)
+		=	{ state restriction }
+		   (G •p) ; (•p ∧ ¬•p ∧ (G •~p))
+		=	{ contradiction }
+		   (G •p) ; false
+		=	{ (10i) }
+		   G •p ∧ E
+
+(C28)	( G (•p ⇒ (G •p) ; (S;•q ∨ 1)) )  =   ( G (•p ⇒ (G •p) ; (S;•q ∨ 1)) );( G (•p ⇒ (G •p) ; (S;•q ∨ 1)) )
+
+(C29)	( G (•p ⇒ (G •p) ; (S;•q ∨ 1)) )   =   *( *(~p;X) ; (G •p) ; S ; q ) ; *(~p;X) ; (G •p) ; (S;p;X;*(~p;X) ∨ 1)  ∨  G •~p
+
+	a  =  *b ; c ; d
+	b  =  ~p;X
+	c  =  G •p
+	d  =  S ; q
+
+	f.x  =  *a ; X ; *b ; c ∨ x
+	g.x  =  (X;x ∨ 1) ∧ •~p
+	h.x  =  (X;x ∨ 1) ∧ (•p  ⇒  c ; (d;true ∨ 1))
+
+		   *a ; *b ; c  ∨  ( (X;x ∨ 1) ∧ •~p )
+		=	{ unfold }
+		   *b;c ∨ a;*a;*b;c ∨ ( (X;x ∨ 1) ∧ •~p )
+		=	{ unfold *b }
+		   c ∨ c;d;*a;*b;c ∨ b;*b;c ∨ b;*b;c;d;*a;*b;c ∨ ( (X;x ∨ 1) ∧ •~p )
+		=	{ •~p ∧ X = b then ∧ over ∨ }
+		   c;(1 ∨ d;*a;*b;c) ∨ (•~p ∧ (X;(*b;c ∨ a;*a;*b;c ∨ x) ∨ 1))
+		=	{ fold a }
+		   c;(1 ∨ d;*a;*b;c) ∨ (•~p ∧ (X;(*a;*b;c ∨ x) ∨ 1))
+		=	{ ∨ over ∧ }
+		   ( c;(1 ∨ d;*a;*b;c) ∨ •~p ) ∧ ( c;(1 ∨ d;*a;*b;c) ∨ X;(*a;*b;c ∨ x) ∨ 1 )
+
+
+
+	(G •p) ; (S;•q ∨ 1)  =  p;X*(p;X);p;(X;•q∨•q ∨ 1)  ∨  p;(X;•q∨•q ∨ 1)  ∨  p;X;∞(p;X)
+
+
+		   (G •p);(S;•q ∨ 1) ∧ X;true
+		⇒	{ unfolding }
+		   p;X;(G •p);(S;•q ∨ 1) ∧ X;true
+		=	{ atomic split }
+		   p;X;(G •p);(S;•q ∨ 1)
+		⇒	{ weakening }
+		   X;( (G •p);(S;•q ∨ 1) ∨ x )
+
+(C31)
+
+G F;(s∨t) = G F;s ∨ G F;t
+
+⇐
+
+	  G F;(s∨t)
+	=   { ; over ∨ }
+	  G (F;s ∨ F;t)
+	⇐   { monotonicity }
+	  G F;s ∨ G F;t
+
+⇒
+
+	  G F;(s∨t) ⇒ G F;s ∨ G F;t
+	=   { predicate calculus }
+	  G F;(s∨t) ∧ ¬G F;s ⇒ G F;t
+
+	  G F;(s∨t) ∧ ¬G F;s
+	=   { ¬ over G and F }
+	  G F;(s∨t) ∧ F;(G ¬s)
+	⇒   { persistence rule }
+	  F ; (G F;(s∨t) ∧ G ¬s)
+	=   { G _ ∧ _ over G _ }
+	  F ; (G (F;(s∨t) ∧ G ¬s))
+	⇒   { persistence rule }
+	  F ; (G (F;( (s∨t) ∧ ¬s )))
+	=   { complements }
+	  F ; (G F;t)
+	=   { (C13b) }
+	  G F;t
+
+(C30)		"second persistence"
+	[ G •p  ⇒  ( s;t   ≡   (s ∧ G •p) ; t ) ]
+
+we prove it by mutual implication:
+	[ G •p  ⇒  ( s;t  ⇐  (s ∧ G •p) ; t ) ] holds thanks to monotonicity of conjunction and sequencing
+
+first proof of [ G •p  ⇒  ( s;t   ⇒   (s ∧ G •p) ; t ) ]
+	it is equivalent to 
+		[ G •p ∧ s;t  ⇒  (s ∧ G•p) ; t ]
+
+pose q = G •p
+
+		   q ∧ s;t
+		=	{ excluded middle and distributivity }
+		   q ∧ ( (¬q∧s) ; t ∨ (q∧s) ; t )
+		⇒	{ weakening }
+		   ( q ∧ (¬q∧s);t ) ∨ (q∧s);t
+		⇒	{ persistence rule }
+		   (¬q∧s) ; (q∧t)  ∨  (q∧s);t
+		⇒	{ weakening }
+		   ¬q ; q  ∨  (q∧s) ; t
+		=	{ ¬q;q = false }
+		   (q∧s) ; t
+
+	we use only the properties of q below 
+		q is persistent
+		¬q;q = false
+
+		   ¬(G•p) ; (G •p)
+		⇒	{ (C0) }
+		   ¬p ; (G •p)
+		⇒	{ G is strengthening }
+		   ¬p ; p ; true
+		=	{ state predicates }
+		   (¬p ∧ p) ; true
+		=	{ left zero }
+		   false
+
+second proof of [ G •p  ⇒  ( s;t   ⇒   (s ∧ G •p) ; t ) ]
+	it is equivalent to 
+		[ s;t  ⇒  (s ∧ G•p) ; t ∨ ¬G •p ]
+
+pose q = G •p
+
+		   s;t
+		=	{ excluded middle and distributivity }
+		   (s ∧ q) ; t  ∨  (s ∧ ¬q) ; t
+		⇒	{ weakening and [ t ⇒ true ] }
+		   (s ∧ q) ; t  ∨  ¬q ; true
+		=	{ ¬ over G }
+		   (s ∧ q) ; t  ∨  F;¬•p; true
+		⇒	{ [ ¬•p;true  ⇒  ¬•p ] }
+		   (s ∧ q) ; t  ∨  F;¬•p
+		=	{ ¬ over G }
+		   (s ∧ q) ; t  ∨  ¬q
+
+	it only use the property of •p that [ ¬•p;true  ⇒  ¬•p ] but it 
+	might not be easy to find other computation predicates that
+	also satisfy it.
+
+		•p satisfies the above property.
+proof:
+		   ¬•
+
+	*	*	*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

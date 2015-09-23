@@ -6,9 +6,12 @@ module UnitB.Property
     , ProgressProp(..)
     , SafetyProp  (..) 
     , PropertySet (..) 
+    , PropertySetField (..) 
     , empty_property_set
     , TrHint (..)
     , empty_hint
+    , makePropertySet
+    , changePropertySet
     , ProgId (..)
     , variant_decreased
     , variant_equals_dummy
@@ -33,7 +36,7 @@ import Data.Map  as M
 import Data.List as L
 import Data.Typeable
 
-import Utilities.TH
+import Utilities.TableConstr
 
 data Constraint = 
         Co [Var] Expr
@@ -48,7 +51,7 @@ empty_hint :: TrHint
 empty_hint = TrHint empty Nothing
 
 data Transient = 
-        Transient 
+        Tr 
             (Map String Var)     -- Free variables
             Expr                 -- Predicate
             [Label]              -- Event, Schedule 
@@ -107,10 +110,10 @@ instance Show PropertySet where
         , ("safety", show $ _safety x)
         ]
 
-mkCons ''PropertySet
+makeRecordConstr ''PropertySet
 
 empty_property_set :: PropertySet
-empty_property_set = makePropertySet
+empty_property_set = makePropertySet []
 
 instance Default PropertySet where
     def = empty_property_set

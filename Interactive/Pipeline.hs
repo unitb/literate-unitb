@@ -24,6 +24,7 @@ import Z3.Z3
         , Validity ( .. ) )
 
     -- Libraries
+import Control.DeepSeq
 import Control.Concurrent
 import Control.Concurrent.STM
 
@@ -107,7 +108,7 @@ parser (Shared { .. })  = return $ do
                 put t1
                 liftIO $ do
                     write_obs parser_state Parsing
-                    (t,()) <- timeItT $ parse
+                    (t,()) <- timeItT $ parse 
                     write_obs parser_state (Idle t)
             ) t
     where
@@ -137,7 +138,7 @@ parser (Shared { .. })  = return $ do
                         write_obs system s
                         write_obs error_list []
                         modify_obs pr_obl $ \pos -> do
-                            return $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
+                            evaluate $ force $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
                         return ()
                     Left es   -> do
                         write_obs error_list es

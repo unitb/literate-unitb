@@ -4,6 +4,7 @@
 module Utilities.Syntactic where
 
 import Control.DeepSeq
+import Control.Lens
 
 import Control.Monad
 import Control.Monad.Trans.Either
@@ -20,13 +21,15 @@ data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord)
 
 data LineInfo = LI 
-        { file_name :: FilePath
-        , line :: Int
-        , column :: Int }     
+        { _filename :: FilePath
+        , _line :: Int
+        , _column :: Int }     
      deriving (Eq,Ord)   
 
 instance Show LineInfo where
     show (LI _ i j) = show (i,j)
+
+makeLenses ''LineInfo
 
 show_err :: [Error] -> String
 show_err xs = unlines $ map report $ sortOn line_info xs

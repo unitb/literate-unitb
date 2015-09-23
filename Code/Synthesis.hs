@@ -16,6 +16,7 @@ import           UnitB.PO
     -- Libraries
 import Control.Applicative hiding (Const)
 import Control.Arrow (first, (***))
+import Control.Lens hiding (Const,indices)
 
 import Control.Monad
 import Control.Monad.Reader.Class
@@ -97,7 +98,7 @@ wait e = tell [Wait [] e]
 make_multiprogram :: Machine -> Partition -> MultiProgram 
 make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
     where
-        scheds ls = concatMap (M.elems . coarse . new_sched . (events m !)) ls
+        scheds ls = concatMap (M.elems . view (new.coarse_sched) . (all_upwards m !)) ls
         prog (ls,term) = runProgramMaker m $ loop term $
             wait $ term `zor` zsome (scheds ls)
 
@@ -186,8 +187,8 @@ safety m others post cfg
     where
         (r,(),es) = runRWS (PG.eval_generatorT 
             $ PG.with (do
-                    PG.context $ assert_ctx m
-                    PG.context $ theory_ctx (theory m)
+                    PG._context $ assert_ctx m
+                    PG._context $ theory_ctx (theory m)
                     PG.named_hyps $ invariants m
                     PG.prefix_label $ _name m
                 ) $ do
@@ -220,8 +221,8 @@ safety_aux (Event pre wait cond evt_lbl) ps = do
     m <- lift $ asks machine
     others <- lift $ asks otherEvts
     local  <- lift $ asks localEvts
-    let evt = events m ! evt_lbl
-        sch = coarse $ new_sched evt
+    let evt = all_upwards m ! evt_lbl
+        sch = evt^.new.coarse_sched
     is_stable_in pre others
     hoare_triple ("postcondition" </> evt_lbl) 
         (cond:wait:pre) evt_lbl ps 
@@ -279,9 +280,9 @@ is_stable_in ps evts = do
 
 disabled :: [Expr] -> Label -> POGen ()
 disabled ps lbl = do
-    evts <- lift $ asks $ events . machine
+    evts <- lift $ asks $ upward_event <$> machine <*> pure lbl
     entails ("disabled" </> lbl) ps 
-        [znot $ zall $ coarse $ new_sched $ evts ! lbl]
+        [znot $ zall $ evts^.new.coarse_sched]
 
 entails :: Label -> [Expr] -> [Expr] -> POGen ()
 entails lbl pre post = do
@@ -296,15 +297,15 @@ entails lbl pre post = do
 hoare_triple :: Label -> [Expr] -> Label -> [Expr] -> POGen ()
 hoare_triple lbl pre evt_lbl post = do
     m <- lift $ asks machine
-    let evt = events m ! evt_lbl
-        grd = new_guard evt
+    let evt = upward_event m evt_lbl
+        grd = evt^.new.guards
         act = ba_predicate m evt
     PG.with (do 
-            PG.context $ step_ctx m
+            PG._context $ step_ctx m
             PG.named_hyps $ grd
             PG.named_hyps $ act
-            PG.variables $ indices evt
-            PG.variables $ params evt) $ do
+            PG.variables $ evt^.new.indices
+            PG.variables $ evt^.new.params) $ do
         entails lbl pre post
         -- forM_ (zip [0..] post) $ \(i,p) -> 
         --     PG.emit_goal [label $ show i] p
@@ -312,12 +313,12 @@ hoare_triple lbl pre evt_lbl post = do
 default_cfg :: Machine -> Program
 default_cfg m = Loop g [] body Infinite
     where
-        all_guard e = zall $ coarse $ new_sched e
-        g    = zsome $ L.map (znot . all_guard) $ M.elems $ events m
+        all_guard e = zall $ e^.new.coarse_sched
+        g    = zsome $ L.map (znot . all_guard) $ M.elems $ all_upwards m
         branch (lbl,e) = Event [] ztrue (all_guard e) lbl
         body = Sequence 
             $ L.map branch
-            $ M.toList $ events m
+            $ M.toList $ all_upwards m
 
 emit :: String -> M ()
 emit xs = do
@@ -474,7 +475,7 @@ runEval cmd = do
 
 event_body_code :: Machine -> UB.Event -> M String
 event_body_code m e = do
-        acts <- runEval $ mapM (assign_code m) $ M.elems $ actions e
+        acts <- runEval $ mapM (assign_code m) $ M.elems $ e^.actions
         -- evaluate_all 
         let (g_acts,l_acts) = (L.map snd *** L.map snd) $ L.partition fst acts
         emit "let s' = s"
@@ -546,7 +547,7 @@ write_seq_code m (Event _pre wait cond lbl)
             expr <- evaluate m cond
             emit $ format "if {0} then do" expr
             indent 2 $ do
-                s' <- event_body_code m (events m ! lbl)
+                s' <- event_body_code m (upward_event m lbl^.new)
                 f s'
             emit $ format "else"    
             indent 2 $ f "s"

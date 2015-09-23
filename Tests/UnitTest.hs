@@ -3,10 +3,12 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE TemplateHaskell            #-}
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
     , selectLeaf, dropLeaves, leaves
+    , makeTestSuite
     , allLeaves, nameOf )
 where
 
@@ -23,9 +25,11 @@ import Control.Concurrent
 import Control.Concurrent.SSem
 import Control.Exception
 import Control.Monad
+import Control.Monad.Loops
 import Control.Monad.Trans
 import Control.Monad.Trans.RWS
 
+import           Data.Either
 import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
@@ -40,6 +44,10 @@ import Utilities.Indentation
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
+
+import Text.Printf
+
+import Language.Haskell.TH
 
 data TestCase = 
       forall a . (Show a, Typeable a) => Case String (IO a) a
@@ -308,3 +316,31 @@ tempFile path = do
     --             removeFile path'
     -- mkWeakPtr path' (Just finalize)
     return path'
+
+makeTestSuite :: String -> ExpQ
+makeTestSuite title = do
+    let names n' = [ "name" ++ n' 
+                   , "case" ++ n' 
+                   , "result" ++ n' ]
+        titleE = litE $ stringL title
+        f n = do
+            let n' = show n
+            any isJust <$> mapM lookupValueName (names n')
+        g n = do
+            let n' = show n
+            es <- filterM (fmap isNothing . lookupValueName) (names n')
+            if null es then return $ Right n
+                       else return $ Left es
+    xs <- concat <$> sequence
+        [ takeWhileM f [0..0]
+        , takeWhileM f [1..] ]
+    (es,ts) <- partitionEithers <$> mapM g xs
+    if null es then do
+        let namei i = varE $ mkName $ "name" ++ show i
+            casei i = varE $ mkName $ "case" ++ show i
+            resulti i = varE $ mkName $ "result" ++ show (i :: Int)
+            cases = [ [e| Case $(namei i) $(casei i) $(resulti i) |] | i <- ts ]
+        [e| test_cases $titleE $(listE cases) |]
+    else do
+        mapM_ (reportError.printf "missing test component: '%s'") (concat es)
+        fail ""

@@ -19,9 +19,9 @@ import Shelly (shelly,rm_f)
 
 compile_script :: Build ()
 compile_script = do
-        compile_file
-        compile_test 
-            >>= run_test
+        -- compile_file
+        -- compile_test 
+            -- >>= run_test
         compile_all
         compile_app
 

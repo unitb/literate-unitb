@@ -44,6 +44,7 @@ args opt file = do
         , "-package", "transformers-0.3.0.0"
         , "-package", "exceptions-0.6.1"
         -- , "-ddump-splices"
+        , "-dynamic-too"
         -- , "-v"
         ]
 

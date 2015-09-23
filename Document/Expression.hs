@@ -669,13 +669,13 @@ parse_expr ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
                     Just $ FunApp (mk_fun xs n [] t) []
             li = line_info i
         toks <- read_tokens (scan_expr $ Just n)
-            (file_name li) 
-            input (line li, column li)
+            (li^.filename) 
+            input (li^.line, li^.column)
         !e   <- read_tokens 
             (runParser ctx n vars' expr) 
-            (file_name li) 
+            (li^.filename) 
             toks 
-            (line li, column li)
+            (li^.line, li^.column)
         return e
 
 parse_oper :: Monad m 
@@ -685,11 +685,11 @@ parse_oper :: Monad m
 parse_oper n s@(StringLi c _) = do
         let li = line_info s
         toks <- hoistEither $ read_tokens (scan_expr $ Just n)
-            (file_name li) 
-            c (line li, column li)
+            (li^.filename) 
+            c (li^.line, li^.column)
         !e   <- hoistEither $ read_tokens 
             (runParser empty_ctx n M.empty
                 oper) 
-            (file_name li) 
-            toks (line li, column li)
+            (li^.filename) 
+            toks (li^.line, li^.column)
         return e

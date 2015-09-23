@@ -1,8 +1,12 @@
-{-# LANGUAGE DeriveDataTypeable, ExistentialQuantification #-} 
-{-# LANGUAGE TemplateHaskell #-} 
+{-# LANGUAGE DeriveDataTypeable
+    , ExistentialQuantification
+    , TemplateHaskell
+    , OverloadedStrings
+    #-} 
 module UnitB.AST 
     ( Theory  (..)
     , Machine (..)
+    , conc_events
     , variableSet
     , empty_machine
     , empty_theory
@@ -11,6 +15,10 @@ module UnitB.AST
     , transient, constraint
     , Rule (..)
     , RefRule (..)
+    , all_upwards, all_downwards
+    , upward_event
+    , new_event_set
+    , all_refs
     , all_types
     , basic_theory
     , disjoint_union
@@ -27,11 +35,11 @@ module UnitB.AST
 where
  
     -- Modules
-import Logic.Expr hiding (merge)
+import Logic.Expr hiding (merge,target)
 import Logic.ExpressionStore (ExprStore, empty_store)
 import Logic.Operator
 import Logic.Proof.POGenerator ( POGen )
-import Logic.Theory as Th
+import Logic.Theory as Th hiding (assert)
 
 import Theories.SetTheory
 import Theories.FunctionTheory
@@ -41,24 +49,32 @@ import UnitB.Event
 import UnitB.Property
 
     -- Libraries
+import Control.Applicative
+import Control.Arrow
 import Control.DeepSeq
-import Control.Lens.TH
+import Control.Lens
 
 import Control.Monad hiding ( guard )
+import Control.Monad.Trans.Maybe
 import Control.Monad.Writer hiding ( guard )
 
 import           Data.DeriveTH
 import           Data.List as L hiding ( union, inits )
-import           Data.Map as M hiding (map)
+import           Data.List.NonEmpty as NE
+import           Data.Map as M
+import           Data.Maybe as M
 import qualified Data.Set as S
+import qualified Data.Traversable as T
 import           Data.Typeable
 
+import Utilities.BipartiteGraph
 import Utilities.Format
-import Utilities.HeterogenousEquality
 import Utilities.Graph  (cycles)
+import Utilities.HeterogenousEquality
+import Utilities.TH
 
 all_types :: Theory -> Map String Sort
-all_types th = unions (types th : map all_types (elems $ extends th)) 
+all_types th = unions (types th : L.map all_types (elems $ extends th)) 
 
 instance Show ProgId where
     show (PId x) = show x
@@ -73,7 +89,7 @@ data Machine =
         , init_witness :: Map Var Expr
         , del_inits  :: Map Label Expr
         , inits      :: Map Label Expr
-        , events     :: Map Label Event
+        , events     :: BiGraph Label AbstrEvent ConcrEvent
         , inh_props  :: PropertySet
         , props      :: PropertySet
         , derivation :: Map Label Rule         
@@ -82,6 +98,53 @@ data Machine =
 
 variableSet :: Machine -> S.Set Var
 variableSet m = S.fromList $ M.elems $ variables m
+
+
+
+
+all_refs :: Machine -> [EventRef]
+all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards m
+
+conc_events :: Machine -> Map Label ConcrEvent
+conc_events = M.map fst . backwardEdges . events
+
+upward_event :: Machine -> Label -> EventMerging
+upward_event m lbl = M.fromJust $ readGraph (events m) $ runMaybeT $ do
+        v  <- MaybeT $ hasRightVertex lbl
+        lift $ do
+            es <- fmap source <$> predecessors v
+            EvtM <$> T.forM es (\e -> (,) <$> leftKey e <*> leftInfo e)
+                 <*> ((,) <$> rightKey v <*> rightInfo v)
+
+new_event_set :: Map String Var
+              -> Map Label Event
+              -> BiGraph Label AbstrEvent ConcrEvent
+new_event_set vs es = M.fromJust $ makeGraph $ do
+        skip <- newLeftVertex ":skip:" skip_abstr
+        forM_ (M.toList es) $ \(lbl,e) -> do
+            let f m = M.fromList $ L.map (id &&& Word) $ M.elems $ m `M.difference` vs
+            v <- newRightVertex lbl $ CEvent e (e^.actions.to frame.to f) M.empty
+            newEdge skip v
+
+all_upwards :: Machine -> Map Label EventMerging
+all_upwards m = readGraph (events m) $ do
+        es <- getRightVertices
+        ms <- forM es $ \e -> do
+            es' <- fmap source <$> predecessors e
+            (,) <$> rightKey e
+                <*> (EvtM <$> T.forM es' (\e -> (,) <$> leftKey e <*> leftInfo e)
+                          <*> ((,) <$> rightKey e <*> rightInfo e))
+        return $ M.fromList ms
+
+all_downwards :: Machine -> Map Label EventSplitting
+all_downwards m = readGraph (events m) $ do
+        es <- getLeftVertices
+        ms <- forM es $ \e -> do
+            es' <- fmap target <$> successors e
+            (,) <$> leftKey e
+                <*> (EvtS <$> ((,) <$> leftKey e <*> leftInfo e)
+                          <*> T.forM es' (\e -> (,) <$> rightKey e <*> rightInfo e))
+        return $ M.fromList ms
 
 data DocItem = 
         DocVar String 
@@ -95,26 +158,6 @@ instance Show DocItem where
     show (DocEvent xs) = format "{0} (event)" xs
     show (DocInv xs) = format "{0} (invariant)" xs
     show (DocProg xs) = format "{0} (progress)" xs
-
-
-empty_machine :: String -> Machine
-empty_machine n = Mch 
-        { _name = (Lbl n) 
-        , theory = empty_theory { extends = fromList [
-                ("arithmetic",arithmetic), 
-                ("basic", basic_theory)] }
-        , variables = empty
-        , abs_vars  = empty
-        , del_vars  = empty
-        , init_witness = empty
-        , del_inits = empty
-        , inits     = empty
-        , events    = empty 
-        , inh_props = empty_property_set 
-        , props     = empty_property_set
-        , derivation = empty
-        , comments  = empty
-        }  
 
 -- data Decomposition = Decomposition 
     
@@ -143,7 +186,7 @@ empty_system = Sys [] M.empty empty_store
 all_notation :: Machine -> Notation
 all_notation m = flip precede logical_notation 
         $ L.foldl combine empty_notation 
-        $ map Th.notation th
+        $ L.map Th.notation th
     where
         th = theory m : elems (extends $ theory m)
 
@@ -182,9 +225,18 @@ instance RefRule Rule where
     rule_name (Rule r) = rule_name r
     supporting_evts (Rule r) = supporting_evts r
 
-ba_predicate :: Machine -> Event -> Map Label Expr
-ba_predicate m evt =          ba_predicate' (variables m) (actions evt)
-                    `M.union` M.mapKeys (label . name) (witness evt)
+ba_predicate :: HasConcrEvent event 
+             => Machine -> event -> Map Label Expr
+ba_predicate m evt =          ba_predicate' (variables m) (evt^.new.actions)
+                    `M.union` M.mapKeys (label . name) (evt^.witness)
+
+mkCons ''Machine
+
+empty_machine :: String -> Machine
+empty_machine n = makeMachine (label n) 
+            empty_theory { extends = M.fromList [
+                ("arithmetic",arithmetic), 
+                ("basic", basic_theory)] }
 
 makeLenses ''PropertySet
 
@@ -192,3 +244,4 @@ derive makeNFData ''DocItem
 derive makeNFData ''Machine
 derive makeNFData ''Rule
 derive makeNFData ''System
+

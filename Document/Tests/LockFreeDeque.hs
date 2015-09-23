@@ -77,6 +77,8 @@ test = test_cases
                 case17 result17
             , StringCase "test 18, empty list in VarScope"
                 case18 result18
+            , StringCase "test 19, splitting POs"
+                case19 result19
             ]            
 
 result0 :: String
@@ -3896,3 +3898,12 @@ result18 :: String
 result18 = concat
     [ "no errors"
     ]
+
+path19 :: FilePath
+path19 = "tests/lock-free deque/main8.tex"
+
+case19 :: IO String
+case19 = proof_obligation path19 "m1/resp:pop:left/F_SCH/replace/eqv" 1
+
+result19 :: String
+result19 = ""

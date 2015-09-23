@@ -1,0 +1,10 @@
+\textbf{progress}
+\begin{block}
+\item[ \eqref{m2:prog0} ]$\true \quad \mapsto\quad \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} $ %
+\item[ \eqref{m2:prog1} ]$\true \quad \mapsto\quad \qforall{t}{t \in in}{ \neg loc.t = ext} $ %
+\item[ \eqref{m2:prog2} ]$\qexists{t}{t \in in}{ loc.t = ext}  \quad \mapsto\quad \qforall{t}{t \in in}{ \neg loc.t = ext} $ %
+\item[ \eqref{m2:prog3} ]$t \in in \land loc.t = ext  \quad \mapsto\quad \qforall{t}{t \in in}{ \neg loc.t = ext} $ %
+\item[ \eqref{m2:prog4} ]$\qforall{b}{b \in plf}{ \qexists{t}{t \in in}{ loc.t = b}} \!\! \quad \mapsto\quad \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} $ %
+\item[ \eqref{m2:prog5} ]$\qexists{b,t}{b \in plf \land t \in in}{ loc.t = b} \quad \mapsto\quad \qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} $ %
+\item[ \eqref{m2:prog6} ]$b \in plf \land t \in in \land loc.t = b  \quad \mapsto\quad b \in plf \land \qforall{t}{t \in in}{ \neg loc.t = b} $ %
+\end{block}

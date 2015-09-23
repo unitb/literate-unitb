@@ -211,9 +211,9 @@ assert_hyp :: Machine -> String
            -> Expr -> POGen () 
 assert_hyp m suff cnst hyps prop = 
     with (do
-            POG.context $ assert_ctx m
-            POG.context $ step_ctx m
-            POG.context $ ctx
+            _context $ assert_ctx m
+            _context $ step_ctx m
+            _context $ ctx
             named_hyps $ invariants m
             named_hyps hyps )
         $ emit_goal [po_lbl] prop
@@ -230,9 +230,9 @@ instance RefRule Ensure where
     rule_name _ = "ensure"
     refinement_po (Ensure (LeadsTo vs p q) lbls hint) m = do
             let saf = Unless vs p q Nothing
-                tr  = Transient (symbol_table vs) 
-                                             (p `zand` znot q) lbls 
-                                             hint 
+                tr  = Tr (symbol_table vs) 
+                         (p `zand` znot q) lbls 
+                         hint 
             prop_tr m ("", tr)
             tr_wd_po m ("",tr)
             prop_saf m ("", saf)
@@ -244,7 +244,7 @@ data Discharge = Discharge ProgressProp Label Transient (Maybe SafetyProp)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
-    supporting_evts (Discharge _ _ (Transient _ _ evts _hint) _) = map EventId evts
+    supporting_evts (Discharge _ _ (Tr _ _ evts _hint) _) = map EventId evts
         -- where
         --     TrHint _ ev = hint
             -- _ = _ ev
@@ -255,7 +255,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    _ (Transient fv1 p1 _ _)
+                    _ (Tr fv1 p1 _ _)
                     (Just (Unless fv2 p2 q2 Nothing))) 
         m = do
             assert m "saf/lhs" (
@@ -273,7 +273,7 @@ instance RefRule Discharge where
     refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
-                    _ (Transient fv1 p1 _ _)
+                    _ (Tr fv1 p1 _ _)
                     Nothing)
             m = do
                 assert m "tr/lhs" (

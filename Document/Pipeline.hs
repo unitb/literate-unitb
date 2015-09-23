@@ -1,15 +1,18 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE DeriveDataTypeable     #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE Arrows #-}
 module Document.Pipeline where
 
     -- Modules
 import Latex.Parser
 
     -- Libraries
-import Control.Arrow
+import Control.Arrow hiding (left)
 import qualified Control.Category as C
 
 import Control.Monad.RWS
@@ -17,6 +20,8 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
 import qualified Data.Map as M
+import Data.String
+import Data.Typeable
 
 import Utilities.Syntactic
 
@@ -27,14 +32,82 @@ data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 data Input = Input 
     { getMachineInput :: M.Map MachineId DocBlocks
     , getContextInput :: M.Map ContextId DocBlocks
-    }
+    } deriving Show
 
 newtype MachineId = MId { getMId :: String }
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Typeable)
 
 newtype ContextId = CId { getCId :: String }
     deriving (Eq,Ord)
 
+instance Show MachineId where
+    show = getMId
+
+instance Show ContextId where
+    show = getCId
+
+instance IsString MachineId where
+    fromString = MId
+
+instance IsString ContextId where
+    fromString = CId
+
+    -- arr $ \x -> trace (format "{0}: {1}" m x) ()
+
+-- newtype ErrorAT e m a b = EA { getError :: a -> MaybeT (WriterT e m) b }
+
+-- type ErrorA e = ErrorAT e Identity
+
+-- instance (Monad m, Monoid e) => C.Category (ErrorAT e m) where
+--     id = EA return
+--     f . g = EA $ \x -> getError g x >>= getError f
+
+-- instance (Monad m, Monoid e) => Arrow (ErrorAT e m) where
+--     arr f = EA $ return . f
+--     first (EA f) = EA $ \(x,y) -> do
+--             (,y) `liftM` f x
+--     (EA f) *** (EA g) = EA $ \(x,y) -> MaybeT $ do
+--         -- let errs (Left xs) = xs
+--         --     errs (Right _) = mempty
+--         x <- runMaybeT $ f x
+--         y <- runMaybeT $ g y
+--         case (x, y) of
+--             (Just x',Just y') -> return $ Just (x',y')
+--             (_,_) -> return Nothing
+--     x &&& y = arr (id &&& id) >>> x *** y
+
+-- trigger :: (Monoid e,Monad m) => ErrorAT e m (Either e a) a
+-- trigger = EA f
+--     where
+--         f (Right x) = return x
+--         f (Left x)  = getError hardFail x
+
+-- mapA :: (Monad m,Monoid e) 
+--      => ErrorAT e m a b -> ErrorAT e m [a] [b]
+-- mapA (EA f) = EA $ \xs -> MaybeT $ do
+--         ys <- mapM (runMaybeT . f) xs
+--         return $ sequence ys
+
+-- runErrorAT :: ErrorAT e m a b -> a -> m (Maybe b,e)
+-- runErrorAT (EA f) = runWriterT . runMaybeT . f
+
+-- runErrorA :: ErrorA e a b -> a -> (Maybe b,e)
+-- runErrorA m = runIdentity . runErrorAT m
+
+-- softFail :: (Monoid e, Monad m) => ErrorAT e m e ()
+-- softFail = EA tell
+
+-- hardFail :: (Monoid e, Monad m) => ErrorAT e m e b
+-- hardFail = EA $ \e -> tell e >> fail ""
+
+-- example :: ErrorA [String] Int (Int,Int)
+-- example = (err "allo" >>> err "bonjour") &&& err "salut"
+--         -- x <- err "allo" -< ()
+--         -- z <- err "salut" -< ()
+--         -- y <- err "bonjour" -< x
+--         -- returnA -< (x,y,z)
+--     where
+--         err x = proc _ -> hardFail -< [x]
 
 empty_spec :: DocSpec
 empty_spec = DocSpec M.empty M.empty
@@ -62,15 +135,16 @@ data Env = BlockEnv
     { getEnvArgs :: ([LatexDoc],LineInfo)
     , getEnvContent :: LatexDoc
     , envLI :: LineInfo }
+    deriving (Show)
 data Cmd = BlockCmd 
     { getCmdArgs :: ([LatexDoc],LineInfo)
     , cmdLI :: LineInfo }
-
+    deriving (Show)
 
 data DocBlocks = DocBlocks 
     { getEnv :: M.Map String [Env]
     , getCmd :: M.Map String [Cmd]
-    }
+    } deriving (Show)
 
 instance Monoid DocBlocks where
     mempty = DocBlocks M.empty M.empty
@@ -139,3 +213,19 @@ brackets _ zs@(Doc [] _) = ([],zs)
 isBlank :: LatexToken -> Bool
 isBlank (Blank _ _) = True
 isBlank _ = False 
+
+runPipeline' :: M.Map String [LatexDoc]
+             -> M.Map String [LatexDoc]
+             -> Pipeline MM Input a 
+             -> Either [Error] a
+runPipeline' ms cs p = case x of
+                            Nothing -> Left w
+                            Just x
+                                | null w -> Right x
+                                | otherwise -> Left w 
+    where
+        (x,(),w) = runRWS (runMaybeT $ f input) input ()
+        input = Input mch ctx
+        mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
+        ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs
+        Pipeline m_spec c_spec f = p

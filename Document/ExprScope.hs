@@ -17,9 +17,8 @@ import UnitB.AST
     -- Libraries
 import Control.Applicative
 import Control.Lens
-import Control.Monad.RWS
+import Control.Monad.Reader
 
-import Data.List as L (map)
 import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
@@ -82,14 +81,6 @@ instance Ord EvtExprScope where
 instance Show EvtExprScope where
     show (EvtExprScope x) = show x
 
-addToEventTable :: (MonadState MachineP3 m, Ord l)
-                => Lens' EventP3 (Map l a)
-                -> l -> EventId -> a -> m ()
-addToEventTable ln lbl eid x = modify $ over (pEvents . at eid . inside . ln) (insert lbl x)
-    where
-        inside :: Lens' (Maybe a) a
-        inside f (Just x) = Just <$> f x
-        inside _ Nothing = error "adding elements to a non-existing event"
 
 newtype LensT a b = LensT { getLens :: Lens' a b }
 
@@ -100,8 +91,14 @@ class ( Eq a, Ord a, Typeable a
       , HasLineInfo a LineInfo
       , HasExprStore a [(Expr,[String])]
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
-    parseEvtExpr :: [(Maybe EventId,[(Label,a)])] 
-                 -> RWS () [Error] MachineP3 ()
+    toMchScopeExpr :: Label -> a 
+                   -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+    toEvtScopeExpr :: EventId -> Label -> a 
+                   -> Reader MachineP2 [Either Error [EventP3Field]]
+
+instance IsEvtExpr EvtExprScope where
+    toMchScopeExpr lbl (EvtExprScope x) = toMchScopeExpr lbl x
+    toEvtScopeExpr e lbl (EvtExprScope x) = toEvtScopeExpr e lbl x
 
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f (EvtExprScope x) = EvtExprScope <$> declSource f x
@@ -174,10 +171,10 @@ data ProgressDecl = ProgressProp
         , _progressDeclExprStore :: [(Expr,[String])] }
     deriving (Eq,Ord,Typeable,Show)
 data Initially = Initially
-            { _initiallyInhStatus :: InhStatus Expr
+            { _initiallyInhStatus  :: InhStatus Expr
             , _initiallyDeclSource :: DeclSource
-            , _initiallyLineInfo :: LineInfo
-            , _initiallyExprStore :: [(Expr,[String])] }
+            , _initiallyLineInfo   :: LineInfo
+            , _initiallyExprStore  :: [(Expr,[String])] }
     deriving (Eq,Ord,Typeable)
 data Axiom = Axiom
         { _axiomMchExpr :: Expr
@@ -211,7 +208,23 @@ instance Show Initially where
 class ( Scope a, Typeable a, Show a
       , HasExprStore a [(Expr,[String])] ) 
         => IsExprScope a where
-    parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
+    toMchExpr :: Label -> a -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+    toThyExpr :: Label -> a -> Reader TheoryP2 [Either Error TheoryP3Field]
+    toNewEvtExpr :: Label -> a -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldEvtExpr :: Label -> a -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldPropSet :: Label -> a -> Reader MachineP2 [Either Error PropertySetField]
+    toNewPropSet :: Label -> a -> Reader MachineP2 [Either Error PropertySetField]
+
+delegate :: (forall a. IsExprScope a => lbl -> a -> b) -> lbl -> ExprScope -> b
+delegate f lbl (ExprScope x) = f lbl x
+
+instance IsExprScope ExprScope where
+    toMchExpr = delegate toMchExpr
+    toThyExpr = delegate toThyExpr
+    toNewPropSet = delegate toNewPropSet
+    toOldPropSet = delegate toOldPropSet
+    toNewEvtExpr = delegate toNewEvtExpr
+    toOldEvtExpr = delegate toOldEvtExpr
 
 data ExprScope = forall t. IsExprScope t => ExprScope t
     deriving Typeable
@@ -232,13 +245,6 @@ existential ''ExprGroup
 existential ''ExprScope
 existential ''EvtExprScope
 
-parseExprScope :: Map Label ExprScope
-               -> MachineP3
-               -> (MachineP3,[Error])
-parseExprScope xs = execRWS (mapM_ g $ groupExprGroup (++) $ L.map f $ M.toList xs) ()
-    where
-        f (lbl,ExprScope x) = ExprGroup [(lbl,x)]
-        g (ExprGroup xs)    = parseExpr xs
 
 instance Scope CoarseSchedule where
     type Impl CoarseSchedule = WithDelete CoarseSchedule
