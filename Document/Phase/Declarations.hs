@@ -25,35 +25,28 @@ import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
 import           Control.Applicative 
 
-import           Control.Monad 
 import           Control.Monad.Reader.Class 
-import           Control.Monad.Reader (Reader,runReader)
-import           Control.Monad.Writer.Class 
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Maybe
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
-import           Data.Default
-import           Data.Either
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
 
-import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Syntactic
   
 run_phase2_vars :: Pipeline MM 
-                        (Hierarchy MachineId,MTable MachineP1)
-                        (MTable MachineP2)
-run_phase2_vars = second (C.id &&& symbols) >>> liftP wrapup
+                        SystemP1
+                        SystemP2
+run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
         err_msg = format "Multiple symbols with the name {0}"
         wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
-        symbols = run_phase
+        symbols = arr (view mchTable) >>> run_phase
             [ variable_decl
             , constant_decl
             , dummy_decl
@@ -61,7 +54,7 @@ run_phase2_vars = second (C.id &&& symbols) >>> liftP wrapup
             , arr $ Just . M.map (wrap . L.view pSetDecl)
             , param_decl
             , remove_var ]
-        wrapup (r_ord,(p1,vs)) = do
+        wrapup (SystemP r_ord p1,vs) = do
             let names = M.map (view pEventRenaming) p1
                 vs' = inherit2 names r_ord 
                         <$> unionsWith (++)
@@ -71,55 +64,46 @@ run_phase2_vars = second (C.id &&& symbols) >>> liftP wrapup
                 =<< triggerM vs'
                     
             let _  = vars :: MTable (Map String VarScope)
-            T.sequence $ make_phase2 <$> p1 <.> vars
+            SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 
 make_phase2 :: MachineP1
             -> Map String VarScope
-            -> MM MachineP2 
-make_phase2 p1 vars = mdo
+            -> MM' c MachineP2 
+make_phase2 p1 vars = upgradeRecM newThy newMch oldEvent newEvent p1
+    where
+        vars' = M.toList vars
+        newThy t t' = makeTheoryP2 t _pNotation _pCtxSynt <$> liftField toThyDecl vars'
+            where
+                _pNotation = th_notation $ empty_theory { extends = t'^.pImports }
+                _pCtxSynt  = mkSetting _pNotation (p1 ^. pTypes) constants M.empty (t'^.pDummyVars)
+                constants = (t'^.pConstants) `M.union` (M.mapMaybe defToVar $ t'^.pDefinitions)
+        newMch m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
+            where
+                _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
+                refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
+        newEvent = liftEvent toNewEventDecl
+        oldEvent = liftEvent toOldEventDecl
+        liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
+                  -> MachineP2' EventP1 TheoryP2
+                  -> Maybe EventId -> EventP1 -> EventP2 -> MM' c EventP2
+        liftEvent f m = \case 
+                Just eid -> \e e' -> makeEventP2 e (_pEvtSynt e') (_pSchSynt e') . (!eid) <$> table  -- (m ! eid)
+                Nothing -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') []
+            where
+                table = M.fromListWith (++) <$> liftField f vars'
+                _pSchSynt :: EventP2 -> ParserSetting
+                _pSchSynt e = parser $ e^.eIndices
+
+                _pEvtSynt :: EventP2 -> ParserSetting
+                _pEvtSynt e = parser $ e^.eIndParams
+
+                parser :: Map String Var
+                       -> ParserSetting
+                parser table    = m^.pMchSynt & decls %~ union table
+                        -- mkSetting _pNotation (p2' ^. pTypes) (constants `union` table e) refVars (p2' ^. pDummyVars)
         -- tell err
         -- unless (L.null err) $ MaybeT $ return Nothing
-        let 
-            newThy t = makeTheoryP2 t _pNotation _pCtxSynt <$> liftField toThyDecl (M.toList vars)
-            _pNotation  = th_notation $ empty_theory { extends = p2 ^. pImports }
-            _pCtxSynt   = mkSetting _pNotation (p1 ^. pTypes) constants M.empty (p2' ^. pDummyVars)
-        p2  <- p1 & pContext newThy
-        p2' <- p2 & pEventRef (mapEvents (liftEvent toOldEventDecl) (liftEvent toNewEventDecl))
-        let 
-            _ = p2' :: MachineP1' EventP2 TheoryP2
-            _pMchSynt   = mkSetting _pNotation (p1 ^. pTypes) constants refVars (p2 ^. pDummyVars)
-            refVars = (p2''^.pAbstractVars) `M.union` (p2''^.pStateVars)
-            constants = (p2^.pConstants) `M.union` (M.mapMaybe defToVar $ p2 ^. pDefinitions)
-        p2'' <- makeMachineP2' p2' _pMchSynt 
-                <$> liftField toMchDecl (M.toList vars)
-                     -- & pEventRef %~ G.mapBothWithKey (liftEvent toOldEventDecl) 
-                     --                                 (liftEvent toNewEventDecl)
-        let 
-            liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
-                      -> Maybe EventId -> EventP1 -> MM EventP2
-            liftEvent f = \case 
-                    Just eid -> \e -> makeEventP2 e (_pEvtSynt eid) (_pSchSynt eid) . (!eid) <$> m  -- (m ! eid)
-                    Nothing -> \e -> return $ makeEventP2 e def def []
-                where
-                    m = M.fromListWith (++) <$> liftField f (M.toList vars)
-            ind_param :: EventId -> Map String Var
-            ind_param eid = M.union (p2''^.getEvent eid.eIndices) (p2''^.getEvent eid.eParams)
-            parser :: (EventId -> Map String Var)
-                   -> EventId -> ParserSetting
-            parser table e    = mkSetting _pNotation (p2' ^. pTypes) (constants `union` table e) refVars (p2' ^. pDummyVars)
-            _pSchSynt :: EventId -> ParserSetting
-            _pSchSynt = parser (\eid -> p2''^.getEvent eid.eIndices)
-
-            _pEvtSynt :: EventId -> ParserSetting
-            _pEvtSynt = parser ind_param
             
-        -- | L.null err = 
-        return p2''  -- & (pNotation .~ _pNotation)
-                     -- & (pMchSynt .~ _pMchSynt)
-                     -- & (pCtxSynt .~ _pCtxSynt)
-                     -- & (pSchSynt .~ _pSchSynt)
-                     -- & (pEvtSynt .~ _pEvtSynt)
-    where
         -- varGroup n (VarScope x) = VarGroup [(n,x)]
         -- vars' = groupVars $ L.map (uncurry varGroup) $ M.toList vars
         -- err = []
@@ -270,8 +254,3 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
             li <- lift ask
             vs <- get_variables' ts xs
             return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) (v,escope,Local,li)))) vs
-
-defToVar :: Def -> Maybe Var
-defToVar (Def _ n [] t _) = Just (Var n t)
-defToVar (Def _ _ (_:_) _ _) = Nothing
-

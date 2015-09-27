@@ -36,28 +36,23 @@ import           Control.Monad.Trans.Either
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
+import           Data.List as L hiding ( union, insert, inits )
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
-import           Data.List as L hiding ( union, insert, inits )
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Syntactic
 
-run_phase0_blocks :: Pipeline MM 
-                        Input
-                        (MTable MachineP0)
-run_phase0_blocks = proc doc -> do
+run_phase0_blocks :: Pipeline MM () (MTable MachineP0)
+run_phase0_blocks = withInput $ proc doc -> do
                 let mch = M.map (const ()) $ getMachineInput doc
                     _ctx = M.map (const ()) $ getContextInput doc
                     m0 = M.mapWithKey (const . MachineP0 mch) mch
                     _c0 = M.map (const $ TheoryP0 ()) _ctx    
                 returnA -< m0
 
-run_phase1_types :: Pipeline MM 
-                        (MTable MachineP0)
-                        ( Hierarchy MachineId
-                        , MTable MachineP1)
+run_phase1_types :: Pipeline MM (MTable MachineP0) SystemP1
 run_phase1_types = proc p0 -> do
     ts <- set_decl      -< p0
     e <- arr (fmap $ unionsWith (++)) <<< run_phase 
@@ -107,7 +102,7 @@ run_phase1_types = proc p0 -> do
                          <.> all_types 
                          <.> s <.> evts'
     -- p1 <- triggerP -< p1
-    returnA -< (r_ord,p1)
+    returnA -< SystemP r_ord p1
   where
     evtClash = format "Multiple events with the name {0}"
     setClash = format "Multiple sets with the name {0}"

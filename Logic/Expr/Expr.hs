@@ -492,7 +492,7 @@ instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
                 | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
 
 data AbsContext t q = Context
-        { _sorts :: M.Map String Sort
+        { _absContextSorts :: M.Map String Sort
         , _constants :: M.Map String (AbsVar t)
         , _functions :: M.Map String (AbsFun t)
         , _definitions :: M.Map String (AbsDef t q)

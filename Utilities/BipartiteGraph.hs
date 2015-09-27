@@ -17,6 +17,8 @@ module Utilities.BipartiteGraph
     , mapLeftWithKey
     , mapRightWithKey
     , mapBothWithKey
+    , traverseLeft, traverseRight, traverseBoth
+    , traverseLeftWithKey, traverseRightWithKey
     , leftMap, rightMap, edgeMap
     , readGraph, forwardEdges, backwardEdges
     , hasLeftVertex, hasRightVertex
@@ -26,14 +28,10 @@ where
 import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.DeepSeq
--- import Control.Exception
 import Control.Lens
 
 import Control.Monad.Reader
 import Control.Monad.RWS hiding ((<>))
--- import Control.Monad.Trans.Maybe
--- import Control.Monad.State
--- import Control.Monad.ST
 
 import Data.Array as A
 import Data.Array.ST
@@ -41,17 +39,11 @@ import Data.Default
 import Data.DeriveTH
 import Data.List  as L
 import Data.List.NonEmpty  as NE hiding (fromList)
-import Data.Map   as M hiding (fromList,empty)
+import Data.Map   as M hiding (fromList,empty,traverseWithKey)
 import qualified Data.Map   as M
 import Data.Maybe
 import Data.Semigroup
 import qualified Data.Traversable as T
-
--- import Utilities.Trace
-
--- import Text.Printf
-
--- type Trace key v0 v1 = (key -> String,v0 -> String,v1 -> String)
 
 newtype GraphBuilder key v0 v1 s0 s1 a = GB (RWST () ([(key,v0)],[(key,v1)],[(Int,Int,())]) (Int,Map key Int,Int,Map key Int) Maybe a)
     deriving (Monad,Applicative,Functor,Alternative,MonadPlus)
@@ -171,18 +163,6 @@ zipArrayWithM f a0 a1 = array (i,j) <$> traverse (\i -> (i,) <$> f (a0 A.! i) (a
         i = fst (bounds a0) `max` fst (bounds a0)
         j = snd (bounds a1) `min` snd (bounds a1)
 
--- pairLens :: Lens s t a0 b0
---          -> Lens t u a1 b1
---          -> Lens s u (a0,a1) (b0,b1)
--- pairLens ln0 ln1 f x = _ <*> ln0 _ x
---     where
---         y = f (x^.ln0,x^.ln1)
-
--- type LeftTraversal key v vA vB =
---   forall (f :: * -> *).
---   Control.Applicative.Applicative f =>
---   ((key,vA) -> f vB) -> BiGraph key vA v -> f (BiGraph key vB v)
-
 newLeftVertex :: Ord key => key -> v0 -> GraphBuilder key v0 v1 s0 s1 (Vertex s0)
 newLeftVertex k v = GB $ do
     c <- use $ _2 . to (M.lookup k)
@@ -231,24 +211,15 @@ addEdge k0 k1 = do
     v1 <- getRightVertex k1
     newEdge v0 v1
 
--- divGraph :: Int -> BiGraph Int Int
--- divGraph n = makeGraph $ do
---     forM_ [2..n] $ \i -> do
---         u <- getVertex i
---         forM_ [2..n] $ \j -> do
---             v <- getVertex j
---             when (j `mod` i == 0) $ do
---                 newEdge (j `div` i) u v
-
 mapLeft :: (vA -> vB)
         -> BiGraph key vA v1 
         -> BiGraph key vB v1
-mapLeft f g = g & leftAL.arVals.traverse %~ f
+mapLeft f = traverseLeft %~ f
 
 mapRight :: (vA -> vB)
          -> BiGraph key v0 vA 
          -> BiGraph key v0 vB
-mapRight f g = g & rightAL.arVals.traverse %~ f
+mapRight f = traverseRight %~ f
 
 mapLeftWithKey :: (key -> vA -> vB)
                -> BiGraph key vA v1 
@@ -266,6 +237,23 @@ mapRightWithKey f g = g & rightAL.arVals %~ mapF
         mapF ar = array (bounds ar) $ L.map (uncurry applyF) $ A.assocs ar
         applyF i e = (i,f ((g^.rightAL.arKey) A.! i) e)
         -- f' = g^.rightAL.arKey & traverse %~ f
+
+traverseLeft :: Traversal (BiGraph key vA v1) (BiGraph key vB v1) vA vB
+traverseLeft = leftAL.arVals.traverse
+
+traverseLeftWithKey :: Traversal (BiGraph key vA v1) (BiGraph key vB v1) (key,vA) vB
+traverseLeftWithKey = leftVertices
+
+traverseRightWithKey :: Traversal (BiGraph key v1 vA) (BiGraph key v1 vB) (key,vA) vB
+traverseRightWithKey = rightVertices
+
+traverseRight :: Traversal (BiGraph key v0 vA) (BiGraph key v0 vB) vA vB
+traverseRight = rightAL.arVals.traverse
+
+traverseBoth :: Traversal (BiGraph key vA vA) (BiGraph key vB vB) vA vB
+traverseBoth f (Graph lf rt ed) = Graph <$> (arVals.traverse) f lf 
+                                        <*> (arVals.traverse) f rt 
+                                        <*> pure ed
 
 mapKeys :: Ord k1
         => (k0 -> k1)

@@ -37,7 +37,6 @@ import Control.Monad.Reader.Class
 import Control.Monad.Reader (Reader,runReader) 
 import Control.Monad.State
 import Control.Monad.Trans.Either
-import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State  as ST
 import Control.Monad.Trans.RWS    as RWS hiding (local,ask,tell)
 import Control.Monad.Writer.Class 
@@ -67,7 +66,7 @@ import Utilities.TH
 -- data MachineP0' a = MachineP0
 
 triggerM :: Maybe a -> MM a
-triggerM x = MaybeT $ return x
+triggerM = maybe mzero return
 
 triggerP :: Pipeline MM (Maybe a) a
 triggerP = Pipeline empty_spec empty_spec triggerM
@@ -343,6 +342,21 @@ newtype Abs a = Abs { getAbstract :: a }
 newtype Conc a = Conc { getConcrete :: a }
     deriving (Eq,Ord)
 
+data SystemP m = SystemP
+    { _refineStruct :: Hierarchy MachineId
+    , _mchTable :: MTable m }
+    deriving (Typeable,Show)
+
+type SystemP1 = SystemP MachineP1
+type SystemP2 = SystemP MachineP2
+type SystemP3 = SystemP MachineP3
+type SystemP4 = SystemP MachineP4
+
+data Hierarchy k = Hierarchy 
+        { order :: [k]
+        , edges :: Map k k }
+    deriving (Show,Typeable)
+
 class IsLabel a where
     as_label :: a -> Label
 
@@ -371,6 +385,8 @@ makeRecordConstr ''EventP4
 
 makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
+
+makeLenses ''SystemP
 
 -- type Phase2M = Phase2 MTable
 -- type Phase3M = Phase3 MTable
@@ -490,6 +506,18 @@ newDelVars :: HasMachineP2' phase
            => Getter (phase events t) (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
+pDefVars :: HasTheoryP2 phase
+         => Getter phase (Map String Var)
+pDefVars = to $ \x -> M.mapMaybe defToVar $ x^.pDefinitions
+
+defToVar :: Def -> Maybe Var
+defToVar (Def _ n [] t _) = Just (Var n t)
+defToVar (Def _ _ (_:_) _ _) = Nothing
+
+pAllVars :: HasMachineP2' phase
+        => Getter (phase events t) (Map String Var)
+pAllVars = to $ \x -> view pAbstractVars x `M.union` view pStateVars x
+
 
 pEventMerge :: (HasMachineP1' phase, HasEventP1 events)
             => Getter (phase events t) (Map EventId (events,[EventId]))
@@ -541,6 +569,8 @@ pEvtSynt  :: HasMachineP2 mch event
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
+eIndParams :: HasEventP2 events => Getter events (Map String Var) 
+eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
 
 
@@ -608,11 +638,6 @@ instance ( HasMachineP1' f, HasEventP1 a
          , HasMachineP4' f, HasEventP4 a) 
     => HasMachineP4 f a where
 
-data Hierarchy k = Hierarchy 
-        { order :: [k]
-        , edges :: Map k k }
-    deriving (Show,Typeable)
-
 aliases :: Eq b => Lens' a b -> Lens' a b -> Lens' a b
 aliases ln0 ln1 = lens getter $ flip setter
     where
@@ -652,7 +677,7 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         let es = M.map fst es'
             lis = M.map snd es'
             cs = cycles $ M.toList es
-        vs <- MaybeT $ sequence <$> mapM (cycl_err_msg lis) cs
+        vs <- triggerM =<< sequence <$> mapM (cycl_err_msg lis) cs
         return $ Hierarchy vs es
     where
         struct = "refinement structure" :: String
@@ -731,15 +756,14 @@ mapEvents toOldEvent toNewEvent g =
                     G.leftVertices (uncurry toOldEvent) 
                         =<< G.rightVertices (uncurry toNewEvent) g
 
-liftField :: (label -> scope -> [Either Error field]) -> [(label,scope)] -> MM [field]
+liftField :: (label -> scope -> [Either Error field]) -> [(label,scope)] -> MM' c [field]
 liftField f xs = allResults (uncurry f) xs
 
 liftFieldM :: (label -> scope -> Reader r [Either Error field]) 
-           -> r -> [(label,scope)] -> MM [field]
+           -> r -> [(label,scope)] -> MM' c [field]
 liftFieldM f x xs = allResults (flip runReader x . uncurry f) xs
 
-allResults :: MonadWriter [e] m 
-           => (a -> [Either e b]) -> [a] -> MaybeT m [b]
+allResults :: (a -> [Either Error b]) -> [a] -> MM' c [b]
 allResults f xs 
     | L.null es = return ys
     | otherwise = tell es >> mzero
@@ -749,3 +773,52 @@ allResults f xs
 trigger :: Maybe a -> M a
 trigger (Just x) = return x
 trigger Nothing  = left []
+
+upgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
+               , Applicative f,MonadFix f)
+            => (thy0 -> thy1 -> f thy1)
+            -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> f (mch1 evt0 thy1))
+            -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> f evt1)
+            -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> f evt1)
+            -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+upgradeRecM thyF mchF oldEvF newEvF = upgradeM
+        (mfix.thyF) 
+        (mfix.mchF) 
+        (fmap (fmap mfix).oldEvF)
+        (fmap (fmap mfix).newEvF)
+
+upgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
+            , Applicative f,Monad f)
+         => (thy0 -> f thy1)
+         -> (mch0 evt0 thy1 -> f (mch1 evt0 thy1))
+         -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> f evt1)
+         -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> f evt1)
+         -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+upgradeM thyF mchF oldEvF newEvF m = do
+        m' <- mchF =<< (m & pContext thyF)
+        m' & pEventRef (\g -> 
+                traverseLeftWithKey (uncurry $ oldEvF m')
+                 =<< traverseRightWithKey (uncurry $ newEvF m') g)
+
+upgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0)
+           => (thy0 -> thy1 -> thy1)
+           -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> mch1 evt0 thy1)
+           -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> evt1)
+           -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> evt1)
+           -> mch0 evt0 thy0 -> mch1 evt1 thy1
+upgradeRec thyF mchF oldEvF newEvF = upgrade
+        (fix.thyF) 
+        (fix.mchF) 
+        (fmap (fmap fix).oldEvF)
+        (fmap (fmap fix).newEvF)
+
+upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0)
+        => (thy0 -> thy1)
+        -> (mch0 evt0 thy1 -> mch1 evt0 thy1)
+        -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1)
+        -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1)
+        -> mch0 evt0 thy0 -> mch1 evt1 thy1
+upgrade thyF mchF oldEvF newEvF = runIdentity . upgradeM
+        (Identity . thyF) (Identity . mchF) 
+        (fmap (fmap Identity) . oldEvF)
+        (fmap (fmap Identity) . newEvF)

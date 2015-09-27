@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE Arrows #-}
 module Document.Pipeline where
 
@@ -12,9 +13,11 @@ module Document.Pipeline where
 import Latex.Parser
 
     -- Libraries
+import Control.Applicative
 import Control.Arrow hiding (left)
 import qualified Control.Category as C
 
+import Control.Monad.Fix
 import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
@@ -25,7 +28,12 @@ import Data.Typeable
 
 import Utilities.Syntactic
 
-type MM = MaybeT (RWS Input [Error] ())
+newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
+    deriving ( Functor,Applicative,Monad,MonadPlus
+             , MonadWriter [Error],MonadReader a
+             , Alternative, MonadFix )
+
+type MM = MM' Input
 
 data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
 
@@ -51,6 +59,15 @@ instance IsString MachineId where
 
 instance IsString ContextId where
     fromString = CId
+
+runMM :: MM' a b -> a -> Either [Error] b
+runMM (MM cmd) input = case r of
+                            Nothing -> Left es
+                            Just x
+                                | null es -> Right x
+                                | otherwise -> Left es
+    where
+        (r,(),es) = runRWS (runMaybeT cmd) input ()
 
     -- arr $ \x -> trace (format "{0}: {1}" m x) ()
 
@@ -153,11 +170,6 @@ instance Monoid DocBlocks where
                 (M.unionWith (++) xs0 ys0)
                 (M.unionWith (++) xs1 ys1)
 
-
-
-
-
-
 machine_spec :: Pipeline m a b -> DocSpec
 machine_spec (Pipeline m _ _) = m
 
@@ -209,6 +221,8 @@ brackets _ zs@(Doc (Bracket Square _ _ _:_) _) = ([],zs)
 brackets _ zs@(Doc (Env _ _ _ _:_) _) = ([],zs)
 brackets _ zs@(Doc [] _) = ([],zs)
 
+withInput :: Pipeline MM Input b -> Pipeline MM a b
+withInput (Pipeline s0 s1 f) = Pipeline s0 s1 $ \_ -> ask >>= f
 
 isBlank :: LatexToken -> Bool
 isBlank (Blank _ _) = True
@@ -216,15 +230,11 @@ isBlank _ = False
 
 runPipeline' :: M.Map String [LatexDoc]
              -> M.Map String [LatexDoc]
-             -> Pipeline MM Input a 
-             -> Either [Error] a
-runPipeline' ms cs p = case x of
-                            Nothing -> Left w
-                            Just x
-                                | null w -> Right x
-                                | otherwise -> Left w 
+             -> a
+             -> Pipeline MM a b 
+             -> Either [Error] b
+runPipeline' ms cs arg p = runMM (f arg) input
     where
-        (x,(),w) = runRWS (runMaybeT $ f input) input ()
         input = Input mch ctx
         mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
         ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs

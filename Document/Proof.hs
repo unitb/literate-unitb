@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 module Document.Proof where
@@ -15,7 +16,7 @@ import Latex.Parser
 import UnitB.AST
 import UnitB.PO
 
-import Logic.Expr hiding (sorts)
+import Logic.Expr
 import Logic.Operator
 import Logic.Proof as LP
 import Logic.Proof.Tactics as LP
@@ -36,7 +37,6 @@ import           Control.Monad.Trans.State as ST ( StateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
-import           Data.Default
 import           Data.Either.Combinators
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
@@ -63,6 +63,22 @@ data ProofStep = Step
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal
        , main_proof  :: Maybe (Tactic Proof)       -- main proof        
        }
+
+data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
+
+data ParserSetting = PSetting 
+    { _language :: Notation
+    , _is_step  :: Bool
+    , _parserSettingSorts    :: Map String Sort
+    , _decls    :: Map String Var
+    , _dum_ctx  :: Map String Var
+    , _primed_vars   :: Map String Var
+    , _free_dummies  :: Bool
+    , _expected_type :: Maybe Type
+    } deriving Show
+
+makeLenses ''ParserSetting
+makeFields ''ParserSetting
 
 -- empty_pr :: Theory -> ProofParam
 -- empty_pr _ = () -- ProofParam (th_notation th)
@@ -448,67 +464,53 @@ parse_calc = do
             soft_error [Error "invalid hint" li]
             return $ LP.with_line_info li $ last_step ztrue
                                
-data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
-
-
-data ParserSetting = PSetting 
-    { language :: Notation
-    , is_step  :: Bool
-    , sorts    :: Map String Sort
-    , decls    :: Map String Var
-    , dum_ctx  :: Map String Var
-    , primed_vars   :: Map String Var
-    , free_dummies  :: Bool
-    , expected_type :: Maybe Type
-    } deriving Show
-
-default_setting :: ParserSetting
-default_setting = PSetting 
-    { language = $myError ""
-    , decls = $myError ""
-    , sorts = $myError ""
-    , primed_vars = M.empty
-    , dum_ctx = M.empty
-    , is_step = False
-    , free_dummies = False
-    , expected_type = (Just bool)
+default_setting :: Notation -> ParserSetting
+default_setting n = PSetting 
+    { _language = n
+    , _decls = M.empty
+    , _parserSettingSorts = M.empty
+    , _primed_vars = M.empty
+    , _dum_ctx = M.empty
+    , _is_step = False
+    , _free_dummies = False
+    , _expected_type = (Just bool)
     }
 
-instance Default ParserSetting where
-    def = default_setting
+
+-- instance Default ParserSetting where
+--     def = default_setting
 
 setting_from_context :: Notation -> Context -> ParserSetting
-setting_from_context notation ctx = default_setting
-        { language = notation
-        , sorts = ss
-        , decls = vs `union` M.mapMaybe f ds
-        , dum_ctx = dums }
+setting_from_context notation ctx = default_setting notation
+        -- & language .~ notation
+        & sorts .~ ss
+        & decls .~ vs `union` M.mapMaybe f ds
+        & dum_ctx .~ dums
     where
         Context ss vs _ ds dums = ctx
         f (Def [] n [] t _) = Just $ Var n t
         f _ = Nothing
 
 with_vars :: ParserSetting -> Map String Var -> ParserSetting
-with_vars setting vs = setting { decls = vs `union` decls setting }
+with_vars setting vs = setting & decls %~ (vs `union`)
 
 theory_setting :: Theory -> ParserSetting
 theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 machine_setting :: Machine -> ParserSetting
 machine_setting m = setting
-        { decls = variables m `union` decls setting
-        , primed_vars = M.mapKeys (++ "'") $ M.map prime $ variables m }
+        & decls %~ (variables m `union`)
+        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ variables m)
     where
         setting = theory_setting (theory m)
 
 schedule_setting :: Machine -> Event -> ParserSetting
-schedule_setting m evt = setting { decls = (evt^.indices) `union` decls setting }
+schedule_setting m evt = setting & decls %~ ((evt^.indices) `union`)
     where
         setting = machine_setting m 
 
 event_setting :: Machine -> Event -> ParserSetting
-event_setting m evt = setting
-        { decls = (evt^.params) `union` decls setting }
+event_setting m evt = setting & decls %~ ((evt^.params) `union`)
     where
         setting = schedule_setting m evt
 
@@ -518,12 +520,11 @@ mkSetting :: Notation
           -> Map String Var     -- Primed variables
           -> Map String Var     -- Dummy variables
           -> ParserSetting
-mkSetting notat sorts plVar prVar dumVar = default_setting
-        { language = notat 
-        , sorts = sorts
-        , decls = (plVar `union` prVar)
-        , primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
-        , dum_ctx = dumVar }
+mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
+        { _parserSettingSorts = sorts
+        , _decls = (plVar `union` prVar)
+        , _primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
+        , _dum_ctx = dumVar }
 
 parse_expr'' :: ParserSetting
              -> LatexDoc
@@ -544,17 +545,17 @@ parse_expr' :: ParserSetting
             -> Either [Error] Expr
 parse_expr' set ys = do
         let ctx0
-                | is_step set = primed_vars set
-                | otherwise   = M.empty
+                | set^.is_step = set^.primed_vars
+                | otherwise    = M.empty
             ctx1 
-                | free_dummies set = dum_ctx set
-                | otherwise        = M.empty
-            ctx = Context (sorts set) (unions [decls set, ctx0, ctx1]) M.empty M.empty (dum_ctx set)
+                | set^.free_dummies = set^.dum_ctx
+                | otherwise         = M.empty
+            ctx = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
             li  = line_info xs
         x  <- parse_expr ctx
-                (language set)
+                (set^.language)
                 (flatten_li' xs)
-        x  <- case expected_type set of
+        x  <- case set^.expected_type of
             Just t -> mapBoth 
                 (\xs -> map (`Error` li) xs) 
                 (normalize_generics) $ zcast t $ Right x
@@ -611,13 +612,13 @@ get_assert m = parse_expr' (machine_setting m)
 get_evt_part :: Machine -> Event
              -> LatexDoc
              -> Either [Error] Expr
-get_evt_part m e = parse_expr' (event_setting m e) { is_step = True }
+get_evt_part m e = parse_expr' (event_setting m e & is_step .~ True)
                         
 
 get_assert_with_free :: Machine 
                      -> LatexDoc
                      -> Either [Error] Expr
-get_assert_with_free m = parse_expr' (machine_setting m) { free_dummies = True }
+get_assert_with_free m = parse_expr' (machine_setting m & free_dummies .~ True)
 
 lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a

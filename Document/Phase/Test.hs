@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, RankNTypes #-}
 module Document.Phase.Test where
 
     --
@@ -8,8 +8,11 @@ module Document.Phase.Test where
 
 import Document.Phase
 import Document.Phase.Structures
+import Document.Phase.Declarations
 import Document.Pipeline
+import Document.Proof
 import Document.Scope
+import Document.VarScope
 
 import Latex.Monad
 
@@ -28,12 +31,10 @@ import UnitB.AST as AST
     --
 import Control.Applicative
 import Control.Arrow
-import Control.Exception
+import Control.Lens hiding ((<.>))
 import Control.Monad
 
-import Debug.Trace
 
--- import Data.Default
 -- import Data.Either.Combinators
 import Data.List as L
 import Data.Map  as M
@@ -42,21 +43,16 @@ import Data.Maybe
 
 import Utilities.BipartiteGraph as G
 import Utilities.Syntactic
-
-import Text.Printf
+import Utilities.Trace
 
 test_case :: TestCase
 test_case = test
 
 test :: TestCase
 test = $(makeTestSuite "Unit tests for the parser")
-    -- Todo: template haskell the list of test cases
 
 ba :: String -> a -> a
-ba msg x = mapException f $ trace ("before " ++ msg) x `seq` trace ("after " ++ msg) x
-    where
-        f :: SomeException -> AssertionFailed
-        f e = AssertionFailed $ printf "Failed during %s\n\n%s" msg $ show e
+ba = beforeAfter
 
 name0 :: String
 name0 = "test 0, phase1" 
@@ -166,10 +162,10 @@ result0 = M.fromList
         li = LI "file.ext" 1 1
 
 name1 :: String
-name1 = "test1: phase0, parsing"
+name1 = "test 1, phase1, parsing"
 
-case1 :: IO (Either [Error] (Hierarchy MachineId, MTable MachineP1))
-case1 = return $ runPipeline' ms cs $ run_phase0_blocks >>> run_phase1_types
+case1 :: IO (Either [Error] SystemP1)
+case1 = return $ runPipeline' ms cs () $ run_phase0_blocks >>> run_phase1_types
     where
         ms = M.map (:[]) $ M.fromList 
                 [ ("m0",makeLatex "file.ext" $ do       
@@ -189,8 +185,99 @@ case1 = return $ runPipeline' ms cs $ run_phase0_blocks >>> run_phase1_types
                         )]
         cs = M.empty
 
-result1 :: Either [Error] (Hierarchy MachineId, MTable MachineP1)
-result1 = Right (h, result0)
+result1 :: Either [Error] SystemP1
+result1 = Right (SystemP h result0)
     where
         h = Hierarchy ["m0","m1"] $ M.singleton "m1" "m0"
 
+name2 :: String
+name2 = "test 2, phase 2 (variables), creating state"
+
+lnZip :: Ord a => Map a b -> Traversal (Map a c) (Map a d) (c,b) d
+lnZip m f m' = traverse f $ M.intersectionWith (,) m' m
+
+case2 :: IO (Either [Error] SystemP2)
+case2 = return $ do
+        r <- result1
+        runMM (r & (mchTable.lnZip vs) (uncurry make_phase2)) ()
+    where
+        li = LI "file.ext" 1 1
+        s0 = Sort "S0" "S0" 0
+        s0' = make_type s0 [] 
+        se new_type = zlift (set_type new_type) ztrue
+        s1 = Sort "\\S1" "sl@S1" 0
+        s1' = make_type s1 [] 
+        vs0 = M.fromList
+                [ ("x",VarScope $ Machine (Var "x" int) Local li) 
+                , ("y",VarScope $ Machine (Var "y" int) Local li)
+                , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
+        vs1 = M.fromList
+                [ ("z",VarScope $ Machine (Var "z" int) Local li) 
+                , ("y",VarScope $ Machine (Var "y" int) Inherited li) 
+                , ("x",VarScope $ DelMch (Just $ Var "x" int) Local li) 
+                , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li)
+                , ("\\S1",VarScope $ TheoryDef (Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
+        vs = M.fromList 
+                [ ("m0",vs0) 
+                , ("m1",vs1)]
+
+withKey :: Lens (Map a b) (Map c d) (Map a (a,b)) (Map c d)
+withKey = lens (M.mapWithKey (,)) (\_ -> id)
+
+result2 :: Either [Error] SystemP2
+result2 = do
+        sys <- result1
+        let 
+            var n = Var n int
+            notation m = th_notation $ empty_theory { extends = m^.pImports }
+            parser m = default_setting (notation m)
+            li = LI "file.ext" 1 1
+            s0 = Sort "S0" "S0" 0
+            s0' = make_type s0 [] 
+            se new_type = zlift (set_type new_type) ztrue
+            s1 = Sort "\\S1" "sl@S1" 0
+            s1' = make_type s1 [] 
+            fieldsM mid
+                | mid == "m0" = [ PStateVars "x" $ var "x", PStateVars "y" $ var "y" ]
+                | otherwise   = [ PStateVars "z" $ var "z"
+                                , PDelVars "x" (var "x",li)
+                                , PAbstractVars "x" $ var "x" 
+                                , PAbstractVars "y" $ var "y" 
+                                , PStateVars "y" $ var "y" ]
+            fieldsT mid
+                | mid == "m0" = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) ]
+                | otherwise   = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) 
+                                , PDefinitions "\\S1" (Def [] "sl@S1" [] (set_type s1') (se s1')) ]
+            upMachine mid m m' = makeMachineP2' m 
+                        (m^.pCtxSynt & decls %~ M.union (m'^.pAllVars) 
+                                     & primed_vars %~ M.union (m'^.pAllVars)) 
+                        (fieldsM mid)
+            upTheory mid t t' = makeTheoryP2 t (notation t) 
+                        (parser t & decls %~ M.union ((t'^.pConstants) `M.union` (t'^.pDefVars))
+                                  & sorts %~ M.union (t'^.pTypes)) 
+                        (fieldsT mid)
+            -- f :: MachineP1' EventP1 TheoryP1 -> MachineP1' EventP2 TheoryP2
+            -- f m = m & pContext %~ ()
+            --         & pEventRef %~ (\g -> g & traverseLeft %~ upEvent & traverseRight %~ upEvent)
+            upEvent m _ e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) []
+        return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
+                upgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
+        -- (\m -> makeMachineP2' (f m) _ [])
+
+name3 :: String
+name3 = "test 3, phase2, parsing"
+
+case3 :: IO (Either [Error] SystemP2)
+case3 = return $ do
+    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+        ms0 = makeLatex "file.ext" $ do       
+                  command "variable" [text "x,y : \\Int"]                 
+        ms1 = makeLatex "file.ext" $ do       
+                  command "variable" [text "z : \\Int"]                 
+                  command "removevar" [text "x"]
+        cs = M.empty
+    r <- result1
+    runPipeline' ms cs r run_phase2_vars
+
+result3 :: Either [Error] SystemP2
+result3 = result2

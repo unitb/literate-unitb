@@ -8,7 +8,7 @@ module Tests.UnitTest
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
     , selectLeaf, dropLeaves, leaves
-    , makeTestSuite
+    , makeTestSuite, makeTestSuiteOnly
     , allLeaves, nameOf )
 where
 
@@ -317,12 +317,20 @@ tempFile path = do
     -- mkWeakPtr path' (Just finalize)
     return path'
 
+makeTestSuiteOnly :: String -> [Int] -> ExpQ
+makeTestSuiteOnly title ts = do
+        let namei i = varE $ mkName $ "name" ++ show i
+            casei i = varE $ mkName $ "case" ++ show i
+            resulti i = varE $ mkName $ "result" ++ show (i :: Int)
+            cases = [ [e| Case $(namei i) $(casei i) $(resulti i) |] | i <- ts ]
+            titleE = litE $ stringL title
+        [e| test_cases $titleE $(listE cases) |]
+
 makeTestSuite :: String -> ExpQ
 makeTestSuite title = do
     let names n' = [ "name" ++ n' 
                    , "case" ++ n' 
                    , "result" ++ n' ]
-        titleE = litE $ stringL title
         f n = do
             let n' = show n
             any isJust <$> mapM lookupValueName (names n')
@@ -336,11 +344,7 @@ makeTestSuite title = do
         , takeWhileM f [1..] ]
     (es,ts) <- partitionEithers <$> mapM g xs
     if null es then do
-        let namei i = varE $ mkName $ "name" ++ show i
-            casei i = varE $ mkName $ "case" ++ show i
-            resulti i = varE $ mkName $ "result" ++ show (i :: Int)
-            cases = [ [e| Case $(namei i) $(casei i) $(resulti i) |] | i <- ts ]
-        [e| test_cases $titleE $(listE cases) |]
+        makeTestSuiteOnly title ts
     else do
         mapM_ (reportError.printf "missing test component: '%s'") (concat es)
-        fail ""
+        [e| undefined |]

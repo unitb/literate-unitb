@@ -1,11 +1,13 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns,DeriveDataTypeable #-}
 module Utilities.Trace where
 
 import Control.Arrow
+import Control.Exception
 import Control.Concurrent
 import Control.Monad.IO.Class
 
-import Data.Set
+-- import Data.Set
+import Data.Typeable
 
 import qualified Debug.Trace as DT
 
@@ -13,24 +15,26 @@ import System.IO.Unsafe
 
 import Utilities.Format
 
-trace_switch :: MVar (Set ThreadId)
-trace_switch = unsafePerformIO (newMVar empty)
+-- trace_switch :: MVar (Set ThreadId)
+-- trace_switch = unsafePerformIO (newMVar empty)
 
 is_tracing_on :: IO Bool
-is_tracing_on = do
-        sw  <- readMVar trace_switch
-        tid <- myThreadId
-        return $ tid `member` sw
+is_tracing_on = return True
+        -- sw  <- readMVar trace_switch
+        -- tid <- myThreadId
+        -- return $ tid `member` sw
 
 turn_tracing_on :: IO ()
-turn_tracing_on = modifyMVar_ trace_switch $ \sw -> do
-        tid <- myThreadId
-        return $ insert tid sw
+turn_tracing_on = return ()
+    -- modifyMVar_ trace_switch $ \sw -> do
+    --     tid <- myThreadId
+    --     return $ insert tid sw
 
 turn_tracing_off :: IO ()
-turn_tracing_off = modifyMVar_ trace_switch $ \sw -> do
-        tid <- myThreadId
-        return $ delete tid sw
+turn_tracing_off = return ()
+    -- modifyMVar_ trace_switch $ \sw -> do
+    --     tid <- myThreadId
+    --     return $ delete tid sw
 
 trace :: String -> a -> a
 trace xs x = unsafePerformIO $ do
@@ -106,4 +110,26 @@ with_tracingIO cmd = do
             else liftIO $ turn_tracing_off
         return r
 
+newtype TracingError = TE String
+    deriving (Typeable)
 
+instance Show TracingError where
+    show (TE xs) = xs
+
+instance Exception TracingError where
+
+beforeAfterIO :: String -> IO a -> IO a
+beforeAfterIO msg cmd = mapException f $ do
+        traceM $ "before " ++ msg
+        x <- catch cmd (throw . f)
+        traceM $ "after " ++ msg
+        return x
+    where
+        f :: SomeException -> TracingError
+        f e = TE $ format "Failed during {0}\n\n{1}" msg e
+
+beforeAfter :: String -> a -> a
+beforeAfter msg x = mapException f $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after " ++ msg) x
+    where
+        f :: SomeException -> TracingError
+        f e = TE $ format "Failed during {0}\n\n{1}" msg e
