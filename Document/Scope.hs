@@ -1,6 +1,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RankNTypes,TupleSections  #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE DeriveTraversable         #-}
+{-# LANGUAGE DeriveFoldable            #-}
+{-# LANGUAGE DeriveFunctor             #-}
 {-# LANGUAGE DefaultSignatures         #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE FlexibleContexts          #-}
@@ -22,8 +25,10 @@ module Document.Scope
     , is_inherited, is_local
     , DeclSource(..)
     , InhStatus(..)
+    , EventInhStatus
     , contents
     , WithDelete 
+    , Redundant
     )
 where
 
@@ -34,15 +39,21 @@ import UnitB.Event
 
     -- Libraries
 import Control.Applicative
+import Control.Arrow
+import Control.DeepSeq
 
 import Control.Lens as L 
 import Control.Monad.Identity
-import Control.Monad.RWS
+import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
 
+import Data.DeriveTH
 import Data.Either
+import Data.Foldable (Foldable)
 import Data.List as L
+import Data.List.NonEmpty as NE hiding (length,tail,head)
 import Data.Map as M
+import Data.Semigroup ((<>),First(..))
 import qualified Data.Traversable as T
 
 import Utilities.Syntactic
@@ -52,9 +63,10 @@ import Utilities.Permutation
 class (Ord a) => Scope a where
     type Impl a :: *
     type Impl a = DefaultClashImpl a
+    kind :: a -> String
     error_item :: a -> (String,LineInfo)
-    default error_item :: (Show a, HasLineInfo a LineInfo) => a -> (String,LineInfo)
-    error_item x = (show x, view lineInfo x)
+    default error_item :: (HasLineInfo a LineInfo) => a -> (String,LineInfo)
+    error_item x = (kind x, view lineInfo x)
 
     keep_from :: DeclSource -> a -> Maybe a
     default keep_from :: (ClashImpl (Impl a), HasImplIso (Impl a) a) 
@@ -74,8 +86,10 @@ class (Ord a) => Scope a where
     default merge_scopes :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> a
     merge_scopes x y = mergeScopesImpl (x ^. asImpl :: Impl a) (y ^. asImpl) ^. L.from asImpl
 
+        -- | let x be a collection of event-related declaration in machine m0 and m1 be a 
+        -- | refinement of m0. rename_events sub x translates the name in x from the m0 
+        -- | namespace to the m1 namespace.
     rename_events :: Map EventId [EventId] -> a -> [a]
-    rename_events _ x = [x]
 
 newtype DefaultClashImpl a = DefaultClashImpl { getDefaultClashImpl :: a }
 
@@ -117,7 +131,9 @@ data DeclSource = Inherited | Local
     deriving (Eq,Ord,Show)
 
 data InhStatus a = InhAdd a | InhDelete (Maybe a)
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
+
+type EventInhStatus a = InhStatus (NonEmpty EventId,a)
 
 contents :: HasInhStatus a (InhStatus b) => a -> Maybe b
 contents x = case x ^. inhStatus of
@@ -184,10 +200,18 @@ make_table' f xs = all_errors $ M.mapWithKey g ws
         ws :: Map a [[b]]
         ws = M.map (flip u_scc clashes) zs 
 
-data WithDelete a = WithDelete a
+newtype WithDelete a = WithDelete { getDelete :: a }
 
 instance HasImplIso (WithDelete a) a where
-    asImpl = iso WithDelete (\(WithDelete x) -> x)
+    asImpl = iso WithDelete getDelete
+
+newtype Redundant expr a = Redundant { getRedundant :: a }
+
+instance HasImplIso a b => HasImplIso (Redundant expr a) b where
+    asImpl = asImpl . iso Redundant getRedundant
+
+instance HasInhStatus a b => HasInhStatus (WithDelete a) b where
+    inhStatus = lens getDelete (const WithDelete) . inhStatus
 
 instance ( HasInhStatus a (InhStatus expr)
          , HasDeclSource a DeclSource )
@@ -211,3 +235,20 @@ instance ( HasInhStatus a (InhStatus expr)
                     (InhDelete Nothing, InhAdd e) -> x & inhStatus .~ InhDelete (Just e)
                     (InhAdd e, InhDelete Nothing) -> y & inhStatus .~ InhDelete (Just e)
                     _ -> error "WithDelete ClashImpl.merge_scopes: Evt, Evt"
+
+instance (Eq expr, ClashImpl a, HasInhStatus a (EventInhStatus expr))
+        => ClashImpl (Redundant expr a) where
+    makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
+    keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
+    clashesImpl (Redundant x) (Redundant y) = 
+            clashesImpl x y && (snd <$> contents x) /= (snd <$> contents y)
+    mergeScopesImpl (Redundant x) (Redundant y) 
+        | (snd <$> contents x) == (snd <$> contents y) = Redundant $ x & inhStatus %~ (flip f $ y^.inhStatus)
+        | otherwise = Redundant $ mergeScopesImpl x y
+        where
+            f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
+            f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
+            f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
+            f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
+
+derive makeNFData ''DeclSource

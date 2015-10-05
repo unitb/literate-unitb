@@ -1,4 +1,8 @@
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE DeriveTraversable  #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveFoldable     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE RankNTypes         #-}
@@ -7,11 +11,11 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module UnitB.Event
     ( EventId (..)
-    , Event   (..)
+    , Event  (..)
     , EventRef (..)
     , EventRefinement (..)
-    , EventMerging    (..)
-    , EventSplitting  (..)
+    , EventMerging   (..)
+    , EventSplitting (..)
     , evt_pairs
     , AbstrEvent (..)
     , HasAbstrEvent (..)
@@ -45,6 +49,7 @@ module UnitB.Event
     , hyps_label
     , default_schedule
     -- , empty_schedule
+    , ($=)
     )
 where
 
@@ -61,6 +66,7 @@ import Control.DeepSeq
 import Control.Lens hiding (indices)
 
 import Data.Default
+import Data.Either.Combinators
 import Data.DeriveTH
 import Data.List as L
 import Data.List.NonEmpty as NE
@@ -155,6 +161,15 @@ mkCons ''Event
 empty_event :: Event
 empty_event = makeEvent
 
+infix 1  $=
+
+($=) :: ExprP -> ExprP -> Either [String] Action
+($=) v e = do
+    v' <- v  
+    v' <- mapLeft (const ["expecting a variable"]) $ matching _Word v'
+    e' <- e
+    return $ Assign v' e'
+
 frame' :: Action -> Map String Var
 frame' (Assign v _) = M.singleton (name v) v
 frame' (BcmIn v _)  = M.singleton (name v) v
@@ -164,9 +179,9 @@ frame :: Map Label Action -> Map String Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
 
 ba_pred :: Action -> Expr
-ba_pred (Assign v e) = $fromJust $ Right (Word (prime v)) `mzeq` Right e
-ba_pred (BcmIn v e) = $fromJust $ Right (Word (prime v)) `zelem` Right e
-ba_pred (BcmSuchThat _ e) = e
+ba_pred (Assign v e) = $fromJust $ Right (Word (prime v)) `mzeq` Right (getExpr e)
+ba_pred (BcmIn v e) = $fromJust $ Right (Word (prime v)) `zelem` Right (getExpr e)
+ba_pred (BcmSuchThat _ e) = getExpr e
 
 rel_action :: [Var] -> Map Label Expr -> Map Label Action
 rel_action vs act = M.map (BcmSuchThat vs) act

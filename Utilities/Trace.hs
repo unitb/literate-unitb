@@ -2,8 +2,9 @@
 module Utilities.Trace where
 
 import Control.Arrow
-import Control.Exception
 import Control.Concurrent
+import Control.DeepSeq
+import Control.Exception
 import Control.Monad.IO.Class
 
 -- import Data.Set
@@ -128,8 +129,11 @@ beforeAfterIO msg cmd = mapException f $ do
         f :: SomeException -> TracingError
         f e = TE $ format "Failed during {0}\n\n{1}" msg e
 
+beforeAfter' :: NFData a => String -> a -> a
+beforeAfter' msg = beforeAfter msg.force
+
 beforeAfter :: String -> a -> a
 beforeAfter msg x = mapException f $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after " ++ msg) x
     where
         f :: SomeException -> TracingError
-        f e = TE $ format "Failed during {0}\n\n{1}" msg e
+        f e = TE $ format "Failed during {0}\n\n{1}\nend" msg e

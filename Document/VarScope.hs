@@ -22,7 +22,6 @@ import Control.Applicative
 import Control.Monad.Identity
 import Control.Lens
 
-import Data.List.Ordered as L
 import Data.Map as M
 import Data.Maybe
 import Data.Typeable
@@ -51,10 +50,8 @@ class (Typeable a,Scope a) => IsVarScope a where
 data VarScope = forall a. IsVarScope a => VarScope a
     deriving (Typeable)
 
-data VarGroup = forall v. IsVarScope v => VarGroup [(String,v)]
 
 existential ''VarScope
-existential ''VarGroup
 
 instance Scope VarScope where
     keep_from s = applyVarScope (keep_from s)
@@ -63,6 +60,7 @@ instance Scope VarScope where
     merge_scopes = fmap (runIdentity . fromJust) . apply2VarScope (fmap Identity . merge_scopes)
     error_item = readVarScope error_item
     rename_events m = applyVarScope (rename_events m)
+    kind (VarScope v) = kind v
 
 instance IsVarScope VarScope where
     toOldEventDecl s (VarScope v) = toOldEventDecl s v
@@ -73,7 +71,7 @@ instance IsVarScope VarScope where
 data TheoryConst = TheoryConst 
         { thCons :: Var
         , _theoryConstDeclSource :: DeclSource
-        , _theoryConstDeclLineInfo :: LineInfo }        
+        , _theoryConstLineInfo :: LineInfo }        
     deriving (Eq,Ord,Show,Typeable)
 
 data TheoryDef = TheoryDef 
@@ -115,32 +113,28 @@ makeFields ''TheoryDef
 makeFields ''MachineVar
 makeFields ''EvtDecl
 
-groupVars :: [VarGroup] -> [VarGroup]
-groupVars vs = g $ sortOn f vs
-    where
-        f (VarGroup x) = typeRep x
-        g (VarGroup xs:VarGroup ys:vs) = case cast ys of
-                                            Just ys -> g $ (VarGroup $ xs ++ ys):vs
-                                            Nothing -> VarGroup xs : g (VarGroup ys : vs)
-        g vs = vs
 
 instance Scope TheoryConst where
-    error_item (TheoryConst _ _ li) = ("constant", li)
+    kind _ = "constant"
+    rename_events _ x = [x]
 
 instance Scope TheoryDef where
-    error_item (TheoryDef _ _ li) = ("constant", li)
+    kind _ = "constant"
+    rename_events _ x = [x]
 
 instance Scope MachineVar where
     clashes (DelMch Nothing _ _) (Machine _ Inherited _) = False
     clashes (Machine _ Inherited _) (DelMch Nothing _ _) = False
     clashes _ _ = True
-    error_item (DelMch _ _ li)   = ("deleted variable", li)
-    error_item (Machine _ _ li)   = ("state variable", li)
     merge_scopes (DelMch Nothing s _) (Machine v Inherited li) = DelMch (Just v) s li
     merge_scopes (Machine v Inherited li) (DelMch Nothing s _) = DelMch (Just v) s li
     merge_scopes _ _ = error "MachineVar Scope.merge_scopes: _, _"
+    kind (DelMch _ _ _)   = "deleted variable"
+    kind (Machine _ _ _)  = "state variable"
+    rename_events _ x = [x]
 
 instance Scope EvtDecl where
+    kind (Evt m) = show $ M.map (view _2) m
     keep_from s (Evt m) 
             | M.null r  = Nothing
             | otherwise = Just $ Evt r
@@ -156,7 +150,7 @@ instance Scope EvtDecl where
             head' [x] = x
             head' [] = error "VarScope Scope VarScope: head' []"  
             head' _ = error "VarScope Scope VarScope: head' too many"
-            msg (Just k) (_v,sc,_,li) = (format "{1} (event {0})" k sc :: String, li)
+            msg (Just k) (_v,sc,_,li) = (format "{1} (event {0})" k (show sc) :: String, li)
             msg Nothing (_v,_,_,li) = (format "dummy", li)
     merge_scopes (Evt m0) (Evt m1) = Evt $ unionWith (error "VarScope Scope.merge_scopes: Evt, Evt") m0 m1
     rename_events m (Evt vs) = Evt <$> concatMap f (toList vs)

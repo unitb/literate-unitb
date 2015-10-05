@@ -24,6 +24,7 @@ import Logic.Proof.Tactics as LP
     -- Libraries
 import Control.Applicative ((<$>))
 import Control.Arrow
+import Control.DeepSeq
 import Control.Lens hiding (Context,indices)
 
 import           Control.Monad hiding ( guard )
@@ -37,6 +38,7 @@ import           Control.Monad.Trans.State as ST ( StateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
+import           Data.DeriveTH
 import           Data.Either.Combinators
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
@@ -624,3 +626,5 @@ lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a
       -> t0 (t1 m) a
 lift2 cmd = lift $ lift cmd
+
+derive makeNFData ''ParserSetting

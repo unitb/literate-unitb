@@ -1,4 +1,7 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE OverloadedStrings
+    , RankNTypes
+    , TemplateHaskell
+    , GeneralizedNewtypeDeriving #-}
 module Document.Phase.Test where
 
     --
@@ -7,12 +10,14 @@ module Document.Phase.Test where
 -- import Document.Tests.Suite
 
 import Document.Phase
-import Document.Phase.Structures
 import Document.Phase.Declarations
+import Document.Phase.Expressions
+import Document.Phase.Structures
 import Document.Pipeline
 import Document.Proof
 import Document.Scope
-import Document.VarScope
+import Document.ExprScope hiding (var)
+import Document.VarScope  hiding (var)
 
 import Latex.Monad
 
@@ -31,19 +36,27 @@ import UnitB.AST as AST
     --
 import Control.Applicative
 import Control.Arrow
-import Control.Lens hiding ((<.>))
+import Control.Lens hiding ((<.>),(.=))
 import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.Writer
 
-
--- import Data.Either.Combinators
 import Data.List as L
+import Data.List.NonEmpty as NE
 import Data.Map  as M
--- import Data.Map.Syntax
 import Data.Maybe
 
 import Utilities.BipartiteGraph as G
 import Utilities.Syntactic
-import Utilities.Trace
+
+newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
+    deriving (Functor,Applicative,Monad)
+
+(##) :: k -> a -> MapSyntax k a ()
+x ## y = MapSyntax (tell [(x,y)])
+
+runMap :: (Ord k, Scope a) => MapSyntax k a b -> Map k a
+runMap (MapSyntax cmd) = M.fromListWith merge_scopes $ execWriter cmd
 
 test_case :: TestCase
 test_case = test
@@ -51,11 +64,8 @@ test_case = test
 test :: TestCase
 test = $(makeTestSuite "Unit tests for the parser")
 
-ba :: String -> a -> a
-ba = beforeAfter
-
 name0 :: String
-name0 = "test 0, phase1" 
+name0 = "test 0, phase 1 (structure), create object" 
 
 case0 :: IO (MTable MachineP1)
 case0 = do
@@ -82,23 +92,24 @@ case0 = do
         evts = M.fromList 
                 [ (MId "m0",evts0)
                 , (MId "m1",evts1) ]
+        skipEvt = Left SkipEvent
         evts0 = fromJust $ makeGraph $ do
-            ae0 <- newRightVertex (Just "ae0") ()
-            ae1a <- newRightVertex (Just "ae1a") ()
-            ae1b <- newRightVertex (Just "ae1b") ()
-            cskip <- newRightVertex Nothing ()
-            askip <- newLeftVertex Nothing ()
+            ae0  <- newRightVertex (Right "ae0") ()
+            ae1a <- newRightVertex (Right "ae1a") ()
+            ae1b <- newRightVertex (Right "ae1b") ()
+            cskip <- newRightVertex skipEvt ()
+            askip <- newLeftVertex skipEvt ()
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Just "ae0") ()
-            ae1a <- newLeftVertex (Just "ae1a") ()
-            ae1b <- newLeftVertex (Just "ae1b") ()
-            askip <- newLeftVertex Nothing ()
-            ce0a <- newRightVertex (Just "ce0a") ()
-            ce0b <- newRightVertex (Just "ce0b") ()
-            ce1 <- newRightVertex (Just "ce1") ()
-            ce2 <- newRightVertex (Just "ce2") ()
-            cskip <- newRightVertex Nothing ()
+            ae0 <- newLeftVertex (Right "ae0") ()
+            ae1a <- newLeftVertex (Right "ae1a") ()
+            ae1b <- newLeftVertex (Right "ae1b") ()
+            askip <- newLeftVertex skipEvt ()
+            ce0a <- newRightVertex (Right "ce0a") ()
+            ce0b <- newRightVertex (Right "ce0b") ()
+            ce1 <- newRightVertex (Right "ce1") ()
+            ce2 <- newRightVertex (Right "ce2") ()
+            cskip <- newRightVertex skipEvt ()
             newEdge ae0 ce0a
             newEdge ae0 ce0b
             newEdge ae1a ce1
@@ -117,23 +128,24 @@ result0 = M.fromList
         ms = M.fromList 
             [ (MId "m0",()) 
             , (MId "m1",()) ]
+        skipEvt = Left SkipEvent
         evts0 = fromJust $ makeGraph $ do
-            ae0 <- newRightVertex (Just "ae0") EventP1
-            ae1a <- newRightVertex (Just "ae1a") EventP1
-            ae1b <- newRightVertex (Just "ae1b") EventP1
-            cskip <- newRightVertex Nothing EventP1
-            askip <- newLeftVertex Nothing EventP1
+            ae0 <- newRightVertex (Right "ae0") EventP1
+            ae1a <- newRightVertex (Right "ae1a") EventP1
+            ae1b <- newRightVertex (Right "ae1b") EventP1
+            cskip <- newRightVertex skipEvt EventP1
+            askip <- newLeftVertex skipEvt EventP1
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Just "ae0") EventP1
-            ae1a <- newLeftVertex (Just "ae1a") EventP1
-            ae1b <- newLeftVertex (Just "ae1b") EventP1
-            askip <- newLeftVertex Nothing EventP1
-            ce0a <- newRightVertex (Just "ce0a") EventP1
-            ce0b <- newRightVertex (Just "ce0b") EventP1
-            ce1 <- newRightVertex (Just "ce1") EventP1
-            ce2 <- newRightVertex (Just "ce2") EventP1
-            cskip <- newRightVertex Nothing EventP1
+            ae0 <- newLeftVertex (Right "ae0") EventP1
+            ae1a <- newLeftVertex (Right "ae1a") EventP1
+            ae1b <- newLeftVertex (Right "ae1b") EventP1
+            askip <- newLeftVertex skipEvt EventP1
+            ce0a <- newRightVertex (Right "ce0a") EventP1
+            ce0b <- newRightVertex (Right "ce0b") EventP1
+            ce1 <- newRightVertex (Right "ce1") EventP1
+            ce2 <- newRightVertex (Right "ce2") EventP1
+            cskip <- newRightVertex skipEvt EventP1
             newEdge ae0 ce0a
             newEdge ae0 ce0b
             newEdge ae1a ce1
@@ -162,7 +174,7 @@ result0 = M.fromList
         li = LI "file.ext" 1 1
 
 name1 :: String
-name1 = "test 1, phase1, parsing"
+name1 = "test 1, phase 1, parsing"
 
 case1 :: IO (Either [Error] SystemP1)
 case1 = return $ runPipeline' ms cs () $ run_phase0_blocks >>> run_phase1_types
@@ -261,11 +273,11 @@ result2 = do
             --         & pEventRef %~ (\g -> g & traverseLeft %~ upEvent & traverseRight %~ upEvent)
             upEvent m _ e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) []
         return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
-                upgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
+                layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
 
 name3 :: String
-name3 = "test 3, phase2, parsing"
+name3 = "test 3, phase 2, parsing"
 
 case3 :: IO (Either [Error] SystemP2)
 case3 = return $ do
@@ -281,3 +293,87 @@ case3 = return $ do
 
 result3 :: Either [Error] SystemP2
 result3 = result2
+
+name4 :: String
+name4 = "test 4, phase 3 (expressions), create object"
+
+case4 :: IO (Either [Error] (SystemP MachineP3))
+case4 = return $ do
+        r <- result2
+        runMM (r & (mchTable.lnZip es) (uncurry make_phase3)) ()
+    where
+        decl x con y = do
+            scope <- ask
+            lift $ x ## ExprScope (con y scope li [])
+        event evt lbl con x = event' evt lbl [evt] con x
+        mkEvent evt lbl es con x inh = do
+            scope <- ask
+            lift $ lbl ## ExprScope (EventExpr $ M.singleton (Right evt) 
+                    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li [])) 
+        event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
+        del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
+        li = LI "file.ext" 1 1 
+        x  = fst $ var "x" int :: ExprP
+        y  = fst $ var "y" int :: ExprP
+        es = M.fromList [("m0",es0),("m1",es1)]
+        es0 = runMap $ flip runReaderT Local $ do
+                decl "inv0" Invariant ($typeCheck $ x .<= y)
+                --event 
+                event "ae0"  "grd0" Guard $ $typeCheck$ x .= 0 
+                forM_ ["ae0","ae1a","ae1b"] $ \evt -> 
+                    event evt "default" CoarseSchedule zfalse
+                event "ae1a" "act0" Action $ $typeCheck$ y $= y + 1 
+        es1 = runMap $ flip runReaderT Inherited $ do
+                decl "inv0" Invariant ($typeCheck $ x .<= y)
+                --event 
+                event' "ce0a" "grd0" ["ae0"] Guard $ $typeCheck$ x .= 0 
+                event' "ce0b" "grd0" ["ae0"] Guard $ $typeCheck$ x .= 0 
+                local (const Local) $ do
+                    del_event "ce0a" "grd0" [] Guard
+                    del_event "ce0b" "grd0" [] Guard
+                forM_ [("ce0a",["ae0"]),("ce0b",["ae0"]),("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
+                    event' evt "default" es CoarseSchedule zfalse
+                event' "ce1" "act0" ["ae1a"] Action $ $typeCheck$ y $= y + 1 
+
+result4 :: Either [Error] (SystemP MachineP3)
+result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
+    where
+        upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
+        x  = fst $ var "x" int :: ExprP
+        y  = fst $ var "y" int :: ExprP
+        newMch mid m 
+            | mid == "m0" = makeMachineP3' m empty_property_set 
+                    (makePropertySet [Inv "inv0" $ $typeCheck$ x .<= y])
+                    [PInvariant "inv0" $ $typeCheck$ x .<= y ]
+            | otherwise = makeMachineP3' m 
+                    (makePropertySet [Inv "inv0" $ $typeCheck$ x .<= y])
+                    empty_property_set 
+                    [PInvariant "inv0" $ $typeCheck$ x .<= y ]
+        newThy m = makeTheoryP3 m []
+        newEvt mid _m (Right eid) e = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
+        newEvt _mid _m (Left _) e = makeEventP3 e []
+        evtField mid eid
+            | eid == "ae0"                 = [EGuards "grd0" $ $typeCheck$ x .= 0]
+            | eid == "ae1a"                = [EActions "act0" $ $typeCheck$ y $= y + 1]
+            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ $typeCheck$ y $= y + 1]
+            | otherwise = []
+
+name5 :: String
+name5 = "test 5, phase 3, parsing"
+
+case5 :: IO (Either [Error] (SystemP MachineP3))
+case5 = return $ do
+    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+        ms0 = makeLatex "file.ext" $ do       
+                  command "invariant" [text "inv0",text "x \\le y"]                 
+                  command "evguard" [text "ae0", text "grd0", text "x = 0"]
+                  command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
+        ms1 = makeLatex "file.ext" $ do       
+                  command "removeguard" [text "ce0a",text "grd0"]
+                  command "removeguard" [text "ce0b",text "grd0"]
+        cs = M.empty
+    r <- result2
+    runPipeline' ms cs r run_phase3_exprs
+
+result5 :: Either [Error] (SystemP MachineP3)
+result5 = result4

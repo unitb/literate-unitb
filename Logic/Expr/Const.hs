@@ -95,10 +95,6 @@ mzeq         = typ_fun2 zeq_fun
 zfollows :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zfollows     = fun2 $ mk_fun [] "follows" [bool,bool] bool
 -- zfollows     = fun2 mzfollows
-ztrue :: TypeSystem2 t => AbsExpr t q
-ztrue        = FunApp (mk_fun [] "true" [] bool) []
-zfalse :: TypeSystem2 t => AbsExpr t q
-zfalse       = FunApp (mk_fun [] "false" [] bool) []
 toList :: Traversable f => f a -> [a]
 toList m = execWriter (T.mapM (tell . (:[])) m)
 zall :: (TypeSystem2 t, IsQuantifier q, Traversable list) 
@@ -219,10 +215,10 @@ mzor x y      = mzsome [x,y]
 
 mzfollows :: TypeSystem2 t => TwoExprP t q
 mzfollows x y = mzimplies y x
-mztrue :: TypeSystem2 t
+mztrue :: (TypeSystem2 t, IsQuantifier q)
        => ExprPG t q
 mztrue        = Right ztrue
-mzfalse :: TypeSystem2 t
+mzfalse :: (TypeSystem2 t, IsQuantifier q)
         => ExprPG t q
 mzfalse       = Right zfalse
 mzall :: (IsQuantifier q, TypeSystem2 t, Traversable list) 

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RankNTypes #-}
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses, TemplateHaskell  #-}
@@ -22,6 +23,8 @@ module Logic.Expr.Expr
     , IsQuantifier(..)
     , HasAbsContext(..)
     , HasDummies(..)
+    , HasExpr(..)
+    , IsGenExpr(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -43,11 +46,14 @@ module Logic.Expr.Expr
     , var_decl
     , target, symbols
     , finiteness
+    , typeCheck
     , fromJust, withLoc, locMsg
     , rewriteExpr, rewriteExprM
         -- Lenses
     , funName, arguments
     , result, annotation
+    , _Word, _Const, _FunApp
+    , _Binder, _Cast, _Lift
     )
 where
 
@@ -674,6 +680,33 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
+class ( TypeSystem (TypeT expr)
+      , TypeSystem (AnnotT expr)
+      , Tree expr ) 
+    => IsGenExpr expr where
+    type TypeT expr :: *
+    type AnnotT expr :: *
+    type QuantT expr :: *
+    asExpr :: expr -> GenExpr (TypeT expr) (AnnotT expr) (QuantT expr)
+    ztrue :: expr
+    zfalse :: expr
+
+
+class HasExpr e a where
+    getExpr :: e -> a
+
+instance HasExpr (GenExpr a b c) (GenExpr a b c) where
+    getExpr = id
+instance ( TypeSystem t0
+         , TypeSystem t1
+         , IsQuantifier q ) 
+         => IsGenExpr (GenExpr t0 t1 q) where
+    type TypeT (GenExpr t0 t1 q) = t0
+    type AnnotT (GenExpr t0 t1 q) = t1
+    type QuantT (GenExpr t0 t1 q) = q
+    asExpr = id
+    ztrue        = FunApp (mk_fun [] "true" [] bool) []
+    zfalse       = FunApp (mk_fun [] "false" [] bool) []
 
 derive makeNFData ''AbsFun
 derive makeNFData ''QuantifierType
@@ -689,6 +722,7 @@ derive makeNFData ''FOQuantifier
 derive makeNFData ''HOQuantifier
 
 makeLenses ''AbsFun
+makePrisms ''GenExpr
 
 fromEither :: Loc -> Either [String] a -> a
 fromEither _ (Right x)  = x
@@ -699,6 +733,9 @@ fromEither loc (Left msg) = error $ unlines $ map (format "\n{0}\n{1}" loc') msg
 
 fromJust :: ExpQ
 fromJust = withLoc 'fromEither
+
+typeCheck :: ExpQ
+typeCheck = withLoc 'fromEither
 
 locMsg :: Loc -> String
 locMsg loc = format "{0}:{1}:{2}" (loc_filename loc) (fst $ loc_start loc) (snd $ loc_end loc)

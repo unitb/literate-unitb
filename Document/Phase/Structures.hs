@@ -78,11 +78,11 @@ run_phase1_types = proc p0 -> do
         edges m = concatMap (\(x,xs) -> L.map (,x) xs) m
         makeGraphs = traverse f 
     evts'   <- triggerP -< evts'    
-    let evts'' :: MTable [(Maybe EventId, [Maybe EventId])]
+    let evts'' :: MTable [(SkipOrEvent, [SkipOrEvent])]
         evts'' = addSkip evts'
-        addSkip = M.map (((Nothing,[Nothing]):).M.elems.M.map ((Just *** ifEmpty).fst))
-        ifEmpty [] = [Nothing]
-        ifEmpty xs = L.map Just xs
+        addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.elems.M.map ((Right *** ifEmpty).fst))
+        ifEmpty [] = [Left SkipEvent]
+        ifEmpty xs = L.map Right xs
     evts'   <- triggerP -< makeGraphs evts''
     -- let _ = _
     types   <- triggerP -< types
@@ -92,7 +92,7 @@ run_phase1_types = proc p0 -> do
     --     -- the creation of p1 won't detect clashes between type names, it will merely overshadow
     --     -- some types with (hopefully) the most local types
     --     -- BIG FLAG
-    let _ = evts' :: MTable (G.BiGraph (Maybe EventId) () ())
+    let _ = evts' :: MTable (G.BiGraph SkipOrEvent () ())
         f th = M.unions $ map AST.types $ M.elems th
         basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
         imp_th = M.map (union basic . M.map fst) imp_th'
@@ -114,7 +114,7 @@ make_phase1 :: MachineP0
             -> Map String Sort
             -> Map String Sort
             -> [(String, PostponedDef)]
-            -> G.BiGraph (Maybe EventId) () () -- Map Label (EventId, [EventId])
+            -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
         -- _pEventRef <- G.fromList _ _ 

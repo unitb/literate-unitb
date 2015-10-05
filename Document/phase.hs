@@ -31,6 +31,7 @@ import UnitB.AST
 -- import Control.Applicative
 import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
+import Control.DeepSeq
 import Control.Lens as L
 
 import Control.Monad.Reader.Class 
@@ -41,7 +42,10 @@ import Control.Monad.Trans.State  as ST
 import Control.Monad.Trans.RWS    as RWS hiding (local,ask,tell)
 import Control.Monad.Writer.Class 
 
+import Data.Default
+import Data.DeriveTH
 import Data.Either
+import Data.Either.Combinators
 import Data.Graph
 import Data.List as L
 import Data.List.NonEmpty as NE
@@ -229,6 +233,13 @@ collect p f arg = do
             return $  fromListWith mappend 
                   <$> mapM (runKleisli $ second $ Kleisli id) xs
 
+data SkipEventId = SkipEvent
+    deriving (Show,Eq,Ord)
+
+instance NFData SkipEventId where
+
+type SkipOrEvent = Either SkipEventId EventId
+
 type MachineP0' a = MachineP0
 
 data MachineP0 = MachineP0
@@ -240,7 +251,7 @@ type MachineP1 = MachineP1' EventP1 TheoryP1
 
 data MachineP1' events theory = MachineP1 
     { _p0 :: MachineP0
-    , _pEventRef :: BiGraph (Maybe EventId) events events
+    , _pEventRef :: BiGraph SkipOrEvent events events
     , _pContext  :: theory
     } deriving (Show,Typeable)
 
@@ -375,6 +386,22 @@ instance IsLabel ProgId where
 type MTable = Map MachineId
 type CTable = Map ContextId
 
+derive makeNFData ''MachineId
+derive makeNFData ''MachineP0
+derive makeNFData ''MachineP1'
+derive makeNFData ''MachineP2'
+derive makeNFData ''MachineP3'
+
+derive makeNFData ''EventP1
+derive makeNFData ''EventP2
+derive makeNFData ''EventP3
+derive makeNFData ''EventP4
+
+derive makeNFData ''TheoryP0
+derive makeNFData ''TheoryP1
+derive makeNFData ''TheoryP2
+derive makeNFData ''TheoryP3
+
 makeRecordConstr ''MachineP2'
 makeRecordConstr ''MachineP3'
 makeRecordConstr ''MachineP4'
@@ -386,7 +413,12 @@ makeRecordConstr ''EventP4
 makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
 
+derive makeNFData ''EventP2Field
+derive makeNFData ''EventP3Field
+
 makeLenses ''SystemP
+
+deriving instance Show EventP3Field
 
 -- type Phase2M = Phase2 MTable
 -- type Phase3M = Phase3 MTable
@@ -445,8 +477,17 @@ instance Monad m => LensState (RWST r w a m) (RWST r w b m) where
 
 infixl 3 <.>
 
-(<.>) :: (Ord a) => Map a (b -> c) -> Map a b -> Map a c
-(<.>) mf mx = M.intersectionWith id mf mx
+(<.>) :: (Ord a,Default b) 
+      => Map a (b -> c) -> Map a b -> Map a c
+(<.>) mf mx = uncurry ($) <$> differenceWith g ((,def) <$> mf) mx
+    where
+        g (f,_) x = Just (f,x) 
+
+zipMap :: (Default a, Default b,Ord k) 
+       => Map k a -> Map k b -> Map k (a,b)
+zipMap m0 m1 = M.unionWith f ((,def) <$> m0) ((def,) <$> m1)
+    where
+        f (x,_) (_,y) = (x,y)
 
 -- onMachine :: MachineId -> Lens' Phase2M Phase2I
 -- onMachine = _
@@ -525,8 +566,8 @@ pEventMerge = pEventRef.to f
     where
         f g = readGraph g $ do
             vs <- getRightVertices
-            fmap (M.fromList.catMaybes) $ forM vs $ \v -> do
-                es <- (catMaybes.NE.toList) 
+            fmap (M.fromList.rights) $ forM vs $ \v -> do
+                es <- (rights.NE.toList) 
                         <$> (    T.mapM (leftKey.G.source) 
                              =<< predecessors v)
                 k  <- rightKey v
@@ -545,7 +586,7 @@ pEvents :: (HasMachineP1' phase)
         => Getter (phase event t) (Map EventId event)
 pEvents = pEventRef.to rightMap.to f
     where
-        f = M.fromList . MM.mapMaybe (runKleisli $ first $ Kleisli id)
+        f = M.fromList . MM.mapMaybe (rightToMaybe . (runKleisli $ first $ Kleisli id))
                        . M.toList
 
 pEventId :: Iso' (Map Label event) (Map EventId event)
@@ -596,14 +637,14 @@ pEventRenaming :: HasMachineP1 mch event
                => Getter (mch event thy) (Map EventId [EventId])
 pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
     where
-        g = M.fromList . MM.mapMaybe (\(x,y) -> (,) <$> x <*> y)
+        g = M.fromList . MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
                        . L.map (second sequence) 
                        . M.toList . M.map NE.toList
         f g = readGraph g $ do
-            vs <- getRightVertices
+            vs <- getLeftVertices
             fmap M.fromList $ forM vs $ \v -> 
-                (,) <$> rightKey v 
-                    <*> (T.mapM (leftKey . G.source) =<< predecessors v)
+                (,) <$> leftKey v 
+                    <*> (T.mapM (rightKey . G.target) =<< successors v)
 
 -- instance HasMachineP0 MachineP3 where
 --     machineP0 = p0
@@ -697,16 +738,17 @@ fromList' xs = M.fromList $ L.zip xs $ L.repeat ()
 inherit :: Hierarchy MachineId -> Map MachineId [b] -> Map MachineId [b]
 inherit = inheritWith id id (++)
 
-inherit2 :: Scope s
-         => MTable (Map EventId [EventId])
+inherit2 :: (Scope s,HasMachineP1' phase,HasEventP1 evt)
+         => MTable (phase evt thy)
          -> Hierarchy MachineId
          -> MTable [(t, s)] 
          -> MTable [(t, s)]
-inherit2 evts = inheritWith'
+inherit2 phase = inheritWith'
             id
-            (\m -> concatMap $ second' $ \s -> make_inherited' s >>= rename_events (evts ! m))
+            (\m -> concatMap $ second' $ \s -> make_inherited' s >>= rename_events (names ! m))
             (++)
     where
+        names = M.map (view pEventRenaming) phase
         make_inherited' = MM.maybeToList . make_inherited
         second' = runKleisli . second . Kleisli
         _ = MM.mapMaybe :: (a -> Maybe a) -> [a] -> [a]
@@ -774,49 +816,72 @@ trigger :: Maybe a -> M a
 trigger (Just x) = return x
 trigger Nothing  = left []
 
-upgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-               , Applicative f,MonadFix f)
+layeredUpgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
+               , Applicative f,MonadFix f,NFData evt1)
             => (thy0 -> thy1 -> f thy1)
             -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> f (mch1 evt0 thy1))
-            -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> f evt1)
-            -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> f evt1)
+            -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> f evt1)
+            -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> f evt1)
             -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
-upgradeRecM thyF mchF oldEvF newEvF = upgradeM
+layeredUpgradeRecM thyF mchF oldEvF newEvF = layeredUpgradeM
         (mfix.thyF) 
         (mfix.mchF) 
         (fmap (fmap mfix).oldEvF)
         (fmap (fmap mfix).newEvF)
 
-upgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-            , Applicative f,Monad f)
+layeredUpgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
+            , Applicative f,Monad f,NFData evt1)
          => (thy0 -> f thy1)
          -> (mch0 evt0 thy1 -> f (mch1 evt0 thy1))
-         -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> f evt1)
-         -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> f evt1)
+         -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> f evt1)
+         -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> f evt1)
          -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
-upgradeM thyF mchF oldEvF newEvF m = do
+layeredUpgradeM thyF mchF oldEvF newEvF m = do
         m' <- mchF =<< (m & pContext thyF)
-        m' & pEventRef (\g -> 
-                traverseLeftWithKey (uncurry $ oldEvF m')
-                 =<< traverseRightWithKey (uncurry $ newEvF m') g)
+        m' & pEventRef (\g -> traverseLeftWithKey (uncurry (oldEvF m'))
+                     =<< traverseRightWithKey (uncurry (newEvF m')) g)
 
-upgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0)
+layeredUpgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
            => (thy0 -> thy1 -> thy1)
            -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> mch1 evt0 thy1)
-           -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> evt1)
-           -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1 -> evt1)
+           -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> evt1)
+           -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> evt1)
            -> mch0 evt0 thy0 -> mch1 evt1 thy1
-upgradeRec thyF mchF oldEvF newEvF = upgrade
+layeredUpgradeRec thyF mchF oldEvF newEvF = layeredUpgrade
         (fix.thyF) 
         (fix.mchF) 
         (fmap (fmap fix).oldEvF)
         (fmap (fmap fix).newEvF)
 
-upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0)
+layeredUpgrade :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
         => (thy0 -> thy1)
         -> (mch0 evt0 thy1 -> mch1 evt0 thy1)
-        -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1)
-        -> (mch1 evt0 thy1 -> Maybe EventId -> evt0 -> evt1)
+        -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1)
+        -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1)
+        -> mch0 evt0 thy0 -> mch1 evt1 thy1
+layeredUpgrade thyF mchF oldEvF newEvF = runIdentity . layeredUpgradeM
+        (Identity . thyF) (Identity . mchF) 
+        (fmap (fmap Identity) . oldEvF)
+        (fmap (fmap Identity) . newEvF)
+
+upgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
+            , Applicative f,Monad f,NFData evt1)
+         => (thy0 -> f thy1)
+         -> (mch0 evt0 thy0 -> f (mch1 evt0 thy0))
+         -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> f evt1)
+         -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> f evt1)
+         -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+upgradeM thyF mchF oldEvF newEvF m = do
+        m' <- pContext thyF =<< mchF m
+        m' & pEventRef (\g -> 
+                (traverseLeftWithKey (uncurry (oldEvF m))
+                     =<< traverseRightWithKey (uncurry (newEvF m)) g))
+
+upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
+        => (thy0 -> thy1)
+        -> (mch0 evt0 thy0 -> mch1 evt0 thy0)
+        -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> evt1)
+        -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> evt1)
         -> mch0 evt0 thy0 -> mch1 evt1 thy1
 upgrade thyF mchF oldEvF newEvF = runIdentity . upgradeM
         (Identity . thyF) (Identity . mchF) 

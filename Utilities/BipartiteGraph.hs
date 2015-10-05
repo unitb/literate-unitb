@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, FlexibleContexts #-}
 module Utilities.BipartiteGraph 
     ( BiGraph,GraphBuilder,GraphReader
     , source, target
@@ -44,6 +44,8 @@ import qualified Data.Map   as M
 import Data.Maybe
 import Data.Semigroup
 import qualified Data.Traversable as T
+
+import Text.Printf
 
 newtype GraphBuilder key v0 v1 s0 s1 a = GB (RWST () ([(key,v0)],[(key,v1)],[(Int,Int,())]) (Int,Map key Int,Int,Map key Int) Maybe a)
     deriving (Monad,Applicative,Functor,Alternative,MonadPlus)
@@ -287,8 +289,15 @@ edgeMap g = M.mapKeys (f leftAL *** f rightAL) $ g^.edges
     where
         f ln = ((g^.ln.arKey) A.!)
 
-instance (Show key0,Show key1,Show e,Ord key0,Ord key1) => Show (BiGraph' key0 v0 key1 v1 e) where
-    show = show . edgeMap
+instance ( Show key0, Show key1
+         , Show e
+         , Ord key0, Ord key1
+         , Show v0, Show v1) 
+        => Show (BiGraph' key0 v0 key1 v1 e) where
+    show g = printf "Graph { left = %s, right = %s, edges = %s }" 
+                (show $ leftMap g) 
+                (show $ rightMap g) 
+                (show $ edgeMap g)
 
 insertEdge :: Ord key 
            => key -> v0 -> key -> v1 

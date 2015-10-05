@@ -156,6 +156,7 @@ make_unique suf vs (Binder q d r xp t) = Binder q d (f r) (f xp) t
         local = (L.foldr M.delete vs (L.map name d))
         f = make_unique suf local
 
+derive makeNFData ''ProgId
 derive makeNFData ''Constraint
 derive makeNFData ''Direction
 derive makeNFData ''ProgressProp

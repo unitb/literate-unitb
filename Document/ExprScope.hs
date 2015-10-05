@@ -19,6 +19,7 @@ import Control.Applicative
 import Control.Lens
 import Control.Monad.Reader
 
+import Data.List.NonEmpty as NE (NonEmpty(..),toList)
 import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
@@ -28,36 +29,36 @@ import Utilities.Syntactic
 import Utilities.TH
 
 data CoarseSchedule = CoarseSchedule 
-        { _coarseScheduleInhStatus :: InhStatus Expr
+        { _coarseScheduleInhStatus :: EventInhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
         , _coarseScheduleLineInfo :: LineInfo
         , _coarseScheduleExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data FineSchedule = FineSchedule 
-        { _fineScheduleInhStatus :: InhStatus Expr
+        { _fineScheduleInhStatus :: EventInhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
         , _fineScheduleLineInfo :: LineInfo
         , _fineScheduleExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Guard = Guard 
-        { _guardInhStatus :: InhStatus Expr
+        { _guardInhStatus :: EventInhStatus Expr
         , _guardDeclSource :: DeclSource
         , _guardLineInfo :: LineInfo
         , _guardExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Witness = Witness 
         { _witnessVar :: Var
         , _witnessEvtExpr :: Expr 
         , _witnessDeclSource :: DeclSource
         , _witnessLineInfo :: LineInfo
         , _witnessExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data ActionDecl = Action 
-        { _actionDeclInhStatus :: InhStatus Action
+        { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
         , _actionDeclLineInfo :: LineInfo
         , _actionDeclExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 
 class HasExprStore a b where
     exprStore :: Getter a b 
@@ -84,7 +85,8 @@ instance Show EvtExprScope where
 
 newtype LensT a b = LensT { getLens :: Lens' a b }
 
-data EvtExprGroup = forall a. IsEvtExpr a => EvtExprGroup [(Maybe EventId,[(Label,a)])]
+
+data RefScope = Old | New
 
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
@@ -93,12 +95,25 @@ class ( Eq a, Ord a, Typeable a
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
                    -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
-    toEvtScopeExpr :: EventId -> Label -> a 
-                   -> Reader MachineP2 [Either Error [EventP3Field]]
+    toEvtScopeExpr :: RefScope -> EventId -> Label -> a
+                   -> Reader MachineP2 [Either Error (EventId,[EventP3Field])]
+    defaultEvtWitness :: EventId -> a 
+                      -> Reader MachineP2 [Either Error (EventId,[EventP3Field])]
+    setSource :: EventId -> a -> a
+    default setSource :: HasInhStatus a (EventInhStatus b)
+                      => EventId -> a -> a
+    setSource ev x = x & inhStatus.traverse._1 .~ (ev :| [])
+    inheritedFrom :: a -> [EventId]
+    default inheritedFrom :: HasInhStatus a (EventInhStatus b) => a -> [EventId]
+    inheritedFrom = fromMaybe [].fmap (NE.toList.fst).contents
+
 
 instance IsEvtExpr EvtExprScope where
     toMchScopeExpr lbl (EvtExprScope x) = toMchScopeExpr lbl x
-    toEvtScopeExpr e lbl (EvtExprScope x) = toEvtScopeExpr e lbl x
+    toEvtScopeExpr ref e lbl (EvtExprScope x) = toEvtScopeExpr ref e lbl x
+    defaultEvtWitness ev (EvtExprScope x) = defaultEvtWitness ev x
+    setSource ev (EvtExprScope x) = EvtExprScope $ setSource ev x
+    inheritedFrom (EvtExprScope x) = inheritedFrom x
 
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f (EvtExprScope x) = EvtExprScope <$> declSource f x
@@ -106,26 +121,10 @@ instance HasDeclSource EvtExprScope DeclSource where
 instance HasLineInfo EvtExprScope LineInfo where
     lineInfo f (EvtExprScope x) = EvtExprScope <$> lineInfo f x
 
-instance Show CoarseSchedule where
-    show x = case x ^. inhStatus of
-                InhDelete _ -> "deleted coarse schedule"
-                InhAdd _ -> "coarse schedule"
-instance Show FineSchedule where
-    show x = case x ^. inhStatus of
-                InhDelete _ -> "deleted fine schedule"
-                InhAdd _ -> "fine schedule"
-instance Show Witness where
-    show (Witness _ _ _ _ _) = "witness"
-instance Show Guard where
-    show x = case x ^. inhStatus of
-                InhDelete _ -> "deleted guard"
-                InhAdd _ -> "guard"    
-instance Show ActionDecl where
-    show x = case x ^. inhStatus of
-                InhDelete _ -> "delete action"
-                InhAdd _ -> "action"
+data InitEventId = InitEvent
+    deriving (Show,Ord,Eq)
 
-data EventExpr = EventExpr (Map (Maybe EventId) EvtExprScope)
+data EventExpr = EventExpr (Map (Either InitEventId EventId) EvtExprScope)
     deriving (Eq,Ord,Typeable,Show)
 
 instance HasExprStore EvtExprScope [(Expr,[String])] where
@@ -139,19 +138,19 @@ data Invariant = Invariant
         , _invariantDeclSource :: DeclSource
         , _invariantLineInfo :: LineInfo
         , _invariantExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data InvTheorem = InvTheorem 
         { _invTheoremMchExpr :: Expr
         , _invTheoremDeclSource :: DeclSource
         , _invTheoremLineInfo :: LineInfo
         , _invTheoremExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data TransientProp = TransientProp
         { _transientPropMchExpr :: Transient
         , _transientPropDeclSource :: DeclSource
         , _transientPropLineInfo :: LineInfo
         , _transientPropExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data ConstraintProp = ConstraintProp
         { _constraintPropMchExpr :: Constraint
         , _constraintPropDeclSource :: DeclSource
@@ -175,7 +174,7 @@ data Initially = Initially
             , _initiallyDeclSource :: DeclSource
             , _initiallyLineInfo   :: LineInfo
             , _initiallyExprStore  :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Show)
 data Axiom = Axiom
         { _axiomMchExpr :: Expr
         , _axiomDeclSource :: DeclSource
@@ -192,28 +191,23 @@ makeFields ''TransientProp
 makeFields ''Invariant
 makeFields ''InvTheorem
 
-instance Show Invariant where
-    show _ = "invariant"
-
-instance Show InvTheorem where
-    show _ = "theorem"
-
-instance Show TransientProp where
-    show _ = "transient predicate"
-
-instance Show Initially where
-    show (Initially (InhAdd _) _ _ _) = "initialization"
-    show (Initially (InhDelete _) _ _ _) = "deleted initialization"
-
 class ( Scope a, Typeable a, Show a
       , HasExprStore a [(Expr,[String])] ) 
         => IsExprScope a where
-    toMchExpr :: Label -> a -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+    -- parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
+    toMchExpr :: Label -> a 
+              -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
     toThyExpr :: Label -> a -> Reader TheoryP2 [Either Error TheoryP3Field]
-    toNewEvtExpr :: Label -> a -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
-    toOldEvtExpr :: Label -> a -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
-    toOldPropSet :: Label -> a -> Reader MachineP2 [Either Error PropertySetField]
-    toNewPropSet :: Label -> a -> Reader MachineP2 [Either Error PropertySetField]
+    toNewEvtExpr :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toNewEvtExprDefault :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldEvtExpr :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldPropSet :: Label -> a 
+                 -> Reader MachineP2 [Either Error PropertySetField]
+    toNewPropSet :: Label -> a 
+                 -> Reader MachineP2 [Either Error PropertySetField]
 
 delegate :: (forall a. IsExprScope a => lbl -> a -> b) -> lbl -> ExprScope -> b
 delegate f lbl (ExprScope x) = f lbl x
@@ -223,7 +217,8 @@ instance IsExprScope ExprScope where
     toThyExpr = delegate toThyExpr
     toNewPropSet = delegate toNewPropSet
     toOldPropSet = delegate toOldPropSet
-    toNewEvtExpr = delegate toNewEvtExpr
+    toNewEvtExpr = delegate toNewEvtExpr
+    toNewEvtExprDefault = delegate toNewEvtExprDefault
     toOldEvtExpr = delegate toOldEvtExpr
 
 data ExprScope = forall t. IsExprScope t => ExprScope t
@@ -238,27 +233,42 @@ instance Ord ExprScope where
 instance HasExprStore ExprScope [(Expr,[String])] where
     exprStore f (ExprScope x) = coerce $ exprStore f x
 
-data ExprGroup = forall a. IsExprScope a => ExprGroup [(Label,a)]
 
-existential ''EvtExprGroup
-existential ''ExprGroup
 existential ''ExprScope
 existential ''EvtExprScope
 
 
 instance Scope CoarseSchedule where
-    type Impl CoarseSchedule = WithDelete CoarseSchedule
+    type Impl CoarseSchedule = Redundant Expr (WithDelete CoarseSchedule)
+    kind x = case x ^. inhStatus of
+                InhDelete _ -> "deleted coarse schedule"
+                InhAdd _ -> "coarse schedule"
+    rename_events _ x = [x]
 
 instance Scope FineSchedule where
-    type Impl FineSchedule = WithDelete FineSchedule
+    type Impl FineSchedule = Redundant Expr (WithDelete FineSchedule)
+    kind x = case x ^. inhStatus of
+                InhDelete _ -> "deleted fine schedule"
+                InhAdd _ -> "fine schedule"
+    rename_events _ x = [x]
 
 instance Scope Guard where
-    type Impl Guard = WithDelete Guard
+    type Impl Guard = Redundant Expr (WithDelete Guard)
+    kind x = case x ^. inhStatus of
+                InhDelete _ -> "deleted guard"
+                InhAdd _ -> "guard"    
+    rename_events _ x = [x]
 
 instance Scope Witness where
+    kind _ = "witness"
+    rename_events _ x = [x]
 
 instance Scope ActionDecl where
-    type Impl ActionDecl = WithDelete ActionDecl
+    type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
+    kind x = case x ^. inhStatus of
+                InhDelete _ -> "delete action"
+                InhAdd _ -> "action"
+    rename_events _ x = [x]
 
 instance Scope EvtExprScope where
     keep_from s x = applyEvtExprScope (keep_from s) x
@@ -269,6 +279,7 @@ instance Scope EvtExprScope where
         where
             err = error "EvtExprScope Scope.merge_scopes: _, _"
     rename_events m = applyEvtExprScope (rename_events m)
+    kind (EvtExprScope e) = kind e
 
 instance Scope ExprScope where
     keep_from s x = applyExprScope (keep_from s) x
@@ -279,6 +290,7 @@ instance Scope ExprScope where
         where
             err = error "ExprScope Scope.merge_scopes: _, _"
     rename_events m = applyExprScope (rename_events m)
+    kind _ = "event"
 
 instance Show ExprScope where
     show (ExprScope x) = show x

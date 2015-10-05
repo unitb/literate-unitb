@@ -23,6 +23,7 @@ import Theories.SetTheory
     -- Libraries
 import Control.Arrow (second)
 import Control.DeepSeq
+import Control.Lens hiding (Context)
 
 import Control.Monad.Trans.Either
 import Control.Monad.RWS as RWS
@@ -484,14 +485,14 @@ parse_induction rule param = do
                 li    <- ask
                 var   <- fromEither ztrue $ hoistEither
                     $ parse_expr' 
-                        (parser `with_vars` symbol_table fv0)
-                               { free_dummies = True
-                               , expected_type = Nothing }
+                        (parser `with_vars` symbol_table fv0
+                               & free_dummies  .~ True
+                               & expected_type .~ Nothing )
                         var
                 bound <- fromEither ztrue $ hoistEither $
                     parse_expr'
-                        parser { free_dummies = True
-                               , expected_type = Just (type_of var) }
+                        (parser & free_dummies  .~ True
+                                & expected_type .~ Just (type_of var) )
                         bound
                 let is_set = isRight $ zcast (set_type gA) (Right var)
                 if type_of var == int then

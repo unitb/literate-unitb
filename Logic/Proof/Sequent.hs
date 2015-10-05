@@ -128,7 +128,7 @@ instance Monoid SyntacticProp where
     mconcat = genericMConcat
     mappend = genericMAppend
 
-empty_sequent :: TypeSystem2 t => AbsSequent t q
+empty_sequent :: (TypeSystem2 t,IsQuantifier q) => AbsSequent t q
 empty_sequent = (Sequent empty_ctx empty_monotonicity [] M.empty ztrue)
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsSequent t q) where

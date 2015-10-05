@@ -25,6 +25,7 @@ import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
 import           Control.Applicative 
 
+import           Control.Monad
 import           Control.Monad.Reader.Class 
 import           Control.Monad.Trans
 
@@ -55,8 +56,7 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
             , param_decl
             , remove_var ]
         wrapup (SystemP r_ord p1,vs) = do
-            let names = M.map (view pEventRenaming) p1
-                vs' = inherit2 names r_ord 
+            let vs' = inherit2 p1 r_ord 
                         <$> unionsWith (++)
                         <$> vs
             vars <- triggerM
@@ -69,7 +69,11 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
 make_phase2 :: MachineP1
             -> Map String VarScope
             -> MM' c MachineP2 
-make_phase2 p1 vars = upgradeRecM newThy newMch oldEvent newEvent p1
+make_phase2 p1 vars = join $
+        layeredUpgradeRecM newThy newMch 
+                    <$> oldEvent 
+                    <*> newEvent 
+                    <*> pure p1
     where
         vars' = M.toList vars
         newThy t t' = makeTheoryP2 t _pNotation _pCtxSynt <$> liftField toThyDecl vars'
@@ -81,25 +85,28 @@ make_phase2 p1 vars = upgradeRecM newThy newMch oldEvent newEvent p1
             where
                 _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
                 refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
-        newEvent = liftEvent toNewEventDecl
+        newEvent = -- fmap (fmap $ fmap $ _ $ beforeAfter' "new event decl") . 
+                    liftEvent toNewEventDecl
         oldEvent = liftEvent toOldEventDecl
         liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
-                  -> MachineP2' EventP1 TheoryP2
-                  -> Maybe EventId -> EventP1 -> EventP2 -> MM' c EventP2
-        liftEvent f m = \case 
-                Just eid -> \e e' -> makeEventP2 e (_pEvtSynt e') (_pSchSynt e') . (!eid) <$> table  -- (m ! eid)
-                Nothing -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') []
+                  -> MM' c (MachineP2' EventP1 TheoryP2
+                            -> SkipOrEvent -> EventP1 -> EventP2 -> MM' c EventP2)
+        liftEvent f = do
+            table <- M.fromListWith (++) <$> liftField f vars'
+            return $ \m eid -> do
+                let _pSchSynt ::  EventP2 -> ParserSetting
+                    _pSchSynt e = parser $ e^.eIndices
+
+                    _pEvtSynt :: EventP2 -> ParserSetting
+                    _pEvtSynt e = parser $ e^.eIndParams
+
+                    parser :: Map String Var
+                           -> ParserSetting
+                    parser table    = m^.pMchSynt & decls %~ union table
+                case eid of 
+                    Right eid -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') (findWithDefault [] eid table)  -- (m ! eid)
+                    Left SkipEvent -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') []
             where
-                table = M.fromListWith (++) <$> liftField f vars'
-                _pSchSynt :: EventP2 -> ParserSetting
-                _pSchSynt e = parser $ e^.eIndices
-
-                _pEvtSynt :: EventP2 -> ParserSetting
-                _pEvtSynt e = parser $ e^.eIndParams
-
-                parser :: Map String Var
-                       -> ParserSetting
-                parser table    = m^.pMchSynt & decls %~ union table
                         -- mkSetting _pNotation (p2' ^. pTypes) (constants `union` table e) refVars (p2' ^. pDummyVars)
         -- tell err
         -- unless (L.null err) $ MaybeT $ return Nothing
