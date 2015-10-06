@@ -19,6 +19,7 @@ module Utilities.BipartiteGraph
     , mapBothWithKey
     , traverseLeft, traverseRight, traverseBoth
     , traverseLeftWithKey, traverseRightWithKey
+    , acrossBoth
     , leftMap, rightMap, edgeMap
     , readGraph, forwardEdges, backwardEdges
     , hasLeftVertex, hasRightVertex
@@ -257,6 +258,14 @@ traverseBoth f (Graph lf rt ed) = Graph <$> (arVals.traverse) f lf
                                         <*> (arVals.traverse) f rt 
                                         <*> pure ed
 
+acrossBoth :: Applicative f 
+           => (vA0 -> f vB0)
+           -> (vA1 -> f vB1)
+           -> BiGraph key vA0 vA1
+           -> f (BiGraph key vB0 vB1)
+acrossBoth f g (Graph lf rt ed) = Graph <$> (arVals.traverse) f lf 
+                                        <*> (arVals.traverse) g rt 
+                                        <*> pure ed
 mapKeys :: Ord k1
         => (k0 -> k1)
         -> BiGraph k0 vA vB

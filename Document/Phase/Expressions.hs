@@ -22,9 +22,8 @@ import Document.Visitor
 
 import Latex.Parser hiding (contents)
 
-import Logic.Expr
-
 import UnitB.AST as AST
+import UnitB.Expr
 
 import Theories.SetTheory
 
@@ -147,8 +146,8 @@ make_phase3 p2 exprs' = do
         newMch :: MachineP2
                -> MM' c (MachineP3' EventP2 TheoryP2)
         newMch m = makeMachineP3' m 
-                <$> (makePropertySet <$> liftFieldM toOldPropSet m exprs)
-                <*> (makePropertySet <$> liftFieldM toNewPropSet m exprs)
+                <$> (makePropertySet' <$> liftFieldM toOldPropSet m exprs)
+                <*> (makePropertySet' <$> liftFieldM toNewPropSet m exprs)
                 <*> liftFieldM toMchExpr m exprs
         newThy t = makeTheoryP3 t <$> liftFieldM toThyExpr t exprs
 
@@ -156,13 +155,13 @@ assignment :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assignment = machineCmd "\\evassignment" $ \(ev_lbl, lbl, xs) _m p2 -> do
             ev <- get_event p2 ev_lbl
-            (pred,eStore) <- parse_expr''
+            pred <- parse_expr''
                 (event_parser p2 ev & is_step .~ True) 
                 xs
             let frame = M.elems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
                 act = BcmSuchThat frame pred
             li <- lift ask
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li eStore))]
+            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
 
 bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -173,27 +172,27 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(ev_lbl, lbl, String v, xs) _m p2 -> do
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (p2^.pStateVars)
             li <- lift ask
-            (xp,eStore) <- parse_expr''
+            xp <- parse_expr''
                 (event_parser p2 ev & expected_type .~ Just t)
                 xs
             check_types
-                $ Right (Word var :: Expr) `mzeq` Right xp
+                $ Right (Word var :: RawExpr) `mzeq` Right (asExpr xp)
             let act = Assign var xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li eStore))]
+            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
 bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(evt, lbl, vs, xs) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            (xp,eStore) <- parse_expr'' 
+            xp <- parse_expr''
                     (event_parser p2 ev & is_step .~ True)
                     xs
             vars <- bind_all (map toString vs)
                 (format "variable '{0}' undeclared")
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li eStore))]
+            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
 
 bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -203,12 +202,12 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(evt, lbl, String v, xs) _m p2 -> do
                 (format "variable '{0}' undeclared" v)
                 $ v `M.lookup` (p2^.pStateVars)
             li  <- lift ask
-            (xp,eStore) <- parse_expr'' 
+            xp <- parse_expr''
                     (event_parser p2 ev & expected_type .~ Just (set_type t) )
                     xs
             let act = BcmIn var xp
-            check_types $ Right (Word var) `zelem` Right xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li eStore))]
+            check_types $ Right (Word var) `zelem` Right (asExpr xp)
+            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
 
 instance Scope Initially where
     type Impl Initially = WithDelete Initially
@@ -218,7 +217,7 @@ instance Scope Initially where
     rename_events _ x = [x]
 
 used_var' :: Expr -> Map String Var
-used_var' = symbol_table . S.toList . used_var
+used_var' = symbol_table . S.toList . used_var . getExpr
 
 instance IsExprScope Initially where
     toNewEvtExprDefault _ _ = return []
@@ -271,22 +270,22 @@ instance IsExprScope Initially where
 remove_init :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_init = machineCmd "\\removeinit" $ \(One lbls) _m _p2 -> do
             li <- lift ask
-            return [(lbl,ExprScope $ Initially (InhDelete Nothing) Local li []) | lbl <- lbls ]
+            return [(lbl,ExprScope $ Initially (InhDelete Nothing) Local li) | lbl <- lbls ]
 
 remove_assgn :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            return [(lbl,evtScope ev (Action (InhDelete Nothing) Local li [])) | lbl <- lbls ]
+            return [(lbl,evtScope ev (Action (InhDelete Nothing) Local li)) | lbl <- lbls ]
 
 witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            (p,eStore)  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
+            p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            return [(label var,evtScope ev (Witness v p Local li eStore))]
+            return [(label var,evtScope ev (Witness v p Local li))]
 
 instance Scope EventExpr where
     kind (EventExpr m) = show $ kind <$> m
@@ -434,42 +433,42 @@ guard_decl :: MPipeline MachineP2
 guard_decl = machineCmd "\\evguard" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (event_parser p2 ev) xs
-            return [(lbl,evtScope ev (Guard (InhAdd (ev NE.:| [],xp)) Local li eStore))]
+            xp <- parse_expr'' (event_parser p2 ev) xs
+            return [(lbl,evtScope ev (Guard (InhAdd (ev NE.:| [],xp)) Local li))]
 
 guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 guard_removal = machineCmd "\\removeguard" $ \(evt_lbl,lbls) _m p2 -> do
         ev  <- get_event p2 evt_lbl
         li <- lift ask
-        return [(lbl,evtScope ev (Guard (InhDelete Nothing) Local li [])) | lbl <- lbls ]
+        return [(lbl,evtScope ev (Guard (InhDelete Nothing) Local li)) | lbl <- lbls ]
 
 coarse_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 coarse_removal = machineCmd "\\removecoarse" $ \(evt_lbl,lbls) _m p2 -> do
         ev  <- get_event p2 evt_lbl
         li <- lift ask
-        return [(lbl,evtScope ev (CoarseSchedule (InhDelete Nothing) Local li [])) | lbl <- lbls ]
+        return [(lbl,evtScope ev (CoarseSchedule (InhDelete Nothing) Local li)) | lbl <- lbls ]
 
 fine_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 fine_removal = machineCmd "\\removefine" $ \(evt_lbl,lbls) _m p2 -> do
         ev  <- get_event p2 evt_lbl
         li <- lift ask
-        return [(lbl,evtScope ev (FineSchedule (InhDelete Nothing) Local li [])) | lbl <- lbls ]
+        return [(lbl,evtScope ev (FineSchedule (InhDelete Nothing) Local li)) | lbl <- lbls ]
 
 coarse_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 coarse_sch_decl = machineCmd "\\cschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (ev NE.:| [],xp)) Local li eStore))]
+            xp <- parse_expr'' (schedule_parser p2 ev) xs
+            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (ev NE.:| [],xp)) Local li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
 fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
             ev <- get_event p2 evt
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (FineSchedule (InhAdd (ev NE.:| [],xp)) Local li eStore))]
+            xp <- parse_expr'' (schedule_parser p2 ev) xs
+            return [(lbl,evtScope ev (FineSchedule (InhAdd (ev NE.:| [],xp)) Local li))]
 
         -------------------------
         --  Theory Properties  --
@@ -479,9 +478,7 @@ instance Scope Axiom where
     kind _ = "axiom"
     merge_scopes _ _ = error "Axiom Scope.merge_scopes: _, _"
     clashes _ _ = True
-    keep_from s x = guard (s == f x) >> return x
-        where
-            f (Axiom _ s _ _) = s
+    keep_from s x = guard (s == view declSource x) >> return x
     rename_events _ x = [x]
 
 parseExpr' :: (HasMchExpr b a, Ord label)
@@ -504,8 +501,8 @@ assumption :: MPipeline MachineP2
                     [(Label,ExprScope)]
 assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (p2^.pCtxSynt) xs
-            return [(lbl,ExprScope $ Axiom xp Local li eStore)]
+            xp <- parse_expr'' (p2^.pCtxSynt) xs
+            return [(lbl,ExprScope $ Axiom xp Local li)]
 
         --------------------------
         --  Program properties  --
@@ -515,8 +512,8 @@ initialization :: MPipeline MachineP2
                     [(Label,ExprScope)]
 initialization = machineCmd "\\initialization" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ Initially (InhAdd xp) Local li eStore)]
+            xp <- parse_expr'' (p2^.pMchSynt) xs
+            return [(lbl,ExprScope $ Initially (InhAdd xp) Local li)]
 
 default_schedule_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 default_schedule_decl = arr $ \p2 -> 
@@ -525,7 +522,7 @@ default_schedule_decl = arr $ \p2 ->
         li = LI "default" 1 1
         default_sch e = ( label "default",
                           ExprScope $ EventExpr 
-                            $ singleton (Right e) (EvtExprScope $ CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li []))
+                            $ singleton (Right e) (EvtExprScope $ CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li))
 
 
 instance Scope Invariant where
@@ -552,8 +549,8 @@ invariant :: MPipeline MachineP2
                     [(Label,ExprScope)]
 invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ Invariant xp Local li eStore)]
+            xp <- parse_expr'' (p2^.pMchSynt) xs
+            return [(lbl,ExprScope $ Invariant xp Local li)]
 
 instance Scope InvTheorem where
     kind _ = "theorem"
@@ -579,8 +576,8 @@ mch_theorem :: MPipeline MachineP2
                     [(Label,ExprScope)]
 mch_theorem = machineCmd "\\theorem" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
-            (xp,eStore) <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ InvTheorem xp Local li eStore)]
+            xp <- parse_expr'' (p2^.pMchSynt) xs
+            return [(lbl,ExprScope $ InvTheorem xp Local li)]
 
 instance Scope TransientProp where
     kind _ = "transient predicate"
@@ -606,7 +603,7 @@ transient_prop :: MPipeline MachineP2
 transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             _evs <- get_events p2 evts
             li   <- lift ask
-            (tr,eStore) <- parse_expr'' 
+            tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     xs
             let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) _evs
@@ -614,17 +611,17 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
                 [ ( not $ L.null withInd
                   , format "event(s) {0} have indices and require witnesses" 
                         $ intercalate "," $ map show withInd) ]
-            let vs = symbol_table $ S.elems $ used_var tr
+            let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
                 prop = Tr fv tr evts empty_hint
-            return [(lbl,ExprScope $ TransientProp prop Local li eStore)]
+            return [(lbl,ExprScope $ TransientProp prop Local li)]
 
 transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
             _evs <- get_events p2 evts
             li   <- lift ask
-            (tr,eStore) <- parse_expr'' 
+            tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     xs
             let fv = free_vars' ds tr
@@ -633,7 +630,7 @@ transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
                     $ NE.nonEmpty evts
             hint  <- tr_hint p2 m fv evts' hint
             let prop = Tr fv tr evts hint
-            return [(lbl,ExprScope $ TransientProp prop Local li eStore)]
+            return [(lbl,ExprScope $ TransientProp prop Local li)]
 
 instance IsExprScope ConstraintProp where
     toNewEvtExprDefault _ _ = return []
@@ -658,7 +655,7 @@ constraint_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 constraint_prop = machineCmd "\\constraint" $ \(lbl,xs) _m p2 -> do
             li  <- lift ask
-            (pre,eStore) <- parse_expr'' 
+            pre <- parse_expr''
                     (p2^.pMchSynt
                         & free_dummies .~ True
                         & is_step .~ True)
@@ -666,7 +663,7 @@ constraint_prop = machineCmd "\\constraint" $ \(lbl,xs) _m p2 -> do
             let vars = elems $ free_vars' ds pre
                 ds = p2^.pDummyVars
                 prop = Co vars pre
-            return [(lbl,ExprScope $ ConstraintProp prop Local li eStore)]
+            return [(lbl,ExprScope $ ConstraintProp prop Local li)]
 
 instance IsExprScope SafetyDecl where
     toNewEvtExprDefault _ _ = return []
@@ -696,19 +693,19 @@ safety_prop :: Label -> Maybe Label
             -> M [(Label,ExprScope)]
 safety_prop lbl evt pCt qCt _m p2 = do
             li <- lift ask
-            p <- unfail $ parse_expr'' 
+            p <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     pCt
-            q <- unfail $ parse_expr'' 
+            q <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     qCt
             maybe (return ()) (void . get_event p2) evt
-            (p,eStore)  <- trigger p
-            (q,eStore') <- trigger q
+            p <- trigger p
+            q <- trigger q
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
                 new_prop = Unless (M.elems dum) p q evt
-            return [(lbl,ExprScope $ SafetyProp new_prop Local li $ eStore ++ eStore')]
+            return [(lbl,ExprScope $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -744,20 +741,20 @@ progress_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
             li <- lift ask
-            p    <- unfail $ parse_expr'' 
+            p    <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True)
                     pCt
-            q    <- unfail $ parse_expr'' 
+            q    <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True)
                     qCt
-            (p,eStore)  <- trigger p
-            (q,eStore') <- trigger q
+            p  <- trigger p
+            q  <- trigger q
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
                 new_prop = LeadsTo (M.elems dum) p q
 --             new_deriv <- bind (format "proof step '{0}' already exists" lbl)
 --                 $ insert_new lbl (Rule Add) $ derivation $ props m
-            return [(lbl,ExprScope $ ProgressProp new_prop Local li (eStore++eStore'))]
+            return [(lbl,ExprScope $ ProgressProp new_prop Local li)]
 
 instance IsEvtExpr Witness where
     defaultEvtWitness _ _ = return []
@@ -766,7 +763,7 @@ instance IsEvtExpr Witness where
         | otherwise              = return []
     toEvtScopeExpr Old _ _ _ = return []
     toEvtScopeExpr New evt _ w
-        | w^.declSource == Local = return [Right (evt,[EWitness (w^.ES.var) (w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EWitness (w^.ES.var) (getExpr $ w^.evtExpr)])]
         | otherwise              = return []
     setSource _ x = x
     inheritedFrom _ = []
@@ -790,7 +787,7 @@ instance IsEvtExpr ActionDecl where
     toMchScopeExpr _ _  = return []
     toEvtScopeExpr =
             parseEvtExpr' "action"
-                (uncurry M.union . (frame' &&& used_var' . ba_pred))
+                (uncurry M.union . (frame' &&& symbol_table.S.toList.used_var.ba_pred))
                 EActions
             -- vs <- view pDelVars
             -- _
@@ -856,10 +853,10 @@ init_witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
             -- ev <- get_event p2 evt
             li <- lift ask
-            (p,eStore)  <- parse_expr'' (p2^.pMchSynt) xp
+            p  <- parse_expr'' (p2^.pMchSynt) xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            return [(label var, ExprScope $ EventExpr $ M.singleton (Left InitEvent) (EvtExprScope $ Witness v p Local li eStore))]
+            return [(label var, ExprScope $ EventExpr $ M.singleton (Left InitEvent) (EvtExprScope $ Witness v p Local li))]
 
 event_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
@@ -895,7 +892,7 @@ check_types c = EitherT $ do
 free_vars' :: Map String Var -> Expr -> Map String Var
 free_vars' ds e = vs `M.intersection` ds
     where
-        vs = symbol_table $ S.elems $ used_var e
+        vs = used_var' e
 
 defaultInitWitness :: MachineP2 -> [MachineP3'Field a b] -> [MachineP3'Field a b]
 defaultInitWitness p2 xs = concatMap f xs ++ xs

@@ -20,12 +20,12 @@ import Document.Visitor
 
 import Latex.Parser
 
-import Logic.Expr 
 import Logic.Operator (Notation)
 import Logic.Proof
 import Logic.Proof.Tactics
 
 import UnitB.AST
+import UnitB.Expr 
 
     -- Libraries
 -- import Control.Applicative
@@ -306,7 +306,7 @@ data EventP3 = EventP3
     , _eCoarseSched :: Map Label Expr     
     , _eFineSched   :: Map Label Expr
     , _eGuards   :: Map Label Expr       
-    , _eWitness     :: Map Var Expr
+    , _eWitness     :: Map Var RawExpr
     , _eActions  :: Map Label Action
     } deriving (Show,Typeable)
 
@@ -613,24 +613,65 @@ pEvtSynt = pEvents . onMap eEvtSynt
 eIndParams :: HasEventP2 events => Getter events (Map String Var) 
 eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
+-- pNewCoarseSched :: HasMachineP3 mch event 
+--                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
+-- pNewCoarseSched = pEvents . onMap eNewCoarseSched
 
+-- pNewFineSched :: HasMachineP3 mch event 
+--               => Getter (mch event t) (Map EventId (Map Label Expr))
+-- pNewFineSched = pEvents . onMap eNewFineSched
 
+-- pOldCoarseSched :: HasMachineP3 mch event 
+--                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
+-- pOldCoarseSched = pEvents . onMap eOldCoarseSched
 
+-- pOldFineSched :: HasMachineP3 mch event 
+--               => Getter (mch event t) (Map EventId (Map Label Expr))
+-- pOldFineSched = pEvents . onMap eOldFineSched
 
+-- pDelCoarseSched :: HasMachineP3 mch event 
+--                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
+-- pDelCoarseSched = pEvents . onMap eDelCoarseSched
 
+-- pDelFineSched :: HasMachineP3 mch event 
+--               => Getter (mch event t) (Map EventId (Map Label Expr))
+-- pDelFineSched = pEvents . onMap eDelFineSched
 
+-- pOldGuards :: HasMachineP3 mch event 
+--            => Getter (mch event t) (Map EventId (Map Label Expr))
+-- pOldGuards = pEvents . onMap eOldGuards
 
+-- pNewGuards :: HasMachineP3 mch event 
+--            => Getter (mch event t) (Map EventId (Map Label Expr))       -- Guards
+-- pNewGuards = pEvents . onMap eNewGuards
 
+-- pDelGuards :: HasMachineP3 mch event 
+--            => Getter (mch event t) (Map EventId (Map Label Expr))       -- Guards
+-- pDelGuards = pEvents . onMap eDelGuards
 
+-- pOldActions :: HasMachineP3 mch event 
+--             => Getter (mch event t) (Map EventId (Map Label Action))    -- Actions
+-- pOldActions = pEvents . onMap eOldActions
 
+-- pDelActions :: HasMachineP3 mch event 
+--             => Getter (mch event t) (Map EventId (Map Label Action))
+-- pDelActions = pEvents . onMap eDelActions
 
+-- pNewActions :: HasMachineP3 mch event 
+--             => Getter (mch event t) (Map EventId (Map Label Action))
+-- pNewActions = pEvents . onMap eNewActions
+
+-- pEventFineRef :: HasMachineP4 mch event
+--               => Lens' (mch event t) (Map EventId (Maybe (ProgId, ProgressProp)))
+-- pEventFineRef = pFineRef
+--         -- pEvents . onMap eFineRef
 
 pEventCoarseRef :: HasMachineP4 mch event
                 => Getter (mch event t) (Map EventId [(Label,ScheduleChange)])
 pEventCoarseRef = pEvents . onMap eCoarseRef
 
 pWitness :: HasMachineP3 mch event 
-         => Getter (mch event t) (Map EventId (Map Var Expr))
+         => Getter (mch event t) (Map EventId (Map Var RawExpr))
 pWitness = pEvents . onMap eWitness
 
 pEventRenaming :: HasMachineP1 mch event

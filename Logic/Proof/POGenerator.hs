@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts       #-}
 module Logic.Proof.POGenerator 
     ( POGen, POGenT -- Logic.Proof.POGenerator.context
     , emit_goal
@@ -32,6 +33,7 @@ import Control.Lens hiding (Context)
 
 import Data.List as L
 import Data.Map as M hiding ( map )
+import qualified Data.Map as M
 
 import Utilities.Error
 import Utilities.TH (mkCons)
@@ -84,14 +86,15 @@ instance Monad m => Monad (POGenT m) where
 instance MonadTrans POGenT where
     lift = POGen . lift
 
-emit_exist_goal :: (Monad m,Functor m) => [Label] -> [Var] -> [Expr] -> POGenT m ()
+emit_exist_goal :: (HasExpr expr Expr, Monad m,Functor m) 
+                => [Label] -> [Var] -> [expr] -> POGenT m ()
 emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
                 emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
     where
-        clauses = partition_expr vars es
+        clauses = partition_expr vars $ map getExpr es
         clauses' = M.toList $ M.fromListWith (++) clauses
 
 existential :: (Monad m,Functor m) => [Var] -> POGenT m () -> POGenT m ()
@@ -116,14 +119,15 @@ existential vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal [] vs ss'
 
-emit_goal :: (Functor m, Monad m) => [Label] -> Expr -> POGenT m ()
+emit_goal :: (Functor m, Monad m, HasExpr expr Expr) 
+          => [Label] -> expr -> POGenT m ()
 emit_goal lbl g = POGen $ do
     tag <- asks tag 
     po <- Sequent <$> view S.context 
                   <*> view synProp
                   <*> view nameless
                   <*> view named
-                  <*> pure g
+                  <*> pure (getExpr g)
     tell [(composite_label $ tag ++ lbl, po)]
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
@@ -153,13 +157,13 @@ prefix_label lbl = POCtx $ do
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: Map Label Expr -> POCtx ()
+named_hyps :: HasExpr expr Expr => Map Label expr -> POCtx ()
 named_hyps hyps = POCtx $ do
-        named %= M.union hyps
+        named %= M.union (M.map getExpr hyps)
 
-nameless_hyps :: [Expr] -> POCtx ()
+nameless_hyps :: HasExpr expr Expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
-        nameless %= (++hyps)
+        nameless %= (++ map getExpr hyps)
 
 variables :: Map String Var -> POCtx ()
 variables vars = POCtx $ do

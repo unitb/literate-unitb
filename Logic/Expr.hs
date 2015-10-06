@@ -11,7 +11,7 @@ where
 
 import Logic.Expr.Classes 
 import Logic.Expr.Const hiding (toList)
-import Logic.Expr.Expr       
+import Logic.Expr.Expr  -- hiding (Expr)  
 import Logic.Expr.Genericity hiding ( Generic, variables )
 import Logic.Expr.Label
 import Logic.Expr.PrettyPrint

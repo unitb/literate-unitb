@@ -17,6 +17,7 @@ import UnitB.AST
 import UnitB.PO
 
 import Logic.Expr
+import Logic.Expr.Printable
 import Logic.Operator
 import Logic.Proof as LP
 import Logic.Proof.Tactics as LP
@@ -53,7 +54,7 @@ import           Utilities.Syntactic hiding (line)
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
-context :: Machine -> Context
+context :: RawMachine -> Context
 context m = step_ctx m `merge_ctx` theory_ctx (theory m)
 
 data ProofStep = Step 
@@ -530,10 +531,9 @@ mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
 
 parse_expr'' :: ParserSetting
              -> LatexDoc
-             -> M (Expr,[(Expr,[String])])
+             -> M DispExpr
 parse_expr'' p xs = do
-        e <- hoistEither $ parse_expr' p xs
-        return (e, [(e,[flatten' $ drop_blank_text' xs])])
+        hoistEither $ parse_expr' p xs
 
 unfail :: M a -> M (Maybe a)
 unfail cmd = do
@@ -544,7 +544,7 @@ unfail cmd = do
 
 parse_expr' :: ParserSetting
             -> LatexDoc
-            -> Either [Error] Expr
+            -> Either [Error] DispExpr
 parse_expr' set ys = do
         let ctx0
                 | set^.is_step = set^.primed_vars
@@ -565,7 +565,7 @@ parse_expr' set ys = do
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> Error (format msg x (type_of x)) li)
                 $ ambiguities x
-        return x
+        return $ DispExpr (flatten' xs) x
     where
         xs    = drop_blank_text' ys
         msg   = "type of {0} is ill-defined: {1}"
@@ -600,7 +600,7 @@ get_expression t ys = do
 get_predicate' :: Theory
                -> Context
                -> LatexDoc
-               -> Either [Error] Expr
+               -> Either [Error] DispExpr
 get_predicate' th ctx ys = parse_expr' 
         (setting_from_context 
             (th_notation th) ctx)
@@ -608,18 +608,18 @@ get_predicate' th ctx ys = parse_expr'
 
 get_assert :: Machine
            -> LatexDoc
-           -> Either [Error] Expr
+           -> Either [Error] DispExpr
 get_assert m = parse_expr' (machine_setting m)
 
 get_evt_part :: Machine -> Event
              -> LatexDoc
-             -> Either [Error] Expr
+             -> Either [Error] DispExpr
 get_evt_part m e = parse_expr' (event_setting m e & is_step .~ True)
                         
 
 get_assert_with_free :: Machine 
                      -> LatexDoc
-                     -> Either [Error] Expr
+                     -> Either [Error] DispExpr
 get_assert_with_free m = parse_expr' (machine_setting m & free_dummies .~ True)
 
 lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))

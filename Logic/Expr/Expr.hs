@@ -682,28 +682,43 @@ rename x y e = rewrite (rename x y) e
 
 class ( TypeSystem (TypeT expr)
       , TypeSystem (AnnotT expr)
-      , Tree expr ) 
+      , GenExpr (TypeT expr) (AnnotT expr) (QuantT expr) ~ ExprT expr) 
     => IsGenExpr expr where
     type TypeT expr :: *
     type AnnotT expr :: *
     type QuantT expr :: *
-    asExpr :: expr -> GenExpr (TypeT expr) (AnnotT expr) (QuantT expr)
+    type ExprT expr :: *
+    asExpr :: expr -> ExprT expr
     ztrue :: expr
     zfalse :: expr
 
 
-class HasExpr e a where
+class HasExpr e a | e -> a where
     getExpr :: e -> a
 
 instance HasExpr (GenExpr a b c) (GenExpr a b c) where
     getExpr = id
+
+--class ( IsGenExpr expr
+--         , TypeT expr ~ GenericType
+--         , AnnotT expr ~ GenericType
+--         , QuantT expr ~ HOQuantifier)
+--    => IsExpr expr
+
+--instance ( IsGenExpr expr
+--         , TypeT expr ~ GenericType
+--         , AnnotT expr ~ GenericType
+--         , QuantT expr ~ HOQuantifier)
+--    => IsExpr expr
+
 instance ( TypeSystem t0
          , TypeSystem t1
-         , IsQuantifier q ) 
+         , IsQuantifier q) 
          => IsGenExpr (GenExpr t0 t1 q) where
-    type TypeT (GenExpr t0 t1 q) = t0
+    type TypeT (GenExpr t0 t1 q)  = t0
     type AnnotT (GenExpr t0 t1 q) = t1
     type QuantT (GenExpr t0 t1 q) = q
+    type ExprT (GenExpr t0 t1 q)  = GenExpr t0 t1 q
     asExpr = id
     ztrue        = FunApp (mk_fun [] "true" [] bool) []
     zfalse       = FunApp (mk_fun [] "false" [] bool) []

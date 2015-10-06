@@ -10,9 +10,8 @@ module Document.ExprScope where
 import Document.Scope
 import Document.Phase
 
-import Logic.Expr hiding (Const)
-
 import UnitB.AST 
+import UnitB.Expr hiding (Const)
 
     -- Libraries
 import Control.Applicative
@@ -32,36 +31,29 @@ data CoarseSchedule = CoarseSchedule
         { _coarseScheduleInhStatus :: EventInhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
         , _coarseScheduleLineInfo :: LineInfo
-        , _coarseScheduleExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data FineSchedule = FineSchedule 
         { _fineScheduleInhStatus :: EventInhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
         , _fineScheduleLineInfo :: LineInfo
-        , _fineScheduleExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data Guard = Guard 
         { _guardInhStatus :: EventInhStatus Expr
         , _guardDeclSource :: DeclSource
         , _guardLineInfo :: LineInfo
-        , _guardExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data Witness = Witness 
         { _witnessVar :: Var
         , _witnessEvtExpr :: Expr 
         , _witnessDeclSource :: DeclSource
         , _witnessLineInfo :: LineInfo
-        , _witnessExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
         , _actionDeclLineInfo :: LineInfo
-        , _actionDeclExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 
-class HasExprStore a b where
-    exprStore :: Getter a b 
 
 makeFields ''CoarseSchedule
 makeFields ''FineSchedule
@@ -91,7 +83,6 @@ data RefScope = Old | New
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
       , HasLineInfo a LineInfo
-      , HasExprStore a [(Expr,[String])]
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
                    -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
@@ -106,7 +97,6 @@ class ( Eq a, Ord a, Typeable a
     inheritedFrom :: a -> [EventId]
     default inheritedFrom :: HasInhStatus a (EventInhStatus b) => a -> [EventId]
     inheritedFrom = fromMaybe [].fmap (NE.toList.fst).contents
-
 
 instance IsEvtExpr EvtExprScope where
     toMchScopeExpr lbl (EvtExprScope x) = toMchScopeExpr lbl x
@@ -127,60 +117,48 @@ data InitEventId = InitEvent
 data EventExpr = EventExpr (Map (Either InitEventId EventId) EvtExprScope)
     deriving (Eq,Ord,Typeable,Show)
 
-instance HasExprStore EvtExprScope [(Expr,[String])] where
-    exprStore f (EvtExprScope x) = coerce $ exprStore f x
 
-instance HasExprStore EventExpr [(Expr,[String])] where
-    exprStore = to $ \(EventExpr m) -> concatMap (view exprStore) $ M.elems m
 
 data Invariant = Invariant 
         { _invariantMchExpr :: Expr
         , _invariantDeclSource :: DeclSource
         , _invariantLineInfo :: LineInfo
-        , _invariantExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data InvTheorem = InvTheorem 
         { _invTheoremMchExpr :: Expr
         , _invTheoremDeclSource :: DeclSource
         , _invTheoremLineInfo :: LineInfo
-        , _invTheoremExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data TransientProp = TransientProp
         { _transientPropMchExpr :: Transient
         , _transientPropDeclSource :: DeclSource
         , _transientPropLineInfo :: LineInfo
-        , _transientPropExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data ConstraintProp = ConstraintProp
         { _constraintPropMchExpr :: Constraint
         , _constraintPropDeclSource :: DeclSource
         , _constraintPropLineInfo :: LineInfo
-        , _constraintPropExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data SafetyDecl = SafetyProp
         { _safetyDeclMchExpr :: SafetyProp
         , _safetyDeclDeclSource :: DeclSource
         , _safetyDeclLineInfo :: LineInfo
-        , _safetyDeclExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data ProgressDecl = ProgressProp
         { _progressDeclMchExpr :: ProgressProp
         , _progressDeclDeclSource :: DeclSource
         , _progressDeclLineInfo :: LineInfo
-        , _progressDeclExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 data Initially = Initially
             { _initiallyInhStatus  :: InhStatus Expr
             , _initiallyDeclSource :: DeclSource
             , _initiallyLineInfo   :: LineInfo
-            , _initiallyExprStore  :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+            } deriving (Eq,Ord,Typeable,Show)
 data Axiom = Axiom
         { _axiomMchExpr :: Expr
         , _axiomDeclSource :: DeclSource
         , _axiomLineInfo :: LineInfo
-        , _axiomExprStore :: [(Expr,[String])] }
-    deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show)
 
 makeFields ''Axiom
 makeFields ''ProgressDecl
@@ -191,8 +169,7 @@ makeFields ''TransientProp
 makeFields ''Invariant
 makeFields ''InvTheorem
 
-class ( Scope a, Typeable a, Show a
-      , HasExprStore a [(Expr,[String])] ) 
+class ( Scope a, Typeable a, Show a )
         => IsExprScope a where
     -- parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
     toMchExpr :: Label -> a 
@@ -230,8 +207,6 @@ instance Eq ExprScope where
 instance Ord ExprScope where
     compare (ExprScope x) (ExprScope y) = h_compare x y
 
-instance HasExprStore ExprScope [(Expr,[String])] where
-    exprStore f (ExprScope x) = coerce $ exprStore f x
 
 
 existential ''ExprScope

@@ -7,8 +7,6 @@ module Document.Phase.Test where
     --
     -- Modules
     --
--- import Document.Tests.Suite
-
 import Document.Phase
 import Document.Phase.Declarations
 import Document.Phase.Expressions
@@ -21,12 +19,12 @@ import Document.VarScope  hiding (var)
 
 import Latex.Monad
 
-import Logic.Expr hiding (fromJust)
 import Logic.Theory hiding (command)
 
 import Theories.Arithmetic
 import Theories.SetTheory
 
+import UnitB.Expr hiding (fromJust)
 import Tests.UnitTest
 
 import UnitB.AST as AST
@@ -304,58 +302,58 @@ case4 = return $ do
     where
         decl x con y = do
             scope <- ask
-            lift $ x ## ExprScope (con y scope li [])
+            lift $ x ## ExprScope (con y scope li)
         event evt lbl con x = event' evt lbl [evt] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
             lift $ lbl ## ExprScope (EventExpr $ M.singleton (Right evt) 
-                    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li [])) 
+                    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)) 
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
-        x  = fst $ var "x" int :: ExprP
-        y  = fst $ var "y" int :: ExprP
+        x  = fst $ var "x" int
+        y  = fst $ var "y" int
         es = M.fromList [("m0",es0),("m1",es1)]
         es0 = runMap $ flip runReaderT Local $ do
-                decl "inv0" Invariant ($typeCheck $ x .<= y)
+                decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
                 --event 
-                event "ae0"  "grd0" Guard $ $typeCheck$ x .= 0 
+                event "ae0"  "grd0" Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
                 forM_ ["ae0","ae1a","ae1b"] $ \evt -> 
                     event evt "default" CoarseSchedule zfalse
-                event "ae1a" "act0" Action $ $typeCheck$ y $= y + 1 
+                event "ae1a" "act0" Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
         es1 = runMap $ flip runReaderT Inherited $ do
-                decl "inv0" Invariant ($typeCheck $ x .<= y)
+                decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
                 --event 
-                event' "ce0a" "grd0" ["ae0"] Guard $ $typeCheck$ x .= 0 
-                event' "ce0b" "grd0" ["ae0"] Guard $ $typeCheck$ x .= 0 
+                event' "ce0a" "grd0" ["ae0"] Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
+                event' "ce0b" "grd0" ["ae0"] Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
                 local (const Local) $ do
                     del_event "ce0a" "grd0" [] Guard
                     del_event "ce0b" "grd0" [] Guard
                 forM_ [("ce0a",["ae0"]),("ce0b",["ae0"]),("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
                     event' evt "default" es CoarseSchedule zfalse
-                event' "ce1" "act0" ["ae1a"] Action $ $typeCheck$ y $= y + 1 
+                event' "ce1" "act0" ["ae1a"] Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
 
 result4 :: Either [Error] (SystemP MachineP3)
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
-        x  = fst $ var "x" int :: ExprP
-        y  = fst $ var "y" int :: ExprP
+        x  = fst $ var "x" int
+        y  = fst $ var "y" int
         newMch mid m 
             | mid == "m0" = makeMachineP3' m empty_property_set 
-                    (makePropertySet [Inv "inv0" $ $typeCheck$ x .<= y])
-                    [PInvariant "inv0" $ $typeCheck$ x .<= y ]
+                    (makePropertySet' [Inv "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y])
+                    [PInvariant "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y ]
             | otherwise = makeMachineP3' m 
-                    (makePropertySet [Inv "inv0" $ $typeCheck$ x .<= y])
+                    (makePropertySet' [Inv "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y])
                     empty_property_set 
-                    [PInvariant "inv0" $ $typeCheck$ x .<= y ]
+                    [PInvariant "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y ]
         newThy m = makeTheoryP3 m []
         newEvt mid _m (Right eid) e = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
         newEvt _mid _m (Left _) e = makeEventP3 e []
         evtField mid eid
-            | eid == "ae0"                 = [EGuards "grd0" $ $typeCheck$ x .= 0]
-            | eid == "ae1a"                = [EActions "act0" $ $typeCheck$ y $= y + 1]
-            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ $typeCheck$ y $= y + 1]
+            | eid == "ae0"                 = [EGuards  "grd0" $ DispExpr "x = 0" $ $typeCheck (x .= 0)]
+            | eid == "ae1a"                = [EActions "act0" $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)]
+            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)]
             | otherwise = []
 
 name5 :: String
