@@ -136,7 +136,7 @@ type ConcrEvent = ConcrEvent' Expr
 
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
-        , _witness   :: Map Var expr
+        , _witness   :: Map Var RawExpr
         , _eql_vars  :: Map String Var
         } deriving (Eq, Show,Functor,Foldable,Traversable)
 
@@ -207,8 +207,8 @@ frame :: Map Label (Action' expr) -> Map String Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
 
 ba_pred :: HasExpr expr RawExpr => Action' expr -> RawExpr
-ba_pred (Assign v e) = $fromJust $ Right (Word (prime v)) `mzeq` Right (getExpr e)
-ba_pred (BcmIn v e) = $fromJust $ Right (Word (prime v)) `zelem` Right (getExpr e)
+ba_pred (Assign v e) = $typeCheck $ Right (Word (prime v)) `mzeq` Right (getExpr e)
+ba_pred (BcmIn v e) = $typeCheck $ Right (Word (prime v)) `zelem` Right (getExpr e)
 ba_pred (BcmSuchThat _ e) = getExpr e
 
 rel_action :: [Var] -> Map Label Expr -> Map Label Action

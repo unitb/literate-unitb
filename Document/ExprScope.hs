@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification      #-}
+{-# LANGUAGE ExistentialQuantification,TypeOperators      #-}
 {-# LANGUAGE RankNTypes,DeriveDataTypeable  #-}
 {-# LANGUAGE TemplateHaskell,MultiParamTypeClasses   #-}
 {-# LANGUAGE FunctionalDependencies,FlexibleContexts #-}
@@ -23,9 +23,9 @@ import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
 
+import Utilities.Existential
 import Utilities.HeterogenousEquality
 import Utilities.Syntactic
-import Utilities.TH
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
@@ -56,23 +56,45 @@ data ActionDecl = Action
 
 
 makeFields ''CoarseSchedule
+makePrisms ''CoarseSchedule
 makeFields ''FineSchedule
 makeFields ''Guard
 makeFields ''ActionDecl
 makeFields ''Witness
 
+data ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
+    deriving Typeable
 
-data EvtExprScope = forall a. IsEvtExpr a => EvtExprScope a
+class ( Scope a, Typeable a, Show a )
+        => IsExprScope a where
+    toMchExpr :: Label -> a 
+              -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+    toThyExpr :: Label -> a -> Reader TheoryP2 [Either Error TheoryP3Field]
+    toNewEvtExpr :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toNewEvtExprDefault :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldEvtExpr :: Label -> a 
+                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
+    toOldPropSet :: Label -> a 
+                 -> Reader MachineP2 [Either Error PropertySetField]
+    toNewPropSet :: Label -> a 
+                 -> Reader MachineP2 [Either Error PropertySetField]
+
+makeFields ''ExprScope
+makePrisms ''ExprScope
+
+data EvtExprScope = EvtExprScope { _evtExprScopeCell :: Cell IsEvtExpr } 
     deriving (Typeable)
 
 instance Eq EvtExprScope where
-    EvtExprScope x == EvtExprScope y = h_equal x y
+    (==) = read2CellsWith' (==) False
 
 instance Ord EvtExprScope where
-    compare (EvtExprScope x) (EvtExprScope y) = h_compare x y
+    compare = read2CellsH' h_compare
 
 instance Show EvtExprScope where
-    show (EvtExprScope x) = show x
+    show = readCell' show
 
 
 newtype LensT a b = LensT { getLens :: Lens' a b }
@@ -98,25 +120,32 @@ class ( Eq a, Ord a, Typeable a
     default inheritedFrom :: HasInhStatus a (EventInhStatus b) => a -> [EventId]
     inheritedFrom = fromMaybe [].fmap (NE.toList.fst).contents
 
+makeFields ''EvtExprScope
+makePrisms ''EvtExprScope
+
 instance IsEvtExpr EvtExprScope where
-    toMchScopeExpr lbl (EvtExprScope x) = toMchScopeExpr lbl x
-    toEvtScopeExpr ref e lbl (EvtExprScope x) = toEvtScopeExpr ref e lbl x
-    defaultEvtWitness ev (EvtExprScope x) = defaultEvtWitness ev x
-    setSource ev (EvtExprScope x) = EvtExprScope $ setSource ev x
-    inheritedFrom (EvtExprScope x) = inheritedFrom x
+    toMchScopeExpr lbl x = readCell' (toMchScopeExpr lbl) x
+    toEvtScopeExpr ref e lbl x = readCell' (toEvtScopeExpr ref e lbl) x
+    defaultEvtWitness ev x = readCell' (defaultEvtWitness ev) x
+    setSource ev x = mapCell' (setSource ev) x
+    inheritedFrom x = readCell' inheritedFrom x
 
 instance HasDeclSource EvtExprScope DeclSource where
-    declSource f (EvtExprScope x) = EvtExprScope <$> declSource f x
+    declSource f = traverseCell' (declSource f)
 
 instance HasLineInfo EvtExprScope LineInfo where
-    lineInfo f (EvtExprScope x) = EvtExprScope <$> lineInfo f x
+    lineInfo f = traverseCell' (lineInfo f)
+
+type InitOrEvent = Either InitEventId EventId
 
 data InitEventId = InitEvent
     deriving (Show,Ord,Eq)
 
-data EventExpr = EventExpr (Map (Either InitEventId EventId) EvtExprScope)
+data EventExpr = EventExpr { _eventExprs :: Map InitOrEvent EvtExprScope }
     deriving (Eq,Ord,Typeable,Show)
 
+makeLenses ''EventExpr
+makePrisms ''EventExpr
 
 
 data Invariant = Invariant 
@@ -169,25 +198,14 @@ makeFields ''TransientProp
 makeFields ''Invariant
 makeFields ''InvTheorem
 
-class ( Scope a, Typeable a, Show a )
-        => IsExprScope a where
-    -- parseExpr :: [(Label, a)] -> RWS () [Error] MachineP3 ()
-    toMchExpr :: Label -> a 
-              -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
-    toThyExpr :: Label -> a -> Reader TheoryP2 [Either Error TheoryP3Field]
-    toNewEvtExpr :: Label -> a 
-                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
-    toNewEvtExprDefault :: Label -> a 
-                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
-    toOldEvtExpr :: Label -> a 
-                 -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
-    toOldPropSet :: Label -> a 
-                 -> Reader MachineP2 [Either Error PropertySetField]
-    toNewPropSet :: Label -> a 
-                 -> Reader MachineP2 [Either Error PropertySetField]
+pCast :: (Typeable a, Typeable b) => Traversal' a b
+pCast f x = maybe (pure x) (pCast_aux f x) eqT
+
+pCast_aux :: (a -> f a) -> b -> (a :~: b) -> f b
+pCast_aux f x Refl = f x
 
 delegate :: (forall a. IsExprScope a => lbl -> a -> b) -> lbl -> ExprScope -> b
-delegate f lbl (ExprScope x) = f lbl x
+delegate f lbl x = readCell' (f lbl) x
 
 instance IsExprScope ExprScope where
     toMchExpr = delegate toMchExpr
@@ -198,19 +216,14 @@ instance IsExprScope ExprScope where
     toNewEvtExprDefault = delegate toNewEvtExprDefault
     toOldEvtExpr = delegate toOldEvtExpr
 
-data ExprScope = forall t. IsExprScope t => ExprScope t
-    deriving Typeable
-
 instance Eq ExprScope where
-    ExprScope x == ExprScope y = h_equal x y
+    (==) = read2CellsWith' (==) False
 
 instance Ord ExprScope where
-    compare (ExprScope x) (ExprScope y) = h_compare x y
+    compare = read2CellsH' h_compare
 
 
 
-existential ''ExprScope
-existential ''EvtExprScope
 
 
 instance Scope CoarseSchedule where
@@ -246,26 +259,28 @@ instance Scope ActionDecl where
     rename_events _ x = [x]
 
 instance Scope EvtExprScope where
-    keep_from s x = applyEvtExprScope (keep_from s) x
-    make_inherited e = applyEvtExprScope make_inherited e
-    error_item e = readEvtExprScope error_item e
-    clashes x y = fromMaybe True $ getConst <$> apply2EvtExprScope (fmap Const <$> clashes) x y
-    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
+    keep_from s = traverseCell' (keep_from s)
+    make_inherited = traverseCell' make_inherited
+    error_item = readCell' error_item
+    clashes = read2CellsWith' clashes True
+    merge_scopes = map2Cells' merge_scopes err
+            -- fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
         where
             err = error "EvtExprScope Scope.merge_scopes: _, _"
-    rename_events m = applyEvtExprScope (rename_events m)
-    kind (EvtExprScope e) = kind e
+    rename_events m = traverseCell' (rename_events m)
+    kind = readCell' kind
+
 
 instance Scope ExprScope where
-    keep_from s x = applyExprScope (keep_from s) x
-    make_inherited e = applyExprScope make_inherited e
-    error_item e = readExprScope (error_item) e
-    clashes x y = fromMaybe True $ getConst <$> apply2ExprScope (fmap Const <$> clashes) x y
-    merge_scopes x y = fromMaybe err $ runIdentity <$> apply2ExprScope (fmap Identity <$> merge_scopes) x y
+    keep_from s = traverseCell' (keep_from s)
+    make_inherited = traverseCell' make_inherited
+    error_item = readCell' error_item
+    clashes = read2CellsWith' clashes True
+    merge_scopes = map2Cells' merge_scopes err
         where
             err = error "ExprScope Scope.merge_scopes: _, _"
-    rename_events m = applyExprScope (rename_events m)
-    kind _ = "event"
+    rename_events m = traverseCell' (rename_events m)
+    kind = readCell' kind
 
 instance Show ExprScope where
-    show (ExprScope x) = show x
+    show = readCell' show

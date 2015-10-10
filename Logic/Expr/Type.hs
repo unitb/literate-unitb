@@ -105,15 +105,16 @@ cons_to_tree (USER_DEFINED s ts) = do
 data Sort =
         BoolSort | IntSort | RealSort 
         | DefSort 
-            String   -- Latex name
-            String   -- Type name
-            [String] -- Generic Parameter
+            String      -- Latex name
+            String      -- Type name
+            [String]    -- Generic Parameter
             GenericType -- Type with variables
         | Sort String String Int --[String]
         | Datatype 
             [String]    -- Parameters
             String      -- type name
-            [(String, [(String,GenericType)])] -- alternatives and named components
+            [(String, [(String,GenericType)])] 
+                        -- alternatives and named components
     deriving (Eq, Ord, Show, Typeable, Data, Generic)
 
 typeParams :: Sort -> Int

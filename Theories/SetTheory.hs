@@ -31,7 +31,7 @@ mzfinite :: ExprP -> ExprP
 mzfinite = typ_fun1 $ mk_fun [gA] "finite" [set_type gA] bool
 
 zfinite :: Expr -> Expr
-zfinite e = ($fromJust) (mzfinite $ Right e)
+zfinite e = ($typeCheck) (mzfinite $ Right e)
 
 set_theory :: Theory 
 set_theory = Theory { .. } -- [] types funs empty facts empty
@@ -68,13 +68,13 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                 , Def [gT] "all" [] (set_type gT) 
                         $ zlift (set_type gT) ztrue
                 , Def [gT] "elem" [x_decl, s1_decl] bool 
-                        $ ($fromJust) (zset_select s1 x)
+                        $ ($typeCheck) (zset_select s1 x)
                 , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
-                        $ ($fromJust) $ s1 `zintersect` map_array "not" (set_type gT) [s2]
+                        $ ($typeCheck) $ s1 `zintersect` map_array "not" (set_type gT) [s2]
                 , Def [gT] "compl" [s1_decl] (set_type gT)
-                        $ ($fromJust) $ map_array "not" (set_type gT) [s1]
+                        $ ($typeCheck) $ map_array "not" (set_type gT) [s1]
                 , Def [gT] "st-subset" [s1_decl,s2_decl] bool
-                        $ ($fromJust) $ (s1 `zsubset` s2)
+                        $ ($typeCheck) $ (s1 `zsubset` s2)
                             `mzand`  mznot (s1 `mzeq` s2)
                 ]
         funs = 

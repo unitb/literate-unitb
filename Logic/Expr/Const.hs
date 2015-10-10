@@ -68,7 +68,7 @@ znot e = case e of
             e' -> fun1 not_fun e'
     -- znot         = fun1 mznot
 zimplies :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q
-zimplies x y = ($fromJust) $ mzimplies (Right x) (Right y)
+zimplies x y = ($typeCheck) $ mzimplies (Right x) (Right y)
 zand :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q
 zand x y     = zall [x, y]
 zor :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q

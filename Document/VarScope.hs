@@ -13,7 +13,7 @@ module Document.VarScope where
 import Document.Phase
 import Document.Scope
 
-import Logic.Expr hiding (Const,fromJust)
+import Logic.Expr hiding (Const)
 
 import UnitB.AST
 

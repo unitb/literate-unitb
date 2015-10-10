@@ -7,6 +7,7 @@ module Utilities.BipartiteGraph
     , leftKey,leftInfo,rightInfo,rightKey
     , predecessors, successors
     , getLeftVertices, getRightVertices
+    , getLeftVertex, getRightVertex
     , leftVertices, rightVertices
     , fromList, empty, makeGraph
     , newEdge, newLeftVertex, newRightVertex
@@ -19,6 +20,11 @@ module Utilities.BipartiteGraph
     , mapBothWithKey
     , traverseLeft, traverseRight, traverseBoth
     , traverseLeftWithKey, traverseRightWithKey
+    , traverseLeftWithEdges, traverseRightWithEdges
+    , traverseLeftWithEdges', traverseRightWithEdges'
+    , traverseLeftWithEdgeInfo', traverseRightWithEdgeInfo'
+    , traverseLeftWithEdgeInfo, traverseRightWithEdgeInfo
+    , traverseEdges
     , acrossBoth
     , leftMap, rightMap, edgeMap
     , readGraph, forwardEdges, backwardEdges
@@ -53,7 +59,9 @@ newtype GraphBuilder key v0 v1 s0 s1 a = GB (RWST () ([(key,v0)],[(key,v1)],[(In
 
 type GraphReader key v0 v1 s0 s1 a = GraphReader' key v0 key v1 () s0 s1 a
 
-newtype GraphReader' key0 v0 key1 v1 e s0 s1 a = GR (Reader (BiGraph' key0 v0 key1 v1 e) a)
+type GraphReader' key0 v0 key1 v1 e s0 s1 = GraphReaderT key0 v0 key1 v1 e s0 s1 Identity
+
+newtype GraphReaderT key0 v0 key1 v1 e s0 s1 m a = GR (ReaderT (BiGraph' key0 v0 key1 v1 e) m a)
     deriving (Monad,Applicative,Functor)
 
 type BiGraph key v0 v1 = BiGraph' key v0 key v1 ()
@@ -257,6 +265,53 @@ traverseBoth :: Traversal (BiGraph key vA vA) (BiGraph key vB vB) vA vB
 traverseBoth f (Graph lf rt ed) = Graph <$> (arVals.traverse) f lf 
                                         <*> (arVals.traverse) f rt 
                                         <*> pure ed
+
+traverseArrayWithKey :: (Applicative f, Ix i) 
+                     => (i -> a -> f b) -> Array i a -> f (Array i b)
+traverseArrayWithKey f ar = listArray (bounds ar) <$> traverse (uncurry f) (A.assocs ar)
+
+traverseRightWithEdgeInfo :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,v0)) vB
+traverseRightWithEdgeInfo f = traverseRightWithEdgeInfo' $ f.second (fmap fst)
+
+traverseRightWithEdgeInfo' :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty ((k0,v0),e)) vB
+traverseRightWithEdgeInfo' f gr = gr'
+    where
+        alist = gr^.rightAL
+        alist' = gr^.leftAL
+        gr' = gr & (rightAL.arVals) (traverseArrayWithKey (fmap f.vert))
+        vert i x = (x,incoming i <$> (alist^.arEdges) A.! i)
+        incoming i j = (((alist'^.arKey) A.! j, (alist'^.arVals) A.! j), (gr^.edges) M.! (j,i))
+
+traverseRightWithEdges' :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,e)) vB
+traverseRightWithEdges' f = traverseRightWithEdgeInfo' $ f.second (fmap $ first fst)
+
+traverseRightWithEdges :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty k0) vB
+traverseRightWithEdges = traverseRightWithEdges'.trav
+    where
+        trav f (x,xs) = f (x,fst <$> xs)
+
+traverseLeftWithEdgeInfo :: Traversal (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty (k1,v1)) vB
+traverseLeftWithEdgeInfo f = traverseLeftWithEdgeInfo' $ f.second (fmap fst)
+
+traverseLeftWithEdgeInfo' :: Traversal (BiGraph' k0 vA k1 v1 e) (BiGraph' k0 vB k1 v1 e) (vA,NonEmpty ((k1,v1),e)) vB
+traverseLeftWithEdgeInfo' f gr = gr'
+    where
+        alist = gr^.leftAL
+        alist' = gr^.rightAL
+        gr' = gr & (leftAL.arVals) (traverseArrayWithKey (fmap f.vert))
+        vert i x = (x,incoming i <$> (alist^.arEdges) A.! i)
+        incoming i j = (((alist'^.arKey) A.! j, (alist'^.arVals) A.! j), (gr^.edges) M.! (i,j))
+
+traverseLeftWithEdges' :: Traversal (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty (k1,e)) vB
+traverseLeftWithEdges' f = traverseLeftWithEdgeInfo' $ f.second (fmap $ first fst)
+
+traverseLeftWithEdges :: Traversal (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty k1) vB
+traverseLeftWithEdges = traverseLeftWithEdges'.trav
+    where
+        trav f (x,xs) = f (x,fst <$> xs)
+
+traverseEdges :: Traversal (BiGraph' k0 v0 k1 v1 eA) (BiGraph' k0 v0 k1 v1 eB) (v0,v1,eA) eB
+traverseEdges f gr = gr & edges (M.traverseWithKey $ \(i,j) e -> f ((gr^.leftAL.arVals) A.! i,(gr^.rightAL.arVals) A.! j,e))
 
 acrossBoth :: Applicative f 
            => (vA0 -> f vB0)

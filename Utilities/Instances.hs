@@ -1,12 +1,13 @@
-{-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE TypeOperators,FlexibleContexts,KindSignatures,DefaultSignatures,TypeSynonymInstances,FlexibleInstances #-}
 module Utilities.Instances where
 
 import Data.Default
 import Data.Monoid
 
 import GHC.Generics
+
+import Language.Haskell.TH
+import Language.Haskell.TH.Syntax
 
 class GMonoid a where
     gmempty :: a p
@@ -52,3 +53,41 @@ instance (GDefault a,GDefault b) => GDefault (a:*:b) where
 
 genericDefault :: (Generic a, GDefault (Rep a)) => a
 genericDefault = to gDefault
+
+class GLifts a => GLift a where
+    glift :: a p -> ExpQ
+
+class GLifts a where
+    glifts :: a p -> [ExpQ]
+    default glifts :: GLift a => a p -> [ExpQ]
+    glifts x = [glift x]
+
+instance GLift b => GLifts (D1 a b) where
+instance GLift b => GLift (D1 a b) where
+    glift (M1 x) = glift x
+
+instance Lift b => GLifts (K1 a b) where
+instance Lift b => GLift (K1 a b) where
+    glift (K1 x) = lift x
+
+instance GLift b => GLifts (S1 s b) where
+instance GLift b => GLift (S1 s b) where
+    glift (M1 x) = glift x
+
+instance (Constructor c,GLifts b) => GLifts (C1 c b) where
+instance (Constructor c,GLifts b) => GLift (C1 c b) where
+    glift c@(M1 x) = appsE $ conE (mkName $ conName c) : glifts x
+
+instance (GLift a, GLift b) => GLifts (a :+: b) where
+instance (GLift a, GLift b) => GLift (a :+: b) where
+    glift (L1 x) = glift x
+    glift (R1 x) = glift x
+
+instance GLifts U1 where
+    glifts U1 = []
+
+instance (GLifts a, GLifts b) => GLifts (a :*: b) where
+    glifts (x :*: y) = glifts x ++ glifts y
+
+defaultLift :: (Generic a, GLift (Rep a)) => a -> ExpQ
+defaultLift = glift . from

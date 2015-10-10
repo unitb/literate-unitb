@@ -37,28 +37,35 @@ data LatexNode =
 data LatexDoc = Doc [LatexNode] LineInfo
     deriving (Eq)
 
-data StringLi = StringLi [(Char,LineInfo)] LineInfo
-
 data BracketType = Curly | Square
     deriving (Eq,Show)
 
 instance Semigroup LatexDoc where
     (<>) (Doc xs _) (Doc ys li) = Doc (xs++ys) li
 
+class Convertible a where
+    flatten :: a -> String
+
 flatten' :: LatexDoc -> String
 flatten' (Doc xs _) = concatMap flatten xs
 
-flatten :: LatexNode -> String
-flatten (Env s _ ct _) = 
-           "\\begin{" ++ s ++ "}"
-        ++ flatten' ct
-        ++ "\\end{" ++ s ++ "}"
-flatten (Bracket b _ ct _) = b0 ++ flatten' ct ++ b1
-    where
-        (b0,b1) = case b of
-            Curly -> ("{", "}")
-            Square -> ("[", "]")
-flatten (Text xs _) = concatMap lexeme xs
+instance Convertible LatexDoc where
+    flatten = flatten'
+
+instance Convertible LatexNode where
+    flatten (Env s _ ct _) = 
+               "\\begin{" ++ s ++ "}"
+            ++ flatten' ct
+            ++ "\\end{" ++ s ++ "}"
+    flatten (Bracket b _ ct _) = b0 ++ flatten' ct ++ b1
+        where
+            (b0,b1) = case b of
+                Curly -> ("{", "}")
+                Square -> ("[", "]")
+    flatten (Text xs _) = concatMap lexeme xs
+
+instance Convertible StringLi where
+    flatten (StringLi xs _) = map fst xs
 
 whole_line :: LineInfo -> [LineInfo]
 whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]

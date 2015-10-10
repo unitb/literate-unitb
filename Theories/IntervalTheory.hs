@@ -67,51 +67,51 @@ interval_theory = empty_theory
             [ interval_r_fun, interval_l_fun
             , interval_lr_fun, interval_fun ]
         , _fact = M.mapKeys label $ M.fromList
-            [ ("axm0", ($fromJust) $ mzforall [x_decl,m_decl,n_decl] mztrue $
+            [ ("axm0", ($typeCheck) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval m n) 
                         `mzeq`  (zbetween mzle mzle m x n))
-            , ("axm1", ($fromJust) $ mzforall [x_decl,m_decl,n_decl] mztrue $
+            , ("axm1", ($typeCheck) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval_r m n) 
                         `mzeq`  (zbetween mzle mzless m x n))
-            , ("axm2", ($fromJust) $ mzforall [x_decl,m_decl,n_decl] mztrue $
+            , ("axm2", ($typeCheck) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval_l m n) 
                         `mzeq`  (zbetween mzless mzle m x n))
-            , ("axm3", ($fromJust) $ mzforall [x_decl,m_decl,n_decl] mztrue $
+            , ("axm3", ($typeCheck) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval_l m n) 
                         `mzeq`  (zbetween mzless mzle m x n))
-            , ("axm4", ($fromJust) $ mzforall [m_decl] mztrue $
+            , ("axm4", ($typeCheck) $ mzforall [m_decl] mztrue $
                                 zinterval_r m m
                         `mzeq`  zempty_set)
-            , ("axm5", ($fromJust) $ mzforall [m_decl] mztrue $
+            , ("axm5", ($typeCheck) $ mzforall [m_decl] mztrue $
                                 zinterval_l m m
                         `mzeq`  zempty_set)
-            , ("axm6", ($fromJust) $ mzforall [m_decl] mztrue $
+            , ("axm6", ($typeCheck) $ mzforall [m_decl] mztrue $
                                 zinterval_r m (m + z1)
                         `mzeq`  zmk_set m)
-            , ("axm7", ($fromJust) $ mzforall [m_decl] mztrue $
+            , ("axm7", ($typeCheck) $ mzforall [m_decl] mztrue $
                                 zinterval_l (m - z1) m
                         `mzeq`  zmk_set m)
-            , ("axm8", ($fromJust) $ mzforall [m_decl,n_decl,p_decl] 
+            , ("axm8", ($typeCheck) $ mzforall [m_decl,n_decl,p_decl] 
                             (zbetween mzle mzle m n p) $
                                 (zinterval_r m n `zunion` zinterval_r n p)
                         `mzeq`  (zinterval_r m p))
-            , ("axm9", ($fromJust) $ mzforall [m_decl,n_decl,p_decl] 
+            , ("axm9", ($typeCheck) $ mzforall [m_decl,n_decl,p_decl] 
                             (zbetween mzle mzle m n p) $
                                 (zinterval_l m n `zunion` zinterval_l n p)
                         `mzeq`  (zinterval_l m p))
-            , ("axm10", ($fromJust) $ mzforall [m_decl,n_decl] 
+            , ("axm10", ($typeCheck) $ mzforall [m_decl,n_decl] 
                             (mzle m n) $
                                 (zinterval_r m n `zunion` zmk_set n)
                         `mzeq`  (zinterval_r m (n+z1)))
-            , ("axm11", ($fromJust) $ mzforall [m_decl,n_decl] 
+            , ("axm11", ($typeCheck) $ mzforall [m_decl,n_decl] 
                             (mzle m n) $
                                 (zinterval_l m n `zunion` zmk_set (n + z1))
                         `mzeq`  (zinterval_l m (n+z1)))
-            , ("axm12", ($fromJust) $ mzforall [m_decl,n_decl] 
+            , ("axm12", ($typeCheck) $ mzforall [m_decl,n_decl] 
                             (mzle m n) $
                                 (zmk_set (m - z1) `zunion` zinterval_r m n)
                         `mzeq`  (zinterval_r (m - z1) n))
-            , ("axm13", ($fromJust) $ mzforall [m_decl,n_decl] 
+            , ("axm13", ($typeCheck) $ mzforall [m_decl,n_decl] 
                             (mzle m n) $
                                 (zmk_set m `zunion` zinterval_l m n)
                         `mzeq`  (zinterval_l (m - z1) n))

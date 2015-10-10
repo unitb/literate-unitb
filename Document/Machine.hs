@@ -11,61 +11,32 @@ module Document.Machine where
     --
     -- Modules
     --
-import Document.Expression
 import Document.ExprScope as ES
 import Document.Pipeline
 import Document.Phase as P
-import Document.Phase.Structures
-import Document.Proof
 import Document.Refinement as Ref
 import Document.Scope
-import Document.VarScope
 import Document.Visitor
 
-import Latex.Parser hiding (contents)
 
 import Logic.Expr
-import qualified Logic.ExpressionStore as St
-import Logic.Operator (Notation)
-import Logic.Proof
 import Logic.Proof.Tactics hiding ( with_line_info )
 
 import UnitB.AST as AST
 import UnitB.PO
 
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.IntervalTheory
-import Theories.PredCalc
-import Theories.RelationTheory
-import Theories.SetTheory
 
     --
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import qualified Control.Category as C
 import           Control.Applicative 
 
 import           Control.Monad 
-import           Control.Monad.Reader.Class 
-import           Control.Monad.Reader (Reader,runReader,runReaderT)
-import           Control.Monad.State.Class 
-import           Control.Monad.Writer.Class 
-import           Control.Monad.Trans
-import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.Maybe
-import           Control.Monad.Trans.RWS as RWS ( RWS, mapRWST )
-import qualified Control.Monad.Writer as W
+import           Control.Monad.Trans.RWS as RWS ( RWS )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
-import           Data.Char
-import           Data.Default
-import           Data.Either
-import           Data.Either.Combinators
-import           Data.Functor
-import           Data.Graph
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
@@ -73,13 +44,9 @@ import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as S
-import qualified Data.Traversable as T
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
-import Utilities.Relation (type(<->),(|>),(<|))
-import qualified Utilities.Relation as R
 import Utilities.Syntactic
         
 old :: Scope s => Map a s -> Map a s
@@ -89,7 +56,7 @@ new :: Scope s => Map a s -> Map a s
 new = M.mapMaybe is_local
 
 make_machine :: MachineId -> MachineP4
-             -> MM Machine
+             -> MM' c Machine
 make_machine (MId m) p4 = mch'
     where
         types   = p4 ^. pTypes
@@ -108,9 +75,9 @@ make_machine (MId m) p4 = mch'
             , consts   = p4 ^. pConstants
             , theorems = M.empty
             , thm_depend = []
-            , _theoryDummies = p4 ^. pDummyVars
+            , _theoryDummies = p4^.pDummyVars
             -- , notation =  empty_notation
-            , _fact = p4 ^. pAssumptions }
+            , _fact = p4^.pAssumptions & traverse %~ getExpr }
         props = p4 ^. pNewPropSet
         mch = Mch 
             { _name  = label m
@@ -126,7 +93,7 @@ make_machine (MId m) p4 = mch'
                     `union` M.map (const $ Rule Add) (_progress props)) 
             , inh_props = p4 ^. pOldPropSet
             , comments  = p4 ^. pComments
-            , events = _ -- M.mapKeys as_label evts 
+            , event_table = EventTable evts -- M.mapKeys as_label evts 
                 -- adep: in a abstract machine, prog_a <- evt_a
                 -- live: in a concrete machine, prog_c <- prog_c
                 -- cdep:                        prog_c <- evt_c
@@ -139,27 +106,47 @@ make_machine (MId m) p4 = mch'
                 -- = (live;adep \/ adep) ; eref \/ cdep
             -- , prog_evt = _ 
             } -- R.mapDomain getConcrete cdep' }
-
-        pos = raw_machine_pos mch
-        po_err = proofs `difference` pos
+        mch' :: MM' c Machine
         mch' = do
+            let pos = raw_machine_pos mch
+                po_err = proofs `difference` pos
             all_errors $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
                 Left [Error (format "proof obligation does not exist: {0}" lbl) li]
             xs <- all_errors $ flip map (toList proofs) $ \(k,(tac,li)) -> do
                 p <- runTactic li (pos ! k) tac
                 return (k,p)
             xs <- triggerM xs
-            return mch 
+            return mch
                 { AST.props = (AST.props mch) 
                     { _proofs = fromList xs } }
         events = p4 ^. pEventRef
-        evts = _ events 
+        evts = G.mapKeys (either (const "skip") as_label) $
+               events & G.traverseLeft %~ abstrEvt
+                      -- & G.traverseRight %~ g
+                      & G.traverseRightWithEdgeInfo %~ uncurry concrEvt
+        abstrEvt :: EventP4 -> AbstrEvent
+        abstrEvt evt = AbsEvent
+                { _old = g evt 
+                , _c_sched_ref = map snd (evt ^. eCoarseRef)
+                , _f_sched_ref = (first as_label) <$> evt ^. eFineRef
+                }
+        concrEvt :: EventP4 -> NonEmpty (SkipOrEvent, AbstrEvent) -> ConcrEvent
+        concrEvt evt olds = CEvent
+                { _new = g evt
+                , _witness   = evt ^. eWitness
+                , _eql_vars = keep' ab_var oldAction
+                             `M.intersection` frame (evt^.eActions)
+                }
+            where oldAction = snd (NE.head olds)^.actions
         g :: EventP4 -> Event
         g evt
             = Event
-                { _indices   = evt ^. eIndices
-                , _params    = evt ^. eParams
-                , _actions  = evt ^. eActions
+                { _indices   = evt^.eIndices
+                , _params    = evt^.eParams
+                , _guards    = evt^.eGuards
+                , _actions  = evt^.eActions
+                , _coarse_sched = evt^.eCoarseSched
+                , _fine_sched = evt^.eFineSched
                 }
 
 uncurryMap :: (Ord a,Ord b) => Map a (Map b c) -> Map (a,b) c
@@ -216,8 +203,6 @@ instance ElementLists as => ElementLists (a:+:as) where
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
 
-get_invariants :: MachineP3 -> Map Label Expr
-get_invariants p3 = (p3 ^. pInvariant)
 
 progress_props :: MachineP3 -> Map ProgId ProgressProp
 progress_props p3 = p3 ^. pProgress

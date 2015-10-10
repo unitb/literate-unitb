@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE DeriveFunctor        #-}
@@ -13,8 +14,10 @@ module UnitB.Property
     , RawConstraint 
     , Constraint' (..)
     , ProgressProp
+    , RawProgressProp
     , ProgressProp'(..)
     , SafetyProp 
+    , RawSafetyProp 
     , SafetyProp' (..) 
     , PropertySet 
     , RawPropertySet 
@@ -23,6 +26,7 @@ module UnitB.Property
     , PropertySetField
     , empty_property_set
     , TrHint
+    , RawTrHint
     , TrHint' (..)
     , empty_hint
     , makePropertySet'
@@ -55,12 +59,12 @@ import Data.DeriveTH
 import Data.Foldable
 import Data.Map  as M
 import Data.List as L
+import Data.String
 import Data.Typeable
 
 import Utilities.TableConstr
 
 type Constraint = Constraint' Expr
-
 type RawConstraint = Constraint' RawExpr
 
 data Constraint' expr = 
@@ -68,6 +72,7 @@ data Constraint' expr =
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
 
 type TrHint = TrHint' Expr
+type RawTrHint = TrHint' RawExpr
 
 data TrHint' expr = TrHint (Map String (Type,expr)) (Maybe Label)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
@@ -77,7 +82,6 @@ empty_hint :: TrHint
 empty_hint = TrHint empty Nothing
 
 type Transient = Transient' Expr
-
 type RawTransient = Transient' RawExpr
 
 data Transient' expr = 
@@ -94,10 +98,9 @@ data Transient' expr =
 data Direction = Up | Down
     deriving (Eq,Show)
 
-
 data Variant = 
-        SetVariant     Var Expr Expr Direction
-      | IntegerVariant Var Expr Expr Direction
+        SetVariant     Var RawExpr RawExpr Direction
+      | IntegerVariant Var RawExpr RawExpr Direction
     deriving (Eq,Show)
 
 type PropertySet = PropertySet' Expr
@@ -116,14 +119,16 @@ data PropertySet' expr = PS
     deriving (Eq,Functor,Foldable,Traversable)
 
 newtype ProgId = PId { getProgId :: Label }
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,IsString)
 
 type ProgressProp = ProgressProp' Expr
+type RawProgressProp = ProgressProp' RawExpr
 
 data ProgressProp' expr = LeadsTo [Var] expr expr
     deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable)
 
 type SafetyProp = SafetyProp' Expr
+type RawSafetyProp = SafetyProp' RawExpr
 
 data SafetyProp' expr = Unless [Var] expr expr (Maybe Label)
     deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable)
@@ -163,19 +168,19 @@ variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` asExpr var
 variant_equals_dummy (SetVariant d var _ _) = Word d `zeq` asExpr var
 
 variant_decreased :: Variant -> RawExpr
-variant_decreased (SetVariant d var _ Up)       = ($fromJust) $ Right (Word d) `zsubset` Right (asExpr var)
+variant_decreased (SetVariant d var _ Up)       = ($typeCheck) $ Right (Word d) `zsubset` Right (asExpr var)
 variant_decreased (IntegerVariant d var _ Up)   = Word d `zless` asExpr var
-variant_decreased (SetVariant d var _ Down)     = ($fromJust) $ Right (asExpr var) `zsubset` Right (Word d)
+variant_decreased (SetVariant d var _ Down)     = ($typeCheck) $ Right (asExpr var) `zsubset` Right (Word d)
 variant_decreased (IntegerVariant d var _ Down) = asExpr var `zless` Word d
 
 variant_bounded :: Variant -> RawExpr
 --variant_bounded (SetVariant d var _ _)     = error "set variants unavailable"
 variant_bounded (IntegerVariant _ var b Down) = asExpr b `zle` asExpr var
 variant_bounded (IntegerVariant _ var b Up)   = asExpr var `zle` asExpr b
-variant_bounded (SetVariant _ var b Down) = ($fromJust) $ 
+variant_bounded (SetVariant _ var b Down) = ($typeCheck) $ 
     mzand (Right (asExpr b) `zsubset` Right (asExpr var))
           (mzfinite $ Right (asExpr var) `zsetdiff` Right (asExpr b))
-variant_bounded (SetVariant _ var b Up)   = ($fromJust) $ 
+variant_bounded (SetVariant _ var b Up)   = ($typeCheck) $ 
     mzand (Right (asExpr var) `zsubset` Right (asExpr b))
           (mzfinite $ Right (asExpr b) `zsetdiff` Right (asExpr var))
 

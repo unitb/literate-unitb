@@ -17,9 +17,9 @@ main :: IO ()
 main = do
         xs <- getArgs
         case xs of
-            x:_ -> do
+            [x] -> do
                 xs <- (drop 2 . head . lines) `liftM` readFile x
-                let xs' = "\"" ++ xs ++ "\""
+                --let xs' = "\"" ++ xs ++ "\""
                 sources <- visit "." [".hs",".lhs"]
                 ys <- concat `liftM` forM sources (\f -> do
                     zs <- (zip [1..] . lines) `liftM` readFile f

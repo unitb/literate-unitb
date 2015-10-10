@@ -25,6 +25,7 @@ module Logic.Expr.Expr
     , HasDummies(..)
     , HasExpr(..)
     , IsGenExpr(..)
+    , Lifting(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -46,8 +47,7 @@ module Logic.Expr.Expr
     , var_decl
     , target, symbols
     , finiteness
-    , typeCheck
-    , fromJust, withLoc, locMsg
+    , typeCheck, withLoc, locMsg
     , rewriteExpr, rewriteExprM
         -- Lenses
     , funName, arguments
@@ -137,16 +137,47 @@ type ExprPG t q = Either [String] (AbsExpr t q)
 
 type ExprPC e = Either [String] e
 
+class ( TypeSystem (TypeT expr)
+      , TypeSystem (AnnotT expr)
+      , GenExpr (TypeT expr) (AnnotT expr) (QuantT expr) ~ ExprT expr) 
+    => IsGenExpr expr where
+    type TypeT expr :: *
+    type AnnotT expr :: *
+    type QuantT expr :: *
+    type ExprT expr :: *
+    asExpr :: expr -> ExprT expr
+    ztrue :: expr
+    zfalse :: expr
+
+instance ( TypeSystem t0
+         , TypeSystem t1
+         , IsQuantifier q) 
+         => IsGenExpr (GenExpr t0 t1 q) where
+    type TypeT (GenExpr t0 t1 q)  = t0
+    type AnnotT (GenExpr t0 t1 q) = t1
+    type QuantT (GenExpr t0 t1 q) = q
+    type ExprT (GenExpr t0 t1 q)  = GenExpr t0 t1 q
+    asExpr = id
+    ztrue        = FunApp (mk_fun [] "true" [] bool) []
+    zfalse       = FunApp (mk_fun [] "false" [] bool) []
+
+class ( TypeT expr ~ AnnotT expr, IsGenExpr expr )
+    => IsAbsExpr expr where
+
+instance (TypeSystem t,IsQuantifier q) => IsAbsExpr (AbsExpr t q) where
+
 var_type :: AbsVar t -> t
 var_type (Var _ t) = t
 
-type_of :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> t
-type_of (Word (Var _ t))         = t
-type_of (Const _ t)              = t
-type_of (Cast _ t)               = t
-type_of (Lift _ t)               = t
-type_of (FunApp (Fun _ _ _ _ t) _) = t
-type_of (Binder _ _ _ _ t)   = t
+type_of :: (IsAbsExpr expr) => expr -> TypeT expr
+type_of e = aux $ asExpr e
+    where
+        aux (Word (Var _ t))         = t
+        aux (Const _ t)              = t
+        aux (Cast _ t)               = t
+        aux (Lift _ t)               = t
+        aux (FunApp (Fun _ _ _ _ t) _) = t
+        aux (Binder _ _ _ _ t)   = t
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -680,18 +711,6 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
-class ( TypeSystem (TypeT expr)
-      , TypeSystem (AnnotT expr)
-      , GenExpr (TypeT expr) (AnnotT expr) (QuantT expr) ~ ExprT expr) 
-    => IsGenExpr expr where
-    type TypeT expr :: *
-    type AnnotT expr :: *
-    type QuantT expr :: *
-    type ExprT expr :: *
-    asExpr :: expr -> ExprT expr
-    ztrue :: expr
-    zfalse :: expr
-
 
 class HasExpr e a | e -> a where
     getExpr :: e -> a
@@ -711,17 +730,6 @@ instance HasExpr (GenExpr a b c) (GenExpr a b c) where
 --         , QuantT expr ~ HOQuantifier)
 --    => IsExpr expr
 
-instance ( TypeSystem t0
-         , TypeSystem t1
-         , IsQuantifier q) 
-         => IsGenExpr (GenExpr t0 t1 q) where
-    type TypeT (GenExpr t0 t1 q)  = t0
-    type AnnotT (GenExpr t0 t1 q) = t1
-    type QuantT (GenExpr t0 t1 q) = q
-    type ExprT (GenExpr t0 t1 q)  = GenExpr t0 t1 q
-    asExpr = id
-    ztrue        = FunApp (mk_fun [] "true" [] bool) []
-    zfalse       = FunApp (mk_fun [] "false" [] bool) []
 
 derive makeNFData ''AbsFun
 derive makeNFData ''QuantifierType
@@ -746,8 +754,6 @@ fromEither loc (Left msg) = error $ unlines $ map (format "\n{0}\n{1}" loc') msg
         loc' :: String
         loc' = locMsg loc
 
-fromJust :: ExpQ
-fromJust = withLoc 'fromEither
 
 typeCheck :: ExpQ
 typeCheck = withLoc 'fromEither

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE NoImplicitPrelude  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE TypeOperators      #-}
 module Utilities.Relation where
 
@@ -8,6 +9,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Monad
 
+import Data.Default
 import Data.DeriveTH
 import Data.List hiding (union,transpose,null)
 import qualified Data.List.Ordered as LO
@@ -30,8 +32,8 @@ infixl 7 |>
 infixl 7 |>>
 infix <->
 
-data Relation a b = Rel (M.Map a (M.Map b ()))
-    deriving Eq
+newtype Relation a b = Rel (M.Map a (M.Map b ()))
+    deriving (Eq,Default)
 
 type (<->) a b = Relation a b
 

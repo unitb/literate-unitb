@@ -8,7 +8,8 @@
 module Document.Proof where
 
     -- Modules
-import Document.Expression
+import Document.Expression (parse_oper)
+import qualified Document.Expression as Expr
 import Document.Visitor
 
 import Latex.Parser 
@@ -545,7 +546,12 @@ unfail cmd = do
 parse_expr' :: ParserSetting
             -> LatexDoc
             -> Either [Error] DispExpr
-parse_expr' set ys = do
+parse_expr' p = parse_expr p . flatten_li' . drop_blank_text'
+
+parse_expr :: ParserSetting
+           -> StringLi
+           -> Either [Error] DispExpr
+parse_expr set xs = do
         let ctx0
                 | set^.is_step = set^.primed_vars
                 | otherwise    = M.empty
@@ -554,9 +560,9 @@ parse_expr' set ys = do
                 | otherwise         = M.empty
             ctx = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
             li  = line_info xs
-        x  <- parse_expr ctx
+        x  <- Expr.parse_expr ctx
                 (set^.language)
-                (flatten_li' xs)
+                xs
         x  <- case set^.expected_type of
             Just t -> mapBoth 
                 (\xs -> map (`Error` li) xs) 
@@ -565,9 +571,8 @@ parse_expr' set ys = do
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> Error (format msg x (type_of x)) li)
                 $ ambiguities x
-        return $ DispExpr (flatten' xs) x
+        return $ DispExpr (flatten xs) x
     where
-        xs    = drop_blank_text' ys
         msg   = "type of {0} is ill-defined: {1}"
 
 get_expression :: ( MonadReader Thy m )
@@ -581,7 +586,7 @@ get_expression t ys = do
             return $ LP.with_line_info li $ do
                 ctx <- get_context
                 x   <- either hard_error return 
-                        $ parse_expr 
+                        $ Expr.parse_expr 
                             ctx notation
                             (flatten_li' xs)
                 let typed_x = fromMaybe id (zcast <$> t) (Right x)

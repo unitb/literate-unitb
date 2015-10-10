@@ -1,72 +1,54 @@
-{-# LANGUAGE TypeOperators, TupleSections, Arrows, RecordWildCards #-}
-module Document.Phase.Proof where
+{-# LANGUAGE TypeOperators
+    , Arrows
+    , TupleSections
+    , FlexibleContexts
+    , OverloadedStrings
+    , FlexibleInstances
+    , RecordWildCards #-}
+module Document.Phase.Proofs where
 
     --
     -- Modules
     --
-import Document.Expression
-import Document.ExprScope as ES
 import Document.Pipeline
 import Document.Phase as P
-import Document.Phase.Structures
 import Document.Phase.Transient
 import Document.Proof
 import Document.Refinement as Ref
 import Document.Scope
-import Document.VarScope
 import Document.Visitor
 
 import Latex.Parser hiding (contents)
 
-import Logic.Expr
-import qualified Logic.ExpressionStore as St
-import Logic.Operator (Notation)
 import Logic.Proof
 import Logic.Proof.Tactics hiding ( with_line_info )
 
 import UnitB.AST as AST
-import UnitB.PO
-
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.IntervalTheory
-import Theories.PredCalc
-import Theories.RelationTheory
-import Theories.SetTheory
+import UnitB.Expr
 
     --
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import qualified Control.Category as C
 import           Control.Applicative 
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
-import           Control.Monad.Reader (Reader,runReader,runReaderT)
-import           Control.Monad.State.Class 
 import           Control.Monad.Writer.Class 
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.Maybe
--- import           Control.Monad.Trans.Reader ( runReaderT )
-import           Control.Monad.Trans.RWS as RWS ( RWS, mapRWST )
-import qualified Control.Monad.Writer as W
+import           Control.Monad.Trans.Reader ( runReaderT )
+import           Control.Monad.Trans.RWS as RWS ( mapRWST )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
-import           Data.Default
-import           Data.Either
 import           Data.Either.Combinators
-import           Data.Functor
-import           Data.Graph
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
-import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Traversable as T
@@ -79,8 +61,8 @@ import Utilities.Syntactic
 
 type LiveEvtId = Either EventId ProgId
 
-run_phase4_proofs :: Pipeline MM (Hierarchy MachineId,MTable MachineP3) (MTable MachineP4)
-run_phase4_proofs = proc (r_ord,p3) -> do
+run_phase4_proofs :: Pipeline MM SystemP3 SystemP4
+run_phase4_proofs = proc (SystemP r_ord p3) -> do
         refs   <- run_phase 
             [ ref_replace_csched
             , ref_replace_fsched ] -< p3
@@ -141,7 +123,7 @@ run_phase4_proofs = proc (r_ord,p3) -> do
                              <.> c_evt_refs <.> f_evt_refs -- evt_refs 
                              <.> prog_ref <.> comments 
                              <.> proofs 
-        returnA -< p4
+        returnA -< SystemP r_ord p4
     where
         refClash   = format "Multiple refinement of progress property {0}"
         commClash  = format "Multiple comments for {0}"
@@ -168,18 +150,20 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
                        -- <.> old_sch' `M.union` evtEmpty
         -- evtEmpty :: Default a => Map EventId a
         -- evtEmpty = M.map (const def) (p3 ^. pEvents)
-        updateEvt :: Maybe EventId -> EventP3 -> EventP4
-        updateEvt (Just eid) e = EventP4 e (_pCoarseRef!eid) (_pFineRef!eid) 
-        updateEvt Nothing e = EventP4 e [] Nothing
+        updateEvt :: SkipOrEvent -> EventP3 -> EventP4
+        updateEvt (Right eid) e = EventP4 e 
+                (findWithDefault [] eid _pCoarseRef) 
+                (findWithDefault Nothing eid _pFineRef) 
+        updateEvt (Left SkipEvent) e = EventP4 e [] Nothing
         promoteEvt _ e = EventP4 e [] Nothing
         _p3 = p3 & pEventRef %~ G.mapBothWithKey 
+                        promoteEvt
                         updateEvt
-                        promoteEvt 
         _pProofs = proofs
         _pCoarseRef = M.map (L.map fst) coarse_refs
-        _pFineRef  = M.map (fmap fst) fine_refs
-        _pLiveRule = M.map (fst . fst) prog_ref
-        _pComments = M.map fst comments
+        _pFineRef   = M.map (fmap fst) fine_refs
+        _pLiveRule  = M.map (fst . fst) prog_ref
+        _pComments  = M.map fst comments
 
 raiseStructError :: Conc LiveStruct -> Either [Error] LiveStruct
 raiseStructError (Conc ls@(LiveStruct { .. }))
@@ -262,13 +246,13 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m
         toEither $ do
             _ <- fromEither undefined $ bind_all del 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
-                    (`M.lookup` (p3 ^. getEvent evt . eDelCoarseSched))
+                    (`M.lookup` (p3 ^. evtDel evt eCoarseSched))
             _ <- fromEither undefined $ bind_all add 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' added during refinement" evt) 
-                    (`M.lookup` (p3 ^. getEvent evt . eAddedCoarseSched))
+                    (`M.lookup` (p3 ^. evtAdded evt eCoarseSched))
             _ <- fromEither undefined $ bind_all keep 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
-                    (`M.lookup` (p3 ^. getEvent evt . eKeptCoarseSched))
+                    (`M.lookup` (p3 ^. evtKept evt eCoarseSched))
             return ()
         let rule = (replace (as_label prog,pprop) (saf,sprop)) 
                         { remove = fromList' del
@@ -286,7 +270,7 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
         li <- lift ask
         return $ EventRef [] [(evt,[(rule,li)])]
 
-ensure :: ProgressProp 
+ensure :: RawProgressProp 
        -> HintBuilder
        -> [Label]
        -> M Ensure
@@ -297,7 +281,7 @@ ensure prog@(LeadsTo fv _ _) hint lbls = do
         let HintBuilderDecl thint m p2 = hint
         hint <- tr_hint p2 m vs lbls' thint
         _    <- get_events p2 lbls
-        return $ Ensure prog lbls hint
+        return $ Ensure (getExpr <$> prog) lbls (getExpr <$> hint)
 
 instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
     parse_rule (f,_) xs rule param@(RuleParserDecl p2 m _ _ _ _ _ hint _) = do
@@ -362,7 +346,7 @@ get_safety_prop p3 _m lbl =
 
 get_guards :: MachineP3 -> EventId -> M (Map Label Expr)
 get_guards p3 evt = 
-        return $ (p3 ^. pNewGuards) ! evt
+        return $ p3^.getEvent evt.eGuards
 
 parse_rule' :: String
             -> RuleParserParameter
@@ -390,7 +374,6 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
-    -- Remove alternatives
 data HintBuilder = 
         HintBuilderDecl LatexDoc MachineId MachineP2
 

@@ -12,8 +12,12 @@ import Control.Monad.IO.Class
 
 import Data.DeriveTH
 import Data.List
+import Data.List.NonEmpty as NE (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
 import Data.List.Ordered
 import Data.Typeable
+
+import Language.Haskell.TH (Loc(..))
 
 import Utilities.Format
 
@@ -81,6 +85,34 @@ shrink_error_list es' = do
                 ls1' = sortOn snd ls1
         less_specific _ _ = False
         es = nubSort es'
+
+data StringLi = StringLi [(Char,LineInfo)] LineInfo
+
+neLines :: String -> NonEmpty String
+neLines [] = [] :| []
+neLines ('\n':xs) = [] :| (y:ys)
+    where
+        (y :| ys) = neLines xs
+neLines (x:xs) = (x:y) :| (ys)
+    where
+        (y :| ys) = neLines xs
+
+unlinesLi :: NonEmpty StringLi -> StringLi
+unlinesLi (x :| []) = x
+unlinesLi (StringLi xs0 li0 :| (StringLi xs1 li1:xss)) = unlinesLi $ StringLi (xs0 ++ [('\n',li0)] ++ xs1) li1 :| xss
+
+asStringLi :: LineInfo -> String -> StringLi
+asStringLi li xs = unlinesLi ys'
+    where
+        ys = NE.zip (NE.iterate nxLn li) (neLines xs)
+        ys' = NE.map f ys
+        nxLn (LI fn i _j) = LI fn (i+1) 1
+        nxCol (LI fn i j) = LI fn i (j+1)
+        f (x,y) = StringLi (zip y lis) (lis !! length y)
+            where lis = iterate nxCol x
+
+asLI :: Loc -> LineInfo
+asLI loc = uncurry (LI (loc_filename loc)) (loc_start loc)
 
 derive makeNFData ''Error
 derive makeNFData ''LineInfo

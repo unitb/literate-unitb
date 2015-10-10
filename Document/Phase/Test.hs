@@ -1,30 +1,35 @@
 {-# LANGUAGE OverloadedStrings
     , RankNTypes
     , TemplateHaskell
+    , QuasiQuotes
     , GeneralizedNewtypeDeriving #-}
 module Document.Phase.Test where
 
     --
     -- Modules
     --
+import Document.Machine
 import Document.Phase
 import Document.Phase.Declarations
 import Document.Phase.Expressions
+import Document.Phase.Proofs
 import Document.Phase.Structures
 import Document.Pipeline
 import Document.Proof
+import Document.Refinement
 import Document.Scope
 import Document.ExprScope hiding (var)
 import Document.VarScope  hiding (var)
 
 import Latex.Monad
 
+import Logic.Expr.QuasiQuote
 import Logic.Theory hiding (command)
 
 import Theories.Arithmetic
 import Theories.SetTheory
 
-import UnitB.Expr hiding (fromJust)
+import UnitB.Expr hiding (decl)
 import Tests.UnitTest
 
 import UnitB.AST as AST
@@ -37,15 +42,19 @@ import Control.Arrow
 import Control.Lens hiding ((<.>),(.=))
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.State
 import Control.Monad.Writer
 
+import Data.Either.Combinators
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
 import Data.Maybe
 
 import Utilities.BipartiteGraph as G
+import Utilities.Lens
 import Utilities.Syntactic
+import Utilities.Existential
 
 newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
     deriving (Functor,Applicative,Monad)
@@ -53,8 +62,20 @@ newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
 (##) :: k -> a -> MapSyntax k a ()
 x ## y = MapSyntax (tell [(x,y)])
 
-runMap :: (Ord k, Scope a) => MapSyntax k a b -> Map k a
-runMap (MapSyntax cmd) = M.fromListWith merge_scopes $ execWriter cmd
+runMapWith :: (Ord k) 
+           => (a -> a -> a) 
+           -> MapSyntax k a b 
+           -> Map k a
+runMapWith f (MapSyntax cmd) = M.fromListWith f $ execWriter cmd
+
+runMap :: (Ord k, Scope a) 
+       => MapSyntax k a b 
+       -> Map k a
+runMap = runMapWith merge_scopes
+runMap' :: (Ord k) 
+        => MapSyntax k a b 
+        -> Map k a
+runMap' = runMapWith const
 
 test_case :: TestCase
 test_case = test
@@ -127,23 +148,28 @@ result0 = M.fromList
             [ (MId "m0",()) 
             , (MId "m1",()) ]
         skipEvt = Left SkipEvent
+        newAEvent eid = newLeftVertex  (Right eid) (EventP1 $ Right eid)
+        newCEvent eid = newRightVertex (Right eid) (EventP1 $ Right eid)
+        abstractSkip = newLeftVertex  skipEvt (EventP1 skipEvt)
+        concreteSkip = newRightVertex skipEvt (EventP1 skipEvt)
+
         evts0 = fromJust $ makeGraph $ do
-            ae0 <- newRightVertex (Right "ae0") EventP1
-            ae1a <- newRightVertex (Right "ae1a") EventP1
-            ae1b <- newRightVertex (Right "ae1b") EventP1
-            cskip <- newRightVertex skipEvt EventP1
-            askip <- newLeftVertex skipEvt EventP1
+            ae0 <- newCEvent "ae0"
+            ae1a <- newCEvent "ae1a"
+            ae1b <- newCEvent "ae1b"
+            cskip <- concreteSkip
+            askip <- abstractSkip
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Right "ae0") EventP1
-            ae1a <- newLeftVertex (Right "ae1a") EventP1
-            ae1b <- newLeftVertex (Right "ae1b") EventP1
-            askip <- newLeftVertex skipEvt EventP1
-            ce0a <- newRightVertex (Right "ce0a") EventP1
-            ce0b <- newRightVertex (Right "ce0b") EventP1
-            ce1 <- newRightVertex (Right "ce1") EventP1
-            ce2 <- newRightVertex (Right "ce2") EventP1
-            cskip <- newRightVertex skipEvt EventP1
+            ae0 <- newAEvent "ae0"
+            ae1a <- newAEvent "ae1a"
+            ae1b <- newAEvent "ae1b"
+            askip <- abstractSkip
+            ce0a <- newCEvent "ce0a"
+            ce0b <- newCEvent "ce0b"
+            ce1 <- newCEvent "ce1"
+            ce2 <- newCEvent "ce2"
+            cskip <- concreteSkip
             newEdge ae0 ce0a
             newEdge ae0 ce0b
             newEdge ae1a ce1
@@ -203,8 +229,19 @@ result1 = Right (SystemP h result0)
 name2 :: String
 name2 = "test 2, phase 2 (variables), creating state"
 
-lnZip :: Ord a => Map a b -> Traversal (Map a c) (Map a d) (c,b) d
-lnZip m f m' = traverse f $ M.intersectionWith (,) m' m
+lnZip' :: Ord k => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c
+lnZip' m f m' = traverse f $ M.intersectionWith (flip id) m' m
+
+lnZip :: Ord k => Map k b -> Traversal (Map k a) (Map k c) (a,b) c
+lnZip m = lnZip' $ flip (,) <$> m
+
+lnZip5 :: Ord k 
+       => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
+       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z
+lnZip5 m0 m1 m2 m3 m4 = lnZip' $ (f <$> m0) `op` m1 `op` m2 `op` m3 `op` m4
+    where
+        f x0 x1 x2 x3 x4 y = (y,x0,x1,x2,x3,x4)
+        op = M.intersectionWith ($)
 
 case2 :: IO (Either [Error] SystemP2)
 case2 = return $ do
@@ -230,9 +267,6 @@ case2 = return $ do
         vs = M.fromList 
                 [ ("m0",vs0) 
                 , ("m1",vs1)]
-
-withKey :: Lens (Map a b) (Map c d) (Map a (a,b)) (Map c d)
-withKey = lens (M.mapWithKey (,)) (\_ -> id)
 
 result2 :: Either [Error] SystemP2
 result2 = do
@@ -295,33 +329,47 @@ result3 = result2
 name4 :: String
 name4 = "test 4, phase 3 (expressions), create object"
 
-case4 :: IO (Either [Error] (SystemP MachineP3))
+case4 :: IO (Either [Error] SystemP3)
 case4 = return $ do
         r <- result2
         runMM (r & (mchTable.lnZip es) (uncurry make_phase3)) ()
     where
         decl x con y = do
             scope <- ask
-            lift $ x ## ExprScope (con y scope li)
+            lift $ x ## makeCell (con y scope li)
         event evt lbl con x = event' evt lbl [evt] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
-            lift $ lbl ## ExprScope (EventExpr $ M.singleton (Right evt) 
-                    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)) 
+            lift $ lbl ## makeEvtCell (Right evt) (con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)
+                --ExprScope (EventExpr $ M.singleton (Right evt) 
+                --    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)) 
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
         x  = fst $ var "x" int
         y  = fst $ var "y" int
+        declVar n t = decls %= M.insert n (Var n t)
+        c_aux b = ctx $ do
+            declVar "x" int
+            declVar "y" int
+            when b $ expected_type `assign` Nothing
+        c  = c_aux False
+        --c' = c_aux True
         es = M.fromList [("m0",es0),("m1",es1)]
         es0 = runMap $ flip runReaderT Local $ do
                 decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
                 --event 
                 event "ae0"  "grd0" Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
-                forM_ ["ae0","ae1a","ae1b"] $ \evt -> 
+                event "ae0"  "sch0" CoarseSchedule $ c [expr| y = y |]
+                event "ae0"  "sch2" CoarseSchedule $ c [expr| y = 0 |]
+                forM_ ["ae1a","ae1b"] $ \evt -> 
                     event evt "default" CoarseSchedule zfalse
                 event "ae1a" "act0" Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
         es1 = runMap $ flip runReaderT Inherited $ do
+                local (const Local) $ do
+                    decl "prog0" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
+                    decl "prog1" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
+                    decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) Nothing
                 decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
                 --event 
                 event' "ce0a" "grd0" ["ae0"] Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
@@ -329,49 +377,198 @@ case4 = return $ do
                 local (const Local) $ do
                     del_event "ce0a" "grd0" [] Guard
                     del_event "ce0b" "grd0" [] Guard
-                forM_ [("ce0a",["ae0"]),("ce0b",["ae0"]),("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
+                event' "ce0a"  "sch1" ["ce0a"] CoarseSchedule $ c [expr| y = y |]
+                event' "ce0a"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
+                event' "ce0b"  "sch0" ["ae0"] CoarseSchedule $ c [expr| y = y |]
+                event' "ce0b"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
+                forM_ [("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
                     event' evt "default" es CoarseSchedule zfalse
                 event' "ce1" "act0" ["ae1a"] Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
 
-result4 :: Either [Error] (SystemP MachineP3)
+decl :: String -> GenericType -> State ParserSetting ()
+decl n t = decls %= M.insert n (Var n t)
+
+result4 :: Either [Error] SystemP3
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
-        x  = fst $ var "x" int
-        y  = fst $ var "y" int
+        --x  = fst $ var "x" int
+        y  = snd $ var "y" int
+        decl n t = decls %= M.insert n (Var n t)
+        c_aux b = ctx $ do
+            decl "x" int
+            decl "y" int
+            when b $ expected_type `assign` Nothing
+        c  = c_aux False
+        c' = c_aux True
         newMch mid m 
             | mid == "m0" = makeMachineP3' m empty_property_set 
-                    (makePropertySet' [Inv "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y])
-                    [PInvariant "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y ]
+                    (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
+                    [PInvariant "inv0" $ c [expr| x \le y |]]
             | otherwise = makeMachineP3' m 
-                    (makePropertySet' [Inv "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y])
-                    empty_property_set 
-                    [PInvariant "inv0" $ DispExpr "x \\le y" $ $typeCheck$ x .<= y ]
+                    (makePropertySet' [Inv "inv0" $ c [expr| x \le y |]])
+                    (makePropertySet' 
+                        [ Progress "prog1" prog1
+                        , Progress "prog0" prog0
+                        , Safety "saf0" saf0 ])
+                    [ PInvariant "inv0" $ c [expr| x \le y |]
+                    , PProgress "prog1" prog1
+                    , PProgress "prog0" prog0
+                    , PSafety "saf0" saf0 ]
+        prog0 = LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
+        prog1 = LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
+        saf0  = Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) Nothing
         newThy m = makeTheoryP3 m []
-        newEvt mid _m (Right eid) e = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
+        newEvt mid _m (Right eid) e 
+            | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
+            | otherwise = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
         newEvt _mid _m (Left _) e = makeEventP3 e []
         evtField mid eid
-            | eid == "ae0"                 = [EGuards  "grd0" $ DispExpr "x = 0" $ $typeCheck (x .= 0)]
-            | eid == "ae1a"                = [EActions "act0" $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)]
-            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)]
+            | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
+                                             , ECoarseSched "sch0" $ c [expr|y = y|] 
+                                             , ECoarseSched "sch2" $ c [expr|y = 0|]]
+            | eid == "ae1a"                = [EActions "act0" $ Assign y $ c' [expr| y + 1 |] ]
+            | eid == "ce0a"                = [ ECoarseSched "sch1" $ c [expr|y = y|] 
+                                             , ECoarseSched "sch2" $ c [expr|y = 0|]]
+            | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
+                                             , ECoarseSched "sch2" $ c [expr|y = 0|]]
+            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ Assign y $ c' [expr| y + 1 |] ]
             | otherwise = []
 
 name5 :: String
 name5 = "test 5, phase 3, parsing"
 
-case5 :: IO (Either [Error] (SystemP MachineP3))
+case5 :: IO (Either [Error] SystemP3)
 case5 = return $ do
+    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+        ms0 = makeLatex "file.ext" $ do       
+                  command "invariant" [text "inv0",text "x \\le y"]                 
+                  command "evguard" [text "ae0", text "grd0", text "x = 0"]
+                  command "cschedule" [text "ae0", text "sch0", text "y = y"]
+                  command "cschedule" [text "ae0", text "sch2", text "y = 0"]
+                  command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
+        ms1 = makeLatex "file.ext" $ do       
+                  command "removeguard" [text "ce0a",text "grd0"]
+                  command "removeguard" [text "ce0b",text "grd0"]
+                  command "removecoarse" [text "ce0a",text "sch0"]
+                  command "cschedule" [text "ce0a", text "sch1", text "y = y"]
+                  command "progress" [text "prog0",text "x \\le y",text "x = y"]
+                  command "progress" [text "prog1",text "x \\le y",text "x = y"]
+                  command "safety" [text "saf0",text "x \\le y",text "x = y"]
+        cs = M.empty
+    r <- result2
+    runPipeline' ms cs r run_phase3_exprs
+
+result5 :: Either [Error] SystemP3
+result5 = result4
+
+name6 :: String
+name6 = "test 6, phase 4 (proofs), create object"
+
+case6 :: IO (Either [Error] SystemP4)
+case6 = return $ do
+        r <- result4
+        return $ r & (mchTable.lnZip5 cSchRef fSchRef liveProof comment proof) %~ 
+                    uncurry6 make_phase4
+    where
+        li = LI "file.ext" 1 1
+        ms = M.fromList [("m0",()),("m1",())]
+        ch = ScheduleChange 
+                (M.singleton "sch0" ()) 
+                (M.singleton "sch1" ()) 
+                (M.singleton "sch2" ()) 
+                ("prog1", prog1) 
+                ("saf0", saf0)
+        cSchRef = runMap' $ do
+            "m0" ## M.empty
+            "m1" ## runMap' (do
+                "ce0a" ## [(("SCH/m1",ch),li)])
+        fSchRef = runMap' $ do
+            "m0" ## M.empty
+            "m1" ## runMap' (do
+                "ce0a" ## Just (("prog1",prog1),li))
+        liveProof = M.insert "m1" (runMap' $ do
+            "prog0" ## ((Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
+            $ M.empty <$ ms
+        comment = M.empty <$ ms
+        proof = M.empty <$ ms
+        prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
+        saf0  = Unless [] (c [expr|x \le y|]) (c [expr|x = y|]) Nothing
+        c  = ctx $ do
+            decl "x" int
+            decl "y" int
+        uncurry6 f (x0,x1,x2,x3,x4,x5) = f x0 x1 x2 x3 x4 x5
+        --x  = fst $ var "x" int
+        --y  = fst $ var "y" (int ::
+
+result6 :: Either [Error] SystemP4
+result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
+    where
+        upgradeAll mid = upgrade id (newMch mid) (newEvt mid) (newEvt mid)
+        --newThy t = 
+        newEvt _mid _m eid e 
+            | eid == Right "ce0a" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
+            | otherwise           = makeEventP4 e [] Nothing []
+        newMch mid m 
+            | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1))]
+            | otherwise   = makeMachineP4' m []
+        ch = ScheduleChange 
+                (M.singleton "sch0" ()) 
+                (M.singleton "sch1" ()) 
+                (M.singleton "sch2" ()) 
+                ("prog1", prog1) 
+                ("saf0", saf0)
+        prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
+        saf0  = Unless [] (c [expr|x \le y|]) (c [expr|x = y|]) Nothing
+        c  = ctx $ do
+            decl "x" int
+            decl "y" int
+
+name7 :: String
+name7 = "test 7, phase 4, parsing"
+
+case7 :: IO (Either [Error] SystemP4)
+case7 = return $ do
     let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
         ms0 = makeLatex "file.ext" $ do       
                   command "invariant" [text "inv0",text "x \\le y"]                 
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
                   command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
         ms1 = makeLatex "file.ext" $ do       
-                  command "removeguard" [text "ce0a",text "grd0"]
-                  command "removeguard" [text "ce0b",text "grd0"]
+                  command "replace" [text "ce0a",text "sch0",text "sch1",text "sch2",text "prog1",text "saf0"]
+                  command "replacefine" [text "ce0a",text "prog1"]
+                  command "refine" [text "prog0",text "monotonicity",text "prog1",text ""]
+                  --command "removeguard" [text "ce0b",text "grd0"]
         cs = M.empty
-    r <- result2
-    runPipeline' ms cs r run_phase3_exprs
+    r <- result5
+    runPipeline' ms cs r run_phase4_proofs
 
-result5 :: Either [Error] (SystemP MachineP3)
-result5 = result4
+result7 :: Either [Error] SystemP4
+result7 = result6
+
+name8 :: String
+name8 = "test 8, make machine"
+
+case8 :: IO (Either [Error] (SystemP Machine))
+case8 = return $ do
+    r <- result7 
+    runMM (r & mchTable (M.traverseWithKey make_machine)) ()
+
+result8 :: Either [Error] (SystemP Machine)
+result8 = Right $ SystemP h ms
+    where
+        h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
+        ms = M.fromList [("m0",m0),("m1",m1)]
+        -- sorts = 
+        m0 = (empty_machine "m0")
+        m1 = empty_machine "m1"
+
+--see :: Map ProgId ProgressProp
+seeA :: IO [EventId]
+seeA = case5 >>= \r -> return $ seeLens r
+
+seeE :: IO [EventId]
+seeE = return $ seeLens result5
+
+seeLens :: Either [Error] SystemP3 -> [EventId]
+seeLens = view $ to fromRight'.mchTable.at "m1".to fromJust.pNewEvents.eEventId.traverse.to (:[])

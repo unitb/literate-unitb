@@ -319,14 +319,14 @@ apply_monotonicity po = fromMaybe po $
                 let f = typ_fun2 g0
                     funApp (x:xs) = L.foldl f (Right x) $ L.map Right xs
                     funApp [] = unit
-                return (c,$fromJust$ funApp x,$fromJust$ funApp y)
+                return (c,$typeCheck$ funApp x,$typeCheck$ funApp y)
         shared :: Eq a => [a] -> [a] -> Bool
         shared xs ys = not $ L.null $ intersect xs ys
         mono :: String -> Fun -> [Expr] -> [Expr] -> Maybe Expr
         mono rel fun xs ys = do
             (i,x,y) <- difference fun xs ys
             g       <- isMonotonic mm' rel (name fun) i
-            return ($fromJust $ g (Right x) (Right y))
+            return ($typeCheck $ g (Right x) (Right y))
         mm' = po^.syntacticThm
 
 fresh :: String -> Map String () -> String

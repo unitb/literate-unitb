@@ -532,13 +532,13 @@ replace_csched_po m (lbl,evt') = do
                 with (do
                         POG.variables $ symbol_table vs) $
                     forM_ (M.toList new_part_c) $ \(lbl,sch) -> do
-                        emit_goal [nb,"prog",plbl,"rhs",lbl] $ $fromJust$
+                        emit_goal [nb,"prog",plbl,"rhs",lbl] $ $typeCheck$
                             Right q0 .=> Right sch
                 with (do
                         POG.variables $ symbol_table us) $ do
-                    emit_goal [nb,"saf",slbl,"lhs"] $ $fromJust$
+                    emit_goal [nb,"saf",slbl,"lhs"] $ $typeCheck$
                             Right p1 .== mzall (M.map Right new_part_c)
-                    emit_goal [nb,"saf",slbl,"rhs"] $ $fromJust$
+                    emit_goal [nb,"saf",slbl,"rhs"] $ $typeCheck$
                             Right q1 .=> mznot (mzall $ M.map Right old_c)
                         -- the above used to include .=> ... \/ not old_f
                         -- it does not seem sound and I removed it
@@ -632,7 +632,7 @@ replace_fsched_po m (lbl,aevt) = do
                             nameless_hyps new_c
                             named_hyps old_c -- is this sound?
                             named_hyps kept_f) $
-                        emit_goal ["eqv"] $ $fromJust$
+                        emit_goal ["eqv"] $ $typeCheck$
                             Right (zsome add_f) .= Right (zsome del_f)
 
 intersections :: Ord k => [Map k a] -> Map k a

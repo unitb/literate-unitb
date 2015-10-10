@@ -140,13 +140,13 @@ contents x = case x ^. inhStatus of
                 InhAdd x -> Just x
                 InhDelete x -> x
 
-fromEither' :: Either [Error] a -> MM (Maybe a)
+fromEither' :: Either [Error] a -> MM' c (Maybe a)
 fromEither' (Left es) = tell es >> return Nothing
 fromEither' (Right x) = return $ Just x
 
 all_errors :: Traversable t 
            => t (Either [Error] a) 
-           -> MM (Maybe (t a))
+           -> MM' c (Maybe (t a))
 all_errors m = T.mapM fromEither' m >>= (return . T.sequence)
 
 make_table :: (Ord a, Show a) 

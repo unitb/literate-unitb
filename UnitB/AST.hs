@@ -19,6 +19,7 @@ module UnitB.AST
     , empty_theory
     , Rule (..)
     , RefRule (..)
+    , EventTable(..)
     , all_upwards, all_downwards
     , upward_event
     --, new_event_set

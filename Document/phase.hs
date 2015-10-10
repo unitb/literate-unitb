@@ -51,8 +51,9 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map   as M
 import Data.Maybe as MM
-import Data.Monoid
+import Data.Monoid hiding ((<>),First(..))
 import Data.Proxy
+import Data.Semigroup
 import Data.Set as S
 import qualified Data.Traversable as T
 import Data.Typeable
@@ -69,7 +70,7 @@ import Utilities.TH
 
 -- data MachineP0' a = MachineP0
 
-triggerM :: Maybe a -> MM a
+triggerM :: Maybe a -> MM' c a
 triggerM = maybe mzero return
 
 triggerP :: Pipeline MM (Maybe a) a
@@ -285,12 +286,13 @@ type MachineP4 = MachineP4' EventP4 TheoryP3
 data MachineP4' events theory = MachineP4
     { _p3 :: MachineP3' events theory
     , _pLiveRule :: Map ProgId Rule
-    , _pFineRef  :: Map EventId (Maybe (ProgId,ProgressProp))
     , _pProofs   :: Map Label (Tactic Proof, LineInfo)
     , _pComments :: Map DocItem String
     } deriving (Typeable)
 
 data EventP1 = EventP1
+         { _eEventId :: SkipOrEvent
+         }
     deriving (Show,Typeable)
 
 data EventP2 = EventP2 
@@ -314,7 +316,7 @@ data EventP4 = EventP4
     { _e3 :: EventP3 
     , _eCoarseRef  :: [(Label,ScheduleChange)]
     , _eFineRef    :: Maybe (ProgId,ProgressProp)
-    } deriving (Typeable)
+    } deriving (Typeable,Show)
 
 data Change = AddC | RemoveC
     deriving (Eq,Show)
@@ -391,6 +393,7 @@ derive makeNFData ''MachineP0
 derive makeNFData ''MachineP1'
 derive makeNFData ''MachineP2'
 derive makeNFData ''MachineP3'
+derive makeNFData ''MachineP4'
 
 derive makeNFData ''EventP1
 derive makeNFData ''EventP2
@@ -412,6 +415,7 @@ makeRecordConstr ''EventP4
 
 makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
+--makeRecordConstr ''TheoryP4
 
 derive makeNFData ''EventP2Field
 derive makeNFData ''EventP3Field
@@ -419,6 +423,7 @@ derive makeNFData ''EventP3Field
 makeLenses ''SystemP
 
 deriving instance Show EventP3Field
+instance NFData (Tactic Proof) where
 
 -- type Phase2M = Phase2 MTable
 -- type Phase3M = Phase3 MTable
@@ -539,9 +544,49 @@ pEventIds :: (HasEventP1 events, HasMachineP1' phase)
 pEventIds = pEvents . to (M.mapWithKey const) . from pEventId
 
 getEvent :: (HasMachineP1' phase)
-      => EventId
-      -> Getter (phase events t) events
+         => EventId
+         -> Getter (phase events t) events
 getEvent eid = pEvents . at eid . (\f x -> Just <$> f (MM.fromJust x))
+
+eventDifference :: HasMachineP1' phase
+                => (NonEmpty (Map Label a) -> Map Label a -> Map Label b)
+                -> EventId 
+                -> Getting (Map Label a) event (Map Label a)
+                -> Getter (phase event t) (Map Label b)
+eventDifference f eid field = pEventRef . to f' 
+    where
+        f' g = readGraph g $ do
+            cevt  <- MM.fromJust <$> hasRightVertex (Right eid)
+            es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
+            f (view field <$> es) <$> (view field <$> rightInfo cevt)
+
+eventDifferenceWithId :: (HasMachineP1' phase,HasEventP1 event)
+                      => (   Map Label (First a,NonEmpty SkipOrEvent) 
+                          -> Map Label (First a,NonEmpty SkipOrEvent) 
+                          -> Map Label (First b,c))
+                      -> EventId 
+                      -> Getting (Map Label a) event (Map Label a)
+                      -> Getter (phase event t) (Map Label (b,c))
+eventDifferenceWithId comp eid field = eventDifference f eid (to field') . to (M.map $ first getFirst)
+    where 
+        f old new = M.unionsWith (<>) (NE.toList old) `comp` new
+        field' e = M.map ((,view eEventId e :| []).First) $ view field e
+
+evtAdded :: HasMachineP1' phase 
+         => EventId
+         -> Getting (Map Label a) event (Map Label a)
+         -> Getter (phase event t) (Map Label a)
+evtAdded = eventDifference $ \old new -> new `M.difference` M.unions (NE.toList old)
+evtDel :: (HasMachineP1' phase, HasEventP1 event)
+       => EventId
+       -> Getting (Map Label a) event (Map Label a)
+       -> Getter (phase event t) (Map Label (a,NonEmpty SkipOrEvent))
+evtDel = eventDifferenceWithId M.difference 
+evtKept :: (HasMachineP1' phase, HasEventP1 event)
+        => EventId
+        -> Getting (Map Label a) event (Map Label a)
+        -> Getter (phase event t) (Map Label (a,NonEmpty SkipOrEvent))
+evtKept = eventDifferenceWithId M.intersection
 
 newDelVars :: HasMachineP2' phase
            => Getter (phase events t) (Map String Var)
@@ -574,9 +619,18 @@ pEventMerge = pEventRef.to f
                 e  <- rightInfo v
                 return $ (,(e,es)) <$> k
 
+traverseFilter :: Ord k => (a -> Bool) -> Traversal' (Map k a) (Map k a)
+traverseFilter p f m = M.union <$> f m' <*> pure (m `M.difference` m')
+    where
+        m' = M.filter p m
+
 pNewEvents :: (HasMachineP1' phase, HasEventP1 events)
-           => Getter (phase events t) (Map EventId events)
-pNewEvents = pEventMerge.to (M.map fst . M.filter (L.null . snd))
+           => Traversal' (phase events t) events
+pNewEvents f = (pEventRef.traverseRightWithEdges) g
+    where
+        g (e,xs) 
+            | L.null $ rights (NE.toList xs) = f e
+            | otherwise                      = pure e
 
 pOldEvents :: (HasMachineP1' phase, HasEventP1 events)
            => Getter (phase events t) (Map EventId events)

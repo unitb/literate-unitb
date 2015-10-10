@@ -1,7 +1,9 @@
 {-# LANGUAGE Arrows
         , TypeOperators
+        , TupleSections 
         , RecordWildCards
-        , TupleSections #-}
+        , OverloadedStrings
+        #-}
 module Document.Phase.Structures where
 
     --
@@ -77,7 +79,7 @@ run_phase1_types = proc p0 -> do
         rightVerts m = L.map ((,()).fst) m
         edges m = concatMap (\(x,xs) -> L.map (,x) xs) m
         makeGraphs = traverse f 
-    evts'   <- triggerP -< evts'    
+    evts'   <- triggerP -< evts'   
     let evts'' :: MTable [(SkipOrEvent, [SkipOrEvent])]
         evts'' = addSkip evts'
         addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.elems.M.map ((Right *** ifEmpty).fst))
@@ -120,7 +122,7 @@ make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
         -- _pEventRef <- G.fromList _ _ 
         --     (concatMap (uncurry $ L.map.(,)) $ M.elems evts)
     where
-        _pEventRef = G.mapBothWithKey (const (const EventP1) . const) (const (const EventP1) . const) evts
+        _pEventRef = G.mapBothWithKey (const.EventP1) (const.EventP1) evts
         -- f = _ :: G.BiGraph Label EventId EventId
         -- _pEvents    = M.map (uncurry EventP1) evts ^. pFromEventId
         _pContext   = TheoryP1 { .. }
@@ -145,6 +147,8 @@ event_splitting = machineCmd "\\splitevent" $ \(aevt, cevts) _m _p0 -> do
     let _ = aevt  :: Label
         _ = cevts :: [Label]
     li <- ask
+    when (any ("skip" ==) cevts) $ do
+        left [Error "invalid event name: 'skip' is a reserved name" li]
     return [(c,(EventId c,[EventId aevt]),li) | c <- cevts]
 
 event_merging :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
@@ -152,11 +156,15 @@ event_merging = machineCmd "\\mergeevents" $ \(aevts, cevt) _m _p0 -> do
     let _ = aevts :: [Label]
         _ = cevt  :: Label
     li <- ask
+    when (cevt == "skip") $ do
+        left [Error "invalid event name: 'skip' is a reserved name" li]
     return [(cevt,(EventId cevt,map EventId aevts),li)]
 
 event_decl :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
 event_decl = machineCmd "\\newevent" $ \(One evt) _m _ -> do 
             li <- lift ask 
+            when (evt == "skip") $ do
+                left [Error "invalid event name: 'skip' is a reserved name" li]
             return [(evt,(EventId evt,[]),li)]
 
 refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]

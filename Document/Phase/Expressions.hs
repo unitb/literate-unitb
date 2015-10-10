@@ -2,6 +2,7 @@
     , Arrows
     , RankNTypes 
     , TypeFamilies
+    , OverloadedStrings
     , ViewPatterns
     , TupleSections
     , DeriveFunctor
@@ -57,7 +58,9 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Traversable as T
 
+import Utilities.Existential
 import Utilities.Format
+import Utilities.Lens
 import Utilities.Syntactic
 
 withHierarchy :: Pipeline MM (Hierarchy MachineId,MTable a) (MTable b)
@@ -93,9 +96,10 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             , guard_removal
             , coarse_removal
             , fine_removal
-            , default_schedule_decl
             , fine_sch_decl
-            , coarse_sch_decl
+            , C.id &&& coarse_sch_decl 
+                >>> arr snd &&& default_schedule_decl 
+                >>> arr (\(x,y) -> M.unionWith (++) <$> x <*> y)
             , initialization
             , assumption
             , invariant
@@ -113,12 +117,20 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
 
 make_phase3 :: MachineP2 -> Map Label ExprScope -> MM' c MachineP3
 make_phase3 p2 exprs' = do
-        join $ upgradeM
+        m <- join $ upgradeM
             newThy newMch
             <$> liftEvent toOldEvtExpr
             <*> liftEvent2 toNewEvtExpr toNewEvtExprDefault
             <*> pure p2
+        return $ m & pNewEvents %~ removeDefault
+
     where
+        removeDefault e
+            | M.null nonDef = e & eCoarseSched .~ def
+            | otherwise     = e & eCoarseSched .~ nonDef
+            where
+                (def,nonDef) = M.partitionWithKey (\k _ -> k == "default") sch
+                sch = e^.eCoarseSched
         exprs = M.toList exprs'
         liftEvent2 :: (   Label 
                       -> ExprScope 
@@ -270,7 +282,7 @@ instance IsExprScope Initially where
 remove_init :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_init = machineCmd "\\removeinit" $ \(One lbls) _m _p2 -> do
             li <- lift ask
-            return [(lbl,ExprScope $ Initially (InhDelete Nothing) Local li) | lbl <- lbls ]
+            return [(lbl,makeCell $ Initially (InhDelete Nothing) Local li) | lbl <- lbls ]
 
 remove_assgn :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_assgn = machineCmd "\\removeact" $ \(evt, lbls) _m p2 -> do
@@ -502,7 +514,7 @@ assumption :: MPipeline MachineP2
 assumption = machineCmd "\\assumption" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             xp <- parse_expr'' (p2^.pCtxSynt) xs
-            return [(lbl,ExprScope $ Axiom xp Local li)]
+            return [(lbl,makeCell $ Axiom xp Local li)]
 
         --------------------------
         --  Program properties  --
@@ -513,16 +525,27 @@ initialization :: MPipeline MachineP2
 initialization = machineCmd "\\initialization" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             xp <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ Initially (InhAdd xp) Local li)]
+            return [(lbl,makeCell $ Initially (InhAdd xp) Local li)]
 
-default_schedule_decl :: MPipeline MachineP2 [(Label,ExprScope)]
-default_schedule_decl = arr $ \p2 -> 
-        Just $ M.map (map default_sch.elems . M.mapWithKey const.view pNewEvents) p2
+makeEvtCell :: IsEvtExpr a => InitOrEvent -> a -> ExprScope
+makeEvtCell evt exp = makeCell $ EventExpr $ singleton evt $ makeCell exp
+
+default_schedule_decl :: Pipeline MM
+                   (MTable MachineP2, Maybe (MTable [(Label, ExprScope)]))
+                   (Maybe (Map MachineId [(Label, ExprScope)]))
+default_schedule_decl = arr $ \(p2,csch) -> 
+        --Just $ M.map (map default_sch.elems . M.mapWithKey const.view pNewEvents) p2
+        --Just $ p2 & traverse %~ view (pNewEvents.eEventId.traverse.to default_sch)
+        Just $ addDefSch <$> p2 <.> evtsWith csch  -- .traverse._CoarseSchedule._)
     where
+        --asCell' = asCell :: Prism' ExprScope EventExpr
+        addDefSch m evts = m^.pNewEvents.eEventId._Right.filterL (`notElem` evts).to default_sch
+        evtsWith csch = csch^.traverse & traverse %~ rights.referencedEvents
+        referencedEvents :: [(Label, ExprScope)] -> [InitOrEvent]
+        referencedEvents m = m^.traverse._2._EventExpr'.withKey'.traverse._1.to (:[]) -- .secondL _CoarseSchedule'._ -- _1.to (:[])
         li = LI "default" 1 1
-        default_sch e = ( label "default",
-                          ExprScope $ EventExpr 
-                            $ singleton (Right e) (EvtExprScope $ CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li))
+        default_sch e = [( label "default",
+                          makeEvtCell (Right e) $ CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li)]
 
 
 instance Scope Invariant where
@@ -550,7 +573,7 @@ invariant :: MPipeline MachineP2
 invariant = machineCmd "\\invariant" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             xp <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ Invariant xp Local li)]
+            return [(lbl,makeCell $ Invariant xp Local li)]
 
 instance Scope InvTheorem where
     kind _ = "theorem"
@@ -577,7 +600,7 @@ mch_theorem :: MPipeline MachineP2
 mch_theorem = machineCmd "\\theorem" $ \(lbl,xs) _m p2 -> do
             li <- lift ask
             xp <- parse_expr'' (p2^.pMchSynt) xs
-            return [(lbl,ExprScope $ InvTheorem xp Local li)]
+            return [(lbl,makeCell $ InvTheorem xp Local li)]
 
 instance Scope TransientProp where
     kind _ = "transient predicate"
@@ -614,7 +637,7 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
                 prop = Tr fv tr evts empty_hint
-            return [(lbl,ExprScope $ TransientProp prop Local li)]
+            return [(lbl,makeCell $ TransientProp prop Local li)]
 
 transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -630,7 +653,7 @@ transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
                     $ NE.nonEmpty evts
             hint  <- tr_hint p2 m fv evts' hint
             let prop = Tr fv tr evts hint
-            return [(lbl,ExprScope $ TransientProp prop Local li)]
+            return [(lbl,makeCell $ TransientProp prop Local li)]
 
 instance IsExprScope ConstraintProp where
     toNewEvtExprDefault _ _ = return []
@@ -663,7 +686,7 @@ constraint_prop = machineCmd "\\constraint" $ \(lbl,xs) _m p2 -> do
             let vars = elems $ free_vars' ds pre
                 ds = p2^.pDummyVars
                 prop = Co vars pre
-            return [(lbl,ExprScope $ ConstraintProp prop Local li)]
+            return [(lbl,makeCell $ ConstraintProp prop Local li)]
 
 instance IsExprScope SafetyDecl where
     toNewEvtExprDefault _ _ = return []
@@ -705,7 +728,7 @@ safety_prop lbl evt pCt qCt _m p2 = do
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
                 new_prop = Unless (M.elems dum) p q evt
-            return [(lbl,ExprScope $ SafetyProp new_prop Local li)]
+            return [(lbl,makeCell $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -754,7 +777,7 @@ progress_prop = machineCmd "\\progress" $ \(lbl, pCt, qCt) _m p2 -> do
                 new_prop = LeadsTo (M.elems dum) p q
 --             new_deriv <- bind (format "proof step '{0}' already exists" lbl)
 --                 $ insert_new lbl (Rule Add) $ derivation $ props m
-            return [(lbl,ExprScope $ ProgressProp new_prop Local li)]
+            return [(lbl,makeCell $ ProgressProp new_prop Local li)]
 
 instance IsEvtExpr Witness where
     defaultEvtWitness _ _ = return []
@@ -821,6 +844,12 @@ instance (Applicative f,Applicative g,Applicative h) => Applicative (Compose3 f 
             comp = Compose . Compose
             uncomp = getCompose . getCompose
 
+_EventExpr' :: Prism' ExprScope (Map InitOrEvent EvtExprScope)
+_EventExpr' = _ExprScope._Cell._EventExpr
+
+_CoarseSchedule' :: Traversal' EvtExprScope (EventInhStatus Expr, DeclSource, LineInfo)
+_CoarseSchedule' = _EvtExprScope._Cell._CoarseSchedule
+
 instance IsExprScope EventExpr where
     toNewEvtExprDefault _ (EventExpr m) = 
           fmap (concat.M.elems) 
@@ -856,7 +885,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(String var, xp) _m p2 -> do
             p  <- parse_expr'' (p2^.pMchSynt) xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            return [(label var, ExprScope $ EventExpr $ M.singleton (Left InitEvent) (EvtExprScope $ Witness v p Local li))]
+            return [(label var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
 
 event_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
@@ -875,7 +904,7 @@ machine_events :: HasMachineP1 phase events => phase events thy -> Map Label Eve
 machine_events p2 = L.view pEventIds p2
 
 evtScope :: IsEvtExpr a => EventId -> a -> ExprScope
-evtScope ev x = ExprScope $ EventExpr $ M.singleton (Right ev) (EvtExprScope x)
+evtScope ev x = makeCell $ EventExpr $ M.singleton (Right ev) (makeCell x)
 
 addEvtExpr :: IsEvtExpr a
            => W.WriterT [(UntypedExpr,[String])] M (EventId,[(UntypedExpr,[String])] -> a) 

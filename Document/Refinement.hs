@@ -22,10 +22,10 @@ import Theories.SetTheory
 
     -- Libraries
 import Control.Arrow (second)
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (Context)
 
-import Control.Monad.Trans.Either
 import Control.Monad.RWS as RWS
 
 import Data.Char
@@ -101,18 +101,18 @@ getHint (RuleParserDecl _ _ _ _ _ _ _ hint _) = hint
 getParser :: RuleParserParameter -> ParserSetting
 getParser (RuleParserDecl _ _ _ _ _ _ _ _ parser) = parser
 
-instance RuleParser (a,()) => RuleParser (ProgressProp -> a,()) where
+instance RuleParser (a,()) => RuleParser (RawProgressProp -> a,()) where
     parse_rule (f,_) xs rule param = do
         let f' x = f
                 where
                     _ = x :: Label
         parse_rule (f',()) xs rule param 
 
-instance RuleParser (a,()) => RuleParser (Label -> ProgressProp -> a,()) where
+instance RuleParser (a,()) => RuleParser (Label -> RawProgressProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
         let prog = getProgress param
         case M.lookup x prog of
-            Just p -> parse_rule (f x p, ()) xs rule param
+            Just p -> parse_rule (f x $ getExpr <$> p, ()) xs rule param
             Nothing -> do
                 li <- lift $ ask
                 raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li
@@ -120,11 +120,11 @@ instance RuleParser (a,()) => RuleParser (Label -> ProgressProp -> a,()) where
                 li <- ask
                 raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
-instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
+instance RuleParser (a,()) => RuleParser (RawSafetyProp -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
         let saf = getSafety param
         case M.lookup x saf of
-            Just p -> parse_rule (f p, ()) xs rule param
+            Just p -> parse_rule (f $ getExpr <$> p, ()) xs rule param
             Nothing -> do
                 li <- ask
                 raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li
@@ -132,11 +132,11 @@ instance RuleParser (a,()) => RuleParser (SafetyProp -> a,()) where
                 li <- ask
                 raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
-instance RuleParser (a,()) => RuleParser (Label -> Transient -> a,()) where
+instance RuleParser (a,()) => RuleParser (Label -> RawTransient -> a,()) where
     parse_rule (f,_) (x:xs) rule param = do
         let tr = getTransient param
         case M.lookup x tr of
-            Just p -> parse_rule (f x p, ()) xs rule param
+            Just p -> parse_rule (f x $ getExpr <$> p, ()) xs rule param
             Nothing -> do
                 li <- ask
                 raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li
@@ -165,7 +165,7 @@ instance RefRule a => RuleParser ([Label] -> M a, ()) where
 --                li <- lift $ ask
 --                left [Error (format "refinement ({0}): expecting more properties" rule) li]
 
-instance RefRule a => RuleParser (NE.NonEmpty (Label,ProgressProp) -> a,()) where
+instance RefRule a => RuleParser (NE.NonEmpty (Label,RawProgressProp) -> a,()) where
     parse_rule (f,_) xs rule param = do
             li <- ask
             when (L.null xs)
@@ -174,10 +174,10 @@ instance RefRule a => RuleParser (NE.NonEmpty (Label,ProgressProp) -> a,()) wher
         where
             g = f . NE.fromList
 
-instance RefRule a => RuleParser ([(Label,ProgressProp)] -> a,()) where
+instance RefRule a => RuleParser ([(Label,RawProgressProp)] -> a,()) where
     parse_rule (f,_) xs rule param = do
             ps <- forM xs g
-            return $ Rule (f $ zip xs ps)        
+            return $ Rule (f $ zip xs $ fmap getExpr <$> ps)        
         where
             prog = getProgress param
             g x = maybe (do
@@ -185,10 +185,10 @@ instance RefRule a => RuleParser ([(Label,ProgressProp)] -> a,()) where
                 raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li )
                 return $ M.lookup x prog
 
-instance RefRule a => RuleParser ([SafetyProp] -> a,()) where
+instance RefRule a => RuleParser ([RawSafetyProp] -> a,()) where
     parse_rule (f,_) xs rule param = do
             xs <- forM xs g
-            return $ Rule (f xs)        
+            return $ Rule (f $ fmap getExpr <$> xs)        
         where
             saf = getSafety param
             g x = maybe (do
@@ -204,10 +204,10 @@ parse rc n param = do
             hyps_lbls = getHypotheses param
         parse_rule rc (goal_lbl:hyps_lbls) n param
 
-assert :: Machine -> String -> Expr -> POGen ()
+assert :: RawMachine -> String -> Expr -> POGen ()
 assert m suff prop = assert_hyp m suff M.empty M.empty prop
 
-assert_hyp :: Machine -> String 
+assert_hyp :: RawMachine -> String 
            -> Map String Var -> Map Label Expr
            -> Expr -> POGen () 
 assert_hyp m suff cnst hyps prop = 
@@ -224,7 +224,7 @@ assert_hyp m suff cnst hyps prop =
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
 
-data Ensure = Ensure ProgressProp [Label] TrHint
+data Ensure = Ensure RawProgressProp [Label] RawTrHint
     deriving (Eq,Typeable,Show)
 
 instance RefRule Ensure where
@@ -240,7 +240,7 @@ instance RefRule Ensure where
             saf_wd_po m ("", saf)
     supporting_evts (Ensure _ hyps _) = map EventId hyps
 
-data Discharge = Discharge ProgressProp Label Transient (Maybe SafetyProp)
+data Discharge = Discharge RawProgressProp Label RawTransient (Maybe RawSafetyProp)
     deriving (Eq,Typeable,Show)
 
 instance RefRule Discharge where
@@ -284,8 +284,8 @@ instance RefRule Discharge where
                     zforall (fv0 ++ M.elems fv1) ztrue (
                              (znot p1 `zimplies` q0) ) )
 
-mk_discharge :: ProgressProp -> Label -> Transient -> [SafetyProp] -> Discharge
-mk_discharge p lbl tr [s] = Discharge p lbl tr $ Just s
+mk_discharge :: RawProgressProp -> Label -> RawTransient -> [RawSafetyProp] -> Discharge
+mk_discharge p lbl tr [s] = Discharge p lbl tr $ Just $ getExpr <$> s
 mk_discharge p lbl tr []  = Discharge p lbl tr Nothing
 mk_discharge _ _ _ _  = error "expecting at most one safety property" 
 
@@ -299,7 +299,7 @@ parse_discharge rule params = do
                             $ intercalate "," $ map show hyps_lbls) li
     parse (mk_discharge,()) rule params
 
-data Monotonicity = Monotonicity ProgressProp Label ProgressProp
+data Monotonicity = Monotonicity RawProgressProp Label RawProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule Monotonicity where
@@ -316,7 +316,7 @@ instance RefRule Monotonicity where
                     zforall (fv0 ++ fv1) ztrue $
                              (q1 `zimplies` q0))
 
-data Implication = Implication ProgressProp
+data Implication = Implication RawProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule Implication where
@@ -329,7 +329,7 @@ instance RefRule Implication where
                              (p1 `zimplies` q1))
     supporting_evts _ = []
 
-data Disjunction = Disjunction ProgressProp [(Label,([Var], ProgressProp))]
+data Disjunction = Disjunction RawProgressProp [(Label,([Var], RawProgressProp))]
     deriving (Eq,Typeable,Show)
 
 instance RefRule Disjunction where
@@ -351,13 +351,13 @@ instance RefRule Disjunction where
             disj_q ([], LeadsTo _ _ q1) = q1
             disj_q (vs, LeadsTo _ _ q1) = zexists vs ztrue q1
 
-disjunction :: ProgressProp -> [(Label,ProgressProp)] -> Disjunction
-disjunction pr0@(LeadsTo fv0 _ _) ps = 
-        let f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, pr1)
+disjunction :: RawProgressProp -> [(Label,RawProgressProp)] -> Disjunction
+disjunction pr0@(LeadsTo fv0 _ _) ps = Disjunction (getExpr <$> pr0) ps0
+        where 
+            f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, getExpr <$> pr1)
             ps0 = map (second f) ps
-        in (Disjunction pr0 ps0)
 
-data NegateDisjunct = NegateDisjunct ProgressProp Label ProgressProp
+data NegateDisjunct = NegateDisjunct RawProgressProp Label RawProgressProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule NegateDisjunct where
@@ -375,7 +375,7 @@ instance RefRule NegateDisjunct where
                     zforall (fv0 ++ fv1) ztrue $
                                 (q1 `zimplies` q0))
 
-data Transitivity = Transitivity ProgressProp (NE.NonEmpty (Label,ProgressProp))
+data Transitivity = Transitivity RawProgressProp (NE.NonEmpty (Label,RawProgressProp))
     deriving (Eq,Typeable,Show)
 
 instance RefRule Transitivity where
@@ -405,7 +405,7 @@ instance RefRule Transitivity where
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             q2 `zimplies` q0 )
 
-data PSP = PSP ProgressProp Label ProgressProp SafetyProp
+data PSP = PSP RawProgressProp Label RawProgressProp RawSafetyProp
     deriving (Eq,Typeable,Show)
 
 instance RefRule PSP where
@@ -426,7 +426,7 @@ instance RefRule PSP where
     refinement_po (PSP _ _ _ (Unless _ _ _ (Just _))) _ 
         = error "PSP.refinement_po: invalid"
 
-data Induction = Induction ProgressProp Label ProgressProp Variant
+data Induction = Induction RawProgressProp Label RawProgressProp Variant
     deriving (Eq,Typeable,Show)
 
 instance RefRule Induction where
@@ -468,8 +468,8 @@ parse_induction rule param = do
             ,   ( not (h0 `member` prog)
                 , format "refinement ({0}): {1} should be a progress property" rule h0 )
             ]
-        let pr0@(LeadsTo fv0 _ _) = prog ! goal_lbl
-            pr1@(LeadsTo fv1 _ _) = prog ! h0
+        let pr0@(LeadsTo fv0 _ _) = getExpr <$> (prog ! goal_lbl)
+            pr1@(LeadsTo fv1 _ _) = getExpr <$> (prog ! h0)
         dum <- case fv1 \\ fv0 of
             [v] -> return v
             _   -> raise $ Error (   "inductive formula should have one free "
@@ -483,14 +483,14 @@ parse_induction rule param = do
                         tell [Error "expecting a direction for the variant" li]
                         return (error "induction: unreadable")
                 li    <- ask
-                var   <- fromEither ztrue $ hoistEither
-                    $ parse_expr' 
+                var   <- fromEither ztrue $
+                    getExpr <$> parse_expr'' 
                         (parser `with_vars` symbol_table fv0
                                & free_dummies  .~ True
                                & expected_type .~ Nothing )
                         var
-                bound <- fromEither ztrue $ hoistEither $
-                    parse_expr'
+                bound <- fromEither ztrue $
+                    getExpr <$> parse_expr''
                         (parser & free_dummies  .~ True
                                 & expected_type .~ Just (type_of var) )
                         bound

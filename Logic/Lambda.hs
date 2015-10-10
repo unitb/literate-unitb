@@ -166,7 +166,7 @@ lambda_def = do
                     eq :: ExprPG Type FOQuantifier
                     eq  = mzeq app (Right e)
                     res :: Expr'
-                    res = ($fromJust) $ mzforall (vs ++ us) mztrue eq
+                    res = ($typeCheck) $ mzforall (vs ++ us) mztrue eq
                 return $ res
 
 delambdify :: Sequent -> Sequent'
@@ -206,7 +206,7 @@ lambdas (Binder (UDQuant fun _ _ _) vs r t _) = do
     fun_t <- get_lambda_term can_t
     let select_r = check_type fun_r $ map Right param_r
         select_t = check_type fun_t $ map Right param_t
-        select = ($fromJust) $ check_type fun [select_r,select_t]
+        select = ($typeCheck) $ check_type fun [select_r,select_t]
         -- careful here! we expect this expression to be type checked already 
     return select
 lambdas (Binder Forall vs r t et) = do
