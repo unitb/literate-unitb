@@ -11,6 +11,7 @@ import Logic.Expr.Genericity
 import Logic.Expr.Type
 
     -- Libraries
+import Control.Lens hiding (rewrite,Const)
 import Control.Monad 
 import Control.Monad.Writer
 
@@ -18,7 +19,7 @@ import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe hiding ( fromJust )
 import qualified Data.Set as S
-import Data.Traversable as T (Traversable,mapM)
+import Data.Traversable as T (mapM)
 
 import Utilities.Syntactic
 
@@ -373,7 +374,7 @@ one_point_rule (Binder q vs r t _)
     where
         e  = zsome [ f $ zexists (filter (`S.member` fv) vs \\ M.keys inst) ztrue 
                         $ zall $ map (substitute 
-                                        $ M.mapKeys name inst) ts
+                                        $ M.mapKeys (view name) inst) ts
                    | (inst,ts,fv) <- insts ]
         
         insts :: [ ( M.Map (AbsVar t) (AbsExpr t q)
@@ -383,7 +384,7 @@ one_point_rule (Binder q vs r t _)
         
         subst :: AbsExpr t q -> M.Map (AbsVar t) (AbsExpr t q)
         subst (FunApp f xs)
-                | name f == "=" = M.fromList $ rs
+                | (f^.name) == "=" = M.fromList $ rs
             where
                 rs = do (i,j) <- [(0,1),(1,0)]
                         k <- maybeToList 
@@ -400,12 +401,12 @@ one_point_rule e = rewrite one_point_rule e
 
 conjuncts :: TypeSystem t => AbsExpr t q -> [AbsExpr t q]
 conjuncts (FunApp f xs) 
-    | name f == "and" = xs
+    | (f^.name) == "and" = xs
 conjuncts x = [x]
 
 disjuncts :: TypeSystem2 t => AbsExpr t q -> [AbsExpr t q]
 disjuncts (FunApp f xs)
-    | name f == "or"  = xs
+    | (f^.name) == "or"  = xs
     -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
 

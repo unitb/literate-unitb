@@ -56,7 +56,7 @@ import           Utilities.Syntactic hiding (line)
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
 context :: RawMachine -> Context
-context m = step_ctx m `merge_ctx` theory_ctx (theory m)
+context m = step_ctx m `merge_ctx` theory_ctx (m^.theory)
 
 data ProofStep = Step 
        { assertions  :: Map Label (Tactic Expr)    -- assertions
@@ -503,10 +503,10 @@ theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 machine_setting :: Machine -> ParserSetting
 machine_setting m = setting
-        & decls %~ (variables m `union`)
-        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ variables m)
+        & decls %~ (view variables m `union`)
+        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ m^.variables)
     where
-        setting = theory_setting (theory m)
+        setting = theory_setting (m^.theory)
 
 schedule_setting :: Machine -> Event -> ParserSetting
 schedule_setting m evt = setting & decls %~ ((evt^.indices) `union`)

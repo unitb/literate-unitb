@@ -42,7 +42,9 @@ module Logic.Theory
     , theory_ctx
     , theory_facts
     , empty_theory
-    , basic_theory )
+    , basic_theory
+    , types, defs, funs, consts, theorems
+    , thm_depend, notation, extends )
 where
 
     -- Modules
@@ -89,17 +91,17 @@ import Utilities.Tuple
     -- the type variables. The generic type (rather than
     -- the type variable) is also used in function types.
 data Theory = Theory 
-        { extends    :: Map String Theory
-        , types      :: Map String Sort
-        , funs       :: Map String Fun
-        , defs       :: Map String Def
-        , consts     :: Map String Var
-        , _fact      :: Map Label Expr
+        { _extends    :: Map String Theory
+        , _types      :: Map String Sort
+        , _funs       :: Map String Fun
+        , _defs       :: Map String Def
+        , _consts     :: Map String Var
+        , _fact       :: Map Label Expr
         , _theoryDummies :: Map String Var 
         , _theorySyntacticThm :: SyntacticProp
-        , theorems   :: Map Label (Maybe Proof)
-        , thm_depend :: [ (Label,Label) ]
-        , notation   :: Notation }
+        , _theorems   :: Map Label (Maybe Proof)
+        , _thm_depend :: [ (Label,Label) ]
+        , _notation   :: Notation }
     deriving (Eq, Show, Typeable, Generic)
 
 makeLenses ''Theory
@@ -112,17 +114,17 @@ all_theories th = th : M.elems (all_theories' th)
         _ = set theorySyntacticThm
 
 all_theories' :: Theory -> Map String Theory
-all_theories' th = M.unions $ extends th : M.elems (M.map all_theories' $ extends th)
+all_theories' th = M.unions $ view extends th : M.elems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
 basic_theory = empty_theory 
-        { types = symbol_table [BoolSort, pair_sort, set_sort]
+        { _types = symbol_table [BoolSort, pair_sort, set_sort]
 --        , funs = symbol_table [everywhere_fun]
 --        , gen_param = Just gT
 --        , funs  = symbol_table [Fun [gT] "eq" [gT,gT] bool]
 --        , fact  = fromList 
 --            [ (label "@basic@@_0", axm0) ]
-        , funs  = symbol_table [const_fun,ident_fun]
+        , _funs  = symbol_table [const_fun,ident_fun]
         , _fact  = fromList 
            [ (label "@basic@@_0", axm0) 
            , (label "@basic@@_1", axm1) ]
@@ -136,7 +138,7 @@ basic_theory = empty_theory
              ++ [ (("=>","not"),Independent zfollows')
                 , (("=>","=>"), Side (Just zfollows')
                                      (Just zimplies')) ] }
-        , notation = functional_notation }
+        , _notation = functional_notation }
    where
         zimplies' = Rel implies_fun Direct
         zfollows' = Rel implies_fun Flipped
@@ -155,25 +157,25 @@ basic_theory = empty_theory
 
 empty_theory :: Theory
 empty_theory = makeTheory
-    { notation = empty_notation }
+    { _notation = empty_notation }
 
 th_notation :: Theory -> Notation
 th_notation th = res
     where
-        ths = th : elems (extends th)
+        ths = th : elems (_extends th)
         res = flip precede logical_notation
             $ L.foldl combine empty_notation 
-            $ L.map notation ths
+            $ L.map _notation ths
 
 theory_ctx :: Theory -> Context
 theory_ctx th = 
         merge_all_ctx $
-            (Context ts c new_fun (defs th) dums) : L.map theory_ctx (M.elems d)
+            (Context ts c new_fun (_defs th) dums) : L.map theory_ctx (M.elems d)
     where
-        d      = extends th
-        ts     = types th
-        fun    = funs th
-        c      = consts th
+        d      = _extends th
+        ts     = _types th
+        fun    = _funs th
+        c      = _consts th
         dums   = th^.dummies
         new_fun = fun
 
@@ -182,7 +184,7 @@ theory_facts :: Theory -> Map Label Expr
 theory_facts th = 
         merge_all (new_fact : L.map theory_facts (M.elems d))
     where
-        d      = extends th
+        d      = _extends th
         facts  = _fact th
         new_fact = facts
 
@@ -384,13 +386,13 @@ command n s = do
     let proxy = Proxy :: Proxy s
         cmd = Command ('\\':n) n (len' proxy) (from_list f)
     M $ tell [ empty_theory
-        { notation = empty_notation & commands .~ [cmd] } ]
+        { _notation = empty_notation & commands .~ [cmd] } ]
     return f
 
 function :: Signature s => String -> s -> M (FunType s)
 function n s = M $ do
     tell [empty_theory 
-        { funs = singleton n (funDecl n s) } ]
+        { _funs = singleton n (funDecl n s) } ]
     return $ utility n s
 
 operator :: (Signature s, FunType s ~ (ExprP -> ExprP -> ExprP))
@@ -399,7 +401,7 @@ operator op tag s = do
     f <- function tag s
     let binop = BinOperator tag op f
     M $ tell [empty_theory 
-            { notation = empty_notation & new_ops .~ [Right binop] } ]
+            { _notation = empty_notation & new_ops .~ [Right binop] } ]
     return (Right binop,f)
 
 unary :: (Signature s, FunType s ~ (ExprP -> ExprP))
@@ -408,7 +410,7 @@ unary op tag s = do
     f <- function tag s
     let unop = UnaryOperator tag op f
     M $ tell [empty_theory 
-            { notation = empty_notation & new_ops .~ [Left unop] } ]
+            { _notation = empty_notation & new_ops .~ [Left unop] } ]
     return (Left unop,f)
 
 preserve :: Fun -> [String] -> M ()
@@ -421,18 +423,18 @@ associativity fun e = M $ tell [empty_theory
 
 left_associativity :: [Operator] -> M ()
 left_associativity ops = M $ tell [empty_theory
-    { notation = empty_notation & left_assoc .~ [L.map (fromRight $ $myError "") ops] }]
+    { _notation = empty_notation & left_assoc .~ [L.map (fromRight $ $myError "") ops] }]
 
 right_associativity :: [Operator] -> M ()
 right_associativity ops = M $ tell [empty_theory
-    { notation = empty_notation & right_assoc .~ [L.map (fromRight $ $myError "") ops] }]
+    { _notation = empty_notation & right_assoc .~ [L.map (fromRight $ $myError "") ops] }]
 
 precedence :: [Operator] 
            -> [[Operator]]
            -> [Operator]
            -> M ()
 precedence vs ops us = M $ tell [empty_theory 
-    { notation = empty_notation & prec .~ [vs : ops ++ [us]] }]
+    { _notation = empty_notation & prec .~ [vs : ops ++ [us]] }]
 
 type_param :: M Type
 type_param = M $ do
@@ -443,13 +445,13 @@ type_param = M $ do
 sort :: TypeSignature s => String -> M s
 sort n = M $ do
     let (r,s) = mkSort n
-    tell [empty_theory { types = singleton n s } ]
+    tell [empty_theory { _types = singleton n s } ]
     return r
 
 sort_def :: TypeDefSignature s => String -> s -> M s
 sort_def n f = M $ do
     let (r,s) = mkSortDef n f
-    tell [empty_theory { types = singleton n s } ]
+    tell [empty_theory { _types = singleton n s } ]
     return r    
 
 param_to_var :: Expr -> Expr

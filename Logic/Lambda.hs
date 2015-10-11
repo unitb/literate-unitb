@@ -87,7 +87,7 @@ canonical role vs e = do
         let { state = CR
             { local_gen = can_local_vars ()
             , free_gen  = can_free_vars ()
-            , renaming  = fromList $ zip (map name vs) (can_bound_vars ())
+            , renaming  = fromList $ zip (map (view name) vs) (can_bound_vars ())
             , exprs     = [] 
             } }
         evalState (do
@@ -115,7 +115,7 @@ findFreeVars ls e
                 modify (\m -> m 
                     { local_gen = take (length vs) ls
                     , renaming  = union 
-                        (fromList $ zip (map name vs) ls) 
+                        (fromList $ zip (map (view name) vs) ls) 
                         ren } )
                 r'  <- findFreeVars dums r
                 t'  <- findFreeVars dums t

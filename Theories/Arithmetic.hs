@@ -46,8 +46,8 @@ gT = VARIABLE "t"
 
 arithmetic :: Theory
 arithmetic = empty_theory { 
-        types = symbol_table [IntSort,RealSort]
-        , funs = symbol_table 
+        _types = symbol_table [IntSort,RealSort]
+        , _funs = symbol_table 
             [ sum_fun ]
         , _theorySyntacticThm = empty_monotonicity
             { _associative  = fromList [("+",mzint 0)] 
@@ -107,7 +107,7 @@ arithmetic = empty_theory {
             -- -- , ("8",axm9)
             -- -- , ("9",axm10)
             -- ]
-        , notation = arith }
+        , _notation = arith }
     where
         zle' = Rel le_fun Direct
         zge' = Rel le_fun Flipped

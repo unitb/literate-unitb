@@ -45,6 +45,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
 
+import Data.Default
 import Data.Either.Combinators
 import Data.List as L
 import Data.List.NonEmpty as NE
@@ -103,7 +104,7 @@ case0 = do
         sorts = M.fromList
                 [ (MId "m0",M.singleton "S0" s0) 
                 , (MId "m1",M.fromList [("S0",s0),("\\S1",s1)])]
-        f th = M.unions $ L.map AST.types $ M.elems th
+        f th = M.unions $ L.map (view AST.types) $ M.elems th
         allSorts = M.intersectionWith (\ts th -> ts `M.union` f th) sorts thy
         pdef  = M.fromList
                 [ (MId "m0",[("S0",(Def [] "S0" [] (set_type s0') (se s0'),Local,li))]) 
@@ -187,7 +188,7 @@ result0 = M.fromList
         s1' = make_type s1 [] 
         sorts0 = M.singleton "S0" s0
         sorts1 = M.singleton "\\S1" s1 `M.union` sorts0
-        f th = M.unions $ L.map AST.types $ M.elems th
+        f th = M.unions $ L.map (view AST.types) $ M.elems th
         allSorts0 = sorts0 `M.union` f thy0
         allSorts1 = sorts1 `M.union` f thy1
         pdef0  = [("S0",(Def [] "S0" [] (set_type s0') (se s0'),Local,li))]
@@ -273,7 +274,7 @@ result2 = do
         sys <- result1
         let 
             var n = Var n int
-            notation m = th_notation $ empty_theory { extends = m^.pImports }
+            notation m = th_notation $ empty_theory { _extends = m^.pImports }
             parser m = default_setting (notation m)
             li = LI "file.ext" 1 1
             s0 = Sort "S0" "S0" 0
@@ -559,9 +560,97 @@ result8 = Right $ SystemP h ms
     where
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
         ms = M.fromList [("m0",m0),("m1",m1)]
-        -- sorts = 
+        s0 = Sort "S0" "S0" 0
+        s1 = Sort "\\S1" "sl@S1" 0
+        setS0 = set_type $ make_type s0 []
+        setS1 = set_type $ make_type s1 []
+        sorts0 = symbol_table [s0]
+        sorts1 = symbol_table [s0,s1]
+        defs0 = symbol_table [Def [] "S0" [] setS0 (zlift setS0 ztrue)]
+        defs1 = M.fromList $ [ ("S0",Def [] "S0" [] setS0 (zlift setS0 ztrue))
+                             , ("\\S1",Def [] "sl@S1" [] setS1 (zlift setS1 ztrue))]
+        vars0 = symbol_table [Var "x" int,Var "y" int]
+        vars1 = symbol_table [Var "z" int,Var "y" int]
+        c' f = c $ f.(expected_type .~ Nothing)
+        c = ctx $ do
+            decl "x" int
+            decl "y" int
         m0 = (empty_machine "m0")
-        m1 = empty_machine "m1"
+                & theory.types .~ sorts0
+                & theory.defs .~ defs0
+                & variables .~ vars0
+                & events .~ evts0
+                & props.inv .~ M.fromList [("inv0",c [expr| x \le y |])]
+        p = c [expr| x \le y |]
+        q = c [expr| x = y |]
+        pprop = LeadsTo [] p q
+        pprop' = getExpr <$> pprop
+        sprop = Unless [] p q Nothing
+        m1 = (empty_machine "m1")
+                & theory.types .~ sorts1
+                & theory.defs .~ defs1
+                & theory.extends %~ M.insert "sets" set_theory
+                & del_vars .~ symbol_table [Var "x" int]
+                & abs_vars .~ vars0
+                & variables .~ vars1
+                & events .~ evts1
+                & inh_props.inv  .~ M.fromList [("inv0",c [expr| x \le y |])]
+                & props.progress .~ M.fromList [("prog0",pprop),("prog1",pprop)]
+                & props.safety .~ M.singleton "saf0" sprop
+                & derivation .~ M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
+        y = Var "y" int
+        skipEvt = Left SkipEvent
+        ae0Evt = def
+            & coarse_sched .~ M.fromList 
+                [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
+            & guards .~ M.fromList
+                [("grd0",c [expr| x = 0 |])]
+        ae1aEvt = def
+            & coarse_sched .~ M.fromList 
+                [("default",c [expr| \false |])]
+            & actions .~ M.fromList
+                [("act0",Assign y $ c' [expr| y + 1 |])]
+        ae1bEvt = def
+            & coarse_sched .~ M.fromList 
+                [("default",c [expr| \false |])]
+        ce0aEvt = def
+            & coarse_sched .~ M.fromList 
+                [("sch1",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
+        ce0bEvt = def
+            & coarse_sched .~ M.fromList 
+                [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
+        ce1Evt = def
+            & coarse_sched .~ M.fromList 
+                [("default",c [expr| \false |])]
+            & actions .~ M.fromList
+                [("act0",Assign y $ c' [expr| y + 1 |])]
+            & eql_vars .~ symbol_table [y]
+        ce2Evt = def
+            & coarse_sched .~ M.fromList 
+                [("default",c [expr| \false |])]
+        evts0 = fromJust $ makeGraph $ do
+            ae0  <- newRightVertex (Right "ae0") (def & new .~ ae0Evt)
+            ae1a <- newRightVertex (Right "ae1a") (def & new .~ ae1aEvt)
+            ae1b <- newRightVertex (Right "ae1b") (def & new .~ ae1bEvt)
+            cskip <- newRightVertex skipEvt def
+            askip <- newLeftVertex skipEvt def
+            forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
+        evts1 = fromJust $ makeGraph $ do
+            ae0 <- newLeftVertex (Right "ae0") (def & old .~ ae0Evt)
+            ae1a <- newLeftVertex (Right "ae1a") (def & old .~ ae1aEvt)
+            ae1b <- newLeftVertex (Right "ae1b") (def & old .~ ae1bEvt)
+            askip <- newLeftVertex skipEvt def
+            ce0a <- newRightVertex (Right "ce0a") (def & new .~ ce0aEvt)
+            ce0b <- newRightVertex (Right "ce0b") (def & new .~ ce0bEvt)
+            ce1 <- newRightVertex (Right "ce1") ce1Evt
+            ce2 <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
+            cskip <- newRightVertex skipEvt def
+            newEdge ae0 ce0a
+            newEdge ae0 ce0b
+            newEdge ae1a ce1
+            newEdge ae1b ce1
+            newEdge askip ce2
+            newEdge askip cskip
 
 --see :: Map ProgId ProgressProp
 seeA :: IO [EventId]

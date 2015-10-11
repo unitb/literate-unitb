@@ -10,7 +10,7 @@ import Logic.Expr.Label
 
     -- Libraries
 import Control.Monad.Reader
-import Control.Lens ((^.))
+import Control.Lens ((^.),view)
 
 import Data.Either
 import Data.List
@@ -105,7 +105,7 @@ checkTypes c (Lift e t) = do
     return (Lift e' t)
 checkTypes c' (Binder q vs' r t _) = do
     let c  = newContext vs' c'
-        ns = map name vs' :: [String]
+        ns = map (view name) vs' :: [String]
         vs = M.elems $ newDummies vs' c'
     (r'',t'') <- parCheck 
         (zcast bool $ checkTypes c r) 
@@ -114,7 +114,7 @@ checkTypes c' (Binder q vs' r t _) = do
         v_type = id -- L.filter ((1 <) . S.size . snd) 
                     $ zip vs
                     $ map f ns 
-        f x = S.filter (\y -> x == name y) vars
+        f x = S.filter (\y -> x == view name y) vars
     ts <- forM v_type $ \((Var x t),xs) -> do
         let ys = map var_type $ S.toList xs
         t' <- maybe 

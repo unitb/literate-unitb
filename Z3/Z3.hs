@@ -215,7 +215,7 @@ z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (head e) False
     where
         head e'@(FunApp f [_,y])
-            | name f == "=>"    = do
+            | view name f == "=>"    = do
                 xs <- head y
                 if null xs 
                     then lhs vs e'
@@ -223,7 +223,7 @@ z3_pattern vs e = runReader (head e) False
         head e = lhs vs e
 
         lhs vs (FunApp f xs)
-            | name f `elem` ["and","or","not","=>"]
+            | view name f `elem` ["and","or","not","=>"]
                 && vs `S.isSubsetOf` S.unions (map used_var xs) 
                 = do
                     ps <- concat <$> mapM (lhs S.empty) xs
@@ -231,7 +231,7 @@ z3_pattern vs e = runReader (head e) False
                         then ps 
                         else []
         lhs vs (FunApp f xs@[x,_])
-            | name f == "="     = do
+            | view name f == "="     = do
                 b  <- ask
                 x' <- lhs vs x 
                 local (const True) $

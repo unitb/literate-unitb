@@ -95,7 +95,7 @@ run_phase1_types = proc p0 -> do
     --     -- some types with (hopefully) the most local types
     --     -- BIG FLAG
     let _ = evts' :: MTable (G.BiGraph SkipOrEvent () ())
-        f th = M.unions $ map AST.types $ M.elems th
+        f th = M.unions $ map (view AST.types) $ M.elems th
         basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
         imp_th = M.map (union basic . M.map fst) imp_th'
         all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th

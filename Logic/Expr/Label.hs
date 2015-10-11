@@ -21,6 +21,9 @@ import GHC.Generics
 data Label = Lbl String
     deriving (Ord, Eq, Typeable, Generic)
 
+class IsLabel a where
+    as_label :: a -> Label
+
 instance Show Label where
     show (Lbl s) = s
 

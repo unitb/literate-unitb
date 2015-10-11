@@ -378,7 +378,7 @@ term = do
                         v_type = id -- L.filter ((1 <) . S.size . snd) 
                                     $ zip3 ns vs
                                     $ map f ns 
-                        f = (`S.filter` vars) . (. name) . (==)
+                        f = (`S.filter` vars) . (. view name) . (==)
                     ts <- forM v_type $ \(x,(Var _ t),xs) -> do
                         let ys = L.map var_type $ S.toList xs
                         t' <- maybe 

@@ -28,8 +28,6 @@ import Data.Monoid as MM
 import qualified Data.Set  as S
 import Data.Typeable
 
-import GHC.Generics (Generic)
-
 import Utilities.Format
 import Utilities.Instances
 import Utilities.TH
@@ -47,7 +45,7 @@ data SyntacticProp = SyntacticProp
     deriving (Eq,Show,Generic)
 
 preserve :: Fun -> [String] -> [((String,String),ArgDep Rel)]
-preserve op funs = [((name op,f),Independent $ Rel op Direct) | f <- funs ]
+preserve op funs = [((view name op,f),Independent $ Rel op Direct) | f <- funs ]
 
 type Function = String
 
@@ -100,7 +98,7 @@ middleMono (Independent m) = Just m
 middleMono _ = Nothing
 
 isAssociative :: SyntacticProp -> Fun -> Maybe ExprP
-isAssociative sp f = name f `M.lookup` (sp^.associative)
+isAssociative sp f = view name f `M.lookup` (sp^.associative)
 
 isMonotonic :: HasSyntacticProp m
             => m -> Relation -> Function 
@@ -240,12 +238,12 @@ apply_monotonicity po = fromMaybe po $
                     g'
                         | L.null vs = rs `zimplies` ts
                         | otherwise = zforall vs rs ts
-                return $ apply_monotonicity $ po' & constants %~ M.insert (name v) v
-                                                  & goal .~ rename nam (name v) g'
+                return $ apply_monotonicity $ po' & constants %~ M.insert (view name v) v
+                                                  & goal .~ rename nam (view name v) g'
             FunApp f [lhs, rhs] ->
                 case (lhs,rhs) of
                     (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
-                        | shared vs us && name f `elem` ["=","=>"] -> do
+                        | shared vs us && view name f `elem` ["=","=>"] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -254,7 +252,7 @@ apply_monotonicity po = fromMaybe po $
                                     (zforall vs' ztrue $ 
                                         FunApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
                     (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
-                        | shared vs us && name f `elem` ["=","=>"] -> do
+                        | shared vs us && view name f `elem` ["=","=>"] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -264,17 +262,17 @@ apply_monotonicity po = fromMaybe po $
                                         FunApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
                     (Binder q0 vs r0 t0 _, Binder q1 us r1 t1 _)
                         | q0 == q1 && vs == us 
-                            && r0 == r1 && name f == "=" -> 
+                            && r0 == r1 && view name f == "=" -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs r0 $ t0 `zeq` t1)
                         | q0 == q1 && vs == us 
-                            && t0 == t1 && name f == "=" -> 
+                            && t0 == t1 && view name f == "=" -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs ztrue $ r0 `zeq` r1)
                     (FunApp g0 xs, FunApp g1 ys)
                         | (length xs /= length ys && isNothing (isAssociative mm' g0))
                             || g0 /= g1 -> Nothing
-                        | name f == "=" -> do
+                        | view name f == "=" -> do
                             (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
                                 po' & goal .~ FunApp f [x, y]
@@ -292,7 +290,7 @@ apply_monotonicity po = fromMaybe po $
                                 -- | we need a means to distinguish an 
                                 -- | implication that introduces contextual
                                 -- | information
-                            x <- mono (name f) g0 xs ys
+                            x <- mono (view name f) g0 xs ys
                             return $ apply_monotonicity $ po' & goal .~ x
 --                            let op = name g0
 --                                mono i xs
@@ -325,7 +323,7 @@ apply_monotonicity po = fromMaybe po $
         mono :: String -> Fun -> [Expr] -> [Expr] -> Maybe Expr
         mono rel fun xs ys = do
             (i,x,y) <- difference fun xs ys
-            g       <- isMonotonic mm' rel (name fun) i
+            g       <- isMonotonic mm' rel (view name fun) i
             return ($typeCheck $ g (Right x) (Right y))
         mm' = po^.syntacticThm
 

@@ -134,7 +134,7 @@ instance ProofRule Proof where
             return xs
         where
             free_vars (Binder Forall ds r expr _) 
-                    | are_fresh [u] po = return $ zforall (L.filter ((v /=) . name) ds) 
+                    | are_fresh [u] po = return $ zforall (L.filter ((v /=) . view name) ds) 
                                                 (rename v u r)
                                                 (rename v u expr)
                     | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
@@ -155,7 +155,7 @@ instance ProofRule Proof where
 
     proof_po (Definition defs p li) lbl s = do
             let decl = symbols s
-                clashes = decl `M.intersection` M.mapKeys name defs
+                clashes = decl `M.intersection` M.mapKeys (view name) defs
                 defs' = L.map (uncurry zeq . first Word) $ M.toList defs
             unless (M.null clashes) $
                 Left [Error (format "Symbols {0} are already defined" $ intercalate "," $ M.keys clashes) li]
@@ -183,7 +183,7 @@ instance ProofRule Proof where
                 Binder Forall vs r t _
                     | all (`elem` vs) (M.keys ps) -> do
                         let new_vs = L.foldl (flip L.delete) vs (M.keys ps)
-                            ps'    = M.mapKeys name ps
+                            ps'    = M.mapKeys (view name) ps
                             re     = substitute ps' r
                             te     = substitute ps' t
                         if L.null new_vs
@@ -260,7 +260,7 @@ obligations' ctx s c = do
 are_fresh :: [String] -> Sequent -> Bool
 are_fresh vs po = 
         S.null $ S.fromList vs `S.intersection` (
-                S.map name $ 
+                S.map (view name) $ 
                 S.unions $ 
                 L.map used_var es)
     where

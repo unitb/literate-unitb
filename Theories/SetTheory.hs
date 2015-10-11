@@ -40,10 +40,10 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         t0  = VARIABLE "t0"
         gT = GENERIC "t"
 
-        extends = M.empty
-        consts  = M.empty
+        _extends = M.empty
+        _consts  = M.empty
         _theoryDummies = M.empty
-        types = M.empty
+        _types = M.empty
         _theorySyntacticThm = def
             { _associative = fromList $ 
                     [ ("intersect",zset_all)
@@ -62,7 +62,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                      , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
-        defs = symbol_table 
+        _defs = symbol_table 
                 [ Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
                 , Def [gT] "all" [] (set_type gT) 
@@ -77,7 +77,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                         $ ($typeCheck) $ (s1 `zsubset` s2)
                             `mzand`  mznot (s1 `mzeq` s2)
                 ]
-        funs = 
+        _funs = 
             -- M.insert "union" (Fun [gT] "bunion" [set_type gT,set_type gT] $ set_type gT) $
             symbol_table
                 [ comprehension_fun
@@ -139,8 +139,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             --     , (label $ dec' "10", axm4)
             --     -- , (label $ dec' "7", axm7)
             --     ]
-        thm_depend = []
-        notation   = set_notation
+        _thm_depend = []
+        _notation   = set_notation
                 
 
         (x,x_decl) = var "x" t
@@ -156,7 +156,7 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
 --            dec x  = x ++ z3_decoration t
         -- dec' x = "@set@@_" ++ x
         
-        theorems = M.empty
+        _theorems = M.empty
 
 zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: ExprP

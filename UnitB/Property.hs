@@ -24,6 +24,7 @@ module UnitB.Property
     , PropertySet' (..) 
     , PropertySet'Field (..) 
     , PropertySetField
+    , EventId (..)
     , empty_property_set
     , TrHint
     , RawTrHint
@@ -88,15 +89,26 @@ data Transient' expr =
         Tr 
             (Map String Var)     -- Free variables
             expr                 -- Predicate
-            [Label]              -- Event, Schedule 
+            [EventId]            -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
             -- (Map String Expr)    -- Index substitution
             -- (Maybe Label)        -- Progress Property for fine schedule
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
 
-
 data Direction = Up | Down
     deriving (Eq,Show)
+
+newtype EventId = EventId Label
+    deriving (Eq,Ord,Typeable)
+
+instance Show EventId where
+    show (EventId x) = show x
+
+instance IsString EventId where
+    fromString = EventId . fromString
+
+instance IsLabel EventId where
+    as_label (EventId lbl) = lbl
 
 data Variant = 
         SetVariant     Var RawExpr RawExpr Direction
@@ -121,6 +133,9 @@ data PropertySet' expr = PS
 newtype ProgId = PId { getProgId :: Label }
     deriving (Eq,Ord,IsString)
 
+instance Show ProgId where
+    show (PId x) = show x
+
 type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
 
@@ -130,7 +145,7 @@ data ProgressProp' expr = LeadsTo [Var] expr expr
 type SafetyProp = SafetyProp' Expr
 type RawSafetyProp = SafetyProp' RawExpr
 
-data SafetyProp' expr = Unless [Var] expr expr (Maybe Label)
+data SafetyProp' expr = Unless [Var] expr expr (Maybe EventId)
     deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable)
 
 instance Show expr => Show (ProgressProp' expr) where
@@ -197,7 +212,7 @@ make_unique suf vs (Cast e t)        = Cast (make_unique suf vs e) t
 make_unique suf vs (Lift e t)        = Lift (make_unique suf vs e) t
 make_unique suf vs (Binder q d r xp t) = Binder q d (f r) (f xp) t
     where
-        local = (L.foldr M.delete vs (L.map name d))
+        local = (L.foldr M.delete vs (L.map (view name) d))
         f = make_unique suf local
 
 makeLenses ''PropertySet'
@@ -211,3 +226,4 @@ derive makeNFData ''SafetyProp'
 derive makeNFData ''Transient'
 derive makeNFData ''TrHint'
 derive makeNFData ''Variant
+derive makeNFData ''EventId

@@ -40,7 +40,6 @@ import Control.Monad
 import Control.Monad.State
 
 import           Data.Either
-import qualified Data.Graph as G
 import           Data.List as L hiding ( union )
 import           Data.List.Ordered hiding (nub)
 import           Data.Map as M 
@@ -54,9 +53,6 @@ import Prelude as L
 import Utilities.Error
 import Utilities.Format
 
-instance Show a => Show (G.SCC a) where
-    show (G.AcyclicSCC v) = "AcyclicSCC " ++ show v
-    show (G.CyclicSCC vs) = "CyclicSCC " ++ show vs 
 
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
@@ -365,12 +361,6 @@ instance Generic GenericType GenericType where
                     Nothing  -> t0
             f t           = rewrite f t
 
-
-
-
-instance (TypeSystem t) => Typed (AbsFun t) where
-    type TypeOf (AbsFun t) = t
-
 instance (HasGenerics t, TypeSystem t) => HasGenerics (AbsFun t) where
     types_of (Fun _ _ _ ts t) = S.unions $ L.map types_of $ t : ts
 
@@ -378,9 +368,6 @@ instance (TypeSystem t', Generic Type t') => Generic (AbsFun Type) (AbsFun t') w
     substitute_types' f (Fun gs n lf ts t) = Fun (map f gs) n lf (map f ts) $ f t
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
-
-instance TypeSystem t => Typed (AbsDef t q) where
-    type TypeOf (AbsDef t q) = t
 
 instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsDef t q) where
     types_of (Def _ _ ts t e) = S.unions $ types_of e : types_of t : map types_of ts
@@ -394,9 +381,6 @@ instance (IsQuantifier q, Generic Type t', TypeSystem t')
                 (substitute_types' f e)
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
-
-instance TypeSystem t => Typed (AbsVar t) where
-    type TypeOf (AbsVar t) = t
 
 instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsVar t) where
     types_of (Var _ t)  = types_of t
@@ -413,9 +397,6 @@ instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsExpr t q) where
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
-
-instance TypeSystem t => Typed (AbsExpr t q) where
-    type TypeOf (AbsExpr t q) = t
 
 instance (IsQuantifier q, Generic Type t', TypeSystem t') 
         => Generic (AbsExpr Type q) (AbsExpr t' q) where

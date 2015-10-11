@@ -92,7 +92,7 @@ emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
-                emit_goal (map (label . name) vs) (zexists vs ztrue $ zall es)
+                emit_goal (map (label . view name) vs) (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ map getExpr es
         clauses' = M.toList $ M.fromListWith (++) clauses

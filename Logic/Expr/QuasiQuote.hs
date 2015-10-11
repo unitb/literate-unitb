@@ -45,14 +45,8 @@ parseExpr loc p str = either (error.("\n"++).show_err) id
 ctx :: State ParserSetting a -> (ParserSetting -> b) -> b
 ctx cmd f = f r
     where
-        r = execState cmd (default_setting $ th_notation empty_theory { extends = 
+        r = execState cmd (default_setting $ th_notation empty_theory { _extends = 
                 fromList [("arithmetic",arithmetic),("basic",basic_theory)] } )
-
-instance Lift Sort where
-    lift = defaultLift
-
-instance Lift GenericType where
-    lift = defaultLift
 
 instance Lift Var where
     lift = defaultLift

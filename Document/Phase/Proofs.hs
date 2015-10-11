@@ -280,7 +280,7 @@ ensure prog@(LeadsTo fv _ _) hint lbls = do
                     $ NE.nonEmpty lbls
         let HintBuilderDecl thint m p2 = hint
         hint <- tr_hint p2 m vs lbls' thint
-        _    <- get_events p2 lbls
+        lbls <- get_events p2 lbls
         return $ Ensure (getExpr <$> prog) lbls (getExpr <$> hint)
 
 instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where

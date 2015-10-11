@@ -11,6 +11,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module UnitB.Event
     ( EventId (..)
+    , SkipEventId (..)
+    , SkipOrEvent
     , Event'  (..)
     , Event
     , EventRef'
@@ -80,11 +82,13 @@ import Data.Foldable (Foldable)
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
-import Data.String
 import Data.Typeable
+
+import GHC.Generics hiding (to)
 
 import Utilities.Format
 import Utilities.TH
+import Utilities.Instances
 
 -- data Schedule = Schedule
 --         { coarse :: Map Label Expr
@@ -107,11 +111,18 @@ data Action' expr =
     deriving (Eq,Ord,Functor,Foldable,Traversable)
 
 instance Show expr => Show (Action' expr) where
-    show (Assign v e) = format "{0} := {1}" (name v) (show e)
-    show (BcmIn v e) = format "{0} :∈ {1}" (name v) (show e)
+    show (Assign v e) = format "{0} := {1}" (view name v) (show e)
+    show (BcmIn v e) = format "{0} :∈ {1}" (view name v) (show e)
     show (BcmSuchThat vs e) = format "{0} :| {1}" 
-            (intercalate "," $ L.map name vs)
+            (intercalate "," $ L.map (view name) vs)
             (show e)
+
+data SkipEventId = SkipEvent
+    deriving (Show,Eq,Ord)
+
+instance NFData SkipEventId where
+
+type SkipOrEvent = Either SkipEventId EventId
 
 type Event = Event' Expr
 
@@ -122,7 +133,7 @@ data Event' expr = Event
         , _params     :: Map String Var
         , _guards   :: Map Label expr
         , _actions  :: Map Label (Action' expr)
-        } deriving (Eq, Show,Functor,Foldable,Traversable)
+        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type AbstrEvent = AbstrEvent' Expr
 
@@ -130,7 +141,7 @@ data AbstrEvent' expr = AbsEvent
         { _old   :: Event' expr
         , _f_sched_ref :: Maybe (Label,ProgressProp' expr)
         , _c_sched_ref :: [ScheduleChange' expr]
-        } deriving (Eq, Show,Functor,Foldable,Traversable)
+        } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type ConcrEvent = ConcrEvent' Expr
 
@@ -138,25 +149,25 @@ data ConcrEvent' expr = CEvent
         { _new   :: Event' expr
         , _witness   :: Map Var RawExpr
         , _eql_vars  :: Map String Var
-        } deriving (Eq, Show,Functor,Foldable,Traversable)
+        } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
 
 type EventMerging' = EventMerging RawExpr
 
 data EventMerging expr = EvtM  
-        { _eventMergingMultiAbstract :: NonEmpty (Label,AbstrEvent' expr)
-        , _eventMergingConcrete ::   (Label,ConcrEvent' expr) }
+        { _eventMergingMultiAbstract :: NonEmpty (SkipOrEvent,AbstrEvent' expr)
+        , _eventMergingConcrete ::   (SkipOrEvent,ConcrEvent' expr) }
 
 type EventSplitting' = EventSplitting RawExpr
 
 data EventSplitting expr = EvtS   
-        { _eventSplittingAbstract :: (Label,AbstrEvent' expr) 
-        , _eventSplittingMultiConcrete :: NonEmpty (Label,ConcrEvent' expr) }
+        { _eventSplittingAbstract :: (SkipOrEvent,AbstrEvent' expr) 
+        , _eventSplittingMultiConcrete :: NonEmpty (SkipOrEvent,ConcrEvent' expr) }
 
 type EventRef' = EventRef RawExpr
 
 data EventRef expr = EvtRef 
-        { _eventRefAbstract :: (Label,AbstrEvent' expr)  
-        , _eventRefConcrete :: (Label,ConcrEvent' expr) }
+        { _eventRefAbstract :: (SkipOrEvent,AbstrEvent' expr)  
+        , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) }
 
 default_schedule :: Map Label Expr
 default_schedule = M.fromList [(label "default", zfalse)]
@@ -183,6 +194,15 @@ hyps_label = PId . fst . sch_prog
 
 mkCons ''Event'
 
+instance Default (AbstrEvent' expr) where
+    def = genericDefault
+
+instance Default (Event' expr) where
+    def = genericDefault
+
+instance Default (ConcrEvent' expr) where
+    def = genericDefault
+
 empty_event :: Event' expr
 empty_event = makeEvent' def def def def
 
@@ -199,9 +219,9 @@ infix 1  $=
     return $ Assign v' e'
 
 frame' :: Action' expr -> Map String Var
-frame' (Assign v _) = M.singleton (name v) v
-frame' (BcmIn v _)  = M.singleton (name v) v
-frame' (BcmSuchThat vs _) = M.fromList $ L.zip (L.map name vs) vs
+frame' (Assign v _) = M.singleton (view name v) v
+frame' (BcmIn v _)  = M.singleton (view name v) v
+frame' (BcmSuchThat vs _) = M.fromList $ L.zip (L.map (view name) vs) vs
 
 frame :: Map Label (Action' expr) -> Map String Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
@@ -233,15 +253,6 @@ ba_predicate' :: HasExpr expr RawExpr => Map String Var -> Map Label (Action' ex
 ba_predicate' vars acts = M.map ba_pred acts `M.union` skip
     where
         skip = skip' $ keep' vars acts
-
-newtype EventId = EventId Label
-    deriving (Eq,Ord,Typeable)
-
-instance Show EventId where
-    show (EventId x) = show x
-
-instance IsString EventId where
-    fromString = EventId . fromString
 
 primed :: Map String Var -> RawExpr -> RawExpr
 primed vs e = make_unique "@prime" vs e
@@ -302,8 +313,8 @@ instance ActionRefinement (EventRef expr) expr where
     concrete_acts = new.actions
 
 class EventRefinement a expr | a -> expr where
-    abstract_evts :: Getter a (NonEmpty (Label,AbstrEvent' expr))
-    concrete_evts :: Getter a (NonEmpty (Label,ConcrEvent' expr))
+    abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))
+    concrete_evts :: Getter a (NonEmpty (SkipOrEvent,ConcrEvent' expr))
 
 evt_pairs :: EventRefinement a expr => Getter a (NonEmpty (EventRef expr))
 evt_pairs = to $ \e -> do
@@ -426,6 +437,5 @@ derive makeNFData ''Event'
 derive makeNFData ''AbstrEvent'
 derive makeNFData ''ConcrEvent'
 derive makeNFData ''Action'
-derive makeNFData ''EventId
 -- derive makeNFData ''Schedule
 derive makeNFData ''ScheduleChange'

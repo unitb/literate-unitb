@@ -90,17 +90,17 @@ t1 = VARIABLE "t1"
 function_theory :: Theory 
 function_theory = Theory { .. }
     where        
-        extends =  singleton "set" set_theory
+        _extends =  singleton "set" set_theory
         
-        consts   = empty
+        _consts   = empty
         _theoryDummies  = empty
-        theorems = empty
+        _theorems = empty
         _theorySyntacticThm = empty_monotonicity
             { _associative = fromList [("zovl",zempty_fun)] }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
-        types    = symbol_table [fun_sort]
-        defs = 
+        _types    = symbol_table [fun_sort]
+        _defs = 
             symbol_table
                 [ 
                   -- Def [t0,t1] "ovl" [f1_decl,f2_decl] (fun_type t0 t1) 
@@ -126,7 +126,7 @@ function_theory = Theory { .. }
                 -- (f2,f2_decl) = var "f2" $ fun_type t0 t1
                 -- (x,x_decl) = var "x" t0
         
-        funs =
+        _funs =
             symbol_table 
                 [  lambda_fun
                 -- ,  right_fun
@@ -145,7 +145,7 @@ function_theory = Theory { .. }
                 t0 = GENERIC "t0"
                 t1 = GENERIC "t1"
 
-        thm_depend = []
+        _thm_depend = []
 
         _fact = "function" `axioms` do
             $axiom $ zdom (as_fun zempty_fun) .= zempty_set
@@ -298,7 +298,7 @@ function_theory = Theory { .. }
                      .=>         (zran $ f1 `zovl` zmk_fun x y)
                              .=  (zran f1 `zunion` zmk_set y)
 
-        notation = function_notation
+        _notation = function_notation
 
         as_fun e = zcast (fun_type t0 t1) e
         as_dom e = zcast (set_type t0) e

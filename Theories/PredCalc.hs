@@ -93,13 +93,13 @@ zrep_select = typ_fun2 (mk_fun [] "select" [pred_type gA, gA] bool)
 
 pred_calc :: Theory
 pred_calc = empty_theory 
-        { types = symbol_table [pred_sort]
-        , funs  = symbol_table [everywhere_fun, ptrue_fun, pfalse_fun]
+        { _types = symbol_table [pred_sort]
+        , _funs  = symbol_table [everywhere_fun, ptrue_fun, pfalse_fun]
         , _fact = M.singleton (label "pred_ew") $ ($typeCheck) $ 
                 mzforall [x_decl] mztrue $ 
                         (zew x)
                     `mzeq` (mzforall [y_decl] mztrue $ zrep_select x y) 
-        , notation = pred_not  }
+        , _notation = pred_not  }
     where
         (x,x_decl) = var "x" $ pred_type t
         (y,y_decl) = var "y" t

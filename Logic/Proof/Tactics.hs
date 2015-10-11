@@ -118,7 +118,7 @@ with_variables :: Monad m
 with_variables vs (TacticT cmd) = TacticT $ do
     ctx   <- view $ sequent.context
     let clashes = M.intersection
-                (M.fromList $ L.map (name &&& const ()) vs)
+                (M.fromList $ L.map (view name &&& const ()) vs)
                 (symbols ctx)
     li <- view line_info
     unless (M.null clashes) $ 
@@ -247,7 +247,7 @@ clear_vars vars proof = do
             -- new_asm = L.filter f asm
             -- new_hyp = M.filter f hyp
             f x     = not $ any (`S.member` used_var x) vars
-            new_vars = L.foldl (flip M.delete) old_vars (L.map name vars)
+            new_vars = L.foldl (flip M.delete) old_vars (L.map (view name) vars)
         li    <- get_line_info
         tac_local 
             (sequent %~ 
@@ -255,7 +255,7 @@ clear_vars vars proof = do
                         & nameless %~ L.filter f
                         & named    %~ M.filter f) $
             do  (lbls,ids)  <- TacticT $ lift $ get
-                let new_ids = ids `S.difference` S.fromList (L.map name vars)
+                let new_ids = ids `S.difference` S.fromList (L.map (view name) vars)
                 TacticT $ lift $ put (lbls,new_ids)
                 (p,w)  <- tac_listen proof
                 TacticT $ do
@@ -462,7 +462,7 @@ free_goal v0 v1 m = do
                           $ zforall (L.delete v0' bv) r t
                       , tt)
                 where
-                  bv' = L.map name bv
+                  bv' = L.map (view name) bv
             _ -> fail $ "goal is not a universal quantification:\n" ++ pretty_print' goal
         p <- with_variables [Var v1 t] $ with_goal new m
         return $ FreeGoal v0 v1 t p li
@@ -475,7 +475,7 @@ instantiate hyp ps = do
             Binder Forall vs r t _
                 | all (`elem` vs) (L.map fst ps) -> do
                     let new_vs = L.foldl (flip L.delete) vs (L.map fst ps)
-                        ps'    = M.mapKeys name $ fromList ps
+                        ps'    = M.mapKeys (view name) $ fromList ps
                         re     = substitute ps' r
                         te     = substitute ps' t
                         newh   = if L.null new_vs
@@ -615,7 +615,7 @@ by_symmetry vs hyp mlbl proof = do
         goal <- get_goal
         case cs of
             FunApp f cs
-                | name f /= "or" -> fail err0
+                | view name f /= "or" -> fail err0
                 | otherwise -> do
                     ps <- forM (permutations vs) $ \us -> do
                         hyp <- get_named_hyps
@@ -636,8 +636,8 @@ by_symmetry vs hyp mlbl proof = do
                     cs <- forM cs $ \x -> return (hyp,x,easy)
                     assert [(lbl,thm,clear_vars vs $ do
                             us <- forM vs $ \(Var n t) -> new_fresh n t
-                            free_vars_goal (zip (L.map name vs) 
-                                                (L.map name us)) 
+                            free_vars_goal (zip (L.map (view name) vs) 
+                                                (L.map (view name) us)) 
                               $ assume named goal proof)] $
                         instantiate_hyp_with thm (L.map f $ permutations vs) $ 
                             by_cases cs
@@ -675,7 +675,7 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
                     assert 
                         [ (thm_lbl, thm, easy)       -- (Ax,y:: x = y == ...)
                         , (g_lbl, new_goal, do       -- (Az:: z ≤ lhs => z ≤ rhs)
-                                free_goal (name z_decl) (name zVar) proof) ]
+                                free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
                             instantiate_hyp                       -- lhs = rhs
@@ -708,12 +708,12 @@ indirect_equality dir op zVar@(Var _ t) proof = do
         goal <- get_goal
         case goal of
             FunApp f [lhs,rhs] 
-                | name f == "=" -> do
+                | view name f == "=" -> do
                     new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
                     assert 
                         [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)
                         , (label "new:goal", new_goal, do       -- (Az:: z ≤ lhs == z ≤ rhs)
-                                free_goal (name z_decl) (name zVar) proof) ]
+                                free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
                             instantiate_hyp                       -- lhs = rhs

@@ -60,10 +60,10 @@ between_lr = Command "\\betweenLR" "betweenLR" 3 $ from_list $ zbetween mzless m
 
 interval_theory :: Theory
 interval_theory = empty_theory 
-        { extends = M.fromList 
+        { _extends = M.fromList 
             [ ("set",set_theory)
             , ("arithmetic",arithmetic) ]
-        , funs = symbol_table
+        , _funs = symbol_table
             [ interval_r_fun, interval_l_fun
             , interval_lr_fun, interval_fun ]
         , _fact = M.mapKeys label $ M.fromList
@@ -116,7 +116,7 @@ interval_theory = empty_theory
                                 (zmk_set m `zunion` zinterval_l m n)
                         `mzeq`  (zinterval_l (m - z1) n))
             ]
-        , notation = interval_notation }
+        , _notation = interval_notation }
     where
         (x,x_decl) = var "x" int
         (m,m_decl) = var "m" int

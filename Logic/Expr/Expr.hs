@@ -5,6 +5,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE MultiParamTypeClasses, TemplateHaskell  #-}
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Logic.Expr.Expr 
@@ -63,7 +64,7 @@ import Logic.Expr.Classes
 import Logic.Expr.Type
 
     -- Library
-import           GHC.Generics
+import           GHC.Generics hiding (to)
 
 import Control.Arrow
 import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
@@ -328,14 +329,10 @@ type Def' = AbsDef GenericType FOQuantifier
 data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
     deriving (Eq,Ord,Generic,Typeable,Data)
 
-instance Show StrList where
-    show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
-    show (Str s)   = s
-
 instance Show HOQuantifier where
     show Forall = "forall"
     show Exists = "exists"
-    show (UDQuant f _ _ _) = name f
+    show (UDQuant f _ _ _) = f^.name
 
 instance Show FOQuantifier where
     show FOForall = "forall"
@@ -437,11 +434,14 @@ rewriteExprM fT fQ fE e =
 instance (TypeSystem t, IsQuantifier q, Tree t') => Show (GenExpr t t' q) where
     show e = show $ runReader (as_tree' e) UserOutput
 
+instance HasName (AbsDecl t q) String where
+    name = to $ \case 
+        (FunDecl _ n _ _)  -> n
+        (ConstDecl n _)    -> n
+        (FunDef _ n _ _ _) -> n
+        (SortDecl s)       -> s^.name
+
 instance TypeSystem t => Named (AbsDecl t q) where
-    name (FunDecl _ n _ _)  = n
-    name (ConstDecl n _)    = n
-    name (FunDef _ n _ _ _) = n
-    name (SortDecl s)       = name s
     decorated_name x = runReader (decorated_name' x) ProverOutput
     decorated_name' d@(FunDef ts _ _ _ _) = do
         ts' <- mapM z3_decoration' ts
@@ -527,6 +527,18 @@ instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
             args
                 | L.null ps = ""
                 | otherwise = intercalate " x " (map (show . as_tree) ps) ++ " -> "
+
+instance (TypeSystem t) => Typed (AbsFun t) where
+    type TypeOf (AbsFun t) = t
+
+instance TypeSystem t => Typed (AbsDef t q) where
+    type TypeOf (AbsDef t q) = t
+
+instance TypeSystem t => Typed (AbsVar t) where
+    type TypeOf (AbsVar t) = t
+
+instance TypeSystem t => Typed (AbsExpr t q) where
+    type TypeOf (AbsExpr t q) = t
 
 data AbsContext t q = Context
         { _absContextSorts :: M.Map String Sort
@@ -614,7 +626,7 @@ substitute :: (TypeSystem t, IsQuantifier q)
            -> (AbsExpr t q) -> (AbsExpr t q)
 substitute m e = f e
     where
-        f e@(Word v) = maybe e id $ M.lookup (name v) m
+        f e@(Word v) = maybe e id $ M.lookup (v^.name) m
         f e@(Binder _ vs _ _ _) = rewrite (substitute $ subst vs) e
         f e = rewrite f e
         subst vs = m M.\\ symbol_table vs
@@ -673,22 +685,28 @@ used_fun e = visit f s e
                 -- Const ts n t -> S.singleton $ Fun ts n [] t
                 _          -> S.empty
 
+instance HasName (AbsFun t) String where
+    name = to $ \(Fun _ x _ _ _) -> x
+
 instance TypeSystem t => Named (AbsFun t) where
-    name (Fun _ x _ _ _) = x
     decorated_name f = runReader (decorated_name' f) ProverOutput
     decorated_name' (Fun ts x _ _ _) = do
             ts' <- mapM z3_decoration' ts
             return $ x ++ concat ts'
 
+instance HasName (AbsDef t q) String where
+    name = to $ \(Def _ x _ _ _) -> x
+
 instance TypeSystem t => Named (AbsDef t q) where
-    name (Def _ x _ _ _) = x
     decorated_name' (Def ts x _ _ _) = do
             ts' <- mapM z3_decoration' ts
             return $ x ++ concat ts'
 
+instance HasName (AbsVar t) String where
+    name = to $ \(Var x _) -> x
+
 instance Named (AbsVar t) where
-    name (Var x _) = x
-    decorated_name' = return . name
+    decorated_name' = return . view name
 
 
 used_types :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set t
@@ -707,7 +725,7 @@ rename x y e@(Word (Var vn t))
         | vn == x   = Word (Var y t)
         | otherwise = e
 rename x y e@(Binder q vs r xp t)
-        | x `elem` L.map name vs  = e
+        | x `elem` L.map (view name) vs  = e
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 

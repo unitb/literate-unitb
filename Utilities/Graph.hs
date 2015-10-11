@@ -4,6 +4,7 @@
 module Utilities.Graph 
     ( Composition(..), cycles, cycles_with
     , Min(..), closure
+    , SCC(..)
     , m_closure, m_closure_with
 --    , m_closure_with'
     , as_matrix, as_matrix_with

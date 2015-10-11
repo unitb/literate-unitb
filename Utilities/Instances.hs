@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeOperators,FlexibleContexts,KindSignatures,DefaultSignatures,TypeSynonymInstances,FlexibleInstances #-}
-module Utilities.Instances where
+module Utilities.Instances 
+    ( Generic, defaultLift, genericMEmpty, genericMAppend, genericMConcat, genericDefault )
+where
 
 import Data.Default
 import Data.Monoid

@@ -3,6 +3,8 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Logic.Operator 
     ( Notation
     , BinOperator (..)
@@ -170,10 +172,13 @@ instance Ord UnaryOperator where
 instance Show UnaryOperator where
     show (UnaryOperator x y _) = show (x,y) -- format str x y
 
+instance HasName Operator String where
+    name = to $ \case 
+        (Right (BinOperator _ xs _))  -> xs
+        (Left (UnaryOperator _ xs _)) -> xs
+
 instance Named Operator where
-    name (Right (BinOperator _ xs _))  = xs
-    name (Left (UnaryOperator _ xs _)) = xs
-    decorated_name' = return . name
+    decorated_name' = return . view name
 
 data BinOperator = BinOperator String String (ExprP -> ExprP -> ExprP)
     deriving Typeable

@@ -2,6 +2,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Logic.Expr.Type where
 
     -- Modules
@@ -9,15 +13,19 @@ import Logic.Expr.Classes
 
     -- Libraries
 import Control.DeepSeq
+import Control.Lens
 import Control.Monad.Reader
 
 import           Data.Data
 import           Data.DeriveTH
 import qualified Data.Set as S
 
-import           GHC.Generics
+import           GHC.Generics hiding (to)
+
+import Language.Haskell.TH.Syntax
 
 import           Utilities.Format
+import           Utilities.Instances
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
@@ -43,10 +51,6 @@ instance Typed FOType where
 instance TypeSystem FOType where
     type_cons (FOT s xs) = Just (USER_DEFINED s xs)
     make_type = FOT
-
-instance Tree () where
-    as_tree' () = return $ List []
-    rewriteM' f = f
 
 instance Typed () where
     type TypeOf () = ()
@@ -85,6 +89,9 @@ instance Tree FOType where
             (s1,ys) <- fold_mapM f s0 ts
             return (s1, FOT s ys)
 
+instance Lift GenericType where
+    lift = defaultLift
+
 as_generic :: FOType -> GenericType
 as_generic (FOT s ts) = Gen s (map as_generic ts)
 
@@ -93,13 +100,13 @@ cons_to_tree (USER_DEFINED s []) = do
     opt <- ask
     let n = case opt of
                 ProverOutput -> z3_name s
-                UserOutput -> name s
+                UserOutput -> s^.name
     return $ Str n
 cons_to_tree (USER_DEFINED s ts) = do
     opt <- ask
     let n = case opt of
                 ProverOutput -> z3_name s
-                UserOutput -> name s
+                UserOutput -> s^.name
     return $ List (Str n : map as_tree ts)
 
 data Sort =
@@ -132,21 +139,24 @@ instance Show FOType where
 instance Show GenericType where
     show (GENERIC n)         = format "_{0}" n 
     show (VARIABLE n)        = format "'{0}" n 
-    show (Gen s []) = name s
-    show (Gen s ts) = format "{0} {1}" (name s) ts
+    show (Gen s []) = s^.name
+    show (Gen s ts) = format "{0} {1}" (s^.name) ts
+
+instance HasName Sort String where
+    name = to $ \case 
+        (Sort x _ _) -> x
+        (DefSort x _ _ _) -> x
+        (Datatype _ x _)  -> x
+        BoolSort   -> "\\Bool"
+        IntSort    -> "\\Int"
+        RealSort   -> "\\Real"
 
 instance Named Sort where
-    name (Sort x _ _) = x
-    name (DefSort x _ _ _) = x
-    name (Datatype _ x _)  = x
-    name BoolSort   = "\\Bool"
-    name IntSort    = "\\Int"
-    name RealSort   = "\\Real"
     decorated_name' s = do
         opt <- ask
         case opt of
             ProverOutput -> return $ z3_name s
-            UserOutput -> return $ name s
+            UserOutput -> return $ s^.name
 
     z3_name (Sort _ x _) = x
     z3_name (DefSort _ x _ _) = x
@@ -154,6 +164,9 @@ instance Named Sort where
     z3_name BoolSort   = "Bool"
     z3_name IntSort    = "Int"
     z3_name RealSort   = "Real"
+
+instance Lift Sort where
+    lift = defaultLift
 
 pair_sort :: Sort
 pair_sort = -- Sort "Pair" "Pair" 2

@@ -49,11 +49,7 @@ import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Syntactic
         
-old :: Scope s => Map a s -> Map a s
-old = M.mapMaybe is_inherited
 
-new :: Scope s => Map a s -> Map a s
-new = M.mapMaybe is_local
 
 make_machine :: MachineId -> MachineP4
              -> MM' c Machine
@@ -68,32 +64,32 @@ make_machine (MId m) p4 = mch'
         -- _ = evt_refs :: Map EventId [(Label,ScheduleChange,LineInfo)]
         ab_var = p4 ^. pAbstractVars
         ctx = empty_theory 
-            { extends  = imp_th
-            , types    = types
-            , funs = M.empty
-            , defs = p4 ^. pDefinitions
-            , consts   = p4 ^. pConstants
-            , theorems = M.empty
-            , thm_depend = []
+            { _extends  = imp_th
+            , _types    = types
+            , _funs = M.empty
+            , _defs = p4 ^. pDefinitions
+            , _consts   = p4 ^. pConstants
+            , _theorems = M.empty
+            , _thm_depend = []
             , _theoryDummies = p4^.pDummyVars
             -- , notation =  empty_notation
             , _fact = p4^.pAssumptions & traverse %~ getExpr }
         props = p4 ^. pNewPropSet
         mch = Mch 
-            { _name  = label m
-            , theory = ctx
-            , variables = p4 ^. pStateVars
-            , abs_vars  = ab_var
-            , del_vars  = M.map fst $ p4 ^. pDelVars
-            , init_witness = p4 ^. pInitWitness
-            , del_inits = p4 ^. pDelInits
-            , inits = p4 ^. pInit
-            , props = props 
-            , derivation = (ref_prog 
+            { _machine'Name = m
+            , _theory = ctx
+            , _variables = p4 ^. pStateVars
+            , _abs_vars  = ab_var
+            , _del_vars  = M.map fst $ p4 ^. pDelVars
+            , _init_witness = p4 ^. pInitWitness
+            , _del_inits = p4 ^. pDelInits
+            , _inits = p4 ^. pInit
+            , _props = props 
+            , _derivation = (ref_prog 
                     `union` M.map (const $ Rule Add) (_progress props)) 
-            , inh_props = p4 ^. pOldPropSet
-            , comments  = p4 ^. pComments
-            , event_table = EventTable evts -- M.mapKeys as_label evts 
+            , _inh_props = p4 ^. pOldPropSet
+            , _comments  = p4 ^. pComments
+            , _event_table = EventTable evts -- M.mapKeys as_label evts 
                 -- adep: in a abstract machine, prog_a <- evt_a
                 -- live: in a concrete machine, prog_c <- prog_c
                 -- cdep:                        prog_c <- evt_c
@@ -116,12 +112,9 @@ make_machine (MId m) p4 = mch'
                 p <- runTactic li (pos ! k) tac
                 return (k,p)
             xs <- triggerM xs
-            return mch
-                { AST.props = (AST.props mch) 
-                    { _proofs = fromList xs } }
+            return $ mch & AST.props.AST.proofs .~ fromList xs
         events = p4 ^. pEventRef
-        evts = G.mapKeys (either (const "skip") as_label) $
-               events & G.traverseLeft %~ abstrEvt
+        evts = events & G.traverseLeft %~ abstrEvt
                       -- & G.traverseRight %~ g
                       & G.traverseRightWithEdgeInfo %~ uncurry concrEvt
         abstrEvt :: EventP4 -> AbstrEvent

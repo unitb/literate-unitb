@@ -240,7 +240,7 @@ instance IsExprScope Initially where
                 | L.null lis' -> [Right $ PInit lbl x]
                 | otherwise   -> [Left $ MLError msg $ (format "predicate {0}" lbl,li):lis']
                 where
-                    lis = L.map (first name) $ M.elems $ vs `M.intersection` used_var' x
+                    lis = L.map (first $ view name) $ M.elems $ vs `M.intersection` used_var' x
                     lis' = L.map (first (format "deleted variable {0}")) lis
                     msg  = format "initialization predicate '{0}' refers to deleted variables" lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
@@ -341,7 +341,7 @@ checkLocalExpr expKind free xs = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ format "deleted variable '{0}'" . name) (M.elems errs)
+                        varsLI = L.map (first $ format "deleted variable '{0}'" . view name) (M.elems errs)
                     unless (M.null errs) 
                         $ tell [MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> do
@@ -362,7 +362,7 @@ checkLocalExpr' expKind free eid lbl sch = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ format "deleted variable '{0}'" . name) (M.elems errs)
+                        varsLI = L.map (first $ format "deleted variable '{0}'" . view name) (M.elems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> 
@@ -624,25 +624,25 @@ instance IsExprScope TransientProp where
 transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
-            _evs <- get_events p2 evts
+            es   <- get_events p2 evts
             li   <- lift ask
             tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     xs
-            let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) _evs
+            let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) es
             toEither $ error_list 
                 [ ( not $ L.null withInd
                   , format "event(s) {0} have indices and require witnesses" 
                         $ intercalate "," $ map show withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
-                prop = Tr fv tr evts empty_hint
+                prop = Tr fv tr es empty_hint
             return [(lbl,makeCell $ TransientProp prop Local li)]
 
 transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
-            _evs <- get_events p2 evts
+            es   <- get_events p2 evts
             li   <- lift ask
             tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
@@ -652,7 +652,7 @@ transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
             evts' <- bind "Expecting non-empty list of events"
                     $ NE.nonEmpty evts
             hint  <- tr_hint p2 m fv evts' hint
-            let prop = Tr fv tr evts hint
+            let prop = Tr fv tr es hint
             return [(lbl,makeCell $ TransientProp prop Local li)]
 
 instance IsExprScope ConstraintProp where
@@ -722,12 +722,12 @@ safety_prop lbl evt pCt qCt _m p2 = do
             q <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     qCt
-            maybe (return ()) (void . get_event p2) evt
+            e <- traverse (get_event p2) evt
             p <- trigger p
             q <- trigger q
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
-                new_prop = Unless (M.elems dum) p q evt
+                new_prop = Unless (M.elems dum) p q e
             return [(lbl,makeCell $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2

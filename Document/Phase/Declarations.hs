@@ -78,7 +78,7 @@ make_phase2 p1 vars = join $
         vars' = M.toList vars
         newThy t t' = makeTheoryP2 t _pNotation _pCtxSynt <$> liftField toThyDecl vars'
             where
-                _pNotation = th_notation $ empty_theory { extends = t'^.pImports }
+                _pNotation = th_notation $ empty_theory { _extends = t'^.pImports }
                 _pCtxSynt  = mkSetting _pNotation (p1 ^. pTypes) constants M.empty (t'^.pDummyVars)
                 constants = (t'^.pConstants) `M.union` (M.mapMaybe defToVar $ t'^.pDefinitions)
         newMch m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'

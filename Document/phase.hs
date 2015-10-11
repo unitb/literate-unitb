@@ -46,7 +46,6 @@ import Data.Default
 import Data.DeriveTH
 import Data.Either
 import Data.Either.Combinators
-import Data.Graph
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map   as M
@@ -59,6 +58,7 @@ import qualified Data.Traversable as T
 import Data.Typeable
 
 import Utilities.BipartiteGraph as G
+import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
 -- import Utilities.Relation hiding ((!))
 import Utilities.Syntactic
@@ -234,13 +234,6 @@ collect p f arg = do
             return $  fromListWith mappend 
                   <$> mapM (runKleisli $ second $ Kleisli id) xs
 
-data SkipEventId = SkipEvent
-    deriving (Show,Eq,Ord)
-
-instance NFData SkipEventId where
-
-type SkipOrEvent = Either SkipEventId EventId
-
 type MachineP0' a = MachineP0
 
 data MachineP0 = MachineP0
@@ -370,17 +363,11 @@ data Hierarchy k = Hierarchy
         , edges :: Map k k }
     deriving (Show,Typeable)
 
-class IsLabel a where
-    as_label :: a -> Label
-
 instance IsLabel MachineId where
     as_label (MId x) = label x
 
 instance IsLabel ContextId where
     as_label (CId x) = label x
-
-instance IsLabel EventId where
-    as_label (EventId lbl) = lbl
 
 instance IsLabel ProgId where
     as_label (PId lbl) = lbl

@@ -2,8 +2,10 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE FlexibleContexts       #-}
 module Logic.Expr.Classes where
 
+import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.State
 
@@ -13,10 +15,13 @@ import Data.List.Utils
 import Data.Maybe
 import Data.Tuple
 
-class Named n where
-    name    :: n -> String
+class HasName a n | a -> n where
+    name :: Getter a n
+
+class HasName n String => Named n where
+    --name    :: n -> String
     as_pair :: n -> (String, n)
-    as_pair n = (name n, n)
+    as_pair n = (n^.name, n)
     
     decorated_name :: n -> String
     decorated_name x = runReader (decorated_name' x) ProverOutput
@@ -24,7 +29,7 @@ class Named n where
     decorated_name' :: n -> Reader OutputMode String
 
     z3_name :: n -> String
-    z3_name x = z3_escape (name x)
+    z3_name x = z3_escape (x^.name)
 
 data OutputMode = ProverOutput | UserOutput
 
@@ -46,12 +51,20 @@ class Tree a where
         where
             g x t () = f x t
 
+instance Tree () where
+    as_tree' () = return $ List []
+    rewriteM' f = f
+
 wrap :: (Monad m, Typeable a, Typeable d) 
      => (a -> b -> m (a,b)) 
      -> d -> StateT b m d
 wrap f = fromEndo $ fromMaybe (Endo return) (gcast $ Endo $ StateT . f)
 
 data StrList = List [StrList] | Str String
+
+instance Show StrList where
+    show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
+    show (Str s)   = s
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
 fold_mapM _ s [] = return (s,[])
