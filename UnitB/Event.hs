@@ -118,7 +118,7 @@ instance Show expr => Show (Action' expr) where
             (show e)
 
 data SkipEventId = SkipEvent
-    deriving (Show,Eq,Ord)
+    deriving (Show,Eq,Ord,Typeable)
 
 instance NFData SkipEventId where
 

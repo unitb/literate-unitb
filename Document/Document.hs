@@ -8,6 +8,10 @@ module Document.Document where
 import Document.Machine   as Mch
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Structures as Mch
+import Document.Phase.Declarations as Mch
+import Document.Phase.Expressions as Mch
+import Document.Phase.Proofs as Mch
 import Document.Visitor
 
 import Latex.Parser
@@ -23,21 +27,16 @@ import UnitB.PO
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 
+import           Control.Lens
 import           Control.Monad 
 import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.RWS as RWS ( runRWS )
 import qualified Control.Monad.Writer as W
 
 import           Data.Either.Combinators
 import           Data.Map   as M hiding ( map, foldl, (\\) )
-import qualified Data.Map   as M
-import           Data.Monoid
-import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.Ordered (sortOn)
-import qualified Data.Traversable as T
 
 import Utilities.Syntactic
 
@@ -45,16 +44,21 @@ read_document :: LatexDoc -> Either [Error] System
 read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
             let li = line_info xs
             (ms,cs) <- get_components xs li
-            runPipeline' ms cs $ proc doc -> do
-                m0 <- run_phase0_blocks -< doc
-                (r_ord,m1) <- Mch.run_phase1_types -<  m0
-                -- _c1 <- Ctx.run_phase1_types -< c0
-                m2 <- Mch.run_phase2_vars   -< (r_ord, m1)
-                (m3,es) <- Mch.run_phase3_exprs  -< (r_ord, m2)
-                m4 <- Mch.run_phase4_proofs -< (r_ord, m3)
-                ms <- liftP' $ fmap Just . T.sequence -< Just $ M.mapWithKey make_machine m4
+            runPipeline' ms cs () system
+
+system :: Pipeline MM () System
+system =     run_phase0_blocks 
+         >>> run_phase1_types 
+         >>> run_phase2_vars
+         >>> run_phase3_exprs
+         >>> run_phase4_proofs
+         >>> wrap_machine
+
+wrap_machine :: Pipeline MM SystemP4 System
+wrap_machine = proc m4 -> do
+                machines <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
                 -- let ms = _ -- M.mapWithKey make_machine m4 :: MTable (Either [Error] Machine)
-                machines <- triggerP -< ms
+                -- machines <- triggerP -< _ ms
                 -- let refs' = M.mapKeys as_label $ M.map as_label $ P.edges $ r_ord
                     -- mam2maybe = fmap (as_label . fst) . (() `M.lookup`)
                 --     check0 = forM_ (keys mch) $ \m -> check_schedule_ref_struct
@@ -65,8 +69,8 @@ read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
                 --                 ((m4 ! m) ^. pProgress) -- exprs ! m)
                 -- liftP -< toEither check0
                 returnA -< empty_system 
-                    { machines = M.mapKeys (\(MId s) -> s) machines 
-                    , expr_store = es }
+                    { machines = M.mapKeys (\(MId s) -> s) $ machines^.mchTable }
+
 
 all_machines :: LatexDoc -> Either [Error] System
 all_machines xs = read_document xs

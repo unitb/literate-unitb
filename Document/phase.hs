@@ -57,6 +57,8 @@ import Data.Set as S
 import qualified Data.Traversable as T
 import Data.Typeable
 
+import Test.QuickCheck as QC hiding (label,collect)
+
 import Utilities.BipartiteGraph as G
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
@@ -65,6 +67,7 @@ import Utilities.Syntactic
 import Utilities.Format
 import Utilities.TableConstr
 import Utilities.TH
+
 
 -- type MachineP0 = MachineP0' ()
 
@@ -778,7 +781,21 @@ inheritWith' :: Ord k
              -> (conc -> abstr -> conc)
              -> Hierarchy k 
              -> Map k base -> Map k conc
-inheritWith' decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
+inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl f (M.map decl m) xs
+    where
+        m1 = M.map decl m
+        prec k = do
+            p <- M.lookup k es 
+            inh k <$> p `M.lookup` m2
+        m2 = M.mapWithKey (\k c -> fromMaybe c ((c ++) <$> (prec k))) m1
+
+inheritWithAlt :: Ord k 
+             => (base -> conc) 
+             -> (k -> conc -> abstr)
+             -> (conc -> abstr -> conc)
+             -> Hierarchy k 
+             -> Map k base -> Map k conc
+inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
     where
         f m v = case v `M.lookup` es of 
                  Just u -> M.adjustWithKey (app $ m ! u) v m
@@ -792,6 +809,16 @@ inheritWith :: Ord k
             -> Hierarchy k 
             -> Map k base -> Map k conc
 inheritWith decl inh = inheritWith' decl (const inh)
+
+instance (Ord a, Arbitrary a) => Arbitrary (Hierarchy a) where
+    arbitrary = do
+        xs <- L.nub <$> arbitrary
+        let ms = M.fromList ys
+            ys = L.zip [0..] xs
+        zs <- forM ys $ \(i,x) -> do
+            j <- QC.elements $ Nothing : L.map Just [0..i-1]
+            return (x,(ms!) <$> j)
+        return $ Hierarchy xs $ M.mapMaybe id $ M.fromList zs
 
 topological_order :: Pipeline MM
                      (Map MachineId (MachineId,LineInfo)) 

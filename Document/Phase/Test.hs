@@ -46,16 +46,17 @@ import Control.Monad.State
 import Control.Monad.Writer
 
 import Data.Default
-import Data.Either.Combinators
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
 import Data.Maybe
 
+import Test.QuickCheck
+
 import Utilities.BipartiteGraph as G
+import Utilities.Existential
 import Utilities.Lens
 import Utilities.Syntactic
-import Utilities.Existential
 
 newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
     deriving (Functor,Applicative,Monad)
@@ -258,10 +259,13 @@ case2 = return $ do
         vs0 = M.fromList
                 [ ("x",VarScope $ Machine (Var "x" int) Local li) 
                 , ("y",VarScope $ Machine (Var "y" int) Local li)
+                , ("p",VarScope $ Evt $ M.singleton (Just "ae1b") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Local li))
                 , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
                 [ ("z",VarScope $ Machine (Var "z" int) Local li) 
                 , ("y",VarScope $ Machine (Var "y" int) Inherited li) 
+                , ("p",VarScope $ Evt $ M.singleton (Just "ce1") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Inherited li))
+                , ("q",VarScope $ Evt $ M.singleton (Just "ce2") (EventDecl (Var "q" int) Index ("ce2":|[]) Local li))
                 , ("x",VarScope $ DelMch (Just $ Var "x" int) Local li) 
                 , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li)
                 , ("\\S1",VarScope $ TheoryDef (Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
@@ -283,7 +287,8 @@ result2 = do
             s1 = Sort "\\S1" "sl@S1" 0
             s1' = make_type s1 [] 
             fieldsM mid
-                | mid == "m0" = [ PStateVars "x" $ var "x", PStateVars "y" $ var "y" ]
+                | mid == "m0" = [ PStateVars "x" $ var "x"
+                                , PStateVars "y" $ var "y" ]
                 | otherwise   = [ PStateVars "z" $ var "z"
                                 , PDelVars "x" (var "x",li)
                                 , PAbstractVars "x" $ var "x" 
@@ -304,7 +309,12 @@ result2 = do
             -- f :: MachineP1' EventP1 TheoryP1 -> MachineP1' EventP2 TheoryP2
             -- f m = m & pContext %~ ()
             --         & pEventRef %~ (\g -> g & traverseLeft %~ upEvent & traverseRight %~ upEvent)
-            upEvent m _ e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) []
+            upEvent m eid e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) (eventFields eid)
+            eventFields eid 
+                | eid == Right "ae1b" = [EParams "p" (Var "p" bool)]
+                | eid == Right "ce1"  = [EParams "p" (Var "p" bool)]
+                | eid == Right "ce2"  = [EIndices "q" (Var "q" int)]
+                | otherwise           = []
         return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
                 layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
@@ -317,9 +327,11 @@ case3 = return $ do
     let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
         ms0 = makeLatex "file.ext" $ do       
                   command "variable" [text "x,y : \\Int"]                 
+                  command "param" [text "ae1b",text "p : \\Bool"]
         ms1 = makeLatex "file.ext" $ do       
                   command "variable" [text "z : \\Int"]                 
                   command "removevar" [text "x"]
+                  command "indices" [text "ce2",text "q : \\Int"]
         cs = M.empty
     r <- result1
     runPipeline' ms cs r run_phase2_vars
@@ -613,6 +625,7 @@ result8 = Right $ SystemP h ms
         ae1bEvt = def
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
+            & params .~ symbol_table [Var "p" bool]
         ce0aEvt = def
             & coarse_sched .~ M.fromList 
                 [("sch1",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
@@ -620,12 +633,14 @@ result8 = Right $ SystemP h ms
             & coarse_sched .~ M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
         ce1Evt = def
+            & params .~ symbol_table [Var "p" bool]
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
             & actions .~ M.fromList
                 [("act0",Assign y $ c' [expr| y + 1 |])]
             & eql_vars .~ symbol_table [y]
         ce2Evt = def
+            & AST.indices .~ symbol_table [Var "q" int]
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
         evts0 = fromJust $ makeGraph $ do
@@ -652,12 +667,41 @@ result8 = Right $ SystemP h ms
             newEdge askip ce2
             newEdge askip cskip
 
+name9 :: String
+name9 = "QuickCheck inheritance"
+
+instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
+    arbitrary = M.fromList <$> arbitrary
+
+prop_inherit_equiv :: Hierarchy Int
+                   -> Property
+prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
+    inheritWith' id (L.map.(+)) (++) h m == inheritWithAlt id (L.map.(+)) (++) h (m :: Map Int [Int])
+
+case9 :: IO Bool
+case9 = f <$> quickCheckResult prop_inherit_equiv
+    where
+        f (Success _ _ _) = True
+        f _ = False
+
+result9 :: Bool
+result9 = True
+
+mkMap :: (Arbitrary a,Ord k) => Hierarchy k -> Gen (Map k [a])
+mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
+
 --see :: Map ProgId ProgressProp
-seeA :: IO [EventId]
-seeA = case5 >>= \r -> return $ seeLens r
+seeA :: IO (Map Int [Int])
+seeA = return $ inheritWith' id (L.map.(+)) (++) hierarchy m
 
-seeE :: IO [EventId]
-seeE = return $ seeLens result5
+hierarchy :: Hierarchy Int
+hierarchy = Hierarchy {order = [2,1], edges = M.fromList [(1,2)]}
 
-seeLens :: Either [Error] SystemP3 -> [EventId]
-seeLens = view $ to fromRight'.mchTable.at "m1".to fromJust.pNewEvents.eEventId.traverse.to (:[])
+m :: Map Int [Int]
+m = M.fromList [(1,[3,-3,-2]),(2,[5,-1])]
+
+seeE :: IO (Map Int [Int])
+seeE = return $ inheritWithAlt id (L.map.(+)) (++) hierarchy m
+
+--seeLens :: Either [Error] SystemP3 -> [EventId]
+--seeLens = view $ to fromRight'.mchTable.at "m1".to fromJust.pNewEvents.eEventId.traverse.to (:[])

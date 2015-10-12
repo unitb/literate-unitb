@@ -12,7 +12,7 @@ import Document.Scope
 import Document.VarScope
 import Document.Visitor
 
-import Latex.Parser hiding (contents)
+import Latex.Parser hiding (contents,source)
 
 import Logic.Expr
 
@@ -31,6 +31,7 @@ import           Control.Monad.Trans
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
+import           Data.List.NonEmpty as NE (NonEmpty(..),toList)
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
@@ -85,8 +86,7 @@ make_phase2 p1 vars = join $
             where
                 _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
                 refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
-        newEvent = -- fmap (fmap $ fmap $ _ $ beforeAfter' "new event decl") . 
-                    liftEvent toNewEventDecl
+        newEvent = liftEvent toNewEventDecl
         oldEvent = liftEvent toOldEventDecl
         liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
                   -> MM' c (MachineP2' EventP1 TheoryP2
@@ -195,7 +195,7 @@ remove_var = machineCmd "\\removevar" $ \(One xs) _m _p1 -> do
 dummy_decl :: MPipeline MachineP1
                     [(String,VarScope)]
 dummy_decl = machine_var_decl 
-        (\v source li -> Evt $ singleton Nothing (v,Param,source,li)) 
+        (\v source li -> Evt $ singleton Nothing (EventDecl v Param undefined source li)) 
         "\\dummy"
 
 machine_var_decl :: IsVarScope var
@@ -216,20 +216,25 @@ param_decl = event_var_decl Param "\\param"
 
 type EventSym = (EventId,[(String,Var)])
 
-toEventDecl :: String -> EvtDecl -> [Either a (EventId,[EventP2Field])]
-toEventDecl s (Evt m) = map Right $ L.map (second $ (:[]).f)
-                                     $ MM.mapMaybe (\(x,y) -> (,y) <$> x) $ M.toList m
+toEventDecl :: RefScope -> String -> EvtDecls -> [Either a (EventId,[EventP2Field])]
+toEventDecl ref s (Evt m) = map Right $ concatMap (uncurry f)
+                                     $ MM.mapMaybe distr $ M.toList m
          where 
-            f :: (Var, EvtScope, DeclSource, LineInfo) -> EventP2Field
-            f x = case x^._2 of 
-                        Index -> EIndices s $ x^._1
-                        Param -> EParams s $ x^._1
+            distr (x,y) = (,y) <$> x
+            f :: EventId -> EventDecl -> [(EventId, [EventP2Field])]
+            f eid x = case ref of
+                        Old -> [ (e,[g x]) | e <- NE.toList $ x^.source ]
+                        New -> [(eid,[g x])]
 
-instance IsVarScope EvtDecl where
-    toOldEventDecl = toEventDecl
-    toNewEventDecl = toEventDecl
+            g x = case x^.scope of 
+                        Index -> EIndices s $ x^.varDecl
+                        Param -> EParams s $ x^.varDecl
+
+instance IsVarScope EvtDecls where
+    toOldEventDecl = toEventDecl Old
+    toNewEventDecl = toEventDecl New
     toMchDecl _ _  = []
-    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . view _1) $ M.elems 
+    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . view varDecl) $ M.elems 
                                 $ M.filterWithKey (const.MM.isNothing) m
     -- processDecl xs = do
     --     let f (n,Evt m) = mconcat $ M.elems $ M.mapWithKey (g n) m
@@ -260,4 +265,5 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
                 $ lbl `M.lookup` evts
             li <- lift ask
             vs <- get_variables' ts xs
-            return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) (v,escope,Local,li)))) vs
+            return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) 
+                    (EventDecl v escope (evt :| []) Local li)))) vs

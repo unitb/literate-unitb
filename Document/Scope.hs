@@ -29,6 +29,7 @@ module Document.Scope
     , contents
     , WithDelete 
     , Redundant
+    , RefScope(..)
     )
 where
 
@@ -134,6 +135,8 @@ data InhStatus a = InhAdd a | InhDelete (Maybe a)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
 
 type EventInhStatus a = InhStatus (NonEmpty EventId,a)
+
+data RefScope = Old | New
 
 contents :: HasInhStatus a (InhStatus b) => a -> Maybe b
 contents x = case x ^. inhStatus of

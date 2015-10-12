@@ -24,6 +24,8 @@ import Data.Set as S
 
 import Tests.UnitTest
 
+import Utilities.BipartiteGraph
+
 -- import Utilities.TH
 
 test_case :: TestCase
@@ -3835,18 +3837,18 @@ result13 = unlines
     , "passed 9 / 9"
     ]
 
-case14 :: IO (Either String ([Label],[Label],[Label]))
+case14 :: IO (Either String ([SkipOrEvent],[SkipOrEvent],[SkipOrEvent]))
 case14 = runEitherT $ do
     ms <- machines <$> get_system path13
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-    return $ (m0,m1,m2) & each %~ (keys . events)
+    return $ (m0,m1,m2) & each %~ (M.keys . rightMap . view events)
 
-result14 :: Either String ([Label],[Label],[Label])
-result14 = Right (["evt"],["evt0","evt1","evt2"],["evt0","evt1","evt2"])
+result14 :: Either String ([SkipOrEvent],[SkipOrEvent],[SkipOrEvent])
+result14 = Right $ (["evt"],["evt0","evt1","evt2"],["evt0","evt1","evt2"]) & each %~ L.map Right
 
-type ExprSet = [(Label,[Label])]
+type ExprSet = [(SkipOrEvent,[Label])]
 
 case15 :: IO (Either String (ExprSet,ExprSet,ExprSet))
 case15 = runEitherT $ do
@@ -3854,13 +3856,14 @@ case15 = runEitherT $ do
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-        exprs e = S.toList $ keysSet (actions e) `S.union` keysSet (new_guard e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . events)
+        exprs e = S.toList $ keysSet (view actions e) `S.union` keysSet (view guards e)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . rightMap . view events)
 
 result15 :: Either String (ExprSet,ExprSet,ExprSet)
-result15 = Right ( [("evt",["act0"])]
-                 , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])]
-                 , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])])
+result15 = Right $ ( [("evt",["act0"])]
+                   , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])]
+                   , [("evt0",["act0"]),("evt1",["act0","grd0"]),("evt2",["act0"])])
+                & each.traverse._1 %~ Right
 
 case16 :: IO (Either String (ExprSet,ExprSet,ExprSet))
 case16 = runEitherT $ do
@@ -3868,13 +3871,14 @@ case16 = runEitherT $ do
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-        decls e = L.map label $ keys (indices e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . events)
+        decls e = L.map label $ M.keys (view indices e)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . rightMap . view events)
 
 result16 :: Either String (ExprSet,ExprSet,ExprSet)
-result16 = Right ( [("evt",["p"])]
-                 , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])]
-                 , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])])
+result16 = Right $ ( [("evt",["p"])]
+                   , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])]
+                   , [("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])])
+                & each.traverse._1 %~ Right
 
 path17 :: FilePath
 path17 = "tests/lock-free deque/main8-err0.tex"

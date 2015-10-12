@@ -553,7 +553,7 @@ parse_expr :: ParserSetting
            -> Either [Error] DispExpr
 parse_expr set xs = do
         let ctx0
-                | set^.is_step = set^.primed_vars
+                | set^.is_step = M.mapKeys (++"'") $ M.map prime $ set^.primed_vars
                 | otherwise    = M.empty
             ctx1 
                 | set^.free_dummies = set^.dum_ctx

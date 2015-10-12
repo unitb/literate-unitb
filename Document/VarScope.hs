@@ -3,6 +3,8 @@
 {-# LANGUAGE RankNTypes,TupleSections  #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE TypeSynonymInstances      #-}
+{-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE FlexibleContexts          #-}
@@ -22,6 +24,7 @@ import Control.Applicative
 import Control.Monad.Identity
 import Control.Lens
 
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Map as M
 import Data.Maybe
 import Data.Typeable
@@ -91,9 +94,20 @@ data MachineVar =
             , _machineVarLineInfo :: LineInfo }
     deriving (Eq,Ord,Show,Typeable)
 
-data EvtDecl = Evt (Map (Maybe EventId) (Var,EvtScope,DeclSource,LineInfo))
+data EvtDecls = Evt (Map (Maybe EventId) EventDecl)
     deriving (Eq,Ord,Show,Typeable)
     --         -- in Evt, 'Nothing' stands for a dummy
+
+data EventDecl = EventDecl
+    { _eventDeclVarDecl :: Var
+    , _scope :: EvtScope
+    , _source :: NonEmpty EventId
+    , _eventDeclDeclSource :: DeclSource
+    , _eventDeclLineInfo :: LineInfo 
+    } deriving (Show,Eq,Ord)
+
+data EvtScope = Param | Index
+    deriving (Eq,Ord)
 
 instance Eq VarScope where
     VarScope x == VarScope y = h_equal x y
@@ -101,18 +115,26 @@ instance Eq VarScope where
 instance Ord VarScope where
     VarScope x `compare` VarScope y = h_compare x y
 
-data EvtScope = Param | Index
-    deriving (Eq,Ord)
-
 instance Show EvtScope where
     show Param = "parameter"
     show Index = "index"
 
+makeLenses ''EventDecl
+makeFields ''EventDecl
+
 makeFields ''TheoryConst
 makeFields ''TheoryDef
 makeFields ''MachineVar
-makeFields ''EvtDecl
+makeFields ''EvtDecls
 
+-- groupVars :: [VarGroup] -> [VarGroup]
+-- groupVars vs = g $ sortOn f vs
+--     where
+--         f (VarGroup x) = typeRep x
+--         g (VarGroup xs:VarGroup ys:vs) = case cast ys of
+--                                             Just ys -> g $ (VarGroup $ xs ++ ys):vs
+--                                             Nothing -> VarGroup xs : g (VarGroup ys : vs)
+--         g vs = vs
 
 instance Scope TheoryConst where
     kind _ = "constant"
@@ -133,28 +155,29 @@ instance Scope MachineVar where
     kind (Machine _ _ _)  = "state variable"
     rename_events _ x = [x]
 
-instance Scope EvtDecl where
-    kind (Evt m) = show $ M.map (view _2) m
+instance Scope EvtDecls where
+    kind (Evt m) = show $ M.map (view scope) m
     keep_from s (Evt m) 
             | M.null r  = Nothing
             | otherwise = Just $ Evt r
         where
             r = M.mapMaybe f m
-            f x@(_,_,s',_)
-                | s == s'   = Just x
+            f x
+                | s == (x^.declSource) = Just x
                 | otherwise = Nothing
-    make_inherited (Evt m) = Just $ Evt $ M.map (set _3 Inherited) m
+    make_inherited (Evt m) = Just $ Evt $ M.map (set declSource Inherited) m
     clashes (Evt m0) (Evt m1) = not $ M.null $ m0 `M.intersection` m1
     error_item (Evt m) = head' $ elems $ mapWithKey msg m
         where
             head' [x] = x
             head' [] = error "VarScope Scope VarScope: head' []"  
             head' _ = error "VarScope Scope VarScope: head' too many"
-            msg (Just k) (_v,sc,_,li) = (format "{1} (event {0})" k (show sc) :: String, li)
-            msg Nothing (_v,_,_,li) = (format "dummy", li)
+            msg (Just k) x = (format "{1} (event {0})" k (show $ x^.scope) :: String, x^.lineInfo)
+            msg Nothing x  = (format "dummy", x^.lineInfo)
     merge_scopes (Evt m0) (Evt m1) = Evt $ unionWith (error "VarScope Scope.merge_scopes: Evt, Evt") m0 m1
     rename_events m (Evt vs) = Evt <$> concatMap f (toList vs)
         where
             lookup x = fromMaybe [x] $ M.lookup x m
-            f (Just eid,x) = [ singleton (Just e) x | e <- lookup eid ]
+            f (Just eid,x) = [ singleton (Just e) $ setSource eid x | e <- lookup eid ]
             f (Nothing,x)  = [ singleton Nothing x ]
+            setSource eid x = x & source .~ eid :| []
