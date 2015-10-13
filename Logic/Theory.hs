@@ -63,6 +63,7 @@ import Control.Monad.State
 import Control.Monad.Writer
 import Control.Lens hiding (Context,(.=),from,to,rewriteM)
 
+import           Data.Default
 import           Data.DeriveTH
 import           Data.Either
 import           Data.Either.Combinators
@@ -77,6 +78,7 @@ import Language.Haskell.TH hiding (Type)
 
 import Utilities.Error
 import Utilities.Format
+import Utilities.Instances
 import Utilities.TH
 import Utilities.Tuple
 
@@ -241,6 +243,9 @@ instance (GBuild a, GBuild b) => GBuild (a :*: b) where
         where
             fst (x :*: _) = x
             snd (_ :*: x) = x
+
+instance Default Theory where
+    def = genericDefault
 
 make_theory :: String -> M () -> Theory
 make_theory name (M cmd) = to $ gBuild (from empty_theory) $ L.map from ts'

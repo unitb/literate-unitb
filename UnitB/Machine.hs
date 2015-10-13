@@ -1,15 +1,17 @@
 {-# LANGUAGE DeriveDataTypeable
-    , ExistentialQuantification
-    , TemplateHaskell
-    , TypeSynonymInstances
-    , MultiParamTypeClasses
-    , FlexibleInstances
+    , RankNTypes
     , TupleSections
     , DeriveFunctor
+    , DeriveGeneric
     , DeriveFoldable
+    , TemplateHaskell
     , FlexibleContexts
+    , FlexibleInstances
     , DeriveTraversable
     , OverloadedStrings
+    , TypeSynonymInstances
+    , MultiParamTypeClasses
+    , ExistentialQuantification
     , GeneralizedNewtypeDeriving
     #-} 
 module UnitB.Machine where
@@ -34,6 +36,7 @@ import Control.DeepSeq
 import Control.Lens
 
 import Control.Monad hiding ( guard )
+import Control.Monad.State
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer hiding ( guard )
 
@@ -52,6 +55,7 @@ import           Data.Typeable
 import Utilities.BipartiteGraph
 import Utilities.Format
 import Utilities.HeterogenousEquality
+import Utilities.Instances
 import Utilities.TH
 
 all_types :: Theory -> Map String Sort
@@ -82,7 +86,7 @@ data Machine' expr =
         , _props      :: PropertySet' expr
         , _derivation :: Map Label Rule         
         , _comments   :: Map DocItem String }
-    deriving (Eq, Show, Typeable,Functor,Foldable,Traversable)
+    deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
 data DocItem = 
         DocVar String 
@@ -232,6 +236,34 @@ all_downwards m = readGraph (m^.events) $ do
         return $ M.fromList ms
     -- M.mapWithKey (downward m) (abs_events m)
 
+eventTable :: (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) (ConcrEvent' expr) s0 s1 ())
+           -> EventTable expr
+eventTable gr = EventTable $ fromJust $ makeGraph $ do
+    a <- newLeftVertex (Left SkipEvent) def
+    c <- newRightVertex (Left SkipEvent) def
+    newEdge a c
+    gr
+
+event :: EventId -> State (Event' expr) ()
+      -> GraphBuilder SkipOrEvent (AbstrEvent' expr) (ConcrEvent' expr) s0 s1 ()
+event eid cmd = do
+    askip <- newLeftVertex (Left SkipEvent) def
+    evt   <- newRightVertex (Right eid) $ def & new .~ execState cmd def
+    newEdge askip evt
+
+refined_event :: EventId -> State (EventRef expr) ()
+              -> GraphBuilder SkipOrEvent (AbstrEvent' expr) (ConcrEvent' expr) s0 s1 ()
+refined_event eid cmd = do
+    let event = execState cmd $ EvtRef (eid',def) (eid',def)
+        eid' = Right eid
+    aevt <- newLeftVertex eid' $ event^.abstrEvent'
+    cevt <- newRightVertex eid' $ event^.concrEvent'
+    newEdge aevt cevt
+
+newEvents :: [(EventId,Event' expr)]
+          -> EventTable expr
+newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
+
 variableSet :: Machine -> S.Set Var
 variableSet m = S.fromList $ M.elems $ m^.variables
 
@@ -278,13 +310,15 @@ ba_predicate :: HasConcrEvent' event RawExpr
 ba_predicate m evt =          ba_predicate' (m^.variables) (evt^.new.actions)
                     `M.union` M.mapKeys (label . view name) (evt^.witness)
 
-mkCons ''Machine
+mkCons ''Machine'
 
-empty_machine :: String -> Machine
-empty_machine n = (makeMachine
-            empty_theory { _extends = M.fromList [
+empty_machine :: String -> Machine' expr
+empty_machine n = genericDefault
+                { _machine'Name = n }
+            & theory .~ empty_theory { _extends = M.fromList [
                 ("arithmetic",arithmetic), 
-                ("basic", basic_theory)] }) { _machine'Name = n }
+                ("basic", basic_theory)] } 
+            -- & name
 
 derive makeNFData ''DocItem
 derive makeNFData ''Machine'

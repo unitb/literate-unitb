@@ -104,13 +104,32 @@ make_phase2 p1 vars = join $
                            -> ParserSetting
                     parser table    = m^.pMchSynt & decls %~ union table
                 case eid of 
-                    Right eid -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') (findWithDefault [] eid table)  -- (m ! eid)
+                    Right eid -> \e e' -> return $ makeEventP2 e (_pSchSynt e') (_pEvtSynt e') (findWithDefault [] eid table)  -- (m ! eid)
                     Left SkipEvent -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') []
             where
                         -- mkSetting _pNotation (p2' ^. pTypes) (constants `union` table e) refVars (p2' ^. pDummyVars)
         -- tell err
         -- unless (L.null err) $ MaybeT $ return Nothing
+        -- let 
+        -- p2  <- p1 & pContext newThy
+        -- p2' <- p2 & pEventRef (mapEvents (liftEvent toOldEventDecl) (liftEvent toNewEventDecl))
+        -- let 
+        --     _ = p2' :: MachineP1' EventP2 TheoryP2
+        -- p2'' <- makeMachineP2' p2' _pMchSynt 
+        --         <$> liftField toMchDecl (M.toList vars)
+        --              -- & pEventRef %~ G.mapBothWithKey (liftEvent toOldEventDecl) 
+        --              --                                 (liftEvent toNewEventDecl)
+        -- let 
+        --     ind_param :: EventId -> Map String Var
+        --     ind_param eid = M.union (p2''^.getEvent eid.eIndices) (p2''^.getEvent eid.eParams)
             
+        -- -- | L.null err = 
+        -- return p2''  -- & (pNotation .~ _pNotation)
+        --              -- & (pMchSynt .~ _pMchSynt)
+        --              -- & (pCtxSynt .~ _pCtxSynt)
+        --              -- & (pSchSynt .~ _pSchSynt)
+        --              -- & (pEvtSynt .~ _pEvtSynt)
+    -- where
         -- varGroup n (VarScope x) = VarGroup [(n,x)]
         -- vars' = groupVars $ L.map (uncurry varGroup) $ M.toList vars
         -- err = []

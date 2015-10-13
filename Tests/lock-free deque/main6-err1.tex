@@ -172,7 +172,7 @@
 \\ \cschedule{m0:push:left}{m1:sch0}{ &r \in \dom.pshL }
 \end{align*}
 % \begin{align*}
-\removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
+% \removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
 % \end{align*}
 
 \subsubsection{Proving \ref{m1:prog1}}
@@ -182,7 +182,7 @@
 \end{align*}
 
 \begin{align*}
-\removecoarse{m0:push:right}{default} % \weakento{m0:push:right}{default}{m1:sch0}
+% \removecoarse{m0:push:right}{default} % \weakento{m0:push:right}{default}{m1:sch0}
 \\ \cschedule{m0:push:right}{m1:sch0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd1}{ pshR.r = x }
@@ -230,8 +230,8 @@
 \\ \cschedule{m0:pop:right:non:empty}{m1:sch1}{ p < q }
 \\ \cschedule{m0:pop:right:empty}{m1:sch0}{ r \in popR }
 \\ \cschedule{m0:pop:right:empty}{m1:sch1}{ p = q }
-\\ \removecoarse{m0:pop:right:non:empty}{default} % \weakento{m0:pop:right:non:empty}{default}{m1:sch0,m1:sch1}
-\\ \removecoarse{m0:pop:right:empty}{default} % \weakento{m0:pop:right:empty}{default}{m1:sch0,m1:sch1}
+% \\ \removecoarse{m0:pop:right:non:empty}{default} % \weakento{m0:pop:right:non:empty}{default}{m1:sch0,m1:sch1}
+% \\ \removecoarse{m0:pop:right:empty}{default} % \weakento{m0:pop:right:empty}{default}{m1:sch0,m1:sch1}
 \\ \evguard{m0:pop:right:non:empty}{m1:grd0}{ r \in popR }
 \\ \evbcmeq{m0:pop:right:non:empty}{m1:a2}
 	{popR}{ popR \setminus \{ r \} }
@@ -261,7 +261,7 @@
 \begin{align*}
 \cschedule{m0:pop:left:non:empty}{m1:sch0}{ r \in popL }
 \\ \cschedule{m0:pop:left:non:empty}{m1:sch1}{ p < q }
-\\ \removecoarse{m0:pop:left:non:empty}{default} % \weakento{m0:pop:left:non:empty}{default}{m1:sch0,m1:sch1}
+% \\ \removecoarse{m0:pop:left:non:empty}{default} % \weakento{m0:pop:left:non:empty}{default}{m1:sch0,m1:sch1}
 \\ \evguard{m0:pop:left:non:empty}{m1:grd0}{ r \in popL }
 \\ \evbcmeq{m0:pop:left:non:empty}{m1:a4}
 	{popL}{ popL \setminus \{ r \} }

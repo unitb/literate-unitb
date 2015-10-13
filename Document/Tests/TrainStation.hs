@@ -10,6 +10,7 @@ import Logic.Proof
 import Logic.Theory
 
 import UnitB.AST
+import qualified UnitB.Expr as UBExpr
 
 import Theories.SetTheory
 import Theories.FunctionTheory
@@ -17,6 +18,7 @@ import Theories.Arithmetic
 
 
     -- Libraries
+import Control.Applicative
 import Control.Arrow
 import Control.Monad.State
 
@@ -203,19 +205,19 @@ block_var :: Var
 (block, block_var) = var "sl@BLK" $ set_type blk_type
 
 machine0 :: Machine
-machine0 = (empty_machine "train0") 
-    {  theory = empty_theory 
-            {  extends = fromList
+machine0 = UBExpr.DispExpr "" <$> (empty_machine "train0") 
+    {  _theory = empty_theory 
+            {  _extends = fromList
                     [  ("functions", function_theory) -- train_type blk_type
                     ,  ("sets", set_theory) -- blk_type
                     ,  ("basic", basic_theory)
                     ,  ("arithmetic", arithmetic)
                     ]
-            ,  defs = fromList 
+            ,  _defs = fromList 
                     [  ("\\TRAIN", train_def)
                     ,  ("\\LOC", loc_def)
                     ,  ("\\BLK", block_def) ]
-            ,  types   = symbol_table 
+            ,  _types   = symbol_table 
                     [ train_sort
                     , loc_sort
                     , blk_sort
@@ -232,49 +234,49 @@ machine0 = (empty_machine "train0")
                     , ("asm4", axm4) 
                     , ("asm5", axm5) 
                     ]
-            ,  consts  = fromList
+            ,  _consts  = fromList
                     [  ("ent", ent_var)
                     ,  ("ext", ext_var)
                     ,  ("PLF", plf_var)
                     ]
             }
-    ,  inits = fromList $ zip (map (label . ("in" ++) . show . (1 -)) [0..])
-            $ map ($fromJust) [loc .= zempty_fun, in_var .= zempty_set]
-    ,  variables = symbol_table [in_decl,loc_decl]
-    ,  events = fromList [("enter", enter_evt), ("leave", leave_evt)]
-    ,  props = props0
-    ,  derivation = fromList []
+    ,  _inits = fromList $ zip (map (label . ("in" ++) . show . (1 -)) [0..])
+            $ map ($typeCheck) [loc .= zempty_fun, in_var .= zempty_set]
+    ,  _variables = symbol_table [in_decl,loc_decl]
+    ,  _event_table = newEvents [("enter", enter_evt), ("leave", leave_evt)]
+    ,  _props = props0
+    ,  _derivation = fromList []
     }
     where
-        axm0 = ($fromJust) (block .= (zset_enum [ent,ext] `zunion` plf)) 
-        axm2 = ($fromJust) (
+        axm0 = ($typeCheck) (block .= (zset_enum [ent,ext] `zunion` plf)) 
+        axm2 = ($typeCheck) (
                mznot (ent .= ext)
             /\ mznot (ent `zelem` plf)
             /\ mznot (ext `zelem` plf) )
-        axm3 = ($fromJust) $
+        axm3 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
                         mznot (p .= ext)
                     .=  (p `zelem` (zmk_set ent `zunion` plf)))
-        axm4 = ($fromJust) $
+        axm4 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
                         mznot (p .= ent)
                     .=  (p `zelem` (zmk_set ext `zunion` plf)))
-        axm5 = ($fromJust) $
+        axm5 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
                         (mzeq p ent \/ mzeq p ext)
                     .=  mznot (p `zelem` plf) )
 
-props0 :: PropertySet
+props0 :: PropertySet' Expr
 props0 = empty_property_set
     {  _constraint = fromList 
             [   ( "co0"
                 , Co [t_decl] 
-                    $ ($fromJust) (mzimplies 
+                    $ ($typeCheck) (mzimplies 
                         (mzand (mznot (t `zelem` in_var)) (t `zelem` in_var')) 
                         (mzeq  (zapply loc' t) ent)) )
             ,   ( "co1"
                 , Co [t_decl] 
-                    $ ($fromJust) (mzimplies 
+                    $ ($typeCheck) (mzimplies 
                         (mzall [ (t `zelem` in_var), 
                                  (zapply loc t .= ent), 
                                  mznot (zapply loc t `zelem` plf)])
@@ -284,14 +286,14 @@ props0 = empty_property_set
             ]
     ,   _transient = fromList
             [   ( "tr0"
-                , Transient
+                , Tr
                     (symbol_table [t_decl])
-                    (($fromJust) (t `zelem` in_var)) ["leave"] 
-                    (TrHint (fromList [("t",(train_type, $fromJust $ t' .= t))]) Nothing) )
+                    (($typeCheck) (t `zelem` in_var)) ["leave"] 
+                    (TrHint (fromList [("t",(train_type, $typeCheck $ t' .= t))]) Nothing) )
             ]
     ,  _inv = fromList 
-            [   ("inv2",($fromJust) (zdom loc .= in_var))
-            ,   ("inv1",($fromJust) $ mzforall [t_decl] (zelem t in_var)
+            [   ("inv2",($typeCheck) (zdom loc .= in_var))
+            ,   ("inv1",($typeCheck) $ mzforall [t_decl] (zelem t in_var)
                         ((zapply loc t `zelem` block)))
             ]
     ,  _proofs = fromList
@@ -316,37 +318,36 @@ props0 = empty_property_set
     where 
         li = LI "" 0 0
 
-enter_evt :: Event
+enter_evt :: Event' Expr
 enter_evt = empty_event
-    {  indices = symbol_table [t_decl]
-    ,  new_guard = fromList
-            [  ("grd1", ($fromJust) $ mznot (t `zelem` in_var))
+    {  _indices = symbol_table [t_decl]
+    ,  _guards  = fromList
+            [  ("grd1", ($typeCheck) $ mznot (t `zelem` in_var))
             ]
-    ,  actions = fromList
+    ,  _actions = fromList
             [  ("a1", BcmSuchThat vars
-                    (($fromJust) (in_var' .= (in_var `zunion` zmk_set t))))
+                    (($typeCheck) (in_var' .= (in_var `zunion` zmk_set t))))
             ,  ("a2", BcmSuchThat vars
-                    (($fromJust) (loc' .= (loc `zovl` zmk_fun t ent))))
+                    (($typeCheck) (loc' .= (loc `zovl` zmk_fun t ent))))
             ]
     }
     where 
         vars = S.elems $ variableSet machine0
 
-leave_evt :: Event
+leave_evt :: Event' Expr
 leave_evt = empty_event 
-    {  indices   = symbol_table [t_decl]
-    ,  new_sched = empty_schedule 
-                    { coarse = singleton "c0" (($fromJust) (t `zelem` in_var)) }
-    ,  new_guard = fromList
-            [  ("grd0", ($fromJust) $  
+    {  _indices   = symbol_table [t_decl]
+    ,  _coarse_sched = singleton "c0" (($typeCheck) (t `zelem` in_var))
+    ,  _guards = fromList
+            [  ("grd0", ($typeCheck) $  
                                        zapply loc t .= ext
                                     /\ (t `zelem` in_var) )
             ]
-    ,  actions = fromList 
+    ,  _actions = fromList 
             [  ("a0", BcmSuchThat vars
-                    (($fromJust) (in_var' .= (in_var `zsetdiff` zmk_set t))))
+                    (($typeCheck) (in_var' .= (in_var `zsetdiff` zmk_set t))))
             ,  ("a3", BcmSuchThat vars
-                    (($fromJust) (loc' .= (zmk_set t `zdomsubt` loc))))
+                    (($typeCheck) (loc' .= (zmk_set t `zdomsubt` loc))))
             ] 
     }
     where

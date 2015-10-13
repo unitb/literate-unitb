@@ -133,7 +133,7 @@
 \\ \cschedule{m0:push:left}{m1:sch0}{ r \in \dom.pshL }
 \end{align*}
 \begin{align*}
-\removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
+% \removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
 \\ \evassignment{m0:pop:right}{m1:a0}{ pshL' = pshL }
 \\ \evassignment{m0:pop:right}{m1:a1}{ pshR' = pshR }
 \\ \evassignment{m0:pop:left}{m1:a0}{ pshL' = pshL }
@@ -145,7 +145,7 @@
 \end{align*}
 
 \begin{align*}
-\removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
+% \removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
 \\ \cschedule{m0:push:right}{m1:sch0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd0}{ r \in \dom.pshR }
 \\ \evguard{m0:push:right}{m1:grd1}{ pshR.r = x }
@@ -166,7 +166,7 @@
 \indices{m0:pop:right}{ r : \REQ }
 \begin{align*}
 \cschedule{m0:pop:right}{m1:sch0}{ r \in popR }
-\\ \removecoarse{m0:pop:right}{default} % \weakento{m0:pop:right}{default}{m1:sch0}
+% \\ \removecoarse{m0:pop:right}{default} % \weakento{m0:pop:right}{default}{m1:sch0}
 \\ \evguard{m0:pop:right}{m1:sch0}{ r \in popR }
 \\ \evassignment{m0:pop:right}{m1:a2}{ popR' = popR \setminus \{ r \} }
 \\ \evassignment{m0:pop:right}{m1:a3}{ (emp' = (p = q)) \land (p < q \implies res' = qe.(q\0-1)) }

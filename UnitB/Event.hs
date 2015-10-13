@@ -70,7 +70,6 @@ import UnitB.Expr
 import UnitB.Property
 
     -- Libraries
--- import Control.Applicative
 import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (indices)
@@ -82,6 +81,7 @@ import Data.Foldable (Foldable)
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
+import Data.String
 import Data.Typeable
 
 import GHC.Generics hiding (to)
@@ -123,6 +123,9 @@ data SkipEventId = SkipEvent
 instance NFData SkipEventId where
 
 type SkipOrEvent = Either SkipEventId EventId
+
+instance IsString SkipOrEvent where
+    fromString = Right . fromString
 
 type Event = Event' Expr
 
@@ -167,7 +170,8 @@ type EventRef' = EventRef RawExpr
 
 data EventRef expr = EvtRef 
         { _eventRefAbstract :: (SkipOrEvent,AbstrEvent' expr)  
-        , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) }
+        , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) 
+        } deriving (Generic)
 
 default_schedule :: Map Label Expr
 default_schedule = M.fromList [(label "default", zfalse)]
@@ -272,6 +276,9 @@ instance HasConcrEvent' (EventMerging expr) expr where
 
 instance HasEvent' (EventMerging expr) expr where
     event' = concrEvent'.event'
+
+instance HasEvent' (EventSplitting expr) expr where
+    event' = abstrEvent'.event'
 
 instance HasAbstrEvent' (EventSplitting expr) expr where
     abstrEvent' = abstract._2

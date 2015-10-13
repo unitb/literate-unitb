@@ -166,7 +166,7 @@ raw_machine_pos m' = eval_generator $
                         evt_eql_po m ev
                         sch_po m ev
                     -- forM_ (all_refs m) $ \ev -> do
-                    forM_  (M.toList $ all_downwards m) $ \ev -> do
+                    forM_  (M.toList $ nonSkipDownwards m) $ \ev -> do
                         replace_csched_po m ev
                         weaken_csched_po  m ev
                         replace_fsched_po m ev
@@ -500,7 +500,7 @@ wit_fis_po m (lbl, evt) =
         pvar = L.map prime $ M.elems $ view abs_vars m `M.difference` view variables m
 
 
-replace_csched_po :: RawMachine -> (SkipOrEvent,EventSplitting RawExpr) -> M ()
+replace_csched_po :: RawMachine -> (EventId,EventSplitting RawExpr) -> M ()
 replace_csched_po m (lbl,evt') = do 
         -- assert (L.null (L.drop 1 xs) 
         -- || L.null (evt^.c_sched_ref)) $ do
@@ -509,7 +509,7 @@ replace_csched_po m (lbl,evt') = do
             let evt = EvtRef ae ce 
             with (do
                     prefix_label $ _name m
-                    prefix_label $ skipOrLabel lbl
+                    prefix_label $ as_label lbl
                     prefix_label "C_SCH/delay"
                     _context $ assert_ctx m
                     _context $ step_ctx m
@@ -546,7 +546,7 @@ replace_csched_po m (lbl,evt') = do
                         -- it broke one of the test cases
         _ -> assert (L.null (evt'^.c_sched_ref)) (return ())
 
-weaken_csched_po :: RawMachine -> (SkipOrEvent,EventSplitting RawExpr) -> M ()
+weaken_csched_po :: RawMachine -> (EventId,EventSplitting RawExpr) -> M ()
 weaken_csched_po m (lbl,evt) = do
     -- case evt' of 
     --     EvtS ae (ce :| []) -> do
@@ -562,10 +562,11 @@ weaken_csched_po m (lbl,evt) = do
                 old_c = evt^.old.coarse_sched
             with (do
                     prefix_label $ _name m
-                    prefix_label $ skipOrLabel lbl
+                    prefix_label $ as_label lbl
                     prefix_label "C_SCH/weaken"
                     _context $ assert_ctx m
                     _context $ step_ctx m
+                    POG.variables $ evt^.indices
                     T.forM (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
@@ -580,7 +581,7 @@ weaken_csched_po m (lbl,evt) = do
                     ms -> 
                         emit_goal [] $ zsome $ NE.map zall ms
 
-replace_fsched_po :: RawMachine -> (SkipOrEvent,EventSplitting RawExpr) -> M ()
+replace_fsched_po :: RawMachine -> (EventId,EventSplitting RawExpr) -> M ()
 replace_fsched_po m (lbl,aevt) = do
         let evts   = aevt^.evt_pairs.to NE.toList
             -- _ = _
@@ -592,7 +593,7 @@ replace_fsched_po m (lbl,aevt) = do
             new_fs = L.map (view $ new.fine_sched) evts
         with (do
                 prefix_label $ _name m
-                prefix_label $ skipOrLabel lbl
+                prefix_label $ as_label lbl
                 prefix_label "F_SCH/replace"
                 -- POG.variables $ _^.new.indices
                 _context $ assert_ctx m
@@ -603,11 +604,13 @@ replace_fsched_po m (lbl,aevt) = do
                 let LeadsTo vs p0 q0 = prog
                 with (do
                         POG.variables $ symbol_table vs
+                        POG.variables $ aevt^.old.indices
                         named_hyps old_c
                         named_hyps old_f ) $
                     emit_goal ["prog",plbl,"lhs"] p0
                 forM_ evts' $ \(clbl,evt) -> 
                     with (do
+                            POG.variables $ evt^.total.indices
                             named_hyps $ evt^.new.coarse_sched
                             named_hyps $ evt^.new.fine_sched ) $
                         forM_ (M.toList $ evt^.deleted.fine_sched) $ \(lbl,sch) ->
@@ -615,12 +618,14 @@ replace_fsched_po m (lbl,aevt) = do
                 case new_fs of
                   [new_f] -> do
                     with (do
+                            POG.variables $ evts^.traverse.new.indices
                             POG.variables $ symbol_table vs) $ do
                         forM_ (M.toList new_f) $ \(lbl,sch) -> 
                             emit_goal ["prog",plbl,"rhs",lbl] $
                                     q0 `zimplies` sch
                   _ -> do
                     with (do
+                            POG.variables $ evts^.traverse.new.indices
                             POG.variables $ symbol_table vs) $ do
                         emit_goal ["prog",plbl,"rhs"] $
                                 q0 `zimplies` zsome (L.map zall new_fs)
@@ -630,6 +635,8 @@ replace_fsched_po m (lbl,aevt) = do
                     kept_f = intersections $ L.map (view $ kept.fine_sched) evts
                 unless (new_fs == [old_f]) $
                     with (do
+                            POG.variables $ aevt^.old.indices
+                            POG.variables $ evts^.traverse.new.indices
                             nameless_hyps new_c
                             named_hyps old_c -- is this sound?
                             named_hyps kept_f) $

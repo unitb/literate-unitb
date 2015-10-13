@@ -112,25 +112,25 @@
 	\cschedule{resp:push:left}{m0:sch0}{ r \in \dom.psL } \\
 	\evbcmeq{resp:push:left}{m0:act0}{psL}{ \{r\} \domsub psL }
 \end{align}
-\removecoarse{resp:push:left}{default}
+% \removecoarse{resp:push:left}{default}
 \begin{align}
 	\refine{m0:p2}{ensure}{resp:pop:left}{ \index{r}{r' = r} }
 	\cschedule{resp:pop:left}{m0:sch0}{ r \in ppL } \\
 	\evbcmeq{resp:pop:left}{m0:act0}{ppL}{ ppL \setminus \{ r \} }
 \end{align}
-\removecoarse{resp:pop:left}{default}
+% \removecoarse{resp:pop:left}{default}
 \begin{align}
 	\refine{m0:p1}{ensure}{resp:push:right}{ \index{r}{r' = r} }
 	\cschedule{resp:push:right}{m0:sch0}{ r \in \dom.psR } \\
 	\evbcmeq{resp:push:right}{m0:act0}{psR}{ \{r\} \domsub psR }
 \end{align}
-\removecoarse{resp:push:right}{default}
+% \removecoarse{resp:push:right}{default}
 \begin{align}
 	\refine{m0:p3}{ensure}{resp:pop:right}{ \index{r}{r' = r} }
 	\cschedule{resp:pop:right}{m0:sch0}{ r \in ppR } \\
 	\evbcmeq{resp:pop:right}{m0:act0}{ppR}{ ppR \setminus \{ r \} }
 \end{align}
-\removecoarse{resp:pop:right}{default}
+% \removecoarse{resp:pop:right}{default}
 \end{machine}
 \section{First Refinement --- Sequence of Values}
 \input{main8/machine_m1}
