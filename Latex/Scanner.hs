@@ -5,16 +5,19 @@ module Latex.Scanner
     , match_first, match_string
     , look_ahead, try, choice
     , read_if, match, many
+    , line_number
     , sep1 )
 where
 
 import Control.Applicative hiding ( many )
-
+--import Control.Arrow
 import Control.Monad
 
 import Data.Maybe
+import qualified Data.List.NonEmpty as NE
 
 import Utilities.Syntactic
+import Utilities.Lines as L
 
 data State a = State [(a,LineInfo)] LineInfo
 
@@ -55,7 +58,7 @@ try (Scanner bl) sc (Scanner fl) = Scanner ret
                     fl x
 
 
-read_if :: (a -> Bool) -> (a -> Scanner a b) -> Scanner a b -> Scanner a b
+read_if :: Token a => (a -> Bool) -> (a -> Scanner a b) -> Scanner a b -> Scanner a b
 read_if p left right = do
         b <- is_eof
         if b then right
@@ -73,7 +76,14 @@ line_number fn xs     = concatMap f ys
     where
         f (n, xs)  = map (g n) xs
         g n (i, x) = (x, LI fn n i)
-        ys         = zip [1..] $ map (zip [1..] . (++ "\n")) $ lines xs
+        ys         = zip [1..] $ map (zip [1..]) $ NE.toList $ L.lines' xs
+        --addEOL = maybe [] (uncurry (++) . (second (:[]))) . unconsR
+        --ys         = zip [1..] $ map (zip [1..] . (++ "\n")) $ lines xs
+
+--unconsR :: [a] -> Maybe ([a],a)
+--unconsR xs 
+--    | null xs   = Nothing
+--    | otherwise = Just (init xs,last xs)
 
 peek :: Scanner a [a]
 peek = Scanner f
@@ -86,22 +96,24 @@ is_eof = do
         xs <- peek
         return (null xs)
             
-read_char :: Scanner b b
+read_char :: Token b => Scanner b b
 read_char = Scanner f
     where
-        f (State ((x,LI fn i j):xs) _) 
-            = Right (x, State xs (LI fn i j))
+        --next _ (tok:_) = end tok
+        --next li []        = li
+        f (State (t@(x,_):xs) _) 
+            = Right (x, State xs $ end t)
         f (State [] li)               
             = Left [(Error "Expected: character" li)]
 
-read_string :: Int -> Scanner a [a]
+read_string :: Token a => Int -> Scanner a [a]
 read_string 0 = return []
 read_string n = do
         x  <- read_char
         xs <- read_string (n-1)
         return (x:xs)
 
-match :: ([a] -> Maybe Int) -> Scanner a (Maybe [a])
+match :: Token a => ([a] -> Maybe Int) -> Scanner a (Maybe [a])
 match p = do
         xs <- peek
         case p xs of
@@ -119,7 +131,7 @@ match_string xs = \ys -> do
 
 type Pattern a b = ([a] -> Maybe Int, [a] -> Scanner a b)
 
-match_first :: [Pattern a b] -> Scanner a b -> Scanner a b
+match_first :: Token a => [Pattern a b] -> Scanner a b -> Scanner a b
 match_first [] x       = x
 match_first ((p,f):xs) x = do
         c <- match p
@@ -128,8 +140,8 @@ match_first ((p,f):xs) x = do
             Nothing -> match_first xs x
 
 read_lines :: Scanner Char a 
-            -> FilePath -> String 
-            -> Either [Error] a 
+           -> FilePath -> String 
+           -> Either [Error] a 
 read_lines s fn xs = read_tokens s fn (line_number fn xs) (1,1)
 
 read_tokens :: Scanner a b

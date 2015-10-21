@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns, TupleSections #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TemplateHaskell
+    , MultiParamTypeClasses
+    , FunctionalDependencies #-}
 module Utilities.Syntactic where
 
 import Control.DeepSeq
@@ -19,7 +21,10 @@ import Data.Typeable
 
 import Language.Haskell.TH (Loc(..))
 
+import Safe
+
 import Utilities.Format
+import qualified Utilities.Lines as L
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord)
@@ -28,10 +33,10 @@ data LineInfo = LI
         { _filename :: FilePath
         , _line :: Int
         , _column :: Int }     
-     deriving (Eq,Ord)   
+     deriving (Eq,Ord,Typeable)   
 
 instance Show LineInfo where
-    show (LI _ i j) = show (i,j)
+    show (LI fn i j) = format "(LI {0} {1} {2})" (show fn) i j
 
 makeLenses ''LineInfo
 
@@ -41,8 +46,38 @@ show_err xs = unlines $ map report $ sortOn line_info xs
 class Syntactic a where
     line_info :: a -> LineInfo
 
+class Token t where
+    lexeme :: t -> String
+    lexemeLength :: t -> LineInfo -> LineInfo
+    lexemeLength x
+            | length xs <= 1 = column %~ (+ length t)
+            | otherwise      = (line %~ (+ (length xs - 1))).(column .~ (length (last xs) + 1))
+        where 
+            xs = NE.toList $ L.lines t
+            t  = lexeme x
+
+instance Token Char where
+    lexeme x = [x]
+
+class IsBracket a str | a -> str where
+    bracketPair :: a -> (str,str)
+    openBracket :: a -> str
+    openBracket = fst . bracketPair
+    closeBracket :: a -> str
+    closeBracket = snd . bracketPair
+
+start :: (a,LineInfo) -> LineInfo
+start = snd
+
+end :: Token a => (a,LineInfo) -> LineInfo
+end (tok,li) = lexemeLength tok li
+
+afterLast :: Token a => LineInfo -> [(a,LineInfo)] -> LineInfo
+afterLast li xs = maybe li end $ lastMay xs
+
 with_li :: LineInfo -> Either [String] b -> Either [Error] b
 with_li li = either (\x -> Left $ map (`Error` li) x) Right
+
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
@@ -86,7 +121,9 @@ shrink_error_list es' = do
         less_specific _ _ = False
         es = nubSort es'
 
-data StringLi = StringLi [(Char,LineInfo)] LineInfo
+data TokenStream a = StringLi [(a,LineInfo)] LineInfo
+
+type StringLi = TokenStream Char
 
 neLines :: String -> NonEmpty String
 neLines [] = [] :| []
