@@ -1,13 +1,6 @@
-{-# LANGUAGE DeriveDataTypeable     #-}
-{-# LANGUAGE DeriveGeneric, RankNTypes #-}
-{-# LANGUAGE DefaultSignatures      #-}
-{-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE LambdaCase             #-}
-{-# LANGUAGE MultiParamTypeClasses, TemplateHaskell  #-}
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies           #-}
 module Logic.Expr.Expr 
     ( Expr, Expr', AbsExpr, GenExpr (..), FOExpr
     , UntypedExpr, ExprP, ExprPG, ExprPC
@@ -72,7 +65,7 @@ import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.Identity
 import Control.Lens hiding (rewrite,Context
-                           ,Const,Context')
+                           ,Const,Context',List)
 
 import           Data.Data
 import           Data.DeriveTH
@@ -80,7 +73,6 @@ import           Data.List as L
 import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
-import           Data.Traversable (sequenceA)
 
 import Language.Haskell.TH hiding (Type) -- (ExpQ,location,Loc)
 

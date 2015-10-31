@@ -1,5 +1,4 @@
 #!/usr/bin/env runhaskell -W -Werror
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
@@ -7,11 +6,10 @@ import Build
 import Interactive.Config
 
 import Control.Concurrent
-import Control.Monad.Error
+import Control.Monad.Except
 
 import Data.Char
 import Data.List
-import Data.List.Ordered
 import Data.Time
 
 import GHC.IO.Exception

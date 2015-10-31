@@ -1,10 +1,5 @@
-{-# LANGUAGE FlexibleContexts, BangPatterns #-} 
+{-# LANGUAGE BangPatterns #-} 
 {-# LANGUAGE ScopedTypeVariables            #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE TupleSections          #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
 module Document.Proof where
 
     -- Modules
@@ -24,7 +19,6 @@ import Logic.Proof as LP
 import Logic.Proof.Tactics as LP
 
     -- Libraries
-import Control.Applicative ((<$>))
 import Control.Arrow
 import Control.DeepSeq
 import Control.Lens hiding (Context,indices)

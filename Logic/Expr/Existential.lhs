@@ -13,7 +13,6 @@ It can be done with the following strategy:
 We implement it in \emph{partition\_expr} with a disjoint set data structure.
 
 \begin{code}
-{-# LANGUAGE FlexibleContexts #-}
 module Logic.Expr.Existential
     ( partition_expr
     , get_partition )
@@ -32,7 +31,6 @@ import           Data.IntMap
             , assocs, insert, elems
             , IntMap, fromList, Key )
 import qualified Data.Map as M
-import           Data.Monoid ( mappend )
 import qualified Data.Set as S
 
 get_partition :: [Var] -> [Expr] -> ([(Key, Int)], [(Var, Int)], [(Expr, Int)])

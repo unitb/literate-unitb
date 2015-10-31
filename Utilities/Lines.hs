@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Utilities.Lines where
 
 import Control.Applicative

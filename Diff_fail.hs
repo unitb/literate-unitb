@@ -9,7 +9,7 @@ import Interactive.Config
 import System.Directory
 import System.Process
 
-import Utilities.Format
+import Text.Printf
 
 main :: IO ()
 main = do
@@ -21,8 +21,8 @@ main = do
         print ys
         if null xs || null ys then return ()
         else do
-            let file1 = (format "actual-{0}.txt" n)
-                file2 = (format "expected-{0}.txt" n)
+            let file1 = (printf "actual-%d.txt" n)
+                file2 = (printf "expected-%d.txt" (n :: Int))
             b1 <- doesFileExist file1
             b2 <- doesFileExist file2
             if b1 && b2 then do

@@ -1,7 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TemplateHaskell #-}
-{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances            #-}
-{-# LANGUAGE FlexibleInstances               #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Logic.Expr.Const where
 
     -- Modules   

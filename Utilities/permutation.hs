@@ -1,11 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TupleSections       #-}
 module Utilities.Permutation 
     ( top_sort, closure, closure'
     , graph, graphWith, u_scc

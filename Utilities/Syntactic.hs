@@ -1,8 +1,3 @@
-{-# LANGUAGE BangPatterns, TupleSections #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TemplateHaskell
-    , MultiParamTypeClasses
-    , FunctionalDependencies #-}
 module Utilities.Syntactic where
 
 import Control.DeepSeq

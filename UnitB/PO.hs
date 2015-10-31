@@ -1,8 +1,5 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE TupleSections     #-}
     -- Behavior hiding
 module UnitB.PO 
     ( proof_obligation, theory_po
@@ -29,7 +26,6 @@ import UnitB.Expr
 import Z3.Z3
 
     -- Libraries
-import Control.Applicative
 import Control.Exception
 import Control.Lens hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
@@ -43,7 +39,6 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe )
 import qualified Data.Map as M
-import           Data.Monoid
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)

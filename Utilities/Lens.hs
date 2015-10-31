@@ -1,7 +1,5 @@
-{-# LANGUAGE RankNTypes #-}
 module Utilities.Lens where
 
-import Control.Applicative
 import Control.Lens
 
 import Data.Map as M

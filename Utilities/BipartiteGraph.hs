@@ -1,6 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
-{-# LANGUAGE RankNTypes, TemplateHaskell #-}
-{-# LANGUAGE TupleSections, FlexibleContexts #-}
 module Utilities.BipartiteGraph 
     ( BiGraph,GraphBuilder,GraphReader
     , source, target

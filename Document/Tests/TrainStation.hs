@@ -1,5 +1,4 @@
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE OverloadedStrings, QuasiQuotes  #-}
 module Document.Tests.TrainStation where
 
     -- Modules
@@ -16,9 +15,7 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
 
-
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.Monad.State
 

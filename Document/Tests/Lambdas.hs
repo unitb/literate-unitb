@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Document.Tests.Lambdas where
 
     -- Modules

@@ -12,7 +12,6 @@ import UnitB.PO as PO
 import Z3.Z3
 
     -- Libraries
-import Control.Applicative ((<$>))
 import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception

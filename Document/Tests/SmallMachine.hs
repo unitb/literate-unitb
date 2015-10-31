@@ -1,5 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
 module Document.Tests.SmallMachine where
 
     -- Modules

@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns,DeriveDataTypeable #-}
+{-# LANGUAGE BangPatterns #-}
 module Utilities.Trace where
 
 import Control.Arrow

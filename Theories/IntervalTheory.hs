@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards #-}
 module Theories.IntervalTheory where
 
     -- Modules

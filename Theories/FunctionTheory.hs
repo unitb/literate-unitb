@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE BangPatterns, RecordWildCards #-}
 module Theories.FunctionTheory where
 
     -- Modules

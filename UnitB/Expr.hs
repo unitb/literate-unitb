@@ -1,4 +1,3 @@
-
 module UnitB.Expr 
     ( module Logic.Expr
     , module Logic.Expr.Printable 

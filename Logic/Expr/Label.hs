@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 module Logic.Expr.Label where
 
     -- Module

@@ -1,11 +1,8 @@
 \subsection{Visitor}
 
 \begin{code}
-{-# LANGUAGE BangPatterns, RankNTypes   #-}
-{-# LANGUAGE FlexibleContexts           #-} 
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE ExistentialQuantification  #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE TypeOperators              #-}
 module Document.Visitor 
@@ -49,7 +46,6 @@ import Logic.Expr
 import UnitB.AST
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow hiding (left,right)
 import Control.Lens
 
@@ -67,7 +63,6 @@ import           Data.Char
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe
-import           Data.Monoid
 import           Data.Set hiding (map)
 import           Data.String.Utils
 

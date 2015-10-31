@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, RecursiveDo, LambdaCase, TupleSections, FlexibleContexts #-}
+{-# LANGUAGE TypeOperators, RecursiveDo, LambdaCase #-}
 module Document.Phase.Declarations where
 
     --
@@ -23,7 +23,6 @@ import UnitB.AST as AST
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
-import           Control.Applicative 
 
 import           Control.Monad
 import           Control.Monad.Reader.Class 

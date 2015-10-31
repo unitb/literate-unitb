@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 module Logic.OldOperator where
 
 import Logic.Operator

@@ -1,14 +1,3 @@
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE DeriveTraversable  #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveFoldable     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
 module UnitB.Event
     ( EventId (..)
     , SkipEventId (..)
@@ -70,14 +59,12 @@ import UnitB.Expr
 import UnitB.Property
 
     -- Libraries
-import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (indices)
 
 import Data.Default
 import Data.DeriveTH
 import Data.Either.Combinators
-import Data.Foldable (Foldable)
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M

@@ -1,14 +1,7 @@
 
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE RankNTypes,TupleSections  #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TypeSynonymInstances      #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE DeriveDataTypeable        #-}
+{-# LANGUAGE ScopedTypeVariables, KindSignatures
+       #-}
 module Document.VarScope where
 
     -- Modules
@@ -52,7 +45,6 @@ class (Typeable a,Scope a) => IsVarScope a where
 
 data VarScope = forall a. IsVarScope a => VarScope a
     deriving (Typeable)
-
 
 existential ''VarScope
 

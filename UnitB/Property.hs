@@ -1,11 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable   #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE DeriveFunctor        #-}
-{-# LANGUAGE DeriveFoldable       #-}
-{-# LANGUAGE DeriveTraversable    #-}
 module UnitB.Property 
     ( Transient
     , RawTransient
@@ -57,7 +49,6 @@ import Control.Lens hiding (Const)
 
 import Data.Default
 import Data.DeriveTH
-import Data.Foldable
 import Data.Map  as M
 import Data.List as L
 import Data.String

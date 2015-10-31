@@ -1,10 +1,5 @@
 {-# LANGUAGE ExistentialQuantification  #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 module Logic.Proof.ProofTree where
 
     -- Modules
@@ -13,7 +8,6 @@ import Logic.Operator
 import Logic.Proof.Sequent
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
 import Control.Monad

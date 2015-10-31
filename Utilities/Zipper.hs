@@ -1,18 +1,10 @@
 {-# LANGUAGE TypeFamilies
     , GADTs
     , EmptyCase
-    , DeriveGeneric
     , TypeOperators
     , EmptyDataDecls
-    , FlexibleContexts
-    , DefaultSignatures 
-    , FlexibleInstances
-    , DeriveDataTypeable
     , ScopedTypeVariables
     , UndecidableInstances
-    , TypeSynonymInstances
-    , MultiParamTypeClasses
-    , FunctionalDependencies
     , ExistentialQuantification
     #-}
 module Utilities.Zipper where

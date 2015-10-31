@@ -1,10 +1,7 @@
 {-# LANGUAGE KindSignatures
-    ,RankNTypes
     ,ConstraintKinds
-    ,FlexibleContexts
-    ,FunctionalDependencies
     ,ExistentialQuantification
-    ,MultiParamTypeClasses #-}
+    #-}
 module Utilities.Existential where
 
 import Control.Applicative as A

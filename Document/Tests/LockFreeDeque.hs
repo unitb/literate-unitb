@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 module Document.Tests.LockFreeDeque 
     -- ( test_case, test, path4, result4 )
 where
@@ -12,8 +11,6 @@ import Logic.Proof
 import UnitB.AST
 
     -- Libraries
-import Control.Applicative
-
 import Control.Lens hiding (indices)
 
 import Control.Monad.Trans.Either

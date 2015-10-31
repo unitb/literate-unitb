@@ -1,10 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Logic.Operator 
     ( Notation
     , BinOperator (..)

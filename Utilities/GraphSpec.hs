@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE FlexibleInstances #-}
 module Utilities.GraphSpec where
 
     -- Module

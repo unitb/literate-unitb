@@ -1,6 +1,3 @@
-{-# LANGUAGE TemplateHaskell 		#-}
-{-# LANGUAGE OverlappingInstances 	#-}
-{-# LANGUAGE FlexibleInstances 		#-}
 module Utilities.EditDistance where
 
 import Control.Monad

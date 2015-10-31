@@ -1,8 +1,3 @@
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleContexts       #-}
 module Logic.Proof.POGenerator 
     ( POGen, POGenT -- Logic.Proof.POGenerator.context
     , emit_goal
@@ -24,7 +19,6 @@ import Logic.Proof.Sequent as S
 
     -- Libraries
 import Control.Arrow
-import Control.Applicative
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.RWS

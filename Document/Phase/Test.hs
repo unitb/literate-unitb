@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings
-    , RankNTypes
-    , TemplateHaskell
     , QuasiQuotes
-    , GeneralizedNewtypeDeriving #-}
+    , ConstraintKinds
+    #-}
 module Document.Phase.Test where
 
     --
@@ -37,7 +36,6 @@ import UnitB.AST as AST
     --
     -- Libraries
     --
-import Control.Applicative
 import Control.Arrow
 import Control.Lens hiding ((<.>),(.=))
 import Control.Monad

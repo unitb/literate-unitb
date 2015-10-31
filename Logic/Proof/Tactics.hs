@@ -1,9 +1,6 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE OverloadedStrings      #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE TemplateHaskell        #-}
 module Logic.Proof.Tactics 
     ( Tactic, TacticT, get_line_info, get_context
     , get_goal, by_parts
@@ -33,7 +30,6 @@ import Logic.Proof.ProofTree
 import Logic.Proof.Sequent
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.Lens hiding (Context)
 

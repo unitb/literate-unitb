@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Document.MachineSpec where
     
     -- Modules

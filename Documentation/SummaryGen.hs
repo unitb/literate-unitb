@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ViewPatterns 
+    , OverloadedStrings
+    #-}
 module Documentation.SummaryGen 
     ( produce_summaries
     , event_summary' 

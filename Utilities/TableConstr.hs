@@ -1,8 +1,5 @@
-{-# LANGUAGE TupleSections   #-}
-{-# LANGUAGE TemplateHaskell #-}
 module Utilities.TableConstr where
 
-import Control.Applicative
 import Control.Arrow
 import Control.Monad.Identity
 

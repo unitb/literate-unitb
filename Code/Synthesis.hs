@@ -1,7 +1,4 @@
-{-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RankNTypes        #-}
 module Code.Synthesis where
 
     -- Modules
@@ -14,7 +11,6 @@ import qualified UnitB.AST as UB
 import           UnitB.PO 
 
     -- Libraries
-import Control.Applicative hiding (Const)
 import Control.Arrow (first, (***))
 import Control.Lens hiding (Const,indices)
 

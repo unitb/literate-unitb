@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, FlexibleContexts, TemplateHaskell #-}
 module Logic.Lambda 
     ( delambdify
     , CanonicalLambda ( .. )
@@ -13,7 +12,6 @@ import Logic.Proof
 import Theories.SetTheory
 
     -- Libraries
-import Control.Applicative ((<$>))
 import Control.Lens hiding (Context,Context',rewriteM,Const)
 import Control.Monad.State
 

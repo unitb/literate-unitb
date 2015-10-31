@@ -1,11 +1,10 @@
 {-# LANGUAGE RecursiveDo, LambdaCase #-}
-{-# LANGUAGE BangPatterns, FlexibleContexts     #-}
-{-# LANGUAGE TupleSections, ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances, Arrows          #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE Arrows            #-}
 {-# LANGUAGE TypeOperators, TypeFamilies        #-}
-{-# LANGUAGE MultiParamTypeClasses              #-}
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards, RankNTypes        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 module Document.Machine where
 
     --
@@ -18,7 +17,6 @@ import Document.Refinement as Ref
 import Document.Scope
 import Document.Visitor
 
-
 import Logic.Expr
 import Logic.Proof.Tactics hiding ( with_line_info )
 
@@ -30,7 +28,6 @@ import UnitB.PO
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import           Control.Applicative 
 
 import           Control.Monad 
 import           Control.Monad.Trans.RWS as RWS ( RWS )
@@ -40,7 +37,6 @@ import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
-import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
@@ -48,8 +44,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Syntactic
-        
-
 
 make_machine :: MachineId -> MachineP4
              -> MM' c Machine

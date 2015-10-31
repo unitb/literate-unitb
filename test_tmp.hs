@@ -15,9 +15,10 @@ import Document.Tests.SmallMachine  as SM
 import Document.Tests.TrainStation  as TS
 import Document.Tests.LockFreeDeque as Deq
 import Document.Phase.Test as Ph
+import UnitB.Test as UB
 --import Logic.Expr.QuasiQuote
 -- import UnitB.Test as UB
-import Latex.Parser
+--import Latex.Parser
 import qualified Latex.Test_Latex_Parser as Tex
 -- import qualified Z3.Test as ZT
 -- import qualified Document.Test as DOC
@@ -27,7 +28,7 @@ import qualified Latex.Test_Latex_Parser as Tex
 -- import qualified Documentation.Test as Sum
 
 import Tests.UnitTest
-import Text.Printf
+--import Test.QuickCheck
 
 import System.Process
 
@@ -80,27 +81,47 @@ main = do
     --    x = c [expr| \qforall{x}{}{x \le y} |]
     --putStrLn $ prettyPrint x
     --print $ used_var $ asExpr x
-    let longestPrefix xs ys = length $ takeWhile id $ zipWith (==) xs ys
-    return $ run_test_cases Ph.test_case
+    --let longestPrefix xs ys = length $ takeWhile id $ zipWith (==) xs ys
+    run_test_cases $ test_cases "all" 
+        [ Deq.test_case
+        , Puzz.test_case
+        , Ph.test_case
+        , TS.test_case
+        , SM.test_case
+        , Lam.test_case
+        , Cubes.test_case
+        , Puzz.test_case
+        , Tex.test_case
+        , UB.test_case 
+        ]
     return $ run_test_cases Deq.test_case
+    return $ run_test_cases Puzz.test_case
+    return $ run_test_cases Ph.test_case
     return $ run_test_cases TS.test_case
+    --run_test_cases 
+    --print =<< TS.case0
+    --print TS.machine0
     return $ run_test_cases SM.test_case
     return $ run_test_cases Lam.test_case
     return $ run_test_cases Cubes.test_case
     return $ run_test_cases Puzz.test_case
     return $ run_test_cases Tex.test_case
-    print =<< Tex.properties
+    return $ run_test_cases UB.test_case
+    --print =<< Tex.properties
     return $ print =<< Lines.run_tests
-    let ln = longestPrefix (show $ tokens Tex.counter0) (show Tex.counter0')
-    printf "== Counter Example 0 ==\n"
-    printf "expected: %s\n" $ drop (ln - 90) $ show $ tokens Tex.counter0
-    printf "actual:   %s\n" $ drop (ln - 90) $ show Tex.counter0'
-    printf "flatten:  %s\n" $ show $ flatten Tex.counter0
-    printf "tree:     %s\n" $ show Tex.counter0
-    print $ tokens Tex.counter0 == Tex.counter0'
-    print ln
-    print $ length $ show Tex.counter0'
-    print $ length $ show Tex.counter0
+    putStrLn =<< readFile "actual-1.txt"
+
+    --print =<< parse_latex_document Puzz.path21
+    --let ln = longestPrefix (show $ tokens Tex.counter0) (show Tex.counter0')
+    --printf "== Counter Example 0 ==\n"
+    --printf "expected: %s\n" $ drop (ln - 90) $ show $ tokens Tex.counter0
+    --printf "actual:   %s\n" $ drop (ln - 90) $ show Tex.counter0'
+    --printf "flatten:  %s\n" $ show $ flatten Tex.counter0
+    --printf "tree:     %s\n" $ show Tex.counter0
+    --print $ tokens Tex.counter0 == Tex.counter0'
+    --print ln
+    --print $ length $ show Tex.counter0'
+    --print $ length $ show Tex.counter0
     ----print Tex.prop_counter_example0
     --printf "== Counter Example 1 ==\n"
     --printf "expected: %s\n" $ drop (ln - 50) $ show $ Tex.counter1

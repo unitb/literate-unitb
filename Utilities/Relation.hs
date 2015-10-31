@@ -1,6 +1,4 @@
-{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE TypeOperators      #-}
 module Utilities.Relation where
 

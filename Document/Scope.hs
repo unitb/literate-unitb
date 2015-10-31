@@ -1,16 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE RankNTypes,TupleSections  #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE DeriveTraversable         #-}
-{-# LANGUAGE DeriveFoldable            #-}
-{-# LANGUAGE DeriveFunctor             #-}
-{-# LANGUAGE DefaultSignatures         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE TypeFamilies              #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE UndecidableInstances      #-}
 module Document.Scope 
     ( Scope(..)
@@ -39,7 +29,6 @@ import Document.Pipeline
 import UnitB.Event
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
 
@@ -50,7 +39,6 @@ import Control.Parallel.Strategies
 
 import Data.DeriveTH
 import Data.Either
-import Data.Foldable (Foldable)
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (length,tail,head)
 import Data.Map as M

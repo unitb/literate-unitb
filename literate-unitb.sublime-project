@@ -10,7 +10,7 @@
 				"$project_path",
 				"ghc_errors.txt"
 			],
-			"file_regex": "^([^\\s]..*?):([0-9]*):?([0-9]*)",
+			"file_regex": "^([^\\s=]..*?/..*?):([0-9]*):?([0-9]*)",
 			"name": "Haskell / Literate Unit-B",
 			"selector": "source.haskell",
 			"working_dir": "${project_path}"

@@ -1,5 +1,4 @@
 #!/usr/bin/env runhaskell
-{-# LANGUAGE FlexibleContexts #-}
 module Main 
     (main)
 where
@@ -35,7 +34,6 @@ import qualified Data.Serialize as Ser
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
-import System.Locale
 import System.TimeIt
 
 import Utilities.Syntactic

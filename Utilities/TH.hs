@@ -1,5 +1,4 @@
-{-# LANGUAGE TemplateHaskell,QuasiQuotes,TupleSections #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Utilities.TH where
 
 import Control.Applicative

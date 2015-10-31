@@ -1,6 +1,4 @@
-{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 module Utilities.Graph 
     ( Composition(..), cycles, cycles_with
     , Min(..), closure

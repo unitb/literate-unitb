@@ -1,10 +1,6 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
 module Logic.Expr.Genericity 
     ( TypeSystem2(..)
     , typ_fun1, typ_fun2, typ_fun3

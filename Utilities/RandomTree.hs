@@ -1,14 +1,8 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Utilities.RandomTree where
-
-import Control.Applicative
 
 import Control.Monad
 import Control.Monad.Fix

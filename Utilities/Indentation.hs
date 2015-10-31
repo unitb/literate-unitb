@@ -1,19 +1,10 @@
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeSynonymInstances   #-}
-{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TupleSections          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Utilities.Indentation 
     (Indentation(..),reindent,parse',display)
 where
 
-import Control.Applicative hiding (many,(<|>)) -- ((<$>),(<*>),pure)
 import Control.Arrow
-import Control.Lens hiding ((<|))
+import Control.Lens hiding ((<|),List)
 import Control.Monad.Reader
 
 import Data.Char

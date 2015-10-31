@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 module Logic.TestGenericity where
 
     -- Modules

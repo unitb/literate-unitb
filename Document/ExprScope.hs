@@ -1,9 +1,5 @@
 {-# LANGUAGE ExistentialQuantification,TypeOperators      #-}
-{-# LANGUAGE RankNTypes,DeriveDataTypeable  #-}
-{-# LANGUAGE TemplateHaskell,MultiParamTypeClasses   #-}
-{-# LANGUAGE FunctionalDependencies,FlexibleContexts #-}
-{-# LANGUAGE TypeSynonymInstances,FlexibleInstances  #-}
-{-# LANGUAGE TypeFamilies, DefaultSignatures  #-}
+{-# LANGUAGE TypeFamilies           #-}
 module Document.ExprScope where
 
     -- Modules
@@ -14,7 +10,6 @@ import UnitB.AST
 import UnitB.Expr hiding (Const)
 
     -- Libraries
-import Control.Applicative
 import Control.Lens
 import Control.Monad.Reader
 

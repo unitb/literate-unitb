@@ -1,13 +1,7 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE TemplateHaskell       #-}
 module Utilities.Error where
 
 import Utilities.Syntactic
-
-import Control.Applicative
 
 import Control.Monad.Identity
 import Control.Monad.Reader.Class

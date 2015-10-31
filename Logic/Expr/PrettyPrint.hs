@@ -8,7 +8,7 @@ import Logic.Expr.Classes
     -- Libraries
 import Control.Monad.Reader
 
-import Data.List
+import Data.List hiding (uncons)
 
 pretty_print' :: Tree t => t -> String
 -- pretty_print' t = unlines $ pretty_print $ as_tree t 

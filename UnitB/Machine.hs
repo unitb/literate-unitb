@@ -1,18 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable
-    , RankNTypes
-    , TupleSections
-    , DeriveFunctor
-    , DeriveGeneric
-    , DeriveFoldable
-    , TemplateHaskell
-    , FlexibleContexts
-    , FlexibleInstances
-    , DeriveTraversable
-    , OverloadedStrings
-    , TypeSynonymInstances
-    , MultiParamTypeClasses
+{-# LANGUAGE OverloadedStrings
     , ExistentialQuantification
-    , GeneralizedNewtypeDeriving
+    , ScopedTypeVariables
+    , StandaloneDeriving
     #-} 
 module UnitB.Machine where
 
@@ -31,7 +20,6 @@ import UnitB.Expr hiding (merge,target)
 import UnitB.Property
 
     -- Libraries
-import Control.Applicative
 import Control.DeepSeq
 import Control.Lens
 
@@ -42,7 +30,7 @@ import Control.Monad.Writer hiding ( guard )
 
 import           Data.Default
 import           Data.DeriveTH
-import           Data.Foldable (Foldable,foldMap)
+import           Data.Foldable as F (all)
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE
 import           Data.Map as M

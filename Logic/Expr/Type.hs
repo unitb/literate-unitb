@@ -1,11 +1,5 @@
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeFamilies       #-}
-{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Logic.Expr.Type where
 
     -- Modules
@@ -13,7 +7,7 @@ import Logic.Expr.Classes
 
     -- Libraries
 import Control.DeepSeq
-import Control.Lens
+import Control.Lens hiding (List)
 import Control.Monad.Reader
 
 import           Data.Data

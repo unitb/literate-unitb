@@ -1,6 +1,5 @@
-{-# LANGUAGE BangPatterns, FlexibleContexts         #-}
-{-# LANGUAGE RecordWildCards, FlexibleInstances     #-}
-{-# LANGUAGE OverlappingInstances, TemplateHaskell  #-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE RecordWildCards      #-}
 module Document.Expression 
     ( parse_expr , oper, run_test
     , get_variables, get_variables', parse_oper )
@@ -22,7 +21,6 @@ import Utilities.Syntactic
 
     -- Libraries
 import qualified Control.Applicative as A 
-import Control.Applicative ((<$>))
 import Control.Lens hiding (Context,from)
 
 import           Control.Monad
@@ -37,7 +35,6 @@ import           Data.Either
 import           Data.List as L
 import           Data.Map as M hiding ( map )
 import qualified Data.Map as M
-import           Data.Monoid
 import qualified Data.Set as S
 
 import Utilities.Format

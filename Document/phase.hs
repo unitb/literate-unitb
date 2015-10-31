@@ -1,14 +1,8 @@
-{-# LANGUAGE MultiParamTypeClasses          #-}
-{-# LANGUAGE TemplateHaskell                #-}
-{-# LANGUAGE DeriveDataTypeable             #-}
 {-# LANGUAGE Arrows                         #-}
-{-# LANGUAGE FunctionalDependencies         #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE RankNTypes, GADTs              #-}
+{-# LANGUAGE GADTs              #-}
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE TypeOperators,TypeFamilies     #-}
-{-# LANGUAGE TupleSections,RecordWildCards  #-}
+{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE StandaloneDeriving             #-}
 module Document.Phase where
 
@@ -29,7 +23,6 @@ import UnitB.Expr
 
     -- Libraries
 -- import Control.Applicative
-import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
 import Control.DeepSeq
 import Control.Lens as L
@@ -50,7 +43,6 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map   as M
 import Data.Maybe as MM
-import Data.Monoid hiding ((<>),First(..))
 import Data.Proxy
 import Data.Semigroup
 import Data.Set as S

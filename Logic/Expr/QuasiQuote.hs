@@ -1,10 +1,6 @@
-{-# LANGUAGE TypeSynonymInstances
-    ,FlexibleInstances
-    ,TypeOperators
-    ,FlexibleContexts
-    ,QuasiQuotes
-    ,DefaultSignatures
-    ,TemplateHaskell #-}
+{-# LANGUAGE TypeOperators
+    ,QuasiQuotes 
+    #-}
 
 module Logic.Expr.QuasiQuote where
 

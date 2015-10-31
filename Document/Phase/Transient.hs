@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, TupleSections #-}
+{-# LANGUAGE TypeOperators #-}
 module Document.Phase.Transient where
 
     --

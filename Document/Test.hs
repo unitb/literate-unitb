@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Document.Test where
 
-import Control.Monad
+--import Control.Monad
 
 import Data.List as L
 import Document.Document
@@ -35,7 +35,6 @@ import Tests.UnitTest
 import UnitB.PO
 
     -- Libraries
-import Control.Applicative
 
 import Utilities.Syntactic
 

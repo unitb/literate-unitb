@@ -1,12 +1,4 @@
-{-# LANGUAGE DeriveGeneric          #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE TypeSynonymInstances   #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE DeriveDataTypeable     #-}
 module Logic.Proof.Sequent where
 
     -- Modules
@@ -24,7 +16,6 @@ import Data.List as L
 import Data.List.Ordered as OL hiding (merge)
 import Data.Map    as M hiding ( map )
 import Data.Maybe  as MM hiding (fromJust)
-import Data.Monoid as MM
 import qualified Data.Set  as S
 import Data.Typeable
 

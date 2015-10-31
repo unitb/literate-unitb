@@ -1,10 +1,8 @@
-{-# LANGUAGE FlexibleInstances, IncoherentInstances #-}
+{-# LANGUAGE IncoherentInstances #-}
 module Utilities.Format 
     ( format, Formatter, fargs, substAll
     ) 
 where
-
-import Control.Applicative
 
 format :: Formatter a => String -> a
 format xs = fargs xs 0

@@ -1,19 +1,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators   #-}
 {-# LANGUAGE KindSignatures  #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE OverlappingInstances  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies  #-}
-{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE RankNTypes  #-}
 {-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE GADTs  #-}
 module Logic.Theory 
     ( Theory(..)
@@ -55,7 +45,6 @@ import Logic.Proof hiding (preserve)
 import qualified Logic.Proof as P
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
 import Control.Monad.RWS

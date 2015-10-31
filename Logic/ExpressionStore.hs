@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell  #-}
 module Logic.ExpressionStore 
     ( ExprStore, insert, empty_store, get_string, fromList )
 where

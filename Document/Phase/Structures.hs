@@ -1,6 +1,5 @@
 {-# LANGUAGE Arrows
         , TypeOperators
-        , TupleSections 
         , RecordWildCards
         , OverloadedStrings
         #-}
@@ -29,7 +28,6 @@ import Theories.SetTheory
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import           Control.Applicative 
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 

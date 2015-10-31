@@ -1,7 +1,6 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts        #-}
-{-# LANGUAGE DeriveDataTypeable, IncoherentInstances    #-}
+{-# LANGUAGE IncoherentInstances    #-}
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables     #-}
-{-# LANGUAGE BangPatterns, TemplateHaskell              #-}
+{-# LANGUAGE BangPatterns           #-}
 module Document.Refinement where
 
     -- Module
@@ -22,7 +21,6 @@ import Theories.SetTheory
 
     -- Libraries
 import Control.Arrow (second)
-import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (Context)
 

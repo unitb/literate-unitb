@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE Arrows, RecordWildCards #-}
 module Document.Context where
 

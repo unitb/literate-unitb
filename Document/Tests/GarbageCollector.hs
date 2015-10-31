@@ -5,7 +5,6 @@ import Document.Tests.Suite
 import Logic.Proof
 import Theories.RelationTheory
 
-import Control.Applicative
 import Control.Lens
 
 import Data.List as L

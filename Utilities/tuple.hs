@@ -1,15 +1,10 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE DeriveDataTypeable     #-}
-{-# LANGUAGE DefaultSignatures      #-}
 module Utilities.Tuple where
 
     -- Libraries
-import Data.Monoid
 import Data.Typeable
 
 infixr 5 :+:

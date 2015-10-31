@@ -1,10 +1,9 @@
-{-# LANGUAGE TypeOperators,FlexibleContexts,KindSignatures,DefaultSignatures,TypeSynonymInstances,FlexibleInstances #-}
+{-# LANGUAGE TypeOperators,KindSignatures #-}
 module Utilities.Instances 
     ( Generic, defaultLift, genericMEmpty, genericMAppend, genericMConcat, genericDefault )
 where
 
 import Data.Default
-import Data.Monoid
 
 import GHC.Generics
 

@@ -1,11 +1,12 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Theories.RelationTheory where
 
+    -- Modules
 import Logic.Expr
 import Logic.Theory
 
 import Theories.SetTheory
 
+    -- Libraries
 import Utilities.Tuple
 
 relation_theory :: Theory

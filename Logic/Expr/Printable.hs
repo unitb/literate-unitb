@@ -1,15 +1,4 @@
-{-# LANGUAGE DeriveFoldable
-    , TypeFamilies
-    , DeriveFunctor
-    , DeriveGeneric
-    , TemplateHaskell
-    , FlexibleContexts
-    , DeriveTraversable
-    , FlexibleInstances 
-    , DeriveDataTypeable
-    , TypeSynonymInstances
-    , MultiParamTypeClasses
-    #-}
+{-# LANGUAGE TypeFamilies #-}
 module Logic.Expr.Printable where
 
 import Logic.Expr.Expr
@@ -20,7 +9,6 @@ import Control.DeepSeq
 import Control.Lens
 
 import Data.DeriveTH
-import Data.Foldable
 import Data.Map
 import Data.Typeable
 

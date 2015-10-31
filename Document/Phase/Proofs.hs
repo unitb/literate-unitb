@@ -1,9 +1,6 @@
 {-# LANGUAGE TypeOperators
     , Arrows
-    , TupleSections
-    , FlexibleContexts
     , OverloadedStrings
-    , FlexibleInstances
     , RecordWildCards #-}
 module Document.Phase.Proofs where
 
@@ -30,7 +27,6 @@ import UnitB.Expr
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import           Control.Applicative 
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
@@ -47,7 +43,6 @@ import           Data.Either.Combinators
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
-import           Data.Monoid
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
