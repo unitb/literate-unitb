@@ -1,11 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Latex.Monad where
 
     -- Modules
 import Latex.Parser
 
     -- Libraries
-import Control.Applicative
 import Control.Lens
 import Control.Monad.RWS
 

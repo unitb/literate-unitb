@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Latex.Test_Latex_Parser where
 
     -- Modules
@@ -15,8 +14,8 @@ import Control.Monad.State
 import Data.Char
 import Data.Either.Combinators
 import qualified Data.List as L
-import qualified Data.List.Ordered as L
 import qualified Data.Map as M 
+import qualified Data.Maybe as MM
 
 import Tests.UnitTest
 import Test.QuickCheck as QC hiding (sized)
@@ -85,8 +84,8 @@ tests :: FilePath -> IO String
 tests path = do
         ct <- readFile path
         let x = (do
-            tree <- latex_structure path ct
-            return (flatten' tree))
+                tree <- latex_structure path ct
+                return (flatten' tree))
         return (case x of
             Right xs -> xs
             Left msgs -> error $ L.unlines $ map report msgs)
@@ -153,8 +152,37 @@ instance Arbitrary Tokens where
         ts <- evalStateT (sequence xs) (true,li)
         return $ TokenStream ts
 
+instance Arbitrary MutatedTokens where
+    arbitrary = do
+        (important,ts) <- suchThat (do
+            ts <- tokens <$> arbitrary
+            let p :: Traversal' a b -> (z,(a,w)) -> Maybe (z,(a,w))
+                p pr x = x <$ (x^?_2._1.pr)
+                begin :: Traversal' LatexToken ()
+                begin = _Command . _1 . only "\\begin" 
+                end :: Traversal' LatexToken ()
+                end = _Command . _1 . only "\\end"
+                important = MM.mapMaybe (\x -> p _Open x <|> p _Close x <|> p end x <|> p begin x) $ zip [0..] ts
+            return (important,ts)) (not . null . fst)
+        i <- QC.elements $ map fst important
+        return $ MutatedTokens $ take i ts ++ drop (i+1) ts
+
+newtype MutatedTokens = MutatedTokens [(LatexToken,LineInfo)]
+    deriving (Show)
+
 prop_flatten_parse_inv :: LatexDoc -> Property
 prop_flatten_parse_inv t = Right t === latex_structure "foo.txt" (flatten t)
+
+prop_flatten_parse_inv_regression :: Property
+prop_flatten_parse_inv_regression = regression prop_flatten_parse_inv $
+    [ Doc (LI "foo.txt" 1 1) [Text (TextBlock "\247" (LI "foo.txt" 1 1))] (LI "foo.txt" 1 2) 
+    , Doc (LI "foo.txt" 1 1) [Text (TextBlock "=s" (LI "foo.txt" 1 1))] (LI "foo.txt" 1 3) 
+    , Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\"" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [] (LI "foo.txt" 1 10)) (LI "foo.txt" 1 15)] (LI "foo.txt" 1 17)
+    , Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\202" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [Text (TextBlock "H" (LI "foo.txt" 1 10))] (LI "foo.txt" 1 11)) (LI "foo.txt" 1 16)] (LI "foo.txt" 1 18)
+    ]
+
+prop_parse_error :: MutatedTokens -> Bool
+prop_parse_error (MutatedTokens ts) = isLeft $ latex_structure "foo.txt" (flatten ts)
 
 prop_makeLatex_latexMonad_inverse :: LatexDoc -> Property
 prop_makeLatex_latexMonad_inverse t = t === makeLatex "foo.txt" (texMonad t)

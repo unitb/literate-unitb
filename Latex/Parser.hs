@@ -1,18 +1,11 @@
-{-# LANGUAGE TypeFamilies
-    , DeriveGeneric
-    , TemplateHaskell
-    , FlexibleInstances
-    , DeriveDataTypeable 
-    , TypeSynonymInstances
-    , MultiParamTypeClasses
-    #-}
+{-# LANGUAGE TypeFamilies #-}
 module Latex.Parser where
 
     -- Modules
 import Latex.Scanner 
 
     -- Libraries
-import Control.Applicative
+import Control.Applicative hiding ((<|>))
 import Control.Arrow
 import Control.Lens  hiding (argument)
 import Control.Monad
@@ -23,6 +16,7 @@ import Control.Monad.Trans.State
 
 import Data.Char
 import Data.Either
+import Data.Either.Combinators
 import qualified Data.Foldable as F
 import Data.Function
 import Data.Graph
@@ -32,7 +26,7 @@ import Data.Map as M hiding ( foldl, map, null, size )
 import Data.Semigroup
 import Data.Typeable
 
-import GHC.Generics
+import GHC.Generics (Generic)
 
 import Safe
 
@@ -40,7 +34,11 @@ import System.Directory
 import System.IO.Unsafe
 import System.FilePath
 
---import Text.Printf
+import Text.Printf
+import Text.Parsec ((<?>),(<|>))
+import qualified Text.Parsec as P
+import Text.Parsec.Error
+import qualified Text.Parsec.Pos as P
 
 import Utilities.Format
 import Utilities.Graph hiding ( map, empty, size )
@@ -97,12 +95,25 @@ instance Convertible LatexNode where
     flatten (Bracket b _ ct _) = [openBracket b] ++ flatten' ct ++ [closeBracket b]
     flatten (Text xs) = lexeme xs
 
+instance Convertible [LatexToken] where
+    flatten = concatMap lexeme
+
+instance Convertible [(LatexToken,LineInfo)] where
+    flatten = concatMap (lexeme.fst)
+
 instance Convertible StringLi where
     flatten (StringLi xs _) = map fst xs
 
 instance IsBracket BracketType Char where
     bracketPair Curly = ('{','}')
     bracketPair Square = ('[',']')
+
+lineInfoLens :: Lens' LatexToken LineInfo
+lineInfoLens f (TextBlock x li) = TextBlock x <$> f li
+lineInfoLens f (Command x li) = Command x <$> f li
+lineInfoLens f (Blank x li) = Blank x <$> f li
+lineInfoLens f (Open x li)  = Open x  <$> f li
+lineInfoLens f (Close x li) = Close x <$> f li
 
 whole_line :: LineInfo -> [LineInfo]
 whole_line (LI fn i j) = map (uncurry3 LI) $ zip3 (repeat fn) (repeat i) [j..]
@@ -191,17 +202,34 @@ instance Syntactic LatexToken where
     line_info (Blank _ li)      = li
     line_info (Open _ li)       = li
     line_info (Close _ li)      = li
+    traverseLineInfo = lineInfoLens
 
 instance Syntactic LatexNode where
     line_info (Env li _ _ _ _)     = li
     line_info (Bracket _ li _ _) = li
     line_info (Text t)           = line_info t
+    traverseLineInfo f (Bracket b li0 ct li1) = 
+            Bracket b <$> f li0 
+                      <*> traverseLineInfo f ct 
+                      <*> f li1
+    traverseLineInfo f (Env li0 n li1 ct li2) = 
+            Env <$> f li0
+                <*> pure n
+                <*> f li1
+                <*> traverseLineInfo f ct
+                <*> f li2
+    traverseLineInfo f (Text t) = Text <$> lineInfoLens f t
 
 instance Syntactic (TokenStream a) where
     line_info (StringLi xs li) = headDef li (map snd xs)
+    traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
 
 instance Syntactic LatexDoc where
     line_info (Doc li _ _) = li
+    traverseLineInfo f (Doc li xs li') = 
+            Doc <$> f li 
+                <*> traverse (traverseLineInfo f) xs 
+                <*> f li'
 
 tokens :: LatexDoc -> [(LatexToken,LineInfo)]
 tokens (Doc _ xs _) = concatMap f xs
@@ -311,49 +339,84 @@ tex_tokens = do
                             return ((TextBlock (d:ys) li,li):zs)
                         _ ->return ((TextBlock [d] li,li):xs)
 
-latex_content :: Scanner LatexToken LatexDoc
-latex_content = do
-    b  <- is_eof
-    li <- get_line_info
-    if b
-    then return $ Doc li [] li
-    else do
-        c:_ <- peek
-        --traceM $ format "latex_content: {0}" c
-        case c of
-            Command "\\begin" _ -> do
-                    begin_block
-            Open c0 _ -> do
-                    li0 <- get_line_info
-                    read_char
-                    ct  <- latex_content
-                    li1 <- get_line_info
-                    c   <- read_char
-                    case c of
-                        Close c1 _ -> do
-                            unless (c0 == c1) $ fail "mismatched brackets"
-                        _ -> fail "expected closing bracket"
-                    Doc _ rest li' <- latex_content 
-                    return $ Doc li (Bracket c0 li0 ct li1:rest) li'
-            Close _ _ ->         do
-                return $ Doc li [] li
-            Command "\\end" _ -> return $ Doc li [] li
-            t@(Blank _ _)     -> do
-                content_token t
-            t@(TextBlock _ _) -> do
-                content_token t
-            t@(Command _ _)   -> do
-                content_token t
+type Parser = P.Parsec [LatexToken] ()
 
-content_token :: LatexToken -> Scanner LatexToken LatexDoc
-content_token t = do
-        read_char
-        consTex (Text t) <$> latex_content
-        --case xs of
-        --    Doc _ (Text y:ys) li' -> 
-        --        return $ Doc li (Text (t:y) li:ys) li'
-        --    Doc _ xs li' -> 
-        --        return $ Doc li (Text t li:xs) li'
+posToLi :: P.SourcePos -> LineInfo
+posToLi pos = LI <$> P.sourceName <*> P.sourceLine <*> P.sourceColumn $ pos
+
+liToPos :: LineInfo -> P.SourcePos
+liToPos li = P.newPos (li^.filename) (li^.line) (li^.column)
+
+latex_content' :: Parser LatexDoc
+latex_content' = do
+        Doc <$> lineInfo
+            <*> P.many node
+            <*> lineInfo
+    where
+        node  = env <|> brackets <|> text <?> "node"
+        env   = do
+            li0 <- lineInfo
+            cmd "\\begin"       <?> "begin environment"
+            (n,li1) <- argument <?> "argument"
+            ct  <- latex_content'
+            cmd "\\end"         <?> "end environment"
+            (_,li2) <- argument' n <?> printf "\\end{%s}" n
+            return $ Env li0 n li1 ct li2
+        brackets = do
+            li0 <- lineInfo
+            b   <- open <?> "brackets"
+            ct  <- latex_content'
+            li1 <- lineInfo
+            close b
+            return $ Bracket b li0 ct li1
+        text  = fmap Text $ 
+                    (texToken' (_Command . notEnv) <?> "command")
+                <|> (texToken' _Blank <?> "space")
+                <|> (texToken' _TextBlock <?> "text")
+        notEnv f (x,li)
+            | x `notElem` ["\\begin","\\end"] = f (x,li)
+            | otherwise                       = pure (x,li)
+        open  = texToken (_Open._1)
+        close b = texToken (_Close._1.only b)
+        argument = argumentAux id
+        argument' n = argumentAux (only n)
+        argumentAux :: Prism' String a -> Parser (a,LineInfo)
+        argumentAux p = do
+            optional $ texToken _Blank
+            texToken (_Open._1.only Curly)
+            li  <- lineInfo
+            arg <- texToken $ _TextBlock._1.p
+            texToken (_Close._1.only Curly)
+            return (arg,li)
+        lineInfo = posToLi <$> P.getPosition
+        cmd x  = texToken (_Command._1.only x)
+        --fOnly x = prism _ _ _
+
+texToken :: (Traversal' LatexToken a) -> Parser a
+texToken p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) (^? p)
+--texToken p = P.token lexeme (liToPos.end.(id &&& line_info)) (^? p)
+
+texToken' :: (Traversal' LatexToken a) -> Parser LatexToken
+texToken' p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) (\x -> x <$ (x^?p))
+--texToken' p = P.token lexeme (liToPos.end.(id &&& line_info)) (\x -> x <$ (x^?p))
+
+latex_content :: FilePath -> [(LatexToken,LineInfo)] -> (Int,Int) -> Either [Error] LatexDoc
+latex_content fn toks (i,j) = mapLeft toErr $ P.parse parser fn $ map fst toks
+    where toErr e = [Error (errMsg e) (posToLi $ P.errorPos e)]
+          errMsg e = intercalate "; " $ concatMap f $ errorMessages e
+          f (SysUnExpect _) = []
+          f (UnExpect xs) = ["unexpected: " ++ xs]
+          f (Expect xs) = ["expected: " ++ xs]
+          f (Message xs) = [xs]
+          parser = do
+            P.setPosition (P.newPos fn i j)
+            x <- latex_content'
+            eof
+            return x
+          eof = P.try (do{ c <- P.try (texToken' id); P.unexpected (lexeme c) }
+                                <|> return ()
+                                )
+
 
 size :: LatexDoc -> Int
 size (Doc _ xs _) = sum $ map f xs
@@ -412,43 +475,6 @@ skip_blank = do
             (Blank _ _:_) -> do read_char ; return ()
             _  -> return ()
 
-argument :: Scanner LatexToken (LineInfo,LatexDoc)
-argument = do
-        skip_blank
-        xs <- peek
-        case xs of
-            Open Curly _:_ -> do  
-                read_char
-                li <- get_line_info
-                ct <- latex_content
-                close <- read_char
-                case close of
-                    Close Curly _ -> return (li,ct)
-                    _ -> fail "expecting closing bracket '}'"        
-            _ -> fail "expecting opening bracket '{'"            
-
-begin_block :: Scanner LatexToken LatexDoc
-begin_block = do
-    liBegin <- get_line_info
-    read_char
-    --li0 <- get_line_info
---    let li0 = LI fn0 i0 j0 
-    (li0,args0) <- argument
-    ct    <- latex_content
-    end   <- read_char
-    unless (end == Command "\\end" (line_info end)) $ 
-        fail ("expected \\end{" ++ concatMap source (contents' args0) ++ "}, read \'" ++ lexeme end ++ "\'")
-    (li1,args1) <- argument
-    (begin, li2, end, li3) <- 
-        case (args0, args1) of
-            ( Doc _ [Text (TextBlock begin li0)] _ ,
-              Doc _ [Text (TextBlock end li1)] _ ) -> do
-                return (begin, li0, end, li1)
-            _  -> fail "name of a begin / end block must be a simple string"    
-    unless (begin == end) $ 
-        fail (format "begin / end do not match: {0} {1} / {2} {3}" begin li2 end li3)
-    Doc _ rest li <- latex_content 
-    return $ Doc liBegin (Env liBegin begin li0 ct li1:rest) li
 
 type DocWithHoles = Either (String,LineInfo) (LatexToken,LineInfo)
 
@@ -570,12 +596,12 @@ scan_doc fname = runEitherT $ do
 parse_latex_document :: String -> IO (Either [Error] LatexDoc)
 parse_latex_document fname = runEitherT $ do
         ys <- EitherT $ scan_doc fname 
-        hoistEither $ read_tokens latex_content fname ys (1,1)
+        hoistEither $ latex_content fname ys (1,1)
 
 latex_structure :: FilePath -> String -> Either [Error] LatexDoc
 latex_structure fn xs = do
         ys <- scan_latex fn xs
-        read_tokens latex_content fn ys (1,1)
+        latex_content fn ys (1,1)
 
 scan_latex :: FilePath -> String -> Either [Error] [(LatexToken,LineInfo)]
 scan_latex fn xs = -- trace (printf "input: %s\nuncomment: %s\n" xs cs) $ 
@@ -599,65 +625,6 @@ remove_ref ('}':xs) = remove_ref xs
 remove_ref (x:xs)   = x:remove_ref xs
 remove_ref []       = []
 
-type T = State LineInfo
-
---makeTexDoc :: [T LatexNode] -> LatexDoc
---makeTexDoc cmd = evalState (do
---    xs <- sequence cmd
---    li <- get
---    return $ Doc xs li) (LI "" 1 1)
-
 addCol :: Int -> LineInfo -> LineInfo
 addCol n (LI fn i j) = LI fn i (j+n)
-
---env :: String -> [T LatexNode] -> T LatexNode
---env name xs = do
---    li  <- get
---    modify $ addCol (length $ "\\begin{" ++ name ++ "}")
---    ys  <- sequence xs
---    li' <- get
---    modify $ addCol (length $ "\\end{" ++ name ++ "}")
---    return $ Env name li (Doc ys li') li'
-
---bracket :: BracketType -> [T LatexNode] -> T LatexNode
---bracket b xs = do
---    li  <- get
---    modify $ addCol 1
---    ys  <- sequence xs
---    li' <- get
---    modify $ addCol 1
---    return $ Bracket b li (Doc ys li') li'
-
---text :: [T LatexToken] -> T LatexNode
---text xs = do
---    ys <- sequence xs
---    li <- get
---    return $ Text ys li
-
---tokens :: (a -> LineInfo -> LatexToken) 
---       -> a -> T LatexToken
---tokens f x = do
---    li@(LI fn i _) <- get
---    let y = f x li
---        ys = lexeme y
---        ln = lines ys
---        zs = zip ln $ li : [ LI fn (i+k) 1 | k <- [1..]]
---        zs' = [ LI fn i (length xs + j) | (xs,LI fn i j) <- zs ]
---    put $ lastDef li zs'
---    return y
-
---command :: String -> T LatexToken
---command = tokens Command
-
---textBlock :: String -> T LatexToken
---textBlock = tokens TextBlock
-
---blank :: String -> T LatexToken
---blank = tokens Blank
-
---open  :: BracketType -> T LatexToken
---open = tokens Open
-
---close :: BracketType -> T LatexToken
---close = tokens Close
 

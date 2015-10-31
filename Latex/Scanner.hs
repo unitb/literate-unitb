@@ -1,7 +1,7 @@
 module Latex.Scanner 
     ( read_lines, read_tokens
     , is_eof, peek, read_char
-    , get_line_info, Scanner
+    , get_line_info, Scanner(..)
     , match_first, match_string
     , look_ahead, try, choice
     , read_if, match, many
@@ -9,8 +9,6 @@ module Latex.Scanner
     , sep1 )
 where
 
-import Control.Applicative hiding ( many )
---import Control.Arrow
 import Control.Monad
 
 import Data.Maybe
@@ -99,8 +97,6 @@ is_eof = do
 read_char :: Token b => Scanner b b
 read_char = Scanner f
     where
-        --next _ (tok:_) = end tok
-        --next li []        = li
         f (State (t@(x,_):xs) _) 
             = Right (x, State xs $ end t)
         f (State [] li)               
