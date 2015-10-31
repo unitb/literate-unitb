@@ -5,9 +5,10 @@ import Code.Synthesis hiding (M)
 
 import Document.Document
 
-import Logic.Expr
+import Logic.Expr.Const (var)
 
 import UnitB.AST hiding (safety)
+import UnitB.Expr
 
 import Z3.Z3
 

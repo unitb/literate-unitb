@@ -9,7 +9,7 @@ module UnitB.Machine where
 import Logic.ExpressionStore (ExprStore, empty_store)
 import Logic.Operator
 import Logic.Proof.POGenerator ( POGen )
-import Logic.Theory as Th hiding (assert)
+import Logic.Theory as Th
 
 import Theories.SetTheory
 import Theories.FunctionTheory

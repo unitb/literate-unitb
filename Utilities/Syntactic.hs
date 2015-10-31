@@ -14,15 +14,19 @@ import qualified Data.List.NonEmpty as NE
 import Data.List.Ordered
 import Data.Typeable
 
+import GHC.Read
+
 import Language.Haskell.TH (Loc(..))
 
 import Safe
+
+import Text.ParserCombinators.ReadPrec
 
 import Utilities.Format
 import qualified Utilities.Lines as L
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
-    deriving (Eq,Typeable,Show,Ord)
+    deriving (Eq,Typeable,Show,Ord,Read)
 
 data LineInfo = LI 
         { _filename :: FilePath
@@ -33,6 +37,29 @@ data LineInfo = LI
 instance Show LineInfo where
     show (LI fn i j) = format "(LI {0} {1} {2})" (show fn) i j
 
+instance Read LineInfo where
+    readPrec  = between (string "(LI ") (char ')')
+                          $ LI <$> readPrec 
+                               <*> (char ' ' >> readPrec)
+                               <*> (char ' ' >> readPrec)
+
+between :: ReadPrec () -> ReadPrec () -> ReadPrec a -> ReadPrec a
+between first last cmd = do
+        first
+        x <- cmd
+        last
+        return x
+
+char :: Char -> ReadPrec ()
+char c = do
+    c' <- get
+    unless (c == c') 
+        pfail
+
+string :: String -> ReadPrec ()
+string [] = return ()
+string (x:xs) = char x >> string xs
+
 makeLenses ''LineInfo
 
 show_err :: [Error] -> String
@@ -40,6 +67,7 @@ show_err xs = unlines $ map report $ sortOn line_info xs
 
 class Syntactic a where
     line_info :: a -> LineInfo
+    traverseLineInfo :: Traversal' a LineInfo
 
 class Token t where
     lexeme :: t -> String
@@ -76,6 +104,8 @@ with_li li = either (\x -> Left $ map (`Error` li) x) Right
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
+    traverseLineInfo f (Error x li) = Error x <$> f li
+    traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
 showLiLong :: LineInfo -> String
 showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col

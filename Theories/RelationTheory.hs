@@ -3,6 +3,7 @@ module Theories.RelationTheory where
     -- Modules
 import Logic.Expr
 import Logic.Theory
+import Logic.Theory.Monad
 
 import Theories.SetTheory
 

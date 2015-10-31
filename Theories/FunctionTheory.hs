@@ -3,9 +3,11 @@ module Theories.FunctionTheory where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Const
 import Logic.Operator
 import Logic.Proof
 import Logic.Theory
+import Logic.Theory.Monad
 
 import Theories.SetTheory hiding ( dec )
 

@@ -151,8 +151,8 @@ instance ( TypeSystem t0
     type QuantT (GenExpr t0 t1 q) = q
     type ExprT (GenExpr t0 t1 q)  = GenExpr t0 t1 q
     asExpr = id
-    ztrue        = FunApp (mk_fun [] "true" [] bool) []
-    zfalse       = FunApp (mk_fun [] "false" [] bool) []
+    ztrue  = FunApp (mk_fun [] "true" [] bool) []
+    zfalse = FunApp (mk_fun [] "false" [] bool) []
 
 class ( TypeT expr ~ AnnotT expr, IsGenExpr expr )
     => IsAbsExpr expr where

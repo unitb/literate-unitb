@@ -5,6 +5,7 @@ module Document.Tests.SmallMachine where
 import Document.Tests.Suite
 
 import Logic.Expr
+import Logic.Expr.QuasiQuote
 import Logic.Proof
 
 import UnitB.AST

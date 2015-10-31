@@ -8,6 +8,7 @@ import Control.Exception
 import Control.Monad.IO.Class
 
 -- import Data.Set
+import Data.Foldable as F
 import Data.Typeable
 
 import qualified Debug.Trace as DT
@@ -15,6 +16,7 @@ import qualified Debug.Trace as DT
 import System.IO.Unsafe
 
 import Utilities.Format
+import Text.Printf
 
 -- trace_switch :: MVar (Set ThreadId)
 -- trace_switch = unsafePerformIO (newMVar empty)
@@ -122,7 +124,7 @@ instance Exception TracingError where
 beforeAfterIO :: String -> IO a -> IO a
 beforeAfterIO msg cmd = mapException f $ do
         traceM $ "before " ++ msg
-        x <- catch cmd (throw . f)
+        x <- catch (evaluate =<< cmd) (throw . f)
         traceM $ "after " ++ msg
         return x
     where
@@ -132,8 +134,13 @@ beforeAfterIO msg cmd = mapException f $ do
 beforeAfter' :: NFData a => String -> a -> a
 beforeAfter' msg = beforeAfter msg.force
 
+beforeAfterT :: Foldable f => String -> f a -> f a
+beforeAfterT msg t = beforeAfter msg $ F.foldl f (0 :: Int) t `seq` t
+    where
+        f n x = beforeAfter (printf "| %s, %d" msg n) x `seq` (n+1)
+
 beforeAfter :: String -> a -> a
-beforeAfter msg x = mapException f $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after " ++ msg) x
+beforeAfter msg x = mapException f $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after  " ++ msg) x
     where
         f :: SomeException -> TracingError
         f e = TE $ format "Failed during {0}\n\n{1}\nend" msg e

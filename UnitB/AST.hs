@@ -6,7 +6,7 @@ module UnitB.AST
     ) 
 where
 
-import Logic.Theory hiding (assert,command)
+import Logic.Theory
 
 import UnitB.Machine
 import UnitB.Event

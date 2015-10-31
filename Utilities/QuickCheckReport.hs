@@ -18,10 +18,10 @@ test_report tests = do
     success <- newIORef (0 :: Int)
     total   <- newIORef (0 :: Int)
     let inc r = do
-        when (isSuccess r) 
-            $ modifyIORef success (+1)
-        modifyIORef total (+1)
-        return r
+            when (isSuccess r) 
+                $ modifyIORef success (+1)
+            modifyIORef total (+1)
+            return r
     (tests $ (>>= inc) . quickCheckWithResult stdArgs {chatty = False})
     x <- readIORef success
     y <- readIORef total

@@ -3,8 +3,10 @@ module Theories.SetTheory where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Const
 import Logic.Operator
-import Logic.Theory hiding (preserve)
+import Logic.Theory 
+import Logic.Theory.Monad hiding (preserve)
 import Logic.Proof
 
     -- Libraries

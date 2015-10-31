@@ -3,6 +3,7 @@ module Theories.PredCalc where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Const
 import Logic.Operator
 import Logic.Theory
 

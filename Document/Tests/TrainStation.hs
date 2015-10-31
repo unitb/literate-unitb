@@ -5,6 +5,8 @@ module Document.Tests.TrainStation where
 import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 
 import Logic.Expr
+import qualified Logic.Expr.Const as Expr
+import Logic.Expr.QuasiQuote
 import Logic.Proof
 import Logic.Theory
 

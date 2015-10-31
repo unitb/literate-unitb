@@ -286,8 +286,8 @@ return []
 run_tests :: IO Bool
 run_tests = test_report ($forAllProperties)
 
-main :: IO ()
-main = do
+main' :: IO ()
+main' = do
     run_tests
     -- t <- last `liftM` sample' arbitrary
     -- print (t :: Tree Int)

@@ -1,4 +1,183 @@
+{-# LANGUAGE KindSignatures
+    , TypeFamilies
+    , TypeOperators
+    , ScopedTypeVariables
+    , UndecidableInstances #-}
 module Logic.Theory.Monad where
+
+    -- Modules
+import Logic.Expr
+import Logic.Expr.Genericity (variables)
+import Logic.Operator
+import Logic.Proof hiding (preserve) 
+import qualified Logic.Proof as P
+
+import Logic.Theory.Internals
+
+    -- Libraries
+import Control.Arrow
+import Control.Monad.RWS
+import Control.Monad.State
+import Control.Monad.Writer
+import Control.Lens hiding (Context,(.=),from,to,rewriteM)
+
+import           Data.Either
+import           Data.Either.Combinators
+import           Data.List as L
+import           Data.Map as M 
+import qualified Data.Set as S
+import           Data.Typeable
+
+import GHC.Generics hiding ((:+:),prec)
+
+import Language.Haskell.TH hiding (Type)
+
+import Utilities.Error
+import Utilities.Format
+--import Utilities.Instances
+--import Utilities.TH
+import Utilities.Tuple
+
+class GBuild (g :: * -> *) where
+    gBuild :: g p -> [g p] -> g p
+
+instance GBuild U1 where
+    gBuild _ _ = U1
+
+instance (Show k, Ord k, Typeable a) 
+        => GBuild (K1 i (Map k a)) where
+    gBuild _ xs = K1 $ clash unK1 xs
+
+instance GBuild (K1 i Notation) where
+    gBuild _ xs = K1 
+        $ L.foldl combine empty_notation 
+        $ L.map unK1 xs        
+
+instance GBuild (K1 i SyntacticProp) where
+    gBuild _ ms = K1 $ mconcat $ L.map unK1 ms
+
+instance GBuild (K1 i [a]) where
+    gBuild _ ms = K1 $ concatMap unK1 ms
+
+instance GBuild a => GBuild (M1 i c a) where
+    gBuild (M1 m) xs = M1 $ gBuild m $ L.map unM1 xs
+
+instance (GBuild a, GBuild b) => GBuild (a :*: b) where
+    gBuild (x :*: y) xs = gBuild x (L.map fst xs) :*: gBuild y (L.map snd xs)
+        where
+            fst (x :*: _) = x
+            snd (_ :*: x) = x
+
+class Signature s where
+    type FunType s :: *
+    funDecl' :: String -> [Type] -> s -> Fun
+    utility' :: Fun -> Proxy s -> FunType s
+    len' :: Proxy s -> Int
+
+class SignatureImpl ts where
+    type FunTypeImpl ts :: *
+    typeList :: ts -> [Type]
+    utilityImpl :: Fun -> [ExprP] -> Proxy ts -> FunTypeImpl ts
+
+instance SignatureImpl () where
+    type FunTypeImpl () = ExprP
+    typeList () = []
+    utilityImpl fun argsM' Proxy = do
+        let argsM = reverse argsM'
+            es = lefts argsM
+        unless (L.null es) $ Left $ concat es
+        args <- sequence argsM
+        let ts' = repeat $ VARIABLE "unexpected"
+            (Fun _ n _ ts t) = fun
+            f e t = format (unlines
+                    [ "    argument: {0}" 
+                    , "      type: {1}"
+                    , "      expected type: {2}"])
+                    e (type_of e) t :: String
+            err_msg = format (unlines $
+                    [  "arguments of '{0}' do not match its signature:"
+                    ,  "   signature: {1} -> {2}"
+                    ] ++ zipWith f args (ts ++ ts')
+                    ) n ts t :: String
+        maybe (Left [err_msg]) Right 
+            $ check_args args fun
+        -- Right (FunApp fun $ reverse args)
+
+utility :: forall s. Signature s => String -> s -> FunType s
+utility name f = utility' (funDecl name f) (Proxy :: Proxy s)
+
+instance SignatureImpl as => SignatureImpl (Type :+: as) where
+    type FunTypeImpl (Type :+: as) = ExprP -> FunTypeImpl as
+    typeList (t :+: ts) = t : typeList ts
+    utilityImpl fun args Proxy e = utilityImpl fun (e:args) (Proxy :: Proxy as)
+
+funDecl :: Signature s => String -> s -> Fun
+funDecl name = funDecl' name []
+
+instance (IsTuple t, SignatureImpl (TypeList t)) => Signature (t,Type) where
+    type FunType (t,Type) = FunTypeImpl (TypeList t)
+    len' Proxy = tLength (Proxy :: Proxy t)
+    funDecl' name tp (args,rt) = mk_fun (reverse tp) name (typeList $ toTuple args) rt
+    utility' fun Proxy = utilityImpl fun [] (Proxy :: Proxy (TypeList t))
+
+instance Signature t => Signature (Type -> t) where
+    type FunType (Type -> t) = FunType t
+    len' Proxy = len' (Proxy :: Proxy t)
+    funDecl' name tp f = funDecl' name (gP:tp) (f gP)
+        where
+            p = [toEnum $ fromEnum 'a' + length tp]
+            gP = GENERIC p
+    utility' fun Proxy = utility' fun (Proxy :: Proxy t)
+
+class VarSignature s where
+    varDecl' :: Int -> String -> s -> Var
+
+varDecl :: VarSignature s => String -> s -> Var
+varDecl = varDecl' 0
+
+instance VarSignature Type where
+    varDecl' _ = Var
+
+instance VarSignature t => VarSignature (Type -> t) where
+    varDecl' n name t = varDecl' (n+1) name (t gP)
+        where
+            p  = [toEnum $ fromEnum 'a' + n]
+            gP = GENERIC p
+
+class TypeSignature s where
+    mkSort' :: Sort -> [Type] -> s
+    order :: Proxy s -> Int
+
+mkSort :: forall s. TypeSignature s => String -> (s,Sort)
+mkSort n = (mkSort' s [],s)
+    where
+        s = Sort n n $ order (Proxy :: Proxy s)
+
+instance TypeSignature Type where
+    mkSort' s ts = make_type s $ reverse ts
+    order Proxy  = 0
+
+class TypeDefSignature t where
+    mkSortDef' :: String -> [String] -> t -> ([Type] -> t,Sort)
+
+mkSortDef :: TypeDefSignature t => String -> t -> (t,Sort)
+mkSortDef n f = first ($ []) $ mkSortDef' n [] f
+
+instance TypeDefSignature Type where
+    mkSortDef' n ps t = (\ts -> make_type s $ reverse ts,s)
+        where
+            s = DefSort n n (reverse ps) t
+
+instance TypeDefSignature t => TypeDefSignature (Type -> t) where
+    mkSortDef' n ps f = (\ts t -> f' $ t:ts,s)
+        where
+            (f',s) = mkSortDef' n (p:ps) (f t)
+            p = [toEnum $ fromEnum 'a' + length ps]
+            t = GENERIC p
+
+instance TypeSignature s => TypeSignature (Type -> s) where
+    mkSort' s ts t = mkSort' s (t:ts)
+    order Proxy = 1 + order (Proxy :: Proxy s)
 
 assert' :: Loc -> ExprP -> M ()
 assert' loc stmt = M $ tell 
@@ -161,3 +340,26 @@ mzexists' vs r t = do
             _ -> Left ["Cannot quantify over expressions"])
     mzexists vs' r t
 
+declAxiom :: Loc -> ExprP -> Writer [ExprP] ()
+declAxiom loc stmt = tell [mapLeft (L.map (locMsg loc ++)) $ zcast bool $ withForall stmt]
+
+withForall :: ExprP -> ExprP 
+withForall mx = do
+    x <- mx
+    let vs = S.toList $ used_var x
+    param_to_var <$> mzforall vs mztrue (Right x)
+
+axiom :: ExpQ
+axiom = withLoc 'declAxiom
+
+axioms :: String -> Writer [ExprP] () -> Map Label Expr
+axioms name cmd
+        | L.null ls = fromList $ L.map (first $ label . format "@{0}@@_{1}" name) $ zip ns rs
+        | otherwise = error $ unlines $ concat ls
+    where
+        n  = length rs
+        ns = L.map (pad . show) [1..n]
+        pad ys = replicate (n - length ys) ' ' ++ ys
+        rs = rights xs
+        ls = lefts xs
+        xs = execWriter cmd

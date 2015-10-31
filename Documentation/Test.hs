@@ -8,8 +8,6 @@ import Document.Tests.Suite
 
 import Documentation.SummaryGen
 
-import Logic.Expr
-
 import UnitB.AST
 
     --
@@ -61,10 +59,10 @@ case0 :: IO String
 case0 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
     let ms  = machines s
-        lbl = label "m1:moveout"
+        lbl = "m1:moveout"
         m   = ms ! "m2"
-    return $ getListing s $ 
-            event_summary' m lbl (events m ! lbl)
+    return $ getListing $ 
+            event_summary' m lbl (nonSkipUpwards m ! lbl)
             -- ) (expr_store s,"")
 
 path0 :: String
@@ -107,10 +105,10 @@ case1 :: IO String
 case1 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
     let ms  = machines s
-        lbl = label "m1:moveout"
+        lbl = "m1:moveout"
         m   = ms ! "m3"
-    return $ getListing s $
-            event_summary' m lbl (events m ! lbl)
+    return $ getListing $
+            event_summary' m lbl (nonSkipUpwards m ! lbl)
 
 result2 :: String
 result2 = unlines
@@ -127,8 +125,8 @@ case2 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
     let ms  = machines s
         m   = ms ! "m2"
-        p   = props m
-    return $ getListing s $
+        p   = m!.props
+    return $ getListing $
         safety_sum p
 
 result3 :: String
@@ -151,5 +149,5 @@ case3 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
     let ms  = machines s
         m   = ms ! "m2"
-    return $ getListing s $
+    return $ getListing $
         liveness_sum m

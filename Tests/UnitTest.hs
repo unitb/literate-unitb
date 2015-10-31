@@ -1,9 +1,4 @@
 {-# LANGUAGE ExistentialQuantification  #-} 
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE TemplateHaskell            #-}
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
@@ -26,10 +21,11 @@ import Control.Concurrent.SSem
 import Control.Exception
 import Control.Monad
 import Control.Monad.Loops
-import Control.Monad.Trans
-import Control.Monad.Trans.RWS
+import Control.Monad.Reader
+import Control.Monad.RWS
 
 import           Data.Either
+import           Data.IORef
 import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
@@ -40,6 +36,7 @@ import Prelude
 
 import Utilities.Format
 import Utilities.Indentation
+-- import Utilities.Trace
 
 import System.FilePath
 import System.IO
@@ -57,7 +54,11 @@ data TestCase =
     | LineSetCase String (IO String) String
     | Suite String [TestCase]
 
-type M = RWST Int [Either (MVar [String]) String] Int IO
+newtype M a = M { runM :: RWST Int [Either (MVar [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
+    deriving ( Monad,Functor,Applicative,MonadIO
+             , MonadReader Int
+             , MonadState Int
+             , MonadWriter [Either (MVar [String]) String])
 
 instance Indentation Int M where
     -- func = 
@@ -74,19 +75,19 @@ failure_number = unsafePerformIO $ newMVar 0
 
 take_failure_number :: M ()
 take_failure_number = do
-    n <- lift $ takeMVar failure_number
-    lift $ putMVar failure_number $ n+1
+    n <- liftIO $ takeMVar failure_number
+    liftIO $ putMVar failure_number $ n+1
     put n
 
 new_failure :: String -> String -> String -> M ()
 new_failure name actual expected = do
-    b <- lift $ readMVar log_failures
+    b <- liftIO $ readMVar log_failures
     if b then do
         n <- get
-        lift $ withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
+        liftIO $ withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             hPutStrLn h actual
-        lift $ withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
+        liftIO $ withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             hPutStrLn h expected
     else return ()
@@ -111,7 +112,8 @@ run_test_cases :: TestCase -> IO Bool
 run_test_cases xs = do
         swapMVar failure_number 0
         c        <- f xs 
-        (b,_,w) <- runRWST (test_suite_string [c]) 0 undefined
+        ref      <- newIORef []
+        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string [c]) 0 undefined) ref
         forM_ w $ \ln -> do
             case ln of
                 Right xs -> putStrLn xs
@@ -157,12 +159,12 @@ run_test_cases xs = do
                                     (unlines $ sort $ lines z)
 
 disp :: (Typeable a, Show a) => a -> String
-disp x = fromMaybe (show x) (cast x)
+disp x = fromMaybe (reindent $ show x) (cast x)
 
 print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
 print_po pos name actual expected = do
     n <- get
-    lift $ do
+    liftIO $ do
         let ma = f actual
             me = f expected
             f xs = M.map (== "  o  ") $ M.fromList $ map (swap . splitAt 5) $ lines xs
@@ -195,7 +197,7 @@ test_suite_string xs = do
             case ut of
               (UT x y z) -> forkTest $ do
                 putLn ("+- " ++ x)
-                r <- lift $ catch 
+                r <- liftIO $ catch 
                     (Right `liftM` y) 
                     (\e -> return $ Left $ show (e :: SomeException))
                 case r of
@@ -276,29 +278,38 @@ capabilities = unsafePerformIO $ new 16
 
 forkTest :: M a -> M (MVar (Either SomeException a))
 forkTest cmd = do
-    result <- lift $ newEmptyMVar
-    output <- lift $ newEmptyMVar
+    result <- liftIO $ newEmptyMVar
+    output <- liftIO $ newEmptyMVar
     r <- ask
-    lift $ wait capabilities
-    let handler e = do
-        putMVar result $ Left e
-        putMVar output $ [show e]
-    lift $ forkIO $ do
-        finally (handle handler $ do
-            (x,_,w) <- runRWST cmd r (-1)
-            putMVar result (Right x)
-            xs <- forM w $ \ln -> do
-                either 
-                    takeMVar 
-                    (return . (:[])) 
-                    ln
-            putMVar output $ concat xs)
-            (signal capabilities)
+    liftIO $ wait capabilities
+    --tid <- liftIO myThreadId
+    ref <- M $ lift ask
+    t <- liftIO $ do
+        ref <- newIORef []
+        let handler e = do
+                ts <- readIORef ref
+                mapM_ (`throwTo` e) ts
+                putStrLn "failed"
+                print e
+                putMVar result $ Left e
+                putMVar output $ [show e]
+        forkIO $ do
+            finally (handle handler $ do
+                (x,_,w) <- runReaderT (runRWST (runM cmd) r (-1)) ref
+                putMVar result (Right x)
+                xs <- forM w $ \ln -> do
+                    either 
+                        takeMVar 
+                        (return . (:[])) 
+                        ln
+                putMVar output $ concat xs)
+                (signal capabilities)
+    liftIO $ modifyIORef ref (t:)
     tell [Left output]
     return result
 
 mergeAll :: [MVar a] -> M [a]
-mergeAll xs = lift $ do
+mergeAll xs = liftIO $ do
     forM xs takeMVar
 
 tempFile_num :: MVar Int

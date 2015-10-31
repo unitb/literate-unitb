@@ -76,7 +76,7 @@ makePolyClass recName = do
                 -- | otherwise       = L.map PlainTV $ fT : xT
           in 
           sigD (fieldName f) $ forallT typeVars
-            (cxt [classP className [varT fT]]) t            
+            (cxt [appT (conT className) (varT fT)]) t            
         ] -- substVars _ $ 
     return $ polyClass:polyInstance:fields
 
@@ -315,7 +315,7 @@ existential tn = do
                                 $ appE (conE 'Identity) 
                                 $ appsE [varE f,varE x,varE y]
                               , varE x,varE y]
-                func = return [ClassP ''Functor [VarT f]]
+                func = return [AppT (ConT ''Functor) (VarT f)]
                 _ = undefined :: TypeRep
             a <- newName "a"
             t <- sequence 

@@ -4,7 +4,7 @@ module Document.Tests.Lambdas where
     -- Modules
 import Document.Tests.Suite
 
-import Logic.Expr
+import Logic.Expr.Const
 import Logic.Proof
 
 import Theories.FunctionTheory

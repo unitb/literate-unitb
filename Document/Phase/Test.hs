@@ -23,7 +23,7 @@ import Document.VarScope  hiding (var)
 import Latex.Monad
 
 import Logic.Expr.QuasiQuote
-import Logic.Theory hiding (command)
+import Logic.Theory
 
 import Theories.Arithmetic
 import Theories.SetTheory

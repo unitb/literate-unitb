@@ -3,6 +3,8 @@ module UnitB.Test where
 
     -- Modules
 import           Logic.Expr
+import qualified Logic.Expr.Const as Exp
+import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
 import qualified Logic.TestGenericity as Gen
 

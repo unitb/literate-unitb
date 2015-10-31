@@ -74,8 +74,16 @@ data AdjList key v0 = AList
                 , _arEdges :: Array Int (NonEmpty Int)
                 , _mapKey  :: Map key Int }
 
+newtype Vertex s = Vertex Int
+    deriving (Ord,Eq)
+
+data Edge s0 s1 = Edge Int Int
+    deriving (Ord,Eq)
+
 makeLenses ''BiGraph'
 makeLenses ''AdjList
+derive makeNFData ''Edge
+derive makeNFData ''Vertex
 
 instance (Ord key0, Ord key1, Eq v0, Eq v1, Eq e) => Eq (BiGraph' key0 v0 key1 v1 e) where
     g0 == g1 = f g0 == f g1
@@ -102,7 +110,7 @@ mapALKey :: Ord k1 => (k0 -> k1) -> AdjList k0 v -> AdjList k1 v
 mapALKey f al = al { _arKey = al^.arKey & traverse %~ f, _mapKey = M.mapKeys f $ al^.mapKey }
 
 emptyAr :: Array Int e
-emptyAr = listArray (1,0) []
+emptyAr = listArray (0,-1) []
 
 keys :: Lens (AdjList k0 v) (AdjList k1 v) (Array Int k0,Map k0 Int) (Array Int k1,Map k1 Int)
 keys f x = (\(y,z) -> AList y (x^.arVals) (x^.arEdges) z) <$> y
@@ -137,12 +145,6 @@ makeGraph (GB g) = do
             rightA = AList k1 v1 lnAr1 (table^._4)
         return $ Graph leftA rightA esM -- (listArray (0,n-1) vs) lnAr eAr (snd m)
     where
-
-newtype Vertex s = Vertex Int
-    deriving (Ord,Eq)
-
-data Edge s0 s1 = Edge Int Int
-    deriving (Ord,Eq)
 
 leftVertices :: Traversal (BiGraph key vA v) 
                           (BiGraph key vB v)

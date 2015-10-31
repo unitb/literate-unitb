@@ -1,6 +1,6 @@
 module Logic.Expr.Classes where
 
-import Control.Lens
+import Control.Lens hiding (List)
 import Control.Monad.Reader
 import Control.Monad.State
 
@@ -11,7 +11,7 @@ import Data.Maybe
 import Data.Tuple
 
 class HasName a n | a -> n where
-    name :: Getter a n
+    name :: Getter a String
 
 class HasName n String => Named n where
     --name    :: n -> String

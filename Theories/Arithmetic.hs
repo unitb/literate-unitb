@@ -3,9 +3,11 @@ module Theories.Arithmetic where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Const
 import Logic.Operator
 import Logic.Proof hiding (syntacticProp)
 import Logic.Theory
+import Logic.Theory.Monad
 
 import Theories.SetTheory
 import Theories.FunctionTheory
@@ -46,7 +48,8 @@ gT = VARIABLE "t"
 
 arithmetic :: Theory
 arithmetic = empty_theory { 
-        _types = symbol_table [IntSort,RealSort]
+        _extends = singleton "sets" set_theory
+        , _types = symbol_table [IntSort,RealSort]
         , _funs = symbol_table 
             [ sum_fun ]
         , _theorySyntacticThm = empty_monotonicity

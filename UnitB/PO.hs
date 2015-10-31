@@ -17,7 +17,7 @@ where
 import Logic.Proof
 import           Logic.Proof.POGenerator hiding ( variables )
 import qualified Logic.Proof.POGenerator as POG
-import Logic.Theory hiding (assert)
+import Logic.Theory
 import Logic.WellDefinedness
 
 import UnitB.AST
