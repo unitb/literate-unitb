@@ -39,17 +39,20 @@ import Control.Parallel.Strategies
 
 import Data.DeriveTH
 import Data.Either
+import Data.Maybe 
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (length,tail,head)
 import Data.Map as M
 import Data.Semigroup ((<>),First(..))
 import qualified Data.Traversable as T
 
-import Utilities.Syntactic
+import Text.Printf
+
 import Utilities.Permutation
+import Utilities.Syntactic
 
     -- clashes is a symmetric, reflexive relation
-class (Ord a) => Scope a where
+class (Ord a,Show a) => Scope a where
     type Impl a :: *
     type Impl a = DefaultClashImpl a
     kind :: a -> String
@@ -178,7 +181,9 @@ make_table' :: forall a b.
             => (a -> String) 
             -> [(a,b)] 
             -> MM (Maybe (Map a b))
-make_table' f xs = all_errors $ M.mapWithKey g ws
+make_table' f items = all_errors $ M.mapWithKey g conflicts
+        -- PROBLEM: given x,y,z, it's possible that none conflict with each other but
+        -- x `merge` y conflicts with z
     where
         g k ws
                 | all (\xs -> length xs <= 1) ws 
@@ -187,9 +192,9 @@ make_table' f xs = all_errors $ M.mapWithKey g ws
                                     $ L.filter (\xs -> length xs > 1) ws
             where
                 xs = concat ws             
-        zs = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) xs
-        ws :: Map a [[b]]
-        ws = M.map (flip u_scc clashes) zs 
+        items' = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) items
+        conflicts :: Map a [[b]]
+        conflicts = M.map (flip u_scc clashes) items' 
 
 newtype WithDelete a = WithDelete { getDelete :: a }
 
@@ -205,6 +210,7 @@ instance HasInhStatus a b => HasInhStatus (WithDelete a) b where
     inhStatus = lens getDelete (const WithDelete) . inhStatus
 
 instance ( HasInhStatus a (InhStatus expr)
+         , Show expr
          , HasDeclSource a DeclSource )
         => ClashImpl (WithDelete a) where
     makeInheritedImpl (WithDelete x) = Just $ WithDelete $ x & declSource .~ Inherited
@@ -213,26 +219,25 @@ instance ( HasInhStatus a (InhStatus expr)
             b = case x ^. inhStatus of
                     InhAdd _ -> x ^. declSource == s
                     InhDelete _  -> s == Inherited
-    clashesImpl (WithDelete x) (WithDelete y) = f x == f y
-        where
-            f x = case x ^. inhStatus :: InhStatus expr of 
-                    InhAdd _ -> True
-                    InhDelete (Just _) -> True
-                    InhDelete Nothing -> False
+    clashesImpl (WithDelete x) (WithDelete y) = case (x^.inhStatus,y^.inhStatus) of
+            (InhAdd _,InhDelete Nothing) -> False
+            (InhDelete Nothing,InhAdd _) -> False
+            _ -> True
 
     mergeScopesImpl (WithDelete x) (WithDelete y) = WithDelete z
         where
             z = case (x ^. inhStatus, y ^. inhStatus) of
                     (InhDelete Nothing, InhAdd e) -> x & inhStatus .~ InhDelete (Just e)
                     (InhAdd e, InhDelete Nothing) -> y & inhStatus .~ InhDelete (Just e)
-                    _ -> error "WithDelete ClashImpl.merge_scopes: Evt, Evt"
+                    _ -> error (printf "WithDelete ClashImpl.merge_scopes: Evt, Evt:\n%s\n%s" 
+                            (show $ x^.inhStatus) (show $ y^.inhStatus)) 
 
 instance (Eq expr, ClashImpl a, HasInhStatus a (EventInhStatus expr))
         => ClashImpl (Redundant expr a) where
     makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
     keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
     clashesImpl (Redundant x) (Redundant y) = 
-            clashesImpl x y && (snd <$> contents x) /= (snd <$> contents y)
+            clashesImpl x y && fromMaybe True ((/=) <$> (snd <$> contents x) <*> (snd <$> contents y))
     mergeScopesImpl (Redundant x) (Redundant y) 
         | (snd <$> contents x) == (snd <$> contents y) = Redundant $ x & inhStatus %~ (flip f $ y^.inhStatus)
         | otherwise = Redundant $ mergeScopesImpl x y

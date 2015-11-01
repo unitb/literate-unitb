@@ -17,9 +17,10 @@ module Logic.Expr.Expr
     , IsQuantifier(..)
     , HasAbsContext(..)
     , HasDummies(..)
-    , HasExpr(..)
+    , IsExpr(..)
     , IsGenExpr(..)
     , Lifting(..)
+    , HasExprs(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
@@ -506,8 +507,11 @@ instance TypeSystem t => Show (AbsVar t) where
 
 instance TypeSystem t => Show (AbsFun t) where
     show (Fun xs n _ ts t) = n ++ show xs ++ ": " 
-        ++ intercalate " x " (map (show . as_tree) ts)
-        ++ " -> " ++ show (as_tree t)
+            ++ args ++ show (as_tree t)
+        where
+            args
+                | not $ null ts = intercalate " x " (map (show . as_tree) ts) ++ " -> "
+                | otherwise     = ""
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsDef t q) where
     show (Def xs n ps t e) = n ++ showL xs ++  ": " 
@@ -721,12 +725,26 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
+defExpr :: Lens' (AbsDef t q) (AbsExpr t q) 
+defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
 
-class HasExpr e a | e -> a where
-    getExpr :: e -> a
 
-instance HasExpr (GenExpr a b c) (GenExpr a b c) where
+class (IsGenExpr e
+        , Show e
+        , TypeT e ~ GenericType
+        , AnnotT e ~ GenericType
+        , QuantT e ~ HOQuantifier)
+        => IsExpr e where
+    getExpr :: e -> Expr
+
+instance IsExpr Expr where
     getExpr = id
+
+class HasExprs a expr where
+    traverseExprs :: Traversal' a expr
+
+instance HasExprs (AbsContext t q) (AbsExpr t q) where
+    traverseExprs = definitions.traverse.defExpr
 
 --class ( IsGenExpr expr
 --         , TypeT expr ~ GenericType

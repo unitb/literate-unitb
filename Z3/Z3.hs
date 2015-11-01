@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, BangPatterns, RecordWildCards #-} 
-{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE BangPatterns, RecordWildCards #-} 
 module Z3.Z3 
     ( Sequent
     , Validity ( .. )
@@ -34,10 +33,9 @@ import Logic.Lambda
 import Logic.Proof
 
     -- Libraries
-import Control.Applicative
 import Control.Arrow
 import Control.DeepSeq
-import Control.Lens hiding (Context,Context')
+import Control.Lens hiding (Context,Context',List)
 
 import Control.Concurrent
 import Control.Concurrent.SSem

@@ -6,7 +6,6 @@ import Document.Expression
 
 import Latex.Parser
 
-import Logic.Expr
 import Logic.Operator hiding (Command)
 
 import Theories.Arithmetic
@@ -14,6 +13,7 @@ import Theories.FunctionTheory
 import Theories.SetTheory
 
 import UnitB.AST
+import UnitB.Expr
 
 import Utilities.RandomTree
 
@@ -39,9 +39,9 @@ import           Utilities.Syntactic
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
-f_prop_parseOk :: (Machine, Tex) -> Bool
+f_prop_parseOk :: (RawMachine, Tex) -> Bool
 f_prop_parseOk (mch,Tex tex) =
-        (M.elems . machines) `liftM` (all_machines tex) == Right [mch]
+        (M.elems . M.map (fmap asExpr) . machines) `liftM` (all_machines tex) == Right [mch]
  
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
@@ -50,13 +50,13 @@ f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Bool
-prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showExpr n e)
+prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showExpr n $ asExpr e)
     where
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li
 
-data ExprNotation = ExprNotation Context Notation Expr
+data ExprNotation = ExprNotation Context Notation RawExpr
 
 instance Show ExprNotation where
      show (ExprNotation _ _ e) = show e
@@ -79,7 +79,7 @@ instance Arbitrary ExprNotation where
         return $ ExprNotation 
                     ctx basic_notation e
 
-data MachineInput = MachineInput Machine [LatexNode]
+data MachineInput = MachineInput RawMachine [LatexNode]
 
 is_type_error :: Error -> Bool
 is_type_error e = 
@@ -88,13 +88,13 @@ is_type_error e =
     where
         msg = message e
 
-correct_machine :: Gen (Machine, Tex)
+correct_machine :: Gen (RawMachine, Tex)
 correct_machine = machine_input arbitrary
 
-mch_with_type_error :: Gen (Machine, Tex)
+mch_with_type_error :: Gen (RawMachine, Tex)
 mch_with_type_error = machine_input with_type_error
 
-machine_input :: Gen Machine -> Gen (Machine, Tex)
+machine_input :: Gen RawMachine -> Gen (RawMachine, Tex)
 machine_input cmd = do
         m   <- cmd
         tex <- latex_of m
@@ -128,7 +128,7 @@ showExpr notation e = show_e e
     where
         root_op (FunApp f _) = find_op f
         root_op _ = Nothing
-        find_op f = name f `M.lookup` m_ops 
+        find_op f = view name f `M.lookup` m_ops 
         show_e v@(Word _) = show v
         show_e (FunApp f xs) 
             | length xs == 2 = printf "%s %s %s" 
@@ -139,16 +139,16 @@ showExpr notation e = show_e e
                                 op_name
                                 (show_right_sub_e op x)
             | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
-                                    (name f)
+                                    (view name f)
                                     (L.intercalate ", " $ map show xs)
             | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
             where
                 x = xs !! 0
                 y = xs !! 1
                 op = maybe (Right plus) id $ find_op f
-                op_name = maybe unknown name $ find_op f
+                op_name = maybe unknown (view name) $ find_op f
                 unknown = printf "<unknown function: %s %s>" 
-                            (show (name f)) 
+                            (show (view name f)) 
                             (show $ M.keys m_ops)
         show_e (Const n _) = show n
         show_e _ = "<unknown expression>"
@@ -168,10 +168,10 @@ showExpr notation e = show_e e
                     | g op' == RightAssoc = show_e e
                     | otherwise           = printf "(%s)" $ show_e e
 
-latex_of :: Machine -> Gen LatexDoc
+latex_of :: RawMachine -> Gen LatexDoc
 latex_of m = do
         let m_name = Bracket Curly li 
-                           (Doc [ Text [TextBlock (show $ _name m) li] li ] li)
+                           (Doc li [ Text (TextBlock (show $ _name m) li) ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
             -- m_ops = M.fromList $ zip (map token xs) xs
@@ -183,27 +183,27 @@ latex_of m = do
                         , (set_type int, "\\set[\\Int]")
                         , (fun_type int int, "\\Int \\pfun \\Int")
                         ]
-            cmd n args = Text [Command n li] li : concatMap farg args
-            farg x = [ Bracket Curly li (Doc [ Text [TextBlock x li] li ] li) li, blank ]
+            cmd n args = Text (Command n li) : concatMap farg args
+            farg x = [ Bracket Curly li (Doc li [ Text (TextBlock x li) ] li) li, blank ]
             var_decl (Var n t) = cmd "\\variable" [(n ++ " : " ++ show_t t)]
-            decls = map var_decl $ M.elems $ variables m
+            decls = map var_decl $ M.elems $ m!.variables
             imp_stat xs = cmd "\\with" [xs]
             inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
-            invs        = map inv_decl $ M.toList $ _inv $ props m
+            invs        = map inv_decl $ M.toList $ m!.props.inv
             imports = map imp_stat $ filter (/= "basic") 
-                        $ M.keys $ extends $ theory m
+                        $ M.keys $ m!.theory.extends
         content <- concat `liftM` permute (decls ++ imports ++ invs)
-        return $ Doc [ Env "machine" li 
-                       (Doc ([ m_name, blank ] ++ content) li)
-                       li ] li
+        return $ Doc li [ Env li "machine" li 
+                          (Doc li ([ m_name, blank ] ++ content) li)
+                          li ] li
     where
         li = LI "" 0 0
-        blank = Text [Blank "\n" li] li
+        blank = Text (Blank "\n" li)
 
-expressions :: Machine -> [Expr]
-expressions m = M.elems $ _inv $ props m
+expressions :: Machine' expr -> [expr]
+expressions m = M.elems $ m!.props.inv
 
-with_type_error :: Gen Machine
+with_type_error :: Gen RawMachine
 with_type_error = do
         suchThat (gen_machine True)
              (\m -> not $ L.null $ range m)
@@ -213,8 +213,8 @@ with_type_error = do
     where
         range m = M.elems vars `L.intersect` S.elems fv
             where
-                vars  = variables m
-                fv    = S.unions $ map used_var $ expressions m
+                vars  = m!.variables
+                fv    = S.unions $ map (used_var.getExpr) $ expressions m
 
 choose_type :: Gen Type
 choose_type = do
@@ -247,22 +247,21 @@ var_set = do
             
 basic_notation :: Notation
 basic_notation = th_notation $ empty_theory
-                    { extends = M.fromList 
+                    & extends .~ M.fromList 
                         [ ("sets", set_theory) 
                         , ("functions", function_theory) 
                         , ("arithmetic", arithmetic)
-                        , ("basic", basic_theory)] }
+                        , ("basic", basic_theory)] 
 
 
-gen_machine :: Bool -> Gen Machine
+gen_machine :: Bool -> Gen RawMachine
 gen_machine b = fix (\retry n -> do
             when (n == 0) $ fail "failed to produce Machine"
             -- nvar  <- choose (0,5)
             -- types <- L.sort `liftM` vectorOf nvar choose_type
             vars <- var_set
             -- let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
-            let mch = empty_machine "m0"
-                inv_lbl = map (label . printf "inv%d") ([0..] :: [Int])
+            let inv_lbl = map (label . printf "inv%d") ([0..] :: [Int])
                             -- map (\x -> label $ "inv" ++ show x) [0..]
             ninv <- choose (0,5)
             bs   <- mk_errors b ninv
@@ -276,19 +275,19 @@ gen_machine b = fix (\retry n -> do
             -- return $ catMaybes invs
             case inv of
                 Just inv ->
-                    return $ (empty_machine "m0")
-                        { theory = (theory mch) { extends = M.fromList 
+                    return $ (empty_machine "m0") & content assert %~ \m -> m
+                        & theory.extends .~ M.fromList 
                                 [ ("sets", set_theory) 
                                 , ("functions", function_theory) 
                                 , ("arithmetic", arithmetic)
-                                , ("basic", basic_theory)] }
-                        , variables = vars
-                        , props = empty_property_set
-                                { _inv = M.fromList $ zip inv_lbl inv } }
+                                , ("basic", basic_theory)]
+                        & variables .~ vars
+                        & props .~ empty_property_set
+                                { _inv = M.fromList $ zip inv_lbl inv } 
                 Nothing -> retry $ n-1
             ) 10
 
-instance Arbitrary Machine where
+instance Arbitrary (RawMachine) where
     arbitrary = gen_machine False
 
 mk_errors :: MonadGen m => Bool -> Int -> m [Bool]
@@ -297,7 +296,7 @@ mk_errors True n = do
     xs <- liftGen $ replicateM (n-1) arbitrary
     permute $ True : xs
 
-expr_type :: Bool -> M.Map String Var -> Type -> Gen (Maybe Expr)
+expr_type :: Bool -> M.Map String Var -> Type -> Gen (Maybe RawExpr)
 expr_type b vars t = runReaderT (runRec $ expr_type' b t) t_map
     where
         t_map = M.fromListWith (++) $ map f $ M.elems vars
@@ -307,7 +306,7 @@ type EGen = RecT (ReaderT (M.Map Type [Var]) Gen)
 
 
 
-expr_type' :: Bool -> Type -> EGen Expr
+expr_type' :: Bool -> Type -> EGen RawExpr
 expr_type' b t = do
             choice 
                 [ choose_var b t
@@ -315,7 +314,7 @@ expr_type' b t = do
                 ]
     where
 
-choose_var :: Bool -> Type -> EGen Expr
+choose_var :: Bool -> Type -> EGen RawExpr
 choose_var b t = do
     t' <- if b then liftGen $ other_type t else return t
     t_map <- lift ask
@@ -324,25 +323,25 @@ choose_var b t = do
         ((Word `liftM`) . elements)
         $ M.lookup t' t_map
 
-fun_map :: M.Map Type [([Expr] -> Expr, [Type])]
+fun_map :: M.Map Type [([RawExpr] -> RawExpr, [Type])]
 fun_map = M.fromList
     [ (int, 
-        [ (from_list (zplus :: Expr -> Expr -> Expr), [int,int])])
+        [ (from_list (zplus :: RawExpr -> RawExpr -> RawExpr), [int,int])])
     , (bool, 
         -- [ (from_list zeq', [int,int]) 
         -- , (from_list zeq, [bool,bool])
-        [ (from_list (zand :: Expr -> Expr -> Expr), [bool,bool])
-        , (from_list (zor :: Expr -> Expr -> Expr), [bool,bool])
-        , (from_list (znot :: Expr -> Expr), [bool])
-        , (from_list (zle :: Expr -> Expr -> Expr), [int,int])
+        [ (from_list (zand :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
+        , (from_list (zor :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
+        , (from_list (znot :: RawExpr -> RawExpr), [bool])
+        , (from_list (zle :: RawExpr -> RawExpr -> RawExpr), [int,int])
         , (from_list zelem', [int, set_type int] )])
     ]
 
-zelem' :: Expr -> Expr -> Expr
-zelem' e0 e1 = FunApp (mk_fun [int] "elem" [int,set_type int] bool) [e0,e1 :: Expr]
+zelem' :: RawExpr -> RawExpr -> RawExpr
+zelem' e0 e1 = FunApp (mk_fun [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
         -- zeq' e0 e1 = FunApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
-choose_expr :: Bool -> Type -> EGen Expr
+choose_expr :: Bool -> Type -> EGen RawExpr
 choose_expr b t = do
     case M.lookup t fun_map of
         Just xs -> do
@@ -367,7 +366,7 @@ show_list xs = format "[{0}]" $ L.intercalate "\n," $ surround " " " " ys
         ys = map show xs
         surround pre suf xs = map (\x -> pre ++ x ++ suf) xs
 
-subexpression :: Expr -> [(Expr, Type, String)]
+subexpression :: RawExpr -> [(RawExpr, Type, String)]
 subexpression e = f [] e
     where
         f xs e = (e, type_of e, comment e) : visit f xs e
@@ -390,7 +389,7 @@ main = do
         writeFile "actual_exp.txt" $ show mch'
         writeFile "expect_exp.txt" $ unlines
             [ -- show tex
-            show $ (Right mch :: Either String Machine) ]
+            show $ (Right mch :: Either String RawMachine) ]
         -- -- writeFile "actual.txt" (show mch')
         -- -- writeFile "expect.txt" ("Right " ++ show [mch])
         -- -- writeFile "tex.txt" (show $ Tex tex)

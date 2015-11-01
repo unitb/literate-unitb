@@ -3,6 +3,7 @@ module Logic.Proof.POGenerator
     , emit_goal
     , _context
     , POCtx
+    , getContext
     , eval_generator, eval_generatorT
     , with, prefix_label, prefix, named_hyps
     , nameless_hyps, variables, emit_exist_goal
@@ -19,17 +20,20 @@ import Logic.Proof.Sequent as S
 
     -- Libraries
 import Control.Arrow
+import Control.DeepSeq
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
 import Control.Lens hiding (Context)
 
+import Data.DeriveTH
 import Data.List as L
 import Data.Map as M hiding ( map )
 import qualified Data.Map as M
 
 import Utilities.Error
+import Utilities.Invariant
 import Utilities.TH (mkCons)
 import Utilities.Trace
 
@@ -45,6 +49,7 @@ data POParam = POP
 
 makeFields ''POParam
 mkCons ''POParam
+derive makeNFData ''POParam
 
 empty_param :: POParam
 empty_param = makePOParam empty_ctx
@@ -54,6 +59,12 @@ type POGen = POGenT Identity
 newtype POGenT m a = POGen { runPOGen :: RWST POParam [(Label,Sequent)] () m a }
 
 newtype POCtx a = POCtx { runPOCxt :: State POParam a }
+
+instance NFData (POCtx ()) where
+    rnf (POCtx (StateT f)) = f `seq` ()
+
+getContext :: POCtx Context
+getContext = POCtx $ use context
 
 instance Applicative POCtx where
     (<*>) = ap
@@ -80,20 +91,22 @@ instance Monad m => Monad (POGenT m) where
 instance MonadTrans POGenT where
     lift = POGen . lift
 
-emit_exist_goal :: (HasExpr expr Expr, Monad m,Functor m) 
-                => [Label] -> [Var] -> [expr] -> POGenT m ()
-emit_exist_goal lbl vars es = with
+emit_exist_goal :: (IsExpr expr,Monad m,Functor m) 
+                => Assert 
+                -> [Label] -> [Var] -> [expr] 
+                -> POGenT m ()
+emit_exist_goal asrt lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
-                emit_goal (map (label . view name) vs) (zexists vs ztrue $ zall es)
+                emit_goal asrt (map (label . view name) vs) (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ map getExpr es
         clauses' = M.toList $ M.fromListWith (++) clauses
 
-existential :: (Monad m,Functor m) => [Var] -> POGenT m () -> POGenT m ()
-existential [] cmd = cmd
-existential vs (POGen cmd) = do
+existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
+existential _ [] cmd = cmd
+existential asrt vs (POGen cmd) = do
         let g (_, Sequent ctx _ h0 h1 goal) = do
                     vs <- f ctx
                     return $ zforall vs ztrue $ zall (h0 ++ M.elems h1) `zimplies` goal
@@ -111,18 +124,20 @@ existential vs (POGen cmd) = do
             $ local (const empty_param) cmd
         let (ss',st) = runState (mapM g $ snd ss) empty_ctx
         with (_context st) 
-            $ emit_exist_goal [] vs ss'
+            $ emit_exist_goal asrt [] vs ss'
 
-emit_goal :: (Functor m, Monad m, HasExpr expr Expr) 
-          => [Label] -> expr -> POGenT m ()
-emit_goal lbl g = POGen $ do
+
+
+emit_goal :: (Functor m, Monad m, IsExpr expr) 
+          => Assert -> [Label] -> expr -> POGenT m ()
+emit_goal asrt lbl g = POGen $ do
     tag <- asks tag 
-    po <- Sequent <$> view S.context 
-                  <*> view synProp
-                  <*> view nameless
-                  <*> view named
-                  <*> pure (getExpr g)
-    tell [(composite_label $ tag ++ lbl, po)]
+    po  <- Sequent <$> view S.context 
+                   <*> view synProp
+                   <*> view nameless
+                   <*> view named
+                   <*> pure (getExpr g)
+    tell $ [(composite_label $ tag ++ lbl, checkSequent asrt po)]
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
 set_syntactic_props s = POCtx $ synProp .= s
@@ -151,11 +166,11 @@ prefix_label lbl = POCtx $ do
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: HasExpr expr Expr => Map Label expr -> POCtx ()
+named_hyps :: IsExpr expr => Map Label expr -> POCtx ()
 named_hyps hyps = POCtx $ do
         named %= M.union (M.map getExpr hyps)
 
-nameless_hyps :: HasExpr expr Expr => [expr] -> POCtx ()
+nameless_hyps :: IsExpr expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
         nameless %= (++ map getExpr hyps)
 

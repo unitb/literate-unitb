@@ -116,7 +116,7 @@ get_components xs li =
     where
         with_li li cmd = R.local (const li) cmd
         get_name li xs = with_li li $ liftM fst $ lift $ get_1_lbl xs
-        f x@(Env tag li0 xs _li1) 
+        f x@(Env _ tag li0 xs _li1) 
             | tag == "machine" = do
                     n <- get_name li0 xs
                     W.tell ([(n,[xs])],[])

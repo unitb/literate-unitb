@@ -1,20 +1,21 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Z3.Test where
 
     -- Modules
 import Z3.Z3 as Z
 
 import Logic.Expr
+import Logic.Expr.Const
 import Logic.Lambda
 import Logic.Operator hiding ( Command )
 import Logic.Proof 
-import Logic.Theory   hiding ( assert )
+import Logic.Theory
 
 import Theories.SetTheory
 
-import UnitB.PO
-
     -- Libraries
+import Control.Lens hiding (Context)
+
 import qualified Data.Map as M
 import qualified Data.Maybe as M
 import qualified Data.Set as S
@@ -80,13 +81,13 @@ sample_ast = [
         assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
     where
-        f x y   = ($fromJust) $ typ_fun2 ff (Right x) (Right y)
+        f x y   = ($typeCheck) $ typ_fun2 ff (Right x) (Right y)
 
 sample_quant :: [Command]
 sample_quant = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat ]
     where
         ff          = mk_fun [] "f" [int] int
@@ -96,9 +97,9 @@ sample_proof :: Sequent
 sample_proof = Sequent
         ( mk_context [FunDecl [] "f" [int] int] )
         empty_monotonicity
-        [($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
+        [($typeCheck) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         M.empty
-        (($fromJust) $ mzforall [x'] mztrue (f x `mzless` mzint 12))
+        (($typeCheck) $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
         ff          = mk_fun [] "f" [int] int
         f           = typ_fun1 ff
@@ -106,8 +107,8 @@ sample_proof = Sequent
 sample_quant2 :: [Command]
 sample_quant2 = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
         f           = typ_fun1 $ mk_fun [] "f" [int] int
@@ -115,8 +116,8 @@ sample_quant2 = [
 sample_quant3 :: [Command]
 sample_quant3 = [
         Decl (FunDecl [] "f" [int] int),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
-        assert $ M.fromJust $ strip_generics $ ($fromJust) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
+        assert $ M.fromJust $ strip_generics $ ($typeCheck) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat] 
     where
         f           = typ_fun1 $ mk_fun [] "f" [int] int
@@ -127,21 +128,21 @@ assert x = Assert x Nothing
 sample_calc :: Calculation
 sample_calc = (Calc  
         ctx
-        (  ($fromJust)  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
-                   ( ($fromJust) (f x `mzimplies` f y) )
-        [ (equal,    ($fromJust) (f x `mzeq` (f x `mzand` f y)),  [], li)
-        , (equal,    ($fromJust) ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
-        , (follows,  ($fromJust) ( x `mzeq` (x `mzand` y) ), [], li)
-        , (equal,    ($fromJust) ( x `mzimplies` y ),        [], li) 
+        (  ($typeCheck)  ( (x `mzimplies` y) `mzimplies` (f x `mzimplies` f y) )  )
+                   ( ($typeCheck) (f x `mzimplies` f y) )
+        [ (equal,    ($typeCheck) (f x `mzeq` (f x `mzand` f y)),  [], li)
+        , (equal,    ($typeCheck) ( f x `mzeq` f (x `mzand` y) ),  [hyp], li)
+        , (follows,  ($typeCheck) ( x `mzeq` (x `mzand` y) ), [], li)
+        , (equal,    ($typeCheck) ( x `mzimplies` y ),        [], li) 
         ]
         li )
     where
         ctx = mk_context [ FunDecl [] "f" [bool] bool,
                   FunDef [] "follows" [x',y'] 
-                    bool (($fromJust) (y `mzimplies` x)),
+                    bool (($typeCheck) (y `mzimplies` x)),
                   ConstDecl "x" bool,
                   ConstDecl "y" bool ]
-        hyp         = ($fromJust) $ mzforall 
+        hyp         = ($typeCheck) $ mzforall 
             [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" bool
@@ -249,7 +250,7 @@ case7 :: IO (Maybe (AbsContext FOType HOQuantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
         fun :: M.Map String Fun
-        fun = M.map (instantiate m . substitute_type_vars m) $ funs set_theory
+        fun = M.map (instantiate m . substitute_type_vars m) $ set_theory^.funs
         ctx = Context M.empty M.empty fun M.empty M.empty
         t = Gen (Sort "G0" "G0" 0) []
         m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
@@ -257,7 +258,7 @@ case7 = return $ Just $ to_fol_ctx S.empty ctx
 result7 :: Maybe (AbsContext FOType HOQuantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
     where 
-        fun = decorated_table $ M.elems $ M.map f $ funs set_theory
+        fun = decorated_table $ M.elems $ M.map f $ set_theory^.funs
         f :: Fun -> Fun
         f = instantiate m . substitute_type_vars m
         t = Gen (Sort "G0" "G0" 0) []
@@ -268,7 +269,7 @@ pat :: [Type]
 xs  :: [M.Map String GenericType]
 ts  :: S.Set FOType
 
-fun = head $ M.elems (funs set_theory)
+fun = head $ M.elems (set_theory^.funs)
 pat    = patterns fun
 xs     = map (M.map as_generic) 
                             $ match_all pat (S.elems ts)
@@ -277,7 +278,7 @@ ts  = S.fromList $ M.catMaybes $ map type_strip_generics [ set_type int, int ]
 case8 :: IO (Maybe (AbsContext FOType HOQuantifier))
 case8 = return $ Just $ to_fol_ctx types ctx
     where
-        fun   = funs set_theory
+        fun   = set_theory^.funs
         ctx   = Context M.empty M.empty fun M.empty M.empty
         types = S.fromList 
                 [ int
@@ -294,7 +295,7 @@ result8 = ctx_strip_generics ctx
     where
         ctx = Context M.empty M.empty fun M.empty M.empty
         fun = -- M.fromList $ map g 
-                decorated_table $ concatMap M.elems [ M.map (f m) $ funs set_theory | m <- ms ]
+                decorated_table $ concatMap M.elems [ M.map (f m) $ set_theory^.funs | m <- ms ]
         f m = instantiate m . substitute_type_vars m
         t0  = int
         t1  = set_type int

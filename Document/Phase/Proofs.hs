@@ -152,8 +152,8 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
         updateEvt (Left SkipEvent) e = EventP4 e [] Nothing
         promoteEvt _ e = EventP4 e [] Nothing
         _p3 = p3 & pEventRef %~ G.mapBothWithKey 
-                        promoteEvt
                         updateEvt
+                        promoteEvt
         _pProofs = proofs
         _pCoarseRef = M.map (L.map fst) coarse_refs
         _pFineRef   = M.map (fmap fst) fine_refs
@@ -305,7 +305,7 @@ all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
                 else if is_prog then do
                     return $ DocProg lbl
                 else if is_event then do
-                    return $ DocEvent lbl
+                    return $ DocEvent (EventId lbl)
                 else if is_var then do
                     return $ DocVar item
                 else do

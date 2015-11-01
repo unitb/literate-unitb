@@ -5,9 +5,11 @@ module Logic.Proof.Sequent where
 import Logic.Expr
 
     -- Libraries
-import Control.Applicative
+import Control.Applicative hiding (Const)
 import Control.DeepSeq
-import Control.Lens hiding (Context)
+import Control.Exception.Assert
+import Control.Lens hiding (Context,Const)
+import Control.Monad.RWS
 
 import Data.Char
 import Data.Default
@@ -21,7 +23,10 @@ import Data.Typeable
 
 import Utilities.Format
 import Utilities.Instances
+import Utilities.Lines
 import Utilities.TH
+
+import Text.Printf
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
@@ -73,6 +78,63 @@ mkCons ''SyntacticProp
 instance Default SyntacticProp where
     def = empty_monotonicity
 
+instance HasExprs (AbsSequent t q) (AbsExpr t q) where
+    traverseExprs f (Sequent ctx prop hyp0 hyp1 g) = 
+        Sequent ctx prop 
+                <$> traverse f hyp0 
+                <*> traverse f hyp1 
+                <*> f g
+
+predefined :: [String]
+predefined = [ "=","union","and","or","=>","<=","<",">","^"
+             , "subset","select","true","false"
+             , "intersect","+","-","*","/","not"
+             , "Just", "Nothing"
+             , "empty-set", "store" ]
+
+checkScopesAux :: Expr -> RWS Context [Expr] () ()
+checkScopesAux e@(Word v) = do
+    b0 <- views constants (M.lookup $ v^.name)
+    b1 <- views definitions (M.member $ v^.name)
+    b2 <- views functions (M.member $ v^.name)
+    unless (b0 == Just v || b1 || b2) $ 
+        tell [e]
+checkScopesAux (Const _ _) = return ()
+checkScopesAux e@(FunApp fn args) = do
+    b0 <- views functions (M.member $ fn^.name)
+    b1 <- views definitions (M.member $ fn^.name)
+    unless (b0 || b1 || ((fn^.name) `elem` predefined)) 
+        $ tell [e]
+    mapM_ checkScopesAux args
+checkScopesAux (Binder _ vs r t _) =
+    local (over constants $ M.union $ symbol_table vs) $ do
+        mapM_ checkScopesAux [r,t]
+checkScopesAux (Cast e _) = do
+    checkScopesAux e
+checkScopesAux (Lift e _) = do
+    checkScopesAux e
+
+checkSequent :: (forall a. Bool -> a -> a) -> Sequent -> Sequent
+checkSequent arse s = byPred arse msg (const $ L.null xs) s s
+         --assertMessage "invalid scopes" (unlines $ map show xs) id s
+    where
+        msg = printf "Sequent scopes: \n%s" $ L.unlines $ map show xs
+        --f (Def ts _ n ps t e) = _
+        checkScopes' e = do
+            xs <- snd <$> listen (checkScopesAux e)
+            unless (L.null xs)
+                $ tell [e]
+        ctx = s^.context 
+                & definitions %~ symbol_table.M.elems 
+                & constants %~ symbol_table.M.elems 
+                & functions %~ symbol_table.M.elems 
+                & dummies %~ symbol_table.M.elems 
+        travAsserts = traverseOf_ traverseExprs checkScopes' s
+        f (Def _ _ ts _ e) = local (constants %~ M.union (symbol_table ts)) $ checkScopes' e
+        travDefs = local (definitions .~ M.empty) 
+                $ traverseOf_ traverse f $ ctx^.definitions
+        xs  = snd $ execRWS (travAsserts >> travDefs) ctx ()
+
 expressions :: Getter (AbsSequent t q) [AbsExpr t q]
 expressions = to $ \s -> (s^.goal) : (s^.nameless) ++ (M.elems $ s^.named)
 
@@ -121,18 +183,18 @@ empty_sequent :: (TypeSystem2 t,IsQuantifier q) => AbsSequent t q
 empty_sequent = (Sequent empty_ctx empty_monotonicity [] M.empty ztrue)
 
 instance (TypeSystem t, IsQuantifier q) => Show (AbsSequent t q) where
-    show s =
-            unlines (
-                   map (" " ++)
-                (  ["sort: " ++ intercalate ", " (map f $ toList ss)]
-                ++ (map show $ elems fs)
-                ++ (map show $ elems ds)
-                ++ (map show $ elems vs)
-                ++ map pretty_print' (elems hs))
-                ++ ["|----"," " ++ pretty_print' g] )
+    show s = L.unlines $ asms ++ ["|----",goal'] 
         where
+            indent = over traverseLines (" " ++)
+            asms   = map indent $ 
+                    ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ map f $ toList ss)]
+                    ++ (map show $ elems fs)
+                    ++ (map show $ elems ds)
+                    ++ (map show $ elems vs)
+                    ++ map pretty_print' hs
+            goal' = indent $ pretty_print' g
             Context ss vs fs ds _ = s^.context
-            hs = s^.named
+            hs = elems (s^.named) ++ s^.nameless
             g  = s^.goal
             f (_, IntSort) = ""
             f (_, BoolSort) = ""

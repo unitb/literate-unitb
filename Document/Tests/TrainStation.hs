@@ -2,6 +2,7 @@
 module Document.Tests.TrainStation where
 
     -- Modules
+import Document.Proof
 import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 
 import Logic.Expr
@@ -11,7 +12,6 @@ import Logic.Proof
 import Logic.Theory
 
 import UnitB.AST
-import qualified UnitB.Expr as UBExpr
 
 import Theories.SetTheory
 import Theories.FunctionTheory
@@ -19,11 +19,11 @@ import Theories.Arithmetic
 
     -- Libraries
 import Control.Arrow
+import Control.Lens hiding (elements,universe,(.=),indices)
 import Control.Monad.State
 
 import qualified Data.List as L -- ( intercalate, filter )
-import           Data.Map hiding ( map )
-import qualified Data.Set as S
+import           Data.Map  as M hiding ( map )
 
 import Tests.UnitTest
 import Test.QuickCheck hiding (label)
@@ -193,19 +193,19 @@ ent_var   :: Var
 ext_var   :: Var
 plf_var   :: Var
 
-(train,train_var) = (var "sl@TRAIN" $ set_type train_type)
-(loc_cons,loc_var)   = (var "sl@LOC" $ set_type loc_type)
-(ent,ent_var)   = (var "ent" $ blk_type)
-(ext,ext_var)   = (var "ext" $ blk_type)
-(plf,plf_var)   = (var "PLF" $ set_type blk_type)
+(train,train_var) = (Expr.var "sl@TRAIN" $ set_type train_type)
+(loc_cons,loc_var)   = (Expr.var "sl@LOC" $ set_type loc_type)
+(ent,ent_var)   = (Expr.var "ent" $ blk_type)
+(ext,ext_var)   = (Expr.var "ext" $ blk_type)
+(plf,plf_var)   = (Expr.var "PLF" $ set_type blk_type)
 
 block :: ExprP
 block_var :: Var
-(block, block_var) = var "sl@BLK" $ set_type blk_type
+(block, block_var) = Expr.var "sl@BLK" $ set_type blk_type
 
 machine0 :: Machine
-machine0 = UBExpr.DispExpr "" <$> (empty_machine "train0") 
-    {  _theory = empty_theory 
+machine0 = (empty_machine "train0") & content assert %~ \m -> 
+    m & theory .~ empty_theory 
             {  _extends = fromList
                     [  ("functions", function_theory) -- train_type blk_type
                     ,  ("sets", set_theory) -- blk_type
@@ -239,14 +239,18 @@ machine0 = UBExpr.DispExpr "" <$> (empty_machine "train0")
                     ,  ("PLF", plf_var)
                     ]
             }
-    ,  _inits = fromList $ zip (map (label . ("in" ++) . show . (1 -)) [0..])
-            $ map ($typeCheck) [loc .= zempty_fun, in_var .= zempty_set]
-    ,  _variables = symbol_table [in_decl,loc_decl]
-    ,  _event_table = newEvents [("enter", enter_evt), ("leave", leave_evt)]
-    ,  _props = props0
-    ,  _derivation = fromList []
-    }
+      & inits .~ fromList (zip inLbls 
+            -- $ map ($typeCheck) [loc .= zempty_fun, in_var .= zempty_set])
+             --[ _
+             -- , _ ] )
+             $ [ c [expr| loc = \emptyfun  |]
+               , c [expr| in = \emptyset  |] ] )
+      & variables .~ vars
+      & event_table .~ newEvents [("enter", enter_evt), ("leave", leave_evt)]
+      & props .~ props0
+    --  & derivation .~ fromList []
     where
+        inLbls = map (label . ("in" ++) . show . (1 -)) [0..]
         axm0 = ($typeCheck) (block .= (zset_enum [ent,ext] `zunion` plf)) 
         axm2 = ($typeCheck) (
                mznot (ent .= ext)
@@ -265,35 +269,59 @@ machine0 = UBExpr.DispExpr "" <$> (empty_machine "train0")
                         (mzeq p ent \/ mzeq p ext)
                     .=  mznot (p `zelem` plf) )
 
-props0 :: PropertySet' Expr
+vars :: Map String Var
+vars = symbol_table [in_decl,loc_decl]
+
+c :: Ctx
+c = ctxWith [("sets",set_theory),("functions",function_theory)] $ do
+        [carrier| \TRAIN |]
+        [carrier| \LOC |]
+        [carrier| \BLK |]
+        [var| ent, ext : \BLK |]
+        [var| PLF : \set [\BLK] |]
+        primable $ do
+            --decls %= insert "loc" loc_decl
+            --decls %= insert "in" in_decl
+            [var| loc : \TRAIN \pfun \BLK |]
+            [var| in : \set [\TRAIN] |]
+            [var| t : \TRAIN |]
+
+props0 :: PropertySet
 props0 = empty_property_set
     {  _constraint = fromList 
             [   ( "co0"
                 , Co [t_decl] 
-                    $ ($typeCheck) (mzimplies 
-                        (mzand (mznot (t `zelem` in_var)) (t `zelem` in_var')) 
-                        (mzeq  (zapply loc' t) ent)) )
+                    -- $ ($typeCheck) (mzimplies 
+                    --    (mzand (mznot (t `zelem` in_var)) (t `zelem` in_var')) 
+                    --    (mzeq  (zapply loc' t) ent)) )
+                    $ c $ [expr| \neg t \in in \land t \in in'  \implies  loc'.t = ent |] . (is_step .~ True))
             ,   ( "co1"
                 , Co [t_decl] 
-                    $ ($typeCheck) (mzimplies 
-                        (mzall [ (t `zelem` in_var), 
-                                 (zapply loc t .= ent), 
-                                 mznot (zapply loc t `zelem` plf)])
-                        (mzand (t `zelem` in_var')
-                               ((zapply loc' t `zelem` plf) \/ ((loc' `zapply` t) 
-                               .= ent)))) )
+                   -- $ ($typeCheck) (mzimplies 
+                        --(mzall [ (t `zelem` in_var), 
+                        --         (zapply loc t .= ent), 
+                        --         mznot (zapply loc t `zelem` plf)])
+                        --(mzand (t `zelem` in_var')
+                        --       ((zapply loc' t `zelem` plf) \/ ((loc' `zapply` t) 
+                        --       .= ent)))) )
+                    $ c $ [expr| t \in in \land loc.t = ent \land \neg loc.t \in PLF  
+                               \implies  t \in in' 
+                                   \land (loc'.t \in PLF \1\lor loc'.t = ent) |] . (is_step .~ True) )
             ]
     ,   _transient = fromList
             [   ( "tr0"
                 , Tr
                     (symbol_table [t_decl])
-                    (($typeCheck) (t `zelem` in_var)) ["leave"] 
-                    (TrHint (fromList [("t",(train_type, $typeCheck $ t' .= t))]) Nothing) )
+                    --(($typeCheck) (t `zelem` in_var)) ["leave"] 
+                    (c $ [expr| t \in in |].(free_dummies .~ True)) ["leave"] 
+                    (TrHint (fromList [("t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
             ]
     ,  _inv = fromList 
-            [   ("inv2",($typeCheck) (zdom loc .= in_var))
-            ,   ("inv1",($typeCheck) $ mzforall [t_decl] (zelem t in_var)
-                        ((zapply loc t `zelem` block)))
+            [   ("inv2", c [expr| \dom.loc = in |])
+            --[   ("inv2", ($typeCheck) zdom loc .= in_var))
+            ,   ("inv1", c [expr| \qforall{t}{t \in in}{loc.t \in \BLK} |])
+            --,   ("inv1",($typeCheck) $ mzforall [t_decl] (zelem t in_var)
+            --            ((zapply loc t `zelem` block)))
             ]
     ,  _proofs = fromList
             [   ( "train0/enter/INV/inv2"
@@ -317,40 +345,45 @@ props0 = empty_property_set
     where 
         li = LI "" 0 0
 
-enter_evt :: Event' Expr
+enter_evt :: Event
 enter_evt = empty_event
-    {  _indices = symbol_table [t_decl]
-    ,  _guards  = fromList
-            [  ("grd1", ($typeCheck) $ mznot (t `zelem` in_var))
+    &  indices .~ symbol_table [t_decl]
+    &  coarse_sched .~ fromList
+            [ ("default", zfalse )]
+    &  guards  .~ fromList
+            [  ("grd1", c [expr| \neg t \in in |])
             ]
-    ,  _actions = fromList
-            [  ("a1", BcmSuchThat vars
-                    (($typeCheck) (in_var' .= (in_var `zunion` zmk_set t))))
-            ,  ("a2", BcmSuchThat vars
-                    (($typeCheck) (loc' .= (loc `zovl` zmk_fun t ent))))
+    &  actions .~ fromList
+            [  ("a1", BcmSuchThat (M.elems vars)
+                    --(($typeCheck) (in_var' .= (in_var `zunion` zmk_set t))))
+                    (c $ [expr| in' = in \bunion \{ t \} |] . (is_step .~ True)))
+            ,  ("a2", BcmSuchThat (M.elems vars)
+                    --(($typeCheck) (loc' .= (loc `zovl` zmk_fun t ent))))
+                    (c $ [expr| loc' = loc \1| t \fun ent |] . (is_step .~ True)))
             ]
-    }
-    where 
-        vars = S.elems $ variableSet machine0
+    --where 
+    --    vars = S.elems $ variableSet machine0
+        --c = ctx $ do
+        --        decls %= insert "in" in_decl
+        --        decls %= insert "loc" loc_decl
 
-leave_evt :: Event' Expr
+
+leave_evt :: Event
 leave_evt = empty_event 
     {  _indices   = symbol_table [t_decl]
-    ,  _coarse_sched = singleton "c0" (($typeCheck) (t `zelem` in_var))
+    ,  _coarse_sched = singleton "c0" (c [expr| t \in in |])
     ,  _guards = fromList
-            [  ("grd0", ($typeCheck) $  
-                                       zapply loc t .= ext
-                                    /\ (t `zelem` in_var) )
+            [  ("grd0", c [expr| loc.t = ext \1\land t \in in |] )
             ]
     ,  _actions = fromList 
-            [  ("a0", BcmSuchThat vars
-                    (($typeCheck) (in_var' .= (in_var `zsetdiff` zmk_set t))))
-            ,  ("a3", BcmSuchThat vars
-                    (($typeCheck) (loc' .= (zmk_set t `zdomsubt` loc))))
+            [  ("a0", BcmSuchThat (M.elems vars)
+                    (c $ [expr| in' = in \1\setminus \{ t \} |] . (is_step .~ True)))
+                    --(($typeCheck) (in_var' .= (in_var `zsetdiff` zmk_set t))))
+            ,  ("a3", BcmSuchThat (M.elems vars)
+                    (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
+                    --(($typeCheck) (loc' .= (zmk_set t `zdomsubt` loc))))
             ] 
     }
-    where
-        vars = S.elems $ variableSet machine0
 
 p        :: ExprP
 p_decl   :: Var
@@ -364,9 +397,9 @@ loc      :: ExprP
 loc'     :: ExprP
 loc_decl :: Var
 
-(p, p_decl) = var "p" blk_type
-(t, t_decl) = var "t" train_type
-(t', _) = var "t@prime" train_type
+(p, p_decl) = Expr.var "p" blk_type
+(t, t_decl) = Expr.var "t" train_type
+(t', _) = Expr.var "t@prime" train_type
 (in_var, in_var', in_decl) = prog_var "in" (set_type train_type)
 (loc, loc', loc_decl) = prog_var "loc" (fun_type train_type blk_type)
 
@@ -1023,7 +1056,6 @@ result1 = unlines
     , "  o  train0/leave/CO/co1/step 6"
     , "  o  train0/leave/CO/co1/step 7"
     , "  o  train0/leave/CO/co1/step 8"
-    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1043,7 +1075,7 @@ result1 = unlines
     , "  o  train0/leave/WWD"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
-    , "passed 114 / 115"
+    , "passed 113 / 114"
     ]
 
 case1 :: IO (String, Map Label Sequent)
@@ -1679,122 +1711,137 @@ case12 = raw_proof_obligation path0 "train0/leave/INV/inv2" 0
     --------------------
     -- Error handling --
     --------------------
-result7 :: Either [Error] a
-result7 = Left [Error "unrecognized term: t" (LI path7 54 3)]
+result7 :: String
+result7 = unlines 
+    [ "error 54:4:"
+    , "    unrecognized term: t" 
+    ]
 
 path7 :: String
 path7 = "Tests/train-station-err0.tex"
 
-case7 :: IO (Either [Error] [Machine])
-case7 = parse path7
+case7 :: IO String
+case7 = find_errors path7
 
-result8 :: Either [Error] a
-result8 = Left [Error "event 'leave' is undeclared" (LI path8 42 15)]
+result8 :: String
+result8 = unlines 
+    [ "error 43:1:"
+    , "    event 'leave' is undeclared"
+    ]
 
 path8 :: String
 path8 = "Tests/train-station-err1.tex"
 
-case8 :: IO (Either [Error] [Machine])
-case8 = parse path8
+case8 :: IO String
+case8 = find_errors path8
 
-result9 :: Either [Error] a
-result9 = Left [Error "event 'leave' is undeclared" (LI path9 51 15)]
+result9 :: String
+result9 = unlines
+    [ "error 52:1:"
+    , "    event 'leave' is undeclared" 
+    ]
 
 path9 :: String
 path9 = "Tests/train-station-err2.tex"
 
-case9 :: IO (Either [Error] [Machine])
-case9 = parse path9
+case9 :: IO String
+case9 = find_errors path9
 
-result10 :: Either [Error] a
-result10 = Left [Error "event 'leave' is undeclared" (LI path10 55 15)]
+result10 :: String
+result10 = unlines 
+    [ "error 56:1:"
+    , "    event 'leave' is undeclared" 
+    ]
 
 path10 :: String
 path10 = "Tests/train-station-err3.tex"
 
-case10 :: IO (Either [Error] [Machine])
-case10 = parse path10
+case10 :: IO String
+case10 = find_errors path10
 
-result11 :: Either [Error] a
-result11 = Left [Error "event 'leave' is undeclared" (LI path11 59 15)]
+result11 :: String
+result11 = unlines 
+    [ "error 60:1:"
+    , "    event 'leave' is undeclared" 
+    ]
 
 path11 :: String
 path11 = "Tests/train-station-err4.tex"
 
-case11 :: IO (Either [Error] [Machine])
-case11 = parse path11
+case11 :: IO String
+case11 = find_errors path11
 
 path13 :: String
 path13 = "Tests/train-station-err5.tex"
 
 result13 :: String
 result13 = unlines
-    [ "error 176:3:"
+    [ "error 176:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 178:3:"
+    , "error 178:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 180:3:"
+    , "error 180:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 182:3:"
+    , "error 182:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 186:31:"
+    , "error 186:34:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 251:3:"
+    , "error 251:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 253:3:"
+    , "error 253:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 256:3:"
+    , "error 256:7:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 261:4:"
+    , "error 261:6:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 264:3:"
+    , "error 264:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 267:3:"
+    , "error 267:5:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 269:4:"
+    , "error 269:6:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 272:4:"
+    , "error 272:6:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
     , ""
-    , "error 274:4:"
+    , "error 274:6:"
     , "    unrecognized term: t0"
     , "Perhaps you meant:"
     , "t (variable)"
@@ -1869,7 +1916,7 @@ result14 = unlines
     , "  o  train0/leave/CO/co1/step 6"
     , "  o  train0/leave/CO/co1/step 7"
     , "  o  train0/leave/CO/co1/step 8"
-    , "  o  train0/leave/C_SCH/weaken/c0"
+    --, "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1895,7 +1942,7 @@ result14 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
-    , "passed 83 / 85"
+    , "passed 82 / 84"
     ]
         
 case14 :: IO (String, Map Label Sequent)
@@ -1971,7 +2018,6 @@ result15 = unlines
     , "  o  train0/leave/CO/co1/step 6"
     , "  o  train0/leave/CO/co1/step 7"
     , "  o  train0/leave/CO/co1/step 8"
-    , "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -1997,7 +2043,7 @@ result15 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
-    , "passed 88 / 91"
+    , "passed 87 / 90"
     ]
       
 case15 :: IO (String, Map Label Sequent)
@@ -2092,7 +2138,7 @@ result16 = unlines
     , "  o  train0/leave/CO/co1/step 6"
     , "  o  train0/leave/CO/co1/step 7"
     , "  o  train0/leave/CO/co1/step 8"
-    , "  o  train0/leave/C_SCH/weaken/c0"
+    --, "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -2118,7 +2164,7 @@ result16 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
-    , "passed 109 / 110"
+    , "passed 108 / 109"
     ]
 
 case16 :: IO (String, Map Label Sequent)
@@ -2129,9 +2175,9 @@ path17 = "Tests/train-station-err8.tex"
 
 result17 :: String
 result17 = unlines 
-        [  "error 75:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
-        ,  "error 75:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_b]"
-        ,  "error 77:2:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
+        [  "error 75:4:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
+        ,  "error 75:4:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_b]"
+        ,  "error 77:3:\n    type of empty-fun is ill-defined: \\pfun [\\TRAIN,_a]"
         ]
 
 case17 :: IO String
@@ -2142,7 +2188,7 @@ path22 = "Tests/train-station-err11.tex"
 
 result22 :: String
 result22 = unlines 
-        [  "error 47:15:\n    event(s) leave have indices and require witnesses"
+        [  "error 48:1:\n    event(s) leave have indices and require witnesses"
         ]
 
 case22 :: IO String
@@ -2153,7 +2199,7 @@ path18 = "Tests/train-station-err9.tex"
 
 result18 :: String
 result18 = unlines 
-        [  "error 68:2:\n    expression has type incompatible with its expected type:"
+        [  "error 68:3:\n    expression has type incompatible with its expected type:"
         ,  "  expression: (dom loc)"
         ,  "  actual type: \\set [\\TRAIN]"
         ,  "  expected type: \\Bool "
@@ -2168,7 +2214,7 @@ result18 = unlines
         ,  "  actual type: \\TRAIN"
         ,  "  expected type: \\Bool "
         ,  ""
-        ,  "error 123:2:\n    expression has type incompatible with its expected type:"
+        ,  "error 123:3:\n    expression has type incompatible with its expected type:"
         ,  "  expression: empty-set"
         ,  "  actual type: \\set [_a]"
         ,  "  expected type: \\Bool "
@@ -2187,7 +2233,14 @@ case21 = find_errors path21
 result21 :: String
 result21 = unlines
     [ "Theory imported multiple times"
-    , "error 129:1:\n\t\"sets\"\n"
-    , "error 130:12:\n\t\"sets\"\n"
-    , "error 131:12:\n\t\"sets\"\n\n"
+    , "error 130:1:"
+    , "\t\"sets\""
+    , ""
+    , "error 131:1:"
+    , "\t\"sets\""
+    , ""
+    , "error 132:1:"
+    , "\t\"sets\""
+    , ""
+    , ""
     ]

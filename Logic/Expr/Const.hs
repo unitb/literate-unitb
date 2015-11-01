@@ -423,6 +423,7 @@ zident :: ExprP
 zident = Right $ FunApp ident_fun []
 
 instance Num ExprP where
+    (-) = mzminus
     (+) = mzplus
     (*) = mztimes
     abs = typ_fun1 $ mk_fun [] "abs" [int] int

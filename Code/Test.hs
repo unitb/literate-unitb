@@ -13,11 +13,9 @@ import UnitB.Expr
 import Z3.Z3
 
     -- Libraries
--- import Control.Arrow
-
+import Control.Lens
 import Control.Monad
 import Control.Monad.Trans
--- import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
@@ -57,8 +55,8 @@ result0 = unlines
         , "    , v_f :: M.Map (Int) (Int)" 
         , "    , v_n :: Int }" ]
 
-input :: Either String Machine
-input = unsafePerformIO $ parse path0
+input :: Either String RawMachine
+input = unsafePerformIO $ fmap raw <$> parse path0
 
 path0 :: String
 path0 = "tests/cubes-t8.tex"
@@ -66,7 +64,7 @@ path0 = "tests/cubes-t8.tex"
 case0 :: IO String
 case0 = do x <- runEitherT $ do
                 m <- hoistEither input
-                EitherT $ return $ run $ struct m
+                EitherT $ return $ run $ struct $ raw m
            return $ either id id x    
         
 
@@ -83,8 +81,8 @@ result1 = unlines
      
 case1 :: IO String
 case1 = do x <- runEitherT $ do
-                m <- hoistEither input
-                EitherT $ return $ run $ void $ event_body_code m $ events m ! label "evt"
+                m <- raw <$> hoistEither input
+                EitherT $ return $ run $ void $ event_body_code m $ (conc_events m ! Right "evt")^.new
            return $ either id id x    
 
 result2 :: String
@@ -99,7 +97,7 @@ result2 = unlines
      
 case2 :: IO String
 case2 = do let x = do
-                m <- input
+                m <- raw <$> input
                 run $ init_code m
            return $ either id id x    
 
@@ -137,12 +135,12 @@ result3 = unlines
 
 case3 :: IO String
 case3 = do let x = do
-                m <- input
+                m <- raw <$> input
                 run $ machine_code "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($fromJust) $ fst $ var "n" int
-        (bigN)   = ($fromJust) $ fst $ var "N" int
+        (n)      = ($typeCheck) $ fst $ var "n" int
+        (bigN)   = ($typeCheck) $ fst $ var "N" int
      
 result4 :: String
 result4 = unlines
@@ -202,8 +200,8 @@ case4 = do let x = do
                 source_file "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($fromJust) $ fst $ var "n" int
-        (bigN)   = ($fromJust) $ fst $ var "N" int
+        (n)      = ($typeCheck) $ fst $ var "n" int
+        (bigN)   = ($typeCheck) $ fst $ var "N" int
 
 result7 :: String
 result7 = unlines
@@ -274,8 +272,8 @@ case7 = do let x = do
                 source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
-        (n)      = ($fromJust) $ fst $ var "n" int
-        (bigN)   = ($fromJust) $ fst $ var "N" int
+        (n)      = ($typeCheck) $ fst $ var "n" int
+        (bigN)   = ($typeCheck) $ fst $ var "N" int
 
 result8 :: String
 result8 = unlines 
@@ -297,8 +295,8 @@ case8 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = ($fromJust) $ fst $ var "n" int
-        (bigN)   = ($fromJust) $ fst $ var "N" int
+        (n)      = ($typeCheck) $ fst $ var "n" int
+        (bigN)   = ($typeCheck) $ fst $ var "N" int
 
 result5 :: String
 result5 = unlines
@@ -330,8 +328,8 @@ case5 = do  xs <- runEitherT $ do
                     return rs
             return $ either id id xs    
     where
-        (n)      = ($fromJust) $ fst $ var "n" int
-        (bigN)   = ($fromJust) $ fst $ var "N" int
+        (n)      = ($typeCheck) $ fst $ var "n" int
+        (bigN)   = ($typeCheck) $ fst $ var "N" int
 
 result6 :: String
 result6 = unlines 

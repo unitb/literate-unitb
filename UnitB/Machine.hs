@@ -20,19 +20,22 @@ import UnitB.Expr hiding (merge,target)
 import UnitB.Property
 
     -- Libraries
+import Control.Arrow
 import Control.DeepSeq
-import Control.Lens
+import Control.Exception
+import Control.Lens hiding (indices)
 
 import Control.Monad hiding ( guard )
 import Control.Monad.State
 import Control.Monad.Trans.Maybe
-import Control.Monad.Writer hiding ( guard )
 
 import           Data.Default
 import           Data.DeriveTH
 import           Data.Foldable as F (all)
+import           Data.Functor.Compose
+import           Data.Functor.Classes
 import           Data.List as L hiding ( union, inits )
-import           Data.List.NonEmpty as NE
+import           Data.List.NonEmpty as NE hiding (inits)
 import           Data.Map as M
 import           Data.Maybe as M
 -- import           Data.Maybe as M
@@ -44,6 +47,7 @@ import Utilities.BipartiteGraph
 import Utilities.Format
 import Utilities.HeterogenousEquality
 import Utilities.Instances
+import Utilities.Invariant
 import Utilities.TH
 
 all_types :: Theory -> Map String Sort
@@ -59,9 +63,11 @@ type Machine = Machine' Expr
 
 type RawMachine = Machine' RawExpr
 
-data Machine' expr = 
+type Machine' = Compose Checked Machine''
+
+data Machine'' expr = 
     Mch 
-        { _machine'Name :: String
+        { _machine''Name :: String
         , _theory     :: Theory
         , _variables  :: Map String Var
         , _abs_vars   :: Map String Var
@@ -72,13 +78,19 @@ data Machine' expr =
         , _event_table :: EventTable expr
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
-        , _derivation :: Map Label Rule         
+        , _derivation :: Map ProgId Rule         
         , _comments   :: Map DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
+instance Eq1 Machine'' where
+    eq1 x y = x == y
+
+instance Show1 Machine'' where
+    showsPrec1 n m = showsPrec n m
+
 data DocItem = 
         DocVar String 
-        | DocEvent Label 
+        | DocEvent EventId 
         | DocInv Label
         | DocProg Label
     deriving (Eq,Ord)
@@ -120,8 +132,27 @@ instance RefRule Rule where
     supporting_evts (Rule r) = supporting_evts r
 
 makeLenses ''EventTable
-makeLenses ''Machine'
-makeFields ''Machine'
+makeLenses ''Machine''
+makeFields ''Machine''
+
+instance Show expr => HasName (Machine' expr) String where
+    name = content assert.name
+
+--instance Show expr => HasMachine'' (Machine' expr) expr where
+--    machine'' = content assert
+
+instance Show expr => HasInvariant (Machine'' expr) where
+    invariant m = 
+        [ ("inv0", F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) $ conc_events m) 
+        , ("inv1", F.all validEvent $ m^.props.transient)
+        , ("inv2", F.all tr_wit_enough $ m^.props.transient) ] 
+        where
+            validEvent (Tr _ _ es _) = L.all (`M.member` nonSkipUpwards m) es
+            tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
+            tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) es
+
+instance Controls (Machine'' expr) (Machine'' expr) where 
+    content' = id
 
 -- downward :: Machine -> Label -> AbstrEvent -> EventSplitting
 -- downward m lbl aevt = assert (sameExpr coarse_sched xs 
@@ -139,8 +170,8 @@ makeFields ''Machine'
 -- neList :: a -> [a] -> NonEmpty a
 -- neList x xs = fromMaybe (x :| []) (nonEmpty xs)
 
-all_refs :: Machine' expr -> [EventRef expr]
-all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards m
+all_refs :: Show expr => Machine' expr -> [EventRef expr]
+all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards $ m^.content'
 
 -- sameExpr :: (Ord expr)
 --          => Getting (Map Label expr) event (Map Label expr) 
@@ -151,8 +182,9 @@ all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards m
 --         eqAction x y = acts x == acts y
 --         acts x = L.sort (elems $ x^.ln)
 
-conc_events :: Machine' expr -> Map SkipOrEvent (ConcrEvent' expr)
-conc_events = M.map fst . backwardEdges . view events
+conc_events :: Controls machine (Machine'' expr)
+            => machine -> Map SkipOrEvent (ConcrEvent' expr)
+conc_events = M.map fst . backwardEdges . view' events
 
 -- upward :: Machine -> Label -> ConcrEvent -> EventMerging
 -- upward m lbl cevt = EvtM aevts (lbl,cevt)
@@ -162,26 +194,28 @@ conc_events = M.map fst . backwardEdges . view events
 --         aevts = assert (sameExpr actions $ L.map snd xs) 
 --                 $ neList (lbl,skip_abstr lbl) xs
 
-upward_event :: Machine' expr -> SkipOrEvent -> EventMerging expr
-upward_event m lbl = M.fromJust $ readGraph (m^.events) $ runMaybeT $ do
+upward_event :: Show expr => Machine' expr -> SkipOrEvent -> EventMerging expr
+upward_event m lbl = M.fromJust $ readGraph (m^.content'.events) $ runMaybeT $ do
         v  <- MaybeT $ hasRightVertex lbl
         lift $ do
             es <- fmap source <$> predecessors v
             EvtM <$> T.forM es (\e -> (,) <$> leftKey e <*> leftInfo e)
                  <*> ((,) <$> rightKey v <*> rightInfo v)
 
---new_event_set :: Map String Var
---              -> Map Label Event
---              -> BiGraph Label AbstrEvent ConcrEvent
---new_event_set vs es = M.fromJust $ makeGraph $ do
---        skip <- newLeftVertex ":skip:" skip_abstr
---        forM_ (M.toList es) $ \(lbl,e) -> do
---            let f m = M.fromList $ L.map (id &&& Word) $ M.elems $ m `M.difference` vs
---            v <- newRightVertex lbl $ CEvent e (e^.actions.to frame.to f) M.empty
---            newEdge skip v
+new_event_set :: IsExpr expr
+              => Map String Var
+              -> Map EventId (Event' expr)
+              -> EventTable expr
+new_event_set vs es = EventTable $ M.fromJust $ makeGraph $ do
+        skip <- newLeftVertex (Left SkipEvent) skip_abstr
+        forM_ (M.toList es) $ \(lbl,e) -> do
+            let f m = M.fromList $ L.map (id &&& Word) $ M.elems $ m `M.difference` vs
+            v <- newRightVertex (Right lbl) $ CEvent e (e^.actions.to frame.to f) M.empty M.empty
+            newEdge skip v
 
-nonSkipUpwards :: Machine' expr -> Map EventId (EventMerging expr)
-nonSkipUpwards m = readGraph (m^.events) $ do
+nonSkipUpwards :: Controls machine (Machine'' expr)    
+               => machine -> Map EventId (EventMerging expr)
+nonSkipUpwards m = readGraph (m!.events) $ do
         es <- getRightVertices
         ms <- forM es $ \e -> do
             es' <- fmap source <$> predecessors e
@@ -191,8 +225,9 @@ nonSkipUpwards m = readGraph (m^.events) $ do
             return $ either (const []) ((:[]).(,x)) k
         return $ M.fromList $ concat ms
 
-nonSkipDownwards :: Machine' expr -> Map EventId (EventSplitting expr)
-nonSkipDownwards m = readGraph (m^.events) $ do
+nonSkipDownwards :: Controls machine (Machine'' expr)    
+                 => machine -> Map EventId (EventSplitting expr)
+nonSkipDownwards m = readGraph (m!.events) $ do
         es <- getLeftVertices
         ms <- forM es $ \e -> do
             es' <- fmap target <$> successors e
@@ -202,8 +237,9 @@ nonSkipDownwards m = readGraph (m^.events) $ do
             return $ either (const []) ((:[]).(,x)) k
         return $ M.fromList $ concat ms
 
-all_upwards :: Machine' expr -> Map SkipOrEvent (EventMerging expr)
-all_upwards m = readGraph (m^.events) $ do
+all_upwards :: Controls machine (Machine'' expr)    
+            => machine -> Map SkipOrEvent (EventMerging expr)
+all_upwards m = readGraph (m!.events) $ do
         es <- getRightVertices
         ms <- forM es $ \e -> do
             es' <- fmap source <$> predecessors e
@@ -213,22 +249,30 @@ all_upwards m = readGraph (m^.events) $ do
         return $ M.fromList ms
     -- M.mapWithKey (upward m) (conc_events m)
 
-all_downwards :: Machine' expr -> Map SkipOrEvent (EventSplitting expr)
-all_downwards m = readGraph (m^.events) $ do
+all_downwards :: Controls machine (Machine'' expr)    
+              => machine -> Map SkipOrEvent (EventSplitting expr)
+all_downwards m = readGraph (m!.events) $ do
         es <- getLeftVertices
         ms <- forM es $ \e -> do
-            es' <- fmap target <$> successors e
-            (,) <$> leftKey e
-                <*> (EvtS <$> ((,) <$> leftKey e <*> leftInfo e)
-                          <*> T.forM es' (\e -> (,) <$> rightKey e <*> rightInfo e))
-        return $ M.fromList ms
+            es'  <- fmap target <$> successors e
+            cevts <- T.forM es' (\e -> (,) <$> rightKey e <*> rightInfo e)
+            aevt  <- ((,) <$> leftKey e <*> leftInfo e)
+            e     <- leftKey e
+            case e of
+                Right e -> 
+                    return [(Right e,EvtS aevt cevts)]
+                Left SkipEvent ->
+                    return [(Left SkipEvent,EvtS aevt (c :|[])) | c <- NE.toList cevts]
+        return $ M.fromList $ concat ms
     -- M.mapWithKey (downward m) (abs_events m)
 
-eventTable :: (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) (ConcrEvent' expr) s0 s1 ())
+eventTable :: forall expr. IsGenExpr expr
+           => (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) (ConcrEvent' expr) s0 s1 ())
            -> EventTable expr
 eventTable gr = EventTable $ fromJust $ makeGraph $ do
-    a <- newLeftVertex (Left SkipEvent) def
-    c <- newRightVertex (Left SkipEvent) def
+    let skip = def & coarse_sched .~ singleton "default" (zfalse :: expr)
+    a <- newLeftVertex (Left SkipEvent)  $ def & old .~ skip
+    c <- newRightVertex (Left SkipEvent) $ def & new .~ skip
     newEdge a c
     gr
 
@@ -248,14 +292,15 @@ refined_event eid cmd = do
     cevt <- newRightVertex eid' $ event^.concrEvent'
     newEdge aevt cevt
 
-newEvents :: [(EventId,Event' expr)]
+newEvents :: IsGenExpr expr 
+          => [(EventId,Event' expr)]
           -> EventTable expr
 newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
 
 variableSet :: Machine -> S.Set Var
-variableSet m = S.fromList $ M.elems $ m^.variables
+variableSet m = S.fromList $ M.elems $ m^.content'.variables
 
-events :: Lens' (Machine' expr)
+events :: Lens' (Machine'' expr)
                 (BiGraph SkipOrEvent 
                    (AbstrEvent' expr) 
                    (ConcrEvent' expr))
@@ -280,36 +325,45 @@ empty_system = Sys [] M.empty empty_store
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
 
-all_notation :: Machine -> Notation
+all_notation :: Show expr => Machine' expr -> Notation
 all_notation m = flip precede logical_notation 
         $ L.foldl combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (m^.theory) : elems (_extends $ m^.theory)
+        th = (m^.content'.theory) : elems (_extends $ m^.content'.theory)
 
-instance Named (Machine' expr) where
+instance Show expr => Named (Machine' expr) where
     decorated_name' = return . view name
 
-_name :: Machine' expr -> Label
-_name = label . view name
+_name :: Controls (machine expr) (Machine'' expr)
+      => machine expr -> Label
+_name = label . view' machine''Name
 
-ba_predicate :: HasConcrEvent' event RawExpr
-             => Machine' expr -> event -> Map Label RawExpr
-ba_predicate m evt =          ba_predicate' (m^.variables) (evt^.new.actions)
+ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
+             => Machine' expr 
+             -> event -> Map Label RawExpr
+ba_predicate m evt =          ba_predicate' (m^.content'.variables) (evt^.new.actions)
+                    --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
                     `M.union` M.mapKeys (label . view name) (evt^.witness)
+                    `M.union` M.mapKeys skipLbl (M.map eqPrime noWitness)
+    where
+        skipLbl = label . ("SKIP:"++)
+        eqPrime v = Word (prime v) `zeq` Word v
+        noWitness = (m^.content'.del_vars) `M.difference` M.mapKeys (view name) (evt^.witness)
 
-mkCons ''Machine'
+mkCons ''Machine''
 
-empty_machine :: String -> Machine' expr
-empty_machine n = genericDefault
-                { _machine'Name = n }
+empty_machine :: Show expr => String -> Machine' expr
+empty_machine n = check assert $ genericDefault
+                { _machine''Name = n }
             & theory .~ empty_theory { _extends = M.fromList [
                 ("arithmetic",arithmetic), 
                 ("basic", basic_theory)] } 
             -- & name
 
+
 derive makeNFData ''DocItem
-derive makeNFData ''Machine'
+derive makeNFData ''Machine''
 derive makeNFData ''Rule
 derive makeNFData ''System
 

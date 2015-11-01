@@ -2,12 +2,13 @@
 {-# LANGUAGE RecordWildCards      #-}
 module Document.Expression 
     ( parse_expr , oper, run_test
-    , get_variables, get_variables', parse_oper )
+    , get_variables, get_variables', get_variables''
+    , parse_oper )
 where
 
     -- Modules
 import Latex.Scanner -- hiding (many)
-import Latex.Parser  hiding (Close,Open,BracketType(..),Command)
+import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser)
 
 import Logic.Expr
 import Logic.Operator
@@ -81,6 +82,21 @@ instance MonadPlus Parser where
     Parser m0 `mplus` Parser m1 = Parser $ m0 `mplus` m1
     mzero = Parser mzero
     
+instance IsBracket Bracket String where
+    bracketPair Curly  = ("{","}")
+    bracketPair QuotedCurly = ("\\{","\\}")
+    bracketPair Round  = ("(",")")
+    bracketPair Square = ("[","]")
+
+instance Token ExprToken where
+    lexeme (Open b)   = openBracket b
+    lexeme (Close b)  = closeBracket b
+    lexeme (Ident n)  = n
+    lexeme (Number n) = n
+    lexeme (Operator op) = op
+    lexeme Comma      = ","
+    lexeme Colon      = ":"
+
 runParser :: Context -> Notation 
           -> Map String Expr
           -> Parser a 
@@ -143,7 +159,7 @@ tryP m0 m1 m2 = do
                     Nothing -> run m2)
             (run m2)
 
-match_char :: (a -> Bool) -> Scanner a a
+match_char :: Token a => (a -> Bool) -> Scanner a a
 match_char p = read_if p return (fail "")
 
 -- eat_spaceP :: Parser ()
@@ -181,7 +197,7 @@ colon = read_listP [Colon] >> return ()
 read_listP :: [ExprToken] -> Parser [ExprToken]
 read_listP xs = liftP $ read_list xs
 
-read_list :: (Show a, Eq a) => [a] -> Scanner a [a]
+read_list :: (Token a, Show a, Eq a) => [a] -> Scanner a [a]
 read_list xs = do
         x <- match (match_string xs) 
         case x of
@@ -265,17 +281,21 @@ get_variables :: (Monad m, MonadReader LineInfo m)
               => Context
               -> LatexDoc
               -> EitherT [Error] m [(String, Var)]
-get_variables ctx cs = do
+get_variables ctx = get_variables'' ctx . flatten_li'
+
+get_variables'' :: (Monad m, MonadReader LineInfo m)
+                => Context
+                -> StringLi
+                -> EitherT [Error] m [(String, Var)]
+get_variables'' ctx m = do
         LI fn i j <- lift $ ask
         toks <- hoistEither $ read_tokens 
-            (scan_expr Nothing) fn m (i,j)
+            (scan_expr Nothing) fn (getString m) (i,j)
         xs   <- hoistEither $ read_tokens 
             (runParser ctx
                 ($myError "") M.empty vars) 
             fn toks (i,j)
         return $ map (\(x,y) -> (x,Var x y)) xs
-    where
-        m = getString $ flatten_li' cs
 
 unary :: Parser UnaryOperator
 unary = do

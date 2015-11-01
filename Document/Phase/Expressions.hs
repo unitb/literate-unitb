@@ -19,7 +19,7 @@ import Document.Visitor
 
 import Latex.Parser hiding (contents)
 
-import UnitB.AST as AST
+import UnitB.AST as AST hiding (invariant)
 import UnitB.Expr
 
 import Theories.SetTheory
@@ -53,9 +53,12 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Traversable as T
 
+import Text.Printf
+
 import Utilities.Existential
 import Utilities.Format
 import Utilities.Lens
+import Utilities.String
 import Utilities.Syntactic
 
 withHierarchy :: Pipeline MM (Hierarchy MachineId,MTable a) (MTable b)
@@ -80,7 +83,12 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
                 =<< make_all_tables' err_msg
                 =<< triggerM es'
             xs <- T.sequence $ make_phase3 <$> p2 <.> exprs
-            --store <- triggerM store
+            let mergeError (cevt,(e:es)) = unless (all (((e^.eActions) ==).view eActions) es) $ 
+                    tell [MLError (printf "event %s merges events with different action sets" $ show cevt) []]
+                mergeError (_,[]) = return ()
+                merges :: [(EventId, [EventP3])]
+                merges = xs^.traverse.pEventMerge'.withKey'.traverse.to ((:[]).second (L.map snd.snd))
+            forM_ merges mergeError
             return xs
         expressions = run_phase 
             [ assignment
@@ -111,21 +119,15 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             , witness_decl ]
 
 make_phase3 :: MachineP2 -> Map Label ExprScope -> MM' c MachineP3
-make_phase3 p2 exprs' = do
+make_phase3 p2 exprs' = triggerLenient $ do
         m <- join $ upgradeM
             newThy newMch
             <$> liftEvent toOldEvtExpr
             <*> liftEvent2 toNewEvtExpr toNewEvtExprDefault
             <*> pure p2
-        return $ m & pNewEvents %~ removeDefault
+        return m -- & pNewEvents %~ removeDefault
 
     where
-        removeDefault e
-            | M.null nonDef = e & eCoarseSched .~ def
-            | otherwise     = e & eCoarseSched .~ nonDef
-            where
-                (def,nonDef) = M.partitionWithKey (\k _ -> k == "default") sch
-                sch = e^.eCoarseSched
         exprs = M.toList exprs'
         liftEvent2 :: (   Label 
                       -> ExprScope 
@@ -138,9 +140,9 @@ make_phase3 p2 exprs' = do
                    -> MM' c (MachineP2
                         -> SkipOrEvent -> EventP2 -> MM' c EventP3)
         liftEvent2 f g = do
-            m <- fromListWith (++).L.map (first Right) <$> liftFieldM f p2 exprs
-            m' <- fromListWith (++).L.map (first Right) <$> liftFieldM g p2 exprs
-            let ms = M.unionWith (++) m' m
+            m <- fromListWith (++).L.map (first Right) <$> liftFieldMLenient f p2 exprs
+            m' <- fromListWith (++).L.map (first Right) <$> liftFieldMLenient g p2 exprs
+            let ms = M.unionsWith (++) [m', m, M.singleton (Left SkipEvent) [ECoarseSched "default" zfalse]]
             return $ \_ eid e -> return $ makeEventP3 e (findWithDefault [] eid ms)
         liftEvent :: (   Label 
                       -> ExprScope 
@@ -153,10 +155,10 @@ make_phase3 p2 exprs' = do
         newMch :: MachineP2
                -> MM' c (MachineP3' EventP2 TheoryP2)
         newMch m = makeMachineP3' m 
-                <$> (makePropertySet' <$> liftFieldM toOldPropSet m exprs)
-                <*> (makePropertySet' <$> liftFieldM toNewPropSet m exprs)
-                <*> liftFieldM toMchExpr m exprs
-        newThy t = makeTheoryP3 t <$> liftFieldM toThyExpr t exprs
+                <$> (makePropertySet' <$> liftFieldMLenient toOldPropSet m exprs)
+                <*> (makePropertySet' <$> liftFieldMLenient toNewPropSet m exprs)
+                <*> liftFieldMLenient toMchExpr m exprs
+        newThy t = makeTheoryP3 t <$> liftFieldMLenient toThyExpr t exprs
 
 assignment :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -223,8 +225,8 @@ instance Scope Initially where
             InhDelete _ -> "deleted initialization"
     rename_events _ x = [x]
 
-used_var' :: Expr -> Map String Var
-used_var' = symbol_table . S.toList . used_var . getExpr
+used_var' :: IsExpr expr => expr -> Map String Var
+used_var' = symbol_table . S.toList . used_var . asExpr
 
 instance IsExprScope Initially where
     toNewEvtExprDefault _ _ = return []
@@ -236,7 +238,7 @@ instance IsExprScope Initially where
                 | otherwise   -> [Left $ MLError msg $ (format "predicate {0}" lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.elems $ vs `M.intersection` used_var' x
-                    lis' = L.map (first (format "deleted variable {0}")) lis
+                    lis' = L.map (first (printf "deleted variable %s")) lis
                     msg  = format "initialization predicate '{0}' refers to deleted variables" lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
@@ -295,7 +297,7 @@ witness_decl = machineCmd "\\witness" $ \(evt, String var, xp) _m p2 -> do
             return [(label var,evtScope ev (Witness v p Local li))]
 
 instance Scope EventExpr where
-    kind (EventExpr m) = show $ kind <$> m
+    kind (EventExpr m) = show $ ShowString . kind <$> m
     keep_from s (EventExpr m) = Just $ EventExpr $ M.mapMaybe (keep_from s) m
     make_inherited (EventExpr m) = Just $ EventExpr (M.map f m)
         where
@@ -314,7 +316,7 @@ instance Scope EventExpr where
                     = (format "{1} (event {0}, from {2})" k (kind sc) parents :: String, view lineInfo sc)
                 where
                     parents = intercalate "," $ map show $ inheritedFrom sc
-            msg (Left _) sc = (format "{0} (initialization)" sc :: String, view lineInfo sc)
+            msg (Left _) sc = (format "{0} (initialization)" (kind sc) :: String, view lineInfo sc)
     merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
     rename_events m (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
@@ -336,7 +338,7 @@ checkLocalExpr expKind free xs = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ format "deleted variable '{0}'" . view name) (M.elems errs)
+                        varsLI = L.map (first $ printf "deleted variable '%s'" . view name) (M.elems errs)
                     unless (M.null errs) 
                         $ tell [MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> do
@@ -357,7 +359,7 @@ checkLocalExpr' expKind free eid lbl sch = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ format "deleted variable '{0}'" . view name) (M.elems errs)
+                        varsLI = L.map (first $ printf "deleted variable '%s'" . view name) (M.elems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> 
@@ -534,13 +536,20 @@ default_schedule_decl = arr $ \(p2,csch) ->
         Just $ addDefSch <$> p2 <.> evtsWith csch  -- .traverse._CoarseSchedule._)
     where
         --asCell' = asCell :: Prism' ExprScope EventExpr
-        addDefSch m evts = m^.pNewEvents.eEventId._Right.filterL (`notElem` evts).to default_sch
+        addDefSch m evts = m^.pNewEvents.eEventId._Right.to (default_sch evts)
         evtsWith csch = csch^.traverse & traverse %~ rights.referencedEvents
         referencedEvents :: [(Label, ExprScope)] -> [InitOrEvent]
         referencedEvents m = m^.traverse._2._EventExpr'.withKey'.traverse._1.to (:[]) -- .secondL _CoarseSchedule'._ -- _1.to (:[])
         li = LI "default" 1 1
-        default_sch e = [( label "default",
-                          makeEvtCell (Right e) $ CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li)]
+        makeDelete (InhAdd x) = InhDelete (Just x)
+        makeDelete (InhDelete x) = InhDelete x
+        default_sch evts e 
+                | e `elem` evts = map ((def,) . makeEvtCell (Right e)) [sch,sch']
+                | otherwise     = map ((def,) . makeEvtCell (Right e)) [sch]
+            where
+                def  = label "default"
+                sch  = CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited li
+                sch' = sch & inhStatus %~ makeDelete & declSource .~ Local
 
 
 instance Scope Invariant where
@@ -740,10 +749,10 @@ instance IsExprScope ProgressDecl where
     toMchExpr lbl e = return [Right $ PProgress (PId lbl) $ e^.mchExpr]
     toThyExpr _ _   = return []
     toNewPropSet lbl x = return $ if x^.declSource == Local 
-            then [Right $ Progress lbl $ x^.mchExpr] 
+            then [Right $ Progress (PId lbl) $ x^.mchExpr] 
             else []
     toOldPropSet lbl x = return $ if x^.declSource == Inherited 
-            then [Right $ Progress lbl $ x^.mchExpr] 
+            then [Right $ Progress (PId lbl) $ x^.mchExpr] 
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
@@ -797,15 +806,16 @@ instance IsEvtExpr Witness where
     --     pInitWitness %= M.union (M.fromList $ concat ys')
 
 instance IsEvtExpr ActionDecl where
-    defaultEvtWitness ev (view inhStatus -> InhDelete (Just (_,act))) = do
+    defaultEvtWitness ev scope = case (scope^.inhStatus, scope^.declSource) of 
+        (InhDelete (Just (_,act)),Local) -> do
             vs <- view pDelVars
             return [Right $ (ev,[EWitness v (ba_pred act) 
                                          | v <- M.elems $ frame' act `M.intersection` vs ])]
-    defaultEvtWitness _ _ = return []
+        _ -> return []
     toMchScopeExpr _ _  = return []
     toEvtScopeExpr =
             parseEvtExpr' "action"
-                (uncurry M.union . (frame' &&& symbol_table.S.toList.used_var.ba_pred))
+                (uncurry M.union . (frame' &&& used_var'.ba_pred))
                 EActions
             -- vs <- view pDelVars
             -- _

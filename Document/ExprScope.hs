@@ -95,8 +95,6 @@ instance Show EvtExprScope where
 newtype LensT a b = LensT { getLens :: Lens' a b }
 
 
-data RefScope = Old | New
-
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
       , HasLineInfo a LineInfo

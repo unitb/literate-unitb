@@ -69,6 +69,9 @@ instance Show Proof where
 
 instance Syntactic Calculation where
     line_info c = l_info c
+    traverseLineInfo f c = tr <$> f (l_info c) <*> (traverse._4) f (following c)
+        where
+            tr x y = c { l_info = x, following = y }
 
 instance Syntactic Proof where
     line_info (ByCases _ li)        = li
@@ -77,10 +80,28 @@ instance Syntactic Proof where
     line_info (Definition _ _ li)   = li
     line_info (Assertion _ _ _ li)  = li
     line_info (Easy li)             = li
-    line_info (FreeGoal _ _ _ _ li)   = li
+    line_info (FreeGoal _ _ _ _ li) = li
     line_info (InstantiateHyp _ _ _ li) = li
     line_info (Keep _ _ _ _ li) = li
     line_info (ByCalc c) = line_info c
+    traverseLineInfo f (ByCalc c) = ByCalc <$> traverseLineInfo f c
+    traverseLineInfo f (Easy li)  = Easy <$> f li
+    traverseLineInfo f (ByCases xs li)  = ByCases <$> (traverse._3.traverseLineInfo) f xs 
+                                                  <*> f li
+    traverseLineInfo f (ByParts xs li)  = ByParts <$> (traverse._2.traverseLineInfo) f xs 
+                                                  <*> f li
+    traverseLineInfo f (Definition xs p li) = Definition xs <$> traverseLineInfo f p
+                                                            <*> f li
+    traverseLineInfo f (Assume xs x p li)   = Assume xs x <$> traverseLineInfo f p 
+                                                          <*> f li
+    traverseLineInfo f (Assertion xs x p li) = Assertion xs x <$> traverseLineInfo f p 
+                                                              <*> f li
+    traverseLineInfo f (FreeGoal x y t p li) = FreeGoal x y t <$> traverseLineInfo f p
+                                                              <*> f li
+    traverseLineInfo f (InstantiateHyp c xs p li) = InstantiateHyp c xs <$> traverseLineInfo f p
+                                                                        <*> f li
+    traverseLineInfo f (Keep c xs m p li) = Keep c xs m <$> traverseLineInfo f p 
+                                                        <*> f li
 
 instance ProofRule Proof where
     proof_po (ByCalc c) lbl po = do

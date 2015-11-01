@@ -223,12 +223,20 @@ case2 = find_errors path2
 result2 :: String
 result2 = unlines
     [ "Multiple expressions with the label m0:inv0"
-    , "error 41:15:\n\tinvariant\n"
-    , "error 44:3:\n\tinvariant\n"
+    , "error 42:1:"
+    , "\tinvariant"
+    , ""
+    , "error 44:4:"
+    , "\tinvariant"
+    , ""
     , ""
     , "Multiple expressions with the label m0:grd0"
-    , "error 86:3:\n\tguard (event m0:pop:right)\n"
-    , "error 87:3:\n\tguard (event m0:pop:right)\n"
+    , "error 86:4:"
+    , "\tguard (event m0:pop:right)"
+    , ""
+    , "error 87:4:"
+    , "\tguard (event m0:pop:right)"
+    , ""
     , ""
     ]
 
@@ -3786,8 +3794,12 @@ path10 = "tests/lock-free deque/main6-err0.tex"
 result10 :: String
 result10 = unlines
     [ "Multiple refinement of progress property m1:prog3"
-    , "error 223:4:\n\tm1:prog3\n"
-    , "error 254:1:\n\tm1:prog3\n"
+    , "error 223:5:"
+    , "\tm1:prog3"
+    , ""
+    , "error 255:1:"
+    , "\tm1:prog3"
+    , ""
     , ""
     ]
 
@@ -3796,8 +3808,10 @@ path11 = "tests/lock-free deque/main6-err1.tex"
 
 result11 :: String
 result11 = unlines
-    [ "error 223:4:\n    A witness is needed for r in event 'm0:pop:left:empty'"
-    , "error 223:4:\n    A witness is needed for r in event 'm0:pop:left:non:empty'"
+    [ "error 223:5:"
+    , "    A witness is needed for r in event 'm0:pop:left:empty'"
+    , "error 223:5:"
+    , "    A witness is needed for r in event 'm0:pop:left:non:empty'"
     ]
 
 path12 :: FilePath
@@ -3840,7 +3854,7 @@ case14 = runEitherT $ do
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-    return $ (m0,m1,m2) & each %~ (M.keys . rightMap . view events)
+    return $ (m0,m1,m2) & each %~ (M.keys . rightMap . view' events)
 
 result14 :: Either String ([SkipOrEvent],[SkipOrEvent],[SkipOrEvent])
 result14 = Right $ ([Left SkipEvent,"evt"],[Left SkipEvent,"evt0","evt1","evt2"],[Left SkipEvent,"evt0","evt1","evt2"])
@@ -3854,7 +3868,7 @@ case15 = runEitherT $ do
         m1 = ms ! "m1"
         m2 = ms ! "m2"
         exprs e = S.toList $ keysSet (view actions e) `S.union` keysSet (view guards e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . rightMap . view events)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . rightMap . view' events)
 
 result15 :: Either String (ExprSet,ExprSet,ExprSet)
 result15 = Right   ( [(Left SkipEvent,[]),("evt",["act0"])]
@@ -3868,7 +3882,7 @@ case16 = runEitherT $ do
         m1 = ms ! "m1"
         m2 = ms ! "m2"
         decls e = L.map label $ M.keys (view indices e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . rightMap . view events)
+    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . rightMap . view' events)
 
 result16 :: Either String (ExprSet,ExprSet,ExprSet)
 result16 = Right   ( [(Left SkipEvent,[]),("evt",["p"])]

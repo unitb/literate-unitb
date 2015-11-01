@@ -7,7 +7,6 @@ import Logic.Proof
 import qualified Logic.Proof.POGenerator as PG
 
 import           UnitB.AST as UB hiding (Event)
-import qualified UnitB.AST as UB 
 import           UnitB.PO 
 
     -- Libraries
@@ -37,12 +36,12 @@ import Utilities.Format
 import Text.Printf
 
 data Program = 
-        Event [Expr] Expr Expr Label 
+        Event [Expr] Expr Expr EventId
             -- Precondition
             -- wait condition
             -- Conditional execution
             -- event id
-        | NotEvent [Expr] [Label]
+        | NotEvent [Expr] [EventId]
             -- Precondition
             -- List of events
         | Wait [Expr] Expr
@@ -54,11 +53,11 @@ data Program =
         | Loop    Expr [Expr] Program Termination
             -- Exit Invariant Body Termination
 
-newtype Partition = Partition [([Label],Expr)]
+newtype Partition = Partition [([EventId],Expr)]
 
 newtype MultiProgram = MultiProgram [Program]
 
-type ProgramMaker = RWS Machine [Program] [String]
+type ProgramMaker = RWS RawMachine [Program] [String]
 
 seqP :: [Program] -> Program
 seqP [x] = x
@@ -71,19 +70,19 @@ loop term body = do
         pre  = precondition prog
     tell [Loop term pre (seqP xs) Infinite]
 
-variant :: Variant -> Label -> ProgramMaker () -> ProgramMaker ()
+variant :: Variant -> EventId -> ProgramMaker () -> ProgramMaker ()
 variant v evt cmd = censor (L.map f) cmd
     where
         f (Loop term inv body _) = Loop term inv body (Variant v evt) 
         f x = x
 
-natVariant :: Expr -> Label -> ProgramMaker () -> ProgramMaker ()
+natVariant :: Expr -> EventId -> ProgramMaker () -> ProgramMaker ()
 natVariant var evt cmd = do
     xs <- get
     put (tail xs)
     variant (IntegerVariant (Var (head xs) int) var (zint 0) Down) evt cmd 
 
-runProgramMaker :: Machine -> ProgramMaker () -> Program
+runProgramMaker :: RawMachine -> ProgramMaker () -> Program
 runProgramMaker m cmd = seqP w
     where
         (_,w) = execRWS cmd m [ "var" ++ show i | i <- [0..] ]
@@ -91,14 +90,14 @@ runProgramMaker m cmd = seqP w
 wait :: Expr -> ProgramMaker ()
 wait e = tell [Wait [] e]
 
-make_multiprogram :: Machine -> Partition -> MultiProgram 
+make_multiprogram :: RawMachine -> Partition -> MultiProgram 
 make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
     where
-        scheds ls = concatMap (M.elems . view (new.coarse_sched) . (all_upwards m !)) ls
+        scheds ls = concatMap (M.elems . view (new.coarse_sched) . (nonSkipUpwards m !)) ls
         prog (ls,term) = runProgramMaker m $ loop term $
             wait $ term `zor` zsome (scheds ls)
 
-data Termination = Infinite | Variant Variant Label
+data Termination = Infinite | Variant Variant EventId
 
 data Concurrency = Concurrent (Map String ()) | Sequential
 
@@ -135,10 +134,10 @@ atomically cmd = atomically' return $ \f -> cmd >>= f
     --         return e_name
     --     Sequential -> cmd
 
-evaluate :: Machine -> Expr -> M String
+evaluate :: RawMachine -> Expr -> M String
 evaluate m e = head <$> evaluate_all m [e]
 
-evaluate_all :: Machine -> [Expr] -> M [String]
+evaluate_all :: RawMachine -> [Expr] -> M [String]
 evaluate_all m es = do
     conc <- asks snd
     case conc of
@@ -160,7 +159,7 @@ precondition (Sequence [])       = []
 precondition (Loop _ inv _ _)    = inv
 -- precondition _ (InfLoop _ inv _)   = inv
 
-possibly :: Program -> [Label]
+possibly :: Program -> [EventId]
 possibly (Event _ _ _ lbl)  = [lbl]
 possibly (NotEvent _ _)     = []
 possibly (Wait _ _)         = []
@@ -168,7 +167,7 @@ possibly (Conditional _ lb rb) = L.concatMap (possibly . snd) lb ++ possibly rb
 possibly (Loop _ _ body _)  = possibly body
 possibly (Sequence xs)      = concatMap possibly xs
 
-certainly :: Program -> [Label]
+certainly :: Program -> [EventId]
 certainly (Event _ _ _ lbl) = [lbl]
 certainly (NotEvent _ evts) = evts
 certainly (Wait _ _)        = []
@@ -176,7 +175,7 @@ certainly (Sequence xs)     = concatMap certainly xs
 certainly (Conditional _ lb rb) = L.foldl isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
 certainly (Loop _ _ _ _)    = []
 
-safety :: Machine -> [Label] -> [Expr] -> Program -> Either [String] (Map Label Sequent)
+safety :: RawMachine -> [EventId] -> [Expr] -> Program -> Either [String] (Map Label Sequent)
 safety m others post cfg 
         | L.null es = Right r
         | otherwise = Left es
@@ -184,11 +183,11 @@ safety m others post cfg
         (r,(),es) = runRWS (PG.eval_generatorT 
             $ PG.with (do
                     PG._context $ assert_ctx m
-                    PG._context $ theory_ctx (theory m)
+                    PG._context $ theory_ctx (m!.theory)
                     PG.named_hyps $ invariants m
                     PG.prefix_label $ _name m
                 ) $ do
-                    PG.with (PG.named_hyps $ inits m) $ 
+                    PG.with (PG.named_hyps $ m!.inits) $ 
                         establish_pre "init" [] cfg
                     safety_aux cfg post
                 ) (DCtx m others $ nubSort $ possibly cfg) ()
@@ -198,15 +197,15 @@ establish_pre prefix ps cfg =
     PG.with (do
             PG.nameless_hyps ps
             PG.prefix prefix) $
-        zipWithM_  (\l p -> PG.emit_goal [label $ show (l :: Int)] p) 
+        zipWithM_  (\l p -> PG.emit_goal assert [label $ show (l :: Int)] p) 
                 [0..] (precondition cfg) 
 
 type POGen = PG.POGenT (RWS DistrContext [String] ())
 
 data DistrContext = DCtx
-        { machine   :: Machine
-        , otherEvts :: [Label]
-        , localEvts :: [Label]
+        { machine   :: RawMachine
+        , otherEvts :: [EventId]
+        , localEvts :: [EventId]
         }
 
 prefix :: String -> POGen () -> POGen ()
@@ -217,10 +216,10 @@ safety_aux (Event pre wait cond evt_lbl) ps = do
     m <- lift $ asks machine
     others <- lift $ asks otherEvts
     local  <- lift $ asks localEvts
-    let evt = all_upwards m ! evt_lbl
+    let evt = all_upwards m ! Right evt_lbl
         sch = evt^.new.coarse_sched
     is_stable_in pre others
-    hoare_triple ("postcondition" </> evt_lbl) 
+    hoare_triple ("postcondition" </> as_label evt_lbl) 
         (cond:wait:pre) evt_lbl ps 
     entails "skip" (znot cond : wait : pre) ps
     entails "forced" (pre ++ M.elems sch) [cond]
@@ -269,15 +268,15 @@ safety_aux (Loop exit inv b _) ps = do
         $ lift $ tell [format "Loop is missing events {0}" 
             $ intercalate "," $ L.map show $ local L.\\ cert]
 
-is_stable_in :: [Expr] -> [Label] -> POGen ()
+is_stable_in :: [Expr] -> [EventId] -> POGen ()
 is_stable_in ps evts = do
     -- others <- lift $ asks $ fst . snd
     forM_ evts $ \lbl -> hoare_triple "stable" ps lbl ps
 
-disabled :: [Expr] -> Label -> POGen ()
+disabled :: [Expr] -> EventId -> POGen ()
 disabled ps lbl = do
-    evts <- lift $ asks $ upward_event <$> machine <*> pure lbl
-    entails ("disabled" </> lbl) ps 
+    evts <- lift $ asks $ upward_event <$> machine <*> pure (Right lbl)
+    entails ("disabled" </> as_label lbl) ps 
         [znot $ zall $ evts^.new.coarse_sched]
 
 entails :: Label -> [Expr] -> [Expr] -> POGen ()
@@ -288,12 +287,12 @@ entails lbl pre post = do
     PG.with (do
             PG.nameless_hyps pre) $ do
         forM_ (zip [0..] post) $ \(i,p) -> 
-            PG.emit_goal [suff i] p
+            PG.emit_goal assert [suff i] p
 
-hoare_triple :: Label -> [Expr] -> Label -> [Expr] -> POGen ()
+hoare_triple :: Label -> [Expr] -> EventId -> [Expr] -> POGen ()
 hoare_triple lbl pre evt_lbl post = do
     m <- lift $ asks machine
-    let evt = upward_event m evt_lbl
+    let evt = upward_event m (Right evt_lbl)
         grd = evt^.new.guards
         act = ba_predicate m evt
     PG.with (do 
@@ -306,14 +305,15 @@ hoare_triple lbl pre evt_lbl post = do
         -- forM_ (zip [0..] post) $ \(i,p) -> 
         --     PG.emit_goal [label $ show i] p
 
-default_cfg :: Machine -> Program
+default_cfg :: RawMachine -> Program
 default_cfg m = Loop g [] body Infinite
     where
         all_guard e = zall $ e^.new.coarse_sched
         g    = zsome $ L.map (znot . all_guard) $ M.elems $ all_upwards m
-        branch (lbl,e) = Event [] ztrue (all_guard e) lbl
+        branch (Right lbl,e) = [Event [] ztrue (all_guard e) lbl]
+        branch _ = []
         body = Sequence 
-            $ L.map branch
+            $ concatMap branch
             $ M.toList $ all_upwards m
 
 emit :: String -> M ()
@@ -385,41 +385,41 @@ instance Evaluator ConcurrentEval where
         when b $ tell [v]
     left = lift . Left
 
-eval_expr :: Evaluator m => Machine -> Expr -> m String
+eval_expr :: Evaluator m => RawMachine -> Expr -> m String
 eval_expr m e =
         case e of
             Word (Var n _)
-                | n `M.member` variables m -> do
+                | n `M.member` view' variables m -> do
                     read_var n
                     return $ "v_" ++ n
                 | otherwise              -> return $ "c_" ++ n
             Const n _    -> return $ show n
             FunApp f [] 
-                | name f `M.member` nullops_code -> return $ nullops_code ! name f
+                | view name f `M.member` nullops_code -> return $ nullops_code ! view name f
             FunApp f0 [e0,FunApp f1 [e1,e2]] 
-                | name f0 == "ovl" && name f1 == "mk-fun" -> do
+                | view name f0 == "ovl" && view name f1 == "mk-fun" -> do
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
                     c2 <- eval_expr m e2
                     return $ format "(M.insert {1} {2} {0})" c0 c1 c2
             FunApp f [e]
-                | name f `M.member` unops_code -> do
+                | view name f `M.member` unops_code -> do
                     c <- eval_expr m e
-                    return $ (unops_code ! name f) c
+                    return $ (unops_code ! view name f) c
             FunApp f [e0,e1] 
-                | name f `M.member` binops_code -> do
+                | view name f `M.member` binops_code -> do
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
-                    return $ (binops_code ! name f) c0 c1
+                    return $ (binops_code ! view name f) c0 c1
             _ -> left $ format "unrecognized expression: {0}" e
 
-struct :: Machine -> M ()
+struct :: RawMachine -> M ()
 struct m = do
         sv <- asks (shared_vars . snd)
         let 
             attr comb pre typef = do 
                 code <- mapM (decl typef) $ 
-                               L.map (pre,) (M.elems $ variables m `comb` sv) 
+                               L.map (pre,) (M.elems $ view' variables m `comb` sv) 
                 return $ intercalate "\n    , " code
             s_attr = attr M.intersection "s" (format "TVar ({0})" :: String -> String)
             l_attr = attr M.difference "v" id
@@ -434,29 +434,29 @@ struct m = do
         code <- lift $ l_attr
         emit $ "data State = State\n    { " ++ code ++ " }"
 
-assign_code :: Machine -> Action -> ConcurrentEval (Bool,String)
+assign_code :: RawMachine -> RawAction -> ConcurrentEval (Bool,String)
 assign_code m (Assign v e) = do
         c0 <- eval_expr m e
-        b <- is_shared $ name v
+        b <- is_shared $ v^.name
         -- sv <- asks $ shared_vars . snd
         -- let b = name v `M.member` sv
         return $ (b,if b 
-            then format "writeTVar s_{0} {1}" (name v) c0
-            else format "v_{0} = {1}" (name v) c0)
+            then format "writeTVar s_{0} {1}" (v^.name) c0
+            else format "v_{0} = {1}" (v^.name) c0)
 assign_code _ act@(BcmSuchThat _ _) = left $ format "Action is non deterministic: {0}" act
 assign_code _ act@(BcmIn _ _) = left $ format "Action is non deterministic: {0}" act
 
-init_value_code :: Evaluator m => Machine -> Expr -> m [(Bool,(String,String))]
+init_value_code :: Evaluator m => RawMachine -> Expr -> m [(Bool,(String,String))]
 init_value_code m e =
         case e of
             FunApp f [Word (Var n _),e0]
-                    |      n `M.member` variables m 
-                        && name f == "=" -> do
+                    |      n `M.member` (m!.variables)
+                        && view name f == "=" -> do
                                 b  <- is_shared n
                                 c0 <- eval_expr m e0
                                 return [(b,(n,c0))]
             FunApp f es
-                    | name f == "and" -> do
+                    | view name f == "and" -> do
                         rs <- mapM (init_value_code m) es
                         return $ concat rs
             _ -> left $ format "initialization is not in a canonical form: {0}" e
@@ -469,7 +469,7 @@ runEval cmd = do
         emit $ format "v_{0} <- readTVar s_{1}" r r
     return e
 
-event_body_code :: Machine -> UB.Event -> M String
+event_body_code :: RawMachine -> RawEvent -> M String
 event_body_code m e = do
         acts <- runEval $ mapM (assign_code m) $ M.elems $ e^.actions
         -- evaluate_all 
@@ -507,17 +507,17 @@ report = lift . Left
 --         indent 2 $ event_body_code m e
 --         emit $ "else return ()"
 
-conc_init_code :: Machine -> M ()
+conc_init_code :: RawMachine -> M ()
 conc_init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.elems $ inits m
+            $ mapM (init_value_code m) $ M.elems $ m!.inits
         let acts = L.map snd $ L.filter fst acts' 
         emitAll $ L.map (\(v,e) -> format "s_{0} <- newTVarIO {1}" v e) acts
 
-init_code :: Machine -> M ()
+init_code :: RawMachine -> M ()
 init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.elems $ inits m
+            $ mapM (init_value_code m) $ M.elems $ m!.inits
         let acts = L.map snd $ L.filter (not . fst) acts' 
         emit "s' = State"
         indent 5 $ do
@@ -533,7 +533,7 @@ if_concurrent cmd = do
           Concurrent _ -> cmd
 
 
-write_seq_code :: Machine -> Program -> M ()
+write_seq_code :: RawMachine -> Program -> M ()
 write_seq_code m (Event _pre wait cond lbl)          
     | wait == ztrue = do
         emit "s@(State { .. }) <- get"
@@ -543,7 +543,7 @@ write_seq_code m (Event _pre wait cond lbl)
             expr <- evaluate m cond
             emit $ format "if {0} then do" expr
             indent 2 $ do
-                s' <- event_body_code m (upward_event m lbl^.new)
+                s' <- event_body_code m (upward_event m (Right lbl)^.new)
                 f s'
             emit $ format "else"    
             indent 2 $ f "s"
@@ -585,10 +585,10 @@ write_seq_code m (Loop exit _inv b _) = do
 --                 mapM (event_code m) $ M.elems $ events m
 --                 emit "proc'"
 
-machine_code :: String -> Machine -> Expr -> M ()
+machine_code :: String -> RawMachine -> Expr -> M ()
 machine_code name m _exit = do
         x <- asks snd
-        let args = concatMap (" c_" ++) $ M.keys $ consts $ theory m
+        let args = concatMap (" c_" ++) $ M.keys $ m!.theory.consts
             cfg  = default_cfg m
             trans :: String -> String -> String
             trans = case x of
@@ -611,10 +611,10 @@ run' c cmd = liftM (unlines . snd) $ execRWST cmd (0,c) ()
 run :: M () -> Either String String
 run = run' Sequential
 
-source_file :: String -> Machine -> Expr -> Either String String
+source_file :: String -> RawMachine -> Expr -> Either String String
 source_file = source_file' []
 
-source_file' :: [String] -> String -> Machine -> Expr -> Either String String
+source_file' :: [String] -> String -> RawMachine -> Expr -> Either String String
 source_file' shared name m exit = 
         run' c $ do
             emitAll $

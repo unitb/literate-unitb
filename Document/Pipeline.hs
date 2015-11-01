@@ -5,7 +5,7 @@
 module Document.Pipeline where
 
     -- Modules
-import Latex.Parser
+import Latex.Parser as P
 
     -- Libraries
 import Control.Applicative
@@ -17,6 +17,7 @@ import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
+import Data.List as L
 import qualified Data.Map as M
 import Data.String
 import Data.Typeable
@@ -59,7 +60,7 @@ runMM :: MM' a b -> a -> Either [Error] b
 runMM (MM cmd) input = case r of
                             Nothing -> Left es
                             Just x
-                                | null es -> Right x
+                                | L.null es -> Right x
                                 | otherwise -> Left es
     where
         (r,(),es) = runRWS (runMaybeT cmd) input ()
@@ -176,7 +177,8 @@ getLatexBlocks :: DocSpec
                -> DocBlocks
 getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
     where
-        f (Just (Env name li ys _,xs)) = do
+        f :: Maybe (LatexNode,LatexDoc) -> Writer DocBlocks ()
+        f (Just (Env _ name li ys _,xs)) = do
                 case name `M.lookup` envs of
                     Just nargs -> do
                         let (args,rest) = brackets nargs ys
@@ -188,33 +190,30 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
         f (Just (Bracket _ _ ys _,xs)) = do
                 f $ unconsTex ys
                 f $ unconsTex xs
-        f (Just (Text [] _,xs)) = f $ unconsTex xs
-        f (Just (Text (Command name li:ys) li1,xs)) = do
+        f (Just (Text (Command name li),xs)) = do
                 case name `M.lookup` cmds of
                     Just nargs
-                        | nargs == 0 || not (all isBlank ys) -> do
-                            tell (DocBlocks M.empty (M.singleton name [BlockCmd ([],li1) li]))
-                            f $ Just (Text ys li1, xs)
+                        | nargs == 0 -> do
+                            tell (DocBlocks M.empty (M.singleton name [BlockCmd ([],li) li]))
+                            f $ unconsTex xs
                         | otherwise -> do
                             let (args,rest) = brackets nargs xs
                                 li' = line_info rest
                             tell (DocBlocks M.empty (M.singleton name [BlockCmd (args,li') li]))
                             f $ unconsTex rest
-                    Nothing    -> f $ Just (Text ys li1, xs)
-        f (Just (Text (_:ys) li0,xs)) = f $ Just (Text ys li0, xs)
+                    Nothing    -> f $ unconsTex xs
+        f (Just (Text _,xs)) = f $ unconsTex xs
         f Nothing = return ()
 
 brackets :: Int -> LatexDoc -> ([LatexDoc],LatexDoc)
 brackets 0 xs = ([],xs)
-brackets n (Doc (Bracket Curly _ ys _:xs) li) = (ys:args,r)
-    where
-        (args,r) = brackets (n-1) $ Doc xs li
-brackets n (Doc zs@(Text xs _:ys) li)
-    | all isBlank xs = brackets n (Doc ys li)
-    | otherwise      = ([],Doc zs li)
-brackets _ zs@(Doc (Bracket Square _ _ _:_) _) = ([],zs)
-brackets _ zs@(Doc (Env _ _ _ _:_) _) = ([],zs)
-brackets _ zs@(Doc [] _) = ([],zs)
+brackets n doc = case unconsTex doc of
+        Just (Bracket Curly _ ys _,xs) -> (ys:args,r)
+            where
+                (args,r) = brackets (n-1) xs
+        Just (Text (Blank _ _),ys) -> brackets n ys
+            -- | otherwise      -> ([],doc)
+        _ -> ([],doc)
 
 withInput :: Pipeline MM Input b -> Pipeline MM a b
 withInput (Pipeline s0 s1 f) = Pipeline s0 s1 $ \_ -> ask >>= f

@@ -35,6 +35,9 @@ import System.IO.Unsafe
 type POResult = (String,Map Label Sequent)
 type POS a = Either [Error] (Map String (a, Map Label Sequent))
 
+hide_error_path :: Bool
+hide_error_path = True
+
 pos :: MVar (Map FilePath ((POS Machine,POS Theory), UTCTime))
 pos = unsafePerformIO $ newMVar M.empty
 
@@ -92,6 +95,14 @@ proof_obligation_stripped = proof_obligation_with stripAnnotation
 proof_obligation :: FilePath -> String -> Int -> IO String
 proof_obligation = proof_obligation_with id
 
+lookupSequent :: Label -> Map Label Sequent -> Either String Sequent
+lookupSequent lbl pos = case lbl `M.lookup` pos of
+                Just po -> 
+                    Right po
+                Nothing ->
+                    Left $ format "invalid label: {0}\n{1}" lbl $ 
+                        unlines $ L.map show $ keys pos
+
 sequent :: FilePath -> String 
         -> Int -> IO (Either String Sequent)
 sequent path lbl i = runEitherT $ do
@@ -99,12 +110,7 @@ sequent path lbl i = runEitherT $ do
             <$> list_file_obligations' path
         if i < size xs then do
             let pos = snd $ snd $ i `elemAt` xs
-            case label lbl `M.lookup` pos of
-                Just po -> 
-                    return po
-                Nothing ->
-                    left $ format "invalid label: {0}\n{1}" lbl $ 
-                        unlines $ L.map show $ keys pos
+            hoistEither $ lookupSequent (label lbl) pos
         else
             left $ format "accessing {0}th refinement out of {1}" i (size xs)   
 
@@ -124,8 +130,11 @@ find_errors :: FilePath -> IO String
 find_errors path = do
     p <- canonicalizePath path
     m <- fst <$> list_file_obligations' path
+    let hide
+            | hide_error_path = L.replace (p ++ ":") "error "
+            | otherwise       = id
     return $ either 
-        (L.replace (p ++ ":") "error " . unlines . L.map report) 
+        (hide . unlines . L.map report) 
         (const $ "no errors")
         m
 
@@ -134,7 +143,10 @@ parse_machine path n = fmap (!! n) <$> parse path
 
 parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
-    (fmap (elems . M.map fst) . fst) <$> list_file_obligations' path
+    p <- getCurrentDirectory
+    let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
+        f = elems . M.map fst
+    (mapBoth mapError f . fst) <$> list_file_obligations' path
 
 verify_thy :: FilePath -> String -> IO POResult
 verify_thy path name = makeReport' empty $ do

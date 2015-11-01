@@ -357,34 +357,33 @@ case4 = return $ do
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
-        x  = fst $ var "x" int
-        y  = fst $ var "y" int
         declVar n t = decls %= M.insert n (Var n t)
         c_aux b = ctx $ do
             declVar "x" int
             declVar "y" int
             when b $ expected_type `assign` Nothing
         c  = c_aux False
-        --c' = c_aux True
+        c' = c_aux True
         es = M.fromList [("m0",es0),("m1",es1)]
         es0 = runMap $ flip runReaderT Local $ do
-                decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
+                decl "inv0" Invariant $ c [expr| x \le y |]
                 --event 
-                event "ae0"  "grd0" Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
+                event "ae0"  "grd0" Guard $ c [expr| x = 0 |]
                 event "ae0"  "sch0" CoarseSchedule $ c [expr| y = y |]
                 event "ae0"  "sch2" CoarseSchedule $ c [expr| y = 0 |]
-                forM_ ["ae1a","ae1b"] $ \evt -> 
+                forM_ ["ae1a","ae1b"] $ \evt -> do
                     event evt "default" CoarseSchedule zfalse
-                event "ae1a" "act0" Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
+                    event evt "act0" Action $ c' [act| y := y + 1 |] 
+                    event evt "act1" Action $ c' [act| x := x - 1 |] 
         es1 = runMap $ flip runReaderT Inherited $ do
                 local (const Local) $ do
                     decl "prog0" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "prog1" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) Nothing
-                decl "inv0" Invariant (DispExpr "x \\le y" $ $typeCheck $ x .<= y)
+                decl "inv0" Invariant $ c [expr| x \le y |]
                 --event 
-                event' "ce0a" "grd0" ["ae0"] Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
-                event' "ce0b" "grd0" ["ae0"] Guard $ DispExpr "x = 0" $ $typeCheck$ x .= 0 
+                event' "ce0a" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
+                event' "ce0b" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
                 local (const Local) $ do
                     del_event "ce0a" "grd0" [] Guard
                     del_event "ce0b" "grd0" [] Guard
@@ -392,9 +391,13 @@ case4 = return $ do
                 event' "ce0a"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
                 event' "ce0b"  "sch0" ["ae0"] CoarseSchedule $ c [expr| y = y |]
                 event' "ce0b"  "sch2" ["ae0"] CoarseSchedule $ c [expr| y = 0 |]
+
                 forM_ [("ce1",["ae1a","ae1b"]),("ce2",[])] $ \(evt,es) -> 
                     event' evt "default" es CoarseSchedule zfalse
-                event' "ce1" "act0" ["ae1a"] Action $ DispExpr "y + 1" <$> $typeCheck (y $= y + 1)
+                event' "ce1" "act0" ["ae1a","ae1b"] Action $ c [act| y := y + 1 |]
+                event' "ce1" "act1" ["ae1a","ae1b"] Action $ c' [act| x := x - 1 |] 
+                local (const Local) $
+                    del_event "ce1" "act1" ["ae1a","ae1b"] Action -- $ c [act| x := x - 1 |]
 
 decl :: String -> GenericType -> State ParserSetting ()
 decl n t = decls %= M.insert n (Var n t)
@@ -403,8 +406,7 @@ result4 :: Either [Error] SystemP3
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
-        --x  = fst $ var "x" int
-        y  = snd $ var "y" int
+        (x,x',xvar)  = prog_var "x" int
         decl n t = decls %= M.insert n (Var n t)
         c_aux b = ctx $ do
             decl "x" int
@@ -433,17 +435,21 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
         newEvt mid _m (Right eid) e 
             | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
             | otherwise = makeEventP3 e $ [ ECoarseSched "default" zfalse] ++ evtField mid eid
-        newEvt _mid _m (Left _) e = makeEventP3 e []
+        newEvt _mid _m (Left SkipEvent) e = makeEventP3 e [ECoarseSched "default" zfalse]
         evtField mid eid
             | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
                                              , ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ae1a"                = [EActions "act0" $ Assign y $ c' [expr| y + 1 |] ]
+            | eid == "ae1a"                = [EActions "act0" $ c' [act| y := y + 1 |] 
+                                             ,EActions "act1" $ c' [act| x := x - 1 |] ]
+            | eid == "ae1b"                = [EActions "act0" $ c' [act| y := y + 1 |] 
+                                             ,EActions "act1" $ c' [act| x := x - 1 |] ]
             | eid == "ce0a"                = [ ECoarseSched "sch1" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ce1" && mid == "m1"  = [EActions "act0" $ Assign y $ c' [expr| y + 1 |] ]
+            | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
+                                             , EWitness xvar $ $typeCheck$ x' `mzeq` (x - 1) ]
             | otherwise = []
 
 name5 :: String
@@ -458,6 +464,9 @@ case5 = return $ do
                   command "cschedule" [text "ae0", text "sch0", text "y = y"]
                   command "cschedule" [text "ae0", text "sch2", text "y = 0"]
                   command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
+                  command "evbcmeq" [text "ae1b", text "act0", text "y", text "y+1"]
+                  command "evbcmeq" [text "ae1a", text "act1", text "x", text "x-1"]
+                  command "evbcmeq" [text "ae1b", text "act1", text "x", text "x-1"]
         ms1 = makeLatex "file.ext" $ do       
                   command "removeguard" [text "ce0a",text "grd0"]
                   command "removeguard" [text "ce0b",text "grd0"]
@@ -466,6 +475,7 @@ case5 = return $ do
                   command "progress" [text "prog0",text "x \\le y",text "x = y"]
                   command "progress" [text "prog1",text "x \\le y",text "x = y"]
                   command "safety" [text "saf0",text "x \\le y",text "x = y"]
+                  command "removeact" [text "ce1", text "act1"] 
         cs = M.empty
     r <- result2
     runPipeline' ms cs r run_phase3_exprs
@@ -569,6 +579,7 @@ result8 :: Either [Error] (SystemP Machine)
 result8 = Right $ SystemP h ms
     where
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
+        (x,x',xvar) = prog_var "x" int
         ms = M.fromList [("m0",m0),("m1",m1)]
         s0 = Sort "S0" "S0" 0
         s1 = Sort "\\S1" "sl@S1" 0
@@ -585,18 +596,18 @@ result8 = Right $ SystemP h ms
         c = ctx $ do
             decl "x" int
             decl "y" int
-        m0 = (empty_machine "m0")
+        m0 = (empty_machine "m0") & content AST.assert %~ \m -> m
                 & theory.types .~ sorts0
-                & theory.defs .~ defs0
-                & variables .~ vars0
-                & events .~ evts0
+                & theory.defs  .~ defs0
+                & variables    .~ vars0
+                & events    .~ evts0
                 & props.inv .~ M.fromList [("inv0",c [expr| x \le y |])]
         p = c [expr| x \le y |]
         q = c [expr| x = y |]
         pprop = LeadsTo [] p q
         pprop' = getExpr <$> pprop
         sprop = Unless [] p q Nothing
-        m1 = (empty_machine "m1")
+        m1 = (empty_machine "m1") & content AST.assert %~ \m -> m
                 & theory.types .~ sorts1
                 & theory.defs .~ defs1
                 & theory.extends %~ M.insert "sets" set_theory
@@ -608,8 +619,8 @@ result8 = Right $ SystemP h ms
                 & props.progress .~ M.fromList [("prog0",pprop),("prog1",pprop)]
                 & props.safety .~ M.singleton "saf0" sprop
                 & derivation .~ M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
-        y = Var "y" int
-        skipEvt = Left SkipEvent
+        --y = Var "y" int
+        skipLbl = Left SkipEvent
         ae0Evt = def
             & coarse_sched .~ M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
@@ -619,11 +630,15 @@ result8 = Right $ SystemP h ms
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
             & actions .~ M.fromList
-                [("act0",Assign y $ c' [expr| y + 1 |])]
+                [ ("act0",c' [act| y := y + 1 |])
+                , ("act1",c' [act| x := x - 1 |])]
         ae1bEvt = def
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
             & params .~ symbol_table [Var "p" bool]
+            & actions .~ M.fromList
+                [ ("act0",c' [act| y := y + 1 |])
+                , ("act1",c' [act| x := x - 1 |])]
         ce0aEvt = def
             & coarse_sched .~ M.fromList 
                 [("sch1",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
@@ -634,30 +649,38 @@ result8 = Right $ SystemP h ms
             & params .~ symbol_table [Var "p" bool]
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
+            & witness .~ M.fromList
+                [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
             & actions .~ M.fromList
-                [("act0",Assign y $ c' [expr| y + 1 |])]
-            & eql_vars .~ symbol_table [y]
+                [ ("act0",c' [act| y := y + 1 |])]
+            & abs_actions .~ M.fromList
+                [ ("act0",c' [act| y := y + 1 |])
+                , ("act1",c' [act| x := x - 1 |])]
+            -- & eql_vars .~ symbol_table [y]
         ce2Evt = def
             & AST.indices .~ symbol_table [Var "q" int]
+            & coarse_sched .~ M.fromList 
+                [("default",c [expr| \false |])]
+        skipEvt = def 
             & coarse_sched .~ M.fromList 
                 [("default",c [expr| \false |])]
         evts0 = fromJust $ makeGraph $ do
             ae0  <- newRightVertex (Right "ae0") (def & new .~ ae0Evt)
             ae1a <- newRightVertex (Right "ae1a") (def & new .~ ae1aEvt)
             ae1b <- newRightVertex (Right "ae1b") (def & new .~ ae1bEvt)
-            cskip <- newRightVertex skipEvt def
-            askip <- newLeftVertex skipEvt def
+            cskip <- newRightVertex skipLbl (def & new .~ skipEvt)
+            askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
             ae0 <- newLeftVertex (Right "ae0") (def & old .~ ae0Evt)
             ae1a <- newLeftVertex (Right "ae1a") (def & old .~ ae1aEvt)
             ae1b <- newLeftVertex (Right "ae1b") (def & old .~ ae1bEvt)
-            askip <- newLeftVertex skipEvt def
+            askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             ce0a <- newRightVertex (Right "ce0a") (def & new .~ ce0aEvt)
             ce0b <- newRightVertex (Right "ce0b") (def & new .~ ce0bEvt)
             ce1 <- newRightVertex (Right "ce1") ce1Evt
             ce2 <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
-            cskip <- newRightVertex skipEvt def
+            cskip <- newRightVertex skipLbl (def & new .~ skipEvt)
             newEdge ae0 ce0a
             newEdge ae0 ce0b
             newEdge ae1a ce1

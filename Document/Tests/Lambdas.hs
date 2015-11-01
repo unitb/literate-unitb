@@ -10,11 +10,13 @@ import Logic.Proof
 import Theories.FunctionTheory
 
 import UnitB.AST
+import UnitB.Expr
 
     -- Libraries
 import Control.Monad.Trans.Either
 
 import Data.Map hiding ( map )
+import qualified Data.Map as M
 
 import Tests.UnitTest
 
@@ -352,8 +354,8 @@ result3 = unlines
 path3 :: String
 path3 = "tests/cubes-t3.tex"
 
-result4 :: Either [Error] (Map Label ProgressProp)
-result4 = either g Right (do
+result4 :: Either [Error] (Map ProgId ProgressProp)
+result4 = M.map (fmap $ DispExpr "") <$> either g Right (do
         q0 <- f `mzeq` zlambda [i_decl] 
             (mzle (mzint 0) i `mzand` mzless i bigN) 
             (mzpow i $ mzint 3)
@@ -367,11 +369,11 @@ result4 = either g Right (do
                 (n `mzeq` bigN)
         q4 <- mznot (n `mzeq` k)
         return $ fromList 
-            [   (label "prog0", LeadsTo [] ztrue q0)
-            ,   (label "prog1", LeadsTo [] ztrue q1)
-            ,   (label "prog2", LeadsTo [] p1 q2)
-            ,   (label "prog3", LeadsTo [] p2 q3)
-            ,   (label "prog4", LeadsTo [] p3 q4)
+            [   ("prog0", LeadsTo [] ztrue q0)
+            ,   ("prog1", LeadsTo [] ztrue q1)
+            ,   ("prog2", LeadsTo [] p1 q2)
+            ,   ("prog3", LeadsTo [] p2 q3)
+            ,   ("prog4", LeadsTo [] p3 q4)
             ])
     where
         (k,_)      = var "k" int
@@ -385,15 +387,15 @@ result4 = either g Right (do
 path4 :: String
 path4 = "tests/cubes-t6.tex"
 
-case4 :: IO (Either [Error] (Map Label ProgressProp))
+case4 :: IO (Either [Error] (Map ProgId ProgressProp))
 case4 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
-        [m] -> right $ _progress $ props $ m
+        [m] -> right $ m!.props.progress
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 result5 :: Either [Error] (Map Label SafetyProp)
-result5 = either g Right (do
+result5 = M.map (fmap $ DispExpr "") <$> either g Right (do
         q0  <- bigN `mzeq` n
         p0  <- (k `mzle` n)
         q1  <- mznot (n `mzeq` k)
@@ -416,7 +418,7 @@ case5 :: IO (Either [Error] (Map Label SafetyProp))
 case5 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
-        [m] -> right $ _safety $ props $ m
+        [m] -> right $ m!.props.safety
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
 case6 :: IO (String, Map Label Sequent)
@@ -447,7 +449,7 @@ result6 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
-    , "  o  m0/evt/C_SCH/weaken/c0"
+    --, "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -532,7 +534,7 @@ result6 = unlines
     , "  o  m0/saf0/SAF/WD/lhs"
     , "  o  m0/saf0/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 104 / 108"
+    , "passed 103 / 107"
     ]
 
 path6 :: String
@@ -699,7 +701,7 @@ result8 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
-    , "  o  m0/evt/C_SCH/weaken/c0"
+    --, "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -788,7 +790,7 @@ result8 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 111 / 112"
+    , "passed 110 / 111"
     ]
   
 path8 :: String
@@ -819,7 +821,7 @@ result9 = unlines
     , "  o  m0/INV/WD"
     , "  o  m0/TR/tr0/evt/EN"
     , "  o  m0/TR/tr0/evt/NEG"
-    , "  o  m0/evt/C_SCH/weaken/c0"
+    --, "  o  m0/evt/C_SCH/weaken/c0"
     , "  o  m0/evt/FIS/a@prime"
     , "  o  m0/evt/FIS/b@prime"
     , "  o  m0/evt/FIS/c@prime"
@@ -921,7 +923,7 @@ result9 = unlines
     , "  o  m0/saf1/SAF/WD/lhs"
     , "  o  m0/saf1/SAF/WD/rhs"
     , "  o  m0/tr0/TR/WD"
-    , "passed 121 / 125"
+    , "passed 120 / 124"
     ]
 
 path9 :: String

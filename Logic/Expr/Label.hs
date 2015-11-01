@@ -28,6 +28,9 @@ instance Show Label where
 instance IsString Label where
     fromString x = label x
 
+instance IsLabel Label where
+    as_label = id
+
 label :: String -> Label
 label s = Lbl s
 

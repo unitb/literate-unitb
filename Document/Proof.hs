@@ -46,11 +46,12 @@ import qualified Data.Traversable as T
 import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
+import           Utilities.Trace
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
 context :: RawMachine -> Context
-context m = step_ctx m `merge_ctx` theory_ctx (m^.theory)
+context m = step_ctx m `merge_ctx` theory_ctx (m!.theory)
 
 data ProofStep = Step 
        { assertions  :: Map Label (Tactic Expr)    -- assertions
@@ -381,7 +382,7 @@ collect_proof_step = do
                                         xp <- xp
                                         let p = fromMaybe easy $ M.lookup lbl prfs
                                         return (lbl,xp,p)
-                                    assert assrt p
+                                    LP.assert assrt p
                             -- thm <- sequence thm_ref
                             use_theorems thm $ do
                                 case ng of
@@ -497,10 +498,10 @@ theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 machine_setting :: Machine -> ParserSetting
 machine_setting m = setting
-        & decls %~ (view variables m `union`)
-        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ m^.variables)
+        & decls %~ (view' variables m `union`)
+        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ m!.variables)
     where
-        setting = theory_setting (m^.theory)
+        setting = theory_setting (m!.theory)
 
 schedule_setting :: Machine -> Event -> ParserSetting
 schedule_setting m evt = setting & decls %~ ((evt^.indices) `union`)
@@ -542,17 +543,21 @@ parse_expr' :: ParserSetting
             -> Either [Error] DispExpr
 parse_expr' p = parse_expr p . flatten_li' . drop_blank_text'
 
+contextOf :: ParserSetting -> Context
+contextOf set = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
+    where
+        ctx0
+            | set^.is_step = M.mapKeys (++"'") $ M.map prime $ set^.primed_vars
+            | otherwise    = M.empty
+        ctx1 
+            | set^.free_dummies = set^.dum_ctx
+            | otherwise         = M.empty
+            
 parse_expr :: ParserSetting
            -> StringLi
            -> Either [Error] DispExpr
 parse_expr set xs = do
-        let ctx0
-                | set^.is_step = M.mapKeys (++"'") $ M.map prime $ set^.primed_vars
-                | otherwise    = M.empty
-            ctx1 
-                | set^.free_dummies = set^.dum_ctx
-                | otherwise         = M.empty
-            ctx = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
+        let ctx = contextOf set
             li  = line_info xs
         x  <- Expr.parse_expr ctx
                 (set^.language)
@@ -579,9 +584,10 @@ get_expression t ys = do
             -- sys <- lift $ ST.get
             return $ LP.with_line_info li $ do
                 ctx <- get_context
+                return $ trace (show ctx)
                 x   <- either hard_error return 
                         $ Expr.parse_expr 
-                            ctx notation
+                            (ctx & dummies .~ M.empty) notation
                             (flatten_li' xs)
                 let typed_x = fromMaybe id (zcast <$> t) (Right x)
                 x <- either

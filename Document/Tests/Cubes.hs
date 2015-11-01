@@ -3,18 +3,19 @@ module Document.Tests.Cubes
     ( test_case, test ) 
 where
 
---import qualified Data.Map as M
 import Document.Tests.Suite
 
 import Tests.UnitTest
 
-import Logic.Expr
 import Logic.Proof
 
-import UnitB.AST -- (Machine(..),empty_machine)
+import UnitB.AST 
+import UnitB.Expr
 import UnitB.PO (step_ctx)
 
     -- Libraries
+import Control.Lens ((&),(%~))
+
 import Data.Map hiding ( map )
 import Data.List hiding (inits)
 
@@ -58,23 +59,23 @@ var_c' = Var "c@prime" int
 var_n' = Var "n@prime" int
 
 machine6 :: Machine
-machine6 = (empty_machine "m0") 
-        {  variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
-        ,  inits = fromList
-                [ (label "in2", $fromJust$ c .= 6)
-                , (label "in1", $fromJust$ b .= 1)
-                , (label "init0", $fromJust$ (n .= 0) /\ (a .= 0) )
-                ]
-        ,  props = prop_set6
-        ,  events = singleton (label "evt") event6_evt 
-        }
+machine6 = fmap (DispExpr "") $ (empty_machine "m0") & content assert %~ \m ->
+        m {  _variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
+          ,  _inits = fromList
+                  [ (label "in2", $typeCheck$ c .= 6)
+                  , (label "in1", $typeCheck$ b .= 1)
+                  , (label "init0", $typeCheck$ (n .= 0) /\ (a .= 0) )
+                  ]
+          ,  _props = prop_set6
+          ,  _event_table = newEvents [("evt",event6_evt)]
+          }
     where
         a = Right $ Word var_a
         b = Right $ Word var_b
         c = Right $ Word var_c
         n = Right $ Word var_n
 
-prop_set6 :: PropertySet
+prop_set6 :: PropertySet' RawExpr
 prop_set6 = empty_property_set {
         _proofs = fromList [ 
                     (label "m0/evt/INV/inv0", calc),
@@ -82,24 +83,24 @@ prop_set6 = empty_property_set {
                     (label "m0/evt/INV/inv2", calc) ],
         _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
-                [ $fromJust$ a .= (n .^ 3)
-                , $fromJust$ b .=    3 * (n .^ 2)
+                [ $typeCheck$ a .= (n .^ 3)
+                , $typeCheck$ b .=    3 * (n .^ 2)
                                    + 3 * n
                                    + 1     
-                , $fromJust$ c .= 6 * n + 6 ] }
+                , $typeCheck$ c .= 6 * n + 6 ] }
     where
         a = Right $ Word var_a
         b = Right $ Word var_b
         c = Right $ Word var_c
         n = Right $ Word var_n
-        calc = ByCalc $ Calc (step_ctx machine6) ztrue ztrue [] (LI "" 1 1)
+        calc = ByCalc $ Calc (step_ctx $ asExpr <$> machine6) ztrue ztrue [] (LI "" 1 1)
 
 vars :: [Var]
 vars = [var_a,var_b,var_c,var_n] 
 
-event6_evt :: Event
+event6_evt :: Event' RawExpr
 event6_evt = empty_event {
-        actions = rel_action vars $ fromList $ zip 
+        _actions = rel_action vars $ fromList $ zip 
             (map label ["a1", "a0", "a2", "a3"])
             [ a' `zeq` (a `zplus` b), 
               n' `zeq` (n `zplus` zint 1),
@@ -230,7 +231,7 @@ case9 = do
         r <- parse path6
         case r of
             Right [m] -> do
-                case toList $ _proofs $ props m of
+                case toList $ m!.props.proofs of
                     (lbl,ByCalc calc):_ -> 
                           return (show lbl ++ ":\n" ++ show_proof calc)
                     xs -> return (

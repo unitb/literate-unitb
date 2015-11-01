@@ -48,6 +48,9 @@ data VarScope = forall a. IsVarScope a => VarScope a
 
 existential ''VarScope
 
+instance Show VarScope where
+    show (VarScope x) = show x
+
 instance Scope VarScope where
     keep_from s = applyVarScope (keep_from s)
     make_inherited = applyVarScope make_inherited

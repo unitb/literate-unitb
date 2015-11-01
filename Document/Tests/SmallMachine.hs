@@ -3,6 +3,7 @@ module Document.Tests.SmallMachine where
 
     -- Modules
 import Document.Tests.Suite
+import Document.Proof
 
 import Logic.Expr
 import Logic.Expr.QuasiQuote
@@ -11,9 +12,9 @@ import Logic.Proof
 import UnitB.AST
 
     -- Libraries
-import           Data.Default
-import           Data.Map hiding ( map )
-import qualified Data.Set as S 
+import Control.Lens hiding ((.=))
+
+import           Data.Map as M hiding ( map )
 
 import Tests.UnitTest
 
@@ -44,8 +45,9 @@ test = test_cases "small machine example" [
             case7 result7),
         (StringCase "test 8 (schedulability without selecting schedules (trivially true))" 
             case8 result8),
-        (StringCase "test 9 (coarse schedule weakening, PO)" 
-            case9 result9),
+            -- default: false is no longer weakened away
+        --(StringCase "test 9 (coarse schedule weakening, PO)" 
+        --    case9 result9),
         (StringCase "test 10 (transient PO, enablement)" 
             case10 result10), 
         (StringCase "test 11 (transient PO, negation)" 
@@ -118,7 +120,7 @@ result3 = unlines
     , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
-    , "  o  m0/inc/C_SCH/weaken/c0"
+    --, "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -129,7 +131,7 @@ result3 = unlines
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
-    , "passed 21 / 22"
+    , "passed 20 / 21"
     ]
 
 path3 :: String
@@ -220,7 +222,7 @@ result6 = unlines
     , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
-    , "  o  m0/inc/C_SCH/weaken/c0"
+    --, "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -232,7 +234,7 @@ result6 = unlines
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
-    , "passed 22 / 23"
+    , "passed 21 / 22"
     ]
 
 path6 :: String
@@ -289,8 +291,8 @@ result8 = unlines
     , "(declare-const y Int)"
     , "; c0"
     , "(assert (= x y))"
-    , "; default"
-    , "(assert false)"
+    --, "; default"
+    --, "(assert false)"
     , "; inv0"
     , "(assert (= x (* 2 y)))"
     , "(assert (not (= x y)))"
@@ -411,54 +413,61 @@ y' :: ExprP
 (x,x',var_x) = prog_var "x" int
 (y,y',var_y) = prog_var "y" int
 
+c :: Ctx
+c = ctx $ do
+    primable $ do
+        decls %= M.insert "x" var_x
+        decls %= M.insert "y" var_y
+
+vars :: Map String Var
+vars = fromList [("x", var_x), ("y", var_y)]
+
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
-    actions = fromList [
-                ("a0",BcmSuchThat (S.elems $ variableSet m0_machine) 
-                    $ $fromJust $ x' .= (x .+ 2)) ] }
+    _actions = fromList [
+                ("a0",BcmSuchThat (M.elems vars) 
+                    $ c $ [expr| x' = x+2 |] . (is_step .~ True)) ] }
 
 inc_event_m1 :: Event
 inc_event_m1 = empty_event 
-        { new_sched = def { coarse = singleton "c0" $ $fromJust$ 
-                                x .= y
-                          , fine = singleton "f0" $ $fromJust$ 
-                                x .= y }
-        , actions = fromList [
-                    ("a0",BcmSuchThat vars $ $fromJust$ 
-                            x' .= x .+ 2),
-                    ("a1",BcmSuchThat vars $ $fromJust$
-                            y' .= y .+ 1) ] 
+        { _coarse_sched = singleton "c0" $ 
+                                c [expr| x = y |]
+        , _fine_sched = singleton "f0" $ 
+                                c [expr| x = y |]
+        , _actions = fromList [
+                    ("a0",BcmSuchThat (M.elems vars) $ 
+                            c $ [expr| x' = x + 2 |] . (is_step .~ True)),
+                    ("a1",BcmSuchThat (M.elems vars) $ 
+                            c $ [expr| y' = y + 1 |] . (is_step .~ True)) ] 
         }
-    where
-        vars = S.elems $ variableSet m1_machine
 
 m0_machine :: Machine
-m0_machine = (empty_machine "m0") { 
-        props = m0_props,
-        events = singleton "inc" inc_event_m0,
-        variables = fromList [("x", var_x), ("y", var_y)] }
+m0_machine = empty_machine "m0" & content assert %~ \m -> m
+        & props .~ m0_props
+        & event_table .~ newEvents [("inc", inc_event_m0)]
+        & variables .~ vars 
 
 m1_machine :: Machine
-m1_machine = (empty_machine "m0") 
-        { props = m1_props
-        , events = singleton "inc" inc_event_m1
-        , variables = fromList [("x", var_x), ("y", var_y)] 
-        }
+m1_machine = empty_machine "m0" & content assert %~ \m -> m
+        & props .~ m1_props
+        & event_table .~ newEvents [("inc",inc_event_m1)]
+        & variables .~ vars
+        
 
 m0_props :: PropertySet
 m0_props = empty_property_set {
         _inv = singleton "inv0" $
-                $fromJust$ (x .= 2 .* y) }
+                c [expr| x = 2 \cdot y |] }
 
 m1_props :: PropertySet
 m1_props = m0_props
         { _transient = fromList [
-            ("tr0", Transient empty ($fromJust$ x .= y) ["inc"] empty_hint) ]
+            ("tr0", Tr M.empty (c [expr| x = y |]) ["inc"] empty_hint) ]
         , _constraint = fromList [
-            ("co0", Co [] ($fromJust$ (x .= 1) .=> (x' .= 2) )) ]
+            ("co0", Co [] (c $ [expr| x = 1 \implies x' = 2 |] . (is_step .~ True))) ]
         , _inv = insert 
                 "inv1" 
-                ($fromJust$ x .= x .* (y .+ 1)) 
+                (c [expr| x = x \cdot (y + 1) |])
                 (_inv m0_props)
         }
 

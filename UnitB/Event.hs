@@ -3,13 +3,16 @@ module UnitB.Event
     , SkipEventId (..)
     , SkipOrEvent
     , Event'  (..)
+    , RawEvent
     , Event
     , EventRef'
     , EventRef (..)
     , EventRefinement (..)
     , EventMerging'
+    , RawEventMerging
     , EventMerging   (..)
     , EventSplitting'
+    , RawEventSplitting
     , EventSplitting (..)
     , evt_pairs
     , AbstrEvent
@@ -23,6 +26,7 @@ module UnitB.Event
     , HasEvent' (..)
     , empty_event
     , Action
+    , RawAction
     , Action' (..)
     , ba_predicate'
     , ba_pred
@@ -90,6 +94,7 @@ import Utilities.Instances
 --     def = empty_schedule
 
 type Action = Action' Expr
+type RawAction = Action' RawExpr
 
 data Action' expr = 
         Assign Var expr 
@@ -105,7 +110,7 @@ instance Show expr => Show (Action' expr) where
             (show e)
 
 data SkipEventId = SkipEvent
-    deriving (Show,Eq,Ord,Typeable)
+    deriving (Show,Eq,Ord,Typeable,Generic)
 
 instance NFData SkipEventId where
 
@@ -115,6 +120,7 @@ instance IsString SkipOrEvent where
     fromString = Right . fromString
 
 type Event = Event' Expr
+type RawEvent = Event' RawExpr
 
 data Event' expr = Event 
         { _indices    :: Map String Var
@@ -139,15 +145,18 @@ data ConcrEvent' expr = CEvent
         { _new   :: Event' expr
         , _witness   :: Map Var RawExpr
         , _eql_vars  :: Map String Var
+        , _abs_actions :: Map Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
 
-type EventMerging' = EventMerging RawExpr
+type RawEventMerging = EventMerging RawExpr
+type EventMerging' = EventMerging Expr
 
 data EventMerging expr = EvtM  
         { _eventMergingMultiAbstract :: NonEmpty (SkipOrEvent,AbstrEvent' expr)
         , _eventMergingConcrete ::   (SkipOrEvent,ConcrEvent' expr) }
 
-type EventSplitting' = EventSplitting RawExpr
+type RawEventSplitting = EventSplitting RawExpr
+type EventSplitting' = EventSplitting Expr
 
 data EventSplitting expr = EvtS   
         { _eventSplittingAbstract :: (SkipOrEvent,AbstrEvent' expr) 
@@ -160,7 +169,7 @@ data EventRef expr = EvtRef
         , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) 
         } deriving (Generic)
 
-default_schedule :: Map Label Expr
+default_schedule :: IsGenExpr expr => Map Label expr
 default_schedule = M.fromList [(label "default", zfalse)]
 
 type ScheduleChange = ScheduleChange' Expr
@@ -194,12 +203,9 @@ instance Default (Event' expr) where
 instance Default (ConcrEvent' expr) where
     def = genericDefault
 
-empty_event :: Event' expr
-empty_event = makeEvent' def def def def
-
 infix 1  $=
 
-($=) :: HasExpr expr RawExpr 
+($=) :: IsExpr expr 
      => Either [String] expr 
      -> Either [String] expr 
      -> Either [String] (Action' expr)
@@ -217,12 +223,12 @@ frame' (BcmSuchThat vs _) = M.fromList $ L.zip (L.map (view name) vs) vs
 frame :: Map Label (Action' expr) -> Map String Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
 
-ba_pred :: HasExpr expr RawExpr => Action' expr -> RawExpr
+ba_pred :: IsExpr expr => Action' expr -> RawExpr
 ba_pred (Assign v e) = $typeCheck $ Right (Word (prime v)) `mzeq` Right (getExpr e)
 ba_pred (BcmIn v e) = $typeCheck $ Right (Word (prime v)) `zelem` Right (getExpr e)
 ba_pred (BcmSuchThat _ e) = getExpr e
 
-rel_action :: [Var] -> Map Label Expr -> Map Label Action
+rel_action :: [Var] -> Map Label expr -> Map Label (Action' expr)
 rel_action vs act = M.map (BcmSuchThat vs) act
 
 keep' :: Map String Var -> Map Label (Action' expr) -> Map String Var
@@ -234,13 +240,7 @@ skip' keep = M.mapKeys f $ M.map g keep
         f n = label ("SKIP:" ++ n)
         g v = Word (prime v) `zeq` Word v
 
-skip_abstr :: AbstrEvent' expr
-skip_abstr = AbsEvent empty_event Nothing []
-
-skip_event :: ConcrEvent' expr
-skip_event = CEvent empty_event M.empty M.empty
-
-ba_predicate' :: HasExpr expr RawExpr => Map String Var -> Map Label (Action' expr) -> Map Label RawExpr
+ba_predicate' :: IsExpr expr => Map String Var -> Map Label (Action' expr) -> Map Label RawExpr
 ba_predicate' vars acts = M.map ba_pred acts `M.union` skip
     where
         skip = skip' $ keep' vars acts
@@ -251,6 +251,15 @@ primed vs e = make_unique "@prime" vs e
 makeClassy ''Event'
 makeClassy ''AbstrEvent'
 makeClassy ''ConcrEvent'
+
+skip_abstr :: IsExpr expr => AbstrEvent' expr
+skip_abstr = AbsEvent empty_event Nothing []
+
+skip_event :: IsExpr expr => ConcrEvent' expr
+skip_event = CEvent empty_event M.empty M.empty M.empty
+
+empty_event :: IsExpr expr => Event' expr
+empty_event = makeEvent' def def def def & coarse_sched .~ default_schedule
 
 instance HasEvent' (AbstrEvent' expr) expr where
     event' = old
@@ -323,7 +332,6 @@ instance EventRefinement (EventMerging expr) expr where
 instance EventRefinement (EventSplitting expr) expr where
     abstract_evts = to $ \(EvtS x _)  -> x :| []
     concrete_evts = multiConcrete
-    -- evt_pairs = to $ \(EvtS x ys) -> L.map (EvtRef x) ys
 
 -- deleted_sched :: Event -> Schedule
 -- deleted_sched e = Schedule 
@@ -404,7 +412,8 @@ old' = getItems old
 
 actions_changes :: (Map Label (Action' expr) -> Map Label (Action' expr) -> Map Label (Action' expr))
                 -> Getter (EventMerging expr) (Map Label (Action' expr))
-actions_changes diff = to $ \(EvtM aevts cevt) -> (snd (NE.head aevts)^.actions) `diff` (cevt^._2.actions)
+actions_changes diff = to $ \em -> (em^.abs_actions) `diff` (em^.new.actions) 
+    -- \(EvtM aevts cevt) -> (snd (NE.head aevts)^.actions) `diff` (cevt^._2.actions)
 
 new_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
 new_actions = actions_changes $ flip const
@@ -429,6 +438,8 @@ replace prog saf = ScheduleChange def def def prog saf
 
 derive makeNFData ''Event'
 derive makeNFData ''AbstrEvent'
+derive makeNFData ''EventMerging
+derive makeNFData ''EventSplitting
 derive makeNFData ''ConcrEvent'
 derive makeNFData ''Action'
 -- derive makeNFData ''Schedule

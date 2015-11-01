@@ -29,10 +29,10 @@ import Control.Lens as L
 
 import Control.Monad.Reader.Class 
 import Control.Monad.Reader (Reader,runReader) 
+import Control.Monad.RWS (runRWS)
 import Control.Monad.State
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State  as ST
-import Control.Monad.Trans.RWS    as RWS hiding (local,ask,tell)
 import Control.Monad.Writer.Class 
 
 import Data.Default
@@ -364,9 +364,6 @@ instance IsLabel MachineId where
 instance IsLabel ContextId where
     as_label (CId x) = label x
 
-instance IsLabel ProgId where
-    as_label (PId lbl) = lbl
-
 type MTable = Map MachineId
 type CTable = Map ContextId
 
@@ -405,7 +402,9 @@ derive makeNFData ''EventP3Field
 makeLenses ''SystemP
 
 deriving instance Show EventP3Field
+
 instance NFData (Tactic Proof) where
+    rnf x = seq x () 
 
 -- type Phase2M = Phase2 MTable
 -- type Phase3M = Phase3 MTable
@@ -430,22 +429,8 @@ zoom s f m = M.union m1 <$> f m0
     where
         (m0,m1) = M.partitionWithKey (const . (`S.member` s)) m
 
-class LensState m0 m1 where
-    type StateOf (a :: * -> *) :: *
-    -- type StateB m1 :: *
-    focus :: Lens' (StateOf m0) (StateOf m1) -> m1 a -> m0 a
 
-instance Monad m => LensState (StateT a m) (StateT b m) where
-    type StateOf (StateT a m) = a
-    focus ln cmd = StateT f 
-        where
-            f x = second (\y -> set ln y x) `liftM` runStateT cmd (view ln x)
 
-instance Monad m => LensState (RWST r w a m) (RWST r w b m) where
-    type StateOf (RWST r w a m) = a
-    focus ln cmd = RWST f
-        where
-            f r x = over _2 (\y -> set ln y x) `liftM` runRWST cmd r (view ln x)
 
 -- data ZipMap a b where
 --     FMap :: (a -> b) -> ZipMap a b
@@ -587,19 +572,24 @@ pAllVars :: HasMachineP2' phase
 pAllVars = to $ \x -> view pAbstractVars x `M.union` view pStateVars x
 
 
-pEventMerge :: (HasMachineP1' phase, HasEventP1 events)
-            => Getter (phase events t) (Map EventId (events,[EventId]))
-pEventMerge = pEventRef.to f
+pEventMerge :: (HasMachineP1' phase, HasEventP1 event)
+            => Getter (phase event t) (Map EventId (event,[EventId]))
+pEventMerge = pEventMerge'.to (over (traverse._2.traverse) fst)
+
+pEventMerge' :: (HasMachineP1' phase, HasEventP1 event)
+             => Getter (phase event t) (Map EventId (event,[(EventId,event)]))
+pEventMerge' = pEventRef.to f
     where
+        distr (x,y) = (,y) <$> x
         f g = readGraph g $ do
             vs <- getRightVertices
             fmap (M.fromList.rights) $ forM vs $ \v -> do
-                es <- (rights.NE.toList) 
-                        <$> (    T.mapM (leftKey.G.source) 
-                             =<< predecessors v)
+                es' <- (fmap G.source <$> predecessors v )
+                    >>= T.mapM (\v -> distr <$> ((,) <$> leftKey v <*> leftInfo v) )
+                let es = rights $ NE.toList es'
                 k  <- rightKey v
                 e  <- rightInfo v
-                return $ (,(e,es)) <$> k
+                return $ distr (k,(e,es))
 
 traverseFilter :: Ord k => (a -> Bool) -> Traversal' (Map k a) (Map k a)
 traverseFilter p f m = M.union <$> f m' <*> pure (m `M.difference` m')
@@ -806,7 +796,7 @@ instance (Ord a, Arbitrary a) => Arbitrary (Hierarchy a) where
     arbitrary = do
         xs <- L.nub <$> arbitrary
         let ms = M.fromList ys
-            ys = L.zip [0..] xs
+            ys = L.zip [(0 :: Int)..] xs
         zs <- forM ys $ \(i,x) -> do
             j <- QC.elements $ Nothing : L.map Just [0..i-1]
             return (x,(ms!) <$> j)
@@ -906,12 +896,28 @@ liftFieldM :: (label -> scope -> Reader r [Either Error field])
            -> r -> [(label,scope)] -> MM' c [field]
 liftFieldM f x xs = allResults (flip runReader x . uncurry f) xs
 
+liftFieldMLenient :: (label -> scope -> Reader r [Either Error field]) 
+                  -> r -> [(label,scope)] -> MM' c [field]
+liftFieldMLenient f x xs = allResultsLenient (flip runReader x . uncurry f) xs
+
 allResults :: (a -> [Either Error b]) -> [a] -> MM' c [b]
 allResults f xs 
     | L.null es = return ys
     | otherwise = tell es >> mzero
     where
         (es,ys) = partitionEithers (concatMap f xs)
+
+allResultsLenient :: (a -> [Either Error b]) -> [a] -> MM' c [b]
+allResultsLenient f xs = tell es >> return ys
+    where
+        (es,ys) = partitionEithers (concatMap f xs)
+
+triggerLenient :: MM' c a -> MM' c a
+triggerLenient cmd = do
+    (x,es) <- listen cmd
+    if L.null es 
+        then return x
+        else mzero
 
 trigger :: Maybe a -> M a
 trigger (Just x) = return x

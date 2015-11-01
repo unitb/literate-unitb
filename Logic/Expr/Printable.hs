@@ -6,7 +6,6 @@ import Logic.Expr.Type
 
     -- Libraries
 import Control.DeepSeq
-import Control.Lens
 
 import Data.DeriveTH
 import Data.Map
@@ -20,7 +19,7 @@ import GHC.Generics
 --instance HasExpr Expr where
 --    expr = id
 
-instance HasExpr DispExpr Expr where
+instance IsExpr DispExpr where
     getExpr (DispExpr _ e) = e
 
 instance IsGenExpr DispExpr where
@@ -49,9 +48,6 @@ data ExprStuff expr = ExprStuff expr (Map String expr)
 
 prettyPrint :: DispExpr -> String
 prettyPrint (DispExpr x _) = x
-
-stripped :: (Traversable f, HasExpr e Expr) => f e -> f Expr
-stripped x = x & traverse %~ getExpr
 
 derive makeNFData ''DispExpr
 

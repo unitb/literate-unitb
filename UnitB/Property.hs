@@ -66,11 +66,11 @@ data Constraint' expr =
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
-data TrHint' expr = TrHint (Map String (Type,expr)) (Maybe Label)
+data TrHint' expr = TrHint (Map String (Type,expr)) (Maybe ProgId)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
 
 
-empty_hint :: TrHint
+empty_hint :: TrHint' expr
 empty_hint = TrHint empty Nothing
 
 type Transient = Transient' Expr
@@ -115,14 +115,17 @@ data PropertySet' expr = PS
         , _inv          :: Map Label expr       -- inv
         , _inv_thm      :: Map Label expr       -- inv thm
         , _proofs       :: Map Label Proof
-        , _progress     :: Map Label (ProgressProp' expr)
+        , _progress     :: Map ProgId (ProgressProp' expr)
 --        , schedule     :: Map Label Schedule
         , _safety       :: Map Label (SafetyProp' expr)
         }
     deriving (Eq,Functor,Foldable,Traversable)
 
 newtype ProgId = PId { getProgId :: Label }
-    deriving (Eq,Ord,IsString)
+    deriving (Eq,Ord,IsString,Typeable)
+
+instance IsLabel ProgId where
+    as_label (PId lbl) = lbl
 
 instance Show ProgId where
     show (PId x) = show x

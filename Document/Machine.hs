@@ -28,6 +28,7 @@ import UnitB.PO
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import qualified Control.Exception as Exc
 
 import           Control.Monad 
 import           Control.Monad.Trans.RWS as RWS ( RWS )
@@ -52,9 +53,9 @@ make_machine (MId m) p4 = mch'
         types   = p4 ^. pTypes
         -- evtSet  = p4 ^. pEvents
         imp_th  = p4 ^. pImports
-        ref_prog :: Map Label Rule
-        ref_prog = M.mapKeys as_label $ p4 ^. pLiveRule
-        proofs   = p4 ^. pProofs
+        ref_prog :: Map ProgId Rule
+        ref_prog = p4^.pLiveRule
+        proofs   = p4^.pProofs
         -- _ = evt_refs :: Map EventId [(Label,ScheduleChange,LineInfo)]
         ab_var = p4 ^. pAbstractVars
         ctx = empty_theory 
@@ -69,8 +70,8 @@ make_machine (MId m) p4 = mch'
             -- , notation =  empty_notation
             , _fact = p4^.pAssumptions & traverse %~ getExpr }
         props = p4 ^. pNewPropSet
-        mch = Mch 
-            { _machine'Name = m
+        mch = check Exc.assert $ Mch 
+            { _machine''Name = m
             , _theory = ctx
             , _variables = p4 ^. pStateVars
             , _abs_vars  = ab_var
@@ -106,7 +107,8 @@ make_machine (MId m) p4 = mch'
                 p <- runTactic li (pos ! k) tac
                 return (k,p)
             xs <- triggerM xs
-            return $ mch & AST.props.AST.proofs .~ fromList xs
+            return $ mch & content Exc.assert %~ \m -> 
+                       m & AST.props.AST.proofs .~ fromList xs
         events = p4 ^. pEventRef
         evts = events & G.traverseLeft %~ abstrEvt
                       -- & G.traverseRight %~ g
@@ -123,6 +125,7 @@ make_machine (MId m) p4 = mch'
                 , _witness   = evt ^. eWitness
                 , _eql_vars = keep' ab_var oldAction
                              `M.intersection` frame (evt^.eActions)
+                , _abs_actions = oldAction
                 }
             where oldAction = snd (NE.head olds)^.actions
         g :: EventP4 -> Event

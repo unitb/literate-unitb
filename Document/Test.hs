@@ -3,7 +3,6 @@ module Document.Test where
 
 --import Control.Monad
 
-import Data.List as L
 import Document.Document
 
 -- import qualified Document.Tests.CompCalc as CC
@@ -26,9 +25,8 @@ import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
 
 import Latex.Parser
-import Latex.Scanner
+import Latex.OldMonad
 
-import Test.QuickCheck
 
 import Tests.UnitTest
 
@@ -133,68 +131,68 @@ case2 = do
 --        f (Bracket _ _ xs _)  = 1 + depth xs
 --        f (Text _)          = 0
 
-instance Arbitrary LatexNode where
-    arbitrary = do
-            n <- choose (1,7) :: Gen Int
-            if n == 1 
-                then do
-                    n <- choose (0,length kw+2)
-                    name <- if length kw <= n
-                        then arbitrary :: Gen String
-                        else return (kw !! n)
-                    m    <- choose (0,6) :: Gen Int
-                    xs   <- (`Doc` li 0 0) <$> forM [1..m] 
-                        (\_ -> arbitrary :: Gen LatexNode)
-                    return $ Env name (li 0 0) xs (li 0 0)
-            else if n == 2
-                then do
-                    b  <- elements [Curly,Square]
-                    m    <- choose (0,6) :: Gen Int
-                    xs   <- (`Doc` li 0 0) <$> forM [1..m] 
-                        (\_ -> arbitrary :: Gen LatexNode)
-                    return $ Bracket b (li 0 0) xs (li 0 0)
-            else if 2 < n
-                then do
-                    xs <- arbitrary :: Gen String
-                    let ys = if L.null xs 
-                        then "x"
-                        else xs
---                    n <- choose (0,length cmd+1)
-                    case read_lines tex_tokens "" ys of
-                        Right x -> return $ Text (map fst x) (li 0 0)
-                        Left _  -> return $ Text [TextBlock "x" (li 0 0)] (li 0 0)
-            else error "Document.Test"
-        where
-            kw =
-                [   "machine"
-                ,   "variable"
-                ,   "indices"
-                ,   "evassignment"
-                ,   "cschedule"
-                ,   "fschedule"
-                ,   "invariant"
-                ,   "transient"
-                ,   "dummy"
-                ,   "use:set"
-                ,   "constant"
-                ,   "assumption"
-                ,   "initialization"
-                ,   "constraint"
-                ,   "proof"
-                ,   "calculation"
-                ]
---            cmd =
---                [   "\\newset"
---                ,   "\\hint"
---                ,   "\\ref"
---                ,   "\\eqref"
+--instance Arbitrary LatexDoc where
+--    arbitrary = _ $ mapM nodeToDoc =<< do
+--            n <- choose (1,7) :: Gen Int
+--            if n == 1 
+--                then do
+--                    n <- choose (0,length kw+2)
+--                    name <- if length kw <= n
+--                        then arbitrary :: Gen String
+--                        else return (kw !! n)
+--                    m    <- choose (0,6) :: Gen Int
+--                    xs   <- Doc (li 0 0) <$> replicateM m arbitrary
+--                                         <*> pure (li 0 0)
+--                    return $ [Env (li 0 0) name (li 0 0) xs (li 0 0)]
+--            else if n == 2
+--                then do
+--                    b  <- elements [Curly,Square]
+--                    m    <- choose (0,6) :: Gen Int
+--                    xs   <- Doc (li 0 0) <$> replicateM m arbitrary 
+--                                         <*> pure (li 0 0)
+--                    return $ [Bracket b (li 0 0) xs (li 0 0)]
+--            else if 2 < n
+--                then do
+--                    xs <- arbitrary :: Gen String
+--                    let ys = if L.null xs 
+--                        then "x"
+--                        else xs
+----                    n <- choose (0,length cmd+1)
+--                    case read_lines tex_tokens "" ys of
+--                        Right x -> return $ map (Text . fst) x
+--                        Left _  -> return $ [Text (TextBlock "x" (li 0 0))]
+--            else error "Document.Test"
+--        where
+--            kw =
+--                [   "machine"
+--                ,   "variable"
+--                ,   "indices"
+--                ,   "evassignment"
+--                ,   "cschedule"
+--                ,   "fschedule"
+--                ,   "invariant"
+--                ,   "transient"
+--                ,   "dummy"
+--                ,   "use:set"
+--                ,   "constant"
+--                ,   "assumption"
+--                ,   "initialization"
+--                ,   "constraint"
+--                ,   "proof"
+--                ,   "calculation"
 --                ]
+----            cmd =
+----                [   "\\newset"
+----                ,   "\\hint"
+----                ,   "\\ref"
+----                ,   "\\eqref"
+----                ]
 
 all_properties :: TestCase
 all_properties = Case "the parser is exception free" 
     (return (all_machines tree) >> return ()) ()
 
-tree0' :: T LatexNode
+tree0' :: T LatexDoc
 tree0' = env "machine"
                     [   bracket Square []
                     ,   bracket Curly

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Document.Tests.Puzzle 
-    ( test_case, path0, case12 )
+    --( test_case, path0, case12 )
 where
 
     -- Modules
@@ -14,6 +14,7 @@ import Logic.Proof
 import UnitB.AST
 
     -- Library
+import Control.Lens
 import Control.Monad
 import Control.Monad.Trans.Either
 
@@ -77,14 +78,14 @@ result0 = unlines
     , "  o  m0/prog0/REF/ensure/m0/TR/term/EN"
     , "  o  m0/prog0/REF/ensure/m0/TR/term/NEG"
     , "  o  m0/prog0/REF/ensure/m0/term/SAF"
-    , "  o  m0/term/C_SCH/weaken/sch0"
+    --, "  o  m0/term/C_SCH/weaken/sch0"
     , "  o  m0/term/FIS/b@prime"
     , "  o  m0/term/WD/ACT/act0"
     , "  o  m0/term/WD/C_SCH"
     , "  o  m0/term/WD/F_SCH"
     , "  o  m0/term/WD/GRD"
     , "  o  m0/term/WWD"
-    , "passed 19 / 19"
+    , "passed 18 / 18"
     ]
 
 case1 :: IO (String, Map Label Sequent)
@@ -253,9 +254,9 @@ case3 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
     let ms  = machines s
         m   = ms ! "m1"
-        visit = label "visit"
-        evt  = events m ! visit
-    return $ getListing s $ event_summary' m visit evt
+        visit = "visit"
+        evt   = nonSkipUpwards m ! visit
+    return $ getListing $ event_summary' m visit evt
 
 result3 :: String
 result3 = unlines
@@ -567,7 +568,6 @@ result7 = unlines
     , "  o  m2/INIT/WD"
     , "  o  m2/INIT/WWD"
     , "  o  m2/INV/WD"
-    , "  o  m2/count/C_SCH/weaken/sch0"
     , "  o  m2/count/FIS/b@prime"
     , "  o  m2/count/FIS/cs@prime"
     , "  o  m2/count/FIS/ts@prime"
@@ -582,9 +582,6 @@ result7 = unlines
     , "  o  m2/count/WD/F_SCH"
     , "  o  m2/count/WD/GRD"
     , "  o  m2/count/WWD"
-    , "  o  m2/flick/C_SCH/weaken/sch0"
-    , "  o  m2/flick/C_SCH/weaken/sch1"
-    , "  o  m2/flick/C_SCH/weaken/sch2"
     , "  o  m2/flick/FIS/b@prime"
     , "  o  m2/flick/FIS/cs@prime"
     , "  o  m2/flick/FIS/ts@prime"
@@ -700,7 +697,7 @@ result7 = unlines
     , "  o  m2/visit/WD/F_SCH"
     , "  o  m2/visit/WD/GRD"
     , "  o  m2/visit/WWD"
-    , "passed 141 / 141"
+    , "passed 137 / 137"
     ]
 
 case8 :: IO (String, Map Label Sequent)
@@ -737,10 +734,8 @@ result8 = unlines
     , "  o  m3/count/C_SCH/weaken/sch1"
     , "  o  m3/count/FIS/b@prime"
     , "  o  m3/count/FIS/c@prime"
-    , "  o  m3/count/FIS/cs@prime"
     , "  o  m3/count/FIS/fs@prime"
     , "  o  m3/count/FIS/n@prime"
-    , "  o  m3/count/FIS/ts@prime"
     , "  o  m3/count/FIS/vs@prime"
     , "  o  m3/count/INV/m3:inv0"
     , "  o  m3/count/INV/m3:inv1"
@@ -763,10 +758,8 @@ result8 = unlines
     , "  o  m3/flick/C_SCH/weaken/m3:csch2"
     , "  o  m3/flick/FIS/b@prime"
     , "  o  m3/flick/FIS/c@prime"
-    , "  o  m3/flick/FIS/cs@prime"
     , "  o  m3/flick/FIS/fs@prime"
     , "  o  m3/flick/FIS/n@prime"
-    , "  o  m3/flick/FIS/ts@prime"
     , "  o  m3/flick/FIS/vs@prime"
     , "  o  m3/flick/GRD/str/grd0"
     , "  o  m3/flick/INV/m3:inv0"
@@ -785,15 +778,12 @@ result8 = unlines
     , "  o  m3/flick/WD/F_SCH"
     , "  o  m3/flick/WD/GRD"
     , "  o  m3/flick/WFIS/cs@prime"
-    , "  o  m3/flick/WFIS/ts@prime"
     , "  o  m3/flick/WWD"
     , "  o  m3/term/C_SCH/weaken/sch3"
     , "  o  m3/term/FIS/b@prime"
     , "  o  m3/term/FIS/c@prime"
-    , "  o  m3/term/FIS/cs@prime"
     , "  o  m3/term/FIS/fs@prime"
     , "  o  m3/term/FIS/n@prime"
-    , "  o  m3/term/FIS/ts@prime"
     , "  o  m3/term/FIS/vs@prime"
     , "  o  m3/term/INV/m3:inv0"
     , "  o  m3/term/INV/m3:inv1"
@@ -805,15 +795,11 @@ result8 = unlines
     , "  o  m3/term/WD/C_SCH"
     , "  o  m3/term/WD/F_SCH"
     , "  o  m3/term/WD/GRD"
-    , "  o  m3/term/WFIS/cs@prime"
-    , "  o  m3/term/WFIS/ts@prime"
     , "  o  m3/term/WWD"
     , "  o  m3/visit/FIS/b@prime"
     , "  o  m3/visit/FIS/c@prime"
-    , "  o  m3/visit/FIS/cs@prime"
     , "  o  m3/visit/FIS/fs@prime"
     , "  o  m3/visit/FIS/n@prime"
-    , "  o  m3/visit/FIS/ts@prime"
     , "  o  m3/visit/FIS/vs@prime"
     , "  o  m3/visit/INV/m3:inv0"
     , "  o  m3/visit/INV/m3:inv1"
@@ -824,10 +810,8 @@ result8 = unlines
     , "  o  m3/visit/WD/C_SCH"
     , "  o  m3/visit/WD/F_SCH"
     , "  o  m3/visit/WD/GRD"
-    , "  o  m3/visit/WFIS/cs@prime"
-    , "  o  m3/visit/WFIS/ts@prime"
     , "  o  m3/visit/WWD"
-    , "passed 119 / 119"
+    , "passed 106 / 106"
     ]
 
 case9 :: IO String
@@ -1352,9 +1336,9 @@ result11 = unlines
 case12 :: IO (Either [Error] (Set String,Set String,Set String))
 case12 = runEitherT $ do
     m <- EitherT $ parse_machine path0 3
-    return ( keysSet $ abs_vars m
-           , keysSet $ del_vars m
-           , keysSet $ variables m)
+    return ( keysSet $ m!.abs_vars
+           , keysSet $ m!.del_vars
+           , keysSet $ m!.variables)
 
 result12 :: Either [Error] (Set String,Set String,Set String)
 result12 = Right ( S.fromList ["b","cs","ts","vs"]
@@ -1364,9 +1348,9 @@ result12 = Right ( S.fromList ["b","cs","ts","vs"]
 case13 :: IO (Either [Error] (Set String,Set String,Set String))
 case13 = runEitherT $ do
     m <- EitherT $ parse_machine path0 4
-    return ( keysSet $ abs_vars m
-           , keysSet $ del_vars m
-           , keysSet $ variables m)
+    return ( keysSet $ m!.abs_vars
+           , keysSet $ m!.del_vars
+           , keysSet $ m!.variables)
 
 result13 :: Either [Error] (Set String,Set String,Set String)
 result13 = Right ( S.fromList ["b","vs","n","c","fs"]
@@ -1380,9 +1364,15 @@ case14 :: IO String
 case14 = find_errors path14
 
 result14 :: String
-result14 = "error 225:22:\n    \
-            \unrecognized term: cs\nPerhaps you meant:\n\\Pcs \
-            \(variable)\nc (variable)\nts (variable)\nvs (variable)\n\n"
+result14 = unlines
+        [ "error 225:24:"
+        , "    unrecognized term: cs"
+        , "Perhaps you meant:"
+        , "\\Pcs (variable)"
+        , "c (variable)"
+        , "ts (variable)"
+        , "vs (variable)"
+        , "" ]
 
 path15 :: FilePath
 path15 = "Tests/puzzle/puzzle-err1.tex"
@@ -1393,38 +1383,62 @@ case15 = find_errors path15
 result15 :: String
 result15 = unlines
     [ "event 'count', action 'act0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 179:1:\n\taction 'act0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 179:2:"
+    , "\taction 'act0'"
+    , ""
     , ""
     , "event 'count', action 'act1' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 180:1:\n\taction 'act1'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 180:2:"
+    , "\taction 'act1'"
+    , ""
     , ""
     , "event 'count', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 176:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 176:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     , "event 'flick', action 'act0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 163:1:\n\taction 'act0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 163:2:"
+    , "\taction 'act0'"
+    , ""
     , ""
     , "event 'flick', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 160:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 160:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     , "initialization predicate 'in2' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable cs\n"
-    , "error 175:1:\n\tpredicate in2\n"
+    , "error 116:4:"
+    , "\tdeleted variable cs"
+    , ""
+    , "error 175:2:"
+    , "\tpredicate in2"
+    , ""
     , ""
     ]
 
 case16 :: IO (Either [Error] (Set Label,Set Label,Set Label))
 case16 = runEitherT $ do
     m <- EitherT $ parse_machine path0 3
-    let evt = events m ! "count"
-    return ( keysSet $ old_acts evt
-           , keysSet $ del_acts evt
-           , keysSet $ actions evt)
+    let evt = all_upwards m ! "count"
+    return ( keysSet $ evt^.evt_pairs.traverse.old.actions
+           , keysSet $ evt^.evt_pairs.traverse.deleted.actions
+           , keysSet $ evt^.new.actions)
 
 result16 :: Either [Error] (Set Label,Set Label,Set Label)
 result16 = Right ( S.fromList ["act0","act1"]
@@ -1434,10 +1448,10 @@ result16 = Right ( S.fromList ["act0","act1"]
 case17 :: IO (Either [Error] (Set Label,Set Label,Set Label))
 case17 = runEitherT $ do
     m <- EitherT $ parse_machine path0 4
-    let evt = events m ! "count"
-    return ( keysSet $ old_acts evt
-           , keysSet $ del_acts evt
-           , keysSet $ actions evt)
+    let evt = all_upwards m ! "count"
+    return ( keysSet $ evt^.evt_pairs.traverse.old.actions
+           , keysSet $ evt^.evt_pairs.traverse.deleted.actions
+           , keysSet $ evt^.new.actions)
 
 result17 :: Either [Error] (Set Label,Set Label,Set Label)
 result17 = Right ( S.fromList ["m3:act0","m3:act1"]
@@ -1795,16 +1809,18 @@ result20 = unlines
     , "(assert (= b@prime b))"
     , "; SKIP:c"
     , "(assert (= c@prime c))"
+    , "; SKIP:cs"
+    , "(assert (= cs@prime cs))"
     , "; SKIP:fs"
     , "(assert (= fs@prime fs))"
     , "; SKIP:n"
     , "(assert (= n@prime n))"
+    , "; SKIP:ts"
+    , "(assert (= ts@prime ts))"
     , "; act1"
     , "(assert (= vs@prime (union vs (mk-set@@sl@Pcs p))))"
     , "; asm0"
     , "(assert (finite@@sl@Pcs sl@Pcs))"
-    , "; cs"
-    , "(assert (= cs@prime cs))"
     , "; inv0"
     , "(assert (=> b (= vs sl@Pcs)))"
     , "; inv1"
@@ -1827,8 +1843,6 @@ result20 = unlines
     , "; thm0"
     , "(assert (= (= n (qsum@@sl@Pcs sl@Pcs (const@@sl@Pcs@@Int 1)))"
     , "           (= ts sl@Pcs)))"
-    , "; ts"
-    , "(assert (= ts@prime ts))"
     , "(assert (not (= c@prime"
     , "                (qsum@@sl@Pcs cs@prime (const@@sl@Pcs@@Int 1)))))"
     , "(check-sat-using (or-else (then qe smt)"
@@ -1943,35 +1957,65 @@ case21 = find_errors path21
 result21 :: String
 result21 = unlines
     [ "event 'flick', coarse schedule 'sch1' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 161:1:\n\tcoarse schedule 'sch1'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 161:2:"
+    , "\tcoarse schedule 'sch1'"
+    , ""
     , ""
     , "event 'flick', guard 'grd0' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 162:1:\n\tguard 'grd0'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 162:2:"
+    , "\tguard 'grd0'"
+    , ""
     , ""
     , "event 'term', coarse schedule 'sch2' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 104:1:\n\tcoarse schedule 'sch2'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 104:2:"
+    , "\tcoarse schedule 'sch2'"
+    , ""
     , ""
     , "event 'count', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 176:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 176:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     , "event 'flick', action 'act0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 163:1:\n\taction 'act0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 163:2:"
+    , "\taction 'act0'"
+    , ""
     , ""
     , "event 'flick', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 160:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 160:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     , "initialization predicate 'in2' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable cs\n"
-    , "error 175:1:\n\tpredicate in2\n"
+    , "error 116:4:"
+    , "\tdeleted variable cs"
     , ""
-    , "error 204:1:\n    event 'flick', action 'act' was deleted but does not exist"
-    , "error 205:1:\n    initialization predicate 'in' was deleted but does not exist"
+    , "error 175:2:"
+    , "\tpredicate in2"
+    , ""
+    , ""
+    , "error 204:2:"
+    , "    event 'flick', action 'act' was deleted but does not exist"
+    , "error 205:2:"
+    , "    initialization predicate 'in' was deleted but does not exist"
     ]
 
 path22 :: FilePath
@@ -1982,7 +2026,7 @@ case22 = find_errors path22
 
 result22 :: String
 result22 = unlines
-    [ "error 227:1:\n    'c' is not a disappearing variable"
+    [ "error 227:2:\n    'c' is not a disappearing variable"
     ]
 
 path23 :: FilePath
@@ -1993,14 +2037,14 @@ case23 = find_errors path23
 
 result23 :: String
 result23 = unlines
-    [ "error 227:1:\n    deleted variable \'xyz\' does not exist"
+    [ "error 227:2:\n    deleted variable \'xyz\' does not exist"
     ]
 
 case24 :: IO (Either [Error] (Set Label,Set Label))
 case24 = runEitherT $ do
     m <- EitherT $ parse_machine path0 4
-    return ( keysSet $ _inv $ inh_props m
-           , keysSet $ _inv $ props m)
+    return ( keysSet $ m!.inh_props.inv
+           , keysSet $ m!.props.inv)
 
 result24 :: Either [Error] (Set Label,Set Label)
 result24 = Right ( S.fromList ["inv0","inv1","inv2","m3:inv0","m3:inv1"
@@ -2017,33 +2061,53 @@ case25 = find_errors path25
 result25 :: String
 result25 = unlines
     [ "event 'flick', coarse schedule 'sch1' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 161:1:\n\tcoarse schedule 'sch1'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 161:2:"
+    , "\tcoarse schedule 'sch1'"
+    , ""
     , ""
     , "event 'flick', guard 'grd0' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 162:1:\n\tguard 'grd0'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 162:2:"
+    , "\tguard 'grd0'"
+    , ""
     , ""
     , "event 'term', coarse schedule 'sch2' refers to deleted variables"
-    , "error 101:3:\n\tdeleted variable 'ts'\n"
-    , "error 104:1:\n\tcoarse schedule 'sch2'\n"
+    , "error 101:4:"
+    , "\tdeleted variable 'ts'"
+    , ""
+    , "error 104:2:"
+    , "\tcoarse schedule 'sch2'"
+    , ""
     , ""
     , "event 'count', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 176:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 176:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     , "event 'flick', coarse schedule 'sch0' refers to deleted variables"
-    , "error 116:3:\n\tdeleted variable 'cs'\n"
-    , "error 160:1:\n\tcoarse schedule 'sch0'\n"
+    , "error 116:4:"
+    , "\tdeleted variable 'cs'"
+    , ""
+    , "error 160:2:"
+    , "\tcoarse schedule 'sch0'"
+    , ""
     , ""
     ]
 
 case27 :: IO (Either [Error] (Set Label,Set Label))
 case27 = runEitherT $ do
     m <- EitherT $ parse_machine path0 3
-    let evt = events m ! "flick"
-    return ( keysSet $ old_guard evt
-           , keysSet $ new_guard evt)
+    let evt = nonSkipUpwards m ! "flick"
+    return ( keysSet $ evt^.evt_pairs.traverse.old.guards
+           , keysSet $ evt^.new.guards)
 
 result27 :: Either [Error] (Set Label,Set Label)
 result27 = Right ( S.fromList ["grd0","grd1"]
@@ -2054,6 +2118,6 @@ case28 = find_errors "Tests/puzzle/puzzle-err7.tex"
 
 result28 :: String
 result28 = unlines
-    [ "error 238:18:"
+    [ "error 238:24:"
     , "    Parameter mismatch. Expecting 1 type parameters, received 0."
     ]

@@ -9,7 +9,7 @@ import Document.Pipeline
 import Document.Proof
 import Document.Visitor
 
-import UnitB.AST
+import UnitB.AST hiding (assert)
 import UnitB.PO
 
 import Latex.Parser
@@ -37,6 +37,7 @@ import Data.Typeable
 import Utilities.Error
 import Utilities.Format
 import Utilities.Syntactic
+import qualified Utilities.Invariant as Inv 
 
 
 data RuleParserParameter = 
@@ -215,7 +216,7 @@ assert_hyp m suff cnst hyps prop =
             _context $ ctx
             named_hyps $ invariants m
             named_hyps hyps )
-        $ emit_goal [po_lbl] prop
+        $ emit_goal Inv.assert [po_lbl] prop
     where
         ctx = Context M.empty cnst M.empty M.empty M.empty
         po_lbl 

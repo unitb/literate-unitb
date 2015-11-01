@@ -39,21 +39,19 @@ where
 
     -- Modules
 
-import Latex.Parser
+import Latex.Parser as P
 
 import Logic.Expr
 
 import UnitB.AST
 
     -- Libraries
-import Control.Arrow hiding (left,right)
 import Control.Lens
 
 import           Control.Monad.Reader.Class hiding (reader)
 import           Control.Monad.Trans.RWS (RWS,RWST,mapRWST,withRWST)
 import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Reader       hiding ( reader )
---import           Control.Monad.Reader.Class hiding ( reader )
 import           Control.Monad.State.Class as S
 import           Control.Monad.Trans.Either
 import qualified Control.Monad.Trans.State as ST
@@ -123,9 +121,6 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
-trim_blanks :: ([LatexToken],LineInfo) -> ([LatexToken],LineInfo)
-trim_blanks xs = first reverse $ skip_blanks_rev 
-    $ first (reverse . skip_blanks) xs
 
 type M m = ST.StateT ([LatexDoc],LineInfo) (EitherT [Error] m)
 
@@ -158,11 +153,9 @@ read_label :: Monad m
 read_label = do
     x  <- get_next    
     let x' = trim_blank_text' x
-    lift $ case x' of
-        (Doc [Text [TextBlock x li] _] _) 
-            -> right (x,li)
-        (Doc [Text [Command x li] _] _) 
-            -> right (x,li)
+    lift $ case asSingleton x' of
+        Just (Text (TextBlock x li)) -> right (x,li)
+        Just (Text (Command x li))   -> right (x,li)
         _   -> left [Error "expecting a label" $ line_info x']
 
 instance Readable Str where
@@ -313,10 +306,10 @@ get_1_lbl :: (Monad m)
 get_1_lbl xs = do 
         ([x],z) <- cmd_params 1 xs
         let x' = trim_blank_text' x
-        case x' of
-            Doc [Text [TextBlock x _] _] _
+        case asSingleton x' of
+            Just (Text (TextBlock x _))
                 -> right (x,z)
-            Doc [Text [Command x _] _] _
+            Just (Text (Command x _))
                 -> right (x,z)
             _   -> err_msg x'
     where
@@ -341,39 +334,7 @@ get_1_lbl xs = do
 --        (lbl3,xs) <- get_1_lbl xs
 --        return (lbl0,lbl1,lbl2,lbl3,xs)
 
-drop_blank_text :: [LatexNode] -> [LatexNode]
-drop_blank_text ( Text [Blank _ _] _ : ys ) = drop_blank_text ys
-drop_blank_text ( Text (Blank _ _ : xs) li : ys ) = drop_blank_text ( Text xs li : ys )
-drop_blank_text xs = xs
 
-drop_blank_text' :: LatexDoc -> LatexDoc
-drop_blank_text' (Doc xs li) = drop_blank_text_aux li xs
-    where
-        drop_blank_text_aux li ( Text [] _ : ys ) = drop_blank_text_aux li ys
-        drop_blank_text_aux _ ( Text [Blank _ li] _ : ys ) = drop_blank_text_aux li ys
-        drop_blank_text_aux _ ( Text (Blank _ li : xs) li' : ys ) = drop_blank_text_aux li ( Text xs li' : ys )
-        drop_blank_text_aux li xs = Doc xs li
-
-
-trim_blank_text' :: LatexDoc -> LatexDoc
-trim_blank_text' xs = Doc xs' (lis !! length xs')
-    where
-        Doc ys li = drop_blank_text' xs
-        ys' = scanr (\x -> (allBlank x &&)) True ys
-        xs' = map fst $ takeWhile (not . snd) $ zip ys ys'
-        allBlank (Text xs _) = all isBlank xs
-        allBlank _ = False
-        isBlank (Blank _ _) = True
-        isBlank _ = False
-        lis = map line_info ys ++ [li]
-
-skip_blanks :: [LatexToken] -> [LatexToken]
-skip_blanks (Blank _ _ : xs) = skip_blanks xs
-skip_blanks xs = xs 
-
-skip_blanks_rev :: ([LatexToken],LineInfo) -> ([LatexToken],LineInfo)
-skip_blanks_rev (Blank _ li : xs,_) = skip_blanks_rev (xs,li)
-skip_blanks_rev x = x
 
 with_line_info :: LineInfo -> EitherT a (ReaderT LineInfo m) b -> EitherT a m b
 with_line_info li cmd = 
@@ -387,22 +348,22 @@ find_cmd_arg :: Int -> [String] -> LatexDoc
              -> Maybe (LatexDoc,LatexToken,[LatexDoc],LatexDoc)
 find_cmd_arg n cmds xs = -- (x@(Text xs _) : cs) =
         case unconsTex xs of
-          Just (x@(Text xs li'), cs) ->
-            case (first reverse $ trim_blanks (xs,li')) of
-              (t@(Command ys li):zs,li')
+          Just (Text t@(Command ys li), cs)
+            --case (first reverse $ trim_blanks (xs,li')) of
+            --  (t@(Command ys li):zs,li')
                 | ys `elem` cmds ->
                     eitherT
                             (\_       -> Nothing)
-                            (\(xs,ws) -> Just (f zs li',t,xs,ws))
+                            (\(xs,ws) -> Just (f li,t,xs,ws))
                         $ with_line_info li
                         $ cmd_params n cs
-              _    -> do
-                _1 `over` consTex x <$> find_cmd_arg n cmds cs
+              --_    -> do
+              --  _1 `over` consTex x <$> find_cmd_arg n cmds cs
           Nothing -> Nothing
           Just (x,xs) -> do
                 _1 `over` consTex x <$> find_cmd_arg n cmds xs
     where
-        f xs li = Doc [Text (reverse xs) li] li
+        f li = Doc li [] li
 
 
     -- Bad, bad... unify the monad system of refinement, proof and machine already!
@@ -669,7 +630,7 @@ run li m = EitherT $ do
 ff :: Monad m
    => LatexNode 
    -> ReaderT (ParamT m) (VisitorT m) ()
-ff (Env s li xs _) = do
+ff (Env _ s li xs _) = do
             r <- asks $ L.lookup s . blocksT
             case r of
                 Just (VEnvBlock g)  -> do
@@ -681,7 +642,7 @@ ff (Env s li xs _) = do
 ff (Bracket _ _ cs _) = do
             forM_ (contents' cs) ff
             gg cs
-ff (Text _ _) = return ()
+ff (Text _) = return ()
 
 --  -> RWS (Param s a) [Error] s a
 --f ((name,EnvBlock g):cs) x e@(Env s li xs _)
@@ -704,19 +665,16 @@ gg :: Monad m => LatexDoc
    -> ReaderT (ParamT m) (VisitorT m) ()
 gg x =
     case unconsTex x of
-      Just (Text xs li, ts) -> do
-        case first reverse $ trim_blanks (xs,li) of
-          (Command c li:_,_)   -> do
+      Just (Text (Command c li), ts) -> do
             r <- asks $ L.lookup c . cmdsT
             case r of
                 Just (VCmdBlock f) -> do
                     (args,_) <- lift $ VisitorT $ fromEitherT $ get_tuple' ts li
-                    lift $ with_content (Doc [] li) 
+                    lift $ with_content (Doc li [] li) 
                         $ f args 
                     r <- gg ts
                     return r
                 Nothing -> gg ts
-          _             -> gg ts
       Just (_, ts) -> gg ts
       Nothing -> return ()
 
