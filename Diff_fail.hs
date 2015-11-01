@@ -14,8 +14,8 @@ import Text.Printf
 main :: IO ()
 main = do
     ls <- getDirectoryContents "."
-    let xs = filter (f "actual-") ls
-        ys = filter (f "expected-") ls
+    let xs = filter (isPrefixOf "actual-") ls
+        ys = filter (isPrefixOf "expected-") ls
     fix (\proc n xs ys -> do
         print xs
         print ys
@@ -32,5 +32,3 @@ main = do
             else return ()
             proc (n+1) (delete file1 xs) (delete file2 ys)
         ) 0 xs ys
-    where
-        f x xs = x == take (length x) xs

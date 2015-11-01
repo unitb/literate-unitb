@@ -2,6 +2,8 @@
 
 import Control.Monad
 
+import Data.List
+
 import System.Environment
 import System.Process
 
@@ -13,6 +15,11 @@ escape xs = concatMap f xs
         f '\"' = "\\\""
         f x    = [x]
 
+allBut :: Int -> [a] -> [a]
+allBut k xs = take (n - k) xs
+    where
+        n = length xs
+
 main :: IO ()
 main = do
         fn <- getArgs
@@ -20,11 +27,12 @@ main = do
             [fn] -> do 
                 lns <- (map escape . drop 1 . lines) 
                     `liftM` readFile fn
-                let n = length lns - 2
-                putStrLn $ "    [ \"" ++ (lns !! 0) ++ "\""
-                forM_ (take n $ drop 1 lns) $ \ln -> do
+                let lns' = dropWhile ("; " `isPrefixOf`) lns
+                putStrLn $ "    [ \"" ++ (lns' !! 0) ++ "\""
+                forM_ (allBut 1 $ drop 1 lns') $ \ln -> do
                     putStrLn $ "    , \"" ++ ln ++ "\""
                 putStrLn "    ]"
-                system $ "runhaskell find_case.hs " ++ fn
+                --system $ "runhaskell find_case.hs " ++ fn
+                rawSystem "subl" [drop 2 $ head lns]
                 return ()
             _ -> putStrLn "usage: quote file"

@@ -311,9 +311,9 @@ instance Scope EventExpr where
             head' _ = error "Scope ExprScope: head'"
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = (format "{1} (event {0})" k (kind sc) :: String, view lineInfo sc)
+                    = (format "{1} (event '{0}')" k (kind sc) :: String, view lineInfo sc)
                 | otherwise
-                    = (format "{1} (event {0}, from {2})" k (kind sc) parents :: String, view lineInfo sc)
+                    = (format "{1} (event '{0}', from '{2}')" k (kind sc) parents :: String, view lineInfo sc)
                 where
                     parents = intercalate "," $ map show $ inheritedFrom sc
             msg (Left _) sc = (format "{0} (initialization)" (kind sc) :: String, view lineInfo sc)

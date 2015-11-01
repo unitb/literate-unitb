@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification  #-} 
+{-# LANGUAGE ExistentialQuantification, ImplicitParams  #-} 
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
@@ -32,7 +32,11 @@ import           Data.Maybe
 import           Data.Tuple
 import           Data.Typeable
 
+import GHC.Stack
+import GHC.SrcLoc
+
 import Prelude
+import PseudoMacros
 
 import Utilities.Format
 import Utilities.Indentation
@@ -52,7 +56,7 @@ data TestCase =
     | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
-    | Suite String [TestCase]
+    | Suite CallStack String [TestCase]
 
 newtype M a = M { runM :: RWST Int [Either (MVar [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
     deriving ( Monad,Functor,Applicative,MonadIO
@@ -79,21 +83,29 @@ take_failure_number = do
     liftIO $ putMVar failure_number $ n+1
     put n
 
-new_failure :: String -> String -> String -> M ()
-new_failure name actual expected = do
+callStackLineInfo :: CallStack -> [String]
+callStackLineInfo cs = reverse $ map f $ filter (($__FILE__ /=) . srcLocFile) $ map snd $ getCallStack cs
+    where
+        f c = printf "%s:%d:%d" (srcLocFile c) (srcLocStartLine c) (srcLocStartCol c)
+
+
+new_failure :: CallStack -> String -> String -> String -> M ()
+new_failure cs name actual expected = do
     b <- liftIO $ readMVar log_failures
     if b then do
         n <- get
         liftIO $ withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
+            forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
             hPutStrLn h actual
         liftIO $ withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
+            forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
             hPutStrLn h expected
     else return ()
 
-test_cases :: String -> [TestCase] -> TestCase
-test_cases = Suite
+test_cases :: (?loc :: CallStack) => String -> [TestCase] -> TestCase
+test_cases = Suite ?loc
 
 data UnitTest = UT 
     { name :: String
@@ -101,19 +113,19 @@ data UnitTest = UT
     , outcome :: String
     -- , _source :: FilePath
     }
-    | Node { name :: String, _children :: [UnitTest] }
+    | Node { _callStack :: CallStack, name :: String, _children :: [UnitTest] }
 
 -- strip_line_info :: String -> String
 -- strip_line_info xs = unlines $ map f $ lines xs
 --     where
 --         f xs = takeWhile (/= '(') xs
 
-run_test_cases :: TestCase -> IO Bool
+run_test_cases :: (?loc :: CallStack) => TestCase -> IO Bool
 run_test_cases xs = do
         swapMVar failure_number 0
         c        <- f xs 
         ref      <- newIORef []
-        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string [c]) 0 undefined) ref
+        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 undefined) ref
         forM_ w $ \ln -> do
             case ln of
                 Right xs -> putStrLn xs
@@ -123,10 +135,11 @@ run_test_cases xs = do
     where
         f (POCase x y z)     = do
                 let cmd = catch (second Just `liftM` y) f
-                    f x = do
+                    f exc = do
                         putStrLn "*** EXCEPTION ***"
-                        print x
-                        return (show (x :: SomeException), Nothing)
+                        putStrLn x
+                        print exc
+                        return (show (exc :: SomeException), Nothing)
                     -- get_po = catch (snd `liftM` y) g
                     -- g :: SomeException -> IO (M.Map Label Sequent)
                     -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
@@ -135,7 +148,7 @@ run_test_cases xs = do
                     , routine = cmd 
                     , outcome = z 
                     }
-        f (Suite n xs) = Node n <$> mapM f xs
+        f (Suite cs n xs) = Node cs n <$> mapM f xs
         -- f t = return (Node (nameOf t) [])
         f (Case x y z) = return UT
                             { name = x
@@ -161,8 +174,8 @@ run_test_cases xs = do
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
 
-print_po :: Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
-print_po pos name actual expected = do
+print_po :: CallStack -> Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
+print_po cs pos name actual expected = do
     n <- get
     liftIO $ do
         let ma = f actual
@@ -183,49 +196,52 @@ print_po pos name actual expected = do
                             hPutStrLn h $ "; " ++ if not $ ma M.! po 
                                                   then  "does {not discharge} automatically"
                                                   else  "{discharges} automatically"
+                            forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
                             hPutStrLn h $ unlines $ map pretty_print' (z3_code $ pos M.! label po) ++ ["; " ++ po]
                     else return ()
             Nothing  -> return ()
 
-test_suite_string :: [UnitTest] -> M (MVar (Either SomeException (Int,Int)))
-test_suite_string xs = do
+test_suite_string :: CallStack
+                  -> UnitTest 
+                  -> M (MVar (Either SomeException (Int,Int)))
+test_suite_string cs ut = do
         let putLn xs = do
                 ys <- mk_lines xs
                 -- lift $ putStr $ unlines ys
                 tell $ map Right ys
-        xs <- forM xs $ \ut -> do
-            case ut of
-              (UT x y z) -> forkTest $ do
-                putLn ("+- " ++ x)
-                r <- liftIO $ catch 
-                    (Right `liftM` y) 
-                    (\e -> return $ Left $ show (e :: SomeException))
-                case r of
-                    Right (r,s) -> 
-                        if (r == z)
-                        then return (1,1)
-                        else do
-                            take_failure_number
-                            print_po s x r z
-                            new_failure x r z
-                            putLn "*** FAILED ***"
-                            return (0,1) 
-                    Left m -> do
-                        putLn ("   Exception:  " ++ m)
-                        return (0,1)
-              Node n xs -> do
-                putLn ("+- " ++ n)
-                indent 1 $ test_suite_string xs
-        forkTest $ do
-            xs' <- mergeAll xs
-            let xs = map (either (const (0,1)) id) xs' :: [(Int,Int)]
-                x = sum $ map snd xs
-                y = sum $ map fst xs
-            putLn (format "+- [ Success: {0} / {1} ]" y x)
-            return (y,x)
+        case ut of
+          (UT x y z) -> forkTest $ do
+            putLn ("+- " ++ x)
+            r <- liftIO $ catch 
+                (Right `liftM` y) 
+                (\e -> return $ Left $ show (e :: SomeException))
+            case r of
+                Right (r,s) -> 
+                    if (r == z)
+                    then return (1,1)
+                    else do
+                        take_failure_number
+                        print_po cs s x r z
+                        new_failure cs x r z
+                        putLn "*** FAILED ***"
+                        forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
+                        return (0,1) 
+                Left m -> do
+                    putLn ("   Exception:  " ++ m)
+                    return (0,1)
+          Node cs n xs -> do
+            putLn ("+- " ++ n)
+            xs <- indent 1 $ mapM (test_suite_string cs) xs
+            forkTest $ do
+                xs' <- mergeAll xs
+                let xs = map (either (const (0,1)) id) xs' :: [(Int,Int)]
+                    x = sum $ map snd xs
+                    y = sum $ map fst xs
+                putLn (format "+- [ Success: {0} / {1} ]" y x)
+                return (y,x)
 
 nameOf :: TestCase -> String
-nameOf (Suite n _) = n
+nameOf (Suite _ n _) = n
 nameOf (Case n _ _) = n
 nameOf (POCase n _ _) = n
 nameOf (CalcCase n _ _) = n
@@ -233,11 +249,11 @@ nameOf (StringCase n _ _) = n
 nameOf (LineSetCase n _ _) = n
 
 leaves :: TestCase -> [String]
-leaves (Suite _ xs) = concatMap leaves xs
+leaves (Suite _ _ xs) = concatMap leaves xs
 leaves t = [nameOf t]
 
 setName :: String -> TestCase -> TestCase
-setName n (Suite _ xs) = Suite n xs
+setName n (Suite cs _ xs) = Suite cs n xs
 setName n (Case _ x y) = Case n x y
 setName n (POCase _ x y) = POCase n x y
 setName n (CalcCase _ x y) = CalcCase n x y
@@ -247,14 +263,14 @@ setName n (LineSetCase _ x y) = LineSetCase n x y
 allLeaves :: TestCase -> [TestCase]
 allLeaves = allLeaves' ""
     where
-        allLeaves' n (Suite n' xs) = concatMap (allLeaves' (n ++ n' ++ "/")) xs
+        allLeaves' n (Suite _ n' xs) = concatMap (allLeaves' (n ++ n' ++ "/")) xs
         allLeaves' n t = [setName (n ++ nameOf t) t]
 
 selectLeaf :: Int -> TestCase -> TestCase 
 selectLeaf n = takeLeaves (n+1) . dropLeaves n
 
 dropLeaves :: Int -> TestCase -> TestCase
-dropLeaves n (Suite name xs) = Suite name (drop (length ws) xs)
+dropLeaves n (Suite cs name xs) = Suite cs name (drop (length ws) xs)
     where
         ys = map leafCount xs
         zs = map sum $ inits ys
@@ -262,7 +278,7 @@ dropLeaves n (Suite name xs) = Suite name (drop (length ws) xs)
 dropLeaves _ x = x
 
 takeLeaves :: Int -> TestCase -> TestCase
-takeLeaves n (Suite name xs) = Suite name (take (length ws) xs)
+takeLeaves n (Suite cs name xs) = Suite cs name (take (length ws) xs)
     where
         ys = map leafCount xs
         zs = map sum $ inits ys
@@ -270,7 +286,7 @@ takeLeaves n (Suite name xs) = Suite name (take (length ws) xs)
 takeLeaves _ x = x
 
 leafCount :: TestCase -> Int
-leafCount (Suite _ xs) = sum $ map leafCount xs
+leafCount (Suite _ _ xs) = sum $ map leafCount xs
 leafCount _ = 1
 
 capabilities :: SSem

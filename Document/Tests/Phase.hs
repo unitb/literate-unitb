@@ -23,10 +23,10 @@ path0 = "tests/phases-t0.tex"
 result0 :: String
 result0 = unlines
     [ "A cycle exists in the refinement structure"
-    , "error 173:1:"
+    , "error 174:1:"
     , "\tm0"
     , ""
-    , "error 179:1:"
+    , "error 180:1:"
     , "\tm1"
     , ""
     , ""

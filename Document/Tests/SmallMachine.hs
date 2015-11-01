@@ -481,7 +481,11 @@ case12 = do
 result12 :: String
 result12 = unlines
     [ "Multiple expressions with the label c0"
-    , "error 40:15:\n\tcoarse schedule (event inc)\n"
-    , "error 45:15:\n\tco property\n\n" ]
-
-
+    , "error 41:1:"
+    , "\tcoarse schedule (event 'inc')"
+    , ""
+    , "error 46:1:"
+    , "\tco property"
+    , ""
+    , ""
+    ]

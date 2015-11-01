@@ -167,7 +167,7 @@ instance Scope EvtDecls where
             head' [x] = x
             head' [] = error "VarScope Scope VarScope: head' []"  
             head' _ = error "VarScope Scope VarScope: head' too many"
-            msg (Just k) x = (format "{1} (event {0})" k (show $ x^.scope) :: String, x^.lineInfo)
+            msg (Just k) x = (format "{1} (event '{0}')" k (show $ x^.scope) :: String, x^.lineInfo)
             msg Nothing x  = (format "dummy", x^.lineInfo)
     merge_scopes (Evt m0) (Evt m1) = Evt $ unionWith (error "VarScope Scope.merge_scopes: Evt, Evt") m0 m1
     rename_events m (Evt vs) = Evt <$> concatMap f (toList vs)

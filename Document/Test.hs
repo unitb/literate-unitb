@@ -33,6 +33,7 @@ import Tests.UnitTest
 import UnitB.PO
 
     -- Libraries
+import Control.Lens
 
 import Utilities.Syntactic
 
@@ -96,7 +97,7 @@ case1 = do
 
 result2 :: String
 result2 = concat [
-        "[Error \"predicate is undefined: 'a1'\" (23,11)]"
+        "[Error \"predicate is undefined: 'a1'\" (LI \"\" 23 12)]"
     ]
 
 path2 :: String
@@ -108,7 +109,7 @@ case2 = do
     case r of
         Right _ -> do
             return "ok"
-        Left x -> return $ show x
+        Left x -> return $ show $ x & traverse.traverseLineInfo.filename .~ ""
 
 --prop_parser_exc_free xs = 
 --    classify (depth xs < 5) "shallow" $

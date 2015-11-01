@@ -256,7 +256,10 @@ path10 :: FilePath
 path10   = "Tests/integers_t10.tex"
 
 result10 :: String
-result10 = "error 31:20:\n    type error: a calculation must include at least one reasoning step\n"
+result10 = unlines
+    [ "error 31:21:"
+    , "    type error: a calculation must include at least one reasoning step"
+    ]
 
 case10 :: IO String
 case10 = do

@@ -111,7 +111,6 @@ make_machine (MId m) p4 = mch'
                        m & AST.props.AST.proofs .~ fromList xs
         events = p4 ^. pEventRef
         evts = events & G.traverseLeft %~ abstrEvt
-                      -- & G.traverseRight %~ g
                       & G.traverseRightWithEdgeInfo %~ uncurry concrEvt
         abstrEvt :: EventP4 -> AbstrEvent
         abstrEvt evt = AbsEvent

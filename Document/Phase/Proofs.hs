@@ -152,8 +152,8 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
         updateEvt (Left SkipEvent) e = EventP4 e [] Nothing
         promoteEvt _ e = EventP4 e [] Nothing
         _p3 = p3 & pEventRef %~ G.mapBothWithKey 
-                        updateEvt
                         promoteEvt
+                        updateEvt
         _pProofs = proofs
         _pCoarseRef = M.map (L.map fst) coarse_refs
         _pFineRef   = M.map (fmap fst) fine_refs

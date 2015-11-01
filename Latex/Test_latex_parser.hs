@@ -227,6 +227,14 @@ prop_flatten_scan_inv'_regression = regression prop_flatten_scan_inv' cases
             [ TokenStream [(Command "\\v" (LI "foo.txt" 1 1),(LI "foo.txt" 1 1)),(Command "\\Gr8z\200" (LI "foo.txt" 1 3),(LI "foo.txt" 1 3)),(Blank "\r\r" (LI "foo.txt" 1 9),(LI "foo.txt" 1 9))]
             ]
 
+prop_non_empty_parse_error :: MutatedTokens -> Property
+prop_non_empty_parse_error (MutatedTokens toks) = isLeft xs ==> all (not . null . message) (fromLeft' xs)
+    where 
+        xs = latex_structure "foo.txt" (flatten toks)
+
+prop_non_empty_scan_error :: String -> Bool
+prop_non_empty_scan_error str = isRight $ scan_latex "foo.txt" str
+
 --prop_counter_example0 :: Bool
 --prop_counter_example0 = Right counter0 === counter0'
 

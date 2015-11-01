@@ -313,8 +313,12 @@ path3 = "Tests/train-station-ref-err0.tex"
 result3 :: String
 result3 = unlines
     [ "A cycle exists in the liveness proof"
-    , "error 41:1:\n\tProgress property p0 (refined in m0)\n"
-    , "error 50:1:\n\tEvent evt (refined in m1)\n"
+    , "error 42:1:"
+    , "\tProgress property p0 (refined in m0)"
+    , ""
+    , "error 51:1:"
+    , "\tEvent evt (refined in m1)"
+    , ""
     , ""
     ]
 
@@ -322,8 +326,9 @@ path4 :: String
 path4 = "Tests/train-station-ref-err1.tex"
 
 result4 :: String
-result4 = concat 
-    [ "error 30:20:\n    Machine m0 refines a non-existant machine: mm\n"
+result4 = unlines
+    [ "error 31:1:"
+    , "    Machine m0 refines a non-existant machine: mm"
     ]
 
 -- parse :: FilePath -> IO String
@@ -339,14 +344,26 @@ path5 = "tests/train-station-ref-err2.tex"
 result5 :: String
 result5 = unlines
     [ "Theory imported multiple times"
-    , "error 37:1:\n\t\"sets\"\n"
-    , "error 87:1:\n\t\"sets\"\n"
-    , "error 443:1:\n\t\"sets\"\n"
-    , "error 444:12:\n\t\"sets\"\n"
+    , "error 38:1:"
+    , "\t\"sets\""
+    , ""
+    , "error 88:1:"
+    , "\t\"sets\""
+    , ""
+    , "error 444:1:"
+    , "\t\"sets\""
+    , ""
+    , "error 445:1:"
+    , "\t\"sets\""
+    , ""
     , ""
     , "Theory imported multiple times"
-    , "error 88:12:\n\t\"functions\"\n"
-    , "error 445:12:\n\t\"functions\"\n"
+    , "error 89:1:"
+    , "\t\"functions\""
+    , ""
+    , "error 446:1:"
+    , "\t\"functions\""
+    , ""
     , ""
     ]
 

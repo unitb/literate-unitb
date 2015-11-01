@@ -232,10 +232,10 @@ result2 = unlines
     , ""
     , "Multiple expressions with the label m0:grd0"
     , "error 86:4:"
-    , "\tguard (event m0:pop:right)"
+    , "\tguard (event 'm0:pop:right')"
     , ""
     , "error 87:4:"
-    , "\tguard (event m0:pop:right)"
+    , "\tguard (event 'm0:pop:right')"
     , ""
     , ""
     ]

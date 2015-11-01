@@ -4,10 +4,7 @@ import Document.Tests.Suite
 
 
     -- Libraries
-
 import Tests.UnitTest
-
-import Utilities.Format
 
 test_case :: TestCase
 test_case = test
@@ -43,7 +40,6 @@ result0 = unlines
     , "  o  m0/m0:enter/WD/F_SCH"
     , "  o  m0/m0:enter/WD/GRD"
     , "  o  m0/m0:enter/WWD"
-    , "  o  m0/m0:leave/C_SCH/weaken/lv:c0"
     , "  o  m0/m0:leave/FIS/in@prime"
     , "  o  m0/m0:leave/WD/ACT/lv:a0"
     , "  o  m0/m0:leave/WD/C_SCH"
@@ -56,7 +52,7 @@ result0 = unlines
     , "  o  m0/m0:prog0/REF/discharge/tr/rhs"
     , "  o  m0/m0:tr0/TR/WD"
     , "  o  m0/m0:tr0/TR/WD/witness/t"
-    , "passed 25 / 25"
+    , "passed 24 / 24"
     ]
 
 result1 :: String
@@ -105,8 +101,6 @@ result1 = unlines
     , "  o  m1/m0:leave/WD/F_SCH"
     , "  o  m1/m0:leave/WD/GRD"
     , "  o  m1/m0:leave/WWD"
-    , "  o  m1/m1:movein/C_SCH/weaken/mi:c1"
-    , "  o  m1/m1:movein/C_SCH/weaken/mi:c2"
     , "  o  m1/m1:movein/FIS/in@prime"
     , "  o  m1/m1:movein/FIS/loc@prime"
     , "  o  m1/m1:movein/INV/inv0"
@@ -121,7 +115,6 @@ result1 = unlines
     , "  o  m1/m1:movein/WD/F_SCH"
     , "  o  m1/m1:movein/WD/GRD"
     , "  o  m1/m1:movein/WWD"
-    , "  o  m1/m1:moveout/C_SCH/weaken/c1"
     , "  o  m1/m1:moveout/FIS/in@prime"
     , "  o  m1/m1:moveout/FIS/loc@prime"
     , "  o  m1/m1:moveout/INV/inv0"
@@ -170,7 +163,7 @@ result1 = unlines
     , "  o  m1/m1:tr0/TR/WD/witness/t"
     , "  o  m1/m1:tr1/TR/WD"
     , "  o  m1/m1:tr1/TR/WD/witness/t"
-    , "passed 109 / 109"
+    , "passed 106 / 106"
     ]
 
 result2 :: String
@@ -314,8 +307,8 @@ path0 = "Tests/train-station-set.tex"
 
 result3 :: String
 result3 = unlines
-    [ "error 295:48:\n    type error: expression has type incompatible \
-      \with its expected type:"
+    [ "error 295:53:"
+    , "    type error: expression has type incompatible with its expected type:"
     , "  expression: ent"
     , "  actual type: \\Blk"
     , "  expected type: \\Bool "
@@ -335,13 +328,14 @@ case4 :: IO String
 case4 = find_errors path4
 
 result4 :: String
-result4 = format "error 494:25:\n    {0}" $ 
-            unlines 
-                [ "unrecognized term: t"
-                , "Perhaps you meant:"
-                , "ent (variable)"
-                , "ext (variable)" 
-                , "" ]
+result4 = unlines 
+    [ "error 494:27:"
+    , "    unrecognized term: t"
+    , "Perhaps you meant:"
+    , "ent (variable)"
+    , "ext (variable)"
+    , ""
+    ]
 
 result5 :: String
 result5 = unlines

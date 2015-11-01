@@ -935,10 +935,18 @@ path10 = "tests/cubes-t9.tex"
 result10 :: String
 result10 = unlines
     [ "A cycle exists in the liveness proof"
-    , "error 338:68:\n\tProgress property prog0 (refined in m0)\n"
-    , "error 340:36:\n\tProgress property prog1 (refined in m0)\n"
-    , "error 342:49:\n\tProgress property prog2 (refined in m0)\n"
-    , "error 346:26:\n\tProgress property prog3 (refined in m0)\n"
+    , "error 339:1:"
+    , "\tProgress property prog0 (refined in m0)"
+    , ""
+    , "error 341:1:"
+    , "\tProgress property prog1 (refined in m0)"
+    , ""
+    , "error 343:1:"
+    , "\tProgress property prog2 (refined in m0)"
+    , ""
+    , "error 347:1:"
+    , "\tProgress property prog3 (refined in m0)"
+    , ""
     , ""
     ]
 
@@ -1265,7 +1273,7 @@ path12 = "Tests/cubes-t10.tex"
 
 result12 :: String
 result12 = unlines 
-        [  "error 274:2:\n    type of j is ill-defined: _a"
+        [  "error 274:3:\n    type of j is ill-defined: _a"
         ]
 
 case12 :: IO String

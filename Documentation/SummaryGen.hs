@@ -239,7 +239,7 @@ variable_sum m = section (keyword "variables") $
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = m!.content'.props
-        section kw_inv $ put_all_expr_with_doc (makeDoc .= comment_of m . DocInv) "" (M.toList $ prop^.inv) 
+        section kw_inv $ put_all_expr_with (makeDoc .= comment_of m . DocInv) "" (M.toList $ prop^.inv) 
     where
         kw_inv = "\\textbf{invariants}"
         
@@ -343,14 +343,14 @@ put_expr opts pre (lbl,e) = do
         opts^.makeDoc $ lbl
 
 put_all_expr' :: Show label => (a -> M String) -> EventId -> [(label, a)] -> M ()
-put_all_expr' f = put_all_expr_with_doc' f (return ())
+put_all_expr' f = put_all_expr_with' f (return ())
 
-put_all_expr_with_doc' :: Show label
+put_all_expr_with' :: Show label
                        => (expr -> M String)
                        -> State (ExprDispOpt label expr) ()
                        -> EventId 
                        -> [(label, expr)] -> M ()
-put_all_expr_with_doc' toString opts pre xs
+put_all_expr_with' toString opts pre xs
     | L.null xs = return ()
     | otherwise = 
         block $ forM_ xs $ put_expr (execState opts $ defOptions toString) pre
@@ -358,9 +358,9 @@ put_all_expr_with_doc' toString opts pre xs
 put_all_expr :: EventId -> [(Label,Expr)] -> M ()
 put_all_expr = put_all_expr' get_string'
 
-put_all_expr_with_doc :: State (ExprDispOpt Label Expr) () 
+put_all_expr_with :: State (ExprDispOpt Label Expr) () 
                       -> EventId -> [(Label, Expr)] -> M ()
-put_all_expr_with_doc opts = put_all_expr_with_doc' get_string' opts
+put_all_expr_with opts = put_all_expr_with' get_string' opts
 
 section :: String -> M () -> M ()
 section kw cmd = do
@@ -381,9 +381,12 @@ csched_sum lbl e = do
         section kw $ do
             when show_removals $
                 local (second $ const True)
-                    $ put_all_expr lbl del_sch
-            put_all_expr lbl sch
+                    $ put_all_expr_with (makeRef %= isDefault) lbl del_sch
+            put_all_expr_with (makeRef %= isDefault) lbl sch
     where
+        isDefault f eid lbl
+            | lbl == "default" = return $ format "(\\ref{{0}}/default)" (eid :: EventId)
+            | otherwise        = f eid lbl
         kw = "\\textbf{during}"    
         sch = M.toList $ e^.new.coarse_sched --coarse $ new_sched e
         del_sch = concatMap (fmap M.toList $ view $ deleted.coarse_sched) $ e^.evt_pairs.to NE.toList

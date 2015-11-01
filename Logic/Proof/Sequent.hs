@@ -89,7 +89,7 @@ predefined :: [String]
 predefined = [ "=","union","and","or","=>","<=","<",">","^"
              , "subset","select","true","false"
              , "intersect","+","-","*","/","not"
-             , "Just", "Nothing"
+             , "Just", "Nothing", "pair"
              , "empty-set", "store" ]
 
 checkScopesAux :: Expr -> RWS Context [Expr] () ()

@@ -43,8 +43,8 @@ import Utilities.Graph as G ( (!) )
 import Utilities.EditDistance
 
 data Param = Param 
-    { context :: Context
-    , notation :: Notation
+    { context   :: Context
+    , notation  :: Notation
     , variables :: Map String Expr
     }
 

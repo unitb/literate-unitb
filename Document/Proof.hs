@@ -46,7 +46,6 @@ import qualified Data.Traversable as T
 import           Utilities.Error
 import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
-import           Utilities.Trace
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
@@ -562,11 +561,12 @@ parse_expr set xs = do
         x  <- Expr.parse_expr ctx
                 (set^.language)
                 xs
-        x  <- case set^.expected_type of
+        typed_x  <- case set^.expected_type of
             Just t -> mapBoth 
                 (\xs -> map (`Error` li) xs) 
                 (normalize_generics) $ zcast t $ Right x
             Nothing -> return x
+        let x = normalize_generics typed_x
         unless (L.null $ ambiguities x) $ Left 
             $ map (\x -> Error (format msg x (type_of x)) li)
                 $ ambiguities x
@@ -584,23 +584,11 @@ get_expression t ys = do
             -- sys <- lift $ ST.get
             return $ LP.with_line_info li $ do
                 ctx <- get_context
-                return $ trace (show ctx)
-                x   <- either hard_error return 
-                        $ Expr.parse_expr 
-                            (ctx & dummies .~ M.empty) notation
-                            (flatten_li' xs)
-                let typed_x = fromMaybe id (zcast <$> t) (Right x)
-                x <- either
-                    (hard_error . map (`Error` li))
-                    (return . normalize_generics) 
-                    $ typed_x
-                unless (L.null $ ambiguities x) $ hard_error 
-                    $ map (\x -> Error (format msg x (type_of x)) li)
-                        $ ambiguities x
-                return x
+                let parser = setting_from_context notation ctx & expected_type .~ t
+                either hard_error return $ 
+                    getExpr <$> parse_expr parser (flatten_li' xs)
         where
             xs    = drop_blank_text' ys
-            msg   = "type of {0} is ill-defined: {1}"
 
 get_predicate' :: Theory
                -> Context

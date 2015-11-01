@@ -320,20 +320,12 @@ tex_tokens = do
                     (return Nothing)
             case c of
                 Just x  -> do
-                    --traceM $ show x
-                    --b <- is_eof
-                    --when b $ do
-                    --    traceM "eof"
-                    --    traceM.show =<< peek
                     xs <- tex_tokens
-                    --traceM $ "> " ++ show x
                     return ((x,li):xs)
                 Nothing -> do
                     li <- get_line_info
                     d  <- read_char
-                    --traceM $ show d
                     xs <- tex_tokens
-                    --traceM $ "> " ++ show d
                     case xs of
                         (TextBlock ys _,_):zs -> 
                             return ((TextBlock (d:ys) li,li):zs)
@@ -353,7 +345,7 @@ latex_content' = do
             <*> P.many node
             <*> lineInfo
     where
-        node  = env <|> brackets <|> text <?> "node"
+        node  = (env <|> brackets <|> text) <?> "node"
         env   = do
             li0 <- lineInfo
             cmd "\\begin"       <?> "begin environment"
@@ -364,50 +356,50 @@ latex_content' = do
             return $ Env li0 n li1 ct li2
         brackets = do
             li0 <- lineInfo
-            b   <- open <?> "brackets"
+            b   <- open <?> "open bracket"
             ct  <- latex_content'
             li1 <- lineInfo
-            close b
+            close b  <?> "close bracket"
             return $ Bracket b li0 ct li1
         text  = fmap Text $ 
                     (texToken' (_Command . notEnv) <?> "command")
-                <|> (texToken' _Blank <?> "space")
+                <|> (texToken' _Blank     <?> "space")
                 <|> (texToken' _TextBlock <?> "text")
         notEnv f (x,li)
             | x `notElem` ["\\begin","\\end"] = f (x,li)
             | otherwise                       = pure (x,li)
-        open  = texToken (_Open._1)
-        close b = texToken (_Close._1.only b)
+        open     = texToken (_Open._1)
+        close b  = texToken (_Close._1.only b)
         argument = argumentAux id
         argument' n = argumentAux (only n)
-        argumentAux :: Prism' String a -> Parser (a,LineInfo)
+        argumentAux :: Show a => Prism' String a -> Parser (a,LineInfo)
         argumentAux p = do
             optional $ texToken _Blank
-            texToken (_Open._1.only Curly)
+            texToken (_Open._1.only Curly)    <?> "open curly"
             li  <- lineInfo
-            arg <- texToken $ _TextBlock._1.p
-            texToken (_Close._1.only Curly)
+            arg <- texToken (_TextBlock._1.p) <?> "argument"
+            texToken (_Close._1.only Curly)   <?> "close curly"
             return (arg,li)
         lineInfo = posToLi <$> P.getPosition
         cmd x  = texToken (_Command._1.only x)
-        --fOnly x = prism _ _ _
 
 texToken :: (Traversal' LatexToken a) -> Parser a
-texToken p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) (^? p)
---texToken p = P.token lexeme (liToPos.end.(id &&& line_info)) (^? p)
+texToken p = texTokenAux (^? p)
+
+texTokenAux :: (LatexToken -> Maybe a) -> Parser a
+texTokenAux p = P.tokenPrim show (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
 
 texToken' :: (Traversal' LatexToken a) -> Parser LatexToken
-texToken' p = P.tokenPrim lexeme (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) (\x -> x <$ (x^?p))
---texToken' p = P.token lexeme (liToPos.end.(id &&& line_info)) (\x -> x <$ (x^?p))
+texToken' p = texTokenAux (\x -> x <$ (x^?p))
 
 latex_content :: FilePath -> [(LatexToken,LineInfo)] -> (Int,Int) -> Either [Error] LatexDoc
 latex_content fn toks (i,j) = mapLeft toErr $ P.parse parser fn $ map fst toks
     where toErr e = [Error (errMsg e) (posToLi $ P.errorPos e)]
           errMsg e = intercalate "; " $ concatMap f $ errorMessages e
-          f (SysUnExpect _) = []
+          f (SysUnExpect xs) = ["whaaaa? " ++ xs]
           f (UnExpect xs) = ["unexpected: " ++ xs]
-          f (Expect xs) = ["expected: " ++ xs]
-          f (Message xs) = [xs]
+          f (Expect xs)   = ["expected: " ++ xs]
+          f (Message xs)  = [xs]
           parser = do
             P.setPosition (P.newPos fn i j)
             x <- latex_content'
@@ -593,7 +585,7 @@ scan_doc fname = runEitherT $ do
     hoistEither $ fill_holes fname m
         
 
-parse_latex_document :: String -> IO (Either [Error] LatexDoc)
+parse_latex_document :: FilePath -> IO (Either [Error] LatexDoc)
 parse_latex_document fname = runEitherT $ do
         ys <- EitherT $ scan_doc fname 
         hoistEither $ latex_content fname ys (1,1)

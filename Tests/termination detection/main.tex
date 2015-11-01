@@ -83,7 +83,7 @@
 	\evbcmeq{detect}{m1:act0}{term}{\true}
 	\refine{m1:prog0}{ensure}{detect}{}
 \end{align}
-	\removecoarse{detect}{default}
+	% \removecoarse{detect}{default}
 \end{machine}
 
 \input{main/machine_m2}
@@ -121,7 +121,7 @@
 	\evguard{add}{m2:grd0}{ st.p = idle } \\
 	\evbcmeq{add}{m2:act0}{d}{d \bunion \{p\}}
 \end{align}
-	\removecoarse{add}{default}
+	% \removecoarse{add}{default}
 \end{machine}
 \input{main/machine_m3}
 \begin{machine}{m3}

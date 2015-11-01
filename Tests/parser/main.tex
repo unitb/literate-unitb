@@ -103,7 +103,7 @@
     \evbcmeq{parse}{m1:act1}{c}{nx} \\
     \evbcmeq{parse}{m1:act2}{err}{\false}
 \end{align}
-\removecoarse{parse}{default}
+% \removecoarse{parse}{default}
 % trading
 \begin{align*}
 \refine{m1:prog0}{trading}{m1:prog1}{}
@@ -132,7 +132,7 @@
     \evbcmeq{fail}{m1:act0}{c}{nx} \\
     \evbcmeq{fail}{m1:act1}{err}{\true}
 \end{align}
-    \removecoarse{fail}{default}
+    % \removecoarse{fail}{default}
 \begin{align}
     \cschedule{choose}{m1:sch0}{c < v} \\
     \evguard{choose}{m1:grd0}{\betweenL{c}{vv}{v}} \\
@@ -140,7 +140,7 @@
     \evguard{choose}{m1:grd1}{c = nx} \\
     \evbcmeq{choose}{m1:act0}{nx}{vv}
 \end{align}
-    \removecoarse{choose}{default}
+    % \removecoarse{choose}{default}
 \end{machine}
 \input{main/machine_m2}
 \begin{machine}{m2}

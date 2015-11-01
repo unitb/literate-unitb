@@ -60,11 +60,11 @@ verify :: FilePath -> Int -> IO POResult
 verify path i = makeReport' empty $ do
     ms <- EitherT $ fst <$> list_file_obligations' path
     if i < size ms then do
-            let (m,pos) = snd $ i `elemAt` ms
-            r <- lift $ try (str_verify_machine m)
-            case r of
-                Right (s,_,_) -> return (s, pos)
-                Left e -> return (show (e :: SomeException),pos)
+        let (m,pos) = snd $ i `elemAt` ms
+        r <- lift $ try (str_verify_machine m)
+        case r of
+            Right (s,_,_) -> return (s, pos)
+            Left e -> return (show (e :: SomeException),pos)
     else return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
 
 all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
