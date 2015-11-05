@@ -23,7 +23,7 @@ import           Control.Monad.Trans.RWS as RWS ( RWS )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
-import           Data.Map   as M hiding ( map, foldl, (\\) )
+import           Data.Map   as M hiding ( foldl, (\\) )
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.List.NonEmpty ( NonEmpty(..) )
@@ -41,7 +41,7 @@ tr_hint :: MachineP2
 tr_hint p2 m vs lbls thint = do
     tr@(TrHint wit _)  <- toEither $ tr_hint' p2 m vs lbls thint empty_hint
     evs <- get_events p2 $ NE.toList lbls
-    let vs = map (view pIndices p2 !) evs
+    let vs = L.map (view pIndices p2 !) evs
         err e ind = ( not $ M.null diff
                     , format "A witness is needed for {0} in event '{1}'" 
                         (intercalate "," $ keys diff) e)
@@ -87,6 +87,13 @@ tr_hint' p2 _m fv lbls = visit_doc []
 get_event :: HasMachineP1 phase events => phase events thy -> Label -> M EventId
 get_event p2 ev_lbl = do
         let evts = p2^.pEventIds
+        bind
+            (format "event '{0}' is undeclared" ev_lbl)
+            $ ev_lbl `M.lookup` evts
+
+get_abstract_event :: HasMachineP1 phase events => phase events thy -> Label -> M EventId
+get_abstract_event p2 ev_lbl = do
+        let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
         bind
             (format "event '{0}' is undeclared" ev_lbl)
             $ ev_lbl `M.lookup` evts

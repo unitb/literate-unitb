@@ -348,10 +348,10 @@ latex_content' = do
         node  = (env <|> brackets <|> text) <?> "node"
         env   = do
             li0 <- lineInfo
-            cmd "\\begin"       <?> "begin environment"
-            (n,li1) <- argument <?> "argument"
+            cmd "\\begin"          <?> "begin environment"
+            (n,li1) <- argument    <?> "argument"
             ct  <- latex_content'
-            cmd "\\end"         <?> "end environment"
+            cmd "\\end"            <?> printf "end keyword (%s)" n
             (_,li2) <- argument' n <?> printf "\\end{%s}" n
             return $ Env li0 n li1 ct li2
         brackets = do
@@ -395,8 +395,8 @@ texToken' p = texTokenAux (\x -> x <$ (x^?p))
 latex_content :: FilePath -> [(LatexToken,LineInfo)] -> (Int,Int) -> Either [Error] LatexDoc
 latex_content fn toks (i,j) = mapLeft toErr $ P.parse parser fn $ map fst toks
     where toErr e = [Error (errMsg e) (posToLi $ P.errorPos e)]
-          errMsg e = intercalate "; " $ concatMap f $ errorMessages e
-          f (SysUnExpect xs) = ["whaaaa? " ++ xs]
+          errMsg e = intercalate "; " $ L.nub $ concatMap f $ errorMessages e
+          f (SysUnExpect xs) = ["unexpected: " ++ xs]
           f (UnExpect xs) = ["unexpected: " ++ xs]
           f (Expect xs)   = ["expected: " ++ xs]
           f (Message xs)  = [xs]

@@ -84,8 +84,6 @@ result2 = unlines
     , "  o  m0/TR/tr0/leadsto/rhs"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
-    , "  o  m0/inc/F_SCH/replace/prog/prog0/lhs"
-    , "  o  m0/inc/F_SCH/replace/prog/prog0/rhs/f0"
     , "  o  m0/inc/INV/inv0"
     , " xxx m0/inc/INV/inv1"
     , "  o  m0/inc/WD/ACT/a0"
@@ -98,12 +96,12 @@ result2 = unlines
     , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog0/REF/add"
     , "  o  m0/tr0/TR/WD"
-    , "passed 24 / 27"
+    , "passed 22 / 25"
     ]
-
 
 path2 :: String
 path2 = "Tests/small_machine_t2.tex"
+
 case2 :: IO (String, Map Label Sequent)
 case2 =  verify path2 0
 

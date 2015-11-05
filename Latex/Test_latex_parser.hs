@@ -20,7 +20,10 @@ import qualified Data.Maybe as MM
 import Tests.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 
+import Text.Printf
+
 import Utilities.RandomTree hiding (size,subtrees)
+import Utilities.String
 import Utilities.Syntactic
 import Utilities.Lines
 
@@ -28,23 +31,17 @@ path2 :: FilePath
 path2 = "tests/sample.tex"
 
 result2 :: String
-result2 = concat ["Right (fromList [",
-            "(\"align\",[]),",
-            "(\"calculation\",",
-                "[Env{calculation} (13),",
-                 "Env{calculation} (10)]),",
-            "(\"equation\",[]),",
-            "(\"invariant\",[]),",
-            "(\"lemma\",[]),",
-            "(\"machine\",[]),",
-            "(\"theorem\",[])",
-            "])"]
+result2 = 
+     "Right (fromList [(\"align\",[]),(\"calculation\",[Env{calculation} (59),Env{calculation} (29)]),(\"equation\",[]),(\"invariant\",[]),(\"lemma\",[]),(\"machine\",[]),(\"theorem\",[])])"
+    
 
 path3 :: String
 path3 = "tests/sorted_sequences_err.tex"
 
 result3 :: String
-result3 = "Left [Error \"expected \\\\end{equation}, read '}'\" (29,13)]"
+result3 = concat
+    [ "Left [Error \"unexpected: Close Curly (LI \\\"\\\" 29 13); expected: node; expected: end keyword (equation)\" (LI \"\" 29 13)]"
+    ]
 
 path4 :: String
 path4 = "tests/sorted_sequences.tex"
@@ -77,8 +74,11 @@ find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) $ con
 
 main :: FilePath -> IO String
 main path = do
+        let f (Env _ n _ doc _)   = ShowString $ printf "Env{%s} (%d)" n (length $ contents' doc)
+            f (Bracket _ _ doc _) = ShowString $ printf "Bracket (%d)" (length $ contents' doc)
+            f (Text _)            = ShowString "Text {..}"
         ct <- readFile path
-        return $ show $ extract_structure ct
+        return $ show $ M.map (map f) <$> extract_structure ct
 
 tests :: FilePath -> IO String
 tests path = do

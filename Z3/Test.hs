@@ -285,8 +285,12 @@ case8 = return $ Just $ to_fol_ctx types ctx
                 , set_type int
                 , set_type $ set_type int
                 , array int int
+                , array int (set_type int)
+                , array (set_type int) (set_type $ set_type int)
                 , array int bool
                 , array (set_type int) (set_type int)
+                , array (set_type int) int
+                , array int (set_type $ set_type int) -- (set_type $ set_type int)
                 , array (set_type int) bool
                 ]
 
@@ -299,7 +303,9 @@ result8 = ctx_strip_generics ctx
         f m = instantiate m . substitute_type_vars m
         t0  = int
         t1  = set_type int
-        ms  = [ M.fromList [ (tj,ti) | tj <- ["a","b","t"] ] | ti <- [t0, t1] ]
+        m0  = M.fromList [ ("a",t0), ("b",t1), ("t",t0) ]
+        m1  = M.fromList [ ("a",t1), ("b",t0), ("t",t0) ]
+        ms  = [m0,m1] ++ [ M.fromList [ (tj,ti) | tj <- ["a","b","t"] ] | ti <- [t0, t1] ]
 
 case9 :: IO [ M.Map String FOType ]
 case9 = return $ match_some pat types

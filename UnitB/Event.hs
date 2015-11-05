@@ -14,7 +14,6 @@ module UnitB.Event
     , EventSplitting'
     , RawEventSplitting
     , EventSplitting (..)
-    , evt_pairs
     , AbstrEvent
     , AbstrEvent' (..)
     , HasAbstrEvent' (..)
@@ -53,6 +52,10 @@ module UnitB.Event
     , default_schedule
     -- , empty_schedule
     , ($=)
+    , eventRefAbstract
+    , eventRefConcrete
+    , add, remove, keep
+    , sch_prog, sch_saf
     )
 where
 
@@ -154,6 +157,7 @@ type EventMerging' = EventMerging Expr
 data EventMerging expr = EvtM  
         { _eventMergingMultiAbstract :: NonEmpty (SkipOrEvent,AbstrEvent' expr)
         , _eventMergingConcrete ::   (SkipOrEvent,ConcrEvent' expr) }
+    deriving (Show)
 
 type RawEventSplitting = EventSplitting RawExpr
 type EventSplitting' = EventSplitting Expr
@@ -161,13 +165,14 @@ type EventSplitting' = EventSplitting Expr
 data EventSplitting expr = EvtS   
         { _eventSplittingAbstract :: (SkipOrEvent,AbstrEvent' expr) 
         , _eventSplittingMultiConcrete :: NonEmpty (SkipOrEvent,ConcrEvent' expr) }
+    deriving (Show)
 
 type EventRef' = EventRef RawExpr
 
 data EventRef expr = EvtRef 
         { _eventRefAbstract :: (SkipOrEvent,AbstrEvent' expr)  
         , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) 
-        } deriving (Generic)
+        } deriving (Generic,Show)
 
 default_schedule :: IsGenExpr expr => Map Label expr
 default_schedule = M.fromList [(label "default", zfalse)]
@@ -175,32 +180,34 @@ default_schedule = M.fromList [(label "default", zfalse)]
 type ScheduleChange = ScheduleChange' Expr
 
 data ScheduleChange' expr = ScheduleChange 
-        { remove :: Map Label ()
-        , add    :: Map Label ()
-        , keep   :: Map Label ()
-        , sch_prog :: (Label,ProgressProp' expr) 
-        , sch_saf  :: (Label,SafetyProp' expr)
+        { _remove :: Map Label ()
+        , _add    :: Map Label ()
+        , _keep   :: Map Label ()
+        , _sch_prog :: (Label,ProgressProp' expr) 
+        , _sch_saf  :: (Label,SafetyProp' expr)
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable)
 
 makeFields ''EventRef
+makeLenses ''EventRef
+makeLenses ''ScheduleChange'
 makeFields ''EventSplitting
 makeFields ''EventMerging
 -- makeLenses ''EventSplitting
 -- makeLenses ''EventMerging
 
 hyps_label :: ScheduleChange -> ProgId
-hyps_label = PId . fst . sch_prog
+hyps_label = PId . fst . view sch_prog
 
 mkCons ''Event'
 
-instance Default (AbstrEvent' expr) where
+instance IsExpr expr => Default (AbstrEvent' expr) where
     def = genericDefault
 
-instance Default (Event' expr) where
-    def = genericDefault
+instance IsExpr expr => Default (Event' expr) where
+    def = empty_event
 
-instance Default (ConcrEvent' expr) where
+instance IsExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
 
 infix 1  $=
@@ -248,6 +255,9 @@ ba_predicate' vars acts = M.map ba_pred acts `M.union` skip
 primed :: Map String Var -> RawExpr -> RawExpr
 primed vs e = make_unique "@prime" vs e
 
+empty_event :: IsExpr expr => Event' expr
+empty_event = (makeEvent' def def def def) { _coarse_sched = default_schedule }
+
 makeClassy ''Event'
 makeClassy ''AbstrEvent'
 makeClassy ''ConcrEvent'
@@ -258,8 +268,6 @@ skip_abstr = AbsEvent empty_event Nothing []
 skip_event :: IsExpr expr => ConcrEvent' expr
 skip_event = CEvent empty_event M.empty M.empty M.empty
 
-empty_event :: IsExpr expr => Event' expr
-empty_event = makeEvent' def def def def & coarse_sched .~ default_schedule
 
 instance HasEvent' (AbstrEvent' expr) expr where
     event' = old
@@ -318,20 +326,23 @@ instance ActionRefinement (EventRef expr) expr where
 class EventRefinement a expr | a -> expr where
     abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))
     concrete_evts :: Getter a (NonEmpty (SkipOrEvent,ConcrEvent' expr))
-
-evt_pairs :: EventRefinement a expr => Getter a (NonEmpty (EventRef expr))
-evt_pairs = to $ \e -> do
-                a <- e^.abstract_evts
-                c <- e^.concrete_evts
-                return $ EvtRef a c
+    evt_pairs :: (EventRefinement a expr) => Getter a (NonEmpty (EventRef expr))
 
 instance EventRefinement (EventMerging expr) expr where
     abstract_evts = multiAbstract
     concrete_evts = to $ \(EvtM _ y)  -> y :| []
+    evt_pairs = to $ \e -> do
+            let c = e^.concrete
+            a <- e^.multiAbstract
+            return $ EvtRef a c
 
 instance EventRefinement (EventSplitting expr) expr where
     abstract_evts = to $ \(EvtS x _)  -> x :| []
     concrete_evts = multiConcrete
+    evt_pairs = to $ \e -> do
+            let a = e^.abstract
+            c <- e^.multiConcrete
+            return $ EvtRef a c
 
 -- deleted_sched :: Event -> Schedule
 -- deleted_sched e = Schedule 

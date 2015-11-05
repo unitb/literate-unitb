@@ -731,6 +731,7 @@ defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
 
 class (IsGenExpr e
         , Show e
+        , Eq e
         , TypeT e ~ GenericType
         , AnnotT e ~ GenericType
         , QuantT e ~ HOQuantifier)

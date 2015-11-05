@@ -4,6 +4,7 @@ module Tests.UnitTest
     , tempFile, takeLeaves, leafCount
     , selectLeaf, dropLeaves, leaves
     , makeTestSuite, makeTestSuiteOnly
+    , testName, TestName
     , allLeaves, nameOf )
 where
 
@@ -57,6 +58,7 @@ data TestCase =
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
     | Suite CallStack String [TestCase]
+    | WithLineInfo CallStack TestCase
 
 newtype M a = M { runM :: RWST Int [Either (MVar [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
     deriving ( Monad,Functor,Applicative,MonadIO
@@ -111,6 +113,7 @@ data UnitTest = UT
     { name :: String
     , routine :: IO (String, Maybe (M.Map Label Sequent))
     , outcome :: String
+    , _mcallStack :: Maybe CallStack
     -- , _source :: FilePath
     }
     | Node { _callStack :: CallStack, name :: String, _children :: [UnitTest] }
@@ -123,7 +126,7 @@ data UnitTest = UT
 run_test_cases :: (?loc :: CallStack) => TestCase -> IO Bool
 run_test_cases xs = do
         swapMVar failure_number 0
-        c        <- f xs 
+        c        <- f Nothing xs 
         ref      <- newIORef []
         (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 undefined) ref
         forM_ w $ \ln -> do
@@ -132,8 +135,9 @@ run_test_cases xs = do
                 Left xs -> takeMVar xs >>= mapM_ putStrLn
         x <- fmap (uncurry (==)) <$> takeMVar b
         either throw return x
-    where
-        f (POCase x y z)     = do
+    where        
+        f _ (WithLineInfo cs t) = f (Just cs) t
+        f cs (POCase x y z)     = do
                 let cmd = catch (second Just `liftM` y) f
                     f exc = do
                         putStrLn "*** EXCEPTION ***"
@@ -147,27 +151,31 @@ run_test_cases xs = do
                     { name = x
                     , routine = cmd 
                     , outcome = z 
+                    , _mcallStack = cs
                     }
-        f (Suite cs n xs) = Node cs n <$> mapM f xs
+        f _ (Suite cs n xs) = Node cs n <$> mapM (f $ Just cs) xs
         -- f t = return (Node (nameOf t) [])
-        f (Case x y z) = return UT
+        f cs (Case x y z) = return UT
                             { name = x
                             , routine = do a <- y ; return (disp a,Nothing)
                             , outcome = disp z
+                            , _mcallStack = cs
                             }
-        f (CalcCase x y z) = do 
+        f cs (CalcCase x y z) = do 
                 r <- z
                 return UT
                     { name = x
                     , routine = do a <- y ; return (disp a, Nothing)
                     , outcome = disp r
+                    , _mcallStack = cs
                     }
-        f (StringCase x y z) = return UT 
+        f cs (StringCase x y z) = return UT 
                                 { name = x
                                 , routine = (,Nothing) `liftM` y
                                 , outcome = z
+                                , _mcallStack = cs
                                 }
-        f (LineSetCase x y z) = f $ StringCase x 
+        f cs (LineSetCase x y z) = f cs $ StringCase x 
                                     ((unlines . sort . lines) `liftM` y) 
                                     (unlines $ sort $ lines z)
 
@@ -204,13 +212,14 @@ print_po cs pos name actual expected = do
 test_suite_string :: CallStack
                   -> UnitTest 
                   -> M (MVar (Either SomeException (Int,Int)))
-test_suite_string cs ut = do
+test_suite_string cs' ut = do
         let putLn xs = do
                 ys <- mk_lines xs
                 -- lift $ putStr $ unlines ys
                 tell $ map Right ys
         case ut of
-          (UT x y z) -> forkTest $ do
+          (UT x y z mli) -> forkTest $ do
+            let cs = fromMaybe cs' mli
             putLn ("+- " ++ x)
             r <- liftIO $ catch 
                 (Right `liftM` y) 
@@ -241,6 +250,7 @@ test_suite_string cs ut = do
                 return (y,x)
 
 nameOf :: TestCase -> String
+nameOf (WithLineInfo _ c) = nameOf c
 nameOf (Suite _ n _) = n
 nameOf (Case n _ _) = n
 nameOf (POCase n _ _) = n
@@ -253,6 +263,7 @@ leaves (Suite _ _ xs) = concatMap leaves xs
 leaves t = [nameOf t]
 
 setName :: String -> TestCase -> TestCase
+setName n (WithLineInfo cs t) = WithLineInfo cs $ setName n t
 setName n (Suite cs _ xs) = Suite cs n xs
 setName n (Case _ x y) = Case n x y
 setName n (POCase _ x y) = POCase n x y
@@ -344,12 +355,25 @@ tempFile path = do
     -- mkWeakPtr path' (Just finalize)
     return path'
 
+data TestName = TestName String CallStack
+
+testName :: (?loc :: CallStack) => String -> TestName
+testName str = TestName str ?loc
+
+fooNameOf :: TestName -> String
+fooNameOf (TestName str _)   = str
+
+fooCallStack :: TestName -> CallStack
+fooCallStack (TestName _ cs) = cs
+
 makeTestSuiteOnly :: String -> [Int] -> ExpQ
 makeTestSuiteOnly title ts = do
-        let namei i = varE $ mkName $ "name" ++ show i
+        let namei :: Int -> ExpQ
+            namei i = [e| fooNameOf $(varE $ mkName $ "name" ++ show i) |]
             casei i = varE $ mkName $ "case" ++ show i
+            loci i = [e| fooCallStack $(varE $ mkName $ "name" ++ show i) |]
             resulti i = varE $ mkName $ "result" ++ show (i :: Int)
-            cases = [ [e| Case $(namei i) $(casei i) $(resulti i) |] | i <- ts ]
+            cases = [ [e| WithLineInfo $(loci i) (Case $(namei i) $(casei i) $(resulti i)) |] | i <- ts ]
             titleE = litE $ stringL title
         [e| test_cases $titleE $(listE cases) |]
 

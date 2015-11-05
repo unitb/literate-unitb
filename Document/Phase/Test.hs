@@ -83,8 +83,8 @@ test_case = test
 test :: TestCase
 test = $(makeTestSuite "Unit tests for the parser")
 
-name0 :: String
-name0 = "test 0, phase 1 (structure), create object" 
+name0 :: TestName
+name0 = testName "test 0, phase 1 (structure), create object" 
 
 case0 :: IO (MTable MachineP1)
 case0 = do
@@ -197,8 +197,8 @@ result0 = M.fromList
         thy2 = M.fromList [("basic",basic_theory),("arithmetic",arithmetic)]
         li = LI "file.ext" 1 1
 
-name1 :: String
-name1 = "test 1, phase 1, parsing"
+name1 :: TestName
+name1 = testName "test 1, phase 1, parsing"
 
 case1 :: IO (Either [Error] SystemP1)
 case1 = return $ runPipeline' ms cs () $ run_phase0_blocks >>> run_phase1_types
@@ -226,8 +226,8 @@ result1 = Right (SystemP h result0)
     where
         h = Hierarchy ["m0","m1"] $ M.singleton "m1" "m0"
 
-name2 :: String
-name2 = "test 2, phase 2 (variables), creating state"
+name2 :: TestName
+name2 = testName "test 2, phase 2 (variables), creating state"
 
 lnZip' :: Ord k => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c
 lnZip' m f m' = traverse f $ M.intersectionWith (flip id) m' m
@@ -317,8 +317,8 @@ result2 = do
                 layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
         -- (\m -> makeMachineP2' (f m) _ [])
 
-name3 :: String
-name3 = "test 3, phase 2, parsing"
+name3 :: TestName
+name3 = testName "test 3, phase 2, parsing"
 
 case3 :: IO (Either [Error] SystemP2)
 case3 = return $ do
@@ -337,8 +337,8 @@ case3 = return $ do
 result3 :: Either [Error] SystemP2
 result3 = result2
 
-name4 :: String
-name4 = "test 4, phase 3 (expressions), create object"
+name4 :: TestName
+name4 = testName "test 4, phase 3 (expressions), create object"
 
 case4 :: IO (Either [Error] SystemP3)
 case4 = return $ do
@@ -452,8 +452,8 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
                                              , EWitness xvar $ $typeCheck$ x' `mzeq` (x - 1) ]
             | otherwise = []
 
-name5 :: String
-name5 = "test 5, phase 3, parsing"
+name5 :: TestName
+name5 = testName "test 5, phase 3, parsing"
 
 case5 :: IO (Either [Error] SystemP3)
 case5 = return $ do
@@ -468,12 +468,12 @@ case5 = return $ do
                   command "evbcmeq" [text "ae1a", text "act1", text "x", text "x-1"]
                   command "evbcmeq" [text "ae1b", text "act1", text "x", text "x-1"]
         ms1 = makeLatex "file.ext" $ do       
-                  command "removeguard" [text "ce0a",text "grd0"]
-                  command "removeguard" [text "ce0b",text "grd0"]
+                  command "removeguard"  [text "ce0a",text "grd0"]
+                  command "removeguard"  [text "ce0b",text "grd0"]
                   command "removecoarse" [text "ce0a",text "sch0"]
                   command "cschedule" [text "ce0a", text "sch1", text "y = y"]
-                  command "progress" [text "prog0",text "x \\le y",text "x = y"]
-                  command "progress" [text "prog1",text "x \\le y",text "x = y"]
+                  command "progress"  [text "prog0",text "x \\le y",text "x = y"]
+                  command "progress"  [text "prog1",text "x \\le y",text "x = y"]
                   command "safety" [text "saf0",text "x \\le y",text "x = y"]
                   command "removeact" [text "ce1", text "act1"] 
         cs = M.empty
@@ -483,8 +483,8 @@ case5 = return $ do
 result5 :: Either [Error] SystemP3
 result5 = result4
 
-name6 :: String
-name6 = "test 6, phase 4 (proofs), create object"
+name6 :: TestName
+name6 = testName "test 6, phase 4 (proofs), create object"
 
 case6 :: IO (Either [Error] SystemP4)
 case6 = return $ do
@@ -503,11 +503,11 @@ case6 = return $ do
         cSchRef = runMap' $ do
             "m0" ## M.empty
             "m1" ## runMap' (do
-                "ce0a" ## [(("SCH/m1",ch),li)])
+                "ae0" ## [(("SCH/m1",ch),li)])
         fSchRef = runMap' $ do
             "m0" ## M.empty
             "m1" ## runMap' (do
-                "ce0a" ## Just (("prog1",prog1),li))
+                "ae0" ## Just (("prog1",prog1),li))
         liveProof = M.insert "m1" (runMap' $ do
             "prog0" ## ((Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
             $ M.empty <$ ms
@@ -527,8 +527,8 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
     where
         upgradeAll mid = upgrade id (newMch mid) (newEvt mid) (newEvt mid)
         --newThy t = 
-        newEvt _mid _m eid e 
-            | eid == Right "ce0a" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
+        newEvt mid _m eid e 
+            | eid == Right "ae0" && mid == "m1" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
             | otherwise           = makeEventP4 e [] Nothing []
         newMch mid m 
             | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1))]
@@ -545,8 +545,8 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
             decl "x" int
             decl "y" int
 
-name7 :: String
-name7 = "test 7, phase 4, parsing"
+name7 :: TestName
+name7 = testName "test 7, phase 4, parsing"
 
 case7 :: IO (Either [Error] SystemP4)
 case7 = return $ do
@@ -556,8 +556,8 @@ case7 = return $ do
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
                   command "evbcmeq" [text "ae1a", text "act0", text "y", text "y+1"]
         ms1 = makeLatex "file.ext" $ do       
-                  command "replace" [text "ce0a",text "sch0",text "sch1",text "sch2",text "prog1",text "saf0"]
-                  command "replacefine" [text "ce0a",text "prog1"]
+                  command "replace" [text "ae0",text "sch0",text "sch1",text "sch2",text "prog1",text "saf0"]
+                  command "replacefine" [text "ae0",text "prog1"]
                   command "refine" [text "prog0",text "monotonicity",text "prog1",text ""]
                   --command "removeguard" [text "ce0b",text "grd0"]
         cs = M.empty
@@ -567,8 +567,8 @@ case7 = return $ do
 result7 :: Either [Error] SystemP4
 result7 = result6
 
-name8 :: String
-name8 = "test 8, make machine"
+name8 :: TestName
+name8 = testName "test 8, make machine"
 
 case8 :: IO (Either [Error] (SystemP Machine))
 case8 = return $ do
@@ -621,6 +621,12 @@ result8 = Right $ SystemP h ms
                 & derivation .~ M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
         --y = Var "y" int
         skipLbl = Left SkipEvent
+        ae0sched = def & old .~ ae0Evt
+                       & c_sched_ref .~ [replace ("prog1",pprop) ("saf0",sprop)
+                                          & remove .~ singleton "sch0" ()
+                                          & add    .~ singleton "sch1" ()
+                                          & keep   .~ singleton "sch2" () ]
+                       & f_sched_ref .~ Just ("prog1",pprop) 
         ae0Evt = def
             & coarse_sched .~ M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
@@ -672,7 +678,7 @@ result8 = Right $ SystemP h ms
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Right "ae0") (def & old .~ ae0Evt)
+            ae0 <- newLeftVertex (Right "ae0") ae0sched
             ae1a <- newLeftVertex (Right "ae1a") (def & old .~ ae1aEvt)
             ae1b <- newLeftVertex (Right "ae1b") (def & old .~ ae1bEvt)
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
@@ -688,8 +694,8 @@ result8 = Right $ SystemP h ms
             newEdge askip ce2
             newEdge askip cskip
 
-name9 :: String
-name9 = "QuickCheck inheritance"
+name9 :: TestName
+name9 = testName "QuickCheck inheritance"
 
 instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
     arbitrary = M.fromList <$> arbitrary

@@ -59,8 +59,6 @@ result1 = unlines
     , "  o  m1/INIT/WD"
     , "  o  m1/INIT/WWD"
     , "  o  m1/INV/WD"
-    , "  o  m1/choose/C_SCH/weaken/m1:sch0"
-    , "  o  m1/choose/C_SCH/weaken/m1:sch1"
     , "  o  m1/choose/FIS/ast@prime"
     , "  o  m1/choose/FIS/c@prime"
     , "  o  m1/choose/FIS/err@prime"
@@ -78,8 +76,6 @@ result1 = unlines
     , "  o  m1/choose/WD/F_SCH"
     , "  o  m1/choose/WD/GRD"
     , "  o  m1/choose/WWD"
-    , "  o  m1/fail/C_SCH/weaken/m1:sch0"
-    , "  o  m1/fail/C_SCH/weaken/m1:sch1"
     , "  o  m1/fail/FIS/ast@prime"
     , "  o  m1/fail/FIS/c@prime"
     , "  o  m1/fail/FIS/err@prime"
@@ -158,8 +154,6 @@ result1 = unlines
     , "  o  m1/m1:prog5/REF/ensure/m1/fail/SAF"
     , "  o  m1/m1:prog5/REF/ensure/m1/input/SAF"
     , "  o  m1/m1:prog5/REF/ensure/m1/parse/SAF"
-    , "  o  m1/parse/C_SCH/weaken/m1:sch0"
-    , "  o  m1/parse/C_SCH/weaken/m1:sch1"
     , "  o  m1/parse/FIS/ast@prime"
     , "  o  m1/parse/FIS/c@prime"
     , "  o  m1/parse/FIS/err@prime"
@@ -179,7 +173,7 @@ result1 = unlines
     , "  o  m1/parse/WD/F_SCH"
     , "  o  m1/parse/WD/GRD"
     , "  o  m1/parse/WWD"
-    , "passed 132 / 132"
+    , "passed 126 / 126"
     ]
 
 case2 :: IO POResult

@@ -24,8 +24,8 @@
 \maketitle
 \tableofcontents
 
-\input{machine_m1}
-\input{machine_m2}
+% \input{machine_m1}
+% \input{machine_m2}
 \newcommand{\stmt}[1]{ $#1$ }
 \newcommand{\comment}[2]{ 
 	% \begin{tabular}{|l|l|} 
@@ -174,7 +174,7 @@
 \\ \cschedule{m0:push:left}{m1:sch0}{ &r \in \dom.pshL }
 \end{align*}
 % \begin{align*}
-% \removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
+\removecoarse{m0:push:left}{default} % \weakento{m0:push:left}{default}{m1:sch0}
 % \end{align*}
 
 \subsubsection{Proving \ref{m1:prog1}}

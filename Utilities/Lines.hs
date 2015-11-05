@@ -1,10 +1,12 @@
 module Utilities.Lines where
 
 import Control.Applicative
+import Control.Arrow
 import Control.Lens hiding (elements,(<|))
 
 import Data.Foldable as F (concat)
 import Data.List.NonEmpty (NonEmpty(..),fromList,toList,(<|))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.List as L
 
 import Prelude hiding (lines,unlines)
@@ -97,15 +99,28 @@ instance Arbitrary a => Arbitrary (NonEmpty a) where
 
 instance Arbitrary Lines where
     arbitrary = do
-        let line  = listOf (arbitrary `suchThat` (`notElem` "\n\r"))
-            line' = L.concat <$> sequence [line,eol]
-            eol   = elements ["\n","\r\n","\r"]
+        let char  = arbitrary `suchThat` (`notElem` "\n\r")
+            line1 = listOf1 char
+            line  = listOf char
+            line' = L.concat <$> oneof 
+                        [ sequence [line,eol]
+                        , sequence [line1,return "\n"]]
+            eol   = elements ["\r\n","\r"]
             f (x0:x1:xs) 
                 | "\r" `L.isSuffixOf` x0 
                     && x1 == "\n" = f (x1:xs)
                 | otherwise = x0 : f (x1:xs)
             f x = x
         Lines . fromList . f <$> ((++) <$> listOf line' <*> sequence [line])
+    shrink (Lines xs) = filter p $ Lines . f <$> zip [0..] (shrink' xs)
+            --Lines . NE.reverse . f <$> zip [0..] (shrink $ NE.reverse xs)
+        where
+            shrink' xs = NE.reverse . (NE.head xs :|) <$> shrink (NE.tail $ NE.reverse xs)
+            f (n,x :| xs) = take n x :| (take' n <$> xs)
+            take' n xs = uncurry (++) $ first (take n) $ span (`notElem` "\n\r") xs
+            p (Lines xs) = all (`notElem` "\n\r") (NE.head xs') && all (\x -> any (`L.isSuffixOf` x) ["\n","\r\n","\r"]) (NE.tail xs')
+                where
+                    xs' = NE.reverse xs 
 
 return []
 

@@ -412,7 +412,7 @@ check_sat = [ "(check-sat-using (or-else (then qe smt)"
 
 
 train_decl :: Bool -> Bool -> [String]
-train_decl b ind = 
+train_decl primed ind = 
         [ "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
         , "(declare-datatypes () ( (Null null) ))"
         , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
@@ -441,7 +441,7 @@ train_decl b ind =
         else []
     where
         var_decl
-            | b         =
+            | primed    =
                 [  "(declare-const in (set sl@TRAIN))"
                 ,  "(declare-const in@prime (set sl@TRAIN))"
                 ,  "(declare-const loc (pfun sl@TRAIN sl@BLK))"
@@ -1228,7 +1228,7 @@ result3 = unlines $
      , "(set-option :smt.timeout 3000)"
      ] ++
      push ++
-     train_decl False True ++ 
+     train_decl True True ++ 
      filterAssert kw 
      (    set_decl_smt2 [WithPFun] ++ 
           comp_facts [WithPFun] ++
@@ -1295,7 +1295,7 @@ result19 = unlines $
      , "(set-option :smt.timeout 3000)"
      ] ++
      push ++ 
-     train_decl False True ++ 
+     train_decl True True ++ 
      filterAssert kw (
           set_decl_smt2 [WithPFun] ++ 
           comp_facts [WithPFun] ++

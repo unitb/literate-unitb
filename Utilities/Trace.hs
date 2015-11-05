@@ -51,6 +51,12 @@ trace xs x = unsafePerformIO $ do
 traceM :: Monad m => String -> m ()
 traceM xs = trace xs (return ())
 
+traceM' :: Monad m => String -> m a -> m a
+traceM' xs cmd = do
+    x <- cmd
+    traceM xs
+    return x
+
 traceA :: ArrowApply arr => (a -> String) -> arr a ()
 traceA f = arr (\x -> (trace (f x) returnA, ())) >>> app
 

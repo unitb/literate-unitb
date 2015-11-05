@@ -52,6 +52,7 @@ data Program =
             -- list of programs
         | Loop    Expr [Expr] Program Termination
             -- Exit Invariant Body Termination
+    deriving (Show)
 
 newtype Partition = Partition [([EventId],Expr)]
 
@@ -98,6 +99,7 @@ make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
             wait $ term `zor` zsome (scheds ls)
 
 data Termination = Infinite | Variant Variant EventId
+    deriving (Show)
 
 data Concurrency = Concurrent (Map String ()) | Sequential
 
@@ -309,7 +311,8 @@ default_cfg :: RawMachine -> Program
 default_cfg m = Loop g [] body Infinite
     where
         all_guard e = zall $ e^.new.coarse_sched
-        g    = zsome $ L.map (znot . all_guard) $ M.elems $ all_upwards m
+        g    = zsome xs
+        xs   = L.map (znot . all_guard) $ M.elems $ nonSkipUpwards m
         branch (Right lbl,e) = [Event [] ztrue (all_guard e) lbl]
         branch _ = []
         body = Sequence 

@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Document.Tests.Puzzle 
-    --( test_case, path0, case12 )
-where
+module Document.Tests.Puzzle where
 
     -- Modules
 import Document.Tests.Suite

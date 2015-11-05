@@ -40,7 +40,6 @@ result0 = unlines
     , "  o  m0/m0:enter/WD/F_SCH"
     , "  o  m0/m0:enter/WD/GRD"
     , "  o  m0/m0:enter/WWD"
-    , "  o  m0/m0:leave/C_SCH/weaken/lv:c0"
     , "  o  m0/m0:leave/FIS/in@prime"
     , "  o  m0/m0:leave/WD/ACT/lv:a0"
     , "  o  m0/m0:leave/WD/C_SCH"
@@ -53,7 +52,7 @@ result0 = unlines
     , "  o  m0/m0:prog0/REF/discharge/tr/rhs"
     , "  o  m0/m0:tr0/TR/WD"
     , "  o  m0/m0:tr0/TR/WD/witness/t"
-    , "passed 25 / 25"
+    , "passed 24 / 24"
     ]
 
 result1 :: String
@@ -102,8 +101,6 @@ result1 = unlines
     , "  o  m1/m0:leave/WD/F_SCH"
     , "  o  m1/m0:leave/WD/GRD"
     , "  o  m1/m0:leave/WWD"
-    , "  o  m1/m1:movein/C_SCH/weaken/mi:c1"
-    , "  o  m1/m1:movein/C_SCH/weaken/mi:c2"
     , "  o  m1/m1:movein/FIS/in@prime"
     , "  o  m1/m1:movein/FIS/loc@prime"
     , "  o  m1/m1:movein/INV/inv0"
@@ -118,7 +115,6 @@ result1 = unlines
     , "  o  m1/m1:movein/WD/F_SCH"
     , "  o  m1/m1:movein/WD/GRD"
     , "  o  m1/m1:movein/WWD"
-    , "  o  m1/m1:moveout/C_SCH/weaken/c1"
     , "  o  m1/m1:moveout/FIS/in@prime"
     , "  o  m1/m1:moveout/FIS/loc@prime"
     , "  o  m1/m1:moveout/INV/inv0"
@@ -167,7 +163,7 @@ result1 = unlines
     , "  o  m1/m1:tr0/TR/WD/witness/t"
     , "  o  m1/m1:tr1/TR/WD"
     , "  o  m1/m1:tr1/TR/WD/witness/t"
-    , "passed 109 / 109"
+    , "passed 106 / 106"
     ]
 
 result2 :: String

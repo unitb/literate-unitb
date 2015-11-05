@@ -411,7 +411,7 @@ result5 = unlines
     , "  o  m3/m1:moveout/FIS/loc@prime"
     , "  o  m3/m1:moveout/FIS/osgn@prime"
     , "  o  m3/m1:moveout/F_SCH/replace/prog/m3:prog0/lhs"
-    , "  o  m3/m1:moveout/F_SCH/replace/str/mo:f0"
+    , "  o  m3/m1:moveout/F_SCH/replace/str/mo:f0/m1:moveout"
     , "  o  m3/m1:moveout/GRD/str/mo:g3"
     , "  o  m3/m1:moveout/INV/m3:inv0"
     , "  o  m3/m1:moveout/INV/m3:inv1"
@@ -428,7 +428,6 @@ result5 = unlines
     , "  o  m3/m1:moveout/WD/F_SCH"
     , "  o  m3/m1:moveout/WD/GRD"
     , "  o  m3/m1:moveout/WWD"
-    , "  o  m3/m3:ctr:plf/C_SCH/weaken/m3:cp:c0"
     , "  o  m3/m3:ctr:plf/FIS/in@prime"
     , "  o  m3/m3:ctr:plf/FIS/loc@prime"
     , "  o  m3/m3:ctr:plf/FIS/osgn@prime"
@@ -454,9 +453,9 @@ result5 = unlines
     , "  o  m3/m3:saf1/SAF/WD/rhs"
     , "  o  m3/m3:tr0/TR/WD"
     , "  o  m3/m3:tr0/TR/WD/witness/p"
-    , "passed 110 / 115"
+    , "passed 109 / 114"
     ]
-
+    
 case6 :: IO String
 case6 = proof_obligation path0 "m2/TR/m2:tr1/m1:moveout/EN" 2
 

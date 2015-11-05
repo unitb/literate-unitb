@@ -63,7 +63,6 @@ result1 = unlines
     , "  o  m1/activate/WD/F_SCH"
     , "  o  m1/activate/WD/GRD"
     , "  o  m1/activate/WWD"
-    , "  o  m1/detect/C_SCH/weaken/m1:sch0"
     , "  o  m1/detect/FIS/st@prime"
     , "  o  m1/detect/FIS/term@prime"
     , "  o  m1/detect/INV/m1:inv0"
@@ -94,7 +93,7 @@ result1 = unlines
     , "  o  m1/stop/WD/F_SCH"
     , "  o  m1/stop/WD/GRD"
     , "  o  m1/stop/WWD"
-    , "passed 46 / 46"
+    , "passed 45 / 45"
     ]
 
 case2 :: IO POResult
@@ -119,7 +118,6 @@ result2 = unlines
     , "  o  m2/activate/WD/F_SCH"
     , "  o  m2/activate/WD/GRD"
     , "  o  m2/activate/WWD"
-    , "  o  m2/add/C_SCH/weaken/m2:sch0"
     , "  o  m2/add/FIS/d@prime"
     , "  o  m2/add/FIS/st@prime"
     , "  o  m2/add/FIS/term@prime"
@@ -173,7 +171,7 @@ result2 = unlines
     , "  o  m2/stop/WD/F_SCH"
     , "  o  m2/stop/WD/GRD"
     , "  o  m2/stop/WWD"
-    , "passed 71 / 71"
+    , "passed 70 / 70"
     ]
 
 case3 :: IO POResult

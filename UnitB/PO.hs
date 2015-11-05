@@ -1,5 +1,4 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns,OverloadedStrings,ImplicitParams #-}
     -- Behavior hiding
 module UnitB.PO 
     ( proof_obligation, theory_po
@@ -175,7 +174,7 @@ raw_machine_pos m' = eval_generator $
                         sim_po m ev
                         sch_po m ev
                     -- forM_ (all_refs m) $ \ev -> do
-                    forM_  (M.toList $ all_downwards m) $ \ev -> do
+                    forM_  (M.toList $ nonSkipDownwards m) $ \ev -> do
                         replace_csched_po m ev
                         weaken_csched_po  m ev
                         replace_fsched_po m ev
@@ -329,7 +328,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                 act  = ba_predicate m evt
                 ind  = evt^.new.indices
                 ind1 = (evt^.new.indices) `M.intersection` hint
-                param_ctx = POG.variables (evt^.new.params)
+                param_ctx  = POG.variables (evt^.new.params)
                 enablement = emit_goal assert [as_label evt_lbl, "EN"] 
                             (          asExpr xp 
                             `zimplies` (new_dummy ind $ zall $ asExpr <$> sch0))
@@ -509,16 +508,15 @@ wit_fis_po m (lbl, evt) =
     where
         pvar = L.map prime $ M.elems $ view' abs_vars m `M.difference` view' variables m
 
-replace_csched_po :: RawMachine -> (SkipOrEvent,RawEventSplitting) -> M ()
+replace_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 replace_csched_po m (lbl,evt') = do 
-        -- assert (L.null (L.drop 1 xs) 
-        -- || L.null (evt^.c_sched_ref)) $ do
+        -- TODO: generate the safety property rather than reading it
     case evt' of 
         EvtS ae (ce :| []) -> do
             let evt = EvtRef ae ce
             with (do
                     prefix_label $ _name m
-                    prefix_label $ skipOrLabel lbl
+                    prefix_label $ as_label lbl
                     prefix_label "C_SCH/delay"
                     _context $ assert_ctx m
                     _context $ step_ctx m
@@ -527,10 +525,10 @@ replace_csched_po m (lbl,evt') = do
                 let old_c = evt^.old.coarse_sched
                     old_f = evt^.old.fine_sched
                 forM_ (L.zip [0..] $ evt^.c_sched_ref) $ \(i,ref) -> do
-                    let (plbl,prog) = sch_prog ref
-                        (slbl,saf)  = sch_saf ref
-                        keep_c      = (evt^.new.coarse_sched) `M.intersection` keep ref
-                        new_part_c  = ((evt^.added.coarse_sched) `M.intersection` add ref) `M.union` keep_c
+                    let (plbl,prog) = ref^.sch_prog
+                        (slbl,saf)  = ref^.sch_saf
+                        keep_c      = (evt^.new.coarse_sched) `M.intersection` view keep ref
+                        new_part_c  = ((evt^.added.coarse_sched) `M.intersection` view add ref) `M.union` keep_c
                         nb  = label $ show (i :: Int)
                         LeadsTo vs p0 q0  = prog
                         Unless us p1 q1 _ = saf
@@ -555,14 +553,14 @@ replace_csched_po m (lbl,evt') = do
                             -- it broke one of the test cases
         _ -> assert (L.null (evt'^.c_sched_ref)) (return ())
 
-weaken_csched_po :: RawMachine -> (SkipOrEvent,RawEventSplitting) -> M ()
+weaken_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
     -- case evt' of 
     --     EvtS ae (ce :| []) -> do
             let -- evt = EvtRef ae ce 
                 weaken_sch = do
                         e <- evt^.evt_pairs
-                        return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map add $ e^.c_sched_ref)
+                        return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
                 -- weaken_sch  = case weaken_sch' of
                 --                 m :| [] -> _
                 --                 ms -> _
@@ -571,7 +569,7 @@ weaken_csched_po m (lbl,evt) = do
                 old_c = evt^.old.coarse_sched
             with (do
                     prefix_label $ _name m
-                    prefix_label $ skipOrLabel lbl
+                    prefix_label $ as_label lbl
                     prefix_label "C_SCH/weaken"
                     _context $ assert_ctx m
                     _context $ step_ctx m
@@ -590,7 +588,7 @@ weaken_csched_po m (lbl,evt) = do
                     ms -> 
                         emit_goal assert [] $ zsome $ NE.map zall ms
 
-replace_fsched_po :: RawMachine -> (SkipOrEvent,RawEventSplitting) -> M ()
+replace_fsched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 replace_fsched_po m (lbl,aevt) = do
         let evts   = aevt^.evt_pairs.to NE.toList
             -- _ = _
@@ -602,7 +600,7 @@ replace_fsched_po m (lbl,aevt) = do
             new_fs = L.map (view $ new.fine_sched) evts
         with (do
                 prefix_label $ _name m
-                prefix_label $ skipOrLabel lbl
+                prefix_label $ as_label lbl
                 prefix_label "F_SCH/replace"
                 -- POG.variables $ _^.new.indices
                 _context $ assert_ctx m
@@ -693,6 +691,8 @@ sim_po m (lbl, evt) =
 fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
 fis_po m (lbl, evt) = 
         with (do _context $ assert_ctx m
+                 -- TODO: Only check feasibility of
+                 -- (concrete) non-deterministic assignments
                  _context $ abstract_step_ctx m
                  POG.variables $ evt^.indices
                  POG.variables $ evt^.params 

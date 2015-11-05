@@ -5,9 +5,12 @@ module Main where
 import Build
 
 import Control.Concurrent
+import Control.Exception
 
 import Control.Monad
 import Control.Monad.Trans
+
+import Data.List
 
 import System.Directory
 import System.Environment
@@ -19,11 +22,12 @@ import Shelly (shelly,rm_f)
 
 compile_script :: Build ()
 compile_script = do
-        -- compile_file
-        -- compile_test 
-            -- >>= run_test
-        compile_all
-        compile_app
+        compile_file
+        compile_test 
+              >>= run_test
+        --compile_all
+        --compile_app
+        return ()
 
 
 _wait :: IO Bool -> IO ()
@@ -46,8 +50,15 @@ _errFile :: FilePath
 _o_file :: FilePath
 _o_file = replaceExtension file ".o"
 
+inBin :: (Bool -> FilePath -> FilePath) -> FilePath -> FilePath
+inBin arse file = arse (path `isPrefixOf` file) $ path </> "bin" </> drop (length path + 1) (dropExtension file) <.> "o"
+
 compile_file :: Build ()
-compile_file = compile True (args CompileFile file)             
+compile_file = do
+    liftIO $ do
+        b <- doesFileExist $ inBin assert file
+        when b $ removeFile $ inBin assert file
+    compile True (args CompileFile file)
 
 run_test :: FilePath -> Build ()
 run_test fp = lift $ lift $ void $ rawSystem fp []

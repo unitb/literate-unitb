@@ -290,7 +290,7 @@ case8 = do  xs <- runEitherT $ do
                         , ""
                         , "main = do"
                         , "        print . v_a =<< find_cubes 10" ]
-                    (rs) <- readProcess "runghc" [file] ""
+                    rs <- readProcess "runghc" [file] ""
                     removeFile file
                     return rs
             return $ either id id xs    

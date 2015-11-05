@@ -27,6 +27,7 @@ import UnitB.Expr
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import Control.DeepSeq
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
@@ -47,6 +48,8 @@ import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Traversable as T
+
+import GHC.Generics (Generic)
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
@@ -152,8 +155,8 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
         updateEvt (Left SkipEvent) e = EventP4 e [] Nothing
         promoteEvt _ e = EventP4 e [] Nothing
         _p3 = p3 & pEventRef %~ G.mapBothWithKey 
-                        promoteEvt
                         updateEvt
+                        promoteEvt
         _pProofs = proofs
         _pCoarseRef = M.map (L.map fst) coarse_refs
         _pFineRef   = M.map (fmap fst) fine_refs
@@ -228,7 +231,7 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3
         return [(goal',(r,dep),li)]
 
 ref_replace_csched :: MPipeline MachineP3 EventRefA
-ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m p3 -> do
+ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog,saf) m p3 -> do
         -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
         (sprop,pprop,evt) <- toEither $ do
             sprop <- fromEither (error "replace_csched: saf") 
@@ -236,30 +239,30 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,add,keep,prog,saf) m
             pprop <- fromEither (error "replace_csched: prog") 
                         $ get_progress_prop p3 m prog
             evt   <- fromEither (error "replace_csched: evt")
-                        $ get_event p3 evt_lbl
+                        $ get_abstract_event p3 evt_lbl
             return (sprop,pprop,evt)
         toEither $ do
             _ <- fromEither undefined $ bind_all del 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
-                    (`M.lookup` (p3 ^. evtDel evt eCoarseSched))
-            _ <- fromEither undefined $ bind_all add 
+                    (`M.lookup` (M.unions $ p3^.evtSplitDel AST.assert evt eCoarseSched))
+            _ <- fromEither undefined $ bind_all added 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' added during refinement" evt) 
-                    (`M.lookup` (p3 ^. evtAdded evt eCoarseSched))
-            _ <- fromEither undefined $ bind_all keep 
+                    (`M.lookup` (M.unions $ p3^.evtSplitAdded AST.assert evt eCoarseSched))
+            _ <- fromEither undefined $ bind_all kept 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
-                    (`M.lookup` (p3 ^. evtKept evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitKept AST.assert evt eCoarseSched))
             return ()
-        let rule = (replace (as_label prog,pprop) (saf,sprop)) 
-                        { remove = fromList' del
-                        , add  = fromList' add
-                        , keep = fromList' keep }
+        let rule = replace (as_label prog,pprop) (saf,sprop)
+                        & remove .~ fromList' del
+                        & add  .~ fromList' added
+                        & keep .~ fromList' kept
             po_lbl = composite_label ["SCH",as_label m]            
         li <- lift ask
         return $ EventRef [(evt,[((po_lbl,rule),li)])] []
 
 ref_replace_fsched :: MPipeline MachineP3 EventRefA
 ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
-        evt <- get_event p3 evt_lbl
+        evt <- get_abstract_event p3 evt_lbl
         pprop <- get_progress_prop p3 m prog
         let rule      = (prog,pprop)
         li <- lift ask
@@ -375,6 +378,9 @@ data HintBuilder =
 data EventRefA = EventRef 
         { coarseRef :: [(EventId,[((Label,ScheduleChange),LineInfo)])]
         , fineRef :: [(EventId,[((ProgId,ProgressProp),LineInfo)])] }
+    deriving (Generic)
+
+instance NFData EventRefA where
 
 instance Monoid EventRefA where
     mempty = EventRef [] []

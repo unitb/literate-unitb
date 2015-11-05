@@ -23,7 +23,8 @@ test_case = test_cases
     , StringCase "test5: monotonicity in relation theory" case5 result5 
     , StringCase "test6: monotonicity of POs" case6 result6
     , StringCase "test7: POs, step 3 (monotonicity, associativity)" case7 result7
-    , StringCase "test8: POs, step 4 (monotonicity, associativity)" case8 result8 ]
+    , StringCase "test8: POs, step 4 (monotonicity, associativity)" case8 result8 
+    ]
 
 path0 :: FilePath
 path0 = "Tests/garbage collector/main.tex"
