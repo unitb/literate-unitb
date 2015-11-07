@@ -545,7 +545,7 @@ replace_csched_po m (lbl,evt') = do
                     with (do
                             POG.variables $ symbol_table us) $ do
                         emit_goal assert [nb,"saf",slbl,"lhs"] $ $typeCheck$
-                                Right p1 .== mzall (M.map Right new_part_c)
+                                Right p1 .==. mzall (M.map Right new_part_c)
                         emit_goal assert [nb,"saf",slbl,"rhs"] $ $typeCheck$
                                 Right q1 .=> mznot (mzall $ M.map Right old_c)
                             -- the above used to include .=> ... \/ not old_f
@@ -648,7 +648,7 @@ replace_fsched_po m (lbl,aevt) = do
                             named_hyps old_c -- is this sound?
                             named_hyps kept_f) $
                         emit_goal assert ["eqv"] $ $typeCheck$
-                            Right (zsome add_f) .= Right (zsome del_f)
+                            Right (zsome add_f) .=. Right (zsome del_f)
 
 intersections :: Ord k => [Map k a] -> Map k a
 intersections []  = error "intersection of empty list is undefined"

@@ -66,37 +66,37 @@ arithmetic = empty_theory {
 
                 $axiom $ 
                     (mznot $ x `zelem` r) .=>
-                        asum (r `zunion` zmk_set x) term  
-                    .= (asum r term .+ zselect term x)
+                         asum (r `zunion` zmk_set x) term  
+                    .=. (asum r term .+ zselect term x)
 
                 $axiom $ 
-                    (r `zintersect` r' .= zempty_set) .=>
-                        asum (r `zunion` r') term 
-                    .= (asum r term .+ asum r' term)
+                    (r `zintersect` r' .=. zempty_set) .=>
+                         asum (r `zunion` r') term 
+                    .=. (asum r term .+ asum r' term)
 
                 $axiom $ mzfinite r .=>
                     mzint 0 .<= zcard r
 
                 $axiom $ 
-                    zcard r .= mzint 0  .==  r .= zempty_set
+                    zcard r .=. mzint 0  .==.  r .=. zempty_set
 
                 $axiom $ 
-                    zcard (zmk_set x) .= mzint 1
+                    zcard (zmk_set x) .=. mzint 1
 
                 $axiom $
-                        zcard r .= mzint 1
-                    .== mzexists [x_decl] mztrue (r .= zmk_set x)
+                         zcard r .=. mzint 1
+                    .==. mzexists [x_decl] mztrue (r .=. zmk_set x)
 
                     -- dangerous!
                 -- $axiom $ 
                 --     mznot (x `zelem` r) .=>
-                --         zcard (r `zunion` zmk_set x)
-                --     .=  zcard r .+ mzint 1
+                --          zcard (r `zunion` zmk_set x)
+                --     .=.  zcard r .+ mzint 1
 
                 $axiom $ 
-                    r `zintersect` r' .= zempty_set .=>
-                        zcard (r `zunion` r')
-                    .=  zcard r .+ zcard r'            
+                    r `zintersect` r' .=. zempty_set .=>
+                         zcard (r `zunion` r')
+                    .=.  zcard r .+ zcard r'            
 
             -- fromList $ L.map (first $ label . dec')
             -- [ ("0",axm1) 

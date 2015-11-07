@@ -64,6 +64,9 @@ data TacticT m a = TacticT
                     [Label] 
                     (S.Set Label,S.Set String) m) a }
 
+instance Show (TacticT m a) where
+  show _ = "<tactic>"
+
 type Tactic = TacticT Identity
 
 tac_local :: Monad m

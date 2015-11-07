@@ -1,5 +1,5 @@
 #!/usr/bin/env runhaskell -W -Werror
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,FlexibleContexts #-}
 module Main where
 
 import Build
@@ -24,8 +24,7 @@ import System.Process
 
 import Text.Printf
 
-import Utilities.Format
-import Z3.Z3
+import Z3.Version
 
 p_system :: String -> IO ExitCode
 p_system cmd
@@ -111,8 +110,8 @@ general = do
                        : (take 6 $ map f $ reverse 
                             $ sortOn fst 
                             $ filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs ys)
-                      ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) 60 in 
-                                format "{0}m {1}s" m s)]
+                      ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) (60 :: Int) in 
+                                printf "%dm %ds" m s)]
                 -- system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"
                 xs <- readFile "result.txt"
                 putStrLn xs

@@ -22,7 +22,6 @@ module Document.Visitor
     , drop_blank_text
     , drop_blank_text'
     , get_1_lbl
-    , System(..)
     , visitor, raise
     , VisitorT ( .. )
     , run_visitor

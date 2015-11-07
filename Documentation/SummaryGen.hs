@@ -14,7 +14,7 @@ where
 --import Logic.ExpressionStore
 
 import UnitB.AST
-import UnitB.Expr hiding ((</>),(.=))
+import UnitB.Expr hiding ((</>))
 
     -- Libraries
 import Control.Arrow

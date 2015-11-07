@@ -88,8 +88,10 @@ compile_test = do
     compile False (args Make "test_tmp.hs")
     return "bin/test_tmp"
 
-compile_all :: Build ()
-compile_all = compile False (args Make "test.hs")
+compile_all :: Build FilePath
+compile_all = do
+    compile False (args Make "test.hs")
+    return "bin/test"
 
 compile_app :: Build ()
 compile_app = compile False (args Make "continuous.hs")

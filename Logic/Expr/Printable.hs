@@ -3,6 +3,7 @@ module Logic.Expr.Printable where
 
 import Logic.Expr.Expr
 import Logic.Expr.Type
+import Logic.Expr.Scope
 
     -- Libraries
 import Control.DeepSeq
@@ -42,6 +43,9 @@ instance Ord DispExpr where
 
 instance Show DispExpr where
     show (DispExpr _ x) = show x
+
+instance HasScope DispExpr where
+    scopeCorrect' = scopeCorrect' . getExpr
 
 data ExprStuff expr = ExprStuff expr (Map String expr)
     deriving (Foldable,Functor,Traversable)

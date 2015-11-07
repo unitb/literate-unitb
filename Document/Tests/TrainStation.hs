@@ -240,34 +240,30 @@ machine0 = (empty_machine "train0") & content assert %~ \m ->
                     ]
             }
       & inits .~ fromList (zip inLbls 
-            -- $ map ($typeCheck) [loc .= zempty_fun, in_var .= zempty_set])
-             --[ _
-             -- , _ ] )
              $ [ c [expr| loc = \emptyfun  |]
                , c [expr| in = \emptyset  |] ] )
       & variables .~ vars
       & event_table .~ newEvents [("enter", enter_evt), ("leave", leave_evt)]
       & props .~ props0
-    --  & derivation .~ fromList []
     where
         inLbls = map (label . ("in" ++) . show . (1 -)) [0..]
-        axm0 = ($typeCheck) (block .= (zset_enum [ent,ext] `zunion` plf)) 
+        axm0 = ($typeCheck) (block .=. (zset_enum [ent,ext] `zunion` plf)) 
         axm2 = ($typeCheck) (
-               mznot (ent .= ext)
+               mznot (ent .=. ext)
             /\ mznot (ent `zelem` plf)
             /\ mznot (ext `zelem` plf) )
         axm3 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
-                        mznot (p .= ext)
-                    .=  (p `zelem` (zmk_set ent `zunion` plf)))
+                         mznot (p .=. ext)
+                    .=.  (p `zelem` (zmk_set ent `zunion` plf)))
         axm4 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
-                        mznot (p .= ent)
-                    .=  (p `zelem` (zmk_set ext `zunion` plf)))
+                         mznot (p .=. ent)
+                    .=.  (p `zelem` (zmk_set ext `zunion` plf)))
         axm5 = ($typeCheck) $
             mzforall [p_decl] mztrue $ (
-                        (mzeq p ent \/ mzeq p ext)
-                    .=  mznot (p `zelem` plf) )
+                         (mzeq p ent \/ mzeq p ext)
+                    .=.  mznot (p `zelem` plf) )
 
 vars :: Map String Var
 vars = symbol_table [in_decl,loc_decl]
@@ -280,8 +276,6 @@ c = ctxWith [("sets",set_theory),("functions",function_theory)] $ do
         [var| ent, ext : \BLK |]
         [var| PLF : \set [\BLK] |]
         primable $ do
-            --decls %= insert "loc" loc_decl
-            --decls %= insert "in" in_decl
             [var| loc : \TRAIN \pfun \BLK |]
             [var| in : \set [\TRAIN] |]
             [var| t : \TRAIN |]
@@ -291,19 +285,9 @@ props0 = empty_property_set
     {  _constraint = fromList 
             [   ( "co0"
                 , Co [t_decl] 
-                    -- $ ($typeCheck) (mzimplies 
-                    --    (mzand (mznot (t `zelem` in_var)) (t `zelem` in_var')) 
-                    --    (mzeq  (zapply loc' t) ent)) )
                     $ c $ [expr| \neg t \in in \land t \in in'  \implies  loc'.t = ent |] . (is_step .~ True))
             ,   ( "co1"
                 , Co [t_decl] 
-                   -- $ ($typeCheck) (mzimplies 
-                        --(mzall [ (t `zelem` in_var), 
-                        --         (zapply loc t .= ent), 
-                        --         mznot (zapply loc t `zelem` plf)])
-                        --(mzand (t `zelem` in_var')
-                        --       ((zapply loc' t `zelem` plf) \/ ((loc' `zapply` t) 
-                        --       .= ent)))) )
                     $ c $ [expr| t \in in \land loc.t = ent \land \neg loc.t \in PLF  
                                \implies  t \in in' 
                                    \land (loc'.t \in PLF \1\lor loc'.t = ent) |] . (is_step .~ True) )
@@ -312,16 +296,12 @@ props0 = empty_property_set
             [   ( "tr0"
                 , Tr
                     (symbol_table [t_decl])
-                    --(($typeCheck) (t `zelem` in_var)) ["leave"] 
                     (c $ [expr| t \in in |].(free_dummies .~ True)) ["leave"] 
                     (TrHint (fromList [("t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
             ]
     ,  _inv = fromList 
             [   ("inv2", c [expr| \dom.loc = in |])
-            --[   ("inv2", ($typeCheck) zdom loc .= in_var))
             ,   ("inv1", c [expr| \qforall{t}{t \in in}{loc.t \in \BLK} |])
-            --,   ("inv1",($typeCheck) $ mzforall [t_decl] (zelem t in_var)
-            --            ((zapply loc t `zelem` block)))
             ]
     ,  _proofs = fromList
             [   ( "train0/enter/INV/inv2"
@@ -355,18 +335,10 @@ enter_evt = empty_event
             ]
     &  actions .~ fromList
             [  ("a1", BcmSuchThat (M.elems vars)
-                    --(($typeCheck) (in_var' .= (in_var `zunion` zmk_set t))))
                     (c $ [expr| in' = in \bunion \{ t \} |] . (is_step .~ True)))
             ,  ("a2", BcmSuchThat (M.elems vars)
-                    --(($typeCheck) (loc' .= (loc `zovl` zmk_fun t ent))))
                     (c $ [expr| loc' = loc \1| t \fun ent |] . (is_step .~ True)))
             ]
-    --where 
-    --    vars = S.elems $ variableSet machine0
-        --c = ctx $ do
-        --        decls %= insert "in" in_decl
-        --        decls %= insert "loc" loc_decl
-
 
 leave_evt :: Event
 leave_evt = empty_event 
@@ -378,10 +350,8 @@ leave_evt = empty_event
     ,  _actions = fromList 
             [  ("a0", BcmSuchThat (M.elems vars)
                     (c $ [expr| in' = in \1\setminus \{ t \} |] . (is_step .~ True)))
-                    --(($typeCheck) (in_var' .= (in_var `zsetdiff` zmk_set t))))
             ,  ("a3", BcmSuchThat (M.elems vars)
                     (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
-                    --(($typeCheck) (loc' .= (zmk_set t `zdomsubt` loc))))
             ] 
     }
 

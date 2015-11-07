@@ -14,7 +14,7 @@ module Logic.Proof.POGenerator
 where
 
     -- Modules
-import Logic.Expr as E hiding ((.=))
+import Logic.Expr as E
 import Logic.Expr.Existential
 import Logic.Proof.Sequent as S
 

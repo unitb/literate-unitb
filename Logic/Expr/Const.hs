@@ -4,6 +4,7 @@ module Logic.Expr.Const where
     -- Modules   
 import Logic.Expr.Classes 
 import Logic.Expr.Expr
+import Logic.Expr.Variable
 import Logic.Expr.Genericity
 import Logic.Expr.Type
 
@@ -20,11 +21,11 @@ import Data.Traversable as T (mapM)
 
 import Utilities.Syntactic
 
-infixr 1 .==
+infixr 1 .==.
 infix 2 .=>
 infixr 3 \/
 infixr 3 /\
-infix 4 .=
+infix 4 .=.
 infix 4 .<=
 infix 4 .<
 infixr 5 .+
@@ -85,10 +86,10 @@ zeq          = no_errors2 mzeq
 mzeq :: TwoExprP Type q
 mzeq         = typ_fun2 zeq_fun
 
-(.=) :: TwoExprP Type q
-(.=) = mzeq
-(.==) :: TwoExprP Type q
-(.==) = mzeq
+(.=.) :: TwoExprP Type q
+(.=.) = mzeq
+(.==.) :: TwoExprP Type q
+(.==.) = mzeq
 
 zfollows :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zfollows     = fun2 $ mk_fun [] "follows" [bool,bool] bool
@@ -357,9 +358,6 @@ prog_var :: String -> Type -> (Either a Expr, Either a Expr, Var)
 prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
     where
         v = Var n t
-
-prime :: Var -> Var
-prime (Var n t) = Var (n ++ "@prime") t
 
 zapply :: ExprP -> ExprP -> ExprP
 zapply  = typ_fun2 (mk_fun [gA,gB] "apply" [fun_type gA gB, gA] gB)

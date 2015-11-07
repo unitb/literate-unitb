@@ -90,14 +90,14 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
         _fact :: Map Label Expr
         _fact = "set" `axioms` do
                 -- elem and mk-set
-            $axiom $  (x `zelem` zmk_set y) .==  x .= y
+            $axiom $  (x `zelem` zmk_set y) .==.  x .=. y
                 -- comprehension
-            $axiom $       zelem y (zset r1 term)
-                      .== (mzexists [x'_decl] (x' `zelem` r1)
-                                (zselect term x' .= y))
+            $axiom $        zelem y (zset r1 term)
+                      .==. (mzexists [x'_decl] (x' `zelem` r1)
+                                (zselect term x' .=. y))
                     -- with empty set
-            $axiom $     zset r1 term .= zmk_set y
-                    .==  mzforall [x'_decl] (zelem x' r1)
+            $axiom $      zset r1 term .=. zmk_set y
+                    .==.  mzforall [x'_decl] (zelem x' r1)
                                  (       (zselect term x' `mzeq` y) )
                 -- finite
             $axiom $      mzfinite s1
@@ -107,14 +107,14 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             $axiom $ mzfinite $ zmk_set x
             $axiom $ mzfinite $ zcast (set_type t) zempty_set
             $axiom $ zsubset s1 s2 .=> (mzfinite s2 .=> mzfinite s1)
-            $axiom $ zset r1 zident .= r1
+            $axiom $ zset r1 zident .=. r1
                 -- quantifier union
-            $axiom $ zunion_qu (zcast (set_type t0) zempty_set) terms .= zempty_set
-            $axiom $ zunion_qu (zmk_set x') terms .= zselect terms x'
-            $axiom $   zunion_qu (r1 `zunion` r2) terms 
-                    .= zunion_qu r1 terms `zunion` zunion_qu r2 terms 
-            $axiom $    mzforall [x'_decl] (x' `zelem` r1) ( zselect terms x' .= zselect terms' x' )
-                    .=> zunion_qu r1 terms .= zunion_qu r1 terms'
+            $axiom $ zunion_qu (zcast (set_type t0) zempty_set) terms .=. zempty_set
+            $axiom $ zunion_qu (zmk_set x') terms .=. zselect terms x'
+            $axiom $    zunion_qu (r1 `zunion` r2) terms 
+                    .=. zunion_qu r1 terms `zunion` zunion_qu r2 terms 
+            $axiom $    mzforall [x'_decl] (x' `zelem` r1) ( zselect terms x' .=. zselect terms' x' )
+                    .=> zunion_qu r1 terms .=. zunion_qu r1 terms'
                 -- elem over union
             -- $axiom $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
             --                     (x `zelem` (s1 `zunion` s2)) 

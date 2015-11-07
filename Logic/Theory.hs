@@ -16,6 +16,7 @@ module Logic.Theory
     , theory_facts
     , empty_theory
     , basic_theory
+    , symbols
     , types, defs, funs, consts, theorems
     , thm_depend, notation, extends )
 where
@@ -32,16 +33,16 @@ import Logic.Theory.Monad
     -- Libraries
 import Control.DeepSeq
 import Control.Monad.RWS
-import Control.Lens hiding (Context,(.=),from,to,rewriteM)
+import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Default
-import           Data.DeriveTH
 import           Data.List as L
 import           Data.Map as M 
 
 import GHC.Generics hiding ((:+:),prec)
 
 import Utilities.Instances
+import Utilities.Lens
 
 all_theories :: Theory -> [Theory]
 all_theories th = th : M.elems (all_theories' th)
@@ -52,13 +53,13 @@ all_theories' :: Theory -> Map String Theory
 all_theories' th = M.unions $ view extends th : M.elems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
-basic_theory = empty_theory 
-        { _types = symbol_table [BoolSort, pair_sort, set_sort]
-        , _funs  = symbol_table [const_fun,ident_fun]
-        , _fact  = fromList 
+basic_theory = create $ do 
+        types .= symbol_table [BoolSort, pair_sort, set_sort]
+        funs  .= symbol_table [const_fun,ident_fun]
+        fact  .= fromList 
            [ (label "@basic@@_0", axm0) 
            , (label "@basic@@_1", axm1) ]
-        , _theorySyntacticThm = empty_monotonicity
+        syntacticThm .= empty_monotonicity
             { _associative = fromList 
                     [("and",mztrue)
                     ,("or", mzfalse)
@@ -68,7 +69,7 @@ basic_theory = empty_theory
              ++ [ (("=>","not"),Independent zfollows')
                 , (("=>","=>"), Side (Just zfollows')
                                      (Just zimplies')) ] }
-        , _notation = functional_notation }
+        notation .= functional_notation
    where
         zimplies' = Rel implies_fun Direct
         zfollows' = Rel implies_fun Flipped
@@ -81,9 +82,9 @@ basic_theory = empty_theory
 --        axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue $
 --                mzeq x y `mzeq` mzeq_symb x y
         axm0 = $typeCheck $ mzforall [x_decl,y_decl] mztrue $ 
-            zselect (zconst x) y .= x
+            zselect (zconst x) y .=. x
         axm1 = $typeCheck $ mzforall [x_decl] mztrue $
-            zselect zident x .= x
+            zselect zident x .=. x
 
 th_notation :: Theory -> Notation
 th_notation th = res
@@ -114,8 +115,13 @@ theory_facts th =
         facts  = _fact th
         new_fact = facts
 
+instance HasSymbols Theory Var where
+    symbols t = symbol_table $ defsAsVars (theory_ctx t)^.constants
+
 instance Default Theory where
     def = genericDefault
+
+instance NFData Theory where
 
 make_theory :: String -> M () -> Theory
 make_theory name (M cmd) = to $ gBuild (from empty_theory) $ L.map from ts'
@@ -125,5 +131,3 @@ make_theory name (M cmd) = to $ gBuild (from empty_theory) $ L.map from ts'
         n = length $ show $ length ts
         pad m = name ++ replicate (n - length (show m)) ' ' ++ show m
         pad' k _ = label $ pad k
-
-derive makeNFData ''Theory

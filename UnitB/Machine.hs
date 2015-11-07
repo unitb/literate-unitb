@@ -7,6 +7,7 @@ module UnitB.Machine where
 
     -- Modules
 import Logic.ExpressionStore (ExprStore, empty_store)
+import Logic.Expr.Scope
 import Logic.Operator
 import Logic.Proof.POGenerator ( POGen )
 import Logic.Theory as Th
@@ -26,11 +27,11 @@ import Control.Exception
 import Control.Lens hiding (indices)
 
 import Control.Monad hiding ( guard )
+import Control.Monad.Reader.Class
 import Control.Monad.State
 import Control.Monad.Trans.Maybe
 
 import           Data.Default
-import           Data.DeriveTH
 import           Data.Foldable as F (all)
 import           Data.Functor.Compose
 import           Data.Functor.Classes
@@ -49,6 +50,7 @@ import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.TH
+import Utilities.Trace
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 
@@ -70,7 +72,7 @@ data Machine'' expr =
         { _machine''Name :: String
         , _theory     :: Theory
         , _variables  :: Map String Var
-        , _abs_vars   :: Map String Var
+        , _machine''Abs_vars :: Map String Var
         , _del_vars   :: Map String Var
         , _init_witness :: Map Var expr
         , _del_inits  :: Map Label expr
@@ -93,10 +95,10 @@ data DocItem =
         | DocEvent EventId 
         | DocInv Label
         | DocProg Label
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic)
 
 data Rule = forall r. RefRule r => Rule r
-    deriving Typeable
+    deriving (Typeable)
 
 class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
     refinement_po :: a -> RawMachine -> POGen ()
@@ -137,13 +139,13 @@ makeLenses ''EventTable
 makeLenses ''Machine''
 makeFields ''Machine''
 
-instance Show expr => HasName (Machine' expr) String where
+instance (Show expr, HasScope expr) => HasName (Machine' expr) String where
     name = content assert.name
 
 --instance Show expr => HasMachine'' (Machine' expr) expr where
 --    machine'' = content assert
 
-instance Show expr => HasInvariant (Machine'' expr) where
+instance (Show expr, HasScope expr) => HasInvariant (Machine'' expr) where
     invariant m = 
         [ ("inv0", F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) $ conc_events m) 
         , ("inv1", F.all validEvent $ m^.props.transient)
@@ -151,12 +153,28 @@ instance Show expr => HasInvariant (Machine'' expr) where
             -- valid witnesses
         , ("inv3", G.member (Left SkipEvent) (Left SkipEvent) $ m^.events )  
             -- has skip and (a)skip refined by (b)skip
+        --, ("inv4", scopeCorrect m)
             -- valid scopes
-        ] 
+        ] ++ L.map (\(x,y) -> (format "inv4: {0}\n{1}" x y, False)) (scopeCorrect m)
         where
             validEvent (Tr _ _ es _) = L.all (`M.member` nonSkipUpwards m) es
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) es
+
+instance HasScope expr => HasScope (Machine'' expr) where
+    scopeCorrect' m = withVars (symbols $ m^.theory) $ mconcat 
+        [ withPrefix "inherited" $
+          withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
+            $ scopeCorrect' $ m^.inh_props 
+        , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
+            $ f $ scopeCorrect' $ m^.props 
+        ]
+        where
+            f cmd = do
+                x  <- ask
+                xs <- cmd
+                return $ L.map (trace $ "vars (mch): " ++ show (x^.constants)) xs
+                --fmap $ fmap $ trace ("symbols: " ++ show (symbols $ m^.theory))
 
 instance Controls (Machine'' expr) (Machine'' expr) where 
     content' = id
@@ -317,15 +335,17 @@ events :: Lens' (Machine'' expr)
 events = event_table . table
 
 -- data Decomposition = Decomposition 
-    
-data System = Sys 
+
+type System = System'
+
+data System' = Sys 
         {  proof_struct :: [(Label,Label)]
         ,  ref_struct   :: Map Label Label
         ,  expr_store   :: ExprStore
         ,  machines     :: Map String Machine
         ,  theories     :: Map String Theory
         }
-    deriving Eq
+    deriving (Eq,Generic)
 
 empty_system :: System
 empty_system = Sys [] M.empty empty_store 
@@ -342,7 +362,7 @@ all_notation m = flip precede logical_notation
     where
         th = (m^.content'.theory) : elems (_extends $ m^.content'.theory)
 
-instance Show expr => Named (Machine' expr) where
+instance (IsExpr expr) => Named (Machine' expr) where
     decorated_name' = return . view name
 
 _name :: Controls (machine expr) (Machine'' expr)
@@ -363,7 +383,7 @@ ba_predicate m evt =          ba_predicate' (m^.content'.variables) (evt^.new.ac
 
 mkCons ''Machine''
 
-empty_machine :: IsExpr expr => String -> Machine' expr
+empty_machine :: (HasScope expr, IsExpr expr) => String -> Machine' expr
 empty_machine n = check assert $ genericDefault
             & machine''Name .~ n
             -- & events .~ _ $ G.fromList _ _
@@ -376,8 +396,16 @@ empty_machine n = check assert $ genericDefault
     where
         skip = Left SkipEvent
 
-derive makeNFData ''DocItem
-derive makeNFData ''Machine''
-derive makeNFData ''Rule
-derive makeNFData ''System
+newMachine :: IsExpr expr 
+           => Assert
+           -> String
+           -> State (Machine'' expr) a
+           -> Machine' expr
+newMachine arse name f = empty_machine name & content arse %~ execState f
+
+instance NFData DocItem where
+instance NFData expr => NFData (Machine'' expr) where
+instance NFData Rule where
+    rnf (Rule x) = rnf x
+instance NFData System' where
 

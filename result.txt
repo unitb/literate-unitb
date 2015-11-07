@@ -30,9 +30,6 @@
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:200 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:379 ===
-
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:383 ===
 +++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:203 ===
@@ -48,18 +45,50 @@
 +++ OK, passed 100 tests.
 
 === prop_all_valid from ./Utilities/Relation.hs:233 ===
-=== prop_lines_unlines_cancel from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Utilities/Lines.hs:62 ===
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:379 ===
 
-=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:388 ===
-
-
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:399 ===
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:383 ===
 
 === prop_b from ./Utilities/EditDistance.hs:135 ===
 
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:388 ===
+
+=== prop_lines_unlines_cancel from ./Utilities/Lines.hs:62 ===
++++ OK, passed 100 tests.
+
+=== prop_unlines_lines_cancel from ./Utilities/Lines.hs:71 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:253 ===
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:399 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:259 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:141 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:147 ===
+
 === prop_top_sort_complete from ./Utilities/Permutation.hs:411 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:262 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:153 ===
 
 === prop_top_sort_cycles from ./Utilities/Permutation.hs:418 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:159 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
 
 === prop_top_sort_singles from ./Utilities/Permutation.hs:424 ===
 
@@ -68,13 +97,30 @@
 === prop_closure_complete from ./Utilities/Permutation.hs:461 ===
 
 === prop_closure_contain_all_edges from ./Utilities/Permutation.hs:464 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:271 ===
 
 === prop_closure_closed from ./Utilities/Permutation.hs:469 ===
++++ OK, passed 100 tests.
+
+=== prop_lines'_concat_cancel from ./Utilities/Lines.hs:77 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:274 ===
+
 
 === prop_closure_minimal from ./Utilities/Permutation.hs:475 ===
 
++++ OK, passed 100 tests.
 
-=== prop_a from ./Utilities/EditDistance.hs:141 ===
+=== prop_concat_lines'_cancel from ./Utilities/Lines.hs:80 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:280 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -273,112 +319,14 @@
 |  |  |  +- test1: verify m1
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
-+++ OK, passed 100 tests.
-
-=== prop_unlines_lines_cancel from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Utilities/Lines.hs:71 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:147 ===
-+++ OK, passed 100 tests.
-
-=== prop_union_def from ./Utilities/Relation.hs:253 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:259 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:262 ===
-+++ OK, passed 100 tests.
-
-=== prop_lines'_concat_cancel from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Utilities/Lines.hs:77 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
-+++ OK, passed 100 tests.
-
-=== prop_concat_lines'_cancel from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Utilities/Lines.hs:80 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:271 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:274 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:280 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:295 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:153 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:298 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
-+++ OK, passed 100 tests.
-
-=== prop_concat_lines'_cancel_regression from /Users/Simon/Dropbox/UnitB/Haskell 2/skell 2/literate-unitb-code-gen/Utilities/Lines.hs:83 ===
-+++ OK, passed 100 tests.
-
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
-
-=== prop_g from ./Utilities/EditDistance.hs:159 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterDom_def from ./Utilities/Relation.hs:328 ===
-+++ OK, passed 100 tests.
-
-=== prop_filterRan_def from ./Utilities/Relation.hs:331 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:334 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:339 ===
-+++ OK, passed 100 tests.
-
-=== prop_bimapMaybe_def from ./Utilities/Relation.hs:344 ===
-+++ OK, passed 100 tests.
-
-
 |  |  |  +- test4: quantified union
 |  |  +- [ Success: 5 / 5 ]
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
 |  |  |  +- test2: verify m2
 |  |  +- [ Success: 3 / 3 ]
 |  |  +- QuickCheck spec of machine parser
@@ -414,6 +362,58 @@
 |  |  +- [ Success: 19 / 19 ]
 |  +- [ Success: 25 / 25 ]
 |  +- latex parser
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:295 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:298 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
++++ OK, passed 100 tests.
+
+=== prop_concat_lines'_cancel_regression from ./Utilities/Lines.hs:83 ===
++++ OK, passed 100 tests.
+
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
++++ OK, passed 100 tests.
+
+=== prop_filterDom_def from ./Utilities/Relation.hs:328 ===
++++ OK, passed 100 tests.
+
+=== prop_filterRan_def from ./Utilities/Relation.hs:331 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeDom_def from ./Utilities/Relation.hs:334 ===
++++ OK, passed 100 tests.
+
+=== prop_mapMaybeRan_def from ./Utilities/Relation.hs:339 ===
++++ OK, passed 100 tests.
+
+=== prop_bimapMaybe_def from ./Utilities/Relation.hs:344 ===
++++ OK, passed 100 tests.
+
 +++ OK, passed 100 tests.
 
 === prop_flatten_parse_inv_regression from ./Latex/Test_Latex_Parser.hs:176 ===
@@ -517,10 +517,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   48420 total
+   48558 total
     1043 Document/phase.hs
-    1009 UnitB/PO.hs
-     938 Document/Phase/Expressions.hs
-     807 Logic/Expr/Expr.hs
+    1008 UnitB/PO.hs
+     934 Document/Phase/Expressions.hs
+     808 Logic/Expr/Expr.hs
      735 Logic/Proof/Tactics.hs
-Run time: 3m 6s
+Run time: 2m 19s

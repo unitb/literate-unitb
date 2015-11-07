@@ -1,7 +1,9 @@
 module Utilities.Lens where
 
 import Control.Lens
+import Control.Monad.State
 
+import Data.Default
 import Data.Map as M
 import Data.Tuple
 
@@ -24,3 +26,6 @@ filterL p f x
 
 secondL :: LensLike f s t a b -> LensLike f (k,s) t (k,a) b
 secondL ln f x = ln (\y -> f $ x & _2 .~ y) (snd x)
+
+create :: Default a => State a b -> a
+create cmd = execState cmd def

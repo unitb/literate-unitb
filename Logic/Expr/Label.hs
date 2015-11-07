@@ -8,6 +8,7 @@ import Logic.Expr.Classes
 import Control.DeepSeq
 
 import Data.DeriveTH
+import Data.Foldable as F
 import Data.List as L
 import Data.Map hiding ( map, split )
 import Data.String
@@ -34,8 +35,8 @@ instance IsLabel Label where
 label :: String -> Label
 label s = Lbl s
 
-symbol_table :: Named a => [a] -> Map String a
-symbol_table xs = fromList $ map as_pair xs
+symbol_table :: (Named a, Foldable f) => f a -> Map String a
+symbol_table xs = fromList $ map as_pair $ F.toList xs
 
 decorated_table :: Named a => [a] -> Map String a
 decorated_table xs = fromList $ map (\x -> (decorated_name x, x)) xs

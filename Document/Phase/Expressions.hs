@@ -50,7 +50,6 @@ import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as S
 import qualified Data.Traversable as T
 
 import Text.Printf
@@ -224,9 +223,6 @@ instance Scope Initially where
             InhAdd _ -> "initialization"
             InhDelete _ -> "deleted initialization"
     rename_events _ x = [x]
-
-used_var' :: IsExpr expr => expr -> Map String Var
-used_var' = symbol_table . S.toList . used_var . asExpr
 
 instance IsExprScope Initially where
     toNewEvtExprDefault _ _ = return []

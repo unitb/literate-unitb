@@ -15,3 +15,4 @@ type ExprP = Either [String] Expr
 
 raw :: (Functor m, IsExpr expr) => m expr -> m RawExpr
 raw = fmap getExpr
+

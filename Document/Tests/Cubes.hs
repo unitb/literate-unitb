@@ -62,9 +62,9 @@ machine6 :: Machine
 machine6 = fmap (DispExpr "") $ (empty_machine "m0") & content assert %~ \m ->
         m {  _variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
           ,  _inits = fromList
-                  [ (label "in2", $typeCheck$ c .= 6)
-                  , (label "in1", $typeCheck$ b .= 1)
-                  , (label "init0", $typeCheck$ (n .= 0) /\ (a .= 0) )
+                  [ (label "in2", $typeCheck$ c .=. 6)
+                  , (label "in1", $typeCheck$ b .=. 1)
+                  , (label "init0", $typeCheck$ (n .=. 0) /\ (a .=. 0) )
                   ]
           ,  _props = prop_set6
           ,  _event_table = newEvents [("evt",event6_evt)]
@@ -83,11 +83,11 @@ prop_set6 = empty_property_set {
                     (label "m0/evt/INV/inv2", calc) ],
         _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
-                [ $typeCheck$ a .= (n .^ 3)
-                , $typeCheck$ b .=    3 * (n .^ 2)
+                [ $typeCheck$ a .=. (n .^ 3)
+                , $typeCheck$ b .=.    3 * (n .^ 2)
                                    + 3 * n
                                    + 1     
-                , $typeCheck$ c .= 6 * n + 6 ] }
+                , $typeCheck$ c .=. 6 * n + 6 ] }
     where
         a = Right $ Word var_a
         b = Right $ Word var_b

@@ -85,6 +85,9 @@ instance HasExprs (AbsSequent t q) (AbsExpr t q) where
                 <*> traverse f hyp1 
                 <*> f g
 
+instance HasConstants (AbsSequent t q) (Map String (AbsVar t)) where
+    constants = context.constants
+
 predefined :: [String]
 predefined = [ "=","union","and","or","=>","<=","<",">","^"
              , "subset","select","true","false"

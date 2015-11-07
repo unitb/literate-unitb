@@ -37,6 +37,7 @@ module UnitB.Property
 where
 
     -- Modules
+import Logic.Expr.Scope
 import Logic.Proof
 
 import Theories.SetTheory
@@ -45,16 +46,20 @@ import UnitB.Expr
 
     -- Libraries
 import Control.DeepSeq
+import Control.Monad.Reader
 import Control.Lens hiding (Const)
 
 import Data.Default
 import Data.DeriveTH
-import Data.Map  as M
+import Data.Foldable
+import Data.Map  as M hiding (fold)
+import Data.Monoid
 import Data.List as L
 import Data.String
 import Data.Typeable
 
 import Utilities.TableConstr
+import Utilities.Trace
 
 type Constraint = Constraint' Expr
 type RawConstraint = Constraint' RawExpr
@@ -210,6 +215,34 @@ make_unique suf vs (Binder q d r xp t) = Binder q d (f r) (f xp) t
         f = make_unique suf local
 
 makeLenses ''PropertySet'
+
+instance HasScope expr => HasScope (Transient' expr) where
+    scopeCorrect' (Tr vs e _ _) = withVars vs $ scopeCorrect' e
+
+instance HasScope expr => HasScope (ProgressProp' expr) where
+    scopeCorrect' (LeadsTo vs p q) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
+
+instance HasScope expr => HasScope (SafetyProp' expr) where
+    scopeCorrect' (Unless vs p q _) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
+
+instance HasScope expr => HasScope (Constraint' expr) where
+    scopeCorrect' (Co vs e) = withPrimes $ withVars (symbol_table vs) $ scopeCorrect' e
+
+instance HasScope expr => HasScope (PropertySet' expr) where
+    scopeCorrect' x = f $ withPrefix "props" $ fold $
+        [ withPrefix "transient"  $ foldMapWithKey scopeCorrect'' (x^.transient)
+        , withPrefix "constraint" $ foldMapWithKey scopeCorrect'' (x^.constraint)
+        , withPrefix "invariant"  $ foldMapWithKey scopeCorrect'' (x^.inv)
+        , withPrefix "theorem"    $ foldMapWithKey scopeCorrect'' (x^.inv_thm)
+        , withPrefix "progress"   $ foldMapWithKey scopeCorrect'' (x^.progress)
+        , withPrefix "safety" $ foldMapWithKey scopeCorrect'' (x^.safety)
+        --, withPrefix "proofs" $ foldMapWithKey scopeCorrect'' (x^.proofs)
+        ]
+        where
+            f cmd = do
+                x  <- ask
+                xs <- cmd
+                return $ L.map (trace $ "vars: " ++ show (x^.constants)) xs
 
 derive makeNFData ''ProgId
 derive makeNFData ''Constraint'

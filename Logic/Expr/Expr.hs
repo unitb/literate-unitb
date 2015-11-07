@@ -15,19 +15,19 @@ module Logic.Expr.Expr
     , Var, FOVar, AbsVar(..), UntypedVar
     , Def, FODef, Def', AbsDef(..)
     , IsQuantifier(..)
-    , HasAbsContext(..)
-    , HasDummies(..)
     , IsExpr(..)
     , IsGenExpr(..)
     , Lifting(..)
     , HasExprs(..)
+    , HasSymbols(..)
     , type_of, var_type
     , merge, merge_all
     , merge_ctx, merge_all_ctx
     , mk_context, empty_ctx
     , mk_fun, mk_lifted_fun
     , isLifted
-    , used_var, used_fun, used_types
+    , used_var, used_var'
+    , used_fun, used_types
     , substitute, rename
     , z3_fun_name
     , z3_decoration
@@ -40,22 +40,29 @@ module Logic.Expr.Expr
     , pair, pair_type, pair_sort
     , free_vars
     , var_decl
-    , target, symbols
+    , target
     , finiteness
     , typeCheck, withLoc, locMsg
     , rewriteExpr, rewriteExprM
+    , defsAsVars, defAsVar
         -- Lenses
     , funName, arguments
     , result, annotation
     , _Word, _Const, _FunApp
     , _Binder, _Cast, _Lift
+    , HasAbsContext(..)
+    , HasConstants(..)
+    , HasSorts(..)
+    , HasDummies(..)
     )
 where
 
     -- Module
 import Logic.Expr.Label
 import Logic.Expr.Classes
+import Logic.Expr.Scope
 import Logic.Expr.Type
+import Logic.Expr.Variable
 
     -- Library
 import           GHC.Generics hiding (to)
@@ -64,6 +71,7 @@ import Control.Arrow
 import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
 import Control.DeepSeq
 import Control.Monad.Reader
+import Control.Monad.State
 import Control.Monad.Identity
 import Control.Lens hiding (rewrite,Context
                            ,Const,Context',List)
@@ -242,6 +250,9 @@ type FOContext = AbsContext FOType FOQuantifier
 class Symbol a t q where
     decl :: a -> [AbsDecl t q]
 
+instance Symbol (AbsVar t) t q where
+    decl (Var name typ)        = [ConstDecl name typ]
+
 z3_decoration :: TypeSystem t => t -> String
 z3_decoration t = runReader (z3_decoration' t) ProverOutput
 
@@ -300,15 +311,6 @@ mk_fun ps n ts t = Fun ps n Unlifted ts t
 
 mk_lifted_fun :: [t] -> String -> [t] -> t -> AbsFun t
 mk_lifted_fun ps n ts t = Fun ps n Lifted ts t
-
-type UntypedVar = AbsVar ()
-
-type Var = AbsVar GenericType
-
-type FOVar = AbsVar FOType
-
-data AbsVar t = Var String t
-    deriving (Eq,Ord,Generic,Typeable,Data)
 
 target :: AbsDef t q -> AbsExpr t q
 target (Def _ _ _ _ e) = e
@@ -496,15 +498,6 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
                 return $ List [Str n, t']
     rewriteM' = id
     
-instance TypeSystem t => Tree (AbsVar t) where
-    as_tree' (Var vn vt) = do
-        t <- as_tree' vt
-        return $ List [Str vn, t]
-    rewriteM' = id
-
-instance TypeSystem t => Show (AbsVar t) where
-    show (Var n t) = n ++ ": " ++ show (as_tree t)
-
 instance TypeSystem t => Show (AbsFun t) where
     show (Fun xs n _ ts t) = n ++ show xs ++ ": " 
             ++ args ++ show (as_tree t)
@@ -530,15 +523,12 @@ instance (TypeSystem t) => Typed (AbsFun t) where
 instance TypeSystem t => Typed (AbsDef t q) where
     type TypeOf (AbsDef t q) = t
 
-instance TypeSystem t => Typed (AbsVar t) where
-    type TypeOf (AbsVar t) = t
-
 instance TypeSystem t => Typed (AbsExpr t q) where
     type TypeOf (AbsExpr t q) = t
 
 data AbsContext t q = Context
         { _absContextSorts :: M.Map String Sort
-        , _constants :: M.Map String (AbsVar t)
+        , _absContextConstants :: M.Map String (AbsVar t)
         , _functions :: M.Map String (AbsFun t)
         , _definitions :: M.Map String (AbsDef t q)
         , _absContextDummies :: M.Map String (AbsVar t)
@@ -548,12 +538,27 @@ data AbsContext t q = Context
 makeFields ''AbsContext
 makeClassy ''AbsContext
 
-symbols :: HasAbsContext ctx t0 t1
-        => ctx -> M.Map String ()
-symbols ctx = M.unions [f a,f b,f c]
-    where
-        (Context _ a b c _) = ctx^.absContext
-        f = M.map (const ())
+defAsVar :: AbsDef t q -> Maybe (AbsVar t)
+defAsVar (Def [] n [] t _) = Just $ Var n t
+defAsVar _ = Nothing
+
+defsAsVars :: AbsContext t q -> AbsContext t q
+defsAsVars = execState $ do
+        defs <- uses definitions $ M.mapMaybe defAsVar
+        constants %= M.union defs
+
+instance HasScope Expr where
+    scopeCorrect' e = do
+        areVisible [vars,constants] (used_var' e) e
+
+class HasSymbols a b | a -> b where
+    symbols :: a -> M.Map String b
+
+instance HasSymbols (AbsContext t q) () where
+    symbols ctx = M.unions [f a,f b,f c]
+        where
+            (Context _ a b c _) = ctx^.absContext
+            f = M.map (const ())
 
 instance Symbol Sort t q where
     decl s = [SortDecl s]
@@ -561,9 +566,6 @@ instance Symbol Sort t q where
 instance Symbol (AbsFun t) t q where
     decl (Fun xs name Unlifted params ret) = [FunDecl xs name params ret]
     decl _ = error "Symbol.decl: cannot declare lifted functions"
-
-instance Symbol (AbsVar t) t q where
-    decl (Var name typ)        = [ConstDecl name typ]
 
 instance Symbol (AbsDef t q) t q where
     decl (Def xs name ps typ ex)  = [FunDef xs name ps typ ex]
@@ -659,6 +661,9 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr _) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
+used_var' :: IsExpr expr => expr -> M.Map String Var
+used_var' = symbol_table . S.toList . used_var . asExpr
+
 free_vars :: Context -> Expr -> M.Map String Var
 free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
     where
@@ -698,13 +703,6 @@ instance TypeSystem t => Named (AbsDef t q) where
             ts' <- mapM z3_decoration' ts
             return $ x ++ concat ts'
 
-instance HasName (AbsVar t) String where
-    name = to $ \(Var x _) -> x
-
-instance Named (AbsVar t) where
-    decorated_name' = return . view name
-
-
 used_types :: (TypeSystem t, IsQuantifier q) => AbsExpr t q -> S.Set t
 used_types e = visit (flip $ S.union . used_types) (
         case e of
@@ -730,8 +728,8 @@ defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
 
 
 class (IsGenExpr e
-        , Show e
-        , Eq e
+        , Show e, Eq e
+        , HasScope e
         , TypeT e ~ GenericType
         , AnnotT e ~ GenericType
         , QuantT e ~ HOQuantifier)

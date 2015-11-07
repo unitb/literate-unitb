@@ -6,6 +6,7 @@ module Logic.Expr
     , module Logic.Expr.Label
     , module Logic.Expr.PrettyPrint
     , module Logic.Expr.Type
+    , module Logic.Expr.Variable
     )
 where
 
@@ -16,3 +17,4 @@ import Logic.Expr.Genericity hiding ( Generic, variables )
 import Logic.Expr.Label
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
+import Logic.Expr.Variable

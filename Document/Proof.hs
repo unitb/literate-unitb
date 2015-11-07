@@ -479,15 +479,13 @@ default_setting n = PSetting
 --     def = default_setting
 
 setting_from_context :: Notation -> Context -> ParserSetting
-setting_from_context notation ctx = default_setting notation
+setting_from_context notation ctx' = default_setting notation
         -- & language .~ notation
-        & sorts .~ ss
-        & decls .~ vs `union` M.mapMaybe f ds
-        & dum_ctx .~ dums
+        & sorts .~ ctx^.sorts
+        & decls .~ ctx^.constants
+        & dum_ctx .~ ctx^.dummies
     where
-        Context ss vs _ ds dums = ctx
-        f (Def [] n [] t _) = Just $ Var n t
-        f _ = Nothing
+        ctx = defsAsVars ctx'
 
 with_vars :: ParserSetting -> Map String Var -> ParserSetting
 with_vars setting vs = setting & decls %~ (vs `union`)

@@ -32,6 +32,8 @@ import Logic.Expr hiding ((</>))
 import Logic.Lambda
 import Logic.Proof
 
+import Z3.Version
+
     -- Libraries
 import Control.Arrow
 import Control.DeepSeq
@@ -44,64 +46,23 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Reader
 
-import Data.ConfigFile
 import Data.Char
 import Data.DeriveTH
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
-import           Data.List.Utils as L
+--import           Data.List.Utils as L
 import qualified Data.Map as M
 import qualified Data.Set as S
 import           Data.Typeable 
 
-import Interactive.Config
-
-import           System.Directory
-import           System.Environment
 import           System.Exit
-import           System.FilePath as F
 import           System.IO.Unsafe
 import           System.Process
 
-import Text.Printf
-
-import           Utilities.Format
-
-z3_path :: String
-z3_path = z3c_path z3_config
-
-default_timeout :: Int
-default_timeout = z3c_timeout z3_config
+import           Text.Printf
 
 total_caps :: SSem
 total_caps = unsafePerformIO $ new $ z3c_capacity z3_config
-
-data Z3Config = Z3Config 
-    { z3c_path :: FilePath
-    , z3c_timeout :: Int
-    , z3c_capacity :: Int }
-    deriving Show
-
-z3_config :: Z3Config
-z3_config = unsafePerformIO $ do
-    let fn = "z3_config.conf"
-    lc   <- doesFileExist fn
-    path <- getExecutablePath
-    gc   <- doesFileExist $ path </> fn
-    cp <- if lc then do
-        readfile emptyCP fn
-    else if gc then do
-        readfile emptyCP fn
-    else
-        return $ return emptyCP
-    let option :: Get_C a => a -> String -> a
-        option x name = fromRight x $ do
-            cp <- cp
-            get cp "DEFAULT" name
-    return $ Z3Config
-        { z3c_path = option "z3" "z3_path" 
-        , z3c_timeout  = option 20 "timeout"
-        , z3c_capacity = option 32 "capacity" }
 
 instance Tree Command where
     as_tree' = return . as_tree
@@ -169,45 +130,6 @@ instance Tree Command where
 --            strat t = List [Str "try-for", Str "200", List [Str "then", t, Str "sat"] ]
     as_tree GetModel      = List [Str "get-model"]
     rewriteM' = id
-
-check_z3_bin :: IO Bool
-check_z3_bin = do
-    b <- z3_installed
-    if b then do
-        (v,h) <- z3_version
-        let versions = [ ("4.3.2","2ca14b49fe45")
-                       , ("4.3.2","784307fc3001")
-                       , ("4.3.2","5e72cf0123f6")
-                       , ("4.4.0","0482e7fe727c")
-                       , ("4.4.1","e8811748d39a")] -- trial
-        if (v,h) `elem` versions then
-            return True
-        else do
-            printf "Expecting z3 %s\n" $ intercalate " or\n"
-                $ map (uncurry $ printf "z3 version %s, hashcode %s") versions
-            return False
-    else do
-        putStrLn ("A 'z3' executable has not been found in the path ")
-        return False
-
-z3_version :: IO (String,String)
-z3_version = do
-        xs <- (words . head . lines) `liftM` readProcess z3_path ["--help"] ""
-        let hashcode = dropWhile (/= "hashcode") xs !! 1
-            version = dropWhile (/= "[version") xs !! 1
-        return (version, filter isHexDigit hashcode)
-
-
-z3_installed :: IO Bool        
-z3_installed = do
-    path <- getEnv "PATH"
-    xs   <- if is_os_windows then do
-            let ps = L.split ";" path ++ ["."]
-            forM ps (doesFileExist . (`combine` "z3.exe"))
-    else do
-            let ps = L.split ":" path
-            forM ps (doesFileExist . (`combine` "z3"))
-    return $ or xs
 
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (head e) False
@@ -333,7 +255,7 @@ instance Exception Z3Exception
 
 map_failures :: (Int -> Label) -> IO a -> IO a
 map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
-        fail $ format "during verification of {0}:\n{1}" (po_name i) msg 
+        fail $ printf "during verification of %s:\n%s" (show $ po_name i) msg 
 
 --subexpr :: TypeSystem t => AbsExpr t -> [AbsExpr t]
 --subexpr e = reverse $ f [] e
@@ -404,7 +326,7 @@ verify lbl xs n = do
             let header = Comment $ show lbl
             n <- modifyMVar log_count $ 
                 return . ((1+) &&& id)
-            writeFile (format "log{0}-1.z3" n) (unlines $ map pretty_print' $ header : ys)
+            writeFile (printf "log%d-1.z3" n) (unlines $ map pretty_print' $ header : ys)
             -- writeFile (format "log{0}-2.z3" n) code
             -- return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show _err) (show out))
             return $ Right SatUnknown

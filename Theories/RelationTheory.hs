@@ -67,55 +67,55 @@ relation_theory = make_theory "relation" $ do
         p1 = mzpair x3 x4
         p2 = mzpair x1 x4
     -- $assert $   x1 `zelem` zreldom r1 
-    --         .== mzexists' [x2] mztrue (mzpair x1 x2 `zelem` r1)
+    --         .==. mzexists' [x2] mztrue (mzpair x1 x2 `zelem` r1)
         -- def of dom
     $assert $     mzpair x1 x2 `zelem` r1
               .=> x1 `zelem` zreldom r1
         -- dom over domres
-    $assert $ zreldom (s1 `zreldomres` r1) .= s1 `zintersect` zreldom r1
+    $assert $ zreldom (s1 `zreldomres` r1) .=. s1 `zintersect` zreldom r1
         -- p |-> _ in {p} <| _
-    $assert $ p' `zelem` (zmk_set x1 `zreldomres` r1) .== p' `zelem` r1
+    $assert $ p' `zelem` (zmk_set x1 `zreldomres` r1) .==. p' `zelem` r1
         -- singleton set to singleton rel
-    $assert $ zasrel (zmk_set x1) .= zmk_set (mzpair x1 x1)
+    $assert $ zasrel (zmk_set x1) .=. zmk_set (mzpair x1 x1)
         -- assoc of ;
-    $assert $ (r1 `zseq` r3) `zseq` r5 .= r1 `zseq` (r3 `zseq` r5)
+    $assert $ (r1 `zseq` r3) `zseq` r5 .=. r1 `zseq` (r3 `zseq` r5)
         -- left monotonicity 
     $assert $ r1 `zsubset` r2 .=> (r1 `zseq` r3) `zsubset` (r2 `zseq` r3)
         -- right monotonicity 
     $assert $ r1 `zsubset` r2 .=> (r4 `zseq` r1) `zsubset` (r4 `zseq` r2)
         -- <| and ; assoc
-    -- $assert $ (s1 `zreldomres` r1) `zseq` r3 .= s1 `zreldomres` (r1 `zseq` r3)
+    -- $assert $ (s1 `zreldomres` r1) `zseq` r3 .=. s1 `zreldomres` (r1 `zseq` r3)
         -- *(_ \/ _) to *(_ ; _)
-    $assert $ zstar (rr `zunion` rr') .= zstar (zstar rr `zseq` rr') `zseq` zstar rr
-    $assert $ zstar (rr `zunion` rr') .= zstar rr' `zseq` zstar (rr `zseq` zstar rr')
+    $assert $ zstar (rr `zunion` rr') .=. zstar (zstar rr `zseq` rr') `zseq` zstar rr
+    $assert $ zstar (rr `zunion` rr') .=. zstar rr' `zseq` zstar (rr `zseq` zstar rr')
         -- unfold
-    $assert $ (zstar rr `zseq` rr) `zunion` zid .= zstar rr
-    $assert $ (rr `zseq` zstar rr) `zunion` zid .= zstar rr
+    $assert $ (zstar rr `zseq` rr) `zunion` zid .=. zstar rr
+    $assert $ (rr `zseq` zstar rr) `zunion` zid .=. zstar rr
         -- ; over \/ 
-    $assert $ (r1 `zunion` r2) `zseq` r3 .= (r1 `zseq` r3) `zunion` (r2 `zseq` r3)
-    $assert $ r4 `zseq` (r1 `zunion` r2)  .= (r4 `zseq` r1) `zunion` (r4 `zseq` r2)
-    $assert $ zmk_set p `zseq` zset_all .= zmk_set x1 `zreldomres` zset_all 
-    $assert $ zmk_set p' `zseq` zset_all `zseq` zmk_set p1 .= zmk_set p2
-    -- $assert $ zstar (r1 `zseq` r6) .= ( r1 `zseq` zstar (r6 `zseq` r1) `zseq` r6 ) `zunion` zid
+    $assert $ (r1 `zunion` r2) `zseq` r3 .=. (r1 `zseq` r3) `zunion` (r2 `zseq` r3)
+    $assert $ r4 `zseq` (r1 `zunion` r2)  .=. (r4 `zseq` r1) `zunion` (r4 `zseq` r2)
+    $assert $ zmk_set p `zseq` zset_all .=. zmk_set x1 `zreldomres` zset_all 
+    $assert $ zmk_set p' `zseq` zset_all `zseq` zmk_set p1 .=. zmk_set p2
+    -- $assert $ zstar (r1 `zseq` r6) .=. ( r1 `zseq` zstar (r6 `zseq` r1) `zseq` r6 ) `zunion` zid
     $assert $ zasrel (zmk_set x1) `zseq` zset_all `zseq` zasrel (zmk_set x2)
-              .= zmk_set (mzpair x1 x2)
+              .=. zmk_set (mzpair x1 x2)
 
-    $assert $ mzpair x1 x1' `zelem` zid .== x1 .= x1'
-    $assert $ zid `zseq` r1 .= r1
-    $assert $ r1 `zseq` zid .= r1
+    $assert $ mzpair x1 x1' `zelem` zid .==. x1 .=. x1'
+    $assert $ zid `zseq` r1 .=. r1
+    $assert $ r1 `zseq` zid .=. r1
     $assert $ rr `zsubset` zstar rr
     -- $assert $ zid `zsubset` zstar rr
     $assert $ rr `zsubset` rr' .=> zstar rr `zsubset` zstar rr'
     $assert $ p `zelem` zstar (rr `zintersect` rr') .=> p `zelem` zstar rr
     $assert $ p `zelem` zstar rr .=> p `zelem` zstar (rr `zunion` rr')
-    $assert $ zstar rr `zseq` zstar rr .= zstar rr
+    $assert $ zstar rr `zseq` zstar rr .=. zstar rr
     $assert $ r1 `zsubset` r2 .=> (r1 `zseq` r3) `zsubset` (r2 `zseq` r3)
     $assert $ r1 `zsubset` r2 .=> (r4 `zseq` r1) `zsubset` (r4 `zseq` r2)
-    $assert $ zplus rr .= zstar rr `zseq` rr
-    $assert $ zplus rr .= rr `zseq` zstar rr
-    $assert $ x2 `zelem` zlookup r1 s1 .== mzexists' [x1] (x1 `zelem` s1) (mzpair x1 x2 `zelem` r1)
+    $assert $ zplus rr .=. zstar rr `zseq` rr
+    $assert $ zplus rr .=. rr `zseq` zstar rr
+    $assert $ x2 `zelem` zlookup r1 s1 .==. mzexists' [x1] (x1 `zelem` s1) (mzpair x1 x2 `zelem` r1)
     $assert $ x1 `zelem` s1 .=> 
               (    mzpair x1 x2 `zelem` r1 
                .=> x2 `zelem` zlookup r1 s1)
-    -- $assert $ x2 `zelem` zlookup r1 s1 .== mzpair x1 x2 `zelem` r1
+    -- $assert $ x2 `zelem` zlookup r1 s1 .==. mzpair x1 x2 `zelem` r1
     -- _

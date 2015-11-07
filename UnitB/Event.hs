@@ -62,6 +62,8 @@ where
     -- Modules
 import Theories.SetTheory
 
+import Logic.Expr.Scope
+
 import UnitB.Expr
 import UnitB.Property
 
@@ -72,6 +74,7 @@ import Control.Lens hiding (indices)
 import Data.Default
 import Data.DeriveTH
 import Data.Either.Combinators
+import Data.Foldable as F
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
@@ -193,6 +196,9 @@ makeLenses ''EventRef
 makeLenses ''ScheduleChange'
 makeFields ''EventSplitting
 makeFields ''EventMerging
+makeClassy ''Event'
+makeClassy ''AbstrEvent'
+makeClassy ''ConcrEvent'
 -- makeLenses ''EventSplitting
 -- makeLenses ''EventMerging
 
@@ -209,6 +215,41 @@ instance IsExpr expr => Default (Event' expr) where
 
 instance IsExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
+
+instance (Show expr, HasScope expr) => HasScope (Action' expr) where
+    scopeCorrect' act@(Assign v e) = withPrefix "assign" $ F.fold 
+        [ scopeCorrect' e
+        , areVisible [vars,abs_vars] [v] act ]
+    scopeCorrect' act@(BcmSuchThat vs p) = withPrefix "become such that" $ F.fold
+        [ withPrimes $ scopeCorrect' p 
+        , areVisible [vars,abs_vars] vs act ]
+    scopeCorrect' act@(BcmIn v s) = withPrefix "become such that" $ F.fold
+        [ scopeCorrect' s
+        , areVisible [vars,abs_vars] [v] act ]
+
+instance (Show expr, HasScope expr) => HasScope (AbstrEvent' expr) where
+    scopeCorrect' = withPrefix "abstract" . scopeCorrect' . view old
+
+instance (Show expr, HasScope expr) => HasScope (ConcrEvent' expr) where
+    scopeCorrect' evt = withPrefix "concrete" $ F.fold
+        [ scopeCorrect' $ evt^.new
+        , withPrefix "witnesses" $
+            areVisible [to $ M.difference <$> view abs_vars <*> view vars] 
+                (keys $ evt^.witness) 
+                (keys $ evt^.witness) 
+        , withPrefix "witnesses" $
+            withAbstract $ withPrimes $ foldMapWithKey scopeCorrect'' (evt^.witness)
+        , areVisible [abs_vars] (evt^.eql_vars) (evt^.eql_vars) ]
+
+instance (Show expr,HasScope expr) => HasScope (Event' expr) where
+    scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
+        [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
+        , foldMapWithKey scopeCorrect'' (e^.fine_sched) 
+        , withVars (e^.params) $ F.fold 
+            [ foldMapWithKey scopeCorrect'' (e^.guards) 
+            , foldMapWithKey scopeCorrect'' (e^.actions) 
+            ]
+        ]
 
 infix 1  $=
 
@@ -257,10 +298,6 @@ primed vs e = make_unique "@prime" vs e
 
 empty_event :: IsExpr expr => Event' expr
 empty_event = (makeEvent' def def def def) { _coarse_sched = default_schedule }
-
-makeClassy ''Event'
-makeClassy ''AbstrEvent'
-makeClassy ''ConcrEvent'
 
 skip_abstr :: IsExpr expr => AbstrEvent' expr
 skip_abstr = AbsEvent empty_event Nothing []

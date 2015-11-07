@@ -169,7 +169,7 @@ instance ProofRule Proof where
                    : pos)
 
     proof_po (Definition defs p li) lbl s = do
-            let decl = symbols s
+            let decl = symbols $ s^.absContext
                 clashes = decl `M.intersection` M.mapKeys (view name) defs
                 defs' = L.map (uncurry zeq . first Word) $ M.toList defs
             unless (M.null clashes) $

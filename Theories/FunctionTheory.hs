@@ -115,8 +115,8 @@ function_theory = Theory { .. }
                 --     ($fromJust $ (mzforall [x_decl,x2_decl] 
                 --                           (mzand  (x `zelem` zdom f1) 
                 --                                   (x2 `zelem` zdom f1))
-                --                       $   (zapply f1 x .= zapply f1 x2) 
-                --                              .=> (x .= x2) ))
+                --                       $   (zapply f1 x .=. zapply f1 x2) 
+                --                              .=> (x .=. x2) ))
                 ]
             where
                 -- lright = typ_fun2 (Fun [t1] "right" Lifted [fun_type t0 t1,fun_type t0 t1] (fun_type t0 t1))                
@@ -150,137 +150,137 @@ function_theory = Theory { .. }
         _thm_depend = []
 
         _fact = "function" `axioms` do
-            $axiom $ zdom (as_fun zempty_fun) .= zempty_set
-    --         $axiom $ zright m (zjust x) .= zjust x
-    --         $axiom $ zright m znothing .= m
-    --         $axiom $ zright m m .= m
-            $axiom $ lambda zempty_set term .= zempty_fun
-            $axiom $ zdom (lambda r term) .= r
-            $axiom $   lambda (zmk_set x) term .= zmk_fun x (zselect term x) 
-            $axiom $    lambda r term `zovl` zmk_fun x (zselect term x)
-                     .= lambda (r `zunion` zmk_set x) term
-            $axiom $   lambda r term `zovl` lambda r' term
-                    .= lambda (r `zunion` r') term
+            $axiom $ zdom (as_fun zempty_fun) .=. zempty_set
+    --         $axiom $ zright m (zjust x) .=. zjust x
+    --         $axiom $ zright m znothing .=. m
+    --         $axiom $ zright m m .=. m
+            $axiom $ lambda zempty_set term .=. zempty_fun
+            $axiom $ zdom (lambda r term) .=. r
+            $axiom $   lambda (zmk_set x) term .=. zmk_fun x (zselect term x) 
+            $axiom $     lambda r term `zovl` zmk_fun x (zselect term x)
+                     .=. lambda (r `zunion` zmk_set x) term
+            $axiom $    lambda r term `zovl` lambda r' term
+                    .=. lambda (r `zunion` r') term
 
-            $axiom $    f1 `zovl` zempty_fun .= f1
-            $axiom $    zempty_fun `zovl` f1 .= f1
+            $axiom $    f1 `zovl` zempty_fun .=. f1
+            $axiom $    zempty_fun `zovl` f1 .=. f1
                 -- dom and mk-fun
-            $axiom $ zdom (x `zmk_fun` y) .= zmk_set x
+            $axiom $ zdom (x `zmk_fun` y) .=. zmk_set x
                 -- ovl and apply
             $axiom $        (x `zelem` zdom f2) 
-                        .=> (zapply (f1 `zovl` f2) x .= zapply f2 x)
+                        .=> (zapply (f1 `zovl` f2) x .=. zapply f2 x)
             $axiom $      (x `zelem` zdom f1)
                        /\ (mznot $ x `zelem` zdom f2)
-                .=> (zapply (f1 `zovl` f2) x .= zapply f1 x)
+                .=> (zapply (f1 `zovl` f2) x .=. zapply f1 x)
                 -- apply and mk-fun
-            $axiom $  zmk_fun x y `zapply` x .= y 
+            $axiom $  zmk_fun x y `zapply` x .=. y 
                 -- dom-rest and apply
             $axiom $ (
                             (mzand (x `zelem` s1)
                                    (x `zelem` zdom f1))
-                .=> (zapply (s1 `zdomrest` f1) x .= zapply f1 x) )
+                .=> (zapply (s1 `zdomrest` f1) x .=. zapply f1 x) )
                 -- dom-subst and apply
             $axiom $    x `zelem` (zdom f1 `zsetdiff` s1)
-                    .=> zapply (s1 `zdomsubt` f1) x .= zapply f1 x 
+                    .=> zapply (s1 `zdomsubt` f1) x .=. zapply f1 x 
                 -- empty-fun as a total function
             $axiom $ as_fun zempty_fun `zelem` ztfun (as_dom zempty_set) s2
                 -- dom and overload
-            $axiom $   (zdom (f1 `zovl` f2))
-                    .= (zdom f1 `zunion` zdom f2) 
+            $axiom $    (zdom (f1 `zovl` f2))
+                    .=. (zdom f1 `zunion` zdom f2) 
                 -- dom and tfun
                 -- dom-rest and tfun
                 -- dom-subst and tfun
                 -- dom-rest and dom
-            $axiom $ zdom (s1 `zdomrest` f1) .= s1 `zintersect` zdom f1
+            $axiom $ zdom (s1 `zdomrest` f1) .=. s1 `zintersect` zdom f1
                 -- dom-subst and dom
-            $axiom $ (zdom (s1 `zdomsubt` f1)) .= (zdom f1 `zsetdiff` s1)
+            $axiom $ (zdom (s1 `zdomsubt` f1)) .=. (zdom f1 `zsetdiff` s1)
             
     --         $axiom $     zrep_select (lambda r term) x
-    --                  .=  zite (zelem x r) (zjust $ zselect term x) znothing
+    --                  .=.  zite (zelem x r) (zjust $ zselect term x) znothing
 
-            $axiom $     x `zelem` r .=> zapply (lambda r term) x .= zselect term x
+            $axiom $     x `zelem` r .=> zapply (lambda r term) x .=. zselect term x
 
     --             -- encoding of dom rest, dom subt, dom, apply, empty-fun, mk-fun
     --             -- empty-fun
     --             -- NOTE: this is not type correct (in literate-unitb) because we are using array operations on
     --             -- a pfun. It works because pfun [a,b] is represented as ARRAY [a,Maybe b], and Z3 considers them
     --             -- type correct.
-    --         -- $axiom $ (   zrep_select zempty_fun x
-    --         --           .= zcast (maybe_type t1) znothing )
+    --         -- $axiom $ (    zrep_select zempty_fun x
+    --         --           .=. zcast (maybe_type t1) znothing )
     --             -- mk-fun
     --         $axiom $ (   zrep_select (zmk_fun x y) x2
-    --                   .= zite (mzeq x x2) (zjust y) znothing )
+    --                   .=. zite (mzeq x x2) (zjust y) znothing )
     --             -- apply
-    --         -- $axiom $ (   zrep_select (zovl f1 f2) x
-    --         --           .= zite (zrep_select f2 x .= znothing)
+    --         -- $axiom $ (    zrep_select (zovl f1 f2) x
+    --         --           .=. zite (zrep_select f2 x .=. znothing)
     --         --                     (zrep_select f1 x)
     --         --                     (zrep_select f2 x) )
             --     -- domain
             -- $axiom $ 
             --         (      zset_select (zdom f1) x
-            --         .= mznot (zrep_select f1 x .= znothing))
+            --         .=. mznot (zrep_select f1 x .=. znothing))
     --             -- set comprehension
 
-            -- $axiom$ zrep_select (lambda r term) x .= zite (x `zelem` r) (zjust $ zselect term x) znothing
+            -- $axiom$ zrep_select (lambda r term) x .=. zite (x `zelem` r) (zjust $ zselect term x) znothing
 
                 -- Super duper important 
-            $axiom $      (zelem x (zdom f1) /\ (zapply f1 x .= y))
-                     .==  (zrep_select f1 x .= zjust y)
+            $axiom $       (zelem x (zdom f1) /\ (zapply f1 x .=. y))
+                     .==.  (zrep_select f1 x .=. zjust y)
 
                 -- ovl and mk_fun
-            $axiom $        mznot (x .= x2)
-                       .=> (zapply (f1 `zovl` zmk_fun x y) x2 .= zapply f1 x2)
-            $axiom $       (zapply (f1 `zovl` zmk_fun x y) x .= y)
+            $axiom $        mznot (x .=. x2)
+                       .=> (zapply (f1 `zovl` zmk_fun x y) x2 .=. zapply f1 x2)
+            $axiom $       (zapply (f1 `zovl` zmk_fun x y) x .=. y)
             
                 -- ran and empty-fun
-            $axiom $     zran (zcast (fun_type t0 t1) zempty_fun) 
-                      .= zempty_set
+            $axiom $      zran (zcast (fun_type t0 t1) zempty_fun) 
+                      .=. zempty_set
 
                 -- ran and elem
-            $axiom $    ( y `zelem` zran f1 ) 
-                    .== ( mzexists [x_decl] mztrue 
-                                ( (x `zelem` zdom f1) /\ (zapply f1 x .= y)))
+            $axiom $     ( y `zelem` zran f1 ) 
+                    .==. ( mzexists [x_decl] mztrue 
+                                ( (x `zelem` zdom f1) /\ (zapply f1 x .=. y)))
             
                 -- ran mk-fun
-            $axiom $   zran (zmk_fun x y) .= zmk_set y
+            $axiom $   zran (zmk_fun x y) .=. zmk_set y
             
     --             -- ran ovl
     --         $axiom $   zran (f1 `zovl` f2) `zsubset` (zran f1 `zunion` zran f2)
     -- --                       zite (mzeq (zrep_select f1 x) znothing)
     -- --                            (zrep_select f2 x)
     -- --                            (zrep_select f1 x) )
-            $axiom $     (f1 `zelem` ztfun s1 s2)
-                    .==  (s1 .= zdom f1) /\ (zran f1 `zsubset` s2)
+            $axiom $      (f1 `zelem` ztfun s1 s2)
+                    .==.  (s1 .=. zdom f1) /\ (zran f1 `zsubset` s2)
                 -- definition of injective
-            $axiom $     zinjective f1
-                    .==  (mzforall [x_decl,x2_decl] 
+            $axiom $      zinjective f1
+                    .==.  (mzforall [x_decl,x2_decl] 
                                         (mzand  (x `zelem` zdom f1) 
                                                 (x2 `zelem` zdom f1))
-                                $   (zapply f1 x .= zapply f1 x2) 
-                                .=> (x .= x2) )
+                                $   (zapply f1 x .=. zapply f1 x2) 
+                                .=> (x .=. x2) )
             $axiom $     zinjective $ as_fun zempty_fun
             --     -- injective, domsubt and ran (with mk_set)
             -- $axiom $         zinjective f1 /\ (x `zelem` zdom f1)
             --             .=>       zran (zmk_set x `zdomsubt` f1)
-            --                  .=  (zran f1 `zsetdiff` zmk_set (zapply f1 x))
+            --                  .=.  (zran f1 `zsetdiff` zmk_set (zapply f1 x))
                                 
     --             -- domsub, apply and mk-set
-    --         $axiom $        (mznot $ x .= x2) /\ (x2 `zelem` zdom f1)
-    --                 .=>         zapply (zmk_set x `zdomsubt` f1) x2
-    --                         .=  zapply f1 x2
+    --         $axiom $        (mznot $ x .=. x2) /\ (x2 `zelem` zdom f1)
+    --                 .=>          zapply (zmk_set x `zdomsubt` f1) x2
+    --                         .=.  zapply f1 x2
                                 
             --     -- domrest, apply and mk-set
             -- $axiom $        (x `zelem` zdom f1)
             --          .=>    (    zapply (zmk_set x `zdomrest` f1) x
-            --                  .=  zapply f1 x )
+            --                  .=.  zapply f1 x )
     --             -- domsub, apply 
     --         $axiom $        ((mznot $ x `zelem` s1) /\ (x `zelem` zdom f1))
-    --                  .=>    (    zapply (s1 `zdomsubt` f1) x
-    --                          .=  zapply f1 x )
+    --                  .=>    (     zapply (s1 `zdomsubt` f1) x
+    --                          .=.  zapply f1 x )
     --             -- domrest, apply
     --         $axiom $        ((x `zelem` s1) /\ (x `zelem` zdom f1))
     --                  .=>    (    zapply (s1 `zdomrest` f1) x
-    --                          .=  zapply f1 x )
+    --                          .=.  zapply f1 x )
                 -- '.', '\in', 'ran'
             $axiom $        ( x `zelem` zdom f1 )
                      .=>    zapply f1 x `zelem` zran f1
@@ -292,13 +292,13 @@ function_theory = Theory { .. }
                      .=>    zapply f1 x `zelem` zran (s1 `zdomrest` f1)
                 -- ran.(f | x -> _) with f injective and x in dom.f
             $axiom $        (x `zelem` zdom f1) /\ zinjective f1
-                     .=>            (zran $ f1 `zovl` zmk_fun x y)
-                               .=   (zran f1 `zsetdiff` zmk_set (f1 `zapply` x))
+                     .=>             (zran $ f1 `zovl` zmk_fun x y)
+                               .=.   (zran f1 `zsetdiff` zmk_set (f1 `zapply` x))
                                      `zunion` zmk_set y
                 -- ran.(f | x -> _) with x not in dom.f
             $axiom $        ( mznot $ x `zelem` zdom f1 )
                      .=>         (zran $ f1 `zovl` zmk_fun x y)
-                             .=  (zran f1 `zunion` zmk_set y)
+                             .=.  (zran f1 `zunion` zmk_set y)
 
         _notation = function_notation
 
