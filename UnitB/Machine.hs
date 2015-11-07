@@ -27,7 +27,6 @@ import Control.Exception
 import Control.Lens hiding (indices)
 
 import Control.Monad hiding ( guard )
-import Control.Monad.Reader.Class
 import Control.Monad.State
 import Control.Monad.Trans.Maybe
 
@@ -50,7 +49,6 @@ import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.TH
-import Utilities.Trace
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 
@@ -139,13 +137,13 @@ makeLenses ''EventTable
 makeLenses ''Machine''
 makeFields ''Machine''
 
-instance (Show expr, HasScope expr) => HasName (Machine' expr) String where
+instance (IsExpr expr) => HasName (Machine' expr) String where
     name = content assert.name
 
 --instance Show expr => HasMachine'' (Machine' expr) expr where
 --    machine'' = content assert
 
-instance (Show expr, HasScope expr) => HasInvariant (Machine'' expr) where
+instance (IsExpr expr) => HasInvariant (Machine'' expr) where
     invariant m = 
         [ ("inv0", F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) $ conc_events m) 
         , ("inv1", F.all validEvent $ m^.props.transient)
@@ -161,63 +159,43 @@ instance (Show expr, HasScope expr) => HasInvariant (Machine'' expr) where
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) es
 
-instance HasScope expr => HasScope (Machine'' expr) where
+instance IsExpr expr => HasScope (Machine'' expr) where
     scopeCorrect' m = withVars (symbols $ m^.theory) $ mconcat 
         [ withPrefix "inherited" $
           withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
             $ scopeCorrect' $ m^.inh_props 
         , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
-            $ f $ scopeCorrect' $ m^.props 
+            $ scopeCorrect' $ m^.props 
+        , withPrefix "del init"
+            $ withVars' vars (m^.abs_vars)
+            $ foldMapWithKey scopeCorrect'' $ m^.del_inits
+        , withPrefix "init" 
+            $ withVars' vars (m^.variables)
+            $ foldMapWithKey scopeCorrect'' $ m^.inits
+        , withPrefix "witnesses (var)" 
+            $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
+            $ areVisible [constants] (M.keys $ m^.init_witness) (M.keys $ m^.init_witness)
+        , withPrefix "witnesses (expr)" 
+            $ withVars ((m^.variables) `M.union` (m^.abs_vars))
+            $ foldMapWithKey scopeCorrect'' $ m^.init_witness
+        , withPrefix "abstract events"
+            $ withVars' vars (m^.abs_vars)
+            $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
+        , withPrefix "concrete events" $
+          withVars' abs_vars (m^.abs_vars)
+            $ withVars' vars (m^.variables)
+            $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
         ]
-        where
-            f cmd = do
-                x  <- ask
-                xs <- cmd
-                return $ L.map (trace $ "vars (mch): " ++ show (x^.constants)) xs
-                --fmap $ fmap $ trace ("symbols: " ++ show (symbols $ m^.theory))
 
 instance Controls (Machine'' expr) (Machine'' expr) where 
     content' = id
 
--- downward :: Machine -> Label -> AbstrEvent -> EventSplitting
--- downward m lbl aevt = assert (sameExpr coarse_sched xs 
---                 && (L.null (L.drop 1 xs) || L.null (aevt^.c_sched_ref))) 
---             $ EvtS (lbl,aevt) cevts
---     where
---         xs    = L.map snd $ NE.toList cevts
---         cevts = NE.map (id &&& (conc_events m !)) (aevt^.ref_evts)
-
--- downward_events :: Machine -> Label -> EventSplitting
--- downward_events m lbl = downward m lbl aevt
---     where
---         aevt = abs_events m ! lbl
-
--- neList :: a -> [a] -> NonEmpty a
--- neList x xs = fromMaybe (x :| []) (nonEmpty xs)
-
 all_refs :: Show expr => Machine' expr -> [EventRef expr]
 all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards $ m^.content'
-
--- sameExpr :: (Ord expr)
---          => Getting (Map Label expr) event (Map Label expr) 
---          -> [event]
---          -> Bool
--- sameExpr ln xs = L.null $ L.drop 1 $ L.groupBy eqAction xs
---     where
---         eqAction x y = acts x == acts y
---         acts x = L.sort (elems $ x^.ln)
 
 conc_events :: Controls machine (Machine'' expr)
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
-
--- upward :: Machine -> Label -> ConcrEvent -> EventMerging
--- upward m lbl cevt = EvtM aevts (lbl,cevt)
---     where
---         xs = L.map (id &&& (abs_events m !)) $ cevt^.abs_evts
---         -- aevts = assert (L.null $ L.drop 1 $ L.groupBy eqAction $ L.map snd xs) 
---         aevts = assert (sameExpr actions $ L.map snd xs) 
---                 $ neList (lbl,skip_abstr lbl) xs
 
 upward_event :: Show expr => Machine' expr -> SkipOrEvent -> EventMerging expr
 upward_event m lbl = fromJust' assert "upward_event" $ readGraph (m^.content'.events) $ runMaybeT $ do

@@ -46,7 +46,6 @@ import UnitB.Expr
 
     -- Libraries
 import Control.DeepSeq
-import Control.Monad.Reader
 import Control.Lens hiding (Const)
 
 import Data.Default
@@ -59,7 +58,6 @@ import Data.String
 import Data.Typeable
 
 import Utilities.TableConstr
-import Utilities.Trace
 
 type Constraint = Constraint' Expr
 type RawConstraint = Constraint' RawExpr
@@ -229,7 +227,7 @@ instance HasScope expr => HasScope (Constraint' expr) where
     scopeCorrect' (Co vs e) = withPrimes $ withVars (symbol_table vs) $ scopeCorrect' e
 
 instance HasScope expr => HasScope (PropertySet' expr) where
-    scopeCorrect' x = f $ withPrefix "props" $ fold $
+    scopeCorrect' x = withPrefix "props" $ fold $
         [ withPrefix "transient"  $ foldMapWithKey scopeCorrect'' (x^.transient)
         , withPrefix "constraint" $ foldMapWithKey scopeCorrect'' (x^.constraint)
         , withPrefix "invariant"  $ foldMapWithKey scopeCorrect'' (x^.inv)
@@ -238,11 +236,6 @@ instance HasScope expr => HasScope (PropertySet' expr) where
         , withPrefix "safety" $ foldMapWithKey scopeCorrect'' (x^.safety)
         --, withPrefix "proofs" $ foldMapWithKey scopeCorrect'' (x^.proofs)
         ]
-        where
-            f cmd = do
-                x  <- ask
-                xs <- cmd
-                return $ L.map (trace $ "vars: " ++ show (x^.constants)) xs
 
 derive makeNFData ''ProgId
 derive makeNFData ''Constraint'

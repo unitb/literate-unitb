@@ -216,7 +216,7 @@ instance IsExpr expr => Default (Event' expr) where
 instance IsExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
 
-instance (Show expr, HasScope expr) => HasScope (Action' expr) where
+instance (IsExpr expr) => HasScope (Action' expr) where
     scopeCorrect' act@(Assign v e) = withPrefix "assign" $ F.fold 
         [ scopeCorrect' e
         , areVisible [vars,abs_vars] [v] act ]
@@ -227,21 +227,23 @@ instance (Show expr, HasScope expr) => HasScope (Action' expr) where
         [ scopeCorrect' s
         , areVisible [vars,abs_vars] [v] act ]
 
-instance (Show expr, HasScope expr) => HasScope (AbstrEvent' expr) where
+instance (IsExpr expr) => HasScope (AbstrEvent' expr) where
     scopeCorrect' = withPrefix "abstract" . scopeCorrect' . view old
 
-instance (Show expr, HasScope expr) => HasScope (ConcrEvent' expr) where
+instance (IsExpr expr) => HasScope (ConcrEvent' expr) where
     scopeCorrect' evt = withPrefix "concrete" $ F.fold
         [ scopeCorrect' $ evt^.new
-        , withPrefix "witnesses" $
+        , withPrefix "witnesses (vars)" $
+            withVars ((evt^.params) `M.union` (evt^.indices)) $ 
             areVisible [to $ M.difference <$> view abs_vars <*> view vars] 
                 (keys $ evt^.witness) 
                 (keys $ evt^.witness) 
-        , withPrefix "witnesses" $
+        , withPrefix "witnesses (expression)" $
+            withVars ((evt^.params) `M.union` (evt^.indices)) $ 
             withAbstract $ withPrimes $ foldMapWithKey scopeCorrect'' (evt^.witness)
         , areVisible [abs_vars] (evt^.eql_vars) (evt^.eql_vars) ]
 
-instance (Show expr,HasScope expr) => HasScope (Event' expr) where
+instance (IsExpr expr) => HasScope (Event' expr) where
     scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
         [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
         , foldMapWithKey scopeCorrect'' (e^.fine_sched) 

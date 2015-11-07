@@ -60,7 +60,9 @@ withAbstract :: ScopeCorrectnessM a -> ScopeCorrectnessM a
 withAbstract = local (\x -> x & vars %~ M.union (x^.abs_vars))
 
 withPrimes :: ScopeCorrectnessM a -> ScopeCorrectnessM a
-withPrimes = local (\x -> x & constants %~ M.union (primeAll $ x^.vars))
+withPrimes cmd = do
+    x <- ask
+    withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
 areVisible :: (Show e,Foldable f) 
            => [Getting (Map String Var) VisibleVars (Map String Var)]
