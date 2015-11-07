@@ -24,6 +24,7 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Expr.Const
+import Logic.Expr.Scope
 import Logic.Operator
 import Logic.Proof hiding (preserve) 
 import qualified Logic.Proof as P
@@ -122,6 +123,14 @@ instance Default Theory where
     def = genericDefault
 
 instance NFData Theory where
+
+instance HasScope Theory where
+    scopeCorrect' t = mconcat
+            [ withVars (symbols t)
+                $ foldMapWithKey scopeCorrect'' $ t^.fact
+            , withVars (symbols $ t & defs .~ M.empty)
+                $ foldMapWithKey scopeCorrect'' $ t^.defs
+            , foldMapWithKey scopeCorrect'' (t^.extends) ]
 
 make_theory :: String -> M () -> Theory
 make_theory name (M cmd) = to $ gBuild (from empty_theory) $ L.map from ts'

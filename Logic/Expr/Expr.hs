@@ -77,7 +77,6 @@ import Control.Lens hiding (rewrite,Context
                            ,Const,Context',List)
 
 import           Data.Data
-import           Data.DeriveTH
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Serialize
@@ -280,6 +279,7 @@ data AbsDecl t q =
         | ConstDecl String t
         | FunDef [t] String [AbsVar t] t (AbsExpr t q)
         | SortDecl Sort
+    deriving (Generic)
 
 type Fun = AbsFun GenericType
 
@@ -323,6 +323,9 @@ type Def' = AbsDef GenericType FOQuantifier
 
 data AbsDef t q = Def [t] String [AbsVar t] t (AbsExpr t q)
     deriving (Eq,Ord,Generic,Typeable,Data)
+
+instance HasScope Def where
+    scopeCorrect' (Def _tp _n args _t e) = withVars args $ scopeCorrect' e
 
 instance Show HOQuantifier where
     show Forall = "forall"
@@ -758,18 +761,18 @@ instance HasExprs (AbsContext t q) (AbsExpr t q) where
 --    => IsExpr expr
 
 
-derive makeNFData ''AbsFun
-derive makeNFData ''QuantifierType
-derive makeNFData ''QuantifierWD
-derive makeNFData ''Lifting
-derive makeNFData ''AbsDef
-derive makeNFData ''AbsVar
-derive makeNFData ''Value
-derive makeNFData ''GenExpr
-derive makeNFData ''AbsDecl
-derive makeNFData ''AbsContext
-derive makeNFData ''FOQuantifier
-derive makeNFData ''HOQuantifier
+instance NFData t => NFData (AbsFun t) where
+instance NFData QuantifierType
+instance NFData QuantifierWD
+instance NFData Lifting
+instance (NFData t,NFData q) => NFData (AbsDef t q)
+instance NFData t => NFData (AbsVar t)
+instance NFData Value
+instance (NFData t0,NFData t1,NFData q) => NFData (GenExpr t0 t1 q)
+instance (NFData t,NFData q) => NFData (AbsDecl t q)
+instance (NFData t,NFData q) => NFData (AbsContext t q)
+instance NFData FOQuantifier
+instance NFData HOQuantifier
 
 makeLenses ''AbsFun
 makePrisms ''GenExpr

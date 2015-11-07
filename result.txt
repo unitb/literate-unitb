@@ -18,39 +18,26 @@
 +++ OK, passed 100 tests.
 +++ OK, passed 100 tests.
 === prop_flatten_parse_inv from ./Latex/Test_Latex_Parser.hs:173 ===
-
-=== prop_type_error from ./Document/MachineSpec.hs:46 ===
-
-=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
 === prop_c from ./Utilities/EditDistance.hs:129 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:192 ===
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:352 ===
+
+=== prop_u_scc_complete from ./Utilities/Permutation.hs:356 ===
 +++ OK, passed 100 tests.
 
 === prop_fromList_toList from ./Utilities/Relation.hs:196 ===
+
+=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:361 ===
 +++ OK, passed 100 tests.
 
 === prop_domain_def from ./Utilities/Relation.hs:200 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:379 ===
-
-=== prop_u_scc_complete from ./Utilities/Permutation.hs:383 ===
-
-=== prop_lines_unlines_cancel from ./Utilities/Lines.hs:62 ===
 
 === prop_b from ./Utilities/EditDistance.hs:135 ===
-
-=== prop_u_scc_disconnected from ./Utilities/Permutation.hs:388 ===
-
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:399 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:141 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:147 ===
-+++ OK, passed 100 tests.
-
-=== prop_unlines_lines_cancel from ./Utilities/Lines.hs:71 ===
 +++ OK, passed 100 tests.
 
 === prop_range_def from ./Utilities/Relation.hs:203 ===
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:372 ===
 +++ OK, passed 100 tests.
 
 === prop_empty_def from ./Utilities/Relation.hs:206 ===
@@ -64,11 +51,89 @@
 
 === prop_all_valid from ./Utilities/Relation.hs:233 ===
 
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:411 ===
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:384 ===
+
+=== prop_type_error from ./Document/MachineSpec.hs:46 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:391 ===
++++ OK, passed 100 tests.
+
+=== prop_union_def from ./Utilities/Relation.hs:253 ===
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:397 ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:402 ===
++++ OK, passed 100 tests.
+
+=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
++++ OK, passed 100 tests.
+
+=== prop_difference_def from ./Utilities/Relation.hs:259 ===
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:434 ===
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:437 ===
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:442 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:262 ===
+
+=== prop_a from ./Utilities/EditDistance.hs:141 ===
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:448 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
+
+=== prop_lines_unlines_cancel from ./Utilities/Lines.hs:62 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:147 ===
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
 
 === prop_f from ./Utilities/EditDistance.hs:153 ===
++++ OK, passed 100 tests.
 
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:418 ===
+=== prop_unlines_lines_cancel from ./Utilities/Lines.hs:71 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:271 ===
++++ OK, passed 100 tests.
+
+=== prop_domRestr from ./Utilities/Relation.hs:274 ===
++++ OK, passed 100 tests.
+
+=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:280 ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
++++ OK, passed 100 tests.
+
+=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
+
+=== prop_g from ./Utilities/EditDistance.hs:159 ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:295 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:298 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -267,6 +332,25 @@
 |  |  |  +- test1: verify m1
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
++++ OK, passed 100 tests.
+
+=== prop_lines'_concat_cancel from ./Utilities/Lines.hs:77 ===
+
++++ OK, passed 100 tests.
+
+=== prop_concat_lines'_cancel from ./Utilities/Lines.hs:80 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
 |  |  |  +- test4: quantified union
 |  |  +- [ Success: 5 / 5 ]
 |  |  +- Parser
@@ -307,96 +391,12 @@
 |  |  +- [ Success: 19 / 19 ]
 |  +- [ Success: 25 / 25 ]
 |  +- latex parser
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:424 ===
-+++ OK, passed 100 tests.
-
-=== prop_lines'_concat_cancel from ./Utilities/Lines.hs:77 ===
-+++ OK, passed 100 tests.
-
-=== prop_concat_lines'_cancel from ./Utilities/Lines.hs:80 ===
-
-=== prop_g from ./Utilities/EditDistance.hs:159 ===
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:429 ===
-+++ OK, passed 100 tests.
-
-=== prop_union_def from ./Utilities/Relation.hs:253 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:461 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:259 ===
-
-=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:464 ===
-
-=== prop_closure_closed from ./Utilities/Permutation.hs:469 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:262 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:271 ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:274 ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:475 ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:280 ===
-+++ OK, passed 100 tests.
-
-=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
 +++ OK, passed 100 tests.
 
 === prop_concat_lines'_cancel_regression from ./Utilities/Lines.hs:83 ===
 +++ OK, passed 100 tests.
 
-+++ OK, passed 100 tests.
 
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:295 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:298 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
-
-
-+++ OK, passed 100 tests.
-
-=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:328 ===
@@ -517,10 +517,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   48572 total
+   48585 total
     1043 Document/phase.hs
     1008 UnitB/PO.hs
      934 Document/Phase/Expressions.hs
-     805 Logic/Expr/Expr.hs
+     808 Logic/Expr/Expr.hs
      735 Logic/Proof/Tactics.hs
-Run time: 2m 50s
+Run time: 2m 25s

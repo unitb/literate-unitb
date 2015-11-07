@@ -6,7 +6,6 @@
 module UnitB.Machine where
 
     -- Modules
-import Logic.ExpressionStore (ExprStore, empty_store)
 import Logic.Expr.Scope
 import Logic.Operator
 import Logic.Proof.POGenerator ( POGen )
@@ -160,31 +159,35 @@ instance (IsExpr expr) => HasInvariant (Machine'' expr) where
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) es
 
 instance IsExpr expr => HasScope (Machine'' expr) where
-    scopeCorrect' m = withVars (symbols $ m^.theory) $ mconcat 
-        [ withPrefix "inherited" $
-          withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
-            $ scopeCorrect' $ m^.inh_props 
-        , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
-            $ scopeCorrect' $ m^.props 
-        , withPrefix "del init"
-            $ withVars' vars (m^.abs_vars)
-            $ foldMapWithKey scopeCorrect'' $ m^.del_inits
-        , withPrefix "init" 
-            $ withVars' vars (m^.variables)
-            $ foldMapWithKey scopeCorrect'' $ m^.inits
-        , withPrefix "witnesses (var)" 
-            $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
-            $ areVisible [constants] (M.keys $ m^.init_witness) (M.keys $ m^.init_witness)
-        , withPrefix "witnesses (expr)" 
-            $ withVars ((m^.variables) `M.union` (m^.abs_vars))
-            $ foldMapWithKey scopeCorrect'' $ m^.init_witness
-        , withPrefix "abstract events"
-            $ withVars' vars (m^.abs_vars)
-            $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
-        , withPrefix "concrete events" $
-          withVars' abs_vars (m^.abs_vars)
-            $ withVars' vars (m^.variables)
-            $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
+    scopeCorrect' m = mconcat 
+        [ withVars (symbols $ m^.theory) $ mconcat 
+            [ withPrefix "inherited"
+                $ withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
+                $ scopeCorrect' $ m^.inh_props 
+            , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
+                $ scopeCorrect' $ m^.props 
+            , withPrefix "del init"
+                $ withVars' vars (m^.abs_vars)
+                $ foldMapWithKey scopeCorrect'' $ m^.del_inits
+            , withPrefix "init" 
+                $ withVars' vars (m^.variables)
+                $ foldMapWithKey scopeCorrect'' $ m^.inits
+            , withPrefix "witnesses (var)" 
+                $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
+                $ areVisible [constants] (M.keys $ m^.init_witness) (M.keys $ m^.init_witness)
+            , withPrefix "witnesses (expr)" 
+                $ withVars ((m^.variables) `M.union` (m^.abs_vars))
+                $ foldMapWithKey scopeCorrect'' $ m^.init_witness
+            , withPrefix "abstract events"
+                $ withVars' vars (m^.abs_vars)
+                $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
+            , withPrefix "concrete events"
+                $ withVars' abs_vars (m^.abs_vars)
+                $ withVars' vars (m^.variables)
+                $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
+            ]
+        , withPrefix "theory"
+            $ scopeCorrect' $ m^.theory
         ]
 
 instance Controls (Machine'' expr) (Machine'' expr) where 
@@ -319,14 +322,13 @@ type System = System'
 data System' = Sys 
         {  proof_struct :: [(Label,Label)]
         ,  ref_struct   :: Map Label Label
-        ,  expr_store   :: ExprStore
         ,  machines     :: Map String Machine
         ,  theories     :: Map String Theory
         }
     deriving (Eq,Generic)
 
 empty_system :: System
-empty_system = Sys [] M.empty empty_store 
+empty_system = Sys [] M.empty 
         M.empty $ M.fromList 
             [ ("sets",set_theory)
             , ("functions",function_theory)
