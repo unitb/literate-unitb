@@ -41,7 +41,7 @@ prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
 f_prop_parseOk :: (RawMachine, Tex) -> Bool
 f_prop_parseOk (mch,Tex tex) =
-        (M.elems . M.map (fmap asExpr) . machines) `liftM` (all_machines tex) == Right [mch]
+        (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) == Right [mch]
  
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
@@ -378,7 +378,7 @@ main = do
         xs <- liftM concat $ replicateM 100 $ sample' correct_machine
         let (mch,tex) = head 
                 $ filter (not . f_prop_parseOk) xs
-            mch'  = (M.elems . machines) `liftM` (all_machines $ unTex tex)
+            mch'  = (M.elems . view' machines) `liftM` (all_machines $ unTex tex)
         -- print $ tex
         -- print $ mch'
         --     -- txt = showExpr n e

@@ -1,6 +1,8 @@
+{-# LANGUAGE ConstraintKinds, TypeOperators #-}
 module Utilities.TableConstr where
 
 import Control.Arrow
+import Control.Lens
 import Control.Monad.Identity
 
 import Data.Char
@@ -9,7 +11,9 @@ import Data.Either
 import Data.List as L
 import Data.Map as M (Map,fromList,union)
 import Data.Maybe
--- import Data.Typeable
+
+import GHC.Generics hiding (from,to)
+import GHC.Generics.Lens
 
 import Language.Haskell.TH
 
@@ -149,3 +153,30 @@ constructor' (AppT t t') = second (++[t']) <$> constructor' t
 constructor' ListT       = Just ('[],[])
 constructor' (VarT _)    = Nothing
 constructor' t = error $ "not a simple type: " ++ show t
+
+class GAllTables a where
+    gAllTables :: (Applicative f)
+               => (forall k a. (Show k, Show a) => String -> Map k a -> f (Map k a))
+               -> Maybe String -> a p -> f (a p)
+
+instance (GAllTables c, Selector s) => GAllTables (S1 s c) where
+    gAllTables f _ m@(M1 x) = M1 <$> gAllTables f (Just $ selName m) x
+
+instance (GAllTables c) => GAllTables (D1 d c) where
+    gAllTables f tag (M1 x) = M1 <$> gAllTables f tag x
+
+instance (GAllTables c) => GAllTables (C1 d c) where
+    gAllTables f tag (M1 x) = M1 <$> gAllTables f tag x
+
+instance (Show k,Show b) => GAllTables (K1 a (Map k b)) where
+    gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
+    gAllTables _ Nothing (K1 x) = K1 <$> pure x
+instance (GAllTables a, GAllTables b) 
+        => GAllTables (a :*: b) where
+    gAllTables f tag (x :*: y) = (:*:) <$> gAllTables f tag x <*> gAllTables f tag y
+
+allTables :: (Applicative f, Generic x, GAllTables (Rep x))
+          => (forall k a. (Show k,Show a) => String -> Map k a -> f (Map k a))
+          -> x -> f x
+allTables f = generic $ gAllTables f Nothing
+

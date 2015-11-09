@@ -187,7 +187,7 @@ safety m others post cfg
                     PG._context $ assert_ctx m
                     PG._context $ theory_ctx (m!.theory)
                     PG.named_hyps $ invariants m
-                    PG.prefix_label $ _name m
+                    PG.prefix_label $ as_label $ _name m
                 ) $ do
                     PG.with (PG.named_hyps $ m!.inits) $ 
                         establish_pre "init" [] cfg

@@ -1,9 +1,19 @@
-{-# LANGUAGE TypeOperators,KindSignatures #-}
+{-# LANGUAGE TypeOperators,KindSignatures, TypeFamilies,ScopedTypeVariables #-}
 module Utilities.Instances 
-    ( Generic, defaultLift, genericMEmpty, genericMAppend, genericMConcat, genericDefault )
+    ( Generic, defaultLift, genericMEmpty, genericMAppend
+    , genericMConcat, genericDefault, genericSemigroupMAppend
+    , Intersection(..), genericSemigroupMAppendWith )
 where
 
+import Control.Comonad
+import Control.Lens hiding (to,from)
+
 import Data.Default
+import Data.Map (Map)
+import qualified Data.Map as M
+import Data.Set (Set)
+import qualified Data.Set as S
+import Data.Semigroup
 
 import GHC.Generics
 
@@ -33,12 +43,77 @@ instance (GMonoid a,GMonoid b) => GMonoid (a :*: b) where
             f (x :*: _) = x
             g (_ :*: x) = x
 
+class GSemigroupWith a where
+    gSemiMAppend :: a p -> a p -> a p
+
+instance (GSemigroupWith c) => GSemigroupWith (M1 a b c) where
+    gSemiMAppend x y = M1 (gSemiMAppend (unM1 x) (unM1 y))
+
+instance Semigroup b => GSemigroupWith (K1 a b) where
+    gSemiMAppend x y = K1 (unK1 x <> unK1 y)
+
+instance (GSemigroupWith a,GSemigroupWith b) 
+        => GSemigroupWith (a :*: b) where
+    gSemiMAppend x y = gSemiMAppend (left x) (left y) :*:
+                             gSemiMAppend (right x) (right y)
+
+left :: (a :*: b) p -> a p
+left (x :*: _) = x
+right :: (a :*: b) p -> b p
+right (_ :*: x) = x
+
+class Applicative f => MapFields a (f :: * -> *) where
+    type Mapped a f :: * -> *
+    put :: f (a p) -> Mapped a f p
+    get :: Mapped a f p -> f (a p)
+    mapped :: Iso' (f (a p)) (Mapped a f p)
+    mapped = iso put get
+
+instance MapFields c f => MapFields (M1 a b c) f where
+    type Mapped (M1 a b c) f = M1 a b (Mapped c f)
+    put x = M1 $ put (unM1 <$> x)
+    get x = M1 <$> get (unM1 x)
+
+instance (Applicative f,Comonad f) => MapFields (K1 a b) f where
+    type Mapped (K1 a b) f = K1 a (f b)
+    put = K1 . pure . unK1 . extract
+    get = fmap K1 . unK1
+
+instance (MapFields a f,MapFields b f) => MapFields (a :*: b) f where
+    type Mapped (a :*: b) f = Mapped a f :*: Mapped b f
+    put x = put (left <$> x) :*: put (right <$> x)
+    get x = (:*:) <$> get (left x) <*> get (right x)
+
+
 genericMEmpty :: (Generic a, GMonoid (Rep a)) => a
 genericMEmpty = to gmempty
 genericMAppend :: (Generic a, GMonoid (Rep a)) => a -> a -> a
 genericMAppend x y = to $ gmappend (from x) (from y)
 genericMConcat :: (Generic a, GMonoid (Rep a)) => [a] -> a
 genericMConcat xs = to $ gmconcat $ map from xs
+
+genericSemigroupMAppend :: (Generic a, GSemigroupWith (Rep a)) => a -> a -> a
+genericSemigroupMAppend x y = to $ gSemiMAppend (from x) (from y)
+
+genericSemigroupMAppendWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) => f a -> f a -> f a
+genericSemigroupMAppendWith x y = to <$> get (gSemiMAppend (put $ from <$> x) (put $ from <$> y))
+
+newtype Intersection a = Intersection { getIntersection :: a }
+    deriving (Functor)
+
+instance Applicative Intersection where
+    pure = Intersection
+    Intersection f <*> Intersection x = Intersection $ f x
+
+instance Comonad Intersection where
+    extract   = getIntersection
+    duplicate = Intersection
+
+instance Ord k => Semigroup (Intersection (Map k a)) where
+    Intersection x <> Intersection y = Intersection $ x `M.intersection` y
+
+instance Ord k => Semigroup (Intersection (Set k)) where
+    Intersection x <> Intersection y = Intersection $ x `S.intersection` y
 
 class GDefault a where
     gDefault :: a p

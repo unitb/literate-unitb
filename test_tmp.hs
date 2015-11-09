@@ -108,7 +108,7 @@ main = timeIt $ do
     return $ run_test_cases TS.test_case
     return $ run_test_cases TSS.test_case
     return $ run_test_cases TSRef.test_case
-    run_test_cases Tex.test_case
+    return $ run_test_cases Tex.test_case
     return $ run_test_cases GC.test_case
     return $ run_test_cases Doc.test_case
     return ()

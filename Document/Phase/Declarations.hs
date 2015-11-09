@@ -240,9 +240,10 @@ toEventDecl ref s (Evt m) = map Right $ concatMap (uncurry f)
          where 
             distr (x,y) = (,y) <$> x
             f :: EventId -> EventDecl -> [(EventId, [EventP2Field])]
-            f eid x = case ref of
-                        Old -> [ (e,[g x]) | e <- NE.toList $ x^.source ]
-                        New -> [(eid,[g x])]
+            f eid x = case (ref,x^.declSource) of
+                        (Old,Inherited) -> [ (e,[g x]) | e <- NE.toList $ x^.source ]
+                        (Old,Local) -> []
+                        (New,_) -> [(eid,[g x])]
 
             g x = case x^.scope of 
                         Index -> EIndices s $ x^.varDecl

@@ -19,7 +19,7 @@ import Theories.Arithmetic
 
     -- Libraries
 import Control.Arrow
-import Control.Lens hiding (elements,universe,(.=),indices)
+import Control.Lens hiding (elements,universe,indices)
 import Control.Monad.State
 
 import qualified Data.List as L -- ( intercalate, filter )
@@ -29,6 +29,7 @@ import Tests.UnitTest
 import Test.QuickCheck hiding (label)
 
 import Utilities.Format
+import Utilities.Lens
 import Utilities.Syntactic
 
 brackets :: String -> (Int,Int)
@@ -204,8 +205,8 @@ block_var :: Var
 (block, block_var) = Expr.var "sl@BLK" $ set_type blk_type
 
 machine0 :: Machine
-machine0 = (empty_machine "train0") & content assert %~ \m -> 
-    m & theory .~ empty_theory 
+machine0 = newMachine assert "train0" $ do
+      theory .= empty_theory 
             {  _extends = fromList
                     [  ("functions", function_theory) -- train_type blk_type
                     ,  ("sets", set_theory) -- blk_type
@@ -239,13 +240,30 @@ machine0 = (empty_machine "train0") & content assert %~ \m ->
                     ,  ("PLF", plf_var)
                     ]
             }
-      & inits .~ fromList (zip inLbls 
+      inits .= fromList (zip inLbls 
              $ [ c [expr| loc = \emptyfun  |]
                , c [expr| in = \emptyset  |] ] )
-      & variables .~ vars
-      & event_table .~ newEvents [("enter", enter_evt), ("leave", leave_evt)]
-      & props .~ props0
+      variables .= vars
+      event_table .= newEvents [("enter", enter_evt), ("leave", leave_evt)]
+      props .= props0
+      proofs .= fromList
+            [   ( "train0/enter/INV/inv2"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/leave/INV/inv2"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/INIT/INV/inv2"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/enter/CO/co0"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/enter/CO/co1"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/leave/CO/co0"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ,   ( "train0/leave/CO/co1"
+                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
+            ]
     where
+        li = LI "" 0 0
         inLbls = map (label . ("in" ++) . show . (1 -)) [0..]
         axm0 = ($typeCheck) (block .=. (zset_enum [ent,ext] `zunion` plf)) 
         axm2 = ($typeCheck) (
@@ -281,8 +299,8 @@ c = ctxWith [("sets",set_theory),("functions",function_theory)] $ do
             [var| t : \TRAIN |]
 
 props0 :: PropertySet
-props0 = empty_property_set
-    {  _constraint = fromList 
+props0 = create $ do
+    constraint .= fromList 
             [   ( "co0"
                 , Co [t_decl] 
                     $ c $ [expr| \neg t \in in \land t \in in'  \implies  loc'.t = ent |] . (is_step .~ True))
@@ -292,48 +310,29 @@ props0 = empty_property_set
                                \implies  t \in in' 
                                    \land (loc'.t \in PLF \1\lor loc'.t = ent) |] . (is_step .~ True) )
             ]
-    ,   _transient = fromList
+    transient .= fromList
             [   ( "tr0"
                 , Tr
                     (symbol_table [t_decl])
                     (c $ [expr| t \in in |].(free_dummies .~ True)) ["leave"] 
                     (TrHint (fromList [("t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
             ]
-    ,  _inv = fromList 
+    inv .= fromList 
             [   ("inv2", c [expr| \dom.loc = in |])
             ,   ("inv1", c [expr| \qforall{t}{t \in in}{loc.t \in \BLK} |])
             ]
-    ,  _proofs = fromList
-            [   ( "train0/enter/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/INIT/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/enter/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/enter/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ]
-    ,  _safety = fromList
+    safety .= fromList
             []
-    }
-    where 
-        li = LI "" 0 0
 
 enter_evt :: Event
-enter_evt = empty_event
-    &  indices .~ symbol_table [t_decl]
-    &  coarse_sched .~ fromList
+enter_evt = flip execState empty_event $ do
+     indices .= symbol_table [t_decl]
+     coarse_sched .= fromList
             [ ("default", zfalse )]
-    &  guards  .~ fromList
+     guards  .= fromList
             [  ("grd1", c [expr| \neg t \in in |])
             ]
-    &  actions .~ fromList
+     actions .= fromList
             [  ("a1", BcmSuchThat (M.elems vars)
                     (c $ [expr| in' = in \bunion \{ t \} |] . (is_step .~ True)))
             ,  ("a2", BcmSuchThat (M.elems vars)
@@ -341,19 +340,18 @@ enter_evt = empty_event
             ]
 
 leave_evt :: Event
-leave_evt = empty_event 
-    {  _indices   = symbol_table [t_decl]
-    ,  _coarse_sched = singleton "c0" (c [expr| t \in in |])
-    ,  _guards = fromList
+leave_evt = flip execState empty_event $ do
+    indices   .= symbol_table [t_decl]
+    coarse_sched .= singleton "c0" (c [expr| t \in in |])
+    guards .= fromList
             [  ("grd0", c [expr| loc.t = ext \1\land t \in in |] )
             ]
-    ,  _actions = fromList 
+    actions .= fromList 
             [  ("a0", BcmSuchThat (M.elems vars)
                     (c $ [expr| in' = in \1\setminus \{ t \} |] . (is_step .~ True)))
             ,  ("a3", BcmSuchThat (M.elems vars)
                     (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
             ] 
-    }
 
 p        :: ExprP
 p_decl   :: Var

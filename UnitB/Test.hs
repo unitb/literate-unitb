@@ -450,7 +450,7 @@ get_cmd_tr_po :: Monad m
               -> m (Either [Error] String)
 get_cmd_tr_po em = return (do
         m <- em
-        let lbl = composite_label [_name m, "TR/TR0/t@param"]
+        let lbl = composite_label [as_label $ _name m, "TR/TR0/t@param"]
         pos <- proof_obligation m
         let po = pos ! lbl
             cmd =  z3_code po
@@ -460,7 +460,7 @@ get_tr_en_po :: Either [Error] RawMachine -> IO String
 get_tr_en_po em = either (return . show_err) return $ do
         m   <- em
         pos <- proof_obligation m
-        let lbl = composite_label [_name m, "TR/TR0/leave/EN"]
+        let lbl = composite_label [as_label $ _name m, "TR/TR0/leave/EN"]
             po  = either error id $ lookupSequent lbl pos
         return $ show po
 
@@ -468,7 +468,7 @@ get_tr_neg_po :: Either [Error] RawMachine -> IO String
 get_tr_neg_po em = either (return . show_err) return $ do
         m   <- em
         pos <- proof_obligation m
-        let lbl = composite_label [_name m, "TR/TR0/leave/NEG"]
+        let lbl = composite_label [as_label $ _name m, "TR/TR0/leave/NEG"]
             po  = either error id $ lookupSequent lbl pos
         return $ show po
 

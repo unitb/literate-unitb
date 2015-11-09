@@ -1,40 +1,4 @@
-module UnitB.Property 
-    ( Transient
-    , RawTransient
-    , Transient'  (..)
-    , Constraint 
-    , RawConstraint 
-    , Constraint' (..)
-    , ProgressProp
-    , RawProgressProp
-    , ProgressProp'(..)
-    , SafetyProp 
-    , RawSafetyProp 
-    , SafetyProp' (..) 
-    , PropertySet 
-    , RawPropertySet 
-    , PropertySet' (..) 
-    , PropertySet'Field (..) 
-    , PropertySetField
-    , EventId (..)
-    , empty_property_set
-    , TrHint
-    , RawTrHint
-    , TrHint' (..)
-    , empty_hint
-    , makePropertySet'
-    , changePropertySet'
-    , ProgId (..)
-    , variant_decreased
-    , variant_equals_dummy
-    , variant_bounded
-    , Variant (..)
-    , Direction (..)
-    , make_unique
-    , safety, transient
-    , proofs, progress
-    , constraint, inv, inv_thm )
-where
+module UnitB.Property where
 
     -- Modules
 import Logic.Expr.Scope
@@ -49,14 +13,19 @@ import Control.DeepSeq
 import Control.Lens hiding (Const)
 
 import Data.Default
-import Data.DeriveTH
 import Data.Foldable
 import Data.Map  as M hiding (fold)
-import Data.Monoid
+import Data.Semigroup
 import Data.List as L
 import Data.String
 import Data.Typeable
 
+import GHC.Generics
+
+import Text.Printf
+
+import Utilities.Instances
+import Utilities.Invariant
 import Utilities.TableConstr
 
 type Constraint = Constraint' Expr
@@ -64,13 +33,13 @@ type RawConstraint = Constraint' RawExpr
 
 data Constraint' expr = 
         Co [Var] expr
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
 data TrHint' expr = TrHint (Map String (Type,expr)) (Maybe ProgId)
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 
 empty_hint :: TrHint' expr
@@ -87,13 +56,13 @@ data Transient' expr =
             (TrHint' expr)       -- Hints for instantiation
             -- (Map String Expr)    -- Index substitution
             -- (Maybe Label)        -- Progress Property for fine schedule
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 data Direction = Up | Down
-    deriving (Eq,Show)
+    deriving (Eq,Show,Generic)
 
 newtype EventId = EventId Label
-    deriving (Eq,Ord,Typeable)
+    deriving (Eq,Ord,Typeable,Generic)
 
 instance Show EventId where
     show (EventId x) = show x
@@ -107,7 +76,7 @@ instance IsLabel EventId where
 data Variant = 
         SetVariant     Var RawExpr RawExpr Direction
       | IntegerVariant Var RawExpr RawExpr Direction
-    deriving (Eq,Show)
+    deriving (Eq,Show,Generic)
 
 type PropertySet = PropertySet' Expr
 type RawPropertySet = PropertySet' RawExpr
@@ -117,15 +86,14 @@ data PropertySet' expr = PS
         , _constraint   :: Map Label (Constraint' expr)
         , _inv          :: Map Label expr       -- inv
         , _inv_thm      :: Map Label expr       -- inv thm
-        , _proofs       :: Map Label Proof
         , _progress     :: Map ProgId (ProgressProp' expr)
 --        , schedule     :: Map Label Schedule
         , _safety       :: Map Label (SafetyProp' expr)
         }
-    deriving (Eq,Functor,Foldable,Traversable)
+    deriving (Eq,Functor,Foldable,Traversable,Generic)
 
 newtype ProgId = PId { getProgId :: Label }
-    deriving (Eq,Ord,IsString,Typeable)
+    deriving (Eq,Ord,IsString,Typeable,Generic)
 
 instance IsLabel ProgId where
     as_label (PId lbl) = lbl
@@ -137,13 +105,13 @@ type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
 
 data ProgressProp' expr = LeadsTo [Var] expr expr
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic)
 
 type SafetyProp = SafetyProp' Expr
 type RawSafetyProp = SafetyProp' RawExpr
 
 data SafetyProp' expr = Unless [Var] expr expr (Maybe EventId)
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance Show expr => Show (ProgressProp' expr) where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
@@ -154,15 +122,15 @@ instance Show expr => Show (SafetyProp' expr) where
             except = maybe "" (("  EXCEPT  " ++) . show) ev
 
 instance Show expr => Show (PropertySet' expr) where
-    show x = intercalate ", " $ L.map (\(x,y) -> x ++ " = " ++ y)
-        [ ("transient",  show $ _transient x)
-        , ("constraint", show $ _constraint x)
-        , ("inv", show $ _inv x)
-        , ("inv_thm", show $ _inv_thm x)
-        , ("proofs", show $ keys $ _proofs x)
-        , ("progress", show $ _progress x)
-        , ("safety", show $ _safety x)
-        ]
+    show x = printf "PropertySet { %s }" 
+        $ intercalate ", " $ L.map (\(x,y) -> x ++ " = " ++ y)
+            [ ("transient",  show $ _transient x)
+            , ("constraint", show $ _constraint x)
+            , ("inv", show $ _inv x)
+            , ("inv_thm", show $ _inv_thm x)
+            , ("progress", show $ _progress x)
+            , ("safety", show $ _safety x)
+            ]
 
 makeRecordConstr ''PropertySet'
 
@@ -173,6 +141,19 @@ empty_property_set = makePropertySet' []
 
 instance Default (PropertySet' expr) where
     def = empty_property_set
+
+hasClashes :: PropertySet' expr -> PropertySet' expr -> PropertySet' expr
+hasClashes x y = getIntersection $ Intersection x <> Intersection y
+
+noClashes :: Show expr => PropertySet' expr -> PropertySet' expr -> Invariant ()
+noClashes p0 p1 = allTables inv (hasClashes p0 p1) >> return ()
+    where
+        inv msg m = withPrefix msg $ do
+            (show $ keys m) ## M.null m
+            return m
+
+instance Semigroup (Intersection (PropertySet' expr)) where
+    (<>) = genericSemigroupMAppendWith
 
 variant_equals_dummy :: Variant -> RawExpr
 --variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` asExpr var
@@ -237,13 +218,17 @@ instance HasScope expr => HasScope (PropertySet' expr) where
         --, withPrefix "proofs" $ foldMapWithKey scopeCorrect'' (x^.proofs)
         ]
 
-derive makeNFData ''ProgId
-derive makeNFData ''Constraint'
-derive makeNFData ''Direction
-derive makeNFData ''ProgressProp'
-derive makeNFData ''PropertySet'
-derive makeNFData ''SafetyProp'
-derive makeNFData ''Transient'
-derive makeNFData ''TrHint'
-derive makeNFData ''Variant
-derive makeNFData ''EventId
+instance Monoid (PropertySet' expr) where
+    mempty = genericMEmpty
+    mappend = genericMAppend
+
+instance NFData ProgId
+instance NFData expr => NFData (Constraint' expr)
+instance NFData Direction
+instance NFData expr => NFData (ProgressProp' expr)
+instance NFData expr => NFData (PropertySet' expr)
+instance NFData expr => NFData (SafetyProp' expr)
+instance NFData expr => NFData (Transient' expr)
+instance NFData expr => NFData (TrHint' expr)
+instance NFData Variant
+instance NFData EventId

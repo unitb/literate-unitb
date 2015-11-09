@@ -3850,7 +3850,7 @@ result13 = unlines
 
 case14 :: IO (Either String ([SkipOrEvent],[SkipOrEvent],[SkipOrEvent]))
 case14 = runEitherT $ do
-    ms <- machines <$> get_system path13
+    ms <- view' machines <$> get_system path13
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
@@ -3863,7 +3863,7 @@ type ExprSet = [(SkipOrEvent,[Label])]
 
 case15 :: IO (Either String (ExprSet,ExprSet,ExprSet))
 case15 = runEitherT $ do
-    ms <- machines <$> get_system path13
+    ms <- view' machines <$> get_system path13
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
@@ -3877,7 +3877,7 @@ result15 = Right   ( [(Left SkipEvent,[]),("evt",["act0"])]
 
 case16 :: IO (Either String (ExprSet,ExprSet,ExprSet))
 case16 = runEitherT $ do
-    ms <- machines <$> get_system path13
+    ms <- view' machines <$> get_system path13
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"

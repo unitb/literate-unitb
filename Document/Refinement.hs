@@ -5,7 +5,6 @@ module Document.Refinement where
 
     -- Module
 import Document.Phase
-import Document.Pipeline
 import Document.Proof
 import Document.Visitor
 

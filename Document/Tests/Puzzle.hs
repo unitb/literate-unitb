@@ -250,7 +250,7 @@ result2 = unlines
 case3 :: IO String
 case3 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
-    let ms  = machines s
+    let ms  = s!.machines
         m   = ms ! "m1"
         visit = "visit"
         evt   = nonSkipUpwards m ! visit

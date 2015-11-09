@@ -8,11 +8,10 @@ module UnitB.Machine where
     -- Modules
 import Logic.Expr.Scope
 import Logic.Operator
+import Logic.Proof
 import Logic.Proof.POGenerator ( POGen )
 import Logic.Theory as Th
 
-import Theories.SetTheory
-import Theories.FunctionTheory
 import Theories.Arithmetic
 
 import UnitB.Event
@@ -37,8 +36,8 @@ import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
 import           Data.Map as M
 import           Data.Maybe as M
--- import           Data.Maybe as M
 import qualified Data.Set as S
+import           Data.String
 import qualified Data.Traversable as T
 import           Data.Typeable
 
@@ -78,6 +77,7 @@ data Machine'' expr =
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
         , _derivation :: Map ProgId Rule         
+        , _proofs     :: Map Label Proof
         , _comments   :: Map DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
@@ -86,6 +86,20 @@ instance Eq1 Machine'' where
 
 instance Show1 Machine'' where
     showsPrec1 n m = showsPrec n m
+
+newtype MachineId = MId { getMId :: String }
+    deriving (Eq,Ord,Typeable,Generic)
+
+instance Show MachineId where
+    show = getMId
+
+instance IsString MachineId where
+    fromString = MId
+
+instance NFData MachineId where
+
+instance IsLabel MachineId where
+    as_label (MId x) = label x
 
 data DocItem = 
         DocVar String 
@@ -143,16 +157,22 @@ instance (IsExpr expr) => HasName (Machine' expr) String where
 --    machine'' = content assert
 
 instance (IsExpr expr) => HasInvariant (Machine'' expr) where
-    invariant m = 
-        [ ("inv0", F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) $ conc_events m) 
-        , ("inv1", F.all validEvent $ m^.props.transient)
-        , ("inv2", F.all tr_wit_enough $ m^.props.transient) 
-            -- valid witnesses
-        , ("inv3", G.member (Left SkipEvent) (Left SkipEvent) $ m^.events )  
-            -- has skip and (a)skip refined by (b)skip
-        --, ("inv4", scopeCorrect m)
-            -- valid scopes
-        ] ++ L.map (\(x,y) -> (format "inv4: {0}\n{1}" x y, False)) (scopeCorrect m)
+    invariant m = withPrefix (m^.name) $ do
+            "inv0" ## F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) (conc_events m) 
+            "inv1" ## F.all validEvent (m^.props.transient)
+            "inv2" ## F.all tr_wit_enough (m^.props.transient)
+                -- valid witnesses
+            "inv3" ## G.member (Left SkipEvent) (Left SkipEvent) (m^.events)  
+                -- has skip and (a)skip refined by (b)skip
+                -- valid scopes
+            forM_ (scopeCorrect m) $ \(x,y) -> 
+                format "inv4: {0}\n{1}" x y ## False
+            "inv5" ## ((m^.abs_vars) `M.difference` (m^.variables)) `isSubmapOf'` (m^.del_vars)
+                -- Inv5 is not an equality because del_vars is cummulative
+            "inv6" ## ((m^.abs_vars) `M.difference` (m^.del_vars)) `isSubmapOf'` (m^.variables)
+            "inv7" ## noClashes (m^.inh_props) (m^.props)
+            --"inv8" ## no name clashes between declarations of events, state variables and theories
+            --"inv9" ## no name clashes between expression tags of events, state variables and theories
         where
             validEvent (Tr _ _ es _) = L.all (`M.member` nonSkipUpwards m) es
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
@@ -317,24 +337,6 @@ events = event_table . table
 
 -- data Decomposition = Decomposition 
 
-type System = System'
-
-data System' = Sys 
-        {  proof_struct :: [(Label,Label)]
-        ,  ref_struct   :: Map Label Label
-        ,  machines     :: Map String Machine
-        ,  theories     :: Map String Theory
-        }
-    deriving (Eq,Generic)
-
-empty_system :: System
-empty_system = Sys [] M.empty 
-        M.empty $ M.fromList 
-            [ ("sets",set_theory)
-            , ("functions",function_theory)
-            , ("arithmetic",arithmetic)
-            , ("basic",basic_theory)]
-
 all_notation :: Show expr => Machine' expr -> Notation
 all_notation m = flip precede logical_notation 
         $ L.foldl combine empty_notation 
@@ -346,8 +348,8 @@ instance (IsExpr expr) => Named (Machine' expr) where
     decorated_name' = return . view name
 
 _name :: Controls (machine expr) (Machine'' expr)
-      => machine expr -> Label
-_name = label . view' machine''Name
+      => machine expr -> MachineId
+_name = MId . view' machine''Name
 
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              => Machine' expr 
@@ -387,5 +389,3 @@ instance NFData DocItem where
 instance NFData expr => NFData (Machine'' expr) where
 instance NFData Rule where
     rnf (Rule x) = rnf x
-instance NFData System' where
-

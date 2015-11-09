@@ -6,6 +6,7 @@ module Document.Pipeline where
 
     -- Modules
 import Latex.Parser as P
+import UnitB.AST
 
     -- Libraries
 import Control.Applicative
@@ -20,7 +21,6 @@ import Control.Monad.Writer
 import Data.List as L
 import qualified Data.Map as M
 import Data.String
-import Data.Typeable
 
 import Utilities.Syntactic
 
@@ -38,20 +38,11 @@ data Input = Input
     , getContextInput :: M.Map ContextId DocBlocks
     } deriving Show
 
-newtype MachineId = MId { getMId :: String }
-    deriving (Eq,Ord,Typeable)
-
 newtype ContextId = CId { getCId :: String }
     deriving (Eq,Ord)
 
-instance Show MachineId where
-    show = getMId
-
 instance Show ContextId where
     show = getCId
-
-instance IsString MachineId where
-    fromString = MId
 
 instance IsString ContextId where
     fromString = CId

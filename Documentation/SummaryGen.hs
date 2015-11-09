@@ -77,7 +77,7 @@ produce_summaries path sys = do
                     event_summary m lbl evt
             ) ((),path)
     where
-        ms = machines sys
+        ms = sys!.machines
         path' = dropExtension path
 
 make_file :: FilePath -> M () -> Doc ()
@@ -215,7 +215,7 @@ event_summary m lbl e = make_file fn $
 
 refines_clause :: System -> Machine -> M ()
 refines_clause sys m = do
-    case _name m `M.lookup` ref_struct sys of
+    case _name m `M.lookup` (sys!.ref_struct) of
         Nothing -> return ()
         Just anc -> tell [keyword "refines" ++ " " ++ show anc]
 

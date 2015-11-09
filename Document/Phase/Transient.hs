@@ -4,7 +4,6 @@ module Document.Phase.Transient where
     --
     -- Modules
     --
-import Document.Pipeline
 import Document.Phase as P
 import Document.Proof
 import Document.Visitor

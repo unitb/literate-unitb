@@ -58,7 +58,7 @@ result0 = unlines
 case0 :: IO String
 case0 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
-    let ms  = machines s
+    let ms  = s!.machines
         lbl = "m1:moveout"
         m   = ms ! "m2"
     return $ getListing $ 
@@ -104,7 +104,7 @@ result1 = unlines
 case1 :: IO String
 case1 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
-    let ms  = machines s
+    let ms  = s!.machines
         lbl = "m1:moveout"
         m   = ms ! "m3"
     return $ getListing $
@@ -123,7 +123,7 @@ result2 = unlines
 case2 :: IO String
 case2 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
-    let ms  = machines s
+    let ms  = s!.machines
         m   = ms ! "m2"
         p   = m!.props
     return $ getListing $
@@ -147,7 +147,7 @@ result3 = unlines
 case3 :: IO String
 case3 = liftM (either id id) $ runEitherT $ do
     s <- get_system path0
-    let ms  = machines s
+    let ms  = s!.machines
         m   = ms ! "m2"
     return $ getListing $
         liveness_sum m

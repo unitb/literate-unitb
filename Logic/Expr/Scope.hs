@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
-module Logic.Expr.Scope where
+module Logic.Expr.Scope 
+    ( HasPrefix(..) 
+    , module Logic.Expr.Scope )
+where
 
     -- Modules
 import Logic.Expr.Label
@@ -16,6 +19,7 @@ import Data.Map as M
 import Text.Printf
 
 import Utilities.Instances
+import Utilities.Invariant
 
 data VisibleVars = VisibleVars
         { _visibleVarsConstants :: Map String Var
@@ -39,10 +43,8 @@ instance Default VisibleVars where
 scopeCorrect'' :: (HasScope a, Show lbl) => lbl -> a -> ScopeCorrectness
 scopeCorrect'' lbl x = withPrefix (show lbl) $ scopeCorrect' x
 
-withPrefix :: String 
-           -> ScopeCorrectnessM a 
-           -> ScopeCorrectnessM a
-withPrefix lbl = local (prefix %~ (lbl:))
+instance HasPrefix ScopeCorrectnessM where
+    withPrefix lbl = local (prefix %~ (lbl:))
 
 withVars :: (Foldable f) 
          => f Var 

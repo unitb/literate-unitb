@@ -36,6 +36,7 @@ import qualified Control.Monad.Writer as W
 
 import           Data.Either.Combinators
 import           Data.Map   as M hiding ( map, foldl, (\\) )
+import qualified Data.Map   as M
 import           Data.List.Ordered (sortOn)
 
 import Utilities.Syntactic
@@ -56,7 +57,7 @@ system =     run_phase0_blocks
 
 wrap_machine :: Pipeline MM SystemP4 System
 wrap_machine = proc m4 -> do
-                machines <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
+                sys <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
                 -- let ms = _ -- M.mapWithKey make_machine m4 :: MTable (Either [Error] Machine)
                 -- machines <- triggerP -< _ ms
                 -- let refs' = M.mapKeys as_label $ M.map as_label $ P.edges $ r_ord
@@ -68,9 +69,10 @@ wrap_machine = proc m4 -> do
                 --                 (transient $ props $ machines ! m)
                 --                 ((m4 ! m) ^. pProgress) -- exprs ! m)
                 -- liftP -< toEither check0
-                returnA -< empty_system 
-                    { machines = M.mapKeys (\(MId s) -> s) $ machines^.mchTable }
-
+                returnA -< create' assert $ do
+                    machines   .= sys^.mchTable
+                    ref_struct .= (Nothing <$ sys^.mchTable)
+                    ref_struct %= M.union (sys^.refineStruct.to (M.map Just .edges))
 
 all_machines :: LatexDoc -> Either [Error] System
 all_machines xs = read_document xs
@@ -80,7 +82,7 @@ list_machines :: FilePath
 list_machines fn = do
         xs <- EitherT $ parse_latex_document fn
         ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ machines ms
+        return $ map snd $ toList $ ms!.machines
 
 list_proof_obligations :: FilePath
                        -> EitherT [Error] IO [(Machine, Map Label Sequent)]
@@ -104,7 +106,7 @@ parse_machine :: FilePath -> IO (Either [Error] [Machine])
 parse_machine fn = runEitherT $ do
         xs <- EitherT $ parse_latex_document fn
         ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ machines ms
+        return $ map snd $ toList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 
                -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])

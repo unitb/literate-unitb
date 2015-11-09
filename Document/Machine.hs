@@ -105,8 +105,8 @@ make_machine (MId m) p4 = mch'
                 p <- runTactic li (pos ! k) tac
                 return (k,p)
             xs <- triggerM xs
-            return $ mch & content Exc.assert %~ \m -> 
-                       m & AST.props.AST.proofs .~ fromList xs
+            return $ mutate Exc.assert mch $ 
+                       AST.proofs .= fromList xs
         events = p4^.pEventRef
         evts = events & G.traverseLeft %~ abstrEvt
                       & G.traverseRightWithEdgeInfo %~ uncurry concrEvt

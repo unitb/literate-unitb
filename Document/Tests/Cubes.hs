@@ -68,19 +68,20 @@ machine6 = fmap (DispExpr "") $ (empty_machine "m0") & content assert %~ \m ->
                   ]
           ,  _props = prop_set6
           ,  _event_table = newEvents [("evt",event6_evt)]
+          ,  _proofs = fromList [ 
+                        (label "m0/evt/INV/inv0", calc),
+                        (label "m0/evt/INV/inv1", calc),
+                        (label "m0/evt/INV/inv2", calc) ]
           }
     where
         a = Right $ Word var_a
         b = Right $ Word var_b
         c = Right $ Word var_c
         n = Right $ Word var_n
+        calc = ByCalc $ Calc (step_ctx $ asExpr <$> machine6) ztrue ztrue [] (LI "" 1 1)
 
 prop_set6 :: PropertySet' RawExpr
 prop_set6 = empty_property_set {
-        _proofs = fromList [ 
-                    (label "m0/evt/INV/inv0", calc),
-                    (label "m0/evt/INV/inv1", calc),
-                    (label "m0/evt/INV/inv2", calc) ],
         _inv = fromList $ zip 
                 (map label ["inv0","inv1","inv2"]) 
                 [ $typeCheck$ a .=. (n .^ 3)
@@ -93,7 +94,6 @@ prop_set6 = empty_property_set {
         b = Right $ Word var_b
         c = Right $ Word var_c
         n = Right $ Word var_n
-        calc = ByCalc $ Calc (step_ctx $ asExpr <$> machine6) ztrue ztrue [] (LI "" 1 1)
 
 vars :: [Var]
 vars = [var_a,var_b,var_c,var_n] 
@@ -231,7 +231,7 @@ case9 = do
         r <- parse path6
         case r of
             Right [m] -> do
-                case toList $ m!.props.proofs of
+                case toList $ m!.proofs of
                     (lbl,ByCalc calc):_ -> 
                           return (show lbl ++ ":\n" ++ show_proof calc)
                     xs -> return (

@@ -36,7 +36,6 @@ import Control.Monad.Trans.State  as ST
 import Control.Monad.Writer.Class 
 
 import Data.Default
-import Data.DeriveTH
 import Data.Either
 import Data.Either.Combinators
 import Data.List as L
@@ -236,7 +235,7 @@ type MachineP0' a = MachineP0
 data MachineP0 = MachineP0
         { _pAllMachines :: MTable ()
         , _pMachineId   :: MachineId }
-    deriving (Show,Typeable)
+    deriving (Show,Typeable,Generic)
 
 type MachineP1 = MachineP1' EventP1 TheoryP1
 
@@ -244,7 +243,7 @@ data MachineP1' events theory = MachineP1
     { _p0 :: MachineP0
     , _pEventRef :: BiGraph SkipOrEvent events events
     , _pContext  :: theory
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 type MachineP2 = MachineP2' EventP2 TheoryP2
 
@@ -254,7 +253,7 @@ data MachineP2' events theory = MachineP2
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 type MachineP3 = MachineP3' EventP3 TheoryP3
 
@@ -269,7 +268,7 @@ data MachineP3' events theory = MachineP3
     , _pInit        :: Map Label Expr
     , _pOldPropSet  :: PropertySet
     , _pNewPropSet  :: PropertySet
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 type MachineP4 = MachineP4' EventP4 TheoryP3
 
@@ -278,12 +277,12 @@ data MachineP4' events theory = MachineP4
     , _pLiveRule :: Map ProgId Rule
     , _pProofs   :: Map Label (Tactic Proof, LineInfo)
     , _pComments :: Map DocItem String
-    } deriving (Typeable,Show)
+    } deriving (Typeable,Show,Generic)
 
 data EventP1 = EventP1
          { _eEventId :: SkipOrEvent
          }
-    deriving (Show,Typeable)
+    deriving (Show,Typeable,Generic)
 
 data EventP2 = EventP2 
     { _e1 :: EventP1 
@@ -291,7 +290,7 @@ data EventP2 = EventP2
     , _eParams  :: Map String Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 data EventP3 = EventP3 
     { _e2 :: EventP2 
@@ -300,20 +299,20 @@ data EventP3 = EventP3
     , _eGuards   :: Map Label Expr       
     , _eWitness     :: Map Var RawExpr
     , _eActions  :: Map Label Action
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 data EventP4 = EventP4 
     { _e3 :: EventP3 
     , _eCoarseRef  :: [(Label,ScheduleChange)]
     , _eFineRef    :: Maybe (ProgId,ProgressProp)
-    } deriving (Typeable,Show)
+    } deriving (Typeable,Show,Generic)
 
 data Change = AddC | RemoveC
     deriving (Eq,Show)
 
 data TheoryP0 = TheoryP0
     { _tNothing :: ()
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 type PostponedDef = (Def,DeclSource,LineInfo)
 
@@ -323,7 +322,7 @@ data TheoryP1 = TheoryP1
     , _pTypes     :: Map String Sort
     , _pAllTypes  :: Map String Sort
     , _pSetDecl   :: [(String, PostponedDef)]
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 data TheoryP2 = TheoryP2
     { _t1 :: TheoryP1 
@@ -332,12 +331,12 @@ data TheoryP2 = TheoryP2
     , _pDummyVars :: Map String Var             -- dummy variables
     , _pNotation  :: Notation
     , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 data TheoryP3 = TheoryP3
     { _t2 :: TheoryP2
     , _pAssumptions :: Map Label Expr
-    } deriving (Show,Typeable)
+    } deriving (Show,Typeable,Generic)
 
 newtype Abs a = Abs { getAbstract :: a }
     deriving (Eq,Ord)
@@ -358,13 +357,11 @@ type SystemP2 = SystemP MachineP2
 type SystemP3 = SystemP MachineP3
 type SystemP4 = SystemP MachineP4
 
+  -- TODO: write contracts
 data Hierarchy k = Hierarchy 
         { order :: [k]
         , edges :: Map k k }
     deriving (Show,Typeable,Generic)
-
-instance IsLabel MachineId where
-    as_label (MId x) = label x
 
 instance IsLabel ContextId where
     as_label (CId x) = label x
@@ -372,22 +369,21 @@ instance IsLabel ContextId where
 type MTable = Map MachineId
 type CTable = Map ContextId
 
-derive makeNFData ''MachineId
-derive makeNFData ''MachineP0
-derive makeNFData ''MachineP1'
-derive makeNFData ''MachineP2'
-derive makeNFData ''MachineP3'
-derive makeNFData ''MachineP4'
+instance NFData MachineP0
+instance (NFData e,NFData t) => NFData (MachineP1' e t)
+instance (NFData e,NFData t) => NFData (MachineP2' e t)
+instance (NFData e,NFData t) => NFData (MachineP3' e t)
+instance (NFData e,NFData t) => NFData (MachineP4' e t)
 
-derive makeNFData ''EventP1
-derive makeNFData ''EventP2
-derive makeNFData ''EventP3
-derive makeNFData ''EventP4
+instance NFData EventP1
+instance NFData EventP2
+instance NFData EventP3
+instance NFData EventP4
 
-derive makeNFData ''TheoryP0
-derive makeNFData ''TheoryP1
-derive makeNFData ''TheoryP2
-derive makeNFData ''TheoryP3
+instance NFData TheoryP0
+instance NFData TheoryP1
+instance NFData TheoryP2
+instance NFData TheoryP3
 
 makeRecordConstr ''MachineP2'
 makeRecordConstr ''MachineP3'
@@ -401,8 +397,11 @@ makeRecordConstr ''TheoryP2
 makeRecordConstr ''TheoryP3
 --makeRecordConstr ''TheoryP4
 
-derive makeNFData ''EventP2Field
-derive makeNFData ''EventP3Field
+instance NFData EventP2Field
+instance NFData EventP3Field
+deriving instance Generic EventP2Field
+deriving instance Generic EventP3Field
+deriving instance Generic EventP4Field
 
 makeLenses ''SystemP
 

@@ -33,15 +33,15 @@ import System.Directory
 import System.IO.Unsafe
 
 type POResult = (String,Map Label Sequent)
-type POS a = Either [Error] (Map String (a, Map Label Sequent))
+type POS sid a = Either [Error] (Map sid (a, Map Label Sequent))
 
 hide_error_path :: Bool
 hide_error_path = True
 
-pos :: MVar (Map FilePath ((POS Machine,POS Theory), UTCTime))
+pos :: MVar (Map FilePath ((POS MachineId Machine,POS String Theory), UTCTime))
 pos = unsafePerformIO $ newMVar M.empty
 
-list_file_obligations' :: FilePath -> IO (POS Machine,POS Theory)
+list_file_obligations' :: FilePath -> IO (POS MachineId Machine,POS String Theory)
 list_file_obligations' path = do
     path <- canonicalizePath path
     t <- getModificationTime path
@@ -51,8 +51,8 @@ list_file_obligations' path = do
             let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
                 cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
                 -- ms :: Either 
-                ms = machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
-                ts = theories <$> sys >>= traverseWithKey (cmd theory_po)
+                ms = view' machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
+                ts = view' theories <$> sys >>= traverseWithKey (cmd theory_po)
             putMVar pos $ M.insert path ((ms,ts),t) m
             return (ms,ts)
 
