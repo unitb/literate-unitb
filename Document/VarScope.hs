@@ -22,8 +22,11 @@ import Data.Map as M
 import Data.Maybe
 import Data.Typeable
 
+import Test.QuickCheck
+
 import Utilities.Format
 import Utilities.HeterogenousEquality
+import Utilities.Instances
 import Utilities.Syntactic
 import Utilities.TH
 
@@ -54,7 +57,7 @@ instance Show VarScope where
 instance Scope VarScope where
     keep_from s = applyVarScope (keep_from s)
     make_inherited = applyVarScope make_inherited
-    clashes = fmap (fromMaybe True . fmap getConst) . apply2VarScope (fmap Const . clashes)
+    clash = fmap (fromMaybe True . fmap getConst) . apply2VarScope (fmap Const . clash)
     merge_scopes = fmap (runIdentity . fromJust) . apply2VarScope (fmap Identity . merge_scopes)
     error_item = readVarScope error_item
     rename_events m = applyVarScope (rename_events m)
@@ -70,13 +73,13 @@ data TheoryConst = TheoryConst
         { thCons :: Var
         , _theoryConstDeclSource :: DeclSource
         , _theoryConstLineInfo :: LineInfo }        
-    deriving (Eq,Ord,Show,Typeable)
+    deriving (Eq,Ord,Show,Typeable,Generic)
 
 data TheoryDef = TheoryDef 
         { thDef :: Def
         , _theoryDefDeclSource :: DeclSource
         , _theoryDefLineInfo :: LineInfo }
-    deriving (Eq,Ord,Show,Typeable)
+    deriving (Eq,Ord,Show,Typeable,Generic)
 
 data MachineVar = 
         Machine 
@@ -87,10 +90,10 @@ data MachineVar =
             { mvar :: Maybe Var
             , _machineVarDeclSource :: DeclSource
             , _machineVarLineInfo :: LineInfo }
-    deriving (Eq,Ord,Show,Typeable)
+    deriving (Eq,Ord,Show,Typeable,Generic)
 
 data EvtDecls = Evt (Map (Maybe EventId) EventDecl)
-    deriving (Eq,Ord,Show,Typeable)
+    deriving (Eq,Ord,Show,Typeable,Generic)
     --         -- in Evt, 'Nothing' stands for a dummy
 
 data EventDecl = EventDecl
@@ -99,10 +102,10 @@ data EventDecl = EventDecl
     , _source :: NonEmpty EventId
     , _eventDeclDeclSource :: DeclSource
     , _eventDeclLineInfo :: LineInfo 
-    } deriving (Show,Eq,Ord)
+    } deriving (Show,Eq,Ord,Generic)
 
 data EvtScope = Param | Index
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic)
 
 instance Eq VarScope where
     VarScope x == VarScope y = h_equal x y
@@ -140,9 +143,9 @@ instance Scope TheoryDef where
     rename_events _ x = [x]
 
 instance Scope MachineVar where
-    clashes (DelMch Nothing _ _) (Machine _ Inherited _) = False
-    clashes (Machine _ Inherited _) (DelMch Nothing _ _) = False
-    clashes _ _ = True
+    clash (DelMch Nothing _ _) (Machine _ Inherited _) = False
+    clash (Machine _ Inherited _) (DelMch Nothing _ _) = False
+    clash _ _ = True
     merge_scopes (DelMch Nothing s _) (Machine v Inherited li) = DelMch (Just v) s li
     merge_scopes (Machine v Inherited li) (DelMch Nothing s _) = DelMch (Just v) s li
     merge_scopes _ _ = error "MachineVar Scope.merge_scopes: _, _"
@@ -161,7 +164,7 @@ instance Scope EvtDecls where
                 | s == (x^.declSource) = Just x
                 | otherwise = Nothing
     make_inherited (Evt m) = Just $ Evt $ M.map (set declSource Inherited) m
-    clashes (Evt m0) (Evt m1) = not $ M.null $ m0 `M.intersection` m1
+    clash (Evt m0) (Evt m1) = not $ M.null $ m0 `M.intersection` m1
     error_item (Evt m) = head' $ elems $ mapWithKey msg m
         where
             head' [x] = x
@@ -176,3 +179,22 @@ instance Scope EvtDecls where
             f (Just eid,x) = [ singleton (Just e) $ setSource eid x | e <- lookup eid ]
             f (Nothing,x)  = [ singleton Nothing x ]
             setSource eid x = x & source .~ eid :| []
+
+instance Arbitrary TheoryDef where
+    arbitrary = genericArbitrary
+
+instance Arbitrary TheoryConst where
+    arbitrary = genericArbitrary
+
+instance Arbitrary MachineVar where
+    arbitrary = genericArbitrary
+
+instance Arbitrary EventDecl where
+    arbitrary = genericArbitrary
+
+instance Arbitrary EvtDecls where
+    arbitrary = Evt . fromList <$> arbitrary
+
+instance Arbitrary EvtScope where
+    arbitrary = genericArbitrary
+

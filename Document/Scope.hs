@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE ImplicitParams            #-}
 module Document.Scope 
     ( Scope(..)
     , HasDeclSource (..)
@@ -29,7 +30,7 @@ import Document.Pipeline
 import UnitB.Event
 
     -- Libraries
-import Control.Arrow
+import Control.Arrow (second)
 import Control.DeepSeq
 
 import Control.Lens as L 
@@ -46,8 +47,14 @@ import Data.Map as M
 import Data.Semigroup ((<>),First(..))
 import qualified Data.Traversable as T
 
+import GHC.Stack
+
+import Test.QuickCheck as QC
+
 import Text.Printf
 
+import Utilities.Instances
+import Utilities.Invariant
 import Utilities.Permutation
 import Utilities.Syntactic
 
@@ -70,9 +77,9 @@ class (Ord a,Show a) => Scope a where
                            => a -> Maybe a
     make_inherited x = (asImpl :: Iso' a (Impl a)) makeInheritedImpl x
 
-    clashes :: a -> a -> Bool
-    default clashes :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> Bool
-    clashes x y = clashesImpl (x ^. asImpl :: Impl a) (y ^. asImpl)
+    clash :: a -> a -> Bool
+    default clash :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> Bool
+    clash x y = clashesImpl (x ^. asImpl :: Impl a) (y ^. asImpl)
 
     merge_scopes :: a -> a -> a
     default merge_scopes :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> a
@@ -82,6 +89,22 @@ class (Ord a,Show a) => Scope a where
         -- | refinement of m0. rename_events sub x translates the name in x from the m0 
         -- | namespace to the m1 namespace.
     rename_events :: Map EventId [EventId] -> a -> [a]
+
+    axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
+    axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
+    axiom_Scope_clashesOverMerge :: a -> a -> a -> Bool
+    axiom_Scope_clashesOverMerge x y z = clash x y || ((x <+> y) `clash` z == (x `clash` z || y `clash` z))
+    axiom_Scope_mergeCommutative :: a -> a -> Bool
+    axiom_Scope_mergeCommutative x y = clash x y || x <+> y == y <+> x
+    axiom_Scope_mergeAssociative :: a -> a -> a -> Bool
+    axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) || x <+> (y <+> z) == (x <+> y) <+> z
+
+(<+>) :: (Scope a, ?loc :: CallStack) => a -> a -> a
+(<+>) x y = provided (not $ clash x y) $ x `merge_scopes` y
+
+clashFree :: Scope a => [a] -> Bool
+clashFree [] = True
+clashFree (x:xs) = all (not . clash x) xs && clashFree xs
 
 newtype DefaultClashImpl a = DefaultClashImpl { getDefaultClashImpl :: a }
 
@@ -120,10 +143,10 @@ is_local :: Scope s => s -> Maybe s
 is_local = keep_from Local
 
 data DeclSource = Inherited | Local
-    deriving (Eq,Ord,Show)
+    deriving (Eq,Ord,Show,Generic)
 
 data InhStatus a = InhAdd a | InhDelete (Maybe a)
-    deriving (Eq,Ord,Show,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 type EventInhStatus a = InhStatus (NonEmpty EventId,a)
 
@@ -194,9 +217,15 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
                 xs = concat ws             
         items' = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) items
         conflicts :: Map a [[b]]
-        conflicts = M.map (flip u_scc clashes) items' 
+        conflicts = M.map (flip u_scc clash) items' 
 
 newtype WithDelete a = WithDelete { getDelete :: a }
+
+instance Arbitrary DeclSource where
+    arbitrary = genericArbitrary
+
+instance Arbitrary e => Arbitrary (InhStatus e) where
+    arbitrary = genericArbitrary
 
 instance HasImplIso (WithDelete a) a where
     asImpl = iso WithDelete getDelete

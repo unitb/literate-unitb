@@ -1,62 +1,6 @@
-module UnitB.Event
-    ( EventId (..)
-    , SkipEventId (..)
-    , SkipOrEvent
-    , Event'  (..)
-    , RawEvent
-    , Event
-    , EventRef'
-    , EventRef (..)
-    , EventRefinement (..)
-    , EventMerging'
-    , RawEventMerging
-    , EventMerging   (..)
-    , EventSplitting'
-    , RawEventSplitting
-    , EventSplitting (..)
-    , AbstrEvent
-    , AbstrEvent' (..)
-    , HasAbstrEvent' (..)
-    , skip_abstr
-    , skip_event
-    , ConcrEvent
-    , ConcrEvent' (..)
-    , HasConcrEvent' (..)
-    , HasEvent' (..)
-    , empty_event
-    , Action
-    , RawAction
-    , Action' (..)
-    , ba_predicate'
-    , ba_pred
-    , rel_action, primed
-    , concrete
-    , abstract
-    , keep', frame, frame'
-    , deleted, kept
-    , total, added
-    , deleted', kept'
-    , total', added'
-    , old', new'
-    , old_actions, new_actions
-    , added_actions, deleted_actions
-    , total_actions, kept_actions
-    , multiAbstract
-    , multiConcrete
-    , schedules
-    -- , Schedule    (..)
-    , ScheduleChange 
-    , ScheduleChange' (..)
-    , replace
-    , hyps_label
-    , default_schedule
-    -- , empty_schedule
-    , ($=)
-    , eventRefAbstract
-    , eventRefConcrete
-    , add, remove, keep
-    , sch_prog, sch_saf
-    )
+module UnitB.Event 
+    ( module UnitB.Event
+    , EventId (..) )
 where
 
     -- Modules
@@ -83,9 +27,11 @@ import Data.Typeable
 
 import GHC.Generics hiding (to)
 
+import Test.QuickCheck hiding (label)
+
 import Utilities.Format
-import Utilities.TH
 import Utilities.Instances
+import Utilities.TH
 
 -- data Schedule = Schedule
 --         { coarse :: Map Label Expr
@@ -106,7 +52,7 @@ data Action' expr =
         Assign Var expr 
         | BcmSuchThat [Var] expr
         | BcmIn Var expr
-    deriving (Eq,Ord,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Functor,Foldable,Traversable,Generic)
 
 instance Show expr => Show (Action' expr) where
     show (Assign v e) = format "{0} := {1}" (view name v) (show e)
@@ -252,6 +198,9 @@ instance (IsExpr expr) => HasScope (Event' expr) where
             , foldMapWithKey scopeCorrect'' (e^.actions) 
             ]
         ]
+
+instance Arbitrary expr => Arbitrary (Action' expr) where
+    arbitrary = genericArbitrary
 
 infix 1  $=
 

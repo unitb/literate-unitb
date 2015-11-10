@@ -7,6 +7,7 @@ import Logic.Expr.Const
 import Theories.SetTheory
 
     -- Libraries
+import Control.Lens
 import Control.Monad
 
 import Data.Map hiding ( map )
@@ -22,23 +23,23 @@ left  = suffix_generics "1"
 right :: Type -> Type
 right = suffix_generics "2"
 
-prop_yield_same_type :: (Type,Type) -> Maybe (Type,Type)
-prop_yield_same_type (t0,t1) = 
-        maybe (Just (t0,t1)) (const Nothing) (do
+prop_yield_same_type :: (GType,GType) -> Maybe (GType,GType)
+prop_yield_same_type (GType t0,GType t1) = 
+        maybe (Just (GType t0, GType t1)) (const Nothing) (do
             un <- unify t0 t1
             let ct0 = instantiate un $ left t0
                 ct1 = instantiate un $ right t1
             return (ct0 == ct1))
 
-prop_unifying_yields_unified_type :: (Type, Type) -> Property
-prop_unifying_yields_unified_type (t0,t1) = 
+prop_unifying_yields_unified_type :: (GType, GType) -> Property
+prop_unifying_yields_unified_type (GType t0, GType t1) = 
         match ==>
-        maybe True (const False) (prop_yield_same_type (t0,t1))
+        maybe True (const False) (prop_yield_same_type (GType t0,GType t1))
     where
         match = unify t0 t1 /= Nothing
 
-prop_common_symm :: GenericType -> GenericType -> Bool
-prop_common_symm t0 t1 = common t0 t1 == common t1 t0 
+prop_common_symm :: GType -> GType -> Bool
+prop_common_symm (GType t0) (GType t1) = common t0 t1 == common t1 t0 
 
 counter_ex2_common_symm :: Bool
 counter_ex2_common_symm = 
@@ -46,12 +47,12 @@ counter_ex2_common_symm =
     where
         _a = GENERIC "a"
         pfun = fun_type
-        t0 = array _a _a
-        t1 = array _a (pfun (pfun _a int) real)
+        t0 = GType $ array _a _a
+        t1 = GType $ array _a (pfun (pfun _a int) real)
 
 
 counter_ex_common_symm :: Bool
-counter_ex_common_symm = prop_common_symm t0 t1
+counter_ex_common_symm = prop_common_symm (GType t0) (GType t1)
     where
         _a = GENERIC "a"
         _b = GENERIC "b"
@@ -90,8 +91,11 @@ check_prop p = do
             Success _ _ _ -> return True
             _             -> return False
 
-instance Arbitrary Type where
-    arbitrary = oneof (
+newtype GType = GType { getType :: Type }
+    deriving (Show)
+
+instance Arbitrary GType where
+    arbitrary = GType <$> oneof (
                 [ return bool
                 , return int
                 , return real
@@ -140,13 +144,12 @@ instance Arbitrary Type where
                 , GENERIC "b"
                 , GENERIC "c"
                 ]
-    shrink (GENERIC _)  = []
-    shrink (VARIABLE _) = []
-    shrink (Gen s ts) = ts ++ do
-            ts <- mapM shrink ts
-            return $ t ts
-        where
-            t ts = Gen s ts
+    shrink (GType (GENERIC _))  = []
+    shrink (GType (VARIABLE _)) = []
+    shrink (GType (Gen s ts)) = map GType ts ++ do
+            ts <- mapM (shrink . GType) ts
+            let t = Gen s $ map getType ts
+            return $ GType t
 
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
@@ -181,7 +184,7 @@ test = test_cases "genericity" (
         ] ++
         map (\ce -> Case 
                 "instantiation of unified types is unique (counter examples)" 
-                (return $ prop_yield_same_type ce) 
+                (return $ prop_yield_same_type $ ce & each %~ GType) 
                 Nothing
             ) unicity_counter_example ++ 
 --        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True

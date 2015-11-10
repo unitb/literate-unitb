@@ -10,19 +10,22 @@ import UnitB.Expr
 
     -- Libraries
 import Control.DeepSeq
-import Control.Lens hiding (Const)
+import Control.Lens hiding (Const,elements)
 
 import Data.Default
 import Data.Foldable
 import Data.Map  as M hiding (fold)
 import Data.Semigroup
 import Data.List as L
+import Data.List.NonEmpty as NE hiding (take)
 import Data.String
 import Data.Typeable
 
 import GHC.Generics
 
 import Text.Printf
+
+import Test.QuickCheck hiding (label)
 
 import Utilities.Instances
 import Utilities.Invariant
@@ -52,7 +55,7 @@ data Transient' expr =
         Tr 
             (Map String Var)     -- Free variables
             expr                 -- Predicate
-            [EventId]            -- Event, Schedule 
+            (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
             -- (Map String Expr)    -- Index substitution
             -- (Maybe Label)        -- Progress Property for fine schedule
@@ -63,6 +66,9 @@ data Direction = Up | Down
 
 newtype EventId = EventId Label
     deriving (Eq,Ord,Typeable,Generic)
+
+instance Arbitrary EventId where
+    arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
 
 instance Show EventId where
     show (EventId x) = show x
@@ -221,6 +227,22 @@ instance HasScope expr => HasScope (PropertySet' expr) where
 instance Monoid (PropertySet' expr) where
     mempty = genericMEmpty
     mappend = genericMAppend
+
+instance Arbitrary expr => Arbitrary (ProgressProp' expr) where
+    arbitrary = genericArbitrary
+instance Arbitrary expr => Arbitrary (SafetyProp' expr) where
+    arbitrary = genericArbitrary
+instance Arbitrary expr => Arbitrary (Constraint' expr) where
+    arbitrary = genericArbitrary
+instance Arbitrary expr => Arbitrary (Transient' expr) where
+    arbitrary = Tr <$> (M.fromList <$> arbitrary) 
+                   <*> arbitrary 
+                   <*> (NE.nub <$> arbitrary) 
+                   <*> arbitrary
+instance Arbitrary ProgId where
+    arbitrary = genericArbitrary
+instance Arbitrary expr => Arbitrary (TrHint' expr) where
+    arbitrary = TrHint <$> (M.fromList <$> arbitrary) <*> arbitrary
 
 instance NFData ProgId
 instance NFData expr => NFData (Constraint' expr)

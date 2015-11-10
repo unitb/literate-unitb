@@ -15,6 +15,7 @@ import UnitB.AST
 import Control.Lens hiding ((.=))
 
 import           Data.Map as M hiding ( map )
+import qualified Data.List.NonEmpty as NE
 
 import Tests.UnitTest
 
@@ -460,7 +461,7 @@ m0_props = empty_property_set {
 m1_props :: PropertySet
 m1_props = m0_props
         { _transient = fromList [
-            ("tr0", Tr M.empty (c [expr| x = y |]) ["inc"] empty_hint) ]
+            ("tr0", Tr M.empty (c [expr| x = y |]) (NE.fromList ["inc"]) empty_hint) ]
         , _constraint = fromList [
             ("co0", Co [] (c $ [expr| x = 1 \implies x' = 2 |] . (is_step .~ True))) ]
         , _inv = insert 

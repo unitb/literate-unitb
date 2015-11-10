@@ -23,6 +23,7 @@ import Control.Lens hiding (elements,universe,indices)
 import Control.Monad.State
 
 import qualified Data.List as L -- ( intercalate, filter )
+import qualified Data.List.NonEmpty as NE
 import           Data.Map  as M hiding ( map )
 
 import Tests.UnitTest
@@ -314,7 +315,7 @@ props0 = create $ do
             [   ( "tr0"
                 , Tr
                     (symbol_table [t_decl])
-                    (c $ [expr| t \in in |].(free_dummies .~ True)) ["leave"] 
+                    (c $ [expr| t \in in |].(free_dummies .~ True)) (NE.fromList ["leave"]) 
                     (TrHint (fromList [("t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
             ]
     inv .= fromList 

@@ -176,7 +176,7 @@ instance (IsExpr expr) => HasInvariant (Machine'' expr) where
         where
             validEvent (Tr _ _ es _) = L.all (`M.member` nonSkipUpwards m) es
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
-            tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) es
+            tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) (NE.toList es)
 
 instance IsExpr expr => HasScope (Machine'' expr) where
     scopeCorrect' m = mconcat 

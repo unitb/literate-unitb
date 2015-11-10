@@ -310,7 +310,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                 with (named_hyps $ singleton pname xp) $
                     forM_ (M.toList hint) $ \(v,(t,e)) -> do
                         emit_exist_goal assert ["WFIS",label v] [prime $ Var v t] [e]
-                zipWithM_ stuff evt_lbl es
+                zipWithM_ stuff (NE.toList evt_lbl) es
                 following
     where
         TrHint hint' lt_fine = tr_hint
@@ -349,10 +349,10 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                       $ do
                         emit_goal assert [as_label evt_lbl,"NEG"] 
                             $ xp `zimplies` (znot $ primed (m!.variables) xp) 
-        all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind evt_lbl es
+        all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
         inds    = L.map (add_suffix "@param") $ M.elems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
-        es      = L.map (upward_event m.Right) evt_lbl
+        es      = L.map (upward_event m.Right) (NE.toList evt_lbl)
         
         local_ind :: EventId -> RawEventMerging -> Map String Var
         local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ e^.indices
@@ -365,12 +365,12 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
             -- (M.elems ind) 
         tagged_sched :: EventId -> RawEventMerging -> Map Label RawExpr
         tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched & traverse %~ asExpr
-        all_csch  = concatMap M.elems $ L.zipWith tagged_sched evt_lbl es
+        all_csch  = concatMap M.elems $ L.zipWith tagged_sched (NE.toList evt_lbl) es
             
             -- we take the disjunction of the fine schedules of 
             -- all the events involved in the transient predicate
         all_fsch  =
-            zsome $ L.zipWith (\lbl e -> (new_ind lbl e . zall) $ e^.new.fine_sched & traverse %~ asExpr) evt_lbl es
+            zsome $ L.zipWith (\lbl e -> (new_ind lbl e . zall) $ e^.new.fine_sched & traverse %~ asExpr) (NE.toList evt_lbl) es
             -- fine $ new_sched evt
         following = with (prefix_label "leadsto") $
                 case lt_fine of
@@ -384,7 +384,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                         | otherwise -> error $ format (
                                "transient predicate {0}'s side condition doesn't "
                             ++ "match the fine schedule of event {1}"
-                            ) pname (intercalate "," $ L.map show evt_lbl)
+                            ) pname (intercalate "," $ L.map show (NE.toList evt_lbl))
                     Nothing
                         | not $ all_fsch == ztrue ->
                             emit_goal assert [] $ zforall all_ind

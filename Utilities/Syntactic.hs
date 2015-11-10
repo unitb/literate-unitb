@@ -20,9 +20,12 @@ import Language.Haskell.TH (Loc(..))
 
 import Safe
 
+import Test.QuickCheck
+
 import Text.ParserCombinators.ReadPrec
 
 import Utilities.Format
+import Utilities.Instances
 import qualified Utilities.Lines as L
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
@@ -32,7 +35,7 @@ data LineInfo = LI
         { _filename :: FilePath
         , _line :: Int
         , _column :: Int }     
-     deriving (Eq,Ord,Typeable)   
+     deriving (Eq,Ord,Typeable,Generic)
 
 instance Show LineInfo where
     show (LI fn i j) = format "(LI {0} {1} {2})" (show fn) i j
@@ -106,6 +109,9 @@ instance Syntactic Error where
     line_info (MLError _ ls) = minimum $ map snd ls
     traverseLineInfo f (Error x li) = Error x <$> f li
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
+
+instance Arbitrary LineInfo where
+    arbitrary = genericArbitrary
 
 showLiLong :: LineInfo -> String
 showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col

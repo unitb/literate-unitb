@@ -23,9 +23,9 @@ import Test.QuickCheck as QC hiding (sized)
 import Text.Printf
 
 import Utilities.RandomTree hiding (size,subtrees)
+import Utilities.Regression
 import Utilities.String
 import Utilities.Syntactic
-import Utilities.Lines
 
 path2 :: FilePath
 path2 = "tests/sample.tex"

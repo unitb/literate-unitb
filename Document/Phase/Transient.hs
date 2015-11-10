@@ -97,7 +97,7 @@ get_abstract_event p2 ev_lbl = do
             (format "event '{0}' is undeclared" ev_lbl)
             $ ev_lbl `M.lookup` evts
 
-get_events :: MachineP2 -> [Label] -> M [EventId]
+get_events :: Traversable f => MachineP2 -> f Label -> M (f EventId)
 get_events p2 ev_lbl = do
             let evts = p2^.pEventIds
             bind_all ev_lbl

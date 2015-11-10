@@ -18,36 +18,39 @@ import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
 
+import Test.QuickCheck
+
 import Utilities.Existential
 import Utilities.HeterogenousEquality
+import Utilities.Instances
 import Utilities.Syntactic
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
         , _coarseScheduleLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data FineSchedule = FineSchedule 
         { _fineScheduleInhStatus :: EventInhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
         , _fineScheduleLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data Guard = Guard 
         { _guardInhStatus :: EventInhStatus Expr
         , _guardDeclSource :: DeclSource
         , _guardLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data Witness = Witness 
         { _witnessVar :: Var
         , _witnessEvtExpr :: Expr 
         , _witnessDeclSource :: DeclSource
         , _witnessLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
         , _actionDeclLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 
 
 makeFields ''CoarseSchedule
@@ -132,7 +135,7 @@ instance HasLineInfo EvtExprScope LineInfo where
 type InitOrEvent = Either InitEventId EventId
 
 data InitEventId = InitEvent
-    deriving (Show,Ord,Eq)
+    deriving (Show,Ord,Eq,Generic)
 
 data EventExpr = EventExpr { _eventExprs :: Map InitOrEvent EvtExprScope }
     deriving (Eq,Ord,Typeable,Show)
@@ -145,42 +148,42 @@ data Invariant = Invariant
         { _invariantMchExpr :: Expr
         , _invariantDeclSource :: DeclSource
         , _invariantLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data InvTheorem = InvTheorem 
         { _invTheoremMchExpr :: Expr
         , _invTheoremDeclSource :: DeclSource
         , _invTheoremLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data TransientProp = TransientProp
         { _transientPropMchExpr :: Transient
         , _transientPropDeclSource :: DeclSource
         , _transientPropLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data ConstraintProp = ConstraintProp
         { _constraintPropMchExpr :: Constraint
         , _constraintPropDeclSource :: DeclSource
         , _constraintPropLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data SafetyDecl = SafetyProp
         { _safetyDeclMchExpr :: SafetyProp
         , _safetyDeclDeclSource :: DeclSource
         , _safetyDeclLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data ProgressDecl = ProgressProp
         { _progressDeclMchExpr :: ProgressProp
         , _progressDeclDeclSource :: DeclSource
         , _progressDeclLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data Initially = Initially
             { _initiallyInhStatus  :: InhStatus Expr
             , _initiallyDeclSource :: DeclSource
             , _initiallyLineInfo   :: LineInfo
-            } deriving (Eq,Ord,Typeable,Show)
+            } deriving (Eq,Ord,Typeable,Show,Generic)
 data Axiom = Axiom
         { _axiomMchExpr :: Expr
         , _axiomDeclSource :: DeclSource
         , _axiomLineInfo :: LineInfo
-        } deriving (Eq,Ord,Typeable,Show)
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 
 makeFields ''Axiom
 makeFields ''ProgressDecl
@@ -255,7 +258,7 @@ instance Scope EvtExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
-    clashes = read2CellsWith' clashes True
+    clash = read2CellsWith' clash True
     merge_scopes = map2Cells' merge_scopes err
             -- fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
         where
@@ -268,7 +271,7 @@ instance Scope ExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
-    clashes = read2CellsWith' clashes True
+    clash = read2CellsWith' clash True
     merge_scopes = map2Cells' merge_scopes err
         where
             err = error "ExprScope Scope.merge_scopes: _, _"
@@ -277,3 +280,38 @@ instance Scope ExprScope where
 
 instance Show ExprScope where
     show = readCell' show
+
+instance Arbitrary CoarseSchedule where
+    arbitrary = genericArbitrary
+
+instance Arbitrary FineSchedule where
+    arbitrary = genericArbitrary
+
+instance Arbitrary Guard where
+    arbitrary = genericArbitrary
+
+instance Arbitrary ActionDecl where
+    arbitrary = genericArbitrary
+
+instance Arbitrary Witness where
+    arbitrary = genericArbitrary
+
+instance Arbitrary TransientProp where
+    arbitrary = genericArbitrary
+
+instance Arbitrary Invariant where
+    arbitrary = genericArbitrary
+instance Arbitrary InvTheorem where
+    arbitrary = genericArbitrary
+instance Arbitrary ConstraintProp where
+    arbitrary = genericArbitrary
+instance Arbitrary SafetyDecl where
+    arbitrary = genericArbitrary
+instance Arbitrary ProgressDecl where
+    arbitrary = genericArbitrary
+instance Arbitrary Initially where
+    arbitrary = genericArbitrary
+instance Arbitrary Axiom where
+    arbitrary = genericArbitrary
+instance Arbitrary InitEventId where
+    arbitrary = genericArbitrary

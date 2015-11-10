@@ -9,16 +9,11 @@ import Logic.Expr.Scope
 import Control.DeepSeq
 
 import Data.DeriveTH
-import Data.Map
 import Data.Typeable
 
 import GHC.Generics
 
---class HasExpr a where
---    expr :: Lens' a Expr
-
---instance HasExpr Expr where
---    expr = id
+import Test.QuickCheck
 
 instance IsExpr DispExpr where
     getExpr (DispExpr _ e) = e
@@ -47,8 +42,10 @@ instance Show DispExpr where
 instance HasScope DispExpr where
     scopeCorrect' = scopeCorrect' . getExpr
 
-data ExprStuff expr = ExprStuff expr (Map String expr)
-    deriving (Foldable,Functor,Traversable)
+instance Arbitrary DispExpr where
+    arbitrary = do
+        x <- arbitrary
+        return $ DispExpr (show x) x
 
 prettyPrint :: DispExpr -> String
 prettyPrint (DispExpr x _) = x

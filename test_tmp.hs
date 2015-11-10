@@ -19,6 +19,7 @@ import Document.Tests.TrainStationSets  as TSS
 import Document.Tests.TrainStationRefinement  as TSRef
 import Document.Tests.LockFreeDeque as Deq
 import Document.Tests.Suite 
+import Document.Phase.Expressions as PExp
 import Z3.Test as Z3
 import Document.Phase.Test as Ph
 import Document.Test as Doc
@@ -99,6 +100,8 @@ main = timeIt $ do
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case
     return verify
+    run_test_cases Doc.check_axioms
+    return $ print =<< PExp.check_props
     return $ run_test_cases SM.test_case
     return $ run_test_cases Lam.test_case
     return $ run_test_cases Cubes.test_case

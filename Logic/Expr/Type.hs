@@ -7,16 +7,17 @@ import Logic.Expr.Classes
 
     -- Libraries
 import Control.DeepSeq
-import Control.Lens hiding (List)
+import Control.Lens hiding (List,elements)
 import Control.Monad.Reader
 
 import           Data.Data
-import           Data.DeriveTH
 import qualified Data.Set as S
 
 import           GHC.Generics hiding (to)
 
 import Language.Haskell.TH.Syntax
+
+import           Test.QuickCheck
 
 import           Utilities.Format
 import           Utilities.Instances
@@ -62,7 +63,7 @@ data GenericType =
     deriving (Eq, Ord, Typeable, Generic, Data)
 
 data FOType      = FOT Sort [FOType]
-    deriving (Eq, Ord, Typeable)
+    deriving (Eq, Ord, Typeable, Generic)
 
 data TypeCons a = USER_DEFINED Sort [a]
     deriving (Eq, Ord, Show, Generic, Typeable)
@@ -203,7 +204,86 @@ array t0 t1 = make_type array_sort [t0,t1]
 set_sort :: Sort
 set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
 
-derive makeNFData ''TypeCons
-derive makeNFData ''FOType
-derive makeNFData ''GenericType
-derive makeNFData ''Sort
+set_type :: TypeSystem t => t -> t
+set_type t = make_type set_sort [t]
+
+int :: TypeSystem t => t
+int  = make_type IntSort []
+
+real :: TypeSystem t => t
+real = make_type RealSort []
+
+instance Arbitrary Sort where
+    arbitrary = oneof
+        [ pure BoolSort 
+        , pure IntSort 
+        , pure RealSort 
+        , Sort <$> arbitrary <*> arbitrary <*> elements [0..5]
+        ]
+        -- | Datatype 
+        --    [String]    -- Parameters
+        --    String      -- type name
+        --    [(String, [(String,GenericType)])] 
+
+instance Arbitrary GenericType where
+    arbitrary = oneof (
+                [ return bool
+                , return int
+                , return real
+                ] ++ concat (take 2 $ repeat
+                [ do
+                    t0 <- arbitrary
+                    t1 <- arbitrary
+                    return $ array t0 t1
+                , oneof gen_prm
+                , do
+                    s  <- oneof sorts
+                    ts <- case s of
+                        Sort _ _ n -> 
+                            replicateM n arbitrary
+                        DefSort _ _ args _ -> 
+                            replicateM (length args) arbitrary
+                        IntSort -> 
+                            return []
+                        RealSort ->
+                            return []
+                        BoolSort -> 
+                            return []
+                        Datatype _ _ _ -> error "Type.arbitrary: impossible"
+                    return $ Gen s ts
+                , do
+                    t <- arbitrary
+                    return $ set_type t
+                , do
+                    t0 <- arbitrary
+                    t1 <- arbitrary
+                    return $ fun_type t0 t1
+                ] ) )
+        where
+            sorts = map return
+                [ Sort "A" "A" 0
+                , Sort "B" "B" 1
+                , Sort "C" "C" 1
+                , Sort "D" "D" 2
+                , DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+                , BoolSort
+                , IntSort
+                , RealSort
+                ]
+            gen_prm = map return
+                [ GENERIC "a"
+                , GENERIC "b"
+                , GENERIC "c"
+                ]
+    shrink (GENERIC _)  = []
+    shrink (VARIABLE _) = []
+    shrink (Gen s ts) = ts ++ do
+            ts <- mapM shrink ts
+            return $ t ts
+        where
+            t ts = Gen s ts
+
+instance NFData t => NFData (TypeCons t)
+instance NFData FOType
+instance NFData GenericType
+instance NFData Sort

@@ -4,7 +4,6 @@ module Logic.Expr.Const where
     -- Modules   
 import Logic.Expr.Classes 
 import Logic.Expr.Expr
-import Logic.Expr.Variable
 import Logic.Expr.Genericity
 import Logic.Expr.Type
 
@@ -292,11 +291,6 @@ zint n       = Const (IntVal $ fromIntegral n) int
 
 zreal :: TypeSystem2 t => Double -> AbsExpr t q
 zreal n      = Const (RealVal n) real
-
-int :: TypeSystem t => t
-int  = make_type IntSort []
-real :: TypeSystem t => t
-real = make_type RealSort []
 
 mzless :: TypeSystem2 t => TwoExprP t q
 mzless        = typ_fun2 $ mk_fun [] "<" [int,int] bool

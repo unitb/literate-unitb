@@ -18,9 +18,6 @@ import Data.Map as M hiding ( foldl )
 
 import Utilities.Format
 
-set_type :: TypeSystem t => t -> t
-set_type t = make_type set_sort [t]
-
 as_array :: TypeSystem t => t -> String -> AbsExpr t q
 as_array t x = FunApp (mk_lifted_fun [] x [] t) []
 

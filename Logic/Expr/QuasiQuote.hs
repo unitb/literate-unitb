@@ -15,7 +15,6 @@ import Logic.Theory
 import UnitB.Event
 
 import Theories.Arithmetic
-import Theories.SetTheory
 
     -- Libraries
 import Control.Arrow

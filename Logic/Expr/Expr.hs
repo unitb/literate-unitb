@@ -2,59 +2,9 @@
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE TypeFamilies           #-}
 module Logic.Expr.Expr 
-    ( Expr, Expr', AbsExpr, GenExpr (..), FOExpr
-    , UntypedExpr, ExprP, ExprPG, ExprPC
-    , Value(..)
-    , HOQuantifier(..)
-    , FOQuantifier(..)
-    , QuantifierType(..)
-    , QuantifierWD(..)
-    , Context', Context, FOContext, AbsContext(..)
-    , Decl, FODecl, AbsDecl(..)
-    , Fun, FOFun, AbsFun(..)
-    , Var, FOVar, AbsVar(..), UntypedVar
-    , Def, FODef, Def', AbsDef(..)
-    , IsQuantifier(..)
-    , IsExpr(..)
-    , IsGenExpr(..)
-    , Lifting(..)
-    , HasExprs(..)
-    , HasSymbols(..)
-    , type_of, var_type
-    , merge, merge_all
-    , merge_ctx, merge_all_ctx
-    , mk_context, empty_ctx
-    , mk_fun, mk_lifted_fun
-    , isLifted
-    , used_var, used_var'
-    , used_fun, used_types
-    , substitute, rename
-    , z3_fun_name
-    , z3_decoration
-    , array
-    , decl, Symbol
-    , ztuple_type, ztuple
-    , fun_type, fun_sort
-    , bool
-    , maybe_type
-    , pair, pair_type, pair_sort
-    , free_vars
-    , var_decl
-    , target
-    , finiteness
-    , typeCheck, withLoc, locMsg
-    , rewriteExpr, rewriteExprM
-    , defsAsVars, defAsVar
-        -- Lenses
-    , funName, arguments
-    , result, annotation
-    , _Word, _Const, _FunApp
-    , _Binder, _Cast, _Lift
-    , HasAbsContext(..)
-    , HasConstants(..)
-    , HasSorts(..)
-    , HasDummies(..)
-    )
+    ( module Logic.Expr.Expr
+    , module Logic.Expr.Variable
+    , HasConstants(..) )
 where
 
     -- Module
@@ -73,7 +23,7 @@ import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Identity
-import Control.Lens hiding (rewrite,Context
+import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List)
 
 import           Data.Data
@@ -84,7 +34,10 @@ import qualified Data.Set as S
 
 import Language.Haskell.TH hiding (Type) -- (ExpQ,location,Loc)
 
+import Test.QuickCheck
+
 import Utilities.Format
+import Utilities.Instances
 
 type Expr = AbsExpr GenericType HOQuantifier
 
@@ -116,6 +69,44 @@ data Value = RealVal Double | IntVal Int
 instance Show Value where
     show (RealVal v) = show v
     show (IntVal v)  = show v
+
+instance (Arbitrary t,Arbitrary a,Arbitrary q,Tree a,TypeSystem t,IsQuantifier q) 
+        => Arbitrary (GenExpr t a q) where
+    arbitrary = do
+        inductive $ \arb -> 
+            [ Word   <$> arbitrary' 
+            , Const  <$> arbitrary' <*> arbitrary'
+            , FunApp <$> arbitrary' <*> listOf' arb
+            , Binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
+            , Cast   <$> arb <*> arbitrary'
+            , Lift   <$> arb <*> arbitrary'
+            ]
+
+expSize :: GenExpr t a q -> Int
+expSize (Word _) = 0
+expSize (Const _ _)   = 0
+expSize (FunApp _ xs) = 1 + sum (map expSize xs)
+expSize (Binder _ _ r t _) = 1 + expSize r + expSize t
+expSize (Cast e _) = 1 + expSize e
+expSize (Lift e _) = 1 + expSize e
+
+instance Arbitrary Value where
+    arbitrary = genericArbitrary
+
+instance Arbitrary Lifting where
+    arbitrary = genericArbitrary
+
+instance Arbitrary HOQuantifier where
+    arbitrary = genericArbitrary
+
+instance Arbitrary QuantifierWD where
+    arbitrary = genericArbitrary
+
+instance Arbitrary QuantifierType where
+    arbitrary = genericArbitrary
+
+instance Arbitrary t => Arbitrary (AbsFun t) where
+    arbitrary = genericArbitrary
 
 data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
     deriving (Eq,Ord,Generic,Typeable,Data)
@@ -335,6 +326,12 @@ instance Show HOQuantifier where
 instance Show FOQuantifier where
     show FOForall = "forall"
     show FOExists = "exists"
+
+instance Arbitrary Def where
+    arbitrary = genericArbitrary
+
+instance Arbitrary t => Arbitrary (AbsVar t) where
+    arbitrary = genericArbitrary
 
 isLifted :: AbsFun t -> Bool
 isLifted (Fun _ _ lf _ _) = lf == Lifted

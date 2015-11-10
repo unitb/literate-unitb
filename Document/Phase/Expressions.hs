@@ -50,7 +50,9 @@ import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Traversable as T
+import qualified Data.Traversable   as T
+
+import Test.QuickCheck hiding (label)
 
 import Text.Printf
 
@@ -298,9 +300,9 @@ instance Scope EventExpr where
     make_inherited (EventExpr m) = Just $ EventExpr (M.map f m)
         where
             f x = set declSource Inherited x
-    clashes (EventExpr m0) (EventExpr m1) = not $ M.null 
+    clash (EventExpr m0) (EventExpr m1) = not $ M.null 
             $ M.filter id
-            $ M.intersectionWith clashes m0 m1
+            $ M.intersectionWith clash m0 m1
     error_item (EventExpr m) = head' $ elems $ mapWithKey msg m
         where
             head' [x] = x
@@ -482,7 +484,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
 instance Scope Axiom where
     kind _ = "axiom"
     merge_scopes _ _ = error "Axiom Scope.merge_scopes: _, _"
-    clashes _ _ = True
+    clash _ _ = True
     keep_from s x = guard (s == view declSource x) >> return x
     rename_events _ x = [x]
 
@@ -624,12 +626,13 @@ instance IsExprScope TransientProp where
 transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
-            es   <- get_events p2 evts
+            es   <- get_events p2 
+                   =<< bind "Expecting at least one event" (NE.nonEmpty evts)
             li   <- lift ask
             tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     xs
-            let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) es
+            let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) (NE.toList es)
             toEither $ error_list 
                 [ ( not $ L.null withInd
                   , format "event(s) {0} have indices and require witnesses" 
@@ -642,7 +645,8 @@ transient_prop = machineCmd "\\transient" $ \(evts, lbl, xs) _m p2 -> do
 transientB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 transientB_prop = machineCmd "\\transientB" $ \(evts, lbl, hint, xs) m p2 -> do
-            es   <- get_events p2 evts
+            es   <- get_events p2 
+                    =<< bind "Expecting at least one event" (NE.nonEmpty evts)
             li   <- lift ask
             tr   <- parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
@@ -894,13 +898,6 @@ event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
 schedule_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
 schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 
-
-
-
-
-
-
-
 machine_events :: HasMachineP1 phase events => phase events thy -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
 
@@ -932,3 +929,18 @@ defaultInitWitness p2 xs = concatMap f xs ++ xs
                                     | v <- M.elems $ used_var' expr `M.intersection` vs ]
         f _ = []
 
+return []
+
+check_props :: IO Bool
+check_props = $quickCheckAll
+
+instance Arbitrary ExprScope where
+    arbitrary = ExprScope <$> $(arbitraryCell' ''IsExprScope [ [t| ExprScope |] ])
+
+instance Arbitrary EvtExprScope where
+    arbitrary = do
+        s <- $(arbitraryCell' ''IsEvtExpr [ [t| EvtExprScope |] ])
+        return $ EvtExprScope s
+
+instance Arbitrary EventExpr where
+    arbitrary = EventExpr . fromList <$> listOf1 arbitrary

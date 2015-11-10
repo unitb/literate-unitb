@@ -45,6 +45,7 @@ import Logic.Expr
 import UnitB.AST
 
     -- Libraries
+import Control.Arrow ((&&&))
 import Control.Lens
 
 import           Control.Monad.Reader.Class hiding (reader)
@@ -57,11 +58,13 @@ import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
 
 import           Data.Char
+import           Data.Foldable as F
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe
 import           Data.Set hiding (map)
 import           Data.String.Utils
+import           Data.Traversable as T
 
 import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
 
@@ -414,20 +417,21 @@ bind msg Nothing = do
         left [Error msg li]
 bind _ (Just x) = return x
 
-bind_all :: Monad m
-         => [a]
+bind_all :: (Monad m,Traversable t)
+         => t a
          -> (a -> String) 
          -> (a -> Maybe b)
-         -> EitherT [Error] (RWST LineInfo [Error] s m) [b]
+         -> EitherT [Error] (RWST LineInfo [Error] s m) (t b)
 bind_all xs msgs lu = do
-            let ys = map lu xs
-                zs = map (msgs . fst) 
+            let ys' = (id &&& lu) <$> xs
+                ys  = T.mapM snd ys'
+                zs = fmap (msgs . fst) 
                     $ L.filter (isNothing . snd) 
-                    $ zip xs ys
+                    $ F.toList ys'
             li <- lift $ ask
             toEither $ forM_ zs $ \msg ->  
                 RWS.tell [Error msg li]
-            return $ catMaybes ys
+            maybe (left []) return ys
 
 
 insert_new :: Ord a 

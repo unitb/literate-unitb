@@ -6,11 +6,18 @@ module Utilities.Existential where
 
 import Control.Applicative as A
 import Control.Lens
+import Control.Monad
 
 import Data.Maybe
 import Data.Typeable
 
 import GHC.Exts (Constraint)
+
+import Language.Haskell.TH
+
+import Test.QuickCheck
+
+import Text.Printf
 
 data Cell (constr :: * -> Constraint) = forall a. (constr a, Typeable a) => Cell a
 
@@ -99,3 +106,30 @@ read2CellsH' :: HasCell c (Cell constr)
              => (forall a b. (constr a,Typeable a,constr b,Typeable b) => a -> b -> r) 
              -> c -> c -> r
 read2CellsH' f x y = read2CellsH f (x^.cell) (y^.cell)
+
+arbitraryInstanceOf :: Name -> Name -> ExpQ
+arbitraryInstanceOf cons cl = arbitraryInstanceOf' cons cl []
+
+arbitraryInstanceOf' :: Name -> Name -> [TypeQ] -> ExpQ
+arbitraryInstanceOf' cons cl ts = do
+        ClassI _ is <- reify cl
+        ts <- sequence ts
+        let getArg (InstanceD [] (AppT _ t) []) 
+                | t `notElem` ts = return (Just t)
+                | otherwise      = return Nothing
+            getArg t = do
+                reportError $ "invalid number of arguments in instance: " ++ pprint t
+                return Nothing
+            --trigger x = 
+
+        is' <- catMaybes <$> mapM (fmap (fmap return) . getArg) is
+        let arbits = [ [e| $(conE cons) <$> $(arb i) |] | i <- is' ]
+            arb i  = sigE [e| arbitrary |] [t| Gen $i |]
+        when (null is') $ fail $ printf "no instances of '%s' found" (show cl)
+        [e| oneof $(listE arbits) |]
+
+arbitraryCell :: Name -> ExpQ
+arbitraryCell cl = arbitraryCell' cl []
+
+arbitraryCell' :: Name -> [TypeQ] -> ExpQ
+arbitraryCell' cl ts = [e| $(arbitraryInstanceOf' 'Cell cl ts) :: Gen (Cell $(conT cl)) |]

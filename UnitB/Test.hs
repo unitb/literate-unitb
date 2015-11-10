@@ -23,6 +23,7 @@ import Control.Lens
 
 import           Data.Either
 import           Data.List ( sort )
+import qualified Data.List.NonEmpty as NE
 import           Data.Map as M hiding (map)
 
 import Tests.UnitTest
@@ -57,7 +58,7 @@ example0 = do
         csched <- with_li li (x `mzeq` y)
         s0     <- with_li li (liftM (Assign x_decl) (x `mzplus` mzint 2))
         s1     <- with_li li (liftM (Assign y_decl) (y `mzplus` mzint 1))
-        let tr0 = Tr empty tr ["evt"] empty_hint
+        let tr0 = Tr empty tr (NE.fromList ["evt"]) empty_hint
             co0 = Co [] co
             ps = empty_property_set {
                 _transient = 
@@ -102,7 +103,7 @@ train_m0 = do
                     ,   _actions   = fromList [("A0", a0)]
                     })
         tr <- with_li li (st `select` t)
-        let props' = fromList [("TR0", Tr (symbol_table [t_decl]) tr ["leave"] hint)] 
+        let props' = fromList [("TR0", Tr (symbol_table [t_decl]) tr (NE.fromList ["leave"]) hint)] 
             hint  = getExpr <$> TrHint (singleton "t" (int,c [expr| t = t' |])) Nothing
             c     = ctx $ do
                     [var| t, t' : \Int |]

@@ -15,6 +15,8 @@ import qualified Text.PortableLines as PL
 
 import Test.QuickCheck
 
+import Utilities.Regression
+
 asLines :: Iso' String (NonEmpty String)
 asLines = iso lines' F.concat
 
@@ -53,11 +55,6 @@ unlines xs = f $ L.unlines $ toList xs
         f [] = []
         f [_] = []
         f (x:xs) = x:f xs
-
-regression :: (Show a, Testable b) => (a -> b) -> [a] -> Property
-regression f xs = conjoin $ zipWith counterexample tags $ map f xs
-    where
-        tags = [ "counterexample " ++ show (i :: Int) ++ "\n" ++ show x | (i,x) <- zip [0..] xs ]
 
 prop_lines_unlines_cancel :: String -> Property
 prop_lines_unlines_cancel xs = canonicalizeNewline xs === unlines (lines xs)

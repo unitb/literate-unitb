@@ -17,6 +17,8 @@ import Data.Typeable
 
 import GHC.Generics 
 
+import Test.QuickCheck hiding (label)
+
 data Label = Lbl String
     deriving (Ord, Eq, Typeable, Generic)
 
@@ -31,6 +33,9 @@ instance IsString Label where
 
 instance IsLabel Label where
     as_label = id
+
+instance Arbitrary Label where
+    arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 
 label :: String -> Label
 label s = Lbl s

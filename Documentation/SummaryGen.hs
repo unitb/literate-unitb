@@ -282,7 +282,7 @@ transient_sum m = do
         toString (Tr _ p evts hint) = do -- do
             let TrHint sub lt = hint
                 evts' :: String
-                evts' = intercalate "," $ L.map (format "\\ref{{0}}") evts
+                evts' = intercalate "," $ L.map (format "\\ref{{0}}") (NE.toList evts)
             sub' <- forM (M.toList sub) $ \(v,p) -> do
                 p <- get_string' $ snd p
                 return (v,p)

@@ -37,6 +37,9 @@ import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
 
+import Test.QuickCheck
+
+import Utilities.Existential
 import Utilities.Format
 import Utilities.Syntactic
   
@@ -286,3 +289,8 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
             vs <- get_variables' ts xs
             return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) 
                     (EventDecl v escope (evt :| []) Local li)))) vs
+
+return []
+
+instance Arbitrary VarScope where
+    arbitrary = $(arbitraryInstanceOf' 'VarScope ''IsVarScope [[t| VarScope |]])

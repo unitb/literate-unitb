@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Document.Test where
 
---import Control.Monad
+import Control.Exception (evaluate)
 
 import Document.Document
 
@@ -18,12 +18,14 @@ import qualified Document.Tests.TrainStationRefinement as Ref
 import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.UnlessExcept as UE
 -- import qualified Document.Tests.Suite as Suite
+import qualified Document.Scope (Scope)
 import qualified Document.MachineSpec as MSpec 
 import qualified Document.Tests.GarbageCollector as Gar
 import qualified Document.Tests.Parser as Parser
 import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
 
+import Document.Phase.Expressions as PExp
 import Latex.Parser
 import Latex.OldMonad
 
@@ -35,6 +37,7 @@ import UnitB.PO
     -- Libraries
 import Control.Lens
 
+import Utilities.AxiomaticClass
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -64,6 +67,8 @@ test = test_cases
         , Case "QuickCheck spec of machine parser" 
             MSpec.run_spec True
         , all_properties
+        , check_axioms
+        , Case "expression phase, properties" PExp.check_props True
         ]
 
 result1 :: String
@@ -189,9 +194,13 @@ case2 = do
 ----                ,   "\\eqref"
 ----                ]
 
+check_axioms :: TestCase
+check_axioms = Case "conformance of instances to type class axioms"
+    $(quickCheckClasses [''Document.Scope.Scope]) True
+
 all_properties :: TestCase
 all_properties = Case "the parser is exception free" 
-    (return (all_machines tree) >> return ()) ()
+    (evaluate (all_machines tree) >> return ()) ()
 
 tree0' :: T LatexDoc
 tree0' = env "machine"

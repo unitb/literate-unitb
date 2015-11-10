@@ -7,7 +7,7 @@ module Utilities.Invariant
     , HasPrefix(..)
     , (===), isSubsetOf', isProperSubsetOf'
     , isSubmapOf',isProperSubmapOf'
-    , relation
+    , relation, provided
     , Invariant, (##) )
 where
 
@@ -23,6 +23,7 @@ import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.List
 import Data.Map (isSubmapOf,isProperSubmapOf,Map)
+import Data.Maybe
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
@@ -110,18 +111,22 @@ infixr 0 ##
 (##) tag b = withStack ?loc $ withPrefix tag $ toInvariant b
 
 withStack :: CallStack -> Invariant a -> Invariant a
-withStack cs | null (loc cs) = id
-             | otherwise = withPrefix $ '\n':concatMap locToString (loc cs)
+withStack cs = maybe id withPrefix $ stackTrace cs
+
+stackTrace :: CallStack -> Maybe String
+stackTrace cs | null loc  = Just $ '\n':concatMap f loc
+              | otherwise = Nothing
     where
-        loc = filter notHere . getCallStack
-        locToString :: (String, SrcLoc) -> String
-        locToString (fn,loc) = printf "%s:%d:%d - %s\n" 
-                    (srcLocFile loc) 
-                    (srcLocStartLine loc)
-                    (srcLocStartCol loc)
-                    fn
+        loc = filter notHere $ getCallStack cs
+        f (fn,loc) = printf "%s - %s\n" (locToString loc) fn
         notHere :: (a,SrcLoc) -> Bool
         notHere (_,x) = srcLocFile x /= $__FILE__
+
+locToString :: SrcLoc -> String
+locToString loc = printf "%s:%d:%d" 
+            (srcLocFile loc) 
+            (srcLocStartLine loc)
+            (srcLocStartCol loc)
 
 infix 4 ===
 
@@ -151,6 +156,9 @@ instance HasPrefix Invariant where
 
 mutate :: IsChecked c a => Assert -> c -> State a k -> c
 mutate arse x cmd = x & content arse %~ execState cmd 
+
+provided :: (?loc :: CallStack) => Bool -> a -> a
+provided b = assertMessage "Precondition" (fromMaybe "" $ stackTrace ?loc) (assert b)
 
 create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
 create' arse = check arse . create 

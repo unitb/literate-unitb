@@ -16,8 +16,6 @@ import Latex.Parser
 import Logic.Expr
 import Logic.Proof.POGenerator as POG
 
-import Theories.SetTheory
-
     -- Libraries
 import Control.Arrow (second)
 import Control.DeepSeq
@@ -222,7 +220,7 @@ assert_hyp m suff cnst hyps prop =
             | L.null suff = composite_label []
             | otherwise   = composite_label [label suff]
 
-data Ensure = Ensure RawProgressProp [EventId] RawTrHint
+data Ensure = Ensure RawProgressProp (NE.NonEmpty EventId) RawTrHint
     deriving (Eq,Typeable,Show)
 
 instance RefRule Ensure where
@@ -236,14 +234,14 @@ instance RefRule Ensure where
             tr_wd_po m ("",tr)
             prop_saf m ("", saf)
             saf_wd_po m ("", saf)
-    supporting_evts (Ensure _ hyps _) = hyps
+    supporting_evts (Ensure _ hyps _) = NE.toList hyps
 
 data Discharge = Discharge RawProgressProp Label RawTransient (Maybe RawSafetyProp)
     deriving (Eq,Typeable,Show)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
-    supporting_evts (Discharge _ _ (Tr _ _ evts _hint) _) = evts
+    supporting_evts (Discharge _ _ (Tr _ _ evts _hint) _) = NE.toList evts
         -- where
         --     TrHint _ ev = hint
             -- _ = _ ev

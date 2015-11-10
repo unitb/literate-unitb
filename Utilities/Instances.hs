@@ -2,15 +2,19 @@
 module Utilities.Instances 
     ( Generic, defaultLift, genericMEmpty, genericMAppend
     , genericMConcat, genericDefault, genericSemigroupMAppend
-    , Intersection(..), genericSemigroupMAppendWith )
+    , Intersection(..), genericSemigroupMAppendWith
+    , genericArbitrary, inductive, listOf', arbitrary' )
 where
 
 import Control.Comonad
+import Control.Monad.Fix
 import Control.Lens hiding (to,from)
 
 import Data.Default
+import Data.Functor.Compose
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
@@ -19,6 +23,8 @@ import GHC.Generics
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
+
+import Test.QuickCheck
 
 class GMonoid a where
     gmempty :: a p
@@ -130,6 +136,27 @@ instance (GDefault a,GDefault b) => GDefault (a:*:b) where
 genericDefault :: (Generic a, GDefault (Rep a)) => a
 genericDefault = to gDefault
 
+class GArbitrary a where
+    gArbitrary :: [Gen (a p)]
+
+instance GArbitrary c => GArbitrary (M1 a b c) where
+    gArbitrary = fmap M1 <$> gArbitrary
+
+instance Arbitrary b => GArbitrary (K1 a b) where
+    gArbitrary = [K1 <$> arbitrary]
+
+instance (GArbitrary a,GArbitrary b) => GArbitrary (a :*: b) where
+    gArbitrary = getCompose $ (:*:) <$> Compose gArbitrary <*> Compose gArbitrary
+
+instance (GArbitrary a,GArbitrary b) => GArbitrary (a :+: b) where
+    gArbitrary = (fmap L1 <$> gArbitrary) ++ (fmap R1 <$> gArbitrary)
+
+instance GArbitrary U1 where
+    gArbitrary = [return U1]
+
+genericArbitrary :: (Generic a, GArbitrary (Rep a)) => Gen a
+genericArbitrary = to <$> oneof gArbitrary
+
 class GLifts a => GLift a where
     glift :: a p -> ExpQ
 
@@ -167,3 +194,17 @@ instance (GLifts a, GLifts b) => GLifts (a :*: b) where
 
 defaultLift :: (Generic a, GLift (Rep a)) => a -> ExpQ
 defaultLift = glift . from
+
+inductive :: (Compose Maybe Gen a -> [Compose Maybe Gen a]) -> Gen a
+inductive f = sized $ fix $ \ind n -> oneof =<< catMaybes . map getCompose . f <$> cmd ind n
+    where
+        cmd :: (Int -> Gen a) -> Int -> Gen (Compose Maybe Gen a)
+        cmd r n =
+                if n == 0 then return $ Compose Nothing
+                          else return $ Compose $ Just $ r (n `div` 10)
+
+listOf' :: Compose Maybe Gen a -> Compose Maybe Gen [a]
+listOf' (Compose cmd) = Compose $ listOf <$> cmd
+
+arbitrary' :: Arbitrary a => Compose Maybe Gen a
+arbitrary' = Compose $ Just arbitrary
