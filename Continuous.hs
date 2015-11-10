@@ -75,9 +75,9 @@ check_one :: (MonadIO m, MonadState Params m)
           => Machine -> m (Int,String)
 check_one m = do
         param <- get
-        let po = M.findWithDefault M.empty (_name m) $ pos param
+        let po = M.findWithDefault M.empty (as_label $ _name m) $ pos param
         (po,s,n)    <- liftIO $ verify_changes m po
-        put (param { pos = M.insert (_name m) po $ pos param })
+        put (param { pos = M.insert (as_label $ _name m) po $ pos param })
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
 check_theory :: (MonadIO m, MonadState Params m) 
@@ -130,7 +130,7 @@ check_file = do
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
             lift $ produce_summaries (path param) s
-            return (M.elems $ machines s, M.toList $ theories s)
+            return (M.elems $ s!.machines, M.toList $ s!.theories)
         case r of
             Right (ms,ts) -> do
                 if no_verif param then return ()

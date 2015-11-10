@@ -27,6 +27,7 @@ import Z3.Z3
 import Control.DeepSeq
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Lens
 
 import Control.Exception
 
@@ -121,16 +122,16 @@ parser (Shared { .. })  = return $ do
         parse = do
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
-                    ms <- hoistEither $ mapM f $ M.elems $ machines s
-                    pos <- hoistEither $ mapM theory_po $ M.elems $ theories s
+                    ms <- hoistEither $ mapM f $ M.elems $ s!.machines
+                    pos <- hoistEither $ mapM theory_po $ M.elems $ s!.theories
                     let cs = M.fromList $ map (uncurry h) $ do
-                                (x,ys) <- zip (map label (keys $ theories s)) pos
+                                (x,ys) <- zip (map label (s!.theories.to keys)) pos
                                 y <- toList ys
                                 return (x,y)
                     return (ms, cs, s)
                 case xs of
                     Right (ms,cs,s) -> do
-                        let new_pos = unions (cs : ms) :: Map Key Seq
+                        let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Map Key Seq
                             f (s0,b0) (s1,b1)
                                 | s0 == s1  = (s0,b0)
                                 | otherwise = (s1,b1)

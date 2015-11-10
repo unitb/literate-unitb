@@ -8,6 +8,8 @@ module Utilities.Invariant
     , (===), isSubsetOf', isProperSubsetOf'
     , isSubmapOf',isProperSubmapOf'
     , relation, provided
+    , fromJust''
+    , assertFalse, assertFalse'
     , Invariant, (##) )
 where
 
@@ -165,9 +167,16 @@ create' arse = check arse . create
 
 type Assert = forall a. Bool -> a -> a
 
-fromJust' :: Assert -> String -> Maybe a -> a
-fromJust' _ _ (Just x)   = x
-fromJust' arse tag Nothing = assertFalse arse tag
+fromJust' :: (?loc :: CallStack) => Maybe a -> a
+fromJust' (Just x)   = x
+fromJust' Nothing = assertFalse' "Nothing"
+
+fromJust'' :: Assert -> Maybe a -> a
+fromJust'' _ (Just x) = x
+fromJust'' arse Nothing = assertFalse arse "Nothing"
 
 assertFalse :: Assert -> String -> a
-assertFalse arse msg = assertMessage "False" msg (arse False) (error "false assertion")
+assertFalse arse msg = assertMessage "False" msg (arse False) (error "false assertion (1)")
+
+assertFalse' :: (?loc :: CallStack) => a
+assertFalse' = provided False (error "false assertion (2)")

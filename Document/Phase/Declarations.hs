@@ -49,7 +49,7 @@ run_phase2_vars :: Pipeline MM
 run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
         err_msg = format "Multiple symbols with the name {0}"
-        wrap = L.map (second $ VarScope . uncurry3 TheoryDef)
+        wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
         symbols = arr (view mchTable) >>> run_phase
             [ variable_decl
             , constant_decl
@@ -211,7 +211,7 @@ instance IsVarScope MachineVar where
 remove_var :: MPipeline MachineP1 [(String,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(One xs) _m _p1 -> do
         li <- lift ask
-        return $ map ((\x -> (x,VarScope $ DelMch Nothing Local li)) . toString) xs
+        return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . toString) xs
 
 dummy_decl :: MPipeline MachineP1
                     [(String,VarScope)]
@@ -227,7 +227,7 @@ machine_var_decl :: IsVarScope var
 machine_var_decl scope kw = machineCmd kw $ \(One xs) _m p1 -> do
             vs <- get_variables' (p1 ^. pAllTypes) xs
             li <- lift ask
-            return $ map (\(x,y) -> (x,VarScope $ scope y Local li)) vs
+            return $ map (\(x,y) -> (x,makeCell $ scope y Local li)) vs
 
 index_decl :: MPipeline MachineP1 [(String,VarScope)]
 index_decl = event_var_decl Index "\\indices"
@@ -287,10 +287,10 @@ event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
                 $ lbl `M.lookup` evts
             li <- lift ask
             vs <- get_variables' ts xs
-            return $ map (\(n,v) -> ((n,VarScope $ Evt $ M.singleton (Just evt) 
+            return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Just evt) 
                     (EventDecl v escope (evt :| []) Local li)))) vs
 
 return []
 
 instance Arbitrary VarScope where
-    arbitrary = $(arbitraryInstanceOf' 'VarScope ''IsVarScope [[t| VarScope |]])
+    arbitrary = VarScope <$> $(arbitraryCell' ''IsVarScope [[t| VarScope |]])

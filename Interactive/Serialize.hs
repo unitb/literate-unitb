@@ -4,6 +4,7 @@ module Interactive.Serialize where
 import Logic.Expr
 import Logic.Proof
 
+import UnitB.AST
 import UnitB.PO
 
     -- Libraries
@@ -44,6 +45,7 @@ instance Serialize a => Serialize (ArgDep a) where
 instance Serialize Rel where
 instance Serialize Flipping where
 instance Serialize Value where
+instance Serialize MachineId where
 
 expr_number :: Expr -> State (Map Expr Int) Int
 expr_number expr = do

@@ -221,7 +221,7 @@ conc_events :: Controls machine (Machine'' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
 upward_event :: Show expr => Machine' expr -> SkipOrEvent -> EventMerging expr
-upward_event m lbl = fromJust' assert "upward_event" $ readGraph (m^.content'.events) $ runMaybeT $ do
+upward_event m lbl = fromJust'' assert $ readGraph (m^.content'.events) $ runMaybeT $ do
         v  <- MaybeT $ hasRightVertex lbl
         lift $ do
             es <- predecessors v
@@ -232,7 +232,7 @@ new_event_set :: IsExpr expr
               => Map String Var
               -> Map EventId (Event' expr)
               -> EventTable expr
-new_event_set vs es = EventTable $ fromJust' assert "new_event_set" $ makeGraph $ do
+new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
         skip <- newLeftVertex (Left SkipEvent) skip_abstr
         forM_ (M.toList es) $ \(lbl,e) -> do
             let f m = M.fromList $ L.map (id &&& Word) $ M.elems $ m `M.difference` vs
@@ -369,8 +369,7 @@ empty_machine :: (HasScope expr, IsExpr expr) => String -> Machine' expr
 empty_machine n = check assert $ genericDefault
             & machine''Name .~ n
             -- & events .~ _ $ G.fromList _ _
-            & events .~ fromJust' assert "event table" 
-                (G.fromList [(skip,def)] [(skip,def)] [(skip,skip)])
+            & events .~ G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
             & theory .~ empty_theory { _extends = M.fromList [
                 ("arithmetic",arithmetic), 
                 ("basic", basic_theory)] } 

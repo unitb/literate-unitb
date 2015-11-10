@@ -258,11 +258,7 @@ instance Scope EvtExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
-    clash = read2CellsWith' clash True
-    merge_scopes = map2Cells' merge_scopes err
-            -- fromMaybe err $ runIdentity <$> apply2EvtExprScope (fmap Identity <$> merge_scopes) x y
-        where
-            err = error "EvtExprScope Scope.merge_scopes: _, _"
+    merge_scopes' = apply2Cells' merge_scopes' Nothing
     rename_events m = traverseCell' (rename_events m)
     kind = readCell' kind
 
@@ -271,10 +267,7 @@ instance Scope ExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
-    clash = read2CellsWith' clash True
-    merge_scopes = map2Cells' merge_scopes err
-        where
-            err = error "ExprScope Scope.merge_scopes: _, _"
+    merge_scopes' = apply2Cells' merge_scopes' Nothing
     rename_events m = traverseCell' (rename_events m)
     kind = readCell' kind
 

@@ -107,6 +107,31 @@ read2CellsH' :: HasCell c (Cell constr)
              -> c -> c -> r
 read2CellsH' f x y = read2CellsH f (x^.cell) (y^.cell)
 
+cellEqual :: (forall a. constr a => a -> a -> Bool)
+          -> Cell constr 
+          -> Cell constr 
+          -> Bool
+cellEqual f = read2CellsWith f False
+
+cellEqual' :: HasCell c (Cell constr) 
+           => (forall a. constr a => a -> a -> Bool)
+           -> c -> c -> Bool
+cellEqual' f x y = cellEqual f (x^.cell) (y^.cell)
+
+cellCompare :: (forall a. constr a => a -> a -> Ordering)
+            -> Cell constr 
+            -> Cell constr 
+            -> Ordering
+cellCompare f x y = read2CellsWith f (x' `compare` y') x y
+    where
+        x' = readCell typeOf x :: TypeRep
+        y' = readCell typeOf y :: TypeRep
+
+cellCompare' :: HasCell c (Cell constr) 
+             => (forall a. constr a => a -> a -> Ordering)
+             -> c -> c -> Ordering
+cellCompare' f x y = cellCompare f (x^.cell) (y^.cell)
+
 arbitraryInstanceOf :: Name -> Name -> ExpQ
 arbitraryInstanceOf cons cl = arbitraryInstanceOf' cons cl []
 

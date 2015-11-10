@@ -255,18 +255,18 @@ case2 = return $ do
         s1 = Sort "\\S1" "sl@S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
-                [ ("x",VarScope $ Machine (Var "x" int) Local li) 
-                , ("y",VarScope $ Machine (Var "y" int) Local li)
-                , ("p",VarScope $ Evt $ M.singleton (Just "ae1b") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Local li))
-                , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
+                [ ("x",makeCell $ Machine (Var "x" int) Local li) 
+                , ("y",makeCell $ Machine (Var "y" int) Local li)
+                , ("p",makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Local li))
+                , ("S0",makeCell $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
-                [ ("z",VarScope $ Machine (Var "z" int) Local li) 
-                , ("y",VarScope $ Machine (Var "y" int) Inherited li) 
-                , ("p",VarScope $ Evt $ M.singleton (Just "ce1") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Inherited li))
-                , ("q",VarScope $ Evt $ M.singleton (Just "ce2") (EventDecl (Var "q" int) Index ("ce2":|[]) Local li))
-                , ("x",VarScope $ DelMch (Just $ Var "x" int) Local li) 
-                , ("S0",VarScope $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li)
-                , ("\\S1",VarScope $ TheoryDef (Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
+                [ ("z",makeCell $ Machine (Var "z" int) Local li) 
+                , ("y",makeCell $ Machine (Var "y" int) Inherited li) 
+                , ("p",makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Inherited li))
+                , ("q",makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Var "q" int) Index ("ce2":|[]) Local li))
+                , ("x",makeCell $ DelMch (Just $ Var "x" int) Local li) 
+                , ("S0",makeCell $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li)
+                , ("\\S1",makeCell $ TheoryDef (Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
                 [ ("m0",vs0) 
                 , ("m1",vs1)]

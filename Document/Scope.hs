@@ -12,6 +12,8 @@ module Document.Scope
     , make_all_tables 
     , make_all_tables'
     , all_errors
+    , scopeUnion
+    , merge_scopes
     , fromEither'
     , is_inherited, is_local
     , DeclSource(..)
@@ -30,6 +32,7 @@ import Document.Pipeline
 import UnitB.Event
 
     -- Libraries
+import Control.Applicative
 import Control.Arrow (second)
 import Control.DeepSeq
 
@@ -38,7 +41,6 @@ import Control.Monad.Identity
 import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
 
-import Data.DeriveTH
 import Data.Either
 import Data.Maybe 
 import Data.List as L
@@ -51,10 +53,8 @@ import GHC.Stack
 
 import Test.QuickCheck as QC
 
-import Text.Printf
-
-import Utilities.Instances
-import Utilities.Invariant
+import Utilities.Instances 
+import Utilities.Invariant hiding ((===))
 import Utilities.Permutation
 import Utilities.Syntactic
 
@@ -77,13 +77,9 @@ class (Ord a,Show a) => Scope a where
                            => a -> Maybe a
     make_inherited x = (asImpl :: Iso' a (Impl a)) makeInheritedImpl x
 
-    clash :: a -> a -> Bool
-    default clash :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> Bool
-    clash x y = clashesImpl (x ^. asImpl :: Impl a) (y ^. asImpl)
-
-    merge_scopes :: a -> a -> a
-    default merge_scopes :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> a
-    merge_scopes x y = mergeScopesImpl (x ^. asImpl :: Impl a) (y ^. asImpl) ^. L.from asImpl
+    merge_scopes' :: a -> a -> Maybe a
+    default merge_scopes' :: (ClashImpl (Impl a), HasImplIso (Impl a) a) => a -> a -> Maybe a
+    merge_scopes' x y = view (L.from asImpl) <$> mergeScopesImpl (x^.asImpl :: Impl a) (y^.asImpl)
 
         -- | let x be a collection of event-related declaration in machine m0 and m1 be a 
         -- | refinement of m0. rename_events sub x translates the name in x from the m0 
@@ -94,13 +90,28 @@ class (Ord a,Show a) => Scope a where
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
     axiom_Scope_clashesOverMerge :: a -> a -> a -> Bool
     axiom_Scope_clashesOverMerge x y z = clash x y || ((x <+> y) `clash` z == (x `clash` z || y `clash` z))
-    axiom_Scope_mergeCommutative :: a -> a -> Bool
-    axiom_Scope_mergeCommutative x y = clash x y || x <+> y == y <+> x
-    axiom_Scope_mergeAssociative :: a -> a -> a -> Bool
-    axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) || x <+> (y <+> z) == (x <+> y) <+> z
+    axiom_Scope_mergeCommutative :: a -> a -> Property
+    axiom_Scope_mergeCommutative x y = clash x y .||. x <+> y === y <+> x
+    axiom_Scope_mergeAssociative :: a -> a -> a -> Property
+    axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) .||. x <+> (y <+> z) === (x <+> y) <+> z
+
+clash :: Scope a => a -> a -> Bool
+clash x y = isNothing $ merge_scopes' x y
+
+merge_scopes :: (Scope a, ?loc :: CallStack) => a -> a -> a
+merge_scopes x y = fromJust' $ merge_scopes' x y
+
+scopeUnion :: Ord k
+           => (a -> a -> Maybe a) 
+           -> Map k a 
+           -> Map k a 
+           -> Maybe (Map k a)
+scopeUnion f m0 m1 = sequence $ unionWith f' (Just <$> m0) (Just <$> m1)
+    where
+        f' x y = join $ f <$> x <*> y
 
 (<+>) :: (Scope a, ?loc :: CallStack) => a -> a -> a
-(<+>) x y = provided (not $ clash x y) $ x `merge_scopes` y
+(<+>) x y = x `merge_scopes` y
 
 clashFree :: Scope a => [a] -> Bool
 clashFree [] = True
@@ -112,8 +123,7 @@ class HasImplIso a b where
     asImpl :: Iso' b a
 
 class ClashImpl a where
-    clashesImpl :: a -> a -> Bool
-    mergeScopesImpl :: a -> a -> a
+    mergeScopesImpl :: a -> a -> Maybe a
     keepFromImpl :: DeclSource -> a -> Maybe a
     makeInheritedImpl :: a -> Maybe a
 
@@ -121,8 +131,7 @@ instance HasDeclSource a DeclSource
         => ClashImpl (DefaultClashImpl a) where
     keepFromImpl s x'@(DefaultClashImpl x) = guard (x ^. declSource == s) >> return x'
     makeInheritedImpl (DefaultClashImpl x) = Just $ DefaultClashImpl $ x & declSource .~ Inherited
-    clashesImpl _ _ = True
-    mergeScopesImpl _ _ = error "merging clashing scopes"
+    mergeScopesImpl _ _ = Nothing
 
 instance HasImplIso (DefaultClashImpl a) a where
     asImpl = iso DefaultClashImpl getDefaultClashImpl
@@ -248,32 +257,25 @@ instance ( HasInhStatus a (InhStatus expr)
             b = case x ^. inhStatus of
                     InhAdd _ -> x ^. declSource == s
                     InhDelete _  -> s == Inherited
-    clashesImpl (WithDelete x) (WithDelete y) = case (x^.inhStatus,y^.inhStatus) of
-            (InhAdd _,InhDelete Nothing) -> False
-            (InhDelete Nothing,InhAdd _) -> False
-            _ -> True
 
-    mergeScopesImpl (WithDelete x) (WithDelete y) = WithDelete z
+    mergeScopesImpl (WithDelete x) (WithDelete y) = WithDelete <$> z
         where
             z = case (x ^. inhStatus, y ^. inhStatus) of
-                    (InhDelete Nothing, InhAdd e) -> x & inhStatus .~ InhDelete (Just e)
-                    (InhAdd e, InhDelete Nothing) -> y & inhStatus .~ InhDelete (Just e)
-                    _ -> error (printf "WithDelete ClashImpl.merge_scopes: Evt, Evt:\n%s\n%s" 
-                            (show $ x^.inhStatus) (show $ y^.inhStatus)) 
+                    (InhDelete Nothing, InhAdd e) -> Just $ x & inhStatus .~ InhDelete (Just e)
+                    (InhAdd e, InhDelete Nothing) -> Just $ y & inhStatus .~ InhDelete (Just e)
+                    _ -> Nothing
 
 instance (Eq expr, ClashImpl a, HasInhStatus a (EventInhStatus expr))
         => ClashImpl (Redundant expr a) where
     makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
     keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
-    clashesImpl (Redundant x) (Redundant y) = 
-            clashesImpl x y && fromMaybe True ((/=) <$> (snd <$> contents x) <*> (snd <$> contents y))
-    mergeScopesImpl (Redundant x) (Redundant y) 
-        | (snd <$> contents x) == (snd <$> contents y) = Redundant $ x & inhStatus %~ (flip f $ y^.inhStatus)
-        | otherwise = Redundant $ mergeScopesImpl x y
+    mergeScopesImpl (Redundant x) (Redundant y) = (Redundant <$> mergeScopesImpl x y) <|> g x y
         where
+            g x y = guard' x y >> Just (Redundant $ x & inhStatus %~ (flip f $ y^.inhStatus))
+            guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
             f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
             f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
             f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
             f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
 
-derive makeNFData ''DeclSource
+instance NFData DeclSource

@@ -13,8 +13,6 @@ import Logic.Expr hiding (Const)
 import UnitB.AST
 
     -- Libraries
-import Control.Applicative
-import Control.Monad.Identity
 import Control.Lens
 
 import Data.List.NonEmpty (NonEmpty(..))
@@ -24,11 +22,10 @@ import Data.Typeable
 
 import Test.QuickCheck
 
+import Utilities.Existential
 import Utilities.Format
-import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Syntactic
-import Utilities.TH
 
 -- apply :: Functor f
 --       => (forall a. IsVarScope a => a -> f a)
@@ -46,28 +43,28 @@ class (Typeable a,Scope a) => IsVarScope a where
     toThyDecl :: String -> a -> [Either Error TheoryP2Field]
     toMchDecl :: String -> a -> [Either Error (MachineP2'Field b c)]
 
-data VarScope = forall a. IsVarScope a => VarScope a
+newtype VarScope = VarScope { _varScopeCell :: Cell IsVarScope }
     deriving (Typeable)
 
-existential ''VarScope
+makeFields ''VarScope
 
 instance Show VarScope where
-    show (VarScope x) = show x
+    show = readCell' show
 
 instance Scope VarScope where
-    keep_from s = applyVarScope (keep_from s)
-    make_inherited = applyVarScope make_inherited
-    clash = fmap (fromMaybe True . fmap getConst) . apply2VarScope (fmap Const . clash)
-    merge_scopes = fmap (runIdentity . fromJust) . apply2VarScope (fmap Identity . merge_scopes)
-    error_item = readVarScope error_item
-    rename_events m = applyVarScope (rename_events m)
-    kind (VarScope v) = kind v
+    keep_from s = traverseCell' (keep_from s)
+    make_inherited = traverseCell' make_inherited
+    merge_scopes' = -- fmap (runIdentity . fromJust) . 
+        apply2Cells' merge_scopes' Nothing
+    error_item = readCell' error_item
+    rename_events m = traverseCell' (rename_events m)
+    kind = readCell' kind
 
 instance IsVarScope VarScope where
-    toOldEventDecl s (VarScope v) = toOldEventDecl s v
-    toNewEventDecl s (VarScope v) = toNewEventDecl s v
-    toThyDecl s (VarScope v) = toThyDecl s v
-    toMchDecl s (VarScope v) = toMchDecl s v
+    toOldEventDecl s = readCell' $ toOldEventDecl s
+    toNewEventDecl s = readCell' $ toNewEventDecl s
+    toThyDecl s = readCell' $ toThyDecl s
+    toMchDecl s = readCell' $ toMchDecl s
 
 data TheoryConst = TheoryConst 
         { thCons :: Var
@@ -108,10 +105,10 @@ data EvtScope = Param | Index
     deriving (Eq,Ord,Generic)
 
 instance Eq VarScope where
-    VarScope x == VarScope y = h_equal x y
+    (==) = cellEqual' (==)
 
 instance Ord VarScope where
-    VarScope x `compare` VarScope y = h_compare x y
+    compare = cellCompare' compare
 
 instance Show EvtScope where
     show Param = "parameter"
@@ -143,12 +140,9 @@ instance Scope TheoryDef where
     rename_events _ x = [x]
 
 instance Scope MachineVar where
-    clash (DelMch Nothing _ _) (Machine _ Inherited _) = False
-    clash (Machine _ Inherited _) (DelMch Nothing _ _) = False
-    clash _ _ = True
-    merge_scopes (DelMch Nothing s _) (Machine v Inherited li) = DelMch (Just v) s li
-    merge_scopes (Machine v Inherited li) (DelMch Nothing s _) = DelMch (Just v) s li
-    merge_scopes _ _ = error "MachineVar Scope.merge_scopes: _, _"
+    merge_scopes' (DelMch Nothing s _) (Machine v Inherited li) = Just $ DelMch (Just v) s li
+    merge_scopes' (Machine v Inherited li) (DelMch Nothing s _) = Just $ DelMch (Just v) s li
+    merge_scopes' _ _ = Nothing
     kind (DelMch _ _ _)   = "deleted variable"
     kind (Machine _ _ _)  = "state variable"
     rename_events _ x = [x]
@@ -164,7 +158,6 @@ instance Scope EvtDecls where
                 | s == (x^.declSource) = Just x
                 | otherwise = Nothing
     make_inherited (Evt m) = Just $ Evt $ M.map (set declSource Inherited) m
-    clash (Evt m0) (Evt m1) = not $ M.null $ m0 `M.intersection` m1
     error_item (Evt m) = head' $ elems $ mapWithKey msg m
         where
             head' [x] = x
@@ -172,7 +165,7 @@ instance Scope EvtDecls where
             head' _ = error "VarScope Scope VarScope: head' too many"
             msg (Just k) x = (format "{1} (event '{0}')" k (show $ x^.scope) :: String, x^.lineInfo)
             msg Nothing x  = (format "dummy", x^.lineInfo)
-    merge_scopes (Evt m0) (Evt m1) = Evt $ unionWith (error "VarScope Scope.merge_scopes: Evt, Evt") m0 m1
+    merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion (const $ const Nothing) m0 m1
     rename_events m (Evt vs) = Evt <$> concatMap f (toList vs)
         where
             lookup x = fromMaybe [x] $ M.lookup x m

@@ -52,7 +52,7 @@ import GHC.Generics (Generic)
 
 import Test.QuickCheck as QC hiding (label,collect)
 
-import Utilities.BipartiteGraph as G
+import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
 -- import Utilities.Relation hiding ((!))
@@ -241,7 +241,7 @@ type MachineP1 = MachineP1' EventP1 TheoryP1
 
 data MachineP1' events theory = MachineP1 
     { _p0 :: MachineP0
-    , _pEventRef :: BiGraph SkipOrEvent events events
+    , _pEventRef :: G.BiGraph SkipOrEvent events events
     , _pContext  :: theory
     } deriving (Show,Typeable,Generic)
 
@@ -511,7 +511,7 @@ pEventIds = pEvents . to (M.mapWithKey const) . from pEventId
 getEvent :: (HasMachineP1' phase)
          => EventId
          -> Getter (phase events t) events
-getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust' AST.assert "getEvent" x))
+getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust'' AST.assert x))
 
 eventDifference :: HasMachineP1' phase
                 => (NonEmpty (Map Label a) -> Map Label a -> Map Label b)
@@ -521,7 +521,7 @@ eventDifference :: HasMachineP1' phase
 eventDifference f eid field = pEventRef . to f' 
     where
         f' g = readGraph g $ do
-            cevt  <- fromJust' AST.assert (show eid) <$> hasRightVertex (Right eid)
+            cevt  <- fromJust'' AST.assert <$> hasRightVertex (Right eid)
             es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
             f (view field <$> es) <$> (view field <$> rightInfo cevt)
 

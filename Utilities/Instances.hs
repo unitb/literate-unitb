@@ -6,7 +6,6 @@ module Utilities.Instances
     , genericArbitrary, inductive, listOf', arbitrary' )
 where
 
-import Control.Comonad
 import Control.Monad.Fix
 import Control.Lens hiding (to,from)
 
@@ -80,9 +79,9 @@ instance MapFields c f => MapFields (M1 a b c) f where
     put x = M1 $ put (unM1 <$> x)
     get x = M1 <$> get (unM1 x)
 
-instance (Applicative f,Comonad f) => MapFields (K1 a b) f where
+instance (Applicative f) => MapFields (K1 a b) f where
     type Mapped (K1 a b) f = K1 a (f b)
-    put = K1 . pure . unK1 . extract
+    put = K1 . fmap unK1
     get = fmap K1 . unK1
 
 instance (MapFields a f,MapFields b f) => MapFields (a :*: b) f where
@@ -111,9 +110,6 @@ instance Applicative Intersection where
     pure = Intersection
     Intersection f <*> Intersection x = Intersection $ f x
 
-instance Comonad Intersection where
-    extract   = getIntersection
-    duplicate = Intersection
 
 instance Ord k => Semigroup (Intersection (Map k a)) where
     Intersection x <> Intersection y = Intersection $ x `M.intersection` y

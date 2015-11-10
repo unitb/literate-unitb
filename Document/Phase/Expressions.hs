@@ -300,9 +300,6 @@ instance Scope EventExpr where
     make_inherited (EventExpr m) = Just $ EventExpr (M.map f m)
         where
             f x = set declSource Inherited x
-    clash (EventExpr m0) (EventExpr m1) = not $ M.null 
-            $ M.filter id
-            $ M.intersectionWith clash m0 m1
     error_item (EventExpr m) = head' $ elems $ mapWithKey msg m
         where
             head' [x] = x
@@ -315,7 +312,7 @@ instance Scope EventExpr where
                 where
                     parents = intercalate "," $ map show $ inheritedFrom sc
             msg (Left _) sc = (format "{0} (initialization)" (kind sc) :: String, view lineInfo sc)
-    merge_scopes (EventExpr m0) (EventExpr m1) = EventExpr $ unionWith merge_scopes m0 m1
+    merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events m (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
             lookup x = MM.fromMaybe [x] $ M.lookup x m
@@ -483,8 +480,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(evt, lbl, xs) _m p2 -> do
 
 instance Scope Axiom where
     kind _ = "axiom"
-    merge_scopes _ _ = error "Axiom Scope.merge_scopes: _, _"
-    clash _ _ = True
+    merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
     keep_from s x = guard (s == view declSource x) >> return x
     rename_events _ x = [x]
 

@@ -111,7 +111,7 @@ instance Syntactic Error where
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
 instance Arbitrary LineInfo where
-    arbitrary = genericArbitrary
+    arbitrary = LI "file" <$> arbitrary <*> arbitrary
 
 showLiLong :: LineInfo -> String
 showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col

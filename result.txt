@@ -21,23 +21,165 @@
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.VarScope.VarScope : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.VarScope : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_mergeCommutative ===
+
+=== prop_type_error from ./Document/MachineSpec.hs:46 ===
+
+=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
 === prop_flatten_parse_inv from ./Latex/Test_Latex_Parser.hs:173 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_mergeAssociative ===
 === prop_c from ./Utilities/EditDistance.hs:129 ===
-=== prop_evalList_is_identity from ./Utilities/Permutation.hs:352 ===
 === prop_toList_fromList from ./Utilities/Relation.hs:192 ===
++++ OK, passed 100 tests.
+=== prop_evalList_is_identity from ./Utilities/Permutation.hs:352 ===
 
 === prop_u_scc_complete from ./Utilities/Permutation.hs:356 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== prop_fromList_toList from ./Utilities/Relation.hs:196 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_clashesOverMerge ===
 === prop_lines_unlines_cancel from ./Utilities/Lines.hs:59 ===
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
+
+=== prop_domain_def from ./Utilities/Relation.hs:200 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
++++ OK, passed 100 tests.
+
+=== prop_unlines_lines_cancel from ./Utilities/Lines.hs:68 ===
++++ OK, passed 100 tests.
+
+=== prop_range_def from ./Utilities/Relation.hs:203 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_mergeAssociative ===
 
 === prop_u_scc_disconnected from ./Utilities/Permutation.hs:361 ===
 
-=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:372 ===
-
 === prop_b from ./Utilities/EditDistance.hs:135 ===
++++ OK, passed 100 tests+++ OK, passed 100 tests.
+.
 
-=== prop_top_sort_complete from ./Utilities/Permutation.hs:384 ===
+=== prop_empty_def from ./Utilities/Relation.hs:206 ===
 
-=== prop_top_sort_cycles from ./Utilities/Permutation.hs:391 ===
+=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests+++ OK, passed 100 tests.
+.
+
+=== prop_apply_def from ./Utilities/Relation.hs:210 ===
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_clashesOverMerge ===
+
+=== prop_u_scc_valid_components from ./Utilities/Permutation.hs:372 ===
++++ OK, passed 100 tests.
++++ OK, passed 100 tests
+=== prop_compose_def from ./Utilities/Relation.hs:214 ===
+.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_mergeAssociative ===
+
++++ OK, passed 100 tests.
+
+=== prop_lines'_concat_cancel from ./Utilities/Lines.hs:74 ===
++++ OK, passed 100 tests.
+
+=== prop_all_valid from ./Utilities/Relation.hs:233 ===
 +- Literate Unit-B Test Suite
 |  +- Unit-B Document
 |  |  +- basic syntax and scopes
@@ -223,8 +365,6 @@
 |  |  +- Garbage collector
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
-
-=== prop_top_sort_singles from ./Utilities/Permutation.hs:397 ===
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: monotonic simplification
 |  |  |  +- test4: monotonicity of POs
@@ -236,31 +376,6 @@
 |  |  +- Termination Detection
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
-
-=== prop_top_sort_order from ./Utilities/Permutation.hs:402 ===
-
-=== prop_closure_complete from ./Utilities/Permutation.hs:434 ===
-
-=== prop_a from ./Utilities/EditDistance.hs:141 ===
-
-=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:437 ===
-
-=== prop_closure_closed from ./Utilities/Permutation.hs:442 ===
-
-=== prop_type_error from ./Document/MachineSpec.hs:46 ===
-
-=== prop_e from ./Utilities/EditDistance.hs:147 ===
-
-=== prop_closure_minimal from ./Utilities/Permutation.hs:448 ===
-
-=== prop_f from ./Utilities/EditDistance.hs:153 ===
-
-
-=== prop_g from ./Utilities/EditDistance.hs:159 ===
-
-=== prop_expr_parser from ./Document/MachineSpec.hs:52 ===
-
-
 |  |  |  +- test2: verify m2
 |  |  |  +- test3: verify m3
 |  |  |  +- test4: quantified union
@@ -268,219 +383,32 @@
 |  |  +- Parser
 |  |  |  +- test0: verify m0
 |  |  |  +- test1: verify m1
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.VarScope : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_unlines_lines_cancel from ./Utilities/Lines.hs:68 ===
-+++ OK, passed 100 tests.
-
-=== prop_fromList_toList from ./Utilities/Relation.hs:196 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== prop_domain_def from ./Utilities/Relation.hs:200 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-+++ OK, passed 100 tests.
 |  |  |  +- test2: verify m2
 |  |  +- [ Success: 3 / 3 ]
 |  |  +- QuickCheck spec of machine parser
 |  |  +- the parser is exception free
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
+=== Axiom of Document.Scope.Scope Document.ExprScope.CoarseSchedule : axiom_Scope_clashesIsSymmetric ===
 
-=== prop_range_def from ./Utilities/Relation.hs:203 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryDef : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.TheoryConst : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_empty_def from ./Utilities/Relation.hs:206 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== prop_apply_def from ./Utilities/Relation.hs:210 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.MachineVar : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_compose_def from ./Utilities/Relation.hs:214 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== prop_all_valid from ./Utilities/Relation.hs:233 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.VarScope.EvtDecls : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== prop_lines'_concat_cancel from ./Utilities/Lines.hs:74 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Witness : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_clashesIsSymmetric ===
+=== prop_a from ./Utilities/EditDistance.hs:141 ===
 +++ OK, passed 100 tests.
 
 === prop_concat_lines'_cancel from ./Utilities/Lines.hs:77 ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
 === prop_union_def from ./Utilities/Relation.hs:253 ===
-+++ OK, passed 100 tests.
-
-=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Guard : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== prop_difference_def from ./Utilities/Relation.hs:259 ===
-+++ OK, passed 100 tests.
-
-=== prop_identity_def from ./Utilities/Relation.hs:262 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
-+++ OK, passed 100 tests.
-
-=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
-+++ OK, passed 100 tests.
-
-=== prop_domSubt from ./Utilities/Relation.hs:271 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.FineSchedule : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_domRestr from ./Utilities/Relation.hs:274 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== prop_concat_lines'_cancel_regression from ./Utilities/Lines.hs:80 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.ExprScope : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EvtExprScope : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_subset_def from ./Utilities/Relation.hs:280 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.CoarseSchedule : axiom_Scope_clashesIsSymmetric ===
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.CoarseSchedule : axiom_Scope_clashesOverMerge ===
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.CoarseSchedule : axiom_Scope_mergeCommutative ===
+
+=== prop_top_sort_complete from ./Utilities/Permutation.hs:384 ===
 +++ OK, passed 100 tests.
 
-=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
-+++ OK, passed 100 tests.
-
-=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
-+++ OK, passed 100 tests.
-
-=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
-+++ OK, passed 100 tests.
-
-=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
-+++ OK, passed 100 tests.
-
-=== prop_null_def from ./Utilities/Relation.hs:295 ===
-+++ OK, passed 100 tests.
-
-=== prop_image_def from ./Utilities/Relation.hs:298 ===
-+++ OK, passed 100 tests.
-
-=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
+=== prop_intersection_def from ./Utilities/Relation.hs:256 ===
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.CoarseSchedule : axiom_Scope_mergeAssociative ===
@@ -495,37 +423,34 @@
 === Axiom of Document.Scope.Scope Document.ExprScope.ActionDecl : axiom_Scope_mergeCommutative ===
 +++ OK, passed 100 tests.
 
-=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
+=== prop_difference_def from ./Utilities/Relation.hs:259 ===
++++ OK, passed 100 tests.
+
+=== prop_identity_def from ./Utilities/Relation.hs:262 ===
+
+=== prop_top_sort_cycles from ./Utilities/Permutation.hs:391 ===
+
+=== prop_e from ./Utilities/EditDistance.hs:147 ===
++++ OK, passed 100 tests.
+
+=== prop_ranSubt from ./Utilities/Relation.hs:265 ===
++++ OK, passed 100 tests.
+
+=== prop_ranRestr from ./Utilities/Relation.hs:268 ===
++++ OK, passed 100 tests.
+
+=== prop_domSubt from ./Utilities/Relation.hs:271 ===
++++ OK, passed 100 tests.
+
+=== prop_concat_lines'_cancel_regression from ./Utilities/Lines.hs:80 ===
++++ OK, passed 100 tests.
+
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.ActionDecl : axiom_Scope_mergeAssociative ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
+=== prop_domRestr from ./Utilities/Relation.hs:274 ===
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.ProgressDecl : axiom_Scope_clashesIsSymmetric ===
@@ -540,58 +465,21 @@
 === Axiom of Document.Scope.Scope Document.ExprScope.ProgressDecl : axiom_Scope_mergeAssociative ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_clashesIsSymmetric ===
+=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_clashesIsSymmetric ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_clashesOverMerge ===
+=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_clashesOverMerge ===
+
+=== prop_top_sort_singles from ./Utilities/Permutation.hs:397 ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_mergeCommutative ===
+=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_mergeCommutative ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_mergeAssociative ===
+=== prop_transpose_def from ./Utilities/Relation.hs:277 ===
 +++ OK, passed 100 tests.
 
-=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_mergeAssociative ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_clashesIsSymmetric ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_clashesOverMerge ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_mergeCommutative ===
-+++ OK, passed 100 tests.
-
-=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
-+++ OK, passed 100 tests.
-
-=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_mergeAssociative ===
+=== Axiom of Document.Scope.Scope Document.ExprScope.SafetyDecl : axiom_Scope_mergeAssociative ===
 +++ OK, passed 100 tests.
 
 === Axiom of Document.Scope.Scope Document.ExprScope.ConstraintProp : axiom_Scope_clashesIsSymmetric ===
@@ -606,6 +494,50 @@
 === Axiom of Document.Scope.Scope Document.ExprScope.ConstraintProp : axiom_Scope_mergeAssociative ===
 +++ OK, passed 100 tests.
 
+=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== prop_subset_def from ./Utilities/Relation.hs:280 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.TransientProp : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.InvTheorem : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== prop_irreflexive_def from ./Utilities/Relation.hs:283 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Invariant : axiom_Scope_mergeAssociative ===
+
+=== prop_top_sort_order from ./Utilities/Permutation.hs:402 ===
++++ OK, passed 100 tests.
+
 === Axiom of Document.Scope.Scope Document.ExprScope.Axiom : axiom_Scope_clashesIsSymmetric ===
 +++ OK, passed 100 tests.
 
@@ -615,7 +547,68 @@
 === Axiom of Document.Scope.Scope Document.ExprScope.Axiom : axiom_Scope_mergeCommutative ===
 +++ OK, passed 100 tests.
 
+=== prop_symmetric_def from ./Utilities/Relation.hs:286 ===
++++ OK, passed 100 tests.
+
 === Axiom of Document.Scope.Scope Document.ExprScope.Axiom : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== prop_transitive_def from ./Utilities/Relation.hs:289 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== prop_antisymmetric_def from ./Utilities/Relation.hs:292 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_mergeCommutative ===
++++ OK, passed 100 tests.
+
+=== prop_null_def from ./Utilities/Relation.hs:295 ===
+
+=== prop_closure_complete from ./Utilities/Permutation.hs:434 ===
++++ OK, passed 100 tests.
+
+=== prop_image_def from ./Utilities/Relation.hs:298 ===
++++ OK, passed 100 tests.
+
+=== prop_closure_is_transitive from ./Utilities/Relation.hs:301 ===
+
+=== prop_closure_contain_all_edges from ./Utilities/Permutation.hs:437 ===
+
+=== prop_f from ./Utilities/EditDistance.hs:153 ===
+
+=== prop_closure_closed from ./Utilities/Permutation.hs:442 ===
++++ OK, passed 100 tests.
+
+=== prop_mapDomain_def from ./Utilities/Relation.hs:306 ===
++++ OK, passed 100 tests.
+
+=== prop_mapRange_def from ./Utilities/Relation.hs:309 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.EventExpr : axiom_Scope_mergeAssociative ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_clashesIsSymmetric ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_clashesOverMerge ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_all_valid from ./Utilities/Relation.hs:312 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_mergeCommutative ===
+
+=== prop_closure_minimal from ./Utilities/Permutation.hs:448 ===
++++ OK, passed 100 tests.
+
+=== Axiom of Document.Scope.Scope Document.ExprScope.Initially : axiom_Scope_mergeAssociative ===
 +++ OK, passed 100 tests.
 
 |  |  +- conformance of instances to type class axioms
@@ -651,6 +644,12 @@
 |  |  +- [ Success: 19 / 19 ]
 |  +- [ Success: 25 / 25 ]
 |  +- latex parser
+
+=== prop_g from ./Utilities/EditDistance.hs:159 ===
++++ OK, passed 100 tests.
+
+=== prop_cycles_maximal from ./Utilities/Relation.hs:317 ===
+
 +++ OK, passed 100 tests.
 
 === prop_filterDom_def from ./Utilities/Relation.hs:328 ===
@@ -667,6 +666,7 @@
 
 === prop_bimapMaybe_def from ./Utilities/Relation.hs:344 ===
 +++ OK, passed 100 tests.
+
 
 +++ OK, passed 100 tests.
 
@@ -771,10 +771,10 @@
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   49182 total
+   49205 total
     1042 Document/phase.hs
     1008 UnitB/PO.hs
-     946 Document/Phase/Expressions.hs
+     942 Document/Phase/Expressions.hs
      805 Logic/Expr/Expr.hs
      735 Logic/Proof/Tactics.hs
-Run time: 2m 56s
+Run time: 2m 52s
