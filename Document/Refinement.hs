@@ -24,12 +24,13 @@ import Control.Lens hiding (Context)
 import Control.Monad.RWS as RWS
 
 import Data.Char
-import Data.DeriveTH
 import Data.Either
 import Data.List as L ( intercalate, (\\), null )
 import qualified Data.List.NonEmpty as NE
 import Data.Map as M hiding ( map, (\\) )
 import Data.Typeable
+
+import GHC.Generics (Generic)
 
 import Utilities.Error
 import Utilities.Format
@@ -50,7 +51,7 @@ data RuleParserParameter =
         ParserSetting
 
 data Add = Add
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Add where
     rule_name _       = label "add"
@@ -221,7 +222,7 @@ assert_hyp m suff cnst hyps prop =
             | otherwise   = composite_label [label suff]
 
 data Ensure = Ensure RawProgressProp (NE.NonEmpty EventId) RawTrHint
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Ensure where
     rule_name _ = "ensure"
@@ -237,7 +238,7 @@ instance RefRule Ensure where
     supporting_evts (Ensure _ hyps _) = NE.toList hyps
 
 data Discharge = Discharge RawProgressProp Label RawTransient (Maybe RawSafetyProp)
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Discharge where
     rule_name _ = label "discharge"
@@ -296,7 +297,7 @@ parse_discharge rule params = do
     parse (mk_discharge,()) rule params
 
 data Monotonicity = Monotonicity RawProgressProp Label RawProgressProp
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Monotonicity where
     rule_name _   = label "monotonicity"
@@ -313,7 +314,7 @@ instance RefRule Monotonicity where
                              (q1 `zimplies` q0))
 
 data Implication = Implication RawProgressProp
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Implication where
     rule_name _   = label "implication"
@@ -326,7 +327,7 @@ instance RefRule Implication where
     supporting_evts _ = []
 
 data Disjunction = Disjunction RawProgressProp [(Label,([Var], RawProgressProp))]
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Disjunction where
     rule_name _ = label "disjunction"
@@ -354,7 +355,7 @@ disjunction pr0@(LeadsTo fv0 _ _) ps = Disjunction (getExpr <$> pr0) ps0
             ps0 = map (second f) ps
 
 data NegateDisjunct = NegateDisjunct RawProgressProp Label RawProgressProp
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule NegateDisjunct where
     rule_name _   = label "trading"
@@ -372,7 +373,7 @@ instance RefRule NegateDisjunct where
                                 (q1 `zimplies` q0))
 
 data Transitivity = Transitivity RawProgressProp (NE.NonEmpty (Label,RawProgressProp))
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Transitivity where
     rule_name _ = label "transitivity"
@@ -402,7 +403,7 @@ instance RefRule Transitivity where
                             q2 `zimplies` q0 )
 
 data PSP = PSP RawProgressProp Label RawProgressProp RawSafetyProp
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule PSP where
     rule_name _ = label "PSP"
@@ -423,7 +424,7 @@ instance RefRule PSP where
         = error "PSP.refinement_po: invalid"
 
 data Induction = Induction RawProgressProp Label RawProgressProp Variant
-    deriving (Eq,Typeable,Show)
+    deriving (Eq,Typeable,Show,Generic)
 
 instance RefRule Induction where
     rule_name _ = label "induction"
@@ -522,13 +523,13 @@ parse_induction rule param = do
 --         ++ assert m "r"
 --         ++ assert m "b"
 
-derive makeNFData ''Add
-derive makeNFData  ''Ensure
-derive makeNFData  ''Discharge
-derive makeNFData  ''Monotonicity
-derive makeNFData  ''Implication
-derive makeNFData  ''Disjunction
-derive makeNFData  ''NegateDisjunct
-derive makeNFData  ''Transitivity
-derive makeNFData  ''PSP
-derive makeNFData  ''Induction
+instance NFData Add
+instance NFData Ensure
+instance NFData Discharge
+instance NFData Monotonicity
+instance NFData Implication
+instance NFData Disjunction
+instance NFData NegateDisjunct
+instance NFData Transitivity
+instance NFData PSP
+instance NFData Induction

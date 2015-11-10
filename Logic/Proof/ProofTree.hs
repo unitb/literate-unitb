@@ -13,7 +13,6 @@ import Control.DeepSeq
 import Control.Monad
 import Control.Lens hiding (Context,rewrite)
 
-import Data.DeriveTH
 import Data.List as L
 import Data.Map as M 
                 ( Map )
@@ -21,6 +20,8 @@ import qualified Data.Map as M
 import Data.Maybe as M 
 import Data.Set as S 
 import Data.Typeable
+
+import GHC.Generics (Generic)
 
 import Utilities.Format
 import Utilities.Syntactic
@@ -42,7 +43,7 @@ data Proof =  FreeGoal String String Type Proof LineInfo
             | InstantiateHyp Expr (Map Var Expr) Proof LineInfo
             | Keep Context [Expr] (Map Label Expr) Proof LineInfo
             | ByCalc Calculation
-    deriving (Eq,Typeable)
+    deriving (Eq,Typeable, Generic)
 
 data Calculation = Calc 
         {  _calculationContext :: Context
@@ -50,7 +51,7 @@ data Calculation = Calc
         ,  first_step :: Expr
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
-    deriving (Eq, Typeable)
+    deriving (Eq, Typeable, Generic)
 
 makeFields ''Calculation
 
@@ -319,5 +320,5 @@ entails_goal_po ctx (Calc d g e0 es li) = do
         xs = take (length es) (e0:ys)
         rs = L.map(\(x,_,_,_) -> x) es
 
-derive makeNFData ''Proof
-derive makeNFData ''Calculation
+instance NFData Proof
+instance NFData Calculation

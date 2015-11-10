@@ -22,7 +22,6 @@ import UnitB.AST as AST
 import UnitB.Expr 
 
     -- Libraries
--- import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
 import Control.DeepSeq
 import Control.Lens as L
@@ -55,16 +54,10 @@ import Test.QuickCheck as QC hiding (label,collect)
 import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
--- import Utilities.Relation hiding ((!))
 import Utilities.Syntactic
 import Utilities.Format
 import Utilities.TableConstr
 import Utilities.TH
-
-
--- type MachineP0 = MachineP0' ()
-
--- data MachineP0' a = MachineP0
 
 triggerM :: Maybe a -> MM' c a
 triggerM = maybe mzero return

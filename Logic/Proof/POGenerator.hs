@@ -27,10 +27,11 @@ import Control.Monad.RWS
 import Control.Monad.State
 import Control.Lens hiding (Context)
 
-import Data.DeriveTH
 import Data.List as L
 import Data.Map as M hiding ( map )
 import qualified Data.Map as M
+
+import GHC.Generics (Generic)
 
 import Utilities.Error
 import Utilities.Invariant
@@ -45,11 +46,11 @@ data POParam = POP
     , _pOParamNameless :: [Expr]
     , _pOParamNamed :: Map Label Expr
     , _pOParamSynProp :: SyntacticProp
-    }
+    } deriving (Generic)
 
 makeFields ''POParam
 mkCons ''POParam
-derive makeNFData ''POParam
+instance NFData POParam
 
 empty_param :: POParam
 empty_param = makePOParam empty_ctx

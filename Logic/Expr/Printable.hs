@@ -8,7 +8,6 @@ import Logic.Expr.Scope
     -- Libraries
 import Control.DeepSeq
 
-import Data.DeriveTH
 import Data.Typeable
 
 import GHC.Generics
@@ -50,5 +49,5 @@ instance Arbitrary DispExpr where
 prettyPrint :: DispExpr -> String
 prettyPrint (DispExpr x _) = x
 
-derive makeNFData ''DispExpr
+instance NFData DispExpr
 

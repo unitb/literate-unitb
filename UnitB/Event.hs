@@ -16,7 +16,6 @@ import Control.DeepSeq
 import Control.Lens hiding (indices)
 
 import Data.Default
-import Data.DeriveTH
 import Data.Either.Combinators
 import Data.Foldable as F
 import Data.List as L
@@ -32,18 +31,6 @@ import Test.QuickCheck hiding (label)
 import Utilities.Format
 import Utilities.Instances
 import Utilities.TH
-
--- data Schedule = Schedule
---         { coarse :: Map Label Expr
---         , fine   :: Map Label Expr
---         }
---     deriving (Eq, Show)
-
--- empty_schedule :: Schedule
--- empty_schedule = Schedule default_schedule M.empty
-
--- instance Default Schedule where
---     def = empty_schedule
 
 type Action = Action' Expr
 type RawAction = Action' RawExpr
@@ -106,7 +93,7 @@ type EventMerging' = EventMerging Expr
 data EventMerging expr = EvtM  
         { _eventMergingMultiAbstract :: NonEmpty (SkipOrEvent,AbstrEvent' expr)
         , _eventMergingConcrete ::   (SkipOrEvent,ConcrEvent' expr) }
-    deriving (Show)
+    deriving (Show,Generic)
 
 type RawEventSplitting = EventSplitting RawExpr
 type EventSplitting' = EventSplitting Expr
@@ -114,7 +101,7 @@ type EventSplitting' = EventSplitting Expr
 data EventSplitting expr = EvtS   
         { _eventSplittingAbstract :: (SkipOrEvent,AbstrEvent' expr) 
         , _eventSplittingMultiConcrete :: NonEmpty (SkipOrEvent,ConcrEvent' expr) }
-    deriving (Show)
+    deriving (Show,Generic)
 
 type EventRef' = EventRef RawExpr
 
@@ -135,7 +122,7 @@ data ScheduleChange' expr = ScheduleChange
         , _sch_prog :: (Label,ProgressProp' expr) 
         , _sch_saf  :: (Label,SafetyProp' expr)
         }
-    deriving (Show,Eq,Typeable,Functor,Foldable,Traversable)
+    deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
 
 makeFields ''EventRef
 makeLenses ''EventRef
@@ -435,11 +422,10 @@ deleted_actions = actions_changes M.difference
 replace :: (Label, ProgressProp) -> (Label, SafetyProp) -> ScheduleChange
 replace prog saf = ScheduleChange def def def prog saf
 
-derive makeNFData ''Event'
-derive makeNFData ''AbstrEvent'
-derive makeNFData ''EventMerging
-derive makeNFData ''EventSplitting
-derive makeNFData ''ConcrEvent'
-derive makeNFData ''Action'
--- derive makeNFData ''Schedule
-derive makeNFData ''ScheduleChange'
+instance NFData expr => NFData (Event' expr)
+instance NFData expr => NFData (AbstrEvent' expr)
+instance NFData expr => NFData (EventMerging expr)
+instance NFData expr => NFData (EventSplitting expr)
+instance NFData expr => NFData (ConcrEvent' expr)
+instance NFData expr => NFData (Action' expr)
+instance NFData expr => NFData (ScheduleChange' expr)

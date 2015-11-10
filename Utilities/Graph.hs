@@ -20,7 +20,6 @@ import Control.Monad
 import           Data.Array as A ( bounds, Array, (//), array, ixmap )
 import qualified Data.Array as A -- hiding ( (!) )
 import           Data.Array.ST
-import           Data.DeriveTH
 import           Data.Function
 import           Data.Graph hiding ( vertices )
 import           Data.List as L hiding ( union, (\\), transpose, map )
@@ -33,6 +32,8 @@ import qualified Data.Map  as M
 import           Data.Maybe
 import           Data.Tuple
 
+import GHC.Generics
+
 import Prelude hiding ( map )
 
 import Test.QuickCheck
@@ -44,7 +45,7 @@ instance Show a => Show (SCC a) where
 --type Array a b = 
 
 data Matrix a b = Matrix (Map a (Map a b)) [a] b
-    deriving (Eq, Show)
+    deriving (Eq, Show, Generic)
 
 empty :: b -> Matrix a b
 empty x = Matrix M.empty [] x
@@ -364,4 +365,4 @@ return []
 run_tests :: IO Bool
 run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
-derive makeNFData ''Matrix
+instance (NFData a,NFData b) => NFData (Matrix a b)

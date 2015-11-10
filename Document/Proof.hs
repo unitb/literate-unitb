@@ -34,7 +34,6 @@ import           Control.Monad.Trans.State as ST ( StateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
-import           Data.DeriveTH
 import           Data.Either.Combinators
 import           Data.Map hiding ( map, foldl )
 import qualified Data.Map as M
@@ -42,6 +41,8 @@ import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 import qualified Data.Traversable as T 
+
+import GHC.Generics (Generic)
 
 import           Utilities.Error
 import           Utilities.Format
@@ -73,7 +74,11 @@ data ParserSetting = PSetting
     , _primed_vars   :: Map String Var
     , _free_dummies  :: Bool
     , _expected_type :: Maybe Type
-    } deriving Show
+    } -- deriving Show
+    deriving (Generic)
+
+instance Show ParserSetting where
+    show _ = "<parser>"
 
 makeLenses ''ParserSetting
 makeFields ''ParserSetting
@@ -618,4 +623,4 @@ lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       -> t0 (t1 m) a
 lift2 cmd = lift $ lift cmd
 
-derive makeNFData ''ParserSetting
+instance NFData ParserSetting

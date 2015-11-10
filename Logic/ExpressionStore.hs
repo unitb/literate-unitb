@@ -10,7 +10,6 @@ import Logic.Expr.TypeChecking
 import Control.Arrow
 import Control.DeepSeq
 
-import Data.DeriveTH
 import Data.Map as M ( insertWith, fromListWith, Map, empty, lookup ) --, (!) )
 
 newtype ExprStore = ExprStore { getMap :: Map UntypedExpr [String] }

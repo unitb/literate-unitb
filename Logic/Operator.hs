@@ -38,12 +38,13 @@ import Logic.Expr
 import Control.DeepSeq
 import Control.Lens
 
-import Data.DeriveTH
 import Data.Default
 import Data.Either
 import Data.Function
 import Data.List as L
 import Data.Typeable
+
+import GHC.Generics (Generic)
 
 import           Utilities.Error
 import           Utilities.Format
@@ -68,7 +69,7 @@ mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
 mk_unary (UnaryOperator _ _ f) x = f $ Right x
 
 data Assoc = LeftAssoc | RightAssoc | NoAssoc
-    deriving (Show,Eq,Typeable)
+    deriving (Show,Eq,Typeable,Generic)
 
 data Notation = Notation
     { _new_ops :: [Operator]
@@ -80,7 +81,7 @@ data Notation = Notation
     , _commands :: [Command]
     , _quantifiers :: [(String,HOQuantifier)]
     , _struct :: Matrix Operator Assoc
-    } deriving (Eq,Show)
+    } deriving (Eq,Show,Generic)
 
 empty_notation :: Notation
 empty_notation = with_assoc $ Notation 
@@ -156,7 +157,7 @@ precede x y
         common = L.map f $ _new_ops x `intersect` _new_ops y
 
 data UnaryOperator = UnaryOperator String String (ExprP -> ExprP)
-    deriving Typeable
+    deriving (Typeable,Generic)
 
 instance Eq UnaryOperator where
     UnaryOperator x0 x1 _ == UnaryOperator y0 y1 _ = (x0,x1) == (y0,y1)
@@ -176,7 +177,7 @@ instance Named Operator where
     decorated_name' = return . view name
 
 data BinOperator = BinOperator String String (ExprP -> ExprP -> ExprP)
-    deriving Typeable
+    deriving (Typeable,Generic)
 
 instance Eq BinOperator where
     BinOperator x0 x1 _ == BinOperator y0 y1 _ = (x0,x1) == (y0,y1)
@@ -190,6 +191,7 @@ instance Show BinOperator where
 type Operator = Either UnaryOperator BinOperator
 
 data Command = Command String String Int ([ExprP] -> ExprP)
+    deriving (Generic)
 
 instance Show Command where
     show (Command x y _ _) = show (x,y) -- format str x y
@@ -334,8 +336,8 @@ logical_notation = with_assoc empty_notation
         , ((follows,equiv),follows)
         , ((follows,follows),follows) ]  }
 
-derive makeNFData ''Notation
-derive makeNFData ''UnaryOperator
-derive makeNFData ''Command
-derive makeNFData ''BinOperator
-derive makeNFData ''Assoc
+instance NFData Notation
+instance NFData UnaryOperator
+instance NFData Command
+instance NFData BinOperator
+instance NFData Assoc

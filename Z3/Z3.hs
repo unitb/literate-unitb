@@ -47,13 +47,13 @@ import Control.Monad
 import Control.Monad.Reader
 
 import Data.Char
-import Data.DeriveTH
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
---import           Data.List.Utils as L
 import qualified Data.Map as M
 import qualified Data.Set as S
 import           Data.Typeable 
+
+import GHC.Generics (Generic)
 
 import           System.Exit
 import           System.IO.Unsafe
@@ -182,14 +182,16 @@ data Satisfiability = Sat | Unsat | SatUnknown
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
 
-data Command = Decl (FODecl FOQuantifier) 
-    | Assert FOExpr (Maybe String)
-    | SetOption String String
-    | CheckSat 
-    | GetUnsatCore
-    | GetModel 
-    | Push | Pop 
-    | Comment String
+data Command = Decl 
+        (FODecl FOQuantifier) 
+        | Assert FOExpr (Maybe String)
+        | SetOption String String
+        | CheckSat 
+        | GetUnsatCore
+        | GetModel 
+        | Push | Pop 
+        | Comment String
+    deriving (Generic)
 
 z3_code :: Sequent -> [Command]
 z3_code po = 
@@ -341,4 +343,4 @@ verify lbl xs n = do
         else
             fail "verify: incomplete conditional"
 
-derive makeNFData ''Command
+instance NFData Command

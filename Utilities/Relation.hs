@@ -8,7 +8,6 @@ import Control.DeepSeq
 import Control.Monad
 
 import Data.Default
-import Data.DeriveTH
 import Data.List hiding (union,transpose,null)
 import qualified Data.List.Ordered as LO
 import Data.Monoid
@@ -16,6 +15,8 @@ import Data.Tuple
 import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Set as S
+
+import GHC.Generics
 
 import Prelude hiding (null)
 
@@ -31,7 +32,7 @@ infixl 7 |>>
 infix <->
 
 newtype Relation a b = Rel (M.Map a (M.Map b ()))
-    deriving (Eq,Default)
+    deriving (Eq,Default,Generic)
 
 type (<->) a b = Relation a b
 
@@ -356,4 +357,4 @@ run_spec = $quickCheckAll
 main :: IO Bool
 main = run_spec
 
-derive makeNFData ''Relation
+instance (NFData a,NFData b) => NFData (Relation a b)

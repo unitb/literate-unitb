@@ -7,7 +7,6 @@ import Logic.Expr.Classes
     -- Libraries
 import Control.DeepSeq
 
-import Data.DeriveTH
 import Data.Foldable as F
 import Data.List as L
 import Data.Map hiding ( map, split )
@@ -57,4 +56,4 @@ composite_label xs = Lbl $ intercalate "/" $ L.filter (not . L.null) $ map str x
 to_list :: Label -> [Label]
 to_list (Lbl xs) = map Lbl $ split "/" xs
 
-derive makeNFData ''Label
+instance NFData Label

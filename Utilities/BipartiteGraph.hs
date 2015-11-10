@@ -46,7 +46,6 @@ import Control.Monad.RWS hiding ((<>))
 import Data.Array as A
 import Data.Array.ST
 import Data.Default
-import Data.DeriveTH
 import Data.List  as L hiding (transpose,lookup)
 import Data.List.NonEmpty  as NE hiding (fromList,transpose)
 import Data.Map   as M hiding (fromList,empty,traverseWithKey,lookup,member)
@@ -55,6 +54,8 @@ import Data.Maybe
 import Data.Semigroup
 import qualified Data.Traversable as T
 import Data.Tuple
+
+import GHC.Generics (Generic)
 
 import Prelude hiding (lookup)
 
@@ -78,23 +79,25 @@ data BiGraph' key0 v0 key1 v1 e = Graph
                 { _leftAL  :: AdjList key0 v0
                 , _rightAL :: AdjList key1 v1
                 , _edges :: Map (Int,Int) e }
+    deriving (Generic)
 
 data AdjList key v0 = AList 
                 { _arKey :: Array Int key
                 , _arVals  :: Array Int v0 
                 , _arEdges :: Array Int (NonEmpty Int)
                 , _mapKey  :: Map key Int }
+    deriving (Generic)
 
 newtype Vertex s = Vertex Int
-    deriving (Ord,Eq)
+    deriving (Ord,Eq,Generic)
 
 data Edge s0 s1 = Edge Int Int
-    deriving (Ord,Eq)
+    deriving (Ord,Eq,Generic)
 
 makeLenses ''BiGraph'
 makeLenses ''AdjList
-derive makeNFData ''Edge
-derive makeNFData ''Vertex
+instance NFData (Edge s0 s1)
+instance NFData (Vertex s0)
 
 instance (Ord key0, Ord key1, Eq v0, Eq v1, Eq e) => Eq (BiGraph' key0 v0 key1 v1 e) where
     g0 == g1 = f g0 == f g1
@@ -564,8 +567,8 @@ target (Edge _ v) = Vertex v
 origins :: Edge s0 s1 -> (Vertex s0,Vertex s1)
 origins (Edge v0 v1) = (Vertex v0, Vertex v1)
 
-derive makeNFData ''AdjList
-derive makeNFData ''BiGraph'
+instance (NFData k,NFData a) => NFData (AdjList k a)
+instance (NFData k0,NFData k1,NFData v0,NFData v1,NFData e) => NFData (BiGraph' k0 v0 k1 v1 e)
 
 -- graph :: Int -> Maybe (BiGraph Int String String)
 -- graph n = makeGraph $ do

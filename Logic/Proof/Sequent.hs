@@ -13,7 +13,6 @@ import Control.Monad.RWS
 
 import Data.Char
 import Data.Default
-import Data.DeriveTH
 import Data.List as L
 import Data.List.Ordered as OL hiding (merge)
 import Data.Map    as M hiding ( map )
@@ -400,9 +399,9 @@ entailment s0 s1 = (po0,po1)
         po1 = s1 & context .~ ctx
                  & goal    .~ zall (s0^.nameless ++ elems (s0^.named))
 
-derive makeNFData ''AbsSequent
-derive makeNFData ''SyntacticProp
-derive makeNFData ''Rel
-derive makeNFData ''Flipping
-derive makeNFData ''ArgDep
+instance (NFData t,NFData q) => NFData (AbsSequent t q)
+instance NFData SyntacticProp
+instance NFData Rel
+instance NFData Flipping
+instance NFData t => NFData (ArgDep t)
 

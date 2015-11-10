@@ -7,7 +7,6 @@ import Control.Monad
 import Control.Monad.Trans.Either
 import Control.Monad.IO.Class
 
-import Data.DeriveTH
 import Data.List
 import Data.List.NonEmpty as NE (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
@@ -29,7 +28,7 @@ import Utilities.Instances
 import qualified Utilities.Lines as L
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
-    deriving (Eq,Typeable,Show,Ord,Read)
+    deriving (Eq,Typeable,Show,Ord,Read,Generic)
 
 data LineInfo = LI 
         { _filename :: FilePath
@@ -182,5 +181,5 @@ asStringLi li xs = unlinesLi ys'
 asLI :: Loc -> LineInfo
 asLI loc = uncurry (LI (loc_filename loc)) (loc_start loc)
 
-derive makeNFData ''Error
-derive makeNFData ''LineInfo
+instance NFData Error
+instance NFData LineInfo
