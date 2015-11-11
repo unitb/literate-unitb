@@ -25,12 +25,12 @@ import Control.Lens hiding (Context,indices)
 
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Reader.Class hiding ( reader )
+import           Control.Monad.State as ST ( StateT, State, execState )
 import           Control.Monad.State.Class as ST
 import qualified Control.Monad.Writer.Class as W
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader, local )
-import           Control.Monad.Trans.State as ST ( StateT )
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
@@ -479,16 +479,14 @@ default_setting n = PSetting
     , _expected_type = (Just bool)
     }
 
-
--- instance Default ParserSetting where
---     def = default_setting
+makeSetting :: Notation -> State ParserSetting a -> ParserSetting
+makeSetting n cmd = execState cmd (default_setting n)
 
 setting_from_context :: Notation -> Context -> ParserSetting
-setting_from_context notation ctx' = default_setting notation
-        -- & language .~ notation
-        & sorts .~ ctx^.sorts
-        & decls .~ ctx^.constants
-        & dum_ctx .~ ctx^.dummies
+setting_from_context notation ctx' = makeSetting notation $ do
+        sorts .= ctx^.sorts
+        decls .= ctx^.constants
+        dum_ctx .= ctx^.dummies
     where
         ctx = defsAsVars ctx'
 

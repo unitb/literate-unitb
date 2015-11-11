@@ -74,13 +74,13 @@ example0 = do
                         ("S0", s0),
                         ("S1", s1) ] }
             vs = fromList $ map as_pair [x_decl,y_decl]
-            m  = (empty_machine "m0") & content assert %~ \m -> m
-                & variables .~ vs
-                & event_table .~ new_event_set vs (singleton "evt" evt)
-                & inits .~ fromList 
+            m  = newMachine assert "m0" $ do
+                variables .= vs
+                event_table .= new_event_set vs (singleton "evt" evt)
+                inits .= fromList 
                     [ ("init0", init0)
                     , ("init1", init1) ]
-                & props .~ ps
+                props .= ps
         return m 
 
 select :: ExprP -> ExprP -> ExprP
@@ -109,10 +109,10 @@ train_m0 = do
                     [var| t, t' : \Int |]
             ps    = empty_property_set { _transient = props', _inv = inv }
             vs    = fromList $ map as_pair [st_decl]
-            m     = empty_machine "train_m0" & content assert %~ \m -> m
-                        & props .~ ps
-                        & variables .~ vs
-                        & event_table .~ new_event_set vs (fromList [enter, leave])
+            m     = newMachine assert "train_m0" $ do
+                        props     .= ps
+                        variables .= vs
+                        event_table .= new_event_set vs (fromList [enter, leave])
         return m
 
 result_example0 :: String

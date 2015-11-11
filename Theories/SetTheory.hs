@@ -10,13 +10,14 @@ import Logic.Theory.Monad hiding (preserve)
 import Logic.Proof
 
     -- Libraries
-import Control.Lens hiding ((.=))
+import Control.Lens
 
 import Data.Default
 import Data.List as L
 import Data.Map as M hiding ( foldl ) 
 
 import Utilities.Format
+import Utilities.Lens
 
 as_array :: TypeSystem t => t -> String -> AbsExpr t q
 as_array t x = FunApp (mk_lifted_fun [] x [] t) []
@@ -250,13 +251,13 @@ st_superset     = BinOperator "st-superset" "\\supset" (flip zstsubset)
 compl           = UnaryOperator "complement" "\\compl" zcompl
 
 set_notation :: Notation
-set_notation = empty_notation
-    & new_ops     .~ Left compl : 
+set_notation = create $ do
+    new_ops     .= Left compl : 
                      L.map Right 
                      [ set_union,set_diff,membership,set_intersect
                      , subset,superset,st_subset,st_superset
                      ]
-    & prec .~ [   [ Left compl ]
+    prec .= [   [ Left compl ]
                 : L.map (L.map Right)
                   [ [apply]
                   , [pair_op,set_union,set_diff,set_intersect]
@@ -264,21 +265,21 @@ set_notation = empty_notation
                     , membership, subset
                     , st_subset, superset
                     , st_superset ] ]]
-    & left_assoc  .~ [[set_union]]
-    & right_assoc .~ []
-    & relations   .~ []
-    & quantifiers .~ [ ("\\qset",comprehension)
-                     , ("\\qunion",qunion) ]
-    & commands    .~ [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
-                     , Command "\\all" "all" 0 $ const $ zset_all
-                     , Command "\\finite" "finite" 1 $ from_list mzfinite ]
-    & chaining    .~ [ ((subset,subset),subset) 
-                     , ((subset,st_subset),st_subset)
-                     , ((st_subset,subset),st_subset)
-                     , ((st_subset,st_subset),st_subset)
-                     , ((superset,superset),superset) 
-                     , ((superset,st_superset),st_superset)
-                     , ((st_superset,superset),st_superset)
-                     , ((st_superset,st_superset),st_superset)
-                     ]  
+    left_assoc  .= [[set_union]]
+    right_assoc .= []
+    relations   .= []
+    quantifiers .= [ ("\\qset",comprehension)
+                   , ("\\qunion",qunion) ]
+    commands    .= [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
+                   , Command "\\all" "all" 0 $ const $ zset_all
+                   , Command "\\finite" "finite" 1 $ from_list mzfinite ]
+    chaining    .= [ ((subset,subset),subset) 
+                   , ((subset,st_subset),st_subset)
+                   , ((st_subset,subset),st_subset)
+                   , ((st_subset,st_subset),st_subset)
+                   , ((superset,superset),superset) 
+                   , ((superset,st_superset),st_superset)
+                   , ((st_superset,superset),st_superset)
+                   , ((st_superset,st_superset),st_superset)
+                   ]  
 

@@ -12,7 +12,7 @@ import Logic.Proof
 import UnitB.AST
 
     -- Libraries
-import Control.Lens hiding ((.=))
+import Control.Lens
 
 import           Data.Map as M hiding ( map )
 import qualified Data.List.NonEmpty as NE
@@ -441,16 +441,16 @@ inc_event_m1 = empty_event
         }
 
 m0_machine :: Machine
-m0_machine = empty_machine "m0" & content assert %~ \m -> m
-        & props .~ m0_props
-        & event_table .~ newEvents [("inc", inc_event_m0)]
-        & variables .~ vars 
+m0_machine = newMachine assert "m0" $ do
+        props .= m0_props
+        event_table .= newEvents [("inc", inc_event_m0)]
+        variables .= vars 
 
 m1_machine :: Machine
-m1_machine = empty_machine "m0" & content assert %~ \m -> m
-        & props .~ m1_props
-        & event_table .~ newEvents [("inc",inc_event_m1)]
-        & variables .~ vars
+m1_machine = newMachine assert "m0" $ do
+        props .= m1_props
+        event_table .= newEvents [("inc",inc_event_m1)]
+        variables .= vars
         
 
 m0_props :: PropertySet

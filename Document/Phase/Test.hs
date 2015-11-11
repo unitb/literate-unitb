@@ -37,7 +37,7 @@ import UnitB.AST as AST
     -- Libraries
     --
 import Control.Arrow
-import Control.Lens hiding ((<.>),(.=))
+import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
@@ -592,79 +592,80 @@ result8 = Right $ SystemP h ms
         c = ctx $ do
             decl "x" int
             decl "y" int
-        m0 = (empty_machine "m0") & content AST.assert %~ \m -> m
-                & theory.types .~ sorts0
-                & theory.defs  .~ defs0
-                & variables    .~ vars0
-                & events    .~ evts0
-                & props.inv .~ M.fromList [("inv0",c [expr| x \le y |])]
+        m0 = newMachine AST.assert "m0" $ do
+                theory.types .= sorts0
+                theory.defs  .= defs0
+                variables .= vars0
+                events    .= evts0
+                props.inv .= M.fromList [("inv0",c [expr| x \le y |])]
         p = c [expr| x \le y |]
         q = c [expr| x = y |]
         pprop = LeadsTo [] p q
         pprop' = getExpr <$> pprop
         sprop = Unless [] p q 
-        m1 = (empty_machine "m1") & content AST.assert %~ \m -> m
-                & theory.types .~ sorts1
-                & theory.defs .~ defs1
-                & theory.extends %~ M.insert "sets" set_theory
-                & del_vars .~ symbol_table [Var "x" int]
-                & abs_vars .~ vars0
-                & variables .~ vars1
-                & events .~ evts1
-                & inh_props.inv  .~ M.fromList [("inv0",c [expr| x \le y |])]
-                & props.progress .~ M.fromList [("prog0",pprop),("prog1",pprop)]
-                & props.safety .~ M.singleton "saf0" sprop
-                & derivation .~ M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
+        m1 = newMachine AST.assert "m1" $ do
+                theory.types .= sorts1
+                theory.defs .= defs1
+                theory.extends %= M.insert "sets" set_theory
+                del_vars .= symbol_table [Var "x" int]
+                abs_vars .= vars0
+                variables .= vars1
+                events .= evts1
+                inh_props.inv  .= M.fromList [("inv0",c [expr| x \le y |])]
+                props.progress .= M.fromList [("prog0",pprop),("prog1",pprop)]
+                props.safety .= M.singleton "saf0" sprop
+                derivation .= M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
         --y = Var "y" int
         skipLbl = Left SkipEvent
-        ae0sched = def & old .~ ae0Evt
-                       & c_sched_ref .~ [replace ("prog1",pprop)
+        ae0sched = create $ do
+                        old .= ae0Evt
+                        c_sched_ref .= [replace ("prog1",pprop)
                                           & remove .~ singleton "sch0" ()
                                           & add    .~ singleton "sch1" ()
                                           & keep   .~ singleton "sch2" () ]
-                       & f_sched_ref .~ Just ("prog1",pprop) 
-        ae0Evt = def
-            & coarse_sched .~ M.fromList 
+                        f_sched_ref .= Just ("prog1",pprop) 
+        ae0Evt = create $ do
+            coarse_sched .= M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
-            & guards .~ M.fromList
+            guards .= M.fromList
                 [("grd0",c [expr| x = 0 |])]
-        ae1aEvt = def
-            & coarse_sched .~ M.fromList 
+        ae1aEvt = create $ do
+            coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            & actions .~ M.fromList
+            actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])
                 , ("act1",c' [act| x := x - 1 |])]
-        ae1bEvt = def
-            & coarse_sched .~ M.fromList 
+        ae1bEvt = create $ do
+            coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            & params .~ symbol_table [Var "p" bool]
-            & actions .~ M.fromList
+            params .= symbol_table [Var "p" bool]
+            actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])
                 , ("act1",c' [act| x := x - 1 |])]
-        ce0aEvt = def
-            & coarse_sched .~ M.fromList 
+        ce0aEvt = create $ do
+            coarse_sched .= M.fromList 
                 [("sch1",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
-        ce0bEvt = def
-            & coarse_sched .~ M.fromList 
+        ce0bEvt = create $ do
+            coarse_sched .= M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
-        ce1Evt = def
-            & params .~ symbol_table [Var "p" bool]
-            & coarse_sched .~ M.fromList 
+        ce1Evt = create $ do
+            params .= symbol_table [Var "p" bool]
+            coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            & witness .~ M.fromList
+            witness .= M.fromList
                 [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
-            & actions .~ M.fromList
+            actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])]
-            & abs_actions .~ M.fromList
+            abs_actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])
                 , ("act1",c' [act| x := x - 1 |])]
-            -- & eql_vars .~ symbol_table [y]
-        ce2Evt = def
-            & AST.indices .~ symbol_table [Var "q" int]
-            & coarse_sched .~ M.fromList 
+            -- eql_vars .= symbol_table [y]
+        ce2Evt = create $ do
+            AST.indices .= symbol_table [Var "q" int]
+            coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-        skipEvt = def 
-            & coarse_sched .~ M.fromList 
+        skipEvt = create $ do 
+            coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
         evts0 = fromJust $ makeGraph $ do
             ae0  <- newRightVertex (Right "ae0") (def & new .~ ae0Evt)

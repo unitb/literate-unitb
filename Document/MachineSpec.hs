@@ -15,6 +15,7 @@ import Theories.SetTheory
 import UnitB.AST
 import UnitB.Expr
 
+import Utilities.Lens
 import Utilities.RandomTree
 
     -- Libraries
@@ -246,8 +247,8 @@ var_set = do
     return $ symbol_table vars
             
 basic_notation :: Notation
-basic_notation = th_notation $ empty_theory
-                    & extends .~ M.fromList 
+basic_notation = th_notation $ create $ do
+                    extends .= M.fromList 
                         [ ("sets", set_theory) 
                         , ("functions", function_theory) 
                         , ("arithmetic", arithmetic)
@@ -275,14 +276,14 @@ gen_machine b = fix (\retry n -> do
             -- return $ catMaybes invs
             case inv of
                 Just inv ->
-                    return $ (empty_machine "m0") & content assert %~ \m -> m
-                        & theory.extends .~ M.fromList 
+                    return $ newMachine assert "m0" $ do
+                        theory.extends .= M.fromList 
                                 [ ("sets", set_theory) 
                                 , ("functions", function_theory) 
                                 , ("arithmetic", arithmetic)
                                 , ("basic", basic_theory)]
-                        & variables .~ vars
-                        & props .~ empty_property_set
+                        variables .= vars
+                        props .= empty_property_set
                                 { _inv = M.fromList $ zip inv_lbl inv } 
                 Nothing -> retry $ n-1
             ) 10

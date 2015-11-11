@@ -46,6 +46,7 @@ import Utilities.Format
 import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Invariant
+import Utilities.Lens
 import Utilities.TH
 
 all_types :: Theory -> Map String Sort
@@ -301,9 +302,9 @@ eventTable :: forall expr. IsExpr expr
            => (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ())
            -> EventTable expr
 eventTable gr = EventTable $ fromJust $ makeGraph $ do
-    let skip = def & coarse_sched .~ singleton "default" (zfalse :: expr)
-    a <- newLeftVertex (Left SkipEvent)  $ def & old .~ skip
-    c <- newRightVertex (Left SkipEvent) $ def & new .~ skip
+    let skip = create $ coarse_sched .= singleton "default" (zfalse :: expr)
+    a <- newLeftVertex (Left SkipEvent)  $ create $ old .= skip
+    c <- newRightVertex (Left SkipEvent) $ create $ new .= skip
     newEdge a c
     gr
 
@@ -312,7 +313,7 @@ event :: IsExpr expr
       -> GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ()
 event eid cmd = do
     askip <- newLeftVertex (Left SkipEvent) def
-    evt   <- newRightVertex (Right eid) $ def & new .~ execState cmd def
+    evt   <- newRightVertex (Right eid) $ create $ new .= execState cmd def
     newEdge askip evt
 
 refined_event :: IsExpr expr
@@ -370,11 +371,11 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions)
 mkCons ''Machine''
 
 empty_machine :: (HasScope expr, IsExpr expr) => String -> Machine' expr
-empty_machine n = check assert $ genericDefault
-            & machine''Name .~ n
+empty_machine n = check assert $ flip execState genericDefault $ do
+            machine''Name .= n
             -- & events .~ _ $ G.fromList _ _
-            & events .~ G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
-            & theory .~ empty_theory { _extends = M.fromList [
+            events .= G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
+            theory .= empty_theory { _extends = M.fromList [
                 ("arithmetic",arithmetic), 
                 ("basic", basic_theory)] } 
             -- & name
