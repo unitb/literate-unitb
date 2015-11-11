@@ -110,7 +110,6 @@ instance Applicative Intersection where
     pure = Intersection
     Intersection f <*> Intersection x = Intersection $ f x
 
-
 instance Ord k => Semigroup (Intersection (Map k a)) where
     Intersection x <> Intersection y = Intersection $ x `M.intersection` y
 

@@ -171,6 +171,9 @@ instance (IsExpr expr) => HasInvariant (Machine'' expr) where
                 -- Inv5 is not an equality because del_vars is cummulative
             "inv6" ## ((m^.abs_vars) `M.difference` (m^.del_vars)) `isSubmapOf'` (m^.variables)
             "inv7" ## noClashes (m^.inh_props) (m^.props)
+            withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
+                format "%s - %s" (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
+                    ## (ev^.old.actions) === (ev^.abs_actions)
             --"inv8" ## no name clashes between declarations of events, state variables and theories
             --"inv9" ## no name clashes between expression tags of events, state variables and theories
         where
@@ -213,7 +216,8 @@ instance IsExpr expr => HasScope (Machine'' expr) where
 instance Controls (Machine'' expr) (Machine'' expr) where 
     content' = id
 
-all_refs :: Show expr => Machine' expr -> [EventRef expr]
+all_refs :: Controls machine (Machine'' expr) 
+         => machine -> [EventRef expr]
 all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards $ m^.content'
 
 conc_events :: Controls machine (Machine'' expr)
