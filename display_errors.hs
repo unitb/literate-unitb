@@ -24,9 +24,9 @@ compile_script :: Build ()
 compile_script = do
         compile_file
         compile_test 
-              >>= run_test
-        --compile_all
-        --compile_app
+            >>= run_test
+        compile_all
+        compile_app
         return ()
 
 

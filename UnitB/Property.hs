@@ -116,16 +116,16 @@ data ProgressProp' expr = LeadsTo [Var] expr expr
 type SafetyProp = SafetyProp' Expr
 type RawSafetyProp = SafetyProp' RawExpr
 
-data SafetyProp' expr = Unless [Var] expr expr (Maybe EventId)
+data SafetyProp' expr = Unless [Var] expr expr
     deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance Show expr => Show (ProgressProp' expr) where
     show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
 
 instance Show expr => Show (SafetyProp' expr) where
-    show (Unless _ p q ev) = show p ++ "  UNLESS  " ++ show q ++ except
-        where
-            except = maybe "" (("  EXCEPT  " ++) . show) ev
+    show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
+        --where
+        --    except = maybe "" (("  EXCEPT  " ++) . show) ev
 
 instance Show expr => Show (PropertySet' expr) where
     show x = printf "PropertySet { %s }" 
@@ -208,7 +208,7 @@ instance HasScope expr => HasScope (ProgressProp' expr) where
     scopeCorrect' (LeadsTo vs p q) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
 
 instance HasScope expr => HasScope (SafetyProp' expr) where
-    scopeCorrect' (Unless vs p q _) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
+    scopeCorrect' (Unless vs p q) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
 
 instance HasScope expr => HasScope (Constraint' expr) where
     scopeCorrect' (Co vs e) = withPrimes $ withVars (symbol_table vs) $ scopeCorrect' e

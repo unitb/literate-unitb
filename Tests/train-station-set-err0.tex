@@ -279,7 +279,7 @@ We adjust \ref{m1:movein} to satisfy \ref{m1:tr1}.
 \replace{m1:movein}{}{mi:c0}{}{m2:prog0}{m2:saf0}
 \begin{align*}
 \progress{m2:prog0}{\true}{\qexists{b}{b \in plf}{ \neg b \in \ran.loc } }
-\\ \safetyB{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
+% \\ \safetyB{m2:saf0}{m1:movein}{\qexists{b}{b \in plf}{ \qforall{t}{t \in in}{ \neg loc.t = b}} }{\false} % \2{\textbf{except}} \text{\ref{m1:movein}}
 \end{align*}
 
 %The above property, \eqref{m2:saf0}, should not discharge automatically.

@@ -227,7 +227,7 @@ data Ensure = Ensure RawProgressProp (NE.NonEmpty EventId) RawTrHint
 instance RefRule Ensure where
     rule_name _ = "ensure"
     refinement_po (Ensure (LeadsTo vs p q) lbls hint) m = do
-            let saf = Unless vs p q Nothing
+            let saf = Unless vs p q
                 tr  = Tr (symbol_table vs) 
                          (p `zand` znot q) lbls 
                          hint 
@@ -247,14 +247,10 @@ instance RefRule Discharge where
         --     TrHint _ ev = hint
             -- _ = _ ev
     refinement_po 
-            (Discharge _ _ _
-                (Just (Unless _ _ _ (Just _)))) _
-            = error "Discharge.refinement_po: should not reach this point" 
-    refinement_po 
             (Discharge 
                     (LeadsTo fv0 p0 q0)
                     _ (Tr fv1 p1 _ _)
-                    (Just (Unless fv2 p2 q2 Nothing))) 
+                    (Just (Unless fv2 p2 q2))) 
         m = do
             assert m "saf/lhs" (
                 zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
@@ -412,7 +408,7 @@ instance RefRule PSP where
             (PSP
                     (LeadsTo fv0 p0 q0)
                     _ (LeadsTo fv1 p1 q1)
-                    (Unless fv2 r b Nothing))
+                    (Unless fv2 r b))
             m = do
                 assert m "lhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
@@ -420,8 +416,6 @@ instance RefRule PSP where
                 assert m "rhs" (
                     zforall (fv0 ++ fv1 ++ fv2) ztrue $
                             (q0 `zimplies` zor (q1 `zand` r) b))
-    refinement_po (PSP _ _ _ (Unless _ _ _ (Just _))) _ 
-        = error "PSP.refinement_po: invalid"
 
 data Induction = Induction RawProgressProp Label RawProgressProp Variant
     deriving (Eq,Typeable,Show,Generic)

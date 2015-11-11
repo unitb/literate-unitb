@@ -404,8 +404,8 @@ result5 = M.map (fmap $ DispExpr "") <$> either g Right (do
                 , mznot (n `mzeq` bigN)
                 ]
         return $ fromList 
-            [   (label "saf0", Unless [k_decl] p0 q0 Nothing)
-            ,   (label "saf1", Unless [k_decl] p1 q1 Nothing)
+            [   (label "saf0", Unless [k_decl] p0 q0)
+            ,   (label "saf1", Unless [k_decl] p1 q1)
             ])
     where
         (k,k_decl) = var "k" int

@@ -231,16 +231,14 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3
         return [(goal',(r,dep),li)]
 
 ref_replace_csched :: MPipeline MachineP3 EventRefA
-ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog,saf) m p3 -> do
+ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog) m p3 -> do
         -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
-        (sprop,pprop,evt) <- toEither $ do
-            sprop <- fromEither (error "replace_csched: saf") 
-                        $ get_safety_prop p3 m saf
+        (pprop,evt) <- toEither $ do
             pprop <- fromEither (error "replace_csched: prog") 
                         $ get_progress_prop p3 m prog
             evt   <- fromEither (error "replace_csched: evt")
                         $ get_abstract_event p3 evt_lbl
-            return (sprop,pprop,evt)
+            return (pprop,evt)
         toEither $ do
             _ <- fromEither undefined $ bind_all del 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
@@ -252,7 +250,7 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog,saf)
                     (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
                     (`M.lookup` (M.unions $ p3^.evtSplitKept AST.assert evt eCoarseSched))
             return ()
-        let rule = replace (as_label prog,pprop) (saf,sprop)
+        let rule = replace (as_label prog,pprop)
                         & remove .~ fromList' del
                         & add  .~ fromList' added
                         & keep .~ fromList' kept

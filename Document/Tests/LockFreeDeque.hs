@@ -42,19 +42,19 @@ test = test_cases
             , (POCase "test 4, m1, liveness implemented with conditional behavior"
                 (verify path4 1) result4)
             , (StringCase "test 5, transient, two branches, enablement of non-empty"
-                (proof_obligation path4 "m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:non:empty/EN" 1)
+                (proof_obligation path4 "m1/m1:prog3/REF/ensure/TR/m0:pop:left:non:empty/EN" 1)
                 result5)
             , (StringCase "test 6, transient, two branches, enablement of empty"
-                (proof_obligation path4 "m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/EN" 1)
+                (proof_obligation path4 "m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/EN" 1)
                 result6)
             , (StringCase "test 7, transient, two branches, negation of empty"
-                (proof_obligation path4 "m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG" 1)
+                (proof_obligation path4 "m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG" 1)
                 result7)
             , (StringCase "test 8, transient, two branches, negation of non-empty"
-                (proof_obligation path4 "m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG" 1)
+                (proof_obligation path4 "m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG" 1)
                 result8)
             , (StringCase "test 9, transient, two branches, follow and disjunction"
-                (proof_obligation path4 "m1/m1:prog3/REF/ensure/m1/TR/leadsto" 1)
+                (proof_obligation path4 "m1/m1:prog3/REF/ensure/TR/leadsto" 1)
                 result9)
             , (StringCase "test 10, duplicate refinement of liveness properties"
                 (find_errors path10)
@@ -456,77 +456,77 @@ result4 = unlines
     , "  o  m1/m0:push:right/WWD"
     , "  o  m1/m1:prog0/PROG/WD/lhs"
     , "  o  m1/m1:prog0/PROG/WD/rhs"
-    , "  o  m1/m1:prog0/REF/ensure/m1/SAF/WD/lhs"
-    , "  o  m1/m1:prog0/REF/ensure/m1/SAF/WD/rhs"
-    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WD"
-    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WD/witness/r"
-    , "  o  m1/m1:prog0/REF/ensure/m1/TR/WFIS/r/r@prime"
-    , "  o  m1/m1:prog0/REF/ensure/m1/TR/m0:push:left/EN"
-    , "  o  m1/m1:prog0/REF/ensure/m1/TR/m0:push:left/NEG"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:pop:left:empty/SAF"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:pop:left:non:empty/SAF"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:pop:right:empty/SAF"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:pop:right:non:empty/SAF"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:push:left/SAF"
-    , "  o  m1/m1:prog0/REF/ensure/m1/m0:push:right/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/SAF/WD/lhs"
+    , "  o  m1/m1:prog0/REF/ensure/SAF/WD/rhs"
+    , "  o  m1/m1:prog0/REF/ensure/TR/WD"
+    , "  o  m1/m1:prog0/REF/ensure/TR/WD/witness/r"
+    , "  o  m1/m1:prog0/REF/ensure/TR/WFIS/r/r@prime"
+    , "  o  m1/m1:prog0/REF/ensure/TR/m0:push:left/EN"
+    , "  o  m1/m1:prog0/REF/ensure/TR/m0:push:left/NEG"
+    , "  o  m1/m1:prog0/REF/ensure/m0:pop:left:empty/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/m0:pop:left:non:empty/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/m0:pop:right:empty/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/m0:pop:right:non:empty/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/m0:push:left/SAF"
+    , "  o  m1/m1:prog0/REF/ensure/m0:push:right/SAF"
     , "  o  m1/m1:prog1/PROG/WD/lhs"
     , "  o  m1/m1:prog1/PROG/WD/rhs"
-    , "  o  m1/m1:prog1/REF/ensure/m1/SAF/WD/lhs"
-    , "  o  m1/m1:prog1/REF/ensure/m1/SAF/WD/rhs"
-    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WD"
-    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WD/witness/r"
-    , "  o  m1/m1:prog1/REF/ensure/m1/TR/WFIS/r/r@prime"
-    , "  o  m1/m1:prog1/REF/ensure/m1/TR/m0:push:right/EN"
-    , "  o  m1/m1:prog1/REF/ensure/m1/TR/m0:push:right/NEG"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:pop:left:empty/SAF"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:pop:left:non:empty/SAF"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:pop:right:empty/SAF"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:pop:right:non:empty/SAF"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:push:left/SAF"
-    , "  o  m1/m1:prog1/REF/ensure/m1/m0:push:right/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/SAF/WD/lhs"
+    , "  o  m1/m1:prog1/REF/ensure/SAF/WD/rhs"
+    , "  o  m1/m1:prog1/REF/ensure/TR/WD"
+    , "  o  m1/m1:prog1/REF/ensure/TR/WD/witness/r"
+    , "  o  m1/m1:prog1/REF/ensure/TR/WFIS/r/r@prime"
+    , "  o  m1/m1:prog1/REF/ensure/TR/m0:push:right/EN"
+    , "  o  m1/m1:prog1/REF/ensure/TR/m0:push:right/NEG"
+    , "  o  m1/m1:prog1/REF/ensure/m0:pop:left:empty/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/m0:pop:left:non:empty/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/m0:pop:right:empty/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/m0:pop:right:non:empty/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/m0:push:left/SAF"
+    , "  o  m1/m1:prog1/REF/ensure/m0:push:right/SAF"
     , "  o  m1/m1:prog2/PROG/WD/lhs"
     , "  o  m1/m1:prog2/PROG/WD/rhs"
-    , "  o  m1/m1:prog2/REF/ensure/m1/SAF/WD/lhs"
-    , "  o  m1/m1:prog2/REF/ensure/m1/SAF/WD/rhs"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WD"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WD/witness/r"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/WFIS/r/r@prime"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/leadsto"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:empty/EN"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:empty/NEG"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:non:empty/EN"
-    , "  o  m1/m1:prog2/REF/ensure/m1/TR/m0:pop:right:non:empty/NEG"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:pop:left:empty/SAF"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:pop:left:non:empty/SAF"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:pop:right:empty/SAF"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:pop:right:non:empty/SAF"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:push:left/SAF"
-    , "  o  m1/m1:prog2/REF/ensure/m1/m0:push:right/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/SAF/WD/lhs"
+    , "  o  m1/m1:prog2/REF/ensure/SAF/WD/rhs"
+    , "  o  m1/m1:prog2/REF/ensure/TR/WD"
+    , "  o  m1/m1:prog2/REF/ensure/TR/WD/witness/r"
+    , "  o  m1/m1:prog2/REF/ensure/TR/WFIS/r/r@prime"
+    , "  o  m1/m1:prog2/REF/ensure/TR/leadsto"
+    , "  o  m1/m1:prog2/REF/ensure/TR/m0:pop:right:empty/EN"
+    , "  o  m1/m1:prog2/REF/ensure/TR/m0:pop:right:empty/NEG"
+    , "  o  m1/m1:prog2/REF/ensure/TR/m0:pop:right:non:empty/EN"
+    , "  o  m1/m1:prog2/REF/ensure/TR/m0:pop:right:non:empty/NEG"
+    , "  o  m1/m1:prog2/REF/ensure/m0:pop:left:empty/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/m0:pop:left:non:empty/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/m0:pop:right:empty/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/m0:pop:right:non:empty/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/m0:push:left/SAF"
+    , "  o  m1/m1:prog2/REF/ensure/m0:push:right/SAF"
     , "  o  m1/m1:prog3/PROG/WD/lhs"
     , "  o  m1/m1:prog3/PROG/WD/rhs"
-    , "  o  m1/m1:prog3/REF/ensure/m1/SAF/WD/lhs"
-    , "  o  m1/m1:prog3/REF/ensure/m1/SAF/WD/rhs"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WD"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WD/witness/r"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/WFIS/r/r@prime"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/leadsto"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/EN"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:non:empty/EN"
-    , "  o  m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:non:empty/NEG"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:left:empty/SAF"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:left:non:empty/SAF"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:right:empty/SAF"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:pop:right:non:empty/SAF"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:left/SAF"
-    , "  o  m1/m1:prog3/REF/ensure/m1/m0:push:right/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/SAF/WD/lhs"
+    , "  o  m1/m1:prog3/REF/ensure/SAF/WD/rhs"
+    , "  o  m1/m1:prog3/REF/ensure/TR/WD"
+    , "  o  m1/m1:prog3/REF/ensure/TR/WD/witness/r"
+    , "  o  m1/m1:prog3/REF/ensure/TR/WFIS/r/r@prime"
+    , "  o  m1/m1:prog3/REF/ensure/TR/leadsto"
+    , "  o  m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/EN"
+    , "  o  m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG"
+    , "  o  m1/m1:prog3/REF/ensure/TR/m0:pop:left:non:empty/EN"
+    , "  o  m1/m1:prog3/REF/ensure/TR/m0:pop:left:non:empty/NEG"
+    , "  o  m1/m1:prog3/REF/ensure/m0:pop:left:empty/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/m0:pop:left:non:empty/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/m0:pop:right:empty/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/m0:pop:right:non:empty/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/m0:push:left/SAF"
+    , "  o  m1/m1:prog3/REF/ensure/m0:push:right/SAF"
     , "passed 206 / 206"
     ]
 
     -- enablement non-empty
 result5 :: String
 result5 = unlines 
-    [ "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:non:empty/EN"
+    [ "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:non:empty/EN"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -1024,12 +1024,12 @@ result5 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:non:empty/EN"
+    , "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:non:empty/EN"
     ]
 
 result6 :: String
 result6 = unlines 
-    [ "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/EN"
+    [ "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/EN"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -1527,12 +1527,12 @@ result6 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/EN"
+    , "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/EN"
     ]
 
 result7 :: String
 result7 = unlines 
-    [ "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
+    [ "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -2392,12 +2392,12 @@ result7 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
+    , "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG"
     ]
 
 result8 :: String
 result8 = unlines 
-    [ "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
+    [ "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -3257,12 +3257,12 @@ result8 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog3/REF/ensure/m1/TR/m0:pop:left:empty/NEG"
+    , "; m1/m1:prog3/REF/ensure/TR/m0:pop:left:empty/NEG"
     ]
 
 result9 :: String
 result9 = unlines
-    [ "; m1/m1:prog3/REF/ensure/m1/TR/leadsto"
+    [ "; m1/m1:prog3/REF/ensure/TR/leadsto"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -3785,7 +3785,7 @@ result9 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/m1:prog3/REF/ensure/m1/TR/leadsto"
+    , "; m1/m1:prog3/REF/ensure/TR/leadsto"
     ]
 
 path10 :: FilePath 

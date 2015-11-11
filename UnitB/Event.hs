@@ -114,13 +114,13 @@ default_schedule :: IsGenExpr expr => Map Label expr
 default_schedule = M.fromList [(label "default", zfalse)]
 
 type ScheduleChange = ScheduleChange' Expr
+type RawScheduleChange = ScheduleChange' RawExpr
 
 data ScheduleChange' expr = ScheduleChange 
         { _remove :: Map Label ()
         , _add    :: Map Label ()
         , _keep   :: Map Label ()
         , _sch_prog :: (Label,ProgressProp' expr) 
-        , _sch_saf  :: (Label,SafetyProp' expr)
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
 
@@ -132,8 +132,6 @@ makeFields ''EventMerging
 makeClassy ''Event'
 makeClassy ''AbstrEvent'
 makeClassy ''ConcrEvent'
--- makeLenses ''EventSplitting
--- makeLenses ''EventMerging
 
 hyps_label :: ScheduleChange -> ProgId
 hyps_label = PId . fst . view sch_prog
@@ -268,28 +266,6 @@ instance HasConcrEvent' (EventRef expr) expr where
 instance HasAbstrEvent' (EventRef expr) expr where
     abstrEvent' = abstract._2
 
--- class OneAbstract a where
---     abstract :: Lens' a AbstrEvent
-
--- class OneConcrete a where
---     concrete :: Lens' a ConcrEvent
-
--- instance OneAbstract EventRef where
---     abstract = lens 
---         (\(EvtRef x _) -> x) 
---         (\(EvtRef _ y) x -> EvtRef x y)
-
--- instance OneAbstract EventSplitting where
---     abstract = lens _ _
-
--- instance OneConcrete EventRef where
---     concrete = lens 
---         (\(EvtRef _ x) -> x) 
---         (\(EvtRef x _) y -> EvtRef x y)
-
--- instance OneConcrete EventMerging where
---     concrete = lens _ _
-
 class ActionRefinement a expr | a -> expr where
     abstract_acts :: Getter a (Map Label (Action' expr))
     concrete_acts :: Getter a (Map Label (Action' expr))
@@ -318,21 +294,6 @@ instance EventRefinement (EventSplitting expr) expr where
             let a = e^.abstract
             c <- e^.multiConcrete
             return $ EvtRef a c
-
--- deleted_sched :: Event -> Schedule
--- deleted_sched e = Schedule 
---         { fine = fine (old_sched e) `M.difference` fine (new_sched e)
---         , coarse = coarse (old_sched e) `M.difference` coarse (new_sched e) }
-
--- added_sched :: Event -> Schedule
--- added_sched e = Schedule 
---         { fine = fine (new_sched e) `M.difference` fine (old_sched e)
---         , coarse = coarse (new_sched e) `M.difference` coarse (old_sched e) }
-
--- kept_sched :: Event -> Schedule
--- kept_sched e = Schedule 
---         { fine = fine (new_sched e) `M.intersection` fine (old_sched e)
---         , coarse = coarse (new_sched e) `M.intersection` coarse (old_sched e) }
 
 changes :: (forall k a. Ord k => Map k a -> Map k a -> Map k a)
         -> Getter (EventRef expr) (Event' expr)
@@ -419,8 +380,8 @@ added_actions   = actions_changes (flip M.difference)
 deleted_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
 deleted_actions = actions_changes M.difference
 
-replace :: (Label, ProgressProp) -> (Label, SafetyProp) -> ScheduleChange
-replace prog saf = ScheduleChange def def def prog saf
+replace :: (Label, ProgressProp) -> ScheduleChange
+replace prog = ScheduleChange def def def prog
 
 instance NFData expr => NFData (Event' expr)
 instance NFData expr => NFData (AbstrEvent' expr)

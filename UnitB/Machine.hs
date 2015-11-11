@@ -218,14 +218,14 @@ instance Controls (Machine'' expr) (Machine'' expr) where
 
 all_refs :: Controls machine (Machine'' expr) 
          => machine -> [EventRef expr]
-all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards $ m^.content'
+all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards m
 
 conc_events :: Controls machine (Machine'' expr)
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
 upward_event :: Show expr => Machine' expr -> SkipOrEvent -> EventMerging expr
-upward_event m lbl = fromJust'' assert $ readGraph (m^.content'.events) $ runMaybeT $ do
+upward_event m lbl = fromJust'' assert $ readGraph (m!.events) $ runMaybeT $ do
         v  <- MaybeT $ hasRightVertex lbl
         lift $ do
             es <- predecessors v
@@ -331,7 +331,7 @@ newEvents :: IsExpr expr
 newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
 
 variableSet :: Machine -> S.Set Var
-variableSet m = S.fromList $ M.elems $ m^.content'.variables
+variableSet m = S.fromList $ M.elems $ m!.variables
 
 events :: Lens' (Machine'' expr)
                 (BiGraph' SkipOrEvent (AbstrEvent' expr) 
@@ -346,7 +346,7 @@ all_notation m = flip precede logical_notation
         $ L.foldl combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (m^.content'.theory) : elems (_extends $ m^.content'.theory)
+        th = (m!.theory) : elems (_extends $ m!.theory)
 
 instance (IsExpr expr) => Named (Machine' expr) where
     decorated_name' = return . view name
@@ -358,14 +358,14 @@ _name = MId . view' machine''Name
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              => Machine' expr 
              -> event -> Map Label RawExpr
-ba_predicate m evt =          ba_predicate' (m^.content'.variables) (evt^.new.actions)
+ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
                     `M.union` M.mapKeys (label . view name) (evt^.witness)
                     `M.union` M.mapKeys skipLbl (M.map eqPrime noWitness)
     where
         skipLbl = label . ("SKIP:"++)
         eqPrime v = Word (prime v) `zeq` Word v
-        noWitness = (m^.content'.del_vars) `M.difference` M.mapKeys (view name) (evt^.witness)
+        noWitness = (m!.del_vars) `M.difference` M.mapKeys (view name) (evt^.witness)
 
 mkCons ''Machine''
 

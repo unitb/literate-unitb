@@ -379,7 +379,7 @@ case4 = return $ do
                 local (const Local) $ do
                     decl "prog0" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
                     decl "prog1" ProgressProp $ LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
-                    decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) Nothing
+                    decl "saf0" SafetyProp $ Unless [] (c [expr| x \le y |]) (c [expr| x = y |])
                 decl "inv0" Invariant $ c [expr| x \le y |]
                 --event 
                 event' "ce0a" "grd0" ["ae0"] Guard $ c [expr|x = 0|]
@@ -430,7 +430,7 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
                     , PSafety "saf0" saf0 ]
         prog0 = LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
         prog1 = LeadsTo [] (c [expr| x \le y |]) (c [expr| x = y |])
-        saf0  = Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) Nothing
+        saf0  = Unless [] (c [expr| x \le y |]) (c [expr| x = y |]) 
         newThy m = makeTheoryP3 m []
         newEvt mid _m (Right eid) e 
             | eid `elem` ["ae0","ce0a","ce0b"] = makeEventP3 e $ evtField mid eid
@@ -499,7 +499,6 @@ case6 = return $ do
                 (M.singleton "sch1" ()) 
                 (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
-                ("saf0", saf0)
         cSchRef = runMap' $ do
             "m0" ## M.empty
             "m1" ## runMap' (do
@@ -514,7 +513,6 @@ case6 = return $ do
         comment = M.empty <$ ms
         proof = M.empty <$ ms
         prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
-        saf0  = Unless [] (c [expr|x \le y|]) (c [expr|x = y|]) Nothing
         c  = ctx $ do
             decl "x" int
             decl "y" int
@@ -538,9 +536,7 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
                 (M.singleton "sch1" ()) 
                 (M.singleton "sch2" ()) 
                 ("prog1", prog1) 
-                ("saf0", saf0)
         prog1 = LeadsTo [] (c [expr|x \le y|]) (c [expr|x = y|])
-        saf0  = Unless [] (c [expr|x \le y|]) (c [expr|x = y|]) Nothing
         c  = ctx $ do
             decl "x" int
             decl "y" int
@@ -606,7 +602,7 @@ result8 = Right $ SystemP h ms
         q = c [expr| x = y |]
         pprop = LeadsTo [] p q
         pprop' = getExpr <$> pprop
-        sprop = Unless [] p q Nothing
+        sprop = Unless [] p q 
         m1 = (empty_machine "m1") & content AST.assert %~ \m -> m
                 & theory.types .~ sorts1
                 & theory.defs .~ defs1
@@ -622,7 +618,7 @@ result8 = Right $ SystemP h ms
         --y = Var "y" int
         skipLbl = Left SkipEvent
         ae0sched = def & old .~ ae0Evt
-                       & c_sched_ref .~ [replace ("prog1",pprop) ("saf0",sprop)
+                       & c_sched_ref .~ [replace ("prog1",pprop)
                                           & remove .~ singleton "sch0" ()
                                           & add    .~ singleton "sch1" ()
                                           & keep   .~ singleton "sch2" () ]

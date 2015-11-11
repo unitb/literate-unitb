@@ -708,13 +708,13 @@ instance Scope SafetyDecl where
     kind _ = "safety property"
     rename_events _ x = [x]
 
-safety_prop :: Label -> Maybe Label
+safety_prop :: Label
             -> LatexDoc
             -> LatexDoc
             -> MachineId
             -> MachineP2
             -> M [(Label,ExprScope)]
-safety_prop lbl evt pCt qCt _m p2 = do
+safety_prop lbl pCt qCt _m p2 = do
             li <- lift ask
             p <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
@@ -722,23 +722,25 @@ safety_prop lbl evt pCt qCt _m p2 = do
             q <- unfail $ parse_expr''
                     (p2^.pMchSynt & free_dummies .~ True) 
                     qCt
-            e <- traverse (get_event p2) evt
             p <- trigger p
             q <- trigger q
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
-                new_prop = Unless (M.elems dum) p q e
+                new_prop = Unless (M.elems dum) p q
             return [(lbl,makeCell $ SafetyProp new_prop Local li)]
 
 safetyA_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 safetyA_prop = machineCmd "\\safety" 
-                $ \(lbl, pCt, qCt) -> safety_prop lbl Nothing pCt qCt
+                $ \(lbl, pCt, qCt) -> safety_prop lbl pCt qCt
 
 safetyB_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
 safetyB_prop = machineCmd "\\safetyB" 
-                $ \(lbl, evt, pCt, qCt) -> safety_prop lbl evt pCt qCt
+                $ \(lbl, evt, pCt, qCt) _ _ -> do
+    let _ = safety_prop lbl pCt qCt
+        _ = evt :: Maybe Label
+    bind "OBSOLETE FEATURE: p UNLESS q EXCEPT evt is no longer supported" Nothing
 
 instance IsExprScope ProgressDecl where
     toNewEvtExprDefault _ _ = return []

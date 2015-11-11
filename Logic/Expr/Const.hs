@@ -10,13 +10,12 @@ import Logic.Expr.Type
     -- Libraries
 import Control.Lens hiding (rewrite,Const)
 import Control.Monad 
-import Control.Monad.Writer
 
+import           Data.Foldable as F
 import           Data.List as L
 import qualified Data.Map as M
 import           Data.Maybe hiding ( fromJust )
 import qualified Data.Set as S
-import Data.Traversable as T (mapM)
 
 import Utilities.Syntactic
 
@@ -93,9 +92,7 @@ mzeq         = typ_fun2 zeq_fun
 zfollows :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
 zfollows     = fun2 $ mk_fun [] "follows" [bool,bool] bool
 -- zfollows     = fun2 mzfollows
-toList :: Traversable f => f a -> [a]
-toList m = execWriter (T.mapM (tell . (:[])) m)
-zall :: (TypeSystem2 t, IsQuantifier q, Traversable list) 
+zall :: (TypeSystem2 t, IsQuantifier q, Foldable list) 
      => list (AbsExpr t q) -> AbsExpr t q
 zall xs'      = 
         case concatMap f xs of
@@ -105,7 +102,7 @@ zall xs'      =
                 | zfalse `elem` xs -> zfalse
                 | otherwise -> FunApp (mk_fun [] "and" (take n $ repeat bool) bool) xs
     where
-        xs = toList xs'
+        xs = F.toList xs'
         n = length xs
         f (FunApp fun@(Fun [] "and" _ _ _) xs)
             | not $ isLifted fun = concatMap f xs

@@ -191,7 +191,7 @@ event_file_name m lbl = (show (m!.name) ++ "_" ++ rename lbl) <.> "tex"
 comment_of :: Machine -> DocItem -> M ()
 comment_of m key = do
     item $ do
-        case key `M.lookup` (m!.content'.comments) of
+        case key `M.lookup` (m!.comments) of
             Just cmt -> block $ item $ tell [format "{0}" cmt]
             Nothing -> return ()
 
@@ -238,7 +238,7 @@ variable_sum m = section (keyword "variables") $
 
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
-        let prop = m!.content'.props
+        let prop = m!.props
         section kw_inv $ put_all_expr_with (makeDoc .= comment_of m . DocInv) "" (M.toList $ prop^.inv) 
     where
         kw_inv = "\\textbf{invariants}"
@@ -251,7 +251,7 @@ invariant_thm_sum prop =
 
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
-        let prop = m!.content'.props
+        let prop = m!.props
         section kw $ put_all_expr' toString "" (M.toList $ prop^.progress) 
     where
         kw = "\\textbf{progress}"
@@ -265,17 +265,14 @@ safety_sum prop = do
         section kw $ put_all_expr' toString "" (M.toList $ prop^.safety)
     where
         kw = "\\textbf{safety}"
-        toString (Unless _ p q exc) = do
+        toString (Unless _ p q) = do
             p' <- get_string' p
             q' <- get_string' q
-            let exc' = case exc of
-                        Nothing -> "" :: String
-                        Just exc -> format "\\qquad  \\text{(except \\ref{{0}})}" exc
-            return $ format "{0} \\textbf{\\quad unless \\quad} {1}{2}" p' q' exc'
+            return $ format "{0} \\textbf{\\quad unless \\quad} {1}" p' q'
 
 transient_sum :: Machine -> M ()
 transient_sum m = do
-        let prop = m!.content'.props
+        let prop = m!.props
         section kw $ put_all_expr' toString "" (M.toList $ prop^.transient) 
     where
         kw = "\\textbf{transient}"
@@ -303,7 +300,7 @@ transient_sum m = do
 
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
-        let prop = m!.content'.props
+        let prop = m!.props
         section kw $ put_all_expr' toString "" (M.toList $ prop^.constraint)
     where
         kw = "\\textbf{safety}"
