@@ -1,5 +1,8 @@
-{-# LANGUAGE ExistentialQuantification,TypeOperators      #-}
-{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE ExistentialQuantification
+        , TypeOperators
+        , OverloadedStrings
+        , TypeFamilies           
+        #-}
 module Document.ExprScope where
 
     -- Modules
@@ -23,6 +26,7 @@ import Test.QuickCheck
 import Utilities.Existential
 import Utilities.HeterogenousEquality
 import Utilities.Instances
+import Utilities.Regression
 import Utilities.Syntactic
 
 data CoarseSchedule = CoarseSchedule 
@@ -308,3 +312,14 @@ instance Arbitrary Axiom where
     arbitrary = genericArbitrary
 instance Arbitrary InitEventId where
     arbitrary = genericArbitrary
+
+prop_axiom_Scope_mergeCommutative :: Property
+prop_axiom_Scope_mergeCommutative = regression (uncurry axiom_Scope_mergeCommutative) [(g0,g1)]
+    where
+        g0 = Guard {_guardInhStatus = InhAdd ("i" :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = (LI "file" 0 0)}
+        g1 = Guard {_guardInhStatus = InhAdd ("e" :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = (LI "file" 0 0)}
+
+return []
+
+run_tests :: IO Bool
+run_tests = $quickCheckAll

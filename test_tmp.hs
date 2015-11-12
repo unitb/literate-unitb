@@ -37,7 +37,7 @@ import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
 import Tests.UnitTest
---import Test.QuickCheck
+import Document.ExprScope as ESco
 
 --import Language.Haskell.TH
 --import Language.Haskell.TH.Syntax

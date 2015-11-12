@@ -33,7 +33,7 @@ import UnitB.Event
 
     -- Libraries
 import Control.Applicative
-import Control.Arrow (second)
+import Control.Arrow (second,(***))
 import Control.DeepSeq
 
 import Control.Lens as L 
@@ -247,6 +247,9 @@ instance HasImplIso a b => HasImplIso (Redundant expr a) b where
 instance HasInhStatus a b => HasInhStatus (WithDelete a) b where
     inhStatus = lens getDelete (const WithDelete) . inhStatus
 
+instance HasDeclSource a b => HasDeclSource (WithDelete a) b where
+    declSource = lens getDelete (const WithDelete) . declSource
+
 instance ( HasInhStatus a (InhStatus expr)
          , Show expr
          , HasDeclSource a DeclSource )
@@ -265,17 +268,23 @@ instance ( HasInhStatus a (InhStatus expr)
                     (InhAdd e, InhDelete Nothing) -> Just $ y & inhStatus .~ InhDelete (Just e)
                     _ -> Nothing
 
-instance (Eq expr, ClashImpl a, HasInhStatus a (EventInhStatus expr))
+instance ( Eq expr, ClashImpl a
+         , HasInhStatus a (EventInhStatus expr)
+         , HasDeclSource a DeclSource)
         => ClashImpl (Redundant expr a) where
     makeInheritedImpl = fmap Redundant . makeInheritedImpl . getRedundant
     keepFromImpl s = fmap Redundant . keepFromImpl s . getRedundant
-    mergeScopesImpl (Redundant x) (Redundant y) = (Redundant <$> mergeScopesImpl x y) <|> g x y
+    mergeScopesImpl (Redundant x) (Redundant y) = Redundant <$> (mergeScopesImpl x y <|> g x y)
         where
-            g x y = guard' x y >> Just (Redundant $ x & inhStatus %~ (flip f $ y^.inhStatus))
+            g :: a -> a -> Maybe a
+            g x y = guard' x y >> Just (x & inhStatus %~ (flip f $ y^.inhStatus) 
+                                          & declSource %~ (declUnion $ y^.declSource))
             guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
-            f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
-            f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
-            f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
-            f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
+            f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ NE.sort.(<> y^._1)
+            f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ NE.sort.(x^._1 <>)
+            f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ NE.sort.(<> y^._1)
+            f (InhDelete x) (InhDelete y) = InhDelete $ (NE.sort *** getFirst) <$> (second First <$> x) <> (second First <$> y)
+            declUnion Local Local = Local
+            declUnion _ _         = Inherited
 
 instance NFData DeclSource

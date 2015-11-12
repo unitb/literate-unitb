@@ -519,57 +519,55 @@ csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_lab
 
 replace_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 replace_csched_po m (lbl,evt') = do 
-        -- TODO: generate the safety property rather than reading it
-    case evt' of 
-        EvtS ae (ce :| []) -> do
-            let evt = EvtRef ae ce
-            let old_c = evt^.old.coarse_sched
-                old_f = evt^.old.fine_sched
-            forM_ (L.zip [0..] $ evt^.c_sched_ref) $ \(i,ref) -> do
-                let nb  = label $ show (i :: Int)
-                with (do 
-                        prefix_label $ as_label lbl
-                        prefix_label "C_SCH/delay"
-                        prefix_label nb ) $ do
-                    with (do
-                            prefix_label "saf") $
-                        forM_ (csched_ref_safety ref evt') 
-                            $ prop_saf' m (Just lbl)
-                    with (do
-                            _context $ assert_ctx m
-                            _context $ step_ctx m
-                            POG.variables $ evt^.new.indices
-                            named_hyps $ invariants m ) $ do
-                        let (plbl,prog) = ref^.sch_prog
-                            --(slbl,saf)  = _ -- ref^.sch_saf
-                            --keep_c      = (evt^.new.coarse_sched) `M.intersection` view keep ref
-                            new_part_c  = ((evt^.added.coarse_sched) `M.intersection` view add ref)
-                                -- | we don't need (_ `M.union` keep_c) because, whenever 'old ∧ keep_c'
-                                -- | are true forever, that includes that keep_c is true forever
-                                -- | and therefore, provided 'new' eventually holds, it will hold
-                                -- | at the same time as 'keep_c'
-                            LeadsTo vs p0 q0  = prog
-                            --Unless us p1 q1 _ = saf
-                        with (do
-                                POG.variables $ symbol_table vs
-                                named_hyps old_c
-                                named_hyps old_f) $ 
-                            emit_goal assert ["prog",plbl,"lhs"] p0
-                        with (do
-                                POG.variables $ symbol_table vs) $
-                            forM_ (M.toList new_part_c) $ \(lbl,sch) -> do
-                                emit_goal assert ["prog",plbl,"rhs",lbl] $ $typeCheck$
-                                    Right q0 .=> Right sch
-                    --with (do
-                    --        POG.variables $ symbol_table us) $ do
-                    --    emit_goal assert [nb,"saf",slbl,"lhs"] $ $typeCheck$
-                    --            Right p1 .==. mzall (M.map Right new_part_c)
-                    --    emit_goal assert [nb,"saf",slbl,"rhs"] $ $typeCheck$
-                    --            Right q1 .=> mznot (mzall $ M.map Right old_c)
-                            -- the above used to include .=> ... \/ not old_f
-                            -- it does not seem sound and I removed it
-                            -- it broke one of the test cases
-        _ -> assert (L.null (evt'^.c_sched_ref)) (return ())
+    let old_c = evt'^.old.coarse_sched
+        old_f = evt'^.old.fine_sched
+    forM_ (L.zip [0..] $ evt'^.c_sched_ref) $ \(i,ref) -> do
+        let nb  = label $ show (i :: Int)
+        with (do 
+                prefix_label $ as_label lbl
+                prefix_label "C_SCH/delay"
+                prefix_label nb ) $ do
+            with (do
+                    prefix_label "saf") $
+                forM_ (csched_ref_safety ref evt') 
+                    $ prop_saf' m (Just lbl)
+            with (do
+                    _context $ assert_ctx m
+                    _context $ step_ctx m
+                    POG.variables $ evt'^.old.indices
+                    POG.variables $ evt'^.concrete_evts.traverse._2.new.indices
+                    named_hyps $ invariants m ) $ do
+                let (plbl,prog) = ref^.sch_prog
+                    new_part_c  = NE.map new_coarse_scheds $ evt'^.evt_pairs
+                    new_coarse_scheds e = (e^.added.coarse_sched) `M.intersection` view add ref
+                        -- | we don't need (_ `M.union` keep_c) because,
+                        -- | whenever 'old ∧ keep_c' are true forever,
+                        -- | that includes that keep_c is true forever
+                        -- | and therefore, provided 'new' eventually
+                        -- | holds, it will hold at the same time as
+                        -- | 'keep_c'
+                    LeadsTo vs p0 q0  = prog
+                with (do
+                        POG.variables $ symbol_table vs
+                        named_hyps old_c
+                        named_hyps old_f) $ 
+                    emit_goal assert ["prog",plbl,"lhs"] p0
+                with (do
+                        POG.variables $ symbol_table vs) $ do
+                            -- For the next set of proof obligations
+                            -- there are two possibilities: (1) either
+                            -- we are faced with a regular one-to-one
+                            -- refinement or (2) we have an event
+                            -- splitting. If we have a one-to-one
+                            -- refinement (1), we can prove that q ⇒
+                            -- csched one schedule at a time. Otherwise,
+                            -- we have to prove one big disjunction.
+                    let new_part' = case new_part_c of
+                                        cs :| [] -> cs
+                                        cs -> singleton "split" $ zsome $ NE.map zall cs
+                    forM_ (M.toList new_part') $ \(lbl,sch) -> do
+                        emit_goal assert ["prog",plbl,"rhs",lbl] $ $typeCheck$
+                            Right q0 .=> Right sch
 
 weaken_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do

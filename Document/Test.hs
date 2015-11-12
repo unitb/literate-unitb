@@ -19,6 +19,7 @@ import qualified Document.Tests.TrainStationSets as Set
 import qualified Document.Tests.UnlessExcept as UE
 -- import qualified Document.Tests.Suite as Suite
 import qualified Document.Scope (Scope)
+import qualified Document.ExprScope as ESc 
 import qualified Document.MachineSpec as MSpec 
 import qualified Document.Tests.GarbageCollector as Gar
 import qualified Document.Tests.Parser as Parser
@@ -26,6 +27,7 @@ import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
 
 import Document.Phase.Expressions as PExp
+
 import Latex.Parser
 import Latex.OldMonad
 
@@ -68,7 +70,8 @@ test = test_cases
             MSpec.run_spec True
         , all_properties
         , check_axioms
-        , Case "expression phase, properties" PExp.check_props True
+        , Case "expression phase, properties" 
+            ((&&) <$> PExp.check_props <*> ESc.run_tests) True
         ]
 
 result1 :: String
