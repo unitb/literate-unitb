@@ -7,6 +7,7 @@ module Utilities.BipartiteGraph
     , getLeftVertex, getRightVertex
     , leftVertex, rightVertex
     , leftVertices, rightVertices
+    , getEdges
     , fromList, fromList', empty, makeGraph
     , newEdge'
     , newEdge, newLeftVertex, newRightVertex
@@ -24,7 +25,7 @@ module Utilities.BipartiteGraph
     , traverseLeftWithEdges', traverseRightWithEdges'
     , traverseLeftWithEdgeInfo', traverseRightWithEdgeInfo'
     , traverseLeftWithEdgeInfo, traverseRightWithEdgeInfo
-    , traverseEdges
+    , traverseEdges, traverseEdgesWithKeys
     , acrossBoth
     , transpose
     , leftMap, rightMap, edgeMap
@@ -334,7 +335,20 @@ traverseLeftWithEdges = traverseLeftWithEdges'.trav
         trav f (x,xs) = f (x,fst <$> xs)
 
 traverseEdges :: Traversal (BiGraph' k0 v0 k1 v1 eA) (BiGraph' k0 v0 k1 v1 eB) (v0,v1,eA) eB
-traverseEdges f gr = gr & edges (M.traverseWithKey $ \(i,j) e -> f ((gr^.leftAL.arVals) A.! i,(gr^.rightAL.arVals) A.! j,e))
+traverseEdges = traverseEdgesWithKeys . (.f)
+    where
+        f (_,x,_,y,e) = (x,y,e)
+
+traverseEdgesWithKeys :: Traversal (BiGraph' k0 v0 k1 v1 eA) (BiGraph' k0 v0 k1 v1 eB) (k0,v0,k1,v1,eA) eB
+traverseEdgesWithKeys f gr = gr & edges (M.traverseWithKey g)
+    where
+        g (i,j) e = f (k0,v0,k1,v1,e)
+            where
+                k0 = (gr^.leftAL.arKey ) A.! i
+                v0 = (gr^.leftAL.arVals) A.! i 
+                k1 = (gr^.rightAL.arKey ) A.! j
+                v1 = (gr^.rightAL.arVals) A.! j 
+
 
 acrossBoth :: Applicative f 
            => (vA0 -> f vB0)
@@ -455,6 +469,11 @@ leftVertex :: Ord key0
 leftVertex arse v = GR $ do
     vs <- view $ leftAL.mapKey
     return $ Vertex $ fromJust'' arse $ v `M.lookup` vs
+
+getEdges :: GraphReader' key0 v0 key1 v1 e s0 s1 (Map (Edge s0 s1) ())
+getEdges = GR $ do
+    es <- views edges $ M.mapKeys (uncurry Edge)
+    return $ () <$ es
 
 rightVertex :: Ord key1
             => Assert -> key1

@@ -130,11 +130,11 @@ make_machine (MId m) p4 = mch'
             = Event
                 { _indices   = evt^.eIndices
                 , _params    = evt^.eParams
-                , _guards    = evt^.eGuards
+                , _raw_guards    = evt^.eGuards
                 , _actions  = evt^.eActions
-                , _coarse_sched = evt^.eCoarseSched
+                , _raw_coarse_sched = Nothing
                 , _fine_sched = evt^.eFineSched
-                }
+                } & coarse_sched .~ evt^.eCoarseSched
 
 uncurryMap :: (Ord a,Ord b) => Map a (Map b c) -> Map (a,b) c
 uncurryMap m = fromList $ do

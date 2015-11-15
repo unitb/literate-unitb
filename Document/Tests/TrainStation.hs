@@ -330,7 +330,7 @@ enter_evt = flip execState empty_event $ do
      indices .= symbol_table [t_decl]
      coarse_sched .= fromList
             [ ("default", zfalse )]
-     guards  .= fromList
+     raw_guards  .= fromList
             [  ("grd1", c [expr| \neg t \in in |])
             ]
      actions .= fromList
@@ -344,7 +344,7 @@ leave_evt :: Event
 leave_evt = flip execState empty_event $ do
     indices   .= symbol_table [t_decl]
     coarse_sched .= singleton "c0" (c [expr| t \in in |])
-    guards .= fromList
+    raw_guards .= fromList
             [  ("grd0", c [expr| loc.t = ext \1\land t \in in |] )
             ]
     actions .= fromList 
@@ -1232,6 +1232,8 @@ result3 = unlines $
           ,  "(assert (= sl@BLK"
           ,  "           (union (union (mk-set@@sl@BLK ent) (mk-set@@sl@BLK ext))"
           ,  "                  PLF)))"
+          ,  "; c0"
+          ,  "(assert (elem@@sl@TRAIN t in))"
           ,  "; grd0"
           ,  "(assert (and (= (apply@@sl@TRAIN@@sl@BLK loc t) ext)"
           ,  "             (elem@@sl@TRAIN t in)))"
@@ -1299,6 +1301,8 @@ result19 = unlines $
           ,  "(assert (= sl@BLK"
           ,  "           (union (union (mk-set@@sl@BLK ent) (mk-set@@sl@BLK ext))"
           ,  "                  PLF)))"
+          ,  "; c0"
+          ,  "(assert (elem@@sl@TRAIN t in))"
           ,  "; grd0"
           ,  "(assert (and (= (apply@@sl@TRAIN@@sl@BLK loc t) ext)"
           ,  "             (elem@@sl@TRAIN t in)))"
@@ -1654,6 +1658,8 @@ result12 = unlines $
         ,  "(assert (= sl@BLK"
         ,  "           (union (union (mk-set@@sl@BLK ent) (mk-set@@sl@BLK ext))"
         ,  "                  PLF)))"
+        ,  "; c0"
+        ,  "(assert (elem@@sl@TRAIN t in))"
         ,  "; grd0"
         ,  "(assert (and (= (apply@@sl@TRAIN@@sl@BLK loc t) ext)"
         ,  "             (elem@@sl@TRAIN t in)))"

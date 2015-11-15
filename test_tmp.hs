@@ -11,6 +11,7 @@ module Main where
 import Document.Tests.Puzzle  as Puzz
 import Document.Tests.Cubes   as Cubes
 import Document.Tests.Lambdas as Lam
+import Document.Tests.Parser as Parser
 import Document.Tests.SmallMachine  as SM
 import Document.Tests.GarbageCollector  as GC
 import Document.Tests.TerminationDetection  as Term
@@ -37,7 +38,6 @@ import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
 import Tests.UnitTest
-import Document.ExprScope as ESco
 
 --import Language.Haskell.TH
 --import Language.Haskell.TH.Syntax
@@ -113,5 +113,6 @@ main = timeIt $ do
     return $ run_test_cases TSRef.test_case
     return $ run_test_cases Tex.test_case
     return $ run_test_cases GC.test_case
+    return $ run_test_cases Parser.test_case
     return $ run_test_cases Doc.test_case
     return ()

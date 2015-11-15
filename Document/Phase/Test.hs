@@ -627,7 +627,7 @@ result8 = Right $ SystemP h ms
         ae0Evt = create $ do
             coarse_sched .= M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
-            guards .= M.fromList
+            raw_guards .= M.fromList
                 [("grd0",c [expr| x = 0 |])]
         ae1aEvt = create $ do
             coarse_sched .= M.fromList 

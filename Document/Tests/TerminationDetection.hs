@@ -138,6 +138,7 @@ result2 = unlines
     , "  o  m2/detect/FIS/d@prime"
     , "  o  m2/detect/FIS/st@prime"
     , "  o  m2/detect/FIS/term@prime"
+    , "  o  m2/detect/GRD/str/m1:sch0"
     , "  o  m2/detect/INV/m2:inv0"
     , "  o  m2/detect/SAF/m2:saf0"
     , "  o  m2/detect/SCH/m1:grd0"
@@ -173,7 +174,7 @@ result2 = unlines
     , "  o  m2/stop/WD/F_SCH"
     , "  o  m2/stop/WD/GRD"
     , "  o  m2/stop/WWD"
-    , "passed 72 / 72"
+    , "passed 73 / 73"
     ]
 
 case3 :: IO POResult

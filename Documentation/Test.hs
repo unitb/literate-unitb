@@ -14,7 +14,6 @@ import UnitB.AST
     -- Libraries
     -- 
 import Control.Monad
-import Control.Monad.Trans.Either
 
 import Data.Map
 

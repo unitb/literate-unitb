@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module UnitB.Event 
     ( module UnitB.Event
     , EventId (..) )
@@ -21,6 +22,7 @@ import Data.Foldable as F
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
+import Data.Maybe
 import Data.String
 import Data.Typeable
 
@@ -30,6 +32,7 @@ import Test.QuickCheck hiding (label)
 
 import Utilities.Format
 import Utilities.Instances
+import Utilities.Lens
 import Utilities.TH
 
 type Action = Action' Expr
@@ -63,10 +66,10 @@ type RawEvent = Event' RawExpr
 
 data Event' expr = Event 
         { _indices    :: Map String Var
-        , _coarse_sched :: Map Label expr
+        , _raw_coarse_sched :: Maybe (Map Label expr)
         , _fine_sched :: Map Label expr
         , _params     :: Map String Var
-        , _guards   :: Map Label expr
+        , _raw_guards :: Map Label expr
         , _actions  :: Map Label (Action' expr)
         } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
@@ -103,7 +106,8 @@ data EventSplitting expr = EvtS
         , _eventSplittingMultiConcrete :: NonEmpty (SkipOrEvent,ConcrEvent' expr) }
     deriving (Show,Generic)
 
-type EventRef' = EventRef RawExpr
+type EventRef' = EventRef Expr
+type RawEventRef = EventRef RawExpr
 
 data EventRef expr = EvtRef 
         { _eventRefAbstract :: (SkipOrEvent,AbstrEvent' expr)  
@@ -233,7 +237,7 @@ primed :: Map String Var -> RawExpr -> RawExpr
 primed vs e = make_unique "@prime" vs e
 
 empty_event :: IsExpr expr => Event' expr
-empty_event = (makeEvent' def def def def) { _coarse_sched = default_schedule }
+empty_event = (makeEvent' def def def def) { _raw_coarse_sched = Nothing }
 
 skip_abstr :: IsExpr expr => AbstrEvent' expr
 skip_abstr = AbsEvent empty_event Nothing []
@@ -241,6 +245,8 @@ skip_abstr = AbsEvent empty_event Nothing []
 skip_event :: IsExpr expr => ConcrEvent' expr
 skip_event = CEvent empty_event M.empty M.empty M.empty
 
+eventRef :: IsExpr expr => EventId -> EventId -> EventRef expr
+eventRef aid cid = EvtRef (Right aid,def) (Right cid,def)
 
 instance HasEvent' (AbstrEvent' expr) expr where
     event' = old
@@ -274,12 +280,12 @@ instance ActionRefinement (EventRef expr) expr where
     abstract_acts = old.actions
     concrete_acts = new.actions
 
-class EventRefinement a expr | a -> expr where
+class IsExpr expr => EventRefinement a expr | a -> expr where
     abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))
     concrete_evts :: Getter a (NonEmpty (SkipOrEvent,ConcrEvent' expr))
     evt_pairs :: (EventRefinement a expr) => Getter a (NonEmpty (EventRef expr))
 
-instance EventRefinement (EventMerging expr) expr where
+instance IsExpr expr => EventRefinement (EventMerging expr) expr where
     abstract_evts = multiAbstract
     concrete_evts = to $ \(EvtM _ y)  -> y :| []
     evt_pairs = to $ \e -> do
@@ -287,7 +293,7 @@ instance EventRefinement (EventMerging expr) expr where
             a <- e^.multiAbstract
             return $ EvtRef a c
 
-instance EventRefinement (EventSplitting expr) expr where
+instance IsExpr expr => EventRefinement (EventSplitting expr) expr where
     abstract_evts = to $ \(EvtS x _)  -> x :| []
     concrete_evts = multiConcrete
     evt_pairs = to $ \e -> do
@@ -295,19 +301,33 @@ instance EventRefinement (EventSplitting expr) expr where
             c <- e^.multiConcrete
             return $ EvtRef a c
 
-changes :: (forall k a. Ord k => Map k a -> Map k a -> Map k a)
-        -> Getter (EventRef expr) (Event' expr)
-changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> Event 
-    { _indices = ( aevt^.indices ) `diff` ( cevt^.indices )
-    , _coarse_sched = ( aevt^.coarse_sched ) `diff` ( cevt^.coarse_sched )
-    , _fine_sched   = ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
-    , _params  = ( aevt^.params )  `diff` ( cevt^.params ) 
-    , _guards  = ( aevt^.guards )  `diff` ( cevt^.guards ) 
-    , _actions = ( aevt^.actions ) `diff` ( cevt^.actions )
-    }
+coarse_sched :: (IsExpr expr, HasEvent' event expr) => Lens' event (Map Label expr)
+coarse_sched = raw_coarse_sched.lens (fromMaybe default_schedule) (const f)
+    where
+        f m
+            | "default" `M.lookup` m == Just zfalse = Nothing
+            | otherwise                             = Just m
 
-schedules :: Getter (Event' expr) (Map Label expr)
-schedules = to $ \e -> _coarse_sched e `M.union` _fine_sched e
+guards :: HasEvent' event expr => Getter event (Map Label expr)
+guards = to $ \e -> M.unions 
+        [ e^.raw_guards
+        , fromMaybe M.empty $ e^.raw_coarse_sched
+        , e^.fine_sched
+        ]
+
+changes :: IsExpr expr
+        => (forall k a. Ord k => Map k a -> Map k a -> Map k a)
+        -> Getter (EventRef expr) (Event' expr)
+changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
+    indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
+    coarse_sched .= ( aevt^.coarse_sched ) `diff` ( cevt^.coarse_sched )
+    fine_sched   .= ( aevt^.fine_sched )   `diff` ( cevt^.fine_sched ) 
+    params  .= ( aevt^.params )  `diff` ( cevt^.params ) 
+    raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
+    actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
+
+schedules :: IsExpr expr => Getter (Event' expr) (Map Label expr)
+schedules = to $ \e -> view coarse_sched e `M.union` _fine_sched e
 
 getItems :: EventRefinement evt expr
          => Getter (EventRef expr) (Event' expr) 
@@ -320,7 +340,7 @@ deleted' :: EventRefinement evt expr
          -> Getter evt [(a,b)]
 deleted' = getItems deleted
 
-deleted :: Getter (EventRef expr) (Event' expr)
+deleted :: IsExpr expr => Getter (EventRef expr) (Event' expr)
 deleted = changes M.difference
 
 added' :: EventRefinement evt expr
@@ -328,7 +348,7 @@ added' :: EventRefinement evt expr
        -> Getter evt [(a,b)]
 added' = getItems added
 
-added :: Getter (EventRef expr) (Event' expr)
+added :: IsExpr expr => Getter (EventRef expr) (Event' expr)
 added = changes (flip M.difference)
 
 kept' :: EventRefinement evt expr
@@ -336,7 +356,7 @@ kept' :: EventRefinement evt expr
       -> Getter evt [(a,b)]
 kept' = getItems kept
 
-kept :: Getter (EventRef expr) (Event' expr)
+kept :: IsExpr expr => Getter (EventRef expr) (Event' expr)
 kept = changes M.intersection
 
 total' :: EventRefinement evt expr
@@ -344,7 +364,7 @@ total' :: EventRefinement evt expr
        -> Getter evt [(a,b)]
 total' = getItems total
 
-total :: Getter (EventRef expr) (Event' expr)
+total :: IsExpr expr => Getter (EventRef expr) (Event' expr)
 total = changes M.union
 
 new' :: EventRefinement evt expr

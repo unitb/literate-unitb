@@ -14,7 +14,6 @@ import UnitB.AST
     -- Library
 import Control.Lens
 import Control.Monad
-import Control.Monad.Trans.Either
 
 import Data.Map
 import Data.Set as S (Set,fromList)
@@ -124,6 +123,7 @@ result1 = unlines
     , "  o  m1/term/C_SCH/delay/0/saf/visit/SAF/term"
     , "  o  m1/term/FIS/b@prime"
     , "  o  m1/term/FIS/vs@prime"
+    , "  o  m1/term/GRD/str/sch0"
     , "  o  m1/term/INV/inv0"
     , "  o  m1/term/SAF/saf1"
     , "  o  m1/term/SAF/saf2"
@@ -142,7 +142,7 @@ result1 = unlines
     , "  o  m1/visit/WD/F_SCH"
     , "  o  m1/visit/WD/GRD"
     , "  o  m1/visit/WWD"
-    , "passed 52 / 52"
+    , "passed 53 / 53"
     ]
 
 case2 :: IO String
@@ -675,6 +675,7 @@ result7 = unlines
     , "  o  m2/term/FIS/cs@prime"
     , "  o  m2/term/FIS/ts@prime"
     , "  o  m2/term/FIS/vs@prime"
+    , "  o  m2/term/GRD/str/sch1"
     , "  o  m2/term/INV/inv1"
     , "  o  m2/term/INV/inv2"
     , "  o  m2/term/SAF/saf3"
@@ -696,7 +697,7 @@ result7 = unlines
     , "  o  m2/visit/WD/F_SCH"
     , "  o  m2/visit/WD/GRD"
     , "  o  m2/visit/WWD"
-    , "passed 139 / 139"
+    , "passed 140 / 140"
     ]
 
 case8 :: IO (String, Map Label Sequent)
@@ -736,6 +737,7 @@ result8 = unlines
     , "  o  m3/count/FIS/fs@prime"
     , "  o  m3/count/FIS/n@prime"
     , "  o  m3/count/FIS/vs@prime"
+    , "  o  m3/count/GRD/str/sch0"
     , "  o  m3/count/INV/m3:inv0"
     , "  o  m3/count/INV/m3:inv1"
     , "  o  m3/count/INV/m3:inv2"
@@ -761,6 +763,8 @@ result8 = unlines
     , "  o  m3/flick/FIS/n@prime"
     , "  o  m3/flick/FIS/vs@prime"
     , "  o  m3/flick/GRD/str/grd0"
+    , "  o  m3/flick/GRD/str/sch0"
+    , "  o  m3/flick/GRD/str/sch1"
     , "  o  m3/flick/INV/m3:inv0"
     , "  o  m3/flick/INV/m3:inv1"
     , "  o  m3/flick/INV/m3:inv2"
@@ -784,6 +788,7 @@ result8 = unlines
     , "  o  m3/term/FIS/fs@prime"
     , "  o  m3/term/FIS/n@prime"
     , "  o  m3/term/FIS/vs@prime"
+    , "  o  m3/term/GRD/str/sch2"
     , "  o  m3/term/INV/m3:inv0"
     , "  o  m3/term/INV/m3:inv1"
     , "  o  m3/term/INV/m3:inv2"
@@ -810,7 +815,7 @@ result8 = unlines
     , "  o  m3/visit/WD/F_SCH"
     , "  o  m3/visit/WD/GRD"
     , "  o  m3/visit/WWD"
-    , "passed 106 / 106"
+    , "passed 110 / 110"
     ]
 
 case9 :: IO String
@@ -1554,6 +1559,8 @@ result18 = unlines
     , "(assert (= n@prime (+ n 1)))"
     , "; m3:grd0"
     , "(assert (= c 1))"
+    , "; sch1"
+    , "(assert (= c 1))"
     , "; ts"
     , "(assert (= ts@prime (union ts cs)))"
     , "(assert (not (= cs@prime empty-set@@sl@Pcs)))"
@@ -2109,8 +2116,8 @@ case27 = runEitherT $ do
            , keysSet $ evt^.new.guards)
 
 result27 :: Either [Error] (Set Label,Set Label)
-result27 = Right ( S.fromList ["grd0","grd1"]
-                 , S.fromList ["grd1","m3:grd1","m3:grd2"])
+result27 = Right ( S.fromList ["grd0","grd1","sch0","sch1","sch2"]
+                 , S.fromList ["grd1","m3:grd1","m3:grd2","m3:csch1","m3:csch2","sch2"])
 
 case28 :: IO String
 case28 = find_errors "Tests/puzzle/puzzle-err7.tex"

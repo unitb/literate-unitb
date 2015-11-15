@@ -1,4 +1,8 @@
-module Document.Tests.Suite where
+{-# LANGUAGE ImplicitParams #-}
+module Document.Tests.Suite 
+    ( module Document.Tests.Suite 
+    , module Control.Monad.Trans.Either )
+where
 
     -- Modules
 import Document.Document as Doc
@@ -26,7 +30,12 @@ import Data.List.Utils as L
 import Data.Map as M
 import Data.Time
 
+import GHC.Stack
+
+import PseudoMacros
+
 import Utilities.Format
+import Utilities.CallStack
 import Utilities.Syntactic
 
 import System.Directory
@@ -165,3 +174,5 @@ get_system path = do
     EitherT $ either (Left . show_err) Right 
         <$> parse_system path
 
+lookup :: (?loc :: CallStack,Monad m,Ord k) => k -> Map k a -> EitherT [Error] m a
+lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc "<nothing>") return $ M.lookup k m

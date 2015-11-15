@@ -197,6 +197,7 @@ result2 = unlines
     , "  o  m2/free/FIS/live@prime"
     , "  o  m2/free/FIS/ptr@prime"
     , "  o  m2/free/FIS/reach@prime"
+    , "  o  m2/free/GRD/str/m1:sch1"
     , "  o  m2/free/INV/m2:inv0"
     , "  o  m2/free/SAF/m2:saf0"
     , "  o  m2/free/SCH/m0:grd0"
@@ -215,7 +216,7 @@ result2 = unlines
     , " xxx m2/m2:prog2/REF/add"
     , "  o  m2/m2:saf0/SAF/WD/lhs"
     , "  o  m2/m2:saf0/SAF/WD/rhs"
-    , "passed 56 / 61"
+    , "passed 57 / 62"
     ]
 
 case3 :: IO String

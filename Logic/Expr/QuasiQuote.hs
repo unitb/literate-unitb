@@ -15,6 +15,8 @@ import Logic.Theory
 import UnitB.Event
 
 import Theories.Arithmetic
+import Theories.FunctionTheory
+import Theories.SetTheory
 
     -- Libraries
 import Control.Arrow
@@ -123,6 +125,12 @@ parseExpr loc p str = either (error.("\n"++).show_err) id
     -- either fail lift.
 
 type Ctx = (ParserSetting -> DispExpr) -> DispExpr
+
+impFunctions :: (String,Theory)
+impFunctions = ("functions",function_theory)
+
+impSets :: (String,Theory)
+impSets = ("sets",set_theory)
 
 ctxWith :: [(String,Theory)] 
         -> State ParserSetting a 

@@ -19,6 +19,7 @@ import qualified Data.List.NonEmpty as NE
 
 import Tests.UnitTest
 
+import Utilities.Lens
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -86,7 +87,7 @@ result2 = unlines
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
-    , " xxx m0/inc/INV/inv1"
+    , "  o  m0/inc/INV/inv1"
     , "  o  m0/inc/WD/ACT/a0"
     , "  o  m0/inc/WD/ACT/a1"
     , "  o  m0/inc/WD/C_SCH"
@@ -97,7 +98,7 @@ result2 = unlines
     , "  o  m0/prog0/PROG/WD/rhs"
     , " xxx m0/prog0/REF/add"
     , "  o  m0/tr0/TR/WD"
-    , "passed 22 / 25"
+    , "passed 23 / 25"
     ]
 
 path2 :: String
@@ -159,6 +160,8 @@ result4 = unlines
     , "(assert (= x@prime (+ x 2)))"
     , "; a1"
     , "(assert (= y@prime (+ y 1)))"
+    , "; c0"
+    , "(assert (= x y))"
     , "; inv0"
     , "(assert (= x (* 2 y)))"
     , "(assert (not (= x@prime (* 2 y@prime))))"
@@ -428,17 +431,14 @@ inc_event_m0 = empty_event {
                     $ c $ [expr| x' = x+2 |] . (is_step .~ True)) ] }
 
 inc_event_m1 :: Event
-inc_event_m1 = empty_event 
-        { _coarse_sched = singleton "c0" $ 
-                                c [expr| x = y |]
-        , _fine_sched = singleton "f0" $ 
-                                c [expr| x = y |]
-        , _actions = fromList [
+inc_event_m1 = create $ do
+        coarse_sched .= singleton "c0" (c [expr| x = y |])
+        fine_sched .= singleton "f0" (c [expr| x = y |])
+        actions .= fromList [
                     ("a0",BcmSuchThat (M.elems vars) $ 
                             c $ [expr| x' = x + 2 |] . (is_step .~ True)),
                     ("a1",BcmSuchThat (M.elems vars) $ 
                             c $ [expr| y' = y + 1 |] . (is_step .~ True)) ] 
-        }
 
 m0_machine :: Machine
 m0_machine = newMachine assert "m0" $ do

@@ -411,8 +411,8 @@ guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do
         when show_removals $
             local (second $ const True)
-                $ put_all_expr lbl $ e^.deleted' guards -- deleted_guard e
-        put_all_expr lbl $ e^.new' guards -- new_guard e
+                $ put_all_expr lbl $ e^.deleted' raw_guards -- deleted_guard e
+        put_all_expr lbl $ e^.new' raw_guards -- new_guard e
     where
         kw = "\\textbf{when}"
 

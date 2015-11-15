@@ -19,7 +19,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Monad
-import Control.Lens
+import Control.Lens hiding (indices)
 
 import           Data.Either
 import           Data.List ( sort )
@@ -28,6 +28,7 @@ import           Data.Map as M hiding (map)
 
 import Tests.UnitTest
 
+import Utilities.Lens
 import Utilities.Syntactic
 
 test_case :: TestCase
@@ -68,11 +69,11 @@ example0 = do
                     fromList [
                         ("CO0", co0)],
                 _inv = fromList [("J0", inv0)] }
-            evt = empty_event
-                    { _coarse_sched = singleton "sch0" csched
-                    , _actions = fromList [
+            evt = create $ do
+                    coarse_sched .= singleton "sch0" csched
+                    actions .= fromList [
                         ("S0", s0),
-                        ("S1", s1) ] }
+                        ("S1", s1) ]
             vs = fromList $ map as_pair [x_decl,y_decl]
             m  = newMachine assert "m0" $ do
                 variables .= vs
@@ -97,11 +98,11 @@ train_m0 = do
         a0   <- with_li li (liftM (Assign st_decl) $ zstore st t mzfalse)
         let inv = fromList [("J0",inv0)]
             enter = ("enter", empty_event)
-            leave = ("leave", empty_event 
-                    {   _indices = symbol_table [t_decl]
-                    ,   _coarse_sched = singleton "C0" c0
-                    ,   _actions   = fromList [("A0", a0)]
-                    })
+            leave = ("leave", create $ do
+                        indices .= symbol_table [t_decl]
+                        coarse_sched .= singleton "C0" c0
+                        actions .= fromList [("A0", a0)]
+                    )
         tr <- with_li li (st `select` t)
         let props' = fromList [("TR0", Tr (symbol_table [t_decl]) tr (NE.fromList ["leave"]) hint)] 
             hint  = getExpr <$> TrHint (singleton "t" (int,c [expr| t = t' |])) Nothing

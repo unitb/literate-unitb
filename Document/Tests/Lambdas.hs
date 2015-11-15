@@ -13,8 +13,6 @@ import UnitB.AST
 import UnitB.Expr
 
     -- Libraries
-import Control.Monad.Trans.Either
-
 import Data.Map hiding ( map )
 import qualified Data.Map as M
 

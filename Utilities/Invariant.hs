@@ -30,12 +30,12 @@ import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
 import GHC.Stack
-import GHC.SrcLoc
 
 import PseudoMacros
 
 import Text.Printf
 
+import Utilities.CallStack
 import Utilities.Lens
 
 newtype Checked a = Checked { getChecked :: a }
@@ -85,7 +85,7 @@ infixl 8 !.
 (!.) :: Controls a b => a -> Getting c b c -> c
 (!.) = flip view'
 
-view' :: Controls a b => Getting c b c -> a -> c
+view' :: (Controls a b,MonadReader a m) => Getting c b c -> m c
 view' ln = view $ content'.ln
 
 instance Controls (Checked a) a where
@@ -111,24 +111,6 @@ infixr 0 ##
 
 (##) :: (IsAssertion b, ?loc :: CallStack) => String -> b -> Invariant ()
 (##) tag b = withStack ?loc $ withPrefix tag $ toInvariant b
-
-withStack :: CallStack -> Invariant a -> Invariant a
-withStack cs = maybe id withPrefix $ stackTrace cs
-
-stackTrace :: CallStack -> Maybe String
-stackTrace cs | null loc  = Just $ '\n':concatMap f loc
-              | otherwise = Nothing
-    where
-        loc = filter notHere $ getCallStack cs
-        f (fn,loc) = printf "%s - %s\n" (locToString loc) fn
-        notHere :: (a,SrcLoc) -> Bool
-        notHere (_,x) = srcLocFile x /= $__FILE__
-
-locToString :: SrcLoc -> String
-locToString loc = printf "%s:%d:%d" 
-            (srcLocFile loc) 
-            (srcLocStartLine loc)
-            (srcLocStartCol loc)
 
 infix 4 ===
 
@@ -159,8 +141,12 @@ instance HasPrefix Invariant where
 mutate :: IsChecked c a => Assert -> c -> State a k -> c
 mutate arse x cmd = x & content arse %~ execState cmd 
 
+withStack :: CallStack -> Invariant a -> Invariant a
+withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs
+
 provided :: (?loc :: CallStack) => Bool -> a -> a
-provided b = assertMessage "Precondition" (fromMaybe "" $ stackTrace ?loc) (assert b)
+provided b = assertMessage "Precondition" 
+        (fromMaybe "" $ stackTrace [$__FILE__] ?loc) (assert b)
 
 create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
 create' arse = check arse . create 

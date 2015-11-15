@@ -29,7 +29,7 @@ import Control.Monad.State
 import Control.Monad.Trans.Maybe
 
 import           Data.Default
-import           Data.Foldable as F (all)
+import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
 import           Data.Functor.Classes
 import           Data.List as L hiding ( union, inits )
@@ -219,7 +219,18 @@ instance Controls (Machine'' expr) (Machine'' expr) where
 
 all_refs :: Controls machine (Machine'' expr) 
          => machine -> [EventRef expr]
-all_refs m = concat $ elems $ M.map (NE.toList . view evt_pairs) $ all_upwards m
+all_refs = F.toList . all_refs'
+
+all_refs' :: Controls machine (Machine'' expr) 
+          => machine -> Map (SkipOrEvent, SkipOrEvent) (EventRef expr)
+all_refs' m = readGraph (m!.events) $ do
+        es <- getEdges
+        m  <- forM (M.toList es) $ \(e,()) -> do
+            k  <- (,) <$> leftKey (source e) <*> rightKey (target e)
+            ae <- (,) <$> leftKey (source e) <*> leftInfo (source e)
+            ce <- (,) <$> rightKey (target e) <*> rightInfo (target e)
+            return (k,EvtRef ae ce)
+        return $ M.fromList m
 
 conc_events :: Controls machine (Machine'' expr)
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
@@ -296,13 +307,12 @@ all_downwards m = readGraph (m!.events) $ do
                 Left SkipEvent ->
                     return [(Left SkipEvent,EvtS aevt (c :|[])) | c <- NE.toList cevts]
         return $ M.fromList $ concat ms
-    -- M.mapWithKey (downward m) (abs_events m)
 
 eventTable :: forall expr. IsExpr expr
            => (forall s0 s1. GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ())
            -> EventTable expr
 eventTable gr = EventTable $ fromJust $ makeGraph $ do
-    let skip = create $ coarse_sched .= singleton "default" (zfalse :: expr)
+    let skip = def 
     a <- newLeftVertex (Left SkipEvent)  $ create $ old .= skip
     c <- newRightVertex (Left SkipEvent) $ create $ new .= skip
     newEdge a c

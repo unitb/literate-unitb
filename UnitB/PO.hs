@@ -571,16 +571,9 @@ replace_csched_po m (lbl,evt') = do
 
 weaken_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
-    -- case evt' of 
-    --     EvtS ae (ce :| []) -> do
-            let -- evt = EvtRef ae ce 
-                weaken_sch = do
+            let weaken_sch = do
                         e <- evt^.evt_pairs
                         return $ (e^.added.coarse_sched) `M.difference` M.unions (L.map (view add) $ e^.c_sched_ref)
-                -- weaken_sch  = case weaken_sch' of
-                --                 m :| [] -> _
-                --                 ms -> _
-                -- weaken_sch = (evt^.added.coarse_sched) `M.difference` M.unions (L.map add $ evt^.c_sched_ref)
 
                 old_c = evt^.old.coarse_sched
             with (do
@@ -599,16 +592,14 @@ weaken_csched_po m (lbl,evt) = do
                 case weaken_sch of
                     m :| [] -> 
                         forM_ (M.toList m) $ \(lbl,sch) -> do
-                            emit_goal assert [lbl] sch
+                            emit_goal assert [lbl] sch
                     ms -> 
                         emit_goal assert [] $ zsome $ NE.map zall ms
 
 replace_fsched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 replace_fsched_po m (lbl,aevt) = do
         let evts   = aevt^.evt_pairs.to NE.toList
-            -- _ = _
             evts'  = L.zip (NE.toList $ aevt^.multiConcrete.to (NE.map fst)) evts
-            -- evt   = _
             old_c  = unions $ L.map (view $ old.coarse_sched) evts
             new_c  = L.nub $ concatMap (elems . view (new.coarse_sched)) evts
             old_f  = unions $ L.map (view $ old.fine_sched) evts
@@ -616,7 +607,6 @@ replace_fsched_po m (lbl,aevt) = do
         with (do
                 prefix_label $ as_label lbl
                 prefix_label "F_SCH/replace"
-                -- POG.variables $ _^.new.indices
                 _context $ assert_ctx m
                 _context $ step_ctx m
                 named_hyps  $ invariants m) $ do
@@ -826,7 +816,7 @@ evt_wd_po m (lbl, evts) =
             with (POG.variables $ evts^.new.params) $ do
                 incremental_wd_po "GRD" 
                     (f $ old.guards) 
-                    (evts^.new.guards)
+                    (evts^.new.raw_guards)
               -- es -> _
             with (POG.variables $ evts^.new.params) $ do
                 with (do prefix_label "ACT"
@@ -864,16 +854,16 @@ sch_po m (lbl, evts) =
                  POG.variables ind
                  named_hyps hyp) $ do
             let removed_sched sch = not $ M.null $ evt^.deleted.sch
-                added_grd = not $ M.null $ evt^.added.guards
+                added_grd = not $ M.null $ evt^.added.raw_guards
                 removed_c_sch = removed_sched coarse_sched
                 removed_f_sch = removed_sched fine_sched
             if M.null param
                 then do 
                     when (removed_c_sch || removed_f_sch) $
-                        forM_ (M.toList $ evt^.kept.guards) 
+                        forM_ (M.toList $ evt^.kept.raw_guards) 
                             $ \(lbl,grd) -> 
                             emit_goal assert [lbl] grd  
-                    forM_ (M.toList $ evt^.added.guards) 
+                    forM_ (M.toList $ evt^.added.raw_guards) 
                         $ \(lbl,grd) -> 
                         emit_goal assert [lbl] grd  
             else if removed_c_sch || removed_f_sch || added_grd

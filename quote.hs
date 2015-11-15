@@ -27,7 +27,7 @@ main = do
             [fn] -> do 
                 lns <- (map escape . drop 1 . lines) 
                     `liftM` readFile fn
-                let lns' = dropWhile ("; " `isPrefixOf`) lns
+                let lns' = drop 1 lns
                 putStrLn $ "    [ \"" ++ (lns' !! 0) ++ "\""
                 forM_ (allBut 1 $ drop 1 lns') $ \ln -> do
                     putStrLn $ "    , \"" ++ ln ++ "\""

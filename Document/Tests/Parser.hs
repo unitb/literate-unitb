@@ -1,15 +1,33 @@
+{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
 module Document.Tests.Parser where
 
-import Document.Tests.Suite
+    -- Modules
+import Document.Tests.Suite as S
+
+import Logic.Expr.QuasiQuote
 
 import Tests.UnitTest
+
+import UnitB.Expr
+import UnitB.Event
+import UnitB.Machine
+
+    -- Library
+import Control.Lens
+import Control.Monad.State
+
+import Data.Map
+
+import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test_cases 
     "Parser" 
     [ POCase "test0: verify m0" case0 result0 
     , POCase "test1: verify m1" case1 result1 
-    , POCase "test2: verify m2" case2 result2 ]
+    , POCase "test2: verify m2" case2 result2 
+    , Case "test3: spontaneous events" case3 result3 
+    ]
 
 path0 :: FilePath
 path0 = "Tests/parser/main.tex"
@@ -86,8 +104,6 @@ result1 = unlines
     , "  o  m1/fail/INV/m1:inv1"
     , "  o  m1/fail/INV/m1:inv2"
     , "  o  m1/fail/INV/m1:inv3"
-    , "  o  m1/fail/SCH/m1:grd0"
-    , "  o  m1/fail/SCH/m1:grd1"
     , "  o  m1/fail/WD/ACT/m1:act0"
     , "  o  m1/fail/WD/ACT/m1:act1"
     , "  o  m1/fail/WD/C_SCH"
@@ -164,8 +180,6 @@ result1 = unlines
     , "  o  m1/parse/INV/m1:inv1"
     , "  o  m1/parse/INV/m1:inv2"
     , "  o  m1/parse/INV/m1:inv3"
-    , "  o  m1/parse/SCH/m1:grd0"
-    , "  o  m1/parse/SCH/m1:grd1"
     , "  o  m1/parse/WD/ACT/m1:act0"
     , "  o  m1/parse/WD/ACT/m1:act1"
     , "  o  m1/parse/WD/ACT/m1:act2"
@@ -173,7 +187,7 @@ result1 = unlines
     , "  o  m1/parse/WD/F_SCH"
     , "  o  m1/parse/WD/GRD"
     , "  o  m1/parse/WWD"
-    , "passed 126 / 126"
+    , "passed 122 / 122"
     ]
 
 case2 :: IO POResult
@@ -231,3 +245,31 @@ result2 = unlines
     , "  o  m2/parse/WWD"
     , "passed 48 / 48"
     ]
+
+case3 :: IO (Either [Error] (EventRef Expr))
+case3 = runEitherT $ do
+    r <- EitherT $ parse_machine path0 2
+    S.lookup (Right "input",Right "input") $ all_refs' r
+
+result3 :: Either [Error] EventRef'
+result3 = Right $ eventRef "input" "input" &~ do
+        let fs = make_type (Sort "FS" "FS" 0) []
+            file = symbol_table [Var "file" fs]
+            c = ctxWith [impFunctions] $ do
+                [carrier| FS |]
+                [var| file : FS |]
+                [var| in : \Int \pfun FS |]
+                [var| v : \Int |]
+            acts  = fromList 
+                    [ ("m0:act0",c [act| in := in \1| (v+1) \fun file |])
+                    , ("m0:act1",c [act| v := v + 1 |]) ]
+        old %= execState (do
+            params  .= file
+            actions .= acts
+            )
+        abs_actions .= acts
+        new %= execState (do
+            params  .= file
+            actions .= acts
+            )
+
