@@ -267,7 +267,7 @@ type MachineP4 = MachineP4' EventP4 TheoryP3
 
 data MachineP4' events theory = MachineP4
     { _p3 :: MachineP3' events theory
-    , _pLiveRule :: Map ProgId Rule
+    , _pLiveRule :: Map ProgId ProofTree
     , _pProofs   :: Map Label (Tactic Proof, LineInfo)
     , _pComments :: Map DocItem String
     } deriving (Typeable,Show,Generic)

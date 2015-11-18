@@ -140,6 +140,21 @@ instance Show expr => Show (PropertySet' expr) where
 
 makeRecordConstr ''PropertySet'
 
+class ReferencesEvents a where
+    traverseEvents :: Traversal' a EventId
+
+instance ReferencesEvents (Transient' expr) where
+    traverseEvents f (Tr fv p es hint) = Tr fv p <$> traverse f es <*> pure hint
+
+class ReferencesProgress a where
+    traverseProgId :: Traversal' a ProgId
+
+instance ReferencesProgress (TrHint' expr) where
+    traverseProgId f (TrHint ws p) = TrHint ws <$> traverse f p
+
+instance ReferencesProgress (Transient' expr) where
+    traverseProgId f (Tr x y z hint) = Tr x y z <$> traverseProgId f hint
+
 type PropertySetField = PropertySet'Field Expr
 
 empty_property_set :: PropertySet' expr
@@ -225,8 +240,9 @@ instance HasScope expr => HasScope (PropertySet' expr) where
         ]
 
 instance Monoid (PropertySet' expr) where
-    mempty = genericMEmpty
+    mempty  = genericMEmpty
     mappend = genericMAppend
+    mconcat = genericMConcat
 
 instance Arbitrary expr => Arbitrary (ProgressProp' expr) where
     arbitrary = genericArbitrary

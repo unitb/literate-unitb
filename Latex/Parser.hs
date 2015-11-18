@@ -45,7 +45,6 @@ import Utilities.Graph hiding ( map, empty, size )
 import Utilities.Lines as LN
 import Utilities.Syntactic
 --import Utilities.Zipper as Z
---import Utilities.Trace
 
 data LatexNode = 
         Env LineInfo String LineInfo LatexDoc LineInfo

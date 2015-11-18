@@ -25,13 +25,14 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
-import Data.List as L
+import Data.List as L hiding (lookup)
 import Data.List.Utils as L
-import Data.Map as M
+import Data.Map as M hiding (lookup)
 import Data.Time
 
 import GHC.Stack
 
+import Prelude hiding (lookup)
 import PseudoMacros
 
 import Utilities.Format
@@ -55,15 +56,14 @@ list_file_obligations' path = do
     path <- canonicalizePath path
     t <- getModificationTime path
     m <- takeMVar pos
-    do
-            sys <- parse_system path
-            let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
-                cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
-                -- ms :: Either 
-                ms = view' machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
-                ts = view' theories <$> sys >>= traverseWithKey (cmd theory_po)
-            putMVar pos $ M.insert path ((ms,ts),t) m
-            return (ms,ts)
+    sys <- parse_system path
+    let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
+        cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
+        -- ms :: Either 
+        ms = view' machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
+        ts = view' theories <$> sys >>= traverseWithKey (cmd theory_po)
+    putMVar pos $ M.insert path ((ms,ts),t) m
+    return (ms,ts)
 
 verify :: FilePath -> Int -> IO POResult
 verify path i = makeReport' empty $ do
@@ -84,11 +84,17 @@ all_proof_obligations path = runEitherT $ do
             cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
         return cmd
 
+withLI :: (?loc :: CallStack) => Either String a -> Either [Error] a
+withLI = mapLeft $ errorTrace [] ?loc
+
 raw_proof_obligation :: FilePath -> String -> Int -> IO String
 raw_proof_obligation path lbl i = makeReport $ do
         ms <- EitherT $ Doc.parse_machine path
-        let po = raw_machine_pos (ms !! i) ! label lbl
-            cmd = unlines $ L.map pretty_print' $ z3_code po
+        m  <- Document.Tests.Suite.lookup i ms
+        po <- hoistEither $ withLI $ lookupSequent 
+                (label lbl) 
+                (raw_machine_pos m)
+        let cmd = unlines $ L.map pretty_print' $ z3_code po
         return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
 
 stripAnnotation :: Expr -> Expr
@@ -105,7 +111,7 @@ proof_obligation :: FilePath -> String -> Int -> IO String
 proof_obligation = proof_obligation_with id
 
 lookupSequent :: Label -> Map Label Sequent -> Either String Sequent
-lookupSequent lbl pos = case lbl `M.lookup` pos of
+lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
                 Nothing ->
@@ -143,12 +149,13 @@ find_errors path = do
             | hide_error_path = L.replace (p ++ ":") "error "
             | otherwise       = id
     return $ either 
-        (hide . unlines . L.map report) 
+        (hide . unlines . L.map report)
         (const $ "no errors")
         m
 
 parse_machine :: FilePath -> Int -> IO (Either [Error] Machine)
-parse_machine path n = fmap (!! n) <$> parse path
+parse_machine path n = runEitherT $ -- fmap (!! n) <$> 
+        lookup n =<< EitherT (parse path)
 
 parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
@@ -174,5 +181,5 @@ get_system path = do
     EitherT $ either (Left . show_err) Right 
         <$> parse_system path
 
-lookup :: (?loc :: CallStack,Monad m,Ord k) => k -> Map k a -> EitherT [Error] m a
-lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc "<nothing>") return $ M.lookup k m
+lookup :: (?loc :: CallStack,Monad m,Ixed f) => Index f -> f -> EitherT [Error] m (IxValue f)
+lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc "<nothing>") return $ m^?ix k

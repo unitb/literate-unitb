@@ -15,7 +15,6 @@ import Document.Phase.Proofs
 import Document.Phase.Structures
 import Document.Pipeline
 import Document.Proof
-import Document.Refinement
 import Document.Scope
 import Document.ExprScope hiding (var)
 import Document.VarScope  hiding (var)
@@ -508,7 +507,7 @@ case6 = return $ do
             "m1" ## runMap' (do
                 "ae0" ## Just (("prog1",prog1),li))
         liveProof = M.insert "m1" (runMap' $ do
-            "prog0" ## ((Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
+            "prog0" ## ((makeRule' Monotonicity "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
             $ M.empty <$ ms
         comment = M.empty <$ ms
         proof = M.empty <$ ms
@@ -529,7 +528,7 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
             | eid == Right "ae0" && mid == "m1" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
             | otherwise           = makeEventP4 e [] Nothing []
         newMch mid m 
-            | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (Rule $ Monotonicity (getExpr <$> prog1) "prog1" (getExpr <$> prog1))]
+            | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (makeRule' Monotonicity "prog1" (getExpr <$> prog1))]
             | otherwise   = makeMachineP4' m []
         ch = ScheduleChange 
                 (M.singleton "sch0" ()) 
@@ -614,7 +613,7 @@ result8 = Right $ SystemP h ms
                 inh_props.inv  .= M.fromList [("inv0",c [expr| x \le y |])]
                 props.progress .= M.fromList [("prog0",pprop),("prog1",pprop)]
                 props.safety .= M.singleton "saf0" sprop
-                derivation .= M.fromList [("prog0",Rule $ Monotonicity pprop' "prog1" pprop'),("prog1",Rule Add)]
+                derivation .= M.fromList [("prog0",makeRule' Monotonicity "prog1" pprop'),("prog1",makeRule Add)]
         --y = Var "y" int
         skipLbl = Left SkipEvent
         ae0sched = create $ do

@@ -32,7 +32,7 @@ test = test_cases
         "Z3 test" 
         [ case0, case1
         , case2, case3
-        , case4
+        --, case4
         , Case "canonical lambdas part a" case5a result5a
         , Case "canonical lambdas part b" case5b result5b
         , Case "canonical lambdas with quantifier part a" case6a result6a
@@ -49,8 +49,8 @@ case2 :: TestCase
 case2 = Case "sample_quant3" (verify (label "") sample_quant3 2) $ Right Unsat
 case3 :: TestCase
 case3 = Case "sample proof" (discharge (label "") sample_proof) Valid
-case4 :: TestCase
-case4 = Case "check sample calc" (check sample_calc) (Right [])
+--case4 :: TestCase
+--case4 = Case "check sample calc" (check sample_calc) (Right [])
 
 sample :: String
 sample = unlines [

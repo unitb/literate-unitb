@@ -7,6 +7,7 @@ module Utilities.Invariant
     , HasPrefix(..)
     , (===), isSubsetOf', isProperSubsetOf'
     , isSubmapOf',isProperSubmapOf'
+    , member'
     , relation, provided
     , fromJust''
     , assertFalse, assertFalse'
@@ -24,7 +25,7 @@ import Data.Default
 import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.List
-import Data.Map (isSubmapOf,isProperSubmapOf,Map)
+import Data.Map (isSubmapOf,isProperSubmapOf,Map,member)
 import Data.Maybe
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
@@ -129,7 +130,10 @@ isSubmapOf' = relation "/⊆" isSubmapOf
 isProperSubmapOf' :: (Ord k,Eq a,Show k,Show a) => Map k a -> Map k a -> Invariant ()
 isProperSubmapOf' = relation "/⊂" isProperSubmapOf
 
-relation :: Show a => String -> (a -> a -> Bool) -> a -> a -> Invariant ()
+member' :: (Show k,Show a,Ord k) => k -> Map k a -> Invariant ()
+member' = relation "/∈" member
+
+relation :: (Show a,Show b) => String -> (a -> b -> Bool) -> a -> b -> Invariant ()
 relation symb rel x y = printf "%s %s %s" (show x) symb (show y) ## (x `rel` y)
 
 class HasPrefix m where

@@ -46,6 +46,8 @@ test = test_cases
         ,  Gen.test_case
         ]
 
+_ = Gen.test_case
+
 example0 :: Either [Error] RawMachine
 example0 = do
         let (x,x',x_decl) = prog_var "x" int
@@ -126,9 +128,9 @@ result_example0 = unlines
     , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , "  o  m0/SKIP/CO/CO0"
-    , "  o  m0/TR/TR0/evt/EN"
-    , "  o  m0/TR/TR0/evt/NEG"
     , "  o  m0/TR0/TR/WD"
+    , "  o  m0/TR0/TR/evt/EN"
+    , "  o  m0/TR0/TR/evt/NEG"
     , "  o  m0/evt/CO/CO0"
     , "  o  m0/evt/FIS/x@prime"
     , "  o  m0/evt/FIS/y@prime"
@@ -148,11 +150,11 @@ result_train_m0 = unlines
     , "  o  train_m0/INIT/WD"
     , "  o  train_m0/INIT/WWD"
     , "  o  train_m0/INV/WD"
-    , "  o  train_m0/TR/TR0/WFIS/t/t@prime"
-    , "  o  train_m0/TR/TR0/leave/EN"
-    , "  o  train_m0/TR/TR0/leave/NEG"
     , "  o  train_m0/TR0/TR/WD"
     , "  o  train_m0/TR0/TR/WD/witness/t"
+    , "  o  train_m0/TR0/TR/WFIS/t/t@prime"
+    , "  o  train_m0/TR0/TR/leave/EN"
+    , "  o  train_m0/TR0/TR/leave/NEG"
     , "  o  train_m0/enter/FIS/st@prime"
     , "  o  train_m0/enter/INV/J0"
     , "  o  train_m0/enter/WD/C_SCH"
@@ -454,25 +456,25 @@ get_cmd_tr_po em = return (do
         m <- em
         let lbl = composite_label [as_label $ _name m, "TR/TR0/t@param"]
         pos <- proof_obligation m
-        let po = pos ! lbl
-            cmd =  z3_code po
-        return $ unlines $ map pretty_print' cmd)
+        let po = lookupSequent lbl pos
+            cmd = either id (unlines . map pretty_print' . z3_code) po
+        return cmd)
     
 get_tr_en_po :: Either [Error] RawMachine -> IO String
 get_tr_en_po em = either (return . show_err) return $ do
         m   <- em
         pos <- proof_obligation m
-        let lbl = composite_label [as_label $ _name m, "TR/TR0/leave/EN"]
-            po  = either error id $ lookupSequent lbl pos
-        return $ show po
+        let lbl = composite_label [as_label $ _name m, "TR0/TR/leave/EN"]
+            po  = either id show $ lookupSequent lbl pos
+        return $ po
 
 get_tr_neg_po :: Either [Error] RawMachine -> IO String
 get_tr_neg_po em = either (return . show_err) return $ do
         m   <- em
         pos <- proof_obligation m
-        let lbl = composite_label [as_label $ _name m, "TR/TR0/leave/NEG"]
-            po  = either error id $ lookupSequent lbl pos
-        return $ show po
+        let lbl = composite_label [as_label $ _name m, "TR0/TR/leave/NEG"]
+            po  = either id show $ lookupSequent lbl pos
+        return po
 
 case3 :: IO [([Var], [Expr])]
 result3 :: [([Var], [Expr])]

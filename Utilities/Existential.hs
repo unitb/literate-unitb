@@ -132,6 +132,14 @@ cellCompare' :: HasCell c (Cell constr)
              -> c -> c -> Ordering
 cellCompare' f x y = cellCompare f (x^.cell) (y^.cell)
 
+cellLens :: Functor f => (forall a. constr a => LensLike' f a b) -> LensLike' f (Cell constr) b
+cellLens ln f = traverseCell (ln f)
+
+cellLens' :: (HasCell c (Cell constr), Functor f)
+          => (forall a. constr a => LensLike' f a b) 
+          -> LensLike' f c b
+cellLens' ln = cell.cellLens ln
+
 arbitraryInstanceOf :: Name -> Name -> ExpQ
 arbitraryInstanceOf cons cl = arbitraryInstanceOf' cons cl []
 

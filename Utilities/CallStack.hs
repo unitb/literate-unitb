@@ -1,4 +1,7 @@
-module Utilities.CallStack where
+module Utilities.CallStack 
+    ( module Utilities.CallStack
+    , module GHC.Stack )
+where
 
 import Control.Lens
 

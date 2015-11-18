@@ -944,9 +944,6 @@ result1 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
-    , "  o  train0/TR/tr0/WFIS/t/t@prime"
-    , "  o  train0/TR/tr0/leave/EN"
-    , "  o  train0/TR/tr0/leave/NEG"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal"
@@ -1044,6 +1041,9 @@ result1 = unlines
     , "  o  train0/leave/WWD"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
+    , "  o  train0/tr0/TR/WFIS/t/t@prime"
+    , "  o  train0/tr0/TR/leave/EN"
+    , "  o  train0/tr0/TR/leave/NEG"
     , "passed 113 / 114"
     ]
 
@@ -1390,7 +1390,7 @@ case4 = proof_obligation path0 "train0/leave/SCH/grd0" 0
 
 result5 :: String
 result5 = unlines $
-    [ "; train0/TR/tr0/WFIS/t/t@prime" 
+    [ "; train0/tr0/TR/WFIS/t/t@prime" 
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     ] ++
@@ -1441,13 +1441,13 @@ result5 = unlines $
         ] ++ 
         check_sat ++
         pop ++
-        [ "; train0/TR/tr0/WFIS/t/t@prime" ])
+        [ "; train0/tr0/TR/WFIS/t/t@prime" ])
     where
         kw = [ "finite@@sl@LOC (mk-set" 
              , "(elem@@sl@LOC x (mk-set@@sl@LOC y))" ]
 
 case5 :: IO String
-case5 = proof_obligation path0 "train0/TR/tr0/WFIS/t/t@prime" 0
+case5 = proof_obligation path0 "train0/tr0/TR/WFIS/t/t@prime" 0
 
 addDecl :: String -> [String] -> [String]
 addDecl y xs = x ++ y : z
@@ -1457,7 +1457,7 @@ addDecl y xs = x ++ y : z
 
 result23 :: String
 result23 = unlines $
-    [ "; train0/TR/tr0/leave/EN" 
+    [ "; train0/tr0/TR/leave/EN" 
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     ] ++
@@ -1507,17 +1507,17 @@ result23 = unlines $
         ] ++ 
         check_sat ++
         pop ++
-        [ "; train0/TR/tr0/leave/EN" ] )
+        [ "; train0/tr0/TR/leave/EN" ] )
     where
         kw = [ "finite@@sl@LOC (mk-set" 
              , "(elem@@sl@LOC x (mk-set@@sl@LOC y))" ]
 
 case23 :: IO String
-case23 = proof_obligation path0 "train0/TR/tr0/leave/EN" 0
+case23 = proof_obligation path0 "train0/tr0/TR/leave/EN" 0
 
 result24 :: String
 result24 = unlines $
-    [ "; train0/TR/tr0/leave/NEG" 
+    [ "; train0/tr0/TR/leave/NEG" 
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     ] ++
@@ -1579,13 +1579,13 @@ result24 = unlines $
         ] ++ 
         check_sat ++
         pop ++
-        [ "; train0/TR/tr0/leave/NEG" ] )
+        [ "; train0/tr0/TR/leave/NEG" ] )
     where
         kw = [ "finite@@sl@LOC (mk-set" 
              , "(elem@@sl@LOC x (mk-set@@sl@LOC y))" ]
 
 case24 :: IO String
-case24 = proof_obligation path0 "train0/TR/tr0/leave/NEG" 0
+case24 = proof_obligation path0 "train0/tr0/TR/leave/NEG" 0
 
 --result6 = unlines ( 
 --        train_decl True ++ 
@@ -1609,7 +1609,7 @@ case24 = proof_obligation path0 "train0/TR/tr0/leave/NEG" 0
 --        pos <- list_file_obligations path0
 --        case pos of
 --            Right [(_,pos)] -> do
---                let po = pos ! "m0/leave/TR/NEG/tr0"
+--                let po = pos ! "m0/leave/NEG/TR/tr0"
 --                    cmd = unlines $ map (show . as_tree) $ z3_code po
 --                return cmd
 --            x -> return $ show x
@@ -1841,9 +1841,6 @@ result14 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
-    , "  o  train0/TR/tr0/WFIS/t/t@prime"
-    , "  o  train0/TR/tr0/leave/EN"
-    , "  o  train0/TR/tr0/leave/NEG"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal"
@@ -1917,9 +1914,12 @@ result14 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
+    , "  o  train0/tr0/TR/WFIS/t/t@prime"
+    , "  o  train0/tr0/TR/leave/EN"
+    , "  o  train0/tr0/TR/leave/NEG"
     , "passed 82 / 84"
     ]
-        
+
 case14 :: IO (String, Map Label Sequent)
 case14 = verify path14 0
     
@@ -1937,9 +1937,6 @@ result15 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
-    , "  o  train0/TR/tr0/WFIS/t/t@prime"
-    , "  o  train0/TR/tr0/leave/EN"
-    , "  o  train0/TR/tr0/leave/NEG"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal"
@@ -2018,9 +2015,12 @@ result15 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
+    , "  o  train0/tr0/TR/WFIS/t/t@prime"
+    , "  o  train0/tr0/TR/leave/EN"
+    , "  o  train0/tr0/TR/leave/NEG"
     , "passed 87 / 90"
     ]
-      
+
 case15 :: IO (String, Map Label Sequent)
 case15 = verify path15 0
 
@@ -2038,9 +2038,6 @@ result16 = unlines
     , "  o  train0/INV/WD"
     , "  o  train0/SKIP/CO/co0"
     , "  o  train0/SKIP/CO/co1"
-    , "  o  train0/TR/tr0/WFIS/t/t@prime"
-    , "  o  train0/TR/tr0/leave/EN"
-    , "  o  train0/TR/tr0/leave/NEG"
     , "  o  train0/co0/CO/WD"
     , "  o  train0/co1/CO/WD"
     , "  o  train0/enter/CO/co0/case 1/goal"
@@ -2113,7 +2110,6 @@ result16 = unlines
     , "  o  train0/leave/CO/co1/step 6"
     , "  o  train0/leave/CO/co1/step 7"
     , "  o  train0/leave/CO/co1/step 8"
-    --, "  o  train0/leave/C_SCH/weaken/c0"
     , "  o  train0/leave/FIS/in@prime"
     , "  o  train0/leave/FIS/loc@prime"
     , "  o  train0/leave/INV/inv1"
@@ -2139,6 +2135,9 @@ result16 = unlines
     , "  o  train0/s1/SAF/WD/rhs"
     , "  o  train0/tr0/TR/WD"
     , "  o  train0/tr0/TR/WD/witness/t"
+    , "  o  train0/tr0/TR/WFIS/t/t@prime"
+    , "  o  train0/tr0/TR/leave/EN"
+    , "  o  train0/tr0/TR/leave/NEG"
     , "passed 108 / 109"
     ]
 

@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE RankNTypes         #-}
 module Main where
 
 import Build
 
 import Control.Concurrent
 import Control.Exception
+import Control.Exception.Assert
 
 import Control.Monad
 import Control.Monad.Trans
@@ -50,8 +52,14 @@ _errFile :: FilePath
 _o_file :: FilePath
 _o_file = replaceExtension file ".o"
 
-inBin :: (Bool -> FilePath -> FilePath) -> FilePath -> FilePath
-inBin arse file = arse (path `isPrefixOf` file) $ path </> "bin" </> drop (length path + 1) (dropExtension file) <.> "o"
+inBin :: Assert -> FilePath -> FilePath
+inBin arse file = byRel arse "isPrefixOf" isPrefixOf path file $ path </> "bin" </> drop (length path + 1) (dropExtension file) <.> "o"
+
+type Assert = forall x. Bool -> x -> x
+
+byRel :: Show a => Assert -> String -> (a -> a -> Bool) -> a -> a -> x -> x
+byRel arse tag rel x0 x1 r = assertMessage tag
+    (show x0 ++ " /rel/ " ++ show x1) (arse $ x0 `rel` x1) r
 
 compile_file :: Build ()
 compile_file = do

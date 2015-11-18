@@ -9,13 +9,13 @@ module UnitB.Machine where
 import Logic.Expr.Scope
 import Logic.Operator
 import Logic.Proof
-import Logic.Proof.POGenerator ( POGen )
 import Logic.Theory as Th
 
 import Theories.Arithmetic
 
 import UnitB.Event
 import UnitB.Expr hiding (merge,target)
+import UnitB.Proof
 import UnitB.Property
 
     -- Libraries
@@ -29,6 +29,7 @@ import Control.Monad.State
 import Control.Monad.Trans.Maybe
 
 import           Data.Default
+import           Data.Monoid
 import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
 import           Data.Functor.Classes
@@ -43,7 +44,6 @@ import           Data.Typeable
 
 import Utilities.BipartiteGraph as G
 import Utilities.Format
-import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Lens
@@ -77,7 +77,7 @@ data Machine'' expr =
         , _event_table :: EventTable expr
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
-        , _derivation :: Map ProgId Rule         
+        , _derivation :: Map ProgId ProofTree         
         , _proofs     :: Map Label Proof
         , _comments   :: Map DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
@@ -109,13 +109,7 @@ data DocItem =
         | DocProg Label
     deriving (Eq,Ord,Generic)
 
-data Rule = forall r. RefRule r => Rule r
-    deriving (Typeable)
 
-class (Typeable a, Eq a, Show a, NFData a) => RefRule a where
-    refinement_po :: a -> RawMachine -> POGen ()
-    rule_name     :: a -> Label
-    supporting_evts :: a -> [EventId]
 
 instance Show expr => Show (EventTable expr) where
     show (EventTable m) = show m
@@ -136,16 +130,8 @@ instance Show DocItem where
     show (DocInv xs) = format "{0} (invariant)" xs
     show (DocProg xs) = format "{0} (progress)" xs
 
-instance Show Rule where
-    show (Rule x) = show x
 
-instance Eq Rule where
-    Rule x == Rule y = x `h_equal` y
 
-instance RefRule Rule where
-    refinement_po (Rule r) = refinement_po r
-    rule_name (Rule r) = rule_name r
-    supporting_evts (Rule r) = supporting_evts r
 
 makeLenses ''EventTable
 makeLenses ''Machine''
@@ -175,9 +161,18 @@ instance (IsExpr expr) => HasInvariant (Machine'' expr) where
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
                 format "%s - %s" (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
                     ## (ev^.old.actions) === (ev^.abs_actions)
+                -- Proofs match properties
+            "inv9" ## ((m^.derivation) `M.difference` (m^.props.progress)) === M.empty
+                -- events in proofs
+            "inv10" ## mapM_ ((`elem` (m^.events)).Right) 
+                (m^.partsOf (derivation.traverse.traverseEvents))
+                -- progress/safety properties referenced in proofs
+            "inv11" ## mapM_ (`member'` (m^.all_props.progress)) 
+                (m^.partsOf (derivation.traverse.traverseProgId))
             --"inv8" ## no name clashes between declarations of events, state variables and theories
             --"inv9" ## no name clashes between expression tags of events, state variables and theories
         where
+            elem = relation "elem" rightMember 
             validEvent (Tr _ _ es _) = L.all (`M.member` nonSkipUpwards m) es
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) (NE.toList es)
@@ -350,6 +345,9 @@ events :: Lens' (Machine'' expr)
                    ())
 events = event_table . table
 
+all_props :: Getter (Machine'' expr) (PropertySet' expr)
+all_props = to $ \m -> (m^.props) <> (m^.inh_props)
+
 -- data Decomposition = Decomposition 
 
 all_notation :: Show expr => Machine' expr -> Notation
@@ -401,5 +399,3 @@ newMachine arse name f = empty_machine name & content arse %~ execState f
 
 instance NFData DocItem where
 instance NFData expr => NFData (Machine'' expr) where
-instance NFData Rule where
-    rnf (Rule x) = rnf x

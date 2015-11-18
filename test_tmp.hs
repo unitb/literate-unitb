@@ -8,19 +8,20 @@ module Main where
 --import Utilities.Syntactic
 
 -- import Document.Tests.Suite
-import Document.Tests.Puzzle  as Puzz
+import Document.Phase.Expressions as PExp
 import Document.Tests.Cubes   as Cubes
-import Document.Tests.Lambdas as Lam
-import Document.Tests.Parser as Parser
-import Document.Tests.SmallMachine  as SM
 import Document.Tests.GarbageCollector  as GC
+import Document.Tests.Lambdas as Lam
+import Document.Tests.LockFreeDeque as Deq
+import Document.Tests.Parser as Parser
+import Document.Tests.Phase  as Sync
+import Document.Tests.Puzzle  as Puzz
+import Document.Tests.SmallMachine  as SM
+import Document.Tests.Suite 
 import Document.Tests.TerminationDetection  as Term
 import Document.Tests.TrainStation  as TS
-import Document.Tests.TrainStationSets  as TSS
 import Document.Tests.TrainStationRefinement  as TSRef
-import Document.Tests.LockFreeDeque as Deq
-import Document.Tests.Suite 
-import Document.Phase.Expressions as PExp
+import Document.Tests.TrainStationSets  as TSS
 import Z3.Test as Z3
 import Document.Phase.Test as Ph
 import Document.Test as Doc
@@ -105,6 +106,7 @@ main = timeIt $ do
     return $ run_test_cases SM.test_case
     return $ run_test_cases Lam.test_case
     return $ run_test_cases Cubes.test_case
+    return $ run_test_cases Sync.test_case
     return $ run_test_cases Puzz.test_case
     return $ run_test_cases UB.test_case
     return $ print =<< Lines.run_tests

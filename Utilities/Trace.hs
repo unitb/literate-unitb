@@ -127,6 +127,9 @@ instance Show TracingError where
 
 instance Exception TracingError where
 
+beforeAfterIO' :: NFData a => String -> IO a -> IO a
+beforeAfterIO' msg cmd = beforeAfterIO msg (force <$> cmd)
+
 beforeAfterIO :: String -> IO a -> IO a
 beforeAfterIO msg cmd = mapException f $ do
         traceM $ "before " ++ msg

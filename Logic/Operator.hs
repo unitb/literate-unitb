@@ -81,7 +81,10 @@ data Notation = Notation
     , _commands :: [Command]
     , _quantifiers :: [(String,HOQuantifier)]
     , _struct :: Matrix Operator Assoc
-    } deriving (Eq,Show,Generic)
+    } deriving (Eq,Generic)
+
+instance Show Notation where
+    show _ = "<notation>" 
 
 empty_notation :: Notation
 empty_notation = with_assoc $ Notation 

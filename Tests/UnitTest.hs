@@ -41,7 +41,6 @@ import PseudoMacros
 
 import Utilities.Format
 import Utilities.Indentation
--- import Utilities.Trace
 
 import System.FilePath
 import System.IO

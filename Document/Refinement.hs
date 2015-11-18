@@ -1,447 +1,185 @@
 {-# LANGUAGE IncoherentInstances    #-}
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables     #-}
-{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE BangPatterns, TypeFamilies       #-}
 module Document.Refinement where
 
     -- Module
 import Document.Phase
+import Document.Phase.Transient
 import Document.Proof
 import Document.Visitor
 
 import UnitB.AST hiding (assert)
-import UnitB.PO
 
 import Latex.Parser
 
-import Logic.Expr
-import Logic.Proof.POGenerator as POG
+import Logic.Expr hiding (Const)
 
     -- Libraries
 import Control.Arrow (second)
-import Control.DeepSeq
 import Control.Lens hiding (Context)
 
 import Control.Monad.RWS as RWS
 
 import Data.Char
 import Data.Either
-import Data.List as L ( intercalate, (\\), null )
+import Data.List as L
+import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map as M hiding ( map, (\\) )
-import Data.Typeable
-
-import GHC.Generics (Generic)
+import Data.Tuple
 
 import Utilities.Error
 import Utilities.Format
 import Utilities.Syntactic
-import qualified Utilities.Invariant as Inv 
-
 
 data RuleParserParameter = 
     RuleParserDecl 
-        MachineP2
-        MachineId
-        (Map Label ProgressProp)
-        (Map Label SafetyProp)
-        (Map Label Transient)
-        Label
-        [Label]
-        LatexDoc
-        ParserSetting
+        { getMachine :: MachineP2
+        , getMachineId :: MachineId
+        , getProgress :: (Map Label ProgressProp)
+        , getSafety :: (Map Label SafetyProp)
+        , getTransient :: (Map Label Transient)
+        , getGoal :: Label
+        , getHypotheses :: [Label]
+        , getHint :: LatexDoc
+        , getParser :: ParserSetting
+        }
 
-data Add = Add
-    deriving (Eq,Typeable,Show,Generic)
+type Rule = ProofTree
 
-instance RefRule Add where
-    rule_name _       = label "add"
-    refinement_po _ m = assert m "" zfalse
-    supporting_evts _ = []
+class ( LivenessRulePO rule
+      , Parsable (SafetyHyp rule)
+      , Parsable (ProgressHyp rule) )
+            => RuleParser rule where
 
-class RuleParser a where
-    parse_rule :: a -> [Label] -> String 
-               -> RuleParserParameter 
-               -> M Rule
+parse_rule :: RuleParser rule
+           => rule
+           -> LiveParser Rule
+parse_rule r = ProofNode r <$> (fmap (second ref.swap) <$> parseProgress r) 
+                             <*> (fmap (,Nothing) <$> parseSafety r)
+    where
+        ref :: ProgId -> ProofTree
+        ref pid = ProofNode (Reference pid) (Const ()) (Const ())
 
-instance RefRule a => RuleParser (M a,()) where
-    parse_rule (cmd,_) [] _ _ = do 
-            x <- cmd
-            return $ Rule x
-    parse_rule _ hyps_lbls _ _ = do
-        li <- ask
-        raise $ Error (format "too many hypotheses in the application of the rule: {0}" 
-                          $ intercalate "," $ map show hyps_lbls) li
+type LiveParser = RWST RuleParserParameter () [Label] M
 
-instance RefRule a => RuleParser (a,()) where
-    parse_rule (x,()) xs y z = do
-            let cmd = return x :: M a
-            parse_rule (cmd,()) xs y z
+class Parsable f where
+    parseMany :: Label
+              -> (Label -> M a)
+              -> LiveParser (f a)
 
-getProgress :: RuleParserParameter -> Map Label ProgressProp
-getProgress (RuleParserDecl _ _ prog _ _ _ _ _ _) = prog
+instance Parsable None where
+    parseMany _ _ = return $ Const ()
+instance Parsable One where
+    parseMany rule f = do
+        xs <- get
+        case xs of
+          x:xs -> do
+            put xs
+            lift $ Identity <$> f x
+          [] -> lift $ do
+            li <- ask
+            raise $ Error (format "refinement ({0}): expecting more properties" rule) li
+instance Parsable [] where
+    parseMany _ f = do
+        xs <- get
+        put []
+        lift $ mapM f xs
 
-getSafety :: RuleParserParameter -> Map Label SafetyProp
-getSafety (RuleParserDecl _ _ _ saf _ _ _ _ _) = saf
+instance Parsable Maybe where
+    parseMany rule f = do
+        xs <- get
+        put []
+        lift $ case xs of
+            [] -> return Nothing
+            [x] -> Just <$> f x
+            _   -> do
+                li <- ask
+                raise $ Error (format "refinement ({0}): expecting at most one property" rule) li                
 
-getTransient :: RuleParserParameter -> Map Label Transient
-getTransient (RuleParserDecl _ _ _ _ tr _ _ _ _) = tr
+instance Parsable NonEmpty where
+    parseMany r f = (:|) <$> parseOne r f
+                         <*> parseMany r f
 
-getGoal :: RuleParserParameter -> Label
-getGoal (RuleParserDecl _ _ _ _ _ goal_lbl _ _ _) = goal_lbl
-
-getHypotheses :: RuleParserParameter -> [Label]
-getHypotheses (RuleParserDecl _ _ _ _ _ _ hyps_lbls _ _) = hyps_lbls
-
-getHint :: RuleParserParameter -> LatexDoc
-getHint (RuleParserDecl _ _ _ _ _ _ _ hint _) = hint
-
-getParser :: RuleParserParameter -> ParserSetting
-getParser (RuleParserDecl _ _ _ _ _ _ _ _ parser) = parser
-
-instance RuleParser (a,()) => RuleParser (RawProgressProp -> a,()) where
-    parse_rule (f,_) xs rule param = do
-        let f' x = f
-                where
-                    _ = x :: Label
-        parse_rule (f',()) xs rule param 
-
-instance RuleParser (a,()) => RuleParser (Label -> RawProgressProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param = do
-        let prog = getProgress param
+parseProgress :: (LivenessRule rule, Parsable f) 
+              => rule
+              -> LiveParser (f (ProgId, RawProgressProp))
+parseProgress r = do
+    prog <- asks getProgress
+    let rule = rule_name r
+    parseMany rule $ \x -> do
         case M.lookup x prog of
-            Just p -> parse_rule (f x $ getExpr <$> p, ()) xs rule param
+            Just p -> return (PId x, getExpr <$> p)
             Nothing -> do
                 li <- lift $ ask
                 raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li
-    parse_rule _ [] rule _ = do
-                li <- ask
-                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
 
-instance RuleParser (a,()) => RuleParser (RawSafetyProp -> a,()) where
-    parse_rule (f,_) (x:xs) rule param = do
-        let saf = getSafety param
-        case M.lookup x saf of
-            Just p -> parse_rule (f $ getExpr <$> p, ()) xs rule param
-            Nothing -> do
-                li <- ask
-                raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li
-    parse_rule _ [] rule _ = do
-                li <- ask
-                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
+parseSafety :: (LivenessRule rule, Parsable f) 
+            => rule
+            -> LiveParser (f RawSafetyProp)
+parseSafety r = do
+        saf <- asks getSafety
+        let rule = rule_name r
+        parseMany rule $ \x -> 
+            case M.lookup x saf of
+                Just p -> return $ getExpr <$> p
+                Nothing -> do
+                    li <- ask
+                    raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li
 
-instance RuleParser (a,()) => RuleParser (Label -> RawTransient -> a,()) where
-    parse_rule (f,_) (x:xs) rule param = do
-        let tr = getTransient param
-        case M.lookup x tr of
-            Just p -> parse_rule (f x $ getExpr <$> p, ()) xs rule param
-            Nothing -> do
-                li <- ask
-                raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule x) li
-    parse_rule _ [] rule _ = do
-                li <- ask
-                raise $ Error (format "refinement ({0}): expecting more properties" rule) li
+instance RuleParser Induction where
+instance RuleParser Disjunction where
+instance RuleParser Discharge where
+instance RuleParser Monotonicity where
+instance RuleParser Implication where
+instance RuleParser NegateDisjunct where
+instance RuleParser Transitivity where
+instance RuleParser PSP where
+instance RuleParser Ensure where
 
-instance RefRule a => RuleParser ([Label] -> M a, ()) where
-    parse_rule (f,_) es rule _ = do
-        -- evts <- bind_all x
-        li <- ask
-        when (L.null es) 
-            $ raise $ Error (format "refinement ({0}): at least one event is required" rule) li
-        rule <- f es
-        return (Rule rule) -- ys rule param
-
-
---instance RuleParser (a,()) => RuleParser (Schedule -> a,()) where
---    parse_rule (f,_) (x:xs) rule param@(RuleParserParameter m _ _ _ _ _) = do
---        case M.lookup x $ schedule $ props m of
---            Just p -> parse_rule (f p, ()) xs rule param
---            Nothing -> do
---                li <- lift $ ask
---                left [Error (format "refinement ({0}): {1} should be a schedule" rule x) li]
---    parse_rule _ [] rule _ = do
---                li <- lift $ ask
---                left [Error (format "refinement ({0}): expecting more properties" rule) li]
-
-instance RefRule a => RuleParser (NE.NonEmpty (Label,RawProgressProp) -> a,()) where
-    parse_rule (f,_) xs rule param = do
-            li <- ask
-            when (L.null xs)
-                $ raise $ Error (format "refinement ({0}): expecting at least one progress property" rule) li
-            parse_rule (g,()) xs rule param
-        where
-            g = f . NE.fromList
-
-instance RefRule a => RuleParser ([(Label,RawProgressProp)] -> a,()) where
-    parse_rule (f,_) xs rule param = do
-            ps <- forM xs g
-            return $ Rule (f $ zip xs $ fmap getExpr <$> ps)        
-        where
-            prog = getProgress param
-            g x = maybe (do
-                li <- ask
-                raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li )
-                return $ M.lookup x prog
-
-instance RefRule a => RuleParser ([RawSafetyProp] -> a,()) where
-    parse_rule (f,_) xs rule param = do
-            xs <- forM xs g
-            return $ Rule (f $ fmap getExpr <$> xs)        
-        where
-            saf = getSafety param
-            g x = maybe (do
-                li <- ask
-                raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li )
-                return $ M.lookup x saf
-
-parse :: RuleParser a
-      => a -> String -> RuleParserParameter
+parse :: RuleParser rule
+      => rule
+      -> RuleParserParameter
       -> M Rule
-parse rc n param = do
-        let goal_lbl = getGoal param
-            hyps_lbls = getHypotheses param
-        parse_rule rc (goal_lbl:hyps_lbls) n param
+parse rc param = do
+        let hyps_lbls = getHypotheses param
+        fst <$> evalRWST (parse_rule rc) param hyps_lbls
 
-assert :: RawMachine -> String -> Expr -> POGen ()
-assert m suff prop = assert_hyp m suff M.empty M.empty prop
+parse' :: RuleParserParameter
+       -> LiveParser Rule
+       -> M Rule
+parse' param cmd = do
+        let hyps_lbls = getHypotheses param
+        fst <$> evalRWST cmd param hyps_lbls
 
-assert_hyp :: RawMachine -> String 
-           -> Map String Var -> Map Label Expr
-           -> Expr -> POGen () 
-assert_hyp m suff cnst hyps prop = 
-    with (do
-            _context $ assert_ctx m
-            _context $ step_ctx m
-            _context $ ctx
-            named_hyps $ invariants m
-            named_hyps hyps )
-        $ emit_goal Inv.assert [po_lbl] prop
-    where
-        ctx = Context M.empty cnst M.empty M.empty M.empty
-        po_lbl 
-            | L.null suff = composite_label []
-            | otherwise   = composite_label [label suff]
+parseOne :: Label -> (Label -> M b) -> LiveParser b
+parseOne rule f = runIdentity <$> parseMany rule f
 
-data Ensure = Ensure RawProgressProp (NE.NonEmpty EventId) RawTrHint
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Ensure where
-    rule_name _ = "ensure"
-    refinement_po (Ensure (LeadsTo vs p q) lbls hint) m = do
-            let saf = Unless vs p q
-                tr  = Tr (symbol_table vs) 
-                         (p `zand` znot q) lbls 
-                         hint 
-            prop_tr m ("", tr)
-            tr_wd_po m ("",tr)
-            prop_saf m ("", saf)
-            saf_wd_po m ("", saf)
-    supporting_evts (Ensure _ hyps _) = NE.toList hyps
-
-data Discharge = Discharge RawProgressProp Label RawTransient (Maybe RawSafetyProp)
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Discharge where
-    rule_name _ = label "discharge"
-    supporting_evts (Discharge _ _ (Tr _ _ evts _hint) _) = NE.toList evts
-        -- where
-        --     TrHint _ ev = hint
-            -- _ = _ ev
-    refinement_po 
-            (Discharge 
-                    (LeadsTo fv0 p0 q0)
-                    _ (Tr fv1 p1 _ _)
-                    (Just (Unless fv2 p2 q2))) 
-        m = do
-            assert m "saf/lhs" (
-                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                        p0 `zimplies` p2
-                        ) )
-            assert m "saf/rhs" (
-                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                        q2 `zimplies` q0
-                        ) )
-            assert m "tr" (
-                zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
-                        zand p0 (znot q0) `zimplies` p1
-                        ) )
-    refinement_po 
-            (Discharge 
-                    (LeadsTo fv0 p0 q0)
-                    _ (Tr fv1 p1 _ _)
-                    Nothing)
-            m = do
-                assert m "tr/lhs" (
-                    zforall (fv0 ++ M.elems fv1) ztrue (
-                             (p0 `zimplies` p1) ) )
-                assert m "tr/rhs" (
-                    zforall (fv0 ++ M.elems fv1) ztrue (
-                             (znot p1 `zimplies` q0) ) )
-
-mk_discharge :: RawProgressProp -> Label -> RawTransient -> [RawSafetyProp] -> Discharge
-mk_discharge p lbl tr [s] = Discharge p lbl tr $ Just $ getExpr <$> s
-mk_discharge p lbl tr []  = Discharge p lbl tr Nothing
-mk_discharge _ _ _ _  = error "expecting at most one safety property" 
-
-parse_discharge :: String -> RuleParserParameter
+parse_discharge :: RuleParserParameter
                 -> M Rule
-parse_discharge rule params = do
+parse_discharge params = do
     let hyps_lbls = getHypotheses params
     li <- ask
     when (1 > length hyps_lbls || length hyps_lbls > 2)
         $ raise $ Error (format "too many hypotheses in the application of the rule: {0}"
                             $ intercalate "," $ map show hyps_lbls) li
-    parse (mk_discharge,()) rule params
+    parse' params $ do
+        transient <- asks getTransient
+        let rule = "discharge"
+        (lbl,tr) <- parseOne rule $ \lbl -> do
+            case M.lookup lbl transient of
+                Just p -> return (lbl,getExpr <$> p)
+                Nothing -> do
+                    li <- ask
+                    raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule lbl) li
+        parse_rule (Discharge lbl tr)
 
-data Monotonicity = Monotonicity RawProgressProp Label RawProgressProp
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Monotonicity where
-    rule_name _   = label "monotonicity"
-    supporting_evts _ = []
-    refinement_po (Monotonicity 
-                    (LeadsTo fv0 p0 q0)
-                    _ (LeadsTo fv1 p1 q1))
-                  m = do
-                assert m "lhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                             (p0 `zimplies` p1))
-                assert m "rhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                             (q1 `zimplies` q0))
-
-data Implication = Implication RawProgressProp
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Implication where
-    rule_name _   = label "implication"
-    refinement_po (Implication 
-                    (LeadsTo fv1 p1 q1))
-                  m = 
-                assert m "" (
-                    zforall fv1 ztrue $
-                             (p1 `zimplies` q1))
-    supporting_evts _ = []
-
-data Disjunction = Disjunction RawProgressProp [(Label,([Var], RawProgressProp))]
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Disjunction where
-    rule_name _ = label "disjunction"
-    supporting_evts _ = []
-    refinement_po (Disjunction 
-                    (LeadsTo fv0 p0 q0)
-                    ps') m = do
-                assert m "lhs" (
-                    zforall fv0 ztrue (
-                        ( p0 `zimplies` zsome (map disj_p ps) ) ) )
-                assert m "rhs" (
-                    zforall fv0 ztrue (
-                        ( zsome (map disj_q ps) `zimplies` q0 ) ) )
-        where
-            ps = map snd ps'
-            disj_p ([], LeadsTo _ p1 _) = p1
-            disj_p (vs, LeadsTo _ p1 _) = zexists vs ztrue p1
-            disj_q ([], LeadsTo _ _ q1) = q1
-            disj_q (vs, LeadsTo _ _ q1) = zexists vs ztrue q1
-
-disjunction :: RawProgressProp -> [(Label,RawProgressProp)] -> Disjunction
-disjunction pr0@(LeadsTo fv0 _ _) ps = Disjunction (getExpr <$> pr0) ps0
-        where 
-            f pr1@(LeadsTo fv1 _ _) = (fv1 \\ fv0, getExpr <$> pr1)
-            ps0 = map (second f) ps
-
-data NegateDisjunct = NegateDisjunct RawProgressProp Label RawProgressProp
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule NegateDisjunct where
-    rule_name _   = label "trading"
-    supporting_evts _ = []
-    refinement_po 
-            (NegateDisjunct
-                    (LeadsTo fv0 p0 q0) _
-                    (LeadsTo fv1 p1 q1) )
-            m = do
-                assert m "lhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                                (zand p0 (znot q0) `zimplies` p1))
-                assert m "rhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                                (q1 `zimplies` q0))
-
-data Transitivity = Transitivity RawProgressProp (NE.NonEmpty (Label,RawProgressProp))
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Transitivity where
-    rule_name _ = label "transitivity"
-    supporting_evts _ = []
-    refinement_po 
-            (Transitivity
-                    (LeadsTo fv0 p0 q0)
-                    xs )
-                    -- (NonEmpty firstLT xs))
-                    -- _ (LeadsTo fv1 p1 q1)
-                    -- _ (LeadsTo fv2 p2 q2))
-            m = do
-                let (LeadsTo fv1 p1 _) = snd $ NE.head xs
-                    (LeadsTo fv2 _ q2) = snd $ NE.last xs
-                    conseq = zip (NE.toList xs) (drop 1 $ NE.toList xs)
-                assert m "lhs" ( 
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            p0 `zimplies` p1 )
-                forM_ conseq $ \(p,q) -> do
-                    let (l1, LeadsTo fv1 _ q1) = p
-                        (l2, LeadsTo fv2 p2 _) = q
-                    assert m (show $ "mhs" </> l1 </> l2) ( 
-                        zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                                q1 `zimplies` p2 )
-                assert m "rhs" ( 
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            q2 `zimplies` q0 )
-
-data PSP = PSP RawProgressProp Label RawProgressProp RawSafetyProp
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule PSP where
-    rule_name _ = label "PSP"
-    supporting_evts _ = []
-    refinement_po 
-            (PSP
-                    (LeadsTo fv0 p0 q0)
-                    _ (LeadsTo fv1 p1 q1)
-                    (Unless fv2 r b))
-            m = do
-                assert m "lhs" (
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                        (zand p1 r `zimplies` p0))
-                assert m "rhs" (
-                    zforall (fv0 ++ fv1 ++ fv2) ztrue $
-                            (q0 `zimplies` zor (q1 `zand` r) b))
-
-data Induction = Induction RawProgressProp Label RawProgressProp Variant
-    deriving (Eq,Typeable,Show,Generic)
-
-instance RefRule Induction where
-    rule_name _ = label "induction"
-    supporting_evts _ = []
-    refinement_po 
-            (Induction 
-                    (LeadsTo fv0 p0 q0)
-                    _ (LeadsTo fv1 p1 q1) v)
-            m = do
-                assert m "lhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                        ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
-                        )
-                assert m "rhs" (
-                    zforall (fv0 ++ fv1) ztrue $
-                        (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
-                        )
-
-parse_induction :: String 
-                -> RuleParserParameter
+parse_induction :: RuleParserParameter
                 -> M Rule
-parse_induction rule param = do
-        let prog = getProgress param
+parse_induction param = do
+        let rule = "induction"
+            prog = getProgress param
             goal_lbl = getGoal param
             hyps_lbls = getHypotheses param
             hint = getHint param
@@ -459,8 +197,8 @@ parse_induction rule param = do
             ,   ( not (h0 `member` prog)
                 , format "refinement ({0}): {1} should be a progress property" rule h0 )
             ]
-        let pr0@(LeadsTo fv0 _ _) = getExpr <$> (prog ! goal_lbl)
-            pr1@(LeadsTo fv1 _ _) = getExpr <$> (prog ! h0)
+        let (LeadsTo fv0 _ _) = getExpr <$> (prog ! goal_lbl)
+            (LeadsTo fv1 _ _) = getExpr <$> (prog ! h0)
         dum <- case fv1 \\ fv0 of
             [v] -> return v
             _   -> raise $ Error (   "inductive formula should have one free "
@@ -499,8 +237,22 @@ parse_induction rule param = do
                 -- return (dir,var,bound)
             Nothing -> raise $ Error "expecting a variant" li
             _ -> raise $ Error "invalid variant" li
-        return $ Rule (Induction pr0 h0 pr1 var)
+        parse (Induction var) param
 
+parse_ensure :: RuleParserParameter
+             -> M Rule
+parse_ensure params = do
+        let vs = symbol_table fv
+            p2 = getMachine params
+            thint = getHint params
+            LeadsTo fv _ _ = getProgress params ! getGoal params
+            lbls = getHypotheses params
+            m    = getMachineId params
+        lbls' <- bind  "Expected non empty list of events"
+                    $ NE.nonEmpty lbls
+        hint <- tr_hint p2 m vs lbls' thint
+        lbls <- get_events p2 lbls'
+        parse (Ensure lbls (getExpr <$> hint)) params
 
 --data Cancellation = Cancellation ProgressProp ProgressProp ProgressProp
 --
@@ -516,14 +268,3 @@ parse_induction rule param = do
 --         ++ assert m "q" (q1 `zimplies` 
 --         ++ assert m "r"
 --         ++ assert m "b"
-
-instance NFData Add
-instance NFData Ensure
-instance NFData Discharge
-instance NFData Monotonicity
-instance NFData Implication
-instance NFData Disjunction
-instance NFData NegateDisjunct
-instance NFData Transitivity
-instance NFData PSP
-instance NFData Induction

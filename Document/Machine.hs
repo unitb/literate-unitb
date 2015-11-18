@@ -79,7 +79,7 @@ make_machine (MId m) p4 = mch'
             inits .= p4^.pInit
             props .= p4^.pNewPropSet 
             derivation .= (ref_prog 
-                    `union` (Rule Add <$ (p4^.pNewPropSet.progress))) 
+                    `union` (makeRule Add <$ (p4^.pNewPropSet.progress))) 
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
             event_table .= EventTable evts -- M.mapKeys as_label evts 
@@ -99,8 +99,9 @@ make_machine (MId m) p4 = mch'
         mch' = do
             let pos = raw_machine_pos mch
                 po_err = proofs `difference` pos
-            all_errors $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
+            x <- all_errors $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
                 Left [Error (format "proof obligation does not exist: {0}" lbl) li]
+            triggerM x
             xs <- all_errors $ flip map (toList proofs) $ \(k,(tac,li)) -> do
                 p <- runTactic li (pos ! k) tac
                 return (k,p)

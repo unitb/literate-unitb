@@ -18,7 +18,6 @@ import Theories.SetTheory
 
 import Utilities.Error
 import Utilities.Syntactic
---import Utilities.Trace
 
     -- Libraries
 import qualified Control.Applicative as A 

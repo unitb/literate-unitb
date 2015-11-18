@@ -113,14 +113,16 @@ machine_summary sys m = do
                 $ item $ input path $ constraint_file m
             item $ do
                 tell [keyword "events"]
-                block $ forM_ (keys $ nonSkipUpwards m) $ \k -> do
-                    item $ input path $ event_file_name m k
+                let evts = keys $ nonSkipUpwards m
+                unless (L.null evts) $
+                    block $ forM_ evts $ \k -> do
+                        item $ input path $ event_file_name m k
             item $ kw_end
     where
-        fn = "machine_" ++ show (m!.name) <.> "tex"
+        fn = "machine_" ++ (m!.name) <.> "tex"
 
 prop_file_name :: Machine -> String
-prop_file_name m = "machine_" ++ show (m!.name) ++ "_props" <.> "tex"
+prop_file_name m = "machine_" ++ (m!.name) ++ "_props" <.> "tex"
 
 indent :: Int -> String -> String
 indent n xs = intercalate "\n" $ L.map (margin ++) $ L.lines xs
@@ -154,22 +156,22 @@ properties_summary m = do
         fn = prop_file_name m
 
 inv_file :: Machine -> String
-inv_file m  = "machine_" ++ show (m!.name) ++ "_inv" <.> "tex"
+inv_file m  = "machine_" ++ (m!.name) ++ "_inv" <.> "tex"
 
 inv_thm_file :: Machine -> String
-inv_thm_file m  = "machine_" ++ show (m!.name) ++ "_thm" <.> "tex"
+inv_thm_file m  = "machine_" ++ (m!.name) ++ "_thm" <.> "tex"
 
 live_file :: Machine -> String
-live_file m = "machine_" ++ show (m!.name) ++ "_prog" <.> "tex"
+live_file m = "machine_" ++ (m!.name) ++ "_prog" <.> "tex"
 
 transient_file :: Machine -> String
-transient_file m = "machine_" ++ show (m!.name) ++ "_trans" <.> "tex"
+transient_file m = "machine_" ++ (m!.name) ++ "_trans" <.> "tex"
 
 saf_file :: Machine -> String
-saf_file m  = "machine_" ++ show (m!.name) ++ "_saf" <.> "tex"
+saf_file m  = "machine_" ++ (m!.name) ++ "_saf" <.> "tex"
 
 constraint_file :: Machine -> String
-constraint_file m  = "machine_" ++ show (m!.name) ++ "_co" <.> "tex"
+constraint_file m  = "machine_" ++ (m!.name) ++ "_co" <.> "tex"
 
 getListing :: M () -> String
 getListing cmd = L.unlines $ snd $ execRWS cmd ((), False) ()
@@ -182,7 +184,7 @@ kw_end :: M ()
 kw_end = tell ["\\textbf{end} \\\\"]
 
 event_file_name :: Machine -> EventId -> FilePath
-event_file_name m lbl = (show (m!.name) ++ "_" ++ rename lbl) <.> "tex"
+event_file_name m lbl = ((m!.name) ++ "_" ++ rename lbl) <.> "tex"
     where
         rename lbl = L.map f $ show lbl
         f ':' = '-'
@@ -215,7 +217,7 @@ event_summary m lbl e = make_file fn $
 
 refines_clause :: System -> Machine -> M ()
 refines_clause sys m = do
-    case _name m `M.lookup` (sys!.ref_struct) of
+    case join $ _name m `M.lookup` (sys!.ref_struct) of
         Nothing -> return ()
         Just anc -> tell [keyword "refines" ++ " " ++ show anc]
 
@@ -227,6 +229,7 @@ block cmd = do
 
 variable_sum :: Machine -> M ()
 variable_sum m = section (keyword "variables") $ 
+    unless (M.null (m!.variables) && M.null (m!.abs_vars)) $
     block $ do
         when show_removals $ 
             forM_ (keys $ view' abs_vars m `M.difference` view' variables m) $ \v -> do

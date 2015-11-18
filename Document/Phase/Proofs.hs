@@ -45,7 +45,6 @@ import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Traversable as T
 
@@ -266,22 +265,6 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
         li <- lift ask
         return $ EventRef [] [(evt,[(rule,li)])]
 
-ensure :: RawProgressProp 
-       -> HintBuilder
-       -> [Label]
-       -> M Ensure
-ensure prog@(LeadsTo fv _ _) hint lbls = do
-        let vs = symbol_table fv
-        lbls' <- bind  "Expected non empty list of events"
-                    $ NE.nonEmpty lbls
-        let HintBuilderDecl thint m p2 = hint
-        hint <- tr_hint p2 m vs lbls' thint
-        lbls <- get_events p2 lbls'
-        return $ Ensure (getExpr <$> prog) lbls (getExpr <$> hint)
-
-instance RuleParser (a,()) => RuleParser (HintBuilder -> a,()) where
-    parse_rule (f,_) xs rule param@(RuleParserDecl p2 m _ _ _ _ _ hint _) = do
-        parse_rule (f (HintBuilderDecl hint m p2),()) xs rule param
 
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
@@ -351,22 +334,21 @@ parse_rule' rule param = do
     li <- lift ask
     case M.lookup rule refinement_parser of
         Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
-            runEitherT $ f rule param
+            runEitherT $ f param
         Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
 
 refinement_parser :: Map String (
-                  String
-               -> RuleParserParameter
+                  RuleParserParameter
                -> M Rule)
 refinement_parser = fromList 
-    [   ("disjunction", parse (disjunction, ()))
+    [   ("disjunction", parse Disjunction) -- parse (disjunction, ()))
     ,   ("discharge", parse_discharge)
-    ,   ("monotonicity", parse (Monotonicity, ()))
-    ,   ("implication", parse (Implication, ()))
-    ,   ("trading", parse (NegateDisjunct, ()))
-    ,   ("transitivity", parse (Transitivity, ()))
-    ,   ("psp", parse (PSP, ()))
-    ,   ("ensure", parse (ensure, ()))
+    ,   ("monotonicity", parse Monotonicity) -- parse (Monotonicity, ()))
+    ,   ("implication", parse Implication) -- parse (Implication, ()))
+    ,   ("trading", parse NegateDisjunct) -- parse (NegateDisjunct, ()))
+    ,   ("transitivity", parse Transitivity) -- parse (Transitivity, ()))
+    ,   ("psp", parse PSP) -- parse (PSP, ()))
+    ,   ("ensure", parse_ensure) -- parse (ensure, ()))
     ,   ("induction", parse_induction)
     ]
 

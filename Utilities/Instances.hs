@@ -3,17 +3,21 @@ module Utilities.Instances
     ( Generic, defaultLift, genericMEmpty, genericMAppend
     , genericMConcat, genericDefault, genericSemigroupMAppend
     , Intersection(..), genericSemigroupMAppendWith
+    , show1, NFData1(..), deepseq1
     , genericArbitrary, inductive, listOf', arbitrary' )
 where
 
+import Control.DeepSeq
 import Control.Monad.Fix
 import Control.Lens hiding (to,from)
 
 import Data.Default
+import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
@@ -203,3 +207,45 @@ listOf' (Compose cmd) = Compose $ listOf <$> cmd
 
 arbitrary' :: Arbitrary a => Compose Maybe Gen a
 arbitrary' = Compose $ Just arbitrary
+
+instance Eq a => Eq1 (Const a) where
+    eq1 = (==)
+
+instance Eq1 NonEmpty where
+    eq1 = (==)
+
+instance Show a => Show1 (Const a) where
+    showsPrec1 = showsPrec
+
+instance Show1 NonEmpty where
+    showsPrec1 = showsPrec
+
+show1 :: (Show a, Show1 f) => f a -> String
+show1 x = showsPrec1 0 x ""
+
+class NFData1 f where
+    rnf1 :: NFData a => f a -> ()
+
+deepseq1 :: (NFData a, NFData1 f) => f a -> b -> b
+deepseq1 x y = rnf1 x `seq` y
+
+instance NFData a => NFData1 (Const a) where
+    rnf1 = rnf
+instance NFData1 Identity where
+    rnf1 = rnf
+instance NFData1 [] where
+    rnf1 = rnf
+instance NFData1 NonEmpty where
+    rnf1 = rnf
+instance (Functor f,NFData1 f,NFData1 g) => NFData1 (Compose f g) where
+    rnf1 = rnf . WithNFData . fmap WithNFData . getCompose
+instance NFData a => NFData1 ((,) a) where
+    rnf1 = rnf
+instance NFData1 Maybe where
+    rnf1 = rnf
+
+newtype WithNFData f a = WithNFData { getNFData :: (f a) }
+
+instance (NFData a,NFData1 f) => NFData (WithNFData f a) where
+    rnf = rnf1 . getNFData
+

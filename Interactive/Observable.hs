@@ -8,8 +8,6 @@ where
 import Control.Concurrent
 import Control.Monad
 
---import Utilities.Trace
-
 data Observable a = Obs (MVar a) (MVar [IO ()])
 
 new_obs :: a -> IO (Observable a)

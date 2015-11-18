@@ -80,10 +80,6 @@ result2 = unlines
     , "  o  m0/INIT/WD"
     , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
-    , " xxx m0/TR/tr0/inc/EN"
-    , "  o  m0/TR/tr0/inc/NEG"
-    , "  o  m0/TR/tr0/leadsto/lhs"
-    , "  o  m0/TR/tr0/leadsto/rhs"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -94,10 +90,14 @@ result2 = unlines
     , "  o  m0/inc/WD/F_SCH"
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
+    , " xxx m0/prog0/LIVE/add"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
-    , " xxx m0/prog0/REF/add"
     , "  o  m0/tr0/TR/WD"
+    , " xxx m0/tr0/TR/inc/EN"
+    , "  o  m0/tr0/TR/inc/NEG"
+    , "  o  m0/tr0/TR/leadsto/lhs"
+    , "  o  m0/tr0/TR/leadsto/rhs"
     , "passed 23 / 25"
     ]
 
@@ -116,11 +116,8 @@ result3 = unlines
     , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/TR/tr0/inc/EN"
-    , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
-    --, "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -131,6 +128,8 @@ result3 = unlines
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
+    , "  o  m0/tr0/TR/inc/EN"
+    , "  o  m0/tr0/TR/inc/NEG"
     , "passed 20 / 21"
     ]
 
@@ -220,11 +219,8 @@ result6 = unlines
     , "  o  m0/INIT/WWD"
     , "  o  m0/INV/WD"
     , " xxx m0/SKIP/CO/co0"
-    , "  o  m0/TR/tr0/inc/EN"
-    , "  o  m0/TR/tr0/inc/NEG"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/inc/CO/co0"
-    --, "  o  m0/inc/C_SCH/weaken/c0"
     , "  o  m0/inc/FIS/x@prime"
     , "  o  m0/inc/FIS/y@prime"
     , "  o  m0/inc/INV/inv0"
@@ -236,6 +232,8 @@ result6 = unlines
     , "  o  m0/inc/WD/GRD"
     , "  o  m0/inc/WWD"
     , "  o  m0/tr0/TR/WD"
+    , "  o  m0/tr0/TR/inc/EN"
+    , "  o  m0/tr0/TR/inc/NEG"
     , "passed 21 / 22"
     ]
 
@@ -341,7 +339,7 @@ case9 = show_po path6 "m0/inc/C_SCH/weaken/c0"
 
 result10 :: String
 result10 = unlines 
-    [ "; m0/TR/tr0/inc/EN"
+    [ "; m0/tr0/TR/inc/EN"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -362,15 +360,15 @@ result10 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m0/TR/tr0/inc/EN"
+    , "; m0/tr0/TR/inc/EN"
     ]
 
 case10 :: IO String
-case10 = show_po path6 "m0/TR/tr0/inc/EN"
+case10 = show_po path6 "m0/tr0/TR/inc/EN"
 
 result11 :: String
 result11 = unlines
-    [ "; m0/TR/tr0/inc/NEG"
+    [ "; m0/tr0/TR/inc/NEG"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -399,11 +397,11 @@ result11 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m0/TR/tr0/inc/NEG"
+    , "; m0/tr0/TR/inc/NEG"
     ]
 
 case11 :: IO String
-case11 = show_po path6 "m0/TR/tr0/inc/NEG"
+case11 = show_po path6 "m0/tr0/TR/inc/NEG"
 
 var_x :: Var
 var_y :: Var

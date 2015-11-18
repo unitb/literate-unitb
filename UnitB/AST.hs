@@ -3,6 +3,7 @@ module UnitB.AST
     , abs_vars
     , module UnitB.Event
     , module UnitB.Machine
+    , module UnitB.Proof
     , module UnitB.Property
     , module UnitB.System
     , module Utilities.Invariant
@@ -14,6 +15,7 @@ import Logic.Theory
 
 import UnitB.Event
 import UnitB.Machine
+import UnitB.Proof
 import UnitB.Property
 import UnitB.System
 
