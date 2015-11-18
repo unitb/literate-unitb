@@ -54,7 +54,7 @@ import GHC.Stack
 import Test.QuickCheck as QC
 
 import Utilities.Instances 
-import Utilities.Invariant hiding ((===))
+import Utilities.Partial
 import Utilities.Permutation
 import Utilities.Syntactic
 

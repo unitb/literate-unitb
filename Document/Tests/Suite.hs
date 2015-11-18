@@ -76,16 +76,22 @@ verify path i = makeReport' empty $ do
             Left e -> return (show (e :: SomeException),pos)
     else return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
 
-all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
-all_proof_obligations path = runEitherT $ do
+all_proof_obligations' :: FilePath -> EitherT String IO [Map Label String]
+all_proof_obligations' path = do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
         let pos = M.elems $ M.map snd xs
             cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
         return cmd
 
+all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
+all_proof_obligations = runEitherT . all_proof_obligations'
+
 withLI :: (?loc :: CallStack) => Either String a -> Either [Error] a
 withLI = mapLeft $ errorTrace [] ?loc
+
+withLI' :: (?loc :: CallStack,Monad m) => EitherT String m a -> EitherT [Error] m a
+withLI' (EitherT cmd) = EitherT $ withLI <$> cmd
 
 raw_proof_obligation :: FilePath -> String -> Int -> IO String
 raw_proof_obligation path lbl i = makeReport $ do
@@ -118,14 +124,23 @@ lookupSequent lbl pos = case pos^?ix lbl of
                     Left $ format "invalid label: {0}\n{1}" lbl $ 
                         unlines $ L.map show $ keys pos
 
+lookupSequent' :: Monad m 
+               => Label -> Map Label Sequent 
+               -> EitherT String m Sequent
+lookupSequent' lbl m = hoistEither $ lookupSequent lbl m
+
 sequent :: FilePath -> String 
         -> Int -> IO (Either String Sequent)
-sequent path lbl i = runEitherT $ do
+sequent path lbl i = runEitherT $ sequent' path lbl i
+
+sequent' :: FilePath -> String 
+         -> Int -> EitherT String IO Sequent
+sequent' path lbl i = do
         xs <- EitherT $ (mapLeft show_err . fst) 
             <$> list_file_obligations' path
         if i < size xs then do
             let pos = snd $ snd $ i `elemAt` xs
-            hoistEither $ lookupSequent (label lbl) pos
+            lookupSequent' (label lbl) pos
         else
             left $ format "accessing {0}th refinement out of {1}" i (size xs)   
 
@@ -154,8 +169,10 @@ find_errors path = do
         m
 
 parse_machine :: FilePath -> Int -> IO (Either [Error] Machine)
-parse_machine path n = runEitherT $ -- fmap (!! n) <$> 
-        lookup n =<< EitherT (parse path)
+parse_machine path n = runEitherT $ parse_machine' path n
+
+parse_machine' :: FilePath -> Int -> EitherT [Error] IO Machine
+parse_machine' fn i = lookup i =<< parse' fn
 
 parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
@@ -163,6 +180,9 @@ parse path = do
     let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
         f = elems . M.map fst
     (mapBoth mapError f . fst) <$> list_file_obligations' path
+
+parse' :: FilePath -> EitherT [Error] IO [Machine]
+parse' = EitherT . parse
 
 verify_thy :: FilePath -> String -> IO POResult
 verify_thy path name = makeReport' empty $ do

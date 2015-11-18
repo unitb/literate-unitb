@@ -54,6 +54,7 @@ import Test.QuickCheck as QC hiding (label,collect)
 import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
+import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Format
 import Utilities.TableConstr

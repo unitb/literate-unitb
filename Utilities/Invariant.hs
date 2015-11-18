@@ -1,15 +1,18 @@
 {-# LANGUAGE StandaloneDeriving, ImplicitParams #-}
 module Utilities.Invariant 
     ( HasInvariant(..), Checked, IsChecked(..)
-    , Assert, fromJust', mutate, create'
+    , Assert
+    , mutate, mutate', create'
     , module Control.Exception.Assert
-    , Controls(..), view',(!.) 
+    , Controls(..)
+    , view',(!.), views'
+    , use', uses'
     , HasPrefix(..)
     , (===), isSubsetOf', isProperSubsetOf'
     , isSubmapOf',isProperSubmapOf'
     , member'
-    , relation, provided
-    , fromJust''
+    , relation
+    , provided, providedM
     , assertFalse, assertFalse'
     , Invariant, (##) )
 where
@@ -89,6 +92,21 @@ infixl 8 !.
 view' :: (Controls a b,MonadReader a m) => Getting c b c -> m c
 view' ln = view $ content'.ln
 
+views' :: (Controls a b,MonadReader a m) 
+       => Getting d b c
+       -> (c -> d)
+       -> m d
+views' ln f = views (content'.ln) f
+
+use' :: (Controls a b,MonadState a m) => Getting c b c -> m c
+use' ln = use $ content'.ln
+
+uses' :: (Controls a b,MonadState a m) 
+      => Getting d b c 
+      -> (c -> d) 
+      -> m d
+uses' ln f = uses (content'.ln) f
+
 instance Controls (Checked a) a where
     content' = to getChecked
 
@@ -145,6 +163,9 @@ instance HasPrefix Invariant where
 mutate :: IsChecked c a => Assert -> c -> State a k -> c
 mutate arse x cmd = x & content arse %~ execState cmd 
 
+mutate' :: (IsChecked c a,Monad m) => Assert -> StateT a m k -> StateT c m k
+mutate' arse cmd = zoom (content arse) cmd
+
 withStack :: CallStack -> Invariant a -> Invariant a
 withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs
 
@@ -152,18 +173,14 @@ provided :: (?loc :: CallStack) => Bool -> a -> a
 provided b = assertMessage "Precondition" 
         (fromMaybe "" $ stackTrace [$__FILE__] ?loc) (assert b)
 
+providedM :: (?loc :: CallStack) => Bool -> m a -> m a
+providedM b cmd = do
+        provided b () `seq` cmd
+
 create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
 create' arse = check arse . create 
 
 type Assert = forall a. Bool -> a -> a
-
-fromJust' :: (?loc :: CallStack) => Maybe a -> a
-fromJust' (Just x)   = x
-fromJust' Nothing = assertFalse' "Nothing"
-
-fromJust'' :: Assert -> Maybe a -> a
-fromJust'' _ (Just x) = x
-fromJust'' arse Nothing = assertFalse arse "Nothing"
 
 assertFalse :: Assert -> String -> a
 assertFalse arse msg = assertMessage "False" msg (arse False) (error "false assertion (1)")

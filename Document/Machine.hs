@@ -22,7 +22,6 @@ import Logic.Proof.Tactics hiding ( with_line_info )
 import UnitB.AST as AST
 import UnitB.PO
 
-
     --
     -- Libraries
     --

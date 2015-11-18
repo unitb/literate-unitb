@@ -46,6 +46,7 @@ import Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Instances
 import Utilities.Invariant
+import Utilities.Partial
 import Utilities.Lens
 import Utilities.TH
 

@@ -10,22 +10,17 @@ module Documentation.SummaryGen
 where
 
     -- Modules
---import Logic.Expr hiding ((</>))
---import Logic.ExpressionStore
-
 import UnitB.AST
 import UnitB.Expr hiding ((</>))
 
     -- Libraries
-import Control.Arrow
 import Control.Lens hiding ((<.>),indices)
 
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Control.Monad.RWS
 import Control.Monad.State
-import Control.Monad.Trans.Reader (ReaderT,runReaderT)
+import Control.Monad.Trans.Reader (ReaderT(..),runReaderT)
 
 import Data.Default
 import Data.List as L ( intercalate,null
@@ -34,16 +29,19 @@ import Data.List.NonEmpty as NE
 import Data.Map as M hiding (map)
 import qualified Data.Map as M
 
-import System.Directory
 import System.FilePath
 
+import Prelude hiding (writeFile,readFile)
+
+import Utilities.FileSystem
 import Utilities.Format
 
-type Doc = ReaderT ((),FilePath) IO
+newtype Doc a = Doc { getDoc :: forall io. FileSystem io => ReaderT FilePath io a }
+    deriving (Functor)
     -- Reader parameters:
     --      AST -> LaTeX conversions
     --      path for listing creation
-type M = RWS ((),Bool) [String] ()
+type M = RWS Bool [String] ()
     --      AST -> LaTeX conversions
     --      should we strike out expressions?
 
@@ -53,6 +51,19 @@ data ExprDispOpt label expr = ExprDispOpt
         , _makeString :: expr -> M String }         -- How to convert (AST) type `a` to LaTeX?
 
 makeLenses ''ExprDispOpt
+
+instance Applicative Doc where
+    pure x = Doc $ pure x
+    Doc f <*> Doc x = Doc $ f <*> x
+
+instance Monad Doc where
+    Doc m >>= f = Doc $ m >>= getDoc . f
+instance MonadReader FilePath Doc where
+    ask = Doc ask
+    local f (Doc m) = Doc $ local f m
+instance FileSystem Doc where
+    liftFS f = NoParam $ Doc $ lift $ getNoParam f
+    lift2FS f = OneParam $ \g -> Doc $ ReaderT $ \fn -> getOneParam f $ \x -> runReaderT (getDoc $ g x) fn
 
 defOptions :: Show label => (expr -> M String) -> ExprDispOpt label expr
 defOptions f = ExprDispOpt
@@ -66,26 +77,30 @@ instance Show label => Default (ExprDispOpt label Expr) where
 show_removals :: Bool
 show_removals = True
 
-produce_summaries :: FilePath -> System -> IO ()
+runDoc :: FileSystem io => Doc a -> FilePath -> io a
+runDoc (Doc cmd) = runReaderT cmd
+
+produce_summaries :: FileSystem io 
+                  => FilePath -> System -> io ()
 produce_summaries path sys = do
         createDirectoryIfMissing True path'
-        runReaderT (do
+        runDoc (do
             forM_ (M.elems ms) $ \m -> do
                 machine_summary sys m
                 properties_summary m
                 forM_ (M.toList $ nonSkipUpwards m) $ \(lbl,evt) -> do
                     event_summary m lbl evt
-            ) ((),path)
+            ) path
     where
         ms = sys!.machines
         path' = dropExtension path
 
 make_file :: FilePath -> M () -> Doc ()
 make_file fn cmd = do
-    (s,path) <- ask
-    let xs = snd $ execRWS cmd (s,False) ()
+    path <- ask
+    let xs = snd $ execRWS cmd False ()
         root = format "%!TEX root=../{0}" (takeFileName path)
-    liftIO $ writeFile (dropExtension path </> fn) 
+    writeFile (dropExtension path </> fn) 
         $ L.unlines $ root : xs
 
 keyword :: String -> String
@@ -93,7 +108,7 @@ keyword kw = format "\\textbf{{0}}" kw
 
 machine_summary :: System -> Machine -> Doc ()
 machine_summary sys m = do
-    path <- asks snd
+    path <- ask
     make_file fn $ 
         block $ do
             item $ tell [keyword "machine" ++ " " ++ show (_name m)]
@@ -138,7 +153,7 @@ item cmd = do
 properties_summary :: Machine -> Doc ()
 properties_summary m = do
         let prop = m!.props
-        path <- asks snd
+        path <- ask
         make_file (inv_file m) $ invariant_sum m
         make_file (inv_thm_file m) $ invariant_thm_sum prop
         make_file (live_file m) $ liveness_sum m
@@ -174,7 +189,7 @@ constraint_file :: Machine -> String
 constraint_file m  = "machine_" ++ (m!.name) ++ "_co" <.> "tex"
 
 getListing :: M () -> String
-getListing cmd = L.unlines $ snd $ execRWS cmd ((), False) ()
+getListing cmd = L.unlines $ snd $ execRWS cmd False ()
 
 input :: FilePath -> String -> M ()
 input path fn = do
@@ -312,7 +327,7 @@ constraint_sum m = do
 
 format_formula :: String -> M String
 format_formula str = do
-        sout <- asks snd    -- Strike out the formula?
+        sout <- ask    -- Strike out the formula?
         let sout' 
                 | sout      = "\\sout"
                 | otherwise = ""
@@ -380,7 +395,7 @@ csched_sum lbl e = do
         -- unless (sch == def) $ 
         section kw $ do
             when show_removals $
-                local (second $ const True)
+                local (const True)
                     $ put_all_expr_with (makeRef %= isDefault) lbl del_sch
             put_all_expr_with (makeRef %= isDefault) lbl sch
     where
@@ -395,7 +410,7 @@ csched_sum lbl e = do
 fsched_sum :: EventId -> EventMerging' -> M ()
 fsched_sum lbl e = section kw $ do
         when show_removals $
-            local (second $ const True)
+            local (const True)
                 $ put_all_expr lbl del_sch
         put_all_expr lbl xs
     where
@@ -413,7 +428,7 @@ param_sum e
 guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do
         when show_removals $
-            local (second $ const True)
+            local (const True)
                 $ put_all_expr lbl $ e^.deleted' raw_guards -- deleted_guard e
         put_all_expr lbl $ e^.new' raw_guards -- new_guard e
     where
@@ -422,7 +437,7 @@ guard_sum lbl e = section kw $ do
 act_sum :: EventId -> EventMerging' -> M ()
 act_sum lbl e = section kw $ do
         when show_removals $
-            local (second $ const True)
+            local (const True)
                 $ put_all_expr' put_assign lbl $ e^.deleted' actions -- del_acts e
         put_all_expr' put_assign lbl $ M.toList $ e^.actions
     where 

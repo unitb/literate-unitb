@@ -234,7 +234,6 @@ parse_induction param = do
                             (type_of var))
                         li]
                     return ($myError "")
-                -- return (dir,var,bound)
             Nothing -> raise $ Error "expecting a variant" li
             _ -> raise $ Error "invalid variant" li
         parse (Induction var) param

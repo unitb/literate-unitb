@@ -63,6 +63,7 @@ import Prelude hiding (lookup)
 import Text.Printf
 
 import Utilities.Invariant
+import Utilities.Partial
 
 newtype GraphBuilder key0 v0 key1 v1 e s0 s1 a = GB (RWST () ([(key0,v0)],[(key1,v1)],[(Int,Int,e)]) (Int,Map key0 Int,Int,Map key1 Int) Maybe a)
     deriving (Monad,Applicative,Functor,Alternative,MonadPlus)

@@ -4,7 +4,7 @@ module Documentation.Test where
     -- 
     -- Modules
     --
-import Document.Tests.Suite
+import Document.Tests.Suite as S
 
 import Documentation.SummaryGen
 
@@ -13,11 +13,15 @@ import UnitB.AST
     --
     -- Libraries
     -- 
-import Control.Monad
-
-import Data.Map
+import Data.Map as M
+import Data.Map.Syntax
+import Data.Maybe 
 
 import Tests.UnitTest
+
+import Utilities.FileSystem
+import Utilities.Partial
+import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test_cases 
@@ -26,6 +30,7 @@ test_case = test_cases
         , Case "m3, event m1:moveout" case1 result1
         , Case "safety properties of m2" case2 result2
         , Case "progress properties of m2" case3 result3
+        , Case "File structure" case4 result4
         ]
 
 result0 :: String
@@ -55,14 +60,12 @@ result0 = unlines
     ]
 
 case0 :: IO String
-case0 = liftM (either id id) $ runEitherT $ do
-    s <- get_system path0
-    let ms  = s!.machines
-        lbl = "m1:moveout"
-        m   = ms ! "m2"
-    return $ getListing $ 
-            event_summary' m lbl (nonSkipUpwards m ! lbl)
-            -- ) (expr_store s,"")
+case0 = makeReport $ do
+    m <- parse_machine' path0 2
+    let lbl = "m1:moveout"
+    evt <- S.lookup lbl $ nonSkipUpwards m
+    return $ getListing $
+            event_summary' m lbl evt
 
 path0 :: String
 path0 = "Tests/train-station-set.tex"
@@ -101,13 +104,12 @@ result1 = unlines
     ]
 
 case1 :: IO String
-case1 = liftM (either id id) $ runEitherT $ do
-    s <- get_system path0
-    let ms  = s!.machines
-        lbl = "m1:moveout"
-        m   = ms ! "m3"
+case1 = makeReport $ do
+    m <- parse_machine' path0 3
+    let lbl = "m1:moveout"
+    evt <- S.lookup lbl $ nonSkipUpwards m
     return $ getListing $
-            event_summary' m lbl (nonSkipUpwards m ! lbl)
+            event_summary' m lbl evt
 
 result2 :: String
 result2 = unlines
@@ -119,11 +121,8 @@ result2 = unlines
     ]
 
 case2 :: IO String
-case2 = liftM (either id id) $ runEitherT $ do
-    s <- get_system path0
-    let ms  = s!.machines
-        m   = ms ! "m2"
-        p   = m!.props
+case2 = makeReport $ do
+    p <- view' props <$> parse_machine' path0 2
     return $ getListing $
         safety_sum p
 
@@ -143,9 +142,67 @@ result3 = unlines
     ]
 
 case3 :: IO String
-case3 = liftM (either id id) $ runEitherT $ do
-    s <- get_system path0
-    let ms  = s!.machines
-        m   = ms ! "m2"
+case3 = makeReport $ do
+    m <- parse_machine' path0 2
     return $ getListing $
         liveness_sum m
+
+result4 :: Either String (Map FilePath Bool)
+result4 = Right $ fromRight' $ runMap $ do
+        "." ## False
+        "/" ## False
+        "dir" ## False 
+        "dir/file" ## False 
+        "dir/file/m0_m0-enter.tex" ## True
+        "dir/file/m0_m0-leave.tex" ## True 
+        "dir/file/m1_m0-enter.tex" ## True
+        "dir/file/m1_m0-leave.tex" ## True 
+        "dir/file/m1_m1-moveout.tex" ## True
+        "dir/file/m1_m1-movein.tex" ## True
+        "dir/file/m2_m0-enter.tex" ## True
+        "dir/file/m2_m0-leave.tex" ## True 
+        "dir/file/m2_m1-moveout.tex" ## True
+        "dir/file/m2_m1-movein.tex" ## True
+        "dir/file/m3_m0-enter.tex" ## True
+        "dir/file/m3_m0-leave.tex" ## True 
+        "dir/file/m3_m1-moveout.tex" ## True
+        "dir/file/m3_m1-movein.tex" ## True
+        "dir/file/m3_m3-ctr-plf.tex" ## True
+        "dir/file/machine_m0.tex" ## True
+        "dir/file/machine_m0_co.tex" ## True
+        "dir/file/machine_m0_inv.tex" ## True
+        "dir/file/machine_m0_prog.tex" ## True
+        "dir/file/machine_m0_props.tex" ## True
+        "dir/file/machine_m0_saf.tex" ## True
+        "dir/file/machine_m0_thm.tex" ## True
+        "dir/file/machine_m0_trans.tex" ## True
+        "dir/file/machine_m1.tex" ## True
+        "dir/file/machine_m1_co.tex" ## True
+        "dir/file/machine_m1_inv.tex" ## True
+        "dir/file/machine_m1_prog.tex" ## True
+        "dir/file/machine_m1_props.tex" ## True
+        "dir/file/machine_m1_saf.tex" ## True
+        "dir/file/machine_m1_thm.tex" ## True
+        "dir/file/machine_m1_trans.tex" ## True
+        "dir/file/machine_m2.tex" ## True
+        "dir/file/machine_m2_co.tex" ## True
+        "dir/file/machine_m2_inv.tex" ## True
+        "dir/file/machine_m2_prog.tex" ## True
+        "dir/file/machine_m2_props.tex" ## True
+        "dir/file/machine_m2_saf.tex" ## True
+        "dir/file/machine_m2_thm.tex" ## True
+        "dir/file/machine_m2_trans.tex" ## True
+        "dir/file/machine_m3.tex" ## True
+        "dir/file/machine_m3_co.tex" ## True
+        "dir/file/machine_m3_inv.tex" ## True
+        "dir/file/machine_m3_prog.tex" ## True
+        "dir/file/machine_m3_props.tex" ## True
+        "dir/file/machine_m3_saf.tex" ## True
+        "dir/file/machine_m3_thm.tex" ## True
+        "dir/file/machine_m3_trans.tex" ## True
+
+case4 :: IO (Either String (Map FilePath Bool))
+case4 = runEitherT $ do
+    s <- get_system path0
+    return $ M.map isJust $ view' files $ execMockFileSystem 
+        $ produce_summaries "dir/file.ext" s
