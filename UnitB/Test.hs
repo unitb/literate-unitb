@@ -2,12 +2,15 @@
 module UnitB.Test where 
 
     -- Modules
+import Document.Proof
 import Document.Tests.Suite (lookupSequent)
 
 import           Logic.Expr
 import qualified Logic.Expr.Const as Exp
 import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
+import           Logic.Proof.POGenerator hiding (variables)
+import qualified Logic.Proof.POGenerator as POG
 import qualified Logic.TestGenericity as Gen
 
 import Theories.FunctionTheory
@@ -44,6 +47,7 @@ test = test_cases
         ,  Case "Feasibility and partitioning" case3 result3
         ,  Case "Debugging the partitioning" case4 result4
         ,  Gen.test_case
+        ,  Case "unless with except and split event" case5 result5
         ]
 
 _ = Gen.test_case
@@ -505,3 +509,40 @@ result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
         (c,c_decl) = Exp.var "c" int
         (d,d_decl) = Exp.var "d" int
         f (xs,ys) = (sort xs, sort ys)
+
+result5 :: Map Label Sequent
+result5 = eval_generator $ with (do
+            POG.variables $ symbol_table 
+                [ Var "p" bool
+                , Var "q" bool
+                , Var "p@prime" bool
+                , Var "q@prime" bool]
+            named_hyps $ fromList 
+                [ ("skipA", c [expr| p' = p |] ) 
+                , ("skipC", c [expr| q' = q |])]
+            ) $ do
+        emit_goal assert ["ce0a/SAF/lbl"] ztrue
+        emit_goal assert ["ce0b/SAF/lbl"] ztrue
+        let p = c [expr| p \land \neg q \1\implies p' \lor q' |]
+        emit_goal' assert ["ce1a/SAF/lbl"] p
+        emit_goal' assert ["ce1b/SAF/lbl"] p
+    where
+        c p = c' $ p . (is_step .~ True)
+        c' = ctx (do
+            primable [var| p, q : \Bool |])
+
+case5 :: IO (Map Label Sequent)
+case5 = return $ eval_generator 
+        $ prop_saf' m (Just "ae0") ("lbl", getExpr <$> c [safe| p UNLESS q |])
+    where
+        c = ctx $ do
+                [var| p, q : \Bool |]
+        m = newMachine assert "m0" $ do
+            variables .= symbol_table [Var "p" bool,Var "q" bool]
+            event_table .= eventTable (do
+                split_event "ae0" (return ()) 
+                    [ ("ce0a",return ()) 
+                    , ("ce0b",return ()) ]
+                split_event "ae1" (return ())
+                    [ ("ce1a",return ()) 
+                    , ("ce1b",return ()) ] )

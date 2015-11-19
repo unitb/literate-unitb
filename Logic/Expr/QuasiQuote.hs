@@ -13,6 +13,7 @@ import Logic.Expr.Printable
 import Logic.Theory
 
 import UnitB.Event
+import UnitB.Property
 
 import Theories.Arithmetic
 import Theories.FunctionTheory
@@ -68,6 +69,13 @@ carrier = QuasiQuoter
     , quoteDec  = undefined
     , quoteType = undefined }
 
+safe :: QuasiQuoter 
+safe = QuasiQuoter
+    { quoteExp  = \x -> [e| \p -> let loc = $(lift =<< location) in parseSafetyProp loc p $(litE (stringL x)) |]
+    , quotePat  = undefined
+    , quoteDec  = undefined
+    , quoteType = undefined }
+
 parseAction :: Loc -> ParserSetting -> String -> Action
 parseAction loc p str = Assign v e
     where
@@ -77,6 +85,32 @@ parseAction loc p str = Assign v e
         p' = p & expected_type .~ Just t
         li = asLI loc
         err = error $ "\n"++ show_err [Error (printf "misshapen assignment: '%s'" str) li]
+
+type Parser a = Loc -> ParserSetting -> String -> a
+
+parseParts :: (a -> b -> c) 
+           -> String
+           -> String
+           -> Parser a -> Parser b -> Parser c
+parseParts f sep kind pars0 pars1 loc p str | sep `isInfixOf` str = f v e
+                                            | otherwise           = err
+    where
+        (rVar,rExpr) = second (intercalate sep) $ fromMaybe err $ uncons (S.split sep str)
+        v  = pars0 loc p rVar
+        e  = pars1 loc p rExpr
+        --p' = p & expected_type .~ Just t
+        li  = asLI loc
+        err = error $ "\n"++ show_err [Error (printf "misshapen %s: '%s'" kind str) li]
+
+parseSafetyProp :: Loc -> ParserSetting -> String -> SafetyProp
+parseSafetyProp = parseParts makeSafety "UNLESS" "safety property" parseExpr parseExpr
+    where
+        makeSafety e0 e1 = Unless [] e0 e1
+
+parseProgressProp :: Loc -> ParserSetting -> String -> ProgressProp
+parseProgressProp = parseParts makeProgress "UNLESS" "safety property" parseExpr parseExpr
+    where
+        makeProgress e0 e1 = LeadsTo [] e0 e1
 
 parseVarDecl :: Loc -> String -> State ParserSetting ()
 parseVarDecl loc str = do

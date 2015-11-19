@@ -275,7 +275,7 @@ is_stable_in ps evts = do
 
 disabled :: [Expr] -> EventId -> POGen ()
 disabled ps lbl = do
-    evts <- lift $ asks $ upward_event <$> machine <*> pure (Right lbl)
+    evts <- lift $ asks $ upward_event assert <$> machine <*> pure (Right lbl)
     entails ("disabled" </> as_label lbl) ps 
         [znot $ zall $ evts^.new.coarse_sched]
 
@@ -292,7 +292,7 @@ entails lbl pre post = do
 hoare_triple :: Label -> [Expr] -> EventId -> [Expr] -> POGen ()
 hoare_triple lbl pre evt_lbl post = do
     m <- lift $ asks machine
-    let evt = upward_event m (Right evt_lbl)
+    let evt = upward_event assert m (Right evt_lbl)
         grd = evt^.new.guards
         act = ba_predicate m evt
     PG.with (do 
@@ -544,7 +544,7 @@ write_seq_code m (Event _pre wait cond lbl)
             expr <- evaluate m cond
             emit $ format "if {0} then do" expr
             indent 2 $ do
-                s' <- event_body_code m (upward_event m (Right lbl)^.new)
+                s' <- event_body_code m (upward_event assert m (Right lbl)^.new)
                 f s'
             emit $ format "else"    
             indent 2 $ f "s"

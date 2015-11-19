@@ -8,6 +8,7 @@ module UnitB.PO
     , str_verify_machine, raw_machine_pos
     , verify_all, prop_saf, prop_tr
     , tr_wd_po, saf_wd_po
+    , prop_saf'
     , verify_changes, verify_machine
     , smoke_test_machine, dump, used_types )
 where
@@ -37,7 +38,6 @@ import           Data.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Data.Map as M
-import           Data.Maybe
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)
@@ -369,7 +369,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
         all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
         inds    = L.map (add_suffix "@param") $ M.elems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
-        es      = L.map (upward_event m.Right) (NE.toList evt_lbl)
+        es      = L.map (upward_event assert m.Right) (NE.toList evt_lbl)
         
         local_ind :: EventId -> RawEventMerging -> Map String Var
         local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ e^.indices
@@ -446,15 +446,18 @@ prop_saf' m excp (pname, Unless fv p q) =
     with
         (do _context $ step_ctx m
             POG.variables $ symbol_table fv
-            named_hyps $ invariants m)
-        $ forM_ evts $ \(evt_lbl,evt) -> do
+            named_hyps $ invariants m) $ do
+        let excps = maybe [] (NE.toList.view concrete_evts.downward_event assert m.Right) excp
+            inds  = M.map (view indices) $ M.fromList excps
+        forM_ evts $ \(evt_lbl,evt) -> do
             let grd  = evt^.new.guards
                 act  = ba_predicate m evt
-                ind = maybe M.empty (view indices . (conc_events m !)) (Right <$> excp)
+                ind = findWithDefault M.empty (Right evt_lbl) inds
                 fvs = symbol_table fv 
                 neq x = znot $ Word x `zeq` Word (suff x)
-                rng =   fromMaybe ztrue 
-                        (zsome (L.map neq $ elems inter) <$ excp)
+                isExcp = Right evt_lbl `M.member` inds
+                rng | isExcp    = zsome $ L.map neq $ elems inter
+                    | otherwise = ztrue
                 inter = fvs `M.intersection` ind
                 diff  = fvs `M.difference` ind
             with 

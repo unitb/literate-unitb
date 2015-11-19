@@ -1,6 +1,6 @@
 module Logic.Proof.POGenerator 
     ( POGen, POGenT -- Logic.Proof.POGenerator.context
-    , emit_goal
+    , emit_goal, emit_goal'
     , _context
     , POCtx
     , getContext
@@ -127,10 +127,12 @@ existential asrt vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal asrt [] vs ss'
 
+emit_goal' :: (Functor m, Monad m, IsExpr expr) 
+           => Assert -> [Label] -> expr -> POGenT m ()
+emit_goal' arse lbl g = emit_goal arse lbl $ getExpr g
 
-
-emit_goal :: (Functor m, Monad m, IsExpr expr) 
-          => Assert -> [Label] -> expr -> POGenT m ()
+emit_goal :: (Functor m, Monad m) 
+          => Assert -> [Label] -> Expr -> POGenT m ()
 emit_goal asrt lbl g = POGen $ do
     tag <- asks tag 
     po  <- Sequent <$> view S.context 
@@ -181,7 +183,6 @@ variables vars = POCtx $ do
 
 eval_generator :: POGen () -> Map Label Sequent
 eval_generator cmd = runIdentity $ eval_generatorT cmd
-        -- fromList $ snd $ evalRWS (runPOGen cmd) empty_param ()
 
 tracePOG :: Monad m => POGenT m () -> POGenT m ()
 tracePOG (POGen cmd) = POGen $ do

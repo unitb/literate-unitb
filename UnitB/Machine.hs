@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings
-    , ExistentialQuantification
+    , ImplicitParams
     , ScopedTypeVariables
     , StandaloneDeriving
     #-} 
@@ -26,7 +26,6 @@ import Control.Lens hiding (indices)
 
 import Control.Monad hiding ( guard )
 import Control.Monad.State
-import Control.Monad.Trans.Maybe
 
 import           Data.Default
 import           Data.Monoid
@@ -43,6 +42,7 @@ import qualified Data.Traversable as T
 import           Data.Typeable
 
 import Utilities.BipartiteGraph as G
+import Utilities.CallStack
 import Utilities.Format
 import Utilities.Instances
 import Utilities.Invariant
@@ -232,13 +232,19 @@ conc_events :: Controls machine (Machine'' expr)
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
-upward_event :: Show expr => Machine' expr -> SkipOrEvent -> EventMerging expr
-upward_event m lbl = fromJust'' assert $ readGraph (m!.events) $ runMaybeT $ do
-        v  <- MaybeT $ hasRightVertex lbl
-        lift $ do
-            es <- predecessors v
-            EvtM <$> T.forM es (\e -> (,) <$> leftKey (source e) <*> leftInfo (source e))
-                 <*> ((,) <$> rightKey v <*> rightInfo v)
+upward_event :: Assert -> Machine' expr -> SkipOrEvent -> EventMerging expr
+upward_event arse m lbl = readGraph (m!.events) $ do
+        v  <- rightVertex arse lbl
+        es <- predecessors v
+        EvtM <$> T.forM es (\e -> (,) <$> leftKey (source e) <*> leftInfo (source e))
+             <*> ((,) <$> rightKey v <*> rightInfo v)
+
+downward_event :: Assert -> Machine' expr -> SkipOrEvent -> EventSplitting expr
+downward_event arse m lbl = readGraph (m!.events) $ do
+        v  <- leftVertex arse lbl
+        es <- successors v
+        EvtS <$> ((,) <$> leftKey v <*> leftInfo v)
+             <*> T.forM es (\e -> (,) <$> rightKey (target e) <*> rightInfo (target e))
 
 new_event_set :: IsExpr expr
               => Map String Var
@@ -321,6 +327,26 @@ event eid cmd = do
     askip <- newLeftVertex (Left SkipEvent) def
     evt   <- newRightVertex (Right eid) $ create $ new .= execState cmd def
     newEdge askip evt
+
+split_event :: (IsExpr expr, ?loc :: CallStack)
+            => EventId 
+            -> State (AbstrEvent' expr) ()
+            -> [(EventId,State (ConcrEvent' expr) ())]
+            -> GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ()
+split_event eid ae ces = do
+        a  <- newLeftVertex (Right eid) (create ae)
+        cs <- mapM (uncurry newRightVertex.(Right *** create)) ces
+        mapM_ (newEdge a) cs
+
+merge_event :: (IsExpr expr, ?loc :: CallStack)
+            => EventId 
+            -> [(EventId,State (AbstrEvent' expr) ())]
+            -> State (ConcrEvent' expr) ()
+            -> GraphBuilder SkipOrEvent (AbstrEvent' expr) SkipOrEvent (ConcrEvent' expr) () s0 s1 ()
+merge_event eid aes ce = do
+        c  <- newRightVertex (Right eid) (create ce)
+        as <- mapM (uncurry newLeftVertex.(Right *** create)) aes
+        mapM_ (flip newEdge c) as
 
 refined_event :: IsExpr expr
               => EventId -> State (EventRef expr) ()
