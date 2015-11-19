@@ -28,7 +28,7 @@ import Control.Monad.RWS
 import           Data.Either
 import           Data.IORef
 import           Data.List
-import qualified Data.Map as M
+import qualified Data.Map as M hiding ((!))
 import           Data.Maybe
 import           Data.Tuple
 import           Data.Typeable
@@ -36,11 +36,14 @@ import           Data.Typeable
 import GHC.Stack
 import GHC.SrcLoc
 
+import Language.Haskell.TH
+
 import Prelude
 import PseudoMacros
 
 import Utilities.Format
 import Utilities.Indentation
+import Utilities.Partial
 
 import System.FilePath
 import System.IO
@@ -48,7 +51,6 @@ import System.IO.Unsafe
 
 import Text.Printf
 
-import Language.Haskell.TH
 
 data TestCase = 
       forall a . (Show a, Typeable a) => Case String (IO a) a
@@ -200,11 +202,11 @@ print_po cs pos name actual expected = do
                         withFile (format "po-{0}-{1}.z3" n i) WriteMode $ \h -> do
                             hPutStrLn h $ "; " ++ name
                             hPutStrLn h $ "; " ++ po
-                            hPutStrLn h $ "; " ++ if not $ ma M.! po 
+                            hPutStrLn h $ "; " ++ if not $ ma ! po 
                                                   then  "does {not discharge} automatically"
                                                   else  "{discharges} automatically"
                             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
-                            hPutStrLn h $ unlines $ map pretty_print' (z3_code $ pos M.! label po) ++ ["; " ++ po]
+                            hPutStrLn h $ unlines $ map pretty_print' (z3_code $ pos ! label po) ++ ["; " ++ po]
                     else return ()
             Nothing  -> return ()
 

@@ -35,7 +35,7 @@ import           Data.Either.Combinators
 import           Data.Map as M hiding 
                     ( map, foldl, foldr
                     , delete, filter, null
-                    , (\\), mapMaybe )
+                    , (\\), mapMaybe, (!) )
 import qualified Data.Map as M
 import           Data.Maybe
 import           Data.List as L hiding (inits, union,insert)
@@ -46,6 +46,7 @@ import qualified Data.Traversable as T
 import System.IO
 
 import Utilities.Format
+import Utilities.Partial
 import Utilities.Syntactic
 
     -- 
@@ -1097,7 +1098,7 @@ verify_all :: Map Label Sequent -> IO (Map Label Bool)
 verify_all pos' = do
     let xs         = M.toList pos'
         lbls       = L.map fst xs 
-    ys <- map_failures (lbls !!) 
+    ys <- map_failures (lbls !) 
             $ discharge_all xs
     rs <- forM (L.zip lbls ys) $ \(lbl,r) -> do
 --    rs <- forM xs $ \(lbl, po) -> do

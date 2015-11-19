@@ -44,13 +44,13 @@ import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.RWS hiding ((<>))
 
-import Data.Array as A
+import Data.Array as A hiding ((!))
 import Data.Array.ST
 import Data.Default
 import Data.List  as L hiding (transpose,lookup)
 import Data.List.NonEmpty  as NE hiding (fromList,transpose)
-import Data.Map   as M hiding (fromList,empty,traverseWithKey,lookup,member)
-import qualified Data.Map   as M
+import Data.Map   as M hiding (fromList,empty,traverseWithKey,lookup,member,(!))
+import qualified Data.Map   as M hiding ((!))
 import Data.Maybe
 import Data.Semigroup
 import qualified Data.Traversable as T
@@ -191,7 +191,7 @@ zipArrayWithM :: Applicative f
               -> Array Int a
               -> Array Int b
               -> f (Array Int c)
-zipArrayWithM f a0 a1 = array (i,j) <$> traverse (\i -> (i,) <$> f (a0 A.! i) (a1 A.! i)) [i..j]
+zipArrayWithM f a0 a1 = array (i,j) <$> traverse (\i -> (i,) <$> f (a0 ! i) (a1 ! i)) [i..j]
     where
         i = fst (bounds a0) `max` fst (bounds a0)
         j = snd (bounds a1) `min` snd (bounds a1)
@@ -263,7 +263,7 @@ mapLeftWithKey :: (key -> vA -> vB)
 mapLeftWithKey f g = g & leftAL.arVals %~ mapF
     where
         mapF ar = array (bounds ar) $ L.map (uncurry applyF) $ A.assocs ar
-        applyF i e = (i,f ((g^.leftAL.arKey) A.! i) e)
+        applyF i e = (i,f ((g^.leftAL.arKey) ! i) e)
 
 mapRightWithKey :: (key -> vA -> vB)
                 -> BiGraph key v0 vA 
@@ -271,7 +271,7 @@ mapRightWithKey :: (key -> vA -> vB)
 mapRightWithKey f g = g & rightAL.arVals %~ mapF
     where
         mapF ar = array (bounds ar) $ L.map (uncurry applyF) $ A.assocs ar
-        applyF i e = (i,f ((g^.rightAL.arKey) A.! i) e)
+        applyF i e = (i,f ((g^.rightAL.arKey) ! i) e)
         -- f' = g^.rightAL.arKey & traverse %~ f
 
 traverseLeft :: Traversal (BiGraph' key0 vA key1 v1 e) (BiGraph' key0 vB key1 v1 e) vA vB
@@ -304,8 +304,8 @@ traverseRightWithEdgeInfo' f gr = gr'
         alist = gr^.rightAL
         alist' = gr^.leftAL
         gr' = gr & (rightAL.arVals) (traverseArrayWithKey (fmap f.vert))
-        vert i x = (x,incoming i <$> (alist^.arEdges) A.! i)
-        incoming i j = (((alist'^.arKey) A.! j, (alist'^.arVals) A.! j), (gr^.edges) M.! (j,i))
+        vert i x = (x,incoming i <$> (alist^.arEdges) ! i)
+        incoming i j = (((alist'^.arKey) ! j, (alist'^.arVals) ! j), (gr^.edges) ! (j,i))
 
 traverseRightWithEdges' :: Traversal (BiGraph' k0 v0 k1 vA e) (BiGraph' k0 v0 k1 vB e) (vA,NonEmpty (k0,e)) vB
 traverseRightWithEdges' f = traverseRightWithEdgeInfo' $ f.second (fmap $ first fst)
@@ -324,8 +324,8 @@ traverseLeftWithEdgeInfo' f gr = gr'
         alist = gr^.leftAL
         alist' = gr^.rightAL
         gr' = gr & (leftAL.arVals) (traverseArrayWithKey (fmap f.vert))
-        vert i x = (x,incoming i <$> (alist^.arEdges) A.! i)
-        incoming i j = (((alist'^.arKey) A.! j, (alist'^.arVals) A.! j), (gr^.edges) M.! (i,j))
+        vert i x = (x,incoming i <$> (alist^.arEdges) ! i)
+        incoming i j = (((alist'^.arKey) ! j, (alist'^.arVals) ! j), (gr^.edges) ! (i,j))
 
 traverseLeftWithEdges' :: Traversal (BiGraph' k0 vA k1 v0 e) (BiGraph' k0 vB k1 v0 e) (vA,NonEmpty (k1,e)) vB
 traverseLeftWithEdges' f = traverseLeftWithEdgeInfo' $ f.second (fmap $ first fst)
@@ -345,10 +345,10 @@ traverseEdgesWithKeys f gr = gr & edges (M.traverseWithKey g)
     where
         g (i,j) e = f (k0,v0,k1,v1,e)
             where
-                k0 = (gr^.leftAL.arKey ) A.! i
-                v0 = (gr^.leftAL.arVals) A.! i 
-                k1 = (gr^.rightAL.arKey ) A.! j
-                v1 = (gr^.rightAL.arVals) A.! j 
+                k0 = (gr^.leftAL.arKey ) ! i
+                v0 = (gr^.leftAL.arVals) ! i 
+                k1 = (gr^.rightAL.arKey ) ! j
+                v1 = (gr^.rightAL.arVals) ! j 
 
 
 acrossBoth :: Applicative f 
@@ -393,7 +393,7 @@ rightMap g = M.fromList $ L.zip (A.elems $ g^.rightAL.arKey) (A.elems $ g^.right
 edgeMap :: (Ord key0,Ord key1) => BiGraph' key0 v0 key1 v1 e -> Map (key0,key1) e
 edgeMap g = M.mapKeys (f leftAL *** f rightAL) $ g^.edges
     where
-        f ln = ((g^.ln.arKey) A.!)
+        f ln = ((g^.ln.arKey) !)
 
 instance ( Show key0, Show key1
          , Show e
@@ -420,7 +420,7 @@ insertEdge kx x ky y g = g & leftAL  %~ f nx kx x ny
         --   -> AdjList key val 
         --   -> AdjList key val
         arLU ar i f x 
-            | inRange (bounds ar) i = f x $ ar A.! i
+            | inRange (bounds ar) i = f x $ ar ! i
             | otherwise             = x
 
         insertArray n x ar = array (second (max n) (bounds ar)) (A.assocs ar ++ [(n,x)])
@@ -484,7 +484,7 @@ rightVertex arse v = GR $ do
     return $ Vertex $ fromJust'' arse $ v `M.lookup` vs
 
 edgeInfo :: Edge s0 s1 -> GraphReader' key0 v0 key1 v1 e s0 s1 e
-edgeInfo (Edge i j) = GR $ views edges (M.! (i,j))
+edgeInfo (Edge i j) = GR $ views edges (! (i,j))
 
 member :: (Ord key0,Ord key1) => key0 -> key1 
        -> BiGraph' key0 v0 key1 v1 e -> Bool
@@ -536,17 +536,17 @@ getLeftVertices = GR $ do
 successors :: Vertex s0 -> GraphReader' key0 v0 key1 v1 e s0 s1 (NonEmpty (Edge s0 s1))
 successors (Vertex u) = GR $ do
     ln <- view $ leftAL.arEdges
-    return $ NE.map (Edge u) $ ln A.! u
+    return $ NE.map (Edge u) $ ln ! u
 
 leftKey :: Vertex s0 -> GraphReader' key0 v0 key1 v1 e s0 s1 key0
 leftKey (Vertex v) = GR $ do
     ar <- view $ leftAL.arKey
-    return $ ar A.! v
+    return $ ar ! v
 
 leftInfo :: Vertex s0 -> GraphReader' key0 v0 key1 v1 e s0 s1 v0
 leftInfo (Vertex v) = GR $ do
     ar <- view $ leftAL.arVals
-    return $ ar A.! v
+    return $ ar ! v
 
 getRightVertices :: GraphReader' key0 v0 key1 v1 e s0 s1 [Vertex s1]
 getRightVertices = GR $ do
@@ -558,17 +558,17 @@ getRightVertices = GR $ do
 predecessors :: Vertex s1 -> GraphReader' key0 v0 key1 v1 e s0 s1 (NonEmpty (Edge s0 s1))
 predecessors (Vertex u) = GR $ do
     AList _ _ ln _ <- view rightAL
-    return $ NE.map (`Edge` u) $ ln A.! u
+    return $ NE.map (`Edge` u) $ ln ! u
 
 rightKey :: Vertex s1 -> GraphReader' key0 v0 key1 v1 e s0 s1 key1
 rightKey (Vertex v) = GR $ do
     AList ar _ _ _ <- view rightAL
-    return $ ar A.! v
+    return $ ar ! v
 
 rightInfo :: Vertex s1 -> GraphReader' key0 v0 key1 v1 e s0 s1 v1
 rightInfo (Vertex v) = GR $ do
     AList _ ar _ _ <- view rightAL
-    return $ ar A.! v
+    return $ ar ! v
 
 transpose :: BiGraph' key0 v0 key1 v1 e -> BiGraph' key1 v1 key0 v0 e
 transpose (Graph arL arR es) = Graph arR arL $ M.mapKeys swap es

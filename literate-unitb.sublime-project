@@ -5,12 +5,12 @@
 			"cmd":
 			[
 				"runghc",
-				"$project_path/display_errors",
+				"$project_path/display_errors.hs",
 				"$file",
 				"$project_path",
 				"ghc_errors.txt"
 			],
-			"file_regex": "^([^\\s=]..*?/..*?):([0-9]*):?([0-9]*)",
+			"file_regex": "^[ \t]*([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
 			"name": "Haskell / Literate Unit-B",
 			"selector": "source.haskell",
 			"working_dir": "${project_path}"

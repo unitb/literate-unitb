@@ -50,6 +50,7 @@ import System.Directory
 import System.TimeIt
 
 import Utilities.Format
+import Utilities.Partial
 import Utilities.Syntactic
 
     -- The pipeline is made of three processes:
@@ -320,11 +321,11 @@ keyboard sh@(Shared { .. }) = do
                 write_obs focus Nothing
             else if take 1 ws == ["dump"]
                     && length ws == 2  
-                    && all isDigit (ws !! 1) then do
+                    && all isDigit (ws ! 1) then do
                 modify_obs dump_cmd $ \st -> do
                     if isNothing st then do
                         pos <- read_obs pr_obl
-                        return $ Just $ Just $ snd $ keys pos !! (read $ ws !! 1)
+                        return $ Just $ Just $ snd $ keys pos ! (read $ ws ! 1)
                     else return Nothing
             else if xs == "dumpall" then do
                 modify_obs dump_cmd $ \st -> do
@@ -332,7 +333,7 @@ keyboard sh@(Shared { .. }) = do
                         return $ Just Nothing
                     else return st
             else if take 1 ws == ["focus"] && length ws == 2 then do
-                write_obs focus $ Just (ws !! 1)
+                write_obs focus $ Just (ws ! 1)
             else do
                 putStrLn $ format "Invalid command: '{0}'" xs
             keyboard sh

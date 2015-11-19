@@ -153,52 +153,52 @@ result4 = Right $ fromRight' $ runMap $ do
         "/" ## False
         "dir" ## False 
         "dir/file" ## False 
-        "dir/file/m0_m0-enter.tex" ## True
-        "dir/file/m0_m0-leave.tex" ## True 
-        "dir/file/m1_m0-enter.tex" ## True
-        "dir/file/m1_m0-leave.tex" ## True 
+        "dir/file/m0_m0-enter.tex"   ## True
+        "dir/file/m0_m0-leave.tex"   ## True 
+        "dir/file/m1_m0-enter.tex"   ## True
+        "dir/file/m1_m0-leave.tex"   ## True 
         "dir/file/m1_m1-moveout.tex" ## True
-        "dir/file/m1_m1-movein.tex" ## True
-        "dir/file/m2_m0-enter.tex" ## True
-        "dir/file/m2_m0-leave.tex" ## True 
+        "dir/file/m1_m1-movein.tex"  ## True
+        "dir/file/m2_m0-enter.tex"   ## True
+        "dir/file/m2_m0-leave.tex"   ## True 
         "dir/file/m2_m1-moveout.tex" ## True
-        "dir/file/m2_m1-movein.tex" ## True
-        "dir/file/m3_m0-enter.tex" ## True
-        "dir/file/m3_m0-leave.tex" ## True 
+        "dir/file/m2_m1-movein.tex"  ## True
+        "dir/file/m3_m0-enter.tex"   ## True
+        "dir/file/m3_m0-leave.tex"   ## True 
         "dir/file/m3_m1-moveout.tex" ## True
-        "dir/file/m3_m1-movein.tex" ## True
+        "dir/file/m3_m1-movein.tex"  ## True
         "dir/file/m3_m3-ctr-plf.tex" ## True
         "dir/file/machine_m0.tex" ## True
-        "dir/file/machine_m0_co.tex" ## True
-        "dir/file/machine_m0_inv.tex" ## True
-        "dir/file/machine_m0_prog.tex" ## True
+        "dir/file/machine_m0_co.tex"    ## True
+        "dir/file/machine_m0_inv.tex"   ## True
+        "dir/file/machine_m0_prog.tex"  ## True
         "dir/file/machine_m0_props.tex" ## True
-        "dir/file/machine_m0_saf.tex" ## True
-        "dir/file/machine_m0_thm.tex" ## True
+        "dir/file/machine_m0_saf.tex"   ## True
+        "dir/file/machine_m0_thm.tex"   ## True
         "dir/file/machine_m0_trans.tex" ## True
         "dir/file/machine_m1.tex" ## True
-        "dir/file/machine_m1_co.tex" ## True
-        "dir/file/machine_m1_inv.tex" ## True
-        "dir/file/machine_m1_prog.tex" ## True
+        "dir/file/machine_m1_co.tex"    ## True
+        "dir/file/machine_m1_inv.tex"   ## True
+        "dir/file/machine_m1_prog.tex"  ## True
         "dir/file/machine_m1_props.tex" ## True
-        "dir/file/machine_m1_saf.tex" ## True
-        "dir/file/machine_m1_thm.tex" ## True
+        "dir/file/machine_m1_saf.tex"   ## True
+        "dir/file/machine_m1_thm.tex"   ## True
         "dir/file/machine_m1_trans.tex" ## True
         "dir/file/machine_m2.tex" ## True
-        "dir/file/machine_m2_co.tex" ## True
-        "dir/file/machine_m2_inv.tex" ## True
-        "dir/file/machine_m2_prog.tex" ## True
+        "dir/file/machine_m2_co.tex"    ## True
+        "dir/file/machine_m2_inv.tex"   ## True
+        "dir/file/machine_m2_prog.tex"  ## True
         "dir/file/machine_m2_props.tex" ## True
-        "dir/file/machine_m2_saf.tex" ## True
-        "dir/file/machine_m2_thm.tex" ## True
+        "dir/file/machine_m2_saf.tex"   ## True
+        "dir/file/machine_m2_thm.tex"   ## True
         "dir/file/machine_m2_trans.tex" ## True
         "dir/file/machine_m3.tex" ## True
-        "dir/file/machine_m3_co.tex" ## True
-        "dir/file/machine_m3_inv.tex" ## True
-        "dir/file/machine_m3_prog.tex" ## True
+        "dir/file/machine_m3_co.tex"    ## True
+        "dir/file/machine_m3_inv.tex"   ## True
+        "dir/file/machine_m3_prog.tex"  ## True
         "dir/file/machine_m3_props.tex" ## True
-        "dir/file/machine_m3_saf.tex" ## True
-        "dir/file/machine_m3_thm.tex" ## True
+        "dir/file/machine_m3_saf.tex"   ## True
+        "dir/file/machine_m3_thm.tex"   ## True
         "dir/file/machine_m3_trans.tex" ## True
 
 case4 :: IO (Either String (Map FilePath Bool))

@@ -4,34 +4,36 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 
-import Data.Array as A
+import Data.Array as A hiding ((!))
 import Data.List as L
 
 import Test.QuickCheck
 
+import Utilities.Partial
+
 dist :: Eq a => [a] -> [a] -> Int
 dist xs ys = 
         --ar A.! (m-1, n-1)
-        ar A.! (m-1, n-1)
+        ar ! (m-1, n-1)
     where
         m = length xs
         n = length ys
         f (-1,j) = j+1
         f (i,-1) = i+1
         f (i,j)  = minimum $
-                        [  (1 + ar A.! (i,j-1))
-                        ,  (1 + ar A.! (i-1,j))
-                        ,  (cost + ar A.! (i-1,j-1)) ]
+                        [  (1 + ar ! (i,j-1))
+                        ,  (1 + ar ! (i-1,j))
+                        ,  (cost + ar ! (i-1,j-1)) ]
                         ++ swap
           where
             cost 
-              | xs !! i == ys !! j  = 0
-              | otherwise           = 1
+              | xs ! i == ys ! j  = 0
+              | otherwise         = 1
             swap 
               |    0 < i && 0 < j  
-                &&     (xs !! (i-1), xs !! i) 
-                    == (ys !! j    , ys !! (j-1)) 
-                = [ar A.! (i-2,j-2) + cost]
+                &&     (xs ! (i-1), xs ! i) 
+                    == (ys ! j    , ys ! (j-1)) 
+                = [ar ! (i-2,j-2) + cost]
               | otherwise       = []
         --bnds = ( ( -1, -1)
         --       , (m-1,n-1))
@@ -44,25 +46,25 @@ dist xs ys =
 diff :: Eq a => [a] -> [a] -> [Change a]
 diff xs ys = 
         --ar A.! (m-1, n-1)
-        ar A.! (m-1, n-1)
+        ar ! (m-1, n-1)
     where
         m = length xs
         n = length ys
         f (-1,j) = map (uncurry Insert) $ zip [0..j] ys
         f (i,-1) = reverse $ map Delete [0..i]
         f (i,j)  = min_ $  swap ++ 
-                           [ Insert (i+1) (ys !! j) : ar A.! (i,j-1)
-                           , Delete i : (ar A.! (i-1,j))
-                           , cost ++ ar A.! (i-1,j-1) ]
+                           [ Insert (i+1) (ys ! j) : ar ! (i,j-1)
+                           , Delete i : (ar ! (i-1,j))
+                           , cost ++ ar ! (i-1,j-1) ]
           where
             cost 
-              | xs !! i == ys !! j  = []
-              | otherwise           = [Replace i (ys !! j)]
+              | xs ! i == ys ! j  = []
+              | otherwise           = [Replace i (ys ! j)]
             swap 
               |    1 <= i && 1 <= j  
-                &&     (xs !! (i-1), xs !! i) 
-                    == (ys !! j    , ys !! (j-1)) 
-                = [[Swap (i-1)] ++ ar A.! (i-2,j-2)]
+                &&     (xs ! (i-1), xs ! i) 
+                    == (ys ! j    , ys ! (j-1)) 
+                = [[Swap (i-1)] ++ ar ! (i-2,j-2)]
               | otherwise       = []
         min_ (x0:x1:xs) = x0 `_min_` min_ (x1:xs)
         min_ [x0]       = x0

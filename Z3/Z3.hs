@@ -55,11 +55,13 @@ import           Data.Typeable
 
 import GHC.Generics (Generic)
 
-import           System.Exit
-import           System.IO.Unsafe
-import           System.Process
+import System.Exit
+import System.IO.Unsafe
+import System.Process
 
-import           Text.Printf
+import Text.Printf
+
+import Utilities.Partial
 
 total_caps :: SSem
 total_caps = unsafePerformIO $ new $ z3c_capacity z3_config
@@ -320,7 +322,7 @@ verify lbl xs n = do
         let lns = lines out
             res = take 1 $ dropWhile ("WARNING" `isPrefixOf`) lns
         if length lns == 0 ||
-            (length lns > 1 && lns !! 1 /= "timeout") ||
+            (length lns > 1 && lns ! 1 /= "timeout") ||
                 (      res /= ["sat"]
                     && res /= ["unsat"]
                     && res /= ["unknown"]

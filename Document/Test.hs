@@ -148,7 +148,7 @@ case2 = do
 --                    n <- choose (0,length kw+2)
 --                    name <- if length kw <= n
 --                        then arbitrary :: Gen String
---                        else return (kw !! n)
+--                        else return (kw ! n)
 --                    m    <- choose (0,6) :: Gen Int
 --                    xs   <- Doc (li 0 0) <$> replicateM m arbitrary
 --                                         <*> pure (li 0 0)

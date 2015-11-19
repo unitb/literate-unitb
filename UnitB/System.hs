@@ -18,13 +18,14 @@ import Control.Exception
 import Control.Lens hiding (indices)
 
 import           Data.Default
-import           Data.Map as M
+import           Data.Map as M hiding ((!))
 
 import Text.Printf
 
 import Utilities.BipartiteGraph
 import Utilities.Instances
 import Utilities.Invariant
+import Utilities.Partial
 
 type System = Checked System'
 

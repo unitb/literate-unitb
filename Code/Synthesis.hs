@@ -23,15 +23,13 @@ import Control.Monad.Trans.RWS
         (RWS,RWST
         ,runRWS,runRWST
         ,execRWST,execRWS)
--- import Control.Monad.Trans.Reader (Reader,runReader)
 
--- import Data.Maybe
 import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
-import Data.Map  as M
--- import Data.Set  as S
+import Data.Map  as M hiding ((!))
 
 import Utilities.Format
+import Utilities.Partial
 
 import Text.Printf
 

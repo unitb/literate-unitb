@@ -39,7 +39,7 @@ import Data.Either
 import Data.Either.Combinators
 import Data.List as L
 import Data.List.NonEmpty as NE
-import Data.Map   as M
+import Data.Map   as M hiding ((!))
 import Data.Maybe as MM
 import Data.Proxy
 import Data.Semigroup

@@ -29,7 +29,6 @@ import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.List
 import Data.Map (isSubmapOf,isProperSubmapOf,Map,member)
-import Data.Maybe
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
@@ -40,6 +39,7 @@ import PseudoMacros
 import Text.Printf
 
 import Utilities.CallStack
+import Utilities.Partial
 import Utilities.Lens
 
 newtype Checked a = Checked { getChecked :: a }
@@ -166,24 +166,8 @@ mutate arse x cmd = x & content arse %~ execState cmd
 mutate' :: (IsChecked c a,Monad m) => Assert -> StateT a m k -> StateT c m k
 mutate' arse cmd = zoom (content arse) cmd
 
-withStack :: CallStack -> Invariant a -> Invariant a
-withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs
-
-provided :: (?loc :: CallStack) => Bool -> a -> a
-provided b = assertMessage "Precondition" 
-        (fromMaybe "" $ stackTrace [$__FILE__] ?loc) (assert b)
-
-providedM :: (?loc :: CallStack) => Bool -> m a -> m a
-providedM b cmd = do
-        provided b () `seq` cmd
-
 create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
 create' arse = check arse . create 
 
-type Assert = forall a. Bool -> a -> a
-
-assertFalse :: Assert -> String -> a
-assertFalse arse msg = assertMessage "False" msg (arse False) (error "false assertion (1)")
-
-assertFalse' :: (?loc :: CallStack) => a
-assertFalse' = provided False (error "false assertion (2)")
+withStack :: CallStack -> Invariant a -> Invariant a
+withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs

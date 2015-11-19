@@ -58,17 +58,6 @@ system =     run_phase0_blocks
 wrap_machine :: Pipeline MM SystemP4 System
 wrap_machine = proc m4 -> do
                 sys <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
-                -- let ms = _ -- M.mapWithKey make_machine m4 :: MTable (Either [Error] Machine)
-                -- machines <- triggerP -< _ ms
-                -- let refs' = M.mapKeys as_label $ M.map as_label $ P.edges $ r_ord
-                    -- mam2maybe = fmap (as_label . fst) . (() `M.lookup`)
-                --     check0 = forM_ (keys mch) $ \m -> check_schedule_ref_struct
-                --                 refs' (as_label m)
-                --                 _ -- (prog_dep ! m)
-                --                 (events $ machines ! m)
-                --                 (transient $ props $ machines ! m)
-                --                 ((m4 ! m) ^. pProgress) -- exprs ! m)
-                -- liftP -< toEither check0
                 returnA -< create' assert $ do
                     machines   .= sys^.mchTable
                     ref_struct .= (Nothing <$ sys^.mchTable)

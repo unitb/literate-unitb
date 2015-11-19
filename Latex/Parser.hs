@@ -22,7 +22,7 @@ import Data.Function
 import Data.Graph
 import Data.List ( intercalate )
 import qualified Data.List as L
-import Data.Map as M hiding ( foldl, map, null, size )
+import Data.Map as M hiding ( foldl, map, null, size, (!) )
 import Data.Semigroup
 import Data.Typeable
 
@@ -41,8 +41,9 @@ import Text.Parsec.Error
 import qualified Text.Parsec.Pos as P
 
 import Utilities.Format
-import Utilities.Graph hiding ( map, empty, size )
+import Utilities.Graph hiding ( map, empty, size, (!) )
 import Utilities.Lines as LN
+import Utilities.Partial
 import Utilities.Syntactic
 --import Utilities.Zipper as Z
 
@@ -434,7 +435,7 @@ opt_args :: Scanner LatexToken [[LatexNode]]
 opt_args = return []
 
 trim_blank_text' :: LatexDoc -> LatexDoc
-trim_blank_text' xs = Doc li0 xs' (lis !! length xs')
+trim_blank_text' xs = Doc li0 xs' (lis ! length xs')
     where
         Doc li0 ys li = drop_blank_text' xs
         ys' = scanr (\x -> (allBlank x &&)) True ys
@@ -519,12 +520,12 @@ fill_holes :: String -> Map String [DocWithHoles]
            -> Either [Error] [(LatexToken,LineInfo)]
 fill_holes fname m = do
         m <- foldM propagate M.empty order
-        return (m M.! fname)
+        return (m ! fname)
     where
         propagate :: (Map String [(LatexToken, LineInfo)])
                   -> SCC String
                   -> Either [Error] (Map String [(LatexToken, LineInfo)])
-        propagate m1 (AcyclicSCC v) = Right (insert v (g (m M.! v) m1) m1)
+        propagate m1 (AcyclicSCC v) = Right (insert v (g (m ! v) m1) m1)
         propagate _ (CyclicSCC xs@(y:_)) = Left 
             [ (Error (format msg $ intercalate "," xs) 
                 $ LI y 1 1)]
@@ -537,7 +538,7 @@ fill_holes fname m = do
           -> DocWithHoles
           -> [(LatexToken,LineInfo)] 
         h _ (Right x)       = [x]
-        h m (Left (name,_)) = m M.! name
+        h m (Left (name,_)) = m ! name
         msg = "A cycle exists in the LaTeX document structure: {0}"
         order = cycles_with [fname] edges 
         edges :: [(String,String)]

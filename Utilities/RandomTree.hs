@@ -16,11 +16,9 @@ import Text.Printf
 
 import Test.QuickCheck hiding (sized)
 import qualified Test.QuickCheck as QC
--- import Test.QuickCheck.All
 
+import Utilities.Partial
 import Utilities.QuickCheckReport
-
--- import Utilities.Tuple
 
 data Tree a = Tree a [Tree a]
     deriving Eq
@@ -118,7 +116,7 @@ choice :: MonadGen m => [RecT m a] -> RecT m a
 choice [] = fail ""
 choice xs = do
         i <- liftGen $ choose (0,length xs-1)
-        x <- try $ xs !! i
+        x <- try $ xs ! i
         maybe (choice $ remove i xs) return x
     where
         remove i xs = take i xs ++ drop (i+1) xs

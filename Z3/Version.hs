@@ -18,6 +18,8 @@ import System.IO.Unsafe
 
 import Text.Printf
 
+import Utilities.Partial
+
 check_z3_bin :: IO Bool
 check_z3_bin = do
     b <- z3_installed
@@ -41,8 +43,8 @@ check_z3_bin = do
 z3_version :: IO (String,String)
 z3_version = do
         xs <- (words . head . lines) `liftM` readProcess z3_path ["--help"] ""
-        let hashcode = dropWhile (/= "hashcode") xs !! 1
-            version = dropWhile (/= "[version") xs !! 1
+        let hashcode = dropWhile (/= "hashcode") xs ! 1
+            version = dropWhile (/= "[version") xs ! 1
         return (version, filter isHexDigit hashcode)
 
 

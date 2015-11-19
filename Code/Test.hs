@@ -20,13 +20,15 @@ import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
 import Data.List as L
-import Data.Map
-
-import Tests.UnitTest
+import Data.Map hiding ((!))
 
 import System.Directory
 import System.IO.Unsafe
 import System.Process
+
+import Tests.UnitTest
+
+import Utilities.Partial
 
 test_case :: TestCase
 test_case = test

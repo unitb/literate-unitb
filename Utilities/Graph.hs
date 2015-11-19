@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables,TypeFamilies #-}
 module Utilities.Graph 
     ( Composition(..), cycles, cycles_with
     , Min(..), closure
@@ -366,3 +366,4 @@ run_tests :: IO Bool
 run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 instance (NFData a,NFData b) => NFData (Matrix a b)
+

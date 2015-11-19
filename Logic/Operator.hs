@@ -246,24 +246,11 @@ assoc_table ops
                   , G.map (f RightAssoc) $ G.transpose pm
                   , G.map (f LeftAssoc) $ G.mapKeys g lm
                   , G.map (f RightAssoc) $ G.mapKeys g rm ]
-            -- fromList (zip bs $ L.map g bs)
     where
         cycles = L.filter (\x -> pm G.! (x,x)) (_new_ops ops)
---        complete = all_ops L.\\ (nub $ new_ops ops)
---        all_ops = nub $   concat (concat (prec ops) 
---                   ++ L.map (L.map Right) (left_assoc ops)
---                   ++ L.map (L.map Right) (right_assoc ops)
---                   ++ L.map (\((x,y),z) -> L.map Right [x,y,z]) (chaining ops))
---              ++ L.map Right (relations ops)
         pm = precedence ops
         lm = left_assoc_graph ops
         rm = right_assoc_graph ops
---        bs = range $ bounds pm
-            -- pm (mapKeys swap pm)
-            -- M.map (f LeftAssoc) pm
-            -- M.map (f RightAssoc) $ mapKeys swap pm
-            -- M.map (f LeftAssoc) lm
-            -- M.map (f RightAssoc) rm
         f a b 
             | b         = a
             | otherwise = NoAssoc
@@ -271,12 +258,6 @@ assoc_table ops
         join x NoAssoc = x
         join NoAssoc x = x
         join _ _ = error "operator parser: conflicting precedences"
---        g (i,j)
---            | pm M.! (i,j) = LeftAssoc
---            | pm M.! (j,i) = RightAssoc
---            | lm M.! (i,j) = LeftAssoc
---            | rm M.! (i,j) = RightAssoc
---            | otherwise    = NoAssoc
 
     -- Basic functions
 apply   :: BinOperator

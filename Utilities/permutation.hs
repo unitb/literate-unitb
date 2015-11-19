@@ -17,7 +17,7 @@ import Control.Monad.ST
 import Control.Monad.State ( evalState )
 import Control.Monad.State.Class -- (MonadState)
 
-import Data.Array.IArray
+import Data.Array.IArray hiding ((!))
 import Data.Array.IO
 import Data.Array.ST
 import Data.Graph (SCC(..))
@@ -29,6 +29,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Tuple as T
 
+import Utilities.Partial
 
 import Test.QuickCheck hiding (frequency,elements)
 import qualified Test.QuickCheck as QC

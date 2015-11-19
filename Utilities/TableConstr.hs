@@ -45,18 +45,11 @@ makeRecordConstrAs makeName' n = do
             where
                 x' = nameBase x
         withUpper = changeCap toUpper . mkName . dropWhile (== '_') . nameBase
-        -- withLower = changeCap toLower
         fieldCons (n,(t,t')) = normalC (withUpper n) [strictType notStrict $ pure t,strictType notStrict $ pure t']
         fields'' = map (uncurry isMapType) fields
         fields' = rights fields''
         params  = lefts fields''
-    -- runIO $ putStrLn "STUFF!!!"
-    -- runIO $ mapM_ ((uncurry $ printf "%s :: %s\nSTUFF\n") . (pprint *** pprint)) fields
-    -- runIO $ putStrLn "STUFF!!!"
-    -- runIO $ print fields
-    -- runIO $ print fields''
     params' <- forM params $ \v -> (v,) <$> newName "p"
-    -- runIO $ putStrLn "AFTER"
     let fieldType = dataD (cxt []) typeName 
                 (map PlainTV args) 
                 (map fieldCons fields') 
@@ -94,8 +87,6 @@ makeRecordConstrAs makeName' n = do
                 $ arrowType (map (snd . fst) params') 
                     $ [t| $listType -> $recType |]
                     
-    -- (runIO . putStrLn . pprint) <$> fieldType
-    -- (runIO . putStrLn . pprint) <$> fieldType
     sequence 
         [ fieldType
         , makeSig

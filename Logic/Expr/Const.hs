@@ -17,6 +17,7 @@ import qualified Data.Map as M
 import           Data.Maybe hiding ( fromJust )
 import qualified Data.Set as S
 
+import Utilities.Partial
 import Utilities.Syntactic
 
 infixr 1 .==.
@@ -340,6 +341,7 @@ var_of :: AbsExpr t q -> AbsVar t
 var_of (Word v) = v
 var_of _ = error "var_of: expecting a variable expression"
 
+-- {-# DEPRECATED var, prog_var "use Logic.Expr.QuasiQuote" #-}
 var :: String -> t -> (Either a (AbsExpr t q), AbsVar t)
 var n t      = (Right $ Word $ v, v)
     where
@@ -374,9 +376,9 @@ one_point_rule (Binder q vs r t _)
             where
                 rs = do (i,j) <- [(0,1),(1,0)]
                         k <- maybeToList 
-                            $ (xs !! i) `lookup` zip (map Word vs) vs
-                        guard $ S.null $ S.intersection (S.fromList vs) (used_var $ xs !! j)
-                        return (k, xs !! j)
+                            $ (xs ! i) `lookup` zip (map Word vs) vs
+                        guard $ S.null $ S.intersection (S.fromList vs) (used_var $ xs ! j)
+                        return (k, xs ! j)
         subst _ = M.empty
         f x
             | length ts' == 1   = rewrite one_point_rule x

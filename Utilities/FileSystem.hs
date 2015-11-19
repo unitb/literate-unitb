@@ -10,11 +10,11 @@ module Utilities.FileSystem
     , files
     , module System.Directory 
     , runMockFileSystem
+    , execMockFileSystem
+    , evalMockFileSystem
     , runMockFileSystem'
     , execMockFileSystem'
-    , execMockFileSystem
     , evalMockFileSystem'
-    , evalMockFileSystem
     )
 where
 
@@ -22,7 +22,7 @@ import Control.Lens
 import Control.Monad.State
 
 import Data.Default
-import Data.Map as M
+import Data.Map as M hiding ((!))
 import Data.Maybe
 
 import Prelude hiding (readFile,writeFile)

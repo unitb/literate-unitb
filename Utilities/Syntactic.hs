@@ -14,6 +14,7 @@ import Data.List.Ordered
 import Data.Typeable
 
 import GHC.Read
+import GHC.SrcLoc
 
 import Language.Haskell.TH (Loc(..))
 
@@ -23,6 +24,7 @@ import Test.QuickCheck
 
 import Text.ParserCombinators.ReadPrec
 
+import Utilities.CallStack
 import Utilities.Format
 import Utilities.Instances
 import qualified Utilities.Lines as L
@@ -180,6 +182,17 @@ asStringLi li xs = unlinesLi ys'
 
 asLI :: Loc -> LineInfo
 asLI loc = uncurry (LI (loc_filename loc)) (loc_start loc)
+
+locToLI :: SrcLoc -> LineInfo
+locToLI loc = LI
+            (srcLocFile loc) 
+            (srcLocStartLine loc)
+            (srcLocStartCol loc)
+
+errorTrace :: [FilePath] -> CallStack -> String -> [Error]
+errorTrace fs stack msg = [MLError msg $ map (_2 %~ locToLI) loc]
+    where
+        loc = getSrcLocs fs stack
 
 instance NFData Error
 instance NFData LineInfo

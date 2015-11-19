@@ -11,6 +11,8 @@ import Control.Lens hiding (Const)
 
 import Data.List
 
+import Utilities.Partial
+
 well_definedness :: Expr -> Expr
 well_definedness (Word _) = ztrue
 well_definedness (Const _ _) = ztrue
@@ -31,9 +33,9 @@ well_definedness (FunApp fun xs)
         | view name fun == "and"   = zsome $ map (f id) ys
         | view name fun == "or"    = zsome $ map (f znot) ys
         | view name fun == "=>"    = well_definedness 
-                                       $ znot (xs !! 0) `zor` (xs !! 1)
+                                       $ znot (xs ! 0) `zor` (xs ! 1)
         | view name fun == "apply" = zall $ 
-                                        (($typeCheck) $ xs' !! 1 `zelem` zdom (xs' !! 0))
+                                        (($typeCheck) $ xs' ! 1 `zelem` zdom (xs' ! 0))
                                       : map well_definedness xs
         | otherwise                = zall $ map well_definedness xs
     where

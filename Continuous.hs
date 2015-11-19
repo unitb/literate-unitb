@@ -27,7 +27,7 @@ import Data.Time
 import Data.Typeable
 
 import qualified Data.ByteString as BS
-import qualified Data.Map as M
+import qualified Data.Map as M hiding ((!))
 import           Data.Maybe
 import qualified Data.Serialize as Ser
 
@@ -36,6 +36,7 @@ import System.Directory
 import System.Environment
 import System.TimeIt
 
+import Utilities.Partial
 import Utilities.Syntactic
 
 import Text.Printf
@@ -88,7 +89,7 @@ check_theory (name,th) = do
             po = either undefined id $ theory_po th
             new_po = po `M.difference` old_po
             ch_po  = po `M.intersection` old_po
-            ch     = M.filterWithKey (\k x -> snd (old_po M.! k) /= x) ch_po
+            ch     = M.filterWithKey (\k x -> snd (old_po ! k) /= x) ch_po
             all_po = new_po `M.union` ch
 --            handle :: ErrorCall -> IO (Map Label Bool)
                 -- revise: do not return empty
@@ -101,7 +102,7 @@ check_theory (name,th) = do
                     (verify_all all_po)
                     handle
         let p_r = M.mapWithKey f po
-            f k x = maybe (old_po M.! k) (\b -> (b,x)) $ M.lookup k res
+            f k x = maybe (old_po ! k) (\b -> (b,x)) $ M.lookup k res
         put param { pos = M.insert (label name) p_r $ pos param }
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toList res
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)

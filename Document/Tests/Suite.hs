@@ -36,7 +36,6 @@ import Prelude hiding (lookup)
 import PseudoMacros
 
 import Utilities.Format
-import Utilities.CallStack
 import Utilities.Syntactic
 
 import System.Directory

@@ -34,6 +34,7 @@ import Text.Printf
 
 import           Utilities.Format
 import qualified Utilities.Graph as G 
+import           Utilities.Partial
 import           Utilities.Syntactic
 -- import           Utilities.QuickCheckReport
 
@@ -144,8 +145,8 @@ showExpr notation e = show_e e
                                     (L.intercalate ", " $ map show xs)
             | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
             where
-                x = xs !! 0
-                y = xs !! 1
+                x = xs ! 0
+                y = xs ! 1
                 op = maybe (Right plus) id $ find_op f
                 op_name = maybe unknown (view name) $ find_op f
                 unknown = printf "<unknown function: %s %s>" 
