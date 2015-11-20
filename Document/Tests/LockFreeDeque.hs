@@ -76,6 +76,8 @@ test = test_cases
                 case18 result18
             , StringCase "test 19, splitting POs"
                 case19 result19
+            , POCase "test 20, Lamport proofs"
+                case20 result20
             ]            
 
 result0 :: String
@@ -4363,3 +4365,33 @@ result19 = unlines
     , "                          (then (using-params simplify :expand-power true) smt)))"
     , "; m1/resp:pop:left/F_SCH/replace/eqv"
     ]
+
+path20 :: FilePath
+path20 = "tests/lock-free deque/main9.tex"
+
+result20 :: String
+result20 = unlines
+    [ "  o  m0/INIT/WD"
+    , "  o  m0/INIT/WWD"
+    , "  o  m0/INV/WD"
+    , "  o  m0/handle/FIS/req@prime"
+    , "  o  m0/handle/WD/ACT/act0"
+    , "  o  m0/handle/WD/C_SCH"
+    , "  o  m0/handle/WD/F_SCH"
+    , "  o  m0/handle/WD/GRD"
+    , "  o  m0/handle/WWD"
+    , "  o  m0/prog0/LIVE/add"
+    , "  o  m0/prog0/PROG/WD/lhs"
+    , "  o  m0/prog0/PROG/WD/rhs"
+    , "  o  m0/req/FIS/req@prime"
+    , "  o  m0/req/SCH/r"
+    , "  o  m0/req/WD/ACT/act0"
+    , "  o  m0/req/WD/C_SCH"
+    , "  o  m0/req/WD/F_SCH"
+    , "  o  m0/req/WD/GRD"
+    , "  o  m0/req/WWD"
+    , "passed 18 / 19"
+    ]
+
+case20 :: IO POResult
+case20 = verify path20 0

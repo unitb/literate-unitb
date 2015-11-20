@@ -17,6 +17,8 @@
 \RequirePackage{ifthen}
 \RequirePackage{amsmath}
 \RequirePackage[retainorgcmds]{IEEEtrantools}
+\RequirePackage{enumitem}
+\RequirePackage{amsthm}
 
 
 %%%%% Macros for Unit-B
@@ -538,6 +540,27 @@
 \newcommand{\var}[3]{$#1$, #2 to $#3$}
 % \newcommand{\index}[2]{$#1 := #2$}
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
+
+\newcounter{prooflevel}
+
+\newenvironment{liveness}[2]
+{ \begin{proof}{#1} \\ by #2
+  \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+  \addtocounter{prooflevel}{1}
+}
+{ \end{enumerate}
+  \end{proof}
+  \addtocounter{prooflevel}{-1}
+}
+\newcommand{\progstep}[2]{ \item \quad $#1 \quad \mapsto\quad #2$ }
+\newcommand{\safstep}[2]{ \item  \quad $#1 \quad \textbf{unless}\quad #2$ }
+\newenvironment{step}[1]
+{ \\ by #1
+  \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+  \addtocounter{prooflevel}{1}}
+{ \end{enumerate}
+  \addtocounter{prooflevel}{-1}
+}
 
 % \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
 \newcommand{\replace}[6]{}     % {event}{old,...}{new,...}{aux,...}

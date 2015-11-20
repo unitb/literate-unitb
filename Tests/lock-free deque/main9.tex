@@ -1,0 +1,84 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+	% see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{../unitb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+
+\newcommand{\REQ}{\text{REQ}}
+
+\begin{document}
+	\input{main9/machine_m0.tex}
+\begin{machine}{m0}
+
+	\newset{\REQ}
+
+We need a variable to keep track of all the requests to mutate the
+data structure.
+
+	\[ \variable{ req,req0 : \set [\REQ] } \]
+
+... and new events:
+% \hide{
+	\newevent{req}{req}
+	\newevent{handle}{handle}
+	% \newevent{req}{req\_b} 
+	% \newevent{handle}{handle\_b} 
+
+\[\param{req}{r : \REQ }\]
+\[\param{handle}{r : \REQ }\]
+\with{sets}
+\begin{align*}
+	\evguard{req}{grd0}{ \neg r \in req }  \\
+	\evbcmeq{req}{act0}{ req }{ req \bunion \{ r \} } \\
+	\evbcmeq{req}{act1}{ req0 }{ req } \\
+	\evguard{handle}{grd0}{ r \in req }  \\
+	\evbcmeq{handle}{act0}{ req }{ req \setminus \{ r \} } \\
+	\evbcmeq{handle}{act1}{ req0 }{ req }
+\end{align*}
+
+\section{Requirements}
+	\dummy{ R : \set[\REQ] }
+\begin{align*}
+	\constraint{co0}{ req0' = req \1\lor (req0' = req0 \1\land req' = req) }
+\end{align*}
+\begin{align*}
+	& \progress{prog0}
+		{ \neg req = \emptyset }
+		{ \neg req0 \subseteq req } \\
+ \refine{prog0}{ensure}{handle}{}
+\end{align*}
+\begin{align*}
+	\cschedule{handle}{sch0}{ \neg req = \emptyset }
+	\initialization{m0:in0}{ req = \emptyset }
+\end{align*}
+\end{machine}
+
+\input{main9/machine_m1}
+\begin{machine}{m1}
+	\refines{m0}
+\[ \indices{handle}{ rs : \set[\REQ] } \]
+
+\end{machine}
+
+% \input{main9/machine_m2}
+\begin{machine}{m2}
+	\refines{m0}
+
+We now partitial $req$ into requests for operation A ($reqA$) and
+requests for operation B ($reqB$).
+
+\[ \variable{ reqA, reqB : \set [\REQ] } \]
+\begin{align*}
+	\invariant{m1:inv0}{ reqA \bunion reqB = req } \\
+	\invariant{m1:inv1}{ reqA \binter reqB = req } 
+\end{align*}
+And consequ
+\begin{align*}
+	\initialization{m1:in0}{ reqA = \emptyset \land reqB = \emptyset }
+\end{align*}
+\end{machine}
+
+\end{document}
