@@ -117,3 +117,6 @@ get_components xs li =
             | otherwise      = map_docM_ f x
         f x = map_docM_ f x
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
+
+syntax :: [String]
+syntax = machineSyntax system

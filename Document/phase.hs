@@ -66,11 +66,17 @@ triggerM = maybe mzero return
 triggerP :: Pipeline MM (Maybe a) a
 triggerP = Pipeline empty_spec empty_spec triggerM
 
-cmdSpec :: String -> Int -> DocSpec
-cmdSpec cmd nargs = DocSpec M.empty (M.singleton cmd nargs)
+cmdSpec :: IsTuple LatexArg a 
+        => String -> Proxy a -> DocSpec
+cmdSpec cmd p = DocSpec M.empty (M.singleton cmd $ ArgumentSpec nargs p)
+    where
+        nargs = len latexArgProxy p
 
-envSpec :: String -> Int -> DocSpec
-envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
+envSpec :: IsTuple LatexArg a 
+        => String -> Proxy a -> DocSpec
+envSpec env p = DocSpec (M.singleton env $ ArgumentSpec nargs p) M.empty
+    where
+        nargs = len latexArgProxy p
 
 read_all :: (IsTuple LatexArg a, Monad m)
          => StateT ([LatexDoc],LineInfo) (EitherT [Error] m) a
@@ -101,8 +107,7 @@ machineCmd :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineCmd cmd f = Pipeline m_spec empty_spec g
     where
-        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
-        m_spec = cmdSpec cmd nargs
+        m_spec = cmdSpec cmd (Proxy :: Proxy args)
         param = Collect 
             { getList = getCmd
             , tag = cmd
@@ -135,8 +140,7 @@ machineEnv :: forall result args ctx.
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
-        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
-        m_spec = envSpec env nargs
+        m_spec = envSpec env (Proxy :: Proxy args)
         param = Collect 
             { getList = getEnv
             , tag = env
@@ -166,8 +170,7 @@ contextCmd :: forall a b c.
            -> Pipeline MM (CTable c) (Maybe (CTable a))
 contextCmd cmd f = Pipeline empty_spec c_spec g
     where
-        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy b)
-        c_spec = cmdSpec cmd nargs
+        c_spec = cmdSpec cmd (Proxy :: Proxy b)
         param = Collect 
             { getList = getCmd
             , tag = cmd
@@ -182,8 +185,7 @@ contextEnv :: forall result args ctx.
            -> Pipeline MM (CTable ctx) (Maybe (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
-        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
-        c_spec = envSpec env nargs
+        c_spec = envSpec env (Proxy :: Proxy args)
         param = Collect 
             { getList = getEnv
             , tag = env

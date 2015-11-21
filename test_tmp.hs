@@ -7,7 +7,7 @@ module Main where
 --import Data.Either.Combinators
 --import Utilities.Syntactic
 
--- import Document.Tests.Suite
+import Document.Document as Doc ( syntax )
 import Document.Phase.Expressions as PExp
 import Document.Tests.Cubes   as Cubes
 import Document.Tests.GarbageCollector  as GC
@@ -46,7 +46,7 @@ import Tests.UnitTest
 import System.Process
 import System.TimeIt
 
-import Utilities.Lines as Lines
+import qualified Utilities.Lines as Lines
 
 --import Utilities.Instances ()
 
@@ -91,6 +91,7 @@ main = timeIt $ do
     --    , Tex.test_case
     --    , UB.test_case 
     --    ]
+    writeFile "syntax.txt" $ unlines syntax
     return $ run_test_cases Deq.test_case
     return $ run_test_cases Term.test_case
     return $ run_test_cases Puzz.test_case

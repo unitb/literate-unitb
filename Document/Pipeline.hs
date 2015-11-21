@@ -1,10 +1,12 @@
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE Arrows #-}
 module Document.Pipeline where
 
     -- Modules
+import Document.Phase.Parameters
 import Latex.Parser as P
 import UnitB.AST
 
@@ -20,9 +22,13 @@ import Control.Monad.Writer
 
 import Data.List as L
 import qualified Data.Map as M
+import Data.Proxy
 import Data.String
 
+import Text.Printf
+
 import Utilities.Syntactic
+import Utilities.Tuple.Generics
 
 newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
     deriving ( Functor,Applicative,Monad,MonadPlus
@@ -31,7 +37,12 @@ newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
 
 type MM = MM' Input
 
-data DocSpec = DocSpec (M.Map String Int) (M.Map String Int)
+data DocSpec = DocSpec 
+            { getEnvSpec :: M.Map String ArgumentSpec 
+            , getCommandSpec :: M.Map String ArgumentSpec
+            }
+
+data ArgumentSpec = forall a. IsTuple LatexArg a => ArgumentSpec Int (Proxy a)
 
 data Input = Input 
     { getMachineInput :: M.Map MachineId DocBlocks
@@ -46,6 +57,9 @@ instance Show ContextId where
 
 instance IsString ContextId where
     fromString = CId
+
+argCount :: ArgumentSpec -> Int
+argCount (ArgumentSpec n _) = n
 
 runMM :: MM' a b -> a -> Either [Error] b
 runMM (MM cmd) input = case r of
@@ -115,7 +129,7 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
         f (Just (Env _ name li ys _,xs)) = do
                 case name `M.lookup` envs of
                     Just nargs -> do
-                        let (args,rest) = brackets nargs ys
+                        let (args,rest) = brackets (argCount nargs) ys
                             li' = line_info rest 
                         tell (DocBlocks (M.singleton name 
                             [BlockEnv (args,li') rest li]) M.empty) 
@@ -125,7 +139,7 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
                 f $ unconsTex ys
                 f $ unconsTex xs
         f (Just (Text (Command name li),xs)) = do
-                case name `M.lookup` cmds of
+                case argCount <$> name `M.lookup` cmds of
                     Just nargs
                         | nargs == 0 -> do
                             tell (DocBlocks M.empty (M.singleton name [BlockCmd ([],li) li]))
@@ -167,3 +181,17 @@ runPipeline' ms cs arg p = runMM (f arg) input
         mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
         ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs
         Pipeline m_spec c_spec f = p
+
+latexArgProxy :: Proxy LatexArg
+latexArgProxy = Proxy
+
+machineSyntax :: Pipeline m a b -> [String]
+machineSyntax (Pipeline mch _ _) = 
+           M.foldMapWithKey cmd (getCommandSpec mch)
+        ++ M.foldMapWithKey env (getEnvSpec mch)
+    where
+        argument p = printf "{%s}" (argKind p)
+        cmd x (ArgumentSpec _ xs) = [x ++ foldMapTupleType latexArgProxy argument xs]
+        env x (ArgumentSpec _ xs) = [printf "\\begin{%s} .. \\end{%s}" x x 
+                    ++ foldMapTupleType latexArgProxy argument xs]
+

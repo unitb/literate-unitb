@@ -1,0 +1,41 @@
+\assumption{fresh-name}{expression}
+\comment{text / comment}{text / comment}
+\constant{text / comment}
+\constraint{fresh-name}{expression}
+\cschedule{concrete event-name}{fresh-name}{expression}
+\dummy{text / comment}
+\evassignment{concrete event-name}{fresh-name}{expression}
+\evbcmeq{concrete event-name}{fresh-name}{variable}{expression}
+\evbcmin{concrete event-name}{fresh-name}{variable}{expression}
+\evbcmsuch{concrete event-name}{fresh-name}{zero or more variable}{expression}
+\evguard{concrete event-name}{fresh-name}{expression}
+\fschedule{concrete event-name}{fresh-name}{expression}
+\indices{concrete event-name}{text / comment}
+\initialization{fresh-name}{expression}
+\initwitness{variable}{expression}
+\invariant{fresh-name}{expression}
+\mergeevents{zero or more abstract event-name}{concrete event-name}
+\newevent{concrete event-name}
+\newset{set-name}
+\param{concrete event-name}{text / comment}
+\progress{fresh-name}{expression}{expression}
+\refine{progress-property-label}{rule}{zero or more progress-property-label}{text / comment}
+\refines{machine-name}
+\removeact{concrete event-name}{zero or more abstract action-label}
+\removecoarse{concrete event-name}{zero or more abstract coarse-schedule-label}
+\removefine{concrete event-name}{zero or more abstract fine-schedule-label}
+\removeguard{concrete event-name}{zero or more abstract guard-label}
+\removeinit{zero or more abstract initialization-label}
+\removevar{zero or more variable}
+\replace{abstract event-name}{zero or more abstract coarse-schedule-label}{zero or more concrete coarse-schedule-label}{zero or more preserved coarse-schedule-label}{progress-property-label}
+\replacefine{abstract event-name}{progress-property-label}
+\safety{fresh-name}{expression}{expression}
+\safetyB{fresh-name}{abstract event-name}{expression}{expression}
+\splitevent{abstract event-name}{zero or more concrete event-name}
+\theorem{fresh-name}{expression}
+\transient{zero or more concrete event-name}{fresh-name}{expression}
+\transientB{zero or more concrete event-name}{fresh-name}{text / comment}{expression}
+\variable{text / comment}
+\with{theory-name}
+\witness{concrete event-name}{variable}{expression}
+\begin{proof} .. \end{proof}{proof-obligation-name}
