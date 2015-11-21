@@ -506,7 +506,6 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ invariants m
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
-                 -- nameless_hyps $ _ $ evt^.abstract_evts
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
                 $ M.elems $ evt^.witness)
@@ -520,7 +519,6 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ invariants m
                  prefix_label $ as_label lbl
                  named_hyps $ evt^.new.guards
-                 -- nameless_hyps $ _ $ evt^.abstract_evts
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_exist_goal assert ["WFIS"] pvar 
                 $ M.elems $ evt^.witness)
@@ -1104,8 +1102,6 @@ verify_all pos' = do
     ys <- map_failures (lbls !) 
             $ discharge_all xs
     rs <- forM (L.zip lbls ys) $ \(lbl,r) -> do
---    rs <- forM xs $ \(lbl, po) -> do
---            r <- discharge po
             case r of
                 Valid -> do
                     return (lbl, True) 
@@ -1117,7 +1113,6 @@ verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Seq
 verify_changes m old_pos = do
         case proof_obligation m of
             Right pos -> do
---                dump (show $ _name m) pos
                 let new_pos = differenceWith f pos old_pos
                 res <- verify_all new_pos
                 let { h k p0 = (
@@ -1138,7 +1133,6 @@ str_verify_machine :: IsExpr expr => Machine' expr -> IO (String,Int,Int)
 str_verify_machine m = 
         case proof_obligation m of
             Right pos -> do
---                dump (show $ _name m) pos
                 xs <- verify_all pos
                 format_result xs
             Left msgs -> return (L.unlines $ L.map report msgs,0,0)

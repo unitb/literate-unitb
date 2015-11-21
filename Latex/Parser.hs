@@ -202,12 +202,16 @@ instance Syntactic LatexToken where
     line_info (Blank _ li)      = li
     line_info (Open _ li)       = li
     line_info (Close _ li)      = li
+    after x = end (x,line_info x)
     traverseLineInfo = lineInfoLens
 
 instance Syntactic LatexNode where
     line_info (Env li _ _ _ _)     = li
     line_info (Bracket _ li _ _) = li
     line_info (Text t)           = line_info t
+    after (Text t) = after t
+    after (Env _ nm _ _ li)  = end (nm ++ "}",li)
+    after (Bracket _ _ _ li) = end ("}",li)
     traverseLineInfo f (Bracket b li0 ct li1) = 
             Bracket b <$> f li0 
                       <*> traverseLineInfo f ct 
@@ -222,10 +226,12 @@ instance Syntactic LatexNode where
 
 instance Syntactic (TokenStream a) where
     line_info (StringLi xs li) = headDef li (map snd xs)
+    after (StringLi _ li) = li
     traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
 
 instance Syntactic LatexDoc where
     line_info (Doc li _ _) = li
+    after (Doc _ _ li)     = li
     traverseLineInfo f (Doc li xs li') = 
             Doc <$> f li 
                 <*> traverse (traverseLineInfo f) xs 

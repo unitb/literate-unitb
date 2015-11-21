@@ -56,63 +56,6 @@ runMM (MM cmd) input = case r of
     where
         (r,(),es) = runRWS (runMaybeT cmd) input ()
 
-    -- arr $ \x -> trace (format "{0}: {1}" m x) ()
-
--- newtype ErrorAT e m a b = EA { getError :: a -> MaybeT (WriterT e m) b }
-
--- type ErrorA e = ErrorAT e Identity
-
--- instance (Monad m, Monoid e) => C.Category (ErrorAT e m) where
---     id = EA return
---     f . g = EA $ \x -> getError g x >>= getError f
-
--- instance (Monad m, Monoid e) => Arrow (ErrorAT e m) where
---     arr f = EA $ return . f
---     first (EA f) = EA $ \(x,y) -> do
---             (,y) `liftM` f x
---     (EA f) *** (EA g) = EA $ \(x,y) -> MaybeT $ do
---         -- let errs (Left xs) = xs
---         --     errs (Right _) = mempty
---         x <- runMaybeT $ f x
---         y <- runMaybeT $ g y
---         case (x, y) of
---             (Just x',Just y') -> return $ Just (x',y')
---             (_,_) -> return Nothing
---     x &&& y = arr (id &&& id) >>> x *** y
-
--- trigger :: (Monoid e,Monad m) => ErrorAT e m (Either e a) a
--- trigger = EA f
---     where
---         f (Right x) = return x
---         f (Left x)  = getError hardFail x
-
--- mapA :: (Monad m,Monoid e) 
---      => ErrorAT e m a b -> ErrorAT e m [a] [b]
--- mapA (EA f) = EA $ \xs -> MaybeT $ do
---         ys <- mapM (runMaybeT . f) xs
---         return $ sequence ys
-
--- runErrorAT :: ErrorAT e m a b -> a -> m (Maybe b,e)
--- runErrorAT (EA f) = runWriterT . runMaybeT . f
-
--- runErrorA :: ErrorA e a b -> a -> (Maybe b,e)
--- runErrorA m = runIdentity . runErrorAT m
-
--- softFail :: (Monoid e, Monad m) => ErrorAT e m e ()
--- softFail = EA tell
-
--- hardFail :: (Monoid e, Monad m) => ErrorAT e m e b
--- hardFail = EA $ \e -> tell e >> fail ""
-
--- example :: ErrorA [String] Int (Int,Int)
--- example = (err "allo" >>> err "bonjour") &&& err "salut"
---         -- x <- err "allo" -< ()
---         -- z <- err "salut" -< ()
---         -- y <- err "bonjour" -< x
---         -- returnA -< (x,y,z)
---     where
---         err x = proc _ -> hardFail -< [x]
-
 empty_spec :: DocSpec
 empty_spec = DocSpec M.empty M.empty
 

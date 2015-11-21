@@ -9,6 +9,7 @@ module Document.Phase.Proofs where
     --
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Parameters
 import Document.Phase.Transient
 import Document.Proof
 import Document.Refinement as Ref
@@ -213,7 +214,7 @@ mergeLiveness (Conc cl) (Abs al) = Conc LiveStruct
 
 refine_prog_prop :: MPipeline MachineP3
                 [(ProgId,(Rule,[(ProgId,ProgId)]),LineInfo)]
-refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3 -> do
+refine_prog_prop = machineCmd "\\refine" $ \(goal, RuleName rule, hyps, PlainText hint) m p3 -> do
         let p2   = (p3 ^. machineP2') 
                         & pEventRef %~ G.mapBoth (view e2) (view e2)
                         & pContext %~ view t2
@@ -222,16 +223,20 @@ refine_prog_prop = machineCmd "\\refine" $ \(goal, String rule, hyps, hint) m p3
             tr   = p3 ^. pTransient
             parser = p3 ^. pMchSynt
             rule' = map toLower rule
-            goal' = PId goal
-            dep = zip (repeat goal') (map PId hyps)
+            goal' = as_label goal
+            hyps' = map as_label hyps
+            dep = map (goal,) hyps
         r <- parse_rule' rule'
-            (RuleParserDecl p2 m (M.mapKeys as_label prog) saf tr goal hyps hint parser)
+            (RuleParserDecl p2 m (M.mapKeys as_label prog) saf tr goal' hyps' hint parser)
         li <- ask
-        return [(goal',(r,dep),li)]
+        return [(goal,(r,dep),li)]
 
 ref_replace_csched :: MPipeline MachineP3 EventRefA
-ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog) m p3 -> do
+ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',prog) m p3 -> do
         -- let lbls  = (S.elems $ add `S.union` del `S.union` keep)
+        let del   = map (getCoarseSchLbl . getAbstract) del'
+            added = map (getCoarseSchLbl . getConcrete) added'
+            kept  = map (getCoarseSchLbl . getCommon) kept'
         (pprop,evt) <- toEither $ do
             pprop <- fromEither (error "replace_csched: prog") 
                         $ get_progress_prop p3 m prog
@@ -258,7 +263,7 @@ ref_replace_csched = machineCmd "\\replace" $ \(evt_lbl,del,added,kept,prog) m p
         return $ EventRef [(evt,[((po_lbl,rule),li)])] []
 
 ref_replace_fsched :: MPipeline MachineP3 EventRefA
-ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
+ref_replace_fsched = machineCmd "\\replacefine" $ \(Abs evt_lbl,prog) m p3 -> do
         evt <- get_abstract_event p3 evt_lbl
         pprop <- get_progress_prop p3 m prog
         let rule      = (prog,pprop)
@@ -267,7 +272,7 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(evt_lbl,prog) m p3 -> do
 
 
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
-all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
+all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 -> do
                 li <- lift ask
                 let cmt = flatten' cmt'
                     item = L.filter (/= '$') $ remove_ref $ flatten' item'
@@ -301,10 +306,10 @@ all_comments = machineCmd "\\comment" $ \(item',cmt') _m p3 -> do
                 return [(key,cmt,li)]
 
 all_proofs :: MPipeline MachineP3 [(Label,Tactic Proof,LineInfo)]
-all_proofs = machineEnv "proof" $ \(One po) xs m p3 -> do
+all_proofs = machineEnv "proof" $ \(Identity (PO po)) xs m p3 -> do
         li <- lift ask
         let notation = p3^.pNotation
-            po_lbl = label $ remove_ref $ flatten' po
+            po_lbl = label $ remove_ref po
             lbl = composite_label [ as_label m, po_lbl ]
         proof <- mapEitherT 
             (\cmd -> runReaderT cmd notation) 

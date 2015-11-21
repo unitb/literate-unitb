@@ -17,8 +17,9 @@ import Utilities.Graph as G
 import Utilities.EditDistance
 import Utilities.Lines as Lines
 import qualified Utilities.GraphSpec as GSpec
-import qualified Utilities.Relation as Rel
 import qualified Utilities.Permutation as Perm
+import qualified Utilities.Relation as Rel
+import qualified Utilities.Tuple.Generics as Tup
 
     -- Libraries
 import Control.Lens
@@ -60,7 +61,8 @@ test = test_cases "Graphs and operator grammars" $
     ] ++ GSpec.test_cases ++
     [ Case "case 11 - Relations, quickcheck" Rel.run_spec True
     , Case "case 12 - New graphs, quickcheck" Perm.run_tests True  
-    , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True]
+    , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
+    , Tup.test_case ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do

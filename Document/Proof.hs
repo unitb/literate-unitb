@@ -526,10 +526,10 @@ mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
         , _dum_ctx = dumVar }
 
 parse_expr'' :: ParserSetting
-             -> LatexDoc
+             -> StringLi
              -> M DispExpr
 parse_expr'' p xs = do
-        hoistEither $ parse_expr' p xs
+        hoistEither $ parse_expr p xs
 
 unfail :: M a -> M (Maybe a)
 unfail cmd = do

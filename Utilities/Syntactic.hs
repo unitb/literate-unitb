@@ -71,6 +71,7 @@ show_err xs = unlines $ map report $ sortOn line_info xs
 
 class Syntactic a where
     line_info :: a -> LineInfo
+    after :: a -> LineInfo
     traverseLineInfo :: Traversal' a LineInfo
 
 class Token t where
@@ -85,6 +86,9 @@ class Token t where
 
 instance Token Char where
     lexeme x = [x]
+
+instance Token String where
+    lexeme = id
 
 class IsBracket a str | a -> str where
     bracketPair :: a -> (str,str)
@@ -108,6 +112,7 @@ with_li li = either (\x -> Left $ map (`Error` li) x) Right
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
+    after = line_info
     traverseLineInfo f (Error x li) = Error x <$> f li
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 

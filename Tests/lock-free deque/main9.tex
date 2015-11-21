@@ -51,7 +51,7 @@ data structure.
  \refine{prog0}{ensure}{handle}{}
 \end{align*}
 \begin{align*}
-	\cschedule{handle}{sch0}{ \neg req = \emptyset }
+	\cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
 	\initialization{m0:in0}{ req = \emptyset }
 \end{align*}
 \end{machine}
@@ -59,8 +59,11 @@ data structure.
 \input{main9/machine_m1}
 \begin{machine}{m1}
 	\refines{m0}
-\[ \indices{handle}{ rs : \set[\REQ] } \]
-
+\[ \indices{handle}{ b : \Bool } \]
+\[ \variable{ ch : \Bool } \]
+\begin{align*}
+	\cschedule{handle}{m1:sch0}{ b = ch }
+\end{align*}
 \end{machine}
 
 % \input{main9/machine_m2}

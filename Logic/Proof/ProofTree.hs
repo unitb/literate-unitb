@@ -70,6 +70,7 @@ instance Show Proof where
 
 instance Syntactic Calculation where
     line_info c = l_info c
+    after = line_info
     traverseLineInfo f c = tr <$> f (l_info c) <*> (traverse._4) f (following c)
         where
             tr x y = c { l_info = x, following = y }
@@ -85,6 +86,7 @@ instance Syntactic Proof where
     line_info (InstantiateHyp _ _ _ li) = li
     line_info (Keep _ _ _ _ li) = li
     line_info (ByCalc c) = line_info c
+    after = line_info
     traverseLineInfo f (ByCalc c) = ByCalc <$> traverseLineInfo f c
     traverseLineInfo f (Easy li)  = Easy <$> f li
     traverseLineInfo f (ByCases xs li)  = ByCases <$> (traverse._3.traverseLineInfo) f xs 

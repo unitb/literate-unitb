@@ -8,15 +8,15 @@ module Document.Phase where
 
     -- Modules
 import Document.Pipeline
+import Document.Phase.Parameters
 import Document.Proof
 import Document.Scope
-import Document.Visitor
 
 import Latex.Parser
 
 import Logic.Operator (Notation)
 import Logic.Proof
-import Logic.Proof.Tactics
+import Logic.Proof.Tactics (Tactic)
 
 import UnitB.AST as AST
 import UnitB.Expr 
@@ -31,7 +31,6 @@ import Control.Monad.Reader (Reader,runReader)
 import Control.Monad.RWS (runRWS)
 import Control.Monad.State
 import Control.Monad.Trans.Either
-import Control.Monad.Trans.State  as ST
 import Control.Monad.Writer.Class 
 
 import Data.Default
@@ -59,6 +58,7 @@ import Utilities.Syntactic
 import Utilities.Format
 import Utilities.TableConstr
 import Utilities.TH
+import Utilities.Tuple.Generics
 
 triggerM :: Maybe a -> MM' c a
 triggerM = maybe mzero return
@@ -66,46 +66,42 @@ triggerM = maybe mzero return
 triggerP :: Pipeline MM (Maybe a) a
 triggerP = Pipeline empty_spec empty_spec triggerM
 
-
-instance Readable MachineId where
-    read_one = do
-        xs <- read_one
-        return $ MId $ show (xs :: Label)
-    read_args = do
-        xs <- read_args
-        return $ MId $ show (xs :: Label)
-
-instance Readable ProgId where
-    read_one  = liftM PId read_one
-    read_args = liftM PId read_args
-        
-instance Readable (Maybe ProgId) where
-    read_one  = fmap PId <$> read_one
-    read_args = fmap PId <$> read_args
-
 cmdSpec :: String -> Int -> DocSpec
 cmdSpec cmd nargs = DocSpec M.empty (M.singleton cmd nargs)
 
 envSpec :: String -> Int -> DocSpec
 envSpec env nargs = DocSpec (M.singleton env nargs) M.empty
 
-parseArgs :: (IsTuple a, AllReadable (TypeList a))
-          => ([LatexDoc], LineInfo)
+read_all :: (IsTuple LatexArg a, Monad m)
+         => StateT ([LatexDoc],LineInfo) (EitherT [Error] m) a
+read_all = do
+    let p = Proxy :: Proxy LatexArg
+        read_one' :: forall b m. (LatexArg b, Monad m) 
+                  => StateT ([LatexDoc],LineInfo) (EitherT [Error] m) b
+        read_one' = do
+            (xs,li) <- get
+            case xs of
+              (x:xs) -> put (xs,after x) >> lift (hoistEither $ read_one x)
+              []     -> lift $ left [Error "expecting more arguments" li]
+    makeTuple' p read_one'
+
+parseArgs :: (IsTuple LatexArg a)
+          => Assert 
+          -> ([LatexDoc], LineInfo)
           -> M a
-parseArgs xs = do
-    (x,([],_)) <- ST.runStateT read_all xs
-    return $ fromTuple x
+parseArgs arse xs = do
+    (x,(xs,_)) <- runStateT read_all xs
+    return $ byPred arse "null remainder" L.null xs x
 
 machineCmd :: forall result args ctx. 
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
+              ( Monoid result
+              , IsTuple LatexArg args )
            => String
            -> (args -> MachineId -> ctx -> M result) 
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineCmd cmd f = Pipeline m_spec empty_spec g
     where
-        nargs = len (Proxy :: Proxy (TypeList args))
+        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
         m_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -117,9 +113,8 @@ machineCmd cmd f = Pipeline m_spec empty_spec g
 -- type M' = RWS LineInfo [Error] System
 
 cmdFun :: forall a b c d. 
-              ( IsTuple b, Ord c
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
+              ( IsTuple LatexArg b
+              , Ord c )
            => (b -> c -> d -> M a) 
            -> Cmd
            -> c -> (Map c d) -> MM (Maybe a)
@@ -128,21 +123,19 @@ cmdFun f xs m ctx = case x of
                       Left es -> tell (w ++ es) >> return Nothing
     where
         (x,(),w) = runRWS (runEitherT $ do
-                        x <- parseArgs (getCmdArgs xs)
+                        x <- parseArgs assert (getCmdArgs xs)
                         f x m (ctx ! m) )
                     (cmdLI xs) 
                     ()
 
 machineEnv :: forall result args ctx.
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
+              ( Monoid result, IsTuple LatexArg args )
            => String
            -> (args -> LatexDoc -> MachineId -> ctx -> M result)
            -> Pipeline MM (MTable ctx) (Maybe (MTable result))
 machineEnv env f = Pipeline m_spec empty_spec g
     where
-        nargs = len (Proxy :: Proxy (TypeList args))
+        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
         m_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv
@@ -152,9 +145,7 @@ machineEnv env f = Pipeline m_spec empty_spec g
         g = collect param (envFun f)
 
 envFun :: forall a b c d. 
-              ( IsTuple b, Ord c
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
+              ( IsTuple LatexArg b, Ord c )
            => (b -> LatexDoc -> c -> d -> M a) 
            -> Env
            -> c -> (Map c d) -> MM (Maybe a)
@@ -163,21 +154,19 @@ envFun f xs m ctx = case x of
                       Left es -> tell (w ++ es) >> return Nothing
     where
         (x,(),w) = runRWS (runEitherT $ do
-                        x <- parseArgs (getEnvArgs xs)
+                        x <- parseArgs assert (getEnvArgs xs)
                         f x (getEnvContent xs) m (ctx ! m))
                     (envLI xs) 
                     ()
 
 contextCmd :: forall a b c. 
-              ( Monoid a, IsTuple b
-              , IsTypeList  (TypeList b)
-              , AllReadable (TypeList b))
+              ( Monoid a, IsTuple LatexArg b )
            => String
            -> (b -> ContextId -> c -> M a) 
            -> Pipeline MM (CTable c) (Maybe (CTable a))
 contextCmd cmd f = Pipeline empty_spec c_spec g
     where
-        nargs = len (Proxy :: Proxy (TypeList b))
+        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy b)
         c_spec = cmdSpec cmd nargs
         param = Collect 
             { getList = getCmd
@@ -187,15 +176,13 @@ contextCmd cmd f = Pipeline empty_spec c_spec g
         g = collect param (cmdFun f)
 
 contextEnv :: forall result args ctx.
-              ( Monoid result, IsTuple args
-              , IsTypeList  (TypeList args)
-              , AllReadable (TypeList args))
+              ( Monoid result, IsTuple LatexArg args )
            => String
            -> (args -> LatexDoc -> ContextId -> ctx -> M result)
            -> Pipeline MM (CTable ctx) (Maybe (CTable result))
 contextEnv env f = Pipeline empty_spec c_spec g
     where
-        nargs = len (Proxy :: Proxy (TypeList args))
+        nargs = len (Proxy :: Proxy LatexArg) (Proxy :: Proxy args)
         c_spec = envSpec env nargs
         param = Collect 
             { getList = getEnv
@@ -331,12 +318,6 @@ data TheoryP3 = TheoryP3
     { _t2 :: TheoryP2
     , _pAssumptions :: Map Label Expr
     } deriving (Show,Typeable,Generic)
-
-newtype Abs a = Abs { getAbstract :: a }
-    deriving (Eq,Ord)
-
-newtype Conc a = Conc { getConcrete :: a }
-    deriving (Eq,Ord)
 
 data SystemP m = SystemP
     { _refineStruct :: Hierarchy MachineId

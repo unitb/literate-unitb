@@ -265,7 +265,7 @@ result3 = unlines
     , "  \\end{block}"
     , "  \\item   \\textbf{begin}"
     , "  \\begin{block}"
-    , "  \\item[ \\eqref{visitact1} ]{$vs \\bcmeq vs \\bunion \\{ p \\} $} %"
+    , "  \\item[ \\eqref{visitact1} ]{$vs \\bcmeq vs \\bunion \\{ p \\}$} %"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
     , "\\end{block}"

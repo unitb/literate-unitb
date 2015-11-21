@@ -90,12 +90,12 @@ get_event p2 ev_lbl = do
             (format "event '{0}' is undeclared" ev_lbl)
             $ ev_lbl `M.lookup` evts
 
-get_abstract_event :: HasMachineP1 phase events => phase events thy -> Label -> M EventId
+get_abstract_event :: HasMachineP1 phase events => phase events thy -> EventId -> M EventId
 get_abstract_event p2 ev_lbl = do
         let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
         bind
             (format "event '{0}' is undeclared" ev_lbl)
-            $ ev_lbl `M.lookup` evts
+            $ as_label ev_lbl `M.lookup` evts
 
 get_events :: Traversable f => MachineP2 -> f Label -> M (f EventId)
 get_events p2 ev_lbl = do

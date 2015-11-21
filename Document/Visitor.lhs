@@ -123,7 +123,6 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
-
 type M m = ST.StateT ([LatexDoc],LineInfo) (EitherT [Error] m)
 
 get_next :: (Monad m)
@@ -272,6 +271,22 @@ instance Readable (M.Map Label ()) where
         M.fromSet (const ()) <$> read_args
     read_one = do
         M.fromSet (const ()) <$> read_one
+
+instance Readable MachineId where
+    read_one = do
+        xs <- read_one
+        return $ MId $ show (xs :: Label)
+    read_args = do
+        xs <- read_args
+        return $ MId $ show (xs :: Label)
+
+instance Readable ProgId where
+    read_one  = liftM PId read_one
+    read_args = liftM PId read_args
+        
+instance Readable (Maybe ProgId) where
+    read_one  = fmap PId <$> read_one
+    read_args = fmap PId <$> read_args
 
 raise :: Monad m => Error -> EitherT [Error] m a
 raise e = left [e]

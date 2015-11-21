@@ -217,12 +217,12 @@ parse_induction param = do
                         (parser `with_vars` symbol_table fv0
                                & free_dummies  .~ True
                                & expected_type .~ Nothing )
-                        var
+                        (flatten_li' var)
                 bound <- fromEither ztrue $
                     getExpr <$> parse_expr''
                         (parser & free_dummies  .~ True
                                 & expected_type .~ Just (type_of var) )
-                        bound
+                        (flatten_li' bound)
                 let is_set = isRight $ zcast (set_type gA) (Right var)
                 if type_of var == int then
                     return (IntegerVariant dum var bound dir)

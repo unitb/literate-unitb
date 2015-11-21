@@ -10,8 +10,8 @@ module Document.Phase.Structures where
     --
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Parameters
 import Document.Scope
-import Document.Visitor
 
 import Logic.Expr
 
@@ -117,21 +117,15 @@ make_phase1 :: MachineP0
             -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
-        -- _pEventRef <- G.fromList _ _ 
-        --     (concatMap (uncurry $ L.map.(,)) $ M.elems evts)
     where
         _pEventRef = G.mapBothWithKey (const.EventP1) (const.EventP1) evts
-        -- f = _ :: G.BiGraph Label EventId EventId
-        -- _pEvents    = M.map (uncurry EventP1) evts ^. pFromEventId
         _pContext   = TheoryP1 { .. }
         _t0         = TheoryP0 ()
-        -- _pImports
-        -- _pNewEvents = M.map fst $ M.filter ((== Local) . snd) evts
 
 set_decl :: MPipeline MachineP0 
             ( [(String,Sort,LineInfo)]
             , [(String,PostponedDef)] )
-set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
+set_decl = machineCmd "\\newset" $ \(Identity (SetName tag)) _m _ -> do
             let name     = tag 
                 new_sort = Sort tag (z3_escape name) 0
                 new_type = Gen new_sort []
@@ -141,41 +135,40 @@ set_decl = machineCmd "\\newset" $ \(One (String tag)) _m _ -> do
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
 event_splitting :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
-event_splitting = machineCmd "\\splitevent" $ \(aevt, cevts) _m _p0 -> do
-    let _ = aevt  :: Label
-        _ = cevts :: [Label]
+event_splitting = machineCmd "\\splitevent" $ \(Abs aevt, cevts) _m _p0 -> do
+    let _ = aevt  :: EventId
+        _ = cevts :: [Conc EventId]
     li <- ask
-    when (any ("skip" ==) cevts) $ do
+    when (any (Conc "skip" ==) cevts) $ do
         left [Error "invalid event name: 'skip' is a reserved name" li]
-    return [(c,(EventId c,[EventId aevt]),li) | c <- cevts]
+    return [(as_label c,(c,[aevt]),li) | Conc c <- cevts]
 
 event_merging :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
-event_merging = machineCmd "\\mergeevents" $ \(aevts, cevt) _m _p0 -> do
-    let _ = aevts :: [Label]
-        _ = cevt  :: Label
+event_merging = machineCmd "\\mergeevents" $ \(aevts, Conc cevt) _m _p0 -> do
+    let _ = aevts :: [Abs EventId]
+        _ = cevt  :: EventId
     li <- ask
     when (cevt == "skip") $ do
         left [Error "invalid event name: 'skip' is a reserved name" li]
-    return [(cevt,(EventId cevt,map EventId aevts),li)]
+    return [(as_label cevt,(cevt,map getAbstract aevts),li)]
 
 event_decl :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
-event_decl = machineCmd "\\newevent" $ \(One evt) _m _ -> do 
+event_decl = machineCmd "\\newevent" $ \(Identity (Conc evt)) _m _ -> do 
             li <- lift ask 
             when (evt == "skip") $ do
                 left [Error "invalid event name: 'skip' is a reserved name" li]
-            return [(evt,(EventId evt,[]),li)]
+            return [(as_label evt,(evt,[]),li)]
 
 refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
-refines_mch = machineCmd "\\refines" $ \(One amch) cmch (MachineP0 ms _) -> do
+refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) -> do
             li <- lift ask
             unless (amch `M.member` ms) 
                 $ left [Error (format "Machine {0} refines a non-existant machine: {1}" cmch amch) li]
                 -- check that mch is a machine
             return [((),amch,li)]
 
-
 import_theory :: MPipeline MachineP0 [(String, Theory, LineInfo)]
-import_theory = machineCmd "\\with" $ \(One (String th_name)) _m _ -> do
+import_theory = machineCmd "\\with" $ \(Identity (TheoryName th_name)) _m _ -> do
         let th = [ ("sets"       , set_theory)
                  , ("functions"  , function_theory)
                  , ("relations"  , relation_theory)

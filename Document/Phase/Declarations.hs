@@ -7,6 +7,7 @@ module Document.Phase.Declarations where
 import Document.Expression
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Parameters
 import Document.Proof
 import Document.Scope
 import Document.VarScope
@@ -140,9 +141,9 @@ instance IsVarScope MachineVar where
     toMchDecl s (DelMch Nothing _ li)    = [Left $ Error (format "deleted variable '{0}' does not exist" s) li]
 
 remove_var :: MPipeline MachineP1 [(String,VarScope)]
-remove_var = machineCmd "\\removevar" $ \(One xs) _m _p1 -> do
+remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
         li <- lift ask
-        return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . toString) xs
+        return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . getVarName) xs
 
 dummy_decl :: MPipeline MachineP1
                     [(String,VarScope)]
@@ -155,7 +156,7 @@ machine_var_decl :: IsVarScope var
                  -> String
                  -> MPipeline MachineP1
                         [(String,VarScope)]
-machine_var_decl scope kw = machineCmd kw $ \(One xs) _m p1 -> do
+machine_var_decl scope kw = machineCmd kw $ \(Identity (PlainText xs)) _m p1 -> do
             vs <- get_variables' (p1 ^. pAllTypes) xs
             li <- lift ask
             return $ map (\(x,y) -> (x,makeCell $ scope y Local li)) vs
@@ -194,12 +195,13 @@ event_var_decl :: EvtScope
                -> String
                -> MPipeline MachineP1
                     [(String,VarScope)]
-event_var_decl escope kw = machineCmd kw $ \(lbl,xs) _m p1 -> do
-            let ts   = L.view pAllTypes p1
+event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
+            let _    = lbl :: EventId
+                ts   = L.view pAllTypes p1
                 evts = L.view pEventIds p1 
             evt <- bind
                 (format "event '{0}' is undeclared" lbl)
-                $ lbl `M.lookup` evts
+                $ as_label lbl `M.lookup` evts
             li <- lift ask
             vs <- get_variables' ts xs
             return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Just evt) 
