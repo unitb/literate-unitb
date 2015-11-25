@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell,RankNTypes #-}
 module Utilities.Lines where
 
 import Control.Applicative
@@ -22,6 +23,9 @@ asLines = iso lines' F.concat
 
 traverseLines :: Traversal' String String
 traverseLines = asLines . traverse
+
+spanIso :: (a -> Bool) -> Iso [a] [b] ([a],[a]) ([b],[b])
+spanIso p = iso (span p) (uncurry (++))
 
 lines :: String -> NonEmpty String
 lines xs = fromList $ f ys

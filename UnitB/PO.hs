@@ -276,7 +276,7 @@ init_sim_po m =
             prefix_label "SIM"
             _context (assert_ctx m)
             named_hyps $ m!.inits
-            named_hyps $ M.mapKeys (label . view name) $ m!.init_witness)
+            named_hyps $ M.mapKeys label $ snd <$> m!.init_witness)
         (forM_ (M.toList $ m!.del_inits) $ \(lbl,p) -> do
             emit_goal assert [lbl] p)
 
@@ -286,7 +286,7 @@ init_wit_wd_po m =
         (do _context (assert_ctx m)
             named_hyps $ m!.inits)
         (emit_goal assert ["INIT/WWD"] 
-            (well_definedness $ zall $ getExpr <$> m!.init_witness))
+            (well_definedness $ zall $ getExpr.snd <$> m!.init_witness))
 
 init_witness_fis_po :: RawMachine -> M ()
 init_witness_fis_po m =
@@ -295,7 +295,7 @@ init_witness_fis_po m =
             named_hyps $ m!.inits)
         (emit_exist_goal assert ["INIT/WFIS"] 
             (M.elems $ (view' abs_vars m)  `M.difference` (view' variables m))
-            (M.elems $ m!.init_witness))
+            (M.elems $ snd <$> m!.init_witness))
 
 init_fis_po :: RawMachine -> M ()
 init_fis_po m = 
@@ -495,7 +495,7 @@ inv_po m (pname, xp) =
                         (primed (view' variables m `M.union` view' abs_vars m) xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
-                 named_hyps $ M.mapKeys (label . view name) (m!.init_witness))
+                 named_hyps $ M.mapKeys label $ snd <$> m!.init_witness)
             $ emit_goal assert [inv_init_lbl, pname] xp
 
 wit_wd_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
@@ -508,7 +508,7 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
-                $ M.elems $ evt^.witness)
+                $ M.elems $ snd <$> evt^.all_witnesses)
 
 wit_fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
@@ -521,7 +521,7 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_exist_goal assert ["WFIS"] pvar 
-                $ M.elems $ evt^.witness)
+                $ M.elems $ snd <$> evt^.all_witnesses)
     where
         pvar = L.map prime $ M.elems $ view' abs_vars m `M.difference` view' variables m
 

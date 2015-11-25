@@ -6,6 +6,11 @@ import Control.Lens
 import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 
+import Data.Char
+import Data.List
+
+import Utilities.Lines
+
 import System.Exit
 import System.FilePath
 import System.Process
@@ -75,13 +80,20 @@ compile silent argsM = do
         r <- if silent then do
             (r,_out,err) <- readProcessWithExitCode ghc args []
             -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
-            putStrLn err
+            putStrLn $ removeAtLineNumber err
             return r
         else rawSystem ghc args
         threadDelay 10
         case r of
             ExitSuccess -> return $ Just ()
             _ -> return Nothing
+
+removeAtLineNumber :: String -> String
+removeAtLineNumber = traverseLines.spanIso isSpace._2 %~ dropKW "at "
+    where
+        dropKW kw xs | kw `isPrefixOf` xs = drop (length kw) xs
+                     | otherwise          = xs
+
 
 compile_test :: Build FilePath
 compile_test = do

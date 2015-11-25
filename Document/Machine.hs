@@ -119,7 +119,8 @@ make_machine (MId m) p4 = mch'
         concrEvt :: EventP4 -> NonEmpty (SkipOrEvent, AbstrEvent) -> ConcrEvent
         concrEvt evt olds = CEvent
                 { _new = g evt
-                , _witness   = evt^.eWitness
+                , _witness   = (evt^.eWitness) `M.intersection` (p4^.pAbstractVars)
+                , _ind_witness = (evt^.eWitness) `M.intersection` (evt^.eIndices)
                 , _eql_vars = keep' (p4^.pAbstractVars) oldAction
                              `M.intersection` frame (evt^.eActions)
                 , _abs_actions = oldAction

@@ -542,24 +542,43 @@
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
 
 \newcounter{prooflevel}
+\newcounter{flatlevel}
+
+\setlistdepth{9}
 
 \newenvironment{liveness}[2]
-{ \begin{proof}{#1} \\ by #2
+{ \begin{proof}{#1} \\ \qquad by #2
   \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
   \addtocounter{prooflevel}{1}
+  \addtocounter{flatlevel}{1}
 }
 { \end{enumerate}
   \end{proof}
   \addtocounter{prooflevel}{-1}
+  \addtocounter{flatlevel}{-1}
 }
 \newcommand{\progstep}[2]{ \item \quad $#1 \quad \mapsto\quad #2$ }
 \newcommand{\safstep}[2]{ \item  \quad $#1 \quad \textbf{unless}\quad #2$ }
+\newcommand{\trstep}[2]{ \item  \quad $#2 \qquad$ is falsified by #1 }
 \newenvironment{step}[1]
-{ \\ by #1
+{ \\ \qquad by #1
   \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
   \addtocounter{prooflevel}{1}}
 { \end{enumerate}
   \addtocounter{prooflevel}{-1}
+}
+\newcommand{\resetenum}
+  { \ifthenelse{\value{flatlevel}=1}
+    { \setcounter{enumi}{0} }
+    { \ifthenelse{\value{flatlevel}=2} 
+      { \setcounter{enumii}{0} }
+      { \ifthenelse{\value{flatlevel}=2} 
+        { \setcounter{enumiii}{0} }
+        { \setcounter{enumiv}{0} } } } }
+\newenvironment{flatstep}[1]
+{ \\ $\qquad$ by #1 \resetenum
+  \addtocounter{prooflevel}{1}}
+{ \addtocounter{prooflevel}{-1}
 }
 
 % \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }

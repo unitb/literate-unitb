@@ -448,7 +448,7 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EWitness xvar $ $typeCheck$ x' `mzeq` (x - 1) ]
+                                             , EWitness "x" (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
             | otherwise = []
 
 name5 :: TestName
@@ -652,7 +652,7 @@ result8 = Right $ SystemP h ms
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
             witness .= M.fromList
-                [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+                [ ("x", (xvar, $typeCheck$ x' `mzeq` (x - 1))) ]
             actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])]
             abs_actions .= M.fromList

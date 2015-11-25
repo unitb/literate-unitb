@@ -1,10 +1,3 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE TypeOperators   #-}
-{-# LANGUAGE KindSignatures  #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE GADTs  #-}
 module Logic.Theory 
     ( Theory(..)
     , fact
@@ -25,7 +18,7 @@ where
 import Logic.Expr
 import Logic.Expr.Const
 import Logic.Expr.Scope
-import Logic.Operator
+import Logic.Operator as OP
 import Logic.Proof hiding (preserve) 
 import qualified Logic.Proof as P
 import Logic.Theory.Internals
@@ -92,7 +85,7 @@ th_notation th = res
     where
         ths = th : elems (_extends th)
         res = flip precede logical_notation
-            $ L.foldl combine empty_notation 
+            $ L.foldl OP.combine empty_notation 
             $ L.map _notation ths
 
 theory_ctx :: Theory -> Context

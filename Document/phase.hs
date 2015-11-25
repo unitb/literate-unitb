@@ -246,7 +246,7 @@ data MachineP3' events theory = MachineP3
     , _pSafety    :: Map Label SafetyProp
     , _pTransient :: Map Label Transient
     , _pInvariant   :: Map Label Expr                     -- Invariants
-    , _pInitWitness :: Map Var Expr
+    , _pInitWitness :: Map String (Var,Expr)
     , _pDelInits    :: Map Label Expr
     , _pInit        :: Map Label Expr
     , _pOldPropSet  :: PropertySet
@@ -280,7 +280,7 @@ data EventP3 = EventP3
     , _eCoarseSched :: Map Label Expr     
     , _eFineSched   :: Map Label Expr
     , _eGuards   :: Map Label Expr       
-    , _eWitness     :: Map Var RawExpr
+    , _eWitness     :: Map String (Var,RawExpr)
     , _eActions  :: Map Label Action
     } deriving (Show,Typeable,Generic)
 
@@ -491,10 +491,10 @@ getEvent :: (HasMachineP1' phase)
 getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust'' AST.assert x))
 
 eventDifference :: HasMachineP1' phase
-                => (NonEmpty (Map Label a) -> Map Label a -> Map Label b)
+                => (NonEmpty (Map label a) -> Map label a -> Map label b)
                 -> EventId 
-                -> Getting (Map Label a) event (Map Label a)
-                -> Getter (phase event t) (Map Label b)
+                -> Getting (Map label a) event (Map label a)
+                -> Getter (phase event t) (Map label b)
 eventDifference f eid field = pEventRef . to f' 
     where
         f' g = readGraph g $ do
@@ -502,22 +502,22 @@ eventDifference f eid field = pEventRef . to f'
             es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
             f (view field <$> es) <$> (view field <$> rightInfo cevt)
 
-eventDifferenceWithId :: (HasMachineP1' phase,HasEventP1 event)
-                      => (   Map Label (First a,NonEmpty SkipOrEvent) 
-                          -> Map Label (First a,NonEmpty SkipOrEvent) 
-                          -> Map Label (First b,c))
+eventDifferenceWithId :: (HasMachineP1' phase,HasEventP1 event,Ord label)
+                      => (   Map label (First a,NonEmpty SkipOrEvent) 
+                          -> Map label (First a,NonEmpty SkipOrEvent) 
+                          -> Map label (First b,c))
                       -> EventId 
-                      -> Getting (Map Label a) event (Map Label a)
-                      -> Getter (phase event t) (Map Label (b,c))
+                      -> Getting (Map label a) event (Map label a)
+                      -> Getter (phase event t) (Map label (b,c))
 eventDifferenceWithId comp eid field = eventDifference f eid (to field') . to (M.map $ first getFirst)
     where 
         f old new = M.unionsWith (<>) (NE.toList old) `comp` new
         field' e = M.map ((,view eEventId e :| []).First) $ view field e
 
-evtMergeAdded :: HasMachineP1' phase 
+evtMergeAdded :: (HasMachineP1' phase, Ord label)
               => EventId
-              -> Getting (Map Label a) event (Map Label a)
-              -> Getter (phase event t) (Map Label a)
+              -> Getting (Map label a) event (Map label a)
+              -> Getter (phase event t) (Map label a)
 evtMergeAdded = eventDifference $ \old new -> new `M.difference` M.unions (NE.toList old)
 evtMergeDel :: (HasMachineP1' phase, HasEventP1 event)
             => EventId
@@ -720,7 +720,7 @@ pEventCoarseRef :: HasMachineP4 mch event
 pEventCoarseRef = pEvents . onMap eCoarseRef
 
 pWitness :: HasMachineP3 mch event 
-         => Getter (mch event t) (Map EventId (Map Var RawExpr))
+         => Getter (mch event t) (Map EventId (Map String (Var,RawExpr)))
 pWitness = pEvents . onMap eWitness
 
 pEventRenaming :: HasMachineP1 mch event

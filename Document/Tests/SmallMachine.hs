@@ -20,7 +20,6 @@ import qualified Data.List.NonEmpty as NE
 import Tests.UnitTest
 
 import Utilities.Lens
-import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test

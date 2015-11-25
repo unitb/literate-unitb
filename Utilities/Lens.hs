@@ -4,6 +4,7 @@ import Control.Lens
 import Control.Monad.State
 
 import Data.Default
+import Data.Foldable as F
 import Data.Map as M
 import Data.Tuple
 
@@ -29,3 +30,17 @@ secondL ln f x = ln (\y -> f $ x & _2 .~ y) (snd x)
 
 create :: Default a => State a b -> a
 create cmd = execState cmd def
+
+combine :: Lens' b a -> (a -> a -> a) -> b -> b -> b -> b
+combine ln f x y z = z & ln .~ f (x^.ln) (y^.ln)
+
+combine' :: Lens' b a -> (a -> a -> a) -> b -> b -> State b ()
+combine' ln f x y = modify $ combine ln f x y
+
+combineAll :: (Foldable f, Functor f, Default a) 
+           => Lens' b a -> (a -> a -> a) -> f b -> b -> b
+combineAll ln f xs = set ln $ F.foldl f def $ view ln <$> xs
+
+combineAll' :: (Foldable f, Functor f, Default a) 
+            => Lens' b a -> (a -> a -> a) -> f b -> State b ()
+combineAll' ln f xs = modify $ combineAll ln f xs

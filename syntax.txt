@@ -38,4 +38,4 @@
 \variable{text / comment}
 \with{theory-name}
 \witness{concrete event-name}{variable}{expression}
-\begin{proof} .. \end{proof}{proof-obligation-name}
+\begin{proof}{proof-obligation-name} .. \end{proof}

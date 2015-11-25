@@ -20,8 +20,6 @@ import Data.Set as S (Set,fromList)
 
 import Tests.UnitTest
 
-import Utilities.Syntactic
-
 test_case :: TestCase
 test_case = test_cases 
         "The king and his advisors puzzle"
@@ -2032,7 +2030,7 @@ case22 = find_errors path22
 
 result22 :: String
 result22 = unlines
-    [ "error 227:2:\n    'c' is not a disappearing variable"
+    [ "error 227:2:\n    'c' is not a disappearing variable or a new index"
     ]
 
 path23 :: FilePath

@@ -1,12 +1,7 @@
 {-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
 module Main where
 
--- import Shelly
-
---import Control.Lens
---import Data.Either.Combinators
---import Utilities.Syntactic
-
+import qualified Reactive as R
 import Document.Document as Doc ( syntax )
 import Document.Phase.Expressions as PExp
 import Document.Tests.Cubes   as Cubes
@@ -72,27 +67,13 @@ import qualified Utilities.Lines as Lines
 
 main :: IO ()
 main = timeIt $ do
-    -- shelly $ do
     system "rm actual-*.txt"
     system "rm expected-*.txt"
     system "rm po-*.z3"
     system "rm log*.z3"
-    --print $ used_var $ asExpr x
-    --let longestPrefix xs ys = length $ takeWhile id $ zipWith (==) xs ys
-    --run_test_cases $ test_cases "all" 
-    --    [ Deq.test_case
-    --    , Puzz.test_case
-    --    , Ph.test_case
-    --    , TS.test_case
-    --    , SM.test_case
-    --    , Lam.test_case
-    --    , Cubes.test_case
-    --    , Puzz.test_case
-    --    , Tex.test_case
-    --    , UB.test_case 
-    --    ]
     writeFile "syntax.txt" $ unlines syntax
-    return $ run_test_cases Deq.test_case
+    return R.main
+    run_test_cases Deq.test_case
     return $ run_test_cases Term.test_case
     return $ run_test_cases Puzz.test_case
     return $ run_test_cases Ph.test_case

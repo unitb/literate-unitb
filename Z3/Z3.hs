@@ -231,7 +231,7 @@ smoke_test lbl po = discharge lbl (po & goal .~ zfalse)
 discharge_on :: Label -> Sequent -> IO (MVar (Either String Validity))
 discharge_on lbl po = do
     res <- newEmptyMVar
-    forkIO $ withSem total_caps $ do
+    forkIO $ do
         r <- try (discharge' (Just default_timeout) lbl po)
         let f e = show (e :: SomeException)
             r'  = mapLeft f r
@@ -297,7 +297,7 @@ discharge' :: Maybe Int      -- Timeout in seconds
            -> Label
            -> Sequent        -- 
            -> IO Validity
-discharge' n lbl po = do
+discharge' n lbl po = withSem total_caps $ do
         let code = z3_code po
         s <- verify lbl code (maybe default_timeout id n)
         case s of

@@ -34,6 +34,7 @@ import           Data.Typeable
 import Tests.UnitTest
 import Test.QuickCheck
 
+import Utilities.Brackets
 import Utilities.Format
 import Utilities.Syntactic
 import Utilities.Error
@@ -62,6 +63,7 @@ test = test_cases "Graphs and operator grammars" $
     [ Case "case 11 - Relations, quickcheck" Rel.run_spec True
     , Case "case 12 - New graphs, quickcheck" Perm.run_tests True  
     , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
+    , Case "test 14 - quickcheck brackets" runSpec True
     , Tup.test_case ]
 
 case0 :: IO (Array (Int,Int) Bool)

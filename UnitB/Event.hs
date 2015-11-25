@@ -85,7 +85,8 @@ type ConcrEvent = ConcrEvent' Expr
 
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
-        , _witness   :: Map Var RawExpr
+        , _witness   :: Map String (Var,RawExpr)
+        , _ind_witness :: Map String (Var,RawExpr)
         , _eql_vars  :: Map String Var
         , _abs_actions :: Map Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
@@ -168,16 +169,31 @@ instance (IsExpr expr) => HasScope (AbstrEvent' expr) where
 instance (IsExpr expr) => HasScope (ConcrEvent' expr) where
     scopeCorrect' evt = withPrefix "concrete" $ F.fold
         [ scopeCorrect' $ evt^.new
-        , withPrefix "witnesses (vars)" $
+        , withPrefix "variable witnesses (vars)" $
             withVars ((evt^.params) `M.union` (evt^.indices)) $ 
             areVisible [to $ M.difference <$> view abs_vars <*> view vars] 
-                (keys $ evt^.witness) 
-                (keys $ evt^.witness) 
-        , withPrefix "witnesses (expression)" $
-            withVars ((evt^.params) `M.union` (evt^.indices)) $ 
-            withAbstract $ withPrimes $ foldMapWithKey scopeCorrect'' (evt^.witness)
+                (elems $ fst <$> evt^.witness) 
+                (elems $ fst <$> evt^.witness) 
+        , withPrefix "variable witnesses (expression)" $
+            withVars ((evt^.params) `M.union` (evt^.indices)) 
+                $ withAbstract $ withPrimes 
+                $ foldMapWithKey scopeCorrect'' (snd <$> evt^.witness)
         , areVisible [abs_vars] (evt^.eql_vars) (evt^.eql_vars) ]
 
+instance IsExpr expr => HasScope (EventMerging expr) where
+    scopeCorrect' evt = withPrefix "merging" $ F.fold
+        [ withPrefix "index witnesses (vars)" $
+            withOnly (evt^.compact.added.indices) $ 
+            areVisible [constants] 
+                (elems $ fst <$> evt^.ind_witness) 
+                (elems $ fst <$> evt^.ind_witness) 
+        , withPrefix "index witnesses (expression)" $
+            withVars ((evt^.compact.old.params) `M.union` (evt^.compact.old.indices)) 
+                $ withAbstract
+                $ foldMapWithKey correct (evt^.ind_witness)
+        ]
+        where
+            correct lbl (v,e) = withVars [v] $ scopeCorrect'' lbl e
 instance (IsExpr expr) => HasScope (Event' expr) where
     scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
         [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
@@ -243,7 +259,7 @@ skip_abstr :: IsExpr expr => AbstrEvent' expr
 skip_abstr = AbsEvent empty_event Nothing []
 
 skip_event :: IsExpr expr => ConcrEvent' expr
-skip_event = CEvent empty_event M.empty M.empty M.empty
+skip_event = CEvent empty_event M.empty M.empty M.empty M.empty
 
 eventRef :: IsExpr expr => EventId -> EventId -> EventRef expr
 eventRef aid cid = EvtRef (Right aid,def) (Right cid,def)
@@ -314,6 +330,10 @@ guards = to $ \e -> M.unions
         , fromMaybe M.empty $ e^.raw_coarse_sched
         , e^.fine_sched
         ]
+
+all_witnesses :: HasConcrEvent' event expr 
+              => Getter event (Map String (Var,RawExpr))
+all_witnesses = to $ \e -> (e^.witness) `M.union` (e^.ind_witness)
 
 changes :: IsExpr expr
         => (forall k a. Ord k => Map k a -> Map k a -> Map k a)
@@ -399,6 +419,20 @@ added_actions   = actions_changes (flip M.difference)
 
 deleted_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
 deleted_actions = actions_changes M.difference
+
+compact :: IsExpr expr 
+        => Getter (EventMerging expr) (EventRef expr)
+compact = to $ \m -> EvtRef (Left SkipEvent, evt m) (m^.concrete)
+    where
+        aevts m = snd <$> m^.abstract_evts
+        evt :: IsExpr expr => EventMerging expr -> AbstrEvent' expr
+        evt m = create $ do
+                combineAll' (indices) M.union $ aevts m
+                combineAll' (params) M.union $ aevts m
+                combineAll' (coarse_sched) M.union $ aevts m
+                combineAll' (fine_sched) M.union $ aevts m
+                combineAll' (raw_guards) M.union $ aevts m
+                combineAll' (actions) M.union $ aevts m
 
 replace :: (Label, ProgressProp) -> ScheduleChange
 replace prog = ScheduleChange def def def prog

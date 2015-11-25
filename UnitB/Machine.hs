@@ -7,7 +7,7 @@ module UnitB.Machine where
 
     -- Modules
 import Logic.Expr.Scope
-import Logic.Operator
+import Logic.Operator as OP
 import Logic.Proof
 import Logic.Theory as Th
 
@@ -72,7 +72,7 @@ data Machine'' expr =
         , _variables  :: Map String Var
         , _machine''Abs_vars :: Map String Var
         , _del_vars   :: Map String Var
-        , _init_witness :: Map Var expr
+        , _init_witness :: Map String (Var,expr)
         , _del_inits  :: Map Label expr
         , _inits      :: Map Label expr
         , _event_table :: EventTable expr
@@ -194,10 +194,12 @@ instance IsExpr expr => HasScope (Machine'' expr) where
                 $ foldMapWithKey scopeCorrect'' $ m^.inits
             , withPrefix "witnesses (var)" 
                 $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
-                $ areVisible [constants] (M.keys $ m^.init_witness) (M.keys $ m^.init_witness)
+                $ areVisible [constants] 
+                        (M.elems $ fst <$> m^.init_witness) 
+                        (M.elems $ fst <$> m^.init_witness)
             , withPrefix "witnesses (expr)" 
                 $ withVars ((m^.variables) `M.union` (m^.abs_vars))
-                $ foldMapWithKey scopeCorrect'' $ m^.init_witness
+                $ foldMapWithKey scopeCorrect'' $ snd <$> m^.init_witness
             , withPrefix "abstract events"
                 $ withVars' vars (m^.abs_vars)
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
@@ -205,6 +207,10 @@ instance IsExpr expr => HasScope (Machine'' expr) where
                 $ withVars' abs_vars (m^.abs_vars)
                 $ withVars' vars (m^.variables)
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
+            , withPrefix "merging events"
+                $ withVars' abs_vars (m^.abs_vars)
+                $ withVars' vars (m^.variables)
+                $ foldMapWithKey scopeCorrect'' $ all_upwards m
             ]
         , withPrefix "theory"
             $ scopeCorrect' $ m^.theory
@@ -253,8 +259,8 @@ new_event_set :: IsExpr expr
 new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
         skip <- newLeftVertex (Left SkipEvent) skip_abstr
         forM_ (M.toList es) $ \(lbl,e) -> do
-            let f m = M.fromList $ L.map (id &&& Word) $ M.elems $ m `M.difference` vs
-            v <- newRightVertex (Right lbl) $ CEvent e (e^.actions.to frame.to f) M.empty M.empty
+            let f m = M.fromList $ L.map (view name &&& (id &&& Word)) $ M.elems $ m `M.difference` vs
+            v <- newRightVertex (Right lbl) $ CEvent e (e^.actions.to frame.to f) M.empty M.empty M.empty
             newEdge skip v
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 
@@ -379,7 +385,7 @@ all_props = to $ \m -> (m^.props) <> (m^.inh_props)
 
 all_notation :: Show expr => Machine' expr -> Notation
 all_notation m = flip precede logical_notation 
-        $ L.foldl combine empty_notation 
+        $ L.foldl OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
         th = (m!.theory) : elems (_extends $ m!.theory)
@@ -396,12 +402,12 @@ ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              -> event -> Map Label RawExpr
 ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
-                    `M.union` M.mapKeys (label . view name) (evt^.witness)
+                    `M.union` M.mapKeys label (snd <$> evt^.witness)
                     `M.union` M.mapKeys skipLbl (M.map eqPrime noWitness)
     where
         skipLbl = label . ("SKIP:"++)
         eqPrime v = Word (prime v) `zeq` Word v
-        noWitness = (m!.del_vars) `M.difference` M.mapKeys (view name) (evt^.witness)
+        noWitness = (m!.del_vars) `M.difference` (snd <$> evt^.witness)
 
 mkCons ''Machine''
 

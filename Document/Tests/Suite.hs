@@ -1,7 +1,8 @@
 {-# LANGUAGE ImplicitParams #-}
 module Document.Tests.Suite 
     ( module Document.Tests.Suite 
-    , module Control.Monad.Trans.Either )
+    , module Control.Monad.Trans.Either 
+    , Error(..) )
 where
 
     -- Modules
@@ -200,5 +201,5 @@ get_system path = do
     EitherT $ either (Left . show_err) Right 
         <$> parse_system path
 
-lookup :: (?loc :: CallStack,Monad m,Ixed f) => Index f -> f -> EitherT [Error] m (IxValue f)
-lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc "<nothing>") return $ m^?ix k
+lookup :: (?loc :: CallStack,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
+lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k

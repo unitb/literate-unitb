@@ -18,8 +18,6 @@ import Control.Monad.State
 
 import Data.Map
 
-import Utilities.Syntactic
-
 test_case :: TestCase
 test_case = test_cases 
     "Parser" 

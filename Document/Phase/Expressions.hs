@@ -288,9 +288,11 @@ witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- lift ask
+            let disappear  = (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
+                newIndices = p2^.evtMergeAdded ev eIndices
             p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
-            v  <- bind (format "'{0}' is not a disappearing variable" var)
-                (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
+            v  <- bind (format "'{0}' is not a disappearing variable or a new index" var)
+                (var `M.lookup` (disappear `M.union` newIndices))
             return [(label var,evtScope ev (Witness v p Local li))]
 
 instance Scope EventExpr where
@@ -787,12 +789,14 @@ progress_prop = machineCmd "\\progress" $ \(NewLabel lbl, Expr pCt, Expr qCt) _m
 instance IsEvtExpr Witness where
     defaultEvtWitness _ _ = return []
     toMchScopeExpr _ w   
-        | w^.declSource == Local = return [Right $ PInitWitness (w^.ES.var) (w^.evtExpr)]
+        | w^.declSource == Local = return [Right $ PInitWitness (v^.name) (v, w^.evtExpr)]
         | otherwise              = return []
+        where v = w^.ES.var
     toEvtScopeExpr Old _ _ _ = return []
     toEvtScopeExpr New evt _ w
-        | w^.declSource == Local = return [Right (evt,[EWitness (w^.ES.var) (getExpr $ w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
         | otherwise              = return []
+        where v = w^.ES.var
     setSource _ x = x
     inheritedFrom _ = []
     -- parseEvtExpr xs = do
@@ -810,7 +814,7 @@ instance IsEvtExpr ActionDecl where
     defaultEvtWitness ev scope = case (scope^.inhStatus, scope^.declSource) of 
         (InhDelete (Just (_,act)),Local) -> do
             vs <- view pDelVars
-            return [Right $ (ev,[EWitness v (ba_pred act) 
+            return [Right $ (ev,[EWitness (v^.name) (v, ba_pred act) 
                                          | v <- M.elems $ frame' act `M.intersection` vs ])]
         _ -> return []
     toMchScopeExpr _ _  = return []
@@ -926,7 +930,7 @@ defaultInitWitness :: MachineP2 -> [MachineP3'Field a b] -> [MachineP3'Field a b
 defaultInitWitness p2 xs = concatMap f xs ++ xs
     where
         vs = p2^.pDelVars
-        f (PDelInits _lbl expr) = [PInitWitness v expr
+        f (PDelInits _lbl expr) = [PInitWitness (v^.name) (v, expr)
                                     | v <- M.elems $ used_var' expr `M.intersection` vs ]
         f _ = []
 
