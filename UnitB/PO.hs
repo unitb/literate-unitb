@@ -508,7 +508,7 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
-                $ M.elems $ snd <$> evt^.all_witnesses)
+                $ M.elems $ snd <$> evt^.witness)
 
 wit_fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
@@ -521,22 +521,38 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_exist_goal assert ["WFIS"] pvar 
-                $ M.elems $ snd <$> evt^.all_witnesses)
+                $ M.elems $ snd <$> evt^.witness)
     where
         pvar = L.map prime $ M.elems $ view' abs_vars m `M.difference` view' variables m
 
+removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
+removeSkip = rights.fmap distrLeft.NE.toList
+    where
+        distrLeft (x,y) = (,y) <$> x
+
 csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
+        -- | When using witnesses with event indices:
+        -- | as /\ cs.i
+        -- | either 
+        -- |     ∀i:: as => cs.i
+        -- | or
+        -- |     as ↦ (∃i:: cs.i)
+        -- |     cs.i  unless  ¬as
+        -- | or
+        -- |     witness: i = f.x
+        -- |     as ↦ i = f.x ∧ cs.i
+        -- |     i = f.x ∧ cs.i  unless  ¬as
     where
-        removeSkip = rights.fmap distrLeft.NE.toList
-        distrLeft (x,y) = (,y) <$> x
         new = (sch^.keep) `M.union` (sch^.add)
         old = (sch^.keep) `M.union` (sch^.remove)
         ind cevt = M.elems $ M.union (cevt^.indices) (ev^.indices)
         safe :: ConcrEvent' RawExpr -> RawSafetyProp
         safe cevt = Unless (ind cevt)
-                (zall $ (cevt^.coarse_sched) `M.intersection` new) 
-                (znot $ zall $ (ev^.coarse_sched) `M.intersection` old) 
+                    (zall new_sch) 
+                    (znot $ zall $ (ev^.coarse_sched) `M.intersection` old) 
+                where
+                    new_sch = elems $ (cevt^.coarse_sched) `M.intersection` new
 
 replace_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
 replace_csched_po m (lbl,evt') = do 
@@ -571,18 +587,18 @@ replace_csched_po m (lbl,evt') = do
                 with (do
                         POG.variables $ symbol_table vs
                         named_hyps old_c
+                        named_hyps $ M.mapKeys label $ snd <$> evt'^.ind_witness
                         named_hyps old_f) $ 
                     emit_goal assert ["prog",plbl,"lhs"] p0
                 with (do
                         POG.variables $ symbol_table vs) $ do
-                            -- For the next set of proof obligations
-                            -- there are two possibilities: (1) either
-                            -- we are faced with a regular one-to-one
-                            -- refinement or (2) we have an event
-                            -- splitting. If we have a one-to-one
-                            -- refinement (1), we can prove that q ⇒
-                            -- csched one schedule at a time. Otherwise,
-                            -- we have to prove one big disjunction.
+                            -- | For the next set of proof obligations there are
+                            -- | two possibilities: (1) either we are faced with
+                            -- | a regular one-to-one refinement or (2) we have
+                            -- | an event splitting. If we have a one-to-one
+                            -- | refinement (1), we can prove that q ⇒ csched
+                            -- | one schedule at a time. Otherwise, we have to
+                            -- | prove one big disjunction.
                     let new_part' = case new_part_c of
                                         cs :| [] -> cs
                                         cs -> singleton "split" $ zsome $ NE.map zall cs
@@ -606,9 +622,9 @@ weaken_csched_po m (lbl,evt) = do
                     T.forM (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
-                        -- old version admits old_f as assumption
-                        -- why is it correct or needed?
-                        -- named_hyps old_f
+                        -- | old version admits old_f as assumption
+                        -- | why is it correct or needed?
+                        -- | named_hyps old_f
                     named_hyps old_c) $ do
                 case weaken_sch of
                     m :| [] -> 

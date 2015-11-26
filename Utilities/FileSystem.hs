@@ -45,10 +45,6 @@ newtype ExistingFile s = ExistingFile FilePath
 newtype NoParam r m = NoParam { getNoParam :: m r }
 newtype OneParam a r m = OneParam { getOneParam :: (forall s. ExistingFile s -> m a) -> m r }
 
---class Runnable (f :: (* -> *) -> *) m0 where
---    type Internal m0 :: *
---    run :: f (Internal m0) -> f m0
-
 class Monad m => FileSystem m where
     {-# MINIMAL liftFS, lift2FS | 
         readFile, writeFile
@@ -122,8 +118,6 @@ instance FileSystem MockFileSystem where
         dirExists  <- doesDirectoryExist (takeDirectory fn)
         isDir      <- doesDirectoryExist fn
         MockFileSystem $ mutate' assert $ do 
-            --entry <- uses files (takeDirectory fn `M.lookup`)
-            --file  <- uses files (fn `M.lookup`)
             providedM (dirExists && not isDir)  $
                 files %= insert fn (Just x)
     ifFileExists fn f = do

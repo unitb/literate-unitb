@@ -57,8 +57,6 @@ data Transient' expr =
             expr                 -- Predicate
             (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
-            -- (Map String Expr)    -- Index substitution
-            -- (Maybe Label)        -- Progress Property for fine schedule
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 data Direction = Up | Down
@@ -124,8 +122,6 @@ instance Show expr => Show (ProgressProp' expr) where
 
 instance Show expr => Show (SafetyProp' expr) where
     show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
-        --where
-        --    except = maybe "" (("  EXCEPT  " ++) . show) ev
 
 instance Show expr => Show (PropertySet' expr) where
     show x = printf "PropertySet { %s }" 

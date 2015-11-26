@@ -82,7 +82,9 @@ test = test_cases
                 case20 result20
             , Case "test 21, new index witness"
                 case21 result21
-            , Case "test 22, new index proof obligation part b"
+            , Case "test 22, new index proof obligation part a"
+                case22 result22
+            , Case "test 23, new index proof obligation part b"
                 case23 result23
             ]            
 
@@ -4386,12 +4388,18 @@ result20 = unlines
     , "  o  m0/LIVE/prog0/ensure/TR/WD"
     , "  o  m0/LIVE/prog0/ensure/TR/handle/EN"
     , "  o  m0/LIVE/prog0/ensure/TR/handle/NEG"
+    , "  o  m0/LIVE/prog1/ensure/SAF/WD/lhs"
+    , "  o  m0/LIVE/prog1/ensure/SAF/WD/rhs"
+    , "  o  m0/LIVE/prog1/ensure/TR/WD"
+    , "  o  m0/LIVE/prog1/ensure/TR/handle/EN"
+    , "  o  m0/LIVE/prog1/ensure/TR/handle/NEG"
     , "  o  m0/SKIP/CO/co0"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/handle/CO/co0"
     , "  o  m0/handle/FIS/req0@prime"
     , "  o  m0/handle/FIS/req@prime"
     , "  o  m0/handle/SAF/LIVE/prog0/ensure"
+    , "  o  m0/handle/SAF/LIVE/prog1/ensure"
     , "  o  m0/handle/SCH"
     , "  o  m0/handle/SCH/r"
     , "  o  m0/handle/WD/ACT/act0"
@@ -4402,10 +4410,13 @@ result20 = unlines
     , "  o  m0/handle/WWD"
     , "  o  m0/prog0/PROG/WD/lhs"
     , "  o  m0/prog0/PROG/WD/rhs"
+    , "  o  m0/prog1/PROG/WD/lhs"
+    , "  o  m0/prog1/PROG/WD/rhs"
     , "  o  m0/req/CO/co0"
     , "  o  m0/req/FIS/req0@prime"
     , "  o  m0/req/FIS/req@prime"
     , "  o  m0/req/SAF/LIVE/prog0/ensure"
+    , "  o  m0/req/SAF/LIVE/prog1/ensure"
     , "  o  m0/req/SCH/r"
     , "  o  m0/req/WD/ACT/act0"
     , "  o  m0/req/WD/ACT/act1"
@@ -4413,8 +4424,9 @@ result20 = unlines
     , "  o  m0/req/WD/F_SCH"
     , "  o  m0/req/WD/GRD"
     , "  o  m0/req/WWD"
-    , "passed 36 / 36"
+    , "passed 45 / 45"
     ]
+
 
 case20 :: IO POResult
 case20 = verify path20 0
@@ -4429,11 +4441,11 @@ result21 = Right $ M.singleton "b" (b,getExpr $ c [expr| b = ch |])
 case21 :: IO (Either [Error] (Map String (Var, RawExpr)))
 case21 = runEitherT $ do
     m <- parse_machine' path20 1
-    view ind_witness <$> S.lookup "handle" (m!.events.to rightMap)
+    view ind_witness <$> S.lookup "handle" (m!.events.to leftMap)
 
 result23 :: String
 result23 = unlines
-    [ "; m1/handle/C_SCH/weaken/m1:sch0"
+    [ "; m1/handle/C_SCH/delay/0/prog/m1:prog1/lhs"
     , "(set-option :auto-config false)"
     , "(set-option :smt.timeout 3000)"
     , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
@@ -4511,8 +4523,90 @@ result23 = unlines
     , "                          (then simplify smt)"
     , "                          (then skip smt)"
     , "                          (then (using-params simplify :expand-power true) smt)))"
-    , "; m1/handle/C_SCH/weaken/m1:sch0"
+    , "; m1/handle/C_SCH/delay/0/prog/m1:prog1/lhs"
     ]
 
 case23 :: IO String
-case23 = proof_obligation path20 "m1/handle/C_SCH/weaken/m1:sch0" 1
+case23 = proof_obligation path20 "m1/handle/C_SCH/delay/0/prog/m1:prog1/lhs" 1
+
+result22 :: String
+result22 = unlines
+    [ "; m1/handle/C_SCH/delay/0/prog/m1:prog1/rhs/m1:sch0"
+    , "(set-option :auto-config false)"
+    , "(set-option :smt.timeout 3000)"
+    , "(declare-datatypes (a) ( (Maybe (Just (fromJust a)) Nothing) ))"
+    , "(declare-datatypes () ( (Null null) ))"
+    , "(declare-datatypes (a b) ( (Pair (pair (first a) (second b))) ))"
+    , "; comment: we don't need to declare the sort Bool"
+    , "; comment: we don't need to declare the sort Int"
+    , "(declare-sort sl@REQ 0)"
+    , "; comment: we don't need to declare the sort Real"
+    , "(define-sort set (a) (Array a Bool))"
+    , "(declare-const b Bool)"
+    , "(declare-const ch Bool)"
+    , "(declare-const ch@prime Bool)"
+    , "(declare-const req (set sl@REQ))"
+    , "(declare-const req@prime (set sl@REQ))"
+    , "(declare-const req0 (set sl@REQ))"
+    , "(declare-const req0@prime (set sl@REQ))"
+    , "(declare-fun finite@@sl@REQ ( (set sl@REQ) ) Bool)"
+    , "(define-fun all@@sl@REQ"
+    , "            ()"
+    , "            (set sl@REQ)"
+    , "            ( (as const (set sl@REQ))"
+    , "              true ))"
+    , "(define-fun compl@@sl@REQ"
+    , "            ( (s1 (set sl@REQ)) )"
+    , "            (set sl@REQ)"
+    , "            ( (_ map not)"
+    , "              s1 ))"
+    , "(define-fun empty-set@@sl@REQ"
+    , "            ()"
+    , "            (set sl@REQ)"
+    , "            ( (as const (set sl@REQ))"
+    , "              false ))"
+    , "(define-fun set-diff@@sl@REQ"
+    , "            ( (s1 (set sl@REQ))"
+    , "              (s2 (set sl@REQ)) )"
+    , "            (set sl@REQ)"
+    , "            (intersect s1 ( (_ map not) s2 )))"
+    , "(define-fun sl@REQ"
+    , "            ()"
+    , "            (set sl@REQ)"
+    , "            ( (as const (set sl@REQ))"
+    , "              true ))"
+    , "(define-fun st-subset@@sl@REQ"
+    , "            ( (s1 (set sl@REQ))"
+    , "              (s2 (set sl@REQ)) )"
+    , "            Bool"
+    , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(assert (forall ( (s1 (set sl@REQ))"
+    , "                  (s2 (set sl@REQ)) )"
+    , "                (! (=> (finite@@sl@REQ s1)"
+    , "                       (finite@@sl@REQ (set-diff@@sl@REQ s1 s2)))"
+    , "                   :pattern"
+    , "                   ( (finite@@sl@REQ (set-diff@@sl@REQ s1 s2)) ))))"
+    , "(assert (forall ( (s1 (set sl@REQ))"
+    , "                  (s2 (set sl@REQ)) )"
+    , "                (! (=> (and (finite@@sl@REQ s1) (finite@@sl@REQ s2))"
+    , "                       (finite@@sl@REQ (union s1 s2)))"
+    , "                   :pattern"
+    , "                   ( (finite@@sl@REQ (union s1 s2)) ))))"
+    , "(assert (finite@@sl@REQ empty-set@@sl@REQ))"
+    , "(assert (forall ( (s1 (set sl@REQ))"
+    , "                  (s2 (set sl@REQ)) )"
+    , "                (! (=> (subset s1 s2)"
+    , "                       (=> (finite@@sl@REQ s2) (finite@@sl@REQ s1)))"
+    , "                   :pattern"
+    , "                   ( (finite@@sl@REQ s2)"
+    , "                     (finite@@sl@REQ s1) ))))"
+    , "(assert (not (=> (= b ch) (= b ch))))"
+    , "(check-sat-using (or-else (then qe smt)"
+    , "                          (then simplify smt)"
+    , "                          (then skip smt)"
+    , "                          (then (using-params simplify :expand-power true) smt)))"
+    , "; m1/handle/C_SCH/delay/0/prog/m1:prog1/rhs/m1:sch0"
+    ]
+
+case22 :: IO String
+case22 = proof_obligation path20 "m1/handle/C_SCH/delay/0/prog/m1:prog1/rhs/m1:sch0" 1

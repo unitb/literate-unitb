@@ -102,12 +102,6 @@ machine_input cmd = do
         tex <- latex_of m
         return (m,Tex tex)
 
--- instance Arbitrary MachineInput where
---     arbitrary = do
---         m   <- arbitrary
---         tex <- latex_of m
---         return $ CorrectMachineInput m tex
-
 perm :: Int -> Gen [Int]
 perm n = permute [0..n-1]
 
@@ -176,9 +170,6 @@ latex_of m = do
                            (Doc li [ Text (TextBlock (show $ _name m) li) ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
-            -- m_ops = M.fromList $ zip (map token xs) xs
-            --     where
-            --         xs = new_ops $ all_notation m
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")
@@ -209,9 +200,6 @@ with_type_error :: Gen RawMachine
 with_type_error = do
         suchThat (gen_machine True)
              (\m -> not $ L.null $ range m)
-        -- (Var n t) <- elements $ range m
-        -- t'        <- other_type t
-        -- return m { variables = M.insert n (Var n t') $ variables m }
     where
         range m = M.elems vars `L.intersect` S.elems fv
             where
@@ -269,12 +257,6 @@ gen_machine b = fix (\retry n -> do
             bs   <- mk_errors b ninv
             inv <- sequence `liftM` forM bs 
                     (\b -> resize 5 $ expr_type b vars bool)
-            -- let bk = or (zipWith (\x y -> isJust x && y) invs bs)
-            -- inv <- if not bk && b then do
-            --     x <- choose (0,5)
-            --     return $ zint x : catMaybes invs
-            -- else 
-            -- return $ catMaybes invs
             case inv of
                 Just inv ->
                     return $ newMachine assert "m0" $ do

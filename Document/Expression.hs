@@ -137,9 +137,6 @@ look_aheadP = liftHOF look_ahead
 liftP :: Scanner ExprToken a -> Parser a
 liftP = Parser . lift . lift
 
--- many :: Parser a -> Parser [a]
--- many m = do
-
 liftHOF :: (   Scanner ExprToken a
             -> Scanner ExprToken b )
         -> Parser a -> Parser b
@@ -160,9 +157,6 @@ tryP m0 m1 m2 = do
 
 match_char :: Token a => (a -> Bool) -> Scanner a a
 match_char p = read_if p return (fail "")
-
--- eat_spaceP :: Parser ()
--- eat_spaceP = liftP $ eat_space
 
 eat_space :: Scanner Char ()
 eat_space = do
@@ -478,10 +472,6 @@ choose_la (x:xs) = do
 choose_la [] = mzero
 
 add_context :: String -> Parser a -> Parser a
---add_context msg cmd = do       
---    li <- liftP $ get_line_info
---    let e = Error msg li
---    liftHOF (change_errors (e:)) cmd
 add_context _ cmd = cmd
 
 from :: [(String,a)] -> Parser a

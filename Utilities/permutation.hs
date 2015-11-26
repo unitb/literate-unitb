@@ -106,9 +106,6 @@ top_sort' g = runST $ do
         path    <- newArray (0,nn-1) 
                     (error "undefined in path")
                     :: ST s (STArray s Int Vertex)
-        -- edges   <- newArray (0,nn-1) 
-        --             (error "undefined in edges")
-        --             :: ST s (STArray s Int [Vertex])
         eStack  <- newArray (-1,nn-1) 0
                     :: ST s (STArray s Int Int)
         eList   <- newArray_ (0,mm-1) 
@@ -128,7 +125,6 @@ top_sort' g = runST $ do
                 writeArray visited i Grey
                 n  <- readSTRef rN
                 writeArray path  n i
-                -- writeArray edges n $ reverse (i2e ! i)
                 k <- readArray eStack (n-1)
                 let es = (i2e ! i)
                 zipWithM (writeArray eList) [k..] es
@@ -140,7 +136,6 @@ top_sort' g = runST $ do
                 r  <- root p t
                 writeArray visited r Black
                 when (n == 0) $ error "n == 0"
-                -- writeArray edges (n-1) []
                 modifySTRef rN (+ (-1))
                 modifySTRef res (r:)       
         fix $ \rec -> do
@@ -158,7 +153,6 @@ top_sort' g = runST $ do
                 v  <- readArray path  (n-1)
                 k  <- readArray eStack (n-2)
                 k' <- readArray eStack (n-1)
-                -- es <- readArray edges (n-1)
                 if k == k' then pop
                 else do
                     x  <- readArray eList (k'-1)
@@ -167,7 +161,6 @@ top_sort' g = runST $ do
                     case c of
                       White -> do
                         writeArray eStack (n-1) (k' - 1)
-                        -- writeArray edges (n-1) (tail es)
                         push x
                       Grey  -> do
                         r' <- root p v
@@ -176,21 +169,14 @@ top_sort' g = runST $ do
                             y <- readArray path (n-2)
                             merge p y v
                             writeArray path (n-1) (V $ -1)
-                            -- es' <- readArray edges (n-2)
-                            -- writeArray edges (n-2) (es++es')
                             writeArray eStack (n-2) k'
                             writeArray eStack (n-1) 0
                             modifySTRef rN (+ (-1))
-                            -- check_inv "D"
                         when (r == r') $ do
-                            -- writeArray edges (n-1) (tail es)
                             writeArray eStack (n-1) (k'-1)
                             writeArray cycles r True
-                            -- check_inv "C"
                       Black -> do
-                        -- writeArray edges (n-1) (tail es)
                         writeArray eStack (n-1) (k'-1)
-                        -- check_inv "B"
             unless (m == V nn && n == 0) rec
         m  <- getSets p
         r  <- readSTRef res

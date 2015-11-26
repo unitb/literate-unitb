@@ -14,6 +14,7 @@ import Document.Pipeline
 import Document.Phase as P
 import Document.Phase.Parameters
 import Document.Phase.Transient
+import Document.Phase.Types
 import Document.Proof
 import Document.Scope
 import Document.Visitor
@@ -153,7 +154,7 @@ make_phase3 p2 exprs' = triggerLenient $ do
                         -> SkipOrEvent -> EventP2 -> MM' c EventP3)
         liftEvent f = liftEvent2 f (\_ _ -> return [])
         newMch :: MachineP2
-               -> MM' c (MachineP3' EventP2 TheoryP2)
+               -> MM' c (MachineP3' EventP2 EventP2 TheoryP2)
         newMch m = makeMachineP3' m 
                 <$> (makePropertySet' <$> liftFieldMLenient toOldPropSet m exprs)
                 <*> (makePropertySet' <$> liftFieldMLenient toNewPropSet m exprs)
@@ -249,29 +250,6 @@ instance IsExprScope Initially where
     toOldPropSet _ _ = return []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     xs <- forM xs $ \(lbl,x) -> do
-    --         case x of
-    --             Initially (InhAdd x) _ li _ -> do
-    --                 vs <- gets $ view pDelVars
-    --                 let msg = format "initialization predicate '{0}' refers to deleted variables" lbl
-    --                     lis = L.map (first name) $ M.elems $ vs `M.intersection` used_var' x
-    --                     lis' = L.map (first (format "deleted variable {0}")) lis
-    --                 unless (L.null lis')
-    --                     $ tell [MLError msg $ (format "predicate {0}" lbl,li):lis']
-    --                 return ([(lbl,x)],[],[])
-    --             Initially (InhDelete (Just x)) Local _ _ -> 
-    --                 return ([],[(lbl,x)],[(v,x) | v <- S.elems $ used_var x ])
-    --             Initially (InhDelete (Just _)) Inherited _ _ -> 
-    --                 return ([],[],[])
-    --             Initially (InhDelete Nothing) _ li _ -> do
-    --                 let msg = format "initialization predicate '{0}' was deleted but does not exist" lbl
-    --                 tell [Error msg li]
-    --                 return ([],[],[])
-    --     let (ys,zs,ws) = mconcat xs 
-    --     pInit     %= M.union (M.fromList ys)
-    --     pDelInits %= M.union (M.fromList zs)
-    --     pInitWitness %= flip M.union (M.fromList ws)
 
 remove_init :: MPipeline MachineP2 [(Label,ExprScope)]
 remove_init = machineCmd "\\removeinit" $ \(Identity lbls) _m _p2 -> do
@@ -288,12 +266,14 @@ witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- lift ask
-            let disappear  = (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
-                newIndices = p2^.evtMergeAdded ev eIndices
+            let disappear  = (True,) <$> (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
+                newIndices = (False,) <$> p2^.evtMergeAdded ev eIndices
             p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
-            v  <- bind (format "'{0}' is not a disappearing variable or a new index" var)
+            (isVar,v)  <- bind (format "'{0}' is not a disappearing variable or a new index" var)
                 (var `M.lookup` (disappear `M.union` newIndices))
-            return [(label var,evtScope ev (Witness v p Local li))]
+            return $ if isVar
+                then [(label var,evtScope ev (Witness v p Local li))]
+                else [(label var,evtScope ev (IndexWitness v p Local li))]
 
 instance Scope EventExpr where
     kind (EventExpr m) = show $ ShowString . kind <$> m
@@ -413,25 +393,16 @@ instance IsEvtExpr CoarseSchedule where
     toMchScopeExpr _ _  = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "coarse schedule" ECoarseSched
---     parseEvtExpr xs = do
---         parseEvtExprChoice' pOldCoarseSched pDelCoarseSched pNewCoarseSched fst xs
---         checkLocalExpr "coarse schedule" used_var' xs
 
 instance IsEvtExpr FineSchedule where
     toMchScopeExpr _ _  = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "fine schedule" EFineSched
---     parseEvtExpr xs = do
---         parseEvtExprChoice' pOldFineSched pDelFineSched pNewFineSched fst xs
---         checkLocalExpr "fine schedule" used_var' xs
 
 instance IsEvtExpr Guard where
     toMchScopeExpr _ _  = return []
     defaultEvtWitness _ _ = return []
     toEvtScopeExpr = parseEvtExpr "guard" EGuards
---     parseEvtExpr xs = do
---         parseEvtExprChoice' pOldGuards pDelGuards pNewGuards fst xs
---         checkLocalExpr "guard" used_var' xs
 
 guard_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -526,8 +497,6 @@ default_schedule_decl :: Pipeline MM
                    (MTable MachineP2, Maybe (MTable [(Label, ExprScope)]))
                    (Maybe (Map MachineId [(Label, ExprScope)]))
 default_schedule_decl = arr $ \(p2,csch) -> 
-        --Just $ M.map (map default_sch.elems . M.mapWithKey const.view pNewEvents) p2
-        --Just $ p2 & traverse %~ view (pNewEvents.eEventId.traverse.to default_sch)
         Just $ addDefSch <$> p2 <.> evtsWith csch  -- .traverse._CoarseSchedule._)
     where
         --asCell' = asCell :: Prism' ExprScope EventExpr
@@ -563,9 +532,6 @@ instance IsExprScope Invariant where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     parseExpr' pInvariant xs
-    --     modifyProps inv xs
 
 invariant :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -590,9 +556,6 @@ instance IsExprScope InvTheorem where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     parseExpr' pInvariant xs
-    --     modifyProps inv_thm xs
 
 mch_theorem :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -616,9 +579,6 @@ instance IsExprScope TransientProp where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     parseExpr' pTransient xs
-    --     modifyProps transient xs
 
 transient_prop :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -672,8 +632,6 @@ instance IsExprScope ConstraintProp where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     modifyProps constraint xs
 
 instance Scope ConstraintProp where
     kind _ = "co property"
@@ -705,9 +663,6 @@ instance IsExprScope SafetyDecl where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     parseExpr' pSafety xs
-    --     modifyProps safety xs
 
 instance Scope SafetyDecl where
     kind _ = "safety property"
@@ -759,9 +714,6 @@ instance IsExprScope ProgressDecl where
             else []
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
-    -- parseExpr xs = do
-    --     parseExpr' pProgress $ map (first PId) xs
-    --     modifyProps progress xs
 
 instance Scope ProgressDecl where
     kind _ = "progress property"
@@ -782,9 +734,18 @@ progress_prop = machineCmd "\\progress" $ \(NewLabel lbl, Expr pCt, Expr qCt) _m
             let ds  = p2^.pDummyVars
                 dum = free_vars' ds p `union` free_vars' ds q
                 new_prop = LeadsTo (M.elems dum) p q
---             new_deriv <- bind (format "proof step '{0}' already exists" lbl)
---                 $ insert_new lbl (Rule Add) $ derivation $ props m
             return [(lbl,makeCell $ ProgressProp new_prop Local li)]
+
+instance IsEvtExpr IndexWitness where
+    defaultEvtWitness _ _ = return []
+    toMchScopeExpr _ _ = return []
+    toEvtScopeExpr Old evt _ w
+        | w^.declSource == Local = return [Right (evt,[EIndWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
+        | otherwise              = return []
+        where v = w^.ES.var
+    toEvtScopeExpr New _ _ _ = return []
+    setSource _ x = x
+    inheritedFrom _ = []
 
 instance IsEvtExpr Witness where
     defaultEvtWitness _ _ = return []
@@ -799,16 +760,6 @@ instance IsEvtExpr Witness where
         where v = w^.ES.var
     setSource _ x = x
     inheritedFrom _ = []
-    -- parseEvtExpr xs = do
-    --     let toExpr = (_witnessVar &&& view evtExpr) . snd
-    --         -- isLocal x = x ^. declSource == Local
-    --         getLocalExpr = mapA (second $ Kleisli $ is_local) >>> arr (map toExpr)
-    --         withEvent    = Kleisli id
-    --         withoutEvent = Kleisli $ guard . MM.isNothing
-    --         xs' = MM.mapMaybe (runKleisli $ withEvent *** getLocalExpr) xs
-    --         ys' = MM.mapMaybe (runKleisli $ withoutEvent *** getLocalExpr >>> arr snd) xs
-    --     pWitness %= doubleUnion xs'
-    --     pInitWitness %= M.union (M.fromList $ concat ys')
 
 instance IsEvtExpr ActionDecl where
     defaultEvtWitness ev scope = case (scope^.inhStatus, scope^.declSource) of 
@@ -822,27 +773,6 @@ instance IsEvtExpr ActionDecl where
             parseEvtExpr' "action"
                 (uncurry M.union . (frame' &&& used_var'.ba_pred))
                 EActions
-            -- vs <- view pDelVars
-            -- _
-            -- concat <$> sequence 
-            --     [ case act of
-            --           Action (InhDelete (Just act)) Local _ _ -> _
-            --               where f = frame' act `M.intersection` vs
-            --                     ns = [ (lbl,Witness v (ba_pred act) Local undefined []) | v <- M.elems f ]
-                -- ]
---     parseEvtExpr xs = do
---             parseEvtExprChoice' pOldActions pDelActions pNewActions fst xs
---             vs <- gets $ view pDelVars
---             let xs' = map (uncurry $ \k -> (k,) . concat . MM.mapMaybe (g k)) xs
---                 g (Just _) (lbl,Action (InhDelete (Just act)) Local _ _) = do
---                         let f = frame' act `M.intersection` vs
---                             ns = [ (lbl,Witness v (ba_pred act) Local undefined []) | v <- M.elems f ]
---                         return ns
---                 g _ _ = Nothing
---             parseEvtExprDefault pWitness (_witnessVar . snd) xs'
---             checkLocalExpr "action" 
---                (uncurry M.union . (frame' &&& used_var' . ba_pred)) 
---                 xs
 
 newtype Compose3 f g h a = Compose3 { getCompose3 :: f (g (h a)) }
     deriving (Functor)
@@ -882,11 +812,6 @@ instance IsExprScope EventExpr where
               fields :: (EventId, EvtExprScope)
                      -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
               fields (x,y) = toEvtScopeExpr Old x lbl y
---     parseExpr xs = mapM_ (readEvtExprGroup parseEvtExpr) zs
---         where
---             ys = concatMap g xs
---             zs = groupEvtExprGroup (++) ys
---             g (lbl,EventExpr m) = M.elems $ M.mapWithKey (\eid -> readEvtExprScope $ \e -> EvtExprGroup [(eid,[(lbl,e)])]) m
 
 init_witness_decl :: MPipeline MachineP2 [(Label,ExprScope)]
 init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -> do
@@ -897,13 +822,13 @@ init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
             return [(label var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
 
-event_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
+event_parser :: HasMachineP2 phase => phase -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
 
-schedule_parser :: HasMachineP2 phase events => phase events thy -> EventId -> ParserSetting
+schedule_parser :: HasMachineP2 phase => phase -> EventId -> ParserSetting
 schedule_parser p2 ev = (p2 ^. pSchSynt) ! ev
 
-machine_events :: HasMachineP1 phase events => phase events thy -> Map Label EventId
+machine_events :: HasMachineP1 phase => phase -> Map Label EventId
 machine_events p2 = L.view pEventIds p2
 
 evtScope :: IsEvtExpr a => EventId -> a -> ExprScope
@@ -926,7 +851,7 @@ free_vars' ds e = vs `M.intersection` ds
     where
         vs = used_var' e
 
-defaultInitWitness :: MachineP2 -> [MachineP3'Field a b] -> [MachineP3'Field a b]
+defaultInitWitness :: MachineP2 -> [MachineP3'Field a b c] -> [MachineP3'Field a b c]
 defaultInitWitness p2 xs = concatMap f xs ++ xs
     where
         vs = p2^.pDelVars

@@ -13,6 +13,7 @@ module Document.Machine where
 import Document.ExprScope as ES
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Types
 import Document.Refinement as Ref
 import Document.Scope
 
@@ -49,13 +50,10 @@ make_machine :: MachineId -> MachineP4
 make_machine (MId m) p4 = mch'
     where
         types   = p4^.pTypes
-        -- evtSet  = p4^.pEvents
         imp_th  = p4^.pImports
         ref_prog :: Map ProgId Rule
         ref_prog = p4^.pLiveRule
         proofs   = p4^.pProofs
-        -- _ = evt_refs :: Map EventId [(Label,ScheduleChange,LineInfo)]
-        --ab_var = p4^.pAbstractVars
         ctx = empty_theory 
             { _extends  = imp_th
             , _types    = types
@@ -65,7 +63,6 @@ make_machine (MId m) p4 = mch'
             , _theorems = M.empty
             , _thm_depend = []
             , _theoryDummies = p4^.pDummyVars
-            -- , notation =  empty_notation
             , _fact = p4^.pAssumptions & traverse %~ getExpr }
         mch = newMachine Exc.assert m $ do
             theory .= ctx
@@ -82,18 +79,16 @@ make_machine (MId m) p4 = mch'
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
             event_table .= EventTable evts -- M.mapKeys as_label evts 
-            --    -- adep: in a abstract machine, prog_a <- evt_a
-            --    -- live: in a concrete machine, prog_c <- prog_c
-            --    -- cdep:                        prog_c <- evt_c
-            --    -- eref: in a refinement, evt_a <- evt_c
-            --    -- pref_a:                evt_a <- prog_a
-            --    -- pref_c:                evt_a <- prog_c
-            --    --   adep;eref \/ (live\/id);cdep
-            --    --   (adep;pref_a)+ /\ id ⊆ {}
+                -- adep: in a abstract machine, prog_a <- evt_a
+                -- live: in a concrete machine, prog_c <- prog_c
+                -- cdep:                        prog_c <- evt_c
+                -- eref: in a refinement, evt_a <- evt_c
+                -- pref_a:                evt_a <- prog_a
+                -- pref_c:                evt_a <- prog_c
+                --   adep;eref \/ (live\/id);cdep
+                --   (adep;pref_a)+ /\ id ⊆ {}
 
-            --    -- = (live;adep \/ adep) ; eref \/ cdep
-            ---- , prog_evt = _ 
-            --} -- R.mapDomain getConcrete cdep' }
+                -- = (live;adep \/ adep) ; eref \/ cdep
         mch' :: MM' c Machine
         mch' = do
             let pos = raw_machine_pos mch
@@ -112,21 +107,21 @@ make_machine (MId m) p4 = mch'
                       & G.traverseRightWithEdgeInfo %~ uncurry concrEvt
         abstrEvt :: EventP4 -> AbstrEvent
         abstrEvt evt = AbsEvent
-                { _old = g evt 
+                { _old = g $ evt^.eventP3
+                , _ind_witness = evt^.eIndWitness
                 , _c_sched_ref = map snd (evt^.eCoarseRef)
                 , _f_sched_ref = (first as_label) <$> evt^.eFineRef
                 }
-        concrEvt :: EventP4 -> NonEmpty (SkipOrEvent, AbstrEvent) -> ConcrEvent
+        concrEvt :: EventP3 -> NonEmpty (SkipOrEvent, AbstrEvent) -> ConcrEvent
         concrEvt evt olds = CEvent
                 { _new = g evt
-                , _witness   = (evt^.eWitness) `M.intersection` (p4^.pAbstractVars)
-                , _ind_witness = (evt^.eWitness) `M.intersection` (evt^.eIndices)
-                , _eql_vars = keep' (p4^.pAbstractVars) oldAction
-                             `M.intersection` frame (evt^.eActions)
+                , _witness   = evt^.eWitness
+                , _eql_vars  = keep' (p4^.pAbstractVars) oldAction
+                                `M.intersection` frame (evt^.eActions)
                 , _abs_actions = oldAction
                 }
             where oldAction = snd (NE.head olds)^.actions
-        g :: EventP4 -> Event
+        g :: EventP3 -> Event
         g evt
             = Event
                 { _indices   = evt^.eIndices
@@ -149,24 +144,8 @@ flipMap m = M.map fromList $ fromListWith (++) $ do
     (y,z)  <- xs
     return (y,[(x,z)])
 
--- type MM = R.ReaderT Input M
-
-
-
-
--- trigger_errors 
-
-
--- type family MapOf a :: *
--- type instance MapOf [(a,b,LineInfo)] = Either [Error] (Map a b)
-
-
-
-
-
     -- Todo: detect when the same variable is declared twice
     -- in the same declaration block.
-
 
 progress_props :: MachineP3 -> Map ProgId ProgressProp
 progress_props p3 = p3^.pProgress

@@ -3,27 +3,25 @@
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE TypeOperators,TypeFamilies     #-}
 {-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE StandaloneDeriving             #-}
+{-# LANGUAGE StandaloneDeriving, UndecidableInstances #-}
 module Document.Phase where
 
     -- Modules
 import Document.Pipeline
+import Document.Phase.Types
 import Document.Phase.Parameters
 import Document.Proof
 import Document.Scope
 
 import Latex.Parser
 
-import Logic.Operator (Notation)
 import Logic.Proof
-import Logic.Proof.Tactics (Tactic)
 
 import UnitB.AST as AST
-import UnitB.Expr 
+import UnitB.Expr
 
     -- Libraries
 import Control.Arrow hiding (ArrowChoice(..))
-import Control.DeepSeq
 import Control.Lens as L
 
 import Control.Monad.Reader.Class 
@@ -41,12 +39,9 @@ import Data.List.NonEmpty as NE
 import Data.Map   as M hiding ((!))
 import Data.Maybe as MM
 import Data.Proxy
-import Data.Semigroup
 import Data.Set as S
+import Data.Semigroup
 import qualified Data.Traversable as T
-import Data.Typeable
-
-import GHC.Generics (Generic)
 
 import Test.QuickCheck as QC hiding (label,collect)
 
@@ -56,8 +51,6 @@ import Utilities.Error
 import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Format
-import Utilities.TableConstr
-import Utilities.TH
 import Utilities.Tuple.Generics
 
 triggerM :: Maybe a -> MM' c a
@@ -213,185 +206,6 @@ collect p f arg = do
             return $  fromListWith mappend 
                   <$> mapM (runKleisli $ second $ Kleisli id) xs
 
-type MachineP0' a = MachineP0
-
-data MachineP0 = MachineP0
-        { _pAllMachines :: MTable ()
-        , _pMachineId   :: MachineId }
-    deriving (Show,Typeable,Generic)
-
-type MachineP1 = MachineP1' EventP1 TheoryP1
-
-data MachineP1' events theory = MachineP1 
-    { _p0 :: MachineP0
-    , _pEventRef :: G.BiGraph SkipOrEvent events events
-    , _pContext  :: theory
-    } deriving (Show,Typeable,Generic)
-
-type MachineP2 = MachineP2' EventP2 TheoryP2
-
-data MachineP2' events theory = MachineP2
-    { _p1 :: MachineP1' events theory
-    , _pDelVars   :: Map String (Var,LineInfo)
-    , _pStateVars :: Map String Var             -- machine variables
-    , _pAbstractVars :: Map String Var          -- abstract machine variables
-    , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
-    } deriving (Show,Typeable,Generic)
-
-type MachineP3 = MachineP3' EventP3 TheoryP3
-
-data MachineP3' events theory = MachineP3
-    { _p2 :: MachineP2' events theory
-    , _pProgress  :: Map ProgId ProgressProp
-    , _pSafety    :: Map Label SafetyProp
-    , _pTransient :: Map Label Transient
-    , _pInvariant   :: Map Label Expr                     -- Invariants
-    , _pInitWitness :: Map String (Var,Expr)
-    , _pDelInits    :: Map Label Expr
-    , _pInit        :: Map Label Expr
-    , _pOldPropSet  :: PropertySet
-    , _pNewPropSet  :: PropertySet
-    } deriving (Show,Typeable,Generic)
-
-type MachineP4 = MachineP4' EventP4 TheoryP3
-
-data MachineP4' events theory = MachineP4
-    { _p3 :: MachineP3' events theory
-    , _pLiveRule :: Map ProgId ProofTree
-    , _pProofs   :: Map Label (Tactic Proof, LineInfo)
-    , _pComments :: Map DocItem String
-    } deriving (Typeable,Show,Generic)
-
-data EventP1 = EventP1
-         { _eEventId :: SkipOrEvent
-         }
-    deriving (Show,Typeable,Generic)
-
-data EventP2 = EventP2 
-    { _e1 :: EventP1 
-    , _eIndices :: Map String Var
-    , _eParams  :: Map String Var
-    , _eSchSynt :: ParserSetting
-    , _eEvtSynt :: ParserSetting
-    } deriving (Show,Typeable,Generic)
-
-data EventP3 = EventP3 
-    { _e2 :: EventP2 
-    , _eCoarseSched :: Map Label Expr     
-    , _eFineSched   :: Map Label Expr
-    , _eGuards   :: Map Label Expr       
-    , _eWitness     :: Map String (Var,RawExpr)
-    , _eActions  :: Map Label Action
-    } deriving (Show,Typeable,Generic)
-
-data EventP4 = EventP4 
-    { _e3 :: EventP3 
-    , _eCoarseRef  :: [(Label,ScheduleChange)]
-    , _eFineRef    :: Maybe (ProgId,ProgressProp)
-    } deriving (Typeable,Show,Generic)
-
-data Change = AddC | RemoveC
-    deriving (Eq,Show)
-
-data TheoryP0 = TheoryP0
-    { _tNothing :: ()
-    } deriving (Show,Typeable,Generic)
-
-type PostponedDef = (Def,DeclSource,LineInfo)
-
-data TheoryP1 = TheoryP1
-    { _t0 :: TheoryP0
-    , _pImports   :: Map String Theory
-    , _pTypes     :: Map String Sort
-    , _pAllTypes  :: Map String Sort
-    , _pSetDecl   :: [(String, PostponedDef)]
-    } deriving (Show,Typeable,Generic)
-
-data TheoryP2 = TheoryP2
-    { _t1 :: TheoryP1 
-    , _pDefinitions :: Map String Def
-    , _pConstants :: Map String Var
-    , _pDummyVars :: Map String Var             -- dummy variables
-    , _pNotation  :: Notation
-    , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
-    } deriving (Show,Typeable,Generic)
-
-data TheoryP3 = TheoryP3
-    { _t2 :: TheoryP2
-    , _pAssumptions :: Map Label Expr
-    } deriving (Show,Typeable,Generic)
-
-data SystemP m = SystemP
-    { _refineStruct :: Hierarchy MachineId
-    , _mchTable :: MTable m }
-    deriving (Typeable,Show,Generic)
-
-instance NFData m => NFData (SystemP m) where
-instance NFData m => NFData (Hierarchy m) where
-
-type SystemP1 = SystemP MachineP1
-type SystemP2 = SystemP MachineP2
-type SystemP3 = SystemP MachineP3
-type SystemP4 = SystemP MachineP4
-
-  -- TODO: write contracts
-data Hierarchy k = Hierarchy 
-        { order :: [k]
-        , edges :: Map k k }
-    deriving (Show,Typeable,Generic)
-
-instance IsLabel ContextId where
-    as_label (CId x) = label x
-
-type MTable = Map MachineId
-type CTable = Map ContextId
-
-instance NFData MachineP0
-instance (NFData e,NFData t) => NFData (MachineP1' e t)
-instance (NFData e,NFData t) => NFData (MachineP2' e t)
-instance (NFData e,NFData t) => NFData (MachineP3' e t)
-instance (NFData e,NFData t) => NFData (MachineP4' e t)
-
-instance NFData EventP1
-instance NFData EventP2
-instance NFData EventP3
-instance NFData EventP4
-
-instance NFData TheoryP0
-instance NFData TheoryP1
-instance NFData TheoryP2
-instance NFData TheoryP3
-
-makeRecordConstr ''MachineP2'
-makeRecordConstr ''MachineP3'
-makeRecordConstr ''MachineP4'
-
-makeRecordConstr ''EventP2
-makeRecordConstr ''EventP3
-makeRecordConstr ''EventP4
-
-makeRecordConstr ''TheoryP2
-makeRecordConstr ''TheoryP3
---makeRecordConstr ''TheoryP4
-
-instance NFData EventP2Field
-instance NFData EventP3Field
-deriving instance Generic EventP2Field
-deriving instance Generic EventP3Field
-deriving instance Generic EventP4Field
-
-makeLenses ''SystemP
-
-deriving instance Show EventP3Field
-
-instance NFData (Tactic Proof) where
-    rnf x = seq x () 
-
--- type Phase2M = Phase2 MTable
--- type Phase3M = Phase3 MTable
-
--- type Phase2I = Phase2 Identity
--- type Phase3I = MachineP3 Identity
 
     -- we want to encode phases as maps to 
     -- phase records and extract fields
@@ -410,24 +224,6 @@ zoom s f m = M.union m1 <$> f m0
     where
         (m0,m1) = M.partitionWithKey (const . (`S.member` s)) m
 
-
-
-
--- data ZipMap a b where
---     FMap :: (a -> b) -> ZipMap a b
---     Map :: Map a b -> ZipMap a b
-
--- instance Functor (ZipMap a) where
---     fmap f (Map m) = Map $ M.map f m
---     fmap f (FMap g) = FMap $ \x -> f $ g x
-
--- instance Ord a => Applicative (Map a) where
-    -- pure = FMap . const
-    -- (<*>) (FMap f) (FMap g) = FMap $ \x -> f x (g x)
-    -- (<*>) (FMap f) (Map m)  = Map $ M.mapWithKey f m
-    -- (<*>) (Map m)  (FMap f) = Map $ M.mapWithKey (\k g -> g $ f k) m
-    -- (<*>) (Map m0) (Map m1) = Map $ M.intersectionWith id m0 m1
-
 infixl 3 <.>
 
 (<.>) :: (Ord a,Default b) 
@@ -442,99 +238,70 @@ zipMap m0 m1 = M.unionWith f ((,def) <$> m0) ((def,) <$> m1)
     where
         f (x,_) (_,y) = (x,y)
 
--- onMachine :: MachineId -> Lens' Phase2M Phase2I
--- onMachine = _
-
-$(makeClassy ''EventP1)
-
-$(makeClassy ''EventP2)
-
-$(makeClassy ''EventP3)
-
-$(makeClassy ''EventP4)
-
-createHierarchy 
-        [ (''MachineP1' ,'_p0)
-        , (''MachineP2' ,'_p1)
-        , (''MachineP3' ,'_p2)
-        , (''MachineP4' ,'_p3)
-        -- , (''MachineP1', '_pContext)
-        , (''TheoryP1, '_t0)
-        , (''TheoryP2, '_t1)
-        , (''TheoryP3, '_t2)
-        -- , (''MachineP0' ,undefined)
-        ]
-
-$(makeHierarchy
-           ''EventP1
-        [ (''EventP2, 'e1)
-        , (''EventP3, 'e2)
-        , (''EventP4, 'e3)
-        ] )
-
-instance (HasMachineP1' m, HasTheoryP1 t) => HasTheoryP1 (m e t) where
+instance (HasMachineP1 (m a c t), HasTheoryP1 t) => HasTheoryP1 (m a c t) where
     theoryP1 = pContext . theoryP1
 
-instance (HasMachineP1' m, HasTheoryP2 t) => HasTheoryP2 (m e t) where
+instance (HasMachineP1 (m a c t), HasTheoryP2 t) => HasTheoryP2 (m a c t) where
     theoryP2 = pContext . theoryP2
 
-instance (HasMachineP1' m, HasTheoryP3 t) => HasTheoryP3 (m e t) where
+instance (HasMachineP1 (m a c t), HasTheoryP3 t) => HasTheoryP3 (m a c t) where
     theoryP3 = pContext . theoryP3
 
-pEventIds :: (HasEventP1 events, HasMachineP1' phase) 
-          => Getter (phase events t) (Map Label EventId)
+pEventIds :: (HasMachineP1 phase) 
+          => Getter phase (Map Label EventId)
 pEventIds = pEvents . to (M.mapWithKey const) . from pEventId
 
-getEvent :: (HasMachineP1' phase)
+getEvent :: (HasMachineP1 phase)
          => EventId
-         -> Getter (phase events t) events
+         -> Getter phase (CEvtType phase)
 getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust'' AST.assert x))
 
-eventDifference :: HasMachineP1' phase
+eventDifference :: (HasMachineP1 phase, AEvtType phase ~ CEvtType phase)
                 => (NonEmpty (Map label a) -> Map label a -> Map label b)
                 -> EventId 
-                -> Getting (Map label a) event (Map label a)
-                -> Getter (phase event t) (Map label b)
-eventDifference f eid field = pEventRef . to f' 
+                -> Getting (Map label a) (AEvtType phase) (Map label a)
+                -- -> Getting (Map label a) event (Map label a)
+                -> Getter phase (Map label b)
+eventDifference f eid field = pEventRef . to f'
     where
         f' g = readGraph g $ do
             cevt  <- fromJust'' AST.assert <$> hasRightVertex (Right eid)
             es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
             f (view field <$> es) <$> (view field <$> rightInfo cevt)
 
-eventDifferenceWithId :: (HasMachineP1' phase,HasEventP1 event,Ord label)
+eventDifferenceWithId :: (HasMachineP1 phase,Ord label,AEvtType phase ~ CEvtType phase)
                       => (   Map label (First a,NonEmpty SkipOrEvent) 
                           -> Map label (First a,NonEmpty SkipOrEvent) 
                           -> Map label (First b,c))
                       -> EventId 
-                      -> Getting (Map label a) event (Map label a)
-                      -> Getter (phase event t) (Map label (b,c))
-eventDifferenceWithId comp eid field = eventDifference f eid (to field') . to (M.map $ first getFirst)
+                      -> Getting (Map label a) (AEvtType phase) (Map label a)
+                      -> Getter phase (Map label (b,c))
+eventDifferenceWithId comp eid field = eventDifference f eid (to $ field' field) . to (M.map $ first getFirst)
     where 
         f old new = M.unionsWith (<>) (NE.toList old) `comp` new
-        field' e = M.map ((,view eEventId e :| []).First) $ view field e
+        field' ln e = M.map ((,view eEventId e :| []).First) $ view ln e
 
-evtMergeAdded :: (HasMachineP1' phase, Ord label)
+evtMergeAdded :: (HasMachineP1 phase, Ord label,AEvtType phase ~ CEvtType phase)
               => EventId
-              -> Getting (Map label a) event (Map label a)
-              -> Getter (phase event t) (Map label a)
+              -> Getting (Map label a) (AEvtType phase) (Map label a)
+              -> Getter phase (Map label a)
 evtMergeAdded = eventDifference $ \old new -> new `M.difference` M.unions (NE.toList old)
-evtMergeDel :: (HasMachineP1' phase, HasEventP1 event)
+evtMergeDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
             => EventId
-            -> Getting (Map Label a) event (Map Label a)
-            -> Getter (phase event t) (Map Label (a,NonEmpty SkipOrEvent))
+            -> Getting (Map Label a) (AEvtType phase) (Map Label a)
+            -> Getter phase (Map Label (a,NonEmpty SkipOrEvent))
 evtMergeDel = eventDifferenceWithId M.difference 
-evtMergeKept :: (HasMachineP1' phase, HasEventP1 event)
+evtMergeKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
              => EventId
-             -> Getting (Map Label a) event (Map Label a)
-             -> Getter (phase event t) (Map Label (a,NonEmpty SkipOrEvent))
+             -> Getting (Map Label a) (AEvtType phase) (Map Label a)
+             -> Getter (phase) (Map Label (a,NonEmpty SkipOrEvent))
 evtMergeKept = eventDifferenceWithId M.intersection
 
-evtSplits :: (HasMachineP1 phase event)
+evtSplits :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
           => (Map Label a -> Map Label a -> Map Label a)
           -> Assert -> EventId 
-          -> Getting (Map Label a) event (Map Label a) 
-          -> Getter (phase event t) [Map Label a]
+          -> Getting (Map Label a) (AEvtType phase) (Map Label a) 
+          -> Getter phase [Map Label a]
 evtSplits union arse eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
         rs <- NE.toList <$> (successors =<< leftVertex arse (Right eid))
         rs <- forM rs $ \v -> do
@@ -544,24 +311,24 @@ evtSplits union arse eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
             return $ r <$ eid
         return $ rights rs
 
-evtSplitAdded :: HasMachineP1 phase event
+evtSplitAdded :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
               => Assert -> EventId
-              -> Getting (Map Label a) event (Map Label a)
-              -> Getter (phase event t) [Map Label a]
+              -> Getting (Map Label a) (AEvtType phase) (Map Label a)
+              -> Getter phase [Map Label a]
 evtSplitAdded = evtSplits $ flip M.difference
-evtSplitDel :: HasMachineP1 phase event
+evtSplitDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
             => Assert -> EventId
-            -> Getting (Map Label a) event (Map Label a)
-            -> Getter (phase event t) [Map Label a]
+            -> Getting (Map Label a) (AEvtType phase) (Map Label a)
+            -> Getter phase [Map Label a]
 evtSplitDel = evtSplits M.difference
-evtSplitKept :: HasMachineP1 phase event
+evtSplitKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
              => Assert -> EventId
-             -> Getting (Map Label a) event (Map Label a)
-             -> Getter (phase event t) [Map Label a]
+             -> Getting (Map Label a) (AEvtType phase) (Map Label a)
+             -> Getter phase [Map Label a]
 evtSplitKept = evtSplits M.intersection
 
-newDelVars :: HasMachineP2' phase
-           => Getter (phase events t) (Map String Var)
+newDelVars :: HasMachineP2 phase
+           => Getter phase (Map String Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
 pDefVars :: HasTheoryP2 phase
@@ -573,11 +340,11 @@ defToVar (Def _ n [] t _) = Just (Var n t)
 defToVar (Def _ _ (_:_) _ _) = Nothing
 
 pAllVars :: HasMachineP2' phase
-        => Getter (phase events t) (Map String Var)
+         => Getter (phase ae ce t) (Map String Var)
 pAllVars = to $ \x -> view pAbstractVars x `M.union` view pStateVars x
 
-pEventSplit' :: (HasMachineP1' phase, HasEventP1 event)
-             => Getter (phase event t) (Map EventId (event,[(EventId,event)]))
+pEventSplit' :: (HasMachineP1 phase)
+             => Getter phase (Map EventId (AEvtType phase,[(EventId,CEvtType phase)]))
 pEventSplit' = pEventRef.to f
     where
         distr (x,y) = (,y) <$> x
@@ -591,16 +358,16 @@ pEventSplit' = pEventRef.to f
                 e  <- leftInfo v
                 return $ distr (k,(e,es))
 
-pEventSplit :: (HasMachineP1' phase, HasEventP1 event)
-            => Getter (phase event t) (Map EventId (event,[EventId]))
+pEventSplit :: (HasMachineP1 phase)
+            => Getter phase (Map EventId (AEvtType phase,[EventId]))
 pEventSplit = pEventSplit'.to (over (traverse._2.traverse) fst)
 
-pEventMerge :: (HasMachineP1' phase, HasEventP1 event)
-            => Getter (phase event t) (Map EventId (event,[EventId]))
+pEventMerge :: (HasMachineP1 phase)
+            => Getter phase (Map EventId (CEvtType phase,[EventId]))
 pEventMerge = pEventMerge'.to (over (traverse._2.traverse) fst)
 
-pEventMerge' :: (HasMachineP1' phase, HasEventP1 event)
-             => Getter (phase event t) (Map EventId (event,[(EventId,event)]))
+pEventMerge' :: (HasMachineP1 phase)
+             => Getter phase (Map EventId (CEvtType phase,[(EventId,AEvtType phase)]))
 pEventMerge' = pEventRef.to f
     where
         distr (x,y) = (,y) <$> x
@@ -619,20 +386,21 @@ traverseFilter p f m = M.union <$> f m' <*> pure (m `M.difference` m')
     where
         m' = M.filter p m
 
-pNewEvents :: (HasMachineP1' phase, HasEventP1 events)
-           => Traversal' (phase events t) events
+pNewEvents :: (HasMachineP1 phase)
+           => Traversal' phase (CEvtType phase)
 pNewEvents f = (pEventRef.traverseRightWithEdges) g
     where
         g (e,xs) 
             | L.null $ rights (NE.toList xs) = f e
             | otherwise                      = pure e
 
-pOldEvents :: (HasMachineP1' phase, HasEventP1 events)
-           => Getter (phase events t) (Map EventId events)
+    -- | Concrete events that are inherited from refined machine
+pOldEvents :: (HasMachineP1 phase)
+           => Getter phase (Map EventId (CEvtType phase))
 pOldEvents = pEventMerge.to (M.map fst . M.filter (not . L.null . snd))
 
-pEvents :: (HasMachineP1' phase) 
-        => Getter (phase event t) (Map EventId event)
+pEvents :: (HasMachineP1 phase) 
+        => Getter phase (Map EventId (CEvtType phase))
 pEvents = pEventRef.to rightMap.to f
     where
         f = M.fromList . MM.mapMaybe (rightToMaybe . (runKleisli $ first $ Kleisli id))
@@ -643,88 +411,27 @@ pEventId = iso
         (M.mapKeys EventId) 
         (M.mapKeys as_label)
 
-pIndices  :: HasMachineP2 mch event 
-          => Getter (mch event t) (Map EventId (Map String Var))
+pIndices  :: HasMachineP2 mch
+          => Getter mch (Map EventId (Map String Var))
 pIndices = pEvents . onMap eIndices
 
-pParams   :: HasMachineP2 mch event 
-          => Getter (mch event t) (Map EventId (Map String Var))
-pParams = pEvents . onMap eParams
-pSchSynt  :: HasMachineP2 mch event 
-          => Getter (mch event t) (Map EventId ParserSetting)    
+--pParams   :: HasMachineP2 mch
+--          => Getter mch (Map EventId (Map String Var))
+--pParams = pEvents . onMap eParams
+pSchSynt  :: HasMachineP2 mch 
+          => Getter mch (Map EventId ParserSetting)    
     -- parsing schedule
 pSchSynt = pEvents . onMap eSchSynt
-pEvtSynt  :: HasMachineP2 mch event 
-          => Getter (mch event t) (Map EventId ParserSetting)    
+pEvtSynt  :: HasMachineP2 mch 
+          => Getter mch (Map EventId ParserSetting)    
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
 eIndParams :: HasEventP2 events => Getter events (Map String Var) 
 eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
--- pNewCoarseSched :: HasMachineP3 mch event 
---                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
--- pNewCoarseSched = pEvents . onMap eNewCoarseSched
-
--- pNewFineSched :: HasMachineP3 mch event 
---               => Getter (mch event t) (Map EventId (Map Label Expr))
--- pNewFineSched = pEvents . onMap eNewFineSched
-
--- pOldCoarseSched :: HasMachineP3 mch event 
---                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
--- pOldCoarseSched = pEvents . onMap eOldCoarseSched
-
--- pOldFineSched :: HasMachineP3 mch event 
---               => Getter (mch event t) (Map EventId (Map Label Expr))
--- pOldFineSched = pEvents . onMap eOldFineSched
-
--- pDelCoarseSched :: HasMachineP3 mch event 
---                 => Getter (mch event t) (Map EventId (Map Label Expr))     -- Schedules
--- pDelCoarseSched = pEvents . onMap eDelCoarseSched
-
--- pDelFineSched :: HasMachineP3 mch event 
---               => Getter (mch event t) (Map EventId (Map Label Expr))
--- pDelFineSched = pEvents . onMap eDelFineSched
-
--- pOldGuards :: HasMachineP3 mch event 
---            => Getter (mch event t) (Map EventId (Map Label Expr))
--- pOldGuards = pEvents . onMap eOldGuards
-
--- pNewGuards :: HasMachineP3 mch event 
---            => Getter (mch event t) (Map EventId (Map Label Expr))       -- Guards
--- pNewGuards = pEvents . onMap eNewGuards
-
--- pDelGuards :: HasMachineP3 mch event 
---            => Getter (mch event t) (Map EventId (Map Label Expr))       -- Guards
--- pDelGuards = pEvents . onMap eDelGuards
-
--- pOldActions :: HasMachineP3 mch event 
---             => Getter (mch event t) (Map EventId (Map Label Action))    -- Actions
--- pOldActions = pEvents . onMap eOldActions
-
--- pDelActions :: HasMachineP3 mch event 
---             => Getter (mch event t) (Map EventId (Map Label Action))
--- pDelActions = pEvents . onMap eDelActions
-
--- pNewActions :: HasMachineP3 mch event 
---             => Getter (mch event t) (Map EventId (Map Label Action))
--- pNewActions = pEvents . onMap eNewActions
-
--- pEventFineRef :: HasMachineP4 mch event
---               => Lens' (mch event t) (Map EventId (Maybe (ProgId, ProgressProp)))
--- pEventFineRef = pFineRef
---         -- pEvents . onMap eFineRef
-
-pEventCoarseRef :: HasMachineP4 mch event
-                => Getter (mch event t) (Map EventId [(Label,ScheduleChange)])
-pEventCoarseRef = pEvents . onMap eCoarseRef
-
-pWitness :: HasMachineP3 mch event 
-         => Getter (mch event t) (Map EventId (Map String (Var,RawExpr)))
-pWitness = pEvents . onMap eWitness
-
-pEventRenaming :: HasMachineP1 mch event
-               => Getter (mch event thy) (Map EventId [EventId])
+pEventRenaming :: HasMachineP1 mch
+               => Getter mch (Map EventId [EventId])
 pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
     where
         g = M.fromList . MM.mapMaybe (\(x,y) -> rightToMaybe $ (,) <$> x <*> y)
@@ -736,38 +443,61 @@ pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
                 (,) <$> leftKey v 
                     <*> (T.mapM (rightKey . G.target) =<< successors v)
 
--- instance HasMachineP0 MachineP3 where
---     machineP0 = p0
-    -- func = 
+class ( IsMachine p
+      , HasMachineP1' (MchType p)
+      , HasEventP1 (AEvtType p)
+      , HasEventP1 (CEvtType p)
+      , HasTheoryP1 (ThyType p) ) 
+    => HasMachineP1 p where
 
--- class HasMachineP1 phase where
---     p1' :: phase events -> MachineP1' events
+instance ( IsMachine p
+         , HasMachineP1' (MchType p)
+         , HasEventP1 (AEvtType p)
+         , HasEventP1 (CEvtType p)
+         , HasTheoryP1 (ThyType p) ) => HasMachineP1 p where
 
-class (HasMachineP1' f, HasEventP1 a) => HasMachineP1 f a where
+class ( IsMachine p
+      , HasMachineP2' (MchType p)
+      , HasEventP2 (AEvtType p)
+      , HasEventP2 (CEvtType p)
+      , HasTheoryP2 (ThyType p) 
+      , HasMachineP1 p
+      ) => HasMachineP2 p where
 
-instance (HasMachineP1' f, HasEventP1 a) => HasMachineP1 f a where
+instance ( IsMachine p
+          , HasMachineP1 p
+          , HasMachineP2' (MchType p)
+          , HasEventP2 (AEvtType p)
+          , HasEventP2 (CEvtType p)
+          , HasTheoryP2 (ThyType p) ) 
+    => HasMachineP2 p where
 
-class (HasMachineP2' f, HasEventP2 a, HasMachineP1 f a) => HasMachineP2 f a where
+class ( IsMachine p
+      , HasMachineP3' (MchType p)
+      , HasEventP3 (AEvtType p)
+      , HasEventP3 (CEvtType p)
+      , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP3 p where
 
-instance ( HasMachineP1' f, HasEventP1 a
-         , HasMachineP2' f, HasEventP2 a) 
-    => HasMachineP2 f a where
+instance ( IsMachine p
+          , HasMachineP3' (MchType p)
+          , HasEventP3 (AEvtType p)
+          , HasEventP3 (CEvtType p)
+          , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP3 p where
 
-class (HasMachineP3' f, HasEventP3 a, HasMachineP2 f a) => HasMachineP3 f a where
+class ( IsMachine p
+      , HasMachineP4' (MchType p)
+      , HasEventP4 (AEvtType p)
+      , HasEventP3 (CEvtType p)
+      , HasTheoryP3 (ThyType p) ) => HasMachineP4 p where
 
-instance ( HasMachineP1' f, HasEventP1 a
-         , HasMachineP2' f, HasEventP2 a
-         , HasMachineP3' f, HasEventP3 a) 
-    => HasMachineP3 f a where
-
-class ( HasMachineP4' f, HasEventP4 a
-      , HasMachineP3 f a) => HasMachineP4 f a where
-
-instance ( HasMachineP1' f, HasEventP1 a
-         , HasMachineP2' f, HasEventP2 a
-         , HasMachineP3' f, HasEventP3 a 
-         , HasMachineP4' f, HasEventP4 a) 
-    => HasMachineP4 f a where
+instance ( IsMachine p
+          , HasMachineP4' (MchType p)
+          , HasEventP4 (AEvtType p)
+          , HasEventP3 (CEvtType p)
+          , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP4 p where
 
 aliases :: Eq b => Lens' a b -> Lens' a b -> Lens' a b
 aliases ln0 ln1 = lens getter $ flip setter
@@ -852,8 +582,8 @@ fromList' xs = M.fromList $ L.zip xs $ L.repeat ()
 inherit :: Hierarchy MachineId -> Map MachineId [b] -> Map MachineId [b]
 inherit = inheritWith id id (++)
 
-inherit2 :: (Scope s,HasMachineP1' phase,HasEventP1 evt)
-         => MTable (phase evt thy)
+inherit2 :: (Scope s,HasMachineP1 phase)
+         => MTable (phase)
          -> Hierarchy MachineId
          -> MTable [(t, s)] 
          -> MTable [(t, s)]
@@ -947,12 +677,12 @@ trigger (Just x) = return x
 trigger Nothing  = left []
 
 layeredUpgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-               , Applicative f,MonadFix f,NFData evt1)
+               , Applicative f,MonadFix f)
             => (thy0 -> thy1 -> f thy1)
-            -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> f (mch1 evt0 thy1))
-            -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> f evt1)
-            -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> f evt1)
-            -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+            -> (mch0 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1 -> f (mch1 aevt0 cevt0 thy1))
+            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1 -> f aevt1)
+            -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> cevt1 -> f cevt1)
+            -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 layeredUpgradeRecM thyF mchF oldEvF newEvF = layeredUpgradeM
         (mfix.thyF) 
         (mfix.mchF) 
@@ -960,59 +690,59 @@ layeredUpgradeRecM thyF mchF oldEvF newEvF = layeredUpgradeM
         (fmap (fmap mfix).newEvF)
 
 layeredUpgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-            , Applicative f,Monad f,NFData evt1)
+            , Applicative f,Monad f) -- ,NFData evt1)
          => (thy0 -> f thy1)
-         -> (mch0 evt0 thy1 -> f (mch1 evt0 thy1))
-         -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> f evt1)
-         -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> f evt1)
-         -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+         -> (mch0 aevt0 cevt0 thy1 -> f (mch1 aevt0 cevt0 thy1))
+         -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> f aevt1)
+         -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> f cevt1)
+         -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 layeredUpgradeM thyF mchF oldEvF newEvF m = do
         m' <- mchF =<< (m & pContext thyF)
         m' & pEventRef (\g -> traverseLeftWithKey (uncurry (oldEvF m'))
                      =<< traverseRightWithKey (uncurry (newEvF m')) g)
 
-layeredUpgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
+layeredUpgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0)
            => (thy0 -> thy1 -> thy1)
-           -> (mch0 evt0 thy1 -> mch1 evt0 thy1 -> mch1 evt0 thy1)
-           -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> evt1)
-           -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1 -> evt1)
-           -> mch0 evt0 thy0 -> mch1 evt1 thy1
+           -> (mch0 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1)
+           -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1 -> aevt1)
+           -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> cevt1 -> cevt1)
+           -> mch0 aevt0 cevt0 thy0 -> mch1 aevt1 cevt1 thy1
 layeredUpgradeRec thyF mchF oldEvF newEvF = layeredUpgrade
         (fix.thyF) 
         (fix.mchF) 
         (fmap (fmap fix).oldEvF)
         (fmap (fmap fix).newEvF)
 
-layeredUpgrade :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
+layeredUpgrade :: (HasMachineP1' mch1, HasMachineP1' mch0)
         => (thy0 -> thy1)
-        -> (mch0 evt0 thy1 -> mch1 evt0 thy1)
-        -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1)
-        -> (mch1 evt0 thy1 -> SkipOrEvent -> evt0 -> evt1)
-        -> mch0 evt0 thy0 -> mch1 evt1 thy1
+        -> (mch0 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1)
+        -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1)
+        -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> cevt0 -> cevt1)
+        -> mch0 aevt0 cevt0 thy0 -> mch1 aevt1 cevt1 thy1
 layeredUpgrade thyF mchF oldEvF newEvF = runIdentity . layeredUpgradeM
         (Identity . thyF) (Identity . mchF) 
         (fmap (fmap Identity) . oldEvF)
         (fmap (fmap Identity) . newEvF)
 
 upgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-            , Applicative f,Monad f,NFData evt1)
+            , Monad f)
          => (thy0 -> f thy1)
-         -> (mch0 evt0 thy0 -> f (mch1 evt0 thy0))
-         -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> f evt1)
-         -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> f evt1)
-         -> mch0 evt0 thy0 -> f (mch1 evt1 thy1)
+         -> (mch0 aevt0 cevt0 thy0 -> f (mch1 aevt0 cevt0 thy0))
+         -> (mch0 aevt0 cevt0 thy0 -> SkipOrEvent -> aevt0 -> f aevt1)
+         -> (mch0 aevt0 cevt0 thy0 -> SkipOrEvent -> cevt0 -> f cevt1)
+         -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 upgradeM thyF mchF oldEvF newEvF m = do
         m' <- pContext thyF =<< mchF m
         m' & pEventRef (\g -> 
                 (traverseLeftWithKey (uncurry (oldEvF m))
                      =<< traverseRightWithKey (uncurry (newEvF m)) g))
 
-upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0, NFData evt1)
+upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0)
         => (thy0 -> thy1)
-        -> (mch0 evt0 thy0 -> mch1 evt0 thy0)
-        -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> evt1)
-        -> (mch0 evt0 thy0 -> SkipOrEvent -> evt0 -> evt1)
-        -> mch0 evt0 thy0 -> mch1 evt1 thy1
+        -> (mch0 aevt0 cevt0 thy0 -> mch1 aevt0 cevt0 thy0)
+        -> (mch0 aevt0 cevt0 thy0 -> SkipOrEvent -> aevt0 -> aevt1)
+        -> (mch0 aevt0 cevt0 thy0 -> SkipOrEvent -> cevt0 -> cevt1)
+        -> mch0 aevt0 cevt0 thy0 -> mch1 aevt1 cevt1 thy1
 upgrade thyF mchF oldEvF newEvF = runIdentity . upgradeM
         (Identity . thyF) (Identity . mchF) 
         (fmap (fmap Identity) . oldEvF)

@@ -214,8 +214,8 @@ make_table' :: forall a b.
             -> [(a,b)] 
             -> MM (Maybe (Map a b))
 make_table' f items = all_errors $ M.mapWithKey g conflicts
-        -- PROBLEM: given x,y,z, it's possible that none conflict with each other but
-        -- x `merge` y conflicts with z
+        -- | PROBLEM: given x,y,z, it's possible that none conflict with each other but
+        -- | x `merge` y conflicts with z
     where
         g k ws
                 | all (\xs -> length xs <= 1) ws 

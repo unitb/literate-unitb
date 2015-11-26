@@ -155,7 +155,7 @@ typeKind n = do
             TyConI (TySynD _ _ t) -> do
                 n <- degree t
                 return n
-            _ -> fail $ "typeKind, invalid type: " ++ show n
+            _ -> fail $ printf "typeKind, invalid type: %s\n%s" (show n) (show i)
     where
         degree (AppT t0 _) = (-1 +) <$> degree t0
         degree (ConT n) = typeKind n

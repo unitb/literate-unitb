@@ -83,12 +83,6 @@ instance Show ParserSetting where
 makeLenses ''ParserSetting
 makeFields ''ParserSetting
 
--- empty_pr :: Theory -> ProofParam
--- empty_pr _ = () -- ProofParam (th_notation th)
-
---par_ctx :: ProofParam -> Context
---par_ctx pr = ctx pr `merge_ctx` Context M.empty (locals pr) M.empty M.empty M.empty
-
 set_proof :: ( Monad m
              , MonadReader LineInfo m
              , MonadError m
@@ -217,14 +211,8 @@ find_assumptions = visitor
             )
         ,   (   "\\using"
             ,   VCmdBlock $ \(One refs) -> do
-                    -- s       <- lift $ lift $ ST.get
                     ((),hs) <- add_writer $ with_content refs hint
-                    -- lift $ lift $ ST.put s
                     add_refs hs
---                    li <- ask 
---                    lift $ do
---                        ((),hs) <- lift $ runWriterT $ run_visitor li refs $ hint
---                        add_refs hs                    
             )       
         ]
 
@@ -243,9 +231,6 @@ find_proof_step = visitor
                             Right cc_goal -> do
                                     return (ByCalc $ cc & goal .~ cc_goal )
                             Left msgs      -> hard_error $ map (\x -> Error (format "type error: {0}" x) li) msgs
-                    -- cc <- lift_i $ parse_calc pr
-                    -- set_proof $ LP.with_line_info li $ do
-                    --     proof_of cc
                     return ()
             )
                 -- TODO: make into a command
@@ -412,12 +397,6 @@ hint = visitor []
         -- , ( "\\stmt", VCmdBlock h )
         ]
     where
-        -- h (expr,()) = do
-        --     xp <- get_expression Nothing expr
-        --     li <- ask
-        --     lift $ W.tell [do
-        --         p <- xp
-        --         return (Lemma p,li)]
         g (lbl,subst) = do
                 li <- ask
                 ((),w) <- with_content subst $ add_writer $ visitor []

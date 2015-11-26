@@ -8,6 +8,7 @@ import Document.Expression
 import Document.Pipeline
 import Document.Phase as P
 import Document.Phase.Parameters
+import Document.Phase.Types
 import Document.Proof
 import Document.Scope
 import Document.VarScope
@@ -44,9 +45,7 @@ import Utilities.Existential
 import Utilities.Format
 import Utilities.Syntactic
   
-run_phase2_vars :: Pipeline MM 
-                        SystemP1
-                        SystemP2
+run_phase2_vars :: Pipeline MM SystemP1 SystemP2
 run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
         err_msg = format "Multiple symbols with the name {0}"
@@ -70,11 +69,20 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
             let _  = vars :: MTable (Map String VarScope)
             SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 
+newMch :: [(String,VarScope)] 
+       -> MachineP1' EventP1 EventP1 TheoryP2
+       -> MachineP2' EventP1 EventP1 TheoryP2 
+       -> MM' c (MachineP2' EventP1 EventP1 TheoryP2)
+newMch vars' m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
+    where
+        _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
+        refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
+
 make_phase2 :: MachineP1
             -> Map String VarScope
             -> MM' c MachineP2 
 make_phase2 p1 vars = join $
-        layeredUpgradeRecM newThy newMch 
+        layeredUpgradeRecM newThy (newMch vars')
                     <$> oldEvent 
                     <*> newEvent 
                     <*> pure p1
@@ -85,14 +93,10 @@ make_phase2 p1 vars = join $
                 _pNotation = th_notation $ empty_theory { _extends = t'^.pImports }
                 _pCtxSynt  = mkSetting _pNotation (p1 ^. pTypes) constants M.empty (t'^.pDummyVars)
                 constants = (t'^.pConstants) `M.union` (M.mapMaybe defToVar $ t'^.pDefinitions)
-        newMch m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
-            where
-                _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
-                refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
         newEvent = liftEvent toNewEventDecl
         oldEvent = liftEvent toOldEventDecl
         liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
-                  -> MM' c (MachineP2' EventP1 TheoryP2
+                  -> MM' c (MachineP2' EventP1 EventP1 TheoryP2
                             -> SkipOrEvent -> EventP1 -> EventP2 -> MM' c EventP2)
         liftEvent f = do
             table <- M.fromListWith (++) <$> liftField f vars'

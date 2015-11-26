@@ -4,8 +4,8 @@
 module Document.Refinement where
 
     -- Module
-import Document.Phase
 import Document.Phase.Transient
+import Document.Phase.Types
 import Document.Proof
 import Document.Visitor
 

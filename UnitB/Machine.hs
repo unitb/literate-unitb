@@ -131,18 +131,12 @@ instance Show DocItem where
     show (DocInv xs) = format "{0} (invariant)" xs
     show (DocProg xs) = format "{0} (progress)" xs
 
-
-
-
 makeLenses ''EventTable
 makeLenses ''Machine''
 makeFields ''Machine''
 
 instance (IsExpr expr) => HasName (Machine' expr) String where
     name = content assert.name
-
---instance Show expr => HasMachine'' (Machine' expr) expr where
---    machine'' = content assert
 
 instance (IsExpr expr) => HasInvariant (Machine'' expr) where
     invariant m = withPrefix (m^.name) $ do
@@ -207,10 +201,10 @@ instance IsExpr expr => HasScope (Machine'' expr) where
                 $ withVars' abs_vars (m^.abs_vars)
                 $ withVars' vars (m^.variables)
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
-            , withPrefix "merging events"
+            , withPrefix "splitting events"
                 $ withVars' abs_vars (m^.abs_vars)
                 $ withVars' vars (m^.variables)
-                $ foldMapWithKey scopeCorrect'' $ all_upwards m
+                $ foldMapWithKey scopeCorrect'' $ all_downwards m
             ]
         , withPrefix "theory"
             $ scopeCorrect' $ m^.theory
@@ -260,7 +254,9 @@ new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
         skip <- newLeftVertex (Left SkipEvent) skip_abstr
         forM_ (M.toList es) $ \(lbl,e) -> do
             let f m = M.fromList $ L.map (view name &&& (id &&& Word)) $ M.elems $ m `M.difference` vs
-            v <- newRightVertex (Right lbl) $ CEvent e (e^.actions.to frame.to f) M.empty M.empty M.empty
+            v <- newRightVertex (Right lbl) $ 
+                def & new .~ e 
+                    & witness .~ (e^.actions.to frame.to f)
             newEdge skip v
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 

@@ -7,7 +7,7 @@ module Document.ExprScope where
 
     -- Modules
 import Document.Scope
-import Document.Phase
+import Document.Phase.Types
 
 import UnitB.AST 
 import UnitB.Expr hiding (Const)
@@ -50,6 +50,12 @@ data Witness = Witness
         , _witnessDeclSource :: DeclSource
         , _witnessLineInfo :: LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
+data IndexWitness = IndexWitness 
+        { _indexWitnessVar :: Var
+        , _indexWitnessEvtExpr :: Expr 
+        , _indexWitnessDeclSource :: DeclSource
+        , _indexWitnessLineInfo :: LineInfo
+        } deriving (Eq,Ord,Typeable,Show,Generic)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
@@ -63,6 +69,7 @@ makeFields ''FineSchedule
 makeFields ''Guard
 makeFields ''ActionDecl
 makeFields ''Witness
+makeFields ''IndexWitness
 
 data ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
     deriving Typeable
@@ -70,7 +77,7 @@ data ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
 class ( Scope a, Typeable a, Show a )
         => IsExprScope a where
     toMchExpr :: Label -> a 
-              -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+              -> Reader MachineP2 [Either Error (MachineP3'Field ae ce t)]
     toThyExpr :: Label -> a -> Reader TheoryP2 [Either Error TheoryP3Field]
     toNewEvtExpr :: Label -> a 
                  -> Reader MachineP2 [Either Error (EventId, [EventP3Field])]
@@ -107,7 +114,7 @@ class ( Eq a, Ord a, Typeable a
       , HasLineInfo a LineInfo
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
-                   -> Reader MachineP2 [Either Error (MachineP3'Field b c)]
+                   -> Reader MachineP2 [Either Error (MachineP3'Field ae ce t)]
     toEvtScopeExpr :: RefScope -> EventId -> Label -> a
                    -> Reader MachineP2 [Either Error (EventId,[EventP3Field])]
     defaultEvtWitness :: EventId -> a 
@@ -251,6 +258,10 @@ instance Scope Witness where
     kind _ = "witness"
     rename_events _ x = [x]
 
+instance Scope IndexWitness where
+    kind _ = "witness (index)"
+    rename_events _ x = [x]
+
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
     kind x = case x ^. inhStatus of
@@ -291,6 +302,9 @@ instance Arbitrary ActionDecl where
     arbitrary = genericArbitrary
 
 instance Arbitrary Witness where
+    arbitrary = genericArbitrary
+
+instance Arbitrary IndexWitness where
     arbitrary = genericArbitrary
 
 instance Arbitrary TransientProp where

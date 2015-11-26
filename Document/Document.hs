@@ -8,6 +8,7 @@ module Document.Document where
 import Document.Machine   as Mch
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Types
 import Document.Phase.Structures as Mch
 import Document.Phase.Declarations as Mch
 import Document.Phase.Expressions as Mch

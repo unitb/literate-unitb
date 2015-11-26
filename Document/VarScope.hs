@@ -5,7 +5,7 @@
 module Document.VarScope where
 
     -- Modules
-import Document.Phase
+import Document.Phase.Types
 import Document.Scope
 
 import Logic.Expr hiding (Const)
@@ -27,21 +27,11 @@ import Utilities.Format
 import Utilities.Instances
 import Utilities.Syntactic
 
--- apply :: Functor f
---       => (forall a. IsVarScope a => a -> f a)
---       -> VarScope -> f VarScope
--- apply f (VarScope x) = VarScope <$> f x
-
--- apply2 :: Functor f
---        => (forall a. IsVarScope a => a -> a -> f a)
---        -> VarScope -> VarScope -> Maybe (f VarScope)
--- apply2 f (VarScope x) (VarScope y) = fmap VarScope <$> (f x <$> cast y)
-
 class (Typeable a,Scope a) => IsVarScope a where
     toOldEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
     toNewEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
     toThyDecl :: String -> a -> [Either Error TheoryP2Field]
-    toMchDecl :: String -> a -> [Either Error (MachineP2'Field b c)]
+    toMchDecl :: String -> a -> [Either Error (MachineP2'Field ae ce t)]
 
 newtype VarScope = VarScope { _varScopeCell :: Cell IsVarScope }
     deriving (Typeable)
@@ -121,15 +111,6 @@ makeFields ''TheoryConst
 makeFields ''TheoryDef
 makeFields ''MachineVar
 makeFields ''EvtDecls
-
--- groupVars :: [VarGroup] -> [VarGroup]
--- groupVars vs = g $ sortOn f vs
---     where
---         f (VarGroup x) = typeRep x
---         g (VarGroup xs:VarGroup ys:vs) = case cast ys of
---                                             Just ys -> g $ (VarGroup $ xs ++ ys):vs
---                                             Nothing -> VarGroup xs : g (VarGroup ys : vs)
---         g vs = vs
 
 instance Scope TheoryConst where
     kind _ = "constant"

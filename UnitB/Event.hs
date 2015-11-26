@@ -23,6 +23,7 @@ import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map  as M
 import Data.Maybe
+import Data.Semigroup
 import Data.String
 import Data.Typeable
 
@@ -79,6 +80,7 @@ data AbstrEvent' expr = AbsEvent
         { _old   :: Event' expr
         , _f_sched_ref :: Maybe (Label,ProgressProp' expr)
         , _c_sched_ref :: [ScheduleChange' expr]
+        , _ind_witness :: Map String (Var,RawExpr)
         } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type ConcrEvent = ConcrEvent' Expr
@@ -86,7 +88,6 @@ type ConcrEvent = ConcrEvent' Expr
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
         , _witness   :: Map String (Var,RawExpr)
-        , _ind_witness :: Map String (Var,RawExpr)
         , _eql_vars  :: Map String Var
         , _abs_actions :: Map Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
@@ -152,6 +153,16 @@ instance IsExpr expr => Default (Event' expr) where
 instance IsExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
 
+instance Semigroup (Event' expr) where
+instance Monoid (Event' expr) where
+    mempty = genericMEmpty
+    mappend = genericMAppend
+
+instance IsExpr expr => Semigroup (ConcrEvent' expr) where
+    (<>) e0 e1 = combine new (<>) e0 e1 def
+instance IsExpr expr => Semigroup (AbstrEvent' expr) where
+    (<>) e0 e1 = combine old (<>) e0 e1 def
+
 instance (IsExpr expr) => HasScope (Action' expr) where
     scopeCorrect' act@(Assign v e) = withPrefix "assign" $ F.fold 
         [ scopeCorrect' e
@@ -180,7 +191,7 @@ instance (IsExpr expr) => HasScope (ConcrEvent' expr) where
                 $ foldMapWithKey scopeCorrect'' (snd <$> evt^.witness)
         , areVisible [abs_vars] (evt^.eql_vars) (evt^.eql_vars) ]
 
-instance IsExpr expr => HasScope (EventMerging expr) where
+instance IsExpr expr => HasScope (EventSplitting expr) where
     scopeCorrect' evt = withPrefix "merging" $ F.fold
         [ withPrefix "index witnesses (vars)" $
             withOnly (evt^.compact.added.indices) $ 
@@ -256,10 +267,10 @@ empty_event :: IsExpr expr => Event' expr
 empty_event = (makeEvent' def def def def) { _raw_coarse_sched = Nothing }
 
 skip_abstr :: IsExpr expr => AbstrEvent' expr
-skip_abstr = AbsEvent empty_event Nothing []
+skip_abstr = def
 
 skip_event :: IsExpr expr => ConcrEvent' expr
-skip_event = CEvent empty_event M.empty M.empty M.empty M.empty
+skip_event = def
 
 eventRef :: IsExpr expr => EventId -> EventId -> EventRef expr
 eventRef aid cid = EvtRef (Right aid,def) (Right cid,def)
@@ -331,9 +342,6 @@ guards = to $ \e -> M.unions
         , e^.fine_sched
         ]
 
-all_witnesses :: HasConcrEvent' event expr 
-              => Getter event (Map String (Var,RawExpr))
-all_witnesses = to $ \e -> (e^.witness) `M.union` (e^.ind_witness)
 
 changes :: IsExpr expr
         => (forall k a. Ord k => Map k a -> Map k a -> Map k a)
@@ -420,19 +428,11 @@ added_actions   = actions_changes (flip M.difference)
 deleted_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
 deleted_actions = actions_changes M.difference
 
-compact :: IsExpr expr 
-        => Getter (EventMerging expr) (EventRef expr)
-compact = to $ \m -> EvtRef (Left SkipEvent, evt m) (m^.concrete)
-    where
-        aevts m = snd <$> m^.abstract_evts
-        evt :: IsExpr expr => EventMerging expr -> AbstrEvent' expr
-        evt m = create $ do
-                combineAll' (indices) M.union $ aevts m
-                combineAll' (params) M.union $ aevts m
-                combineAll' (coarse_sched) M.union $ aevts m
-                combineAll' (fine_sched) M.union $ aevts m
-                combineAll' (raw_guards) M.union $ aevts m
-                combineAll' (actions) M.union $ aevts m
+compact :: EventRefinement event expr
+        => Getter event (EventRef expr)
+compact = to $ \m -> EvtRef 
+        (Left SkipEvent, sconcat $ snd <$> m^.abstract_evts) 
+        (Left SkipEvent, sconcat $ snd <$> m^.concrete_evts)
 
 replace :: (Label, ProgressProp) -> ScheduleChange
 replace prog = ScheduleChange def def def prog

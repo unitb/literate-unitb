@@ -115,10 +115,4 @@ myError = do
 
         fun = VarE 'makeError -- _
     return $ AppE fun arg
-
---instance (MonadTrans t, MonadError m) => MonadError (t m) where
---    soft_error x = lift $ soft_error x
---    hard_error x = lift $ hard_error x
---    make_hard m = lift $ 
---    make_soft  :: a -> m a -> m a
     

@@ -149,9 +149,6 @@ class Eq a => Composition a where
     up  :: a -> a -> a
     seqC   :: a -> a -> a
     below x y = x `up` y == y
-    -- zero `up` x = x
-    -- zero `seq` x = zero
-    -- x `below` y  =  x `up` y == y
 
 data Type a = Type
 
@@ -250,20 +247,6 @@ m_closure xs = ixmap (g m, g n) f $ closure_ ar
         g (i,j)    = (m1 A.! i, m1 A.! j) 
         (m,n)      = bounds ar
 
---m_closure_with :: (Ix b, Ord b) => [b] -> [(b,b)] -> Array (b,b) Bool
---m_closure_with rs xs = ixmap (g m, g n) f $ closure_ ar
---    where
---        (m0,m1,ar) = matrix_of_with rs xs
---        f (x,y)    = (m0 ! x, m0 ! y)
---        g (i,j)    = (m1 ! i, m1 ! j) 
---        (m,n)      = bounds ar
-
---m_closure_with' :: Ord b => [b] -> [(b,b)] -> Matrix b Bool
---m_closure_with' rs xs = mapKeys g $ fromList $ assocs $ closure_ ar
---    where
---        (_,m1,ar) = matrix_of_with rs xs
---        g (i,j)    = (m1 A.! i, m1 A.! j) 
-
 m_closure_with :: (Ord b) => [b] -> [(b,b)] -> Matrix b Bool
 m_closure_with vs es = Matrix (M.map (M.mapKeys convert . fromList . (`zip` repeat True)) result) new_vs False
     where
@@ -300,14 +283,6 @@ as_matrix_with vs es = Matrix (M.map fromList $ fromListWith (++) zs) vs False
     where
 --        cs = [ (x,y) | x <- rs, y <- rs ]
         zs = [ (x,[(y,True)]) | (x,y) <- es ]
-
---as_matrix_with :: (Ix a, Ord a) => [a] -> [(a,a)] -> Array (a,a) Bool
---as_matrix_with rs xs = ixmap (g m, g n) f ar
---    where
---        (m0,m1,ar) = matrix_of_with rs xs
---        f (x,y)    = (m0 ! x, m0 ! y)
---        g (i,j)    = (m1 ! i, m1 ! j) 
---        (m,n)      = bounds ar
 
 matrix_of :: (Ord a) => [(a,a)] -> (Map a Int, Array Int a, Array (Int,Int) Bool)
 matrix_of xs = matrix_of_with [] xs
@@ -355,12 +330,7 @@ unions_aux' x ([]:ys) = unions_aux' x ys
 unions_aux' x ws@((y:ys):zs)
     | x < y     = x : unions_aux ws
     | otherwise = unions_aux' x $ insertBy (compare `on` listToMaybe) ys zs
---    | x == y    = unions_aux' x $ insertBy (compare `on` listToMaybe) ys zs
---    | otherwise = error "the input lists have to be sorted"
 
---top_sort xs 
---    where
---        cycles xs
 return []
 run_tests :: IO Bool
 run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })

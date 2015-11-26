@@ -167,84 +167,7 @@ instance LivenessRule Discharge where
     rule_name _ = label "discharge"
     travRefs' _ = pure
     travEvent' f (Discharge lbl tr) = Discharge lbl <$> traverseEvents f tr
-instance NFData Discharge where
-
---isReference :: LiveProofRule prop saf -> Bool
---isReference (Reference _) = True
---isReference _ = False
- 
---isAdd :: LiveProofRule prop saf -> Bool
---isAdd (Add) = True
---isAdd _ = False
- 
---isEnsure :: LiveProofRule prop saf -> Bool
---isEnsure (Ensure _ _) = True
---isEnsure _ = False
- 
---isImplication :: LiveProofRule prop saf -> Bool
---isImplication (Implication) = True
---isImplication _ = False
- 
---isDisjunction :: LiveProofRule prop saf -> Bool
---isDisjunction (Disjunction) = True
---isDisjunction _ = False
- 
---isNegateDisjunct :: LiveProofRule prop saf -> Bool
---isNegateDisjunct (NegateDisjunct) = True
---isNegateDisjunct _ = False
- 
---isTransitivity :: LiveProofRule prop saf -> Bool
---isTransitivity (Transitivity) = True
---isTransitivity _ = False
- 
---isPSP :: LiveProofRule prop saf -> Bool
---isPSP (PSP) = True
---isPSP _ = False
- 
---isInduction :: LiveProofRule prop saf -> Bool
---isInduction (Induction _) = True
---isInduction _ = False
-  
---isMonotonicity :: LiveProofRule prop saf -> Bool
---isMonotonicity (Monotonicity) = True
---isMonotonicity _ = False
- 
-
---makePrisms ''LiveProofRule
-
---instance Eq (LiveProofRule prog saf) where
---    Add == x = isAdd x
---    Implication == x = isImplication x
---    Disjunction == x = isDisjunction x
---    NegateDisjunct == x = isNegateDisjunct x
---    Transitivity == x = isTransitivity x
---    PSP == x = isPSP x
---    Monotonicity == x = isMonotonicity x
---    Reference l0 == Reference l1 = l0 == l1
---    Reference _  == _ = False
---    Ensure es tr == Ensure es' tr' = es == es' && tr == tr'
---    Ensure _ _   == _ = False
---    Induction v0 == Induction v1 = v0 == v1
---    Induction _  == _ = False
-
---instance Show (LiveProofRule prog saf) where
---    show (Reference lbl) = printf "Reference %s" $ show lbl
---    show Add = "Add"
---    show (Ensure en tr)  = printf "Ensure (%s) (%s)" (show en) (show tr)
---    show Implication  = "Implication"
---    show Disjunction  = "Disjunction"
---    show NegateDisjunct  = "NegateDisjunct"
---    show Transitivity = "Transitivity"
---    show PSP = "PSP"
---    show (Induction v) = printf "Induction (%s)" (show v)
---    show Monotonicity = "Monotonicity"
-
---class LivenessRule a where
-
---instance LivenessRule ARule where
---    rule_name (ARule r) = rule_name r
-
---instance LivenessRule (LiveProofRule pr saf) where
+instance NFData Discharge where 
 
 travRefs :: Traversal' ARule ProgId
 travRefs = cellLens' travRefs'
@@ -252,28 +175,8 @@ travRefs = cellLens' travRefs'
 travEvent :: Traversal' ARule EventId
 travEvent = cellLens' travEvent'
 
---instance NFData (LiveProofRule prog saf) where
---    rnf (Reference x) = rnf x
---    rnf (Ensure x y) = x `deepseq` y `deepseq` ()
---    rnf (Induction v) = rnf v
---    rnf Add = ()
---    rnf Monotonicity = ()
---    rnf Implication  = ()
---    rnf Disjunction  = ()
---    rnf Transitivity = ()
---    rnf NegateDisjunct = ()
---    rnf PSP = ()
-
 data ProofTree = forall rule. 
             LivenessRulePO rule =>
-            --( Typeable prog, Traversable prog
-            --, Typeable saf,  Traversable saf 
-            --, Eq (prog (RawProgressProp,ProofTree))
-            --, Show (prog (RawProgressProp,ProofTree))
-            --, Eq (saf  (RawSafetyProp,Maybe Label))
-            --, Show (saf  (RawSafetyProp,Maybe Label))
-            --, NFData (prog (RawProgressProp, ProofTree))
-            --, NFData (saf (RawSafetyProp, Maybe Label))) => 
         ProofNode rule 
             ((ProgressHyp rule) (RawProgressProp,ProofTree)) 
             (SafetyHyp rule (RawSafetyProp,Maybe Label))

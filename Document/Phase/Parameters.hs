@@ -1,8 +1,6 @@
 module Document.Phase.Parameters where
 
     -- Modules
---import Document.Phase
-
 import Latex.Parser
 
 import Logic.Expr
@@ -82,10 +80,6 @@ class LatexArg a where
 
 read_one' :: LatexArgFromString a => LatexDoc -> Either [Error] a
 read_one' = fmap readFromString . readString
-
---class LatexArg a where
---    read_one' :: LatexDoc -> Either [Error] a
---    read_one' = fmap readFromString . readString
 
 instance LatexArg TheoryName where
 instance LatexArgFromString TheoryName where

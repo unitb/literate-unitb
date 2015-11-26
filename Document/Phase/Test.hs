@@ -9,6 +9,7 @@ module Document.Phase.Test where
     --
 import Document.Machine
 import Document.Phase
+import Document.Phase.Types
 import Document.Phase.Declarations
 import Document.Phase.Expressions
 import Document.Phase.Proofs
@@ -295,6 +296,10 @@ result2 = do
                 | mid == "m0" = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) ]
                 | otherwise   = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) 
                                 , PDefinitions "\\S1" (Def [] "sl@S1" [] (set_type s1') (se s1')) ]
+            upMachine :: MachineId 
+                      -> MachineP1' EventP1 EventP1 TheoryP2
+                      -> MachineP2' EventP1 EventP1 TheoryP2
+                      -> MachineP2' EventP1 EventP1 TheoryP2
             upMachine mid m m' = makeMachineP2' m 
                         (m^.pCtxSynt & decls %~ M.union (m'^.pAllVars) 
                                      & primed_vars %~ M.union (m'^.pAllVars)) 
@@ -303,9 +308,6 @@ result2 = do
                         (parser t & decls %~ M.union ((t'^.pConstants) `M.union` (t'^.pDefVars))
                                   & sorts %~ M.union (t'^.pTypes)) 
                         (fieldsT mid)
-            -- f :: MachineP1' EventP1 TheoryP1 -> MachineP1' EventP2 TheoryP2
-            -- f m = m & pContext %~ ()
-            --         & pEventRef %~ (\g -> g & traverseLeft %~ upEvent & traverseRight %~ upEvent)
             upEvent m eid e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) (eventFields eid)
             eventFields eid 
                 | eid == Right "ae1b" = [EParams "p" (Var "p" bool)]
@@ -351,8 +353,6 @@ case4 = return $ do
         mkEvent evt lbl es con x inh = do
             scope <- ask
             lift $ lbl ## makeEvtCell (Right evt) (con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)
-                --ExprScope (EventExpr $ M.singleton (Right evt) 
-                --    (EvtExprScope $ con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope li)) 
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
@@ -516,13 +516,12 @@ case6 = return $ do
             decl "x" int
             decl "y" int
         uncurry6 f (x0,x1,x2,x3,x4,x5) = f x0 x1 x2 x3 x4 x5
-        --x  = fst $ var "x" int
-        --y  = fst $ var "y" (int ::
 
 result6 :: Either [Error] SystemP4
 result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
     where
-        upgradeAll mid = upgrade id (newMch mid) (newEvt mid) (newEvt mid)
+        upgradeAll :: MachineId -> MachineP3 -> MachineP4
+        upgradeAll mid = upgrade id (newMch mid) (newEvt mid) (const $ const id)
         --newThy t = 
         newEvt mid _m eid e 
             | eid == Right "ae0" && mid == "m1" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
@@ -725,6 +724,3 @@ m = M.fromList [(1,[3,-3,-2]),(2,[5,-1])]
 
 seeE :: IO (Map Int [Int])
 seeE = return $ inheritWithAlt id (L.map.(+)) (++) hierarchy m
-
---seeLens :: Either [Error] SystemP3 -> [EventId]
---seeLens = view $ to fromRight'.mchTable.at "m1".to fromJust.pNewEvents.eEventId.traverse.to (:[])

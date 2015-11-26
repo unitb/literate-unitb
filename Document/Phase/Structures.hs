@@ -11,6 +11,7 @@ module Document.Phase.Structures where
 import Document.Pipeline
 import Document.Phase as P
 import Document.Phase.Parameters
+import Document.Phase.Types
 import Document.Scope
 
 import Logic.Expr
@@ -101,7 +102,6 @@ run_phase1_types = proc p0 -> do
                          <.> (M.map (M.map fst) types) 
                          <.> all_types 
                          <.> s <.> evts'
-    -- p1 <- triggerP -< p1
     returnA -< SystemP r_ord p1
   where
     evtClash = format "Multiple events with the name {0}"

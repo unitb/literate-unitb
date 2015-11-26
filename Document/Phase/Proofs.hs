@@ -11,6 +11,7 @@ import Document.Pipeline
 import Document.Phase as P
 import Document.Phase.Parameters
 import Document.Phase.Transient
+import Document.Phase.Types
 import Document.Proof
 import Document.Refinement as Ref
 import Document.Scope
@@ -142,21 +143,12 @@ make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs
         = -- makeMachineP4' p3 _ 
             MachineP4 { .. }
     where
-        -- _e3 = EventP4 <$> (p3 ^. pEvents) 
-        --               <.> _pCoarseRef `M.union` evtEmpty
-        --               <.> _pFineRef `M.union` evtEmpty
-                       -- <.> old_sch' `M.union` evtEmpty
-        -- evtEmpty :: Default a => Map EventId a
-        -- evtEmpty = M.map (const def) (p3 ^. pEvents)
         updateEvt :: SkipOrEvent -> EventP3 -> EventP4
         updateEvt (Right eid) e = EventP4 e 
                 (findWithDefault [] eid _pCoarseRef) 
                 (findWithDefault Nothing eid _pFineRef) 
         updateEvt (Left SkipEvent) e = EventP4 e [] Nothing
-        promoteEvt _ e = EventP4 e [] Nothing
-        _p3 = p3 & pEventRef %~ G.mapBothWithKey 
-                        updateEvt
-                        promoteEvt
+        _p3 = p3 & pEventRef %~ G.mapLeftWithKey updateEvt
         _pProofs = proofs
         _pCoarseRef = M.map (L.map fst) coarse_refs
         _pFineRef   = M.map (fmap fst) fine_refs

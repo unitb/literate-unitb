@@ -49,8 +49,6 @@ case2 :: TestCase
 case2 = Case "sample_quant3" (verify (label "") sample_quant3 2) $ Right Unsat
 case3 :: TestCase
 case3 = Case "sample proof" (discharge (label "") sample_proof) Valid
---case4 :: TestCase
---case4 = Case "check sample calc" (check sample_calc) (Right [])
 
 sample :: String
 sample = unlines [
