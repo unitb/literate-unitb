@@ -27,7 +27,7 @@ instance TypeSystem t => Tree (AbsVar t) where
     as_tree' (Var vn vt) = do
         t <- as_tree' vt
         return $ List [Str vn, t]
-    rewriteM' = id
+    rewriteM _ = pure
 
 instance TypeSystem t => Show (AbsVar t) where
     show (Var n t) = n ++ ": " ++ show (as_tree t)

@@ -11,6 +11,7 @@ import Control.Lens
 
 import Data.Char
 import Data.Data hiding (typeOf)
+import Data.Data.Lens
 import Data.Default
 import Data.Graph
 import Data.List as L
@@ -19,6 +20,7 @@ import Data.Map as M
 import Data.Maybe
 import Data.Tuple
 import qualified Data.Typeable as T (typeOf)
+import           Data.Typeable.Lens
 
 import Language.Haskell.TH
 
@@ -401,3 +403,16 @@ count_cases = do
         ) (0 :: Int)
     runIO $ printf "%d test cases\n" n
     return []
+
+subexp :: Traversal' Exp Exp
+subexp f = gtraverse (_cast f)
+
+_FunType :: Prism' Type ([TyVarBndr], Cxt, Type, Type)
+_FunType = prism cons isFun
+    where
+        cons ([],[],t0,t1) = AppT ArrowT t0 `AppT` t1
+        cons (vs,cs,t0,t1) = ForallT vs cs $ AppT ArrowT t0 `AppT` t1
+        isFun (ForallT vs cs (AppT (AppT ArrowT t0) t1)) = Right (vs,cs,t0,t1)
+        isFun (AppT (AppT ArrowT t0) t1) = Right ([],[],t0,t1)
+        isFun t = Left t
+

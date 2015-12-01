@@ -1,4 +1,4 @@
-module UnitB.AST 
+module UnitB.Syntax
     ( module Logic.Theory
     , abs_vars
     , module UnitB.Event
@@ -19,4 +19,4 @@ import UnitB.Proof
 import UnitB.Property
 import UnitB.System
 
-import Utilities.Invariant hiding (Invariant,(##))
+import Utilities.Invariant hiding (Invariant,(##),(===))

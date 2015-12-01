@@ -4,8 +4,8 @@ module Interactive.Serialize where
 import Logic.Expr
 import Logic.Proof
 
-import UnitB.AST
 import UnitB.PO
+import UnitB.Syntax
 
     -- Libraries
 import Codec.Compression.Zlib

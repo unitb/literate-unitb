@@ -15,8 +15,8 @@ import qualified Logic.TestGenericity as Gen
 
 import Theories.FunctionTheory
 
-import UnitB.AST
-import UnitB.PO 
+import UnitB.PO (prop_saf')
+import UnitB.UnitB
 
 import Z3.Z3
 
@@ -24,7 +24,6 @@ import Z3.Z3
 import Control.Monad
 import Control.Lens hiding (indices)
 
-import           Data.Either
 import           Data.List ( sort )
 import qualified Data.List.NonEmpty as NE
 import           Data.Map as M hiding (map)
@@ -448,7 +447,7 @@ check_mch :: Either [Error] RawMachine -> IO (String, Map Label Sequent)
 check_mch em = do
     case em of
         Right m -> do
-            let r = head $ rights [proof_obligation m]
+            let r = proof_obligation m
             (xs,_,_) <- str_verify_machine m
             return (xs,r)
         Left x -> return (show_err x, empty)
@@ -459,25 +458,25 @@ get_cmd_tr_po :: Monad m
 get_cmd_tr_po em = return (do
         m <- em
         let lbl = composite_label [as_label $ _name m, "TR/TR0/t@param"]
-        pos <- proof_obligation m
-        let po = lookupSequent lbl pos
+            pos = proof_obligation m
+            po  = lookupSequent lbl pos
             cmd = either id (unlines . map pretty_print' . z3_code) po
         return cmd)
     
 get_tr_en_po :: Either [Error] RawMachine -> IO String
 get_tr_en_po em = either (return . show_err) return $ do
         m   <- em
-        pos <- proof_obligation m
         let lbl = composite_label [as_label $ _name m, "TR0/TR/leave/EN"]
-            po  = either id show $ lookupSequent lbl pos
+            pos = proof_obligation m
+            po  = either id pretty $ lookupSequent lbl pos
         return $ po
 
 get_tr_neg_po :: Either [Error] RawMachine -> IO String
 get_tr_neg_po em = either (return . show_err) return $ do
         m   <- em
-        pos <- proof_obligation m
         let lbl = composite_label [as_label $ _name m, "TR0/TR/leave/NEG"]
-            po  = either id show $ lookupSequent lbl pos
+            pos = proof_obligation m
+            po  = either id pretty $ lookupSequent lbl pos
         return po
 
 case3 :: IO [([Var], [Expr])]
@@ -512,14 +511,14 @@ result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 
 result5 :: Map Label Sequent
 result5 = eval_generator $ with (do
-            POG.variables $ symbol_table 
-                [ Var "p" bool
-                , Var "q" bool
-                , Var "p@prime" bool
-                , Var "q@prime" bool]
+            POG.variables $ fromList
+                [ ("p", Var "p" bool)
+                , ("q", Var "q" bool)
+                , ("p'",Var "p@prime" bool)
+                , ("q'",Var "q@prime" bool)]
             named_hyps $ fromList 
-                [ ("skipA", c [expr| p' = p |] ) 
-                , ("skipC", c [expr| q' = q |])]
+                [ ("SKIP:p", c [expr| p' = p |] ) 
+                , ("SKIP:q", c [expr| q' = q |])]
             ) $ do
         emit_goal assert ["ce0a/SAF/lbl"] ztrue
         emit_goal assert ["ce0b/SAF/lbl"] ztrue

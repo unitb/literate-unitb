@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, TypeFamilies #-}
 module Utilities.Trace where
 
 import Control.Arrow
@@ -15,8 +15,9 @@ import qualified Debug.Trace as DT
 
 import System.IO.Unsafe
 
-import Utilities.Format
 import Text.Printf
+
+import Utilities.Format
 
 -- trace_switch :: MVar (Set ThreadId)
 -- trace_switch = unsafePerformIO (newMVar empty)
@@ -149,7 +150,36 @@ beforeAfterT msg t = beforeAfter msg $ F.foldl f (0 :: Int) t `seq` t
         f n x = beforeAfter (printf "| %s, %d" msg n) x `seq` (n+1)
 
 beforeAfter :: String -> a -> a
-beforeAfter msg x = mapException f $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after  " ++ msg) x
-    where
-        f :: SomeException -> TracingError
-        f e = TE $ format "Failed during {0}\n\n{1}\nend" msg e
+beforeAfter msg x = insertMsg msg $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after  " ++ msg) x
+
+insertMsg :: String -> a -> a
+insertMsg msg = mapException $ \e -> TE $ format "Failed during {0}\n\n{1}\nend" msg (e :: SomeException)
+
+class BeforeAfter' a where
+    beforeAfterAllAux' :: String -> Int -> FunSig a -> a
+class BeforeAfter a where
+    beforeAfterAllAux :: String -> Int -> FunSig a -> a
+
+type family FunSig a :: * where
+    FunSig (Result a) = a
+    FunSig (a -> b) = a -> FunSig b
+
+instance NFData a => BeforeAfter (Result a) where
+    beforeAfterAllAux tag _ = Result . insertMsg (tag ++ " (result)") . force
+
+instance (NFData a, BeforeAfter b) => BeforeAfter (a -> b) where
+    beforeAfterAllAux tag n f x = beforeAfterAllAux tag (n+1) (f $ insertMsg (printf "%s (arg %d)" tag n) $ force x)
+
+instance BeforeAfter' (Result a) where
+    beforeAfterAllAux' tag _ = Result . insertMsg (tag ++ " (result)")
+
+instance (BeforeAfter' b) => BeforeAfter' (a -> b) where
+    beforeAfterAllAux' tag n f x = beforeAfterAllAux' tag (n+1) (f $ insertMsg (printf "%s (arg %d)" tag n) x)
+
+beforeAfterAll' :: BeforeAfter' a => String -> FunSig a -> a
+beforeAfterAll' msg = beforeAfterAllAux' msg 0
+
+beforeAfterAll :: BeforeAfter a => String -> FunSig a -> a
+beforeAfterAll msg = beforeAfterAllAux msg 0
+
+newtype Result a = Result { getres :: a }

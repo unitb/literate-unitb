@@ -1,14 +1,15 @@
 module Logic.Expr.Classes where
 
-import Control.Lens hiding (List)
+import Control.Lens hiding (List,rewriteM)
 import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Data
+import Data.Data.Lens 
 import Data.List
 import Data.List.Utils
-import Data.Maybe
 import Data.Tuple
+import Data.Typeable.Lens
 
 class HasName a n | a -> n where
     name :: Getter a String
@@ -33,27 +34,24 @@ newtype Endo m a = Endo { fromEndo :: a -> m a }
 class Tree a where
     as_tree   :: a -> StrList
     as_tree'  :: a -> Reader OutputMode StrList
-    rewriteM' :: Monad m => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
-    rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
     as_tree x = runReader (as_tree' x) ProverOutput
-    default rewriteM' :: (Monad m, Data a) => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
-    rewriteM' f x t = liftM swap $ runStateT (gmapM (wrap g) t) x
+    rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
+    rewriteM :: (Applicative m, Tree a) => (a -> m a) -> a -> m a
+    default rewriteM :: (Applicative m, Data a) => (a -> m a) -> a -> m a
+    rewriteM f t = gtraverse (_cast f) t
         where
-            g x y = liftM swap $ f y x
                 -- (Endo return) (gcast $ Endo $ \x -> StateT $ liftM swap . flip f x)
 
     rewrite' f x t = (rewriteM' g x t) ()
         where
             g x t () = f x t
 
+rewriteM' :: (Monad m, Tree a) => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
+rewriteM' f x t = swap <$> runStateT (rewriteM (StateT . fmap (fmap swap) . flip f) t) x
+
 instance Tree () where
     as_tree' () = return $ List []
-    rewriteM' f = f
-
-wrap :: (Monad m, Typeable a, Typeable d) 
-     => (a -> b -> m (a,b)) 
-     -> d -> StateT b m d
-wrap f = fromEndo $ fromMaybe (Endo return) (gcast $ Endo $ StateT . f)
+    rewriteM f = f
 
 data StrList = List [StrList] | Str String
 
@@ -91,15 +89,6 @@ visitM f x t = visit g (return x) t
         g x t = do
             y <- x
             f y t
-
-rewriteM :: (Monad m, Tree a) => (a -> m a) -> a -> m a
-rewriteM f t = do
-        ((),x) <- rewriteM' g () t
-        return x
-    where 
-        g () x = do
-            y <- f x
-            return ((),y)
 
 class FromList a b where
     from_list :: a -> [b] -> b

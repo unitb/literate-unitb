@@ -2,6 +2,7 @@
 module Logic.Expr.Printable where
 
 import Logic.Expr.Expr
+import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
 import Logic.Expr.Scope
 
@@ -45,6 +46,9 @@ instance Arbitrary DispExpr where
     arbitrary = do
         x <- arbitrary
         return $ DispExpr (show x) x
+
+instance PrettyPrintable DispExpr where
+    pretty = pretty . getExpr
 
 prettyPrint :: DispExpr -> String
 prettyPrint (DispExpr x _) = x

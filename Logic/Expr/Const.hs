@@ -96,14 +96,14 @@ zfollows     = fun2 $ mk_fun [] "follows" [bool,bool] bool
 zall :: (TypeSystem2 t, IsQuantifier q, Foldable list) 
      => list (AbsExpr t q) -> AbsExpr t q
 zall xs'      = 
-        case concatMap f xs of
+        case xs of
             []  -> ztrue
             [x] -> x
             xs  
                 | zfalse `elem` xs -> zfalse
-                | otherwise -> FunApp (mk_fun [] "and" (take n $ repeat bool) bool) xs
+                | otherwise -> FunApp (mk_fun [] "and" (replicate n bool) bool) xs
     where
-        xs = F.toList xs'
+        xs = concatMap f $ F.toList xs'
         n = length xs
         f (FunApp fun@(Fun [] "and" _ _ _) xs)
             | not $ isLifted fun = concatMap f xs
@@ -217,6 +217,7 @@ mztrue        = Right ztrue
 mzfalse :: (TypeSystem2 t, IsQuantifier q)
         => ExprPG t q
 mzfalse       = Right zfalse
+
 mzall :: (IsQuantifier q, TypeSystem2 t, Traversable list) 
       => list (ExprPG t q) -> ExprPG t q
 mzall xs = case toList xs of

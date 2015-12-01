@@ -22,8 +22,8 @@ import Latex.Parser hiding (contents)
 import Logic.Proof
 import Logic.Proof.Tactics hiding ( with_line_info )
 
-import UnitB.AST as AST
 import UnitB.Expr
+import UnitB.Syntax as AST
 
     --
     -- Libraries

@@ -8,8 +8,6 @@ import Document.Tests.Suite as S
 
 import Documentation.SummaryGen
 
-import UnitB.AST
-
     --
     -- Libraries
     -- 

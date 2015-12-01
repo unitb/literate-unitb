@@ -20,8 +20,7 @@ import Latex.Parser
 import Logic.Expr
 import Logic.Proof
 
-import UnitB.AST as AST
-import UnitB.PO
+import UnitB.UnitB
 
     --
     -- Libraries
@@ -78,9 +77,7 @@ list_proof_obligations :: FilePath
                        -> EitherT [Error] IO [(Machine, Map Label Sequent)]
 list_proof_obligations fn = do
         xs <- list_machines fn
-        hoistEither $ forM xs $ \x -> do
-            y <- proof_obligation x
-            return (x,y)
+        return [ (m,proof_obligation m) | m <- xs ]
 
 list_file_obligations :: FilePath
                        -> IO (Either [Error] [(Machine, Map Label Sequent)])
@@ -119,5 +116,5 @@ get_components xs li =
         f x = map_docM_ f x
         g (x,y) = (M.fromListWith (++) x, M.fromListWith (++) y)
 
-syntax :: [String]
-syntax = machineSyntax system
+syntaxSummary :: [String]
+syntaxSummary = machineSyntax system

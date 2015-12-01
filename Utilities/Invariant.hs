@@ -1,4 +1,4 @@
-{-# LANGUAGE StandaloneDeriving, ImplicitParams #-}
+{-# LANGUAGE StandaloneDeriving, ImplicitParams, TypeFamilies #-}
 module Utilities.Invariant 
     ( HasInvariant(..), Checked, IsChecked(..)
     , Assert
@@ -12,6 +12,7 @@ module Utilities.Invariant
     , isSubmapOf',isProperSubmapOf'
     , member'
     , relation
+    , trading
     , provided, providedM
     , assertFalse, assertFalse'
     , Invariant, (##) )
@@ -61,11 +62,15 @@ newtype Invariant a = Invariant { runInvariant :: RWS [String] [(String,Bool)] (
 
 class Show a => HasInvariant a where
     invariant :: a -> Invariant ()
+    updateCache :: a -> a
+    updateCache = id
 
 class HasInvariant b => IsChecked a b | a -> b where
-    check :: (Bool -> b -> b)
+    check :: Assert
           -> b -> a
-    content :: (Bool -> b -> b)
+    check' :: Assert
+           -> b -> a
+    content :: Assert
             -> Iso' a b
 
 class IsAssertion a where
@@ -81,7 +86,7 @@ instance IsAssertion (Invariant a) where
 
 class Controls a b | a -> b where
     content' :: Getter a b
-    default content' :: Getter a a
+    default content' :: a ~ b => Getter a b
     content' = id
 
 infixl 8 !.
@@ -110,17 +115,30 @@ uses' ln f = uses (content'.ln) f
 instance Controls (Checked a) a where
     content' = to getChecked
 
+instance (Functor f, Show a, Show1 f, Show1 g, HasInvariant (f (g a))) 
+        => HasInvariant (Compose f g a) where
+    invariant = invariant . getCompose
+    updateCache = _Wrapped' %~ updateCache
+
 instance HasInvariant a => IsChecked (Checked a) a where
-    check arse x = Checked $ byPred arse (printf "invariant failure: \n%s" $ intercalate "\n" p) (const $ null p) x x 
+    check arse = check' arse . updateCache
+    check' arse x = Checked $ byPred arse msg (const $ null p) x x
         where
+            msg = printf "invariant failure: \n%s" $ intercalate "\n" p
             p = map fst $ filter (not.snd) $ snd $ execRWS (runInvariant $ invariant x) [] ()
     content arse = iso getChecked (check arse)
+
+trading :: (Functor f,Functor f')
+        => Iso (Compose f (Compose g h) x) (Compose f' (Compose g' h') x')
+               (Compose f g (h x)) (Compose f' g' (h' x'))
+trading = iso (_Wrapped %~ fmap getCompose) (_Wrapped %~ fmap Compose)
 
 instance Controls (Compose Checked f a) (f a) where
     content' = to getCompose . content'
 
 instance HasInvariant (f a) => IsChecked (Compose Checked f a) (f a) where
     check arse = Compose . check arse
+    check' arse  = Compose . check arse
     content arse = iso getCompose Compose . content arse
 
 instance NFData (f (g x)) => NFData (Compose f g x) where

@@ -1,8 +1,6 @@
 {-# LANGUAGE StandaloneDeriving,TypeFamilies
     , ConstraintKinds
     #-}
-    --, UndecidableInstances 
-{-# OPTIONS -fno-warn-overlapping-patterns #-}
 module Document.Phase.Types where
 
     -- Modules
@@ -14,8 +12,8 @@ import Logic.Operator (Notation)
 import Logic.Proof
 import Logic.Proof.Tactics (Tactic)
 
-import UnitB.AST as AST hiding (Constraint)
 import UnitB.Expr 
+import UnitB.Syntax as AST hiding (Constraint)
 
     -- Libraries
 import Control.DeepSeq
@@ -37,10 +35,11 @@ class (MchType a (AEvtType a) (CEvtType a) (ThyType a) ~ a)
     type ThyType a :: *
     type AEvtType a :: *
     type CEvtType a :: *
+
 data MachineP0 = MachineP0
         { _pAllMachines :: MTable ()
         , _pMachineId   :: MachineId }
-    deriving (Show,Typeable,Generic)
+    deriving (Show,Typeable,Generic,Eq)
 
 type MachineP1 = MachineP1' EventP1 EventP1 TheoryP1
 
@@ -48,7 +47,7 @@ data MachineP1' ae ce thy = MachineP1
     { _p0 :: MachineP0
     , _pEventRef :: G.BiGraph SkipOrEvent ae ce
     , _pContext  :: thy
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP1' ae ce thy) where
     type MchType (MachineP1' ae ce thy) = MachineP1'
@@ -64,7 +63,7 @@ data MachineP2' ae ce thy = MachineP2
     , _pStateVars :: Map String Var             -- machine variables
     , _pAbstractVars :: Map String Var          -- abstract machine variables
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP2' ae ce thy) where
     type MchType (MachineP2' ae ce thy) = MachineP2'
@@ -85,7 +84,7 @@ data MachineP3' ae ce thy = MachineP3
     , _pInit        :: Map Label Expr
     , _pOldPropSet  :: PropertySet
     , _pNewPropSet  :: PropertySet
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 instance IsMachine (MachineP3' ae ce thy) where
     type MchType (MachineP3' ae ce thy) = MachineP3'
@@ -102,6 +101,15 @@ data MachineP4' ae ce thy = MachineP4
     , _pComments :: Map DocItem String
     } deriving (Show,Typeable,Generic)
 
+instance (Eq ea,Eq ce,Eq thy) => Eq (MachineP4' ea ce thy) where
+    x == y = all ($ (x,y)) 
+            [ cmp _p3
+            , cmp _pLiveRule
+            , cmp _pComments 
+            , cmp $ fmap snd . _pProofs ]
+        where
+            cmp f (x,y) = f x == f y
+
 instance IsMachine (MachineP4' ae ce thy) where
     type MchType (MachineP4' ae ce thy) = MachineP4'
     type AEvtType (MachineP4' ae ce thy) = ae
@@ -111,7 +119,7 @@ instance IsMachine (MachineP4' ae ce thy) where
 data EventP1 = EventP1
          { _eEventId :: SkipOrEvent
          }
-    deriving (Show,Typeable,Generic)
+    deriving (Show,Typeable,Generic,Eq)
 
 data EventP2 = EventP2 
     { _e1 :: EventP1 
@@ -119,7 +127,7 @@ data EventP2 = EventP2
     , _eParams  :: Map String Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 data EventP3 = EventP3 
     { _e2 :: EventP2 
@@ -129,20 +137,20 @@ data EventP3 = EventP3
     , _eActions  :: Map Label Action
     , _eWitness     :: Map String (Var,RawExpr)
     , _eIndWitness  :: Map String (Var,RawExpr)
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 data EventP4 = EventP4 
     { _e3 :: EventP3 
     , _eCoarseRef  :: [(Label,ScheduleChange)]
     , _eFineRef    :: Maybe (ProgId,ProgressProp)
-    } deriving (Typeable,Show,Generic)
+    } deriving (Typeable,Show,Generic,Eq)
 
 data Change = AddC | RemoveC
     deriving (Eq,Show)
 
 data TheoryP0 = TheoryP0
     { _tNothing :: ()
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 type PostponedDef = (Def,DeclSource,LineInfo)
 
@@ -152,7 +160,7 @@ data TheoryP1 = TheoryP1
     , _pTypes     :: Map String Sort
     , _pAllTypes  :: Map String Sort
     , _pSetDecl   :: [(String, PostponedDef)]
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 data TheoryP2 = TheoryP2
     { _t1 :: TheoryP1 
@@ -161,17 +169,17 @@ data TheoryP2 = TheoryP2
     , _pDummyVars :: Map String Var             -- dummy variables
     , _pNotation  :: Notation
     , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 data TheoryP3 = TheoryP3
     { _t2 :: TheoryP2
     , _pAssumptions :: Map Label Expr
-    } deriving (Show,Typeable,Generic)
+    } deriving (Show,Typeable,Generic,Eq)
 
 data SystemP m = SystemP
     { _refineStruct :: Hierarchy MachineId
     , _mchTable :: MTable m }
-    deriving (Typeable,Show,Generic)
+    deriving (Typeable,Show,Generic,Eq)
 
 instance NFData m => NFData (SystemP m) where
 instance NFData m => NFData (Hierarchy m) where
@@ -186,6 +194,9 @@ data Hierarchy k = Hierarchy
         { order :: [k]
         , edges :: Map k k }
     deriving (Show,Typeable,Generic)
+
+instance Eq k => Eq (Hierarchy k) where
+    h0 == h1 = edges h0 == edges h1
 
 instance IsLabel ContextId where
     as_label (CId x) = label x

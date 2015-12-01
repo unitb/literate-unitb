@@ -20,7 +20,7 @@ import Language.Haskell.TH (Loc(..))
 
 import Safe
 
-import Test.QuickCheck
+import Test.QuickCheck as QC
 
 import Text.ParserCombinators.ReadPrec
 
@@ -117,7 +117,7 @@ instance Syntactic Error where
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
 instance Arbitrary LineInfo where
-    arbitrary = LI "file" <$> arbitrary <*> arbitrary
+    arbitrary = LI "file" <$> QC.elements [0,5,10] <*> QC.elements [0,5,10]
 
 showLiLong :: LineInfo -> String
 showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col

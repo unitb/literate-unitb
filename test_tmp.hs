@@ -2,8 +2,9 @@
 module Main where
 
 import qualified Reactive as R
-import Document.Document as Doc ( syntax )
+import Document.Document as Doc ( syntaxSummary )
 import Document.Phase.Expressions as PExp
+import Document.MachineSpec as MSpec hiding (main)
 import Document.Tests.Cubes   as Cubes
 import Document.Tests.GarbageCollector  as GC
 import Document.Tests.Lambdas as Lam
@@ -17,6 +18,7 @@ import Document.Tests.TerminationDetection  as Term
 import Document.Tests.TrainStation  as TS
 import Document.Tests.TrainStationRefinement  as TSRef
 import Document.Tests.TrainStationSets  as TSS
+import Logic.TestGenericity as Gen
 import Z3.Test as Z3
 import Document.Phase.Test as Ph
 import Document.Test as Doc
@@ -33,6 +35,8 @@ import qualified Latex.Test_Latex_Parser as Tex
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
+import Data.Map as M
+
 import Tests.UnitTest
 
 --import Language.Haskell.TH
@@ -42,6 +46,10 @@ import System.Process
 import System.TimeIt
 
 import qualified Utilities.Lines as Lines
+
+import Test.QuickCheck
+
+import Text.Printf
 
 --import Utilities.Instances ()
 
@@ -71,9 +79,9 @@ main = timeIt $ do
     system "rm expected-*.txt"
     system "rm po-*.z3"
     system "rm log*.z3"
-    writeFile "syntax.txt" $ unlines syntax
+    writeFile "syntax.txt" $ unlines syntaxSummary
     return R.main
-    run_test_cases Deq.test_case
+    return $ run_test_cases Deq.test_case
     return $ run_test_cases Term.test_case
     return $ run_test_cases Puzz.test_case
     return $ run_test_cases Ph.test_case
@@ -82,14 +90,21 @@ main = timeIt $ do
     --print =<< Ph.case7
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case
+    return $ run_test_cases Gen.test_case
     return verify
     return $ print =<< run_test_cases Doc.check_axioms
     return $ print =<< PExp.check_props
     return $ run_test_cases SM.test_case
+    return $ do
+        c4 <- Lam.case4
+        printf "size: %s\n" (show $ 
+                M.intersectionWith (==) <$> (c4) <*> (Lam.result4))
     return $ run_test_cases Lam.test_case
     return $ run_test_cases Cubes.test_case
     return $ run_test_cases Sync.test_case
     return $ run_test_cases Puzz.test_case
+    return $ quickCheck MSpec.prop_expr_parser
+    return $ MSpec.run_spec
     return $ run_test_cases UB.test_case
     return $ print =<< Lines.run_tests
     return $ run_test_cases TS.test_case

@@ -1,6 +1,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeOperators          #-}
 module Logic.Expr.Expr 
     ( module Logic.Expr.Expr
     , module Logic.Expr.Variable
@@ -13,6 +14,7 @@ import Logic.Expr.Classes
 import Logic.Expr.Scope
 import Logic.Expr.Type
 import Logic.Expr.Variable
+import Logic.Expr.PrettyPrint
 
     -- Library
 import           GHC.Generics hiding (to)
@@ -24,7 +26,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Identity
 import Control.Lens hiding (rewrite,Context,elements
-                           ,Const,Context',List)
+                           ,Const,Context',List,rewriteM)
 
 import           Data.Data
 import           Data.List as L
@@ -56,7 +58,7 @@ data GenExpr t a q =
         | Binder q [AbsVar t] (GenExpr t a q) (GenExpr t a q) t
         | Cast (GenExpr t a q) a
         | Lift (GenExpr t a q) a
-    deriving (Eq, Ord, Typeable, Data, Generic)
+    deriving (Eq, Ord, Typeable, Data, Generic, Show)
 
 data Lifting = Unlifted | Lifted
     deriving (Eq,Ord, Generic, Data, Typeable)
@@ -375,21 +377,12 @@ instance (TypeSystem t, IsQuantifier q, Tree t')
                           [ merge_range q
                           , r'
                           , xp' ] ]
-    rewriteM' _ s x@(Word _)           = return (s,x)
-    rewriteM' _ s x@(Const _ _)        = return (s,x)
-    rewriteM' f s (Lift e t)           = do
-            (x,e') <- f s e
-            return (x, Lift e' t)
-    rewriteM' f s (Cast e t)           = do
-            (x,e') <- f s e
-            return (x, Cast e' t)
-    rewriteM' f s0 (FunApp g xs)  = do
-            (s1,ys) <- fold_mapM f s0 xs
-            return (s1,FunApp g ys)
-    rewriteM' f s0 (Binder q xs r0 x t)  = do
-            (s1,r1) <- f s0 r0
-            (s2,y)  <- f s1 x
-            return (s2,Binder q xs r1 y t)
+    rewriteM _ x@(Word _)           = pure x
+    rewriteM _ x@(Const _ _)        = pure x
+    rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
+    rewriteM f (Cast e t)    = Cast <$> f e <*> pure t
+    rewriteM f (FunApp g xs) = FunApp g <$> traverse f xs
+    rewriteM f (Binder q xs r x t)  = Binder q xs <$> f r <*> f x <*> pure t
 
 rewriteExpr :: (t0 -> t1)
             -> (q0 -> q1)
@@ -398,7 +391,7 @@ rewriteExpr :: (t0 -> t1)
 rewriteExpr fT fQ fE = runIdentity . rewriteExprM 
         (return . fT) (return . fQ) (return . fE)
 
-rewriteExprM :: (Applicative m, Monad m)
+rewriteExprM :: (Applicative m)
              => (t0 -> m t1)
              -> (q0 -> m q1)
              -> (AbsExpr t0 q0 -> m (AbsExpr t1 q1))
@@ -409,10 +402,10 @@ rewriteExprM fT fQ fE e =
             Const v t -> Const v <$> fT t
             FunApp f args -> 
                 FunApp <$> ffun f
-                       <*> mapM fE args
+                       <*> traverse fE args
             Binder q vs re te t ->
                 Binder <$> fQ q 
-                       <*> mapM fvar vs 
+                       <*> traverse fvar vs 
                        <*> fE re
                        <*> fE te
                        <*> fT t
@@ -420,14 +413,14 @@ rewriteExprM fT fQ fE e =
             Lift e t -> Lift <$> fE e <*> fT t
     where
         ffun (Fun ts n lf targs rt) = 
-                Fun <$> mapM fT ts 
+                Fun <$> traverse fT ts 
                     <*> pure n <*> pure lf
-                    <*> mapM fT targs 
+                    <*> traverse fT targs 
                     <*> fT rt
         fvar (Var n t) = Var n <$> fT t
 
-instance (TypeSystem t, IsQuantifier q, Tree t') => Show (GenExpr t t' q) where
-    show e = show $ runReader (as_tree' e) UserOutput
+instance (TypeSystem t, IsQuantifier q, Tree t') => PrettyPrintable (GenExpr t t' q) where
+    pretty e = show $ runReader (as_tree' e) UserOutput
 
 instance HasName (AbsDecl t q) String where
     name = to $ \case 
@@ -496,7 +489,7 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
             g (n,t)     = do
                 t' <- as_tree' t
                 return $ List [Str n, t']
-    rewriteM' = id
+    rewriteM _ = pure
     
 instance TypeSystem t => Show (AbsFun t) where
     show (Fun xs n _ ts t) = n ++ show xs ++ ": " 

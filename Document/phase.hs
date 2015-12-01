@@ -17,8 +17,8 @@ import Latex.Parser
 
 import Logic.Proof
 
-import UnitB.AST as AST
 import UnitB.Expr
+import UnitB.Syntax as AST
 
     -- Libraries
 import Control.Arrow hiding (ArrowChoice(..))

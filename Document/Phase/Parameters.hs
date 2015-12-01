@@ -5,7 +5,7 @@ import Latex.Parser
 
 import Logic.Expr
 
-import UnitB.AST
+import UnitB.Syntax
 
     -- Libraries
 import Data.Char

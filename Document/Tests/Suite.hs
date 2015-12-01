@@ -2,6 +2,7 @@
 module Document.Tests.Suite 
     ( module Document.Tests.Suite 
     , module Control.Monad.Trans.Either 
+    , module UnitB.UnitB
     , Error(..) )
 where
 
@@ -11,8 +12,9 @@ import Document.Document as Doc
 import Logic.Expr as E
 import Logic.Proof
 
-import UnitB.AST
-import UnitB.PO as PO
+import UnitB.PO
+import UnitB.UnitB hiding (proof_obligation,raw_proof_obligation)
+import qualified UnitB.UnitB as UB
 
 import Z3.Z3
 
@@ -57,11 +59,12 @@ list_file_obligations' path = do
     t <- getModificationTime path
     m <- takeMVar pos
     sys <- parse_system path
-    let cmd :: Monad m => (b -> m c) -> a -> b -> m (b,c)
-        cmd f _ = runKleisli (Kleisli return &&& Kleisli f)
+    let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
+        cmd f = runKleisli (Kleisli return &&& Kleisli f)
         -- ms :: Either 
-        ms = view' machines <$> sys >>= traverseWithKey (cmd PO.proof_obligation)
-        ts = view' theories <$> sys >>= traverseWithKey (cmd theory_po)
+        ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
+            -- >>= traverseWithKey (cmd PO.proof_obligation)
+        ts = view' theories <$> sys >>= traverse (cmd theory_po)
     putMVar pos $ M.insert path ((ms,ts),t) m
     return (ms,ts)
 
@@ -99,7 +102,7 @@ raw_proof_obligation path lbl i = makeReport $ do
         m  <- Document.Tests.Suite.lookup i ms
         po <- hoistEither $ withLI $ lookupSequent 
                 (label lbl) 
-                (raw_machine_pos m)
+                (UB.raw_proof_obligation m)
         let cmd = unlines $ L.map pretty_print' $ z3_code po
         return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
 

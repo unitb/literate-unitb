@@ -43,7 +43,7 @@ data Proof =  FreeGoal String String Type Proof LineInfo
             | InstantiateHyp Expr (Map Var Expr) Proof LineInfo
             | Keep Context [Expr] (Map Label Expr) Proof LineInfo
             | ByCalc Calculation
-    deriving (Eq,Typeable, Generic)
+    deriving (Eq,Typeable, Generic, Show)
 
 data Calculation = Calc 
         {  _calculationContext :: Context
@@ -51,7 +51,7 @@ data Calculation = Calc
         ,  first_step :: Expr
         ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
         ,  l_info     :: LineInfo }
-    deriving (Eq, Typeable, Generic)
+    deriving (Eq, Typeable, Generic, Show)
 
 makeFields ''Calculation
 
@@ -65,8 +65,6 @@ data TheoremRef =
 class (Syntactic a, Typeable a, Eq a) => ProofRule a where
     proof_po :: a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
-instance Show Proof where
-    show _ = "[..]"
 
 instance Syntactic Calculation where
     line_info c = l_info c
@@ -244,17 +242,20 @@ infer_goal (Calc _ _ s0 xs _) n = do
         f (_,y,_,_) = y
         g (x,_,_,_) = x
 
+instance PrettyPrintable Calculation where
+    pretty (Calc _ g fs ss _) = 
+            unlines ( [
+                    pretty g,
+                    "----",
+                    "    " ++ pretty fs ]
+                ++  concatMap f ss )
+        where
+            f (_, s, h, _) = (
+                       (L.map ("      | " ++) $ L.map pretty h)
+                    ++ [ "    " ++ pretty s ] )
+
 show_proof :: Calculation -> String
-show_proof (Calc _ g fs ss _) = 
-        unlines ( [
-                show g,
-                "----",
-                "    " ++ show fs ]
-            ++  concatMap f ss )
-    where
-        f (_, s, h, _) = (
-                   (L.map ("      | " ++) $ L.map show h)
-                ++ [ "    " ++ show s ] )
+show_proof = pretty
 
 goal_po :: Calculation -> Sequent
 goal_po c = empty_sequent & context .~ (c^.context)

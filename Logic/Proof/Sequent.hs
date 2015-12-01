@@ -64,7 +64,7 @@ data AbsSequent t q = Sequent
         , _absSequentNameless :: [AbsExpr t q] 
         , _absSequentNamed :: Map Label (AbsExpr t q)
         , _absSequentGoal  :: AbsExpr t q }
-    deriving (Eq, Generic)
+    deriving (Eq, Generic, Show)
 
 -- class HasGoal a b | a -> b where
 --     goal :: Getter a b
@@ -127,10 +127,10 @@ checkSequent arse s = byPred arse msg (const $ L.null xs) s s
             unless (L.null xs)
                 $ tell [e]
         ctx = s^.context 
-                & definitions %~ symbol_table.M.elems 
-                & constants %~ symbol_table.M.elems 
-                & functions %~ symbol_table.M.elems 
-                & dummies %~ symbol_table.M.elems 
+                & definitions %~ symbol_table 
+                & constants %~ symbol_table
+                & functions %~ symbol_table
+                & dummies %~ symbol_table
         travAsserts = traverseOf_ traverseExprs checkScopes' s
         f (Def _ _ ts _ e) = local (constants %~ M.union (symbol_table ts)) $ checkScopes' e
         travDefs = local (definitions .~ M.empty) 
@@ -184,8 +184,8 @@ instance Monoid SyntacticProp where
 empty_sequent :: (TypeSystem2 t,IsQuantifier q) => AbsSequent t q
 empty_sequent = (Sequent empty_ctx empty_monotonicity [] M.empty ztrue)
 
-instance (TypeSystem t, IsQuantifier q) => Show (AbsSequent t q) where
-    show s = L.unlines $ asms ++ ["|----",goal'] 
+instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) where
+    pretty s = L.unlines $ asms ++ ["|----",goal'] 
         where
             indent = over traverseLines (" " ++)
             asms   = map indent $ 
@@ -369,7 +369,7 @@ apply_monotonicity po = fromMaybe po $
                 (c,x,y) <- differs_by_segment 
                     (flatten_assoc g0 xs) 
                     (flatten_assoc g0 ys)
-                let f = typ_fun2 g0
+                let f = typ_fun2 $ g0 & arguments %~ take 2
                     funApp (x:xs) = L.foldl f (Right x) $ L.map Right xs
                     funApp [] = unit
                 return (c,$typeCheck$ funApp x,$typeCheck$ funApp y)

@@ -9,7 +9,6 @@ import Logic.Proof
 
 import Theories.FunctionTheory
 
-import UnitB.AST
 import UnitB.Expr
 
     -- Libraries
@@ -353,7 +352,7 @@ path3 :: String
 path3 = "tests/cubes-t3.tex"
 
 result4 :: Either [Error] (Map ProgId ProgressProp)
-result4 = M.map (fmap $ DispExpr "") <$> either g Right (do
+result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
         q0 <- f `mzeq` zlambda [i_decl] 
             (mzle (mzint 0) i `mzand` mzless i bigN) 
             (mzpow i $ mzint 3)
@@ -369,12 +368,12 @@ result4 = M.map (fmap $ DispExpr "") <$> either g Right (do
         return $ fromList 
             [   ("prog0", LeadsTo [] ztrue q0)
             ,   ("prog1", LeadsTo [] ztrue q1)
-            ,   ("prog2", LeadsTo [] p1 q2)
-            ,   ("prog3", LeadsTo [] p2 q3)
-            ,   ("prog4", LeadsTo [] p3 q4)
+            ,   ("prog2", LeadsTo [kdec] p1 q2)
+            ,   ("prog3", LeadsTo [kdec] p2 q3)
+            ,   ("prog4", LeadsTo [kdec] p3 q4)
             ])
     where
-        (k,_)      = var "k" int
+        (k,kdec)   = var "k" int
         (i,i_decl) = var "i" int
         (f,_)      = var "f" (fun_type int int)
         (n,_)      = var "n" int

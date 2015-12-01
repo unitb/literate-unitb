@@ -1,5 +1,5 @@
 module Logic.Expr.PrettyPrint 
-    ( pretty_print' )
+    ( pretty_print', Pretty(..), PrettyPrintable(..) )
 where
 
     -- Modules
@@ -8,13 +8,27 @@ import Logic.Expr.Classes
     -- Libraries
 import Control.Monad.Reader
 
+import Data.Functor.Classes
 import Data.List hiding (uncons)
+
+import Utilities.Instances
 
 pretty_print' :: Tree t => t -> String
 -- pretty_print' t = unlines $ pretty_print $ as_tree t 
 pretty_print' t = intercalate "\n" 
     $ map toString $ as_list $ fst 
     $ runReader (pretty_print_aux $ as_tree t) ""
+
+newtype Pretty a = Pretty { unPretty :: a }
+    deriving (Eq,Ord,Functor,Foldable,Traversable)
+
+class PrettyPrintable a where
+    pretty :: a -> String
+    default pretty :: (Functor f, Show1 f) => f a -> String
+    pretty = show1 . fmap Pretty
+
+instance PrettyPrintable a => Show (Pretty a) where
+    show = pretty . unPretty
 
 data Line = Line String String
 

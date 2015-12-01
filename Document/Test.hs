@@ -34,7 +34,7 @@ import Latex.OldMonad
 
 import Tests.UnitTest
 
-import UnitB.PO
+import UnitB.UnitB
 
     -- Libraries
 import Control.Lens

@@ -10,7 +10,7 @@ import Document.Scope
 
 import Logic.Expr hiding (Const)
 
-import UnitB.AST
+import UnitB.Syntax
 
     -- Libraries
 import Control.Lens

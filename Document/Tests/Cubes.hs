@@ -9,17 +9,14 @@ import Tests.UnitTest
 
 import Logic.Proof
 
-import UnitB.AST 
 import UnitB.Expr
-import UnitB.PO (step_ctx)
+import qualified UnitB.Syntax as AST
 
     -- Libraries
-import Control.Lens ((&),(%~))
+import Control.Lens -- ((.=))
 
 import Data.Map hiding ( map )
 import Data.List hiding (inits)
-
-import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test
@@ -58,27 +55,21 @@ var_b' = Var "b@prime" int
 var_c' = Var "c@prime" int
 var_n' = Var "n@prime" int
 
-machine6 :: Machine
-machine6 = fmap (DispExpr "") $ (empty_machine "m0") & content assert %~ \m ->
-        m {  _variables = fromList $ map as_pair [var_a,var_b,var_c,var_n]
-          ,  _inits = fromList
+machine6 :: AST.RawMachine
+machine6 = newMachine assert "m0" $ do
+        variables .= fromList (map as_pair [var_a,var_b,var_c,var_n])
+        inits .= fromList
                   [ (label "in2", $typeCheck$ c .=. 6)
                   , (label "in1", $typeCheck$ b .=. 1)
                   , (label "init0", $typeCheck$ (n .=. 0) /\ (a .=. 0) )
                   ]
-          ,  _props = prop_set6
-          ,  _event_table = newEvents [("evt",event6_evt)]
-          ,  _proofs = fromList [ 
-                        (label "m0/evt/INV/inv0", calc),
-                        (label "m0/evt/INV/inv1", calc),
-                        (label "m0/evt/INV/inv2", calc) ]
-          }
+        props .= prop_set6
+        event_table .= newEvents [("evt",event6_evt)]
     where
         a = Right $ Word var_a
         b = Right $ Word var_b
         c = Right $ Word var_c
         n = Right $ Word var_n
-        calc = ByCalc $ Calc (step_ctx $ asExpr <$> machine6) ztrue ztrue [] (LI "" 1 1)
 
 prop_set6 :: PropertySet' RawExpr
 prop_set6 = empty_property_set {
@@ -119,8 +110,8 @@ event6_evt = empty_event {
 path6 :: FilePath
 path6    = "Tests/integers.tex"
 
-case6 :: IO (Either [Error] [Machine])
-case6    = parse path6
+case6 :: IO (Either [Error] [AST.RawMachine])
+case6    = (traverse.traverse %~ fmap getExpr.view' syntax) <$> parse path6
 
 result7 :: String
 result7 = unlines 

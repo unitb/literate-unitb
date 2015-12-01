@@ -15,8 +15,8 @@ import Logic.Expr
 import Logic.Operator
 import Logic.Proof hiding ( with_line_info )
 
-import UnitB.AST as AST
 import UnitB.PO
+import UnitB.Syntax as AST
 
 import Theories.Arithmetic
 import Theories.FunctionTheory

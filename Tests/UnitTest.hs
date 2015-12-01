@@ -20,6 +20,7 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.SSem
 import Control.Exception
+import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Loops
 import Control.Monad.Reader
@@ -28,6 +29,7 @@ import Control.Monad.RWS
 import           Data.Either
 import           Data.IORef
 import           Data.List
+import           Data.List.NonEmpty as NE (sort)
 import qualified Data.Map as M hiding ((!))
 import           Data.Maybe
 import           Data.Tuple
@@ -43,6 +45,7 @@ import PseudoMacros
 
 import Utilities.Format
 import Utilities.Indentation
+import Utilities.Lines hiding (lines,unlines)
 import Utilities.Partial
 
 import System.FilePath
@@ -53,9 +56,9 @@ import Text.Printf
 
 
 data TestCase = 
-      forall a . (Show a, Typeable a) => Case String (IO a) a
+      forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a
     | POCase String (IO (String, M.Map Label Sequent)) String
-    | forall a . (Show a, Typeable a) => CalcCase String (IO a) (IO a) 
+    | forall a . (Show a, Eq a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
     | Suite CallStack String [TestCase]
@@ -110,11 +113,12 @@ new_failure cs name actual expected = do
 test_cases :: (?loc :: CallStack) => String -> [TestCase] -> TestCase
 test_cases = Suite ?loc
 
-data UnitTest = UT 
+data UnitTest = forall a. Eq a => UT 
     { name :: String
-    , routine :: IO (String, Maybe (M.Map Label Sequent))
-    , outcome :: String
+    , routine :: IO (a, Maybe (M.Map Label Sequent))
+    , outcome :: a
     , _mcallStack :: Maybe CallStack
+    , _display :: a -> String
     -- , _source :: FilePath
     }
     | Node { _callStack :: CallStack, name :: String, _children :: [UnitTest] }
@@ -153,32 +157,36 @@ run_test_cases xs = do
                     , routine = cmd 
                     , outcome = z 
                     , _mcallStack = cs
+                    , _display = id
                     }
         f _ (Suite cs n xs) = Node cs n <$> mapM (f $ Just cs) xs
         -- f t = return (Node (nameOf t) [])
         f cs (Case x y z) = return UT
                             { name = x
-                            , routine = do a <- y ; return (disp a,Nothing)
-                            , outcome = disp z
+                            , routine = (,Nothing) <$> y
+                            , outcome = z
                             , _mcallStack = cs
+                            , _display = disp
                             }
         f cs (CalcCase x y z) = do 
                 r <- z
                 return UT
                     { name = x
-                    , routine = do a <- y ; return (disp a, Nothing)
-                    , outcome = disp r
+                    , routine  = (,Nothing) <$> y
+                    , outcome  = r
                     , _mcallStack = cs
+                    , _display = disp
                     }
         f cs (StringCase x y z) = return UT 
                                 { name = x
-                                , routine = (,Nothing) `liftM` y
+                                , routine = (,Nothing) <$> y
                                 , outcome = z
                                 , _mcallStack = cs
+                                , _display = id
                                 }
         f cs (LineSetCase x y z) = f cs $ StringCase x 
-                                    ((unlines . sort . lines) `liftM` y) 
-                                    (unlines $ sort $ lines z)
+                                    ((asLines %~ NE.sort) <$> y) 
+                                    (z & asLines %~ NE.sort)
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
@@ -219,7 +227,7 @@ test_suite_string cs' ut = do
                 -- lift $ putStr $ unlines ys
                 tell $ map Right ys
         case ut of
-          (UT x y z mli) -> forkTest $ do
+          (UT x y z mli disp) -> forkTest $ do
             let cs = fromMaybe cs' mli
             putLn ("+- " ++ x)
             r <- liftIO $ catch 
@@ -231,8 +239,8 @@ test_suite_string cs' ut = do
                     then return (1,1)
                     else do
                         take_failure_number
-                        print_po cs s x r z
-                        new_failure cs x r z
+                        print_po cs s x (disp r) (disp z)
+                        new_failure cs x (disp r) (disp z)
                         putLn "*** FAILED ***"
                         forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
                         return (0,1) 

@@ -94,7 +94,7 @@ data PropertySet' expr = PS
 --        , schedule     :: Map Label Schedule
         , _safety       :: Map Label (SafetyProp' expr)
         }
-    deriving (Eq,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Functor,Foldable,Traversable,Generic,Show)
 
 newtype ProgId = PId { getProgId :: Label }
     deriving (Eq,Ord,IsString,Typeable,Generic)
@@ -109,22 +109,22 @@ type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
 
 data ProgressProp' expr = LeadsTo [Var] expr expr
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic,Show)
 
 type SafetyProp = SafetyProp' Expr
 type RawSafetyProp = SafetyProp' RawExpr
 
 data SafetyProp' expr = Unless [Var] expr expr
-    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic)
+    deriving (Eq,Ord,Typeable,Functor,Foldable,Traversable,Generic,Show)
 
-instance Show expr => Show (ProgressProp' expr) where
-    show (LeadsTo _ p q) = show p ++ "  |->  " ++ show q
+instance PrettyPrintable expr => PrettyPrintable (ProgressProp' expr) where
+    pretty (LeadsTo _ p q) = pretty p ++ "  |->  " ++ pretty q
 
-instance Show expr => Show (SafetyProp' expr) where
-    show (Unless _ p q) = show p ++ "  UNLESS  " ++ show q
+instance PrettyPrintable expr => PrettyPrintable (SafetyProp' expr) where
+    pretty (Unless _ p q) = pretty p ++ "  UNLESS  " ++ pretty q
 
-instance Show expr => Show (PropertySet' expr) where
-    show x = printf "PropertySet { %s }" 
+instance PrettyPrintable expr => PrettyPrintable (PropertySet' expr) where
+    pretty x' = printf "PropertySet { %s }" 
         $ intercalate ", " $ L.map (\(x,y) -> x ++ " = " ++ y)
             [ ("transient",  show $ _transient x)
             , ("constraint", show $ _constraint x)
@@ -133,6 +133,8 @@ instance Show expr => Show (PropertySet' expr) where
             , ("progress", show $ _progress x)
             , ("safety", show $ _safety x)
             ]
+        where
+            x = Pretty <$> x'
 
 makeRecordConstr ''PropertySet'
 

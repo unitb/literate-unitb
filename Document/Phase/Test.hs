@@ -28,10 +28,11 @@ import Logic.Theory
 import Theories.Arithmetic
 import Theories.SetTheory
 
-import UnitB.Expr hiding (decl)
 import Tests.UnitTest
 
-import UnitB.AST as AST
+import UnitB.Expr hiding (decl)
+import UnitB.Syntax as AST hiding (Machine)
+import UnitB.UnitB
 
     --
     -- Libraries
@@ -135,9 +136,12 @@ case0 = do
             newEdge ae1b ce1
             newEdge askip ce2
             newEdge askip cskip
-    return $ make_phase1 <$> p0 <.> thy 
-                         <.> sorts <.> allSorts 
-                         <.> pdef <.> evts
+    return $ make_phase1 <$> p0 
+                         <.> thy 
+                         <.> sorts 
+                         <.> allSorts 
+                         <.> pdef 
+                         <.> evts
 
 result0 :: MTable MachineP1
 result0 = M.fromList 
@@ -308,7 +312,16 @@ result2 = do
                         (parser t & decls %~ M.union ((t'^.pConstants) `M.union` (t'^.pDefVars))
                                   & sorts %~ M.union (t'^.pTypes)) 
                         (fieldsT mid)
-            upEvent m eid e _ = makeEventP2 e (m^.pMchSynt) (m^.pMchSynt) (eventFields eid)
+            upEvent m eid e _ = makeEventP2 e 
+                        (withIndSynt eid $ m^.pMchSynt) 
+                        (withParamSynt eid $ m^.pMchSynt) (eventFields eid)
+            withIndSynt eid p 
+                | eid == Right "ce2" = p & decls %~ M.insert "q" (Var "q" int)
+                | otherwise          = p
+            withParamSynt eid = withIndSynt eid . withParamSynt' eid
+            withParamSynt' eid p 
+                | eid `elem` [Right "ae1b",Right "ce1"] = p & decls %~ M.insert "p" (Var "p" bool)
+                | otherwise                             = p
             eventFields eid 
                 | eid == Right "ae1b" = [EParams "p" (Var "p" bool)]
                 | eid == Right "ce1"  = [EParams "p" (Var "p" bool)]
@@ -570,7 +583,7 @@ case8 = return $ do
     runMM (r & mchTable (M.traverseWithKey make_machine)) ()
 
 result8 :: Either [Error] (SystemP Machine)
-result8 = Right $ SystemP h ms
+result8 = Right $ SystemP h $ fromSyntax <$> ms
     where
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
         (x,x',xvar) = prog_var "x" int
@@ -698,7 +711,7 @@ instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
 prop_inherit_equiv :: Hierarchy Int
                    -> Property
 prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
-    inheritWith' id (L.map.(+)) (++) h m == inheritWithAlt id (L.map.(+)) (++) h (m :: Map Int [Int])
+    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Map Int [Int])
 
 case9 :: IO Bool
 case9 = f <$> quickCheckResult prop_inherit_equiv

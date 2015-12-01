@@ -16,8 +16,7 @@ import Interactive.Serialize
 
 import Logic.Expr
 
-import UnitB.AST 
-import UnitB.PO hiding (dump)
+import UnitB.UnitB
 
 import Z3.Z3 
         ( discharge
@@ -114,10 +113,8 @@ parser (Shared { .. })  = return $ do
                     write_obs parser_state (Idle t)
             ) t
     where
-        f m = do
-            x <- proof_obligation m
+        f m = return $ M.mapKeys (g $ _name m) $ proof_obligation m
             -- return $ fromList $ map (g $ _name m) $ toList $ x
-            return $ M.mapKeys (g $ _name m) x
         g lbl x = (lbl,x)
         h lbl (x,y) = ((lbl,x),y)
         parse = do

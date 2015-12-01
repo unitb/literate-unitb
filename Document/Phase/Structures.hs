@@ -16,7 +16,7 @@ import Document.Scope
 
 import Logic.Expr
 
-import UnitB.AST as AST
+import UnitB.Syntax as AST
 
 import Theories.Arithmetic
 import Theories.FunctionTheory

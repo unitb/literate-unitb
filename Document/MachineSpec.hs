@@ -12,8 +12,8 @@ import Theories.Arithmetic
 import Theories.FunctionTheory
 import Theories.SetTheory
 
-import UnitB.AST
 import UnitB.Expr
+import UnitB.UnitB
 
 import Utilities.Lens
 import Utilities.RandomTree
@@ -51,8 +51,8 @@ prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
 f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
-prop_expr_parser :: ExprNotation -> Bool
-prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showExpr n $ asExpr e)
+prop_expr_parser :: ExprNotation -> Property
+prop_expr_parser (ExprNotation ctx n e) = e' === parse_expr ctx n (withLI $ showExpr n $ asExpr e)
     where
         e' = Right e
         li = LI "" 0 0
@@ -61,7 +61,7 @@ prop_expr_parser (ExprNotation ctx n e) = e' == parse_expr ctx n (withLI $ showE
 data ExprNotation = ExprNotation Context Notation RawExpr
 
 instance Show ExprNotation where
-     show (ExprNotation _ _ e) = show e
+     show (ExprNotation _ _ e) = pretty e
 
 instance Arbitrary ExprNotation where
     arbitrary = sized $ \n -> resize (n `min` 20) $ do
@@ -125,7 +125,7 @@ showExpr notation e = show_e e
         root_op (FunApp f _) = find_op f
         root_op _ = Nothing
         find_op f = view name f `M.lookup` m_ops 
-        show_e v@(Word _) = show v
+        show_e v@(Word _) = pretty v
         show_e (FunApp f xs) 
             | length xs == 2 = printf "%s %s %s" 
                                 (show_left_sub_e op x)
@@ -193,7 +193,7 @@ latex_of m = do
         li = LI "" 0 0
         blank = Text (Blank "\n" li)
 
-expressions :: Machine' expr -> [expr]
+expressions :: IsExpr expr => Machine' expr -> [expr]
 expressions m = M.elems $ m!.props.inv
 
 with_type_error :: Gen RawMachine

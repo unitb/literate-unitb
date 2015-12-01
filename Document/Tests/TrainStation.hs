@@ -9,13 +9,12 @@ import Logic.Expr
 import qualified Logic.Expr.Const as Expr
 import Logic.Expr.QuasiQuote
 import Logic.Proof
-import Logic.Theory
-
-import UnitB.AST
 
 import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
+
+import UnitB.Syntax as AST
 
     -- Libraries
 import Control.Arrow
@@ -31,7 +30,6 @@ import Tests.UnitTest
 import Utilities.Brackets
 import Utilities.Format
 import Utilities.Lens hiding (combine)
-import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test
@@ -142,7 +140,7 @@ block :: ExprP
 block_var :: Var
 (block, block_var) = Expr.var "sl@BLK" $ set_type blk_type
 
-machine0 :: Machine
+machine0 :: AST.Machine
 machine0 = newMachine assert "train0" $ do
       theory .= empty_theory 
             {  _extends = fromList
@@ -184,24 +182,7 @@ machine0 = newMachine assert "train0" $ do
       variables .= vars
       event_table .= newEvents [("enter", enter_evt), ("leave", leave_evt)]
       props .= props0
-      proofs .= fromList
-            [   ( "train0/enter/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/INIT/INV/inv2"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/enter/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/enter/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/CO/co0"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ,   ( "train0/leave/CO/co1"
-                , ByCalc $ Calc empty_ctx ztrue ztrue [] li)
-            ]
     where
-        li = LI "" 0 0
         inLbls = map (label . ("in" ++) . show . (1 -)) [0..]
         axm0 = ($typeCheck) (block .=. (zset_enum [ent,ext] `zunion` plf)) 
         axm2 = ($typeCheck) (
@@ -862,8 +843,8 @@ named_facts = []
 path0 :: String
 path0 = "Tests/train-station.tex"
 
-case0 :: IO (Either [Error] [Machine])
-case0 = parse path0
+case0 :: IO (Either [Error] [AST.Machine])
+case0 = (traverse.traverse %~ view' syntax) <$> parse path0
 
 result1 :: String
 result1 = unlines 

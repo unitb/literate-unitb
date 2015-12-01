@@ -42,7 +42,7 @@ import Latex.Parser as P
 
 import Logic.Expr
 
-import UnitB.AST
+import UnitB.Syntax
 
     -- Libraries
 import Control.Arrow ((&&&))

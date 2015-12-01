@@ -18,7 +18,7 @@ import Latex.Parser hiding (contents,source)
 
 import Logic.Expr
 
-import UnitB.AST as AST
+import UnitB.Syntax as AST
 
     --
     -- Libraries

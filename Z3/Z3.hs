@@ -131,7 +131,7 @@ instance Tree Command where
 --        where
 --            strat t = List [Str "try-for", Str "200", List [Str "then", t, Str "sat"] ]
     as_tree GetModel      = List [Str "get-model"]
-    rewriteM' = id
+    rewriteM _ = pure
 
 z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (head e) False
@@ -179,7 +179,7 @@ feed_z3 = unsafePerformIO $ do
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
-    deriving (Show, Typeable)
+    deriving (Show, Typeable, Eq)
 
 data Validity = Valid | Invalid | ValUnknown
     deriving (Show, Eq, Typeable)
@@ -312,7 +312,7 @@ log_count :: MVar Int
 log_count = unsafePerformIO $ newMVar 0
 
 verify :: Label -> [Command] -> Int -> IO (Either String Satisfiability)
-verify lbl xs n = do
+verify lbl xs n = do
         let ys = concat $ map reverse $ groupBy eq xs
             code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
             eq x y = is_assert x && is_assert y

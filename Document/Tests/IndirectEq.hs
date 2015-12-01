@@ -3,8 +3,8 @@ module Document.Tests.IndirectEq where
 import Document.Document
 import Document.Tests.Suite
 
-import UnitB.AST
 import UnitB.PO
+import UnitB.Syntax
 
 import Logic.Expr
 import Logic.Proof

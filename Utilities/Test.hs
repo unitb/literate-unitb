@@ -55,8 +55,8 @@ test = test_cases "Graphs and operator grammars" $
     , Case "case 4 - transitive closures in linear time" case4 result4
     , test'
     , Case "case 5 - error monad" case5 result5
-    , Case "case 6 - union of a list of {sorted} list" case6 result6
-    , Case "case 7 - union of a list of {unsorted} list" case7 result7  
+    , Case "case 6 - union of a list of {sorted} list" (show <$> case6) (show result6)
+    , Case "case 7 - union of a list of {unsorted} list" (show <$> case7) (show result7)  
     , Case "case 8 - edit distance, random testing" case8 True
     , Case "case 9 - edit distance, regression test from random testing" case9 0
     ] ++ GSpec.test_cases ++

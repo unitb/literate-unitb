@@ -10,7 +10,6 @@ import Logic.Expr.QuasiQuote
 import Logic.Proof
 
 import UnitB.Expr
-import UnitB.AST
 
     -- Libraries
 import Control.Lens hiding (indices)

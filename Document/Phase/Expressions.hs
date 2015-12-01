@@ -19,8 +19,8 @@ import Document.Proof
 import Document.Scope
 import Document.Visitor
 
-import UnitB.AST as AST hiding (invariant)
 import UnitB.Expr
+import UnitB.Syntax as AST hiding (invariant)
 
 import Theories.SetTheory
 

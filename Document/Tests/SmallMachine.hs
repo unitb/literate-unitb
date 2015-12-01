@@ -9,8 +9,6 @@ import Logic.Expr
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 
-import UnitB.AST
-
     -- Libraries
 import Control.Lens
 

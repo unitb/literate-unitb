@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-} 
 module UnitB.System where
 
     -- Modules
@@ -10,7 +11,7 @@ import Theories.Arithmetic
 
 import UnitB.Event
 import UnitB.Expr hiding (merge,target)
-import UnitB.Machine
+import UnitB.Machine 
 
     -- Libraries
 import Control.DeepSeq
@@ -18,6 +19,8 @@ import Control.Exception
 import Control.Lens hiding (indices)
 
 import           Data.Default
+import           Data.Functor.Classes
+import           Data.Functor.Compose
 import           Data.Map as M hiding ((!))
 
 import Text.Printf
@@ -27,21 +30,23 @@ import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Partial
 
-type System = Checked System'
+type System  = System' Machine
+type System' = Compose Checked SystemBase
 
-data System' = Sys 
+data SystemBase mch = Sys 
         {  _proof_struct :: [(Label,Label)]
         ,  _ref_struct   :: Map MachineId (Maybe MachineId)
-        ,  _machines     :: Map MachineId Machine
+        ,  _machines     :: Map MachineId mch
         ,  _theories     :: Map String Theory
         }
-    deriving (Eq,Generic,Show)
+    deriving (Eq,Generic,Show,Functor,Foldable,Traversable)
 
-makeLenses ''System'
+makeLenses ''SystemBase
 
-instance NFData System' where
+instance NFData mch => NFData (SystemBase mch) where
 
-instance HasInvariant System' where
+instance (Show mch,HasMachine mch expr,IsExpr expr) 
+        => HasInvariant (SystemBase mch) where
     invariant s = do 
         "inv4" ## M.keys (s^.ref_struct) === M.keys (s^.machines)
         traverseWithKey (mch match) $ s^.ref_struct
@@ -59,9 +64,15 @@ instance HasInvariant System' where
                             "inv3" ## (m0!.inh_props) === (m1!.inh_props) `mappend` (m1!.props)
                             
 
-instance Controls System' System' where
+instance Controls (SystemBase mch) (SystemBase mch) where
 
-instance Default System' where
+instance Eq1 SystemBase where
+    eq1 = (==)
+
+instance Show1 SystemBase where
+    showsPrec1 = showsPrec
+
+instance Default (SystemBase mch) where
     def = Sys [] M.empty 
         M.empty $ M.fromList 
             [ ("sets",set_theory)
@@ -69,8 +80,9 @@ instance Default System' where
             , ("arithmetic",arithmetic)
             , ("basic",basic_theory)]
 
-instance Default System where
+instance (HasMachine mch expr,Show mch) => Default (System' mch) where
     def = empty_system
 
-empty_system :: System
+empty_system :: (IsExpr expr,HasMachine mch expr,Show mch) 
+             => System' mch
 empty_system = check assert def

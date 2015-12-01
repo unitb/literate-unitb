@@ -1,38 +1,40 @@
-{-# LANGUAGE BangPatterns,OverloadedStrings,ImplicitParams,GADTs #-}
+{-# LANGUAGE BangPatterns,OverloadedStrings,ImplicitParams,GADTs,TypeFamilies #-}
     -- Behavior hiding
 module UnitB.PO 
-    ( proof_obligation, theory_po
+    ( theory_po
     , step_ctx, evt_live_ctx
     , theory_ctx, theory_facts
     , evt_saf_ctx, invariants, assert_ctx
-    , str_verify_machine, raw_machine_pos
     , verify_all, prop_saf, prop_tr
     , tr_wd_po, saf_wd_po
     , prop_saf'
-    , verify_changes, verify_machine
-    , smoke_test_machine, dump, used_types )
+    , proof_obligation'
+    , raw_machine_pos'
+    , dump, used_types )
 where
 
     -- Modules
+import Logic.Expr.Scope
 import Logic.Proof
 import           Logic.Proof.POGenerator hiding ( variables )
 import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
 
-import UnitB.AST
 import UnitB.Expr hiding (Const)
+import UnitB.Proof
+import UnitB.Syntax as AST hiding (Machine,Machine',System)
+import qualified UnitB.Syntax as AST -- hiding (Machine,Machine')
 
 import Z3.Z3
 
     -- Libraries
 import Control.Arrow
-import Control.Lens hiding (indices,Context,Context',(.=))
+import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 
 import           Data.Either
 import           Data.Foldable as F
-import           Data.Either.Combinators
 import           Data.Map as M hiding 
                     ( map, foldl, foldr
                     , delete, filter, null
@@ -91,8 +93,6 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
--- forWithKeyM = flip traverse
-
 assert_ctx :: RawMachine -> Context
 assert_ctx m =
           (Context M.empty (view' variables m `M.union` view' del_vars m) M.empty M.empty M.empty)
@@ -145,8 +145,8 @@ invariants_only m =
         p0 = m!.props
         p1 = m!.inh_props
 
-raw_machine_pos :: IsExpr expr => Machine' expr -> (Map Label Sequent)
-raw_machine_pos m' = eval_generator $ 
+raw_machine_pos' :: IsExpr expr => AST.Machine' expr -> (Map Label Sequent)
+raw_machine_pos' m' = eval_generator $ 
                 with (do
                         prefix_label $ as_label $ _name m
                         _context $ theory_ctx (m!.theory)
@@ -199,10 +199,13 @@ raw_machine_pos m' = eval_generator $
         unnamed = theory_facts (m!.theory) `M.difference` named_f
         named_f = theory_facts (m!.theory) { _extends = M.empty }
 
-proof_obligation :: IsExpr expr => Machine' expr -> Either [Error] (Map Label Sequent)
-proof_obligation m = do
-        let pos = raw_machine_pos m
-        forM_ (M.toList $ m!.proofs) (\(lbl,p) -> do
+proof_obligation' :: IsExpr expr 
+                  => Map Label Sequent
+                  -> Map Label Proof
+                  -> AST.Machine' expr 
+                  -> Either [Error] (Map Label Sequent)
+proof_obligation' pos proofs m = do
+        forM_ (M.toList proofs) (\(lbl,p) -> do
             let li = line_info p
             if lbl `M.member` pos
                 then return ()
@@ -210,7 +213,7 @@ proof_obligation m = do
                     (format "a proof is provided for non-existant proof obligation {0}" lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
-            case M.lookup lbl $ m!.proofs of
+            case M.lookup lbl proofs of
                 Just c ->
                     proof_po c lbl po
                 Nothing -> 
@@ -1086,12 +1089,6 @@ add_suffix suf (Var n t) = Var (n ++ suf) t
 new_dummy :: Map String Var -> RawExpr -> RawExpr
 new_dummy = make_unique "@param"
 
-verify_machine :: Machine -> IO (Int, Int)
-verify_machine m = do
-    (s,i,j) <- str_verify_machine m
-    putStrLn s
-    return (i,j)
-
 --check :: Calculation -> IO (Either [Error] [(Validity, Int)])
 --check c = runEitherT $ do
 --        pos <- hoistEither $ obligations' empty_ctx empty_sequent c
@@ -1124,53 +1121,4 @@ verify_all pos' = do
                 _     -> do
                     return (lbl, False)
     return $ M.fromList rs
-
-verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Sequent), String,Int)
-verify_changes m old_pos = do
-        case proof_obligation m of
-            Right pos -> do
-                let new_pos = differenceWith f pos old_pos
-                res <- verify_all new_pos
-                let { h k p0 = (
-                    case M.lookup k res of
-                        Just b  -> (b,p0)
-                        Nothing -> old_pos ! k) }
-                let all_pos = M.mapWithKey h pos 
-                (res,_,_) <- format_result (M.map fst all_pos)
-                return (all_pos,res, M.size new_pos)
-            Left msgs -> 
-                return (old_pos,L.unlines $ L.map report msgs,0)
-    where
-        f p0 (_,p1)
-            | p0 == p1  = Nothing 
-            | otherwise = Just p0
                  
-str_verify_machine :: IsExpr expr => Machine' expr -> IO (String,Int,Int)
-str_verify_machine m = 
-        case proof_obligation m of
-            Right pos -> do
-                xs <- verify_all pos
-                format_result xs
-            Left msgs -> return (L.unlines $ L.map report msgs,0,0)
-
-smoke_test_machine :: Machine -> IO (String)
-smoke_test_machine m =
-        case proof_obligation m of 
-            Right pos -> do
-                rs <- flip filterM (M.toList pos) $ \(lbl,po) -> do
-                    r <- smoke_test lbl po
-                    return $ r == Valid
-                return $ L.unlines $ L.map (show . fst) rs
-            Left msgs -> return (L.unlines $ L.map report msgs)
-
-format_result :: Map Label Bool -> IO (String,Int,Int)
-format_result xs' = do
-        let rs    = L.map f $ M.toList xs'
-            total = L.length rs
-            passed = L.length $ L.filter fst rs
-            xs = "passed " ++ (show passed) ++ " / " ++ show total
-            ys = L.map snd rs ++ [xs]
-        return (L.unlines ys, passed, total)
-    where
-        f (y,True)  = (True, "  o  " ++ show y)
-        f (y,False) = (False," xxx " ++ show y)

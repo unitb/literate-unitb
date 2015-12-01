@@ -9,8 +9,7 @@ import Document.Visitor
 
 import Latex.Parser 
 
-import UnitB.AST
-import UnitB.PO
+import UnitB.UnitB
 
 import Logic.Expr
 import Logic.Expr.Printable
@@ -50,8 +49,6 @@ import           Utilities.Syntactic hiding (line)
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
-context :: RawMachine -> Context
-context m = step_ctx m `merge_ctx` theory_ctx (m!.theory)
 
 data ProofStep = Step 
        { assertions  :: Map Label (Tactic Expr)    -- assertions
@@ -75,10 +72,7 @@ data ParserSetting = PSetting
     , _free_dummies  :: Bool
     , _expected_type :: Maybe Type
     } -- deriving Show
-    deriving (Generic)
-
-instance Show ParserSetting where
-    show _ = "<parser>"
+    deriving (Generic,Eq,Show)
 
 makeLenses ''ParserSetting
 makeFields ''ParserSetting
@@ -548,7 +542,7 @@ parse_expr set xs = do
             Nothing -> return x
         let x = normalize_generics typed_x
         unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (format msg x (type_of x)) li)
+            $ map (\x -> Error (format msg (pretty x) (type_of x)) li)
                 $ ambiguities x
         return $ DispExpr (flatten xs) x
     where

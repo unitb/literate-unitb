@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings
+    , TypeFamilies
     , ImplicitParams
     , ScopedTypeVariables
     , StandaloneDeriving
@@ -48,7 +49,6 @@ import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Partial
 import Utilities.Lens
-import Utilities.TH
 
 all_types :: Theory -> Map String Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 
@@ -63,14 +63,14 @@ type Machine = Machine' Expr
 
 type RawMachine = Machine' RawExpr
 
-type Machine' = Compose Checked Machine''
+type Machine' = Compose Checked MachineBase
 
-data Machine'' expr = 
+data MachineBase expr = 
     Mch 
-        { _machine''Name :: String
+        { _machineBaseName :: String
         , _theory     :: Theory
         , _variables  :: Map String Var
-        , _machine''Abs_vars :: Map String Var
+        , _machineBaseAbs_vars :: Map String Var
         , _del_vars   :: Map String Var
         , _init_witness :: Map String (Var,expr)
         , _del_inits  :: Map Label expr
@@ -79,14 +79,13 @@ data Machine'' expr =
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
         , _derivation :: Map ProgId ProofTree         
-        , _proofs     :: Map Label Proof
         , _comments   :: Map DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
-instance Eq1 Machine'' where
+instance Eq1 MachineBase where
     eq1 x y = x == y
 
-instance Show1 Machine'' where
+instance Show1 MachineBase where
     showsPrec1 n m = showsPrec n m
 
 newtype MachineId = MId { getMId :: String }
@@ -132,13 +131,30 @@ instance Show DocItem where
     show (DocProg xs) = format "{0} (progress)" xs
 
 makeLenses ''EventTable
-makeLenses ''Machine''
-makeFields ''Machine''
+makeClassy ''MachineBase
+makeFields ''MachineBase
+
+class (Controls mch (Internal mch expr)
+        , IsExpr expr
+        , HasMachineBase (Internal mch expr) expr
+        , HasName (Internal mch expr) String 
+        , HasAbs_vars (Internal mch expr) (Map String Var) ) 
+        => HasMachine mch expr | mch -> expr where
+    type Internal mch expr :: *
+    empty_machine :: String -> mch
+
+instance IsExpr expr => HasMachine (Machine' expr) expr where
+    type Internal (Machine' expr) expr = MachineBase expr
+    empty_machine = empty_machine'
+
+instance IsExpr expr => HasMachine (MachineBase expr) expr where
+    type Internal (MachineBase expr) expr = MachineBase expr
+    empty_machine = view content' . empty_machine'
 
 instance (IsExpr expr) => HasName (Machine' expr) String where
     name = content assert.name
 
-instance (IsExpr expr) => HasInvariant (Machine'' expr) where
+instance (IsExpr expr) => HasInvariant (MachineBase expr) where
     invariant m = withPrefix (m^.name) $ do
             "inv0" ## F.all ((`isSubmapOf` (m^.variables)).frame.view (new.actions)) (conc_events m) 
             "inv1" ## F.all validEvent (m^.props.transient)
@@ -172,7 +188,7 @@ instance (IsExpr expr) => HasInvariant (Machine'' expr) where
             tr_wit_enough (Tr _ _ es (TrHint ws _)) = fmap M.keys (unions . L.map (view indices) <$> tr_evt es) == Just (M.keys ws)
             tr_evt es = mapM (flip M.lookup $ nonSkipUpwards m) (NE.toList es)
 
-instance IsExpr expr => HasScope (Machine'' expr) where
+instance IsExpr expr => HasScope (MachineBase expr) where
     scopeCorrect' m = mconcat 
         [ withVars (symbols $ m^.theory) $ mconcat 
             [ withPrefix "inherited"
@@ -210,14 +226,13 @@ instance IsExpr expr => HasScope (Machine'' expr) where
             $ scopeCorrect' $ m^.theory
         ]
 
-instance Controls (Machine'' expr) (Machine'' expr) where 
-    content' = id
+instance Controls (MachineBase expr) (MachineBase expr) where 
 
-all_refs :: Controls machine (Machine'' expr) 
+all_refs :: HasMachine machine expr
          => machine -> [EventRef expr]
 all_refs = F.toList . all_refs'
 
-all_refs' :: Controls machine (Machine'' expr) 
+all_refs' :: HasMachine machine expr
           => machine -> Map (SkipOrEvent, SkipOrEvent) (EventRef expr)
 all_refs' m = readGraph (m!.events) $ do
         es <- getEdges
@@ -228,7 +243,7 @@ all_refs' m = readGraph (m!.events) $ do
             return (k,EvtRef ae ce)
         return $ M.fromList m
 
-conc_events :: Controls machine (Machine'' expr)
+conc_events :: HasMachine machine expr
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
@@ -260,7 +275,7 @@ new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
             newEdge skip v
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 
-nonSkipUpwards :: Controls machine (Machine'' expr)    
+nonSkipUpwards :: HasMachine machine expr
                => machine -> Map EventId (EventMerging expr)
 nonSkipUpwards m = readGraph (m!.events) $ do
         es <- getRightVertices
@@ -272,7 +287,7 @@ nonSkipUpwards m = readGraph (m!.events) $ do
             return $ either (const []) ((:[]).(,x)) k
         return $ M.fromList $ concat ms
 
-nonSkipDownwards :: Controls machine (Machine'' expr)    
+nonSkipDownwards :: HasMachine machine expr
                  => machine -> Map EventId (EventSplitting expr)
 nonSkipDownwards m = readGraph (m!.events) $ do
         es <- getLeftVertices
@@ -284,7 +299,7 @@ nonSkipDownwards m = readGraph (m!.events) $ do
             return $ either (const []) ((:[]).(,x)) k
         return $ M.fromList $ concat ms
 
-all_upwards :: Controls machine (Machine'' expr)    
+all_upwards :: HasMachine machine expr
             => machine -> Map SkipOrEvent (EventMerging expr)
 all_upwards m = readGraph (m!.events) $ do
         es <- getRightVertices
@@ -296,7 +311,7 @@ all_upwards m = readGraph (m!.events) $ do
         return $ M.fromList ms
     -- M.mapWithKey (upward m) (conc_events m)
 
-all_downwards :: Controls machine (Machine'' expr)    
+all_downwards :: HasMachine machine expr
               => machine -> Map SkipOrEvent (EventSplitting expr)
 all_downwards m = readGraph (m!.events) $ do
         es <- getLeftVertices
@@ -368,18 +383,19 @@ newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
 variableSet :: Machine -> S.Set Var
 variableSet m = S.fromList $ M.elems $ m!.variables
 
-events :: Lens' (Machine'' expr)
+events :: HasMachineBase mch expr
+       => Lens' mch
                 (BiGraph' SkipOrEvent (AbstrEvent' expr) 
                    SkipOrEvent (ConcrEvent' expr)
                    ())
 events = event_table . table
 
-all_props :: Getter (Machine'' expr) (PropertySet' expr)
+all_props :: Getter (MachineBase expr) (PropertySet' expr)
 all_props = to $ \m -> (m^.props) <> (m^.inh_props)
 
 -- data Decomposition = Decomposition 
 
-all_notation :: Show expr => Machine' expr -> Notation
+all_notation :: HasMachine machine expr => machine -> Notation
 all_notation m = flip precede logical_notation 
         $ L.foldl OP.combine empty_notation 
         $ L.map (view Th.notation) th
@@ -389,9 +405,9 @@ all_notation m = flip precede logical_notation
 instance (IsExpr expr) => Named (Machine' expr) where
     decorated_name' = return . view name
 
-_name :: Controls (machine expr) (Machine'' expr)
-      => machine expr -> MachineId
-_name = MId . view' machine''Name
+_name :: (HasMachine machine expr)
+      => machine -> MachineId
+_name = MId . view' machineBaseName
 
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              => Machine' expr 
@@ -405,11 +421,11 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions)
         eqPrime v = Word (prime v) `zeq` Word v
         noWitness = (m!.del_vars) `M.difference` (snd <$> evt^.witness)
 
-mkCons ''Machine''
+--mkCons ''MachineBase
 
-empty_machine :: (HasScope expr, IsExpr expr) => String -> Machine' expr
-empty_machine n = check assert $ flip execState genericDefault $ do
-            machine''Name .= n
+empty_machine' :: (HasScope expr, IsExpr expr) => String -> Machine' expr
+empty_machine' n = check assert $ flip execState genericDefault $ do
+            machineBaseName .= n
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
             theory .= empty_theory { _extends = M.fromList [
@@ -419,12 +435,13 @@ empty_machine n = check assert $ flip execState genericDefault $ do
     where
         skip = Left SkipEvent
 
-newMachine :: IsExpr expr 
+newMachine :: ( HasMachine machine expr
+              , IsChecked machine (Internal machine expr)) 
            => Assert
            -> String
-           -> State (Machine'' expr) a
-           -> Machine' expr
-newMachine arse name f = empty_machine name & content arse %~ execState f
+           -> State (MachineBase expr) a
+           -> machine
+newMachine arse name f = empty_machine name & content arse.machineBase %~ execState f
 
 instance NFData DocItem where
-instance NFData expr => NFData (Machine'' expr) where
+instance NFData expr => NFData (MachineBase expr) where

@@ -7,8 +7,9 @@ import Document.Document
 
 import Logic.Expr.Const (var)
 
-import UnitB.AST hiding (safety)
 import UnitB.Expr
+import UnitB.UnitB hiding (safety)
+import qualified UnitB.Syntax as AST
 
 import Z3.Z3
 
@@ -57,8 +58,8 @@ result0 = unlines
         , "    , v_f :: M.Map (Int) (Int)" 
         , "    , v_n :: Int }" ]
 
-input :: Either String RawMachine
-input = unsafePerformIO $ fmap raw <$> parse path0
+input :: Either String AST.RawMachine
+input = unsafePerformIO $ fmap (view' syntax.raw) <$> parse path0
 
 path0 :: String
 path0 = "tests/cubes-t8.tex"
@@ -66,7 +67,7 @@ path0 = "tests/cubes-t8.tex"
 case0 :: IO String
 case0 = do x <- runEitherT $ do
                 m <- hoistEither input
-                EitherT $ return $ run $ struct $ raw m
+                EitherT $ return $ run $ struct m
            return $ either id id x    
         
 
@@ -83,7 +84,7 @@ result1 = unlines
      
 case1 :: IO String
 case1 = do x <- runEitherT $ do
-                m <- raw <$> hoistEither input
+                m <- hoistEither input
                 EitherT $ return $ run $ void $ event_body_code m $ (conc_events m ! Right "evt")^.new
            return $ either id id x    
 

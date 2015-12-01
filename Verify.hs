@@ -11,8 +11,8 @@ import System.Environment
 
 import Text.Printf
 
-import UnitB.AST
 import UnitB.PO
+import UnitB.Syntax
 
 import Utilities.Syntactic
 

@@ -27,6 +27,10 @@ fromRight' :: (?loc :: CallStack) => Either a b -> b
 fromRight' (Right x) = x
 fromRight' (Left _)  = assertFalse' "Left"
 
+fromRight'' :: Assert -> Either a b -> b
+fromRight'' _ (Right x) = x
+fromRight'' arse (Left _)  = assertFalse arse "Left"
+
 fromLeft' :: (?loc :: CallStack) => Either a b -> a
 fromLeft' (Left x) = x
 fromLeft' (Right _)  = assertFalse' "Right"

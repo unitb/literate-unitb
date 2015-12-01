@@ -9,8 +9,6 @@ import Documentation.SummaryGen
 import Logic.Expr
 import Logic.Proof
 
-import UnitB.AST
-
     -- Library
 import Control.Lens
 import Control.Monad

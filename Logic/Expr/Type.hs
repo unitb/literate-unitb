@@ -72,17 +72,14 @@ instance Tree GenericType where
     as_tree' (Gen s ts) = cons_to_tree $ USER_DEFINED s ts
     as_tree' (GENERIC x)   = return $ Str x
     as_tree' (VARIABLE n)  = return $ Str $ "_" ++ n
-    rewriteM' f s0 (Gen s ts) = do
-            (s1,ys) <- fold_mapM f s0 ts
-            return (s1, Gen s ys)
-    rewriteM' _ s x@(VARIABLE _) = return (s,x)
-    rewriteM' _ s x@(GENERIC _)  = return (s,x)
+    rewriteM f (Gen s ts) = do
+            Gen s <$> traverse f ts
+    rewriteM _ x@(VARIABLE _) = pure x
+    rewriteM _ x@(GENERIC _)  = pure x
 
 instance Tree FOType where
     as_tree' (FOT s ts) = cons_to_tree $ USER_DEFINED s ts
-    rewriteM' f s0 (FOT s ts) = do
-            (s1,ys) <- fold_mapM f s0 ts
-            return (s1, FOT s ys)
+    rewriteM f (FOT s ts) = FOT s <$> traverse f ts
 
 instance Lift GenericType where
     lift = defaultLift

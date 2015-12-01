@@ -49,7 +49,6 @@ import Prelude as L
 import Utilities.Error
 import Utilities.Format
 
-
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
 suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
@@ -97,7 +96,7 @@ instance TypeSystem2 FOType where
                 , "  expression: {0}"
                 , "  actual type: {1}"
                 , "  expected type: {2} "
-                ]) e (type_of e) t :: String }
+                ]) (pretty e) (type_of e) t :: String }
             unless (type_of e == t)
                 $  Left [err_msg]
             return e
@@ -128,7 +127,7 @@ instance TypeSystem2 GenericType where
                 , "  expression: {0}"
                 , "  actual type: {1}"
                 , "  expected type: {2} "
-                ]) e (type_of e) t :: String }
+                ]) (pretty e) (type_of e) t :: String }
             u <- maybe (Left [err_msg]) Right $ 
                 unify t $ type_of e
             return $ specialize_right u e
@@ -173,11 +172,10 @@ typ_fun1 f@(Fun _ n _ ts t) mx        = do
                     ,  "     type {4}"
                     ] )
                     n ts t 
-                    x (type_of x) :: String
+                    (pretty x) (type_of x) :: String
         maybe (Left [err_msg]) Right $ check_args [x] f
 
-typ_fun2 :: ( TypeSystem2 t
-            )
+typ_fun2 :: ( TypeSystem2 t )
          => AbsFun t  -> TwoExprP t q
 typ_fun2 f@(Fun _ n _ ts t) mx my     = do
         x <- mx
@@ -191,8 +189,8 @@ typ_fun2 f@(Fun _ n _ ts t) mx my     = do
                     ,  "     type {6}"
                     ] )
                     n ts t 
-                    x (type_of x) 
-                    y (type_of y) :: String
+                    (pretty x) (type_of x) 
+                    (pretty y) (type_of y) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y] f
 
 typ_fun3 :: ( TypeSystem2 t )
@@ -213,9 +211,9 @@ typ_fun3 f@(Fun _ n _ ts t) mx my mz  = do
                     ,  "     type {8}"
                     ] )
                     n ts t 
-                    x (type_of x) 
-                    y (type_of y) 
-                    z (type_of z) :: String
+                    (pretty x) (type_of x) 
+                    (pretty y) (type_of y) 
+                    (pretty z) (type_of z) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y,z] f
 
 unify_aux :: [(Type,Type)] -> Maybe (Map String Type)

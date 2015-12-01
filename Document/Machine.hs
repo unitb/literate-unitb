@@ -12,16 +12,13 @@ module Document.Machine where
     --
 import Document.ExprScope as ES
 import Document.Pipeline
-import Document.Phase as P
 import Document.Phase.Types
 import Document.Refinement as Ref
 import Document.Scope
 
 import Logic.Expr
-import Logic.Proof.Tactics hiding ( with_line_info )
 
-import UnitB.AST as AST
-import UnitB.PO
+import UnitB.UnitB
 
     --
     -- Libraries
@@ -42,7 +39,6 @@ import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 
 import qualified Utilities.BipartiteGraph as G
-import Utilities.Format
 import Utilities.Syntactic
 
 make_machine :: MachineId -> MachineP4
@@ -71,7 +67,6 @@ make_machine (MId m) p4 = mch'
             del_vars  .= M.map fst (p4^.pDelVars)
             init_witness .= p4^.pInitWitness
             del_inits .= p4^.pDelInits
-            --{ _machine''Name = m
             inits .= p4^.pInit
             props .= p4^.pNewPropSet 
             derivation .= (ref_prog 
@@ -91,17 +86,7 @@ make_machine (MId m) p4 = mch'
                 -- = (live;adep \/ adep) ; eref \/ cdep
         mch' :: MM' c Machine
         mch' = do
-            let pos = raw_machine_pos mch
-                po_err = proofs `difference` pos
-            x <- all_errors $ flip map (toList po_err) $ \(lbl,(_,li)) -> 
-                Left [Error (format "proof obligation does not exist: {0}" lbl) li]
-            triggerM x
-            xs <- all_errors $ flip map (toList proofs) $ \(k,(tac,li)) -> do
-                p <- runTactic li (pos ! k) tac
-                return (k,p)
-            xs <- triggerM xs
-            return $ mutate Exc.assert mch $ 
-                       AST.proofs .= fromList xs
+            liftEither $ withPOs proofs mch
         events = p4^.pEventRef
         evts = events & G.traverseLeft %~ abstrEvt
                       & G.traverseRightWithEdgeInfo %~ uncurry concrEvt

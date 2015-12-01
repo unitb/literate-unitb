@@ -8,7 +8,7 @@ module Document.Pipeline where
     -- Modules
 import Document.Phase.Parameters
 import Latex.Parser as P
-import UnitB.AST
+import UnitB.Syntax
 
     -- Libraries
 import Control.Applicative
@@ -57,6 +57,10 @@ instance Show ContextId where
 
 instance IsString ContextId where
     fromString = CId
+
+liftEither :: Either [Error] a -> MM' c a
+liftEither (Left xs) = MM $ tell xs >> mzero
+liftEither (Right r) = return r
 
 argCount :: ArgumentSpec -> Int
 argCount (ArgumentSpec n _) = n

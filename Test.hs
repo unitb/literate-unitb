@@ -37,7 +37,7 @@ test_case = test_cases
 
 main :: IO ()
 main = do
-    writeFile "syntax.txt" $ unlines syntax
+    writeFile "syntax.txt" $ unlines syntaxSummary
     xs <- getDirectoryContents "."
     let prefix ys = any (ys `isPrefixOf`) xs
     when (prefix "actual-") $

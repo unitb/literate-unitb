@@ -12,8 +12,8 @@ import Documentation.SummaryGen
 
 import Logic.Expr
 
-import UnitB.AST
 import UnitB.PO
+import UnitB.UnitB
 
 import Z3.Z3
 

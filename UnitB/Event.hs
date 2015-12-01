@@ -114,7 +114,7 @@ type RawEventRef = EventRef RawExpr
 data EventRef expr = EvtRef 
         { _eventRefAbstract :: (SkipOrEvent,AbstrEvent' expr)  
         , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) 
-        } deriving (Generic,Show)
+        } deriving (Generic,Show,Eq)
 
 default_schedule :: IsGenExpr expr => Map Label expr
 default_schedule = M.fromList [(label "default", zfalse)]

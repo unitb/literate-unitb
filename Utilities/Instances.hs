@@ -126,8 +126,17 @@ class GDefault a where
 instance GDefault c => GDefault (M1 a b c) where
     gDefault = M1 gDefault
 
+class Default1 f where
+    def1 :: Default a => f a
+
+instance (Functor f,Default1 f,Default1 g,Default x) => Default (Compose f g x) where
+    def = Compose $ getFunctor <$> def1
+
 instance Default b => GDefault (K1 a b) where
     gDefault = K1 def
+
+instance (Default x,Default1 f) => Default (OnFunctor f x) where
+    def = OnFunctor def1
 
 instance (GDefault a,GDefault b) => GDefault (a:*:b) where
     gDefault = gDefault :*: gDefault
@@ -238,14 +247,14 @@ instance NFData1 [] where
 instance NFData1 NonEmpty where
     rnf1 = rnf
 instance (Functor f,NFData1 f,NFData1 g) => NFData1 (Compose f g) where
-    rnf1 = rnf . WithNFData . fmap WithNFData . getCompose
+    rnf1 = rnf . OnFunctor . fmap OnFunctor . getCompose
 instance NFData a => NFData1 ((,) a) where
     rnf1 = rnf
 instance NFData1 Maybe where
     rnf1 = rnf
 
-newtype WithNFData f a = WithNFData { getNFData :: (f a) }
+newtype OnFunctor f a = OnFunctor { getFunctor :: (f a) }
 
-instance (NFData a,NFData1 f) => NFData (WithNFData f a) where
-    rnf = rnf1 . getNFData
+instance (NFData a,NFData1 f) => NFData (OnFunctor f a) where
+    rnf = rnf1 . getFunctor
 

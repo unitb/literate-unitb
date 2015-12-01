@@ -10,8 +10,8 @@ module Documentation.SummaryGen
 where
 
     -- Modules
-import UnitB.AST
-import UnitB.Expr hiding ((</>))
+import UnitB.Expr   hiding ((</>))
+import UnitB.UnitB
 
     -- Libraries
 import Control.Lens hiding ((<.>),indices)

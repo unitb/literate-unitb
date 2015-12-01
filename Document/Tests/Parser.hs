@@ -9,8 +9,6 @@ import Logic.Expr.QuasiQuote
 import Tests.UnitTest
 
 import UnitB.Expr
-import UnitB.Event
-import UnitB.Machine
 
     -- Library
 import Control.Lens

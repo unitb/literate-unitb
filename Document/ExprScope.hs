@@ -9,8 +9,8 @@ module Document.ExprScope where
 import Document.Scope
 import Document.Phase.Types
 
-import UnitB.AST 
 import UnitB.Expr hiding (Const)
+import UnitB.Syntax 
 
     -- Libraries
 import Control.Lens
