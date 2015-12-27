@@ -1,9 +1,12 @@
-{-# LANGUAGE TypeFamilies       #-}
-{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE TypeFamilies
+        , LambdaCase
+        , OverloadedStrings  #-}
 module Logic.Expr.Type where
 
     -- Modules
 import Logic.Expr.Classes
+import Logic.Expr.PrettyPrint
+import Logic.Names
 
     -- Libraries
 import Control.DeepSeq
@@ -13,14 +16,14 @@ import Control.Monad.Reader
 import           Data.Data
 import qualified Data.Set as S
 
-import           GHC.Generics hiding (to)
-
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax hiding (Name)
 
 import           Test.QuickCheck
 
-import           Utilities.Format
+import           Text.Printf
+
 import           Utilities.Instances
+import           Utilities.Partial
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
@@ -31,7 +34,8 @@ referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 instance Typed GenericType where
     type TypeOf GenericType = GenericType
 
-class (Ord a, Tree a, Show a, Typed a, TypeOf a ~ a) => TypeSystem a where
+class (Ord a, Tree a, PrettyPrintable a, Show a, Typed a, TypeOf a ~ a, Typeable a) 
+        => TypeSystem a where
     type_cons :: a -> Maybe (TypeCons a)
     make_type :: Sort -> [a] -> a
 
@@ -54,24 +58,31 @@ instance TypeSystem () where
     type_cons () = Nothing
     make_type _ _ = ()
 
-type Type = GenericType
+instance PrettyPrintable () where
+    pretty = show
 
-data GenericType = 
-        Gen Sort [GenericType] 
-        | GENERIC String
-        | VARIABLE String
-    deriving (Eq, Ord, Typeable, Generic, Data)
+type Type = GenericType
+type GenericType = AbsType InternalName
+type TaggedType  = AbsType TaggedName
+type TaggedName  = (Int,InternalName)
+type Tag = InternalName -> TaggedName
+
+data AbsType n = 
+        Gen Sort [AbsType n] 
+        | GENERIC n
+        | VARIABLE InternalName
+    deriving (Eq,Ord,Typeable,Generic,Data,Show,Functor,Foldable,Traversable)
 
 data FOType      = FOT Sort [FOType]
-    deriving (Eq, Ord, Typeable, Generic)
+    deriving (Eq, Ord, Typeable, Generic, Show)
 
 data TypeCons a = USER_DEFINED Sort [a]
     deriving (Eq, Ord, Show, Generic, Typeable)
 
 instance Tree GenericType where
     as_tree' (Gen s ts) = cons_to_tree $ USER_DEFINED s ts
-    as_tree' (GENERIC x)   = return $ Str x
-    as_tree' (VARIABLE n)  = return $ Str $ "_" ++ n
+    as_tree' (GENERIC x)   = return $ Str $ render x
+    as_tree' (VARIABLE n)  = return $ Str $ "_" ++ render n
     rewriteM f (Gen s ts) = do
             Gen s <$> traverse f ts
     rewriteM _ x@(VARIABLE _) = pure x
@@ -82,37 +93,37 @@ instance Tree FOType where
     rewriteM f (FOT s ts) = FOT s <$> traverse f ts
 
 instance Lift GenericType where
-    lift = defaultLift
+    lift = genericLift
 
 as_generic :: FOType -> GenericType
 as_generic (FOT s ts) = Gen s (map as_generic ts)
 
-cons_to_tree :: Tree a => TypeCons a -> Reader OutputMode StrList
+cons_to_tree :: Tree a => TypeCons a -> Reader (OutputMode n) StrList
 cons_to_tree (USER_DEFINED s []) = do
     opt <- ask
     let n = case opt of
-                ProverOutput -> z3_name s
-                UserOutput -> s^.name
+                ProverOutput -> render $ z3_name s
+                UserOutput -> render $ s^.name
     return $ Str n
 cons_to_tree (USER_DEFINED s ts) = do
     opt <- ask
     let n = case opt of
-                ProverOutput -> z3_name s
-                UserOutput -> s^.name
+                ProverOutput -> render $ z3_name s
+                UserOutput -> render $ s^.name
     return $ List (Str n : map as_tree ts)
 
 data Sort =
         BoolSort | IntSort | RealSort 
         | DefSort 
-            String      -- Latex name
-            String      -- Type name
-            [String]    -- Generic Parameter
+            Name        -- Latex name
+            InternalName    -- Type name
+            [Name]  -- Generic Parameter
             GenericType -- Type with variables
-        | Sort String String Int --[String]
+        | Sort Name InternalName Int
         | Datatype 
-            [String]    -- Parameters
-            String      -- type name
-            [(String, [(String,GenericType)])] 
+            [Name]    -- Parameters
+            Name      -- type name
+            [(Name, [(Name,GenericType)])] 
                         -- alternatives and named components
     deriving (Eq, Ord, Show, Typeable, Data, Generic)
 
@@ -124,67 +135,74 @@ typeParams (Sort _ _ n) = n
 typeParams (DefSort _ _ ps _) = length ps
 typeParams (Datatype xs _ _)  = length xs
 
-instance Show FOType where
-    show (FOT s []) = (z3_name s)
-    show (FOT s ts) = format "{0} {1}" (z3_name s) ts
+instance PrettyPrintable FOType where
+    pretty (FOT s []) = (render $ z3_name s)
+    pretty (FOT s ts) = printf "%s %s" (render $ s^.name) (show $ map Pretty ts)
 
-instance Show GenericType where
-    show (GENERIC n)         = format "_{0}" n 
-    show (VARIABLE n)        = format "'{0}" n 
-    show (Gen s []) = s^.name
-    show (Gen s ts) = format "{0} {1}" (s^.name) ts
+instance PrettyPrintable GenericType where
+    pretty (GENERIC n)         = "_" ++ render n 
+    pretty (VARIABLE n)        = "'" ++ render n 
+    pretty (Gen s []) = render $ s^.name
+    pretty (Gen s ts) = printf "%s %s" (render $ s^.name) (show $ map Pretty ts)
 
-instance HasName Sort String where
+instance HasName Sort Name where
     name = to $ \case 
         (Sort x _ _) -> x
         (DefSort x _ _ _) -> x
         (Datatype _ x _)  -> x
-        BoolSort   -> "\\Bool"
-        IntSort    -> "\\Int"
-        RealSort   -> "\\Real"
+        BoolSort   -> makeName assert "\\Bool"
+        IntSort    -> makeName assert "\\Int"
+        RealSort   -> makeName assert "\\Real"
 
 instance Named Sort where
+    type NameOf Sort = Name
     decorated_name' s = do
         opt <- ask
         case opt of
             ProverOutput -> return $ z3_name s
             UserOutput -> return $ s^.name
 
+        -- TODO: make BoolSort, IntSort, RealSort into 
+        -- the Sort datatype with a 'builtin' flag
     z3_name (Sort _ x _) = x
     z3_name (DefSort _ x _ _) = x
-    z3_name (Datatype _ x _)  = x
-    z3_name BoolSort   = "Bool"
-    z3_name IntSort    = "Int"
-    z3_name RealSort   = "Real"
+    z3_name (Datatype _ x _)  = asInternal x
+    z3_name BoolSort   = fromString'' "Bool"
+    z3_name IntSort    = fromString'' "Int"
+    z3_name RealSort   = fromString'' "Real"
 
 instance Lift Sort where
-    lift = defaultLift
+    lift = genericLift
 
 pair_sort :: Sort
 pair_sort = -- Sort "Pair" "Pair" 2
-               Datatype ["a","b"] "Pair" 
-                    [ ("pair", 
-                        [ ("first",  GENERIC "a")
-                        , ("second", GENERIC "b") ]) ]
+               Datatype [fromString'' "a",fromString'' "b"] 
+                    (fromString'' "Pair")
+                    [ (fromString'' "pair", 
+                        [ (fromString'' "first",  gA)
+                        , (fromString'' "second", gB) ]) ]
 
 
 pair_type :: TypeSystem t => t -> t -> t
 pair_type x y = make_type pair_sort [x,y]
 
 null_sort :: Sort
-null_sort = Sort "Null" "Null" 2
+null_sort = Datatype [] (fromString'' "Null") [ (fromString'' "null", []) ] 
 
 null_type :: TypeSystem t => t
 null_type = make_type null_sort []
 
 maybe_sort :: Sort
-maybe_sort   = Sort "\\maybe" "Maybe" 1
+maybe_sort   = Datatype [fromString'' "a"] (fromString'' "Maybe")
+                    [ (fromString'' "Just", [(fromString'' "fromJust", gA)])
+                    , (fromString'' "Nothing", []) ]
 
 maybe_type :: TypeSystem t => t -> t
 maybe_type t = make_type maybe_sort [t]
 
 fun_sort :: Sort
-fun_sort = DefSort "\\pfun" "pfun" ["a","b"] (array (GENERIC "a") (maybe_type $ GENERIC "b"))
+fun_sort = make DefSort "\\pfun"
+        "pfun" [fromString'' "a",fromString'' "b"] (array gA (maybe_type gB))
 
 fun_type :: TypeSystem t => t -> t -> t
 fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
@@ -193,13 +211,13 @@ bool :: TypeSystem t => t
 bool = make_type BoolSort []
     
 array_sort :: Sort
-array_sort = Sort "Array" "Array" 2
+array_sort = make Sort "Array" "Array" 2
 
 array :: TypeSystem t => t -> t -> t
 array t0 t1 = make_type array_sort [t0,t1]
 
 set_sort :: Sort
-set_sort = DefSort "\\set" "set" ["a"] (array (GENERIC "a") bool)
+set_sort = make DefSort "\\set" "set" [fromString'' "a"] (array gA bool)
 
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
@@ -221,6 +239,27 @@ instance Arbitrary Sort where
         --    [String]    -- Parameters
         --    String      -- type name
         --    [(String, [(String,GenericType)])] 
+
+gA :: GenericType
+gA = GENERIC $ fromString'' "a"
+
+gB :: GenericType
+gB = GENERIC $ fromString'' "b"
+
+gC :: GenericType
+gC = GENERIC $ fromString'' "c"
+
+z3Sort :: (?loc :: CallStack) 
+       => String -> String -> Int -> Sort
+z3Sort n0 n1 = Sort (fromString'' n0) (z3Name n1)
+
+z3DefSort :: (?loc :: CallStack) 
+          => String -> String -> [String] -> GenericType -> Sort
+z3DefSort n0 n1 ps = DefSort (fromString'' n0) (fromString'' n1) (fromString'' <$> ps)
+
+z3GENERIC :: (?loc :: CallStack)
+          => String -> GenericType
+z3GENERIC = GENERIC . fromString''
 
 instance Arbitrary GenericType where
     arbitrary = oneof (
@@ -258,19 +297,21 @@ instance Arbitrary GenericType where
                 ] ) )
         where
             sorts = map return
-                [ Sort "A" "A" 0
-                , Sort "B" "B" 1
-                , Sort "C" "C" 1
-                , Sort "D" "D" 2
-                , DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+                [ make Sort "A" "A" 0
+                , make Sort "B" "B" 1
+                , make Sort "C" "C" 1
+                , make Sort "D" "D" 2
+                , make DefSort "E" "E" 
+                            [ fromString'' "a"
+                            , fromString'' "b"] $ array gA gB
                 , BoolSort
                 , IntSort
                 , RealSort
                 ]
             gen_prm = map return
-                [ GENERIC "a"
-                , GENERIC "b"
-                , GENERIC "c"
+                [ gA
+                , gB
+                , gC
                 ]
     shrink (GENERIC _)  = []
     shrink (VARIABLE _) = []

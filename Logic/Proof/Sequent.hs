@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE TypeOperators
+    , TypeFamilies #-}
 module Logic.Proof.Sequent where
 
     -- Modules
@@ -14,7 +15,6 @@ import Control.Monad.RWS
 import Data.Char
 import Data.Default
 import Data.List as L
-import Data.List.Ordered as OL hiding (merge)
 import Data.Map    as M hiding ( map )
 import Data.Maybe  as MM hiding (fromJust)
 import qualified Data.Set  as S
@@ -23,28 +23,33 @@ import Data.Typeable
 import Utilities.Format
 import Utilities.Instances
 import Utilities.Lines
+import Utilities.Partial
 import Utilities.TH
 
 import Text.Printf
 
+--type Sequent = AbsSequent GenericType HOQuantifier
+
 type Sequent = AbsSequent GenericType HOQuantifier
 
-type Sequent' = AbsSequent GenericType FOQuantifier
+type Sequent' = GenSequent InternalName GenericType FOQuantifier
 
-type FOSequent = AbsSequent FOType FOQuantifier
+type FOSequent = GenSequent InternalName FOType FOQuantifier
+
+type AbsSequent = GenSequent Name
 
 data SyntacticProp = SyntacticProp  
-        { _associative  :: Map String ExprP
+        { _associative  :: Map Name ExprP
         , _monotonicity :: Map (Relation,Function) (ArgDep Rel) }
             -- (rel,fun) --> rel
     deriving (Eq,Show,Generic)
 
-preserve :: Fun -> [String] -> [((String,String),ArgDep Rel)]
+preserve :: Fun -> [Function] -> [((Relation,Function),ArgDep Rel)]
 preserve op funs = [((view name op,f),Independent $ Rel op Direct) | f <- funs ]
 
-type Function = String
+type Function = Name
 
-type Relation = String
+type Relation = Name
 
 data Flipping = Flipped | Direct
     deriving (Eq,Show,Generic,Typeable)
@@ -58,37 +63,38 @@ data ArgDep a = Side (Maybe a) (Maybe a) | Independent a
 data ArgumentPos = RightArg | LeftArg | MiddleArg
     deriving (Show)
 
-data AbsSequent t q = Sequent 
-        { _absSequentContext  :: AbsContext t q
-        , _absSequentSyntacticThm :: SyntacticProp
-        , _absSequentNameless :: [AbsExpr t q] 
-        , _absSequentNamed :: Map Label (AbsExpr t q)
-        , _absSequentGoal  :: AbsExpr t q }
+data GenSequent name t q = Sequent 
+        { _genSequentContext  :: GenContext name t q
+        , _genSequentSyntacticThm :: SyntacticProp
+        , _genSequentNameless :: [AbsExpr name t q] 
+        , _genSequentNamed :: Map Label (AbsExpr name t q)
+        , _genSequentGoal  :: AbsExpr name t q }
     deriving (Eq, Generic, Show)
 
 -- class HasGoal a b | a -> b where
 --     goal :: Getter a b
 
-makeFields ''AbsSequent
-makeLenses ''AbsSequent
+makeFields ''GenSequent
+makeLenses ''GenSequent
 makeClassy ''SyntacticProp
 mkCons ''SyntacticProp
 
 instance Default SyntacticProp where
     def = empty_monotonicity
 
-instance HasExprs (AbsSequent t q) (AbsExpr t q) where
+instance HasExprs (GenSequent n t q) (AbsExpr n t q) where
     traverseExprs f (Sequent ctx prop hyp0 hyp1 g) = 
         Sequent ctx prop 
                 <$> traverse f hyp0 
                 <*> traverse f hyp1 
                 <*> f g
 
-instance HasConstants (AbsSequent t q) (Map String (AbsVar t)) where
+instance HasConstants (GenSequent n t q) (Map n (AbsVar n t)) where
     constants = context.constants
 
-predefined :: [String]
-predefined = [ "=","union","and","or","=>","<=","<",">","^"
+predefined :: [InternalName]
+predefined = map fromString''
+             [ "=","union","and","or","=>","<=","<",">","^"
              , "subset","select","true","false"
              , "intersect","+","-","*","/","not"
              , "Just", "Nothing", "pair"
@@ -105,7 +111,7 @@ checkScopesAux (Const _ _) = return ()
 checkScopesAux e@(FunApp fn args) = do
     b0 <- views functions (M.member $ fn^.name)
     b1 <- views definitions (M.member $ fn^.name)
-    unless (b0 || b1 || ((fn^.name) `elem` predefined)) 
+    unless (b0 || b1 || ((z3_name fn) `elem` predefined)) 
         $ tell [e]
     mapM_ checkScopesAux args
 checkScopesAux (Binder _ vs r t _) =
@@ -116,11 +122,11 @@ checkScopesAux (Cast e _) = do
 checkScopesAux (Lift e _) = do
     checkScopesAux e
 
-checkSequent :: (forall a. Bool -> a -> a) -> Sequent -> Sequent
-checkSequent arse s = byPred arse msg (const $ L.null xs) s s
+checkSequent :: Assert -> Sequent -> Sequent
+checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
          --assertMessage "invalid scopes" (unlines $ map show xs) id s
     where
-        msg = printf "Sequent scopes: \n%s" $ L.unlines $ map show xs
+        msg = printf "Sequent scopes: \n%s" $ L.unlines $ map pretty_print' xs
         --f (Def ts _ n ps t e) = _
         checkScopes' e = do
             xs <- snd <$> listen (checkScopesAux e)
@@ -135,9 +141,10 @@ checkSequent arse s = byPred arse msg (const $ L.null xs) s s
         f (Def _ _ ts _ e) = local (constants %~ M.union (symbol_table ts)) $ checkScopes' e
         travDefs = local (definitions .~ M.empty) 
                 $ traverseOf_ traverse f $ ctx^.definitions
+        xs :: [Expr]
         xs  = snd $ execRWS (travAsserts >> travDefs) ctx ()
 
-expressions :: Getter (AbsSequent t q) [AbsExpr t q]
+expressions :: Getter (GenSequent n t q) [AbsExpr n t q]
 expressions = to $ \s -> (s^.goal) : (s^.nameless) ++ (M.elems $ s^.named)
 
 leftMono :: ArgDep a -> Maybe a
@@ -153,7 +160,7 @@ middleMono (Independent m) = Just m
 middleMono _ = Nothing
 
 isAssociative :: SyntacticProp -> Fun -> Maybe ExprP
-isAssociative sp f = view name f `M.lookup` (sp^.associative)
+isAssociative sp f = (f^.name) `M.lookup` (sp^.associative)
 
 isMonotonic :: HasSyntacticProp m
             => m -> Relation -> Function 
@@ -170,8 +177,8 @@ isMonotonic m rel fun pos = do
         Flipped ->
             return $ flip $ typ_fun2 rel
 
-instance HasAbsContext (AbsSequent a b) a b where
-    absContext = context
+instance HasGenContext (GenSequent n a b) n a b where
+    genContext = context
 
 empty_monotonicity :: SyntacticProp
 empty_monotonicity = makeSyntacticProp
@@ -189,28 +196,28 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
         where
             indent = over traverseLines (" " ++)
             asms   = map indent $ 
-                    ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ map f $ toList ss)]
-                    ++ (map show $ elems fs)
-                    ++ (map show $ elems ds)
-                    ++ (map show $ elems vs)
+                    ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ MM.mapMaybe f $ toList ss)]
+                    ++ (map pretty $ elems fs)
+                    ++ (map pretty $ elems ds)
+                    ++ (map pretty $ elems vs)
                     ++ map pretty_print' hs
             goal' = indent $ pretty_print' g
             Context ss vs fs ds _ = s^.context
             hs = elems (s^.named) ++ s^.nameless
             g  = s^.goal
-            f (_, IntSort) = ""
-            f (_, BoolSort) = ""
-            f (_, RealSort) = ""
-            f (x, Datatype args n _) = f (x, Sort n n $ length args)
+            f (_, IntSort)  = Nothing
+            f (_, BoolSort) = Nothing
+            f (_, RealSort) = Nothing
+            f (x, Datatype args n _) = f (x, Sort n (asInternal n) $ length args)
             f (x, DefSort y z xs _)  = f (x, Sort y z $ length xs)
-            f (_, Sort _ z 0) = z
-            f (_, Sort _ z n) = format "{0} [{1}]" z (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
+            f (_, Sort _ z 0) = Just $ render z
+            f (_, Sort _ z n) = Just $ format "{0} [{1}]" (render z) (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
 remove_type_vars :: Sequent' -> FOSequent
 remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
     where
         (Context sorts _ _ dd _) = ctx
-        _ = dd :: Map String Def'
+        _ = dd :: Map InternalName Def'
         asm_types = MM.catMaybes 
                     $ map type_strip_generics 
                     $ S.elems $ S.unions 
@@ -230,7 +237,8 @@ remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
         goal' :: FOExpr
         goal' = vars_to_sorts sorts goal
 
-one_point :: (IsQuantifier q, TypeSystem2 t) => AbsSequent t q -> AbsSequent t q
+one_point :: (IsQuantifier q, TypeSystem2 t,IsName n) 
+          => GenSequent n t q -> GenSequent n t q
 one_point s = s & goal .~ g'
                 & nameless %~ asm
     where
@@ -251,7 +259,8 @@ differs_by_one xs ys = f $ zip ws $ zip xs ys
             | all (uncurry (==) . snd) xs = Just (i,x,y)
             | otherwise     = Nothing
 
-flatten_assoc :: Fun -> [Expr] -> [Expr]
+flatten_assoc :: (IsGenExpr expr,TypeT expr ~ Type) 
+              => FunT expr -> [expr] -> [expr]
 flatten_assoc fun xs = concatMap f xs
     where
         f (FunApp fun' xs)
@@ -294,11 +303,11 @@ apply_monotonicity po = fromMaybe po $
                         | L.null vs = rs `zimplies` ts
                         | otherwise = zforall vs rs ts
                 return $ apply_monotonicity $ po' & constants %~ M.insert (view name v) v
-                                                  & goal .~ rename nam (view name v) g'
+                                                  & goal .~ rename nam (v^.name) g'
             FunApp f [lhs, rhs] ->
                 case (lhs,rhs) of
                     (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
-                        | shared vs us && view name f `elem` ["=","=>"] -> do
+                        | shared vs us && z3_name f `elem` map fromString'' ["=","=>"] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -307,7 +316,7 @@ apply_monotonicity po = fromMaybe po $
                                     (zforall vs' ztrue $ 
                                         FunApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
                     (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
-                        | shared vs us && view name f `elem` ["=","=>"] -> do
+                        | shared vs us && z3_name f `elem` map fromString'' ["=","=>"] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -317,17 +326,17 @@ apply_monotonicity po = fromMaybe po $
                                         FunApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
                     (Binder q0 vs r0 t0 _, Binder q1 us r1 t1 _)
                         | q0 == q1 && vs == us 
-                            && r0 == r1 && view name f == "=" -> 
+                            && r0 == r1 && z3_name f == fromString'' "=" -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs r0 $ t0 `zeq` t1)
                         | q0 == q1 && vs == us 
-                            && t0 == t1 && view name f == "=" -> 
+                            && t0 == t1 && z3_name f == fromString'' "=" -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs ztrue $ r0 `zeq` r1)
                     (FunApp g0 xs, FunApp g1 ys)
                         | (length xs /= length ys && isNothing (isAssociative mm' g0))
                             || g0 /= g1 -> Nothing
-                        | view name f == "=" -> do
+                        | z3_name f == fromString'' "=" -> do
                             (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
                                 po' & goal .~ FunApp f [x, y]
@@ -363,6 +372,10 @@ apply_monotonicity po = fromMaybe po $
                     _ -> Nothing
             _ -> Nothing
     where
+        difference :: Fun
+                   -> [Expr] 
+                   -> [Expr] 
+                   -> Maybe (ArgumentPos, Expr, Expr)
         difference g0 xs ys = 
             differs_by_one xs ys <|> do
                 unit <- isAssociative mm' g0
@@ -375,18 +388,12 @@ apply_monotonicity po = fromMaybe po $
                 return (c,$typeCheck$ funApp x,$typeCheck$ funApp y)
         shared :: Eq a => [a] -> [a] -> Bool
         shared xs ys = not $ L.null $ intersect xs ys
-        mono :: String -> Fun -> [Expr] -> [Expr] -> Maybe Expr
+        mono :: Name -> Fun -> [Expr] -> [Expr] -> Maybe Expr
         mono rel fun xs ys = do
             (i,x,y) <- difference fun xs ys
             g       <- isMonotonic mm' rel (view name fun) i
             return ($typeCheck $ g (Right x) (Right y))
         mm' = po^.syntacticThm
-
-fresh :: String -> Map String () -> String
-fresh name xs = head $ ys `minus` M.keys xs
-    where
-        ys = name : map f [0..]
-        f x = name ++ show x
 
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment s0 s1 = (po0,po1)

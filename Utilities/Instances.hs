@@ -1,10 +1,23 @@
-{-# LANGUAGE TypeOperators,KindSignatures, TypeFamilies,ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators
+        , QuasiQuotes
+        , TemplateHaskell
+        , TypeFamilies
+        , KindSignatures
+        , TypeSynonymInstances
+        , FlexibleInstances
+        , FlexibleContexts
+        , DeriveFunctor
+        , ScopedTypeVariables
+        , MultiParamTypeClasses
+        , DefaultSignatures #-}
 module Utilities.Instances 
-    ( Generic, defaultLift, genericMEmpty, genericMAppend
+    ( Generic, genericLift, genericMEmpty, genericMAppend
     , genericMConcat, genericDefault, genericSemigroupMAppend
     , Intersection(..), genericSemigroupMAppendWith
+    , genericSemigroupMConcat, genericSemigroupMConcatWith
     , show1, NFData1(..), deepseq1
-    , genericArbitrary, inductive, listOf', arbitrary' )
+    , genericArbitrary, inductive, listOf', arbitrary' 
+    , Lift1(..) )
 where
 
 import Control.DeepSeq
@@ -54,17 +67,21 @@ instance (GMonoid a,GMonoid b) => GMonoid (a :*: b) where
 
 class GSemigroupWith a where
     gSemiMAppend :: a p -> a p -> a p
+    gSemiMConcat :: NonEmpty (a p) -> a p
 
 instance (GSemigroupWith c) => GSemigroupWith (M1 a b c) where
     gSemiMAppend x y = M1 (gSemiMAppend (unM1 x) (unM1 y))
+    gSemiMConcat xs  = M1 (gSemiMConcat $ unM1 <$> xs)
 
 instance Semigroup b => GSemigroupWith (K1 a b) where
     gSemiMAppend x y = K1 (unK1 x <> unK1 y)
+    gSemiMConcat xs  = K1 (sconcat $ unK1 <$> xs)
 
 instance (GSemigroupWith a,GSemigroupWith b) 
         => GSemigroupWith (a :*: b) where
     gSemiMAppend x y = gSemiMAppend (left x) (left y) :*:
                              gSemiMAppend (right x) (right y)
+    gSemiMConcat xs = gSemiMConcat (left <$> xs) :*: gSemiMConcat (right <$> xs)
 
 left :: (a :*: b) p -> a p
 left (x :*: _) = x
@@ -104,8 +121,16 @@ genericMConcat xs = to $ gmconcat $ map from xs
 genericSemigroupMAppend :: (Generic a, GSemigroupWith (Rep a)) => a -> a -> a
 genericSemigroupMAppend x y = to $ gSemiMAppend (from x) (from y)
 
-genericSemigroupMAppendWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) => f a -> f a -> f a
+genericSemigroupMConcat :: (Generic a, GSemigroupWith (Rep a)) => NonEmpty a -> a
+genericSemigroupMConcat xs = to $ gSemiMConcat (from <$> xs)
+
+genericSemigroupMAppendWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) 
+                            => f a -> f a -> f a
 genericSemigroupMAppendWith x y = to <$> get (gSemiMAppend (put $ from <$> x) (put $ from <$> y))
+
+genericSemigroupMConcatWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) 
+                            => NonEmpty (f a) -> f a
+genericSemigroupMConcatWith xs = to <$> get (gSemiMConcat $ put.fmap from <$> xs)
 
 newtype Intersection a = Intersection { getIntersection :: a }
     deriving (Functor)
@@ -200,8 +225,14 @@ instance GLifts U1 where
 instance (GLifts a, GLifts b) => GLifts (a :*: b) where
     glifts (x :*: y) = glifts x ++ glifts y
 
-defaultLift :: (Generic a, GLift (Rep a)) => a -> ExpQ
-defaultLift = glift . from
+genericLift :: (Generic a, GLift (Rep a)) => a -> ExpQ
+genericLift = glift . from
+
+instance Lift a => Lift (NonEmpty a) where
+    lift = genericLift
+
+instance Lift Loc where
+    lift = genericLift
 
 inductive :: (Compose Maybe Gen a -> [Compose Maybe Gen a]) -> Gen a
 inductive f = sized $ fix $ \ind n -> oneof =<< catMaybes . map getCompose . f <$> cmd ind n
@@ -222,6 +253,12 @@ instance Eq a => Eq1 (Const a) where
 
 instance Eq1 NonEmpty where
     eq1 = (==)
+
+instance Ord a => Ord1 (Const a) where
+    compare1 = compare
+
+instance Ord1 NonEmpty where
+    compare1 = compare
 
 instance Show a => Show1 (Const a) where
     showsPrec1 = showsPrec
@@ -258,3 +295,26 @@ newtype OnFunctor f a = OnFunctor { getFunctor :: (f a) }
 instance (NFData a,NFData1 f) => NFData (OnFunctor f a) where
     rnf = rnf1 . getFunctor
 
+class Lift1 f where
+    lift1 :: Lift a => f a -> ExpQ
+
+instance Lift a => Lift (Const a b) where
+    lift (Const x) = [e| Const $(lift x) |]
+instance Lift a => Lift (Identity a) where
+    lift (Identity x) = [e| Identity $(lift x) |]
+instance Lift a => Lift1 (Const a) where
+    lift1 = lift
+instance Lift1 Identity where
+    lift1 = lift
+instance Lift1 [] where
+    lift1 = lift
+instance Lift1 NonEmpty where
+    lift1 = lift
+instance (Lift1 f,Lift1 g,Functor f) => Lift1 (Compose f g) where
+    lift1 (Compose x) = lift1 $ OnFunctor <$> x
+instance (Lift1 f,Lift a) => Lift (OnFunctor f a) where
+    lift (OnFunctor x) = lift1 x
+instance Lift a => Lift1 ((,) a) where
+    lift1 = lift
+instance Lift1 Maybe where
+    lift1 = lift

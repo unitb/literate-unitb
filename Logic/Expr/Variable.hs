@@ -3,46 +3,74 @@ module Logic.Expr.Variable where
 
     -- Module
 import Logic.Expr.Classes
+import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
+import Logic.Names
 
     -- Library
-import           GHC.Generics hiding (to)
+import           GHC.Generics (Generic)
 
 import Control.Lens hiding (rewrite,Context
-                           ,Const,Context',List)
+                           ,Const,Context',List
+                           ,Traversable1(..))
 
 import Data.Data
 import Data.Map as M
 
-type UntypedVar = AbsVar ()
+import Utilities.Functor
+import Utilities.Partial
 
-type Var = AbsVar GenericType
+type UntypedVar = AbsVar Name ()
 
-type FOVar = AbsVar FOType
+type Var = AbsVar Name GenericType
 
-data AbsVar t = Var String t
-    deriving (Eq,Ord,Generic,Typeable,Data)
+type Var' = AbsVar InternalName Type
 
-instance TypeSystem t => Tree (AbsVar t) where
+type FOVar = AbsVar InternalName FOType
+
+data AbsVar name t = Var name t
+    deriving (Eq,Ord,Generic,Typeable,Data,Functor,Foldable,Traversable,Show)
+
+translate' :: (n0 -> n1) -> AbsVar n0 t -> AbsVar n1 t
+translate' = fmap1
+
+instance IsName n => Translatable (AbsVar n t) (AbsVar InternalName t) where
+    translate = translate' asInternal
+
+instance (TypeSystem t,IsName n) => Tree (AbsVar n t) where
     as_tree' (Var vn vt) = do
         t <- as_tree' vt
-        return $ List [Str vn, t]
+        return $ List [Str $ render vn, t]
     rewriteM _ = pure
 
-instance TypeSystem t => Show (AbsVar t) where
-    show (Var n t) = n ++ ": " ++ show (as_tree t)
+instance (TypeSystem t, IsName n) => Typed (AbsVar n t) where
+    type TypeOf (AbsVar n t) = t
 
-instance TypeSystem t => Typed (AbsVar t) where
-    type TypeOf (AbsVar t) = t
+instance (TypeSystem t, IsName n) => PrettyPrintable (AbsVar n t) where
+    pretty (Var n t) = render n ++ ": " ++ show (as_tree t)
 
-prime :: AbsVar t -> AbsVar t
-prime (Var n t) = Var (n ++ "@prime") t
+instance Functor1 AbsVar where
+instance Foldable1 AbsVar where
+instance Traversable1 AbsVar where
+    traverse1 f (Var n t) = Var <$> f n <*> pure t
 
-primeAll :: Map String (AbsVar t) -> Map String (AbsVar t)
-primeAll m = M.mapKeys (++ "@prime") $ M.map prime m
+prime :: IsName n => AbsVar n t -> AbsVar n t
+prime (Var n t) = Var (addPrime n) t
 
-instance HasName (AbsVar t) String where
+primeAll :: IsName n => Map n (AbsVar n t) -> Map n (AbsVar n t)
+primeAll m = M.mapKeys addPrime $ M.map prime m
+
+z3Var :: (?loc :: CallStack)
+      => String -> t -> AbsVar Name t
+z3Var = Var . fromString''
+
+instance HasName (AbsVar n t) n where
     name = to $ \(Var x _) -> x
 
-instance Named (AbsVar t) where
-    decorated_name' = return . view name
+instance IsName n => HasNames (AbsVar n t) n where
+    type SetNameT n' (AbsVar n t) = AbsVar n' t
+    namesOf f (Var x t) = Var <$> f x <*> pure t
+
+instance (IsName n,Typeable t) => Named (AbsVar n t) where
+    type NameOf (AbsVar n t) = n
+    decorated_name' (Var x _) = adaptName x

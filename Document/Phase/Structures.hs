@@ -41,6 +41,8 @@ import           Data.List as L hiding ( union, insert, inits )
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 
+import Text.Printf
+
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
 import Utilities.Syntactic
@@ -95,7 +97,7 @@ run_phase1_types = proc p0 -> do
     --     -- BIG FLAG
     let _ = evts' :: MTable (G.BiGraph SkipOrEvent () ())
         f th = M.unions $ map (view AST.types) $ M.elems th
-        basic = fromList [("arithmetic",arithmetic),("basic",basic_theory)]
+        basic = symbol_table [arithmetic,basic_theory]
         imp_th = M.map (union basic . M.map fst) imp_th'
         all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th
         p1 = make_phase1 <$> p0 <.> imp_th 
@@ -110,10 +112,10 @@ run_phase1_types = proc p0 -> do
     refClash = format "Multiple refinement clauses"
 
 make_phase1 :: MachineP0
-            -> Map String Theory
-            -> Map String Sort
-            -> Map String Sort
-            -> [(String, PostponedDef)]
+            -> Map Name Theory
+            -> Map Name Sort
+            -> Map Name Sort
+            -> [(Name, PostponedDef)]
             -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1
 make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
@@ -123,13 +125,13 @@ make_phase1 _p0 _pImports _pTypes _pAllTypes _pSetDecl evts = MachineP1 { .. }
         _t0         = TheoryP0 ()
 
 set_decl :: MPipeline MachineP0 
-            ( [(String,Sort,LineInfo)]
-            , [(String,PostponedDef)] )
+            ( [(Name,Sort,LineInfo)]
+            , [(Name,PostponedDef)] )
 set_decl = machineCmd "\\newset" $ \(Identity (SetName tag)) _m _ -> do
             let name     = tag 
-                new_sort = Sort tag (z3_escape name) 0
+                new_sort = Sort tag (asInternal name) 0
                 new_type = Gen new_sort []
-                new_def = Def [] (z3_escape name) [] (set_type new_type)
+                new_def = Def [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
             li <- lift ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
@@ -163,21 +165,22 @@ refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
 refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) -> do
             li <- lift ask
             unless (amch `M.member` ms) 
-                $ left [Error (format "Machine {0} refines a non-existant machine: {1}" cmch amch) li]
+                $ left [Error (printf "Machine %s refines a non-existant machine: %s" (pretty cmch) (pretty amch)) li]
                 -- check that mch is a machine
             return [((),amch,li)]
 
-import_theory :: MPipeline MachineP0 [(String, Theory, LineInfo)]
+import_theory :: MPipeline MachineP0 [(Name, Theory, LineInfo)]
 import_theory = machineCmd "\\with" $ \(Identity (TheoryName th_name)) _m _ -> do
-        let th = [ ("sets"       , set_theory)
-                 , ("functions"  , function_theory)
-                 , ("relations"  , relation_theory)
-                 , ("arithmetic" , arithmetic)
-                 , ("predcalc"   , pred_calc)
-                 , ("intervals"  , interval_theory) ]
-            msg = "Undefined theory: {0} "
+        let th = symbol_table
+                 [ set_theory
+                 , function_theory
+                 , relation_theory
+                 , arithmetic
+                 , pred_calc
+                 , interval_theory ]
+            msg = "Undefined theory: %s "
                 -- add suggestions
         li <- lift ask
-        case th_name `L.lookup` th of
-            Nothing -> left [Error (format msg th_name) li]
+        case th_name `M.lookup` th of
+            Nothing -> left [Error (printf msg $ render th_name) li]
             Just th -> return [(th_name,th,li)]

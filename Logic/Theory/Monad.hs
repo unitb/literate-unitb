@@ -19,7 +19,7 @@ import Control.Arrow
 import Control.Monad.RWS
 import Control.Monad.State
 import Control.Monad.Writer
-import Control.Lens hiding (Context,(.=),from,to,rewriteM)
+import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Either
 import           Data.Either.Combinators
@@ -28,49 +28,26 @@ import           Data.Map as M
 import qualified Data.Set as S
 import           Data.Typeable
 
-import GHC.Generics hiding ((:+:),prec)
-
-import Language.Haskell.TH hiding (Type)
+import Language.Haskell.TH hiding (Type,Name)
 
 import Utilities.Error
 import Utilities.Format
 --import Utilities.Instances
+import Utilities.Partial
 --import Utilities.TH
 import Utilities.Tuple
 
-class GBuild (g :: * -> *) where
-    gBuild :: g p -> [g p] -> g p
 
-instance GBuild U1 where
-    gBuild _ _ = U1
 
-instance (Show k, Ord k, Typeable a) 
-        => GBuild (K1 i (Map k a)) where
-    gBuild _ xs = K1 $ clash unK1 xs
 
-instance GBuild (K1 i Notation) where
-    gBuild _ xs = K1 
-        $ L.foldl combine empty_notation 
-        $ L.map unK1 xs        
 
-instance GBuild (K1 i SyntacticProp) where
-    gBuild _ ms = K1 $ mconcat $ L.map unK1 ms
 
-instance GBuild (K1 i [a]) where
-    gBuild _ ms = K1 $ concatMap unK1 ms
 
-instance GBuild a => GBuild (M1 i c a) where
-    gBuild (M1 m) xs = M1 $ gBuild m $ L.map unM1 xs
 
-instance (GBuild a, GBuild b) => GBuild (a :*: b) where
-    gBuild (x :*: y) xs = gBuild x (L.map fst xs) :*: gBuild y (L.map snd xs)
-        where
-            fst (x :*: _) = x
-            snd (_ :*: x) = x
 
 class Signature s where
     type FunType s :: *
-    funDecl' :: String -> [Type] -> s -> Fun
+    funDecl' :: Name -> [Type] -> s -> Fun
     utility' :: Fun -> Proxy s -> FunType s
     len' :: Proxy s -> Int
 
@@ -87,7 +64,7 @@ instance SignatureImpl () where
             es = lefts argsM
         unless (L.null es) $ Left $ concat es
         args <- sequence argsM
-        let ts' = repeat $ VARIABLE "unexpected"
+        let ts' = repeat $ VARIABLE $ fromString'' "unexpected"
             (Fun _ n _ ts t) = fun
             f e t = format (unlines
                     [ "    argument: {0}" 
@@ -103,7 +80,8 @@ instance SignatureImpl () where
             $ check_args args fun
         -- Right (FunApp fun $ reverse args)
 
-utility :: forall s. Signature s => String -> s -> FunType s
+utility :: forall s. (Signature s) 
+        => Name -> s -> FunType s
 utility name f = utility' (funDecl name f) (Proxy :: Proxy s)
 
 instance SignatureImpl as => SignatureImpl (Type :+: as) where
@@ -111,7 +89,7 @@ instance SignatureImpl as => SignatureImpl (Type :+: as) where
     typeList (t :+: ts) = t : typeList ts
     utilityImpl fun args Proxy e = utilityImpl fun (e:args) (Proxy :: Proxy as)
 
-funDecl :: Signature s => String -> s -> Fun
+funDecl :: (Signature s) => Name -> s -> Fun
 funDecl name = funDecl' name []
 
 instance (IsTuple t, SignatureImpl (TypeList t)) => Signature (t,Type) where
@@ -125,14 +103,15 @@ instance Signature t => Signature (Type -> t) where
     len' Proxy = len' (Proxy :: Proxy t)
     funDecl' name tp f = funDecl' name (gP:tp) (f gP)
         where
-            p = [toEnum $ fromEnum 'a' + length tp]
+            p = fromString'' [toEnum $ fromEnum 'a' + length tp]
             gP = GENERIC p
     utility' fun Proxy = utility' fun (Proxy :: Proxy t)
 
 class VarSignature s where
-    varDecl' :: Int -> String -> s -> Var
+    varDecl' :: Int -> Name -> s -> Var
 
-varDecl :: VarSignature s => String -> s -> Var
+varDecl :: (VarSignature s) 
+        => Name -> s -> Var
 varDecl = varDecl' 0
 
 instance VarSignature Type where
@@ -141,38 +120,42 @@ instance VarSignature Type where
 instance VarSignature t => VarSignature (Type -> t) where
     varDecl' n name t = varDecl' (n+1) name (t gP)
         where
-            p  = [toEnum $ fromEnum 'a' + n]
+            p  = fromString'' [toEnum $ fromEnum 'a' + n]
             gP = GENERIC p
 
 class TypeSignature s where
     mkSort' :: Sort -> [Type] -> s
     order :: Proxy s -> Int
 
-mkSort :: forall s. TypeSignature s => String -> (s,Sort)
+mkSort :: forall s. (TypeSignature s) => Name -> (s,Sort)
 mkSort n = (mkSort' s [],s)
     where
-        s = Sort n n $ order (Proxy :: Proxy s)
+        s = Sort n (asInternal n) $ order (Proxy :: Proxy s)
 
 instance TypeSignature Type where
     mkSort' s ts = make_type s $ reverse ts
     order Proxy  = 0
 
 class TypeDefSignature t where
-    mkSortDef' :: String -> [String] -> t -> ([Type] -> t,Sort)
+    mkSortDef' :: Name -> [Name] -> t -> ([Type] -> t,Sort)
 
-mkSortDef :: TypeDefSignature t => String -> t -> (t,Sort)
+mkSortDef :: (TypeDefSignature t) 
+          => Name -> t -> (t,Sort)
 mkSortDef n f = first ($ []) $ mkSortDef' n [] f
 
 instance TypeDefSignature Type where
     mkSortDef' n ps t = (\ts -> make_type s $ reverse ts,s)
         where
-            s = DefSort n n (reverse ps) t
+            s = DefSort n 
+                (asInternal n) 
+                (reverse ps) t
 
 instance TypeDefSignature t => TypeDefSignature (Type -> t) where
     mkSortDef' n ps f = (\ts t -> f' $ t:ts,s)
         where
             (f',s) = mkSortDef' n (p:ps) (f t)
-            p = [toEnum $ fromEnum 'a' + length ps]
+            p :: IsName n => n
+            p = fromString'' [toEnum $ fromEnum 'a' + length ps]
             t = GENERIC p
 
 instance TypeSignature s => TypeSignature (Type -> s) where
@@ -180,9 +163,8 @@ instance TypeSignature s => TypeSignature (Type -> s) where
     order Proxy = 1 + order (Proxy :: Proxy s)
 
 assert' :: Loc -> ExprP -> M ()
-assert' loc stmt = M $ tell 
-        [ empty_theory 
-            { _fact = singleton (label "") x }]
+assert' loc stmt = do
+    M $ tell [x]
     where
         x = either (error . unlines . L.map (locMsg loc ++)) id 
             $ zcast bool $ withForall stmt
@@ -190,91 +172,101 @@ assert' loc stmt = M $ tell
 assert :: ExpQ
 assert = withLoc 'assert'
 
-dummy :: VarSignature s => String -> s -> M ExprP
-dummy n s = M $ do
-    let v = varDecl n s
-    tell [ empty_theory & dummies .~ singleton n v ]
+dummy :: (VarSignature s) => String -> s -> M ExprP
+dummy n s = do
+    let v = varDecl name s
+        name = fromString'' n
+    tellTheory $ dummies <>= singleton name v
     return $ Right $ Word v
 
 command :: forall s. (FromList (FunType s) ExprP, Signature s)
-        => String -> s -> M (FunType s)
+        => Name -> s -> M (FunType s)
 command n s = do
-    f <- function n s
+    let name = addBackslash n
+    f <- function (asInternal n) s
     let proxy = Proxy :: Proxy s
-        cmd = Command ('\\':n) n (len' proxy) (from_list f)
-    M $ tell [ empty_theory
-        { _notation = empty_notation & commands .~ [cmd] } ]
+        cmd = Command 
+                name 
+                (asInternal n)
+                (len' proxy) (from_list f)
+    tellTheory $ notation.commands <>= [cmd]
     return f
 
-function :: Signature s => String -> s -> M (FunType s)
-function n s = M $ do
-    tell [empty_theory 
-        { _funs = singleton n (funDecl n s) } ]
-    return $ utility n s
+function :: (Signature s) => InternalName -> s -> M (FunType s)
+function n s = do
+    let n' = asName n
+    tellTheory $ funs <>= singleton n' (funDecl n' s)
+    return $ utility n' s
 
 operator :: (Signature s, FunType s ~ (ExprP -> ExprP -> ExprP))
-         => String -> String -> s -> M (Operator,ExprP -> ExprP -> ExprP)
+         => Name -> InternalName 
+         -> s -> M (Operator,ExprP -> ExprP -> ExprP)
 operator op tag s = do
     f <- function tag s
     let binop = BinOperator tag op f
-    M $ tell [empty_theory 
-            { _notation = empty_notation & new_ops .~ [Right binop] } ]
+    tellTheory $ notation.new_ops <>= [Right binop]
     return (Right binop,f)
 
 unary :: (Signature s, FunType s ~ (ExprP -> ExprP))
-      => String -> String -> s -> M (Operator,ExprP -> ExprP)
+      => Name -> InternalName -> s -> M (Operator,ExprP -> ExprP)
 unary op tag s = do
     f <- function tag s
     let unop = UnaryOperator tag op f
-    M $ tell [empty_theory 
-            { _notation = empty_notation & new_ops .~ [Left unop] } ]
+    tellTheory $ notation.new_ops %= (Left unop:)
     return (Left unop,f)
 
-preserve :: Fun -> [String] -> M ()
-preserve rel fun = M $ tell [empty_theory
-    & syntacticThm.monotonicity .~ M.fromList (P.preserve rel fun) ]
+preserve :: Fun -> [Function] -> M ()
+preserve rel fun = tellTheory $
+    syntacticThm.monotonicity <>= M.fromList (P.preserve rel fun)
 
-associativity :: String -> ExprP -> M ()
-associativity fun e = M $ tell [empty_theory
-    & syntacticThm.associative .~ M.singleton fun e] 
+associativity :: Function -> ExprP -> M ()
+associativity fun e = tellTheory $ do
+        syntacticThm.associative <>= M.singleton fun e
 
 left_associativity :: [Operator] -> M ()
-left_associativity ops = M $ tell [empty_theory
-    { _notation = empty_notation & left_assoc .~ [L.map (fromRight $ $myError "") ops] }]
+left_associativity ops = tellTheory $ do
+        notation.left_assoc <>= [L.map (fromRight $ $myError "") ops]
 
 right_associativity :: [Operator] -> M ()
-right_associativity ops = M $ tell [empty_theory
-    { _notation = empty_notation & right_assoc .~ [L.map (fromRight $ $myError "") ops] }]
+right_associativity ops = tellTheory $ do
+        notation.right_assoc <>= [L.map (fromRight $ $myError "") ops]
 
 precedence :: [Operator] 
            -> [[Operator]]
            -> [Operator]
            -> M ()
-precedence vs ops us = M $ tell [empty_theory 
-    { _notation = empty_notation & prec .~ [vs : ops ++ [us]] }]
+precedence vs ops us = tellTheory $
+        notation.prec <>= [vs : ops ++ [us]]
+
+uniqueId :: M Int
+uniqueId = M $ do
+    n <- use _1
+    _1 .= n + 1
+    return n
 
 type_param :: M Type
-type_param = M $ do
-    n <- get
-    put (n+1)
-    return $ VARIABLE $ "t" ++ show n
+type_param = do
+    n <- uniqueId
+    return $ VARIABLE $ fromString'' $ "t" ++ show n
 
-sort :: TypeSignature s => String -> M s
-sort n = M $ do
+sort :: TypeSignature s => Name -> M s
+sort n = do
     let (r,s) = mkSort n
-    tell [empty_theory { _types = singleton n s } ]
+    tellTheory $ types .= singleton n s
     return r
 
-sort_def :: TypeDefSignature s => String -> s -> M s
-sort_def n f = M $ do
+sort_def :: TypeDefSignature s => Name -> s -> M s
+sort_def n f = do
     let (r,s) = mkSortDef n f
-    tell [empty_theory { _types = singleton n s } ]
+    tellTheory $ types <>= singleton n s
     return r    
 
 param_to_var :: Expr -> Expr
 param_to_var e = evalState (param_to_varE e) (0,variables e,M.empty)
 
-param_to_varE :: Expr -> State (Int,S.Set String,Map String String) Expr
+type RewriteST = State (Int,S.Set InternalName,Map InternalName InternalName)
+
+param_to_varE :: Expr -> RewriteST Expr
 param_to_varE e = do
     e' <- rewriteM param_to_varE e
     case e' of
@@ -287,7 +279,7 @@ param_to_varE e = do
                    <*> pure xs
         _ -> return e'
 
-param_to_varT :: Type -> State (Int,S.Set String,Map String String) Type
+param_to_varT :: Type -> RewriteST Type
 param_to_varT t@(VARIABLE _) = return t
 param_to_varT (GENERIC n) = do
         ns <- use trans
@@ -305,12 +297,12 @@ param_to_varT (GENERIC n) = do
             i <- use count
             _1 += 1 -- count
             vs <- use vars 
-            if ("t" ++ show i) `S.member` vs 
+            if (fromString'' $ "t" ++ show i) `S.member` vs 
                 then next_free
-                else return $ "t" ++ show i
+                else return $ fromString'' $ "t" ++ show i
 param_to_varT t = rewriteM param_to_varT t
 
-newtype M a = M (RWS () [Theory] Int a)
+newtype M a = M (RWS () [Expr] (Int,Theory) a)
     deriving (Applicative,Functor,Monad)
 
 clash :: (Show a, Ord a)
@@ -323,6 +315,27 @@ clash f xs
             (x,ys) <- zip xs $ drop 1 $ tails xs
             y      <- ys
             return $ M.intersection (f x) (f y)
+
+make_theory' :: (?loc :: CallStack) 
+             => String -> State Theory () -> Theory
+make_theory' name cmd = make_theory name $ M $ zoom _2 (state $ runState cmd)
+
+make_theory :: (?loc :: CallStack) 
+            => String -> M () -> Theory
+make_theory name (M cmd) = t'
+    where
+        name' = fromString'' name
+        ((_,t),es) = execRWS cmd () (0,empty_theory name')
+        es' = zipWith (\i -> (pad i,)) [0..] es
+        t' = t & fact %~ M.union (fromList es')
+        n = length $ show $ length es
+        pad m = label $ name ++ replicate (n - length (show m)) ' ' ++ show m
+        --pad' k _ = label $ pad k
+
+tellTheory :: State Theory () -> M ()
+tellTheory cmd = M $ zoom _2 (state $ runState cmd)
+        --n <- ask
+        --tell [execState cmd $ empty_theory n]
 
 mzforall' :: [ExprP] -> ExprP -> ExprP -> ExprP
 mzforall' vs r t = do

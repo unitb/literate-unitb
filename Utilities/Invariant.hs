@@ -1,4 +1,4 @@
-{-# LANGUAGE StandaloneDeriving, ImplicitParams, TypeFamilies #-}
+{-# LANGUAGE StandaloneDeriving, TypeFamilies #-}
 module Utilities.Invariant 
     ( HasInvariant(..), Checked, IsChecked(..)
     , Assert

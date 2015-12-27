@@ -1,4 +1,6 @@
-{-# LANGUAGE BangPatterns,OverloadedStrings,ImplicitParams,GADTs,TypeFamilies #-}
+{-# LANGUAGE BangPatterns
+    ,OverloadedStrings
+    ,GADTs,TypeFamilies #-}
     -- Behavior hiding
 module UnitB.PO 
     ( theory_po
@@ -48,6 +50,7 @@ import qualified Data.Traversable as T
 import System.IO
 
 import Utilities.Format
+import Utilities.Functor
 import Utilities.Partial
 import Utilities.Syntactic
 
@@ -99,21 +102,17 @@ assert_ctx m =
 
 step_ctx :: RawMachine -> Context
 step_ctx m = merge_all_ctx 
-        [  Context M.empty (prime_all $ vars `M.union` abs) M.empty M.empty M.empty
+        [  Context M.empty (primeAll $ vars `M.union` abs) M.empty M.empty M.empty
         ,  assert_ctx m ]
     where
         abs  = m!.abs_vars
         vars = m!.variables
-        prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
-        prime_var (Var n t) = (Var (n ++ "@prime") t)
 
 abstract_step_ctx :: RawMachine -> Context
 abstract_step_ctx m = merge_all_ctx 
-        [  Context M.empty (prime_all $ view' variables m) M.empty M.empty M.empty
+        [  Context M.empty (primeAll $ view' variables m) M.empty M.empty M.empty
         ,  assert_ctx m ]
     where
-        prime_all vs = mapKeys (++ "'") $ M.map prime_var vs
-        prime_var (Var n t) = (Var (n ++ "@prime") t)
 
 evt_saf_ctx :: HasConcrEvent' event RawExpr => event -> Context
 evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
@@ -121,8 +120,8 @@ evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
 evt_live_ctx :: HasConcrEvent' event RawExpr => event -> Context
 evt_live_ctx evt = Context M.empty (evt^.new.indices) M.empty M.empty M.empty
 
-primed_vars :: Map String Var -> POCtx ()
-primed_vars = POG.variables . M.mapKeys (++"'") . M.map prime
+primed_vars :: Map Name Var -> POCtx ()
+primed_vars = POG.variables . primeAll
 
 skipOrLabel :: SkipOrEvent -> Label
 skipOrLabel lbl = fromRight "SKIP" $ as_label <$> lbl
@@ -145,7 +144,7 @@ invariants_only m =
         p0 = m!.props
         p1 = m!.inh_props
 
-raw_machine_pos' :: IsExpr expr => AST.Machine' expr -> (Map Label Sequent)
+raw_machine_pos' :: HasExpr expr => AST.Machine' expr -> (Map Label Sequent)
 raw_machine_pos' m' = eval_generator $ 
                 with (do
                         prefix_label $ as_label $ _name m
@@ -199,7 +198,7 @@ raw_machine_pos' m' = eval_generator $
         unnamed = theory_facts (m!.theory) `M.difference` named_f
         named_f = theory_facts (m!.theory) { _extends = M.empty }
 
-proof_obligation' :: IsExpr expr 
+proof_obligation' :: HasExpr expr 
                   => Map Label Sequent
                   -> Map Label Proof
                   -> AST.Machine' expr 
@@ -279,7 +278,7 @@ init_sim_po m =
             prefix_label "SIM"
             _context (assert_ctx m)
             named_hyps $ m!.inits
-            named_hyps $ M.mapKeys label $ snd <$> m!.init_witness)
+            named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
         (forM_ (M.toList $ m!.del_inits) $ \(lbl,p) -> do
             emit_goal assert [lbl] p)
 
@@ -315,7 +314,7 @@ expected_leadsto_po (LeadsTo vs p0 q0) (LeadsTo vs' p1 q1) = do
         emit_goal assert ["lhs"] $ zforall (vs ++ vs') p0 p1
         emit_goal assert ["rhs"] $ zforall (vs ++ vs') q1 q0
 
-assume_old_guard :: IsExpr expr => EventMerging expr -> POCtx ()
+assume_old_guard :: HasExpr expr => EventMerging expr -> POCtx ()
 assume_old_guard evt = do
     case evt^.abstract_evts of
         e :| [] -> named_hyps $ e^._2.old.guards
@@ -329,11 +328,12 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                     named_hyps $ invariants m) $ do
                 with (named_hyps $ singleton pname xp) $
                     forM_ (M.toList hint) $ \(v,(t,e)) -> do
-                        emit_exist_goal assert ["WFIS",label v] [prime $ Var v t] [e]
+                        emit_exist_goal assert ["WFIS",as_label v] [prime $ Var v t] [e]
                 zipWithM_ stuff (NE.toList evt_lbl) es
                 following
     where
         TrHint hint' lt_fine = tr_hint
+        hint :: Map Name (Type,RawExpr)
         hint = hint' & traverse._2 %~ asExpr
         xp = asExpr xp'
         stuff evt_lbl evt = 
@@ -349,14 +349,15 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                 ind  = evt^.new.indices
                 ind1 = (evt^.new.indices) `M.intersection` hint
                 param_ctx  = POG.variables (evt^.new.params)
-                enablement = emit_goal assert [as_label evt_lbl, "EN"] 
+                enablement = do
+                        emit_goal assert [as_label evt_lbl, "EN"] 
                             (          asExpr xp 
                             `zimplies` (new_dummy ind $ zall $ asExpr <$> sch0))
 
                 new_defs = flip L.map (M.elems ind1) 
-                        $ \(Var n t) -> (n ++ "@param", mk_fun [] (n ++ "@param") [] t)
+                        $ \(Var n t) -> (setSuffix assert "param" n, mk_fun [] (setSuffix assert "param" n) [] t)
                 new_hyps = flip L.map (M.toList hint)
-                        $ \(x,(_,e)) -> rename (x ++ "@prime") (x ++ "@param") e
+                        $ \(x,(_,e)) -> rename (addPrime x) (setSuffix assert "param" x) e
                 def_ctx = do
                     POG.functions (M.fromList new_defs)
                     POG.nameless_hyps new_hyps
@@ -370,18 +371,18 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                         emit_goal assert [as_label evt_lbl,"NEG"] 
                             $ xp `zimplies` (znot $ primed (m!.variables) xp) 
         all_ind = M.elems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
-        inds    = L.map (add_suffix "@param") $ M.elems 
+        inds    = L.map (fmap1 $ setSuffix assert "param") $ M.elems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
         es      = L.map (upward_event assert m.Right) (NE.toList evt_lbl)
         
-        local_ind :: EventId -> RawEventMerging -> Map String Var
-        local_ind lbl e = M.mapKeys (++ suff) $ M.map (add_suffix suff) $ e^.indices
+        local_ind :: EventId -> RawEventMerging -> Map Name Var
+        local_ind lbl e = renameAll' (add_suffix assert suff) $ e^.indices
             where
-                suff = mk_suff $ "@" ++ show lbl
+                suff = mk_suff $ show lbl
         new_ind :: EventId -> RawEventMerging -> RawExpr -> RawExpr
-        new_ind lbl e = make_unique suff (e^.indices)
+        new_ind lbl e = make_unique assert suff (e^.indices)
             where
-                suff = mk_suff $ "@" ++ show lbl
+                suff = mk_suff $ show lbl
             -- (M.elems ind) 
         tagged_sched :: EventId -> RawEventMerging -> Map Label RawExpr
         tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched & traverse %~ asExpr
@@ -406,7 +407,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                             ++ "match the fine schedule of event {1}"
                             ) pname (intercalate "," $ L.map show (NE.toList evt_lbl))
                     Nothing
-                        | not $ all_fsch == ztrue ->
+                        | not $ all_fsch == ztrue -> do
                             emit_goal assert [] $ zforall all_ind
                                     (zall $ xp : all_csch) 
                                     all_fsch
@@ -417,7 +418,9 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                 dummy
         dummy = POG.variables fv
         progs = (m!.props.progress) `M.union` (m!.inh_props.progress)
-        mk_suff suff = LU.replace ":" "-" suff
+
+mk_suff :: String -> String
+mk_suff = LU.replace ":" "-" 
 
 prop_co :: RawMachine -> (Label, Constraint' RawExpr) -> M ()
 prop_co m (pname, Co fv xp) = 
@@ -478,7 +481,7 @@ prop_saf' m excp (pname, Unless fv p q) =
     where
         evts = rights $ L.map (\(x,y) -> (,y) <$> x) $ M.toList $ all_upwards m
         vars = m!.variables
-        suff = add_suffix "@param"
+        suff = add_suffix assert "param"
 
 inv_po :: RawMachine -> (Label, RawExpr) -> M ()
 inv_po m (pname, xp) = 
@@ -498,7 +501,7 @@ inv_po m (pname, xp) =
                         (primed (view' variables m `M.union` view' abs_vars m) xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
-                 named_hyps $ M.mapKeys label $ snd <$> m!.init_witness)
+                 named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
             $ emit_goal assert [inv_init_lbl, pname] xp
 
 wit_wd_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
@@ -590,7 +593,7 @@ replace_csched_po m (lbl,evt') = do
                 with (do
                         POG.variables $ symbol_table vs
                         named_hyps old_c
-                        named_hyps $ M.mapKeys label $ snd <$> evt'^.ind_witness
+                        named_hyps $ M.mapKeys as_label $ snd <$> evt'^.ind_witness
                         named_hyps old_f) $ 
                     emit_goal assert ["prog",plbl,"lhs"] p0
                 with (do
@@ -764,7 +767,7 @@ tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) =
                             `M.union` vs
                         POG.named_hyps $ singleton lbl p
                         ) $
-                    emit_goal assert ["WD","witness",label n] $ 
+                    emit_goal assert ["WD","witness",as_label n] $ 
                         well_definedness e
 
 prog_wd_po :: RawMachine -> (ProgId, ProgressProp' RawExpr) -> M ()
@@ -881,7 +884,7 @@ evt_eql_po  m (_lbl, evts) =
                  _context $ evt_live_ctx evt
                  _context $ evt_saf_ctx evt)
             (forM_ (M.elems $ evt^.eql_vars) $ \v -> do
-                emit_goal assert [label $ v^.name] 
+                emit_goal assert [as_label $ v^.name] 
                     $ Word (prime v) `zeq` Word v )
 
 sch_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
@@ -1083,11 +1086,11 @@ instance LivenessRulePO Discharge where
             zforall (fv0 ++ M.elems fv1) ztrue (
                      (znot p1 `zimplies` q0) ) )
 
-add_suffix :: String -> Var -> Var
-add_suffix suf (Var n t) = Var (n ++ suf) t
+add_suffix :: Assert -> String -> Var -> Var
+add_suffix arse = fmap1 . setSuffix arse
 
-new_dummy :: Map String Var -> RawExpr -> RawExpr
-new_dummy = make_unique "@param"
+new_dummy :: Map Name Var -> RawExpr -> RawExpr
+new_dummy = make_unique assert "param"
 
 --check :: Calculation -> IO (Either [Error] [(Validity, Int)])
 --check c = runEitherT $ do

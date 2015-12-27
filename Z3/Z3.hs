@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RecordWildCards #-} 
+{-# LANGUAGE BangPatterns, RecordWildCards, OverloadedStrings #-} 
 module Z3.Z3 
     ( Sequent
     , Validity ( .. )
@@ -29,7 +29,7 @@ where
 
     -- Modules
 import Logic.Expr hiding ((</>))
-import Logic.Lambda
+import Logic.Expr.Declaration
 import Logic.Proof
 
 import Z3.Version
@@ -51,11 +51,14 @@ import           Data.Either.Combinators
 import           Data.List as L hiding (union)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as T
 import           Data.Typeable 
 
 import GHC.Generics (Generic)
 
 import System.Exit
+import System.IO
 import System.IO.Unsafe
 import System.Process
 
@@ -137,7 +140,7 @@ z3_pattern :: S.Set FOVar -> FOExpr -> [FOExpr]
 z3_pattern vs e = runReader (head e) False
     where
         head e'@(FunApp f [_,y])
-            | view name f == "=>"    = do
+            | view name f == fromString'' "=>" = do
                 xs <- head y
                 if null xs 
                     then lhs vs e'
@@ -145,7 +148,7 @@ z3_pattern vs e = runReader (head e) False
         head e = lhs vs e
 
         lhs vs (FunApp f xs)
-            | view name f `elem` ["and","or","not","=>"]
+            | view name f `elem` map fromString'' ["and","or","not","=>"]
                 && vs `S.isSubsetOf` S.unions (map used_var xs) 
                 = do
                     ps <- concat <$> mapM (lhs S.empty) xs
@@ -153,7 +156,7 @@ z3_pattern vs e = runReader (head e) False
                         then ps 
                         else []
         lhs vs (FunApp f xs@[x,_])
-            | view name f == "="     = do
+            | view name f == fromString'' "="     = do
                 b  <- ask
                 x' <- lhs vs x 
                 local (const True) $
@@ -201,12 +204,7 @@ z3_code po =
         ++ [SetOption "auto-config" "false"]
         ++ [SetOption "smt.timeout" "3000"]
         -- ++ [SetOption "smt.mbqi" "false"]
-        ++ map Decl (concatMap decl
-               [ Datatype ["a"] "Maybe" 
-                    [ ("Just", [("fromJust", GENERIC "a")])
-                    , ("Nothing", []) ]
-               , Datatype [] "Null"
-                    [ ("null", []) ] ] )
+        ++ map Decl (concatMap decl [maybe_sort,null_sort] )
         ++ map Decl (decl d)
         ++ zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
                 assume [0..]
@@ -215,11 +213,7 @@ z3_code po =
         ++ [CheckSat]
         ++ [] )
     where
---        !() = unsafePerformIO (p
-        (Sequent d _ assume hyps assert) = remove_type_vars 
-                    $ one_point
-                    $ delambdify
-                    $ apply_monotonicity po
+        (Sequent d _ assume hyps assert) = firstOrderSequent po
         f ((lbl,xp),n) = [ Comment $ show lbl
                          , Assert xp $ Just $ "h" ++ show n]
 

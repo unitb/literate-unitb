@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 module Document.Tests.TrainStation where
 
     -- Modules
@@ -95,17 +95,17 @@ part5 = test_cases
             ]
 
 train_sort :: Sort
-train_sort = Sort "\\TRAIN" "sl@TRAIN" 0
+train_sort = z3Sort "\\TRAIN" "sl@TRAIN" 0
 train_type :: Type
 train_type = Gen train_sort []
 
 loc_sort :: Sort
-loc_sort = Sort "\\LOC" "sl@LOC" 0
+loc_sort = z3Sort "\\LOC" "sl@LOC" 0
 loc_type :: Type
 loc_type = Gen loc_sort []
 
 blk_sort :: Sort
-blk_sort = Sort "\\BLK" "sl@BLK" 0
+blk_sort = z3Sort "\\BLK" "sl@BLK" 0
 blk_type :: Type
 blk_type = Gen blk_sort []
 
@@ -115,9 +115,9 @@ loc_def :: Def
 block_def :: Def
 
 universe t = (zlift (set_type t) ztrue)
-train_def = Def [] "sl@TRAIN" [] (set_type train_type) (universe train_type)
-loc_def = Def [] "sl@LOC" [] (set_type loc_type) (universe loc_type)
-block_def = Def [] "sl@BLK" [] (set_type blk_type) (universe blk_type)
+train_def  = z3Def [] "sl@TRAIN" [] (set_type train_type) (universe train_type)
+loc_def    = z3Def [] "sl@LOC" [] (set_type loc_type) (universe loc_type)
+block_def  = z3Def [] "sl@BLK" [] (set_type blk_type) (universe blk_type)
 
 train    :: ExprP
 loc_cons :: ExprP
@@ -140,28 +140,31 @@ block :: ExprP
 block_var :: Var
 (block, block_var) = Expr.var "sl@BLK" $ set_type blk_type
 
+trainName :: Name
+trainName = fromString'' "train0"
+
 machine0 :: AST.Machine
-machine0 = newMachine assert "train0" $ do
-      theory .= empty_theory 
-            {  _extends = fromList
-                    [  ("functions", function_theory) -- train_type blk_type
-                    ,  ("sets", set_theory) -- blk_type
-                    ,  ("basic", basic_theory)
-                    ,  ("arithmetic", arithmetic)
+machine0 = newMachine assert trainName $ do
+      theory .= (empty_theory trainName)
+            {  _extends = symbol_table 
+                    [ function_theory
+                    , set_theory
+                    , basic_theory
+                    , arithmetic
                     ]
-            ,  _defs = fromList 
-                    [  ("\\TRAIN", train_def)
-                    ,  ("\\LOC", loc_def)
-                    ,  ("\\BLK", block_def) ]
+            ,  _defs = symbol_table
+                    [  train_def
+                    ,  loc_def
+                    ,  block_def ]
             ,  _types   = symbol_table 
                     [ train_sort
                     , loc_sort
                     , blk_sort
                     ]
             ,  _theoryDummies = symbol_table 
-                            $ (map (\t -> Var t $ train_type) 
+                            $ (map (\t -> z3Var t $ train_type) 
                                 [ "t","t_0","t_1","t_2","t_3" ]
-                               ++ map (\t -> Var t $ blk_type) 
+                               ++ map (\t -> z3Var t $ blk_type) 
                                 [ "p","q" ])
             ,  _fact   = fromList 
                     [ ("axm0", axm0)
@@ -170,10 +173,10 @@ machine0 = newMachine assert "train0" $ do
                     , ("asm4", axm4) 
                     , ("asm5", axm5) 
                     ]
-            ,  _consts  = fromList
-                    [  ("ent", ent_var)
-                    ,  ("ext", ext_var)
-                    ,  ("PLF", plf_var)
+            ,  _consts  = symbol_table
+                    [  ent_var
+                    ,  ext_var
+                    ,  plf_var
                     ]
             }
       inits .= fromList (zip inLbls 
@@ -202,11 +205,11 @@ machine0 = newMachine assert "train0" $ do
                          (mzeq p ent \/ mzeq p ext)
                     .=.  mznot (p `zelem` plf) )
 
-vars :: Map String Var
+vars :: Map Name Var
 vars = symbol_table [in_decl,loc_decl]
 
 c :: Ctx
-c = ctxWith [("sets",set_theory),("functions",function_theory)] $ do
+c = ctxWith [set_theory,function_theory] $ do
         [carrier| \TRAIN |]
         [carrier| \LOC |]
         [carrier| \BLK |]
@@ -234,7 +237,7 @@ props0 = create $ do
                 , Tr
                     (symbol_table [t_decl])
                     (c $ [expr| t \in in |].(free_dummies .~ True)) (NE.fromList ["leave"]) 
-                    (TrHint (fromList [("t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
+                    (TrHint (fromList [(fromString'' "t",(train_type, c $ [expr| t' = t |] . (is_step .~ True)))]) Nothing) )
             ]
     inv .= fromList 
             [   ("inv2", c [expr| \dom.loc = in |])
@@ -348,17 +351,18 @@ set_decl_smt2 xs =
         , "             sl@BLK)"]
 --        ,  "(declare-fun bunion@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((set (pfun sl@TRAIN sl@BLK)) (set (pfun sl@TRAIN sl@BLK))) (set (pfun sl@TRAIN sl@BLK)))"
      ++ when (WithPFun `elem` xs)
-        [  "(declare-fun dom-rest@@sl@TRAIN@@sl@BLK"
+        [  "(declare-fun dom@@sl@TRAIN@@sl@BLK"
+        ,  "             ( (pfun sl@TRAIN sl@BLK) )"
+        ,  "             (set sl@TRAIN))"
+        ,  "(declare-fun dom-rest@@sl@TRAIN@@sl@BLK"
         ,  "             ( (set sl@TRAIN)"
         ,  "               (pfun sl@TRAIN sl@BLK) )"
         ,  "             (pfun sl@TRAIN sl@BLK))"
         ,  "(declare-fun dom-subt@@sl@TRAIN@@sl@BLK"
         ,  "             ( (set sl@TRAIN)"
         ,  "               (pfun sl@TRAIN sl@BLK) )"
-        ,  "             (pfun sl@TRAIN sl@BLK))"
-        ,  "(declare-fun dom@@sl@TRAIN@@sl@BLK"
-        ,  "             ( (pfun sl@TRAIN sl@BLK) )"
-        ,  "             (set sl@TRAIN))"]
+        ,  "             (pfun sl@TRAIN sl@BLK))" 
+        ]
 --        ,  "(declare-fun elem@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((pfun sl@TRAIN sl@BLK) (set (pfun sl@TRAIN sl@BLK))) Bool)"
      ++ when (WithPFun `elem` xs)
         [  "(declare-fun empty-fun@@sl@TRAIN@@sl@BLK"
@@ -469,21 +473,6 @@ set_decl_smt2 xs =
         , "              (s2 (set sl@TRAIN)) )"
         , "            (set sl@TRAIN)"
         , "            (intersect s1 ( (_ map not) s2 )))"
-        , "(define-fun sl@BLK"
-        , "            ()"
-        , "            (set sl@BLK)"
-        , "            ( (as const (set sl@BLK))"
-        , "              true ))"
-        , "(define-fun sl@LOC"
-        , "            ()"
-        , "            (set sl@LOC)"
-        , "            ( (as const (set sl@LOC))"
-        , "              true ))"
-        , "(define-fun sl@TRAIN"
-        , "            ()"
-        , "            (set sl@TRAIN)"
-        , "            ( (as const (set sl@TRAIN))"
-        , "              true ))"
         , "(define-fun st-subset@@sl@BLK"
         , "            ( (s1 (set sl@BLK))"
         , "              (s2 (set sl@BLK)) )"
@@ -499,6 +488,21 @@ set_decl_smt2 xs =
         , "              (s2 (set sl@TRAIN)) )"
         , "            Bool"
         , "            (and (subset s1 s2) (not (= s1 s2))))"
+        , "(define-fun sl@BLK"
+        , "            ()"
+        , "            (set sl@BLK)"
+        , "            ( (as const (set sl@BLK))"
+        , "              true ))"
+        , "(define-fun sl@LOC"
+        , "            ()"
+        , "            (set sl@LOC)"
+        , "            ( (as const (set sl@LOC))"
+        , "              true ))"
+        , "(define-fun sl@TRAIN"
+        , "            ()"
+        , "            (set sl@TRAIN)"
+        , "            ( (as const (set sl@TRAIN))"
+        , "              true ))"
         ]
 --        ,  "(declare-fun subset@Open@@pfun@@sl@TRAIN@@sl@BLK@Close ((set (pfun sl@TRAIN sl@BLK)) (set (pfun sl@TRAIN sl@BLK))) Bool)"
 --     ++ when (WithPFun `elem` xs)
@@ -2126,13 +2130,13 @@ result21 :: String
 result21 = unlines
     [ "Theory imported multiple times"
     , "error 130:1:"
-    , "\t\"sets\""
+    , "\tsets"
     , ""
     , "error 131:1:"
-    , "\t\"sets\""
+    , "\tsets"
     , ""
     , "error 132:1:"
-    , "\t\"sets\""
+    , "\tsets"
     , ""
     , ""
     ]

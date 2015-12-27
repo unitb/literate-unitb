@@ -6,7 +6,7 @@ import Control.Exception (evaluate)
 import Document.Document
 
 -- import qualified Document.Tests.CompCalc as CC
-import qualified Document.Tests.Cubes as Cubes
+import qualified Document.Tests.Cubes as Cubes 
 -- import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
@@ -26,7 +26,7 @@ import qualified Document.Tests.Parser as Parser
 import qualified Document.Tests.TerminationDetection as Term
 import qualified Document.Phase.Test as PhTest
 
-import Document.Phase.Expressions as PExp
+import Document.Phase.Expressions as PExp 
 
 import Latex.Parser
 import Latex.OldMonad
@@ -49,14 +49,14 @@ test :: TestCase
 test = test_cases 
         "Unit-B Document" 
         [ StringCase "basic syntax and scopes" case1 result1
-        , StringCase "Contextual predicate visibility rules" case2 result2
-        , PhTest.test_case
-        , Puz.test_case
-        , UE.test_case
-        , LFD.test_case
+        , LFD.test_case 
         -- , CC.test_case
         -- , Ind.test_case
         , SMch.test_case
+        , StringCase "Contextual predicate visibility rules" case2 result2 
+        , Puz.test_case
+        , UE.test_case
+        , PhTest.test_case
         , Cubes.test_case
         , Train.test_case
         , Lambdas.test_case

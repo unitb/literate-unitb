@@ -24,7 +24,7 @@ getSrcLocs fs cs = filter notHere $ getCallStack cs
 
 stackTrace :: [FilePath] -> CallStack -> Maybe String
 stackTrace fs cs | null loc  = Nothing
-                 | otherwise = Just $ '\n':concatMap f loc
+                 | otherwise = Just $ '\n':concatMap f (reverse loc)
     where
         loc = getSrcLocs fs cs
         f (fn,loc) = printf "%s - %s\n" (locToString loc) fn

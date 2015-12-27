@@ -1,23 +1,24 @@
-{-# LANGUAGE BangPatterns, TypeFamilies #-}
+{-# LANGUAGE BangPatterns, TypeFamilies, TypeOperators #-}
 module Utilities.Trace where
 
-import Control.Arrow
+import Control.Arrow hiding (left,right)
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception
+import Control.Lens
 import Control.Monad.IO.Class
 
--- import Data.Set
 import Data.Foldable as F
 import Data.Typeable
 
 import qualified Debug.Trace as DT
 
+import GHC.Generics hiding (from,to)
+import GHC.Generics.Lens
+
 import System.IO.Unsafe
 
 import Text.Printf
-
-import Utilities.Format
 
 -- trace_switch :: MVar (Set ThreadId)
 -- trace_switch = unsafePerformIO (newMVar empty)
@@ -45,7 +46,7 @@ trace xs x = unsafePerformIO $ do
         tid <- myThreadId
         -- b   <- is_tracing_on
         -- if b then
-        return (DT.trace (format "({0}) {1}" tid xs) x)
+        return (DT.trace (printf "(%s) %s" (show tid) xs) x)
         -- else
             -- return x
 
@@ -66,7 +67,7 @@ traceIO xs = do
         tid <- liftIO $ myThreadId
         b <- liftIO $ is_tracing_on
         if b then
-            liftIO $ DT.traceIO (format "({0}) {1}" tid xs)
+            liftIO $ DT.traceIO (printf "(%s) %s" (show tid) xs)
         else
             return ()
 
@@ -139,7 +140,7 @@ beforeAfterIO msg cmd = mapException f $ do
         return x
     where
         f :: SomeException -> TracingError
-        f e = TE $ format "Failed during {0}\n\n{1}" msg e
+        f e = TE $ printf "Failed during %s\n\n%s" msg (show e)
 
 beforeAfter' :: NFData a => String -> a -> a
 beforeAfter' msg = beforeAfter msg.force
@@ -153,7 +154,7 @@ beforeAfter :: String -> a -> a
 beforeAfter msg x = insertMsg msg $ DT.trace ("before " ++ msg) x `seq` DT.trace ("after  " ++ msg) x
 
 insertMsg :: String -> a -> a
-insertMsg msg = mapException $ \e -> TE $ format "Failed during {0}\n\n{1}\nend" msg (e :: SomeException)
+insertMsg msg = mapException $ \e -> TE $ printf "Failed during %s\n\n%s\nend" msg (show (e :: SomeException))
 
 class BeforeAfter' a where
     beforeAfterAllAux' :: String -> Int -> FunSig a -> a
@@ -183,3 +184,34 @@ beforeAfterAll :: BeforeAfter a => String -> FunSig a -> a
 beforeAfterAll msg = beforeAfterAllAux msg 0
 
 newtype Result a = Result { getres :: a }
+
+class GOnFields a where
+    gOnFields :: String
+              -> a p -> a p
+
+instance GOnFields c => GOnFields (C1 b c) where
+    gOnFields str = _M1 %~ gOnFields str
+instance GOnFields c => GOnFields (D1 b c) where
+    gOnFields str = _M1 %~ gOnFields str
+instance (GOnFields c,Selector s) => GOnFields (S1 s c) where
+    gOnFields str x = x & _M1 %~ gOnFields (str ++ ": " ++ selName x)
+
+instance (GOnFields a,GOnFields b) => GOnFields (a :*: b) where
+    gOnFields str = (left %~ gOnFields str) . (right %~ gOnFields str)
+
+left :: Lens ((a0 :*: b) p) ((a1 :*: b) p) (a0 p) (a1 p)
+left f (x :*: y) = (:*: y) <$> f x
+
+right :: Lens ((a :*: b0) p) ((a :*: b1) p) (b0 p) (b1 p)
+right f (x :*: y) = (x :*:) <$> f y
+
+instance (GOnFields a,GOnFields b) => GOnFields (a :+: b) where
+    gOnFields str = (_L1 %~ gOnFields str) . (_R1 %~ gOnFields str)
+
+instance NFData b => GOnFields (K1 a b) where
+    gOnFields str (K1 x) = K1 $ beforeAfter' str x
+
+onFields :: (Generic a, GOnFields (Rep a))
+         => String
+         -> a -> a  
+onFields str = generic %~ gOnFields str 

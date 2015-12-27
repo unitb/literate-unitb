@@ -16,7 +16,7 @@ import UnitB.Syntax
 import Control.Lens
 import Control.Monad.Reader
 
-import Data.List.NonEmpty as NE (NonEmpty(..),toList)
+import Data.List.NonEmpty as NE (toList)
 import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable

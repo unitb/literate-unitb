@@ -4,6 +4,8 @@ where
 
     -- Modules
 import Logic.Expr.Classes
+import Logic.Expr.Label
+import Logic.Names
 
     -- Libraries
 import Control.Monad.Reader
@@ -14,7 +16,6 @@ import Data.List hiding (uncons)
 import Utilities.Instances
 
 pretty_print' :: Tree t => t -> String
--- pretty_print' t = unlines $ pretty_print $ as_tree t 
 pretty_print' t = intercalate "\n" 
     $ map toString $ as_list $ fst 
     $ runReader (pretty_print_aux $ as_tree t) ""
@@ -29,6 +30,18 @@ class PrettyPrintable a where
 
 instance PrettyPrintable a => Show (Pretty a) where
     show = pretty . unPretty
+
+instance PrettyPrintable a => PrettyPrintable [a] where
+    pretty = show . map Pretty
+
+instance PrettyPrintable StrList where
+    pretty = show
+
+instance PrettyPrintable Label where
+    pretty = show
+
+instance PrettyPrintable Name where
+    pretty = render
 
 data Line = Line String String
 

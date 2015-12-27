@@ -2,9 +2,11 @@ module Document.Tests.GarbageCollector where
 
 import Document.Tests.Suite
 
+import Logic.Names
 import Logic.Proof
 import Theories.RelationTheory
 
+import Control.Arrow
 import Control.Lens
 
 import Data.List as L
@@ -582,7 +584,7 @@ result3 = unlines
 
 case4 :: IO String
 case4 = do
-    either id (unlines . L.map show . keys . (^.syntacticThm.monotonicity)) 
+    either id (unlines . L.map (show . (each %~ render)) . keys . (^.syntacticThm.monotonicity)) 
         <$> sequent path0 "m1/THM/thm0/main goal/assertion/lmm0/step 5" 1
 
 result4 :: String
@@ -607,7 +609,7 @@ result4 = unlines
 
 case5 :: IO String
 case5 = do
-    return $ unlines $ L.map show $ keys 
+    return $ unlines $ L.map (show . (render *** render)) $ keys 
         $ relation_theory^.syntacticThm.monotonicity
 
 result5 :: String

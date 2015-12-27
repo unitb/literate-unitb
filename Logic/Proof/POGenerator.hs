@@ -53,46 +53,20 @@ mkCons ''POParam
 instance NFData POParam
 
 empty_param :: POParam
-empty_param = makePOParam empty_ctx
+empty_param = makePOParam 
 
 type POGen = POGenT Identity
 
 newtype POGenT m a = POGen { runPOGen :: RWST POParam [(Label,Sequent)] () m a }
+    deriving (Functor,Applicative,Monad,MonadTrans)
 
 newtype POCtx a = POCtx { runPOCxt :: State POParam a }
-
-instance NFData (POCtx ()) where
-    rnf (POCtx (StateT f)) = f `seq` ()
+    deriving (Functor,Applicative,Monad)
 
 getContext :: POCtx Context
 getContext = POCtx $ use context
 
-instance Applicative POCtx where
-    (<*>) = ap
-    pure  = return
-
-instance Functor POCtx where
-    fmap = liftM
-
-instance Monad POCtx where
-    m >>= f = POCtx $ runPOCxt m >>= runPOCxt . f
-    return  = POCtx . return
-
-instance Monad m => Applicative (POGenT m) where
-    (<*>) = ap
-    pure = return
-
-instance Monad m => Functor (POGenT m) where
-    fmap = liftM
-
-instance Monad m => Monad (POGenT m) where
-    POGen m >>= f = POGen $ m >>= runPOGen . f
-    return = POGen . return
-
-instance MonadTrans POGenT where
-    lift = POGen . lift
-
-emit_exist_goal :: (IsExpr expr,Monad m,Functor m) 
+emit_exist_goal :: (HasExpr expr,Monad m) 
                 => Assert 
                 -> [Label] -> [Var] -> [expr] 
                 -> POGenT m ()
@@ -100,7 +74,9 @@ emit_exist_goal asrt lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
-                emit_goal asrt (map (label . view name) vs) (zexists vs ztrue $ zall es)
+                emit_goal' asrt 
+                    (map (as_label . view name) vs) 
+                    (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ map getExpr es
         clauses' = M.toList $ M.fromListWith (++) clauses
@@ -127,7 +103,7 @@ existential asrt vs (POGen cmd) = do
         with (_context st) 
             $ emit_exist_goal asrt [] vs ss'
 
-emit_goal' :: (Functor m, Monad m, IsExpr expr) 
+emit_goal' :: (Functor m, Monad m, HasExpr expr) 
            => Assert -> [Label] -> expr -> POGenT m ()
 emit_goal' arse lbl g = emit_goal arse lbl $ getExpr g
 
@@ -139,7 +115,7 @@ emit_goal asrt lbl g = POGen $ do
                    <*> view synProp
                    <*> view nameless
                    <*> view named
-                   <*> pure (getExpr g)
+                   <*> pure g
     tell $ [(composite_label $ tag ++ lbl, checkSequent asrt po)]
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
@@ -150,11 +126,11 @@ _context :: Context -> POCtx ()
 _context new_ctx = POCtx $ do
     S.context %= (new_ctx `merge_ctx`)
 
-functions :: Map String Fun -> POCtx ()
+functions :: Map Name Fun -> POCtx ()
 functions new_funs = do
     _context $ Context M.empty M.empty new_funs M.empty M.empty
 
-definitions :: Map String Def -> POCtx ()
+definitions :: Map Name Def -> POCtx ()
 definitions new_defs = POCtx $ do
     S.context.E.definitions .= new_defs
 
@@ -169,15 +145,15 @@ prefix_label lbl = POCtx $ do
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: IsExpr expr => Map Label expr -> POCtx ()
+named_hyps :: HasExpr expr => Map Label expr -> POCtx ()
 named_hyps hyps = POCtx $ do
         named %= M.union (M.map getExpr hyps)
 
-nameless_hyps :: IsExpr expr => [expr] -> POCtx ()
+nameless_hyps :: HasExpr expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
         nameless %= (++ map getExpr hyps)
 
-variables :: Map String Var -> POCtx ()
+variables :: Map Name Var -> POCtx ()
 variables vars = POCtx $ do
         S.context.constants %= (vars `merge`)
 

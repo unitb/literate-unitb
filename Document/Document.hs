@@ -39,7 +39,7 @@ import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import           Data.List.Ordered (sortOn)
 
-import Utilities.Syntactic
+import Utilities.Syntactic as Syn
 
 read_document :: LatexDoc -> Either [Error] System
 read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
@@ -96,7 +96,7 @@ parse_machine fn = runEitherT $ do
         return $ map snd $ toList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 
-               -> Either [Error] (M.Map String [LatexDoc],M.Map String [LatexDoc])
+               -> Either [Error] (M.Map Name [LatexDoc],M.Map String [LatexDoc])
 get_components xs li = 
         liftM g
             $ R.runReader (runEitherT $ W.execWriterT 
@@ -108,7 +108,8 @@ get_components xs li =
         f x@(Env _ tag li0 xs _li1) 
             | tag == "machine" = do
                     n <- get_name li0 xs
-                    W.tell ([(n,[xs])],[])
+                    n' <- lift $ hoistEither $ Syn.with_li li $ isName n
+                    W.tell ([(n',[xs])],[])
             | tag == "context" = do
                     n <- get_name li0 xs
                     W.tell ([],[(n,[xs])])

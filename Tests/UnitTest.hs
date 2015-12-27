@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, ImplicitParams  #-} 
+{-# LANGUAGE ExistentialQuantification #-} 
 module Tests.UnitTest 
     ( TestCase(..), run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount

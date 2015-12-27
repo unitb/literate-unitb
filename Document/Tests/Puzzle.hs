@@ -13,8 +13,9 @@ import Logic.Proof
 import Control.Lens
 import Control.Monad
 
+import Data.List as L
 import Data.Map
-import Data.Set as S (Set,fromList)
+import Data.Set  as S (Set,fromList)
 
 import Tests.UnitTest
 
@@ -183,16 +184,16 @@ result2 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (s1 (set sl@Pcs))"
     , "                  (s2 (set sl@Pcs)) )"
     , "                (! (=> (finite@@sl@Pcs s1)"
@@ -316,16 +317,16 @@ result4 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (x sl@Pcs)"
     , "                  (y sl@Pcs) )"
     , "                (! (= (elem@@sl@Pcs x (mk-set@@sl@Pcs y)) (= x y))"
@@ -417,16 +418,16 @@ result5 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (x sl@Pcs)"
     , "                  (y sl@Pcs) )"
     , "                (! (= (elem@@sl@Pcs x (mk-set@@sl@Pcs y)) (= x y))"
@@ -837,7 +838,6 @@ result9 = unlines
     , "(declare-const n Int)"
     , "(declare-const ts (set sl@Pcs))"
     , "(declare-const vs (set sl@Pcs))"
-    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(declare-fun const@@sl@Pcs@@Int (Int) (Array sl@Pcs Int))"
     , "(declare-fun const@@sl@Pcs@@sl@Pcs"
     , "             (sl@Pcs)"
@@ -859,6 +859,7 @@ result9 = unlines
     , "             ( (set sl@Pcs)"
     , "               (Array sl@Pcs sl@Pcs) )"
     , "             (set sl@Pcs))"
+    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(define-fun all@@Int () (set Int) ( (as const (set Int)) true ))"
     , "(define-fun all@@sl@Pcs"
     , "            ()"
@@ -905,11 +906,6 @@ result9 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -920,6 +916,11 @@ result9 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (term (Array sl@Pcs Int)) )"
     , "                (! (= (qsum@@sl@Pcs empty-set@@sl@Pcs term) 0)"
     , "                   :pattern"
@@ -1128,7 +1129,6 @@ result10 = unlines
     , "(declare-const n Int)"
     , "(declare-const ts (set sl@Pcs))"
     , "(declare-const vs (set sl@Pcs))"
-    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(declare-fun const@@sl@Pcs@@Int (Int) (Array sl@Pcs Int))"
     , "(declare-fun finite@@sl@Pcs ( (set sl@Pcs) ) Bool)"
     , "(declare-fun mk-set@@sl@Pcs (sl@Pcs) (set sl@Pcs))"
@@ -1136,6 +1136,7 @@ result10 = unlines
     , "             ( (set sl@Pcs)"
     , "               (Array sl@Pcs Int) )"
     , "             Int)"
+    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(define-fun all@@sl@Pcs"
     , "            ()"
     , "            (set sl@Pcs)"
@@ -1161,16 +1162,16 @@ result10 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (term (Array sl@Pcs Int)) )"
     , "                (! (= (qsum@@sl@Pcs empty-set@@sl@Pcs term) 0)"
     , "                   :pattern"
@@ -1333,29 +1334,31 @@ result11 = unlines
     , "passed 43 / 43"
     ]
 
-case12 :: IO (Either [Error] (Set String,Set String,Set String))
+case12 :: IO (Either [Error] (Set Name,Set Name,Set Name))
 case12 = runEitherT $ do
     m <- EitherT $ parse_machine path0 3
     return ( keysSet $ m!.abs_vars
            , keysSet $ m!.del_vars
            , keysSet $ m!.variables)
 
-result12 :: Either [Error] (Set String,Set String,Set String)
-result12 = Right ( S.fromList ["b","cs","ts","vs"]
-                 , S.fromList ["cs","ts"]
-                 , S.fromList ["b","vs","n","c","fs"])
+result12 :: Either [Error] (Set Name,Set Name,Set Name)
+result12 = Right $ ( ["b","cs","ts","vs"]
+                   , ["cs","ts"]
+                   , ["b","vs","n","c","fs"])
+                 & each %~ (S.fromList . L.map fromString'')
 
-case13 :: IO (Either [Error] (Set String,Set String,Set String))
+case13 :: IO (Either [Error] (Set Name,Set Name,Set Name))
 case13 = runEitherT $ do
     m <- EitherT $ parse_machine path0 4
     return ( keysSet $ m!.abs_vars
            , keysSet $ m!.del_vars
            , keysSet $ m!.variables)
 
-result13 :: Either [Error] (Set String,Set String,Set String)
-result13 = Right ( S.fromList ["b","vs","n","c","fs"]
-                 , S.fromList ["cs","ts"]
-                 , S.fromList ["b","vs","n","c","fs"])
+result13 :: Either [Error] (Set Name,Set Name,Set Name)
+result13 = Right $ ( ["b","vs","n","c","fs"]
+                   , ["cs","ts"]
+                   , ["b","vs","n","c","fs"])
+                 & each %~ (S.fromList . L.map fromString'')
 
 path14 :: FilePath
 path14 = "Tests/puzzle/puzzle-err0.tex"
@@ -1368,10 +1371,10 @@ result14 = unlines
         [ "error 225:24:"
         , "    unrecognized term: cs"
         , "Perhaps you meant:"
-        , "\\Pcs (variable)"
         , "c (variable)"
         , "ts (variable)"
         , "vs (variable)"
+        , "\\Pcs (variable)"
         , "" ]
 
 path15 :: FilePath
@@ -1509,16 +1512,16 @@ result18 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (s1 (set sl@Pcs))"
     , "                  (s2 (set sl@Pcs)) )"
     , "                (! (=> (finite@@sl@Pcs s1)"
@@ -1598,7 +1601,6 @@ result20 = unlines
     , "(declare-const ts@prime (set sl@Pcs))"
     , "(declare-const vs (set sl@Pcs))"
     , "(declare-const vs@prime (set sl@Pcs))"
-    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(declare-fun const@@sl@Pcs@@Int (Int) (Array sl@Pcs Int))"
     , "(declare-fun finite@@Int ( (set Int) ) Bool)"
     , "(declare-fun finite@@sl@Pcs ( (set sl@Pcs) ) Bool)"
@@ -1612,6 +1614,7 @@ result20 = unlines
     , "             ( (set sl@Pcs)"
     , "               (Array sl@Pcs Int) )"
     , "             (set Int))"
+    , "(declare-fun @@lambda@@_0 ( (set sl@Pcs) ) (set sl@Pcs))"
     , "(define-fun all@@Int () (set Int) ( (as const (set Int)) true ))"
     , "(define-fun all@@sl@Pcs"
     , "            ()"
@@ -1658,11 +1661,6 @@ result20 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@Int"
     , "            ( (s1 (set Int))"
     , "              (s2 (set Int)) )"
@@ -1673,6 +1671,11 @@ result20 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (term (Array sl@Pcs Int)) )"
     , "                (! (= (qsum@@sl@Pcs empty-set@@sl@Pcs term) 0)"
     , "                   :pattern"
@@ -1898,16 +1901,16 @@ result19 = unlines
     , "              (s2 (set sl@Pcs)) )"
     , "            (set sl@Pcs)"
     , "            (intersect s1 ( (_ map not) s2 )))"
-    , "(define-fun sl@Pcs"
-    , "            ()"
-    , "            (set sl@Pcs)"
-    , "            ( (as const (set sl@Pcs))"
-    , "              true ))"
     , "(define-fun st-subset@@sl@Pcs"
     , "            ( (s1 (set sl@Pcs))"
     , "              (s2 (set sl@Pcs)) )"
     , "            Bool"
     , "            (and (subset s1 s2) (not (= s1 s2))))"
+    , "(define-fun sl@Pcs"
+    , "            ()"
+    , "            (set sl@Pcs)"
+    , "            ( (as const (set sl@Pcs))"
+    , "              true ))"
     , "(assert (forall ( (s1 (set sl@Pcs))"
     , "                  (s2 (set sl@Pcs)) )"
     , "                (! (=> (finite@@sl@Pcs s1)"

@@ -43,8 +43,9 @@ import qualified Data.Traversable as T
 
 import GHC.Generics (Generic)
 
+import Text.Printf
+
 import           Utilities.Error
-import           Utilities.Format
 import           Utilities.Syntactic hiding (line)
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
@@ -54,7 +55,7 @@ data ProofStep = Step
        { assertions  :: Map Label (Tactic Expr)    -- assertions
        , subproofs   :: Map Label (Tactic Proof)   -- proofs of assertions
        , assumptions :: Map Label (Tactic Expr)    -- assumptions
-       , definition  :: [(String, Tactic Expr)] 
+       , definition  :: [(Name, Tactic Expr)] 
        , theorem_ref :: [Tactic (TheoremRef, LineInfo)]
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal
        , main_proof  :: Maybe (Tactic Proof)       -- main proof        
@@ -65,10 +66,10 @@ data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
 data ParserSetting = PSetting 
     { _language :: Notation
     , _is_step  :: Bool
-    , _parserSettingSorts    :: Map String Sort
-    , _decls    :: Map String Var
-    , _dum_ctx  :: Map String Var
-    , _primed_vars   :: Map String Var
+    , _parserSettingSorts    :: Map Name Sort
+    , _decls    :: Map Name Var
+    , _dum_ctx  :: Map Name Var
+    , _primed_vars   :: Map Name Var
     , _free_dummies  :: Bool
     , _expected_type :: Maybe Type
     } -- deriving Show
@@ -116,7 +117,7 @@ add_definition :: ( Monad m
                   , MonadReader LineInfo m
                   , MonadError m
                   , MonadState ProofStep m)
-               => String -> Tactic Expr
+               => Name -> Tactic Expr
                -> m ()
 add_definition v e = do
         s <- ST.get
@@ -132,7 +133,7 @@ add_assumption lbl asm = do
         s <- ST.get
         if lbl `member` assumptions s then do
             li    <- ask
-            hard_error [Error (format "an assumption {0} already exists" lbl) li]
+            hard_error [Error (printf "an assumption %s already exists" $ show lbl) li]
         else ST.put $ s { assumptions = insert lbl asm $ assumptions s }
 
 add_assert :: ( Monad m
@@ -145,7 +146,7 @@ add_assert lbl asrt = do
         s <- ST.get
         if lbl `member` assertions s then do
             li    <- ask
-            hard_error [Error (format "an assertion {0} already exists" lbl) li]
+            hard_error [Error (printf "an assertion %s already exists" $ show lbl) li]
         else ST.put $ s { assertions = insert lbl asrt $ assertions s }
 
 add_proof :: ( Monad m
@@ -158,7 +159,7 @@ add_proof lbl prf = do
         s <- ST.get
         if lbl `member` subproofs s then do
             li    <- ask
-            hard_error [Error (format "a proof for assertion {0} already exists" lbl) li]
+            hard_error [Error (printf "a proof for assertion %s already exists" $ show lbl) li]
         else
             ST.put $ s { subproofs = insert lbl prf $ subproofs s }
 
@@ -194,7 +195,7 @@ find_assumptions = visitor
                     add_assert lbl expr
             )
         ,   (   "\\define"
-            ,   VCmdBlock $ \(String var,formula) -> do
+            ,   VCmdBlock $ \(var,formula) -> do
                     expr   <- lift_i $ get_expression Nothing formula 
                     add_definition var expr
             )
@@ -224,12 +225,12 @@ find_proof_step = visitor
                         case infer_goal cc notat of
                             Right cc_goal -> do
                                     return (ByCalc $ cc & goal .~ cc_goal )
-                            Left msgs      -> hard_error $ map (\x -> Error (format "type error: {0}" x) li) msgs
+                            Left msgs      -> hard_error $ map (\x -> Error (printf "type error: %s" x) li) msgs
                     return ()
             )
                 -- TODO: make into a command
         ,   (   "free:var"
-            ,   VEnvBlock $ \(String from,String to) _ -> do
+            ,   VEnvBlock $ \(from,to) _ -> do
                     li    <- ask
                     proof <- lift_i $ collect_proof_step
                     set_proof $ LP.with_line_info li $ do
@@ -260,12 +261,12 @@ find_proof_step = visitor
                     li     <- ask
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
-                            (hard_error [Error (format "invalid subproof label: {0}" lbl) li])
+                            (hard_error [Error (printf "invalid subproof label: %s" $ show lbl) li])
                     p <- lift_i collect_proof_step-- (change_goal pr new_goal) m
                     add_proof lbl p
             )
         ,   (   "indirect:equality"
-            ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
+            ,   VEnvBlock $ \(String dir,rel,zVar) _ -> do
                     li <- ask
                     notat <- lift $ lift ask
                     op <- make_soft equal $ fromEitherM
@@ -283,7 +284,7 @@ find_proof_step = visitor
                                 var p
             )
         ,   (   "indirect:inequality"
-            ,   VEnvBlock $ \(String dir,rel,String zVar) _ -> do
+            ,   VEnvBlock $ \(String dir,rel,zVar) _ -> do
                     li <- ask
                     notat <- lift $ lift ask
                     op <- make_soft equal $ fromEitherM
@@ -305,7 +306,7 @@ find_proof_step = visitor
                     li <- ask
                     p <- lift_i collect_proof_step
                     set_proof $ LP.with_line_info li $ do
-                        vs <- mapM (get_dummy . toString) vars 
+                        vs <- mapM get_dummy vars 
                         by_symmetry vs lbl Nothing p
             )
         ] [ (   "\\easy"
@@ -394,7 +395,7 @@ hint = visitor []
         g (lbl,subst) = do
                 li <- ask
                 ((),w) <- with_content subst $ add_writer $ visitor []
-                    [ ( "\\subst", VCmdBlock $ \(String var, expr) -> do
+                    [ ( "\\subst", VCmdBlock $ \(var, expr) -> do
                             expr <- get_expression Nothing expr
                             lift $ W.tell [do
                                 dum <- get_dummy var
@@ -463,7 +464,7 @@ setting_from_context notation ctx' = makeSetting notation $ do
     where
         ctx = defsAsVars ctx'
 
-with_vars :: ParserSetting -> Map String Var -> ParserSetting
+with_vars :: ParserSetting -> Map Name Var -> ParserSetting
 with_vars setting vs = setting & decls %~ (vs `union`)
 
 theory_setting :: Theory -> ParserSetting
@@ -472,7 +473,7 @@ theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 machine_setting :: Machine -> ParserSetting
 machine_setting m = setting
         & decls %~ (view' variables m `union`)
-        & primed_vars .~ M.mapKeys (++ "'") (M.map prime $ m!.variables)
+        & primed_vars .~ M.mapKeys addPrime (M.map prime $ m!.variables)
     where
         setting = theory_setting (m!.theory)
 
@@ -487,15 +488,15 @@ event_setting m evt = setting & decls %~ ((evt^.params) `union`)
         setting = schedule_setting m evt
 
 mkSetting :: Notation 
-          -> Map String Sort    -- Types
-          -> Map String Var     -- Plain variables
-          -> Map String Var     -- Primed variables
-          -> Map String Var     -- Dummy variables
+          -> Map Name Sort    -- Types
+          -> Map Name Var     -- Plain variables
+          -> Map Name Var     -- Primed variables
+          -> Map Name Var     -- Dummy variables
           -> ParserSetting
 mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
         { _parserSettingSorts = sorts
         , _decls = (plVar `union` prVar)
-        , _primed_vars = M.mapKeys (++ "'") $ M.map prime prVar
+        , _primed_vars = primeAll prVar
         , _dum_ctx = dumVar }
 
 parse_expr'' :: ParserSetting
@@ -520,7 +521,7 @@ contextOf :: ParserSetting -> Context
 contextOf set = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
     where
         ctx0
-            | set^.is_step = M.mapKeys (++"'") $ M.map prime $ set^.primed_vars
+            | set^.is_step = primeAll $ set^.primed_vars
             | otherwise    = M.empty
         ctx1 
             | set^.free_dummies = set^.dum_ctx
@@ -542,11 +543,11 @@ parse_expr set xs = do
             Nothing -> return x
         let x = normalize_generics typed_x
         unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (format msg (pretty x) (type_of x)) li)
+            $ map (\x -> Error (printf msg (pretty x) (pretty $ type_of x)) li)
                 $ ambiguities x
         return $ DispExpr (flatten xs) x
     where
-        msg   = "type of {0} is ill-defined: {1}"
+        msg   = "type of %s is ill-defined: %s"
 
 get_expression :: ( MonadReader Thy m )
                => Maybe Type

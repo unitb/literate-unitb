@@ -24,7 +24,6 @@ import Control.Monad.RWS as RWS
 import Data.Char
 import Data.Either
 import Data.List as L
-import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map as M hiding ( map, (\\) )
 import Data.Tuple

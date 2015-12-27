@@ -4,22 +4,25 @@ module Z3.Test where
     -- Modules
 import Z3.Z3 as Z
 
-import Logic.Expr
+import Logic.Expr hiding (assert)
 import Logic.Expr.Const
-import Logic.Lambda
+import Logic.Expr.Declaration
 import Logic.Operator hiding ( Command )
 import Logic.Proof 
+import Logic.Proof.Lambda
 import Logic.Theory
 
 import Theories.SetTheory
 
     -- Libraries
-import Control.Lens hiding (Context)
+import Control.Lens hiding (Context,traverse1)
 
+import Data.Default
 import qualified Data.Map as M
 import qualified Data.Maybe as M
 import qualified Data.Set as S
 
+import Utilities.Functor
 import Utilities.Syntactic
 
 import Tests.UnitTest
@@ -62,19 +65,19 @@ sample = unlines [
     "(check-sat)",
     "(get-model)"]
 
-a :: AbsExpr Type q
-x :: Either a (AbsExpr Type q)
+a :: AbsExpr InternalName Type q
+x :: Either a (AbsExpr Name Type q)
 x' :: Var
-ff :: Fun
+ff :: IsName n => AbsFun n Type
 
-a        = Word (Var "a" int)
+a        = Word (make' Var "a" int)
 (x,x')   = var "x" int
-ff       = mk_fun [] "f" [int, bool] int
+ff       = mk_fun' [] "f" [int, bool] int
 
 sample_ast :: [Command]
 sample_ast = [
-        Decl (ConstDecl "a" int),
-        Decl (FunDecl [] "f" [int, bool] int),
+        Decl (make' ConstDecl "a" int),
+        Decl (make' (FunDecl []) "f" [int, bool] int),
         assert $ M.fromJust $ strip_generics (a `zgreater` zint 10),
         assert $ M.fromJust $ strip_generics (f a ztrue `zless` zint 10),
         CheckSat ]
@@ -83,42 +86,42 @@ sample_ast = [
 
 sample_quant :: [Command]
 sample_quant = [
-        Decl (FunDecl [] "f" [int] int),
+        Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 9)),
         CheckSat ]
     where
-        ff          = mk_fun [] "f" [int] int
+        ff          = mk_fun' [] "f" [int] int
         f           = typ_fun1 ff
 
 sample_proof :: Sequent
 sample_proof = Sequent
-        ( mk_context [FunDecl [] "f" [int] int] )
+        ( def & functions .~ symbol_table [mk_fun' [] "f" [int] int] )
         empty_monotonicity
         [($typeCheck) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]
         M.empty
         (($typeCheck) $ mzforall [x'] mztrue (f x `mzless` mzint 12))
     where
-        ff          = mk_fun [] "f" [int] int
+        ff          = mk_fun' [] "f" [int] int
         f           = typ_fun1 ff
 
 sample_quant2 :: [Command]
 sample_quant2 = [
-        Decl (FunDecl [] "f" [int] int),
+        Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat]
     where
-        f           = typ_fun1 $ mk_fun [] "f" [int] int
+        f           = typ_fun1 $ mk_fun' [] "f" [int] int
 
 sample_quant3 :: [Command]
 sample_quant3 = [
-        Decl (FunDecl [] "f" [int] int),
+        Decl (make' (FunDecl []) "f" [int] int),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) (mzforall [x'] mztrue (f x `mzless` mzint 10)),
         assert $ M.fromJust $ strip_generics $ ($typeCheck) $ mznot (mzforall [x'] mztrue (f x `mzless` mzint 11)),
         CheckSat] 
     where
-        f           = typ_fun1 $ mk_fun [] "f" [int] int
+        f           = typ_fun1 $ mk_fun' [] "f" [int] int
         
 assert :: FOExpr -> Command
 assert x = Assert x Nothing
@@ -135,17 +138,18 @@ sample_calc = (Calc
         ]
         li )
     where
-        ctx = mk_context [ FunDecl [] "f" [bool] bool,
-                  FunDef [] "follows" [x',y'] 
-                    bool (($typeCheck) (y `mzimplies` x)),
-                  ConstDecl "x" bool,
-                  ConstDecl "y" bool ]
+        ctx = def & functions .~ symbol_table [ mk_fun' [] "f" [bool] bool ]
+                  & definitions .~ symbol_table [ z3Def [] "follows" [x',y'] 
+                                    bool (($typeCheck) (y `mzimplies` x)) ]
+                  & constants .~ symbol_table ( (traverse.traverse1 %~ fromString'')
+                                 [ Var "x" bool
+                                 , Var "y" bool ] )
         hyp         = ($typeCheck) $ mzforall 
             [x',y'] mztrue 
             ( (f (x `mzand` y) `mzeq` (f x `mzand` f y)) )
         (x,x')      = var "x" bool
         (y,y')      = var "y" bool
-        f           = typ_fun1 $ mk_fun [] "f" [bool] bool
+        f           = typ_fun1 $ mk_fun' [] "f" [bool] bool
         li          = LI "" (-1) (-1)
 
 indent :: String -> String
@@ -160,9 +164,10 @@ result5a = ( CL
                 (Just bool)
             , [y])
     where
-        (x,x_decl) = var' "@@bv@@_0" int
-        (fv0,fv0_decl) = var' "@@fv@@_0" int
-        (y,_) = var' "y" int
+        (x,x_decl) = var' (reserved "bv" 0) int
+        (fv0,fv0_decl) = var' (reserved "fv" 0) int
+        (y,_) = var' [smt|y|] int
+        y :: Expr'
 
 result5b :: (CanonicalLambda, [Expr'])
 result5b = ( CL 
@@ -171,28 +176,28 @@ result5b = ( CL
                 (Just bool)
             , [z `zplus` y,z `zplus` y])
     where
-        (x,x_decl) = var' "@@bv@@_0" int
-        (fv1,fv1_decl) = var' "@@fv@@_0" int
-        (fv2,fv2_decl) = var' "@@fv@@_1" int
-        (y,_) = var' "y" int
-        (z,_) = var' "z" int
+        (x,x_decl) = var' (reserved "bv" 0) int
+        (fv1,fv1_decl) = var' (reserved "fv" 0) int
+        (fv2,fv2_decl) = var' (reserved "fv" 1) int
+        (y,_) = var' [smt|y|] int
+        (z,_) = var' [smt|z|] int
 
 case5a :: IO (CanonicalLambda, [Expr'])
 case5a = do
         return (canonical Term [x_decl] (x `zle` y))
     where
-        (x,x_decl) = var' "x" int
-        (y,_) = var' "y" int
+        (x,x_decl) = var' [smt|x|] int
+        (y,_) = var' [smt|y|] int
 
 case5b :: IO (CanonicalLambda, [Expr'])
 case5b = do
         return (canonical Term [x_decl] ( (x `zplus` (z `zplus` y)) `zle` (z `zplus` y) ))
     where
-        (x,x_decl) = var' "x" int
-        (y,_) = var' "y" int
-        (z,_) = var' "z" int
+        (x,x_decl) = var' [smt|x|] int
+        (y,_) = var' [smt|y|] int
+        (z,_) = var' [smt|z|] int
 
-var' :: String -> Type -> (Expr', Var)
+var' :: InternalName -> Type -> (Expr', Var')
 var' x t = (Word (Var x t), Var x t)
 
 result6a :: (CanonicalLambda, [Expr'])
@@ -203,17 +208,17 @@ result6a = ( CL
                 (Just bool)
             , [y])
     where
-        (x,x_decl) = var' "@@bv@@_0" int
-        (fv0,fv0_decl) = var' "@@fv@@_0" int
-        (y,_) = var' "y" int
+        (x,x_decl) = var' (reserved "bv" 0) int
+        (fv0,fv0_decl) = var' (reserved "fv" 0) int
+        (y,_) = var' [smt|y|] int
 
 case6a :: IO (CanonicalLambda, [Expr'])
 case6a = do
         return (canonical Term [x_decl] (x `zle` y))
     where
-        x_decl = Var "x" int
+        x_decl = make' Var "x" int
         x = Word x_decl
-        y = Word (Var "y" int)
+        y = Word (make' Var "y" int)
 
 result6b :: (CanonicalLambda, [Expr'])
 result6b = ( CL 
@@ -225,12 +230,12 @@ result6b = ( CL
                 (Just bool)
             , [zplus (zint 3) y,y,y])
     where
-        (x,x_decl) = var' "@@bv@@_0" int
-        (fv1,fv1_decl) = var' "@@fv@@_0" int
-        (fv2,fv2_decl) = var' "@@fv@@_1" int
-        (fv3,fv3_decl) = var' "@@fv@@_2" int
-        (lv0,lv0_decl) = var' "@@lv@@_0" int
-        (y,_) = var' "y" int
+        (x,x_decl) = var' (reserved "bv" 0) int
+        (fv1,fv1_decl) = var' (reserved "fv" 0) int
+        (fv2,fv2_decl) = var' (reserved "fv" 1) int
+        (fv3,fv3_decl) = var' (reserved "fv" 2) int
+        (lv0,lv0_decl) = var' (reserved "lv" 0) int
+        (y,_) = var' [smt|y|] int
 
 case6b :: IO (CanonicalLambda, [Expr'])
 case6b = do
@@ -238,33 +243,35 @@ case6b = do
             (x `zle` zplus (zint 3) y)
             ((x `zplus` (z `zplus` y)) `zle` (z `zplus` y) )))
     where
-        x_decl = Var "x" int
+        x_decl = make' Var "x" int
         x = Word x_decl
-        y = Word (Var "y" int)
-        z_decl = Var "z" int
+        y = Word (make' Var "y" int)
+        z_decl = make' Var "z" int
         z = Word z_decl
 
-case7 :: IO (Maybe (AbsContext FOType HOQuantifier))
+case7 :: IO (Maybe (GenContext InternalName FOType HOQuantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
-        fun :: M.Map String Fun
+        fun :: M.Map Name Fun
         fun = M.map (instantiate m . substitute_type_vars m) $ set_theory^.funs
         ctx = Context M.empty M.empty fun M.empty M.empty
-        t = Gen (Sort "G0" "G0" 0) []
-        m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
+        t = Gen (Sort (fromString'' "G0") (fromString'' "G0") 0) []
+        m = M.fromList [ (ti,t) | ti <- map fromString'' ["t","a","b"] ]
 
-result7 :: Maybe (AbsContext FOType HOQuantifier)
-result7 = ctx_strip_generics $ Context M.empty M.empty fun M.empty M.empty
+result7 :: Maybe (GenContext InternalName FOType HOQuantifier)
+result7 = ctx_strip_generics $ Context M.empty M.empty fun' M.empty M.empty
     where 
+        fun' = fun & traverse.namesOf %~ asInternal
+        fun :: M.Map InternalName Fun
         fun = decorated_table $ M.elems $ M.map f $ set_theory^.funs
-        f :: Fun -> Fun
+        f :: AbsFun n Type -> AbsFun n Type
         f = instantiate m . substitute_type_vars m
-        t = Gen (Sort "G0" "G0" 0) []
-        m = M.fromList [ (ti,t) | ti <- ["t","a","b"] ]
+        t = Gen (z3Sort "G0" "G0" 0) []
+        m = M.fromList [ (ti,t) | ti <- map fromString'' ["t","a","b"] ]
 
 fun :: Fun
 pat :: [Type]
-xs  :: [M.Map String GenericType]
+xs  :: [M.Map InternalName GenericType]
 ts  :: S.Set FOType
 
 fun = head $ M.elems (set_theory^.funs)
@@ -273,7 +280,7 @@ xs     = map (M.map as_generic)
                             $ match_all pat (S.elems ts)
 ts  = S.fromList $ M.catMaybes $ map type_strip_generics [ set_type int, int ]
 
-case8 :: IO (Maybe (AbsContext FOType HOQuantifier))
+case8 :: IO (Maybe (GenContext InternalName FOType HOQuantifier))
 case8 = return $ Just $ to_fol_ctx types ctx
     where
         fun   = set_theory^.funs
@@ -292,33 +299,34 @@ case8 = return $ Just $ to_fol_ctx types ctx
                 , array (set_type int) bool
                 ]
 
-result8 :: Maybe (AbsContext FOType HOQuantifier)
+result8 :: Maybe (GenContext InternalName FOType HOQuantifier)
 result8 = ctx_strip_generics ctx
     where
-        ctx = Context M.empty M.empty fun M.empty M.empty
+        ctx = Context M.empty M.empty fun' M.empty M.empty
+        fun' = fun & traverse.namesOf %~ asInternal
         fun = -- M.fromList $ map g 
                 decorated_table $ concatMap M.elems [ M.map (f m) $ set_theory^.funs | m <- ms ]
         f m = instantiate m . substitute_type_vars m
         t0  = int
         t1  = set_type int
-        m0  = M.fromList [ ("a",t0), ("b",t1), ("t",t0) ]
-        m1  = M.fromList [ ("a",t1), ("b",t0), ("t",t0) ]
-        ms  = [m0,m1] ++ [ M.fromList [ (tj,ti) | tj <- ["a","b","t"] ] | ti <- [t0, t1] ]
+        m0  = M.fromList $ [ ("a",t0), ("b",t1), ("t",t0) ] & traverse._1 %~ fromString''
+        m1  = M.fromList $ [ ("a",t1), ("b",t0), ("t",t0) ] & traverse._1 %~ fromString''
+        ms  = [m0,m1] ++ [ M.fromList [ (tj,ti) | tj <- map fromString'' ["a","b","t"] ] | ti <- [t0, t1] ]
 
-case9 :: IO [ M.Map String FOType ]
+case9 :: IO [ M.Map InternalName FOType ]
 case9 = return $ match_some pat types
     where
         types = [set_type int, set_type $ set_type int, fun_type int int]
-        var0  = VARIABLE "a"
-        var1  = VARIABLE "b"
-        var2  = VARIABLE "c"
+        var0  = make' VARIABLE "a"
+        var1  = make' VARIABLE "b"
+        var2  = make' VARIABLE "c"
         pat   = [fun_type var1 var0, set_type var2, var1]
 --        pat   = [var0, set_type var1]
 
-result9 :: [ M.Map String FOType ]
+result9 :: [ M.Map InternalName FOType ]
 result9 = 
-        [ M.fromList [ ("a", int), ("b", int), ("c", int) ]
-        , M.fromList [ ("a", int), ("b", int), ("c", set_type int) ]
+        [ M.fromList $ [ ("a", int), ("b", int), ("c", int) ] & traverse._1 %~ fromString''
+        , M.fromList $ [ ("a", int), ("b", int), ("c", set_type int) ] & traverse._1 %~ fromString''
         ]
 
 

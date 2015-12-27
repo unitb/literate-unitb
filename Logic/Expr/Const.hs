@@ -6,6 +6,7 @@ import Logic.Expr.Classes
 import Logic.Expr.Expr
 import Logic.Expr.Genericity
 import Logic.Expr.Type
+import Logic.Names
 
     -- Libraries
 import Control.Lens hiding (rewrite,Const)
@@ -31,23 +32,23 @@ infixr 5 .+
 infixr 6 .*
 infixl 7 .^
 
-type OneExpr t q = AbsExpr t q -> AbsExpr t q
+type OneExpr n t q = AbsExpr n t q -> AbsExpr n t q
 
-type TwoExpr t q = AbsExpr t q -> AbsExpr t q -> AbsExpr t q
+type TwoExpr n t q = AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 
 fun1 :: ( TypeSystem t )
-     => AbsFun t 
-     -> AbsExpr t q -> AbsExpr t q
+     => AbsFun n t 
+     -> AbsExpr n t q -> AbsExpr n t q
 fun1 f x           = FunApp f [x]
 fun2 :: ( TypeSystem t  )
-     => AbsFun t -> AbsExpr t q
-     -> AbsExpr t q -> AbsExpr t q
+     => AbsFun n t -> AbsExpr n t q
+     -> AbsExpr n t q -> AbsExpr n t q
 fun2 f x y         = FunApp f [x,y]
 
 no_errors2 :: ( TypeSystem t 
               , IsQuantifier q )
-           => (TwoExprP t q)
-           -> (TwoExpr t q)
+           => (TwoExprP n t q)
+           -> (TwoExpr n t q)
 no_errors2 f x y = either (error . unlines) id $ f (Right x) (Right y)
 
 toErrors :: LineInfo -> ExprP -> Either [Error] Expr
@@ -55,83 +56,86 @@ toErrors li m = case m of
         Right x -> Right x
         Left xs -> Left $ map (`Error` li) xs
 
-not_fun :: TypeSystem2 t => AbsFun t
-not_fun = mk_fun [] "not" [bool] bool
+not_fun :: (TypeSystem2 t,IsName n) => AbsFun n t
+not_fun = mk_fun [] (fromString'' "not") [bool] bool
 
-znot :: (TypeSystem2 t, IsQuantifier q) => OneExpr t q
+znot :: (TypeSystem2 t, IsQuantifier q,IsName n) => OneExpr n t q
 znot e = case e of 
             FunApp f [x]
                 | f == not_fun -> x
                 | otherwise    -> fun1 not_fun e
             e' -> fun1 not_fun e'
     -- znot         = fun1 mznot
-zimplies :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q
+zimplies :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
 zimplies x y = ($typeCheck) $ mzimplies (Right x) (Right y)
-zand :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q
+zand :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
 zand x y     = zall [x, y]
-zor :: (TypeSystem2 t, IsQuantifier q) => TwoExpr t q
+zor :: (TypeSystem2 t, IsQuantifier q,IsName n) => TwoExpr n t q
 zor x y      = zsome [x, y]
 
-zeq_fun :: Fun
-zeq_fun      = mk_fun [] "="  [gA, gA] bool
+zeq_fun :: IsName n => AbsFun n Type
+zeq_fun      = mk_fun [] (fromString'' "=") [gA, gA] bool
 
-zeq_symb :: (IsQuantifier q) => TwoExpr Type q
+zeq_symb :: (IsQuantifier q,IsName n) => TwoExpr n Type q
 zeq_symb     = no_errors2 mzeq_symb
-mzeq_symb :: TwoExprP Type q
-mzeq_symb    = typ_fun2 $ mk_fun [gA] "eq" [gA, gA] bool
+mzeq_symb :: IsName n => TwoExprP n Type q
+mzeq_symb    = typ_fun2 $ mk_fun [gA] (fromString'' "eq") [gA, gA] bool
 
-zeq :: Expr -> Expr -> Expr
+zeq :: (IsQuantifier q,IsName n)
+    => AbsExpr n Type q -> AbsExpr n Type q -> AbsExpr n Type q
 zeq          = no_errors2 mzeq
-mzeq :: TwoExprP Type q
+mzeq :: IsName n => TwoExprP n Type q
 mzeq         = typ_fun2 zeq_fun
 
-(.=.) :: TwoExprP Type q
+(.=.) :: IsName n => TwoExprP n Type q
 (.=.) = mzeq
-(.==.) :: TwoExprP Type q
+(.==.) :: IsName n => TwoExprP n Type q
 (.==.) = mzeq
 
-zfollows :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zfollows     = fun2 $ mk_fun [] "follows" [bool,bool] bool
+zfollows :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zfollows     = fun2 $ mk_fun [] (fromString'' "follows") [bool,bool] bool
 -- zfollows     = fun2 mzfollows
-zall :: (TypeSystem2 t, IsQuantifier q, Foldable list) 
-     => list (AbsExpr t q) -> AbsExpr t q
+zall :: (TypeSystem2 t, IsQuantifier q, Foldable list,IsName n) 
+     => list (AbsExpr n t q) -> AbsExpr n t q
 zall xs'      = 
         case xs of
             []  -> ztrue
             [x] -> x
             xs  
                 | zfalse `elem` xs -> zfalse
-                | otherwise -> FunApp (mk_fun [] "and" (replicate n bool) bool) xs
+                | otherwise -> FunApp (mk_fun [] (fromString'' "and") (replicate n bool) bool) xs
     where
         xs = concatMap f $ F.toList xs'
         n = length xs
-        f (FunApp fun@(Fun [] "and" _ _ _) xs)
-            | not $ isLifted fun = concatMap f xs
+        f (FunApp fun@(Fun [] n _ _ _) xs)
+            | render n == "and" 
+                && not (isLifted fun) = concatMap f xs
         f x
             | x == ztrue = []
             | otherwise   = [x]
-zsome :: (TypeSystem2 t, IsQuantifier q, Traversable list) 
-      => list (AbsExpr t q) -> AbsExpr t q
+zsome :: (TypeSystem2 t, IsQuantifier q, Traversable list,IsName n) 
+      => list (AbsExpr n t q) -> AbsExpr n t q
 zsome xs'      = 
         case concatMap f xs of
             []  -> zfalse
             [x] -> x
             xs
                 | ztrue `elem` xs -> ztrue
-                | otherwise        -> FunApp (mk_fun [] "or" (replicate n bool) bool) xs
+                | otherwise        -> FunApp (mk_fun [] (fromString'' "or") (replicate n bool) bool) xs
     where
         xs = toList xs'
         n = length xs
-        f (FunApp fun@(Fun [] "or" _ _ _) xs) 
-            | not $ isLifted fun = concatMap f xs
+        f (FunApp fun@(Fun [] n _ _ _) xs) 
+            | n == fromString'' "or"
+                && not (isLifted fun) = concatMap f xs
         f x
             | x == zfalse = []
             | otherwise   = [x]
-zforall :: (TypeSystem2 t, IsQuantifier q)
-        => [AbsVar t] 
-        -> AbsExpr t q
-        -> AbsExpr t q
-        -> AbsExpr t q
+zforall :: (TypeSystem2 t, IsQuantifier q,IsName n)
+        => [AbsVar n t] 
+        -> AbsExpr n t q
+        -> AbsExpr n t q
+        -> AbsExpr n t q
 zforall [] x y  = zimplies x y
 zforall vs x w@(Binder q us y z _) 
     | q == qForall = if x == ztrue
@@ -142,11 +146,11 @@ zforall vs x w
       && w `elem` [ztrue, zfalse] = zimplies x w
     | otherwise                   = Binder qForall vs x w bool
 
-zexists :: (TypeSystem2 t, IsQuantifier q)
-        => [AbsVar t] 
-        -> AbsExpr t q
-        -> AbsExpr t q
-        -> AbsExpr t q
+zexists :: (TypeSystem2 t, IsQuantifier q,IsName n)
+        => [AbsVar n t] 
+        -> AbsExpr n t q
+        -> AbsExpr n t q
+        -> AbsExpr n t q
 zexists [] x y = zand x y
 zexists vs x w@(Binder q us y z _) 
     | q == qExists = if x == ztrue 
@@ -165,23 +169,23 @@ zquantifier q vs r t = do
         rt    = exprType q tuple (type_of t')
     return $ Binder q vs r' t' rt
 
-zite :: ThreeExprP Type q
-zite       = typ_fun3 (mk_fun [] "ite" [bool,gA,gA] gA)
+zite :: IsName n => ThreeExprP n Type q
+zite       = typ_fun3 (mk_fun [] (fromString'' "ite") [bool,gA,gA] gA)
 
-zjust :: OneExprP Type q
-zjust      = typ_fun1 (mk_fun [] "Just" [gA] (maybe_type gA))
+zjust :: IsName n => OneExprP n Type q
+zjust      = typ_fun1 (mk_fun [] (fromString'' "Just") [gA] (maybe_type gA))
 
-znothing :: ExprPG Type q
-znothing   = Right $ Cast (FunApp (mk_fun [] "Nothing" [] $ maybe_type gA) []) (maybe_type gA)
+znothing :: IsName n => ExprPG n Type q
+znothing   = Right $ Cast (FunApp (mk_fun [] (fromString'' "Nothing") [] $ maybe_type gA) []) (maybe_type gA)
 
-mznot :: TypeSystem2 t => OneExprP t q
+mznot :: (TypeSystem2 t,IsName n) => OneExprP n t q
 mznot me       = do
         e <- me
         case e of
             FunApp f [x] 
                 | f == not_fun -> typ_fun1 not_fun (Right x)
             e -> typ_fun1 not_fun (Right e)
-mzimplies :: TypeSystem2 t => TwoExprP t q
+mzimplies :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 mzimplies mx my = do
         x <- mx
         y <- my
@@ -192,34 +196,34 @@ mzimplies mx my = do
         else typ_fun2 implies_fun 
                 (Right x) (Right y)
 
-implies_fun :: TypeSystem t => AbsFun t
-implies_fun = mk_fun [] "=>" [bool,bool] bool
+implies_fun :: (IsName n,TypeSystem t) => AbsFun n t
+implies_fun = mk_fun [] (z3Name "=>") [bool,bool] bool
 
-(.=>) :: TypeSystem2 t => TwoExprP t q
+(.=>) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.=>) = mzimplies
 
-mzand :: TypeSystem2 t => TwoExprP t q
+mzand :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 mzand x y     = mzall [x,y]
-mzor :: TypeSystem2 t => TwoExprP t q
+mzor :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 mzor x y      = mzsome [x,y]
 
-(\/) :: TypeSystem2 t => TwoExprP t q
+(\/) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (\/) = mzor
 
-(/\) :: TypeSystem2 t => TwoExprP t q
+(/\) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (/\) = mzand
 
-mzfollows :: TypeSystem2 t => TwoExprP t q
+mzfollows :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 mzfollows x y = mzimplies y x
-mztrue :: (TypeSystem2 t, IsQuantifier q)
-       => ExprPG t q
+mztrue :: (TypeSystem2 t,IsQuantifier q,IsName n)
+       => ExprPG n t q
 mztrue        = Right ztrue
-mzfalse :: (TypeSystem2 t, IsQuantifier q)
-        => ExprPG t q
+mzfalse :: (TypeSystem2 t,IsQuantifier q,IsName n)
+        => ExprPG n t q
 mzfalse       = Right zfalse
 
-mzall :: (IsQuantifier q, TypeSystem2 t, Traversable list) 
-      => list (ExprPG t q) -> ExprPG t q
+mzall :: (IsQuantifier q, TypeSystem2 t, Traversable list,IsName n) 
+      => list (ExprPG n t q) -> ExprPG n t q
 mzall xs = case toList xs of
     []  -> mztrue
     [x] -> x
@@ -227,8 +231,8 @@ mzall xs = case toList xs of
         xs <- forM xs $ zcast bool 
         return $ zall xs
 
-mzsome :: (IsQuantifier q, TypeSystem2 t, Traversable list) 
-       => list (ExprPG t q) -> ExprPG t q
+mzsome :: (IsQuantifier q, TypeSystem2 t, Traversable list,IsName n) 
+       => list (ExprPG n t q) -> ExprPG n t q
 mzsome xs = case toList xs of
     []  -> mzfalse
     [x] -> x
@@ -236,128 +240,123 @@ mzsome xs = case toList xs of
         xs <- forM xs $ zcast bool
         return $ zsome xs
 
-mzforall :: (TypeSystem2 t, IsQuantifier q) 
-         => [AbsVar t] 
-         -> TwoExprP t q
+mzforall :: (TypeSystem2 t, IsQuantifier q,IsName n) 
+         => [AbsVar n t] 
+         -> TwoExprP n t q
 mzforall xs mx my = do
         x <- zcast bool mx
         y <- zcast bool my
         return $ zforall xs x y
 
-mzexists :: (TypeSystem2 t, IsQuantifier q)
-         => [AbsVar t] 
-         -> TwoExprP t q
+mzexists :: (TypeSystem2 t, IsQuantifier q,IsName n)
+         => [AbsVar n t] 
+         -> TwoExprP n t q
 mzexists xs mx my = do
         x <- zcast bool mx
         y <- zcast bool my
         return $ zexists xs x y
 
-zless :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zless        = fun2 $ mk_fun [] "<" [int,int] bool
+zless :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zless        = fun2 $ mk_fun [] (fromString'' "<") [int,int] bool
 
-zgreater :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zgreater     = fun2 $ mk_fun [] ">" [int,int] bool
+zgreater :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zgreater     = fun2 $ mk_fun [] (fromString'' ">") [int,int] bool
 
-le_fun :: TypeSystem t => AbsFun t
-le_fun = mk_fun [] "<=" [int,int] bool
+le_fun :: (IsName n,TypeSystem t) => AbsFun n t
+le_fun = mk_fun [] (z3Name "<=") [int,int] bool
 
-zle :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
+zle :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 zle          = fun2 le_fun
 
-zge :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zge          = fun2 $ mk_fun [] ">=" [int,int] bool
+zge :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zge          = fun2 $ mk_fun [] (z3Name ">=") [int,int] bool
 
-zplus :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zplus        = fun2 $ mk_fun [] "+" [int,int] int
+zplus :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zplus        = fun2 $ mk_fun [] (fromString'' "+") [int,int] int
 
-zminus :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zminus       = fun2 $ mk_fun [] "-" [int,int] int
+zminus :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zminus       = fun2 $ mk_fun [] (fromString'' "-") [int,int] int
 
-zopp :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q
-zopp         = fun1 $ mk_fun [] "-" [int] int
+zopp :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q
+zopp         = fun1 $ mk_fun [] (fromString'' "-") [int] int
 
-ztimes :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-ztimes       = fun2 $ mk_fun [] "*" [int,int] int
+ztimes :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+ztimes       = fun2 $ mk_fun [] (fromString'' "*") [int,int] int
 
-zpow :: TypeSystem2 t => AbsExpr t q -> AbsExpr t q -> AbsExpr t q
-zpow         = fun2 $ mk_fun [] "^" [int,int] int
+zpow :: (IsName n,TypeSystem2 t )=> AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+zpow         = fun2 $ mk_fun [] (fromString'' "^") [int,int] int
 
-zselect :: TwoExprP Type q
-zselect      = typ_fun2 (mk_fun [] "select" [array gA gB, gA] gB)
+zselect :: IsName n => TwoExprP n Type q
+zselect      = typ_fun2 (mk_fun [] (fromString'' "select") [array gA gB, gA] gB)
 
-zint :: (TypeSystem2 t, Integral n) => n -> AbsExpr t q
+zint :: (TypeSystem2 t, Integral int) => int -> AbsExpr n t q
 zint n       = Const (IntVal $ fromIntegral n) int
 
-zreal :: TypeSystem2 t => Double -> AbsExpr t q
+zreal :: TypeSystem2 t => Double -> AbsExpr n t q
 zreal n      = Const (RealVal n) real
 
-mzless :: TypeSystem2 t => TwoExprP t q
-mzless        = typ_fun2 $ mk_fun [] "<" [int,int] bool
-(.<) :: TypeSystem2 t => TwoExprP t q
+mzless :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzless        = typ_fun2 $ mk_fun [] (fromString'' "<") [int,int] bool
+(.<) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.<) = mzless
 
-mzgreater :: TypeSystem2 t => TwoExprP t q
-mzgreater        = typ_fun2 $ mk_fun [] ">" [int,int] bool
-mzle :: TypeSystem2 t => TwoExprP t q
-mzle          = typ_fun2 $ mk_fun [] "<=" [int,int] bool
-(.<=) :: TypeSystem2 t => TwoExprP t q
+mzgreater :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzgreater        = typ_fun2 $ mk_fun [] (fromString'' ">") [int,int] bool
+mzle :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzle          = typ_fun2 $ mk_fun [] (z3Name "<=") [int,int] bool
+(.<=) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.<=) = mzle
 
-mzge :: TypeSystem2 t => TwoExprP t q
-mzge          = typ_fun2 $ mk_fun [] ">=" [int,int] bool
-mzplus :: TypeSystem2 t => TwoExprP t q
-mzplus       = typ_fun2 $ mk_fun [] "+" [int,int] int
-(.+) :: TypeSystem2 t => TwoExprP t q
+mzge :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzge          = typ_fun2 $ mk_fun [] (z3Name ">=") [int,int] bool
+mzplus :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzplus       = typ_fun2 $ mk_fun [] (fromString'' "+") [int,int] int
+(.+) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.+)       = mzplus
 
-mzminus :: TypeSystem2 t => TwoExprP t q
-mzminus       = typ_fun2 $ mk_fun [] "-" [int,int] int
-mzopp :: (TypeSystem2 t,IsQuantifier q) => ExprPG t q -> ExprPG t q
-mzopp         = typ_fun1 $ mk_fun [] "-" [int] int
-mztimes :: TypeSystem2 t => TwoExprP t q
-mztimes       = typ_fun2 $ mk_fun [] "*" [int,int] int
-(.*) :: TypeSystem2 t => TwoExprP t q
+mzminus :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzminus       = typ_fun2 $ mk_fun [] (fromString'' "-") [int,int] int
+mzopp :: (TypeSystem2 t,IsQuantifier q,IsName n) => ExprPG n t q -> ExprPG n t q
+mzopp         = typ_fun1 $ mk_fun [] (fromString'' "-") [int] int
+mztimes :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mztimes       = typ_fun2 $ mk_fun [] (fromString'' "*") [int,int] int
+(.*) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.*) = mztimes
 
-mzpow :: TypeSystem2 t => TwoExprP t q
-mzpow         = typ_fun2 $ mk_fun [] "^" [int,int] int
-(.^) :: TypeSystem2 t => TwoExprP t q
+mzpow :: (TypeSystem2 t,IsName n) => TwoExprP n t q
+mzpow         = typ_fun2 $ mk_fun [] (fromString'' "^") [int,int] int
+(.^) :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 (.^) = mzpow
 
-mzint :: (TypeSystem2 t, Integral n) => n -> ExprPG t q 
+mzint :: (TypeSystem2 t, Integral int) => int -> ExprPG n t q 
 mzint n       = Right $ zint n
 
-mzreal :: TypeSystem2 t => Int -> ExprPG t q
+mzreal :: TypeSystem2 t => Int -> ExprPG n t q
 mzreal x       = Right $ zreal $ fromIntegral x
 
 mzpair :: ExprP -> ExprP -> ExprP
-mzpair = typ_fun2 $ mk_fun [] "pair" [gA,gB] (pair_type gA gB)
+mzpair = typ_fun2 $ mk_fun [] (fromString'' "pair") [gA,gB] (pair_type gA gB)
 
-gA :: Type
-gA = GENERIC "a"
-gB :: Type
-gB = GENERIC "b"
-
-var_of :: AbsExpr t q -> AbsVar t
+var_of :: AbsExpr n t q -> AbsVar n t
 var_of (Word v) = v
 var_of _ = error "var_of: expecting a variable expression"
 
 -- {-# DEPRECATED var, prog_var "use Logic.Expr.QuasiQuote" #-}
-var :: String -> t -> (Either a (AbsExpr t q), AbsVar t)
+var :: (?loc :: CallStack,IsName n) => String -> t -> (Either a (AbsExpr n t q), AbsVar n t)
 var n t      = (Right $ Word $ v, v)
     where
-        v = Var n t
+        v = Var (z3Name n) t
 
 prog_var :: String -> Type -> (Either a Expr, Either a Expr, Var)
 prog_var n t = (Right $ Word v, Right $ Word $ prime v, v)
     where
-        v = Var n t
+        v = Var (fromString'' n) t
 
 zapply :: ExprP -> ExprP -> ExprP
-zapply  = typ_fun2 (mk_fun [gA,gB] "apply" [fun_type gA gB, gA] gB)
+zapply  = typ_fun2 (mk_fun [gA,gB] (fromString'' "apply") [fun_type gA gB, gA] gB)
 
-one_point_rule :: forall t q. (IsQuantifier q, TypeSystem2 t) 
-               => AbsExpr t q -> AbsExpr t q
+one_point_rule :: forall n t q. (IsQuantifier q, TypeSystem2 t,IsName n) 
+               => AbsExpr n t q -> AbsExpr n t q
 one_point_rule (Binder q vs r t _) 
         | q == qExists = e
     where
@@ -366,14 +365,14 @@ one_point_rule (Binder q vs r t _)
                                         $ M.mapKeys (view name) inst) ts
                    | (inst,ts,fv) <- insts ]
         
-        insts :: [ ( M.Map (AbsVar t) (AbsExpr t q)
-                   , [AbsExpr t q]
-                   , S.Set (AbsVar t)) ]
+        insts :: [ ( M.Map (AbsVar n t) (AbsExpr n t q)
+                   , [AbsExpr n t q]
+                   , S.Set (AbsVar n t)) ]
         insts = [ (M.unions $ map subst ts,ts,S.unions $ map used_var ts) | ts <- ts' ]
         
-        subst :: AbsExpr t q -> M.Map (AbsVar t) (AbsExpr t q)
+        subst :: AbsExpr n t q -> M.Map (AbsVar n t) (AbsExpr n t q)
         subst (FunApp f xs)
-                | (f^.name) == "=" = M.fromList $ rs
+                | (z3_name f) == fromString'' "=" = M.fromList $ rs
             where
                 rs = do (i,j) <- [(0,1),(1,0)]
                         k <- maybeToList 
@@ -388,28 +387,32 @@ one_point_rule (Binder q vs r t _)
         ts' = forM (map disjuncts ts) id
 one_point_rule e = rewrite one_point_rule e
 
-conjuncts :: TypeSystem t => AbsExpr t q -> [AbsExpr t q]
+conjuncts :: (IsName n,TypeSystem t) => AbsExpr n t q -> [AbsExpr n t q]
 conjuncts (FunApp f xs) 
-    | (f^.name) == "and" = xs
+    | z3_name f == fromString'' "and" = xs
 conjuncts x = [x]
 
-disjuncts :: TypeSystem2 t => AbsExpr t q -> [AbsExpr t q]
+disjuncts :: (IsName n,TypeSystem2 t) => AbsExpr n t q -> [AbsExpr n t q]
 disjuncts (FunApp f xs)
-    | (f^.name) == "or"  = xs
+    | z3_name f == fromString'' "or" = xs
     -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
 
-zlift :: TypeSystem2 t => t -> AbsExpr t q -> AbsExpr t q
+zlift :: TypeSystem2 t => t -> AbsExpr n t q -> AbsExpr n t q
 zlift t e = Lift e t
 
-const_fun :: Fun
-const_fun = mk_fun [gA,gB] "const" [gB] (array gA gB)
+const_fun :: IsName n => AbsFun n Type
+const_fun = mk_fun [gA,gB] (fromString'' "const") [gB] (array gA gB)
 
 zconst :: ExprP -> ExprP
 zconst = typ_fun1 const_fun
 
-ident_fun :: Fun
-ident_fun = mk_fun [gA] "ident" [] (array gA gA)
+ident_fun :: IsName n => AbsFun n Type
+ident_fun = mk_fun [gA] (fromString'' "ident") [] (array gA gA)
+
+zelem        = typ_fun2 (mk_fun' [gA] "elem" [gA,set_type gA] bool)
+zelem         :: (IsQuantifier q,IsName n) 
+              => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
 
 zident :: ExprP
 zident = Right $ FunApp ident_fun []
@@ -418,7 +421,7 @@ instance Num ExprP where
     (-) = mzminus
     (+) = mzplus
     (*) = mztimes
-    abs = typ_fun1 $ mk_fun [] "abs" [int] int
+    abs = typ_fun1 $ mk_fun [] (fromString'' "abs") [int] int
     signum x = zite (x .< 0) (-1) $ zite (0 .< x) 1 0
     fromInteger = mzint
     negate = mzopp

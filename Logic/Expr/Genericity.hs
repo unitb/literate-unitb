@@ -23,15 +23,18 @@ module Logic.Expr.Genericity
 where
 
     -- Modules
-import Logic.Expr.Expr
+import Logic.Expr.Expr 
 import Logic.Expr.Classes
+import Logic.Expr.Context
 import Logic.Expr.Label
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
+import Logic.Names
 
     -- Libraries
 import Control.Applicative hiding (empty, Const)
 import Control.Arrow
+import Control.Lens hiding (rewrite,Context,Const)
 import Control.Monad
 import Control.Monad.State
 
@@ -46,23 +49,26 @@ import qualified Data.Set as S
 
 import Prelude as L
 
+import Text.Printf
+
 import Utilities.Error
-import Utilities.Format
+import Utilities.Partial (Assert)
 
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
-suffix_generics xs (GENERIC x)         = GENERIC (x ++ "@" ++ xs)
+suffix_generics xs (GENERIC x)         = GENERIC (('@':xs) `addSuffix` x)
 suffix_generics xs (Gen s ts) = Gen s $ map (suffix_generics xs) ts
+--suffix_generics = fmap
 
-rewrite_types :: IsQuantifier q
-              => String 
-              -> AbsExpr Type q -> AbsExpr Type q
-rewrite_types xs e = 
+rewrite_types :: (IsQuantifier q,IsName n)
+              => String
+              -> AbsExpr n Type q -> AbsExpr n Type q
+rewrite_types xs e = -- typesOf %~ suffix_generics tag
     case e of
-        Word (Var name t) -> rewrite fe $ Word (Var name u)
+        Word (Var name t) -> Word (Var name u)
           where
             u           = ft t
-        Const v t         -> rewrite fe $ Const v t'
+        Const v t         -> Const v t'
           where
             t'          = ft t
         Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
@@ -77,13 +83,13 @@ rewrite_types xs e =
         ft          = suffix_generics xs
 
 class TypeSystem t => TypeSystem2 t where
-    check_args :: IsQuantifier q
-               => [AbsExpr t q] 
-               -> AbsFun t 
-               -> Maybe (AbsExpr t q) 
-    zcast :: IsQuantifier q 
-          => t -> ExprPG t q
-          -> ExprPG t q
+    check_args :: (IsQuantifier q,IsName n)
+               => [AbsExpr n t q] 
+               -> AbsFun n t 
+               -> Maybe (AbsExpr n t q) 
+    zcast :: (IsQuantifier q,IsName n)
+          => t -> ExprPG n t q
+          -> ExprPG n t q
 
 instance TypeSystem2 FOType where
     check_args xp f@(Fun _ _ _ ts _) = do
@@ -91,12 +97,12 @@ instance TypeSystem2 FOType where
             return $ FunApp f xp
     zcast t me = do
             e <- me
-            let { err_msg = format (unlines
+            let { err_msg = printf (unlines
                 [ "expression has type incompatible with its expected type:"
-                , "  expression: {0}"
-                , "  actual type: {1}"
-                , "  expected type: {2} "
-                ]) (pretty e) (type_of e) t :: String }
+                , "  expression: %s"
+                , "  actual type: %s"
+                , "  expected type: %s "
+                ]) (pretty e) (pretty $ type_of e) (pretty t) :: String }
             unless (type_of e == t)
                 $  Left [err_msg]
             return e
@@ -105,9 +111,9 @@ instance TypeSystem2 GenericType where
     check_args xp (Fun gs name lf ts t) = do
             let n       = length ts
             guard (n == length ts)
-            let args    = zipWith rewrite_types (L.map show [1..n]) xp
+            let args    = zipWith rewrite_types (map show [1..n]) xp
                 targs   = L.map type_of args
-                rt      = GENERIC ("a@" ++ show (n+1))
+                rt      = GENERIC (reserved "a" (n+1))
                 -- t0 and t1 are type tuples for the sake of unification
                 t0      = Gen IntSort (t:ts) 
                 t1      = Gen IntSort (rt:targs)
@@ -122,12 +128,12 @@ instance TypeSystem2 GenericType where
             return expr
     zcast t me = do
             e <- me
-            let { err_msg = format (unlines
+            let { err_msg = printf (unlines
                 [ "expression has type incompatible with its expected type:"
-                , "  expression: {0}"
-                , "  actual type: {1}"
-                , "  expected type: {2} "
-                ]) (pretty e) (type_of e) t :: String }
+                , "  expression: %s"
+                , "  actual type: %s"
+                , "  expected type: %s "
+                ]) (pretty e) (pretty $ type_of e) (pretty t) :: String }
             u <- maybe (Left [err_msg]) Right $ 
                 unify t $ type_of e
             return $ specialize_right u e
@@ -137,86 +143,91 @@ check_all xs
     | all isRight xs = Right $ rights xs
     | otherwise      = Left $ concat $ lefts xs
 
-check_type :: IsQuantifier q => Fun 
-           -> [ExprPG Type q] -> ExprPG Type q
+check_type :: (IsQuantifier q,IsName n)
+           => AbsFun n Type 
+           -> [ExprPG n Type q] 
+           -> ExprPG n Type q
 check_type f@(Fun _ n _ ts t) mxs = do
         xs <- check_all mxs
-        let args = unlines $ map (\(i,x) -> format (unlines
-                            [ "   argument {0}:  {1}"
-                            , "   type:          {2}" ] )
-                            (i :: Int) x (type_of x))
+        let args = unlines $ map (\(i,x) -> printf (unlines
+                            [ "   argument %d:  %s"
+                            , "   type:          %s" ] )
+                            (i :: Int) (pretty x) (pretty $ type_of x))
                         (zip [0..] xs) 
-            err_msg = format (unlines 
-                    [  "arguments of '{0}' do not match its signature:"
-                    ,  "   signature: {1} -> {2}"
-                    ,  "{3}"
+            err_msg = printf (unlines 
+                    [  "arguments of '%s' do not match its signature:"
+                    ,  "   signature: %s -> %s"
+                    ,  "%s"
                     ] )
-                    n ts t args :: String
+                    (render n) (pretty ts) (pretty t) args :: String
         maybe (Left [err_msg]) Right $ check_args xs f
 
-type OneExprP t q   = IsQuantifier q => ExprPG t q -> ExprPG t q
-type TwoExprP t q   = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q
-type ThreeExprP t q = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q
-type FourExprP t q  = IsQuantifier q => ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q -> ExprPG t q
+type OneExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q
+type TwoExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q
+type ThreeExprP n t q = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q -> ExprPG n t q
+type FourExprP n t q  = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG n t q -> ExprPG n t q -> ExprPG n t q
 
 
-typ_fun1 :: ( TypeSystem2 t )
-         => AbsFun t
-         -> OneExprP t q
+typ_fun1 :: ( TypeSystem2 t,IsName n )
+         => AbsFun n t
+         -> OneExprP n t q
 typ_fun1 f@(Fun _ n _ ts t) mx        = do
         x <- mx
-        let err_msg = format (unlines 
-                    [  "argument of '{0}' do not match its signature:"
-                    ,  "   signature: {1} -> {2}"
-                    ,  "   argument: {3}"
-                    ,  "     type {4}"
+        let err_msg = printf (unlines 
+                    [  "argument of '%s' do not match its signature:"
+                    ,  "   signature: %s -> %s"
+                    ,  "   argument: %s"
+                    ,  "     type %s"
                     ] )
-                    n ts t 
-                    (pretty x) (type_of x) :: String
+                    (render n)
+                    (pretty ts) (pretty t)
+                    (pretty x) (pretty $ type_of x) :: String
         maybe (Left [err_msg]) Right $ check_args [x] f
 
-typ_fun2 :: ( TypeSystem2 t )
-         => AbsFun t  -> TwoExprP t q
+typ_fun2 :: ( TypeSystem2 t,IsName n )
+         => AbsFun n t  
+         -> TwoExprP n t q
 typ_fun2 f@(Fun _ n _ ts t) mx my     = do
         x <- mx
         y <- my
-        let err_msg = format (unlines 
-                    [  "arguments of '{0}' do not match its signature:"
-                    ,  "   signature: {1} -> {2}"
-                    ,  "   left argument: {3}"
-                    ,  "     type {4}"
-                    ,  "   right argument: {5}"
-                    ,  "     type {6}"
+        let err_msg = printf (unlines 
+                    [  "arguments of '%s' do not match its signature:"
+                    ,  "   signature: %s -> %s"
+                    ,  "   left argument: %s"
+                    ,  "     type %s"
+                    ,  "   right argument: %s"
+                    ,  "     type %s"
                     ] )
-                    n ts t 
-                    (pretty x) (type_of x) 
-                    (pretty y) (type_of y) :: String
+                    (render n) (pretty ts) (pretty t)
+                    (pretty x) (pretty $ type_of x) 
+                    (pretty y) (pretty $ type_of y) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y] f
 
-typ_fun3 :: ( TypeSystem2 t )
-         => AbsFun t
-         -> ThreeExprP t q
+typ_fun3 :: ( TypeSystem2 t,IsName n )
+         => AbsFun n t
+         -> ThreeExprP n t q
 typ_fun3 f@(Fun _ n _ ts t) mx my mz  = do
         x <- mx
         y <- my
         z <- mz
-        let err_msg = format (unlines 
-                    [  "arguments of '{0}' do not match its signature:"
-                    ,  "   signature: {1} -> {2}"
-                    ,  "   first argument: {3}"
-                    ,  "     type {4}"
-                    ,  "   second argument: {5}"
-                    ,  "     type {6}"
-                    ,  "   third argument: {7}"
-                    ,  "     type {8}"
+        let err_msg = printf (unlines 
+                    [  "arguments of '%s' do not match its signature:"
+                    ,  "   signature: %s -> %s"
+                    ,  "   first argument: %s"
+                    ,  "     type %s"
+                    ,  "   second argument: %s"
+                    ,  "     type %s"
+                    ,  "   third argument: %s"
+                    ,  "     type %s"
                     ] )
-                    n ts t 
-                    (pretty x) (type_of x) 
-                    (pretty y) (type_of y) 
-                    (pretty z) (type_of z) :: String
+                    (render n) 
+                    (pretty ts) (pretty t) 
+                    (pretty x) (pretty $ type_of x) 
+                    (pretty y) (pretty $ type_of y) 
+                    (pretty z) (pretty $ type_of z) :: String
         maybe (Left [err_msg]) Right $ check_args [x,y,z] f
 
-unify_aux :: [(Type,Type)] -> Maybe (Map String Type)
+unify_aux :: [(Type,Type)] -> Maybe (Map InternalName Type)
 unify_aux ( (GENERIC x, t1) : xs ) 
         | t1 == GENERIC x = unify_aux xs
         | x `S.member` generics t1 = Nothing
@@ -236,11 +247,13 @@ unify_aux ( (Gen x xs, Gen y ys) : zs ) = do
 unify_aux [] = return empty
 unify_aux _  = Nothing
 
-unify :: GenericType -> GenericType -> Maybe (Map String GenericType)
+unify :: GenericType -> GenericType -> Maybe (Map InternalName GenericType)
 unify t0 t1 = 
     unify_aux [(suffix_generics "1" t0, suffix_generics "2" t1)]
 
-strip_generics :: AbsExpr Type q -> Maybe (AbsExpr FOType q)
+strip_generics :: IsName n 
+               => AbsExpr n Type q 
+               -> Maybe (AbsExpr InternalName FOType q)
 strip_generics (Word v)    = do
     v <- var_strip_generics v
     return (Word v)
@@ -272,44 +285,41 @@ type_strip_generics (Gen s ts) = do
     return (FOT s ts)
 type_strip_generics _       = Nothing
 
-fun_strip_generics :: Fun -> Maybe FOFun
+fun_strip_generics :: IsName n => AbsFun n Type -> Maybe FOFun
 fun_strip_generics (Fun ts n lf ps rt) = do
     ts <- mapM type_strip_generics ts
     ps <- mapM type_strip_generics ps
     rt <- type_strip_generics rt
-    return (Fun ts n lf ps rt)
+    return (Fun ts (asInternal n) lf ps rt)
 
-def_strip_generics :: AbsDef Type q -> Maybe (AbsDef FOType q)
+def_strip_generics :: IsName n => AbsDef n Type q -> Maybe (AbsDef InternalName FOType q)
 def_strip_generics (Def ts n ps rt val) = do
     ts  <- mapM type_strip_generics ts
     ps  <- mapM var_strip_generics ps
     rt  <- type_strip_generics rt
     val <- strip_generics val
-    return (Def ts n ps rt val)
+    return (Def ts (asInternal n) ps rt val)
 
-var_strip_generics :: Var -> Maybe FOVar
+var_strip_generics :: IsName n => AbsVar n Type -> Maybe FOVar
 var_strip_generics (Var n t) = do
     t <- type_strip_generics t
-    return (Var n t)
+    return (Var (asInternal n) t)
 
-ctx_strip_generics :: Context -> Maybe (AbsContext FOType HOQuantifier)
-ctx_strip_generics (Context a b c d e) = do
-    bs <- mapM var_strip_generics $ M.elems b
-    cs <- mapM fun_strip_generics $ M.elems c
-    ds <- mapM def_strip_generics $ M.elems d
-    es <- mapM var_strip_generics $ M.elems e
-    return $ Context
-        a 
-        (fromList $ zip (keys b) bs)
-        (fromList $ zip (keys c) cs)
-        (fromList $ zip (keys d) ds)
-        (fromList $ zip (keys e) es)
+ctx_strip_generics :: IsName n
+                   => (GenContext n GenericType HOQuantifier) 
+                   -> Maybe (GenContext InternalName FOType HOQuantifier)
+ctx_strip_generics (Context a b c d e) = 
+        Context a 
+            <$> (mapKeys asInternal <$> traverse var_strip_generics b)
+            <*> (mapKeys asInternal <$> traverse fun_strip_generics c)
+            <*> (mapKeys asInternal <$> traverse def_strip_generics d)
+            <*> (mapKeys asInternal <$> traverse var_strip_generics e)
 
 class Typed a => HasGenerics a where
-    generics    :: a -> S.Set String
-    variables   :: a -> S.Set String
+    generics    :: a -> S.Set InternalName
+    variables   :: a -> S.Set InternalName
     types_of    :: a -> S.Set Type
-    genericsList :: a -> [String]
+    genericsList :: a -> [InternalName]
     generics x  = S.fromList $ genericsList x
     genericsList x  = concatMap genericsList $ S.toList $ types_of x
     variables x = S.unions $ map variables $ S.toList $ types_of x
@@ -317,16 +327,16 @@ class Typed a => HasGenerics a where
 class (HasGenerics a, TypeOf a ~ Type, TypeSystem (TypeOf b)) 
         => Generic a b where
     substitute_types'    :: (TypeOf a -> TypeOf b) -> a -> b
-    instantiate' :: Map String (TypeOf b) -> a -> b
-    substitute_type_vars' :: Map String (TypeOf b) -> a -> b
+    instantiate' :: Map InternalName (TypeOf b) -> a -> b
+    substitute_type_vars' :: Map InternalName (TypeOf b) -> a -> b
 
 substitute_types :: Generic a a => (Type -> Type) -> a -> a
 substitute_types = substitute_types'
 
-instantiate :: Generic a a => Map String Type -> a -> a
+instantiate :: Generic a a => Map InternalName Type -> a -> a
 instantiate = instantiate'
 
-substitute_type_vars :: Generic a a => Map String Type -> a -> a
+substitute_type_vars :: Generic a a => Map InternalName Type -> a -> a
 substitute_type_vars = substitute_type_vars'
 
 instance HasGenerics GenericType where
@@ -355,19 +365,19 @@ instance Generic GenericType GenericType where
                     Nothing  -> t0
             f t           = rewrite f t
 
-instance (HasGenerics t, TypeSystem t) => HasGenerics (AbsFun t) where
+instance (HasGenerics t, TypeSystem t) => HasGenerics (AbsFun n t) where
     types_of (Fun _ _ _ ts t) = S.unions $ L.map types_of $ t : ts
 
-instance (TypeSystem t', Generic Type t') => Generic (AbsFun Type) (AbsFun t') where
+instance (TypeSystem t', Generic Type t') => Generic (AbsFun n Type) (AbsFun n t') where
     substitute_types' f (Fun gs n lf ts t) = Fun (map f gs) n lf (map f ts) $ f t
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
 
-instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsDef t q) where
+instance (TypeSystem t, HasGenerics t,IsName n) => HasGenerics (AbsDef n t q) where
     types_of (Def _ _ ts t e) = S.unions $ types_of e : types_of t : map types_of ts
 
-instance (IsQuantifier q, Generic Type t', TypeSystem t') 
-        => Generic (AbsDef Type q) (AbsDef t' q) where
+instance (IsQuantifier q, Generic Type t', TypeSystem t',IsName n) 
+        => Generic (AbsDef n Type q) (AbsDef n t' q) where
     substitute_types' f (Def gs n ts t e) = 
             Def (map f gs) n 
                 (map (substitute_types' f) ts) 
@@ -376,15 +386,15 @@ instance (IsQuantifier q, Generic Type t', TypeSystem t')
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
 
-instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsVar t) where
+instance (TypeSystem t, HasGenerics t,IsName n) => HasGenerics (AbsVar n t) where
     types_of (Var _ t)  = types_of t
 
-instance (TypeSystem t', Generic Type t') => Generic Var (AbsVar t') where
+instance (TypeSystem t', Generic Type t',IsName n) => Generic (AbsVar n Type) (AbsVar n t') where
     substitute_types' f (Var x t) = Var x $ f t
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
  
-instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsExpr t q) where
+instance (TypeSystem t, HasGenerics t,IsName n) => HasGenerics (AbsExpr n t q) where
     types_of (Word v)      = types_of v
     types_of (Const _ t)   = types_of t
     types_of (Cast e t)     = S.union (types_of t) (types_of e)
@@ -392,8 +402,8 @@ instance (TypeSystem t, HasGenerics t) => HasGenerics (AbsExpr t q) where
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
 
-instance (IsQuantifier q, Generic Type t', TypeSystem t') 
-        => Generic (AbsExpr Type q) (AbsExpr t' q) where
+instance (IsQuantifier q, Generic Type t', TypeSystem t', IsName n) 
+        => Generic (AbsExpr n Type q) (AbsExpr n t' q) where
     substitute_types' g = rewriteExpr g id (substitute_types' g)
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
@@ -439,7 +449,8 @@ normalize_generics :: (Tree t, Generic t t) => t -> t
 normalize_generics expr = instantiate renaming expr
     where
         letters = map (:[]) [ 'a' .. 'z' ]
-        gen = (letters ++ [ x ++ y | x <- gen, y <- letters ])
+        gen = map fromString'' gen'
+        gen' = (letters ++ [ x ++ y | x <- gen', y <- letters ])
         f (m,names) e = visit f (M.union renaming m, drop n names) e
             where
                 free_gen = nub (genericsList e) L.\\ keys m
@@ -447,26 +458,26 @@ normalize_generics expr = instantiate renaming expr
                 n        = length free_gen
         renaming = fst $ f (empty, map GENERIC gen) expr
 
-instantiate_left :: Map String GenericType -> GenericType -> GenericType
+instantiate_left :: Map InternalName GenericType -> GenericType -> GenericType
 instantiate_left m t = instantiate m (suffix_generics "1" t)
 
-_instantiate_right :: Map String GenericType -> GenericType -> GenericType
+_instantiate_right :: Map InternalName GenericType -> GenericType -> GenericType
 _instantiate_right m t = instantiate m (suffix_generics "2" t)
 
     -- apply a type substitution to an expression
-specialize :: IsQuantifier q
-           => Map String GenericType 
-           -> AbsExpr Type q -> AbsExpr Type q
+specialize :: (IsQuantifier q,IsName n)
+           => Map InternalName GenericType 
+           -> AbsExpr n Type q -> AbsExpr n Type q
 specialize = instantiate
 
-_specialize_left :: IsQuantifier q 
-                 => Map String GenericType 
-                 -> AbsExpr Type q -> AbsExpr Type q
+_specialize_left :: (IsQuantifier q,IsName n)
+                 => Map InternalName GenericType 
+                 -> AbsExpr n Type q -> AbsExpr n Type q
 _specialize_left m e  = specialize m (rewrite_types "1" e)
 
-specialize_right :: IsQuantifier q
-                 => Map String GenericType 
-                 -> AbsExpr Type q -> AbsExpr Type q
+specialize_right :: (IsQuantifier q,IsName n)
+                 => Map InternalName GenericType 
+                 -> AbsExpr n Type q -> AbsExpr n Type q
 specialize_right m e = specialize m (rewrite_types "2" e)
 
     -- instantiation patterns
@@ -490,11 +501,11 @@ patterns ts = map maybe_pattern pat
         -- ungen t = rewrite ungen t
 
     -- generic to first order
-gen_to_fol :: IsQuantifier q 
+gen_to_fol :: (IsQuantifier q,IsName n)
            => S.Set FOType 
            -> Label 
-           -> AbsExpr Type q 
-           -> [(Label,AbsExpr FOType q)]
+           -> AbsExpr n Type q 
+           -> [(Label,AbsExpr InternalName FOType q)]
 gen_to_fol types lbl e = map (f &&& inst) xs
     where
         inst m = mk_error ("gen_to_fol", types_of $ e' m)
@@ -504,27 +515,29 @@ gen_to_fol types lbl e = map (f &&& inst) xs
         f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
         pat    = patterns e
 
-to_fol_ctx :: forall q. IsQuantifier q 
+to_fol_ctx :: forall q n. (IsQuantifier q,IsName n)
            => S.Set FOType 
-           -> AbsContext Type q 
-           -> AbsContext FOType q
+           -> GenContext n Type q 
+           -> GenContext InternalName FOType q
 to_fol_ctx types (Context s vars funs defs dums) = 
-        Context s vars' funs' defs' dums'
+        Context s 
+            vars' funs' defs' dums'
     where
-        vars' = M.map fv  vars
-        funs' = decorated_table $ concatMap ff $ M.elems funs
-        defs' = decorated_table $ concatMap fdf $ M.elems defs
-        dums' = M.map fdm dums
+        vars' = M.mapKeys asInternal $ M.map fv vars
+        funs' = M.mapKeys asInternal $ decorated_table $ concatMap ff $ M.elems funs
+        defs' = M.mapKeys asInternal $ decorated_table $ concatMap fdf $ M.elems defs
+        dums' = M.mapKeys asInternal $ M.map fdm dums
         fv    = mk_error () var_strip_generics
+        ff :: AbsFun n Type -> [FOFun]
         ff fun = map inst xs
             where
                 pat    = patterns fun
                 xs     = L.map (M.map as_generic) 
                             $ match_all pat (S.elems types)
-                inst :: Map String Type -> FOFun
+                inst :: Map InternalName Type -> FOFun
                 inst m = mk_error m fun_strip_generics $ substitute_type_vars m fun'
 
-                fun' :: Fun
+                fun' :: AbsFun n Type
                 fun' = substitute_types f fun
                 f (GENERIC s) = VARIABLE s
                 f t = rewrite f t
@@ -534,23 +547,23 @@ to_fol_ctx types (Context s vars funs defs dums) =
                 xs     = L.map (M.map as_generic) 
                             $ match_all pat (S.elems types)
                 
-                inst :: Map String Type -> AbsDef FOType q
+                inst :: Map InternalName Type -> AbsDef InternalName FOType q
                 inst m = mk_error m def_strip_generics $ substitute_type_vars m def'
 
-                def' :: AbsDef Type q               
+                def' :: AbsDef n Type q               
                 def' = substitute_types f def
                 f (GENERIC s) = VARIABLE s
                 f t = rewrite f t
         fdm = MM.fromJust . var_strip_generics
 
-match_all :: [Type] -> [FOType] -> [Map String FOType]
+match_all :: [Type] -> [FOType] -> [Map InternalName FOType]
 match_all pat types = 
         foldM (\x p -> do
                 t  <- types'
                 m  <- MM.maybeToList $ unify p t
                 ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
                 let m'  = M.fromList $ zip (M.keys m) ms
-                    m'' = M.mapKeys (reverse . drop 2 . reverse) m'
+                    m'' = M.mapKeys dropSuffix m'
                 guard $ consistent m'' x
                 return (m'' `M.union` x)
             ) M.empty pat'
@@ -560,7 +573,7 @@ match_all pat types =
         f t = rewrite f t
         types' = map as_generic types
 
-match_some :: [Type] -> [FOType] -> [Map String FOType]
+match_some :: [Type] -> [FOType] -> [Map InternalName FOType]
 match_some pat types = nubSort $ do -- map (M.map head) ms -- do
         ms <- foldM (\x (_,xs) -> do
                 m <- xs
@@ -581,13 +594,13 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
         vars = S.unions $ map generics pat'
         ms' = M.unionsWith (++) ms
 --        ms :: [Map String [FOType]]
-        ms :: [Map String [Map String FOType]]
+        ms :: [Map InternalName [Map InternalName FOType]]
         ms = do
             p  <- pat'
             t  <- types'
             m  <- MM.maybeToList $ unify p t
             ms <- MM.maybeToList $ mapM type_strip_generics (M.elems m) 
-            let ms' = M.fromList $ zip (map (reverse . drop 2 . reverse) $ M.keys m) ms
+            let ms' = M.fromList $ zip (map dropSuffix $ M.keys m) ms
             return $ M.map (const [ms']) ms' 
 
 --mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
@@ -595,7 +608,7 @@ mk_error :: (Show a, Show c, Tree a) => c -> (a -> Maybe b) -> a -> b
 mk_error z f x = 
         case f x of
             Just y -> y
-            Nothing -> $myError $ format "failed to strip type variables: \n{0}\n{1}" (pretty_print' x) z
+            Nothing -> $myError $ printf "failed to strip type variables: \n%s\n%s" (pretty_print' x) (show z)
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool
@@ -613,16 +626,15 @@ maybe_pattern t = MM.fromMaybe t $ do
         -- v2g (VARIABLE x) = GENERIC x
         -- v2g t = rewrite v2g t
 
-        gA = GENERIC "a"
-        gB2 = GENERIC "b@1"
-        gA2 = GENERIC "a@1"
+        gB2 = GENERIC $ reserved "b" 1
+        gA2 = GENERIC $ reserved "a" 1
 
 -- is_maybe :: Type -> Bool
 -- is_maybe t = MM.isJust (unify t (maybe_type gA))
 --     where
 --         gA = GENERIC "a"
 
-type_vars_to_sorts :: Type -> State ([FOType],Map String FOType) FOType
+type_vars_to_sorts :: Type -> State ([FOType],Map InternalName FOType) FOType
 type_vars_to_sorts t = 
         case t of
           VARIABLE n -> do
@@ -636,11 +648,14 @@ type_vars_to_sorts t =
           GENERIC _ -> fail "expecting no more generic parameters"
           Gen s ts  -> make_type s <$> mapM type_vars_to_sorts ts
 
-vars_to_sorts_aux :: AbsExpr Type q  -> State ([FOType],Map String FOType) (AbsExpr FOType q)
+vars_to_sorts_aux :: AbsExpr n Type q  -> State ([FOType],Map InternalName FOType) (AbsExpr n FOType q)
 vars_to_sorts_aux = rewriteExprM type_vars_to_sorts return vars_to_sorts_aux
 
-vars_to_sorts :: Map String Sort -> AbsExpr Type q -> AbsExpr FOType q
+names :: Assert -> String -> [Name]
+names arse n = map (makeName arse . (n ++) . show) [0 :: Int ..]
+
+vars_to_sorts :: Map Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
 vars_to_sorts sorts e = evalState (vars_to_sorts_aux e) (new_sorts, empty)
     where
-        new_sorts = map as_type $ map (("G" ++) . show) [0 :: Int ..] `minus` keys sorts
-        as_type n = make_type (Sort n n 0) []
+        new_sorts = map as_type $ names assert "G" `minus` keys sorts
+        as_type n = make_type (Sort n (asInternal n) 0) []

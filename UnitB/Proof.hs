@@ -17,7 +17,6 @@ import Control.Lens
 
 import Data.Functor.Classes
 import Data.Foldable as F
-import Data.List.NonEmpty
 import Data.List.Ordered
 import Data.Maybe
 import Data.Typeable

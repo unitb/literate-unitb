@@ -1,4 +1,7 @@
+{-# LANGUAGE TypeFamilies,GADTs #-}
 module Logic.Expr.Classes where
+
+import Logic.Names
 
 import Control.Lens hiding (List,rewriteM)
 import Control.Monad.Reader
@@ -6,41 +9,77 @@ import Control.Monad.State
 
 import Data.Data
 import Data.Data.Lens 
-import Data.List
-import Data.List.Utils
+import Data.Foldable as F
+import Data.List as L 
+import Data.Map  as M
 import Data.Tuple
 import Data.Typeable.Lens
 
-class HasName a n | a -> n where
-    name :: Getter a String
 
-class HasName n String => Named n where
-    --name    :: n -> String
-    as_pair :: n -> (String, n)
-    as_pair n = (n^.name, n)
-    
-    decorated_name :: n -> String
+class HasName a n | a -> n where
+    name :: Getter a n
+
+as_pair :: HasName a n 
+        => a -> (n, a)
+as_pair = as_pair' id
+
+as_pair' :: HasName b n 
+         => (a -> b) -> a -> (n, a)
+as_pair' f n = (f n^.name, n)
+
+class (IsName (NameOf n), HasName n (NameOf n), Typeable n, Show (NameOf n)) => Named n where
+    type NameOf n :: *
+    decorated_name :: n -> InternalName
     decorated_name x = runReader (decorated_name' x) ProverOutput
 
-    decorated_name' :: n -> Reader OutputMode String
+    decorated_name' :: n -> Reader (OutputMode n0) n0
 
-    z3_name :: n -> String
-    z3_name x = z3_escape (x^.name)
+    z3_name :: n -> InternalName
+    z3_name x = x^.name.to asInternal
 
-data OutputMode = ProverOutput | UserOutput
+data OutputMode :: * -> * where 
+    ProverOutput :: OutputMode InternalName
+    UserOutput :: OutputMode Name
 
-newtype Endo m a = Endo { fromEndo :: a -> m a }
+adaptName :: (IsName n,MonadReader (OutputMode n0) m) 
+          => n -> m n0
+adaptName n = do
+    mode <- ask
+    return $ case mode of
+        ProverOutput -> asInternal n
+        UserOutput -> asName n
+
+onOutputName :: (MonadReader (OutputMode n) m) 
+             => (forall n0. IsName n0 => n0 -> a)
+             -> m n -> m a
+onOutputName f m = do
+    mode <- ask
+    x    <- m
+    return $ case mode of
+        ProverOutput -> f x
+        UserOutput -> f x
+
+onInternalName :: (MonadReader (OutputMode n) m) 
+             => (InternalName -> InternalName)
+             -> m n -> m n
+onInternalName f m = do
+    mode <- ask
+    x    <- m
+    return $ case mode of
+        ProverOutput -> f x
+        UserOutput -> x
+
+render_decorated :: Named n0 => n0 -> Reader (OutputMode n) String
+render_decorated = onOutputName render . decorated_name'
 
 class Tree a where
     as_tree   :: a -> StrList
-    as_tree'  :: a -> Reader OutputMode StrList
+    as_tree'  :: a -> Reader (OutputMode n) StrList
     as_tree x = runReader (as_tree' x) ProverOutput
     rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
     rewriteM :: (Applicative m, Tree a) => (a -> m a) -> a -> m a
     default rewriteM :: (Applicative m, Data a) => (a -> m a) -> a -> m a
     rewriteM f t = gtraverse (_cast f) t
-        where
-                -- (Endo return) (gcast $ Endo $ \x -> StateT $ liftM swap . flip f x)
 
     rewrite' f x t = (rewriteM' g x t) ()
         where
@@ -56,7 +95,7 @@ instance Tree () where
 data StrList = List [StrList] | Str String
 
 instance Show StrList where
-    show (List xs) = "(" ++ intercalate " " (map show xs) ++ ")"
+    show (List xs) = "(" ++ intercalate " " (L.map show xs) ++ ")"
     show (Str s)   = s
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
@@ -101,5 +140,29 @@ instance FromList a b => FromList (b -> a) b where
     from_list f (x:xs) = from_list (f x) xs
     from_list _ [] = error "from_list: not enough arguments"
 
-z3_escape :: String -> String
-z3_escape xs = intercalate "sl@" $ split "\\" xs
+z3_escape :: String -> InternalName
+z3_escape = fromString''
+
+insert_symbol :: Ord n => HasName a n => a -> Map n a -> Map n a
+insert_symbol x = M.insert (x^.name) x
+
+symbol_table' :: (Ord n, HasName b n, Foldable f) 
+              => (a -> b) -> f a -> Map n a
+symbol_table' f xs = fromList $ L.map (as_pair' f) $ F.toList xs
+
+symbol_table :: (Ord n, HasName a n, Foldable f) 
+             => f a -> Map n a
+symbol_table = symbol_table' id
+
+decorated_table :: Named a => [a] -> Map InternalName a
+decorated_table xs = fromList $ L.map (\x -> (decorated_name x, x)) xs
+
+renameAll' :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
+           => (a -> SetNameT n1 a)
+           -> Map n0 a -> Map n1 (SetNameT n1 a)
+renameAll' f = symbol_table . (traverse %~ f) . M.elems
+
+renameAll :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
+          => (n0 -> n1)
+          -> Map n0 a -> Map n1 (SetNameT n1 a)
+renameAll f = renameAll' (namesOf %~ f)

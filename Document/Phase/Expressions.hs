@@ -22,8 +22,6 @@ import Document.Visitor
 import UnitB.Expr
 import UnitB.Syntax as AST hiding (invariant)
 
-import Theories.SetTheory
-
     --
     -- Libraries
     --
@@ -236,7 +234,7 @@ instance IsExprScope Initially where
                 | otherwise   -> [Left $ MLError msg $ (format "predicate {0}" lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.elems $ vs `M.intersection` used_var' x
-                    lis' = L.map (first (printf "deleted variable %s")) lis
+                    lis' = L.map (first (printf "deleted variable %s" . render)) lis
                     msg  = format "initialization predicate '{0}' refers to deleted variables" lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
@@ -269,11 +267,11 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
             let disappear  = (True,) <$> (p2^.pAbstractVars) `M.difference` (p2^.pStateVars)
                 newIndices = (False,) <$> p2^.evtMergeAdded ev eIndices
             p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
-            (isVar,v)  <- bind (format "'{0}' is not a disappearing variable or a new index" var)
+            (isVar,v)  <- bind (printf "'%s' is not a disappearing variable or a new index" $ render var)
                 (var `M.lookup` (disappear `M.union` newIndices))
             return $ if isVar
-                then [(label var,evtScope ev (Witness v p Local li))]
-                else [(label var,evtScope ev (IndexWitness v p Local li))]
+                then [(label $ render var,evtScope ev (Witness v p Local li))]
+                else [(label $ render var,evtScope ev (IndexWitness v p Local li))]
 
 instance Scope EventExpr where
     kind (EventExpr m) = show $ ShowString . kind <$> m
@@ -287,12 +285,12 @@ instance Scope EventExpr where
             head' _ = error "Scope ExprScope: head'"
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = (format "{1} (event '{0}')" k (kind sc) :: String, view lineInfo sc)
+                    = (printf "%s (event '%s')" (kind sc) (show k) :: String, view lineInfo sc)
                 | otherwise
-                    = (format "{1} (event '{0}', from '{2}')" k (kind sc) parents :: String, view lineInfo sc)
+                    = (printf "%s (event '%s', from '%s')" (kind sc) (show k) parents :: String, view lineInfo sc)
                 where
                     parents = intercalate "," $ map show $ inheritedFrom sc
-            msg (Left _) sc = (format "{0} (initialization)" (kind sc) :: String, view lineInfo sc)
+            msg (Left _) sc = (printf "%s (initialization)" (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events m (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
@@ -302,7 +300,7 @@ instance Scope EventExpr where
 
 checkLocalExpr :: ( HasInhStatus decl (InhStatus expr)
                   , HasLineInfo decl LineInfo )
-               => String -> (expr -> Map String Var)
+               => String -> (expr -> Map Name Var)
                -> [(Maybe EventId, [(Label,decl)])] 
                -> RWS () [Error] MachineP3 ()
 checkLocalExpr expKind free xs = do
@@ -314,7 +312,7 @@ checkLocalExpr expKind free xs = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ printf "deleted variable '%s'" . view name) (M.elems errs)
+                        varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.elems errs)
                     unless (M.null errs) 
                         $ tell [MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> do
@@ -325,7 +323,7 @@ checkLocalExpr expKind free xs = do
 
 checkLocalExpr' :: ( HasInhStatus decl (InhStatus expr)
                   , HasLineInfo decl LineInfo )
-               => String -> (expr -> Map String Var)
+               => String -> (expr -> Map Name Var)
                -> EventId -> Label -> decl
                -> Reader MachineP2 [Either Error a]
 checkLocalExpr' expKind free eid lbl sch = do
@@ -335,7 +333,7 @@ checkLocalExpr' expKind free eid lbl sch = do
                     let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
                         errs   = vs `M.intersection` free expr
                         schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
-                        varsLI = L.map (first $ printf "deleted variable '%s'" . view name) (M.elems errs)
+                        varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.elems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> 
@@ -361,7 +359,7 @@ parseEvtExpr' :: ( HasInhStatus decl (EventInhStatus expr)
                  -- , HasMchExpr decl expr
                  , HasDeclSource decl DeclSource)
               => String 
-              -> (expr -> Map String Var)
+              -> (expr -> Map Name Var)
               -> (Label -> expr -> field)
               -> RefScope
               -> EventId -> Label -> decl
@@ -820,7 +818,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -
             p  <- parse_expr'' (p2^.pMchSynt) xp
             v  <- bind (format "'{0}' is not a disappearing variable" var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
-            return [(label var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
+            return [(label $ render var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
 
 event_parser :: HasMachineP2 phase => phase -> EventId -> ParserSetting
 event_parser p2 ev = (p2 ^. pEvtSynt) ! ev
@@ -846,7 +844,7 @@ check_types c = EitherT $ do
     li <- ask
     return $ either (\xs -> Left $ map (`Error` li) xs) Right c
 
-free_vars' :: Map String Var -> Expr -> Map String Var
+free_vars' :: Map Name Var -> Expr -> Map Name Var
 free_vars' ds e = vs `M.intersection` ds
     where
         vs = used_var' e

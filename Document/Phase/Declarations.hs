@@ -32,7 +32,7 @@ import           Control.Monad.Trans
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
-import           Data.List.NonEmpty as NE (NonEmpty(..),toList)
+import           Data.List.NonEmpty as NE (toList)
 import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
@@ -40,6 +40,8 @@ import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
 
 import Test.QuickCheck
+
+import Text.Printf
 
 import Utilities.Existential
 import Utilities.Format
@@ -66,10 +68,10 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
                 =<< make_all_tables' err_msg 
                 =<< triggerM vs'
                     
-            let _  = vars :: MTable (Map String VarScope)
+            let _  = vars :: MTable (Map Name VarScope)
             SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 
-newMch :: [(String,VarScope)] 
+newMch :: [(Name,VarScope)] 
        -> MachineP1' EventP1 EventP1 TheoryP2
        -> MachineP2' EventP1 EventP1 TheoryP2 
        -> MM' c (MachineP2' EventP1 EventP1 TheoryP2)
@@ -79,7 +81,7 @@ newMch vars' m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
         refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
 
 make_phase2 :: MachineP1
-            -> Map String VarScope
+            -> Map Name VarScope
             -> MM' c MachineP2 
 make_phase2 p1 vars = join $
         layeredUpgradeRecM newThy (newMch vars')
@@ -90,12 +92,12 @@ make_phase2 p1 vars = join $
         vars' = M.toList vars
         newThy t t' = makeTheoryP2 t _pNotation _pCtxSynt <$> liftField toThyDecl vars'
             where
-                _pNotation = th_notation $ empty_theory { _extends = t'^.pImports }
+                _pNotation = th_notation' $ t'^.pImports
                 _pCtxSynt  = mkSetting _pNotation (p1 ^. pTypes) constants M.empty (t'^.pDummyVars)
                 constants = (t'^.pConstants) `M.union` (M.mapMaybe defToVar $ t'^.pDefinitions)
         newEvent = liftEvent toNewEventDecl
         oldEvent = liftEvent toOldEventDecl
-        liftEvent :: (String -> VarScope -> [Either Error (EventId, [EventP2Field])])
+        liftEvent :: (Name -> VarScope -> [Either Error (EventId, [EventP2Field])])
                   -> MM' c (MachineP2' EventP1 EventP1 TheoryP2
                             -> SkipOrEvent -> EventP1 -> EventP2 -> MM' c EventP2)
         liftEvent f = do
@@ -107,7 +109,7 @@ make_phase2 p1 vars = join $
                     _pEvtSynt :: EventP2 -> ParserSetting
                     _pEvtSynt e = parser $ e^.eIndParams
 
-                    parser :: Map String Var
+                    parser :: Map Name Var
                            -> ParserSetting
                     parser table    = m^.pMchSynt & decls %~ union table
                 case eid of 
@@ -121,7 +123,7 @@ instance IsVarScope TheoryDef where
     toMchDecl _ _  = []
 
 variable_decl :: MPipeline MachineP1
-                    [(String,VarScope)]
+                    [(Name,VarScope)]
 variable_decl = machine_var_decl Machine "\\variable"
 
 instance IsVarScope TheoryConst where
@@ -131,7 +133,7 @@ instance IsVarScope TheoryConst where
     toMchDecl _ _  = []
 
 constant_decl :: MPipeline MachineP1
-                    [(String,VarScope)]
+                    [(Name,VarScope)]
 constant_decl = machine_var_decl TheoryConst "\\constant"
 
 instance IsVarScope MachineVar where
@@ -142,15 +144,15 @@ instance IsVarScope MachineVar where
     toMchDecl s (Machine v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
     toMchDecl s (DelMch (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
     toMchDecl s (DelMch (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
-    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error (format "deleted variable '{0}' does not exist" s) li]
+    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error (printf "deleted variable '%s' does not exist" $ render s) li]
 
-remove_var :: MPipeline MachineP1 [(String,VarScope)]
+remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
         li <- lift ask
         return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . getVarName) xs
 
 dummy_decl :: MPipeline MachineP1
-                    [(String,VarScope)]
+                    [(Name,VarScope)]
 dummy_decl = machine_var_decl 
         (\v source li -> Evt $ singleton Nothing (EventDecl v Param undefined source li)) 
         "\\dummy"
@@ -159,21 +161,21 @@ machine_var_decl :: IsVarScope var
                  => (Var -> DeclSource -> LineInfo -> var)
                  -> String
                  -> MPipeline MachineP1
-                        [(String,VarScope)]
+                        [(Name,VarScope)]
 machine_var_decl scope kw = machineCmd kw $ \(Identity (PlainText xs)) _m p1 -> do
             vs <- get_variables' (p1 ^. pAllTypes) xs
             li <- lift ask
             return $ map (\(x,y) -> (x,makeCell $ scope y Local li)) vs
 
-index_decl :: MPipeline MachineP1 [(String,VarScope)]
+index_decl :: MPipeline MachineP1 [(Name,VarScope)]
 index_decl = event_var_decl Index "\\indices"
 
-param_decl :: MPipeline MachineP1 [(String,VarScope)]
+param_decl :: MPipeline MachineP1 [(Name,VarScope)]
 param_decl = event_var_decl Param "\\param"
 
-type EventSym = (EventId,[(String,Var)])
+type EventSym = (EventId,[(Name,Var)])
 
-toEventDecl :: RefScope -> String -> EvtDecls -> [Either a (EventId,[EventP2Field])]
+toEventDecl :: RefScope -> Name -> EvtDecls -> [Either a (EventId,[EventP2Field])]
 toEventDecl ref s (Evt m) = map Right $ concatMap (uncurry f)
                                      $ MM.mapMaybe distr $ M.toList m
          where 
@@ -198,7 +200,7 @@ instance IsVarScope EvtDecls where
 event_var_decl :: EvtScope
                -> String
                -> MPipeline MachineP1
-                    [(String,VarScope)]
+                    [(Name,VarScope)]
 event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
             let _    = lbl :: EventId
                 ts   = L.view pAllTypes p1

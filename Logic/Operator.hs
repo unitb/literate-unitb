@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE TypeFamilies          #-}
 module Logic.Operator 
     ( Notation
     , BinOperator (..)
@@ -10,10 +11,11 @@ module Logic.Operator
     , Matrix
     , Input (..)
     -- , with_assoc
+    , functionName
     , empty_notation
     , logical_notation
     , functional_notation
-    , pair_op
+    , pair_op, make
     , apply, equal, conj, disj
     , implies, follows, equiv
     , combine, precede
@@ -79,7 +81,7 @@ data Notation = Notation
     , _relations :: [BinOperator]
     , _chaining :: [((BinOperator,BinOperator),BinOperator)]
     , _commands :: [Command]
-    , _quantifiers :: [(String,HOQuantifier)]
+    , _quantifiers :: [(Name,HOQuantifier)]
     , _struct :: Matrix Operator Assoc
     } deriving (Eq,Generic)
 
@@ -112,7 +114,7 @@ chaining :: Lens' Notation [((BinOperator,BinOperator),BinOperator)]
 chaining = lens _chaining (\n x -> with_assoc $ n { _chaining = x })
 commands :: Lens' Notation [Command]
 commands = lens _commands (\n x -> with_assoc $ n { _commands = x })
-quantifiers :: Lens' Notation [(String,HOQuantifier)]
+quantifiers :: Lens' Notation [(Name,HOQuantifier)]
 quantifiers = lens _quantifiers (\n x -> with_assoc $ n { _quantifiers = x })
 struct :: Getter Notation (Matrix Operator Assoc)
 struct = to _struct
@@ -138,11 +140,9 @@ combine x y
         , _chaining     = _chaining x  ++ _chaining y }
     | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
     where
-        f (Right (BinOperator x _ _))  = x
-        f (Left (UnaryOperator x _ _)) = x
         intersect :: Input a => [a] -> [a] -> [a]
         intersect = intersectBy ((==) `on` token)
-        common1 = L.map f $ _new_ops x `intersect` _new_ops y
+        common1 = L.map token $ _new_ops x `intersect` _new_ops y
         common2 = L.map token $ _commands x `intersect` _commands y
         common = common1 `union` common2
 
@@ -159,7 +159,7 @@ precede x y
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ _new_ops x `intersect` _new_ops y
 
-data UnaryOperator = UnaryOperator String String (ExprP -> ExprP)
+data UnaryOperator = UnaryOperator InternalName Name (ExprP -> ExprP)
     deriving (Typeable,Generic)
 
 instance Eq UnaryOperator where
@@ -171,15 +171,20 @@ instance Ord UnaryOperator where
 instance Show UnaryOperator where
     show (UnaryOperator x y _) = show (x,y) -- format str x y
 
-instance HasName Operator String where
+instance HasName Operator Name where
     name = to $ \case 
         (Right (BinOperator _ xs _))  -> xs
         (Left (UnaryOperator _ xs _)) -> xs
 
 instance Named Operator where
-    decorated_name' = return . view name
+    type NameOf Operator = Name
+    decorated_name' = adaptName . view name
 
-data BinOperator = BinOperator String String (ExprP -> ExprP -> ExprP)
+functionName :: Operator -> Name
+functionName (Right (BinOperator xs _ _)) = asName xs
+functionName (Left (UnaryOperator xs _ _)) = asName xs
+
+data BinOperator = BinOperator InternalName Name (ExprP -> ExprP -> ExprP)
     deriving (Typeable,Generic)
 
 instance Eq BinOperator where
@@ -193,31 +198,30 @@ instance Show BinOperator where
 
 type Operator = Either UnaryOperator BinOperator
 
-data Command = Command String String Int ([ExprP] -> ExprP)
+data Command = Command Name InternalName Int ([ExprP] -> ExprP)
     deriving (Generic)
 
 instance Show Command where
-    show (Command x y _ _) = show (x,y) -- format str x y
+    show (Command x y _ _) = show (x,y)
 
 instance Eq Command where
     (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =
         (x0,y0,n0) == (x1,y1,n1)
 
 class Input a where
-    token :: a -> String
+    token :: a -> Name
 
 instance Input BinOperator where
-    token (BinOperator tok _ _) = tok
+    token (BinOperator _ tok _) = tok
 
 instance Input UnaryOperator where
-    token (UnaryOperator tok _ _) = tok
+    token (UnaryOperator _ tok _) = tok
 
 instance Input Command where
     token (Command tok _ _ _) = tok
     
 instance Input Operator where
-    token (Left x) = token x
-    token (Right x) = token x
+    token = either token token
     
 precedence :: Notation -> Matrix Operator Bool
 precedence ops = m_closure_with (_new_ops ops)
@@ -264,9 +268,9 @@ apply   :: BinOperator
 equal   :: BinOperator
 pair_op :: BinOperator
 
-apply   = BinOperator "apply" "."     zapply
-equal   = BinOperator "equal" "="     mzeq
-pair_op = BinOperator "pair"  "\\mapsto" mzpair
+apply   = make BinOperator "apply" "."     zapply
+equal   = make BinOperator "equal" "="     mzeq
+pair_op = make BinOperator "pair"  "\\mapsto" mzpair
 
 functional_notation :: Notation
 functional_notation = with_assoc empty_notation
@@ -278,8 +282,8 @@ functional_notation = with_assoc empty_notation
     , _left_assoc  = [[apply],[pair_op]]
     , _right_assoc = []
     , _relations   = []
-    , _quantifiers = [ ("\\qforall", Forall)
-                     , ("\\qexists", Exists) ]
+    , _quantifiers = [ (fromString'' "\\qforall", Forall)
+                     , (fromString'' "\\qexists", Exists) ]
     , _chaining    = [] }
 
     -- logic
@@ -290,12 +294,12 @@ follows :: BinOperator
 equiv   :: BinOperator
 neg     :: UnaryOperator
 
-disj    = BinOperator "or" "\\lor"          mzor
-conj    = BinOperator "and" "\\land"        mzand
-implies = BinOperator "implies" "\\implies" mzimplies
-follows = BinOperator "follows" "\\follows" (flip mzimplies)
-equiv   = BinOperator "equiv" "\\equiv"   mzeq
-neg     = UnaryOperator "not" "\\neg"       mznot
+disj    = make BinOperator "or" "\\lor"          mzor
+conj    = make BinOperator "and" "\\land"        mzand
+implies = make BinOperator "implies" "\\implies" mzimplies
+follows = make BinOperator "follows" "\\follows" (flip mzimplies)
+equiv   = make BinOperator "equiv" "\\equiv"   mzeq
+neg     = make UnaryOperator "not" "\\neg"       mznot
 
 logical_notation :: Notation
 logical_notation = with_assoc empty_notation
@@ -309,8 +313,8 @@ logical_notation = with_assoc empty_notation
     , _right_assoc = []
     , _relations   = [equiv,implies,follows]
     , _commands    = 
-        [ Command "\\true" "true" 0 $ const mztrue
-        , Command "\\false" "false" 0 $ const mzfalse ]
+        [ make Command "\\true" "true" 0 $ const mztrue
+        , make Command "\\false" "false" 0 $ const mzfalse ]
     , _chaining    = 
         [ ((equiv,implies),implies)
         , ((implies,equiv),implies)

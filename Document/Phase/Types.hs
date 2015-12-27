@@ -59,9 +59,9 @@ type MachineP2 = MachineP2' EventP2 EventP2 TheoryP2
 
 data MachineP2' ae ce thy = MachineP2
     { _p1 :: MachineP1' ae ce thy
-    , _pDelVars   :: Map String (Var,LineInfo)
-    , _pStateVars :: Map String Var             -- machine variables
-    , _pAbstractVars :: Map String Var          -- abstract machine variables
+    , _pDelVars   :: Map Name (Var,LineInfo)
+    , _pStateVars :: Map Name Var             -- machine variables
+    , _pAbstractVars :: Map Name Var          -- abstract machine variables
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
     } deriving (Show,Typeable,Generic,Eq)
 
@@ -79,7 +79,7 @@ data MachineP3' ae ce thy = MachineP3
     , _pSafety    :: Map Label SafetyProp
     , _pTransient :: Map Label Transient
     , _pInvariant   :: Map Label Expr                     -- Invariants
-    , _pInitWitness :: Map String (Var,Expr)
+    , _pInitWitness :: Map Name (Var,Expr)
     , _pDelInits    :: Map Label Expr
     , _pInit        :: Map Label Expr
     , _pOldPropSet  :: PropertySet
@@ -123,8 +123,8 @@ data EventP1 = EventP1
 
 data EventP2 = EventP2 
     { _e1 :: EventP1 
-    , _eIndices :: Map String Var
-    , _eParams  :: Map String Var
+    , _eIndices :: Map Name Var
+    , _eParams  :: Map Name Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting
     } deriving (Show,Typeable,Generic,Eq)
@@ -135,8 +135,8 @@ data EventP3 = EventP3
     , _eFineSched   :: Map Label Expr
     , _eGuards   :: Map Label Expr       
     , _eActions  :: Map Label Action
-    , _eWitness     :: Map String (Var,RawExpr)
-    , _eIndWitness  :: Map String (Var,RawExpr)
+    , _eWitness     :: Map Name (Var,RawExpr)
+    , _eIndWitness  :: Map Name (Var,RawExpr)
     } deriving (Show,Typeable,Generic,Eq)
 
 data EventP4 = EventP4 
@@ -156,17 +156,17 @@ type PostponedDef = (Def,DeclSource,LineInfo)
 
 data TheoryP1 = TheoryP1
     { _t0 :: TheoryP0
-    , _pImports   :: Map String Theory
-    , _pTypes     :: Map String Sort
-    , _pAllTypes  :: Map String Sort
-    , _pSetDecl   :: [(String, PostponedDef)]
+    , _pImports   :: Map Name Theory
+    , _pTypes     :: Map Name Sort
+    , _pAllTypes  :: Map Name Sort
+    , _pSetDecl   :: [(Name, PostponedDef)]
     } deriving (Show,Typeable,Generic,Eq)
 
 data TheoryP2 = TheoryP2
     { _t1 :: TheoryP1 
-    , _pDefinitions :: Map String Def
-    , _pConstants :: Map String Var
-    , _pDummyVars :: Map String Var             -- dummy variables
+    , _pDefinitions :: Map Name Def
+    , _pConstants :: Map Name Var
+    , _pDummyVars :: Map Name Var             -- dummy variables
     , _pNotation  :: Notation
     , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
     } deriving (Show,Typeable,Generic,Eq)

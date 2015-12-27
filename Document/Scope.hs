@@ -2,7 +2,6 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
-{-# LANGUAGE ImplicitParams            #-}
 module Document.Scope 
     ( Scope(..)
     , HasDeclSource (..)
@@ -28,6 +27,8 @@ where
 
     -- Modules
 import Document.Pipeline
+
+import Logic.Expr.PrettyPrint
 
 import UnitB.Event
 
@@ -175,7 +176,7 @@ all_errors :: Traversable t
            -> MM' c (Maybe (t a))
 all_errors m = T.mapM fromEither' m >>= (return . T.sequence)
 
-make_table :: (Ord a, Show a) 
+make_table :: (Ord a, PrettyPrintable a) 
            => (a -> String) 
            -> [(a,b,LineInfo)] 
            -> Either [Error] (Map a (b,LineInfo))
@@ -191,7 +192,7 @@ make_table f xs = returnOrFail $ fromListWith add $ L.map mkCell xs
             | otherwise = Left $ L.map (uncurry err) ys
             where
                 ys = lefts xs
-        err x li = MLError (f x) (L.map (show x,) li)
+        err x li = MLError (f x) (L.map (pretty x,) li)
         lis (Left xs)     = xs
         lis (Right (_,z)) = [z]
         add x y = Left $ lis x ++ lis y
@@ -202,7 +203,7 @@ make_all_tables' :: (Scope b, Show a, Ord a, Ord k)
                  -> MM (Maybe (Map k (Map a b)))
 make_all_tables' f xs = T.sequence <$> T.sequence (M.map (make_table' f) xs `using` parTraversable rseq)
 
-make_all_tables :: (Show a, Ord a, Ord k) 
+make_all_tables :: (PrettyPrintable a, Ord a, Ord k) 
                 => (a -> String)
                 -> Map k [(a, b, LineInfo)] 
                 -> MM (Maybe (Map k (Map a (b,LineInfo))))

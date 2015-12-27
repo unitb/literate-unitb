@@ -26,7 +26,6 @@ import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 import           Data.Map   as M hiding ( foldl, (\\) )
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
-import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 
 import Utilities.Format
@@ -34,7 +33,7 @@ import Utilities.Syntactic
 
 tr_hint :: MachineP2
         -> MachineId
-        -> Map String Var
+        -> Map Name Var
         -> NonEmpty Label
         -> LatexDoc
         -> M TrHint
@@ -44,7 +43,7 @@ tr_hint p2 m vs lbls thint = do
     let vs = L.map (view pIndices p2 !) evs
         err e ind = ( not $ M.null diff
                     , format "A witness is needed for {0} in event '{1}'" 
-                        (intercalate "," $ keys diff) e)
+                        (intercalate "," $ render <$> keys diff) e)
             where
                 diff = ind `M.difference` wit
     toEither $ error_list 
@@ -53,14 +52,14 @@ tr_hint p2 m vs lbls thint = do
 
 tr_hint' :: MachineP2
          -> MachineId
-         -> Map String Var
+         -> Map Name Var
          -> NonEmpty Label
          -> LatexDoc
          -> TrHint
          -> RWS LineInfo [Error] () TrHint
 tr_hint' p2 _m fv lbls = visit_doc []
         [ ( "\\index"
-          , CmdBlock $ \(String x, texExpr) (TrHint ys z) -> do
+          , CmdBlock $ \(x, texExpr) (TrHint ys z) -> do
                 evs <- get_events p2 $ NE.toList lbls
                 let inds = p2^.pIndices
                 vs <- bind_all evs 
@@ -68,7 +67,7 @@ tr_hint' p2 _m fv lbls = visit_doc []
                     (\e -> x `M.lookup` (inds ! e))
                 let Var _ t = head vs
                     ind = prime $ Var x t
-                    x'  = x ++ "'"
+                    x'  = addPrime x
                 expr <- hoistEither $ parse_expr' 
                     ((p2^.pMchSynt) `with_vars` insert x' ind fv) 
                         -- { expected_type = Just t }

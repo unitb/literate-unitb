@@ -30,11 +30,11 @@ well_definedness (Binder q vs r t _) = (zforall vs ztrue t') `zand` fin
 well_definedness (Cast e _) = well_definedness e
 well_definedness (Lift e _) = well_definedness e
 well_definedness (FunApp fun xs) 
-        | view name fun == "and"   = zsome $ map (f id) ys
-        | view name fun == "or"    = zsome $ map (f znot) ys
-        | view name fun == "=>"    = well_definedness 
+        | view name fun == fromString'' "and"   = zsome $ map (f id) ys
+        | view name fun == fromString'' "or"    = zsome $ map (f znot) ys
+        | view name fun == z3Name "=>"    = well_definedness 
                                        $ znot (xs ! 0) `zor` (xs ! 1)
-        | view name fun == "apply" = zall $ 
+        | view name fun == fromString'' "apply" = zall $ 
                                         (($typeCheck) $ xs' ! 1 `zelem` zdom (xs' ! 0))
                                       : map well_definedness xs
         | otherwise                = zall $ map well_definedness xs

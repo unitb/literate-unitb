@@ -15,7 +15,6 @@ import Theories.SetTheory
 import UnitB.Expr
 import UnitB.UnitB
 
-import Utilities.Lens
 import Utilities.RandomTree
 
     -- Libraries
@@ -61,7 +60,7 @@ prop_expr_parser (ExprNotation ctx n e) = e' === parse_expr ctx n (withLI $ show
 data ExprNotation = ExprNotation Context Notation RawExpr
 
 instance Show ExprNotation where
-     show (ExprNotation _ _ e) = pretty e
+     show (ExprNotation _ n e) = showExpr n e
 
 instance Arbitrary ExprNotation where
     arbitrary = sized $ \n -> resize (n `min` 20) $ do
@@ -119,7 +118,7 @@ permute_aux n xs = sized $ \size -> do
         zs <- permute_aux (n-1) (drop buck ys)
         return $ z ++ zs
 
-showExpr :: (TypeSystem t, IsQuantifier q) => Notation -> AbsExpr t q -> String
+showExpr :: (TypeSystem t, IsQuantifier q) => Notation -> AbsExpr Name t q -> String
 showExpr notation e = show_e e
     where
         root_op (FunApp f _) = find_op f
@@ -136,19 +135,19 @@ showExpr notation e = show_e e
                                 (show_right_sub_e op x)
             | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
                                     (view name f)
-                                    (L.intercalate ", " $ map show xs)
+                                    (L.intercalate ", " $ map pretty xs)
             | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
             where
                 x = xs ! 0
                 y = xs ! 1
                 op = maybe (Right plus) id $ find_op f
-                op_name = maybe unknown (view name) $ find_op f
+                op_name = maybe unknown (render . view name) $ find_op f
                 unknown = printf "<unknown function: %s %s>" 
-                            (show (view name f)) 
-                            (show $ M.keys m_ops)
-        show_e (Const n _) = show n
+                            (render $ f^.name)
+                            (show $ map Pretty $ M.keys m_ops)
+        show_e (Const n _) = pretty n
         show_e _ = "<unknown expression>"
-        m_ops = M.fromList $ zip (map token xs) xs
+        m_ops = M.fromList $ zip (map functionName xs) xs
             where
                 xs = notation^.new_ops
         show_left_sub_e op e = maybe (show_e e) f $ root_op e
@@ -176,14 +175,16 @@ latex_of m = do
                         , (set_type int, "\\set[\\Int]")
                         , (fun_type int int, "\\Int \\pfun \\Int")
                         ]
+            cmd :: String -> [String] -> [LatexNode]
             cmd n args = Text (Command n li) : concatMap farg args
             farg x = [ Bracket Curly li (Doc li [ Text (TextBlock x li) ] li) li, blank ]
-            var_decl (Var n t) = cmd "\\variable" [(n ++ " : " ++ show_t t)]
+            var_decl (Var n t) = cmd "\\variable" [(render n ++ " : " ++ show_t t)]
             decls = map var_decl $ M.elems $ m!.variables
-            imp_stat xs = cmd "\\with" [xs]
+            imp_stat :: Name -> [LatexNode]
+            imp_stat xs = cmd "\\with" [render xs]
             inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
             invs        = map inv_decl $ M.toList $ m!.props.inv
-            imports = map imp_stat $ filter (/= "basic") 
+            imports = map imp_stat $ filter (/= makeName assert "basic") 
                         $ M.keys $ m!.theory.extends
         content <- concat `liftM` permute (decls ++ imports ++ invs)
         return $ Doc li [ Env li "machine" li 
@@ -228,20 +229,19 @@ instance Show Tex where
             [ "" -- show m
             , flatten' tex]
 
-var_set :: Gen (M.Map String Var)
+var_set :: Gen (M.Map Name Var)
 var_set = do
     nvar  <- choose (0,5)
     types <- L.sort `liftM` vectorOf nvar choose_type
-    let vars = zipWith (Var . (:[])) ['a'..] types
+    let vars = zipWith (Var . makeName assert . (:[])) ['a'..] types
     return $ symbol_table vars
             
 basic_notation :: Notation
-basic_notation = th_notation $ create $ do
-                    extends .= M.fromList 
-                        [ ("sets", set_theory) 
-                        , ("functions", function_theory) 
-                        , ("arithmetic", arithmetic)
-                        , ("basic", basic_theory)] 
+basic_notation = th_notation'
+                        [ set_theory
+                        , function_theory
+                        , arithmetic
+                        , basic_theory ] 
 
 
 gen_machine :: Bool -> Gen RawMachine
@@ -259,12 +259,12 @@ gen_machine b = fix (\retry n -> do
                     (\b -> resize 5 $ expr_type b vars bool)
             case inv of
                 Just inv ->
-                    return $ newMachine assert "m0" $ do
-                        theory.extends .= M.fromList 
-                                [ ("sets", set_theory) 
-                                , ("functions", function_theory) 
-                                , ("arithmetic", arithmetic)
-                                , ("basic", basic_theory)]
+                    return $ newMachine assert ([tex|m0|]) $ do
+                        theory.extends .= symbol_table
+                                [ set_theory
+                                , function_theory
+                                , arithmetic
+                                , basic_theory]
                         variables .= vars
                         props .= empty_property_set
                                 { _inv = M.fromList $ zip inv_lbl inv } 
@@ -280,7 +280,7 @@ mk_errors True n = do
     xs <- liftGen $ replicateM (n-1) arbitrary
     permute $ True : xs
 
-expr_type :: Bool -> M.Map String Var -> Type -> Gen (Maybe RawExpr)
+expr_type :: Bool -> M.Map Name Var -> Type -> Gen (Maybe RawExpr)
 expr_type b vars t = runReaderT (runRec $ expr_type' b t) t_map
     where
         t_map = M.fromListWith (++) $ map f $ M.elems vars
@@ -322,7 +322,7 @@ fun_map = M.fromList
     ]
 
 zelem' :: RawExpr -> RawExpr -> RawExpr
-zelem' e0 e1 = FunApp (mk_fun [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
+zelem' e0 e1 = FunApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
         -- zeq' e0 e1 = FunApp (mk_fun [] "=" [int,int] bool) [e0,e1 :: Expr]
 
 choose_expr :: Bool -> Type -> EGen RawExpr

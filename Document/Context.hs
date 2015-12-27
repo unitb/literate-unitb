@@ -49,8 +49,8 @@ run_phase1_types = proc p0 -> do
         it <- imp_theory -< p0
         let t = M.map fst <$> ts
             sets = M.map snd <$> ts
-            types  = t  >>= make_all_tables (format "Multiple sets with the name {0}")
-            imp_th = it >>= make_all_tables (format "Theory imported multiple times {0}")
+            types  = t  >>= make_all_tables (printf "Multiple sets with the name %s")
+            imp_th = it >>= make_all_tables (printf "Theory imported multiple times %s")
         (types,imp_th,sets) <- triggerP -< (types,imp_th,sets)
         let imp_th' = M.map (M.map fst) imp_th
             f th = M.unions $ L.map AST.types $ M.elems th
@@ -64,10 +64,10 @@ run_phase1_types = proc p0 -> do
 
 type CPipeline ph a = Pipeline MM (CTable ph) (Maybe (CTable a))
 
-make_phase1 :: Map String Sort
-            -> Map String Sort
-            -> Map String Theory
-            -> [(String,PostponedDef)] 
+make_phase1 :: Map Name Sort
+            -> Map Name Sort
+            -> Map Name Theory
+            -> [(Name,PostponedDef)] 
             -> TheoryP1
 make_phase1 _pTypes _pAllTypes _pImports _pSetDecl = TheoryP1 { .. }
     where

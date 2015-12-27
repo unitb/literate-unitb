@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RecordWildCards #-}
+{-# LANGUAGE BangPatterns, RecordWildCards, OverloadedStrings #-}
 module Theories.FunctionTheory where
 
     -- Modules
@@ -31,27 +31,27 @@ zstore   :: ExprP -> ExprP -> ExprP -> ExprP
 zrep_select :: ExprP -> ExprP -> ExprP
 zempty_fun  :: ExprP
 
-ztfun = typ_fun2 (mk_fun [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
+ztfun = typ_fun2 (mk_fun' [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
-zdom = typ_fun1 (mk_fun [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
+zdom = typ_fun1 (mk_fun' [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
 
-zran = typ_fun1 (mk_fun [gA,gB] "ran" [fun_type gA gB] $ set_type gB)
+zran = typ_fun1 (mk_fun' [gA,gB] "ran" [fun_type gA gB] $ set_type gB)
 
-zdomsubt = typ_fun2 (mk_fun [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
+zdomsubt = typ_fun2 (mk_fun' [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
-zdomrest = typ_fun2 (mk_fun [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
+zdomrest = typ_fun2 (mk_fun' [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
 
-zrep_select = typ_fun2 (mk_fun [] "select" [fun_type gA gB, gA] $ maybe_type gB)
+zrep_select = typ_fun2 (mk_fun' [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 
-zovl    = typ_fun2 (mk_fun [gA,gB] "ovl" [ft,ft] ft)
+zovl    = typ_fun2 (mk_fun' [gA,gB] "ovl" [ft,ft] ft)
     where
         ft = fun_type gA gB
 
-zmk_fun = typ_fun2 (mk_fun [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
+zmk_fun = typ_fun2 (mk_fun' [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
 
 --zset = typ_fun1 (Fun [gA,gB] "set" [array gA $ maybe_type gB] $ set_type gB)
 
-zempty_fun = Right $ FunApp (mk_fun [gA,gB] "empty-fun" [] $ fun_type gA gB) []
+zempty_fun = Right $ FunApp (mk_fun' [gA,gB] "empty-fun" [] $ fun_type gA gB) []
 
 zlambda = zquantifier qlambda
 
@@ -59,18 +59,18 @@ lambda :: ExprP -> ExprP -> ExprP
 lambda = typ_fun2 lambda_fun
 
 lambda_fun :: Fun
-lambda_fun = mk_fun [gA,gB] "lambda" [set_type gA,array gA gB] $ fun_type gA gB
+lambda_fun = mk_fun' [gA,gB] "lambda" [set_type gA,array gA gB] $ fun_type gA gB
 
 qlambda :: HOQuantifier
 qlambda = UDQuant lambda_fun gA (QTSort fun_sort) InfiniteWD
 
-zstore        = typ_fun3 $ mk_fun [] "store" [
-        array (gB) $ gA, 
-        gB, gA] $ 
-    array gB gA
+zstore        = typ_fun3 $ mk_fun' [] "store" [
+                    array (gB) $ gA, 
+                    gB, gA] $ 
+                array gB gA
 
 zinjective :: ExprP -> ExprP
-zinjective  = typ_fun1 $ mk_fun [gA,gB] "injective" [fun_type gA gB] bool
+zinjective  = typ_fun1 $ mk_fun' [gA,gB] "injective" [fun_type gA gB] bool
 
 -- zsurjective = typ_fun1 $ Fun [gA,gB] "surjective" 
 
@@ -88,19 +88,19 @@ fun_set t0 t1 = set_type (fun_type t0 t1)
 -- zright :: ExprP -> ExprP -> ExprP
 -- zright = typ_fun2 right_fun
 
-t0 = VARIABLE "t0"
-t1 = VARIABLE "t1"
+t0 = VARIABLE $ fromString'' "t0"
+t1 = VARIABLE $ fromString'' "t1"
 
 function_theory :: Theory 
 function_theory = Theory { .. }
     where        
-        _extends =  singleton "set" set_theory
-        
+        _extends =  symbol_table [set_theory]
+        _theoryName = fromString'' "functions"
         _consts   = empty
         _theoryDummies  = empty
         _theorems = empty
         _theorySyntacticThm = empty_monotonicity
-            { _associative = fromList [("zovl",zempty_fun)] }
+            { _associative = fromList [(fromString'' "zovl",zempty_fun)] }
 --        set_ths  = 
         fun_set t0 t1 = set_type (fun_type t0 t1)
         _types    = symbol_table [fun_sort]
@@ -134,20 +134,20 @@ function_theory = Theory { .. }
             symbol_table 
                 [  lambda_fun
                 -- ,  right_fun
-                ,  mk_fun [t0,t1] "empty-fun" [] (fun_type t0 t1)
-                ,  mk_fun [t0,t1] "apply"  [fun_type t0 t1,t0] t1
-                ,  mk_fun [t0,t1] "dom"    [fun_type t0 t1] $ set_type t0
-                ,  mk_fun [t0,t1] "ran"    [fun_type t0 t1] $ set_type t1
-                ,  mk_fun [t0,t1] "ovl"    [fun_type t0 t1,fun_type t0 t1] $ fun_type t0 t1
-                ,  mk_fun [t0,t1] "dom-rest" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
-                ,  mk_fun [t0,t1] "dom-subt" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
-                ,  mk_fun [t0,t1] "mk-fun" [t0,t1] $ fun_type t0 t1 
-                ,  mk_fun [t0,t1] "tfun" [set_type t0,set_type t1] $ fun_set t0 t1
-                ,  mk_fun [t0,t1] "injective" [fun_type t0 t1] bool
+                ,  mk_fun' [t0,t1] "empty-fun" [] (fun_type t0 t1)
+                ,  mk_fun' [t0,t1] "apply"  [fun_type t0 t1,t0] t1
+                ,  mk_fun' [t0,t1] "dom"    [fun_type t0 t1] $ set_type t0
+                ,  mk_fun' [t0,t1] "ran"    [fun_type t0 t1] $ set_type t1
+                ,  mk_fun' [t0,t1] "ovl"    [fun_type t0 t1,fun_type t0 t1] $ fun_type t0 t1
+                ,  mk_fun' [t0,t1] "dom-rest" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
+                ,  mk_fun' [t0,t1] "dom-subt" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
+                ,  mk_fun' [t0,t1] "mk-fun" [t0,t1] $ fun_type t0 t1 
+                ,  mk_fun' [t0,t1] "tfun" [set_type t0,set_type t1] $ fun_set t0 t1
+                ,  mk_fun' [t0,t1] "injective" [fun_type t0 t1] bool
                 ]
             where
-                t0 = GENERIC "t0"
-                t1 = GENERIC "t1"
+                t0 = GENERIC $ fromString'' "t0"
+                t1 = GENERIC $ fromString'' "t1"
 
         _thm_depend = []
 
@@ -331,11 +331,11 @@ total_fun   :: BinOperator
 domrest     :: BinOperator
 domsubt     :: BinOperator
 
-overload    = BinOperator "overload" "|"        zovl
-mk_fun_op   = BinOperator "mk-fun" "\\fun"      zmk_fun
-total_fun   = BinOperator "total-fun" "\\tfun"  ztfun
-domrest     = BinOperator "dom-rest" "\\domres" zdomrest
-domsubt     = BinOperator "dom-subt" "\\domsub" zdomsubt
+overload    = make BinOperator "overload" "|"        zovl
+mk_fun_op   = make BinOperator "mk-fun" "\\fun"      zmk_fun
+total_fun   = make BinOperator "total-fun" "\\tfun"  ztfun
+domrest     = make BinOperator "dom-rest" "\\domres" zdomrest
+domsubt     = make BinOperator "dom-subt" "\\domsub" zdomsubt
 
 function_notation :: Notation
 function_notation = create $ do
@@ -355,11 +355,11 @@ function_notation = create $ do
    left_assoc  .= [[overload]]
    right_assoc .= [[domrest,domsubt]]
    commands    .= 
-                [ Command "\\emptyfun" "emptyfun" 0 $ const zempty_fun
-                , Command "\\dom" "dom" 1 $ zdom . head
-                , Command "\\ran" "ran" 1 $ zran . head
-                , Command "\\injective" "injective" 1 $ zinjective . head
+                [ make Command "\\emptyfun" "emptyfun" 0 $ const zempty_fun
+                , make Command "\\dom" "dom" 1 $ zdom . head
+                , make Command "\\ran" "ran" 1 $ zran . head
+                , make Command "\\injective" "injective" 1 $ zinjective . head
                 ]
-   quantifiers .= [ ("\\qfun",qlambda) ]
+   quantifiers .= [ (fromString'' "\\qfun",qlambda) ]
    relations   .= []
    chaining    .= []  

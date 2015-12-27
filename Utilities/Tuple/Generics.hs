@@ -1,7 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses
     , RankNTypes
     , TypeOperators
-    , ImplicitParams
     , ConstraintKinds
     , DefaultSignatures
     , ScopedTypeVariables

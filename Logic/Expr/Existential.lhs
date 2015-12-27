@@ -19,8 +19,7 @@ module Logic.Expr.Existential
 where
 
     -- Modules
-import Logic.Expr
-            ( Expr, Var, used_var, conjuncts )
+import Logic.Expr hiding (merge)
 
     -- Libraries
 import           Control.Monad 
@@ -55,7 +54,10 @@ get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not impleme
             -- map expressions
 
 
-partition_expr :: [Var] -> [Expr] -> [([Var],[Expr])]
+partition_expr :: (TypeSystem t,IsName n,IsQuantifier q)
+               => [AbsVar n t] 
+               -> [AbsExpr n t q] 
+               -> [([AbsVar n t],[AbsExpr n t q])]
 partition_expr vs es = do 
         runPartitionWith [0..m+n-1] $ do
             forM_ (M.assocs me) $ \(e,i) -> 

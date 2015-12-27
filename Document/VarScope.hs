@@ -15,7 +15,6 @@ import UnitB.Syntax
     -- Libraries
 import Control.Lens
 
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Map as M
 import Data.Maybe
 import Data.Typeable
@@ -28,10 +27,10 @@ import Utilities.Instances
 import Utilities.Syntactic
 
 class (Typeable a,Scope a) => IsVarScope a where
-    toOldEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
-    toNewEventDecl :: String -> a -> [Either Error (EventId,[EventP2Field])]
-    toThyDecl :: String -> a -> [Either Error TheoryP2Field]
-    toMchDecl :: String -> a -> [Either Error (MachineP2'Field ae ce t)]
+    toOldEventDecl :: Name -> a -> [Either Error (EventId,[EventP2Field])]
+    toNewEventDecl :: Name -> a -> [Either Error (EventId,[EventP2Field])]
+    toThyDecl :: Name -> a -> [Either Error TheoryP2Field]
+    toMchDecl :: Name -> a -> [Either Error (MachineP2'Field ae ce t)]
 
 newtype VarScope = VarScope { _varScopeCell :: Cell IsVarScope }
     deriving (Typeable)

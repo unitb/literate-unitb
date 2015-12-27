@@ -1,4 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
 module Document.Tests.Suite 
     ( module Document.Tests.Suite 
     , module Control.Monad.Trans.Either 

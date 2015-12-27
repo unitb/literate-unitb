@@ -2,12 +2,15 @@ module Logic.Theory
     ( Theory(..)
     , fact
     , make_theory
+    , make_theory'
     , all_theories
     , syntacticThm
     , th_notation
+    , th_notation'
     , theory_ctx
     , theory_facts
     , empty_theory
+    , empty_theory'
     , basic_theory
     , symbols
     , types, defs, funs, consts, theorems
@@ -26,28 +29,22 @@ import Logic.Theory.Monad
 
     -- Libraries
 import Control.DeepSeq
-import Control.Monad.RWS
 import Control.Lens hiding (Context,from,to,rewriteM)
 
-import           Data.Default
+import           Data.Foldable as F
 import           Data.List as L
 import           Data.Map as M 
-
-import GHC.Generics hiding ((:+:),prec)
-
-import Utilities.Instances
-import Utilities.Lens
 
 all_theories :: Theory -> [Theory]
 all_theories th = th : M.elems (all_theories' th)
     where
         _ = set theorySyntacticThm
 
-all_theories' :: Theory -> Map String Theory
+all_theories' :: Theory -> Map Name Theory
 all_theories' th = M.unions $ view extends th : M.elems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
-basic_theory = create $ do 
+basic_theory = make_theory' "basic" $ do 
         types .= symbol_table [BoolSort, pair_sort, set_sort]
         funs  .= symbol_table [const_fun,ident_fun]
         fact  .= fromList 
@@ -55,22 +52,27 @@ basic_theory = create $ do
            , (label "@basic@@_1", axm1) ]
         syntacticThm .= empty_monotonicity
             { _associative = fromList 
-                    [("and",mztrue)
-                    ,("or", mzfalse)
-                    ,("=",  mztrue)]
+                    [(nAnd,   mztrue)
+                    ,(nOr,    mzfalse)
+                    ,(nEqual, mztrue)]
             , _monotonicity = fromList $
-                P.preserve implies_fun ["and","or"] 
-             ++ [ (("=>","not"),Independent zfollows')
-                , (("=>","=>"), Side (Just zfollows')
+                P.preserve implies_fun [nAnd,nOr] 
+             ++ [ ((nImp,nNeg),Independent zfollows')
+                , ((nImp,nImp), Side (Just zfollows')
                                      (Just zimplies')) ] }
         notation .= functional_notation
    where
+        nImp = z3Name "=>"
+        nNeg = z3Name "not"
+        nAnd = z3Name "and"
+        nOr  = z3Name "or"
+        nEqual = z3Name "="
         zimplies' = Rel implies_fun Direct
         zfollows' = Rel implies_fun Flipped
         _ = theoryDummies Identity
 --        t  = VARIABLE "t"
-        t0 = VARIABLE "t0"
-        t1 = VARIABLE "t1"
+        t0 = VARIABLE $ z3Name "t0"
+        t1 = VARIABLE $ z3Name "t1"
         (x,x_decl) = var "x" t0
         (y,y_decl) = var "y" t1
 --        axm0 = fromJust $ mzforall [x_decl,y_decl] mztrue $
@@ -80,13 +82,17 @@ basic_theory = create $ do
         axm1 = $typeCheck $ mzforall [x_decl] mztrue $
             zselect zident x .=. x
 
+
+
 th_notation :: Theory -> Notation
-th_notation th = res
+th_notation th = th_notation' ths
+    where ths = th : elems (_extends th)
+
+th_notation' :: Foldable f => f Theory -> Notation
+th_notation' ths = res
     where
-        ths = th : elems (_extends th)
-        res = flip precede logical_notation
-            $ L.foldl OP.combine empty_notation 
-            $ L.map _notation ths
+        res = flip precede logical_notation res'
+        res' = F.foldr (OP.combine . _notation) empty_notation ths
 
 theory_ctx :: Theory -> Context
 theory_ctx th = 
@@ -109,11 +115,9 @@ theory_facts th =
         facts  = _fact th
         new_fact = facts
 
-instance HasSymbols Theory Var where
+instance HasSymbols Theory Var Name where
     symbols t = symbol_table $ defsAsVars (theory_ctx t)^.constants
 
-instance Default Theory where
-    def = genericDefault
 
 instance NFData Theory where
 
@@ -125,11 +129,3 @@ instance HasScope Theory where
                 $ foldMapWithKey scopeCorrect'' $ t^.defs
             , foldMapWithKey scopeCorrect'' (t^.extends) ]
 
-make_theory :: String -> M () -> Theory
-make_theory name (M cmd) = to $ gBuild (from empty_theory) $ L.map from ts'
-    where
-        ts  = snd $ execRWS cmd () 0
-        ts' = zipWith (\i -> fact %~ M.mapKeys (pad' i)) [0..] ts
-        n = length $ show $ length ts
-        pad m = name ++ replicate (n - length (show m)) ' ' ++ show m
-        pad' k _ = label $ pad k

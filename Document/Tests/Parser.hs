@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Document.Tests.Parser where
 
     -- Modules
@@ -7,6 +7,8 @@ import Document.Tests.Suite as S
 import Logic.Expr.QuasiQuote
 
 import Tests.UnitTest
+
+import Theories.FunctionTheory
 
 import UnitB.Expr
 
@@ -249,9 +251,9 @@ case3 = runEitherT $ do
 
 result3 :: Either [Error] EventRef'
 result3 = Right $ eventRef "input" "input" &~ do
-        let fs = make_type (Sort "FS" "FS" 0) []
-            file = symbol_table [Var "file" fs]
-            c = ctxWith [impFunctions] $ do
+        let fs = make_type (z3Sort "FS" "FS" 0) []
+            file = symbol_table [z3Var "file" fs]
+            c = ctxWith [function_theory] $ do
                 [carrier| FS |]
                 [var| file : FS |]
                 [var| in : \Int \pfun FS |]

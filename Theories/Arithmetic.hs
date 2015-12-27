@@ -13,6 +13,7 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 
     -- Libraries
+import Control.Arrow
 import Control.Lens
 
 import Data.List as L
@@ -30,14 +31,14 @@ greater :: BinOperator
 leq     :: BinOperator
 geq     :: BinOperator
 
-power   = BinOperator "^" "^"           mzpow
-mult    = BinOperator "*" "\\cdot"      mztimes
-plus    = BinOperator "+" "+"           mzplus
-minus   = BinOperator "-" "-"           mzminus
-less    = BinOperator "<" "<"           mzless
-greater = BinOperator ">" ">"           (flip mzless)
-leq     = BinOperator "<=" "\\le"       mzle
-geq     = BinOperator ">=" "\\ge"       (flip mzle)
+power   = make BinOperator "^" "^"           mzpow
+mult    = make BinOperator "*" "\\cdot"      mztimes
+plus    = make BinOperator "+" "+"           mzplus
+minus   = make BinOperator "-" "-"           mzminus
+less    = make BinOperator "<" "<"           mzless
+greater = make BinOperator ">" ">"           (flip mzless)
+leq     = make BinOperator "<=" "\\le"       mzle
+geq     = make BinOperator ">=" "\\ge"       (flip mzle)
 
 zsum :: [Var] -> ExprP -> ExprP -> ExprP
 zsum = zquantifier qsum
@@ -46,17 +47,17 @@ zcard :: ExprP -> ExprP
 zcard x = typ_fun2 sum_fun x (zconst $ mzint 1)
 
 gT :: Type
-gT = VARIABLE "t"
+gT = VARIABLE $ fromString'' "t"
 
 arithmetic :: Theory
-arithmetic = empty_theory { 
-        _extends = singleton "sets" set_theory
+arithmetic = (empty_theory' "arithmetic") { 
+        _extends = symbol_table [set_theory]
         , _types = symbol_table [IntSort,RealSort]
         , _funs = symbol_table 
             [ sum_fun ]
         , _theorySyntacticThm = empty_monotonicity
-            { _associative  = fromList [("+",mzint 0)] 
-            , _monotonicity = fromList $
+            { _associative  = fromList [(fromString'' "+",mzint 0)] 
+            , _monotonicity = fromList $ L.map (first $ z3Name *** z3Name)
               [ (("=>","<="), Side (Just zge' )
                                    (Just zle'))
               , (("<=","+"), Independent zle')
@@ -126,7 +127,7 @@ arithmetic = empty_theory {
 
 
 sum_fun :: Fun
-sum_fun = mk_fun [gA] "qsum" [set_type gA, array gA int] int
+sum_fun = mk_fun [gA] (fromString'' "qsum") [set_type gA, array gA int] int
 
 qsum :: HOQuantifier
 qsum = UDQuant sum_fun int (QTConst int) FiniteWD
@@ -156,8 +157,8 @@ arith = create $ do
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
-   commands .= [Command "\\card" "card" 1 $ from_list zcard]
+   commands .= [make Command "\\card" "card" 1 $ from_list zcard]
    quantifiers .= 
-        [ ("\\qsum"
+        [ (fromString'' "\\qsum"
           , qsum)]
           

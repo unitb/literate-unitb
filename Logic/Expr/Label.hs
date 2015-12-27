@@ -2,14 +2,12 @@
 module Logic.Expr.Label where
 
     -- Module
-import Logic.Expr.Classes
+import Logic.Names
 
     -- Libraries
 import Control.DeepSeq
 
-import Data.Foldable as F
 import Data.List as L
-import Data.Map hiding ( map, split )
 import Data.String
 import Data.String.Utils ( split )
 import Data.Typeable
@@ -33,17 +31,14 @@ instance IsString Label where
 instance IsLabel Label where
     as_label = id
 
+instance IsLabel Name where
+    as_label = label . render . asInternal
+
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 
 label :: String -> Label
 label s = Lbl s
-
-symbol_table :: (Named a, Foldable f) => f a -> Map String a
-symbol_table xs = fromList $ map as_pair $ F.toList xs
-
-decorated_table :: Named a => [a] -> Map String a
-decorated_table xs = fromList $ map (\x -> (decorated_name x, x)) xs
 
 (</>) :: Label -> Label -> Label
 (</>) (Lbl x) (Lbl y) = Lbl $ x ++ "/" ++ y

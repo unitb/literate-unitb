@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Logic.TestGenericity where
 
     -- Modules
@@ -45,7 +46,7 @@ counter_ex2_common_symm :: Bool
 counter_ex2_common_symm = 
         prop_common_symm t0 t1
     where
-        _a = GENERIC "a"
+        _a = gA
         pfun = fun_type
         t0 = GType $ array _a _a
         t1 = GType $ array _a (pfun (pfun _a int) real)
@@ -54,11 +55,13 @@ counter_ex2_common_symm =
 counter_ex_common_symm :: Bool
 counter_ex_common_symm = prop_common_symm (GType t0) (GType t1)
     where
-        _a = GENERIC "a"
-        _b = GENERIC "b"
-        _c = GENERIC "c"
-        s2 = Sort "D" "D" 2
-        _s2 = DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+        _a = gA
+        _b = gB
+        _c = gC
+        a = fromString'' "a"
+        b = fromString'' "b"
+        s2 = Sort (fromString'' "D") (fromString'' "D") 2
+        _s2 = DefSort (fromString'' "E") (fromString'' "E") [a,b] $ array gA gB
         empty x y = Gen s2 [x,y]
         t0 = fun_type _b _a
         pfun = fun_type
@@ -130,19 +133,19 @@ instance Arbitrary GType where
                 ] ) )
         where
             sorts = map return
-                [ Sort "A" "A" 0
-                , Sort "B" "B" 1
-                , Sort "C" "C" 1
-                , Sort "D" "D" 2
-                , DefSort "E" "E" ["a","b"] $ array (GENERIC "a") (GENERIC "b")
+                [ z3Sort "A" "A" 0
+                , z3Sort "B" "B" 1
+                , z3Sort "C" "C" 1
+                , z3Sort "D" "D" 2
+                , z3DefSort "E" "E" ["a","b"] $ array gA gB
                 , BoolSort
                 , IntSort
                 , RealSort
                 ]
             gen_prm = map return
-                [ GENERIC "a"
-                , GENERIC "b"
-                , GENERIC "c"
+                [ gA
+                , gB
+                , gC
                 ]
     shrink (GType (GENERIC _))  = []
     shrink (GType (VARIABLE _)) = []
@@ -153,7 +156,7 @@ instance Arbitrary GType where
 
 unicity_counter_example :: [(Type,Type)]
 unicity_counter_example = 
-    [   (array real (Gen (Sort "C" "" 1) [GENERIC "b"]),GENERIC "b")
+    [   (array real (Gen (z3Sort "C" "C" 1) [gB]),gB)
     ]
 
 test_case :: TestCase
@@ -161,14 +164,14 @@ test_case = test
 
 test :: TestCase
 test = test_cases "genericity" (
-        [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [("c@1",int), ("b@1",real)])
-        , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [("c@1",set_type int), ("b@1",real)])
+        [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [(vC1,int), (vB1,real)])
+        , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [(vC1,set_type int), (vB1,real)])
         , Case "unification, t2" (return $ unify gtype stype2) Nothing
-        , Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [("a@1",set_type int), ("a@2",real)])
+        , Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [(vA1,set_type int), (vA2,real)])
         , Case "unification, t4" (return $ unify gtype1 gtype2) Nothing
-        , Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [("a@2",set_type real), ("a@1",set_type $ set_type real)])
-        , Case "unification, t6" (return $ unify int (GENERIC "c")) (Just $ fromList [("c@2",int)])
-        , Case "type instantiation" (return $ instantiate (fromList [("c", set_type int),("b",real)]) gtype) stype1
+        , Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [(vA2,set_type real), (vA1,set_type $ set_type real)])
+        , Case "unification, t6" (return $ unify int gC) (Just $ fromList [(vC2,int)])
+        , Case "type instantiation" (return $ instantiate (fromList [(c, set_type int),(b,real)]) gtype) stype1
 --        ,  Case "type inference 0" case2 result2
         , Case "type inference 1" case3 result3
 --        , Case "type inference 2" case4 result4
@@ -192,8 +195,14 @@ test = test_cases "genericity" (
         , StringCase "one-point rule simplification on existentials" case8 result8
         ] )
     where
-        fun_sort = Sort "\\tfun" "fun" 2
-        gtype    = Gen fun_sort [GENERIC "c", set_type $ GENERIC "b"]
+        reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
+        vA1 = reserved "a" 1
+        vA2 = reserved "a" 2
+        vB1 = reserved "b" 1
+        vC1 = reserved "c" 1
+        vC2 = reserved "c" 2
+        fun_sort = z3Sort "\\tfun" "fun" 2
+        gtype    = Gen fun_sort [z3GENERIC "c", set_type $ z3GENERIC "b"]
         
         stype0   = Gen fun_sort [int, set_type real]
         stype1   = Gen fun_sort [set_type int, set_type real]
@@ -209,49 +218,56 @@ case5   :: IO Expr
 result5 :: Expr
 case6   :: IO Expr
 result6 :: Expr
-case3 = return $ specialize (fromList [("a",GENERIC "b")]) $ FunApp union [x3,x4]
-result3 = FunApp (mk_fun [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
+case3 = return $ specialize (fromList [(a,gB)]) $ FunApp union [x3,x4]
+result3 = FunApp (mk_fun' [gB] "union" [set_type gB,set_type gB] $ set_type gB) [x3,x4] 
 case5 = return $ p
 result5 = q
 case6 = return $ pp
 result6 = qq
 
 x1 :: Expr
-x1 = Word $ Var "x1" (set_type int)
+x1 = Word $ z3Var "x1" (set_type int)
 x2 :: Expr
-x2 = Word $ Var "x2" (set_type int)
+x2 = Word $ z3Var "x2" (set_type int)
 x3 :: Expr
-x3 = Word $ Var "x3" (set_type $ set_type int)
+x3 = Word $ z3Var "x3" (set_type $ set_type int)
 x4 :: Expr
-x4 = Word $ Var "x3" (set_type $ set_type int)
+x4 = Word $ z3Var "x3" (set_type $ set_type int)
 -- y  = Word $ Var "y" int
 -- z  = Word $ Var "z" real
 union :: Fun
-union  = mk_fun [gA] "union" [set_type gA,set_type gA] $ set_type gA
+union  = mk_fun' [gA] "union" [set_type gA,set_type gA] $ set_type gA
 
 member :: Fun
-member = mk_fun [gA] "member" [gA, set_type gA] bool
+member = mk_fun' [gA] "member" [gA, set_type gA] bool
+
+a :: InternalName
+a = fromString'' "a"
+b :: InternalName
+b = fromString'' "b"
+c :: InternalName
+c = fromString'' "c"
 
 pp :: Expr
-pp = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
+pp = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type gA)]) $ FunApp union [x3,x4]]
 
 qq :: Expr
-qq = FunApp member [FunApp union [x1,x2], FunApp (mk_fun [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+qq = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA,set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 p :: Expr
-p = FunApp member [FunApp union [x1,x2], specialize (fromList [("a",set_type $ GENERIC "a")]) $ FunApp union [x3,x4]]
+p = FunApp member [FunApp union [x1,x2], specialize (fromList [(a,set_type $ gA)]) $ FunApp union [x3,x4]]
 q :: Expr
-q = FunApp member [FunApp union [x1,x2], FunApp (mk_fun [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
+q = FunApp member [FunApp union [x1,x2], FunApp (mk_fun' [set_type gA] "union" [set_type $ set_type gA, set_type $ set_type gA] $ set_type $ set_type gA) [x3,x4]]
 
 case7   :: IO ExprP
 result7 :: ExprP
 (case7, result7) = 
         ( return (x `zelem` zempty_set)
-        , Right $ FunApp (mk_fun [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
+        , Right $ FunApp (mk_fun' [train] "elem" [train,set_type train] bool) [either (error "expecting right") id x,empty_set_of_train]
         )
     where
-        train = Gen (Sort "\train" "train" 0) []
+        train = Gen (z3Sort "\\train" "train" 0) []
         (x,_) = var "x" train
-        empty_set_of_train = FunApp (mk_fun [train] "empty-set" [] $ set_type train) []
+        empty_set_of_train = FunApp (mk_fun' [train] "empty-set" [] $ set_type train) []
 
 result8 :: String
 result8 = unlines

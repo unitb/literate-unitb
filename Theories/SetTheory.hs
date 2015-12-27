@@ -1,4 +1,6 @@
-{-# LANGUAGE BangPatterns, RecordWildCards #-}
+{-# LANGUAGE BangPatterns
+      , RecordWildCards
+      , OverloadedStrings #-}
 module Theories.SetTheory where
 
     -- Modules
@@ -10,6 +12,7 @@ import Logic.Theory.Monad hiding (preserve)
 import Logic.Proof
 
     -- Libraries
+import Control.Arrow
 import Control.Lens
 
 import Data.Default
@@ -19,38 +22,44 @@ import Data.Map as M hiding ( foldl )
 import Utilities.Format
 import Utilities.Lens
 
-as_array :: TypeSystem t => t -> String -> AbsExpr t q
+as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
 as_array t x = FunApp (mk_lifted_fun [] x [] t) []
 
-map_array :: String -> Type -> [ExprP] -> ExprP
+map_array :: Name -> Type -> [ExprP] -> ExprP
 map_array name t xs = do
     xs <- sequence xs
     return $ FunApp (mk_lifted_fun [] name (L.map type_of xs) t) xs
 
-mzfinite :: ExprP -> ExprP
-mzfinite = typ_fun1 $ mk_fun [gA] "finite" [set_type gA] bool
+mzfinite :: (IsName n,IsQuantifier q)
+         => ExprPG n Type q -> ExprPG n Type q
+mzfinite = typ_fun1 $ mk_fun [gA] (z3Name "finite") [set_type gA] bool
 
 zfinite :: Expr -> Expr
 zfinite e = ($typeCheck) (mzfinite $ Right e)
 
-set_theory :: Theory 
-set_theory = Theory { .. } -- [] types funs empty facts empty
-    where
-        t  = VARIABLE "t"
-        t0  = VARIABLE "t0"
-        gT = GENERIC "t"
+set_theory' :: Map Name Theory
+set_theory' = singleton (makeName Logic.Expr.assert "sets") set_theory
 
+set_theory :: Theory 
+set_theory = Theory { .. }
+    where
+        t  = VARIABLE $ z3Name "t"
+        t0  = VARIABLE $ z3Name "t0"
+        gT = GENERIC $ z3Name "t"
+
+        _theoryName = z3Name "sets"
         _extends = M.empty
         _consts  = M.empty
         _theoryDummies = M.empty
         _types = M.empty
         _theorySyntacticThm = def
-            { _associative = fromList $ 
+            { _associative = fromList $ L.map (first z3Name)
                     [ ("intersect",zset_all)
                     , ("union",zempty_set) ]
             , _monotonicity = fromList $
-                   preserve subset_fun ["intersect","union"]
-                ++ [ ( ("=>","subset")
+                   preserve subset_fun (L.map z3Name ["intersect","union"])
+                ++ L.map (first $ z3Name *** z3Name)
+                   [ ( ("=>","subset")
                      , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
                    , ( ("=>","st-subset")
                      , Side (Just $ Rel subset_fun Flipped) (Just $ Rel subset_fun Direct))
@@ -62,18 +71,20 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
                      , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
-        _defs = symbol_table 
-                [ Def [gT] "empty-set" [] (set_type gT) 
+        _defs = symbol_table
+                [ z3Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
-                , Def [gT] "all" [] (set_type gT) 
+                , z3Def [gT] "all" [] (set_type gT) 
                         $ zlift (set_type gT) ztrue
-                , Def [gT] "elem" [x_decl, s1_decl] bool 
+                , z3Def [gT] "elem" [x_decl, s1_decl] bool 
                         $ ($typeCheck) (zset_select s1 x)
-                , Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
-                        $ ($typeCheck) $ s1 `zintersect` map_array "not" (set_type gT) [s2]
-                , Def [gT] "compl" [s1_decl] (set_type gT)
-                        $ ($typeCheck) $ map_array "not" (set_type gT) [s1]
-                , Def [gT] "st-subset" [s1_decl,s2_decl] bool
+                , z3Def [gT] "set-diff" [s1_decl,s2_decl] (set_type gT)
+                        $ ($typeCheck) $ s1 `zintersect` 
+                            map_array (z3Name "not") (set_type gT) [s2]
+                , z3Def [gT] "compl" [s1_decl] (set_type gT)
+                        $ ($typeCheck) $ 
+                            map_array (z3Name "not") (set_type gT) [s1]
+                , z3Def [gT] "st-subset" [s1_decl,s2_decl] bool
                         $ ($typeCheck) $ (s1 `zsubset` s2)
                             `mzand`  mznot (s1 `mzeq` s2)
                 ]
@@ -82,8 +93,8 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
             symbol_table
                 [ comprehension_fun
                 , qunion_fun
-                , mk_fun [gT] "mk-set" [gT] $ set_type gT 
-                , mk_fun [gT] "finite" [set_type gT] $ bool
+                , mk_fun [gT] (z3Name "mk-set") [gT] $ set_type gT 
+                , mk_fun [gT] (z3Name "finite") [set_type gT] $ bool
                 ]
         _fact :: Map Label Expr
         _fact = "set" `axioms` do
@@ -161,10 +172,15 @@ set_theory = Theory { .. } -- [] types funs empty facts empty
 zset_select   :: ExprP -> ExprP -> ExprP
 zempty_set    :: ExprP
 zset_all      :: ExprP
-zelem         :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
-zsubset       :: ExprP -> ExprP -> ExprP
+zsubset       :: (IsName n,IsQuantifier q)
+              => ExprPG n Type q 
+              -> ExprPG n Type q 
+              -> ExprPG n Type q
 zstsubset     :: ExprP -> ExprP -> ExprP
-zsetdiff      :: ExprP -> ExprP -> ExprP
+zsetdiff      :: (IsName n,IsQuantifier q)
+              => ExprPG n Type q 
+              -> ExprPG n Type q 
+              -> ExprPG n Type q
 zintersect    :: ExprP -> ExprP -> ExprP
 zcompl        :: ExprP -> ExprP
 
@@ -175,8 +191,8 @@ zset_enum     :: [ExprP] -> ExprP
 comprehension :: HOQuantifier
 comprehension = UDQuant comprehension_fun gA (QTFromTerm set_sort) InfiniteWD
 
-comprehension_fun :: Fun
-comprehension_fun = mk_fun [gA,gB] "set" [set_type gA, array gA gB] $ set_type gB
+comprehension_fun :: IsName n => AbsFun n Type
+comprehension_fun = mk_fun' [gA,gB] "set" [set_type gA, array gA gB] $ set_type gB
 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
@@ -184,41 +200,40 @@ zcomprehension = zquantifier comprehension
 qunion :: HOQuantifier
 qunion = UDQuant qunion_fun (set_type gA) QTTerm InfiniteWD
 
-zunion_qu :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
+zunion_qu :: (IsQuantifier q,IsName n) => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
 zunion_qu = typ_fun2 qunion_fun
 
-qunion_fun :: Fun
-qunion_fun = mk_fun [gA,gB] "qunion" [set_type gA, array gA (set_type gB)] (set_type gB)
+qunion_fun :: IsName n => AbsFun n Type
+qunion_fun = mk_fun' [gA,gB] "qunion" [set_type gA, array gA (set_type gB)] (set_type gB)
 
-zset :: IsQuantifier q => ExprPG Type q -> ExprPG Type q -> ExprPG Type q
+zset :: (IsQuantifier q,IsName n) => ExprPG n Type q -> ExprPG n Type q -> ExprPG n Type q
 zset = typ_fun2 comprehension_fun
 
-zset_select = typ_fun2 (mk_fun [] "select" [set_type gA, gA] bool)
+zset_select = typ_fun2 (mk_fun' [] "select" [set_type gA, gA] bool)
 
-zelem        = typ_fun2 (mk_fun [gA] "elem" [gA,set_type gA] bool)
-zsetdiff     = typ_fun2 (mk_fun [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
+zsetdiff     = typ_fun2 (mk_fun' [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
 
 
-zempty_set   = Right $ FunApp (mk_fun [gA] "empty-set" [] $ set_type gA) []
-zset_all     = Right $ FunApp (mk_fun [gA] "all" [] $ set_type gA) []
+zempty_set   = Right $ FunApp (mk_fun' [gA] "empty-set" [] $ set_type gA) []
+zset_all     = Right $ FunApp (mk_fun' [gA] "all" [] $ set_type gA) []
 zsubset      = typ_fun2 subset_fun
 zstsubset    = typ_fun2 st_subset_fun
-zintersect   = typ_fun2 (mk_fun [] "intersect" [set_type gA,set_type gA] $ set_type gA)
-zunion       = typ_fun2 (mk_fun [] "union" [set_type gA,set_type gA] $ set_type gA)
-zcompl       = typ_fun1 (mk_fun [gA] "compl" [set_type gA] $ set_type gA)
+zintersect   = typ_fun2 (mk_fun' [] "intersect" [set_type gA,set_type gA] $ set_type gA)
+zunion       = typ_fun2 (mk_fun' [] "union" [set_type gA,set_type gA] $ set_type gA)
+zcompl       = typ_fun1 (mk_fun' [gA] "compl" [set_type gA] $ set_type gA)
 
-zmk_set      = typ_fun1 (mk_fun [gA] "mk-set" [gA] $ set_type gA)
+zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zset_enum (x:xs) = foldl zunion y ys 
     where
         y  = zmk_set x
         ys = L.map zmk_set xs
 zset_enum [] = zempty_set
 
-st_subset_fun :: Fun
-st_subset_fun = mk_fun [gA] "st-subset" [set_type gA,set_type gA] bool
+st_subset_fun :: IsName n => AbsFun n Type
+st_subset_fun = mk_fun' [gA] "st-subset" [set_type gA,set_type gA] bool
 
-subset_fun :: Fun
-subset_fun = mk_fun [] "subset" [set_type gA,set_type gA] bool
+subset_fun :: IsName n => AbsFun n Type
+subset_fun = mk_fun' [] "subset" [set_type gA,set_type gA] bool
 
 dec :: String -> Type -> String
 dec x t = x ++ z3_decoration t
@@ -240,15 +255,15 @@ st_subset   :: BinOperator
 st_superset :: BinOperator
 compl       :: UnaryOperator
 
-set_union       = BinOperator "union" "\\bunion"        zunion
-set_intersect   = BinOperator "intersect" "\\binter" zintersect
-set_diff        = BinOperator "set-diff" "\\setminus"   zsetdiff
-membership      = BinOperator "elem" "\\in"       zelem
-subset          = BinOperator "subset"     "\\subseteq" zsubset
-superset        = BinOperator "superset"   "\\supseteq" (flip zsubset)
-st_subset       = BinOperator "st-subset"   "\\subset" zstsubset
-st_superset     = BinOperator "st-superset" "\\supset" (flip zstsubset)
-compl           = UnaryOperator "complement" "\\compl" zcompl
+set_union       = make BinOperator "union" "\\bunion"        zunion
+set_intersect   = make BinOperator "intersect" "\\binter" zintersect
+set_diff        = make BinOperator "set-diff" "\\setminus"   zsetdiff
+membership      = make BinOperator "elem" "\\in"       zelem
+subset          = make BinOperator "subset"     "\\subseteq" zsubset
+superset        = make BinOperator "superset"   "\\supseteq" (flip zsubset)
+st_subset       = make BinOperator "st-subset"   "\\subset" zstsubset
+st_superset     = make BinOperator "st-superset" "\\supset" (flip zstsubset)
+compl           = make UnaryOperator "complement" "\\compl" zcompl
 
 set_notation :: Notation
 set_notation = create $ do
@@ -268,11 +283,11 @@ set_notation = create $ do
     left_assoc  .= [[set_union]]
     right_assoc .= []
     relations   .= []
-    quantifiers .= [ ("\\qset",comprehension)
-                   , ("\\qunion",qunion) ]
-    commands    .= [ Command "\\emptyset" "emptyset" 0 $ const $ zempty_set
-                   , Command "\\all" "all" 0 $ const $ zset_all
-                   , Command "\\finite" "finite" 1 $ from_list mzfinite ]
+    quantifiers .= [ (fromString'' "\\qset",comprehension)
+                   , (fromString'' "\\qunion",qunion) ]
+    commands    .= [ make Command "\\emptyset" "empty-set" 0 $ const $ zempty_set
+                   , make Command "\\all" "all" 0 $ const $ zset_all
+                   , make Command "\\finite" "finite" 1 $ from_list (mzfinite :: ExprP -> ExprP) ]
     chaining    .= [ ((subset,subset),subset) 
                    , ((subset,st_subset),st_subset)
                    , ((st_subset,subset),st_subset)

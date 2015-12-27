@@ -328,11 +328,11 @@ evtSplitKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
 evtSplitKept = evtSplits M.intersection
 
 newDelVars :: HasMachineP2 phase
-           => Getter phase (Map String Var)
+           => Getter phase (Map Name Var)
 newDelVars = to $ \x -> view pAbstractVars x `M.difference` view pStateVars x
 
 pDefVars :: HasTheoryP2 phase
-         => Getter phase (Map String Var)
+         => Getter phase (Map Name Var)
 pDefVars = to $ \x -> M.mapMaybe defToVar $ x^.pDefinitions
 
 defToVar :: Def -> Maybe Var
@@ -340,7 +340,7 @@ defToVar (Def _ n [] t _) = Just (Var n t)
 defToVar (Def _ _ (_:_) _ _) = Nothing
 
 pAllVars :: HasMachineP2' phase
-         => Getter (phase ae ce t) (Map String Var)
+         => Getter (phase ae ce t) (Map Name Var)
 pAllVars = to $ \x -> view pAbstractVars x `M.union` view pStateVars x
 
 pEventSplit' :: (HasMachineP1 phase)
@@ -412,7 +412,7 @@ pEventId = iso
         (M.mapKeys as_label)
 
 pIndices  :: HasMachineP2 mch
-          => Getter mch (Map EventId (Map String Var))
+          => Getter mch (Map EventId (Map Name Var))
 pIndices = pEvents . onMap eIndices
 
 --pParams   :: HasMachineP2 mch
@@ -427,7 +427,7 @@ pEvtSynt  :: HasMachineP2 mch
     -- parsing guards and actions
 pEvtSynt = pEvents . onMap eEvtSynt
 
-eIndParams :: HasEventP2 events => Getter events (Map String Var) 
+eIndParams :: HasEventP2 events => Getter events (Map Name Var) 
 eIndParams = to $ \e -> (e^.eParams) `M.union` (e^.eIndices)
 
 pEventRenaming :: HasMachineP1 mch

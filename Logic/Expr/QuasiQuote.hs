@@ -1,8 +1,10 @@
 {-# LANGUAGE TypeOperators
     ,QuasiQuotes 
     #-}
-
-module Logic.Expr.QuasiQuote where
+module Logic.Expr.QuasiQuote
+    ( module Logic.Expr.QuasiQuote
+    , Name, InternalName ) 
+where
 
     -- Modules
 import Document.Proof
@@ -16,8 +18,6 @@ import UnitB.Event
 import UnitB.Property
 
 import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.SetTheory
 
     -- Libraries
 import Control.Arrow
@@ -26,15 +26,16 @@ import Control.Monad.Reader hiding (lift)
 import Control.Monad.State  hiding (lift)
 import Control.Monad.Trans.Either
 
-import Data.Char
 import Data.List
 import Data.Map as M
 import Data.Maybe
 import Data.String.Utils as S
 
-import Language.Haskell.TH
+import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax hiding (Name)
+
+import PseudoMacros
 
 import Text.Printf
 
@@ -116,27 +117,27 @@ parseVarDecl :: Loc -> String -> State ParserSetting ()
 parseVarDecl loc str = do
         ctx <- gets contextOf
         let e  = fromList $ run $ get_variables'' ctx (asStringLi li str)
-            e' = M.map f e
-            f (Var n t) = Var (S.replace "'" "@prime" n) t
-        decls %= M.union e'
+            --e' = M.map f e
+            --f (Var n t) = Var (S.replace "'" "@prime" n) t
+        decls %= M.union e
     where
         li  = asLI loc
         run = either (error.("\n"++).show_err) id . flip runReader li . runEitherT
 
 parseTypeDecl :: String -> ExpQ -- State ParserSetting ()
 parseTypeDecl str = do
-        let str'    = strip str
-            texName = concatMap f str'
-            f '\\'  = "sl@"
-            f x     = [x]
-            s       = Sort str' texName 0
-            
-        unless (all isAlphaNum $ dropWhile ('\\' ==) str') 
-            $ fail "invalid type name"
+        --str' <- either (fail . unlines) return 
+        --    $ isName $ strip str
+        --let texName = str'^.asInternal
+        --    s = Sort str' texName 0
+        addDependentFile $__FILE__
+        let str' = strip str
         [e| do
-                let t       = set_type $ make_type s []
-                sorts %= M.insert str' s
-                decls %= M.insert str' (Var texName t) |]
+                let t   = set_type $ make_type s []
+                    s   = Sort n (asInternal n) 0
+                    n   = fromString'' str'
+                sorts %= M.insert n s
+                decls %= M.insert n (Var n t) |]
 
 primable :: State ParserSetting () -> State ParserSetting ()
 primable cmd = do
@@ -146,11 +147,13 @@ primable cmd = do
     primed_vars %= M.union (s' `M.difference` s)
 
 parseVar :: Loc -> ParserSetting -> String -> Var
-parseVar loc p str = fromMaybe err $ M.lookup n $ p^.decls
+parseVar loc p str = fromMaybe err $ do
+        n' <- isName' n
+        M.lookup n' $ p^.decls
     where
         n = strip str
-        li = asLI loc
         err = error $ "\n"++ show_err [Error (printf "unknown variables: '%s'" n) li]
+        li = asLI loc
 
 parseExpr :: Loc -> ParserSetting -> String -> DispExpr
 parseExpr loc p str = either (error.("\n"++).show_err) id
@@ -160,50 +163,47 @@ parseExpr loc p str = either (error.("\n"++).show_err) id
 
 type Ctx = (ParserSetting -> DispExpr) -> DispExpr
 
-impFunctions :: (String,Theory)
-impFunctions = ("functions",function_theory)
+--impFunctions :: (String,Theory)
+--impFunctions = ("functions",function_theory)
 
-impSets :: (String,Theory)
-impSets = ("sets",set_theory)
+--impSets :: (String,Theory)
+--impSets = ("sets",set_theory)
 
-ctxWith :: [(String,Theory)] 
+ctxWith :: [Theory] 
         -> State ParserSetting a 
         -> (ParserSetting -> b) -> b
 ctxWith xs cmd f = f r
     where
-        r = execState cmd (theory_setting $ empty_theory { _extends = 
-                fromList $ xs ++ [("arithmetic",arithmetic),("basic",basic_theory)] } )
+        r = execState cmd (theory_setting $ (empty_theory' "empty") { _extends = 
+                symbol_table $ xs ++ [arithmetic,basic_theory] } )
 
 ctx :: State ParserSetting a 
     -> (ParserSetting -> b) -> b
 ctx = ctxWith []
 
 instance Lift Var where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift Expr where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift Fun where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift HOQuantifier where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift QuantifierType where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift QuantifierWD where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift Lifting where
-    lift = defaultLift
+    lift = genericLift
 
 instance Lift Value where
-    lift = defaultLift
-
-instance Lift Loc where
-    lift (Loc a b c d e) = appsE [conE 'Loc,lift a,lift b,lift c,lift d,lift e]
+    lift = genericLift
 
 instance Lift DispExpr where
-    lift = defaultLift
+    lift = genericLift

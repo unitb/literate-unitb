@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 module UnitB.UnitB 
     ( module UnitB.Syntax
-    , module UnitB.UnitB )
+    , module UnitB.UnitB 
+    , theory_po )
 where
 
     -- Modules
@@ -43,7 +44,6 @@ import Utilities.Partial
 import Utilities.Invariant
 import Utilities.Instances
 import Utilities.Syntactic
-import Utilities.TH
 
 type RawMachine = Machine' RawExpr
 type Machine = Machine' Expr
@@ -87,7 +87,9 @@ instance Show a => Show (MemBox a) where
     show (MemBox f) = show f
 
 makeLenses ''MachinePO'
-mkCons ''MachinePO'
+
+makeMachinePO' :: AST.Machine' expr -> MachinePO' expr
+makeMachinePO' x = MachinePO x def def def
 
 raw_proof_obligation :: Controls machine (MachinePO' expr)
                      => machine -> Map Label Sequent
@@ -95,7 +97,7 @@ raw_proof_obligation = view $ content'.raw_proof_obligation_field.to unbox
 
 proof_obligation :: Controls machine (MachinePO' expr)
                  => machine -> Map Label Sequent
-proof_obligation = view $ content'.proof_obligation_field.to unbox
+proof_obligation = view (content'.proof_obligation_field.to unbox)
 
 instance Controls (MachinePO' expr) (MachinePO' expr) where
 
@@ -103,20 +105,20 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
 --    check arse m = fromRight'' arse $ withPO _ _
 --    content arse = _
     --func = 
-instance IsExpr expr => HasMachineBase (MachinePO' expr) expr where
+instance HasExpr expr => HasMachineBase (MachinePO' expr) expr where
     machineBase = syntax.content assert
-instance IsExpr expr => HasAbs_vars (MachinePO' expr) (Map String Var) where
+instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Map Name Var) where
     abs_vars = machineBase.abs_vars
-instance HasName (MachinePO' expr) String where
+instance HasName (MachinePO' expr) Name where
     name = syntax.content'.name
-instance IsExpr expr => HasMachine (Machine' expr) expr where
+instance HasExpr expr => HasMachine (Machine' expr) expr where
     type Internal (Machine' expr) expr = MachinePO' expr
     empty_machine = fromSyntax . empty_machine
-instance IsExpr expr => HasMachine (MachinePO' expr) expr where
+instance HasExpr expr => HasMachine (MachinePO' expr) expr where
     type Internal (MachinePO' expr) expr = MachinePO' expr
     empty_machine = view content' . fromSyntax . empty_machine
 
-instance IsExpr expr => HasInvariant (MachinePO' expr) where
+instance HasExpr expr => HasInvariant (MachinePO' expr) where
     invariant m = do
         "inv1" ## keysSet (m^.proofs) `S.isSubsetOf` keysSet (raw_proof_obligation m)
     updateCache m = m 
@@ -134,16 +136,16 @@ instance Show1 MachinePO' where
 instance NFData (Box a) where
     rnf x = seq x ()
 
-fromSyntax :: IsExpr expr => AST.Machine' expr -> Machine' expr
+fromSyntax :: HasExpr expr => AST.Machine' expr -> Machine' expr
 fromSyntax m = check assert $ makeMachinePO' m
 
-withProofs :: IsExpr expr
+withProofs :: HasExpr expr
            => Assert -> Map Label Proof 
            -> AST.Machine' expr
            -> Machine' expr
 withProofs arse p m = check arse $ makeMachinePO' m & proofs .~ p
 
-withPOs :: IsExpr expr 
+withPOs :: HasExpr expr 
         => Map Label (Tactic Proof,LineInfo)
         -> AST.Machine' expr 
         -> Either [Error] (Machine' expr)
@@ -177,7 +179,7 @@ verify_changes m old_pos = do
             | p0 == p1  = Nothing 
             | otherwise = Just p0
 
-str_verify_machine :: IsExpr expr => Machine' expr -> IO (String,Int,Int)
+str_verify_machine :: HasExpr expr => Machine' expr -> IO (String,Int,Int)
 str_verify_machine m = do
         let pos = proof_obligation m
         xs <- verify_all pos

@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings
-    , QuasiQuotes
     , ConstraintKinds
     #-}
 module Document.Phase.Test where
@@ -30,7 +29,7 @@ import Theories.SetTheory
 
 import Tests.UnitTest
 
-import UnitB.Expr hiding (decl)
+import UnitB.Expr 
 import UnitB.Syntax as AST hiding (Machine)
 import UnitB.UnitB
 
@@ -87,31 +86,34 @@ test = $(makeTestSuite "Unit tests for the parser")
 name0 :: TestName
 name0 = testName "test 0, phase 1 (structure), create object" 
 
+mId :: String -> MachineId
+mId = MId . makeName assert
+
 case0 :: IO (MTable MachineP1)
 case0 = do
-    let ms = M.fromList [(MId "m0",()),(MId "m1",())]
+    let ms = M.fromList [(mId "m0",()),(mId "m1",())]
         p0 = mapWithKey (const . MachineP0 ms) ms
         thy = M.fromList 
-                [ (MId "m0", M.fromList $ ("arithmetic",arithmetic):thy2) 
-                , (MId "m1", M.fromList $ ("sets", set_theory):thy2) ]
-        thy2 = [("basic", basic_theory),("arithmetic",arithmetic)]
-        s0 = Sort "S0" "S0" 0
+                [ (mId "m0", symbol_table $ arithmetic:thy2) 
+                , (mId "m1", symbol_table $ set_theory:thy2) ]
+        thy2 = [basic_theory,arithmetic]
+        s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl@S1" 0
         s1' = make_type s1 [] 
         li = LI "file.ext" 1 1
         sorts = M.fromList
-                [ (MId "m0",M.singleton "S0" s0) 
-                , (MId "m1",M.fromList [("S0",s0),("\\S1",s1)])]
+                [ (mId "m0",symbol_table [s0]) 
+                , (mId "m1",symbol_table [s0,s1])]
         f th = M.unions $ L.map (view AST.types) $ M.elems th
         allSorts = M.intersectionWith (\ts th -> ts `M.union` f th) sorts thy
         pdef  = M.fromList
-                [ (MId "m0",[("S0",(Def [] "S0" [] (set_type s0') (se s0'),Local,li))]) 
-                , (MId "m1",[("\\S1",(Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li))])]
+                [ (mId "m0",L.map (as_pair' $ view _1) [(z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]) 
+                , (mId "m1",L.map (as_pair' $ view _1) [(z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)])]
         evts = M.fromList 
-                [ (MId "m0",evts0)
-                , (MId "m1",evts1) ]
+                [ (mId "m0",evts0)
+                , (mId "m1",evts1) ]
         skipEvt = Left SkipEvent
         evts0 = fromJust $ makeGraph $ do
             ae0  <- newRightVertex (Right "ae0") ()
@@ -145,12 +147,12 @@ case0 = do
 
 result0 :: MTable MachineP1
 result0 = M.fromList 
-        [ (MId "m0",m0) 
-        , (MId "m1",m1) ]
+        [ (mId "m0",m0) 
+        , (mId "m1",m1) ]
     where
         ms = M.fromList 
-            [ (MId "m0",()) 
-            , (MId "m1",()) ]
+            [ (mId "m0",()) 
+            , (mId "m1",()) ]
         skipEvt = Left SkipEvent
         newAEvent eid = newLeftVertex  (Right eid) (EventP1 $ Right eid)
         newCEvent eid = newRightVertex (Right eid) (EventP1 $ Right eid)
@@ -180,25 +182,25 @@ result0 = M.fromList
             newEdge ae1b ce1
             newEdge askip ce2
             newEdge askip cskip
-        p0 = MachineP0 ms . MId
+        p0 = MachineP0 ms . mId
         tp0 = TheoryP0 ()
         m0 = MachineP1 (p0 "m0") evts0 (TheoryP1 tp0 thy0 sorts0 allSorts0 pdef0)
         m1 = MachineP1 (p0 "m1") evts1 (TheoryP1 tp0 thy1 sorts1 allSorts1 pdef1)
-        s0 = Sort "S0" "S0" 0
+        s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl@S1" 0
         s1' = make_type s1 [] 
-        sorts0 = M.singleton "S0" s0
-        sorts1 = M.singleton "\\S1" s1 `M.union` sorts0
+        sorts0 = symbol_table [s0]
+        sorts1 = symbol_table [s1] `M.union` sorts0
         f th = M.unions $ L.map (view AST.types) $ M.elems th
         allSorts0 = sorts0 `M.union` f thy0
         allSorts1 = sorts1 `M.union` f thy1
-        pdef0  = [("S0",(Def [] "S0" [] (set_type s0') (se s0'),Local,li))]
-        pdef1  = [("\\S1",(Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li))]
-        thy0 = M.singleton "arithmetic" arithmetic `M.union` thy2
-        thy1 = M.singleton "sets" set_theory `M.union` thy2
-        thy2 = M.fromList [("basic",basic_theory),("arithmetic",arithmetic)]
+        pdef0  = [as_pair' (view _1) (z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]
+        pdef1  = [as_pair' (view _1) (z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)]
+        thy0 = symbol_table $ arithmetic:thy2
+        thy1 = symbol_table $ set_theory:thy2
+        thy2 = [basic_theory,arithmetic]
         li = LI "file.ext" 1 1
 
 name1 :: TestName
@@ -208,14 +210,14 @@ case1 :: IO (Either [Error] SystemP1)
 case1 = return $ runPipeline' ms cs () $ run_phase0_blocks >>> run_phase1_types
     where
         ms = M.map (:[]) $ M.fromList 
-                [ ("m0",makeLatex "file.ext" $ do       
+                [ ([tex|m0|],makeLatex "file.ext" $ do       
                             command "newset" [text "S0"]                 
                             command "newevent" [text "ae0"]
                             command "newevent" [text "ae1a"]
                             command "newevent" [text "ae1b"]
                         ) 
                     -- what if we split or merge non-existant events?
-                , ("m1",makeLatex "file.ext" $ do
+                , ([tex|m1|],makeLatex "file.ext" $ do
                             command "newset" [text "\\S1"]                 
                             command "refines" [text "m0"]
                             command "with" [text "sets"]
@@ -253,24 +255,24 @@ case2 = return $ do
         runMM (r & (mchTable.lnZip vs) (uncurry make_phase2)) ()
     where
         li = LI "file.ext" 1 1
-        s0 = Sort "S0" "S0" 0
+        s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl@S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
-                [ ("x",makeCell $ Machine (Var "x" int) Local li) 
-                , ("y",makeCell $ Machine (Var "y" int) Local li)
-                , ("p",makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Local li))
-                , ("S0",makeCell $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
+                [ ([tex|x|],makeCell $ Machine (z3Var "x" int) Local li) 
+                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Local li)
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ae1b") (EventDecl (z3Var "p" bool) Param ("ae1b":|[]) Local li))
+                , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li) ]
         vs1 = M.fromList
-                [ ("z",makeCell $ Machine (Var "z" int) Local li) 
-                , ("y",makeCell $ Machine (Var "y" int) Inherited li) 
-                , ("p",makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (Var "p" bool) Param ("ae1b":|[]) Inherited li))
-                , ("q",makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Var "q" int) Index ("ce2":|[]) Local li))
-                , ("x",makeCell $ DelMch (Just $ Var "x" int) Local li) 
-                , ("S0",makeCell $ TheoryDef (Def [] "S0" [] (set_type s0') (se s0')) Local li)
-                , ("\\S1",makeCell $ TheoryDef (Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
+                [ ([tex|z|],makeCell $ Machine (z3Var "z" int) Local li) 
+                , ([tex|y|],makeCell $ Machine (z3Var "y" int) Inherited li) 
+                , ([tex|p|],makeCell $ Evt $ M.singleton (Just "ce1") (EventDecl (z3Var "p" bool) Param ("ae1b":|[]) Inherited li))
+                , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (z3Var "q" int) Index ("ce2":|[]) Local li))
+                , ([tex|x|],makeCell $ DelMch (Just $ z3Var "x" int) Local li) 
+                , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
+                , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
                 [ ("m0",vs0) 
                 , ("m1",vs1)]
@@ -279,27 +281,27 @@ result2 :: Either [Error] SystemP2
 result2 = do
         sys <- result1
         let 
-            var n = Var n int
-            notation m = th_notation $ empty_theory { _extends = m^.pImports }
+            var n = Var (fromString'' n) int
+            notation m = th_notation' $ m^.pImports
             parser m = default_setting (notation m)
             li = LI "file.ext" 1 1
-            s0 = Sort "S0" "S0" 0
+            s0 = z3Sort "S0" "S0" 0
             s0' = make_type s0 [] 
             se new_type = zlift (set_type new_type) ztrue
-            s1 = Sort "\\S1" "sl@S1" 0
+            s1 = z3Sort "\\S1" "sl@S1" 0
             s1' = make_type s1 [] 
             fieldsM mid
-                | mid == "m0" = [ PStateVars "x" $ var "x"
-                                , PStateVars "y" $ var "y" ]
-                | otherwise   = [ PStateVars "z" $ var "z"
-                                , PDelVars "x" (var "x",li)
-                                , PAbstractVars "x" $ var "x" 
-                                , PAbstractVars "y" $ var "y" 
-                                , PStateVars "y" $ var "y" ]
+                | mid == "m0" = [ make' PStateVars "x" $ var "x"
+                                , make' PStateVars "y" $ var "y" ]
+                | otherwise   = [ make' PStateVars "z" $ var "z"
+                                , make' PDelVars "x" (var "x",li)
+                                , make' PAbstractVars "x" $ var "x" 
+                                , make' PAbstractVars "y" $ var "y" 
+                                , make' PStateVars "y" $ var "y" ]
             fieldsT mid
-                | mid == "m0" = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) ]
-                | otherwise   = [ PDefinitions "S0" (Def [] "S0" [] (set_type s0') (se s0')) 
-                                , PDefinitions "\\S1" (Def [] "sl@S1" [] (set_type s1') (se s1')) ]
+                | mid == "m0" = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) ]
+                | otherwise   = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) 
+                                , make' PDefinitions "\\S1" (z3Def [] "sl@S1" [] (set_type s1') (se s1')) ]
             upMachine :: MachineId 
                       -> MachineP1' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
@@ -316,16 +318,16 @@ result2 = do
                         (withIndSynt eid $ m^.pMchSynt) 
                         (withParamSynt eid $ m^.pMchSynt) (eventFields eid)
             withIndSynt eid p 
-                | eid == Right "ce2" = p & decls %~ M.insert "q" (Var "q" int)
+                | eid == Right "ce2" = p & decls %~ insert_symbol (z3Var "q" int)
                 | otherwise          = p
             withParamSynt eid = withIndSynt eid . withParamSynt' eid
             withParamSynt' eid p 
-                | eid `elem` [Right "ae1b",Right "ce1"] = p & decls %~ M.insert "p" (Var "p" bool)
+                | eid `elem` [Right "ae1b",Right "ce1"] = p & decls %~ insert_symbol (z3Var "p" bool)
                 | otherwise                             = p
             eventFields eid 
-                | eid == Right "ae1b" = [EParams "p" (Var "p" bool)]
-                | eid == Right "ce1"  = [EParams "p" (Var "p" bool)]
-                | eid == Right "ce2"  = [EIndices "q" (Var "q" int)]
+                | eid == Right "ae1b" = [make' EParams "p" (z3Var "p" bool)]
+                | eid == Right "ce1"  = [make' EParams "p" (z3Var "p" bool)]
+                | eid == Right "ce2"  = [make' EIndices "q" (z3Var "q" int)]
                 | otherwise           = []
         return $ sys & mchTable.withKey.traverse %~ \(mid,m) -> 
                 layeredUpgradeRec (upTheory mid) (upMachine mid) upEvent upEvent m
@@ -336,7 +338,7 @@ name3 = testName "test 3, phase 2, parsing"
 
 case3 :: IO (Either [Error] SystemP2)
 case3 = return $ do
-    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+    let ms = M.fromList [(fromString'' "m0",[ms0]),(fromString'' "m1",[ms1])]
         ms0 = makeLatex "file.ext" $ do       
                   command "variable" [text "x,y : \\Int"]                 
                   command "param" [text "ae1b",text "p : \\Bool"]
@@ -369,7 +371,7 @@ case4 = return $ do
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con undefined $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
-        declVar n t = decls %= M.insert n (Var n t)
+        declVar n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             declVar "x" int
             declVar "y" int
@@ -412,14 +414,14 @@ case4 = return $ do
                     del_event "ce1" "act1" ["ae1a","ae1b"] Action -- $ c [act| x := x - 1 |]
 
 decl :: String -> GenericType -> State ParserSetting ()
-decl n t = decls %= M.insert n (Var n t)
+decl n t = decls %= insert_symbol (z3Var n t)
 
 result4 :: Either [Error] SystemP3
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
         (x,x',xvar)  = prog_var "x" int
-        decl n t = decls %= M.insert n (Var n t)
+        decl n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             decl "x" int
             decl "y" int
@@ -452,16 +454,16 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid == "ae0"                 = [ EGuards  "grd0" $ c [expr|x = 0|]
                                              , ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
-            | eid == "ae1a"                = [EActions "act0" $ c' [act| y := y + 1 |] 
-                                             ,EActions "act1" $ c' [act| x := x - 1 |] ]
-            | eid == "ae1b"                = [EActions "act0" $ c' [act| y := y + 1 |] 
-                                             ,EActions "act1" $ c' [act| x := x - 1 |] ]
+            | eid == "ae1a"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
+                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
+            | eid == "ae1b"                = [ EActions "act0" $ c' [act| y := y + 1 |] 
+                                             , EActions "act1" $ c' [act| x := x - 1 |] ]
             | eid == "ce0a"                = [ ECoarseSched "sch1" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , EWitness "x" (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+                                             , make' EWitness "x" (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
             | otherwise = []
 
 name5 :: TestName
@@ -469,7 +471,7 @@ name5 = testName "test 5, phase 3, parsing"
 
 case5 :: IO (Either [Error] SystemP3)
 case5 = return $ do
-    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+    let ms = M.fromList [(fromString'' "m0",[ms0]),(fromString'' "m1",[ms1])]
         ms0 = makeLatex "file.ext" $ do       
                   command "invariant" [text "inv0",text "x \\le y"]                 
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
@@ -557,7 +559,7 @@ name7 = testName "test 7, phase 4, parsing"
 
 case7 :: IO (Either [Error] SystemP4)
 case7 = return $ do
-    let ms = M.fromList [("m0",[ms0]),("m1",[ms1])]
+    let ms = M.fromList [(fromString'' "m0",[ms0]),(fromString'' "m1",[ms1])]
         ms0 = makeLatex "file.ext" $ do       
                   command "invariant" [text "inv0",text "x \\le y"]                 
                   command "evguard" [text "ae0", text "grd0", text "x = 0"]
@@ -588,22 +590,22 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
         (x,x',xvar) = prog_var "x" int
         ms = M.fromList [("m0",m0),("m1",m1)]
-        s0 = Sort "S0" "S0" 0
-        s1 = Sort "\\S1" "sl@S1" 0
+        s0 = z3Sort "S0" "S0" 0
+        s1 = z3Sort "\\S1" "sl@S1" 0
         setS0 = set_type $ make_type s0 []
         setS1 = set_type $ make_type s1 []
         sorts0 = symbol_table [s0]
         sorts1 = symbol_table [s0,s1]
-        defs0 = symbol_table [Def [] "S0" [] setS0 (zlift setS0 ztrue)]
-        defs1 = M.fromList $ [ ("S0",Def [] "S0" [] setS0 (zlift setS0 ztrue))
-                             , ("\\S1",Def [] "sl@S1" [] setS1 (zlift setS1 ztrue))]
-        vars0 = symbol_table [Var "x" int,Var "y" int]
-        vars1 = symbol_table [Var "z" int,Var "y" int]
+        defs0 = symbol_table [z3Def [] "S0" [] setS0 (zlift setS0 ztrue)]
+        defs1 = symbol_table [ (z3Def [] "S0" [] setS0 (zlift setS0 ztrue))
+                             , (z3Def [] "sl@S1" [] setS1 (zlift setS1 ztrue))]
+        vars0 = symbol_table [z3Var "x" int,z3Var "y" int]
+        vars1 = symbol_table [z3Var "z" int,z3Var "y" int]
         c' f = c $ f.(expected_type .~ Nothing)
         c = ctx $ do
             decl "x" int
             decl "y" int
-        m0 = newMachine AST.assert "m0" $ do
+        m0 = newMachine AST.assert (fromString'' "m0") $ do
                 theory.types .= sorts0
                 theory.defs  .= defs0
                 variables .= vars0
@@ -614,11 +616,11 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         pprop = LeadsTo [] p q
         pprop' = getExpr <$> pprop
         sprop = Unless [] p q 
-        m1 = newMachine AST.assert "m1" $ do
+        m1 = newMachine AST.assert (fromString'' "m1") $ do
                 theory.types .= sorts1
                 theory.defs .= defs1
-                theory.extends %= M.insert "sets" set_theory
-                del_vars .= symbol_table [Var "x" int]
+                theory.extends %= insert_symbol set_theory
+                del_vars .= symbol_table [z3Var "x" int]
                 abs_vars .= vars0
                 variables .= vars1
                 events .= evts1
@@ -649,7 +651,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         ae1bEvt = create $ do
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            params .= symbol_table [Var "p" bool]
+            params .= symbol_table [z3Var "p" bool]
             actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])
                 , ("act1",c' [act| x := x - 1 |])]
@@ -660,11 +662,11 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
             coarse_sched .= M.fromList 
                 [("sch0",c [expr| y = y|]),("sch2",c [expr| y = 0 |])]
         ce1Evt = create $ do
-            params .= symbol_table [Var "p" bool]
+            params .= symbol_table [z3Var "p" bool]
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            witness .= M.fromList
-                [ ("x", (xvar, $typeCheck$ x' `mzeq` (x - 1))) ]
+            witness .= symbol_table' fst
+                [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
             actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])]
             abs_actions .= M.fromList
@@ -672,7 +674,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
                 , ("act1",c' [act| x := x - 1 |])]
             -- eql_vars .= symbol_table [y]
         ce2Evt = create $ do
-            AST.indices .= symbol_table [Var "q" int]
+            AST.indices .= symbol_table [z3Var "q" int]
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
         skipEvt = create $ do 

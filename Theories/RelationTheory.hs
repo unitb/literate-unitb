@@ -1,7 +1,7 @@
 module Theories.RelationTheory where
 
     -- Modules
-import Logic.Expr
+import Logic.Expr hiding (assert)
 import Logic.Theory
 import Logic.Theory.Monad
 
@@ -11,25 +11,25 @@ import Theories.SetTheory
 import Utilities.Tuple
 
 relation_theory :: Theory
-relation_theory = make_theory "relation" $ do
+relation_theory = make_theory "relations" $ do
     -- rel_type <- sort_def "relation" $ \gA gB -> 
     --     set_type (pair_type gA gB)
     let rel_type gA gB = set_type (pair_type gA gB)
         rel_type :: Type -> Type -> Type
         -- id' = id :: Type -> Type
-    (star_op,zstar) <- unary "\\star" "star" $ \gA -> 
+    (star_op,zstar) <- unary [tex|\star|] [smt|star|] $ \gA -> 
         (One $ rel_type gA gA,rel_type gA gA)
-    (plus_op,zplus) <- unary "\\star" "plus" $ \gA -> 
+    (plus_op,zplus) <- unary [tex|\plus|] [smt|plus|] $ \gA -> 
         (One $ rel_type gA gA,rel_type gA gA)
-    (seq_op,zseq)  <- operator ";" "seq" $ \gA gB gC -> 
+    (seq_op,zseq)  <- operator [tex|;|] [smt|seq|] $ \gA gB gC -> 
         ((rel_type gA gB,rel_type gB gC),rel_type gA gC)
-    zlookup <- command "lookup" $ \gA gB -> 
+    zlookup <- command [tex|lookup|] $ \gA gB -> 
         ((rel_type gA gB, set_type gA),set_type gB)
-    zid <- command "id" $ \gA ->
+    zid <- command [tex|id|] $ \gA ->
         ((),rel_type gA gA)
-    zasrel  <- command "asrel" $ \gA ->
+    zasrel  <- command [tex|asrel|] $ \gA ->
         (One $ set_type gA,rel_type gA gA)
-    zreldom <- command "reldom" $ \gA gB ->
+    zreldom <- command [tex|reldom|] $ \gA gB ->
         (One $ rel_type gA gB, set_type gA)
     -- zrelran <- command "relran" $ \gA gB ->
     --     (One $ rel_type gA gB, set_type gB)
@@ -55,8 +55,8 @@ relation_theory = make_theory "relation" $ do
     x3  <- dummy "x4" t3
     x4  <- dummy "x5" t4
     s1  <- dummy "s1" $ set_type t1
-    associativity "seq" zid
-    preserve subset_fun ["seq","star"]
+    associativity (fromString'' "seq") zid
+    preserve subset_fun $ map fromString'' ["seq","star"]
     precedence  [] 
         [[star_op,plus_op],[seq_op]] 
         [Right set_union,Right set_diff,Right set_intersect]

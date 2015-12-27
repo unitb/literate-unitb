@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import qualified Reactive as R
@@ -24,14 +24,13 @@ import Document.Phase.Test as Ph
 import Document.Test as Doc
 import Utilities.Test as Ut
 import UnitB.Test as UB
---import Logic.Expr.QuasiQuote
--- import UnitB.Test as UB
---import Latex.Parser
+----import Logic.Expr.QuasiQuote
+---- import UnitB.Test as UB
+----import Latex.Parser
 import qualified Latex.Test_Latex_Parser as Tex
--- import qualified Z3.Test as ZT
--- import qualified Document.Test as DOC
--- import qualified Utilities.Format as FMT
--- import qualified Utilities.Test as UT
+---- import qualified Document.Test as DOC
+---- import qualified Utilities.Format as FMT
+import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
@@ -44,33 +43,13 @@ import Tests.UnitTest
 
 import System.Process
 import System.TimeIt
+import System.Timeout
 
 import qualified Utilities.Lines as Lines
 
 import Test.QuickCheck
 
 import Text.Printf
-
---import Utilities.Instances ()
-
--- tests :: TestCase
--- tests = test_cases 
---     ""
---     [ TSets.test_case
---     ]
-
--- test_case :: TestCase
--- test_case = test_cases 
---         "Literate Unit-B Test Suite" 
---         [  DOC.test_case
---         ,  UB.test_case
---         ,  LT.test_case
---         ,  ZT.test_case
--- --        ,  FMT.test_case
---         ,  UT.test_case
---         ,  Code.test_case
---         ,  Sum.test_case
---         ]
 
 
 main :: IO ()
@@ -87,7 +66,7 @@ main = timeIt $ do
     return $ run_test_cases Ph.test_case
     return $ run_test_cases Ut.test_case
     return $ run_test_cases Z3.test_case
-    --print =<< Ph.case7
+    ----print =<< Ph.case7
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case
     return $ run_test_cases Gen.test_case
@@ -98,20 +77,27 @@ main = timeIt $ do
     return $ do
         c4 <- Lam.case4
         printf "size: %s\n" (show $ 
-                M.intersectionWith (==) <$> (c4) <*> (Lam.result4))
+                M.intersectionWith (==) <$> (c4) <*> (Lam.result4)) 
+-- ******
     return $ run_test_cases Lam.test_case
+-- ******
     return $ run_test_cases Cubes.test_case
     return $ run_test_cases Sync.test_case
     return $ run_test_cases Puzz.test_case
     return $ quickCheck MSpec.prop_expr_parser
-    return $ MSpec.run_spec
-    return $ run_test_cases UB.test_case
+    return $ print =<< MSpec.run_spec
+    return $ print =<< run_test_cases check_axioms
+    return $ run_test_cases Gen.test_case
+    timeout (60 * 1000000) $ do
+        return $ run_test_cases UB.test_case
     return $ print =<< Lines.run_tests
     return $ run_test_cases TS.test_case
     return $ run_test_cases TSS.test_case
     return $ run_test_cases TSRef.test_case
+    return $ run_test_cases UT.test_case
     return $ run_test_cases Tex.test_case
     return $ run_test_cases GC.test_case
     return $ run_test_cases Parser.test_case
+    run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
     return ()

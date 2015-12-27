@@ -37,14 +37,14 @@ import           Data.Map as M hiding ( map, (!) )
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+import Utilities.EditDistance
 import Utilities.Format
 import Utilities.Graph as G ((!))
-import Utilities.EditDistance
 
 data Param = Param 
     { context   :: Context
     , notation  :: Notation
-    , variables :: Map String Expr
+    , variables :: Map Name Expr
     }
 
 data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
@@ -97,7 +97,7 @@ instance Token ExprToken where
     lexeme Colon      = ":"
 
 runParser :: Context -> Notation 
-          -> Map String Expr
+          -> Map Name Expr
           -> Parser a 
           -> Scanner ExprToken a
 runParser x y w m = runParserWith (Param x y w) m
@@ -116,10 +116,10 @@ get_notation = notation `liftM` get_params
 get_table :: Parser (Matrix Operator Assoc)
 get_table = (view struct . notation) <$> get_params
 
-get_vars :: Parser (Map String Expr)
+get_vars :: Parser (Map Name Expr)
 get_vars = variables `liftM` get_params
 
-with_vars :: [(String, Var)] -> Parser b -> Parser b
+with_vars :: [(Name, Var)] -> Parser b -> Parser b
 with_vars vs cmd = do
         x <- get_params
         liftP $ runParserWith (f x) $ do
@@ -204,11 +204,11 @@ brackets b cmd = do
         read_listP [Close b]
         return x
 
-word_or_command :: Parser String            
+word_or_command :: Parser Name
 word_or_command = do
     x <- liftP read_char
     case x of
-        Ident xs -> return xs
+        Ident xs -> return $ fromString'' xs
         _ -> fail "expecting an identifier"
 
 type_t :: Parser Type
@@ -230,30 +230,30 @@ type_t = do
                         (typeParams s) 
                         (length ts)
                 return $ Gen s ts
-            Nothing -> fail ("Invalid sort: '" ++ t ++ "'")
+            Nothing -> fail ("Invalid sort: '" ++ render t ++ "'")
         b2 <- look_aheadP $ read_listP [ Ident "\\pfun" ]               
         if b2 
         then do
             maybe 
                 (fail $ "Invalid sort: '\\pfun'")
                 return
-                $ get_type ctx "\\pfun"
+                $ get_type ctx $ fromString'' "\\pfun"
             read_listP [Ident "\\pfun"]
             t2 <- type_t
             return $ fun_type t t2
         else return t
 
-get_type :: Context -> String -> Maybe Sort
+get_type :: Context -> Name -> Maybe Sort
 get_type (Context ts _ _ _ _) x = M.lookup x m
     where
         m = fromList 
-                   [ ("\\Int", IntSort)
-                   , ("\\Real", RealSort)
-                   , ("\\Bool", BoolSort)]
+                   [ ([tex|\Int|], IntSort)
+                   , ([tex|\Real|], RealSort)
+                   , ([tex|\Bool|], BoolSort)]
             `M.union` ts
 --        z3_type s@(Sort _ x _) = USER_DEFINED s
 
-vars :: Parser [(String,Type)]
+vars :: Parser [(Name,Type)]
 vars = do
         vs <- sep1P word_or_command comma
         colon
@@ -261,9 +261,9 @@ vars = do
         return (map (\x -> (x,t)) vs)     
 
 get_variables' :: (Monad m, MonadReader LineInfo m)
-               => Map String Sort
+               => Map Name Sort
                -> LatexDoc
-               -> EitherT [Error] m [(String, Var)]
+               -> EitherT [Error] m [(Name, Var)]
 get_variables' types cs = 
         get_variables 
             (Context types M.empty 
@@ -273,13 +273,13 @@ get_variables' types cs =
 get_variables :: (Monad m, MonadReader LineInfo m)
               => Context
               -> LatexDoc
-              -> EitherT [Error] m [(String, Var)]
+              -> EitherT [Error] m [(Name, Var)]
 get_variables ctx = get_variables'' ctx . flatten_li'
 
 get_variables'' :: (Monad m, MonadReader LineInfo m)
                 => Context
                 -> StringLi
-                -> EitherT [Error] m [(String, Var)]
+                -> EitherT [Error] m [(Name, Var)]
 get_variables'' ctx m = do
         LI fn i j <- lift $ ask
         toks <- hoistEither $ read_tokens 
@@ -299,7 +299,7 @@ unary = do
             return
     where
         f op@(UnaryOperator _ tok _) = do
-            read_listP [Operator tok]
+            read_listP [Operator $ render tok]
             return op
 
 choiceP :: [Parser a] -> Parser a -> (a -> Parser a) -> Parser a
@@ -322,7 +322,7 @@ oper = do
             return
     where
         f op@(BinOperator _ tok _) = do
-            read_listP [Operator tok]
+            read_listP [Operator $ render tok]
             return op
 
 data FunOperator = Domain | Range
@@ -339,13 +339,13 @@ apply_fun_op (Command _ _ _ fop) x = do
         e <- check_types $ fop [Right x]
         return $ Right e
 
-suggestion :: String -> Map String String -> [String]
-suggestion xs m = map (\(x,y) -> x ++ " (" ++ y ++ ")") $ toList ws
+suggestion :: Name -> Map Name String -> [String]
+suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toList ws
   where
-    xs' = map toLower xs
+    xs' = map toLower $ render xs
     p ys _ = 2 * dist xs' ys' <= (length xs' `max` length ys') + 1
       where
-        ys' = map toLower ys
+        ys' = map toLower $ render ys
     ws = M.filterWithKey p m
 
 type Term = Either Command Expr
@@ -355,7 +355,7 @@ term = do
     n <- get_notation
     let cmds = zip (map token (n^.commands)) (n^.commands)
         quants = n^.quantifiers
-        oftype = [("\\oftype",())]
+        oftype = [([tex|\oftype|],())]
     choose_la 
         [ do    c@(Command _ _ n f) <- from cmds
                 if n == 1 then do
@@ -389,7 +389,7 @@ term = do
                                     $ zip3 ns vs
                                     $ map f ns 
                         f = (`S.filter` vars) . (. view name) . (==)
-                    ts <- forM v_type $ \(x,(Var _ t),xs) -> do
+                    ts <- forM v_type $ \(x,(Var x' t),xs) -> do
                         let ys = L.map var_type $ S.toList xs
                         t' <- maybe 
                             (fail $ format "Inconsistent type for {0}: {1}" 
@@ -400,7 +400,7 @@ term = do
                         t' <- if t' == gA 
                             then return t
                             else return t'
-                        return (x, Var x t')
+                        return (x, Var x' t')
                     let ts' = M.map Word $ fromList ts
                         r' = substitute ts' r
                         t' = substitute ts' t
@@ -420,22 +420,22 @@ term = do
                     Nothing -> fail ""
         , do    xs <- attempt word_or_command
                 vs <- get_vars
-                let oftype' = M.map (const "keyword")  $ fromList oftype
-                    quants' = M.map (const "quantifier") $ fromList quants
-                    cmd'    = M.map (const "command")  $ fromList cmds
-                    vars'   = M.map (const "variable") $ vs
+                let oftype' = "keyword"  <$ fromList oftype
+                    quants' = "quantifier" <$ fromList quants
+                    cmd'    = "command"  <$ fromList cmds
+                    vars'   = "variable" <$ vs
                     sug     = suggestion xs $ M.unions 
                             [ cmd', quants'
                             , oftype', vars' ]
                 fail (   "unrecognized term: "
-                      ++ xs ++ if not $ L.null sug then
+                      ++ render xs ++ if not $ L.null sug then
                             "\nPerhaps you meant:\n"
                       ++ unlines sug else "")
         , do    xs <- number
                 return $ Right $ zint $ read xs
         ]
 
-dummy_types :: [String] -> Context -> [Var]
+dummy_types :: [Name] -> Context -> [Var]
 dummy_types vs (Context _ _ _ _ dums) = map f vs
     where
         f x = maybe (Var x gA) id $ M.lookup x dums
@@ -474,7 +474,7 @@ choose_la [] = mzero
 add_context :: String -> Parser a -> Parser a
 add_context _ cmd = cmd
 
-from :: [(String,a)] -> Parser a
+from :: [(Name,a)] -> Parser a
 from m = attempt $ do
         x <- word_or_command
         case x `L.lookup` m of
@@ -633,10 +633,11 @@ scan_expr n = do
                     x  <- match_char isAlpha
                     xs <- many $ match_char isWord
                     ys <- option $ read_list "\'"
-                    let zs = ws ++ x : xs ++ ys
+                    let zs = fromString'' $ ws ++ x : xs ++ ys
+                        zs :: Name
                     if isOper n zs
-                        then return $ Operator zs
-                        else return $ Ident zs
+                        then return $ Operator $ render zs
+                        else return $ Ident $ render zs
                 , match_char isSymbol >>= \x -> return $ Operator [x]
                 , match_char isPunctuation >>= \x -> return $ Operator [x]
                 , do
@@ -659,10 +660,8 @@ scan_expr n = do
             return $ (x,li) : xs
         else return []
     where
-        isOper (Just n) zs = zs `elem` map f (n^.new_ops)
+        isOper (Just n) zs = zs `elem` map token (n^.new_ops)
         isOper Nothing _ = False
-        f (Right (BinOperator _ tok _)) = tok
-        f (Left (UnaryOperator _ tok _)) = tok
 
 parse_expr :: Context 
            -> Notation

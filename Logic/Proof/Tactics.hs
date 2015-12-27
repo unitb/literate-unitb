@@ -1,6 +1,6 @@
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE OverloadedStrings      #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TypeOperators
+    , OverloadedStrings
+    , UndecidableInstances   #-}
 module Logic.Proof.Tactics 
     ( Tactic, TacticT, get_line_info, get_context
     , get_goal, by_parts
@@ -23,7 +23,7 @@ module Logic.Proof.Tactics
     )
 where
 
-import Logic.Expr hiding ( instantiate )
+import Logic.Expr hiding ( instantiate, assert )
 import Logic.Operator
 import Logic.WellDefinedness
 import Logic.Proof.ProofTree
@@ -47,6 +47,7 @@ import           Data.Tuple
 import Utilities.Error
 import Utilities.Format
 import Utilities.Graph hiding ( map )
+import Utilities.CallStack 
 import Utilities.Syntactic ( Error (..), LineInfo )
 
 data TacticParam = TacticParam 
@@ -57,12 +58,13 @@ data TacticParam = TacticParam
 
 makeLenses ''TacticParam
 
-data TacticT m a = TacticT 
+newtype TacticT m a = TacticT 
         { unTactic :: ErrorT 
                 (RWST 
                     TacticParam 
                     [Label] 
-                    (S.Set Label,S.Set String) m) a }
+                    (S.Set Label,S.Set Name) m) a }
+    deriving (Functor,Applicative,MonadError)
 
 instance Show (TacticT m a) where
   show _ = "<tactic>"
@@ -121,22 +123,21 @@ with_variables vs (TacticT cmd) = TacticT $ do
                 (symbols ctx)
     li <- view line_info
     unless (M.null clashes) $ 
-        hard_error [Error (format "redefinition of {0}" $ intercalate "," $ keys clashes) 
+        hard_error [Error (format "redefinition of {0}" $ intercalate "," $ L.map render $ keys clashes) 
             $ li]
     ErrorT $ local (sequent.constants %~ (symbol_table vs `M.union`)) $ 
         runErrorT cmd
 
 get_dummy :: Monad m
-          => String -> TacticT m Var
+          => Name -> TacticT m Var
 get_dummy var = do
         ctx <- get_context
         li  <- get_line_info
         let Context _ _ _ _ vars = ctx
         maybe 
-            (hard_error [Error ("invalid dummy: " ++ var) li])
+            (hard_error [Error ("invalid dummy: " ++ render var) li])
             return
             $ M.lookup var vars
-
 
 get_line_info :: Monad m
               => TacticT m LineInfo
@@ -359,27 +360,28 @@ get_used_vars = do
         return $ S.toList $ S.unions $ L.map used_var es
 
 get_allocated_vars :: Monad m
-                   => TacticT m [String]
+                   => TacticT m [Name]
 get_allocated_vars = do
         (_,ids) <- TacticT $ lift $ get
         return $ S.toList ids
 
 is_fresh :: Monad m
-         => String -> TacticT m Bool
+         => Name -> TacticT m Bool
 is_fresh v = TacticT $ do
         are_fresh [v] <$> view sequent
 
-new_fresh :: Monad m
-          => String -> Type 
+new_fresh :: (Monad m, ?loc :: CallStack)
+          => String
+          -> Type 
           -> TacticT m Var
 new_fresh name t = do
         fix (\rec n suf -> do
-            let v = (name ++ suf)
+            let v = fromString'' (name ++ suf)
             b <- is_fresh v
             (lbls,ids) <- TacticT $ lift $ get
-            if b && not ((name ++ suf) `S.member` ids)
+            if b && not (v `S.member` ids)
             then TacticT $ do
-                lift $ put (lbls,S.insert (name ++ suf) ids)
+                lift $ put (lbls,S.insert v ids)
                 return $ Var v t
             else do
                 rec (n+1 :: Int) (show n)
@@ -408,7 +410,7 @@ fresh_label name = do
             ) 0 ""
 
 free_vars_goal :: Monad m
-               => [(String,String)]
+               => [(Name,Name)]
                -> TacticT m Proof
                -> TacticT m Proof
 free_vars_goal [] proof = proof
@@ -424,12 +426,12 @@ guard :: Monad m => String -> Bool -> m ()
 guard msg b = unless b $ fail msg
 
 define :: Monad m
-       => [(String, Expr)]
+       => [(Name, Expr)]
        -> TacticT m Proof
        -> TacticT m Proof
 define xs proof = do
-    let po (v,e) = ("WD" </> label v,well_definedness e,easy)
-        vars = L.map (uncurry Var . second type_of) xs
+    let po (v,e) = ("WD" </> label (render v),well_definedness e,easy)
+        vars = L.map (uncurry Var . (second type_of)) xs
     li <- get_line_info
     p  <- assert (L.map po xs) $ 
       with_variables vars $
@@ -441,7 +443,7 @@ define xs proof = do
       else Definition (fromList $ zip vars $ L.map snd xs) p li
 
 free_goal :: Monad m
-          => String -> String
+          => Name -> Name
           -> TacticT m Proof 
           -> TacticT m Proof
 free_goal v0 v1 m = do
@@ -566,13 +568,6 @@ runTacticWithTheorems :: LineInfo -> Sequent
                       -> Tactic a -> Either [Error] (a, [Label])
 runTacticWithTheorems li s thms tac = runIdentity (runTacticTWithTheorems li s thms tac)
           
-instance Monad m => Functor (TacticT m) where
-    fmap = liftM
-
-instance Monad m => Applicative (TacticT m) where
-    f <*> x = ap f x
-    pure x  = return x
-
 instance Monad m => Monad (TacticT m) where
     TacticT m >>= f = TacticT $ m >>= (unTactic . f)
     return x       = TacticT $ return x
@@ -594,13 +589,6 @@ instance MonadReader r m => MonadReader r (TacticT m) where
 instance MonadTrans TacticT where
     lift cmd = TacticT $ lift $ lift cmd
 
-instance Monad m => MonadError (TacticT m) where
-    soft_error e = TacticT $ soft_error e
-    hard_error e = TacticT $ hard_error e
-    make_hard (TacticT cmd) = TacticT $ make_hard cmd
-    make_soft x (TacticT cmd) = TacticT $ make_soft x cmd
-
-
 by_symmetry :: Monad m
             => [Var]
             -> Label
@@ -614,7 +602,7 @@ by_symmetry vs hyp mlbl proof = do
         goal <- get_goal
         case cs of
             FunApp f cs
-                | view name f /= "or" -> fail err0
+                | view name f /= (z3Name "or") -> fail err0
                 | otherwise -> do
                     ps <- forM (permutations vs) $ \us -> do
                         hyp <- get_named_hyps
@@ -634,7 +622,7 @@ by_symmetry vs hyp mlbl proof = do
                         f xs = zip vs $ L.map Word xs
                     cs <- forM cs $ \x -> return (hyp,x,easy)
                     assert [(lbl,thm,clear_vars vs $ do
-                            us <- forM vs $ \(Var n t) -> new_fresh n t
+                            us <- forM vs $ \(Var n t) -> new_fresh (render n) t
                             free_vars_goal (zip (L.map (view name) vs) 
                                                 (L.map (view name) us)) 
                               $ assume named goal proof)] $
@@ -707,7 +695,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
         goal <- get_goal
         case goal of
             FunApp f [lhs,rhs] 
-                | view name f == "=" -> do
+                | view name f == z3Name "=" -> do
                     new_goal <- make_expr $ mzforall [z_decl] mztrue $ thm_rhs lhs rhs
                     assert 
                         [ (label "indirect:eq", thm, easy)      -- (Ax,y:: x = y == ...)

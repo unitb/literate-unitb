@@ -3,7 +3,6 @@ module Logic.Expr.Printable where
 
 import Logic.Expr.Expr
 import Logic.Expr.PrettyPrint
-import Logic.Expr.Type
 import Logic.Expr.Scope
 
     -- Libraries
@@ -15,15 +14,11 @@ import GHC.Generics
 
 import Test.QuickCheck
 
-instance IsExpr DispExpr where
-    getExpr (DispExpr _ e) = e
+instance HasExpr DispExpr where
 
-instance IsGenExpr DispExpr where
-    type AnnotT DispExpr = Type
-    type TypeT DispExpr  = Type
-    type QuantT DispExpr = HOQuantifier
+instance HasGenExpr DispExpr where
     type ExprT DispExpr  = Expr
-    asExpr = getExpr
+    asExpr (DispExpr _ e) = e
     ztrue  = DispExpr "\\true" ztrue
     zfalse = DispExpr "\\false" zfalse
 

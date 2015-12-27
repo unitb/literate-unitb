@@ -58,6 +58,7 @@ import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
 
 import           Data.Char
+import           Data.Either.Validation
 import           Data.Foldable as F
 import           Data.List as L
 import qualified Data.Map as M
@@ -272,13 +273,43 @@ instance Readable (M.Map Label ()) where
     read_one = do
         M.fromSet (const ()) <$> read_one
 
+instance Readable Name where
+    read_one  = do
+        (xs,li) <- read_label
+        lift $ hoistEither $ with_li li $ isName xs
+    read_args = do
+        xs <- read_args
+        let xs' = flatten' xs
+            li  = line_info xs
+        lift $ hoistEither $ with_li li $ isName xs'
+
+instance Readable [Name] where
+    read_args = do
+        arg <- read_args
+        let parse x = eitherToValidation $ isName x
+            li  = line_info arg
+        lift $ hoistEither 
+             $ with_li li 
+             $ validationToEither 
+             $ traverse parse 
+             $ comma_sep (flatten' arg)
+    read_one = do
+        arg <- get_next
+        let parse x = eitherToValidation $ isName x
+            li  = line_info arg
+        lift $ hoistEither 
+             $ with_li li 
+             $ validationToEither 
+             $ traverse parse 
+             $ comma_sep (flatten' arg)
+
 instance Readable MachineId where
     read_one = do
         xs <- read_one
-        return $ MId $ show (xs :: Label)
+        return $ MId $ (xs :: Name)
     read_args = do
         xs <- read_args
-        return $ MId $ show (xs :: Label)
+        return $ MId $ (xs :: Name)
 
 instance Readable ProgId where
     read_one  = liftM PId read_one
@@ -473,17 +504,7 @@ data ParamT m = ParamT
     }
 
 newtype VisitorT m a = VisitorT { unVisitor :: ErrorT (ReaderT (LineInfo, LatexDoc) m) a }
-
-instance Monad m => Functor (VisitorT m) where
-    fmap = liftM
-
-instance Monad m => Applicative (VisitorT m) where
-    (<*>) = ap
-    pure = return
-
-instance Monad m => Monad (VisitorT m) where
-    VisitorT cmd >>= f = VisitorT $ cmd >>= (unVisitor . f)
-    return = VisitorT . return
+    deriving (Functor,Applicative,Monad,MonadError)
 
 instance MonadTrans VisitorT where
     lift = VisitorT . lift . lift
@@ -512,13 +533,6 @@ with_content :: Monad m
 with_content xs (VisitorT cmd) = VisitorT $ local (const (li,xs)) cmd
     where
         li = line_info xs
-
-
-instance Monad m => MonadError (VisitorT m) where
-    soft_error x = VisitorT $ soft_error x
-    hard_error x = VisitorT $ hard_error x
-    make_hard (VisitorT cmd) = VisitorT $ make_hard cmd
-    make_soft x (VisitorT cmd) = VisitorT $ make_soft x cmd
 
 --instance Monad m => MonadReader (ParamT m) (VisitorT m) where
 

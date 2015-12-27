@@ -272,7 +272,8 @@ result7 = unlines
 case7 :: IO String
 case7 = do let x = do
                 m <- input
-                source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
+                let vars = L.map fromString'' ["n","f","b"]
+                source_file' vars "find_cubes" m $ n `zeq` bigN
            return $ either id id x    
     where
         (n)      = ($typeCheck) $ fst $ var "n" int
@@ -285,7 +286,8 @@ result8 = unlines
 case8 :: IO String
 case8 = do  xs <- runEitherT $ do
                 m  <- hoistEither input
-                xs <- hoistEither $ source_file' ["n","f","b"] "find_cubes" m $ n `zeq` bigN
+                let vars = L.map fromString'' ["n","f","b"]
+                xs <- hoistEither $ source_file' vars "find_cubes" m $ n `zeq` bigN
                 lift $ do 
                     file <- tempFile "tests/code.hs"
                     writeFile file $ unlines

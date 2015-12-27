@@ -28,7 +28,6 @@ import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
 import Data.Map  as M hiding ((!))
 
-import Utilities.Format
 import Utilities.Partial
 
 import Text.Printf
@@ -56,7 +55,7 @@ newtype Partition = Partition [([EventId],Expr)]
 
 newtype MultiProgram = MultiProgram [Program]
 
-type ProgramMaker = RWS RawMachine [Program] [String]
+type ProgramMaker = RWS RawMachine [Program] [Name]
 
 seqP :: [Program] -> Program
 seqP [x] = x
@@ -84,7 +83,7 @@ natVariant var evt cmd = do
 runProgramMaker :: RawMachine -> ProgramMaker () -> Program
 runProgramMaker m cmd = seqP w
     where
-        (_,w) = execRWS cmd m [ "var" ++ show i | i <- [0..] ]
+        (_,w) = execRWS cmd m [ makeName assert $ "var" ++ show i | i <- [0..] ]
 
 wait :: Expr -> ProgramMaker ()
 wait e = tell [Wait [] e]
@@ -99,9 +98,9 @@ make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
 data Termination = Infinite | Variant Variant EventId
     deriving (Show)
 
-data Concurrency = Concurrent (Map String ()) | Sequential
+data Concurrency = Concurrent (Map Name ()) | Sequential
 
-shared_vars :: Concurrency -> Map String ()
+shared_vars :: Concurrency -> Map Name ()
 shared_vars (Concurrent s) = s
 shared_vars Sequential     = M.empty
 
@@ -113,11 +112,11 @@ atomically' f cmd = do
     let e_name = "expr"
     case conc of
         Concurrent _ -> do
-            emit $ format "{0} <- lift $ atomically $ do" e_name
+            emit $ printf "%s <- lift $ atomically $ do" e_name
             indent 2 (cmd $ emit . printf "return %s")
             f e_name
         Sequential -> do
-            -- emit $ format "{0} <- do" e_name
+            -- emit $ printf "%s <- do" e_name
             cmd f
     -- return e_name        
 
@@ -127,10 +126,10 @@ atomically cmd = atomically' return $ \f -> cmd >>= f
     -- case conc of
     --     Concurrent _ -> do
     --         let e_name = "expr"
-    --         emit $ format "{0} <- lift $ atomically $ do" e_name
+    --         emit $ printf "%s <- lift $ atomically $ do" e_name
     --         indent 2 $ do
     --             e <- cmd
-    --             emit $ format "return {0}" e
+    --             emit $ printf "return %s" e
     --         return e_name
     --     Sequential -> cmd
 
@@ -265,7 +264,7 @@ safety_aux (Loop exit inv b _) ps = do
     entails "postcondition" (exit : inv) ps
     let cert = certainly b
     unless (local == cert)
-        $ lift $ tell [format "Loop is missing events {0}" 
+        $ lift $ tell [printf "Loop is missing events %s" 
             $ intercalate "," $ L.map show $ local L.\\ cert]
 
 is_stable_in :: [Expr] -> [EventId] -> POGen ()
@@ -338,44 +337,44 @@ type_code t =
                 Gen s [t]
                     | s == set_sort -> do
                         c <- type_code t
-                        return $ format "S.Set ({0})" c
+                        return $ printf "S.Set (%s)" c
                 Gen s [t0,t1]
                     | s == fun_sort -> do
                         c0 <- type_code t0
                         c1 <- type_code t1
-                        return $ format 
-                            "M.Map ({0}) ({1})" c0 c1
-                _ -> Left $ format "unrecognized type: {0}" t
+                        return $ printf
+                            "M.Map (%s) (%s)" c0 c1
+                _ -> Left $ printf "unrecognized type: %s" (pretty t)
                     
-binops_code :: Map String (String -> String -> String)
+binops_code :: Map Name (String -> String -> String)
 binops_code = M.fromList 
-    [ ("=", format "({0} == {1})")
-    , ("+", format "({0} + {1})")
-    , ("<", format "({0} < {1})")
-    , ("ovl", format "(M.union {1} {0})")
-    , ("mk-fun", format "(M.singleton {0} {1})")
+    [ (z3Name "=", printf "(%s == %s)")
+    , (z3Name "+", printf "(%s + %s)")
+    , (z3Name "<", printf "(%s < %s)")
+    , (z3Name "ovl", flip $ printf "(M.union %s %s)")
+    , (z3Name "mk-fun", printf "(M.singleton %s %s)")
     ]
 
-unops_code :: Map String (String -> String)
+unops_code :: Map Name (String -> String)
 unops_code = M.fromList
-    [ ("not", format "(not {0})")]
+    [ (z3Name "not", printf "(not %s)")]
 
-nullops_code :: Map String String
+nullops_code :: Map Name String
 nullops_code = M.fromList
-    [ ("empty-fun", "M.empty") 
-    , ("empty-set", "S.empty")]
+    [ (z3Name "empty-fun", "M.empty") 
+    , (z3Name "empty-set", "S.empty")]
 
 class Monad m => Evaluator m where
-    read_var :: String -> m ()
+    read_var :: Name -> m ()
     left :: String -> m a
-    is_shared :: String -> m Bool
+    is_shared :: Name -> m Bool
 
 instance Evaluator (Either String) where
     left = Left
     read_var _ = return ()
     is_shared _ = return False
 
-type ConcurrentEval = RWST (Map String ()) [String] () (Either String)
+type ConcurrentEval = RWST (Map Name ()) [Name] () (Either String)
 
 instance Evaluator ConcurrentEval where
     is_shared v = do
@@ -386,23 +385,27 @@ instance Evaluator ConcurrentEval where
         when b $ tell [v]
     left = lift . Left
 
+addPrefix :: (?loc :: CallStack)
+          => String -> Name -> Name
+addPrefix pre n = fromString'' $ pre ++ render n 
+
 eval_expr :: Evaluator m => RawMachine -> Expr -> m String
 eval_expr m e =
         case e of
             Word (Var n _)
                 | n `M.member` view' variables m -> do
                     read_var n
-                    return $ "v_" ++ n
-                | otherwise              -> return $ "c_" ++ n
-            Const n _    -> return $ show n
+                    return $ "v_" ++ render n
+                | otherwise              -> return $ "c_" ++ render n
+            Const n _    -> return $ pretty n
             FunApp f [] 
                 | view name f `M.member` nullops_code -> return $ nullops_code ! view name f
             FunApp f0 [e0,FunApp f1 [e1,e2]] 
-                | view name f0 == "ovl" && view name f1 == "mk-fun" -> do
+                | view name f0 == z3Name "ovl" && view name f1 == z3Name "mk-fun" -> do
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
                     c2 <- eval_expr m e2
-                    return $ format "(M.insert {1} {2} {0})" c0 c1 c2
+                    return $ printf "(M.insert %s %s %s)" c1 c2 c0
             FunApp f [e]
                 | view name f `M.member` unops_code -> do
                     c <- eval_expr m e
@@ -412,22 +415,24 @@ eval_expr m e =
                     c0 <- eval_expr m e0
                     c1 <- eval_expr m e1
                     return $ (binops_code ! view name f) c0 c1
-            _ -> left $ format "unrecognized expression: {0}" e
+            _ -> left $ printf "unrecognized expression: %s" (pretty e)
 
 struct :: RawMachine -> M ()
 struct m = do
         sv <- asks (shared_vars . snd)
-        let 
+        let attr :: (Map Name Var -> Map Name () -> Map Name Var)
+                 -> String -> (String -> String)
+                 -> Either String String
             attr comb pre typef = do 
                 code <- mapM (decl typef) $ 
                                L.map (pre,) (M.elems $ view' variables m `comb` sv) 
                 return $ intercalate "\n    , " code
-            s_attr = attr M.intersection "s" (format "TVar ({0})" :: String -> String)
+            s_attr = attr M.intersection "s" (printf "TVar (%s)" :: String -> String)
             l_attr = attr M.difference "v" id
             decl :: (String -> String) -> (String,Var) -> Either String String
             decl typef (pre,Var y t) = do
                 code <- type_code t
-                return $ format "{2}_{0} :: {1}" y (typef code) (pre :: String)
+                return $ printf "%s_%s :: %s" (pre :: String) (render y) (typef code)
         unless (M.null sv) $ do
             code <- lift $ s_attr
             emit $ "data Shared = Shared\n    { " ++ code ++ " }"
@@ -442,32 +447,32 @@ assign_code m (Assign v e) = do
         -- sv <- asks $ shared_vars . snd
         -- let b = name v `M.member` sv
         return $ (b,if b 
-            then format "writeTVar s_{0} {1}" (v^.name) c0
-            else format "v_{0} = {1}" (v^.name) c0)
-assign_code _ act@(BcmSuchThat _ _) = left $ format "Action is non deterministic: {0}" act
-assign_code _ act@(BcmIn _ _) = left $ format "Action is non deterministic: {0}" act
+            then printf "writeTVar s_%s %s" (render $ v^.name) c0
+            else printf "v_%s = %s" (render $ v^.name) c0)
+assign_code _ act@(BcmSuchThat _ _) = left $ printf "Action is non deterministic: %s" (pretty act)
+assign_code _ act@(BcmIn _ _) = left $ printf "Action is non deterministic: %s" (pretty act)
 
-init_value_code :: Evaluator m => RawMachine -> Expr -> m [(Bool,(String,String))]
+init_value_code :: Evaluator m => RawMachine -> Expr -> m [(Bool,(Name,String))]
 init_value_code m e =
         case e of
             FunApp f [Word (Var n _),e0]
                     |      n `M.member` (m!.variables)
-                        && view name f == "=" -> do
+                        && view name f == z3Name "=" -> do
                                 b  <- is_shared n
                                 c0 <- eval_expr m e0
                                 return [(b,(n,c0))]
             FunApp f es
-                    | view name f == "and" -> do
+                    | view name f == z3Name "and" -> do
                         rs <- mapM (init_value_code m) es
                         return $ concat rs
-            _ -> left $ format "initialization is not in a canonical form: {0}" e
+            _ -> left $ printf "initialization is not in a canonical form: %s" (pretty e)
 
 runEval :: ConcurrentEval a -> M a
 runEval cmd = do
     sv <- asks $ shared_vars . snd
     (e,(),rs) <- lift $ runRWST cmd sv ()
     forM_ (nubSort rs) $ \r -> 
-        emit $ format "v_{0} <- readTVar s_{1}" r r
+        emit $ printf "v_%s <- readTVar s_%s" (render r) (render r)
     return e
 
 event_body_code :: RawMachine -> RawEvent -> M String
@@ -479,7 +484,7 @@ event_body_code m e = do
         indent 8 $ do
             case l_acts of 
                 x:xs -> do
-                    emit $ format "{ {0}" x
+                    emit $ printf "{ %s" x
                     mapM_ (emit . (", " ++)) xs
                     emit "}"
                 []   -> emit "s'"
@@ -489,7 +494,7 @@ event_body_code m e = do
         -- indent 2 $ do
         --     case acts of 
         --         x:xs -> do
-        --             emit $ format "s' { {0}" x
+        --             emit $ printf "s' { %s" x
         --             indent 3 $ do
         --                 mapM_ (emit . (", " ++)) xs
         --                 emit "}"
@@ -504,7 +509,7 @@ report = lift . Left
 --         unless (M.null $ indices e) $ report "non null number of indices"
 --         unless (isNothing $ fine $ new_sched e) $ report "event has a fine schedule"
 --         grd  <- lift $ eval_expr m $ zall $ coarse $ new_sched e
---         emit $ format "if {0} then" grd
+--         emit $ printf "if %s then" grd
 --         indent 2 $ event_body_code m e
 --         emit $ "else return ()"
 
@@ -513,7 +518,7 @@ conc_init_code m = do
         acts' <- runEval $ liftM concat 
             $ mapM (init_value_code m) $ M.elems $ m!.inits
         let acts = L.map snd $ L.filter fst acts' 
-        emitAll $ L.map (\(v,e) -> format "s_{0} <- newTVarIO {1}" v e) acts
+        emitAll $ L.map (\(v,e) -> printf "s_%s <- newTVarIO %s" (pretty v) e) acts
 
 init_code :: RawMachine -> M ()
 init_code m = do
@@ -522,7 +527,7 @@ init_code m = do
         let acts = L.map snd $ L.filter (not . fst) acts' 
         emit "s' = State"
         indent 5 $ do
-            emitAll $ zipWith (++) ("{ ":repeat ", ") $ L.map (uncurry $ format "v_{0} = {1}") acts
+            emitAll $ zipWith (++) ("{ ":repeat ", ") $ L.map (uncurry $ printf "v_%s = %s" . render) acts
             when (not $ L.null acts) 
                 $ emit "}"
 
@@ -542,11 +547,11 @@ write_seq_code m (Event _pre wait cond lbl)
         let f = emit . printf "put %s"
         atomically' f $ \f -> do
             expr <- evaluate m cond
-            emit $ format "if {0} then do" expr
+            emit $ printf "if %s then do" expr
             indent 2 $ do
                 s' <- event_body_code m (upward_event assert m (Right lbl)^.new)
                 f s'
-            emit $ format "else"    
+            emit $ printf "else"    
             indent 2 $ f "s"
     | otherwise = lift $ Left "Waiting is not allowed in sequential code"
 write_seq_code _ (NotEvent _ _) = return ()
@@ -555,11 +560,11 @@ write_seq_code m (Conditional _ ((c,b):cs) eb) = do
     emit "(State { .. }) <- get"
     if_concurrent $ emit "(Shared { .. }) <- ask"
     expr <- atomically $ evaluate m c
-    emit $ format "if {0} then do" expr
+    emit $ printf "if %s then do" expr
     indent 2 $ write_seq_code m b
     forM_ cs $ \(c,b) -> do
         expr <- lift $ eval_expr m c
-        emit $ format "else if {0} then do" expr
+        emit $ printf "else if %s then do" expr
         indent 2 $ write_seq_code m b
     emit $ "else do"
     indent 2 $ write_seq_code m eb
@@ -573,14 +578,14 @@ write_seq_code m (Loop exit _inv b _) = do
         emit "(State { .. }) <- get"
         if_concurrent $ emit "(Shared { .. }) <- ask"
         exitc <- atomically $ evaluate m exit
-        emit $ format "if {0} then return ()" exitc
+        emit $ printf "if %s then return ()" exitc
         emit "else do"
         indent 2 $ do
             write_seq_code m b
             emit "proc'"
 -- emit "(State { .. }) <- get"
 --             exitc <- eval_expr m exit
---             emit $ format "if {0} then return ()" exitc
+--             emit $ printf "if %s then return ()" exitc
 --             emit "else do"
 --             indent 2 $ do
 --                 mapM (event_code m) $ M.elems $ events m
@@ -589,13 +594,13 @@ write_seq_code m (Loop exit _inv b _) = do
 machine_code :: String -> RawMachine -> Expr -> M ()
 machine_code name m _exit = do
         x <- asks snd
-        let args = concatMap (" c_" ++) $ M.keys $ m!.theory.consts
+        let args = concatMap ((" c_" ++).render) $ M.keys $ m!.theory.consts
             cfg  = default_cfg m
             trans :: String -> String -> String
             trans = case x of
-                     Sequential -> format "execState {0} {1}"
-                     Concurrent _ -> format "fst `liftM` (execRWST {0} (Shared { .. }) {1} :: IO (Main.State,()))"
-        emit $ format "{0}{1} = do" name args
+                     Sequential -> printf "execState %s %s"
+                     Concurrent _ -> printf "fst `liftM` (execRWST %s (Shared { .. }) %s :: IO (Main.State,()))"
+        emit $ printf "%s%s = do" name args
         indent 8 $ do
             conc_init_code m
             emit $ trans "proc" "s'" 
@@ -615,7 +620,7 @@ run = run' Sequential
 source_file :: String -> RawMachine -> Expr -> Either String String
 source_file = source_file' []
 
-source_file' :: [String] -> String -> RawMachine -> Expr -> Either String String
+source_file' :: [Name] -> String -> RawMachine -> Expr -> Either String String
 source_file' shared name m exit = 
         run' c $ do
             emitAll $

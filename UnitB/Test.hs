@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module UnitB.Test where 
 
     -- Modules
@@ -9,6 +9,7 @@ import           Logic.Expr
 import qualified Logic.Expr.Const as Exp
 import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
+import           Logic.Names.Internals as Names
 import           Logic.Proof.POGenerator hiding (variables)
 import qualified Logic.Proof.POGenerator as POG
 import qualified Logic.TestGenericity as Gen
@@ -47,9 +48,11 @@ test = test_cases
         ,  Case "Debugging the partitioning" case4 result4
         ,  Gen.test_case
         ,  Case "unless with except and split event" case5 result5
+        ,  Case "QuickCheck names" Names.check_props True
         ]
 
 _ = Gen.test_case
+_ = Names.check_props
 
 example0 :: Either [Error] RawMachine
 example0 = do
@@ -80,7 +83,7 @@ example0 = do
                         ("S0", s0),
                         ("S1", s1) ]
             vs = fromList $ map as_pair [x_decl,y_decl]
-            m  = newMachine assert "m0" $ do
+            m  = newMachine assert (fromString'' "m0") $ do
                 variables .= vs
                 event_table .= new_event_set vs (singleton "evt" evt)
                 inits .= fromList 
@@ -90,7 +93,7 @@ example0 = do
         return m 
 
 select :: ExprP -> ExprP -> ExprP
-select      = typ_fun2 (mk_fun [] "select" [array gA gB, gA] gB)
+select      = typ_fun2 (mk_fun' [] "select" [array gA gB, gA] gB)
 
 train_m0 :: Either [Error] RawMachine
 train_m0 = do
@@ -110,12 +113,12 @@ train_m0 = do
                     )
         tr <- with_li li (st `select` t)
         let props' = fromList [("TR0", Tr (symbol_table [t_decl]) tr (NE.fromList ["leave"]) hint)] 
-            hint  = getExpr <$> TrHint (singleton "t" (int,c [expr| t = t' |])) Nothing
+            hint  = getExpr <$> TrHint (singleton (fromString'' "t") (int,c [expr| t = t' |])) Nothing
             c     = ctx $ do
                     [var| t, t' : \Int |]
             ps    = empty_property_set { _transient = props', _inv = inv }
             vs    = fromList $ map as_pair [st_decl]
-            m     = newMachine assert "train_m0" $ do
+            m     = newMachine assert (fromString'' "train_m0") $ do
                         props     .= ps
                         variables .= vs
                         event_table .= new_event_set vs (fromList [enter, leave])
@@ -193,7 +196,7 @@ result_train_m0_tr_en_po = unlines
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
     , " qunion[_a,_b]: (set a) x (Array a (set b)) -> (set b)"
     , " set[_a,_b]: (set a) x (Array a b) -> (set b)"
-    , " t@param[]: Int"
+    , " t_{param}[]: Int"
     , " all[_t] : (set t)  =  ((as const (set t)) true)"
     , " compl[_t] : (s1 (set _t)) -> (set t)  =  ((_ map not) s1)"
     , " elem[_t] : (x _t) x (s1 (set _t)) -> Bool  =  (select s1 x)"
@@ -201,7 +204,7 @@ result_train_m0_tr_en_po = unlines
     , " set-diff[_t] : (s1 (set _t)) x (s2 (set _t)) -> (set t)  =  (intersect s1 ((_ map not) s2))"
     , " st-subset[_t] : (s1 (set _t)) x (s2 (set _t)) -> Bool  =  (and (subset s1 s2) (not (= s1 s2)))"
     , " st: (Array Int Bool)"
-    , " st@prime: (Array Int Bool)"
+    , " st': (Array Int Bool)"
     , " t: Int"
     , " (forall ( (t Int) )"
     , "         (=> true (= (store st t false) (store st t false))))"
@@ -307,9 +310,9 @@ result_train_m0_tr_en_po = unlines
     , "                             (= (select terms x) (select terms0 x))))"
     , "                 (= (qunion@@_t0@@_t r1 terms)"
     , "                    (qunion@@_t0@@_t r1 terms0)))))"
-    , " (= t t@param)"
+    , " (= t t_{param})"
     , "|----"
-    , " (=> (select st t) (select st t@param))"
+    , " (=> (select st t) (select st t_{param}))"
     ]
 
 result_train_m0_tr_neg_po :: String
@@ -322,7 +325,7 @@ result_train_m0_tr_neg_po = unlines
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
     , " qunion[_a,_b]: (set a) x (Array a (set b)) -> (set b)"
     , " set[_a,_b]: (set a) x (Array a b) -> (set b)"
-    , " t@param[]: Int"
+    , " t_{param}[]: Int"
     , " all[_t] : (set t)  =  ((as const (set t)) true)"
     , " compl[_t] : (s1 (set _t)) -> (set t)  =  ((_ map not) s1)"
     , " elem[_t] : (x _t) x (s1 (set _t)) -> Bool  =  (select s1 x)"
@@ -330,10 +333,10 @@ result_train_m0_tr_neg_po = unlines
     , " set-diff[_t] : (s1 (set _t)) x (s2 (set _t)) -> (set t)  =  (intersect s1 ((_ map not) s2))"
     , " st-subset[_t] : (s1 (set _t)) x (s2 (set _t)) -> Bool  =  (and (subset s1 s2) (not (= s1 s2)))"
     , " st: (Array Int Bool)"
-    , " st@prime: (Array Int Bool)"
+    , " st': (Array Int Bool)"
     , " t: Int"
-    , " (= st@prime (store st t@param false))"
-    , " (select st t@param)"
+    , " (= st' (store st t_{param} false))"
+    , " (select st t_{param})"
     , " (forall ( (t Int) )"
     , "         (=> true (= (store st t false) (store st t false))))"
     , " (forall ( (term (Array _t Int)) )"
@@ -438,9 +441,9 @@ result_train_m0_tr_neg_po = unlines
     , "                             (= (select terms x) (select terms0 x))))"
     , "                 (= (qunion@@_t0@@_t r1 terms)"
     , "                    (qunion@@_t0@@_t r1 terms0)))))"
-    , " (= t t@param)"
+    , " (= t t_{param})"
     , "|----"
-    , " (=> (select st t) (not (select st@prime t)))"
+    , " (=> (select st t) (not (select st' t)))"
     ]
 
 check_mch :: Either [Error] RawMachine -> IO (String, Map Label Sequent)
@@ -511,11 +514,11 @@ result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
 
 result5 :: Map Label Sequent
 result5 = eval_generator $ with (do
-            POG.variables $ fromList
-                [ ("p", Var "p" bool)
-                , ("q", Var "q" bool)
-                , ("p'",Var "p@prime" bool)
-                , ("q'",Var "q@prime" bool)]
+            POG.variables $ symbol_table
+                [ z3Var "p" bool
+                , z3Var "q" bool
+                , z3Var "p'" bool
+                , z3Var "q'" bool ]
             named_hyps $ fromList 
                 [ ("SKIP:p", c [expr| p' = p |] ) 
                 , ("SKIP:q", c [expr| q' = q |])]
@@ -536,8 +539,8 @@ case5 = return $ eval_generator
     where
         c = ctx $ do
                 [var| p, q : \Bool |]
-        m = newMachine assert "m0" $ do
-            variables .= symbol_table [Var "p" bool,Var "q" bool]
+        m = newMachine assert (fromString'' "m0") $ do
+            variables .= symbol_table [z3Var "p" bool,z3Var "q" bool]
             event_table .= eventTable (do
                 split_event "ae0" (return ()) 
                     [ ("ce0a",return ()) 

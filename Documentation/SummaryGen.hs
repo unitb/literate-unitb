@@ -111,7 +111,7 @@ machine_summary sys m = do
     path <- ask
     make_file fn $ 
         block $ do
-            item $ tell [keyword "machine" ++ " " ++ show (_name m)]
+            item $ tell [keyword "machine" ++ " " ++ render (m!.name)]
             item $ refines_clause sys m
             item $ variable_sum m
             unless (M.null $ _inv $ m!.props) 
@@ -134,10 +134,10 @@ machine_summary sys m = do
                         item $ input path $ event_file_name m k
             item $ kw_end
     where
-        fn = "machine_" ++ (m!.name) <.> "tex"
+        fn = "machine_" ++ (render $ m!.name) <.> "tex"
 
 prop_file_name :: Machine -> String
-prop_file_name m = "machine_" ++ (m!.name) ++ "_props" <.> "tex"
+prop_file_name m = "machine_" ++ (render $ m!.name) ++ "_props" <.> "tex"
 
 indent :: Int -> String -> String
 indent n xs = intercalate "\n" $ L.map (margin ++) $ L.lines xs
@@ -171,22 +171,22 @@ properties_summary m = do
         fn = prop_file_name m
 
 inv_file :: Machine -> String
-inv_file m  = "machine_" ++ (m!.name) ++ "_inv" <.> "tex"
+inv_file m  = "machine_" ++ (render $ m!.name) ++ "_inv" <.> "tex"
 
 inv_thm_file :: Machine -> String
-inv_thm_file m  = "machine_" ++ (m!.name) ++ "_thm" <.> "tex"
+inv_thm_file m  = "machine_" ++ (render $ m!.name) ++ "_thm" <.> "tex"
 
 live_file :: Machine -> String
-live_file m = "machine_" ++ (m!.name) ++ "_prog" <.> "tex"
+live_file m = "machine_" ++ (render $ m!.name) ++ "_prog" <.> "tex"
 
 transient_file :: Machine -> String
-transient_file m = "machine_" ++ (m!.name) ++ "_trans" <.> "tex"
+transient_file m = "machine_" ++ (render $ m!.name) ++ "_trans" <.> "tex"
 
 saf_file :: Machine -> String
-saf_file m  = "machine_" ++ (m!.name) ++ "_saf" <.> "tex"
+saf_file m  = "machine_" ++ (render $ m!.name) ++ "_saf" <.> "tex"
 
 constraint_file :: Machine -> String
-constraint_file m  = "machine_" ++ (m!.name) ++ "_co" <.> "tex"
+constraint_file m  = "machine_" ++ (render $ m!.name) ++ "_co" <.> "tex"
 
 getListing :: M () -> String
 getListing cmd = L.unlines $ snd $ execRWS cmd False ()
@@ -199,7 +199,7 @@ kw_end :: M ()
 kw_end = tell ["\\textbf{end} \\\\"]
 
 event_file_name :: Machine -> EventId -> FilePath
-event_file_name m lbl = ((m!.name) ++ "_" ++ rename lbl) <.> "tex"
+event_file_name m lbl = ((render $ m!.name) ++ "_" ++ rename lbl) <.> "tex"
     where
         rename lbl = L.map f $ show lbl
         f ':' = '-'
@@ -388,7 +388,7 @@ index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\te
     where
         ind 
             | M.null $ e^.indices = ""
-            | otherwise           = "[" ++ intercalate "," (L.map (view name) $ M.elems $ e^.indices) ++ "]"
+            | otherwise           = "[" ++ intercalate "," (L.map (render . view name) $ M.elems $ e^.indices) ++ "]"
 
 csched_sum :: EventId -> EventMerging' -> M ()
 csched_sum lbl e = do
@@ -423,7 +423,7 @@ param_sum e
     | M.null $ e^.params  = return ()
     | otherwise           = do
         tell ["\\textbf{any} " 
-            ++ intercalate "," (L.map (view name) $ M.elems $ e^.params)]
+            ++ intercalate "," (L.map (render . view name) $ M.elems $ e^.params)]
 
 guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do
@@ -444,11 +444,11 @@ act_sum lbl e = section kw $ do
         kw = "\\textbf{begin}"
         put_assign (Assign v e) = do
             xs <- get_string' e
-            return $ format "{0} \\bcmeq {1}" (v^.name :: String) xs
+            return $ format "{0} \\bcmeq {1}" (render $ v^.name) xs
         put_assign (BcmSuchThat vs e) = do
             xs <- get_string' e
-            return $ format "{0} \\bcmsuch {1}" (intercalate "," $ L.map (view name) vs :: String) xs
+            return $ format "{0} \\bcmsuch {1}" (intercalate "," $ L.map (render . view name) vs :: String) xs
         put_assign (BcmIn v e) = do
             xs <- get_string' e
-            return $ format "{0} \\bcmin {1}" (v^.name :: String) xs
+            return $ format "{0} \\bcmin {1}" (render $ v^.name) xs
 

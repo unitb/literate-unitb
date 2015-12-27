@@ -1,12 +1,13 @@
-{-# LANGUAGE TypeFamilies,ImplicitParams #-}
+{-# LANGUAGE TypeFamilies #-}
 module Logic.Expr.Scope 
     ( HasPrefix(..) 
     , module Logic.Expr.Scope )
 where
 
     -- Modules
-import Logic.Expr.Label
+import Logic.Expr.Classes
 import Logic.Expr.Variable
+import Logic.Names
 
     -- Libraries
 import Control.Lens
@@ -25,9 +26,9 @@ import Utilities.Instances
 import Utilities.Invariant
 
 data VisibleVars = VisibleVars
-        { _visibleVarsConstants :: Map String Var
-        , _visibleVarsAbs_vars  :: Map String Var
-        , _vars      :: Map String Var
+        { _visibleVarsConstants :: Map Name Var
+        , _visibleVarsAbs_vars  :: Map Name Var
+        , _vars      :: Map Name Var
         , _prefix    :: [String]
         } deriving (Generic,Show)
 
@@ -57,7 +58,7 @@ withVars :: (Foldable f)
 withVars = withVars' constants
 
 withVars' :: (Foldable f) 
-          => Lens' VisibleVars (Map String Var) -> f Var 
+          => Lens' VisibleVars (Map Name Var) -> f Var 
           -> ScopeCorrectnessM a
           -> ScopeCorrectnessM a
 withVars' ln vs = local (ln %~ M.union (symbol_table vs))
@@ -80,7 +81,7 @@ withPrimes cmd = do
     withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
 areVisible :: (Show e,Foldable f,?loc :: CallStack) 
-           => [Getting (Map String Var) VisibleVars (Map String Var)]
+           => [Getting (Map Name Var) VisibleVars (Map Name Var)]
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
     vs <- foldMap view ln 

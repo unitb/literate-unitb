@@ -24,13 +24,13 @@ zbetween r1 r2 mx my mz =
       (mx `r1` my) `mzand` (my `r2` mz)
 
 interval_fun :: Fun
-interval_fun    = mk_fun [] "interval"  [int,int] $ set_type int
+interval_fun    = mk_fun [] (fromString'' "interval")  [int,int] $ set_type int
 interval_l_fun :: Fun
-interval_l_fun  = mk_fun [] "intervalL" [int,int] $ set_type int
+interval_l_fun  = mk_fun [] (fromString'' "intervalL") [int,int] $ set_type int
 interval_r_fun :: Fun
-interval_r_fun  = mk_fun [] "intervalR" [int,int] $ set_type int
+interval_r_fun  = mk_fun [] (fromString'' "intervalR") [int,int] $ set_type int
 interval_lr_fun :: Fun
-interval_lr_fun = mk_fun [] "intervalLR" [int,int] $ set_type int
+interval_lr_fun = mk_fun [] (fromString'' "intervalLR") [int,int] $ set_type int
 
 zinterval :: Rel
 zinterval = typ_fun2 interval_fun
@@ -42,28 +42,28 @@ zinterval_lr :: Rel
 zinterval_lr = typ_fun2 interval_lr_fun
 
 interval :: Command
-interval = Command "\\interval" "interval" 2 $ from_list zinterval
+interval = make Command "\\interval" "interval" 2 $ from_list zinterval
 interval_l :: Command
-interval_l = Command "\\intervalL" "intervalL" 2 $ from_list zinterval_l
+interval_l = make Command "\\intervalL" "intervalL" 2 $ from_list zinterval_l
 interval_r :: Command
-interval_r = Command "\\intervalR" "intervalR" 2 $ from_list zinterval_r
+interval_r = make Command "\\intervalR" "intervalR" 2 $ from_list zinterval_r
 interval_lr :: Command
-interval_lr = Command "\\intervalLR" "intervalLR" 2 $ from_list zinterval_lr
+interval_lr = make Command "\\intervalLR" "intervalLR" 2 $ from_list zinterval_lr
 
 between :: Command
-between = Command "\\between" "between" 3 $ from_list $ zbetween mzle mzle
+between = make Command "\\between" "between" 3 $ from_list $ zbetween mzle mzle
 between_l :: Command
-between_l = Command "\\betweenL" "betweenL" 3 $ from_list $ zbetween mzless mzle
+between_l = make Command "\\betweenL" "betweenL" 3 $ from_list $ zbetween mzless mzle
 between_r :: Command
-between_r = Command "\\betweenR" "betweenR" 3 $ from_list $ zbetween mzle mzless
+between_r = make Command "\\betweenR" "betweenR" 3 $ from_list $ zbetween mzle mzless
 between_lr :: Command
-between_lr = Command "\\betweenLR" "betweenLR" 3 $ from_list $ zbetween mzless mzless
+between_lr = make Command "\\betweenLR" "betweenLR" 3 $ from_list $ zbetween mzless mzless
 
 interval_theory :: Theory
-interval_theory = empty_theory 
-        { _extends = M.fromList 
-            [ ("set",set_theory)
-            , ("arithmetic",arithmetic) ]
+interval_theory = (empty_theory' "intervals") 
+        { _extends = symbol_table
+            [ set_theory
+            , arithmetic ]
         , _funs = symbol_table
             [ interval_r_fun, interval_l_fun
             , interval_lr_fun, interval_fun ]

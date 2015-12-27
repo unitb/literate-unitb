@@ -1,4 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
 module Utilities.FileSystem 
     ( FileSystem (..)
     , MockFileSystem

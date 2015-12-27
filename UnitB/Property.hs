@@ -41,7 +41,7 @@ data Constraint' expr =
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
-data TrHint' expr = TrHint (Map String (Type,expr)) (Maybe ProgId)
+data TrHint' expr = TrHint (Map Name (Type,expr)) (Maybe ProgId)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 
@@ -53,7 +53,7 @@ type RawTransient = Transient' RawExpr
 
 data Transient' expr = 
         Tr 
-            (Map String Var)     -- Free variables
+            (Map Name Var)     -- Free variables
             expr                 -- Predicate
             (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
@@ -104,6 +104,9 @@ instance IsLabel ProgId where
 
 instance Show ProgId where
     show (PId x) = show x
+
+instance PrettyPrintable ProgId where
+    pretty = show
 
 type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
@@ -175,7 +178,6 @@ instance Semigroup (Intersection (PropertySet' expr)) where
     (<>) = genericSemigroupMAppendWith
 
 variant_equals_dummy :: Variant -> RawExpr
---variant_equals_dummy (SetVariant d var _ _)     = Word d `zeq` asExpr var
 variant_equals_dummy (IntegerVariant d var _ _) = Word d `zeq` asExpr var
 variant_equals_dummy (SetVariant d var _ _) = Word d `zeq` asExpr var
 
@@ -196,22 +198,6 @@ variant_bounded (SetVariant _ var b Up)   = ($typeCheck) $
     mzand (Right (asExpr var) `zsubset` Right (asExpr b))
           (mzfinite $ Right (asExpr b) `zsetdiff` Right (asExpr var))
 
-make_unique :: String           -- suffix to be added to the name of variables
-            -> Map String Var   -- set of variables that must renamed
-            -> RawExpr          -- expression to rewrite
-            -> RawExpr
-make_unique suf vs w@(Word (Var vn vt)) 
-        | vn `M.member` vs    = Word (Var (vn ++ suf) vt)
-        | otherwise           = w
-make_unique _ _ c@(Const _ _)    = c
-make_unique suf vs (FunApp f xs)     = FunApp f $ L.map (make_unique suf vs) xs
-make_unique suf vs (Cast e t)        = Cast (make_unique suf vs e) t
-make_unique suf vs (Lift e t)        = Lift (make_unique suf vs e) t
-make_unique suf vs (Binder q d r xp t) = Binder q d (f r) (f xp) t
-    where
-        local = (L.foldr M.delete vs (L.map (view name) d))
-        f = make_unique suf local
-
 makeLenses ''PropertySet'
 
 instance HasScope expr => HasScope (Transient' expr) where
@@ -225,6 +211,18 @@ instance HasScope expr => HasScope (SafetyProp' expr) where
 
 instance HasScope expr => HasScope (Constraint' expr) where
     scopeCorrect' (Co vs e) = withPrimes $ withVars (symbol_table vs) $ scopeCorrect' e
+
+--instance HasScope Proof where
+--    scopeCorrect' (Easy _) = return []
+--    scopeCorrect' (FreeGoal _ u t p _) = withVars [Var u t] $ scopeCorrect' p
+--    scopeCorrect' (ByCases xs _) = fold $ L.map (scopeCorrect'.view _3) xs <> L.map (scopeCorrect'.view _2) xs
+--    scopeCorrect' (ByParts xs _) = fold $ L.map (scopeCorrect'.view _1) xs <> L.map (scopeCorrect'.view _2) xs
+--    scopeCorrect' (Assume xs goal p _) = _
+--    scopeCorrect' (Assertion _ _ _ _) = _
+--    scopeCorrect' (Definition _ _ _) = _
+--    scopeCorrect' (InstantiateHyp _ _ _ _) = _
+--    scopeCorrect' (Keep _ _ _ _ _) = _
+--    scopeCorrect' (ByCalc _) = _
 
 instance HasScope expr => HasScope (PropertySet' expr) where
     scopeCorrect' x = withPrefix "props" $ fold $

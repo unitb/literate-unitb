@@ -15,7 +15,6 @@ import UnitB.Machine
 
     -- Libraries
 import Control.DeepSeq
-import Control.Exception
 import Control.Lens hiding (indices)
 
 import           Data.Default
@@ -45,7 +44,7 @@ makeLenses ''SystemBase
 
 instance NFData mch => NFData (SystemBase mch) where
 
-instance (Show mch,HasMachine mch expr,IsExpr expr) 
+instance (Show mch,HasMachine mch expr,HasExpr expr) 
         => HasInvariant (SystemBase mch) where
     invariant s = do 
         "inv4" ## M.keys (s^.ref_struct) === M.keys (s^.machines)
@@ -55,7 +54,7 @@ instance (Show mch,HasMachine mch expr,IsExpr expr)
             mch cmd m0 m1 = 
                             withPrefix (printf "%s -> %s" (show m0) (show m1)) $
                             -- <$> 
-                            cmd ((s^.machines) ! m0) (maybe (empty_machine "empty") ((s^.machines) !) m1)
+                            cmd ((s^.machines) ! m0) (maybe (empty_machine $ fromString'' "empty") ((s^.machines) !) m1)
             match m0 m1   = do
                             "inv0" ## ((m0!.abs_vars) === (m1!.variables))
                                 -- del vars is cummulative
@@ -83,6 +82,6 @@ instance Default (SystemBase mch) where
 instance (HasMachine mch expr,Show mch) => Default (System' mch) where
     def = empty_system
 
-empty_system :: (IsExpr expr,HasMachine mch expr,Show mch) 
+empty_system :: (HasExpr expr,HasMachine mch expr,Show mch) 
              => System' mch
 empty_system = check assert def

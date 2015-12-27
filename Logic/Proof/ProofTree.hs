@@ -32,7 +32,7 @@ data Ignore = Ignore LineInfo
 data Prune = Prune Int Proof
     deriving (Eq,Typeable)
 
-data Proof =  FreeGoal String String Type Proof LineInfo
+data Proof =  FreeGoal Name Name Type Proof LineInfo
             | ByCases   [(Label, Expr, Proof)] LineInfo
             | Easy                             LineInfo
             | Assume (Map Label Expr) Expr Proof LineInfo
@@ -174,7 +174,7 @@ instance ProofRule Proof where
                 clashes = decl `M.intersection` M.mapKeys (view name) defs
                 defs' = L.map (uncurry zeq . first Word) $ M.toList defs
             unless (M.null clashes) $
-                Left [Error (format "Symbols {0} are already defined" $ intercalate "," $ M.keys clashes) li]
+                Left [Error (format "Symbols {0} are already defined" $ intercalate "," $ L.map render $ M.keys clashes) li]
             proof_po p lbl $ 
                 s & constants %~ (M.union $ symbol_table $ M.keys defs)
                   & nameless  %~ (defs' ++)
@@ -276,7 +276,7 @@ obligations' ctx s c = do
 
 --proof_po :: Theory -> Proof -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
-are_fresh :: [String] -> Sequent -> Bool
+are_fresh :: [Name] -> Sequent -> Bool
 are_fresh vs po = 
         S.null $ S.fromList vs `S.intersection` (
                 S.map (view name) $ 

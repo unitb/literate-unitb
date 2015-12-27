@@ -8,6 +8,7 @@ module Document.Pipeline where
     -- Modules
 import Document.Phase.Parameters
 import Latex.Parser as P
+import Logic.Names
 import UnitB.Syntax
 
     -- Libraries
@@ -174,7 +175,7 @@ isBlank :: LatexToken -> Bool
 isBlank (Blank _ _) = True
 isBlank _ = False 
 
-runPipeline' :: M.Map String [LatexDoc]
+runPipeline' :: M.Map Name [LatexDoc]
              -> M.Map String [LatexDoc]
              -> a
              -> Pipeline MM a b 

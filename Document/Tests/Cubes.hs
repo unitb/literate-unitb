@@ -45,18 +45,18 @@ var_b' :: Var
 var_c' :: Var
 var_n' :: Var
 
-var_a = Var "a" int
-var_b = Var "b" int
-var_c = Var "c" int
-var_n = Var "n" int
+var_a = Var [smt|a|] int
+var_b = Var [smt|b|] int
+var_c = Var [smt|c|] int
+var_n = Var [smt|n|] int
 
-var_a' = Var "a@prime" int
-var_b' = Var "b@prime" int
-var_c' = Var "c@prime" int
-var_n' = Var "n@prime" int
+var_a' = Var [smt|a@prime|] int
+var_b' = Var [smt|b@prime|] int
+var_c' = Var [smt|c@prime|] int
+var_n' = Var [smt|n@prime|] int
 
 machine6 :: AST.RawMachine
-machine6 = newMachine assert "m0" $ do
+machine6 = newMachine assert [tex|m0|] $ do
         variables .= fromList (map as_pair [var_a,var_b,var_c,var_n])
         inits .= fromList
                   [ (label "in2", $typeCheck$ c .=. 6)
@@ -197,24 +197,20 @@ case8 = do
         proof_obligation path8 "m0/INIT/FIS/x" 0
 
 result9 :: String
-result9 = unlines [
-        "m0/evt/INV/inv0:",
-        "(= (^ n@prime 3) a@prime)",
-        "----",
-        "    (^ n@prime 3)",
-        "      | (= n@prime (+ n 1))",
-        "    (^ (+ n 1) 3)",
-        "    (+ (+ (+ (^ n 3) (* 3 (^ n 2)))" ++
-                 " (* 3 n))" ++
-              " 1)",
-        "      | (= a (^ n 3))",
-        "    (+ (+ (+ a (* 3 (^ n 2)))" ++
-                 " (* 3 n))" ++
-              " 1)",
-        "      | (= b (+ (+ (* 3 (^ n 2)) (* 3 n)) 1))",
-        "    (+ a b)",
-        "      | (= a@prime (+ a b))",
-        "    a@prime"
+result9 = unlines 
+    [ "m0/evt/INV/inv0:"
+    , "(= (^ n' 3) a')"
+    , "----"
+    , "    (^ n' 3)"
+    , "      | (= n' (+ n 1))"
+    , "    (^ (+ n 1) 3)"
+    , "    (+ (+ (+ (^ n 3) (* 3 (^ n 2))) (* 3 n)) 1)"
+    , "      | (= a (^ n 3))"
+    , "    (+ (+ (+ a (* 3 (^ n 2))) (* 3 n)) 1)"
+    , "      | (= b (+ (+ (* 3 (^ n 2)) (* 3 n)) 1))"
+    , "    (+ a b)"
+    , "      | (= a' (+ a b))"
+    , "    a'"
     ]
 
 case9 :: IO String

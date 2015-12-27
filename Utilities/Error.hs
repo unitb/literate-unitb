@@ -3,6 +3,8 @@ module Utilities.Error where
 
 import Utilities.Syntactic
 
+import Data.Either.Validation
+
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
@@ -64,6 +66,7 @@ class (Monad m) => MonadError m where
     hard_error :: [Error] -> m a
     make_hard  :: m a -> m a
     make_soft  :: a -> m a -> m a
+    from_validation :: Validation [Error] a -> m a
 
 instance Monad m => MonadError (ErrorT m) where
     soft_error er = tell er
@@ -83,6 +86,7 @@ instance Monad m => MonadError (ErrorT m) where
             case y of
                 Right (y,w) -> return $ Right (y,w)
                 Left w ->  return $ Right (x,w)
+    from_validation = fromEitherT . hoistEither . validationToEither
 
 fromEitherM :: MonadError m => EitherT [Error] m a -> m a
 fromEitherM cmd = do

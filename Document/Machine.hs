@@ -35,7 +35,6 @@ import           Data.Map   as M hiding ( map, foldl, (\\) )
 import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
-import           Data.List.NonEmpty ( NonEmpty(..) )
 import qualified Data.List.NonEmpty as NE
 
 import qualified Utilities.BipartiteGraph as G
@@ -50,7 +49,7 @@ make_machine (MId m) p4 = mch'
         ref_prog :: Map ProgId Rule
         ref_prog = p4^.pLiveRule
         proofs   = p4^.pProofs
-        ctx = empty_theory 
+        ctx = (empty_theory m)
             { _extends  = imp_th
             , _types    = types
             , _funs = M.empty

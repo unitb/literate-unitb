@@ -49,6 +49,7 @@ import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 import qualified Data.Traversable as T
+import           Data.Witherable  as W
 
 import GHC.Generics (Generic)
 
@@ -266,8 +267,8 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(Abs evt_lbl,prog) m p3 -> do
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 -> do
                 li <- lift ask
-                let cmt = flatten' cmt'
-                    item = L.filter (/= '$') $ remove_ref $ flatten' item'
+                let item = L.filter (/= '$') $ remove_ref $ flatten' item'
+                    cmt = flatten' cmt'
                     -- prop = props m
                     invs = p3^.pInvariant
                     is_inv = label item `member` invs
@@ -276,9 +277,10 @@ all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 
                     evts = p3^.pEventIds
                     is_event = label item `member` evts
                     vars = p3^.pStateVars
-                    is_var = item `member` vars
+                let item' = isName' item
+                    is_var = W.filter (`member` vars) item'
                     lbl = label item
-                    conds = [is_inv,is_prog,is_event,is_var]
+                    conds = [is_inv,is_prog,is_event, MM.isJust is_var]
                 unless (length (L.filter id conds) <= 1)
                     $ fail "all_comments: conditional not mutually exclusive"
                 key <- if is_inv then do
@@ -287,14 +289,14 @@ all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 
                     return $ DocProg lbl
                 else if is_event then do
                     return $ DocEvent (EventId lbl)
-                else if is_var then do
-                    return $ DocVar item
-                else do
-                    let msg = "`{0}` is not one of: a variable, an event, \
-                              \ an invariant or a progress property "
-                    unless (not $ or conds)
-                        $ fail "all_comments: conditional not exhaustive"
-                    left [Error (format msg item) li]
+                else case is_var of
+                    Just item -> return $ DocVar item
+                    _ -> do
+                        let msg = "`{0}` is not one of: a variable, an event, \
+                                  \ an invariant or a progress property "
+                        unless (not $ or conds)
+                            $ fail "all_comments: conditional not exhaustive"
+                        left [Error (format msg item) li]
                 return [(key,cmt,li)]
 
 all_proofs :: MPipeline MachineP3 [(Label,Tactic Proof,LineInfo)]

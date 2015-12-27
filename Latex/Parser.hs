@@ -7,6 +7,7 @@ import Latex.Scanner
     -- Libraries
 import Control.Applicative hiding ((<|>))
 import Control.Arrow
+import Control.DeepSeq
 import Control.Lens  hiding (argument)
 import Control.Monad
 import Control.Monad.IO.Class
@@ -57,7 +58,7 @@ data LatexDoc = Doc LineInfo [LatexNode] LineInfo
     deriving (Eq,Show,Generic,Typeable)
 
 data BracketType = Curly | Square
-    deriving (Eq,Show,Typeable)
+    deriving (Eq,Show,Typeable,Generic)
 
 data LatexToken =
         Command String LineInfo
@@ -65,7 +66,7 @@ data LatexToken =
         | Blank String LineInfo
         | Open BracketType LineInfo
         | Close BracketType LineInfo
-    deriving (Eq, Show, Typeable)
+    deriving (Eq, Show, Typeable, Generic)
 
 makePrisms ''LatexToken
 
@@ -107,6 +108,11 @@ instance Convertible StringLi where
 instance IsBracket BracketType Char where
     bracketPair Curly = ('{','}')
     bracketPair Square = ('[',']')
+
+instance NFData LatexDoc where
+instance NFData LatexNode where
+instance NFData LatexToken where
+instance NFData BracketType where
 
 lineInfoLens :: Lens' LatexToken LineInfo
 lineInfoLens f (TextBlock x li) = TextBlock x <$> f li
