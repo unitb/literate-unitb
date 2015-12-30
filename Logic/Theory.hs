@@ -33,14 +33,16 @@ import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Foldable as F
 import           Data.List as L
-import           Data.Map as M 
+
+import Utilities.Map as M 
+import Utilities.Table
 
 all_theories :: Theory -> [Theory]
 all_theories th = th : M.elems (all_theories' th)
     where
         _ = set theorySyntacticThm
 
-all_theories' :: Theory -> Map Name Theory
+all_theories' :: Theory -> Table Name Theory
 all_theories' th = M.unions $ view extends th : M.elems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
@@ -107,7 +109,7 @@ theory_ctx th =
         new_fun = fun
 
     -- todo: prefix name of theorems of a z3_decoration
-theory_facts :: Theory -> Map Label Expr
+theory_facts :: Theory -> Table Label Expr
 theory_facts th = 
         merge_all (new_fact : L.map theory_facts (M.elems d))
     where

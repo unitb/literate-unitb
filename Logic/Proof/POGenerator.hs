@@ -28,13 +28,14 @@ import Control.Monad.State
 import Control.Lens hiding (Context)
 
 import Data.List as L
-import Data.Map as M hiding ( map )
-import qualified Data.Map as M
 
 import GHC.Generics (Generic)
 
 import Utilities.Error
 import Utilities.Invariant
+import Utilities.Map as M hiding ( map )
+import qualified Utilities.Map as M
+import Utilities.Table
 import Utilities.TH (mkCons)
 import Utilities.Trace
 
@@ -44,7 +45,7 @@ data POParam = POP
     { _pOParamContext :: Context
     , tag :: [Label]
     , _pOParamNameless :: [Expr]
-    , _pOParamNamed :: Map Label Expr
+    , _pOParamNamed :: Table Label Expr
     , _pOParamSynProp :: SyntacticProp
     } deriving (Generic)
 
@@ -79,7 +80,7 @@ emit_exist_goal asrt lbl vars es = with
                     (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ map getExpr es
-        clauses' = M.toList $ M.fromListWith (++) clauses
+        clauses' = M.toList $ (M.fromListWith (++) clauses :: Map [Var] [Expr])
 
 existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
 existential _ [] cmd = cmd
@@ -126,11 +127,11 @@ _context :: Context -> POCtx ()
 _context new_ctx = POCtx $ do
     S.context %= (new_ctx `merge_ctx`)
 
-functions :: Map Name Fun -> POCtx ()
+functions :: Table Name Fun -> POCtx ()
 functions new_funs = do
     _context $ Context M.empty M.empty new_funs M.empty M.empty
 
-definitions :: Map Name Def -> POCtx ()
+definitions :: Table Name Def -> POCtx ()
 definitions new_defs = POCtx $ do
     S.context.E.definitions .= new_defs
 
@@ -145,7 +146,7 @@ prefix_label lbl = POCtx $ do
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
 
-named_hyps :: HasExpr expr => Map Label expr -> POCtx ()
+named_hyps :: HasExpr expr => Table Label expr -> POCtx ()
 named_hyps hyps = POCtx $ do
         named %= M.union (M.map getExpr hyps)
 
@@ -153,11 +154,11 @@ nameless_hyps :: HasExpr expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
         nameless %= (++ map getExpr hyps)
 
-variables :: Map Name Var -> POCtx ()
+variables :: Table Name Var -> POCtx ()
 variables vars = POCtx $ do
         S.context.constants %= (vars `merge`)
 
-eval_generator :: POGen () -> Map Label Sequent
+eval_generator :: POGen () -> Table Label Sequent
 eval_generator cmd = runIdentity $ eval_generatorT cmd
 
 tracePOG :: Monad m => POGenT m () -> POGenT m ()
@@ -165,5 +166,5 @@ tracePOG (POGen cmd) = POGen $ do
     xs <- snd `liftM` listen cmd
     traceM $ unlines $ map (show . second (view goal)) xs
 
-eval_generatorT :: Monad m => POGenT m () -> m (Map Label Sequent)
+eval_generatorT :: Monad m => POGenT m () -> m (Table Label Sequent)
 eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ printf "%s\n" $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()

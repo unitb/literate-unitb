@@ -15,8 +15,10 @@ import qualified UnitB.Syntax as AST
     -- Libraries
 import Control.Lens -- ((.=))
 
-import Data.Map hiding ( map )
 import Data.List hiding (inits)
+
+import Utilities.Map hiding ( map )
+import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -164,7 +166,7 @@ result7 = unlines
     , "passed 46 / 46"
     ]
 
-case7 :: IO (String, Map Label Sequent)
+case7 :: IO (String, Table Label Sequent)
 case7 = do
     verify path6 0
 

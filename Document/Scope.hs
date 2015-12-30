@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE ViewPatterns              #-}
 module Document.Scope 
     ( Scope(..)
     , HasDeclSource (..)
@@ -42,21 +43,22 @@ import Control.Monad.Identity
 import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
 
-import Data.Either
+import Data.Either.Validation
 import Data.Maybe 
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (length,tail,head)
-import Data.Map as M
 import Data.Semigroup ((<>),First(..))
 import qualified Data.Traversable as T
 
 import GHC.Stack
 
-import Test.QuickCheck as QC
+import Test.QuickCheck as QC hiding (Failure,Success)
 
 import Utilities.Instances 
+import Utilities.Map as M
 import Utilities.Partial
 import Utilities.Permutation
+import Utilities.Table
 import Utilities.Syntactic
 
     -- clashes is a symmetric, reflexive relation
@@ -85,7 +87,7 @@ class (Ord a,Show a) => Scope a where
         -- | let x be a collection of event-related declaration in machine m0 and m1 be a 
         -- | refinement of m0. rename_events sub x translates the name in x from the m0 
         -- | namespace to the m1 namespace.
-    rename_events :: Map EventId [EventId] -> a -> [a]
+    rename_events :: Table EventId [EventId] -> a -> [a]
 
     axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
@@ -104,9 +106,9 @@ merge_scopes x y = fromJust' $ merge_scopes' x y
 
 scopeUnion :: Ord k
            => (a -> a -> Maybe a) 
-           -> Map k a 
-           -> Map k a 
-           -> Maybe (Map k a)
+           -> Table k a 
+           -> Table k a 
+           -> Maybe (Table k a)
 scopeUnion f m0 m1 = sequence $ unionWith f' (Just <$> m0) (Just <$> m1)
     where
         f' x y = join $ f <$> x <*> y
@@ -179,41 +181,31 @@ all_errors m = T.mapM fromEither' m >>= (return . T.sequence)
 make_table :: (Ord a, PrettyPrintable a) 
            => (a -> String) 
            -> [(a,b,LineInfo)] 
-           -> Either [Error] (Map a (b,LineInfo))
-make_table f xs = returnOrFail $ fromListWith add $ L.map mkCell xs
+           -> Either [Error] (Table a (b,LineInfo))
+make_table f xs = validationToEither $ M.traverseWithKey failIf' $ M.fromListWith (<>) $ L.map mkCell' xs 
     where
-        mkCell (x,y,z) = (x,Right (y,z))
-        sepError (x,y) = case y of
-                 Left z -> Left (x,z)
-                 Right (z,li) -> Right (x,(z,li))
-        returnOrFail m = failIf $ L.map sepError $ M.toList m
-        failIf xs 
-            | L.null ys = return $ M.fromList $ rights xs
-            | otherwise = Left $ L.map (uncurry err) ys
-            where
-                ys = lefts xs
-        err x li = MLError (f x) (L.map (pretty x,) li)
-        lis (Left xs)     = xs
-        lis (Right (_,z)) = [z]
-        add x y = Left $ lis x ++ lis y
+        mkCell' (x,y,z) = (x,(y,z) :| [])
+        failIf' _ (x :| []) = pure x
+        failIf' k (NE.toList -> xs) = Failure $ err k (L.map snd xs)
+        err x li = [MLError (f x) (L.map (pretty x,) li)]
 
 make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
                  => (a -> String) 
-                 -> Map k [(a,b)] 
-                 -> MM (Maybe (Map k (Map a b)))
+                 -> Table k [(a,b)] 
+                 -> MM (Maybe (Table k (Table a b)))
 make_all_tables' f xs = T.sequence <$> T.sequence (M.map (make_table' f) xs `using` parTraversable rseq)
 
 make_all_tables :: (PrettyPrintable a, Ord a, Ord k) 
                 => (a -> String)
-                -> Map k [(a, b, LineInfo)] 
-                -> MM (Maybe (Map k (Map a (b,LineInfo))))
+                -> Table k [(a, b, LineInfo)] 
+                -> MM (Maybe (Table k (Table a (b,LineInfo))))
 make_all_tables f xs = all_errors (M.map (make_table f) xs `using` parTraversable rseq)
 
 make_table' :: forall a b.
                (Ord a, Show a, Scope b) 
             => (a -> String) 
             -> [(a,b)] 
-            -> MM (Maybe (Map a b))
+            -> MM (Maybe (Table a b))
 make_table' f items = all_errors $ M.mapWithKey g conflicts
         -- | PROBLEM: given x,y,z, it's possible that none conflict with each other but
         -- | x `merge` y conflicts with z
@@ -226,7 +218,7 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
             where
                 xs = concat ws             
         items' = fromListWith (++) $ L.map (\(x,y) -> (x,[y])) items
-        conflicts :: Map a [[b]]
+        conflicts :: Table a [[b]]
         conflicts = M.map (flip u_scc clash) items' 
 
 newtype WithDelete a = WithDelete { getDelete :: a }

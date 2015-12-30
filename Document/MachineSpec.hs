@@ -23,7 +23,6 @@ import Control.Monad
 import Control.Monad.Reader
 -- import Control.Monad.State
 
-import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Set as S
 
@@ -33,8 +32,10 @@ import Text.Printf
 
 import           Utilities.Format
 import qualified Utilities.Graph as G 
+import qualified Utilities.Map as M
 import           Utilities.Partial
 import           Utilities.Syntactic
+import           Utilities.Table
 -- import           Utilities.QuickCheckReport
 
 prop_parseOk :: Property
@@ -147,6 +148,7 @@ showExpr notation e = show_e e
                             (show $ map Pretty $ M.keys m_ops)
         show_e (Const n _) = pretty n
         show_e _ = "<unknown expression>"
+        m_ops :: Table Name Operator
         m_ops = M.fromList $ zip (map functionName xs) xs
             where
                 xs = notation^.new_ops
@@ -169,6 +171,7 @@ latex_of m = do
                            (Doc li [ Text (TextBlock (show $ _name m) li) ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
+            type_map :: Table Type String
             type_map = M.fromList 
                         [ (int, "\\Int")
                         , (bool, "\\Bool")
@@ -229,7 +232,7 @@ instance Show Tex where
             [ "" -- show m
             , flatten' tex]
 
-var_set :: Gen (M.Map Name Var)
+var_set :: Gen (Table Name Var)
 var_set = do
     nvar  <- choose (0,5)
     types <- L.sort `liftM` vectorOf nvar choose_type
@@ -280,13 +283,13 @@ mk_errors True n = do
     xs <- liftGen $ replicateM (n-1) arbitrary
     permute $ True : xs
 
-expr_type :: Bool -> M.Map Name Var -> Type -> Gen (Maybe RawExpr)
+expr_type :: Bool -> Table Name Var -> Type -> Gen (Maybe RawExpr)
 expr_type b vars t = runReaderT (runRec $ expr_type' b t) t_map
     where
         t_map = M.fromListWith (++) $ map f $ M.elems vars
         f v@(Var _ t) = (t,[v])
 
-type EGen = RecT (ReaderT (M.Map Type [Var]) Gen)
+type EGen = RecT (ReaderT (Table Type [Var]) Gen)
 
 
 
@@ -307,7 +310,7 @@ choose_var b t = do
         ((Word `liftM`) . elements)
         $ M.lookup t' t_map
 
-fun_map :: M.Map Type [([RawExpr] -> RawExpr, [Type])]
+fun_map :: Table Type [([RawExpr] -> RawExpr, [Type])]
 fun_map = M.fromList
     [ (int, 
         [ (from_list (zplus :: RawExpr -> RawExpr -> RawExpr), [int,int])])

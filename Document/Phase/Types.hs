@@ -19,13 +19,13 @@ import UnitB.Syntax as AST hiding (Constraint)
 import Control.DeepSeq
 import Control.Lens as L
 
-import Data.Map   as M hiding ((!))
 import Data.Typeable
 
 import GHC.Generics (Generic)
 
 import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Syntactic
+import Utilities.Table
 import Utilities.TableConstr
 import Utilities.TH
 
@@ -59,9 +59,9 @@ type MachineP2 = MachineP2' EventP2 EventP2 TheoryP2
 
 data MachineP2' ae ce thy = MachineP2
     { _p1 :: MachineP1' ae ce thy
-    , _pDelVars   :: Map Name (Var,LineInfo)
-    , _pStateVars :: Map Name Var             -- machine variables
-    , _pAbstractVars :: Map Name Var          -- abstract machine variables
+    , _pDelVars   :: Table Name (Var,LineInfo)
+    , _pStateVars :: Table Name Var             -- machine variables
+    , _pAbstractVars :: Table Name Var          -- abstract machine variables
     , _pMchSynt   :: ParserSetting                  -- parsing invariants and properties
     } deriving (Show,Typeable,Generic,Eq)
 
@@ -75,13 +75,13 @@ type MachineP3 = MachineP3' EventP3 EventP3 TheoryP3
 
 data MachineP3' ae ce thy = MachineP3
     { _p2 :: MachineP2' ae ce thy
-    , _pProgress  :: Map ProgId ProgressProp
-    , _pSafety    :: Map Label SafetyProp
-    , _pTransient :: Map Label Transient
-    , _pInvariant   :: Map Label Expr                     -- Invariants
-    , _pInitWitness :: Map Name (Var,Expr)
-    , _pDelInits    :: Map Label Expr
-    , _pInit        :: Map Label Expr
+    , _pProgress  :: Table ProgId ProgressProp
+    , _pSafety    :: Table Label SafetyProp
+    , _pTransient :: Table Label Transient
+    , _pInvariant   :: Table Label Expr                     -- Invariants
+    , _pInitWitness :: Table Name (Var,Expr)
+    , _pDelInits    :: Table Label Expr
+    , _pInit        :: Table Label Expr
     , _pOldPropSet  :: PropertySet
     , _pNewPropSet  :: PropertySet
     } deriving (Show,Typeable,Generic,Eq)
@@ -96,9 +96,9 @@ type MachineP4 = MachineP4' EventP4 EventP3 TheoryP3
 
 data MachineP4' ae ce thy = MachineP4
     { _p3 :: MachineP3' ae ce thy
-    , _pLiveRule :: Map ProgId ProofTree
-    , _pProofs   :: Map Label (Tactic Proof, LineInfo)
-    , _pComments :: Map DocItem String
+    , _pLiveRule :: Table ProgId ProofTree
+    , _pProofs   :: Table Label (Tactic Proof, LineInfo)
+    , _pComments :: Table DocItem String
     } deriving (Show,Typeable,Generic)
 
 instance (Eq ea,Eq ce,Eq thy) => Eq (MachineP4' ea ce thy) where
@@ -123,20 +123,20 @@ data EventP1 = EventP1
 
 data EventP2 = EventP2 
     { _e1 :: EventP1 
-    , _eIndices :: Map Name Var
-    , _eParams  :: Map Name Var
+    , _eIndices :: Table Name Var
+    , _eParams  :: Table Name Var
     , _eSchSynt :: ParserSetting
     , _eEvtSynt :: ParserSetting
     } deriving (Show,Typeable,Generic,Eq)
 
 data EventP3 = EventP3 
     { _e2 :: EventP2 
-    , _eCoarseSched :: Map Label Expr     
-    , _eFineSched   :: Map Label Expr
-    , _eGuards   :: Map Label Expr       
-    , _eActions  :: Map Label Action
-    , _eWitness     :: Map Name (Var,RawExpr)
-    , _eIndWitness  :: Map Name (Var,RawExpr)
+    , _eCoarseSched :: Table Label Expr     
+    , _eFineSched   :: Table Label Expr
+    , _eGuards   :: Table Label Expr       
+    , _eActions  :: Table Label Action
+    , _eWitness     :: Table Name (Var,RawExpr)
+    , _eIndWitness  :: Table Name (Var,RawExpr)
     } deriving (Show,Typeable,Generic,Eq)
 
 data EventP4 = EventP4 
@@ -156,24 +156,24 @@ type PostponedDef = (Def,DeclSource,LineInfo)
 
 data TheoryP1 = TheoryP1
     { _t0 :: TheoryP0
-    , _pImports   :: Map Name Theory
-    , _pTypes     :: Map Name Sort
-    , _pAllTypes  :: Map Name Sort
+    , _pImports   :: Table Name Theory
+    , _pTypes     :: Table Name Sort
+    , _pAllTypes  :: Table Name Sort
     , _pSetDecl   :: [(Name, PostponedDef)]
     } deriving (Show,Typeable,Generic,Eq)
 
 data TheoryP2 = TheoryP2
     { _t1 :: TheoryP1 
-    , _pDefinitions :: Map Name Def
-    , _pConstants :: Map Name Var
-    , _pDummyVars :: Map Name Var             -- dummy variables
+    , _pDefinitions :: Table Name Def
+    , _pConstants :: Table Name Var
+    , _pDummyVars :: Table Name Var             -- dummy variables
     , _pNotation  :: Notation
     , _pCtxSynt   :: ParserSetting                  -- parsing assumptions
     } deriving (Show,Typeable,Generic,Eq)
 
 data TheoryP3 = TheoryP3
     { _t2 :: TheoryP2
-    , _pAssumptions :: Map Label Expr
+    , _pAssumptions :: Table Label Expr
     } deriving (Show,Typeable,Generic,Eq)
 
 data SystemP m = SystemP
@@ -192,7 +192,7 @@ type SystemP4 = SystemP MachineP4
   -- TODO: write contracts
 data Hierarchy k = Hierarchy 
         { order :: [k]
-        , edges :: Map k k }
+        , edges :: Table k k }
     deriving (Show,Typeable,Generic)
 
 instance Eq k => Eq (Hierarchy k) where
@@ -201,8 +201,8 @@ instance Eq k => Eq (Hierarchy k) where
 instance IsLabel ContextId where
     as_label (CId x) = label x
 
-type MTable = Map MachineId
-type CTable = Map ContextId
+type MTable = Table MachineId
+type CTable = Table ContextId
 
 instance NFData MachineP0
 instance (NFData ae,NFData ce,NFData thy) 

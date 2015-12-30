@@ -27,7 +27,6 @@ import Control.Monad.State  hiding (lift)
 import Control.Monad.Trans.Either
 
 import Data.List
-import Data.Map as M
 import Data.Maybe
 import Data.String.Utils as S
 
@@ -40,6 +39,7 @@ import PseudoMacros
 import Text.Printf
 
 import Utilities.Instances
+import Utilities.Map as M
 import Utilities.Syntactic
 
 expr :: QuasiQuoter

@@ -34,7 +34,6 @@ import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
-import Data.Map as M
 
 import Tests.UnitTest
 
@@ -46,6 +45,7 @@ import System.TimeIt
 import System.Timeout
 
 import qualified Utilities.Lines as Lines
+import Utilities.Map as M
 
 import Test.QuickCheck
 

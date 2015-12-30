@@ -15,7 +15,6 @@ import Control.Monad.RWS
 import Data.Char
 import Data.Default
 import Data.List as L
-import Data.Map    as M hiding ( map )
 import Data.Maybe  as MM hiding (fromJust)
 import qualified Data.Set  as S
 import Data.Typeable
@@ -23,7 +22,9 @@ import Data.Typeable
 import Utilities.Format
 import Utilities.Instances
 import Utilities.Lines
+import Utilities.Map    as M hiding ( map )
 import Utilities.Partial
+import Utilities.Table
 import Utilities.TH
 
 import Text.Printf
@@ -39,7 +40,7 @@ type FOSequent = GenSequent InternalName FOType FOQuantifier
 type AbsSequent = GenSequent Name
 
 data SyntacticProp = SyntacticProp  
-        { _associative  :: Map Name ExprP
+        { _associative  :: Table Name ExprP
         , _monotonicity :: Map (Relation,Function) (ArgDep Rel) }
             -- (rel,fun) --> rel
     deriving (Eq,Show,Generic)
@@ -67,7 +68,7 @@ data GenSequent name t q = Sequent
         { _genSequentContext  :: GenContext name t q
         , _genSequentSyntacticThm :: SyntacticProp
         , _genSequentNameless :: [AbsExpr name t q] 
-        , _genSequentNamed :: Map Label (AbsExpr name t q)
+        , _genSequentNamed :: Table Label (AbsExpr name t q)
         , _genSequentGoal  :: AbsExpr name t q }
     deriving (Eq, Generic, Show)
 
@@ -89,7 +90,7 @@ instance HasExprs (GenSequent n t q) (AbsExpr n t q) where
                 <*> traverse f hyp1 
                 <*> f g
 
-instance HasConstants (GenSequent n t q) (Map n (AbsVar n t)) where
+instance HasConstants (GenSequent n t q) (Table n (AbsVar n t)) where
     constants = context.constants
 
 predefined :: [InternalName]
@@ -217,7 +218,7 @@ remove_type_vars :: Sequent' -> FOSequent
 remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
     where
         (Context sorts _ _ dd _) = ctx
-        _ = dd :: Map InternalName Def'
+        _ = dd :: Table InternalName Def'
         asm_types = MM.catMaybes 
                     $ map type_strip_generics 
                     $ S.elems $ S.unions 
@@ -232,7 +233,7 @@ remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
         ctx'  = to_fol_ctx decl_types ctx
         asm' :: [FOExpr]
         asm' = map snd $ concatMap (gen_to_fol seq_types (label "")) asm
-        hyp' :: Map Label FOExpr
+        hyp' :: Table Label FOExpr
         hyp' = M.fromList $ concat $ M.elems $ M.mapWithKey (gen_to_fol seq_types) hyp
         goal' :: FOExpr
         goal' = vars_to_sorts sorts goal

@@ -29,7 +29,6 @@ import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import Data.List as L hiding (lookup)
 import Data.List.Utils as L
-import Data.Map as M hiding (lookup)
 import Data.Time
 
 import GHC.Stack
@@ -38,13 +37,15 @@ import Prelude hiding (lookup)
 import PseudoMacros
 
 import Utilities.Format
+import Utilities.Map as M hiding (lookup)
 import Utilities.Syntactic
+import Utilities.Table
 
 import System.Directory
 import System.IO.Unsafe
 
-type POResult = (String,Map Label Sequent)
-type POS sid a = Either [Error] (Map sid (a, Map Label Sequent))
+type POResult = (String,Table Label Sequent)
+type POS sid a = Either [Error] (Table sid (a, Table Label Sequent))
 
 hide_error_path :: Bool
 hide_error_path = True
@@ -78,7 +79,7 @@ verify path i = makeReport' empty $ do
             Left e -> return (show (e :: SomeException),pos)
     else return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
 
-all_proof_obligations' :: FilePath -> EitherT String IO [Map Label String]
+all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
 all_proof_obligations' path = do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
@@ -86,7 +87,7 @@ all_proof_obligations' path = do
             cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
         return cmd
 
-all_proof_obligations :: FilePath -> IO (Either String [Map Label String])
+all_proof_obligations :: FilePath -> IO (Either String [Table Label String])
 all_proof_obligations = runEitherT . all_proof_obligations'
 
 withLI :: (?loc :: CallStack) => Either String a -> Either [Error] a
@@ -118,7 +119,7 @@ proof_obligation_stripped = proof_obligation_with stripAnnotation
 proof_obligation :: FilePath -> String -> Int -> IO String
 proof_obligation = proof_obligation_with id
 
-lookupSequent :: Label -> Map Label Sequent -> Either String Sequent
+lookupSequent :: Label -> Table Label Sequent -> Either String Sequent
 lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
@@ -127,7 +128,7 @@ lookupSequent lbl pos = case pos^?ix lbl of
                         unlines $ L.map show $ keys pos
 
 lookupSequent' :: Monad m 
-               => Label -> Map Label Sequent 
+               => Label -> Table Label Sequent 
                -> EitherT String m Sequent
 lookupSequent' lbl m = hoistEither $ lookupSequent lbl m
 

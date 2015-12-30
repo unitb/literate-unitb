@@ -13,7 +13,7 @@ import Theories.SetTheory
     -- Libraries
 import Control.Lens
 
-import qualified Data.Map as M
+import qualified Utilities.Map as M
 
     -- arithmetic
 

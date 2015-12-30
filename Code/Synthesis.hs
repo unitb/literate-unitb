@@ -26,9 +26,10 @@ import Control.Monad.Trans.RWS
 
 import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
-import Data.Map  as M hiding ((!))
 
+import Utilities.Map  as M
 import Utilities.Partial
+import Utilities.Table
 
 import Text.Printf
 
@@ -98,9 +99,9 @@ make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
 data Termination = Infinite | Variant Variant EventId
     deriving (Show)
 
-data Concurrency = Concurrent (Map Name ()) | Sequential
+data Concurrency = Concurrent (Table Name ()) | Sequential
 
-shared_vars :: Concurrency -> Map Name ()
+shared_vars :: Concurrency -> Table Name ()
 shared_vars (Concurrent s) = s
 shared_vars Sequential     = M.empty
 
@@ -174,7 +175,7 @@ certainly (Sequence xs)     = concatMap certainly xs
 certainly (Conditional _ lb rb) = L.foldl isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
 certainly (Loop _ _ _ _)    = []
 
-safety :: RawMachine -> [EventId] -> [Expr] -> Program -> Either [String] (Map Label Sequent)
+safety :: RawMachine -> [EventId] -> [Expr] -> Program -> Either [String] (Table Label Sequent)
 safety m others post cfg 
         | L.null es = Right r
         | otherwise = Left es
@@ -346,7 +347,7 @@ type_code t =
                             "M.Map (%s) (%s)" c0 c1
                 _ -> Left $ printf "unrecognized type: %s" (pretty t)
                     
-binops_code :: Map Name (String -> String -> String)
+binops_code :: Table Name (String -> String -> String)
 binops_code = M.fromList 
     [ (z3Name "=", printf "(%s == %s)")
     , (z3Name "+", printf "(%s + %s)")
@@ -355,11 +356,11 @@ binops_code = M.fromList
     , (z3Name "mk-fun", printf "(M.singleton %s %s)")
     ]
 
-unops_code :: Map Name (String -> String)
+unops_code :: Table Name (String -> String)
 unops_code = M.fromList
     [ (z3Name "not", printf "(not %s)")]
 
-nullops_code :: Map Name String
+nullops_code :: Table Name String
 nullops_code = M.fromList
     [ (z3Name "empty-fun", "M.empty") 
     , (z3Name "empty-set", "S.empty")]
@@ -374,7 +375,7 @@ instance Evaluator (Either String) where
     read_var _ = return ()
     is_shared _ = return False
 
-type ConcurrentEval = RWST (Map Name ()) [Name] () (Either String)
+type ConcurrentEval = RWST (Table Name ()) [Name] () (Either String)
 
 instance Evaluator ConcurrentEval where
     is_shared v = do
@@ -420,7 +421,7 @@ eval_expr m e =
 struct :: RawMachine -> M ()
 struct m = do
         sv <- asks (shared_vars . snd)
-        let attr :: (Map Name Var -> Map Name () -> Map Name Var)
+        let attr :: (Table Name Var -> Table Name () -> Table Name Var)
                  -> String -> (String -> String)
                  -> Either String String
             attr comb pre typef = do 

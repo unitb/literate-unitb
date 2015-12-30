@@ -23,13 +23,14 @@ import Control.Monad.State
 
 import qualified Data.List as L -- ( intercalate, filter )
 import qualified Data.List.NonEmpty as NE
-import           Data.Map  as M hiding ( map )
 
 import Tests.UnitTest
 
 import Utilities.Brackets
 import Utilities.Format
 import Utilities.Lens hiding (combine)
+import Utilities.Map   as M hiding ( map )
+import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -205,7 +206,7 @@ machine0 = newMachine assert trainName $ do
                          (mzeq p ent \/ mzeq p ext)
                     .=.  mznot (p `zelem` plf) )
 
-vars :: Map Name Var
+vars :: Table Name Var
 vars = symbol_table [in_decl,loc_decl]
 
 c :: Ctx
@@ -969,7 +970,7 @@ result1 = unlines
     , "passed 113 / 114"
     ]
 
-case1 :: IO (String, Map Label Sequent)
+case1 :: IO (String, Table Label Sequent)
 case1 = verify path0 0 
         
 result2 :: String
@@ -1842,7 +1843,7 @@ result14 = unlines
     , "passed 82 / 84"
     ]
 
-case14 :: IO (String, Map Label Sequent)
+case14 :: IO (String, Table Label Sequent)
 case14 = verify path14 0
     
 path15 :: String
@@ -1943,7 +1944,7 @@ result15 = unlines
     , "passed 87 / 90"
     ]
 
-case15 :: IO (String, Map Label Sequent)
+case15 :: IO (String, Table Label Sequent)
 case15 = verify path15 0
 
 path16 :: String
@@ -2063,7 +2064,7 @@ result16 = unlines
     , "passed 108 / 109"
     ]
 
-case16 :: IO (String, Map Label Sequent)
+case16 :: IO (String, Table Label Sequent)
 case16 = verify path16 0
 
 path17 :: String

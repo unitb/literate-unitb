@@ -14,7 +14,6 @@ import Control.Lens hiding (Const,elements)
 
 import Data.Default
 import Data.Foldable
-import Data.Map  as M hiding (fold)
 import Data.Semigroup
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
@@ -29,6 +28,8 @@ import Test.QuickCheck hiding (label)
 
 import Utilities.Instances
 import Utilities.Invariant
+import Utilities.Map  as M
+import Utilities.Table
 import Utilities.TableConstr
 
 type Constraint = Constraint' Expr
@@ -41,7 +42,7 @@ data Constraint' expr =
 type TrHint = TrHint' Expr
 type RawTrHint = TrHint' RawExpr
 
-data TrHint' expr = TrHint (Map Name (Type,expr)) (Maybe ProgId)
+data TrHint' expr = TrHint (Table Name (Type,expr)) (Maybe ProgId)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 
@@ -53,7 +54,7 @@ type RawTransient = Transient' RawExpr
 
 data Transient' expr = 
         Tr 
-            (Map Name Var)     -- Free variables
+            (Table Name Var)     -- Free variables
             expr                 -- Predicate
             (NonEmpty EventId)   -- Event, Schedule 
             (TrHint' expr)       -- Hints for instantiation
@@ -86,13 +87,12 @@ type PropertySet = PropertySet' Expr
 type RawPropertySet = PropertySet' RawExpr
 
 data PropertySet' expr = PS
-        { _transient    :: Map Label (Transient' expr)
-        , _constraint   :: Map Label (Constraint' expr)
-        , _inv          :: Map Label expr       -- inv
-        , _inv_thm      :: Map Label expr       -- inv thm
-        , _progress     :: Map ProgId (ProgressProp' expr)
---        , schedule     :: Map Label Schedule
-        , _safety       :: Map Label (SafetyProp' expr)
+        { _transient    :: Table Label (Transient' expr)
+        , _constraint   :: Table Label (Constraint' expr)
+        , _inv          :: Table Label expr       -- inv
+        , _inv_thm      :: Table Label expr       -- inv thm
+        , _progress     :: Table ProgId (ProgressProp' expr)
+        , _safety       :: Table Label (SafetyProp' expr)
         }
     deriving (Eq,Functor,Foldable,Traversable,Generic,Show)
 
@@ -210,7 +210,7 @@ instance HasScope expr => HasScope (SafetyProp' expr) where
     scopeCorrect' (Unless vs p q) = withVars vs $ scopeCorrect' p <> scopeCorrect' q
 
 instance HasScope expr => HasScope (Constraint' expr) where
-    scopeCorrect' (Co vs e) = withPrimes $ withVars (symbol_table vs) $ scopeCorrect' e
+    scopeCorrect' (Co vs e) = withPrimes $ withVars vs $ scopeCorrect' e
 
 --instance HasScope Proof where
 --    scopeCorrect' (Easy _) = return []

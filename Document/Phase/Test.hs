@@ -46,7 +46,6 @@ import Control.Monad.Writer
 import Data.Default
 import Data.List as L
 import Data.List.NonEmpty as NE
-import Data.Map  as M
 import Data.Maybe
 
 import Test.QuickCheck
@@ -54,7 +53,9 @@ import Test.QuickCheck
 import Utilities.BipartiteGraph as G
 import Utilities.Existential
 import Utilities.Lens
+import Utilities.Map  as M
 import Utilities.Syntactic
+import Utilities.Table
 
 newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
     deriving (Functor,Applicative,Monad)
@@ -65,16 +66,16 @@ x ## y = MapSyntax (tell [(x,y)])
 runMapWith :: (Ord k) 
            => (a -> a -> a) 
            -> MapSyntax k a b 
-           -> Map k a
+           -> Table k a
 runMapWith f (MapSyntax cmd) = M.fromListWith f $ execWriter cmd
 
 runMap :: (Ord k, Scope a) 
        => MapSyntax k a b 
-       -> Map k a
+       -> Table k a
 runMap = runMapWith merge_scopes
 runMap' :: (Ord k) 
         => MapSyntax k a b 
-        -> Map k a
+        -> Table k a
 runMap' = runMapWith const
 
 test_case :: TestCase
@@ -235,15 +236,27 @@ result1 = Right (SystemP h result0)
 name2 :: TestName
 name2 = testName "test 2, phase 2 (variables), creating state"
 
-lnZip' :: Ord k => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c
+-- {-# SPECIALIZE lnZip' :: (Ord k) => Map k (a -> b) -> Traversal (Map k a) (Map k c) b c #-}
+-- {-# INLINE lnZip' :: forall a k b c. (Ord k) => Table k (a -> b) -> Traversal (Table k a) (Table k c) b c #-}
+{-# INLINE lnZip' #-}
+lnZip' :: (IsMap map,IsKey map k,Traversable (map k)) => map k (a -> b) -> Traversal (map k a) (map k c) b c
 lnZip' m f m' = traverse f $ M.intersectionWith (flip id) m' m
 
-lnZip :: Ord k => Map k b -> Traversal (Map k a) (Map k c) (a,b) c
+-- {-# SPECIALIZE lnZip :: (Ord k) => Map k b -> Traversal (Map k a) (Map k c) (a,b) c #-}
+-- {-# SPECIALIZE lnZip :: (Ord k) => Table k b -> Traversal (Table k a) (Table k c) (a,b) c #-}
+{-# INLINE lnZip #-}
+lnZip :: (IsMap map,IsKey map k,Traversable (map k)) 
+      => map k b -> Traversal (map k a) (map k c) (a,b) c
 lnZip m = lnZip' $ flip (,) <$> m
 
-lnZip5 :: Ord k 
-       => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
-       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z
+-- {-# SPECIALIZE lnZip5 :: (Ord k) => Map k b0 -> Map k b1 -> Map k b2 -> Map k b3 -> Map k b4
+--                       -> Traversal (Map k a) (Map k z) (a,b0,b1,b2,b3,b4) z #-}
+-- {-# SPECIALIZE lnZip5 :: (Ord k) => Table k b0 -> Table k b1 -> Table k b2 -> Table k b3 -> Table k b4
+--                       -> Traversal (Table k a) (Table k z) (a,b0,b1,b2,b3,b4) z #-}
+{-# INLINE lnZip5 #-}
+lnZip5 :: (IsMap map,IsKey map k,Traversable (map k))
+       => map k b0 -> map k b1 -> map k b2 -> map k b3 -> map k b4
+       -> Traversal (map k a) (map k z) (a,b0,b1,b2,b3,b4) z
 lnZip5 m0 m1 m2 m3 m4 = lnZip' $ (f <$> m0) `op` m1 `op` m2 `op` m3 `op` m4
     where
         f x0 x1 x2 x3 x4 y = (y,x0,x1,x2,x3,x4)
@@ -713,7 +726,7 @@ instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
 prop_inherit_equiv :: Hierarchy Int
                    -> Property
 prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
-    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Map Int [Int])
+    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
 
 case9 :: IO Bool
 case9 = f <$> quickCheckResult prop_inherit_equiv
@@ -724,18 +737,18 @@ case9 = f <$> quickCheckResult prop_inherit_equiv
 result9 :: Bool
 result9 = True
 
-mkMap :: (Arbitrary a,Ord k) => Hierarchy k -> Gen (Map k [a])
+mkMap :: (Arbitrary a,Ord k) => Hierarchy k -> Gen (Table k [a])
 mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
 
 --see :: Map ProgId ProgressProp
-seeA :: IO (Map Int [Int])
+seeA :: IO (Table Int [Int])
 seeA = return $ inheritWith' id (L.map.(+)) (++) hierarchy m
 
 hierarchy :: Hierarchy Int
 hierarchy = Hierarchy {order = [2,1], edges = M.fromList [(1,2)]}
 
-m :: Map Int [Int]
+m :: Table Int [Int]
 m = M.fromList [(1,[3,-3,-2]),(2,[5,-1])]
 
-seeE :: IO (Map Int [Int])
+seeE :: IO (Table Int [Int])
 seeE = return $ inheritWithAlt id (L.map.(+)) (++) hierarchy m

@@ -12,7 +12,6 @@ import Data.List hiding (union,transpose,null)
 import qualified Data.List.Ordered as LO
 import Data.Monoid
 import Data.Tuple
-import qualified Data.Map as M
 import Data.Maybe
 import qualified Data.Set as S
 
@@ -23,7 +22,9 @@ import Prelude hiding (null)
 import Test.QuickCheck
 import Test.QuickCheck.Function
 
+import qualified Utilities.Map as M
 import qualified Utilities.Permutation as Perm
+import Utilities.Table
 
 infixr 6 <|
 infixr 6 <<|
@@ -31,7 +32,7 @@ infixl 7 |>
 infixl 7 |>>
 infix <->
 
-newtype Relation a b = Rel (M.Map a (M.Map b ()))
+newtype Relation a b = Rel (Table a (Table b ()))
     deriving (Eq,Default,Generic)
 
 type (<->) a b = Relation a b
@@ -49,7 +50,7 @@ toList (Rel m) = [ (x,y) | (x,xs) <- M.toList m, (y,()) <- M.toList xs ]
 fromList :: (Ord a, Ord b) => [(a,b)] -> Relation a b
 fromList xs = Rel $ M.map M.fromList $ M.fromListWith (++) [ (x,[(y,())]) | (x,y) <- xs ]
 
-fromListMap :: (Ord b) => M.Map a [b] -> Relation a b
+fromListMap :: (Ord b) => Table a [b] -> Relation a b
 fromListMap m = Rel $ M.map (M.fromList . map pair) m
     where
         pair x = (x,())
@@ -60,7 +61,7 @@ empty = Rel M.empty
 compose :: (Ord a, Ord b, Ord c) => Relation a b -> Relation b c -> Relation a c
 compose (Rel r0) (Rel r1) = Rel $ cleanup $ M.map (M.unions . M.elems . (r1 `M.intersection`)) r0
 
-cleanup :: M.Map k0 (M.Map k1 a) -> M.Map k0 (M.Map k1 a)
+cleanup :: Table k0 (Table k1 a) -> Table k0 (Table k1 a)
 cleanup = M.filter (not . M.null)
 
 union :: (Ord a, Ord b) => Relation a b -> Relation a b -> Relation a b
@@ -221,12 +222,13 @@ prop_compose_def r0 r1 =   toList (compose r0 r1)
 
 closure :: Ord a => Relation a a -> Relation a a
 closure r = Rel 
-        $ cleanup
+        $ cleanup $ M.convertMap
         $ M.map (M.fromSet (const ()) . S.fromList)
         $ Perm.closure' $ asGraph r
 
 asGraph :: Ord a => Relation a a -> Perm.GraphImp a
-asGraph r@(Rel m) = Perm.from_map (S.toList $ domain r `S.union` range r) (M.map M.keys m)
+asGraph r@(Rel m) = Perm.from_map (S.toList $ domain r `S.union` range r) 
+        (M.convertMap $ M.map M.keys m)
 
 cycles :: Ord a => Relation a a -> [[a]]
 cycles r = Perm.cycles $ asGraph r

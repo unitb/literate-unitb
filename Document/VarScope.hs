@@ -15,7 +15,6 @@ import UnitB.Syntax
     -- Libraries
 import Control.Lens
 
-import Data.Map as M
 import Data.Maybe
 import Data.Typeable
 
@@ -24,7 +23,9 @@ import Test.QuickCheck
 import Utilities.Existential
 import Utilities.Format
 import Utilities.Instances
+import Utilities.Map as M
 import Utilities.Syntactic
+import Utilities.Table
 
 class (Typeable a,Scope a) => IsVarScope a where
     toOldEventDecl :: Name -> a -> [Either Error (EventId,[EventP2Field])]
@@ -78,7 +79,7 @@ data MachineVar =
             , _machineVarLineInfo :: LineInfo }
     deriving (Eq,Ord,Show,Typeable,Generic)
 
-data EvtDecls = Evt (Map (Maybe EventId) EventDecl)
+data EvtDecls = Evt (Table (Maybe EventId) EventDecl)
     deriving (Eq,Ord,Show,Typeable,Generic)
     --         -- in Evt, 'Nothing' stands for a dummy
 

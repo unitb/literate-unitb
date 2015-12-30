@@ -22,13 +22,14 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
 import Data.List as L
-import qualified Data.Map as M
 import Data.Proxy
 import Data.String
 
 import Text.Printf
 
 import Utilities.Syntactic
+import qualified Utilities.Map as M
+import Utilities.Table
 import Utilities.Tuple.Generics
 
 newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
@@ -46,8 +47,8 @@ data DocSpec = DocSpec
 data ArgumentSpec = forall a. IsTuple LatexArg a => ArgumentSpec Int (Proxy a)
 
 data Input = Input 
-    { getMachineInput :: M.Map MachineId DocBlocks
-    , getContextInput :: M.Map ContextId DocBlocks
+    { getMachineInput :: Table MachineId DocBlocks
+    , getContextInput :: Table ContextId DocBlocks
     } deriving Show
 
 newtype ContextId = CId { getCId :: String }
@@ -108,8 +109,8 @@ data Cmd = BlockCmd
     deriving (Show)
 
 data DocBlocks = DocBlocks 
-    { getEnv :: M.Map String [Env]
-    , getCmd :: M.Map String [Cmd]
+    { getEnv :: Table String [Env]
+    , getCmd :: Table String [Cmd]
     } deriving (Show)
 
 instance Monoid DocBlocks where
@@ -175,8 +176,8 @@ isBlank :: LatexToken -> Bool
 isBlank (Blank _ _) = True
 isBlank _ = False 
 
-runPipeline' :: M.Map Name [LatexDoc]
-             -> M.Map String [LatexDoc]
+runPipeline' :: Table Name [LatexDoc]
+             -> Table String [LatexDoc]
              -> a
              -> Pipeline MM a b 
              -> Either [Error] b

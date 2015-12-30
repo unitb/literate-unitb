@@ -49,7 +49,6 @@ import Control.Monad.Reader
 import Data.Char
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
-import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -64,6 +63,7 @@ import System.Process
 
 import Text.Printf
 
+import qualified Utilities.Map as M
 import Utilities.Partial
 
 total_caps :: SSem

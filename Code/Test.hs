@@ -21,7 +21,6 @@ import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
 import Data.List as L
-import Data.Map hiding ((!))
 
 import System.Directory
 import System.IO.Unsafe
@@ -29,6 +28,7 @@ import System.Process
 
 import Tests.UnitTest
 
+import Utilities.Map  hiding ((!))
 import Utilities.Partial
 
 test_case :: TestCase

@@ -34,8 +34,6 @@ import           Control.Monad.Trans.Writer
 
 import           Data.Char
 import           Data.Either.Combinators
-import           Data.Map hiding ( map, foldl )
-import qualified Data.Map as M
 import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
@@ -46,15 +44,18 @@ import GHC.Generics (Generic)
 import Text.Printf
 
 import           Utilities.Error
+import           Utilities.Map hiding ( map )
+import qualified Utilities.Map as M
 import           Utilities.Syntactic hiding (line)
+import           Utilities.Table
 
 type M = EitherT [Error] (RWS LineInfo [Error] ())
 
 
 data ProofStep = Step 
-       { assertions  :: Map Label (Tactic Expr)    -- assertions
-       , subproofs   :: Map Label (Tactic Proof)   -- proofs of assertions
-       , assumptions :: Map Label (Tactic Expr)    -- assumptions
+       { assertions  :: Table Label (Tactic Expr)    -- assertions
+       , subproofs   :: Table Label (Tactic Proof)   -- proofs of assertions
+       , assumptions :: Table Label (Tactic Expr)    -- assumptions
        , definition  :: [(Name, Tactic Expr)] 
        , theorem_ref :: [Tactic (TheoremRef, LineInfo)]
        , new_goal    :: Maybe (Tactic Expr)        -- new_goal
@@ -66,10 +67,10 @@ data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
 data ParserSetting = PSetting 
     { _language :: Notation
     , _is_step  :: Bool
-    , _parserSettingSorts    :: Map Name Sort
-    , _decls    :: Map Name Var
-    , _dum_ctx  :: Map Name Var
-    , _primed_vars   :: Map Name Var
+    , _parserSettingSorts    :: Table Name Sort
+    , _decls    :: Table Name Var
+    , _dum_ctx  :: Table Name Var
+    , _primed_vars   :: Table Name Var
     , _free_dummies  :: Bool
     , _expected_type :: Maybe Type
     } -- deriving Show
@@ -464,7 +465,7 @@ setting_from_context notation ctx' = makeSetting notation $ do
     where
         ctx = defsAsVars ctx'
 
-with_vars :: ParserSetting -> Map Name Var -> ParserSetting
+with_vars :: ParserSetting -> Table Name Var -> ParserSetting
 with_vars setting vs = setting & decls %~ (vs `union`)
 
 theory_setting :: Theory -> ParserSetting
@@ -488,10 +489,10 @@ event_setting m evt = setting & decls %~ ((evt^.params) `union`)
         setting = schedule_setting m evt
 
 mkSetting :: Notation 
-          -> Map Name Sort    -- Types
-          -> Map Name Var     -- Plain variables
-          -> Map Name Var     -- Primed variables
-          -> Map Name Var     -- Dummy variables
+          -> Table Name Sort    -- Types
+          -> Table Name Var     -- Plain variables
+          -> Table Name Var     -- Primed variables
+          -> Table Name Var     -- Dummy variables
           -> ParserSetting
 mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
         { _parserSettingSorts = sorts

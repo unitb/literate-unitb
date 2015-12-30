@@ -10,18 +10,20 @@ import Logic.Names
     -- Library
 import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
 import Control.DeepSeq
+import Control.Monad.Reader
 import Control.Monad.State
 import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List,rewriteM
-                           ,Traversable1(..))
+                           ,Traversable1(..),children)
 
 import           Data.Data
 import           Data.Default
-import qualified Data.Map as M
 import           Data.Semigroup
 
 import Utilities.Functor
 import Utilities.Instances
+import qualified Utilities.Map as M
+import Utilities.Table
 
 type Context = AbsContext GenericType HOQuantifier
 
@@ -34,11 +36,11 @@ type FOContext = GenContext InternalName FOType FOQuantifier
 type AbsContext = GenContext Name
 
 data GenContext name t q = Context
-        { _genContextSorts :: M.Map Name Sort
-        , _genContextConstants :: M.Map name (AbsVar name t)
-        , _functions :: M.Map name (AbsFun name t)
-        , _definitions :: M.Map name (AbsDef name t q)
-        , _genContextDummies :: M.Map name (AbsVar name t)
+        { _genContextSorts :: Table Name Sort
+        , _genContextConstants :: Table name (AbsVar name t)
+        , _functions :: Table name (AbsFun name t)
+        , _definitions :: Table name (AbsDef name t q)
+        , _genContextDummies :: Table name (AbsVar name t)
         }
     deriving (Show,Eq,Generic,Typeable,Functor,Foldable,Traversable)
 
@@ -55,7 +57,7 @@ defsAsVars = execState $ do
         constants %= M.union defs
 
 class HasSymbols a b n | a -> b n where
-    symbols :: a -> M.Map n b
+    symbols :: a -> Table n b
 
 instance Ord n => HasSymbols (GenContext n t q) () n where
     symbols ctx = M.unions [f a,f b,f c]
@@ -129,14 +131,17 @@ empty_ctx = def
 --    where
 --        ctx' = mconcat $ CtxWith def <$> cs
 
-free_vars :: Context -> Expr -> M.Map Name Var
-free_vars (Context _ _ _ _ dum) e = M.fromList $ f [] e
+free_vars :: Context -> Expr -> Table Name Var
+free_vars (Context _ _ _ _ dum) e = M.fromList $ runReader (f e) dum
     where
-        f xs (Word v)
-            | (v^.name) `M.member` dum = (v^.name,v):xs
-            | otherwise      = xs
-        f xs v@(Binder _ vs _ _ _) = M.toList (M.fromList (visit f xs v) M.\\ symbol_table vs)
-        f xs v = visit f xs v
+        f (Word v) = do
+            dum <- ask
+            pure $ if (v^.name) `M.member` dum 
+                then [(v^.name,v)]
+                else []
+        f e@(Binder _ vs _ _ _) = local (M.\\ symbol_table vs) $ concat <$> forM (e^.partsOf children) f
+            --M.toList (M.fromList (visitM f xs v) M.\\ symbol_table vs)
+        f e = concat <$> forM (e^.partsOf children) f -- visitM f v
 
 var_decl :: Name -> Context -> Maybe Var
 var_decl s (Context _ m _ _ d) = 

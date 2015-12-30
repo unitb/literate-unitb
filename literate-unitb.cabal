@@ -45,17 +45,11 @@ extra-source-files:  README.txt
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
-library 
-  -- literate-unitb
-
-  default-language:    Haskell2010
-  
-executable unitb
-  -- .hs or .lhs file containing the Main module.
-  main-is:  continuous.hs
+library
+  exposed-modules: UnitB.UnitB, Document.Document, Z3.Z3, Logic.Expr, Logic.Proof
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable
+  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
 
   ghc-options: -W -fwarn-missing-signatures -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
@@ -63,14 +57,29 @@ executable unitb
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
+
+executable unitb
+  -- .hs or .lhs file containing the Main module.
+  main-is:  continuous.hs
+  default-language:    Haskell2010
+
+  build-depends:       base >=4.8, literate-unitb, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
+
+  ghc-options: -W -fwarn-missing-signatures -fwarn-incomplete-uni-patterns
+         -fwarn-missing-methods
+         -threaded  -fno-ignore-asserts
+         -fwarn-tabs -Werror
+  
+  -- LANGUAGE extensions used by modules in this package.
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
 executable run_tests
   -- .hs or .lhs file containing the Main module.
   main-is:  Run_tests.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, exceptions == 0.8.0.1
+  build-depends:       base >=4.8, literate-unitb, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
 
   ghc-options: -W -fwarn-missing-signatures -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
@@ -78,13 +87,13 @@ executable run_tests
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
 executable test_tmp
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable
+  build-depends:       base >=4.8, literate-unitb, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
 
   ghc-options: -W -fwarn-missing-signatures -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
@@ -92,14 +101,14 @@ executable test_tmp
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
 
 executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable
+  build-depends:       base >=4.8, literate-unitb, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
@@ -109,11 +118,11 @@ executable test
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams
+  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable
+  build-depends:       base >=4.8, directory, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
   
   -- Directories containing source files.
   hs-source-dirs:      .

@@ -28,7 +28,6 @@ import Control.Lens hiding (rewrite,Context,elements
 
 import           Data.Data
 import           Data.List as L
-import qualified Data.Map as M
 import           Data.Serialize
 import qualified Data.Set as S
 
@@ -39,7 +38,9 @@ import Test.QuickCheck
 import Utilities.Format
 import Utilities.Functor
 import Utilities.Instances
+import qualified Utilities.Map as M
 import Utilities.Partial
+import Utilities.Table
 
 type Expr = AbsExpr Name GenericType HOQuantifier
 
@@ -132,7 +133,7 @@ instance IsName n => Translatable
 make_unique :: (IsGenExpr expr, Name ~ NameT expr)
             => Assert
             -> String               -- suffix to be added to the name of variables
-            -> M.Map Name var       -- set of variables that must renamed
+            -> Table Name var       -- set of variables that must renamed
             -> expr                 -- expression to rewrite
             -> expr
 make_unique arse suf vs = freeVarsOf.namesOf %~ newName
@@ -327,8 +328,8 @@ freeVarsOf :: IsGenExpr expr
 freeVarsOf f = freeVarsOf'' (const f) M.empty
 
 freeVarsOf'' :: (IsGenExpr expr, n ~ NameT expr,Applicative f) 
-             => (M.Map n (VarT expr) -> VarT expr -> f (VarT expr))
-             -> M.Map n (VarT expr)
+             => (Table n (VarT expr) -> VarT expr -> f (VarT expr))
+             -> Table n (VarT expr)
              -> expr -> f expr
 freeVarsOf'' f vs (Word v) | (v^.name) `M.member` vs = pure (Word v)
                            | otherwise       = Word <$> f vs v
@@ -650,19 +651,21 @@ defAsVar _ = Nothing
 
 instance HasScope Expr where
     scopeCorrect' e = do
-        let free = symbol_table $ used_var' e
+        let free = used_var' e
         areVisible [vars,constants] free e
 
-merge :: (Ord k, Eq a, Show k, Show a)
-          => M.Map k a -> M.Map k a -> M.Map k a
+{-# SPECIALIZE merge :: (Ord k,Eq a,Show k,Show a) => M.Map k a -> M.Map k a -> M.Map k a #-}
+{-# SPECIALIZE merge :: (Ord k,Eq a,Show k,Show a) => Table k a -> Table k a -> Table k a #-}
+merge :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
+          => map k a -> map k a -> map k a
 merge m0 m1 = M.unionWithKey f m0 m1
     where
         f k x y
             | x == y    = x
             | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
-merge_all :: (Ord k, Eq a, Show k, Show a)
-          => [M.Map k a] -> M.Map k a
+merge_all :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
+          => [map k a] -> map k a
 merge_all ms = foldl (M.unionWithKey f) M.empty ms
     where
         f k x y
@@ -670,7 +673,7 @@ merge_all ms = foldl (M.unionWithKey f) M.empty ms
             | otherwise = error $ format "conflicting declaration for key {0}: {1} {2}" k x y
 
 substitute :: (TypeSystem t, IsQuantifier q, IsName n)
-           => M.Map n (AbsExpr n t q) 
+           => Table n (AbsExpr n t q) 
            -> (AbsExpr n t q) -> (AbsExpr n t q)
 substitute m e = f e
     where
@@ -685,7 +688,7 @@ used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr _) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
 
-used_var' :: HasGenExpr expr => expr -> M.Map (NameT (ExprT expr)) (VarT (ExprT expr))
+used_var' :: HasGenExpr expr => expr -> Table (NameT (ExprT expr)) (VarT (ExprT expr))
 used_var' = symbol_table . S.toList . used_var . asExpr
 
 used_fun :: (TypeSystem t, IsQuantifier q, IsName n) 
@@ -746,7 +749,7 @@ rename x y e@(Binder q vs r xp t)
         | otherwise             = Binder q vs (rename x y r) (rename x y xp) t
 rename x y e = rewrite (rename x y) e 
 
-primeOnly :: M.Map Name var -> Expr -> Expr
+primeOnly :: Table Name var -> Expr -> Expr
 primeOnly vs = freeVarsOf %~ pr
     where
         pr v | (v^.name) `M.member` vs = prime v

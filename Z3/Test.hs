@@ -18,14 +18,15 @@ import Theories.SetTheory
 import Control.Lens hiding (Context,traverse1)
 
 import Data.Default
-import qualified Data.Map as M
 import qualified Data.Maybe as M
 import qualified Data.Set as S
 
-import Utilities.Functor
-import Utilities.Syntactic
-
 import Tests.UnitTest
+
+import Utilities.Functor
+import qualified Utilities.Map as M
+import Utilities.Syntactic
+import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -252,7 +253,7 @@ case6b = do
 case7 :: IO (Maybe (GenContext InternalName FOType HOQuantifier))
 case7 = return $ Just $ to_fol_ctx S.empty ctx
     where
-        fun :: M.Map Name Fun
+        fun :: Table Name Fun
         fun = M.map (instantiate m . substitute_type_vars m) $ set_theory^.funs
         ctx = Context M.empty M.empty fun M.empty M.empty
         t = Gen (Sort (fromString'' "G0") (fromString'' "G0") 0) []
@@ -262,7 +263,7 @@ result7 :: Maybe (GenContext InternalName FOType HOQuantifier)
 result7 = ctx_strip_generics $ Context M.empty M.empty fun' M.empty M.empty
     where 
         fun' = fun & traverse.namesOf %~ asInternal
-        fun :: M.Map InternalName Fun
+        fun :: Table InternalName Fun
         fun = decorated_table $ M.elems $ M.map f $ set_theory^.funs
         f :: AbsFun n Type -> AbsFun n Type
         f = instantiate m . substitute_type_vars m

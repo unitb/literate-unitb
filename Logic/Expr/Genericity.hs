@@ -41,9 +41,6 @@ import Control.Monad.State
 import           Data.Either
 import           Data.List as L hiding ( union )
 import           Data.List.Ordered hiding (nub)
-import           Data.Map as M 
-                    hiding ( foldl, map, union, unions, (\\) )
-import qualified Data.Map as M
 import qualified Data.Maybe as MM
 import qualified Data.Set as S 
 
@@ -52,6 +49,10 @@ import Prelude as L
 import Text.Printf
 
 import Utilities.Error
+import           Utilities.Map as M 
+                    hiding ( map, union, unions, (\\) )
+import qualified Utilities.Map as M
+import Utilities.Table
 import Utilities.Partial (Assert)
 
 suffix_generics :: String -> GenericType -> GenericType
@@ -654,7 +655,7 @@ vars_to_sorts_aux = rewriteExprM type_vars_to_sorts return vars_to_sorts_aux
 names :: Assert -> String -> [Name]
 names arse n = map (makeName arse . (n ++) . show) [0 :: Int ..]
 
-vars_to_sorts :: Map Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
+vars_to_sorts :: Table Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
 vars_to_sorts sorts e = evalState (vars_to_sorts_aux e) (new_sorts, empty)
     where
         new_sorts = map as_type $ names assert "G" `minus` keys sorts

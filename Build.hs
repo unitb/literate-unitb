@@ -74,6 +74,12 @@ args opt file = do
         -- , "-v"
         ]
 
+showBuildCommand :: FilePath -> Build () -> IO (Maybe String)
+showBuildCommand fp cmd = fmap (fmap $ view _1) $ build fp $ do
+    cmd 
+    (ghc,args) <- get
+    return $ showCommandForUser ghc args
+
 compile :: Bool -> Build () -> Build ()
 compile silent argsM = do
     argsM

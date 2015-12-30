@@ -33,8 +33,6 @@ import           Control.Monad.Trans
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.List.NonEmpty as NE (toList)
-import           Data.Map   as M hiding ( map, foldl, (\\) )
-import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
@@ -45,12 +43,15 @@ import Text.Printf
 
 import Utilities.Existential
 import Utilities.Format
+import Utilities.Map as M hiding ( map, (\\) )
+import qualified Utilities.Map as M
+import Utilities.Table
 import Utilities.Syntactic
   
 run_phase2_vars :: Pipeline MM SystemP1 SystemP2
 run_phase2_vars = C.id &&& symbols >>> liftP wrapup
     where
-        err_msg = format "Multiple symbols with the name {0}"
+        err_msg = printf "Multiple symbols with the name %s" . render
         wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
         symbols = arr (view mchTable) >>> run_phase
             [ variable_decl
@@ -68,7 +69,7 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
                 =<< make_all_tables' err_msg 
                 =<< triggerM vs'
                     
-            let _  = vars :: MTable (Map Name VarScope)
+            let _  = vars :: MTable (Table Name VarScope)
             SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 
 newMch :: [(Name,VarScope)] 
@@ -81,7 +82,7 @@ newMch vars' m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
         refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
 
 make_phase2 :: MachineP1
-            -> Map Name VarScope
+            -> Table Name VarScope
             -> MM' c MachineP2 
 make_phase2 p1 vars = join $
         layeredUpgradeRecM newThy (newMch vars')
@@ -102,6 +103,7 @@ make_phase2 p1 vars = join $
                             -> SkipOrEvent -> EventP1 -> EventP2 -> MM' c EventP2)
         liftEvent f = do
             table <- M.fromListWith (++) <$> liftField f vars'
+            let _ = table :: Table EventId [EventP2Field] 
             return $ \m eid -> do
                 let _pSchSynt ::  EventP2 -> ParserSetting
                     _pSchSynt e = parser $ e^.eIndices
@@ -109,7 +111,7 @@ make_phase2 p1 vars = join $
                     _pEvtSynt :: EventP2 -> ParserSetting
                     _pEvtSynt e = parser $ e^.eIndParams
 
-                    parser :: Map Name Var
+                    parser :: Table Name Var
                            -> ParserSetting
                     parser table    = m^.pMchSynt & decls %~ union table
                 case eid of 

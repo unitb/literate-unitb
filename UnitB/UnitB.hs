@@ -31,19 +31,20 @@ import           Data.Default
 import           Data.Either.Validation
 import           Data.Functor.Classes
 import           Data.Functor.Compose
-import           Data.Map as M hiding 
-                    ( map, foldl, foldr
-                    , delete, filter, null
-                    , (\\), mapMaybe, (!) )
-import qualified Data.Map as M
 import           Data.List as L hiding (inits, union,insert)
 import qualified Data.Set as S
 
 import Utilities.Format
+import           Utilities.Map as M hiding 
+                    ( map
+                    , delete, filter, null
+                    , (\\), mapMaybe, (!) )
+import qualified Utilities.Map as M
 import Utilities.Partial
 import Utilities.Invariant
 import Utilities.Instances
 import Utilities.Syntactic
+import Utilities.Table
 
 type RawMachine = Machine' RawExpr
 type Machine = Machine' Expr
@@ -53,9 +54,9 @@ type System  = AST.System' Machine
 
 data MachinePO' expr = MachinePO
     { _syntax :: AST.Machine' expr 
-    , _proofs     :: Map Label Proof    
-    , _raw_proof_obligation_field :: Box (Map Label Sequent)
-    , _proof_obligation_field :: MemBox (Map Label Sequent) }
+    , _proofs     :: Table Label Proof    
+    , _raw_proof_obligation_field :: Box (Table Label Sequent)
+    , _proof_obligation_field :: MemBox (Table Label Sequent) }
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 
 newtype Box a = Box (() -> a)
@@ -92,11 +93,11 @@ makeMachinePO' :: AST.Machine' expr -> MachinePO' expr
 makeMachinePO' x = MachinePO x def def def
 
 raw_proof_obligation :: Controls machine (MachinePO' expr)
-                     => machine -> Map Label Sequent
+                     => machine -> Table Label Sequent
 raw_proof_obligation = view $ content'.raw_proof_obligation_field.to unbox
 
 proof_obligation :: Controls machine (MachinePO' expr)
-                 => machine -> Map Label Sequent
+                 => machine -> Table Label Sequent
 proof_obligation = view (content'.proof_obligation_field.to unbox)
 
 instance Controls (MachinePO' expr) (MachinePO' expr) where
@@ -107,7 +108,7 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
     --func = 
 instance HasExpr expr => HasMachineBase (MachinePO' expr) expr where
     machineBase = syntax.content assert
-instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Map Name Var) where
+instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Table Name Var) where
     abs_vars = machineBase.abs_vars
 instance HasName (MachinePO' expr) Name where
     name = syntax.content'.name
@@ -140,13 +141,13 @@ fromSyntax :: HasExpr expr => AST.Machine' expr -> Machine' expr
 fromSyntax m = check assert $ makeMachinePO' m
 
 withProofs :: HasExpr expr
-           => Assert -> Map Label Proof 
+           => Assert -> Table Label Proof 
            -> AST.Machine' expr
            -> Machine' expr
 withProofs arse p m = check arse $ makeMachinePO' m & proofs .~ p
 
 withPOs :: HasExpr expr 
-        => Map Label (Tactic Proof,LineInfo)
+        => Table Label (Tactic Proof,LineInfo)
         -> AST.Machine' expr 
         -> Either [Error] (Machine' expr)
 withPOs ps m = fmap (check' assert) $ do
@@ -162,7 +163,7 @@ withPOs ps m = fmap (check' assert) $ do
             return $ MachinePO m p poBox (box $ \() -> pos)
             --proof_obligation_field (const $ box . const <$> proof_obligation' pos m) m'
 
-verify_changes :: Machine -> Map Label (Bool,Sequent) -> IO (Map Label (Bool,Sequent), String,Int)
+verify_changes :: Machine -> Table Label (Bool,Sequent) -> IO (Table Label (Bool,Sequent), String,Int)
 verify_changes m old_pos = do
         let pos = proof_obligation m
             new_pos = differenceWith f pos old_pos
@@ -199,7 +200,7 @@ verify_machine m = do
     putStrLn s
     return (i,j)
 
-format_result :: Map Label Bool -> IO (String,Int,Int)
+format_result :: Table Label Bool -> IO (String,Int,Int)
 format_result xs' = do
         let rs    = L.map f $ M.toList xs'
             total = L.length rs

@@ -17,9 +17,9 @@ import Control.Arrow
 import Control.Lens
 
 import Data.List as L
-import Data.Map
 
 import Utilities.Lens
+import Utilities.Map
 
     -- arithmetic
 power   :: BinOperator

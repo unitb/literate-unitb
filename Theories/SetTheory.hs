@@ -17,10 +17,11 @@ import Control.Lens
 
 import Data.Default
 import Data.List as L
-import Data.Map as M hiding ( foldl ) 
 
 import Utilities.Format
 import Utilities.Lens
+import Utilities.Map as M
+import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
 as_array t x = FunApp (mk_lifted_fun [] x [] t) []
@@ -37,7 +38,7 @@ mzfinite = typ_fun1 $ mk_fun [gA] (z3Name "finite") [set_type gA] bool
 zfinite :: Expr -> Expr
 zfinite e = ($typeCheck) (mzfinite $ Right e)
 
-set_theory' :: Map Name Theory
+set_theory' :: Table Name Theory
 set_theory' = singleton (makeName Logic.Expr.assert "sets") set_theory
 
 set_theory :: Theory 
@@ -96,7 +97,7 @@ set_theory = Theory { .. }
                 , mk_fun [gT] (z3Name "mk-set") [gT] $ set_type gT 
                 , mk_fun [gT] (z3Name "finite") [set_type gT] $ bool
                 ]
-        _fact :: Map Label Expr
+        _fact :: Table Label Expr
         _fact = "set" `axioms` do
                 -- elem and mk-set
             $axiom $  (x `zelem` zmk_set y) .==.  x .=. y

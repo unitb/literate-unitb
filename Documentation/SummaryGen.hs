@@ -26,8 +26,6 @@ import Data.Default
 import Data.List as L ( intercalate,null
                       , map,unlines,lines )
 import Data.List.NonEmpty as NE
-import Data.Map as M hiding (map)
-import qualified Data.Map as M
 
 import System.FilePath
 
@@ -35,6 +33,8 @@ import Prelude hiding (writeFile,readFile)
 
 import Utilities.FileSystem
 import Utilities.Format
+import Utilities.Map as M hiding (map)
+import qualified Utilities.Map as M
 
 newtype Doc a = Doc { getDoc :: forall io. FileSystem io => ReaderT FilePath io a }
     deriving (Functor)

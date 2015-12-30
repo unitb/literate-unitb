@@ -16,7 +16,7 @@ import UnitB.Expr
 import Control.Lens
 import Control.Monad.State
 
-import Data.Map
+import Utilities.Map
 
 test_case :: TestCase
 test_case = test_cases 

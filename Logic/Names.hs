@@ -37,6 +37,7 @@ import Control.DeepSeq
 import Control.Lens
 
 import Data.Data
+import Data.Serialize
 import Data.List.NonEmpty
 
 import GHC.Generics (Generic)
@@ -133,6 +134,8 @@ isName' = fmap (view $ from name) . Intl.isName'
 
 instance NFData Name where
 instance NFData InternalName where
+instance Serialize Name where
+instance Serialize InternalName where
 
 instance Arbitrary Name where
     arbitrary = view (from name) <$> arbitrary

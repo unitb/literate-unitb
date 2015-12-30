@@ -18,7 +18,6 @@ import Data.Default
 import Data.Foldable as F
 import Data.List as L
 import Data.List.NonEmpty as NE
-import Data.Map  as M
 import Data.Maybe
 import Data.Semigroup
 import Data.String
@@ -32,6 +31,8 @@ import Text.Printf
 
 import Utilities.Instances
 import Utilities.Lens
+import Utilities.Map  as M
+import Utilities.Table
 import Utilities.TH
 
 type Action = Action' Expr
@@ -64,12 +65,12 @@ type Event = Event' Expr
 type RawEvent = Event' RawExpr
 
 data Event' expr = Event 
-        { _indices    :: Map Name Var
-        , _raw_coarse_sched :: Maybe (Map Label expr)
-        , _fine_sched :: Map Label expr
-        , _params     :: Map Name Var
-        , _raw_guards :: Map Label expr
-        , _actions  :: Map Label (Action' expr)
+        { _indices    :: Table Name Var
+        , _raw_coarse_sched :: Maybe (Table Label expr)
+        , _fine_sched :: Table Label expr
+        , _params     :: Table Name Var
+        , _raw_guards :: Table Label expr
+        , _actions  :: Table Label (Action' expr)
         } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type AbstrEvent = AbstrEvent' Expr
@@ -78,16 +79,16 @@ data AbstrEvent' expr = AbsEvent
         { _old   :: Event' expr
         , _f_sched_ref :: Maybe (Label,ProgressProp' expr)
         , _c_sched_ref :: [ScheduleChange' expr]
-        , _ind_witness :: Map Name (Var,RawExpr)
+        , _ind_witness :: Table Name (Var,RawExpr)
         } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type ConcrEvent = ConcrEvent' Expr
 
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
-        , _witness   :: Map Name (Var,RawExpr)
-        , _eql_vars  :: Map Name Var
-        , _abs_actions :: Map Label (Action' expr)
+        , _witness   :: Table Name (Var,RawExpr)
+        , _eql_vars  :: Table Name Var
+        , _abs_actions :: Table Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
 
 type RawEventMerging = EventMerging RawExpr
@@ -114,16 +115,16 @@ data EventRef expr = EvtRef
         , _eventRefConcrete :: (SkipOrEvent,ConcrEvent' expr) 
         } deriving (Generic,Show,Eq)
 
-default_schedule :: HasGenExpr expr => Map Label expr
+default_schedule :: HasGenExpr expr => Table Label expr
 default_schedule = M.fromList [(label "default", zfalse)]
 
 type ScheduleChange = ScheduleChange' Expr
 type RawScheduleChange = ScheduleChange' RawExpr
 
 data ScheduleChange' expr = ScheduleChange 
-        { _remove :: Map Label ()
-        , _add    :: Map Label ()
-        , _keep   :: Map Label ()
+        { _remove :: Table Label ()
+        , _add    :: Table Label ()
+        , _keep   :: Table Label ()
         , _sch_prog :: (Label,ProgressProp' expr) 
         }
     deriving (Show,Eq,Typeable,Functor,Foldable,Traversable,Generic)
@@ -228,12 +229,12 @@ instance Arbitrary expr => Arbitrary (Action' expr) where
 --    e' <- e
 --    return $ Assign v' e'
 
-frame' :: Action' expr -> Map Name Var
+frame' :: Action' expr -> Table Name Var
 frame' (Assign v _) = M.singleton (view name v) v
 frame' (BcmIn v _)  = M.singleton (view name v) v
 frame' (BcmSuchThat vs _) = M.fromList $ L.zip (L.map (view name) vs) vs
 
-frame :: Map Label (Action' expr) -> Map Name Var
+frame :: Table Label (Action' expr) -> Table Name Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
 
 ba_pred :: HasExpr expr => Action' expr -> RawExpr
@@ -241,24 +242,24 @@ ba_pred (Assign v e) = $typeCheck $ Right (Word (prime v)) `mzeq` Right (getExpr
 ba_pred (BcmIn v e) = $typeCheck $ Right (Word (prime v)) `zelem` Right (getExpr e)
 ba_pred (BcmSuchThat _ e) = getExpr e
 
-rel_action :: [Var] -> Map Label expr -> Map Label (Action' expr)
+rel_action :: [Var] -> Table Label expr -> Table Label (Action' expr)
 rel_action vs act = M.map (BcmSuchThat vs) act
 
-keep' :: Map Name Var -> Map Label (Action' expr) -> Map Name Var
+keep' :: Table Name Var -> Table Label (Action' expr) -> Table Name Var
 keep' vars acts = vars `M.difference` frame acts
 
-skip' :: Map Name Var -> Map Label RawExpr
+skip' :: Table Name Var -> Table Label RawExpr
 skip' keep = M.mapKeys f $ M.map g keep
     where
         f n = label ("SKIP:" ++ render n)
         g v = Word (prime v) `zeq` Word v
 
-ba_predicate' :: HasExpr expr => Map Name Var -> Map Label (Action' expr) -> Map Label RawExpr
+ba_predicate' :: HasExpr expr => Table Name Var -> Table Label (Action' expr) -> Table Label RawExpr
 ba_predicate' vars acts = M.map ba_pred acts `M.union` skip
     where
         skip = skip' $ keep' vars acts
 
-primed :: Map Name var -> RawExpr -> RawExpr
+primed :: Table Name var -> RawExpr -> RawExpr
 primed vs = primeOnly vs
 
 empty_event :: HasExpr expr => Event' expr
@@ -298,8 +299,8 @@ instance HasAbstrEvent' (EventRef expr) expr where
     abstrEvent' = abstract._2
 
 class ActionRefinement a expr | a -> expr where
-    abstract_acts :: Getter a (Map Label (Action' expr))
-    concrete_acts :: Getter a (Map Label (Action' expr))
+    abstract_acts :: Getter a (Table Label (Action' expr))
+    concrete_acts :: Getter a (Table Label (Action' expr))
 
 instance ActionRefinement (EventRef expr) expr where
     abstract_acts = old.actions
@@ -326,14 +327,14 @@ instance HasExpr expr => EventRefinement (EventSplitting expr) expr where
             c <- e^.multiConcrete
             return $ EvtRef a c
 
-coarse_sched :: (HasExpr expr, HasEvent' event expr) => Lens' event (Map Label expr)
+coarse_sched :: (HasExpr expr, HasEvent' event expr) => Lens' event (Table Label expr)
 coarse_sched = raw_coarse_sched.lens (fromMaybe default_schedule) (const f)
     where
         f m
             | "default" `M.lookup` m == Just zfalse = Nothing
             | otherwise                             = Just m
 
-guards :: HasEvent' event expr => Getter event (Map Label expr)
+guards :: HasEvent' event expr => Getter event (Table Label expr)
 guards = to $ \e -> M.unions 
         [ e^.raw_guards
         , fromMaybe M.empty $ e^.raw_coarse_sched
@@ -341,8 +342,9 @@ guards = to $ \e -> M.unions
         ]
 
 
-changes :: HasExpr expr
-        => (forall k a. Ord k => Map k a -> Map k a -> Map k a)
+{-# INLINE changes #-}
+changes :: (HasExpr expr)
+        => (forall k a map. (IsMap map,IsKey map k) => map k a -> map k a -> map k a)
         -> Getter (EventRef expr) (Event' expr)
 changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do 
     indices .= ( aevt^.indices ) `diff` ( cevt^.indices )
@@ -352,17 +354,17 @@ changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do
     raw_guards  .= ( aevt^.raw_guards )  `diff` ( cevt^.raw_guards ) 
     actions .= ( aevt^.actions ) `diff` ( cevt^.actions )
 
-schedules :: HasExpr expr => Getter (Event' expr) (Map Label expr)
+schedules :: HasExpr expr => Getter (Event' expr) (Table Label expr)
 schedules = to $ \e -> view coarse_sched e `M.union` _fine_sched e
 
 getItems :: EventRefinement evt expr
          => Getter (EventRef expr) (Event' expr) 
-         -> Getter (Event' expr) (Map a b) 
+         -> Getter (Event' expr) (Table a b) 
          -> Getter evt [(a,b)]
 getItems ln ln' = evt_pairs.to NE.toList.to (concatMap $ view $ ln.ln'.to M.toList)
 
 deleted' :: EventRefinement evt expr
-         => Getter (Event' expr) (Map a b) 
+         => Getter (Event' expr) (Table a b) 
          -> Getter evt [(a,b)]
 deleted' = getItems deleted
 
@@ -370,7 +372,7 @@ deleted :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 deleted = changes M.difference
 
 added' :: EventRefinement evt expr
-       => Getter (Event' expr) (Map a b) 
+       => Getter (Event' expr) (Table a b) 
        -> Getter evt [(a,b)]
 added' = getItems added
 
@@ -378,7 +380,7 @@ added :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 added = changes (flip M.difference)
 
 kept' :: EventRefinement evt expr
-      => Getter (Event' expr) (Map a b) 
+      => Getter (Event' expr) (Table a b) 
       -> Getter evt [(a,b)]
 kept' = getItems kept
 
@@ -386,7 +388,7 @@ kept :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 kept = changes M.intersection
 
 total' :: EventRefinement evt expr
-       => Getter (Event' expr) (Map a b) 
+       => Getter (Event' expr) (Table a b) 
        -> Getter evt [(a,b)]
 total' = getItems total
 
@@ -394,36 +396,36 @@ total :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 total = changes M.union
 
 new' :: EventRefinement evt expr
-     => Getter (Event' expr) (Map a b) 
+     => Getter (Event' expr) (Table a b) 
      -> Getter evt [(a,b)]
 new' = getItems new
 
 old' :: EventRefinement evt expr
-     => Getter (Event' expr) (Map a b) 
+     => Getter (Event' expr) (Table a b) 
      -> Getter evt [(a,b)]
 old' = getItems old
 
-actions_changes :: (Map Label (Action' expr) -> Map Label (Action' expr) -> Map Label (Action' expr))
-                -> Getter (EventMerging expr) (Map Label (Action' expr))
+actions_changes :: (Table Label (Action' expr) -> Table Label (Action' expr) -> Table Label (Action' expr))
+                -> Getter (EventMerging expr) (Table Label (Action' expr))
 actions_changes diff = to $ \em -> (em^.abs_actions) `diff` (em^.new.actions) 
     -- \(EvtM aevts cevt) -> (snd (NE.head aevts)^.actions) `diff` (cevt^._2.actions)
 
-new_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+new_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 new_actions = actions_changes $ flip const
 
-old_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+old_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 old_actions = actions_changes const
 
-total_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+total_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 total_actions   = actions_changes M.union
 
-kept_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+kept_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 kept_actions    = actions_changes M.intersection
 
-added_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+added_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 added_actions   = actions_changes (flip M.difference)
 
-deleted_actions :: Getter (EventMerging expr) (Map Label (Action' expr))
+deleted_actions :: Getter (EventMerging expr) (Table Label (Action' expr))
 deleted_actions = actions_changes M.difference
 
 compact :: EventRefinement event expr

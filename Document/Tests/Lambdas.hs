@@ -12,12 +12,12 @@ import Theories.FunctionTheory
 import UnitB.Expr
 
     -- Libraries
-import Data.Map hiding ( map )
-import qualified Data.Map as M
-
 import Tests.UnitTest
 
+import Utilities.Map hiding ( map )
+import qualified Utilities.Map as M
 import Utilities.Syntactic
+import Utilities.Table
 
 test_case :: TestCase
 test_case = test
@@ -351,7 +351,7 @@ result3 = unlines
 path3 :: String
 path3 = "tests/cubes-t3.tex"
 
-result4 :: Either [Error] (Map ProgId ProgressProp)
+result4 :: Either [Error] (Table ProgId ProgressProp)
 result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
         q0 <- f `mzeq` zlambda [i_decl] 
             (mzle (mzint 0) i `mzand` mzless i bigN) 
@@ -384,14 +384,14 @@ result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
 path4 :: String
 path4 = "tests/cubes-t6.tex"
 
-case4 :: IO (Either [Error] (Map ProgId ProgressProp))
+case4 :: IO (Either [Error] (Table ProgId ProgressProp))
 case4 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ m!.props.progress
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
-result5 :: Either [Error] (Map Label SafetyProp)
+result5 :: Either [Error] (Table Label SafetyProp)
 result5 = M.map (fmap $ DispExpr "") <$> either g Right (do
         q0  <- bigN `mzeq` n
         p0  <- (k `mzle` n)
@@ -411,14 +411,14 @@ result5 = M.map (fmap $ DispExpr "") <$> either g Right (do
         li         = LI path4 0 0
         g xs = Left $ map (`Error` li) xs
 
-case5 :: IO (Either [Error] (Map Label SafetyProp))
+case5 :: IO (Either [Error] (Table Label SafetyProp))
 case5 = runEitherT (do
     ms <- EitherT $ parse path4 :: EitherT [Error] IO [Machine]
     case ms of
         [m] -> right $ m!.props.safety
         _   -> left [Error "a single machine is expected" (LI "" 0 0)])
 
-case6 :: IO (String, Map Label Sequent)
+case6 :: IO (String, Table Label Sequent)
 case6 = verify path6 0
 
 result6 :: String
@@ -536,7 +536,7 @@ result6 = unlines
 path6 :: String
 path6 = "tests/cubes-t5.tex"
 
-case7 :: IO (String, Map Label Sequent)
+case7 :: IO (String, Table Label Sequent)
 case7 = verify path7 0
 
 result7 :: String
@@ -669,7 +669,7 @@ result7 = unlines
 path7 :: String
 path7 = "tests/cubes-t4.tex"
 
-case8 :: IO (String, Map Label Sequent)
+case8 :: IO (String, Table Label Sequent)
 case8 = verify path8 0
 
 result8 :: String

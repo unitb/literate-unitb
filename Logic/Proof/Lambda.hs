@@ -17,11 +17,13 @@ import Control.Monad.State
 
 import Data.Default
 import Data.List as L hiding (union)
-import Data.Map  as M hiding (filter,foldl)
 import qualified Data.Set as S
 import Data.Tuple
 import qualified Data.Traversable as T
 import Data.Typeable
+
+import Utilities.Map  as M hiding (filter)
+import Utilities.Table
 
 data CanonicalLambda = CL 
         [Var'] [Var'] -- free vars, bound vars
@@ -53,7 +55,7 @@ can_local_vars _ = L.map (reserved "lv") [0..]
 data CanonicalRewriter = CR 
         {  local_gen :: [InternalName]            -- locals
         ,  free_gen  :: [InternalName]            -- bound var names
-        ,  renaming :: Map InternalName InternalName      -- rewrites
+        ,  renaming :: Table InternalName InternalName      -- rewrites
         ,  exprs  :: [(Expr', Var')]
         }
 
@@ -194,7 +196,7 @@ delambdify po = -- (Sequent ctx asm hyps goal) =
                  `merge_ctx` decl :: Context') 
                 (po^.syntacticThm)
                 (asm' ++ defs :: [Expr'])
-                (hyps' :: Map Label Expr')
+                (hyps' :: Table Label Expr')
                 (goal' :: Expr')
             ) empty
 

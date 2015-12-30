@@ -11,9 +11,11 @@ import Data.Data
 import Data.Data.Lens 
 import Data.Foldable as F
 import Data.List as L 
-import Data.Map  as M
 import Data.Tuple
 import Data.Typeable.Lens
+
+import Utilities.Map  as M
+import Utilities.Table as M
 
 
 class HasName a n | a -> n where
@@ -129,6 +131,9 @@ visitM f x t = visit g (return x) t
             y <- x
             f y t
 
+children :: Tree a => Traversal' a a
+children = rewriteM
+
 class FromList a b where
     from_list :: a -> [b] -> b
 
@@ -143,26 +148,26 @@ instance FromList a b => FromList (b -> a) b where
 z3_escape :: String -> InternalName
 z3_escape = fromString''
 
-insert_symbol :: Ord n => HasName a n => a -> Map n a -> Map n a
+insert_symbol :: Ord n => HasName a n => a -> Table n a -> Table n a
 insert_symbol x = M.insert (x^.name) x
 
-symbol_table' :: (Ord n, HasName b n, Foldable f) 
-              => (a -> b) -> f a -> Map n a
+symbol_table' :: (HasName b n, Foldable f,Ord n) 
+              => (a -> b) -> f a -> Table n a
 symbol_table' f xs = fromList $ L.map (as_pair' f) $ F.toList xs
 
-symbol_table :: (Ord n, HasName a n, Foldable f) 
-             => f a -> Map n a
+symbol_table :: (HasName a n, Foldable f,Ord n) 
+             => f a -> Table n a
 symbol_table = symbol_table' id
 
-decorated_table :: Named a => [a] -> Map InternalName a
+decorated_table :: Named a => [a] -> Table InternalName a
 decorated_table xs = fromList $ L.map (\x -> (decorated_name x, x)) xs
 
 renameAll' :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
            => (a -> SetNameT n1 a)
-           -> Map n0 a -> Map n1 (SetNameT n1 a)
+           -> Table n0 a -> Table n1 (SetNameT n1 a)
 renameAll' f = symbol_table . (traverse %~ f) . M.elems
 
 renameAll :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
           => (n0 -> n1)
-          -> Map n0 a -> Map n1 (SetNameT n1 a)
+          -> Table n0 a -> Table n1 (SetNameT n1 a)
 renameAll f = renameAll' (namesOf %~ f)

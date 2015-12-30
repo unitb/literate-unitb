@@ -30,7 +30,6 @@ import Data.Either.Combinators
 import Data.List as L
 import qualified Data.List.Ordered as Ord
 import Data.List.NonEmpty as NE
-import qualified Data.Map as M
 import Data.Serialize
 import Data.Semigroup hiding (option)
 import Data.String.Utils
@@ -44,8 +43,10 @@ import Text.Printf
 import Utilities.Instances
 import Utilities.Invariant hiding ((===))
 import Utilities.Language  as Lang
+import qualified Utilities.Map as M
 import Utilities.Packaged
 import Utilities.Partial
+import Utilities.Table
 
 import Test.QuickCheck as QC
 
@@ -129,7 +130,7 @@ instance IsBaseName Name where
     z3Name = fromJust' . isZ3Name'
     texName = fromString''
 
-fresh :: IsBaseName n => n -> M.Map n b -> n
+fresh :: IsBaseName n => n -> Table n b -> n
 fresh name xs = L.head $ ys `Ord.minus` M.keys xs
     where
         ys = generateNames name

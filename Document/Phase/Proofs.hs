@@ -43,8 +43,6 @@ import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
 import           Data.Either.Combinators
-import           Data.Map   as M hiding ( map, foldl, (\\) )
-import qualified Data.Map   as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
@@ -55,9 +53,12 @@ import GHC.Generics (Generic)
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
+import           Utilities.Map   as M hiding ( map, (\\) )
+import qualified Utilities.Map   as M
 import Utilities.Relation (type(<->),(|>),(<|))
 import qualified Utilities.Relation as R
 import Utilities.Syntactic
+import Utilities.Table
 
 type LiveEvtId = Either EventId ProgId
 
@@ -69,11 +70,11 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         ref_p  <- refine_prog_prop -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
-        let c_evt_refs :: Maybe (MTable (Map EventId [((Label,ScheduleChange),LineInfo)]))
+        let c_evt_refs :: Maybe (MTable (Table EventId [((Label,ScheduleChange),LineInfo)]))
             c_evt_refs = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++) 
                      <$> L.map (M.map coarseRef) <$> refs 
-            f_evt_refs' :: Maybe (MTable (Map EventId [((ProgId,ProgressProp),LineInfo)]))
+            f_evt_refs' :: Maybe (MTable (Table EventId [((ProgId,ProgressProp),LineInfo)]))
             f_evt_refs' = M.map (M.fromListWith (++)) 
                      <$> M.unionsWith (++)
                      <$> L.map (M.map fineRef) <$> refs
@@ -88,10 +89,10 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         prog_ref   <- triggerP -< prog_ref
         proofs     <- triggerP -< proofs
         comments   <- triggerP -< comments
-        let _ = c_evt_refs :: MTable (Map EventId [((Label,ScheduleChange),LineInfo)])
-            _ = f_evt_refs :: MTable (Map EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
-            _ = prog_ref :: MTable (Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
-            evt_ref_props :: MTable (Map EventId [(ProgId,LineInfo)])
+        let _ = c_evt_refs :: MTable (Table EventId [((Label,ScheduleChange),LineInfo)])
+            _ = f_evt_refs :: MTable (Table EventId (Maybe ((ProgId,ProgressProp),LineInfo)))
+            _ = prog_ref :: MTable (Table ProgId ((Rule,[(ProgId,ProgId)]),LineInfo))
+            evt_ref_props :: MTable (Table EventId [(ProgId,LineInfo)])
             evt_ref_props = M.unionWith (M.unionWith (++)) 
                         (M.map (M.map $ L.map $ first $ hyps_label . snd) c_evt_refs) 
                         (M.map (M.map $ L.map (first fst) . MM.maybeToList) f_evt_refs)
@@ -100,7 +101,7 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
             live_evt :: MTable (ProgId <-> EventId)
             live_evt  = M.map (R.fromListMap . M.map (supporting_evts . fst . fst)) prog_ref
                 -- 
-            evt_evt :: MTable (Map EventId EventId)
+            evt_evt :: MTable (Table EventId EventId)
             evt_evt   = M.map (view $ pOldEvents . to (M.mapWithKey const)) p3 -- evt_refs 
             live_live :: MTable (LiveEvtId <-> LiveEvtId)
             live_live = M.map (R.bimap Right Right) $
@@ -134,11 +135,11 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
                                     $ L.map (first $ show . fst) xs] >> return Nothing
 
 make_phase4 :: MachineP3 
-            -> Map EventId [((Label, ScheduleChange), LineInfo)]
-            -> Map EventId (Maybe ((ProgId,ProgressProp),LineInfo))
-            -> Map ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
-            -> Map DocItem (String,LineInfo)
-            -> Map Label (Tactic Proof, LineInfo) 
+            -> Table EventId [((Label, ScheduleChange), LineInfo)]
+            -> Table EventId (Maybe ((ProgId,ProgressProp),LineInfo))
+            -> Table ProgId ((Rule,[(ProgId,ProgId)]),LineInfo) 
+            -> Table DocItem (String,LineInfo)
+            -> Table Label (Tactic Proof, LineInfo) 
             -> MachineP4
 make_phase4 p3 coarse_refs fine_refs prog_ref comments proofs 
         = -- makeMachineP4' p3 _ 
@@ -178,9 +179,9 @@ data LiveStruct = LiveStruct
     , evt_live  :: EventId <-> ProgId
     , live_live :: LiveEvtId  <-> LiveEvtId
     , live_evt  :: ProgId  <-> EventId
-    , evt_evt   :: Map EventId EventId
-    , live_info :: Map ProgId (MachineId,LineInfo)
-    , evt_info  :: Map (EventId,ProgId) (MachineId,LineInfo)
+    , evt_evt   :: Table EventId EventId
+    , live_info :: Table ProgId (MachineId,LineInfo)
+    , evt_info  :: Table (EventId,ProgId) (MachineId,LineInfo)
     } 
 
 mergeLiveness :: Conc LiveStruct -> Abs LiveStruct -> Conc LiveStruct
@@ -322,7 +323,7 @@ get_safety_prop p3 _m lbl =
                 (format "safety property '{0}' is undeclared" lbl)
                 $ lbl `M.lookup` (L.view pSafety p3)
 
-get_guards :: MachineP3 -> EventId -> M (Map Label Expr)
+get_guards :: MachineP3 -> EventId -> M (Table Label Expr)
 get_guards p3 evt = 
         return $ p3^.getEvent evt.eGuards
 

@@ -14,9 +14,6 @@ import Control.Monad
 import Control.Lens hiding (Context,rewrite)
 
 import Data.List as L
-import Data.Map as M 
-                ( Map )
-import qualified Data.Map as M 
 import Data.Maybe as M 
 import Data.Set as S 
 import Data.Typeable
@@ -24,7 +21,9 @@ import Data.Typeable
 import GHC.Generics (Generic)
 
 import Utilities.Format
+import qualified Utilities.Map as M 
 import Utilities.Syntactic
+import Utilities.Table
 
 data Ignore = Ignore LineInfo
     deriving (Eq,Typeable)
@@ -35,13 +34,13 @@ data Prune = Prune Int Proof
 data Proof =  FreeGoal Name Name Type Proof LineInfo
             | ByCases   [(Label, Expr, Proof)] LineInfo
             | Easy                             LineInfo
-            | Assume (Map Label Expr) Expr Proof LineInfo
+            | Assume (Table Label Expr) Expr Proof LineInfo
             | ByParts [(Expr,Proof)]           LineInfo
                 -- Too complex
-            | Assertion (Map Label (Expr,Proof)) [(Label,Label)] Proof LineInfo
-            | Definition (Map Var Expr) Proof LineInfo
-            | InstantiateHyp Expr (Map Var Expr) Proof LineInfo
-            | Keep Context [Expr] (Map Label Expr) Proof LineInfo
+            | Assertion (Table Label (Expr,Proof)) [(Label,Label)] Proof LineInfo
+            | Definition (Table Var Expr) Proof LineInfo
+            | InstantiateHyp Expr (Table Var Expr) Proof LineInfo
+            | Keep Context [Expr] (Table Label Expr) Proof LineInfo
             | ByCalc Calculation
     deriving (Eq,Typeable, Generic, Show)
 
@@ -180,6 +179,7 @@ instance ProofRule Proof where
                   & nameless  %~ (defs' ++)
     proof_po (Assertion lemma dep p _) lbl po = do
             let depend = M.map M.fromList $ M.fromListWith (++) $ L.map f dep
+                depend :: Table Label (Table Label ())
                 f (x,y) = (x,[(y,())])
             pos1 <- proof_po p ( composite_label [lbl,label "main goal"] )
                 $ po & nameless %~ (++ L.map fst (M.elems lemma))
@@ -223,7 +223,7 @@ chain :: Notation -> BinOperator -> BinOperator -> Either [String] BinOperator
 chain n x y 
     | x == equal = Right y
     | y == equal = Right x
-    | otherwise  = case M.lookup (x,y) $ M.fromList (n^.chaining) of
+    | otherwise  = case (x,y) `L.lookup` (n^.chaining) of
                     Just z -> Right z
                     Nothing -> Left [format "chain: operators {0} and {1} don't chain" x y]
 

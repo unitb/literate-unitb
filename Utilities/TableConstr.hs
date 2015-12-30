@@ -9,15 +9,20 @@ import Data.Char
 import Data.Data
 import Data.Either
 import Data.List as L
-import Data.Map as M (Map,fromList,union)
 import Data.Maybe
 
 import GHC.Generics hiding (from,to)
 import GHC.Generics.Lens
 
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax
+
+import PseudoMacros
 
 import System.IO
+
+import Utilities.Map as M (Map,fromList,union,IsMap)
+import Utilities.Table
 
 prefix :: String -> Name -> Name
 prefix p n = mkName $ prefix' p n
@@ -32,20 +37,22 @@ makeRecordConstrAs :: String -> Name -> DecsQ
 makeRecordConstrAs makeName' n = do
     let makeName = mkName makeName'
     (args,cons,fields) <- fieldList =<< reify n
+    addDependentFile $__FILE__
     xs <- newName "_xs"
     r  <- newName "r"
     x  <- newName "x"
     y  <- newName "y"
     let isMapType field t = case constructor' t of
                         Just (n,[t,t'])
-                            | n == ''Map -> Right (field,(t, t'))
+                            | n == ''Map -> Right (field,(t, t'),n)
+                            | n == ''Table -> Right (field,(t, t'),n)
                         _ -> Left (field,t)
         typeName  = mkName $ nameBase n ++ "Field"
         changeCap f x = mkName $ map f (take 1 x') ++ drop 1 x'
             where
                 x' = nameBase x
         withUpper = changeCap toUpper . mkName . dropWhile (== '_') . nameBase
-        fieldCons (n,(t,t')) = normalC (withUpper n) [strictType notStrict $ pure t,strictType notStrict $ pure t']
+        fieldCons (n,(t,t'),_) = normalC (withUpper n) [strictType notStrict $ pure t,strictType notStrict $ pure t']
         fields'' = map (uncurry isMapType) fields
         fields' = rights fields''
         params  = lefts fields''
@@ -54,8 +61,8 @@ makeRecordConstrAs makeName' n = do
                 (map PlainTV args) 
                 (map fieldCons fields') 
                 []
-        fieldInit (n,(_t,_t')) = (n,) <$> [e| fromList (concatMap $(varE $ prefix "_" n) $(varE xs)) |]
-        fieldGetter (n,(_t,_t')) = funD (prefix "_" n) 
+        fieldInit (n,(_t,_t'),_) = (n,) <$> [e| fromList (concatMap $(varE $ prefix "_" n) $(varE xs)) |]
+        fieldGetter (n,(_t,_t'),_) = funD (prefix "_" n) 
                 [ clause [conP (withUpper n) [varP x,varP y]] 
                     (normalB $ [e| [($(varE x), $(varE y))] |]) []
                 , clause [wildP] (normalB $ listE []) []]
@@ -147,7 +154,7 @@ constructor' t = error $ "not a simple type: " ++ show t
 
 class GAllTables a where
     gAllTables :: (Applicative f)
-               => (forall k a. (Show k, Show a) => String -> Map k a -> f (Map k a))
+               => (forall map k a. (Show k, Show a,IsMap map) => String -> map k a -> f (map k a))
                -> Maybe String -> a p -> f (a p)
 
 instance (GAllTables c, Selector s) => GAllTables (S1 s c) where
@@ -159,6 +166,10 @@ instance (GAllTables c) => GAllTables (D1 d c) where
 instance (GAllTables c) => GAllTables (C1 d c) where
     gAllTables f tag (M1 x) = M1 <$> gAllTables f tag x
 
+instance (Show k,Show b) => GAllTables (K1 a (Table k b)) where
+    gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
+    gAllTables _ Nothing (K1 x) = K1 <$> pure x
+
 instance (Show k,Show b) => GAllTables (K1 a (Map k b)) where
     gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
     gAllTables _ Nothing (K1 x) = K1 <$> pure x
@@ -167,7 +178,7 @@ instance (GAllTables a, GAllTables b)
     gAllTables f tag (x :*: y) = (:*:) <$> gAllTables f tag x <*> gAllTables f tag y
 
 allTables :: (Applicative f, Generic x, GAllTables (Rep x))
-          => (forall k a. (Show k,Show a) => String -> Map k a -> f (Map k a))
+          => (forall k a map. (Show k,Show a,IsMap map) => String -> map k a -> f (map k a))
           -> x -> f x
 allTables f = generic $ gAllTables f Nothing
 

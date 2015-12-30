@@ -30,7 +30,6 @@ import           Data.Either
 import           Data.IORef
 import           Data.List
 import           Data.List.NonEmpty as NE (sort)
-import qualified Data.Map as M hiding ((!))
 import           Data.Maybe
 import           Data.Tuple
 import           Data.Typeable
@@ -44,9 +43,11 @@ import Prelude
 import PseudoMacros
 
 import Utilities.Format
+import qualified Utilities.Map as M hiding ((!))
 import Utilities.Indentation
 import Utilities.Lines hiding (lines,unlines)
 import Utilities.Partial
+import Utilities.Table
 
 import System.FilePath
 import System.IO
@@ -57,7 +58,7 @@ import Text.Printf
 
 data TestCase = 
       forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a
-    | POCase String (IO (String, M.Map Label Sequent)) String
+    | POCase String (IO (String, Table Label Sequent)) String
     | forall a . (Show a, Eq a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
@@ -115,7 +116,7 @@ test_cases = Suite ?loc
 
 data UnitTest = forall a. Eq a => UT 
     { name :: String
-    , routine :: IO (a, Maybe (M.Map Label Sequent))
+    , routine :: IO (a, Maybe (Table Label Sequent))
     , outcome :: a
     , _mcallStack :: Maybe CallStack
     , _display :: a -> String
@@ -150,7 +151,7 @@ run_test_cases xs = do
                         print exc
                         return (show (exc :: SomeException), Nothing)
                     -- get_po = catch (snd `liftM` y) g
-                    -- g :: SomeException -> IO (M.Map Label Sequent)
+                    -- g :: SomeException -> IO (Table Label Sequent)
                     -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
                 return UT
                     { name = x
@@ -191,12 +192,13 @@ run_test_cases xs = do
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
 
-print_po :: CallStack -> Maybe (M.Map Label Sequent) -> String -> String -> String -> M ()
+print_po :: CallStack -> Maybe (Table Label Sequent) -> String -> String -> String -> M ()
 print_po cs pos name actual expected = do
     n <- get
     liftIO $ do
         let ma = f actual
             me = f expected
+            f :: String -> Table String Bool
             f xs = M.map (== "  o  ") $ M.fromList $ map (swap . splitAt 5) $ lines xs
             mr = M.keys $ M.filter not $ M.unionWith (==) (me `M.intersection` ma) ma
         case pos of

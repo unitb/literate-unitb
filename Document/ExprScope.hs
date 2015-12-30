@@ -17,7 +17,6 @@ import Control.Lens
 import Control.Monad.Reader
 
 import Data.List.NonEmpty as NE (toList)
-import Data.Map as M hiding (mapMaybe)
 import Data.Maybe as M
 import Data.Typeable
 
@@ -28,6 +27,7 @@ import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Regression
 import Utilities.Syntactic
+import Utilities.Table
 
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
@@ -148,7 +148,7 @@ type InitOrEvent = Either InitEventId EventId
 data InitEventId = InitEvent
     deriving (Show,Ord,Eq,Generic)
 
-data EventExpr = EventExpr { _eventExprs :: Map InitOrEvent EvtExprScope }
+data EventExpr = EventExpr { _eventExprs :: Table InitOrEvent EvtExprScope }
     deriving (Eq,Ord,Typeable,Show)
 
 makeLenses ''EventExpr

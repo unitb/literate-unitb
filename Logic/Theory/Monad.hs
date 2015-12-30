@@ -24,7 +24,6 @@ import Control.Lens hiding (Context,from,to,rewriteM)
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
-import           Data.Map as M 
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -35,15 +34,9 @@ import Utilities.Format
 --import Utilities.Instances
 import Utilities.Partial
 --import Utilities.TH
+import Utilities.Map as M
+import Utilities.Table
 import Utilities.Tuple
-
-
-
-
-
-
-
-
 
 class Signature s where
     type FunType s :: *
@@ -365,7 +358,7 @@ withForall mx = do
 axiom :: ExpQ
 axiom = withLoc 'declAxiom
 
-axioms :: String -> Writer [ExprP] () -> Map Label Expr
+axioms :: String -> Writer [ExprP] () -> Table Label Expr
 axioms name cmd
         | L.null ls = fromList $ L.map (first $ label . format "@{0}@@_{1}" name) $ zip ns rs
         | otherwise = error $ unlines $ concat ls

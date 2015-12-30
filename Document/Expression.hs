@@ -33,18 +33,19 @@ import qualified Control.Monad.Trans.Reader as R
 import           Data.Char
 import           Data.Either
 import           Data.List as L
-import           Data.Map as M hiding ( map, (!) )
-import qualified Data.Map as M
 import qualified Data.Set as S
 
 import Utilities.EditDistance
 import Utilities.Format
 import Utilities.Graph as G ((!))
+import           Utilities.Map as M hiding ( map, (!) )
+import qualified Utilities.Map as M
+import Utilities.Table
 
 data Param = Param 
     { context   :: Context
     , notation  :: Notation
-    , variables :: Map Name Expr
+    , variables :: Table Name Expr
     }
 
 data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
@@ -97,7 +98,7 @@ instance Token ExprToken where
     lexeme Colon      = ":"
 
 runParser :: Context -> Notation 
-          -> Map Name Expr
+          -> Table Name Expr
           -> Parser a 
           -> Scanner ExprToken a
 runParser x y w m = runParserWith (Param x y w) m
@@ -116,7 +117,7 @@ get_notation = notation `liftM` get_params
 get_table :: Parser (Matrix Operator Assoc)
 get_table = (view struct . notation) <$> get_params
 
-get_vars :: Parser (Map Name Expr)
+get_vars :: Parser (Table Name Expr)
 get_vars = variables `liftM` get_params
 
 with_vars :: [(Name, Var)] -> Parser b -> Parser b
@@ -261,7 +262,7 @@ vars = do
         return (map (\x -> (x,t)) vs)     
 
 get_variables' :: (Monad m, MonadReader LineInfo m)
-               => Map Name Sort
+               => Table Name Sort
                -> LatexDoc
                -> EitherT [Error] m [(Name, Var)]
 get_variables' types cs = 
@@ -339,7 +340,7 @@ apply_fun_op (Command _ _ _ fop) x = do
         e <- check_types $ fop [Right x]
         return $ Right e
 
-suggestion :: Name -> Map Name String -> [String]
+suggestion :: Name -> Table Name String -> [String]
 suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toList ws
   where
     xs' = map toLower $ render xs

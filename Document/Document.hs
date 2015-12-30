@@ -35,11 +35,12 @@ import           Control.Monad.Trans.Either
 import qualified Control.Monad.Writer as W
 
 import           Data.Either.Combinators
-import           Data.Map   as M hiding ( map, foldl, (\\) )
-import qualified Data.Map   as M
 import           Data.List.Ordered (sortOn)
 
+import           Utilities.Map   as M hiding ( map, (\\) )
+import qualified Utilities.Map   as M
 import Utilities.Syntactic as Syn
+import Utilities.Table
 
 read_document :: LatexDoc -> Either [Error] System
 read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
@@ -74,13 +75,13 @@ list_machines fn = do
         return $ map snd $ toList $ ms!.machines
 
 list_proof_obligations :: FilePath
-                       -> EitherT [Error] IO [(Machine, Map Label Sequent)]
+                       -> EitherT [Error] IO [(Machine, Table Label Sequent)]
 list_proof_obligations fn = do
         xs <- list_machines fn
         return [ (m,proof_obligation m) | m <- xs ]
 
 list_file_obligations :: FilePath
-                       -> IO (Either [Error] [(Machine, Map Label Sequent)])
+                       -> IO (Either [Error] [(Machine, Table Label Sequent)])
 list_file_obligations fn = do
         runEitherT $ list_proof_obligations fn
 
@@ -96,7 +97,7 @@ parse_machine fn = runEitherT $ do
         return $ map snd $ toList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 
-               -> Either [Error] (M.Map Name [LatexDoc],M.Map String [LatexDoc])
+               -> Either [Error] (Table Name [LatexDoc],Table String [LatexDoc])
 get_components xs li = 
         liftM g
             $ R.runReader (runEitherT $ W.execWriterT 

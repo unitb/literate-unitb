@@ -29,7 +29,6 @@ import Data.Default
 import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.List
-import Data.Map (isSubmapOf,isProperSubmapOf,Map,member)
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
@@ -40,6 +39,7 @@ import PseudoMacros
 import Text.Printf
 
 import Utilities.CallStack
+import Utilities.Map (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
 import Utilities.Partial
 import Utilities.Lens
 
@@ -160,13 +160,16 @@ isSubsetOf' = relation "/⊆" isSubsetOf
 isProperSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant ()
 isProperSubsetOf' = relation "/⊂" isProperSubsetOf
 
-isSubmapOf' :: (Ord k,Eq a,Show k,Show a) => Map k a -> Map k a -> Invariant ()
+{-# INLINE isSubmapOf' #-}
+isSubmapOf' :: (IsMap map,IsKey map k,Eq k,Eq a,Show (map k a)) => map k a -> map k a -> Invariant ()
 isSubmapOf' = relation "/⊆" isSubmapOf
 
-isProperSubmapOf' :: (Ord k,Eq a,Show k,Show a) => Map k a -> Map k a -> Invariant ()
+{-# INLINE isProperSubmapOf' #-}
+isProperSubmapOf' :: (IsMap map,Eq k, Eq a,Show (map k a),IsKey map k) => map k a -> map k a -> Invariant ()
 isProperSubmapOf' = relation "/⊂" isProperSubmapOf
 
-member' :: (Show k,Show a,Ord k) => k -> Map k a -> Invariant ()
+{-# INLINE member' #-}
+member' :: (Show k,Show (map k a),IsMap map,IsKey map k) => k -> map k a -> Invariant ()
 member' = relation "/∈" member
 
 relation :: (Show a,Show b) => String -> (a -> b -> Bool) -> a -> b -> Invariant ()

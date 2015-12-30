@@ -33,7 +33,6 @@ import           Data.Functor.Compose
 import           Data.Functor.Classes
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
-import           Data.Map as M
 import           Data.Maybe as M
 import qualified Data.Set as S
 import           Data.String
@@ -46,10 +45,12 @@ import Utilities.Format
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Lens
+import Utilities.Map as M
 import Utilities.Partial
+import Utilities.Table
 import Utilities.TH
 
-all_types :: Theory -> Map Name Sort
+all_types :: Theory -> Table Name Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 
 
 newtype EventTable expr = EventTable { _table :: 
@@ -68,17 +69,17 @@ data MachineBase expr =
     Mch 
         { _machineBaseName :: Name
         , _theory     :: Theory
-        , _variables  :: Map Name Var
-        , _machineBaseAbs_vars :: Map Name Var
-        , _del_vars   :: Map Name Var
-        , _init_witness :: Map Name (Var,expr)
-        , _del_inits  :: Map Label expr
-        , _inits      :: Map Label expr
+        , _variables  :: Table Name Var
+        , _machineBaseAbs_vars :: Table Name Var
+        , _del_vars   :: Table Name Var
+        , _init_witness :: Table Name (Var,expr)
+        , _del_inits  :: Table Label expr
+        , _inits      :: Table Label expr
         , _event_table :: EventTable expr
         , _inh_props  :: PropertySet' expr
         , _props      :: PropertySet' expr
-        , _derivation :: Map ProgId ProofTree         
-        , _comments   :: Map DocItem String }
+        , _derivation :: Table ProgId ProofTree         
+        , _comments   :: Table DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
 
 instance Eq1 MachineBase where
@@ -141,7 +142,7 @@ class (Controls mch (Internal mch expr)
         , HasExpr expr
         , HasMachineBase (Internal mch expr) expr
         , HasName (Internal mch expr) Name 
-        , HasAbs_vars (Internal mch expr) (Map Name Var) ) 
+        , HasAbs_vars (Internal mch expr) (Table Name Var) ) 
         => HasMachine mch expr | mch -> expr where
     type Internal mch expr :: *
     empty_machine :: Name -> mch
@@ -265,7 +266,7 @@ downward_event arse m lbl = readGraph (m!.events) $ do
              <*> T.forM es (\e -> (,) <$> rightKey (target e) <*> rightInfo (target e))
 
 new_event_set :: HasExpr expr
-              => Map Name Var
+              => Table Name Var
               -> Map EventId (Event' expr)
               -> EventTable expr
 new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
@@ -277,8 +278,8 @@ new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
             newEdge skip v
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 
-makeWitness :: Map Name Var 
-            -> Event' expr -> Map Name (Var,RawExpr)
+makeWitness :: Table Name Var 
+            -> Event' expr -> Table Name (Var,RawExpr)
 makeWitness vs = view $ actions.to frame.to f -- .to (traverse._2.namesOf %~ asInternal)
     where 
         f m = M.fromList $ L.map (view name &&& (id &&& Word)) $ M.elems $ m `M.difference` vs
@@ -420,13 +421,13 @@ _name = MId . view' machineBaseName
 
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              => Machine' expr 
-             -> event -> Map Label RawExpr
-ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Map Label RawAction)
+             -> event -> Table Label RawExpr
+ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
-                    `M.union` M.mapKeys (label.render) (snd <$> evt^.witness)
-                    `M.union` M.mapKeys (skipLbl.render) (M.map eqPrime noWitness)
+                    `M.union` M.mapKeys (label.render) (convertMap $ snd <$> evt^.witness)
+                    `M.union` M.mapKeys (skipLbl.render) (convertMap $ M.map eqPrime noWitness)
     where
-        _ = ba_predicate' (m!.variables) (evt^.new.actions :: Map Label RawAction) :: Map Label RawExpr
+        _ = ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction) :: Table Label RawExpr
         skipLbl :: String -> Label
         skipLbl = label . ("SKIP:"++)
         eqPrime v = Word (prime v) `zeq` Word v

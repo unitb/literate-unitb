@@ -15,7 +15,6 @@ import Control.Monad.Reader.Class
 
 import Data.Default
 import Data.List
-import Data.Map as M
 
 import PseudoMacros
 
@@ -24,11 +23,13 @@ import Text.Printf
 import Utilities.CallStack
 import Utilities.Instances
 import Utilities.Invariant
+import Utilities.Map as M
+import Utilities.Table
 
 data VisibleVars = VisibleVars
-        { _visibleVarsConstants :: Map Name Var
-        , _visibleVarsAbs_vars  :: Map Name Var
-        , _vars      :: Map Name Var
+        { _visibleVarsConstants :: Table Name Var
+        , _visibleVarsAbs_vars  :: Table Name Var
+        , _vars      :: Table Name Var
         , _prefix    :: [String]
         } deriving (Generic,Show)
 
@@ -58,7 +59,7 @@ withVars :: (Foldable f)
 withVars = withVars' constants
 
 withVars' :: (Foldable f) 
-          => Lens' VisibleVars (Map Name Var) -> f Var 
+          => Lens' VisibleVars (Table Name Var) -> f Var 
           -> ScopeCorrectnessM a
           -> ScopeCorrectnessM a
 withVars' ln vs = local (ln %~ M.union (symbol_table vs))
@@ -81,7 +82,7 @@ withPrimes cmd = do
     withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
 areVisible :: (Show e,Foldable f,?loc :: CallStack) 
-           => [Getting (Map Name Var) VisibleVars (Map Name Var)]
+           => [Getting (Table Name Var) VisibleVars (Table Name Var)]
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
     vs <- foldMap view ln 

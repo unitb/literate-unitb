@@ -38,13 +38,14 @@ import           Control.Monad.Trans.Either
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.List as L hiding ( union, insert, inits )
-import           Data.Map   as M hiding ( map, foldl, (\\) )
-import qualified Data.Map   as M
 
 import Text.Printf
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Format
+import           Utilities.Map   as M hiding ( map, (\\) )
+import qualified Utilities.Map   as M
+import Utilities.Table
 import Utilities.Syntactic
 
 run_phase0_blocks :: Pipeline MM () (MTable MachineP0)
@@ -65,7 +66,7 @@ run_phase1_types = proc p0 -> do
     r  <- refines_mch   -< p0
     it <- import_theory -< p0
     refs <- triggerP <<< liftP' (make_all_tables refClash) -< r
-    let _ = refs :: Map MachineId (Map () (MachineId,LineInfo))
+    let _ = refs :: MTable (Table () (MachineId,LineInfo))
     r_ord <- topological_order -< mapMaybe (M.lookup ()) refs
     let t = M.map fst <$> ts
         s = M.map snd <$> ts
@@ -112,9 +113,9 @@ run_phase1_types = proc p0 -> do
     refClash = format "Multiple refinement clauses"
 
 make_phase1 :: MachineP0
-            -> Map Name Theory
-            -> Map Name Sort
-            -> Map Name Sort
+            -> Table Name Theory
+            -> Table Name Sort
+            -> Table Name Sort
             -> [(Name, PostponedDef)]
             -> G.BiGraph SkipOrEvent () () -- Map Label (EventId, [EventId])
             -> MachineP1

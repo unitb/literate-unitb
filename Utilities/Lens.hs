@@ -5,13 +5,16 @@ import Control.Monad.State
 
 import Data.Default
 import Data.Foldable as F
-import Data.Map as M
 import Data.Tuple
 
-withKey :: Iso (Map a b) (Map c d) (Map a (a,b)) (Map c d)
+import Utilities.Map as M
+
+{-# INLINE withKey #-}
+withKey :: IsMap map => Iso (map a b) (map c d) (map a (a,b)) (map c d)
 withKey = iso (M.mapWithKey (,)) id
 
-withKey' :: Getter (Map a b) (Map a (a,b))
+{-# INLINE withKey' #-}
+withKey' :: IsMap map => Getter (map a b) (map a (a,b))
 withKey' = to (M.mapWithKey (,))
 
 firstL :: LensLike f s t a b -> LensLike f (s,k) t (a,k) b

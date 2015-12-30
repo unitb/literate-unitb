@@ -15,12 +15,13 @@ import UnitB.Expr
 import Control.Lens hiding (indices)
 
 import Data.List as L
-import Data.Map as M
 import Data.Set as S
 
 import Tests.UnitTest
 
 import Utilities.BipartiteGraph
+import Utilities.Map as M
+import Utilities.Table
 
 -- import Utilities.TH
 
@@ -3828,7 +3829,7 @@ result11 = unlines
 path12 :: FilePath
 path12 = "tests/lock-free deque/main7-err0.tex"
 
-case12 :: IO (String, Map Label Sequent)
+case12 :: IO (String, Table Label Sequent)
 case12 = verify path12 0
 
 result12 :: String
@@ -3842,7 +3843,7 @@ result12 = unlines
 path13 :: FilePath
 path13 = "tests/lock-free deque/main7.tex"
 
-case13 :: IO (String, Map Label Sequent)
+case13 :: IO (String, Table Label Sequent)
 case13 = verify path13 0
 
 result13 :: String
@@ -4430,14 +4431,14 @@ result20 = unlines
 case20 :: IO POResult
 case20 = verify path20 0
 
-result21 :: Either [Error] (Map Name (Var, RawExpr))
+result21 :: Either [Error] (Table Name (Var, RawExpr))
 result21 = Right $ symbol_table' fst [(b,getExpr $ c [expr| b = ch |])]
     where
         b = z3Var "b" bool
         c = ctx $ do
             [var| b,ch : \Bool |]
 
-case21 :: IO (Either [Error] (Map Name (Var, RawExpr)))
+case21 :: IO (Either [Error] (Table Name (Var, RawExpr)))
 case21 = runEitherT $ do
     m <- parse_machine' path20 1
     view ind_witness <$> S.lookup "handle" (m!.events.to leftMap)

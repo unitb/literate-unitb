@@ -25,20 +25,21 @@ import Data.Char
 import Data.Either
 import Data.List as L
 import qualified Data.List.NonEmpty as NE
-import Data.Map as M hiding ( map, (\\) )
 import Data.Tuple
 
 import Utilities.Error
 import Utilities.Format
+import Utilities.Map as M hiding ( map, (\\) )
 import Utilities.Syntactic
+import Utilities.Table
 
 data RuleParserParameter = 
     RuleParserDecl 
         { getMachine :: MachineP2
         , getMachineId :: MachineId
-        , getProgress :: (Map Label ProgressProp)
-        , getSafety :: (Map Label SafetyProp)
-        , getTransient :: (Map Label Transient)
+        , getProgress :: (Table Label ProgressProp)
+        , getSafety :: (Table Label SafetyProp)
+        , getTransient :: (Table Label Transient)
         , getGoal :: Label
         , getHypotheses :: [Label]
         , getHint :: LatexDoc

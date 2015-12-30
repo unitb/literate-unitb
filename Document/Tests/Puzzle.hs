@@ -14,10 +14,12 @@ import Control.Lens
 import Control.Monad
 
 import Data.List as L
-import Data.Map
 import Data.Set  as S (Set,fromList)
 
 import Tests.UnitTest
+
+import Utilities.Map
+import Utilities.Table
 
 test_case :: TestCase
 test_case = test_cases 
@@ -55,7 +57,7 @@ test_case = test_cases
 path0 :: FilePath
 path0 = "Tests/puzzle/puzzle.tex"
 
-case0 :: IO (String, Map Label Sequent)
+case0 :: IO (String, Table Label Sequent)
 case0 = verify path0 0
 
 result0 :: String
@@ -81,7 +83,7 @@ result0 = unlines
     , "passed 18 / 18"
     ]
 
-case1 :: IO (String, Map Label Sequent)
+case1 :: IO (String, Table Label Sequent)
 case1 = verify path0 1
 
 result1 :: String
@@ -549,7 +551,7 @@ result5 = unlines
     -- , "; m1/visit/SCH/0/REF/weaken"
     -- ]
 
-case7 :: IO (String, Map Label Sequent)
+case7 :: IO (String, Table Label Sequent)
 case7 = verify path0 2
 
 result7 :: String
@@ -697,7 +699,7 @@ result7 = unlines
     , "passed 140 / 140"
     ]
 
-case8 :: IO (String, Map Label Sequent)
+case8 :: IO (String, Table Label Sequent)
 case8 = verify path0 3
 
 result8 :: String
@@ -1283,7 +1285,7 @@ result10 = unlines
     , "; m3/INIT/INV/m3:inv1"
     ]
 
-case11 :: IO (String, Map Label Sequent)
+case11 :: IO (String, Table Label Sequent)
 case11 = verify path0 4
 
 result11 :: String
