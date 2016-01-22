@@ -1,0 +1,19 @@
+%!TEX root=../main9.tex
+\noindent \ref{req}  \textbf{event}
+\begin{block}
+  \item   \textbf{during}
+  \begin{block}
+  \item[ (\ref{req}/default) ]{$\false$} %
+  \end{block}
+  \item   \textbf{any} r
+  \item   \textbf{when}
+  \begin{block}
+  \item[ \eqref{reqgrd0} ]{$\neg r \in req$} %
+  \end{block}
+  \item   \textbf{begin}
+  \begin{block}
+  \item[ \eqref{reqact0} ]{$req \bcmeq req \bunion \{ r \}$} %
+  \item[ \eqref{reqact1} ]{$req0 \bcmeq req$} %
+  \end{block}
+  \item   \textbf{end} \\
+\end{block}

@@ -102,6 +102,33 @@ removeAtLineNumber = traverseLines.spanIso isSpace._2 %~ dropKW "at "
         dropKW kw xs | kw `isPrefixOf` xs = drop (length kw) xs
                      | otherwise          = xs
 
+newtype CabalTarget = CabalTarget FilePath
+
+returnIf :: a -> ExitCode -> Build a
+returnIf x ExitSuccess = return x
+returnIf _ (ExitFailure _) = mzero
+
+liftIOWithExit :: IO ExitCode -> Build ()
+liftIOWithExit cmd = do
+        r <- liftIO cmd
+        returnIf () r
+
+cabal_run :: CabalTarget -> Build ()
+cabal_run (CabalTarget target) = do
+    liftIOWithExit $ do
+        (r,_out,err) <- readProcessWithExitCode "cabal" ["run",target] []
+        -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
+        putStrLn $ removeAtLineNumber err
+        return r
+
+cabal_build :: String -> Build CabalTarget
+cabal_build target = do
+    liftIOWithExit $ do
+        (r,_out,err) <- readProcessWithExitCode "cabal" ["build",target] []
+        -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
+        putStrLn $ removeAtLineNumber err
+        return r
+    return $ CabalTarget target
 
 compile_test :: Build FilePath
 compile_test = do

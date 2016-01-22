@@ -1,9 +1,11 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies,CPP #-}
 module Logic.Names.Internals 
     ( Name(Name), InternalName(InternalName)
     , isZ3Name, isZ3Name'
     , IsBaseName(..)
     , Translatable(..)
+    , IsName(..)
+    , asInternal, asName
     , makeName
     , make, make'
     , isName, isName'
@@ -15,6 +17,8 @@ module Logic.Names.Internals
     , addSuffix
     , addBackslash
     , setSuffix
+    , smt, tex
+    , NonEmpty((:|))
     , Encoding(Z3Encoding)
     , check_props )
 where
@@ -36,7 +40,10 @@ import Data.String.Utils
 import Data.Tuple
 import Data.Word
 
-import Language.Haskell.TH.Syntax (Lift(..))
+import Language.Haskell.TH hiding (Name)
+import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Syntax hiding (Name,lift)
+import qualified Language.Haskell.TH.Syntax as TH 
 
 import Text.Printf
 
@@ -50,6 +57,8 @@ import Utilities.Table
 
 import Test.QuickCheck as QC
 
+#ifdef __LAZY_NAME__
+
     -- ^ Names can be specified in Z3 or in LaTeX encoding
     -- ^ They can then be rendered in either Z3 or LaTeX
     -- ^ by using `substToZ3` and `substToLatex` to translate them
@@ -60,6 +69,27 @@ data Name = Name
         , _suffix :: NullTerminatedString
         , _encoding :: Encoding }
     deriving (Data,Generic,Show,Eq,Ord)
+
+data InternalName = InternalName NullTerminatedString Name NullTerminatedString
+    deriving (Eq,Ord,Data,Generic,Show)
+
+#else
+
+    -- ^ Names can be specified in Z3 or in LaTeX encoding
+    -- ^ They can then be rendered in either Z3 or LaTeX
+    -- ^ by using `substToZ3` and `substToLatex` to translate them
+data Name = Name 
+        { _backslash :: !Bool 
+        , _base :: !NullTerminatedNEString 
+        , _primes :: !Word8 
+        , _suffix :: !NullTerminatedString
+        , _encoding :: !Encoding }
+    deriving (Data,Generic,Show,Eq,Ord)
+
+data InternalName = InternalName !NullTerminatedString !Name !NullTerminatedString
+    deriving (Eq,Ord,Data,Generic,Show)
+
+#endif
 
 name :: Bool -> NullTerminatedNEString
              -> Word8
@@ -73,10 +103,8 @@ data Encoding = Z3Encoding | LatexEncoding
 
 makeLenses ''Name
 
-data InternalName = InternalName NullTerminatedString Name NullTerminatedString
-    deriving (Eq,Ord,Data,Generic,Show)
 
-class (Show a,Ord a,Data a) => IsBaseName a where
+class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
     render :: a -> String
     --asString :: Assert -> Iso' a String
     asInternal' :: a -> InternalName
@@ -130,8 +158,27 @@ instance IsBaseName Name where
     z3Name = fromJust' . isZ3Name'
     texName = fromString''
 
+class IsBaseName n => IsName n where
+    fromInternal :: InternalName -> n
+    fromName :: Name -> n
+
+asInternal :: IsName n => n -> InternalName
+asInternal = asInternal'
+--asInternal = view (from internal) . asInternal'
+
+asName :: IsName n => n -> Name    
+asName = asName'
+--asName = view (from name) . asName'
+
+instance IsName Name where
+    fromInternal = asName
+    fromName = id
+instance IsName InternalName where
+    fromInternal = id
+    fromName = asInternal
+
 fresh :: IsBaseName n => n -> Table n b -> n
-fresh name xs = L.head $ ys `Ord.minus` M.keys xs
+fresh name xs = L.head $ ys `Ord.minus` M.ascKeys xs
     where
         ys = generateNames name
 
@@ -177,6 +224,9 @@ instance IsBaseName InternalName where
     z3Name str = asInternal' $ (z3Name str :: Name)
     texName str = asInternal' $ (texName str :: Name)
 
+instance Hashable Name where
+instance Hashable InternalName where
+instance Hashable Encoding where
 
 z3Render :: Name -> String
 z3Render n = concat $ [slash,NE.toList xs] ++ replicate (fromIntegral ps) "@prime" ++ [suf']
@@ -279,6 +329,28 @@ replaceAll' arse sub = nonEmpty' arse . replaceAll sub . toList
 replaceAll :: [(String,String)] -> String -> String
 replaceAll = execState . mapM_ (modify . uncurry replace)
 
+smt :: QuasiQuoter
+smt = QuasiQuoter
+    { quoteExp  = \str -> [e| fromName $ $(parseZ3Name str) |]
+    --{ quoteExp  = \str -> [e| fromName . view (from name) $ $(parseZ3Name str) |]
+    , quotePat  = undefined
+    , quoteDec  = undefined
+    , quoteType = undefined }
+
+tex :: QuasiQuoter
+tex = QuasiQuoter
+    { quoteExp  = \str -> [e| $(parseTexName str) |]
+    --{ quoteExp  = \str -> [e| view (from name) $ $(parseTexName str) |]
+    , quotePat  = undefined
+    , quoteDec  = undefined
+    , quoteType = undefined }
+
+parseZ3Name :: String -> ExpQ
+parseZ3Name str = either (fail . unlines) TH.lift $ isZ3Name str
+
+parseTexName :: String -> ExpQ
+parseTexName str = either (fail . unlines) TH.lift $ isName str
+
 prop_subst_idempotent :: String -> Property
 prop_subst_idempotent xs = replaceAll substToZ3 (replaceAll substToZ3 xs) === replaceAll substToZ3 xs
 
@@ -324,7 +396,7 @@ instance Arbitrary InternalName where
     arbitrary = do
         asInternal' <$> (arbitrary :: Gen Name)
 
-instance Lift Name where
+instance TH.Lift Name where
     lift (Name a b c d e) = [e| name a b c d e |]
 instance Lift Encoding where
     lift = genericLift

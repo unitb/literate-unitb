@@ -8,12 +8,16 @@ import Logic.Expr.Label
 import Logic.Names
 
     -- Libraries
+import Control.Arrow
 import Control.Monad.Reader
 
+import Data.Either.Combinators
 import Data.Functor.Classes
 import Data.List hiding (uncons)
 
 import Utilities.Instances
+import qualified Utilities.Map as M
+import Utilities.Table
 
 pretty_print' :: Tree t => t -> String
 pretty_print' t = intercalate "\n" 
@@ -21,7 +25,7 @@ pretty_print' t = intercalate "\n"
     $ runReader (pretty_print_aux $ as_tree t) ""
 
 newtype Pretty a = Pretty { unPretty :: a }
-    deriving (Eq,Ord,Functor,Foldable,Traversable)
+    deriving (Eq,Ord,Functor,Foldable,Traversable,Hashable)
 
 class PrettyPrintable a where
     pretty :: a -> String
@@ -42,6 +46,21 @@ instance PrettyPrintable Label where
 
 instance PrettyPrintable Name where
     pretty = render
+
+instance (PrettyPrintable k,Ord k,Hashable k,PrettyPrintable a) 
+        => PrettyPrintable (Table k a) where
+    pretty = show . M.mapKeys Pretty . M.map Pretty
+
+instance (PrettyPrintable a,PrettyPrintable b) 
+        => PrettyPrintable (Either a b) where
+    pretty = show . mapBoth Pretty Pretty
+
+instance PrettyPrintable () where
+    pretty = show
+
+instance (PrettyPrintable a,PrettyPrintable b)
+        => PrettyPrintable (a,b) where
+    pretty = show . (Pretty *** Pretty)
 
 data Line = Line String String
 

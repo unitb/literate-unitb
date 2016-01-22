@@ -1,0 +1,38 @@
+
+
+sequence
+introduce terminating loop
+merge terminating loop
+non-terminating loop
+conditional
+
+Sequence
+========
+
+	evtA
+		during P0 ∧ C0
+		then B0
+		end
+
+	evtB
+		during P1 ∧ C1
+		then B1
+		end
+
+	===>
+
+	evtAB
+		during P0 ∧ (C0 ∨ C1)
+		then 
+			C0 → B0
+			{ P1 }
+			C1 → B1
+		end
+
+	where
+		{ C0 ∧ P0 } B0 { P1 }
+		P0 ∧ ¬C0 ⇒ P1
+		P1 ∧ C1  unless  ¬P0 ∨ ¬C0
+
+Introduce Terminating Loop
+==========================

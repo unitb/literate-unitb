@@ -35,6 +35,8 @@ data AbsVar name t = Var name t
 translate' :: (n0 -> n1) -> AbsVar n0 t -> AbsVar n1 t
 translate' = fmap1
 
+instance (Hashable name,Hashable t) => Hashable (AbsVar name t) where
+
 instance IsName n => Translatable (AbsVar n t) (AbsVar InternalName t) where
     translate = translate' asInternal
 

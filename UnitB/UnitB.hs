@@ -202,7 +202,7 @@ verify_machine m = do
 
 format_result :: Table Label Bool -> IO (String,Int,Int)
 format_result xs' = do
-        let rs    = L.map f $ M.toList xs'
+        let rs    = L.map f $ M.toAscList xs'
             total = L.length rs
             passed = L.length $ L.filter fst rs
             xs = "passed " ++ (show passed) ++ " / " ++ show total

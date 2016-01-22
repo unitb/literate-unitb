@@ -196,7 +196,7 @@ instance IsVarScope EvtDecls where
     toOldEventDecl = toEventDecl Old
     toNewEventDecl = toEventDecl New
     toMchDecl _ _  = []
-    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . view varDecl) $ M.elems 
+    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . view varDecl) $ M.ascElems 
                                 $ M.filterWithKey (const.MM.isNothing) m
 
 event_var_decl :: EvtScope

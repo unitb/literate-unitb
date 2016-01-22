@@ -22,6 +22,7 @@ import           Data.Semigroup
 
 import Utilities.Functor
 import Utilities.Instances
+import Utilities.Lens
 import qualified Utilities.Map as M
 import Utilities.Table
 
@@ -59,7 +60,7 @@ defsAsVars = execState $ do
 class HasSymbols a b n | a -> b n where
     symbols :: a -> Table n b
 
-instance Ord n => HasSymbols (GenContext n t q) () n where
+instance (Ord n,Hashable n) => HasSymbols (GenContext n t q) () n where
     symbols ctx = M.unions [f a,f b,f c]
         where
             (Context _ a b c _) = ctx^.genContext
@@ -99,17 +100,17 @@ data CtxConflict n t q = CtxWith
             , declaration :: GenContext n t q }
     deriving (Generic)
 
-instance Ord n => Semigroup (GenContext n t q) where
-instance Ord n => Monoid (GenContext n t q) where
+instance (Ord n,Hashable n) => Semigroup (GenContext n t q) where
+instance (Ord n,Hashable n) => Monoid (GenContext n t q) where
     mempty  = genericMEmpty
     mconcat = genericMConcat
     mappend = genericMAppend
-instance Ord n => Semigroup (Intersection (GenContext n t q)) where
+instance (Ord n,Hashable n) => Semigroup (Intersection (GenContext n t q)) where
     (<>) = genericSemigroupMAppendWith
     sconcat = genericSemigroupMConcatWith
 
-instance Ord n => Semigroup (CtxConflict n t q) where
-instance Ord n => Monoid (CtxConflict n t q) where
+instance (Ord n,Hashable n) => Semigroup (CtxConflict n t q) where
+instance (Ord n,Hashable n) => Monoid (CtxConflict n t q) where
     mempty  = def
     mappend c0 c1 = CtxWith 
         { conflict = mconcat [conflict c0,conflict c1

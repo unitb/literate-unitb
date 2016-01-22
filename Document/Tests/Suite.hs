@@ -83,7 +83,7 @@ all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
 all_proof_obligations' path = do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
-        let pos = M.elems $ M.map snd xs
+        let pos = M.ascElems $ M.map snd xs
             cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
         return cmd
 
@@ -181,7 +181,7 @@ parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
     p <- getCurrentDirectory
     let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
-        f = elems . M.map fst
+        f = ascElems . M.map fst
     (mapBoth mapError f . fst) <$> list_file_obligations' path
 
 parse' :: FilePath -> EitherT [Error] IO [Machine]
@@ -193,7 +193,7 @@ verify_thy path name = makeReport' empty $ do
         let pos = snd $ r ! name
         res <- lift $ try (verify_all pos)
         case res of
-            Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toList res, pos)
+            Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toAscList res, pos)
             Left e -> return (show (e :: SomeException),pos)
     where
         success True  = "  o  "

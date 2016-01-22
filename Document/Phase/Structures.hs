@@ -84,7 +84,7 @@ run_phase1_types = proc p0 -> do
     evts'   <- triggerP -< evts'   
     let evts'' :: MTable [(SkipOrEvent, [SkipOrEvent])]
         evts'' = addSkip evts'
-        addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.elems.M.map ((Right *** ifEmpty).fst))
+        addSkip = M.map (((Left SkipEvent,[Left SkipEvent]):).M.ascElems.M.map ((Right *** ifEmpty).fst))
         ifEmpty [] = [Left SkipEvent]
         ifEmpty xs = L.map Right xs
     evts'   <- triggerP -< makeGraphs evts''

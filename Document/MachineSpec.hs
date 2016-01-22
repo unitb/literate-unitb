@@ -69,7 +69,7 @@ instance Arbitrary ExprNotation where
         (vars,e) <- fix (\retry n -> do
             when (n == 0) $ fail "failed to generate ExprNotation"
             vars  <- var_set
-            t     <- elements $ bool : (map var_type $ M.elems vars)
+            t     <- elements $ bool : (map var_type $ M.ascElems vars)
             e     <- expr_type False vars t
             case e of
                 Just e  -> return (vars,e)
@@ -198,14 +198,14 @@ latex_of m = do
         blank = Text (Blank "\n" li)
 
 expressions :: IsExpr expr => Machine' expr -> [expr]
-expressions m = M.elems $ m!.props.inv
+expressions m = M.ascElems $ m!.props.inv
 
 with_type_error :: Gen RawMachine
 with_type_error = do
         suchThat (gen_machine True)
              (\m -> not $ L.null $ range m)
     where
-        range m = M.elems vars `L.intersect` S.elems fv
+        range m = M.ascElems vars `L.intersect` S.elems fv
             where
                 vars  = m!.variables
                 fv    = S.unions $ map (used_var.getExpr) $ expressions m

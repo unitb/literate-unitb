@@ -14,6 +14,7 @@ import Control.Lens hiding (List,elements)
 import Control.Monad.Reader
 
 import           Data.Data
+import           Data.Hashable
 import qualified Data.Set as S
 
 import Language.Haskell.TH.Syntax hiding (Name)
@@ -34,7 +35,9 @@ referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 instance Typed GenericType where
     type TypeOf GenericType = GenericType
 
-class (Ord a, Tree a, PrettyPrintable a, Show a, Typed a, TypeOf a ~ a, Typeable a) 
+class (Ord a, Tree a, PrettyPrintable a, Show a
+        , Typed a, TypeOf a ~ a, Typeable a
+        , Hashable a ) 
         => TypeSystem a where
     type_cons :: a -> Maybe (TypeCons a)
     make_type :: Sort -> [a] -> a
@@ -51,15 +54,16 @@ instance TypeSystem FOType where
     type_cons (FOT s xs) = Just (USER_DEFINED s xs)
     make_type = FOT
 
+instance Hashable FOType where
+instance Hashable GenericType where
+instance Hashable Sort where
+
 instance Typed () where
     type TypeOf () = ()
 
 instance TypeSystem () where
     type_cons () = Nothing
     make_type _ _ = ()
-
-instance PrettyPrintable () where
-    pretty = show
 
 type Type = GenericType
 type GenericType = AbsType InternalName

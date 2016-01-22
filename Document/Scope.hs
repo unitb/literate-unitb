@@ -104,7 +104,7 @@ clash x y = isNothing $ merge_scopes' x y
 merge_scopes :: (Scope a, ?loc :: CallStack) => a -> a -> a
 merge_scopes x y = fromJust' $ merge_scopes' x y
 
-scopeUnion :: Ord k
+scopeUnion :: IsKey Table k
            => (a -> a -> Maybe a) 
            -> Table k a 
            -> Table k a 
@@ -178,7 +178,7 @@ all_errors :: Traversable t
            -> MM' c (Maybe (t a))
 all_errors m = T.mapM fromEither' m >>= (return . T.sequence)
 
-make_table :: (Ord a, PrettyPrintable a) 
+make_table :: (IsKey Table a, PrettyPrintable a) 
            => (a -> String) 
            -> [(a,b,LineInfo)] 
            -> Either [Error] (Table a (b,LineInfo))
@@ -189,20 +189,20 @@ make_table f xs = validationToEither $ M.traverseWithKey failIf' $ M.fromListWit
         failIf' k (NE.toList -> xs) = Failure $ err k (L.map snd xs)
         err x li = [MLError (f x) (L.map (pretty x,) li)]
 
-make_all_tables' :: (Scope b, Show a, Ord a, Ord k) 
+make_all_tables' :: (Scope b, Show a, IsKey Table a, Ord k) 
                  => (a -> String) 
                  -> Table k [(a,b)] 
                  -> MM (Maybe (Table k (Table a b)))
 make_all_tables' f xs = T.sequence <$> T.sequence (M.map (make_table' f) xs `using` parTraversable rseq)
 
-make_all_tables :: (PrettyPrintable a, Ord a, Ord k) 
+make_all_tables :: (PrettyPrintable a, IsKey Table a, Ord k) 
                 => (a -> String)
                 -> Table k [(a, b, LineInfo)] 
                 -> MM (Maybe (Table k (Table a (b,LineInfo))))
 make_all_tables f xs = all_errors (M.map (make_table f) xs `using` parTraversable rseq)
 
 make_table' :: forall a b.
-               (Ord a, Show a, Scope b) 
+               (IsKey Table a, Show a, Scope b) 
             => (a -> String) 
             -> [(a,b)] 
             -> MM (Maybe (Table a b))

@@ -16,6 +16,7 @@ import UnitB.Syntax
 import Control.Lens
 import Control.Monad.Reader
 
+import Data.Hashable
 import Data.List.NonEmpty as NE (toList)
 import Data.Maybe as M
 import Data.Typeable
@@ -71,10 +72,10 @@ makeFields ''ActionDecl
 makeFields ''Witness
 makeFields ''IndexWitness
 
-data ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
+newtype ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
     deriving Typeable
 
-class ( Scope a, Typeable a, Show a )
+class ( Scope a, Typeable a, Show a, PrettyPrintable a )
         => IsExprScope a where
     toMchExpr :: Label -> a 
               -> Reader MachineP2 [Either Error (MachineP3'Field ae ce t)]
@@ -93,7 +94,7 @@ class ( Scope a, Typeable a, Show a )
 makeFields ''ExprScope
 makePrisms ''ExprScope
 
-data EvtExprScope = EvtExprScope { _evtExprScopeCell :: Cell IsEvtExpr } 
+newtype EvtExprScope = EvtExprScope { _evtExprScopeCell :: Cell IsEvtExpr } 
     deriving (Typeable)
 
 instance Eq EvtExprScope where
@@ -105,12 +106,15 @@ instance Ord EvtExprScope where
 instance Show EvtExprScope where
     show = readCell' show
 
+instance PrettyPrintable EvtExprScope where
+    pretty = readCell' pretty
 
 newtype LensT a b = LensT { getLens :: Lens' a b }
 
 
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
+      , PrettyPrintable a
       , HasLineInfo a LineInfo
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
@@ -154,6 +158,7 @@ data EventExpr = EventExpr { _eventExprs :: Table InitOrEvent EvtExprScope }
 makeLenses ''EventExpr
 makePrisms ''EventExpr
 
+instance Hashable InitEventId where
 
 data Invariant = Invariant 
         { _invariantMchExpr :: Expr
@@ -229,9 +234,8 @@ instance Eq ExprScope where
 instance Ord ExprScope where
     compare = read2CellsH' h_compare
 
-
-
-
+instance PrettyPrintable ExprScope where
+    pretty = readCell' pretty
 
 instance Scope CoarseSchedule where
     type Impl CoarseSchedule = Redundant Expr (WithDelete CoarseSchedule)

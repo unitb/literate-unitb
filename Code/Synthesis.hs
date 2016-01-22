@@ -222,7 +222,7 @@ safety_aux (Event pre wait cond evt_lbl) ps = do
     hoare_triple ("postcondition" </> as_label evt_lbl) 
         (cond:wait:pre) evt_lbl ps 
     entails "skip" (znot cond : wait : pre) ps
-    entails "forced" (pre ++ M.elems sch) [cond]
+    entails "forced" (pre ++ M.ascElems sch) [cond]
     forM_ local $ disabled (znot wait : pre)
 safety_aux (NotEvent pre evts) ps = do
     mapM_ (disabled pre) evts
@@ -478,7 +478,7 @@ runEval cmd = do
 
 event_body_code :: RawMachine -> RawEvent -> M String
 event_body_code m e = do
-        acts <- runEval $ mapM (assign_code m) $ M.elems $ e^.actions
+        acts <- runEval $ mapM (assign_code m) $ M.ascElems $ e^.actions
         -- evaluate_all 
         let (g_acts,l_acts) = (L.map snd *** L.map snd) $ L.partition fst acts
         emit "let s' = s"
@@ -517,14 +517,14 @@ report = lift . Left
 conc_init_code :: RawMachine -> M ()
 conc_init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.elems $ m!.inits
+            $ mapM (init_value_code m) $ M.ascElems $ m!.inits
         let acts = L.map snd $ L.filter fst acts' 
         emitAll $ L.map (\(v,e) -> printf "s_%s <- newTVarIO %s" (pretty v) e) acts
 
 init_code :: RawMachine -> M ()
 init_code m = do
         acts' <- runEval $ liftM concat 
-            $ mapM (init_value_code m) $ M.elems $ m!.inits
+            $ mapM (init_value_code m) $ M.ascElems $ m!.inits
         let acts = L.map snd $ L.filter (not . fst) acts' 
         emit "s' = State"
         indent 5 $ do

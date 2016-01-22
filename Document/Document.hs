@@ -72,7 +72,7 @@ list_machines :: FilePath
 list_machines fn = do
         xs <- EitherT $ parse_latex_document fn
         ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ ms!.machines
+        return $ map snd $ toAscList $ ms!.machines
 
 list_proof_obligations :: FilePath
                        -> EitherT [Error] IO [(Machine, Table Label Sequent)]
@@ -94,7 +94,7 @@ parse_machine :: FilePath -> IO (Either [Error] [Machine])
 parse_machine fn = runEitherT $ do
         xs <- EitherT $ parse_latex_document fn
         ms <- hoistEither $ all_machines xs
-        return $ map snd $ toList $ ms!.machines
+        return $ map snd $ toAscList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 
                -> Either [Error] (Table Name [LatexDoc],Table String [LatexDoc])

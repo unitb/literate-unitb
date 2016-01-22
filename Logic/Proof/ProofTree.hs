@@ -182,7 +182,7 @@ instance ProofRule Proof where
                 depend :: Table Label (Table Label ())
                 f (x,y) = (x,[(y,())])
             pos1 <- proof_po p ( composite_label [lbl,label "main goal"] )
-                $ po & nameless %~ (++ L.map fst (M.elems lemma))
+                $ po & nameless %~ (++ L.map fst (M.ascElems lemma))
             pos2 <- forM (M.toList lemma) (\(lbl2,(g,p)) -> do
                 let used = fromMaybe M.empty $ lbl2 `M.lookup` depend
                     thm  = (M.map fst lemma) `M.intersection` used
@@ -193,7 +193,7 @@ instance ProofRule Proof where
 
     proof_po    (InstantiateHyp hyp ps proof li) 
                 lbl po = do -- (Sequent ctx asm hyps goal) = do
-        if hyp `elem` M.elems (po^.named) 
+        if hyp `elem` M.ascElems (po^.named) 
                 || hyp `elem` (po^.nameless) then do
             newh <- case hyp of
                 Binder Forall vs r t _
@@ -283,7 +283,7 @@ are_fresh vs po =
                 S.unions $ 
                 L.map used_var es)
     where
-        es = (po^.goal) : (po^.nameless) ++ (M.elems $ po^.named)
+        es = (po^.goal) : (po^.nameless) ++ (M.ascElems $ po^.named)
 
 rename_all :: [(Var,Var)] -> Expr -> Expr
 rename_all [] e = e

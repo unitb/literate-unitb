@@ -3880,7 +3880,7 @@ case15 = runEitherT $ do
         m1 = ms ! "m1"
         m2 = ms ! "m2"
         exprs e = S.toList $ keysSet (view actions e) `S.union` keysSet (view guards e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map exprs . rightMap . view' events)
+    return $ (m0,m1,m2) & each %~ (M.toAscList . M.map exprs . rightMap . view' events)
 
 result15 :: Either String (ExprSet,ExprSet,ExprSet)
 result15 = Right   ( [(Left SkipEvent,[]),("evt",["act0"])]
@@ -3893,8 +3893,8 @@ case16 = runEitherT $ do
     let m0 = ms ! "m0"
         m1 = ms ! "m1"
         m2 = ms ! "m2"
-        decls e = L.map as_label $ M.keys (view indices e)
-    return $ (m0,m1,m2) & each %~ (M.toList . M.map decls . rightMap . view' events)
+        decls e = L.map as_label $ M.ascKeys (view indices e)
+    return $ (m0,m1,m2) & each %~ (M.toAscList . M.map decls . rightMap . view' events)
 
 result16 :: Either String (ExprSet,ExprSet,ExprSet)
 result16 = Right   ( [(Left SkipEvent,[]),("evt",["p"])]

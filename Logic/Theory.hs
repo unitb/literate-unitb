@@ -38,12 +38,12 @@ import Utilities.Map as M
 import Utilities.Table
 
 all_theories :: Theory -> [Theory]
-all_theories th = th : M.elems (all_theories' th)
+all_theories th = th : M.ascElems (all_theories' th)
     where
         _ = set theorySyntacticThm
 
 all_theories' :: Theory -> Table Name Theory
-all_theories' th = M.unions $ view extends th : M.elems (M.map all_theories' $ view extends th)
+all_theories' th = M.unions $ view extends th : M.ascElems (M.map all_theories' $ view extends th)
 
 basic_theory :: Theory
 basic_theory = make_theory' "basic" $ do 
@@ -88,7 +88,7 @@ basic_theory = make_theory' "basic" $ do
 
 th_notation :: Theory -> Notation
 th_notation th = th_notation' ths
-    where ths = th : elems (_extends th)
+    where ths = th : ascElems (_extends th)
 
 th_notation' :: Foldable f => f Theory -> Notation
 th_notation' ths = res
@@ -99,7 +99,7 @@ th_notation' ths = res
 theory_ctx :: Theory -> Context
 theory_ctx th = 
         merge_all_ctx $
-            (Context ts c new_fun (_defs th) dums) : L.map theory_ctx (M.elems d)
+            (Context ts c new_fun (_defs th) dums) : L.map theory_ctx (M.ascElems d)
     where
         d      = _extends th
         ts     = _types th
@@ -111,7 +111,7 @@ theory_ctx th =
     -- todo: prefix name of theorems of a z3_decoration
 theory_facts :: Theory -> Table Label Expr
 theory_facts th = 
-        merge_all (new_fact : L.map theory_facts (M.elems d))
+        merge_all (new_fact : L.map theory_facts (M.ascElems d))
     where
         d      = _extends th
         facts  = _fact th

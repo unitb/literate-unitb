@@ -513,7 +513,7 @@ gen_to_fol types lbl e = map (f &&& inst) xs
                     strip_generics $ e' m
         e' m   = substitute_type_vars (M.map as_generic m) e
         xs     = match_all pat (S.elems types)
-        f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.elems xs]
+        f xs   = composite_label [lbl, label $ concatMap z3_decoration $ M.ascElems xs]
         pat    = patterns e
 
 to_fol_ctx :: forall q n. (IsQuantifier q,IsName n)

@@ -55,6 +55,9 @@ data SkipEventId = SkipEvent
     deriving (Show,Eq,Ord,Typeable,Generic)
 
 instance NFData SkipEventId where
+instance Hashable SkipEventId where
+instance PrettyPrintable SkipEventId where
+    pretty = show
 
 type SkipOrEvent = Either SkipEventId EventId
 
@@ -357,13 +360,13 @@ changes diff = to $ \(EvtRef (_,aevt) (_,cevt)) -> create $ do
 schedules :: HasExpr expr => Getter (Event' expr) (Table Label expr)
 schedules = to $ \e -> view coarse_sched e `M.union` _fine_sched e
 
-getItems :: EventRefinement evt expr
+getItems :: (EventRefinement evt expr,Ord a)
          => Getter (EventRef expr) (Event' expr) 
          -> Getter (Event' expr) (Table a b) 
          -> Getter evt [(a,b)]
 getItems ln ln' = evt_pairs.to NE.toList.to (concatMap $ view $ ln.ln'.to M.toList)
 
-deleted' :: EventRefinement evt expr
+deleted' :: (EventRefinement evt expr,Ord a)
          => Getter (Event' expr) (Table a b) 
          -> Getter evt [(a,b)]
 deleted' = getItems deleted
@@ -371,7 +374,7 @@ deleted' = getItems deleted
 deleted :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 deleted = changes M.difference
 
-added' :: EventRefinement evt expr
+added' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
        -> Getter evt [(a,b)]
 added' = getItems added
@@ -379,7 +382,7 @@ added' = getItems added
 added :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 added = changes (flip M.difference)
 
-kept' :: EventRefinement evt expr
+kept' :: (EventRefinement evt expr,Ord a)
       => Getter (Event' expr) (Table a b) 
       -> Getter evt [(a,b)]
 kept' = getItems kept
@@ -387,7 +390,7 @@ kept' = getItems kept
 kept :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 kept = changes M.intersection
 
-total' :: EventRefinement evt expr
+total' :: (EventRefinement evt expr,Ord a)
        => Getter (Event' expr) (Table a b) 
        -> Getter evt [(a,b)]
 total' = getItems total
@@ -395,12 +398,12 @@ total' = getItems total
 total :: HasExpr expr => Getter (EventRef expr) (Event' expr)
 total = changes M.union
 
-new' :: EventRefinement evt expr
+new' :: (EventRefinement evt expr,Ord a)
      => Getter (Event' expr) (Table a b) 
      -> Getter evt [(a,b)]
 new' = getItems new
 
-old' :: EventRefinement evt expr
+old' :: (EventRefinement evt expr,Ord a)
      => Getter (Event' expr) (Table a b) 
      -> Getter evt [(a,b)]
 old' = getItems old

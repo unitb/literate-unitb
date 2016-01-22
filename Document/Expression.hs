@@ -341,7 +341,7 @@ apply_fun_op (Command _ _ _ fop) x = do
         return $ Right e
 
 suggestion :: Name -> Table Name String -> [String]
-suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toList ws
+suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
   where
     xs' = map toLower $ render xs
     p ys _ = 2 * dist xs' ys' <= (length xs' `max` length ys') + 1

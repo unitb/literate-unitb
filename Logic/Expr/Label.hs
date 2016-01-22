@@ -7,6 +7,7 @@ import Logic.Names
     -- Libraries
 import Control.DeepSeq
 
+import Data.Hashable
 import Data.List as L
 import Data.String
 import Data.String.Utils ( split )
@@ -36,6 +37,8 @@ instance IsLabel Name where
 
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
+
+instance Hashable Label where
 
 label :: String -> Label
 label s = Lbl s

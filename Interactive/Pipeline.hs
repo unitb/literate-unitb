@@ -36,11 +36,6 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
 
 import           Data.Char
-import           Data.Map as M 
-                    ( Map
-                    , insert, keys
-                    , toList, unions )
-import qualified Data.Map as M 
 import           Data.Maybe
 import qualified Data.List as L
 
@@ -49,8 +44,13 @@ import System.Directory
 import System.TimeIt
 
 import Utilities.Format
+import           Utilities.Map as M 
+                    ( Map, insert, keys
+                    , toList, unions )
+import qualified Utilities.Map as M 
 import Utilities.Partial
 import Utilities.Syntactic
+import Utilities.Table
 
     -- The pipeline is made of three processes:
     --  o the parser
@@ -65,7 +65,7 @@ data Shared = Shared
         { working    :: Observable Int
         , system     :: Observable System
         , error_list :: Observable [Error]
-        , pr_obl     :: Observable (Map (Label,Label) (Seq,Maybe Bool))
+        , pr_obl     :: Observable (Table (Label,Label) (Seq,Maybe Bool))
         , fname      :: FilePath
         , exit_code  :: MVar ()
         , parser_state :: Observable ParserState
@@ -84,7 +84,7 @@ data Params = Params
         , no_dump :: Bool
         , no_verif :: Bool
         , reset :: Bool
-        , pos :: Map Label (Map Label (Bool,Seq))
+        , pos :: Map Label (Table Label (Bool,Seq))
         , init_focus :: Maybe String
         }
 
@@ -120,8 +120,8 @@ parser (Shared { .. })  = return $ do
         parse = do
                 xs <- liftIO $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
-                    ms <- hoistEither $ mapM f $ M.elems $ s!.machines
-                    pos <- hoistEither $ mapM theory_po $ M.elems $ s!.theories
+                    ms <- hoistEither $ mapM f $ M.ascElems $ s!.machines
+                    pos <- hoistEither $ mapM theory_po $ M.ascElems $ s!.theories
                     let cs = M.fromList $ map (uncurry h) $ do
                                 (x,ys) <- zip (map label (s!.theories.to keys)) pos
                                 y <- toList ys
@@ -129,7 +129,7 @@ parser (Shared { .. })  = return $ do
                     return (ms, cs, s)
                 case xs of
                     Right (ms,cs,s) -> do
-                        let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Map Key Seq
+                        let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Table Key Seq
                             f (s0,b0) (s1,b1)
                                 | s0 == s1  = (s0,b0)
                                 | otherwise = (s1,b1)
@@ -179,7 +179,7 @@ prover (Shared { .. }) = do
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
 proof_report :: Maybe String
-             -> Map (Label,Label) (Seq,Maybe Bool) 
+             -> Table (Label,Label) (Seq,Maybe Bool) 
              -> [Error] -> Bool 
              -> [String]
 proof_report pattern outs es b = 
@@ -203,7 +203,7 @@ proof_report pattern outs es b =
         foot _ = 
                 [ format "# hidden: {0} failures" (length xs - length ys)
                 ]
-        xs = filter (failure . snd) (zip [0..] $ toList outs)
+        xs = filter (failure . snd) (zip [0..] $ M.toAscList outs)
         ys = map f $ filter (match . snd) xs
         match xs  = maybe True (\f -> f `L.isInfixOf` map toLower (show $ snd $ fst xs)) pattern
         failure x = maybe False not $ snd $ snd x

@@ -47,3 +47,10 @@ combineAll ln f xs = set ln $ F.foldl f def $ view ln <$> xs
 combineAll' :: (Foldable f, Functor f, Default a) 
             => Lens' b a -> (a -> a -> a) -> f b -> State b ()
 combineAll' ln f xs = modify $ combineAll ln f xs
+
+onBoth :: Applicative f
+       => (a0 -> f a1)
+       -> (b0 -> f b1)
+       -> (a0,b0)
+       -> f (a1,b1)
+onBoth f g (x,y) = (,) <$> f x <*> g y

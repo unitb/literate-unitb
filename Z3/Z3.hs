@@ -208,7 +208,7 @@ z3_code po =
         ++ map Decl (decl d)
         ++ zipWith (\x y -> Assert x $ Just $ "s" ++ show y) 
                 assume [0..]
-        ++ concatMap f (zip (M.toList hyps) [0..])
+        ++ concatMap f (zip (M.toAscList hyps) [0..])
         ++ [Assert (znot assert) $ Just "goal"]
         ++ [CheckSat]
         ++ [] )

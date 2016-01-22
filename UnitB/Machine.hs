@@ -89,7 +89,7 @@ instance Show1 MachineBase where
     showsPrec1 n m = showsPrec n m
 
 newtype MachineId = MId { getMId :: Name }
-    deriving (Eq,Ord,Typeable,Generic)
+    deriving (Eq,Ord,Typeable,Generic,Hashable)
 
 instance PrettyPrintable MachineId where
     pretty = render . getMId
@@ -112,7 +112,7 @@ data DocItem =
         | DocProg Label
     deriving (Eq,Ord,Generic)
 
-
+instance Hashable DocItem where
 
 instance Show expr => Show (EventTable expr) where
     show (EventTable m) = show m
@@ -409,7 +409,7 @@ all_notation m = flip precede logical_notation
         $ L.foldl OP.combine empty_notation 
         $ L.map (view Th.notation) th
     where
-        th = (m!.theory) : elems (_extends $ m!.theory)
+        th = (m!.theory) : ascElems (_extends $ m!.theory)
 
 instance (HasExpr expr) => Named (Machine' expr) where
     type NameOf (Machine' expr) = Name

@@ -85,10 +85,10 @@ produce_summaries :: FileSystem io
 produce_summaries path sys = do
         createDirectoryIfMissing True path'
         runDoc (do
-            forM_ (M.elems ms) $ \m -> do
+            forM_ (M.ascElems ms) $ \m -> do
                 machine_summary sys m
                 properties_summary m
-                forM_ (M.toList $ nonSkipUpwards m) $ \(lbl,evt) -> do
+                forM_ (M.toAscList $ nonSkipUpwards m) $ \(lbl,evt) -> do
                     event_summary m lbl evt
             ) path
     where
@@ -257,20 +257,20 @@ variable_sum m = section (keyword "variables") $
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = m!.props
-        section kw_inv $ put_all_expr_with (makeDoc .= comment_of m . DocInv) "" (M.toList $ prop^.inv) 
+        section kw_inv $ put_all_expr_with (makeDoc .= comment_of m . DocInv) "" (M.toAscList $ prop^.inv) 
     where
         kw_inv = "\\textbf{invariants}"
         
 invariant_thm_sum :: PropertySet -> M ()
 invariant_thm_sum prop = 
-        section kw_thm $ put_all_expr "" (M.toList $ prop^.inv_thm)
+        section kw_thm $ put_all_expr "" (M.toAscList $ prop^.inv_thm)
     where
         kw_thm = "\\textbf{invariants} (theorems)"
 
 liveness_sum :: Machine -> M ()
 liveness_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toList $ prop^.progress) 
+        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.progress) 
     where
         kw = "\\textbf{progress}"
         toString (LeadsTo _ p q) = do
@@ -280,7 +280,7 @@ liveness_sum m = do
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
-        section kw $ put_all_expr' toString "" (M.toList $ prop^.safety)
+        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.safety)
     where
         kw = "\\textbf{safety}"
         toString (Unless _ p q) = do
@@ -291,7 +291,7 @@ safety_sum prop = do
 transient_sum :: Machine -> M ()
 transient_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toList $ prop^.transient) 
+        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.transient) 
     where
         kw = "\\textbf{transient}"
         toString (Tr _ p evts hint) = do -- do
@@ -319,7 +319,7 @@ transient_sum m = do
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
         let prop = m!.props
-        section kw $ put_all_expr' toString "" (M.toList $ prop^.constraint)
+        section kw $ put_all_expr' toString "" (M.toAscList $ prop^.constraint)
     where
         kw = "\\textbf{safety}"
         toString (Co _ p) = do
@@ -388,7 +388,7 @@ index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\te
     where
         ind 
             | M.null $ e^.indices = ""
-            | otherwise           = "[" ++ intercalate "," (L.map (render . view name) $ M.elems $ e^.indices) ++ "]"
+            | otherwise           = "[" ++ intercalate "," (L.map (render . view name) $ M.ascElems $ e^.indices) ++ "]"
 
 csched_sum :: EventId -> EventMerging' -> M ()
 csched_sum lbl e = do
@@ -403,7 +403,7 @@ csched_sum lbl e = do
             | lbl == "default" = return $ format "(\\ref{{0}}/default)" (eid :: EventId)
             | otherwise        = f eid lbl
         kw = "\\textbf{during}"    
-        sch = M.toList $ e^.new.coarse_sched --coarse $ new_sched e
+        sch = M.toAscList $ e^.new.coarse_sched --coarse $ new_sched e
         del_sch = concatMap (fmap M.toList $ view $ deleted.coarse_sched) $ e^.evt_pairs.to NE.toList
         -- def = M.singleton (label "default") zfalse
 
@@ -416,14 +416,14 @@ fsched_sum lbl e = section kw $ do
     where
         kw = "\\textbf{upon}"
         xs = e^.new' fine_sched -- fine $ new_sched e
-        del_sch = concatMap (fmap M.toList $ view $ deleted.fine_sched) $ e^.evt_pairs.to NE.toList -- fine $ deleted_sched e
+        del_sch = concatMap (fmap M.toAscList $ view $ deleted.fine_sched) $ e^.evt_pairs.to NE.toList -- fine $ deleted_sched e
 
 param_sum :: EventMerging' -> M ()
 param_sum e
     | M.null $ e^.params  = return ()
     | otherwise           = do
         tell ["\\textbf{any} " 
-            ++ intercalate "," (L.map (render . view name) $ M.elems $ e^.params)]
+            ++ intercalate "," (L.map (render . view name) $ M.ascElems $ e^.params)]
 
 guard_sum :: EventId -> EventMerging' -> M ()
 guard_sum lbl e = section kw $ do
@@ -439,7 +439,7 @@ act_sum lbl e = section kw $ do
         when show_removals $
             local (const True)
                 $ put_all_expr' put_assign lbl $ e^.deleted' actions -- del_acts e
-        put_all_expr' put_assign lbl $ M.toList $ e^.actions
+        put_all_expr' put_assign lbl $ M.toAscList $ e^.actions
     where 
         kw = "\\textbf{begin}"
         put_assign (Assign v e) = do

@@ -146,7 +146,7 @@ checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
         xs  = snd $ execRWS (travAsserts >> travDefs) ctx ()
 
 expressions :: Getter (GenSequent n t q) [AbsExpr n t q]
-expressions = to $ \s -> (s^.goal) : (s^.nameless) ++ (M.elems $ s^.named)
+expressions = to $ \s -> (s^.goal) : (s^.nameless) ++ (M.ascElems $ s^.named)
 
 leftMono :: ArgDep a -> Maybe a
 leftMono (Side l _) = l
@@ -198,13 +198,13 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
             indent = over traverseLines (" " ++)
             asms   = map indent $ 
                     ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ MM.mapMaybe f $ toList ss)]
-                    ++ (map pretty $ elems fs)
-                    ++ (map pretty $ elems ds)
-                    ++ (map pretty $ elems vs)
+                    ++ (map pretty $ ascElems fs)
+                    ++ (map pretty $ ascElems ds)
+                    ++ (map pretty $ ascElems vs)
                     ++ map pretty_print' hs
             goal' = indent $ pretty_print' g
             Context ss vs fs ds _ = s^.context
-            hs = elems (s^.named) ++ s^.nameless
+            hs = ascElems (s^.named) ++ s^.nameless
             g  = s^.goal
             f (_, IntSort)  = Nothing
             f (_, BoolSort) = Nothing
@@ -405,7 +405,7 @@ entailment s0 s1 = (po0,po1)
         po0 = empty_sequent & context .~ ctx
                             & goal    .~ xp0 `zimplies` xp1 
         po1 = s1 & context .~ ctx
-                 & goal    .~ zall (s0^.nameless ++ elems (s0^.named))
+                 & goal    .~ zall (s0^.nameless ++ ascElems (s0^.named))
 
 instance (NFData t,NFData q) => NFData (AbsSequent t q)
 instance NFData SyntacticProp

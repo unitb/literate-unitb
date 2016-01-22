@@ -87,7 +87,7 @@ existential _ [] cmd = cmd
 existential asrt vs (POGen cmd) = do
         let g (_, Sequent ctx _ h0 h1 goal) = do
                     vs <- f ctx
-                    return $ zforall vs ztrue $ zall (h0 ++ M.elems h1) `zimplies` goal
+                    return $ zforall vs ztrue $ zall (h0 ++ M.ascElems h1) `zimplies` goal
             f (Context s vs fs def _) 
                 | not $ M.null s = error "existential: cannot add sorts in existentials"
                 -- |    not (M.null fs) 
@@ -95,7 +95,7 @@ existential asrt vs (POGen cmd) = do
                 | otherwise = do
                     E.definitions %= merge def
                     E.functions %= merge fs
-                    return $ M.elems vs
+                    return $ M.ascElems vs
             -- f xs = [(tag, zexists vs ztrue $ zall $ map snd xs)]
         ss <- POGen 
             $ censor (const []) $ listen 

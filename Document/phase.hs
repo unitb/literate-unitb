@@ -112,7 +112,7 @@ machineCmd cmd f = Pipeline m_spec empty_spec g
 
 cmdFun :: forall a b c d. 
               ( IsTuple LatexArg b
-              , Ord c )
+              , IsKey Table c )
            => (b -> c -> d -> M a) 
            -> Cmd
            -> c -> (Table c d) -> MM (Maybe a)
@@ -142,7 +142,7 @@ machineEnv env f = Pipeline m_spec empty_spec g
         g = collect param (envFun f)
 
 envFun :: forall a b c d. 
-              ( IsTuple LatexArg b, Ord c )
+              ( IsTuple LatexArg b, IsKey Table c )
            => (b -> LatexDoc -> c -> d -> M a) 
            -> Env
            -> c -> (Table c d) -> MM (Maybe a)
@@ -192,7 +192,7 @@ data Collect a b k t = Collect
     -- , getContent :: b -> a
     , tag :: k }
 
-collect :: (Ord k, Monoid z, Ord c, Show c)
+collect :: (IsKey Table k, Monoid z, IsKey Table c, Show c)
         => Collect a b k c
         -> (b -> c -> d -> MM (Maybe z)) 
         -> d
@@ -210,7 +210,7 @@ collect p f arg = do
     -- we want to encode phases as maps to 
     -- phase records and extract fields
     -- as maps to value
-onMap :: Ord k => Lens' a b -> Lens' (Table k a) (Table k b)
+onMap :: IsKey Table k => Lens' a b -> Lens' (Table k a) (Table k b)
 onMap ln f ma = M.intersectionWith (flip $ set ln) ma <$> mb' 
     where
         mb  = M.map (view ln) ma 
@@ -227,8 +227,8 @@ onMap' ln = to $ M.map $ view ln
 infixl 3 <.>
 
 {-# SPECIALIZE (<.>) :: (Ord a,Default b) => Map a (b -> c) -> Map a b -> Map a c #-}
-{-# SPECIALIZE (<.>) :: (Ord a,Default b) => Table a (b -> c) -> Table a b -> Table a c #-}
-(<.>) :: (Ord a,Default b,Functor (map a),IsMap map,IsKey map a) 
+{-# SPECIALIZE (<.>) :: (IsKey Table a,Default b) => Table a (b -> c) -> Table a b -> Table a c #-}
+(<.>) :: (Default b,Functor (map a),IsMap map,IsKey map a) 
       => map a (b -> c) -> map a b -> map a c
 (<.>) mf mx = uncurry ($) <$> differenceWith g ((,def) <$> mf) mx
     where
@@ -271,7 +271,7 @@ eventDifference f eid field = pEventRef . to f'
             es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
             f (view field <$> es) <$> (view field <$> rightInfo cevt)
 
-eventDifferenceWithId :: (HasMachineP1 phase,Ord label,AEvtType phase ~ CEvtType phase)
+eventDifferenceWithId :: (HasMachineP1 phase,IsKey Table label,AEvtType phase ~ CEvtType phase)
                       => (   Table label (First a,NonEmpty SkipOrEvent) 
                           -> Table label (First a,NonEmpty SkipOrEvent) 
                           -> Table label (First b,c))
@@ -283,7 +283,7 @@ eventDifferenceWithId comp eid field = eventDifference f eid (to $ field' field)
         f old new = M.unionsWith (<>) (NE.toList old) `comp` new
         field' ln e = M.map ((,view eEventId e :| []).First) $ view ln e
 
-evtMergeAdded :: (HasMachineP1 phase, Ord label,AEvtType phase ~ CEvtType phase)
+evtMergeAdded :: (HasMachineP1 phase, M.IsKey Table label,AEvtType phase ~ CEvtType phase)
               => EventId
               -> Getting (Table label a) (AEvtType phase) (Table label a)
               -> Getter phase (Table label a)
@@ -383,7 +383,7 @@ pEventMerge' = pEventRef.to f
                 e  <- rightInfo v
                 return $ distr (k,(e,es))
 
-traverseFilter :: Ord k => (a -> Bool) -> Traversal' (Table k a) (Table k a)
+traverseFilter :: M.IsKey Table k => (a -> Bool) -> Traversal' (Table k a) (Table k a)
 traverseFilter p f m = M.union <$> f m' <*> pure (m `M.difference` m')
     where
         m' = M.filter p m
@@ -513,7 +513,7 @@ aliases ln0 ln1 = lens getter $ flip setter
                 y = view ln1 z
         setter x = set ln0 x . set ln1 x
 
-inheritWith' :: Ord k 
+inheritWith' :: M.IsKey Table k 
              => (base -> conc) 
              -> (k -> conc -> abstr)
              -> (conc -> abstr -> conc)
@@ -527,7 +527,7 @@ inheritWith' decl inh (++) (Hierarchy _xs es) m = m2 -- _ $ L.foldl f (M.map dec
             inh k <$> p `M.lookup` m2
         m2 = M.mapWithKey (\k c -> fromMaybe c ((c ++) <$> (prec k))) m1
 
-inheritWithAlt :: Ord k 
+inheritWithAlt :: M.IsKey Table k 
              => (base -> conc) 
              -> (k -> conc -> abstr)
              -> (conc -> abstr -> conc)
@@ -540,7 +540,7 @@ inheritWithAlt decl inh (++) (Hierarchy xs es) m = L.foldl f (M.map decl m) xs
                  Nothing -> m
         app ixs k dxs = dxs ++ inh k ixs
 
-inheritWith :: Ord k 
+inheritWith :: M.IsKey Table k 
             => (base -> conc) 
             -> (conc -> abstr)
             -> (conc -> abstr -> conc)
@@ -548,7 +548,7 @@ inheritWith :: Ord k
             -> Table k base -> Table k conc
 inheritWith decl inh = inheritWith' decl (const inh)
 
-instance (Ord a, Arbitrary a) => Arbitrary (Hierarchy a) where
+instance (Ord a,Hashable a,Arbitrary a) => Arbitrary (Hierarchy a) where
     arbitrary = do
         xs <- L.nub <$> arbitrary
         let ms = M.fromList ys :: Map Int a
@@ -579,7 +579,7 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
             return Nothing -- (error "topological_order")
         msg = "A cycle exists in the {0}"
 
-fromList' :: Ord a => [a] -> Table a ()
+fromList' :: IsKey Table a => [a] -> Table a ()
 fromList' xs = M.fromList $ L.zip xs $ L.repeat ()
 
 inherit :: Hierarchy MachineId -> Table MachineId [b] -> Table MachineId [b]

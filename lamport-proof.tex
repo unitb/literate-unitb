@@ -1,0 +1,47 @@
+\documentclass[12pt]{article}
+\usepackage[]{color} %used for font color
+\usepackage{amssymb} %maths
+\usepackage{amsmath} %maths
+\usepackage[utf8]{inputenc} %useful to type directly diacritic characters
+
+\usepackage{enumitem}
+\usepackage{amsthm}
+
+\newcounter{prooflevel}
+
+\newenvironment{liveness}[2]
+{	\begin{proof}{#1} by #2
+	\begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+	\addtocounter{prooflevel}{1}
+}
+{	\end{enumerate}
+	\end{proof}
+	\addtocounter{prooflevel}{-1}
+}
+
+\newenvironment{step}[1]
+{	\\ by #1
+	\begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+	\addtocounter{prooflevel}{1}}
+{	\end{enumerate}
+	\addtocounter{prooflevel}{-1}
+}
+
+\begin{document}
+
+\begin{liveness}{suff}{PSP}
+\item A
+  \begin{step}{monotonicity}
+    \item C 
+  \begin{step}{trading}
+    \item D
+    \item G
+  \end{step}
+    \item H
+  \end{step}
+\item B
+\item E
+\item F
+\end{liveness}
+
+\end{document}

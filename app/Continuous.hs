@@ -27,7 +27,6 @@ import Data.Time
 import Data.Typeable
 
 import qualified Data.ByteString as BS
-import qualified Data.Map as M hiding ((!))
 import           Data.Maybe
 import qualified Data.Serialize as Ser
 
@@ -36,6 +35,7 @@ import System.Directory
 import System.Environment
 import System.TimeIt
 
+import qualified Utilities.Map as M hiding ((!))
 import Utilities.Partial
 import Utilities.Syntactic
 
@@ -104,7 +104,7 @@ check_theory (name,th) = do
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po ! k) (\b -> (b,x)) $ M.lookup k res
         put param { pos = M.insert (label name) p_r $ pos param }
-        let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toList res
+        let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toAscList res
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where
         success True  = "  o  "
@@ -131,7 +131,7 @@ check_file = do
         r <- liftIO $ runEitherT $ do
             s <- EitherT $ parse_system $ path param
             lift $ produce_summaries (path param) s
-            return (M.elems $ s!.machines, M.toList $ s!.theories)
+            return (M.ascElems $ s!.machines, M.toAscList $ s!.theories)
         case r of
             Right (ms,ts) -> do
                 if no_verif param then return ()

@@ -63,17 +63,17 @@ newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
 (##) :: k -> a -> MapSyntax k a ()
 x ## y = MapSyntax (tell [(x,y)])
 
-runMapWith :: (Ord k) 
+runMapWith :: (M.IsKey Table k) 
            => (a -> a -> a) 
            -> MapSyntax k a b 
            -> Table k a
 runMapWith f (MapSyntax cmd) = M.fromListWith f $ execWriter cmd
 
-runMap :: (Ord k, Scope a) 
+runMap :: (M.IsKey Table k, Scope a) 
        => MapSyntax k a b 
        -> Table k a
 runMap = runMapWith merge_scopes
-runMap' :: (Ord k) 
+runMap' :: (M.IsKey Table k) 
         => MapSyntax k a b 
         -> Table k a
 runMap' = runMapWith const
@@ -737,7 +737,7 @@ case9 = f <$> quickCheckResult prop_inherit_equiv
 result9 :: Bool
 result9 = True
 
-mkMap :: (Arbitrary a,Ord k) => Hierarchy k -> Gen (Table k [a])
+mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
 mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
 
 --see :: Map ProgId ProgressProp

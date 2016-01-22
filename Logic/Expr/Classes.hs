@@ -17,7 +17,6 @@ import Data.Typeable.Lens
 import Utilities.Map  as M
 import Utilities.Table as M
 
-
 class HasName a n | a -> n where
     name :: Getter a n
 
@@ -148,14 +147,14 @@ instance FromList a b => FromList (b -> a) b where
 z3_escape :: String -> InternalName
 z3_escape = fromString''
 
-insert_symbol :: Ord n => HasName a n => a -> Table n a -> Table n a
+insert_symbol :: IsKey Table n => HasName a n => a -> Table n a -> Table n a
 insert_symbol x = M.insert (x^.name) x
 
-symbol_table' :: (HasName b n, Foldable f,Ord n) 
+symbol_table' :: (HasName b n, Foldable f,IsKey Table n) 
               => (a -> b) -> f a -> Table n a
 symbol_table' f xs = fromList $ L.map (as_pair' f) $ F.toList xs
 
-symbol_table :: (HasName a n, Foldable f,Ord n) 
+symbol_table :: (HasName a n, Foldable f,M.IsKey Table n) 
              => f a -> Table n a
 symbol_table = symbol_table' id
 

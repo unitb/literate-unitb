@@ -423,7 +423,7 @@ vars = symbol_table [var_x,var_y]
 inc_event_m0 :: Event
 inc_event_m0 = empty_event { 
     _actions = fromList [
-                ("a0",BcmSuchThat (M.elems vars) 
+                ("a0",BcmSuchThat (M.ascElems vars) 
                     $ c $ [expr| x' = x+2 |] . (is_step .~ True)) ] }
 
 inc_event_m1 :: Event
@@ -431,9 +431,9 @@ inc_event_m1 = create $ do
         coarse_sched .= singleton "c0" (c [expr| x = y |])
         fine_sched .= singleton "f0" (c [expr| x = y |])
         actions .= fromList [
-                    ("a0",BcmSuchThat (M.elems vars) $ 
+                    ("a0",BcmSuchThat (M.ascElems vars) $ 
                             c $ [expr| x' = x + 2 |] . (is_step .~ True)),
-                    ("a1",BcmSuchThat (M.elems vars) $ 
+                    ("a1",BcmSuchThat (M.ascElems vars) $ 
                             c $ [expr| y' = y + 1 |] . (is_step .~ True)) ] 
 
 m0_machine :: Machine

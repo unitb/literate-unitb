@@ -256,9 +256,9 @@ enter_evt = flip execState empty_event $ do
             [  ("grd1", c [expr| \neg t \in in |])
             ]
      actions .= fromList
-            [  ("a1", BcmSuchThat (M.elems vars)
+            [  ("a1", BcmSuchThat (M.ascElems vars)
                     (c $ [expr| in' = in \bunion \{ t \} |] . (is_step .~ True)))
-            ,  ("a2", BcmSuchThat (M.elems vars)
+            ,  ("a2", BcmSuchThat (M.ascElems vars)
                     (c $ [expr| loc' = loc \1| t \fun ent |] . (is_step .~ True)))
             ]
 
@@ -270,9 +270,9 @@ leave_evt = flip execState empty_event $ do
             [  ("grd0", c [expr| loc.t = ext \1\land t \in in |] )
             ]
     actions .= fromList 
-            [  ("a0", BcmSuchThat (M.elems vars)
+            [  ("a0", BcmSuchThat (M.ascElems vars)
                     (c $ [expr| in' = in \1\setminus \{ t \} |] . (is_step .~ True)))
-            ,  ("a3", BcmSuchThat (M.elems vars)
+            ,  ("a3", BcmSuchThat (M.ascElems vars)
                     (c $ [expr| loc' = \{t\} \domsub loc |] . (is_step .~ True)))
             ] 
 

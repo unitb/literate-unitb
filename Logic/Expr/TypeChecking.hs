@@ -106,7 +106,7 @@ checkTypes c (Lift e t) = do
 checkTypes c' (Binder q vs' r t _) = do
     let c  = newContext vs' c'
         ns = map (view name) vs' :: [String]
-        vs = M.elems $ newDummies vs' c'
+        vs = M.ascElems $ newDummies vs' c'
     (r'',t'') <- parCheck 
         (zcast bool $ checkTypes c r) 
         (zcast (termType q) $ checkTypes c t)

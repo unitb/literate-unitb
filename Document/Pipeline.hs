@@ -21,6 +21,7 @@ import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
 
+import Data.Hashable
 import Data.List as L
 import Data.Proxy
 import Data.String
@@ -52,7 +53,7 @@ data Input = Input
     } deriving Show
 
 newtype ContextId = CId { getCId :: String }
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Hashable)
 
 instance Show ContextId where
     show = getCId

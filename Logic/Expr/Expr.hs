@@ -27,6 +27,7 @@ import Control.Lens hiding (rewrite,Context,elements
                            ,Traversable1(..))
 
 import           Data.Data
+import           Data.Hashable
 import           Data.List as L
 import           Data.Serialize
 import qualified Data.Set as S
@@ -93,6 +94,15 @@ instance Functor3 GenExpr where
 instance Foldable1 (GenExpr a b) where
 instance Foldable2 (GenExpr a) where
 instance Foldable3 GenExpr where
+
+instance (Hashable n,Hashable t) => Hashable (AbsFun n t)
+instance Hashable Lifting
+instance Hashable QuantifierWD
+instance Hashable QuantifierType
+instance Hashable HOQuantifier
+instance Hashable Value
+instance (Hashable n,Hashable t,Hashable a,Hashable q) 
+        => Hashable (GenExpr n t a q) where
 
 instance Traversable1 (GenExpr a b) where
     traverse1 _ (Word v) = pure $ Word v
@@ -655,7 +665,7 @@ instance HasScope Expr where
         areVisible [vars,constants] free e
 
 {-# SPECIALIZE merge :: (Ord k,Eq a,Show k,Show a) => M.Map k a -> M.Map k a -> M.Map k a #-}
-{-# SPECIALIZE merge :: (Ord k,Eq a,Show k,Show a) => Table k a -> Table k a -> Table k a #-}
+{-# SPECIALIZE merge :: (M.IsKey Table k,Eq a,Show k,Show a) => Table k a -> Table k a -> Table k a #-}
 merge :: (M.IsKey map k, Eq a, Show k, Show a,M.IsMap map)
           => map k a -> map k a -> map k a
 merge m0 m1 = M.unionWithKey f m0 m1

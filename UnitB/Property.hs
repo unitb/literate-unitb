@@ -14,6 +14,7 @@ import Control.Lens hiding (Const,elements)
 
 import Data.Default
 import Data.Foldable
+import Data.Hashable
 import Data.Semigroup
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
@@ -64,7 +65,7 @@ data Direction = Up | Down
     deriving (Eq,Show,Generic)
 
 newtype EventId = EventId Label
-    deriving (Eq,Ord,Typeable,Generic)
+    deriving (Eq,Ord,Typeable,Generic,Hashable,PrettyPrintable)
 
 instance Arbitrary EventId where
     arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
@@ -97,7 +98,7 @@ data PropertySet' expr = PS
     deriving (Eq,Functor,Foldable,Traversable,Generic,Show)
 
 newtype ProgId = PId { getProgId :: Label }
-    deriving (Eq,Ord,IsString,Typeable,Generic)
+    deriving (Eq,Ord,IsString,Typeable,Generic,Hashable)
 
 instance IsLabel ProgId where
     as_label (PId lbl) = lbl
@@ -167,7 +168,7 @@ instance Default (PropertySet' expr) where
 hasClashes :: PropertySet' expr -> PropertySet' expr -> PropertySet' expr
 hasClashes x y = getIntersection $ Intersection x <> Intersection y
 
-noClashes :: Show expr => PropertySet' expr -> PropertySet' expr -> Invariant ()
+noClashes :: (Show expr) => PropertySet' expr -> PropertySet' expr -> Invariant ()
 noClashes p0 p1 = allTables inv (hasClashes p0 p1) >> return ()
     where
         inv msg m = withPrefix msg $ do

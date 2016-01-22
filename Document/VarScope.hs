@@ -139,7 +139,7 @@ instance Scope EvtDecls where
                 | s == (x^.declSource) = Just x
                 | otherwise = Nothing
     make_inherited (Evt m) = Just $ Evt $ M.map (set declSource Inherited) m
-    error_item (Evt m) = head' $ elems $ mapWithKey msg m
+    error_item (Evt m) = head' $ ascElems $ mapWithKey msg m
         where
             head' [x] = x
             head' [] = error "VarScope Scope VarScope: head' []"  

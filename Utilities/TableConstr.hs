@@ -22,7 +22,10 @@ import PseudoMacros
 import System.IO
 
 import Utilities.Map as M (Map,fromList,union,IsMap)
-import Utilities.Table
+import Utilities.Table 
+import Utilities.Table.HashKey
+import Utilities.Table.BucketTable
+import Utilities.Table.HashMap
 
 prefix :: String -> Name -> Name
 prefix p n = mkName $ prefix' p n
@@ -166,13 +169,22 @@ instance (GAllTables c) => GAllTables (D1 d c) where
 instance (GAllTables c) => GAllTables (C1 d c) where
     gAllTables f tag (M1 x) = M1 <$> gAllTables f tag x
 
-instance (Show k,Show b) => GAllTables (K1 a (Table k b)) where
+instance (Show k,Show b) => GAllTables (K1 a (MapWithHash k b)) where
+    gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
+    gAllTables _ Nothing (K1 x) = K1 <$> pure x
+
+instance (Show k,Show b) => GAllTables (K1 a (HashTable k b)) where
+    gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
+    gAllTables _ Nothing (K1 x) = K1 <$> pure x
+
+instance (Show k,Show b) => GAllTables (K1 a (HashMap k b)) where
     gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
     gAllTables _ Nothing (K1 x) = K1 <$> pure x
 
 instance (Show k,Show b) => GAllTables (K1 a (Map k b)) where
     gAllTables f (Just tag) (K1 x) = K1 <$> f tag x
     gAllTables _ Nothing (K1 x) = K1 <$> pure x
+
 instance (GAllTables a, GAllTables b) 
         => GAllTables (a :*: b) where
     gAllTables f tag (x :*: y) = (:*:) <$> gAllTables f tag x <*> gAllTables f tag y

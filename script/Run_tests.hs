@@ -48,52 +48,17 @@ run phase cmd  = do
 
 general :: IO ExitCode
 general = do
---        let compile x = readProcessWithExitCode "ghc" (x ++ 
---                        [ "--make"
---                        , "-W"
---                        , "-Werror"
---                        , "-hidir", "interface"
---                        , "-odir", "bin"]) ""
---        rs <- mapM compile 
---            [ ["test.hs","-threaded"]
---            , ["continuous.hs","-threaded"]
---            , ["verify.hs"]
---            , ["periodic.hs"]
---            , ["compile.hs"]
---            , ["run_tests.hs"] ]
---        let (cs,_,xs) = unzip3 rs
---            c1 = foldl success ExitSuccess cs
---        forM_ (concatMap lines xs) putStrLn
         let c1 = ExitSuccess
         case c1 of
             ExitSuccess -> do
                 path <- getCurrentDirectory
-                build path compile_all
+                build path (cabal_build "test")
+                --build path compile_all
                 putStrLn "Running test ..."
                 hFlush stdout
---                (_,hout,_,ps) <- runInteractiveCommand "./test"
---                hSetBinaryMode hout False
-----                (_, Just out, _, ps) <- createProcess (shell "./test") { std_out = CreatePipe }
---                out                  <- hGetContents hout
-----                (c1,out,_) <- readProcessWithExitCode "./test" [] ""
---                withFile "result.txt" WriteMode $ \h -> do
---                    (_, Just hreport, _, p2) <- createProcess 
---                        (shell "wc -l $(git ls-files | grep '.*\\.hs$') | sort -r | head -n 6")
---                            { std_out = CreatePipe }
---                    report <- hGetContents hreport
---                    let lns = lines out ++ ["Lines of Haskell code:"] ++ lines report
---                    if null out 
---                        then putStrLn "NULL" 
---                        else putStrLn "not NULL"
---                    forM_ lns $ \ln -> do
---                        putStrLn ln
---                        hPutStrLn h ln
---                        hFlush stdout
---                        hFlush h
---                    waitForProcess p2
---                c1 <- waitForProcess ps
                 t0 <- getCurrentTime
-                c1 <- p_system "bin/test > result.txt"
+                --c1 <- p_system "bin/test > result.txt"
+                c1 <- system "cabal run test > result.txt"
                 t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
                 zs' <- mapM (liftM (length . lines) . readFile) ys'
@@ -102,7 +67,6 @@ general = do
                     n = maximum $ map (length . show) zs
                     pad xs = replicate (3 + n - length xs) ' ' ++ xs ++ " "
                     f (n,xs) = pad (show n) ++ xs
-                -- map (pad . show) 
                 appendFile "result.txt"
                     $ unlines 
                     $ "Lines of Haskell code:"
@@ -111,7 +75,6 @@ general = do
                             $ filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs ys)
                       ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) (60 :: Int) in 
                                 printf "%dm %ds" m s)]
-                -- system "wc -l $(git ls-files | grep '.*hs$') | sort -r | head -n 6 >> result.txt"
                 xs <- readFile "result.txt"
                 putStrLn xs
                 return c1
@@ -120,9 +83,6 @@ general = do
                 putStrLn   "*** FAILURE ***"
                 putStrLn   "***************"
                 return c1
---    where
---        success ExitSuccess ExitSuccess = ExitSuccess
---        success _ _                     = ExitFailure 0
 
 specific :: String -> Maybe String -> IO ()
 specific mod_name fun_name = do

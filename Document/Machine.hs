@@ -147,7 +147,7 @@ fieldB f (Right x) = (Left . (x,)) <$> f x
 
 parseEvtExprChoice :: ( HasInhStatus decl (InhStatus expr)
                       , HasDeclSource decl DeclSource 
-                      , Ord label)
+                      , IsKey Table label)
               => Lens' MachineP3 (Table EventId (Table label expr))
               -> Lens' MachineP3 (Table EventId (Table label expr))
               -> ((Label,decl) -> label)
@@ -157,7 +157,7 @@ parseEvtExprChoice oldLn newLn f = parseEvtExprChoice' oldLn newLn newLn f
 
 parseEvtExprChoice' :: ( HasInhStatus decl (InhStatus expr)
                       , HasDeclSource decl DeclSource 
-                      , Ord label)
+                      , IsKey Table label)
               => Lens' MachineP3 (Table EventId (Table label expr))
               -> Lens' MachineP3 (Table EventId (Table label expr))
               -> Lens' MachineP3 (Table EventId (Table label expr))
@@ -171,7 +171,7 @@ parseEvtExprChoice' oldLn delLn newLn = parseEvtExprChoiceImp
 
 parseEvtExprChoiceImp :: ( HasInhStatus decl (InhStatus expr)
                          , HasDeclSource decl DeclSource 
-                         , Ord label)
+                         , IsKey Table label)
               => Maybe (LensT MachineP3 (Table EventId (Table label expr)))
               -> Maybe (LensT MachineP3 (Table EventId (Table label expr)))
               -> Maybe (LensT MachineP3 (Table EventId (Table label expr)))
@@ -195,14 +195,14 @@ parseEvtExprChoiceImp oldLn delLn newLn f xs = do
     delLn `assign` doubleUnion (g del_xs)
     newLn `assign` doubleUnion (g new_xs)
 
-doubleUnion :: (Ord k0,Ord k1)
+doubleUnion :: (IsKey Table k0,IsKey Table k1)
             => [(k0,[(k1,a)])]
             -> Table k0 (Table k1 a)
             -> Table k0 (Table k1 a)
 doubleUnion xs = M.unionWith M.union (M.map M.fromList $ M.fromListWith (++) xs)
 
 
-parseEvtExprDefault :: (HasEvtExpr decl expr, Ord label)
+parseEvtExprDefault :: (HasEvtExpr decl expr, IsKey Table label)
               => Lens' MachineP3 (Table EventId (Table label expr))
               -> ((Label,decl) -> label)
               -> [(Maybe EventId, [(Label, decl)])]
@@ -213,7 +213,7 @@ parseEvtExprDefault ln f xs = do
         xs'' = M.map M.fromList $ M.fromListWith (++) xs'
     ln %= flip (M.unionWith M.union) xs''
 
-parseInitExpr :: (HasEvtExpr decl expr, Ord label)
+parseInitExpr :: (HasEvtExpr decl expr, M.IsKey Table label)
               => Lens' MachineP3 (Table label expr)
               -> ((Label,decl) -> label)
               -> [(Maybe EventId, [(Label, decl)])]
