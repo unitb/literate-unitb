@@ -5,7 +5,8 @@
 			"cmd":
 			[
 				"runghc",
-				"$project_path/display_errors.hs",
+				"-isrc",
+				"$project_path/script/display_errors.hs",
 				"$file",
 				"$project_path",
 				"ghc_errors.txt"
@@ -47,11 +48,15 @@
 				"bin",
 				"interface",
 				"gui",
-				"eifgens",
-				"src"
+				"eifgens"
 			],
 			"path": "."
-		}
+		},
+		{ "path" : "src" },
+		{ "path" : "suite" },
+		{ "path" : "script" },
+		{ "path" : "app" },
+		{ "path" : "Tests" }
 	],
 	"settings":
 	{ "translate_tabs_to_spaces": true }

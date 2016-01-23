@@ -21,7 +21,6 @@ import Utilities.RandomTree
 import Control.Lens hiding (Context,elements,Const)
 import Control.Monad
 import Control.Monad.Reader
--- import Control.Monad.State
 
 import qualified Data.List as L
 import qualified Data.Set as S
@@ -36,7 +35,6 @@ import qualified Utilities.Map as M
 import           Utilities.Partial
 import           Utilities.Syntactic
 import           Utilities.Table
--- import           Utilities.QuickCheckReport
 
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk

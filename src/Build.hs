@@ -38,7 +38,7 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ inf
+        , "-i" ++ intercalate ":" [inf,"suite","src"]
         , "-hidir" ++ inf
         , "-W"
         , "-XTupleSections"
@@ -64,6 +64,7 @@ args opt file = do
         --, "-fwarn-orphans"
         , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
+        , "-hide-package", "literate-unitb"
         --, "-package", "either-4.3"
         --, "-package", "mtl-2.1.3.1"
         --, "-package", "QuickCheck"

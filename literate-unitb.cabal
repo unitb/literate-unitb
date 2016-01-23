@@ -67,7 +67,7 @@ Flag PackagedNames
     default: False
 
 library
-  hs-source-dirs: .
+  hs-source-dirs: src
   exposed-modules: 
         Code.Synthesis
         Document.Document
