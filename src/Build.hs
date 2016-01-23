@@ -11,6 +11,7 @@ import Data.List
 
 import Utilities.Lines
 
+import System.Directory
 import System.Exit
 import System.FilePath
 import System.Process
@@ -32,6 +33,8 @@ build path cmd = fmap f <$> runMaybeT (runRWST cmd path ("ghc",[]))
 args :: CompileMode -> FilePath -> Build ()
 args opt file = do
     path <- ask
+    liftIO $ createDirectoryIfMissing True $ 
+        path </> "bin" </> takeDirectory file
     let flag = case opt of 
                     CompileFile -> ["-c",file]
                     Make        -> ["--make",file,"-o",path </> "bin" </> dropExtension file]
@@ -64,7 +67,7 @@ args opt file = do
         --, "-fwarn-orphans"
         , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
-        , "-hide-package", "literate-unitb"
+        , "-ignore-package", "literate-unitb"
         --, "-package", "either-4.3"
         --, "-package", "mtl-2.1.3.1"
         --, "-package", "QuickCheck"
@@ -133,13 +136,13 @@ cabal_build target = do
 
 compile_test :: Build FilePath
 compile_test = do
-    compile False (args Make "test_tmp.hs")
+    compile False (args Make "suite/test_tmp.hs")
     return "bin/test_tmp"
 
 compile_all :: Build FilePath
 compile_all = do
-    compile False (args Make "test.hs")
+    compile False (args Make "suite/test.hs")
     return "bin/test"
 
 compile_app :: Build ()
-compile_app = compile False (args Make "continuous.hs")
+compile_app = compile False (args Make "app/continuous.hs")
