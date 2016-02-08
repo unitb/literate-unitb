@@ -291,7 +291,9 @@ discharge' :: Maybe Int      -- Timeout in seconds
            -> Label
            -> Sequent        -- 
            -> IO Validity
-discharge' n lbl po = withSem total_caps $ do
+discharge' n lbl po
+    | (po^.goal) == ztrue = return Valid
+    | otherwise = withSem total_caps $ do
         let code = z3_code po
         s <- verify lbl code (maybe default_timeout id n)
         case s of

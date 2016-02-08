@@ -185,6 +185,8 @@ raw_machine_pos' m' = eval_generator $
                         sch_po m ev
                     -- forM_ (all_refs m) $ \ev -> do
                     forM_  (M.toList $ nonSkipDownwards m) $ \ev -> do
+                        ind_wit_wd_po m ev
+                        ind_wit_fis_po m ev
                         replace_csched_po m ev
                         weaken_csched_po  m ev
                         replace_fsched_po m ev
@@ -522,6 +524,33 @@ wit_wd_po m (lbl, evt) =
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
                 $ M.ascElems $ snd <$> evt^.witness)
 
+ind_wit_wd_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_wd_po m (lbl, evt) = 
+        with (do _context $ step_ctx m
+                 POG.variables $ evt^.old.indices
+                 POG.variables $ evt^.old.params
+                 named_hyps $ invariants m
+                 prefix_label $ as_label lbl
+                 named_hyps $ evt^.old.coarse_sched
+                 named_hyps $ evt^.old.fine_sched)
+            (emit_goal assert ["IWWD"] $ well_definedness $ zall 
+                $ M.ascElems $ snd <$> evt^.ind_witness)
+
+ind_wit_fis_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_fis_po m (lbl, evt) = 
+        with (do _context $ step_ctx m
+                 POG.variables $ m!.del_vars
+                 POG.variables $ evt^.old.indices
+                 POG.variables $ evt^.old.params
+                 named_hyps $ invariants m
+                 prefix_label $ as_label lbl
+                 named_hyps $ evt^.old.coarse_sched
+                 named_hyps $ evt^.old.fine_sched)
+            (emit_exist_goal assert ["IWFIS"] pvar 
+                $ M.ascElems $ snd <$> evt^.ind_witness)
+    where
+        pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
+
 wit_fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
         with (do _context $ step_ctx m
@@ -634,6 +663,7 @@ weaken_csched_po m (lbl,evt) = do
                     T.forM (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
+                    named_hyps $ M.mapKeys as_label $ snd <$> evt^.ind_witness
                         -- | old version admits old_f as assumption
                         -- | why is it correct or needed?
                         -- | named_hyps old_f

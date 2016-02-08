@@ -122,6 +122,7 @@ result1 = unlines
     , "  o  m1/term/FIS/vs@prime"
     , "  o  m1/term/GRD/str/sch0"
     , "  o  m1/term/INV/inv0"
+    , "  o  m1/term/IWWD"
     , "  o  m1/term/SAF/LIVE/prog3/ensure"
     , "  o  m1/term/SAF/saf1"
     , "  o  m1/term/SAF/saf2"
@@ -141,7 +142,7 @@ result1 = unlines
     , "  o  m1/visit/WD/F_SCH"
     , "  o  m1/visit/WD/GRD"
     , "  o  m1/visit/WWD"
-    , "passed 53 / 53"
+    , "passed 54 / 54"
     ]
 
 case2 :: IO String
@@ -669,6 +670,7 @@ result7 = unlines
     , "  o  m2/term/GRD/str/sch1"
     , "  o  m2/term/INV/inv1"
     , "  o  m2/term/INV/inv2"
+    , "  o  m2/term/IWWD"
     , "  o  m2/term/SAF/LIVE/prog10/ensure"
     , "  o  m2/term/SAF/LIVE/prog11/ensure"
     , "  o  m2/term/SAF/LIVE/prog6/ensure"
@@ -686,6 +688,7 @@ result7 = unlines
     , "  o  m2/visit/FIS/vs@prime"
     , "  o  m2/visit/INV/inv1"
     , "  o  m2/visit/INV/inv2"
+    , "  o  m2/visit/IWWD"
     , "  o  m2/visit/SAF/LIVE/prog10/ensure"
     , "  o  m2/visit/SAF/LIVE/prog11/ensure"
     , "  o  m2/visit/SAF/LIVE/prog6/ensure"
@@ -696,7 +699,7 @@ result7 = unlines
     , "  o  m2/visit/WD/F_SCH"
     , "  o  m2/visit/WD/GRD"
     , "  o  m2/visit/WWD"
-    , "passed 140 / 140"
+    , "passed 142 / 142"
     ]
 
 case8 :: IO (String, Table Label Sequent)
@@ -743,6 +746,7 @@ result8 = unlines
     , "  o  m3/count/INV/m3:inv5"
     , "  o  m3/count/INV/m3:inv6"
     , "  o  m3/count/INV/m3:inv7"
+    , "  o  m3/count/IWWD"
     , "  o  m3/count/SCH/m3:grd0"
     , "  o  m3/count/SIM/act0"
     , "  o  m3/count/SIM/act1"
@@ -770,6 +774,7 @@ result8 = unlines
     , "  o  m3/flick/INV/m3:inv5"
     , "  o  m3/flick/INV/m3:inv6"
     , "  o  m3/flick/INV/m3:inv7"
+    , "  o  m3/flick/IWWD"
     , "  o  m3/flick/SCH/grd1"
     , "  o  m3/flick/SCH/m3:grd1"
     , "  o  m3/flick/SCH/m3:grd2"
@@ -794,6 +799,7 @@ result8 = unlines
     , "  o  m3/term/INV/m3:inv5"
     , "  o  m3/term/INV/m3:inv6"
     , "  o  m3/term/INV/m3:inv7"
+    , "  o  m3/term/IWWD"
     , "  o  m3/term/SCH/grd0"
     , "  o  m3/term/WD/C_SCH"
     , "  o  m3/term/WD/F_SCH"
@@ -810,11 +816,12 @@ result8 = unlines
     , "  o  m3/visit/INV/m3:inv5"
     , "  o  m3/visit/INV/m3:inv6"
     , "  o  m3/visit/INV/m3:inv7"
+    , "  o  m3/visit/IWWD"
     , "  o  m3/visit/WD/C_SCH"
     , "  o  m3/visit/WD/F_SCH"
     , "  o  m3/visit/WD/GRD"
     , "  o  m3/visit/WWD"
-    , "passed 110 / 110"
+    , "passed 114 / 114"
     ]
 
 case9 :: IO String
@@ -1302,6 +1309,7 @@ result11 = unlines
     , "  o  m4/count/FIS/fs@prime"
     , "  o  m4/count/FIS/n@prime"
     , "  o  m4/count/FIS/vs@prime"
+    , "  o  m4/count/IWWD"
     , "  o  m4/count/WD/C_SCH"
     , "  o  m4/count/WD/F_SCH"
     , "  o  m4/count/WD/GRD"
@@ -1311,6 +1319,7 @@ result11 = unlines
     , "  o  m4/flick/FIS/fs@prime"
     , "  o  m4/flick/FIS/n@prime"
     , "  o  m4/flick/FIS/vs@prime"
+    , "  o  m4/flick/IWWD"
     , "  o  m4/flick/WD/C_SCH"
     , "  o  m4/flick/WD/F_SCH"
     , "  o  m4/flick/WD/GRD"
@@ -1320,6 +1329,7 @@ result11 = unlines
     , "  o  m4/term/FIS/fs@prime"
     , "  o  m4/term/FIS/n@prime"
     , "  o  m4/term/FIS/vs@prime"
+    , "  o  m4/term/IWWD"
     , "  o  m4/term/WD/C_SCH"
     , "  o  m4/term/WD/F_SCH"
     , "  o  m4/term/WD/GRD"
@@ -1329,11 +1339,12 @@ result11 = unlines
     , "  o  m4/visit/FIS/fs@prime"
     , "  o  m4/visit/FIS/n@prime"
     , "  o  m4/visit/FIS/vs@prime"
+    , "  o  m4/visit/IWWD"
     , "  o  m4/visit/WD/C_SCH"
     , "  o  m4/visit/WD/F_SCH"
     , "  o  m4/visit/WD/GRD"
     , "  o  m4/visit/WWD"
-    , "passed 43 / 43"
+    , "passed 47 / 47"
     ]
 
 case12 :: IO (Either [Error] (Set Name,Set Name,Set Name))

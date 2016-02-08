@@ -66,6 +66,7 @@ result1 = unlines
     , "  o  m1/m0:enter/FIS/in@prime"
     , "  o  m1/m0:enter/FIS/loc@prime"
     , "  o  m1/m0:enter/INV/inv0"
+    , "  o  m1/m0:enter/IWWD"
     , "  o  m1/m0:enter/SAF/m1:saf0"
     , "  o  m1/m0:enter/SAF/m1:saf1"
     , "  o  m1/m0:enter/SAF/m1:saf2"
@@ -85,6 +86,7 @@ result1 = unlines
     , "  o  m1/m0:leave/FIS/in@prime"
     , "  o  m1/m0:leave/FIS/loc@prime"
     , "  o  m1/m0:leave/INV/inv0"
+    , "  o  m1/m0:leave/IWWD"
     , "  o  m1/m0:leave/SAF/m1:saf0"
     , "  o  m1/m0:leave/SAF/m1:saf1"
     , "  o  m1/m0:leave/SAF/m1:saf2"
@@ -164,7 +166,7 @@ result1 = unlines
     , "  o  m1/m1:tr1/TR/WFIS/t/t@prime"
     , "  o  m1/m1:tr1/TR/m1:movein/EN"
     , "  o  m1/m1:tr1/TR/m1:movein/NEG"
-    , "passed 107 / 107"
+    , "passed 109 / 109"
     ]
 
 result2 :: String
@@ -178,6 +180,7 @@ result2 = unlines
     , "  o  m2/m0:enter/FIS/in@prime"
     , "  o  m2/m0:enter/FIS/loc@prime"
     , "  o  m2/m0:enter/INV/m2:inv0"
+    , "  o  m2/m0:enter/IWWD"
     , "  o  m2/m0:enter/SAF/m2:saf1"
     , "  o  m2/m0:enter/SAF/m2:saf2"
     , "  o  m2/m0:enter/SCH/et:g1"
@@ -210,6 +213,7 @@ result2 = unlines
     , "  o  m2/m0:leave/INV/m2:inv0/main goal/step 2"
     , "  o  m2/m0:leave/INV/m2:inv0/main goal/step 3"
     , "  o  m2/m0:leave/INV/m2:inv0/new assumption"
+    , "  o  m2/m0:leave/IWWD"
     , "  o  m2/m0:leave/SAF/m2:saf1"
     , "  o  m2/m0:leave/SAF/m2:saf2"
     , "  o  m2/m0:leave/WD/C_SCH"
@@ -225,6 +229,7 @@ result2 = unlines
     , "  o  m2/m1:movein/FIS/in@prime"
     , "  o  m2/m1:movein/FIS/loc@prime"
     , "  o  m2/m1:movein/INV/m2:inv0"
+    , "  o  m2/m1:movein/IWWD"
     , "  o  m2/m1:movein/SAF/m2:saf1"
     , "  o  m2/m1:movein/SAF/m2:saf2"
     , "  o  m2/m1:movein/SCH"
@@ -238,6 +243,7 @@ result2 = unlines
     , "  o  m2/m1:moveout/F_SCH/replace/prog/m2:prog1/lhs"
     , "  o  m2/m1:moveout/F_SCH/replace/prog/m2:prog1/rhs/mo:f0"
     , "  o  m2/m1:moveout/INV/m2:inv0"
+    , "  o  m2/m1:moveout/IWWD"
     , "  o  m2/m1:moveout/SAF/m2:saf1"
     , "  o  m2/m1:moveout/SAF/m2:saf2"
     , "  o  m2/m1:moveout/SCH/mo:g3"
@@ -291,7 +297,7 @@ result2 = unlines
     , "  o  m2/m2:tr1/TR/leadsto/rhs"
     , "  o  m2/m2:tr1/TR/m1:moveout/EN"
     , "  o  m2/m2:tr1/TR/m1:moveout/NEG"
-    , "passed 121 / 122"
+    , "passed 125 / 126"
     ]
 
 path0 :: String

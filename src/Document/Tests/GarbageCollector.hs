@@ -120,6 +120,7 @@ result1 = unlines
     , "  o  m1/alloc/FIS/free@prime"
     , "  o  m1/alloc/FIS/live@prime"
     , "  o  m1/alloc/FIS/ptr@prime"
+    , "  o  m1/alloc/IWWD"
     , "  o  m1/alloc/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/alloc/WD/C_SCH"
     , "  o  m1/alloc/WD/F_SCH"
@@ -140,6 +141,7 @@ result1 = unlines
     , "  o  m1/free/FIS/free@prime"
     , "  o  m1/free/FIS/live@prime"
     , "  o  m1/free/FIS/ptr@prime"
+    , "  o  m1/free/IWWD"
     , "  o  m1/free/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/free/SCH/m0:grd0"
     , "  o  m1/free/WD/C_SCH"
@@ -148,7 +150,7 @@ result1 = unlines
     , "  o  m1/free/WWD"
     , "  o  m1/m1:prog0/PROG/WD/lhs"
     , "  o  m1/m1:prog0/PROG/WD/rhs"
-    , "passed 72 / 73"
+    , "passed 74 / 75"
     ]
 
 case2 :: IO POResult
@@ -168,6 +170,7 @@ result2 = unlines
     , "  o  m2/add/FIS/ptr@prime"
     , "  o  m2/add/FIS/reach@prime"
     , "  o  m2/add/INV/m2:inv0"
+    , "  o  m2/add/IWWD"
     , "  o  m2/add/SAF/m2:saf0"
     , "  o  m2/add/WD/C_SCH"
     , "  o  m2/add/WD/F_SCH"
@@ -178,6 +181,7 @@ result2 = unlines
     , "  o  m2/alloc/FIS/ptr@prime"
     , "  o  m2/alloc/FIS/reach@prime"
     , "  o  m2/alloc/INV/m2:inv0"
+    , "  o  m2/alloc/IWWD"
     , "  o  m2/alloc/SAF/m2:saf0"
     , "  o  m2/alloc/WD/C_SCH"
     , "  o  m2/alloc/WD/F_SCH"
@@ -188,6 +192,7 @@ result2 = unlines
     , "  o  m2/delete/FIS/ptr@prime"
     , "  o  m2/delete/FIS/reach@prime"
     , "  o  m2/delete/INV/m2:inv0"
+    , "  o  m2/delete/IWWD"
     , "  o  m2/delete/SAF/m2:saf0"
     , "  o  m2/delete/WD/C_SCH"
     , "  o  m2/delete/WD/F_SCH"
@@ -201,6 +206,7 @@ result2 = unlines
     , "  o  m2/free/FIS/reach@prime"
     , "  o  m2/free/GRD/str/m1:sch1"
     , "  o  m2/free/INV/m2:inv0"
+    , "  o  m2/free/IWWD"
     , "  o  m2/free/SAF/m2:saf0"
     , "  o  m2/free/SCH/m0:grd0"
     , "  o  m2/free/WD/C_SCH"
@@ -218,7 +224,7 @@ result2 = unlines
     , "  o  m2/m2:prog2/PROG/WD/rhs"
     , "  o  m2/m2:saf0/SAF/WD/lhs"
     , "  o  m2/m2:saf0/SAF/WD/rhs"
-    , "passed 57 / 62"
+    , "passed 61 / 66"
     ]
 
 case3 :: IO String

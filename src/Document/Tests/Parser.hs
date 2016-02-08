@@ -139,6 +139,7 @@ result1 = unlines
     , "  o  m1/input/INV/m1:inv1"
     , "  o  m1/input/INV/m1:inv2"
     , "  o  m1/input/INV/m1:inv3"
+    , "  o  m1/input/IWWD"
     , "  o  m1/input/SAF/LIVE/m1:prog2/ensure"
     , "  o  m1/input/SAF/LIVE/m1:prog4/ensure"
     , "  o  m1/input/SAF/LIVE/m1:prog5/ensure"
@@ -185,7 +186,7 @@ result1 = unlines
     , "  o  m1/parse/WD/F_SCH"
     , "  o  m1/parse/WD/GRD"
     , "  o  m1/parse/WWD"
-    , "passed 122 / 122"
+    , "passed 123 / 123"
     ]
 
 case2 :: IO POResult
@@ -207,6 +208,7 @@ result2 = unlines
     , "  o  m2/choose/FIS/in@prime"
     , "  o  m2/choose/FIS/nx@prime"
     , "  o  m2/choose/FIS/v@prime"
+    , "  o  m2/choose/IWWD"
     , "  o  m2/choose/WD/C_SCH"
     , "  o  m2/choose/WD/F_SCH"
     , "  o  m2/choose/WD/GRD"
@@ -217,6 +219,7 @@ result2 = unlines
     , "  o  m2/fail/FIS/in@prime"
     , "  o  m2/fail/FIS/nx@prime"
     , "  o  m2/fail/FIS/v@prime"
+    , "  o  m2/fail/IWWD"
     , "  o  m2/fail/WD/C_SCH"
     , "  o  m2/fail/WD/F_SCH"
     , "  o  m2/fail/WD/GRD"
@@ -227,6 +230,7 @@ result2 = unlines
     , "  o  m2/input/FIS/in@prime"
     , "  o  m2/input/FIS/nx@prime"
     , "  o  m2/input/FIS/v@prime"
+    , "  o  m2/input/IWWD"
     , "  o  m2/input/WD/C_SCH"
     , "  o  m2/input/WD/F_SCH"
     , "  o  m2/input/WD/GRD"
@@ -237,11 +241,12 @@ result2 = unlines
     , "  o  m2/parse/FIS/in@prime"
     , "  o  m2/parse/FIS/nx@prime"
     , "  o  m2/parse/FIS/v@prime"
+    , "  o  m2/parse/IWWD"
     , "  o  m2/parse/WD/C_SCH"
     , "  o  m2/parse/WD/F_SCH"
     , "  o  m2/parse/WD/GRD"
     , "  o  m2/parse/WWD"
-    , "passed 48 / 48"
+    , "passed 52 / 52"
     ]
 
 case3 :: IO (Either [Error] (EventRef Expr))
