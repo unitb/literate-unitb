@@ -30,6 +30,8 @@ import qualified Data.ByteString as BS
 import           Data.Maybe
 import qualified Data.Serialize as Ser
 
+import PseudoMacros
+
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
@@ -185,6 +187,9 @@ focus _ = Nothing
 
 main :: IO ()
 main = do
+        (v,h) <- z3_version
+        printf "using z3 version %s, hashcode %s\n" v h
+        printf "built on %s at %s\n" $__DATE__ $__TIME__
         rawargs <- getArgs
         let (opts,args,_) = getOpt Permute options rawargs
         case args of
@@ -202,8 +207,6 @@ main = do
                             , reset      = Reset `elem` opts
                             , init_focus = listToMaybe $ catMaybes $ map focus opts
                             } }
-                    (v,h) <- z3_version
-                    printf "using z3 version %s, hashcode %s\n" v h
                     if continuous param then do
                         run_pipeline xs param
                         return ()

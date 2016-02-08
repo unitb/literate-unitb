@@ -165,7 +165,7 @@ showExpr notation e = show_e e
 
 latex_of :: RawMachine -> Gen LatexDoc
 latex_of m = do
-        let m_name = Bracket Curly li 
+        let m_name = BracketNode $ Bracket Curly li 
                            (Doc li [ Text (TextBlock (show $ _name m) li) ] li)
                            li
             show_t t = M.findWithDefault "<unknown>" t type_map
@@ -178,7 +178,7 @@ latex_of m = do
                         ]
             cmd :: String -> [String] -> [LatexNode]
             cmd n args = Text (Command n li) : concatMap farg args
-            farg x = [ Bracket Curly li (Doc li [ Text (TextBlock x li) ] li) li, blank ]
+            farg x = [ BracketNode $ Bracket Curly li (Doc li [ Text (TextBlock x li) ] li) li, blank ]
             var_decl (Var n t) = cmd "\\variable" [(render n ++ " : " ++ show_t t)]
             decls = map var_decl $ M.elems $ m!.variables
             imp_stat :: Name -> [LatexNode]
@@ -188,7 +188,7 @@ latex_of m = do
             imports = map imp_stat $ filter (/= makeName assert "basic") 
                         $ M.keys $ m!.theory.extends
         content <- concat `liftM` permute (decls ++ imports ++ invs)
-        return $ Doc li [ Env li "machine" li 
+        return $ Doc li [ EnvNode $ Env li "machine" li 
                           (Doc li ([ m_name, blank ] ++ content) li)
                           li ] li
     where

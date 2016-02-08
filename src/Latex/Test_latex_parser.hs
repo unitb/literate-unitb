@@ -67,15 +67,15 @@ extract_structure ct = do
 find_env :: [String] -> LatexDoc -> M.Map String [LatexNode]
 find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) $ contents' xs
     where
-        f m (t@(Env _ name _ _ _))
+        f m (t@(EnvNode (Env _ name _ _ _)))
             | name `elem` kw = M.insertWith (++) name [t] m
             | otherwise        = fold_doc f m t
         f m t                  = fold_doc f m t
 
 main :: FilePath -> IO String
 main path = do
-        let f (Env _ n _ doc _)   = ShowString $ printf "Env{%s} (%d)" n (length $ contents' doc)
-            f (Bracket _ _ doc _) = ShowString $ printf "Bracket (%d)" (length $ contents' doc)
+        let f (EnvNode (Env _ n _ doc _))   = ShowString $ printf "Env{%s} (%d)" n (length $ contents' doc)
+            f (BracketNode (Bracket _ _ doc _)) = ShowString $ printf "Bracket (%d)" (length $ contents' doc)
             f (Text _)            = ShowString "Text {..}"
         ct <- readFile path
         return $ show $ M.map (map f) <$> extract_structure ct
@@ -177,8 +177,8 @@ prop_flatten_parse_inv_regression :: Property
 prop_flatten_parse_inv_regression = regression prop_flatten_parse_inv $
     [ Doc (LI "foo.txt" 1 1) [Text (TextBlock "\247" (LI "foo.txt" 1 1))] (LI "foo.txt" 1 2) 
     , Doc (LI "foo.txt" 1 1) [Text (TextBlock "=s" (LI "foo.txt" 1 1))] (LI "foo.txt" 1 3) 
-    , Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\"" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [] (LI "foo.txt" 1 10)) (LI "foo.txt" 1 15)] (LI "foo.txt" 1 17)
-    , Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\202" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [Text (TextBlock "H" (LI "foo.txt" 1 10))] (LI "foo.txt" 1 11)) (LI "foo.txt" 1 16)] (LI "foo.txt" 1 18)
+    , Doc (LI "foo.txt" 1 1) [EnvNode $ Env (LI "foo.txt" 1 1) "\"" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [] (LI "foo.txt" 1 10)) (LI "foo.txt" 1 15)] (LI "foo.txt" 1 17)
+    , Doc (LI "foo.txt" 1 1) [EnvNode $ Env (LI "foo.txt" 1 1) "\202" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [Text (TextBlock "H" (LI "foo.txt" 1 10))] (LI "foo.txt" 1 11)) (LI "foo.txt" 1 16)] (LI "foo.txt" 1 18)
     ]
 
 prop_parse_error :: MutatedTokens -> Bool
@@ -194,7 +194,7 @@ prop_flatten_scan_inv_regression :: Property
 prop_flatten_scan_inv_regression = regression prop_flatten_scan_inv cases
     where
         cases = 
-            [ Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\232y\171" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 12) [Text (TextBlock "\181" (LI "foo.txt" 1 12))] (LI "foo.txt" 1 13)) (LI "foo.txt" 1 18)] (LI "foo.txt" 1 22)
+            [ Doc (LI "foo.txt" 1 1) [EnvNode $ Env (LI "foo.txt" 1 1) "\232y\171" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 12) [Text (TextBlock "\181" (LI "foo.txt" 1 12))] (LI "foo.txt" 1 13)) (LI "foo.txt" 1 18)] (LI "foo.txt" 1 22)
             ]
 
 prop_uncomment_inv :: String -> Property
@@ -242,7 +242,7 @@ prop_non_empty_scan_error str = isRight $ scan_latex "foo.txt" str
 --prop_counter_example1 = Right counter1 === counter1'
 
 counter0 :: LatexDoc
-counter0 = Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "\232y\171" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 12) [Text (TextBlock "\181" (LI "foo.txt" 1 12))] (LI "foo.txt" 1 13)) (LI "foo.txt" 1 18)] (LI "foo.txt" 1 22)
+counter0 = Doc (LI "foo.txt" 1 1) [EnvNode $ Env (LI "foo.txt" 1 1) "\232y\171" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 12) [Text (TextBlock "\181" (LI "foo.txt" 1 12))] (LI "foo.txt" 1 13)) (LI "foo.txt" 1 18)] (LI "foo.txt" 1 22)
     --Doc (LI "foo.txt" 1 1) [Env (LI "foo.txt" 1 1) "r" (LI "foo.txt" 1 8) (Doc (LI "foo.txt" 1 10) [Text (TextBlock "K" (LI "foo.txt" 1 10))] (LI "foo.txt" 1 11)) (LI "foo.txt" 1 11)] (LI "foo.txt" 1 18)
 
 counter0' :: [(LatexToken,LineInfo)]

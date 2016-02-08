@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Document.Phase.Parameters where
 
     -- Modules
@@ -8,11 +9,20 @@ import Logic.Expr
 import UnitB.Syntax
 
     -- Libraries
+import Control.Applicative
+import Control.Category
+import Control.Lens
+import Control.Monad.State
+
 import Data.Char
 import Data.Either.Validation
-import Data.String
-import Data.String.Utils
-import Data.Proxy
+import Data.List as L
+import qualified Data.List.NonEmpty as NE
+import Data.Maybe
+import Data.Proxy.TH
+import Data.String 
+import Data.String.Utils hiding (join)
+import Prelude hiding ((.),id)
 
 import Utilities.Syntactic
 
@@ -41,6 +51,8 @@ newtype ActionLbl = ActionLbl { getActionLbl :: Label }
 newtype InitLbl = InitLbl { getInitLbl :: Label }
 
 newtype NewLabel = NewLabel { getNewLabel :: Label }
+
+newtype EventOrRef = EventOrRef { getEventOrRef :: Label }
 
 --type M = Either [Error]
 
@@ -157,6 +169,11 @@ instance LatexArgFromString NewLabel where
     kind' Proxy = "fresh-name"
     read_one' = readFromString $ NewLabel . fromString
 
+instance LatexArg EventOrRef where
+instance LatexArgFromString EventOrRef where
+    kind' Proxy = "event-or-progress-property"
+    read_one' = readFromString $ EventOrRef . fromString
+
 instance LatexArg PlainText where
     argKind Proxy = "text / comment"
     read_one = return . PlainText
@@ -180,6 +197,13 @@ instance LatexArgFromString a => LatexArg [a] where
     argKind p = "zero or more " ++ kind' (head <$> p)
     read_one doc = validationToEither $ parseAll $ comma_sep $ flatten doc
         where 
+            parseAll = traverse (eitherToValidation . read_one' (line_info doc))
+instance LatexArgFromString a => LatexArg (NonEmpty a) where
+    argKind p = "one or more " ++ kind' (NE.head <$> p)
+    read_one doc = toEither $ fmap parseAll $ NE.nonEmpty $ comma_sep $ flatten doc
+        where 
+            msg = "expecting at one or more " ++ kind' [pr|a|] ++ " argument"
+            toEither = validationToEither . fromMaybe (Failure [Error msg $ line_info doc])
             parseAll = traverse (eitherToValidation . read_one' (line_info doc))
 
 newtype Abs a = Abs { getAbstract :: a }

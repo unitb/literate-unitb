@@ -28,8 +28,7 @@ import           Control.Monad.State as ST ( StateT, State, execState )
 import           Control.Monad.State.Class as ST
 import qualified Control.Monad.Writer.Class as W
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.RWS hiding ( ask, tell, asks, reader, local )
+import qualified Control.Monad.Trans.Either as E
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
@@ -48,9 +47,6 @@ import           Utilities.Map hiding ( map )
 import qualified Utilities.Map as M
 import           Utilities.Syntactic hiding (line)
 import           Utilities.Table
-
-type M = EitherT [Error] (RWS LineInfo [Error] ())
-
 
 data ProofStep = Step 
        { assertions  :: Table Label (Tactic Expr)    -- assertions
@@ -507,8 +503,8 @@ parse_expr'' p xs = do
         hoistEither $ parse_expr p xs
 
 unfail :: M a -> M (Maybe a)
-unfail cmd = do
-    x <- lift (runEitherT cmd)
+unfail (M cmd) = M $ do
+    x <- lift (E.runEitherT cmd)
     case x of
         Right x -> return $ Just x
         Left es -> W.tell es >> return Nothing

@@ -541,49 +541,171 @@
 % \newcommand{\index}[2]{$#1 := #2$}
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
 
+% \newcounter{prooflevel}
+% \newcounter{flatlevel}
+
+% \setlistdepth{9}
+
+% \newenvironment{liveness}[2]
+% { \begin{proof}{#1} \\ \qquad by #2
+%   \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+%   \addtocounter{prooflevel}{1}
+%   \addtocounter{flatlevel}{1}
+% }
+% { \end{enumerate}
+%   \end{proof}
+%   \addtocounter{prooflevel}{-1}
+%   \addtocounter{flatlevel}{-1}
+% }
+% \newcommand{\progstep}[2]{ \item \quad $#1 \quad \mapsto\quad #2$ }
+% \newcommand{\safstep}[2]{ \item  \quad $#1 \quad \textbf{unless}\quad #2$ }
+% \newcommand{\trstep}[2]{ \item  \quad $#2 \qquad$ is falsified by #1 }
+% \newenvironment{step}[1]
+% { \\ \qquad by #1
+%   \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+%   \addtocounter{prooflevel}{1}}
+% { \end{enumerate}
+%   \addtocounter{prooflevel}{-1}
+% }
+% \newcommand{\resetenum}
+%   { \ifthenelse{\value{flatlevel}=1}
+%     { \setcounter{enumi}{0} }
+%     { \ifthenelse{\value{flatlevel}=2} 
+%       { \setcounter{enumii}{0} }
+%       { \ifthenelse{\value{flatlevel}=2} 
+%         { \setcounter{enumiii}{0} }
+%         { \setcounter{enumiv}{0} } } } }
+% \newenvironment{flatstep}[1]
+% { \\ $\qquad$ by #1 \resetenum
+%   \addtocounter{prooflevel}{1}}
+% { \addtocounter{prooflevel}{-1}
+% }
+
 \newcounter{prooflevel}
 \newcounter{flatlevel}
+\newcounter{nestinglevel}
 
 \setlistdepth{9}
 
-\newenvironment{liveness}[2]
-{ \begin{proof}{#1} \\ \qquad by #2
-  \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
-  \addtocounter{prooflevel}{1}
-  \addtocounter{flatlevel}{1}
+\newenvironment{liveness}[3]
+{ %\begin{proof}  banana
+  \bigskip
+  % \def\P{#1}
+  % \def\Q{#2}
+  % \def\rule{#3}
+
+  % \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
+  % \addtocounter{prooflevel}{1}
+  % \addtocounter{flatlevel}{1}
+  % \item d
+  % \item d
+  \begin{step}
+  \progstep[Prove:]{#1}{#2}{#3}
+  % \progstep{#1}{#2}{#3}
+  % \item e
+  % \item e
 }
-{ \end{enumerate}
-  \end{proof}
-  \addtocounter{prooflevel}{-1}
-  \addtocounter{flatlevel}{-1}
+{ \item[Q.E.D.]
+  \end{step}
+  % \end{enumerate}
+  %\end{proof}
+  % \addtocounter{prooflevel}{-1}
+  % \addtocounter{flatlevel}{-1}
 }
-\newcommand{\progstep}[2]{ \item \quad $#1 \quad \mapsto\quad #2$ }
-\newcommand{\safstep}[2]{ \item  \quad $#1 \quad \textbf{unless}\quad #2$ }
-\newcommand{\trstep}[2]{ \item  \quad $#2 \qquad$ is falsified by #1 }
-\newenvironment{step}[1]
-{ \\ \qquad by #1
-  \begin{enumerate}[label=$\langle\arabic{prooflevel}\rangle$\arabic*]
-  \addtocounter{prooflevel}{1}}
-{ \end{enumerate}
-  \addtocounter{prooflevel}{-1}
-}
+\newcommand{\progstep}[4][]{ 
+  \def\rule{#4}
+  \ifx\rule\@empty 
+    \def\byRule{}
+  \else
+    \def\byRule{\\ & \qquad \text{by \rule}}
+  \fi
+  \ifx\bullet\@empty
+    % \def\myitem{\item}
+    \item
+  \else
+    % \def\myitem{\item[#1]}
+    \item[#1]
+  \fi
+  % \myitem
+   $\begin{array}[t]{rl} 
+    & #2 \quad \mapsto\quad #3
+    \byRule
+  \end{array} $
+   }
+\newcommand{\safstep}[3]{ 
+  \def\P{#1}
+  \def\Q{#2}
+  \def\rule{#3}
+  \ifx\rule\@empty 
+    \def\byRule{}
+  \else
+    \def\byRule{\\ & \qquad \text{by \rule}}
+  \fi
+  \item
+   $\begin{array}[t]{rl} 
+    & \P \quad \UNLESS\quad \Q
+    \byRule
+  \end{array} $
+   }
+\newcommand{\trstep}[3] % {evts}{hint}{predicate}
+  { \def\P{#3}
+    \def\evt{#1}
+    \def\hint{#2}
+    \item  $\begin{array}[t]{rl} 
+    & \P
+    \\ & \qquad \text{falsified by \evt \hint}
+  \end{array} $ }
 \newcommand{\resetenum}
-  { \ifthenelse{\value{flatlevel}=1}
+  { % \item \arabic{enumii}
+    % \item \arabic{nestinglevel}
+    % \item \arabic{enumii}
+    % \item \arabic{enumiii}
+    % \item \arabic{enumiv}
+    % \setcounter{enumi}{0}
+    % \setcounter{enumii}{0}
+    % \setcounter{enumiii}{0}
+    % \setcounter{enumiv}{0}
+    \ifthenelse{\value{nestinglevel}=1}
     { \setcounter{enumi}{0} }
-    { \ifthenelse{\value{flatlevel}=2} 
+    { \ifthenelse{\value{nestinglevel}=2} 
       { \setcounter{enumii}{0} }
-      { \ifthenelse{\value{flatlevel}=2} 
+      { \ifthenelse{\value{nestinglevel}=3} 
         { \setcounter{enumiii}{0} }
         { \setcounter{enumiv}{0} } } } }
-\newenvironment{flatstep}[1]
-{ \\ $\qquad$ by #1 \resetenum
+  % { \ifthenelse{\value{flatlevel}=1}
+  %   { \setcounter{enumi}{0} }
+  %   { \ifthenelse{\value{flatlevel}=2} 
+  %     { \setcounter{enumii}{0} }
+  %     { \ifthenelse{\value{flatlevel}=3} 
+  %       { \setcounter{enumiii}{0} }
+  %       { \setcounter{enumiv}{0} } } } }
+\newcommand{\steplabel}[1]
+{ $\langle\arabic{prooflevel}\rangle\arabic{#1}$. }
+\newenvironment{step}[1][]
+{ \def\isflat{#1}
+  \ifx\isflat\@empty
+    \begin{enumerate}[label=\steplabel*]
+    \addtocounter{nestinglevel}{1}
+  \else
+    \resetenum
+  \fi
+  \addtocounter{prooflevel}{1}}
+{ \ifx\isflat\@empty
+    \end{enumerate}
+    \addtocounter{nestinglevel}{-1}
+  \else
+  \fi
+  \addtocounter{prooflevel}{-1}
+}
+\newenvironment{flatstep}
+{ \resetenum
   \addtocounter{prooflevel}{1}}
 { \addtocounter{prooflevel}{-1}
 }
 
 % \newcommand{\weakento}[4]{ } % We weaken the coarse schedule #2 of #1 to #3 }
-\newcommand{\replace}[6]{}     % {event}{old,...}{new,...}{aux,...}
-                               %        {prog}{saf}
+\newcommand{\replace}[5]{}     % {event}{old,...}{new,...}{aux,...}
+                               %        {prog}
 \newcommand{\replacefine}[2]{} % {event}{progid}
 \newcommand{\removeguard}[2]{} % {event}{grd0,grd1,...}
 \newcommand{\removevar}[1]{#1}  % {var,...}

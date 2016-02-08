@@ -7,7 +7,7 @@ module Document.Pipeline where
 
     -- Modules
 import Document.Phase.Parameters
-import Latex.Parser as P
+import Latex.Parser as P 
 import Logic.Names
 import UnitB.Syntax
 
@@ -23,7 +23,6 @@ import Control.Monad.Writer
 
 import Data.Hashable
 import Data.List as L
-import Data.Proxy
 import Data.String
 
 import Text.Printf
@@ -133,7 +132,7 @@ getLatexBlocks :: DocSpec
 getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
     where
         f :: Maybe (LatexNode,LatexDoc) -> Writer DocBlocks ()
-        f (Just (Env _ name li ys _,xs)) = do
+        f (Just ((EnvNode (Env _ name li ys _),xs))) = do
                 case name `M.lookup` envs of
                     Just nargs -> do
                         let (args,rest) = brackets (argCount nargs) ys
@@ -142,7 +141,7 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
                             [BlockEnv (args,li') rest li]) M.empty) 
                     Nothing -> f $ unconsTex ys
                 f $ unconsTex xs
-        f (Just (Bracket _ _ ys _,xs)) = do
+        f (Just ((BracketNode (Bracket _ _ ys _),xs))) = do
                 f $ unconsTex ys
                 f $ unconsTex xs
         f (Just (Text (Command name li),xs)) = do
@@ -163,7 +162,7 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
 brackets :: Int -> LatexDoc -> ([LatexDoc],LatexDoc)
 brackets 0 xs = ([],xs)
 brackets n doc = case unconsTex doc of
-        Just (Bracket Curly _ ys _,xs) -> (ys:args,r)
+        Just ((BracketNode (Bracket Curly _ ys _),xs)) -> (ys:args,r)
             where
                 (args,r) = brackets (n-1) xs
         Just (Text (Blank _ _),ys) -> brackets n ys

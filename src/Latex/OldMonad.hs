@@ -36,7 +36,7 @@ env name xs = nodeToDoc $ do
     doc <- getDoc xs
     li2 <- get
     modify $ addCol (length $ "\\end{" ++ name ++ "}")
-    return $ Env li0 name li1 doc li2
+    return $ EnvNode $ Env li0 name li1 doc li2
 
 bracket :: BracketType -> [T LatexDoc] -> T LatexDoc
 bracket b xs = nodeToDoc $ do
@@ -45,7 +45,7 @@ bracket b xs = nodeToDoc $ do
     doc <- getDoc xs
     li' <- get
     modify $ addCol 1
-    return $ Bracket b li doc li'
+    return $ BracketNode $ Bracket b li doc li'
 
 text :: [T LatexToken] -> T LatexDoc
 text xs = do

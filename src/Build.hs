@@ -134,15 +134,16 @@ cabal_build target = do
         return r
     return $ CabalTarget target
 
+make :: FilePath -> Build FilePath
+make target = do
+    compile False (args Make target)
+    return $ "bin" </> dropExtension target
+
 compile_test :: Build FilePath
-compile_test = do
-    compile False (args Make "suite/test_tmp.hs")
-    return "bin/test_tmp"
+compile_test = make "suite/test_tmp.hs"
 
 compile_all :: Build FilePath
-compile_all = do
-    compile False (args Make "suite/test.hs")
-    return "bin/test"
+compile_all = make "suite/test.hs"
 
-compile_app :: Build ()
-compile_app = compile False (args Make "app/continuous.hs")
+compile_app :: Build FilePath
+compile_app = make "app/continuous.hs"

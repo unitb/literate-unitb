@@ -22,7 +22,7 @@ module Document.Visitor
     , drop_blank_text
     , drop_blank_text'
     , get_1_lbl
-    , visitor, raise
+    , visitor, raise, raise'
     , VisitorT ( .. )
     , run_visitor
     , add_state
@@ -33,6 +33,13 @@ module Document.Visitor
     , get_content
     , with_content
     , Readable (..)
+    , M (..)
+    , unM, runM
+    , Document.Visitor.hoistEither
+    , hoistValidation
+    , triggerV
+    , unfailV
+    , Document.Visitor.left
     , AllReadable (..) )
 where
 
@@ -48,12 +55,13 @@ import UnitB.Syntax
 import Control.Arrow ((&&&))
 import Control.Lens
 
+import           Control.Monad.Except
 import           Control.Monad.Reader.Class hiding (reader)
 import           Control.Monad.Trans.RWS (RWS,RWST,mapRWST,withRWST)
 import qualified Control.Monad.Trans.RWS as RWS
 import           Control.Monad.Reader       hiding ( reader )
 import           Control.Monad.State.Class as S
-import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Either as E
 import qualified Control.Monad.Trans.State as ST
 import           Control.Monad.Trans.Writer ( WriterT ( .. ), runWriterT )
 
@@ -71,16 +79,50 @@ import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
 
 import GHC.Read
 
-import Utilities.Error
+import Utilities.Error hiding (MonadError)
+import qualified Utilities.Error as E
 import Utilities.Format 
 import Utilities.Syntactic
 import Utilities.Tuple
+
+newtype M a = M { _unM :: EitherT [Error] (RWS LineInfo [Error] ()) a }
+    deriving (Functor,Monad,MonadReader LineInfo,MonadError [Error])
+
+instance Applicative M where
+    pure = M . pure
+    M f <*> M x = M $ EitherT $ do
+        f' <- runEitherT f
+        x' <- runEitherT x
+        return $ validationToEither $ eitherToValidation f' <*> eitherToValidation x'
+
+makeLenses ''M
+
+hoistEither :: Either [Error] a -> M a
+hoistEither = M . E.hoistEither
+
+hoistValidation :: Validation [Error] a 
+                -> M a
+hoistValidation = M . EitherT . return . validationToEither
+
+triggerV :: Validation [Error] a -> M a
+triggerV = hoistValidation
+
+unfailV :: M a -> M (Validation [Error] a)
+unfailV (M (EitherT cmd)) = M $ lift $ eitherToValidation <$> cmd
+
+left :: [Error] -> M a
+left = M . E.left
+
+runM :: M a -> LineInfo -> (Either [Error] a,[Error])
+runM (M cmd) li = (r,es)
+    where
+        (r,(),es) = RWS.runRWS (runEitherT cmd) li ()
 
 class Readable a where
     read_args :: (Monad m)
               => ST.StateT LatexDoc (EitherT [Error] m) a
     read_one :: (Monad m)
-             => M m a
+             => Impl m a
 
 get_tuple' :: (Monad m, IsTuple a, AllReadable (TypeList a))
            => LatexDoc -> LineInfo 
@@ -93,14 +135,14 @@ class AllReadable a where
     get_tuple :: (Monad m, MonadReader LineInfo m) 
               => ST.StateT LatexDoc (EitherT [Error] m) a
     read_all :: (Monad m, MonadReader LineInfo m) 
-             => M m a
+             => Impl m a
 
 instance AllReadable () where
     get_tuple = return () 
     read_all = do
         (xs,_) <- get
         case xs of
-            x:_ -> lift $ left [Error "too many arguments" $ line_info x]
+            x:_ -> lift $ E.left [Error "too many arguments" $ line_info x]
             [] -> return ()
 
 instance (AllReadable as, Readable a) => AllReadable (a :+: as) where
@@ -124,17 +166,17 @@ comma_sep xs = trim ys : comma_sep (drop 1 zs)
     where
         (ys,zs) = break (== ',') xs
 
-type M m = ST.StateT ([LatexDoc],LineInfo) (EitherT [Error] m)
+type Impl m = ST.StateT ([LatexDoc],LineInfo) (EitherT [Error] m)
 
 get_next :: (Monad m)
-         => M m LatexDoc
+         => Impl m LatexDoc
 get_next = do
     (s,li)  <- get
     case s of
       x:xs -> put (xs,li) >> return x
       [] -> do
         -- li <- ask
-        lift $ left [Error "expecting more arguments" li]
+        lift $ E.left [Error "expecting more arguments" li]
 
 instance Readable LatexDoc where
     read_args = do
@@ -151,14 +193,14 @@ instance Readable LatexDoc where
 data Str = String { toString :: String }
 
 read_label :: Monad m
-           => M m (String,LineInfo)
+           => Impl m (String,LineInfo)
 read_label = do
     x  <- get_next    
     let x' = trim_blank_text' x
     lift $ case asSingleton x' of
         Just (Text (TextBlock x li)) -> right (x,li)
         Just (Text (Command x li))   -> right (x,li)
-        _   -> left [Error "expecting a label" $ line_info x']
+        _   -> E.left [Error "expecting a label" $ line_info x']
 
 instance Readable Str where
     read_args = do
@@ -178,13 +220,13 @@ instance Readable Int where
         case reads arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
+                E.left [Error (format "invalid integer: '{0}'" arg) $ line_info ts]
     read_one = do
         (arg,li) <- read_label
         case reads arg of
             [(n,"")] -> return n
             _ -> lift $ do
-                left [Error (format "invalid integer: '{0}'" arg) li]
+                E.left [Error (format "invalid integer: '{0}'" arg) li]
 
 instance Readable (Maybe Label) where
     read_args = do
@@ -239,13 +281,13 @@ instance Readable [[Str]] where
         case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                left [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
+                throwError [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
     read_one = do
         arg <- get_next
         case reads $ flatten' arg of 
             [(n,"")] -> return n
             _ -> lift $ do
-                left [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
+                throwError [Error (format "invalid list of strings: '{0}'" arg) $ line_info arg]
 
 instance Read Str where
     readPrec = do
@@ -276,19 +318,19 @@ instance Readable (M.Map Label ()) where
 instance Readable Name where
     read_one  = do
         (xs,li) <- read_label
-        lift $ hoistEither $ with_li li $ isName xs
+        lift $ E.hoistEither $ with_li li $ isName xs
     read_args = do
         xs <- read_args
         let xs' = flatten' xs
             li  = line_info xs
-        lift $ hoistEither $ with_li li $ isName xs'
+        lift $ E.hoistEither $ with_li li $ isName xs'
 
 instance Readable [Name] where
     read_args = do
         arg <- read_args
         let parse x = eitherToValidation $ isName x
             li  = line_info arg
-        lift $ hoistEither 
+        lift $ E.hoistEither 
              $ with_li li 
              $ validationToEither 
              $ traverse parse 
@@ -297,7 +339,7 @@ instance Readable [Name] where
         arg <- get_next
         let parse x = eitherToValidation $ isName x
             li  = line_info arg
-        lift $ hoistEither 
+        lift $ E.hoistEither 
              $ with_li li 
              $ validationToEither 
              $ traverse parse 
@@ -319,8 +361,14 @@ instance Readable (Maybe ProgId) where
     read_one  = fmap PId <$> read_one
     read_args = fmap PId <$> read_args
 
-raise :: Monad m => Error -> EitherT [Error] m a
-raise e = left [e]
+raise :: MonadError [Error] m 
+      => Error -> m a
+raise e = throwError [e]
+
+raise' :: (MonadError [Error] m,MonadReader LineInfo m)
+       => (LineInfo -> Error) -> m a
+raise' e = do
+    raise . e =<< ask
 
 --instance Readable a => Readable (Maybe a) where
 --    read_args = do
@@ -344,10 +392,10 @@ cmd_params 0 xs     = right ([], xs)
 cmd_params n xs     = do
         let xs' = drop_blank_text' xs
         case unconsTex xs' of
-            Just (Bracket _ _ xs _, ys) -> do
+            Just (BracketNode (Bracket _ _ xs _), ys) -> do
                 (ws, zs) <- cmd_params (n-1) ys
                 right (xs:ws, zs)
-            _                 -> left [Error ("Expecting one more argument") $ line_info xs]
+            _                 -> throwError [Error ("Expecting one more argument") $ line_info xs]
 
 get_1_lbl :: (Monad m)
           => LatexDoc -> EitherT [Error] m (String, LatexDoc)
@@ -361,7 +409,7 @@ get_1_lbl xs = do
                 -> right (x,z)
             _   -> err_msg x'
     where
-        err_msg x = left [Error "expecting a label" $ line_info x]
+        err_msg x = throwError [Error "expecting a label" $ line_info x]
         
 --get_2_lbl :: (Monad m, MonadReader (Int,Int) m)
 --get_2_lbl xs = do
@@ -447,8 +495,8 @@ fromEither y m = do
                 RWS.tell xs
                 return y
 
-toEither :: Monad m => RWST a [c] d m b -> EitherT [c] (RWST a [c] d m) b
-toEither m = EitherT $ mapRWST f $ do
+toEither :: RWS LineInfo [Error] () b -> M b
+toEither m = M $ EitherT $ mapRWST f $ do
         (x,xs) <- RWS.listen m
         case xs of
             [] -> return $ Right x
@@ -456,28 +504,27 @@ toEither m = EitherT $ mapRWST f $ do
     where
         f m = m >>= \(x,y,_) -> return (x,y,[])
 
-bind :: MonadReader LineInfo m
-     => String -> Maybe a -> EitherT [Error] m a
+bind :: (MonadError [Error] m,MonadReader r m,Syntactic r)
+     => String -> Maybe a -> m a
 bind msg Nothing = do
-        li <- ask
-        left [Error msg li]
+        li <- asks line_info
+        throwError [Error msg li]
 bind _ (Just x) = return x
 
-bind_all :: (Monad m,Traversable t)
+bind_all :: (Traversable t,MonadReader r m,Syntactic r,MonadError [Error] m)
          => t a
          -> (a -> String) 
          -> (a -> Maybe b)
-         -> EitherT [Error] (RWST LineInfo [Error] s m) (t b)
+         -> m (t b)
 bind_all xs msgs lu = do
             let ys' = (id &&& lu) <$> xs
                 ys  = T.mapM snd ys'
                 zs = fmap (msgs . fst) 
                     $ L.filter (isNothing . snd) 
                     $ F.toList ys'
-            li <- lift $ ask
-            toEither $ forM_ zs $ \msg ->  
-                RWS.tell [Error msg li]
-            maybe (left []) return ys
+            -- assert $ isNothing ys == not (null zs)
+            li <- asks line_info
+            maybe (throwError [Error msg li | msg <- zs]) return ys
 
 
 insert_new :: Ord a 
@@ -504,7 +551,7 @@ data ParamT m = ParamT
     }
 
 newtype VisitorT m a = VisitorT { unVisitor :: ErrorT (ReaderT (LineInfo, LatexDoc) m) a }
-    deriving (Functor,Applicative,Monad,MonadError)
+    deriving (Functor,Applicative,Monad,E.MonadError)
 
 instance MonadTrans VisitorT where
     lift = VisitorT . lift . lift
@@ -662,7 +709,7 @@ run li m = EitherT $ do
 ff :: Monad m
    => LatexNode 
    -> ReaderT (ParamT m) (VisitorT m) ()
-ff (Env _ s li xs _) = do
+ff (EnvNode (Env _ s li xs _)) = do
             r <- asks $ L.lookup s . blocksT
             case r of
                 Just (VEnvBlock g)  -> do
@@ -671,7 +718,7 @@ ff (Env _ s li xs _) = do
                 Nothing -> do
                     forM_ (contents' xs) ff
                     gg xs
-ff (Bracket _ _ cs _) = do
+ff (BracketNode (Bracket _ _ cs _)) = do
             forM_ (contents' cs) ff
             gg cs
 ff (Text _) = return ()

@@ -18,11 +18,13 @@ import UnitB.Syntax as AST
     --
     -- Libraries
     --
-import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.RWS as RWS ( RWS )
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Control.Monad.RWS as RWS ( RWS )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
+import Data.Either.Validation
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
@@ -32,14 +34,28 @@ import Utilities.Map   as M hiding ( (\\) )
 import Utilities.Syntactic
 import Utilities.Table
 
-tr_hint :: MachineP2
-        -> MachineId
+tr_hintV :: HasMachineP2 mch
+         => mch
+         -> Table Name Var
+         -> NonEmpty EventId
+         -> LatexDoc
+         -> Either [Error] TrHint
+tr_hintV p2 vs evts doc = validationToEither $ eitherToValidation r <* nonNullError es
+    where
+        (r,es) = runM (tr_hint p2 vs (as_label <$> evts) doc) (line_info doc)
+
+nonNullError :: [e] -> Validation [e] ()
+nonNullError [] = pure ()
+nonNullError es = Failure es
+
+tr_hint :: HasMachineP2 mch
+        => mch
         -> Table Name Var
         -> NonEmpty Label
         -> LatexDoc
         -> M TrHint
-tr_hint p2 m vs lbls thint = do
-    tr@(TrHint wit _)  <- toEither $ tr_hint' p2 m vs lbls thint empty_hint
+tr_hint p2 vs lbls thint = do
+    tr@(TrHint wit _)  <- toEither $ tr_hint' p2 vs lbls thint empty_hint
     evs <- get_events p2 $ NE.toList lbls
     let vs = L.map (view pIndices p2 !) evs
         err e ind = ( not $ M.null diff
@@ -51,40 +67,40 @@ tr_hint p2 m vs lbls thint = do
         $ zipWith err evs vs
     return tr
 
-tr_hint' :: MachineP2
-         -> MachineId
+tr_hint' :: HasMachineP2 mch
+         => mch
          -> Table Name Var
          -> NonEmpty Label
          -> LatexDoc
          -> TrHint
          -> RWS LineInfo [Error] () TrHint
-tr_hint' p2 _m fv lbls = visit_doc []
+tr_hint' p2 fv lbls = visit_doc []
         [ ( "\\index"
           , CmdBlock $ \(x, texExpr) (TrHint ys z) -> do
-                evs <- get_events p2 $ NE.toList lbls
+                evs <- _unM $ get_events p2 lbls
                 let inds = p2^.pIndices
-                vs <- bind_all evs 
+                vs <- _unM $ bind_all evs 
                     (format "'{0}' is not an index of '{1}'" x) 
                     (\e -> x `M.lookup` (inds ! e))
-                let Var _ t = head vs
+                let Var _ t = NE.head vs
                     ind = prime $ Var x t
                     x'  = addPrime x
-                expr <- hoistEither $ parse_expr' 
+                expr <- _unM $ hoistEither $ parse_expr' 
                     ((p2^.pMchSynt) `with_vars` insert x' ind fv) 
-                        -- { expected_type = Just t }
                     texExpr
                 return $ TrHint (insert x (t, expr) ys) z)
         , ( "\\lt"
           , CmdBlock $ \(One prog) (TrHint ys z) -> do
                 let msg = "Only one progress property needed for '{0}'"
-                toEither $ error_list 
+                _unM $ toEither $ error_list 
                     [ ( not $ MM.isNothing z
                       , format msg lbls )
                     ]
                 return $ TrHint ys (Just prog))
         ]
 
-get_event :: HasMachineP1 phase => phase -> Label -> M EventId
+get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m) 
+          => phase -> Label -> m EventId
 get_event p2 ev_lbl = do
         let evts = p2^.pEventIds
         bind
@@ -98,7 +114,8 @@ get_abstract_event p2 ev_lbl = do
             (format "event '{0}' is undeclared" ev_lbl)
             $ as_label ev_lbl `M.lookup` evts
 
-get_events :: Traversable f => MachineP2 -> f Label -> M (f EventId)
+get_events :: (Traversable f,MonadReader r m,Syntactic r,MonadError [Error] m,HasMachineP2 mch)
+           => mch -> f Label -> m (f EventId)
 get_events p2 ev_lbl = do
             let evts = p2^.pEventIds
             bind_all ev_lbl

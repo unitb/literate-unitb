@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns
     ,OverloadedStrings
+    ,ViewPatterns
     ,GADTs,TypeFamilies #-}
     -- Behavior hiding
 module UnitB.PO 
@@ -40,10 +41,12 @@ import           Data.Foldable as F
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)
+import           Data.Monoid.Monad
 import qualified Data.Traversable as T
 
 import System.IO
 
+import Utilities.Existential
 import Utilities.Format
 import Utilities.Functor
 import Utilities.Partial
@@ -191,7 +194,7 @@ raw_machine_pos' m' = eval_generator $
                         wit_fis_po m ev
                         fis_po m ev
                     mapM_ (prog_wd_po m) $ M.toList $ _progress p
-                    sequence_ $ M.intersectionWithKey (ref_po m) (p^.progress) (m!.derivation)
+                    run $ foldMapWithKey (fmap Cons . ref_po m) (m!.derivation)
     where 
         m = raw m'
         syn = mconcat $ L.map (view syntacticThm) $ all_theories $ m!.theory
@@ -223,27 +226,27 @@ proof_obligation' pos proofs m = do
 
 additional_transient :: RawMachine -> [(Label, RawTransient)]
 additional_transient m = do
-    F.fold $ M.intersectionWithKey 
+    M.foldMapWithKey 
         (allAutomaticTransients . ("LIVE" </>) . as_label) 
-        (m!.props.progress) 
+        --(m!.props.progress) 
         (m!.derivation)
 
 additional_safety :: RawMachine -> [(Label, RawSafetyProp)]
 additional_safety m = do
     F.fold $ M.intersectionWithKey 
-        (allAutomaticSafety . ("LIVE" </>) . as_label) 
+        (const . allAutomaticSafety . ("LIVE" </>) . as_label) 
         (m!.props.progress) 
         (m!.derivation)
 
-ref_po :: RawMachine -> ProgId -> RawProgressProp -> ProofTree -> M ()
-ref_po m lbl prop r = 
+ref_po :: RawMachine -> ProgId -> ProofTree -> M ()
+ref_po m lbl r = 
         with (do
                 prefix_label $ as_label lbl
                 prefix_label "LIVE" 
                 _context $ assert_ctx m
                 _context $ step_ctx m
                 named_hyps $ invariants m) 
-            $ refinement_po m prop r
+            $ refinement_po m r
 
 theory_po :: Theory -> Either [Error] (Table Label Sequent)
 theory_po th = do
@@ -945,28 +948,28 @@ thm_po m (lbl, xp) =
     where
         inv = invariants_only m
 
-allAutomaticTransients :: Label -> RawProgressProp -> ProofTree -> [(Label,RawTransient)]
-allAutomaticTransients lbl prop (ProofNode r ps _) = 
+allAutomaticTransients :: Label -> ProofTree -> [(Label,RawTransient)]
+allAutomaticTransients lbl (view cell -> Cell (Inference prop r ps _ _)) =
            ((lbl',) <$> automaticTransient prop r)
-        ++ foldMapOf traverse (uncurry $ allAutomaticTransients lbl') ps
+        ++ foldMapOf traverse (allAutomaticTransients lbl') ps
     where
         lbl' = lbl </> rule_name r
 
-allAutomaticSafety :: Label -> RawProgressProp -> ProofTree -> [(Label,RawSafetyProp)]
-allAutomaticSafety lbl prop (ProofNode r ps _) = 
+allAutomaticSafety :: Label -> ProofTree -> [(Label,RawSafetyProp)]
+allAutomaticSafety lbl (view cell -> Cell (Inference prop r ps _ _)) = 
            ((lbl',) <$> automaticSafety prop r)
-        ++ foldMapOf traverse (uncurry $ allAutomaticSafety lbl') ps
+        ++ foldMapOf traverse (allAutomaticSafety lbl') ps
     where
         lbl' = lbl </> rule_name r
 
-refinement_po :: RawMachine -> RawProgressProp -> ProofTree -> POGen ()
-refinement_po m prog (ProofNode n hp hs) = do
+refinement_po :: RawMachine -> ProofTree -> POGen ()
+refinement_po m (view cell -> Cell (Inference prog n hp ht hs)) = do
         with (prefix_label $ rule_name n) $ do
-            liveness_po prog n (fst <$> hp) (fst <$> hs)
-            for_ hp $ uncurry $ refinement_po m
+            liveness_po prog n (view goal <$> hp) ht (fst <$> hs)
+            for_ hp $ refinement_po m
 
 instance LivenessRulePO Ensure where
-    liveness_po _ _ (Const ()) (Const ()) = return ()
+    liveness_po _ _ Proxy Proxy Proxy = return ()
     automaticSafety (LeadsTo vs p q) (Ensure _ _) = [saf]
         where
             saf = Unless vs p q
@@ -978,7 +981,7 @@ instance LivenessRulePO Ensure where
 instance LivenessRulePO Monotonicity where
     liveness_po (LeadsTo fv0 p0 q0) Monotonicity 
             (Identity (LeadsTo fv1 p1 q1)) 
-            (Const ()) = do
+            Proxy Proxy = do
         emit_goal assert ["lhs"] (
             zforall (fv0 ++ fv1) ztrue $
                      (p0 `zimplies` p1))
@@ -987,13 +990,13 @@ instance LivenessRulePO Monotonicity where
                      (q1 `zimplies` q0))
 instance LivenessRulePO Implication where
     liveness_po (LeadsTo fv1 p1 q1) Implication
-            (Const ()) (Const ()) = do
+            Proxy Proxy Proxy = do
         emit_goal assert [] (
             zforall fv1 ztrue $
                      (p1 `zimplies` q1))
 instance LivenessRulePO Disjunction where
     liveness_po (LeadsTo fv0 p0 q0) Disjunction 
-            ps (Const ()) = do
+            ps Proxy Proxy = do
         emit_goal assert ["lhs"] (
             zforall fv0 ztrue (
                 ( p0 `zimplies` zsome (NE.map disj_p ps') ) ) )
@@ -1010,7 +1013,7 @@ instance LivenessRulePO Disjunction where
 instance LivenessRulePO NegateDisjunct where
     liveness_po (LeadsTo fv0 p0 q0) NegateDisjunct
             (Identity (LeadsTo fv1 p1 q1)) 
-            (Const ()) = do
+            Proxy Proxy = do
         emit_goal assert ["lhs"] (
             zforall (fv0 ++ fv1) ztrue $
                         (zand p0 (znot q0) `zimplies` p1))
@@ -1019,7 +1022,7 @@ instance LivenessRulePO NegateDisjunct where
                         (q1 `zimplies` q0))
 instance LivenessRulePO Transitivity where
     liveness_po (LeadsTo fv0 p0 q0) Transitivity
-            xs (Const ()) = do
+            xs Proxy Proxy = do
         let (LeadsTo fv1 p1 _) = NE.head xs
             (LeadsTo fv2 _ q2) = NE.last xs
             conseq = L.zip (NE.toList xs) (L.drop 1 $ NE.toList xs)
@@ -1040,6 +1043,7 @@ instance LivenessRulePO Transitivity where
 instance LivenessRulePO PSP where
     liveness_po (LeadsTo fv0 p0 q0) PSP
             (Identity (LeadsTo fv1 p1 q1))
+            Proxy 
             (Identity (Unless fv2 r b)) = do
         emit_goal assert ["lhs"] (
             zforall (fv0 ++ fv1 ++ fv2) ztrue $
@@ -1050,7 +1054,7 @@ instance LivenessRulePO PSP where
 instance LivenessRulePO Induction where
     liveness_po (LeadsTo fv0 p0 q0) (Induction v)
             (Identity (LeadsTo fv1 p1 q1))
-            (Const ()) = do
+            Proxy Proxy = do
         emit_goal assert ["lhs"] (
             zforall (fv0 ++ fv1) ztrue $
                 ((p0 `zand` variant_equals_dummy v `zand` variant_bounded v) `zimplies` p1)
@@ -1060,12 +1064,10 @@ instance LivenessRulePO Induction where
                 (q1 `zimplies` zor (p0 `zand` variant_decreased v `zand` variant_bounded v) q0)
                 )
 instance LivenessRulePO Add where
-    liveness_po _ Add (Const ()) (Const ()) = emit_goal assert [] (zfalse :: RawExpr)
+    liveness_po _ Add Proxy Proxy Proxy = emit_goal assert [] (zfalse :: RawExpr)
 instance LivenessRulePO Discharge where
     liveness_po (LeadsTo fv0 p0 q0)
-            (Discharge 
-                    _ (Tr fv1 p1 _ _)) (Const ())
-                    (Just (Unless fv2 p2 q2)) = do
+            Discharge Proxy (Identity (Tr fv1 p1 _ _)) (Just (Unless fv2 p2 q2)) = do
         emit_goal assert ["saf/lhs"] (
             zforall (fv0 ++ M.elems fv1 ++ fv2) ztrue (
                     p0 `zimplies` p2
@@ -1079,9 +1081,7 @@ instance LivenessRulePO Discharge where
                     zand p0 (znot q0) `zimplies` p1
                     ) )
     liveness_po (LeadsTo fv0 p0 q0)
-            (Discharge 
-                    _ (Tr fv1 p1 _ _))  (Const ())
-                    Nothing = do
+            Discharge Proxy (Identity (Tr fv1 p1 _ _)) Nothing = do
         emit_goal assert ["tr/lhs"] (
             zforall (fv0 ++ M.elems fv1) ztrue (
                      (p0 `zimplies` p1) ) )

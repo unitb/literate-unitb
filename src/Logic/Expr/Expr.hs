@@ -711,6 +711,12 @@ used_fun e = visit f s e
                 -- Const ts n t -> S.singleton $ Fun ts n [] t
                 _          -> S.empty
 
+free_vars' :: HasExpr expr
+           => Table Name Var -> expr -> Table Name Var
+free_vars' ds e = vs `M.intersection` ds
+    where
+        vs = used_var' (getExpr e)
+
 instance HasName (AbsFun n t) n where
     name = to $ \(Fun _ x _ _ _) -> x
 

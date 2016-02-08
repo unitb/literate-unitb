@@ -13,7 +13,7 @@ import Document.Phase.Structures as Mch
 import Document.Phase.Declarations as Mch
 import Document.Phase.Expressions as Mch
 import Document.Phase.Proofs as Mch
-import Document.Visitor
+import Document.Visitor hiding (hoistEither)
 
 import Latex.Parser
 
@@ -106,7 +106,7 @@ get_components xs li =
     where
         with_li li cmd = R.local (const li) cmd
         get_name li xs = with_li li $ liftM fst $ lift $ get_1_lbl xs
-        f x@(Env _ tag li0 xs _li1) 
+        f x@(EnvNode (Env _ tag li0 xs _li1)) 
             | tag == "machine" = do
                     n <- get_name li0 xs
                     n' <- lift $ hoistEither $ Syn.with_li li $ isName n

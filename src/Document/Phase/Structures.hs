@@ -31,9 +31,8 @@ import Theories.SetTheory
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 
 import           Control.Monad 
+import           Control.Monad.Except
 import           Control.Monad.Reader.Class 
-import           Control.Monad.Trans
-import           Control.Monad.Trans.Either
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
@@ -134,7 +133,7 @@ set_decl = machineCmd "\\newset" $ \(Identity (SetName tag)) _m _ -> do
                 new_type = Gen new_sort []
                 new_def = Def [] name [] (set_type new_type)
                                     $ zlift (set_type new_type) ztrue
-            li <- lift ask
+            li <- ask
             return ([(tag,new_sort,li)],[(tag,(new_def,Local,li))])
 
 event_splitting :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
@@ -143,7 +142,7 @@ event_splitting = machineCmd "\\splitevent" $ \(Abs aevt, cevts) _m _p0 -> do
         _ = cevts :: [Conc EventId]
     li <- ask
     when (any (Conc "skip" ==) cevts) $ do
-        left [Error "invalid event name: 'skip' is a reserved name" li]
+        throwError [Error "invalid event name: 'skip' is a reserved name" li]
     return [(as_label c,(c,[aevt]),li) | Conc c <- cevts]
 
 event_merging :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
@@ -152,21 +151,21 @@ event_merging = machineCmd "\\mergeevents" $ \(aevts, Conc cevt) _m _p0 -> do
         _ = cevt  :: EventId
     li <- ask
     when (cevt == "skip") $ do
-        left [Error "invalid event name: 'skip' is a reserved name" li]
+        throwError [Error "invalid event name: 'skip' is a reserved name" li]
     return [(as_label cevt,(cevt,map getAbstract aevts),li)]
 
 event_decl :: MPipeline MachineP0 [(Label, (EventId,[EventId]), LineInfo)]
 event_decl = machineCmd "\\newevent" $ \(Identity (Conc evt)) _m _ -> do 
-            li <- lift ask 
+            li <- ask 
             when (evt == "skip") $ do
-                left [Error "invalid event name: 'skip' is a reserved name" li]
+                throwError [Error "invalid event name: 'skip' is a reserved name" li]
             return [(as_label evt,(evt,[]),li)]
 
 refines_mch :: MPipeline MachineP0 [((), MachineId, LineInfo)]
 refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) -> do
-            li <- lift ask
+            li <- ask
             unless (amch `M.member` ms) 
-                $ left [Error (printf "Machine %s refines a non-existant machine: %s" (pretty cmch) (pretty amch)) li]
+                $ throwError [Error (printf "Machine %s refines a non-existant machine: %s" (pretty cmch) (pretty amch)) li]
                 -- check that mch is a machine
             return [((),amch,li)]
 
@@ -181,7 +180,7 @@ import_theory = machineCmd "\\with" $ \(Identity (TheoryName th_name)) _m _ -> d
                  , interval_theory ]
             msg = "Undefined theory: %s "
                 -- add suggestions
-        li <- lift ask
+        li <- ask
         case th_name `M.lookup` th of
-            Nothing -> left [Error (printf msg $ render th_name) li]
+            Nothing -> throwError [Error (printf msg $ render th_name) li]
             Just th -> return [(th_name,th,li)]

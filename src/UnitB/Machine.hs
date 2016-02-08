@@ -177,7 +177,7 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
                 format "%s - %s" (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
                     ## (ev^.old.actions) === (ev^.abs_actions)
                 -- Proofs match properties
-            "inv9" ## ((m^.derivation) `M.difference` (m^.props.progress)) === M.empty
+            "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty
                 -- events in proofs
             "inv10" ## mapM_ ((`elem` (m^.events)).Right) 
                 (m^.partsOf (derivation.traverse.traverseEvents))

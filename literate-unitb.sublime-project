@@ -36,27 +36,45 @@
 	],
 	"folders":
 	[
-		{
-			"file_include_patterns":
-			[
-				"*hs","*tex",
-				"*.md","*sty"
-			],
-			"folder_exclude_patterns":
-			[
-				".*",
-				"bin",
-				"interface",
-				"gui",
-				"eifgens"
-			],
-			"path": "."
-		},
-		{ "path" : "src" },
-		{ "path" : "suite" },
-		{ "path" : "script" },
-		{ "path" : "app" },
-		{ "path" : "Tests" }
+		// {
+		// 	"file_include_patterns":
+		// 	[
+		// 		"*hs","*tex",
+		// 		"*.md","*sty"
+		// 	],
+		// 	// "folder_include_patterns":
+		// 	// [
+		// 	// 	"src",
+		// 	// 	"suite",
+		// 	// 	"app"
+		// 	// ],
+		// 	"folder_exclude_patterns":
+		// 	[
+		// 		".*",
+		// 		"bin",
+		// 		"interface",
+		// 		"gui",
+		// 		"eifgens"
+		// 	],
+		// 	"path": "."
+		// },
+		{ "path" : "." 
+		, "file_include_patterns" : ["*.cabal"] },
+		{ "path" : "src"
+		, "file_include_patterns":
+			[ "*hs","*.md" ] },
+		{ "path" : "suite" 
+		, "file_include_patterns":
+			[ "*hs","*.md" ] },
+		{ "path" : "script" 
+		, "file_include_patterns":
+			[ "*hs","*.md" ] },
+		{ "path" : "app" 
+		, "file_include_patterns":
+			[ "*hs","*.md" ] },
+		{ "path" : "Tests" 
+		, "file_include_patterns":
+			[ "*tex","*sty" ] }
 	],
 	"settings":
 	{ "translate_tabs_to_spaces": true }

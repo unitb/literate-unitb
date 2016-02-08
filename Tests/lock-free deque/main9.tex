@@ -10,7 +10,7 @@
 \newcommand{\REQ}{\text{REQ}}
 
 \begin{document}
-  \input{main9/machine_m0.tex}
+  % \input{main9/machine_m0.tex}
 \begin{machine}{m0}
 
   \newset{\REQ}
@@ -18,7 +18,7 @@
 We need a variable to keep track of all the requests to mutate the
 data structure.
 
-  \[ \variable{ req,req0 : \set [\REQ] } \]
+  \[ \variable{ req,req_0 : \set [\REQ] } \]
 
 ... and new events:
 % % \hide{
@@ -32,29 +32,29 @@ data structure.
 \begin{align*}
   & \evguard{req}{grd0}{ \neg r \in req }  \\
   & \evbcmeq{req}{act0}{ req }{ req \bunion \{ r \} } \\
-  & \evbcmeq{req}{act1}{ req0 }{ req } 
+  & \evbcmeq{req}{act1}{ req_0 }{ req } 
 \end{align*}
 \[\param{handle}{r : \REQ }\]
 \begin{align*}
   \evguard{handle}{grd0}{ r \in req }  \\
   \evbcmeq{handle}{act0}{ req }{ req \setminus \{ r \} } \\
-  \evbcmeq{handle}{act1}{ req0 }{ req }
+  \evbcmeq{handle}{act1}{ req_0 }{ req }
 \end{align*}
 
 % \section{Requirements}
 %   \dummy{ R : \set[\REQ] }
 \begin{align*}
-  \constraint{co0}{ req0' = req \1\lor (req0' = req0 \1\land req' = req) }
+  \constraint{co0}{ req_0' = req \1\lor (req_0' = req_0 \1\land req' = req) }
 \end{align*}
 \begin{align*}
   & \progress{prog0}
     { \neg req = \emptyset }
-    { \neg req0 \subseteq req }
+    { \neg req_0 \subseteq req }
  \refine{prog0}{ensure}{handle}{ using \ref{handle} }
   & \progress{prog1}
     { V = req}
     { req \subset V 
-      \1\lor req = \emptyset \1\lor \neg req \subseteq req0}
+      \1\lor req = \emptyset \1\lor \neg req \subseteq req_0}
  \refine{prog1}{ensure}{handle}{ using \ref{handle} }
 \end{align*}
 \begin{align*}
@@ -64,7 +64,7 @@ data structure.
 \end{align*}
 \end{machine}
 
-\input{main9/machine_m1}
+% \input{main9/machine_m1}
 \begin{machine}{m1}
   \refines{m0}
 \[ \indices{handle}{ b : \Bool } \]
@@ -75,23 +75,26 @@ data structure.
   & \witness{handle}{b}{b = ch} \\
   & \progress{m1:prog1}{ b = ch }{ b = ch }
 \end{align*}
-\replace{handle}{}{m1:sch0}{}{m1:prog1}
-      \begin{liveness}{1}{2}
-        \progstep{\true}{req = \emptyset \1\lor \neg req \subseteq req_0}
-      \begin{flatstep}{induction}
-        \progstep
-          {V = req}
-          {req \subset V
-            \1\lor req = \emptyset \1\lor \neg req \subseteq req_0}  
-          \begin{step}{discharge}
-            \trstep{handle}
-              { req = V \1\land \neg req = \emptyset  }
-            \safstep
-              { V = req }
-              { req \subset V \1\lor \neg req \subseteq req_0 }
-          \end{step}
-      \end{flatstep}
-      \end{liveness}
+% \replace{handle}{}{m1:sch0}{}{} % {m1:prog1}
+  \begin{liveness}{m1:prog1}{2}{}
+    \progstep{\true}{req = \emptyset \1\lor \neg req \subseteq req_0}
+      {induction}{}{ \var{req}{up}{\emptyset} }
+  \begin{flatstep}
+    \progstep
+      {V = req}
+      {req \subset V
+        \1\lor req = \emptyset \1\lor \neg req \subseteq req_0}
+      {discharge}{}{}
+      \begin{step}
+        \trstep{handle}{ \index{b}{ \true }  }
+          { req = V \1\land \neg req = \emptyset  }
+        \safstep
+          { V = req }
+          { req \subset V \1\lor \neg req \subseteq req_0 }
+          {}
+      \end{step}
+  \end{flatstep}
+  \end{liveness}
 \end{machine}
 
 % % \input{main9/machine_m2}

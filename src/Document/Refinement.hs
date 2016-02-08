@@ -4,6 +4,7 @@
 module Document.Refinement where
 
     -- Module
+import Document.Phase
 import Document.Phase.Transient
 import Document.Phase.Types
 import Document.Proof
@@ -16,18 +17,24 @@ import Latex.Parser
 import Logic.Expr hiding (Const)
 
     -- Libraries
-import Control.Arrow (second)
+import Control.Applicative
 import Control.Lens hiding (Context)
 
+import Control.Monad.Except
+import Control.Monad.Reader
 import Control.Monad.RWS as RWS
+import Control.Monad.Trans.Either as E
 
 import Data.Char
+import Data.Default
 import Data.Either
 import Data.List as L
 import qualified Data.List.NonEmpty as NE
-import Data.Tuple
 
-import Utilities.Error
+import Text.Printf
+
+import Utilities.Error hiding (MonadError)
+import Utilities.Existential
 import Utilities.Format
 import Utilities.Map as M hiding ( map, (\\) )
 import Utilities.Syntactic
@@ -35,42 +42,95 @@ import Utilities.Table
 
 data RuleParserParameter = 
     RuleParserDecl 
-        { getMachine :: MachineP2
-        , getMachineId :: MachineId
-        , getProgress :: (Table Label ProgressProp)
-        , getSafety :: (Table Label SafetyProp)
-        , getTransient :: (Table Label Transient)
+        { getMachine :: MachineP3
+        --, getProgress :: Table Label ProgressProp
+        --, getSafety :: Table Label SafetyProp
+        --, getTransient :: Table Label Transient
         , getGoal :: Label
         , getHypotheses :: [Label]
         , getHint :: LatexDoc
-        , getParser :: ParserSetting
         }
 
+instance Syntactic RuleParserParameter where
+    line_info = line_info . getHint
+    after = after . getHint
+    traverseLineInfo = hintDoc . traverseLineInfo
+
+hintDoc :: Lens' RuleParserParameter LatexDoc
+hintDoc f p = (\h' -> p {getHint = h'}) <$> f (getHint p)
+
+getMachineId :: RuleParserParameter -> MachineId
+getMachineId = view pMachineId . getMachine
+
+getParser :: RuleParserParameter -> ParserSetting
+getParser = view pMchSynt . getMachine
+
+getTransient :: RuleParserParameter -> Table Label Transient
+getTransient = view pTransient . getMachine
+
+getProgress :: RuleParserParameter -> Map Label ProgressProp
+getProgress = mapKeysMonotonic as_label . view pProgress . getMachine
+
+getSafety :: RuleParserParameter -> Table Label SafetyProp
+getSafety = view pSafety . getMachine
+
+getGoalProp :: RuleParserParameter -> ProgressProp
+getGoalProp = liftA2 (!) getProgress getGoal
+
 type Rule = ProofTree
+newtype RuleProxy = RuleProxy { _ruleProxyCell :: Cell1 Proxy RuleParser }
 
 class ( LivenessRulePO rule
       , Parsable (SafetyHyp rule)
+      , Parsable (TransientHyp rule)
       , Parsable (ProgressHyp rule) )
             => RuleParser rule where
-
-parse_rule :: RuleParser rule
-           => rule
-           -> LiveParser Rule
-parse_rule r = ProofNode r <$> (fmap (second ref.swap) <$> parseProgress r) 
-                             <*> (fmap (,Nothing) <$> parseSafety r)
-    where
-        ref :: ProgId -> ProofTree
-        ref pid = ProofNode (Reference pid) (Const ()) (Const ())
-
-type LiveParser = RWST RuleParserParameter () [Label] M
+    makeEventList :: Proxy rule
+                  -> [label] 
+                  -> M (EventSupport rule label)
+    default makeEventList :: EventSupport rule ~ None
+                          => Proxy rule 
+                          -> [label] 
+                          -> M (EventSupport rule label)
+    makeEventList _ [] = return Proxy
+    makeEventList _ (_:_) = raise' $ Error "expecting no events" 
+    promoteRule :: MachineP3
+                -> Inference (Proxy rule) 
+                -> EventSupport rule Label
+                -> LatexDoc
+                -> M rule
+    default promoteRule :: (Default rule, EventSupport rule ~ None)
+                        => MachineP3
+                        -> Inference (Proxy rule) 
+                        -> EventSupport rule Label
+                        -> LatexDoc
+                        -> M rule
+    promoteRule _ _ _ _ = return def
+    --promoteRule _ = assert False undefined
 
 class Parsable f where
     parseMany :: Label
               -> (Label -> M a)
               -> LiveParser (f a)
 
+type LiveParser = RWST RuleParserParameter () [Label] M
+
+makeFields ''RuleProxy
+
+parse_rule :: RuleParser rule
+           => RawProgressProp
+           -> rule
+           -> LiveParser Rule
+parse_rule g r = proofNode g r <$> (fmap ref <$> parseProgress r) 
+                               <*> (parseTransient r)
+                               <*> (fmap (,Nothing) <$> parseSafety r)
+    where
+        ref :: (ProgId,RawProgressProp) -> ProofTree
+        ref (pid,prop) = proofNode prop (Reference pid) Proxy Proxy Proxy
+
+
 instance Parsable None where
-    parseMany _ _ = return $ Const ()
+    parseMany _ _ = return Proxy
 instance Parsable One where
     parseMany rule f = do
         xs <- get
@@ -112,8 +172,21 @@ parseProgress r = do
         case M.lookup x prog of
             Just p -> return (PId x, getExpr <$> p)
             Nothing -> do
-                li <- lift $ ask
+                li <- ask
                 raise $ Error (format "refinement ({0}): {1} should be a progress property" rule x) li
+
+parseTransient :: (LivenessRule rule, Parsable f) 
+               => rule
+               -> LiveParser (f RawTransient)
+parseTransient r = do
+        saf <- asks getTransient
+        let rule = rule_name r
+        parseMany rule $ \lbl -> 
+            case M.lookup lbl saf of
+                Just p -> return $ getExpr <$> p
+                Nothing -> do
+                    li <- ask
+                    raise $ Error (format "refinement ({0}): {1} should be a safety property" rule lbl) li
 
 parseSafety :: (LivenessRule rule, Parsable f) 
             => rule
@@ -129,22 +202,89 @@ parseSafety r = do
                     raise $ Error (format "refinement ({0}): {1} should be a safety property" rule x) li
 
 instance RuleParser Induction where
+    promoteRule m (Inference g Proxy (Identity st) Proxy Proxy) _ hint = do
+        let (LeadsTo fv0 _ _) = g
+            (LeadsTo fv1 _ _) = st^.goal
+            parser = m^.pMchSynt
+            syntax = "Syntax: \\var{expr}{dir}{bound}"
+        li <- ask
+        dum <- case fv1 \\ fv0 of
+            [v] -> return v
+            _   -> raise $ Error (   "inductive formula should have one free "
+                                ++ "variable to record the variant") li 
+        var <- case find_cmd_arg 3 ["\\var"] hint of
+            Just (_,_,[var,dir,bound],_) -> toEither $ do
+                dir  <- case map toLower $ flatten' dir of
+                    "up"   -> return Up
+                    "down" -> return Down
+                    _      -> do
+                        tell [Error "expecting a direction for the variant" li]
+                        return (error "induction: unreadable")
+                var   <- fromEither ztrue $ _unM $
+                    getExpr <$> parse_expr'' 
+                        (parser `with_vars` symbol_table fv0
+                               & free_dummies  .~ True
+                               & expected_type .~ Nothing )
+                        (flatten_li' var)
+                bound <- fromEither ztrue $ _unM $
+                    getExpr <$> parse_expr''
+                        (parser & free_dummies  .~ True
+                                & expected_type .~ Just (type_of var) )
+                        (flatten_li' bound)
+                let is_set = isRight $ zcast (set_type gA) (Right var)
+                if type_of var == int then
+                    return (IntegerVariant dum var bound dir)
+                else if is_set then
+                    return (SetVariant dum var bound dir)
+                else do
+                    tell [Error 
+                        (format "invalid variant type\n\tExpecting: set or integer\n\tActual:  {0}\n\t{1}" 
+                            (type_of var) syntax)
+                        li]
+                    return ($myError "")
+            Nothing -> raise $ Error ("expecting a variant. " ++ syntax) li
+            _ -> raise $ Error ("invalid variant. " ++ syntax) li
+        return (Induction var)
+
 instance RuleParser Disjunction where
 instance RuleParser Discharge where
+    promoteRule _ _ _ _ = return Discharge
 instance RuleParser Monotonicity where
 instance RuleParser Implication where
 instance RuleParser NegateDisjunct where
 instance RuleParser Transitivity where
 instance RuleParser PSP where
+instance RuleParser Reference where
+    makeEventList Proxy xs = do
+        case xs of
+            [x] -> return $ Identity x
+            _   -> raise' $ Error "expecting exactly one label"
+    promoteRule m _ (Identity ref) _ = do
+        let pid = PId ref
+        unless (pid `M.member` (m^.pProgress))
+            $ raise' $ Error $ printf "invalid progress property: %s" $ show ref
+        return $ Reference pid
 instance RuleParser Ensure where
+    makeEventList Proxy xs = do
+        bind "expecting at least one event" (NE.nonEmpty xs)
+    promoteRule m proof evts hint = do
+        let LeadsTo dum _ _ = proof^.goal
+        evts' <- bind_all evts 
+            (printf "invalid event name: %s" . show) 
+            (`M.lookup` (m^.pEventIds))
+        hint <- tr_hint m 
+                (symbol_table dum)
+                evts hint
+        return $ Ensure evts' (asExpr <$> hint)
 
 parse :: RuleParser rule
       => rule
       -> RuleParserParameter
       -> M Rule
 parse rc param = do
-        let hyps_lbls = getHypotheses param
-        fst <$> evalRWST (parse_rule rc) param hyps_lbls
+        let goal      = getExpr <$> getGoalProp param
+            hyps_lbls = getHypotheses param
+        fst <$> evalRWST (parse_rule goal rc) param hyps_lbls
 
 parse' :: RuleParserParameter
        -> LiveParser Rule
@@ -159,28 +299,29 @@ parseOne rule f = runIdentity <$> parseMany rule f
 parse_discharge :: RuleParserParameter
                 -> M Rule
 parse_discharge params = do
-    let hyps_lbls = getHypotheses params
-    li <- ask
-    when (1 > length hyps_lbls || length hyps_lbls > 2)
-        $ raise $ Error (format "too many hypotheses in the application of the rule: {0}"
-                            $ intercalate "," $ map show hyps_lbls) li
+    let goal = getExpr <$> getGoalProp params
+    --let hyps_lbls = getHypotheses params
+    --li <- ask
+    --when (1 > length hyps_lbls || length hyps_lbls > 2)
+    --    $ raise $ Error (format "too many hypotheses in the application of the rule: {0}"
+    --                        $ intercalate "," $ map show hyps_lbls) li
     parse' params $ do
-        transient <- asks getTransient
-        let rule = "discharge"
-        (lbl,tr) <- parseOne rule $ \lbl -> do
-            case M.lookup lbl transient of
-                Just p -> return (lbl,getExpr <$> p)
-                Nothing -> do
-                    li <- ask
-                    raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule lbl) li
-        parse_rule (Discharge lbl tr)
+        --transient <- asks getTransient
+        --let rule = "discharge"
+        --(lbl,tr) <- parseOne rule $ \lbl -> do
+        --    case M.lookup lbl transient of
+        --        Just p -> return (lbl,getExpr <$> p)
+        --        Nothing -> do
+        --            li <- ask
+        --            raise $ Error (format "refinement ({0}): {1} should be a transient predicate" rule lbl) li
+        parse_rule goal Discharge -- (Discharge lbl tr)
 
 parse_induction :: RuleParserParameter
                 -> M Rule
 parse_induction param = do
         let rule = "induction"
             prog = getProgress param
-            goal_lbl = getGoal param
+            goal_lbl  = getGoal param
             hyps_lbls = getHypotheses param
             hint = getHint param
             parser = getParser param
@@ -212,13 +353,13 @@ parse_induction param = do
                         tell [Error "expecting a direction for the variant" li]
                         return (error "induction: unreadable")
                 li    <- ask
-                var   <- fromEither ztrue $
+                var   <- fromEither ztrue $ _unM $
                     getExpr <$> parse_expr'' 
                         (parser `with_vars` symbol_table fv0
                                & free_dummies  .~ True
                                & expected_type .~ Nothing )
                         (flatten_li' var)
-                bound <- fromEither ztrue $
+                bound <- fromEither ztrue $ _unM $
                     getExpr <$> parse_expr''
                         (parser & free_dummies  .~ True
                                 & expected_type .~ Just (type_of var) )
@@ -238,6 +379,24 @@ parse_induction param = do
             _ -> raise $ Error "invalid variant" li
         parse (Induction var) param
 
+type RuleParser' rule = ProgressProp 
+                     -> Inference (Proxy rule) 
+                     -> EitherT [Error] (Reader RuleParserParameter) (Inference rule)
+
+parse_ensure' :: RuleParser' Ensure
+parse_ensure' goal inf = do
+        params <- ask
+        let vs = symbol_table fv
+            p3 = getMachine params
+            thint = getHint params
+            LeadsTo fv _ _ = goal
+            evts = getHypotheses params
+        evts' <- get_events p3
+            =<< bind  "Expected non empty list of events"
+                    (NE.nonEmpty evts)
+        hint  <- E.hoistEither $ tr_hintV p3 vs evts' thint
+        return $ inf & ruleLens .~ Ensure evts' (getExpr <$> hint)
+
 parse_ensure :: RuleParserParameter
              -> M Rule
 parse_ensure params = do
@@ -246,11 +405,10 @@ parse_ensure params = do
             thint = getHint params
             LeadsTo fv _ _ = getProgress params ! getGoal params
             lbls = getHypotheses params
-            m    = getMachineId params
         lbls' <- bind  "Expected non empty list of events"
                     $ NE.nonEmpty lbls
-        hint <- tr_hint p2 m vs lbls' thint
-        lbls <- get_events p2 lbls'
+        hint  <- tr_hint p2 vs lbls' thint
+        lbls  <- get_events p2 lbls'
         parse (Ensure lbls (getExpr <$> hint)) params
 
 --data Cancellation = Cancellation ProgressProp ProgressProp ProgressProp

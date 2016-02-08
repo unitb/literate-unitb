@@ -109,6 +109,11 @@ afterLast li xs = maybe li end $ lastMay xs
 with_li :: LineInfo -> Either [String] b -> Either [Error] b
 with_li li = either (\x -> Left $ map (`Error` li) x) Right
 
+instance Syntactic LineInfo where
+    line_info = id
+    after = id
+    traverseLineInfo = id
+
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
@@ -161,6 +166,23 @@ shrink_error_list es' = do
 data TokenStream a = StringLi [(a,LineInfo)] LineInfo
 
 type StringLi = TokenStream Char
+
+instance Syntactic (TokenStream a) where
+    line_info (StringLi xs li) = headDef li (map snd xs)
+    after (StringLi _ li) = li
+    traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
+
+unconsStream :: TokenStream a -> Maybe (a,LineInfo,TokenStream a)
+unconsStream (StringLi ((x,li):xs) li') = Just (x,li,StringLi xs li')
+unconsStream (StringLi [] _) = Nothing
+
+consStream :: (a,LineInfo)
+           -> TokenStream a
+           -> TokenStream a
+consStream x (StringLi xs li) = StringLi (x:xs) li
+
+stream :: LineInfo -> TokenStream a
+stream = StringLi []
 
 neLines :: String -> NonEmpty String
 neLines [] = [] :| []

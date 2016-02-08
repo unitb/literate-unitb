@@ -12,6 +12,7 @@ import Document.Phase.Types
 import Document.Phase.Parameters
 import Document.Proof
 import Document.Scope
+import Document.Visitor (M,runM,left,hoistEither)
 
 import Latex.Parser
 
@@ -26,9 +27,7 @@ import Control.Lens as L hiding ((<.>))
 
 import Control.Monad.Reader.Class 
 import Control.Monad.Reader (Reader,runReader) 
-import Control.Monad.RWS (runRWS)
 import Control.Monad.State
-import Control.Monad.Trans.Either
 import Control.Monad.Writer.Class 
 
 import Data.Default
@@ -37,7 +36,6 @@ import Data.Either.Combinators
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Maybe as MM
-import Data.Proxy
 import Data.Semigroup
 import qualified Data.Traversable as T
 
@@ -71,12 +69,12 @@ envSpec env p = DocSpec (M.singleton env $ ArgumentSpec nargs p) M.empty
     where
         nargs = len latexArgProxy p
 
-read_all :: (IsTuple LatexArg a, Monad m)
-         => StateT ([LatexDoc],LineInfo) (EitherT [Error] m) a
+read_all :: (IsTuple LatexArg a)
+         => StateT ([LatexDoc],LineInfo) M a
 read_all = do
     let p = Proxy :: Proxy LatexArg
-        read_one' :: forall b m. (LatexArg b, Monad m) 
-                  => StateT ([LatexDoc],LineInfo) (EitherT [Error] m) b
+        read_one' :: forall b. (LatexArg b) 
+                  => StateT ([LatexDoc],LineInfo) M b
         read_one' = do
             (xs,li) <- get
             case xs of
@@ -120,11 +118,10 @@ cmdFun f xs m ctx = case x of
                       Right x -> tell w >> return (Just x)
                       Left es -> tell (w ++ es) >> return Nothing
     where
-        (x,(),w) = runRWS (runEitherT $ do
-                        x <- parseArgs assert (getCmdArgs xs)
-                        f x m (ctx ! m) )
-                    (cmdLI xs) 
-                    ()
+        (x,w) = runM (do
+                    x <- parseArgs assert (getCmdArgs xs)
+                    f x m (ctx ! m) )
+                (cmdLI xs) 
 
 machineEnv :: forall result args ctx.
               ( Monoid result, IsTuple LatexArg args )
@@ -150,11 +147,10 @@ envFun f xs m ctx = case x of
                       Right x -> tell w >> return (Just x)
                       Left es -> tell (w ++ es) >> return Nothing
     where
-        (x,(),w) = runRWS (runEitherT $ do
+        (x,w) = runM (do
                         x <- parseArgs assert (getEnvArgs xs)
                         f x (getEnvContent xs) m (ctx ! m))
                     (envLI xs) 
-                    ()
 
 contextCmd :: forall a b c. 
               ( Monoid a, IsTuple LatexArg b )

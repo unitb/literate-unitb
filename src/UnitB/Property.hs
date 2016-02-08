@@ -79,6 +79,19 @@ instance IsString EventId where
 instance IsLabel EventId where
     as_label (EventId lbl) = lbl
 
+instance PrettyPrintable expr => PrettyPrintable (Transient' expr) where
+    pretty (Tr _ expr es hint) = printf "TRANSIENT  %s {%s} [%s]" 
+            (pretty expr)
+            (pretty $ NE.toList es)
+            (pretty hint)
+
+instance PrettyPrintable expr => PrettyPrintable (TrHint' expr) where
+    pretty (TrHint subst prog) = printf "HINT: %s %s"
+            (reifyPrettyPrint asgn $ \pp -> pretty $ L.map pp $ M.toList subst)
+            (show $ Pretty <$> prog)
+        where
+            asgn (n,(t,e)) = printf "%s := %s (type: %s)" (pretty n) (pretty e) (pretty t)
+
 data Variant = 
         SetVariant     Var RawExpr RawExpr Direction
       | IntegerVariant Var RawExpr RawExpr Direction

@@ -22,9 +22,7 @@ import Theories.Arithmetic
     -- Libraries
 import Control.Arrow
 import Control.Lens hiding (uncons)
-import Control.Monad.Reader hiding (lift)
 import Control.Monad.State  hiding (lift)
-import Control.Monad.Trans.Either
 
 import Data.List
 import Data.Maybe
@@ -116,13 +114,13 @@ parseProgressProp = parseParts makeProgress "UNLESS" "safety property" parseExpr
 parseVarDecl :: Loc -> String -> State ParserSetting ()
 parseVarDecl loc str = do
         ctx <- gets contextOf
-        let e  = fromList $ run $ get_variables'' ctx (asStringLi li str)
+        let e  = fromList $ run $ get_variables'' ctx (asStringLi li str) li
             --e' = M.map f e
             --f (Var n t) = Var (S.replace "'" "@prime" n) t
         decls %= M.union e
     where
         li  = asLI loc
-        run = either (error.("\n"++).show_err) id . flip runReader li . runEitherT
+        run = either (error.("\n"++).show_err) id
 
 parseTypeDecl :: String -> ExpQ -- State ParserSetting ()
 parseTypeDecl str = do

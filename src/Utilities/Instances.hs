@@ -31,6 +31,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.List.NonEmpty (NonEmpty(..))
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
@@ -160,6 +161,9 @@ instance (Functor f,Default1 f,Default1 g,Default x) => Default (Compose f g x) 
 instance Default b => GDefault (K1 a b) where
     gDefault = K1 def
 
+instance GDefault U1 where
+    gDefault = U1
+
 instance (Default x,Default1 f) => Default (OnFunctor f x) where
     def = OnFunctor def1
 
@@ -250,7 +254,8 @@ arbitrary' = Compose $ Just arbitrary
 
 instance Eq a => Eq1 (Const a) where
     eq1 = (==)
-
+instance Eq1 Proxy where
+    eq1 = (==)
 instance Eq1 NonEmpty where
     eq1 = (==)
 
@@ -260,6 +265,8 @@ instance Ord a => Ord1 (Const a) where
 instance Ord1 NonEmpty where
     compare1 = compare
 
+instance Show1 Proxy where
+    showsPrec1 = showsPrec
 instance Show a => Show1 (Const a) where
     showsPrec1 = showsPrec
 
@@ -275,6 +282,8 @@ class NFData1 f where
 deepseq1 :: (NFData a, NFData1 f) => f a -> b -> b
 deepseq1 x y = rnf1 x `seq` y
 
+instance NFData1 Proxy where
+    rnf1 = rnf
 instance NFData a => NFData1 (Const a) where
     rnf1 = rnf
 instance NFData1 Identity where

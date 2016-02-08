@@ -1,23 +1,29 @@
 {-# LANGUAGE TypeOperators
     , Arrows
+    , ConstraintKinds
     , OverloadedStrings
-    , RecordWildCards #-}
-module Document.Phase.Proofs where
+    , RecordWildCards 
+    , ScopedTypeVariables #-}
+module Document.Phase.Proofs 
+    (run_phase4_proofs,make_phase4)
+where
 
     --
     -- Modules
     --
 import Document.Pipeline
 import Document.Phase as P
+import Document.Phase.Expressions
+import Document.Phase.Latex
 import Document.Phase.Parameters
 import Document.Phase.Transient
 import Document.Phase.Types
 import Document.Proof
 import Document.Refinement as Ref
-import Document.Scope
+import Document.Scope  hiding (contents)
 import Document.Visitor
 
-import Latex.Parser hiding (contents)
+import Latex.Parser 
 
 import Logic.Proof
 import Logic.Proof.Tactics hiding ( with_line_info )
@@ -28,13 +34,14 @@ import UnitB.Syntax as AST
     --
     -- Libraries
     --
+import Control.Applicative
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import Control.Category
 import Control.DeepSeq
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
-import           Control.Monad.Writer.Class 
-import           Control.Monad.Trans
+import           Control.Monad.Writer hiding ((<>))
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Reader ( runReaderT )
 import           Control.Monad.Trans.RWS as RWS ( mapRWST )
@@ -43,15 +50,23 @@ import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
 import           Data.Either.Combinators
+import           Data.Either.Validation
+import           Data.Functor.Compose
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
+import           Data.Proxy.TH
 import qualified Data.Set as S
 import qualified Data.Traversable as T
 import           Data.Witherable  as W
 
 import GHC.Generics (Generic)
 
+import Prelude hiding (id,(.))
+
+import Text.Printf
+
 import qualified Utilities.BipartiteGraph as G
+import Utilities.Existential
 import Utilities.Format
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
@@ -60,6 +75,7 @@ import qualified Utilities.Relation as R
 import Utilities.Syntactic
 import Utilities.Table
 
+
 type LiveEvtId = Either EventId ProgId
 
 run_phase4_proofs :: Pipeline MM SystemP3 SystemP4
@@ -67,7 +83,8 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         refs   <- run_phase 
             [ ref_replace_csched
             , ref_replace_fsched ] -< p3
-        ref_p  <- refine_prog_prop -< p3
+        ref_p  <- refine_prog_prop &&& liveness_proofs 
+                >>> arr (uncurry $ liftA2 (unionWith (++))) -< p3
         comm   <- all_comments -< p3
         prfs   <- all_proofs   -< p3
         let c_evt_refs :: Maybe (MTable (Table EventId [((Label,ScheduleChange),LineInfo)]))
@@ -83,7 +100,6 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         prog_ref <- liftP' (make_all_tables refClash)   -< ref_p
         proofs   <- liftP' (make_all_tables proofClash) -< prfs
         comments <- liftP' (make_all_tables commClash)  -< inherit r_ord <$> comm
-        let 
         f_evt_refs <- triggerP -< f_evt_refs
         c_evt_refs <- triggerP -< c_evt_refs
         prog_ref   <- triggerP -< prog_ref
@@ -208,20 +224,13 @@ mergeLiveness (Conc cl) (Abs al) = Conc LiveStruct
 
 refine_prog_prop :: MPipeline MachineP3
                 [(ProgId,(Rule,[(ProgId,ProgId)]),LineInfo)]
-refine_prog_prop = machineCmd "\\refine" $ \(goal, RuleName rule, hyps, PlainText hint) m p3 -> do
-        let p2   = (p3 ^. machineP2') 
-                        & pEventRef %~ G.mapBoth (view e2) (view e2)
-                        & pContext %~ view t2
-            prog = p3 ^. pProgress
-            saf  = p3 ^. pSafety
-            tr   = p3 ^. pTransient
-            parser = p3 ^. pMchSynt
-            rule' = map toLower rule
+refine_prog_prop = machineCmd "\\refine" $ \(goal, RuleName rule, hyps, PlainText hint) _m p3 -> do
+        let rule' = map toLower rule
             goal' = as_label goal
             hyps' = map as_label hyps
             dep = map (goal,) hyps
         r <- parse_rule' rule'
-            (RuleParserDecl p2 m (M.mapKeys as_label prog) saf tr goal' hyps' hint parser)
+            (RuleParserDecl p3 goal' hyps' hint)
         li <- ask
         return [(goal,(r,dep),li)]
 
@@ -233,18 +242,18 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
             kept  = map (getCoarseSchLbl . getCommon) kept'
         (pprop,evt) <- toEither $ do
             pprop <- fromEither (error "replace_csched: prog") 
-                        $ get_progress_prop p3 m prog
+                        $ _unM $ get_progress_prop p3 m prog
             evt   <- fromEither (error "replace_csched: evt")
-                        $ get_abstract_event p3 evt_lbl
+                        $ _unM $ get_abstract_event p3 evt_lbl
             return (pprop,evt)
         toEither $ do
-            _ <- fromEither undefined $ bind_all del 
+            _ <- fromEither undefined $ _unM $ bind_all del 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
                     (`M.lookup` (M.unions $ p3^.evtSplitDel AST.assert evt eCoarseSched))
-            _ <- fromEither undefined $ bind_all added 
+            _ <- fromEither undefined $ _unM $ bind_all added 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' added during refinement" evt) 
                     (`M.lookup` (M.unions $ p3^.evtSplitAdded AST.assert evt eCoarseSched))
-            _ <- fromEither undefined $ bind_all kept 
+            _ <- fromEither undefined $ _unM $ bind_all kept 
                     (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
                     (`M.lookup` (M.unions $ p3^.evtSplitKept AST.assert evt eCoarseSched))
             return ()
@@ -253,7 +262,7 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
                         & add  .~ fromList' added
                         & keep .~ fromList' kept
             po_lbl = composite_label ["SCH",as_label m]            
-        li <- lift ask
+        li <- ask
         return $ EventRef [(evt,[((po_lbl,rule),li)])] []
 
 ref_replace_fsched :: MPipeline MachineP3 EventRefA
@@ -261,13 +270,13 @@ ref_replace_fsched = machineCmd "\\replacefine" $ \(Abs evt_lbl,prog) m p3 -> do
         evt <- get_abstract_event p3 evt_lbl
         pprop <- get_progress_prop p3 m prog
         let rule      = (prog,pprop)
-        li <- lift ask
+        li <- ask
         return $ EventRef [] [(evt,[(rule,li)])]
 
 
 all_comments :: MPipeline MachineP3 [(DocItem, String, LineInfo)]
 all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 -> do
-                li <- lift ask
+                li <- ask
                 let item = L.filter (/= '$') $ remove_ref $ flatten' item'
                     cmt = flatten' cmt'
                     -- prop = props m
@@ -297,16 +306,142 @@ all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 
                                   \ an invariant or a progress property "
                         unless (not $ or conds)
                             $ fail "all_comments: conditional not exhaustive"
-                        left [Error (format msg item) li]
+                        raise $ Error (format msg item) li
                 return [(key,cmt,li)]
+
+liveness_proofs :: MPipeline MachineP3 
+                [(ProgId,(Rule,[(ProgId,ProgId)]),LineInfo)]
+liveness_proofs = machineEnv "liveness" $ \(Identity (PO po)) xs _m p3 -> do
+        li <- ask
+        proof <- parseLatex (liveness p3) xs ()
+        let dep = [ (goal,h) | h <- proof^.partsOf traverseProgId ]
+            goal = PId $ label po
+        prop <- bind (printf "'%s' is not the name of a progress property in this machine" po)
+            $ goal `M.lookup` (p3^.pProgress)
+        return [(goal,(makeMonotonicity prop proof,dep),li)]
+
+liveness :: MachineP3 -> LatexParser ProofTree
+liveness m = withLineInfo $ proc () -> do
+        (goal,evts,hint,rProxy) <- prop -< ()
+        subTrees <- step <!> nostep -< (goal,rProxy)
+        tree <- makeRule -< (evts,hint,subTrees)
+        returnA -< tree
+    where
+        prop :: LatexParser (RawProgressProp,[EventOrRef],LatexDoc,RuleProxy)
+        prop = withCommand "\\progstep" $ progStep m
+        nostep :: LatexParserA (RawProgressProp,RuleProxy) VoidInference
+        nostep = lift' $ \(prog,rule) -> maybe 
+            (raise' $ Error $ printf "Expecting premises to rule: %s" $ readCell1' (show . rule_name') rule) 
+            return
+            (readCell1' (voidInference (Sub D) prog) rule)
+        makeRule :: LatexParserA ([EventOrRef],LatexDoc,VoidInference) ProofTree
+        makeRule = lift' (uncurry3 $ \evts hint -> wrapUpTree . traverseCell1 (fillInRule evts hint . getCompose))
+        uncurry3 f (x,y,z) = f x y z
+        wrapUpTree :: M (Cell1 Inference RuleParser) -> M ProofTree
+        wrapUpTree = fmap (ProofTree . rewriteCell (Sub D))
+        fillInRule :: forall rule. RuleParser rule 
+                   => [EventOrRef]
+                   -> LatexDoc
+                   -> Inference (Proxy rule) 
+                   -> M (Inference rule)
+        fillInRule evts hint inf = do
+            es <- makeEventList [pr|rule|] $ getEventOrRef <$> evts
+            r  <- promoteRule m inf es hint
+            return $ inf & ruleLens .~ r
+        step :: LatexParserA (RawProgressProp,RuleProxy) VoidInference
+        step = insideOneEnvOf ["step","flatstep"] $ proc (goal,prxy) -> do 
+                Cell prxy' <- arr (view cell) -< prxy
+                stepList m -< (goal,Inst prxy')
+
+type VoidInference = Cell1 (Compose Inference Proxy) RuleParser
+
+expr :: MachineP3 -> StringLi -> Validation [Error] RawExpr
+expr m = eitherToValidation . fmap asExpr . parse_expr (m^.pMchSynt & free_dummies .~ True)
+
+liftA4 :: Applicative f 
+       => (a -> b -> c -> d -> e)
+       -> f a -> f b -> f c -> f d -> f e
+liftA4 f x0 x1 x2 x3 = liftA3 f x0 x1 x2 <*> x3
+
+trStep :: MachineP3
+       -> (NonEmpty (Conc EventId),PlainText,ExprText)
+       -> M RawTransient
+trStep m (evts,PlainText hint,Expr p) = do
+        tr <- triggerV $ expr m p
+        let ds  = m^.pDummyVars
+            dum = free_vars' ds tr
+            evts' = getConcrete <$> evts 
+        hint <- local (const $ line_info hint) 
+              $ tr_hint m dum
+                (as_label <$> evts') hint
+        return $ transientProp m tr evts' (asExpr <$> hint)
+
+safStep :: MachineP3
+        -> (ExprText,ExprText)
+        -> M (RawSafetyProp, Maybe Label)
+safStep m (Expr p,Expr q) = hoistValidation $
+        (,Nothing) <$> liftA2 (unlessProp m) (expr m p) (expr m q)
+
+progStep :: MachineP3
+         -> (ExprText,ExprText,RuleName,[EventOrRef],PlainText)
+         -> M (RawProgressProp,[EventOrRef],LatexDoc,RuleProxy)
+progStep m (Expr p,Expr q,RuleName r,evts,PlainText hint) = liftA4 (,,,)
+        (hoistValidation $ liftA2 (leadsTo m) (expr m p) (expr m q))
+        (pure evts)
+        (pure hint)
+        (parse_naked_rule r)
+
+stepList :: MachineP3
+         -> LatexParserA (RawProgressProp,Inst1 Proxy RuleParser rule) VoidInference
+stepList m = arr (dict.snd) &&& stepList' m >>> arr (\(D,inf) -> Cell (Compose inf))
+
+
+stepList' :: MachineP3
+          -> LatexParserA 
+                (RawProgressProp,Inst1 Proxy RuleParser rule) 
+                (Inference (Proxy rule))
+stepList' m = 
+                arr (Inference . fst)
+            <*> arr (view inst1 . snd)
+            <*> (consume' <<< buildProgress (Sub D) (withLookAhead $ liveness m) <<< pre) 
+            <*> (consume' <<< buildTransient (Sub D) (withLookAhead transient) <<< pre)
+            <*> (consume' <<< buildSafety (Sub D) (withLookAhead safety) <<< pre)
+    where
+        pre = arr snd >>> (id &&& getLineInfo) >>> arr (\(r,li) -> ((),r,li))
+        safety :: LatexParser (RawSafetyProp, Maybe Label)
+        safety = withCommand "\\safstep" $ safStep m
+        transient :: LatexParser RawTransient
+        transient = withCommand "\\trstep" $ trStep m
+
+parse_naked_rule :: String -> M RuleProxy
+parse_naked_rule rule = do
+    li <- ask
+    case M.lookup rule ruleProxies of
+        Just x -> return x
+        Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
+
+ruleProxies :: Table String RuleProxy
+ruleProxies = fromList $ execWriter $ do
+        "discharge"    `with` [pr|Discharge|]
+        "disjunction"  `with` [pr|Disjunction|]
+        "monotonicity" `with` [pr|Monotonicity|]
+        "transitivity" `with` [pr|Transitivity|]
+        "implication"  `with` [pr|Implication|]
+        "induction"    `with` [pr|Induction|]
+        "trading" `with` [pr|NegateDisjunct|]
+        "psp"     `with` [pr|PSP|]
+        "ref"     `with` [pr|Reference|]
+        "ensure"  `with` [pr|Ensure|]
+    where
+        x `with` y = tell [(x,makeCell1 y)]
 
 all_proofs :: MPipeline MachineP3 [(Label,Tactic Proof,LineInfo)]
 all_proofs = machineEnv "proof" $ \(Identity (PO po)) xs m p3 -> do
-        li <- lift ask
+        li <- ask
         let notation = p3^.pNotation
             po_lbl = label $ remove_ref po
             lbl = composite_label [ as_label m, po_lbl ]
-        proof <- mapEitherT 
+        proof <- M $ mapEitherT 
             (\cmd -> runReaderT cmd notation) 
             $ run_visitor li xs collect_proof_step 
         return [(lbl,proof,li)]
@@ -317,24 +452,16 @@ get_progress_prop p3 _m lbl =
                 (format "progress property '{0}' is undeclared" lbl)
                 $ lbl `M.lookup` (L.view pProgress p3)
 
-get_safety_prop :: MachineP3 -> MachineId -> Label -> M SafetyProp
-get_safety_prop p3 _m lbl =  
-            bind
-                (format "safety property '{0}' is undeclared" lbl)
-                $ lbl `M.lookup` (L.view pSafety p3)
 
-get_guards :: MachineP3 -> EventId -> M (Table Label Expr)
-get_guards p3 evt = 
-        return $ p3^.getEvent evt.eGuards
 
 parse_rule' :: String
             -> RuleParserParameter
             -> M Rule
 parse_rule' rule param = do
-    li <- lift ask
+    li <- ask
     case M.lookup rule refinement_parser of
-        Just f -> EitherT $ mapRWST (\x -> return (runIdentity x)) $
-            runEitherT $ f param
+        Just f -> M $ EitherT $ mapRWST (\x -> return (runIdentity x)) $
+            runEitherT $ _unM $ f param
         Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
 
 refinement_parser :: Map String (
@@ -352,8 +479,6 @@ refinement_parser = fromList
     ,   ("induction", parse_induction)
     ]
 
-data HintBuilder = 
-        HintBuilderDecl LatexDoc MachineId MachineP2
 
 data EventRefA = EventRef 
         { coarseRef :: [(EventId,[((Label,ScheduleChange),LineInfo)])]

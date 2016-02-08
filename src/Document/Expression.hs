@@ -8,7 +8,7 @@ where
 
     -- Modules
 import Latex.Scanner -- hiding (many)
-import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser)
+import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
 import Logic.Expr
 import Logic.Operator
@@ -24,7 +24,6 @@ import qualified Control.Applicative as A
 import Control.Lens hiding (Context,from)
 
 import           Control.Monad
-import           Control.Monad.Reader.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
 import           Control.Monad.Trans.Maybe
@@ -261,31 +260,30 @@ vars = do
         t  <- type_t
         return (map (\x -> (x,t)) vs)     
 
-get_variables' :: (Monad m, MonadReader LineInfo m)
-               => Table Name Sort
+get_variables' :: Table Name Sort
                -> LatexDoc
-               -> EitherT [Error] m [(Name, Var)]
+               -> LineInfo
+               -> Either [Error] [(Name, Var)]
 get_variables' types cs = 
         get_variables 
             (Context types M.empty 
                 M.empty M.empty M.empty)
             cs
 
-get_variables :: (Monad m, MonadReader LineInfo m)
-              => Context
+get_variables :: Context
               -> LatexDoc
-              -> EitherT [Error] m [(Name, Var)]
+              -> LineInfo
+              -> Either [Error] [(Name, Var)]
 get_variables ctx = get_variables'' ctx . flatten_li'
 
-get_variables'' :: (Monad m, MonadReader LineInfo m)
-                => Context
+get_variables'' :: Context
                 -> StringLi
-                -> EitherT [Error] m [(Name, Var)]
-get_variables'' ctx m = do
-        LI fn i j <- lift $ ask
-        toks <- hoistEither $ read_tokens 
+                -> LineInfo
+                -> Either [Error] [(Name, Var)]
+get_variables'' ctx m (LI fn i j) = do
+        toks <- read_tokens 
             (scan_expr Nothing) fn (getString m) (i,j)
-        xs   <- hoistEither $ read_tokens 
+        xs   <- read_tokens 
             (runParser ctx
                 ($myError "") M.empty vars) 
             fn toks (i,j)

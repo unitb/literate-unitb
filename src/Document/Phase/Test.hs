@@ -535,7 +535,7 @@ case6 = return $ do
             "m1" ## runMap' (do
                 "ae0" ## Just (("prog1",prog1),li))
         liveProof = M.insert "m1" (runMap' $ do
-            "prog0" ## ((makeRule' Monotonicity "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
+            "prog0" ## ((makeRule' Monotonicity prog1 "prog1" (getExpr <$> prog1),[("prog0","prog1")]),li))
             $ M.empty <$ ms
         comment = M.empty <$ ms
         proof = M.empty <$ ms
@@ -555,7 +555,7 @@ result6 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result5
             | eid == Right "ae0" && mid == "m1" = makeEventP4 e [("SCH/m1",ch)] (Just ("prog1",prog1)) []
             | otherwise           = makeEventP4 e [] Nothing []
         newMch mid m 
-            | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (makeRule' Monotonicity "prog1" (getExpr <$> prog1))]
+            | mid == "m1" = makeMachineP4' m [PLiveRule "prog0" (makeRule' Monotonicity prog1 "prog1" prog1)]
             | otherwise   = makeMachineP4' m []
         ch = ScheduleChange 
                 (M.singleton "sch0" ()) 
@@ -640,7 +640,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
                 inh_props.inv  .= M.fromList [("inv0",c [expr| x \le y |])]
                 props.progress .= M.fromList [("prog0",pprop),("prog1",pprop)]
                 props.safety .= M.singleton "saf0" sprop
-                derivation .= M.fromList [("prog0",makeRule' Monotonicity "prog1" pprop'),("prog1",makeRule Add)]
+                derivation .= M.fromList [("prog0",makeRule' Monotonicity pprop "prog1" pprop'),("prog1",makeRule Add pprop)]
         --y = Var "y" int
         skipLbl = Left SkipEvent
         ae0sched = create $ do

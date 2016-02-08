@@ -11,15 +11,15 @@ import Control.DeepSeq
 import Control.Lens  hiding (argument)
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans
+import Control.Monad.RWS
+import Control.Monad.State
 import Control.Monad.Trans.Either as E
-import Control.Monad.Trans.State
 
 import Data.Char
 import Data.Either
 import Data.Either.Combinators
+--import Data.Either.Validation
 import qualified Data.Foldable as F
-import Data.Function
 import Data.Graph
 import Data.List ( intercalate )
 import qualified Data.List as L
@@ -49,9 +49,15 @@ import Utilities.Syntactic
 --import Utilities.Zipper as Z
 
 data LatexNode = 
-        Env LineInfo String LineInfo LatexDoc LineInfo
-        | Bracket BracketType LineInfo LatexDoc LineInfo
+        EnvNode Environment
+        | BracketNode Bracket
         | Text LatexToken
+    deriving (Eq,Show,Generic,Typeable)
+
+data Environment = Env LineInfo String LineInfo LatexDoc LineInfo
+    deriving (Eq,Show,Generic,Typeable)
+
+data Bracket = Bracket BracketType LineInfo LatexDoc LineInfo
     deriving (Eq,Show,Generic,Typeable)
 
 data LatexDoc = Doc LineInfo [LatexNode] LineInfo
@@ -69,6 +75,9 @@ data LatexToken =
     deriving (Eq, Show, Typeable, Generic)
 
 makePrisms ''LatexToken
+
+envType :: Environment -> String
+envType (Env _ n _ _ _) = n
 
 --instance Zippable LatexNode where
 --    type ZipperImpl LatexNode = MZipperT LatexNode LatexDoc
@@ -89,11 +98,11 @@ instance Convertible LatexDoc where
     flatten = flatten'
 
 instance Convertible LatexNode where
-    flatten (Env _ s _ ct _) = 
+    flatten (EnvNode (Env _ s _ ct _)) = 
                "\\begin{" ++ s ++ "}"
             ++ flatten' ct
             ++ "\\end{" ++ s ++ "}"
-    flatten (Bracket b _ ct _) = [openBracket b] ++ flatten' ct ++ [closeBracket b]
+    flatten (BracketNode (Bracket b _ ct _)) = [openBracket b] ++ flatten' ct ++ [closeBracket b]
     flatten (Text xs) = lexeme xs
 
 instance Convertible [LatexToken] where
@@ -109,6 +118,8 @@ instance IsBracket BracketType Char where
     bracketPair Curly = ('{','}')
     bracketPair Square = ('[',']')
 
+instance NFData Environment where
+instance NFData Bracket where
 instance NFData LatexDoc where
 instance NFData LatexNode where
 instance NFData LatexToken where
@@ -134,12 +145,12 @@ getString :: StringLi -> [(Char,LineInfo)]
 getString (StringLi xs _) = xs
 
 flatten_li :: LatexNode -> [(Char,LineInfo)]
-flatten_li (Env li0 s _ ct li1) = 
+flatten_li (EnvNode (Env li0 s _ ct li1)) = 
            zip ("\\begin{" ++ s ++ "}") (whole_line li0)
         ++ getString (flatten_li' ct)
         ++ zip ("\\end{" ++ s ++ "}") (whole_line li1)
 flatten_li (Text xs)        = lexeme_li xs
-flatten_li (Bracket b li0 ct li1) 
+flatten_li (BracketNode (Bracket b li0 ct li1)) 
         = (openBracket b,li0) : getString (flatten_li' ct) ++ [(closeBracket b,li1)]
 
 fold_doc :: (a -> LatexNode -> a)
@@ -169,11 +180,21 @@ asSingleton :: LatexDoc -> Maybe LatexNode
 asSingleton (Doc _ [x] _) = Just x
 asSingleton (Doc _ _ _) = Nothing
 
-contents :: LatexNode -> LatexDoc
-contents (Env _ _ _ c _)     = c
-contents (Bracket _ _ c _) = c
-contents (Text t)          = Doc (line_info t) [] (line_info t)
+class IsLatexNode node where
+    contents :: node -> LatexDoc
+
+instance IsLatexNode Bracket where
+    contents (Bracket _ _ c _) = c
+instance IsLatexNode Environment where
+    contents (Env _ _ _ c _) = c
+instance IsLatexNode LatexToken where
+    contents t = Doc (line_info t) [] (line_info t)
     -- error? li is actually the beginning of the text. Or is it?
+
+instance IsLatexNode LatexNode where
+    contents (EnvNode c)       = contents c
+    contents (BracketNode c)   = contents c
+    contents (Text t)          = contents t
 
 contents' :: LatexDoc -> [LatexNode]
 contents' (Doc _ xs _) = xs
@@ -184,6 +205,9 @@ unconsTex (Doc _ [] _)      = Nothing
 
 consTex :: LatexNode -> LatexDoc -> LatexDoc
 consTex x (Doc _ xs li) = Doc (line_info x) (x:xs) li
+
+prependNodes :: [LatexNode] -> LatexDoc -> LatexDoc
+prependNodes ns d = L.foldr consTex d ns
 
 --instance Show LatexNode where
 --    show (Env b _ xs _) = "Env{" ++ b ++ "} (" ++ show (length $ contents' xs) ++ ")"
@@ -212,28 +236,23 @@ instance Syntactic LatexToken where
     traverseLineInfo = lineInfoLens
 
 instance Syntactic LatexNode where
-    line_info (Env li _ _ _ _)     = li
-    line_info (Bracket _ li _ _) = li
+    line_info (EnvNode (Env li _ _ _ _))     = li
+    line_info (BracketNode (Bracket _ li _ _)) = li
     line_info (Text t)           = line_info t
     after (Text t) = after t
-    after (Env _ nm _ _ li)  = end (nm ++ "}",li)
-    after (Bracket _ _ _ li) = end ("}",li)
-    traverseLineInfo f (Bracket b li0 ct li1) = 
+    after (EnvNode (Env _ nm _ _ li))  = end (nm ++ "}",li)
+    after (BracketNode (Bracket _ _ _ li)) = end ("}",li)
+    traverseLineInfo f (BracketNode (Bracket b li0 ct li1)) = fmap BracketNode $
             Bracket b <$> f li0 
                       <*> traverseLineInfo f ct 
                       <*> f li1
-    traverseLineInfo f (Env li0 n li1 ct li2) = 
+    traverseLineInfo f (EnvNode (Env li0 n li1 ct li2)) = fmap EnvNode $
             Env <$> f li0
                 <*> pure n
                 <*> f li1
                 <*> traverseLineInfo f ct
                 <*> f li2
     traverseLineInfo f (Text t) = Text <$> lineInfoLens f t
-
-instance Syntactic (TokenStream a) where
-    line_info (StringLi xs li) = headDef li (map snd xs)
-    after (StringLi _ li) = li
-    traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
 
 instance Syntactic LatexDoc where
     line_info (Doc li _ _) = li
@@ -247,7 +266,7 @@ tokens :: LatexDoc -> [(LatexToken,LineInfo)]
 tokens (Doc _ xs _) = concatMap f xs
     where
         f :: LatexNode -> [(LatexToken,LineInfo)]
-        f (Env li0 name li1 ct li2) = f begin ++ cont ++ f end
+        f (EnvNode (Env li0 name li1 ct li2)) = f begin ++ cont ++ f end
             where
                 f = map (id &&& line_info)
                 openLI = li0 & column %~ (length "\\begin"+)
@@ -264,7 +283,7 @@ tokens (Doc _ xs _) = concatMap f xs
                        , (Open Curly openLI')
                        , (TextBlock name li2) 
                        , (Close Curly closeLI')]
-        f (Bracket br li0 ct li1) = [(Open br li0,li0)] ++ tokens ct ++ [(Close br li1,li1)]
+        f (BracketNode (Bracket br li0 ct li1)) = [(Open br li0,li0)] ++ tokens ct ++ [(Close br li1,li1)]
         f (Text tok) = [(tok,line_info tok)]
 
 source :: LatexNode -> String
@@ -365,14 +384,14 @@ latex_content' = do
             ct  <- latex_content'
             cmd "\\end"            <?> printf "end keyword (%s)" n
             (_,li2) <- argument' n <?> printf "\\end{%s}" n
-            return $ Env li0 n li1 ct li2
+            return $ EnvNode $ Env li0 n li1 ct li2
         brackets = do
             li0 <- lineInfo
             b   <- open <?> "open bracket"
             ct  <- latex_content'
             li1 <- lineInfo
             close b  <?> "close bracket"
-            return $ Bracket b li0 ct li1
+            return $ BracketNode $ Bracket b li0 ct li1
         text  = fmap Text $ 
                     (texToken' (_Command . notEnv) <?> "command")
                 <|> (texToken' _Blank     <?> "space")
@@ -396,10 +415,22 @@ latex_content' = do
         cmd x  = texToken (_Command._1.only x)
 
 texToken :: (Traversal' LatexToken a) -> Parser a
-texToken p = texTokenAux (^? p)
+texToken = token 
+
+token :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+      => (Traversal' token a) -> P.Parsec xs () a
+token p = tokenAux (^? p)
 
 texTokenAux :: (LatexToken -> Maybe a) -> Parser a
-texTokenAux p = P.tokenPrim show (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
+texTokenAux = tokenAux
+
+tokenAux :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+         => (token -> Maybe a) -> P.Parsec xs () a
+tokenAux p = P.tokenPrim show (const (\t -> const $ liToPos $ end (t,line_info t)) . posToLi) p
+
+token' :: (Syntactic token,P.Stream xs Identity token,Show token,Token token)
+       => (Traversal' token a) -> P.Parsec xs () token
+token' p = tokenAux (\x -> x <$ (x^?p))
 
 texToken' :: (Traversal' LatexToken a) -> Parser LatexToken
 texToken' p = texTokenAux (\x -> x <$ (x^?p))
@@ -426,18 +457,23 @@ size :: LatexDoc -> Int
 size (Doc _ xs _) = sum $ map f xs
     where
         f (Text _) = 1
-        f (Env _ _ _ ct _) = 1 + size ct
-        f (Bracket _ _ ct _) = 1 + size ct
+        f (EnvNode (Env _ _ _ ct _)) = 1 + size ct
+        f (BracketNode (Bracket _ _ ct _)) = 1 + size ct
 
 subtrees :: LatexDoc -> [() -> LatexDoc]
 subtrees (Doc li xs li') = concatMap f xs ++ ys
     where
         f (Text _) = []
-        f (Env li0 n li1 ct li2) = (\() -> ct) : concat [ [ doc, \() -> Doc li [Env li0 n li1 (doc ()) li2] li' ] | doc <- subtrees ct ]
-        f (Bracket b li1 ct li2) = (\() -> ct) : concat [ [ doc, \() -> Doc li [Bracket b li1 (doc ()) li2] li' ] | doc <- subtrees ct ]
+        f (EnvNode (Env li0 n li1 ct li2)) = (\() -> ct) : concat 
+            [ [ doc, \() -> Doc li [EnvNode $ Env li0 n li1 (doc ()) li2] li' ] 
+                | doc <- subtrees ct ]
+        f (BracketNode (Bracket b li1 ct li2)) = (\() -> ct) : 
+            concat [ 
+                [ doc, \() -> Doc li [BracketNode $ Bracket b li1 (doc ()) li2] li' ] 
+                    | doc <- subtrees ct ]
         g t@(Text _) = [\() -> Doc li [t] li']
-        g (Env li0 n li1 ct li2) = [\() -> Doc li [Env li0 n li1 ct li2] li']
-        g (Bracket b li1 ct li2) = [\() -> Doc li [Bracket b li1 ct li2] li']
+        g (EnvNode (Env li0 n li1 ct li2)) = [\() -> Doc li [EnvNode $ Env li0 n li1 ct li2] li']
+        g (BracketNode (Bracket b li1 ct li2)) = [\() -> Doc li [BracketNode $ Bracket b li1 ct li2] li']
         ys
             | length xs <= 1 = []
             | otherwise      = concatMap g xs

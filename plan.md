@@ -89,7 +89,7 @@ next:
         * ~~remove System from the state of the parser~~
         * ~~commit~~
 
-        * Event splitting
+        * ~~Event splitting~~
         * Encapsulate System phase information
         * LatexNode = ... | Text [LatexToken]
             * remove the list

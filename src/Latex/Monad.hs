@@ -1,7 +1,7 @@
 module Latex.Monad where
 
     -- Modules
-import Latex.Parser
+import Latex.Parser hiding (token)
 
     -- Libraries
 import Control.Lens
@@ -54,7 +54,7 @@ begin name args body = do
     updateLI $ "\\end{" 
     li'  <- LatexGen get
     updateLI $ name ++ "}"
-    node $ Env liBegin name li (sconcat $ fromList $ args ++ [body]) li'
+    node $ EnvNode $ Env liBegin name li (sconcat $ fromList $ args ++ [body]) li'
     return x
 
 brackets :: LatexGen a -> LatexGen a
@@ -67,7 +67,7 @@ brackets' b body = do
     (x,doc) <- getDoc' body
     li' <- LatexGen get
     updateLI "}"
-    node $ Bracket b li doc li'
+    node $ BracketNode $ Bracket b li doc li'
     return x
 
 node :: LatexNode -> LatexGen ()
@@ -77,8 +77,8 @@ texMonad :: LatexDoc -> LatexGen ()
 texMonad (Doc _ xs _) = mapM_ f xs
     where
         f (Text t) = text (lexeme t)
-        f (Env _ n _ ct _) = begin n [] $ texMonad ct
-        f (Bracket b _ ct _) = brackets' b $ texMonad ct
+        f (EnvNode (Env _ n _ ct _)) = begin n [] $ texMonad ct
+        f (BracketNode (Bracket b _ ct _)) = brackets' b $ texMonad ct
 
 token :: LatexToken -> LatexGen () 
 token tok = do

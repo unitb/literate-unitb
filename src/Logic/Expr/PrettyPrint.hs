@@ -1,5 +1,7 @@
+{-# LANGUAGE UndecidableInstances #-}
 module Logic.Expr.PrettyPrint 
-    ( pretty_print', Pretty(..), PrettyPrintable(..) )
+    ( pretty_print', Pretty(..), PrettyPrintable(..) 
+    , reifyPrettyPrint, ReflectedPrettyPrint(..) )
 where
 
     -- Modules
@@ -14,6 +16,8 @@ import Control.Monad.Reader
 import Data.Either.Combinators
 import Data.Functor.Classes
 import Data.List hiding (uncons)
+import Data.Proxy
+import Data.Reflection
 
 import Utilities.Instances
 import qualified Utilities.Map as M
@@ -135,6 +139,26 @@ pretty_print_aux (List ys@(x:xs)) =
         margin n = replicate n ' '
         add_to_last suff (Ls xs (Line x y),k) = (Ls xs (Line x $ y++suff),k)
   
+newtype ReflectedPrettyPrint s a = ReflectedPrettyPrint a
+
+newtype ReifiedPrettyPrint a = ReifiedPrettyPrint { unreifyPP :: a -> String }
+
+instance Reifies s (ReifiedPrettyPrint a) 
+        => PrettyPrintable (ReflectedPrettyPrint s a) where
+    pretty = reifiedPP Proxy
+
+reifiedPP :: Reifies s (ReifiedPrettyPrint a) 
+          => Proxy s -> ReflectedPrettyPrint s a -> String
+reifiedPP p (ReflectedPrettyPrint x) = unreifyPP (reflect p) x
+
+reifyPrettyPrint :: (a -> String)
+                 -> (forall s. PrettyPrintable (ReflectedPrettyPrint s a) => (a -> ReflectedPrettyPrint s a) -> t)
+                 -> t
+reifyPrettyPrint f x = reify (ReifiedPrettyPrint f) (\p -> x $ fitTag p . ReflectedPrettyPrint)
+
+fitTag :: proxy s -> f s a -> f s a
+fitTag _ = id
+
 -- pretty_print :: StrList -> [String]
 -- pretty_print (Str xs) = [xs]
 -- pretty_print (List []) = ["()"]

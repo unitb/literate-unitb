@@ -2,6 +2,7 @@
 module Utilities.Trace where
 
 import Control.Arrow hiding (left,right)
+import Control.Category
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception
@@ -15,6 +16,8 @@ import qualified Debug.Trace as DT
 
 import GHC.Generics hiding (from,to)
 import GHC.Generics.Lens
+
+import Prelude hiding ((.),id)
 
 import System.IO.Unsafe
 
@@ -58,6 +61,12 @@ traceM' xs cmd = do
     x <- cmd
     traceM xs
     return x
+
+traceA' :: Arrow arr 
+        => (b -> String)
+        -> arr a b 
+        -> arr a a
+traceA' f a = id &&& a >>> arr (\(x,y) -> trace (f y) () `seq` x)
 
 traceA :: ArrowApply arr => (a -> String) -> arr a ()
 traceA f = arr (\x -> (trace (f x) returnA, ())) >>> app

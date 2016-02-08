@@ -26,7 +26,7 @@ main = do
             b1 <- doesFileExist file1
             b2 <- doesFileExist file2
             if b1 && b2 then do
-                system $ "./quote.hs \"" ++ file1 ++ "\" | pbcopy"
+                system $ "script/quote.hs \"" ++ file1 ++ "\" | pbcopy"
                 diff file1 file2
                 return ()
             else return ()

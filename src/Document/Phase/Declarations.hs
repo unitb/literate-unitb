@@ -28,7 +28,6 @@ import qualified Control.Category as C
 
 import           Control.Monad
 import           Control.Monad.Reader.Class 
-import           Control.Monad.Trans
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
@@ -150,7 +149,7 @@ instance IsVarScope MachineVar where
 
 remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
-        li <- lift ask
+        li <- ask
         return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . getVarName) xs
 
 dummy_decl :: MPipeline MachineP1
@@ -165,8 +164,8 @@ machine_var_decl :: IsVarScope var
                  -> MPipeline MachineP1
                         [(Name,VarScope)]
 machine_var_decl scope kw = machineCmd kw $ \(Identity (PlainText xs)) _m p1 -> do
-            vs <- get_variables' (p1 ^. pAllTypes) xs
-            li <- lift ask
+            li <- ask
+            vs <- hoistEither $ get_variables' (p1 ^. pAllTypes) xs li
             return $ map (\(x,y) -> (x,makeCell $ scope y Local li)) vs
 
 index_decl :: MPipeline MachineP1 [(Name,VarScope)]
@@ -210,8 +209,8 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
             evt <- bind
                 (format "event '{0}' is undeclared" lbl)
                 $ as_label lbl `M.lookup` evts
-            li <- lift ask
-            vs <- get_variables' ts xs
+            li <- ask
+            vs <- hoistEither $ get_variables' ts xs li
             return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Just evt) 
                     (EventDecl v escope (evt :| []) Local li)))) vs
 
