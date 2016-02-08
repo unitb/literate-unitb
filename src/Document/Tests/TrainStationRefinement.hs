@@ -1,5 +1,5 @@
 module Document.Tests.TrainStationRefinement 
-    ( test, test_case )
+    ( test, test_case, path3 )
 where
 
     -- Modules

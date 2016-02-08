@@ -75,7 +75,6 @@ import qualified Utilities.Relation as R
 import Utilities.Syntactic
 import Utilities.Table
 
-
 type LiveEvtId = Either EventId ProgId
 
 run_phase4_proofs :: Pipeline MM SystemP3 SystemP4

@@ -4396,8 +4396,8 @@ result20 = unlines
     , "  o  m0/SKIP/CO/co0"
     , "  o  m0/co0/CO/WD"
     , "  o  m0/handle/CO/co0"
-    , "  o  m0/handle/FIS/req0@prime"
     , "  o  m0/handle/FIS/req@prime"
+    , "  o  m0/handle/FIS/req_0@prime"
     , "  o  m0/handle/SAF/LIVE/prog0/ensure"
     , "  o  m0/handle/SAF/LIVE/prog1/ensure"
     , "  o  m0/handle/SCH"
@@ -4413,8 +4413,8 @@ result20 = unlines
     , "  o  m0/prog1/PROG/WD/lhs"
     , "  o  m0/prog1/PROG/WD/rhs"
     , "  o  m0/req/CO/co0"
-    , "  o  m0/req/FIS/req0@prime"
     , "  o  m0/req/FIS/req@prime"
+    , "  o  m0/req/FIS/req_0@prime"
     , "  o  m0/req/SAF/LIVE/prog0/ensure"
     , "  o  m0/req/SAF/LIVE/prog1/ensure"
     , "  o  m0/req/SCH/r"
@@ -4426,7 +4426,6 @@ result20 = unlines
     , "  o  m0/req/WWD"
     , "passed 45 / 45"
     ]
-
 
 case20 :: IO POResult
 case20 = verify path20 0
@@ -4461,8 +4460,8 @@ result23 = unlines
     , "(declare-const ch@prime Bool)"
     , "(declare-const req (set sl@REQ))"
     , "(declare-const req@prime (set sl@REQ))"
-    , "(declare-const req0 (set sl@REQ))"
-    , "(declare-const req0@prime (set sl@REQ))"
+    , "(declare-const req_0 (set sl@REQ))"
+    , "(declare-const req_0@prime (set sl@REQ))"
     , "(declare-fun finite@@sl@REQ ( (set sl@REQ) ) Bool)"
     , "(define-fun all@@sl@REQ"
     , "            ()"
@@ -4547,8 +4546,8 @@ result22 = unlines
     , "(declare-const ch@prime Bool)"
     , "(declare-const req (set sl@REQ))"
     , "(declare-const req@prime (set sl@REQ))"
-    , "(declare-const req0 (set sl@REQ))"
-    , "(declare-const req0@prime (set sl@REQ))"
+    , "(declare-const req_0 (set sl@REQ))"
+    , "(declare-const req_0@prime (set sl@REQ))"
     , "(declare-fun finite@@sl@REQ ( (set sl@REQ) ) Bool)"
     , "(define-fun all@@sl@REQ"
     , "            ()"

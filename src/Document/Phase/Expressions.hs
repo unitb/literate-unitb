@@ -274,7 +274,7 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
                 newIndices = (False,) <$> p2^.evtMergeAdded ev eIndices
             p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
             (isVar,v)  <- bind 
-                (printf "'%s' is not a disappearing variable or a new index (new indices = )" (render var))
+                (printf "'%s' is not a disappearing variable or a new index" (render var))
                 (var `M.lookup` (disappear `M.union` newIndices))
             return $ if isVar
                 then [(label $ render var,evtScope ev (Witness v p Local li))]

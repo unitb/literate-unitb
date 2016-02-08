@@ -61,7 +61,8 @@ main = timeIt $ do
     system "rm log*.z3"
     writeFile "syntax.txt" $ unlines syntaxSummary
     return R.main
-    run_test_cases Deq.test_case
+    print =<< find_errors TSRef.path3
+    return $ run_test_cases Deq.test_case
     --x <- proof_obligation Deq.path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:empty/NEG" 1
     return $ run_test_cases Term.test_case
     return $ run_test_cases Puzz.test_case

@@ -403,7 +403,7 @@ instance ReferencesEvents ProofTree where
     traverseEvents f = traverseCell1' $ \(Inference g n p t s) ->
         Inference g <$> travEvent' f n
                     <*> (traverse.traverseEvents) f p
-                    <*> pure t
+                    <*> (traverse.traverseEvents) f t
                     <*> pure s
 
 supporting_evts :: ProofTree

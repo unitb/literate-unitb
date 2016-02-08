@@ -537,8 +537,8 @@
 \newcommand{\refine}[4]
 	% \refine{prop}{rule}{new props}{ comment }{<notag>}
 {	\\ \sqsubseteq \quad & \qquad \left\{\text{ #2 \eqref{#1}#4 }\right\} \\ }
-\newcommand{\var}[3]{$#1$, #2 to $#3$}
-% \newcommand{\index}[2]{$#1 := #2$}
+\newcommand{\var}[3]{variant: $#1$, #2 to $#3$}
+\renewcommand{\index}[2]{$#1 := #1' ~|~ #2$}
 %\newcommand{\ntag}[4]{#1\ifthenelse{\equal{#4}{}}{}{#2}}#3}
 
 % \newcounter{prooflevel}
@@ -587,7 +587,7 @@
 
 \setlistdepth{9}
 
-\newenvironment{liveness}[3]
+\newenvironment{liveness}[1]
 { %\begin{proof}  banana
   \bigskip
   % \def\P{#1}
@@ -600,7 +600,7 @@
   % \item d
   % \item d
   \begin{step}
-  \progstep[Prove:]{#1}{#2}{#3}
+  \item[Proof of]{\eqref{#1}}
   % \progstep{#1}{#2}{#3}
   % \item e
   % \item e
@@ -613,6 +613,7 @@
   % \addtocounter{flatlevel}{-1}
 }
 \newcommand{\progstep}[4][]{ 
+  \def\bullet{#1}
   \def\rule{#4}
   \ifx\rule\@empty 
     \def\byRule{}
@@ -641,9 +642,9 @@
   \else
     \def\byRule{\\ & \qquad \text{by \rule}}
   \fi
-  \item
+  \item 
    $\begin{array}[t]{rl} 
-    & \P \quad \UNLESS\quad \Q
+    & #1 \quad \textbf{unless} \quad #2
     \byRule
   \end{array} $
    }
@@ -652,7 +653,7 @@
     \def\evt{#1}
     \def\hint{#2}
     \item  $\begin{array}[t]{rl} 
-    & \P
+    & \P \qquad \textbf{is transient}
     \\ & \qquad \text{falsified by \evt \hint}
   \end{array} $ }
 \newcommand{\resetenum}
