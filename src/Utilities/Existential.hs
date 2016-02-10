@@ -1,5 +1,6 @@
 {-# LANGUAGE KindSignatures
     ,ConstraintKinds
+    ,UndecidableInstances
     ,ExistentialQuantification
     ,ScopedTypeVariables
     ,TypeOperators
@@ -218,6 +219,9 @@ readInst1 f = getConst . traverseInst1 (Const . f)
 
 -- |
 -- = Combinators =
+
+class (c0 a,c1 a) => (c0 :&: c1) a where
+instance (c0 a,c1 a) => (c0 :&: c1) a where
 
 apply2Cells :: Functor f
             => (forall a. (constr a,Typeable a) 

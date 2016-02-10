@@ -23,11 +23,12 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
-import Control.Monad.RWS
+import Control.Monad.RWS hiding ((<>))
 import Control.Monad.State
 import Control.Lens hiding (Context)
 
 import Data.List as L
+import Data.Semigroup
 
 import GHC.Generics (Generic)
 
@@ -80,7 +81,7 @@ emit_exist_goal asrt lbl vars es = with
                     (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ map getExpr es
-        clauses' = M.toList $ (M.fromListWith (++) clauses :: Map [Var] [Expr])
+        clauses' = M.toList $ (M.fromListWith (<>) clauses :: Map [Var] (NonEmpty Expr))
 
 existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
 existential _ [] cmd = cmd

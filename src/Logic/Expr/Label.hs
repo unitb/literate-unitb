@@ -35,6 +35,9 @@ instance IsLabel Label where
 instance IsLabel Name where
     as_label = label . render . asInternal
 
+instance (IsLabel l,IsLabel r) => IsLabel (Either l r) where
+    as_label = either as_label as_label
+
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 

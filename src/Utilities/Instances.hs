@@ -252,22 +252,16 @@ listOf' (Compose cmd) = Compose $ listOf <$> cmd
 arbitrary' :: Arbitrary a => Compose Maybe Gen a
 arbitrary' = Compose $ Just arbitrary
 
-instance Eq a => Eq1 (Const a) where
-    eq1 = (==)
 instance Eq1 Proxy where
     eq1 = (==)
 instance Eq1 NonEmpty where
     eq1 = (==)
 
-instance Ord a => Ord1 (Const a) where
-    compare1 = compare
 
 instance Ord1 NonEmpty where
     compare1 = compare
 
 instance Show1 Proxy where
-    showsPrec1 = showsPrec
-instance Show a => Show1 (Const a) where
     showsPrec1 = showsPrec
 
 instance Show1 NonEmpty where

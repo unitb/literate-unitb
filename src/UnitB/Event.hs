@@ -54,6 +54,8 @@ instance PrettyPrintable expr => PrettyPrintable (Action' expr) where
 data SkipEventId = SkipEvent
     deriving (Show,Eq,Ord,Typeable,Generic)
 
+instance IsLabel SkipEventId where
+    as_label SkipEvent = label "SKIP"
 instance NFData SkipEventId where
 instance Hashable SkipEventId where
 instance PrettyPrintable SkipEventId where
@@ -312,7 +314,7 @@ instance ActionRefinement (EventRef expr) expr where
 class HasExpr expr => EventRefinement a expr | a -> expr where
     abstract_evts :: Getter a (NonEmpty (SkipOrEvent,AbstrEvent' expr))
     concrete_evts :: Getter a (NonEmpty (SkipOrEvent,ConcrEvent' expr))
-    evt_pairs :: (EventRefinement a expr) => Getter a (NonEmpty (EventRef expr))
+    evt_pairs :: Getter a (NonEmpty (EventRef expr))
 
 instance HasExpr expr => EventRefinement (EventMerging expr) expr where
     abstract_evts = multiAbstract

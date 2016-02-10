@@ -495,7 +495,7 @@ result4 :: ([(Int, Int)], [(Var, Int)], [(Expr, Int)])
             let arg0 = [a_decl,b_decl,c_decl,d_decl] 
                 arg1 = [e0,e1,e2,e3]
             return 
-                ( return $ map f $ partition_expr arg0 arg1
+                ( return $ map f $ partition_expr arg0 arg1 & traverse._2 %~ NE.toList
                 , [([a_decl],[e0]),([b_decl,c_decl,d_decl],[e2,e3,e1])]
                 , return $ get_partition arg0 arg1
                 , ( [ (0,0), (1,1)

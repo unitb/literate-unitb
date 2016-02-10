@@ -22,13 +22,16 @@ where
 import Logic.Expr hiding (merge)
 
     -- Libraries
+import           Control.Lens
 import           Control.Monad 
 import           Control.Monad.State as ST
 
 import           Data.IntMap 
             ( (!), fromListWith
             , assocs, insert, elems
-            , IntMap, fromList, Key )
+            , IntMap, fromList, Key 
+            , mapMaybe )
+import           Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -57,8 +60,8 @@ get_partition vs es = do -- error "UnitB.Feasibility.partition_expr: not impleme
 partition_expr :: (TypeSystem t,IsName n,IsQuantifier q)
                => [AbsVar n t] 
                -> [AbsExpr n t q] 
-               -> [([AbsVar n t],[AbsExpr n t q])]
-partition_expr vs es = do 
+               -> [([AbsVar n t],NonEmpty (AbsExpr n t q))]
+partition_expr vs es' = do 
         runPartitionWith [0..m+n-1] $ do
             forM_ (M.assocs me) $ \(e,i) -> 
                 forM_ (S.elems $ used_var e) $ \v ->
@@ -74,8 +77,9 @@ partition_expr vs es = do
                 j <- parent i
                 return (j,([v],[]))
             let m = fromListWith mappend $ xs ++ ys
-            return $ elems m 
+            return $ elems $ mapMaybe (_2 nonEmpty) m 
     where
+        es = filter (ztrue /=) es'
         m = length vs
         n = length cs
         cs = concatMap conjuncts es

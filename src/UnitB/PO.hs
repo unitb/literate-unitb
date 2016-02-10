@@ -524,33 +524,6 @@ wit_wd_po m (lbl, evt) =
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
                 $ M.ascElems $ snd <$> evt^.witness)
 
-ind_wit_wd_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
-ind_wit_wd_po m (lbl, evt) = 
-        with (do _context $ step_ctx m
-                 POG.variables $ evt^.old.indices
-                 POG.variables $ evt^.old.params
-                 named_hyps $ invariants m
-                 prefix_label $ as_label lbl
-                 named_hyps $ evt^.old.coarse_sched
-                 named_hyps $ evt^.old.fine_sched)
-            (emit_goal assert ["IWWD"] $ well_definedness $ zall 
-                $ M.ascElems $ snd <$> evt^.ind_witness)
-
-ind_wit_fis_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
-ind_wit_fis_po m (lbl, evt) = 
-        with (do _context $ step_ctx m
-                 POG.variables $ m!.del_vars
-                 POG.variables $ evt^.old.indices
-                 POG.variables $ evt^.old.params
-                 named_hyps $ invariants m
-                 prefix_label $ as_label lbl
-                 named_hyps $ evt^.old.coarse_sched
-                 named_hyps $ evt^.old.fine_sched)
-            (emit_exist_goal assert ["IWFIS"] pvar 
-                $ M.ascElems $ snd <$> evt^.ind_witness)
-    where
-        pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
-
 wit_fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
         with (do _context $ step_ctx m
@@ -566,10 +539,36 @@ wit_fis_po m (lbl, evt) =
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
+ind_wit_wd_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_wd_po m (lbl, evts) = 
+        with (do _context $ step_ctx m
+                 named_hyps $ invariants m
+                 prefix_label $ as_label lbl
+                 named_hyps $ evts^.old.coarse_sched
+                 named_hyps $ evts^.old.fine_sched) $ do
+            forM_ (evts^.evt_pairs) $ \evt -> do
+                with (POG.variables $ evt^.new.indices) $
+                    emit_goal assert ["IWWD",evt^.concrete._1.to as_label] $ well_definedness $ zall 
+                        $ M.ascElems $ snd <$> evt^.ind_witness
+
+ind_wit_fis_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_fis_po m (lbl, evts) = 
+        with (do _context $ step_ctx m
+                 --POG.variables $ evt^.old.indices
+                 --POG.variables $ evt^.old.params
+                 named_hyps $ invariants m
+                 prefix_label $ as_label lbl
+                 named_hyps $ evts^.old.coarse_sched
+                 named_hyps $ evts^.old.fine_sched) $ do
+            forM_ (evts^.evt_pairs) $ \evt -> do
+                let pvar = evt^.added.indices
+                emit_exist_goal assert ["IWFIS"] (M.ascElems pvar)
+                    $ M.ascElems $ snd <$> ((evt^.ind_witness) `M.intersection` pvar)
+
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap distrLeft.NE.toList
     where
-        distrLeft (x,y) = (,y) <$> x
+        distrLeft = sequenceOf _1
 
 csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)

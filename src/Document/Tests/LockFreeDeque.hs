@@ -86,6 +86,8 @@ test = test_cases
                 case22 result22
             , Case "test 23, new index proof obligation part b"
                 case23 result23
+            , POCase "test 24, scoping in index witness feasibility"
+                case24 result24
             ]            
 
 result0 :: String
@@ -381,7 +383,7 @@ result4 = unlines
     , "  o  m1/m0:pop:left:empty/F_SCH/replace/eqv"
     , "  o  m1/m0:pop:left:empty/INV/m1:inv0"
     , "  o  m1/m0:pop:left:empty/INV/m1:inv1"
-    , "  o  m1/m0:pop:left:empty/IWWD"
+    , "  o  m1/m0:pop:left:empty/IWWD/m0:pop:left:empty"
     , "  o  m1/m0:pop:left:empty/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:pop:left:empty/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:pop:left:empty/SAF/LIVE/m1:prog2/ensure"
@@ -407,7 +409,7 @@ result4 = unlines
     , "  o  m1/m0:pop:left:non:empty/F_SCH/replace/eqv"
     , "  o  m1/m0:pop:left:non:empty/INV/m1:inv0"
     , "  o  m1/m0:pop:left:non:empty/INV/m1:inv1"
-    , "  o  m1/m0:pop:left:non:empty/IWWD"
+    , "  o  m1/m0:pop:left:non:empty/IWWD/m0:pop:left:non:empty"
     , "  o  m1/m0:pop:left:non:empty/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:pop:left:non:empty/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:pop:left:non:empty/SAF/LIVE/m1:prog2/ensure"
@@ -435,7 +437,7 @@ result4 = unlines
     , "  o  m1/m0:pop:right:empty/F_SCH/replace/eqv"
     , "  o  m1/m0:pop:right:empty/INV/m1:inv0"
     , "  o  m1/m0:pop:right:empty/INV/m1:inv1"
-    , "  o  m1/m0:pop:right:empty/IWWD"
+    , "  o  m1/m0:pop:right:empty/IWWD/m0:pop:right:empty"
     , "  o  m1/m0:pop:right:empty/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:pop:right:empty/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:pop:right:empty/SAF/LIVE/m1:prog2/ensure"
@@ -461,7 +463,7 @@ result4 = unlines
     , "  o  m1/m0:pop:right:non:empty/F_SCH/replace/eqv"
     , "  o  m1/m0:pop:right:non:empty/INV/m1:inv0"
     , "  o  m1/m0:pop:right:non:empty/INV/m1:inv1"
-    , "  o  m1/m0:pop:right:non:empty/IWWD"
+    , "  o  m1/m0:pop:right:non:empty/IWWD/m0:pop:right:non:empty"
     , "  o  m1/m0:pop:right:non:empty/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:pop:right:non:empty/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:pop:right:non:empty/SAF/LIVE/m1:prog2/ensure"
@@ -488,7 +490,7 @@ result4 = unlines
     , "  o  m1/m0:push:left/FIS/resR@prime"
     , "  o  m1/m0:push:left/INV/m1:inv0"
     , "  o  m1/m0:push:left/INV/m1:inv1"
-    , "  o  m1/m0:push:left/IWWD"
+    , "  o  m1/m0:push:left/IWWD/m0:push:left"
     , "  o  m1/m0:push:left/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:push:left/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:push:left/SAF/LIVE/m1:prog2/ensure"
@@ -514,7 +516,7 @@ result4 = unlines
     , "  o  m1/m0:push:right/FIS/resR@prime"
     , "  o  m1/m0:push:right/INV/m1:inv0"
     , "  o  m1/m0:push:right/INV/m1:inv1"
-    , "  o  m1/m0:push:right/IWWD"
+    , "  o  m1/m0:push:right/IWWD/m0:push:right"
     , "  o  m1/m0:push:right/SAF/LIVE/m1:prog0/ensure"
     , "  o  m1/m0:push:right/SAF/LIVE/m1:prog1/ensure"
     , "  o  m1/m0:push:right/SAF/LIVE/m1:prog2/ensure"
@@ -4615,3 +4617,39 @@ result22 = unlines
 
 case22 :: IO String
 case22 = proof_obligation path20 "m1/handle/C_SCH/delay/0/prog/m1:prog1/rhs/m1:sch0" 1
+
+path24 :: FilePath
+path24 = "Tests/lock-free deque/main10.tex"
+
+case24 :: IO POResult
+case24 = verify path24 1
+
+result24 :: String
+result24 = unlines
+    [ "  o  m1/INIT/WD"
+    , "  o  m1/INIT/WWD"
+    , "  o  m1/INV/WD"
+    , "  o  m1/add/FIS/req@prime"
+    , "  o  m1/add/FIS/ver@prime"
+    , "  o  m1/add/IWWD/add"
+    , "  o  m1/add/WD/C_SCH"
+    , "  o  m1/add/WD/F_SCH"
+    , "  o  m1/add/WD/GRD"
+    , "  o  m1/add/WWD"
+    , " xxx m1/handle/C_SCH/weaken/m1:sch0"
+    , " xxx m1/handle/C_SCH/weaken/m1:sch1"
+    , "  o  m1/handle/FIS/req@prime"
+    , "  o  m1/handle/FIS/ver@prime"
+    , "  o  m1/handle/GRD/str/m0:sch0"
+    , " xxx m1/handle/IWFIS/v"
+    , " xxx m1/handle/IWWD/handle"
+    , "  o  m1/handle/SCH"
+    , "  o  m1/handle/SCH/r"
+    , "  o  m1/handle/SIM/m0:act0"
+    , "  o  m1/handle/WD/ACT/m1:act0"
+    , "  o  m1/handle/WD/C_SCH"
+    , "  o  m1/handle/WD/F_SCH"
+    , "  o  m1/handle/WD/GRD"
+    , "  o  m1/handle/WWD"
+    , "passed 21 / 25"
+    ]
