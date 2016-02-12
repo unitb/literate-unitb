@@ -88,6 +88,8 @@ test = test_cases
                 case23 result23
             , POCase "test 24, scoping in index witness feasibility"
                 case24 result24
+            , POCase "test 25, parameter promotion and inheritance"
+                case25 result25
             ]            
 
 result0 :: String
@@ -4650,4 +4652,34 @@ result24 = unlines
     , "  o  m1/handle/WD/GRD"
     , "  o  m1/handle/WWD"
     , "passed 20 / 23"
+    ]
+
+path25 :: FilePath
+path25 = "Tests/lock-free deque/main11.tex"
+
+case25 :: IO POResult
+case25 = verify path25 2
+
+result25 :: String
+result25 = unlines
+    [ "  o  m2/INIT/FIS/req"
+    , "  o  m2/INIT/FIS/ver"
+    , "  o  m2/INIT/WD"
+    , "  o  m2/INIT/WWD"
+    , "  o  m2/INV/WD"
+    , "  o  m2/add/FIS/req@prime"
+    , "  o  m2/add/FIS/ver@prime"
+    , "  o  m2/add/IWWD/add"
+    , "  o  m2/add/WD/C_SCH"
+    , "  o  m2/add/WD/F_SCH"
+    , "  o  m2/add/WD/GRD"
+    , "  o  m2/add/WWD"
+    , "  o  m2/handle/FIS/req@prime"
+    , "  o  m2/handle/FIS/ver@prime"
+    , "  o  m2/handle/IWWD/handle"
+    , "  o  m2/handle/WD/C_SCH"
+    , "  o  m2/handle/WD/F_SCH"
+    , "  o  m2/handle/WD/GRD"
+    , "  o  m2/handle/WWD"
+    , "passed 19 / 19"
     ]

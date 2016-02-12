@@ -144,14 +144,20 @@ instance Scope EventDecl where
     kind = show
     keep_from s x | s == (x^.declSource) = Just x
                   | otherwise            = Nothing
-    make_inherited = scope promotedToIndex . (declSource .~ Inherited)
-        where
-            promotedToIndex s = maybe (Just s) (fmap Index) (s^?_Promoted)
+    make_inherited = Just . (declSource .~ Inherited)
     merge_scopes' s0 s1 = case (s0^.scope,s1^.scope) of
-            (Param v,Promoted Nothing) -> Just $ s1 
+            (Param v,Promoted Nothing) -> case s1^.declSource of
+                    Inherited -> Just $ s1 
+                        & scope .~ Index v
+                        & declSource .~ Inherited
+                    Local -> Just $ s1 
                         & scope .~ Promoted (Just v) 
                         & declSource .~ Inherited
-            (Promoted Nothing,Param v) -> Just $ s0 
+            (Promoted Nothing,Param v) -> case s0^.declSource of
+                    Inherited -> Just $ s0 
+                        & scope .~ Index v 
+                        & declSource .~ Inherited
+                    Local -> Just $ s0 
                         & scope .~ Promoted (Just v) 
                         & declSource .~ Inherited
             _ -> Nothing

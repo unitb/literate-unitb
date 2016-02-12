@@ -73,7 +73,6 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
             vars <- triggerM
                 =<< make_all_tables' err_msg 
                 =<< triggerM vs'
-                    
             let _  = vars :: MTable (Table Name VarScope)
             SystemP r_ord <$> T.sequence (make_phase2 <$> p1 <.> vars)
 

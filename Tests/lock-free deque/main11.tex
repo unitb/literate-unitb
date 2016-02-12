@@ -1,0 +1,65 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+  % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{unitb}
+
+\newcommand{\REQ}{\text{REQ}}
+
+\begin{document}
+
+\section{Strategy}
+
+\begin{itemize}
+  \item 
+\end{itemize}
+\section{Model m0 --- Requests and non-deterministic handling}
+  % \input{lock-free-deque/machine_m0.tex}
+\begin{machine}{m0}
+  \with{sets}
+  \newset{\REQ}
+  \newevent{add}{add}
+  \newevent{handle}{handle}
+  \[ \variable{ req : \set [\REQ] } \]
+  \[ \param{add}{ r : \REQ } \]
+  \[ \param{handle}{ r : \REQ } \]
+  \begin{align*}
+      \initialization{m0:init0}{ req = \emptyset } \\
+      \evguard{add}{m0:guard}{ \neg r \in req } \\
+      \evbcmeq{add}{m0:act0}{req}{ req \bunion \{ r \} } \\
+      \cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
+      \evguard{handle}{m0:grd0}{ r \in req } \\
+      \evbcmeq{handle}{m0:act0}{req}{ req \setminus \{ r \} } 
+  \end{align*}
+
+\noindent
+\end{machine}
+\section{Model m1 --- Version numbers and individual fairness}
+  % \input{lock-free-deque/machine_m1.tex}
+\begin{machine}{m1}
+    \refines{m0}
+  \[ \variable{ ver : \Int } \]
+  % \[ \indices{handle}{ r0 : \REQ } \]
+  \[ \indices{handle}{ v : \Int } \]
+  \promote{handle}{r}
+  \removecoarse{handle}{m0:sch0}
+  \removeguard{handle}{m0:grd0}
+  % \removeact{handle}{m0:act0}
+  \[\witness{handle}{r}{r \in req}\]
+  \[\witness{handle}{v}{v = ver}\]
+  \begin{align}
+      \initialization{m1:init0}{ ver = 0 } \\
+      \cschedule{handle}{m1:sch0}{ r \in req } \\
+      \cschedule{handle}{m1:sch1}{ v = ver } \\
+      % \evguard{handle}{m1:grd0}{ r = r0 } \\
+      \evbcmeq{handle}{m1:act0}{ver}{ ver + 1 } 
+  \end{align}
+\end{machine}
+
+\begin{machine}{m2}
+  \refines{m1}
+\end{machine}
+\end{document}

@@ -285,6 +285,22 @@ instance HasEvent' (AbstrEvent' expr) expr where
 instance HasEvent' (ConcrEvent' expr) expr where
     event' = new
 
+instance PrettyPrintable (ScheduleChange' expr) where
+    pretty _ = "<schedule-change>"
+
+instance (PrettyPrintable expr,Typeable expr) => PrettyRecord (AbstrEvent' expr) where
+    recordFields = genericRecordFields [[field|_old|]]
+instance (PrettyPrintable expr,Typeable expr) => PrettyRecord (ConcrEvent' expr) where
+    recordFields = genericRecordFields [[field|_new|]]
+instance PrettyPrintable expr => PrettyRecord (Event' expr) where
+    recordFields = genericRecordFields []
+instance (PrettyPrintable expr,Typeable expr) => PrettyPrintable (AbstrEvent' expr) where
+    pretty = prettyRecord
+instance (PrettyPrintable expr,Typeable expr) => PrettyPrintable (ConcrEvent' expr) where
+    pretty = prettyRecord
+instance PrettyPrintable expr => PrettyPrintable (Event' expr) where
+    pretty = prettyRecord
+
 instance HasConcrEvent' (EventMerging expr) expr where
     concrEvent' = concrete._2
 

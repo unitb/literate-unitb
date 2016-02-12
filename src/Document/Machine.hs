@@ -73,7 +73,7 @@ make_machine (MId m) p4 = mch'
                     `union` (makeRule Add <$> (p4^.pNewPropSet.progress))) 
             inh_props .= p4^.pOldPropSet
             comments  .= p4^.pComments
-            event_table .= EventTable evts -- M.mapKeys as_label evts 
+            event_table .= EventTable evts
                 -- adep: in a abstract machine, prog_a <- evt_a
                 -- live: in a concrete machine, prog_c <- prog_c
                 -- cdep:                        prog_c <- evt_c
