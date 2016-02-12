@@ -134,7 +134,7 @@ run_test_cases xs = do
         swapMVar failure_number 0
         c        <- f Nothing xs 
         ref      <- newIORef []
-        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 undefined) ref
+        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 (assertFalse' "??")) ref
         forM_ w $ \ln -> do
             case ln of
                 Right xs -> putStrLn xs

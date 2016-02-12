@@ -106,7 +106,6 @@ class ( LivenessRulePO rule
                         -> LatexDoc
                         -> M rule
     promoteRule _ _ _ _ = return def
-    --promoteRule _ = assert False undefined
 
 class Parsable f where
     parseMany :: Label

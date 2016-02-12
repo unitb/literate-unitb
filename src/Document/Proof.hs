@@ -69,11 +69,14 @@ data ParserSetting = PSetting
     , _primed_vars   :: Table Name Var
     , _free_dummies  :: Bool
     , _expected_type :: Maybe Type
-    } -- deriving Show
+    }
     deriving (Generic,Eq,Show)
 
 makeLenses ''ParserSetting
 makeFields ''ParserSetting
+
+instance PrettyPrintable ParserSetting where
+    pretty _ = "<parser-setting>"
 
 set_proof :: ( Monad m
              , MonadReader LineInfo m

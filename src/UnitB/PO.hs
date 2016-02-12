@@ -733,7 +733,7 @@ replace_fsched_po m (lbl,aevt) = do
                             Right (zsome add_f) .=. Right (zsome del_f)
 
 intersections :: IsKey Table k => [Table k a] -> Table k a
-intersections []  = error "intersection of empty list is undefined"
+intersections []  = assertFalse' "intersection of empty list is undefined"
 intersections [x] = x
 intersections (x:xs) = x `intersection` intersections xs                                
 

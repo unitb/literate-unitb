@@ -149,7 +149,8 @@ traverseCell' :: (Functor f,HasCell c (Cell constr))
               => (forall a. (constr a,Typeable a) => a -> f a) -> c -> f c
 traverseCell' f = cell (traverseCell f)
 
-traverseCell1 :: Functor f => (forall a. (constr a,Typeable a) => g a -> f (h a))
+traverseCell1 :: Functor f 
+              => (forall a. (constr a,Typeable a) => g a -> f (h a))
               -> Cell1 g constr -> f (Cell1 h constr)
 traverseCell1 f (Cell x) = Cell <$> f x
 
@@ -380,7 +381,9 @@ cellLens' :: (HasCell c (Cell constr), Functor f)
           -> LensLike' f c b
 cellLens' ln f = traverseCell' (ln f)
 
-cell1Lens :: Functor f => (forall a. constr a => LensLike' f (g a) b) -> LensLike' f (Cell1 g constr) b
+cell1Lens :: Functor f 
+          => (forall a. constr a => LensLike' f (g a) b) 
+          -> LensLike' f (Cell1 g constr) b
 cell1Lens = cell1Lens'
 
 cell1Lens' :: (HasCell c (Cell1 g constr), Functor f)

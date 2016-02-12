@@ -5,6 +5,7 @@
 {-# LANGUAGE ViewPatterns              #-}
 module Document.Scope 
     ( Scope(..)
+    , rename_events
     , HasDeclSource (..)
     , HasLineInfo (..)
     , HasInhStatus (..)
@@ -87,7 +88,7 @@ class (Ord a,Show a) => Scope a where
         -- | let x be a collection of event-related declaration in machine m0 and m1 be a 
         -- | refinement of m0. rename_events sub x translates the name in x from the m0 
         -- | namespace to the m1 namespace.
-    rename_events :: Table EventId [EventId] -> a -> [a]
+    rename_events' :: (EventId -> [EventId]) -> a -> [a]
 
     axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
@@ -97,6 +98,9 @@ class (Ord a,Show a) => Scope a where
     axiom_Scope_mergeCommutative x y = clash x y .||. x <+> y === y <+> x
     axiom_Scope_mergeAssociative :: a -> a -> a -> Property
     axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) .||. x <+> (y <+> z) === (x <+> y) <+> z
+
+rename_events :: Scope a => Table EventId [EventId] -> a -> [a]
+rename_events m = rename_events' (\e -> findWithDefault [e] e m)
 
 clash :: Scope a => a -> a -> Bool
 clash x y = isNothing $ merge_scopes' x y
@@ -222,6 +226,9 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
         conflicts = M.map (flip u_scc clash) items' 
 
 newtype WithDelete a = WithDelete { getDelete :: a }
+
+instance PrettyPrintable DeclSource where
+    pretty = show
 
 instance Arbitrary DeclSource where
     arbitrary = genericArbitrary

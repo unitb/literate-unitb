@@ -225,7 +225,7 @@ instance Scope Initially where
     kind x = case x^.inhStatus of 
             InhAdd _ -> "initialization"
             InhDelete _ -> "deleted initialization"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 instance IsExprScope Initially where
     toNewEvtExprDefault _ _ = return []
@@ -299,9 +299,8 @@ instance Scope EventExpr where
                     parents = intercalate "," $ map show $ inheritedFrom sc
             msg (Left _) sc = (printf "%s (initialization)" (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
-    rename_events m (EventExpr es) = map EventExpr $ concatMap f $ toList es
+    rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
-            lookup x = MM.fromMaybe [x] $ M.lookup x m
             f (Right eid,x) = [ singleton (Right e) $ setSource eid x | e <- lookup eid ]
             f (Left InitEvent,x) = [singleton (Left InitEvent) x]
 
@@ -468,7 +467,7 @@ instance Scope Axiom where
     kind _ = "axiom"
     merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
     keep_from s x = guard (s == view declSource x) >> return x
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 parseExpr' :: (HasMchExpr b a, IsKey Table label)
            => Lens' MachineP3 (Table label a) 
@@ -537,7 +536,7 @@ instance PrettyPrintable Invariant where
 
 instance Scope Invariant where
     kind _ = "invariant"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 instance IsExprScope Invariant where
     toNewEvtExprDefault _ _ = return []
@@ -561,7 +560,7 @@ invariant = machineCmd "\\invariant" $ \(NewLabel lbl,Expr xs) _m p2 -> do
 
 instance Scope InvTheorem where
     kind _ = "theorem"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 instance IsExprScope InvTheorem where
     toNewEvtExprDefault _ _ = return []
@@ -588,7 +587,7 @@ mch_theorem = machineCmd "\\theorem" $ \(NewLabel lbl,Expr xs) _m p2 -> do
 
 instance Scope TransientProp where
     kind _ = "transient predicate"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 instance IsExprScope TransientProp where
     toNewEvtExprDefault _ _ = return []
     toMchExpr lbl e = return [Right $ PTransient lbl $ e^.mchExpr]
@@ -660,7 +659,7 @@ instance IsExprScope ConstraintProp where
 
 instance Scope ConstraintProp where
     kind _ = "co property"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 instance PrettyPrintable ConstraintProp where
     pretty = kind
@@ -694,7 +693,7 @@ instance IsExprScope SafetyDecl where
 
 instance Scope SafetyDecl where
     kind _ = "safety property"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 instance PrettyPrintable SafetyDecl where
     pretty = kind
@@ -746,7 +745,7 @@ instance IsExprScope ProgressDecl where
 
 instance Scope ProgressDecl where
     kind _ = "progress property"
-    rename_events _ x = [x]
+    rename_events' _ x = [x]
 
 transientProp :: (HasTheoryP2 p,HasExpr expr)
               => p -> expr 

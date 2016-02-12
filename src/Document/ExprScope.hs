@@ -242,43 +242,43 @@ instance Scope CoarseSchedule where
     kind x = case x ^. inhStatus of
                 InhDelete _ -> "deleted coarse schedule"
                 InhAdd _ -> "coarse schedule"
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope FineSchedule where
     type Impl FineSchedule = Redundant Expr (WithDelete FineSchedule)
     kind x = case x ^. inhStatus of
                 InhDelete _ -> "deleted fine schedule"
                 InhAdd _ -> "fine schedule"
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope Guard where
     type Impl Guard = Redundant Expr (WithDelete Guard)
     kind x = case x ^. inhStatus of
                 InhDelete _ -> "deleted guard"
                 InhAdd _ -> "guard"    
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope Witness where
     kind _ = "witness"
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope IndexWitness where
     kind _ = "witness (index)"
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
     kind x = case x ^. inhStatus of
                 InhDelete _ -> "delete action"
                 InhAdd _ -> "action"
-    rename_events _ x = [x]
+    rename_events' _ e = [e]
 
 instance Scope EvtExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
     merge_scopes' = apply2Cells' merge_scopes' Nothing
-    rename_events m = traverseCell' (rename_events m)
+    rename_events' m = traverseCell' (rename_events' m)
     kind = readCell' kind
 
 
@@ -287,7 +287,7 @@ instance Scope ExprScope where
     make_inherited = traverseCell' make_inherited
     error_item = readCell' error_item
     merge_scopes' = apply2Cells' merge_scopes' Nothing
-    rename_events m = traverseCell' (rename_events m)
+    rename_events' m = traverseCell' (rename_events' m)
     kind = readCell' kind
 
 instance Show ExprScope where

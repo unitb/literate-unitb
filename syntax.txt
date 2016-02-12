@@ -19,6 +19,7 @@
 \newset{set-name}
 \param{concrete event-name}{text / comment}
 \progress{fresh-name}{expression}{expression}
+\promote{concrete event-name}{variable}
 \refine{progress-property-label}{rule}{zero or more progress-property-label}{text / comment}
 \refines{machine-name}
 \removeact{concrete event-name}{zero or more abstract action-label}

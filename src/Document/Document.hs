@@ -26,6 +26,7 @@ import UnitB.UnitB
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import Control.Category
 
 import           Control.Lens
 import           Control.Monad 
@@ -37,16 +38,21 @@ import qualified Control.Monad.Writer as W
 import           Data.Either.Combinators
 import           Data.List.Ordered (sortOn)
 
+import Prelude hiding ((.),id)
+
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
 import Utilities.Syntactic as Syn
 import Utilities.Table
 
 read_document :: LatexDoc -> Either [Error] System
-read_document xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
+read_document = parseWith system
+
+parseWith :: Pipeline MM () a -> LatexDoc -> Either [Error] a
+parseWith parser xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
             let li = line_info xs
             (ms,cs) <- get_components xs li
-            runPipeline' ms cs () system
+            runPipeline' ms cs () parser
 
 system :: Pipeline MM () System
 system =     run_phase0_blocks 

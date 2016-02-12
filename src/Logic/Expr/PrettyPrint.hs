@@ -1,7 +1,9 @@
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances,TypeOperators,ScopedTypeVariables #-}
 module Logic.Expr.PrettyPrint 
     ( pretty_print', Pretty(..), PrettyPrintable(..) 
-    , reifyPrettyPrint, ReflectedPrettyPrint(..) )
+    , field
+    , prettyRecord, PrettyRecord(..)
+    , genericRecordFields )
 where
 
     -- Modules
@@ -10,17 +12,33 @@ import Logic.Expr.Label
 import Logic.Names
 
     -- Libraries
+import Control.Applicative
 import Control.Arrow
+import Control.Lens hiding (List,cons,uncons)
 import Control.Monad.Reader
 
 import Data.Either.Combinators
 import Data.Functor.Classes
-import Data.List hiding (uncons)
-import Data.Proxy
-import Data.Reflection
+import Data.Maybe
+import Data.List hiding (uncons,unlines)
+import qualified Data.List as L
+import qualified Data.List.NonEmpty as NE
 
+import GHC.Generics
+import GHC.Generics.Lens
+
+import Language.Haskell.TH hiding (Name)
+import Language.Haskell.TH.Quote
+
+import Prelude hiding (unlines)
+
+import Text.Printf
+
+import Utilities.Existential
 import Utilities.Instances
+import Utilities.Lines
 import qualified Utilities.Map as M
+import Utilities.Syntactic (LineInfo(..))
 import Utilities.Table
 
 pretty_print' :: Tree t => t -> String
@@ -31,6 +49,9 @@ pretty_print' t = intercalate "\n"
 newtype Pretty a = Pretty { unPretty :: a }
     deriving (Eq,Ord,Functor,Foldable,Traversable,Hashable)
 
+withMargin :: String -> String -> String -> String
+withMargin first other = asLines %~ NE.zipWith (++) (first :| repeat other) 
+
 class PrettyPrintable a where
     pretty :: a -> String
     default pretty :: (Functor f, Show1 f) => f a -> String
@@ -40,7 +61,8 @@ instance PrettyPrintable a => Show (Pretty a) where
     show = pretty . unPretty
 
 instance PrettyPrintable a => PrettyPrintable [a] where
-    pretty = show . map Pretty
+    pretty = show . L.map Pretty
+    -- pretty xs = L.intercalate "\n" $ zipWith (\m -> withMargin m "  " . pretty) ("[ " : repeat ", ") xs ++ ["]"]
 
 instance PrettyPrintable StrList where
     pretty = show
@@ -53,7 +75,7 @@ instance PrettyPrintable Name where
 
 instance (PrettyPrintable k,Ord k,Hashable k,PrettyPrintable a) 
         => PrettyPrintable (Table k a) where
-    pretty = show . M.mapKeys Pretty . M.map Pretty
+    pretty m = "fromList\n" ++ withMargin "  " "  " (pretty $ M.toList m)
 
 instance (PrettyPrintable a,PrettyPrintable b) 
         => PrettyPrintable (Either a b) where
@@ -62,9 +84,70 @@ instance (PrettyPrintable a,PrettyPrintable b)
 instance PrettyPrintable () where
     pretty = show
 
+instance (PrettyPrintable a) => PrettyPrintable (NonEmpty a) where
+    pretty = printf "|%s|" . pretty . NE.toList
+instance (PrettyPrintable a) => PrettyPrintable (Maybe a) where
+    pretty = show . fmap Pretty
+
 instance (PrettyPrintable a,PrettyPrintable b)
         => PrettyPrintable (a,b) where
     pretty = show . (Pretty *** Pretty)
+
+instance PrettyPrintable LineInfo where
+    pretty (LI _ i j) = printf "(li:%d:%d)" i j
+
+class PrettyRecord a where
+    recordFields :: a -> (String,[(String,String)])
+
+prettyRecord :: PrettyRecord a => a -> String
+prettyRecord r = unlines $ 
+        cons :|
+        zipWith (++) ("  { " : repeat "  , ")
+            [ withMargin f' (margin f') v | (f,v) <- fs, let f' = f ++ " = " ]
+        ++ [ "  }", "" ]
+    where
+        margin f = replicate (length f + 4) ' '
+        (cons,fs) = recordFields r
+
+genericRecordFields :: forall a. (Generic a,GenericRecordFields (Rep a))
+                    => [Field a]
+                    -> a -> (String, [(String,String)])
+genericRecordFields excp x = (_1 %~ fromMaybe "") . gRecordFields (L.map unfield excp) . view generic $ x
+    where
+        unfield :: Field a -> (String, Cell PrettyRecord)
+        unfield (Field name y) = (name,runIdentity $ y & traverseCell1 (pure . pure . ($ x))) -- & traverseCell1 %~ (Identity . ($ y)))
+
+data Field a = Field String (Cell1 ((->) a) PrettyRecord)
+
+field :: QuasiQuoter
+field = QuasiQuoter 
+    { quoteExp  = \f -> [e| Field f $ Cell $(varE $ mkName f) |]
+    , quotePat  = undefined
+    , quoteType = undefined
+    , quoteDec  = undefined
+    }
+
+class GenericRecordFields a where
+    gRecordFields :: [(String,Cell PrettyRecord)] -> a p -> (Maybe String, [(String,String)])
+
+instance (GenericRecordFields a,GenericRecordFields b) 
+        => GenericRecordFields (a :+: b) where
+    gRecordFields excp (L1 x) = gRecordFields excp x
+    gRecordFields excp (R1 x) = gRecordFields excp x
+instance (GenericRecordFields a,GenericRecordFields b) 
+        => GenericRecordFields (a :*: b) where
+    gRecordFields excp (x :*: y) = (fst rx <|> fst ry, snd rx ++ snd ry)
+        where
+            rx = gRecordFields excp x
+            ry = gRecordFields excp y
+instance (Selector s,PrettyPrintable b) => GenericRecordFields (S1 s (K1 a b)) where
+    gRecordFields excp x@(M1 (K1 v))
+        | Just f <- selName x `L.lookup` excp = (Nothing,snd $ readCell recordFields f)
+        | otherwise             = (Nothing,[(selName x,pretty v)])
+instance (Constructor c,GenericRecordFields a) => GenericRecordFields (C1 c a) where
+    gRecordFields excp m@(M1 x) = gRecordFields excp x & _1 .~ Just (conName m)
+instance GenericRecordFields b => GenericRecordFields (D1 a b) where
+    gRecordFields excp = gRecordFields excp . unM1
 
 data Line = Line String String
 
@@ -139,26 +222,6 @@ pretty_print_aux (List ys@(x:xs)) =
         margin n = replicate n ' '
         add_to_last suff (Ls xs (Line x y),k) = (Ls xs (Line x $ y++suff),k)
   
-newtype ReflectedPrettyPrint s a = ReflectedPrettyPrint a
-
-newtype ReifiedPrettyPrint a = ReifiedPrettyPrint { unreifyPP :: a -> String }
-
-instance Reifies s (ReifiedPrettyPrint a) 
-        => PrettyPrintable (ReflectedPrettyPrint s a) where
-    pretty = reifiedPP Proxy
-
-reifiedPP :: Reifies s (ReifiedPrettyPrint a) 
-          => Proxy s -> ReflectedPrettyPrint s a -> String
-reifiedPP p (ReflectedPrettyPrint x) = unreifyPP (reflect p) x
-
-reifyPrettyPrint :: (a -> String)
-                 -> (forall s. PrettyPrintable (ReflectedPrettyPrint s a) => (a -> ReflectedPrettyPrint s a) -> t)
-                 -> t
-reifyPrettyPrint f x = reify (ReifiedPrettyPrint f) (\p -> x $ fitTag p . ReflectedPrettyPrint)
-
-fitTag :: proxy s -> f s a -> f s a
-fitTag _ = id
-
 -- pretty_print :: StrList -> [String]
 -- pretty_print (Str xs) = [xs]
 -- pretty_print (List []) = ["()"]

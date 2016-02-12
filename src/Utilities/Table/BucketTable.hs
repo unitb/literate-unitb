@@ -198,6 +198,7 @@ instance IsMap HashTable where
     map f = hashTable %~ IM.map (map f)
     -- {-# INLINE mapMaybe #-}
     mapMaybe f = hashTable %~ IM.mapMaybe (notNull . mapMaybe f)
+    mapMaybeWithKey f = hashTable %~ IM.mapMaybe (notNull . mapMaybeWithKey f)
     -- {-# INLINE mapEither #-}
     mapEither f = mapEitherWithKey (const f)
     -- {-# INLINE mapEitherWithKey #-}

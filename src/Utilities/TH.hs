@@ -311,7 +311,6 @@ existential tn = do
                                 $ appsE [varE f,varE x,varE y]
                               , varE x,varE y]
                 func = return [AppT (ConT ''Functor) (VarT f)]
-                _ = undefined :: TypeRep
             a <- newName "a"
             t <- sequence 
                 [ sigD apply $ forallT [PlainTV f] func $

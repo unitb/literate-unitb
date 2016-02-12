@@ -46,6 +46,8 @@ instance IsMap M.HashMap where
     map = M.map
     {-# INLINE mapMaybe #-}
     mapMaybe f = M.map fromJust . M.filter isJust . M.map f
+    {-# INLINE mapMaybeWithKey #-}
+    mapMaybeWithKey f = M.map fromJust . M.filter isJust . M.mapWithKey f
     {-# INLINE mapEither #-}
     mapEither f = mapEitherWithKey (const f)
     mapEitherWithKey f m = (Map.mapMaybe leftToMaybe m',Map.mapMaybe rightToMaybe m')

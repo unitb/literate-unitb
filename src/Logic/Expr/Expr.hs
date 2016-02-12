@@ -776,7 +776,8 @@ defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
 
 
 class (IsGenExpr e
-        , Show e, Eq e
+        , Show e
+        , PrettyPrintable e, Eq e
         --, HasScope e
         , NameT e ~ Name
         , TypeT e ~ Type
@@ -785,7 +786,8 @@ class (IsGenExpr e
         => IsExpr e where
 
 class (IsGenExpr e
-        , Show e, Eq e
+        , Show e
+        , PrettyPrintable e, Eq e
         --, HasScope e
         , NameT e ~ InternalName
         , TypeT e ~ Type
@@ -797,7 +799,7 @@ getExpr :: HasExpr e => e
         -> AbsExpr (NameT (ExprT e)) Type HOQuantifier
 getExpr = asExpr
 
-class (HasGenExpr e,Show e,Eq e,IsExpr (ExprT e),HasScope e) => HasExpr e where
+class (HasGenExpr e,Show e,PrettyPrintable e,Eq e,IsExpr (ExprT e),HasScope e) => HasExpr e where
 class (HasGenExpr e,IsRawExpr (ExprT e),HasScope e) => HasRawExpr e where
 
 instance IsRawExpr (AbsExpr InternalName Type HOQuantifier) where

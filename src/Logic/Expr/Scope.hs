@@ -6,6 +6,7 @@ where
 
     -- Modules
 import Logic.Expr.Classes
+import Logic.Expr.PrettyPrint
 import Logic.Expr.Variable
 import Logic.Names
 
@@ -81,22 +82,22 @@ withPrimes cmd = do
     x <- ask
     withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
-areVisible :: (Show e,Foldable f,?loc :: CallStack) 
+areVisible :: (PrettyPrintable e,Foldable f,?loc :: CallStack) 
            => [Getting (Table Name Var) VisibleVars (Table Name Var)]
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
     vs <- foldMap view ln 
     let pre  = printf "\n%s\n free vars = %s\n declared  = %s\n diff      = %s"
                 (stackTrace' [$__FILE__] ?loc "Scope error")
-                (show $ M.toList vars)
-                (show $ M.toList vs)
-                (show $ M.toList $ vars `M.difference` vs)
+                (show $ Pretty <$> M.toList vars)
+                (show $ Pretty <$> M.toList vs)
+                (show $ Pretty <$> M.toList (vars `M.difference` vs))
         vars = symbol_table vars'
     if vars `isSubmapOf` vs
         then return []
         else withPrefix pre $ do 
             pre <- views prefix $ intercalate " - " . reverse
-            return [(pre,show e)]
+            return [(pre,pretty e)]
 
 scopeCorrect :: (HasScope a,?loc :: CallStack) => a -> [(String,String)]
 scopeCorrect x = scopeCorrect' x def

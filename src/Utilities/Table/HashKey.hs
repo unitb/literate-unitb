@@ -99,6 +99,8 @@ instance IsMap MapWithHash where
     map f = mapWithHash %~ map f
     {-# INLINE mapMaybe #-}
     mapMaybe f = mapWithHash %~ mapMaybe f
+    {-# INLINE mapMaybeWithKey #-}
+    mapMaybeWithKey f = mapWithHash %~ mapMaybeWithKey (f . key)
     {-# INLINE mapEither #-}
     mapEither f = mapEitherWithKey (const f)
     {-# INLINE mapEitherWithKey #-}

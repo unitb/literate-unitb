@@ -145,6 +145,16 @@ data EventP4 = EventP4
     , _eFineRef    :: Maybe (ProgId,ProgressProp)
     } deriving (Typeable,Show,Generic,Eq)
 
+instance PrettyRecord EventP1 where
+    recordFields = genericRecordFields []
+instance PrettyPrintable EventP1 where
+    pretty = prettyRecord
+
+instance PrettyRecord EventP2 where
+    recordFields r = genericRecordFields [[field|_e1|]] r
+instance PrettyPrintable EventP2 where
+    pretty = prettyRecord
+
 data Change = AddC | RemoveC
     deriving (Eq,Show)
 

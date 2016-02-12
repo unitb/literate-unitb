@@ -88,7 +88,7 @@ check_theory :: (MonadIO m, MonadState Params m)
 check_theory (name,th) = do
         param <- get
         let old_po = M.findWithDefault M.empty (label name) $ pos param
-            po = either undefined id $ theory_po th
+            po = either (assertFalse' "check_theory") id $ theory_po th
             new_po = po `M.difference` old_po
             ch_po  = po `M.intersection` old_po
             ch     = M.filterWithKey (\k x -> snd (old_po ! k) /= x) ch_po

@@ -68,7 +68,7 @@ diff xs ys =
               | otherwise       = []
         min_ (x0:x1:xs) = x0 `_min_` min_ (x1:xs)
         min_ [x0]       = x0
-        min_ []         = undefined
+        min_ []         = assertFalse' "diff"
         _min_ xs ys
             | length xs <= length ys = xs
             | otherwise              = ys
