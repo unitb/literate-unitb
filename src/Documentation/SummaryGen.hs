@@ -11,7 +11,7 @@ where
 
     -- Modules
 import UnitB.Expr   hiding ((</>))
-import UnitB.UnitB
+import UnitB.UnitB as UB
 
     -- Libraries
 import Control.Lens hiding ((<.>),indices)
@@ -129,6 +129,8 @@ machine_summary sys m = do
             unless (M.null $ _constraint $ m!.props)
                 $ item $ input path $ constraint_file m
             item $ do
+                tell [keyword "initialization"]
+                init_summary m
                 tell [keyword "events"]
                 let evts = keys $ nonSkipUpwards m
                 unless (L.null evts) $
@@ -213,6 +215,13 @@ comment_of m key = do
         case key `M.lookup` (m!.comments) of
             Just cmt -> block $ item $ tell [printf "%s" cmt]
             Nothing -> return ()
+
+init_summary :: Machine -> M ()
+init_summary m = do
+    when show_removals $
+        local (const True)
+            $ put_all_expr "" $ M.toAscList $ m!.del_inits
+    put_all_expr "" $ M.toAscList $ m!.UB.inits
 
 event_summary' :: Machine -> EventId -> EventMerging' -> M ()
 event_summary' m lbl e = do
@@ -355,8 +364,7 @@ put_expr opts pre (lbl,e) = do
         --            Nothing -> format "(\\ref{{0}}/default)" pre
         --            Just lbl -> format "\\eqref{{0}}" (show pre ++ show lbl)
         expr  <- format_formula =<< (opts^.makeString $ e)
-        tell [printf "\\item[ %s ]%s" 
-                    ref expr]
+        tell [printf "  \\item[ %s ]%s" ref expr]
         opts^.makeDoc $ lbl
 
 put_all_expr' :: Show label => (a -> M String) -> EventId -> [(label, a)] -> M ()
@@ -376,7 +384,7 @@ put_all_expr :: EventId -> [(Label,Expr)] -> M ()
 put_all_expr = put_all_expr' get_string'
 
 put_all_expr_with :: State (ExprDispOpt Label Expr) () 
-                      -> EventId -> [(Label, Expr)] -> M ()
+                  -> EventId -> [(Label, Expr)] -> M ()
 put_all_expr_with opts = put_all_expr_with' get_string' opts
 
 section :: String -> M () -> M ()
@@ -390,7 +398,8 @@ index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\te
     where
         ind 
             | M.null $ e^.indices = ""
-            | otherwise           = "[" ++ intercalate "," (L.map (render . view name) $ M.ascElems $ e^.indices) ++ "]"
+            | otherwise           = "$[" ++ inds ++ "]$"
+        inds = intercalate "," (L.map (render . view name) $ M.ascElems $ e^.indices)
 
 csched_sum :: EventId -> EventMerging' -> M ()
 csched_sum lbl e = do

@@ -257,15 +257,15 @@ case3 = liftM (either id id) $ runEitherT $ do
 
 result3 :: String
 result3 = unlines
-    [ "\\noindent \\ref{visit} [p] \\textbf{event}"
+    [ "\\noindent \\ref{visit} $[p]$ \\textbf{event}"
     , "\\begin{block}"
     , "  \\item   \\textbf{during}"
     , "  \\begin{block}"
-    , "  \\item[ (\\ref{visit}/default) ]\\sout{$\\false$} %"
+    , "    \\item[ (\\ref{visit}/default) ]\\sout{$\\false$} %"
     , "  \\end{block}"
     , "  \\item   \\textbf{begin}"
     , "  \\begin{block}"
-    , "  \\item[ \\eqref{visitact1} ]{$vs \\bcmeq vs \\bunion \\{ p \\}$} %"
+    , "    \\item[ \\eqref{visitact1} ]{$vs \\bcmeq vs \\bunion \\{ p \\}$} %"
     , "  \\end{block}"
     , "  \\item   \\textbf{end} \\\\"
     , "\\end{block}"
