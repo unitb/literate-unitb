@@ -195,16 +195,21 @@ empty_sequent = (Sequent empty_ctx empty_monotonicity [] M.empty ztrue)
 instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) where
     pretty s = L.unlines $ asms ++ ["|----",goal'] 
         where
-            indent = over traverseLines (" " ++)
-            asms   = map indent $ 
+            indent n = over traverseLines (replicate n ' ' ++)
+            indentAfter n = partsOf traverseLines %~ zipWith (++) ("" : repeat (replicate n ' '))
+            asms   = map (indent 1) $ 
                     ["sort: " ++ intercalate ", " (L.filter (not.L.null) $ MM.mapMaybe f $ toList ss)]
                     ++ (map pretty $ ascElems fs)
                     ++ (map pretty $ ascElems ds)
                     ++ (map pretty $ ascElems vs)
-                    ++ map pretty_print' hs
-            goal' = indent $ pretty_print' g
+                    ++ map showWithLabel hs
+                    ++ map pretty_print' hs'
+            goal' = indent 1 $ pretty_print' g
             Context ss vs fs ds _ = s^.context
-            hs = ascElems (s^.named) ++ s^.nameless
+            hs  = map (_1 %~ (++":  ") . show) $ M.toList (s^.named)
+            hs' = s^.nameless
+            margin = maximum (0:map (length.fst) hs)
+            showWithLabel (lbl,x) = take margin (lbl ++ repeat ' ') ++ indentAfter margin (pretty_print' x)
             g  = s^.goal
             f (_, IntSort)  = Nothing
             f (_, BoolSort) = Nothing

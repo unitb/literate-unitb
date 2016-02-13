@@ -41,15 +41,15 @@ test_case = test
 test :: TestCase
 test = test_cases 
         "Unit-B" 
-        [  POCase "'x eventually increases' verifies" (check_mch example0) (result_example0)
-        ,  POCase "train, model 0, verification" (check_mch train_m0) (result_train_m0)
-        ,  Case "train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
-        ,  Case "train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
-        ,  Case "Feasibility and partitioning" case3 result3
-        ,  Case "Debugging the partitioning" case4 result4
+        [  POCase "0: 'x eventually increases' verifies" (check_mch example0) (result_example0)
+        ,  POCase "1: train, model 0, verification" (check_mch train_m0) (result_train_m0)
+        ,  Case "2: train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
+        ,  Case "3: train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
+        ,  Case "4: Feasibility and partitioning" case3 result3
+        ,  Case "5: Debugging the partitioning" case4 result4
         ,  Gen.test_case
-        ,  Case "unless with except and split event" case5 result5
-        ,  Case "QuickCheck names" Names.check_props True
+        ,  Case "6: unless with except and split event" case5 result5
+        ,  Case "7: QuickCheck names" Names.check_props True
         ]
 
 _ = Gen.test_case
@@ -207,8 +207,8 @@ result_train_m0_tr_en_po = unlines
     , " st: (Array Int Bool)"
     , " st': (Array Int Bool)"
     , " t: Int"
-    , " (forall ( (t Int) )"
-    , "         (=> true (= (store st t false) (store st t false))))"
+    , " J0:  (forall ( (t Int) )"
+    , "              (=> true (= (store st t false) (store st t false))))"
     , " (forall ( (term (Array _t Int)) )"
     , "         (=> true (= (qsum@@_t empty-set@@_t term) 0)))"
     , " (forall ( (r (set _t))"
@@ -336,10 +336,10 @@ result_train_m0_tr_neg_po = unlines
     , " st: (Array Int Bool)"
     , " st': (Array Int Bool)"
     , " t: Int"
-    , " (= st' (store st t_{param} false))"
-    , " (select st t_{param})"
-    , " (forall ( (t Int) )"
-    , "         (=> true (= (store st t false) (store st t false))))"
+    , " A0:  (= st' (store st t_{param} false))"
+    , " C0:  (select st t_{param})"
+    , " J0:  (forall ( (t Int) )"
+    , "              (=> true (= (store st t false) (store st t false))))"
     , " (forall ( (term (Array _t Int)) )"
     , "         (=> true (= (qsum@@_t empty-set@@_t term) 0)))"
     , " (forall ( (r (set _t))"

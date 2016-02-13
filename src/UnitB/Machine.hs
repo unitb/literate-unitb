@@ -427,11 +427,10 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: 
                     `M.union` M.mapKeys (label.render) (convertMap $ snd <$> evt^.witness)
                     `M.union` M.mapKeys (skipLbl.render) (convertMap $ M.map eqPrime noWitness)
     where
-        _ = ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction) :: Table Label RawExpr
         skipLbl :: String -> Label
         skipLbl = label . ("SKIP:"++)
         eqPrime v = Word (prime v) `zeq` Word v
-        noWitness = (m!.del_vars) `M.difference` (evt^.witness)
+        noWitness = ((m!.del_vars) `M.intersection` (m!.abs_vars)) `M.difference` (evt^.witness)
 
 empty_machine' :: (HasScope expr, HasExpr expr) => Name -> Machine' expr
 empty_machine' n = check assert $ flip execState (makeMachineBase n (empty_theory n)) $ do
