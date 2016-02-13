@@ -29,6 +29,8 @@ import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 
+import Text.Printf
+
 import Utilities.Format
 import Utilities.Map   as M hiding ( (\\) )
 import Utilities.Syntactic
@@ -104,14 +106,14 @@ get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m)
 get_event p2 ev_lbl = do
         let evts = p2^.pEventIds
         bind
-            (format "event '{0}' is undeclared" ev_lbl)
+            (printf "event '%s' is undeclared" $ show ev_lbl)
             $ ev_lbl `M.lookup` evts
 
 get_abstract_event :: HasMachineP1 phase => phase -> EventId -> M EventId
 get_abstract_event p2 ev_lbl = do
         let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
         bind
-            (format "event '{0}' is undeclared" ev_lbl)
+            (printf "event '%s' is undeclared" $ show ev_lbl)
             $ as_label ev_lbl `M.lookup` evts
 
 get_events :: (Traversable f,MonadReader r m,Syntactic r,MonadError [Error] m,HasMachineP2 mch)
@@ -119,5 +121,5 @@ get_events :: (Traversable f,MonadReader r m,Syntactic r,MonadError [Error] m,Ha
 get_events p2 ev_lbl = do
             let evts = p2^.pEventIds
             bind_all ev_lbl
-                (format "event '{0}' is undeclared")
+                (printf "event '%s' is undeclared" . show)
                 $ (`M.lookup` evts)

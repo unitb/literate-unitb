@@ -19,7 +19,7 @@ import           Data.List as L
 import Utilities.Lens
 import Utilities.Map
 
-ztfun :: ExprP -> ExprP -> ExprP
+ztfun,zpfun :: ExprP -> ExprP -> ExprP
 zdom  :: ExprP -> ExprP
 zran  :: ExprP -> ExprP
 zovl  :: ExprP -> ExprP -> ExprP
@@ -32,6 +32,8 @@ zrep_select :: ExprP -> ExprP -> ExprP
 zempty_fun  :: ExprP
 
 ztfun = typ_fun2 (mk_fun' [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
+
+zpfun = typ_fun2 (mk_fun' [gA,gB] "pfun" [set_type gA, set_type gB] $ fun_set gA gB)
 
 zdom = typ_fun1 (mk_fun' [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
 
@@ -143,6 +145,7 @@ function_theory = Theory { .. }
                 ,  mk_fun' [t0,t1] "dom-subt" [set_type t0,fun_type t0 t1] $ fun_type t0 t1
                 ,  mk_fun' [t0,t1] "mk-fun" [t0,t1] $ fun_type t0 t1 
                 ,  mk_fun' [t0,t1] "tfun" [set_type t0,set_type t1] $ fun_set t0 t1
+                ,  mk_fun' [t0,t1] "pfun" [set_type t0,set_type t1] $ fun_set t0 t1
                 ,  mk_fun' [t0,t1] "injective" [fun_type t0 t1] bool
                 ]
             where
@@ -253,6 +256,9 @@ function_theory = Theory { .. }
     -- --                            (zrep_select f1 x) )
             $axiom $      (f1 `zelem` ztfun s1 s2)
                     .==.  (s1 .=. zdom f1) /\ (zran f1 `zsubset` s2)
+
+            $axiom $      (f1 `zelem` zpfun s1 s2)
+                    .==.  (zdom f1 `zsubset` s1) /\ (zran f1 `zsubset` s2)
                 -- definition of injective
             $axiom $      zinjective f1
                     .==.  (mzforall [x_decl,x2_decl] 
@@ -327,22 +333,22 @@ function_theory = Theory { .. }
     -- notation
 overload    :: BinOperator
 mk_fun_op   :: BinOperator
-total_fun   :: BinOperator
-domrest     :: BinOperator
-domsubt     :: BinOperator
+total_fun,partial_fun :: BinOperator
+domrest,domsubt       :: BinOperator
 
-overload    = make BinOperator "overload" "|"        zovl
-mk_fun_op   = make BinOperator "mk-fun" "\\fun"      zmk_fun
-total_fun   = make BinOperator "total-fun" "\\tfun"  ztfun
-domrest     = make BinOperator "dom-rest" "\\domres" zdomrest
-domsubt     = make BinOperator "dom-subt" "\\domsub" zdomsubt
+overload    = make BinOperator "overload" "|"         zovl
+mk_fun_op   = make BinOperator "mk-fun" "\\fun"       zmk_fun
+total_fun   = make BinOperator "total-fun" "\\tfun"   ztfun
+partial_fun = make BinOperator "partial-fun" "\\pfun" zpfun
+domrest     = make BinOperator "dom-rest" "\\domres"  zdomrest
+domsubt     = make BinOperator "dom-subt" "\\domsub"  zdomsubt
 
 function_notation :: Notation
 function_notation = create $ do
    new_ops     .= L.map Right 
                 [ overload,mk_fun_op
-                , total_fun,domrest
-                , domsubt]
+                , total_fun, partial_fun
+                , domrest, domsubt]
    prec .= [ L.map (L.map Right) 
                  [ [apply]
                  , [mk_fun_op]
@@ -350,7 +356,7 @@ function_notation = create $ do
                  , [domrest,domsubt] 
                  , [ equal ] ]
              , L.map (L.map Right)
-               [ [ total_fun ]
+               [ [ total_fun,partial_fun ]
                , [ membership ]] ]
    left_assoc  .= [[overload]]
    right_assoc .= [[domrest,domsubt]]

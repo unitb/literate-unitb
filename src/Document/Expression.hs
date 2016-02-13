@@ -34,8 +34,9 @@ import           Data.Either
 import           Data.List as L
 import qualified Data.Set as S
 
+import Text.Printf
+
 import Utilities.EditDistance
-import Utilities.Format
 import Utilities.Graph as G ((!))
 import           Utilities.Map as M hiding ( map, (!) )
 import qualified Utilities.Map as M
@@ -204,6 +205,13 @@ brackets b cmd = do
         read_listP [Close b]
         return x
 
+operator :: Parser Name
+operator = do
+    x <- liftP read_char
+    case x of
+        Operator n -> return $ fromString'' n
+        _ -> fail "expecting an operator"
+
 word_or_command :: Parser Name
 word_or_command = do
     x <- liftP read_char
@@ -213,7 +221,11 @@ word_or_command = do
 
 type_t :: Parser Type
 type_t = do
-        t  <- word_or_command
+        t  <- choiceP 
+            [ word_or_command
+            , operator ]
+            (fail "expecting word or command") 
+            return
         b1 <- look_aheadP $ read_listP [Open Square]
         ts <- if b1
             then do
@@ -226,7 +238,7 @@ type_t = do
         t <- case get_type ctx t of
             Just s -> do
                 unless (length ts == typeParams s)
-                    $ fail $ format "Parameter mismatch. Expecting {0} type parameters, received {1}." 
+                    $ fail $ printf "Parameter mismatch. Expecting %d type parameters, received %d." 
                         (typeParams s) 
                         (length ts)
                 return $ Gen s ts
@@ -331,7 +343,7 @@ check_types :: ExprP -> Parser Expr
 check_types e = 
         case e of
             Right e -> return e
-            Left xs -> fail $ format "type error: {0}" $ intercalate "\n" xs
+            Left xs -> fail $ printf "type error: %s" $ intercalate "\n" xs
 
 apply_fun_op :: Command -> Expr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
@@ -391,8 +403,8 @@ term = do
                     ts <- forM v_type $ \(x,(Var x' t),xs) -> do
                         let ys = L.map var_type $ S.toList xs
                         t' <- maybe 
-                            (fail $ format "Inconsistent type for {0}: {1}" 
-                                    x
+                            (fail $ printf "Inconsistent type for %s: %s" 
+                                    (render x)
                                     $ intercalate "," $ map show ys)
                             return
                             $ foldM common gA ys
@@ -491,7 +503,7 @@ expr = do
         r <- read_term []
         case r of
             Right e -> return e
-            Left op -> fail $ format "unapplied functional operator: {0}" op
+            Left op -> fail $ printf "unapplied functional operator: %s" (pretty op)
     where
         read_term :: [([UnaryOperator], Term, BinOperator)] 
                   -> Parser Term
@@ -543,8 +555,8 @@ expr = do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
-                NoAssoc ->  fail $ format "ambiguous expression: '{0}' and '{1}' are not associative" op0 op1
-        reduce xs (u:us) e0 op0             = do
+                NoAssoc ->  fail $ printf "ambiguous expression: '%s' and '%s' are not associative" (pretty op0) (pretty op1)
+        reduce xs (u:us) e0 op0 = do
             r <- binds u op0
             case r of
                 LeftAssoc   -> do
@@ -580,10 +592,10 @@ apply_unary op e = do
             Right e -> do
                 x2 <- check_types $ mk_unary op e
                 return $ Right x2
-            Left oper -> fail $ format 
-                    err_msg oper op
+            Left oper -> fail $ printf 
+                    err_msg (pretty oper) (pretty op)
     where
-        err_msg = "functional operator cannot be the operand of any unary operator: {0}, {1}"
+        err_msg = "functional operator cannot be the operand of any unary operator: %s, %s"
         
 apply_op :: BinOperator -> Term -> Term -> Parser Term
 apply_op op x0 x1 = do
@@ -596,11 +608,11 @@ apply_op op x0 x1 = do
                     Left oper ->
                         if op == apply then
                             apply_fun_op oper e1
-                        else fail $ format err_msg oper op
+                        else fail $ printf err_msg (pretty oper) (pretty op)
             Left e1 -> 
-                fail $ format err_msg e1 op
+                fail $ printf err_msg (pretty e1) (pretty op)
     where
-        err_msg = "functional operator cannot be the operand of any binary operator: {0}, {1}"
+        err_msg = "functional operator cannot be the operand of any binary operator: %s, %s"
 
 option :: Monoid b => Scanner a b -> Scanner a b
 option cmd = do
@@ -652,8 +664,8 @@ scan_expr n = do
                     let b  = take 5 ys == take 5 cs 
                         zs
                             | b         = ""
-                            | otherwise = format " '{0}'" (take 5 ys)
-                    fail $ format "invalid token: '{0}'{1}" (take 5 cs) zs)
+                            | otherwise = printf " '%s'" (take 5 ys)
+                    fail $ printf "invalid token: '%s'%s" (take 5 cs) zs)
                 return
             xs <- scan_expr n
             return $ (x,li) : xs

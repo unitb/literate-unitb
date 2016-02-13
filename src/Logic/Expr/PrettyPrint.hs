@@ -73,6 +73,9 @@ instance PrettyPrintable Label where
 instance PrettyPrintable Name where
     pretty = render
 
+instance PrettyPrintable InternalName where
+    pretty = render
+
 instance (PrettyPrintable k,Ord k,Hashable k,PrettyPrintable a) 
         => PrettyPrintable (Table k a) where
     pretty m = "fromList\n" ++ withMargin "  " "  " (pretty $ M.toList m)

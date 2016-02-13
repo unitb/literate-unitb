@@ -21,8 +21,9 @@ import Data.Typeable
 
 import Test.QuickCheck
 
+import Text.Printf
+
 import Utilities.Existential
-import Utilities.Format
 import Utilities.Instances
 import Utilities.Map as M
 import Utilities.Syntactic
@@ -141,7 +142,10 @@ instance Scope MachineVar where
     rename_events' _ e = [e]
 
 instance Scope EventDecl where
-    kind = show
+    kind x = case x^.scope of 
+            Index _ -> "index"
+            Param _ -> "parameter"
+            Promoted _ -> "promoted parameter"
     keep_from s x | s == (x^.declSource) = Just x
                   | otherwise            = Nothing
     make_inherited = Just . (declSource .~ Inherited)
@@ -185,8 +189,8 @@ instance Scope EvtDecls where
             head' [x] = x
             head' [] = error "VarScope Scope VarScope: head' []"  
             head' _ = error "VarScope Scope VarScope: head' too many"
-            msg (Just k) x = (format "{1} (event '{0}')" k (show $ x^.scope) :: String, x^.lineInfo)
-            msg Nothing x  = (format "dummy", x^.lineInfo)
+            msg (Just k) x = (printf "%s (event '%s')" (kind x) (show k) :: String, x^.lineInfo)
+            msg Nothing x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (Evt vs) = Evt <$> concatMap f (toList vs)
         where

@@ -51,7 +51,6 @@ import Test.QuickCheck hiding (label)
 import Text.Printf
 
 import Utilities.Existential
-import Utilities.Format
 import Utilities.Lens
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
@@ -73,7 +72,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String
-        err_msg = format "Multiple expressions with the label {0}"
+        err_msg = printf "Multiple expressions with the label %s" . show
         wrapup :: Hierarchy MachineId
                -> (MTable MachineP2, Maybe [Table MachineId [(Label, ExprScope)]])
                -> MM' Input (MTable MachineP3)
@@ -180,7 +179,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             let _ = lbl :: Label
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                (format "variable '{0}' undeclared" v)
+                (printf "variable '%s' undeclared" $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li <- ask
             xp <- parse_expr''
@@ -200,7 +199,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                     (event_parser p2 ev & is_step .~ True)
                     xs
             vars <- bind_all (map getVarName vs)
-                (format "variable '{0}' undeclared")
+                (printf "variable '%s' undeclared" . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
             return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
@@ -210,7 +209,7 @@ bcmin_assgn :: MPipeline MachineP2
 bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr xs) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                (format "variable '{0}' undeclared" v)
+                (printf "variable '%s' undeclared" $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li  <- ask
             xp <- parse_expr''
@@ -234,16 +233,16 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ (format "predicate {0}" lbl,li):lis']
+                | otherwise   -> [Left $ MLError msg $ (printf "predicate %s" $ show lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first (printf "deleted variable %s" . render)) lis
-                    msg  = format "initialization predicate '{0}' refers to deleted variables" lbl
+                    msg  = printf "initialization predicate '%s' refers to deleted variables" $ show lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
                 where
-                    msg = format "initialization predicate '{0}' was deleted but does not exist" lbl
+                    msg = printf "initialization predicate '%s' was deleted but does not exist" $ show lbl
         where
             li = i^.lineInfo
     toThyExpr _ _  = return []
@@ -315,14 +314,14 @@ checkLocalExpr expKind free xs = do
         forM_ xs' $ \(eid,lbl,sch) -> do
             case (sch ^. inhStatus) of
                 InhAdd expr -> do
-                    let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
+                    let msg = printf "event '%s', %s '%s' refers to deleted variables" (show eid) expKind (show lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
+                        schLI  = (printf "%s '%s'" expKind $ show lbl, sch^.lineInfo)
                         varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.ascElems errs)
                     unless (M.null errs) 
                         $ tell [MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> do
-                    let msg = format "event '{1}', {2} '{0}' was deleted but does not exist" lbl eid expKind
+                    let msg = printf "event '%s', %s '%s' was deleted but does not exist" (show eid) expKind (show lbl)
                         li  = sch ^. lineInfo
                     tell [Error msg li]
                 _ -> return ()
@@ -336,15 +335,15 @@ checkLocalExpr' expKind free eid lbl sch = do
             vs <- view pDelVars 
             return $ case (sch ^. inhStatus) of
                 InhAdd expr -> 
-                    let msg = format "event '{1}', {2} '{0}' refers to deleted variables" lbl eid expKind
+                    let msg = printf "event '%s', %s '%s' refers to deleted variables" (show eid) expKind (show lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = (format "{1} '{0}'" lbl expKind, sch ^. lineInfo)
+                        schLI  = (printf "%s '%s'" expKind $ show lbl, sch ^. lineInfo)
                         varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.ascElems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> 
-                    let msg = format "event '{1}', {2} '{0}' was deleted but does not exist" lbl eid expKind
-                        li  = sch ^. lineInfo
+                    let msg = printf "event '%s', %s '%s' was deleted but does not exist" (show eid) expKind (show lbl)
+                        li  = sch^.lineInfo
                     in [Left $ Error msg li]
                 _ -> []
         -- xs' = [ (eid,lbl,sch) | (e,ss) <- xs, (lbl,sch) <- ss, eid <- MM.maybeToList e ]
@@ -618,7 +617,7 @@ transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m 
             let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) (NE.toList es)
             toEither $ error_list 
                 [ ( not $ L.null withInd
-                  , format "event(s) {0} have indices and require witnesses" 
+                  , printf "event(s) %s have indices and require witnesses" 
                         $ intercalate "," $ map show withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
@@ -886,7 +885,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -
             -- ev <- get_event p2 evt
             li <- ask
             p  <- parse_expr'' (p2^.pMchSynt) xp
-            v  <- bind (format "'{0}' is not a disappearing variable" var)
+            v  <- bind (printf "'%s' is not a disappearing variable" $ render var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
             return [(label $ render var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
 

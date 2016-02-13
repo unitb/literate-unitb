@@ -448,7 +448,7 @@ all_proofs = machineEnv "proof" $ \(Identity (PO po)) xs m p3 -> do
 get_progress_prop :: MachineP3 -> MachineId -> ProgId -> M ProgressProp
 get_progress_prop p3 _m lbl =  
             bind
-                (format "progress property '{0}' is undeclared" lbl)
+                (printf "progress property '%s' is undeclared" $ show lbl)
                 $ lbl `M.lookup` (L.view pProgress p3)
 
 

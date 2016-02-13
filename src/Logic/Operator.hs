@@ -83,10 +83,10 @@ data Notation = Notation
     , _commands :: [Command]
     , _quantifiers :: [(Name,HOQuantifier)]
     , _struct :: Matrix Operator Assoc
-    } deriving (Eq,Generic)
+    } deriving (Eq,Generic,Show)
 
-instance Show Notation where
-    show _ = "<notation>" 
+instance PrettyPrintable Notation where
+    pretty _ = "<notation>" 
 
 empty_notation :: Notation
 empty_notation = with_assoc $ Notation 
@@ -171,6 +171,9 @@ instance Ord UnaryOperator where
 instance Show UnaryOperator where
     show (UnaryOperator x y _) = show (x,y) -- format str x y
 
+instance PrettyPrintable UnaryOperator where
+    pretty (UnaryOperator x y _) = pretty (x,y) -- format str x y
+
 instance HasName Operator Name where
     name = to $ \case 
         (Right (BinOperator _ xs _))  -> xs
@@ -195,6 +198,8 @@ instance Ord BinOperator where
 
 instance Show BinOperator where
     show (BinOperator x y _) = show (x,y) -- format str x y
+instance PrettyPrintable BinOperator where
+    pretty (BinOperator x y _) = pretty (x,y) -- format str x y
 
 type Operator = Either UnaryOperator BinOperator
 
@@ -203,6 +208,8 @@ data Command = Command Name InternalName Int ([ExprP] -> ExprP)
 
 instance Show Command where
     show (Command x y _ _) = show (x,y)
+instance PrettyPrintable Command where
+    pretty (Command x y _ _) = pretty (x,y)
 
 instance Eq Command where
     (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =

@@ -45,7 +45,6 @@ import Test.QuickCheck hiding (Result(..),label)
 import Text.Printf
 
 import Utilities.Existential
-import Utilities.Format
 import Utilities.Map as M hiding ( map, (\\) )
 import qualified Utilities.Map as M
 import Utilities.Partial
@@ -195,7 +194,7 @@ promote_param = machineCmd "\\promote" $ \(Conc lbl,VarName n) _m p1 -> do
             let _    = lbl :: EventId
                 evts = L.view pEventIds p1 
             evt <- bind
-                (format "event '{0}' is undeclared" lbl)
+                (printf "event '%s' is undeclared" $ show lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             return $ [(n,makeCell $ Evt $ M.singleton (Just evt) 
@@ -256,7 +255,7 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
                 ts   = L.view pAllTypes p1
                 evts = L.view pEventIds p1 
             evt <- bind
-                (format "event '{0}' is undeclared" lbl)
+                (printf "event '%s' is undeclared" $ show lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             vs <- hoistEither $ get_variables' ts xs li

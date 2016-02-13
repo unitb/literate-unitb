@@ -501,10 +501,18 @@
 
 \renewcommand{\oftype}[2]{ #1 }
 
-\newcommand{\newevent}[2]
-{	\begin{align*} \textbf{event}~\tag{#2}\label{#1} 
+\newcommand{\newevent}[3][]
+{	\def\aevt{#1}
+	\def\cevt{#2}
+	\def\t{#3}
+	\ifx\aevt\@empty	
+		\def\refining{}
+	\else
+		\def\refining{~\text{\textbf{refining}~\eqref{#1}}}
+	\fi
+	\begin{align*} \textbf{event}\refining~\tag{#3}\label{#2} 
 	\end{align*}
-	\newcompound{#1} 
+	\newcompound{#2} 
 	}
 
 %%%%%%%%%
@@ -527,6 +535,8 @@
 \newcomponent{\cschedule}{C}
 \newcomponent{\evassignment}{A}
 \newassignment{\evbcmeq}{A}{\bcmeq}
+\newassignment{\evbcmsuch}{A}{\bcmsuch}
+\newassignment{\evbcmin}{A}{\bcmin}
 
 %%%%%%%%%%%%%%%%%%
 % Proof obligations and refinement
@@ -718,6 +728,7 @@
 \newcommand{\removefine}[2]{}   % {event}{lbl,...}
 \newcommand{\removeinit}[1]{}   % {lbl}
 \newcommand{\splitevent}[2]{}
+\newcommand{\refiningevent}[3]{ \newevent[#1]{#2}{#3} }
 
 \newenvironment{block}
 {	\begin{list}{}
