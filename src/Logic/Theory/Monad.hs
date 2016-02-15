@@ -30,10 +30,8 @@ import           Data.Typeable
 import Language.Haskell.TH hiding (Type,Name)
 
 import Utilities.Error
-import Utilities.Format
---import Utilities.Instances
 import Utilities.Partial
---import Utilities.TH
+import Utilities.PrintfTH
 import Utilities.Map as M
 import Utilities.Table
 import Utilities.Tuple
@@ -59,19 +57,16 @@ instance SignatureImpl () where
         args <- sequence argsM
         let ts' = repeat $ VARIABLE $ fromString'' "unexpected"
             (Fun _ n _ ts t) = fun
-            f e t = format (unlines
-                    [ "    argument: {0}" 
-                    , "      type: {1}"
-                    , "      expected type: {2}"])
-                    e (type_of e) t :: String
-            err_msg = format (unlines $
-                    [  "arguments of '{0}' do not match its signature:"
-                    ,  "   signature: {1} -> {2}"
+            f e t = unlines
+                    [ [printf|    argument: %s|] (pretty e)
+                    , [printf|      type: %s|] (pretty $ type_of e)
+                    , [printf|      expected type: %s|] (pretty t) ] 
+            err_msg = unlines $
+                    [ [printf|arguments of '%s' do not match its signature:|] (render n)
+                    , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
                     ] ++ zipWith f args (ts ++ ts')
-                    ) n ts t :: String
         maybe (Left [err_msg]) Right 
             $ check_args args fun
-        -- Right (FunApp fun $ reverse args)
 
 utility :: forall s. (Signature s) 
         => Name -> s -> FunType s
@@ -298,11 +293,11 @@ param_to_varT t = rewriteM param_to_varT t
 newtype M a = M (RWS () [Expr] (Int,Theory) a)
     deriving (Applicative,Functor,Monad)
 
-clash :: (Show a, Ord a)
+clash :: (PrettyPrintable a, Ord a)
       => (thy -> Map a b) -> [thy] -> Map a b
 clash f xs 
         | L.null es = M.unions $ L.map f xs
-        | otherwise = error $ format "Name clash with: {0}" $ intercalate "," (L.map show es)
+        | otherwise = error $ [printf|Name clash with: %s|] $ intercalate "," (L.map pretty es)
     where
         es = keys $ M.unions $ do
             (x,ys) <- zip xs $ drop 1 $ tails xs
@@ -360,7 +355,7 @@ axiom = withLoc 'declAxiom
 
 axioms :: String -> Writer [ExprP] () -> Table Label Expr
 axioms name cmd
-        | L.null ls = fromList $ L.map (first $ label . format "@{0}@@_{1}" name) $ zip ns rs
+        | L.null ls = fromList $ L.map (first $ label . [printf|@%s@@_%s|] name) $ zip ns rs
         | otherwise = error $ unlines $ concat ls
     where
         n  = length rs

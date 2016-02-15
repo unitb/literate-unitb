@@ -18,9 +18,9 @@ import Control.Lens
 import Data.Default
 import Data.List as L
 
-import Utilities.Format
 import Utilities.Lens
 import Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
@@ -242,8 +242,8 @@ dec x t = x ++ z3_decoration t
 item_type :: Type -> Either String Type
 item_type t0@(Gen s [t])
         | s == set_sort         = Right t
-        | otherwise             = Left $ format " {0} is not a set " t0
-item_type t0                    = Left $ format " {0} is not a set " t0
+        | otherwise             = Left $ [printf| %s is not a set |] (pretty t0)
+item_type t0                    = Left $ [printf| %s is not a set |] (pretty t0)
 
     -- set theory
 set_union   :: BinOperator

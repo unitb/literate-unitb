@@ -42,19 +42,16 @@ import Language.Haskell.TH
 import Prelude
 import PseudoMacros
 
-import Utilities.Format
 import qualified Utilities.Map as M hiding ((!))
 import Utilities.Indentation
 import Utilities.Lines hiding (lines,unlines)
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Table
 
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
-
-import Text.Printf
-
 
 data TestCase = 
       forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a
@@ -93,7 +90,7 @@ take_failure_number = do
 callStackLineInfo :: CallStack -> [String]
 callStackLineInfo cs = reverse $ map f $ filter (($__FILE__ /=) . srcLocFile) $ map snd $ getCallStack cs
     where
-        f c = printf "%s:%d:%d" (srcLocFile c) (srcLocStartLine c) (srcLocStartCol c)
+        f c = [printf|%s:%d:%d|] (srcLocFile c) (srcLocStartLine c) (srcLocStartCol c)
 
 
 new_failure :: CallStack -> String -> String -> String -> M ()
@@ -101,11 +98,11 @@ new_failure cs name actual expected = do
     b <- liftIO $ readMVar log_failures
     if b then do
         n <- get
-        liftIO $ withFile (format "actual-{0}.txt" n) WriteMode $ \h -> do
+        liftIO $ withFile ([printf|actual-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
             hPutStrLn h actual
-        liftIO $ withFile (format "expected-{0}.txt" n) WriteMode $ \h -> do
+        liftIO $ withFile ([printf|expected-%d.txt|] n) WriteMode $ \h -> do
             hPutStrLn h $ "; " ++ name
             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
             hPutStrLn h expected
@@ -209,7 +206,7 @@ print_po cs pos name actual expected = do
 --                    hPutStrLn stderr $ "---"
 --                    forM_ (M.keys me) $ hPutStrLn stderr . show
                     if label po `M.member` pos then do
-                        withFile (format "po-{0}-{1}.z3" n i) WriteMode $ \h -> do
+                        withFile ([printf|po-%d-%d.z3|] n i) WriteMode $ \h -> do
                             hPutStrLn h $ "; " ++ name
                             hPutStrLn h $ "; " ++ po
                             hPutStrLn h $ "; " ++ if not $ ma ! po 
@@ -257,7 +254,7 @@ test_suite_string cs' ut = do
                 let xs = map (either (const (0,1)) id) xs' :: [(Int,Int)]
                     x = sum $ map snd xs
                     y = sum $ map fst xs
-                putLn (format "+- [ Success: {0} / {1} ]" y x)
+                putLn ([printf|+- [ Success: %d / %d ]|] y x)
                 return (y,x)
 
 nameOf :: TestCase -> String
@@ -408,5 +405,5 @@ makeTestSuite title = do
     if null es then do
         makeTestSuiteOnly title ts
     else do
-        mapM_ (reportError.printf "missing test component: '%s'") (concat es)
+        mapM_ (reportError.[printf|missing test component: '%s'|]) (concat es)
         [e| undefined |]

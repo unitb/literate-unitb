@@ -31,12 +31,10 @@ import System.FilePath
 
 import Prelude hiding (writeFile,readFile)
 
-import Text.Printf
-
 import Utilities.FileSystem
-import Utilities.Format
 import Utilities.Map as M hiding (map)
 import qualified Utilities.Map as M
+import Utilities.PrintfTH
 
 newtype Doc a = Doc { getDoc :: forall io. FileSystem io => ReaderT FilePath io a }
     deriving (Functor)
@@ -71,7 +69,7 @@ defOptions :: Show label => (expr -> M String) -> ExprDispOpt label expr
 defOptions f = ExprDispOpt
             { _makeDoc = const $ return () 
             , _makeString = f 
-            , _makeRef = \pre lbl -> return $ printf "\\eqref{%s}" (show pre ++ show lbl) }
+            , _makeRef = \pre lbl -> return $ [printf|\\eqref{%s}|] (show pre ++ show lbl) }
 
 instance Show label => Default (ExprDispOpt label Expr) where
     def = defOptions get_string'
@@ -101,12 +99,12 @@ make_file :: FilePath -> M () -> Doc ()
 make_file fn cmd = do
     path <- ask
     let xs = snd $ execRWS cmd False ()
-        root = printf "%%!TEX root=../%s" (takeFileName path)
+        root = [printf|%%!TEX root=../%s|] (takeFileName path)
     writeFile (dropExtension path </> fn) 
         $ L.unlines $ root : xs
 
 keyword :: String -> String
-keyword kw = printf "\\textbf{%s}" kw
+keyword kw = [printf|\\textbf{%s}|] kw
 
 machine_summary :: System -> Machine -> Doc ()
 machine_summary sys m = do
@@ -197,7 +195,7 @@ getListing cmd = L.unlines $ snd $ execRWS cmd False ()
 
 input :: FilePath -> String -> M ()
 input path fn = do
-    tell [printf "\\input{%s/%s}" (takeBaseName path) $ dropExtension fn]
+    tell [[printf|\\input{%s/%s}|] (takeBaseName path) $ dropExtension fn]
 
 kw_end :: M ()
 kw_end = tell ["\\textbf{end} \\\\"]
@@ -213,7 +211,7 @@ comment_of :: Machine -> DocItem -> M ()
 comment_of m key = do
     item $ do
         case key `M.lookup` (m!.comments) of
-            Just cmt -> block $ item $ tell [printf "%s" cmt]
+            Just cmt -> block $ item $ tell [[printf|%s|] cmt]
             Nothing -> return ()
 
 init_summary :: Machine -> M ()
@@ -259,10 +257,10 @@ variable_sum m = section (keyword "variables") $
     block $ do
         when show_removals $ 
             forM_ (keys $ view' abs_vars m `M.difference` view' variables m) $ \v -> do
-                item $ tell [printf "$%s$\\quad(removed)" $ render v]
+                item $ tell [[printf|$%s$\\quad(removed)|] $ render v]
                 comment_of m (DocVar v)
         forM_ (keys $ view' variables m) $ \v -> do
-            item $ tell [printf "$%s$" $ render v]
+            item $ tell [[printf|$%s$|] $ render v]
             comment_of m (DocVar v)
 
 invariant_sum :: Machine -> M ()
@@ -287,7 +285,7 @@ liveness_sum m = do
         toString (LeadsTo _ p q) = do
             p' <- get_string' p
             q' <- get_string' q
-            return $ printf "%s \\quad \\mapsto\\quad %s" p' q'
+            return $ [printf|%s \\quad \\mapsto\\quad %s|] p' q'
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
@@ -297,7 +295,7 @@ safety_sum prop = do
         toString (Unless _ p q) = do
             p' <- get_string' p
             q' <- get_string' q
-            return $ printf "%s \\textbf{\\quad unless \\quad} %s" p' q'
+            return $ [printf|%s \\textbf{\\quad unless \\quad} %s|] p' q'
 
 transient_sum :: Machine -> M ()
 transient_sum m = do
@@ -308,7 +306,7 @@ transient_sum m = do
         toString (Tr _ p evts hint) = do -- do
             let TrHint sub lt = hint
                 evts' :: String
-                evts' = intercalate "," $ L.map (printf "\\ref{%s}" . show) (NE.toList evts)
+                evts' = intercalate "," $ L.map ([printf|\\ref{%s}|] . show) (NE.toList evts)
             sub' <- forM (M.toList sub) $ \(v,p) -> do
                 p <- get_string' $ snd p
                 return (v,p)
@@ -317,15 +315,16 @@ transient_sum m = do
                 sub'' :: String
                 sub'' 
                     | M.null $ M.filterWithKey isNotIdent $ M.map snd sub = ""
-                    | otherwise  = format ": [%s]" (intercalate ", " $ L.map (uncurry $ format "{0} := {0}'~|~{1}") $ sub' :: String)
+                    | otherwise  = [printf|: [%s]|] (intercalate ", " $ L.map asgnString sub')
+                asgnString (v,e) = [printf|%s := %s'~|~%s|] (render v) (render v) e
                 lt' :: String
-                lt' = maybe "" (printf ", with \\eqref{%s}" . show) lt
+                lt' = maybe "" ([printf|, with \\eqref{%s}|] . show) lt
             p <- get_string' p
-            return $ printf "%s \\qquad \\text{(%s$%s$%s)}" 
+            return $ [printf|%s \\qquad \\text{(%s$%s$%s)}|] 
                 p evts' sub'' lt'
             -- p' <- get_string' p
             -- q' <- get_string' q
-            -- return $ format "{0} \\quad \\mapsto\\quad {1}" p' q'
+            -- return $ [printf|{0} \\quad \\mapsto\\quad {1}|] p' q'
 
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
@@ -361,10 +360,10 @@ put_expr opts pre (lbl,e) = do
         ref <- (opts^.makeRef) pre lbl
         --let ref :: String
         --    ref = case lbl of
-        --            Nothing -> format "(\\ref{{0}}/default)" pre
-        --            Just lbl -> format "\\eqref{{0}}" (show pre ++ show lbl)
+        --            Nothing -> [printf|(\\ref{{0}}/default)|] pre
+        --            Just lbl -> [printf|\\eqref{{0}}|] (show pre ++ show lbl)
         expr  <- format_formula =<< (opts^.makeString $ e)
-        tell [printf "  \\item[ %s ]%s" ref expr]
+        tell [[printf|  \\item[ %s ]%s|] ref expr]
         opts^.makeDoc $ lbl
 
 put_all_expr' :: Show label => (a -> M String) -> EventId -> [(label, a)] -> M ()
@@ -411,7 +410,7 @@ csched_sum lbl e = do
             put_all_expr_with (makeRef %= isDefault) lbl sch
     where
         isDefault f eid lbl
-            | lbl == "default" = return $ printf "(\\ref{%s}/default)" $ show (eid :: EventId)
+            | lbl == "default" = return $ [printf|(\\ref{%s}/default)|] $ show (eid :: EventId)
             | otherwise        = f eid lbl
         kw = "\\textbf{during}"    
         sch = M.toAscList $ e^.new.coarse_sched --coarse $ new_sched e
@@ -455,11 +454,11 @@ act_sum lbl e = section kw $ do
         kw = "\\textbf{begin}"
         put_assign (Assign v e) = do
             xs <- get_string' e
-            return $ printf "%s \\bcmeq %s" (render $ v^.name) xs
+            return $ [printf|%s \\bcmeq %s|] (render $ v^.name) xs
         put_assign (BcmSuchThat vs e) = do
             xs <- get_string' e
-            return $ printf "%s \\bcmsuch %s" (intercalate "," $ L.map (render . view name) vs :: String) xs
+            return $ [printf|%s \\bcmsuch %s|] (intercalate "," $ L.map (render . view name) vs :: String) xs
         put_assign (BcmIn v e) = do
             xs <- get_string' e
-            return $ printf "%s \\bcmin %s" (render $ v^.name) xs
+            return $ [printf|%s \\bcmin %s|] (render $ v^.name) xs
 

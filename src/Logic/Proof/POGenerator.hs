@@ -36,11 +36,10 @@ import Utilities.Error
 import Utilities.Invariant
 import Utilities.Map as M hiding ( map )
 import qualified Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Table
 import Utilities.TH (mkCons)
 import Utilities.Trace
-
-import Text.Printf
 
 data POParam = POP 
     { _pOParamContext :: Context
@@ -168,4 +167,4 @@ tracePOG (POGen cmd) = POGen $ do
     traceM $ unlines $ map (show . second (view goal)) xs
 
 eval_generatorT :: Monad m => POGenT m () -> m (Table Label Sequent)
-eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ printf "%s\n" $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()
+eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ [printf|%s\n|] $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()

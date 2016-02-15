@@ -48,12 +48,11 @@ import qualified Data.Traversable   as T
 
 import Test.QuickCheck hiding (label)
 
-import Text.Printf
-
 import Utilities.Existential
 import Utilities.Lens
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
+import Utilities.PrintfTH
 import Utilities.String
 import Utilities.Syntactic
 import Utilities.Table
@@ -72,7 +71,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String
-        err_msg = printf "Multiple expressions with the label %s" . show
+        err_msg = [printf|Multiple expressions with the label %s|] . show
         wrapup :: Hierarchy MachineId
                -> (MTable MachineP2, Maybe [Table MachineId [(Label, ExprScope)]])
                -> MM' Input (MTable MachineP3)
@@ -84,7 +83,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
                 =<< triggerM es'
             xs <- T.sequence $ make_phase3 <$> p2 <.> exprs
             let mergeError (cevt,(e:es)) = unless (all (((e^.eActions) ==).view eActions) es) $ 
-                    tell [MLError (printf "event %s merges events with different action sets" $ show cevt) []]
+                    tell [MLError ([printf|event %s merges events with different action sets|] $ show cevt) []]
                 mergeError (_,[]) = return ()
                 merges :: [(EventId, [EventP3])]
                 merges = xs^.traverse.pEventMerge'.withKey'.traverse.to ((:[]).second (L.map snd.snd))
@@ -179,7 +178,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             let _ = lbl :: Label
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                (printf "variable '%s' undeclared" $ render v)
+                ([printf|variable '%s' undeclared|] $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li <- ask
             xp <- parse_expr''
@@ -199,7 +198,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                     (event_parser p2 ev & is_step .~ True)
                     xs
             vars <- bind_all (map getVarName vs)
-                (printf "variable '%s' undeclared" . render)
+                ([printf|variable '%s' undeclared|] . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
             return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local li))]
@@ -209,7 +208,7 @@ bcmin_assgn :: MPipeline MachineP2
 bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr xs) _m p2 -> do
             ev <- get_event p2 $ as_label (evt :: EventId)
             var@(Var _ t) <- bind
-                (printf "variable '%s' undeclared" $ render v)
+                ([printf|variable '%s' undeclared|] $ render v)
                 $ v `M.lookup` (p2^.pStateVars)
             li  <- ask
             xp <- parse_expr''
@@ -233,16 +232,16 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ (printf "predicate %s" $ show lbl,li):lis']
+                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ show lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
-                    lis' = L.map (first (printf "deleted variable %s" . render)) lis
-                    msg  = printf "initialization predicate '%s' refers to deleted variables" $ show lbl
+                    lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
+                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ show lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
                 where
-                    msg = printf "initialization predicate '%s' was deleted but does not exist" $ show lbl
+                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ show lbl
         where
             li = i^.lineInfo
     toThyExpr _ _  = return []
@@ -273,7 +272,7 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
                 newIndices = (False,) <$> p2^.evtMergeAdded ev eIndices
             p  <- parse_expr'' (event_parser p2 ev & is_step .~ True) xp
             (isVar,v)  <- bind 
-                (printf "'%s' is not a disappearing variable or a new index" (render var))
+                ([printf|'%s' is not a disappearing variable or a new index|] (render var))
                 (var `M.lookup` (disappear `M.union` newIndices))
             return $ if isVar
                 then [(label $ render var,evtScope ev (Witness v p Local li))]
@@ -291,12 +290,12 @@ instance Scope EventExpr where
             head' _ = error "Scope ExprScope: head'"
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = (printf "%s (event '%s')" (kind sc) (show k) :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s')|] (kind sc) (show k) :: String, view lineInfo sc)
                 | otherwise
-                    = (printf "%s (event '%s', from '%s')" (kind sc) (show k) parents :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (show k) parents :: String, view lineInfo sc)
                 where
                     parents = intercalate "," $ map show $ inheritedFrom sc
-            msg (Left _) sc = (printf "%s (initialization)" (kind sc) :: String, view lineInfo sc)
+            msg (Left _) sc = ([printf|%s (initialization)|] (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
         where
@@ -314,14 +313,14 @@ checkLocalExpr expKind free xs = do
         forM_ xs' $ \(eid,lbl,sch) -> do
             case (sch ^. inhStatus) of
                 InhAdd expr -> do
-                    let msg = printf "event '%s', %s '%s' refers to deleted variables" (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (show eid) expKind (show lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = (printf "%s '%s'" expKind $ show lbl, sch^.lineInfo)
-                        varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.ascElems errs)
+                        schLI  = ([printf|%s '%s'|] expKind $ show lbl, sch^.lineInfo)
+                        varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
                     unless (M.null errs) 
                         $ tell [MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> do
-                    let msg = printf "event '%s', %s '%s' was deleted but does not exist" (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (show eid) expKind (show lbl)
                         li  = sch ^. lineInfo
                     tell [Error msg li]
                 _ -> return ()
@@ -335,14 +334,14 @@ checkLocalExpr' expKind free eid lbl sch = do
             vs <- view pDelVars 
             return $ case (sch ^. inhStatus) of
                 InhAdd expr -> 
-                    let msg = printf "event '%s', %s '%s' refers to deleted variables" (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (show eid) expKind (show lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = (printf "%s '%s'" expKind $ show lbl, sch ^. lineInfo)
-                        varsLI = L.map (first $ printf "deleted variable '%s'" . render . view name) (M.ascElems errs)
+                        schLI  = ([printf|%s '%s'|] expKind $ show lbl, sch ^. lineInfo)
+                        varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ schLI : varsLI]
                 InhDelete Nothing -> 
-                    let msg = printf "event '%s', %s '%s' was deleted but does not exist" (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (show eid) expKind (show lbl)
                         li  = sch^.lineInfo
                     in [Left $ Error msg li]
                 _ -> []
@@ -617,7 +616,7 @@ transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m 
             let withInd = L.filter (not . M.null . (^. eIndices) . ((p2 ^. pEvents) !)) (NE.toList es)
             toEither $ error_list 
                 [ ( not $ L.null withInd
-                  , printf "event(s) %s have indices and require witnesses" 
+                  , [printf|event(s) %s have indices and require witnesses|] 
                         $ intercalate "," $ map show withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
@@ -885,7 +884,7 @@ init_witness_decl = machineCmd "\\initwitness" $ \(VarName var, Expr xp) _m p2 -
             -- ev <- get_event p2 evt
             li <- ask
             p  <- parse_expr'' (p2^.pMchSynt) xp
-            v  <- bind (printf "'%s' is not a disappearing variable" $ render var)
+            v  <- bind ([printf|'%s' is not a disappearing variable|] $ render var)
                 (var `M.lookup` (L.view pAbstractVars p2 `M.difference` L.view pStateVars p2))
             return [(label $ render var, makeEvtCell (Left InitEvent) (Witness v p Local li))]
 

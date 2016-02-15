@@ -49,9 +49,9 @@ import Data.Typeable
 import GHC.Generics (Generic)
 
 import           Utilities.Error
-import           Utilities.Format
 import           Utilities.Graph hiding ( Matrix )
 import qualified Utilities.Graph as G 
+import Utilities.PrintfTH
 
 type Matrix a b = G.Matrix a b
 
@@ -138,7 +138,7 @@ combine x y
         , _commands     = _commands x  ++ _commands y
         , _quantifiers  = _quantifiers x ++ _quantifiers y
         , _chaining     = _chaining x  ++ _chaining y }
-    | otherwise        = error $ format "Notation, combine: redundant operator names. {0}" common
+    | otherwise        = error $ [printf|Notation, combine: redundant operator names. %s|] (pretty common)
     where
         intersect :: Input a => [a] -> [a] -> [a]
         intersect = intersectBy ((==) `on` token)
@@ -152,7 +152,7 @@ precede x y
         let z = (combine x y) in
             with_assoc z { 
                 _prec = _prec z ++ [ xs ++ ys | xs <- _prec x, ys <- _prec y ] }
-        | otherwise        = error $ format "Notation, precede: redundant operator names. {0}" common
+        | otherwise        = error $ [printf|Notation, precede: redundant operator names. %s|] (show common)
     where
         f (Right x) = show x
         f (Left y)  = show y

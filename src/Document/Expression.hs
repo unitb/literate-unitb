@@ -34,12 +34,11 @@ import           Data.Either
 import           Data.List as L
 import qualified Data.Set as S
 
-import Text.Printf
-
 import Utilities.EditDistance
 import Utilities.Graph as G ((!))
 import           Utilities.Map as M hiding ( map, (!) )
 import qualified Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Table
 
 data Param = Param 
@@ -238,7 +237,7 @@ type_t = do
         t <- case get_type ctx t of
             Just s -> do
                 unless (length ts == typeParams s)
-                    $ fail $ printf "Parameter mismatch. Expecting %d type parameters, received %d." 
+                    $ fail $ [printf|Parameter mismatch. Expecting %d type parameters, received %d.|] 
                         (typeParams s) 
                         (length ts)
                 return $ Gen s ts
@@ -343,7 +342,7 @@ check_types :: ExprP -> Parser Expr
 check_types e = 
         case e of
             Right e -> return e
-            Left xs -> fail $ printf "type error: %s" $ intercalate "\n" xs
+            Left xs -> fail $ [printf|type error: %s|] $ intercalate "\n" xs
 
 apply_fun_op :: Command -> Expr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
@@ -403,7 +402,7 @@ term = do
                     ts <- forM v_type $ \(x,(Var x' t),xs) -> do
                         let ys = L.map var_type $ S.toList xs
                         t' <- maybe 
-                            (fail $ printf "Inconsistent type for %s: %s" 
+                            (fail $ [printf|Inconsistent type for %s: %s|] 
                                     (render x)
                                     $ intercalate "," $ map show ys)
                             return
@@ -503,7 +502,7 @@ expr = do
         r <- read_term []
         case r of
             Right e -> return e
-            Left op -> fail $ printf "unapplied functional operator: %s" (pretty op)
+            Left op -> fail $ [printf|unapplied functional operator: %s|] (pretty op)
     where
         read_term :: [([UnaryOperator], Term, BinOperator)] 
                   -> Parser Term
@@ -555,7 +554,7 @@ expr = do
                     e2 <- apply_op op0 e0 e1
                     reduce ys vs e2 op1
                 RightAssoc -> read_term (([],e1,op1):xs)
-                NoAssoc ->  fail $ printf "ambiguous expression: '%s' and '%s' are not associative" (pretty op0) (pretty op1)
+                NoAssoc ->  fail $ [printf|ambiguous expression: '%s' and '%s' are not associative|] (pretty op0) (pretty op1)
         reduce xs (u:us) e0 op0 = do
             r <- binds u op0
             case r of
@@ -592,10 +591,9 @@ apply_unary op e = do
             Right e -> do
                 x2 <- check_types $ mk_unary op e
                 return $ Right x2
-            Left oper -> fail $ printf 
-                    err_msg (pretty oper) (pretty op)
+            Left oper -> fail $ err_msg (pretty oper) (pretty op)
     where
-        err_msg = "functional operator cannot be the operand of any unary operator: %s, %s"
+        err_msg = [printf|functional operator cannot be the operand of any unary operator: %s, %s|]
         
 apply_op :: BinOperator -> Term -> Term -> Parser Term
 apply_op op x0 x1 = do
@@ -608,11 +606,11 @@ apply_op op x0 x1 = do
                     Left oper ->
                         if op == apply then
                             apply_fun_op oper e1
-                        else fail $ printf err_msg (pretty oper) (pretty op)
+                        else fail $ err_msg (pretty oper) (pretty op)
             Left e1 -> 
-                fail $ printf err_msg (pretty e1) (pretty op)
+                fail $ err_msg (pretty e1) (pretty op)
     where
-        err_msg = "functional operator cannot be the operand of any binary operator: %s, %s"
+        err_msg = [printf|functional operator cannot be the operand of any binary operator: %s, %s|]
 
 option :: Monoid b => Scanner a b -> Scanner a b
 option cmd = do
@@ -664,8 +662,8 @@ scan_expr n = do
                     let b  = take 5 ys == take 5 cs 
                         zs
                             | b         = ""
-                            | otherwise = printf " '%s'" (take 5 ys)
-                    fail $ printf "invalid token: '%s'%s" (take 5 cs) zs)
+                            | otherwise = [printf| '%s'|] (take 5 ys)
+                    fail $ [printf|invalid token: '%s'%s|] (take 5 cs) zs)
                 return
             xs <- scan_expr n
             return $ (x,li) : xs

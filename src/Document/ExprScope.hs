@@ -24,7 +24,6 @@ import Data.Typeable
 import Test.QuickCheck
 
 import Utilities.Existential
-import Utilities.HeterogenousEquality
 import Utilities.Instances
 import Utilities.Regression
 import Utilities.Syntactic
@@ -98,10 +97,10 @@ newtype EvtExprScope = EvtExprScope { _evtExprScopeCell :: Cell IsEvtExpr }
     deriving (Typeable)
 
 instance Eq EvtExprScope where
-    (==) = read2CellsWith' (==) False
+    (==) = cellEqual' (==)
 
 instance Ord EvtExprScope where
-    compare = read2CellsH' h_compare
+    compare = cellCompare' compare
 
 instance Show EvtExprScope where
     show = readCell' show
@@ -232,7 +231,7 @@ instance Eq ExprScope where
     (==) = read2CellsWith' (==) False
 
 instance Ord ExprScope where
-    compare = read2CellsH' h_compare
+    compare = cellCompare' compare
 
 instance PrettyPrintable ExprScope where
     pretty = readCell' pretty

@@ -46,8 +46,8 @@ import Utilities.Map as M
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Syntactic
-import Utilities.Format
 import Utilities.Table 
 import Utilities.Tuple.Generics
 
@@ -565,15 +565,14 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         return $ Hierarchy vs es
     where
         struct = "refinement structure" :: String
-        cycle_msg = format msg struct -- $ intercalate ", " (map show ys)
+        cycle_msg = msg struct
         cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
-            -- li <- ask
             tell [MLError cycle_msg 
                 $ L.map (first show) $ M.toList $ 
                 lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
-        msg = "A cycle exists in the {0}"
+        msg = [printf|A cycle exists in the %s|]
 
 fromList' :: IsKey Table a => [a] -> Table a ()
 fromList' xs = M.fromList $ L.zip xs $ L.repeat ()

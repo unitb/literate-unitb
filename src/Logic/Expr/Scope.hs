@@ -19,12 +19,11 @@ import Data.List
 
 import PseudoMacros
 
-import Text.Printf
-
 import Utilities.CallStack
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Table
 
 data VisibleVars = VisibleVars
@@ -87,7 +86,7 @@ areVisible :: (PrettyPrintable e,Foldable f,?loc :: CallStack)
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
     vs <- foldMap view ln 
-    let pre  = printf "\n%s\n free vars = %s\n declared  = %s\n diff      = %s"
+    let pre  = [printf|\n%s\n free vars = %s\n declared  = %s\n diff      = %s|]
                 (stackTrace' [$__FILE__] ?loc "Scope error")
                 (show $ Pretty <$> M.toList vars)
                 (show $ Pretty <$> M.toList vs)

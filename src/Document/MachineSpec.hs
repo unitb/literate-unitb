@@ -27,12 +27,10 @@ import qualified Data.Set as S
 
 import Test.QuickCheck hiding (label, sized, elements)
 
-import Text.Printf
-
-import           Utilities.Format
 import qualified Utilities.Graph as G 
 import qualified Utilities.Map as M
 import           Utilities.Partial
+import           Utilities.PrintfTH
 import           Utilities.Syntactic
 import           Utilities.Table
 
@@ -125,15 +123,15 @@ showExpr notation e = show_e e
         find_op f = view name f `M.lookup` m_ops 
         show_e v@(Word _) = pretty v
         show_e (FunApp f xs) 
-            | length xs == 2 = printf "%s %s %s" 
+            | length xs == 2 = [printf|%s %s %s|] 
                                 (show_left_sub_e op x)
                                 op_name
                                 (show_right_sub_e op y)
-            | length xs == 1 = printf "%s %s" 
+            | length xs == 1 = [printf|%s %s|] 
                                 op_name
                                 (show_right_sub_e op x)
-            | length xs == 0 = error $ format "show_e: not a binary or unary operator '{0}' {1}"
-                                    (view name f)
+            | length xs == 0 = error $ [printf|show_e: not a binary or unary operator '%s' %s|]
+                                    (render $ f^.name)
                                     (L.intercalate ", " $ map pretty xs)
             | otherwise      = show_e (FunApp f $ [head xs, FunApp f $ tail xs])
             where
@@ -141,7 +139,7 @@ showExpr notation e = show_e e
                 y = xs ! 1
                 op = maybe (Right plus) id $ find_op f
                 op_name = maybe unknown (render . view name) $ find_op f
-                unknown = printf "<unknown function: %s %s>" 
+                unknown = [printf|<unknown function: %s %s>|] 
                             (render $ f^.name)
                             (show $ map Pretty $ M.keys m_ops)
         show_e (Const n _) = pretty n
@@ -155,13 +153,13 @@ showExpr notation e = show_e e
                 g op' = (notation^.struct) G.! (op',op)
                 f op'
                     | g op' == LeftAssoc = show_e e
-                    | otherwise          = printf "(%s)" $ show_e e
+                    | otherwise          = [printf|(%s)|] $ show_e e
         show_right_sub_e op e = maybe (show_e e) f $ root_op e
             where
                 g op' = (notation^.struct) G.! (op,op')
                 f op'
                     | g op' == RightAssoc = show_e e
-                    | otherwise           = printf "(%s)" $ show_e e
+                    | otherwise           = [printf|(%s)|] $ show_e e
 
 latex_of :: RawMachine -> Gen LatexDoc
 latex_of m = do
@@ -252,7 +250,7 @@ gen_machine b = fix (\retry n -> do
             -- types <- L.sort `liftM` vectorOf nvar choose_type
             vars <- var_set
             -- let vars = map (uncurry $ Var . (:[])) $ zip ['a'..'z'] types
-            let inv_lbl = map (label . printf "inv%d") ([0..] :: [Int])
+            let inv_lbl = map (label . [printf|inv%d|]) ([0..] :: [Int])
                             -- map (\x -> label $ "inv" ++ show x) [0..]
             ninv <- choose (0,5)
             bs   <- mk_errors b ninv
@@ -346,7 +344,7 @@ run_spec = -- test_report $forAllProperties
            $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 show_list :: Show a => [a] -> String
-show_list xs = format "[{0}]" $ L.intercalate "\n," $ surround " " " " ys
+show_list xs = [printf|[%s]|] $ L.intercalate "\n," $ surround " " " " ys
     where
         ys = map show xs
         surround pre suf xs = map (\x -> pre ++ x ++ suf) xs
@@ -355,7 +353,11 @@ subexpression :: RawExpr -> [(RawExpr, Type, String)]
 subexpression e = f [] e
     where
         f xs e = (e, type_of e, comment e) : visit f xs e
-        comment (FunApp (Fun act f _ argt rt) arg) = format "{0} {1} ({2}) : {3} -> {4}" act f arg argt rt
+        comment :: RawExpr -> String
+        comment (FunApp (Fun act f _ argt rt) arg) = [printf|%s %s (%s) : %s -> %s|] 
+                    (pretty act) (render f) 
+                    (pretty arg) (pretty argt) 
+                    (pretty rt)
         comment _ = "<>"
 
 main :: IO ()

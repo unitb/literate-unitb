@@ -25,10 +25,9 @@ import System.Directory
 import System.Environment
 import System.Console.ANSI
 
-import Text.Printf
-
 import Utilities.Invariant
 import Utilities.Map  as M hiding (split)
+import Utilities.PrintfTH
 import Utilities.Reactive.Async
 import Utilities.Syntactic
 import Utilities.Table
@@ -104,9 +103,9 @@ prover sys = do
 printReport :: (Table Key Validity, [Error], Int) -> IO ()
 printReport (pos,errs,ws) = do
         let pos' = M.filter (Valid /=) pos
-            lns0 = printf " x %s" . show . uncurry (</>) . (_1 %~ as_label) <$> keys pos'
+            lns0 = [printf| x %s|] . show . uncurry (</>) . (_1 %~ as_label) <$> keys pos'
             lns1 = report <$> errs
-            lns2 = [printf "workers: %d" ws]
+            lns2 = [[printf|workers: %d|] ws]
             lns  = lns0 ++ lns1 ++ lns2
         cursorUpLine (length lns)
         clearFromCursorToScreenBeginning

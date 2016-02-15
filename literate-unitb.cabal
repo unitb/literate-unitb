@@ -156,11 +156,9 @@ library
         Utilities.Error
         Utilities.Existential
         Utilities.FileSystem
-        Utilities.Format
         Utilities.Functor
         Utilities.Graph
         Utilities.GraphSpec
-        Utilities.HeterogenousEquality
         Utilities.Indentation
         Utilities.Instances
         Utilities.Invariant
@@ -171,6 +169,7 @@ library
         Utilities.Packaged
         Utilities.Partial
         Utilities.Permutation
+        Utilities.PrintfTH
         Utilities.QuickCheckReport
         Utilities.RandomTree
         Utilities.Reactive.Async

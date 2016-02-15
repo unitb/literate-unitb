@@ -14,7 +14,6 @@ import qualified UnitB.Test as UB
 import qualified Latex.Test_Latex_Parser as LT
 import qualified Z3.Test as ZT
 import qualified Document.Test as DOC
---import qualified Utilities.Format as FMT
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum

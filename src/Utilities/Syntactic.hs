@@ -25,9 +25,9 @@ import Test.QuickCheck as QC
 import Text.ParserCombinators.ReadPrec
 
 import Utilities.CallStack
-import Utilities.Format
 import Utilities.Instances
 import qualified Utilities.Lines as L
+import Utilities.PrintfTH
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord,Read,Generic)
@@ -39,7 +39,7 @@ data LineInfo = LI
      deriving (Eq,Ord,Typeable,Generic)
 
 instance Show LineInfo where
-    show (LI fn i j) = format "(LI {0} {1} {2})" (show fn) i j
+    show (LI fn i j) = [printf|(LI %s %d %d)|] (show fn) i j
 
 instance Read LineInfo where
     readPrec  = between (string "(LI ") (char ')')
@@ -125,13 +125,13 @@ instance Arbitrary LineInfo where
     arbitrary = LI "file" <$> QC.elements [0,5,10] <*> QC.elements [0,5,10]
 
 showLiLong :: LineInfo -> String
-showLiLong (LI fn ln col) = format "{0}:{1}:{2}" fn ln col
+showLiLong (LI fn ln col) = [printf|%s:%d:%d|] fn ln col
 
 report :: Error -> String
-report (Error msg li) = format "{1}:\n    {0}" msg (showLiLong li)
-report (MLError msg ys) = format "{0}\n{1}" msg
+report (Error msg li) = [printf|%s:\n    %s|] (showLiLong li) msg
+report (MLError msg ys) = [printf|%s\n%s|] msg
                 (unlines 
-                    $ map (\(msg,li) -> format "{1}:\n\t{0}\n" msg (showLiLong li)) 
+                    $ map (\(msg,li) -> [printf|%s:\n\t%s\n|] (showLiLong li) msg) 
                     $ sortOn snd ys)
 
 makeReport :: MonadIO m => EitherT [Error] m String -> m String

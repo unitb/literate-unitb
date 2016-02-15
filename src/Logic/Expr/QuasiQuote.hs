@@ -34,10 +34,9 @@ import Language.Haskell.TH.Syntax hiding (Name)
 
 import PseudoMacros
 
-import Text.Printf
-
 import Utilities.Instances
 import Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Syntactic
 
 expr :: QuasiQuoter
@@ -83,7 +82,7 @@ parseAction loc p str = Assign v e
         e  = parseExpr loc p' rExpr
         p' = p & expected_type .~ Just t
         li = asLI loc
-        err = error $ "\n"++ show_err [Error (printf "misshapen assignment: '%s'" str) li]
+        err = error $ "\n"++ show_err [Error ([printf|misshapen assignment: '%s'|] str) li]
 
 type Parser a = Loc -> ParserSetting -> String -> a
 
@@ -99,7 +98,7 @@ parseParts f sep kind pars0 pars1 loc p str | sep `isInfixOf` str = f v e
         e  = pars1 loc p rExpr
         --p' = p & expected_type .~ Just t
         li  = asLI loc
-        err = error $ "\n"++ show_err [Error (printf "misshapen %s: '%s'" kind str) li]
+        err = error $ "\n"++ show_err [Error ([printf|misshapen %s: '%s'|] kind str) li]
 
 parseSafetyProp :: Loc -> ParserSetting -> String -> SafetyProp
 parseSafetyProp = parseParts makeSafety "UNLESS" "safety property" parseExpr parseExpr
@@ -150,7 +149,7 @@ parseVar loc p str = fromMaybe err $ do
         M.lookup n' $ p^.decls
     where
         n = strip str
-        err = error $ "\n"++ show_err [Error (printf "unknown variables: '%s'" n) li]
+        err = error $ "\n"++ show_err [Error ([printf|unknown variables: '%s'|] n) li]
         li = asLI loc
 
 parseExpr :: Loc -> ParserSetting -> String -> DispExpr

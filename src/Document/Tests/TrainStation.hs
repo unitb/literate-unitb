@@ -27,9 +27,9 @@ import qualified Data.List.NonEmpty as NE
 import Tests.UnitTest
 
 import Utilities.Brackets
-import Utilities.Format
 import Utilities.Lens hiding (combine)
 import Utilities.Map   as M hiding ( map )
+import Utilities.PrintfTH
 import Utilities.Table
 
 test_case :: TestCase
@@ -559,7 +559,7 @@ foo xs' stmts = [ (x, substAll y ys) | (x,y) <- zip tag $ splitAll p stmts ]
         p = not . L.isPrefixOf " "
         pad x = replicate (length x) ' '
         ys = concat $ L.transpose [ [x,y,pad y] | (x,y) <- xs ]
-        tag = [ format "{0}{1}" (concatMap snd xs) k | k <- [0..] ]
+        tag = [ [printf|%s%d|] (concatMap snd xs) k | k <- [0..] ]
 
 fun_facts :: [(String, String)] -> [(String,String)]
 fun_facts xs = concat $ L.transpose [ foo [x,y] ys | (x,y) <- xs ]

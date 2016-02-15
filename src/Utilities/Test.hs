@@ -35,9 +35,9 @@ import Tests.UnitTest
 import Test.QuickCheck
 
 import Utilities.Brackets
-import Utilities.Format
-import Utilities.Syntactic
 import Utilities.Error
+import Utilities.PrintfTH
+import Utilities.Syntactic
 
 import System.IO.Unsafe
 
@@ -201,10 +201,10 @@ test' :: TestCase
 test' = test_cases
         "Formatting utilities"
         [ StringCase "test 0" 
-                    (return $ format "hello {0} name is {1} and I'm {2} years old" "my" "Simon" 28) 
+                    (return $ [printf|hello %s name is %s and I'm %d years old|] "my" "Simon" 28) 
                     ("hello my name is Simon and I'm 28 years old")
         , StringCase "test 1"
-                    (return $ format "this is a tree {0}, its second leaf is {1}" t4 t2)
+                    (return $ [printf|this is a tree %s, its second leaf is %s|] (show t4) (show t2))
                     (   "this is a tree Node \"Candide+Paul-Henri\" (Node \"Yves+Sylvie\" Leaf Leaf) "
                      ++ "(Node \"Danielle+Louis\" (Node \"Francois+Elsa\" Leaf Leaf) "
                      ++       "(Node \"Emilie+Vincent\" Leaf Leaf)), its second leaf is "

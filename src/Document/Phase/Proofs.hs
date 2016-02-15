@@ -63,11 +63,10 @@ import GHC.Generics (Generic)
 
 import Prelude hiding (id,(.))
 
-import Text.Printf
+import Utilities.PrintfTH
 
 import qualified Utilities.BipartiteGraph as G
 import Utilities.Existential
-import Utilities.Format
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
 import Utilities.Relation (type(<->),(|>),(<|))
@@ -141,12 +140,17 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
                              <.> proofs 
         returnA -< SystemP r_ord p4
     where
-        refClash   = format "Multiple refinement of progress property {0}"
-        commClash  = format "Multiple comments for {0}"
-        proofClash = format "Multiple proofs labeled {0}"
+        refClash :: ProgId -> String
+        refClash   = [printf|Multiple refinement of progress property %s|] . show
+        commClash :: DocItem -> String
+        commClash  = [printf|Multiple comments for %s|] . pretty
+        proofClash :: Label -> String
+        proofClash = [printf|Multiple proofs labeled %s|] . show
+        only_one :: EventId -> [((ProgId, ProgressProp), LineInfo)] 
+                 -> MM (Maybe ((ProgId, ProgressProp), LineInfo))
         only_one _ []   = return Nothing
         only_one _ [x]  = return (Just x)
-        only_one eid xs = tell [MLError (format "Multiple refinement provided for the fine schedule of {0}" eid) 
+        only_one eid xs = tell [MLError ([printf|Multiple refinement provided for the fine schedule of %s|] $ show eid) 
                                     $ L.map (first $ show . fst) xs] >> return Nothing
 
 make_phase4 :: MachineP3 
@@ -179,12 +183,13 @@ raiseStructError (Conc ls@(LiveStruct { .. }))
     where
         cycles = R.cycles live_live
         edges  = L.map ((\s -> s <| live_live |> s) . S.fromList) cycles
-        es = L.map (MLError (msg $ show machine_id) . L.map err_item . R.toList) edges
+        es = L.map (MLError (msg machine_id) . L.map err_item . R.toList) edges
         err_item :: (LiveEvtId, LiveEvtId) -> (String, LineInfo)
         err_item = uncurry (\les -> first $ name les) . (id &&& uncurry li)
-        msg = format "A cycle exists in the liveness proof"
-        name (Left e,_) m = format "Event {0} (refined in {1})" e m
-        name (Right e,_) m = format "Progress property {0} (refined in {1})" e m
+        msg _ = "A cycle exists in the liveness proof"
+        name :: (LiveEvtId,a) -> MachineId -> String
+        name (Left e,_) m = [printf|Event %s (refined in %s)|] (show e) (pretty m)
+        name (Right prop,_) m = [printf|Progress property %s (refined in %s)|] (show prop) (pretty m)
         li (Left e) (Right l) = evt_info ! (e,l)
         li (Left _) (Left _)  = error "raiseStructError: event refined by event"
         li (Right l) _ = live_info ! l
@@ -247,13 +252,13 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
             return (pprop,evt)
         toEither $ do
             _ <- fromEither undefined $ _unM $ bind_all del 
-                    (format "'{1}' is not the label of a coarse schedule of '{0}' deleted during refinement" evt) 
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (show lbl) (show evt))
                     (`M.lookup` (M.unions $ p3^.evtSplitDel AST.assert evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all added 
-                    (format "'{1}' is not the label of a coarse schedule of '{0}' added during refinement" evt) 
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (show lbl) (show evt)) 
                     (`M.lookup` (M.unions $ p3^.evtSplitAdded AST.assert evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all kept 
-                    (format "'{1}' is not the label of a coarse schedule of '{0}' kept during refinement" evt) 
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (show lbl) (show evt)) 
                     (`M.lookup` (M.unions $ p3^.evtSplitKept AST.assert evt eCoarseSched))
             return ()
         let rule = replace (as_label prog,pprop)
@@ -301,11 +306,10 @@ all_comments = machineCmd "\\comment" $ \(PlainText item',PlainText cmt') _m p3 
                 else case is_var of
                     Just item -> return $ DocVar item
                     _ -> do
-                        let msg = "`{0}` is not one of: a variable, an event, \
-                                  \ an invariant or a progress property "
+                        let msg = [printf|`%s` is not one of: a variable, an event, an invariant or a progress property |]
                         unless (not $ or conds)
                             $ fail "all_comments: conditional not exhaustive"
-                        raise $ Error (format msg item) li
+                        raise $ Error (msg item) li
                 return [(key,cmt,li)]
 
 liveness_proofs :: MPipeline MachineP3 
@@ -315,7 +319,7 @@ liveness_proofs = machineEnv "liveness" $ \(Identity (PO po)) xs _m p3 -> do
         proof <- parseLatex (liveness p3) xs ()
         let dep = [ (goal,h) | h <- proof^.partsOf traverseProgId ]
             goal = PId $ label po
-        prop <- bind (printf "'%s' is not the name of a progress property in this machine" po)
+        prop <- bind ([printf|'%s' is not the name of a progress property in this machine|] po)
             $ goal `M.lookup` (p3^.pProgress)
         return [(goal,(makeMonotonicity prop proof,dep),li)]
 
@@ -330,7 +334,7 @@ liveness m = withLineInfo $ proc () -> do
         prop = withCommand "\\progstep" $ progStep m
         nostep :: LatexParserA (RawProgressProp,RuleProxy) VoidInference
         nostep = lift' $ \(prog,rule) -> maybe 
-            (raise' $ Error $ printf "Expecting premises to rule: %s" $ readCell1' (show . rule_name') rule) 
+            (raise' $ Error $ [printf|Expecting premises to rule: %s|] $ readCell1' (show . rule_name') rule) 
             return
             (readCell1' (voidInference (Sub D) prog) rule)
         makeRule :: LatexParserA ([EventOrRef],LatexDoc,VoidInference) ProofTree
@@ -417,7 +421,7 @@ parse_naked_rule rule = do
     li <- ask
     case M.lookup rule ruleProxies of
         Just x -> return x
-        Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
+        Nothing -> raise $ Error ([printf|invalid refinement rule: %s|] rule) li
 
 ruleProxies :: Table String RuleProxy
 ruleProxies = fromList $ execWriter $ do
@@ -448,7 +452,7 @@ all_proofs = machineEnv "proof" $ \(Identity (PO po)) xs m p3 -> do
 get_progress_prop :: MachineP3 -> MachineId -> ProgId -> M ProgressProp
 get_progress_prop p3 _m lbl =  
             bind
-                (printf "progress property '%s' is undeclared" $ show lbl)
+                ([printf|progress property '%s' is undeclared|] $ show lbl)
                 $ lbl `M.lookup` (L.view pProgress p3)
 
 
@@ -461,7 +465,7 @@ parse_rule' rule param = do
     case M.lookup rule refinement_parser of
         Just f -> M $ EitherT $ mapRWST (\x -> return (runIdentity x)) $
             runEitherT $ _unM $ f param
-        Nothing -> raise $ Error (format "invalid refinement rule: {0}" rule) li
+        Nothing -> raise $ Error ([printf|invalid refinement rule: %s|] rule) li
 
 refinement_parser :: Map String (
                   RuleParserParameter

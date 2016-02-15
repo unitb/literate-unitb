@@ -20,8 +20,7 @@ import qualified Data.Maybe as MM
 import Tests.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 
-import Text.Printf
-
+import Utilities.PrintfTH
 import Utilities.RandomTree hiding (size,subtrees)
 import Utilities.Regression
 import Utilities.String
@@ -74,8 +73,8 @@ find_env kw xs = M.map reverse $ foldl f (M.fromList $ zip kw $ repeat []) $ con
 
 main :: FilePath -> IO String
 main path = do
-        let f (EnvNode (Env _ n _ doc _))   = ShowString $ printf "Env{%s} (%d)" n (length $ contents' doc)
-            f (BracketNode (Bracket _ _ doc _)) = ShowString $ printf "Bracket (%d)" (length $ contents' doc)
+        let f (EnvNode (Env _ n _ doc _))   = ShowString $ [printf|Env{%s} (%d)|] n (length $ contents' doc)
+            f (BracketNode (Bracket _ _ doc _)) = ShowString $ [printf|Bracket (%d)|] (length $ contents' doc)
             f (Text _)            = ShowString "Text {..}"
         ct <- readFile path
         return $ show $ M.map (map f) <$> extract_structure ct

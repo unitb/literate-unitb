@@ -35,16 +35,15 @@ import System.Directory
 import System.IO.Unsafe
 import System.FilePath
 
-import Text.Printf
 import Text.Parsec ((<?>),(<|>))
 import qualified Text.Parsec as P
 import Text.Parsec.Error
 import qualified Text.Parsec.Pos as P
 
-import Utilities.Format
 import Utilities.Graph hiding ( map, empty, size, (!) )
 import Utilities.Lines as LN
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Syntactic
 --import Utilities.Zipper as Z
 
@@ -382,8 +381,8 @@ latex_content' = do
             cmd "\\begin"          <?> "begin environment"
             (n,li1) <- argument    <?> "argument"
             ct  <- latex_content'
-            cmd "\\end"            <?> printf "end keyword (%s)" n
-            (_,li2) <- argument' n <?> printf "\\end{%s}" n
+            cmd "\\end"            <?> [printf|end keyword (%s)|] n
+            (_,li2) <- argument' n <?> [printf|\\end{%s}|] n
             return $ EnvNode $ Env li0 n li1 ct li2
         brackets = do
             li0 <- lineInfo
@@ -575,7 +574,7 @@ fill_holes fname m = do
                   -> Either [Error] (Map String [(LatexToken, LineInfo)])
         propagate m1 (AcyclicSCC v) = Right (insert v (g (m ! v) m1) m1)
         propagate _ (CyclicSCC xs@(y:_)) = Left 
-            [ (Error (format msg $ intercalate "," xs) 
+            [ (Error (msg $ intercalate "," xs) 
                 $ LI y 1 1)]
         propagate _ (CyclicSCC []) = error "fill_holes: a cycle has to include two or more vertices"
         g :: [DocWithHoles]
@@ -587,7 +586,7 @@ fill_holes fname m = do
           -> [(LatexToken,LineInfo)] 
         h _ (Right x)       = [x]
         h m (Left (name,_)) = m ! name
-        msg = "A cycle exists in the LaTeX document structure: {0}"
+        msg = [printf|A cycle exists in the LaTeX document structure: %s|]
         order = cycles_with [fname] edges 
         edges :: [(String,String)]
         edges    = concatMap f $ toList m
@@ -644,7 +643,7 @@ latex_structure fn xs = do
         latex_content fn ys (1,1)
 
 scan_latex :: FilePath -> String -> Either [Error] [(LatexToken,LineInfo)]
-scan_latex fn xs = -- trace (printf "input: %s\nuncomment: %s\n" xs cs) $ 
+scan_latex fn xs = -- trace ([printf|input: %s\nuncomment: %s\n|] xs cs) $ 
         read_lines tex_tokens fn (uncomment xs)
     --where cs = uncomment xs
 

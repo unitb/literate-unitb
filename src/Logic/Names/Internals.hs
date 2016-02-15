@@ -45,14 +45,13 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax hiding (Name,lift)
 import qualified Language.Haskell.TH.Syntax as TH 
 
-import Text.Printf
-
 import Utilities.Instances
 import Utilities.Invariant hiding ((===))
 import Utilities.Language  as Lang
 import qualified Utilities.Map as M
 import Utilities.Packaged
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Table
 
 import Test.QuickCheck as QC
@@ -119,10 +118,10 @@ class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
            => String -> a
 
 --instance Show Name where
---    show = printf "[%s]" . render
+--    show = [printf|[%s]|] . render
 
 --instance Show InternalName where
---    show x = printf "{%s}" $ render x
+--    show x = [printf|{%s}|] $ render x
 
 toZ3Encoding :: Name -> Name
 toZ3Encoding n = case n^.encoding of
@@ -145,7 +144,7 @@ instance IsBaseName Name where
             slash  | b          = "\\"
                    | otherwise  = ""
             suffix | L.null suff = ""
-                   | otherwise   = printf "_{%s}" suff
+                   | otherwise   = [printf|_{%s}|] suff
     --asString arse = iso render $ makeName arse
     asInternal' n = InternalName (NullTerm "") n (NullTerm "")
     asName' = id
@@ -206,7 +205,7 @@ instance IsBaseName InternalName where
     render (InternalName (NullTerm pre) x (NullTerm suf)) = prefix ++ z3Render x ++ suf
         where
             prefix | null pre  = ""
-                   | otherwise = printf "@@%s@@_" pre
+                   | otherwise = [printf|@@%s@@_|] pre
             --suffix | null suf  = ""
             --       | otherwise = "@" ++ suf
     --asString arse = iso render $ fromString' arse
@@ -254,12 +253,12 @@ isZ3Name' x = either (const Nothing) Just $ isZ3Name x
 isZ3Name :: String -> Either [String] Name
 isZ3Name str = mapLeft (\x -> [err,show x]) $ parse' z3Name' "" str
     where
-        err = printf "invalid name: '%s'" str
+        err = [printf|invalid name: '%s'|] str
 
 isName :: String -> Either [String] Name
 isName str = mapBoth (\x -> [err,show x]) toZ3Encoding $ parse' latexName "" str
     where
-        err = printf "invalid name: '%s'" str
+        err = [printf|invalid name: '%s'|] str
 
 isName' :: String -> Maybe Name
 isName' = either (const Nothing) Just . isName

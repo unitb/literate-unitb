@@ -19,17 +19,13 @@ import Data.Maybe  as MM hiding (fromJust)
 import qualified Data.Set  as S
 import Data.Typeable
 
-import Utilities.Format
 import Utilities.Instances
 import Utilities.Lines
 import Utilities.Map    as M hiding ( map )
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Table
 import Utilities.TH
-
-import Text.Printf
-
---type Sequent = AbsSequent GenericType HOQuantifier
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
@@ -127,7 +123,7 @@ checkSequent :: Assert -> Sequent -> Sequent
 checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
          --assertMessage "invalid scopes" (unlines $ map show xs) id s
     where
-        msg = printf "Sequent scopes: \n%s" $ L.unlines $ map pretty_print' xs
+        msg = [printf|Sequent scopes: \n%s|] $ L.unlines $ map pretty_print' xs
         --f (Def ts _ n ps t e) = _
         checkScopes' e = do
             xs <- snd <$> listen (checkScopesAux e)
@@ -217,7 +213,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
             f (x, Datatype args n _) = f (x, Sort n (asInternal n) $ length args)
             f (x, DefSort y z xs _)  = f (x, Sort y z $ length xs)
             f (_, Sort _ z 0) = Just $ render z
-            f (_, Sort _ z n) = Just $ format "{0} [{1}]" (render z) (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
+            f (_, Sort _ z n) = Just $ [printf|%s [%s]|] (render z) (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
 remove_type_vars :: Sequent' -> FOSequent
 remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'

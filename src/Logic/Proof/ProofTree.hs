@@ -20,8 +20,8 @@ import Data.Typeable
 
 import GHC.Generics (Generic)
 
-import Utilities.Format
 import qualified Utilities.Map as M 
+import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -152,7 +152,8 @@ instance ProofRule Proof where
                     | are_fresh [u] po = return $ zforall (L.filter ((v /=) . view name) ds) 
                                                 (rename v u r)
                                                 (rename v u expr)
-                    | otherwise        = Left $ [Error (format "variable '{0}' cannot be freed as '{1}'" v u) li]
+                    | otherwise        = Left $ [Error ([printf|variable '%s' cannot be freed as '%s'|] 
+                                                    (render v) (render u)) li]
             free_vars expr = return expr
 
     proof_po (Easy _) lbl po = 
@@ -173,7 +174,7 @@ instance ProofRule Proof where
                 clashes = decl `M.intersection` M.mapKeys (view name) defs
                 defs' = L.map (uncurry zeq . first Word) $ M.toList defs
             unless (M.null clashes) $
-                Left [Error (format "Symbols {0} are already defined" $ intercalate "," $ L.map render $ M.keys clashes) li]
+                Left [Error ([printf|Symbols %s are already defined|] $ intercalate "," $ L.map render $ M.keys clashes) li]
             proof_po p lbl $ 
                 s & constants %~ (M.union $ symbol_table $ M.keys defs)
                   & nameless  %~ (defs' ++)
@@ -225,7 +226,8 @@ chain n x y
     | y == equal = Right x
     | otherwise  = case (x,y) `L.lookup` (n^.chaining) of
                     Just z -> Right z
-                    Nothing -> Left [format "chain: operators {0} and {1} don't chain" x y]
+                    Nothing -> Left [[printf|chain: operators %s and %s don't chain|] 
+                                    (pretty x) (pretty y)]
 
 
 infer_goal :: Calculation -> Notation -> Either [String] Expr

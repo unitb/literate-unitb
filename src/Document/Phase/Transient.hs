@@ -29,10 +29,8 @@ import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 
-import Text.Printf
-
-import Utilities.Format
 import Utilities.Map   as M hiding ( (\\) )
+import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -61,8 +59,8 @@ tr_hint p2 vs lbls thint = do
     evs <- get_events p2 $ NE.toList lbls
     let vs = L.map (view pIndices p2 !) evs
         err e ind = ( not $ M.null diff
-                    , format "A witness is needed for {0} in event '{1}'" 
-                        (intercalate "," $ render <$> keys diff) e)
+                    , [printf|A witness is needed for %s in event '%s'|] 
+                        (intercalate "," $ render <$> keys diff) (show e))
             where
                 diff = ind `M.difference` wit
     toEither $ error_list 
@@ -82,7 +80,7 @@ tr_hint' p2 fv lbls = visit_doc []
                 evs <- _unM $ get_events p2 lbls
                 let inds = p2^.pIndices
                 vs <- _unM $ bind_all evs 
-                    (format "'{0}' is not an index of '{1}'" x) 
+                    ([printf|'%s' is not an index of '%s'|] (render x) . show) 
                     (\e -> x `M.lookup` (inds ! e))
                 let Var _ t = NE.head vs
                     ind = prime $ Var x t
@@ -93,10 +91,10 @@ tr_hint' p2 fv lbls = visit_doc []
                 return $ TrHint (insert x (t, expr) ys) z)
         , ( "\\lt"
           , CmdBlock $ \(One prog) (TrHint ys z) -> do
-                let msg = "Only one progress property needed for '{0}'"
+                let msg = [printf|Only one progress property needed for '%s'|]
                 _unM $ toEither $ error_list 
                     [ ( not $ MM.isNothing z
-                      , format msg lbls )
+                      , msg $ show $ NE.toList lbls )
                     ]
                 return $ TrHint ys (Just prog))
         ]
@@ -106,14 +104,14 @@ get_event :: (HasMachineP1 phase,MonadReader LineInfo m,MonadError [Error] m)
 get_event p2 ev_lbl = do
         let evts = p2^.pEventIds
         bind
-            (printf "event '%s' is undeclared" $ show ev_lbl)
+            ([printf|event '%s' is undeclared|] $ show ev_lbl)
             $ ev_lbl `M.lookup` evts
 
 get_abstract_event :: HasMachineP1 phase => phase -> EventId -> M EventId
 get_abstract_event p2 ev_lbl = do
         let evts = p2^.pEventSplit & M.mapKeys as_label . M.mapWithKey const
         bind
-            (printf "event '%s' is undeclared" $ show ev_lbl)
+            ([printf|event '%s' is undeclared|] $ show ev_lbl)
             $ as_label ev_lbl `M.lookup` evts
 
 get_events :: (Traversable f,MonadReader r m,Syntactic r,MonadError [Error] m,HasMachineP2 mch)
@@ -121,5 +119,5 @@ get_events :: (Traversable f,MonadReader r m,Syntactic r,MonadError [Error] m,Ha
 get_events p2 ev_lbl = do
             let evts = p2^.pEventIds
             bind_all ev_lbl
-                (printf "event '%s' is undeclared" . show)
+                ([printf|event '%s' is undeclared|] . show)
                 $ (`M.lookup` evts)

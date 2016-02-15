@@ -32,12 +32,11 @@ import Language.Haskell.TH.Quote
 
 import Prelude hiding (unlines)
 
-import Text.Printf
-
 import Utilities.Existential
 import Utilities.Instances
 import Utilities.Lines
 import qualified Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Syntactic (LineInfo(..))
 import Utilities.Table
 
@@ -88,7 +87,7 @@ instance PrettyPrintable () where
     pretty = show
 
 instance (PrettyPrintable a) => PrettyPrintable (NonEmpty a) where
-    pretty = printf "|%s|" . pretty . NE.toList
+    pretty = [printf||%s||] . pretty . NE.toList
 instance (PrettyPrintable a) => PrettyPrintable (Maybe a) where
     pretty = show . fmap Pretty
 
@@ -97,7 +96,7 @@ instance (PrettyPrintable a,PrettyPrintable b)
     pretty = show . (Pretty *** Pretty)
 
 instance PrettyPrintable LineInfo where
-    pretty (LI _ i j) = printf "(li:%d:%d)" i j
+    pretty (LI _ i j) = [printf|(li:%d:%d)|] i j
 
 class PrettyRecord a where
     recordFields :: a -> (String,[(String,String)])

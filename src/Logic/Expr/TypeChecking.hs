@@ -56,15 +56,15 @@ getElementType :: Type -> Either [String] Type
 getElementType t = runReaderT (getElementType_aux t t) 1
 
 getElementType_aux :: Type -> Type -> ReaderT Int (Either [String]) Type
-getElementType_aux orgt (VARIABLE _) = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
-getElementType_aux orgt (GENERIC _)  = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
+getElementType_aux orgt (VARIABLE _) = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
+getElementType_aux orgt (GENERIC _)  = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
 getElementType_aux _ (Gen (Sort "Array" "Array" 2) [_x,y]) = return y
 getElementType_aux orgt (Gen (DefSort _ _ args t) xs) = do
     n <- ask
     if n == 0 
-        then lift $ Left [printf "Expecting array type but found %s" $ show orgt]
+        then lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
         else local (-1 +) $ getElementType_aux orgt $ instantiate (M.fromList $ zip args xs) t
-getElementType_aux orgt (Gen _ _) = lift $ Left [printf "Expecting array type but found %s" $ show orgt]
+getElementType_aux orgt (Gen _ _) = lift $ Left [[printf|Expecting array type but found %s|] $ show orgt]
 
 newContext :: [UntypedVar] -> Context -> Context
 newContext us c@(Context ss vs fs ds dums) = Context ss (M.union vs' vs) fs ds dums
@@ -83,7 +83,7 @@ newDummies us (Context _ _ _ _ dums) = vs'
 checkTypes :: Context -> UntypedExpr -> Either [String] Expr
 checkTypes c (Word (Var n ())) = do
     v <- bind (n `M.lookup` (c^.constants))
-        (printf "%s is undeclared" )
+        ([printf|%s is undeclared|] )
     return $ Word v
 checkTypes _ (Const n ()) = do
     let t = case n of 
@@ -94,7 +94,7 @@ checkTypes c (FunApp f args) = do
     let Fun _ n _ _ _ = f ;
         targs = map (checkTypes c) args
     tfun <- bind (n `M.lookup` (c^.functions))
-        (printf "%s is undeclared" ) ;
+        ([printf|%s is undeclared|] ) ;
     check_type tfun targs
 checkTypes c (Cast e t) = do
     e' <- zcast t $ checkTypes c e
@@ -118,7 +118,7 @@ checkTypes c' (Binder q vs' r t _) = do
     ts <- forM v_type $ \((Var x t),xs) -> do
         let ys = map var_type $ S.toList xs
         t' <- maybe 
-            (fail $ printf "Inconsistent type for %s: %s" 
+            (fail $ [printf|Inconsistent type for %s: %s|] 
                     x
                     $ intercalate "," $ map show ys)
             return

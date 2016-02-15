@@ -43,35 +43,17 @@ import Data.Typeable
 
 import Prelude hiding ((.),id)
 
-import Text.Printf
-
 import Utilities.Arrow
 import Utilities.Existential
-import Utilities.Tuple.Generics
-import Utilities.Syntactic
 import Utilities.Partial
-
---newtype ValidationT e m a = ValidationT { runValidationT :: m (Validation e a) }
---    deriving (Functor)
-
---instance (Applicative m,Semigroup e) => Applicative (ValidationT e m) where
---    pure = ValidationT . pure . pure
---    ValidationT f <*> ValidationT x = ValidationT $ liftA2 (<*>) f x
-
---instance (Monad m,Semigroup e) => Monad (ValidationT e m) where
---    ValidationT m >>= f = ValidationT $ m >>= validation (pure . Failure) (runValidationT . f) 
---        where 
---            validation _ g (Success x) = g x
---            validation f _ (Failure x) = f x
-
---instance MonadTrans (ValidationT e) where
---    lift m = ValidationT $ Success <$> m
+import Utilities.PrintfTH
+import Utilities.Syntactic
+import Utilities.Tuple.Generics
 
 data LatexMatch = CmdMatch String [Bracket] | EnvMatch Environment
 
 makePrisms ''LatexMatch
 
---type LatexParser a = Parsec [LatexMatch] () a
 type LatexParser = LatexParserA ()
 type LatexParserA = LatexParserT M
 
@@ -139,7 +121,7 @@ readEnv tag = LatexParser [tag] [] [tag] [] False $ \() -> EitherT $ do
                     | envType e == tag -> do
                         put xs
                         return $ Right e
-                _ -> return $ Left [Error (printf "expecting environment '%s'" tag) $ line_info xs]
+                _ -> return $ Left [Error ([printf|expecting environment '%s'|] tag) $ line_info xs]
 
 insideOneEnvOf :: (?loc :: CallStack)
                => [String] 
@@ -176,7 +158,7 @@ readCommand tag = provided ("\\" `isPrefixOf` tag)
                     | t == tag -> do
                         put xs
                         return $ evalState (getCompose $ makeTuple' [pr|LatexArg|] next) x
-                _ -> return $ Left [Error (printf "expecting command '%s'" tag) $ line_info xs]
+                _ -> return $ Left [Error ([printf|expecting command '%s'|] tag) $ line_info xs]
     where
         tupleType = Cell [pr|a|]
         next :: forall b. LatexArg b 
@@ -241,10 +223,10 @@ rewriteDoc es cs d = case unconsTex d of
                 argSpec <- M.lookup tag' cs
                 let n = readCell1 (len [pr|LatexArg|]) argSpec
                     docs = readCell1 (foldMapTupleType [pr|LatexArg|] ((:[]) . argKind)) argSpec
-                    docs' = concatMap (printf "{%s}") docs :: String
+                    docs' = concatMap ([printf|{%s}|]) docs :: String
                     (args,doc') = takeArgs n doc
                     checkedArgs | length args == n = pure args
-                                | otherwise        = Failure [Error (printf "expecting %d arguments: %s" n docs') li]
+                                | otherwise        = Failure [Error ([printf|expecting %d arguments: %s|] n docs') li]
                 return $ consStream . (,li) . CmdMatch tag' 
                             <$> checkedArgs 
                             <*> rewriteDoc es cs doc'

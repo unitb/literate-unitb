@@ -21,10 +21,9 @@ import Language.Haskell.TH.Syntax hiding (Name)
 
 import           Test.QuickCheck
 
-import           Text.Printf
-
 import           Utilities.Instances
 import           Utilities.Partial
+import           Utilities.PrintfTH
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
@@ -141,13 +140,13 @@ typeParams (Datatype xs _ _)  = length xs
 
 instance PrettyPrintable FOType where
     pretty (FOT s []) = (render $ z3_name s)
-    pretty (FOT s ts) = printf "%s %s" (render $ s^.name) (show $ map Pretty ts)
+    pretty (FOT s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
 instance PrettyPrintable GenericType where
     pretty (GENERIC n)         = "_" ++ render n 
     pretty (VARIABLE n)        = "'" ++ render n 
     pretty (Gen s []) = render $ s^.name
-    pretty (Gen s ts) = printf "%s %s" (render $ s^.name) (show $ map Pretty ts)
+    pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
 instance HasName Sort Name where
     name = to $ \case 

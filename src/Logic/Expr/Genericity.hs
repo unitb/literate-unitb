@@ -46,14 +46,13 @@ import qualified Data.Set as S
 
 import Prelude as L
 
-import Text.Printf
-
 import Utilities.Error
 import           Utilities.Map as M 
                     hiding ( map, union, unions, (\\) )
 import qualified Utilities.Map as M
-import Utilities.Table
 import Utilities.Partial (Assert)
+import Utilities.PrintfTH
+import Utilities.Table
 
 suffix_generics :: String -> GenericType -> GenericType
 suffix_generics _  v@(VARIABLE _)      = v
@@ -98,12 +97,12 @@ instance TypeSystem2 FOType where
             return $ FunApp f xp
     zcast t me = do
             e <- me
-            let { err_msg = printf (unlines
-                [ "expression has type incompatible with its expected type:"
-                , "  expression: %s"
-                , "  actual type: %s"
-                , "  expected type: %s "
-                ]) (pretty e) (pretty $ type_of e) (pretty t) :: String }
+            let { err_msg = unlines
+                            [ [printf|expression has type incompatible with its expected type:|]
+                            , [printf|  expression: %s|]        (pretty e)
+                            , [printf|  actual type: %s|]       (pretty $ type_of e)
+                            , [printf|  expected type: %s |]    (pretty t)
+                            ] }
             unless (type_of e == t)
                 $  Left [err_msg]
             return e
@@ -129,12 +128,12 @@ instance TypeSystem2 GenericType where
             return expr
     zcast t me = do
             e <- me
-            let { err_msg = printf (unlines
-                [ "expression has type incompatible with its expected type:"
-                , "  expression: %s"
-                , "  actual type: %s"
-                , "  expected type: %s "
-                ]) (pretty e) (pretty $ type_of e) (pretty t) :: String }
+            let { err_msg = unlines
+                            [ [printf|expression has type incompatible with its expected type:|]
+                            , [printf|  expression: %s|]        (pretty e)
+                            , [printf|  actual type: %s|]       (pretty $ type_of e)
+                            , [printf|  expected type: %s |]    (pretty t)
+                            ] }
             u <- maybe (Left [err_msg]) Right $ 
                 unify t $ type_of e
             return $ specialize_right u e
@@ -150,17 +149,14 @@ check_type :: (IsQuantifier q,IsName n)
            -> ExprPG n Type q
 check_type f@(Fun _ n _ ts t) mxs = do
         xs <- check_all mxs
-        let args = unlines $ map (\(i,x) -> printf (unlines
-                            [ "   argument %d:  %s"
-                            , "   type:          %s" ] )
-                            (i :: Int) (pretty x) (pretty $ type_of x))
+        let args = unlines $ map (\(i,x) -> unlines 
+                                    [ [printf|   argument %d:  %s|] i (pretty x)
+                                    , [printf|   type:          %s|] (pretty $ type_of x) ])
                         (zip [0..] xs) 
-            err_msg = printf (unlines 
-                    [  "arguments of '%s' do not match its signature:"
-                    ,  "   signature: %s -> %s"
-                    ,  "%s"
-                    ] )
-                    (render n) (pretty ts) (pretty t) args :: String
+            err_msg = unlines 
+                        [ [printf|arguments of '%s' do not match its signature:|] (render n)
+                        , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
+                        , [printf|%s|] args ]
         maybe (Left [err_msg]) Right $ check_args xs f
 
 type OneExprP n t q   = IsQuantifier q => ExprPG n t q -> ExprPG n t q
@@ -174,15 +170,12 @@ typ_fun1 :: ( TypeSystem2 t,IsName n )
          -> OneExprP n t q
 typ_fun1 f@(Fun _ n _ ts t) mx        = do
         x <- mx
-        let err_msg = printf (unlines 
-                    [  "argument of '%s' do not match its signature:"
-                    ,  "   signature: %s -> %s"
-                    ,  "   argument: %s"
-                    ,  "     type %s"
-                    ] )
-                    (render n)
-                    (pretty ts) (pretty t)
-                    (pretty x) (pretty $ type_of x) :: String
+        let err_msg = unlines
+                    [ [printf|argument of '%s' do not match its signature:|] (render n)
+                    , [printf|   signature: %s -> %s|] (pretty ts) (pretty t)
+                    , [printf|   argument: %s|] (pretty x)
+                    , [printf|     type %s|] (pretty $ type_of x)
+                    ]
         maybe (Left [err_msg]) Right $ check_args [x] f
 
 typ_fun2 :: ( TypeSystem2 t,IsName n )
@@ -191,17 +184,14 @@ typ_fun2 :: ( TypeSystem2 t,IsName n )
 typ_fun2 f@(Fun _ n _ ts t) mx my     = do
         x <- mx
         y <- my
-        let err_msg = printf (unlines 
-                    [  "arguments of '%s' do not match its signature:"
-                    ,  "   signature: %s -> %s"
-                    ,  "   left argument: %s"
-                    ,  "     type %s"
-                    ,  "   right argument: %s"
-                    ,  "     type %s"
-                    ] )
-                    (render n) (pretty ts) (pretty t)
-                    (pretty x) (pretty $ type_of x) 
-                    (pretty y) (pretty $ type_of y) :: String
+        let err_msg = unlines
+                    [ [printf|arguments of '%s' do not match its signature:|] (render n)
+                    , [printf|   signature: %s -> %s|]                        (pretty ts) (pretty t)
+                    , [printf|   left argument: %s|]                          (pretty x)
+                    , [printf|     type %s|]                                  (pretty $ type_of x) 
+                    , [printf|   right argument: %s|]                         (pretty y)
+                    , [printf|     type %s|]                                  (pretty $ type_of y)
+                    ]
         maybe (Left [err_msg]) Right $ check_args [x,y] f
 
 typ_fun3 :: ( TypeSystem2 t,IsName n )
@@ -211,21 +201,16 @@ typ_fun3 f@(Fun _ n _ ts t) mx my mz  = do
         x <- mx
         y <- my
         z <- mz
-        let err_msg = printf (unlines 
-                    [  "arguments of '%s' do not match its signature:"
-                    ,  "   signature: %s -> %s"
-                    ,  "   first argument: %s"
-                    ,  "     type %s"
-                    ,  "   second argument: %s"
-                    ,  "     type %s"
-                    ,  "   third argument: %s"
-                    ,  "     type %s"
-                    ] )
-                    (render n) 
-                    (pretty ts) (pretty t) 
-                    (pretty x) (pretty $ type_of x) 
-                    (pretty y) (pretty $ type_of y) 
-                    (pretty z) (pretty $ type_of z) :: String
+        let err_msg = unlines
+                   [ [printf|arguments of '%s' do not match its signature:|] (render n) 
+                   , [printf|   signature: %s -> %s|]                        (pretty ts) (pretty t) 
+                   , [printf|   first argument: %s|]                         (pretty x)
+                   , [printf|     type %s|]                                  (pretty $ type_of x) 
+                   , [printf|   second argument: %s|]                        (pretty y)
+                   , [printf|     type %s|]                                  (pretty $ type_of y) 
+                   , [printf|   third argument: %s|]                         (pretty z)
+                   , [printf|     type %s|]                                  (pretty $ type_of z)
+                   ]
         maybe (Left [err_msg]) Right $ check_args [x,y,z] f
 
 unify_aux :: [(Type,Type)] -> Maybe (Map InternalName Type)
@@ -609,7 +594,7 @@ mk_error :: (Show a, Show c, Tree a) => c -> (a -> Maybe b) -> a -> b
 mk_error z f x = 
         case f x of
             Just y -> y
-            Nothing -> $myError $ printf "failed to strip type variables: \n%s\n%s" (pretty_print' x) (show z)
+            Nothing -> $myError $ [printf|failed to strip type variables: \n%s\n%s|] (pretty_print' x) (show z)
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool

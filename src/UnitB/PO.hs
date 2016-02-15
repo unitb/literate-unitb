@@ -47,7 +47,6 @@ import qualified Data.Traversable as T
 import System.IO
 
 import Utilities.Existential
-import Utilities.Format
 import Utilities.Functor
 import Utilities.Partial
 import           Utilities.Map as M hiding 
@@ -55,6 +54,7 @@ import           Utilities.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Utilities.Map as M
+import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -215,7 +215,7 @@ proof_obligation' pos proofs m = do
             if lbl `M.member` pos
                 then return ()
                 else Left [Error 
-                    (format "a proof is provided for non-existant proof obligation {0}" lbl)
+                    ([printf|a proof is provided for non-existant proof obligation %s|] $ show lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl proofs of
@@ -409,10 +409,10 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
                                         (zall $ xp : all_csch)
                                         all_fsch) 
                                 (progs ! lbl)
-                        | otherwise -> error $ format (
-                               "transient predicate {0}'s side condition doesn't "
-                            ++ "match the fine schedule of event {1}"
-                            ) pname (intercalate "," $ L.map show (NE.toList evt_lbl))
+                        | otherwise -> error $ 
+                               [printf|transient predicate %s's side condition doesn't |] (show pname) 
+                            ++ [printf|match the fine schedule of event %s|]
+                                        (intercalate "," $ L.map show (NE.toList evt_lbl))
                     Nothing
                         | not $ all_fsch == ztrue -> do
                             emit_goal assert [] $ zforall all_ind
@@ -1135,7 +1135,7 @@ dump :: String -> Table Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
-                hPutStrLn h (format "(echo \"> {0}\")\n(push)" lbl)
+                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ show lbl)
                 hPutStrLn h (L.unlines $ L.map f $ z3_code po)
                 hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ show lbl)

@@ -34,13 +34,13 @@ import           Data.Functor.Compose
 import           Data.List as L hiding (inits, union,insert)
 import qualified Data.Set as S
 
-import Utilities.Format
 import           Utilities.Map as M hiding 
                     ( map
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Utilities.Map as M
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Invariant
 import Utilities.Instances
 import Utilities.Syntactic
@@ -154,7 +154,7 @@ withPOs ps m = fmap (check' assert) $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps
-                f lbl (_,li) = Error (format "proof obligation does not exist: {0}" lbl) li
+                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ show lbl) li
                 errs = concat (p^.partsOf (traverse._Failure)) ++ elems (mapWithKey f $ ps `difference` pos)
                 errs' | null errs = sequenceA p
                       | otherwise = Failure errs

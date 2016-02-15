@@ -43,12 +43,12 @@ import System.Console.ANSI
 import System.Directory
 import System.TimeIt
 
-import Utilities.Format
 import           Utilities.Map as M 
                     ( Map, insert, keys
                     , toList, unions )
 import qualified Utilities.Map as M 
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -89,7 +89,7 @@ data Params = Params
         }
 
 instance Show ParserState where
-    show (Idle x) = format "Idle {0}ms" $ show $ round $ x * 1000
+    show (Idle x) = [printf|Idle %sms|] $ show $ round $ x * 1000
     show Parsing  = "Parsing"
 
 parser :: Shared
@@ -168,7 +168,7 @@ prover (Shared { .. }) = do
         -- handler :: 
         handler lbl@(_,x) (ErrorCall msg) = do
             write_obs dump_cmd $ Just $ Just x
-            fail (format "During {0}: {1}" lbl msg)
+            fail ([printf|During %s: %s|] (show lbl) msg)
         worker req = forever $ do
             -- (k,po) <- takeMVar req
             (k,po) <- atomically $ readTBQueue req
@@ -201,13 +201,13 @@ proof_report pattern outs es b =
                 , "#"
                 ]
         foot _ = 
-                [ format "# hidden: {0} failures" (length xs - length ys)
+                [ [printf|# hidden: %d failures|] (length xs - length ys)
                 ]
         xs = filter (failure . snd) (zip [0..] $ M.toAscList outs)
         ys = map f $ filter (match . snd) xs
         match xs  = maybe True (\f -> f `L.isInfixOf` map toLower (show $ snd $ fst xs)) pattern
         failure x = maybe False not $ snd $ snd x
-        f (n,((m,lbl),(_,_))) = format " x {0} - {1}  ({2})" m lbl n
+        f (n,((m,lbl),(_,_))) = [printf| x %s - %s  (%d)|] (show m) (show lbl) n
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
 run_all xs = do
@@ -244,7 +244,7 @@ display (Shared { .. }) = do
                     putStrLn ""
             st <- read_obs parser_state
             du <- isJust `liftM` read_obs dump_cmd
-            putStr $ format "n workers: {0}; parser: {1}; dumping: {2}" w st du
+            putStr $ [printf|n workers: %d; parser: %s; dumping: %s|] w (show st) (show du)
             clearFromCursorToLineEnd 
             -- hFlush stdout
             putStrLn ""
@@ -332,7 +332,7 @@ keyboard sh@(Shared { .. }) = do
             else if take 1 ws == ["focus"] && length ws == 2 then do
                 write_obs focus $ Just (ws ! 1)
             else do
-                putStrLn $ format "Invalid command: '{0}'" xs
+                putStrLn $ [printf|Invalid command: '%s'|] xs
             keyboard sh
 
 run_pipeline :: FilePath -> Params -> IO ()

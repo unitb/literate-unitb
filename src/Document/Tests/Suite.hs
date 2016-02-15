@@ -36,8 +36,8 @@ import GHC.Stack
 import Prelude hiding (lookup)
 import PseudoMacros
 
-import Utilities.Format
 import Utilities.Map as M hiding (lookup)
+import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -77,7 +77,7 @@ verify path i = makeReport' empty $ do
         case r of
             Right (s,_,_) -> return (s, pos)
             Left e -> return (show (e :: SomeException),pos)
-    else return (format "accessing {0}th refinement out of {1}" i (size ms),empty)
+    else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
 
 all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
 all_proof_obligations' path = do
@@ -104,7 +104,7 @@ raw_proof_obligation path lbl i = makeReport $ do
                 (label lbl) 
                 (UB.raw_proof_obligation m)
         let cmd = unlines $ L.map pretty_print' $ z3_code po
-        return $ format "; {0}\n{1}; {2}\n" lbl cmd lbl
+        return $ [printf|; %s\n%s; %s\n|] lbl cmd lbl
 
 stripAnnotation :: Expr -> Expr
 stripAnnotation e = E.rewrite stripAnnotation $ f e
@@ -124,7 +124,7 @@ lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
                 Nothing ->
-                    Left $ format "invalid label: {0}\n{1}" lbl $ 
+                    Left $ [printf|invalid label: %s\n%s|] (show lbl) $ 
                         unlines $ L.map show $ keys pos
 
 lookupSequent' :: Monad m 
@@ -145,14 +145,14 @@ sequent' path lbl i = do
             let pos = snd $ snd $ i `elemAt` xs
             lookupSequent' (label lbl) pos
         else
-            left $ format "accessing {0}th refinement out of {1}" i (size xs)   
+            left $ [printf|accessing %dth refinement out of %d|] i (size xs)   
 
 proof_obligation_with :: (Expr -> Expr) 
                       -> FilePath -> String 
                       -> Int -> IO String
 proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
     where
-        disp po = format "; {0}\n{1}; {2}\n" lbl (cmd po) lbl
+        disp po = [printf|; %s\n%s; %s\n|] lbl (cmd po) lbl
         cmd po = unlines $ L.map pretty_print' 
                                   $ z3_code 
                                   $ po & nameless %~ L.map f

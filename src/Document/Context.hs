@@ -38,7 +38,6 @@ import Data.Map as M
 import Data.String.Utils
 
 import Utilities.Error
-import Utilities.Format
 import Utilities.Syntactic
 
 run_phase1_types :: Pipeline MM 
@@ -49,8 +48,8 @@ run_phase1_types = proc p0 -> do
         it <- imp_theory -< p0
         let t = M.map fst <$> ts
             sets = M.map snd <$> ts
-            types  = t  >>= make_all_tables (printf "Multiple sets with the name %s")
-            imp_th = it >>= make_all_tables (printf "Theory imported multiple times %s")
+            types  = t  >>= make_all_tables ([printf|Multiple sets with the name %s|])
+            imp_th = it >>= make_all_tables ([printf|Theory imported multiple times %s|])
         (types,imp_th,sets) <- triggerP -< (types,imp_th,sets)
         let imp_th' = M.map (M.map fst) imp_th
             f th = M.unions $ L.map AST.types $ M.elems th

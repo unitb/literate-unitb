@@ -45,9 +45,9 @@ import           Data.Tuple
 
 import Utilities.CallStack 
 import Utilities.Error
-import Utilities.Format
 import Utilities.Graph hiding ( map )
 import Utilities.Map  as M
+import Utilities.PrintfTH
 import Utilities.Syntactic ( Error (..), LineInfo )
 import Utilities.Table
 
@@ -124,7 +124,7 @@ with_variables vs (TacticT cmd) = TacticT $ do
                 (symbols ctx)
     li <- view line_info
     unless (M.null clashes) $ 
-        hard_error [Error (format "redefinition of {0}" $ intercalate "," $ L.map render $ keys clashes) 
+        hard_error [Error ([printf|redefinition of %s|] $ intercalate "," $ L.map render $ keys clashes) 
             $ li]
     ErrorT $ local (sequent.constants %~ (symbol_table vs `M.union`)) $ 
         runErrorT cmd
@@ -171,7 +171,7 @@ lookup_hypothesis :: Monad m
                   -> TacticT m Expr
 lookup_hypothesis (ThmRef hyp inst) = do
         li <- get_line_info
-        let err_msg = Error (format "predicate is undefined: '{0}'" hyp) li
+        let err_msg = Error ([printf|predicate is undefined: '%s'|] $ show hyp) li
         hyps <- TacticT $ view $ sequent.named
         x <- maybe 
             (hard_error [err_msg])
@@ -219,10 +219,10 @@ assert xs proof = make_hard $
                 -- , assertions with proof objects
                 -- , dependencies between assertions)
             make_hard $ forM_ (cycles $ concat zs) $ \x ->
-                let msg = "a cycle exists between the proofs of the assertions {0}" in
+                let msg = [printf|a cycle exists between the proofs of the assertions %s|] in
                 case x of
                     AcyclicSCC _ -> return ()
-                    CyclicSCC cs -> soft_error [Error (format msg $ intercalate "," $ L.map show cs) li]
+                    CyclicSCC cs -> soft_error [Error (msg $ intercalate "," $ L.map show cs) li]
             p  <- with_hypotheses xs proof
             return $ Assertion (fromList ys) (concat zs) p li
 
@@ -453,11 +453,11 @@ free_goal v0 v1 m = do
         fresh <- is_fresh v1
         (new,t) <- case goal of 
             Binder Forall bv r t _ -> do
-                  guard (format "'{0}' is not a fresh variable" v1)
+                  guard ([printf|'%s' is not a fresh variable|] $ render v1)
                       fresh
                   v0'@(Var _ tt) <- bind 
-                      (format "'{0}' is not a bound variable in:\n{1}"
-                                v0 $ pretty_print' goal)
+                      ([printf|'%s' is not a bound variable in:\n%s|]
+                                (render v0) $ pretty_print' goal)
                       $ L.lookup v0 (zip bv' bv)
                   return
                       ( rename v0 v1 
@@ -499,7 +499,7 @@ instantiate_all ((ThmRef lbl ps, li):rs) proof = do
         hyps    <- get_named_hyps -- _hypotheses
         new_lbl <- fresh_label $ show lbl
         h <- maybe
-            (hard_error [Error (format "inexistant hypothesis: {0}" lbl) li])
+            (hard_error [Error ([printf|inexistant hypothesis: %s|] $ show lbl) li])
             return 
             (lbl `M.lookup` hyps)
         instantiate_hyp h new_lbl ps $
@@ -598,7 +598,7 @@ by_symmetry :: Monad m
             -> TacticT m Proof
 by_symmetry vs hyp mlbl proof = do
         cs <- lookup_hypothesis (ThmRef hyp [])
-        let err0 = format "expecting a disjunction\n{0}: {1}" hyp $ pretty_print' cs
+        let err0 = [printf|expecting a disjunction\n%s: %s|] (show hyp) $ pretty_print' cs
         lbl  <- maybe (fresh_label "symmetry") return mlbl
         goal <- get_goal
         case cs of

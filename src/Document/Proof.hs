@@ -40,11 +40,10 @@ import qualified Data.Traversable as T
 
 import GHC.Generics (Generic)
 
-import Text.Printf
-
 import           Utilities.Error
 import           Utilities.Map hiding ( map )
 import qualified Utilities.Map as M
+import           Utilities.PrintfTH
 import           Utilities.Syntactic hiding (line)
 import           Utilities.Table
 
@@ -133,7 +132,7 @@ add_assumption lbl asm = do
         s <- ST.get
         if lbl `member` assumptions s then do
             li    <- ask
-            hard_error [Error (printf "an assumption %s already exists" $ show lbl) li]
+            hard_error [Error ([printf|an assumption %s already exists|] $ show lbl) li]
         else ST.put $ s { assumptions = insert lbl asm $ assumptions s }
 
 add_assert :: ( Monad m
@@ -146,7 +145,7 @@ add_assert lbl asrt = do
         s <- ST.get
         if lbl `member` assertions s then do
             li    <- ask
-            hard_error [Error (printf "an assertion %s already exists" $ show lbl) li]
+            hard_error [Error ([printf|an assertion %s already exists|] $ show lbl) li]
         else ST.put $ s { assertions = insert lbl asrt $ assertions s }
 
 add_proof :: ( Monad m
@@ -159,7 +158,7 @@ add_proof lbl prf = do
         s <- ST.get
         if lbl `member` subproofs s then do
             li    <- ask
-            hard_error [Error (printf "a proof for assertion %s already exists" $ show lbl) li]
+            hard_error [Error ([printf|a proof for assertion %s already exists|] $ show lbl) li]
         else
             ST.put $ s { subproofs = insert lbl prf $ subproofs s }
 
@@ -225,7 +224,7 @@ find_proof_step = visitor
                         case infer_goal cc notat of
                             Right cc_goal -> do
                                     return (ByCalc $ cc & goal .~ cc_goal )
-                            Left msgs      -> hard_error $ map (\x -> Error (printf "type error: %s" x) li) msgs
+                            Left msgs      -> hard_error $ map (\x -> Error ([printf|type error: %s|] x) li) msgs
                     return ()
             )
                 -- TODO: make into a command
@@ -261,7 +260,7 @@ find_proof_step = visitor
                     li     <- ask
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
-                            (hard_error [Error (printf "invalid subproof label: %s" $ show lbl) li])
+                            (hard_error [Error ([printf|invalid subproof label: %s|] $ show lbl) li])
                     p <- lift_i collect_proof_step-- (change_goal pr new_goal) m
                     add_proof lbl p
             )
@@ -543,11 +542,11 @@ parse_expr set xs = do
             Nothing -> return x
         let x = normalize_generics typed_x
         unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (printf msg (pretty x) (pretty $ type_of x)) li)
+            $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
                 $ ambiguities x
         return $ DispExpr (flatten xs) x
     where
-        msg   = "type of %s is ill-defined: %s"
+        msg   = [printf|type of %s is ill-defined: %s|]
 
 get_expression :: ( MonadReader Thy m )
                => Maybe Type

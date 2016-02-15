@@ -41,12 +41,12 @@ import           Data.Typeable
 
 import Utilities.BipartiteGraph as G
 import Utilities.CallStack
-import Utilities.Format
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Lens
 import Utilities.Map as M
 import Utilities.Partial
+import Utilities.PrintfTH
 import Utilities.Table
 import Utilities.TH
 
@@ -128,10 +128,10 @@ instance Traversable EventTable where
             pure g 
 
 instance Show DocItem where
-    show (DocVar xs) = format "{0} (variable)" xs
-    show (DocEvent xs) = format "{0} (event)" xs
-    show (DocInv xs) = format "{0} (invariant)" xs
-    show (DocProg xs) = format "{0} (progress)" xs
+    show (DocVar xs) = [printf|%s (variable)|] $ render xs
+    show (DocEvent xs) = [printf|%s (event)|] $ show xs
+    show (DocInv xs) = [printf|%s (invariant)|] $ show xs
+    show (DocProg xs) = [printf|%s (progress)|] $ show xs
 
 makeLenses ''EventTable
 makeClassy ''MachineBase
@@ -168,13 +168,13 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
                 -- has skip and (a)skip refined by (b)skip
                 -- valid scopes
             forM_ (scopeCorrect m) $ \(x,y) -> 
-                format "inv4: {0}\n{1}" x y ## False
+                [printf|inv4: %s\n%s|] x y ## False
             "inv5" ## ((m^.abs_vars) `M.difference` (m^.variables)) `isSubmapOf'` (m^.del_vars)
                 -- Inv5 is not an equality because del_vars is cummulative
             "inv6" ## ((m^.abs_vars) `M.difference` (m^.del_vars)) `isSubmapOf'` (m^.variables)
             "inv7" ## noClashes (m^.inh_props) (m^.props)
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
-                format "%s - %s" (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
+                [printf|%s - %s|] (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
                     ## (ev^.old.actions) === (ev^.abs_actions)
                 -- Proofs match properties
             "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty
