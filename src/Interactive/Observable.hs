@@ -1,5 +1,6 @@
 module Interactive.Observable 
-    ( Observable, new_obs, modify_obs
+    ( Observable, new_obs
+    , modify_obs, modify_obs'
     , write_obs, read_obs, observe
     , observe_with, reads_obs
     , test )
@@ -27,6 +28,9 @@ reads_obs obs f = do
 write_obs :: Eq a => Observable a -> a -> IO ()
 write_obs v x = modify_obs v (const $ return x)
 
+modify_obs' :: Eq a => Observable a -> (a -> a) -> IO ()
+modify_obs' obs = modify_obs obs . fmap return
+
 modify_obs :: Eq a => Observable a -> (a -> IO a) -> IO ()
 modify_obs (Obs v vs) f = do
         (x,y) <- modifyMVar v $ \x -> do
@@ -40,7 +44,6 @@ modify_obs (Obs v vs) f = do
 
 observe :: Observable a -> MVar () -> IO ()
 observe (Obs _ vs) v = do
---    traceBlock "observe" $ do
         modifyMVar_ vs $ \vs -> do
             return $ void (tryPutMVar v ()) : vs
         

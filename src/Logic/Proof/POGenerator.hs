@@ -54,7 +54,7 @@ mkCons ''POParam
 instance NFData POParam
 
 empty_param :: POParam
-empty_param = makePOParam 
+empty_param = makePOParam
 
 type POGen = POGenT Identity
 
@@ -85,7 +85,7 @@ emit_exist_goal asrt lbl vars es = with
 existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
 existential _ [] cmd = cmd
 existential asrt vs (POGen cmd) = do
-        let g (_, Sequent ctx _ h0 h1 goal) = do
+        let g (_, Sequent _ _ ctx _ h0 h1 goal) = do
                     vs <- f ctx
                     return $ zforall vs ztrue $ zall (h0 ++ M.ascElems h1) `zimplies` goal
             f (Context s vs fs def _) 
@@ -111,13 +111,15 @@ emit_goal' arse lbl g = emit_goal arse lbl $ getExpr g
 emit_goal :: (Functor m, Monad m) 
           => Assert -> [Label] -> Expr -> POGenT m ()
 emit_goal asrt lbl g = POGen $ do
-    tag <- asks tag 
-    po  <- Sequent <$> view S.context 
-                   <*> view synProp
-                   <*> view nameless
-                   <*> view named
-                   <*> pure g
-    tell $ [(composite_label $ tag ++ lbl, checkSequent asrt po)]
+    tag   <- asks tag 
+    param <- ask
+    let po = makeSequent asrt
+                   (param^.S.context) 
+                   (param^.synProp)
+                   (param^.nameless)
+                   (param^.named)
+                   g
+    tell $ [(composite_label $ tag ++ lbl, po)]
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
 set_syntactic_props s = POCtx $ synProp .= s
@@ -167,4 +169,8 @@ tracePOG (POGen cmd) = POGen $ do
     traceM $ unlines $ map (show . second (view goal)) xs
 
 eval_generatorT :: Monad m => POGenT m () -> m (Table Label Sequent)
-eval_generatorT cmd = liftM (fromListWithKey (\k _ _ -> ($myError) $ [printf|%s\n|] $ show k) . snd) $ evalRWST (runPOGen cmd) empty_param ()
+eval_generatorT cmd = 
+            liftM (fromListWithKey combine . snd) 
+                $ evalRWST (runPOGen cmd) empty_param ()
+    where
+        combine k _ _ = ($myError) $ [printf|%s\n|] $ show k

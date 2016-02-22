@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Interactive.Pipeline 
-   ( run_pipeline, Params (..) )
+   ( run_pipeline, Params' (..), Params, pos )
 where
 
     -- Modules
@@ -39,12 +39,14 @@ import           Data.Char
 import           Data.Maybe
 import qualified Data.List as L
 
+import GHC.Generics (Generic)
+
 import System.Console.ANSI
 import System.Directory
 import System.TimeIt
 
 import           Utilities.Map as M 
-                    ( Map, insert, keys
+                    ( insert, keys
                     , toList, unions )
 import qualified Utilities.Map as M 
 import Utilities.Partial
@@ -63,6 +65,7 @@ import Utilities.Table
                 
 data Shared = Shared
         { working    :: Observable Int
+        , untried    :: Observable Int
         , system     :: Observable System
         , error_list :: Observable [Error]
         , pr_obl     :: Observable (Table (Label,Label) (Seq,Maybe Bool))
@@ -77,16 +80,22 @@ data Shared = Shared
 data ParserState = Idle Double | Parsing
     deriving Eq
 
-data Params = Params
+type Params = Params' (Table Label (Table Label (Bool,Seq)))
+
+data Params' pos = Params
         { path :: FilePath
         , verbose :: Bool
         , continuous :: Bool
         , no_dump :: Bool
         , no_verif :: Bool
         , reset :: Bool
-        , pos :: Map Label (Table Label (Bool,Seq))
+        , _pos :: pos
         , init_focus :: Maybe String
-        }
+        } deriving (Generic)
+
+makeLenses ''Params'
+
+instance NFData Params where
 
 instance Show ParserState where
     show (Idle x) = [printf|Idle %sms|] $ show $ round $ x * 1000
@@ -138,6 +147,8 @@ parser (Shared { .. })  = return $ do
                         write_obs error_list []
                         modify_obs pr_obl $ \pos -> do
                             evaluate $ force $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
+                        pos <- read_obs pr_obl
+                        write_obs untried $ M.size $ M.filter (isNothing.snd) pos
                         return ()
                     Left es   -> do
                         write_obs error_list es
@@ -149,7 +160,7 @@ prover (Shared { .. }) = do
     observe pr_obl tok
     -- req <- newEmptyMVar
     req <- newTBQueueIO 20
-    forM_ [1..32] $ \p -> forkOn p $ worker req 
+    forM_ [1..40] $ \p -> forkOn p $ worker req 
     return $ forever $ do
         takeMVar tok
         inc 1
@@ -176,6 +187,7 @@ prover (Shared { .. }) = do
             inc 1
             r      <- catch (discharge k' po) (handler k)
             dec 1
+            modify_obs' untried (+ (-1))
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
 proof_report :: Maybe String
@@ -223,6 +235,7 @@ display (Shared { .. }) = do
     observe pr_obl tok
     observe error_list tok
     observe working tok
+    observe untried tok
     observe parser_state tok
     observe focus tok
     observe redraw tok
@@ -232,6 +245,7 @@ display (Shared { .. }) = do
             outs <- read_obs pr_obl
             es   <- read_obs error_list
             w    <- read_obs working
+            u    <- read_obs untried
             fil  <- read_obs focus
             let ys = proof_report fil outs es (w /= 0)
             cursorUpLine $ length ys
@@ -244,7 +258,7 @@ display (Shared { .. }) = do
                     putStrLn ""
             st <- read_obs parser_state
             du <- isJust `liftM` read_obs dump_cmd
-            putStr $ [printf|n workers: %d; parser: %s; dumping: %s|] w (show st) (show du)
+            putStr $ [printf|numbor of workers: %d; untried: %d; parser: %s; dumping: %s|] w u (show st) (show du)
             clearFromCursorToLineEnd 
             -- hFlush stdout
             putStrLn ""
@@ -264,7 +278,7 @@ serialize (Shared { .. }) = do
         let out = pos
 --        (pos@(out,_),es) <- takeMVar ser
         es <- read_obs error_list
-        dump_pos fname pos
+        -- dump_pos fname pos
         writeFile 
             (fname ++ ".report") 
             (unlines $ proof_report Nothing out es False)
@@ -339,6 +353,7 @@ run_pipeline :: FilePath -> Params -> IO ()
 run_pipeline fname (Params {..}) = do
         system     <- new_obs empty_system
         working    <- new_obs 0
+        untried    <- new_obs 0
         error_list <- new_obs []
         exit_code  <- newEmptyMVar 
         m          <- load_pos fname M.empty
@@ -361,6 +376,8 @@ run_pipeline fname (Params {..}) = do
         keyboard sh
         putStrLn "received a 'quit' command"
         mapM_ killThread ts
+        pos <- read_obs pr_obl
+        dump_pos fname pos
 --        return sh
 
 --type Verifier = StablePtr (Shared)

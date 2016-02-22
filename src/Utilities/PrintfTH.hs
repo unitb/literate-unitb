@@ -13,7 +13,7 @@ printf = QuasiQuoter
 
 unescape :: String -> Q String
 unescape ('\\':'\\':xs) = ('\\' :) <$> unescape xs
-unescape ('\\':'\"':xs)  = ('\"' :) <$> unescape xs
+unescape ('\\':'\"':xs) = ('\"' :) <$> unescape xs
 unescape ('\\':'n':xs)  = ('\n' :) <$> unescape xs
 unescape ('\\':'t':xs)  = ('\t' :) <$> unescape xs
 unescape ('\\':_)       = fail "invalid escape character"

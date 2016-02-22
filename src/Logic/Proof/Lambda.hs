@@ -191,7 +191,9 @@ delambdify po = -- (Sequent ctx asm hyps goal) =
                             (M.mapKeys asInternal ds')
                             (symbol_table $ M.map translate dd) 
                 ctx' :: Context'
-            return $ Sequent
+            return $ Sequent 
+                (po^.timeout) 
+                (po^.resource) 
                 (            ctx' 
                  `merge_ctx` decl :: Context') 
                 (po^.syntacticThm)

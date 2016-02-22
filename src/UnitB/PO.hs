@@ -842,17 +842,20 @@ inv_wd_po :: RawMachine -> M ()
 inv_wd_po m = 
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inh_props.inv
-                 named_hyps $ m!.inh_props.inv_thm)
-            $ emit_goal assert ["INV", "WD"] 
-                $ well_definedness $ zall $ m!.props.inv
+                 named_hyps $ m!.inh_props.inv_thm
+                     )
+            $ do
+                let wd = well_definedness $ zall $ m!.props.inv
+                emit_goal assert ["INV", "WD"] wd
 
 init_wd_po :: RawMachine -> M ()
 init_wd_po m = 
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inh_props.inv
                  named_hyps $ m!.inh_props.inv_thm)
-            $ emit_goal assert ["INIT", "WD"] 
-                $ well_definedness $ zall $ m!.inits
+            $ do
+                emit_goal assert ["INIT", "WD"] 
+                    $ well_definedness $ zall $ m!.inits
 
 incremental_wd_po :: Label
                   -> Table Label RawExpr  -- 

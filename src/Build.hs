@@ -18,6 +18,10 @@ import System.Process
 
 data CompileMode = Make | CompileFile
 
+data CompileFlags = CompileFlags
+        { mode :: CompileMode 
+        , profile :: Bool }
+
 type Build = RWST FilePath () (FilePath,[FilePath]) (MaybeT IO)
 
 inf :: FilePath
@@ -30,12 +34,12 @@ build path cmd = fmap f <$> runMaybeT (runRWST cmd path ("ghc",[]))
     where 
         f (x,(y,z),()) = (x,y,z)
 
-args :: CompileMode -> FilePath -> Build ()
+args :: CompileFlags -> FilePath -> Build ()
 args opt file = do
     path <- ask
     liftIO $ createDirectoryIfMissing True $ 
         path </> "bin" </> takeDirectory file
-    let flag = case opt of 
+    let flag = case mode opt of 
                     CompileFile -> ["-c",file]
                     Make        -> ["--make",file,"-o",path </> "bin" </> dropExtension file]
     _2 .= flag ++
@@ -61,22 +65,34 @@ args opt file = do
         , "-XDeriveTraversable"
         , "-XFunctionalDependencies"
         , "-XImplicitParams"
+        --, "-D__HASHED_KEYS__"
+        -- , "-D__HASH_MAP__"
+        -- , "-D__HASH_MAP_LAZY__"
+        -- , "-D__PACKAGED_NAMES__"
         , "-fwarn-missing-signatures"
         , "-fwarn-incomplete-uni-patterns"
         , "-fwarn-missing-methods"
-        --, "-fwarn-orphans"
+        -- , "-fwarn-orphans"
         , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
         , "-ignore-package", "literate-unitb"
-        --, "-package", "either-4.3"
-        --, "-package", "mtl-2.1.3.1"
-        --, "-package", "QuickCheck"
-        --, "-package", "transformers-0.3.0.0"
-        --, "-package", "exceptions-0.6.1"
+        -- , "-package", "either-4.3"
+        -- , "-package", "mtl-2.1.3.1"
+        -- , "-package", "QuickCheck"
+        -- , "-package", "transformers-0.3.0.0"
+        -- , "-package", "exceptions-0.6.1"
         -- , "-ddump-splices"
-        , "-dynamic-too"
+        -- , "-fforce-recomp"
+        -- , "-O2"
+        ] ++ if profile opt 
+            then [ "-osufp_o", "-hisufp_hi"
+                 , "-prof", "-O2"
+                 -- , "-caf-all"
+                 -- , "-fforce-recomp"
+                 , "-auto-all"
+                 , "-rtsopts" ]
+            else [ "-dynamic-too" ]
         -- , "-v"
-        ]
 
 showBuildCommand :: FilePath -> Build () -> IO (Maybe String)
 showBuildCommand fp cmd = fmap (fmap $ view _1) $ build fp $ do
@@ -134,9 +150,14 @@ cabal_build target = do
         return r
     return $ CabalTarget target
 
+enableProfiling :: FilePath -> Build FilePath
+enableProfiling target = do
+    compile False (args (CompileFlags Make True) target)
+    return $ "bin" </> dropExtension target
+
 make :: FilePath -> Build FilePath
 make target = do
-    compile False (args Make target)
+    compile False (args (CompileFlags Make False) target)
     return $ "bin" </> dropExtension target
 
 compile_test :: Build FilePath
@@ -147,3 +168,8 @@ compile_all = make "suite/test.hs"
 
 compile_app :: Build FilePath
 compile_app = make "app/continuous.hs"
+
+profile_app :: Build FilePath
+profile_app = do 
+    make "app/continuous.hs"
+    enableProfiling "app/continuous.hs"

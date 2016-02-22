@@ -66,7 +66,7 @@ getParser = view pMchSynt . getMachine
 getTransient :: RuleParserParameter -> Table Label Transient
 getTransient = view pTransient . getMachine
 
-getProgress :: RuleParserParameter -> Map Label ProgressProp
+getProgress :: RuleParserParameter -> Table Label ProgressProp
 getProgress = mapKeysMonotonic as_label . view pProgress . getMachine
 
 getSafety :: RuleParserParameter -> Table Label SafetyProp

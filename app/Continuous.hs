@@ -15,20 +15,20 @@ import Logic.Expr
 import UnitB.PO
 import UnitB.UnitB
 
-import Z3.Z3
+import Z3.Version
 
     -- Libraries
-import Control.Monad
 import Control.Exception
+import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
+import Control.Lens
 
+import Data.Maybe
 import Data.Time
 import Data.Typeable
 
-import qualified Data.ByteString as BS
-import           Data.Maybe
-import qualified Data.Serialize as Ser
+import Interactive.Serialize hiding (dump_pos)
 
 import PseudoMacros
 
@@ -36,34 +36,44 @@ import System.Console.GetOpt
 import System.Directory
 import System.Environment
 import System.TimeIt
+import System.Timeout
 
+import Utilities.FileFormat
 import qualified Utilities.Map as M hiding ((!))
+import qualified Utilities.Table as M
 import Utilities.Partial
 import Utilities.Syntactic
 
 import Text.Printf
 
+seqFileFormat' :: FileFormat (M.Table Label (M.Table Label (Bool, Seq)))
+seqFileFormat' = prismFormat pr $ seqFileFormat
+    where 
+        pr :: Iso' (M.Table Key (Seq, Maybe Bool)) 
+                   (M.Table Label (M.Table Label (Bool, Seq))) 
+        pr = pruneUntried.mapping swapped.M.curriedMap
+        pruneUntried :: Iso' 
+                            (M.Table Key (Seq, Maybe Bool)) 
+                            (M.Table Key (Seq, Bool))
+        pruneUntried = iso (M.mapMaybe sequence) (traverse._2 %~ Just)
+
 with_po_map :: StateT Params IO a -> Params -> IO ()
 with_po_map act param = do
-        let fn = path param ++ ".state'"
+        let fn = path param ++ ".state"
         b <- doesFileExist fn
         param <- if b && not (no_verif param) && not (reset param) then do
-            xs <- BS.readFile fn
-            either 
-                (\_ -> return param) 
-                (\po -> return param { pos = po }) 
-                $ Ser.decode xs
+            p <- readFormat seqFileFormat' fn
+            return $ maybe param (\p -> param & pos .~ p) p
         else return param
         void $ execStateT act param
 
 dump_pos :: MonadIO m => StateT Params m ()
 dump_pos = do
         d <- gets no_dump
-        p    <- gets pos
+        p    <- use pos
         file <- gets path   
-        let fn = file ++ ".state'"
+        let fn = file ++ ".state"
         if not d then do
-    --        liftIO $ Ser.dump_pos file p
             liftIO $ putStrLn "Producing Z3 file:"
             (dt,()) <- liftIO $ timeItT $ forM_ (M.toList p) $ \(n,p) -> do
                 dump (show n) (M.map snd p)
@@ -71,23 +81,26 @@ dump_pos = do
         else return ()
         liftIO $ do
             putStrLn "Serializing state:"
-        (dt',()) <- liftIO $ timeItT $ BS.writeFile fn $ Ser.encode p
+        (dt',()) <- liftIO $ timeItT $ writeFormat seqFileFormat' fn p
         liftIO $ print dt'
 
 check_one :: (MonadIO m, MonadState Params m) 
           => Machine -> m (Int,String)
 check_one m = do
+        liftIO $ putStrLn $ render $ m!.name
         param <- get
-        let po = M.findWithDefault M.empty (as_label $ _name m) $ pos param
+        let po = M.findWithDefault M.empty (as_label $ _name m) $ _pos param
         (po,s,n)    <- liftIO $ verify_changes m po
-        put (param { pos = M.insert (as_label $ _name m) po $ pos param })
+        put (param { _pos = M.insert (as_label $ _name m) po $ _pos param })
+        liftIO $ putStrLn "done"
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
 check_theory (name,th) = do
+        liftIO $ putStrLn name
         param <- get
-        let old_po = M.findWithDefault M.empty (label name) $ pos param
+        let old_po = M.findWithDefault M.empty (label name) $ _pos param
             po = either (assertFalse' "check_theory") id $ theory_po th
             new_po = po `M.difference` old_po
             ch_po  = po `M.intersection` old_po
@@ -105,8 +118,9 @@ check_theory (name,th) = do
                     handle
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po ! k) (\b -> (b,x)) $ M.lookup k res
-        put param { pos = M.insert (label name) p_r $ pos param }
+        put param { _pos = M.insert (label name) p_r $ _pos param }
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toAscList res
+        liftIO $ putStrLn $ "done " ++ name
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where
         success True  = "  o  "
@@ -185,6 +199,12 @@ focus :: Option -> Maybe String
 focus (Focus x) = Just x
 focus _ = Nothing
 
+_myTimeout :: IO () -> IO ()
+_myTimeout cmd = do
+        let dt = 4 * 60 * 1000000
+        timeout dt cmd
+        putStrLn "!!!TIMEOUT!!!"
+
 main :: IO ()
 main = do
         (v,h) <- z3_version
@@ -199,7 +219,7 @@ main = do
                 if b1 && b2 then do
                     let { param = Params 
                             { path = xs
-                            , pos = M.empty
+                            , _pos = M.empty
                             , no_dump    = NoDump `elem` opts
                             , no_verif   = NoVerif `elem` opts
                             , verbose    = Verbose `elem` opts

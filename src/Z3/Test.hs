@@ -96,7 +96,7 @@ sample_quant = [
         f           = typ_fun1 ff
 
 sample_proof :: Sequent
-sample_proof = Sequent
+sample_proof = Sequent 3000 1
         ( def & functions .~ symbol_table [mk_fun' [] "f" [int] int] )
         empty_monotonicity
         [($typeCheck) $ mzforall [x'] mztrue (f x `mzless` mzint 10)]

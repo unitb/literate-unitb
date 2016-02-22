@@ -32,8 +32,6 @@ makeLatex fn cmd = doc
 
 updateLI :: String -> LatexGen ()
 updateLI xs = do
-    --next 0
-    --traceM $ show $ reverse $ lines xs
     LatexGen $ case reverse $ lines xs of
         y0:_:ys -> do
             line += length ys + 1

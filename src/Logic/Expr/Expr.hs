@@ -574,6 +574,7 @@ instance (TypeSystem t, IsQuantifier q, Tree t', IsName n)
                           [ merge_range q
                           , r'
                           , xp' ] ]
+    {-# INLINE rewriteM #-}
     rewriteM _ x@(Word _)           = pure x
     rewriteM _ x@(Const _ _)        = pure x
     rewriteM f (Lift e t)    = Lift <$> f e <*> pure t

@@ -15,7 +15,7 @@ import Logic.Theory
 
 import UnitB.Event
 import UnitB.Machine
-import UnitB.Proof
+import UnitB.Proof hiding (Builder)
 import UnitB.Property
 import UnitB.System
 

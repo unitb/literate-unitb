@@ -49,12 +49,13 @@ import Utilities.Instances
 import Utilities.Invariant hiding ((===))
 import Utilities.Language  as Lang
 import qualified Utilities.Map as M
-import Utilities.Packaged
 import Utilities.Partial
 import Utilities.PrintfTH
 import Utilities.Table
 
 import Test.QuickCheck as QC
+
+type NEString = NonEmpty Char
 
 #ifdef __LAZY_NAME__
 
@@ -63,13 +64,13 @@ import Test.QuickCheck as QC
     -- ^ by using `substToZ3` and `substToLatex` to translate them
 data Name = Name 
         { _backslash :: Bool 
-        , _base :: NullTerminatedNEString 
+        , _base :: NEString 
         , _primes :: Word8 
-        , _suffix :: NullTerminatedString
+        , _suffix :: String
         , _encoding :: Encoding }
     deriving (Data,Generic,Show,Eq,Ord)
 
-data InternalName = InternalName NullTerminatedString Name NullTerminatedString
+data InternalName = InternalName String Name String
     deriving (Eq,Ord,Data,Generic,Show)
 
 #else
@@ -79,20 +80,20 @@ data InternalName = InternalName NullTerminatedString Name NullTerminatedString
     -- ^ by using `substToZ3` and `substToLatex` to translate them
 data Name = Name 
         { _backslash :: !Bool 
-        , _base :: !NullTerminatedNEString 
+        , _base :: !NEString 
         , _primes :: !Word8 
-        , _suffix :: !NullTerminatedString
+        , _suffix :: !String
         , _encoding :: !Encoding }
     deriving (Data,Generic,Show,Eq,Ord)
 
-data InternalName = InternalName !NullTerminatedString !Name !NullTerminatedString
+data InternalName = InternalName !String !Name !String
     deriving (Eq,Ord,Data,Generic,Show)
 
 #endif
 
-name :: Bool -> NullTerminatedNEString
+name :: Bool -> NEString
              -> Word8
-             -> NullTerminatedString
+             -> String
              -> Encoding
              -> Name
 name = Name
@@ -125,34 +126,34 @@ class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
 
 toZ3Encoding :: Name -> Name
 toZ3Encoding n = case n^.encoding of
-    LatexEncoding -> n & base._Wrapped' %~ replaceAll' assert substToZ3
-                       & suffix._Wrapped' %~ replaceAll substToZ3
+    LatexEncoding -> n & base %~ replaceAll' assert substToZ3
+                       & suffix %~ replaceAll substToZ3
                        & encoding .~ Z3Encoding
     Z3Encoding -> n
 
 toLatexEncoding :: Name -> Name
 toLatexEncoding n = case n^.encoding of
-    Z3Encoding -> n & base._Wrapped' %~ replaceAll' assert substToLatex
-                    & suffix._Wrapped' %~ replaceAll substToLatex
+    Z3Encoding -> n & base %~ replaceAll' assert substToLatex
+                    & suffix %~ replaceAll substToLatex
                     & encoding .~ LatexEncoding
     LatexEncoding -> n
 
 instance IsBaseName Name where
     render n = concat [slash,toList base,replicate (fromIntegral p) '\'',suffix]
         where
-            (Name b (NullTerm base) p (NullTerm suff) _) = toLatexEncoding n
+            (Name b base p suff _) = toLatexEncoding n
             slash  | b          = "\\"
                    | otherwise  = ""
             suffix | L.null suff = ""
                    | otherwise   = [printf|_{%s}|] suff
     --asString arse = iso render $ makeName arse
-    asInternal' n = InternalName (NullTerm "") n (NullTerm "")
+    asInternal' n = InternalName "" n ""
     asName' = id
     fromString'' xs = makeName (withCallStack $ withMessage "makeName" (show xs) assert) xs
     --addSuffix (Name n0) n1 = Name $ n0 <> ('@' :| n1)
     --dropSuffix (Name (n:|ns)) = Name $ n :| L.takeWhile ('@' /=) ns
     addPrime = primes %~ (+1)
-    generateNames n = n : [ n & base._Wrapped' %~ (<+ show i) | i <- [0..] ]
+    generateNames n = n : [ n & base %~ (<+ show i) | i <- [0..] ]
     language Proxy = latexName
     z3Name = fromJust' . isZ3Name'
     texName = fromString''
@@ -202,7 +203,7 @@ make' f = f . fromString''
 --numbers n = L.map (fromString''.show) [1..n]
 
 instance IsBaseName InternalName where
-    render (InternalName (NullTerm pre) x (NullTerm suf)) = prefix ++ z3Render x ++ suf
+    render (InternalName pre x suf) = prefix ++ z3Render x ++ suf
         where
             prefix | null pre  = ""
                    | otherwise = [printf|@@%s@@_|] pre
@@ -232,16 +233,16 @@ z3Render n = concat $ [slash,NE.toList xs] ++ replicate (fromIntegral ps) "@prim
     where
         slash | sl        = "sl@"
               | otherwise = ""
-        (Name sl (NullTerm xs) ps (NullTerm suf) _) 
+        (Name sl xs ps suf _) 
                 = toZ3Encoding n
         suf' | null suf  = ""
              | otherwise = "@" ++ suf
 
 setSuffix :: Assert -> String -> Name -> Name
-setSuffix _ suff = suffix .~ NullTerm suff
+setSuffix _ suff = suffix .~ suff
 
 fromString' :: Assert -> String -> InternalName
-fromString' arse nm = InternalName (NullTerm "") (fromJust'' arse $ isZ3Name' n) (NullTerm suf)
+fromString' arse nm = InternalName "" (fromJust'' arse $ isZ3Name' n) suf
     where
         (n,suf) = L.span ('@' /=) nm
 
@@ -270,16 +271,14 @@ addBackslash :: Name -> Name
 addBackslash = backslash .~ True
 
 addSuffix :: String -> InternalName -> InternalName
-addSuffix n1 (InternalName pre n0 suf) = InternalName pre n0 $ suf & _Wrapped' %~ (++ n1)
+addSuffix n1 (InternalName pre n0 suf) = InternalName pre n0 $ suf ++ n1
 
 dropSuffix :: InternalName -> InternalName
-dropSuffix (InternalName pre ns _) = InternalName pre ns (NullTerm "")
-
-
+dropSuffix (InternalName pre ns _) = InternalName pre ns ""
 
 
 reserved :: String -> Int -> InternalName
-reserved pre n = InternalName (NullTerm pre) (makeName assert $ show n) (NullTerm "")
+reserved pre n = InternalName pre (makeName assert $ show n) ""
 
 internal :: Lens' InternalName Name
 internal f (InternalName pre n suf) = (\n' -> InternalName pre n' suf) <$> f n
@@ -289,29 +288,29 @@ z3Name' = ($ Z3Encoding) <$> (symb <|> name)
     where
         name = 
             Name <$> option False (try (string "sl@" >> pure True)) 
-                 <*> (NullTerm <$> many1' (alphaNum <|> char '-'))
+                 <*> many1' (alphaNum <|> char '-')
                  <*> (fromIntegral.L.length 
                         <$> many (string "@prime"))
-                 <*> pure (NullTerm "")
-        symb = Name False . sconcat <$> many1' symbol <*> pure 0 <*> pure (NullTerm "")
+                 <*> pure ""
+        symb = Name False . sconcat <$> many1' symbol <*> pure 0 <*> pure ""
 
 latexName :: Language Name
 latexName = ($ LatexEncoding) <$> (symb <|> name)
     where
         name = 
             Name <$> option False (string "\\" >> pure True) 
-                 <*> (NullTerm <$> many1' (alphaNum <|> char '_'))
+                 <*> many1' (alphaNum <|> char '_')
                  <*> (fromIntegral.L.length 
                         <$> many (string "\'"))
-                 <*> pure (NullTerm "")
-        symb = Name False <$> symbol' <*> pure 0 <*> pure (NullTerm "")
+                 <*> pure ""
+        symb = Name False <$> symbol' <*> pure 0 <*> pure ""
         symbol' = symbol <|> texSymbol
 
-texSymbol :: Language NullTerminatedNEString
-texSymbol = (NullTerm.(:| [])) <$> oneOf [';','.']
+texSymbol :: Language NEString
+texSymbol = (:| []) <$> oneOf [';','.']
 
-symbol :: Language NullTerminatedNEString
-symbol = (NullTerm.(:| []) <$> (oneOf ['-','*','/'] <|> satisfy isSymbol)) <?> "symbol"
+symbol :: Language NEString
+symbol = ((:| []) <$> (oneOf ['-','*','/'] <|> satisfy isSymbol)) <?> "symbol"
 
 substToZ3 :: [(String,String)]
 substToZ3 = [("\\","sl@")

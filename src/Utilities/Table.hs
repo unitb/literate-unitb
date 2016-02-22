@@ -6,12 +6,14 @@ module Utilities.Table
     , tableToList
     , tableElems
     , tableType
+    , curryMap, uncurryMap
+    , curriedMap
     )
 where
 
 --import Control.Arrow
 --import Control.DeepSeq
---import Control.Lens
+import Control.Lens
 --import Control.Monad
 
 --import Data.Array
@@ -38,7 +40,7 @@ import Data.Typeable
 import Prelude hiding (lookup,null,map,filter)
 
 --import Utilities.Instances
---import Utilities.Map
+import Utilities.Map
 
 --import Test.QuickCheck hiding (shrinkList)
 --import Test.QuickCheck.Function
@@ -61,8 +63,8 @@ import Utilities.Table.HashMap as Table
 
 type Table = HashMap
 #else
-import Data.Map as M
-type Table = Map
+import qualified Data.Map as M
+type Table = M.Map
 
 tableToList :: Table k a -> [(k, a)]
 tableToList = M.toList
@@ -76,3 +78,18 @@ tableElems = M.elems
 
 tableType :: String
 tableType = tyConModule $ fst $ splitTyConApp $ typeRep (Proxy :: Proxy (Table Int Int))
+
+uncurryMap :: (IsKey Table a,IsKey Table b)
+           => Table a (Table b c)
+           -> Table (a,b) c
+uncurryMap m = fromList [ ((x,y),k) | (x,xs) <- toList m, (y,k) <- toList xs ]
+
+curryMap :: (IsKey Table a,IsKey Table b)
+         => Table (a,b) c
+         -> Table a (Table b c)
+curryMap m = fromList <$> fromListWith (++) [ (x,[(y,k)]) | ((x,y),k) <- toList m ]
+
+curriedMap :: (IsKey Table a,IsKey Table b,IsKey Table x,IsKey Table y)
+           => Iso (Table (a,b) c) (Table (x,y) z) 
+                  (Table a (Table b c)) (Table x (Table y z))
+curriedMap = iso curryMap uncurryMap

@@ -86,6 +86,7 @@ instance Tree GenericType where
     as_tree' (Gen s ts) = cons_to_tree $ USER_DEFINED s ts
     as_tree' (GENERIC x)   = return $ Str $ render x
     as_tree' (VARIABLE n)  = return $ Str $ "_" ++ render n
+    {-# INLINABLE rewriteM #-}
     rewriteM f (Gen s ts) = do
             Gen s <$> traverse f ts
     rewriteM _ x@(VARIABLE _) = pure x
@@ -93,6 +94,7 @@ instance Tree GenericType where
 
 instance Tree FOType where
     as_tree' (FOT s ts) = cons_to_tree $ USER_DEFINED s ts
+    {-# INLINABLE rewriteM #-}
     rewriteM f (FOT s ts) = FOT s <$> traverse f ts
 
 instance Lift GenericType where

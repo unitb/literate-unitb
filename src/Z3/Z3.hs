@@ -50,14 +50,11 @@ import Data.Char
 import           Data.Either.Combinators
 import           Data.List as L hiding (union)
 import qualified Data.Set as S
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
 import           Data.Typeable 
 
 import GHC.Generics (Generic)
 
 import System.Exit
-import System.IO
 import System.IO.Unsafe
 import System.Process
 
@@ -172,12 +169,15 @@ z3_pattern vs e = runReader (head e) False
             | vs `S.isSubsetOf` used_var e = return [e]
             | otherwise                    = return []
 
-
 feed_z3 :: String -> Int -> IO (ExitCode, String, String)
 feed_z3 = unsafePerformIO $ do
     b <- check_z3_bin
     unless b $ fail "bad z3 setup"
     return $ \xs n -> do
+        -- -- Mock
+        -- evaluate $ force xs
+        -- return (ExitSuccess,"unsat","")
+        -- -- END Mock
         (st,out,err) <- readProcessWithExitCode z3_path ["-smt2","-in","-T:" ++ show n] xs
         return (st, out, err)
         
@@ -202,7 +202,7 @@ z3_code :: Sequent -> [Command]
 z3_code po = 
     (      [] 
         ++ [SetOption "auto-config" "false"]
-        ++ [SetOption "smt.timeout" "3000"]
+        ++ [SetOption "smt.timeout" $ show tout]
         -- ++ [SetOption "smt.mbqi" "false"]
         ++ map Decl (concatMap decl [maybe_sort,null_sort] )
         ++ map Decl (decl d)
@@ -213,7 +213,7 @@ z3_code po =
         ++ [CheckSat]
         ++ [] )
     where
-        (Sequent d _ assume hyps assert) = firstOrderSequent po
+        (Sequent tout _ d _ assume hyps assert) = firstOrderSequent po
         f ((lbl,xp),n) = [ Comment $ show lbl
                          , Assert xp $ Just $ "h" ++ show n]
 
@@ -293,7 +293,7 @@ discharge' :: Maybe Int      -- Timeout in seconds
            -> IO Validity
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
-    | otherwise = withSem total_caps $ do
+    | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
         let code = z3_code po
         s <- verify lbl code (maybe default_timeout id n)
         case s of
@@ -310,7 +310,7 @@ log_count = unsafePerformIO $ newMVar 0
 verify :: Label -> [Command] -> Int -> IO (Either String Satisfiability)
 verify lbl xs n = do
         let ys = concat $ map reverse $ groupBy eq xs
-            code = (unlines $ map (show . as_tree) ys) -- $ [Push] ++ xs ++ [Pop])
+            code = unlines $ map (show . as_tree) ys
             eq x y = is_assert x && is_assert y
             is_assert (Assert _ _) = True
             is_assert _            = False

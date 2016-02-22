@@ -24,13 +24,15 @@ import Shelly (shelly,rm_f)
 
 compile_script :: Build ()
 compile_script = do
-        compile_file
+        -- compile_file
         compile_test 
-            >>= run_test
+            -- >>= run_test
+        -- cabal_build "bench-bucket-packaged"
+        --    >>= cabal_run
         compile_all
         compile_app
+        profile_app
         return ()
-
 
 _wait :: IO Bool -> IO ()
 _wait cond = do
@@ -66,7 +68,9 @@ compile_file = do
     liftIO $ do
         b <- doesFileExist $ inBin assert file
         when b $ removeFile $ inBin assert file
-    compile True (args CompileFile file)
+    compile True (args (CompileFlags CompileFile False) file)
+    liftIO $ rawSystem "touch" [file]
+    return ()
 
 run_test :: FilePath -> Build ()
 run_test fp = lift $ lift $ void $ rawSystem fp []

@@ -138,7 +138,7 @@ instance Controls (Compose Checked f a) (f a) where
 
 instance HasInvariant (f a) => IsChecked (Compose Checked f a) (f a) where
     check arse = Compose . check arse
-    check' arse  = Compose . check arse
+    check' arse  = Compose . check' arse
     content arse = iso getCompose Compose . content arse
 
 instance NFData (f (g x)) => NFData (Compose f g x) where

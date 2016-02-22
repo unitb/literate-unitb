@@ -20,8 +20,8 @@ withKey' = to (M.mapWithKey (,))
 firstL :: LensLike f s t a b -> LensLike f (s,k) t (a,k) b
 firstL ln f x = ln (\y -> f $ x & _1 .~ y) (fst x)
 
-isoSwap :: Iso' (a,b) (b,a)
-isoSwap = iso swap swap
+swapped :: Iso (a,b) (c,d) (b,a) (d,c)
+swapped = iso swap swap
 
 filterL :: (a -> Bool) -> Traversal' a a
 filterL p f x

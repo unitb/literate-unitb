@@ -23,7 +23,7 @@ import Control.Concurrent
 import Control.Exception
 import Control.Lens
 
-import Control.Monad.Trans
+import Control.Monad.State
 import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
@@ -69,11 +69,17 @@ list_file_obligations' path = do
     return (ms,ts)
 
 verify :: FilePath -> Int -> IO POResult
-verify path i = makeReport' empty $ do
+verify = verifyWith (return ())
+
+verifyWith :: State Sequent a
+           -> FilePath 
+           -> Int 
+           -> IO POResult
+verifyWith opt path i = makeReport' empty $ do
     ms <- EitherT $ fst <$> list_file_obligations' path
     if i < size ms then do
         let (m,pos) = snd $ i `elemAt` ms
-        r <- lift $ try (str_verify_machine m)
+        r <- lift $ try (str_verify_machine_with opt m)
         case r of
             Right (s,_,_) -> return (s, pos)
             Left e -> return (show (e :: SomeException),pos)

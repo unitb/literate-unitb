@@ -26,6 +26,7 @@ import Z3.Z3
 import Control.DeepSeq
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
+import Control.Monad.State
 
 import           Data.Default
 import           Data.Either.Validation
@@ -55,7 +56,7 @@ type System  = AST.System' Machine
 data MachinePO' expr = MachinePO
     { _syntax :: AST.Machine' expr 
     , _proofs     :: Table Label Proof    
-    , _raw_proof_obligation_field :: Box (Table Label Sequent)
+    , _raw_proof_obligation_field :: MemBox (Table Label Sequent)
     , _proof_obligation_field :: MemBox (Table Label Sequent) }
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 
@@ -181,8 +182,14 @@ verify_changes m old_pos = do
             | otherwise = Just p0
 
 str_verify_machine :: HasExpr expr => Machine' expr -> IO (String,Int,Int)
-str_verify_machine m = do
-        let pos = proof_obligation m
+str_verify_machine = str_verify_machine_with (return ())
+
+str_verify_machine_with :: HasExpr expr 
+                        => State Sequent a
+                        -> Machine' expr 
+                        -> IO (String,Int,Int)
+str_verify_machine_with opt m = do
+        let pos = execState opt <$> proof_obligation m
         xs <- verify_all pos
         format_result xs
 

@@ -3,17 +3,20 @@ module Logic.Expr.Classes where
 
 import Logic.Names
 
-import Control.Lens hiding (List,rewriteM)
+import Control.Lens hiding (List,rewriteM,rewrite,children)
 import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Data
 import Data.Data.Lens 
+import Data.DList as D
 import Data.Foldable as F
-import Data.List as L 
+import Data.List as L hiding (intercalate)
+import Data.Monoid
 import Data.Tuple
 import Data.Typeable.Lens
 
+import Utilities.DList as D
 import Utilities.Map  as M
 import Utilities.Table as M
 
@@ -86,6 +89,7 @@ class Tree a where
         where
             g x t () = f x t
 
+{-# INLINE rewriteM' #-}
 rewriteM' :: (Monad m, Tree a) => (b -> a -> m (b,a)) -> b -> a -> m (b,a)
 rewriteM' f x t = swap <$> runStateT (rewriteM (StateT . fmap (fmap swap) . flip f) t) x
 
@@ -95,9 +99,12 @@ instance Tree () where
 
 data StrList = List [StrList] | Str String
 
+show' :: StrList -> DList Char
+show' (List xs) = D.fromList "(" <> intercalate " " (L.map show' xs) <> D.fromList ")"
+show' (Str s)   = D.fromList s
+
 instance Show StrList where
-    show (List xs) = "(" ++ intercalate " " (L.map show xs) ++ ")"
-    show (Str s)   = s
+    show = D.toList . show'
 
 fold_mapM :: Monad m => (a -> b -> m (a,c)) -> a -> [b] -> m (a,[c])
 fold_mapM _ s [] = return (s,[])
@@ -152,14 +159,14 @@ insert_symbol x = M.insert (x^.name) x
 
 symbol_table' :: (HasName b n, Foldable f,IsKey Table n) 
               => (a -> b) -> f a -> Table n a
-symbol_table' f xs = fromList $ L.map (as_pair' f) $ F.toList xs
+symbol_table' f xs = M.fromList $ L.map (as_pair' f) $ F.toList xs
 
 symbol_table :: (HasName a n, Foldable f,M.IsKey Table n) 
              => f a -> Table n a
 symbol_table = symbol_table' id
 
 decorated_table :: Named a => [a] -> Table InternalName a
-decorated_table xs = fromList $ L.map (\x -> (decorated_name x, x)) xs
+decorated_table xs = M.fromList $ L.map (\x -> (decorated_name x, x)) xs
 
 renameAll' :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
            => (a -> SetNameT n1 a)

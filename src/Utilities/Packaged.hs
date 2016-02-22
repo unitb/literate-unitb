@@ -92,11 +92,13 @@ instance Wrapped (NullTerminated f) where
 
 instance Serialize (NullTerminated []) where
     put (NullTerm xs) = mapM_ put xs >> put (chr 0)
+    {-# INLINE get #-}
     get = NullTerm <$> 
             whileJust (do x <- get ; return (if x == chr 0 then Nothing else Just x)) return
 
 instance Serialize (NullTerminated NonEmpty) where
     put (NullTerm xs) = mapM_ put xs >> put (chr 0)
+    {-# INLINE get #-}
     get = maybe mzero (return . NullTerm) . nonEmpty =<<
              whileJust (do x <- get ; return (if x == chr 0 then Nothing else Just x)) return
 

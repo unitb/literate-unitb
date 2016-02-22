@@ -18,6 +18,7 @@ import Data.List as L
 import Data.Maybe  as MM hiding (fromJust)
 import qualified Data.Set  as S
 import Data.Typeable
+import Data.Word
 
 import Utilities.Instances
 import Utilities.Lines
@@ -29,11 +30,11 @@ import Utilities.TH
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
-type Sequent' = GenSequent InternalName GenericType FOQuantifier
+type Sequent' = GenSequent InternalName GenericType FOQuantifier Expr'
 
-type FOSequent = GenSequent InternalName FOType FOQuantifier
+type FOSequent = GenSequent InternalName FOType FOQuantifier FOExpr
 
-type AbsSequent = GenSequent Name
+type AbsSequent t q = GenSequent Name t q (AbsExpr Name t q)
 
 data SyntacticProp = SyntacticProp  
         { _associative  :: Table Name ExprP
@@ -60,13 +61,15 @@ data ArgDep a = Side (Maybe a) (Maybe a) | Independent a
 data ArgumentPos = RightArg | LeftArg | MiddleArg
     deriving (Show)
 
-data GenSequent name t q = Sequent 
-        { _genSequentContext  :: GenContext name t q
+data GenSequent name t q expr = Sequent 
+        { _genSequentTimeout  :: Word32
+        , _genSequentResource :: Word32
+        , _genSequentContext  :: GenContext name t q
         , _genSequentSyntacticThm :: SyntacticProp
-        , _genSequentNameless :: [AbsExpr name t q] 
-        , _genSequentNamed :: Table Label (AbsExpr name t q)
-        , _genSequentGoal  :: AbsExpr name t q }
-    deriving (Eq, Generic, Show)
+        , _genSequentNameless :: [expr] 
+        , _genSequentNamed :: Table Label (expr)
+        , _genSequentGoal  :: expr }
+    deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 
 -- class HasGoal a b | a -> b where
 --     goal :: Getter a b
@@ -79,14 +82,14 @@ mkCons ''SyntacticProp
 instance Default SyntacticProp where
     def = empty_monotonicity
 
-instance HasExprs (GenSequent n t q) (AbsExpr n t q) where
-    traverseExprs f (Sequent ctx prop hyp0 hyp1 g) = 
-        Sequent ctx prop 
+instance HasExprs (GenSequent n t q e) e where
+    traverseExprs f (Sequent tout res ctx prop hyp0 hyp1 g) = 
+        Sequent tout res ctx prop 
                 <$> traverse f hyp0 
                 <*> traverse f hyp1 
                 <*> f g
 
-instance HasConstants (GenSequent n t q) (Table n (AbsVar n t)) where
+instance HasConstants (GenSequent n t q e) (Table n (AbsVar n t)) where
     constants = context.constants
 
 predefined :: [InternalName]
@@ -119,6 +122,16 @@ checkScopesAux (Cast e _) = do
 checkScopesAux (Lift e _) = do
     checkScopesAux e
 
+makeSequent :: Assert
+            -> Context
+            -> SyntacticProp
+            -> [Expr]
+            -> Table Label Expr
+            -> Expr
+            -> Sequent
+makeSequent arse ctx props asms0 asms1 g = checkSequent arse $ 
+    Sequent 3000 1 ctx props asms0 asms1 g
+
 checkSequent :: Assert -> Sequent -> Sequent
 checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
          --assertMessage "invalid scopes" (unlines $ map show xs) id s
@@ -141,7 +154,7 @@ checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
         xs :: [Expr]
         xs  = snd $ execRWS (travAsserts >> travDefs) ctx ()
 
-expressions :: Getter (GenSequent n t q) [AbsExpr n t q]
+expressions :: Getter (GenSequent n t q expr) [expr]
 expressions = to $ \s -> (s^.goal) : (s^.nameless) ++ (M.ascElems $ s^.named)
 
 leftMono :: ArgDep a -> Maybe a
@@ -174,7 +187,7 @@ isMonotonic m rel fun pos = do
         Flipped ->
             return $ flip $ typ_fun2 rel
 
-instance HasGenContext (GenSequent n a b) n a b where
+instance HasGenContext (GenSequent n a b e) n a b where
     genContext = context
 
 empty_monotonicity :: SyntacticProp
@@ -186,7 +199,7 @@ instance Monoid SyntacticProp where
     mappend = genericMAppend
 
 empty_sequent :: (TypeSystem2 t,IsQuantifier q) => AbsSequent t q
-empty_sequent = (Sequent empty_ctx empty_monotonicity [] M.empty ztrue)
+empty_sequent = (Sequent 3000 1 empty_ctx empty_monotonicity [] M.empty ztrue)
 
 instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) where
     pretty s = L.unlines $ asms ++ ["|----",goal'] 
@@ -216,7 +229,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
             f (_, Sort _ z n) = Just $ [printf|%s [%s]|] (render z) (intersperse ',' $ map chr $ take n [ord 'a' ..]) 
 
 remove_type_vars :: Sequent' -> FOSequent
-remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
+remove_type_vars (Sequent tout res ctx m asm hyp goal) = Sequent tout res ctx' m asm' hyp' goal'
     where
         (Context sorts _ _ dd _) = ctx
         _ = dd :: Table InternalName Def'
@@ -240,7 +253,8 @@ remove_type_vars (Sequent ctx m asm hyp goal) = Sequent ctx' m asm' hyp' goal'
         goal' = vars_to_sorts sorts goal
 
 one_point :: (IsQuantifier q, TypeSystem2 t,IsName n) 
-          => GenSequent n t q -> GenSequent n t q
+          => GenSequent n t q (AbsExpr n t q) 
+          -> GenSequent n t q (AbsExpr n t q)
 one_point s = s & goal .~ g'
                 & nameless %~ asm
     where
