@@ -87,7 +87,8 @@ args opt file = do
         ] ++ if profile opt 
             then [ "-osufp_o", "-hisufp_hi"
                  , "-prof", "-O2"
-                 -- , "-caf-all"
+                 , "-fhpc"
+                 , "-caf-all"
                  -- , "-fforce-recomp"
                  , "-auto-all"
                  , "-rtsopts" ]

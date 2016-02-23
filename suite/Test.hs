@@ -1,13 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Exception
 import Control.Monad
-import Control.Monad.State
 
 import Data.List
-import Data.Time
-import Data.Tuple
 
 import Document.Document
 import qualified UnitB.Test as UB
@@ -26,30 +22,7 @@ import System.Directory
 
 import Tests.UnitTest
 
-import Text.Printf
-
-formatDiff :: NominalDiffTime -> String 
-formatDiff = evalState formatDiffState . fst . properFraction
-
-formatDiffState :: State Int String
-formatDiffState = do
-    s <- state $ swap . (`divMod` 60)
-    m <- state $ swap . (`divMod` 60)
-    h <- get
-    return $ printf "%d:%02d:%02d" h m s 
-
-timeIt :: IO a -> IO a
-timeIt cmd = do
-        (t,x) <- time cmd
-        putStrLn $ formatDiff t
-        return x
-
-time :: IO t -> IO (NominalDiffTime, t)
-time cmd = do 
-        t0 <- getCurrentTime
-        x <- evaluate =<< cmd
-        t <- getCurrentTime
-        return (diffUTCTime t t0, x)
+import Utilities.TimeIt
 
 test_case :: TestCase
 test_case = test_cases 

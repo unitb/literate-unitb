@@ -35,7 +35,6 @@ import PseudoMacros
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
-import System.TimeIt
 import System.Timeout
 
 import Utilities.FileFormat
@@ -43,6 +42,7 @@ import qualified Utilities.Map as M hiding ((!))
 import qualified Utilities.Table as M
 import Utilities.Partial
 import Utilities.Syntactic
+import Utilities.TimeIt
 
 import Text.Printf
 
@@ -87,18 +87,15 @@ dump_pos = do
 check_one :: (MonadIO m, MonadState Params m) 
           => Machine -> m (Int,String)
 check_one m = do
-        liftIO $ putStrLn $ render $ m!.name
         param <- get
         let po = M.findWithDefault M.empty (as_label $ _name m) $ _pos param
         (po,s,n)    <- liftIO $ verify_changes m po
         put (param { _pos = M.insert (as_label $ _name m) po $ _pos param })
-        liftIO $ putStrLn "done"
         return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
 
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
 check_theory (name,th) = do
-        liftIO $ putStrLn name
         param <- get
         let old_po = M.findWithDefault M.empty (label name) $ _pos param
             po = either (assertFalse' "check_theory") id $ theory_po th
@@ -120,7 +117,6 @@ check_theory (name,th) = do
             f k x = maybe (old_po ! k) (\b -> (b,x)) $ M.lookup k res
         put param { _pos = M.insert (label name) p_r $ _pos param }
         let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toAscList res
-        liftIO $ putStrLn $ "done " ++ name
         return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
     where
         success True  = "  o  "

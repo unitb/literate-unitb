@@ -185,6 +185,7 @@ library
         Utilities.Table.HashMap
         Utilities.TableConstr
         Utilities.TH
+        Utilities.TimeIt
         Utilities.Trace
         Utilities.Tuple
         Utilities.Tuple.Generics

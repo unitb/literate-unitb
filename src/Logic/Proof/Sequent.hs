@@ -422,7 +422,8 @@ entailment s0 s1 = (po0,po1)
         po1 = s1 & context .~ ctx
                  & goal    .~ zall (s0^.nameless ++ ascElems (s0^.named))
 
-instance (NFData t,NFData q) => NFData (AbsSequent t q)
+instance (NFData n,NFData t,NFData q,NFData expr) 
+    => NFData (GenSequent n t q expr)
 instance NFData SyntacticProp
 instance NFData Rel
 instance NFData Flipping

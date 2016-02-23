@@ -8,14 +8,19 @@ import UnitB.PO
 import UnitB.Syntax
 
     -- Libraries
+import Control.Applicative hiding (empty)
+import Control.DeepSeq
 import Control.Lens hiding (Context)
 import Control.Monad
 import Control.Parallel.Strategies
 import Control.Monad.State
 
 import Data.ByteString.Builder
+import qualified Data.ByteString.Lazy as Lazy
+import           Data.Either.Combinators
+import           Data.Either.Validation
 import           Data.Maybe
-import           Data.Serialize as Ser ( Serialize(..) ) 
+import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
 import           Data.Serialize.Put 
 import           Data.Tuple
 import qualified Data.HashMap.Strict as H
@@ -55,21 +60,93 @@ instance Serialize Rel where
 instance Serialize Flipping where
 instance Serialize Value where
 instance Serialize MachineId where
+instance (NFData a,NFData b) => NFData (Validation a b) where
+    rnf (Failure x) = rnf x
+    rnf (Success x) = rnf x
+
+type AbsIntMap a b = (a,[(b,Maybe Bool)])
+
+data AbsFileStruct a b c = FileStruct { _seqs :: AbsIntMap a b, _exprs :: c }
+    deriving (Generic)
+
+makeLenses ''AbsFileStruct
+
+{-# INLINABLE traverseKeys #-}
+traverseKeys :: Traversal (AbsFileStruct a b c) (AbsFileStruct a' b c) a a'
+traverseKeys = seqs._1
+
+{-# INLINABLE traverseSeqIs #-}
+traverseSeqIs :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b' c) b b'
+traverseSeqIs = seqs._2.traverse._1
+
+{-# INLINABLE traverseExprTable #-}
+traverseExprTable :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b c') c c'
+traverseExprTable = exprs
+
+traverseFileStruct :: Applicative f
+                   => (a -> f a')
+                   -> (b -> f b')
+                   -> (c -> f c')
+                   -> (AbsFileStruct a b c -> f (AbsFileStruct a' b' c'))
+traverseFileStruct fA fB fC (FileStruct (a,b) c) = 
+        FileStruct <$> liftA2 (,) 
+                        (par $ fA a) 
+                        (withStrategy (parList $ _1 rseq) <$> (traverse._1) fB b)
+                   <*> par (fC c)
+    where
+        par = withStrategy rpar
+
+{-# INLINE encodedFileStructPrism #-}
+encodedFileStructPrism :: Prism' FileStructBin FileStruct
+encodedFileStructPrism = prism 
+        ( (traverseExprTable %~ par' . encodeLazy) 
+        . (traverseKeys %~ par' . encodeLazy) 
+        . (traverseSeqIs %~ par' . encodeLazy)) 
+        (\x -> mapLeft (const x) . validationToEither $
+            -- mapLeft (const x) . validationToEither $ 
+             traverseFileStruct 
+                (par' . decodeLazy') 
+                (par' . decodeLazy') 
+                (par' . decodeLazy') x )
+    where
+        par' :: NFData a => a -> a
+        par' = withStrategy (rparWith rdeepseq)
+
+decodeLazy' :: Serialize a 
+            => Lazy.ByteString -> Validation () a
+decodeLazy' = eitherToValidation . mapLeft (const ()) . decodeLazy
 
 {-# INLINABLE seqFileFormat #-}
 seqFileFormat :: FileFormat (Table Key (Seq,Maybe Bool))
 seqFileFormat = 
           failOnException 
-        . compressedSequents ()
+        . compressedSequents
+        . compressedFileFormat
         . serializedLazy
         . compressed
         $ lazyByteStringFile
 
+{-# INLINABLE compressedSequents' #-}
+compressedSequents' :: err
+                    -> FileFormat' err FileStruct
+                    -> FileFormat' err (Table Key (Seq,Maybe Bool))
+compressedSequents' err = prismFormat' (const err) intSequentIso
+
 {-# INLINABLE compressedSequents #-}
-compressedSequents :: err
-                   -> FileFormat' err FileStruct
-                   -> FileFormat' err (Table Key (Seq,Maybe Bool))
-compressedSequents err = prismFormat' (const err) intSequentIso
+compressedSequents :: FileFormat FileStruct
+                   -> FileFormat (Table Key (Seq,Maybe Bool))
+compressedSequents = prismFormat intSequentIso
+
+{-# INLINABLE compressedFileFormat #-}
+compressedFileFormat :: FileFormat FileStructBin
+                     -> FileFormat FileStruct
+compressedFileFormat = prismFormat encodedFileStructPrism
+
+{-# INLINABLE compressedFileFormat' #-}
+compressedFileFormat' :: err
+                      -> FileFormat' err FileStructBin
+                      -> FileFormat' err FileStruct
+compressedFileFormat' err = prismFormat' (const err) encodedFileStructPrism
 
 {-# INLINABLE intSequentIso #-}
 intSequentIso :: Iso' FileStruct (Table Key (Seq,Maybe Bool))
@@ -109,9 +186,12 @@ type Seq    = Sequent
 type SeqI   = GenSequent Name Type HOQuantifier Int
 type Key    = (Label,Label)
 -- type IntMap = [(Key,(SeqI,Bool))]
-type IntMap = ([Key],[(SeqI,Maybe Bool)])
+type IntMap = AbsIntMap [Key] SeqI
+type IntMapBin = AbsIntMap Lazy.ByteString Lazy.ByteString
 type ExprStore = State (H.HashMap Expr Int)
 type ExprIndex = State (Table Int Expr)
+type FileStruct = AbsFileStruct [Key] SeqI (H.HashMap Expr Int) 
+type FileStructBin = AbsFileStruct Lazy.ByteString Lazy.ByteString Lazy.ByteString
 
 load_pos :: FilePath 
          -> Table Key (Seq,Maybe Bool)
@@ -123,15 +203,54 @@ load_pos file pos = do
             fromMaybe pos <$> readFormat seqFileFormat fname
         else return pos
 
-data FileStruct = FileStruct IntMap (H.HashMap Expr Int) 
-    deriving (Generic)
+instance (Serialize a,Serialize b,Serialize c) 
+        => Serialize (AbsFileStruct a b c) where
+    -- put (FileStruct (ks,seqs) ixs) = putBuilder $ 
+    --         -- (parMconcatExponentialTree 5 xs)
+    --             -- 22.9s
+    --         -- (parMconcatExponentialTree 10 xs)
+    --             -- 23.6s
+    --         -- (parMconcatExponentialTree 20 xs)
+    --             -- 23.4s
+    --         -- (parMconcatExponentialTree 40 xs)
+    --             -- 22.9s
+    --         -- (parMconcat 5 xs)
+    --             -- 24.97s
+    --         -- (parMconcat 10 xs)
+    --             -- 22.0s
+    --         (parMconcat 20 xs)
+    --             -- 21.9s
+    --         -- (parMconcat 40 xs)
+    --             -- 23.6s
+    --         -- mconcat (xs  `using` parListChunk 5 rseq)
+    --             -- 22.0s
+    --         -- mconcat (xs  `using` parListChunk 10 rseq)
+    --             -- 22.2s
+    --         -- mconcat (xs  `using` parListChunk 20 rseq)
+    --             -- 24.8s
+    --         -- mconcat (xs  `using` parListChunk 40 rseq)
+    --             -- 26.2s
+    --     where
+    --         xs = builderOfList ks ++ builderOfList seqs ++ builderOfList (toList ixs)
 
-instance Serialize FileStruct where
-    put (FileStruct (ks,seqs) ixs) = putBuilder $ 
-            -- (parMconcat 10 xs)
-            mconcat (xs  `using` parListChunk 10 rseq)
-        where
-            xs = builderOfList ks ++ builderOfList seqs ++ builderOfList (toList ixs)
+parMconcatExponentialTree :: Monoid a => Int -> [a] -> a
+parMconcatExponentialTree ch xs = mconcat $ trees (length xs) ch xs
+    where
+        trees sz n xs 
+                | sz <= n   = [runEval $ recurse sz xs]
+                | otherwise = runEval (recurse n ys) : trees (sz - n) (ch * n) zs
+            where
+                (ys,zs) = splitAt n xs
+        recurse n xs 
+                | n <= ch   = rpar $ mconcat xs
+                | otherwise = rpar =<< do
+                        let k = n `div` ch
+                            breakDown [] = []
+                            breakDown xs = (length ys,ys) : breakDown zs
+                                where
+                                    (ys,zs) = splitAt k xs
+                        rs <- mapM (uncurry recurse) (breakDown xs)
+                        rseq $ mconcat rs
 
 parMconcat :: Monoid a => Int -> [a] -> a
 parMconcat chunk xs = mconcat (xs `using` aux n)
@@ -170,4 +289,3 @@ dump_z3 pat file pos = dump file (M.map fst
         $ mapKeys snd pos)
     where
         matches = maybe (const True) (==) pat
-
