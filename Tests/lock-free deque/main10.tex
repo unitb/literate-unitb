@@ -1,0 +1,53 @@
+\documentclass[12pt]{amsart}
+\usepackage[margin=0.5in]{geometry} 
+  % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{bsymb}
+\usepackage{calculation}
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{../unitb}
+
+\newcommand{\REQ}{\text{REQ}}
+
+\begin{document}
+  \input{main10/machine_m0.tex}
+\begin{machine}{m0}
+  \with{sets}
+  \newset{\REQ}
+  \newevent{add}{add}
+  \newevent{handle}{handle}
+  \[ \variable{ req : \set [\REQ] } \]
+  \[ \param{add}{ r : \REQ } \]
+  \[ \param{handle}{ r : \REQ } \]
+  \begin{align*}
+      \evguard{add}{m0:guard}{ \neg r \in req } \\
+      \evbcmeq{add}{m0:act0}{req}{ req \bunion \{ r \} } \\
+      \cschedule{handle}{m0:sch0}{ \neg req = \emptyset } \\
+      \evguard{handle}{m0:grd0}{ r \in req } \\
+      \evbcmeq{handle}{m0:act0}{req}{ req \setminus \{ r \} } 
+  \end{align*}
+
+\noindent
+\end{machine}
+
+  \input{main10/machine_m1.tex}
+\begin{machine}{m1}
+    \refines{m0}
+    \with{functions}
+  \[ \variable{ ver : \Int } \]
+  \[ \promote{handle}{r} \]
+  \[ \indices{handle}{ v : \Int } \]
+  \[ \constant{ f : \Int \pfun \Int } \]
+  \removecoarse{handle}{m0:sch0}
+  % \removeact{handle}{m0:act0}
+  \removeguard{handle}{m0:grd0}
+  \[ \witness{handle}{r}{r \in req} \]
+  \witness{handle}{v}{f.v = ver}
+  \begin{align}
+      \cschedule{handle}{m1:sch0}{ r \in req } \\
+      \cschedule{handle}{m1:sch1}{ v = ver } 
+      % \evguard{handle}{m1:grd0}{ r = r0 } 
+      % \evbcmeq{handle}{m1:act0}{req}{ req \setminus \{ r \} } 
+  \end{align}
+\end{machine}
+\end{document}
