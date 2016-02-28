@@ -55,20 +55,18 @@ data DocSpec = DocSpec
 
 data ArgumentSpec = forall a. IsTuple LatexArg a => ArgumentSpec Int (Proxy a)
 
-type Input = InputRaw []
-type InputBuilder = InputRaw DList
+type Input = InputRaw InputTable
+type InputBuilder = InputRaw InputTableBuilder
 
 data InputRaw f = Input 
     { getMachineInput :: Table MachineId (DocBlocksRaw f)
     , getContextInput :: Table ContextId (DocBlocksRaw f)
     } deriving Show
 
-convertInput :: (forall a. f a -> g a)
-             -> InputRaw f
-             -> InputRaw g
-convertInput f (Input mch ctx) = Input 
-        (M.map (convertBlocks f) mch) 
-        (M.map (convertBlocks f) ctx)
+convertInput :: InputBuilder -> Input
+convertInput (Input mch ctx) = Input 
+        (M.map convertBlocks mch) 
+        (M.map convertBlocks ctx)
 
 newtype ContextId = CId { getCId :: String }
     deriving (Eq,Ord,Hashable)
@@ -131,32 +129,48 @@ data Cmd = BlockCmd
     , cmdLI :: LineInfo }
     deriving (Show)
 
-type DocBlocks = DocBlocksRaw []
-type DocBlocksBuilder = DocBlocksRaw DList
+type DocBlocks = DocBlocksRaw InputTable
+type DocBlocksBuilder = DocBlocksRaw InputTableBuilder
+
+newtype InputTable a = InputTable { getInputTable :: Table String [a] }
+newtype InputTableBuilder a = InputTableBuilder { getInputTableBuilder :: DList (String,DList a) }
 
 data DocBlocksRaw f = DocBlocks 
-    { getEnv :: Table String (OnFunctor f Env)
-    , getCmd :: Table String (OnFunctor f Cmd)
+    { getEnv :: OnFunctor f Env
+    , getCmd :: OnFunctor f Cmd
     } deriving (Show)
 
-convertBlocks :: (forall a. f a -> g a)
-              -> DocBlocksRaw f -> DocBlocksRaw g
-convertBlocks f (DocBlocks env cmd) = DocBlocks
-    (env & traverse._Wrapped %~ f)
-    (cmd & traverse._Wrapped %~ f)
+instance Monoid1 InputTableBuilder where
+    mempty1  = InputTableBuilder mempty
+    mconcat1 = InputTableBuilder . mconcat1 . L.map getInputTableBuilder
+    mappend1 (InputTableBuilder x) (InputTableBuilder y) = 
+        InputTableBuilder $ x `mappend` y
+
+buildInputTable :: InputTableBuilder a -> InputTable a
+buildInputTable (InputTableBuilder xs) = InputTable
+        $ M.map D.toList $ M.fromListWith (<>) $ D.toList xs
+
+convertBlocks :: DocBlocksBuilder -> DocBlocks
+convertBlocks (DocBlocks env cmd) = DocBlocks
+    (env & _Wrapped %~ buildInputTable)
+    (cmd & _Wrapped %~ buildInputTable)
 
 instance Monoid1 f => Monoid (DocBlocksRaw f) where
-    mempty = DocBlocks M.empty M.empty
+    mempty = DocBlocks mempty mempty
     mappend (DocBlocks xs0 xs1) (DocBlocks ys0 ys1) = 
             DocBlocks 
-                (M.unionWith (<>) xs0 ys0)
-                (M.unionWith (<>) xs1 ys1)
+                (xs0 <> ys0)
+                (xs1 <> ys1)
 
 machine_spec :: Pipeline m a b -> DocSpec
 machine_spec (Pipeline m _ _) = m
 
 context_spec :: Pipeline m a b -> DocSpec
 context_spec (Pipeline _ c _) = c
+
+item :: String -> a
+     -> OnFunctor InputTableBuilder a
+item n x = OnFunctor $ InputTableBuilder $ pure (n,pure x)
 
 getLatexBlocks :: DocSpec
                -> LatexDoc
@@ -169,8 +183,8 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
                     Just nargs -> do
                         let (args,rest) = brackets (argCount nargs) ys
                             li' = line_info rest 
-                        tell (DocBlocks (M.singleton name 
-                            $ pure $ BlockEnv (args,li') rest li) M.empty) 
+                        tell (DocBlocks (item name 
+                            $ BlockEnv (args,li') rest li) mempty) 
                     Nothing -> f $ unconsTex ys
                 f $ unconsTex xs
         f (Just ((BracketNode (Bracket _ _ ys _),xs))) = do
@@ -180,15 +194,15 @@ getLatexBlocks (DocSpec envs cmds) xs = execWriter (f $ unconsTex xs)
                 case argCount <$> name `M.lookup` cmds of
                     Just nargs
                         | nargs == 0 -> do
-                            tell (DocBlocks M.empty (M.singleton name
-                                $ pure $ BlockCmd ([],li) li))
+                            tell (DocBlocks mempty (item name
+                                $ BlockCmd ([],li) li))
                             f $ unconsTex xs
                         | otherwise -> do
                             let (args,rest) = brackets nargs xs
                                 li' = line_info rest
-                            tell (DocBlocks M.empty
-                                (M.singleton name
-                                    $ pure $ BlockCmd (args,li') li))
+                            tell (DocBlocks mempty
+                                (item name
+                                    $ BlockCmd (args,li') li))
                             f $ unconsTex rest
                     Nothing    -> f $ unconsTex xs
         f (Just (Text _,xs)) = f $ unconsTex xs
@@ -221,8 +235,8 @@ runPipeline' :: Table Name [LatexDoc]
 runPipeline' ms cs arg p = runMM (f arg) input
     where
         input = Input 
-                (M.map (convertBlocks D.toList) mch) 
-                (M.map (convertBlocks D.toList) ctx)
+                (M.map convertBlocks mch) 
+                (M.map convertBlocks ctx)
         mch   = M.mapKeys MId $ M.map (mconcat . map (getLatexBlocks m_spec)) ms
         ctx   = M.mapKeys CId $ M.map (mconcat . map (getLatexBlocks c_spec)) cs
         Pipeline m_spec c_spec f = p
