@@ -37,9 +37,12 @@ import qualified Control.Monad.Writer as W
 
 import           Data.Either.Combinators
 import           Data.List.Ordered (sortOn)
+import qualified Data.List.NonEmpty as NE
+import           Data.Semigroup
 
 import Prelude hiding ((.),id)
 
+import Utilities.Lens
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
 import Utilities.Syntactic as Syn
@@ -48,12 +51,14 @@ import Utilities.Table
 read_document :: LatexDoc -> Either [Error] System
 read_document = parseWith system
 
+{-# INLINABLE parseWith #-}
 parseWith :: Pipeline MM () a -> LatexDoc -> Either [Error] a
 parseWith parser xs = mapBoth (sortOn line_info . shrink_error_list) id $ do
             let li = line_info xs
             (ms,cs) <- get_components xs li
             runPipeline' ms cs () parser
 
+{-# INLINABLE system #-}
 system :: Pipeline MM () System
 system =     run_phase0_blocks 
          >>> run_phase1_types 
@@ -76,7 +81,8 @@ all_machines xs = read_document xs
 list_machines :: FilePath
               -> EitherT [Error] IO [Machine]
 list_machines fn = do
-        xs <- EitherT $ parse_latex_document fn
+        doc <- liftIO $ readFile fn
+        xs  <- hoistEither $ latex_structure fn doc
         ms <- hoistEither $ all_machines xs
         return $ map snd $ toAscList $ ms!.machines
 
@@ -92,14 +98,21 @@ list_file_obligations fn = do
         runEitherT $ list_proof_obligations fn
 
 parse_system :: FilePath -> IO (Either [Error] System)
-parse_system fn = runEitherT $ do
-        xs <- EitherT $ parse_latex_document fn
-        hoistEither $ all_machines xs
+parse_system fn = parse_system' $ pure fn
+
+parse_system' :: NonEmpty FilePath -> IO (Either [Error] System)
+parse_system' fs = runEitherT $ do
+        docs <- liftIO $ mapM readFile fs
+        xs <- hoistEither $ flip traverseValidation (NE.zip fs docs) $ 
+            \(fn,doc) -> do
+                latex_structure fn doc
+        hoistEither $ all_machines $ sconcat xs
         
 parse_machine :: FilePath -> IO (Either [Error] [Machine])
 parse_machine fn = runEitherT $ do
-        xs <- EitherT $ parse_latex_document fn
-        ms <- hoistEither $ all_machines xs
+        doc <- liftIO $ readFile fn
+        xs  <- hoistEither $ latex_structure fn doc
+        ms  <- hoistEither $ all_machines xs
         return $ map snd $ toAscList $ ms!.machines
 
 get_components :: LatexDoc -> LineInfo 

@@ -17,7 +17,8 @@ module Utilities.Instances
     , genericSemigroupMConcat, genericSemigroupMConcatWith
     , show1, NFData1(..), deepseq1
     , genericArbitrary, inductive, listOf', arbitrary' 
-    , Lift1(..) )
+    , Lift1(..), Monoid1(..)
+    , OnFunctor(..) )
 where
 
 import Control.DeepSeq
@@ -27,6 +28,7 @@ import Control.Lens hiding (to,from)
 import Data.Default
 import Data.Functor.Classes
 import Data.Functor.Compose
+import Data.DList (DList)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -118,6 +120,25 @@ genericMAppend :: (Generic a, GMonoid (Rep a)) => a -> a -> a
 genericMAppend x y = to $ gmappend (from x) (from y)
 genericMConcat :: (Generic a, GMonoid (Rep a)) => [a] -> a
 genericMConcat xs = to $ gmconcat $ map from xs
+
+class Monoid1 (f :: * -> *) where
+    mempty1 :: f a
+    default mempty1 :: Monoid (f a) => f a
+    mempty1 = mempty
+    mappend1 :: f a -> f a -> f a
+    default mappend1 :: Monoid (f a) => f a -> f a -> f a
+    mappend1 = mappend
+    mconcat1 :: [f a] -> f a
+    default mconcat1 :: Monoid (f a) => [f a] -> f a
+    mconcat1 = mconcat
+
+instance Monoid1 f => Monoid (OnFunctor f a) where
+    mempty  = OnFunctor mempty1
+    mappend (OnFunctor x) (OnFunctor y) = OnFunctor $ x `mappend1` y
+    mconcat xs = OnFunctor $ mconcat1 $ map getFunctor xs
+
+instance Monoid1 [] where
+instance Monoid1 DList where
 
 genericSemigroupMAppend :: (Generic a, GSemigroupWith (Rep a)) => a -> a -> a
 genericSemigroupMAppend x y = to $ gSemiMAppend (from x) (from y)
@@ -267,6 +288,9 @@ instance Show1 Proxy where
 instance Show1 NonEmpty where
     showsPrec1 = showsPrec
 
+instance (Show1 f,Show a) => Show (OnFunctor f a) where
+    show = show1 . getFunctor
+
 show1 :: (Show a, Show1 f) => f a -> String
 show1 x = showsPrec1 0 x ""
 
@@ -294,6 +318,13 @@ instance NFData1 Maybe where
     rnf1 = rnf
 
 newtype OnFunctor f a = OnFunctor { getFunctor :: (f a) }
+    deriving (Functor,Applicative,Monad,Traversable,Foldable)
+
+instance Rewrapped (OnFunctor f a) (OnFunctor g b) where
+
+instance Wrapped (OnFunctor f a) where
+    type Unwrapped (OnFunctor f a) = f a
+    _Wrapped' = iso getFunctor OnFunctor
 
 instance (NFData a,NFData1 f) => NFData (OnFunctor f a) where
     rnf = rnf1 . getFunctor
@@ -321,3 +352,5 @@ instance Lift a => Lift1 ((,) a) where
     lift1 = lift
 instance Lift1 Maybe where
     lift1 = lift
+
+instance Semigroup (DList a) where

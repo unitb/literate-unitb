@@ -41,7 +41,9 @@ args opt file = do
         path </> "bin" </> takeDirectory file
     let flag = case mode opt of 
                     CompileFile -> ["-c",file]
-                    Make        -> ["--make",file,"-o",path </> "bin" </> dropExtension file]
+                    Make        
+                        | profile opt -> ["--make",file,"-o",path </> "bin" </> dropExtension file ++ "_p"]
+                        | otherwise   -> ["--make",file,"-o",path </> "bin" </> dropExtension file]
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
@@ -154,7 +156,7 @@ cabal_build target = do
 enableProfiling :: FilePath -> Build FilePath
 enableProfiling target = do
     compile False (args (CompileFlags Make True) target)
-    return $ "bin" </> dropExtension target
+    return $ "bin" </> dropExtension target ++ "_p"
 
 make :: FilePath -> Build FilePath
 make target = do
@@ -163,6 +165,11 @@ make target = do
 
 compile_test :: Build FilePath
 compile_test = make "suite/test_tmp.hs"
+
+profile_test :: Build FilePath
+profile_test = do
+    -- make "suite/test_tmp.hs"
+    enableProfiling "suite/test_tmp.hs"
 
 compile_all :: Build FilePath
 compile_all = make "suite/test.hs"

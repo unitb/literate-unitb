@@ -43,7 +43,6 @@ import GHC.Generics (Generic)
 
 import System.Console.ANSI
 import System.Directory
-import System.TimeIt
 
 import           Utilities.Map as M 
                     ( insert, keys
@@ -53,6 +52,7 @@ import Utilities.Partial
 import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
+import Utilities.TimeIt
 
     -- The pipeline is made of three processes:
     --  o the parser
@@ -65,7 +65,6 @@ import Utilities.Table
                 
 data Shared = Shared
         { working    :: Observable Int
-        , untried    :: Observable Int
         , system     :: Observable System
         , error_list :: Observable [Error]
         , pr_obl     :: Observable (Table (Label,Label) (Seq,Maybe Bool))
@@ -127,7 +126,7 @@ parser (Shared { .. })  = return $ do
         g lbl x = (lbl,x)
         h lbl (x,y) = ((lbl,x),y)
         parse = do
-                xs <- liftIO $ runEitherT $ do
+                xs <- liftIO $ timeIt $ runEitherT $ do
                     s  <- EitherT $ parse_system fname
                     ms <- hoistEither $ mapM f $ M.ascElems $ s!.machines
                     pos <- hoistEither $ mapM theory_po $ M.ascElems $ s!.theories
@@ -135,20 +134,18 @@ parser (Shared { .. })  = return $ do
                                 (x,ys) <- zip (map label (s!.theories.to keys)) pos
                                 y <- toList ys
                                 return (x,y)
-                    return (ms, cs, s)
-                case xs of
+                    liftIO $ evaluate (ms, cs, s)
+                timeIt $ case xs of
                     Right (ms,cs,s) -> do
                         let new_pos = unions (cs : map (M.mapKeys $ over _1 as_label) ms) :: Table Key Seq
                             f (s0,b0) (s1,b1)
                                 | s0 == s1  = (s0,b0)
                                 | otherwise = (s1,b1)
                             g s = (s, Nothing)
-                        write_obs system s
+                        write_obs_fast system s
                         write_obs error_list []
-                        modify_obs pr_obl $ \pos -> do
-                            evaluate $ force $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
-                        pos <- read_obs pr_obl
-                        write_obs untried $ M.size $ M.filter (isNothing.snd) pos
+                        modify_obs_fast pr_obl $ \pos -> do
+                            evaluate $ M.unionWith f (pos `M.intersection` new_pos) (M.map g new_pos)
                         return ()
                     Left es   -> do
                         write_obs error_list es
@@ -187,7 +184,6 @@ prover (Shared { .. }) = do
             inc 1
             r      <- catch (discharge k' po) (handler k)
             dec 1
-            modify_obs' untried (+ (-1))
             modify_obs pr_obl $ return . insert k (po,Just $ r == Valid)
 
 proof_report :: Maybe String
@@ -235,7 +231,6 @@ display (Shared { .. }) = do
     observe pr_obl tok
     observe error_list tok
     observe working tok
-    observe untried tok
     observe parser_state tok
     observe focus tok
     observe redraw tok
@@ -245,7 +240,6 @@ display (Shared { .. }) = do
             outs <- read_obs pr_obl
             es   <- read_obs error_list
             w    <- read_obs working
-            u    <- read_obs untried
             fil  <- read_obs focus
             let ys = proof_report fil outs es (w /= 0)
             cursorUpLine $ length ys
@@ -256,9 +250,10 @@ display (Shared { .. }) = do
                     putStr x
                     clearFromCursorToLineEnd 
                     putStrLn ""
+            let u = M.size $ M.filter (isNothing.snd) outs
             st <- read_obs parser_state
             du <- isJust `liftM` read_obs dump_cmd
-            putStr $ [printf|numbor of workers: %d; untried: %d; parser: %s; dumping: %s|] w u (show st) (show du)
+            putStr $ [printf|number of workers: %d; untried: %d; parser: %s; dumping: %s|] w u (show st) (show du)
             clearFromCursorToLineEnd 
             -- hFlush stdout
             putStrLn ""
@@ -353,7 +348,6 @@ run_pipeline :: FilePath -> Params -> IO ()
 run_pipeline fname (Params {..}) = do
         system     <- new_obs empty_system
         working    <- new_obs 0
-        untried    <- new_obs 0
         error_list <- new_obs []
         exit_code  <- newEmptyMVar 
         m          <- load_pos fname M.empty

@@ -9,7 +9,9 @@ import Data.Tuple
 import Text.Printf
 
 formatDiff :: NominalDiffTime -> String 
-formatDiff = evalState formatDiffState . fst . properFraction
+formatDiff dt = printf "%s.%03d" (evalState formatDiffState s) (truncate $ fs * 1000 :: Int)
+    where
+        (s,fs) = properFraction dt
 
 formatDiffState :: State Int String
 formatDiffState = do

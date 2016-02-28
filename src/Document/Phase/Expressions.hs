@@ -66,8 +66,8 @@ withHierarchy cmd = proc (SystemP ref tab) -> do
 run_phase3_exprs :: Pipeline MM SystemP2 SystemP3
 run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expressions) >>> _ -- liftP (uncurry wrapup)
         proc (SystemP ref tab) -> do
-            es <- C.id &&& expressions -< tab
-            x  <- liftP (uncurry wrapup) -< (ref,es)
+            es <- expressions -< tab
+            x  <- liftP (uncurry wrapup) -< (ref,(tab,es))
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String

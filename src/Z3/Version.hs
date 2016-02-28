@@ -1,5 +1,6 @@
 module Z3.Version where
 
+import Control.Lens
 import Control.Monad
 
 import Data.Char
@@ -29,7 +30,8 @@ check_z3_bin = do
                        , ("4.3.2","784307fc3001")
                        , ("4.3.2","5e72cf0123f6")
                        , ("4.4.0","0482e7fe727c")
-                       , ("4.4.1","e8811748d39a")] -- trial
+                       , ("4.4.1","e8811748d39a")
+                       , ("4.4.1","")] -- trial
         if (v,h) `elem` versions then
             return True
         else do
@@ -43,9 +45,9 @@ check_z3_bin = do
 z3_version :: IO (String,String)
 z3_version = do
         xs <- (words . head . lines) `liftM` readProcess z3_path ["--help"] ""
-        let hashcode = dropWhile (/= "hashcode") xs ! 1
+        let hashcode = dropWhile (/= "hashcode") xs^?ix 1
             version = dropWhile (/= "[version") xs ! 1
-        return (version, filter isHexDigit hashcode)
+        return (version, maybe "" (filter isHexDigit) hashcode)
 
 
 z3_installed :: IO Bool        

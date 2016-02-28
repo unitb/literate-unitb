@@ -56,7 +56,7 @@ type System  = AST.System' Machine
 data MachinePO' expr = MachinePO
     { _syntax :: AST.Machine' expr 
     , _proofs     :: Table Label Proof    
-    , _raw_proof_obligation_field :: MemBox (Table Label Sequent)
+    , _raw_proof_obligation_field :: Box (Table Label Sequent)
     , _proof_obligation_field :: MemBox (Table Label Sequent) }
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 

@@ -4,7 +4,9 @@ import Control.Lens
 import Control.Monad.State
 
 import Data.Default
+import Data.Either.Validation
 import Data.Foldable as F
+import Data.Semigroup
 import Data.Tuple
 
 import Utilities.Map as M
@@ -54,3 +56,8 @@ onBoth :: Applicative f
        -> (a0,b0)
        -> f (a1,b1)
 onBoth f g (x,y) = (,) <$> f x <*> g y
+
+traverseValidation :: (Traversable t,Semigroup e)
+                   => (a -> Either e b) 
+                   -> t a -> Either e (t b)
+traverseValidation f = validationToEither . traverse (eitherToValidation . f)

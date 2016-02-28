@@ -24,13 +24,15 @@ import Shelly (shelly,rm_f)
 
 compile_script :: Build ()
 compile_script = do
-        -- compile_file
-        compile_test 
-            -- >>= run_test
+        compile_file
+        profile_test 
+            >>= run_benchmark
+        -- compile_test 
+        --     >>= run_test
         -- cabal_build "bench-bucket-packaged"
-        --    >>= cabal_run
-        compile_all
-        compile_app
+           -- >>= cabal_run
+        -- compile_all
+        -- compile_app
         profile_app
         return ()
 
@@ -74,6 +76,13 @@ compile_file = do
 
 run_test :: FilePath -> Build ()
 run_test fp = lift $ lift $ void $ rawSystem fp []
+
+run_benchmark :: FilePath -> Build ()
+run_benchmark fp = do
+    liftIO $ do
+        -- removeFile $ takeFileName $ fp ++ ".tix"
+        void $ rawSystem fp ["+RTS","-p","-RTS"]
+        removeFile $ takeFileName $ fp ++ ".tix"
 
 main :: IO ()
 main = do

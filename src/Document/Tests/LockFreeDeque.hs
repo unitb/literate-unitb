@@ -92,8 +92,8 @@ test = test_cases
                 case25 result25
             , POCase "test 26, scoping problem in sequents"
                 case26 result26
-            , POCase "test 27, problem: failure in WD-checking"
-                case27 result27
+            -- , POCase "test 27, problem: failure in WD-checking"
+            --     case27 result27
             , StringCase "test 28, large WD-condition"
                 case28 result28
             ]            

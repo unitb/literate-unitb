@@ -27,13 +27,12 @@ import Control.Monad.RWS hiding ((<>))
 import Control.Monad.State
 import Control.Lens hiding (Context)
 
-import Data.List as L
+import Data.DList as D
+import Data.List  as L
 import Data.Semigroup
 
-import GHC.Generics (Generic)
-
-import Utilities.Error
 import Utilities.Invariant
+import Utilities.Instances
 import Utilities.Map as M hiding ( map )
 import qualified Utilities.Map as M
 import Utilities.PrintfTH
@@ -43,8 +42,8 @@ import Utilities.Trace
 
 data POParam = POP 
     { _pOParamContext :: Context
-    , tag :: [Label]
-    , _pOParamNameless :: [Expr]
+    , tag :: DList Label
+    , _pOParamNameless :: DList Expr
     , _pOParamNamed :: Table Label Expr
     , _pOParamSynProp :: SyntacticProp
     } deriving (Generic)
@@ -58,7 +57,7 @@ empty_param = makePOParam
 
 type POGen = POGenT Identity
 
-newtype POGenT m a = POGen { runPOGen :: RWST POParam [(Label,Sequent)] () m a }
+newtype POGenT m a = POGen { runPOGen :: RWST POParam (DList (Label,Sequent)) () m a }
     deriving (Functor,Applicative,Monad,MonadTrans)
 
 newtype POCtx a = POCtx { runPOCxt :: State POParam a }
@@ -76,10 +75,10 @@ emit_exist_goal asrt lbl vars es = with
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
                 emit_goal' asrt 
-                    (map (as_label . view name) vs) 
+                    (L.map (as_label . view name) vs) 
                     (zexists vs ztrue $ zall es)
     where
-        clauses = partition_expr vars $ map getExpr es
+        clauses = partition_expr vars $ L.map getExpr es
         clauses' = M.toList $ (M.fromListWith (<>) clauses :: Map [Var] (NonEmpty Expr))
 
 existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
@@ -98,9 +97,9 @@ existential asrt vs (POGen cmd) = do
                     return $ M.ascElems vs
             -- f xs = [(tag, zexists vs ztrue $ zall $ map snd xs)]
         ss <- POGen 
-            $ censor (const []) $ listen 
+            $ censor (const D.empty) $ listen 
             $ local (const empty_param) cmd
-        let (ss',st) = runState (mapM g $ snd ss) empty_ctx
+        let (ss',st) = runState (mapM g $ D.toList $ snd ss) empty_ctx
         with (_context st) 
             $ emit_exist_goal asrt [] vs ss'
 
@@ -116,10 +115,10 @@ emit_goal asrt lbl g = POGen $ do
     let po = makeSequent asrt
                    (param^.S.context) 
                    (param^.synProp)
-                   (param^.nameless)
+                   (D.toList $ param^.nameless)
                    (param^.named)
                    g
-    tell $ [(composite_label $ tag ++ lbl, po)]
+    tell $ D.singleton (composite_label $ D.apply tag lbl, po)
 
 set_syntactic_props :: SyntacticProp -> POCtx ()
 set_syntactic_props s = POCtx $ synProp .= s
@@ -143,7 +142,7 @@ with f cmd = POGen $ local (execState $ runPOCxt f) $ runPOGen cmd
 prefix_label :: Label -> POCtx ()
 prefix_label lbl = POCtx $ do
         tag <- gets tag
-        modify $ \p -> p { tag = tag ++ [lbl] }
+        modify $ \p -> p { tag = tag <> D.singleton lbl }
 
 prefix :: String -> POCtx ()
 prefix lbl = prefix_label $ label lbl
@@ -154,7 +153,7 @@ named_hyps hyps = POCtx $ do
 
 nameless_hyps :: HasExpr expr => [expr] -> POCtx ()
 nameless_hyps hyps = POCtx $ do
-        nameless %= (++ map getExpr hyps)
+        nameless <>= D.fromList (L.map getExpr hyps)
 
 variables :: Table Name Var -> POCtx ()
 variables vars = POCtx $ do
@@ -165,12 +164,12 @@ eval_generator cmd = runIdentity $ eval_generatorT cmd
 
 tracePOG :: Monad m => POGenT m () -> POGenT m ()
 tracePOG (POGen cmd) = POGen $ do
-    xs <- snd `liftM` listen cmd
-    traceM $ unlines $ map (show . second (view goal)) xs
+    xs <- snd <$> listen cmd
+    traceM $ unlines $ L.map (show . second (view goal)) (D.toList xs)
 
 eval_generatorT :: Monad m => POGenT m () -> m (Table Label Sequent)
 eval_generatorT cmd = 
-            liftM (fromListWithKey combine . snd) 
+            liftM (fromListWithKey combine . D.toList . snd) 
                 $ evalRWST (runPOGen cmd) empty_param ()
     where
-        combine k _ _ = ($myError) $ [printf|%s\n|] $ show k
+        combine k _ _ = assertFalse assert $ [printf|%s\n|] $ show k

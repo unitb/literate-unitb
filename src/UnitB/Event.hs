@@ -243,8 +243,8 @@ frame :: Table Label (Action' expr) -> Table Name Var
 frame acts = M.unions $ L.map frame' $ M.elems acts
 
 ba_pred :: HasExpr expr => Action' expr -> RawExpr
-ba_pred (Assign v e) = $typeCheck $ Right (Word (prime v)) `mzeq` Right (getExpr e)
-ba_pred (BcmIn v e) = $typeCheck $ Right (Word (prime v)) `zelem` Right (getExpr e)
+ba_pred (Assign v e) = Word (prime v) `zeq` getExpr e
+ba_pred (BcmIn v e)  = Word (prime v) `zelemUnchecked` getExpr e
 ba_pred (BcmSuchThat _ e) = getExpr e
 
 rel_action :: [Var] -> Table Label expr -> Table Label (Action' expr)

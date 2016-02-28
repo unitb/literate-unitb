@@ -96,6 +96,19 @@ instance Serialize (NullTerminated []) where
     get = NullTerm <$> 
             whileJust (do x <- get ; return (if x == chr 0 then Nothing else Just x)) return
 
+putNullTerminated :: Foldable t => Putter (t Char)
+putNullTerminated xs = mapM_ put xs >> put (chr 0)
+
+getNullTerminatedList :: Get String
+getNullTerminatedList = do
+        x <- get
+        if x == chr 0 
+            then return []
+            else (x:) <$> getNullTerminatedList
+
+getNullTerminatedNEList :: Get (NonEmpty Char)
+getNullTerminatedNEList = maybe mzero return . nonEmpty =<< getNullTerminatedList
+
 instance Serialize (NullTerminated NonEmpty) where
     put (NullTerm xs) = mapM_ put xs >> put (chr 0)
     {-# INLINE get #-}

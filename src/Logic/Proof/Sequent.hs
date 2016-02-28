@@ -307,11 +307,6 @@ longestCommonSuffix xs ys = longestCommonPrefix
 
 apply_monotonicity :: Sequent -> Sequent
 apply_monotonicity po = fromMaybe po $
-        let 
-            g = po^.goal
-            ctx = po^.context
-            po'  = po & nameless %~ (++ [znot g])
-        in
         case g of
             Binder Forall (Var nam t:vs) rs ts _ -> do
                 let v   = Var (fresh nam $ symbols ctx) t
@@ -323,7 +318,7 @@ apply_monotonicity po = fromMaybe po $
             FunApp f [lhs, rhs] ->
                 case (lhs,rhs) of
                     (Binder Forall vs r0 t0 _, Binder Forall us r1 t1 _) 
-                        | shared vs us && z3_name f `elem` map fromString'' ["=","=>"] -> do
+                        | shared vs us && z3_name f `elem` [[smt|=|],[smt|=>|]] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -332,7 +327,7 @@ apply_monotonicity po = fromMaybe po $
                                     (zforall vs' ztrue $ 
                                         FunApp f [zforall vs0 r0 t0, zforall vs1 r1 t1])
                     (Binder Exists vs r0 t0 _, Binder Exists us r1 t1 _) 
-                        | shared vs us && z3_name f `elem` map fromString'' ["=","=>"] -> do
+                        | shared vs us && z3_name f `elem` [[smt|=|],[smt|=>|]] -> do
                             let vs0 = vs L.\\ us
                                 vs1 = us L.\\ vs
                                 vs' = L.intersect vs us
@@ -342,17 +337,17 @@ apply_monotonicity po = fromMaybe po $
                                         FunApp f [zexists vs0 r0 t0, zexists vs1 r1 t1])
                     (Binder q0 vs r0 t0 _, Binder q1 us r1 t1 _)
                         | q0 == q1 && vs == us 
-                            && r0 == r1 && z3_name f == fromString'' "=" -> 
+                            && r0 == r1 && z3_name f == [smt|=|] -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs r0 $ t0 `zeq` t1)
                         | q0 == q1 && vs == us 
-                            && t0 == t1 && z3_name f == fromString'' "=" -> 
+                            && t0 == t1 && z3_name f == [smt|=|] -> 
                                 return $ apply_monotonicity $
                                     po' & goal .~ (zforall vs ztrue $ r0 `zeq` r1)
                     (FunApp g0 xs, FunApp g1 ys)
                         | (length xs /= length ys && isNothing (isAssociative mm' g0))
                             || g0 /= g1 -> Nothing
-                        | z3_name f == fromString'' "=" -> do
+                        | z3_name f == [smt|=|] -> do
                             (_,x,y) <- difference g0 xs ys
                             return $ apply_monotonicity $
                                 po' & goal .~ FunApp f [x, y]
@@ -374,10 +369,10 @@ apply_monotonicity po = fromMaybe po $
                             return $ apply_monotonicity $ po' & goal .~ x
 --                            let op = name g0
 --                                mono i xs
---                                    | (op `elem` ["and","or"]) ||
---                                        (op == "=>" && i == 1)     = FunApp f xs
---                                    |  op == "not" ||
---                                        (op == "=>" && i == 0)     = FunApp f $ reverse xs
+--                                    | (op `elem` [[smt|and|],[smt|or|]]) ||
+--                                        (op == [smt|=>|] && i == 1)     = FunApp f xs
+--                                    |  op == [smt|not|] ||
+--                                        (op == [smt|=>|] && i == 0)     = FunApp f $ reverse xs
 --                                    | otherwise                  = error $ "Z3.discharge': unexpected operator / position pair: " ++ op ++ ", " ++ show i
 --                            in case differs_by_one xs ys of
 --                                Just (i,x,y) -> 
@@ -410,6 +405,9 @@ apply_monotonicity po = fromMaybe po $
             g       <- isMonotonic mm' rel (view name fun) i
             return ($typeCheck $ g (Right x) (Right y))
         mm' = po^.syntacticThm
+        g   = po^.goal
+        ctx = po^.context
+        po' = po & nameless %~ (++ [znot g])
 
 entailment :: Sequent -> Sequent -> (Sequent,Sequent)
 entailment s0 s1 = (po0,po1)

@@ -3,13 +3,11 @@ module Document.Tests.TrainStationRefinement
 where
 
     -- Modules
--- import Document.Machine
 import Document.Tests.Suite
 
     -- Libraries
+import Data.List.NonEmpty as NE
 import Tests.UnitTest
-
--- import Utilities.Syntactic
 
 test_case :: TestCase
 test_case = test
@@ -20,7 +18,8 @@ test = test_cases
             [ POCase "verify machine m0 (ref)" (verify path0 0) result0
             , POCase "verify machine m1 (ref)" (verify path0 1) result1
             , POCase "verify machine m2 (ref)" (verify path0 2) result2
-            , POCase "verify machine m2 (ref), in many files" (verify path1 2) result2
+            , POCase "verify machine m2 (ref), in many files" 
+                (verifyFiles (NE.fromList [path1,path1']) 2) result2
             , StringCase "cyclic proof of liveness through 3 refinements" (find_errors path3) result3
             , StringCase "refinement of undefined machine" (find_errors path4) result4
             , StringCase "repeated imports" case5 result5
@@ -305,6 +304,9 @@ path0 = "Tests/train-station-ref.tex"
 
 path1 :: String
 path1 = "Tests/train-station-ref/main.tex"
+
+path1' :: String
+path1' = "Tests/train-station-ref/ref0.tex"
 
 path3 :: String
 path3 = "Tests/train-station-ref-err0.tex"

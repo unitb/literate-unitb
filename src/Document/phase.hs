@@ -45,6 +45,7 @@ import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Map as M
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
+import Utilities.Instances
 import Utilities.Partial
 import Utilities.PrintfTH
 import Utilities.Syntactic
@@ -100,7 +101,7 @@ machineCmd cmd f = Pipeline m_spec empty_spec g
     where
         m_spec = cmdSpec cmd (Proxy :: Proxy args)
         param = Collect 
-            { getList = getCmd
+            { getList = M.map getFunctor . getCmd
             , tag = cmd
             , getInput = getMachineInput
             }
@@ -132,7 +133,7 @@ machineEnv env f = Pipeline m_spec empty_spec g
     where
         m_spec = envSpec env (Proxy :: Proxy args)
         param = Collect 
-            { getList = getEnv
+            { getList = M.map getFunctor . getEnv
             , tag = env
             , getInput = getMachineInput
             }
@@ -161,7 +162,7 @@ contextCmd cmd f = Pipeline empty_spec c_spec g
     where
         c_spec = cmdSpec cmd (Proxy :: Proxy b)
         param = Collect 
-            { getList = getCmd
+            { getList = M.map getFunctor . getCmd
             , tag = cmd
             , getInput = getContextInput
             }
@@ -176,7 +177,7 @@ contextEnv env f = Pipeline empty_spec c_spec g
     where
         c_spec = envSpec env (Proxy :: Proxy args)
         param = Collect 
-            { getList = getEnv
+            { getList = M.map getFunctor . getEnv
             , tag = env
             , getInput = getContextInput
              }

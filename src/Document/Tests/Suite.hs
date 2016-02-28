@@ -28,6 +28,7 @@ import Control.Monad.Trans.Either
 
 import Data.Either.Combinators
 import Data.List as L hiding (lookup)
+import qualified Data.List.NonEmpty as NE
 import Data.List.Utils as L
 import Data.Time
 
@@ -50,23 +51,32 @@ type POS sid a = Either [Error] (Table sid (a, Table Label Sequent))
 hide_error_path :: Bool
 hide_error_path = True
 
-pos :: MVar (Map FilePath ((POS MachineId Machine,POS String Theory), UTCTime))
+pos :: MVar (Map (NonEmpty FilePath) 
+                 ((POS MachineId Machine,POS String Theory), Map FilePath UTCTime))
 pos = unsafePerformIO $ newMVar M.empty
 
 list_file_obligations' :: FilePath -> IO (POS MachineId Machine,POS String Theory)
-list_file_obligations' path = do
-    path <- canonicalizePath path
-    t <- getModificationTime path
+list_file_obligations' path = many_file_obligations' $ pure path
+
+many_file_obligations' :: NonEmpty FilePath -> IO (POS MachineId Machine,POS String Theory)
+many_file_obligations' files = do
     m <- takeMVar pos
-    sys <- parse_system path
+    files <- mapM canonicalizePath files
+    t <- fmap M.fromList $ forM (NE.toList files) $ \file -> 
+        (file,) <$> getModificationTime file
+    sys <- parse_system' files
     let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
         cmd f = runKleisli (Kleisli return &&& Kleisli f)
         -- ms :: Either 
         ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
             -- >>= traverseWithKey (cmd PO.proof_obligation)
         ts = view' theories <$> sys >>= traverse (cmd theory_po)
-    putMVar pos $ M.insert path ((ms,ts),t) m
+    putMVar pos $ M.insert (NE.sort files) ((ms,ts),t) m
     return (ms,ts)
+
+verifyFiles :: NonEmpty FilePath 
+            -> Int -> IO POResult
+verifyFiles = verifyFilesWith (return ())
 
 verify :: FilePath -> Int -> IO POResult
 verify = verifyWith (return ())
@@ -75,8 +85,14 @@ verifyWith :: State Sequent a
            -> FilePath 
            -> Int 
            -> IO POResult
-verifyWith opt path i = makeReport' empty $ do
-    ms <- EitherT $ fst <$> list_file_obligations' path
+verifyWith cmd fp = verifyFilesWith cmd $ pure fp
+
+verifyFilesWith :: State Sequent a
+                -> NonEmpty FilePath
+                -> Int 
+                -> IO POResult
+verifyFilesWith opt files i = makeReport' empty $ do
+    ms <- EitherT $ fst <$> many_file_obligations' files
     if i < size ms then do
         let (m,pos) = snd $ i `elemAt` ms
         r <- lift $ try (str_verify_machine_with opt m)
