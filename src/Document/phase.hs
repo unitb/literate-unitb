@@ -676,7 +676,7 @@ trigger (Just x) = return x
 trigger Nothing  = left []
 
 layeredUpgradeRecM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-               , Applicative f,MonadFix f)
+               , MonadFix f)
             => (thy0 -> thy1 -> f thy1)
             -> (mch0 aevt0 cevt0 thy1 -> mch1 aevt0 cevt0 thy1 -> f (mch1 aevt0 cevt0 thy1))
             -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> aevt1 -> f aevt1)
@@ -689,7 +689,7 @@ layeredUpgradeRecM thyF mchF oldEvF newEvF = layeredUpgradeM
         (fmap (fmap mfix).newEvF)
 
 layeredUpgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
-            , Applicative f,Monad f) -- ,NFData evt1)
+            , Monad f)
          => (thy0 -> f thy1)
          -> (mch0 aevt0 cevt0 thy1 -> f (mch1 aevt0 cevt0 thy1))
          -> (mch1 aevt0 cevt0 thy1 -> SkipOrEvent -> aevt0 -> f aevt1)
@@ -697,8 +697,10 @@ layeredUpgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
          -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 layeredUpgradeM thyF mchF oldEvF newEvF m = do
         m' <- mchF =<< (m & pContext thyF)
-        m' & pEventRef (\g -> traverseLeftWithKey (uncurry (oldEvF m'))
-                     =<< traverseRightWithKey (uncurry (newEvF m')) g)
+        m' & pEventRef (\g -> acrossBothWithKey 
+                        (oldEvF m')
+                        (newEvF m') 
+                        pure g)
 
 layeredUpgradeRec :: (HasMachineP1' mch1, HasMachineP1' mch0)
            => (thy0 -> thy1 -> thy1)
@@ -732,9 +734,10 @@ upgradeM :: ( HasMachineP1' mch1, HasMachineP1' mch0
          -> mch0 aevt0 cevt0 thy0 -> f (mch1 aevt1 cevt1 thy1)
 upgradeM thyF mchF oldEvF newEvF m = do
         m' <- pContext thyF =<< mchF m
-        m' & pEventRef (\g -> 
-                (traverseLeftWithKey (uncurry (oldEvF m))
-                     =<< traverseRightWithKey (uncurry (newEvF m)) g))
+        m' & pEventRef (\g -> acrossBothWithKey
+                         (oldEvF m)
+                         (newEvF m) 
+                         pure g)
 
 upgrade :: (HasMachineP1' mch1, HasMachineP1' mch0)
         => (thy0 -> thy1)

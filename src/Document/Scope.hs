@@ -67,9 +67,11 @@ class (Ord a,Show a) => Scope a where
     type Impl a :: *
     type Impl a = DefaultClashImpl a
     kind :: a -> String
-    error_item :: a -> (String,LineInfo)
-    default error_item :: (HasLineInfo a LineInfo) => a -> (String,LineInfo)
-    error_item x = (kind x, view lineInfo x)
+    error_item :: a -> NonEmpty (String,LineInfo)
+    default error_item :: ( HasLineInfo a li, ErrorItem li
+                          , ClashImpl (Impl a), HasImplIso (Impl a) a) 
+                       => a -> NonEmpty (String,LineInfo)
+    error_item x = errorItemImpl (kind x) (x^.lineInfo)
 
     keep_from :: DeclSource -> a -> Maybe a
     default keep_from :: (ClashImpl (Impl a), HasImplIso (Impl a) a) 
@@ -126,6 +128,9 @@ clashFree (x:xs) = all (not . clash x) xs && clashFree xs
 
 newtype DefaultClashImpl a = DefaultClashImpl { getDefaultClashImpl :: a }
 
+defaultClashImpl :: Iso (DefaultClashImpl a) (DefaultClashImpl b) a b
+defaultClashImpl = iso getDefaultClashImpl DefaultClashImpl
+
 class HasImplIso a b where
     asImpl :: Iso' b a
 
@@ -134,14 +139,28 @@ class ClashImpl a where
     keepFromImpl :: DeclSource -> a -> Maybe a
     makeInheritedImpl :: a -> Maybe a
 
-instance HasDeclSource a DeclSource 
+class ErrorItem err where
+    errorItemImpl :: String 
+                  -> err 
+                  -> NonEmpty (String,LineInfo)
+
+instance ErrorItem LineInfo where
+    errorItemImpl kind x = pure (kind,x)
+
+instance ErrorItem (NonEmpty LineInfo) where
+    errorItemImpl kind xs = (kind,) <$> xs
+
+instance (HasDeclSource a DeclSource)
         => ClashImpl (DefaultClashImpl a) where
     keepFromImpl s x'@(DefaultClashImpl x) = guard (x ^. declSource == s) >> return x'
     makeInheritedImpl (DefaultClashImpl x) = Just $ DefaultClashImpl $ x & declSource .~ Inherited
-    mergeScopesImpl _ _ = Nothing
+    mergeScopesImpl _ _  = Nothing
 
 instance HasImplIso (DefaultClashImpl a) a where
-    asImpl = iso DefaultClashImpl getDefaultClashImpl
+    asImpl = from defaultClashImpl
+
+instance HasLineInfo a b => HasLineInfo (DefaultClashImpl a) b where
+    lineInfo = defaultClashImpl . lineInfo
 
 class HasDeclSource a b | a -> b where
     declSource :: Lens' a b
@@ -217,7 +236,7 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
         g k ws
                 | all (\xs -> length xs <= 1) ws 
                             = Right $ L.foldl merge_scopes (head xs) (tail xs)
-                | otherwise = Left $ L.map (\xs -> MLError (f k) $ L.map error_item xs) 
+                | otherwise = Left $ L.map (\xs -> MLError (f k) $ concatMap (NE.toList.error_item) xs) 
                                     $ L.filter (\xs -> length xs > 1) ws
             where
                 xs = concat ws             
@@ -226,6 +245,10 @@ make_table' f items = all_errors $ M.mapWithKey g conflicts
         conflicts = M.map (flip u_scc clash) items' 
 
 newtype WithDelete a = WithDelete { getDelete :: a }
+    deriving Show
+
+deleteIso :: Iso (WithDelete a) (WithDelete b) a b
+deleteIso = iso getDelete WithDelete
 
 instance PrettyPrintable DeclSource where
     pretty = show
@@ -237,18 +260,27 @@ instance Arbitrary e => Arbitrary (InhStatus e) where
     arbitrary = genericArbitrary
 
 instance HasImplIso (WithDelete a) a where
-    asImpl = iso WithDelete getDelete
+    asImpl = from deleteIso
 
 newtype Redundant expr a = Redundant { getRedundant :: a }
 
+redundant :: Iso (Redundant expr a) (Redundant expr b) a b
+redundant = iso getRedundant Redundant
+
 instance HasImplIso a b => HasImplIso (Redundant expr a) b where
-    asImpl = asImpl . iso Redundant getRedundant
+    asImpl = asImpl . from redundant
 
 instance HasInhStatus a b => HasInhStatus (WithDelete a) b where
-    inhStatus = lens getDelete (const WithDelete) . inhStatus
+    inhStatus = deleteIso . inhStatus
 
 instance HasDeclSource a b => HasDeclSource (WithDelete a) b where
-    declSource = lens getDelete (const WithDelete) . declSource
+    declSource = deleteIso . declSource
+
+instance HasLineInfo a b => HasLineInfo (WithDelete a) b where
+    lineInfo = deleteIso . lineInfo
+
+instance HasLineInfo a b => HasLineInfo (Redundant expr a) b where
+    lineInfo = redundant . lineInfo
 
 instance ( HasInhStatus a (InhStatus expr)
          , Show expr
@@ -263,12 +295,13 @@ instance ( HasInhStatus a (InhStatus expr)
 
     mergeScopesImpl (WithDelete x) (WithDelete y) = WithDelete <$> z
         where
-            z = case (x ^. inhStatus, y ^. inhStatus) of
+            z = case (x^.inhStatus, y^.inhStatus) of
                     (InhDelete Nothing, InhAdd e) -> Just $ x & inhStatus .~ InhDelete (Just e)
                     (InhAdd e, InhDelete Nothing) -> Just $ y & inhStatus .~ InhDelete (Just e)
                     _ -> Nothing
 
-instance ( Eq expr, ClashImpl a
+instance ( Eq expr, ClashImpl a, Show a
+         , HasLineInfo a (NonEmpty LineInfo)
          , HasInhStatus a (EventInhStatus expr)
          , HasDeclSource a DeclSource)
         => ClashImpl (Redundant expr a) where
@@ -278,7 +311,8 @@ instance ( Eq expr, ClashImpl a
         where
             g :: a -> a -> Maybe a
             g x y = guard' x y >> Just (x & inhStatus %~ (flip f $ y^.inhStatus) 
-                                          & declSource %~ (declUnion $ y^.declSource))
+                                          & declSource %~ (declUnion $ y^.declSource)
+                                          & lineInfo %~ NE.sort.(<> (y^.lineInfo)))
             guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
             f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ NE.sort.(<> y^._1)
             f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ NE.sort.(x^._1 <>)

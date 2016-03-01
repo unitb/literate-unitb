@@ -45,6 +45,8 @@ import Language.Haskell.TH.Syntax
 
 import Test.QuickCheck
 
+import Utilities.Generics
+
 class GMonoid a where
     gmempty :: a p
     gmappend :: a p -> a p -> a p
@@ -82,14 +84,9 @@ instance Semigroup b => GSemigroupWith (K1 a b) where
 
 instance (GSemigroupWith a,GSemigroupWith b) 
         => GSemigroupWith (a :*: b) where
-    gSemiMAppend x y = gSemiMAppend (left x) (left y) :*:
-                             gSemiMAppend (right x) (right y)
-    gSemiMConcat xs = gSemiMConcat (left <$> xs) :*: gSemiMConcat (right <$> xs)
-
-left :: (a :*: b) p -> a p
-left (x :*: _) = x
-right :: (a :*: b) p -> b p
-right (_ :*: x) = x
+    gSemiMAppend x y = gSemiMAppend (x^.left) (y^.left) :*:
+                             gSemiMAppend (x^.right) (y^.right)
+    gSemiMConcat xs = gSemiMConcat (view left <$> xs) :*: gSemiMConcat (view right <$> xs)
 
 class Applicative f => MapFields a (f :: * -> *) where
     type Mapped a f :: * -> *
@@ -110,8 +107,8 @@ instance (Applicative f) => MapFields (K1 a b) f where
 
 instance (MapFields a f,MapFields b f) => MapFields (a :*: b) f where
     type Mapped (a :*: b) f = Mapped a f :*: Mapped b f
-    put x = put (left <$> x) :*: put (right <$> x)
-    get x = (:*:) <$> get (left x) <*> get (right x)
+    put x = put (view left <$> x) :*: put (view right <$> x)
+    get x = (:*:) <$> get (x^.left) <*> get (x^.right)
 
 
 genericMEmpty :: (Generic a, GMonoid (Rep a)) => a

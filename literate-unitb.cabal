@@ -159,6 +159,7 @@ library
         Utilities.FileFormat
         Utilities.FileSystem
         Utilities.Functor
+        Utilities.Generics 
         Utilities.Graph
         Utilities.GraphSpec
         Utilities.Indentation

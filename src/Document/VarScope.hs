@@ -17,7 +17,8 @@ import UnitB.Syntax
     -- Libraries
 import Control.Lens
 
-import Data.Typeable
+import qualified Data.List.NonEmpty as NE
+import           Data.Typeable
 
 import Test.QuickCheck
 
@@ -26,6 +27,7 @@ import Text.Printf
 import Utilities.Existential
 import Utilities.Instances
 import Utilities.Map as M
+import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -184,11 +186,8 @@ instance Scope EvtDecls where
         where
             f m | M.null m  = Nothing
                 | otherwise = Just m
-    error_item (Evt m) = head' $ ascElems $ mapWithKey msg m
+    error_item (Evt m) = fromJust' $ NE.nonEmpty $ ascElems $ mapWithKey msg m
         where
-            head' [x] = x
-            head' [] = error "VarScope Scope VarScope: head' []"  
-            head' _ = error "VarScope Scope VarScope: head' too many"
             msg (Just k) x = (printf "%s (event '%s')" (kind x) (show k) :: String, x^.lineInfo)
             msg Nothing x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1

@@ -33,7 +33,8 @@ module Utilities.BipartiteGraph
     , hasLeftVertex, hasRightVertex
     , hasEdge, edgeInfo 
     , lookup, leftLookup, rightLookup
-    , member, leftMember, rightMember )
+    , member, leftMember, rightMember 
+    , acrossBothWithKey )
 where
 
 import Control.Applicative hiding (empty)
@@ -350,6 +351,16 @@ traverseEdgesWithKeys f gr = gr & edges (M.traverseWithKey g)
                 k1 = (gr^.rightAL.arKey ) ! j
                 v1 = (gr^.rightAL.arVals) ! j 
 
+acrossBothWithKey :: Applicative f 
+                  => (key0 -> vA0 -> f vB0)
+                  -> (key1 -> vA1 -> f vB1)
+                  -> (e0 -> f e1)
+                  -> BiGraph' key0 vA0 key1 vA1 e0
+                  -> f (BiGraph' key0 vB0 key1 vB1 e1)
+acrossBothWithKey f g h (Graph lf rt ed) = 
+            Graph <$> arKeyVal (uncurry f) lf 
+                  <*> arKeyVal (uncurry g) rt
+                  <*> traverse h ed
 
 acrossBoth :: Applicative f 
            => (vA0 -> f vB0)

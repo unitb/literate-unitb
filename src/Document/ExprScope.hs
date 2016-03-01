@@ -32,34 +32,34 @@ import Utilities.Table
 data CoarseSchedule = CoarseSchedule 
         { _coarseScheduleInhStatus :: EventInhStatus Expr
         , _coarseScheduleDeclSource :: DeclSource
-        , _coarseScheduleLineInfo :: LineInfo
+        , _coarseScheduleLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data FineSchedule = FineSchedule 
         { _fineScheduleInhStatus :: EventInhStatus Expr
         , _fineScheduleDeclSource :: DeclSource
-        , _fineScheduleLineInfo :: LineInfo
+        , _fineScheduleLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data Guard = Guard 
         { _guardInhStatus :: EventInhStatus Expr
         , _guardDeclSource :: DeclSource
-        , _guardLineInfo :: LineInfo
+        , _guardLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data Witness = Witness 
         { _witnessVar :: Var
         , _witnessEvtExpr :: Expr 
         , _witnessDeclSource :: DeclSource
-        , _witnessLineInfo :: LineInfo
+        , _witnessLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data IndexWitness = IndexWitness 
         { _indexWitnessVar :: Var
         , _indexWitnessEvtExpr :: Expr 
         , _indexWitnessDeclSource :: DeclSource
-        , _indexWitnessLineInfo :: LineInfo
+        , _indexWitnessLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 data ActionDecl = Action 
         { _actionDeclInhStatus :: EventInhStatus Action
         , _actionDeclDeclSource :: DeclSource
-        , _actionDeclLineInfo :: LineInfo
+        , _actionDeclLineInfo :: NonEmpty LineInfo
         } deriving (Eq,Ord,Typeable,Show,Generic)
 
 
@@ -108,13 +108,12 @@ instance Show EvtExprScope where
 instance PrettyPrintable EvtExprScope where
     pretty = readCell' pretty
 
-newtype LensT a b = LensT { getLens :: Lens' a b }
 
 
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
       , PrettyPrintable a
-      , HasLineInfo a LineInfo
+      , HasLineInfo a (NonEmpty LineInfo)
       , HasDeclSource a DeclSource ) => IsEvtExpr a where
     toMchScopeExpr :: Label -> a 
                    -> Reader MachineP2 [Either Error (MachineP3'Field ae ce t)]
@@ -143,7 +142,7 @@ instance IsEvtExpr EvtExprScope where
 instance HasDeclSource EvtExprScope DeclSource where
     declSource f = traverseCell' (declSource f)
 
-instance HasLineInfo EvtExprScope LineInfo where
+instance HasLineInfo EvtExprScope (NonEmpty LineInfo) where
     lineInfo f = traverseCell' (lineInfo f)
 
 type InitOrEvent = Either InitEventId EventId
@@ -333,8 +332,8 @@ instance Arbitrary InitEventId where
 prop_axiom_Scope_mergeCommutative :: Property
 prop_axiom_Scope_mergeCommutative = regression (uncurry axiom_Scope_mergeCommutative) [(g0,g1)]
     where
-        g0 = Guard {_guardInhStatus = InhAdd ("i" :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = (LI "file" 0 0)}
-        g1 = Guard {_guardInhStatus = InhAdd ("e" :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = (LI "file" 0 0)}
+        g0 = Guard {_guardInhStatus = InhAdd ("i" :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = pure (LI "file" 0 0)}
+        g1 = Guard {_guardInhStatus = InhAdd ("e" :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = pure (LI "file" 0 0)}
 
 return []
 

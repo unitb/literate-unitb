@@ -165,16 +165,16 @@ parseEvtExprChoice' :: ( HasInhStatus decl (InhStatus expr)
               -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
 parseEvtExprChoice' oldLn delLn newLn = parseEvtExprChoiceImp 
-        (Just (LensT oldLn)) 
-        (Just (LensT delLn))
-        (Just (LensT newLn))
+        (Just (Lens oldLn)) 
+        (Just (Lens delLn))
+        (Just (Lens newLn))
 
 parseEvtExprChoiceImp :: ( HasInhStatus decl (InhStatus expr)
                          , HasDeclSource decl DeclSource 
                          , IsKey Table label)
-              => Maybe (LensT MachineP3 (Table EventId (Table label expr)))
-              -> Maybe (LensT MachineP3 (Table EventId (Table label expr)))
-              -> Maybe (LensT MachineP3 (Table EventId (Table label expr)))
+              => Maybe (ReifiedLens' MachineP3 (Table EventId (Table label expr)))
+              -> Maybe (ReifiedLens' MachineP3 (Table EventId (Table label expr)))
+              -> Maybe (ReifiedLens' MachineP3 (Table EventId (Table label expr)))
               -> ((Label,decl) -> label)
               -> [(Maybe EventId, [(Label, decl)])]
               -> RWS () [Error] MachineP3 ()
@@ -190,7 +190,7 @@ parseEvtExprChoiceImp oldLn delLn newLn f xs = do
         getLabelExpr = runKleisli $ arr f &&& Kleisli (contents . snd)
         g        = L.map (second $ MM.mapMaybe getLabelExpr)
             -- arr (map $ f &&& (view evtExpr . snd)))
-        assign ln f = maybe (return ()) (\(LensT ln) -> ln %= f) ln
+        assign ln f = maybe (return ()) (\(Lens ln) -> ln %= f) ln
     oldLn `assign` doubleUnion (g old_xs)
     delLn `assign` doubleUnion (g del_xs)
     newLn `assign` doubleUnion (g new_xs)

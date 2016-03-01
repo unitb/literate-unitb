@@ -14,14 +14,13 @@ import Data.Typeable
 
 import qualified Debug.Trace as DT
 
-import GHC.Generics hiding (from,to)
-import GHC.Generics.Lens
-
 import Prelude hiding ((.),id)
 
 import System.IO.Unsafe
 
 import Text.Printf
+
+import Utilities.Generics
 
 -- trace_switch :: MVar (Set ThreadId)
 -- trace_switch = unsafePerformIO (newMVar empty)
@@ -207,12 +206,6 @@ instance (GOnFields c,Selector s) => GOnFields (S1 s c) where
 
 instance (GOnFields a,GOnFields b) => GOnFields (a :*: b) where
     gOnFields str = (left %~ gOnFields str) . (right %~ gOnFields str)
-
-left :: Lens ((a0 :*: b) p) ((a1 :*: b) p) (a0 p) (a1 p)
-left f (x :*: y) = (:*: y) <$> f x
-
-right :: Lens ((a :*: b0) p) ((a :*: b1) p) (b0 p) (b1 p)
-right f (x :*: y) = (x :*:) <$> f y
 
 instance (GOnFields a,GOnFields b) => GOnFields (a :+: b) where
     gOnFields str = (_L1 %~ gOnFields str) . (_R1 %~ gOnFields str)
