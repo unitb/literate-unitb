@@ -60,19 +60,24 @@ list_file_obligations' path = many_file_obligations' $ pure path
 
 many_file_obligations' :: NonEmpty FilePath -> IO (POS MachineId Machine,POS String Theory)
 many_file_obligations' files = do
-    m <- takeMVar pos
-    files <- mapM canonicalizePath files
-    t <- fmap M.fromList $ forM (NE.toList files) $ \file -> 
-        (file,) <$> getModificationTime file
-    sys <- parse_system' files
-    let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
-        cmd f = runKleisli (Kleisli return &&& Kleisli f)
-        -- ms :: Either 
-        ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
-            -- >>= traverseWithKey (cmd PO.proof_obligation)
-        ts = view' theories <$> sys >>= traverse (cmd theory_po)
-    putMVar pos $ M.insert (NE.sort files) ((ms,ts),t) m
-    return (ms,ts)
+        -- | modifyMVar is important for exception safety
+        -- | if this procedure crashes without restoring the
+        -- | state of pos, every other thread attempting any 
+        -- | call on this module is going to with a mysterious
+        -- | MVar exception
+    modifyMVar pos $ \m -> do
+        files <- mapM canonicalizePath files
+        t <- fmap M.fromList $ forM (NE.toList files) $ \file -> 
+            (file,) <$> getModificationTime file
+        sys <- parse_system' files
+        let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
+            cmd f = runKleisli (Kleisli return &&& Kleisli f)
+            -- ms :: Either 
+            ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
+                -- >>= traverseWithKey (cmd PO.proof_obligation)
+            ts = view' theories <$> sys >>= traverse (cmd theory_po)
+            m' = M.insert (NE.sort files) ((ms,ts),t) m
+        return (m',(ms,ts))
 
 verifyFiles :: NonEmpty FilePath 
             -> Int -> IO POResult
@@ -92,14 +97,19 @@ verifyFilesWith :: State Sequent a
                 -> Int 
                 -> IO POResult
 verifyFilesWith opt files i = makeReport' empty $ do
-    ms <- EitherT $ fst <$> many_file_obligations' files
-    if i < size ms then do
-        let (m,pos) = snd $ i `elemAt` ms
-        r <- lift $ try (str_verify_machine_with opt m)
-        case r of
-            Right (s,_,_) -> return (s, pos)
-            Left e -> return (show (e :: SomeException),pos)
-    else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
+    b <- liftIO $ mapM doesFileExist files
+    if and b then do
+        ms <- EitherT $ fst <$> many_file_obligations' files
+        if i < size ms then do
+            let (m,pos) = snd $ i `elemAt` ms
+            r <- lift $ try (str_verify_machine_with opt m)
+            case r of
+                Right (s,_,_) -> return (s, pos)
+                Left e -> return (show (e :: SomeException),pos)
+        else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
+    else do
+        let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
+        return ([printf|The following files do not exist: %s|] $ intercalate "," fs,empty)
 
 all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
 all_proof_obligations' path = do
@@ -184,14 +194,17 @@ proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
 find_errors :: FilePath -> IO String 
 find_errors path = do
     p <- canonicalizePath path
-    m <- fst <$> list_file_obligations' path
-    let hide
-            | hide_error_path = L.replace (p ++ ":") "error "
-            | otherwise       = id
-    return $ either 
-        (hide . unlines . L.map report)
-        (const $ "no errors")
-        m
+    exists <- doesFileExist path
+    if exists then do
+        m <- fst <$> list_file_obligations' path
+        let hide
+                | hide_error_path = L.replace (p ++ ":") "error "
+                | otherwise       = id
+        return $ either 
+            (hide . unlines . L.map report)
+            (const $ "no errors")
+            m
+    else return $ [printf|file does not exist: %s|] path
 
 parse_machine :: FilePath -> Int -> IO (Either [Error] Machine)
 parse_machine path n = runEitherT $ parse_machine' path n
@@ -202,9 +215,13 @@ parse_machine' fn i = lookup i =<< parse' fn
 parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
     p <- getCurrentDirectory
+    exists <- doesFileExist path
     let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
         f = ascElems . M.map fst
-    (mapBoth mapError f . fst) <$> list_file_obligations' path
+    if exists then
+        (mapBoth mapError f . fst) <$> list_file_obligations' path
+    else 
+        return $ Left [Error ([printf|'%s' does not exist|] path) $ LI "" 1 1]
 
 parse' :: FilePath -> EitherT [Error] IO [Machine]
 parse' = EitherT . parse
