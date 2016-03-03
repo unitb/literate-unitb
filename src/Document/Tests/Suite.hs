@@ -37,8 +37,9 @@ import GHC.Stack
 import Prelude hiding (lookup)
 import PseudoMacros
 
+import Text.Printf.TH
+
 import Utilities.Map as M hiding (lookup)
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 

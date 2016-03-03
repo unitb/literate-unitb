@@ -28,7 +28,6 @@ where
 import Logic.Names.Internals (IsBaseName(..))
 import qualified Logic.Names.Internals as Intl
 
-import Utilities.Packaged
 import Utilities.Partial
 
     -- Libraries
@@ -38,6 +37,7 @@ import Control.Lens
 import Data.Data
 import Data.Hashable
 import Data.List.NonEmpty
+import Data.Packaged
 import Data.Serialize
 
 import GHC.Generics (Generic)

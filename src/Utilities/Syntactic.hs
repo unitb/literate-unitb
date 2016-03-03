@@ -12,9 +12,11 @@ import Data.List.NonEmpty as NE (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
 import Data.List.Ordered
 import Data.Typeable
+import qualified Data.String.Lines as L
 
 import GHC.Read
 import GHC.SrcLoc
+import GHC.Stack.Utils
 
 import Language.Haskell.TH (Loc(..))
 
@@ -23,11 +25,9 @@ import Safe
 import Test.QuickCheck as QC
 
 import Text.ParserCombinators.ReadPrec
+import Text.Printf.TH
 
-import Utilities.CallStack
 import Utilities.Instances
-import qualified Utilities.Lines as L
-import Utilities.PrintfTH
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord,Read,Generic)

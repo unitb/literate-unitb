@@ -5,7 +5,7 @@ import Control.Monad
 import System.Directory
 import System.Process
 
-import Utilities.PrintfTH
+import Text.Printf.TH
 
 main :: IO ()
 main = do

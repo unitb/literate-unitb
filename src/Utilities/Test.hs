@@ -15,11 +15,8 @@ import Utilities.Graph as G
         , m_closure_with, as_map
         , unions )
 import Utilities.EditDistance
-import Utilities.Lines as Lines
 import qualified Utilities.GraphSpec as GSpec
 import qualified Utilities.Permutation as Perm
-import qualified Utilities.Relation as Rel
-import qualified Utilities.Tuple.Generics as Tup
 
     -- Libraries
 import Control.Lens
@@ -28,15 +25,19 @@ import           Data.Array
 import           Data.Function
 import           Data.List
 import           Data.List.Ordered as OL
+import           Data.String.Lines as Lines
 import qualified Data.Map as M
+import qualified Data.Relation as Rel
+import           Data.String.Brackets
+import qualified Data.Tuple.Generics as Tup
 import           Data.Typeable
 
 import Tests.UnitTest
 import Test.QuickCheck
 
-import Utilities.Brackets
+import Text.Printf.TH
+
 import Utilities.Error
-import Utilities.PrintfTH
 import Utilities.Syntactic
 
 import System.IO.Unsafe

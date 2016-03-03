@@ -18,6 +18,8 @@ import Data.Either.Combinators hiding
 import Data.List.NonEmpty
 import Data.Maybe hiding (fromJust)
 
+import GHC.Stack.Utils
+
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
@@ -25,7 +27,6 @@ import PseudoMacros
 
 import Text.Printf
 
-import Utilities.CallStack
 import Utilities.Instances ()
 
 fromJust' :: (?loc :: CallStack) => Maybe a -> a

@@ -79,9 +79,10 @@ import qualified Text.ParserCombinators.ReadPrec as RP ( get, pfail, (<++) )
 
 import GHC.Read
 
+import Text.Printf.TH
+
 import Utilities.Error hiding (MonadError)
 import qualified Utilities.Error as E
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Tuple
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Utilities.CallStack 
-    ( module Utilities.CallStack
+module GHC.Stack.Utils 
+    ( module GHC.Stack.Utils
     , module GHC.Stack )
 where
 

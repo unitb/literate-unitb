@@ -60,6 +60,9 @@
 		// },
 		{ "path" : "." 
 		, "file_include_patterns" : ["*.cabal"] },
+		{ "path" : "utils"
+		, "file_include_patterns":
+			[ "*hs","*.md" ] },
 		{ "path" : "src"
 		, "file_include_patterns":
 			[ "*hs","*.md" ] },

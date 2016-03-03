@@ -10,13 +10,13 @@ import Control.Monad.State
 import Data.Data
 import Data.Data.Lens 
 import Data.DList as D
+import Data.DList.Utils as D
 import Data.Foldable as F
 import Data.List as L hiding (intercalate)
 import Data.Monoid
 import Data.Tuple
 import Data.Typeable.Lens
 
-import Utilities.DList as D
 import Utilities.Map  as M
 import Utilities.Table as M
 

@@ -17,6 +17,7 @@ import UnitB.Syntax
     -- Libraries
 import Control.Lens
 
+import           Data.Existential
 import qualified Data.List.NonEmpty as NE
 import           Data.Typeable
 
@@ -24,7 +25,6 @@ import Test.QuickCheck
 
 import Text.Printf
 
-import Utilities.Existential
 import Utilities.Instances
 import Utilities.Map as M
 import Utilities.Partial

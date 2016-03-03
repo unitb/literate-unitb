@@ -20,8 +20,9 @@ import Data.Typeable
 
 import GHC.Generics (Generic)
 
+import Text.Printf.TH
+
 import qualified Utilities.Map as M 
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -44,12 +44,13 @@ import GHC.Generics (Generic)
 import System.Console.ANSI
 import System.Directory
 
+import Text.Printf.TH
+
 import           Utilities.Map as M 
                     ( insert, keys
                     , toList, unions )
 import qualified Utilities.Map as M 
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 import Utilities.TimeIt

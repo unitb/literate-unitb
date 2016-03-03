@@ -8,8 +8,7 @@ import Control.Monad.Trans.Maybe
 
 import Data.Char
 import Data.List
-
-import Utilities.Lines
+import Data.String.Lines
 
 import System.Directory
 import System.Exit
@@ -47,7 +46,7 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ intercalate ":" [inf,"suite","src"]
+        , "-i" ++ intercalate ":" [inf,"suite","src","utils"]
         , "-hidir" ++ inf
         , "-W"
         , "-XTupleSections"

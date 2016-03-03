@@ -34,9 +34,10 @@ import Language.Haskell.TH.Syntax hiding (Name)
 
 import PseudoMacros
 
+import Text.Printf.TH
+
 import Utilities.Instances
 import Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Syntactic
 
 expr :: QuasiQuoter

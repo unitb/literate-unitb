@@ -20,6 +20,7 @@ import UnitB.Syntax hiding (Constraint)
     -- Libraries
 import Control.Applicative
 import Control.Arrow
+import Control.Arrow.Unfold
 import Control.Category
 import Control.Lens
 import Control.Monad.Reader
@@ -28,12 +29,14 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe
 
 import Data.Either.Validation
+import Data.Existential
 import Data.Functor.Alt
 import Data.Functor.Compose
 import Data.List as L
 import Data.Map as M
 import Data.Maybe
 import Data.Proxy.TH
+import Data.Tuple.Generics
 import Data.Typeable
 --import Data.Validation
 --import Data.Validation (ValidationT(..),_Either)
@@ -43,12 +46,10 @@ import Data.Typeable
 
 import Prelude hiding ((.),id)
 
-import Utilities.Arrow
-import Utilities.Existential
+import Text.Printf.TH
+
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Syntactic
-import Utilities.Tuple.Generics
 
 data LatexMatch = CmdMatch String [Bracket] | EnvMatch Environment
 

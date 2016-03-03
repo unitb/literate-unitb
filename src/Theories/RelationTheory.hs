@@ -8,7 +8,7 @@ import Logic.Theory.Monad
 import Theories.SetTheory
 
     -- Libraries
-import Utilities.Tuple
+import Data.Functor.Identity
 
 relation_theory :: Theory
 relation_theory = make_theory "relations" $ do
@@ -18,9 +18,9 @@ relation_theory = make_theory "relations" $ do
         rel_type :: Type -> Type -> Type
         -- id' = id :: Type -> Type
     (star_op,zstar) <- unary [tex|\star|] [smt|star|] $ \gA -> 
-        (One $ rel_type gA gA,rel_type gA gA)
+        (Identity $ rel_type gA gA,rel_type gA gA)
     (plus_op,zplus) <- unary [tex|\plus|] [smt|plus|] $ \gA -> 
-        (One $ rel_type gA gA,rel_type gA gA)
+        (Identity $ rel_type gA gA,rel_type gA gA)
     (seq_op,zseq)  <- operator [tex|;|] [smt|seq|] $ \gA gB gC -> 
         ((rel_type gA gB,rel_type gB gC),rel_type gA gC)
     zlookup <- command [tex|lookup|] $ \gA gB -> 
@@ -28,9 +28,9 @@ relation_theory = make_theory "relations" $ do
     zid <- command [tex|id|] $ \gA ->
         ((),rel_type gA gA)
     zasrel  <- command [tex|asrel|] $ \gA ->
-        (One $ set_type gA,rel_type gA gA)
+        (Identity $ set_type gA,rel_type gA gA)
     zreldom <- command [tex|reldom|] $ \gA gB ->
-        (One $ rel_type gA gB, set_type gA)
+        (Identity $ rel_type gA gB, set_type gA)
     -- zrelran <- command "relran" $ \gA gB ->
     --     (One $ rel_type gA gB, set_type gB)
     -- (domres,zreldomres) <- operator "\\rdomres" "rdomres" $ \gA gB ->

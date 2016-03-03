@@ -1,4 +1,4 @@
-module Utilities.DList where
+module Data.DList.Utils where
 
 import Control.Lens
 

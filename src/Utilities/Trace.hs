@@ -14,13 +14,13 @@ import Data.Typeable
 
 import qualified Debug.Trace as DT
 
+import GHC.Generics.Utils
+
 import Prelude hiding ((.),id)
 
 import System.IO.Unsafe
 
 import Text.Printf
-
-import Utilities.Generics
 
 -- trace_switch :: MVar (Set ThreadId)
 -- trace_switch = unsafePerformIO (newMVar empty)

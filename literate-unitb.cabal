@@ -67,7 +67,7 @@ Flag PackagedNames
     default: False
 
 library
-  hs-source-dirs: src
+  hs-source-dirs: src, utils
   exposed-modules: 
         Code.Synthesis
         Document.Document
@@ -147,38 +147,21 @@ library
         UnitB.Syntax
         UnitB.System
         UnitB.UnitB
-        Utilities.Arrow
-        Utilities.AxiomaticClass
-        Utilities.BipartiteGraph
-        Utilities.Brackets
-        Utilities.CallStack
-        Utilities.DList
         Utilities.EditDistance
         Utilities.Error
-        Utilities.Existential
         Utilities.FileFormat
         Utilities.FileSystem
         Utilities.Functor
-        Utilities.Generics 
         Utilities.Graph
         Utilities.GraphSpec
-        Utilities.Indentation
         Utilities.Instances
         Utilities.Invariant
         Utilities.Language
         Utilities.Lens
-        Utilities.Lines
         Utilities.Map
-        Utilities.Packaged
         Utilities.Partial
-        Utilities.PartialOrd
         Utilities.Permutation
-        Utilities.PrintfTH
-        Utilities.QuickCheckReport
-        Utilities.RandomTree
         Utilities.Reactive.Async
-        Utilities.Regression
-        Utilities.Relation
         Utilities.String
         Utilities.Syntactic
         Utilities.Table
@@ -190,10 +173,29 @@ library
         Utilities.TimeIt
         Utilities.Trace
         Utilities.Tuple
-        Utilities.Tuple.Generics
-        Utilities.Unfoldable
         Z3.Version
         Z3.Z3
+          -- Utilities
+        Control.Arrow.Unfold
+        Data.Existential
+        Data.DList.Utils
+        Data.Graph.Bipartite
+        Data.Packaged
+        Data.PartialOrd
+        Data.String.Brackets
+        Data.String.Lines
+        Data.String.Indentation
+        Data.Tuple.Generics
+        Data.Unfoldable
+        Data.Relation
+        GHC.Generics.Utils
+        GHC.Stack.Utils
+        Reactive.Banana.Keyboard
+        Test.QuickCheck.AxiomaticClass
+        Test.QuickCheck.Report
+        Test.QuickCheck.RandomTree
+        Test.QuickCheck.Regression
+        Text.Printf.TH
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes

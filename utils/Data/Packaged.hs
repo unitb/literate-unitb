@@ -7,7 +7,7 @@
     ,FlexibleInstances
     ,MultiParamTypeClasses
     ,FunctionalDependencies #-}
-module Utilities.Packaged where
+module Data.Packaged where
 
 import Control.DeepSeq
 import Control.Lens

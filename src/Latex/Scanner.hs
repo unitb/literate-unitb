@@ -13,9 +13,9 @@ import Control.Monad
 
 import Data.Maybe
 import qualified Data.List.NonEmpty as NE
+import Data.String.Lines as L
 
 import Utilities.Syntactic
-import Utilities.Lines as L
 
 data State a = State [(a,LineInfo)] LineInfo
 

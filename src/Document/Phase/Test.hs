@@ -44,14 +44,14 @@ import Control.Monad.State
 import Control.Monad.Writer
 
 import Data.Default
+import Data.Existential
+import Data.Graph.Bipartite as G
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Maybe
 
 import Test.QuickCheck
 
-import Utilities.BipartiteGraph as G
-import Utilities.Existential
 import Utilities.Lens
 import Utilities.Map  as M
 import Utilities.Syntactic

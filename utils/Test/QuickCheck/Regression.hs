@@ -1,4 +1,4 @@
-module Utilities.Regression where
+module Test.QuickCheck.Regression where
 
 import Test.QuickCheck
 

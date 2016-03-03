@@ -1,4 +1,4 @@
-module Utilities.BipartiteGraph 
+module Data.Graph.Bipartite
     ( BiGraph,GraphBuilder,GraphReader,BiGraph'
     , source, target, origins
     , leftKey,leftInfo,rightInfo,rightKey
@@ -12,8 +12,8 @@ module Utilities.BipartiteGraph
     , newEdge'
     , newEdge, newLeftVertex, newRightVertex
     , mapLeft, mapRight, mapBoth
-    , Utilities.BipartiteGraph.mapKeys
-    , Utilities.BipartiteGraph.keys
+    , Data.Graph.Bipartite.mapKeys
+    , Data.Graph.Bipartite.keys
     , insertEdge
     , mapLeftWithKey
     , mapRightWithKey

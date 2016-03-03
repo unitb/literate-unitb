@@ -35,13 +35,14 @@ import           Data.Functor.Compose
 import           Data.List as L hiding (inits, union,insert)
 import qualified Data.Set as S
 
+import Text.Printf.TH
+
 import           Utilities.Map as M hiding 
                     ( map
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Utilities.Map as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Invariant
 import Utilities.Instances
 import Utilities.Syntactic

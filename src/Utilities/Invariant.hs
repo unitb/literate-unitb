@@ -33,12 +33,12 @@ import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
 import GHC.Stack
+import GHC.Stack.Utils
 
 import PseudoMacros
 
 import Text.Printf
 
-import Utilities.CallStack
 import Utilities.Map (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
 import Utilities.Partial
 import Utilities.Lens

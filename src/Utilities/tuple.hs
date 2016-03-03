@@ -2,9 +2,12 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-module Utilities.Tuple where
+module Utilities.Tuple 
+    ( module Utilities.Tuple )
+where
 
     -- Libraries
+import Data.Functor.Identity
 import Data.Typeable
 
 infixr 5 :+:
@@ -13,7 +16,7 @@ data (:+:) a b = (:+:) a b
 
 type family Tuple a :: *
 type instance Tuple () = ()
-type instance Tuple (a:+:()) = Tuple1 a
+type instance Tuple (a:+:()) = Identity a
 type instance Tuple (a0:+:a1:+:()) = (a0,a1)
 type instance Tuple (a0:+:a1:+:a2:+:()) = (a0,a1,a2)
 type instance Tuple (a0:+:a1:+:a2:+:a3:+:()) = (a0,a1,a2,a3)
@@ -87,11 +90,7 @@ type Id a = a
 data S a = S a
     deriving Typeable
 
-data Tuple1 a = One a
 
-instance Monoid a => Monoid (Tuple1 a) where
-    mempty = One $ mempty
-    mappend (One x) (One y) = One $ x `mappend` y
 
 class Number a where
     value :: a -> Int
@@ -125,10 +124,10 @@ instance IsTuple () where
     toTuple () = ()
     fromTuple () = ()
 
-instance IsTuple (Tuple1 a) where
-    type TypeList (Tuple1 a) = a :+: ()
-    toTuple (One x) = x :+: ()
-    fromTuple (x :+: ()) = One x 
+instance IsTuple (Identity a) where
+    type TypeList (Identity a) = a :+: ()
+    toTuple (Identity x) = x :+: ()
+    fromTuple (x :+: ()) = Identity x 
 
 instance IsTuple (a,b) where
     type TypeList (a,b) = (a :+: b :+: ())

@@ -29,8 +29,9 @@ import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 
+import Text.Printf.TH
+
 import Utilities.Map   as M hiding ( (\\) )
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -90,7 +91,7 @@ tr_hint' p2 fv lbls = visit_doc []
                     texExpr
                 return $ TrHint (insert x (t, expr) ys) z)
         , ( "\\lt"
-          , CmdBlock $ \(One prog) (TrHint ys z) -> do
+          , CmdBlock $ \(Identity prog) (TrHint ys z) -> do
                 let msg = [printf|Only one progress property needed for '%s'|]
                 _unM $ toEither $ error_list 
                     [ ( not $ MM.isNothing z

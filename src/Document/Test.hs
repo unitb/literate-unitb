@@ -39,7 +39,8 @@ import UnitB.UnitB
     -- Libraries
 import Control.Lens
 
-import Utilities.AxiomaticClass
+import Test.QuickCheck.AxiomaticClass
+
 import Utilities.Syntactic
 
 test_case :: TestCase

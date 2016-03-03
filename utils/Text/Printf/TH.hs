@@ -1,4 +1,4 @@
-module Utilities.PrintfTH where
+module Text.Printf.TH where
 
 import Text.Printf as P
 import Language.Haskell.TH

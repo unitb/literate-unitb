@@ -18,7 +18,8 @@ import Control.Monad.Trans.Either
 
 import Tests.UnitTest
 
-import Utilities.PrintfTH
+import Text.Printf.TH
+
 import Utilities.Syntactic
 
 test_case :: TestCase

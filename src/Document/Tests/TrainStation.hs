@@ -23,13 +23,14 @@ import Control.Monad.State
 
 import qualified Data.List as L -- ( intercalate, filter )
 import qualified Data.List.NonEmpty as NE
+import           Data.String.Brackets
 
 import Tests.UnitTest
 
-import Utilities.Brackets
+import Text.Printf.TH
+
 import Utilities.Lens hiding (combine)
 import Utilities.Map   as M hiding ( map )
-import Utilities.PrintfTH
 import Utilities.Table
 
 test_case :: TestCase

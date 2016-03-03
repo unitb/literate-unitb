@@ -19,10 +19,11 @@ import qualified Data.Maybe as MM
 
 import Tests.UnitTest
 import Test.QuickCheck as QC hiding (sized)
+import Test.QuickCheck.RandomTree hiding (size,subtrees)
+import Test.QuickCheck.Regression
 
-import Utilities.PrintfTH
-import Utilities.RandomTree hiding (size,subtrees)
-import Utilities.Regression
+import Text.Printf.TH
+
 import Utilities.String
 import Utilities.Syntactic
 

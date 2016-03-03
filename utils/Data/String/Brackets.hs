@@ -1,4 +1,4 @@
-module Utilities.Brackets where
+module Data.String.Brackets where
 
     -- Modules
 import Control.Monad.State

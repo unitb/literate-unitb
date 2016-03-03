@@ -48,10 +48,11 @@ import Data.Typeable
 
 import GHC.Generics (Generic)
 
+import Text.Printf.TH
+
 import           Utilities.Error
 import           Utilities.Graph hiding ( Matrix )
 import qualified Utilities.Graph as G 
-import Utilities.PrintfTH
 
 type Matrix a b = G.Matrix a b
 

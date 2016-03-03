@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module Utilities.PartialOrd where
+module Data.PartialOrd where
 
 import Control.Lens
 
@@ -7,12 +7,12 @@ import Data.Function
 import Data.List 
 import Data.List.Ordered
 import Data.Proxy.TH
+import Data.Tuple.Generics
 
 import Test.QuickCheck
 
 import qualified Utilities.Map as M
 import Utilities.Table 
-import Utilities.Tuple.Generics
 
 data PartOrdering = Comp Ordering | Uncomp
     deriving (Eq,Ord,Show)

@@ -28,13 +28,14 @@ import Control.Monad.Trans.Either as E
 import Data.Char
 import Data.Default
 import Data.Either
+import Data.Existential
 import Data.List as L
 import qualified Data.List.NonEmpty as NE
 
+import Text.Printf.TH
+
 import Utilities.Error hiding (MonadError)
-import Utilities.Existential
 import Utilities.Map as M hiding ( map, (\\) )
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 

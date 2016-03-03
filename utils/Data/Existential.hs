@@ -5,7 +5,7 @@
     ,ScopedTypeVariables
     ,TypeOperators
     #-}
-module Utilities.Existential where
+module Data.Existential where
 
 import Control.Applicative as A
 import Control.Arrow

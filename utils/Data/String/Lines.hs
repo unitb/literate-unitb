@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell,RankNTypes #-}
-module Utilities.Lines where
+module Data.String.Lines where
 
 import Control.Applicative
 import Control.Arrow
@@ -15,8 +15,7 @@ import Prelude hiding (lines,unlines)
 import qualified Text.PortableLines as PL
 
 import Test.QuickCheck
-
-import Utilities.Regression
+import Test.QuickCheck.Regression
 
 asLines :: Iso' String (NonEmpty String)
 asLines = iso lines' F.concat

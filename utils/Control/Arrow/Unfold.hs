@@ -1,16 +1,15 @@
-module Utilities.Arrow where
+module Control.Arrow.Unfold where
 
 import Control.Arrow hiding (loop)
 import Control.Category
 import Control.Monad.State
 import Control.Lens
 
+import Data.Existential
 import Data.Tuple
+import Data.Unfoldable
 
 import Prelude hiding (id,(.))
-
-import Utilities.Existential
-import Utilities.Unfoldable
 
 class Arrow arr => ArrowUnfold arr where
     fixA :: Unfoldable t 

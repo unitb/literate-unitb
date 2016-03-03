@@ -21,9 +21,10 @@ import Language.Haskell.TH.Syntax hiding (Name)
 
 import           Test.QuickCheck
 
+import           Text.Printf.TH
+
 import           Utilities.Instances
 import           Utilities.Partial
-import           Utilities.PrintfTH
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *

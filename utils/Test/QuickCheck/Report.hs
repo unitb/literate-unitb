@@ -1,4 +1,4 @@
-module Utilities.QuickCheckReport where
+module Test.QuickCheck.Report where
 
 import Control.Monad
 

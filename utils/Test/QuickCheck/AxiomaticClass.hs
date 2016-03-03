@@ -1,4 +1,4 @@
-module Utilities.AxiomaticClass where
+module Test.QuickCheck.AxiomaticClass where
 
 import Control.Lens
 import Control.Monad

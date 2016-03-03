@@ -27,13 +27,14 @@ import qualified Data.DList as D
 import Data.Hashable
 import Data.List as L
 import Data.String
+import Data.Tuple.Generics
+
+import Text.Printf.TH
 
 import Utilities.Instances
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
-import Utilities.Tuple.Generics
 
 newtype MM' a b = MM (MaybeT (RWS a [Error] ()) b)
     deriving ( Functor,Applicative,MonadPlus

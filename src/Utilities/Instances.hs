@@ -39,15 +39,14 @@ import Data.Proxy.TH
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
+import Data.Tuple.Generics
 
+import GHC.Generics.Utils
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
 import Test.QuickCheck
-
-import Utilities.Generics
-import Utilities.Tuple.Generics
 
 class GMonoid a where
     gmempty :: a p

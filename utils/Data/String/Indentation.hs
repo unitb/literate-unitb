@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
-module Utilities.Indentation 
+module Data.String.Indentation 
     (Indentation(..),reindent,parse',display)
 where
 

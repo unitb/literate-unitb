@@ -24,6 +24,8 @@ import Data.Default
 import Data.Map as M hiding ((!))
 import Data.Maybe
 
+import GHC.Stack.Utils
+
 import Prelude hiding (readFile,writeFile)
 import qualified Prelude as P
 
@@ -35,7 +37,6 @@ import qualified System.Directory as D
 import System.FileLock
 import System.FilePath
 
-import Utilities.CallStack
 import Utilities.Invariant
 import Utilities.Partial
 

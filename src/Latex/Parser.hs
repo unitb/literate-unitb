@@ -25,6 +25,7 @@ import Data.List ( intercalate )
 import qualified Data.List as L
 import Data.Map as M hiding ( foldl, map, null, size, (!) )
 import Data.Semigroup
+import Data.String.Lines as LN
 import Data.Typeable
 
 import GHC.Generics (Generic)
@@ -40,10 +41,10 @@ import qualified Text.Parsec as P
 import Text.Parsec.Error
 import qualified Text.Parsec.Pos as P
 
+import Text.Printf.TH
+
 import Utilities.Graph hiding ( map, empty, size, (!) )
-import Utilities.Lines as LN
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Syntactic
 --import Utilities.Zipper as Z
 

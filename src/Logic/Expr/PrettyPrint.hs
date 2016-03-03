@@ -22,12 +22,15 @@ import Control.Monad.Reader
 
 import Data.DList as D (DList)
 import qualified Data.DList as D
+import Data.DList.Utils as D
 import Data.Either.Combinators
+import Data.Existential
 import Data.Functor.Classes
 import Data.Maybe
 import Data.Monoid
 import Data.List as L hiding (uncons,unlines)
 import qualified Data.List.NonEmpty as NE
+import Data.String.Lines
 
 import GHC.Generics
 import GHC.Generics.Lens
@@ -37,12 +40,10 @@ import Language.Haskell.TH.Quote
 
 import Prelude hiding (unlines)
 
-import Utilities.DList as D
-import Utilities.Existential
+import Text.Printf.TH
+
 import Utilities.Instances
-import Utilities.Lines
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Syntactic (LineInfo(..))
 import Utilities.Table
 

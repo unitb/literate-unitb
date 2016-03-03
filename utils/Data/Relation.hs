@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude  #-}
 {-# LANGUAGE TypeOperators      #-}
-module Utilities.Relation where
+module Data.Relation where
 
     -- Libraries
 import Control.Arrow

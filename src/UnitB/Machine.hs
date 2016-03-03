@@ -31,6 +31,7 @@ import           Data.Monoid
 import           Data.Foldable as F (all,toList)
 import           Data.Functor.Compose
 import           Data.Functor.Classes
+import           Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
 import           Data.Maybe as M
@@ -39,14 +40,15 @@ import           Data.String
 import qualified Data.Traversable as T
 import           Data.Typeable
 
-import Utilities.BipartiteGraph as G
-import Utilities.CallStack
+import GHC.Stack.Utils
+
+import Text.Printf.TH
+
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Lens
 import Utilities.Map as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Table
 import Utilities.TH
 

@@ -1,4 +1,4 @@
-module Utilities.Unfoldable where
+module Data.Unfoldable where
 
 import Data.Functor.Identity
 import Data.List.NonEmpty

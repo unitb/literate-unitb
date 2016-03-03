@@ -37,6 +37,7 @@ import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 
 import           Data.Either
+import           Data.Existential
 import           Data.Foldable as F
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
@@ -46,7 +47,8 @@ import qualified Data.Traversable as T
 
 import System.IO
 
-import Utilities.Existential
+import Text.Printf.TH
+
 import Utilities.Functor
 import Utilities.Partial
 import           Utilities.Map as M hiding 
@@ -54,7 +56,6 @@ import           Utilities.Map as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table
 

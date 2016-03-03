@@ -24,12 +24,14 @@ import UnitB.Property
     -- Libraries
 import Control.Applicative
 import Control.Arrow
+import Control.Arrow.Unfold
 import Control.Category
 import Control.DeepSeq
 import Control.Lens 
 import Control.Monad
 
 import Data.Default
+import Data.Existential
 import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.Foldable as F
@@ -37,15 +39,13 @@ import Data.List.Ordered
 import Data.Maybe
 import Data.Proxy.TH
 import Data.Typeable
+import Data.Unfoldable
 
 import Prelude hiding (id,(.))
 import Text.Printf
 
-import Utilities.Arrow
-import Utilities.Existential
 import Utilities.Instances
 import Utilities.Syntactic
-import Utilities.Unfoldable
 
 type Builder r t = forall arr a b constr. ArrowUnfold arr 
                => (constr r :- Unfoldable t)

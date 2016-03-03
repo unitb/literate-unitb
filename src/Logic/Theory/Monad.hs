@@ -29,9 +29,10 @@ import           Data.Typeable
 
 import Language.Haskell.TH hiding (Type,Name)
 
+import Text.Printf.TH
+
 import Utilities.Error
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Map as M
 import Utilities.Table
 import Utilities.Tuple

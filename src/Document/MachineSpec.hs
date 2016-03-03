@@ -15,7 +15,6 @@ import Theories.SetTheory
 import UnitB.Expr
 import UnitB.UnitB
 
-import Utilities.RandomTree
 
     -- Libraries
 import Control.Lens hiding (Context,elements,Const)
@@ -26,11 +25,13 @@ import qualified Data.List as L
 import qualified Data.Set as S
 
 import Test.QuickCheck hiding (label, sized, elements)
+import Test.QuickCheck.RandomTree
+
+import Text.Printf.TH
 
 import qualified Utilities.Graph as G 
 import qualified Utilities.Map as M
 import           Utilities.Partial
-import           Utilities.PrintfTH
 import           Utilities.Syntactic
 import           Utilities.Table
 

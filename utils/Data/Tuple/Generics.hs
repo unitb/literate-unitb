@@ -5,7 +5,7 @@
     , DefaultSignatures
     , ScopedTypeVariables
     , UndecidableInstances #-}
-module Utilities.Tuple.Generics 
+module Data.Tuple.Generics 
     ( IsTuple(..)
     , GIsTuple(..)
     , Generic, GZippableRecord
@@ -32,10 +32,9 @@ import Data.Semigroup.Monad
 
 import GHC.Generics hiding (from,to)
 import GHC.Generics.Lens
+import GHC.Generics.Utils
 
 import Text.Read (readMaybe)
-
-import Utilities.Generics
 
 class IsTuple constr a where
     traverseTuple :: Applicative f => Proxy constr -> (forall b. constr b => b -> f b) -> a -> f a

@@ -19,11 +19,11 @@ import UnitB.Syntax as AST hiding (Constraint)
 import Control.DeepSeq
 import Control.Lens as L
 
+import Data.Graph.Bipartite as G hiding (fromList')
 import Data.Typeable
 
 import GHC.Generics (Generic)
 
-import Utilities.BipartiteGraph as G hiding (fromList')
 import Utilities.Syntactic
 import Utilities.Table
 import Utilities.TableConstr

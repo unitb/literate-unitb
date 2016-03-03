@@ -17,13 +17,15 @@ import Control.Monad.Reader.Class
 import Data.Default
 import Data.List
 
+import GHC.Stack.Utils
+
 import PseudoMacros
 
-import Utilities.CallStack
+import Text.Printf.TH
+
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Table
 
 data VisibleVars = VisibleVars

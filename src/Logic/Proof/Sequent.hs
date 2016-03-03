@@ -16,19 +16,20 @@ import Data.Char
 import Data.Default
 import Data.List as L
 import Data.Maybe  as MM hiding (fromJust)
+import Data.PartialOrd
 import qualified Data.Set  as S
+import Data.String.Lines
 import Data.Typeable
 import Data.Word
 
+import Test.QuickCheck.Report ()
 import Test.QuickCheck hiding (label)
 
+import Text.Printf.TH
+
 import Utilities.Instances
-import Utilities.Lines
 import Utilities.Map    as M hiding ( map, Unordered )
 import Utilities.Partial
-import Utilities.PartialOrd
-import Utilities.PrintfTH
-import Utilities.QuickCheckReport ()
 import Utilities.Table
 import Utilities.TH
 

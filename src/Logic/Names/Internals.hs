@@ -45,15 +45,16 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax hiding (Name,lift)
 import qualified Language.Haskell.TH.Syntax as TH 
 
+import Test.QuickCheck as QC
+
+import Text.Printf.TH
+
 import Utilities.Instances
 import Utilities.Invariant hiding ((===))
 import Utilities.Language  as Lang
 import qualified Utilities.Map as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Table
-
-import Test.QuickCheck as QC
 
 type NEString = NonEmpty Char
 

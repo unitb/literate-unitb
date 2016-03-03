@@ -14,18 +14,18 @@ import Control.Monad
 
 import Data.Hashable
 import Data.Map hiding ( map, union, member )
+import Data.PartialOrd
 import qualified Data.Set as S
 
 import Test.QuickCheck
+import Test.QuickCheck.AxiomaticClass
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
+import Test.QuickCheck.Regression
+import Test.QuickCheck.Report ()
 
 import Tests.UnitTest
 
-import Utilities.AxiomaticClass
-import Utilities.Regression
-import Utilities.PartialOrd
-import Utilities.QuickCheckReport ()
 
 left :: Type -> Type
 left  = suffix_generics "1"

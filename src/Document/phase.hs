@@ -33,24 +33,25 @@ import Control.Monad.Writer.Class
 import Data.Default
 import Data.Either
 import Data.Either.Combinators
+import Data.Graph.Bipartite as G hiding (fromList')
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Maybe as MM
 import Data.Semigroup
 import qualified Data.Traversable as T
+import Data.Tuple.Generics
 
 import Test.QuickCheck as QC hiding (label,collect)
 
-import Utilities.BipartiteGraph as G hiding (fromList')
+import Text.Printf.TH
+
 import Utilities.Map as M
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
 import Utilities.Instances
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Syntactic
 import Utilities.Table 
-import Utilities.Tuple.Generics
 
 triggerM :: Maybe a -> MM' c a
 triggerM = maybe mzero return

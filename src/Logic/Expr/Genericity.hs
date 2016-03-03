@@ -46,12 +46,13 @@ import qualified Data.Set as S
 
 import Prelude as L
 
+import Text.Printf.TH
+
 import Utilities.Error
 import           Utilities.Map as M 
                     hiding ( map, union, unions, (\\) )
 import qualified Utilities.Map as M
 import Utilities.Partial (Assert)
-import Utilities.PrintfTH
 import Utilities.Table
 
 suffix_generics :: String -> GenericType -> GenericType

@@ -16,16 +16,16 @@ import UnitB.Syntax
 import Control.Lens
 import Control.Monad.Reader
 
+import Data.Existential
 import Data.Hashable
 import Data.List.NonEmpty as NE (toList)
 import Data.Maybe as M
 import Data.Typeable
 
 import Test.QuickCheck
+import Test.QuickCheck.Regression
 
-import Utilities.Existential
 import Utilities.Instances
-import Utilities.Regression
 import Utilities.Syntactic
 import Utilities.Table
 

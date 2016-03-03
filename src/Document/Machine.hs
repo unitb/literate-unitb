@@ -31,11 +31,11 @@ import           Control.Monad.Trans.RWS as RWS ( RWS )
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
+import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
 
-import qualified Utilities.BipartiteGraph as G
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
 import Utilities.Syntactic

@@ -51,10 +51,14 @@ import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 import           Data.Char
 import           Data.Either.Combinators
 import           Data.Either.Validation
+import           Data.Existential
 import           Data.Functor.Compose
+import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import           Data.Proxy.TH
+import           Data.Relation (type(<->),(|>),(<|))
+import qualified Data.Relation as R
 import qualified Data.Set as S
 import qualified Data.Traversable as T
 import           Data.Witherable  as W
@@ -63,14 +67,10 @@ import GHC.Generics (Generic)
 
 import Prelude hiding (id,(.))
 
-import Utilities.PrintfTH
+import Text.Printf.TH
 
-import qualified Utilities.BipartiteGraph as G
-import Utilities.Existential
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
-import Utilities.Relation (type(<->),(|>),(<|))
-import qualified Utilities.Relation as R
 import Utilities.Syntactic
 import Utilities.Table
 

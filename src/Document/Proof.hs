@@ -40,10 +40,11 @@ import qualified Data.Traversable as T
 
 import GHC.Generics (Generic)
 
+import Text.Printf.TH
+
 import           Utilities.Error
 import           Utilities.Map hiding ( map )
 import qualified Utilities.Map as M
-import           Utilities.PrintfTH
 import           Utilities.Syntactic hiding (line)
 import           Utilities.Table
 
@@ -181,7 +182,7 @@ find_assumptions = visitor
             ,   VEnvBlock $ \() _ -> return ()
             )
         ,   (   "subproof"
-            ,   VEnvBlock $ \(One (_ :: Label)) _ -> return ()
+            ,   VEnvBlock $ \(Identity (_ :: Label)) _ -> return ()
             )
         ] [ (   "\\assume"
             ,   VCmdBlock $ \(lbl,formula) -> do
@@ -199,12 +200,12 @@ find_assumptions = visitor
                     add_definition var expr
             )
         ,   (   "\\goal"
-            ,   VCmdBlock $ \(One formula) -> do
+            ,   VCmdBlock $ \(Identity formula) -> do
                     expr   <- lift_i $ get_expression (Just bool) formula 
                     set_goal expr
             )
         ,   (   "\\using"
-            ,   VCmdBlock $ \(One refs) -> do
+            ,   VCmdBlock $ \(Identity refs) -> do
                     ((),hs) <- add_writer $ with_content refs hint
                     add_refs hs
             )       
@@ -256,7 +257,7 @@ find_proof_step = visitor
                         by_parts xs
             )
         ,   (   "subproof"
-            ,   VEnvBlock $ \(One lbl) _ -> do
+            ,   VEnvBlock $ \(Identity lbl) _ -> do
                     li     <- ask
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
@@ -330,7 +331,7 @@ find_parts :: (MonadReader Thy m)
            => VisitorT (WriterT [(Tactic Expr,Tactic Proof)] m) () -- [(Expr,Proof)]
 find_parts = visitor 
         [   (   "part:a"
-            ,   VEnvBlock $ \(One formula) _ -> do -- xs cases -> do
+            ,   VEnvBlock $ \(Identity formula) _ -> do -- xs cases -> do
                     expr  <- lift_i $ get_expression (Just bool) formula 
                     p     <- lift_i collect_proof_step -- (pr { po = new_po }) m
                     lift $ tell [(expr, p)]
@@ -405,7 +406,7 @@ hint = visitor []
                 lift $ W.tell [do
                     w <- sequence w 
                     return (ThmRef lbl w,li)]
-        f (One b) = do
+        f (Identity b) = do
             li <- ask
             lift $ W.tell [return (ThmRef b [],li)]
 

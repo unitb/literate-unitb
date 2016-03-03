@@ -27,9 +27,10 @@ import Control.Monad.Trans.RWS
 import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
 
+import Text.Printf.TH
+
 import Utilities.Map  as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Table
 
 

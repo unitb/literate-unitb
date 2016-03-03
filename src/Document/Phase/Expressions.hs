@@ -39,6 +39,7 @@ import qualified Control.Monad.Writer as W
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Either hiding (isLeft,isRight)
+import           Data.Existential
 import           Data.Functor.Compose
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
@@ -47,12 +48,12 @@ import qualified Data.Traversable   as T
 
 import Test.QuickCheck hiding (label)
 
-import Utilities.Existential
+import Text.Printf.TH
+
 import Utilities.Lens
 import           Utilities.Map   as M hiding ( map, (\\) )
 import qualified Utilities.Map   as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.String
 import Utilities.Syntactic
 import Utilities.Table

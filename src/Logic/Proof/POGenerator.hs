@@ -31,11 +31,12 @@ import Data.DList as D
 import Data.List  as L
 import Data.Semigroup
 
+import Text.Printf.TH
+
 import Utilities.Invariant
 import Utilities.Instances
 import Utilities.Map as M hiding ( map )
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Table
 import Utilities.TH (mkCons)
 import Utilities.Trace

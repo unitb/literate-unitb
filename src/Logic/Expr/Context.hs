@@ -18,16 +18,16 @@ import Control.Lens hiding (rewrite,Context,elements
 
 import           Data.Data
 import           Data.Default
+import           Data.PartialOrd
 import           Data.Semigroup
 
 import Test.QuickCheck
+import Test.QuickCheck.Report ()
 
 import Utilities.Functor
 import Utilities.Instances
 import Utilities.Lens
 import qualified Utilities.Map as M
-import Utilities.PartialOrd
-import Utilities.QuickCheckReport ()
 import Utilities.Table
 
 type Context = AbsContext GenericType HOQuantifier

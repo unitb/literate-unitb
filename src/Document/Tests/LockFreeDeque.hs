@@ -14,12 +14,12 @@ import UnitB.Expr
     -- Libraries
 import Control.Lens hiding (indices)
 
+import Data.Graph.Bipartite
 import Data.List as L
 import Data.Set as S
 
 import Tests.UnitTest
 
-import Utilities.BipartiteGraph
 import Utilities.Map as M
 import Utilities.Table
 

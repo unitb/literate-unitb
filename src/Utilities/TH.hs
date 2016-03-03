@@ -19,7 +19,6 @@ import Data.List.Ordered
 import Data.Map as M
 import Data.Maybe
 import Data.Tuple
-import qualified Data.Typeable as T (typeOf)
 import           Data.Typeable.Lens
 
 import Language.Haskell.TH
@@ -286,104 +285,6 @@ cons n = do
     where
         cname = mkName $ "make" ++ nameBase n
 
-existential :: Name -> DecsQ
-existential tn = do
-    i <- reify tn
-    case i of
-      TyConI d -> 
-        case d of
-          DataD [] n [] [ForallC [vs] cx (NormalC cons [(_,t')])] _ -> do
-            let apply  = mkName $ "apply" ++ nameBase n
-                apply2 = mkName $ "apply2" ++ nameBase n
-                group  = mkName $ "group" ++ nameBase n
-                group' = mkName $ "group" ++ nameBase n ++ "'"
-                typeOf = mkName $ "typeOf" ++ nameBase n
-                map = mkName $ "map" ++ nameBase n
-                read = mkName $ "read" ++ nameBase n
-                f  = mkName "f"
-                x  = mkName "x"
-                y  = mkName "y"
-                xs = mkName "xs"
-                t  = return t'
-                check = appsE [ varE apply2
-                              , lamE [varP x,varP y] 
-                                $ appE (conE 'Identity) 
-                                $ appsE [varE f,varE x,varE y]
-                              , varE x,varE y]
-                func = return [AppT (ConT ''Functor) (VarT f)]
-            a <- newName "a"
-            t <- sequence 
-                [ sigD apply $ forallT [PlainTV f] func $
-                    arrowType' [ forallT [vs] (return cx) $ 
-                                    arrowType' [t] $ appT (varT f) t
-                               , conT tn ]
-                               $ appT (varT f) (conT tn) 
-                , funD apply [clause [varP f,conP cons [varP x]] 
-                    (normalB $ appsE [varE 'fmap,conE cons,appE (varE f) (varE x)]) []]
-                , sigD apply2 $ forallT [PlainTV f] func $
-                    arrowType' [ forallT [vs] (return cx) $ 
-                                    arrowType' [t,t] $ appT (varT f) t
-                               , conT tn, conT tn ]
-                               $ appT (conT ''Maybe) (appT (varT f) (conT tn) )
-                , funD apply2 [clause [varP f,conP cons [varP x],conP cons [varP y]]
-                    (normalB $ appsE [ varE 'fmap
-                                     , appE (varE 'fmap) (conE cons)
-                                     , appsE [ varE 'fmap
-                                             , appE (varE f) (varE x) 
-                                             , appE (varE 'cast) (varE y) ] ]) []]
-                , sigD group' $ arrowType' 
-                    [ forallT [vs] (return cx) $ 
-                        arrowType' [t,t] t 
-                    , appT listT (conT tn) ]
-                    (appT listT (conT tn))
-                , funD group'
-                    [ clause [varP f,conP '(:) [varP x,conP '(:) [varP y,varP xs]]]
-                        (normalB $ caseE check 
-                            [ match (conP 'Just [conP 'Identity [varP y]]) 
-                                (normalB $ appsE [varE group,varE f,appsE [conE '(:),varE y,varE xs]]) []
-                            , match (conP 'Nothing []) 
-                                (normalB $ appsE [ conE '(:), varE x
-                                                 , appsE [ varE group, varE f
-                                                         , appsE [conE '(:),varE y,varE xs]]]) []]) []
-                    , clause [wildP,varP xs] (normalB $ varE xs) []
-                    ]
-                , sigD group $ arrowType' 
-                    [ forallT [vs] (return cx) $ 
-                        arrowType' [t,t] t 
-                    , appT listT (conT tn) ]
-                    (appT listT (conT tn))
-                , funD group
-                    [ clause [varP f,varP xs] 
-                        (normalB $ appsE [ varE group',varE f
-                                         , appsE [varE 'sortOn,varE typeOf,varE xs]]) [] ]
-                , sigD typeOf $ arrowType' [conT tn] $ conT ''TypeRep
-                , funD typeOf 
-                    [ clause [conP cons [varP x]] (normalB $ appE (varE 'T.typeOf) (varE x)) [] ]
-                , sigD map $ arrowType' [ forallT [vs] (return cx) $ 
-                                            arrowType' [t] t
-                                        , conT tn ]
-                                        $ (conT tn) 
-                , funD map 
-                    [ clause [varP f,varP x] (normalB $ 
-                        appE (varE 'runIdentity) $
-                        appsE [ varE apply
-                              , appsE [varE '(.),conE 'Identity,varE f]
-                              , varE x]) [] ]
-                , sigD read $ forallT [PlainTV a] (return []) $
-                    arrowType' [ forallT [vs] (return cx) $ 
-                                        arrowType' [t] (varT a)
-                               , conT tn ]
-                               $ (varT a) 
-                , funD read
-                    [ clause [varP f,varP x] (normalB $ 
-                        appE (varE 'getConst) $
-                        appsE [ varE apply
-                              , appsE [varE '(.),conE 'Const,varE f]
-                              , varE x]) [] ]
-                ]
-            return t
-          _ -> fail $ "unsupported type: \n" ++ pprint d
-      _ -> fail $ "unsupported decl: \n" ++ pprint i
 
 count_cases :: DecsQ
 count_cases = do

@@ -18,9 +18,10 @@ import Control.Lens
 import Data.Default
 import Data.List as L
 
+import Text.Printf.TH
+
 import Utilities.Lens
 import Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q

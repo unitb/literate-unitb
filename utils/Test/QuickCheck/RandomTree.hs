@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Utilities.RandomTree where
+module Test.QuickCheck.RandomTree where
 
 import Control.Monad
 import Control.Monad.Fix
@@ -16,9 +16,9 @@ import Text.Printf
 
 import Test.QuickCheck hiding (sized)
 import qualified Test.QuickCheck as QC
+import Test.QuickCheck.Report
 
 import Utilities.Partial
-import Utilities.QuickCheckReport
 
 data Tree a = Tree a [Tree a]
     deriving Eq

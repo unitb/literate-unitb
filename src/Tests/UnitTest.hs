@@ -31,6 +31,8 @@ import           Data.IORef
 import           Data.List
 import           Data.List.NonEmpty as NE (sort)
 import           Data.Maybe
+import           Data.String.Indentation
+import           Data.String.Lines hiding (lines,unlines)
 import           Data.Tuple
 import           Data.Typeable
 
@@ -43,15 +45,14 @@ import Prelude
 import PseudoMacros
 
 import qualified Utilities.Map as M hiding ((!))
-import Utilities.Indentation
-import Utilities.Lines hiding (lines,unlines)
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Table
 
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
+
+import Text.Printf.TH
 
 data TestCase = 
       forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a

@@ -31,10 +31,11 @@ import System.FilePath
 
 import Prelude hiding (writeFile,readFile)
 
+import Text.Printf.TH
+
 import Utilities.FileSystem
 import Utilities.Map as M hiding (map)
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 
 newtype Doc a = Doc { getDoc :: forall io. FileSystem io => ReaderT FilePath io a }
     deriving (Functor)

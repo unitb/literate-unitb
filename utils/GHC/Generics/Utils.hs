@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
-module Utilities.Generics 
+module GHC.Generics.Utils
     ( left,right
     , module GHC.Generics
     , module GHC.Generics.Lens )

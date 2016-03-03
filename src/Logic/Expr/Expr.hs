@@ -36,11 +36,12 @@ import Language.Haskell.TH hiding (Type,Name) -- (ExpQ,location,Loc)
 
 import Test.QuickCheck
 
+import Text.Printf.TH
+
 import Utilities.Functor
 import Utilities.Instances
 import qualified Utilities.Map as M
 import Utilities.Partial
-import Utilities.PrintfTH
 import Utilities.Table
 
 type Expr = AbsExpr Name GenericType HOQuantifier

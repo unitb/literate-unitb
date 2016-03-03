@@ -34,11 +34,12 @@ import           Data.Either
 import           Data.List as L
 import qualified Data.Set as S
 
+import Text.Printf.TH
+
 import Utilities.EditDistance
 import Utilities.Graph as G ((!))
 import           Utilities.Map as M hiding ( map, (!) )
 import qualified Utilities.Map as M
-import Utilities.PrintfTH
 import Utilities.Table
 
 data Param = Param 

@@ -20,10 +20,10 @@ import Control.Lens hiding (indices)
 import           Data.Default
 import           Data.Functor.Classes
 import           Data.Functor.Compose
+import           Data.Graph.Bipartite
 
 import Text.Printf
 
-import Utilities.BipartiteGraph
 import Utilities.Instances
 import Utilities.Invariant
 import Utilities.Map as M hiding ((!))
