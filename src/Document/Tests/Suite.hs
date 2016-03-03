@@ -92,22 +92,30 @@ verifyFilesWith :: State Sequent a
                 -> Int 
                 -> IO POResult
 verifyFilesWith opt files i = makeReport' empty $ do
-    ms <- EitherT $ fst <$> many_file_obligations' files
-    if i < size ms then do
-        let (m,pos) = snd $ i `elemAt` ms
-        r <- lift $ try (str_verify_machine_with opt m)
-        case r of
-            Right (s,_,_) -> return (s, pos)
-            Left e -> return (show (e :: SomeException),pos)
-    else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
+    b <- liftIO $ mapM doesFileExist files
+    if and b then do
+        ms <- EitherT $ fst <$> many_file_obligations' files
+        if i < size ms then do
+            let (m,pos) = snd $ i `elemAt` ms
+            r <- lift $ try (str_verify_machine_with opt m)
+            case r of
+                Right (s,_,_) -> return (s, pos)
+                Left e -> return (show (e :: SomeException),pos)
+        else return ([printf|accessing %dth refinement out of %d|] i (size ms),empty)
+    else do
+        let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
+        return ([printf|The following files do not exist: %s|] $ intercalate "," fs,empty)
 
 all_proof_obligations' :: FilePath -> EitherT String IO [Table Label String]
 all_proof_obligations' path = do
+    exists <- liftIO $ doesFileExist path
+    if exists then do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
         let pos = M.ascElems $ M.map snd xs
             cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
         return cmd
+    else left $ [printf|file does not exist: %s|] path
 
 all_proof_obligations :: FilePath -> IO (Either String [Table Label String])
 all_proof_obligations = runEitherT . all_proof_obligations'
@@ -120,6 +128,8 @@ withLI' (EitherT cmd) = EitherT $ withLI <$> cmd
 
 raw_proof_obligation :: FilePath -> String -> Int -> IO String
 raw_proof_obligation path lbl i = makeReport $ do
+    exists <- liftIO $ doesFileExist path
+    if exists then do
         ms <- EitherT $ Doc.parse_machine path
         m  <- Document.Tests.Suite.lookup i ms
         po <- hoistEither $ withLI $ lookupSequent 
@@ -127,6 +137,7 @@ raw_proof_obligation path lbl i = makeReport $ do
                 (UB.raw_proof_obligation m)
         let cmd = unlines $ L.map pretty_print' $ z3_code po
         return $ [printf|; %s\n%s; %s\n|] lbl cmd lbl
+    else return $ [printf|file does not exist: %s|] path
 
 stripAnnotation :: Expr -> Expr
 stripAnnotation e = E.rewrite stripAnnotation $ f e
@@ -184,14 +195,17 @@ proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
 find_errors :: FilePath -> IO String 
 find_errors path = do
     p <- canonicalizePath path
-    m <- fst <$> list_file_obligations' path
-    let hide
-            | hide_error_path = L.replace (p ++ ":") "error "
-            | otherwise       = id
-    return $ either 
-        (hide . unlines . L.map report)
-        (const $ "no errors")
-        m
+    exists <- doesFileExist path
+    if exists then do
+        m <- fst <$> list_file_obligations' path
+        let hide
+                | hide_error_path = L.replace (p ++ ":") "error "
+                | otherwise       = id
+        return $ either 
+            (hide . unlines . L.map report)
+            (const $ "no errors")
+            m
+    else return $ [printf|file does not exist: %s|] path
 
 parse_machine :: FilePath -> Int -> IO (Either [Error] Machine)
 parse_machine path n = runEitherT $ parse_machine' path n
@@ -202,29 +216,40 @@ parse_machine' fn i = lookup i =<< parse' fn
 parse :: FilePath -> IO (Either [Error] [Machine])
 parse path = do
     p <- getCurrentDirectory
+    exists <- doesFileExist path
     let mapError = traverse.traverseLineInfo.filename %~ drop (length p)
         f = ascElems . M.map fst
-    (mapBoth mapError f . fst) <$> list_file_obligations' path
+    if exists then
+        (mapBoth mapError f . fst) <$> list_file_obligations' path
+    else 
+        return $ Left [Error ([printf|'%s' does not exist|] path) $ LI "" 1 1]
 
 parse' :: FilePath -> EitherT [Error] IO [Machine]
 parse' = EitherT . parse
 
 verify_thy :: FilePath -> String -> IO POResult
 verify_thy path name = makeReport' empty $ do
-        r <- EitherT $ snd <$> list_file_obligations' path
-        let pos = snd $ r ! name
-        res <- lift $ try (verify_all pos)
-        case res of
-            Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toAscList res, pos)
-            Left e -> return (show (e :: SomeException),pos)
+        exists <- liftIO $ doesFileExist path
+        if exists then do
+            r <- EitherT $ snd <$> list_file_obligations' path
+            let pos = snd $ r ! name
+            res <- lift $ try (verify_all pos)
+            case res of
+                Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toAscList res, pos)
+                Left e -> return (show (e :: SomeException),pos)
+        else return ([printf|file does not exist: %s|] path,empty)
     where
         success True  = "  o  "
         success False = " xxx "
 
 get_system :: FilePath -> EitherT String IO System
 get_system path = do
-    EitherT $ either (Left . show_err) Right 
-        <$> parse_system path
+    exists <- liftIO $ doesFileExist path
+    if exists then do
+        EitherT $ either (Left . show_err) Right 
+            <$> parse_system path
+    else left $ [printf|file does not exist: %s|] path
+
 
 lookup :: (?loc :: CallStack,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k
