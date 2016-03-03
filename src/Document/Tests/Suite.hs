@@ -60,19 +60,30 @@ list_file_obligations' path = many_file_obligations' $ pure path
 
 many_file_obligations' :: NonEmpty FilePath -> IO (POS MachineId Machine,POS String Theory)
 many_file_obligations' files = do
-    m <- takeMVar pos
-    files <- mapM canonicalizePath files
-    t <- fmap M.fromList $ forM (NE.toList files) $ \file -> 
-        (file,) <$> getModificationTime file
-    sys <- parse_system' files
-    let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
-        cmd f = runKleisli (Kleisli return &&& Kleisli f)
-        -- ms :: Either 
-        ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
-            -- >>= traverseWithKey (cmd PO.proof_obligation)
-        ts = view' theories <$> sys >>= traverse (cmd theory_po)
-    putMVar pos $ M.insert (NE.sort files) ((ms,ts),t) m
-    return (ms,ts)
+        -- | modifyMVar is important for exception safety
+        -- | if this procedure crashes without restoring the
+        -- | state of pos, every other thread attempting any 
+        -- | call on this module is going to with a mysterious
+        -- | MVar exception
+    b <- liftIO $ mapM doesFileExist files
+    if and b then do
+        modifyMVar pos $ \m -> do
+            files <- mapM canonicalizePath files
+            t <- fmap M.fromList $ forM (NE.toList files) $ \file -> 
+                (file,) <$> getModificationTime file
+            sys <- parse_system' files
+            let cmd :: Monad m => (b -> m c) -> b -> m (b,c)
+                cmd f = runKleisli (Kleisli return &&& Kleisli f)
+                -- ms :: Either 
+                ms = M.map (id &&& UB.proof_obligation).view' machines <$> sys 
+                    -- >>= traverseWithKey (cmd PO.proof_obligation)
+                ts = view' theories <$> sys >>= traverse (cmd theory_po)
+                m' = M.insert (NE.sort files) ((ms,ts),t) m
+            return (m',(ms,ts))
+    else do
+        let fs = L.map snd $ NE.filter (not.fst) $ NE.zip b files
+            errs = Left [Error ([printf|The following files do not exist: %s|] $ intercalate "," fs) $ LI "" 1 1]
+        return (errs,errs)
 
 verifyFiles :: NonEmpty FilePath 
             -> Int -> IO POResult
