@@ -20,10 +20,14 @@ import           Data.Data
 import           Data.Default
 import           Data.Semigroup
 
+import Test.QuickCheck
+
 import Utilities.Functor
 import Utilities.Instances
 import Utilities.Lens
 import qualified Utilities.Map as M
+import Utilities.PartialOrd
+import Utilities.QuickCheckReport ()
 import Utilities.Table
 
 type Context = AbsContext GenericType HOQuantifier
@@ -116,6 +120,16 @@ instance (Ord n,Hashable n) => Monoid (CtxConflict n t q) where
         { conflict = mconcat [conflict c0,conflict c1
             , getIntersection $ Intersection (declaration c0) <> Intersection (declaration c1)] 
         , declaration = declaration c0 `mappend` declaration c1 }
+
+instance (Ord n,Eq t,Eq q) => PreOrd (GenContext n t q) where
+    partCompare = genericPreorder
+
+instance (Ord n,Eq t,Eq q) => PartialOrd (GenContext n t q) where
+
+instance ( Ord n,TypeSystem t,IsQuantifier q
+         , Arbitrary n,Arbitrary t,Arbitrary q) 
+        => Arbitrary (GenContext n t q) where
+    arbitrary = scale (`div` 2) genericArbitrary
 
 empty_ctx :: GenContext n t q
 empty_ctx = def

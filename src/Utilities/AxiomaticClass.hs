@@ -10,7 +10,6 @@ import Data.Maybe
 import Prelude hiding (Monoid(..))
 
 import Language.Haskell.TH
-import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Lens
 
 import Test.QuickCheck
@@ -88,7 +87,7 @@ quickCheckClassTests cl = do
         subst _ _ = undefined
         quickCheckInvoke :: Type -> Dec -> ExpQ
         quickCheckInvoke t d = [e| (
-            printf "Axiom of %s : %s" $(lift $ pprint t) $(lift $ nameBase $ decName d)
+            $(stringE $ printf "Axiom of %s : %s" (pprint t) (nameBase $ decName d))
             , property $(subst t d)) |]
         props = quickCheckInvoke <$> insts <*> axioms
     when (null insts) $ fail $ printf "class %s does not have instances"

@@ -64,7 +64,7 @@ test = test_cases "Graphs and operator grammars" $
     , Case "case 12 - New graphs, quickcheck" Perm.run_tests True  
     , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
     , Case "test 14 - quickcheck brackets" runSpec True
-    , Tup.test_case ]
+    , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do

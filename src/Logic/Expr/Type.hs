@@ -38,19 +38,15 @@ class (Ord a, Tree a, PrettyPrintable a, Show a
         , Typed a, TypeOf a ~ a, Typeable a
         , Hashable a ) 
         => TypeSystem a where
-    type_cons :: a -> Maybe (TypeCons a)
     make_type :: Sort -> [a] -> a
 
 instance TypeSystem GenericType where
-    type_cons (Gen s xs) = Just (USER_DEFINED s xs)
-    type_cons _          = Nothing
     make_type    = Gen
 
 instance Typed FOType where
     type TypeOf FOType = FOType
 
 instance TypeSystem FOType where
-    type_cons (FOT s xs) = Just (USER_DEFINED s xs)
     make_type = FOT
 
 instance Hashable FOType where
@@ -61,7 +57,6 @@ instance Typed () where
     type TypeOf () = ()
 
 instance TypeSystem () where
-    type_cons () = Nothing
     make_type _ _ = ()
 
 type Type = GenericType
@@ -79,11 +74,8 @@ data AbsType n =
 data FOType      = FOT Sort [FOType]
     deriving (Eq, Ord, Typeable, Generic, Show)
 
-data TypeCons a = USER_DEFINED Sort [a]
-    deriving (Eq, Ord, Show, Generic, Typeable)
-
 instance Tree GenericType where
-    as_tree' (Gen s ts) = cons_to_tree $ USER_DEFINED s ts
+    as_tree' (Gen s ts) = cons_to_tree s ts
     as_tree' (GENERIC x)   = return $ Str $ render x
     as_tree' (VARIABLE n)  = return $ Str $ "_" ++ render n
     {-# INLINABLE rewriteM #-}
@@ -93,7 +85,7 @@ instance Tree GenericType where
     rewriteM _ x@(GENERIC _)  = pure x
 
 instance Tree FOType where
-    as_tree' (FOT s ts) = cons_to_tree $ USER_DEFINED s ts
+    as_tree' (FOT s ts) = cons_to_tree s ts
     {-# INLINABLE rewriteM #-}
     rewriteM f (FOT s ts) = FOT s <$> traverse f ts
 
@@ -103,14 +95,14 @@ instance Lift GenericType where
 as_generic :: FOType -> GenericType
 as_generic (FOT s ts) = Gen s (map as_generic ts)
 
-cons_to_tree :: Tree a => TypeCons a -> Reader (OutputMode n) StrList
-cons_to_tree (USER_DEFINED s []) = do
+cons_to_tree :: Tree a => Sort -> [a] -> Reader (OutputMode n) StrList
+cons_to_tree s [] = do
     opt <- ask
     let n = case opt of
                 ProverOutput -> render $ z3_name s
                 UserOutput -> render $ s^.name
     return $ Str n
-cons_to_tree (USER_DEFINED s ts) = do
+cons_to_tree s ts = do
     opt <- ask
     let n = case opt of
                 ProverOutput -> render $ z3_name s
@@ -240,10 +232,6 @@ instance Arbitrary Sort where
         , pure RealSort 
         , Sort <$> arbitrary <*> arbitrary <*> elements [0..5]
         ]
-        -- | Datatype 
-        --    [String]    -- Parameters
-        --    String      -- type name
-        --    [(String, [(String,GenericType)])] 
 
 gA :: GenericType
 gA = GENERIC $ fromString'' "a"
@@ -326,7 +314,6 @@ instance Arbitrary GenericType where
         where
             t ts = Gen s ts
 
-instance NFData t => NFData (TypeCons t)
 instance NFData FOType
 instance NFData GenericType
 instance NFData Sort

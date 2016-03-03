@@ -9,7 +9,7 @@ import Logic.Expr
 import Control.Applicative hiding (Const)
 import Control.DeepSeq
 import Control.Exception.Assert
-import Control.Lens hiding (Context,Const)
+import Control.Lens hiding (Context,Const,elements)
 import Control.Monad.RWS
 
 import Data.Char
@@ -20,11 +20,15 @@ import qualified Data.Set  as S
 import Data.Typeable
 import Data.Word
 
+import Test.QuickCheck hiding (label)
+
 import Utilities.Instances
 import Utilities.Lines
-import Utilities.Map    as M hiding ( map )
+import Utilities.Map    as M hiding ( map, Unordered )
 import Utilities.Partial
+import Utilities.PartialOrd
 import Utilities.PrintfTH
+import Utilities.QuickCheckReport ()
 import Utilities.Table
 import Utilities.TH
 
@@ -50,7 +54,7 @@ type Function = Name
 type Relation = Name
 
 data Flipping = Flipped | Direct
-    deriving (Eq,Show,Generic,Typeable)
+    deriving (Eq,Show,Generic,Typeable,Bounded,Enum)
 
 data Rel = Rel Fun Flipping
     deriving (Eq,Show,Generic,Typeable)
@@ -78,6 +82,22 @@ makeFields ''GenSequent
 makeLenses ''GenSequent
 makeClassy ''SyntacticProp
 mkCons ''SyntacticProp
+
+instance (Ord name,Eq t,Eq q,Ord expr) => 
+        PreOrd (GenSequent name t q expr) where
+    partCompare x y = genericPreorder (f x) (f y)
+        where
+            f (Sequent to r ctx sThm hyps0 hyps1 goal) = 
+                    ( Partial to,Partial r,ctx,sThm
+                    , Unordered hyps0,hyps1,Quotient goal)
+
+instance (Ord name,Eq t,Eq q,Ord expr) => 
+        PartialOrd (GenSequent name t q expr) where
+
+instance PreOrd SyntacticProp where
+    partCompare = genericPartialOrder
+
+instance PartialOrd SyntacticProp where
 
 instance Default SyntacticProp where
     def = empty_monotonicity
@@ -427,3 +447,19 @@ instance NFData Rel
 instance NFData Flipping
 instance NFData t => NFData (ArgDep t)
 
+instance ( Ord n, Arbitrary n, Arbitrary t, Arbitrary q, Arbitrary e
+         , IsQuantifier q, TypeSystem t )
+        => Arbitrary (GenSequent n t q e) where
+    arbitrary = scale (`div` 4) genericArbitrary
+
+instance Arbitrary SyntacticProp where
+    arbitrary = scale (`div` 4) genericArbitrary
+
+instance Arbitrary Flipping where
+    arbitrary = genericArbitrary
+
+instance Arbitrary Rel where
+    arbitrary = genericArbitrary
+
+instance Arbitrary a => Arbitrary (ArgDep a) where
+    arbitrary = genericArbitrary

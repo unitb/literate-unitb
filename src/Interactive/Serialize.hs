@@ -41,7 +41,6 @@ instance Serialize Label where
 instance Serialize Sort where
 instance (Serialize n,Serialize t) => Serialize (AbsVar n t) where
 instance Serialize Type where
-instance Serialize (TypeCons Type) where
 instance (Serialize n,Serialize t) => Serialize (AbsFun n t) where
 instance (Serialize n,Serialize q,Serialize t) 
     => Serialize (AbsDef n t q) where

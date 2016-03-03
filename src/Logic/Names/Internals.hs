@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies,CPP #-}
 module Logic.Names.Internals 
-    ( Name(Name), InternalName(InternalName)
+    ( Name(..), InternalName(..)
     , isZ3Name, isZ3Name'
     , IsBaseName(..)
     , Translatable(..)
@@ -19,7 +19,7 @@ module Logic.Names.Internals
     , setSuffix
     , smt, tex
     , NonEmpty((:|))
-    , Encoding(Z3Encoding)
+    , Encoding(..)
     , check_props )
 where
 

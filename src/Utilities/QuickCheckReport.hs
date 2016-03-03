@@ -3,6 +3,7 @@ module Utilities.QuickCheckReport where
 import Control.Monad
 
 import Data.IORef
+import Data.Map as M
 
 import Test.QuickCheck
 
@@ -29,3 +30,6 @@ test_report tests = do
         x y
         (if x == y then "passed" else "failed")
     return $ x == y
+
+instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
+    arbitrary = M.fromList <$> arbitrary

@@ -141,8 +141,8 @@ run_test_cases xs = do
     where        
         f _ (WithLineInfo cs t) = f (Just cs) t
         f cs (POCase x y z)     = do
-                let cmd = catch (second Just `liftM` y) f
-                    f exc = do
+                let cmd = catch (second Just `liftM` y) handler
+                    handler exc = do
                         putStrLn "*** EXCEPTION ***"
                         putStrLn x
                         print exc

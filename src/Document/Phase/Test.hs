@@ -720,9 +720,6 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
 name9 :: TestName
 name9 = testName "QuickCheck inheritance"
 
-instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
-    arbitrary = M.fromList <$> arbitrary
-
 prop_inherit_equiv :: Hierarchy Int
                    -> Property
 prop_inherit_equiv h = forAll (mkMap h) $ \m -> 

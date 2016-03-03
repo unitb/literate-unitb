@@ -7,15 +7,19 @@
     , UndecidableInstances #-}
 module Utilities.Tuple.Generics 
     ( IsTuple(..)
-    , test_case
+    , Generic, GZippableRecord
+    , Rep
     , makeTuple'
     , foldMapTuple
     , foldMapTupleType
     , traverseTupleType
-    , len )
+    , zipFields
+    , zipFieldsM
+    , len 
+    , result0, case0 )
 where
 
---import Control.Exception.Assert
+import Control.Applicative
 import Control.Lens
 import Control.Monad.Trans.Maybe
 import Control.Monad.State
@@ -23,13 +27,14 @@ import Control.Monad.Writer
 
 import Data.Functor.Compose
 import Data.Proxy
+import Data.Semigroup.Monad
 
 import GHC.Generics hiding (from,to)
 import GHC.Generics.Lens
 
-import Tests.UnitTest
-
 import Text.Read (readMaybe)
+
+import Utilities.Generics
 
 class IsTuple constr a where
     traverseTuple :: Applicative f => Proxy constr -> (forall b. constr b => b -> f b) -> a -> f a
@@ -107,14 +112,44 @@ instance (GIsTuple constr a,GIsTuple constr b)
             (:*:) <$> gTraverseTuple p f x
                   <*> gTraverseTuple p f y
     gMakeTuple p f x =
-            (:*:) <$> gMakeTuple p f (left <$> x)
-                  <*> gMakeTuple p f (right <$> x)
+            (:*:) <$> gMakeTuple p f (view left <$> x)
+                  <*> gMakeTuple p f (view right <$> x)
 
-left :: (a :*: b) p -> a p
-left (x :*: _) = x
+class GZippableRecord constr a where
+    gZipFields :: Applicative f
+               => Proxy constr 
+               -> (forall b. constr b => b -> b -> f b)
+               -> a p -> a p -> f (a p)
 
-right :: (a :*: b) p -> b p
-right (_ :*: x) = x
+instance GZippableRecord constr c 
+      => GZippableRecord constr (M1 a b c) where
+    gZipFields p f (M1 x) (M1 y) = M1 <$> gZipFields p f x y
+instance constr b => GZippableRecord constr (K1 a b) where
+    gZipFields Proxy f (K1 x) (K1 y) = K1 <$> f x y
+instance (GZippableRecord constr a,GZippableRecord constr b)
+      => GZippableRecord constr (a :*: b) where
+    gZipFields p f (x0 :*: x1) (y0 :*: y1) = 
+        liftA2 (:*:) (gZipFields p f x0 y0) (gZipFields p f x1 y1)
+instance GZippableRecord constr U1 where
+    gZipFields _ _ U1 U1 = pure U1
+
+zipFields :: (Generic a,GZippableRecord constr (Rep a),Monoid c)
+          => Proxy constr
+          -> (forall b. constr b => b -> b -> c)
+          -> a -> a -> c
+zipFields p f x y = getConst $ zipFields' p (fmap Const . f) x y
+
+zipFields' :: (Generic a,GZippableRecord constr (Rep a),Applicative f)
+           => Proxy constr
+           -> (forall b. constr b => b -> b -> f b)
+           -> a -> a -> f a
+zipFields' p f x y = view (from generic) <$> gZipFields p f (x^.generic) (y^.generic)
+
+zipFieldsM :: (Generic a,GZippableRecord constr (Rep a),Monad m,Monoid c)
+           => Proxy constr
+           -> (forall b. constr b => b -> b -> m c)
+           -> a -> a -> m c
+zipFieldsM p f x y = getMon $ zipFields p (fmap Mon . f) x y
 
 instance IsTuple constr () where
 instance constr a => IsTuple constr (Identity a) where
@@ -148,10 +183,6 @@ parse = evalState cmd
             xs <- get
             guard (null xs)
             return r
-
-test_case :: TestCase
-test_case = test_cases "Generic tuple" 
-    [ Case "test 0: parsing" case0 result0 ]
 
 result0 :: Maybe (Int,Float,[Int],Char)
 result0 = Just (7,7.7,[7,6,5,4],'a')

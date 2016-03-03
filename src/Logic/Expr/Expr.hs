@@ -519,9 +519,6 @@ instance PrettyPrintable FOQuantifier where
     pretty FOForall = "forall"
     pretty FOExists = "exists"
 
-instance Arbitrary Def where
-    arbitrary = genericArbitrary
-
 z3Def :: (?loc :: CallStack) 
       => [Type] 
       -> String
@@ -530,6 +527,14 @@ z3Def :: (?loc :: CallStack)
 z3Def ts n = Def ts (z3Name n)
 
 instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsVar n t) where
+    arbitrary = genericArbitrary
+
+instance ( TypeSystem t
+         , IsQuantifier q
+         , Arbitrary t
+         , Arbitrary n
+         , Arbitrary q) 
+        => Arbitrary (AbsDef n t q) where
     arbitrary = genericArbitrary
 
 isLifted :: AbsFun n t -> Bool

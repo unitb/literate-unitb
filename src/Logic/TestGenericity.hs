@@ -1,22 +1,31 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,TypeFamilies #-}
 module Logic.TestGenericity where
 
     -- Modules
 import Logic.Expr
 import Logic.Expr.Const
+import Logic.Proof ()
 
 import Theories.SetTheory
 
     -- Libraries
-import Control.Lens
+import Control.Lens hiding (lifted,Context,Const)
 import Control.Monad
 
+import Data.Hashable
 import Data.Map hiding ( map, union, member )
 import qualified Data.Set as S
 
 import Test.QuickCheck
+import Test.QuickCheck.Gen
+import Test.QuickCheck.Random
 
 import Tests.UnitTest
+
+import Utilities.AxiomaticClass
+import Utilities.Regression
+import Utilities.PartialOrd
+import Utilities.QuickCheckReport ()
 
 left :: Type -> Type
 left  = suffix_generics "1"
@@ -193,6 +202,7 @@ test = test_cases "genericity" (
 --        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
         [ Case "type mapping are acyclic" (check_prop prop_type_mapping_acyclic) True
         , StringCase "one-point rule simplification on existentials" case8 result8
+        , Case "axioms of type classes PreOrd and PartialOrd" case9 True
         ] )
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -307,3 +317,30 @@ case8 = return $ unlines $ map pretty_print' $ disjuncts e'
                             (p `mzor` e0 `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))
         e' = one_point_rule e
+
+case9 :: IO Bool
+case9 = $(quickCheckClasses [''PreOrd,''PartialOrd])
+
+instance IsQuantifier Integer where
+    merge_range = Str . show
+    termType n = unGen arbitrary (mkQCGen $ fromInteger n) (fromInteger n)
+    exprType n r t = unGen (oneof [arbitrary,return r,return t]) 
+                (mkQCGen $ fromInteger n) (fromInteger n)
+    qForall  = 1
+    qExists  = 2
+instance Tree Integer where
+    as_tree' = return . Str . show
+instance PrettyPrintable Integer where
+    pretty = show
+instance TypeSystem Integer where
+    make_type s = product . (toInteger (hash s):)
+instance Typed Integer where
+    type TypeOf Integer = Integer
+
+checkRegression :: Property
+checkRegression = regression (uncurry axiom_derived_def_comparable)
+                    [(x0,y0)]
+    where
+        x0 :: GenContext Integer Integer Integer
+        x0 = Context {_genContextSorts = fromList [], _genContextConstants = fromList [(-1,Var 0 (-1))], _functions = fromList [], _definitions = fromList [(1,Def [0] 0 [] 0 (Lift (Const (IntVal (-1)) 0) 0))], _genContextDummies = fromList [(1,Var 1 (-1))]}
+        y0 = Context {_genContextSorts = fromList [(Name {_backslash = True, _base = 'o' :| "-", _primes = 0, _suffix = "", _encoding = Z3Encoding},Sort (Name {_backslash = False, _base = '.' :| "", _primes = 0, _suffix = "", _encoding = LatexEncoding}) (InternalName "" (Name {_backslash = False, _base = '-' :| "", _primes = 0, _suffix = "", _encoding = Z3Encoding}) "") 1)], _genContextConstants = fromList [(0,Var (-1) 1)], _functions = fromList [(-1,Fun {_annotation = [], _funName = -1, lifted = Unlifted, _arguments = [], _result = 0})], _definitions = fromList [], _genContextDummies = fromList []}
