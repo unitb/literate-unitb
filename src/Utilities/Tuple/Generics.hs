@@ -7,6 +7,7 @@
     , UndecidableInstances #-}
 module Utilities.Tuple.Generics 
     ( IsTuple(..)
+    , GIsTuple(..)
     , Generic, GZippableRecord
     , Rep
     , makeTuple'

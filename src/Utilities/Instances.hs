@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators
         , QuasiQuotes
+        , ConstraintKinds
         , TemplateHaskell
         , TypeFamilies
         , KindSignatures
@@ -23,7 +24,7 @@ where
 
 import Control.DeepSeq
 import Control.Monad.Fix
-import Control.Lens hiding (to,from)
+import Control.Lens
 
 import Data.Default
 import Data.Functor.Classes
@@ -34,11 +35,11 @@ import qualified Data.Map as M
 import Data.Maybe
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Proxy
+import Data.Proxy.TH
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
 
-import GHC.Generics
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
@@ -46,6 +47,7 @@ import Language.Haskell.TH.Syntax
 import Test.QuickCheck
 
 import Utilities.Generics
+import Utilities.Tuple.Generics
 
 class GMonoid a where
     gmempty :: a p
@@ -112,11 +114,11 @@ instance (MapFields a f,MapFields b f) => MapFields (a :*: b) f where
 
 
 genericMEmpty :: (Generic a, GMonoid (Rep a)) => a
-genericMEmpty = to gmempty
+genericMEmpty = gmempty^.from generic
 genericMAppend :: (Generic a, GMonoid (Rep a)) => a -> a -> a
-genericMAppend x y = to $ gmappend (from x) (from y)
+genericMAppend x y = gmappend (x^.generic) (y^.generic)^.from generic
 genericMConcat :: (Generic a, GMonoid (Rep a)) => [a] -> a
-genericMConcat xs = to $ gmconcat $ map from xs
+genericMConcat xs = gmconcat (map (view generic) xs)^.from generic
 
 class Monoid1 (f :: * -> *) where
     mempty1 :: f a
@@ -138,18 +140,18 @@ instance Monoid1 [] where
 instance Monoid1 DList where
 
 genericSemigroupMAppend :: (Generic a, GSemigroupWith (Rep a)) => a -> a -> a
-genericSemigroupMAppend x y = to $ gSemiMAppend (from x) (from y)
+genericSemigroupMAppend x y = gSemiMAppend (x^.generic) (y^.generic)^.from generic
 
 genericSemigroupMConcat :: (Generic a, GSemigroupWith (Rep a)) => NonEmpty a -> a
-genericSemigroupMConcat xs = to $ gSemiMConcat (from <$> xs)
+genericSemigroupMConcat xs = gSemiMConcat (view generic <$> xs)^.from generic
 
 genericSemigroupMAppendWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) 
                             => f a -> f a -> f a
-genericSemigroupMAppendWith x y = to <$> get (gSemiMAppend (put $ from <$> x) (put $ from <$> y))
+genericSemigroupMAppendWith x y = view (from generic) <$> get (gSemiMAppend (put $ view generic <$> x) (put $ view generic <$> y))
 
 genericSemigroupMConcatWith :: forall a f. (Functor f,Generic a,MapFields (Rep a) f,GSemigroupWith (Mapped (Rep a) f)) 
                             => NonEmpty (f a) -> f a
-genericSemigroupMConcatWith xs = to <$> get (gSemiMConcat $ put.fmap from <$> xs)
+genericSemigroupMConcatWith xs = view (from generic) <$> get (gSemiMConcat $ put.fmap (view generic) <$> xs)
 
 newtype Intersection a = Intersection { getIntersection :: a }
     deriving (Functor)
@@ -164,11 +166,7 @@ instance Ord k => Semigroup (Intersection (Map k a)) where
 instance Ord k => Semigroup (Intersection (Set k)) where
     Intersection x <> Intersection y = Intersection $ x `S.intersection` y
 
-class GDefault a where
-    gDefault :: a p
 
-instance GDefault c => GDefault (M1 a b c) where
-    gDefault = M1 gDefault
 
 class Default1 f where
     def1 :: Default a => f a
@@ -176,20 +174,21 @@ class Default1 f where
 instance (Functor f,Default1 f,Default1 g,Default x) => Default (Compose f g x) where
     def = Compose $ getFunctor <$> def1
 
-instance Default b => GDefault (K1 a b) where
-    gDefault = K1 def
 
-instance GDefault U1 where
-    gDefault = U1
 
 instance (Default x,Default1 f) => Default (OnFunctor f x) where
     def = OnFunctor def1
 
-instance (GDefault a,GDefault b) => GDefault (a:*:b) where
-    gDefault = gDefault :*: gDefault
 
-genericDefault :: (Generic a, GDefault (Rep a)) => a
-genericDefault = to gDefault
+makeTuple'' :: (Generic a, GIsTuple constr (Rep a),Applicative f) 
+            => Proxy constr 
+            -> (forall b. constr b => Proxy b -> f b)
+            -> Proxy a
+            -> f a
+makeTuple'' p f x = view (from generic) <$> gMakeTuple p f (view generic <$> x)
+
+genericDefault :: (Generic a, GIsTuple Default (Rep a)) => a
+genericDefault = runIdentity $ makeTuple'' [pr|Default|] (const $ Identity def) Proxy
 
 class GArbitrary a where
     gArbitrary :: [Gen (a p)]
@@ -210,7 +209,7 @@ instance GArbitrary U1 where
     gArbitrary = [return U1]
 
 genericArbitrary :: (Generic a, GArbitrary (Rep a)) => Gen a
-genericArbitrary = to <$> oneof gArbitrary
+genericArbitrary = view (from generic) <$> oneof gArbitrary
 
 class GLifts a => GLift a where
     glift :: a p -> ExpQ
@@ -248,7 +247,7 @@ instance (GLifts a, GLifts b) => GLifts (a :*: b) where
     glifts (x :*: y) = glifts x ++ glifts y
 
 genericLift :: (Generic a, GLift (Rep a)) => a -> ExpQ
-genericLift = glift . from
+genericLift = glift . view generic
 
 instance Lift a => Lift (NonEmpty a) where
     lift = genericLift
