@@ -34,10 +34,14 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State
+import Control.Precondition
 
 import           Data.Char
-import           Data.Maybe
 import qualified Data.List as L
+import           Data.Map.Class as M 
+                    ( insert, keys
+                    , toList, unions )
+import qualified Data.Map.Class as M 
 
 import GHC.Generics (Generic)
 
@@ -46,11 +50,6 @@ import System.Directory
 
 import Text.Printf.TH
 
-import           Utilities.Map as M 
-                    ( insert, keys
-                    , toList, unions )
-import qualified Utilities.Map as M 
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table
 import Utilities.TimeIt

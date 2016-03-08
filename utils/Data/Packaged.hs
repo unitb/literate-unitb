@@ -25,9 +25,9 @@ import Data.Semigroup
 import Data.Serialize as Ser
 import Data.String
 
-import Language.Haskell.TH.Syntax
+import GHC.Generics.Instances
 
-import Utilities.Instances
+import Language.Haskell.TH.Syntax
 
 newtype Packaged a = Package { getPackage :: ByteString }
     deriving (Eq,Ord,Data,Generic,Hashable)

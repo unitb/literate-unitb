@@ -8,10 +8,9 @@ import Theories.SetTheory
 
     -- Libraries
 import Control.Lens hiding (Const)
+import Control.Precondition
 
 import Data.List
-
-import Utilities.Partial
 
 is_true_or_false :: Expr -> Expr
 is_true_or_false e = is_true e `zor` is_false e

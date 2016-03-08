@@ -39,8 +39,7 @@ import Data.Typeable
 
 import Prelude hiding (lookup,null,map,filter)
 
---import Utilities.Instances
-import Utilities.Map
+import Data.Map.Class
 
 --import Test.QuickCheck hiding (shrinkList)
 --import Test.QuickCheck.Function

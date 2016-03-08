@@ -35,6 +35,7 @@ import Z3.Z3
 import Control.Arrow
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
+import Control.Precondition
 
 import           Data.Either
 import           Data.Existential
@@ -42,6 +43,11 @@ import           Data.Foldable as F
 import           Data.List as L hiding (inits, union,insert)
 import           Data.List.NonEmpty as NE hiding (inits,(!!))
 import           Data.List.Utils as LU (replace)
+import           Data.Map.Class as M hiding 
+                    ( map
+                    , delete, filter, null
+                    , (\\), mapMaybe, (!) )
+import qualified Data.Map.Class as M
 import           Data.Monoid.Monad
 import qualified Data.Traversable as T
 
@@ -50,12 +56,6 @@ import System.IO
 import Text.Printf.TH
 
 import Utilities.Functor
-import Utilities.Partial
-import           Utilities.Map as M hiding 
-                    ( map
-                    , delete, filter, null
-                    , (\\), mapMaybe, (!) )
-import qualified Utilities.Map as M
 import Utilities.Syntactic
 import Utilities.Table
 

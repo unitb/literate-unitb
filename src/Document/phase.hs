@@ -29,27 +29,27 @@ import Control.Monad.Reader.Class
 import Control.Monad.Reader (Reader,runReader) 
 import Control.Monad.State
 import Control.Monad.Writer.Class 
+import Control.Precondition
 
 import Data.Default
 import Data.Either
-import Data.Either.Combinators
 import Data.Graph.Bipartite as G hiding (fromList')
 import Data.List as L
 import Data.List.NonEmpty as NE
+import Data.Map.Class as M
 import Data.Maybe as MM
 import Data.Semigroup
 import qualified Data.Traversable as T
 import Data.Tuple.Generics
 
+import GHC.Generics.Instances
+
 import Test.QuickCheck as QC hiding (label,collect)
 
 import Text.Printf.TH
 
-import Utilities.Map as M
 import Utilities.Graph (cycles,SCC(..))
 import Utilities.Error
-import Utilities.Instances
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table 
 

@@ -45,6 +45,7 @@ import Control.Concurrent.SSem
 import Control.Exception
 import Control.Monad
 import Control.Monad.Reader
+import Control.Precondition
 
 import Data.Char
 import           Data.Either.Combinators
@@ -60,8 +61,7 @@ import System.Process
 
 import Text.Printf
 
-import qualified Utilities.Map as M
-import Utilities.Partial
+import qualified Data.Map.Class as M
 
 total_caps :: SSem
 total_caps = unsafePerformIO $ new $ z3c_capacity z3_config

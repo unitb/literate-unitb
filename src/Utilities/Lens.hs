@@ -6,10 +6,10 @@ import Control.Monad.State
 import Data.Default
 import Data.Either.Validation
 import Data.Foldable as F
+import Data.Map.Class as M
 import Data.Semigroup
 import Data.Tuple
 
-import Utilities.Map as M
 
 {-# INLINE withKey #-}
 withKey :: IsMap map => Iso (map a b) (map c d) (map a (a,b)) (map c d)

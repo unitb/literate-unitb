@@ -28,10 +28,10 @@ import Data.Either.Validation
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Class   as M hiding ( (\\) )
 
 import Text.Printf.TH
 
-import Utilities.Map   as M hiding ( (\\) )
 import Utilities.Syntactic
 import Utilities.Table
 

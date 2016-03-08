@@ -2,9 +2,9 @@ module Z3.Version where
 
 import Control.Lens
 import Control.Monad
+import Control.Precondition
 
 import Data.Char
-import Data.Either.Combinators
 import Data.List as L
 import Data.List.Utils as L
 import Data.ConfigFile
@@ -18,8 +18,6 @@ import System.Process
 import System.IO.Unsafe
 
 import Text.Printf
-
-import Utilities.Partial
 
 check_z3_bin :: IO Bool
 check_z3_bin = do

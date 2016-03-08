@@ -12,10 +12,11 @@ import Theories.FunctionTheory
 import UnitB.Expr
 
     -- Libraries
+import Data.Map.Class hiding ( map )
+import qualified Data.Map.Class as M
+
 import Tests.UnitTest
 
-import Utilities.Map hiding ( map )
-import qualified Utilities.Map as M
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -24,27 +24,28 @@ import Z3.Z3
 
     -- Libraries
 import Control.DeepSeq
+import Control.Invariant
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 import Control.Monad.State
+import Control.Precondition
 
 import           Data.Default
 import           Data.Either.Validation
 import           Data.Functor.Classes
 import           Data.Functor.Compose
 import           Data.List as L hiding (inits, union,insert)
-import qualified Data.Set as S
-
-import Text.Printf.TH
-
-import           Utilities.Map as M hiding 
+import           Data.Map.Class as M hiding 
                     ( map
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
-import qualified Utilities.Map as M
-import Utilities.Partial
-import Utilities.Invariant
-import Utilities.Instances
+import qualified Data.Map.Class as M
+import qualified Data.Set as S
+
+import GHC.Generics.Instances
+
+import Text.Printf.TH
+
 import Utilities.Syntactic
 import Utilities.Table
 

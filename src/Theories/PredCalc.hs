@@ -10,11 +10,11 @@ import Logic.Theory
     -- Libraries
 import Control.Lens
 
+import qualified Data.Map.Class as M
 
 import Prelude hiding ( pred )
 
 import Utilities.Lens
-import qualified Utilities.Map as M
 
 everywhere_fun :: Fun
 everywhere_fun = mk_fun [gA] (fromString'' "ew") [pred_type gA] bool

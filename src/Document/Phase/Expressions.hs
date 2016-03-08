@@ -27,6 +27,7 @@ import UnitB.Syntax as AST hiding (invariant)
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
+import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
@@ -36,13 +37,15 @@ import           Control.Monad.Writer.Class
 import           Control.Monad.Trans.RWS as RWS ( RWS )
 import qualified Control.Monad.Writer as W
 
-import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
+import Control.Precondition
 
 import           Data.Either hiding (isLeft,isRight)
 import           Data.Existential
 import           Data.Functor.Compose
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
+import           Data.Map.Class   as M hiding ( map, (\\) )
+import qualified Data.Map.Class   as M
 import           Data.Semigroup
 import qualified Data.Traversable   as T
 
@@ -51,9 +54,6 @@ import Test.QuickCheck hiding (label)
 import Text.Printf.TH
 
 import Utilities.Lens
-import           Utilities.Map   as M hiding ( map, (\\) )
-import qualified Utilities.Map   as M
-import Utilities.Partial
 import Utilities.String
 import Utilities.Syntactic
 import Utilities.Table

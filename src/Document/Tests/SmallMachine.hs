@@ -13,12 +13,12 @@ import Logic.Proof
 import Control.Lens
 
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Class as M hiding ( map )
 
 import Tests.UnitTest
 
 import Utilities.Lens
 import Utilities.Table
-import Utilities.Map as M hiding ( map )
 
 test_case :: TestCase
 test_case = test

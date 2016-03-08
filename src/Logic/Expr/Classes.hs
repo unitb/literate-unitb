@@ -13,11 +13,11 @@ import Data.DList as D
 import Data.DList.Utils as D
 import Data.Foldable as F
 import Data.List as L hiding (intercalate)
+import Data.Map.Class  as M
 import Data.Monoid
 import Data.Tuple
 import Data.Typeable.Lens
 
-import Utilities.Map  as M
 import Utilities.Table as M
 
 class HasName a n | a -> n where

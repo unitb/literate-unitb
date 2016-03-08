@@ -18,18 +18,17 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
+import Control.Precondition
 
 import Data.Either.Combinators
 import Data.List as L
+import Data.Map.Class  hiding ((!))
 
 import System.Directory
 import System.IO.Unsafe
 import System.Process
 
 import Tests.UnitTest
-
-import Utilities.Map  hiding ((!))
-import Utilities.Partial
 
 test_case :: TestCase
 test_case = test

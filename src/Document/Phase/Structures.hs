@@ -29,20 +29,19 @@ import Theories.SetTheory
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad 
 import           Control.Monad.Except
 import           Control.Monad.Reader.Class 
 
-import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
-
 import qualified Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, insert, inits )
+import           Data.Map.Class   as M hiding ( map, (\\) )
+import qualified Data.Map.Class   as M
 
 import Text.Printf.TH
 
-import           Utilities.Map   as M hiding ( map, (\\) )
-import qualified Utilities.Map   as M
 import Utilities.Table
 import Utilities.Syntactic
 

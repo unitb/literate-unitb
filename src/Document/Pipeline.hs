@@ -26,13 +26,14 @@ import Data.DList (DList)
 import qualified Data.DList as D
 import Data.Hashable
 import Data.List as L
+import qualified Data.Map.Class as M
 import Data.String
 import Data.Tuple.Generics
 
+import GHC.Generics.Instances
+
 import Text.Printf.TH
 
-import Utilities.Instances
-import qualified Utilities.Map as M
 import Utilities.Syntactic
 import Utilities.Table
 

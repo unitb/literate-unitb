@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE StandaloneDeriving  #-}
-module Utilities.Permutation 
+module Data.Graph.Array 
     ( top_sort, closure, closure'
     , graph, graphWith, u_scc
     , GraphImp (..), run_tests 
@@ -16,24 +16,21 @@ import Control.Monad.Fix
 import Control.Monad.ST
 import Control.Monad.State ( evalState )
 import Control.Monad.State.Class -- (MonadState)
+import Control.Precondition
 
 import Data.Array.IArray hiding ((!))
 import Data.Array.IO
 import Data.Array.ST
 import Data.Graph (SCC(..))
 import Data.List
-import Data.Maybe
 import Data.STRef
 import qualified Data.List.Ordered as OL
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Tuple as T
 
-import Utilities.Partial
-
 import Test.QuickCheck hiding (frequency,elements)
 import qualified Test.QuickCheck as QC
-
 
 class AllZero a where
     zeros :: a

@@ -13,12 +13,12 @@ import           GHC.Generics (Generic)
 import Control.Lens hiding (rewrite,Context
                            ,Const,Context',List
                            ,Traversable1(..))
+import Control.Precondition
 
 import Data.Data
+import Data.Map.Class as M
 
 import Utilities.Functor
-import Utilities.Map as M
-import Utilities.Partial
 import Utilities.Table
 
 type UntypedVar = AbsVar Name ()

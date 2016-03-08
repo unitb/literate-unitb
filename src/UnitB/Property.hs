@@ -10,6 +10,7 @@ import UnitB.Expr
 
     -- Libraries
 import Control.DeepSeq
+import Control.Invariant
 import Control.Lens hiding (Const,elements)
 
 import Data.Default
@@ -18,18 +19,17 @@ import Data.Hashable
 import Data.Semigroup
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
+import Data.Map.Class  as M
 import Data.String
 import Data.Typeable
 
 import GHC.Generics
+import GHC.Generics.Instances
 
 import Text.Printf
 
 import Test.QuickCheck hiding (label)
 
-import Utilities.Instances
-import Utilities.Invariant
-import Utilities.Map  as M
 import Utilities.Table
 import Utilities.TableConstr
 

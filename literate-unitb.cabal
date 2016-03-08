@@ -67,7 +67,7 @@ Flag PackagedNames
     default: False
 
 library
-  hs-source-dirs: src, utils
+  hs-source-dirs: src
   exposed-modules: 
         Code.Synthesis
         Document.Document
@@ -154,13 +154,8 @@ library
         Utilities.Functor
         Utilities.Graph
         Utilities.GraphSpec
-        Utilities.Instances
-        Utilities.Invariant
         Utilities.Language
         Utilities.Lens
-        Utilities.Map
-        Utilities.Partial
-        Utilities.Permutation
         Utilities.Reactive.Async
         Utilities.String
         Utilities.Syntactic
@@ -175,27 +170,6 @@ library
         Utilities.Tuple
         Z3.Version
         Z3.Z3
-          -- Utilities
-        Control.Arrow.Unfold
-        Data.Existential
-        Data.DList.Utils
-        Data.Graph.Bipartite
-        Data.Packaged
-        Data.PartialOrd
-        Data.String.Brackets
-        Data.String.Lines
-        Data.String.Indentation
-        Data.Tuple.Generics
-        Data.Unfoldable
-        Data.Relation
-        GHC.Generics.Utils
-        GHC.Stack.Utils
-        Reactive.Banana.Keyboard
-        Test.QuickCheck.AxiomaticClass
-        Test.QuickCheck.Report
-        Test.QuickCheck.RandomTree
-        Test.QuickCheck.Regression
-        Text.Printf.TH
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes
@@ -227,7 +201,7 @@ library
 
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -257,7 +231,7 @@ executable unitb
   main-is:  continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

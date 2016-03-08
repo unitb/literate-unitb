@@ -11,10 +11,12 @@ import Control.DeepSeq
 import Control.Exception.Assert
 import Control.Lens hiding (Context,Const,elements)
 import Control.Monad.RWS
+import Control.Precondition
 
 import Data.Char
 import Data.Default
 import Data.List as L
+import Data.Map.Class    as M hiding ( map, Unordered )
 import Data.Maybe  as MM hiding (fromJust)
 import Data.PartialOrd
 import qualified Data.Set  as S
@@ -22,14 +24,13 @@ import Data.String.Lines
 import Data.Typeable
 import Data.Word
 
+import GHC.Generics.Instances
+
 import Test.QuickCheck.Report ()
 import Test.QuickCheck hiding (label)
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import Utilities.Map    as M hiding ( map, Unordered )
-import Utilities.Partial
 import Utilities.Table
 import Utilities.TH
 

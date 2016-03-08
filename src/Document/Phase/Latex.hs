@@ -27,6 +27,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe
+import Control.Precondition
 
 import Data.Either.Validation
 import Data.Existential
@@ -34,7 +35,6 @@ import Data.Functor.Alt
 import Data.Functor.Compose
 import Data.List as L
 import Data.Map as M
-import Data.Maybe
 import Data.Proxy.TH
 import Data.Tuple.Generics
 import Data.Typeable
@@ -48,7 +48,6 @@ import Prelude hiding ((.),id)
 
 import Text.Printf.TH
 
-import Utilities.Partial
 import Utilities.Syntactic
 
 data LatexMatch = CmdMatch String [Bracket] | EnvMatch Environment

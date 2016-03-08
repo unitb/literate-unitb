@@ -16,18 +16,19 @@ import UnitB.Syntax
 
     -- Libraries
 import Control.Lens
+import Control.Precondition
 
 import           Data.Existential
 import qualified Data.List.NonEmpty as NE
+import           Data.Map.Class as M
 import           Data.Typeable
+
+import GHC.Generics.Instances
 
 import Test.QuickCheck
 
 import Text.Printf
 
-import Utilities.Instances
-import Utilities.Map as M
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -14,10 +14,10 @@ import Theories.SetTheory hiding ( dec )
     -- Libraries
 import Control.Lens
 
-import           Data.List as L
+import Data.List as L
+import Data.Map.Class
 
 import Utilities.Lens
-import Utilities.Map
 
 ztfun,zpfun :: ExprP -> ExprP -> ExprP
 zdom  :: ExprP -> ExprP

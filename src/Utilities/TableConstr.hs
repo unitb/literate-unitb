@@ -9,6 +9,7 @@ import Data.Char
 import Data.Data
 import Data.Either
 import Data.List as L
+import Data.Map.Class as M (Map,fromList,union,IsMap)
 import Data.Maybe
 
 import GHC.Generics hiding (from,to)
@@ -21,7 +22,6 @@ import PseudoMacros
 
 import System.IO
 
-import Utilities.Map as M (Map,fromList,union,IsMap)
 import Utilities.Table 
 import Utilities.Table.HashKey
 import Utilities.Table.BucketTable

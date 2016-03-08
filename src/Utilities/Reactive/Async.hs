@@ -12,14 +12,14 @@ import Control.Monad.Trans.Maybe
 import Control.Lens
 
 import Data.Foldable as F
+import Data.Map.Class as M (mapEither)
+import qualified Data.Map.Class as M
 import Data.Maybe
 import Data.Proxy
 
 import Reactive.Banana
 import Reactive.Banana.Frameworks
 
-import Utilities.Map as M (mapEither)
-import qualified Utilities.Map as M
 import Utilities.Table
 
 type JobQueue = JobQueue' Proxy

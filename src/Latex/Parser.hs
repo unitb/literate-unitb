@@ -14,6 +14,7 @@ import Control.Monad.IO.Class
 import Control.Monad.RWS
 import Control.Monad.State
 import Control.Monad.Trans.Either as E
+import Control.Precondition
 
 import Data.Char
 import Data.Either
@@ -44,7 +45,6 @@ import qualified Text.Parsec.Pos as P
 import Text.Printf.TH
 
 import Utilities.Graph hiding ( map, empty, size, (!) )
-import Utilities.Partial
 import Utilities.Syntactic
 --import Utilities.Zipper as Z
 

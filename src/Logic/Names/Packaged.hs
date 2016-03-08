@@ -28,11 +28,10 @@ where
 import Logic.Names.Internals (IsBaseName(..))
 import qualified Logic.Names.Internals as Intl
 
-import Utilities.Partial
-
     -- Libraries
 import Control.DeepSeq
 import Control.Lens
+import Control.Precondition
 
 import Data.Data
 import Data.Hashable

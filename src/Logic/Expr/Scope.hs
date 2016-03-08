@@ -11,21 +11,21 @@ import Logic.Expr.Variable
 import Logic.Names
 
     -- Libraries
+import Control.Invariant
 import Control.Lens
 import Control.Monad.Reader.Class
 
 import Data.Default
 import Data.List
+import Data.Map.Class as M
 
+import GHC.Generics.Instances
 import GHC.Stack.Utils
 
 import PseudoMacros
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import Utilities.Invariant
-import Utilities.Map as M
 import Utilities.Table
 
 data VisibleVars = VisibleVars

@@ -16,11 +16,11 @@ import Control.Lens hiding (indices)
 
 import Data.Graph.Bipartite
 import Data.List as L
+import Data.Map.Class as M
 import Data.Set as S
 
 import Tests.UnitTest
 
-import Utilities.Map as M
 import Utilities.Table
 
 -- import Utilities.TH

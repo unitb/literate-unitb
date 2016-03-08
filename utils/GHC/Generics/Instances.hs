@@ -11,7 +11,7 @@
         , ScopedTypeVariables
         , MultiParamTypeClasses
         , DefaultSignatures #-}
-module Utilities.Instances 
+module GHC.Generics.Instances 
     ( Generic, genericLift, genericMEmpty, genericMAppend
     , genericMConcat, genericDefault, genericSemigroupMAppend
     , Intersection(..), genericSemigroupMAppendWith

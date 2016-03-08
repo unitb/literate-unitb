@@ -38,13 +38,13 @@ import qualified Control.Monad.Writer as W
 import           Data.Either.Combinators
 import           Data.List.Ordered (sortOn)
 import qualified Data.List.NonEmpty as NE
+import           Data.Map.Class   as M hiding ( map, (\\) )
+import qualified Data.Map.Class   as M
 import           Data.Semigroup
 
 import Prelude hiding ((.),id)
 
 import Utilities.Lens
-import           Utilities.Map   as M hiding ( map, (\\) )
-import qualified Utilities.Map   as M
 import Utilities.Syntactic as Syn
 import Utilities.Table
 

@@ -30,9 +30,11 @@ import Data.Maybe
 import Data.Monoid
 import Data.List as L hiding (uncons,unlines)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Class as M
 import Data.String.Lines
 
 import GHC.Generics
+import GHC.Generics.Instances
 import GHC.Generics.Lens
 
 import Language.Haskell.TH hiding (Name)
@@ -42,8 +44,6 @@ import Prelude hiding (unlines)
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import qualified Utilities.Map as M
 import Utilities.Syntactic (LineInfo(..))
 import Utilities.Table
 

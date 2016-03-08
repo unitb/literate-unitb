@@ -19,12 +19,13 @@ import Z3.Version
 
     -- Libraries
 import Control.Exception
+import Control.Lens
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans.Either 
-import Control.Lens
+import Control.Precondition
 
-import Data.Maybe
+import qualified Data.Map.Class as M hiding ((!))
 import Data.Time
 import Data.Typeable
 
@@ -38,9 +39,7 @@ import System.Environment
 import System.Timeout
 
 import Utilities.FileFormat
-import qualified Utilities.Map as M hiding ((!))
 import qualified Utilities.Table as M
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.TimeIt
 

@@ -35,9 +35,9 @@ import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.List.NonEmpty as NE
+import           Data.Map.Class   as M hiding ( map, (\\) )
+import qualified Data.Map.Class   as M
 
-import           Utilities.Map   as M hiding ( map, (\\) )
-import qualified Utilities.Map   as M
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -28,15 +28,18 @@ import UnitB.Syntax as AST
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
+import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad
 import           Control.Monad.Reader.Class 
 
-import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
+import Control.Precondition
 
 import           Data.List.NonEmpty as NE (toList)
 import           Data.Either.Validation
 import           Data.Existential
+import Data.Map.Class as M hiding ( map, (\\) )
+import qualified Data.Map.Class as M
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
@@ -45,9 +48,6 @@ import Test.QuickCheck hiding (Result(..),label)
 
 import Text.Printf.TH
 
-import Utilities.Map as M hiding ( map, (\\) )
-import qualified Utilities.Map as M
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table
   

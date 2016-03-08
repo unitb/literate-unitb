@@ -16,8 +16,8 @@ import qualified UnitB.Syntax as AST
 import Control.Lens -- ((.=))
 
 import Data.List hiding (inits)
+import Data.Map.Class hiding ( map )
 
-import Utilities.Map hiding ( map )
 import Utilities.Table
 
 test_case :: TestCase

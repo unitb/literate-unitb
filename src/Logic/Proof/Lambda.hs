@@ -17,12 +17,12 @@ import Control.Monad.State
 
 import Data.Default
 import Data.List as L hiding (union)
+import Data.Map.Class  as M hiding (filter)
 import qualified Data.Set as S
 import Data.Tuple
 import qualified Data.Traversable as T
 import Data.Typeable
 
-import Utilities.Map  as M hiding (filter)
 import Utilities.Table
 
 data CanonicalLambda = CL 

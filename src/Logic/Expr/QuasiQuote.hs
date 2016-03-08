@@ -25,8 +25,11 @@ import Control.Lens hiding (uncons)
 import Control.Monad.State  hiding (lift)
 
 import Data.List
+import Data.Map.Class as M
 import Data.Maybe
 import Data.String.Utils as S
+
+import GHC.Generics.Instances
 
 import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
@@ -36,8 +39,6 @@ import PseudoMacros
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import Utilities.Map as M
 import Utilities.Syntactic
 
 expr :: QuasiQuoter

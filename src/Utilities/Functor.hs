@@ -3,7 +3,7 @@ module Utilities.Functor where
 
 import Control.Lens hiding (Traversable1(..))
 
-import Utilities.Map
+import Data.Map.Class
 
 newtype Swap1 f a b = Swap1 {swap1 :: f b a}
 newtype Swap2 f a b c = Swap2 {swap2 :: f c b a}

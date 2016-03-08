@@ -37,10 +37,14 @@ import Control.Arrow
 import Control.Lens hiding (rewrite,Context,Const)
 import Control.Monad
 import Control.Monad.State
+import Control.Precondition (Assert)
 
 import           Data.Either
 import           Data.List as L hiding ( union )
 import           Data.List.Ordered hiding (nub)
+import           Data.Map.Class as M 
+                    hiding ( map, union, unions, (\\) )
+import qualified Data.Map.Class as M
 import qualified Data.Maybe as MM
 import qualified Data.Set as S 
 
@@ -49,10 +53,6 @@ import Prelude as L
 import Text.Printf.TH
 
 import Utilities.Error
-import           Utilities.Map as M 
-                    hiding ( map, union, unions, (\\) )
-import qualified Utilities.Map as M
-import Utilities.Partial (Assert)
 import Utilities.Table
 
 suffix_generics :: String -> GenericType -> GenericType

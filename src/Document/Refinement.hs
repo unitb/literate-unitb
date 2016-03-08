@@ -31,11 +31,11 @@ import Data.Either
 import Data.Existential
 import Data.List as L
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Class as M hiding ( map, (\\) )
 
 import Text.Printf.TH
 
 import Utilities.Error hiding (MonadError)
-import Utilities.Map as M hiding ( map, (\\) )
 import Utilities.Syntactic
 import Utilities.Table
 

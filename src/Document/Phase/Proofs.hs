@@ -56,6 +56,8 @@ import           Data.Functor.Compose
 import qualified Data.Graph.Bipartite as G
 import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
+import           Data.Map.Class   as M hiding ( map, (\\) )
+import qualified Data.Map.Class   as M
 import           Data.Proxy.TH
 import           Data.Relation (type(<->),(|>),(<|))
 import qualified Data.Relation as R
@@ -69,8 +71,6 @@ import Prelude hiding (id,(.))
 
 import Text.Printf.TH
 
-import           Utilities.Map   as M hiding ( map, (\\) )
-import qualified Utilities.Map   as M
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -16,13 +16,13 @@ import Utilities.Graph as G
         , unions )
 import Utilities.EditDistance
 import qualified Utilities.GraphSpec as GSpec
-import qualified Utilities.Permutation as Perm
 
     -- Libraries
 import Control.Lens
 
 import           Data.Array 
 import           Data.Function
+import qualified Data.Graph.Array as Graph
 import           Data.List
 import           Data.List.Ordered as OL
 import           Data.String.Lines as Lines
@@ -62,7 +62,7 @@ test = test_cases "Graphs and operator grammars" $
     , Case "case 9 - edit distance, regression test from random testing" case9 0
     ] ++ GSpec.test_cases ++
     [ Case "case 11 - Relations, quickcheck" Rel.run_spec True
-    , Case "case 12 - New graphs, quickcheck" Perm.run_tests True  
+    , Case "case 12 - New graphs, quickcheck" Graph.run_tests True  
     , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
     , Case "test 14 - quickcheck brackets" runSpec True
     , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]

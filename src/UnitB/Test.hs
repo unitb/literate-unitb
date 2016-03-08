@@ -27,11 +27,11 @@ import Control.Lens hiding (indices)
 
 import           Data.List ( sort )
 import qualified Data.List.NonEmpty as NE
+import           Data.Map.Class  as M hiding (map)
 
 import Tests.UnitTest
 
 import Utilities.Lens
-import Utilities.Map  as M hiding (map)
 import Utilities.Syntactic
 import Utilities.Table
 

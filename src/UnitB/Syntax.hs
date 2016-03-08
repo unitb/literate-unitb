@@ -6,7 +6,7 @@ module UnitB.Syntax
     , module UnitB.Proof
     , module UnitB.Property
     , module UnitB.System
-    , module Utilities.Invariant
+    , module Control.Invariant
     ) 
 where
 
@@ -19,4 +19,4 @@ import UnitB.Proof hiding (Builder)
 import UnitB.Property
 import UnitB.System
 
-import Utilities.Invariant hiding (Invariant,(##),(===))
+import Control.Invariant hiding (Invariant,(##),(===))

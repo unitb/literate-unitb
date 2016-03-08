@@ -14,11 +14,11 @@ import Control.Lens
 import Control.Monad
 
 import Data.List as L
+import Data.Map.Class
 import Data.Set  as S (Set,fromList)
 
 import Tests.UnitTest
 
-import Utilities.Map
 import Utilities.Table
 
 test_case :: TestCase

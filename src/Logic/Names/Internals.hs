@@ -26,7 +26,9 @@ where
     -- Libraries
 import Control.DeepSeq
 import Control.Lens
+import Control.Invariant hiding ((===))
 import Control.Monad.State
+import Control.Precondition
 
 import Data.Char
 import Data.Data
@@ -34,11 +36,14 @@ import Data.Either.Combinators
 import Data.List as L
 import qualified Data.List.Ordered as Ord
 import Data.List.NonEmpty as NE
+import qualified Data.Map.Class as M
 import Data.Serialize
 import Data.Semigroup hiding (option)
 import Data.String.Utils
 import Data.Tuple
 import Data.Word
+
+import GHC.Generics.Instances
 
 import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
@@ -49,11 +54,7 @@ import Test.QuickCheck as QC
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import Utilities.Invariant hiding ((===))
 import Utilities.Language  as Lang
-import qualified Utilities.Map as M
-import Utilities.Partial
 import Utilities.Table
 
 type NEString = NonEmpty Char

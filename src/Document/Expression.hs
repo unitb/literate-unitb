@@ -32,14 +32,14 @@ import qualified Control.Monad.Trans.Reader as R
 import           Data.Char
 import           Data.Either
 import           Data.List as L
+import           Data.Map.Class as M hiding ( map, (!) )
+import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
 import Text.Printf.TH
 
 import Utilities.EditDistance
 import Utilities.Graph as G ((!))
-import           Utilities.Map as M hiding ( map, (!) )
-import qualified Utilities.Map as M
 import Utilities.Table
 
 data Param = Param 

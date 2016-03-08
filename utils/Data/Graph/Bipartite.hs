@@ -40,10 +40,12 @@ where
 import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.DeepSeq
+import Control.Invariant
 import Control.Lens
 
 import Control.Monad.Reader
 import Control.Monad.RWS hiding ((<>))
+import Control.Precondition
 
 import Data.Array as A hiding ((!))
 import Data.Array.ST
@@ -52,7 +54,6 @@ import Data.List  as L hiding (transpose,lookup)
 import Data.List.NonEmpty  as NE hiding (fromList,transpose)
 import Data.Map   as M hiding (fromList,empty,traverseWithKey,lookup,member,(!))
 import qualified Data.Map   as M hiding ((!))
-import Data.Maybe
 import Data.Semigroup
 import qualified Data.Traversable as T
 import Data.Tuple
@@ -62,9 +63,6 @@ import GHC.Generics (Generic)
 import Prelude hiding (lookup)
 
 import Text.Printf
-
-import Utilities.Invariant
-import Utilities.Partial
 
 newtype GraphBuilder key0 v0 key1 v1 e s0 s1 a = GB (RWST () ([(key0,v0)],[(key1,v1)],[(Int,Int,e)]) (Int,Map key0 Int,Int,Map key1 Int) Maybe a)
     deriving (Monad,Applicative,Functor,Alternative,MonadPlus)

@@ -41,10 +41,11 @@ import Data.Proxy.TH
 import Data.Typeable
 import Data.Unfoldable
 
+import GHC.Generics.Instances
+
 import Prelude hiding (id,(.))
 import Text.Printf
 
-import Utilities.Instances
 import Utilities.Syntactic
 
 type Builder r t = forall arr a b constr. ArrowUnfold arr 

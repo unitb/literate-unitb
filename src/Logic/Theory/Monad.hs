@@ -20,10 +20,12 @@ import Control.Monad.RWS
 import Control.Monad.State
 import Control.Monad.Writer
 import Control.Lens hiding (Context,from,to,rewriteM)
+import Control.Precondition
 
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
+import           Data.Map.Class as M
 import qualified Data.Set as S
 import           Data.Typeable
 
@@ -32,8 +34,6 @@ import Language.Haskell.TH hiding (Type,Name)
 import Text.Printf.TH
 
 import Utilities.Error
-import Utilities.Partial
-import Utilities.Map as M
 import Utilities.Table
 import Utilities.Tuple
 

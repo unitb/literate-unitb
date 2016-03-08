@@ -1,15 +1,15 @@
 {-# LANGUAGE KindSignatures,TypeFamilies #-}
-module Utilities.Map 
+module Data.Map.Class 
     ( M.Map
-    , module Utilities.Map 
+    , module Data.Map.Class 
     , (P.!) )
 where
 
 import Control.Lens
+import Control.Precondition as P
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Utilities.Partial as P
 
 import GHC.Exts (Constraint)
 

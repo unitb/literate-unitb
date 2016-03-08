@@ -19,6 +19,11 @@ import Data.ByteString.Builder
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either.Combinators
 import           Data.Either.Validation
+import           Data.Map.Class as M 
+        ( insert 
+        , (!), fromList, toList
+        , empty, mapKeys )
+import qualified Data.Map.Class as M 
 import           Data.Maybe
 import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
 import           Data.Serialize.Put 
@@ -30,11 +35,6 @@ import GHC.Generics (Generic)
 import System.Directory
 
 import           Utilities.FileFormat
-import           Utilities.Map as M 
-        ( insert 
-        , (!), fromList, toList
-        , empty, mapKeys )
-import qualified Utilities.Map as M 
 import           Utilities.Table
 
 instance Serialize Label where

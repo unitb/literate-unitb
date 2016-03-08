@@ -22,10 +22,11 @@ import Data.List.NonEmpty as NE (toList)
 import Data.Maybe as M
 import Data.Typeable
 
+import GHC.Generics.Instances
+
 import Test.QuickCheck
 import Test.QuickCheck.Regression
 
-import Utilities.Instances
 import Utilities.Syntactic
 import Utilities.Table
 

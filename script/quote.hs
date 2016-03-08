@@ -1,11 +1,10 @@
 #!/usr/bin/env runhaskell
 
 import Control.Monad
+import Control.Precondition
 
 import System.Environment
 import System.Process
-
-import Utilities.Partial
 
 escape :: String -> String
 escape xs = concatMap f xs

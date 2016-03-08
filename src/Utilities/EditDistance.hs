@@ -3,13 +3,12 @@ module Utilities.EditDistance where
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
+import Control.Precondition
 
 import Data.Array as A hiding ((!))
 import Data.List as L
 
 import Test.QuickCheck
-
-import Utilities.Partial
 
 dist :: Eq a => [a] -> [a] -> Int
 dist xs ys = 

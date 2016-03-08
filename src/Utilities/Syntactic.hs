@@ -14,6 +14,7 @@ import Data.List.Ordered
 import Data.Typeable
 import qualified Data.String.Lines as L
 
+import GHC.Generics.Instances
 import GHC.Read
 import GHC.SrcLoc
 import GHC.Stack.Utils
@@ -27,7 +28,6 @@ import Test.QuickCheck as QC
 import Text.ParserCombinators.ReadPrec
 import Text.Printf.TH
 
-import Utilities.Instances
 
 data Error = Error String LineInfo | MLError String [(String,LineInfo)]
     deriving (Eq,Typeable,Show,Ord,Read,Generic)

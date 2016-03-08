@@ -1,47 +1,66 @@
-{-# LANGUAGE RankNTypes,UndecidableInstances #-}
+{-# LANGUAGE RankNTypes,ScopedTypeVariables,UndecidableInstances #-}
 module Reactive.Banana.Keyboard where
 
 import Reactive.Banana
 import Reactive.Banana.Frameworks
 
-import Control.Arrow
 import Control.Lens hiding (pre)
 import Control.Monad.Reader
 import Control.Monad.RWS
 
-import Text.Printf
+import Data.Functor.Compose
+import Data.List.Lens
+import Data.Semigroup.Applicative
+import Data.String.Utils hiding (split)
+import Data.Typeable
+import Data.Typeable.Lens
+
+import Reactive.Banana.IO
+
+import Text.Printf.TH
 
 type Keyboard = KeyboardT Moment
 type KeyboardIO = KeyboardT MomentIO
-newtype KeyboardT m a = Keyboard { _keyboard :: RWST (Behavior (ReifiedPrism' String String)) () (Event String) m a }
+type Filter   = Behavior [String]
+newtype KeyboardT m a = Keyboard { _keyboard :: RWST Filter (Ap Behavior [String]) (Event String) m a }
     deriving ( Functor, Applicative
-             , Monad, MonadTrans
+             , MonadTrans
              , MonadIO, MonadMoment
+             , MonadMomentIO
              , MonadFix )
 
-instance (MonadMoment m,Monoid w) => MonadMoment (RWST r w s m) where
-    liftMoment = lift . liftMoment
+instance Monad m => Monad (KeyboardT m) where
+    {-# INLINE (>>=) #-}
+    Keyboard m >>= f = Keyboard $ m >>= _keyboard . f
 
 makeLenses ''KeyboardT
 
 class KeyboardMonad m where
-    command' :: Behavior (ReifiedPrism' String a) 
+    command' :: forall a. (Typeable a,Show a,Read a) 
+             => Behavior String
              -> m (Event a)
-    specializeKeyboard :: Behavior (ReifiedPrism' String String)
+    specializeKeyboard :: Behavior String
                        -> m a
                        -> m a
 
 
 instance Monad m => KeyboardMonad (KeyboardT m) where
-    specializeKeyboard f (Keyboard m) = Keyboard $ local (\f' -> combine <$> f' <*> f) m
-    command' pr = Keyboard $ do
+    specializeKeyboard f (Keyboard m) = Keyboard $ local (liftA2 (:) f) m
+    command' name = Keyboard $ do
         pre <- ask
         kb <- get
-        let cmd = (matching.runPrism) <$> (combine<$>pre<*>pr) <@> kb
-            (kb',r) = split cmd
+        let cmd  = concat.reverse <$> liftA2 (:) name pre
+            arg  = matching.(._Show').prefixed <$> cmd <@> kb
+            arg' = Compose arg
+            (kb',r) = split arg
+        tell $ Ap $ sequenceA [liftA2 (++) cmd $ pure $ show $ typeRep arg']
         --state (split . fmap (swapEither . matching (_.pr)))
         put kb'
         return r
+
+_Show' :: (Read a,Show a,Typeable a) => Prism' String a
+_Show' = prism' show (\x -> x^?prefixed " ".to strip._Show <|> x^?to strip.only ""._cast)
+    -- prism (view chosen) _.without _Show _
 
 -- overA :: Lens' s t a b -> (arr a b) -> (arr s t)
 -- overA ln = proc x -> do
@@ -64,18 +83,19 @@ instance MonadWriter w m => MonadWriter w (KeyboardT m) where
     listen = keyboard.insideRWST %~ listen
     pass   = keyboard.insideRWST %~ pass
 
-withKeyboard :: (Functor m)
-             => Event String
-             -> KeyboardT m a
-             -> m (a,Event String)
-withKeyboard kb m = (view _1 &&& view _2) <$> runRWST (m^.keyboard) (pure $ Prism id) kb
+withKeyboardT :: (Functor m)
+              => Event String
+              -> KeyboardT m a
+              -> m (a,Event String,Behavior [String])
+withKeyboardT kb m = (_3 %~ getAp) <$> runRWST (m^.keyboard) (pure []) kb
 
-withKeyboard_ :: Event String
-              -> KeyboardIO a
-              -> MomentIO a
+withKeyboard_ :: MonadMomentIO m
+              => Event String
+              -> KeyboardT m a
+              -> m a
 withKeyboard_ e m = do
-        (x,kb) <- withKeyboard e m
-        reject kb
+        (x,kb,cmds) <- withKeyboardT e m
+        reject kb cmds
         return x
 
 combine :: ReifiedPrism s t a b
@@ -83,17 +103,15 @@ combine :: ReifiedPrism s t a b
         -> ReifiedPrism s t a' b'
 combine (Prism p0) (Prism p1) = Prism $ p0 . p1
 
-takeKeyboard :: (KeyboardMonad m)
-             => m (Event String)
-takeKeyboard = do
-        command id
+reject :: MonadMomentIO m
+       => Event String
+       -> Behavior [String]
+       -> m ()
+reject kb cmds = do
+    let msg = flip [printf|Invalid command: '%s'\nValid commands:\n%s\n|] . unlines . map ("  " ++)
+    liftMomentIO $ reactimate $ fmap putStrLn . msg <$> cmds <@> kb
 
-reject :: Event String
-       -> MomentIO ()
-reject kb = do
-    reactimate $ printf "Invalid command: '%s'\n" <$> kb
-
-command :: (KeyboardMonad m)
-        => Prism' String a
+command :: (KeyboardMonad m,Read a,Show a,Typeable a)
+        => String
         -> m (Event a)
-command = command' . pure . Prism
+command cmd = command' $ pure cmd

@@ -21,22 +21,23 @@ import Logic.Proof.Sequent as S
     -- Libraries
 import Control.Arrow
 import Control.DeepSeq
+import Control.Invariant
+import Control.Lens hiding (Context)
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.RWS hiding ((<>))
 import Control.Monad.State
-import Control.Lens hiding (Context)
 
 import Data.DList as D
 import Data.List  as L
+import Data.Map.Class as M hiding ( map )
+import qualified Data.Map.Class as M
 import Data.Semigroup
+
+import GHC.Generics.Instances
 
 import Text.Printf.TH
 
-import Utilities.Invariant
-import Utilities.Instances
-import Utilities.Map as M hiding ( map )
-import qualified Utilities.Map as M
 import Utilities.Table
 import Utilities.TH (mkCons)
 import Utilities.Trace

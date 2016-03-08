@@ -15,19 +15,20 @@ import UnitB.Machine
 
     -- Libraries
 import Control.DeepSeq
+import Control.Invariant
 import Control.Lens hiding (indices)
+import Control.Precondition
 
-import           Data.Default
-import           Data.Functor.Classes
-import           Data.Functor.Compose
-import           Data.Graph.Bipartite
+import Data.Default
+import Data.Functor.Classes
+import Data.Functor.Compose
+import Data.Graph.Bipartite
+import Data.Map.Class as M hiding ((!))
+
+import GHC.Generics.Instances
 
 import Text.Printf
 
-import Utilities.Instances
-import Utilities.Invariant
-import Utilities.Map as M hiding ((!))
-import Utilities.Partial
 import Utilities.Table
 
 type System  = System' Machine

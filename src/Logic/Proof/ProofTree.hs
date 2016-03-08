@@ -15,6 +15,7 @@ import Control.Lens hiding (Context,rewrite)
 
 import Data.List as L
 import Data.Maybe as M 
+import qualified Data.Map.Class as M 
 import Data.Set as S 
 import Data.Typeable
 
@@ -22,7 +23,6 @@ import GHC.Generics (Generic)
 
 import Text.Printf.TH
 
-import qualified Utilities.Map as M 
 import Utilities.Syntactic
 import Utilities.Table
 

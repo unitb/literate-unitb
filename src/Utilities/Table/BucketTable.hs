@@ -15,6 +15,7 @@ import qualified Data.Map as IM
 import qualified Data.Map as M
 import qualified Data.Maybe as My
 import qualified Data.List as L
+import Data.Map.Class
 --import qualified Data.List.Ordered as Ord
 --import Data.List.NonEmpty as NE (NonEmpty(..)) 
 --import qualified Data.List.NonEmpty as NE
@@ -25,11 +26,10 @@ import qualified Data.Set as S
 
 --import GHC.Exts (Int(..))
 --import GHC.Prim
+import GHC.Generics.Instances
 
 import Prelude hiding (lookup,null,map,filter)
 
-import Utilities.Instances
-import Utilities.Map
 
 import Test.QuickCheck hiding (shrinkList)
 import Test.QuickCheck.Function

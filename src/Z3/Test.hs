@@ -24,7 +24,7 @@ import qualified Data.Set as S
 import Tests.UnitTest
 
 import Utilities.Functor
-import qualified Utilities.Map as M
+import qualified Data.Map.Class as M
 import Utilities.Syntactic
 import Utilities.Table
 

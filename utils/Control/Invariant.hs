@@ -1,5 +1,5 @@
 {-# LANGUAGE StandaloneDeriving, TypeFamilies #-}
-module Utilities.Invariant 
+module Control.Invariant 
     ( HasInvariant(..), Checked, IsChecked(..)
     , Assert
     , mutate, mutate', create'
@@ -24,6 +24,7 @@ import Control.Exception.Assert
 import Control.Lens
 import Control.Monad.State
 import Control.Monad.RWS
+import Control.Precondition
 
 import Data.Default
 import Data.Functor.Compose
@@ -32,16 +33,13 @@ import Data.List
 import Data.Set (isSubsetOf,isProperSubsetOf,Set)
 import Data.Typeable
 
-import GHC.Stack
 import GHC.Stack.Utils
 
 import PseudoMacros
 
 import Text.Printf
 
-import Utilities.Map (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
-import Utilities.Partial
-import Utilities.Lens
+import Data.Map.Class (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
 
 newtype Checked a = Checked { getChecked :: a }
     deriving (Eq,Ord,NFData,Functor,Foldable,Traversable,Typeable)
@@ -188,7 +186,7 @@ mutate' :: (IsChecked c a,Monad m) => Assert -> StateT a m k -> StateT c m k
 mutate' arse cmd = zoom (content arse) cmd
 
 create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
-create' arse = check arse . create 
+create' arse = check arse . flip execState def 
 
 withStack :: CallStack -> Invariant a -> Invariant a
 withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs

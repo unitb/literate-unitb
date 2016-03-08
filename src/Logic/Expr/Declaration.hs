@@ -14,11 +14,12 @@ import Control.DeepSeq
 import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List,rewriteM)
 
+import qualified Data.Map.Class as M
 import Data.Typeable
 
+import GHC.Generics.Instances
+
 import Utilities.Functor
-import Utilities.Instances
-import qualified Utilities.Map as M
 
 type Decl = AbsDecl GenericType
 

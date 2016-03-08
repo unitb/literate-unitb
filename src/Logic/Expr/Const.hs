@@ -11,14 +11,13 @@ import Logic.Names
     -- Libraries
 import Control.Lens hiding (rewrite,Const)
 import Control.Monad 
+import Control.Precondition
 
 import           Data.Foldable as F
 import           Data.List as L
-import           Data.Maybe hiding ( fromJust )
+import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
-import qualified Utilities.Map as M
-import Utilities.Partial
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -12,6 +12,7 @@ import Data.Either.Combinators
 import Data.Function
 import Data.Hashable
 import Data.List as L
+import Data.Map.Class as Map
 import Data.Maybe
 --import Data.Monoid
 import Data.Semigroup
@@ -24,8 +25,7 @@ import qualified Data.HashMap.Lazy as M
 import qualified Data.HashMap.Strict as M
 #endif
 
-import Utilities.Instances
-import Utilities.Map as Map
+import GHC.Generics.Instances
 
 instance IsMap M.HashMap where
     type IsKey M.HashMap k = (Ord k,Hashable k)

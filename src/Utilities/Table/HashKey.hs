@@ -13,14 +13,14 @@ import Data.Hashable
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.List.Ordered as Ord
+import Data.Map.Class
 import Data.Semigroup
 import Data.Serialize
 import qualified Data.Set as S
 
-import Prelude hiding (lookup,null,map,filter)
+import GHC.Generics.Instances
 
-import Utilities.Instances
-import Utilities.Map
+import Prelude hiding (lookup,null,map,filter)
 
 newtype MapWithHash k a = MapWithHash { _mapWithHash :: M.Map (HashKey k) a }
     deriving (Eq,Ord,Generic,Functor,Foldable,Traversable,Default,Monoid)

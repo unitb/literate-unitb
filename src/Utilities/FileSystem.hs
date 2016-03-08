@@ -18,13 +18,12 @@ module Utilities.FileSystem
 where
 
 import Control.Lens
+import Control.Invariant
 import Control.Monad.State
+import Control.Precondition
 
 import Data.Default
 import Data.Map as M hiding ((!))
-import Data.Maybe
-
-import GHC.Stack.Utils
 
 import Prelude hiding (readFile,writeFile)
 import qualified Prelude as P
@@ -36,9 +35,6 @@ import System.Directory hiding
 import qualified System.Directory as D
 import System.FileLock
 import System.FilePath
-
-import Utilities.Invariant
-import Utilities.Partial
 
 newtype ExistingFile s = ExistingFile FilePath
 

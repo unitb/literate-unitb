@@ -40,6 +40,7 @@ import Control.Monad.Trans.Either
 import           Data.Graph hiding (Table)
 import           Data.List as L
 import qualified Data.List.Ordered as OL
+import           Data.Map.Class  as M
 import qualified Data.Set  as S
 import           Data.Tuple
 
@@ -49,7 +50,6 @@ import Text.Printf.TH
 
 import Utilities.Error
 import Utilities.Graph hiding ( map )
-import Utilities.Map  as M
 import Utilities.Syntactic ( Error (..), LineInfo )
 import Utilities.Table
 

@@ -12,15 +12,14 @@ import Documentation.SummaryGen
     -- Libraries
     -- 
 import Control.Lens
+import Control.Precondition
 
 import Data.Map as M
 import Data.Map.Syntax
-import Data.Maybe 
 
 import Tests.UnitTest
 
 import Utilities.FileSystem
-import Utilities.Partial
 import Utilities.Syntactic
 
 test_case :: TestCase

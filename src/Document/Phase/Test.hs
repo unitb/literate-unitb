@@ -48,12 +48,12 @@ import Data.Existential
 import Data.Graph.Bipartite as G
 import Data.List as L
 import Data.List.NonEmpty as NE
+import Data.Map.Class  as M
 import Data.Maybe
 
 import Test.QuickCheck
 
 import Utilities.Lens
-import Utilities.Map  as M
 import Utilities.Syntactic
 import Utilities.Table
 

@@ -12,10 +12,13 @@ import Logic.Names
 import Control.DeepSeq
 import Control.Lens hiding (List,elements)
 import Control.Monad.Reader
+import Control.Precondition
 
 import           Data.Data
 import           Data.Hashable
 import qualified Data.Set as S
+
+import           GHC.Generics.Instances
 
 import Language.Haskell.TH.Syntax hiding (Name)
 
@@ -23,8 +26,6 @@ import           Test.QuickCheck
 
 import           Text.Printf.TH
 
-import           Utilities.Instances
-import           Utilities.Partial
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *

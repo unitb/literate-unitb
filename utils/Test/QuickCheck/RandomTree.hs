@@ -9,6 +9,7 @@ import Control.Monad.Fix
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Reader
+import Control.Precondition
 
 import Data.List
 
@@ -17,8 +18,6 @@ import Text.Printf
 import Test.QuickCheck hiding (sized)
 import qualified Test.QuickCheck as QC
 import Test.QuickCheck.Report
-
-import Utilities.Partial
 
 data Tree a = Tree a [Tree a]
     deriving Eq

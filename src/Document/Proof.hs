@@ -33,6 +33,8 @@ import           Control.Monad.Trans.Writer
 
 import           Data.Char
 import           Data.Either.Combinators
+import           Data.Map.Class hiding ( map )
+import qualified Data.Map.Class as M
 import           Data.Maybe
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
@@ -43,8 +45,6 @@ import GHC.Generics (Generic)
 import Text.Printf.TH
 
 import           Utilities.Error
-import           Utilities.Map hiding ( map )
-import qualified Utilities.Map as M
 import           Utilities.Syntactic hiding (line)
 import           Utilities.Table
 

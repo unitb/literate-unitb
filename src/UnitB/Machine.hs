@@ -21,10 +21,11 @@ import UnitB.Property
     -- Libraries
 import Control.Arrow
 import Control.DeepSeq
+import Control.Invariant
 import Control.Lens hiding (indices)
-
 import Control.Monad hiding ( guard )
 import Control.Monad.State
+import Control.Precondition
 
 import           Data.Default
 import           Data.Monoid
@@ -34,21 +35,18 @@ import           Data.Functor.Classes
 import           Data.Graph.Bipartite as G
 import           Data.List as L hiding ( union, inits )
 import           Data.List.NonEmpty as NE hiding (inits)
+import           Data.Map.Class as M
 import           Data.Maybe as M
 import qualified Data.Set as S
 import           Data.String
 import qualified Data.Traversable as T
 import           Data.Typeable
 
-import GHC.Stack.Utils
+import GHC.Generics.Instances
 
 import Text.Printf.TH
 
-import Utilities.Instances
-import Utilities.Invariant
 import Utilities.Lens
-import Utilities.Map as M
-import Utilities.Partial
 import Utilities.Table
 import Utilities.TH
 

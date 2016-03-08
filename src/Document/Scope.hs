@@ -43,22 +43,20 @@ import Control.Lens as L
 import Control.Monad.Identity
 import Control.Monad.RWS (tell)
 import Control.Parallel.Strategies
+import Control.Precondition
 
 import Data.Either.Validation
-import Data.Maybe 
+import Data.Graph.Array
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (length,tail,head)
+import Data.Map.Class as M
 import Data.Semigroup ((<>),First(..))
 import qualified Data.Traversable as T
 
-import GHC.Stack
+import GHC.Generics.Instances 
 
 import Test.QuickCheck as QC hiding (Failure,Success)
 
-import Utilities.Instances 
-import Utilities.Map as M
-import Utilities.Partial
-import Utilities.Permutation
 import Utilities.Table
 import Utilities.Syntactic
 

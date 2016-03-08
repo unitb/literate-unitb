@@ -18,20 +18,20 @@ import Data.Default
 import Data.Foldable as F
 import Data.List as L
 import Data.List.NonEmpty as NE
+import Data.Map.Class  as M
 import Data.Maybe
 import Data.Semigroup
 import Data.String
 import Data.Typeable
 
 import GHC.Generics hiding (to)
+import GHC.Generics.Instances
 
 import Test.QuickCheck hiding (label)
 
 import Text.Printf
 
-import Utilities.Instances
 import Utilities.Lens
-import Utilities.Map  as M
 import Utilities.Table
 import Utilities.TH
 

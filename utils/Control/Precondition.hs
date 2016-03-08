@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell, ImplicitParams #-}
-module Utilities.Partial 
-    ( module Utilities.Partial 
+module Control.Precondition 
+    ( module Control.Precondition 
     , module Control.Exception.Assert
     , module Data.Maybe 
     , module Data.Either.Combinators
@@ -27,7 +27,7 @@ import PseudoMacros
 
 import Text.Printf
 
-import Utilities.Instances ()
+import GHC.Generics.Instances ()
 
 fromJust' :: (?loc :: CallStack) => Maybe a -> a
 fromJust' (Just x)   = x

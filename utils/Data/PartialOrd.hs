@@ -6,13 +6,11 @@ import Control.Lens
 import Data.Function
 import Data.List 
 import Data.List.Ordered
+import qualified Data.Map.Class as M
 import Data.Proxy.TH
 import Data.Tuple.Generics
 
 import Test.QuickCheck
-
-import qualified Utilities.Map as M
-import Utilities.Table 
 
 data PartOrdering = Comp Ordering | Uncomp
     deriving (Eq,Ord,Show)
@@ -95,6 +93,12 @@ class (Eq a,PreOrd a) => PartialOrd a where
     axiom_antisymmetry :: a -> a -> Bool
     axiom_antisymmetry x y = not (leq x y) || not (leq y x) || x == y
 
+isLeq :: PartOrdering -> Bool
+isLeq o = o == Comp LT || o == Comp EQ
+
+isGeq :: PartOrdering -> Bool
+isGeq o = o == Comp GT || o == Comp EQ
+
 instance Ord a => PartialOrd (Partial a) where
 
 instance Ord a => PreOrd (Partial a) where
@@ -111,7 +115,7 @@ instance Ord a => PreOrd (Unordered a) where
             zs = xunionBy (compare `on` fst) ((,True) <$> sort xs) ((,False) <$> sort ys)
             (l,r) = partition snd zs
 
-instance (Ord k,Eq a) => PreOrd (Table k a) where
+instance (Ord k,Eq a) => PreOrd (M.Map k a) where
     partCompare x y = case compare nX nY of
                         GT 
                             | M.isSubmapOf y x -> Comp GT
@@ -126,7 +130,7 @@ instance (Ord k,Eq a) => PreOrd (Table k a) where
             nX = M.size x
             nY = M.size y
 
-instance (Ord k,Eq a) => PartialOrd (Table k a) where
+instance (Ord k,Eq a) => PartialOrd (M.Map k a) where
 
 instance Eq a => PreOrd (Quotient a) where
     partCompare x y

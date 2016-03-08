@@ -24,13 +24,14 @@ import Control.Monad.Trans.RWS
         ,runRWS,runRWST
         ,execRWST,execRWS)
 
+import Control.Precondition
+
 import Data.List as L hiding (inits)
 import Data.List.Ordered as OL
+import Data.Map.Class  as M
 
 import Text.Printf.TH
 
-import Utilities.Map  as M
-import Utilities.Partial
 import Utilities.Table
 
 

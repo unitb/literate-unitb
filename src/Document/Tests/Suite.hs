@@ -30,6 +30,7 @@ import Data.Either.Combinators
 import Data.List as L hiding (lookup)
 import qualified Data.List.NonEmpty as NE
 import Data.List.Utils as L
+import Data.Map.Class as M hiding (lookup)
 import Data.Time
 
 import GHC.Stack
@@ -37,14 +38,13 @@ import GHC.Stack
 import Prelude hiding (lookup)
 import PseudoMacros
 
-import Text.Printf.TH
-
-import Utilities.Map as M hiding (lookup)
-import Utilities.Syntactic
-import Utilities.Table
-
 import System.Directory
 import System.IO.Unsafe
+
+import Text.Printf.TH
+
+import Utilities.Syntactic
+import Utilities.Table
 
 type POResult = (String,Table Label Sequent)
 type POS sid a = Either [Error] (Table sid (a, Table Label Sequent))

@@ -14,6 +14,7 @@ import Data.Data hiding (typeOf)
 import Data.Data.Lens
 import Data.Default
 import Data.Graph
+import Data.Graph.Array
 import Data.List as L
 import Data.List.Ordered
 import Data.Map as M
@@ -25,7 +26,6 @@ import Language.Haskell.TH
 
 import Text.Printf
 
-import Utilities.Permutation
 
 makePolyClass :: Name -> DecsQ
 makePolyClass recName = do

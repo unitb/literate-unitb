@@ -33,8 +33,8 @@ import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Foldable as F
 import           Data.List as L
+import           Data.Map.Class as M 
 
-import Utilities.Map as M 
 import Utilities.Table
 
 all_theories :: Theory -> [Theory]

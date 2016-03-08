@@ -7,12 +7,12 @@ import Logic.Proof hiding (preserve)
 
     -- Libraries
 import Control.Lens hiding (Context,(.=),from,to,rewriteM)
+import Control.Precondition
 
 import           Data.Typeable
 
 import GHC.Generics hiding ((:+:),prec)
 
-import Utilities.Partial
 import Utilities.Table
 import Utilities.TH
 
