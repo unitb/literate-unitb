@@ -137,7 +137,9 @@ failOnException' :: err
 failOnException' err (FileFormat w r) = FileFormat w readF
     where
       readF fn = do
-            let handler (SomeException _) = return $ Left err
+            let handler e@(SomeException _) = do
+                    print e
+                    return $ Left err
             handle handler $ runEitherT $ do
                 x <- EitherT $ r fn
                 lift $ evaluate x

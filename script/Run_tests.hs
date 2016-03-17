@@ -62,8 +62,10 @@ general = do
                 t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
                 zs' <- mapM (liftM (length . lines) . readFile) ys'
-                let ys = "total" : ys'
-                    zs = sum zs' : zs'
+                let -- ys  = "total" : ys'
+                    zs  = sum zs' : zs'
+                    lc  = filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs' ys'
+                    lc' = (sum $ map fst lc,"total") : lc
                     n = maximum $ map (length . show) zs
                     pad xs = replicate (3 + n - length xs) ' ' ++ xs ++ " "
                     f (n,xs) = pad (show n) ++ xs
@@ -71,8 +73,7 @@ general = do
                     $ unlines 
                     $ "Lines of Haskell code:"
                        : (take 6 $ map f $ reverse 
-                            $ sortOn fst 
-                            $ filter (\(_,x) -> not $ "test" `isInfixOf` map toLower x) $ zip zs ys)
+                            $ sortOn fst lc')
                       ++ ["Run time: " ++ (let (m,s) = divMod (round $ diffUTCTime t1 t0) (60 :: Int) in 
                                 printf "%dm %ds" m s)]
                 xs <- readFile "result.txt"

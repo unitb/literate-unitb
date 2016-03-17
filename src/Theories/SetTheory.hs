@@ -34,7 +34,10 @@ map_array name t xs = do
 
 mzfinite :: (IsName n,IsQuantifier q)
          => ExprPG n Type q -> ExprPG n Type q
-mzfinite = typ_fun1 $ mk_fun [gA] (z3Name "finite") [set_type gA] bool
+mzfinite = typ_fun1 finite_fun
+
+finite_fun :: IsName n => AbsFun n Type
+finite_fun = mk_fun [gA] (z3Name "finite") [set_type gA] bool
 
 zfinite :: Expr -> Expr
 zfinite e = ($typeCheck) (mzfinite $ Right e)
@@ -213,16 +216,23 @@ zset = typ_fun2 comprehension_fun
 
 zset_select = typ_fun2 (mk_fun' [] "select" [set_type gA, gA] bool)
 
-zsetdiff     = typ_fun2 (mk_fun' [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA)
-
-
-zempty_set   = Right $ FunApp (mk_fun' [gA] "empty-set" [] $ set_type gA) []
-zset_all     = Right $ FunApp (mk_fun' [gA] "all" [] $ set_type gA) []
+zempty_set   = Right $ FunApp zempty_set_fun []
+zset_all     = Right $ FunApp zset_all_fun []
 zsubset      = typ_fun2 subset_fun
+zsetdiff     = typ_fun2 zsetdiff_fun
 zstsubset    = typ_fun2 st_subset_fun
-zintersect   = typ_fun2 (mk_fun' [] "intersect" [set_type gA,set_type gA] $ set_type gA)
-zunion       = typ_fun2 (mk_fun' [] "union" [set_type gA,set_type gA] $ set_type gA)
-zcompl       = typ_fun1 (mk_fun' [gA] "compl" [set_type gA] $ set_type gA)
+zintersect   = typ_fun2 zintersect_fun
+zunion       = typ_fun2 zunion_fun
+zcompl       = typ_fun1 zcompl_fun
+
+zunion_fun, zintersect_fun, zcompl_fun, zempty_set_fun, zset_all_fun :: Fun
+zsetdiff_fun :: IsName n => AbsFun n Type
+zunion_fun     = mk_fun' [] "union" [set_type gA,set_type gA] $ set_type gA
+zsetdiff_fun   = mk_fun' [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA
+zintersect_fun = mk_fun' [] "intersect" [set_type gA,set_type gA] $ set_type gA
+zcompl_fun     = mk_fun' [gA] "compl" [set_type gA] $ set_type gA
+zempty_set_fun = mk_fun' [gA] "empty-set" [] $ set_type gA
+zset_all_fun   = mk_fun' [gA] "all" [] $ set_type gA
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
 zset_enum (x:xs) = foldl zunion y ys 
@@ -257,15 +267,15 @@ st_subset   :: BinOperator
 st_superset :: BinOperator
 compl       :: UnaryOperator
 
-set_union       = make BinOperator "union" "\\bunion"        zunion
-set_intersect   = make BinOperator "intersect" "\\binter" zintersect
-set_diff        = make BinOperator "set-diff" "\\setminus"   zsetdiff
-membership      = make BinOperator "elem" "\\in"       zelem
-subset          = make BinOperator "subset"     "\\subseteq" zsubset
-superset        = make BinOperator "superset"   "\\supseteq" (flip zsubset)
-st_subset       = make BinOperator "st-subset"   "\\subset" zstsubset
-st_superset     = make BinOperator "st-superset" "\\supset" (flip zstsubset)
-compl           = make UnaryOperator "complement" "\\compl" zcompl
+set_union       = make BinOperator "union" "\\bunion"      Direct zunion_fun
+set_intersect   = make BinOperator "intersect" "\\binter"  Direct zintersect_fun
+set_diff        = make BinOperator "set-diff" "\\setminus" Direct zsetdiff_fun
+membership      = make BinOperator "elem" "\\in"           Direct (elem_fun gA)
+subset          = make BinOperator "subset"     "\\subseteq" Direct subset_fun
+superset        = make BinOperator "superset"   "\\supseteq" Flipped subset_fun
+st_subset       = make BinOperator "st-subset"   "\\subset"  Direct  st_subset_fun
+st_superset     = make BinOperator "st-superset" "\\supset"  Flipped st_subset_fun
+compl           = make UnaryOperator "complement" "\\compl"  zcompl_fun
 
 set_notation :: Notation
 set_notation = create $ do
@@ -287,9 +297,9 @@ set_notation = create $ do
     relations   .= []
     quantifiers .= [ (fromString'' "\\qset",comprehension)
                    , (fromString'' "\\qunion",qunion) ]
-    commands    .= [ make Command "\\emptyset" "empty-set" 0 $ const $ zempty_set
-                   , make Command "\\all" "all" 0 $ const $ zset_all
-                   , make Command "\\finite" "finite" 1 $ from_list (mzfinite :: ExprP -> ExprP) ]
+    commands    .= [ make Command "\\emptyset" "empty-set" 0 zempty_set_fun
+                   , make Command "\\all" "all" 0 zset_all_fun
+                   , make Command "\\finite" "finite" 1 finite_fun ]
     chaining    .= [ ((subset,subset),subset) 
                    , ((subset,st_subset),st_subset)
                    , ((st_subset,subset),st_subset)

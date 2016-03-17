@@ -167,7 +167,7 @@ compile_test = make "suite/test_tmp.hs"
 
 profile_test :: Build FilePath
 profile_test = do
-    -- make "suite/test_tmp.hs"
+    make "suite/test_tmp.hs"
     enableProfiling "suite/test_tmp.hs"
 
 compile_all :: Build FilePath

@@ -10,6 +10,7 @@ module Logic.Operator
     , Operator
     , Matrix
     , Input (..)
+    , Flipping(..)
     -- , with_assoc
     , functionName
     , empty_notation
@@ -44,9 +45,12 @@ import Data.Default
 import Data.Either
 import Data.Function
 import Data.List as L
+import Data.Serialize
 import Data.Typeable
 
-import GHC.Generics (Generic)
+import GHC.Generics.Instances
+
+import Test.QuickCheck
 
 import Text.Printf.TH
 
@@ -66,13 +70,17 @@ type Matrix a b = G.Matrix a b
     -- o create a function that generates an expression
     --      from the token
 mk_expr :: BinOperator -> Expr -> Expr -> Either [String] Expr
-mk_expr (BinOperator _ _ f) x y = f (Right x) (Right y)
+mk_expr (BinOperator _ _ Flipped f) x y = flip (typ_fun2 f) (Right x) (Right y)
+mk_expr (BinOperator _ _ Direct f) x y  = typ_fun2 f (Right x) (Right y)
 
 mk_unary :: UnaryOperator -> Expr -> Either [String] Expr
-mk_unary (UnaryOperator _ _ f) x = f $ Right x
+mk_unary (UnaryOperator _ _ f) x = typ_fun1 f $ Right x
 
 data Assoc = LeftAssoc | RightAssoc | NoAssoc
     deriving (Show,Eq,Typeable,Generic)
+
+data Flipping = Flipped | Direct
+    deriving (Eq,Ord,Show,Generic,Typeable,Bounded,Enum)
 
 data Notation = Notation
     { _new_ops :: [Operator]
@@ -88,6 +96,20 @@ data Notation = Notation
 
 instance PrettyPrintable Notation where
     pretty _ = "<notation>" 
+
+instance Serialize Command where
+instance Serialize UnaryOperator where
+instance Serialize BinOperator where
+
+instance Serialize Notation where
+    put (Notation a b c d e f g h _) = do
+            put a >> put b >> put c
+            put d >> put e >> put f
+            put g >> put h
+    get = fmap with_assoc $ 
+            Notation <$> get <*> get <*> get
+                     <*> get <*> get <*> get
+                     <*> get <*> get <*> pure undefined
 
 empty_notation :: Notation
 empty_notation = with_assoc $ Notation 
@@ -160,24 +182,18 @@ precede x y
         intersect = intersectBy ((==) `on` f)
         common = L.map f $ _new_ops x `intersect` _new_ops y
 
-data UnaryOperator = UnaryOperator InternalName Name (ExprP -> ExprP)
-    deriving (Typeable,Generic)
+data UnaryOperator = UnaryOperator InternalName Name Fun
+    deriving (Typeable,Generic,Eq,Ord,Show)
 
-instance Eq UnaryOperator where
-    UnaryOperator x0 x1 _ == UnaryOperator y0 y1 _ = (x0,x1) == (y0,y1)
 
-instance Ord UnaryOperator where
-    compare (UnaryOperator x0 x1 _) (UnaryOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
-instance Show UnaryOperator where
-    show (UnaryOperator x y _) = show (x,y) -- format str x y
 
 instance PrettyPrintable UnaryOperator where
     pretty (UnaryOperator x y _) = pretty (x,y) -- format str x y
 
 instance HasName Operator Name where
     name = to $ \case 
-        (Right (BinOperator _ xs _))  -> xs
+        (Right (BinOperator _ xs _ _))  -> xs
         (Left (UnaryOperator _ xs _)) -> xs
 
 instance Named Operator where
@@ -185,42 +201,31 @@ instance Named Operator where
     decorated_name' = adaptName . view name
 
 functionName :: Operator -> Name
-functionName (Right (BinOperator xs _ _)) = asName xs
-functionName (Left (UnaryOperator xs _ _)) = asName xs
+functionName (Right (BinOperator xs _ _ _)) = asName xs
+functionName (Left (UnaryOperator xs _ _))  = asName xs
 
-data BinOperator = BinOperator InternalName Name (ExprP -> ExprP -> ExprP)
-    deriving (Typeable,Generic)
+data BinOperator = BinOperator InternalName Name Flipping Fun
+    deriving (Typeable,Generic,Eq,Ord,Show)
 
-instance Eq BinOperator where
-    BinOperator x0 x1 _ == BinOperator y0 y1 _ = (x0,x1) == (y0,y1)
 
-instance Ord BinOperator where
-    compare (BinOperator x0 x1 _) (BinOperator y0 y1 _) = compare (x0,x1) (y0,y1)
 
-instance Show BinOperator where
-    show (BinOperator x y _) = show (x,y) -- format str x y
 instance PrettyPrintable BinOperator where
-    pretty (BinOperator x y _) = pretty (x,y) -- format str x y
+    pretty (BinOperator x y _ _) = pretty (x,y) -- format str x y
 
 type Operator = Either UnaryOperator BinOperator
 
-data Command = Command Name InternalName Int ([ExprP] -> ExprP)
-    deriving (Generic)
+data Command = Command Name InternalName Int Fun
+    deriving (Generic,Show,Eq)
 
-instance Show Command where
-    show (Command x y _ _) = show (x,y)
 instance PrettyPrintable Command where
     pretty (Command x y _ _) = pretty (x,y)
 
-instance Eq Command where
-    (==) (Command x0 y0 n0 _) (Command x1 y1 n1 _) =
-        (x0,y0,n0) == (x1,y1,n1)
 
 class Input a where
     token :: a -> Name
 
 instance Input BinOperator where
-    token (BinOperator _ tok _) = tok
+    token (BinOperator _ tok _ _) = tok
 
 instance Input UnaryOperator where
     token (UnaryOperator _ tok _) = tok
@@ -276,9 +281,9 @@ apply   :: BinOperator
 equal   :: BinOperator
 pair_op :: BinOperator
 
-apply   = make BinOperator "apply" "."     zapply
-equal   = make BinOperator "equal" "="     mzeq
-pair_op = make BinOperator "pair"  "\\mapsto" mzpair
+apply   = make BinOperator "apply" "."     Direct apply_fun
+equal   = make BinOperator "equal" "="     Direct (zeq_fun gA)
+pair_op = make BinOperator "pair"  "\\mapsto" Direct pair_fun
 
 functional_notation :: Notation
 functional_notation = with_assoc empty_notation
@@ -302,12 +307,12 @@ follows :: BinOperator
 equiv   :: BinOperator
 neg     :: UnaryOperator
 
-disj    = make BinOperator "or" "\\lor"          mzor
-conj    = make BinOperator "and" "\\land"        mzand
-implies = make BinOperator "implies" "\\implies" mzimplies
-follows = make BinOperator "follows" "\\follows" (flip mzimplies)
-equiv   = make BinOperator "equiv" "\\equiv"   mzeq
-neg     = make UnaryOperator "not" "\\neg"       mznot
+disj    = make BinOperator "or" "\\lor"          Direct (or_fun 2)
+conj    = make BinOperator "and" "\\land"        Direct (and_fun 2)
+implies = make BinOperator "implies" "\\implies" Direct implies_fun
+follows = make BinOperator "follows" "\\follows" Flipped implies_fun
+equiv   = make BinOperator "equiv" "\\equiv"     Direct (zeq_fun gA)
+neg     = make UnaryOperator "not" "\\neg"       not_fun
 
 logical_notation :: Notation
 logical_notation = with_assoc empty_notation
@@ -321,8 +326,8 @@ logical_notation = with_assoc empty_notation
     , _right_assoc = []
     , _relations   = [equiv,implies,follows]
     , _commands    = 
-        [ make Command "\\true" "true" 0 $ const mztrue
-        , make Command "\\false" "false" 0 $ const mzfalse ]
+        [ make Command "\\true" "true" 0   true_fun
+        , make Command "\\false" "false" 0 false_fun ]
     , _chaining    = 
         [ ((equiv,implies),implies)
         , ((implies,equiv),implies)
@@ -337,3 +342,9 @@ instance NFData UnaryOperator
 instance NFData Command
 instance NFData BinOperator
 instance NFData Assoc
+instance NFData Flipping
+
+instance Arbitrary Flipping where
+    arbitrary = genericArbitrary
+
+instance Serialize Flipping where

@@ -31,29 +31,33 @@ zstore   :: ExprP -> ExprP -> ExprP -> ExprP
 zrep_select :: ExprP -> ExprP -> ExprP
 zempty_fun  :: ExprP
 
-ztfun = typ_fun2 (mk_fun' [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB)
+ztfun = typ_fun2 tfun_fun
+zpfun = typ_fun2 pfun_fun
+zdom = typ_fun1 dom_fun
+zran = typ_fun1 ran_fun
+zdomsubt = typ_fun2 domsubt_fun
+zdomrest = typ_fun2 domrest_fun
 
-zpfun = typ_fun2 (mk_fun' [gA,gB] "pfun" [set_type gA, set_type gB] $ fun_set gA gB)
-
-zdom = typ_fun1 (mk_fun' [gA,gB] "dom" [fun_type gA gB] $ set_type gA)
-
-zran = typ_fun1 (mk_fun' [gA,gB] "ran" [fun_type gA gB] $ set_type gB)
-
-zdomsubt = typ_fun2 (mk_fun' [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB)
-
-zdomrest = typ_fun2 (mk_fun' [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB)
+tfun_fun, pfun_fun, dom_fun, ran_fun, domsubt_fun, domrest_fun :: Fun
+tfun_fun = mk_fun' [gA,gB] "tfun" [set_type gA, set_type gB] $ fun_set gA gB
+pfun_fun = mk_fun' [gA,gB] "pfun" [set_type gA, set_type gB] $ fun_set gA gB
+dom_fun  = mk_fun' [gA,gB] "dom" [fun_type gA gB] $ set_type gA
+ran_fun  = mk_fun' [gA,gB] "ran" [fun_type gA gB] $ set_type gB
+domsubt_fun = mk_fun' [gA,gB] "dom-subt" [set_type gA, fun_type gA gB] $ fun_type gA gB
+domrest_fun = mk_fun' [gA,gB] "dom-rest" [set_type gA, fun_type gA gB] $ fun_type gA gB
 
 zrep_select = typ_fun2 (mk_fun' [] "select" [fun_type gA gB, gA] $ maybe_type gB)
 
-zovl    = typ_fun2 (mk_fun' [gA,gB] "ovl" [ft,ft] ft)
+zovl    = typ_fun2 ovl_fun
+zmk_fun = typ_fun2 mk_fun_fun
+zempty_fun = Right $ FunApp emptyfun []
+
+ovl_fun, mk_fun_fun, emptyfun :: Fun
+ovl_fun = mk_fun' [gA,gB] "ovl" [ft,ft] ft
     where
         ft = fun_type gA gB
-
-zmk_fun = typ_fun2 (mk_fun' [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB)
-
---zset = typ_fun1 (Fun [gA,gB] "set" [array gA $ maybe_type gB] $ set_type gB)
-
-zempty_fun = Right $ FunApp (mk_fun' [gA,gB] "empty-fun" [] $ fun_type gA gB) []
+mk_fun_fun = mk_fun' [gA,gB] "mk-fun" [gA,gB] $ fun_type gA gB
+emptyfun = mk_fun' [gA,gB] "empty-fun" [] $ fun_type gA gB
 
 zlambda = zquantifier qlambda
 
@@ -72,7 +76,10 @@ zstore        = typ_fun3 $ mk_fun' [] "store" [
                 array gB gA
 
 zinjective :: ExprP -> ExprP
-zinjective  = typ_fun1 $ mk_fun' [gA,gB] "injective" [fun_type gA gB] bool
+zinjective  = typ_fun1 injective_fun
+
+injective_fun :: Fun
+injective_fun = mk_fun' [gA,gB] "injective" [fun_type gA gB] bool
 
 -- zsurjective = typ_fun1 $ Fun [gA,gB] "surjective" 
 
@@ -336,12 +343,12 @@ mk_fun_op   :: BinOperator
 total_fun,partial_fun :: BinOperator
 domrest,domsubt       :: BinOperator
 
-overload    = make BinOperator "overload" "|"         zovl
-mk_fun_op   = make BinOperator "mk-fun" "\\fun"       zmk_fun
-total_fun   = make BinOperator "total-fun" "\\tfun"   ztfun
-partial_fun = make BinOperator "partial-fun" "\\pfun" zpfun
-domrest     = make BinOperator "dom-rest" "\\domres"  zdomrest
-domsubt     = make BinOperator "dom-subt" "\\domsub"  zdomsubt
+overload    = make BinOperator "overload" "|"         Direct ovl_fun
+mk_fun_op   = make BinOperator "mk-fun" "\\fun"       Direct mk_fun_fun
+total_fun   = make BinOperator "total-fun" "\\tfun"   Direct tfun_fun
+partial_fun = make BinOperator "partial-fun" "\\pfun" Direct pfun_fun
+domrest     = make BinOperator "dom-rest" "\\domres"  Direct domrest_fun
+domsubt     = make BinOperator "dom-subt" "\\domsub"  Direct domsubt_fun
 
 function_notation :: Notation
 function_notation = create $ do
@@ -361,10 +368,10 @@ function_notation = create $ do
    left_assoc  .= [[overload]]
    right_assoc .= [[domrest,domsubt]]
    commands    .= 
-                [ make Command "\\emptyfun" "emptyfun" 0 $ const zempty_fun
-                , make Command "\\dom" "dom" 1 $ zdom . head
-                , make Command "\\ran" "ran" 1 $ zran . head
-                , make Command "\\injective" "injective" 1 $ zinjective . head
+                [ make Command "\\emptyfun" "emptyfun" 0 emptyfun
+                , make Command "\\dom" "dom" 1 dom_fun
+                , make Command "\\ran" "ran" 1 ran_fun
+                , make Command "\\injective" "injective" 1 injective_fun
                 ]
    quantifiers .= [ (fromString'' "\\qfun",qlambda) ]
    relations   .= []

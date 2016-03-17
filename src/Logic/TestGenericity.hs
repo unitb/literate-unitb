@@ -21,7 +21,6 @@ import Test.QuickCheck
 import Test.QuickCheck.AxiomaticClass
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
-import Test.QuickCheck.Regression
 import Test.QuickCheck.Report ()
 
 import Tests.UnitTest
@@ -336,11 +335,5 @@ instance TypeSystem Integer where
     make_type s = product . (toInteger (hash s):)
 instance Typed Integer where
     type TypeOf Integer = Integer
+    type_of = id
 
-checkRegression :: Property
-checkRegression = regression (uncurry axiom_derived_def_comparable)
-                    [(x0,y0)]
-    where
-        x0 :: GenContext Integer Integer Integer
-        x0 = Context {_genContextSorts = fromList [], _genContextConstants = fromList [(-1,Var 0 (-1))], _functions = fromList [], _definitions = fromList [(1,Def [0] 0 [] 0 (Lift (Const (IntVal (-1)) 0) 0))], _genContextDummies = fromList [(1,Var 1 (-1))]}
-        y0 = Context {_genContextSorts = fromList [(Name {_backslash = True, _base = 'o' :| "-", _primes = 0, _suffix = "", _encoding = Z3Encoding},Sort (Name {_backslash = False, _base = '.' :| "", _primes = 0, _suffix = "", _encoding = LatexEncoding}) (InternalName "" (Name {_backslash = False, _base = '-' :| "", _primes = 0, _suffix = "", _encoding = Z3Encoding}) "") 1)], _genContextConstants = fromList [(0,Var (-1) 1)], _functions = fromList [(-1,Fun {_annotation = [], _funName = -1, lifted = Unlifted, _arguments = [], _result = 0})], _definitions = fromList [], _genContextDummies = fromList []}

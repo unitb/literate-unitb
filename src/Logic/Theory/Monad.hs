@@ -57,7 +57,7 @@ instance SignatureImpl () where
         unless (L.null es) $ Left $ concat es
         args <- sequence argsM
         let ts' = repeat $ VARIABLE $ fromString'' "unexpected"
-            (Fun _ n _ ts t) = fun
+            (Fun _ n _ ts t _) = fun
             f e t = unlines
                     [ [printf|    argument: %s|] (pretty e)
                     , [printf|      type: %s|] (pretty $ type_of e)
@@ -172,37 +172,38 @@ command :: forall s. (FromList (FunType s) ExprP, Signature s)
         => Name -> s -> M (FunType s)
 command n s = do
     let name = addBackslash n
-    f <- function (asInternal n) s
+    (mk,f) <- function (asInternal n) s
     let proxy = Proxy :: Proxy s
         cmd = Command 
                 name 
                 (asInternal n)
-                (len' proxy) (from_list f)
+                (len' proxy) f
     tellTheory $ notation.commands <>= [cmd]
-    return f
+    return mk
 
-function :: (Signature s) => InternalName -> s -> M (FunType s)
+function :: (Signature s) => InternalName -> s -> M (FunType s,Fun)
 function n s = do
     let n' = asName n
-    tellTheory $ funs <>= singleton n' (funDecl n' s)
-    return $ utility n' s
+        fun = funDecl n' s
+    tellTheory $ funs <>= singleton n' fun
+    return (utility n' s,fun)
 
 operator :: (Signature s, FunType s ~ (ExprP -> ExprP -> ExprP))
          => Name -> InternalName 
          -> s -> M (Operator,ExprP -> ExprP -> ExprP)
 operator op tag s = do
-    f <- function tag s
-    let binop = BinOperator tag op f
+    (mk,f) <- function tag s
+    let binop = BinOperator tag op Direct f
     tellTheory $ notation.new_ops <>= [Right binop]
-    return (Right binop,f)
+    return (Right binop,mk)
 
 unary :: (Signature s, FunType s ~ (ExprP -> ExprP))
       => Name -> InternalName -> s -> M (Operator,ExprP -> ExprP)
 unary op tag s = do
-    f <- function tag s
+    (mk,f) <- function tag s
     let unop = UnaryOperator tag op f
     tellTheory $ notation.new_ops %= (Left unop:)
-    return (Left unop,f)
+    return (Left unop,mk)
 
 preserve :: Fun -> [Function] -> M ()
 preserve rel fun = tellTheory $
@@ -259,12 +260,13 @@ param_to_varE :: Expr -> RewriteST Expr
 param_to_varE e = do
     e' <- rewriteM param_to_varE e
     case e' of
-        FunApp (Fun ps n lift args rt) xs -> do
+        FunApp (Fun ps n lift args rt wd) xs -> do
             FunApp <$> (Fun <$> mapM param_to_varT ps 
                             <*> pure n 
                             <*> pure lift 
                             <*> mapM param_to_varT args 
-                            <*> param_to_varT rt) 
+                            <*> param_to_varT rt
+                            <*> pure wd) 
                    <*> pure xs
         _ -> return e'
 

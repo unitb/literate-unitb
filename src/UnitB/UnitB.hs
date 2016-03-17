@@ -31,6 +31,7 @@ import Control.Monad.State
 import Control.Precondition
 
 import           Data.Default
+import           Data.Compressed
 import           Data.Either.Validation
 import           Data.Functor.Classes
 import           Data.Functor.Compose
@@ -40,6 +41,7 @@ import           Data.Map.Class as M hiding
                     , delete, filter, null
                     , (\\), mapMaybe, (!) )
 import qualified Data.Map.Class as M
+import           Data.Serialize
 import qualified Data.Set as S
 
 import GHC.Generics.Instances
@@ -49,11 +51,24 @@ import Text.Printf.TH
 import Utilities.Syntactic
 import Utilities.Table
 
+type Machine' = Compose Checked MachinePO'
 type RawMachine = Machine' RawExpr
 type Machine = Machine' Expr
-type Machine' = Compose Checked MachinePO'
 
+type SystemSyntax' expr = AST.SystemBase (MachineWithProofs' expr)
+type SystemSyntax  = SystemSyntax' RawExpr
+type SystemSemantics' expr = AST.System' (Machine' expr)
+type SystemSemantics  = SystemSemantics' RawExpr
 type System  = AST.System' Machine
+type CompressedSystem  = Compressed (Compose AST.SystemBase MachineWithProofs') RawExpr
+type RawSystem = AST.System' (Machine' RawExpr)
+
+type MachineWithProofs = MachineWithProofs' RawExpr
+
+data MachineWithProofs' expr = MachineWithProofs 
+                (AST.MachineBase expr) 
+                (Table Label (ProofBase expr))
+    deriving (Functor,Foldable,Traversable,Generic)
 
 data MachinePO' expr = MachinePO
     { _syntax :: AST.Machine' expr 
@@ -92,6 +107,19 @@ instance Show a => Show (MemBox a) where
 
 makeLenses ''MachinePO'
 
+
+
+_machineSyntax :: Prism' MachineWithProofs RawMachine
+_machineSyntax = prism'
+            (\m -> MachineWithProofs (m!.syntax.content') (m!.proofs)) 
+            (\(MachineWithProofs m ps) -> rightToMaybe $ withProofs ps $ check assert m)
+
+_Syntax :: Prism' SystemSyntax SystemSemantics
+_Syntax = below _machineSyntax.from (content assert)
+
+compressingSystem :: Prism' CompressedSystem SystemSemantics
+compressingSystem = packaged._Wrapped._Syntax
+
 makeMachinePO' :: AST.Machine' expr -> MachinePO' expr
 makeMachinePO' x = MachinePO x def def def
 
@@ -128,26 +156,43 @@ instance HasExpr expr => HasInvariant (MachinePO' expr) where
     updateCache m = m 
             { _raw_proof_obligation_field = b
             , _proof_obligation_field = box $ 
-                \() -> fromRight' $ proof_obligation' pos (m^.proofs) (m^.syntax) }
+                \() -> fromRight' $ proof_obligation' pos 
+                        (fmap getExpr <$> m^.proofs) 
+                        (getExpr <$> m^.syntax) }
         where
             b = box $ \() -> raw_machine_pos' $ m^.syntax
             pos = unbox b
 instance Eq1 MachinePO' where
     eq1 = (==)
+instance PrettyPrintable expr => PrettyPrintable (MachinePO' expr) where
 instance NFData expr => NFData (MachinePO' expr) where
+instance NFData expr => NFData (MachineWithProofs' expr) where
+instance Serialize expr => Serialize (MachineWithProofs' expr) where
 instance Show1 MachinePO' where
     showsPrec1 = showsPrec
 instance NFData (Box a) where
     rnf x = seq x ()
 
+
+
 fromSyntax :: HasExpr expr => AST.Machine' expr -> Machine' expr
 fromSyntax m = check assert $ makeMachinePO' m
 
-withProofs :: HasExpr expr
-           => Assert -> Table Label Proof 
+withProofs :: IsExpr expr
+           => Table Label (ProofBase expr)
            -> AST.Machine' expr
-           -> Machine' expr
-withProofs arse p m = check arse $ makeMachinePO' m & proofs .~ p
+           -> Either [Error] (Machine' expr)
+withProofs p m = fmap (check' assert) $ do
+            let poBox = box $ \() -> raw_machine_pos' m
+                pos = unbox poBox
+            pos <- proof_obligation' pos p m
+            return $ MachinePO m p poBox (box $ \() -> pos)
+
+withProofs' :: IsExpr expr
+            => Assert -> Table Label Proof 
+            -> AST.Machine' expr
+            -> Machine' expr
+withProofs' arse p m = check arse $ makeMachinePO' m & proofs .~ p
 
 withPOs :: HasExpr expr 
         => Table Label (Tactic Proof,LineInfo)
@@ -162,7 +207,7 @@ withPOs ps m = fmap (check' assert) $ do
                 errs' | null errs = sequenceA p
                       | otherwise = Failure errs
             p <- validationToEither errs' 
-            pos <- proof_obligation' pos p m
+            pos <- proof_obligation' pos (fmap getExpr <$> p) (getExpr <$> m)
             return $ MachinePO m p poBox (box $ \() -> pos)
             --proof_obligation_field (const $ box . const <$> proof_obligation' pos m) m'
 

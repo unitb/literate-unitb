@@ -24,13 +24,13 @@ zbetween r1 r2 mx my mz =
       (mx `r1` my) `mzand` (my `r2` mz)
 
 interval_fun :: Fun
-interval_fun    = mk_fun [] (fromString'' "interval")  [int,int] $ set_type int
+interval_fun    = mk_fun [] [smt|interval|]  [int,int] $ set_type int
 interval_l_fun :: Fun
-interval_l_fun  = mk_fun [] (fromString'' "intervalL") [int,int] $ set_type int
+interval_l_fun  = mk_fun [] [smt|intervalL|] [int,int] $ set_type int
 interval_r_fun :: Fun
-interval_r_fun  = mk_fun [] (fromString'' "intervalR") [int,int] $ set_type int
+interval_r_fun  = mk_fun [] [smt|intervalR|] [int,int] $ set_type int
 interval_lr_fun :: Fun
-interval_lr_fun = mk_fun [] (fromString'' "intervalLR") [int,int] $ set_type int
+interval_lr_fun = mk_fun [] [smt|intervalLR|] [int,int] $ set_type int
 
 zinterval :: Rel
 zinterval = typ_fun2 interval_fun
@@ -42,22 +42,46 @@ zinterval_lr :: Rel
 zinterval_lr = typ_fun2 interval_lr_fun
 
 interval :: Command
-interval = make Command "\\interval" "interval" 2 $ from_list zinterval
+interval = make Command "\\interval" "interval" 2 interval_fun
 interval_l :: Command
-interval_l = make Command "\\intervalL" "intervalL" 2 $ from_list zinterval_l
+interval_l = make Command "\\intervalL" "intervalL" 2 interval_l_fun
 interval_r :: Command
-interval_r = make Command "\\intervalR" "intervalR" 2 $ from_list zinterval_r
+interval_r = make Command "\\intervalR" "intervalR" 2 interval_r_fun
 interval_lr :: Command
-interval_lr = make Command "\\intervalLR" "intervalLR" 2 $ from_list zinterval_lr
+interval_lr = make Command "\\intervalLR" "intervalLR" 2 interval_lr_fun
+
+var' :: name -> t -> (GenExpr name t a q, AbsVar name t)
+var' n t = (Word (Var n t),Var n t)
+
+x,y,z :: GenExpr Name GenericType a q
+x_var,y_var,z_var :: Var
+vars :: [Var]
+(x,x_var) = var' [smt|x|] int
+(y,y_var) = var' [smt|y|] int
+(z,z_var) = var' [smt|z|] int
+vars = [x_var,y_var,z_var]
+
+between_fun :: Def
+between_fun    = Def [] [smt|between|] vars bool $ (x `zle` y) `zand` (y `zle` z)
+between_l_fun :: Def
+between_l_fun  = Def [] [smt|betweenL|] vars bool $ (x `zless` y) `zand` (y `zle` z)
+between_r_fun :: Def
+between_r_fun  = Def [] [smt|betweenR|] vars bool $ (x `zle` y) `zand` (y `zless` z)
+between_lr_fun :: Def
+between_lr_fun = Def [] [smt|betweenLR|] vars bool $ (x `zless` y) `zand` (y `zless` z)
+
+axiomOf :: Def -> Expr 
+axiomOf d@(Def _ _ vars _ e) = zforall vars ztrue 
+        $ FunApp (funOf d) (map Word vars) `zeq` e
 
 between :: Command
-between = make Command "\\between" "between" 3 $ from_list $ zbetween mzle mzle
+between = make Command "\\between" "between" 3 $ funOf between_fun
 between_l :: Command
-between_l = make Command "\\betweenL" "betweenL" 3 $ from_list $ zbetween mzless mzle
+between_l = make Command "\\betweenL" "betweenL" 3 $ funOf between_l_fun
 between_r :: Command
-between_r = make Command "\\betweenR" "betweenR" 3 $ from_list $ zbetween mzle mzless
+between_r = make Command "\\betweenR" "betweenR" 3 $ funOf between_r_fun
 between_lr :: Command
-between_lr = make Command "\\betweenLR" "betweenLR" 3 $ from_list $ zbetween mzless mzless
+between_lr = make Command "\\betweenLR" "betweenLR" 3 $ funOf between_lr_fun
 
 interval_theory :: Theory
 interval_theory = (empty_theory' "intervals") 
@@ -66,7 +90,9 @@ interval_theory = (empty_theory' "intervals")
             , arithmetic ]
         , _funs = symbol_table
             [ interval_r_fun, interval_l_fun
-            , interval_lr_fun, interval_fun ]
+            , interval_lr_fun, interval_fun 
+            , funOf between_fun, funOf between_r_fun
+            , funOf between_l_fun, funOf between_lr_fun ]
         , _fact = M.mapKeys label $ M.fromList
             [ ("axm0", ($typeCheck) $ mzforall [x_decl,m_decl,n_decl] mztrue $
                                 (x `zelem` zinterval m n) 
@@ -116,6 +142,10 @@ interval_theory = (empty_theory' "intervals")
                             (mzle m n) $
                                 (zmk_set m `zunion` zinterval_l m n)
                         `mzeq`  (zinterval_l (m - z1) n))
+            , ("axm14", axiomOf between_fun)
+            , ("axm15", axiomOf between_r_fun)
+            , ("axm16", axiomOf between_l_fun)
+            , ("axm17", axiomOf between_lr_fun)
             ]
         , _notation = interval_notation }
     where

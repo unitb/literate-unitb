@@ -31,20 +31,23 @@ greater :: BinOperator
 leq     :: BinOperator
 geq     :: BinOperator
 
-power   = make BinOperator "^" "^"           mzpow
-mult    = make BinOperator "*" "\\cdot"      mztimes
-plus    = make BinOperator "+" "+"           mzplus
-minus   = make BinOperator "-" "-"           mzminus
-less    = make BinOperator "<" "<"           mzless
-greater = make BinOperator ">" ">"           (flip mzless)
-leq     = make BinOperator "<=" "\\le"       mzle
-geq     = make BinOperator ">=" "\\ge"       (flip mzle)
+power   = make BinOperator "^" "^"         Direct  pow_fun
+mult    = make BinOperator "*" "\\cdot"    Direct  times_fun
+plus    = make BinOperator "+" "+"         Direct  plus_fun
+minus   = make BinOperator "-" "-"         Direct  minus_fun
+less    = make BinOperator "<" "<"         Direct  less_fun
+greater = make BinOperator ">" ">"         Flipped less_fun
+leq     = make BinOperator "<=" "\\le"     Direct  le_fun
+geq     = make BinOperator ">=" "\\ge"     Flipped le_fun
 
 zsum :: [Var] -> ExprP -> ExprP -> ExprP
 zsum = zquantifier qsum
 
+card_fun :: IsName n => AbsFun n Type
+card_fun = Fun [gA] [smt|card|] Unlifted [set_type gA] int FiniteWD
+
 zcard :: ExprP -> ExprP
-zcard x = typ_fun2 sum_fun x (zconst $ mzint 1)
+zcard = typ_fun1 card_fun
 
 gT :: Type
 gT = VARIABLE $ fromString'' "t"
@@ -54,7 +57,8 @@ arithmetic = (empty_theory' "arithmetic") {
         _extends = symbol_table [set_theory]
         , _types = symbol_table [IntSort,RealSort]
         , _funs = symbol_table 
-            [ sum_fun ]
+            [ sum_fun gA 
+            , card_fun ]
         , _theorySyntacticThm = empty_monotonicity
             { _associative  = fromList [(fromString'' "+",mzint 0)] 
             , _monotonicity = fromList $ L.map (first $ z3Name *** z3Name)
@@ -100,6 +104,8 @@ arithmetic = (empty_theory' "arithmetic") {
                     r `zintersect` r' .=. zempty_set .=>
                          zcard (r `zunion` r')
                     .=.  zcard r .+ zcard r'            
+                $axiom $
+                    zcard r .=. typ_fun2 (sum_fun gA) r (zconst $ mzint 1)
 
             -- fromList $ L.map (first $ label . dec')
             -- [ ("0",axm1) 
@@ -118,19 +124,17 @@ arithmetic = (empty_theory' "arithmetic") {
         zle' = Rel le_fun Direct
         zge' = Rel le_fun Flipped
         -- cast = zcast (set_type gT)
-        asum = typ_fun2 sum_fun
+        asum = typ_fun2 (sum_fun gA)
         (term,_term_decl) = var "term" (array gT int)
         (r,_r_decl) = var "r" (set_type gT)
         (r',_r'_decl) = var "r0" (set_type gT)
         (x,x_decl) = var "x" gT
         
-
-
-sum_fun :: Fun
-sum_fun = mk_fun [gA] (fromString'' "qsum") [set_type gA, array gA int] int
+sum_fun :: Type -> Fun
+sum_fun t = mk_fun [t] [smt|qsum|] [set_type t, array t int] int
 
 qsum :: HOQuantifier
-qsum = UDQuant sum_fun int (QTConst int) FiniteWD
+qsum = UDQuant (sum_fun gA) int (QTConst int) FiniteWD
 
 arith :: Notation
 arith = create $ do
@@ -157,8 +161,7 @@ arith = create $ do
           , ((geq,greater),greater)
           , ((greater,geq),greater)
           , ((greater,greater),greater) ] 
-   commands .= [make Command "\\card" "card" 1 $ from_list zcard]
+   commands .= [make Command "\\card" "card" 1 card_fun]
    quantifiers .= 
-        [ (fromString'' "\\qsum"
-          , qsum)]
+        [ ([tex|\qsum|], qsum) ]
           

@@ -106,10 +106,12 @@ library
         Logic.Expr.Declaration
         Logic.Expr.Existential
         Logic.Expr.Expr
+        Logic.Expr.Fun
         Logic.Expr.Genericity
         Logic.Expr.Label
         Logic.Expr.PrettyPrint
         Logic.Expr.Printable
+        Logic.Expr.Quantifier
         Logic.Expr.QuasiQuote
         Logic.Expr.Scope
         Logic.Expr.Type
@@ -143,6 +145,8 @@ library
         UnitB.Machine
         UnitB.PO
         UnitB.Proof
+        UnitB.Proof.Rules
+        UnitB.Proof.PO
         UnitB.Property
         UnitB.Syntax
         UnitB.System

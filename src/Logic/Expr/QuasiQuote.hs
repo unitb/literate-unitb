@@ -195,7 +195,7 @@ instance Lift HOQuantifier where
 instance Lift QuantifierType where
     lift = genericLift
 
-instance Lift QuantifierWD where
+instance Lift SetWD where
     lift = genericLift
 
 instance Lift Lifting where

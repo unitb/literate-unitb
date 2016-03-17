@@ -4,6 +4,7 @@ module Logic.Proof.Sequent where
 
     -- Modules
 import Logic.Expr
+import Logic.Operator
 
     -- Libraries
 import Control.Applicative hiding (Const)
@@ -20,6 +21,7 @@ import Data.Map.Class    as M hiding ( map, Unordered )
 import Data.Maybe  as MM hiding (fromJust)
 import Data.PartialOrd
 import qualified Data.Set  as S
+import Data.Serialize hiding (label,Partial)
 import Data.String.Lines
 import Data.Typeable
 import Data.Word
@@ -38,6 +40,8 @@ type Sequent = AbsSequent GenericType HOQuantifier
 
 type Sequent' = GenSequent InternalName GenericType FOQuantifier Expr'
 
+type HOSequent expr = GenSequent Name GenericType HOQuantifier expr
+
 type FOSequent = GenSequent InternalName FOType FOQuantifier FOExpr
 
 type AbsSequent t q = GenSequent Name t q (AbsExpr Name t q)
@@ -54,9 +58,6 @@ preserve op funs = [((view name op,f),Independent $ Rel op Direct) | f <- funs ]
 type Function = Name
 
 type Relation = Name
-
-data Flipping = Flipped | Direct
-    deriving (Eq,Show,Generic,Typeable,Bounded,Enum)
 
 data Rel = Rel Fun Flipping
     deriving (Eq,Show,Generic,Typeable)
@@ -220,7 +221,8 @@ instance Monoid SyntacticProp where
     mconcat = genericMConcat
     mappend = genericMAppend
 
-empty_sequent :: (TypeSystem2 t,IsQuantifier q) => AbsSequent t q
+empty_sequent :: (TypeSystem2 t,IsQuantifier q,HasGenExpr expr) 
+              => GenSequent n t q expr
 empty_sequent = (Sequent 3000 1 empty_ctx empty_monotonicity [] M.empty ztrue)
 
 instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) where
@@ -431,7 +433,10 @@ apply_monotonicity po = fromMaybe po $
         ctx = po^.context
         po' = po & nameless %~ (++ [znot g])
 
-entailment :: Sequent -> Sequent -> (Sequent,Sequent)
+entailment :: (IsExpr expr,IsName n,TypeSystem2 t,IsQuantifier q)
+           => GenSequent n t q expr 
+           -> GenSequent n t q expr 
+           -> (GenSequent n t q expr,GenSequent n t q expr)
 entailment s0 s1 = (po0,po1)
     where
         xp0 = s0^.goal
@@ -446,7 +451,6 @@ instance (NFData n,NFData t,NFData q,NFData expr)
     => NFData (GenSequent n t q expr)
 instance NFData SyntacticProp
 instance NFData Rel
-instance NFData Flipping
 instance NFData t => NFData (ArgDep t)
 
 instance ( Ord n, Arbitrary n, Arbitrary t, Arbitrary q, Arbitrary e
@@ -457,11 +461,14 @@ instance ( Ord n, Arbitrary n, Arbitrary t, Arbitrary q, Arbitrary e
 instance Arbitrary SyntacticProp where
     arbitrary = scale (`div` 4) genericArbitrary
 
-instance Arbitrary Flipping where
-    arbitrary = genericArbitrary
-
 instance Arbitrary Rel where
     arbitrary = genericArbitrary
 
 instance Arbitrary a => Arbitrary (ArgDep a) where
     arbitrary = genericArbitrary
+
+instance (Ord n,Serialize n,Serialize t,Serialize q,Serialize expr) 
+    => Serialize (GenSequent n t q expr) where
+instance Serialize SyntacticProp where
+instance Serialize a => Serialize (ArgDep a) where
+instance Serialize Rel where

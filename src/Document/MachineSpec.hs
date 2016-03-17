@@ -38,8 +38,8 @@ import           Utilities.Table
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
-f_prop_parseOk :: (RawMachine, Tex) -> Bool
-f_prop_parseOk (mch,Tex tex) =
+f_prop_parseOk :: (Pretty RawMachine, Tex) -> Bool
+f_prop_parseOk (Pretty mch,Tex tex) =
         (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) == Right [mch]
  
 prop_type_error :: Property
@@ -87,17 +87,17 @@ is_type_error e =
     where
         msg = message e
 
-correct_machine :: Gen (RawMachine, Tex)
+correct_machine :: Gen (Pretty RawMachine, Tex)
 correct_machine = machine_input arbitrary
 
-mch_with_type_error :: Gen (RawMachine, Tex)
+mch_with_type_error :: Gen (Pretty RawMachine, Tex)
 mch_with_type_error = machine_input with_type_error
 
-machine_input :: Gen RawMachine -> Gen (RawMachine, Tex)
+machine_input :: Gen RawMachine -> Gen (Pretty RawMachine, Tex)
 machine_input cmd = do
         m   <- cmd
         tex <- latex_of m
-        return (m,Tex tex)
+        return (Pretty m,Tex tex)
 
 perm :: Int -> Gen [Int]
 perm n = permute [0..n-1]
@@ -309,17 +309,17 @@ choose_var b t = do
 
 fun_map :: Table Type [([RawExpr] -> RawExpr, [Type])]
 fun_map = M.fromList
-    [ (int, 
-        [ (from_list (zplus :: RawExpr -> RawExpr -> RawExpr), [int,int])])
-    , (bool, 
-        -- [ (from_list zeq', [int,int]) 
-        -- , (from_list zeq, [bool,bool])
-        [ (from_list (zand :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
-        , (from_list (zor :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
-        , (from_list (znot :: RawExpr -> RawExpr), [bool])
-        , (from_list (zle :: RawExpr -> RawExpr -> RawExpr), [int,int])
-        , (from_list zelem', [int, set_type int] )])
-    ]
+        [ (int, 
+            [ (from_list (zplus :: RawExpr -> RawExpr -> RawExpr), [int,int])])
+        , (bool, 
+            -- [ (from_list zeq', [int,int]) 
+            -- , (from_list zeq, [bool,bool])
+            [ (from_list (zand :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
+            , (from_list (zor :: RawExpr -> RawExpr -> RawExpr), [bool,bool])
+            , (from_list (znot :: RawExpr -> RawExpr), [bool])
+            , (from_list (zle :: RawExpr -> RawExpr -> RawExpr), [int,int])
+            , (from_list zelem', [int, set_type int] )])
+        ]
 
 zelem' :: RawExpr -> RawExpr -> RawExpr
 zelem' e0 e1 = FunApp (mk_fun' [int] "elem" [int,set_type int] bool) [e0,e1 :: RawExpr]
@@ -342,7 +342,8 @@ choose_expr b t = do
 return []
 run_spec :: IO Bool
 run_spec = -- test_report $forAllProperties 
-           $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+           -- $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+           $quickCheckAll
 
 show_list :: Show a => [a] -> String
 show_list xs = [printf|[%s]|] $ L.intercalate "\n," $ surround " " " " ys
@@ -355,18 +356,18 @@ subexpression e = f [] e
     where
         f xs e = (e, type_of e, comment e) : visit f xs e
         comment :: RawExpr -> String
-        comment (FunApp (Fun act f _ argt rt) arg) = [printf|%s %s (%s) : %s -> %s|] 
+        comment (FunApp (Fun act f _ argt rt _) arg) = [printf|%s %s (%s) : %s -> %s|] 
                     (pretty act) (render f) 
                     (pretty arg) (pretty argt) 
                     (pretty rt)
         comment _ = "<>"
 
-main :: IO ()
-main = do
-        xs <- liftM concat $ replicateM 100 $ sample' correct_machine
-        let (mch,tex) = head 
-                $ filter (not . f_prop_parseOk) xs
-            mch'  = (M.elems . view' machines) `liftM` (all_machines $ unTex tex)
+-- main :: IO ()
+-- main = do
+--         xs <- liftM concat $ replicateM 100 $ sample' correct_machine
+--         let (mch,tex) = head 
+--                 $ filter (not . f_prop_parseOk) xs
+--             mch'  = (M.elems . view' machines) `liftM` (all_machines $ unTex tex)
         -- print $ tex
         -- print $ mch'
         --     -- txt = showExpr n e
@@ -374,10 +375,10 @@ main = do
         --     -- mch'' = concat $ rights [mch']
         --     -- mch'  = (M.elems . machines) `liftM` (all_machines tex)
                 
-        writeFile "actual_exp.txt" $ show mch'
-        writeFile "expect_exp.txt" $ unlines
-            [ -- show tex
-            show $ (Right mch :: Either String RawMachine) ]
+        -- writeFile "actual_exp.txt" $ show mch'
+        -- writeFile "expect_exp.txt" $ unlines
+        --     [ -- show tex
+        --     show $ (Right mch :: Either String RawMachine) ]
         -- -- writeFile "actual.txt" (show mch')
         -- -- writeFile "expect.txt" ("Right " ++ show [mch])
         -- -- writeFile "tex.txt" (show $ Tex tex)

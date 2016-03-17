@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators
         , QuasiQuotes
+        , StandaloneDeriving
         , ConstraintKinds
         , TemplateHaskell
         , TypeFamilies
@@ -17,6 +18,7 @@ module GHC.Generics.Instances
     , Intersection(..), genericSemigroupMAppendWith
     , genericSemigroupMConcat, genericSemigroupMConcatWith
     , show1, NFData1(..), deepseq1
+    , Serialize1(..)
     , genericArbitrary, inductive, listOf', arbitrary' 
     , Lift1(..), Monoid1(..)
     , OnFunctor(..) )
@@ -24,9 +26,11 @@ where
 
 import Control.DeepSeq
 import Control.Monad.Fix
+import Control.Monad.Trans.Instances ()
 import Control.Lens
 
 import Data.Default
+import Data.Either.Validation
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.DList (DList)
@@ -36,10 +40,14 @@ import Data.Maybe
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Proxy
 import Data.Proxy.TH
+import Data.Serialize (Serialize)
+import qualified Data.Serialize as S
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Semigroup
 import Data.Tuple.Generics
+import Data.Typeable
+import Data.Typeable.Internal
 
 import GHC.Generics.Utils
 
@@ -349,3 +357,38 @@ instance Lift1 Maybe where
     lift1 = lift
 
 instance Semigroup (DList a) where
+
+deriving instance Generic (Validation a b)
+deriving instance Generic Fingerprint
+deriving instance Generic TypeRep
+deriving instance Generic TyCon
+
+instance (NFData a,NFData b) => NFData (Validation a b) where
+
+class Serialize1 f where
+    put1 :: Serialize a => S.Putter (f a)
+    default put1 :: Serialize (f a) => S.Putter (f a)
+    put1 = S.put
+    get1 :: Serialize a => S.Get (f a)
+    default get1 :: Serialize (f a) => S.Get (f a)
+    get1 = S.get
+
+instance Serialize1 Proxy where
+instance Serialize1 NonEmpty where
+instance Serialize1 Identity where
+instance Serialize1 Maybe where
+
+instance Serialize (Proxy a) where
+
+instance Serialize (f (g a)) 
+        => Serialize (Compose f g a) where
+instance Serialize Fingerprint where
+instance Serialize TyCon where
+instance Serialize TypeRep where
+instance Serialize a => Serialize (NonEmpty a) where
+instance Serialize a => Serialize (Identity a) where
+
+instance (Serialize a,Serialize1 f) => Serialize (OnFunctor f a) where
+    put = put1 . getFunctor
+    get = OnFunctor <$> get1
+

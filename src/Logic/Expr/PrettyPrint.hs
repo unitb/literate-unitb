@@ -17,6 +17,7 @@ import Logic.Names
     -- Libraries
 import Control.Applicative
 import Control.Arrow
+import Control.Invariant
 import Control.Lens hiding (List,cons,uncons)
 import Control.Monad.Reader
 
@@ -26,6 +27,7 @@ import Data.DList.Utils as D
 import Data.Either.Combinators
 import Data.Existential
 import Data.Functor.Classes
+import Data.Functor.Compose
 import Data.Maybe
 import Data.Monoid
 import Data.List as L hiding (uncons,unlines)
@@ -37,14 +39,14 @@ import GHC.Generics
 import GHC.Generics.Instances
 import GHC.Generics.Lens
 
-import Language.Haskell.TH hiding (Name)
+import Language.Haskell.TH hiding (Name,report)
 import Language.Haskell.TH.Quote
 
 import Prelude hiding (unlines)
 
-import Text.Printf.TH
+import Text.Printf.TH 
 
-import Utilities.Syntactic (LineInfo(..))
+import Utilities.Syntactic hiding (line)
 import Utilities.Table
 
 pretty_print' :: Tree t => t -> String
@@ -66,6 +68,8 @@ class PrettyPrintable a where
 instance PrettyPrintable a => Show (Pretty a) where
     show = pretty . unPretty
 
+instance PrettyPrintable a => PrettyPrintable (Checked a) where
+    pretty = pretty . view content'
 instance PrettyPrintable a => PrettyPrintable [a] where
     pretty = show . L.map Pretty
     -- pretty xs = L.intercalate "\n" $ zipWith (\m -> withMargin m "  " . pretty) ("[ " : repeat ", ") xs ++ ["]"]
@@ -92,6 +96,12 @@ instance (PrettyPrintable a,PrettyPrintable b)
 
 instance PrettyPrintable () where
     pretty = show
+
+instance PrettyPrintable (f (g a)) => PrettyPrintable (Compose f g a) where
+    pretty = pretty . getCompose
+
+instance PrettyPrintable Error where
+    pretty = report
 
 instance (PrettyPrintable a) => PrettyPrintable (NonEmpty a) where
     pretty = [printf||%s||] . pretty . NE.toList

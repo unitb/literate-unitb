@@ -21,6 +21,7 @@ import Data.List.NonEmpty as NE
 import Data.Map.Class  as M
 import Data.Maybe
 import Data.Semigroup
+import Data.Serialize hiding (label)
 import Data.String
 import Data.Typeable
 
@@ -465,3 +466,10 @@ instance NFData expr => NFData (EventSplitting expr)
 instance NFData expr => NFData (ConcrEvent' expr)
 instance NFData expr => NFData (Action' expr)
 instance NFData expr => NFData (ScheduleChange' expr)
+
+instance Serialize expr => Serialize (Event' expr) where
+instance Serialize expr => Serialize (AbstrEvent' expr) where
+instance Serialize expr => Serialize (ConcrEvent' expr) where
+instance Serialize expr => Serialize (ScheduleChange' expr) where
+instance Serialize expr => Serialize (Action' expr) where
+instance Serialize SkipEventId where

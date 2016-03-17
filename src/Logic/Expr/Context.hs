@@ -21,6 +21,7 @@ import           Data.Default
 import qualified Data.Map.Class as M
 import           Data.PartialOrd
 import           Data.Semigroup
+import           Data.Serialize
 
 import GHC.Generics.Instances
 
@@ -194,3 +195,5 @@ instance IsName n => HasNames (GenContext n t q) n where
             <*> traversePairs (onBoth f $ traverse2 f) d
             <*> traversePairs (onBoth f $ traverse1 f) e
 
+instance (Ord n,Serialize n,Serialize t,Serialize q) 
+    => Serialize (GenContext n t q) where

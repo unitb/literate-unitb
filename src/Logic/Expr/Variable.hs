@@ -17,6 +17,7 @@ import Control.Precondition
 
 import Data.Data
 import Data.Map.Class as M
+import Data.Serialize
 
 import Utilities.Functor
 import Utilities.Table
@@ -48,6 +49,7 @@ instance (TypeSystem t,IsName n) => Tree (AbsVar n t) where
 
 instance (TypeSystem t, IsName n) => Typed (AbsVar n t) where
     type TypeOf (AbsVar n t) = t
+    type_of (Var _ t) = t
 
 instance (TypeSystem t, IsName n) => PrettyPrintable (AbsVar n t) where
     pretty (Var n t) = render n ++ ": " ++ show (as_tree t)
@@ -77,3 +79,5 @@ instance IsName n => HasNames (AbsVar n t) n where
 instance (IsName n,Typeable t) => Named (AbsVar n t) where
     type NameOf (AbsVar n t) = n
     decorated_name' (Var x _) = adaptName x
+
+instance (Serialize n,Serialize t) => Serialize (AbsVar n t) where

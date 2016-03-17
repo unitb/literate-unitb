@@ -34,6 +34,7 @@ import Control.Lens hiding (Context,from,to,rewriteM)
 import           Data.Foldable as F
 import           Data.List as L
 import           Data.Map.Class as M 
+import           Data.Serialize hiding (label)
 
 import Utilities.Table
 
@@ -131,3 +132,4 @@ instance HasScope Theory where
                 $ foldMapWithKey scopeCorrect'' $ t^.defs
             , foldMapWithKey scopeCorrect'' (t^.extends) ]
 
+instance Serialize Theory where

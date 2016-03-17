@@ -117,7 +117,7 @@ instance Symbol Sort t q where
     decl s = [SortDecl s]
 
 instance IsName n => Symbol (AbsFun n t) t q where
-    decl (Fun xs name Unlifted params ret) = [FunDecl xs (asInternal name) params ret]
+    decl (Fun xs name Unlifted params ret _) = [FunDecl xs (asInternal name) params ret]
     decl _ = error "Symbol.decl: cannot declare lifted functions"
 
 instance IsName n => Symbol (AbsDef n t q) t q where
@@ -148,7 +148,7 @@ mk_context (x:xs) =
                     FunDecl gs n ps t -> 
                         Context 
                             ss vs 
-                            (M.insert n (Fun gs n Unlifted ps t) fs)
+                            (M.insert n (Fun gs n Unlifted ps t InfiniteWD) fs)
                             defs dums
                     FunDef gs n ps t e -> 
                         Context 

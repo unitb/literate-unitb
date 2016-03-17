@@ -55,6 +55,7 @@ import Data.List.NonEmpty  as NE hiding (fromList,transpose)
 import Data.Map   as M hiding (fromList,empty,traverseWithKey,lookup,member,(!))
 import qualified Data.Map   as M hiding ((!))
 import Data.Semigroup
+import Data.Serialize
 import qualified Data.Traversable as T
 import Data.Tuple
 
@@ -632,3 +633,6 @@ instance (NFData k0,NFData k1,NFData v0,NFData v1,NFData e) => NFData (BiGraph' 
 --     --             es <- mapM eInfo =<< successors v
 --     --             x  <- vInfo v
 --     --             return (x,sum es))
+
+instance (Ord v0,Serialize v0,Serialize v1,Serialize e) => Serialize (BiGraph v0 v1 e) where
+instance (Ord v0,Serialize v0,Serialize v1) => Serialize (AdjList v0 v1) where

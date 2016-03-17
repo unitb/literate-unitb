@@ -11,7 +11,7 @@
 				"$project_path",
 				"ghc_errors.txt"
 			],
-			"file_regex": "^[ \t]*([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
+			"file_regex": "^([^\\s=:\\(\\)][^\\n:\\(\\)]+?hs):([0-9]*):?([0-9]*)",
 			"name": "Haskell / Literate Unit-B",
 			"selector": "source.haskell",
 			"working_dir": "${project_path}"
@@ -20,13 +20,10 @@
 			"cmd":
 			[
 				"bin/continuous",
-				// "$project_path/display_errors",
-				"$file", 
-				"-V", // Verbose
-				"-v", // no verification
-				"-d"  // no dumps
-				// "$project_path",
-				// "ghc_errors.txt"
+				"$file",
+				"-V",
+				"-v",
+				"-d"
 			],
 			"file_regex": "^([^\\s]..*?):([0-9]*):?([0-9]*)",
 			"name": "Literate Unit-B",
@@ -36,49 +33,64 @@
 	],
 	"folders":
 	[
-		// {
-		// 	"file_include_patterns":
-		// 	[
-		// 		"*hs","*tex",
-		// 		"*.md","*sty"
-		// 	],
-		// 	// "folder_include_patterns":
-		// 	// [
-		// 	// 	"src",
-		// 	// 	"suite",
-		// 	// 	"app"
-		// 	// ],
-		// 	"folder_exclude_patterns":
-		// 	[
-		// 		".*",
-		// 		"bin",
-		// 		"interface",
-		// 		"gui",
-		// 		"eifgens"
-		// 	],
-		// 	"path": "."
-		// },
-		{ "path" : "." 
-		, "file_include_patterns" : ["*.cabal"] },
-		{ "path" : "utils"
-		, "file_include_patterns":
-			[ "*hs","*.md" ] },
-		{ "path" : "src"
-		, "file_include_patterns":
-			[ "*hs","*.md" ] },
-		{ "path" : "suite" 
-		, "file_include_patterns":
-			[ "*hs","*.md" ] },
-		{ "path" : "script" 
-		, "file_include_patterns":
-			[ "*hs","*.md" ] },
-		{ "path" : "app" 
-		, "file_include_patterns":
-			[ "*hs","*.md" ] },
-		{ "path" : "Tests" 
-		, "file_include_patterns":
-			[ "*tex","*sty" ] }
+		{
+			"file_include_patterns":
+			[
+				"*.cabal"
+			],
+			"path": "."
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "utils"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "src"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "suite"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "script"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "app"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*tex",
+				"*sty"
+			],
+			"path": "Tests"
+		}
 	],
 	"settings":
-	{ "translate_tabs_to_spaces": true }
+	{
+		"translate_tabs_to_spaces": true
+	}
 }

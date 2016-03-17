@@ -93,7 +93,7 @@ class TypeSystem t => TypeSystem2 t where
           -> ExprPG n t q
 
 instance TypeSystem2 FOType where
-    check_args xp f@(Fun _ _ _ ts _) = do
+    check_args xp f@(Fun _ _ _ ts _ _) = do
             guard (map type_of xp == ts)
             return $ FunApp f xp
     zcast t me = do
@@ -109,7 +109,7 @@ instance TypeSystem2 FOType where
             return e
 
 instance TypeSystem2 GenericType where
-    check_args xp (Fun gs name lf ts t) = do
+    check_args xp (Fun gs name lf ts t wd) = do
             let n       = length ts
             guard (n == length ts)
             let args    = zipWith rewrite_types (map show [1..n]) xp
@@ -125,7 +125,7 @@ instance TypeSystem2 GenericType where
                 us    = L.map (ft "1") ts
                 u     = ft "1" t
                 args2 = map (fe "2") args
-                expr = FunApp (Fun gs2 name lf us u) $ args2 
+                expr = FunApp (Fun gs2 name lf us u wd) $ args2 
             return expr
     zcast t me = do
             e <- me
@@ -148,7 +148,7 @@ check_type :: (IsQuantifier q,IsName n)
            => AbsFun n Type 
            -> [ExprPG n Type q] 
            -> ExprPG n Type q
-check_type f@(Fun _ n _ ts t) mxs = do
+check_type f@(Fun _ n _ ts t _) mxs = do
         xs <- check_all mxs
         let args = unlines $ map (\(i,x) -> unlines 
                                     [ [printf|   argument %d:  %s|] i (pretty x)
@@ -169,7 +169,7 @@ type FourExprP n t q  = IsQuantifier q => ExprPG n t q -> ExprPG n t q -> ExprPG
 typ_fun1 :: ( TypeSystem2 t,IsName n )
          => AbsFun n t
          -> OneExprP n t q
-typ_fun1 f@(Fun _ n _ ts t) mx        = do
+typ_fun1 f@(Fun _ n _ ts t _) mx        = do
         x <- mx
         let err_msg = unlines
                     [ [printf|argument of '%s' do not match its signature:|] (render n)
@@ -182,7 +182,7 @@ typ_fun1 f@(Fun _ n _ ts t) mx        = do
 typ_fun2 :: ( TypeSystem2 t,IsName n )
          => AbsFun n t  
          -> TwoExprP n t q
-typ_fun2 f@(Fun _ n _ ts t) mx my     = do
+typ_fun2 f@(Fun _ n _ ts t _) mx my     = do
         x <- mx
         y <- my
         let err_msg = unlines
@@ -198,7 +198,7 @@ typ_fun2 f@(Fun _ n _ ts t) mx my     = do
 typ_fun3 :: ( TypeSystem2 t,IsName n )
          => AbsFun n t
          -> ThreeExprP n t q
-typ_fun3 f@(Fun _ n _ ts t) mx my mz  = do
+typ_fun3 f@(Fun _ n _ ts t _) mx my mz  = do
         x <- mx
         y <- my
         z <- mz
@@ -273,11 +273,11 @@ type_strip_generics (Gen s ts) = do
 type_strip_generics _       = Nothing
 
 fun_strip_generics :: IsName n => AbsFun n Type -> Maybe FOFun
-fun_strip_generics (Fun ts n lf ps rt) = do
+fun_strip_generics (Fun ts n lf ps rt wd) = do
     ts <- mapM type_strip_generics ts
     ps <- mapM type_strip_generics ps
     rt <- type_strip_generics rt
-    return (Fun ts (asInternal n) lf ps rt)
+    return (Fun ts (asInternal n) lf ps rt wd)
 
 def_strip_generics :: IsName n => AbsDef n Type q -> Maybe (AbsDef InternalName FOType q)
 def_strip_generics (Def ts n ps rt val) = do
@@ -353,14 +353,14 @@ instance Generic GenericType GenericType where
             f t           = rewrite f t
 
 instance (HasGenerics t, TypeSystem t) => HasGenerics (AbsFun n t) where
-    types_of (Fun _ _ _ ts t) = S.unions $ L.map types_of $ t : ts
+    types_of (Fun _ _ _ ts t _) = S.unions $ L.map types_of $ t : ts
 
 instance (TypeSystem t', Generic Type t') => Generic (AbsFun n Type) (AbsFun n t') where
-    substitute_types' f (Fun gs n lf ts t) = Fun (map f gs) n lf (map f ts) $ f t
+    substitute_types' f (Fun gs n lf ts t wd) = Fun (map f gs) n lf (map f ts) (f t) wd
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
 
-instance (TypeSystem t, HasGenerics t,IsName n) => HasGenerics (AbsDef n t q) where
+instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (AbsDef n t q) where
     types_of (Def _ _ ts t e) = S.unions $ types_of e : types_of t : map types_of ts
 
 instance (IsQuantifier q, Generic Type t', TypeSystem t',IsName n) 
@@ -380,8 +380,8 @@ instance (TypeSystem t', Generic Type t',IsName n) => Generic (AbsVar n Type) (A
     substitute_types' f (Var x t) = Var x $ f t
     instantiate' m x = substitute_types' (instantiate' m) x
     substitute_type_vars' m x = substitute_types' (substitute_type_vars' m) x
- 
-instance (TypeSystem t, HasGenerics t,IsName n) => HasGenerics (AbsExpr n t q) where
+
+instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (AbsExpr n t q) where
     types_of (Word v)      = types_of v
     types_of (Const _ t)   = types_of t
     types_of (Cast e t)     = S.union (types_of t) (types_of e)

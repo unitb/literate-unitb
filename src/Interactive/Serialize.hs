@@ -5,10 +5,12 @@ import Logic.Expr
 import Logic.Proof
 
 import UnitB.PO
-import UnitB.Syntax
+import UnitB.Syntax as AST hiding (System)
+import UnitB.UnitB 
 
     -- Libraries
 import Control.Applicative hiding (empty)
+import Control.Arrow
 import Control.DeepSeq
 import Control.Lens hiding (Context)
 import Control.Monad
@@ -37,31 +39,6 @@ import System.Directory
 import           Utilities.FileFormat
 import           Utilities.Table
 
-instance Serialize Label where
-instance Serialize Sort where
-instance (Serialize n,Serialize t) => Serialize (AbsVar n t) where
-instance Serialize Type where
-instance (Serialize n,Serialize t) => Serialize (AbsFun n t) where
-instance (Serialize n,Serialize q,Serialize t) 
-    => Serialize (AbsDef n t q) where
-instance Serialize HOQuantifier where
-instance Serialize QuantifierType where
-instance Serialize QuantifierWD where
-instance (Ord n,Serialize n,Serialize t,Serialize q) 
-    => Serialize (GenContext n t q) where
-instance (Serialize n,Serialize q,Serialize t,Serialize a)
-    => Serialize (GenExpr n t a q) where
-instance (Ord n,Serialize n,Serialize t,Serialize q,Serialize expr) 
-    => Serialize (GenSequent n t q expr) where
-instance Serialize SyntacticProp where
-instance Serialize a => Serialize (ArgDep a) where
-instance Serialize Rel where
-instance Serialize Flipping where
-instance Serialize Value where
-instance Serialize MachineId where
-instance (NFData a,NFData b) => NFData (Validation a b) where
-    rnf (Failure x) = rnf x
-    rnf (Success x) = rnf x
 
 type AbsIntMap a b = (a,[(b,Maybe Bool)])
 
@@ -82,6 +59,7 @@ traverseSeqIs = seqs._2.traverse._1
 traverseExprTable :: Traversal (AbsFileStruct a b c) (AbsFileStruct a b c') c c'
 traverseExprTable = exprs
 
+{-# INLINABLE traverseFileStruct #-}
 traverseFileStruct :: Applicative f
                    => (a -> f a')
                    -> (b -> f b')
@@ -111,12 +89,15 @@ encodedFileStructPrism = prism
         par' :: NFData a => a -> a
         par' = withStrategy (rparWith rdeepseq)
 
+{-# INLINABLE decodeLazy' #-}
 decodeLazy' :: Serialize a 
             => Lazy.ByteString -> Validation () a
 decodeLazy' = eitherToValidation . mapLeft (const ()) . decodeLazy
 
+type SeqTable = Table Key (Seq,Maybe Bool)
+
 {-# INLINABLE seqFileFormat #-}
-seqFileFormat :: FileFormat (Table Key (Seq,Maybe Bool))
+seqFileFormat :: FileFormat SeqTable
 seqFileFormat = 
           failOnException 
         . compressedSequents
@@ -124,6 +105,27 @@ seqFileFormat =
         . serializedLazy
         . compressed
         $ lazyByteStringFile
+
+
+{-# INLINABLE systemFileFormat #-}
+systemFileFormat :: FileFormat (SeqTable,RawSystem)
+systemFileFormat = 
+          failOnException
+        . prismFormat compressedSystemIso
+        . serializedLazy
+        . compressed
+        $ lazyByteStringFile
+
+type CompressedSystemPO = (M.Map Key (Maybe Bool),CompressedSystem)
+
+{-# INLINABLE compressedSystemIso #-}
+compressedSystemIso :: Prism' CompressedSystemPO (SeqTable, RawSystem)
+compressedSystemIso = below compressingSystem
+                    . iso (makePO &&& snd) (_1 %~ fmap snd)
+    where
+        makePO (m,sys) = M.intersectionWith (,) 
+            (uncurryMap $ mapKeys as_label $ sys!.machines & traverse %~ proof_obligation)
+            m
 
 {-# INLINABLE compressedSequents' #-}
 compressedSequents' :: err

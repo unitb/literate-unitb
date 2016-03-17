@@ -40,6 +40,7 @@ import PseudoMacros
 
 import System.Directory
 import System.IO.Unsafe
+import System.Process
 
 import Text.Printf.TH
 
@@ -265,3 +266,9 @@ get_system path = do
 
 lookup :: (?loc :: CallStack,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k
+
+edit :: FilePath -> IO ()
+edit str = do
+    readProcess "edit" [] str
+    return ()
+

@@ -9,6 +9,8 @@
         #-}
 module UnitB.Proof 
     ( module UnitB.Proof 
+    , module UnitB.Proof.Rules
+    , module UnitB.Proof.PO
     , Proxy(..)
     , One,None,NonEmpty
     , HasGoal(..)
@@ -18,7 +20,10 @@ where
     -- Modules
 import Logic.Expr as E hiding (Context,Const)
 import Logic.Proof
-import Logic.Proof.POGenerator
+-- import Logic.Proof.POGenerator
+
+import UnitB.Proof.Rules
+import UnitB.Proof.PO
 import UnitB.Property
 
     -- Libraries
@@ -30,14 +35,16 @@ import Control.DeepSeq
 import Control.Lens 
 import Control.Monad
 
-import Data.Default
+-- import Data.Default
 import Data.Existential
+import Data.Factory
 import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.Foldable as F
 import Data.List.Ordered
 import Data.Maybe
 import Data.Proxy.TH
+import Data.Serialize hiding (label)
 import Data.Typeable
 import Data.Unfoldable
 
@@ -47,69 +54,6 @@ import Prelude hiding (id,(.))
 import Text.Printf
 
 import Utilities.Syntactic
-
-type Builder r t = forall arr a b constr. ArrowUnfold arr 
-               => (constr r :- Unfoldable t)
-               -> arr b (Maybe a) 
-               -> arr (b,Inst1 Proxy constr r,LineInfo) (Either [Error] (t a))
-
-class ( Eq rule
-      , Eq1 (ProgressHyp rule)
-      , Eq1 (SafetyHyp rule)
-      , Eq1 (TransientHyp rule)
-      , Typeable (ProgressHyp rule)
-      , Typeable (SafetyHyp rule)
-      , Typeable rule
-      , Show rule
-      , Show1 (ProgressHyp rule)
-      , Show1 (SafetyHyp rule)
-      , Show1 (TransientHyp rule)
-      , NFData rule
-      , NFData1 (ProgressHyp rule)
-      , NFData1 (SafetyHyp rule)
-      , NFData1 (TransientHyp rule)
-      , Unfoldable (TransientHyp rule)
-      , Unfoldable (ProgressHyp rule)
-      , Unfoldable (SafetyHyp rule)
-      , Traversable (TransientHyp rule)
-      , Traversable (ProgressHyp rule)
-      , Traversable (SafetyHyp rule) ) =>
-        LivenessRule rule where
-    type SafetyHyp rule :: * -> *
-    type ProgressHyp rule :: * -> *
-    type TransientHyp rule :: * -> *
-    type TransientHyp rule = None
-    type EventSupport rule :: * -> *
-    type EventSupport rule = None
-    rule_name' :: proxy rule -> Label
-    travRefs' :: Traversal' rule ProgId
-    travEvent' :: Traversal' rule EventId
-    voidInference :: HasExpr expr
-                  => (LivenessRule rule :- constr rule)
-                  -> ProgressProp' expr
-                  -> Proxy rule
-                  -> Maybe (Cell1 (Compose Inference Proxy) constr)
-    default voidInference :: ( HasExpr expr
-                             , ProgressHyp rule ~ None
-                             , SafetyHyp rule ~ None
-                             , TransientHyp rule ~ None )
-                          => (LivenessRule rule :- constr rule)
-                          -> ProgressProp' expr
-                          -> Proxy rule
-                          -> Maybe (Cell1 (Compose Inference Proxy) constr)
-    voidInference (Sub D) g r = Just $ Cell $ Compose $ Inference (getExpr <$> g) r Proxy Proxy Proxy
-
-instance LivenessRule rule => LivenessRule (Proxy rule) where
-    type ProgressHyp (Proxy rule) = ProgressHyp rule
-    type SafetyHyp (Proxy rule) = SafetyHyp rule
-    type TransientHyp (Proxy rule) = TransientHyp rule
-    rule_name' = rule_name' . reproxy
-    travEvent' _ = pure
-    travRefs' _ = pure
-    voidInference _ _ _ = Nothing
-
-reproxy :: proxy (Proxy rule) -> Proxy rule
-reproxy _ = Proxy
 
 rule_name :: LivenessRule rule => rule -> Label
 rule_name = rule_name' . (id :: Proxy rule -> Proxy rule) . pure
@@ -135,152 +79,6 @@ build kind _foo m = proc (st,_r,li) -> do
         returnA -< maybe e Right xs
     where
 
-class LivenessRule rule => LivenessRulePO rule  where
-    liveness_po :: RawProgressProp 
-                -> rule
-                -> ProgressHyp rule RawProgressProp
-                -> TransientHyp rule RawTransient
-                -> SafetyHyp rule RawSafetyProp
-                -> POGen ()
-    automaticSafety :: RawProgressProp -> rule -> [RawSafetyProp]
-    automaticTransient :: RawProgressProp -> rule -> [RawTransient]
-    automaticSafety _ _ = []
-    automaticTransient _ _ = []
-
-data Reference = Reference (ProgId) 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Reference where
-    type ProgressHyp Reference = None
-    type SafetyHyp Reference = None
-    type EventSupport Reference = One
-    rule_name' _  = label "reference"
-    travRefs' f (Reference pid) = Reference <$> f pid
-    travEvent' _ = pure
-instance NFData Reference where
-
-data Add = Add 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Add where
-    type ProgressHyp Add = None
-    type SafetyHyp Add = None
-    rule_name' _ = label "add"
-    travRefs' _ = pure
-    travEvent' _ = pure
-instance NFData Add where
-
-data Ensure = Ensure (NonEmpty EventId) (RawTrHint) 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Ensure where
-    type ProgressHyp Ensure = None
-    type SafetyHyp Ensure = None
-    type EventSupport Ensure = NonEmpty
-    rule_name' _   = label "ensure"
-    travRefs' f (Ensure es (TrHint ws pid)) = 
-            Ensure es . TrHint ws <$> traverse f pid
-    travEvent' f (Ensure es tr) = 
-            Ensure <$> traverse f es <*> pure tr
-instance NFData Ensure where
-
-data Implication = Implication 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Implication where
-    type ProgressHyp Implication = None
-    type SafetyHyp Implication = None
-    rule_name' _  = label "implication"
-    travRefs' _ = pure
-    travEvent' _ = pure
-instance NFData Implication where
-instance Default Implication where
-    def = genericDefault
-
-data Disjunction = Disjunction 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Disjunction where
-    type ProgressHyp Disjunction = NonEmpty
-    type SafetyHyp Disjunction = None
-    rule_name' _  = label "disjunction"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData Disjunction where
-instance Default Disjunction where
-    def = genericDefault
-
-data NegateDisjunct = NegateDisjunct 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule NegateDisjunct where
-    type ProgressHyp NegateDisjunct = One
-    type SafetyHyp NegateDisjunct = None
-    rule_name' _ = label "trading"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData NegateDisjunct where
-instance Default NegateDisjunct where
-    def = genericDefault
-
-data Transitivity = Transitivity 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Transitivity where
-    type ProgressHyp Transitivity = NonEmpty
-    type SafetyHyp Transitivity = None
-    rule_name' _ = label "transitivity"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData Transitivity where
-instance Default Transitivity where
-    def = genericDefault
-
-data PSP = PSP 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule PSP where
-    type ProgressHyp PSP = One
-    type SafetyHyp PSP = One
-    rule_name' _ = label "PSP"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData PSP where
-instance Default PSP where
-    def = genericDefault
-
-data Induction = Induction Variant
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Induction where
-    type ProgressHyp Induction = One
-    type SafetyHyp Induction = None
-    rule_name' _  = label "induction"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData Induction where
-
-data Monotonicity = Monotonicity 
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Monotonicity where
-    type ProgressHyp Monotonicity = One
-    type SafetyHyp Monotonicity = None
-    rule_name' _ = label "monotonicity"
-    travRefs' _ = pure
-    travEvent' _ = pure
-    voidInference _ _ _ = Nothing
-instance NFData Monotonicity where
-instance Default Monotonicity where
-    def = genericDefault
-
-data Discharge = Discharge
-    deriving (Eq,Generic,Typeable,Show)
-instance LivenessRule Discharge where
-    type ProgressHyp Discharge = None
-    type SafetyHyp Discharge = Maybe
-    type TransientHyp Discharge = One
-    rule_name' _ = label "discharge"
-    travRefs' _ = pure
-    travEvent' _ Discharge = pure Discharge
-    voidInference _ _ _ = Nothing
-instance NFData Discharge where 
-
 travRefs :: Traversal' ARule ProgId
 travRefs = cellLens' travRefs'
 
@@ -295,7 +93,7 @@ data Inference rule = Inference
     , _progressHyps :: ProgressHyp rule ProofTree
     , _transientHyps :: TransientHyp rule RawTransient
     , _safetyHyps :: SafetyHyp rule (RawSafetyProp,Maybe Label)
-    }
+    } deriving (Generic)
 
 instance LivenessRule rule => Show (Inference rule) where
     show (Inference x y z v w) = printf "%s (%s) (%s) (%s) (%s)" 
@@ -315,11 +113,17 @@ instance LivenessRule rule => Eq (Inference rule) where
 
 --data ProofTree = forall rule. LivenessRulePO rule => ProofNode (Inference rule)
 newtype ProofTree = ProofTree { _proofTreeCell :: Cell1 Inference LivenessRulePO }
+    deriving Generic
 
+makeFactory ''LivenessRulePO
 makeFields ''ARule
 makeLenses ''Inference
 makeFields ''Inference
 makeFields ''ProofTree
+
+instance Serialize ProofTree where
+    put = putCell1 put . view cell
+    get = view (from cell) <$> getCell1 get
 
 instance HasGoal ProofTree RawProgressProp where
     goal f = traverseCell1' (goal f)
@@ -329,6 +133,14 @@ class HasRuleLens proof0 proof1 rule0 rule1 | proof0 -> rule0, proof1 -> rule1 w
 
 class HasRule proof rule | proof -> rule where
      rule :: Getter proof rule
+
+voidInference :: (HasExpr expr,LivenessRule rule)
+              => LivenessRule rule :- constr rule
+              -> ProgressProp' expr
+              -> Proxy rule
+              -> Maybe (Cell1 (Compose Inference Proxy) constr)
+voidInference d prog rule = voidInference' d prog rule 
+    (\p r -> Compose $ Inference p r Proxy Proxy Proxy)
 
 instance 
         ( ProgressHyp rule0 ~ ProgressHyp rule1
@@ -475,3 +287,12 @@ makeRule' r g pid p = proofNode g r (Identity (makeRule (Reference pid) p)) Prox
 
 instance LivenessRulePO Reference where
     liveness_po _ (Reference _) Proxy Proxy Proxy = return ()
+
+instance (Serialize a,LivenessRule a) => Serialize (Inference a) where
+    put (Inference p r x y z) = do
+          put p
+          put r
+          put1 x
+          put1 y
+          put1 z
+    get = Inference <$> get <*> get <*> get1 <*> get1 <*> get1

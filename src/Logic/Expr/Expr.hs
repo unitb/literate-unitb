@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings      #-}
 module Logic.Expr.Expr 
     ( module Logic.Expr.Expr
+    , module Logic.Expr.Fun
+    , module Logic.Expr.Quantifier
     , module Logic.Expr.Variable
     , HasConstants(..)
     , Loc(..) )
@@ -12,8 +14,10 @@ where
 
     -- Module
 import Logic.Expr.Classes
+import Logic.Expr.Fun
 import Logic.Expr.PrettyPrint
 import Logic.Expr.Scope
+import Logic.Expr.Quantifier
 import Logic.Expr.Type
 import Logic.Expr.Variable
 import Logic.Names
@@ -66,11 +70,6 @@ data GenExpr n t a q =
         | Lift (GenExpr n t a q) a
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
 
-data Lifting = Unlifted | Lifted
-    deriving (Eq,Ord, Generic, Data, Typeable,Show)
-
-instance Serialize Lifting where
-
 data Value = RealVal Double | IntVal Int
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
 
@@ -97,11 +96,6 @@ instance Foldable1 (GenExpr a b) where
 instance Foldable2 (GenExpr a) where
 instance Foldable3 GenExpr where
 
-instance (Hashable n,Hashable t) => Hashable (AbsFun n t)
-instance Hashable Lifting
-instance Hashable QuantifierWD
-instance Hashable QuantifierType
-instance Hashable HOQuantifier
 instance Hashable Value
 instance (Hashable n,Hashable t,Hashable a,Hashable q) 
         => Hashable (GenExpr n t a q) where
@@ -165,36 +159,6 @@ expSize (Lift e _) = 1 + expSize e
 instance Arbitrary Value where
     arbitrary = genericArbitrary
 
-instance Arbitrary Lifting where
-    arbitrary = genericArbitrary
-
-instance Arbitrary HOQuantifier where
-    arbitrary = genericArbitrary
-
-instance Arbitrary QuantifierWD where
-    arbitrary = genericArbitrary
-
-instance Arbitrary QuantifierType where
-    arbitrary = genericArbitrary
-
-instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsFun n t) where
-    arbitrary = genericArbitrary
-
-data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
-    deriving (Eq,Ord,Generic,Typeable,Data,Show)
-
-data QuantifierWD  = FiniteWD | InfiniteWD
-    deriving (Eq,Ord,Generic,Typeable,Data,Show)
-
-data HOQuantifier = 
-        Forall 
-        | Exists 
-        | UDQuant Fun Type QuantifierType QuantifierWD
-    deriving (Eq,Ord,Generic,Typeable,Data,Show)
-
-data FOQuantifier = FOForall | FOExists 
-    deriving (Eq,Ord,Generic,Typeable,Data,Show)
-
 type P = Either [String]
 
 type RawExprP = Either [String] RawExpr 
@@ -244,17 +208,19 @@ instance ( IsName n
     type SetAnnotT arg (GenExpr n t0 t1 q) = GenExpr n t0 arg q
     type SetQuantT arg (GenExpr n t0 t1 q) = GenExpr n t0 t1 arg
 
+true_fun :: (IsName n, TypeSystem t) => AbsFun n t
+true_fun = mkConstant "true" bool
+
+false_fun :: (IsName n, TypeSystem t) => AbsFun n t
+false_fun = mkConstant "false" bool
+
 instance ( IsName n,TypeSystem t0,TypeSystem t1
          , IsQuantifier q)
         => HasGenExpr (GenExpr n t0 t1 q) where
     type ExprT (GenExpr n t0 t1 q)  = GenExpr n t0 t1 q
     asExpr = id
-    ztrue  = FunApp (mkConstant "true" bool) []
-    zfalse = FunApp (mkConstant "false" bool) []
-
-mkConstant :: (?loc :: CallStack,IsName n) 
-           => String -> t -> AbsFun n t
-mkConstant n t = mk_fun [] (fromString'' n) [] t
+    ztrue  = FunApp true_fun []
+    zfalse = FunApp false_fun []
 
 class ( TypeT expr ~ AnnotT expr, IsGenExpr expr )
     => IsAbsExpr expr where
@@ -265,15 +231,16 @@ instance (IsName n,TypeSystem t,IsQuantifier q)
 var_type :: AbsVar n t -> t
 var_type (Var _ t) = t
 
-type_of :: (IsAbsExpr expr) => expr -> TypeT expr
-type_of e = aux $ asExpr e
-    where
-        aux (Word (Var _ t))         = t
-        aux (Const _ t)              = t
-        aux (Cast _ t)               = t
-        aux (Lift _ t)               = t
-        aux (FunApp (Fun _ _ _ _ t) _) = t
-        aux (Binder _ _ _ _ t)   = t
+instance (IsName n,TypeSystem t,IsQuantifier q) => Typed (AbsExpr n t q) where
+    type TypeOf (AbsExpr n t q) = t
+    type_of e = aux $ asExpr e
+        where
+            aux (Word (Var _ t))         = t
+            aux (Const _ t)              = t
+            aux (Cast _ t)               = t
+            aux (Lift _ t)               = t
+            aux (FunApp (Fun _ _ _ _ t _) _) = t
+            aux (Binder _ _ _ _ t)   = t
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -295,45 +262,6 @@ pair x y = FunApp (mk_fun [] (fromString'' "pair") [t0,t1] $ pair_type t0 t1) [x
     where
         t0 = type_of x
         t1 = type_of y
-
-finiteness :: HOQuantifier -> QuantifierWD
-finiteness Forall = InfiniteWD
-finiteness Exists = InfiniteWD
-finiteness (UDQuant _ _ _ fin) = fin
-
-class (Ord q, PrettyPrintable q, Show q, Data q) => IsQuantifier q where
-    merge_range :: q -> StrList
-    termType :: q -> Type
-    exprType :: q -> Type -> Type -> Type
-    qForall :: q
-    qExists :: q    
-
-instance IsQuantifier HOQuantifier where
-    merge_range Forall = Str "=>"
-    merge_range Exists = Str "and"
-    merge_range (UDQuant _ _ _ _) = Str "PRE"
-    termType Forall = bool
-    termType Exists = bool
-    termType (UDQuant _ t _ _) = t
-    exprType Forall _ _ = bool
-    exprType Exists _ _ = bool
-    exprType (UDQuant _ _ (QTConst t) _) _ _ = t
-    exprType (UDQuant _ _ (QTSort s) _) arg term = make_type s [arg,term]
-    exprType (UDQuant _ _ (QTFromTerm s) _) _ term = make_type s [term]
-    exprType (UDQuant _ _ QTTerm _) _ term = term
-    qForall = Forall
-    qExists = Exists
-
-
-instance IsQuantifier FOQuantifier where
-    merge_range FOForall = Str "=>"
-    merge_range FOExists   = Str "and"
-    termType FOForall = bool
-    termType FOExists = bool
-    exprType FOForall _ _ = bool
-    exprType FOExists _ _ = bool
-    qForall = FOForall
-    qExists = FOExists
 
 freeVarsOf :: IsGenExpr expr
            => Traversal' expr (VarT expr)
@@ -415,61 +343,12 @@ instance IsName n => HasNames (GenExpr n t0 t1 q) n where
     type SetNameT n' (GenExpr n t0 t1 q) = GenExpr n' t0 t1 q
     namesOf = traverse3
 
-z3_decoration :: TypeSystem t => t -> String
-z3_decoration t = runReader (z3_decoration' t) ProverOutput
-
-z3_decoration' :: TypeSystem t => t -> Reader (OutputMode n) String
-z3_decoration' t = do
-        opt <- ask 
-        case opt of
-            ProverOutput -> f <$> as_tree' t
-            UserOutput -> return ""
-    where
-        f (List ys) = [printf|@Open%s@Close|] xs
-            where xs = concatMap f ys :: String
-        f (Str y)   = [printf|@@%s|] y
-
-    -- replace it everywhere (replace what? with what?)
-z3_fun_name :: Fun -> InternalName
-z3_fun_name (Fun xs ys _ _ _) = fromString'' $ render ys ++ concatMap z3_decoration xs
-
-type Fun = AbsFun Name GenericType
-
-type FOFun = AbsFun InternalName FOType
-
-type InternalFun = AbsFun InternalName Type
-
-data AbsFun n t = Fun 
-        { _annotation :: [t]
-        , _funName :: n
-        , lifted :: Lifting
-        , _arguments :: [t]
-        , _result :: t }
-    deriving (Eq,Ord,Generic,Typeable,Data,Functor,Foldable,Traversable,Show)
-
-instance (Data n,Data t,IsName n,TypeSystem t) => Tree (AbsFun n t) where
-    as_tree' f@(Fun _ _ _ argT rT) = List <$> sequenceA
-            [ Str  <$> render_decorated f
-            , List <$> mapM as_tree' argT 
-            , as_tree' rT ]
-
 instance (Data n,IsName n,Data t,Data q,TypeSystem t, IsQuantifier q) => Tree (AbsDef n t q) where
     as_tree' d@(Def _ _ argT rT e) = List <$> sequenceA
             [ Str  <$> render_decorated d
             , List <$> mapM as_tree' argT 
             , as_tree' rT 
             , as_tree' e ]
-
-
-mk_fun' :: (?loc :: CallStack,IsName n) 
-        => [t] -> String -> [t] -> t -> AbsFun n t
-mk_fun' ps = mk_fun ps . z3Name
-
-mk_fun :: [t] -> n -> [t] -> t -> AbsFun n t
-mk_fun  ps n ts t = Fun ps n Unlifted ts t
-
-mk_lifted_fun :: IsName n => [t] -> n -> [t] -> t -> AbsFun n t
-mk_lifted_fun ps n ts t = Fun ps n Lifted ts t
 
 target :: AbsDef n t q -> AbsExpr n t q
 target (Def _ _ _ _ e) = e
@@ -512,15 +391,6 @@ instance IsName n => HasNames (AbsDef n t q) n where
     type SetNameT m (AbsDef n t q) = AbsDef m t q
     namesOf = traverse2
 
-instance PrettyPrintable HOQuantifier where
-    pretty Forall = "forall"
-    pretty Exists = "exists"
-    pretty (UDQuant f _ _ _) = render $ f^.name
-
-instance PrettyPrintable FOQuantifier where
-    pretty FOForall = "forall"
-    pretty FOExists = "exists"
-
 z3Def :: (?loc :: CallStack) 
       => [Type] 
       -> String
@@ -539,9 +409,6 @@ instance ( TypeSystem t
         => Arbitrary (AbsDef n t q) where
     arbitrary = genericArbitrary
 
-isLifted :: AbsFun n t -> Bool
-isLifted (Fun _ _ lf _ _) = lf == Lifted
-
 instance (TypeSystem t, IsQuantifier q, Tree t', IsName n) 
         => Tree (GenExpr n t t' q) where
     as_tree' (Cast e t)   = do
@@ -555,7 +422,7 @@ instance (TypeSystem t, IsQuantifier q, Tree t', IsName n)
                              , e']
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Const xs _)         = return $ Str $ pretty xs
-    as_tree' (FunApp f@(Fun _ _ _ _ t) [])
+    as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
             | isLifted f =List <$> sequence   
                                [ List 
                                  <$> (map Str ["_","map"] ++) 
@@ -618,11 +485,12 @@ rewriteExprM' fT fA fQ fE e =
             Cast e t -> Cast <$> fE e <*> fA t
             Lift e t -> Lift <$> fE e <*> fA t
     where
-        ffun (Fun ts n lf targs rt) = 
+        ffun (Fun ts n lf targs rt wd) = 
                 Fun <$> traverse fT ts 
                     <*> pure n <*> pure lf
                     <*> traverse fT targs 
                     <*> fT rt
+                    <*> pure wd
         fvar (Var n t) = Var n <$> fT t
 
 rewriteExprM :: (Applicative m)
@@ -635,14 +503,6 @@ rewriteExprM fT = rewriteExprM' fT fT
 instance (TypeSystem t, IsQuantifier q,IsName n, Tree t') => PrettyPrintable (GenExpr n t t' q) where
     pretty e = pretty $ runReader (as_tree' e) UserOutput
 
-instance (IsName n,TypeSystem t) => PrettyPrintable (AbsFun n t) where
-    pretty (Fun xs n _ ts t) = render n ++ pretty xs ++ ": " 
-            ++ args ++ pretty (as_tree t)
-        where
-            args
-                | not $ null ts = intercalate " x " (map (pretty . as_tree) ts) ++ " -> "
-                | otherwise     = ""
-
 instance (TypeSystem t, IsQuantifier q, IsName n) => PrettyPrintable (AbsDef n t q) where
     pretty (Def xs n ps t e) = render n ++ showL xs ++  ": " 
         ++ args ++ pretty (as_tree t)
@@ -654,14 +514,10 @@ instance (TypeSystem t, IsQuantifier q, IsName n) => PrettyPrintable (AbsDef n t
                 | L.null ps = ""
                 | otherwise = intercalate " x " (map (pretty . as_tree) ps) ++ " -> "
 
-instance (TypeSystem t) => Typed (AbsFun n t) where
-    type TypeOf (AbsFun n t) = t
-
 instance TypeSystem t => Typed (AbsDef n t q) where
     type TypeOf (AbsDef n t q) = t
+    type_of (Def _ _ _ t _) = t
 
-instance TypeSystem t => Typed (AbsExpr n t q) where
-    type TypeOf (AbsExpr n t q) = t
 
 defAsVar :: AbsDef n t q -> Maybe (AbsVar n t)
 defAsVar (Def [] n [] t _) = Just $ Var n t
@@ -727,22 +583,6 @@ free_vars' ds e = vs `M.intersection` ds
     where
         vs = used_var' (getExpr e)
 
-instance HasName (AbsFun n t) n where
-    name = to $ \(Fun _ x _ _ _) -> x
-
-instance IsName n => HasNames (AbsFun n t) n where
-    type SetNameT n' (AbsFun n t) = AbsFun n' t
-    namesOf = traverse1
-    --name = to $ \(Fun _ x _ _ _) -> x
-
-instance (IsName n,TypeSystem t) => Named (AbsFun n t) where
-    type NameOf (AbsFun n t) = n
-    decorated_name' (Fun ts x _ _ _) = do
-            ts' <- mapM z3_decoration' ts
-            let suf = concat ts'
-            onInternalName (addSuffix suf) 
-                $ adaptName x
-
 instance HasName (AbsDef n t q) n where
     name = to $ \(Def _ x _ _ _) -> x
 
@@ -784,6 +624,9 @@ primeOnly vs = freeVarsOf %~ pr
 defExpr :: Lens' (AbsDef n t q) (AbsExpr n t q) 
 defExpr f (Def ps n args rt e) = Def ps n args rt <$> f e
 
+funOf :: (TypeSystem t, IsQuantifier q, IsName n) 
+      => AbsDef n t q -> AbsFun n t
+funOf (Def ps n args rt _e) = Fun ps n Unlifted (map type_of args) rt InfiniteWD
 
 class (IsGenExpr e
         , Show e
@@ -831,24 +674,18 @@ instance HasExpr (AbsExpr Name Type HOQuantifier) where
 --    => IsExpr expr
 
 
-instance (NFData t,NFData n) => NFData (AbsFun n t) where
-instance NFData QuantifierType
-instance NFData QuantifierWD
-instance NFData Lifting
 instance (NFData t,NFData q,NFData n) => NFData (AbsDef n t q)
 instance (NFData t,NFData n) => NFData (AbsVar n t)
 instance NFData Value
 instance (NFData t0,NFData t1,NFData q,NFData n) => NFData (GenExpr n t0 t1 q)
-instance NFData FOQuantifier
-instance NFData HOQuantifier
 
-makeLenses ''AbsFun
+instance (Serialize n,Serialize q,Serialize t,Serialize a)
+    => Serialize (GenExpr n t a q) where
+instance Serialize Value where
+instance (Serialize n,Serialize q,Serialize t) 
+    => Serialize (AbsDef n t q) where
+
 makePrisms ''GenExpr
-
-instance Functor1 AbsFun where
-instance Foldable1 AbsFun where
-instance Traversable1 AbsFun where
-    traverse1 = funName
 
 fromEither :: Loc -> Either [String] a -> a
 fromEither _ (Right x)  = x
@@ -860,4 +697,3 @@ fromEither loc (Left msg) = error $ unlines $ map ([printf|\n%s\n%s|] loc') msg
 
 typeCheck :: ExpQ
 typeCheck = withLoc 'fromEither
-

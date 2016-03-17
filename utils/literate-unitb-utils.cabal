@@ -53,8 +53,10 @@ library
         Control.Arrow.Unfold
         Control.Invariant
         Control.Precondition
-        Data.Existential
+        Data.Compressed
         Data.DList.Utils
+        Data.Existential
+        Data.Factory
         Data.Graph.Array
         Data.Graph.Bipartite
         Data.Map.Class

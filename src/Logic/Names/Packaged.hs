@@ -1,10 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Logic.Names.Packaged
     ( Name, InternalName
-    , IsName
+    , IsName(..)
     , IsBaseName(..) 
     , asInternal
     , asName
+    , isZ3Name
     , makeName
     , Intl.make
     , Intl.make'
@@ -57,7 +58,7 @@ name = iso getName Name . unpackaged
 internal :: Iso' InternalName Intl.InternalName
 internal = iso getInternalName InternalName . unpackaged
 
-class IsBaseName n => IsName n where
+class (IsBaseName n,Hashable n) => IsName n where
     fromInternal :: InternalName -> n
     fromName :: Name -> n
 
@@ -164,3 +165,6 @@ parseZ3Name str = either (fail . unlines) lift $ Intl.isZ3Name str
 
 parseTexName :: String -> ExpQ
 parseTexName str = either (fail . unlines) lift $ Intl.isName str
+
+isZ3Name :: String -> Either [String] Name
+isZ3Name = fmap (view $ from name) . Intl.isZ3Name

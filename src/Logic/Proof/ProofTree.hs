@@ -16,6 +16,7 @@ import Control.Lens hiding (Context,rewrite)
 import Data.List as L
 import Data.Maybe as M 
 import qualified Data.Map.Class as M 
+import Data.Serialize hiding (label)
 import Data.Set as S 
 import Data.Typeable
 
@@ -32,28 +33,32 @@ data Ignore = Ignore LineInfo
 data Prune = Prune Int Proof
     deriving (Eq,Typeable)
 
-data Proof =  FreeGoal Name Name Type Proof LineInfo
-            | ByCases   [(Label, Expr, Proof)] LineInfo
+type Proof = ProofBase Expr
+
+data ProofBase expr =  FreeGoal Name Name Type (ProofBase expr) LineInfo
+            | ByCases   [(Label, expr, (ProofBase expr))] LineInfo
             | Easy                             LineInfo
-            | Assume (Table Label Expr) Expr Proof LineInfo
-            | ByParts [(Expr,Proof)]           LineInfo
+            | Assume (Table Label expr) expr (ProofBase expr) LineInfo
+            | ByParts [(expr,(ProofBase expr))]           LineInfo
                 -- Too complex
-            | Assertion (Table Label (Expr,Proof)) [(Label,Label)] Proof LineInfo
-            | Definition (Table Var Expr) Proof LineInfo
-            | InstantiateHyp Expr (Table Var Expr) Proof LineInfo
-            | Keep Context [Expr] (Table Label Expr) Proof LineInfo
-            | ByCalc Calculation
-    deriving (Eq,Typeable, Generic, Show)
+            | Assertion (Table Label (expr,(ProofBase expr))) [(Label,Label)] (ProofBase expr) LineInfo
+            | Definition (Table Var expr) (ProofBase expr) LineInfo
+            | InstantiateHyp expr (Table Var expr) (ProofBase expr) LineInfo
+            | Keep Context [expr] (Table Label expr) (ProofBase expr) LineInfo
+            | ByCalc (CalculationBase expr)
+    deriving (Eq,Typeable, Generic, Show,Functor,Foldable,Traversable)
 
-data Calculation = Calc 
-        {  _calculationContext :: Context
-        ,  _calculationGoal    :: Expr
-        ,  first_step :: Expr
-        ,  following  :: [(BinOperator, Expr, [Expr], LineInfo)]
+type Calculation = CalculationBase Expr
+
+data CalculationBase expr = Calc 
+        {  _calculationBaseContext :: Context
+        ,  _calculationBaseGoal    :: expr
+        ,  first_step :: expr
+        ,  following  :: [(BinOperator, expr, [expr], LineInfo)]
         ,  l_info     :: LineInfo }
-    deriving (Eq, Typeable, Generic, Show)
+    deriving (Eq,Typeable,Generic,Show,Functor,Foldable,Traversable)
 
-makeFields ''Calculation
+makeFields ''CalculationBase
 
 data TheoremRef = 
         ThmRef Label [(Var,Expr)]
@@ -66,14 +71,14 @@ class (Syntactic a, Typeable a, Eq a) => ProofRule a where
     proof_po :: a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
 
-instance Syntactic Calculation where
+instance Syntactic (CalculationBase expr) where
     line_info c = l_info c
     after = line_info
     traverseLineInfo f c = tr <$> f (l_info c) <*> (traverse._4) f (following c)
         where
             tr x y = c { l_info = x, following = y }
 
-instance Syntactic Proof where
+instance Syntactic (ProofBase expr) where
     line_info (ByCases _ li)        = li
     line_info (Assume _ _ _ li)     = li
     line_info (ByParts _ li)        = li
@@ -104,7 +109,7 @@ instance Syntactic Proof where
     traverseLineInfo f (Keep c xs m p li) = Keep c xs m <$> traverseLineInfo f p 
                                                         <*> f li
 
-instance ProofRule Proof where
+instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
     proof_po (ByCalc c) lbl po = do
             let ctx = po^.context
                 (y0,y1) = entailment (goal_po c) po
@@ -260,7 +265,9 @@ instance PrettyPrintable Calculation where
 show_proof :: Calculation -> String
 show_proof = pretty
 
-goal_po :: Calculation -> Sequent
+goal_po :: (HasGenExpr expr) 
+        => CalculationBase expr 
+        -> HOSequent expr
 goal_po c = empty_sequent & context .~ (c^.context)
                           & nameless .~ xs
                           & goal .~ (c^.goal)
@@ -326,5 +333,8 @@ entails_goal_po ctx (Calc d g e0 es li) = do
         xs = take (length es) (e0:ys)
         rs = L.map(\(x,_,_,_) -> x) es
 
-instance NFData Proof
-instance NFData Calculation
+instance NFData expr => NFData (ProofBase expr)
+instance NFData expr => NFData (CalculationBase expr)
+
+instance Serialize expr => Serialize (ProofBase expr) where
+instance Serialize expr => Serialize (CalculationBase expr) where

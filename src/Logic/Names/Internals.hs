@@ -69,8 +69,7 @@ data Name = Name
         , _base :: NEString 
         , _primes :: Word8 
         , _suffix :: String
-        , _encoding :: Encoding }
-    deriving (Data,Generic,Show,Eq,Ord)
+        } deriving (Data,Generic,Eq,Ord)
 
 data InternalName = InternalName String Name String
     deriving (Eq,Ord,Data,Generic,Show)
@@ -85,26 +84,33 @@ data Name = Name
         , _base :: !NEString 
         , _primes :: !Word8 
         , _suffix :: !String
-        , _encoding :: !Encoding }
-    deriving (Data,Generic,Show,Eq,Ord)
+        } deriving (Data,Generic,Eq,Ord)
 
 data InternalName = InternalName !String !Name !String
-    deriving (Eq,Ord,Data,Generic,Show)
+    deriving (Eq,Ord,Data,Generic)
 
 #endif
-
-name :: Bool -> NEString
-             -> Word8
-             -> String
-             -> Encoding
-             -> Name
-name = Name
 
 data Encoding = Z3Encoding | LatexEncoding
     deriving (Eq,Ord,Data,Generic,Show)
 
 makeLenses ''Name
 
+name :: Bool -> NEString
+             -> Word8
+             -> String
+             -> Encoding
+             -> Name
+name bl base pr suff Z3Encoding = Name bl base pr suff
+name bl base pr suff LatexEncoding = Name bl 
+        (replaceAll' assert substToZ3 base) pr 
+        (replaceAll substToZ3 suff)
+
+instance Show Name where
+    show = [printf|"%s"|] . render
+
+instance Show InternalName where
+    show = [printf|"%s"|] . render
 
 class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
     render :: a -> String
@@ -120,34 +126,30 @@ class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
     z3Name :: (?loc :: CallStack) 
            => String -> a
 
+_Name :: IsName a => Prism' String a
+_Name = prism' render (fmap fromName . isZ3Name')
+
 --instance Show Name where
 --    show = [printf|[%s]|] . render
 
 --instance Show InternalName where
 --    show x = [printf|{%s}|] $ render x
 
-toZ3Encoding :: Name -> Name
-toZ3Encoding n = case n^.encoding of
-    LatexEncoding -> n & base %~ replaceAll' assert substToZ3
-                       & suffix %~ replaceAll substToZ3
-                       & encoding .~ Z3Encoding
-    Z3Encoding -> n
 
-toLatexEncoding :: Name -> Name
-toLatexEncoding n = case n^.encoding of
-    Z3Encoding -> n & base %~ replaceAll' assert substToLatex
-                    & suffix %~ replaceAll substToLatex
-                    & encoding .~ LatexEncoding
-    LatexEncoding -> n
+renderAsLatex :: Name -> String
+renderAsLatex (Name b base' p suff') = concat [slash,toList base,replicate (fromIntegral p) '\'',suffix]
+    where
+        -- (Name b base p suff _) = toLatexEncoding n
+        base = replaceAll' assert substToLatex base'
+        suff = replaceAll substToLatex suff'
+
+        slash  | b          = "\\"
+               | otherwise  = ""
+        suffix | L.null suff = ""
+               | otherwise   = [printf|_{%s}|] suff
 
 instance IsBaseName Name where
-    render n = concat [slash,toList base,replicate (fromIntegral p) '\'',suffix]
-        where
-            (Name b base p suff _) = toLatexEncoding n
-            slash  | b          = "\\"
-                   | otherwise  = ""
-            suffix | L.null suff = ""
-                   | otherwise   = [printf|_{%s}|] suff
+    render = renderAsLatex
     --asString arse = iso render $ makeName arse
     asInternal' n = InternalName "" n ""
     asName' = id
@@ -231,12 +233,11 @@ instance Hashable InternalName where
 instance Hashable Encoding where
 
 z3Render :: Name -> String
-z3Render n = concat $ [slash,NE.toList xs] ++ replicate (fromIntegral ps) "@prime" ++ [suf']
+z3Render (Name sl xs ps suf) 
+        = concat $ [slash,NE.toList xs] ++ replicate (fromIntegral ps) "@prime" ++ [suf']
     where
         slash | sl        = "sl@"
               | otherwise = ""
-        (Name sl xs ps suf _) 
-                = toZ3Encoding n
         suf' | null suf  = ""
              | otherwise = "@" ++ suf
 
@@ -259,7 +260,7 @@ isZ3Name str = mapLeft (\x -> [err,show x]) $ parse' z3Name' "" str
         err = [printf|invalid name: '%s'|] str
 
 isName :: String -> Either [String] Name
-isName str = mapBoth (\x -> [err,show x]) toZ3Encoding $ parse' latexName "" str
+isName str = mapLeft (\x -> [err,show x]) $ parse' latexName "" str
     where
         err = [printf|invalid name: '%s'|] str
 
@@ -286,7 +287,7 @@ internal :: Lens' InternalName Name
 internal f (InternalName pre n suf) = (\n' -> InternalName pre n' suf) <$> f n
  
 z3Name' :: Language Name
-z3Name' = ($ Z3Encoding) <$> (symb <|> name)
+z3Name' = symb <|> name
     where
         name = 
             Name <$> option False (try (string "sl@" >> pure True)) 
@@ -297,15 +298,19 @@ z3Name' = ($ Z3Encoding) <$> (symb <|> name)
         symb = Name False . sconcat <$> many1' symbol <*> pure 0 <*> pure ""
 
 latexName :: Language Name
-latexName = ($ LatexEncoding) <$> (symb <|> name)
+latexName = symb <|> name'
     where
-        name = 
-            Name <$> option False (string "\\" >> pure True) 
+        name' = 
+            name <$> option False (string "\\" >> pure True) 
                  <*> many1' (alphaNum <|> char '_')
                  <*> (fromIntegral.L.length 
                         <$> many (string "\'"))
                  <*> pure ""
-        symb = Name False <$> symbol' <*> pure 0 <*> pure ""
+                 <*> pure LatexEncoding
+        symb = name False <$> symbol' 
+                          <*> pure 0 
+                          <*> pure ""
+                          <*> pure LatexEncoding
         symbol' = symbol <|> texSymbol
 
 texSymbol :: Language NEString
@@ -397,7 +402,7 @@ instance Arbitrary InternalName where
         asInternal' <$> (arbitrary :: Gen Name)
 
 instance TH.Lift Name where
-    lift (Name a b c d e) = [e| name a b c d e |]
+    lift (Name a b c d) = [e| name a b c d Z3Encoding |]
 instance Lift Encoding where
     lift = genericLift
 instance Lift InternalName where
@@ -409,7 +414,6 @@ instance NFData InternalName where
 instance Serialize Encoding where
 instance Serialize Name where
 instance Serialize InternalName where
-instance Serialize a => Serialize (NonEmpty a) where
 
 class Translatable a b | a -> b where
     translate :: a -> b

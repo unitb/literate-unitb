@@ -29,7 +29,7 @@ check_z3_bin = do
                        , ("4.3.2","5e72cf0123f6")
                        , ("4.4.0","0482e7fe727c")
                        , ("4.4.1","e8811748d39a")
-                       , ("4.4.1","")] -- trial
+                       , ("4.4.1","")]
         if (v,h) `elem` versions then
             return True
         else do

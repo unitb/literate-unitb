@@ -9,6 +9,7 @@ import Control.DeepSeq
 
 import Data.Hashable
 import Data.List as L
+import Data.Serialize hiding (label)
 import Data.String
 import Data.String.Utils ( split )
 import Data.Typeable
@@ -58,3 +59,5 @@ to_list :: Label -> [Label]
 to_list (Lbl xs) = map Lbl $ split "/" xs
 
 instance NFData Label
+
+instance Serialize Label where

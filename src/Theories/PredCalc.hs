@@ -2,8 +2,8 @@
 module Theories.PredCalc where
 
     -- Modules
-import Logic.Expr
-import Logic.Expr.Const
+import Logic.Expr hiding (or_fun,and_fun)
+import Logic.Expr.Const hiding (or_fun,and_fun)
 import Logic.Operator
 import Logic.Theory
 
@@ -17,7 +17,7 @@ import Prelude hiding ( pred )
 import Utilities.Lens
 
 everywhere_fun :: Fun
-everywhere_fun = mk_fun [gA] (fromString'' "ew") [pred_type gA] bool
+everywhere_fun = mk_fun [gA] [smt|ew|] [pred_type gA] bool
 
 zew :: ExprP -> ExprP
 zew = typ_fun1 everywhere_fun
@@ -26,19 +26,19 @@ pred :: Type
 pred = pred_type gA
 
 pimplies_fun :: Fun
-pimplies_fun = mk_lifted_fun [] (fromString'' "=>") [pred,pred] pred
+pimplies_fun = mk_lifted_fun [] [smt|=>|] [pred,pred] pred
 
 equiv_fun :: Fun
-equiv_fun = mk_lifted_fun [] (fromString'' "equiv") [pred,pred] pred
+equiv_fun = mk_lifted_fun [] [smt|equiv|] [pred,pred] pred
 
 and_fun :: Fun
-and_fun = mk_lifted_fun [] (fromString'' "and") [pred,pred] pred
+and_fun = mk_lifted_fun [] [smt|and|] [pred,pred] pred
 
 or_fun :: Fun
-or_fun = mk_lifted_fun [] (fromString'' "or") [pred,pred] pred
+or_fun = mk_lifted_fun [] [smt|or|] [pred,pred] pred
 
 neg_fun :: Fun
-neg_fun = (mk_lifted_fun [] (fromString'' "not") [pred] pred)
+neg_fun = (mk_lifted_fun [] [smt|not|] [pred] pred)
 
 zpimplies :: ExprP -> ExprP -> ExprP
 zpimplies = typ_fun2 pimplies_fun
@@ -56,28 +56,28 @@ zpneg :: ExprP -> ExprP
 zpneg     = typ_fun1 neg_fun
     
 pfollows :: BinOperator
-pfollows = make BinOperator "pfollows" "\\pfollows" (flip zpimplies)
+pfollows = make BinOperator "pfollows" "\\pfollows" Flipped pimplies_fun
 
 pimplies :: BinOperator
-pimplies = make BinOperator "pimplies" "\\pimplies" zpimplies
+pimplies = make BinOperator "pimplies" "\\pimplies" Direct pimplies_fun
 
 pequiv :: BinOperator
-pequiv = make BinOperator "pequiv" "\\pequiv" zpequiv
+pequiv = make BinOperator "pequiv" "\\pequiv" Direct equiv_fun
 
 pconj :: BinOperator
-pconj = make BinOperator "pand" "\\pand" zpand
+pconj = make BinOperator "pand" "\\pand" Direct and_fun
 
 pdisj :: BinOperator
-pdisj = make BinOperator "por" "\\por" zpor
+pdisj = make BinOperator "por" "\\por" Direct or_fun
 
 pneg :: UnaryOperator
-pneg = make UnaryOperator "pneg" "\\pneg" zpneg
+pneg = make UnaryOperator "pneg" "\\pneg" neg_fun
 
 ptrue_fun :: Fun
-ptrue_fun = mk_fun [gA] (fromString'' "ptrue") [] (pred_type gA)
+ptrue_fun = mk_fun [gA] [smt|ptrue|] [] (pred_type gA)
 
 pfalse_fun :: Fun
-pfalse_fun = mk_fun [gA] (fromString'' "pfalse") [] (pred_type gA)
+pfalse_fun = mk_fun [gA] [smt|pfalse|] [] (pred_type gA)
 
 ptrue :: ExprP
 ptrue   = Right $ FunApp ptrue_fun []
@@ -86,13 +86,13 @@ pfalse :: ExprP
 pfalse  = Right $ FunApp pfalse_fun []
 
 pred_sort :: Sort
-pred_sort = DefSort (fromString'' "\\pred") (fromString'' "pred") [fromString'' "a"] $ array gA bool
+pred_sort = DefSort [tex|\pred|] [smt|pred|] [[smt|a|]] $ array gA bool
 
 pred_type :: TypeSystem t => t -> t
 pred_type t = make_type pred_sort [t]
 
 zrep_select :: ExprP -> ExprP -> ExprP
-zrep_select = typ_fun2 (mk_fun [] (fromString'' "select") [pred_type gA, gA] bool)
+zrep_select = typ_fun2 (mk_fun [] [smt|select|] [pred_type gA, gA] bool)
 
 pred_calc :: Theory
 pred_calc = make_theory' "predcalc" $ do
@@ -106,7 +106,7 @@ pred_calc = make_theory' "predcalc" $ do
     where
         (x,x_decl) = var "x" $ pred_type t
         (y,y_decl) = var "y" t
-        t = VARIABLE $ fromString'' "t"
+        t = VARIABLE [smt|t|]
     
     
 pred_not :: Notation
@@ -122,9 +122,9 @@ pred_not = create $ do
    right_assoc .= []
    relations   .= [pequiv,pimplies,pfollows]
    commands    .= 
-        [ make Command "\\ptrue" "ptrue" 0 $ const ptrue
-        , make Command "\\pfalse" "pfalse" 0 $ const pfalse
-        , make Command "\\ew" "ew" 1 $ zew . head ]
+        [ make Command "\\ptrue" "ptrue" 0 ptrue_fun
+        , make Command "\\pfalse" "pfalse" 0 pfalse_fun
+        , make Command "\\ew" "ew" 1 everywhere_fun ]
    chaining    .= 
         [ ((pequiv,pimplies),pimplies)
         , ((pimplies,pequiv),pimplies)

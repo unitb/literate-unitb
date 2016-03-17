@@ -11,6 +11,7 @@ import Data.List
 import Data.List.NonEmpty as NE (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
 import Data.List.Ordered
+import Data.Serialize hiding (get)
 import Data.Typeable
 import qualified Data.String.Lines as L
 
@@ -223,3 +224,4 @@ errorTrace fs stack msg = [MLError msg $ map (_2 %~ locToLI) loc]
 
 instance NFData Error
 instance NFData LineInfo
+instance Serialize LineInfo where

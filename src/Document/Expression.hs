@@ -332,7 +332,7 @@ oper = do
                     ++ show (take 1 xs))            
             return
     where
-        f op@(BinOperator _ tok _) = do
+        f op@(BinOperator _ tok _ _) = do
             read_listP [Operator $ render tok]
             return op
 
@@ -347,7 +347,7 @@ check_types e =
 
 apply_fun_op :: Command -> Expr -> Parser Term
 apply_fun_op (Command _ _ _ fop) x = do
-        e <- check_types $ fop [Right x]
+        e <- check_types $ typ_fun1 fop (Right x)
         return $ Right e
 
 suggestion :: Name -> Table Name String -> [String]
@@ -374,13 +374,13 @@ term = do
                         (\_ -> do
                             e <- expr
                             read_listP [Close Curly]
-                            e <- check_types $ f [Right e]
+                            e <- check_types $ typ_fun1 f (Right e)
                             return $ Right e)
                         (return $ Left c)
                 else do
-                    args <-replicateM n $
+                    args <- replicateM n $
                         brackets Curly expr
-                    e <- check_types $ f $ map Right args
+                    e <- check_types $ check_type f (map Right args)
                     return $ Right e
         , do    quant <- from quants 
                 ns <- brackets Curly
@@ -686,12 +686,12 @@ parse_expr ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
         toks <- read_tokens (scan_expr $ Just n)
             (li^.filename) 
             input (li^.line, li^.column)
-        !e   <- read_tokens 
+        e   <- read_tokens 
             (runParser ctx n vars' expr) 
             (li^.filename) 
             toks 
             (li^.line, li^.column)
-        return e
+        return $ normalize_generics $ flattenConnectors e
 
 parse_oper :: Monad m 
            => Notation

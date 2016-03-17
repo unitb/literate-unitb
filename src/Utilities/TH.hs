@@ -20,7 +20,7 @@ import Data.List.Ordered
 import Data.Map as M
 import Data.Maybe
 import Data.Tuple
-import           Data.Typeable.Lens
+import Data.Typeable.Lens
 
 import Language.Haskell.TH
 

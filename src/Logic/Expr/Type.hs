@@ -17,10 +17,11 @@ import Control.Precondition
 import           Data.Data
 import           Data.Hashable
 import qualified Data.Set as S
+import           Data.Serialize
 
 import           GHC.Generics.Instances
 
-import Language.Haskell.TH.Syntax hiding (Name)
+import Language.Haskell.TH.Syntax hiding (Name,Type)
 
 import           Test.QuickCheck
 
@@ -29,12 +30,14 @@ import           Text.Printf.TH
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
+    type_of :: a -> TypeOf a
 
 referenced_types :: FOType -> S.Set FOType
 referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 
 instance Typed GenericType where
     type TypeOf GenericType = GenericType
+    type_of = id
 
 class (Ord a, Tree a, PrettyPrintable a, Show a
         , Typed a, TypeOf a ~ a, Typeable a
@@ -47,6 +50,7 @@ instance TypeSystem GenericType where
 
 instance Typed FOType where
     type TypeOf FOType = FOType
+    type_of = id
 
 instance TypeSystem FOType where
     make_type = FOT
@@ -57,6 +61,7 @@ instance Hashable Sort where
 
 instance Typed () where
     type TypeOf () = ()
+    type_of = id
 
 instance TypeSystem () where
     make_type _ _ = ()
@@ -255,6 +260,23 @@ z3DefSort n0 n1 ps = DefSort (fromString'' n0) (fromString'' n1) (fromString'' <
 z3GENERIC :: (?loc :: CallStack)
           => String -> GenericType
 z3GENERIC = GENERIC . fromString''
+
+z3_decoration :: TypeSystem t => t -> String
+z3_decoration t = runReader (z3_decoration' t) ProverOutput
+
+z3_decoration' :: TypeSystem t => t -> Reader (OutputMode n) String
+z3_decoration' t = do
+        opt <- ask 
+        case opt of
+            ProverOutput -> f <$> as_tree' t
+            UserOutput -> return ""
+    where
+        f (List ys) = [printf|@Open%s@Close|] xs
+            where xs = concatMap f ys :: String
+        f (Str y)   = [printf|@@%s|] y
+
+instance Serialize Sort where
+instance Serialize Type where
 
 instance Arbitrary GenericType where
     arbitrary = oneof (

@@ -16,10 +16,11 @@ import Control.Lens hiding (Const,elements)
 import Data.Default
 import Data.Foldable
 import Data.Hashable
-import Data.Semigroup
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
 import Data.Map.Class  as M
+import Data.Semigroup
+import Data.Serialize hiding (label)
 import Data.String
 import Data.Typeable
 
@@ -284,3 +285,14 @@ instance NFData expr => NFData (Transient' expr)
 instance NFData expr => NFData (TrHint' expr)
 instance NFData Variant
 instance NFData EventId
+
+instance Serialize ProgId where
+instance Serialize Direction where
+instance Serialize expr => Serialize (TrHint' expr) where
+instance Serialize expr => Serialize (Transient' expr) where
+instance Serialize expr => Serialize (SafetyProp' expr) where
+instance Serialize expr => Serialize (ProgressProp' expr) where
+instance Serialize expr => Serialize (Constraint' expr) where
+instance Serialize expr => Serialize (PropertySet' expr) where
+instance Serialize Variant where
+instance Serialize EventId where

@@ -24,6 +24,7 @@ import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Graph.Bipartite
 import Data.Map.Class as M hiding ((!))
+import Data.Serialize
 
 import GHC.Generics.Instances
 
@@ -64,7 +65,6 @@ instance (Show mch,HasMachine mch expr,HasExpr expr)
                             "inv2" ## ((m0!.events.to (M.map (view old) . leftMap)) === (m1!.events.to (M.map (view new) . rightMap)))
                             "inv3" ## (m0!.inh_props) === (m1!.inh_props) `mappend` (m1!.props)
                             
-
 instance Controls (SystemBase mch) (SystemBase mch) where
 
 instance Eq1 SystemBase where
@@ -87,3 +87,5 @@ instance (HasMachine mch expr,Show mch) => Default (System' mch) where
 empty_system :: (HasExpr expr,HasMachine mch expr,Show mch) 
              => System' mch
 empty_system = check assert def
+
+instance Serialize m => Serialize (SystemBase m) where

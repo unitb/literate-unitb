@@ -85,8 +85,11 @@ well_definedness (FunApp fun xs)
         | view name fun == [smt|apply|] = zall $ 
                                         (($typeCheck) $ x1' `zelem` zdom x0')
                                       : map well_definedness xs
-        | otherwise                = zall $ map well_definedness xs
+        | otherwise                = zall $ wdFun : map well_definedness xs
     where
+        wdFun = case fun^.finite of
+            InfiniteWD -> ztrue
+            FiniteWD -> zall $ map zfinite xs
         withAsms sign x = zall (map sign as) `zimplies` x
         linearRecurse foldTrue foldFalse sign = case bs of
                             [] -> ztrue

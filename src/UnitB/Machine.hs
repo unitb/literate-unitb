@@ -38,6 +38,7 @@ import           Data.List.NonEmpty as NE hiding (inits)
 import           Data.Map.Class as M
 import           Data.Maybe as M
 import qualified Data.Set as S
+import           Data.Serialize hiding (label,put)
 import           Data.String
 import qualified Data.Traversable as T
 import           Data.Typeable
@@ -57,7 +58,7 @@ newtype EventTable expr = EventTable { _table ::
         BiGraph' SkipOrEvent (AbstrEvent' expr) 
                  SkipOrEvent (ConcrEvent' expr) 
                  () }
-    deriving (Eq,Default,NFData)
+    deriving (Eq,Default,NFData,Generic)
 
 type Machine = Machine' Expr
 
@@ -451,6 +452,13 @@ newMachine :: ( HasMachine machine expr
 newMachine arse name f = empty_machine name & content arse.machineBase %~ execState f
 
 instance NFData DocItem where
+instance PrettyPrintable expr => PrettyPrintable (Machine' expr) where
+instance PrettyPrintable expr => PrettyPrintable (MachineBase expr) where
 instance PrettyPrintable DocItem where
     pretty = show
 instance NFData expr => NFData (MachineBase expr) where
+
+instance Serialize DocItem where
+instance Serialize MachineId where
+instance Serialize expr => Serialize (EventTable expr) where
+instance Serialize expr => Serialize (MachineBase expr) where
