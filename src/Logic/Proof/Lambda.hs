@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds, ViewPatterns #-}
 module Logic.Proof.Lambda 
     ( delambdify
     , CanonicalLambda ( .. )
@@ -7,9 +8,8 @@ where
 
     -- Modules
 import Logic.Expr   hiding ( rename, free_vars )
+import Logic.Expr.Prism
 import Logic.Proof.Sequent
-
---import Theories.SetTheory
 
     -- Libraries
 import Control.Lens hiding (Context,Context',rewriteM,Const)
@@ -88,11 +88,11 @@ data Role = Range | Term
 canonical :: Role -> [Var'] -> Expr' -> (CanonicalLambda, [Expr'])
 canonical role vs e = do
         let { state = CR
-            { local_gen = can_local_vars ()
-            , free_gen  = can_free_vars ()
-            , renaming  = fromList $ zip (L.map (view name) vs) (can_bound_vars ())
-            , exprs     = [] 
-            } }
+                { local_gen = can_local_vars ()
+                , free_gen  = can_free_vars ()
+                , renaming  = fromList $ zip (L.map (view name) vs) (can_bound_vars ())
+                , exprs     = [] 
+                } }
         evalState (do
                 e'      <- findFreeVars (S.fromList vs) e
                 us      <- forM vs rename
@@ -202,18 +202,25 @@ delambdify po = -- (Sequent ctx asm hyps goal) =
                 (goal' :: Expr')
             ) empty
 
+make_canonical :: Role -> [Var'] -> Expr' 
+               -> State TermStore ExprP'
+make_canonical Range vs [fun| (elem $var $set) |]
+       |   L.map Word vs == [var]
+        && not (any (`S.member` used_var set) vs) = 
+            return $ Right set
+make_canonical role vars e = do
+        let (can,param) = canonical role vars e
+        fun <- get_lambda_term can
+        return $ check_type fun $ L.map Right param
+
 lambdas :: Expr -> State TermStore Expr'
-lambdas (Binder (UDQuant fun _ _ _) vs r t _) = do
+lambdas (Binder (UDQuant fn _ _ _) vs r t _) = do
     r' <- lambdas r
     t' <- lambdas t
     let vs' = L.map translate vs
-        (can_r, param_r) = canonical Range vs' r'
-        (can_t, param_t) = canonical Term vs' t'
-    fun_r <- get_lambda_term can_r
-    fun_t <- get_lambda_term can_t
-    let select_r = check_type fun_r $ L.map Right param_r
-        select_t = check_type fun_t $ L.map Right param_t
-        select = ($typeCheck) $ check_type (fun & namesOf %~ asInternal) [select_r,select_t]
+    select_r <- make_canonical Range vs' r'
+    select_t <- make_canonical Term vs' t'
+    let select = ($typeCheck) $ check_type (fn & namesOf %~ asInternal) [select_r,select_t]
         -- careful here! we expect this expression to be type checked already 
     return select
 lambdas (Binder Forall vs r t et) = do

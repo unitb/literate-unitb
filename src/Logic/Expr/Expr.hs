@@ -165,6 +165,8 @@ type RawExprP = Either [String] RawExpr
 
 type ExprP = Either [String] Expr 
 
+type ExprP' = Either [String] Expr'
+
 type ExprPG n t q = Either [String] (AbsExpr n t q)
 
 type ExprPC e = Either [String] e
