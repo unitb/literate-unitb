@@ -79,6 +79,7 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
             f'          = substitute_types ft f
             new_args    = map fe args
         Binder q vs r term t -> rewrite (rewrite_types xs) (Binder q vs r term (ft t))
+        Record e -> Record $ e & traverseRecExpr %~ rewrite_types xs
     where
         fe          = rewrite_types xs
         ft          = suffix_generics xs
@@ -265,6 +266,7 @@ strip_generics (Binder q vs r t et) = do
     t  <- strip_generics t
     et' <- type_strip_generics et
     return (Binder q vs r t et')
+strip_generics (Record e) = Record <$> traverseRecExpr strip_generics e
 
 type_strip_generics :: Type -> Maybe FOType
 type_strip_generics (Gen s ts) = do
@@ -388,6 +390,7 @@ instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (Ab
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
     types_of (Binder _ vs r xp t) = S.unions $ types_of t : types_of r : types_of xp : map types_of vs
+    types_of (Record x) = S.unions $ x^.partsOf (traverseRecExpr.to types_of)
 
 instance (IsQuantifier q, Generic Type t', TypeSystem t', IsName n) 
         => Generic (AbsExpr n Type q) (AbsExpr n t' q) where
@@ -423,6 +426,7 @@ ambiguities e@(Binder _ vs r xp t) = x ++ y ++ ambiguities r ++ ambiguities xp
         y 
             | not $ S.null (generics t) = [e]
             | otherwise                 = []
+ambiguities (Record e) = concat $ e^.partsOf (traverseRecExpr.to ambiguities)
 
 common :: GenericType -> GenericType -> Maybe GenericType
 common t1 t2 = do

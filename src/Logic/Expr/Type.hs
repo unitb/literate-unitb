@@ -1,6 +1,5 @@
-{-# LANGUAGE TypeFamilies
-        , LambdaCase
-        , OverloadedStrings  #-}
+{-# LANGUAGE LambdaCase
+        , TypeFamilies #-}
 module Logic.Expr.Type where
 
     -- Modules
@@ -16,6 +15,8 @@ import Control.Precondition
 
 import           Data.Data
 import           Data.Hashable
+import           Data.List
+import qualified Data.Map.Class as M
 import qualified Data.Set as S
 import           Data.Serialize
 
@@ -27,26 +28,73 @@ import           Test.QuickCheck
 
 import           Text.Printf.TH
 
+import           Utilities.Table
+
+data GenericType = 
+        Gen Sort [GenericType] 
+        | GENERIC InternalName
+        | VARIABLE InternalName
+    deriving (Eq,Ord,Typeable,Generic,Data,Show)
+
+data FOType      = FOT Sort [FOType]
+    deriving (Eq, Ord, Typeable, Generic, Show)
+
+data Sort =
+        BoolSort | IntSort | RealSort 
+        | RecordSort (Table Name ())
+        | DefSort 
+            Name            -- Latex name
+            InternalName    -- Type name
+            [Name]          -- Generic Parameter
+            GenericType     -- Type with variables
+        | Sort Name InternalName Int
+        | Datatype 
+            [Name]      -- Parameters
+            Name        -- type name
+            [(Name, [(Name,GenericType)])] 
+                        -- alternatives and named components
+    deriving (Eq, Ord, Show, Typeable, Data, Generic)
+
+type Type = GenericType
+
+makePrisms ''FOType
+makePrisms ''GenericType
+makePrisms ''Sort
+
+referenced_types :: FOType -> S.Set FOType
+referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 
 class TypeOf a ~ TypeOf (TypeOf a) => Typed a where
     type TypeOf a :: *
     type_of :: a -> TypeOf a
-
-referenced_types :: FOType -> S.Set FOType
-referenced_types t@(FOT _ ts) = S.insert t $ S.unions $ map referenced_types ts
 
 instance Typed GenericType where
     type TypeOf GenericType = GenericType
     type_of = id
 
 class (Ord a, Tree a, PrettyPrintable a, Show a
+        , TypeAnnotationPair a a
         , Typed a, TypeOf a ~ a, Typeable a
         , Hashable a ) 
         => TypeSystem a where
     make_type :: Sort -> [a] -> a
+    _FromSort :: Prism' a (Sort,[a])
+
+class TypeAnnotationPair a b where
+    strippedType :: b -> a
+
+instance TypeAnnotationPair () t where
+    strippedType _ = ()
+
+instance TypeAnnotationPair GenericType GenericType where
+    strippedType = id
+
+instance TypeAnnotationPair FOType FOType where
+    strippedType = id
 
 instance TypeSystem GenericType where
     make_type    = Gen
+    _FromSort    = _Gen
 
 instance Typed FOType where
     type TypeOf FOType = FOType
@@ -54,6 +102,7 @@ instance Typed FOType where
 
 instance TypeSystem FOType where
     make_type = FOT
+    _FromSort = _FOT
 
 instance Hashable FOType where
 instance Hashable GenericType where
@@ -65,21 +114,7 @@ instance Typed () where
 
 instance TypeSystem () where
     make_type _ _ = ()
-
-type Type = GenericType
-type GenericType = AbsType InternalName
-type TaggedType  = AbsType TaggedName
-type TaggedName  = (Int,InternalName)
-type Tag = InternalName -> TaggedName
-
-data AbsType n = 
-        Gen Sort [AbsType n] 
-        | GENERIC n
-        | VARIABLE InternalName
-    deriving (Eq,Ord,Typeable,Generic,Data,Show,Functor,Foldable,Traversable)
-
-data FOType      = FOT Sort [FOType]
-    deriving (Eq, Ord, Typeable, Generic, Show)
+    _FromSort = prism' (const ()) (const Nothing)
 
 instance Tree GenericType where
     as_tree' (Gen s ts) = cons_to_tree s ts
@@ -116,22 +151,8 @@ cons_to_tree s ts = do
                 UserOutput -> render $ s^.name
     return $ List (Str n : map as_tree ts)
 
-data Sort =
-        BoolSort | IntSort | RealSort 
-        | DefSort 
-            Name        -- Latex name
-            InternalName    -- Type name
-            [Name]  -- Generic Parameter
-            GenericType -- Type with variables
-        | Sort Name InternalName Int
-        | Datatype 
-            [Name]    -- Parameters
-            Name      -- type name
-            [(Name, [(Name,GenericType)])] 
-                        -- alternatives and named components
-    deriving (Eq, Ord, Show, Typeable, Data, Generic)
-
 typeParams :: Sort -> Int
+typeParams (RecordSort m) = M.size m
 typeParams BoolSort = 0
 typeParams IntSort  = 0
 typeParams RealSort = 0
@@ -146,11 +167,17 @@ instance PrettyPrintable FOType where
 instance PrettyPrintable GenericType where
     pretty (GENERIC n)         = "_" ++ render n 
     pretty (VARIABLE n)        = "'" ++ render n 
+    pretty (Gen (RecordSort m) xs) = [printf|{ %s }|] $ intercalate ", " 
+                $ zipWith (\f t -> [printf|%s :: %s|] (render f) (pretty t)) (M.keys m) xs
     pretty (Gen s []) = render $ s^.name
     pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
+recordName :: Table Name a -> Name
+recordName m = makeZ3Name assert $ "Record@@@" ++ intercalate "@@@" (map z3Render $ M.keys m)
+
 instance HasName Sort Name where
     name = to $ \case 
+        RecordSort m   -> recordName m
         (Sort x _ _) -> x
         (DefSort x _ _ _) -> x
         (Datatype _ x _)  -> x
@@ -171,42 +198,43 @@ instance Named Sort where
     z3_name (Sort _ x _) = x
     z3_name (DefSort _ x _ _) = x
     z3_name (Datatype _ x _)  = asInternal x
-    z3_name BoolSort   = fromString'' "Bool"
-    z3_name IntSort    = fromString'' "Int"
-    z3_name RealSort   = fromString'' "Real"
+    z3_name (RecordSort m) = asInternal $ recordName m
+    z3_name BoolSort   = [smt|Bool|]
+    z3_name IntSort    = [smt|Int|]
+    z3_name RealSort   = [smt|Real|]
 
 instance Lift Sort where
     lift = genericLift
 
 pair_sort :: Sort
 pair_sort = -- Sort "Pair" "Pair" 2
-               Datatype [fromString'' "a",fromString'' "b"] 
-                    (fromString'' "Pair")
-                    [ (fromString'' "pair", 
-                        [ (fromString'' "first",  gA)
-                        , (fromString'' "second", gB) ]) ]
+               Datatype [[smt|a|],[smt|b|]] 
+                    ([smt|Pair|])
+                    [ ([smt|pair|], 
+                        [ ([smt|first|],  gA)
+                        , ([smt|second|], gB) ]) ]
 
 
 pair_type :: TypeSystem t => t -> t -> t
 pair_type x y = make_type pair_sort [x,y]
 
 null_sort :: Sort
-null_sort = Datatype [] (fromString'' "Null") [ (fromString'' "null", []) ] 
+null_sort = Datatype [] ([smt|Null|]) [ ([smt|null|], []) ] 
 
 null_type :: TypeSystem t => t
 null_type = make_type null_sort []
 
 maybe_sort :: Sort
-maybe_sort   = Datatype [fromString'' "a"] (fromString'' "Maybe")
-                    [ (fromString'' "Just", [(fromString'' "fromJust", gA)])
-                    , (fromString'' "Nothing", []) ]
+maybe_sort   = Datatype [[smt|a|]] ([smt|Maybe|])
+                    [ ([smt|Just|], [([smt|fromJust|], gA)])
+                    , ([smt|Nothing|], []) ]
 
 maybe_type :: TypeSystem t => t -> t
 maybe_type t = make_type maybe_sort [t]
 
 fun_sort :: Sort
 fun_sort = make DefSort "\\pfun"
-        "pfun" [fromString'' "a",fromString'' "b"] (array gA (maybe_type gB))
+        "pfun" [[smt|a|],[smt|b|]] (array gA (maybe_type gB))
 
 fun_type :: TypeSystem t => t -> t -> t
 fun_type t0 t1 = make_type fun_sort [t0,t1] --ARRAY t0 t1
@@ -221,10 +249,13 @@ array :: TypeSystem t => t -> t -> t
 array t0 t1 = make_type array_sort [t0,t1]
 
 set_sort :: Sort
-set_sort = make DefSort "\\set" "set" [fromString'' "a"] (array gA bool)
+set_sort = make DefSort "\\set" "set" [[smt|a|]] (array gA bool)
 
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
+
+elementType :: (TypeSystem t,?loc :: CallStack) => t -> t
+elementType t = fromJust' $ t^?_FromSort.swapped.below (only set_sort)._1.filtered ((1 ==) . length).traverse
 
 int :: TypeSystem t => t
 int  = make_type IntSort []
@@ -241,13 +272,13 @@ instance Arbitrary Sort where
         ]
 
 gA :: GenericType
-gA = GENERIC $ fromString'' "a"
+gA = GENERIC $ [smt|a|]
 
 gB :: GenericType
-gB = GENERIC $ fromString'' "b"
+gB = GENERIC $ [smt|b|]
 
 gC :: GenericType
-gC = GENERIC $ fromString'' "c"
+gC = GENERIC $ [smt|c|]
 
 z3Sort :: (?loc :: CallStack) 
        => String -> String -> Int -> Sort
@@ -292,6 +323,8 @@ instance Arbitrary GenericType where
                 , do
                     s  <- oneof sorts
                     ts <- case s of
+                        RecordSort m -> 
+                            replicateM (M.size m) arbitrary
                         Sort _ _ n -> 
                             replicateM n arbitrary
                         DefSort _ _ args _ -> 
@@ -319,8 +352,8 @@ instance Arbitrary GenericType where
                 , make Sort "C" "C" 1
                 , make Sort "D" "D" 2
                 , make DefSort "E" "E" 
-                            [ fromString'' "a"
-                            , fromString'' "b"] $ array gA gB
+                            [ [smt|a|]
+                            , [smt|b|]] $ array gA gB
                 , BoolSort
                 , IntSort
                 , RealSort

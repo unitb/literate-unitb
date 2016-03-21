@@ -33,6 +33,7 @@ is_true e@(FunApp fun xs)
     where
         x0  = xs ! 0
         x1  = xs ! 1
+is_true e@(Record _) = e `zand` delta e
 
 is_false :: Expr -> Expr
 is_false e@(Word _) = znot e
@@ -52,6 +53,7 @@ is_false e@(FunApp fun xs)
     where
         x0  = xs ! 0
         x1  = xs ! 1
+is_false e@(Record _) = znot e `zand` delta e
 
 delta :: Expr -> Expr
 delta = well_definedness
@@ -100,4 +102,4 @@ well_definedness (FunApp fun xs)
         x1  = xs ! 1
         x1' = Right x1
         (as,bs) = partition ((ztrue ==) . well_definedness) xs
-
+well_definedness (Record e) = zall $ e^.partsOf (traverseRecExpr.to well_definedness)

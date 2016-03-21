@@ -33,6 +33,7 @@ import Data.Default
 import Data.Either.Validation
 import Data.Functor.Classes
 import Data.Functor.Compose
+import Data.Hashable
 import Data.DList (DList)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -259,6 +260,12 @@ genericLift = glift . view generic
 instance Lift a => Lift (NonEmpty a) where
     lift = genericLift
 
+instance (Lift k,Lift a,Ord k) => Lift (Map k a) where
+    lift m = [e| M.fromList $(listE $ lift <$> M.toList m) |]
+
+instance (Lift a,Ord a) => Lift (Set a) where
+    lift m = [e| S.fromList $(listE $ lift <$> S.toList m) |]
+
 instance Lift Loc where
     lift = genericLift
 
@@ -280,7 +287,6 @@ instance Eq1 Proxy where
     eq1 = (==)
 instance Eq1 NonEmpty where
     eq1 = (==)
-
 
 instance Ord1 NonEmpty where
     compare1 = compare
@@ -388,7 +394,17 @@ instance Serialize TypeRep where
 instance Serialize a => Serialize (NonEmpty a) where
 instance Serialize a => Serialize (Identity a) where
 
+instance Arbitrary a => Arbitrary (Identity a) where
+    arbitrary = Identity <$> arbitrary
+instance Arbitrary (Proxy a) where
+    arbitrary = return Proxy
+
 instance (Serialize a,Serialize1 f) => Serialize (OnFunctor f a) where
     put = put1 . getFunctor
     get = OnFunctor <$> get1
 
+instance (Hashable k,Hashable a) => Hashable (Map k a) where
+    hashWithSalt salt = hashWithSalt salt . M.toList
+
+instance Hashable a => Hashable (Set a) where
+    hashWithSalt salt = hashWithSalt salt . S.toList

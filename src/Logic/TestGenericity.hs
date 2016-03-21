@@ -119,6 +119,8 @@ instance Arbitrary GType where
                 , do
                     s  <- oneof sorts
                     ts <- case s of
+                        RecordSort m -> 
+                            replicateM (size m) arbitrary
                         Sort _ _ n -> 
                             replicateM n arbitrary
                         DefSort _ _ args _ -> 
@@ -331,6 +333,8 @@ instance Tree Integer where
     as_tree' = return . Str . show
 instance PrettyPrintable Integer where
     pretty = show
+instance TypeAnnotationPair Integer Integer where
+    strippedType = id
 instance TypeSystem Integer where
     make_type s = product . (toInteger (hash s):)
 instance Typed Integer where

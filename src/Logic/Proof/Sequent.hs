@@ -144,6 +144,8 @@ checkScopesAux (Cast e _) = do
     checkScopesAux e
 checkScopesAux (Lift e _) = do
     checkScopesAux e
+checkScopesAux (Record e) = do
+    mapMOf_ traverseRecExpr checkScopesAux e
 
 makeSequent :: Assert
             -> Context
@@ -247,6 +249,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
             f (_, IntSort)  = Nothing
             f (_, BoolSort) = Nothing
             f (_, RealSort) = Nothing
+            f (_, RecordSort _) = Nothing
             f (x, Datatype args n _) = f (x, Sort n (asInternal n) $ length args)
             f (x, DefSort y z xs _)  = f (x, Sort y z $ length xs)
             f (_, Sort _ z 0) = Just $ render z
@@ -299,7 +302,7 @@ differs_by_one xs ys = f $ zip ws $ zip xs ys
             | all (uncurry (==) . snd) xs = Just (i,x,y)
             | otherwise     = Nothing
 
-flatten_assoc :: (IsGenExpr expr,TypeT expr ~ Type) 
+flatten_assoc :: (IsAbsExpr expr,TypeT expr ~ Type) 
               => FunT expr -> [expr] -> [expr]
 flatten_assoc fun xs = concatMap f xs
     where

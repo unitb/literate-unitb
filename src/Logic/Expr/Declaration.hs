@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase,TypeFamilies #-}
+{-# LANGUAGE LambdaCase,TypeFamilies,ScopedTypeVariables #-}
 module Logic.Expr.Declaration where
 
     -- Module
@@ -81,9 +81,15 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
             return $ List [ Str "define-fun", 
                 Str n, (List argt), 
                 rt, def ]
-    as_tree' (SortDecl IntSort)  = return $ Str "; comment: we don't need to declare the sort Int"
-    as_tree' (SortDecl BoolSort) = return $ Str "; comment: we don't need to declare the sort Bool" 
-    as_tree' (SortDecl RealSort) = return $ Str "; comment: we don't need to declare the sort Real"
+    as_tree' (SortDecl IntSort)    = return $ Str "; comment: we don't need to declare the sort Int"
+    as_tree' (SortDecl BoolSort)   = return $ Str "; comment: we don't need to declare the sort Bool" 
+    as_tree' (SortDecl RealSort)   = return $ Str "; comment: we don't need to declare the sort Real"
+    as_tree' (SortDecl (RecordSort m)) = as_tree' (SortDecl (Datatype args rec 
+            [(make,zip (M.keys m) (GENERIC . asInternal <$> args))]) :: AbsDecl t q)
+        where
+            args = [ makeZ3Name assert $ "a" ++ show i | i <- [1..M.size m] ]
+            rec  = recordName m
+            make = makeZ3Name assert $ "make" ++ z3Render rec
     as_tree' (SortDecl s@(Sort _ _ n)) = do
             return $ List [ 
                 Str "declare-sort",

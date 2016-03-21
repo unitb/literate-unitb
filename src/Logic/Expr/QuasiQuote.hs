@@ -180,13 +180,16 @@ ctx :: State ParserSetting a
     -> (ParserSetting -> b) -> b
 ctx = ctxWith []
 
-instance Lift Var where
+instance (Lift n,Lift t) => Lift (AbsVar n t) where
     lift = genericLift
 
-instance Lift Expr where
+instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where
     lift = genericLift
 
-instance Lift Fun where
+instance (Lift t,Lift a,Lift q,Lift n) => Lift (RecordExpr n t a q) where
+    lift = genericLift
+
+instance (Lift n,Lift a) => Lift (AbsFun n a) where
     lift = genericLift
 
 instance Lift HOQuantifier where

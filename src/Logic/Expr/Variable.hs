@@ -8,8 +8,6 @@ import Logic.Expr.Type
 import Logic.Names
 
     -- Library
-import           GHC.Generics (Generic)
-
 import Control.Lens hiding (rewrite,Context
                            ,Const,Context',List
                            ,Traversable1(..))
@@ -18,6 +16,10 @@ import Control.Precondition
 import Data.Data
 import Data.Map.Class as M
 import Data.Serialize
+
+import GHC.Generics.Instances
+
+import Test.QuickCheck
 
 import Utilities.Functor
 import Utilities.Table
@@ -37,6 +39,9 @@ translate' :: (n0 -> n1) -> AbsVar n0 t -> AbsVar n1 t
 translate' = fmap1
 
 instance (Hashable name,Hashable t) => Hashable (AbsVar name t) where
+
+instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsVar n t) where
+    arbitrary = genericArbitrary
 
 instance IsName n => Translatable (AbsVar n t) (AbsVar InternalName t) where
     translate = translate' asInternal

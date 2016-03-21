@@ -7,12 +7,14 @@ module Logic.Names.Internals
     , IsName(..)
     , asInternal, asName
     , makeName
+    , makeZ3Name
     , make, make'
     , isName, isName'
     , assert
     , fromString'
     , fresh
     , reserved
+    , z3Render
     , dropSuffix 
     , addSuffix
     , addBackslash
@@ -266,6 +268,9 @@ isName str = mapLeft (\x -> [err,show x]) $ parse' latexName "" str
 
 isName' :: String -> Maybe Name
 isName' = either (const Nothing) Just . isName
+
+makeZ3Name :: Assert -> String -> Name
+makeZ3Name arse = fromJust'' arse . isZ3Name'
 
 makeName :: Assert -> String -> Name
 makeName arse = fromJust'' arse . isName'

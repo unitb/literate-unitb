@@ -80,14 +80,15 @@ class Tree a where
     as_tree   :: a -> StrList
     as_tree'  :: a -> Reader (OutputMode n) StrList
     as_tree x = runReader (as_tree' x) ProverOutput
-    rewrite'  :: (b -> a -> (b,a)) -> b -> a -> (b,a)
     rewriteM :: (Applicative m, Tree a) => (a -> m a) -> a -> m a
     default rewriteM :: (Applicative m, Data a) => (a -> m a) -> a -> m a
     rewriteM f t = gtraverse (_cast f) t
 
-    rewrite' f x t = (rewriteM' g x t) ()
-        where
-            g x t () = f x t
+{-# INLINE rewrite' #-}
+rewrite'  :: Tree a => (b -> a -> (b,a)) -> b -> a -> (b,a)
+rewrite' f x t = (rewriteM' g x t) ()
+    where
+        g x t () = f x t
 
 {-# INLINE rewriteM' #-}
 rewriteM' :: (Monad m, Tree a) => (b -> a -> m (b,a)) -> b -> a -> m (b,a)

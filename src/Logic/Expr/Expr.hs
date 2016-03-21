@@ -1,8 +1,4 @@
-{-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE LambdaCase             #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE TypeFamilies #-}
 module Logic.Expr.Expr 
     ( module Logic.Expr.Expr
     , module Logic.Expr.Fun
@@ -23,6 +19,7 @@ import Logic.Expr.Variable
 import Logic.Names
 
     -- Library
+import Control.Applicative hiding (Const)
 import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.Identity
@@ -38,6 +35,7 @@ import qualified Data.Map.Class as M
 import           Data.Serialize
 import qualified Data.Set as S
 
+import GHC.Generics hiding (to,from)
 import GHC.Generics.Instances
 
 import Language.Haskell.TH hiding (Type,Name) -- (ExpQ,location,Loc)
@@ -63,11 +61,19 @@ type UntypedExpr = GenExpr Name () GenericType HOQuantifier
 
 data GenExpr n t a q = 
         Word (AbsVar n t) 
+        | Record (RecordExpr n t a q)
         | Const Value t
-        | FunApp (AbsFun n t) [GenExpr n t a q]
+        | FunApp (AbsFun n a) [GenExpr n t a q]
         | Binder q [AbsVar n t] (GenExpr n t a q) (GenExpr n t a q) t
         | Cast (GenExpr n t a q) a
         | Lift (GenExpr n t a q) a
+    deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
+type RecFields n t a q = Table Name (GenExpr n t a q)
+
+data RecordExpr n t a q =
+        RecLit (RecFields n t a q)
+        | RecUpdate (GenExpr n t a q) (RecFields n t a q)
+        | FieldLookup (GenExpr n t a q) Name
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
 
 data Value = RealVal Double | IntVal Int
@@ -77,7 +83,7 @@ instance PrettyPrintable Value where
     pretty (RealVal v) = show v
     pretty (IntVal v)  = show v
 
-instance (Arbitrary t,Arbitrary a,Arbitrary n,Arbitrary q,Tree a,TypeSystem t,IsQuantifier q) 
+instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 
         => Arbitrary (GenExpr n t a q) where
     arbitrary = do
         inductive $ \arb -> 
@@ -100,26 +106,41 @@ instance Hashable Value
 instance (Hashable n,Hashable t,Hashable a,Hashable q) 
         => Hashable (GenExpr n t a q) where
 
+instance (Hashable n,Hashable t,Hashable q,Hashable a) 
+        => Hashable (RecordExpr n t a q) where
+
+{-# INLINE traverseRecExpr #-}
+traverseRecExpr :: Traversal (RecordExpr n t a q) (RecordExpr n' t' a' q')
+                             (GenExpr n t a q) (GenExpr n' t' a' q')
+traverseRecExpr f (RecLit m) = RecLit <$> traverse f m
+traverseRecExpr f (RecUpdate x m) = 
+      liftA2 RecUpdate (f x) (traverse f m)
+traverseRecExpr f (FieldLookup x field) = liftA2 FieldLookup (f x) (pure field)
+
 instance Traversable1 (GenExpr a b) where
     traverse1 _ (Word v) = pure $ Word v
     traverse1 _ (Const v t) = pure $ Const v t
     traverse1 f (Cast e t) = Cast <$> traverse1 f e <*> f t
     traverse1 f (Lift e t) = Lift <$> traverse1 f e <*> f t
-    traverse1 f (FunApp fun e) = FunApp fun <$> (traverse.traverse1) f e
+    traverse1 f (FunApp fun e) = liftA2 FunApp (traverse f fun) ((traverse.traverse1) f e)
     traverse1 f (Binder a b c d e) = Binder a b <$> traverse1 f c 
                                                 <*> traverse1 f d 
                                                 <*> pure e
+    traverse1 f (Record x) = Record <$> traverseRecExpr (traverse1 f) x
+
 instance Traversable2 (GenExpr a) where
     traverse2 f (Word v) = Word <$> traverse f v
     traverse2 f (Const v t) = Const v <$> f t
     traverse2 f (Cast e t) = Cast <$> traverse2 f e <*> pure t
     traverse2 f (Lift e t) = Lift <$> traverse2 f e <*> pure t
-    traverse2 f (FunApp fun e) = FunApp <$> traverse f fun 
-                                        <*> (traverse.traverse2) f e
+    traverse2 f (FunApp fun e) = FunApp fun 
+                                        <$> (traverse.traverse2) f e
     traverse2 f (Binder a b c d e) = Binder a <$> (traverse.traverse) f b
                                               <*> traverse2 f c 
                                               <*> traverse2 f d
                                               <*> f e
+    traverse2 f (Record x) = Record <$> traverseRecExpr (traverse2 f) x
+
 instance Traversable3 GenExpr where
     traverse3 f (Word v) = Word <$> traverse1 f v
     traverse3 _ (Const v t) = pure $ Const v t
@@ -130,8 +151,9 @@ instance Traversable3 GenExpr where
                                               <*> traverse3 f c
                                               <*> traverse3 f d
                                               <*> pure e
+    traverse3 f (Record x) = Record <$> traverseRecExpr (traverse3 f) x
 
-instance IsName n => Translatable 
+instance (IsName n) => Translatable 
         (GenExpr n t a q) 
         (GenExpr InternalName t a q) where
     translate = fmap3 asInternal
@@ -151,6 +173,9 @@ make_unique arse suf vs = freeVarsOf.namesOf %~ newName
 expSize :: GenExpr n t a q -> Int
 expSize (Word _) = 0
 expSize (Const _ _)   = 0
+expSize (Record (RecLit m)) = 1 + sum (M.map expSize m)
+expSize (Record (RecUpdate e m)) = 1 + expSize e + sum (M.map expSize m)
+expSize (Record (FieldLookup e _)) = 1 + expSize e
 expSize (FunApp _ xs) = 1 + sum (map expSize xs)
 expSize (Binder _ _ r t _) = 1 + expSize r + expSize t
 expSize (Cast e _) = 1 + expSize e
@@ -174,6 +199,7 @@ type ExprPC e = Either [String] e
 class ( TypeSystem (TypeT expr)
       , TypeSystem (AnnotT expr)
       , IsName (NameT expr)
+      , TypeAnnotationPair (TypeT expr) (AnnotT expr)
       , IsQuantifier (QuantT expr)
       , Typeable expr
       , VarT expr ~ AbsVar (NameT expr) (TypeT expr)
@@ -196,19 +222,20 @@ class (IsGenExpr (ExprT expr),Typeable expr) => HasGenExpr expr where
     zfalse :: expr
 
 instance ( IsName n
-         , TypeSystem t0
-         , TypeSystem t1
+         , TypeSystem a
+         , TypeSystem t
+         , TypeAnnotationPair t a
          , IsQuantifier q) 
-         => IsGenExpr (GenExpr n t0 t1 q) where
-    type VarT (GenExpr n t0 t1 q)   = AbsVar n t0
-    type FunT (GenExpr n t0 t1 q)   = AbsFun n t0
-    type NameT (GenExpr n t0 t1 q)  = n
-    type TypeT (GenExpr n t0 t1 q)  = t0
-    type AnnotT (GenExpr n t0 t1 q) = t1
-    type QuantT (GenExpr n t0 t1 q) = q
-    type SetTypeT arg (GenExpr n t0 t1 q)  = GenExpr n arg t1 q
-    type SetAnnotT arg (GenExpr n t0 t1 q) = GenExpr n t0 arg q
-    type SetQuantT arg (GenExpr n t0 t1 q) = GenExpr n t0 t1 arg
+         => IsGenExpr (GenExpr n t a q) where
+    type VarT (GenExpr n t a q)   = AbsVar n t
+    type FunT (GenExpr n t a q)   = AbsFun n t
+    type NameT (GenExpr n t a q)  = n
+    type TypeT (GenExpr n t a q)  = t
+    type AnnotT (GenExpr n t a q) = a
+    type QuantT (GenExpr n t a q) = q
+    type SetTypeT arg (GenExpr n t a q)  = GenExpr n arg a q
+    type SetAnnotT arg (GenExpr n t a q) = GenExpr n t arg q
+    type SetQuantT arg (GenExpr n t a q) = GenExpr n t a arg
 
 true_fun :: (IsName n, TypeSystem t) => AbsFun n t
 true_fun = mkConstant "true" bool
@@ -216,15 +243,18 @@ true_fun = mkConstant "true" bool
 false_fun :: (IsName n, TypeSystem t) => AbsFun n t
 false_fun = mkConstant "false" bool
 
-instance ( IsName n,TypeSystem t0,TypeSystem t1
+instance ( IsName n
+         , TypeSystem a
+         , TypeSystem t
+         , TypeAnnotationPair t a
          , IsQuantifier q)
-        => HasGenExpr (GenExpr n t0 t1 q) where
-    type ExprT (GenExpr n t0 t1 q)  = GenExpr n t0 t1 q
+        => HasGenExpr (GenExpr n t a q) where
+    type ExprT (GenExpr n t a q)  = GenExpr n t a q
     asExpr = id
     ztrue  = FunApp true_fun []
     zfalse = FunApp false_fun []
 
-class ( TypeT expr ~ AnnotT expr, IsGenExpr expr )
+class ( IsGenExpr expr, AnnotT expr ~ TypeT expr )
     => IsAbsExpr expr where
 
 instance (IsName n,TypeSystem t,IsQuantifier q) 
@@ -233,16 +263,37 @@ instance (IsName n,TypeSystem t,IsQuantifier q)
 var_type :: AbsVar n t -> t
 var_type (Var _ t) = t
 
-instance (IsName n,TypeSystem t,IsQuantifier q) => Typed (AbsExpr n t q) where
-    type TypeOf (AbsExpr n t q) = t
-    type_of e = aux $ asExpr e
+
+instance ( IsName n,TypeSystem t,TypeSystem a
+         , TypeAnnotationPair t a,IsQuantifier q) 
+        => Typed (GenExpr n t a q) where
+    type TypeOf (GenExpr n t a q) = t
+    type_of e = type_of $ aux $ asExpr e
         where
             aux (Word (Var _ t))         = t
             aux (Const _ t)              = t
-            aux (Cast _ t)               = t
-            aux (Lift _ t)               = t
-            aux (FunApp (Fun _ _ _ _ t _) _) = t
+            aux (Cast _ t)               = strippedType t
+            aux (Lift _ t)               = strippedType t
+            aux (Record r)               = typeOfRecord r
+            aux (FunApp (Fun _ _ _ _ t _) _) = strippedType t
             aux (Binder _ _ _ _ t)   = t
+
+typeOfRecord :: ( TypeSystem t, TypeSystem a
+                , TypeAnnotationPair t a
+                , IsName n,IsQuantifier q,?loc :: CallStack)
+             => RecordExpr n t a q -> t
+typeOfRecord (RecLit m) = recordType m
+typeOfRecord (RecUpdate x m) = recordType $ 
+              M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
+typeOfRecord (FieldLookup x field) = fromJust' (type_of x^?fieldTypes.ix field)
+
+fieldTypes :: TypeSystem t => Prism' t (Table Name t)
+fieldTypes =  _FromSort.swapped.below _RecordSort
+            . iso (\(ts,m) -> m & unsafePartsOf traverse .~ ts) 
+                  (\m -> (M.elems m,() <$ m))
+
+recordType :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Name e -> t
+recordType m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -259,7 +310,7 @@ ztuple (x0:x1:xs)   = pair x0 $ ztuple (x1:xs)  -- FunApp (Fun [tx, txs] "pair" 
 unit :: (TypeSystem t,IsName n) => AbsExpr n t q
 unit = FunApp (mkConstant "null" null_type) []
 
-pair :: (IsName n,TypeSystem t, IsQuantifier q) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
+pair :: (IsName n,TypeSystem t,IsQuantifier q) => AbsExpr n t q -> AbsExpr n t q -> AbsExpr n t q
 pair x y = FunApp (mk_fun [] (fromString'' "pair") [t0,t1] $ pair_type t0 t1) [x,y]
     where
         t0 = type_of x
@@ -279,20 +330,6 @@ freeVarsOf'' f vs e@(Binder _ us _ _ _) =
         rewriteM (freeVarsOf'' f $ M.union vs $ symbol_table us) e
 freeVarsOf'' f vs e = rewriteM (freeVarsOf'' f vs) e
 
---freeVarsOf' :: (Applicative f,IsName n,TypeSystem t) 
---            => (M.Map n (AbsVar n t) -> AbsVar n t -> f (AbsVar n t))
---            -> M.Map n (AbsVar n t)
---            -> AbsExpr n t q
---            -> f (AbsExpr n t q)
---freeVarsOf' f vs (Word v) | (v^.name) `M.member` vs = Word <$> f vs v
---                          | otherwise       = pure (Word v)
---freeVarsOf' f vs e@(Binder _ us _ _ _) = 
---        rewriteExprM pure pure (freeVarsOf' f $ M.union vs $ symbol_table us) e
---freeVarsOf' f vs e = rewriteM (freeVarsOf' f vs) e
-    -- instead of Applicative f => (a -> f b) -> ...
-    -- use Applicative f => (a -> ReaderT FreeVars f b)
-    -- ReaderT FreeVars f is an applicative functor
-
 varsOf :: IsGenExpr expr
        => Traversal' expr (VarT expr)
 varsOf f (Word v) = Word <$> f v
@@ -302,37 +339,6 @@ subexprs :: IsGenExpr expr
          => Traversal' expr expr
 subexprs = rewriteExprM' pure pure pure
 
---traverseLeaves :: ( IsQuantifier q, TypeSystem t
---                  , Data leaf, Data t)
---               => Traversal' (AbsExpr t q) leaf
---traverseLeaves f = fix $ \call -> gtraverse (call `castPlus` f)
-
---castPlus :: (Typeable a,Typeable b,Typeable c,Applicative f)
---      => (a -> f a)
---      -> (b -> f b)
---      -> (c -> f c)
---castPlus f g x = case (eqT' f x,eqT' g x) of
---                    (Just Refl,_) -> f x
---                    (Nothing, Just Refl) -> g x
---                    (Nothing, Nothing) -> pure x
---    where
---        eqT' :: (Typeable a,Typeable b) 
---             => (a -> f a) -> b -> Maybe (a :~: b)
---        eqT' _ _ = eqT
-
---type VerbExpr = WithTypeInfo Type HOQuantifier
-
---newtype WithTypeInfo t q = WithTypeInfo { unVerb :: AbsExpr t q }
---    deriving (Eq)
-
---instance (TypeSystem t, IsQuantifier q) => Show (WithTypeInfo t q) where
---    show = show . unVerb
---    --show (WithTypeInfo e) = pretty_print' $ e & traverseVars %~ renameWithTypes
---    --show (WithTypeInfo e) = show $ e & traverseVars %~ renameWithTypes
---        --where
---        --    renameWithTypes (Var x t) = Var (printf "(%s :: %s)" x (show t)) t
---            --withDec
-
 typesOf :: Traversal (GenExpr n t0 a q) (GenExpr n t1 a q)
                      t0 t1
 typesOf = traverse2
@@ -341,8 +347,8 @@ typesOf' :: Traversal (AbsExpr n t0 q) (AbsExpr n t1 q)
                       t0 t1
 typesOf' f = rewriteExprM f pure (typesOf' f)
 
-instance IsName n => HasNames (GenExpr n t0 t1 q) n where
-    type SetNameT n' (GenExpr n t0 t1 q) = GenExpr n' t0 t1 q
+instance IsName n => HasNames (GenExpr n t a q) n where
+    type SetNameT n' (GenExpr n t a q) = GenExpr n' t a q
     namesOf = traverse3
 
 instance (Data n,IsName n,Data t,Data q,TypeSystem t, IsQuantifier q) => Tree (AbsDef n t q) where
@@ -358,8 +364,6 @@ target (Def _ _ _ _ e) = e
 type FODef = AbsDef InternalName FOType HOQuantifier
 
 type Def = AbsDef Name GenericType HOQuantifier
-
---type Z3Def = AbsDef MixedDef GenericType HOQuantifier
 
 type Def' = AbsDef InternalName GenericType FOQuantifier
 
@@ -400,8 +404,10 @@ z3Def :: (?loc :: CallStack)
       -> Def
 z3Def ts n = Def ts (z3Name n)
 
-instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsVar n t) where
-    arbitrary = genericArbitrary
+lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
+                , TypeAnnotationPair t a,IsQuantifier q) 
+             => GenExpr n t a q -> Table Name (GenExpr n t a q)
+lookupFields e = fromJust' $ type_of e^?fieldTypes.to (imap $ \f _ -> Record $ FieldLookup e f)
 
 instance ( TypeSystem t
          , IsQuantifier q
@@ -411,8 +417,10 @@ instance ( TypeSystem t
         => Arbitrary (AbsDef n t q) where
     arbitrary = genericArbitrary
 
-instance (TypeSystem t, IsQuantifier q, Tree t', IsName n) 
-        => Tree (GenExpr n t t' q) where
+instance (TypeSystem a, TypeSystem t
+         , TypeAnnotationPair t a
+         , IsQuantifier q, IsName n)
+        => Tree (GenExpr n t a q) where
     as_tree' (Cast e t)   = do
         t' <- as_tree' t
         e' <- as_tree' e
@@ -422,6 +430,14 @@ instance (TypeSystem t, IsQuantifier q, Tree t', IsName n)
         e' <- as_tree' e
         return $ List [ List [Str "as", Str "const", t']
                              , e']
+    as_tree' (Record (RecLit m))  = 
+        List <$> liftA2 (:) 
+            (pure $ Str $ render (recordName m)) 
+            (traverse as_tree' $ M.elems m)
+    as_tree' (Record (RecUpdate x m))  = 
+        as_tree' (Record $ RecLit $ m `M.union` lookupFields x)
+    as_tree' (Record (FieldLookup x field)) =
+        List <$> sequenceA [as_tree' x,pure $ Str $ render field]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Const xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
@@ -450,9 +466,10 @@ instance (TypeSystem t, IsQuantifier q, Tree t', IsName n)
                           [ merge_range q
                           , r'
                           , xp' ] ]
-    {-# INLINE rewriteM #-}
+    -- {-# INLINE rewriteM #-}
     rewriteM _ x@(Word _)           = pure x
     rewriteM _ x@(Const _ _)        = pure x
+    rewriteM f (Record e)        = Record <$> (traverseRecExpr.rewriteM) f e
     rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
     rewriteM f (Cast e t)    = Cast <$> f e <*> pure t
     rewriteM f (FunApp g xs) = FunApp g <$> traverse f xs
@@ -486,12 +503,13 @@ rewriteExprM' fT fA fQ fE e =
                        <*> fT t
             Cast e t -> Cast <$> fE e <*> fA t
             Lift e t -> Lift <$> fE e <*> fA t
+            Record e -> Record <$> traverseRecExpr (rewriteExprM' fT fA fQ fE) e
     where
         ffun (Fun ts n lf targs rt wd) = 
-                Fun <$> traverse fT ts 
+                Fun <$> traverse fA ts 
                     <*> pure n <*> pure lf
-                    <*> traverse fT targs 
-                    <*> fT rt
+                    <*> traverse fA targs 
+                    <*> fA rt
                     <*> pure wd
         fvar (Var n t) = Var n <$> fT t
 
@@ -502,7 +520,10 @@ rewriteExprM :: (Applicative m)
              -> AbsExpr n t0 q0 -> m (AbsExpr n t1 q1)
 rewriteExprM fT = rewriteExprM' fT fT
 
-instance (TypeSystem t, IsQuantifier q,IsName n, Tree t') => PrettyPrintable (GenExpr n t t' q) where
+instance ( TypeSystem a,TypeSystem t
+         , TypeAnnotationPair t a
+         , IsQuantifier q,IsName n) 
+        => PrettyPrintable (GenExpr n t a q) where
     pretty e = pretty $ runReader (as_tree' e) UserOutput
 
 instance (TypeSystem t, IsQuantifier q, IsName n) => PrettyPrintable (AbsDef n t q) where
@@ -560,8 +581,10 @@ substitute m e = f e
         f e = rewrite f e
         subst vs = m M.\\ symbol_table vs
 
-used_var :: (TypeSystem t, IsQuantifier q, IsName n, Tree t') 
-         => GenExpr n t t' q -> S.Set (AbsVar n t)
+used_var :: ( TypeSystem a,TypeSystem t
+            , TypeAnnotationPair t a
+            , IsQuantifier q, IsName n) 
+         => GenExpr n t a q -> S.Set (AbsVar n t)
 used_var (Word v) = S.singleton v
 used_var (Binder _ vs r expr _) = (used_var expr `S.union` used_var r) `S.difference` S.fromList vs
 used_var expr = visit (\x y -> S.union x (used_var y)) S.empty expr
@@ -576,7 +599,6 @@ used_fun e = visit f s e
         f x y = S.union x (used_fun y)
         s = case e of
                 FunApp f _ -> S.singleton f
-                -- Const ts n t -> S.singleton $ Fun ts n [] t
                 _          -> S.empty
 
 free_vars' :: HasExpr expr
@@ -633,7 +655,6 @@ funOf (Def ps n args rt _e) = Fun ps n Unlifted (map type_of args) rt InfiniteWD
 class (IsGenExpr e
         , Show e
         , PrettyPrintable e, Eq e
-        --, HasScope e
         , NameT e ~ Name
         , TypeT e ~ Type
         , AnnotT e ~ Type
@@ -643,7 +664,6 @@ class (IsGenExpr e
 class (IsGenExpr e
         , Show e
         , PrettyPrintable e, Eq e
-        --, HasScope e
         , NameT e ~ InternalName
         , TypeT e ~ Type
         , AnnotT e ~ Type
@@ -659,35 +679,27 @@ class (HasGenExpr e,IsRawExpr (ExprT e),HasScope e) => HasRawExpr e where
 
 instance IsRawExpr (AbsExpr InternalName Type HOQuantifier) where
 instance IsExpr (AbsExpr Name Type HOQuantifier) where
---instance HasRawExpr (AbsExpr InternalName Type HOQuantifier) where
 instance HasExpr (AbsExpr Name Type HOQuantifier) where
-    --getExpr = id
 
---class ( IsGenExpr expr
---         , TypeT expr ~ GenericType
---         , AnnotT expr ~ GenericType
---         , QuantT expr ~ HOQuantifier)
---    => IsExpr expr
 
---instance ( IsGenExpr expr
---         , TypeT expr ~ GenericType
---         , AnnotT expr ~ GenericType
---         , QuantT expr ~ HOQuantifier)
---    => IsExpr expr
 
 
 instance (NFData t,NFData q,NFData n) => NFData (AbsDef n t q)
 instance (NFData t,NFData n) => NFData (AbsVar n t)
 instance NFData Value
-instance (NFData t0,NFData t1,NFData q,NFData n) => NFData (GenExpr n t0 t1 q)
+instance (NFData t,NFData q,NFData n,NFData a) => NFData (GenExpr n t a q)
+instance (NFData t,NFData q,NFData n,NFData a) => NFData (RecordExpr n t a q)
 
 instance (Serialize n,Serialize q,Serialize t,Serialize a)
     => Serialize (GenExpr n t a q) where
+instance (Serialize n,Serialize q,Serialize t,Serialize a)
+    => Serialize (RecordExpr n t a q) where
 instance Serialize Value where
 instance (Serialize n,Serialize q,Serialize t) 
     => Serialize (AbsDef n t q) where
 
 makePrisms ''GenExpr
+makePrisms ''RecordExpr
 
 fromEither :: Loc -> Either [String] a -> a
 fromEither _ (Right x)  = x

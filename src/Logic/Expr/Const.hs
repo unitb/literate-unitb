@@ -417,7 +417,7 @@ disjuncts (FunApp f xs)
     -- | name f == "=>"  = map znot (take 1 xs) ++ drop 1 xs
 disjuncts x = [x]
 
-applyAssoc :: (Int -> AbsFun n t) -> [GenExpr n t a q] -> GenExpr n t a q
+applyAssoc :: (Int -> AbsFun n a) -> [GenExpr n t a q] -> GenExpr n t a q
 applyAssoc op xs = FunApp (op (length xs)) xs
 
 flattenConnectors :: (IsName n,TypeSystem2 t,IsQuantifier q) 
