@@ -37,7 +37,7 @@ import Control.Arrow
 import Control.Lens hiding (rewrite,Context,Const)
 import Control.Monad
 import Control.Monad.State
-import Control.Precondition (Assert)
+import Control.Precondition hiding (isRight)
 
 import           Data.Either
 import           Data.List as L hiding ( union )
@@ -52,7 +52,6 @@ import Prelude as L
 
 import Text.Printf.TH
 
-import Utilities.Error
 import Utilities.Table
 
 suffix_generics :: String -> GenericType -> GenericType
@@ -492,7 +491,7 @@ patterns ts = map maybe_pattern pat
         -- ungen t = rewrite ungen t
 
     -- generic to first order
-gen_to_fol :: (IsQuantifier q,IsName n)
+gen_to_fol :: (IsQuantifier q,IsName n,?loc :: CallStack)
            => S.Set FOType 
            -> Label 
            -> AbsExpr n Type q 
@@ -595,11 +594,12 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
             return $ M.map (const [ms']) ms' 
 
 --mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
-mk_error :: (Show a, Show c, Tree a) => c -> (a -> Maybe b) -> a -> b
+mk_error :: (Show a, Show c, Tree a, ?loc :: CallStack) 
+         => c -> (a -> Maybe b) -> a -> b
 mk_error z f x = 
         case f x of
             Just y -> y
-            Nothing -> $myError $ [printf|failed to strip type variables: \n%s\n%s|] (pretty_print' x) (show z)
+            Nothing -> assertFalseMessage $ [printf|failed to strip type variables: \n'%s'\n'%s'|] (pretty_print' x) (show z)
 
 consistent :: (Eq b, Ord k) 
            => Map k b -> Map k b -> Bool

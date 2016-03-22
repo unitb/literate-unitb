@@ -198,8 +198,11 @@ data Command = Decl
         | Comment String
     deriving (Generic)
 
-z3_code :: Sequent -> [Command]
-z3_code po = 
+z3_code :: Sequent -> String
+z3_code = unlines . L.map pretty_print' . z3_commands
+
+z3_commands :: Sequent -> [Command]
+z3_commands po = 
     (      [] 
         ++ [SetOption "auto-config" "false"]
         ++ [SetOption "smt.timeout" $ show tout]
@@ -294,7 +297,7 @@ discharge' :: Maybe Int      -- Timeout in seconds
 discharge' n lbl po
     | (po^.goal) == ztrue = return Valid
     | otherwise = withSemN total_caps (fromIntegral $ po^.resource) $ do
-        let code = z3_code po
+        let code = z3_commands po
         s <- verify lbl code (maybe default_timeout id n)
         case s of
             Right Sat -> return Invalid

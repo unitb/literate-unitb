@@ -89,7 +89,7 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
         where
             args = [ makeZ3Name assert $ "a" ++ show i | i <- [1..M.size m] ]
             rec  = recordName m
-            make = makeZ3Name assert $ "make" ++ z3Render rec
+            make = makeZ3Name assert $ z3Render rec
     as_tree' (SortDecl s@(Sort _ _ n)) = do
             return $ List [ 
                 Str "declare-sort",

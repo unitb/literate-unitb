@@ -8,6 +8,7 @@ import Logic.Expr.PrettyPrint
 import Logic.Names
 
     -- Libraries
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding (List,elements)
 import Control.Monad.Reader
@@ -173,7 +174,7 @@ instance PrettyPrintable GenericType where
     pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
 recordName :: Table Name a -> Name
-recordName m = makeZ3Name assert $ "Record@@@" ++ intercalate "@@@" (map z3Render $ M.keys m)
+recordName m = makeZ3Name assert $ "Record-" ++ intercalate "-" (map z3Render $ M.keys m)
 
 instance HasName Sort Name where
     name = to $ \case 
@@ -254,8 +255,19 @@ set_sort = make DefSort "\\set" "set" [[smt|a|]] (array gA bool)
 set_type :: TypeSystem t => t -> t
 set_type t = make_type set_sort [t]
 
+record_type :: TypeSystem t => Table Name t -> t
+record_type fields = make_type (RecordSort $ () <$ fields) (M.elems fields)
+
+_ElementType :: TypeSystem t => Prism' t t
+_ElementType = _FromSort.swapped.below (only set_sort).first._Cons.below _Empty.first
+    where
+        first = iso fst (,())
+
 elementType :: (TypeSystem t,?loc :: CallStack) => t -> t
-elementType t = fromJust' $ t^?_FromSort.swapped.below (only set_sort)._1.filtered ((1 ==) . length).traverse
+elementType t = fromJust' $ t^?_ElementType
+
+foldSorts :: TypeSystem t => Fold t Sort
+foldSorts = _FromSort.(\f (s,ts) -> liftA2 (,) (f s) ((traverse.foldSorts) f ts))
 
 int :: TypeSystem t => t
 int  = make_type IntSort []

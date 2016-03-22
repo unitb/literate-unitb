@@ -22,6 +22,7 @@ import Data.Map.Class as M
 import Text.Printf.TH
 
 import Utilities.Lens
+import Utilities.MapSyntax
 import Utilities.Table
 
 as_array :: TypeSystem t => t -> Name -> AbsExpr Name t q
@@ -201,6 +202,18 @@ comprehension_fun = mk_fun' [gA,gB] "set" [set_type gA, array gA gB] $ set_type 
 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
+
+zrecord_set :: MapSyntax Name ExprP ()
+            -> ExprP
+zrecord_set m = do
+        let m' = runMap' m :: Table Name ExprP
+            msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
+                      (pretty e) (pretty $ type_of e)
+            getElements :: ExprP -> Either [String] Type
+            getElements e = e >>= \e -> maybe (Left [msg e]) Right $ type_of e^?_ElementType
+        (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m'
+        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m'
+        zcomprehension [r_decl] range r
 
 qunion :: HOQuantifier
 qunion = UDQuant qunion_fun (set_type gA) QTTerm InfiniteWD

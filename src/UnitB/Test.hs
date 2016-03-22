@@ -460,7 +460,7 @@ get_cmd_tr_po em = return (do
         let lbl = composite_label [as_label $ _name m, "TR/TR0/t@param"]
             pos = proof_obligation m
             po  = lookupSequent lbl pos
-            cmd = either id (unlines . map pretty_print' . z3_code) po
+            cmd = either id z3_code po
         return cmd)
     
 get_tr_en_po :: Either [Error] RawMachine -> IO String

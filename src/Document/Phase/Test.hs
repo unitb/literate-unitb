@@ -41,7 +41,6 @@ import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
-import Control.Monad.Writer
 
 import Data.Default
 import Data.Existential
@@ -54,29 +53,14 @@ import Data.Maybe
 import Test.QuickCheck
 
 import Utilities.Lens
+import Utilities.MapSyntax
 import Utilities.Syntactic
 import Utilities.Table
-
-newtype MapSyntax k a b = MapSyntax (Writer [(k,a)] b)
-    deriving (Functor,Applicative,Monad)
-
-(##) :: k -> a -> MapSyntax k a ()
-x ## y = MapSyntax (tell [(x,y)])
-
-runMapWith :: (M.IsKey Table k) 
-           => (a -> a -> a) 
-           -> MapSyntax k a b 
-           -> Table k a
-runMapWith f (MapSyntax cmd) = M.fromListWith f $ execWriter cmd
 
 runMap :: (M.IsKey Table k, Scope a) 
        => MapSyntax k a b 
        -> Table k a
 runMap = runMapWith merge_scopes
-runMap' :: (M.IsKey Table k) 
-        => MapSyntax k a b 
-        -> Table k a
-runMap' = runMapWith const
 
 test_case :: TestCase
 test_case = test

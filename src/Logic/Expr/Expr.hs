@@ -282,8 +282,8 @@ typeOfRecord :: ( TypeSystem t, TypeSystem a
                 , TypeAnnotationPair t a
                 , IsName n,IsQuantifier q,?loc :: CallStack)
              => RecordExpr n t a q -> t
-typeOfRecord (RecLit m) = recordType m
-typeOfRecord (RecUpdate x m) = recordType $ 
+typeOfRecord (RecLit m) = recordTypeOfFields m
+typeOfRecord (RecUpdate x m) = recordTypeOfFields $ 
               M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
 typeOfRecord (FieldLookup x field) = fromJust' (type_of x^?fieldTypes.ix field)
 
@@ -292,8 +292,8 @@ fieldTypes =  _FromSort.swapped.below _RecordSort
             . iso (\(ts,m) -> m & unsafePartsOf traverse .~ ts) 
                   (\m -> (M.elems m,() <$ m))
 
-recordType :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Name e -> t
-recordType m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
+recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Name e -> t
+recordTypeOfFields m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
 
 ztuple_type :: TypeSystem t => [t] -> t
 ztuple_type []          = null_type
@@ -428,7 +428,7 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Lift e t) = do
         t' <- as_tree' t
         e' <- as_tree' e
-        return $ List [ List [Str "as", Str "const", t']
+        return $ List [ List [ Str "as", Str "const", t']
                              , e']
     as_tree' (Record (RecLit m))  = 
         List <$> liftA2 (:) 
@@ -437,7 +437,7 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Record (RecUpdate x m))  = 
         as_tree' (Record $ RecLit $ m `M.union` lookupFields x)
     as_tree' (Record (FieldLookup x field)) =
-        List <$> sequenceA [as_tree' x,pure $ Str $ render field]
+        List <$> sequenceA [pure $ Str $ render field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Const xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
@@ -469,7 +469,7 @@ instance (TypeSystem a, TypeSystem t
     -- {-# INLINE rewriteM #-}
     rewriteM _ x@(Word _)           = pure x
     rewriteM _ x@(Const _ _)        = pure x
-    rewriteM f (Record e)        = Record <$> (traverseRecExpr.rewriteM) f e
+    rewriteM f (Record e)        = Record <$> traverseRecExpr f e
     rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
     rewriteM f (Cast e t)    = Cast <$> f e <*> pure t
     rewriteM f (FunApp g xs) = FunApp g <$> traverse f xs
@@ -503,7 +503,7 @@ rewriteExprM' fT fA fQ fE e =
                        <*> fT t
             Cast e t -> Cast <$> fE e <*> fA t
             Lift e t -> Lift <$> fE e <*> fA t
-            Record e -> Record <$> traverseRecExpr (rewriteExprM' fT fA fQ fE) e
+            Record e -> Record <$> traverseRecExpr fE e
     where
         ffun (Fun ts n lf targs rt wd) = 
                 Fun <$> traverse fA ts 

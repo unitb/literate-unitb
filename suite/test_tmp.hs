@@ -131,7 +131,6 @@ main = timeIt $ void $ do
     ----print =<< Ph.case7
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case
-    return $ run_test_cases Gen.test_case
     return $ print =<< run_test_cases Doc.check_axioms
     return $ print =<< PExp.check_props
     return $ run_test_cases SM.test_case

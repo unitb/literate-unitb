@@ -1019,12 +1019,10 @@ dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
                 hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ show lbl)
-                hPutStrLn h (L.unlines $ L.map f $ z3_code po)
+                hPutStrLn h (z3_code po)
                 hPutStrLn h "(pop)"
                 hPutStrLn h ("; end of " ++ show lbl)
                 ) )
-    where
-        f x = pretty_print' x
 
 verify_all :: Table Label Sequent -> IO (Table Label Bool)
 verify_all pos' = do

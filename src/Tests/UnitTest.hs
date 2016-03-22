@@ -213,7 +213,7 @@ print_po cs pos name actual expected = do
                                                   then  "does {not discharge} automatically"
                                                   else  "{discharges} automatically"
                             forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
-                            hPutStrLn h $ unlines $ map pretty_print' (z3_code $ pos ! label po) ++ ["; " ++ po]
+                            hPutStrLn h $ unlines $ z3_code (pos ! label po) : ["; " ++ po]
                     else return ()
             Nothing  -> return ()
 

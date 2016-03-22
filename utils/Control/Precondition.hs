@@ -65,6 +65,9 @@ assertFalse arse msg = assertMessage "False" msg (arse False) (error "false asse
 assertFalse' :: (?loc :: CallStack) => a
 assertFalse' = provided False (error "false assertion (2)")
 
+assertFalseMessage :: (?loc :: CallStack) => String -> a
+assertFalseMessage msg = providedMessage' ?loc msg False (error "false assertion (2)")
+
 provided :: (?loc :: CallStack) => Bool -> a -> a
 provided = provided' ?loc
 
@@ -81,6 +84,10 @@ assertWithCallStack cs tag = assertMessage tag
 provided' :: CallStack -> Bool -> a -> a
 provided' cs b = assertMessage "Precondition" 
         (fromMaybe "" $ stackTrace [$__FILE__] cs) (assert b)
+
+providedMessage' :: CallStack -> String -> Bool -> a -> a
+providedMessage' cs msg b = assertMessage "Precondition" 
+        (fromMaybe "" (stackTrace [$__FILE__] cs) ++ "\n" ++ msg) (assert b)
 
 providedM :: (?loc :: CallStack) => Bool -> m a -> m a
 providedM b cmd = do

@@ -1,4 +1,4 @@
-#!/usr/bin/env runhaskell -W -Werror
+#!/usr/bin/env cabal exec runhaskell -W -Werror
 {-# LANGUAGE OverloadedStrings,FlexibleContexts #-}
 module Main where
 

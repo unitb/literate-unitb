@@ -124,6 +124,7 @@ library
         Logic.OldOperator
         Logic.Proof
         Logic.Proof.Lambda
+        Logic.Proof.Monad
         Logic.Proof.POGenerator
         Logic.Proof.ProofTree
         Logic.Proof.Sequent
@@ -161,6 +162,7 @@ library
         Utilities.GraphSpec
         Utilities.Language
         Utilities.Lens
+        Utilities.MapSyntax
         Utilities.Reactive.Async
         Utilities.String
         Utilities.Syntactic

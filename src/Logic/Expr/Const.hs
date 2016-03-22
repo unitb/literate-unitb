@@ -5,19 +5,25 @@ module Logic.Expr.Const where
 import Logic.Expr.Classes 
 import Logic.Expr.Expr
 import Logic.Expr.Genericity
+import Logic.Expr.PrettyPrint
 import Logic.Expr.Type
 import Logic.Names
 
     -- Libraries
+import Control.Applicative hiding (Const)
 import Control.Lens hiding (rewrite,Const)
 import Control.Monad 
 import Control.Precondition
 
 import           Data.Foldable as F
 import           Data.List as L
+import           Utilities.MapSyntax
 import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
+import Text.Printf.TH
+
+import Utilities.Lens
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -460,6 +466,31 @@ zelemUnchecked x s = provided (set_type (type_of x) == type_of s) $
 
 zident :: ExprP
 zident = Right $ FunApp ident_fun []
+
+zrecord :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
+zrecord m = fmap (Record . RecLit) . traverseValidation id $ runMap' m
+
+zrec_update :: ExprPG n t q 
+            -> MapSyntax Name (ExprPG n t q) ()
+            -> ExprPG n t q
+zrec_update e m = Record <$> liftA2 RecUpdate e (traverseValidation id $ runMap' m)
+
+zfield :: (IsName n,TypeSystem t,IsQuantifier q) 
+       => ExprPG n t q -> Name -> ExprPG n t q
+zfield e field = do
+    e' <- e
+    let msg1 = [printf|Field lookup requires a record type:\n  in expression %s\n  of type: %s|] 
+                    (pretty e')
+                    (pretty $ type_of e')
+    fs <- maybe (Left [msg1]) Right 
+        $ type_of e'^?fieldTypes
+    let msg2 = [printf|Type of expression does not have field '%s':\n  in expression %s\n  with fields: %s|]
+                    (pretty field)
+                    (pretty e')
+                    (pretty $ M.keys fs)
+    maybe (Left [msg2]) Right
+        $ M.lookup field fs 
+    return $ Record $ FieldLookup e' field
 
 instance Num ExprP where
     (-) = mzminus

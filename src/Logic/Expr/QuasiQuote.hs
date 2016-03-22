@@ -108,7 +108,7 @@ parseSafetyProp = parseParts makeSafety "UNLESS" "safety property" parseExpr par
         makeSafety e0 e1 = Unless [] e0 e1
 
 parseProgressProp :: Loc -> ParserSetting -> String -> ProgressProp
-parseProgressProp = parseParts makeProgress "UNLESS" "safety property" parseExpr parseExpr
+parseProgressProp = parseParts makeProgress "LEADS-TO" "progress property" parseExpr parseExpr
     where
         makeProgress e0 e1 = LeadsTo [] e0 e1
 

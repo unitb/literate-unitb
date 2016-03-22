@@ -112,6 +112,9 @@ instance HasExprs (GenSequent n t q e) e where
                 <*> traverse f hyp1 
                 <*> f g
 
+instance HasSorts (GenSequent n t q e) (Table Name Sort) where
+    sorts = context.sorts
+
 instance HasConstants (GenSequent n t q e) (Table n (AbsVar n t)) where
     constants = context.constants
 

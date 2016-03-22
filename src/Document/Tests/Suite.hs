@@ -126,7 +126,7 @@ all_proof_obligations' path = do
         xs <- bimapEitherT show id
             $ EitherT $ fst <$> list_file_obligations' path
         let pos = M.ascElems $ M.map snd xs
-            cmd = L.map (M.map $ unlines . L.map pretty_print' . z3_code) pos
+            cmd = L.map (M.map z3_code) pos
         return cmd
     else left $ [printf|file does not exist: %s|] path
 
@@ -148,7 +148,7 @@ raw_proof_obligation path lbl i = makeReport $ do
         po <- hoistEither $ withLI $ lookupSequent 
                 (label lbl) 
                 (UB.raw_proof_obligation m)
-        let cmd = unlines $ L.map pretty_print' $ z3_code po
+        let cmd = z3_code po
         return $ [printf|; %s\n%s; %s\n|] lbl cmd lbl
     else return $ [printf|file does not exist: %s|] path
 
@@ -199,11 +199,10 @@ proof_obligation_with :: (Expr -> Expr)
 proof_obligation_with f path lbl i = either id disp <$> sequent path lbl i
     where
         disp po = [printf|; %s\n%s; %s\n|] lbl (cmd po) lbl
-        cmd po = unlines $ L.map pretty_print' 
-                                  $ z3_code 
-                                  $ po & nameless %~ L.map f
-                                       & named %~ M.map f
-                                       & goal %~ f
+        cmd po = z3_code 
+                  $ po & nameless %~ L.map f
+                       & named %~ M.map f
+                       & goal %~ f
 
 find_errors :: FilePath -> IO String 
 find_errors path = do
