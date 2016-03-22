@@ -1,4 +1,4 @@
-#!/usr/bin/env runghc  
+#!/usr/bin/env cabal exec runhaskell
 
 import Control.Monad
 --import Control.Monad.Fix

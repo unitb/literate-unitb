@@ -1,3 +1,4 @@
+#!/usr/bin/env cabal exec runhaskell
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE RankNTypes         #-}

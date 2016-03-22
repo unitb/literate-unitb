@@ -1,3 +1,4 @@
+#!/usr/bin/env cabal exec runhaskell
 module Main where
 
 import Control.Monad

@@ -1,4 +1,4 @@
-#!/usr/bin/env runhaskell
+#!/usr/bin/env cabal exec runhaskell
 import Tools.Source
 
 import System.Environment

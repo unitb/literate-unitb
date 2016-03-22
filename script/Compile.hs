@@ -1,4 +1,4 @@
-#!/usr/bin/env runhaskell
+#!/usr/bin/env cabal exec runhaskell
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
