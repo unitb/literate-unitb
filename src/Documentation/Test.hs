@@ -17,7 +17,7 @@ import Control.Precondition
 import Data.Map as M
 import Data.Map.Syntax
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.FileSystem
 import Utilities.Syntactic

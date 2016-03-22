@@ -25,7 +25,7 @@ import Control.Monad.State
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Class   as M hiding ( map )
 
-import Tests.UnitTest
+import Test.UnitTest
 
 
 import Utilities.Lens hiding (combine)

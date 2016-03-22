@@ -27,7 +27,7 @@ import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
 import Test.QuickCheck.Report ()
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.MapSyntax
 

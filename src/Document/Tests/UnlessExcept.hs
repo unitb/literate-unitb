@@ -3,7 +3,7 @@ module Document.Tests.UnlessExcept where
     -- Modules
 import Document.Tests.Suite
 
-import Tests.UnitTest
+import Test.UnitTest
 
 test_case :: TestCase
 test_case = test

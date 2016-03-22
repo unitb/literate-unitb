@@ -16,9 +16,6 @@ import GHC.Generics hiding (from,to)
 import GHC.Generics.Lens
 
 import Language.Haskell.TH
-import Language.Haskell.TH.Syntax
-
-import PseudoMacros
 
 import System.IO
 
@@ -40,7 +37,6 @@ makeRecordConstrAs :: String -> Name -> DecsQ
 makeRecordConstrAs makeName' n = do
     let makeName = mkName makeName'
     (args,cons,fields) <- fieldList =<< reify n
-    addDependentFile $__FILE__
     xs <- newName "_xs"
     r  <- newName "r"
     x  <- newName "x"

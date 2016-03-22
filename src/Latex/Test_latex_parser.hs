@@ -17,7 +17,7 @@ import qualified Data.List as L
 import qualified Data.Map as M 
 import qualified Data.Maybe as MM
 
-import Tests.UnitTest
+import Test.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 import Test.QuickCheck.RandomTree hiding (size,subtrees)
 import Test.QuickCheck.Regression

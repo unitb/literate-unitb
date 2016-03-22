@@ -38,7 +38,7 @@ import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 -- import Interactive.Serialize
 
-import Tests.UnitTest
+import Test.UnitTest
 
 -- import Language.Haskell.TH
 -- import Language.Haskell.TH.Syntax

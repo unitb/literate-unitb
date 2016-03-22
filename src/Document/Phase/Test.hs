@@ -27,7 +27,7 @@ import Logic.Theory
 import Theories.Arithmetic
 import Theories.SetTheory
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import UnitB.Expr 
 import UnitB.Syntax as AST hiding (Machine)

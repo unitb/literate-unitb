@@ -15,7 +15,7 @@ import UnitB.Expr
 import Data.Map.Class hiding ( map )
 import qualified Data.Map.Class as M
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.Syntactic
 import Utilities.Table

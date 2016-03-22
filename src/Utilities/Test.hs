@@ -32,7 +32,7 @@ import           Data.String.Brackets
 import qualified Data.Tuple.Generics as Tup
 import           Data.Typeable
 
-import Tests.UnitTest
+import Test.UnitTest
 import Test.QuickCheck
 
 import Text.Printf.TH
@@ -60,8 +60,8 @@ test = test_cases "Graphs and operator grammars" $
     , Case "case 7 - union of a list of {unsorted} list" (show <$> case7) (show result7)  
     , Case "case 8 - edit distance, random testing" case8 True
     , Case "case 9 - edit distance, regression test from random testing" case9 0
-    ] ++ GSpec.test_cases ++
-    [ Case "case 11 - Relations, quickcheck" Rel.run_spec True
+    , Case "QuickCheck of graphs" GSpec.run_spec True
+    , Case "case 11 - Relations, quickcheck" Rel.run_spec True
     , Case "case 12 - New graphs, quickcheck" Graph.run_tests True  
     , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
     , Case "test 14 - quickcheck brackets" runSpec True

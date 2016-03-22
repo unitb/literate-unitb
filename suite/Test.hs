@@ -20,7 +20,7 @@ import Shelly hiding (time,get)
 
 import System.Directory
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.TimeIt
 

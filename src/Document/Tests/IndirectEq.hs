@@ -16,7 +16,7 @@ import Data.Map as M hiding (split, map)
 
 import Control.Monad.Trans.Either
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Text.Printf.TH
 

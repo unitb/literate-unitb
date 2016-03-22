@@ -4,7 +4,7 @@ module Document.Tests.Phase where
 import Document.Tests.Suite
 
     -- Libraries
-import Tests.UnitTest
+import Test.UnitTest
 
 
 test_case :: TestCase

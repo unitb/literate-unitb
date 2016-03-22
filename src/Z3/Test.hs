@@ -21,7 +21,7 @@ import Data.Default
 import qualified Data.Maybe as M
 import qualified Data.Set as S
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.Functor
 import qualified Data.Map.Class as M

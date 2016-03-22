@@ -6,7 +6,7 @@ import Document.Tests.Suite as S
 
 import Logic.Expr.QuasiQuote
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Theories.FunctionTheory
 

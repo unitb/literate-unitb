@@ -80,6 +80,28 @@ library
         Test.QuickCheck.RandomTree
         Test.QuickCheck.Regression
         Text.Printf.TH  
+        Utilities.EditDistance
+        Utilities.Error
+        Utilities.FileFormat
+        Utilities.FileSystem
+        Utilities.Functor
+        Utilities.Graph
+        Utilities.GraphSpec
+        Utilities.Language
+        Utilities.Lens
+        Utilities.MapSyntax
+        Utilities.Reactive.Async
+        Utilities.String
+        Utilities.Syntactic
+        Utilities.Table
+        Utilities.Table.BucketTable
+        Utilities.Table.HashKey
+        Utilities.Table.HashMap
+        Utilities.TableConstr
+        Utilities.TH
+        Utilities.TimeIt
+        Utilities.Trace
+        Utilities.Tuple
 
   -- Modules included in this library but not exported.
   -- other-modules:       

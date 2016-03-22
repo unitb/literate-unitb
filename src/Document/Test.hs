@@ -32,7 +32,7 @@ import Latex.Parser
 import Latex.OldMonad
 
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import UnitB.UnitB
 

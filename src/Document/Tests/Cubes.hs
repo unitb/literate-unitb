@@ -5,7 +5,7 @@ where
 
 import Document.Tests.Suite
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Logic.Proof
 

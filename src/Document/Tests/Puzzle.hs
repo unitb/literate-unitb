@@ -17,7 +17,7 @@ import Data.List as L
 import Data.Map.Class
 import Data.Set  as S (Set,fromList)
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.Table
 

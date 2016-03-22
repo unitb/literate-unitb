@@ -12,7 +12,7 @@ import Control.Lens
 import Data.List as L
 import Data.Map  as M
 
-import Tests.UnitTest
+import Test.UnitTest
 
 test_case :: TestCase
 test_case = test_cases 

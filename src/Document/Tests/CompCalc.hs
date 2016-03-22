@@ -11,7 +11,7 @@ import Logic.Proof
 import Data.Map as M hiding (split, map)
 
 
-import Tests.UnitTest
+import Test.UnitTest
 
 test_case :: TestCase
 test_case = test

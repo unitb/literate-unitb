@@ -2,7 +2,6 @@ module Utilities.GraphSpec where
 
     -- Module
 import qualified Utilities.Graph as G hiding (map)
-import Tests.UnitTest
 
     -- Libraries
 import Test.QuickCheck
@@ -34,9 +33,3 @@ axm_def m' = forAll arbitrary $ \(x,z) ->
 return []
 run_spec :: IO Bool
 run_spec = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
-
-test_cases :: [TestCase]
-test_cases = [ Case "QuickCheck of graphs" run_spec True ]
-
-main :: IO ()
-main = run_spec >> return ()

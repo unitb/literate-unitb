@@ -35,7 +35,6 @@ import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax hiding (Name)
 
-import PseudoMacros
 
 import Text.Printf.TH
 
@@ -129,7 +128,6 @@ parseTypeDecl str = do
         --    $ isName $ strip str
         --let texName = str'^.asInternal
         --    s = Sort str' texName 0
-        addDependentFile $__FILE__
         let str' = strip str
         [e| do
                 let t   = set_type $ make_type s []

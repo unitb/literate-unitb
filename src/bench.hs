@@ -22,7 +22,7 @@ import System.Directory
 import System.Environment
 import System.IO
 
-import Tests.UnitTest
+import Test.UnitTest
 import Text.Printf
 
 import Logic.Names

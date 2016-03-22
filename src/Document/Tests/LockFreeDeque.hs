@@ -19,7 +19,7 @@ import Data.List as L
 import Data.Map.Class as M
 import Data.Set  as S
 
-import Tests.UnitTest
+import Test.UnitTest
 
 import Utilities.Table
 

@@ -134,7 +134,6 @@ library
         Logic.Theory.Monad
         Logic.WellDefinedness
         Reactive
-        Tests.UnitTest
         Theories.Arithmetic
         Theories.FunctionTheory
         Theories.IntervalTheory
@@ -153,28 +152,6 @@ library
         UnitB.Syntax
         UnitB.System
         UnitB.UnitB
-        Utilities.EditDistance
-        Utilities.Error
-        Utilities.FileFormat
-        Utilities.FileSystem
-        Utilities.Functor
-        Utilities.Graph
-        Utilities.GraphSpec
-        Utilities.Language
-        Utilities.Lens
-        Utilities.MapSyntax
-        Utilities.Reactive.Async
-        Utilities.String
-        Utilities.Syntactic
-        Utilities.Table
-        Utilities.Table.BucketTable
-        Utilities.Table.HashKey
-        Utilities.Table.HashMap
-        Utilities.TableConstr
-        Utilities.TH
-        Utilities.TimeIt
-        Utilities.Trace
-        Utilities.Tuple
         Z3.Version
         Z3.Z3
           -- TEST CASES
@@ -203,6 +180,7 @@ library
         UnitB.Test
         Utilities.Test
         Z3.Test
+        Test.UnitTest
           -- SCRIPTS
         Build
 
@@ -493,7 +471,7 @@ executable test_tmp
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -511,7 +489,7 @@ executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
