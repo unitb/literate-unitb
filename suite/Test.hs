@@ -19,6 +19,7 @@ import Utilities.Table
 import Shelly hiding (time,get)
 
 import System.Directory
+import System.Exit
 
 import Test.UnitTest
 
@@ -59,3 +60,6 @@ main = timeIt $ do
         putStrLn "\n***************"
         putStrLn   "*** FAILURE ***"
         putStrLn   "***************"
+    if b then exitSuccess
+         else exitFailure
+
