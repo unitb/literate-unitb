@@ -58,7 +58,7 @@ newtype Partition = Partition [([EventId],Expr)]
 
 newtype MultiProgram = MultiProgram [Program]
 
-type ProgramMaker = RWS RawMachine [Program] [Name]
+type ProgramMaker = RWS RawMachineAST [Program] [Name]
 
 seqP :: [Program] -> Program
 seqP [x] = x
@@ -83,7 +83,7 @@ natVariant var evt cmd = do
     put (tail xs)
     variant (IntegerVariant (Var (head xs) int) var (zint 0) Down) evt cmd 
 
-runProgramMaker :: RawMachine -> ProgramMaker () -> Program
+runProgramMaker :: RawMachineAST -> ProgramMaker () -> Program
 runProgramMaker m cmd = seqP w
     where
         (_,w) = execRWS cmd m [ makeName assert $ "var" ++ show i | i <- [0..] ]
@@ -91,7 +91,7 @@ runProgramMaker m cmd = seqP w
 wait :: Expr -> ProgramMaker ()
 wait e = tell [Wait [] e]
 
-make_multiprogram :: RawMachine -> Partition -> MultiProgram 
+make_multiprogram :: RawMachineAST -> Partition -> MultiProgram 
 make_multiprogram m (Partition xs) = MultiProgram $ L.map prog xs
     where
         scheds ls = concatMap (M.elems . view (new.coarse_sched) . (nonSkipUpwards m !)) ls
@@ -136,10 +136,10 @@ atomically cmd = atomically' return $ \f -> cmd >>= f
     --         return e_name
     --     Sequential -> cmd
 
-evaluate :: RawMachine -> Expr -> M String
+evaluate :: RawMachineAST -> Expr -> M String
 evaluate m e = head <$> evaluate_all m [e]
 
-evaluate_all :: RawMachine -> [Expr] -> M [String]
+evaluate_all :: RawMachineAST -> [Expr] -> M [String]
 evaluate_all m es = do
     conc <- asks snd
     case conc of
@@ -177,7 +177,7 @@ certainly (Sequence xs)     = concatMap certainly xs
 certainly (Conditional _ lb rb) = L.foldl isect (nubSort $ certainly rb) $ L.map nubSort (L.map (certainly . snd) lb)
 certainly (Loop _ _ _ _)    = []
 
-safety :: RawMachine -> [EventId] -> [Expr] -> Program -> Either [String] (Table Label Sequent)
+safety :: RawMachineAST -> [EventId] -> [Expr] -> Program -> Either [String] (Table Label Sequent)
 safety m others post cfg 
         | L.null es = Right r
         | otherwise = Left es
@@ -205,7 +205,7 @@ establish_pre prefix ps cfg =
 type POGen = PG.POGenT (RWS DistrContext [String] ())
 
 data DistrContext = DCtx
-        { machine   :: RawMachine
+        { machine   :: RawMachineAST
         , otherEvts :: [EventId]
         , localEvts :: [EventId]
         }
@@ -307,7 +307,7 @@ hoare_triple lbl pre evt_lbl post = do
         -- forM_ (zip [0..] post) $ \(i,p) -> 
         --     PG.emit_goal [label $ show i] p
 
-default_cfg :: RawMachine -> Program
+default_cfg :: RawMachineAST -> Program
 default_cfg m = Loop g [] body Infinite
     where
         all_guard e = zall $ e^.new.coarse_sched
@@ -391,7 +391,7 @@ addPrefix :: (?loc :: CallStack)
           => String -> Name -> Name
 addPrefix pre n = fromString'' $ pre ++ render n 
 
-eval_expr :: Evaluator m => RawMachine -> Expr -> m String
+eval_expr :: Evaluator m => RawMachineAST -> Expr -> m String
 eval_expr m e =
         case e of
             Word (Var n _)
@@ -419,7 +419,7 @@ eval_expr m e =
                     return $ (binops_code ! view name f) c0 c1
             _ -> left $ [printf|unrecognized expression: %s|] (pretty e)
 
-struct :: RawMachine -> M ()
+struct :: RawMachineAST -> M ()
 struct m = do
         sv <- asks (shared_vars . snd)
         let attr :: (Table Name Var -> Table Name () -> Table Name Var)
@@ -442,7 +442,7 @@ struct m = do
         code <- lift $ l_attr
         emit $ "data State = State\n    { " ++ code ++ " }"
 
-assign_code :: RawMachine -> RawAction -> ConcurrentEval (Bool,String)
+assign_code :: RawMachineAST -> RawAction -> ConcurrentEval (Bool,String)
 assign_code m (Assign v e) = do
         c0 <- eval_expr m e
         b <- is_shared $ v^.name
@@ -454,7 +454,7 @@ assign_code m (Assign v e) = do
 assign_code _ act@(BcmSuchThat _ _) = left $ [printf|Action is non deterministic: %s|] (pretty act)
 assign_code _ act@(BcmIn _ _) = left $ [printf|Action is non deterministic: %s|] (pretty act)
 
-init_value_code :: Evaluator m => RawMachine -> Expr -> m [(Bool,(Name,String))]
+init_value_code :: Evaluator m => RawMachineAST -> Expr -> m [(Bool,(Name,String))]
 init_value_code m e =
         case e of
             FunApp f [Word (Var n _),e0]
@@ -477,7 +477,7 @@ runEval cmd = do
         emit $ [printf|v_%s <- readTVar s_%s|] (render r) (render r)
     return e
 
-event_body_code :: RawMachine -> RawEvent -> M String
+event_body_code :: RawMachineAST -> RawEvent -> M String
 event_body_code m e = do
         acts <- runEval $ mapM (assign_code m) $ M.ascElems $ e^.actions
         -- evaluate_all 
@@ -505,7 +505,7 @@ event_body_code m e = do
 report :: String -> M a
 report = lift . Left
 
--- event_code :: Machine -> UB.Event -> M ()
+-- event_code :: MachineAST -> UB.Event -> M ()
 -- event_code m e = do
 --         unless (M.null $ params e) $ report "non null number of parameters"
 --         unless (M.null $ indices e) $ report "non null number of indices"
@@ -515,14 +515,14 @@ report = lift . Left
 --         indent 2 $ event_body_code m e
 --         emit $ "else return ()"
 
-conc_init_code :: RawMachine -> M ()
+conc_init_code :: RawMachineAST -> M ()
 conc_init_code m = do
         acts' <- runEval $ liftM concat 
             $ mapM (init_value_code m) $ M.ascElems $ m!.inits
         let acts = L.map snd $ L.filter fst acts' 
         emitAll $ L.map (\(v,e) -> [printf|s_%s <- newTVarIO %s|] (pretty v) e) acts
 
-init_code :: RawMachine -> M ()
+init_code :: RawMachineAST -> M ()
 init_code m = do
         acts' <- runEval $ liftM concat 
             $ mapM (init_value_code m) $ M.ascElems $ m!.inits
@@ -541,7 +541,7 @@ if_concurrent cmd = do
           Concurrent _ -> cmd
 
 
-write_seq_code :: RawMachine -> Program -> M ()
+write_seq_code :: RawMachineAST -> Program -> M ()
 write_seq_code m (Event _pre wait cond lbl)          
     | wait == ztrue = do
         emit "s@(State { .. }) <- get"
@@ -593,7 +593,7 @@ write_seq_code m (Loop exit _inv b _) = do
 --                 mapM (event_code m) $ M.elems $ events m
 --                 emit "proc'"
 
-machine_code :: String -> RawMachine -> Expr -> M ()
+machine_code :: String -> RawMachineAST -> Expr -> M ()
 machine_code name m _exit = do
         x <- asks snd
         let args = concatMap ((" c_" ++).render) $ M.keys $ m!.theory.consts
@@ -619,10 +619,10 @@ run' c cmd = liftM (unlines . snd) $ execRWST cmd (0,c) ()
 run :: M () -> Either String String
 run = run' Sequential
 
-source_file :: String -> RawMachine -> Expr -> Either String String
+source_file :: String -> RawMachineAST -> Expr -> Either String String
 source_file = source_file' []
 
-source_file' :: [Name] -> String -> RawMachine -> Expr -> Either String String
+source_file' :: [Name] -> String -> RawMachineAST -> Expr -> Either String String
 source_file' shared name m exit = 
         run' c $ do
             emitAll $

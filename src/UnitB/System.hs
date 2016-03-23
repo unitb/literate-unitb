@@ -32,7 +32,7 @@ import Text.Printf
 
 import Utilities.Table
 
-type System  = System' Machine
+type SystemAST = System' MachineAST
 type System' = Compose Checked SystemBase
 
 data SystemBase mch = Sys 

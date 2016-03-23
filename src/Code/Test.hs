@@ -9,7 +9,6 @@ import Logic.Expr.Const (var)
 
 import UnitB.Expr
 import UnitB.UnitB hiding (safety)
-import qualified UnitB.Syntax as AST
 
 import Z3.Z3
 
@@ -57,7 +56,7 @@ result0 = unlines
         , "    , v_f :: M.Map (Int) (Int)" 
         , "    , v_n :: Int }" ]
 
-input :: Either String AST.RawMachine
+input :: Either String RawMachineAST
 input = unsafePerformIO $ fmap (view' syntax.raw) <$> parse path0
 
 path0 :: String

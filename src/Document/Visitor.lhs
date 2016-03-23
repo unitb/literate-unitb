@@ -483,7 +483,7 @@ data VCmdBlock m =
                forall t. (IsTuple t, AllReadable (TypeList t))
             => VCmdBlock (t -> VisitorT m ())
 
-type MSEither = RWS LineInfo [Error] System
+type MSEither = RWS LineInfo [Error] SystemAST
 
 fromEither :: Monad m => a -> EitherT [b] (RWST c [b] d m) a -> RWST c [b] d m a
 fromEither y m = do

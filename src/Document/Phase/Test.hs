@@ -30,7 +30,7 @@ import Theories.SetTheory
 import Test.UnitTest
 
 import UnitB.Expr 
-import UnitB.Syntax as AST hiding (Machine)
+import UnitB.Syntax as AST 
 import UnitB.UnitB
 
     --

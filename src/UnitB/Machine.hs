@@ -60,11 +60,11 @@ newtype EventTable expr = EventTable { _table ::
                  () }
     deriving (Eq,Default,NFData,Generic)
 
-type Machine = Machine' Expr
+type MachineAST = MachineAST' Expr
 
-type RawMachine = Machine' RawExpr
+type RawMachineAST = MachineAST' RawExpr
 
-type Machine' = Compose Checked MachineBase
+type MachineAST' = Compose Checked MachineBase
 
 data MachineBase expr = 
     Mch 
@@ -148,15 +148,15 @@ class (Controls mch (Internal mch expr)
     type Internal mch expr :: *
     empty_machine :: Name -> mch
 
-instance HasExpr expr => HasMachine (Machine' expr) expr where
-    type Internal (Machine' expr) expr = MachineBase expr
+instance HasExpr expr => HasMachine (MachineAST' expr) expr where
+    type Internal (MachineAST' expr) expr = MachineBase expr
     empty_machine = empty_machine'
 
 instance HasExpr expr => HasMachine (MachineBase expr) expr where
     type Internal (MachineBase expr) expr = MachineBase expr
     empty_machine = view content' . empty_machine'
 
-instance (HasExpr expr) => HasName (Machine' expr) Name where
+instance (HasExpr expr) => HasName (MachineAST' expr) Name where
     name = content assert.name
 
 instance (HasExpr expr) => HasInvariant (MachineBase expr) where
@@ -252,14 +252,14 @@ conc_events :: HasMachine machine expr
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
-upward_event :: Assert -> Machine' expr -> SkipOrEvent -> EventMerging expr
+upward_event :: Assert -> MachineAST' expr -> SkipOrEvent -> EventMerging expr
 upward_event arse m lbl = readGraph (m!.events) $ do
         v  <- rightVertex arse lbl
         es <- predecessors v
         EvtM <$> T.forM es (\e -> (,) <$> leftKey (source e) <*> leftInfo (source e))
              <*> ((,) <$> rightKey v <*> rightInfo v)
 
-downward_event :: Assert -> Machine' expr -> SkipOrEvent -> EventSplitting expr
+downward_event :: Assert -> MachineAST' expr -> SkipOrEvent -> EventSplitting expr
 downward_event arse m lbl = readGraph (m!.events) $ do
         v  <- leftVertex arse lbl
         es <- successors v
@@ -390,7 +390,7 @@ newEvents :: HasExpr expr
           -> EventTable expr
 newEvents xs = eventTable $ mapM_ (uncurry event . over _2 put) xs
 
-variableSet :: Machine -> S.Set Var
+variableSet :: MachineAST -> S.Set Var
 variableSet m = S.fromList $ M.elems $ m!.variables
 
 events :: HasMachineBase mch expr
@@ -412,8 +412,8 @@ all_notation m = flip precede logical_notation
     where
         th = (m!.theory) : ascElems (_extends $ m!.theory)
 
-instance (HasExpr expr) => Named (Machine' expr) where
-    type NameOf (Machine' expr) = Name
+instance (HasExpr expr) => Named (MachineAST' expr) where
+    type NameOf (MachineAST' expr) = Name
     decorated_name' = adaptName . view name
 
 _name :: (HasMachine machine expr)
@@ -421,7 +421,7 @@ _name :: (HasMachine machine expr)
 _name = MId . view' machineBaseName
 
 ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
-             => Machine' expr 
+             => MachineAST' expr 
              -> event -> Table Label RawExpr
 ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
@@ -433,7 +433,7 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: 
         eqPrime v = Word (prime v) `zeq` Word v
         noWitness = ((m!.del_vars) `M.intersection` (m!.abs_vars)) `M.difference` (evt^.witness)
 
-empty_machine' :: (HasScope expr, HasExpr expr) => Name -> Machine' expr
+empty_machine' :: (HasScope expr, HasExpr expr) => Name -> MachineAST' expr
 empty_machine' n = check assert $ flip execState (makeMachineBase n (empty_theory n)) $ do
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
@@ -452,7 +452,7 @@ newMachine :: ( HasMachine machine expr
 newMachine arse name f = empty_machine name & content arse.machineBase %~ execState f
 
 instance NFData DocItem where
-instance PrettyPrintable expr => PrettyPrintable (Machine' expr) where
+instance PrettyPrintable expr => PrettyPrintable (MachineAST' expr) where
 instance PrettyPrintable expr => PrettyPrintable (MachineBase expr) where
 instance PrettyPrintable DocItem where
     pretty = show

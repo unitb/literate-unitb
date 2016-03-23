@@ -16,8 +16,6 @@ import Theories.SetTheory
 import Theories.FunctionTheory
 import Theories.Arithmetic
 
-import UnitB.Syntax as AST
-
     -- Libraries
 import Control.Lens hiding (elements,universe,indices)
 import Control.Monad.State
@@ -136,7 +134,7 @@ block :: ExprP
 trainName :: Name
 trainName = fromString'' "train0"
 
-machine0 :: AST.Machine
+machine0 :: MachineAST
 machine0 = newMachine assert trainName $ do
       theory .= (empty_theory trainName)
             {  _extends = symbol_table 
@@ -290,7 +288,7 @@ data AxiomOption = WithPFun
 path0 :: String
 path0 = "Tests/train-station.tex"
 
-case0 :: IO (Either [Error] [AST.Machine])
+case0 :: IO (Either [Error] [MachineAST])
 case0 = (traverse.traverse %~ view' syntax) <$> parse path0
 
 result1 :: String

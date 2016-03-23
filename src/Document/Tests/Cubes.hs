@@ -10,7 +10,6 @@ import Test.UnitTest
 import Logic.Proof
 
 import UnitB.Expr
-import qualified UnitB.Syntax as AST
 
     -- Libraries
 import Control.Lens -- ((.=))
@@ -57,7 +56,7 @@ var_b' = Var [smt|b@prime|] int
 var_c' = Var [smt|c@prime|] int
 var_n' = Var [smt|n@prime|] int
 
-machine6 :: AST.RawMachine
+machine6 :: RawMachineAST
 machine6 = newMachine assert [tex|m0|] $ do
         variables .= fromList (map as_pair [var_a,var_b,var_c,var_n])
         inits .= fromList
@@ -112,7 +111,7 @@ event6_evt = empty_event {
 path6 :: FilePath
 path6    = "Tests/integers.tex"
 
-case6 :: IO (Either [Error] [AST.RawMachine])
+case6 :: IO (Either [Error] [RawMachineAST])
 case6    = (traverse.traverse %~ fmap getExpr.view' syntax) <$> parse path6
 
 result7 :: String

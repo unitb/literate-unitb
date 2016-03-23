@@ -5,7 +5,7 @@ import Logic.Expr
 import Logic.Proof
 
 import UnitB.PO
-import UnitB.Syntax as AST hiding (System)
+import UnitB.Syntax as AST 
 import UnitB.UnitB 
 
     -- Libraries
@@ -93,8 +93,6 @@ encodedFileStructPrism = prism
 decodeLazy' :: Serialize a 
             => Lazy.ByteString -> Validation () a
 decodeLazy' = eitherToValidation . mapLeft (const ()) . decodeLazy
-
-type SeqTable = Table Key (Seq,Maybe Bool)
 
 {-# INLINABLE seqFileFormat #-}
 seqFileFormat :: FileFormat SeqTable
@@ -185,7 +183,6 @@ compress_map m = do
         
 type Seq    = Sequent
 type SeqI   = GenSequent Name Type HOQuantifier Int
-type Key    = (Label,Label)
 -- type IntMap = [(Key,(SeqI,Bool))]
 type IntMap = AbsIntMap [Key] SeqI
 type IntMapBin = AbsIntMap Lazy.ByteString Lazy.ByteString

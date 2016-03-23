@@ -8,9 +8,7 @@ where
     -- Modules
 import UnitB.Expr
 import UnitB.PO 
-import UnitB.Syntax hiding (RawMachine,Machine,Machine',System,System')
-import qualified UnitB.Machine as AST
-import qualified UnitB.System as AST
+import UnitB.Syntax 
 
 import Logic.Expr.Scope
 import Logic.Proof
@@ -55,23 +53,26 @@ type Machine' = Compose Checked MachinePO'
 type RawMachine = Machine' RawExpr
 type Machine = Machine' Expr
 
-type SystemSyntax' expr = AST.SystemBase (MachineWithProofs' expr)
+type SystemSyntax' expr = SystemBase (MachineWithProofs' expr)
 type SystemSyntax  = SystemSyntax' RawExpr
-type SystemSemantics' expr = AST.System' (Machine' expr)
+type SystemSemantics' expr = System' (Machine' expr)
 type SystemSemantics  = SystemSemantics' RawExpr
-type System  = AST.System' Machine
-type CompressedSystem  = Compressed (Compose AST.SystemBase MachineWithProofs') RawExpr
-type RawSystem = AST.System' (Machine' RawExpr)
+type System  = System' Machine
+type CompressedSystem  = Compressed (Compose SystemBase MachineWithProofs') RawExpr
+type RawSystem = System' (Machine' RawExpr)
 
 type MachineWithProofs = MachineWithProofs' RawExpr
 
 data MachineWithProofs' expr = MachineWithProofs 
-                (AST.MachineBase expr) 
+                (MachineBase expr) 
                 (Table Label (ProofBase expr))
     deriving (Functor,Foldable,Traversable,Generic)
 
+type Key    = (Label,Label)
+type SeqTable = Table Key (Sequent,Maybe Bool)
+
 data MachinePO' expr = MachinePO
-    { _syntax :: AST.Machine' expr 
+    { _syntax :: MachineAST' expr 
     , _proofs     :: Table Label Proof    
     , _raw_proof_obligation_field :: Box (Table Label Sequent)
     , _proof_obligation_field :: MemBox (Table Label Sequent) }
@@ -107,7 +108,8 @@ instance Show a => Show (MemBox a) where
 
 makeLenses ''MachinePO'
 
-
+po_table :: SystemSemantics' expr -> SeqTable
+po_table sys = fmap (,Nothing) . uncurryMap $ proof_obligation <$> (mapKeys as_label $ sys!.machines)
 
 _machineSyntax :: Prism' MachineWithProofs RawMachine
 _machineSyntax = prism'
@@ -120,7 +122,7 @@ _Syntax = below _machineSyntax.from (content assert)
 compressingSystem :: Prism' CompressedSystem SystemSemantics
 compressingSystem = packaged._Wrapped._Syntax
 
-makeMachinePO' :: AST.Machine' expr -> MachinePO' expr
+makeMachinePO' :: MachineAST' expr -> MachinePO' expr
 makeMachinePO' x = MachinePO x def def def
 
 raw_proof_obligation :: Controls machine (MachinePO' expr)
@@ -133,7 +135,7 @@ proof_obligation = view (content'.proof_obligation_field.to unbox)
 
 instance Controls (MachinePO' expr) (MachinePO' expr) where
 
---instance IsExpr expr => IsChecked (Machine' expr) (AST.Machine' expr) where
+--instance IsExpr expr => IsChecked (MachineAST' expr) (MachineAST' expr) where
 --    check arse m = fromRight'' arse $ withPO _ _
 --    content arse = _
     --func = 
@@ -175,12 +177,12 @@ instance NFData (Box a) where
 
 
 
-fromSyntax :: HasExpr expr => AST.Machine' expr -> Machine' expr
+fromSyntax :: HasExpr expr => MachineAST' expr -> Machine' expr
 fromSyntax m = check assert $ makeMachinePO' m
 
 withProofs :: IsExpr expr
            => Table Label (ProofBase expr)
-           -> AST.Machine' expr
+           -> MachineAST' expr
            -> Either [Error] (Machine' expr)
 withProofs p m = fmap (check' assert) $ do
             let poBox = box $ \() -> raw_machine_pos' m
@@ -190,13 +192,13 @@ withProofs p m = fmap (check' assert) $ do
 
 withProofs' :: IsExpr expr
             => Assert -> Table Label Proof 
-            -> AST.Machine' expr
+            -> MachineAST' expr
             -> Machine' expr
 withProofs' arse p m = check arse $ makeMachinePO' m & proofs .~ p
 
 withPOs :: HasExpr expr 
         => Table Label (Tactic Proof,LineInfo)
-        -> AST.Machine' expr 
+        -> MachineAST' expr 
         -> Either [Error] (Machine' expr)
 withPOs ps m = fmap (check' assert) $ do
             let poBox = box $ \() -> raw_machine_pos' m

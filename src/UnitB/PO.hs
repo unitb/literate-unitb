@@ -26,8 +26,7 @@ import Logic.WellDefinedness
 
 import UnitB.Expr hiding (Const)
 import UnitB.Proof
-import UnitB.Syntax as AST hiding (Machine,Machine',System)
-import qualified UnitB.Syntax as AST -- hiding (Machine,Machine')
+import UnitB.Syntax as AST 
 
 import Z3.Z3
 
@@ -101,11 +100,11 @@ fis_lbl           = label "FIS"
 sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
-assert_ctx :: RawMachine -> Context
+assert_ctx :: RawMachineAST -> Context
 assert_ctx m =
           (Context M.empty (view' variables m `M.union` view' del_vars m) M.empty M.empty M.empty)
 
-step_ctx :: RawMachine -> Context
+step_ctx :: RawMachineAST -> Context
 step_ctx m = merge_all_ctx 
         [  Context M.empty (primeAll $ vars `M.union` abs) M.empty M.empty M.empty
         ,  assert_ctx m ]
@@ -113,7 +112,7 @@ step_ctx m = merge_all_ctx
         abs  = m!.abs_vars
         vars = m!.variables
 
-abstract_step_ctx :: RawMachine -> Context
+abstract_step_ctx :: RawMachineAST -> Context
 abstract_step_ctx m = merge_all_ctx 
         [  Context M.empty (primeAll $ view' variables m) M.empty M.empty M.empty
         ,  assert_ctx m ]
@@ -131,7 +130,7 @@ primed_vars = POG.variables . primeAll
 skipOrLabel :: SkipOrEvent -> Label
 skipOrLabel lbl = fromRight "SKIP" $ as_label <$> lbl
 
-invariants :: RawMachine -> Table Label RawExpr
+invariants :: RawMachineAST -> Table Label RawExpr
 invariants m = 
                   (_inv p0) 
         `M.union` (_inv_thm p0) 
@@ -141,7 +140,7 @@ invariants m =
         p0 = m!.props
         p1 = m!.inh_props
 
-invariants_only :: RawMachine -> Table Label RawExpr
+invariants_only :: RawMachineAST -> Table Label RawExpr
 invariants_only m = 
                   (_inv p0) 
         `M.union` (_inv p1)
@@ -149,7 +148,7 @@ invariants_only m =
         p0 = m!.props
         p1 = m!.inh_props
 
-raw_machine_pos' :: HasExpr expr => AST.Machine' expr -> (Table Label Sequent)
+raw_machine_pos' :: HasExpr expr => MachineAST' expr -> (Table Label Sequent)
 raw_machine_pos' m' = eval_generator $ 
                 with (do
                         prefix_label $ as_label $ _name m
@@ -208,7 +207,7 @@ raw_machine_pos' m' = eval_generator $
 proof_obligation' :: IsExpr expr 
                   => Table Label Sequent
                   -> Table Label (ProofBase expr)
-                  -> AST.Machine' expr 
+                  -> MachineAST' expr 
                   -> Either [Error] (Table Label Sequent)
 proof_obligation' pos proofs m = do
         forM_ (M.toList proofs) (\(lbl,p) -> do
@@ -227,21 +226,21 @@ proof_obligation' pos proofs m = do
         ys <- theory_po (m!.theory)
         return $ M.fromList (concat xs) `M.union` ys
 
-additional_transient :: RawMachine -> [(Label, RawTransient)]
+additional_transient :: RawMachineAST -> [(Label, RawTransient)]
 additional_transient m = do
     M.foldMapWithKey 
         (allAutomaticTransients . ("LIVE" </>) . as_label) 
         --(m!.props.progress) 
         (m!.derivation)
 
-additional_safety :: RawMachine -> [(Label, RawSafetyProp)]
+additional_safety :: RawMachineAST -> [(Label, RawSafetyProp)]
 additional_safety m = do
     F.fold $ M.intersectionWithKey 
         (const . allAutomaticSafety . ("LIVE" </>) . as_label) 
         (m!.props.progress) 
         (m!.derivation)
 
-ref_po :: RawMachine -> ProgId -> ProofTree -> M ()
+ref_po :: RawMachineAST -> ProgId -> ProofTree -> M ()
 ref_po m lbl r = 
         with (do
                 prefix_label $ as_label lbl
@@ -279,7 +278,7 @@ theory_po th = do
                             (M.ascElems . theory_facts) 
                             (ascElems $ _extends th) ++) 
 
-init_sim_po :: RawMachine -> M ()
+init_sim_po :: RawMachineAST -> M ()
 init_sim_po m = 
     with 
         (do prefix_label "INIT"
@@ -290,7 +289,7 @@ init_sim_po m =
         (forM_ (M.toList $ m!.del_inits) $ \(lbl,p) -> do
             emit_goal assert [lbl] p)
 
-init_wit_wd_po :: RawMachine -> M ()
+init_wit_wd_po :: RawMachineAST -> M ()
 init_wit_wd_po m =
     with 
         (do _context (assert_ctx m)
@@ -298,7 +297,7 @@ init_wit_wd_po m =
         (emit_goal assert ["INIT/WWD"] 
             (well_definedness $ zall $ getExpr.snd <$> m!.init_witness))
 
-init_witness_fis_po :: RawMachine -> M ()
+init_witness_fis_po :: RawMachineAST -> M ()
 init_witness_fis_po m =
     with 
         (do _context (assert_ctx m)
@@ -307,7 +306,7 @@ init_witness_fis_po m =
             (M.ascElems $ (view' abs_vars m)  `M.difference` (view' variables m))
             (M.ascElems $ snd <$> m!.init_witness))
 
-init_fis_po :: RawMachine -> M ()
+init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
     with 
         (do _context (assert_ctx m) )
@@ -328,7 +327,7 @@ assume_old_guard evt = do
         e :| [] -> named_hyps $ e^._2.old.guards
         _ :| (_:_) -> return ()
 
-prop_tr :: RawMachine -> (Label, RawTransient) -> M ()
+prop_tr :: RawMachineAST -> (Label, RawTransient) -> M ()
 prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
             with (do
                     prefix_label $ composite_label [pname,tr_lbl]
@@ -430,7 +429,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = assert (null inds) $ do
 mk_suff :: String -> String
 mk_suff = LU.replace ":" "-" 
 
-prop_co :: RawMachine -> (Label, Constraint' RawExpr) -> M ()
+prop_co :: RawMachineAST -> (Label, Constraint' RawExpr) -> M ()
 prop_co m (pname, Co fv xp) = 
     with
         (do _context $ step_ctx m
@@ -450,11 +449,11 @@ prop_co m (pname, Co fv xp) =
         evts = M.toList (conc_events m)
         forall_fv xp = if L.null fv then xp else zforall fv ztrue xp
 
-prop_saf :: RawMachine
+prop_saf :: RawMachineAST
          -> (Label, SafetyProp' RawExpr) -> M ()
 prop_saf m = prop_saf' m Nothing
 
-prop_saf' :: RawMachine -> Maybe EventId 
+prop_saf' :: RawMachineAST -> Maybe EventId 
           -> (Label, SafetyProp' RawExpr) -> M ()
 prop_saf' m excp (pname, Unless fv p q) = 
     with
@@ -492,7 +491,7 @@ prop_saf' m excp (pname, Unless fv p q) =
         vars = m!.variables
         suff = add_suffix assert "param"
 
-inv_po :: RawMachine -> (Label, RawExpr) -> M ()
+inv_po :: RawMachineAST -> (Label, RawExpr) -> M ()
 inv_po m (pname, xp) = 
     do  with (do _context $ step_ctx m
                  named_hyps $ invariants m)
@@ -513,7 +512,7 @@ inv_po m (pname, xp) =
                  named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
             $ emit_goal assert [inv_init_lbl, pname] xp
 
-wit_wd_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+wit_wd_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_wd_po m (lbl, evt) = 
         with (do _context $ step_ctx m
                  POG.variables $ evt^.new.indices
@@ -525,7 +524,7 @@ wit_wd_po m (lbl, evt) =
             (emit_goal assert ["WWD"] $ well_definedness $ zall 
                 $ M.ascElems $ snd <$> evt^.witness)
 
-wit_fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+wit_fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
         with (do _context $ step_ctx m
                  POG.variables $ m!.del_vars
@@ -540,7 +539,7 @@ wit_fis_po m (lbl, evt) =
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
-ind_wit_wd_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_wd_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_wd_po m (lbl, evts) = 
         with (do _context $ step_ctx m
                  named_hyps $ invariants m
@@ -552,7 +551,7 @@ ind_wit_wd_po m (lbl, evts) =
                     emit_goal assert ["IWWD",evt^.concrete._1.to as_label] $ well_definedness $ zall 
                         $ M.ascElems $ snd <$> evt^.ind_witness
 
-ind_wit_fis_po :: RawMachine -> (EventId, RawEventSplitting) -> M ()
+ind_wit_fis_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_fis_po m (lbl, evts) = 
         with (do _context $ step_ctx m
                  --POG.variables $ evt^.old.indices
@@ -595,7 +594,7 @@ csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_lab
                 where
                     new_sch = ascElems $ (cevt^.coarse_sched) `M.intersection` new
 
-replace_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
+replace_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 replace_csched_po m (lbl,evt') = do 
     let old_c = evt'^.old.coarse_sched
         old_f = evt'^.old.fine_sched
@@ -647,7 +646,7 @@ replace_csched_po m (lbl,evt') = do
                         emit_goal assert ["prog",plbl,"rhs",lbl] $ $typeCheck$
                             Right q0 .=> Right sch
 
-weaken_csched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
+weaken_csched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 weaken_csched_po m (lbl,evt) = do
             let weaken_sch = do
                         e <- evt^.evt_pairs
@@ -675,7 +674,7 @@ weaken_csched_po m (lbl,evt) = do
                     ms -> 
                         emit_goal assert [] $ zsome $ NE.map zall ms
 
-replace_fsched_po :: RawMachine -> (EventId,RawEventSplitting) -> M ()
+replace_fsched_po :: RawMachineAST -> (EventId,RawEventSplitting) -> M ()
 replace_fsched_po m (lbl,aevt) = do
         let evts   = aevt^.evt_pairs.to NE.toList
             evts'  = L.zip (NE.toList $ aevt^.multiConcrete.to (NE.map fst)) evts
@@ -738,7 +737,7 @@ intersections []  = assertFalse' "intersection of empty list is undefined"
 intersections [x] = x
 intersections (x:xs) = x `intersection` intersections xs                                
 
-strengthen_guard_po :: RawMachine -> (EventId,RawEventMerging) -> M ()
+strengthen_guard_po :: RawMachineAST -> (EventId,RawEventMerging) -> M ()
 strengthen_guard_po m (lbl,evt) = 
         with (do
             prefix_label $ as_label lbl
@@ -755,7 +754,7 @@ strengthen_guard_po m (lbl,evt) =
                 emit_goal assert [lbl] grd
           es -> emit_goal assert [] $ zsome $ NE.map (zall . M.ascElems . view (deleted.guards)) es
 
-sim_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+sim_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 sim_po m (lbl, evt) = 
         with (do
                 _context $ step_ctx m
@@ -769,7 +768,7 @@ sim_po m (lbl, evt) =
             forM_ (M.toList $ evt^.deleted_actions) $ \(albl,act) ->
                 emit_goal assert [albl] $ ba_pred act
 
-fis_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 fis_po m (lbl, evt) = 
         with (do _context $ assert_ctx m
                  -- TODO: Only check feasibility of
@@ -788,7 +787,7 @@ fis_po m (lbl, evt) =
     where
         pvar = L.map prime $ M.ascElems $ view' variables m `M.union` view' abs_vars m
 
-tr_wd_po :: RawMachine -> (Label, RawTransient) -> M ()
+tr_wd_po :: RawMachineAST -> (Label, RawTransient) -> M ()
 tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) = 
         with (do prefix_label lbl
                  prefix_label "TR"
@@ -806,7 +805,7 @@ tr_wd_po  m (lbl, Tr vs p _ (TrHint wit _)) =
                     emit_goal assert ["WD","witness",as_label n] $ 
                         well_definedness e
 
-prog_wd_po :: RawMachine -> (ProgId, ProgressProp' RawExpr) -> M ()
+prog_wd_po :: RawMachineAST -> (ProgId, ProgressProp' RawExpr) -> M ()
 prog_wd_po m (lbl, LeadsTo vs p q) = 
         with (do prefix_label $ as_label lbl
                  prefix_label "PROG"
@@ -817,7 +816,7 @@ prog_wd_po m (lbl, LeadsTo vs p q) =
                 emit_goal assert ["WD","rhs"]
                     $ well_definedness $ zforall vs ztrue q
 
-saf_wd_po :: RawMachine -> (Label, SafetyProp' RawExpr) -> M ()
+saf_wd_po :: RawMachineAST -> (Label, SafetyProp' RawExpr) -> M ()
 saf_wd_po m (lbl, Unless vs p q) = 
         with (do prefix_label lbl
                  prefix_label "SAF"
@@ -828,7 +827,7 @@ saf_wd_po m (lbl, Unless vs p q) =
                 emit_goal assert ["WD","rhs"]
                     $ well_definedness $ zforall vs ztrue q
 
-co_wd_po :: RawMachine -> (Label, Constraint' RawExpr) -> M ()
+co_wd_po :: RawMachineAST -> (Label, Constraint' RawExpr) -> M ()
 co_wd_po m (lbl, Co vs p) = 
         with (do prefix_label lbl
                  prefix_label "CO"
@@ -839,7 +838,7 @@ co_wd_po m (lbl, Co vs p) =
              $ emit_goal assert ["WD"]
                 $ well_definedness $ zforall vs ztrue p
 
-inv_wd_po :: RawMachine -> M ()
+inv_wd_po :: RawMachineAST -> M ()
 inv_wd_po m = 
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inh_props.inv
@@ -849,7 +848,7 @@ inv_wd_po m =
                 let wd = well_definedness $ zall $ m!.props.inv
                 emit_goal assert ["INV", "WD"] wd
 
-init_wd_po :: RawMachine -> M ()
+init_wd_po :: RawMachineAST -> M ()
 init_wd_po m = 
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inh_props.inv
@@ -876,7 +875,7 @@ incremental_wd_po lbl old new = do
             $ well_definedness 
             $ zall new
 
-evt_wd_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+evt_wd_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 evt_wd_po m (lbl, evts) = 
         with (do prefix_label $ as_label lbl
                  prefix_label "WD"
@@ -910,7 +909,7 @@ evt_wd_po m (lbl, evts) =
                         emit_goal assert [tag] 
                             $ well_definedness $ ba_pred bap
 
-evt_eql_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+evt_eql_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 evt_eql_po  m (_lbl, evts) = 
     with (do _context $ step_ctx m
              named_hyps $ invariants m ) $
@@ -926,7 +925,7 @@ evt_eql_po  m (_lbl, evts) =
                 emit_goal assert [as_label $ v^.name] 
                     $ Word (prime v) `zeq` Word v )
 
-sch_po :: RawMachine -> (EventId, RawEventMerging) -> M ()
+sch_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 sch_po m (lbl, evts) = 
     forM_ (evts^.evt_pairs.to NE.toList) $ \evt ->
         with (do prefix_label $ as_label lbl
@@ -959,7 +958,7 @@ sch_po m (lbl, evts) =
         ind   = (evts^.new.indices) `merge` (evts^.new.params)
         hyp   = invariants m `M.union` f_sch `M.union` c_sch
 
-thm_wd_po :: RawMachine -> M ()
+thm_wd_po :: RawMachineAST -> M ()
 thm_wd_po m = 
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inh_props.inv
@@ -970,7 +969,7 @@ thm_wd_po m =
                 emit_goal assert ["THM", "WD"] wd 
 
 
-thm_po :: RawMachine -> (Label, RawExpr) -> M ()
+thm_po :: RawMachineAST -> (Label, RawExpr) -> M ()
 thm_po m (lbl, xp) = 
     with (do
             prefix_label thm_lbl
@@ -995,7 +994,7 @@ allAutomaticSafety lbl (view cell -> Cell (Inference prop r ps _ _)) =
     where
         lbl' = lbl </> rule_name r
 
-refinement_po :: RawMachine -> ProofTree -> POGen ()
+refinement_po :: RawMachineAST -> ProofTree -> POGen ()
 refinement_po m (view cell -> Cell (Inference prog n hp ht hs)) = do
         with (prefix_label $ rule_name n) $ do
             liveness_po prog n (view goal <$> hp) ht (fst <$> hs)
