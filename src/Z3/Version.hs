@@ -9,8 +9,6 @@ import Data.List as L
 import Data.List.Utils as L
 import Data.ConfigFile
 
-import Interactive.Config
-
 import System.Directory
 import System.Environment
 import System.FilePath
@@ -18,6 +16,8 @@ import System.Process
 import System.IO.Unsafe
 
 import Text.Printf
+
+import Utilities.Config
 
 check_z3_bin :: IO Bool
 check_z3_bin = do

@@ -80,6 +80,8 @@ library
         Test.QuickCheck.RandomTree
         Test.QuickCheck.Regression
         Text.Printf.TH  
+        Utilities.Config
+        Utilities.Directory
         Utilities.EditDistance
         Utilities.Error
         Utilities.FileFormat

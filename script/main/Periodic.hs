@@ -16,7 +16,6 @@ import Data.Time
 import System.Directory
 import System.Environment
 import System.IO
-import System.Locale
 import System.Process
 
 long_interval :: Time

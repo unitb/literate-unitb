@@ -10,7 +10,7 @@ import Document.Document
 
 import Documentation.SummaryGen
 
-import Interactive.Config hiding ( wait )
+import Utilities.Config hiding ( wait )
 import Interactive.Observable
 import Interactive.Serialize 
 

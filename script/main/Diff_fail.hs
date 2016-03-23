@@ -4,12 +4,12 @@ module Main where
 import Data.Function
 import Data.List
 
-import Interactive.Config
-
 import System.Directory
 import System.Process
 
 import Text.Printf
+
+import Utilities.Config
 
 main :: IO ()
 main = do

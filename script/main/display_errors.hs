@@ -26,15 +26,15 @@ import Shelly (shelly,rm_f)
 compile_script :: Build ()
 compile_script = do
         compile_file
-        profile_test 
-            >>= run_benchmark
-        -- compile_test 
-        --     >>= run_test
+        -- profile_test 
+        --     >>= run_benchmark
+        compile_test 
+            >>= run_test
         -- cabal_build "bench-bucket-packaged"
            -- >>= cabal_run
         -- compile_all
-        -- compile_app
-        profile_app
+        compile_app
+        -- profile_app
         return ()
 
 _wait :: IO Bool -> IO ()

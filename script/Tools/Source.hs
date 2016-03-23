@@ -2,9 +2,9 @@ module Tools.Source where
 
 import Data.String.Utils
 
-import Interactive.Config
-
 import System.Process
+
+import Utilities.Config
 
 goto_definition :: String -> String -> IO ()
 goto_definition scope symbol = do

@@ -4,9 +4,9 @@ import Control.Monad.Fix
 
 import Data.Tuple
 
-import Interactive.Config
-
 import System.Directory
+
+import Utilities.Config
 
 data Input = Quit | Next
 

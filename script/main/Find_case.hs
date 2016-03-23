@@ -1,16 +1,12 @@
 #!/usr/bin/env cabal exec runhaskell
 
 import Control.Monad
---import Control.Monad.Fix
 
 import Data.List
 
-import Interactive.Config
-
 import System.Environment
 
---import Tools.Source
-    
+import Utilities.Config    
 import Utilities.Directory
 
 main :: IO ()

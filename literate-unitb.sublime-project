@@ -5,8 +5,8 @@
 			"cmd":
 			[
 				"runghc",
-				"-isrc",
-				"$project_path/script/display_errors.hs",
+				"-isrc:script",
+				"$project_path/script/main/display_errors.hs",
 				"$file",
 				"$project_path",
 				"ghc_errors.txt"

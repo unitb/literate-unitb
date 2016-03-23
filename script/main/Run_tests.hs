@@ -3,7 +3,6 @@
 module Main where
 
 import Build
-import Interactive.Config
 
 import Control.Concurrent
 import Control.Monad.Except
@@ -22,6 +21,8 @@ import System.Environment
 import System.Process
 
 import Text.Printf
+
+import Utilities.Config
 
 import Z3.Version
 
