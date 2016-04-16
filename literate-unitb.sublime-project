@@ -5,7 +5,7 @@
 			"cmd":
 			[
 				"runghc",
-				"-isrc:script",
+				"-iverifier/src:script:utils:latex",
 				"$project_path/script/main/display_errors.hs",
 				"$file",
 				"$project_path",
@@ -54,7 +54,15 @@
 				"*hs",
 				"*.md"
 			],
-			"path": "src"
+			"path": "verifier/src"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "latex"
 		},
 		{
 			"file_include_patterns":

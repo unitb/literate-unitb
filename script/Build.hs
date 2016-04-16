@@ -46,7 +46,7 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ intercalate ":" [inf,"suite","src","utils"]
+        , "-i" ++ intercalate ":" [inf,"suite","verifier/src","utils","latex"]
         , "-hidir" ++ inf
         , "-W"
         , "-XTupleSections"
@@ -163,15 +163,15 @@ make target = do
     return $ "bin" </> dropExtension target
 
 compile_test :: Build FilePath
-compile_test = make "suite/test_tmp.hs"
+compile_test = make "suite/main/test_tmp.hs"
 
 profile_test :: Build FilePath
 profile_test = do
-    make "suite/test_tmp.hs"
-    enableProfiling "suite/test_tmp.hs"
+    make "suite/main/test_tmp.hs"
+    enableProfiling "suite/main/test_tmp.hs"
 
 compile_all :: Build FilePath
-compile_all = make "suite/test.hs"
+compile_all = make "suite/main/test.hs"
 
 compile_app :: Build FilePath
 compile_app = make "app/continuous.hs"
