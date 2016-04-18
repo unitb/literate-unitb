@@ -6,7 +6,6 @@ import Control.Monad
 import           Data.Char
 import           Data.Graph ( SCC (..))
 import           Data.List hiding ( transpose )
-import           Data.List.Ordered ( sortOn )
 import           Data.Map hiding ( map, split, null, filter )
 import qualified Data.Map as M
 import           Data.String.Utils
