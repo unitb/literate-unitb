@@ -29,4 +29,4 @@ main = do
                     --        goto_definition fn xs
                     --        rec
                     --    else return ()
-            [] -> putStrLn "Usage: find_case error_file"
+            _ -> putStrLn "Usage: find_case error_file"
