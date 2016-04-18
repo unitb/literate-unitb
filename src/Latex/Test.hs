@@ -1,4 +1,4 @@
-module Latex.Test_Latex_Parser where
+module Latex.Test where
 
     -- Modules
 import Latex.Parser 
