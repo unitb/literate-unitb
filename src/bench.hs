@@ -8,7 +8,7 @@ import Data.Time
 
 import Document.Document
 import qualified UnitB.Test as UB
-import qualified Latex.Test_Latex_Parser as LT
+import qualified Latex.Test as LT
 import qualified Z3.Test as ZT
 import qualified Document.Test as DOC
 import qualified Utilities.Test as UT
