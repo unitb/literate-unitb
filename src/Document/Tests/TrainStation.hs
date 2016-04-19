@@ -135,7 +135,7 @@ trainName :: Name
 trainName = fromString'' "train0"
 
 machine0 :: MachineAST
-machine0 = newMachine assert trainName $ do
+machine0 = newMachine trainName $ do
       theory .= (empty_theory trainName)
             {  _extends = symbol_table 
                     [ function_theory

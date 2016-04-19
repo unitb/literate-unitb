@@ -123,7 +123,7 @@ readEnv tag = LatexParser [tag] [] [tag] [] False $ \() -> EitherT $ do
                         return $ Right e
                 _ -> return $ Left [Error ([printf|expecting environment '%s'|] tag) $ line_info xs]
 
-insideOneEnvOf :: (?loc :: CallStack)
+insideOneEnvOf :: Pre
                => [String] 
                -> LatexParserA a b
                -> LatexParserA a b

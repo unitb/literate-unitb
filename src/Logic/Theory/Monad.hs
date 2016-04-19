@@ -307,11 +307,11 @@ clash f xs
             y      <- ys
             return $ M.intersection (f x) (f y)
 
-make_theory' :: (?loc :: CallStack) 
+make_theory' :: Pre 
              => String -> State Theory () -> Theory
 make_theory' name cmd = make_theory name $ M $ zoom _2 (state $ runState cmd)
 
-make_theory :: (?loc :: CallStack) 
+make_theory :: Pre 
             => String -> M () -> Theory
 make_theory name (M cmd) = t'
     where

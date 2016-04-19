@@ -39,8 +39,7 @@ type ScopeCorrectness  = ScopeCorrectnessM [(String,String)]
 type ScopeCorrectnessM = ((->) VisibleVars)
 
 class HasScope a where
-    scopeCorrect' :: (?loc :: CallStack) 
-                  => a -> ScopeCorrectness
+    scopeCorrect' :: Pre => a -> ScopeCorrectness
 
 makeLenses ''VisibleVars
 makeFields ''VisibleVars
@@ -48,7 +47,8 @@ makeFields ''VisibleVars
 instance Default VisibleVars where
     def = genericDefault
 
-scopeCorrect'' :: (HasScope a, Show lbl, ?loc :: CallStack) => lbl -> a -> ScopeCorrectness
+scopeCorrect'' :: (HasScope a, Show lbl, Pre) 
+               => lbl -> a -> ScopeCorrectness
 scopeCorrect'' lbl x = withPrefix (show lbl) $ scopeCorrect' x
 
 instance HasPrefix ScopeCorrectnessM where
@@ -83,7 +83,7 @@ withPrimes cmd = do
     x <- ask
     withVars' vars (primeAll $ x^.vars) $ withVars' abs_vars (primeAll $ x^.abs_vars) cmd
 
-areVisible :: (PrettyPrintable e,Foldable f,?loc :: CallStack) 
+areVisible :: (PrettyPrintable e,Foldable f,Pre) 
            => [Getting (Table Name Var) VisibleVars (Table Name Var)]
            -> f Var -> e -> ScopeCorrectness
 areVisible ln vars' e = do
@@ -100,5 +100,5 @@ areVisible ln vars' e = do
             pre <- views prefix $ intercalate " - " . reverse
             return [(pre,pretty e)]
 
-scopeCorrect :: (HasScope a,?loc :: CallStack) => a -> [(String,String)]
+scopeCorrect :: (HasScope a,Pre) => a -> [(String,String)]
 scopeCorrect x = scopeCorrect' x def

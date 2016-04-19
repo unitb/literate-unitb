@@ -10,7 +10,6 @@ module Logic.Names.Internals
     , makeZ3Name
     , make, make'
     , isName, isName'
-    , assert
     , fromString'
     , fresh
     , reserved
@@ -28,7 +27,6 @@ where
     -- Libraries
 import Control.DeepSeq
 import Control.Lens
-import Control.Invariant hiding ((===))
 import Control.Monad.State
 import Control.Precondition
 
@@ -105,7 +103,7 @@ name :: Bool -> NEString
              -> Name
 name bl base pr suff Z3Encoding = Name bl base pr suff
 name bl base pr suff LatexEncoding = Name bl 
-        (replaceAll' assert substToZ3 base) pr 
+        (replaceAll' substToZ3 base) pr 
         (replaceAll substToZ3 suff)
 
 instance Show Name where
@@ -116,16 +114,15 @@ instance Show InternalName where
 
 class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
     render :: a -> String
-    --asString :: Assert -> Iso' a String
     asInternal' :: a -> InternalName
     asName'  :: a -> Name
-    fromString'' :: (?loc :: CallStack) => String -> a
+    fromString'' :: Pre => String -> a
     addPrime :: a -> a
     generateNames :: a -> [a]
     language :: Proxy a -> Language a
-    texName :: (?loc :: CallStack) 
+    texName :: Pre 
             => String -> a
-    z3Name :: (?loc :: CallStack) 
+    z3Name :: Pre 
            => String -> a
 
 _Name :: IsName a => Prism' String a
@@ -142,7 +139,7 @@ renderAsLatex :: Name -> String
 renderAsLatex (Name b base' p suff') = concat [slash,toList base,replicate (fromIntegral p) '\'',suffix]
     where
         -- (Name b base p suff _) = toLatexEncoding n
-        base = replaceAll' assert substToLatex base'
+        base = replaceAll' substToLatex base'
         suff = replaceAll substToLatex suff'
 
         slash  | b          = "\\"
@@ -155,7 +152,7 @@ instance IsBaseName Name where
     --asString arse = iso render $ makeName arse
     asInternal' n = InternalName "" n ""
     asName' = id
-    fromString'' xs = makeName (withCallStack $ withMessage "makeName" (show xs) assert) xs
+    fromString'' = makeName
     --addSuffix (Name n0) n1 = Name $ n0 <> ('@' :| n1)
     --dropSuffix (Name (n:|ns)) = Name $ n :| L.takeWhile ('@' /=) ns
     addPrime = primes %~ (+1)
@@ -188,13 +185,13 @@ fresh name xs = L.head $ ys `Ord.minus` M.ascKeys xs
     where
         ys = generateNames name
 
-make :: (?loc :: CallStack,IsBaseName n0,IsBaseName n1)
+make :: (Pre,IsBaseName n0,IsBaseName n1)
      => (n0 -> n1 -> a)
      -> String -> String -> a
 make f inm = make' (make' f inm)
     --f (fromString'' inm) (makeName (withCallStack assert) nm)
 
-make' :: (?loc :: CallStack,IsBaseName n)
+make' :: (Pre,IsBaseName n)
       => (n -> a)
       -> String -> a
 make' f = f . fromString''
@@ -218,7 +215,7 @@ instance IsBaseName InternalName where
     --asString arse = iso render $ fromString' arse
     asInternal' = id
     asName' (InternalName _ n _) = n
-    fromString'' str = fromString' (withMessage "InternalName.fromString''" (show str) assert) str
+    fromString'' = fromString'
     --fresh (InternalName name) xs = L.head $ ys `Ord.minus` M.keys xs
     --    where
     --        ys = L.map InternalName $ name : L.map f [0..]
@@ -243,11 +240,11 @@ z3Render (Name sl xs ps suf)
         suf' | null suf  = ""
              | otherwise = "@" ++ suf
 
-setSuffix :: Assert -> String -> Name -> Name
-setSuffix _ suff = suffix .~ suff
+setSuffix :: String -> Name -> Name
+setSuffix suff = suffix .~ suff
 
-fromString' :: Assert -> String -> InternalName
-fromString' arse nm = InternalName "" (fromJust'' arse $ isZ3Name' n) suf
+fromString' :: Pre => String -> InternalName
+fromString' nm = InternalName "" (fromJust' $ isZ3Name' n) suf
     where
         (n,suf) = L.span ('@' /=) nm
 
@@ -269,11 +266,11 @@ isName str = mapLeft (\x -> [err,show x]) $ parse' latexName "" str
 isName' :: String -> Maybe Name
 isName' = either (const Nothing) Just . isName
 
-makeZ3Name :: Assert -> String -> Name
-makeZ3Name arse = fromJust'' arse . isZ3Name'
+makeZ3Name :: Pre => String -> Name
+makeZ3Name = fromJust' . isZ3Name'
 
-makeName :: Assert -> String -> Name
-makeName arse = fromJust'' arse . isName'
+makeName :: Pre => String -> Name
+makeName = fromJust' . isName'
 
 addBackslash :: Name -> Name
 addBackslash = backslash .~ True
@@ -286,7 +283,7 @@ dropSuffix (InternalName pre ns _) = InternalName pre ns ""
 
 
 reserved :: String -> Int -> InternalName
-reserved pre n = InternalName pre (makeName assert $ show n) ""
+reserved pre n = InternalName pre (makeName $ show n) ""
 
 internal :: Lens' InternalName Name
 internal f (InternalName pre n suf) = (\n' -> InternalName pre n' suf) <$> f n
@@ -333,8 +330,9 @@ substToZ3 = [("\\","sl@")
 substToLatex :: [(String,String)]
 substToLatex = L.map swap substToZ3
 
-replaceAll' :: Assert -> [(String,String)] -> NonEmpty Char -> NonEmpty Char
-replaceAll' arse sub = nonEmpty' arse . replaceAll sub . toList
+replaceAll' :: Pre 
+            => [(String,String)] -> NonEmpty Char -> NonEmpty Char
+replaceAll' sub = nonEmpty' . replaceAll sub . toList
 
 replaceAll :: [(String,String)] -> String -> String
 replaceAll = execState . mapM_ (modify . uncurry replace)

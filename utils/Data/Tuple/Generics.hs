@@ -1,5 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses
     , RankNTypes
+    , FlexibleContexts
+    , FlexibleInstances
+    , DeriveGeneric
     , TypeOperators
     , ConstraintKinds
     , DefaultSignatures

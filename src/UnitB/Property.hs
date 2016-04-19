@@ -186,7 +186,7 @@ instance Default (PropertySet' expr) where
 hasClashes :: PropertySet' expr -> PropertySet' expr -> PropertySet' expr
 hasClashes x y = getIntersection $ Intersection x <> Intersection y
 
-noClashes :: (Show expr) => PropertySet' expr -> PropertySet' expr -> Invariant ()
+noClashes :: (Show expr) => PropertySet' expr -> PropertySet' expr -> Invariant
 noClashes p0 p1 = allTables inv (hasClashes p0 p1) >> return ()
     where
         inv msg m = withPrefix msg $ do

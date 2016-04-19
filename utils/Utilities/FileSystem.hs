@@ -49,7 +49,7 @@ class Monad m => FileSystem m where
         , doesDirectoryExist #-}
     readFile  :: ExistingFile s -> m String
     readFile fn = getNoParam $ liftFS (NoParam $ readFile fn)
-    writeFile :: (?loc :: CallStack) => FilePath -> String -> m ()
+    writeFile :: Pre => FilePath -> String -> m ()
     writeFile fn xs = getNoParam $ liftFS (NoParam $ writeFile fn xs)
     ifFileExists :: FilePath -> (forall s. ExistingFile s -> m a) -> m (Maybe a) 
     ifFileExists fn = getOneParam $ lift2FS (OneParam $ ifFileExists fn)
@@ -59,12 +59,12 @@ class Monad m => FileSystem m where
     doesDirectoryExist fn = getNoParam $ liftFS (NoParam $ doesDirectoryExist fn)
     doesFileExist :: FilePath -> m Bool
     doesFileExist fn = getNoParam $ liftFS (NoParam $ doesFileExist fn)
-    liftFS :: (?loc :: CallStack) 
-           => (forall m0. (?loc :: CallStack, FileSystem m0) => NoParam a m0) 
+    liftFS :: Pre 
+           => (forall m0. (Pre, FileSystem m0) => NoParam a m0) 
            -> NoParam a m
     liftFS f = f
-    lift2FS :: (?loc :: CallStack) 
-            => (forall m0. (?loc :: CallStack, FileSystem m0) => OneParam a r m0) 
+    lift2FS :: Pre 
+            => (forall m0. (Pre, FileSystem m0) => OneParam a r m0) 
             -> OneParam a r m
     lift2FS f = f
 
@@ -102,7 +102,7 @@ makeLenses ''MockFileSystemState'
 
 instance HasInvariant MockFileSystemState' where
     invariant m = do        
-        "inv0" ## traverseWithKey 
+        "inv0" ## foldMapWithKey 
             (\f _ -> f ## takeDirectory f `M.lookup` (m^.files) === Just Nothing) 
             (m^.files)
         "has current directory" ## "." `M.lookup` (m^.files) === Just Nothing
@@ -113,7 +113,7 @@ instance FileSystem MockFileSystem where
     writeFile fn x = do
         dirExists  <- doesDirectoryExist (takeDirectory fn)
         isDir      <- doesDirectoryExist fn
-        MockFileSystem $ mutate' assert $ do 
+        MockFileSystem $ mutate' $ do 
             providedM (dirExists && not isDir)  $
                 files %= insert fn (Just x)
     ifFileExists fn f = do
@@ -128,14 +128,14 @@ instance FileSystem MockFileSystem where
     createDirectoryIfMissing b fn = do
             exists <- doesDirectoryExist (takeDirectory fn)
             providedM (b || exists) $ do
-                MockFileSystem $ mutate' assert $ do
+                MockFileSystem $ mutate' $ do
                     let ds 
                             | b         = takeWhile (`notElem` [".","/"]) $ iterate takeDirectory fn
                             | otherwise = [fn]
                     files %= union (fromList $ (,Nothing) <$> ds)
 
 emptyFSState :: MockFileSystemState 
-emptyFSState = create' assert $ do
+emptyFSState = create' $ do
         files .= fromList [(".",Nothing),("/",Nothing)]
 
 instance Default MockFileSystemState' where

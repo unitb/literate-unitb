@@ -44,7 +44,7 @@ zfinite :: Expr -> Expr
 zfinite e = ($typeCheck) (mzfinite $ Right e)
 
 set_theory' :: Table Name Theory
-set_theory' = singleton (makeName Logic.Expr.assert "sets") set_theory
+set_theory' = singleton (makeName "sets") set_theory
 
 set_theory :: Theory 
 set_theory = Theory { .. }

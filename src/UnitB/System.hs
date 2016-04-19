@@ -86,6 +86,6 @@ instance (HasMachine mch expr,Show mch) => Default (System' mch) where
 
 empty_system :: (HasExpr expr,HasMachine mch expr,Show mch) 
              => System' mch
-empty_system = check assert def
+empty_system = check def
 
 instance Serialize m => Serialize (SystemBase m) where

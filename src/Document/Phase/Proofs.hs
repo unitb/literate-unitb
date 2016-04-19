@@ -253,13 +253,13 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
         toEither $ do
             _ <- fromEither undefined $ _unM $ bind_all del 
                     (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (show lbl) (show evt))
-                    (`M.lookup` (M.unions $ p3^.evtSplitDel AST.assert evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitDel evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all added 
                     (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (show lbl) (show evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitAdded AST.assert evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitAdded evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all kept 
                     (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (show lbl) (show evt)) 
-                    (`M.lookup` (M.unions $ p3^.evtSplitKept AST.assert evt eCoarseSched))
+                    (`M.lookup` (M.unions $ p3^.evtSplitKept evt eCoarseSched))
             return ()
         let rule = replace (as_label prog,pprop)
                         & remove .~ fromList' del

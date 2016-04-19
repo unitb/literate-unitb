@@ -10,7 +10,7 @@ import Document.Phase.Types
 import Document.Proof
 import Document.Visitor
 
-import UnitB.Syntax hiding (assert)
+import UnitB.Syntax
 
 import Latex.Parser
 

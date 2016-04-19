@@ -68,24 +68,23 @@ newtype POCtx a = POCtx { runPOCxt :: State POParam a }
 getContext :: POCtx Context
 getContext = POCtx $ use context
 
-emit_exist_goal :: (HasExpr expr,Monad m) 
-                => Assert 
-                -> [Label] -> [Var] -> [expr] 
+emit_exist_goal :: (HasExpr expr,Monad m,Pre) 
+                => [Label] -> [Var] -> [expr] 
                 -> POGenT m ()
-emit_exist_goal asrt lbl vars es = with
+emit_exist_goal lbl vars es = with
         (mapM_ prefix_label lbl)
         $ forM_ clauses' $ \(vs,es) -> 
             unless (L.null es) $
-                emit_goal' asrt 
+                emit_goal'
                     (L.map (as_label . view name) vs) 
                     (zexists vs ztrue $ zall es)
     where
         clauses = partition_expr vars $ L.map getExpr es
         clauses' = M.toList $ (M.fromListWith (<>) clauses :: Map [Var] (NonEmpty Expr))
 
-existential :: (Monad m,Functor m) => Assert -> [Var] -> POGenT m () -> POGenT m ()
-existential _ [] cmd = cmd
-existential asrt vs (POGen cmd) = do
+existential :: (Monad m,Functor m) => [Var] -> POGenT m () -> POGenT m ()
+existential [] cmd = cmd
+existential vs (POGen cmd) = do
         let g (_, Sequent _ _ ctx _ h0 h1 goal) = do
                     vs <- f ctx
                     return $ zforall vs ztrue $ zall (h0 ++ M.ascElems h1) `zimplies` goal
@@ -103,18 +102,18 @@ existential asrt vs (POGen cmd) = do
             $ local (const empty_param) cmd
         let (ss',st) = runState (mapM g $ D.toList $ snd ss) empty_ctx
         with (_context st) 
-            $ emit_exist_goal asrt [] vs ss'
+            $ emit_exist_goal [] vs ss'
 
 emit_goal' :: (Functor m, Monad m, HasExpr expr) 
-           => Assert -> [Label] -> expr -> POGenT m ()
-emit_goal' arse lbl g = emit_goal arse lbl $ getExpr g
+           => [Label] -> expr -> POGenT m ()
+emit_goal' lbl g = emit_goal lbl $ getExpr g
 
 emit_goal :: (Functor m, Monad m) 
-          => Assert -> [Label] -> Expr -> POGenT m ()
-emit_goal asrt lbl g = POGen $ do
+          => [Label] -> Expr -> POGenT m ()
+emit_goal lbl g = POGen $ do
     tag   <- asks tag 
     param <- ask
-    let po = makeSequent asrt
+    let po = makeSequent
                    (param^.S.context) 
                    (param^.synProp)
                    (D.toList $ param^.nameless)
@@ -174,4 +173,4 @@ eval_generatorT cmd =
             liftM (fromListWithKey combine . D.toList . snd) 
                 $ evalRWST (runPOGen cmd) empty_param ()
     where
-        combine k _ _ = assertFalse assert $ [printf|%s\n|] $ show k
+        combine k _ _ = assertFalse' $ [printf|%s\n|] $ show k

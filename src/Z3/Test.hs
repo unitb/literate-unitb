@@ -4,7 +4,7 @@ module Z3.Test where
     -- Modules
 import Z3.Z3 as Z
 
-import Logic.Expr hiding (assert)
+import Logic.Expr
 import Logic.Expr.Const
 import Logic.Expr.Declaration
 import Logic.Operator hiding ( Command )

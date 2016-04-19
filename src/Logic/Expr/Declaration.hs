@@ -87,9 +87,9 @@ instance (TypeSystem t, IsQuantifier q) => Tree (AbsDecl t q) where
     as_tree' (SortDecl (RecordSort m)) = as_tree' (SortDecl (Datatype args rec 
             [(make,zip (M.keys m) (GENERIC . asInternal <$> args))]) :: AbsDecl t q)
         where
-            args = [ makeZ3Name assert $ "a" ++ show i | i <- [1..M.size m] ]
+            args = [ makeZ3Name $ "a" ++ show i | i <- [1..M.size m] ]
             rec  = recordName m
-            make = makeZ3Name assert $ z3Render rec
+            make = makeZ3Name $ z3Render rec
     as_tree' (SortDecl s@(Sort _ _ n)) = do
             return $ List [ 
                 Str "declare-sort",
