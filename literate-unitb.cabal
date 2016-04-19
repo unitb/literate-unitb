@@ -117,8 +117,8 @@ library
         Logic.Expr.Type
         Logic.Expr.Variable
         Logic.Names
-        Logic.Names.Packaged
         Logic.Names.Internals
+        Logic.Names.Packaged
         Logic.Operator
         Logic.OldOperator
         Logic.Proof
@@ -190,6 +190,7 @@ library
          -fwarn-missing-methods
          -fno-ignore-asserts
          -fwarn-tabs
+         -j8
   
   if flag(HashedKeys)
     cpp-options: -D__HASHED_KEYS__

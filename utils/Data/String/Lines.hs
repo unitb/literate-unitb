@@ -17,6 +17,9 @@ import qualified Text.PortableLines as PL
 import Test.QuickCheck
 import Test.QuickCheck.Regression
 
+neTail :: Lens' (NonEmpty a) [a]
+neTail f (x :| xs) = (x :|) <$> f xs
+
 asLines :: Iso' String (NonEmpty String)
 asLines = iso lines' F.concat
 
@@ -51,6 +54,30 @@ breakNewline (x : xs) =
                          _            -> ("", xs,True)
         _    -> over _1 (x:) $ breakNewline xs
                 
+indentTail :: Int -> String -> String
+indentTail n = indentTailWith (replicate n ' ')
+
+indentTailWith :: String -> String -> String
+indentTailWith pre = asLines . neTail . traverse %~ (pre ++)
+
+prependIndent :: String -> String -> String
+prependIndent pre suff = pre ++ indentTail lastLen suff
+    where
+        lastLen = length $ NE.last $ lines pre
+
+appendLines :: NonEmpty String -> NonEmpty String -> NonEmpty String
+appendLines (x :| []) (y :| ys) = (x++y) :| ys
+appendLines (x0 :| (x1:xs)) ys = x0 <| appendLines (x1 :| xs) ys
+
+concatIndent :: [String] -> String
+concatIndent xs = F.concat $ f "" xs'
+    where
+        xs' = map lines' xs
+        f :: String -> [NonEmpty String] -> NonEmpty String
+        f _ [] = "" :| []
+        f n (x:xs) = appendLines (x & neTail.traverse %~ (n ++)) (f (lastLen x ++ n) xs)
+        lastLen :: NonEmpty String -> String
+        lastLen x = replicate (length $ NE.last x) ' '
 
 unlines :: NonEmpty String -> String
 unlines xs = f $ L.unlines $ toList xs
@@ -58,6 +85,27 @@ unlines xs = f $ L.unlines $ toList xs
         f [] = []
         f [_] = []
         f (x:xs) = x:f xs
+
+prop_prependIndent_prefix :: String -> String -> Bool
+prop_prependIndent_prefix xs ys = xs `L.isPrefixOf` prependIndent xs ys
+
+prop_prependIndent_suffix :: String -> String -> Property
+prop_prependIndent_suffix xs ys = zSuffix === ys
+    where
+        zSuffix = concat $ L.map (L.drop lastLen) $ NE.drop (length zLines - yLen) zLines
+        zs = prependIndent xs ys
+        zLines = lines' zs
+        lastLen = length $ NE.last $ lines' xs
+        yLen = NE.length $ lines' ys
+
+prop_appendLines :: String -> String -> Property
+prop_appendLines xs ys = xs ++ ys === F.concat (lines' xs `appendLines` lines' ys)
+
+prop_concatIndent_to_foldl_prependIndent :: [String] -> Property
+prop_concatIndent_to_foldl_prependIndent xs = concatIndent xs === foldl prependIndent "" xs
+
+prop_concatIndent_to_foldr_prependIndent :: [String] -> Property
+prop_concatIndent_to_foldr_prependIndent xs = concatIndent xs === foldr prependIndent "" xs
 
 prop_lines_unlines_cancel :: String -> Property
 prop_lines_unlines_cancel xs = canonicalizeNewline xs === unlines (lines xs)

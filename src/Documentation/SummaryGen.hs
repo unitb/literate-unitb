@@ -2,7 +2,8 @@
     , OverloadedStrings
     #-}
 module Documentation.SummaryGen 
-    ( produce_summaries
+    ( FS
+    , produce_summaries
     , event_summary' 
     , getListing
     , safety_sum
@@ -37,7 +38,7 @@ import Text.Printf.TH
 
 import Utilities.FileSystem
 
-newtype Doc a = Doc { getDoc :: forall io. FileSystem io => ReaderT FilePath io a }
+newtype Doc a = Doc { getDoc :: ReaderT FilePath FileSystemM a }
     deriving (Functor)
     -- Reader parameters:
     --      AST -> LaTeX conversions
@@ -78,11 +79,10 @@ instance Show label => Default (ExprDispOpt label Expr) where
 show_removals :: Bool
 show_removals = True
 
-runDoc :: FileSystem io => Doc a -> FilePath -> io a
-runDoc (Doc cmd) = runReaderT cmd
+runDoc :: Doc a -> FilePath -> FS a
+runDoc (Doc cmd) = unFileSystemM . runReaderT cmd
 
-produce_summaries :: FileSystem io 
-                  => FilePath -> System -> io ()
+produce_summaries :: FilePath -> System -> FS ()
 produce_summaries path sys = do
         createDirectoryIfMissing True path'
         runDoc (do

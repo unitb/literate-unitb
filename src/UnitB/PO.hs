@@ -32,6 +32,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Arrow
+import Control.CoApplicative
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 import Control.Precondition
@@ -566,9 +567,7 @@ ind_wit_fis_po m (lbl, evts) =
                     $ M.ascElems $ snd <$> ((evt^.ind_witness) `M.intersection` pvar)
 
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
-removeSkip = rights.fmap distrLeft.NE.toList
-    where
-        distrLeft = sequenceOf _1
+removeSkip = rights.fmap (view distrLeft).NE.toList
 
 csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)

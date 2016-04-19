@@ -25,6 +25,7 @@ module GHC.Generics.Instances
     , Serialize1(..)
     , genericArbitrary, inductive, listOf', arbitrary' 
     , Lift1(..), Monoid1(..)
+    , Default1(..)
     , OnFunctor(..) )
 where
 
@@ -150,6 +151,7 @@ instance Monoid1 f => Monoid (OnFunctor f a) where
 
 instance Monoid1 [] where
 instance Monoid1 DList where
+instance Ord k => Monoid1 (Map k) where
 
 genericSemigroupMAppend :: (Generic a, GSemigroupWith (Rep a)) => a -> a -> a
 genericSemigroupMAppend x y = gSemiMAppend (x^.generic) (y^.generic)^.from generic

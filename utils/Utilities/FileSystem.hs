@@ -1,5 +1,9 @@
 module Utilities.FileSystem 
     ( FileSystem (..)
+    , FileSystemM
+    , unFileSystemM
+    , FS
+    , runFS, mockFS
     , MockFileSystem
     , NoParam(..)
     , OneParam(..)
@@ -41,6 +45,16 @@ newtype ExistingFile s = ExistingFile FilePath
 newtype NoParam r m = NoParam { getNoParam :: m r }
 newtype OneParam a r m = OneParam { getOneParam :: (forall s. ExistingFile s -> m a) -> m r }
 
+type FS a = forall m. FileSystem m => m a
+newtype FileSystemM a = FileSystemM { unFileSystemM :: FS a } 
+    deriving (Functor)
+
+mockFS :: FileSystemM a -> State MockFileSystemState a
+mockFS (FileSystemM (MockFileSystem m)) = m
+
+runFS :: FileSystemM a -> IO a
+runFS = unFileSystemM
+
 class Monad m => FileSystem m where
     {-# MINIMAL liftFS, lift2FS | 
         readFile, writeFile
@@ -73,6 +87,19 @@ ifFileExists' :: FileSystem m
               -> (forall s. ExistingFile s -> m a) 
               -> m a
 ifFileExists' fn x cmd = fromMaybe x <$> ifFileExists fn cmd
+
+instance Applicative FileSystemM where
+    pure x = FileSystemM $ pure x
+    {-# INLINE (<*>) #-}
+    FileSystemM f <*> FileSystemM x = FileSystemM $ f <*> x
+instance Monad FileSystemM where
+    {-# INLINE (>>=) #-}
+    FileSystemM m >>= f = FileSystemM $ m >>= unFileSystemM . f
+instance FileSystem FileSystemM where
+    {-# INLINE liftFS #-}
+    liftFS f = NoParam $ FileSystemM $ getNoParam f
+    {-# INLINE lift2FS #-}
+    lift2FS f = OneParam $ \g -> FileSystemM $ getOneParam f $ \x -> (unFileSystemM $ g x)
 
 instance FileSystem IO where
     readFile (ExistingFile fn) = do
@@ -141,16 +168,16 @@ emptyFSState = create' $ do
 instance Default MockFileSystemState' where
     def = emptyFSState^.content'
 
-runMockFileSystem :: MockFileSystem a -> (a,MockFileSystemState)
+runMockFileSystem :: FileSystemM a -> (a,MockFileSystemState)
 runMockFileSystem cmd = runMockFileSystem' cmd emptyFSState
-evalMockFileSystem :: MockFileSystem a -> a
+evalMockFileSystem :: FileSystemM a -> a
 evalMockFileSystem = fst . runMockFileSystem
-execMockFileSystem :: MockFileSystem a -> MockFileSystemState
+execMockFileSystem :: FileSystemM a -> MockFileSystemState
 execMockFileSystem = snd . runMockFileSystem
 
-runMockFileSystem' :: MockFileSystem a -> MockFileSystemState -> (a,MockFileSystemState)
-runMockFileSystem' (MockFileSystem cmd) = runState cmd
-evalMockFileSystem' :: MockFileSystem a -> MockFileSystemState -> a
-evalMockFileSystem' (MockFileSystem cmd) = evalState cmd
-execMockFileSystem' :: MockFileSystem a -> MockFileSystemState -> MockFileSystemState
-execMockFileSystem' (MockFileSystem cmd) = execState cmd
+runMockFileSystem' :: FileSystemM a -> MockFileSystemState -> (a,MockFileSystemState)
+runMockFileSystem' (FileSystemM (MockFileSystem cmd)) = runState cmd
+evalMockFileSystem' :: FileSystemM a -> MockFileSystemState -> a
+evalMockFileSystem' (FileSystemM (MockFileSystem cmd)) = evalState cmd
+execMockFileSystem' :: FileSystemM a -> MockFileSystemState -> MockFileSystemState
+execMockFileSystem' (FileSystemM (MockFileSystem cmd)) = execState cmd
