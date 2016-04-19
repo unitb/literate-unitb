@@ -14,11 +14,14 @@ resolver: lts-5.9
 
 ghc-options:
     # All packages
-    "*": -W -Werror -j8 -fwarn-missing-signatures 
+    "*": -W -j8 -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
          -fwarn-tabs
+    literate-unitb: -Werror
+    literate-unitb-scripts: -Werror
+    literate-unitb-utils: -Werror
 
 # Local packages, usually specified by relative directory name
 packages:
