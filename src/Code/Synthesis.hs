@@ -86,7 +86,7 @@ natVariant var evt cmd = do
 runProgramMaker :: RawMachineAST -> ProgramMaker () -> Program
 runProgramMaker m cmd = seqP w
     where
-        (_,w) = execRWS cmd m [ makeName assert $ "var" ++ show i | i <- [0..] ]
+        (_,w) = execRWS cmd m [ makeName $ "var" ++ show i | i <- [0..] ]
 
 wait :: Expr -> ProgramMaker ()
 wait e = tell [Wait [] e]
@@ -199,7 +199,7 @@ establish_pre prefix ps cfg =
     PG.with (do
             PG.nameless_hyps ps
             PG.prefix prefix) $
-        zipWithM_  (\l p -> PG.emit_goal assert [label $ show (l :: Int)] p) 
+        zipWithM_  (\l p -> PG.emit_goal [label $ show (l :: Int)] p) 
                 [0..] (precondition cfg) 
 
 type POGen = PG.POGenT (RWS DistrContext [String] ())
@@ -277,7 +277,7 @@ is_stable_in ps evts = do
 
 disabled :: [Expr] -> EventId -> POGen ()
 disabled ps lbl = do
-    evts <- lift $ asks $ upward_event assert <$> machine <*> pure (Right lbl)
+    evts <- lift $ asks $ upward_event <$> machine <*> pure (Right lbl)
     entails ("disabled" </> as_label lbl) ps 
         [znot $ zall $ evts^.new.coarse_sched]
 
@@ -289,12 +289,12 @@ entails lbl pre post = do
     PG.with (do
             PG.nameless_hyps pre) $ do
         forM_ (zip [0..] post) $ \(i,p) -> 
-            PG.emit_goal assert [suff i] p
+            PG.emit_goal [suff i] p
 
 hoare_triple :: Label -> [Expr] -> EventId -> [Expr] -> POGen ()
 hoare_triple lbl pre evt_lbl post = do
     m <- lift $ asks machine
-    let evt = upward_event assert m (Right evt_lbl)
+    let evt = upward_event m (Right evt_lbl)
         grd = evt^.new.guards
         act = ba_predicate m evt
     PG.with (do 
@@ -387,7 +387,7 @@ instance Evaluator ConcurrentEval where
         when b $ tell [v]
     left = lift . Left
 
-addPrefix :: (?loc :: CallStack)
+addPrefix :: Pre
           => String -> Name -> Name
 addPrefix pre n = fromString'' $ pre ++ render n 
 
@@ -551,7 +551,7 @@ write_seq_code m (Event _pre wait cond lbl)
             expr <- evaluate m cond
             emit $ [printf|if %s then do|] expr
             indent 2 $ do
-                s' <- event_body_code m (upward_event assert m (Right lbl)^.new)
+                s' <- event_body_code m (upward_event m (Right lbl)^.new)
                 f s'
             emit $ [printf|else|]    
             indent 2 $ f "s"

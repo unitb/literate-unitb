@@ -24,7 +24,6 @@ import UnitB.UnitB
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import qualified Control.Exception as Exc
 
 import           Control.Monad 
 import           Control.Monad.Trans.RWS as RWS ( RWS )
@@ -60,7 +59,7 @@ make_machine (MId m) p4 = mch'
             , _thm_depend = []
             , _theoryDummies = p4^.pDummyVars
             , _fact = p4^.pAssumptions & traverse %~ getExpr }
-        mch = newMachine Exc.assert m $ do
+        mch = newMachine m $ do
             theory .= ctx
             variables .= p4^.pStateVars
             abs_vars  .= p4^.pAbstractVars

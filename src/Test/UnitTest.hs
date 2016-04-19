@@ -108,7 +108,7 @@ new_failure cs name actual expected = do
             hPutStrLn h expected
     else return ()
 
-test_cases :: (?loc :: CallStack) => String -> [TestCase] -> TestCase
+test_cases :: Pre => String -> [TestCase] -> TestCase
 test_cases = Suite ?loc
 
 data UnitTest = forall a. Eq a => UT 
@@ -126,7 +126,7 @@ data UnitTest = forall a. Eq a => UT
 --     where
 --         f xs = takeWhile (/= '(') xs
 
-run_test_cases :: (?loc :: CallStack) => TestCase -> IO Bool
+run_test_cases :: Pre => TestCase -> IO Bool
 run_test_cases xs = do
         swapMVar failure_number 0
         c        <- f Nothing xs 
@@ -365,7 +365,7 @@ tempFile path = do
 
 data TestName = TestName String CallStack
 
-testName :: (?loc :: CallStack) => String -> TestName
+testName :: Pre => String -> TestName
 testName str = TestName str ?loc
 
 fooNameOf :: TestName -> String

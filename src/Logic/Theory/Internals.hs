@@ -39,5 +39,5 @@ empty_theory :: Name -> Theory
 empty_theory n = (makeTheory n)
     { _notation = empty_notation }
 
-empty_theory' :: (?loc :: CallStack) => String -> Theory
+empty_theory' :: Pre => String -> Theory
 empty_theory' = empty_theory . fromString''

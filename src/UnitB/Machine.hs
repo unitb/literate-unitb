@@ -99,7 +99,7 @@ instance Show MachineId where
     show = render . getMId
 
 instance IsString MachineId where
-    fromString = MId . makeName assert
+    fromString = MId . makeName
 
 instance NFData MachineId where
 
@@ -157,7 +157,7 @@ instance HasExpr expr => HasMachine (MachineBase expr) expr where
     empty_machine = view content' . empty_machine'
 
 instance (HasExpr expr) => HasName (MachineAST' expr) Name where
-    name = content assert.name
+    name = content.name
 
 instance (HasExpr expr) => HasInvariant (MachineBase expr) where
     invariant m = withPrefix (render $ m^.name) $ do
@@ -252,16 +252,18 @@ conc_events :: HasMachine machine expr
             => machine -> Map SkipOrEvent (ConcrEvent' expr)
 conc_events = M.map fst . backwardEdges . view' events
 
-upward_event :: Assert -> MachineAST' expr -> SkipOrEvent -> EventMerging expr
-upward_event arse m lbl = readGraph (m!.events) $ do
-        v  <- rightVertex arse lbl
+upward_event :: Pre 
+             => MachineAST' expr -> SkipOrEvent -> EventMerging expr
+upward_event m lbl = readGraph (m!.events) $ do
+        v  <- rightVertex lbl
         es <- predecessors v
         EvtM <$> T.forM es (\e -> (,) <$> leftKey (source e) <*> leftInfo (source e))
              <*> ((,) <$> rightKey v <*> rightInfo v)
 
-downward_event :: Assert -> MachineAST' expr -> SkipOrEvent -> EventSplitting expr
-downward_event arse m lbl = readGraph (m!.events) $ do
-        v  <- leftVertex arse lbl
+downward_event :: Pre 
+               => MachineAST' expr -> SkipOrEvent -> EventSplitting expr
+downward_event m lbl = readGraph (m!.events) $ do
+        v  <- leftVertex lbl
         es <- successors v
         EvtS <$> ((,) <$> leftKey v <*> leftInfo v)
              <*> T.forM es (\e -> (,) <$> rightKey (target e) <*> rightInfo (target e))
@@ -270,7 +272,7 @@ new_event_set :: HasExpr expr
               => Table Name Var
               -> Map EventId (Event' expr)
               -> EventTable expr
-new_event_set vs es = EventTable $ fromJust'' assert $ makeGraph $ do
+new_event_set vs es = EventTable $ fromJust' $ makeGraph $ do
         skip <- newLeftVertex (Left SkipEvent) skip_abstr
         forM_ (M.toList es) $ \(lbl,e) -> do
             v <- newRightVertex (Right lbl) $ 
@@ -355,7 +357,7 @@ event eid cmd = do
     evt   <- newRightVertex (Right eid) $ create $ new .= execState cmd def
     newEdge askip evt
 
-split_event :: (HasExpr expr, ?loc :: CallStack)
+split_event :: (HasExpr expr, Pre)
             => EventId 
             -> State (AbstrEvent' expr) ()
             -> [(EventId,State (ConcrEvent' expr) ())]
@@ -365,7 +367,7 @@ split_event eid ae ces = do
         cs <- mapM (uncurry newRightVertex.(Right *** create)) ces
         mapM_ (newEdge a) cs
 
-merge_event :: (HasExpr expr, ?loc :: CallStack)
+merge_event :: (HasExpr expr, Pre)
             => EventId 
             -> [(EventId,State (AbstrEvent' expr) ())]
             -> State (ConcrEvent' expr) ()
@@ -434,9 +436,9 @@ ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: 
         noWitness = ((m!.del_vars) `M.intersection` (m!.abs_vars)) `M.difference` (evt^.witness)
 
 empty_machine' :: (HasScope expr, HasExpr expr) => Name -> MachineAST' expr
-empty_machine' n = check assert $ flip execState (makeMachineBase n (empty_theory n)) $ do
+empty_machine' n = check $ flip execState (makeMachineBase n (empty_theory n)) $ do
             -- & events .~ _ $ G.fromList _ _
-            events .= G.fromList' assert [(skip,def)] [(skip,def)] [(skip,skip)]
+            events .= G.fromList' [(skip,def)] [(skip,def)] [(skip,skip)]
             theory .= (empty_theory n) { _extends = symbol_table 
                 [arithmetic, basic_theory] } 
             -- & name
@@ -444,12 +446,12 @@ empty_machine' n = check assert $ flip execState (makeMachineBase n (empty_theor
         skip = Left SkipEvent
 
 newMachine :: ( HasMachine machine expr
-              , IsChecked machine (Internal machine expr)) 
-           => Assert
-           -> Name
+              , IsChecked machine (Internal machine expr)
+              , Pre) 
+           => Name
            -> State (MachineBase expr) a
            -> machine
-newMachine arse name f = empty_machine name & content arse.machineBase %~ execState f
+newMachine name f = empty_machine name & content.machineBase %~ execState f
 
 instance NFData DocItem where
 instance PrettyPrintable expr => PrettyPrintable (MachineAST' expr) where

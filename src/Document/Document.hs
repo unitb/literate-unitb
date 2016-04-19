@@ -70,7 +70,7 @@ system =     run_phase0_blocks
 wrap_machine :: Pipeline MM SystemP4 System
 wrap_machine = proc m4 -> do
                 sys <- liftP id -< m4 & mchTable (M.traverseWithKey make_machine)
-                returnA -< create' assert $ do
+                returnA -< create' $ do
                     machines   .= sys^.mchTable
                     ref_struct .= (Nothing <$ sys^.mchTable)
                     ref_struct %= M.union (sys^.refineStruct.to (M.map Just .edges))

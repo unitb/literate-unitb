@@ -364,7 +364,7 @@ var_of (Word v) = v
 var_of _ = error "var_of: expecting a variable expression"
 
 -- {-# DEPRECATED var, prog_var "use Logic.Expr.QuasiQuote" #-}
-var :: (?loc :: CallStack,IsName n) => String -> t -> (Either a (AbsExpr n t q), AbsVar n t)
+var :: (Pre,IsName n) => String -> t -> (Either a (AbsExpr n t q), AbsVar n t)
 var n t      = (Right $ Word $ v, v)
     where
         v = Var (z3Name n) t

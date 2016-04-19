@@ -2,8 +2,12 @@
         , QuasiQuotes
         , StandaloneDeriving
         , ConstraintKinds
+        , RankNTypes
         , TemplateHaskell
+        , DeriveGeneric
+        , DeriveTraversable
         , TypeFamilies
+        , GeneralizedNewtypeDeriving
         , KindSignatures
         , TypeSynonymInstances
         , FlexibleInstances

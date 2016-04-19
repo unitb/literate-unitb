@@ -184,7 +184,7 @@ latex_of m = do
             imp_stat xs = cmd "\\with" [render xs]
             inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
             invs        = map inv_decl $ M.toList $ m!.props.inv
-            imports = map imp_stat $ filter (/= makeName assert "basic") 
+            imports = map imp_stat $ filter (/= makeName "basic") 
                         $ M.keys $ m!.theory.extends
         content <- concat `liftM` permute (decls ++ imports ++ invs)
         return $ Doc li [ EnvNode $ Env li "machine" li 
@@ -233,7 +233,7 @@ var_set :: Gen (Table Name Var)
 var_set = do
     nvar  <- choose (0,5)
     types <- L.sort `liftM` vectorOf nvar choose_type
-    let vars = zipWith (Var . makeName assert . (:[])) ['a'..] types
+    let vars = zipWith (Var . makeName . (:[])) ['a'..] types
     return $ symbol_table vars
             
 basic_notation :: Notation
@@ -259,7 +259,7 @@ gen_machine b = fix (\retry n -> do
                     (\b -> resize 5 $ expr_type b vars bool)
             case inv of
                 Just inv ->
-                    return $ newMachine assert ([tex|m0|]) $ do
+                    return $ newMachine ([tex|m0|]) $ do
                         theory.extends .= symbol_table
                                 [ set_theory
                                 , function_theory

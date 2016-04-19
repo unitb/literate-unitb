@@ -72,7 +72,7 @@ name0 :: TestName
 name0 = testName "test 0, phase 1 (structure), create object" 
 
 mId :: String -> MachineId
-mId = MId . makeName assert
+mId = MId . makeName
 
 case0 :: IO (MTable MachineP1)
 case0 = do
@@ -602,7 +602,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         c = ctx $ do
             decl "x" int
             decl "y" int
-        m0 = newMachine AST.assert (fromString'' "m0") $ do
+        m0 = newMachine (fromString'' "m0") $ do
                 theory.types .= sorts0
                 theory.defs  .= defs0
                 variables .= vars0
@@ -613,7 +613,7 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         pprop = LeadsTo [] p q
         pprop' = getExpr <$> pprop
         sprop = Unless [] p q 
-        m1 = newMachine AST.assert (fromString'' "m1") $ do
+        m1 = newMachine (fromString'' "m1") $ do
                 theory.types .= sorts1
                 theory.defs .= defs1
                 theory.extends %= insert_symbol set_theory

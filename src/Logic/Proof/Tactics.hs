@@ -23,7 +23,7 @@ module Logic.Proof.Tactics
     )
 where
 
-import Logic.Expr hiding ( instantiate, assert )
+import Logic.Expr hiding ( instantiate )
 import Logic.Operator
 import Logic.WellDefinedness
 import Logic.Proof.ProofTree
@@ -668,7 +668,7 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
                                 free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
+                            instantiate_hyp
                                 thm lbl                             -- | we could instantiate indirect
                                 [ (x_decl,lhs)                      -- | inequality explicitly 
                                 , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
@@ -706,7 +706,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                                 free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
+                            instantiate_hyp                       
                                 thm lbl                             -- | we could instantiate indirect
                                 [ (x_decl,lhs)                      -- | inequality explicitly 
                                 , (y_decl,rhs) ]                    -- | for that, we need hypotheses 

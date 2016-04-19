@@ -1,9 +1,7 @@
 {-# LANGUAGE StandaloneDeriving, TypeFamilies #-}
 module Control.Invariant 
     ( HasInvariant(..), Checked, IsChecked(..)
-    , Assert
     , mutate, mutate', create'
-    , module Control.Exception.Assert
     , Controls(..)
     , view',(!.), views'
     , use', uses'
@@ -12,15 +10,18 @@ module Control.Invariant
     , isSubmapOf',isProperSubmapOf'
     , member'
     , relation
-    , trading
+    , trading, holds
+    , invariantMessage
     , provided, providedM
-    , assertFalse, assertFalse'
+    , assertFalse'
+    , Pre
+    , IsAssertion(..)
+    , checkAssert
+    , checkAssertM
     , Invariant, (##) )
 where
 
 import Control.DeepSeq
-import Control.Exception
-import Control.Exception.Assert
 import Control.Lens
 import Control.Monad.State
 import Control.Monad.RWS
@@ -37,7 +38,7 @@ import GHC.Stack.Utils
 
 import PseudoMacros
 
-import Text.Printf
+import Text.Printf.TH
 
 import Data.Map.Class (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
 
@@ -55,32 +56,42 @@ instance Show1 Checked where
 
 deriving instance Typeable Compose
 
-newtype Invariant a = Invariant { runInvariant :: RWS [String] [(String,Bool)] () a }
+newtype InvariantM a = Invariant { runInvariant :: RWS [String] [String] () a }
     deriving (Functor,Applicative,Monad)
 
+type Invariant = InvariantM ()
+
 class Show a => HasInvariant a where
-    invariant :: a -> Invariant ()
+    invariant :: a -> Invariant
     updateCache :: a -> a
     updateCache = id
 
 class HasInvariant b => IsChecked a b | a -> b where
-    check :: Assert
-          -> b -> a
-    check' :: Assert
-           -> b -> a
-    content :: Assert
-            -> Iso' a b
+    check :: Pre
+          => b -> a
+    check' :: Pre
+           => b -> a
+    content :: Pre
+            => Iso' a b
 
 class IsAssertion a where
-    toInvariant :: a -> Invariant ()
+    toInvariant :: a -> Invariant
+    fromBool :: Bool -> a
 
 instance IsAssertion Bool where
     toInvariant b = Invariant $ do
         p <- ask
-        tell [(intercalate " - " $ reverse p, b)]
+        unless b $ tell [intercalate " - " $ reverse p]
+    fromBool = id
 
-instance IsAssertion (Invariant a) where
+instance (a ~ ()) => IsAssertion (InvariantM a) where
     toInvariant b = b >> return ()
+    fromBool = toInvariant
+
+instance Monoid a => Monoid (InvariantM a) where
+    mempty = return mempty
+    mappend = liftM2 mappend
+    mconcat = fmap mconcat . sequence
 
 class Controls a b | a -> b where
     content' :: Getter a b
@@ -119,12 +130,35 @@ instance (Functor f, Show a, Show1 f, Show1 g, HasInvariant (f (g a)))
     updateCache = _Wrapped' %~ updateCache
 
 instance HasInvariant a => IsChecked (Checked a) a where
-    check arse = check' arse . updateCache
-    check' arse x = Checked $ byPred arse msg (const $ null p) x x
+    check    = check' . updateCache
+    check' x = Checked $ checkAssert (invariant x) (show x) x
         where
-            msg = printf "invariant failure: \n%s" $ intercalate "\n" p
-            p = map fst $ filter (not.snd) $ snd $ execRWS (runInvariant $ invariant x) [] ()
-    content arse = iso getChecked (check arse)
+            -- msg = [printf|invariant failure: \n%s|] $ intercalate "\n" p
+            -- p = map fst $ filter (not.snd) $ snd $ execRWS (runInvariant $ invariant x) [] ()
+    content = iso getChecked check
+
+holds :: IsAssertion prop => prop -> Bool
+holds prop = null $ snd $ execRWS (runInvariant $ toInvariant prop) [] ()
+
+checkAssertM :: (IsAssertion a,Monad m,Pre) => a -> String -> m ()
+checkAssertM p msg = checkAssert p msg (return ())
+
+checkAssert :: (IsAssertion a,Pre) => a -> String -> b -> b
+checkAssert prop detail x = providedMessage' ?loc "Invariants" msg (null p) x
+        where
+            msg = [printf|assertion failure: \n%s\n%s|] (intercalate "\n" p) detail
+            p = invariantResults prop
+
+invariantResults :: IsAssertion a => a -> [String]
+invariantResults prop = 
+        snd $ execRWS (runInvariant $ toInvariant prop) [] ()
+
+invariantMessage :: IsAssertion a => a -> String
+invariantMessage prop 
+        | null p    = "pass"
+        | otherwise = intercalate "\n" $ "failed" : p
+    where
+        p = invariantResults prop
 
 trading :: (Functor f,Functor f')
         => Iso (Compose f (Compose g h) x) (Compose f' (Compose g' h') x')
@@ -135,58 +169,65 @@ instance Controls (Compose Checked f a) (f a) where
     content' = to getCompose . content'
 
 instance HasInvariant (f a) => IsChecked (Compose Checked f a) (f a) where
-    check arse = Compose . check arse
-    check' arse  = Compose . check' arse
-    content arse = iso getCompose Compose . content arse
+    check   = Compose . check
+    check'  = Compose . check'
+    content = iso getCompose Compose . content
 
 instance NFData (f (g x)) => NFData (Compose f g x) where
     rnf = rnf . getCompose
 
 infixr 0 ##
 
-(##) :: (IsAssertion b, ?loc :: CallStack) => String -> b -> Invariant ()
+(##) :: (IsAssertion b, Pre) => String -> b -> Invariant
 (##) tag b = withStack ?loc $ withPrefix tag $ toInvariant b
 
 infix 4 ===
 
-(===) :: (Eq a, Show a) => a -> a -> Invariant ()
+(===) :: (Eq a, Show a) => a -> a -> Invariant
 (===) = relation "/=" (==)
 
-isSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant ()
+isSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant
 isSubsetOf' = relation "/⊆" isSubsetOf
 
-isProperSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant ()
+isProperSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant
 isProperSubsetOf' = relation "/⊂" isProperSubsetOf
 
 {-# INLINE isSubmapOf' #-}
-isSubmapOf' :: (IsMap map,IsKey map k,Eq k,Eq a,Show (map k a)) => map k a -> map k a -> Invariant ()
+isSubmapOf' :: (IsMap map,IsKey map k,Eq k,Eq a,Show (map k a)) 
+            => map k a -> map k a -> Invariant
 isSubmapOf' = relation "/⊆" isSubmapOf
 
 {-# INLINE isProperSubmapOf' #-}
-isProperSubmapOf' :: (IsMap map,Eq k, Eq a,Show (map k a),IsKey map k) => map k a -> map k a -> Invariant ()
+isProperSubmapOf' :: (IsMap map,Eq k, Eq a,Show (map k a),IsKey map k) 
+                  => map k a -> map k a -> Invariant
 isProperSubmapOf' = relation "/⊂" isProperSubmapOf
 
 {-# INLINE member' #-}
-member' :: (Show k,Show (map k a),IsMap map,IsKey map k) => k -> map k a -> Invariant ()
+member' :: (Show k,Show (map k a),IsMap map,IsKey map k) 
+        => k -> map k a -> Invariant
 member' = relation "/∈" member
 
-relation :: (Show a,Show b) => String -> (a -> b -> Bool) -> a -> b -> Invariant ()
-relation symb rel x y = printf "%s %s %s" (show x) symb (show y) ## (x `rel` y)
+relation :: (Show a,Show b) 
+         => String 
+         -> (a -> b -> Bool) 
+         -> a -> b -> Invariant
+relation symb rel x y = [printf|%s %s %s|] (show x) symb (show y) ## (x `rel` y)
 
 class HasPrefix m where
     withPrefix :: String -> m a -> m a
     
-instance HasPrefix Invariant where
+instance HasPrefix InvariantM where
     withPrefix pre (Invariant cmd) = Invariant $ local (pre:) cmd
 
-mutate :: IsChecked c a => Assert -> c -> State a k -> c
-mutate arse x cmd = x & content arse %~ execState cmd 
+mutate :: (IsChecked c a,Pre)
+       => c -> State a k -> c
+mutate x cmd = x & content %~ execState cmd 
 
-mutate' :: (IsChecked c a,Monad m) => Assert -> StateT a m k -> StateT c m k
-mutate' arse cmd = zoom (content arse) cmd
+mutate' :: (IsChecked c a,Monad m,Pre) => StateT a m k -> StateT c m k
+mutate' = zoom content
 
-create' :: (IsChecked c a,Default a) => Assert -> State a k -> c
-create' arse = check arse . flip execState def 
+create' :: (IsChecked c a,Default a,Pre) => State a k -> c
+create' = check . flip execState def 
 
-withStack :: CallStack -> Invariant a -> Invariant a
+withStack :: CallStack -> InvariantM a -> InvariantM a
 withStack cs = maybe id withPrefix $ stackTrace [$__FILE__] cs

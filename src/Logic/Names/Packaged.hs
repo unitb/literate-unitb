@@ -15,7 +15,6 @@ module Logic.Names.Packaged
     , reserved
     , setSuffix
     , dropSuffix
-    , assert
     , isName
     , isName'
     , Intl.fresh
@@ -102,14 +101,14 @@ instance Show InternalName where
     show = show . view unpackaged . getInternalName
 
 
-makeName :: Assert -> String -> Name
-makeName arse = view (from name) . Intl.makeName arse
+makeName :: Pre => String -> Name
+makeName = view (from name) . Intl.makeName
 
 addSuffix :: String -> InternalName -> InternalName
 addSuffix suf = internal %~ Intl.addSuffix suf
 
-setSuffix :: Assert -> String -> Name -> Name
-setSuffix arse suf = name %~ Intl.setSuffix arse suf
+setSuffix :: Pre => String -> Name -> Name
+setSuffix suf = name %~ Intl.setSuffix suf
 
 dropSuffix :: InternalName -> InternalName
 dropSuffix = internal %~ Intl.dropSuffix

@@ -29,7 +29,7 @@ runSequent (SequentM cmd) = empty_sequent
 include :: Theory -> SequentM ()
 include t = SequentM $ tell ([],[],M.elems $ theory_facts t,[theory_ctx t])
 
-assume :: (?loc :: CallStack)
+assume :: Pre
        => ExprP -> SequentM ()
 assume e = do
         let e' = fromRight' e
@@ -41,14 +41,14 @@ collectDeclaration e = SequentM $ do
         let ts = types_of e^.partsOf (to S.toList.traverse.foldSorts)
         tell (ts,[],[],[])
 
-check :: (?loc :: CallStack)
+check :: Pre
       => ExprP -> SequentM Expr
 check e = do
         let e' = fromRight' e
         collectDeclaration e'
         return e'
 
-declare :: (?loc :: CallStack)
+declare :: Pre
         => String -> Type -> SequentM ExprP
 declare n t = do
         let v = Var (fromString'' n) t

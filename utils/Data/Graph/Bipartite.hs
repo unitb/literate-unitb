@@ -40,7 +40,6 @@ where
 import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.DeepSeq
-import Control.Invariant
 import Control.Lens
 
 import Control.Monad.Reader
@@ -115,12 +114,11 @@ fromList v0 v1 es = makeGraph $ do
     mapM_ (uncurry newRightVertex) v1
     mapM_ (uncurry addEdge) es
 
-fromList' :: (Ord key0,Ord key1)
-          => Assert 
-          -> [(key0,v0)] 
+fromList' :: (Ord key0,Ord key1,Pre)
+          => [(key0,v0)] 
           -> [(key1,v1)] -> [(key0,key1)] 
           -> BiGraph' key0 v0 key1 v1 ()
-fromList' arse xs ys zs = fromJust'' arse $ fromList xs ys zs
+fromList' xs ys zs = fromJust' $ fromList xs ys zs
 
 empty :: BiGraph' key0 v0 key1 v1 e
 empty = Graph emptyList emptyList M.empty
@@ -474,24 +472,24 @@ hasRightVertex v = GR $ do
     vs <- view $ rightAL.mapKey
     return $ Vertex <$> v `M.lookup` vs
 
-leftVertex :: Ord key0
-           => Assert -> key0
+leftVertex :: (Ord key0,Pre)
+           => key0
            -> GraphReader' key0 v0 key1 v1 e s0 s1 (Vertex s0)
-leftVertex arse v = GR $ do
+leftVertex v = GR $ do
     vs <- view $ leftAL.mapKey
-    return $ Vertex $ fromJust'' arse $ v `M.lookup` vs
+    return $ Vertex $ fromJust' $ v `M.lookup` vs
 
 getEdges :: GraphReader' key0 v0 key1 v1 e s0 s1 (Map (Edge s0 s1) ())
 getEdges = GR $ do
     es <- views edges $ M.mapKeys (uncurry Edge)
     return $ () <$ es
 
-rightVertex :: Ord key1
-            => Assert -> key1
+rightVertex :: (Ord key1,Pre)
+            => key1
             -> GraphReader' key0 v0 key1 v1 e s0 s1 (Vertex s1)
-rightVertex arse v = GR $ do
+rightVertex v = GR $ do
     vs <- view $ rightAL.mapKey
-    return $ Vertex $ fromJust'' arse $ v `M.lookup` vs
+    return $ Vertex $ fromJust' $ v `M.lookup` vs
 
 edgeInfo :: Edge s0 s1 -> GraphReader' key0 v0 key1 v1 e s0 s1 e
 edgeInfo (Edge i j) = GR $ views edges (! (i,j))
