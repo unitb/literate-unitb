@@ -32,7 +32,7 @@ import           Data.String.Brackets
 import qualified Data.Tuple.Generics as Tup
 import           Data.Typeable
 
-import Test.UnitTest
+import Test.UnitTest hiding (Node)
 import Test.QuickCheck
 
 import Text.Printf.TH

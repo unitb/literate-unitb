@@ -17,9 +17,9 @@ import Test.UnitTest
 test_case :: TestCase
 test_case = test_cases 
     "Garbage collector" 
-    [ POCase "test0: verify m0" case0 result0 
-    , POCase "test1: verify m1" case1 result1 
-    , POCase "test2: verify m2" case2 result2 
+    [ poCase "test0: verify m0" case0 result0 
+    , poCase "test1: verify m1" case1 result1 
+    , poCase "test2: verify m2" case2 result2 
     , StringCase "test3: monotonic simplification" case3 result3
     , StringCase "test4: monotonicity of POs" case4 result4 
     , StringCase "test5: monotonicity in relation theory" case5 result5 

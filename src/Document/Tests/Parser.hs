@@ -21,9 +21,9 @@ import Data.Map.Class
 test_case :: TestCase
 test_case = test_cases 
     "Parser" 
-    [ POCase "test0: verify m0" case0 result0 
-    , POCase "test1: verify m1" case1 result1 
-    , POCase "test2: verify m2" case2 result2 
+    [ poCase "test0: verify m0" case0 result0 
+    , poCase "test1: verify m1" case1 result1 
+    , poCase "test2: verify m2" case2 result2 
     , Case "test3: spontaneous events" case3 result3 
     ]
 
