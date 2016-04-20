@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 module Build where
 
 import Control.Concurrent
@@ -15,6 +16,8 @@ import System.Exit
 import System.FilePath
 import System.Process
 
+import Text.Printf.TH
+
 data CompileMode = Make | CompileFile
 
 data CompileFlags = CompileFlags
@@ -23,10 +26,15 @@ data CompileFlags = CompileFlags
 
 type Build = RWST FilePath () (FilePath,[FilePath]) (MaybeT IO)
 
+data BuildTool = Cabal | Stack
+
 inf :: FilePath
 inf  = "interface"
 bin :: FilePath
 bin  = "bin"
+
+tool :: BuildTool
+tool = Cabal
 
 build :: FilePath -> Build a -> IO (Maybe (a, FilePath, [FilePath]))
 build path cmd = fmap f <$> runMaybeT (runRWST cmd path ("ghc",[]))
@@ -135,10 +143,22 @@ liftIOWithExit cmd = do
         r <- liftIO cmd
         returnIf () r
 
+toolBuild :: (String -> [String] -> r) -> [String] -> r
+toolBuild f args = case tool of
+  Cabal -> f "cabal" $ "build" : args
+  Stack -> f "stack" $ "build" : args
+
+toolExec :: (String -> [String] -> r) -> [String] -> r
+toolExec f args = case tool of
+  Cabal -> f "cabal" $ "run" : args
+  Stack -> f "stack" $ "exec" : args
+
+execCommand :: String -> String -> String
+execCommand command outfile = toolExec (\c args -> [printf|%s %s %s > %s|] c (intercalate " " args) command outfile) []
 cabal_run :: CabalTarget -> Build ()
 cabal_run (CabalTarget target) = do
     liftIOWithExit $ do
-        (r,_out,err) <- readProcessWithExitCode "cabal" ["run",target] []
+        (r,_out,err) <- toolExec readProcessWithExitCode [target] []
         -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
         putStrLn $ removeAtLineNumber err
         return r
@@ -146,7 +166,7 @@ cabal_run (CabalTarget target) = do
 cabal_build :: String -> Build CabalTarget
 cabal_build target = do
     liftIOWithExit $ do
-        (r,_out,err) <- readProcessWithExitCode "cabal" ["build",target] []
+        (r,_out,err) <- toolBuild readProcessWithExitCode [target] []
         -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
         putStrLn $ removeAtLineNumber err
         return r

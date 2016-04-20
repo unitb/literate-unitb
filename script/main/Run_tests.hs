@@ -59,7 +59,7 @@ general = do
                 hFlush stdout
                 t0 <- getCurrentTime
                 --c1 <- p_system "bin/test > result.txt"
-                c1 <- system "cabal run test > result.txt"
+                c1 <- system $ execCommand "test" "result.txt"
                 t1 <- getCurrentTime
                 ys' <- lines `liftM` readProcess "git" ["ls-files","*hs"] ""
                 zs' <- mapM (liftM (length . lines) . readFile) ys'
