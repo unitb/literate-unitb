@@ -155,6 +155,7 @@ toolExec f args = case tool of
 
 execCommand :: String -> String -> String
 execCommand command outfile = toolExec (\c args -> [printf|%s %s %s > %s|] c (intercalate " " args) command outfile) []
+
 cabal_run :: CabalTarget -> Build ()
 cabal_run (CabalTarget target) = do
     liftIOWithExit $ do
