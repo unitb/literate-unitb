@@ -164,14 +164,14 @@ cabal_run (CabalTarget target) = do
         putStrLn $ removeAtLineNumber err
         return r
 
-cabal_build :: String -> Build CabalTarget
+cabal_build :: Maybe String -> Build CabalTarget
 cabal_build target = do
     liftIOWithExit $ do
-        (r,_out,err) <- toolBuild readProcessWithExitCode [target] []
+        (r,_out,err) <- toolBuild readProcessWithExitCode (maybeToList target) []
         -- putStrLn $ unlines $ filter (not . ("[" `isPrefixOf`)) $ lines _out
         putStrLn $ removeAtLineNumber err
         return r
-    return $ CabalTarget target
+    return $ CabalTarget $ fromMaybe "" target
 
 enableProfiling :: FilePath -> Build FilePath
 enableProfiling target = do

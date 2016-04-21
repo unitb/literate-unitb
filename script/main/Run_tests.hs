@@ -53,7 +53,7 @@ general = do
         case c1 of
             ExitSuccess -> do
                 path <- getCurrentDirectory
-                build path (cabal_build "test")
+                build path (cabal_build Nothing)
                 --build path compile_all
                 putStrLn "Running test ..."
                 hFlush stdout
