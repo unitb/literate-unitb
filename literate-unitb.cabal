@@ -178,6 +178,7 @@ library
         Logic.TestGenericity
         UnitB.Test
         Utilities.Test
+        Reactive.Banana.Test
         Z3.Test
         Test.UnitTest
 

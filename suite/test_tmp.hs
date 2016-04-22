@@ -2,6 +2,7 @@
 module Main where
 
 import qualified Reactive as R
+import qualified Reactive.Banana.Property as R
 import Document.Document as Doc ( syntaxSummary )
 import Document.Document as Doc ( parse_system )
 import Document.Phase.Expressions as PExp
@@ -29,6 +30,7 @@ import UnitB.Test as UB
 -- import UnitB.UnitB as UB hiding (raw_proof_obligation)
 -- import Logic.Expr.PrettyPrint
 -- import Logic.Names
+import Logic.Names.Packaged ()
 -- import Logic.Proof
 -- import UnitB.Test as UB
 --import Latex.Parser
@@ -53,6 +55,7 @@ import Data.Functor
 
 -- import System.FilePath.Lens
 
+import Reactive.Banana.Test as RB
 import System.Process
 -- import System.Timeout
 
@@ -167,4 +170,5 @@ main = timeIt $ void $ do
     return $ run_test_cases Parser.test_case
     return $ run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
+    return $ run_test_cases RB.test_case
     return ()

@@ -14,7 +14,7 @@ import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
 
-import Utilities.Table
+import Reactive.Banana.Test as RB
 
 import Shelly hiding (time,get)
 
@@ -23,6 +23,7 @@ import System.Exit
 
 import Test.UnitTest
 
+import Utilities.Table
 import Utilities.TimeIt
 
 test_case :: TestCase
@@ -36,6 +37,7 @@ test_case = test_cases
         ,  UT.test_case
         ,  Code.test_case
         ,  Sum.test_case
+        ,  RB.test_case
         ]
 
 main :: IO ()
@@ -49,7 +51,7 @@ main = timeIt $ do
         shelly $ rm_f "expected-*.txt"
     when (prefix "po-") $
         shelly $ rm_f "po-*.z3"
-    b <- run_test_cases test_case
+    b <- run_test_cases Main.test_case
     putStrLn tableType
     if b 
     then do

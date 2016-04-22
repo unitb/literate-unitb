@@ -3,7 +3,7 @@
     , PatternSynonyms, ConstraintKinds #-}
 module Data.TypeList where
 
-import Control.Lens
+import Control.Lens hiding (curried,uncurried)
 import Control.Monad
 import Control.Precondition
 
@@ -49,21 +49,37 @@ data Pair f g a = Pair (f a) (g a)
 zipL :: List' f a -> List' g a -> List' (Pair f g) a
 zipL = zipWithL' Pair
 
-class IsTypeList (TypeListOf a f) => AsTypeList a f where
-    type TypeListOf a f :: [*]
+class IsTypeList (TypeListOf t) => IsTuple t where
+    type TypeListOf t :: [*]
+    type ReplaceF (f :: * -> *) t :: *
+
+class (IsTuple a, ReplaceF f a ~ a) => AsTypeList a f where
     -- type FunTypeOf a f r :: *
-    asTypeList' :: Iso' a (List' f (TypeListOf a f))
+    asTypeList' :: Iso' a (List' f (TypeListOf a))
 
 class Curried t r f | t r -> f, f r -> t, f t -> r where
     curried' :: Iso' (t -> r) f
+
+curried :: (Curried t r f, Curried t' r' f')
+        => Iso (t -> r) (t' -> r') f f'
+curried = withIso curried' $ \f _ -> withIso curried' $ \_ f' -> iso f f'
+
+uncurried :: (Curried t r f, Curried t' r' f')
+          => Iso f f' (t -> r) (t' -> r')
+uncurried = from curried
 
 uncurried' :: Curried t r f => Iso' f (t -> r)
 uncurried' = from curried'
 
 {-# INLINE asTypeList #-}
 asTypeList :: (AsTypeList a f,AsTypeList b g)
-           => Iso a b (List' f (TypeListOf a f)) (List' g (TypeListOf b g))
+           => Iso a b (List' f (TypeListOf a)) (List' g (TypeListOf b))
 asTypeList = withIso asTypeList' $ \ sa _ -> withIso asTypeList' $ \ _ bt -> iso sa bt
+
+type family TupleOf xs (f :: * -> *) :: * where
+    TupleOf '[] f = ()
+    TupleOf '[a] f = Identity (f a)
+    TupleOf '[a0,a1] f = (f a0,f a1)
 
 class IsTypeList xs where
     byCase :: ((xs ~ '[]) => r) 
@@ -86,7 +102,7 @@ instance IsTypeList '[] where
 instance IsTypeList xs => IsTypeList (x ': xs) where
     byCase _ f Proxy = f
 
-type SameLength a b f g = (AsTypeList a f,AsTypeList b g,TypeListOf a f ~ TypeListOf b g)
+type SameLength a b = (IsTuple a,IsTuple b,TypeListOf a ~ TypeListOf b)
 
 traverseL :: Applicative m 
           => (forall a. f a -> m (g a)) 
@@ -107,6 +123,7 @@ headL (Cons' x _) = x
 do
     let n = 20
         f = varT $ mkName "f"
+        g = varT $ mkName "g"
         r = varT $ mkName "r"
         tupT 1 = [t|Identity|]
         tupT n = tupleT n
@@ -124,7 +141,9 @@ do
         list (t:ts) = appsT [promotedConsT,t,list ts]
     fmap concat $ forM [0..n] $ \i -> do
         let t = appsT $ tupT i : fargs
+            t' = appsT $ tupT i : gargs
             fargs = map (appT f) argT
+            gargs = map (appT g) argT
             ffP = varP $ mkName "f"
             ffE = varE $ mkName "f"
             tList = list argT
@@ -138,9 +157,11 @@ do
             curry' = lamE (ffP:argP) (appE ffE $ tupleE argE)
             uncurry' = lamE [ffP,tupleP argP] (appsE $ ffE : argE)
         [d| instance AsTypeList $t $f where
-                type TypeListOf $t $f = $tList
                 {-# INLINE asTypeList' #-}
                 asTypeList' = iso $toFun $fromFun 
+            instance IsTuple $t where
+                type TypeListOf $t = $tList
+                type ReplaceF $g $t = $t'
             instance Curried $(appsT $ tupT i : argT) $r $(arrowType' argT r) where
                 {-# INLINE curried' #-}
                 curried' = iso $curry' $uncurry' |]

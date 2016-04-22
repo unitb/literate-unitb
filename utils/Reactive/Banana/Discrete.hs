@@ -23,6 +23,27 @@ valueD (Discrete x _) = x
 changesD :: Discrete a -> Event a
 changesD (Discrete _ ev) = ev
 
+  -- For a discrete behavior `d` changPairD d yields an event pair (old,new)
+changePairD :: MonadMoment m 
+            => Discrete a -> m (Event (a,a))
+changePairD d = do
+    b <- behavior d
+    return $ (,) <$> b <@> changesD d
+
+sampleD :: MonadMoment m
+        => Discrete a
+        -> Event b
+        -> m (Event a)
+sampleD f = applyD (const <$> f)
+
+applyD :: MonadMoment m
+       => Discrete (a -> b)
+       -> Event a
+       -> m (Event b)
+applyD d e = do
+    b <- behavior d
+    return $ b <@> e
+
 accumD :: MonadMoment m
        => a
        -> Event (a -> a)

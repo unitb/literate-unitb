@@ -75,9 +75,14 @@ library
         GHC.Generics.Utils
         GHC.Stack.Utils
         Reactive.Banana.Async
+        Reactive.Banana.Async2
+        Reactive.Banana.Combinators.Extras
         Reactive.Banana.Discrete
+        Reactive.Banana.FileSystem
         Reactive.Banana.IO
         Reactive.Banana.Keyboard
+        Reactive.Banana.Monitor
+        Reactive.Banana.Property
         Test.QuickCheck.AxiomaticClass
         Test.QuickCheck.Report
         Test.QuickCheck.RandomTree
