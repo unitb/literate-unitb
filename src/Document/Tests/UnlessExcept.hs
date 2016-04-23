@@ -11,9 +11,9 @@ test_case = test
 test :: TestCase
 test = test_cases
             "Unless / except clause"
-            [ (POCase "test 0, unless/except without indices" 
+            [ (poCase "test 0, unless/except without indices" 
                 (verify path0 0) result0)
-            , (POCase "test 1, unless/except with indices and free variables" 
+            , (poCase "test 1, unless/except with indices and free variables" 
                 (verify path0 1) result1)
             ]
 

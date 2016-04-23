@@ -1,6 +1,7 @@
 module Document.Tests.Suite 
     ( module Document.Tests.Suite 
     , module Control.Monad.Trans.Either 
+    , module Logic.UnitTest
     , module UnitB.UnitB
     , Error(..) )
 where
@@ -10,6 +11,7 @@ import Document.Document as Doc
 
 import Logic.Expr as E
 import Logic.Proof
+import Logic.UnitTest
 
 import UnitB.PO
 import UnitB.UnitB hiding (proof_obligation,raw_proof_obligation)

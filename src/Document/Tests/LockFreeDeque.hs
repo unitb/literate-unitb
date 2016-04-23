@@ -31,15 +31,15 @@ test_case = test
 test :: TestCase
 test = test_cases
             "Specification and refinement of a lock-free algorithm"
-            [ (POCase "test 0, verification, specification with intervals" 
+            [ (poCase "test 0, verification, specification with intervals" 
                 (verify path0 0) result0)
-            , (POCase "test 1, verification, failed proof with intervals" 
+            , (poCase "test 1, verification, failed proof with intervals" 
                 (verify path1 0) result1)
             , (StringCase "test 2, error message name clash in guards" 
                 case2 result2)
-            , (POCase "test 3, verification, looking up function outside of domain" 
+            , (poCase "test 3, verification, looking up function outside of domain" 
                 (verify path3 0) result3)
-            , (POCase "test 4, m1, liveness implemented with conditional behavior"
+            , (poCase "test 4, m1, liveness implemented with conditional behavior"
                 (verify path4 1) result4)
             , (StringCase "test 5, transient, two branches, enablement of non-empty"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:non:empty/EN" 1)
@@ -62,9 +62,9 @@ test = test_cases
             , StringCase "test 11, missing witness"
                 (find_errors path11)
                 result11
-            , POCase "test 12, carrier sets without using sets"
+            , poCase "test 12, carrier sets without using sets"
                 case12 result12
-            , POCase "test 13, event splitting"
+            , poCase "test 13, event splitting"
                 case13 result13
             , Case "test 14, event splitting, event sets"
                 case14 result14                
@@ -78,7 +78,7 @@ test = test_cases
                 case18 result18
             , StringCase "test 19, splitting POs"
                 case19 result19
-            , POCase "test 20, Lamport proofs"
+            , poCase "test 20, Lamport proofs"
                 case20 result20
             , Case "test 21, new index witness"
                 case21 result21
@@ -86,11 +86,11 @@ test = test_cases
                 case22 result22
             , Case "test 23, new index proof obligation part b"
                 case23 result23
-            , POCase "test 24, scoping in index witness feasibility"
+            , poCase "test 24, scoping in index witness feasibility"
                 case24 result24
-            , POCase "test 25, parameter promotion and inheritance"
+            , poCase "test 25, parameter promotion and inheritance"
                 case25 result25
-            , POCase "test 26, scoping problem in sequents"
+            , poCase "test 26, scoping problem in sequents"
                 case26 result26
             -- , POCase "test 27, problem: failure in WD-checking"
             --     case27 result27

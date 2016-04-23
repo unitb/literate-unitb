@@ -7,11 +7,11 @@ import Test.UnitTest
 test_case :: TestCase
 test_case = test_cases 
     "Termination Detection" 
-    [ POCase "test0: verify m0" case0 result0 
-    , POCase "test1: verify m1" case1 result1 
-    , POCase "test2: verify m2" case2 result2 
-    , POCase "test3: verify m3" case3 result3 
-    , POCase "test4: quantified union" case4 result4 ]
+    [ poCase "test0: verify m0" case0 result0 
+    , poCase "test1: verify m1" case1 result1 
+    , poCase "test2: verify m2" case2 result2 
+    , poCase "test3: verify m3" case3 result3 
+    , poCase "test4: quantified union" case4 result4 ]
 
 path0 :: FilePath
 path0 = "Tests/termination detection/main.tex"

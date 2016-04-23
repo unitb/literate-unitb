@@ -79,6 +79,7 @@ library
         Test.QuickCheck.Report
         Test.QuickCheck.RandomTree
         Test.QuickCheck.Regression
+        Test.UnitTest
         Text.Printf.TH  
         Utilities.Config
         Utilities.Directory

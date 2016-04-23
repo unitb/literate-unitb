@@ -2,7 +2,6 @@ module Document.Tests.TrainStationSets where
 
 import Document.Tests.Suite
 
-
     -- Libraries
 import Test.UnitTest
 
@@ -12,15 +11,15 @@ test_case = test
 test :: TestCase
 test = test_cases
             "train station example, with sets"
-            [ POCase "verify machine m0 (sets)" (verify path0 0) result0
-            , POCase "verify machine m1 (sets)" (verify path0 1) result1
-            , POCase "verify machine m2 (sets)" (verify path0 2) result2
+            [ poCase "verify machine m0 (sets)" (verify path0 0) result0
+            , poCase "verify machine m1 (sets)" (verify path0 1) result1
+            , poCase "verify machine m2 (sets)" (verify path0 2) result2
             , Case "m2, enablement proof obligation" case6 result6
             , Case "m2, transient proof obligation, feasibility" case7 result7
             , Case "m2, transient proof obligation, enablement" case10 result10
             , Case "m2, transient proof obligation, negation" case11 result11
             , Case "m2, safety property of schedule replacement" case8 result8
-            , POCase "verify machine m3 (sets)" (verify path0 3) result5
+            , poCase "verify machine m3 (sets)" (verify path0 3) result5
             , Case "type checking of boolean expressions" case3 result3
             , Case "verify machine m3 error (wandering free variable)" case4 result4
             , StringCase "witness well definedness PO" case9 result9
