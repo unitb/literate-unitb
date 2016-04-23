@@ -5,17 +5,14 @@ module Test.UnitTest
     , selectLeaf, dropLeaves, leaves
     , makeTestSuite, makeTestSuiteOnly
     , testName, TestName
-    , allLeaves, nameOf )
+    , callStackLineInfo
+    , M, UnitTest(..) 
+    , IsTestCase(..)
+    , logNothing, PrintLog
+    , allLeaves )
 where
 
-    -- Modules
-import Logic.Expr hiding ( name )
-import Logic.Proof
-
-import Z3.Z3
-
     -- Libraries
-import Control.Arrow
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.SSem
@@ -31,7 +28,6 @@ import           Data.Either
 import           Data.IORef
 import           Data.List
 import           Data.List.NonEmpty as NE (sort)
-import qualified Data.Map.Class as M hiding ((!))
 import           Data.String.Indentation
 import           Data.String.Lines hiding (lines,unlines)
 import           Data.Tuple
@@ -45,7 +41,6 @@ import Language.Haskell.TH
 import Prelude
 import PseudoMacros
 
-import Utilities.Table
 
 import System.FilePath
 import System.IO
@@ -55,12 +50,54 @@ import Text.Printf.TH
 
 data TestCase = 
       forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a
-    | POCase String (IO (String, Table Label Sequent)) String
     | forall a . (Show a, Eq a, Typeable a) => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
     | Suite CallStack String [TestCase]
     | WithLineInfo CallStack TestCase
+    | forall test. IsTestCase test => Other test
+
+class IsTestCase c where
+    makeCase :: Maybe CallStack -> c -> IO UnitTest
+    nameOf :: Lens' c String
+
+instance IsTestCase TestCase where
+    makeCase _ (WithLineInfo cs t) = makeCase (Just cs) t
+    makeCase _ (Suite cs n xs) = Node cs n <$> mapM (makeCase $ Just cs) xs
+    makeCase cs (Case x y z) = return UT
+                        { name = x
+                        , routine = (,logNothing) <$> y
+                        , outcome = z
+                        , _mcallStack = cs
+                        , _display = disp
+                        }
+    makeCase cs (CalcCase x y z) = do 
+            r <- z
+            return UT
+                { name = x
+                , routine  = (,logNothing) <$> y
+                , outcome  = r
+                , _mcallStack = cs
+                , _display = disp
+                }
+    makeCase cs (StringCase x y z) = return UT 
+                            { name = x
+                            , routine = (,logNothing) <$> y
+                            , outcome = z
+                            , _mcallStack = cs
+                            , _display = id
+                            }
+    makeCase cs (LineSetCase x y z) = makeCase cs $ StringCase x 
+                                ((asLines %~ NE.sort) <$> y) 
+                                (z & asLines %~ NE.sort)
+    makeCase cs (Other c) = makeCase cs c
+    nameOf f (WithLineInfo x0 c) = WithLineInfo x0 <$> nameOf f c
+    nameOf f (Suite x0 n x1) = (\n' -> Suite x0 n' x1) <$> f n
+    nameOf f (Case n x0 x1) = (\n' -> Case n' x0 x1) <$> f n
+    nameOf f (Other c) = Other <$> nameOf f c
+    nameOf f (CalcCase n x0 x1) = (\n' -> CalcCase n' x0 x1) <$> f n
+    nameOf f (StringCase n x0 x1) = (\n' -> StringCase n' x0 x1) <$> f n
+    nameOf f (LineSetCase n x0 x1) = (\n' -> LineSetCase n' x0 x1) <$> f n
 
 newtype M a = M { runM :: RWST Int [Either (MVar [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
     deriving ( Monad,Functor,Applicative,MonadIO
@@ -111,9 +148,14 @@ new_failure cs name actual expected = do
 test_cases :: Pre => String -> [TestCase] -> TestCase
 test_cases = Suite ?loc
 
+logNothing :: PrintLog
+logNothing = const $ const $ const $ const $ return ()
+
+type PrintLog = CallStack -> String -> String -> String -> M ()
+
 data UnitTest = forall a. Eq a => UT 
     { name :: String
-    , routine :: IO (a, Maybe (Table Label Sequent))
+    , routine :: IO (a, PrintLog)
     , outcome :: a
     , _mcallStack :: Maybe CallStack
     , _display :: a -> String
@@ -126,10 +168,11 @@ data UnitTest = forall a. Eq a => UT
 --     where
 --         f xs = takeWhile (/= '(') xs
 
-run_test_cases :: Pre => TestCase -> IO Bool
+run_test_cases :: (Pre,IsTestCase testCase) 
+               => testCase -> IO Bool
 run_test_cases xs = do
         swapMVar failure_number 0
-        c        <- f Nothing xs 
+        c        <- makeCase Nothing xs 
         ref      <- newIORef []
         (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 (assertFalse' "??")) ref
         forM_ w $ \ln -> do
@@ -139,83 +182,9 @@ run_test_cases xs = do
         x <- fmap (uncurry (==)) <$> takeMVar b
         either throw return x
     where        
-        f _ (WithLineInfo cs t) = f (Just cs) t
-        f cs (POCase x y z)     = do
-                let cmd = catch (second Just `liftM` y) handler
-                    handler exc = do
-                        putStrLn "*** EXCEPTION ***"
-                        putStrLn x
-                        print exc
-                        return (show (exc :: SomeException), Nothing)
-                    -- get_po = catch (snd `liftM` y) g
-                    -- g :: SomeException -> IO (Table Label Sequent)
-                    -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
-                return UT
-                    { name = x
-                    , routine = cmd 
-                    , outcome = z 
-                    , _mcallStack = cs
-                    , _display = id
-                    }
-        f _ (Suite cs n xs) = Node cs n <$> mapM (f $ Just cs) xs
-        -- f t = return (Node (nameOf t) [])
-        f cs (Case x y z) = return UT
-                            { name = x
-                            , routine = (,Nothing) <$> y
-                            , outcome = z
-                            , _mcallStack = cs
-                            , _display = disp
-                            }
-        f cs (CalcCase x y z) = do 
-                r <- z
-                return UT
-                    { name = x
-                    , routine  = (,Nothing) <$> y
-                    , outcome  = r
-                    , _mcallStack = cs
-                    , _display = disp
-                    }
-        f cs (StringCase x y z) = return UT 
-                                { name = x
-                                , routine = (,Nothing) <$> y
-                                , outcome = z
-                                , _mcallStack = cs
-                                , _display = id
-                                }
-        f cs (LineSetCase x y z) = f cs $ StringCase x 
-                                    ((asLines %~ NE.sort) <$> y) 
-                                    (z & asLines %~ NE.sort)
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
-
-print_po :: CallStack -> Maybe (Table Label Sequent) -> String -> String -> String -> M ()
-print_po cs pos name actual expected = do
-    n <- get
-    liftIO $ do
-        let ma = f actual
-            me = f expected
-            f :: String -> Table String Bool
-            f xs = M.map (== "  o  ") $ M.fromList $ map (swap . splitAt 5) $ lines xs
-            mr = M.keys $ M.filter not $ M.unionWith (==) (me `M.intersection` ma) ma
-        case pos of
-            Just pos -> do
-                forM_ (zip [0..] mr) $ \(i,po) -> do
---                    hPutStrLn stderr $ "writing po file: " 
---                    forM_ (M.keys ma) $ hPutStrLn stderr . show
---                    hPutStrLn stderr $ "---"
---                    forM_ (M.keys me) $ hPutStrLn stderr . show
-                    if label po `M.member` pos then do
-                        withFile ([printf|po-%d-%d.z3|] n i) WriteMode $ \h -> do
-                            hPutStrLn h $ "; " ++ name
-                            hPutStrLn h $ "; " ++ po
-                            hPutStrLn h $ "; " ++ if not $ ma ! po 
-                                                  then  "does {not discharge} automatically"
-                                                  else  "{discharges} automatically"
-                            forM_ (callStackLineInfo cs) $ hPutStrLn h . ("; " ++)
-                            hPutStrLn h $ unlines $ z3_code (pos ! label po) : ["; " ++ po]
-                    else return ()
-            Nothing  -> return ()
 
 test_suite_string :: CallStack
                   -> UnitTest 
@@ -233,12 +202,12 @@ test_suite_string cs' ut = do
                 (Right `liftM` y) 
                 (\e -> return $ Left $ show (e :: SomeException))
             case r of
-                Right (r,s) -> 
+                Right (r,printLog) -> 
                     if (r == z)
                     then return (1,1)
                     else do
                         take_failure_number
-                        print_po cs s x (disp r) (disp z)
+                        printLog cs x (disp r) (disp z)
                         new_failure cs x (disp r) (disp z)
                         putLn "*** FAILED ***"
                         forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
@@ -257,33 +226,17 @@ test_suite_string cs' ut = do
                 putLn ([printf|+- [ Success: %d / %d ]|] y x)
                 return (y,x)
 
-nameOf :: TestCase -> String
-nameOf (WithLineInfo _ c) = nameOf c
-nameOf (Suite _ n _) = n
-nameOf (Case n _ _) = n
-nameOf (POCase n _ _) = n
-nameOf (CalcCase n _ _) = n
-nameOf (StringCase n _ _) = n
-nameOf (LineSetCase n _ _) = n
 
 leaves :: TestCase -> [String]
 leaves (Suite _ _ xs) = concatMap leaves xs
-leaves t = [nameOf t]
+leaves t = [t^.nameOf]
 
-setName :: String -> TestCase -> TestCase
-setName n (WithLineInfo cs t) = WithLineInfo cs $ setName n t
-setName n (Suite cs _ xs) = Suite cs n xs
-setName n (Case _ x y) = Case n x y
-setName n (POCase _ x y) = POCase n x y
-setName n (CalcCase _ x y) = CalcCase n x y
-setName n (StringCase _ x y) = StringCase n x y
-setName n (LineSetCase _ x y) = LineSetCase n x y
 
 allLeaves :: TestCase -> [TestCase]
 allLeaves = allLeaves' ""
     where
         allLeaves' n (Suite _ n' xs) = concatMap (allLeaves' (n ++ n' ++ "/")) xs
-        allLeaves' n t = [setName (n ++ nameOf t) t]
+        allLeaves' n t = [t & nameOf %~ (n ++)]
 
 selectLeaf :: Int -> TestCase -> TestCase 
 selectLeaf n = takeLeaves (n+1) . dropLeaves n

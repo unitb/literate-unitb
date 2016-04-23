@@ -131,6 +131,7 @@ library
         Logic.Theory
         Logic.Theory.Internals
         Logic.Theory.Monad
+        Logic.UnitTest
         Logic.WellDefinedness
         Reactive
         Theories.Arithmetic
@@ -180,7 +181,6 @@ library
         Utilities.Test
         Reactive.Banana.Test
         Z3.Test
-        Test.UnitTest
 
   default-language:    Haskell2010
 
