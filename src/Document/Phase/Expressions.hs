@@ -19,7 +19,7 @@ import Document.Proof
 import Document.Scope
 import Document.Visitor
 
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 
 import UnitB.Expr
 import UnitB.Syntax as AST hiding (invariant)

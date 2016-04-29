@@ -3,7 +3,7 @@
 module Document.Proof where
 
     -- Modules
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 import Document.Visitor
 
 import Latex.Parser 

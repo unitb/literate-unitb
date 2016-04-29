@@ -18,7 +18,7 @@ import Document.Visitor
 import Latex.Parser hiding (contents,source)
 
 import Logic.Expr
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 
 import UnitB.Syntax as AST
 

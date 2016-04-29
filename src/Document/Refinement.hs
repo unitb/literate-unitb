@@ -15,7 +15,7 @@ import UnitB.Syntax hiding (assert)
 import Latex.Parser
 
 import Logic.Expr hiding (Const)
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 
     -- Libraries
 import Control.Applicative

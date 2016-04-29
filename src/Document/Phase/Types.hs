@@ -7,7 +7,7 @@ module Document.Phase.Types where
 import Document.Pipeline
 import Document.Scope
 
-import Logic.Expr.Parser.Parser (ParserSetting)
+import Logic.Expr.Parser (ParserSetting)
 import Logic.Operator (Notation)
 import Logic.Proof
 import Logic.Proof.Tactics (Tactic)

@@ -25,7 +25,7 @@ import Document.Visitor
 
 import Latex.Parser 
 
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 
 import Logic.Proof
 import Logic.Proof.Tactics hiding ( with_line_info )

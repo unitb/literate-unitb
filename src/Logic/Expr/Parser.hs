@@ -1,4 +1,4 @@
-module Logic.Expr.Parser.Parser
+module Logic.Expr.Parser
     ( -- Internal.Parser
       parse_expression, parse_expr, parse_expr'
     , oper, run_test

@@ -8,7 +8,7 @@ import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 
 import Logic.Expr
 import qualified Logic.Expr.Const as Expr
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 

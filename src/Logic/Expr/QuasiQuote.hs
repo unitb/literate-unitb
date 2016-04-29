@@ -8,7 +8,7 @@ where
 
     -- Modules
 import Logic.Expr
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 import Logic.Expr.Printable
 import Logic.Theory
 

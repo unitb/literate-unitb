@@ -5,7 +5,7 @@ import Document.Document
 
 import Latex.Parser
 
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 import Logic.Operator hiding (Command)
 
 import Theories.Arithmetic

@@ -20,7 +20,7 @@ import Document.VarScope  hiding (var)
 
 import Latex.Monad
 
-import Logic.Expr.Parser.Parser
+import Logic.Expr.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Theory
 

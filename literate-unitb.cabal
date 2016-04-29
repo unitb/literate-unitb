@@ -107,9 +107,9 @@ library
         Logic.Expr.Fun
         Logic.Expr.Genericity
         Logic.Expr.Label
+        Logic.Expr.Parser
         Logic.Expr.Parser.Internal.Parser
         Logic.Expr.Parser.Internal.Setting
-        Logic.Expr.Parser.Parser
         Logic.Expr.PrettyPrint
         Logic.Expr.Printable
         Logic.Expr.Prism
