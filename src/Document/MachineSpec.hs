@@ -2,10 +2,10 @@ module Document.MachineSpec where
     
     -- Modules
 import Document.Document
-import Document.Expression
 
 import Latex.Parser
 
+import Logic.Expr.Parser.Parser
 import Logic.Operator hiding (Command)
 
 import Theories.Arithmetic
@@ -49,7 +49,7 @@ f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Property
-prop_expr_parser (ExprNotation ctx n e) = e' === parse_expr ctx n (withLI $ showExpr n $ asExpr e)
+prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression ctx n (withLI $ showExpr n $ asExpr e)
     where
         e' = Right e
         li = LI "" 0 0

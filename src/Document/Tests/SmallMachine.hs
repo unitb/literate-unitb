@@ -3,9 +3,9 @@ module Document.Tests.SmallMachine where
 
     -- Modules
 import Document.Tests.Suite
-import Document.Proof
 
 import Logic.Expr
+import Logic.Expr.Parser.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 

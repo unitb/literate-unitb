@@ -14,13 +14,13 @@ import Document.Phase.Expressions
 import Document.Phase.Proofs
 import Document.Phase.Structures
 import Document.Pipeline
-import Document.Proof
 import Document.Scope
 import Document.ExprScope hiding (var)
 import Document.VarScope  hiding (var)
 
 import Latex.Monad
 
+import Logic.Expr.Parser.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Theory
 

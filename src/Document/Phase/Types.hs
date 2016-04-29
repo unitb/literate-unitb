@@ -5,9 +5,9 @@ module Document.Phase.Types where
 
     -- Modules
 import Document.Pipeline
-import Document.Proof
 import Document.Scope
 
+import Logic.Expr.Parser.Parser (ParserSetting)
 import Logic.Operator (Notation)
 import Logic.Proof
 import Logic.Proof.Tactics (Tactic)
