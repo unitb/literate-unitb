@@ -6,12 +6,12 @@ module Document.Phase.Transient where
     --
 import Document.Phase as P
 import Document.Phase.Types
-import Document.Proof
 import Document.Visitor
 
 import Latex.Parser hiding (contents)
 
 import Logic.Expr
+import Logic.Expr.Parser
 
 import UnitB.Syntax as AST
 

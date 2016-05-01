@@ -71,7 +71,6 @@ library
   exposed-modules: 
         Code.Synthesis
         Document.Document
-        Document.Expression
         Document.ExprScope
         Document.Machine
         Document.MachineSpec
@@ -108,6 +107,9 @@ library
         Logic.Expr.Fun
         Logic.Expr.Genericity
         Logic.Expr.Label
+        Logic.Expr.Parser
+        Logic.Expr.Parser.Internal.Parser
+        Logic.Expr.Parser.Internal.Setting
         Logic.Expr.PrettyPrint
         Logic.Expr.Printable
         Logic.Expr.Prism
@@ -143,6 +145,7 @@ library
         Theories.SetTheory
         UnitB.Event
         UnitB.Expr
+        UnitB.Expr.Parser
         UnitB.Machine
         UnitB.PO
         UnitB.Proof
