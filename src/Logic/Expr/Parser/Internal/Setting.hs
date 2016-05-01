@@ -2,6 +2,7 @@ module Logic.Expr.Parser.Internal.Setting where
 
 import Logic.Expr
 import Logic.Operator
+import Logic.Theory
 
 import Control.DeepSeq
 
@@ -71,3 +72,6 @@ mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
         , _decls = (plVar `union` prVar)
         , _primed_vars = primeAll prVar
         , _dum_ctx = dumVar }
+
+theory_setting :: Theory -> ParserSetting
+theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))

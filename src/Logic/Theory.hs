@@ -9,7 +9,6 @@ module Logic.Theory
     , th_notation'
     , theory_ctx
     , theory_facts
-    , theory_setting
     , empty_theory
     , empty_theory'
     , basic_theory
@@ -21,7 +20,6 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Expr.Const
-import Logic.Expr.Parser.Internal.Setting
 import Logic.Expr.Scope
 import Logic.Operator as OP
 import Logic.Proof hiding (preserve) 
@@ -119,9 +117,6 @@ theory_facts th =
         d      = _extends th
         facts  = _fact th
         new_fact = facts
-
-theory_setting :: Theory -> ParserSetting
-theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
 
 instance HasSymbols Theory Var Name where
     symbols t = symbol_table $ defsAsVars (theory_ctx t)^.constants

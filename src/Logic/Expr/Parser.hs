@@ -9,7 +9,7 @@ module Logic.Expr.Parser
     , language, is_step, parserSettingSorts, decls, dum_ctx
     , primed_vars, free_dummies, expected_type
     , default_setting, makeSetting, setting_from_context, S.with_vars
-    , mkSetting )
+    , mkSetting, theory_setting )
 where
 
 import Logic.Expr.Parser.Internal.Parser as P
