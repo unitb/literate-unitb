@@ -1,16 +1,14 @@
 {-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE RecordWildCards      #-}
-module Document.Expression 
-    ( parse_expr , oper, run_test
-    , get_variables, get_variables', get_variables''
-    , parse_oper )
-where
+module Logic.Expr.Parser.Internal.Parser where
 
     -- Modules
 import Latex.Scanner -- hiding (many)
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
 import Logic.Expr
+import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
+import Logic.Expr.Printable
 import Logic.Operator
 
 
@@ -31,6 +29,7 @@ import qualified Control.Monad.Trans.Reader as R
 
 import           Data.Char
 import           Data.Either
+import           Data.Either.Combinators
 import           Data.List as L
 import           Data.Map.Class as M hiding ( map, (!) )
 import qualified Data.Map.Class as M
@@ -673,11 +672,11 @@ scan_expr n = do
         isOper (Just n) zs = zs `elem` map token (n^.new_ops)
         isOper Nothing _ = False
 
-parse_expr :: Context 
+parse_expression :: Context 
            -> Notation
            -> StringLi
            -> Either [Error] Expr
-parse_expr ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
+parse_expression ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
         let vars' = M.map Word vars `M.union` M.mapMaybe f defs
             f (Def xs n args t _e) = do
                     guard (L.null args)
@@ -708,3 +707,40 @@ parse_oper n s@(StringLi c _) = do
             (li^.filename) 
             toks (li^.line, li^.column)
         return e
+
+parse_expr' :: ParserSetting
+            -> LatexDoc
+            -> Either [Error] DispExpr
+parse_expr' p = parse_expr p . flatten_li' . drop_blank_text'
+
+contextOf :: ParserSetting -> Context
+contextOf set = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
+    where
+        ctx0
+            | set^.is_step = primeAll $ set^.primed_vars
+            | otherwise    = M.empty
+        ctx1 
+            | set^.free_dummies = set^.dum_ctx
+            | otherwise         = M.empty
+            
+parse_expr :: ParserSetting
+           -> StringLi
+           -> Either [Error] DispExpr
+parse_expr set xs = do
+        let ctx = contextOf set
+            li  = line_info xs
+        x  <- parse_expression ctx
+                (set^.language)
+                xs
+        typed_x  <- case set^.expected_type of
+            Just t -> mapBoth 
+                (\xs -> map (`Error` li) xs) 
+                (normalize_generics) $ zcast t $ Right x
+            Nothing -> return x
+        let x = normalize_generics typed_x
+        unless (L.null $ ambiguities x) $ Left 
+            $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
+                $ ambiguities x
+        return $ DispExpr (flatten xs) x
+    where
+        msg   = [printf|type of %s is ill-defined: %s|]

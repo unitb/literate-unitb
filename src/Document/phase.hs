@@ -10,12 +10,12 @@ module Document.Phase where
 import Document.Pipeline
 import Document.Phase.Types
 import Document.Phase.Parameters
-import Document.Proof
 import Document.Scope
 import Document.Visitor (M,runM,left,hoistEither)
 
 import Latex.Parser
 
+import Logic.Expr.Parser (ParserSetting)
 import Logic.Proof
 
 import UnitB.Expr

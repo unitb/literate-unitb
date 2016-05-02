@@ -2,11 +2,11 @@
 module UnitB.Test where 
 
     -- Modules
-import Document.Proof
 import Document.Tests.Suite (lookupSequent)
 
 import           Logic.Expr
 import qualified Logic.Expr.Const as Exp
+import           Logic.Expr.Parser
 import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
 import           Logic.Names.Internals as Names
