@@ -19,8 +19,9 @@ import Control.Exception
 import Control.Invariant
 import Control.Lens
 import Control.Monad
-import Control.Monad.State
 import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Trans.Lens
 
 import Data.Either.Combinators
 import Data.List.NonEmpty (nonEmpty)

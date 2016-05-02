@@ -21,7 +21,7 @@ module GHC.Generics.Instances
     , genericMConcat, genericDefault, genericSemigroupMAppend
     , Intersection(..), genericSemigroupMAppendWith
     , genericSemigroupMConcat, genericSemigroupMConcatWith
-    , show1, NFData1(..), deepseq1
+    , show1, shows1, NFData1(..), deepseq1
     , Serialize1(..)
     , genericArbitrary, inductive, listOf', arbitrary' 
     , Lift1(..), Monoid1(..)
@@ -308,6 +308,9 @@ instance (Show1 f,Show a) => Show (OnFunctor f a) where
 
 show1 :: (Show a, Show1 f) => f a -> String
 show1 x = showsPrec1 0 x ""
+
+shows1 :: (Show a, Show1 f) => f a -> ShowS
+shows1 = showsPrec1 0
 
 class NFData1 f where
     rnf1 :: NFData a => f a -> ()

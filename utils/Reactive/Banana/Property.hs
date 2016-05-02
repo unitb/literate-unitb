@@ -17,8 +17,9 @@ import Control.Precondition
 
 import Data.Function
 -- import Data.IORef
-import Data.List
+import Data.List as L
 import Data.Proxy
+import Data.String.Lines
 import Data.These
 import Data.Time
 
@@ -29,12 +30,18 @@ import Reactive.Banana.Frameworks as R
 -- import Reactive.Banana.Discrete
 import Reactive.Banana.IO as R
 
+import Safe
+
 import Text.Printf.TH
 
-import Test.QuickCheck as QC hiding ((===),(.||.),(.&&.))
+import           Test.QuickCheck as QC hiding ((===),(.||.),(.&&.))
+import qualified Test.QuickCheck as QC 
 import Test.QuickCheck.Monadic hiding (assert)
 import Test.QuickCheck.Function
 import qualified Test.QuickCheck.Monadic as QC
+
+import Utilities.Lens
+import Utilities.String
 
 -- data History a = E (Event a) | B (Behavior a)
 --     deriving (Functor)
@@ -190,12 +197,15 @@ togetherOnly e0 e1 = do
         assert (That _)    = "right happening alone" ## False
     checkEvent check $ assert <$> eventPair' e0 e1
 
-fails :: IO a -> IO (Maybe SomeException)
-fails = fmap leftToMaybe . trying id
+fails' :: IO a -> IO (Maybe SomeException)
+fails' = fmap leftToMaybe . trying id
+
+fails :: IO a -> IO (Either SomeException a)
+fails = trying id
 
 prop_invariant :: Bool -> [Maybe Bool] -> Property
 prop_invariant x xs = monadicIO $ do
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             b <- stepper x e
             always b
             return never) xs
@@ -226,7 +236,7 @@ heldFor dT p = do
 
 prop_co :: Int -> [Maybe Int] -> Property
 prop_co x xs = monadicIO $ do
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             b <- stepper x e
             specify b $ do
                 co (<=)
@@ -239,7 +249,7 @@ prop_unlessB p q x xs = monadicIO $ do
         let isSuffix xs = not (all p' $ take 1 xs) || all p' (takeWhile (not . q') xs)
             p' = apply p
             q' = apply q
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             b <- stepper x e
             specify b $ do
                 p' `unlessB` q'
@@ -259,8 +269,8 @@ expandEvtBehPair x xs = var'
 
 prop_unlessE :: Bool -> [Maybe (Maybe (),Maybe Bool)] -> Property
 prop_unlessE x xs = monadicIO $ do
-        let isSuffix xs = not (all snd $ take 1 xs) || all snd (takeWhile (isNothing.fst) xs)
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        let isSuffix xs = not (all snd $ take 1 xs) || all snd (takeWhile (isNothing.fst) $ drop 1 xs)
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             let (e',upd) = split' e
             b <- stepper x upd
             specify b $ do
@@ -269,14 +279,15 @@ prop_unlessE x xs = monadicIO $ do
         let var' = expandEvtBehPair x xs
         monitor (counterexample $ show b)
         monitor (counterexample $ show var')
-        QC.assert $ isNothing b == all isSuffix (tails var')
+        monitor (counterexample $ show $ filter (not.isSuffix) (tails var'))
+        stop $ isNothing b QC.=== all isSuffix (tails var')
 
 prop_constant :: Fun Int Int
               -> Int -> [Maybe Int]
               -> Property
 prop_constant f' x xs = monadicIO $ do
         let f = apply f'
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             b <- stepper x e
             specify b $ do
                 constant f
@@ -290,7 +301,7 @@ prop_constantUnlessB :: Fun Int Int
 prop_constantUnlessB f' p' x xs = monadicIO $ do
         let f = apply f'
             p = apply p'
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             b <- stepper x e
             specify b $ do
                 constantUnlessB f p
@@ -299,21 +310,38 @@ prop_constantUnlessB f' p' x xs = monadicIO $ do
         QC.assert $ isNothing b == all (isConstant f . takeWhile (not . p)) 
                                        (tails $ x:catMaybes xs)
 
+shiftRL :: a -> b -> [(a,b)] -> [(a,b)]
+shiftRL a b = unzipped %~ (_1 %~ (a:)) . (_2 %~ (\xs -> xs ++ repeat (fromMaybe b $ lastMay xs)))
+
+mkFun :: Eq a => [(a, b)] -> b -> Fun a b
+mkFun xs x = Fun undefined' (fromMaybe x . flip L.lookup xs)
+
+takeWhile1 :: (a -> Bool) -> [a] -> [a]
+takeWhile1 _ [] = []
+takeWhile1 p (x:xs) = x:takeWhile p xs
+
 prop_constantUnlessE :: Fun Int Int
-                     -> Int -> [Maybe (Maybe (),Maybe Int)] -> Property
+                     -> Int -> [Maybe (Maybe (),Maybe Int)] 
+                     -> Property
 prop_constantUnlessE f' x xs = monadicIO $ do
-        let isSuffix xs = isConstant f $ map snd (takeWhile (isNothing.fst) xs)
+        let isSuffix xs = isConstant f $ takeUntilE xs
+            takeUntilE xs = map snd (takeWhile1 (isNothing.fst) xs)
+            shift xs = shiftRL Nothing x xs
             f = apply f'
-        b <- run $ fails $ interpretFrameworks (\e -> do
+        b <- run $ fails' $ interpretFrameworks (\e -> do
             let (e',upd) = split' e
             b <- stepper x upd
             specify b $ do
                 f `constantUnlessE` e'
             return never) xs
         let var' = expandEvtBehPair x xs
-        monitor (counterexample $ show b)
-        monitor (counterexample $ show var')
-        QC.assert $ isNothing b == all isSuffix (tails var')
+        monitor (counterexample $ [printf|b: %s\n|] $ show b)
+        monitor (counterexample $ [printf|var': %s\n|] $ show var')
+        monitor (counterexample $ [printf|suffix': \n%s\n|] 
+            $ L.unlines $ map (show . takeUntilE) $ tails var')
+        monitor (counterexample $ [printf|shift': \n%s\n|] 
+            $ L.unlines $ map (show . shift) $ tails var')
+        stop $ isNothing b QC.=== all isSuffix (tails var')
 
 isConstant :: Eq b => (a -> b) -> [a] -> Bool
 isConstant f xs = null (drop 1 $ groupBy ((==) `on` f) xs)
@@ -329,7 +357,21 @@ satisfies :: ( Show (EventList m a)
           -> InitF m
           -> [EventList m a]
           -> Property
-satisfies st = uncurry satisfies' (execState st (defP,defS))
+satisfies = satisfiesWith showItem showItem
+
+showItem :: Show k => [k] -> [[String]]
+showItem = pure . map show
+
+satisfiesWith :: ( Frameworks m)
+              => ([EventList m a] -> [[String]])
+              -> ([Maybe b] -> [[String]])
+              -> Claim m a b k
+              -> InitF m
+              -> [EventList m a]
+              -> Property
+satisfiesWith showA showB st = uncurry 
+        (satisfiesWith' showA showB) 
+        (execState st (defP,defS))
     where
       defP _ = return never
       defS _ _ = QC.property False
@@ -355,7 +397,7 @@ specification :: (Frameworks m,Testable prop)
               -> Claim m a b ()
 specification p = _2 .= (p & mapped.mapped %~ QC.property)
 
-satisfies' :: (Testable prop
+satisfies' :: ( Testable prop
               , Show (EventList m a)
               , Show a,Show b
               , Frameworks m)
@@ -364,10 +406,23 @@ satisfies' :: (Testable prop
            -> InitF m
            -> [EventList m a]
            -> Property
-satisfies' f spec init input = monadicIO $ do
+satisfies' = satisfiesWith' showItem showItem
+
+satisfiesWith' :: (Testable prop
+                  -- , Show (EventList m a)
+                  -- , Show a,Show b
+                  , Frameworks m)
+               => ([EventList m a] -> [[String]])
+               -> ([Maybe b] -> [[String]])
+               -> (Event a -> m (Event b))
+               -> ([EventList m a] -> [Maybe b] -> prop)
+               -> InitF m
+               -> [EventList m a]
+               -> Property
+satisfiesWith' showA showB f spec init input = monadicIO $ do
         (xs,ys) <- run $ interpret' f init input
-        monitor (counterexample $ show xs)
-        monitor (counterexample $ show ys)
+        monitor (counterexample $ prependIndent "input:  " $ L.unlines $ map (showWith id) (showA xs))
+        monitor (counterexample $ prependIndent "output: " $ L.unlines $ map (showWith id) (showB ys))
         stop (spec xs ys)
 
 return []

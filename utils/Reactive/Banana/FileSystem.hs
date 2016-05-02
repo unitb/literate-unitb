@@ -18,8 +18,9 @@ import Control.Monad.RWS
 import Control.Monad.Writer
 import Control.Monad.State
 
+import Data.List.NonEmpty as NE (NonEmpty(..),toList)
 import qualified Data.Map as M
--- import           Data.TypeList
+import Data.Maybe
 
 import Prelude hiding (writeFile,readFile)
 
@@ -125,10 +126,33 @@ interpretFSMomentT f (initS,s) xs = do
                 return x
     interpret' f' s xs
 
-prop_ :: String
-     -> [Maybe (Maybe String,Maybe String,Maybe ())] -> Property
-prop_ c = satisfies' prog' prop (fs,())
+lockStep :: [NonEmpty a] -> [a]
+lockStep = f 0
     where
+        f _ [] = []
+        f n (x:xs) = drop n (NE.toList x) ++ f ((n `max` length x) - 1) xs
+
+lockStep' :: [NonEmpty a] -> [a]
+lockStep' [] = []
+lockStep' (x:xs) = NE.toList x ++ drop (length x - 1) (lockStep xs)
+
+prop_lockStep :: (Eq a, Show a) => [NonEmpty a] -> Property
+prop_lockStep xs = lockStep xs === lockStep' xs
+
+prop_file_io :: String
+             -> [Maybe (Maybe String,Maybe String,Maybe ())] 
+             -> Property
+prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,())
+    where
+        showInput :: [Maybe (Maybe String, Maybe String, Maybe ())]
+                  -> [[String]]
+        showInput xs = [ xs & traverse %~ show . join . fmap (view _1)
+                       , xs & traverse %~ show . join . fmap (view _2)
+                       , xs & traverse %~ show . join . fmap (view _3) ]
+        showOutput :: [Maybe (Maybe (Maybe String), Maybe (Maybe String))]
+                   -> [[String]]
+        showOutput xs = [ xs & traverse %~ show . join . fmap (view _1)
+                        , xs & traverse %~ show . join . fmap (view _2) ]
         f1 = "/f1"
         f2 = "./f2"
         fs :: MockFileSystemState
@@ -136,11 +160,7 @@ prop_ c = satisfies' prog' prop (fs,())
                 files %= M.insert f1 (Just c)
         prog' :: Event (Maybe String,Maybe String,Maybe ()) 
               -> FSMoment (Event (Maybe (Maybe String),Maybe (Maybe String)))
-        -- prog' = prog^.uncurriedEvent' . mapping (mapping $ splittingEvent')
         prog' = prog^.packageEventFun'
-        -- p :: Event (Maybe String,Maybe String,Maybe ()) 
-        --   -> FSMoment ((Event (Maybe String),Event (Maybe String)))
-        -- p = prog^.uncurriedEvent' . mapping (mapping $ iso _ _)
         prog :: Event String -> Event String -> Event ()
              -> FSMoment (Event (Maybe String), Event (Maybe String))
         prog ioF1 ioF2 readF = do
@@ -154,14 +174,22 @@ prop_ c = satisfies' prog' prop (fs,())
              -> [Maybe (Maybe (Maybe String), Maybe (Maybe String))] 
              -> Property
         prop input output = flip evalState (Just c,Nothing) $ do
-                xs <- forM input $ maybe (return Nothing) $ \(x,y,tick) -> do
-                    mapM_ (assign _1 . Just) x
-                    mapM_ (assign _2 . Just) y
-                    forM tick $ \_ -> do
-                        liftA2 (,) 
-                            (Just <$> use _1)
-                            (Just <$> use _2)
-                return $ xs === output
+                let runReadWrite :: (Maybe String, Maybe String, Maybe ())
+                                 -> State
+                                      (Maybe String, Maybe String)
+                                      (NonEmpty (Maybe (Maybe (Maybe String), Maybe (Maybe String))))
+                    runReadWrite (x,y,tick) = do
+                            mapM_ (assign _1 . Just) x
+                            mapM_ (assign _2 . Just) y
+                            sequence $ 
+                                (return Nothing)
+                                :| (maybeToList tick >> [readFirst,readSecond])
+                    readFirst :: State (Maybe String,Maybe String)
+                                       (Maybe (Maybe (Maybe String), Maybe (Maybe String)))
+                    readFirst  = Just . (_1 %~ Just) . (_2 .~ Nothing) <$> get
+                    readSecond = Just . (_2 %~ Just) . (_1 .~ Nothing) <$> get
+                xs <- input & traverse (maybe (return $ pure Nothing) runReadWrite)
+                return $ lockStep xs === output
 
 return []
 

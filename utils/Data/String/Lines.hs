@@ -105,7 +105,14 @@ prop_concatIndent_to_foldl_prependIndent :: [String] -> Property
 prop_concatIndent_to_foldl_prependIndent xs = concatIndent xs === foldl prependIndent "" xs
 
 prop_concatIndent_to_foldr_prependIndent :: [String] -> Property
-prop_concatIndent_to_foldr_prependIndent xs = concatIndent xs === foldr prependIndent "" xs
+prop_concatIndent_to_foldr_prependIndent xs = concatIndent xs' === foldr prependIndent "" xs'
+    where
+        xs' = map canonicalizeNewline xs
+
+prop_regression_concatIndent_to_foldr_prependIndent :: Property
+prop_regression_concatIndent_to_foldr_prependIndent = 
+        regression prop_concatIndent_to_foldr_prependIndent 
+            [["a","\r","\n"]]
 
 prop_lines_unlines_cancel :: String -> Property
 prop_lines_unlines_cancel xs = canonicalizeNewline xs === unlines (lines xs)

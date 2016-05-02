@@ -19,6 +19,8 @@ import           Data.List
 import qualified Data.Map.Class as M hiding ((!))
 import           Data.Tuple
 
+import GHC.Stack
+
 import Prelude
 
 import Utilities.Table

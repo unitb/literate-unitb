@@ -61,3 +61,6 @@ traverseValidation :: (Traversable t,Semigroup e)
                    => (a -> Either e b) 
                    -> t a -> Either e (t b)
 traverseValidation f = validationToEither . traverse (eitherToValidation . f)
+
+unzipped :: Iso [(a,b)] [(c,d)] ([a],[b]) ([c],[d])
+unzipped = iso unzip (uncurry zip)

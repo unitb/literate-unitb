@@ -2,9 +2,7 @@
 module Main where
 
 import qualified Reactive as R
-import qualified Reactive.Banana.Property as R
 import Document.Document as Doc ( syntaxSummary )
-import Document.Document as Doc ( parse_system )
 import Document.Phase.Expressions as PExp
 import Document.MachineSpec as MSpec
 import Document.Tests.Cubes   as Cubes
@@ -39,7 +37,6 @@ import qualified Latex.Test as Tex
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code
 import qualified Documentation.Test as Sum
-import Interactive.Serialize
 
 import Test.UnitTest
 
@@ -47,8 +44,6 @@ import Test.UnitTest
 -- import Language.Haskell.TH.Syntax
 
 import Control.Concurrent
-import Control.DeepSeq
-import Control.Exception
 -- import Control.Lens
 
 import Data.Functor
@@ -61,7 +56,6 @@ import System.Process
 
 -- import qualified Utilities.Lines as Lines
 -- import Data.Map.Class as M
-import Utilities.FileFormat
 import Utilities.TimeIt
 -- import Utilities.Timeout
 -- import Utilities.Table
@@ -81,11 +75,11 @@ main = timeIt $ void $ do
     writeFile "syntax.txt" $ unlines syntaxSummary
     putStrLn $ nameType
     return R.main
-    let 
-        path   = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque.tex"
-        state' = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-seq.tex.state"
-        state  = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-other.tex.state"
-        -- state2 = state & basename.basename %~ (++ "-2")
+    -- let 
+    --     path   = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque.tex"
+    --     state' = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-seq.tex.state"
+    --     state  = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-other.tex.state"
+    --     state2 = state & basename.basename %~ (++ "-2")
     -- timeIt $ do
     --         -- writeFormat is extremely slow but the profiler seems to find readFormat slow
     --         -- attempts
@@ -115,19 +109,6 @@ main = timeIt $ void $ do
     --     putStrLn "write format"
     --     mapM_ (writeFormat seqFileFormat state2) r
     --     putStrLn "read / write"
-    Right p <- timeIt $ do 
-        p <- parse_system path
-        evaluate $ force p
-        putStrLn "parse"
-        return p
-    timeIt $ do
-    --     -- mapM_ (writeFormat seqFileFormat state2 . (\p -> p!.machines & traverse %~ proof_obligation)) p
-        putStrLn "serialize"
-        writeFormat systemFileFormat state (mempty,fmap getExpr <$> p)
-    timeIt $ do
-    --     -- mapM_ (writeFormat seqFileFormat state2 . (\p -> p!.machines & traverse %~ proof_obligation)) p
-        putStrLn "serialize POs"
-        writeFormat seqFileFormat state' (po_table p)
 
     -- print =<< find_errors TSRef.path3
     return $ edit =<< raw_proof_obligation Deq.path1 "m0/INIT/FIS/q/p" 0
@@ -170,5 +151,5 @@ main = timeIt $ void $ do
     return $ run_test_cases Parser.test_case
     return $ run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
-    return $ run_test_cases RB.test_case
+    run_test_cases RB.test_case
     return ()

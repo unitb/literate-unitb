@@ -123,11 +123,9 @@ packageEventFun' :: forall t r' f m.
                  => Iso' f (Event t -> m (Event r'))
 packageEventFun' = iso0 . iso1
     where
-      iso0 :: ()
-           => Iso' f (Event t -> m (ReplaceF Event r'))
+      iso0 :: Iso' f (Event t -> m (ReplaceF Event r'))
       iso0 = uncurriedEvent'
-      iso1 :: (TypeListOf (ReplaceF Event r') ~ TypeListOf r')
-           => Iso' (Event t -> m (ReplaceF Event r')) (Event t -> m (Event r'))
+      iso1 :: Iso' (Event t -> m (ReplaceF Event r')) (Event t -> m (Event r'))
       iso1 = mapping (mapping $ from splittingEvent')
 
 splittingEvent :: ( SameLength t0 t1, AsTypeList t0 Maybe
