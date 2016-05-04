@@ -4,11 +4,11 @@ module Document.Tests.TrainStation
 where
 
     -- Modules
-import Document.Proof
 import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 
 import Logic.Expr
 import qualified Logic.Expr.Const as Expr
+import Logic.Expr.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 
@@ -51,7 +51,7 @@ part0 = test_cases
 part1 :: TestCase
 part1 = test_cases
             "part 1"
-            [ (POCase "test 1, verification" case1 result1)
+            [ (poCase "test 1, verification" case1 result1)
             , (StringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
             , (StringCase "test 20, proof obligation, INIT/fis, loc" case20 result20)
             , (StringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
@@ -79,14 +79,14 @@ part4 :: TestCase
 part4 = test_cases
             "part 4"
             [ (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
-            , (POCase "test 14, verification, non-exhaustive case analysis" case14 result14)
-            , (POCase "test 15, verification, incorrect new assumption" case15 result15)
+            , (poCase "test 14, verification, non-exhaustive case analysis" case14 result14)
+            , (poCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
 
 part5 :: TestCase
 part5 = test_cases
             "part 5"
-            [ (POCase "test 16, verification, proof by parts" case16 result16)
+            [ (poCase "test 16, verification, proof by parts" case16 result16)
             , (StringCase "test 17, ill-defined types" case17 result17)
             , (StringCase "test 18, assertions have type bool" case18 result18)
             , (StringCase "test 22, missing witness" case22 result22)

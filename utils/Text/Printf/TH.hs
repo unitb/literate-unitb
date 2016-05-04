@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Text.Printf.TH where
 
 import Text.Printf as P

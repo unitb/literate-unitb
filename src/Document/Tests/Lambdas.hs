@@ -34,17 +34,17 @@ test = test_cases
 part0 :: TestCase
 part0 = test_cases
             "part 0"
-            [ (POCase "test 0, verification, lambda vs empty-fun" 
+            [ (poCase "test 0, verification, lambda vs empty-fun" 
                 (verify path0 0) result0)
-            , (POCase "test 1, verification, lambda vs ovl, mk-fun" 
+            , (poCase "test 1, verification, lambda vs ovl, mk-fun" 
                 (verify path1 0) result1)
-            , (POCase "test 2, verification, lambda vs apply" 
+            , (poCase "test 2, verification, lambda vs apply" 
                 (verify path2 0) result2)
             ]            
 part1 :: TestCase
 part1 = test_cases
             "part 1"
-            [ (POCase "test 3, verification, set comprehension, failed proof" 
+            [ (poCase "test 3, verification, set comprehension, failed proof" 
                 (verify path3 0) result3)
             , (Case "test 4, adding a progress property" case4 result4)
             , (Case "test 5, unless properties" case5 result5)
@@ -52,14 +52,14 @@ part1 = test_cases
 part2 :: TestCase
 part2 = test_cases
             "part 2"
-            [ (POCase "test 6, verify progress refinement" case6 result6)
-            , (POCase "test 7, verify refinement rules" case7 result7)
-            , (POCase "test 8, verify refinement rules" case8 result8)
+            [ (poCase "test 6, verify progress refinement" case6 result6)
+            , (poCase "test 7, verify refinement rules" case7 result7)
+            , (poCase "test 8, verify refinement rules" case8 result8)
             ]            
 part3 :: TestCase
 part3 = test_cases
             "part 3"
-            [ (POCase "test 9, verify disjunction rule" (verify path9 0) result9)
+            [ (poCase "test 9, verify disjunction rule" (verify path9 0) result9)
             , (StringCase "test 10, error: cyclic proof" (find_errors path10) result10)
             , (StringCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)

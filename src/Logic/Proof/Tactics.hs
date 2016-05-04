@@ -32,6 +32,7 @@ import Logic.Proof.Sequent
     -- Libraries
 import Control.Arrow
 import Control.Lens hiding (Context)
+import Control.Precondition
 
 import Control.Monad hiding ( guard )
 import Control.Monad.RWS hiding ( guard )
@@ -43,8 +44,6 @@ import qualified Data.List.Ordered as OL
 import           Data.Map.Class  as M
 import qualified Data.Set  as S
 import           Data.Tuple
-
-import GHC.Stack.Utils
 
 import Text.Printf.TH
 
@@ -373,7 +372,7 @@ is_fresh :: Monad m
 is_fresh v = TacticT $ do
         are_fresh [v] <$> view sequent
 
-new_fresh :: (Monad m, ?loc :: CallStack)
+new_fresh :: (Monad m, Pre)
           => String
           -> Type 
           -> TacticT m Var

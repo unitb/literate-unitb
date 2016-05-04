@@ -2,17 +2,18 @@
 module UnitB.Test where 
 
     -- Modules
-import Document.Proof
 import Document.Tests.Suite (lookupSequent)
 
 import           Logic.Expr
 import qualified Logic.Expr.Const as Exp
+import           Logic.Expr.Parser
 import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
 import           Logic.Names.Internals as Names
 import           Logic.Proof.POGenerator hiding (variables)
 import qualified Logic.Proof.POGenerator as POG
 import qualified Logic.TestGenericity as Gen
+import           Logic.UnitTest
 
 import Theories.FunctionTheory
 
@@ -41,8 +42,8 @@ test_case = test
 test :: TestCase
 test = test_cases 
         "Unit-B" 
-        [  POCase "0: 'x eventually increases' verifies" (check_mch example0) (result_example0)
-        ,  POCase "1: train, model 0, verification" (check_mch train_m0) (result_train_m0)
+        [  poCase "0: 'x eventually increases' verifies" (check_mch example0) (result_example0)
+        ,  poCase "1: train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  Case "2: train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
         ,  Case "3: train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
         ,  Case "4: Feasibility and partitioning" case3 result3

@@ -7,10 +7,8 @@ module Logic.Expr.QuasiQuote
 where
 
     -- Modules
-import Document.Proof
-import Document.Expression (get_variables'')
-
 import Logic.Expr
+import Logic.Expr.Parser
 import Logic.Expr.Printable
 import Logic.Theory
 

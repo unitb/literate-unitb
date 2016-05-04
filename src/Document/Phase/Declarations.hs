@@ -7,12 +7,10 @@ module Document.Phase.Declarations where
     --
     -- Modules
     --
-import Document.Expression
 import Document.Pipeline
 import Document.Phase as P
 import Document.Phase.Parameters
 import Document.Phase.Types
-import Document.Proof
 import Document.Scope
 import Document.VarScope
 import Document.Visitor
@@ -20,6 +18,7 @@ import Document.Visitor
 import Latex.Parser hiding (contents,source)
 
 import Logic.Expr
+import Logic.Expr.Parser
 
 import UnitB.Syntax as AST
 

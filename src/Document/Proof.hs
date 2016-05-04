@@ -3,13 +3,13 @@
 module Document.Proof where
 
     -- Modules
-import Document.Expression (parse_oper)
-import qualified Document.Expression as Expr
+import Logic.Expr.Parser
 import Document.Visitor
 
 import Latex.Parser 
 
 import UnitB.UnitB
+import UnitB.Expr.Parser
 
 import Logic.Expr
 import Logic.Expr.Printable
@@ -19,12 +19,11 @@ import Logic.Proof.Tactics as LP
 
     -- Libraries
 import Control.Arrow
-import Control.DeepSeq
 import Control.Lens hiding (Context,indices)
 
 import           Control.Monad hiding ( guard )
 import           Control.Monad.Reader.Class hiding ( reader )
-import           Control.Monad.State as ST ( StateT, State, execState )
+import           Control.Monad.State as ST ( StateT )
 import           Control.Monad.State.Class as ST
 import qualified Control.Monad.Writer.Class as W
 import           Control.Monad.Trans
@@ -32,15 +31,11 @@ import qualified Control.Monad.Trans.Either as E
 import           Control.Monad.Trans.Writer
 
 import           Data.Char
-import           Data.Either.Combinators
 import           Data.Map.Class hiding ( map )
 import qualified Data.Map.Class as M
 import           Data.Maybe
-import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Set as S
 import qualified Data.Traversable as T 
-
-import GHC.Generics (Generic)
 
 import Text.Printf.TH
 
@@ -59,24 +54,6 @@ data ProofStep = Step
        }
 
 data FreeVarOpt = WithFreeDummies | WithoutFreeDummies
-
-data ParserSetting = PSetting 
-    { _language :: Notation
-    , _is_step  :: Bool
-    , _parserSettingSorts    :: Table Name Sort
-    , _decls    :: Table Name Var
-    , _dum_ctx  :: Table Name Var
-    , _primed_vars   :: Table Name Var
-    , _free_dummies  :: Bool
-    , _expected_type :: Maybe Type
-    }
-    deriving (Generic,Eq,Show)
-
-makeLenses ''ParserSetting
-makeFields ''ParserSetting
-
-instance PrettyPrintable ParserSetting where
-    pretty _ = "<parser-setting>"
 
 set_proof :: ( Monad m
              , MonadReader LineInfo m
@@ -441,64 +418,6 @@ parse_calc = do
             soft_error [Error "invalid hint" li]
             return $ LP.with_line_info li $ last_step ztrue
                                
-default_setting :: Notation -> ParserSetting
-default_setting n = PSetting 
-    { _language = n
-    , _decls = M.empty
-    , _parserSettingSorts = M.empty
-    , _primed_vars = M.empty
-    , _dum_ctx = M.empty
-    , _is_step = False
-    , _free_dummies = False
-    , _expected_type = (Just bool)
-    }
-
-makeSetting :: Notation -> State ParserSetting a -> ParserSetting
-makeSetting n cmd = execState cmd (default_setting n)
-
-setting_from_context :: Notation -> Context -> ParserSetting
-setting_from_context notation ctx' = makeSetting notation $ do
-        sorts .= ctx^.sorts
-        decls .= ctx^.constants
-        dum_ctx .= ctx^.dummies
-    where
-        ctx = defsAsVars ctx'
-
-with_vars :: ParserSetting -> Table Name Var -> ParserSetting
-with_vars setting vs = setting & decls %~ (vs `union`)
-
-theory_setting :: Theory -> ParserSetting
-theory_setting th = (setting_from_context (th_notation th) (theory_ctx th))
-
-machine_setting :: Machine -> ParserSetting
-machine_setting m = setting
-        & decls %~ (view' variables m `union`)
-        & primed_vars .~ M.mapKeys addPrime (M.map prime $ m!.variables)
-    where
-        setting = theory_setting (m!.theory)
-
-schedule_setting :: Machine -> Event -> ParserSetting
-schedule_setting m evt = setting & decls %~ ((evt^.indices) `union`)
-    where
-        setting = machine_setting m 
-
-event_setting :: Machine -> Event -> ParserSetting
-event_setting m evt = setting & decls %~ ((evt^.params) `union`)
-    where
-        setting = schedule_setting m evt
-
-mkSetting :: Notation 
-          -> Table Name Sort    -- Types
-          -> Table Name Var     -- Plain variables
-          -> Table Name Var     -- Primed variables
-          -> Table Name Var     -- Dummy variables
-          -> ParserSetting
-mkSetting notat sorts plVar prVar dumVar = (default_setting notat)
-        { _parserSettingSorts = sorts
-        , _decls = (plVar `union` prVar)
-        , _primed_vars = primeAll prVar
-        , _dum_ctx = dumVar }
-
 parse_expr'' :: ParserSetting
              -> StringLi
              -> M DispExpr
@@ -511,43 +430,6 @@ unfail (M cmd) = M $ do
     case x of
         Right x -> return $ Just x
         Left es -> W.tell es >> return Nothing
-
-parse_expr' :: ParserSetting
-            -> LatexDoc
-            -> Either [Error] DispExpr
-parse_expr' p = parse_expr p . flatten_li' . drop_blank_text'
-
-contextOf :: ParserSetting -> Context
-contextOf set = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
-    where
-        ctx0
-            | set^.is_step = primeAll $ set^.primed_vars
-            | otherwise    = M.empty
-        ctx1 
-            | set^.free_dummies = set^.dum_ctx
-            | otherwise         = M.empty
-            
-parse_expr :: ParserSetting
-           -> StringLi
-           -> Either [Error] DispExpr
-parse_expr set xs = do
-        let ctx = contextOf set
-            li  = line_info xs
-        x  <- Expr.parse_expr ctx
-                (set^.language)
-                xs
-        typed_x  <- case set^.expected_type of
-            Just t -> mapBoth 
-                (\xs -> map (`Error` li) xs) 
-                (normalize_generics) $ zcast t $ Right x
-            Nothing -> return x
-        let x = normalize_generics typed_x
-        unless (L.null $ ambiguities x) $ Left 
-            $ map (\x -> Error (msg (pretty x) (pretty $ type_of x)) li)
-                $ ambiguities x
-        return $ DispExpr (flatten xs) x
-    where
-        msg   = [printf|type of %s is ill-defined: %s|]
 
 get_expression :: ( MonadReader Thy m )
                => Maybe Type
@@ -594,5 +476,3 @@ lift2 :: (MonadTrans t0, MonadTrans t1, Monad m, Monad (t1 m))
       => m a
       -> t0 (t1 m) a
 lift2 cmd = lift $ lift cmd
-
-instance NFData ParserSetting

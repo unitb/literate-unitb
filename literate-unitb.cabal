@@ -71,7 +71,6 @@ library
   exposed-modules: 
         Code.Synthesis
         Document.Document
-        Document.Expression
         Document.ExprScope
         Document.Machine
         Document.MachineSpec
@@ -108,6 +107,9 @@ library
         Logic.Expr.Fun
         Logic.Expr.Genericity
         Logic.Expr.Label
+        Logic.Expr.Parser
+        Logic.Expr.Parser.Internal.Parser
+        Logic.Expr.Parser.Internal.Setting
         Logic.Expr.PrettyPrint
         Logic.Expr.Printable
         Logic.Expr.Prism
@@ -131,6 +133,7 @@ library
         Logic.Theory
         Logic.Theory.Internals
         Logic.Theory.Monad
+        Logic.UnitTest
         Logic.WellDefinedness
         Reactive
         Theories.Arithmetic
@@ -142,6 +145,7 @@ library
         Theories.SetTheory
         UnitB.Event
         UnitB.Expr
+        UnitB.Expr.Parser
         UnitB.Machine
         UnitB.PO
         UnitB.Proof
@@ -179,7 +183,6 @@ library
         UnitB.Test
         Utilities.Test
         Z3.Test
-        Test.UnitTest
 
   default-language:    Haskell2010
 

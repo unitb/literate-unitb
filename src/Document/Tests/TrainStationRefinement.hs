@@ -15,10 +15,10 @@ test_case = test
 test :: TestCase
 test = test_cases
             "train station example, with refinement"
-            [ POCase "verify machine m0 (ref)" (verify path0 0) result0
-            , POCase "verify machine m1 (ref)" (verify path0 1) result1
-            , POCase "verify machine m2 (ref)" (verify path0 2) result2
-            , POCase "verify machine m2 (ref), in many files" 
+            [ poCase "verify machine m0 (ref)" (verify path0 0) result0
+            , poCase "verify machine m1 (ref)" (verify path0 1) result1
+            , poCase "verify machine m2 (ref)" (verify path0 2) result2
+            , poCase "verify machine m2 (ref), in many files" 
                 (verifyFiles (NE.fromList [path1,path1']) 2) result2
             , StringCase "cyclic proof of liveness through 3 refinements" (find_errors path3) result3
             , StringCase "refinement of undefined machine" (find_errors path4) result4

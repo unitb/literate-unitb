@@ -3,9 +3,9 @@ module Document.Tests.SmallMachine where
 
     -- Modules
 import Document.Tests.Suite
-import Document.Proof
 
 import Logic.Expr
+import Logic.Expr.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 
@@ -31,15 +31,15 @@ test = test_cases "small machine example" [
         (Case "test 1 (separate machine blocks)" 
             case1 $ 
             Right $ [m1_machine]),
-        (POCase "test 2 (verification, one failure)" 
+        (poCase "test 2 (verification, one failure)" 
             case2 result2),
-        (POCase "test 3 (verification)" 
+        (poCase "test 3 (verification)" 
             case3 result3),
         (StringCase "test 4 (proof obligation, invariance)" 
             case4 result4),
         (StringCase "test 5 (co, 'skip' proof obligation)" 
             case5 result5),
-        (POCase "test 6 (verification, coarse schedule stronger than guard)" 
+        (poCase "test 6 (verification, coarse schedule stronger than guard)" 
             case6 result6),
         (StringCase "test 7 (schedulability proof obligation)" 
             case7 result7),
