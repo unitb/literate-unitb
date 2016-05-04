@@ -95,7 +95,7 @@ instance (IsName n,TypeSystem t) => Named (AbsFun n t) where
             onInternalName (addSuffix suf) 
                 $ adaptName x
 
-mk_fun' :: (?loc :: CallStack,IsName n) 
+mk_fun' :: (Pre,IsName n) 
         => [t] -> String -> [t] -> t -> AbsFun n t
 mk_fun' ps = mk_fun ps . z3Name
 
@@ -105,7 +105,7 @@ mk_fun  ps n ts t = Fun ps n Unlifted ts t InfiniteWD
 mk_lifted_fun :: IsName n => [t] -> n -> [t] -> t -> AbsFun n t
 mk_lifted_fun ps n ts t = Fun ps n Lifted ts t InfiniteWD
 
-mkConstant :: (?loc :: CallStack,IsName n) 
+mkConstant :: (Pre,IsName n) 
            => String -> t -> AbsFun n t
 mkConstant n t = mk_fun [] (fromString'' n) [] t
 

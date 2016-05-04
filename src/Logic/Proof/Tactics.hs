@@ -23,7 +23,7 @@ module Logic.Proof.Tactics
     )
 where
 
-import Logic.Expr hiding ( instantiate, assert )
+import Logic.Expr hiding ( instantiate )
 import Logic.Operator
 import Logic.WellDefinedness
 import Logic.Proof.ProofTree
@@ -32,6 +32,7 @@ import Logic.Proof.Sequent
     -- Libraries
 import Control.Arrow
 import Control.Lens hiding (Context)
+import Control.Precondition
 
 import Control.Monad hiding ( guard )
 import Control.Monad.RWS hiding ( guard )
@@ -43,8 +44,6 @@ import qualified Data.List.Ordered as OL
 import           Data.Map.Class  as M
 import qualified Data.Set  as S
 import           Data.Tuple
-
-import GHC.Stack.Utils
 
 import Text.Printf.TH
 
@@ -373,7 +372,7 @@ is_fresh :: Monad m
 is_fresh v = TacticT $ do
         are_fresh [v] <$> view sequent
 
-new_fresh :: (Monad m, ?loc :: CallStack)
+new_fresh :: (Monad m, Pre)
           => String
           -> Type 
           -> TacticT m Var
@@ -668,7 +667,7 @@ indirect_inequality dir op zVar@(Var _ t) proof = do
                                 free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
+                            instantiate_hyp
                                 thm lbl                             -- | we could instantiate indirect
                                 [ (x_decl,lhs)                      -- | inequality explicitly 
                                 , (y_decl,rhs) ]                    -- | for that, we need hypotheses 
@@ -706,7 +705,7 @@ indirect_equality dir op zVar@(Var _ t) proof = do
                                 free_goal (view name z_decl) (view name zVar) proof) ]
                         $ do
                             lbl <- fresh_label "inst"
-                            instantiate_hyp                       -- lhs = rhs
+                            instantiate_hyp                       
                                 thm lbl                             -- | we could instantiate indirect
                                 [ (x_decl,lhs)                      -- | inequality explicitly 
                                 , (y_decl,rhs) ]                    -- | for that, we need hypotheses 

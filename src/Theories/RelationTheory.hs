@@ -1,7 +1,7 @@
 module Theories.RelationTheory where
 
     -- Modules
-import Logic.Expr hiding (assert)
+import Logic.Expr
 import Logic.Theory
 import Logic.Theory.Monad
 

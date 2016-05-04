@@ -85,7 +85,7 @@ example0 = do
                         ("S0", s0),
                         ("S1", s1) ]
             vs = fromList $ map as_pair [x_decl,y_decl]
-            m  = newMachine assert (fromString'' "m0") $ do
+            m  = newMachine (fromString'' "m0") $ do
                 variables .= vs
                 event_table .= new_event_set vs (singleton "evt" evt)
                 inits .= fromList 
@@ -120,7 +120,7 @@ train_m0 = do
                     [var| t, t' : \Int |]
             ps    = empty_property_set { _transient = props', _inv = inv }
             vs    = fromList $ map as_pair [st_decl]
-            m     = newMachine assert (fromString'' "train_m0") $ do
+            m     = newMachine (fromString'' "train_m0") $ do
                         props     .= ps
                         variables .= vs
                         event_table .= new_event_set vs (fromList [enter, leave])
@@ -521,11 +521,11 @@ result5 = eval_generator $ with (do
                 [ ("SKIP:p", c [expr| p' = p |] ) 
                 , ("SKIP:q", c [expr| q' = q |])]
             ) $ do
-        emit_goal assert ["ce0a/SAF/lbl"] ztrue
-        emit_goal assert ["ce0b/SAF/lbl"] ztrue
+        emit_goal ["ce0a/SAF/lbl"] ztrue
+        emit_goal ["ce0b/SAF/lbl"] ztrue
         let p = c [expr| p \land \neg q \1\implies p' \lor q' |]
-        emit_goal' assert ["ce1a/SAF/lbl"] p
-        emit_goal' assert ["ce1b/SAF/lbl"] p
+        emit_goal' ["ce1a/SAF/lbl"] p
+        emit_goal' ["ce1b/SAF/lbl"] p
     where
         c p = c' $ p . (is_step .~ True)
         c' = ctx (do
@@ -537,7 +537,7 @@ case5 = return $ eval_generator
     where
         c = ctx $ do
                 [var| p, q : \Bool |]
-        m = newMachine assert (fromString'' "m0") $ do
+        m = newMachine (fromString'' "m0") $ do
             variables .= symbol_table [z3Var "p" bool,z3Var "q" bool]
             event_table .= eventTable (do
                 split_event "ae0" (return ()) 

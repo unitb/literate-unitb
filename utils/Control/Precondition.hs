@@ -1,14 +1,16 @@
-{-# LANGUAGE RankNTypes, TemplateHaskell, ImplicitParams #-}
+{-# LANGUAGE RankNTypes
+        , TemplateHaskell
+        , ImplicitParams
+        , ConstraintKinds #-}
 module Control.Precondition 
     ( module Control.Precondition 
-    , module Control.Exception.Assert
     , module Data.Maybe 
     , module Data.Either.Combinators
-    , Loc(..)
-    , CallStack )
+    , Loc(..) )
 where
 
-import Control.Exception.Assert
+import Control.Exception
+import Control.Exception.Assert (assertMessage)
 import Control.Lens
 
 import Data.Either.Combinators hiding 
@@ -29,67 +31,77 @@ import Text.Printf
 
 import GHC.Generics.Instances ()
 
-fromJust' :: (?loc :: CallStack) => Maybe a -> a
+fromJust' :: Pre => Maybe a -> a
 fromJust' (Just x)   = x
 fromJust' Nothing = assertFalse' "Nothing"
 
-fromRight' :: (?loc :: CallStack) => Either a b -> b
+fromRight' :: Pre => Either a b -> b
 fromRight' (Right x) = x
 fromRight' (Left _)  = assertFalse' "Left"
 
-fromRight'' :: Assert -> Either a b -> b
-fromRight'' _ (Right x) = x
-fromRight'' arse (Left _)  = assertFalse arse "Left"
 
-fromLeft' :: (?loc :: CallStack) => Either a b -> a
+fromLeft' :: Pre => Either a b -> a
 fromLeft' (Left x) = x
 fromLeft' (Right _)  = assertFalse' "Right"
 
-fromJust'' :: Assert -> Maybe a -> a
-fromJust'' _ (Just x) = x
-fromJust'' arse Nothing = assertFalse arse "Nothing"
 
-nonEmpty' :: Assert -> [a] -> NonEmpty a
-nonEmpty' _ (x : xs) = x :| xs
-nonEmpty' arse []    = assertFalse arse "empty list cast as non empty"
+nonEmpty' :: Pre => [a] -> NonEmpty a
+nonEmpty' (x : xs) = x :| xs
+nonEmpty' []    = assertFalse' "empty list cast as non empty"
 
-(!) :: (?loc :: CallStack, Ixed m) 
+(!) :: (Pre, Ixed m) 
     => m -> Index m -> IxValue m
 (!) m x = fromJust' $ m^?ix x
 
-type Assert = forall a. Bool -> a -> a
+byPred :: (Show x,Pre) 
+       => String -> (x -> Bool) -> x -> a -> a
+byPred msg p x = providedMessage' ?loc "byPred" (msg ++ "\n" ++ show x) (p x)
 
-assertFalse :: Assert -> String -> a
-assertFalse arse msg = assertMessage "False" msg (arse False) (error "false assertion (1)")
+byEq :: (Eq x, Show x,Pre) => String -> x -> x -> a -> a
+byEq msg = byRel' msg (==) "≠"
 
-assertFalse' :: (?loc :: CallStack) => a
+byOrd :: (Ord x, Show x,Pre) => String -> Ordering -> x -> x -> a -> a
+byOrd msg ord = byRel' msg (\x y -> ord == compare x y) symb
+    where
+        symb = case ord of
+                    LT -> "≮"
+                    GT -> "≯"
+                    EQ -> "≠"
+
+byRel :: (Show a,Pre) => String -> (a -> a -> Bool) -> a -> a -> x -> x
+byRel msg rel = byRel' msg rel "/rel/"
+
+byRel' :: (Show a,Pre) => String -> (a -> a -> Bool) -> String -> a -> a -> x -> x
+byRel' tag rel symb x0 x1 r = providedMessage' ?loc tag
+    (show x0 ++ " " ++ symb ++ " " ++ show x1) (x0 `rel` x1) r
+
+type Pre = (?loc :: CallStack)
+
+
+assertFalse' :: Pre => a
 assertFalse' = provided False (error "false assertion (2)")
 
-assertFalseMessage :: (?loc :: CallStack) => String -> a
-assertFalseMessage msg = providedMessage' ?loc msg False (error "false assertion (2)")
+undefined' :: Pre => a
+undefined' = assertFalse' 
 
-provided :: (?loc :: CallStack) => Bool -> a -> a
+assertFalseMessage :: Pre => String -> a
+assertFalseMessage msg = providedMessage' ?loc "False assert" msg False (error "false assertion (2)")
+
+provided :: Pre => Bool -> a -> a
 provided = provided' ?loc
 
-withCallStack :: (?loc :: CallStack) => Assert -> Assert
-withCallStack arse b = assertWithCallStack ?loc "" (arse b)
 
-withMessage :: (?loc :: CallStack) => String -> String -> Assert -> Assert
-withMessage tag msg arse b = assertWithCallStack ?loc (tag ++ " " ++ msg) $ arse b
 
-assertWithCallStack :: CallStack -> String -> (a -> a) -> a -> a
-assertWithCallStack cs tag = assertMessage tag
-        (fromMaybe "" $ stackTrace [$__FILE__] cs)
 
 provided' :: CallStack -> Bool -> a -> a
 provided' cs b = assertMessage "Precondition" 
         (fromMaybe "" $ stackTrace [$__FILE__] cs) (assert b)
 
-providedMessage' :: CallStack -> String -> Bool -> a -> a
-providedMessage' cs msg b = assertMessage "Precondition" 
+providedMessage' :: CallStack -> String -> String -> Bool -> a -> a
+providedMessage' cs tag msg b = assertMessage tag
         (fromMaybe "" (stackTrace [$__FILE__] cs) ++ "\n" ++ msg) (assert b)
 
-providedM :: (?loc :: CallStack) => Bool -> m a -> m a
+providedM :: Pre => Bool -> m a -> m a
 providedM b cmd = do
         provided b () `seq` cmd
 

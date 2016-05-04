@@ -9,7 +9,6 @@ import Logic.Operator
     -- Libraries
 import Control.Applicative hiding (Const)
 import Control.DeepSeq
-import Control.Exception.Assert
 import Control.Lens hiding (Context,Const,elements)
 import Control.Monad.RWS
 import Control.Precondition
@@ -150,18 +149,19 @@ checkScopesAux (Lift e _) = do
 checkScopesAux (Record e) = do
     mapMOf_ traverseRecExpr checkScopesAux e
 
-makeSequent :: Assert
-            -> Context
+makeSequent :: Pre
+            => Context
             -> SyntacticProp
             -> [Expr]
             -> Table Label Expr
             -> Expr
             -> Sequent
-makeSequent arse ctx props asms0 asms1 g = checkSequent arse $ 
+makeSequent ctx props asms0 asms1 g = checkSequent $ 
     Sequent 3000 1 ctx props asms0 asms1 g
 
-checkSequent :: Assert -> Sequent -> Sequent
-checkSequent arse s = byPred arse msg (const $ L.null xs) (Pretty s) s
+checkSequent :: Pre
+             => Sequent -> Sequent
+checkSequent s = byPred msg (const $ L.null xs) (Pretty s) s
          --assertMessage "invalid scopes" (unlines $ map show xs) id s
     where
         msg = [printf|Sequent scopes: \n%s|] $ L.unlines $ map pretty_print' xs

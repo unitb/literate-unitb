@@ -35,8 +35,6 @@ import Data.List.Utils as L
 import Data.Map.Class as M hiding (lookup)
 import Data.Time
 
-import GHC.Stack
-
 import Prelude hiding (lookup)
 import PseudoMacros
 
@@ -135,10 +133,10 @@ all_proof_obligations' path = do
 all_proof_obligations :: FilePath -> IO (Either String [Table Label String])
 all_proof_obligations = runEitherT . all_proof_obligations'
 
-withLI :: (?loc :: CallStack) => Either String a -> Either [Error] a
+withLI :: Pre => Either String a -> Either [Error] a
 withLI = mapLeft $ errorTrace [] ?loc
 
-withLI' :: (?loc :: CallStack,Monad m) => EitherT String m a -> EitherT [Error] m a
+withLI' :: (Pre,Monad m) => EitherT String m a -> EitherT [Error] m a
 withLI' (EitherT cmd) = EitherT $ withLI <$> cmd
 
 raw_proof_obligation :: FilePath -> String -> Int -> IO String
@@ -265,7 +263,7 @@ get_system path = do
     else left $ [printf|file does not exist: %s|] path
 
 
-lookup :: (?loc :: CallStack,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
+lookup :: (Pre,Monad m,Ixed f,Show (Index f)) => Index f -> f -> EitherT [Error] m (IxValue f)
 lookup k m = maybe (left $ errorTrace [$__FILE__] ?loc (show k)) return $ m^?ix k
 
 edit :: FilePath -> IO ()

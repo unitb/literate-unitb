@@ -57,7 +57,7 @@ var_c' = Var [smt|c@prime|] int
 var_n' = Var [smt|n@prime|] int
 
 machine6 :: RawMachineAST
-machine6 = newMachine assert [tex|m0|] $ do
+machine6 = newMachine [tex|m0|] $ do
         variables .= fromList (map as_pair [var_a,var_b,var_c,var_n])
         inits .= fromList
                   [ (label "in2", $typeCheck$ c .=. 6)

@@ -84,13 +84,12 @@ read_all = do
               []     -> lift $ left [Error "expecting more arguments" li]
     makeTuple' p read_one'
 
-parseArgs :: (IsTuple LatexArg a)
-          => Assert 
-          -> ([LatexDoc], LineInfo)
+parseArgs :: (IsTuple LatexArg a,Pre)
+          => ([LatexDoc], LineInfo)
           -> M a
-parseArgs arse xs = do
+parseArgs xs = do
     (x,(xs,_)) <- runStateT read_all xs
-    return $ byPred arse "null remainder" L.null xs x
+    return $ byPred "null remainder" L.null xs x
 
 machineCmd :: forall result args ctx. 
               ( Monoid result
@@ -121,7 +120,7 @@ cmdFun f xs m ctx = case x of
                       Left es -> tell (w ++ es) >> return Nothing
     where
         (x,w) = runM (do
-                    x <- parseArgs assert (getCmdArgs xs)
+                    x <- parseArgs (getCmdArgs xs)
                     f x m (ctx ! m) )
                 (cmdLI xs) 
 
@@ -150,7 +149,7 @@ envFun f xs m ctx = case x of
                       Left es -> tell (w ++ es) >> return Nothing
     where
         (x,w) = runM (do
-                        x <- parseArgs assert (getEnvArgs xs)
+                        x <- parseArgs (getEnvArgs xs)
                         f x (getEnvContent xs) m (ctx ! m))
                     (envLI xs) 
 
@@ -254,7 +253,7 @@ pEventIds = pEvents . to (M.mapWithKey const) . from pEventId
 getEvent :: (HasMachineP1 phase)
          => EventId
          -> Getter phase (CEvtType phase)
-getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust'' AST.assert x))
+getEvent eid = pEvents . at eid . (\f x -> Just <$> f (fromJust' x))
 
 eventDifference :: (HasMachineP1 phase, AEvtType phase ~ CEvtType phase)
                 => (NonEmpty (Table label a) -> Table label a -> Table label b)
@@ -265,7 +264,7 @@ eventDifference :: (HasMachineP1 phase, AEvtType phase ~ CEvtType phase)
 eventDifference f eid field = pEventRef . to f'
     where
         f' g = readGraph g $ do
-            cevt  <- fromJust'' AST.assert <$> hasRightVertex (Right eid)
+            cevt  <- fromJust' <$> hasRightVertex (Right eid)
             es <- T.mapM (leftInfo.G.source) =<< predecessors cevt
             f (view field <$> es) <$> (view field <$> rightInfo cevt)
 
@@ -297,13 +296,13 @@ evtMergeKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
              -> Getter (phase) (Table Label (a,NonEmpty SkipOrEvent))
 evtMergeKept = eventDifferenceWithId M.intersection
 
-evtSplits :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
+evtSplits :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
           => (Table Label a -> Table Label a -> Table Label a)
-          -> Assert -> EventId 
+          -> EventId 
           -> Getting (Table Label a) (AEvtType phase) (Table Label a) 
           -> Getter phase [Table Label a]
-evtSplits union arse eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
-        rs <- NE.toList <$> (successors =<< leftVertex arse (Right eid))
+evtSplits union eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
+        rs <- NE.toList <$> (successors =<< leftVertex (Right eid))
         rs <- forM rs $ \v -> do
             r <- union <$> (view ln <$> leftInfo (G.source v)) 
                        <*> (view ln <$> rightInfo (G.target v))
@@ -311,18 +310,18 @@ evtSplits union arse eid ln = to $ \m -> readGraph (m^.pEventRef) $ do
             return $ r <$ eid
         return $ rights rs
 
-evtSplitAdded :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
-              => Assert -> EventId
+evtSplitAdded :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
+              => EventId
               -> Getting (Table Label a) (AEvtType phase) (Table Label a)
               -> Getter phase [Table Label a]
 evtSplitAdded = evtSplits $ flip M.difference
-evtSplitDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
-            => Assert -> EventId
+evtSplitDel :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
+            => EventId
             -> Getting (Table Label a) (AEvtType phase) (Table Label a)
             -> Getter phase [Table Label a]
 evtSplitDel = evtSplits M.difference
-evtSplitKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase)
-             => Assert -> EventId
+evtSplitKept :: (HasMachineP1 phase,AEvtType phase ~ CEvtType phase,Pre)
+             => EventId
              -> Getting (Table Label a) (AEvtType phase) (Table Label a)
              -> Getter phase [Table Label a]
 evtSplitKept = evtSplits M.intersection

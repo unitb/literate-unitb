@@ -437,13 +437,13 @@ inc_event_m1 = create $ do
                             c $ [expr| y' = y + 1 |] . (is_step .~ True)) ] 
 
 m0_machine :: Machine
-m0_machine = newMachine assert (fromString'' "m0") $ do
+m0_machine = newMachine [tex|m0|] $ do
         props .= m0_props
         event_table .= newEvents [("inc", inc_event_m0)]
         variables .= vars 
 
 m1_machine :: Machine
-m1_machine = newMachine assert (fromString'' "m0") $ do
+m1_machine = newMachine [tex|m0|] $ do
         props .= m1_props
         event_table .= newEvents [("inc",inc_event_m1)]
         variables .= vars

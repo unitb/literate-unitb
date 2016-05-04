@@ -174,7 +174,7 @@ instance PrettyPrintable GenericType where
     pretty (Gen s ts) = [printf|%s %s|] (render $ s^.name) (show $ map Pretty ts)
 
 recordName :: Table Name a -> Name
-recordName m = makeZ3Name assert $ "Record-" ++ intercalate "-" (map z3Render $ M.keys m)
+recordName m = makeZ3Name $ "Record-" ++ intercalate "-" (map z3Render $ M.keys m)
 
 instance HasName Sort Name where
     name = to $ \case 
@@ -182,9 +182,9 @@ instance HasName Sort Name where
         (Sort x _ _) -> x
         (DefSort x _ _ _) -> x
         (Datatype _ x _)  -> x
-        BoolSort   -> makeName assert "\\Bool"
-        IntSort    -> makeName assert "\\Int"
-        RealSort   -> makeName assert "\\Real"
+        BoolSort   -> makeName "\\Bool"
+        IntSort    -> makeName "\\Int"
+        RealSort   -> makeName "\\Real"
 
 instance Named Sort where
     type NameOf Sort = Name
@@ -263,7 +263,7 @@ _ElementType = _FromSort.swapped.below (only set_sort).first._Cons.below _Empty.
     where
         first = iso fst (,())
 
-elementType :: (TypeSystem t,?loc :: CallStack) => t -> t
+elementType :: (TypeSystem t,Pre) => t -> t
 elementType t = fromJust' $ t^?_ElementType
 
 foldSorts :: TypeSystem t => Fold t Sort
@@ -292,15 +292,15 @@ gB = GENERIC $ [smt|b|]
 gC :: GenericType
 gC = GENERIC $ [smt|c|]
 
-z3Sort :: (?loc :: CallStack) 
+z3Sort :: Pre 
        => String -> String -> Int -> Sort
 z3Sort n0 n1 = Sort (fromString'' n0) (z3Name n1)
 
-z3DefSort :: (?loc :: CallStack) 
+z3DefSort :: Pre 
           => String -> String -> [String] -> GenericType -> Sort
 z3DefSort n0 n1 ps = DefSort (fromString'' n0) (fromString'' n1) (fromString'' <$> ps)
 
-z3GENERIC :: (?loc :: CallStack)
+z3GENERIC :: Pre
           => String -> GenericType
 z3GENERIC = GENERIC . fromString''
 

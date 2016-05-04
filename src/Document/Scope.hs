@@ -105,7 +105,7 @@ rename_events m = rename_events' (\e -> findWithDefault [e] e m)
 clash :: Scope a => a -> a -> Bool
 clash x y = isNothing $ merge_scopes' x y
 
-merge_scopes :: (Scope a, ?loc :: CallStack) => a -> a -> a
+merge_scopes :: (Scope a, Pre) => a -> a -> a
 merge_scopes x y = fromJust' $ merge_scopes' x y
 
 scopeUnion :: IsKey Table k
@@ -117,7 +117,7 @@ scopeUnion f m0 m1 = sequence $ unionWith f' (Just <$> m0) (Just <$> m1)
     where
         f' x y = join $ f <$> x <*> y
 
-(<+>) :: (Scope a, ?loc :: CallStack) => a -> a -> a
+(<+>) :: (Scope a, Pre) => a -> a -> a
 (<+>) x y = x `merge_scopes` y
 
 clashFree :: Scope a => [a] -> Bool

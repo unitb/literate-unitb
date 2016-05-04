@@ -158,15 +158,14 @@ instance (IsName n) => Translatable
         (GenExpr InternalName t a q) where
     translate = fmap3 asInternal
 
-make_unique :: (IsGenExpr expr, Name ~ NameT expr)
-            => Assert
-            -> String               -- suffix to be added to the name of variables
+make_unique :: (IsGenExpr expr, Name ~ NameT expr,Pre)
+            => String               -- suffix to be added to the name of variables
             -> Table Name var       -- set of variables that must renamed
             -> expr                 -- expression to rewrite
             -> expr
-make_unique arse suf vs = freeVarsOf.namesOf %~ newName
+make_unique suf vs = freeVarsOf.namesOf %~ newName
     where
-        newName vn | vn `M.member` vs = setSuffix arse suf vn
+        newName vn | vn `M.member` vs = setSuffix suf vn
                    | otherwise        = vn
 
 
@@ -280,7 +279,7 @@ instance ( IsName n,TypeSystem t,TypeSystem a
 
 typeOfRecord :: ( TypeSystem t, TypeSystem a
                 , TypeAnnotationPair t a
-                , IsName n,IsQuantifier q,?loc :: CallStack)
+                , IsName n,IsQuantifier q,Pre)
              => RecordExpr n t a q -> t
 typeOfRecord (RecLit m) = recordTypeOfFields m
 typeOfRecord (RecUpdate x m) = recordTypeOfFields $ 
@@ -397,7 +396,7 @@ instance IsName n => HasNames (AbsDef n t q) n where
     type SetNameT m (AbsDef n t q) = AbsDef m t q
     namesOf = traverse2
 
-z3Def :: (?loc :: CallStack) 
+z3Def :: Pre 
       => [Type] 
       -> String
       -> [Var] -> Type -> Expr

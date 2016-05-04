@@ -32,7 +32,7 @@ import UnitB.Test as UB
 -- import Logic.Proof
 -- import UnitB.Test as UB
 --import Latex.Parser
-import qualified Latex.Test_Latex_Parser as Tex
+import qualified Latex.Test as Tex
 -- import qualified Document.Test as DOC
 import qualified Utilities.Test as UT
 import qualified Code.Test as Code

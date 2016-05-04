@@ -491,7 +491,7 @@ patterns ts = map maybe_pattern pat
         -- ungen t = rewrite ungen t
 
     -- generic to first order
-gen_to_fol :: (IsQuantifier q,IsName n,?loc :: CallStack)
+gen_to_fol :: (IsQuantifier q,IsName n,Pre)
            => S.Set FOType 
            -> Label 
            -> AbsExpr n Type q 
@@ -594,7 +594,7 @@ match_some pat types = nubSort $ do -- map (M.map head) ms -- do
             return $ M.map (const [ms']) ms' 
 
 --mk_error :: (Expr -> Maybe FOExpr) -> Expr -> Maybe FOExpr
-mk_error :: (Show a, Show c, Tree a, ?loc :: CallStack) 
+mk_error :: (Show a, Show c, Tree a, Pre) 
          => c -> (a -> Maybe b) -> a -> b
 mk_error z f x = 
         case f x of
@@ -642,11 +642,12 @@ type_vars_to_sorts t =
 vars_to_sorts_aux :: AbsExpr n Type q  -> State ([FOType],Map InternalName FOType) (AbsExpr n FOType q)
 vars_to_sorts_aux = rewriteExprM type_vars_to_sorts return vars_to_sorts_aux
 
-names :: Assert -> String -> [Name]
-names arse n = map (makeName arse . (n ++) . show) [0 :: Int ..]
+names :: Pre 
+      => String -> [Name]
+names n = map (makeName . (n ++) . show) [0 :: Int ..]
 
 vars_to_sorts :: Table Name Sort -> AbsExpr n Type q -> AbsExpr n FOType q
 vars_to_sorts sorts e = evalState (vars_to_sorts_aux e) (new_sorts, empty)
     where
-        new_sorts = map as_type $ names assert "G" `minus` keys sorts
+        new_sorts = map as_type $ names "G" `minus` keys sorts
         as_type n = make_type (Sort n (asInternal n) 0) []

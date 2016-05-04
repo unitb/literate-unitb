@@ -114,10 +114,10 @@ po_table sys = fmap (,Nothing) . uncurryMap $ proof_obligation <$> (mapKeys as_l
 _machineSyntax :: Prism' MachineWithProofs RawMachine
 _machineSyntax = prism'
             (\m -> MachineWithProofs (m!.syntax.content') (m!.proofs)) 
-            (\(MachineWithProofs m ps) -> rightToMaybe $ withProofs ps $ check assert m)
+            (\(MachineWithProofs m ps) -> rightToMaybe $ withProofs ps $ check m)
 
 _Syntax :: Prism' SystemSyntax SystemSemantics
-_Syntax = below _machineSyntax.from (content assert)
+_Syntax = below _machineSyntax.from content
 
 compressingSystem :: Prism' CompressedSystem SystemSemantics
 compressingSystem = packaged._Wrapped._Syntax
@@ -140,7 +140,7 @@ instance Controls (MachinePO' expr) (MachinePO' expr) where
 --    content arse = _
     --func = 
 instance HasExpr expr => HasMachineBase (MachinePO' expr) expr where
-    machineBase = syntax.content assert
+    machineBase = syntax.content
 instance HasExpr expr => HasAbs_vars (MachinePO' expr) (Table Name Var) where
     abs_vars = machineBase.abs_vars
 instance HasName (MachinePO' expr) Name where
@@ -178,29 +178,29 @@ instance NFData (Box a) where
 
 
 fromSyntax :: HasExpr expr => MachineAST' expr -> Machine' expr
-fromSyntax m = check assert $ makeMachinePO' m
+fromSyntax m = check $ makeMachinePO' m
 
 withProofs :: IsExpr expr
            => Table Label (ProofBase expr)
            -> MachineAST' expr
            -> Either [Error] (Machine' expr)
-withProofs p m = fmap (check' assert) $ do
+withProofs p m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
             pos <- proof_obligation' pos p m
             return $ MachinePO m p poBox (box $ \() -> pos)
 
-withProofs' :: IsExpr expr
-            => Assert -> Table Label Proof 
+withProofs' :: (IsExpr expr,Pre)
+            => Table Label Proof 
             -> MachineAST' expr
             -> Machine' expr
-withProofs' arse p m = check arse $ makeMachinePO' m & proofs .~ p
+withProofs' p m = check $ makeMachinePO' m & proofs .~ p
 
 withPOs :: HasExpr expr 
         => Table Label (Tactic Proof,LineInfo)
         -> MachineAST' expr 
         -> Either [Error] (Machine' expr)
-withPOs ps m = fmap (check' assert) $ do
+withPOs ps m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps

@@ -178,7 +178,7 @@ library
         Document.Phase.Test
         Document.Test
         Documentation.Test
-        Latex.Test_Latex_Parser
+        Latex.Test
         Logic.TestGenericity
         UnitB.Test
         Utilities.Test

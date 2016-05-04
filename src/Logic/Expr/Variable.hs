@@ -70,7 +70,7 @@ prime (Var n t) = Var (addPrime n) t
 primeAll :: IsName n => Table n (AbsVar n t) -> Table n (AbsVar n t)
 primeAll m = M.mapKeys addPrime $ M.map prime m
 
-z3Var :: (?loc :: CallStack)
+z3Var :: Pre
       => String -> t -> AbsVar Name t
 z3Var = Var . fromString''
 
