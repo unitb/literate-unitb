@@ -17,7 +17,6 @@ import Data.List.NonEmpty as N
 import Data.Maybe
 
 import Reactive.Banana
-import Reactive.Banana.Frameworks
 import Reactive.Banana.IO
 
 import Safe
@@ -101,7 +100,7 @@ instance MonadMomentIO m => MonadAsyncMoment (AsyncMomentT m) where
                 forkIO $ f (takeTMVar inV) (putTMVar outV)
             -- let h' x = h x >> return 3
             tell ([h <$> takeTMVar outV],[t])
-            liftMomentIO $ reactimate $ atomically . putTMVar inV <$> input
+            reactimate $ atomically . putTMVar inV <$> input
             return output
     asyncBehavior input f = AsyncMoment $ do
             (output,h) <- liftMomentIO newEvent        

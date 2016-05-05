@@ -35,7 +35,6 @@ import Data.Time
 import Reactive.Banana as B
 import Reactive.Banana.Async
 import Reactive.Banana.Discrete
-import Reactive.Banana.Frameworks
 import Reactive.Banana.IO
 import Reactive.Banana.Keyboard
 

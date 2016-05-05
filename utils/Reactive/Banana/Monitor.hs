@@ -8,7 +8,7 @@ import Data.String.Lines
 
 import Reactive.Banana
 import Reactive.Banana.Combinators.Extras
-import Reactive.Banana.IO
+import Reactive.Banana.IO hiding (getEvent)
 
 data Monitor a = Monitor a (Event a) 
     deriving (Functor)

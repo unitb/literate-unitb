@@ -1,6 +1,9 @@
-{-# LANGUAGE GADTs,KindSignatures,TypeFamilies #-}
+{-# LANGUAGE GADTs,KindSignatures,TypeFamilies,StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Reactive.Banana.IO 
+    ( module Reactive.Banana.IO 
+    , module R
+    , tell )
 where
 
 import Control.Lens
@@ -16,7 +19,10 @@ import Data.List.Ordered
 
 import Reactive.Banana as R hiding (interpret,apply)
 import Reactive.Banana.Combinators.Extras
-import Reactive.Banana.Frameworks as R
+import Reactive.Banana.Frameworks as R hiding (reactimate,reactimate')
+import qualified Reactive.Banana.Frameworks as R
+
+import Test.QuickCheck
 
 class (MonadMoment m,MonadIO m) => MonadMomentIO m where
     liftMomentIO :: MomentIO a -> m a
@@ -24,10 +30,13 @@ class (MonadMoment m,MonadIO m) => MonadMomentIO m where
                          => MomentIO a -> t m' a
     liftMomentIO = lift . liftMomentIO
 
-class MonadMomentIO m => Frameworks m where
-    type EventList m a :: *
+class (MonadMomentIO m,Functor (EventList m)) => Frameworks m where
+    data EventList m :: * -> *
     type InitF m :: *
     type InitF m = ()
+    getEvent :: (a -> Maybe b) 
+             -> EventList m a
+             -> Maybe b
     interpret' :: (Event a -> m (Event b)) 
                -> InitF m
                -> [EventList m a] 
@@ -69,9 +78,40 @@ instance (MonadMoment m,Monoid w) => MonadMoment (WriterT w m) where
 instance MonadMomentIO MomentIO where
     liftMomentIO = id
 
+convertEventList :: Functor m
+                 => (fb -> gb)
+                 -> (ga -> fa)
+                 -> ([fa] -> m ([fb],c))
+                 -> ([ga] -> m ([gb],c))
+convertEventList f g cmd = (mapped._1.traverse %~ f) . cmd . map g
+
+convertEventList' :: Functor m
+                  => Iso ga gb fa fb
+                  -> ([fa] -> m ([fb],c))
+                  -> ([ga] -> m ([gb],c))
+convertEventList' i = withIso i $ flip convertEventList
+
 instance Frameworks MomentIO where
-    type EventList MomentIO a = Maybe a
-    interpret' f () = interpretFrameworks' f
+    newtype EventList MomentIO a = MomentIOEvent { getMomentIOEvent :: Maybe a }
+        deriving (Functor,Show,Arbitrary)
+    getEvent f (MomentIOEvent x) = x >>= f
+    interpret' f () = convertEventList MomentIOEvent getMomentIOEvent
+                    $ interpretFrameworks' f
+
+instance Frameworks m => Frameworks (ReaderT r m) where
+    newtype EventList (ReaderT r m) a = ReaderEvent { getReaderEvent :: EventList m a }
+    type InitF (ReaderT r m) = (r,InitF m)
+    getEvent f = getEvent f . getReaderEvent
+    interpret' f (r,x) = convertEventList ReaderEvent getReaderEvent
+                $ interpret' (\e -> runReaderT (f e) r) x
+
+readerEvent :: Iso (EventList (ReaderT r m) a)
+                   (EventList (ReaderT r m) b)
+                   (EventList m a) 
+                   (EventList m b) 
+readerEvent = iso getReaderEvent ReaderEvent
+
+deriving instance Functor (EventList m) => Functor (EventList (ReaderT r m))
 
 instance MonadMomentIO m => MonadMomentIO (ReaderT r m) where
 instance (MonadMomentIO m,Monoid w) => MonadMomentIO (RWST r w s m) where
@@ -85,7 +125,7 @@ reactimateB :: MonadMomentIO m
             -> m ()
 reactimateB b = liftMomentIO $ do
         liftIOLater =<< valueB b
-        reactimate' =<< changes b
+        R.reactimate' =<< changes b
 
 display :: MonadMomentIO m
         => Behavior String
@@ -93,10 +133,25 @@ display :: MonadMomentIO m
 display str = 
     reactimateB $ putStrLn <$> str
 
+displayM :: MonadMomentIO m
+         => Behavior a
+         -> (a -> Writer String z)
+         -> m ()
+displayM b f = 
+    reactimateB $ putStrLn.execWriter .f <$> b
+
+reactimate :: MonadMomentIO m 
+           => Event (IO ()) -> m ()
+reactimate = liftMomentIO . R.reactimate
+
+reactimate' :: MonadMomentIO m 
+            => Event (Future (IO ())) -> m ()
+reactimate' = liftMomentIO . R.reactimate'
+
 fromFuture :: MonadMomentIO m
            => Event (Future a)
            -> m (Event a)
 fromFuture e = liftMomentIO $ do
         (e',h) <- newEvent
-        reactimate' $ fmap h <$> e
+        R.reactimate' $ fmap h <$> e
         return e'

@@ -1,5 +1,8 @@
 {-# LANGUAGE KindSignatures, GADTs, PolyKinds #-}
-module Reactive.Banana.Property where
+module Reactive.Banana.Property 
+  ( module Reactive.Banana.Property
+  , module Control.Invariant )
+where
 
 import Control.Arrow
 import Control.Exception
@@ -19,7 +22,6 @@ import Data.Time
 
 import Reactive.Banana as R hiding (interpret,apply)
 import Reactive.Banana.Combinators.Extras
-import Reactive.Banana.Frameworks as R
 import Reactive.Banana.IO as R
 
 import Safe
@@ -52,25 +54,25 @@ data Checker :: (* -> *) -> * where
 type Pred a  = a -> Bool
 type Check f a prop = forall m g. MonadMomentIO m => ReaderT (Behavior a,Checker g) m (g (f prop))
 
-checkEvent :: (IsAssertion prop,MonadMomentIO m) 
+checkAssertM' :: (Monad m,IsAssertion prop,Pre) => prop -> m ()
+checkAssertM' prop = checkAssertM prop ""
+
+checkEvent :: (IsAssertion prop,MonadMomentIO m,Pre) 
            => Checker f
            -> Event prop -> m (f (Event prop))
-checkEvent Checker e = liftMomentIO $ Proxy <$ reactimate (check <$> e) 
-    where check prop = checkAssertM prop ""
+checkEvent Checker e = liftMomentIO $ Proxy <$ reactimate (checkAssertM' <$> e) 
 checkEvent Monitor e = return $ Identity e
 
-checkFutureEvent :: (IsAssertion prop,MonadMomentIO m) 
+checkFutureEvent :: (IsAssertion prop,MonadMomentIO m,Pre) 
            => Checker f
            -> Event (Future prop) -> m (f (Event prop))
-checkFutureEvent Checker e = liftMomentIO $ Proxy <$ reactimate' (fmap check <$> e) 
-    where check prop = checkAssertM prop ""
+checkFutureEvent Checker e = liftMomentIO $ Proxy <$ reactimate' (fmap checkAssertM' <$> e) 
 checkFutureEvent Monitor e = Identity <$> fromFuture e
 
-checkBehavior :: (IsAssertion prop,MonadMomentIO m) 
+checkBehavior :: (IsAssertion prop,MonadMomentIO m,Pre) 
               => Checker f
               -> Behavior prop -> m (f (Behavior prop))
-checkBehavior Checker b = liftMomentIO $ Proxy <$ reactimateB (check <$> b) 
-    where check prop = checkAssertM prop ""
+checkBehavior Checker b = liftMomentIO $ Proxy <$ reactimateB (checkAssertM' <$> b) 
 checkBehavior Monitor b = return $ Identity b
 
 -- checkAllAsserts :: MonadMomentIO m => Checker m Proxy

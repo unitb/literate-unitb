@@ -1,10 +1,13 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies,StandaloneDeriving #-}
 module Reactive.Banana.FileSystem 
-    ( FSMomentT
+    ( module Utilities.FileSystem
+    , FSMomentT
     , FSMoment
     , runFSMoment
     , interpretFSMomentT
-    , reactimateFS, reactimateFS', mapEventFS 
+    , MonadFSMoment(..)
+    , fileSystemEvent
+    , reactimateFS
     , run_tests )
 where
 
@@ -15,8 +18,9 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.RWS
-import Control.Monad.Writer
 import Control.Monad.State
+import Control.Monad.Trans.Lens
+import Control.Monad.Writer
 
 import Data.List.NonEmpty as NE (NonEmpty(..),toList)
 import qualified Data.Map as M
@@ -26,9 +30,10 @@ import Prelude hiding (writeFile,readFile)
 
 import Reactive.Banana
 import Reactive.Banana.Combinators.Extras
-import Reactive.Banana.Frameworks
+import Reactive.Banana.FileSystem.Class
 import Reactive.Banana.IO
-import Reactive.Banana.Property hiding (run_tests)
+import Reactive.Banana.Keyboard.Class
+import Reactive.Banana.Property hiding (run_tests,(===))
 
 import Test.QuickCheck
 
@@ -70,41 +75,47 @@ instance Monad m => Monad (FSMomentT m) where
     {-# INLINE (>>=) #-}
     FileSystemMomentT m >>= f = FileSystemMomentT $ m >>= unFSMomentT . f
 instance Frameworks m => Frameworks (FSMomentT m) where
-    type EventList (FSMomentT m) a = EventList m a
+    newtype EventList (FSMomentT m) a = FSEvent { getFSEvent :: EventList m a }
     type InitF (FSMomentT m) = (MockFileSystemState,InitF m) 
-    interpret' = interpretFSMomentT
+    getEvent f = getEvent f . getFSEvent
+    interpret' f = convertEventList FSEvent getFSEvent . interpretFSMomentT f
 
-reactimateFS :: Monad m'
+fileSystemEvent :: Iso (EventList (FSMomentT m) a)
+                       (EventList (FSMomentT m) b)
+                       (EventList m a)
+                       (EventList m b)
+fileSystemEvent = iso getFSEvent FSEvent
+
+deriving instance Functor (EventList m) => Functor (EventList (FSMomentT m))
+
+instance MonadMomentIO m => MonadFSMoment (FSMomentT m) where 
+    reactimateFS' e = reactimateFSImpl $ e & mapped.mapped.mapped %~ return
+    mapEventFS f e = do
+            (e',h) <- liftMomentIO newEvent
+            reactimateFSImpl $ e & mapped %~ pure.fmap h.f
+            return e'
+
+instance KeyboardMonad m => KeyboardMonad (FSMomentT m) where
+    specializeKeyboard b (FileSystemMomentT m) = FileSystemMomentT $
+            m & insideReaderT . insideWriterT %~ specializeKeyboard b
+
+reactimateFS :: MonadFSMoment m
              => Event (FileSystemM ())
-             -> FSMomentT m' ()
+             -> m ()
 reactimateFS e = reactimateFS' $ pure <$> e
 
-reactimateFS' :: Event (Future (FileSystemM ()))
-              -> FSMomentT m' ()
-reactimateFS' e = reactimateFSImpl $ e & mapped.mapped.mapped %~ return
 
 reactimateFSImpl :: Event (Future (FileSystemM (IO ())))
                  -> FSMomentT m' ()
 reactimateFSImpl e = FileSystemMomentT $ ReaderT $ \react -> runReactimate react e
 
-mapEventFS :: MonadMomentIO m'
-           => (a -> FileSystemM b)
-           -> Event a
-           -> FSMomentT m' (Event b)
-mapEventFS f e = do
-        (e',h) <- liftMomentIO newEvent
-        reactimateFSImpl $ e & mapped %~ pure.fmap h.f
-        return e'
-
 ioReactimate :: MonadMomentIO m => ReactimateType () m 
 ioReactimate = ReactimateType $ \e -> 
-    liftMomentIO $ reactimate' $ e & mapped.mapped %~ join.runFS
+    reactimate' $ e & mapped.mapped %~ join.runFS
 
 mockFSReactimate :: Monad m
                  => ReactimateType [Event (Future (FileSystemM (IO ())))] m 
-mockFSReactimate = ReactimateType $ \e -> do
-    tell [e]
-    -- liftMomentIO _
+mockFSReactimate = ReactimateType $ \e -> tell [e]
 
 runFSMoment :: MonadMomentIO m => FSMomentT m a -> m a
 runFSMoment (FileSystemMomentT cmd) = fst <$> runWriterT (runReaderT cmd ioReactimate)
@@ -121,7 +132,7 @@ interpretFSMomentT f (initS,s) xs = do
                     mock = ioEvt & mapped.mapped %~ runState . mockFS
                 mock' <- fromFuture mock 
                 (e',_) <- mapAccum initS mock'
-                liftMomentIO $ reactimate e'
+                reactimate e'
                     -- mappendWith f x y = liftA2 _ x y
                 return x
     interpret' f' s xs
@@ -142,13 +153,13 @@ prop_lockStep xs = lockStep xs === lockStep' xs
 prop_file_io :: String
              -> [Maybe (Maybe String,Maybe String,Maybe ())] 
              -> Property
-prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,())
+prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,()) . map (FSEvent . MomentIOEvent)
     where
-        showInput :: [Maybe (Maybe String, Maybe String, Maybe ())]
+        showInput :: [EventList FSMoment (Maybe String, Maybe String, Maybe ())]
                   -> [[String]]
-        showInput xs = [ xs & traverse %~ show . join . fmap (view _1)
-                       , xs & traverse %~ show . join . fmap (view _2)
-                       , xs & traverse %~ show . join . fmap (view _3) ]
+        showInput xs = [ xs & traverse %~ show . getEvent (view _1)
+                       , xs & traverse %~ show . getEvent (view _2)
+                       , xs & traverse %~ show . getEvent (view _3) ]
         showOutput :: [Maybe (Maybe (Maybe String), Maybe (Maybe String))]
                    -> [[String]]
         showOutput xs = [ xs & traverse %~ show . join . fmap (view _1)
@@ -170,7 +181,7 @@ prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,())
                     (mapEventFS id $ ifFileExists f1 readFile <$ readF)
                     (mapEventFS id $ ifFileExists f2 readFile <$ readF)
                 
-        prop :: [Maybe (Maybe String, Maybe String,Maybe ())]
+        prop :: [EventList FSMoment (Maybe String, Maybe String,Maybe ())]
              -> [Maybe (Maybe (Maybe String), Maybe (Maybe String))] 
              -> Property
         prop input output = flip evalState (Just c,Nothing) $ do
@@ -188,7 +199,7 @@ prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,())
                                        (Maybe (Maybe (Maybe String), Maybe (Maybe String)))
                     readFirst  = Just . (_1 %~ Just) . (_2 .~ Nothing) <$> get
                     readSecond = Just . (_2 %~ Just) . (_1 .~ Nothing) <$> get
-                xs <- input & traverse (maybe (return $ pure Nothing) runReadWrite)
+                xs <- input & traverse (maybe (return $ pure Nothing) runReadWrite . getMomentIOEvent . getFSEvent)
                 return $ lockStep xs === output
 
 return []

@@ -7,7 +7,11 @@
         ,PolyKinds
         ,StandaloneDeriving
         ,TypeOperators #-}
-module Reactive.Banana.Async2 where
+module Reactive.Banana.Async2 
+    ( module Reactive.Banana.Async2 
+    , module Reactive.Banana.Async.Class
+    , StdGen )
+where
 
 import Control.Arrow
 import Control.CoApplicative
@@ -21,7 +25,7 @@ import Control.Monad.Reader
 import Control.Monad.Random as R
 import Control.Monad.RWS
 import Control.Monad.State
-import Control.Monad.Writer
+import Control.Monad.Trans.Lens
 import Control.Precondition
 
 import Data.Default
@@ -36,25 +40,17 @@ import Data.Time
 import Data.These
 import Data.TypeList
 
-import GHC.Generics.Instances
-
 import Reactive.Banana
+import Reactive.Banana.Async.Class
 import Reactive.Banana.Combinators.Extras
 import Reactive.Banana.Discrete
-import Reactive.Banana.Frameworks
-import           Reactive.Banana.IO as R hiding (interpretFrameworks')
-import qualified Reactive.Banana.IO as R
+import Reactive.Banana.FileSystem.Class
+import           Reactive.Banana.IO as R hiding (interpretFrameworks',split)
+import qualified Reactive.Banana.IO as R hiding (split)
+import Reactive.Banana.Keyboard.Class
 import Reactive.Banana.Property
 
 import Test.QuickCheck
-
-data JobBatch' map a b = JobBatch 
-              { _initJobs :: map (a,Either b (IO b))
-              , _updateJobs :: Event (map (Maybe (a,IO b)))
-              , _killTasks  :: Event ()
-              }
-
-makeLenses ''JobBatch'
 
 type Pipe' s a b = a -> Future (StateT s IO b)
 type Pipe s a b = a -> StateT s IO b
@@ -71,6 +67,10 @@ type AsyncMoment = AsyncMomentT MomentIO
 newtype AsyncMomentT m a = AsyncMoment { _impl :: forall t. MonadAsyncMomentImpl t m => t a }
     deriving (Functor)
 
+newtype MockAsyncMomentT m a = MockAsyncMoment { _unMockAsyncMoment :: RWST (Event String) () (Event StdGen) m a } 
+    deriving (Functor,Applicative,MonadIO
+             ,MonadMoment,MonadMomentIO,MonadFix)
+
 newtype AsyncMomentImplT m a = AsyncMomentImpl { _asyncMoment :: RWST Scaffolding [AsyncEvent] KBEvent m a }
     deriving (Functor,Applicative,MonadIO,MonadTrans
              ,MonadMoment,MonadMomentIO,MonadFix)
@@ -82,13 +82,52 @@ data AsyncEvent =
                 (Outbut k a b) 
             | Source (IO ())
 
--- newtype Apply f (m :: k) a = Apply (f m a)
-
--- type Jobs  k a b = (Map k (a,b), Map k (a,Async b))
 type Jobs' k a b = (Map k (a,Either b (IO b)))
 
 type Input k a b = STM (Map k (Maybe (a,IO b)))
 type Outbut k a b = Map k (a,Either SomeException b) -> Map k (a,()) -> IO ()
+
+class (MonadIO t,MonadFix t) => MonadAsyncMomentImpl t (m :: * -> *) | t -> m where
+    -- asyncEvent' :: s
+    --             -> Pipe s a b
+    --             -> Event (Future a) 
+    --             -> m (Event b)
+    liftIntern :: m a -> t a
+    insideIntern :: Setter (t a) (t b) (m a) (m b)
+    pollKeyboardImpl :: t (Event String)
+    makeTimerImpl :: NominalDiffTime -> t (Event ())
+    jobBatchImpl' :: (Ord lbl)
+                  => State (JobBatch lbl a b) z
+                  -> t (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
+    -- default pollKeyboardImpl :: forall m' (t :: (* -> *) -> * -> *). 
+    --                         (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
+    --                      => t m' (Event String)
+    -- pollKeyboardImpl = lift pollKeyboard
+    -- default makeTimerImpl :: forall m' (t :: (* -> *) -> * -> *). 
+    --                      (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
+    --                   => NominalDiffTime -> m (Event ())
+    -- makeTimerImpl = lift . makeTimer
+    -- default jobBatch' :: forall m' (t :: (* -> *) -> * -> *) a b lbl z. 
+    --                      (t m' ~ m, MonadAsyncMoment m',MonadTrans t,Ord lbl)
+    --           => State (JobBatch lbl a b) z
+    --           -> m (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
+    -- jobBatch' = lift . jobBatch'
+
+instance Monad m => Monad (MockAsyncMomentT m) where
+    {-# INLINE (>>=) #-}
+    MockAsyncMoment m >>= f = MockAsyncMoment $ m >>= _unMockAsyncMoment . f
+
+instance Monad m => Monad (AsyncMomentImplT m) where
+    {-# INLINE (>>=) #-}
+    AsyncMomentImpl m >>= f = AsyncMomentImpl $ m >>= _asyncMoment . f
+
+makeLenses ''AsyncMomentT
+makeLenses ''AsyncMomentImplT
+makeLenses ''MockAsyncMomentT
+
+-- newtype Apply f (m :: k) a = Apply (f m a)
+
+-- type Jobs  k a b = (Map k (a,b), Map k (a,Async b))
 
 instance Applicative m => Applicative (AsyncMomentT m) where
     pure x = AsyncMoment $ pure x
@@ -108,68 +147,15 @@ instance Monad m => Monad (AsyncMomentT m) where
     {-# INLINE (>>=) #-}
     AsyncMoment m >>= f = AsyncMoment $ m >>= _impl . f
 
-instance Monad m => Monad (AsyncMomentImplT m) where
-    {-# INLINE (>>=) #-}
-    AsyncMomentImpl m >>= f = AsyncMomentImpl $ m >>= _asyncMoment . f
-
-type JobBatch lbl a b = JobBatch' (Map lbl) a b
-
-instance Monoid1 map => Default (JobBatch' map a b) where
-    def = JobBatch mempty1 never never
-
-class MonadMomentIO m => MonadAsyncMoment m where
-    -- asyncEvent' :: s
-    --             -> Pipe s a b
-    --             -> Event (Future a) 
-    --             -> m (Event b)
-    pollKeyboard :: m (Event String)
-    makeTimer :: NominalDiffTime -> m (Event ())
-    jobBatch' :: Ord lbl
-              => State (JobBatch lbl a b) z
-              -> m (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
-    default pollKeyboard :: forall m' (t :: (* -> *) -> * -> *). 
-                            (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
-                         => t m' (Event String)
-    pollKeyboard = lift pollKeyboard
-    default makeTimer :: forall m' (t :: (* -> *) -> * -> *). 
-                         (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
-                      => NominalDiffTime -> m (Event ())
-    makeTimer = lift . makeTimer
-    default jobBatch' :: forall m' (t :: (* -> *) -> * -> *) a b lbl z. 
-                         (t m' ~ m, MonadAsyncMoment m',MonadTrans t,Ord lbl)
-              => State (JobBatch lbl a b) z
-              -> m (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
-    jobBatch' = lift . jobBatch'
+instance MonadFSMoment m => MonadFSMoment (AsyncMomentT m) where
+instance KeyboardMonad m => KeyboardMonad (AsyncMomentT m) where
+    specializeKeyboard b (AsyncMoment m) = AsyncMoment $ 
+            m & insideIntern %~ specializeKeyboard b
 
 instance MonadMomentIO m => MonadAsyncMoment (AsyncMomentT m) where
     pollKeyboard = AsyncMoment pollKeyboardImpl
     makeTimer t = AsyncMoment $ makeTimerImpl t
     jobBatch' p = AsyncMoment $ jobBatchImpl' p
-
-class (MonadIO t,MonadFix t) => MonadAsyncMomentImpl t (m :: * -> *) | t -> m where
-    -- asyncEvent' :: s
-    --             -> Pipe s a b
-    --             -> Event (Future a) 
-    --             -> m (Event b)
-    liftIntern :: m a -> t a
-    pollKeyboardImpl :: t (Event String)
-    makeTimerImpl :: NominalDiffTime -> t (Event ())
-    jobBatchImpl' :: (Ord lbl)
-                  => State (JobBatch lbl a b) z
-                  -> t (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
-    -- default pollKeyboardImpl :: forall m' (t :: (* -> *) -> * -> *). 
-    --                         (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
-    --                      => t m' (Event String)
-    -- pollKeyboardImpl = lift pollKeyboard
-    -- default makeTimerImpl :: forall m' (t :: (* -> *) -> * -> *). 
-    --                      (t m' ~ m, MonadAsyncMoment m',MonadTrans t) 
-    --                   => NominalDiffTime -> m (Event ())
-    -- makeTimerImpl = lift . makeTimer
-    -- default jobBatch' :: forall m' (t :: (* -> *) -> * -> *) a b lbl z. 
-    --                      (t m' ~ m, MonadAsyncMoment m',MonadTrans t,Ord lbl)
-    --           => State (JobBatch lbl a b) z
-    --           -> m (Discrete (Map lbl (a,b)),Discrete (Map lbl (a,())))
-    -- jobBatch' = lift . jobBatch'
 
 _MaybeToMap :: Iso (Maybe a) (Maybe b) (Map () a) (Map () b)
 _MaybeToMap = iso (maybe M.empty (M.singleton ())) (M.lookup ())
@@ -277,15 +263,8 @@ thread (Pipeline first input output) = do
         lift $ output ended' $ pending' & traverse._2 .~ () 
         put (ended',pending')
 
-newtype MockAsyncMomentT m a = MockAsyncMoment { _unMockAsyncMoment :: RWST (Event String) () (Event StdGen) m a } 
-    deriving (Functor,Applicative,MonadIO
-             ,MonadMoment,MonadMomentIO,MonadFix)
-
 instance MonadTrans MockAsyncMomentT where
     lift = MockAsyncMoment . lift
-instance Monad m => Monad (MockAsyncMomentT m) where
-    {-# INLINE (>>=) #-}
-    MockAsyncMoment m >>= f = MockAsyncMoment $ m >>= _unMockAsyncMoment . f
 
 mapEventIO' :: (a -> IO b) -> Event a -> MomentIO (Event b)
 mapEventIO' f e1 = do
@@ -304,6 +283,7 @@ accumEventIO x e = mdo
 
 instance (MonadMomentIO m,MonadFix m) => MonadAsyncMomentImpl (MockAsyncMomentT m) m where
     liftIntern = lift
+    insideIntern = unMockAsyncMoment . insideRWST
     pollKeyboardImpl = MockAsyncMoment $ ask
     makeTimerImpl _  = return never
     jobBatchImpl' param = MockAsyncMoment $ do
@@ -364,6 +344,7 @@ instance (MonadMomentIO m,MonadFix m) => MonadAsyncMomentImpl (MockAsyncMomentT 
 
 instance (MonadMomentIO m,MonadFix m) => MonadAsyncMomentImpl (AsyncMomentImplT m) m where
     liftIntern = AsyncMomentImpl . lift
+    insideIntern = asyncMoment . insideRWST
     pollKeyboardImpl = eventSource _1 $ \h -> h =<< getLine
     makeTimerImpl dt = eventSource (_2.at dt) $ \h -> do
             b <- registerDelay $ floor (dt * 1000000)
@@ -391,11 +372,6 @@ instance (MonadMomentIO m,MonadFix m) => MonadAsyncMomentImpl (AsyncMomentImplT 
             reactimate 
                 $ (atomically . putTMVar input) <$> unionWith M.union update terminate'
         return (compl,pending & mapped.mapped._2 .~ ())
-
-instance MonadAsyncMoment m => MonadAsyncMoment (ReaderT r m) where
-instance MonadAsyncMoment m => MonadAsyncMoment (StateT s m) where
-instance (MonadAsyncMoment m,Monoid w) => MonadAsyncMoment (RWST r w s m) where
-instance (MonadAsyncMoment m,Monoid w) => MonadAsyncMoment (WriterT w m) where
 
 atomically' :: StateT s STM b -> StateT s IO b
 atomically' cmd = do
@@ -571,15 +547,28 @@ interpretFrameworks' f xs = do
     --            (reverse <$> readIORef output)    
 
 instance (Frameworks m,MonadFix m) => Frameworks (AsyncMomentT m) where
-    type EventList (AsyncMomentT m) a = EventList m (Maybe a,Maybe String,Maybe StdGen)
+    newtype EventList (AsyncMomentT m) a = AsyncEvent { getAsyncEvent :: EventList m (Maybe a,Maybe String,Maybe StdGen) }
     type InitF (AsyncMomentT m) = InitF m
-    interpret' = interpretAsyncT
+    getEvent f = getEvent (view _1 >=> f) . getAsyncEvent
+    interpret' f = convertEventList AsyncEvent getAsyncEvent . interpretAsyncT f
+
+asyncEventIso :: Iso (EventList (AsyncMomentT m) a)
+                     (EventList (AsyncMomentT m) b)
+                     (EventList m (Maybe a,Maybe String,Maybe StdGen))
+                     (EventList m (Maybe b,Maybe String,Maybe StdGen))
+asyncEventIso = iso getAsyncEvent AsyncEvent
+
+deriving instance Functor (EventList m) => Functor (EventList (AsyncMomentT m))
+deriving instance (Show (EventList m (Maybe a, Maybe String, Maybe StdGen))) 
+            => Show (EventList (AsyncMomentT m) a)
+deriving instance Arbitrary (EventList m (Maybe a, Maybe String, Maybe StdGen))
+            => Arbitrary (EventList (AsyncMomentT m) a)
 
 interpretAsync :: forall a b. 
                   (Event a -> AsyncMoment (Event b))
                -> [Maybe (Maybe a,Maybe String,Maybe StdGen)] 
                -> IO ([Maybe (Maybe a, Maybe String, Maybe StdGen)],[Maybe b])
-interpretAsync f = interpretAsyncT f ()
+interpretAsync f = convertEventList getMomentIOEvent MomentIOEvent $ interpretAsyncT f ()
 
 interpretAsyncT :: forall a b m. (Frameworks m,MonadFix m)
                 => (Event a -> AsyncMomentT m (Event b))

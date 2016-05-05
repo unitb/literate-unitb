@@ -1,9 +1,10 @@
 {-# LANGUAGE RankNTypes,ScopedTypeVariables
+    ,StandaloneDeriving
     ,UndecidableInstances,TypeFamilies #-}
-module Reactive.Banana.Keyboard where
-
-import Reactive.Banana
-import Reactive.Banana.Frameworks
+module Reactive.Banana.Keyboard 
+  ( module Reactive.Banana.Keyboard 
+  , module Reactive.Banana.Keyboard.Class )
+where
 
 import Control.Lens hiding (pre)
 import Control.Monad.Reader
@@ -17,6 +18,10 @@ import Data.String.Utils hiding (split)
 import Data.Typeable
 import Data.Typeable.Lens
 
+import Reactive.Banana
+import Reactive.Banana.Async.Class
+import Reactive.Banana.Keyboard.Class
+import Reactive.Banana.FileSystem.Class
 import Reactive.Banana.IO
 
 import Text.Printf.TH
@@ -38,18 +43,23 @@ instance Monad m => Monad (KeyboardT m) where
 
 makeLenses ''KeyboardT
 
-class KeyboardMonad m where
-    command' :: forall a. (Typeable a,Show a,Read a) 
-             => Behavior String
-             -> m (Event a)
-    specializeKeyboard :: Behavior String
-                       -> m a
-                       -> m a
-
 instance Frameworks m => Frameworks (KeyboardT m) where
-    type EventList (KeyboardT m) a = EventList m (Maybe [String],Maybe String,Maybe a)
+    newtype EventList (KeyboardT m) a = KeyboardEvent { getKeyboardEvent :: EventList m (Maybe [String],Maybe String,Maybe a) }
     type InitF (KeyboardT m) = ([String],InitF m)
-    interpret' = interpretKeyboard
+    getEvent f = getEvent (view _3 >=> f) . getKeyboardEvent
+    interpret' f = convertEventList KeyboardEvent getKeyboardEvent . interpretKeyboard f
+
+deriving instance Functor (EventList m) => Functor (EventList (KeyboardT m))
+
+keyboardEvent :: Iso 
+            (EventList (KeyboardT m) a)
+            (EventList (KeyboardT m) b)
+            (EventList m (Maybe [String],Maybe String,Maybe a))
+            (EventList m (Maybe [String],Maybe String,Maybe b))
+keyboardEvent = iso getKeyboardEvent KeyboardEvent
+
+instance MonadFSMoment m => MonadFSMoment (KeyboardT m) where
+instance MonadAsyncMoment m => MonadAsyncMoment (KeyboardT m) where
 
 instance Monad m => KeyboardMonad (KeyboardT m) where
     specializeKeyboard f (Keyboard m) = Keyboard $ local (liftA2 (:) f) m
@@ -127,7 +137,7 @@ reject :: MonadMomentIO m
        -> m ()
 reject kb cmds = do
     let msg = flip [printf|Invalid command: '%s'\nValid commands:\n%s\n|] . unlines . map ("  " ++)
-    liftMomentIO $ reactimate $ fmap putStrLn . msg <$> cmds <@> kb
+    reactimate $ fmap putStrLn . msg <$> cmds <@> kb
 
 command :: (KeyboardMonad m,Read a,Show a,Typeable a)
         => String

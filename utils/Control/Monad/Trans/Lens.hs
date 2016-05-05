@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Control.Monad.Trans.Lens where
 
 import Control.Applicative
@@ -8,12 +9,32 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
 
+class MonadTrans t => MonadFunTrans t where
+    insideM :: Monad m => Setter (t m a) (t m b) (m a) (m b)
+
+instance Monoid w => MonadFunTrans (RWST r w s) where
+    insideM = insideRWST
+instance MonadFunTrans (ReaderT r) where
+    insideM = insideReaderT
+instance MonadFunTrans (StateT s) where
+    insideM = insideStateT
+instance Monoid w => MonadFunTrans (WriterT w) where
+    insideM = insideWriterT
+
 insideRWST :: Applicative m
            => Setter (RWST r w s m a) (RWST r w s m b) (m a) (m b)
 insideRWST = _Wrapped . mapped . mapped . mapping' _1
 
 insideReaderT :: Setter (ReaderT r m a) (ReaderT r m b) (m a) (m b)
 insideReaderT = _Wrapped . mapped
+
+insideStateT :: Applicative m
+             => Setter (StateT s m a) (StateT s m b) (m a) (m b)
+insideStateT = _Wrapped . mapped . mapping' _1
+
+insideWriterT :: Applicative m
+              => Setter (WriterT r m a) (WriterT r m b) (m a) (m b)
+insideWriterT = _Wrapped . mapping' _1
 
 mapping' :: Applicative f
          => Lens s t a b -> Lens (f s) (f t) (f a) (f b)
