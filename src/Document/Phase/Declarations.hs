@@ -26,25 +26,17 @@ import UnitB.Syntax as AST
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
-import Control.CoApplicative
 import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad
 import           Control.Monad.Reader.Class 
 
-import Control.Precondition
-
-import           Data.List.NonEmpty as NE (toList)
-import           Data.Either.Validation
 import           Data.Existential
 import Data.Map.Class as M hiding ( map, (\\) )
 import qualified Data.Map.Class as M
-import qualified Data.Maybe as MM
 import           Data.List as L hiding ( union, insert, inits )
 import qualified Data.Traversable as T
-
-import Test.QuickCheck hiding (Result(..),label)
 
 import Text.Printf.TH
 
@@ -121,50 +113,13 @@ make_phase2 p1 vars = join $
                     Right eid -> \e e' -> return $ makeEventP2 e (_pSchSynt e') (_pEvtSynt e') (findWithDefault [] eid table)  -- (m ! eid)
                     Left SkipEvent -> \e e' -> return $ makeEventP2 e (_pEvtSynt e') (_pSchSynt e') []
 
-instance IsVarScope TheoryDef where
-    toOldEventDecl _ _ = []
-    toNewEventDecl _ _ = []
-    toThyDecl s th = [Right $ PDefinitions s $ thDef th]
-    toMchDecl _ _  = []
-
-instance PrettyRecord TheoryDef where
-    recordFields = genericRecordFields []
-instance PrettyPrintable TheoryDef where
-    pretty = prettyRecord
-
 variable_decl :: MPipeline MachineP1
                     [(Name,VarScope)]
 variable_decl = machine_var_decl Machine "\\variable"
 
-instance IsVarScope TheoryConst where
-    toOldEventDecl _ _ = []
-    toNewEventDecl _ _ = []
-    toThyDecl s th = [Right $ PConstants s $ thCons th]
-    toMchDecl _ _  = []
-
-instance PrettyRecord TheoryConst where
-    recordFields = genericRecordFields []
-instance PrettyPrintable TheoryConst where
-    pretty = prettyRecord
-
 constant_decl :: MPipeline MachineP1
                     [(Name,VarScope)]
 constant_decl = machine_var_decl TheoryConst "\\constant"
-
-instance IsVarScope MachineVar where
-    toOldEventDecl _ _ = []
-    toNewEventDecl _ _ = []
-    toThyDecl _ _ = []
-    toMchDecl s (Machine v Local _)     = [Right $ PStateVars s v]
-    toMchDecl s (Machine v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
-    toMchDecl s (DelMch (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
-    toMchDecl s (DelMch (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
-    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
-
-instance PrettyRecord MachineVar where
-    recordFields = genericRecordFields []
-instance PrettyPrintable MachineVar where
-    pretty = prettyRecord
 
 remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
@@ -208,43 +163,6 @@ param_decl = event_var_decl Param "\\param"
 
 type EventSym = (EventId,[(Name,Var)])
 
-toEventDecl :: RefScope -> Name -> EvtDecls -> [Either Error (EventId,[EventP2Field])]
-toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
-                                     $ MM.mapMaybe distrLeft' $ M.toList m
-         where 
-            fromValidation (Success x) = [Right x]
-            fromValidation (Failure xs) = Left <$> xs
-            f :: EventId -> EventDecl -> [Validation [Error] (EventId, [EventP2Field])]
-            f eid x = case (ref,x^.declSource) of
-                        (Old,Inherited) -> [ (_2.traverse) id (e,[g x]) | e <- NE.toList $ x^.source ]
-                        (Old,Local) -> []
-                        (New,_) -> [ (_2.traverse) id (eid,[g x])]
-            g :: EventDecl -> Validation [Error] EventP2Field
-            g x = case x^.scope of 
-                        Index v  -> Success $ EIndices s v
-                        Param v  -> Success $ EParams s v
-                        Promoted Nothing -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
-                        Promoted (Just v) -> case ref of
-                                                Old -> Success $ EParams s v
-                                                New -> Success $ EIndices s v
-
-instance IsVarScope EvtDecls where
-    toOldEventDecl = toEventDecl Old
-    toNewEventDecl = toEventDecl New
-    toMchDecl _ _  = []
-    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.ascElems 
-                                $ M.filterWithKey (const.MM.isNothing) m
-
-instance PrettyRecord EvtDecls where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EvtDecls where
-    pretty = prettyRecord
-
-instance PrettyRecord EventDecl where
-    recordFields = genericRecordFields []
-instance PrettyPrintable EventDecl where
-    pretty = prettyRecord
-
 event_var_decl :: (Var -> EvtScope Var)
                -> String
                -> MPipeline MachineP1
@@ -260,8 +178,3 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
             vs <- hoistEither $ get_variables' ts xs li
             return $ map (\(n,v) -> ((n,makeCell $ Evt $ M.singleton (Just evt) 
                     (EventDecl (escope v) (evt :| []) Local li)))) vs
-
-return []
-
-instance Arbitrary VarScope where
-    arbitrary = VarScope <$> $(arbitraryCell' ''IsVarScope [[t| VarScope |]])

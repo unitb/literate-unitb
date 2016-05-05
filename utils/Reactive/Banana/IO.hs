@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs,KindSignatures,TypeFamilies #-}
-module Reactive.Banana.IO where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+module Reactive.Banana.IO 
+where
 
 import Control.Lens
 import Control.Monad.Reader

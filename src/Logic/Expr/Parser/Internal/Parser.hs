@@ -84,8 +84,8 @@ instance MonadPlus Parser where
 instance IsBracket Bracket String where
     bracketPair Curly  = ("{","}")
     bracketPair QuotedCurly = ("\\{","\\}")
-    bracketPair Round  = ("(",")")
-    bracketPair Square = ("[","]")
+    bracketPair Round  = ("(", ")")
+    bracketPair Square = ("[", "]")
 
 instance Token ExprToken where
     lexeme (Open b)   = openBracket b

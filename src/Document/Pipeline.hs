@@ -9,6 +9,7 @@ module Document.Pipeline where
 import Document.Phase.Parameters
 import Latex.Parser as P 
 import Logic.Names
+import Logic.Expr.Label
 import UnitB.Syntax
 
     -- Libraries
@@ -78,6 +79,9 @@ instance Show ContextId where
 
 instance IsString ContextId where
     fromString = CId
+
+instance IsLabel ContextId where
+    as_label (CId x) = label x
 
 liftEither :: Either [Error] a -> MM' c a
 liftEither (Left xs) = MM $ tell xs >> mzero

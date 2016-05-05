@@ -10,6 +10,8 @@ import           Data.Map hiding ( map, split, null, filter )
 import qualified Data.Map as M
 import           Data.String.Utils
 
+import GHC.Generics.Instances ()
+
 import Utilities.Directory
 import Utilities.Graph ( cycles )
 

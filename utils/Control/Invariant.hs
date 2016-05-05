@@ -173,9 +173,6 @@ instance HasInvariant (f a) => IsChecked (Compose Checked f a) (f a) where
     check'  = Compose . check'
     content = iso getCompose Compose . content
 
-instance NFData (f (g x)) => NFData (Compose f g x) where
-    rnf = rnf . getCompose
-
 infixr 0 ##
 
 (##) :: (IsAssertion b, Pre) => String -> b -> Invariant

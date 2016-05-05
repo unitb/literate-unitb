@@ -82,7 +82,7 @@ args opt file = do
         , "-fwarn-missing-signatures"
         , "-fwarn-incomplete-uni-patterns"
         , "-fwarn-missing-methods"
-        -- , "-fwarn-orphans"
+        , "-fwarn-orphans"
         , "-threaded", "-fno-ignore-asserts"
         , "-fwarn-tabs", "-Werror"
         , "-ignore-package", "literate-unitb"

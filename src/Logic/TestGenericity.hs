@@ -16,15 +16,12 @@ import Z3.Z3
 import Control.Lens hiding (lifted,Context,Const)
 import Control.Monad
 
-import Data.Hashable
 import Data.Map hiding ( map, union, member )
 import Data.PartialOrd
 import qualified Data.Set as S
 
 import Test.QuickCheck
 import Test.QuickCheck.AxiomaticClass
-import Test.QuickCheck.Gen
-import Test.QuickCheck.Random
 import Test.QuickCheck.Report ()
 
 import Test.UnitTest
@@ -330,25 +327,6 @@ case8 = return $ unlines $ map pretty_print' $ disjuncts e'
 
 case9 :: IO Bool
 case9 = $(quickCheckClasses [''PreOrd,''PartialOrd])
-
-instance IsQuantifier Integer where
-    merge_range = Str . show
-    termType n = unGen arbitrary (mkQCGen $ fromInteger n) (fromInteger n)
-    exprType n r t = unGen (oneof [arbitrary,return r,return t]) 
-                (mkQCGen $ fromInteger n) (fromInteger n)
-    qForall  = 1
-    qExists  = 2
-instance Tree Integer where
-    as_tree' = return . Str . show
-instance PrettyPrintable Integer where
-    pretty = show
-instance TypeAnnotationPair Integer Integer where
-    strippedType = id
-instance TypeSystem Integer where
-    make_type s = product . (toInteger (hash s):)
-instance Typed Integer where
-    type TypeOf Integer = Integer
-    type_of = id
 
 case10 :: IO String
 case10 = return $ z3_code $ runSequent $ do

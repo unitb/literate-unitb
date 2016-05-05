@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Logic.Expr.Const where
 
     -- Modules   
@@ -500,4 +501,3 @@ instance Num ExprP where
     signum x = zite (x .< 0) (-1) $ zite (0 .< x) 1 0
     fromInteger = mzint
     negate = mzopp
-

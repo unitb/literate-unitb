@@ -84,6 +84,9 @@ class Tree a where
     default rewriteM :: (Applicative m, Data a) => (a -> m a) -> a -> m a
     rewriteM f t = gtraverse (_cast f) t
 
+instance Tree Integer where
+    as_tree' = return . Str . show
+
 {-# INLINE rewrite' #-}
 rewrite'  :: Tree a => (b -> a -> (b,a)) -> b -> a -> (b,a)
 rewrite' f x t = (rewriteM' g x t) ()

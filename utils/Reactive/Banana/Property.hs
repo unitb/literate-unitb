@@ -8,15 +8,9 @@ import Control.Invariant
 import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.State
--- import Control.Monad.RWS
--- import Control.Monad.State
--- import Control.Monad.Trans.Maybe
--- import Control.Monad.Trans.Either
--- import Control.Monad.Writer
 import Control.Precondition
 
 import Data.Function
--- import Data.IORef
 import Data.List as L
 import Data.Proxy
 import Data.String.Lines
@@ -24,10 +18,8 @@ import Data.These
 import Data.Time
 
 import Reactive.Banana as R hiding (interpret,apply)
--- import qualified Reactive.Banana as R
 import Reactive.Banana.Combinators.Extras
 import Reactive.Banana.Frameworks as R
--- import Reactive.Banana.Discrete
 import Reactive.Banana.IO as R
 
 import Safe

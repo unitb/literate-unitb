@@ -4,7 +4,6 @@ module Utilities.Graph
     , Min(..), closure
     , SCC(..)
     , m_closure, m_closure_with
---    , m_closure_with'
     , as_matrix, as_matrix_with
     , matrix_of_with, Matrix, map
     , (!), unionWith, transpose
@@ -12,7 +11,6 @@ module Utilities.Graph
     , unions, times, vertices 
     , uppest, run_tests, from_list )
 where
--- 
 
 import Control.DeepSeq
 import Control.Monad
@@ -37,10 +35,6 @@ import GHC.Generics
 import Prelude hiding ( map )
 
 import Test.QuickCheck
-
-instance Show a => Show (SCC a) where
-    show (AcyclicSCC x) = show x
-    show (CyclicSCC xs) = show xs
 
 --type Array a b = 
 
@@ -337,3 +331,15 @@ run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
 
 instance (NFData a,NFData b) => NFData (Matrix a b)
 
+instance (Ord a,Enum a,Eq b,Arbitrary b) => Arbitrary (Matrix a b) where
+    arbitrary = do
+        (Positive m) <- arbitrary
+        -- (Positive n) <- arbitrary
+        -- let xs = map toEnum [1..m]
+        def <- arbitrary
+        ys  <- listOf $ do
+            i <- choose (1,m)
+            j <- choose (1,m)
+            x <- arbitrary
+            return ((toEnum i, toEnum j),x)
+        return $ from_list ys def

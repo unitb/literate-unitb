@@ -609,9 +609,6 @@ interpretAsyncT f init xs = do
 --          -> Getting _ (f s) (f a)
 -- mapping' ln f x = _ $ ln _ _
 
-instance Arbitrary StdGen where
-    arbitrary = mkStdGen <$> arbitrary
-
 t0 :: [Int]
 t0 = [0]
 

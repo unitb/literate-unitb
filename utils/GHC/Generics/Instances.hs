@@ -16,6 +16,7 @@
         , ScopedTypeVariables
         , MultiParamTypeClasses
         , DefaultSignatures #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module GHC.Generics.Instances 
     ( Generic, genericLift, genericMEmpty, genericMAppend
     , genericMConcat, genericDefault, genericSemigroupMAppend
@@ -30,16 +31,19 @@ module GHC.Generics.Instances
 where
 
 import Control.DeepSeq
-import Control.Monad.Fix
-import Control.Monad.Trans.Instances ()
 import Control.Lens
+import Control.Monad.Fix
+import Control.Monad.Random 
+import Control.Monad.Trans.Instances ()
 
 import Data.Default
 import Data.Either.Validation
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Hashable
+import qualified Data.HashMap.Strict as StrictHM
 import Data.DList (DList)
+import Data.Graph
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -125,7 +129,6 @@ instance (MapFields a f,MapFields b f) => MapFields (a :*: b) f where
     put x = put (view left <$> x) :*: put (view right <$> x)
     get x = (:*:) <$> get (x^.left) <*> get (x^.right)
 
-
 genericMEmpty :: (Generic a, GMonoid (Rep a)) => a
 genericMEmpty = gmempty^.from generic
 genericMAppend :: (Generic a, GMonoid (Rep a)) => a -> a -> a
@@ -180,7 +183,8 @@ instance Ord k => Semigroup (Intersection (Map k a)) where
 instance Ord k => Semigroup (Intersection (Set k)) where
     Intersection x <> Intersection y = Intersection $ x `S.intersection` y
 
-
+instance (Ord k,Hashable k) => Semigroup (Intersection (StrictHM.HashMap k a)) where
+    Intersection x <> Intersection y = Intersection $ x `StrictHM.intersection` y
 
 class Default1 f where
     def1 :: Default a => f a
@@ -188,11 +192,11 @@ class Default1 f where
 instance (Functor f,Default1 f,Default1 g,Default x) => Default (Compose f g x) where
     def = Compose $ getFunctor <$> def1
 
-
-
 instance (Default x,Default1 f) => Default (OnFunctor f x) where
     def = OnFunctor def1
 
+instance Default (StrictHM.HashMap k a) where
+    def = StrictHM.empty
 
 makeTuple'' :: (Generic a, GIsTuple constr (Rep a),Applicative f) 
             => Proxy constr 
@@ -291,6 +295,7 @@ arbitrary' = Compose $ Just arbitrary
 
 instance Eq1 Proxy where
     eq1 = (==)
+
 instance Eq1 NonEmpty where
     eq1 = (==)
 
@@ -303,8 +308,13 @@ instance Show1 Proxy where
 instance Show1 NonEmpty where
     showsPrec1 = showsPrec
 
+instance Show k => Show1 (Map k) where
+    showsPrec1 = showsPrec
+
 instance (Show1 f,Show a) => Show (OnFunctor f a) where
     show = show1 . getFunctor
+
+deriving instance Show v => Show (SCC v)
 
 show1 :: (Show a, Show1 f) => f a -> String
 show1 x = showsPrec1 0 x ""
@@ -346,6 +356,9 @@ instance Wrapped (OnFunctor f a) where
 
 instance (NFData a,NFData1 f) => NFData (OnFunctor f a) where
     rnf = rnf1 . getFunctor
+
+instance NFData (f (g x)) => NFData (Compose f g x) where
+    rnf = rnf . getCompose
 
 class Lift1 f where
     lift1 :: Lift a => f a -> ExpQ
@@ -407,6 +420,15 @@ instance Arbitrary a => Arbitrary (Identity a) where
     arbitrary = Identity <$> arbitrary
 instance Arbitrary (Proxy a) where
     arbitrary = return Proxy
+instance Arbitrary StdGen where
+    arbitrary = mkStdGen <$> arbitrary
+instance (Ord a, Arbitrary a) => Arbitrary (S.Set a) where
+    arbitrary = S.fromList <$> arbitrary
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+    arbitrary = (:|) <$> arbitrary <*> arbitrary
+    shrink (x :| xs) = map (x :|) $ shrink xs
+instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
+    arbitrary = M.fromList <$> arbitrary
 
 instance (Serialize a,Serialize1 f) => Serialize (OnFunctor f a) where
     put = put1 . getFunctor
@@ -417,3 +439,19 @@ instance (Hashable k,Hashable a) => Hashable (Map k a) where
 
 instance Hashable a => Hashable (Set a) where
     hashWithSalt salt = hashWithSalt salt . S.toList
+
+instance Functor ((,,) a b) where
+    {-# INLINE fmap #-}
+    fmap = over _3
+
+instance Functor ((,,,) a b c) where
+    {-# INLINE fmap #-}
+    fmap = over _4
+
+instance Functor ((,,,,) a b c d) where
+    {-# INLINE fmap #-}
+    fmap = over _5
+
+instance Functor ((,,,,,) a b c d e) where
+    {-# INLINE fmap #-}
+    fmap = over _6

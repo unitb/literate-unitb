@@ -33,7 +33,6 @@ import Control.Arrow.Unfold
 import Control.Category
 import Control.DeepSeq
 import Control.Lens 
-import Control.Monad
 
 -- import Data.Default
 import Data.Existential
@@ -115,7 +114,6 @@ instance LivenessRule rule => Eq (Inference rule) where
 newtype ProofTree = ProofTree { _proofTreeCell :: Cell1 Inference LivenessRulePO }
     deriving Generic
 
-makeFactory ''LivenessRulePO
 makeFields ''ARule
 makeLenses ''Inference
 makeFields ''Inference
@@ -284,9 +282,6 @@ makeRule' :: ( LivenessRulePO rule
       -> ProgressProp' expr1
       -> ProofTree
 makeRule' r g pid p = proofNode g r (Identity (makeRule (Reference pid) p)) Proxy Proxy
-
-instance LivenessRulePO Reference where
-    liveness_po _ (Reference _) Proxy Proxy Proxy = return ()
 
 instance (Serialize a,LivenessRule a) => Serialize (Inference a) where
     put (Inference p r x y z) = do

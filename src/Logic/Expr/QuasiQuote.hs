@@ -27,12 +27,9 @@ import Data.Map.Class as M
 import Data.Maybe
 import Data.String.Utils as S
 
-import GHC.Generics.Instances
-
 import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax hiding (Name)
-
 
 import Text.Printf.TH
 
@@ -175,33 +172,3 @@ ctxWith xs cmd f = f r
 ctx :: State ParserSetting a 
     -> (ParserSetting -> b) -> b
 ctx = ctxWith []
-
-instance (Lift n,Lift t) => Lift (AbsVar n t) where
-    lift = genericLift
-
-instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where
-    lift = genericLift
-
-instance (Lift t,Lift a,Lift q,Lift n) => Lift (RecordExpr n t a q) where
-    lift = genericLift
-
-instance (Lift n,Lift a) => Lift (AbsFun n a) where
-    lift = genericLift
-
-instance Lift HOQuantifier where
-    lift = genericLift
-
-instance Lift QuantifierType where
-    lift = genericLift
-
-instance Lift SetWD where
-    lift = genericLift
-
-instance Lift Lifting where
-    lift = genericLift
-
-instance Lift Value where
-    lift = genericLift
-
-instance Lift DispExpr where
-    lift = genericLift

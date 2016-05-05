@@ -18,7 +18,12 @@ import Data.Serialize
 import GHC.Generics
 import GHC.Generics.Instances
 
+import Language.Haskell.TH.Syntax hiding (Name,Type)
+
 import Test.QuickCheck
+import Test.QuickCheck.Gen
+import Test.QuickCheck.Random
+import Test.QuickCheck.Report ()
 
 data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
@@ -92,7 +97,21 @@ instance Arbitrary QuantifierType where
 instance Serialize HOQuantifier where
 instance Serialize QuantifierType where
 
+instance Lift HOQuantifier where
+    lift = genericLift
+
+instance Lift QuantifierType where
+    lift = genericLift
+
 finiteness :: HOQuantifier -> SetWD
 finiteness Forall = InfiniteWD
 finiteness Exists = InfiniteWD
 finiteness (UDQuant _ _ _ fin) = fin
+
+instance IsQuantifier Integer where
+    merge_range = Str . show
+    termType n = unGen arbitrary (mkQCGen $ fromInteger n) (fromInteger n)
+    exprType n r t = unGen (oneof [arbitrary,return r,return t]) 
+                (mkQCGen $ fromInteger n) (fromInteger n)
+    qForall  = 1
+    qExists  = 2

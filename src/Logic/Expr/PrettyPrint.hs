@@ -168,8 +168,10 @@ instance (Constructor c,GenericRecordFields a) => GenericRecordFields (C1 c a) w
 instance GenericRecordFields b => GenericRecordFields (D1 a b) where
     gRecordFields excp = gRecordFields excp . unM1
 
+instance PrettyPrintable Integer where
+    pretty = show
+
 data Line = Line String' String'
--- newtype Line = Line String'
 
 toString :: Line -> String'
 toString (Line xs ys) = xs <> ys
@@ -244,28 +246,3 @@ pretty_print_aux (List ys@(x:xs)) =
             local (margin n <>) cmd
         margin n = D.fromList $ L.replicate n ' '
         add_to_last suff (Ls xs (Line x y),k) = (Ls xs (Line x $ y<>suff),k)
-  
--- pretty_print :: StrList -> [String]
--- pretty_print (Str xs) = [xs]
--- pretty_print (List []) = ["()"]
--- pretty_print (List ys@(x:xs)) = 
---         case x of
---             Str y    -> 
---                 if length one_line <= 50
---                 then ["(" ++ y ++ " " ++ one_line ++ ")"]
---                 else
---                     zipWith (++)
---                         (("(" ++ y ++ " "):repeat (margin (length y + 2)))
---                         (add_to_last ")" zs)
---             List _ -> zipWith (++)
---                 ("( ":repeat (margin 2))
---                 (add_to_last " )" zs')
---     where
---         margin n = replicate n ' '
---         add_to_last suff xs = 
---             case reverse xs of
---                 y:ys -> reverse ( (y++suff):ys )
---                 []        -> [suff]
---         zs = concatMap pretty_print xs
---         zs' = concatMap pretty_print ys
---         one_line = intercalate " " zs

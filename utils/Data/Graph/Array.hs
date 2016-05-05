@@ -201,8 +201,6 @@ data GraphImp v = GraphImp
     , ecount  :: Int
     } 
 
-deriving instance Show v => Show (SCC v)
-
 from_map :: forall v. Ord v => [v] -> (M.Map v [v]) -> GraphImp v
 from_map vs es = GraphImp vs es' i2e i2v v2i fwd bwd f f' nn mm
     where

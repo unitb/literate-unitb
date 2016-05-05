@@ -21,9 +21,9 @@ import           Data.Serialize
 
 import GHC.Generics.Instances
 
+import Language.Haskell.TH.Syntax hiding (Type,Name)
 
 import Test.QuickCheck
-
 
 import Utilities.Functor
 
@@ -130,3 +130,12 @@ instance (Data n,Data t,IsName n,TypeSystem t) => Tree (AbsFun n t) where
 
 instance (Serialize n,Serialize t) => Serialize (AbsFun n t) where
 instance Serialize SetWD where
+
+instance (Lift n,Lift a) => Lift (AbsFun n a) where
+    lift = genericLift
+
+instance Lift SetWD where
+    lift = genericLift
+
+instance Lift Lifting where
+    lift = genericLift

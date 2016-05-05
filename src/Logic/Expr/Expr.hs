@@ -39,6 +39,7 @@ import GHC.Generics hiding (to,from)
 import GHC.Generics.Instances
 
 import Language.Haskell.TH hiding (Type,Name) -- (ExpQ,location,Loc)
+import Language.Haskell.TH.Syntax hiding (Type,Name)
 
 import Test.QuickCheck
 
@@ -684,7 +685,6 @@ instance HasExpr (AbsExpr Name Type HOQuantifier) where
 
 
 instance (NFData t,NFData q,NFData n) => NFData (AbsDef n t q)
-instance (NFData t,NFData n) => NFData (AbsVar n t)
 instance NFData Value
 instance (NFData t,NFData q,NFData n,NFData a) => NFData (GenExpr n t a q)
 instance (NFData t,NFData q,NFData n,NFData a) => NFData (RecordExpr n t a q)
@@ -696,6 +696,15 @@ instance (Serialize n,Serialize q,Serialize t,Serialize a)
 instance Serialize Value where
 instance (Serialize n,Serialize q,Serialize t) 
     => Serialize (AbsDef n t q) where
+
+instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where
+    lift = genericLift
+
+instance (Lift t,Lift a,Lift q,Lift n) => Lift (RecordExpr n t a q) where
+    lift = genericLift
+
+instance Lift Value where
+    lift = genericLift
 
 makePrisms ''GenExpr
 makePrisms ''RecordExpr

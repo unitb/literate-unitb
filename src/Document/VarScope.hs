@@ -15,19 +15,23 @@ import Logic.Expr hiding (Const)
 import UnitB.Syntax
 
     -- Libraries
+import Control.CoApplicative
 import Control.Lens
 import Control.Precondition
 
+import           Data.Either.Validation
 import           Data.Existential
+import qualified Data.List as L
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class as M
+import           Data.Maybe as MM
 import           Data.Typeable
 
 import GHC.Generics.Instances
 
-import Test.QuickCheck
+import Test.QuickCheck hiding (Success,Failure)
 
-import Text.Printf
+import Text.Printf.TH
 
 import Utilities.Syntactic
 import Utilities.Table
@@ -132,9 +136,33 @@ instance Scope TheoryConst where
     kind _ = "constant"
     rename_events' _ e = [e]
 
+instance IsVarScope TheoryConst where
+    toOldEventDecl _ _ = []
+    toNewEventDecl _ _ = []
+    toThyDecl s th = [Right $ PConstants s $ thCons th]
+    toMchDecl _ _  = []
+
+instance PrettyRecord TheoryConst where
+    recordFields = genericRecordFields []
+
+instance PrettyPrintable TheoryConst where
+    pretty = prettyRecord
+
 instance Scope TheoryDef where
     kind _ = "constant"
     rename_events' _ e = [e]
+
+instance IsVarScope TheoryDef where
+    toOldEventDecl _ _ = []
+    toNewEventDecl _ _ = []
+    toThyDecl s th = [Right $ PDefinitions s $ thDef th]
+    toMchDecl _ _  = []
+
+instance PrettyRecord TheoryDef where
+    recordFields = genericRecordFields []
+
+instance PrettyPrintable TheoryDef where
+    pretty = prettyRecord
 
 instance Scope MachineVar where
     merge_scopes' (DelMch Nothing s _) (Machine v Inherited li) = Just $ DelMch (Just v) s li
@@ -143,6 +171,22 @@ instance Scope MachineVar where
     kind (DelMch _ _ _)   = "deleted variable"
     kind (Machine _ _ _)  = "state variable"
     rename_events' _ e = [e]
+
+
+instance IsVarScope MachineVar where
+    toOldEventDecl _ _ = []
+    toNewEventDecl _ _ = []
+    toThyDecl _ _ = []
+    toMchDecl s (Machine v Local _)     = [Right $ PStateVars s v]
+    toMchDecl s (Machine v Inherited _) = L.map Right [PAbstractVars s v,PStateVars s v]
+    toMchDecl s (DelMch (Just v) Local li)     = L.map Right [PDelVars s (v,li),PAbstractVars s v]
+    toMchDecl s (DelMch (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
+    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
+
+instance PrettyRecord MachineVar where
+    recordFields = genericRecordFields []
+instance PrettyPrintable MachineVar where
+    pretty = prettyRecord
 
 instance Scope EventDecl where
     kind x = case x^.scope of 
@@ -189,7 +233,7 @@ instance Scope EvtDecls where
                 | otherwise = Just m
     error_item (Evt m) = fromJust' $ NE.nonEmpty $ ascElems $ mapWithKey msg m
         where
-            msg (Just k) x = (printf "%s (event '%s')" (kind x) (show k) :: String, x^.lineInfo)
+            msg (Just k) x = ([printf|%s (event '%s')|] (kind x) (show k) :: String, x^.lineInfo)
             msg Nothing x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (Evt vs) = Evt <$> concatMap f (toList vs)
@@ -216,3 +260,44 @@ instance Arbitrary EvtDecls where
 instance Arbitrary a => Arbitrary (EvtScope a) where
     arbitrary = genericArbitrary
 
+instance IsVarScope EvtDecls where
+    toOldEventDecl = toEventDecl Old
+    toNewEventDecl = toEventDecl New
+    toMchDecl _ _  = []
+    toThyDecl n (Evt m) = L.map (Right . PDummyVars n . fromJust' . view varDecl) $ M.ascElems 
+                                $ M.filterWithKey (const.MM.isNothing) m
+
+instance PrettyRecord EvtDecls where
+    recordFields = genericRecordFields []
+instance PrettyPrintable EvtDecls where
+    pretty = prettyRecord
+
+instance PrettyRecord EventDecl where
+    recordFields = genericRecordFields []
+instance PrettyPrintable EventDecl where
+    pretty = prettyRecord
+
+toEventDecl :: RefScope -> Name -> EvtDecls -> [Either Error (EventId,[EventP2Field])]
+toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
+                                     $ MM.mapMaybe distrLeft' $ M.toList m
+         where 
+            fromValidation (Success x) = [Right x]
+            fromValidation (Failure xs) = Left <$> xs
+            f :: EventId -> EventDecl -> [Validation [Error] (EventId, [EventP2Field])]
+            f eid x = case (ref,x^.declSource) of
+                        (Old,Inherited) -> [ (_2.traverse) id (e,[g x]) | e <- NE.toList $ x^.source ]
+                        (Old,Local) -> []
+                        (New,_) -> [ (_2.traverse) id (eid,[g x])]
+            g :: EventDecl -> Validation [Error] EventP2Field
+            g x = case x^.scope of 
+                        Index v  -> Success $ EIndices s v
+                        Param v  -> Success $ EParams s v
+                        Promoted Nothing -> Failure [Error "Promoting a non-existing parameter" $ x^.lineInfo]
+                        Promoted (Just v) -> case ref of
+                                                Old -> Success $ EParams s v
+                                                New -> Success $ EIndices s v
+
+return []
+
+instance Arbitrary VarScope where
+    arbitrary = VarScope <$> $(arbitraryCell' ''IsVarScope [[t| VarScope |]])

@@ -13,6 +13,7 @@ import UnitB.Property
 import Control.Lens 
 import Control.Monad
 
+import Data.Factory
 import Data.List as L
 import Data.List.NonEmpty as NE
 import Data.Map.Class as M hiding ((\\))
@@ -153,3 +154,8 @@ instance LivenessRulePO Discharge where
         emit_goal ["tr/rhs"] (
             zforall (fv0 ++ M.elems fv1) ztrue (
                      (znot p1 `zimplies` q0) ) )
+
+instance LivenessRulePO Reference where
+    liveness_po _ (Reference _) Proxy Proxy Proxy = return ()
+
+makeFactory ''LivenessRulePO

@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP, TypeFamilies #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Utilities.Table.HashMap
     ( module Utilities.Table.HashMap 
     , M.HashMap ) 
@@ -7,7 +8,6 @@ where
 import Control.Arrow
 import Control.Lens
 
-import Data.Default
 import Data.Either.Combinators
 import Data.Function
 import Data.Hashable
@@ -15,7 +15,6 @@ import Data.List as L
 import Data.Map.Class as Map
 import Data.Maybe
 --import Data.Monoid
-import Data.Semigroup
 import Data.Serialize
 import qualified Data.Set as S
 
@@ -24,8 +23,6 @@ import qualified Data.HashMap.Lazy as M
 #else
 import qualified Data.HashMap.Strict as M
 #endif
-
-import GHC.Generics.Instances
 
 instance IsMap M.HashMap where
     type IsKey M.HashMap k = (Ord k,Hashable k)
@@ -142,12 +139,6 @@ tableToList = M.toList
 
 tableElems :: M.HashMap k a -> [a]
 tableElems = M.elems
-
-instance Default (M.HashMap k a) where
-    def = M.empty
-
-instance (Ord k,Hashable k) => Semigroup (Intersection (M.HashMap k a)) where
-    Intersection x <> Intersection y = Intersection $ x `intersection` y
 
 instance (Ord k,Ord a) => Ord (M.HashMap k a) where
     compare = compare `on` toList

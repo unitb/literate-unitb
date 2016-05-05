@@ -5,6 +5,8 @@ import Control.Lens
 
 import Data.Tuple
 
+import GHC.Generics.Instances ()
+
 class Functor f => CoApplicative f where
     pure' :: f a -> a
     extract :: f ((a -> r) -> (b -> r) -> r) -> (f a -> r) -> (f b -> r) -> r
@@ -25,36 +27,20 @@ instance CoApplicative ((,) a) where
     {-# INLINE extract #-}
     extract (x,a) f g = a (f.(x,)) (g.(x,))
 
-instance Functor ((,,) a b) where
-    {-# INLINE fmap #-}
-    fmap = over _3
-
 instance CoApplicative ((,,) a b) where
     pure' = view _3
     {-# INLINE extract #-}
     extract (x,y,a) f g = a (f.(x,y,)) (g.(x,y,))
-
-instance Functor ((,,,) a b c) where
-    {-# INLINE fmap #-}
-    fmap = over _4
 
 instance CoApplicative ((,,,) a b c) where
     pure' = view _4
     {-# INLINE extract #-}
     extract (x,y,z,a) f g = a (f.(x,y,z,)) (g.(x,y,z,))
 
-instance Functor ((,,,,) a b c d) where
-    {-# INLINE fmap #-}
-    fmap = over _5
-
 instance CoApplicative ((,,,,) a b c d) where
     pure' = view _5
     {-# INLINE extract #-}
     extract (x,y,z,w,a) f g = a (f.(x,y,z,w,)) (g.(x,y,z,w,))
-
-instance Functor ((,,,,,) a b c d e) where
-    {-# INLINE fmap #-}
-    fmap = over _6
 
 instance CoApplicative ((,,,,,) a b c d e) where
     pure' = view _6

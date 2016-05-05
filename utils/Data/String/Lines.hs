@@ -148,10 +148,6 @@ prop_concat_lines'_cancel_regression = regression prop_concat_lines'_cancel case
 newtype Lines = Lines (NonEmpty String)
     deriving (Show)
 
-instance Arbitrary a => Arbitrary (NonEmpty a) where
-    arbitrary = (:|) <$> arbitrary <*> arbitrary
-    shrink (x :| xs) = map (x :|) $ shrink xs
-
 instance Arbitrary Lines where
     arbitrary = do
         let char  = arbitrary `suchThat` (`notElem` "\n\r")

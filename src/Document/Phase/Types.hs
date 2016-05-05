@@ -1,5 +1,8 @@
-{-# LANGUAGE StandaloneDeriving,TypeFamilies
+{-# LANGUAGE StandaloneDeriving
+    , TypeFamilies
     , ConstraintKinds
+    , ScopedTypeVariables
+    , UndecidableInstances
     #-}
 module Document.Phase.Types where
 
@@ -18,11 +21,16 @@ import UnitB.Syntax as AST hiding (Constraint)
     -- Libraries
 import Control.DeepSeq
 import Control.Lens as L
+import Control.Monad
 
+import Data.List as L
+import Data.Map.Class as M
 import Data.Graph.Bipartite as G hiding (fromList')
 import Data.Typeable
 
 import GHC.Generics (Generic)
+
+import Test.QuickCheck as QC
 
 import Utilities.Syntactic
 import Utilities.Table
@@ -208,8 +216,15 @@ data Hierarchy k = Hierarchy
 instance Eq k => Eq (Hierarchy k) where
     h0 == h1 = edges h0 == edges h1
 
-instance IsLabel ContextId where
-    as_label (CId x) = label x
+instance (Ord a,Hashable a,Arbitrary a) => Arbitrary (Hierarchy a) where
+    arbitrary = do
+        xs <- L.nub <$> arbitrary
+        let ms = M.fromList ys :: Map Int a
+            ys = L.zip [(0 :: Int)..] xs
+        zs <- forM ys $ \(i,x) -> do
+            j <- QC.elements $ Nothing : L.map Just [0..i-1]
+            return (x,(ms!) <$> j)
+        return $ Hierarchy xs $ M.mapMaybe id $ M.fromList zs
 
 type MTable = Table MachineId
 type CTable = Table ContextId
@@ -233,9 +248,6 @@ instance NFData TheoryP0
 instance NFData TheoryP1
 instance NFData TheoryP2
 instance NFData TheoryP3
-
-instance NFData (Tactic Proof) where
-    rnf x = seq x () 
 
 makeRecordConstr ''MachineP2'
 makeRecordConstr ''MachineP3'
@@ -276,3 +288,68 @@ deriving instance Generic EventP3Field
 deriving instance Generic EventP4Field
 
 deriving instance Show EventP3Field
+
+class ( IsMachine p
+      , HasMachineP1' (MchType p)
+      , HasEventP1 (AEvtType p)
+      , HasEventP1 (CEvtType p)
+      , HasTheoryP1 (ThyType p) ) 
+    => HasMachineP1 p where
+
+instance ( IsMachine p
+         , HasMachineP1' (MchType p)
+         , HasEventP1 (AEvtType p)
+         , HasEventP1 (CEvtType p)
+         , HasTheoryP1 (ThyType p) ) => HasMachineP1 p where
+
+class ( IsMachine p
+      , HasMachineP2' (MchType p)
+      , HasEventP2 (AEvtType p)
+      , HasEventP2 (CEvtType p)
+      , HasTheoryP2 (ThyType p) 
+      , HasMachineP1 p
+      ) => HasMachineP2 p where
+
+instance ( IsMachine p
+          , HasMachineP1 p
+          , HasMachineP2' (MchType p)
+          , HasEventP2 (AEvtType p)
+          , HasEventP2 (CEvtType p)
+          , HasTheoryP2 (ThyType p) ) 
+    => HasMachineP2 p where
+
+class ( IsMachine p
+      , HasMachineP3' (MchType p)
+      , HasEventP3 (AEvtType p)
+      , HasEventP3 (CEvtType p)
+      , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP3 p where
+
+instance ( IsMachine p
+          , HasMachineP3' (MchType p)
+          , HasEventP3 (AEvtType p)
+          , HasEventP3 (CEvtType p)
+          , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP3 p where
+
+class ( IsMachine p
+      , HasMachineP4' (MchType p)
+      , HasEventP4 (AEvtType p)
+      , HasEventP3 (CEvtType p)
+      , HasTheoryP3 (ThyType p) ) => HasMachineP4 p where
+
+instance ( IsMachine p
+          , HasMachineP4' (MchType p)
+          , HasEventP4 (AEvtType p)
+          , HasEventP3 (CEvtType p)
+          , HasTheoryP3 (ThyType p) ) 
+    => HasMachineP4 p where
+
+instance (HasMachineP1 (m a c t), HasTheoryP1 t) => HasTheoryP1 (m a c t) where
+    theoryP1 = pContext . theoryP1
+
+instance (HasMachineP1 (m a c t), HasTheoryP2 t) => HasTheoryP2 (m a c t) where
+    theoryP2 = pContext . theoryP2
+
+instance (HasMachineP1 (m a c t), HasTheoryP3 t) => HasTheoryP3 (m a c t) where
+    theoryP3 = pContext . theoryP3

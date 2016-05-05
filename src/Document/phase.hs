@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE TypeOperators,TypeFamilies     #-}
 {-# LANGUAGE RecordWildCards  #-}
-{-# LANGUAGE StandaloneDeriving, UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Document.Phase where
 
     -- Modules
@@ -45,8 +45,6 @@ import qualified Data.Traversable as T
 import Data.Tuple.Generics
 
 import GHC.Generics.Instances
-
-import Test.QuickCheck as QC hiding (label,collect)
 
 import Text.Printf.TH
 
@@ -238,15 +236,6 @@ zipMap :: (Default a, Default b,Ord k)
 zipMap m0 m1 = M.unionWith f ((,def) <$> m0) ((def,) <$> m1)
     where
         f (x,_) (_,y) = (x,y)
-
-instance (HasMachineP1 (m a c t), HasTheoryP1 t) => HasTheoryP1 (m a c t) where
-    theoryP1 = pContext . theoryP1
-
-instance (HasMachineP1 (m a c t), HasTheoryP2 t) => HasTheoryP2 (m a c t) where
-    theoryP2 = pContext . theoryP2
-
-instance (HasMachineP1 (m a c t), HasTheoryP3 t) => HasTheoryP3 (m a c t) where
-    theoryP3 = pContext . theoryP3
 
 pEventIds :: (HasMachineP1 phase) 
           => Getter phase (Table Label EventId)
@@ -443,62 +432,6 @@ pEventRenaming = pEventRef . to (g . f) -- to (M.fromListWith (++) . f)
                 (,) <$> leftKey v 
                     <*> (T.mapM (rightKey . G.target) =<< successors v)
 
-class ( IsMachine p
-      , HasMachineP1' (MchType p)
-      , HasEventP1 (AEvtType p)
-      , HasEventP1 (CEvtType p)
-      , HasTheoryP1 (ThyType p) ) 
-    => HasMachineP1 p where
-
-instance ( IsMachine p
-         , HasMachineP1' (MchType p)
-         , HasEventP1 (AEvtType p)
-         , HasEventP1 (CEvtType p)
-         , HasTheoryP1 (ThyType p) ) => HasMachineP1 p where
-
-class ( IsMachine p
-      , HasMachineP2' (MchType p)
-      , HasEventP2 (AEvtType p)
-      , HasEventP2 (CEvtType p)
-      , HasTheoryP2 (ThyType p) 
-      , HasMachineP1 p
-      ) => HasMachineP2 p where
-
-instance ( IsMachine p
-          , HasMachineP1 p
-          , HasMachineP2' (MchType p)
-          , HasEventP2 (AEvtType p)
-          , HasEventP2 (CEvtType p)
-          , HasTheoryP2 (ThyType p) ) 
-    => HasMachineP2 p where
-
-class ( IsMachine p
-      , HasMachineP3' (MchType p)
-      , HasEventP3 (AEvtType p)
-      , HasEventP3 (CEvtType p)
-      , HasTheoryP3 (ThyType p) ) 
-    => HasMachineP3 p where
-
-instance ( IsMachine p
-          , HasMachineP3' (MchType p)
-          , HasEventP3 (AEvtType p)
-          , HasEventP3 (CEvtType p)
-          , HasTheoryP3 (ThyType p) ) 
-    => HasMachineP3 p where
-
-class ( IsMachine p
-      , HasMachineP4' (MchType p)
-      , HasEventP4 (AEvtType p)
-      , HasEventP3 (CEvtType p)
-      , HasTheoryP3 (ThyType p) ) => HasMachineP4 p where
-
-instance ( IsMachine p
-          , HasMachineP4' (MchType p)
-          , HasEventP4 (AEvtType p)
-          , HasEventP3 (CEvtType p)
-          , HasTheoryP3 (ThyType p) ) 
-    => HasMachineP4 p where
-
 aliases :: Eq b => Lens' a b -> Lens' a b -> Lens' a b
 aliases ln0 ln1 = lens getter $ flip setter
     where
@@ -544,16 +477,6 @@ inheritWith :: M.IsKey Table k
             -> Hierarchy k 
             -> Table k base -> Table k conc
 inheritWith decl inh = inheritWith' decl (const inh)
-
-instance (Ord a,Hashable a,Arbitrary a) => Arbitrary (Hierarchy a) where
-    arbitrary = do
-        xs <- L.nub <$> arbitrary
-        let ms = M.fromList ys :: Map Int a
-            ys = L.zip [(0 :: Int)..] xs
-        zs <- forM ys $ \(i,x) -> do
-            j <- QC.elements $ Nothing : L.map Just [0..i-1]
-            return (x,(ms!) <$> j)
-        return $ Hierarchy xs $ M.mapMaybe id $ M.fromList zs
 
 topological_order :: Pipeline MM
                      (Table MachineId (MachineId,LineInfo)) 

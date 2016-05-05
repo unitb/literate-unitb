@@ -386,3 +386,12 @@ instance Arbitrary GenericType where
 instance NFData FOType
 instance NFData GenericType
 instance NFData Sort
+
+instance TypeSystem Integer where
+    make_type s = product . (toInteger (hash s):)
+instance Typed Integer where
+    type TypeOf Integer = Integer
+    type_of = id
+
+instance TypeAnnotationPair Integer Integer where
+    strippedType = id

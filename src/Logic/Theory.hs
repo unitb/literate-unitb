@@ -20,7 +20,6 @@ where
     -- Modules
 import Logic.Expr
 import Logic.Expr.Const
-import Logic.Expr.Scope
 import Logic.Operator as OP
 import Logic.Proof hiding (preserve) 
 import qualified Logic.Proof as P
@@ -28,13 +27,11 @@ import Logic.Theory.Internals
 import Logic.Theory.Monad
 
     -- Libraries
-import Control.DeepSeq
 import Control.Lens hiding (Context,from,to,rewriteM)
 
 import           Data.Foldable as F
 import           Data.List as L
 import           Data.Map.Class as M 
-import           Data.Serialize hiding (label)
 
 import Utilities.Table
 
@@ -97,18 +94,6 @@ th_notation' ths = res
         res = flip precede logical_notation res'
         res' = F.foldr (OP.combine . _notation) empty_notation ths
 
-theory_ctx :: Theory -> Context
-theory_ctx th = 
-        merge_all_ctx $
-            (Context ts c new_fun (_defs th) dums) : L.map theory_ctx (M.ascElems d)
-    where
-        d      = _extends th
-        ts     = _types th
-        fun    = _funs th
-        c      = _consts th
-        dums   = th^.dummies
-        new_fun = fun
-
     -- todo: prefix name of theorems of a z3_decoration
 theory_facts :: Theory -> Table Label Expr
 theory_facts th = 
@@ -118,18 +103,3 @@ theory_facts th =
         facts  = _fact th
         new_fact = facts
 
-instance HasSymbols Theory Var Name where
-    symbols t = symbol_table $ defsAsVars (theory_ctx t)^.constants
-
-
-instance NFData Theory where
-
-instance HasScope Theory where
-    scopeCorrect' t = mconcat
-            [ withVars (symbols t)
-                $ foldMapWithKey scopeCorrect'' $ t^.fact
-            , withVars (symbols $ t & defs .~ M.empty)
-                $ foldMapWithKey scopeCorrect'' $ t^.defs
-            , foldMapWithKey scopeCorrect'' (t^.extends) ]
-
-instance Serialize Theory where

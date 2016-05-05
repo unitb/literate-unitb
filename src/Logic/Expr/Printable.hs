@@ -11,6 +11,9 @@ import Control.DeepSeq
 import Data.Typeable
 
 import GHC.Generics
+import GHC.Generics.Instances
+
+import Language.Haskell.TH.Syntax hiding (Type,Name)
 
 import Test.QuickCheck
 
@@ -50,3 +53,5 @@ prettyPrint (DispExpr x _) = x
 
 instance NFData DispExpr
 
+instance Lift DispExpr where
+    lift = genericLift

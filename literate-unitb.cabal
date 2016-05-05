@@ -223,6 +223,7 @@ executable unitb
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -dynamic-too
+         -fwarn-orphans
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
   
@@ -241,6 +242,7 @@ executable run_tests
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -dynamic-too
+         -fwarn-orphans
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
   
@@ -256,6 +258,7 @@ benchmark bench-bucket-packaged
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
+         -fwarn-orphans
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
@@ -274,6 +277,7 @@ benchmark bench-bucket
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
+         -fwarn-orphans
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
@@ -295,6 +299,7 @@ benchmark bench-hashed-key-packaged
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -dynamic-too
+         -fwarn-orphans
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
 
@@ -313,6 +318,7 @@ benchmark bench-hashed-key
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -dynamic-too
+         -fwarn-orphans
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
 
@@ -331,6 +337,7 @@ benchmark bench-raw-map
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -dynamic-too
+         -fwarn-orphans
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
 
@@ -348,6 +355,7 @@ benchmark bench-raw-map-packaged
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__PACKAGED_NAMES__
@@ -367,6 +375,7 @@ benchmark bench-bucket-packaged-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__ -D__LAZY_NAME__
@@ -386,6 +395,7 @@ benchmark bench-bucket-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__BUCKET_TABLE__ -D__LAZY_NAME__
@@ -405,6 +415,7 @@ benchmark bench-hashed-key-packaged-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__ -D__LAZY_NAME__
@@ -423,6 +434,7 @@ benchmark bench-hashed-key-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__HASHED_KEYS__ -D__LAZY_NAME__
@@ -441,6 +453,7 @@ benchmark bench-raw-map-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__LAZY_NAME__
@@ -459,6 +472,7 @@ benchmark bench-raw-map-packaged-lazy-name
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
 
   cpp-options: -D__PACKAGED_NAMES__ -D__LAZY_NAME__
@@ -479,6 +493,7 @@ executable test_tmp
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
@@ -499,6 +514,7 @@ executable test
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
   
   -- LANGUAGE extensions used by modules in this package.
@@ -520,6 +536,7 @@ test-suite tests
          -fwarn-missing-methods
          -dynamic-too
          -threaded  -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs -Werror
    default-extensions:  OverloadedStrings
    -- type: exitcode-stdio-1.0

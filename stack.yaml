@@ -18,6 +18,7 @@ ghc-options:
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
+         -fwarn-orphans
          -fwarn-tabs
     literate-unitb: -Werror
     literate-unitb-scripts: -Werror
