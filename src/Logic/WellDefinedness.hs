@@ -3,8 +3,8 @@ module Logic.WellDefinedness where
     -- Modules
 import Logic.Expr
 
-import Theories.FunctionTheory
-import Theories.SetTheory
+import Logic.Theories.FunctionTheory
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Control.Lens hiding (Const)

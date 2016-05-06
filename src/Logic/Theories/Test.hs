@@ -1,9 +1,9 @@
-module Theories.Test where
+module Logic.Theories.Test where
 
 import Logic.Expr
 
-import Theories.RelationTheory
-import Theories.SetTheory
+import Logic.Theories.RelationTheory
+import Logic.Theories.SetTheory
 
 case0 = unify (set_type gA) (rel gA gB)
     where

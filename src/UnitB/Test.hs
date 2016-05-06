@@ -15,7 +15,7 @@ import qualified Logic.Proof.POGenerator as POG
 import qualified Logic.TestGenericity as Gen
 import           Logic.UnitTest
 
-import Theories.FunctionTheory
+import Logic.Theories.FunctionTheory
 
 import UnitB.PO (prop_saf')
 import UnitB.UnitB

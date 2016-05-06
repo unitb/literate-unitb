@@ -12,9 +12,9 @@ import Logic.Expr.Parser
 import Logic.Expr.QuasiQuote
 import Logic.Proof
 
-import Theories.SetTheory
-import Theories.FunctionTheory
-import Theories.Arithmetic
+import Logic.Theories.SetTheory
+import Logic.Theories.FunctionTheory
+import Logic.Theories.Arithmetic
 
     -- Libraries
 import Control.Lens hiding (elements,universe,indices)

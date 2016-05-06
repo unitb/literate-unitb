@@ -4,7 +4,7 @@ import Document.Tests.Suite
 
 import Logic.Names
 import Logic.Proof
-import Theories.RelationTheory
+import Logic.Theories.RelationTheory
 
 import Control.Arrow
 import Control.Lens

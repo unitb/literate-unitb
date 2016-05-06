@@ -11,7 +11,7 @@ import Logic.Operator as OP
 import Logic.Proof
 import Logic.Theory as Th
 
-import Theories.Arithmetic
+import Logic.Theories.Arithmetic
 
 import UnitB.Event
 import UnitB.Expr hiding (merge,target)

@@ -1,11 +1,11 @@
-module Theories.RelationTheory where
+module Logic.Theories.RelationTheory where
 
     -- Modules
 import Logic.Expr
 import Logic.Theory
 import Logic.Theory.Monad
 
-import Theories.SetTheory
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Data.Functor.Identity

@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Theories.Arithmetic where
+module Logic.Theories.Arithmetic where
 
     -- Modules
 import Logic.Expr
@@ -9,8 +9,8 @@ import Logic.Proof hiding (syntacticProp)
 import Logic.Theory
 import Logic.Theory.Monad
 
-import Theories.SetTheory
-import Theories.FunctionTheory
+import Logic.Theories.SetTheory
+import Logic.Theories.FunctionTheory
 
     -- Libraries
 import Control.Arrow

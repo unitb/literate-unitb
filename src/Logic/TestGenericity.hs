@@ -8,7 +8,7 @@ import Logic.Proof ()
 import Logic.Proof.Monad
 import Logic.Theory
 
-import Theories.SetTheory
+import Logic.Theories.SetTheory
 
 import Z3.Z3
 

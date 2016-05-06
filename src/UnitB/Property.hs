@@ -4,7 +4,7 @@ module UnitB.Property where
 import Logic.Expr.Scope
 import Logic.Proof
 
-import Theories.SetTheory
+import Logic.Theories.SetTheory
 
 import UnitB.Expr
 

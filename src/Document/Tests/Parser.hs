@@ -8,7 +8,7 @@ import Logic.Expr.QuasiQuote
 
 import Test.UnitTest
 
-import Theories.FunctionTheory
+import Logic.Theories.FunctionTheory
 
 import UnitB.Expr
 

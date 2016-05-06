@@ -130,19 +130,19 @@ library
         Logic.Proof.ProofTree
         Logic.Proof.Sequent
         Logic.Proof.Tactics
+        Logic.Theories.Arithmetic
+        Logic.Theories.FunctionTheory
+        Logic.Theories.IntervalTheory
+        Logic.Theories.Notation
+        Logic.Theories.PredCalc
+        Logic.Theories.RelationTheory
+        Logic.Theories.SetTheory
         Logic.Theory
         Logic.Theory.Internals
         Logic.Theory.Monad
         Logic.UnitTest
         Logic.WellDefinedness
         Reactive
-        Theories.Arithmetic
-        Theories.FunctionTheory
-        Theories.IntervalTheory
-        Theories.Notation
-        Theories.PredCalc
-        Theories.RelationTheory
-        Theories.SetTheory
         UnitB.Event
         UnitB.Expr
         UnitB.Expr.Parser
