@@ -46,6 +46,14 @@
 				"*hs",
 				"*.md"
 			],
+			"path": "latex"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
 			"path": "utils"
 		},
 		{
