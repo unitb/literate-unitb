@@ -55,7 +55,7 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ intercalate ":" [inf,"suite","src","utils"]
+        , "-i" ++ intercalate ":" [inf,"suite","src","utils","latex"]
         , "-hidir" ++ inf
         , "-W"
         , "-XTupleSections"
