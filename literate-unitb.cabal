@@ -110,7 +110,6 @@ library
         Logic.Expr.Printable
         Logic.Expr.Prism
         Logic.Expr.Quantifier
-        Logic.Expr.QuasiQuote
         Logic.Expr.Scope
         Logic.Expr.Type
         Logic.Expr.Variable
@@ -126,6 +125,7 @@ library
         Logic.Proof.ProofTree
         Logic.Proof.Sequent
         Logic.Proof.Tactics
+        Logic.QuasiQuote
         Logic.Theories.Arithmetic
         Logic.Theories.FunctionTheory
         Logic.Theories.IntervalTheory
@@ -148,6 +148,7 @@ library
         UnitB.Proof.Rules
         UnitB.Proof.PO
         UnitB.Property
+        UnitB.QuasiQuote
         UnitB.Syntax
         UnitB.System
         UnitB.UnitB

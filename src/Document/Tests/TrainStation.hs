@@ -9,8 +9,8 @@ import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 import Logic.Expr
 import qualified Logic.Expr.Const as Expr
 import Logic.Expr.Parser
-import Logic.Expr.QuasiQuote
 import Logic.Proof
+import Logic.QuasiQuote
 
 import Logic.Theories.SetTheory
 import Logic.Theories.FunctionTheory

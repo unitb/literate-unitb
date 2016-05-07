@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeOperators
     ,QuasiQuotes 
     #-}
-module Logic.Expr.QuasiQuote
-    ( module Logic.Expr.QuasiQuote
+module Logic.QuasiQuote
+    ( module Logic.QuasiQuote
     , Name, InternalName ) 
 where
 
@@ -11,9 +11,6 @@ import Logic.Expr
 import Logic.Expr.Parser
 import Logic.Expr.Printable
 import Logic.Theory
-
-import UnitB.Event
-import UnitB.Property
 
 import Logic.Theories.Arithmetic
 
@@ -45,13 +42,6 @@ expr = QuasiQuoter
     , quoteDec  = undefined
     , quoteType = undefined }
 
-act :: QuasiQuoter
-act = QuasiQuoter
-    { quoteExp  = \x -> [e| \p -> let loc = $(lift =<< location) in parseAction loc p $(litE (stringL x)) |]
-    , quotePat  = undefined
-    , quoteDec  = undefined
-    , quoteType = undefined }
-
 var :: QuasiQuoter
 var = QuasiQuoter
     { quoteExp  = \x -> [e| let loc = $(lift =<< location) in parseVarDecl loc $(litE (stringL x)) |]
@@ -65,23 +55,6 @@ carrier = QuasiQuoter
     , quotePat  = undefined
     , quoteDec  = undefined
     , quoteType = undefined }
-
-safe :: QuasiQuoter 
-safe = QuasiQuoter
-    { quoteExp  = \x -> [e| \p -> let loc = $(lift =<< location) in parseSafetyProp loc p $(litE (stringL x)) |]
-    , quotePat  = undefined
-    , quoteDec  = undefined
-    , quoteType = undefined }
-
-parseAction :: Loc -> ParserSetting -> String -> Action
-parseAction loc p str = Assign v e
-    where
-        (rVar,rExpr) = second (intercalate ":=") $ fromMaybe err $ uncons (S.split ":=" str)
-        v@(Var _ t)  = parseVar loc p rVar
-        e  = parseExpr loc p' rExpr
-        p' = p & expected_type .~ Just t
-        li = asLI loc
-        err = error $ "\n"++ show_err [Error ([printf|misshapen assignment: '%s'|] str) li]
 
 type Parser a = Loc -> ParserSetting -> String -> a
 
@@ -98,16 +71,6 @@ parseParts f sep kind pars0 pars1 loc p str | sep `isInfixOf` str = f v e
         --p' = p & expected_type .~ Just t
         li  = asLI loc
         err = error $ "\n"++ show_err [Error ([printf|misshapen %s: '%s'|] kind str) li]
-
-parseSafetyProp :: Loc -> ParserSetting -> String -> SafetyProp
-parseSafetyProp = parseParts makeSafety "UNLESS" "safety property" parseExpr parseExpr
-    where
-        makeSafety e0 e1 = Unless [] e0 e1
-
-parseProgressProp :: Loc -> ParserSetting -> String -> ProgressProp
-parseProgressProp = parseParts makeProgress "LEADS-TO" "progress property" parseExpr parseExpr
-    where
-        makeProgress e0 e1 = LeadsTo [] e0 e1
 
 parseVarDecl :: Loc -> String -> State ParserSetting ()
 parseVarDecl loc str = do

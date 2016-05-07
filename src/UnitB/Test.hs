@@ -7,7 +7,6 @@ import Document.Tests.Suite (lookupSequent)
 import           Logic.Expr
 import qualified Logic.Expr.Const as Exp
 import           Logic.Expr.Parser
-import           Logic.Expr.QuasiQuote 
 import           Logic.Expr.Existential
 import           Logic.Names.Internals as Names
 import           Logic.Proof.POGenerator hiding (variables)
@@ -18,6 +17,7 @@ import           Logic.UnitTest
 import Logic.Theories.FunctionTheory
 
 import UnitB.PO (prop_saf')
+import UnitB.QuasiQuote
 import UnitB.UnitB
 
 import Z3.Z3
