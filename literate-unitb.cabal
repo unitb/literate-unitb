@@ -93,51 +93,6 @@ library
         Interactive.Observable
         Interactive.Pipeline
         Interactive.Serialize
-        Logic.Expr
-        Logic.Expr.Classes
-        Logic.Expr.Const
-        Logic.Expr.Context
-        Logic.Expr.Declaration
-        Logic.Expr.Existential
-        Logic.Expr.Expr
-        Logic.Expr.Fun
-        Logic.Expr.Genericity
-        Logic.Expr.Label
-        Logic.Expr.Parser
-        Logic.Expr.Parser.Internal.Parser
-        Logic.Expr.Parser.Internal.Setting
-        Logic.Expr.PrettyPrint
-        Logic.Expr.Printable
-        Logic.Expr.Prism
-        Logic.Expr.Quantifier
-        Logic.Expr.Scope
-        Logic.Expr.Type
-        Logic.Expr.Variable
-        Logic.Names
-        Logic.Names.Packaged
-        Logic.Names.Internals
-        Logic.Operator
-        Logic.OldOperator
-        Logic.Proof
-        Logic.Proof.Lambda
-        Logic.Proof.Monad
-        Logic.Proof.POGenerator
-        Logic.Proof.ProofTree
-        Logic.Proof.Sequent
-        Logic.Proof.Tactics
-        Logic.QuasiQuote
-        Logic.Theories.Arithmetic
-        Logic.Theories.FunctionTheory
-        Logic.Theories.IntervalTheory
-        Logic.Theories.Notation
-        Logic.Theories.PredCalc
-        Logic.Theories.RelationTheory
-        Logic.Theories.SetTheory
-        Logic.Theory
-        Logic.Theory.Internals
-        Logic.Theory.Monad
-        Logic.UnitTest
-        Logic.WellDefinedness
         Reactive
         UnitB.Event
         UnitB.Expr
@@ -152,8 +107,6 @@ library
         UnitB.Syntax
         UnitB.System
         UnitB.UnitB
-        Z3.Version
-        Z3.Z3
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes
@@ -175,14 +128,12 @@ library
         Document.Phase.Test
         Document.Test
         Documentation.Test
-        Logic.TestGenericity
         UnitB.Test
         Utilities.Test
-        Z3.Test
 
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -212,7 +163,7 @@ executable unitb
   main-is:  continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -230,7 +181,7 @@ executable run_tests
   hs-source-dirs: script/main
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-scripts, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-scripts, literate-unitb-utils, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -467,7 +418,7 @@ executable test_tmp
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -485,7 +436,7 @@ executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
