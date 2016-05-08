@@ -4,13 +4,12 @@ module Document.Tests.Parser where
     -- Modules
 import Document.Tests.Suite as S
 
-import Logic.Expr.QuasiQuote
-
 import Test.UnitTest
 
-import Theories.FunctionTheory
+import Logic.Theories.FunctionTheory
 
 import UnitB.Expr
+import UnitB.QuasiQuote
 
     -- Library
 import Control.Lens

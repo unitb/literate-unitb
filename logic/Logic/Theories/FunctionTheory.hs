@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns, RecordWildCards, OverloadedStrings #-}
-module Theories.FunctionTheory where
+module Logic.Theories.FunctionTheory where
 
     -- Modules
 import Logic.Expr
@@ -9,7 +9,7 @@ import Logic.Proof
 import Logic.Theory
 import Logic.Theory.Monad
 
-import Theories.SetTheory hiding ( dec )
+import Logic.Theories.SetTheory hiding ( dec )
 
     -- Libraries
 import Control.Lens

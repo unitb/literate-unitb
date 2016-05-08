@@ -84,6 +84,7 @@ executable call_z3
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -102,6 +103,7 @@ executable compile
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -120,6 +122,7 @@ executable diff_fail
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -136,6 +139,7 @@ executable find
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 executable find_case
   -- .hs or .lhs file containing the Main module.
   main-is:      Find_case.hs
@@ -148,6 +152,7 @@ executable find_case
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 executable modulestruct
   -- .hs or .lhs file containing the Main module.
   main-is:      ModuleStruct.hs
@@ -160,6 +165,7 @@ executable modulestruct
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 executable open_errors
   -- .hs or .lhs file containing the Main module.
   main-is:      Open_errors.hs
@@ -172,6 +178,7 @@ executable open_errors
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 executable periodic
   -- .hs or .lhs file containing the Main module.
   main-is:      Periodic.hs
@@ -184,6 +191,7 @@ executable periodic
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 executable display_errors
   -- .hs or .lhs file containing the Main module.
   main-is:      Display_errors.hs
@@ -197,3 +205,4 @@ executable display_errors
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8

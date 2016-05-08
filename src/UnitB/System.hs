@@ -5,9 +5,9 @@ module UnitB.System where
 import Logic.Expr.Scope
 import Logic.Theory as Th
 
-import Theories.SetTheory
-import Theories.FunctionTheory
-import Theories.Arithmetic
+import Logic.Theories.SetTheory
+import Logic.Theories.FunctionTheory
+import Logic.Theories.Arithmetic
 
 import UnitB.Event
 import UnitB.Expr hiding (merge,target)

@@ -21,15 +21,15 @@ import Document.VarScope  hiding (var)
 import Latex.Monad
 
 import Logic.Expr.Parser
-import Logic.Expr.QuasiQuote
 import Logic.Theory
 
-import Theories.Arithmetic
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.SetTheory
 
 import Test.UnitTest
 
 import UnitB.Expr 
+import UnitB.QuasiQuote
 import UnitB.Syntax as AST 
 import UnitB.UnitB
 

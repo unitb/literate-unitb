@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
-module Theories.PredCalc where
+module Logic.Theories.PredCalc where
 
     -- Modules
 import Logic.Expr hiding (or_fun,and_fun)

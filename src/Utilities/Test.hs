@@ -5,10 +5,10 @@ module Utilities.Test where
 import Logic.Operator
 import Logic.OldOperator
 
-import Theories.Arithmetic
-import Theories.Notation
-import Theories.SetTheory
-import Theories.FunctionTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.Notation
+import Logic.Theories.SetTheory
+import Logic.Theories.FunctionTheory
 
 import Utilities.Graph as G
         ( matrix_of_with, closure

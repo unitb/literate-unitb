@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns
       , RecordWildCards
       , OverloadedStrings #-}
-module Theories.SetTheory where
+module Logic.Theories.SetTheory where
 
     -- Modules
 import Logic.Expr

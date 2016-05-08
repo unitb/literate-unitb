@@ -9,12 +9,12 @@ import Document.Tests.Suite -- (verify,find_errors,proof_obligation)
 import Logic.Expr
 import qualified Logic.Expr.Const as Expr
 import Logic.Expr.Parser
-import Logic.Expr.QuasiQuote
 import Logic.Proof
+import Logic.QuasiQuote
 
-import Theories.SetTheory
-import Theories.FunctionTheory
-import Theories.Arithmetic
+import Logic.Theories.SetTheory
+import Logic.Theories.FunctionTheory
+import Logic.Theories.Arithmetic
 
     -- Libraries
 import Control.Lens hiding (elements,universe,indices)
