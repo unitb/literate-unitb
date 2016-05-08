@@ -111,7 +111,8 @@ library
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs
+         -fwarn-tabs -Werror
+         -j8
   
   -- Other library packages from which modules are imported.
   build-depends:       base >= 4.8 && < 5, lens, array, containers, deepseq, data-default, cereal < 5, QuickCheck, mtl, template-haskell, hashable, dlist, semigroups, either, transformers, contravariant, directory >= 1.2.3.0 && < 1.2.6.0, filepath, process, SafeSemaphore, data-ordlist, MissingH, assert, pseudomacros, ConfigFile, literate-unitb-utils, literate-unitb-latex

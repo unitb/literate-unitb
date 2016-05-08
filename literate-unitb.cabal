@@ -139,7 +139,8 @@ library
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs
+         -fwarn-tabs -Werror
+         -j8
   
   if flag(HashedKeys)
     cpp-options: -D__HASHED_KEYS__
@@ -171,6 +172,7 @@ executable unitb
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -189,6 +191,7 @@ executable run_tests
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -205,6 +208,7 @@ benchmark bench-bucket-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__
 
@@ -224,6 +228,7 @@ benchmark bench-bucket
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__BUCKET_TABLE__
 
@@ -243,6 +248,7 @@ benchmark bench-hashed-key-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__
 
@@ -261,6 +267,7 @@ benchmark bench-hashed-key
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__HASHED_KEYS__
 
@@ -279,6 +286,7 @@ benchmark bench-raw-map
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
@@ -295,6 +303,7 @@ benchmark bench-raw-map-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__
 
@@ -314,6 +323,7 @@ benchmark bench-bucket-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__ -D__LAZY_NAME__
 
@@ -333,6 +343,7 @@ benchmark bench-bucket-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__BUCKET_TABLE__ -D__LAZY_NAME__
 
@@ -352,6 +363,7 @@ benchmark bench-hashed-key-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__ -D__LAZY_NAME__
 
@@ -370,6 +382,7 @@ benchmark bench-hashed-key-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__HASHED_KEYS__ -D__LAZY_NAME__
 
@@ -388,6 +401,7 @@ benchmark bench-raw-map-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__LAZY_NAME__
 
@@ -406,6 +420,7 @@ benchmark bench-raw-map-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__LAZY_NAME__
 
@@ -426,6 +441,7 @@ executable test_tmp
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -446,6 +462,7 @@ executable test
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -467,6 +484,7 @@ test-suite tests
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
    default-extensions:  OverloadedStrings
    -- type: exitcode-stdio-1.0
    type: exitcode-stdio-1.0
