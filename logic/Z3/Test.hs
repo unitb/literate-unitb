@@ -12,7 +12,7 @@ import Logic.Proof
 import Logic.Proof.Lambda
 import Logic.Theory
 
-import Theories.SetTheory
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Control.Lens hiding (Context,traverse1)

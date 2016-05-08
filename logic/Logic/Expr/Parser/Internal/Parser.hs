@@ -12,7 +12,7 @@ import Logic.Expr.Printable
 import Logic.Operator
 
 
-import Theories.SetTheory
+import Logic.Theories.SetTheory
 
 import Utilities.Error
 import Utilities.Syntactic

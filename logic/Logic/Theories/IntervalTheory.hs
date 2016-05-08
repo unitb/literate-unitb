@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Theories.IntervalTheory where
+module Logic.Theories.IntervalTheory where
 
     -- Modules
 import Logic.Expr
@@ -7,8 +7,8 @@ import Logic.Expr.Const
 import Logic.Operator
 import Logic.Theory
 
-import Theories.Arithmetic
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Control.Lens

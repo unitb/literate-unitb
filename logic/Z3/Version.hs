@@ -15,7 +15,7 @@ import System.FilePath
 import System.Process
 import System.IO.Unsafe
 
-import Text.Printf
+import Text.Printf.TH
 
 import Utilities.Config
 
@@ -33,8 +33,8 @@ check_z3_bin = do
         if (v,h) `elem` versions then
             return True
         else do
-            printf "Expecting z3 %s\n" $ intercalate " or\n"
-                $ map (uncurry $ printf "z3 version %s, hashcode %s") versions
+            putStrLn $ [printf|Expecting z3 %s\n|] $ intercalate " or\n"
+                $ map (uncurry $ [printf|z3 version %s, hashcode %s|]) versions
             return False
     else do
         putStrLn ("A 'z3' executable has not been found in the path ")

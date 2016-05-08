@@ -22,12 +22,15 @@ ghc-options:
     literate-unitb: -Werror
     literate-unitb-scripts: -Werror
     literate-unitb-utils: -Werror
+    literate-unitb-latex: -Werror
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
 - utils/
 - script/
+- latex/
+- logic/
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2

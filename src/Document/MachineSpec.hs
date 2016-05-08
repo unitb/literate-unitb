@@ -8,9 +8,9 @@ import Latex.Parser
 import Logic.Expr.Parser
 import Logic.Operator hiding (Command)
 
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.FunctionTheory
+import Logic.Theories.SetTheory
 
 import UnitB.Expr
 import UnitB.UnitB

@@ -7,7 +7,7 @@ import Document.Tests.Suite
 import Logic.Expr.Const
 import Logic.Proof
 
-import Theories.FunctionTheory
+import Logic.Theories.FunctionTheory
 
 import UnitB.Expr
 

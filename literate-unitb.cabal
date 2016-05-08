@@ -93,56 +93,7 @@ library
         Interactive.Observable
         Interactive.Pipeline
         Interactive.Serialize
-        Latex.Monad
-        Latex.OldMonad
-        Latex.Parser
-        Latex.Scanner
-        Logic.Expr
-        Logic.Expr.Classes
-        Logic.Expr.Const
-        Logic.Expr.Context
-        Logic.Expr.Declaration
-        Logic.Expr.Existential
-        Logic.Expr.Expr
-        Logic.Expr.Fun
-        Logic.Expr.Genericity
-        Logic.Expr.Label
-        Logic.Expr.Parser
-        Logic.Expr.Parser.Internal.Parser
-        Logic.Expr.Parser.Internal.Setting
-        Logic.Expr.PrettyPrint
-        Logic.Expr.Printable
-        Logic.Expr.Prism
-        Logic.Expr.Quantifier
-        Logic.Expr.QuasiQuote
-        Logic.Expr.Scope
-        Logic.Expr.Type
-        Logic.Expr.Variable
-        Logic.Names
-        Logic.Names.Internals
-        Logic.Names.Packaged
-        Logic.Operator
-        Logic.OldOperator
-        Logic.Proof
-        Logic.Proof.Lambda
-        Logic.Proof.Monad
-        Logic.Proof.POGenerator
-        Logic.Proof.ProofTree
-        Logic.Proof.Sequent
-        Logic.Proof.Tactics
-        Logic.Theory
-        Logic.Theory.Internals
-        Logic.Theory.Monad
-        Logic.UnitTest
-        Logic.WellDefinedness
         Reactive
-        Theories.Arithmetic
-        Theories.FunctionTheory
-        Theories.IntervalTheory
-        Theories.Notation
-        Theories.PredCalc
-        Theories.RelationTheory
-        Theories.SetTheory
         UnitB.Event
         UnitB.Expr
         UnitB.Expr.Parser
@@ -152,11 +103,10 @@ library
         UnitB.Proof.Rules
         UnitB.Proof.PO
         UnitB.Property
+        UnitB.QuasiQuote
         UnitB.Syntax
         UnitB.System
         UnitB.UnitB
-        Z3.Version
-        Z3.Z3
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes
@@ -178,21 +128,18 @@ library
         Document.Phase.Test
         Document.Test
         Documentation.Test
-        Latex.Test
-        Logic.TestGenericity
         UnitB.Test
         Utilities.Test
-        Z3.Test
 
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
          -fwarn-missing-methods
          -fno-ignore-asserts
-         -fwarn-tabs
+         -fwarn-tabs -Werror
          -j8
   
   if flag(HashedKeys)
@@ -217,7 +164,7 @@ executable unitb
   main-is:  continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -225,6 +172,7 @@ executable unitb
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -235,7 +183,7 @@ executable run_tests
   hs-source-dirs: script/main
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-scripts, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-scripts, literate-unitb-utils, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -243,6 +191,7 @@ executable run_tests
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -259,10 +208,11 @@ benchmark bench-bucket-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -278,10 +228,11 @@ benchmark bench-bucket
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__BUCKET_TABLE__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -297,10 +248,11 @@ benchmark bench-hashed-key-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -315,10 +267,11 @@ benchmark bench-hashed-key
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__HASHED_KEYS__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -333,8 +286,9 @@ benchmark bench-raw-map
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -349,10 +303,11 @@ benchmark bench-raw-map-packaged
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -368,10 +323,11 @@ benchmark bench-bucket-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__ -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -387,10 +343,11 @@ benchmark bench-bucket-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__BUCKET_TABLE__ -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -406,10 +363,11 @@ benchmark bench-hashed-key-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__ -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -424,10 +382,11 @@ benchmark bench-hashed-key-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__HASHED_KEYS__ -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -442,10 +401,11 @@ benchmark bench-raw-map-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -460,10 +420,11 @@ benchmark bench-raw-map-packaged-lazy-name
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
 
   cpp-options: -D__PACKAGED_NAMES__ -D__LAZY_NAME__
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
 
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
@@ -472,7 +433,7 @@ executable test_tmp
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -480,6 +441,7 @@ executable test_tmp
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
@@ -490,7 +452,7 @@ executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
@@ -500,13 +462,14 @@ executable test
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
   
   -- Directories containing source files.
   -- hs-source-dirs:      .
@@ -521,6 +484,7 @@ test-suite tests
          -dynamic-too
          -threaded  -fno-ignore-asserts
          -fwarn-tabs -Werror
+         -j8
    default-extensions:  OverloadedStrings
    -- type: exitcode-stdio-1.0
    type: exitcode-stdio-1.0

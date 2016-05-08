@@ -18,11 +18,11 @@ import Logic.Proof hiding ( with_line_info )
 import UnitB.PO
 import UnitB.Syntax as AST
 
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.IntervalTheory
-import Theories.PredCalc
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.FunctionTheory
+import Logic.Theories.IntervalTheory
+import Logic.Theories.PredCalc
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Control.Applicative

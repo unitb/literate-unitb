@@ -1,12 +1,12 @@
-module Theories.Notation where
+module Logic.Theories.Notation where
 
     -- Modules
 import Logic.Operator
 import Logic.OldOperator
 
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.FunctionTheory
+import Logic.Theories.SetTheory
 
     -- Libraries
 import Control.Lens

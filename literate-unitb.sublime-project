@@ -5,7 +5,7 @@
 			"cmd":
 			[
 				"runghc",
-				"-isrc:script:utils",
+				"-isrc:script:utils:latex:logic",
 				"$project_path/script/main/display_errors.hs",
 				"$file",
 				"$project_path",
@@ -39,6 +39,22 @@
 				"*.cabal"
 			],
 			"path": "."
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "logic"
+		},
+		{
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "latex"
 		},
 		{
 			"file_include_patterns":

@@ -18,12 +18,12 @@ import Logic.Expr
 
 import UnitB.Syntax as AST
 
-import Theories.Arithmetic
-import Theories.FunctionTheory
-import Theories.IntervalTheory
-import Theories.PredCalc
-import Theories.RelationTheory
-import Theories.SetTheory
+import Logic.Theories.Arithmetic
+import Logic.Theories.FunctionTheory
+import Logic.Theories.IntervalTheory
+import Logic.Theories.PredCalc
+import Logic.Theories.RelationTheory
+import Logic.Theories.SetTheory
 
     --
     -- Libraries

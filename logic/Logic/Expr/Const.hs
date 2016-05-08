@@ -363,7 +363,7 @@ var_of :: AbsExpr n t q -> AbsVar n t
 var_of (Word v) = v
 var_of _ = error "var_of: expecting a variable expression"
 
--- {-# DEPRECATED var, prog_var "use Logic.Expr.QuasiQuote" #-}
+-- {-# DEPRECATED var, prog_var "use Logic.QuasiQuote" #-}
 var :: (Pre,IsName n) => String -> t -> (Either a (AbsExpr n t q), AbsVar n t)
 var n t      = (Right $ Word $ v, v)
     where

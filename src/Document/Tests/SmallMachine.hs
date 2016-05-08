@@ -6,8 +6,8 @@ import Document.Tests.Suite
 
 import Logic.Expr
 import Logic.Expr.Parser
-import Logic.Expr.QuasiQuote
 import Logic.Proof
+import Logic.QuasiQuote
 
     -- Libraries
 import Control.Lens
