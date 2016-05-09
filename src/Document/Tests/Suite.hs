@@ -24,6 +24,7 @@ import Control.Arrow hiding (right,left)
 import Control.Concurrent
 import Control.Exception
 import Control.Lens
+import Control.Precondition ((!))
 
 import Control.Monad.State
 import Control.Monad.Trans.Either

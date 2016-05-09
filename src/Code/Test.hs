@@ -21,7 +21,7 @@ import Control.Precondition
 
 import Data.Either.Combinators
 import Data.List as L
-import Data.Map.Class  hiding ((!))
+import Data.Map.Class
 
 import System.Directory
 import System.IO.Unsafe

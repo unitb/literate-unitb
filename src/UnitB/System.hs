@@ -23,7 +23,7 @@ import Data.Default
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Graph.Bipartite
-import Data.Map.Class as M hiding ((!))
+import Data.Map.Class as M
 import Data.Serialize
 
 import GHC.Generics.Instances

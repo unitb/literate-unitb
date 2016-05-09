@@ -1,12 +1,10 @@
 {-# LANGUAGE KindSignatures,TypeFamilies #-}
 module Data.Map.Class 
     ( M.Map
-    , module Data.Map.Class 
-    , (P.!) )
+    , module Data.Map.Class )
 where
 
 import Control.Lens
-import Control.Precondition as P
 
 import qualified Data.Map as M
 import qualified Data.Set as S

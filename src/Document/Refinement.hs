@@ -20,6 +20,7 @@ import Logic.Expr.Parser
     -- Libraries
 import Control.Applicative
 import Control.Lens hiding (Context)
+import Control.Precondition ((!))
 
 import Control.Monad.Except
 import Control.Monad.Reader

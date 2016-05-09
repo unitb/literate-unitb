@@ -55,7 +55,13 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ intercalate ":" [inf,"suite","src","utils","latex","logic"]
+        , "-i" ++ intercalate ":" [inf,"suite","src","utils","latex","logic"
+                                  ,"libs/axiomatic-classes","libs/data-compressed"
+                                  ,"libs/data-map-class","libs/data-packaged"
+                                  ,"libs/existential","libs/generic-instances"
+                                  ,"libs/invariants","libs/partial-order"
+                                  ,"libs/printf-th","libs/reactive-banana-transformers"
+                                  ,"libs/string-lenses","libs/unfoldable"]
         , "-hidir" ++ inf
         , "-W"
         , "-XTupleSections"

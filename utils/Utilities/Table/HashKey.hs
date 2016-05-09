@@ -5,6 +5,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad
+import Control.Precondition ((!))
 
 import Data.Default
 import Data.Function
