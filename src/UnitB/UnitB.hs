@@ -37,7 +37,7 @@ import           Data.List as L hiding (inits, union,insert)
 import           Data.Map.Class as M hiding 
                     ( map
                     , delete, filter, null
-                    , (\\), mapMaybe, (!) )
+                    , (\\), mapMaybe )
 import qualified Data.Map.Class as M
 import           Data.Serialize
 import qualified Data.Set as S

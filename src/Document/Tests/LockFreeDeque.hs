@@ -13,6 +13,7 @@ import UnitB.QuasiQuote
 
     -- Libraries
 import Control.Lens hiding (indices)
+import Control.Precondition ((!))
 
 import Data.Graph.Bipartite
 import Data.List as L

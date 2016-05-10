@@ -31,6 +31,18 @@ packages:
 - script/
 - latex/
 - logic/
+- libs/axiomatic-classes
+- libs/data-map-class
+- libs/data-compressed
+- libs/data-packaged
+- libs/partial-order
+- libs/string-lenses
+- libs/existential
+- libs/generic-instances
+- libs/invariants
+- libs/printf-th
+- libs/reactive-banana-transformers
+- libs/unfoldable
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2

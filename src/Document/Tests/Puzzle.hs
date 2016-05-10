@@ -12,6 +12,7 @@ import Logic.Proof
     -- Library
 import Control.Lens
 import Control.Monad
+import Control.Precondition ((!))
 
 import Data.List as L
 import Data.Map.Class

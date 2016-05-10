@@ -133,7 +133,7 @@ library
 
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex, literate-unitb-logic, generic-instances, invariants, printf-th, data-map-class, axiomatic-classes, existential, unfoldable, partial-order, reactive-banana-transformers, existential, data-compressed, string-lenses
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -164,7 +164,7 @@ executable unitb
   main-is:  continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic, invariants, data-map-class
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

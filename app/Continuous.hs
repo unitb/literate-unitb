@@ -25,7 +25,7 @@ import Control.Monad.State
 import Control.Monad.Trans.Either 
 import Control.Precondition
 
-import qualified Data.Map.Class as M hiding ((!))
+import qualified Data.Map.Class as M
 import Data.Time
 import Data.Typeable
 

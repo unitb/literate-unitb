@@ -31,7 +31,7 @@ import           Data.Char
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
-import           Data.Map.Class as M hiding ( map, (!) )
+import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
