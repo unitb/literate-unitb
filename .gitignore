@@ -103,6 +103,7 @@ GUI/EIFGENs
 EIFGENs
 *.h
 *.py
+!setup-cabal.py
 *.pyc
 *.state'
 *.z
