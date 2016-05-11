@@ -28,7 +28,7 @@ import Utilities.String
 import Utilities.Syntactic
 
 path2 :: FilePath
-path2 = "tests/sample.tex"
+path2 = "Tests/sample.tex"
 
 result2 :: String
 result2 = 
@@ -36,7 +36,7 @@ result2 =
     
 
 path3 :: String
-path3 = "tests/sorted_sequences_err.tex"
+path3 = "Tests/sorted_sequences_err.tex"
 
 result3 :: String
 result3 = concat
@@ -44,10 +44,10 @@ result3 = concat
     ]
 
 path4 :: String
-path4 = "tests/sorted_sequences.tex"
+path4 = "Tests/sorted_sequences.tex"
 
 path5 :: String
-path5 = "tests/integers.tex"
+path5 = "Tests/integers.tex"
 
 sections :: [String]
 sections = [

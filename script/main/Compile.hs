@@ -130,18 +130,18 @@ main = do
                 hFlush stdout
                 writeFile "ghc_errors.txt" []
                 rs <- g $ runEitherT $ mapM compile 
-                    [ ["periodic.hs"]
-                    , ["compile.hs"]
+                    [ ["Periodic.hs"]
+                    , ["Compile.hs"]
                     --, ["open_errors.hs","-threaded"]
                     --, ["find.hs"]
                     --, ["diff_fail.hs"]
                     --, ["modulestruct.hs"]
                     --, ["find_case.hs","-threaded"]
                     , ["test.hs","-threaded"]
-                    , ["continuous.hs","-threaded","-O2"]
+                    , ["Continuous.hs","-threaded","-O2"]
                     , ["extract_z3.hs"]
                     --, ["verify.hs"]
-                    , ["run_tests.hs","-threaded"]
+                    , ["Run_tests.hs","-threaded"]
                     , ["test_tmp.hs","-threaded"] ]
                 clearScreen
                 hFlush stdout

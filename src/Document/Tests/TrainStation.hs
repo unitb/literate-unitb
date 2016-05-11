@@ -5362,7 +5362,7 @@ case18 :: IO String
 case18 = find_errors path18
 
 path21 :: FilePath
-path21 = "tests/train-station-err10.tex"
+path21 = "Tests/train-station-err10.tex"
 
 case21 :: IO String
 case21 = find_errors path21

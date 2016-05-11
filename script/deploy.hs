@@ -16,5 +16,5 @@ main = void $ runMaybeT $ do
     MaybeT $ do
         path <- getCurrentDirectory
         build path compile_app
-    lift $ system $ "cp bin/continuous /usr/bin/unitb"
+    lift $ system $ "cp bin/Continuous /usr/bin/unitb"
     return ()

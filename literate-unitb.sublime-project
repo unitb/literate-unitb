@@ -19,7 +19,7 @@
 		{
 			"cmd":
 			[
-				"bin/continuous",
+				"bin/Continuous",
 				"$file",
 				"-V",
 				"-v",

@@ -60,7 +60,7 @@ input :: Either String RawMachineAST
 input = unsafePerformIO $ fmap (view' syntax.raw) <$> parse path0
 
 path0 :: String
-path0 = "tests/cubes-t8.tex"
+path0 = "Tests/cubes-t8.tex"
 
 case0 :: IO String
 case0 = do x <- runEitherT $ do
@@ -287,7 +287,7 @@ case8 = do  xs <- runEitherT $ do
                 let vars = L.map fromString'' ["n","f","b"]
                 xs <- hoistEither $ source_file' vars "find_cubes" m $ n `zeq` bigN
                 lift $ do 
-                    file <- tempFile "tests/code.hs"
+                    file <- tempFile "Tests/code.hs"
                     writeFile file $ unlines
                         [ xs
                         , ""
@@ -319,7 +319,7 @@ case5 = do  xs <- runEitherT $ do
                 m  <- hoistEither input
                 xs <- hoistEither $ source_file "find_cubes" m $ n `zeq` bigN
                 lift $ do 
-                    file <- tempFile "tests/code.hs"
+                    file <- tempFile "Tests/code.hs"
                     writeFile file $ unlines
                         [ xs
                         , ""

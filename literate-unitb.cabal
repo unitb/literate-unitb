@@ -161,7 +161,7 @@ library
 executable unitb
   -- .hs or .lhs file containing the Main module.
   hs-source-dirs: app
-  main-is:  continuous.hs
+  main-is:  Continuous.hs
   default-language:    Haskell2010
 
   build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic, invariants, data-map-class

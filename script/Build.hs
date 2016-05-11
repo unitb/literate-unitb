@@ -202,9 +202,9 @@ compile_all :: Build FilePath
 compile_all = make "suite/test.hs"
 
 compile_app :: Build FilePath
-compile_app = make "app/continuous.hs"
+compile_app = make "app/Continuous.hs"
 
 profile_app :: Build FilePath
 profile_app = do 
-    make "app/continuous.hs"
-    enableProfiling "app/continuous.hs"
+    make "app/Continuous.hs"
+    enableProfiling "app/Continuous.hs"
