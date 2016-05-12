@@ -16,7 +16,7 @@ import Control.Monad.RWS
 import Control.Precondition
 
 import           Data.List
-import qualified Data.Map.Class as M hiding ((!))
+import qualified Data.Map.Class as M
 import           Data.Tuple
 
 import GHC.Stack

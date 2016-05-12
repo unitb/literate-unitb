@@ -18,6 +18,7 @@ import Data.Foldable
 import Data.Hashable
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
+import Data.MakeTable
 import Data.Map.Class  as M
 import Data.Semigroup
 import Data.Serialize hiding (label)
@@ -32,7 +33,6 @@ import Text.Printf
 import Test.QuickCheck hiding (label)
 
 import Utilities.Table
-import Utilities.TableConstr
 
 type Constraint = Constraint' Expr
 type RawConstraint = Constraint' RawExpr

@@ -133,7 +133,7 @@ library
 
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, literate-unitb-utils, contravariant, literate-unitb-latex, literate-unitb-logic
+  build-depends:       ansi-terminal, array, async, axiomatic-classes, base >=4.8 && < 5, bipartite-graph, bytestring, cereal < 5, classy-lens-hierarchy, co-applicative, containers, data-compressed, data-default, data-map-class, data-ordlist, deepseq, directory >= 1.2.3.0 && < 1.2.6.0, dlist, either, existential, existential, file-system-mockup, filepath, generic-instances, hashable, invariants, lens, lens-extra, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, map-syntax, MissingH, monoid-transformer, mtl, parallel, partial-order, printf-th, process, pseudomacros, QuickCheck, reactive-banana, reactive-banana-transformers, semigroupoids, semigroups, show-with, stm, string-lenses, tagged, template-haskell, time, transformer-lenses, transformers >=0.3, unfoldable, unitb-testing, unordered-containers, witherable
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -164,7 +164,7 @@ executable unitb
   main-is:  continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, data-map-class, directory >= 1.2.3.0 && < 1.2.6.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -183,7 +183,7 @@ executable run_tests
   hs-source-dirs: script/main
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-scripts, literate-unitb-utils, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, literate-unitb, literate-unitb-logic, literate-unitb-scripts, literate-unitb-utils, mtl, process, shelly, time
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -196,244 +196,12 @@ executable run_tests
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
 
-benchmark bench-bucket-packaged
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-bucket
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__BUCKET_TABLE__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-hashed-key-packaged
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-hashed-key
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__HASHED_KEYS__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-raw-map
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-raw-map-packaged
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-bucket-packaged-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__ -D__BUCKET_TABLE__ -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-bucket-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__BUCKET_TABLE__ -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-hashed-key-packaged-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__ -D__HASHED_KEYS__ -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-hashed-key-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__HASHED_KEYS__ -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-raw-map-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-benchmark bench-raw-map-packaged-lazy-name
-    type:       exitcode-stdio-1.0
-    main-is:    bench.hs
-    build-depends: base, time
-    default-language:    Haskell2010
-  ghc-options: -W -fwarn-missing-signatures 
-         -fwarn-incomplete-uni-patterns
-         -fwarn-missing-methods
-         -dynamic-too
-         -threaded  -fno-ignore-asserts
-         -fwarn-tabs -Werror
-         -j8
-
-  cpp-options: -D__PACKAGED_NAMES__ -D__LAZY_NAME__
-
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers
-
-  default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
 executable test_tmp
   hs-source-dirs: suite
   main-is: test_tmp.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, process, QuickCheck, reactive-banana-transformers, unitb-testing
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -452,7 +220,7 @@ executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, literate-unitb, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, literate-unitb-utils, literate-unitb-latex, literate-unitb-logic
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, reactive-banana-transformers, shelly, unitb-testing
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
@@ -466,10 +234,6 @@ executable test
   
   -- LANGUAGE extensions used by modules in this package.
   default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams, QuasiQuotes
-
-  
-  -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text
   
   -- Directories containing source files.
   -- hs-source-dirs:      .
@@ -493,7 +257,10 @@ test-suite tests
    main-is: test.hs
    build-depends:       base >= 4.8 && < 5, literate-unitb,
                         shelly, directory >= 1.2.3.0, 
-                        hspec                >= 1.8,
-                        literate-unitb-utils
+                        literate-unitb-utils,
+                        literate-unitb-logic,
+                        literate-unitb-latex,
+                        reactive-banana-transformers,
+                        unitb-testing
    default-language:    Haskell2010
    default-extensions:  TupleSections, DeriveFunctor, DeriveGeneric, DeriveFoldable, RankNTypes, MultiParamTypeClasses, GeneralizedNewtypeDeriving, TemplateHaskell, FlexibleContexts, FlexibleInstances, DeriveDataTypeable, TypeSynonymInstances, DefaultSignatures, DeriveTraversable, FunctionalDependencies, ImplicitParams

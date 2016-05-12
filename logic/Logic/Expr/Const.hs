@@ -12,6 +12,7 @@ import Logic.Names
     -- Libraries
 import Control.Applicative hiding (Const)
 import Control.Lens hiding (rewrite,Const)
+import Control.Lens.Misc
 import Control.Monad 
 import Control.Precondition
 
@@ -23,7 +24,6 @@ import qualified Data.Set as S
 
 import Text.Printf.TH
 
-import Utilities.Lens
 import Utilities.Syntactic
 import Utilities.Table
 

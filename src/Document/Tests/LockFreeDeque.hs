@@ -13,6 +13,7 @@ import UnitB.QuasiQuote
 
     -- Libraries
 import Control.Lens hiding (indices)
+import Control.Precondition ((!))
 
 import Data.Graph.Bipartite
 import Data.List as L
@@ -22,8 +23,6 @@ import Data.Set  as S
 import Test.UnitTest
 
 import Utilities.Table
-
--- import Utilities.TH
 
 test_case :: TestCase
 test_case = test

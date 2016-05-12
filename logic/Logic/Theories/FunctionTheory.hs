@@ -13,11 +13,10 @@ import Logic.Theories.SetTheory hiding ( dec )
 
     -- Libraries
 import Control.Lens
+import Control.Lens.Misc
 
 import Data.List as L
 import Data.Map.Class
-
-import Utilities.Lens
 
 ztfun,zpfun :: ExprP -> ExprP -> ExprP
 zdom  :: ExprP -> ExprP

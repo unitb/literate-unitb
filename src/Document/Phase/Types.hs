@@ -18,16 +18,16 @@ import UnitB.Syntax as AST hiding (Constraint)
     -- Libraries
 import Control.DeepSeq
 import Control.Lens as L
+import Control.Lens.HierarchyTH
 
 import Data.Graph.Bipartite as G hiding (fromList')
+import Data.MakeTable
 import Data.Typeable
 
 import GHC.Generics (Generic)
 
 import Utilities.Syntactic
 import Utilities.Table
-import Utilities.TableConstr
-import Utilities.TH
 
 class (MchType a (AEvtType a) (CEvtType a) (ThyType a) ~ a) 
         => IsMachine a where

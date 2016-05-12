@@ -5,7 +5,7 @@
 			"cmd":
 			[
 				"runghc",
-				"-isrc:script:utils:latex:logic",
+				"-isrc:script:utils:latex:logic:libs/invariants:libs/generic-instances:libs/string-lenses:libs/axiomatic-classes:libs/printf-th",
 				"$project_path/script/main/display_errors.hs",
 				"$file",
 				"$project_path",
@@ -47,6 +47,16 @@
 				"*.md"
 			],
 			"path": "logic"
+		},
+		{
+			"folder_exclude_patterns":
+			[	"dist",".stack-work" ],
+			"file_include_patterns":
+			[
+				"*hs",
+				"*.md"
+			],
+			"path": "libs"
 		},
 		{
 			"file_include_patterns":

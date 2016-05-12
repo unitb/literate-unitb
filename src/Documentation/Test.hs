@@ -17,9 +17,10 @@ import Control.Precondition
 import Data.Map as M
 import Data.Map.Syntax
 
+import System.IO.FileSystem
+
 import Test.UnitTest
 
-import Utilities.FileSystem
 import Utilities.Syntactic
 
 test_case :: TestCase

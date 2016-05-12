@@ -31,6 +31,27 @@ packages:
 - script/
 - latex/
 - logic/
+- libs/axiomatic-classes
+- libs/bipartite-graph
+- libs/classy-lens-hierarchy
+- libs/co-applicative
+- libs/data-compressed
+- libs/data-map-class
+- libs/data-packaged
+- libs/existential
+- libs/file-system-mockup
+- libs/generic-instances
+- libs/invariants
+- libs/lens-extra
+- libs/partial-order
+- libs/printf-th
+- libs/reactive-banana-transformers
+- libs/show-with
+- libs/string-lenses
+- libs/transformer-lenses
+- libs/typelist-functor
+- libs/unfoldable
+- libs/unitb-testing
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2

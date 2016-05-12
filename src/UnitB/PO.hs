@@ -46,7 +46,7 @@ import           Data.List.Utils as LU (replace)
 import           Data.Map.Class as M hiding 
                     ( map
                     , delete, filter, null
-                    , (\\), mapMaybe, (!) )
+                    , (\\), mapMaybe )
 import qualified Data.Map.Class as M
 import           Data.Monoid.Monad
 import qualified Data.Traversable as T

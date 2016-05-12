@@ -58,18 +58,10 @@ type Table = HashTable
 #else
 #ifdef __HASH_MAP__ 
 
-import Utilities.Table.HashMap as Table
-
 type Table = HashMap
 #else
 import qualified Data.Map as M
 type Table = M.Map
-
-tableToList :: Table k a -> [(k, a)]
-tableToList = M.toList
-
-tableElems :: Table k a -> [a]
-tableElems = M.elems
 
 #endif
 #endif

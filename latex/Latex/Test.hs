@@ -23,8 +23,8 @@ import Test.QuickCheck.RandomTree hiding (size,subtrees)
 import Test.QuickCheck.Regression
 
 import Text.Printf.TH
+import Text.Show.With
 
-import Utilities.String
 import Utilities.Syntactic
 
 path2 :: FilePath

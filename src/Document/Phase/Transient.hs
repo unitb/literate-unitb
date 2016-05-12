@@ -21,6 +21,7 @@ import UnitB.Syntax as AST
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.RWS as RWS ( RWS )
+import           Control.Precondition
 
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 

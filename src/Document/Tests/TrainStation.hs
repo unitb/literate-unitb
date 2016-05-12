@@ -18,6 +18,7 @@ import Logic.Theories.Arithmetic
 
     -- Libraries
 import Control.Lens hiding (elements,universe,indices)
+import Control.Lens.Misc hiding (combine)
 import Control.Monad.State
 
 import qualified Data.List.NonEmpty as NE
@@ -25,8 +26,6 @@ import Data.Map.Class   as M hiding ( map )
 
 import Test.UnitTest
 
-
-import Utilities.Lens hiding (combine)
 import Utilities.Table
 
 test_case :: TestCase

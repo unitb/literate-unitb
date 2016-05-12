@@ -31,12 +31,11 @@ import Data.Map.Class as M hiding (map)
 import qualified Data.Map.Class as M
 
 import System.FilePath
+import System.IO.FileSystem
 
 import Prelude hiding (writeFile,readFile)
 
 import Text.Printf.TH
-
-import Utilities.FileSystem
 
 newtype Doc a = Doc { getDoc :: ReaderT FilePath FileSystemM a }
     deriving (Functor)

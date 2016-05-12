@@ -5,27 +5,20 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad
+import Control.Precondition ((!))
 
---import Data.Array
 import Data.Default
 import Data.Function
 import Data.Hashable
---import qualified Data.IntMap as IM
 import qualified Data.Map as IM
 import qualified Data.Map as M
 import qualified Data.Maybe as My
 import qualified Data.List as L
 import Data.Map.Class
---import qualified Data.List.Ordered as Ord
---import Data.List.NonEmpty as NE (NonEmpty(..)) 
---import qualified Data.List.NonEmpty as NE
 import Data.Semigroup
 import Data.Serialize
 import qualified Data.Set as S
---import Data.Array.Unboxed
 
---import GHC.Exts (Int(..))
---import GHC.Prim
 import GHC.Generics.Instances
 
 import Prelude hiding (lookup,null,map,filter)
@@ -103,68 +96,6 @@ instance (NFData a,NFData b) => NFData (UnorderedBucket a b) where
 instance (Serialize a,Serialize b,Ord a) => Serialize (HashTable a b) where
 instance (Serialize a,Serialize b,Ord a) => Serialize (OrderedBucket a b) where
 instance (Serialize a,Serialize b,Ord a) => Serialize (UnorderedBucket a b) where
-
-
---instance IsMap Table where
---    type IsKey Table k = Ord k
---    null  = M.null . view table
---    empty = Table M.empty
---    singleton k x = Table $ M.singleton k x
---    size = M.size . view table
---    isSubmapOf x y = M.isSubmapOf (x^.table) (y^.table)
---    isSubmapOfBy f x y = M.isSubmapOfBy f (x^.table) (y^.table)
---    isProperSubmapOf x y = M.isProperSubmapOf (x^.table) (y^.table)
---        -- Map
---    map f = table %~ M.map f
---    mapMaybe f = table %~ M.mapMaybe f
---    mapEither f = mapEitherWithKey (const f)
---    mapEitherWithKey f = (Table *** Table) . M.mapEitherWithKey f . view table    
---    mapWithKey f = table %~ M.mapWithKey f
---    traverseWithKey f = table $ M.traverseWithKey f
---    foldMapWithKey f = M.foldMapWithKey f . view table
---    mapKeys f = table %~ M.mapKeys f
---    mapKeysWith f g = table %~ M.mapKeysWith f g
---    mapKeysMonotonic f = table %~ M.mapKeysMonotonic f
---        -- change by one
---    insert k x = table %~ M.insert k x
---    delete k = table %~ M.delete k
---    adjustWithKey f x = table %~ M.adjustWithKey f x
---        -- lookup
---    elemAt x = M.elemAt x . view table
---    lookup x = M.lookup x . view table
---    member x = M.member x . view table
---    findWithDefault x y = M.findWithDefault x y . view table
---        -- filtering
---    filter f = table %~ M.filter f
---    filterWithKey f = table %~ M.filterWithKey f
---    partitionWithKey f = (Table *** Table) . M.partitionWithKey f . view table
---    split k = (Table *** Table) . split k . view table
---        -- Combination
---    union = on2 table M.union
---    unionWith f = on2 table $ M.unionWith f
---    unionWithKey f = on2 table $ M.unionWithKey f
---    unions = onList table M.unions
---    unionsWith f = onList table $ M.unionsWith f
---    intersection = on2 table M.intersection
---    intersectionWith f = on2 table $ M.intersectionWith f
---    intersectionWithKey f = on2 table $ M.intersectionWithKey f
---    difference = on2 table M.difference
---    differenceWith f = on2 table $ M.differenceWith f
---        -- lists
---    keys  = M.keys . view table
---    keysSet  = M.keysSet . view table
---    elems = M.elems . view table
---    toList = M.toList . view table
---    toListIntl = (Ordered,) . M.toList . view table
---    fromSet f = Table . M.fromSet f
---    fromList = Table . M.fromList
---    fromListIntl (Ordered,xs)   = Table $ M.fromAscList xs
---    fromListIntl (Unordered,xs) = Table $ M.fromList xs
---    fromListWith f = Table . M.fromListWith f
---    fromListWithKey f = Table . M.fromListWithKey f
-
---instance Ord k => Semigroup (Intersection (Table k a)) where
---    Intersection x <> Intersection y = Intersection $ x `intersection` y
 
 {-# SPECIALIZE notNull' :: Lens' (Maybe (Bucket k a)) (Bucket k a) #-}
 {-# SPECIALIZE notNull' :: Lens' (Maybe (HashTable k a)) (HashTable k a) #-}
@@ -267,6 +198,8 @@ instance IsMap HashTable where
     fromListWithKey f xs = HashTable $ IM.map (fromListWithKey f) 
                                      $ IM.fromListWith (flip (++)) (L.map g xs)
                 where g (k,x) = (hash k,[(k,x)])
+    tableToList = tableToList'
+    tableElems = tableElems'
 
 prop_unionsWith_consistent :: forall k a. (Ord k,Eq a,Show k,Show a,Hashable k)
                            => Fun a (Fun a a) -> [[(k,a)]]
@@ -277,16 +210,6 @@ prop_unionsWith_consistent f' xs =
         toList (unionsWith f $ L.map fromList xs :: HashTable k a)
     where
         f = apply . apply f'
-
-tableToList :: HashTable k a -> [(k,a)]
-tableToList = tableToList'
---tableToList = (traverse._1 %~ key) . M.toList . view mapWithHash
---tableToList = M.toList
-
-tableElems :: HashTable k a -> [a]
-tableElems = tableElems'
---tableElems = M.elems . view mapWithHash
---tableElems = M.elems
 
 tableToList' :: HashTable k a -> [(k,a)]
 tableToList' = concat . IM.elems . IM.map M.toList . view hashTable
@@ -300,194 +223,6 @@ _foo = tableElems'
 instance (Hashable k,Ord k) => Semigroup (Intersection (HashTable k a)) where
     Intersection x <> Intersection y = Intersection $ x `intersection` y
 
---shrinkList :: Traversal [a] [b] a (Maybe b)
---shrinkList f = fmap My.catMaybes . traverse f
-
---instance IsMap OrderedBucket where
---    type IsKey OrderedBucket k = Ord k
---    {-# INLINE null #-}
---    null  = L.null . view orderedBucket
---    {-# INLINE empty #-}
---    empty = OrderedBucket []
---    {-# INLINE singleton #-}
---    singleton k x = OrderedBucket [(k,x)]
---    -- {-# INLINE size #-}
---    size = L.length . view orderedBucket
---    -- {-# INLINE isSubmapOf #-}
---    isSubmapOf = isSubmapOfBy (==)
---    -- {-# INLINE isSubmapOfBy #-}
---    isSubmapOfBy f (OrderedBucket xs) (OrderedBucket ys) = subset f xs ys
---    -- {-# INLINE isProperSubmapOf #-}
---    isProperSubmapOf x y = isSubmapOf x y && nX < nY
---        where nX = size x ; nY = size y
---        -- Map
---    -- {-# INLINE map #-}
---    map f = orderedBucket.traverse._2 %~ f
---    -- {-# INLINE mapMaybe #-}
---    mapMaybe f = orderedBucket.shrinkList %~ _2 f
---    -- {-# INLINE mapEither #-}
---    mapEither f = _
---    -- {-# INLINE mapEitherWithKey #-}
---    mapEitherWithKey f = _
---    -- {-# INLINE mapWithKey #-}
---    mapWithKey f = _
---    -- {-# INLINE traverseWithKey #-}
---    traverseWithKey f = orderedBucket.traverse $ \(k,x) -> (k,) <$> f k x
---    -- {-# INLINE foldMapWithKey #-}
---    foldMapWithKey f = _
---    -- {-# INLINE mapKeys #-}
---    mapKeys f = asList.traverse._1 %~ f
---    -- {-# INLINE mapKeysWith #-}
---    mapKeysWith f g = asListWith f.traverse._1 %~ g
---    -- {-# INLINE mapKeysMonotonic #-}
---    mapKeysMonotonic f = orderedBucket.traverse._1 %~ f
---        -- change by one
---    -- {-# INLINE insert #-}
---    insert k x = _
---    -- {-# INLINE delete #-}
---    delete k = _
---    -- {-# INLINE adjustWithKey #-}
---    adjustWithKey f k = _
---        -- lookup
---    -- {-# INLINE elemAt #-}
---    elemAt i = _
---    -- {-# INLINE lookup #-}
---    lookup k = _
---    member k = _
---    -- {-# INLINE findWithDefault #-}
---    findWithDefault x k = _
---        -- filtering
---    filter f = _
---    filterWithKey f = _
---    partitionWithKey f = _
---    split k = _
---        -- Combination
---    union = _
---    unionWith f = _
---    unionWithKey f (HashTable m0) (HashTable m1) = _
---    unions = _
---    unionsWith f = _
---    intersection = _
---    intersectionWith f = _
---    intersectionWithKey f (HashTable m0) (HashTable m1) = _
---    difference = _
---    differenceWith f (HashTable m0) (HashTable m1) = _
---        -- lists
---    keys  = _
---    keysSet  = _
---    elems = _
---    ascElems = _
---    toList = _
---    --toList = _
---    toAscList = _
---    toListIntl = _
---    fromSet f = _
---    fromList = _
---    fromListIntl (_,xs) = _
---    fromListWith f    = _
---    fromListWithKey f xs = _
-
---subset :: (Ord k) 
---       => (a -> b -> Bool)
---       -> [(k,a)] -> [(k,b)] -> Bool
---subset _ [] _ = True
---subset _ _ [] = False
---subset eq xs'@((k0,x0):xs) ((k1,x1):ys) = 
---        case compare k0 k1 of
---            EQ -> x0 `eq` x1 && subset eq xs ys
---            LT -> False
---            GT -> subset eq xs' ys
-
---instance IsMap UnorderedBucket where
---    type IsKey UnorderedBucket k = Eq k
---    {-# INLINE null #-}
---    null  = _
---    {-# INLINE empty #-}
---    empty = _
---    {-# INLINE singleton #-}
---    singleton k x = _
---    -- {-# INLINE size #-}
---    size = _
---    -- {-# INLINE isSubmapOf #-}
---    isSubmapOf = _
---    -- {-# INLINE isSubmapOfBy #-}
---    isSubmapOfBy f x y = _
---    -- {-# INLINE isProperSubmapOf #-}
---    isProperSubmapOf x y = _
---        -- Map
---    -- {-# INLINE map #-}
---    map f = _
---    -- {-# INLINE mapMaybe #-}
---    mapMaybe f = _
---    -- {-# INLINE mapEither #-}
---    mapEither f = _
---    -- {-# INLINE mapEitherWithKey #-}
---    mapEitherWithKey f = _
---    -- {-# INLINE mapWithKey #-}
---    mapWithKey f = _
---    -- {-# INLINE traverseWithKey #-}
---    traverseWithKey f = _
---    -- {-# INLINE foldMapWithKey #-}
---    foldMapWithKey f = _
---    -- {-# INLINE mapKeys #-}
---    mapKeys f = _
---    -- {-# INLINE mapKeysWith #-}
---    mapKeysWith f g = _
---    -- {-# INLINE mapKeysMonotonic #-}
---    mapKeysMonotonic = _
---        -- change by one
---    -- {-# INLINE insert #-}
---    insert k x = _
---    -- {-# INLINE delete #-}
---    delete k = _
---    -- {-# INLINE adjustWithKey #-}
---    adjustWithKey f k = _
---        -- lookup
---    -- {-# INLINE elemAt #-}
---    elemAt i = _
---    -- {-# INLINE lookup #-}
---    lookup k = _
---    member k = _
---    -- {-# INLINE findWithDefault #-}
---    findWithDefault x k = _
---        -- filtering
---    filter f = _
---    filterWithKey f = _
---    partitionWithKey f = _
---        where f' k x | f k x     = _
---                     | otherwise = _
---    split k = _
---        -- Combination
---    union = _
---    unionWith f = _
---    unionWithKey f (HashTable m0) (HashTable m1) = _
---    unions = _
---    unionsWith f = _
---    intersection = _
---    intersectionWith f = _
---    intersectionWithKey f (HashTable m0) (HashTable m1) = _
---    difference = _
---    differenceWith f (HashTable m0) (HashTable m1) = _
---        -- lists
---    keys  = _
---    keysSet  = _
---    elems = _
---    ascElems = _
---    toList = _
---    --toList = _
---    toAscList = _
---    toListIntl = _
---    fromSet f = _
---    fromList = _
---    fromListIntl (_,xs) = _
---    fromListWith f    = _
---    fromListWithKey f xs = _
---                where g (k,x) = _
-
---hash# :: Hashable a => a -> Int#
---hash# x = h
---    where
---        !(I# h) = hash x
 
 return []
 

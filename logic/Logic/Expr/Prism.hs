@@ -19,8 +19,7 @@ import Data.String.Utils
 
 import Language.Haskell.TH hiding (Name)
 import Language.Haskell.TH.Quote
-
-import Utilities.TH
+import Language.Haskell.TH.Utils
 
 fun :: QuasiQuoter
 fun = QuasiQuoter 

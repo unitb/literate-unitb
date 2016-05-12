@@ -15,6 +15,7 @@ import Control.Monad.State
 import Control.Lens hiding (rewrite,Context,elements
                            ,Const,Context',List,rewriteM
                            ,Traversable1(..),children)
+import Control.Lens.Misc
 
 import           Data.Data
 import           Data.Default
@@ -29,7 +30,6 @@ import Test.QuickCheck
 import Test.QuickCheck.Report ()
 
 import Utilities.Functor
-import Utilities.Lens
 import Utilities.Table
 
 type Context = AbsContext GenericType HOQuantifier

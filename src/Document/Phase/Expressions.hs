@@ -30,6 +30,7 @@ import UnitB.Syntax as AST hiding (invariant)
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
+import Control.Lens.Misc
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
@@ -54,9 +55,8 @@ import qualified Data.Traversable   as T
 import Test.QuickCheck hiding (label)
 
 import Text.Printf.TH
+import Text.Show.With
 
-import Utilities.Lens
-import Utilities.String
 import Utilities.Syntactic
 import Utilities.Table
 

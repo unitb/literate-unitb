@@ -23,6 +23,8 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Invariant
 import Control.Lens hiding (indices)
+import Control.Lens.HierarchyTH
+import Control.Lens.Misc
 import Control.Monad hiding ( guard )
 import Control.Monad.State
 import Control.Precondition
@@ -47,9 +49,7 @@ import GHC.Generics.Instances
 
 import Text.Printf.TH
 
-import Utilities.Lens
 import Utilities.Table
-import Utilities.TH
 
 all_types :: Theory -> Table Name Sort
 all_types th = unions (_types th : L.map all_types (elems $ _extends th)) 

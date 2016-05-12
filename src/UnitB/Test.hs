@@ -25,6 +25,7 @@ import Z3.Z3
     -- Libraries
 import Control.Monad
 import Control.Lens hiding (indices)
+import Control.Lens.Misc
 
 import           Data.List ( sort )
 import qualified Data.List.NonEmpty as NE
@@ -32,7 +33,6 @@ import           Data.Map.Class  as M hiding (map)
 
 import Test.UnitTest
 
-import Utilities.Lens
 import Utilities.Syntactic
 import Utilities.Table
 

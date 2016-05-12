@@ -11,13 +11,13 @@ import Logic.QuasiQuote
 
     -- Libraries
 import Control.Lens
+import Control.Lens.Misc
 
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Class as M hiding ( map )
 
 import Test.UnitTest
 
-import Utilities.Lens
 import Utilities.Table
 
 test_case :: TestCase

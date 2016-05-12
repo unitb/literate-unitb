@@ -10,6 +10,7 @@ import Logic.Operator
 import Control.Applicative hiding (Const)
 import Control.DeepSeq
 import Control.Lens hiding (Context,Const,elements)
+import Control.Lens.HierarchyTH
 import Control.Monad.RWS
 import Control.Precondition
 
@@ -33,7 +34,6 @@ import Test.QuickCheck hiding (label)
 import Text.Printf.TH
 
 import Utilities.Table
-import Utilities.TH
 
 type Sequent = AbsSequent GenericType HOQuantifier
 

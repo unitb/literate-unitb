@@ -40,6 +40,7 @@ import Control.Applicative
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import Control.Category
 import Control.DeepSeq
+import Control.Precondition ((!))
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 

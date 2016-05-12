@@ -49,68 +49,23 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:     
-          -- Utilities
-        Control.Arrow.Unfold
-        Control.CoApplicative
-        Control.Invariant
-        Control.Monad.Trans.Lens
-        Control.Precondition
-        Data.Compressed
+        -- Control.CoApplicative
         Data.DList.Utils
-        Data.Existential
-        Data.Factory
-        Data.Graph.Array
-        Data.Graph.Bipartite
-        Data.Map.Class
-        Data.Packaged
-        Data.PartialOrd
-        Data.String.Brackets
-        Data.String.Lines
-        Data.String.Indentation
-        Data.Tuple.Generics
-        Data.TypeList
-        Data.Unfoldable
-        Data.Relation
-        GHC.Generics.Instances
-        GHC.Generics.Utils
-        GHC.Stack.Utils
-        Reactive.Banana.Async
-        Reactive.Banana.Async2
-        Reactive.Banana.Combinators.Extras
-        Reactive.Banana.Discrete
-        Reactive.Banana.FileSystem
-        Reactive.Banana.IO
-        Reactive.Banana.Keyboard
-        Reactive.Banana.Monitor
-        Reactive.Banana.Property
-        Reactive.Banana.Test
-        Test.QuickCheck.AxiomaticClass
-        Test.QuickCheck.Report
-        Test.QuickCheck.RandomTree
-        Test.QuickCheck.Regression
-        Test.UnitTest
-        Text.Printf.TH  
         Utilities.Config
         Utilities.Directory
         Utilities.EditDistance
         Utilities.Error
         Utilities.FileFormat
-        Utilities.FileSystem
         Utilities.Functor
         Utilities.Graph
         Utilities.GraphSpec
         Utilities.Language
-        Utilities.Lens
         Utilities.MapSyntax
         Utilities.Reactive.Async
-        Utilities.String
         Utilities.Syntactic
         Utilities.Table
         Utilities.Table.BucketTable
         Utilities.Table.HashKey
-        Utilities.Table.HashMap
-        Utilities.TableConstr
-        Utilities.TH
         Utilities.TimeIt
         Utilities.Trace
         Utilities.Tuple
@@ -129,8 +84,8 @@ library
          -j8
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, cereal < 5, bytestring, containers, mtl, transformers-compat >= 0.5, transformers >=0.3, timeit, time, either, MissingH, filepath, process, old-locale, safe, template-haskell, data-default, SafeSemaphore, ConfigFile, QuickCheck, deepseq, data-ordlist, array, loop, portable-lines, semigroups, lens, assert, parsec, stm, parallel, ansi-terminal, zlib, monad-loops, shelly, pseudomacros, filelock, reactive-banana, map-syntax, async, witherable, text, hashable, unordered-containers, validation, tagged, semigroupoids, monoid-transformer, reflection, dlist, reducers, these, MonadRandom
-  
+  build-depends:       array, async, base >=4.8 && < 5, bytestring, cereal < 5, containers, data-default, data-map-class, data-ordlist, deepseq, directory >= 1.2.3.0 && < 1.2.6.0, dlist, either, filepath, generic-instances, hashable, invariants, lens, mtl, parsec, printf-th, process, QuickCheck, reactive-banana, safe, semigroups, string-lenses, template-haskell, time, transformers >=0.3, zlib
+
   -- Directories containing source files.
   hs-source-dirs:      .
   

@@ -15,6 +15,7 @@ import Control.DeepSeq
 import Control.Lens hiding (Context)
 import Control.Monad
 import Control.Parallel.Strategies
+import Control.Precondition
 import Control.Monad.State
 
 import Data.ByteString.Builder
@@ -23,10 +24,9 @@ import           Data.Either.Combinators
 import           Data.Either.Validation
 import           Data.Map.Class as M 
         ( insert 
-        , (!), fromList, toList
+        , fromList, toList
         , empty, mapKeys )
 import qualified Data.Map.Class as M 
-import           Data.Maybe
 import           Data.Serialize as Ser ( Serialize(..), encodeLazy, decodeLazy ) 
 import           Data.Serialize.Put 
 import           Data.Tuple

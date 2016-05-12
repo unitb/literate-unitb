@@ -38,6 +38,7 @@ import UnitB.UnitB
     --
 import Control.Arrow
 import Control.Lens hiding ((<.>))
+import Control.Lens.Misc
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
@@ -52,7 +53,6 @@ import Data.Maybe
 
 import Test.QuickCheck
 
-import Utilities.Lens
 import Utilities.MapSyntax
 import Utilities.Syntactic
 import Utilities.Table

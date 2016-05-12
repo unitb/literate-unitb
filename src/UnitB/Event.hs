@@ -13,6 +13,8 @@ import UnitB.Property
     -- Libraries
 import Control.DeepSeq
 import Control.Lens hiding (indices)
+import Control.Lens.HierarchyTH
+import Control.Lens.Misc
 
 import Data.Default
 import Data.Foldable as F
@@ -32,9 +34,7 @@ import Test.QuickCheck hiding (label)
 
 import Text.Printf
 
-import Utilities.Lens
 import Utilities.Table
-import Utilities.TH
 
 type Action = Action' Expr
 type RawAction = Action' RawExpr

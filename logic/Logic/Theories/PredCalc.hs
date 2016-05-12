@@ -9,12 +9,11 @@ import Logic.Theory
 
     -- Libraries
 import Control.Lens
+import Control.Lens.Misc
 
 import qualified Data.Map.Class as M
 
 import Prelude hiding ( pred )
-
-import Utilities.Lens
 
 everywhere_fun :: Fun
 everywhere_fun = mk_fun [gA] [smt|ew|] [pred_type gA] bool

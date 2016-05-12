@@ -50,6 +50,7 @@ import Data.Functor
 
 -- import System.FilePath.Lens
 
+import Reactive.Banana.Property as Prop
 import Reactive.Banana.Test as RB
 import System.Process
 -- import System.Timeout
@@ -151,5 +152,6 @@ main = timeIt $ void $ do
     return $ run_test_cases Parser.test_case
     return $ run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
-    run_test_cases RB.test_case
+    return $ run_test_cases RB.test_case
+    print =<< Prop.run_tests
     return ()
