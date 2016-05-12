@@ -36,9 +36,9 @@ import PseudoMacros
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
+import System.IO.FileFormat
 import System.Timeout
 
-import Utilities.FileFormat
 import qualified Utilities.Table as M
 import Utilities.Syntactic
 import Utilities.TimeIt

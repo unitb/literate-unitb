@@ -1,6 +1,6 @@
 module Reactive.Banana.Test where
 
-import Reactive.Banana.Async2 as Async
+import Reactive.Banana.Async as Async
 import Reactive.Banana.FileSystem as FS
 import Reactive.Banana.Keyboard as KB ()
 import Reactive.Banana.Property as Prop

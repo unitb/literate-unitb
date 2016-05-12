@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified Reactive as R
+import qualified Reactive as R ()
 import Document.Document as Doc ( syntaxSummary )
 import Document.Phase.Expressions as PExp
 import Document.MachineSpec as MSpec
@@ -75,7 +75,7 @@ main = timeIt $ void $ do
     system "rm log*.z3"
     writeFile "syntax.txt" $ unlines syntaxSummary
     putStrLn $ nameType
-    return R.main
+    -- return R.main
     -- let 
     --     path   = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque.tex"
     --     state' = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-seq.tex.state"

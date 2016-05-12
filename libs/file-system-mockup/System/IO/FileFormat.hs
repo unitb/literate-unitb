@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module Utilities.FileFormat where
+module System.IO.FileFormat where
 
 import Codec.Compression.Zlib
 import Control.Exception

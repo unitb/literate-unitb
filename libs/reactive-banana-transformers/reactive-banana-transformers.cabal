@@ -49,7 +49,6 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:    Reactive.Banana.Async
-                      Reactive.Banana.Async2
                       Reactive.Banana.Combinators.Extras
                       Reactive.Banana.Discrete
                       Reactive.Banana.FileSystem

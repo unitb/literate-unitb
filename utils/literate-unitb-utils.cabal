@@ -49,19 +49,16 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:     
-        -- Control.CoApplicative
         Data.DList.Utils
         Utilities.Config
         Utilities.Directory
         Utilities.EditDistance
         Utilities.Error
-        Utilities.FileFormat
         Utilities.Functor
         Utilities.Graph
         Utilities.GraphSpec
         Utilities.Language
         Utilities.MapSyntax
-        Utilities.Reactive.Async
         Utilities.Syntactic
         Utilities.Table
         Utilities.Table.BucketTable
