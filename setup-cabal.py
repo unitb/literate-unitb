@@ -18,7 +18,8 @@ def main():
             if any(file.endswith(".cabal") for file in get_files(subdir)):
                 print_run(["cabal", "sandbox", "add-source", subdir])
                 cwd = os.getcwd()
-                cd_run(subdir, lambda: print_run(["cabal", "sandbox", "init", "--sandbox=" + cwd]))
+                cd_run(subdir, lambda: print_run(["cabal", "sandbox", "init", \
+                    "".join(["--sandbox=", cwd, os.path.sep, ".cabal-sandbox"])]))
 
 def cd_run(path, fun):
     """cd into the given path, run the function and cd back."""
