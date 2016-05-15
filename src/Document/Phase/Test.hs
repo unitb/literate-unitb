@@ -417,7 +417,7 @@ result4 :: Either [Error] SystemP3
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
-        (x,x',xvar)  = prog_var "x" int
+        xvar = Var [tex|x|] int
         decl n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             decl "x" int
@@ -460,7 +460,7 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , make' EWitness "x" (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+                                             , make' EWitness "x" (WitEq xvar $ c' [expr|x - 1|]) ]
             | otherwise = []
 
 name5 :: TestName
@@ -585,7 +585,7 @@ result8 :: Either [Error] (SystemP Machine)
 result8 = Right $ SystemP h $ fromSyntax <$> ms
     where
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
-        (x,x',xvar) = prog_var "x" int
+        xvar = Var [tex|x|] int
         ms = M.fromList [("m0",m0),("m1",m1)]
         s0 = z3Sort "S0" "S0" 0
         s1 = z3Sort "\\S1" "sl@S1" 0
@@ -662,8 +662,8 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
             params .= symbol_table [z3Var "p" bool]
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            witness .= symbol_table' fst
-                [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+            witness .= symbol_table' witVar
+                [ (WitEq xvar $ c' [expr| x - 1 |]) ]
             actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])]
             abs_actions .= M.fromList
@@ -685,14 +685,14 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Right "ae0") ae0sched
+            ae0  <- newLeftVertex (Right "ae0") ae0sched
             ae1a <- newLeftVertex (Right "ae1a") (def & old .~ ae1aEvt)
             ae1b <- newLeftVertex (Right "ae1b") (def & old .~ ae1bEvt)
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             ce0a <- newRightVertex (Right "ce0a") (def & new .~ ce0aEvt)
             ce0b <- newRightVertex (Right "ce0b") (def & new .~ ce0bEvt)
-            ce1 <- newRightVertex (Right "ce1") ce1Evt
-            ce2 <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
+            ce1  <- newRightVertex (Right "ce1") ce1Evt
+            ce2  <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
             cskip <- newRightVertex skipLbl (def & new .~ skipEvt)
             newEdge ae0 ce0a
             newEdge ae0 ce0b

@@ -5297,14 +5297,14 @@ result20 = unlines
 case20 :: IO POResult
 case20 = verify path20 0
 
-result21 :: Either [Error] (Table Name (Var, RawExpr))
-result21 = Right $ symbol_table' fst [(b,getExpr $ c [expr| b = ch |])]
+result21 :: Either [Error] (Table Name Witness)
+result21 = Right $ symbol_table' witVar [(WitSuch b $ c [expr| b = ch |])]
     where
         b = z3Var "b" bool
         c = ctx $ do
             [var| b,ch : \Bool |]
 
-case21 :: IO (Either [Error] (Table Name (Var, RawExpr)))
+case21 :: IO (Either [Error] (Table Name Witness))
 case21 = runEitherT $ do
     m <- parse_machine' path20 1
     view ind_witness <$> S.lookup "handle" (m!.events.to leftMap)

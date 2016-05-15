@@ -767,7 +767,7 @@ instance IsEvtExpr IndexWitness where
     defaultEvtWitness _ _ = return []
     toMchScopeExpr _ _ = return []
     toEvtScopeExpr Old evt _ w
-        | w^.declSource == Local = return [Right (evt,[EIndWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EIndWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr New _ _ _ = return []
@@ -777,28 +777,28 @@ instance IsEvtExpr IndexWitness where
 instance PrettyPrintable IndexWitness where
     pretty = kind
 
-instance IsEvtExpr Witness where
+instance IsEvtExpr ES.Witness where
     defaultEvtWitness _ _ = return []
     toMchScopeExpr _ w   
-        | w^.declSource == Local = return [Right $ PInitWitness (v^.name) (v, w^.evtExpr)]
+        | w^.declSource == Local = return [Right $ PInitWitness (v^.name) (WitSuch v $ w^.evtExpr)]
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr Old _ _ _ = return []
     toEvtScopeExpr New evt _ w
-        | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
         | otherwise              = return []
         where v = w^.ES.var
     setSource _ x = x
     inheritedFrom _ = []
 
-instance PrettyPrintable Witness where
+instance PrettyPrintable ES.Witness where
     pretty = kind
 
 instance IsEvtExpr ActionDecl where
     defaultEvtWitness ev scope = case (scope^.inhStatus, scope^.declSource) of 
         (InhDelete (Just (_,act)),Local) -> do
             vs <- view pDelVars
-            return [Right $ (ev,[EWitness (v^.name) (v, ba_pred act) 
+            return [Right $ (ev,[EWitness (v^.name) (witnessOf v act) 
                                          | v <- M.ascElems $ frame' act `M.intersection` vs ])]
         _ -> return []
     toMchScopeExpr _ _  = return []
@@ -895,7 +895,7 @@ defaultInitWitness :: MachineP2 -> [MachineP3'Field a b c] -> [MachineP3'Field a
 defaultInitWitness p2 xs = concatMap f xs ++ xs
     where
         vs = p2^.pDelVars
-        f (PDelInits _lbl expr) = [PInitWitness (v^.name) (v, expr)
+        f (PDelInits _lbl expr) = [PInitWitness (v^.name) (WitSuch v expr)
                                     | v <- M.ascElems $ used_var' expr `M.intersection` vs ]
         f _ = []
 

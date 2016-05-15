@@ -79,7 +79,7 @@ data MachineP3' ae ce thy = MachineP3
     , _pSafety    :: Table Label SafetyProp
     , _pTransient :: Table Label Transient
     , _pInvariant   :: Table Label Expr                     -- Invariants
-    , _pInitWitness :: Table Name (Var,Expr)
+    , _pInitWitness :: Table Name Witness
     , _pDelInits    :: Table Label Expr
     , _pInit        :: Table Label Expr
     , _pOldPropSet  :: PropertySet
@@ -135,8 +135,8 @@ data EventP3 = EventP3
     , _eFineSched   :: Table Label Expr
     , _eGuards   :: Table Label Expr       
     , _eActions  :: Table Label Action
-    , _eWitness     :: Table Name (Var,RawExpr)
-    , _eIndWitness  :: Table Name (Var,RawExpr)
+    , _eWitness     :: Table Name Witness
+    , _eIndWitness  :: Table Name Witness
     } deriving (Show,Typeable,Generic,Eq)
 
 data EventP4 = EventP4 

@@ -219,6 +219,7 @@ class (IsGenExpr (ExprT expr),Typeable expr) => HasGenExpr expr where
     asExpr :: expr -> ExprT expr
     ztrue :: expr
     zfalse :: expr
+    zword :: VarT (ExprT expr) -> expr
 
 instance ( IsName n
          , TypeSystem a
@@ -252,6 +253,7 @@ instance ( IsName n
     asExpr = id
     ztrue  = FunApp true_fun []
     zfalse = FunApp false_fun []
+    zword  = Word
 
 class ( IsGenExpr expr, AnnotT expr ~ TypeT expr )
     => IsAbsExpr expr where

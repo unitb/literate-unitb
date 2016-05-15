@@ -10,7 +10,7 @@ import Document.Scope
 import Document.Phase.Types
 
 import UnitB.Expr hiding (Const)
-import UnitB.Syntax 
+import UnitB.Syntax hiding (Witness)
 
     -- Libraries
 import Control.Lens

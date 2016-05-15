@@ -286,7 +286,7 @@ init_sim_po m =
             prefix_label "SIM"
             _context (assert_ctx m)
             named_hyps $ m!.inits
-            named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
+            named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
         (forM_ (M.toList $ m!.del_inits) $ \(lbl,p) -> do
             emit_goal [lbl] p)
 
@@ -296,7 +296,7 @@ init_wit_wd_po m =
         (do _context (assert_ctx m)
             named_hyps $ m!.inits)
         (emit_goal ["INIT/WWD"] 
-            (well_definedness $ zall $ getExpr.snd <$> m!.init_witness))
+            (well_definedness $ zall $ witnessDef <$> m!.init_witness))
 
 init_witness_fis_po :: RawMachineAST -> M ()
 init_witness_fis_po m =
@@ -305,7 +305,7 @@ init_witness_fis_po m =
             named_hyps $ m!.inits)
         (emit_exist_goal ["INIT/WFIS"] 
             (M.ascElems $ (view' abs_vars m)  `M.difference` (view' variables m))
-            (M.ascElems $ snd <$> m!.init_witness))
+            (M.ascElems $ witnessDef <$> m!.init_witness))
 
 init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
@@ -510,7 +510,7 @@ inv_po m (pname, xp) =
                         (primed (view' variables m `M.union` view' abs_vars m) xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
-                 named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
+                 named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
             $ emit_goal [inv_init_lbl, pname] xp
 
 wit_wd_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
@@ -523,7 +523,7 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ snd <$> evt^.witness)
+                $ M.ascElems $ witnessDef <$> evt^.witness)
 
 wit_fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
@@ -536,7 +536,7 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_exist_goal ["WFIS"] pvar 
-                $ M.ascElems $ snd <$> evt^.witness)
+                $ M.ascElems $ witnessDef <$> evt^.witness)
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
@@ -550,7 +550,7 @@ ind_wit_wd_po m (lbl, evts) =
             forM_ (evts^.evt_pairs) $ \evt -> do
                 with (POG.variables $ evt^.new.indices) $
                     emit_goal ["IWWD",evt^.concrete._1.to as_label] $ well_definedness $ zall 
-                        $ M.ascElems $ snd <$> evt^.ind_witness
+                        $ M.ascElems $ witnessDef <$> evt^.ind_witness
 
 ind_wit_fis_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_fis_po m (lbl, evts) = 
@@ -564,7 +564,7 @@ ind_wit_fis_po m (lbl, evts) =
             forM_ (evts^.evt_pairs) $ \evt -> do
                 let pvar = evt^.added.indices
                 emit_exist_goal ["IWFIS"] (M.ascElems pvar)
-                    $ M.ascElems $ snd <$> ((evt^.ind_witness) `M.intersection` pvar)
+                    $ M.ascElems $ witnessDef <$> ((evt^.ind_witness) `M.intersection` pvar)
 
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
 removeSkip = rights.fmap (view distrLeft).NE.toList
@@ -626,7 +626,7 @@ replace_csched_po m (lbl,evt') = do
                 with (do
                         POG.variables $ symbol_table vs
                         named_hyps old_c
-                        named_hyps $ M.mapKeys as_label $ snd <$> evt'^.ind_witness
+                        named_hyps $ M.mapKeys as_label $ witnessDef <$> evt'^.ind_witness
                         named_hyps old_f) $ 
                     emit_goal ["prog",plbl,"lhs"] p0
                 with (do
@@ -661,7 +661,7 @@ weaken_csched_po m (lbl,evt) = do
                     T.forM (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
-                    named_hyps $ M.mapKeys as_label $ snd <$> evt^.ind_witness
+                    named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.ind_witness
                         -- | old version admits old_f as assumption
                         -- | why is it correct or needed?
                         -- | named_hyps old_f

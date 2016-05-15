@@ -73,7 +73,7 @@ data MachineBase expr =
         , _variables  :: Table Name Var
         , _machineBaseAbs_vars :: Table Name Var
         , _del_vars   :: Table Name Var
-        , _init_witness :: Table Name (Var,expr)
+        , _init_witness :: Table Name (Witness' expr)
         , _del_inits  :: Table Label expr
         , _inits      :: Table Label expr
         , _event_table :: EventTable expr
@@ -210,11 +210,11 @@ instance HasExpr expr => HasScope (MachineBase expr) where
             , withPrefix "witnesses (var)" 
                 $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
                 $ areVisible [constants] 
-                        (M.elems $ fst <$> m^.init_witness) 
-                        (M.elems $ fst <$> m^.init_witness)
+                        (M.elems $ witVar <$> m^.init_witness) 
+                        (M.elems $ witVar <$> m^.init_witness)
             , withPrefix "witnesses (expr)" 
                 $ withVars ((m^.variables) `M.union` (m^.abs_vars))
-                $ foldMapWithKey scopeCorrect'' $ snd <$> m^.init_witness
+                $ foldMapWithKey scopeCorrect'' $ m^.init_witness
             , withPrefix "abstract events"
                 $ withVars' vars (m^.abs_vars)
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
@@ -281,11 +281,13 @@ new_event_set vs es = EventTable $ fromJust' $ makeGraph $ do
             newEdge skip v
         newEdge skip =<< newRightVertex (Left SkipEvent) def
 
-makeWitness :: Table Name Var 
-            -> Event' expr -> Table Name (Var,RawExpr)
+makeWitness :: HasExpr expr
+            => Table Name Var 
+            -> Event' expr -> Table Name (Witness' expr)
 makeWitness vs = view $ actions.to frame.to f -- .to (traverse._2.namesOf %~ asInternal)
     where 
-        f m = M.fromList $ L.map (view name &&& (id &&& Word)) $ M.elems $ m `M.difference` vs
+        wit v = WitEq v $ zword v
+        f m = M.fromList $ L.map (view name &&& wit) $ M.elems $ m `M.difference` vs
 
 nonSkipUpwards :: HasMachine machine expr
                => machine -> Map EventId (EventMerging expr)
@@ -427,7 +429,7 @@ ba_predicate :: (HasConcrEvent' event RawExpr,Show expr)
              -> event -> Table Label RawExpr
 ba_predicate m evt =          ba_predicate' (m!.variables) (evt^.new.actions :: Table Label RawAction)
                     --`M.union` ba_predicate' (m^.del_vars) (evt^.abs_actions)
-                    `M.union` M.mapKeys (label.render) (convertMap $ snd <$> evt^.witness)
+                    `M.union` M.mapKeys (label.render) (convertMap $ witnessDef <$> evt^.witness)
                     `M.union` M.mapKeys (skipLbl.render) (convertMap $ M.map eqPrime noWitness)
     where
         skipLbl :: String -> Label

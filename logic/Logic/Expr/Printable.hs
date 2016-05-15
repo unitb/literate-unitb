@@ -19,8 +19,9 @@ instance HasExpr DispExpr where
 instance HasGenExpr DispExpr where
     type ExprT DispExpr  = Expr
     asExpr (DispExpr _ e) = e
-    ztrue  = DispExpr "\\true" ztrue
-    zfalse = DispExpr "\\false" zfalse
+    ztrue   = DispExpr "\\true" ztrue
+    zfalse  = DispExpr "\\false" zfalse
+    zword v = DispExpr (pretty v) (Word v)
 
 data DispExpr = DispExpr String Expr
     deriving (Generic,Typeable)
