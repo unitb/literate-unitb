@@ -62,6 +62,7 @@ import Utilities.TimeIt
 -- import Utilities.Table
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.Report
 
 -- import Text.Printf
 
@@ -113,7 +114,7 @@ main = timeIt $ void $ do
 
     -- print =<< find_errors TSRef.path3
     return $ edit =<< raw_proof_obligation Deq.path1 "m0/INIT/FIS/q/p" 0
-    return $ print =<< MSpec.run_spec
+    return $ printQuickCheckResult MSpec.run_spec
     return $ quickCheck MSpec.prop_expr_parser
     return $ run_test_cases Deq.test_case
     -- timeIt $ do
@@ -128,7 +129,7 @@ main = timeIt $ void $ do
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case
     return $ print =<< run_test_cases Doc.check_axioms
-    return $ print =<< PExp.check_props
+    return $ printQuickCheckResult PExp.check_props
     return $ run_test_cases SM.test_case
 -- ******
     return $ run_test_cases Lam.test_case
@@ -137,7 +138,7 @@ main = timeIt $ void $ do
     return $ run_test_cases Sync.test_case
     return $ run_test_cases Puzz.test_case
     return $ quickCheck MSpec.prop_expr_parser
-    return $ print =<< MSpec.run_spec
+    return $ printQuickCheckResult MSpec.run_spec
     return $ print =<< run_test_cases check_axioms
     return $ run_test_cases Gen.test_case
     -- timeout (60 * 1000000) $ do
@@ -153,5 +154,5 @@ main = timeIt $ void $ do
     return $ run_test_cases Z3.test_case
     return $ run_test_cases Doc.test_case
     return $ run_test_cases RB.test_case
-    print =<< Prop.run_tests
+    return $ printQuickCheckResult Prop.run_tests
     return ()

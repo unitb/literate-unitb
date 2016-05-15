@@ -23,7 +23,7 @@ import Prelude hiding (null)
 
 import Test.QuickCheck
 import Test.QuickCheck.Function
-
+import Test.QuickCheck.Report
 
 infixr 6 <|
 infixr 6 <<|
@@ -358,7 +358,8 @@ prop_bimapMaybe_def (Fun _ f) (Fun _ g) r =
 
 return []
 
-run_spec :: IO Bool
-run_spec = $quickCheckAll
+run_spec :: (PropName -> Property -> IO (a, Result))
+         -> IO ([a], Bool)
+run_spec = $forAllProperties'
 
 instance (NFData a,NFData b) => NFData (Relation a b)

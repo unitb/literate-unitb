@@ -17,7 +17,7 @@ import Text.Printf
 
 import Test.QuickCheck hiding (sized)
 import qualified Test.QuickCheck as QC
-import Test.QuickCheck.Report
+import Test.QuickCheck.Report as QC
 
 data Tree a = Tree a [Tree a]
     deriving Eq
@@ -280,14 +280,6 @@ instance Arbitrary a => Arbitrary (Tree a) where
                 return $ Tree x ts
 
 return []
-run_tests :: IO Bool
-run_tests = test_report ($forAllProperties)
-
-main' :: IO ()
-main' = do
-    run_tests
-    -- t <- last `liftM` sample' arbitrary
-    -- print (t :: Tree Int)
-    putStrLn "hello world"
-    -- run_tests
-    return ()
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

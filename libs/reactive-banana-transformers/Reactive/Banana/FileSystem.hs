@@ -33,6 +33,7 @@ import Reactive.Banana.Property hiding (run_tests)
 import System.IO.FileSystem
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 type FSMoment = FSMomentT MomentIO
 
@@ -193,5 +194,6 @@ prop_file_io c = satisfiesWith' showInput showOutput prog' prop (fs,())
 
 return []
 
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

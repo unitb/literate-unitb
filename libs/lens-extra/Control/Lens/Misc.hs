@@ -50,3 +50,6 @@ traverseValidation f = validationToEither . traverse (eitherToValidation . f)
 
 unzipped :: Iso [(a,b)] [(c,d)] ([a],[b]) ([c],[d])
 unzipped = iso unzip (uncurry zip)
+
+zipped :: Iso ([a],[b]) ([c],[d]) [(a,b)] [(c,d)]
+zipped = from unzipped

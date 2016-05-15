@@ -69,7 +69,7 @@ args opt file = do
                                   ,"libs/lens-extra"
                                   ]
         , "-hidir" ++ inf
-        , "-W"
+        , "-W", "-O0"
         , "-XTupleSections"
         , "-XDeriveFunctor"
         , "-XDeriveGeneric"

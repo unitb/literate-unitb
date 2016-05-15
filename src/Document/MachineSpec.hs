@@ -28,6 +28,7 @@ import qualified Data.Set as S
 
 import Test.QuickCheck hiding (label, sized, elements)
 import Test.QuickCheck.RandomTree
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
 
@@ -340,10 +341,9 @@ choose_expr b t = do
         Nothing -> fail ""
 
 return []
-run_spec :: IO Bool
-run_spec = -- test_report $forAllProperties 
-           -- $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
-           $quickCheckAll
+run_spec :: (PropName -> Property -> IO (a, Result))
+         -> IO ([a], Bool)
+run_spec = $forAllProperties'
 
 show_list :: Show a => [a] -> String
 show_list xs = [printf|[%s]|] $ L.intercalate "\n," $ surround " " " " ys

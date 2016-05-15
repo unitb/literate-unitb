@@ -16,7 +16,7 @@ import qualified Data.Maybe as My
 import qualified Data.List as L
 import Data.Map.Class
 import Data.Semigroup
-import Data.Serialize
+import Data.Serialize hiding (Result)
 import qualified Data.Set as S
 
 import GHC.Generics.Instances
@@ -26,14 +26,8 @@ import Prelude hiding (lookup,null,map,filter)
 
 import Test.QuickCheck hiding (shrinkList)
 import Test.QuickCheck.Function
+import Test.QuickCheck.Report
 
---data Table a b = Table (UArray Int Int) (Array Int (Map a b))
---type Table = M.Map
-    --Table { _table :: Map a b }
-    --deriving (Eq,Ord,Generic,Functor,Foldable,Traversable,Default,Monoid)
-
---type Bucket = OrderedBucket
---type Bucket = UnorderedBucket
 type Bucket = M.Map
 
 newtype HashTable a b = HashTable { _hashTable :: M.Map Int (Bucket a b) }
@@ -226,5 +220,6 @@ instance (Hashable k,Ord k) => Semigroup (Intersection (HashTable k a)) where
 
 return []
 
-run_spec :: IO Bool
-run_spec = $quickCheckAll
+run_spec :: (PropName -> Property -> IO (a,Result)) 
+         -> IO ([a],Bool)
+run_spec = $forAllProperties'

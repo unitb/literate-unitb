@@ -21,6 +21,7 @@ import Test.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 import Test.QuickCheck.RandomTree hiding (size,subtrees)
 import Test.QuickCheck.Regression
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
 import Text.Show.With
@@ -269,12 +270,13 @@ counter1' = fromRight' $ scan_latex "foo.txt" (concatMap lexeme $ map fst counte
 
 return []
 
-properties :: IO Bool
-properties = $quickCheckAll
+properties :: (PropName -> Property -> IO (a, Result))
+           -> IO ([a], Bool)
+properties = $forAllProperties'
 
 cases :: TestCase
 cases = test_cases "latex parser" [
-    (Case "quickcheck" properties True),
+    (QuickCheckProps "quickcheck" properties),
     (Case "sample.tex" (main path2) result2),
     (Case "sorted seq err.tex" (main path3) result3),
     (CalcCase "reconstitute sample.tex" 

@@ -1,6 +1,9 @@
 {-# LANGUAGE ExistentialQuantification, ImplicitParams #-} 
 module Test.UnitTest 
-    ( TestCase(..), run_test_cases, test_cases 
+    ( TestCase(..)
+    , run_quickCheck_suite
+    , run_quickCheck_suite_with
+    , run_test_cases, test_cases 
     , tempFile, takeLeaves, leafCount
     , selectLeaf, dropLeaves, leaves
     , makeTestSuite, makeTestSuiteOnly
@@ -16,12 +19,15 @@ where
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.SSem
+import Control.Concurrent.STM
 import Control.Exception
 import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Loops
 import Control.Monad.Reader
 import Control.Monad.RWS
+import Control.Monad.State
+import Control.Monad.Trans.Maybe
 import Control.Precondition
 
 import           Data.Either
@@ -41,10 +47,12 @@ import Language.Haskell.TH
 import Prelude
 import PseudoMacros
 
-
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
+
+import Test.QuickCheck
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
 
@@ -55,10 +63,11 @@ data TestCase =
     | LineSetCase String (IO String) String
     | Suite CallStack String [TestCase]
     | WithLineInfo CallStack TestCase
+    | QuickCheckProps String (forall a. (PropName -> Property -> IO (a,Result)) -> IO ([a],Bool))
     | forall test. IsTestCase test => Other test
 
 class IsTestCase c where
-    makeCase :: Maybe CallStack -> c -> IO UnitTest
+    makeCase :: Maybe CallStack -> c -> ReaderT Args IO UnitTest
     nameOf :: Lens' c String
 
 instance IsTestCase TestCase where
@@ -69,41 +78,59 @@ instance IsTestCase TestCase where
                         , routine = (,logNothing) <$> y
                         , outcome = z
                         , _mcallStack = cs
-                        , _display = disp
+                        , _displayA = disp
+                        , _displayE = disp
+                        , _criterion = id
                         }
     makeCase cs (CalcCase x y z) = do 
-            r <- z
+            r <- lift z
             return UT
                 { name = x
                 , routine  = (,logNothing) <$> y
                 , outcome  = r
                 , _mcallStack = cs
-                , _display = disp
+                , _displayA = disp
+                , _displayE = disp
+                , _criterion = id
                 }
     makeCase cs (StringCase x y z) = return UT 
                             { name = x
                             , routine = (,logNothing) <$> y
                             , outcome = z
                             , _mcallStack = cs
-                            , _display = id
+                            , _displayA = id
+                            , _displayE = id
+                            , _criterion = id
                             }
     makeCase cs (LineSetCase x y z) = makeCase cs $ StringCase x 
                                 ((asLines %~ NE.sort) <$> y) 
                                 (z & asLines %~ NE.sort)
+    makeCase cs (QuickCheckProps n prop) = do
+            args <- ask
+            return UT
+                            { name = n
+                            , routine = (,logNothing) <$> prop (quickCheckWithResult' args)
+                            , outcome = True
+                            , _mcallStack = cs
+                            , _displayA = intercalate "\n" . fst
+                            , _displayE = const ""
+                            , _criterion = snd
+                            }
     makeCase cs (Other c) = makeCase cs c
     nameOf f (WithLineInfo x0 c) = WithLineInfo x0 <$> nameOf f c
     nameOf f (Suite x0 n x1) = (\n' -> Suite x0 n' x1) <$> f n
     nameOf f (Case n x0 x1) = (\n' -> Case n' x0 x1) <$> f n
+    nameOf f (QuickCheckProps n prop) = (\n' -> QuickCheckProps n' prop) <$> f n
     nameOf f (Other c) = Other <$> nameOf f c
     nameOf f (CalcCase n x0 x1) = (\n' -> CalcCase n' x0 x1) <$> f n
     nameOf f (StringCase n x0 x1) = (\n' -> StringCase n' x0 x1) <$> f n
     nameOf f (LineSetCase n x0 x1) = (\n' -> LineSetCase n' x0 x1) <$> f n
 
-newtype M a = M { runM :: RWST Int [Either (MVar [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
+newtype M a = M { runM :: RWST Int [Either (STM [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
     deriving ( Monad,Functor,Applicative,MonadIO
              , MonadReader Int
              , MonadState Int
-             , MonadWriter [Either (MVar [String]) String])
+             , MonadWriter [Either (STM [String]) String])
 
 instance Indentation Int M where
     -- func = 
@@ -112,6 +139,15 @@ instance Indentation Int M where
         return $ concat $ replicate n "|  "
     _margin _ = id
             
+onlyQuickCheck :: TestCase -> Maybe TestCase
+onlyQuickCheck (Suite cs n ts) = Suite cs n <$> nonEmpty (mapMaybe onlyQuickCheck ts)
+    where
+        nonEmpty [] = Nothing
+        nonEmpty xs@(_:_) = Just xs
+onlyQuickCheck (WithLineInfo cs t) = WithLineInfo cs <$> onlyQuickCheck t
+onlyQuickCheck p@(QuickCheckProps _ _) = Just p
+onlyQuickCheck _ = Nothing
+
 log_failures :: MVar Bool
 log_failures = unsafePerformIO $ newMVar True
 
@@ -153,12 +189,14 @@ logNothing = const $ const $ const $ const $ return ()
 
 type PrintLog = CallStack -> String -> String -> String -> M ()
 
-data UnitTest = forall a. Eq a => UT 
+data UnitTest = forall a b. Eq a => UT 
     { name :: String
-    , routine :: IO (a, PrintLog)
+    , routine :: IO (b, PrintLog)
     , outcome :: a
     , _mcallStack :: Maybe CallStack
-    , _display :: a -> String
+    , _displayA :: b -> String
+    , _displayE :: a -> String
+    , _criterion :: b -> a
     -- , _source :: FilePath
     }
     | Node { _callStack :: CallStack, name :: String, _children :: [UnitTest] }
@@ -168,34 +206,50 @@ data UnitTest = forall a. Eq a => UT
 --     where
 --         f xs = takeWhile (/= '(') xs
 
+run_quickCheck_suite :: Pre => TestCase -> IO Bool
+run_quickCheck_suite t = run_quickCheck_suite_with t $ return ()
+
+run_quickCheck_suite_with :: Pre => TestCase -> State Args k -> IO Bool
+run_quickCheck_suite_with t = maybe noProps run_test_cases_with (onlyQuickCheck t)
+    where
+        noProps _ = putStrLn "No QuickCheckProps" >> return True
+
 run_test_cases :: (Pre,IsTestCase testCase) 
                => testCase -> IO Bool
-run_test_cases xs = do
+run_test_cases xs = run_test_cases_with xs (return ())
+
+run_test_cases_with :: (Pre,IsTestCase testCase) 
+                    => testCase 
+                    -> State Args k
+                    -> IO Bool
+run_test_cases_with xs opts = do
+        let args = execState opts stdArgs
         swapMVar failure_number 0
-        c        <- makeCase Nothing xs 
+        c        <- runReaderT (makeCase Nothing xs) args
         ref      <- newIORef []
-        (b,_,w)  <- runReaderT (runRWST (runM $ test_suite_string ?loc c) 0 (assertFalse' "??")) ref
+        (b,_,w)  <- runReaderT (runRWST 
+                        (runM $ test_suite_string ?loc c) 0 
+                        (assertFalse' "??")) ref
         forM_ w $ \ln -> do
             case ln of
                 Right xs -> putStrLn xs
-                Left xs -> takeMVar xs >>= mapM_ putStrLn
-        x <- fmap (uncurry (==)) <$> takeMVar b
+                Left xs -> atomically xs >>= mapM_ putStrLn
+        x <- fmap (uncurry (==)) <$> atomically b
         either throw return x
-    where        
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
 
 test_suite_string :: CallStack
                   -> UnitTest 
-                  -> M (MVar (Either SomeException (Int,Int)))
+                  -> M (STM (Either SomeException (Int,Int)))
 test_suite_string cs' ut = do
         let putLn xs = do
                 ys <- mk_lines xs
                 -- lift $ putStr $ unlines ys
                 tell $ map Right ys
         case ut of
-          (UT x y z mli disp) -> forkTest $ do
+          (UT x y z mli dispA dispE cri) -> forkTest $ do
             let cs = fromMaybe cs' mli
             putLn ("+- " ++ x)
             r <- liftIO $ catch 
@@ -203,12 +257,12 @@ test_suite_string cs' ut = do
                 (\e -> return $ Left $ show (e :: SomeException))
             case r of
                 Right (r,printLog) -> 
-                    if (r == z)
+                    if (cri r == z)
                     then return (1,1)
                     else do
                         take_failure_number
-                        printLog cs x (disp r) (disp z)
-                        new_failure cs x (disp r) (disp z)
+                        printLog cs x (dispA r) (dispE z)
+                        new_failure cs x (dispA r) (dispE z)
                         putLn "*** FAILED ***"
                         forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
                         return (0,1) 
@@ -262,12 +316,12 @@ leafCount (Suite _ _ xs) = sum $ map leafCount xs
 leafCount _ = 1
 
 capabilities :: SSem
-capabilities = unsafePerformIO $ new 16
+capabilities = unsafePerformIO $ new 32
 
-forkTest :: M a -> M (MVar (Either SomeException a))
+forkTest :: M a -> M (STM (Either SomeException a))
 forkTest cmd = do
-    result <- liftIO $ newEmptyMVar
-    output <- liftIO $ newEmptyMVar
+    result <- liftIO $ newEmptyTMVarIO
+    output <- liftIO $ newEmptyTMVarIO
     r <- ask
     liftIO $ wait capabilities
     --tid <- liftIO myThreadId
@@ -279,26 +333,30 @@ forkTest cmd = do
                 mapM_ (`throwTo` e) ts
                 putStrLn "failed"
                 print e
-                putMVar result $ Left e
-                putMVar output $ [show e]
+                atomically $ do 
+                    putTMVar result $ Left e
+                    putTMVar output $ [show e]
         forkIO $ do
+        -- do
             finally (handle handler $ do
                 (x,_,w) <- runReaderT (runRWST (runM cmd) r (-1)) ref
-                putMVar result (Right x)
+                atomically $ putTMVar result (Right x)
                 xs <- forM w $ \ln -> do
                     either 
-                        takeMVar 
+                        atomically 
                         (return . (:[])) 
                         ln
-                putMVar output $ concat xs)
+                -- atomically $ putTMVar output $ concat xs ++ lines (unpack stdout) ++ lines (unpack stderr)
+                atomically $ putTMVar output $ concat xs
+                )
                 (signal capabilities)
     liftIO $ modifyIORef ref (t:)
-    tell [Left output]
-    return result
+    tell [Left $ readTMVar output]
+    return $ readTMVar result
 
-mergeAll :: [MVar a] -> M [a]
+mergeAll :: [STM a] -> M [a]
 mergeAll xs = liftIO $ do
-    forM xs takeMVar
+    forM xs atomically
 
 tempFile_num :: MVar Int
 tempFile_num = unsafePerformIO $ newMVar 0
@@ -318,6 +376,28 @@ tempFile path = do
 
 data TestName = TestName String CallStack
 
+data TestCaseGen = PropCaseGen Name Name | CaseGen Name Name Name
+
+caseGenName :: TestCaseGen -> Name
+caseGenName (PropCaseGen n _) = n
+caseGenName (CaseGen n _ _)   = n
+
+matchTestCase :: Int -> Q (Either Int TestCaseGen)
+matchTestCase n = fmap (maybe (Left n) Right) 
+            $ runMaybeT $ msum
+        [ liftA2 PropCaseGen (valueName namei) (valueName propi)
+        , CaseGen <$> valueName namei <*> valueName casei <*> valueName resulti ]
+    where
+        valueName = MaybeT . lookupValueName
+        namei = "name" ++ show n
+        casei = "case" ++ show n
+        resulti = "result" ++ show n
+        propi = "prop" ++ show n
+
+genTestCase :: TestCaseGen -> ExpQ
+genTestCase (CaseGen n c r) = [e| Case (fooNameOf $(varE n)) $(varE c) $(varE r) |]
+genTestCase (PropCaseGen n prop) = [e| QuickCheckProps (fooNameOf $(varE n)) $(varE prop) |]        
+
 testName :: Pre => String -> TestName
 testName str = TestName str ?loc
 
@@ -327,14 +407,10 @@ fooNameOf (TestName str _)   = str
 fooCallStack :: TestName -> CallStack
 fooCallStack (TestName _ cs) = cs
 
-makeTestSuiteOnly :: String -> [Int] -> ExpQ
+makeTestSuiteOnly :: String -> [TestCaseGen] -> ExpQ
 makeTestSuiteOnly title ts = do
-        let namei :: Int -> ExpQ
-            namei i = [e| fooNameOf $(varE $ mkName $ "name" ++ show i) |]
-            casei i = varE $ mkName $ "case" ++ show i
-            loci i = [e| fooCallStack $(varE $ mkName $ "name" ++ show i) |]
-            resulti i = varE $ mkName $ "result" ++ show (i :: Int)
-            cases = [ [e| WithLineInfo $(loci i) (Case $(namei i) $(casei i) $(resulti i)) |] | i <- ts ]
+        let loci i = [e| fooCallStack $(varE $ caseGenName i) |]
+            cases = [ [e| WithLineInfo $(loci i) $(genTestCase i) |] | i <- ts ]
             titleE = litE $ stringL title
         [e| test_cases $titleE $(listE cases) |]
 
@@ -342,21 +418,18 @@ makeTestSuite :: String -> ExpQ
 makeTestSuite title = do
     let names n' = [ "name" ++ n' 
                    , "case" ++ n' 
-                   , "result" ++ n' ]
+                   , "result" ++ n' 
+                   , "prop" ++ n' ]
+        f :: Int -> Q Bool
         f n = do
             let n' = show n
             any isJust <$> mapM lookupValueName (names n')
-        g n = do
-            let n' = show n
-            es <- filterM (fmap isNothing . lookupValueName) (names n')
-            if null es then return $ Right n
-                       else return $ Left es
     xs <- concat <$> sequence
         [ takeWhileM f [0..0]
         , takeWhileM f [1..] ]
-    (es,ts) <- partitionEithers <$> mapM g xs
+    (es,ts) <- partitionEithers <$> mapM matchTestCase xs
     if null es then do
         makeTestSuiteOnly title ts
     else do
-        mapM_ (reportError.[printf|missing test component: '%s'|]) (concat es)
+        mapM_ (reportError . [printf|missing component for test case # %d|]) es
         [e| undefined |]

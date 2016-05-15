@@ -16,6 +16,7 @@ import qualified Text.PortableLines as PL
 
 import Test.QuickCheck
 import Test.QuickCheck.Regression
+import Test.QuickCheck.Report
 
 neTail :: Lens' (NonEmpty a) [a]
 neTail f (x :| xs) = (x :|) <$> f xs
@@ -90,13 +91,18 @@ prop_prependIndent_prefix :: String -> String -> Bool
 prop_prependIndent_prefix xs ys = xs `L.isPrefixOf` prependIndent xs ys
 
 prop_prependIndent_suffix :: String -> String -> Property
-prop_prependIndent_suffix xs ys = zSuffix === ys
+prop_prependIndent_suffix xs' ys = zSuffix === ys
     where
         zSuffix = concat $ L.map (L.drop lastLen) $ NE.drop (length zLines - yLen) zLines
-        zs = prependIndent xs ys
+        xs = canonicalizeNewline xs'
+        zs  = prependIndent xs ys
         zLines = lines' zs
         lastLen = length $ NE.last $ lines' xs
         yLen = NE.length $ lines' ys
+
+prop_prependIndent_suffix_regression :: Property
+prop_prependIndent_suffix_regression = regression (uncurry prop_prependIndent_suffix)
+        [ ("\r","\n") ]
 
 prop_appendLines :: String -> String -> Property
 prop_appendLines xs ys = xs ++ ys === F.concat (lines' xs `appendLines` lines' ys)
@@ -179,5 +185,6 @@ instance Arbitrary Lines where
 
 return []
 
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

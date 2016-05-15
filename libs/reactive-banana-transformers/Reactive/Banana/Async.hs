@@ -47,6 +47,7 @@ import qualified Reactive.Banana.IO as R
 import Reactive.Banana.Property
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 data JobBatch' map a b = JobBatch 
               { _initJobs :: map (a,Either b (IO b))
@@ -618,22 +619,6 @@ t0 = [0]
 t2 :: [Maybe (Maybe (Maybe Int,Maybe ()), Maybe String, Maybe StdGen)]
 t2 = [Just (Just (Just 0,Nothing),Nothing,Nothing)]
 
--- test :: IO ()
--- test = quickCheck $ prop_check_interpret
-
--- test' :: IO ([Maybe (Maybe (Maybe Int, Maybe ()), Maybe String, Maybe StdGen)],
---              [Maybe String])
--- test' = prop_check_interpret t0 t2
-
--- testResult :: IO ()
--- testResult = do
---     (xs,ys) <- test'
---     let showLine x = ShowString $ maybe "Nothing" format x ++ "\n"
---         format   = asLines %~ (neTail.traverse %~ ("  " ++)).(_head %~ (' ':))
---     print (map ShowLine t2)
---     print (map ShowLine xs)
---     print (map showLine ys)
-
 newtype ShowLine a = ShowLine a
 
 instance Show a => Show (ShowLine a) where
@@ -705,5 +690,6 @@ prop_check_interpret xs = satisfies $ do
 
 return []
 
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

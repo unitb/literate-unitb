@@ -65,7 +65,7 @@ library
   default-extensions:    RankNTypes, ScopedTypeVariables, DeriveFunctor, QuasiQuotes, RankNTypes, DeriveFunctor, RankNTypes, TemplateHaskell, GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, DefaultSignatures, TupleSections, FunctionalDependencies
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, stm >=2.4 && <2.5, mtl >=2.2 && <2.3, transformers >=0.4 && <0.5, either >=4.4 && <4.5, semigroups >=0.18 && <0.19, lens >=4.13 && <4.14, reducers, safe, reactive-banana, printf-th, MissingH, QuickCheck, string-lenses, data-ordlist, invariants, generic-instances, these, tagged, time, containers, data-default, MonadRandom, monad-loops, async, transformer-lenses, typelist-functor, file-system-mockup, show-with, co-applicative, lens-extra, unitb-testing
+  build-depends:       base >=4.8 && <4.9, stm >=2.4 && <2.5, mtl >=2.2 && <2.3, transformers >=0.4 && <0.5, either >=4.4 && <4.5, semigroups >=0.18 && <0.19, lens >=4.13 && <4.14, reducers, safe, reactive-banana, printf-th, MissingH, QuickCheck, string-lenses, data-ordlist, invariants, generic-instances, these, tagged, time, containers, data-default, MonadRandom, monad-loops, async, transformer-lenses, typelist-functor, file-system-mockup, show-with, co-applicative, lens-extra, unitb-testing, axiomatic-classes
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

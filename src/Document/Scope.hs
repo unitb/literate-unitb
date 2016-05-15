@@ -93,7 +93,7 @@ class (Ord a,Show a) => Scope a where
     axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
     axiom_Scope_clashesOverMerge :: a -> a -> a -> Property
-    axiom_Scope_clashesOverMerge x y z = clash x y .||. ((x <+> y) `clash` z == (x `clash` z || y `clash` z))
+    axiom_Scope_clashesOverMerge x y z = clash x y .||. ((x <+> y) `clash` z === (x `clash` z || y `clash` z))
     axiom_Scope_mergeCommutative :: a -> a -> Property
     axiom_Scope_mergeCommutative x y = clash x y .||. x <+> y === y <+> x
     axiom_Scope_mergeAssociative :: a -> a -> a -> Property

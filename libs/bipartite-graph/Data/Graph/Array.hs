@@ -31,6 +31,7 @@ import qualified Data.Tuple as T
 
 import Test.QuickCheck hiding (frequency,elements)
 import qualified Test.QuickCheck as QC
+import Test.QuickCheck.Report as QC
 
 class AllZero a where
     zeros :: a
@@ -457,8 +458,9 @@ instance (Arbitrary a, Eq a) => Arbitrary (Graph a) where
 
 return []
 
-run_tests :: IO Bool
-run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+run_tests :: (PropName -> Property -> IO (a, QC.Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'
 
     -- TODO:
     -- Mutable linked lists in top_sort 

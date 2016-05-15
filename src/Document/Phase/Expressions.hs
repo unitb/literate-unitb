@@ -53,6 +53,7 @@ import           Data.Semigroup
 import qualified Data.Traversable   as T
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
 import Text.Show.With
@@ -901,8 +902,9 @@ defaultInitWitness p2 xs = concatMap f xs ++ xs
 
 return []
 
-check_props :: IO Bool
-check_props = $quickCheckAll
+check_props :: (PropName -> Property -> IO (a, Result))
+            -> IO ([a], Bool)
+check_props = $forAllProperties'
 
 instance Arbitrary ExprScope where
     arbitrary = ExprScope <$> $(arbitraryCell' ''IsExprScope [ [t| ExprScope |] ])

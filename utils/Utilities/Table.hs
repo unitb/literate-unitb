@@ -11,38 +11,15 @@ module Utilities.Table
     )
 where
 
---import Control.Arrow
---import Control.DeepSeq
 import Control.Lens
---import Control.Monad
 
---import Data.Array
---import Data.Default
---import Data.Function
 import Data.Hashable
 import Data.Typeable
---import qualified Data.IntMap as IM
---import qualified Data.Map as IM
---import qualified Data.Map as M
---import qualified Data.Maybe as My
---import qualified Data.List as L
---import qualified Data.List.Ordered as Ord
---import Data.List.NonEmpty as NE (NonEmpty(..)) 
---import qualified Data.List.NonEmpty as NE
---import Data.Semigroup
---import Data.Serialize
---import qualified Data.Set as S
---import Data.Array.Unboxed
-
---import GHC.Exts (Int(..))
---import GHC.Prim
 
 import Prelude hiding (lookup,null,map,filter)
 
 import Data.Map.Class
 
---import Test.QuickCheck hiding (shrinkList)
---import Test.QuickCheck.Function
 
 #ifdef __HASHED_KEYS__
 

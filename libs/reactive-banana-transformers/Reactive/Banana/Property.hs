@@ -29,9 +29,10 @@ import Text.Printf.TH
 
 import           Test.QuickCheck as QC hiding ((===),(.||.),(.&&.))
 import qualified Test.QuickCheck as QC 
-import Test.QuickCheck.Monadic hiding (assert)
 import Test.QuickCheck.Function
+import           Test.QuickCheck.Monadic hiding (assert)
 import qualified Test.QuickCheck.Monadic as QC
+import Test.QuickCheck.Report
 
 import Text.Show.With
 
@@ -412,5 +413,6 @@ satisfiesWith' showA showB f spec init input = monadicIO $ do
 
 return []
 
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

@@ -4,6 +4,7 @@ module Data.String.Brackets where
 import Control.Monad.State
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 brackets :: String -> (Int,Int)
 brackets ln = execState 
@@ -64,5 +65,6 @@ instance Arbitrary BrackString where
 
 return []
 
-runSpec :: IO Bool
-runSpec = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+runSpec :: (PropName -> Property -> IO (a, Result))
+        -> IO ([a], Bool)
+runSpec = $forAllProperties'

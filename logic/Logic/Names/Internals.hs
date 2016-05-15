@@ -51,6 +51,8 @@ import Language.Haskell.TH.Syntax hiding (Name,lift)
 import qualified Language.Haskell.TH.Syntax as TH 
 
 import Test.QuickCheck as QC
+import Test.QuickCheck.Regression as QC
+import Test.QuickCheck.Report as QC
 
 import Text.Printf.TH
 
@@ -375,6 +377,20 @@ prop_subst_left_inv :: Name -> Property
 prop_subst_left_inv xs = 
         replaceAll substToLatex (replaceAll substToZ3 $ render xs) === render xs
 
+prop_subst_left_inv_regression :: Property
+prop_subst_left_inv_regression = regression
+        prop_subst_left_inv
+        [ name0, name1, name2 ]
+
+name0 :: Name
+name0 = Name True ('s' :| "l") 1 ""
+
+name1 :: Name
+name1 = Name True ('p' :| "rime") 1 ""
+
+name2 :: Name
+name2 = Name {_backslash = False, _base = 's' :| "l", _primes = 1, _suffix = ""}
+
 prop_subst_right_inv :: InternalName -> Property
 prop_subst_right_inv xs = 
         replaceAll substToZ3 (replaceAll substToLatex $ render xs) === render xs
@@ -423,5 +439,6 @@ class Translatable a b | a -> b where
 
 return []
 
-check_props :: IO Bool
-check_props = $quickCheckAll
+run_props :: (PropName -> Property -> IO (a, QC.Result))
+          -> IO ([a], Bool)
+run_props = $forAllProperties'

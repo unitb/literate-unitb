@@ -21,11 +21,13 @@ import Data.Hashable
 import Data.List.NonEmpty as NE (toList)
 import Data.Maybe as M
 import Data.Typeable
+import Data.TypeList
 
 import GHC.Generics.Instances
 
 import Test.QuickCheck
 import Test.QuickCheck.Regression
+import Test.QuickCheck.Report
 
 import Utilities.Syntactic
 import Utilities.Table
@@ -336,7 +338,19 @@ prop_axiom_Scope_mergeCommutative = regression (uncurry axiom_Scope_mergeCommuta
         g0 = Guard {_guardInhStatus = InhAdd ("i" :| [],zfalse), _guardDeclSource = Inherited, _guardLineInfo = pure (LI "file" 0 0)}
         g1 = Guard {_guardInhStatus = InhAdd ("e" :| [],zfalse), _guardDeclSource = Local, _guardLineInfo = pure (LI "file" 0 0)}
 
+prop_axiom_Scope_clashesOverMerge :: Property
+prop_axiom_Scope_clashesOverMerge = regression (axiom_Scope_clashesOverMerge^.uncurried') 
+            [ (g0,g1,g2) ]
+    where
+        a = EventId "a"
+        e = DispExpr "-" $ Word (Var [smt|-|] (Gen RealSort []))
+        g0 = Guard {_guardInhStatus = InhAdd (a :| [],e), _guardDeclSource = Local, _guardLineInfo = (LI "file" 10 0) :| []}
+        g1 = Guard {_guardInhStatus = InhDelete Nothing, _guardDeclSource = Local, _guardLineInfo = (LI "file" 0 5) :| []}
+        g2 = Guard {_guardInhStatus = InhDelete (Just (a :| [],e)), _guardDeclSource = Inherited, _guardLineInfo = (LI "file" 0 5) :| []}
+
+
 return []
 
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

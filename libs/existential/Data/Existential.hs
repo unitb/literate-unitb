@@ -23,6 +23,7 @@ import Language.Haskell.TH
 import Prelude hiding ((.),id)
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 import Text.Printf
 
@@ -481,5 +482,6 @@ prop_consistent_compare x y = cellCompare compare (makeCell' x) (makeCell' y) ==
 return []
 
 -- | Check all the QuickCheck properties.
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

@@ -52,10 +52,21 @@ import Data.Map.Class  as M
 import Data.Maybe
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 import Utilities.MapSyntax
 import Utilities.Syntactic
 import Utilities.Table
+
+mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
+mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
+
+prop_inherit_equiv :: Hierarchy Int
+                   -> Property
+prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
+    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
+
+return []
 
 runMap :: (M.IsKey Table k, Scope a) 
        => MapSyntax k a b 
@@ -704,32 +715,6 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
 name9 :: TestName
 name9 = testName "QuickCheck inheritance"
 
-prop_inherit_equiv :: Hierarchy Int
-                   -> Property
-prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
-    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
-
-case9 :: IO Bool
-case9 = f <$> quickCheckResult prop_inherit_equiv
-    where
-        f (Success _ _ _) = True
-        f _ = False
-
-result9 :: Bool
-result9 = True
-
-mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
-mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
-
---see :: Map ProgId ProgressProp
-seeA :: IO (Table Int [Int])
-seeA = return $ inheritWith' id (L.map.(+)) (++) hierarchy m
-
-hierarchy :: Hierarchy Int
-hierarchy = Hierarchy {order = [2,1], edges = M.fromList [(1,2)]}
-
-m :: Table Int [Int]
-m = M.fromList [(1,[3,-3,-2]),(2,[5,-1])]
-
-seeE :: IO (Table Int [Int])
-seeE = return $ inheritWithAlt id (L.map.(+)) (++) hierarchy m
+prop9 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
+prop9 = $(quickCheckWrap 'prop_inherit_equiv)
