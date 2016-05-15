@@ -96,7 +96,7 @@ case0 = do
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         li = LI "file.ext" 1 1
         sorts = M.fromList
@@ -106,7 +106,7 @@ case0 = do
         allSorts = M.intersectionWith (\ts th -> ts `M.union` f th) sorts thy
         pdef  = M.fromList
                 [ (mId "m0",L.map (as_pair' $ view _1) [(z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]) 
-                , (mId "m1",L.map (as_pair' $ view _1) [(z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)])]
+                , (mId "m1",L.map (as_pair' $ view _1) [(z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)])]
         evts = M.fromList 
                 [ (mId "m0",evts0)
                 , (mId "m1",evts1) ]
@@ -185,7 +185,7 @@ result0 = M.fromList
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         sorts0 = symbol_table [s0]
         sorts1 = symbol_table [s1] `M.union` sorts0
@@ -193,7 +193,7 @@ result0 = M.fromList
         allSorts0 = sorts0 `M.union` f thy0
         allSorts1 = sorts1 `M.union` f thy1
         pdef0  = [as_pair' (view _1) (z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]
-        pdef1  = [as_pair' (view _1) (z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)]
+        pdef1  = [as_pair' (view _1) (z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)]
         thy0 = symbol_table $ arithmetic:thy2
         thy1 = symbol_table $ set_theory:thy2
         thy2 = [basic_theory,arithmetic]
@@ -266,7 +266,7 @@ case2 = return $ do
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
                 [ ([tex|x|],makeCell $ Machine (z3Var "x" int) Local li) 
@@ -280,7 +280,7 @@ case2 = return $ do
                 , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Index $ z3Var "q" int) ("ce2":|[]) Local li))
                 , ([tex|x|],makeCell $ DelMch (Just $ z3Var "x" int) Local li) 
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
-                , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
+                , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl$S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
                 [ ("m0",vs0) 
                 , ("m1",vs1)]
@@ -296,7 +296,7 @@ result2 = do
             s0 = z3Sort "S0" "S0" 0
             s0' = make_type s0 [] 
             se new_type = zlift (set_type new_type) ztrue
-            s1 = z3Sort "\\S1" "sl@S1" 0
+            s1 = z3Sort "\\S1" "sl$S1" 0
             s1' = make_type s1 [] 
             fieldsM mid
                 | mid == "m0" = [ make' PStateVars "x" $ var "x"
@@ -309,7 +309,7 @@ result2 = do
             fieldsT mid
                 | mid == "m0" = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) ]
                 | otherwise   = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) 
-                                , make' PDefinitions "\\S1" (z3Def [] "sl@S1" [] (set_type s1') (se s1')) ]
+                                , make' PDefinitions "\\S1" (z3Def [] "sl$S1" [] (set_type s1') (se s1')) ]
             upMachine :: MachineId 
                       -> MachineP1' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
@@ -599,14 +599,14 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
         xvar = Var [tex|x|] int
         ms = M.fromList [("m0",m0),("m1",m1)]
         s0 = z3Sort "S0" "S0" 0
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         setS0 = set_type $ make_type s0 []
         setS1 = set_type $ make_type s1 []
         sorts0 = symbol_table [s0]
         sorts1 = symbol_table [s0,s1]
         defs0 = symbol_table [z3Def [] "S0" [] setS0 (zlift setS0 ztrue)]
         defs1 = symbol_table [ (z3Def [] "S0" [] setS0 (zlift setS0 ztrue))
-                             , (z3Def [] "sl@S1" [] setS1 (zlift setS1 ztrue))]
+                             , (z3Def [] "sl$S1" [] setS1 (zlift setS1 ztrue))]
         vars0 = symbol_table [z3Var "x" int,z3Var "y" int]
         vars1 = symbol_table [z3Var "z" int,z3Var "y" int]
         c' f = c $ f.(expected_type .~ Nothing)

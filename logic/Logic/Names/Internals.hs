@@ -1,32 +1,14 @@
 {-# LANGUAGE TypeFamilies,CPP #-}
 module Logic.Names.Internals 
-    ( Name(..), InternalName(..)
-    , isZ3Name, isZ3Name'
-    , IsBaseName(..)
-    , Translatable(..)
-    , IsName(..)
-    , asInternal, asName
-    , makeName
-    , makeZ3Name
-    , make, make'
-    , isName, isName'
-    , fromString'
-    , fresh
-    , reserved
-    , z3Render
-    , dropSuffix 
-    , addSuffix
-    , addBackslash
-    , setSuffix
-    , smt, tex
+    ( module Logic.Names.Internals
     , NonEmpty((:|))
-    , Encoding(..)
-    , check_props )
+    )
 where
 
     -- Libraries
 import Control.DeepSeq
 import Control.Lens
+import Control.Monad
 import Control.Monad.State
 import Control.Precondition
 
@@ -34,12 +16,12 @@ import Data.Char
 import Data.Data
 import Data.Either.Combinators
 import Data.List as L
+import Data.List.Lens as L
 import qualified Data.List.Ordered as Ord
 import Data.List.NonEmpty as NE
 import qualified Data.Map.Class as M
 import Data.Serialize
 import Data.Semigroup hiding (option)
-import Data.String.Utils
 import Data.Tuple
 import Data.Word
 
@@ -54,6 +36,7 @@ import Test.QuickCheck as QC
 import Test.QuickCheck.Regression as QC
 import Test.QuickCheck.Report as QC
 
+import Text.Pretty
 import Text.Printf.TH
 
 import Utilities.Language  as Lang
@@ -71,7 +54,7 @@ data Name = Name
         , _base :: NEString 
         , _primes :: Word8 
         , _suffix :: String
-        } deriving (Data,Generic,Eq,Ord)
+        } deriving (Data,Generic,Eq,Ord,Show)
 
 data InternalName = InternalName String Name String
     deriving (Eq,Ord,Data,Generic,Show)
@@ -86,10 +69,10 @@ data Name = Name
         , _base :: !NEString 
         , _primes :: !Word8 
         , _suffix :: !String
-        } deriving (Data,Generic,Eq,Ord)
+        } deriving (Data,Generic,Eq,Ord,Show)
 
 data InternalName = InternalName !String !Name !String
-    deriving (Eq,Ord,Data,Generic)
+    deriving (Eq,Ord,Data,Generic,Show)
 
 #endif
 
@@ -108,11 +91,11 @@ name bl base pr suff LatexEncoding = Name bl
         (replaceAll' substToZ3 base) pr 
         (replaceAll substToZ3 suff)
 
-instance Show Name where
-    show = [printf|"%s"|] . render
+instance PrettyPrintable Name where
+    pretty = render
 
-instance Show InternalName where
-    show = [printf|"%s"|] . render
+instance PrettyPrintable InternalName where
+    pretty = render
 
 class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
     render :: a -> String
@@ -237,10 +220,10 @@ z3Render :: Name -> String
 z3Render (Name sl xs ps suf) 
         = concat $ [slash,NE.toList xs] ++ replicate (fromIntegral ps) "@prime" ++ [suf']
     where
-        slash | sl        = "sl@"
+        slash | sl        = "sl$"
               | otherwise = ""
-        suf' | null suf  = ""
-             | otherwise = "@" ++ suf
+        suf'  | null suf  = ""
+              | otherwise = "@" ++ suf
 
 setSuffix :: String -> Name -> Name
 setSuffix suff = suffix .~ suff
@@ -294,7 +277,7 @@ z3Name' :: Language Name
 z3Name' = symb <|> name
     where
         name = 
-            Name <$> option False (try (string "sl@" >> pure True)) 
+            Name <$> option False (try (string "sl$" >> pure True)) 
                  <*> many1' (alphaNum <|> char '-')
                  <*> (fromIntegral.L.length 
                         <$> many (string "@prime"))
@@ -323,21 +306,49 @@ texSymbol = (:| []) <$> oneOf [';','.']
 symbol :: Language NEString
 symbol = ((:| []) <$> (oneOf ['-','*','/'] <|> satisfy isSymbol)) <?> "symbol"
 
-substToZ3 :: [(String,String)]
-substToZ3 = [("\\","sl@")
-            --,("_","@sub@")
-            ,("'","@prime")
-            ]
+data SubstPattern = SPat [(String,String)] [(String,String)] [(String,String)]
+    deriving Show
 
-substToLatex :: [(String,String)]
-substToLatex = L.map swap substToZ3
+inverse :: SubstPattern -> SubstPattern
+inverse (SPat x y z) = SPat (L.map swap x) (L.map swap y) (L.map swap z)
+
+substToZ3 :: SubstPattern
+substToZ3 = SPat [("\\","sl$")] [] [("'","@prime")]
+
+substToLatex :: SubstPattern
+substToLatex = inverse substToZ3
+
+shuffle' :: SubstPattern -> Gen SubstPattern
+shuffle' (SPat x y z) = SPat <$> shuffle x <*> shuffle y <*> shuffle z
 
 replaceAll' :: Pre 
-            => [(String,String)] -> NonEmpty Char -> NonEmpty Char
+            => SubstPattern -> NonEmpty Char -> NonEmpty Char
 replaceAll' sub = nonEmpty' . replaceAll sub . toList
 
-replaceAll :: [(String,String)] -> String -> String
-replaceAll = execState . mapM_ (modify . uncurry replace)
+preSubtituted :: String -> (String,String) -> Maybe (String,String)
+preSubtituted xs (pat,sub) = (sub,) <$> xs^?prefixed pat
+
+postSubtituted :: String -> (String,String) -> Maybe (String,String)
+postSubtituted xs (pat,sub) = (,sub) <$> xs^?suffixed pat
+
+midSubtituted :: String -> (String,String) -> Maybe (String,String)
+midSubtituted xs (pat,sub) = (_1 %~ (++ sub)) <$> xs^?foldSplits . below (prefixed pat)
+
+foldSplits :: Fold [a] ([a],[a])
+foldSplits = folding $ \xs -> L.zip (L.inits xs) (L.tails xs)
+
+replaceAll :: SubstPattern -> String -> String
+replaceAll (SPat pre mid suff) = substPre
+    where
+        substPre xs = fromMaybe (substPost xs) $ do
+                (p,s) <- pre^?traverse.folding (preSubtituted xs)
+                return $ p ++ substPre s
+        substPost xs = fromMaybe (substMid xs) $ do
+                (p,s) <- suff^?traverse.folding (postSubtituted xs)
+                return $ substPost p ++ s
+        substMid xs = fromMaybe xs $ do
+                (p,s) <- mid^?traverse.folding (midSubtituted xs)
+                return $ p ++ substMid s
 
 smt :: QuasiQuoter
 smt = QuasiQuoter
@@ -368,10 +379,10 @@ prop_rev_substToZ3_idempotent :: String -> Property
 prop_rev_substToZ3_idempotent xs = replaceAll substToLatex (replaceAll substToLatex xs) === replaceAll substToLatex xs
 
 prop_subst_order_independent :: String -> Property
-prop_subst_order_independent xs = forAll (shuffle substToZ3) $ \s -> replaceAll s xs === replaceAll substToZ3 xs
+prop_subst_order_independent xs = forAll (shuffle' substToZ3) $ \s -> replaceAll s xs === replaceAll substToZ3 xs
 
 prop_rev_subst_order_independent :: String -> Property
-prop_rev_subst_order_independent xs = forAll (shuffle substToLatex) $ \s -> replaceAll s xs === replaceAll substToLatex xs
+prop_rev_subst_order_independent xs = forAll (shuffle' substToLatex) $ \s -> replaceAll s xs === replaceAll substToLatex xs
 
 prop_subst_left_inv :: Name -> Property
 prop_subst_left_inv xs = 
@@ -401,20 +412,44 @@ prop_subst_preserves_non_emptiness (NonEmpty xs) = replaceAll substToZ3 xs =/= [
 prop_substToLatex_preserves_non_emptiness :: NonEmptyList Char -> Property
 prop_substToLatex_preserves_non_emptiness (NonEmpty xs) = replaceAll substToLatex xs =/= []
 
--- prop: eq render == eq names
+prop_insertAt :: (Eq a,Show a) => Int -> [a] -> NonEmpty a -> Property
+prop_insertAt n xs ys = NE.toList (insertAt n xs ys) === L.take n ys' ++ xs ++ L.drop n ys'
+    where
+        ys' = NE.toList ys
 
---nonEmptyOf :: Gen a -> Gen (NonEmpty a)
---nonEmptyOf gen = (:|) <$> gen <*> listOf gen
+prop_render_isomorphic :: Name -> Name -> Property
+prop_render_isomorphic xs ys = counterexample 
+        (show (render xs) ++ "\n" ++ show (render ys))
+        $ (render xs == render ys) === (xs == ys)
+
+nonEmptyOf :: Gen a -> Gen (NonEmpty a)
+nonEmptyOf gen = (:|) <$> gen <*> listOf gen
 
 infix 4 =/=
 (=/=) :: (Eq a, Show a) => a -> a -> Property
 x =/= y = counterexample (show x ++ " == " ++ show y) (x /= y)
 
+insertAt :: Int -> [a] -> NonEmpty a -> NonEmpty a
+insertAt n xs ne@(y :| ys) 
+    | n <= 0    = foldr (NE.<|) ne xs
+    | otherwise = y :| (L.take (n-1) ys ++ xs ++ L.drop (n-1) ys)
+
 instance Arbitrary Name where
     arbitrary = do
-        oneof 
+        r <- oneof 
             [ word latexName
             , word z3Name' ]
+        let sl    = 's' :| "l"
+            prime = 'p' :| "rime"
+        oneof 
+            [ do 
+                n <- choose (0,3)
+                let cmd n = do
+                        i  <- QC.elements [0,NE.length $ n^.base]
+                        kw <- QC.elements ["sl","prime"]
+                        return $ ((),n & base %~ insertAt i kw)
+                execStateT (replicateM_ n $ StateT cmd) r
+            , r & base (const $ sconcat <$> nonEmptyOf (QC.elements [sl,prime])) ]
 
 instance Arbitrary InternalName where
     arbitrary = do

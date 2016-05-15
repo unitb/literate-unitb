@@ -66,7 +66,7 @@ args opt file = do
                                   ,"libs/file-system-mockup","libs/transformer-lenses"
                                   ,"libs/bipartite-graph","libs/classy-lens-hierarchy"
                                   ,"libs/co-applicative", "libs/unitb-testing"
-                                  ,"libs/lens-extra"
+                                  ,"libs/lens-extra", "libs/pretty-printable"
                                   ]
         , "-hidir" ++ inf
         , "-W", "-O0"

@@ -1,10 +1,29 @@
 {-# LANGUAGE TypeFamilies, CPP #-}
 module Logic.Names 
-    ( module Names
-    , IsBaseName(..) 
+    ( IsBaseName(..) 
     , HasNames(..) 
     , NonEmpty((:|))
     , nameType
+    , Name(..), InternalName(..)
+    , isZ3Name, isZ3Name'
+    , Translatable(..)
+    , IsName(..)
+    , asInternal, asName
+    , makeName
+    , makeZ3Name
+    , make, make'
+    , isName, isName'
+    , fromString'
+    , fresh
+    , reserved
+    , z3Render
+    , dropSuffix 
+    , addSuffix
+    , addBackslash
+    , setSuffix
+    , smt, tex
+    , Encoding(..)
+    , run_props     
     )
 where
 

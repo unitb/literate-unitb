@@ -44,6 +44,7 @@ packages:
 - libs/invariants
 - libs/lens-extra
 - libs/partial-order
+- libs/pretty-printable
 - libs/printf-th
 - libs/reactive-banana-transformers
 - libs/show-with
