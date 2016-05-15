@@ -130,3 +130,5 @@ Tests/byzantine/main/machine_m1_props.tex
 Tests/byzantine/main/machine_m1_saf.tex
 Tests/byzantine/main/machine_m1_thm.tex
 Tests/byzantine/main/machine_m1_trans.tex
+cabal.sandbox.config
+
