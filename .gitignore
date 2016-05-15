@@ -132,3 +132,7 @@ Tests/byzantine/main/machine_m1_thm.tex
 Tests/byzantine/main/machine_m1_trans.tex
 cabal.sandbox.config
 
+!.ghci
+
+# don't ignore gitignore files in subdirectories
+!.gitignore
