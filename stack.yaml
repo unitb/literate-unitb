@@ -10,7 +10,7 @@
 #'
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-5.13
+resolver: lts-5.15
 
 ghc-options:
     # All packages
@@ -47,7 +47,6 @@ packages:
 extra-deps:
 - assert-0.0.1.2
 - directory-1.2.5.1
-- literate-unitb-scripts-0.1.0.0
 - monoid-transformer-0.0.3
 - portable-lines-0.1
 - process-1.4.2.0

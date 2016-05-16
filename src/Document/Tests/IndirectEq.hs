@@ -39,16 +39,16 @@ test = test_cases
             ]
 
 path0 :: String
-path0 = "tests/indirect-equality.tex"
+path0 = "Tests/indirect-equality.tex"
 
 path1 :: String
-path1 = "tests/indirect-equality-t1.tex"
+path1 = "Tests/indirect-equality-t1.tex"
 
 path2 :: String
-path2 = "tests/indirect-equality-t2.tex"
+path2 = "Tests/indirect-equality-t2.tex"
 
 path3 :: String
-path3 = "tests/indirect-equality-t3.tex"
+path3 = "Tests/indirect-equality-t3.tex"
 
 case0 :: IO (String, Map Label Sequent)
 case0 = verify path0 0

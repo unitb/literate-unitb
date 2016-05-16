@@ -340,7 +340,7 @@ result4 = unlines
 --         Left xs -> unlines $ map report xs
 
 path5 :: FilePath
-path5 = "tests/train-station-ref-err2.tex"
+path5 = "Tests/train-station-ref-err2.tex"
 
 result5 :: String
 result5 = unlines

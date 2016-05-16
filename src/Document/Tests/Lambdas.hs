@@ -123,7 +123,7 @@ result0 = unlines
     ]
 
 path0 :: String
-path0 = "tests/cubes-t0.tex"
+path0 = "Tests/cubes-t0.tex"
 
 result1 :: String
 result1 = unlines
@@ -192,7 +192,7 @@ result1 = unlines
     ]
 
 path1 :: String
-path1 = "tests/cubes-t1.tex"
+path1 = "Tests/cubes-t1.tex"
 
 result2 :: String
 result2 = unlines
@@ -270,7 +270,7 @@ result2 = unlines
     ]
 
 path2 :: String
-path2 = "tests/cubes-t2.tex"
+path2 = "Tests/cubes-t2.tex"
 
 result3 :: String
 result3 = unlines
@@ -350,7 +350,7 @@ result3 = unlines
     ]
 
 path3 :: String
-path3 = "tests/cubes-t3.tex"
+path3 = "Tests/cubes-t3.tex"
 
 result4 :: Either [Error] (Table ProgId ProgressProp)
 result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
@@ -383,7 +383,7 @@ result4 = M.map (fmap (DispExpr "")) <$> either g Right (do
         g xs = Left $ map (`Error` li) xs
 
 path4 :: String
-path4 = "tests/cubes-t6.tex"
+path4 = "Tests/cubes-t6.tex"
 
 case4 :: IO (Either [Error] (Table ProgId ProgressProp))
 case4 = runEitherT (do
@@ -535,7 +535,7 @@ result6 = unlines
     ]
 
 path6 :: String
-path6 = "tests/cubes-t5.tex"
+path6 = "Tests/cubes-t5.tex"
 
 case7 :: IO (String, Table Label Sequent)
 case7 = verify path7 0
@@ -668,7 +668,7 @@ result7 = unlines
     ]
 
 path7 :: String
-path7 = "tests/cubes-t4.tex"
+path7 = "Tests/cubes-t4.tex"
 
 case8 :: IO (String, Table Label Sequent)
 case8 = verify path8 0
@@ -790,7 +790,7 @@ result8 = unlines
     ]
   
 path8 :: String
-path8 = "tests/cubes-t7.tex"
+path8 = "Tests/cubes-t7.tex"
 
 result9 :: String
 result9 = unlines
@@ -923,10 +923,10 @@ result9 = unlines
 
 
 path9 :: String
-path9 = "tests/cubes-t8.tex"
+path9 = "Tests/cubes-t8.tex"
      
 path10 :: String
-path10 = "tests/cubes-t9.tex"
+path10 = "Tests/cubes-t9.tex"
 
 result10 :: String
 result10 = unlines
