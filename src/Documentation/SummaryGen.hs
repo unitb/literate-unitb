@@ -66,13 +66,13 @@ instance FileSystem Doc where
     liftFS f = NoParam $ Doc $ lift $ getNoParam f
     lift2FS f = OneParam $ \g -> Doc $ ReaderT $ \fn -> getOneParam f $ \x -> runReaderT (getDoc $ g x) fn
 
-defOptions :: Show label => (expr -> M String) -> ExprDispOpt label expr
+defOptions :: PrettyPrintable label => (expr -> M String) -> ExprDispOpt label expr
 defOptions f = ExprDispOpt
             { _makeDoc = const $ return () 
             , _makeString = f 
-            , _makeRef = \pre lbl -> return $ [printf|\\eqref{%s}|] (show pre ++ show lbl) }
+            , _makeRef = \pre lbl -> return $ [printf|\\eqref{%s}|] (pretty pre ++ pretty lbl) }
 
-instance Show label => Default (ExprDispOpt label Expr) where
+instance PrettyPrintable label => Default (ExprDispOpt label Expr) where
     def = defOptions get_string'
 
 show_removals :: Bool
@@ -203,7 +203,7 @@ kw_end = tell ["\\textbf{end} \\\\"]
 event_file_name :: Machine -> EventId -> FilePath
 event_file_name m lbl = ((render $ m!.name) ++ "_" ++ rename lbl) <.> "tex"
     where
-        rename lbl = L.map f $ show lbl
+        rename lbl = L.map f $ pretty lbl
         f ':' = '-'
         f x   = x
 
@@ -243,7 +243,7 @@ refines_clause :: System -> Machine -> M ()
 refines_clause sys m = do
     case join $ _name m `M.lookup` (sys!.ref_struct) of
         Nothing -> return ()
-        Just anc -> tell [keyword "refines" ++ " " ++ show anc]
+        Just anc -> tell [keyword "refines" ++ " " ++ pretty anc]
 
 block :: M () -> M ()
 block cmd = do
@@ -306,7 +306,7 @@ transient_sum m = do
         toString (Tr _ p evts hint) = do -- do
             let TrHint sub lt = hint
                 evts' :: String
-                evts' = intercalate "," $ L.map ([printf|\\ref{%s}|] . show) (NE.toList evts)
+                evts' = intercalate "," $ L.map ([printf|\\ref{%s}|] . pretty) (NE.toList evts)
             sub' <- forM (M.toList sub) $ \(v,p) -> do
                 p <- get_string' $ snd p
                 return (v,p)
@@ -318,7 +318,7 @@ transient_sum m = do
                     | otherwise  = [printf|: [%s]|] (intercalate ", " $ L.map asgnString sub')
                 asgnString (v,e) = [printf|%s := %s'~|~%s|] (render v) (render v) e
                 lt' :: String
-                lt' = maybe "" ([printf|, with \\eqref{%s}|] . show) lt
+                lt' = maybe "" ([printf|, with \\eqref{%s}|] . pretty) lt
             p <- get_string' p
             return $ [printf|%s \\qquad \\text{(%s$%s$%s)}|] 
                 p evts' sub'' lt'
@@ -361,19 +361,19 @@ put_expr opts pre (lbl,e) = do
         --let ref :: String
         --    ref = case lbl of
         --            Nothing -> [printf|(\\ref{{0}}/default)|] pre
-        --            Just lbl -> [printf|\\eqref{{0}}|] (show pre ++ show lbl)
+        --            Just lbl -> [printf|\\eqref{{0}}|] (pretty pre ++ pretty lbl)
         expr  <- format_formula =<< (opts^.makeString $ e)
         tell [[printf|  \\item[ %s ]%s|] ref expr]
         opts^.makeDoc $ lbl
 
-put_all_expr' :: Show label => (a -> M String) -> EventId -> [(label, a)] -> M ()
+put_all_expr' :: PrettyPrintable label => (a -> M String) -> EventId -> [(label, a)] -> M ()
 put_all_expr' f = put_all_expr_with' f (return ())
 
-put_all_expr_with' :: Show label
-                       => (expr -> M String)
-                       -> State (ExprDispOpt label expr) ()
-                       -> EventId 
-                       -> [(label, expr)] -> M ()
+put_all_expr_with' :: PrettyPrintable label
+                   => (expr -> M String)
+                   -> State (ExprDispOpt label expr) ()
+                   -> EventId 
+                   -> [(label, expr)] -> M ()
 put_all_expr_with' toString opts pre xs
     | L.null xs = return ()
     | otherwise = 
@@ -393,7 +393,7 @@ section kw cmd = do
     censor f cmd
 
 index_sum :: EventId -> EventMerging' -> M ()
-index_sum lbl e = tell ["\\noindent \\ref{" ++ show lbl ++ "} " ++ ind ++ " \\textbf{event}"]
+index_sum lbl e = tell ["\\noindent \\ref{" ++ pretty lbl ++ "} " ++ ind ++ " \\textbf{event}"]
     where
         ind 
             | M.null $ e^.indices = ""
@@ -410,7 +410,7 @@ csched_sum lbl e = do
             put_all_expr_with (makeRef %= isDefault) lbl sch
     where
         isDefault f eid lbl
-            | lbl == "default" = return $ [printf|(\\ref{%s}/default)|] $ show (eid :: EventId)
+            | lbl == "default" = return $ [printf|(\\ref{%s}/default)|] $ pretty (eid :: EventId)
             | otherwise        = f eid lbl
         kw = "\\textbf{during}"    
         sch = M.toAscList $ e^.new.coarse_sched --coarse $ new_sched e

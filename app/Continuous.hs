@@ -75,7 +75,7 @@ dump_pos = do
         if not d then do
             liftIO $ putStrLn "Producing Z3 file:"
             (dt,()) <- liftIO $ timeItT $ forM_ (M.toList p) $ \(n,p) -> do
-                dump (show n) (M.map snd p)
+                dump (pretty n) (M.map snd p)
             liftIO $ print dt
         else return ()
         liftIO $ do
@@ -90,7 +90,7 @@ check_one m = do
         let po = M.findWithDefault M.empty (as_label $ _name m) $ _pos param
         (po,s,n)    <- liftIO $ verify_changes m po
         put (param { _pos = M.insert (as_label $ _name m) po $ _pos param })
-        return (n,"> machine " ++ show (_name m) ++ ":\n" ++ s)
+        return (n,"> machine " ++ pretty (_name m) ++ ":\n" ++ s)
 
 check_theory :: (MonadIO m, MonadState Params m) 
              => (String,Theory) -> m (Int,String)
@@ -115,8 +115,8 @@ check_theory (name,th) = do
         let p_r = M.mapWithKey f po
             f k x = maybe (old_po ! k) (\b -> (b,x)) $ M.lookup k res
         put param { _pos = M.insert (label name) p_r $ _pos param }
-        let s = unlines $ map (\(k,r) -> success r ++ show k) $ M.toAscList res
-        return (M.size res,"> theory " ++ show (label name) ++ ":\n" ++ s)
+        let s = unlines $ map (\(k,r) -> success r ++ pretty k) $ M.toAscList res
+        return (M.size res,"> theory " ++ pretty (label name) ++ ":\n" ++ s)
     where
         success True  = "  o  "
         success False = " xxx "

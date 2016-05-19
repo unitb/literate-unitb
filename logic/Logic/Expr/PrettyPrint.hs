@@ -11,7 +11,6 @@ where
 
     -- Modules
 import Logic.Expr.Classes
-import Logic.Expr.Label
 
     -- Libraries
 import Control.Invariant
@@ -40,9 +39,6 @@ instance PrettyPrintable a => PrettyPrintable (Checked a) where
     pretty = pretty . view content'
 
 instance PrettyPrintable StrList where
-    pretty = show
-
-instance PrettyPrintable Label where
     pretty = show
 
 instance PrettyPrintable Error where

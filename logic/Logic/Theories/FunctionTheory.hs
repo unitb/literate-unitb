@@ -329,12 +329,6 @@ function_theory = Theory { .. }
         (term,_term_decl) = var "t" $ array t0 t1
         (r,_r_decl) = var "r" $ set_type t0
         (r',_r'_decl) = var "r0" $ set_type t0
-        -- (m,_m_decl) = var "m" $ maybe_type t0
-        -- (s2,s2_decl) = var "s2" $ set_type t1
---        dec' x = z3_decoration t0 ++ z3_decoration t1 ++ x
-        -- _dec' x = "@function@@_" ++ pad ++ show (x :: Int)
-        --   where
-        --     pad = if x < 10 then "0" else ""
         
     -- notation
 overload    :: BinOperator

@@ -18,14 +18,16 @@ import GHC.Generics
 
 import Test.QuickCheck hiding (label)
 
+import Text.Pretty
+
 data Label = Lbl String
-    deriving (Ord, Eq, Typeable, Generic)
+    deriving (Ord, Eq, Show, Typeable, Generic)
 
 class IsLabel a where
     as_label :: a -> Label
 
-instance Show Label where
-    show (Lbl s) = s
+instance PrettyPrintable Label where
+    pretty (Lbl s) = s
 
 instance IsString Label where
     fromString x = label x

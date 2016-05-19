@@ -10,8 +10,8 @@ import Logic.Expr.Type
 import Logic.Names
 
     -- Libraries
-import Control.Applicative hiding (Const)
-import Control.Lens hiding (rewrite,Const)
+import Control.Applicative 
+import Control.Lens hiding (rewrite)
 import Control.Lens.Misc
 import Control.Monad 
 import Control.Precondition
@@ -301,10 +301,10 @@ zselect :: IsName n => TwoExprP n Type q
 zselect      = typ_fun2 (mk_fun [] [smt|select|] [array gA gB, gA] gB)
 
 zint :: (TypeSystem2 t, Integral int) => int -> AbsExpr n t q
-zint n       = Const (IntVal $ fromIntegral n) int
+zint n       = Lit (IntVal $ fromIntegral n) int
 
 zreal :: TypeSystem2 t => Double -> AbsExpr n t q
-zreal n      = Const (RealVal n) real
+zreal n      = Lit (RealVal n) real
 
 mzless :: (TypeSystem2 t,IsName n) => TwoExprP n t q
 mzless        = typ_fun2 less_fun

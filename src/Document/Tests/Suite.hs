@@ -171,8 +171,8 @@ lookupSequent lbl pos = case pos^?ix lbl of
                 Just po -> 
                     Right po
                 Nothing ->
-                    Left $ [printf|invalid label: %s\n%s|] (show lbl) $ 
-                        unlines $ L.map show $ keys pos
+                    Left $ [printf|invalid label: %s\n%s|] (pretty lbl) $ 
+                        unlines $ L.map pretty $ keys pos
 
 lookupSequent' :: Monad m 
                => Label -> Table Label Sequent 
@@ -248,7 +248,7 @@ verify_thy path name = makeReport' empty $ do
             let pos = snd $ r ! name
             res <- lift $ try (verify_all pos)
             case res of
-                Right res -> return (unlines $ L.map (\(k,r) -> success r ++ show k) $ toAscList res, pos)
+                Right res -> return (unlines $ L.map (\(k,r) -> success r ++ pretty k) $ toAscList res, pos)
                 Left e -> return (show (e :: SomeException),pos)
         else return ([printf|file does not exist: %s|] path,empty)
     where

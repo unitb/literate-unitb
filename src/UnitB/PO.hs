@@ -24,7 +24,7 @@ import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
 
-import UnitB.Expr hiding (Const)
+import UnitB.Expr
 import UnitB.Proof
 import UnitB.Syntax as AST 
 
@@ -216,7 +216,7 @@ proof_obligation' pos proofs m = do
             if lbl `M.member` pos
                 then return ()
                 else Left [Error 
-                    ([printf|a proof is provided for non-existant proof obligation %s|] $ show lbl)
+                    ([printf|a proof is provided for non-existant proof obligation %s|] $ pretty lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl proofs of
@@ -386,11 +386,11 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
         local_ind :: EventId -> RawEventMerging -> Table Name Var
         local_ind lbl e = renameAll' (add_suffix suff) $ e^.indices
             where
-                suff = mk_suff $ show lbl
+                suff = mk_suff $ pretty lbl
         new_ind :: EventId -> RawEventMerging -> RawExpr -> RawExpr
         new_ind lbl e = make_unique suff (e^.indices)
             where
-                suff = mk_suff $ show lbl
+                suff = mk_suff $ pretty lbl
             -- (M.elems ind) 
         tagged_sched :: EventId -> RawEventMerging -> Table Label RawExpr
         tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched & traverse %~ asExpr
@@ -411,9 +411,9 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                         all_fsch) 
                                 (progs ! lbl)
                         | otherwise -> error $ 
-                               [printf|transient predicate %s's side condition doesn't |] (show pname) 
+                               [printf|transient predicate %s's side condition doesn't |] (pretty pname) 
                             ++ [printf|match the fine schedule of event %s|]
-                                        (intercalate "," $ L.map show (NE.toList evt_lbl))
+                                        (intercalate "," $ L.map pretty (NE.toList evt_lbl))
                     Nothing
                         | not $ all_fsch == ztrue -> do
                             emit_goal [] $ zforall all_ind
@@ -1017,10 +1017,10 @@ dump :: String -> Table Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
-                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ show lbl)
+                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ pretty lbl)
                 hPutStrLn h (z3_code po)
                 hPutStrLn h "(pop)"
-                hPutStrLn h ("; end of " ++ show lbl)
+                hPutStrLn h ("; end of " ++ pretty lbl)
                 ) )
 
 verify_all :: Table Label Sequent -> IO (Table Label Bool)

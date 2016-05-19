@@ -10,7 +10,7 @@
 module UnitB.Proof.Rules where
 
     -- Modules
-import Logic.Expr as E hiding (Context,Const)
+import Logic.Expr as E hiding (Context)
 
 import UnitB.Property
 

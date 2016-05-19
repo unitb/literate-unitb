@@ -75,7 +75,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String
-        err_msg = [printf|Multiple expressions with the label %s|] . show
+        err_msg = [printf|Multiple expressions with the label %s|] . pretty
         wrapup :: Hierarchy MachineId
                -> MTable MachineP2 
                -> Maybe [Table MachineId [(Label, ExprScope)]]
@@ -89,7 +89,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             let _ = exprs :: MTable (Table Label ExprScope)
             xs <- T.sequence $ make_phase3 <$> p2 <.> exprs
             let mergeError (cevt,(e:es)) = unless (all (((e^.eActions) ==).view eActions) es) $ 
-                    tell [MLError ([printf|event %s merges events with different action sets|] $ show cevt) []]
+                    tell [MLError ([printf|event %s merges events with different action sets|] $ pretty cevt) []]
                 mergeError (_,[]) = return ()
                 merges :: [(EventId, [EventP3])]
                 merges = xs^.traverse.pEventMerge'.withKey'.traverse.to ((:[]).second (L.map snd.snd))
@@ -239,16 +239,16 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ show lbl,li):lis']
+                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
-                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ show lbl
+                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ pretty lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
                 where
-                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ show lbl
+                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ pretty lbl
         where
             li = i^.lineInfo
     toThyExpr _ _  = return []
@@ -295,11 +295,11 @@ instance Scope EventExpr where
         where
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = ([printf|%s (event '%s')|] (kind sc) (show k) :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s')|] (kind sc) (pretty k) :: String, view lineInfo sc)
                 | otherwise
-                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (show k) parents :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (pretty k) parents :: String, view lineInfo sc)
                 where
-                    parents = intercalate "," $ map show $ inheritedFrom sc
+                    parents = intercalate "," $ map pretty $ inheritedFrom sc
             msg (Left _) sc = ([printf|%s (initialization)|] (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
@@ -316,15 +316,15 @@ checkLocalExpr' expKind free eid lbl sch = do
             vs <- view pDelVars 
             return $ case sch^.inhStatus of
                 InhAdd expr -> 
-                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (pretty eid) expKind (pretty lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = ([printf|%s '%s'|] expKind $ show lbl,) <$> sch^.lineInfo
+                        schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ NE.toList schLI ++ varsLI]
                 InhDelete Nothing -> 
-                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (show eid) expKind (show lbl)
-                        li  = isOne $ ([printf|%s '%s'|] expKind $ show lbl,) <$> sch^.lineInfo
+                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
+                        li  = isOne $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                     in [Left $ either (MLError msg) (Error msg.snd) li]
                 _ -> []
     where
@@ -597,7 +597,7 @@ transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m 
             toEither $ error_list 
                 [ ( not $ L.null withInd
                   , [printf|event(s) %s have indices and require witnesses|] 
-                        $ intercalate "," $ map show withInd) ]
+                        $ intercalate "," $ map pretty withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
                 prop = Tr fv tr es empty_hint
@@ -807,8 +807,6 @@ instance IsEvtExpr ActionDecl where
             x <- parseEvtExpr' "action"
                 (uncurry M.union . (frame' &&& used_var'.ba_pred))
                 EActions scope eid lbl decl
-            --mapM_ (traceM . show) x
-            --when (L.null x) $ traceM "empty"
             return x
 
 instance PrettyPrintable ActionDecl where

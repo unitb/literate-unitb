@@ -570,7 +570,7 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
             tell [MLError cycle_msg 
-                $ L.map (first show) $ M.toList $ 
+                $ L.map (first pretty) $ M.toList $ 
                 lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
         msg = [printf|A cycle exists in the %s|]

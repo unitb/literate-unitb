@@ -119,8 +119,6 @@ instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
                               : ys)
         where 
             f (x,y) = (composite_label [lbl, x],y)
-            -- with_li x = label (x ++ show li)
-            -- li  = line_info c
 
     proof_po (ByCases xs li) lbl po = do
             dis <- toErrors li $ mzsome (L.map (\(_,x,_) -> Right x) xs)

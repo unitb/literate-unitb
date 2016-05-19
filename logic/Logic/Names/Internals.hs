@@ -113,17 +113,9 @@ class (Show a,Ord a,Hashable a,Data a) => IsBaseName a where
 _Name :: IsName a => Prism' String a
 _Name = prism' render (fmap fromName . isZ3Name')
 
---instance Show Name where
---    show = [printf|[%s]|] . render
-
---instance Show InternalName where
---    show x = [printf|{%s}|] $ render x
-
-
 renderAsLatex :: Name -> String
 renderAsLatex (Name b base' p suff') = concat [slash,toList base,replicate (fromIntegral p) '\'',suffix]
     where
-        -- (Name b base p suff _) = toLatexEncoding n
         base = replaceAll' substToLatex base'
         suff = replaceAll substToLatex suff'
 
@@ -134,12 +126,9 @@ renderAsLatex (Name b base' p suff') = concat [slash,toList base,replicate (from
 
 instance IsBaseName Name where
     render = renderAsLatex
-    --asString arse = iso render $ makeName arse
     asInternal' n = InternalName "" n ""
     asName' = id
     fromString'' = makeName
-    --addSuffix (Name n0) n1 = Name $ n0 <> ('@' :| n1)
-    --dropSuffix (Name (n:|ns)) = Name $ n :| L.takeWhile ('@' /=) ns
     addPrime = primes %~ (+1)
     generateNames n = n : [ n & base %~ (<+ show i) | i <- [0..] ]
     language Proxy = latexName
@@ -152,11 +141,9 @@ class IsBaseName n => IsName n where
 
 asInternal :: IsName n => n -> InternalName
 asInternal = asInternal'
---asInternal = view (from internal) . asInternal'
 
 asName :: IsName n => n -> Name    
 asName = asName'
---asName = view (from name) . asName'
 
 instance IsName Name where
     fromInternal = asName
@@ -174,37 +161,23 @@ make :: (Pre,IsBaseName n0,IsBaseName n1)
      => (n0 -> n1 -> a)
      -> String -> String -> a
 make f inm = make' (make' f inm)
-    --f (fromString'' inm) (makeName (withCallStack assert) nm)
 
 make' :: (Pre,IsBaseName n)
       => (n -> a)
       -> String -> a
 make' f = f . fromString''
 
---instance IsString Name where
---    fromString = fromString''
-
 (<+) :: NonEmpty a -> [a] -> NonEmpty a
 (<+) (x :| xs) ys = x :| (xs ++ ys)
-
---numbers :: Int -> [InternalName]
---numbers n = L.map (fromString''.show) [1..n]
 
 instance IsBaseName InternalName where
     render (InternalName pre x suf) = prefix ++ z3Render x ++ suf
         where
             prefix | null pre  = ""
                    | otherwise = [printf|@@%s@@_|] pre
-            --suffix | null suf  = ""
-            --       | otherwise = "@" ++ suf
-    --asString arse = iso render $ fromString' arse
     asInternal' = id
     asName' (InternalName _ n _) = n
     fromString'' = fromString'
-    --fresh (InternalName name) xs = L.head $ ys `Ord.minus` M.keys xs
-    --    where
-    --        ys = L.map InternalName $ name : L.map f [0..]
-    --        f x = name <: show x
     addPrime = internal %~ addPrime
     generateNames (InternalName pre n suf) = 
             InternalName pre <$> generateNames n <*> pure suf
@@ -236,7 +209,6 @@ fromString' nm = InternalName "" (fromJust' $ isZ3Name' n) suf
 
 isZ3Name' :: String -> Maybe Name
 isZ3Name' x = either (const Nothing) Just $ isZ3Name x
-    --parse z3Name' "" x
 
 isZ3Name :: String -> Either [String] Name
 isZ3Name str = mapLeft (\x -> [err,show x]) $ parse' z3Name' "" str
@@ -353,7 +325,6 @@ replaceAll (SPat pre mid suff) = substPre
 smt :: QuasiQuoter
 smt = QuasiQuoter
     { quoteExp  = \str -> [e| fromName $ $(parseZ3Name str) |]
-    --{ quoteExp  = \str -> [e| fromName . view (from name) $ $(parseZ3Name str) |]
     , quotePat  = undefined
     , quoteDec  = undefined
     , quoteType = undefined }
@@ -361,7 +332,6 @@ smt = QuasiQuoter
 tex :: QuasiQuoter
 tex = QuasiQuoter
     { quoteExp  = \str -> [e| $(parseTexName str) |]
-    --{ quoteExp  = \str -> [e| view (from name) $ $(parseTexName str) |]
     , quotePat  = undefined
     , quoteDec  = undefined
     , quoteType = undefined }

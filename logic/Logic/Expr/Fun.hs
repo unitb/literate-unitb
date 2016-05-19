@@ -21,9 +21,7 @@ import           Data.Serialize
 
 import GHC.Generics.Instances
 
-
 import Test.QuickCheck
-
 
 import Utilities.Functor
 

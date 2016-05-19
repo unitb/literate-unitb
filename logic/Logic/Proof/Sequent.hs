@@ -7,9 +7,9 @@ import Logic.Expr
 import Logic.Operator
 
     -- Libraries
-import Control.Applicative hiding (Const)
+import Control.Applicative
 import Control.DeepSeq
-import Control.Lens hiding (Context,Const,elements)
+import Control.Lens hiding (Context,elements)
 import Control.Lens.HierarchyTH
 import Control.Monad.RWS
 import Control.Precondition
@@ -132,7 +132,7 @@ checkScopesAux e@(Word v) = do
     b2 <- views functions (M.member $ v^.name)
     unless (b0 == Just v || b1 || b2) $ 
         tell [e]
-checkScopesAux (Const _ _) = return ()
+checkScopesAux (Lit _ _) = return ()
 checkScopesAux e@(FunApp fn args) = do
     b0 <- views functions (M.member $ fn^.name)
     b1 <- views definitions (M.member $ fn^.name)
@@ -162,10 +162,8 @@ makeSequent ctx props asms0 asms1 g = checkSequent $
 checkSequent :: Pre
              => Sequent -> Sequent
 checkSequent s = byPred msg (const $ L.null xs) (Pretty s) s
-         --assertMessage "invalid scopes" (unlines $ map show xs) id s
     where
         msg = [printf|Sequent scopes: \n%s|] $ L.unlines $ map pretty_print' xs
-        --f (Def ts _ n ps t e) = _
         checkScopes' e = do
             xs <- snd <$> listen (checkScopesAux e)
             unless (L.null xs)
@@ -244,7 +242,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
                     ++ map pretty_print' hs'
             goal' = indent 1 $ pretty_print' g
             Context ss vs fs ds _ = s^.context
-            hs  = map (_1 %~ (++":  ") . show) $ M.toList (s^.named)
+            hs  = map (_1 %~ (++":  ") . pretty) $ M.toList (s^.named)
             hs' = s^.nameless
             margin = maximum (0:map (length.fst) hs)
             showWithLabel (lbl,x) = take margin (lbl ++ repeat ' ') ++ indentAfter margin (pretty_print' x)

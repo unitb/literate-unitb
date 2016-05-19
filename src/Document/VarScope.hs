@@ -10,7 +10,7 @@ module Document.VarScope where
 import Document.Phase.Types
 import Document.Scope
 
-import Logic.Expr hiding (Const)
+import Logic.Expr
 
 import UnitB.Syntax
 
@@ -189,7 +189,7 @@ instance Scope EvtDecls where
                 | otherwise = Just m
     error_item (Evt m) = fromJust' $ NE.nonEmpty $ ascElems $ mapWithKey msg m
         where
-            msg (Just k) x = (printf "%s (event '%s')" (kind x) (show k) :: String, x^.lineInfo)
+            msg (Just k) x = (printf "%s (event '%s')" (kind x) (pretty k) :: String, x^.lineInfo)
             msg Nothing x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (Evt vs) = Evt <$> concatMap f (toList vs)

@@ -44,9 +44,7 @@ import Test.UnitTest
 -- import Language.Haskell.TH.Syntax
 
 import Control.Concurrent
--- import Control.Lens
-
-import Data.Functor
+import Control.Monad
 
 -- import System.FilePath.Lens
 
@@ -56,7 +54,6 @@ import System.Process
 -- import System.Timeout
 
 -- import qualified Utilities.Lines as Lines
--- import Data.Map.Class as M
 import Utilities.TimeIt
 -- import Utilities.Timeout
 -- import Utilities.Table
@@ -64,9 +61,8 @@ import Utilities.TimeIt
 import Test.QuickCheck hiding (label)
 import Test.QuickCheck.Report
 
--- import Text.Printf
+import Document.ExprScope as EScope
 
-    -- timeout 5000000 $ 
 main :: IO ()
 main = timeIt $ void $ do
     setNumCapabilities 8
@@ -76,43 +72,6 @@ main = timeIt $ void $ do
     system "rm log*.z3"
     writeFile "syntax.txt" $ unlines syntaxSummary
     putStrLn $ nameType
-    -- return R.main
-    -- let 
-    --     path   = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque.tex"
-    --     state' = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-seq.tex.state"
-    --     state  = "/Users/Simon/Dropbox/Qualifying Exam/simon/chapters/models/lock-free-deque-other.tex.state"
-    --     state2 = state & basename.basename %~ (++ "-2")
-    -- timeIt $ do
-    --         -- writeFormat is extremely slow but the profiler seems to find readFormat slow
-    --         -- attempts
-    --         --   setNumCapabilities (made a difference but not a speedup)    
-    --         --   inline traverseFileStruct (no difference)
-    --         --   changed HashMap for Map (made things worse)
-    --         --   next: build with better profiling flags
-    --     r <- readFormat seqFileFormat state
-    --     print $ () <$ r
-    --     evaluate $ force r
-    --     print $ () <$ r
-    --     putStrLn "READING FAILS"
-    --     mapM_ (writeFormat seqFileFormat state2) r
-    --     putStrLn "read / write"
-    -- r <- timeIt $ do
-    -- r <- readFormat seqFileFormat state
-    -- print $ () <$ r
-    --     -- evaluate $ force r
-    --     -- print $ () <$ r
-    --     -- putStrLn "read other format"
-    --     -- return r
-    -- timeIt $ do
-    --     putStrLn "write format"
-    --     mapM_ (writeFormat seqFileFormat state2) r
-    --     putStrLn "read / write"
-    -- timeIt $ do
-    --     putStrLn "write format"
-    --     mapM_ (writeFormat seqFileFormat state2) r
-    --     putStrLn "read / write"
-
-    -- print =<< find_errors TSRef.path3
     return $ edit =<< raw_proof_obligation Deq.path1 "m0/INIT/FIS/q/p" 0
     return $ printQuickCheckResult MSpec.run_spec
     return $ quickCheck MSpec.prop_expr_parser
@@ -155,4 +114,5 @@ main = timeIt $ void $ do
     return $ run_test_cases Doc.test_case
     return $ run_test_cases RB.test_case
     return $ printQuickCheckResult Prop.run_tests
+    return $ printQuickCheckResult EScope.run_tests
     return ()

@@ -204,7 +204,7 @@ withPOs ps m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps
-                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ show lbl) li
+                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ pretty lbl) li
                 errs = concat (p^.partsOf (traverse._Failure)) ++ elems (mapWithKey f $ ps `difference` pos)
                 errs' | null errs = sequenceA p
                       | otherwise = Failure errs
@@ -265,5 +265,5 @@ format_result xs' = do
             ys = L.map snd rs ++ [xs]
         return (L.unlines ys, passed, total)
     where
-        f (y,True)  = (True, "  o  " ++ show y)
-        f (y,False) = (False," xxx " ++ show y)
+        f (y,True)  = (True, "  o  " ++ pretty y)
+        f (y,False) = (False," xxx " ++ pretty y)

@@ -62,7 +62,7 @@ type UntypedExpr = GenExpr Name () GenericType HOQuantifier
 data GenExpr n t a q = 
         Word (AbsVar n t) 
         | Record (RecordExpr n t a q)
-        | Const Value t
+        | Lit Value t
         | FunApp (AbsFun n a) [GenExpr n t a q]
         | Binder q [AbsVar n t] (GenExpr n t a q) (GenExpr n t a q) t
         | Cast (GenExpr n t a q) a
@@ -88,7 +88,7 @@ instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantif
     arbitrary = do
         inductive $ \arb -> 
             [ Word   <$> arbitrary' 
-            , Const  <$> arbitrary' <*> arbitrary'
+            , Lit    <$> arbitrary' <*> arbitrary'
             , FunApp <$> arbitrary' <*> listOf' arb
             , Binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
             , Cast   <$> arb <*> arbitrary'
@@ -119,7 +119,7 @@ traverseRecExpr f (FieldLookup x field) = liftA2 FieldLookup (f x) (pure field)
 
 instance Traversable1 (GenExpr a b) where
     traverse1 _ (Word v) = pure $ Word v
-    traverse1 _ (Const v t) = pure $ Const v t
+    traverse1 _ (Lit v t)  = pure $ Lit v t
     traverse1 f (Cast e t) = Cast <$> traverse1 f e <*> f t
     traverse1 f (Lift e t) = Lift <$> traverse1 f e <*> f t
     traverse1 f (FunApp fun e) = liftA2 FunApp (traverse f fun) ((traverse.traverse1) f e)
@@ -130,7 +130,7 @@ instance Traversable1 (GenExpr a b) where
 
 instance Traversable2 (GenExpr a) where
     traverse2 f (Word v) = Word <$> traverse f v
-    traverse2 f (Const v t) = Const v <$> f t
+    traverse2 f (Lit v t)  = Lit v <$> f t
     traverse2 f (Cast e t) = Cast <$> traverse2 f e <*> pure t
     traverse2 f (Lift e t) = Lift <$> traverse2 f e <*> pure t
     traverse2 f (FunApp fun e) = FunApp fun 
@@ -143,7 +143,7 @@ instance Traversable2 (GenExpr a) where
 
 instance Traversable3 GenExpr where
     traverse3 f (Word v) = Word <$> traverse1 f v
-    traverse3 _ (Const v t) = pure $ Const v t
+    traverse3 _ (Lit v t) = pure $ Lit v t
     traverse3 f (Cast e t) = Cast <$> traverse3 f e <*> pure t
     traverse3 f (Lift e t) = Lift <$> traverse3 f e <*> pure t
     traverse3 f (FunApp fun e) = FunApp <$> traverse1 f fun <*> (traverse.traverse3) f e
@@ -171,7 +171,7 @@ make_unique suf vs = freeVarsOf.namesOf %~ newName
 
 expSize :: GenExpr n t a q -> Int
 expSize (Word _) = 0
-expSize (Const _ _)   = 0
+expSize (Lit _ _)   = 0
 expSize (Record (RecLit m)) = 1 + sum (M.map expSize m)
 expSize (Record (RecUpdate e m)) = 1 + expSize e + sum (M.map expSize m)
 expSize (Record (FieldLookup e _)) = 1 + expSize e
@@ -272,7 +272,7 @@ instance ( IsName n,TypeSystem t,TypeSystem a
     type_of e = type_of $ aux $ asExpr e
         where
             aux (Word (Var _ t))         = t
-            aux (Const _ t)              = t
+            aux (Lit _ t)              = t
             aux (Cast _ t)               = strippedType t
             aux (Lift _ t)               = strippedType t
             aux (Record r)               = typeOfRecord r
@@ -440,7 +440,7 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Record (FieldLookup x field)) =
         List <$> sequenceA [pure $ Str $ render field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
-    as_tree' (Const xs _)         = return $ Str $ pretty xs
+    as_tree' (Lit xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
             | isLifted f =List <$> sequence   
                                [ List 
@@ -469,7 +469,7 @@ instance (TypeSystem a, TypeSystem t
                           , xp' ] ]
     -- {-# INLINE rewriteM #-}
     rewriteM _ x@(Word _)           = pure x
-    rewriteM _ x@(Const _ _)        = pure x
+    rewriteM _ x@(Lit _ _)        = pure x
     rewriteM f (Record e)        = Record <$> traverseRecExpr f e
     rewriteM f (Lift e t)    = Lift <$> f e <*> pure t
     rewriteM f (Cast e t)    = Cast <$> f e <*> pure t
@@ -492,7 +492,7 @@ rewriteExprM' :: (Applicative m)
 rewriteExprM' fT fA fQ fE e = 
         case e of
             Word v -> Word <$> fvar v
-            Const v t -> Const v <$> fT t
+            Lit v t -> Lit v <$> fT t
             FunApp f args -> 
                 FunApp <$> ffun f
                        <*> traverse fE args

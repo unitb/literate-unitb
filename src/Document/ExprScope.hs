@@ -9,7 +9,7 @@ module Document.ExprScope where
 import Document.Scope
 import Document.Phase.Types
 
-import UnitB.Expr hiding (Const)
+import UnitB.Expr 
 import UnitB.Syntax hiding (Witness)
 
     -- Libraries

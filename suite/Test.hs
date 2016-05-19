@@ -58,10 +58,9 @@ main = timeIt $ do
         putStrLn "\n***************"
         putStrLn   "*** SUCCESS ***"
         putStrLn   "***************"
+        exitSuccess
     else do
         putStrLn "\n***************"
         putStrLn   "*** FAILURE ***"
         putStrLn   "***************"
-    if b then exitSuccess
-         else exitFailure
-
+        exitFailure

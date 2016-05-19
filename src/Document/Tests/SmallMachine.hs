@@ -170,7 +170,7 @@ result4 = unlines
     ]
 
 show_po :: FilePath -> Label -> IO String
-show_po path lbl = proof_obligation path (show lbl) 0
+show_po path lbl = proof_obligation path (pretty lbl) 0
 
 case4 :: IO String
 case4 = show_po path3 "m0/inc/INV/inv0"

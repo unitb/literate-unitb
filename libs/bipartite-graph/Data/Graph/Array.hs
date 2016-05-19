@@ -453,9 +453,6 @@ instance (Arbitrary a, Eq a) => Arbitrary (Graph a) where
             return (x,y)
         return $ Graph xs ys
 
-
-
-
 return []
 
 run_tests :: (PropName -> Property -> IO (a, QC.Result))

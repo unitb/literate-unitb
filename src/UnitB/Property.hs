@@ -66,13 +66,10 @@ data Direction = Up | Down
     deriving (Eq,Show,Generic)
 
 newtype EventId = EventId Label
-    deriving (Eq,Ord,Typeable,Generic,Hashable,PrettyPrintable)
+    deriving (Eq,Show,Ord,Typeable,Generic,Hashable,PrettyPrintable)
 
 instance Arbitrary EventId where
     arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
-
-instance Show EventId where
-    show (EventId x) = show x
 
 instance IsString EventId where
     fromString = EventId . fromString
@@ -125,7 +122,7 @@ instance Show ProgId where
     show (PId x) = show x
 
 instance PrettyPrintable ProgId where
-    pretty = show
+    pretty (PId x) = pretty x
 
 type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr

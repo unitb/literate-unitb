@@ -2,7 +2,6 @@
 module Test.QuickCheck.Report where
 
 import Control.Arrow
-import Control.Concurrent.Async
 import Control.Lens
 import Control.Lens.Extras
 import Control.Monad
@@ -18,7 +17,6 @@ import Language.Haskell.TH.Syntax
 import qualified System.IO as S
 
 import Test.QuickCheck
--- import Test.QuickCheck.All
 import Test.QuickCheck.Lens
 
 import Text.Printf.TH
@@ -106,7 +104,7 @@ runQuickCheckAll' :: [(PropName, Property)]
                   -> (PropName -> Property -> IO (a,Result)) 
                   -> IO ([a],Bool)
 runQuickCheckAll' ps qc = 
-  fmap (L.map fst &&& all snd) . flip mapConcurrently ps $ \(xs, p) -> do
+  fmap (L.map fst &&& all snd) . forM ps $ \(xs, p) -> do
     qc xs p & mapped._2 %~ is _Success
     -- return $ (x,is _Success r)
 

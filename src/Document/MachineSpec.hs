@@ -17,7 +17,7 @@ import UnitB.UnitB
 
 
     -- Libraries
-import Control.Lens hiding (Context,elements,Const)
+import Control.Lens hiding (Context,elements)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Precondition
@@ -144,7 +144,7 @@ showExpr notation e = show_e e
                 unknown = [printf|<unknown function: %s %s>|] 
                             (render $ f^.name)
                             (show $ map Pretty $ M.keys m_ops)
-        show_e (Const n _) = pretty n
+        show_e (Lit n _) = pretty n
         show_e _ = "<unknown expression>"
         m_ops :: Table Name Operator
         m_ops = M.fromList $ zip (map functionName xs) xs
@@ -183,7 +183,7 @@ latex_of m = do
             decls = map var_decl $ M.elems $ m!.variables
             imp_stat :: Name -> [LatexNode]
             imp_stat xs = cmd "\\with" [render xs]
-            inv_decl (lbl,xs) = cmd "\\invariant" [show lbl, showExpr (all_notation m) xs]
+            inv_decl (lbl,xs) = cmd "\\invariant" [pretty lbl, showExpr (all_notation m) xs]
             invs        = map inv_decl $ M.toList $ m!.props.inv
             imports = map imp_stat $ filter (/= makeName "basic") 
                         $ M.keys $ m!.theory.extends

@@ -175,7 +175,7 @@ instance (HasExpr expr) => HasInvariant (MachineBase expr) where
             "inv6" ## ((m^.abs_vars) `M.difference` (m^.del_vars)) `isSubmapOf'` (m^.variables)
             "inv7" ## noClashes (m^.inh_props) (m^.props)
             withPrefix "inv8" $ forM_ (all_refs m) $ \ev -> 
-                [printf|%s - %s|] (show $ ev^.abstract._1) (show $ ev^.concrete._1) 
+                [printf|%s - %s|] (pretty $ ev^.abstract._1) (pretty $ ev^.concrete._1) 
                     ## (ev^.old.actions) === (ev^.abs_actions)
                 -- Proofs match properties
             "inv9" ## Pretty ((m^.derivation) `M.difference` (m^.props.progress)) === Pretty M.empty

@@ -125,11 +125,6 @@ makeHierarchy ls xs' = do
             let ns' = uncurry zip $ (++ [ls]) *** (fn:) $ unzip ns
             makeInstance tn ns'
     xs <- concat <$> zipWithM makeInstance' xs (drop 1 $ tails xs)
-    -- runIO $ do
-    --     printf "%s\n" 
-    -- --         (pprint polyClass)
-    -- --         (pprint polyInstance)
-    --         (unlines $ L.map pprint xs)
     return xs    
 
 classKind :: Name -> Q Int

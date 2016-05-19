@@ -52,19 +52,12 @@ quickCheckClassTests cl = do
         _ = insts
 
         insts = map clInst is
-        --match' (t:ts) (AppT ts' t') = M.insert (t^.name) t' $ match ts ts'
-        --match' _ _ = M.empty
-        --match = match' . reverse
-        --withInt (VarT x) = ConT ''Integer
-        --withInt t = t & types %~ withInt
         match' :: Type -> Type -> Maybe (M.Map Name Type)
         match' (ConT x) t   = M.empty <$ (t^?_ConT.only x) 
         match' (VarT x) t   = Just $ M.singleton x t
         match' (AppT x y) t = (t^?_AppT) >>= \(x',y') -> M.union <$> match' x x' <*> match' y y'
         match' ArrowT t     = M.empty <$ (t^?_ArrowT)
         match' t t' = error $ [printf|\n%s\n%s\n|] (pprint t) (pprint t')
-        --match'' t t' = trace (printf "-- %s - %s - %s" (show m) (show t) (show t')) m
-        --    where m = match'' t t'
         match :: Type -> Type -> Type
         match t t' = fromMaybe t' $ t'^?_ForallT.to (\x -> withInt $ substType (M.unions $ mapMaybe (flip match' t) $ x^._2) (x^._3))
         clInst (InstanceD _ t _) = t

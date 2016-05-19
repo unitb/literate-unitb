@@ -627,8 +627,6 @@ instance Show a => Show (ShowLine a) where
 prop_check_interpret :: [Int] -> ()
                      -> [EventList AsyncMoment (Maybe Int,Maybe ())] 
                      -> Property
-                     -- -> [Maybe (Maybe (Maybe Int,Maybe ()), Maybe String, Maybe StdGen)] 
-                     -- -> IO ([Maybe (Maybe (Maybe Int,Maybe ()), Maybe String, Maybe StdGen)],[Maybe String])
 prop_check_interpret xs = satisfies $ do 
     selectM [pr|AsyncMoment|]
     program $ \e -> do
@@ -641,52 +639,14 @@ prop_check_interpret xs = satisfies $ do
         res' <- changePairD res
         m <- stepper 0 $ unionWith const (1 <$ e0) (2 <$ res')
         let _ = m :: Behavior Int
-        -- liftMomentIO $ do
-            -- reactimate $ putStrLn.[printf|a: %s|].show <$> res'
-            -- reactimate $ putStrLn.[printf|b: %s|].show <$> p'
-            -- reactimate $ putStrLn "tick" <$ e0
-            -- reactimate $ putStrLn "a" <$ res'
-            -- reactimate $ putStrLn "b" <$ p'
-            -- reactimate $ print.M.keys <$> changesD p
         do
             res' <- behavior res
             p'   <- behavior p
             specify (liftA2 (,) res' p') $ do
                 invariant' (\(m0,m1) -> M.null $ M.intersection m0 m1)
                 togetherOnly (changesD res) (changesD p)
-            -- specify (pure ())
-            --     (watchSpec (liftA2 (,) b 
-            --             (liftA2 M.union (res' & mapped.traverse._2 .~ ()) p')) $ do
-            --     -- magnify (to $ fmap $ \(x,y) -> M.union (x & mapped._2 .~ ()) y) $ 
-            --         constantUnlessB (M.keys.snd) fst)
         return (never :: Event ())
     specification $ \_ _ -> True
-            -- [ disp_ "e0" e0 
-            -- -- , disp_ "e1" e1
-            -- , dispB "during change" b
-            -- , dispB "assert A" a0
-            -- , dispStr  "assert B" $ invariantMessage <$> a1
-            -- , disp  "delta res" (changesD res)
-            -- , disp  "delta p  " (changesD p)
-            -- -- , dispB "n" n
-            -- -- , dispB "m" m
-            -- -- , disp  "p'  " $ p' & mapped.each %~ M.keys 
-            -- -- , disp  "res'" $ res' & mapped.each %~ M.keys
-            -- ]
-            -- [ ["e"]   <$ e0 
-            -- , pure.[printf|b@e: %s|].show <$> b <@ e0
-            -- , pure.[printf|b@res: %s|].show <$> b <@ res'
-            -- , ["res"] <$ changesD res
-            -- , ["p"]   <$ changesD p 
-            -- , pure.[printf|n: %s|].show <$> unionWith const (n <@ e0) (n <@ res')
-            -- , pure.[printf|res: %s|].show.(each %~ M.keys) <$> res'
-            -- , pure.[printf|m@res: %s|].show <$> m <@ res'
-            -- , pure.[printf|m@e0: %s|].show  <$> m <@ e0
-            -- , pure.[printf|m@e1: %s|].show  <$> m <@ e1
-            -- , pure.[printf|p: %s|].show.(each %~ M.keys) <$> p' 
-            -- ]
-
--- test2 = satisfy ()
 
 return []
 
