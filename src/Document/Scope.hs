@@ -23,6 +23,7 @@ module Document.Scope
     , contents
     , WithDelete 
     , Redundant
+    , NonEmptyListSet(..)
     , RefScope(..)
     )
 where
@@ -36,7 +37,7 @@ import UnitB.Event
 
     -- Libraries
 import Control.Applicative
-import Control.Arrow (second,(***))
+import Control.Arrow (second)
 import Control.DeepSeq
 
 import Control.Lens as L 
@@ -48,9 +49,11 @@ import Control.Precondition
 import Data.Either.Validation
 import Data.Graph.Array
 import Data.List as L
-import Data.List.NonEmpty as NE hiding (length,tail,head)
+import qualified Data.List.Ordered as Ord
+import           Data.List.NonEmpty as NE hiding (length,tail,head,map)
+import qualified Data.List.NonEmpty as NE 
 import Data.Map.Class as M
-import Data.Semigroup ((<>),First(..))
+import Data.Semigroup (Semigroup(..),First(..))
 import qualified Data.Traversable as T
 
 import GHC.Generics.Instances 
@@ -186,7 +189,43 @@ data DeclSource = Inherited | Local
 data InhStatus a = InhAdd a | InhDelete (Maybe a)
     deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
-type EventInhStatus a = InhStatus (NonEmpty EventId,a)
+newtype NonEmptyListSet a = NonEmptyListSet { unNonEmptyListSet :: NonEmpty a } 
+    deriving (Eq, Ord, Show, Functor, Applicative, ZoomEq)
+
+neUnion :: Ord a => NonEmpty a -> NonEmpty a -> NonEmpty a
+neUnion xx@(x :| xs) yy@(y :| ys) = case compare x y of
+        LT -> x NE.<| maybe yy (`neUnion` yy) (nonEmpty xs)
+        GT -> y NE.<| maybe xx (neUnion xx) (nonEmpty ys)
+        EQ -> x :| Ord.union xs ys
+
+newtype HeadOrd a = HeadOrd (NonEmpty a) deriving (Eq, Show)
+
+instance Ord a => Ord (HeadOrd a) where
+    compare (HeadOrd x) (HeadOrd y) = compare (NE.head x) (NE.head y)
+
+neUnions :: Ord a => NonEmpty (NonEmpty a) -> NonEmpty a
+neUnions xs = f xs'
+    where
+        xs' = NE.sort $ NE.map HeadOrd xs
+        f (HeadOrd (x :| x':xs) :| ys) = nub $ x NE.<| f (NE.insert (HeadOrd $ x':|xs) ys)
+        f (HeadOrd (x :| []) :| ys) = nub $ maybe (x :| []) ((x NE.<|) . f) (nonEmpty ys)
+        nub (x :| x':xs)
+            | x == x' = x :| xs
+        nub xs = xs
+
+
+instance Ord a => Semigroup (NonEmptyListSet a) where
+    NonEmptyListSet xs <> NonEmptyListSet ys = NonEmptyListSet $ neUnion xs ys
+    sconcat = NonEmptyListSet . neUnions . fmap unNonEmptyListSet
+
+instance (Arbitrary a,Ord a) => Arbitrary (NonEmptyListSet a) where
+    arbitrary = NonEmptyListSet . NE.nub . NE.sort <$> arbitrary
+
+instance Wrapped (NonEmptyListSet a) where
+    type Unwrapped (NonEmptyListSet a) = NonEmpty a
+    _Wrapped' = iso unNonEmptyListSet NonEmptyListSet
+
+type EventInhStatus a = InhStatus (NonEmptyListSet EventId,a)
 
 data RefScope = Old | New
 
@@ -321,11 +360,14 @@ instance ( Eq expr, ClashImpl a, Show a
             g x y = guard' x y >> Just (x & inhStatus %~ (flip f $ y^.inhStatus) 
                                           & declSource %~ (declUnion $ y^.declSource)
                                           & lineInfo %~ NE.sort.(<> (y^.lineInfo)))
-            guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
-            f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ NE.sort.(<> y^._1)
-            f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ NE.sort.(x^._1 <>)
-            f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ NE.sort.(<> y^._1)
-            f (InhDelete x) (InhDelete y) = InhDelete $ (NE.sort *** getFirst) <$> (second First <$> x) <> (second First <$> y)
+            guard' :: a -> a -> Maybe ()
+            -- guard' x y = guard =<< ((==) <$> (snd <$> contents x) <*> (snd <$> contents y))
+            guard' x y = guard $ (fromMaybe True $ liftA2 (==) (snd <$> contents x) (snd <$> contents y))
+            f :: EventInhStatus expr -> EventInhStatus expr -> EventInhStatus expr
+            f (InhAdd x) (InhAdd y) = InhAdd $ x & _1 %~ (<> y^._1)
+            f (InhAdd x) (InhDelete y) = InhDelete $ y & traverse._1 %~ (x^._1 <>)
+            f (InhDelete x) (InhAdd y) = InhDelete $ x & traverse._1 %~ (<> y^._1)
+            f (InhDelete x) (InhDelete y) = InhDelete $ second getFirst <$> (second First <$> x) <> (second First <$> y)
             declUnion Local Local = Local
             declUnion _ _         = Inherited
 

@@ -327,7 +327,7 @@ takeWhile1 p (x:xs) = x:takeWhile p xs
 --             $ L.unlines $ map (show . takeUntilE) $ tails var')
 --         monitor (counterexample $ [printf|shift': \n%s\n|] 
 --             $ L.unlines $ map (show . shift) $ tails var')
---         stop $ isNothing _ QC.=== all isSuffix (tails var')
+--         stop $ outp QC.=== L.map isSuffix (tails var')
 
 isConstant :: Eq b => (a -> b) -> [a] -> Bool
 isConstant f xs = null (drop 1 $ groupBy ((==) `on` f) xs)

@@ -178,7 +178,7 @@ assignment = machineCmd "\\evassignment" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             let frame = M.ascElems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
                 act = BcmSuchThat frame pred
             li <- ask
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -195,7 +195,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             check_types
                 $ Right (Word var :: RawExpr) `mzeq` Right (asExpr xp)
             let act = Assign var xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -209,7 +209,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                 ([printf|variable '%s' undeclared|] . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -224,7 +224,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr
                     xs
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right (asExpr xp)
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 instance ZoomEq Initially where
 instance Scope Initially where
@@ -369,7 +369,7 @@ parseEvtExpr' expKind fvars field scope evt lbl decl =
                     Old -> return []
                     New -> checkLocalExpr' expKind (fvars.snd) evt lbl decl
         old = case scope of
-            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- NE.toList evts]
+            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- NE.toList $ unNonEmptyListSet evts]
             New -> const []
         new = case scope of
             Old -> const []
@@ -405,7 +405,7 @@ guard_decl = machineCmd "\\evguard" $ \(Conc evt, NewLabel lbl, Expr xs) _m p2 -
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (event_parser p2 ev) xs
-            return [(lbl,evtScope ev (Guard (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (Guard (InhAdd (pure ev,xp)) Local $ pure li))]
 
 guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 guard_removal = machineCmd "\\removeguard" $ \(Conc evt_lbl,lbls) _m p2 -> do
@@ -431,7 +431,7 @@ coarse_sch_decl = machineCmd "\\cschedule" $ \(Conc evt, NewLabel lbl, Expr xs) 
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -439,7 +439,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (FineSchedule (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (FineSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
 
         -------------------------
         --  Theory Properties  --
@@ -510,7 +510,7 @@ default_schedule_decl = arr $ \(p2,csch) ->
                 | otherwise     = map ((def,) . makeEvtCell (Right e)) [sch]
             where
                 def  = label "default"
-                sch  = CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited $ pure li
+                sch  = CoarseSchedule (InhAdd (pure e,zfalse)) Inherited $ pure li
                 sch' = sch & inhStatus %~ makeDelete & declSource .~ Local
 
 instance PrettyPrintable Invariant where

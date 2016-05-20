@@ -218,9 +218,7 @@
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  |  *** FAILED ***
-src/Document/Test.hs:50:8
-|  +- [ Success: 169 / 170 ]
+|  +- [ Success: 170 / 170 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -322,17 +320,17 @@ src/Document/Test.hs:50:8
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 252 / 253 ]
++- [ Success: 253 / 253 ]
 Data.Map.Base
 
 ***************
-*** FAILURE ***
+*** SUCCESS ***
 ***************
 Lines of Haskell code:
-   37013 total
+   37348 total
     1038 src/UnitB/PO.hs
-     918 src/Document/Phase/Expressions.hs
+     926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
      751 src/Document/phase.hs
-     746 logic/Logic/Expr/Parser/Internal/Parser.hs
-Run time: 2m 52s
+     747 logic/Logic/Expr/Expr.hs
+Run time: 2m 9s
