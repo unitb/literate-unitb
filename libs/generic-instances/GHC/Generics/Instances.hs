@@ -26,6 +26,8 @@ module GHC.Generics.Instances
     , genericArbitrary, inductive, listOf', arbitrary' 
     , Lift1(..), Monoid1(..)
     , Default1(..)
+    , Compose(..)
+    , arbitraryCompose
     , OnFunctor(..) )
 where
 
@@ -378,6 +380,9 @@ deriving instance Generic Fingerprint
 deriving instance Generic TypeRep
 deriving instance Generic TyCon
 
+arbitraryCompose :: Arbitrary (f (g a)) => Gen (Compose f g a)
+arbitraryCompose = Compose <$> arbitrary
+
 instance (NFData a,NFData b) => NFData (Validation a b) where
 
 class Serialize1 f where
@@ -405,6 +410,7 @@ instance Serialize a => Serialize (Identity a) where
 
 instance Arbitrary a => Arbitrary (Identity a) where
     arbitrary = Identity <$> arbitrary
+    shrink = genericShrink
 instance Arbitrary (Proxy a) where
     arbitrary = return Proxy
 

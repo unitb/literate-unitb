@@ -17,6 +17,7 @@ import Data.Typeable
 import GHC.Generics 
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Text.Pretty
 
@@ -41,6 +42,8 @@ instance IsLabel Name where
 instance (IsLabel l,IsLabel r) => IsLabel (Either l r) where
     as_label = either as_label as_label
 
+instance ZoomEq Label where
+    (.==) = (===)
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 

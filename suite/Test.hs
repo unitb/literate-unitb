@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import Control.Concurrent
+import Control.Lens ()
 import Control.Monad
 
 import Data.List
@@ -22,6 +24,7 @@ import System.Directory
 import System.Exit
 
 import Test.UnitTest
+import Test.QuickCheck.Lens ()
 
 import Utilities.Table
 import Utilities.TimeIt
@@ -44,6 +47,7 @@ main :: IO ()
 main = timeIt $ do
     writeFile "syntax.txt" $ unlines syntaxSummary
     xs <- getDirectoryContents "."
+    setNumCapabilities 8
     let prefix ys = any (ys `isPrefixOf`) xs
     when (prefix "actual-") $
         shelly $ rm_f "actual-*.txt"
@@ -51,6 +55,7 @@ main = timeIt $ do
         shelly $ rm_f "expected-*.txt"
     when (prefix "po-") $
         shelly $ rm_f "po-*.z3"
+    -- b <- run_quickCheck_suite_with Main.test_case $ argMaxSuccess .= 1000
     b <- run_test_cases Main.test_case
     putStrLn tableType
     if b 

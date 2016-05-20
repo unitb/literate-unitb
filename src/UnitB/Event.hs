@@ -31,6 +31,7 @@ import GHC.Generics hiding (to)
 import GHC.Generics.Instances
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf
 
@@ -59,6 +60,7 @@ instance IsLabel SkipEventId where
     as_label SkipEvent = label "SKIP"
 instance NFData SkipEventId where
 instance Hashable SkipEventId where
+instance ZoomEq SkipEventId where
 instance PrettyPrintable SkipEventId where
     pretty = show
 
@@ -168,11 +170,19 @@ hyps_label = PId . fst . view sch_prog
 
 mkCons ''Event'
 
+instance ZoomEq expr => ZoomEq (ScheduleChange' expr) where
+
+instance ZoomEq expr => ZoomEq (AbstrEvent' expr) where
+
 instance HasExpr expr => Default (AbstrEvent' expr) where
     def = genericDefault
 
+instance ZoomEq expr => ZoomEq (Event' expr) where
+
 instance HasExpr expr => Default (Event' expr) where
     def = empty_event
+
+instance ZoomEq expr => ZoomEq (ConcrEvent' expr) where
 
 instance HasExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
@@ -242,8 +252,15 @@ instance (HasExpr expr) => HasScope (Event' expr) where
             ]
         ]
 
+instance ZoomEq expr => ZoomEq (Action' expr) where
 instance Arbitrary expr => Arbitrary (Action' expr) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance ZoomEq expr => ZoomEq (Witness' expr) where
+instance Arbitrary expr => Arbitrary (Witness' expr) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 --infix 1  $=
 

@@ -189,9 +189,11 @@ mapMaybeRan p (Rel m) = Rel $ cleanup $ M.map (M.fromList . mapMaybe p' . M.toLi
 
 instance (Ord a,Ord b,Arbitrary a,Arbitrary b) => Arbitrary (Relation a b) where
     arbitrary = fromList `liftM` arbitrary
+    shrink = fmap fromList . genericShrink . toList
 
 instance (Ord a, Arbitrary a) => Arbitrary (S.Set a) where
     arbitrary = S.fromList `liftM` arbitrary
+    shrink = fmap S.fromList . genericShrink . S.toList
 
 imp_invariant :: Relation a b -> Bool
 imp_invariant (Rel r) = M.null (M.filter M.null r)

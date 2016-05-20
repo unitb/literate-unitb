@@ -41,6 +41,7 @@ import GHC.Generics.Instances
 import Language.Haskell.TH hiding (Type,Name) -- (ExpQ,location,Loc)
 
 import Test.QuickCheck
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
@@ -83,6 +84,10 @@ instance PrettyPrintable Value where
     pretty (RealVal v) = show v
     pretty (IntVal v)  = show v
 
+instance ZoomEq Value where
+    (.==) = (===)
+
+instance (ZoomEq n,ZoomEq t,ZoomEq a,ZoomEq q) => ZoomEq (GenExpr n t a q) where
 instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 
         => Arbitrary (GenExpr n t a q) where
     arbitrary = do
@@ -93,7 +98,28 @@ instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantif
             , Binder <$> arbitrary' <*> arbitrary' <*> arb <*> arb <*> arbitrary'
             , Cast   <$> arb <*> arbitrary'
             , Lift   <$> arb <*> arbitrary'
+            , Record <$> (arb & _Wrapped.mapped %~ arbitraryRecord)
             ]
+    shrink = genericShrink
+
+arbitraryRecord :: Gen (GenExpr n t a q)
+                -> Gen (RecordExpr n t a q)
+arbitraryRecord arb = oneof 
+      [ RecLit <$> arbitraryFields arb
+      , RecUpdate <$> arb <*> arbitraryFields arb
+      , FieldLookup <$> arb <*> arbitrary ]
+
+arbitraryFields :: (Arbitrary k,Ord k)
+                => Gen a -> Gen (M.Map k a)
+arbitraryFields arb = M.fromList <$> listOf (liftA2 (,) arbitrary arb) 
+
+instance (ZoomEq t,ZoomEq n,ZoomEq a,ZoomEq q) 
+        => ZoomEq (RecordExpr n t a q) where
+
+instance (Arbitrary t,Arbitrary n,Arbitrary a,Arbitrary q,TypeSystem t,IsQuantifier q) 
+        => Arbitrary (RecordExpr n t a q) where
+    arbitrary = arbitraryRecord arbitrary
+    shrink = genericShrink
 
 instance Functor1 (GenExpr a b) where
 instance Functor2 (GenExpr a) where
@@ -182,6 +208,7 @@ expSize (Lift e _) = 1 + expSize e
 
 instance Arbitrary Value where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 type P = Either [String]
 
@@ -410,6 +437,11 @@ lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
              => GenExpr n t a q -> Table Name (GenExpr n t a q)
 lookupFields e = fromJust' $ type_of e^?fieldTypes.to (imap $ \f _ -> Record $ FieldLookup e f)
 
+instance ( ZoomEq t
+         , ZoomEq n
+         , ZoomEq q) 
+        => ZoomEq (AbsDef n t q) where
+
 instance ( TypeSystem t
          , IsQuantifier q
          , Arbitrary t
@@ -417,6 +449,7 @@ instance ( TypeSystem t
          , Arbitrary q) 
         => Arbitrary (AbsDef n t q) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (TypeSystem a, TypeSystem t
          , TypeAnnotationPair t a

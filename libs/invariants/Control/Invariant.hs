@@ -36,9 +36,9 @@ import GHC.Stack.Utils
 
 import PseudoMacros
 
-import Text.Printf.TH
+import Test.QuickCheck hiding ((===))
 
--- import Data.Map.Class (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
+import Text.Printf.TH
 
 newtype Checked a = Checked { getChecked :: a }
     deriving (Eq,Ord,NFData,Functor,Foldable,Traversable,Typeable)
@@ -201,6 +201,10 @@ class HasPrefix m where
     
 instance HasPrefix InvariantM where
     withPrefix pre (Invariant cmd) = Invariant $ local (pre:) cmd
+
+instance (HasInvariant a,Arbitrary a) => Arbitrary (Checked a) where
+    arbitrary = check' <$> arbitrary
+    shrink = fmap check' . shrink . getChecked
 
 mutate :: (IsChecked c a,Pre)
        => c -> State a k -> c

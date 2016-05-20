@@ -1,7 +1,5 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE UndecidableInstances   #-}
-
 module Test.QuickCheck.RandomTree where
 
 import Control.Monad

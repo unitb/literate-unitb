@@ -62,6 +62,8 @@ import GHC.Generics (Generic)
 
 import Prelude hiding (lookup)
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf
 
 newtype GraphBuilder key0 v0 key1 v1 e s0 s1 a = GB (RWST () ([(key0,v0)],[(key1,v1)],[(Int,Int,e)]) (Int,Map key0 Int,Int,Map key1 Int) Maybe a)
@@ -137,6 +139,14 @@ keys :: Lens (AdjList k0 v) (AdjList k1 v) (Array Int k0,Map k0 Int) (Array Int 
 keys f x = (\(y,z) -> AList y (x^.arVals) (x^.arEdges) z) <$> y
     where
         y = f (x^.arKey,x^.mapKey)
+
+edgeList :: BiGraph' k0 v0 k1 v1 e -> [(k0,v0,k1,v1,e)]
+edgeList g = M.elems $ M.mapWithKey (\(i,j) e -> 
+        ((lv^.arKey) ! i,(lv^.arVals) ! i,(rv^.arKey) ! j,(rv^.arVals) ! j,e)) es
+    where
+        es = g^.edges
+        lv = g^.leftAL
+        rv = g^.rightAL
 
 instance Default (BiGraph' key0 v0 key1 v1 e) where
     def = empty
@@ -581,11 +591,6 @@ rightInfo (Vertex v) = GR $ do
 transpose :: BiGraph' key0 v0 key1 v1 e -> BiGraph' key1 v1 key0 v0 e
 transpose (Graph arL arR es) = Graph arR arL $ M.mapKeys swap es
 
--- eInfo :: Edge s0 s1 -> GraphReader key v0 v1 s0 s1 ()
--- eInfo (Edge u v) = GR $ do
---     es <- view edges
---     return $ es M.! (u,v)
-
 source :: Edge s0 s1 -> Vertex s0
 source (Edge v _) = Vertex v
 
@@ -598,39 +603,9 @@ origins (Edge v0 v1) = (Vertex v0, Vertex v1)
 instance (NFData k,NFData a) => NFData (AdjList k a)
 instance (NFData k0,NFData k1,NFData v0,NFData v1,NFData e) => NFData (BiGraph' k0 v0 k1 v1 e)
 
--- graph :: Int -> Maybe (BiGraph Int String String)
--- graph n = makeGraph $ do
---         forM_ [2..n] $ \i -> do
---             u <- newLeftVertex i $ show i
---             forM_ [2..n] $ \j -> do
---                 v <- newRightVertex j $ show j
---                 let x = gcd i j
---                 unless (x == 1) $ do
---                     newEdge u v
-
--- enforce :: (a -> b -> Bool) -> Lens' a b -> Lens' a b
--- enforce p ln = lens (view ln) $ \x y -> assert (p x y) $ set ln y x
-
--- main :: IO ()
--- main = do
---     let g = fromJust $ graph 10
---         f n = readGraph g $ do
---             v  <- hasLeftVertex n
---             es <- maybe (return []) (fmap NE.toList . successors) v
---             L.zip <$> mapM (rightInfo.target) es 
---                   <*> mapM eInfo es
---     putStrLn "hello world"
---     print g
---     -- mapM_ print $ M.toList $ edgeMap g
---     mapM_ print $ f 6
---     -- let g = _ -- divGraph 20
---     -- _
---     -- mapM_ print $ readGraph g $ do
---     --     vertices >>= 
---     --         mapM (\v -> do
---     --             es <- mapM eInfo =<< successors v
---     --             x  <- vInfo v
---     --             return (x,sum es))
+instance (Ord k0,Ord k1,ZoomEq k0,ZoomEq k1,ZoomEq v0,ZoomEq v1,ZoomEq e) 
+        => ZoomEq (BiGraph' k0 v0 k1 v1 e) where
+    g0 .== g1 = (edgeList g0) .== (edgeList g1)
 
 instance (Ord v0,Serialize v0,Serialize v1,Serialize e) => Serialize (BiGraph v0 v1 e) where
 instance (Ord v0,Serialize v0,Serialize v1) => Serialize (AdjList v0 v1) where

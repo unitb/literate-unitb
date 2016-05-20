@@ -26,9 +26,12 @@ import qualified Data.List as L
 import qualified Data.Map.Class as M
 import qualified Data.Set as S
 
+import GHC.Generics
+
 import Test.QuickCheck hiding (label, sized, elements)
 import Test.QuickCheck.RandomTree
 import Test.QuickCheck.Report
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
@@ -39,9 +42,9 @@ import           Utilities.Table
 prop_parseOk :: Property
 prop_parseOk = forAll correct_machine $ f_prop_parseOk
 
-f_prop_parseOk :: (Pretty RawMachine, Tex) -> Bool
+f_prop_parseOk :: (Pretty RawMachine, Tex) -> Property
 f_prop_parseOk (Pretty mch,Tex tex) =
-        (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) == Right [mch]
+        (M.elems . M.map (fmap asExpr) . view' machines) `liftM` (all_machines tex) .== Right [mch]
  
 prop_type_error :: Property
 prop_type_error = forAll (liftM snd mch_with_type_error) f_prop_type_error
@@ -57,6 +60,7 @@ prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression ctx n (withLI 
         withLI xs = StringLi (map (\x -> (x,li)) xs) li
 
 data ExprNotation = ExprNotation Context Notation RawExpr
+    deriving Generic
 
 instance Show ExprNotation where
      show (ExprNotation _ n e) = showExpr n e
@@ -78,6 +82,7 @@ instance Arbitrary ExprNotation where
                     M.empty M.empty 
         return $ ExprNotation 
                     ctx basic_notation e
+    shrink = genericShrink
 
 data MachineInput = MachineInput RawMachine [LatexNode]
 
@@ -272,8 +277,22 @@ gen_machine b = fix (\retry n -> do
                 Nothing -> retry $ n-1
             ) 10
 
-instance Arbitrary (RawMachine) where
+instance Arbitrary RawMachine where
     arbitrary = gen_machine False
+    -- shrink = content $ \m -> 
+    --               [ m & variables .~ vs & abs_vars .~ avs & del_vars .~ dvs 
+    --                   & init_witness .~ iwit & inits .~ i 
+    --                   -- & event_table .~ et 
+    --                   | 
+    --         (vs,avs,dvs,(iwit,i)) <- shrink 
+    --             (m^.variables
+    --             ,m^.abs_vars
+    --             ,m^.del_vars
+    --             ,(m^.init_witness
+    --             ,m^.inits
+    --             -- ,m^.event_table
+    --             )) ]
+
 
 mk_errors :: MonadGen m => Bool -> Int -> m [Bool]
 mk_errors False n = return $ replicate n False

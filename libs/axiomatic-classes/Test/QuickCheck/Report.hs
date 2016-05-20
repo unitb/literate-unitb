@@ -128,3 +128,4 @@ test_report tests = do
 
 instance (Ord k,Arbitrary k,Arbitrary a) => Arbitrary (Map k a) where
     arbitrary = M.fromList <$> arbitrary
+    shrink = fmap M.fromList . genericShrink . M.toList

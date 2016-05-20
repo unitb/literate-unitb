@@ -56,12 +56,13 @@ import qualified Data.Traversable as T
 import GHC.Generics.Instances 
 
 import Test.QuickCheck as QC hiding (Failure,Success)
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Table
 import Utilities.Syntactic
 
     -- clashes is a symmetric, reflexive relation
-class (Ord a,Show a) => Scope a where
+class (Ord a,Show a,ZoomEq a) => Scope a where
     type Impl a :: *
     type Impl a = DefaultClashImpl a
     kind :: a -> String
@@ -93,11 +94,15 @@ class (Ord a,Show a) => Scope a where
     axiom_Scope_clashesIsSymmetric :: a -> a -> Bool
     axiom_Scope_clashesIsSymmetric x y = (x `clash` y) == (y `clash` x)
     axiom_Scope_clashesOverMerge :: a -> a -> a -> Property
-    axiom_Scope_clashesOverMerge x y z = clash x y .||. ((x <+> y) `clash` z === (x `clash` z || y `clash` z))
+    axiom_Scope_clashesOverMerge x y z = 
+            counterexample (show $ x <+> y) $
+            counterexample ("x clash z: " ++ show (x `clash` z)) $
+            counterexample ("y clash z: " ++ show (y `clash` z)) $
+            clash x y .||. ((x <+> y) `clash` z === (x `clash` z || y `clash` z))
     axiom_Scope_mergeCommutative :: a -> a -> Property
     axiom_Scope_mergeCommutative x y = clash x y .||. x <+> y === y <+> x
     axiom_Scope_mergeAssociative :: a -> a -> a -> Property
-    axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) .||. x <+> (y <+> z) === (x <+> y) <+> z
+    axiom_Scope_mergeAssociative x y z = not (clashFree [x,y,z]) .||. x <+> (y <+> z) .== (x <+> y) <+> z
 
 rename_events :: Scope a => Table EventId [EventId] -> a -> [a]
 rename_events m = rename_events' (\e -> findWithDefault [e] e m)
@@ -251,11 +256,16 @@ deleteIso = iso getDelete WithDelete
 instance PrettyPrintable DeclSource where
     pretty = show
 
+instance ZoomEq DeclSource where
 instance Arbitrary DeclSource where
     arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance ZoomEq e => ZoomEq (InhStatus e) where
 
 instance Arbitrary e => Arbitrary (InhStatus e) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance HasImplIso (WithDelete a) a where
     asImpl = from deleteIso

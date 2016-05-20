@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies,StandaloneDeriving #-}
 module UnitB.UnitB 
     ( module UnitB.Syntax
     , module UnitB.UnitB 
@@ -44,6 +44,8 @@ import qualified Data.Set as S
 
 import GHC.Generics.Instances
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf.TH
 
 import Utilities.Syntactic
@@ -79,8 +81,9 @@ data MachinePO' expr = MachinePO
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 
 newtype Box a = Box (() -> a)
+    deriving (Generic)
 newtype MemBox a = MemBox a
-    deriving (Eq,Default,NFData)
+    deriving (Eq,Default,NFData,Generic)
 
 class IsBox f where
     box :: (() -> a) -> f a
@@ -175,7 +178,12 @@ instance Show1 MachinePO' where
 instance NFData (Box a) where
     rnf x = seq x ()
 
+deriving instance ZoomEq a => ZoomEq (MemBox a)
 
+instance ZoomEq a => ZoomEq (Box a) where
+    Box f .== Box g = f () .== g ()
+
+instance ZoomEq expr => ZoomEq (MachinePO' expr) where
 
 fromSyntax :: HasExpr expr => MachineAST' expr -> Machine' expr
 fromSyntax m = check $ makeMachinePO' m

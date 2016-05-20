@@ -57,7 +57,7 @@ library
   default-extensions:    TypeSynonymInstances, RankNTypes
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, mtl >=2.2 && <2.3, lens >=4.13 && <4.14, semigroups >=0.18 && <0.19, existential
+  build-depends:       base >=4.8 && <4.9, mtl >=2.2 && <2.3, lens >=4.13 && <4.14, semigroups >=0.18 && <0.19, constraints
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

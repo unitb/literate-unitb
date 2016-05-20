@@ -9,6 +9,7 @@ import Data.Foldable as F (concat)
 import Data.List.NonEmpty (NonEmpty(..),fromList,toList,(<|))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List as L
+import Data.Maybe (mapMaybe)
 
 import Prelude hiding (lines,unlines)
 
@@ -156,7 +157,7 @@ newtype Lines = Lines (NonEmpty String)
 
 instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = (:|) <$> arbitrary <*> arbitrary
-    shrink (x :| xs) = map (x :|) $ shrink xs
+    shrink = mapMaybe NE.nonEmpty . shrink . NE.toList
 
 instance Arbitrary Lines where
     arbitrary = do

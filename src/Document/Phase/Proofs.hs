@@ -52,6 +52,7 @@ import           Control.Monad.Trans.RWS as RWS ( mapRWST )
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
+import           Data.Constraint (Dict(..),(:-)(..))
 import           Data.Either.Combinators
 import           Data.Either.Validation
 import           Data.Existential
@@ -339,12 +340,12 @@ liveness m = withLineInfo $ proc () -> do
         nostep = lift' $ \(prog,rule) -> maybe 
             (raise' $ Error $ [printf|Expecting premises to rule: %s|] $ readCell1' (pretty . rule_name') rule) 
             return
-            (readCell1' (voidInference (Sub D) prog) rule)
+            (readCell1' (voidInference (Sub Dict) prog) rule)
         makeRule :: LatexParserA ([EventOrRef],LatexDoc,VoidInference) ProofTree
         makeRule = lift' (uncurry3 $ \evts hint -> wrapUpTree . traverseCell1 (fillInRule evts hint . getCompose))
         uncurry3 f (x,y,z) = f x y z
         wrapUpTree :: M (Cell1 Inference RuleParser) -> M ProofTree
-        wrapUpTree = fmap (ProofTree . rewriteCell (Sub D))
+        wrapUpTree = fmap (ProofTree . rewriteCell (Sub Dict))
         fillInRule :: forall rule. RuleParser rule 
                    => [EventOrRef]
                    -> LatexDoc
@@ -399,7 +400,7 @@ progStep m (Expr p,Expr q,RuleName r,evts,PlainText hint) = liftA4 (,,,)
 
 stepList :: MachineP3
          -> LatexParserA (RawProgressProp,Inst1 Proxy RuleParser rule) VoidInference
-stepList m = arr (dict.snd) &&& stepList' m >>> arr (\(D,inf) -> Cell (Compose inf))
+stepList m = arr (dict.snd) &&& stepList' m >>> arr (\(Dict,inf) -> Cell (Compose inf))
 
 
 stepList' :: MachineP3
@@ -409,9 +410,9 @@ stepList' :: MachineP3
 stepList' m = 
                 arr (Inference . fst)
             <*> arr (view inst1 . snd)
-            <*> (consume' <<< buildProgress (Sub D) (withLookAhead $ liveness m) <<< pre) 
-            <*> (consume' <<< buildTransient (Sub D) (withLookAhead transient) <<< pre)
-            <*> (consume' <<< buildSafety (Sub D) (withLookAhead safety) <<< pre)
+            <*> (consume' <<< buildProgress (Sub Dict) (withLookAhead $ liveness m) <<< pre) 
+            <*> (consume' <<< buildTransient (Sub Dict) (withLookAhead transient) <<< pre)
+            <*> (consume' <<< buildSafety (Sub Dict) (withLookAhead safety) <<< pre)
     where
         pre = arr snd >>> (id &&& getLineInfo) >>> arr (\(r,li) -> ((),r,li))
         safety :: LatexParser (RawSafetyProp, Maybe Label)

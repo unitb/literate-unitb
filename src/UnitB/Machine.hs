@@ -47,6 +47,8 @@ import           Data.Typeable
 
 import GHC.Generics.Instances
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf.TH
 
 import Utilities.Table
@@ -82,6 +84,9 @@ data MachineBase expr =
         , _derivation :: Table ProgId ProofTree         
         , _comments   :: Table DocItem String }
     deriving (Eq,Show,Typeable,Functor,Foldable,Traversable,Generic)
+
+instance ZoomEq expr => ZoomEq (MachineBase expr) where
+instance ZoomEq expr => ZoomEq (EventTable expr) where
 
 instance Eq1 MachineBase where
     eq1 x y = x == y

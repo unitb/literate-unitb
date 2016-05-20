@@ -1,5 +1,5 @@
-{-# LANGUAGE UndecidableInstances
-        ,TypeOperators
+{-# LANGUAGE 
+        TypeOperators
         ,ScopedTypeVariables
         ,OverloadedStrings #-}
 module Logic.Expr.PrettyPrint 

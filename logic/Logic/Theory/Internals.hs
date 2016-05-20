@@ -14,6 +14,8 @@ import           Data.Typeable
 
 import GHC.Generics hiding ((:+:),prec)
 
+import Test.QuickCheck.ZoomEq
+
 import Utilities.Table
 
 data Theory = Theory 
@@ -41,3 +43,5 @@ empty_theory n = (makeTheory n)
 
 empty_theory' :: Pre => String -> Theory
 empty_theory' = empty_theory . fromString''
+
+instance ZoomEq Theory where

@@ -54,6 +54,7 @@ import qualified Data.Traversable   as T
 
 import Test.QuickCheck hiding (label)
 import Test.QuickCheck.Report
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 import Text.Show.With
@@ -225,6 +226,7 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             check_types $ Right (Word var) `zelem` Right (asExpr xp)
             return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
 
+instance ZoomEq Initially where
 instance Scope Initially where
     type Impl Initially = WithDelete Initially
     kind x = case x^.inhStatus of 
@@ -285,6 +287,7 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
                 then [(label $ render var,evtScope ev (Witness v p Local $ pure li))]
                 else [(label $ render var,evtScope ev (IndexWitness v p Local $ pure li))]
 
+instance ZoomEq EventExpr where
 instance Scope EventExpr where
     kind (EventExpr m) = show $ ShowString . kind <$> m
     keep_from s (EventExpr m) = Just $ EventExpr $ M.mapMaybe (keep_from s) m
@@ -442,6 +445,7 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(Conc evt, NewLabel lbl, Expr xs) _m
         --  Theory Properties  --
         -------------------------
 
+instance ZoomEq Axiom where
 instance Scope Axiom where
     kind _ = "axiom"
     merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
@@ -512,6 +516,7 @@ default_schedule_decl = arr $ \(p2,csch) ->
 instance PrettyPrintable Invariant where
     pretty = kind
 
+instance ZoomEq Invariant where
 instance Scope Invariant where
     kind _ = "invariant"
     rename_events' _ x = [x]
@@ -536,6 +541,7 @@ invariant = machineCmd "\\invariant" $ \(NewLabel lbl,Expr xs) _m p2 -> do
             xp <- parse_expr'' (p2^.pMchSynt) xs
             return [(lbl,makeCell $ Invariant xp Local li)]
 
+instance ZoomEq InvTheorem where
 instance Scope InvTheorem where
     kind _ = "theorem"
     rename_events' _ x = [x]
@@ -563,6 +569,7 @@ mch_theorem = machineCmd "\\theorem" $ \(NewLabel lbl,Expr xs) _m p2 -> do
             xp <- parse_expr'' (p2^.pMchSynt) xs
             return [(lbl,makeCell $ InvTheorem xp Local li)]
 
+instance ZoomEq TransientProp where
 instance Scope TransientProp where
     kind _ = "transient predicate"
     rename_events' _ x = [x]
@@ -635,6 +642,7 @@ instance IsExprScope ConstraintProp where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq ConstraintProp where
 instance Scope ConstraintProp where
     kind _ = "co property"
     rename_events' _ x = [x]
@@ -669,6 +677,7 @@ instance IsExprScope SafetyDecl where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq SafetyDecl where
 instance Scope SafetyDecl where
     kind _ = "safety property"
     rename_events' _ x = [x]
@@ -721,6 +730,7 @@ instance IsExprScope ProgressDecl where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq ProgressDecl where
 instance Scope ProgressDecl where
     kind _ = "progress property"
     rename_events' _ x = [x]

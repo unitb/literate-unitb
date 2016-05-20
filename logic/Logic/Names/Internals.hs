@@ -35,6 +35,7 @@ import qualified Language.Haskell.TH.Syntax as TH
 import Test.QuickCheck as QC
 import Test.QuickCheck.Regression as QC
 import Test.QuickCheck.Report as QC
+import Test.QuickCheck.ZoomEq
 
 import Text.Pretty
 import Text.Printf.TH
@@ -404,6 +405,12 @@ insertAt n xs ne@(y :| ys)
     | n <= 0    = foldr (NE.<|) ne xs
     | otherwise = y :| (L.take (n-1) ys ++ xs ++ L.drop (n-1) ys)
 
+instance ZoomEq Name where
+    (.==) = (===)
+
+instance ZoomEq InternalName where
+    (.==) = (===)
+
 instance Arbitrary Name where
     arbitrary = do
         r <- oneof 
@@ -420,10 +427,12 @@ instance Arbitrary Name where
                         return $ ((),n & base %~ insertAt i kw)
                 execStateT (replicateM_ n $ StateT cmd) r
             , r & base (const $ sconcat <$> nonEmptyOf (QC.elements [sl,prime])) ]
+    shrink = genericShrink
 
 instance Arbitrary InternalName where
     arbitrary = do
         asInternal' <$> (arbitrary :: Gen Name)
+    shrink = genericShrink
 
 instance TH.Lift Name where
     lift (Name a b c d) = [e| name a b c d Z3Encoding |]

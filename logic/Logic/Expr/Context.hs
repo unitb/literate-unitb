@@ -28,6 +28,7 @@ import GHC.Generics.Instances
 
 import Test.QuickCheck
 import Test.QuickCheck.Report ()
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Functor
 import Utilities.Table
@@ -128,10 +129,13 @@ instance (Ord n,Eq t,Eq q) => PreOrd (GenContext n t q) where
 
 instance (Ord n,Eq t,Eq q) => PartialOrd (GenContext n t q) where
 
+instance ( Ord n,ZoomEq n,ZoomEq t,ZoomEq q) 
+        => ZoomEq (GenContext n t q) where
 instance ( Ord n,TypeSystem t,IsQuantifier q
          , Arbitrary n,Arbitrary t,Arbitrary q) 
         => Arbitrary (GenContext n t q) where
     arbitrary = scale (`div` 2) genericArbitrary
+    shrink = genericShrink
 
 empty_ctx :: GenContext n t q
 empty_ctx = def

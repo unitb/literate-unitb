@@ -54,10 +54,10 @@ library
   -- other-modules:       
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:    KindSignatures, ConstraintKinds, UndecidableInstances, ExistentialQuantification, ScopedTypeVariables, TypeOperators, TemplateHaskell, RankNTypes, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts, QuasiQuotes
+  default-extensions:    KindSignatures, ConstraintKinds, UndecidableInstances, ExistentialQuantification, ScopedTypeVariables, TypeOperators, TemplateHaskell, RankNTypes, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts, QuasiQuotes, DefaultSignatures
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, template-haskell >=2.10 && <2.11, QuickCheck >=2.8 && <2.9, unordered-containers >=0.2 && <0.3, tagged >=0.8 && <0.9, generic-instances, printf-th, cereal, axiomatic-classes
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, template-haskell >=2.10 && <2.11, QuickCheck >=2.8 && <2.9, unordered-containers >=0.2 && <0.3, tagged >=0.8 && <0.9, generic-instances, printf-th, cereal, axiomatic-classes, constraints
   
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

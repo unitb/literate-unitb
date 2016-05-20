@@ -13,6 +13,7 @@ import Data.Typeable
 import GHC.Generics
 
 import Test.QuickCheck
+import Test.QuickCheck.ZoomEq
 
 instance HasExpr DispExpr where
 
@@ -35,10 +36,13 @@ instance Ord DispExpr where
 instance HasScope DispExpr where
     scopeCorrect' = scopeCorrect' . getExpr
 
+instance ZoomEq DispExpr where
+
 instance Arbitrary DispExpr where
     arbitrary = do
         x <- arbitrary
         return $ DispExpr (pretty x) x
+    shrink = genericShrink
 
 instance PrettyPrintable DispExpr where
     pretty = pretty . getExpr

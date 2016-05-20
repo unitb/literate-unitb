@@ -54,7 +54,7 @@ library
   -- other-modules:       
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:    ScopedTypeVariables, TemplateHaskell, RankNTypes, TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, FlexibleInstances
+  default-extensions:    ScopedTypeVariables, TemplateHaskell, RankNTypes, TemplateHaskell, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, FlexibleInstances, DeriveGeneric
   
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9, mtl >=2.2 && <2.3, QuickCheck >=2.8 && <2.9, lens >=4.13 && <4.14, semigroups >=0.18 && <0.19, axiomatic-classes, portable-lines, parsec

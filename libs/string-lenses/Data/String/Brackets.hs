@@ -3,6 +3,8 @@ module Data.String.Brackets where
     -- Modules
 import Control.Monad.State
 
+import GHC.Generics
+
 import Test.QuickCheck
 import Test.QuickCheck.Report
 
@@ -54,7 +56,8 @@ prop_close_close = brackets "))" == (2,0)
 prop_open_open :: Bool
 prop_open_open = brackets "((" == (0,2)
 
-data BrackString = BrackString String
+newtype BrackString = BrackString String
+    deriving (Generic)
 
 instance Show BrackString where
     show (BrackString xs) = show xs
@@ -62,6 +65,7 @@ instance Show BrackString where
 instance Arbitrary BrackString where
     arbitrary = do
         liftM BrackString $ listOf $ elements "(x)"
+    shrink = genericShrink
 
 return []
 

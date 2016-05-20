@@ -28,6 +28,7 @@ import GHC.Generics.Instances
 import Test.QuickCheck
 import Test.QuickCheck.Regression
 import Test.QuickCheck.Report
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Syntactic
 import Utilities.Table
@@ -75,7 +76,7 @@ makeFields ''Witness
 makeFields ''IndexWitness
 
 newtype ExprScope = ExprScope { _exprScopeCell :: Cell IsExprScope }
-    deriving Typeable
+    deriving (Typeable,Generic)
 
 class ( Scope a, Typeable a, Show a, PrettyPrintable a )
         => IsExprScope a where
@@ -97,7 +98,7 @@ makeFields ''ExprScope
 makePrisms ''ExprScope
 
 newtype EvtExprScope = EvtExprScope { _evtExprScopeCell :: Cell IsEvtExpr } 
-    deriving (Typeable)
+    deriving (Typeable,Generic)
 
 instance Eq EvtExprScope where
     (==) = cellEqual' (==)
@@ -110,8 +111,6 @@ instance Show EvtExprScope where
 
 instance PrettyPrintable EvtExprScope where
     pretty = readCell' pretty
-
-
 
 class ( Eq a, Ord a, Typeable a
       , Show a, Scope a
@@ -154,7 +153,7 @@ data InitEventId = InitEvent
     deriving (Show,Ord,Eq,Generic)
 
 data EventExpr = EventExpr { _eventExprs :: Table InitOrEvent EvtExprScope }
-    deriving (Eq,Ord,Typeable,Show)
+    deriving (Eq,Ord,Typeable,Show,Generic)
 
 makeLenses ''EventExpr
 makePrisms ''EventExpr
@@ -238,6 +237,7 @@ instance Ord ExprScope where
 instance PrettyPrintable ExprScope where
     pretty = readCell' pretty
 
+instance ZoomEq CoarseSchedule where
 instance Scope CoarseSchedule where
     type Impl CoarseSchedule = Redundant Expr (WithDelete CoarseSchedule)
     kind x = case x ^. inhStatus of
@@ -245,6 +245,7 @@ instance Scope CoarseSchedule where
                 InhAdd _ -> "coarse schedule"
     rename_events' _ e = [e]
 
+instance ZoomEq FineSchedule where
 instance Scope FineSchedule where
     type Impl FineSchedule = Redundant Expr (WithDelete FineSchedule)
     kind x = case x ^. inhStatus of
@@ -252,6 +253,7 @@ instance Scope FineSchedule where
                 InhAdd _ -> "fine schedule"
     rename_events' _ e = [e]
 
+instance ZoomEq Guard where
 instance Scope Guard where
     type Impl Guard = Redundant Expr (WithDelete Guard)
     kind x = case x ^. inhStatus of
@@ -259,14 +261,17 @@ instance Scope Guard where
                 InhAdd _ -> "guard"    
     rename_events' _ e = [e]
 
+instance ZoomEq Witness where
 instance Scope Witness where
     kind _ = "witness"
     rename_events' _ e = [e]
 
+instance ZoomEq IndexWitness where
 instance Scope IndexWitness where
     kind _ = "witness (index)"
     rename_events' _ e = [e]
 
+instance ZoomEq ActionDecl where
 instance Scope ActionDecl where
     type Impl ActionDecl = Redundant Action (WithDelete ActionDecl)
     kind x = case x ^. inhStatus of
@@ -274,6 +279,8 @@ instance Scope ActionDecl where
                 InhAdd _ -> "action"
     rename_events' _ e = [e]
 
+instance ZoomEq EvtExprScope where
+    (.==) = cellZoomEqual' (.==)
 instance Scope EvtExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
@@ -282,7 +289,8 @@ instance Scope EvtExprScope where
     rename_events' m = traverseCell' (rename_events' m)
     kind = readCell' kind
 
-
+instance ZoomEq ExprScope where
+    (.==) = cellZoomEqual' (.==)
 instance Scope ExprScope where
     keep_from s = traverseCell' (keep_from s)
     make_inherited = traverseCell' make_inherited
@@ -296,41 +304,56 @@ instance Show ExprScope where
 
 instance Arbitrary CoarseSchedule where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary FineSchedule where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Guard where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary ActionDecl where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Witness where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary IndexWitness where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary TransientProp where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Invariant where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary InvTheorem where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary ConstraintProp where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary SafetyDecl where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary ProgressDecl where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary Initially where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary Axiom where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 instance Arbitrary InitEventId where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 prop_axiom_Scope_mergeCommutative :: Property
 prop_axiom_Scope_mergeCommutative = regression (uncurry axiom_Scope_mergeCommutative) [(g0,g1)]

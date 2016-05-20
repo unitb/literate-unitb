@@ -17,6 +17,8 @@ import qualified Data.List as L
 import qualified Data.Map as M 
 import qualified Data.Maybe as MM
 
+import GHC.Generics.Instances
+
 import Test.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 import Test.QuickCheck.RandomTree hiding (size,subtrees)
@@ -91,6 +93,10 @@ tests path = do
             Right xs -> xs
             Left msgs -> error $ L.unlines $ map report msgs)
 
+instance Arbitrary LatexToken where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary LatexDoc where
     arbitrary = sized $ \sz -> makeLatex "foo.txt" <$> aux (ceiling $ fromIntegral sz ** (1.5 :: Float) + 1)
         where
@@ -114,6 +120,7 @@ instance Arbitrary LatexDoc where
             sz x = size (x ())
 
 newtype Tokens = TokenStream [(LatexToken,LineInfo)]
+    deriving (Generic)
 
 instance Show Tokens where
     show (TokenStream xs) = show xs
@@ -152,6 +159,7 @@ instance Arbitrary Tokens where
             return x
         ts <- evalStateT (sequence xs) (true,li)
         return $ TokenStream ts
+    shrink = genericShrink
 
 instance Arbitrary MutatedTokens where
     arbitrary = do

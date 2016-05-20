@@ -30,6 +30,7 @@ import GHC.Generics.Instances
 
 import Test.QuickCheck.Report ()
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
@@ -101,8 +102,12 @@ instance PreOrd SyntacticProp where
 
 instance PartialOrd SyntacticProp where
 
+instance ZoomEq SyntacticProp where
 instance Default SyntacticProp where
     def = empty_monotonicity
+
+instance (Ord n,ZoomEq n,ZoomEq t,ZoomEq q,ZoomEq e) 
+        => ZoomEq (GenSequent n t q e) where
 
 instance HasExprs (GenSequent n t q e) e where
     traverseExprs f (Sequent tout res ctx prop hyp0 hyp1 g) = 
@@ -461,15 +466,22 @@ instance ( Ord n, Arbitrary n, Arbitrary t, Arbitrary q, Arbitrary e
          , IsQuantifier q, TypeSystem t )
         => Arbitrary (GenSequent n t q e) where
     arbitrary = scale (`div` 4) genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary SyntacticProp where
     arbitrary = scale (`div` 4) genericArbitrary
+    shrink = genericShrink
 
+instance ZoomEq Flipping where
+instance ZoomEq Rel where
 instance Arbitrary Rel where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
+instance ZoomEq a => ZoomEq (ArgDep a) where
 instance Arbitrary a => Arbitrary (ArgDep a) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (Ord n,Serialize n,Serialize t,Serialize q,Serialize expr) 
     => Serialize (GenSequent n t q expr) where
