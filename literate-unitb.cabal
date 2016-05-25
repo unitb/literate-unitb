@@ -133,7 +133,7 @@ library
 
   default-language:    Haskell2010
 
-  build-depends:       ansi-terminal, array, async, axiomatic-classes, base >=4.8 && < 5, bipartite-graph, bytestring, cereal < 5, classy-lens-hierarchy, co-applicative, containers, data-compressed, data-default, data-map-class, data-ordlist, deepseq, directory >= 1.2.3.0 && < 1.2.6.0, dlist, either, existential, existential, file-system-mockup, filepath, generic-instances, hashable, invariants, lens, lens-extra, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, map-syntax, MissingH, monoid-transformer, mtl, parallel, partial-order, printf-th, process, pseudomacros, QuickCheck, reactive-banana, reactive-banana-transformers, semigroupoids, semigroups, show-with, stm, string-lenses, tagged, template-haskell, time, transformer-lenses, transformers >=0.3, unfoldable, unitb-testing, unordered-containers, witherable, typelist-functor, constraints
+  build-depends:       ansi-terminal, array, async, axiomatic-classes, base >=4.8 && < 5, bipartite-graph, bytestring, cereal < 5, classy-lens-hierarchy, co-applicative, containers, data-compressed, data-default, data-map-class, data-ordlist, deepseq, directory >= 1.2.3.0, dlist, either, existential, existential, file-system-mockup, filepath, generic-instances, hashable, invariants, lens, lens-extra, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, map-syntax, MissingH, monoid-transformer, mtl, parallel, partial-order, printf-th, process, pseudomacros, QuickCheck, reactive-banana, reactive-banana-transformers, semigroupoids, semigroups, show-with, stm, string-lenses, tagged, template-haskell, time, transformer-lenses, transformers >=0.3, unfoldable, unitb-testing, unordered-containers, witherable, typelist-functor, constraints
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -164,7 +164,7 @@ executable unitb
   main-is:  Continuous.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, data-map-class, directory >= 1.2.3.0 && < 1.2.6.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup
+  build-depends:       base >=4.8 && < 5, data-map-class, directory >= 1.2.3.0, either, invariants, lens, literate-unitb, literate-unitb-logic, literate-unitb-utils, mtl, pseudomacros, time, file-system-mockup
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -183,7 +183,7 @@ executable run_tests
   hs-source-dirs: script/main
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, literate-unitb, literate-unitb-logic, literate-unitb-scripts, literate-unitb-utils, mtl, process, shelly, time
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, literate-unitb, literate-unitb-logic, literate-unitb-scripts, literate-unitb-utils, mtl, process, shelly, time
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns
@@ -220,7 +220,7 @@ executable test
   main-is: test.hs
   default-language:    Haskell2010
 
-  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0 && < 1.2.6.0, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, reactive-banana-transformers, shelly, unitb-testing, lens, axiomatic-classes
+  build-depends:       base >=4.8 && < 5, directory >= 1.2.3.0, literate-unitb, literate-unitb-latex, literate-unitb-logic, literate-unitb-utils, reactive-banana-transformers, shelly, unitb-testing, lens, axiomatic-classes
   
   -- Modules included in this executable, other than Main.
   -- other-modules:  test.hs     
