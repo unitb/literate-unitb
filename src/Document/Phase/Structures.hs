@@ -104,7 +104,7 @@ run_phase1_types = proc p0 -> do
                          <.> s <.> evts'
     returnA -< SystemP r_ord p1
   where
-    evtClash = [printf|Multiple events with the name %s|] . show
+    evtClash = [printf|Multiple events with the name %s|] . pretty
     setClash = [printf|Multiple sets with the name %s|] . render
     thyClash _ = "Theory imported multiple times"
     refClash _ = "Multiple refinement clauses"

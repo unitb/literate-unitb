@@ -61,9 +61,15 @@ args opt file = do
                                   ,"libs/existential","libs/generic-instances"
                                   ,"libs/invariants","libs/partial-order"
                                   ,"libs/printf-th","libs/reactive-banana-transformers"
-                                  ,"libs/string-lenses","libs/unfoldable"]
+                                  ,"libs/string-lenses","libs/unfoldable"
+                                  ,"libs/show-with","libs/typelist-functor"
+                                  ,"libs/file-system-mockup","libs/transformer-lenses"
+                                  ,"libs/bipartite-graph","libs/classy-lens-hierarchy"
+                                  ,"libs/co-applicative", "libs/unitb-testing"
+                                  ,"libs/lens-extra", "libs/pretty-printable"
+                                  ]
         , "-hidir" ++ inf
-        , "-W"
+        , "-W", "-O0"
         , "-XTupleSections"
         , "-XDeriveFunctor"
         , "-XDeriveGeneric"

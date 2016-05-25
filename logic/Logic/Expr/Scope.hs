@@ -47,9 +47,9 @@ makeFields ''VisibleVars
 instance Default VisibleVars where
     def = genericDefault
 
-scopeCorrect'' :: (HasScope a, Show lbl, Pre) 
+scopeCorrect'' :: (HasScope a, PrettyPrintable lbl, Pre) 
                => lbl -> a -> ScopeCorrectness
-scopeCorrect'' lbl x = withPrefix (show lbl) $ scopeCorrect' x
+scopeCorrect'' lbl x = withPrefix (pretty lbl) $ scopeCorrect' x
 
 instance HasPrefix ScopeCorrectnessM where
     withPrefix lbl = local (prefix %~ (lbl:))

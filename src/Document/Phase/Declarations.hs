@@ -26,6 +26,7 @@ import UnitB.Syntax as AST
     -- Libraries
     --
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
+import Control.CoApplicative
 import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
@@ -193,7 +194,7 @@ promote_param = machineCmd "\\promote" $ \(Conc lbl,VarName n) _m p1 -> do
             let _    = lbl :: EventId
                 evts = L.view pEventIds p1 
             evt <- bind
-                ([printf|event '%s' is undeclared|] $ show lbl)
+                ([printf|event '%s' is undeclared|] $ pretty lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             return $ [(n,makeCell $ Evt $ M.singleton (Just evt) 
@@ -209,11 +210,10 @@ type EventSym = (EventId,[(Name,Var)])
 
 toEventDecl :: RefScope -> Name -> EvtDecls -> [Either Error (EventId,[EventP2Field])]
 toEventDecl ref s (Evt m) = concatMap (concatMap fromValidation . uncurry f)
-                                     $ MM.mapMaybe distr $ M.toList m
+                                     $ MM.mapMaybe distrLeft' $ M.toList m
          where 
             fromValidation (Success x) = [Right x]
             fromValidation (Failure xs) = Left <$> xs
-            distr (x,y) = (,y) <$> x
             f :: EventId -> EventDecl -> [Validation [Error] (EventId, [EventP2Field])]
             f eid x = case (ref,x^.declSource) of
                         (Old,Inherited) -> [ (_2.traverse) id (e,[g x]) | e <- NE.toList $ x^.source ]
@@ -254,7 +254,7 @@ event_var_decl escope kw = machineCmd kw $ \(Conc lbl,PlainText xs) _m p1 -> do
                 ts   = L.view pAllTypes p1
                 evts = L.view pEventIds p1 
             evt <- bind
-                ([printf|event '%s' is undeclared|] $ show lbl)
+                ([printf|event '%s' is undeclared|] $ pretty lbl)
                 $ as_label lbl `M.lookup` evts
             li <- ask
             vs <- hoistEither $ get_variables' ts xs li

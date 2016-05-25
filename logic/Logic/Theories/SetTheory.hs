@@ -14,6 +14,7 @@ import Logic.Proof
     -- Libraries
 import Control.Arrow
 import Control.Lens
+import Control.Lens.Misc
 
 import Data.Default
 import Data.List as L
@@ -21,7 +22,6 @@ import Data.Map.Class as M
 
 import Text.Printf.TH
 
-import Utilities.Lens
 import Utilities.MapSyntax
 import Utilities.Table
 

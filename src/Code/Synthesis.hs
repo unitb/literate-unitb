@@ -11,7 +11,7 @@ import           UnitB.Syntax as UB hiding (Event)
 
     -- Libraries
 import Control.Arrow (first, (***))
-import Control.Lens hiding (Const,indices)
+import Control.Lens hiding (indices)
 
 import Control.Monad
 import Control.Monad.Reader.Class
@@ -268,7 +268,7 @@ safety_aux (Loop exit inv b _) ps = do
     let cert = certainly b
     unless (local == cert)
         $ lift $ tell [[printf|Loop is missing events %s|] 
-            $ intercalate "," $ L.map show $ local L.\\ cert]
+            $ intercalate "," $ L.map pretty $ local L.\\ cert]
 
 is_stable_in :: [Expr] -> [EventId] -> POGen ()
 is_stable_in ps evts = do
@@ -285,7 +285,7 @@ entails :: Label -> [Expr] -> [Expr] -> POGen ()
 entails lbl pre post = do
     let suff i
             | L.null $ drop 1 post = lbl
-            | otherwise            = label $ show lbl ++ "-" ++ show i
+            | otherwise            = label $ pretty lbl ++ "-" ++ show i
     PG.with (do
             PG.nameless_hyps pre) $ do
         forM_ (zip [0..] post) $ \(i,p) -> 
@@ -304,8 +304,6 @@ hoare_triple lbl pre evt_lbl post = do
             PG.variables $ evt^.new.indices
             PG.variables $ evt^.new.params) $ do
         entails lbl pre post
-        -- forM_ (zip [0..] post) $ \(i,p) -> 
-        --     PG.emit_goal [label $ show i] p
 
 default_cfg :: RawMachineAST -> Program
 default_cfg m = Loop g [] body Infinite
@@ -399,7 +397,7 @@ eval_expr m e =
                     read_var n
                     return $ "v_" ++ render n
                 | otherwise              -> return $ "c_" ++ render n
-            Const n _    -> return $ pretty n
+            Lit n _    -> return $ pretty n
             FunApp f [] 
                 | view name f `M.member` nullops_code -> return $ nullops_code ! view name f
             FunApp f0 [e0,FunApp f1 [e1,e2]] 

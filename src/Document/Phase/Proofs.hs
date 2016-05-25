@@ -52,6 +52,7 @@ import           Control.Monad.Trans.RWS as RWS ( mapRWST )
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Data.Char
+import           Data.Constraint (Dict(..),(:-)(..))
 import           Data.Either.Combinators
 import           Data.Either.Validation
 import           Data.Existential
@@ -144,17 +145,17 @@ run_phase4_proofs = proc (SystemP r_ord p3) -> do
         returnA -< SystemP r_ord p4
     where
         refClash :: ProgId -> String
-        refClash   = [printf|Multiple refinement of progress property %s|] . show
+        refClash   = [printf|Multiple refinement of progress property %s|] . pretty
         commClash :: DocItem -> String
         commClash  = [printf|Multiple comments for %s|] . pretty
         proofClash :: Label -> String
-        proofClash = [printf|Multiple proofs labeled %s|] . show
+        proofClash = [printf|Multiple proofs labeled %s|] . pretty
         only_one :: EventId -> [((ProgId, ProgressProp), LineInfo)] 
                  -> MM (Maybe ((ProgId, ProgressProp), LineInfo))
         only_one _ []   = return Nothing
         only_one _ [x]  = return (Just x)
-        only_one eid xs = tell [MLError ([printf|Multiple refinement provided for the fine schedule of %s|] $ show eid) 
-                                    $ L.map (first $ show . fst) xs] >> return Nothing
+        only_one eid xs = tell [MLError ([printf|Multiple refinement provided for the fine schedule of %s|] $ pretty eid) 
+                                    $ L.map (first $ pretty . fst) xs] >> return Nothing
 
 make_phase4 :: MachineP3 
             -> Table EventId [((Label, ScheduleChange), LineInfo)]
@@ -191,8 +192,8 @@ raiseStructError (Conc ls@(LiveStruct { .. }))
         err_item = uncurry (\les -> first $ name les) . (id &&& uncurry li)
         msg _ = "A cycle exists in the liveness proof"
         name :: (LiveEvtId,a) -> MachineId -> String
-        name (Left e,_) m = [printf|Event %s (refined in %s)|] (show e) (pretty m)
-        name (Right prop,_) m = [printf|Progress property %s (refined in %s)|] (show prop) (pretty m)
+        name (Left e,_) m = [printf|Event %s (refined in %s)|] (pretty e) (pretty m)
+        name (Right prop,_) m = [printf|Progress property %s (refined in %s)|] (pretty prop) (pretty m)
         li (Left e) (Right l) = evt_info ! (e,l)
         li (Left _) (Left _)  = error "raiseStructError: event refined by event"
         li (Right l) _ = live_info ! l
@@ -255,13 +256,13 @@ ref_replace_csched = machineCmd "\\replace" $ \(Abs evt_lbl,del',added',kept',pr
             return (pprop,evt)
         toEither $ do
             _ <- fromEither undefined $ _unM $ bind_all del 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (show lbl) (show evt))
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' deleted during refinement|] (pretty lbl) (pretty evt))
                     (`M.lookup` (M.unions $ p3^.evtSplitDel evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all added 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (show lbl) (show evt)) 
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' added during refinement|] (pretty lbl) (pretty evt)) 
                     (`M.lookup` (M.unions $ p3^.evtSplitAdded evt eCoarseSched))
             _ <- fromEither undefined $ _unM $ bind_all kept 
-                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (show lbl) (show evt)) 
+                    (\lbl -> [printf|'%s' is not the label of a coarse schedule of '%s' kept during refinement|] (pretty lbl) (pretty evt)) 
                     (`M.lookup` (M.unions $ p3^.evtSplitKept evt eCoarseSched))
             return ()
         let rule = replace (as_label prog,pprop)
@@ -337,14 +338,14 @@ liveness m = withLineInfo $ proc () -> do
         prop = withCommand "\\progstep" $ progStep m
         nostep :: LatexParserA (RawProgressProp,RuleProxy) VoidInference
         nostep = lift' $ \(prog,rule) -> maybe 
-            (raise' $ Error $ [printf|Expecting premises to rule: %s|] $ readCell1' (show . rule_name') rule) 
+            (raise' $ Error $ [printf|Expecting premises to rule: %s|] $ readCell1' (pretty . rule_name') rule) 
             return
-            (readCell1' (voidInference (Sub D) prog) rule)
+            (readCell1' (voidInference (Sub Dict) prog) rule)
         makeRule :: LatexParserA ([EventOrRef],LatexDoc,VoidInference) ProofTree
         makeRule = lift' (uncurry3 $ \evts hint -> wrapUpTree . traverseCell1 (fillInRule evts hint . getCompose))
         uncurry3 f (x,y,z) = f x y z
         wrapUpTree :: M (Cell1 Inference RuleParser) -> M ProofTree
-        wrapUpTree = fmap (ProofTree . rewriteCell (Sub D))
+        wrapUpTree = fmap (ProofTree . rewriteCell (Sub Dict))
         fillInRule :: forall rule. RuleParser rule 
                    => [EventOrRef]
                    -> LatexDoc
@@ -399,7 +400,7 @@ progStep m (Expr p,Expr q,RuleName r,evts,PlainText hint) = liftA4 (,,,)
 
 stepList :: MachineP3
          -> LatexParserA (RawProgressProp,Inst1 Proxy RuleParser rule) VoidInference
-stepList m = arr (dict.snd) &&& stepList' m >>> arr (\(D,inf) -> Cell (Compose inf))
+stepList m = arr (dict.snd) &&& stepList' m >>> arr (\(Dict,inf) -> Cell (Compose inf))
 
 
 stepList' :: MachineP3
@@ -409,9 +410,9 @@ stepList' :: MachineP3
 stepList' m = 
                 arr (Inference . fst)
             <*> arr (view inst1 . snd)
-            <*> (consume' <<< buildProgress (Sub D) (withLookAhead $ liveness m) <<< pre) 
-            <*> (consume' <<< buildTransient (Sub D) (withLookAhead transient) <<< pre)
-            <*> (consume' <<< buildSafety (Sub D) (withLookAhead safety) <<< pre)
+            <*> (consume' <<< buildProgress (Sub Dict) (withLookAhead $ liveness m) <<< pre) 
+            <*> (consume' <<< buildTransient (Sub Dict) (withLookAhead transient) <<< pre)
+            <*> (consume' <<< buildSafety (Sub Dict) (withLookAhead safety) <<< pre)
     where
         pre = arr snd >>> (id &&& getLineInfo) >>> arr (\(r,li) -> ((),r,li))
         safety :: LatexParser (RawSafetyProp, Maybe Label)
@@ -455,7 +456,7 @@ all_proofs = machineEnv "proof" $ \(Identity (PO po)) xs m p3 -> do
 get_progress_prop :: MachineP3 -> MachineId -> ProgId -> M ProgressProp
 get_progress_prop p3 _m lbl =  
             bind
-                ([printf|progress property '%s' is undeclared|] $ show lbl)
+                ([printf|progress property '%s' is undeclared|] $ pretty lbl)
                 $ lbl `M.lookup` (L.view pProgress p3)
 
 

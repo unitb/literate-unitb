@@ -885,8 +885,4 @@ parse path = do
         makeReport $ do
             EitherT $ parse_system path
             return "ok"
---        case r of
---            Right r -> do
---                return r
---            Left x -> return $ show x
 

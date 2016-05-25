@@ -19,6 +19,7 @@ import GHC.Generics
 import GHC.Generics.Instances
 
 import Test.QuickCheck
+import Test.QuickCheck.ZoomEq
 
 data QuantifierType = QTConst Type | QTSort Sort | QTFromTerm Sort | QTTerm
     deriving (Eq,Ord,Generic,Typeable,Data,Show)
@@ -83,11 +84,15 @@ instance Hashable QuantifierType
 instance Hashable HOQuantifier
 instance Hashable FOQuantifier
 
+instance ZoomEq HOQuantifier where
 instance Arbitrary HOQuantifier where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
+instance ZoomEq QuantifierType where
 instance Arbitrary QuantifierType where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Serialize HOQuantifier where
 instance Serialize QuantifierType where

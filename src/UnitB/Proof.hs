@@ -18,9 +18,8 @@ module UnitB.Proof
 where
 
     -- Modules
-import Logic.Expr as E hiding (Context,Const)
+import Logic.Expr as E hiding (Context)
 import Logic.Proof
--- import Logic.Proof.POGenerator
 
 import UnitB.Proof.Rules
 import UnitB.Proof.PO
@@ -35,9 +34,10 @@ import Control.DeepSeq
 import Control.Lens 
 import Control.Monad
 
--- import Data.Default
+import Data.Constraint
 import Data.Existential
 import Data.Factory
+import Data.ForallInstances
 import Data.Functor.Compose
 import Data.Functor.Classes
 import Data.Foldable as F
@@ -51,6 +51,9 @@ import Data.Unfoldable
 import GHC.Generics.Instances
 
 import Prelude hiding (id,(.))
+
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf
 
 import Utilities.Syntactic
@@ -67,14 +70,11 @@ buildSafety = build "safety"
 buildTransient :: Builder rule (TransientHyp rule)
 buildTransient = build "transient"
 
-useDict :: (constr => r) -> Dict constr -> r
-useDict x D = x
-
 build :: forall t r. String -> Builder r t
 build kind _foo m = proc (st,_r,li) -> do
         let e = Left [Error (printf "expecting %s %s assumptions" expSize kind) li]
             unfInst = _foo^.entailsToDictFun $ dict _r
-            expSize = (\D -> expectedSize [pr|t|]) unfInst
+            expSize = (\Dict -> expectedSize [pr|t|]) unfInst
         xs <- fixExA' m -< (unfInst,st)
         returnA -< maybe e Right xs
     where
@@ -121,6 +121,9 @@ makeLenses ''Inference
 makeFields ''Inference
 makeFields ''ProofTree
 
+instance ZoomEq ProofTree where
+    (.==) = cell1ZoomEqual' (.==)
+
 instance Serialize ProofTree where
     put = putCell1 put . view cell
     get = view (from cell) <$> getCell1 get
@@ -148,6 +151,14 @@ instance
         , TransientHyp rule0 ~ TransientHyp rule1 )
     => HasRuleLens (Inference rule0) (Inference rule1) rule0 rule1 where
         ruleLens f (Inference g r ps ts safs) = (\r' -> Inference g r' ps ts safs) <$> f r
+
+instance (LivenessRule rule) 
+      => ZoomEq (Inference rule) where
+    (.==) = useInst x $ useInst y $ useInst z $ genericZoomEq
+      where
+        x = Proxy :: Proxy (ZoomEq (ProgressHyp rule ProofTree))
+        y = Proxy :: Proxy (ZoomEq (SafetyHyp rule (RawSafetyProp, Maybe Label)))
+        z = Proxy :: Proxy (ZoomEq (TransientHyp rule RawTransient))
 
 instance HasRule (Inference rule) rule where
     rule = ruleLens

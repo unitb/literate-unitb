@@ -54,11 +54,18 @@ library
   -- other-modules:       
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:    KindSignatures, TypeFamilies, TupleSections, RankNTypes
+  default-extensions:    KindSignatures, TypeFamilies, TupleSections, RankNTypes, FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6, invariants, generic-instances, unordered-containers, cereal, semigroups, hashable, data-default
   
+  ghc-options: -W -fwarn-missing-signatures 
+         -fwarn-incomplete-uni-patterns
+         -fwarn-missing-methods
+         -fno-ignore-asserts
+         -fwarn-tabs -Werror
+         -j8
+
   -- Directories containing source files.
   hs-source-dirs:      .
   

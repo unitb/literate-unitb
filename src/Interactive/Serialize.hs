@@ -35,10 +35,9 @@ import qualified Data.HashMap.Strict as H
 import GHC.Generics (Generic)
 
 import System.Directory
+import System.IO.FileFormat
 
-import           Utilities.FileFormat
-import           Utilities.Table
-
+import Utilities.Table
 
 type AbsIntMap a b = (a,[(b,Maybe Bool)])
 

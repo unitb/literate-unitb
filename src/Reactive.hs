@@ -2,34 +2,33 @@
 module Reactive where
 
     -- Modules
-import Document.Document
+import Document.Document ()
 
 import Logic.Expr
 
-import UnitB.UnitB (machines,MachineId,System,proof_obligation,empty_system)
+import UnitB.UnitB (machines,MachineId,System,proof_obligation)
 
 import Z3.Z3
 
     -- Libraries
--- import Control.Arrow
-import Control.Concurrent
+import Control.Concurrent ()
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Invariant
 import Control.Lens
 import Control.Monad
-import Control.Monad.State
 import Control.Monad.Reader
+import Control.Monad.State ()
+import Control.Monad.Trans.Lens
 
 import Data.Either.Combinators
-import Data.List.NonEmpty (nonEmpty)
+import Data.List.NonEmpty ()
 import Data.Map.Class  as M hiding (split)
 import Data.Maybe
 import Data.PartialOrd
--- import Data.Semigroup
 import Data.String
-import Data.Time
+import Data.Time ()
 
 import Reactive.Banana as B
 import Reactive.Banana.Async
@@ -40,16 +39,14 @@ import Reactive.Banana.Keyboard
 
 import System.Directory
 import System.Console.ANSI
+import System.IO.FileFormat
 
 import Text.Printf.TH
 
-import Utilities.FileFormat
--- import Utilities.Reactive.Async
 import Utilities.Syntactic
 import Utilities.Table
--- import Utilities.Lens
 
-import Interactive.Pipeline (Params,Params'(..))
+import Interactive.Pipeline (Params)
 import Interactive.Serialize (seqFileFormat,Seq)
 
 type Key = (MachineId,Label)
@@ -67,7 +64,7 @@ type M = Mt MomentIO
 newtype Mt m a = M { _mt :: ReaderT Params (KeyboardT (AsyncMomentT m)) a }
     deriving ( Functor, Applicative
              , MonadIO, MonadReader Params
-             , MonadAsyncMoment
+             -- , MonadAsyncMoment
              , MonadMomentIO
              , MonadMoment, MonadFix )
 
@@ -78,55 +75,55 @@ instance Monad m => Monad (Mt m) where
     {-# INLINE (>>=) #-}
     M m >>= f = M $ m >>= _mt . f
 
-instance MonadAsyncMoment m => MonadAsyncMoment (KeyboardT m) where
-    asyncEvent    = fmap lift . asyncEvent 
-    asyncBehavior = fmap lift . asyncBehavior
-    eventSource   = lift . eventSource
+-- instance MonadAsyncMoment m => MonadAsyncMoment (KeyboardT m) where
+--     asyncEvent    = fmap lift . asyncEvent 
+--     asyncBehavior = fmap lift . asyncBehavior
+--     eventSource   = lift . eventSource
 
 makeLenses ''Mt
 
 instance Exception ManyExceptions where
 
 
-period :: MonadMomentIO m
-       => NominalDiffTime 
-       -> Mt m (Event UTCTime)
-period dt = do
-    t <- liftMomentIO $ fromPoll getCurrentTime
-    first <- valueB t
-    timer <- makeTimer $ fst $ properFraction $ 0.5 * 1000000.0 * dt
-    -- ch    <- changes t
-    let nextF t y
-            | t >= y    = dt `addUTCTime` y
-            | otherwise = y
-    next  <- accumB (dt `addUTCTime` first) 
-            $ nextF <$> t <@ timer
-    return $ t <@ whenE ((<=) <$> next <*> t) timer
+-- period :: MonadMomentIO m
+--        => NominalDiffTime 
+--        -> Mt m (Event UTCTime)
+-- period dt = do
+--     t <- liftMomentIO $ fromPoll getCurrentTime
+--     first <- valueB t
+--     timer <- makeTimer $ fst $ properFraction $ 0.5 * 1000000.0 * dt
+--     -- ch    <- changes t
+--     let nextF t y
+--             | t >= y    = dt `addUTCTime` y
+--             | otherwise = y
+--     next  <- accumB (dt `addUTCTime` first) 
+--             $ nextF <$> t <@ timer
+--     return $ t <@ whenE ((<=) <$> next <*> t) timer
 
-fileChanges :: MonadMomentIO m
-            => FilePath -> Mt m (Event ())
-fileChanges fn = do
-    let dt = 0.5
-    p   <- period dt
-    ts  <- liftMomentIO $ fromPoll $ getModificationTime fn
-    ts0 <- valueB ts
-    let hasChanged ts (ts',_) = (ts,ts /= ts')
-    ch  <- accumE (ts0,False) $ hasChanged <$> ts <@ p
-    return $ () <$ filterApply (pure snd) ch
+-- fileChanges :: MonadMomentIO m
+--             => FilePath -> Mt m (Event ())
+-- fileChanges fn = do
+--     let dt = 0.5
+--     p   <- period dt
+--     ts  <- liftMomentIO $ fromPoll $ getModificationTime fn
+--     ts0 <- valueB ts
+--     let hasChanged ts (ts',_) = (ts,ts /= ts')
+--     ch  <- accumE (ts0,False) $ hasChanged <$> ts <@ p
+--     return $ () <$ filterApply (pure snd) ch
 
-parser :: MonadMomentIO m
-       => FilePath 
-       -> Mt m (Discrete POs, Behavior [Error])
-parser fn = do
-    -- _r <- liftMomentIO $ fromPoll $ 
-    r0   <- liftIO $ parse_system fn
-    ch   <- fileChanges fn
-    rEvt <- liftMomentIO $ mapEventIO parse_system (fn <$ ch)
-    let err0 = fromLeft [] r0
-        s0   = fromRight empty_system r0
-        (err,s) = split rEvt
-        pos = proof_obligation' <$> stepperD s0 s
-    (pos,) <$> stepper err0 err
+-- parser :: MonadMomentIO m
+--        => FilePath 
+--        -> Mt m (Discrete POs, Behavior [Error])
+-- parser fn = do
+--     -- _r <- liftMomentIO $ fromPoll $ 
+--     r0   <- liftIO $ parse_system fn
+--     ch   <- fileChanges fn
+--     rEvt <- liftMomentIO $ mapEventIO parse_system (fn <$ ch)
+--     let err0 = fromLeft [] r0
+--         s0   = fromRight empty_system r0
+--         (err,s) = split rEvt
+--         pos = proof_obligation' <$> stepperD s0 s
+--     (pos,) <$> stepper err0 err
 
 -- data POState = POState
 
@@ -190,23 +187,23 @@ makeProverSet initPos pos = mdo
         prover <- stepper initProvers newProver
         return prover
 
-prover :: Event ()
-       -> Discrete POs
-       -> M ( Behavior (Table Key (Maybe Bool))
-            , Behavior Int)
-prover exit pos = do
-    fn <- asks path
-    let stateFile = fn ++ ".state"
-    withFile seqFileFormat' stateFile exit M.empty $ \initPos -> do
-        prover <- makeProverSet initPos pos
-        let _ = prover :: Behavior ProverSet
-        res    <- asyncBehavior prover gatherResults
-        let exc  = fst <$> res
-            res' = snd <$> res
-        results <- stepper initPos res'
-        let pending = M.filter (isNothing.snd) <$> results
-        lift $ reactimate $ throw . ManyExceptions <$> filterJust (nonEmpty <$> exc)
-        return $ ((fmap snd <$> results,M.size <$> pending),results)
+-- prover :: Event ()
+--        -> Discrete POs
+--        -> M ( Behavior (Table Key (Maybe Bool))
+--             , Behavior Int)
+-- prover exit pos = do
+--     fn <- asks path
+--     let stateFile = fn ++ ".state"
+--     withFile seqFileFormat' stateFile exit M.empty $ \initPos -> do
+--         prover <- makeProverSet initPos pos
+--         let _ = prover :: Behavior ProverSet
+--         res    <- asyncBehavior prover gatherResults
+--         let exc  = fst <$> res
+--             res' = snd <$> res
+--         results <- stepper initPos res'
+--         let pending = M.filter (isNothing.snd) <$> results
+--         lift $ reactimate $ throw . ManyExceptions <$> filterJust (nonEmpty <$> exc)
+--         return $ ((fmap snd <$> results,M.size <$> pending),results)
 
 splitProver :: Prover -> STM (Either Prover (Either SomeException (Seq,Bool)))
 splitProver p@(s,_) = maybe (Left p) (Right . fmap (s,)) <$> pollSTM (snd p)
@@ -220,25 +217,25 @@ splitProverSet ps = do
         let (ps,(es,os)) = mapEither id rs & _2 %~ mapEither id
         return (ps,es,(_2 %~ Just) <$> os)
 
-gatherResults :: Ord lbl 
-              => Pipe 
-                    (Map lbl Prover) 
-                    ([SomeException], Map lbl (Seq, Maybe Bool))
-gatherResults input output = 
-        flip evalStateT (M.empty,M.empty) $ do
-            forever $ do
-                let initResults m = (m & traverse._2 .~ Nothing,m)
-                (cs,ps) <- get
-                    -- (completed,pending)
-                -- lift $ print =<< getCurrentTime
-                lift $ putStrLn $ "completed: " ++ show (M.size ps)
-                m' <- lift $ atomically $ (initResults <$> input) `orElse` do
-                    (ps',es,rs) <- splitProverSet ps
-                    guard $ not (M.null es && M.null rs)
-                    let cs' = rs `M.union` cs
-                    output (M.elems es,cs')
-                    return (cs',ps')
-                put m'
+-- gatherResults :: Ord lbl 
+--               => Pipe 
+--                     (Map lbl Prover) 
+--                     ([SomeException], Map lbl (Seq, Maybe Bool))
+-- gatherResults input output = 
+--         flip evalStateT (M.empty,M.empty) $ do
+--             forever $ do
+--                 let initResults m = (m & traverse._2 .~ Nothing,m)
+--                 (cs,ps) <- get
+--                     -- (completed,pending)
+--                 -- lift $ print =<< getCurrentTime
+--                 lift $ putStrLn $ "completed: " ++ show (M.size ps)
+--                 m' <- lift $ atomically $ (initResults <$> input) `orElse` do
+--                     (ps',es,rs) <- splitProverSet ps
+--                     guard $ not (M.null es && M.null rs)
+--                     let cs' = rs `M.union` cs
+--                     output (M.elems es,cs')
+--                     return (cs',ps')
+--                 put m'
 
 -- getResultSet :: ProverSet -> STM (MExc ResultSet,ProverSet)
 -- getResultSet prover = do
@@ -361,19 +358,19 @@ printReport (pos,errs,ws) = do
             clearFromCursorToLineEnd
             putStrLn ""
 
-display :: Behavior Results
-        -> Behavior [Error]
-        -> Behavior Int
-        -> M ()
-display pos errs ws = do
-        p <- period 0.2
-        let r = printReport <$> 
-                liftA3 (,,) pos errs ws
-        lift $ liftIOLater =<< valueB r
-        ch <- lift $ changes r
-        --let ev = B.unionWith const ch $ pure <$> r <@> p
-        b <- stepper True $ B.unionWith const (True <$ p) (False <$ ch)
-        lift $ reactimate' $ whenE b ch
+-- display :: Behavior Results
+--         -> Behavior [Error]
+--         -> Behavior Int
+--         -> M ()
+-- display pos errs ws = do
+--         p <- period 0.2
+--         let r = printReport <$> 
+--                 liftA3 (,,) pos errs ws
+--         lift $ liftIOLater =<< valueB r
+--         ch <- lift $ changes r
+--         --let ev = B.unionWith const ch $ pure <$> r <@> p
+--         b <- stepper True $ B.unionWith const (True <$ p) (False <$ ch)
+--         lift $ reactimate' $ whenE b ch
 
 seqFileFormat' :: FileFormat (Table Key (Seq, Maybe Bool))
 seqFileFormat' = prismFormat (keyIso (_1 %~ fromString . pretty) (_1 %~ as_label)) $ seqFileFormat
@@ -389,20 +386,20 @@ proof_obligation' = M.unions . fmap (uncurry $ M.mapKeys . (,))
                              . M.toList . M.map proof_obligation 
                              . view' machines
 
-interactiveSystem :: M (Event ())
-interactiveSystem = do
-        -- quit <- makeTimer $ 3 * 60 * 1000000
-        -- _tick <- makeTimer $ 100000
-        fn   <- asks path
-        quit <- command "quit"
-        (sys,_errs) <- parser fn
-        liftMomentIO $ reactimate $ putStrLn "done parsing" <$ changesD sys
-        (_res,_ws)   <- prover quit sys
-        -- display res errs ws
-        return quit
-        -- dump
-        -- summary
-        -- serialize
+-- interactiveSystem :: M (Event ())
+-- interactiveSystem = do
+--         -- quit <- makeTimer $ 3 * 60 * 1000000
+--         -- _tick <- makeTimer $ 100000
+--         fn   <- asks path
+--         quit <- command "quit"
+--         (sys,_errs) <- parser fn
+--         liftMomentIO $ reactimate $ putStrLn "done parsing" <$ changesD sys
+--         (_res,_ws)   <- prover quit sys
+--         -- display res errs ws
+--         return quit
+--         -- dump
+--         -- summary
+--         -- serialize
 
 -- gather :: [STM a] -> STM (NonEmpty a)
 -- gather xs = do
@@ -410,14 +407,14 @@ interactiveSystem = do
 --     ys <- catMaybes <$> mapM try xs
 --     maybe retry return $ nonEmpty ys
 
-main :: Params -> IO ()
-main args = do
-    setNumCapabilities 8
-    -- let mySystem = do
-    --         t <- period 1.0
-    --         liftMomentIO $ reactimate $ putStrLn . [printf|current time: %s|] . show <$> t
-    --         period 30.0
-    runM interactiveSystem args
+-- main :: Params -> IO ()
+-- main args = do
+--     setNumCapabilities 8
+--     -- let mySystem = do
+--     --         t <- period 1.0
+--     --         liftMomentIO $ reactimate $ putStrLn . [printf|current time: %s|] . show <$> t
+--     --         period 30.0
+--     runM interactiveSystem args
     -- return ()
     -- print =<< runM mySystem args
     -- (hTime,fTime) <- newAddHandler

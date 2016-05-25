@@ -26,6 +26,7 @@ import           GHC.Generics.Instances
 import Language.Haskell.TH.Syntax hiding (Name,Type)
 
 import           Test.QuickCheck
+import           Test.QuickCheck.ZoomEq
 
 import           Text.Printf.TH
 
@@ -282,6 +283,7 @@ instance Arbitrary Sort where
         , pure RealSort 
         , Sort <$> arbitrary <*> arbitrary <*> elements [0..5]
         ]
+    shrink = genericShrink
 
 gA :: GenericType
 gA = GENERIC $ [smt|a|]
@@ -320,6 +322,9 @@ z3_decoration' t = do
 
 instance Serialize Sort where
 instance Serialize Type where
+
+instance ZoomEq Sort where
+instance ZoomEq GenericType where
 
 instance Arbitrary GenericType where
     arbitrary = oneof (
@@ -375,13 +380,7 @@ instance Arbitrary GenericType where
                 , gB
                 , gC
                 ]
-    shrink (GENERIC _)  = []
-    shrink (VARIABLE _) = []
-    shrink (Gen s ts) = ts ++ do
-            ts <- mapM shrink ts
-            return $ t ts
-        where
-            t ts = Gen s ts
+    shrink = genericShrink
 
 instance NFData FOType
 instance NFData GenericType

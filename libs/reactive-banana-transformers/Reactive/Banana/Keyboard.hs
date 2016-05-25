@@ -1,4 +1,5 @@
-{-# LANGUAGE RankNTypes,ScopedTypeVariables,UndecidableInstances #-}
+{-# LANGUAGE RankNTypes,ScopedTypeVariables
+    ,UndecidableInstances,TypeFamilies #-}
 module Reactive.Banana.Keyboard where
 
 import Reactive.Banana
@@ -7,6 +8,7 @@ import Reactive.Banana.Frameworks
 import Control.Lens hiding (pre)
 import Control.Monad.Reader
 import Control.Monad.RWS
+import Control.Monad.Trans.Lens
 
 import Data.Functor.Compose
 import Data.List.Lens
@@ -20,6 +22,7 @@ import Reactive.Banana.IO
 import Text.Printf.TH
 
 type Keyboard = KeyboardT Moment
+data KeyboardEvents a = KeyboardEvents [String] [Maybe [String]] [Maybe String] a
 type KeyboardIO = KeyboardT MomentIO
 type Filter   = Behavior [String]
 newtype KeyboardT m a = Keyboard { _keyboard :: RWST Filter (Ap Behavior [String]) (Event String) m a }
@@ -43,6 +46,10 @@ class KeyboardMonad m where
                        -> m a
                        -> m a
 
+instance Frameworks m => Frameworks (KeyboardT m) where
+    type EventList (KeyboardT m) a = EventList m (Maybe [String],Maybe String,Maybe a)
+    type InitF (KeyboardT m) = ([String],InitF m)
+    interpret' = interpretKeyboard
 
 instance Monad m => KeyboardMonad (KeyboardT m) where
     specializeKeyboard f (Keyboard m) = Keyboard $ local (liftA2 (:) f) m
@@ -58,20 +65,31 @@ instance Monad m => KeyboardMonad (KeyboardT m) where
         put kb'
         return r
 
+-- instance Frameworks m i o => Frameworks (KeyboardT m) i o where
+--     interpret' x f xs = do 
+--         id <$> interpret' (_ x) (fmap id . _keyboard . f) xs
+
+interpretKeyboard :: forall m a b. (Frameworks m)
+                  => (Event a -> KeyboardT m (Event b))
+                  -> ([String],InitF m)
+                  -- -> [(Maybe [String],Maybe String,Maybe (EventList m a))]
+                  -> [EventList m (Maybe [String],Maybe String,Maybe a)]
+                  -> IO ([EventList m (Maybe [String],Maybe String,Maybe a)],[Maybe b])
+interpretKeyboard f (xs,i) = interpret' f' i
+  where
+    f' :: Event (Maybe [String],Maybe String,Maybe a) -> m (Event b)
+    f' e = do
+      cmdFilter <- stepper xs $ filterJust (view _1 <$> e)
+      let arg = filterJust (view _3 <$> e)
+          kbInput = filterJust (view _2 <$> e)
+      view _1 <$> runRWST (_keyboard . f $ arg) cmdFilter kbInput
+
 _Show' :: (Read a,Show a,Typeable a) => Prism' String a
 _Show' = prism' show (\x -> x^?prefixed " ".to strip._Show <|> x^?to strip.only ""._cast)
     -- prism (view chosen) _.without _Show _
 
 -- overA :: Lens' s t a b -> (arr a b) -> (arr s t)
 -- overA ln = proc x -> do
-
-
-insideRWST :: Applicative m
-           => Setter (RWST r w s m a) (RWST r w s m b) (m a) (m b)
-insideRWST = iso runRWST RWST . mapped . mapped . lens (fmap $ view _1) (liftA2 $ flip $ set _1)
-
-insideReaderT :: Setter (ReaderT r m a) (ReaderT r m b) (m a) (m b)
-insideReaderT = iso runReaderT ReaderT . mapped
 
 instance MonadReader r m => MonadReader r (KeyboardT m) where
     reader = lift . reader

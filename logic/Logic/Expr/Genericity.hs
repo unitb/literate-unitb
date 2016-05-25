@@ -32,9 +32,9 @@ import Logic.Expr.Type
 import Logic.Names
 
     -- Libraries
-import Control.Applicative hiding (empty, Const)
+import Control.Applicative hiding (empty)
 import Control.Arrow
-import Control.Lens hiding (rewrite,Context,Const)
+import Control.Lens hiding (rewrite,Context)
 import Control.Monad
 import Control.Monad.State
 import Control.Precondition hiding (isRight)
@@ -68,7 +68,7 @@ rewrite_types xs e = -- typesOf %~ suffix_generics tag
         Word (Var name t) -> Word (Var name u)
           where
             u           = ft t
-        Const v t         -> Const v t'
+        Lit v t         -> Lit v t'
           where
             t'          = ft t
         Cast e t -> Cast (rewrite_types xs e) (suffix_generics xs t)
@@ -244,9 +244,9 @@ strip_generics :: IsName n
 strip_generics (Word v)    = do
     v <- var_strip_generics v
     return (Word v)
-strip_generics (Const m t) = do
+strip_generics (Lit m t) = do
     t  <- type_strip_generics t
-    return (Const m t)
+    return (Lit m t)
 strip_generics (Cast e t) = do
     e <- strip_generics e
     t <- type_strip_generics t
@@ -384,7 +384,7 @@ instance (TypeSystem t', Generic Type t',IsName n) => Generic (AbsVar n Type) (A
 
 instance (TypeSystem t,HasGenerics t,IsName n,IsQuantifier q) => HasGenerics (AbsExpr n t q) where
     types_of (Word v)      = types_of v
-    types_of (Const _ t)   = types_of t
+    types_of (Lit _ t)   = types_of t
     types_of (Cast e t)     = S.union (types_of t) (types_of e)
     types_of (Lift e t)     = S.union (types_of t) (types_of e)
     types_of (FunApp f xp)    = S.unions $ types_of f : map types_of xp
@@ -401,7 +401,7 @@ ambiguities :: Expr -> [Expr]
 ambiguities e@(Word (Var _ t))
         | S.null $ generics t = []
         | otherwise           = [e]
-ambiguities e@(Const _ t)    
+ambiguities e@(Lit _ t)    
         | S.null $ generics t = []
         | otherwise           = [e]
 ambiguities e@(Cast e' t)

@@ -321,7 +321,6 @@ make_theory name (M cmd) = t'
         t' = t & fact %~ M.union (fromList es')
         n = length $ show $ length es
         pad m = label $ name ++ replicate (n - length (show m)) ' ' ++ show m
-        --pad' k _ = label $ pad k
 
 tellTheory :: State Theory () -> M ()
 tellTheory cmd = M $ zoom _2 (state $ runState cmd)

@@ -25,6 +25,7 @@ import Language.Haskell.TH (Loc(..))
 import Safe
 
 import Test.QuickCheck as QC
+import Test.QuickCheck.ZoomEq
 
 import Text.ParserCombinators.ReadPrec
 import Text.Printf.TH
@@ -115,6 +116,8 @@ instance Syntactic LineInfo where
     after = id
     traverseLineInfo = id
 
+instance ZoomEq Error where
+    (.==) = (===)
 instance Syntactic Error where
     line_info (Error _ li) = li
     line_info (MLError _ ls) = minimum $ map snd ls
@@ -122,6 +125,8 @@ instance Syntactic Error where
     traverseLineInfo f (Error x li) = Error x <$> f li
     traverseLineInfo f (MLError x lis) = MLError x <$> (traverse._2) f lis
 
+instance ZoomEq LineInfo where
+    (.==) = (===)
 instance Arbitrary LineInfo where
     arbitrary = LI "file" <$> QC.elements [0,5,10] <*> QC.elements [0,5,10]
 

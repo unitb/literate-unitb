@@ -59,6 +59,13 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9, template-haskell >=2.10 && <2.11
   
+  ghc-options: -W -fwarn-missing-signatures 
+         -fwarn-incomplete-uni-patterns
+         -fwarn-missing-methods
+         -fno-ignore-asserts
+         -fwarn-tabs -Werror
+         -j8
+
   -- Directories containing source files.
   hs-source-dirs:      .
   

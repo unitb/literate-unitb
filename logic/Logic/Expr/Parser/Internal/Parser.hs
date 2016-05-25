@@ -404,7 +404,7 @@ term = do
                         t' <- maybe 
                             (fail $ [printf|Inconsistent type for %s: %s|] 
                                     (render x)
-                                    $ intercalate "," $ map show ys)
+                                    $ intercalate "," $ map pretty ys)
                             return
                             $ foldM common gA ys
                         t' <- if t' == gA 
@@ -522,7 +522,7 @@ expr = do
                             read_op xs us $ Right e 
                 ,   add_context ("ready for <term>: " ++ show xs) $
                         do  t <- term
-                            add_context ("parsed <term>: " ++ show t) $
+                            add_context ("parsed <term>: " ++ pretty t) $
                                 read_op xs us t
                 ]
         read_op :: [([UnaryOperator], Term, BinOperator)] 

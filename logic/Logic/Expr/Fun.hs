@@ -21,9 +21,8 @@ import           Data.Serialize
 
 import GHC.Generics.Instances
 
-
 import Test.QuickCheck
-
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Functor
 
@@ -50,14 +49,18 @@ instance (Hashable n,Hashable t) => Hashable (AbsFun n t)
 instance Hashable Lifting
 instance Hashable SetWD
 
+instance ZoomEq Lifting where
 instance Arbitrary Lifting where
     arbitrary = genericArbitrary
 
+instance ZoomEq SetWD where
 instance Arbitrary SetWD where
     arbitrary = genericArbitrary
 
+instance (ZoomEq t,ZoomEq n) => ZoomEq (AbsFun n t) where
 instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsFun n t) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (NFData t,NFData n) => NFData (AbsFun n t) where
 instance NFData Lifting

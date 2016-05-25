@@ -221,7 +221,7 @@ case9 = do
             Right [m] -> do
                 case toList $ m!.proofs of
                     (lbl,ByCalc calc):_ -> 
-                          return (show lbl ++ ":\n" ++ show_proof calc)
+                          return (pretty lbl ++ ":\n" ++ show_proof calc)
                     xs -> return (
                               "found "
                            ++ intercalate "," (map (proof_kind . snd) xs) 

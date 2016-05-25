@@ -37,6 +37,7 @@ import GHC.Generics
 import Prelude hiding ( map )
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 instance Show a => Show (SCC a) where
     show (AcyclicSCC x) = show x
@@ -332,8 +333,9 @@ unions_aux' x ws@((y:ys):zs)
     | otherwise = unions_aux' x $ insertBy (compare `on` listToMaybe) ys zs
 
 return []
-run_tests :: IO Bool
-run_tests = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'
 
 instance (NFData a,NFData b) => NFData (Matrix a b)
 

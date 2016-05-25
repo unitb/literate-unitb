@@ -15,11 +15,10 @@ import Logic.Theories.FunctionTheory
     -- Libraries
 import Control.Arrow
 import Control.Lens
+import Control.Lens.Misc
 
 import Data.List as L
 import Data.Map.Class
-
-import Utilities.Lens
 
     -- arithmetic
 power   :: BinOperator

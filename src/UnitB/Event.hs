@@ -13,6 +13,8 @@ import UnitB.Property
     -- Libraries
 import Control.DeepSeq
 import Control.Lens hiding (indices)
+import Control.Lens.HierarchyTH
+import Control.Lens.Misc
 
 import Data.Default
 import Data.Foldable as F
@@ -29,12 +31,11 @@ import GHC.Generics hiding (to)
 import GHC.Generics.Instances
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf
 
-import Utilities.Lens
 import Utilities.Table
-import Utilities.TH
 
 type Action = Action' Expr
 type RawAction = Action' RawExpr
@@ -59,6 +60,7 @@ instance IsLabel SkipEventId where
     as_label SkipEvent = label "SKIP"
 instance NFData SkipEventId where
 instance Hashable SkipEventId where
+instance ZoomEq SkipEventId where
 instance PrettyPrintable SkipEventId where
     pretty = show
 
@@ -69,6 +71,25 @@ instance IsString SkipOrEvent where
 
 type Event = Event' Expr
 type RawEvent = Event' RawExpr
+
+data Witness' expr = 
+        WitEq { witVar :: Var, witExpr :: expr }
+        | WitSuch { witVar :: Var, witExpr :: expr }
+        | WitIn { witVar :: Var, witExpr :: expr }
+    deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
+
+type Witness = Witness' Expr
+type RawWitness = Witness' RawExpr
+
+witnessDef :: HasExpr expr => Witness' expr -> RawExpr
+witnessDef (WitEq v e)   = Word (prime v) `zeq` getExpr e
+witnessDef (WitIn v e)   = Word (prime v) `zelemUnchecked` getExpr e
+witnessDef (WitSuch _ e) = getExpr e
+
+witnessOf :: Var -> Action' expr -> Witness' expr
+witnessOf v (Assign _ e)  = WitEq v e
+witnessOf v (BcmIn _ e)   = WitIn v e
+witnessOf v (BcmSuchThat _ e) = WitSuch v e
 
 data Event' expr = Event 
         { _indices    :: Table Name Var
@@ -85,14 +106,14 @@ data AbstrEvent' expr = AbsEvent
         { _old   :: Event' expr
         , _f_sched_ref :: Maybe (Label,ProgressProp' expr)
         , _c_sched_ref :: [ScheduleChange' expr]
-        , _ind_witness :: Table Name (Var,RawExpr)
+        , _ind_witness :: Table Name (Witness' expr)
         } deriving (Eq, Show,Functor,Foldable,Traversable,Generic)
 
 type ConcrEvent = ConcrEvent' Expr
 
 data ConcrEvent' expr = CEvent 
         { _new   :: Event' expr
-        , _witness   :: Table Name (Var,RawExpr)
+        , _witness   :: Table Name (Witness' expr)
         , _eql_vars  :: Table Name Var
         , _abs_actions :: Table Label (Action' expr)
         } deriving (Eq,Show,Functor,Foldable,Traversable,Generic)
@@ -149,11 +170,19 @@ hyps_label = PId . fst . view sch_prog
 
 mkCons ''Event'
 
+instance ZoomEq expr => ZoomEq (ScheduleChange' expr) where
+
+instance ZoomEq expr => ZoomEq (AbstrEvent' expr) where
+
 instance HasExpr expr => Default (AbstrEvent' expr) where
     def = genericDefault
 
+instance ZoomEq expr => ZoomEq (Event' expr) where
+
 instance HasExpr expr => Default (Event' expr) where
     def = empty_event
+
+instance ZoomEq expr => ZoomEq (ConcrEvent' expr) where
 
 instance HasExpr expr => Default (ConcrEvent' expr) where
     def = genericDefault
@@ -179,6 +208,9 @@ instance (HasExpr expr) => HasScope (Action' expr) where
         [ scopeCorrect' s
         , areVisible [vars,abs_vars] [v] act ]
 
+instance (HasExpr expr) => HasScope (Witness' expr) where
+    scopeCorrect' = scopeCorrect' . witExpr
+
 instance (HasExpr expr) => HasScope (AbstrEvent' expr) where
     scopeCorrect' = withPrefix "abstract" . scopeCorrect' . view old
 
@@ -188,12 +220,12 @@ instance (HasExpr expr) => HasScope (ConcrEvent' expr) where
         , withPrefix "variable witnesses (vars)" $
             withVars ((evt^.params) `M.union` (evt^.indices)) $ 
             areVisible [to $ M.difference <$> view abs_vars <*> view vars] 
-                (elems $ fst <$> evt^.witness) 
-                (elems $ fst <$> evt^.witness) 
+                (elems $ witVar <$> evt^.witness) 
+                (elems $ witVar <$> evt^.witness) 
         , withPrefix "variable witnesses (expression)" $
             withVars ((evt^.params) `M.union` (evt^.indices)) 
                 $ withAbstract $ withPrimes 
-                $ foldMapWithKey scopeCorrect'' (snd <$> evt^.witness)
+                $ foldMapWithKey scopeCorrect'' (witExpr <$> evt^.witness)
         , areVisible [abs_vars] (evt^.eql_vars) (evt^.eql_vars) ]
 
 instance HasExpr expr => HasScope (EventSplitting expr) where
@@ -201,15 +233,15 @@ instance HasExpr expr => HasScope (EventSplitting expr) where
         [ withPrefix "index witnesses (vars)" $
             withOnly (evt^.compact.added.indices) $ 
             areVisible [constants] 
-                (elems $ fst <$> evt^.ind_witness) 
-                (elems $ fst <$> evt^.ind_witness) 
+                (elems $ witVar <$> evt^.ind_witness) 
+                (elems $ witVar <$> evt^.ind_witness) 
         , withPrefix "index witnesses (expression)" $
             withVars ((evt^.compact.old.params) `M.union` (evt^.compact.old.indices)) 
                 $ withAbstract
                 $ foldMapWithKey correct (evt^.ind_witness)
         ]
         where
-            correct lbl (v,e) = withVars [v] $ scopeCorrect'' lbl e
+            correct lbl w = withVars [witVar w] $ scopeCorrect'' lbl (witExpr w)
 instance (HasExpr expr) => HasScope (Event' expr) where
     scopeCorrect' e = withPrefix "event" $ withVars (e^.indices) $ F.fold 
         [ foldMapWithKey scopeCorrect'' (e^.coarse_sched) 
@@ -220,8 +252,15 @@ instance (HasExpr expr) => HasScope (Event' expr) where
             ]
         ]
 
+instance ZoomEq expr => ZoomEq (Action' expr) where
 instance Arbitrary expr => Arbitrary (Action' expr) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance ZoomEq expr => ZoomEq (Witness' expr) where
+instance Arbitrary expr => Arbitrary (Witness' expr) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 --infix 1  $=
 
@@ -301,6 +340,10 @@ instance (PrettyPrintable expr,Typeable expr) => PrettyPrintable (ConcrEvent' ex
     pretty = prettyRecord
 instance PrettyPrintable expr => PrettyPrintable (Event' expr) where
     pretty = prettyRecord
+instance PrettyPrintable expr => PrettyPrintable (Witness' expr) where
+    pretty (WitEq v e)   = pretty v ++ " := " ++ pretty e
+    pretty (WitSuch v e) = pretty v ++ " :| " ++ pretty e
+    pretty (WitIn v e)   = pretty v ++ " :∈ " ++ pretty e
 
 instance HasConcrEvent' (EventMerging expr) expr where
     concrEvent' = concrete._2
@@ -466,10 +509,12 @@ instance NFData expr => NFData (EventSplitting expr)
 instance NFData expr => NFData (ConcrEvent' expr)
 instance NFData expr => NFData (Action' expr)
 instance NFData expr => NFData (ScheduleChange' expr)
+instance NFData expr => NFData (Witness' expr)
 
 instance Serialize expr => Serialize (Event' expr) where
 instance Serialize expr => Serialize (AbstrEvent' expr) where
 instance Serialize expr => Serialize (ConcrEvent' expr) where
 instance Serialize expr => Serialize (ScheduleChange' expr) where
 instance Serialize expr => Serialize (Action' expr) where
+instance Serialize expr => Serialize (Witness' expr) where
 instance Serialize SkipEventId where

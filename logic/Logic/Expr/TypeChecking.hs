@@ -120,7 +120,7 @@ checkTypes c' (Binder q vs' r t _) = do
         t' <- maybe 
             (fail $ [printf|Inconsistent type for %s: %s|] 
                     x
-                    $ intercalate "," $ map show ys)
+                    $ intercalate "," $ map pretty ys)
             return
             $ foldM common gA ys
         t' <- if t' == gA 
