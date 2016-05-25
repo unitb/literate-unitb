@@ -12,7 +12,7 @@ import Logic.Expr.Prism
 import Logic.Proof.Sequent
 
     -- Libraries
-import Control.Lens hiding (Context,Context',rewriteM,Const)
+import Control.Lens hiding (Context,Context',rewriteM)
 import Control.Monad.State
 
 import Data.Default
@@ -232,7 +232,7 @@ lambdas (Binder Exists vs r t et) = do
     t' <- lambdas t
     return $ Binder FOExists (L.map translate vs) r' t' et
 lambdas (Word v) = return (Word $ translate v)
-lambdas (Const v t) = return (Const v t)
+lambdas (Lit v t) = return (Lit v t)
 lambdas (FunApp fun args) = do
     args' <- mapM lambdas args
     return $ FunApp (fun & namesOf %~ asInternal) args'

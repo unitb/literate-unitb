@@ -55,7 +55,9 @@ instance IsTestCase POCase where
                 , routine = cmd
                 , outcome = res
                 , _mcallStack = cs
-                , _display = id
+                , _displayA = id
+                , _displayE = id
+                , _criterion = id
                 }
     nameOf f (POCase n test res) = (\n' -> POCase n' test res) <$> f n
 

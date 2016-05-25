@@ -10,7 +10,7 @@
 module UnitB.Proof.Rules where
 
     -- Modules
-import Logic.Expr as E hiding (Context,Const)
+import Logic.Expr as E hiding (Context)
 
 import UnitB.Property
 
@@ -23,6 +23,7 @@ import Control.Lens
 
 import Data.Default
 import Data.Existential
+import Data.ForallInstances
 import Data.Functor.Classes
 import Data.Maybe
 import Data.Serialize hiding (label)
@@ -32,6 +33,8 @@ import Data.Unfoldable
 import GHC.Generics.Instances
 
 import Prelude hiding (id,(.))
+
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Syntactic
 
@@ -50,8 +53,12 @@ class ( Eq rule
       , Typeable (ProgressHyp rule)
       , Typeable (SafetyHyp rule)
       , Typeable rule
+      , ZoomEq rule
       , Show rule
       , Serialize rule
+      , InstForall ZoomEq (ProgressHyp rule)
+      , InstForall ZoomEq (SafetyHyp rule)
+      , InstForall ZoomEq (TransientHyp rule)
       , Show1 (ProgressHyp rule)
       , Show1 (SafetyHyp rule)
       , Show1 (TransientHyp rule)
@@ -94,7 +101,12 @@ class ( Eq rule
                            -> Proxy rule
                            -> (RawProgressProp -> Proxy rule -> f rule)
                            -> Maybe (Cell1 f constr)
-    voidInference' (Sub D) g r f = Just $ Cell $ f (getExpr <$> g) r
+    voidInference' (Sub Dict) g r f = Just $ Cell $ f (getExpr <$> g) r
+
+instance InstForall ZoomEq NonEmpty where
+instance InstForall ZoomEq Maybe where
+instance InstForall ZoomEq None where
+instance InstForall ZoomEq One where
 
 instance LivenessRule rule => LivenessRule (Proxy rule) where
     type ProgressHyp (Proxy rule) = ProgressHyp rule
@@ -107,6 +119,7 @@ instance LivenessRule rule => LivenessRule (Proxy rule) where
 
 data Reference = Reference (ProgId) 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Reference where
 instance LivenessRule Reference where
     type ProgressHyp Reference = None
     type SafetyHyp Reference = None
@@ -118,6 +131,7 @@ instance NFData Reference where
 
 data Add = Add 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Add where
 instance LivenessRule Add where
     type ProgressHyp Add = None
     type SafetyHyp Add = None
@@ -128,6 +142,7 @@ instance NFData Add where
 
 data Ensure = Ensure (NonEmpty EventId) (RawTrHint) 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Ensure where
 instance LivenessRule Ensure where
     type ProgressHyp Ensure = None
     type SafetyHyp Ensure = None
@@ -141,6 +156,7 @@ instance NFData Ensure where
 
 data Implication = Implication 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Implication where
 instance LivenessRule Implication where
     type ProgressHyp Implication = None
     type SafetyHyp Implication = None
@@ -153,6 +169,7 @@ instance Default Implication where
 
 data Disjunction = Disjunction 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Disjunction where
 instance LivenessRule Disjunction where
     type ProgressHyp Disjunction = NonEmpty
     type SafetyHyp Disjunction = None
@@ -166,6 +183,7 @@ instance Default Disjunction where
 
 data NegateDisjunct = NegateDisjunct 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq NegateDisjunct where
 instance LivenessRule NegateDisjunct where
     type ProgressHyp NegateDisjunct = One
     type SafetyHyp NegateDisjunct = None
@@ -179,6 +197,7 @@ instance Default NegateDisjunct where
 
 data Transitivity = Transitivity 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Transitivity where
 instance LivenessRule Transitivity where
     type ProgressHyp Transitivity = NonEmpty
     type SafetyHyp Transitivity = None
@@ -192,6 +211,7 @@ instance Default Transitivity where
 
 data PSP = PSP 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq PSP where
 instance LivenessRule PSP where
     type ProgressHyp PSP = One
     type SafetyHyp PSP = One
@@ -205,6 +225,7 @@ instance Default PSP where
 
 data Induction = Induction Variant
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Induction where
 instance LivenessRule Induction where
     type ProgressHyp Induction = One
     type SafetyHyp Induction = None
@@ -216,6 +237,7 @@ instance NFData Induction where
 
 data Monotonicity = Monotonicity 
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Monotonicity where
 instance LivenessRule Monotonicity where
     type ProgressHyp Monotonicity = One
     type SafetyHyp Monotonicity = None
@@ -229,6 +251,7 @@ instance Default Monotonicity where
 
 data Discharge = Discharge
     deriving (Eq,Generic,Typeable,Show)
+instance ZoomEq Discharge where
 instance LivenessRule Discharge where
     type ProgressHyp Discharge = None
     type SafetyHyp Discharge = Maybe

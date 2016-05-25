@@ -7,9 +7,10 @@ import Logic.Expr
 import Logic.Operator
 
     -- Libraries
-import Control.Applicative hiding (Const)
+import Control.Applicative
 import Control.DeepSeq
-import Control.Lens hiding (Context,Const,elements)
+import Control.Lens hiding (Context,elements)
+import Control.Lens.HierarchyTH
 import Control.Monad.RWS
 import Control.Precondition
 
@@ -29,11 +30,11 @@ import GHC.Generics.Instances
 
 import Test.QuickCheck.Report ()
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
 import Utilities.Table
-import Utilities.TH
 
 type Sequent = AbsSequent GenericType HOQuantifier
 
@@ -101,8 +102,12 @@ instance PreOrd SyntacticProp where
 
 instance PartialOrd SyntacticProp where
 
+instance ZoomEq SyntacticProp where
 instance Default SyntacticProp where
     def = empty_monotonicity
+
+instance (Ord n,ZoomEq n,ZoomEq t,ZoomEq q,ZoomEq e) 
+        => ZoomEq (GenSequent n t q e) where
 
 instance HasExprs (GenSequent n t q e) e where
     traverseExprs f (Sequent tout res ctx prop hyp0 hyp1 g) = 
@@ -132,7 +137,7 @@ checkScopesAux e@(Word v) = do
     b2 <- views functions (M.member $ v^.name)
     unless (b0 == Just v || b1 || b2) $ 
         tell [e]
-checkScopesAux (Const _ _) = return ()
+checkScopesAux (Lit _ _) = return ()
 checkScopesAux e@(FunApp fn args) = do
     b0 <- views functions (M.member $ fn^.name)
     b1 <- views definitions (M.member $ fn^.name)
@@ -162,10 +167,8 @@ makeSequent ctx props asms0 asms1 g = checkSequent $
 checkSequent :: Pre
              => Sequent -> Sequent
 checkSequent s = byPred msg (const $ L.null xs) (Pretty s) s
-         --assertMessage "invalid scopes" (unlines $ map show xs) id s
     where
         msg = [printf|Sequent scopes: \n%s|] $ L.unlines $ map pretty_print' xs
-        --f (Def ts _ n ps t e) = _
         checkScopes' e = do
             xs <- snd <$> listen (checkScopesAux e)
             unless (L.null xs)
@@ -244,7 +247,7 @@ instance (TypeSystem t, IsQuantifier q) => PrettyPrintable (AbsSequent t q) wher
                     ++ map pretty_print' hs'
             goal' = indent 1 $ pretty_print' g
             Context ss vs fs ds _ = s^.context
-            hs  = map (_1 %~ (++":  ") . show) $ M.toList (s^.named)
+            hs  = map (_1 %~ (++":  ") . pretty) $ M.toList (s^.named)
             hs' = s^.nameless
             margin = maximum (0:map (length.fst) hs)
             showWithLabel (lbl,x) = take margin (lbl ++ repeat ' ') ++ indentAfter margin (pretty_print' x)
@@ -463,15 +466,22 @@ instance ( Ord n, Arbitrary n, Arbitrary t, Arbitrary q, Arbitrary e
          , IsQuantifier q, TypeSystem t )
         => Arbitrary (GenSequent n t q e) where
     arbitrary = scale (`div` 4) genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary SyntacticProp where
     arbitrary = scale (`div` 4) genericArbitrary
+    shrink = genericShrink
 
+instance ZoomEq Flipping where
+instance ZoomEq Rel where
 instance Arbitrary Rel where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
+instance ZoomEq a => ZoomEq (ArgDep a) where
 instance Arbitrary a => Arbitrary (ArgDep a) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance (Ord n,Serialize n,Serialize t,Serialize q,Serialize expr) 
     => Serialize (GenSequent n t q expr) where

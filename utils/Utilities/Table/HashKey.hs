@@ -64,12 +64,6 @@ onList :: (forall a0 a1. Iso (m0 a0) (m0 a1) (m1 a0) (m1 a1))
        -> ([m0 a0] -> m0 a1)
 onList ln f xs = f (xs & traverse %~ view ln)^.from ln
 
-tableToList :: MapWithHash k a -> [(k,a)]
-tableToList = (traverse._1 %~ key) . M.toList . view mapWithHash
-
-tableElems :: MapWithHash k a -> [a]
-tableElems = M.elems . view mapWithHash
-
 instance (Hashable k,Ord k) => Semigroup (Intersection (MapWithHash k a)) where
     Intersection x <> Intersection y = Intersection $ x `intersection` y
 
@@ -180,6 +174,8 @@ instance IsMap MapWithHash where
     fromListIntl (_,xs) = fromList xs
     fromListWith f    = MapWithHash . fromListWith f . convertKeys
     fromListWithKey f = MapWithHash . fromListWithKey (f . key) . convertKeys
+    tableToList = (traverse._1 %~ key) . M.toList . view mapWithHash
+    tableElems = M.elems . view mapWithHash
 
 convertKeys :: Hashable k => [(k,a)] -> [(HashKey k,a)]
 convertKeys = traverse._1 %~ view (from key')

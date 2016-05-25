@@ -13,16 +13,17 @@ import Control.Category
 import Control.Lens
 import Control.Monad
 
+import Data.Function (on)
+import Data.Constraint
 import Data.Maybe
 import Data.Typeable
-
-import GHC.Exts (Constraint)
 
 import Language.Haskell.TH
 
 import Prelude hiding ((.),id)
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 import Text.Printf
 
@@ -44,22 +45,14 @@ data Inst1 f constr a = (Typeable a,constr a) => Inst (f a)
 
 type EntailsAll c0 c1 = forall a. c0 a :- c1 a
 
-data Dict p = p => D
-
-newtype p :- q = Sub (p => Dict q)
-
 dictFunToEntails :: Iso' (Dict p -> Dict q) (p :- q)
 dictFunToEntails = from entailsToDictFun
 
 entailsToDictFun :: Iso' (p :- q) (Dict p -> Dict q)
-entailsToDictFun = iso (\(Sub x) D -> x) (\f -> Sub $ f D)
+entailsToDictFun = iso (\(Sub x) Dict -> x) (\f -> Sub $ f Dict)
 
 dict :: Inst1 f constr a -> Dict (constr a)
-dict (Inst _) = D
-
-instance Category (:-) where
-    id  = Sub D
-    x . y = view dictFunToEntails $ (x^.entailsToDictFun) . (y^.entailsToDictFun)
+dict (Inst _) = Dict
 
 -- | 'HasCell' permits the overloading of "Iso" 'cell' and makes it easier
 -- | to wrap a 'Cell' with a newtype without having to mention 'Cell' all
@@ -343,6 +336,15 @@ cellEqual' :: HasCell c (Cell constr)
            -> c -> c -> Bool
 cellEqual' f x y = cellEqual f (x^.cell) (y^.cell)
 
+cellZoomEqual' :: (HasCell c (Cell constr), Eq c,Show c)
+               => (forall a. constr a => a -> a -> Property)
+               -> c -> c -> Property
+cellZoomEqual' f = cell1ZoomEqual' (f `on` runIdentity)
+
+cell1ZoomEqual' :: (HasCell c (Cell1 f constr), Eq c,Show c,Typeable f)
+                => (forall a. constr a => f a -> f a -> Property)
+                -> c -> c -> Property
+cell1ZoomEqual' f x y = read2Cells1With f (x === y) (x^.cell) (y^.cell)
 
 cellCompare :: (forall a. constr a => a -> a -> Ordering)
             -> Cell constr 
@@ -397,12 +399,12 @@ cell1Lens' ln f = traverseCell1' (ln f)
 rewriteCell :: EntailsAll c0 c1 
             -> Cell1 f c0
             -> Cell1 f c1
-rewriteCell d (Cell x) = case spec x d of Sub D -> (Cell x)
+rewriteCell d (Cell x) = case spec x d of Sub Dict -> (Cell x)
 
 rewriteInst :: c0 a :- c1 a
             -> Inst1 f c0 a
             -> Inst1 f c1 a
-rewriteInst d (Inst x) = case spec x d of Sub D -> (Inst x)
+rewriteInst d (Inst x) = case spec x d of Sub Dict -> (Inst x)
 
 spec :: f a -> p a :- q a -> p a :- q a
 spec _ = id
@@ -413,7 +415,7 @@ transEnt :: EntailsAll c0 c1
 transEnt = flip (.)
 
 ordEntailsEq :: EntailsAll Ord Eq
-ordEntailsEq = Sub D
+ordEntailsEq = Sub Dict
 
 exArrow :: forall m cl f b.
            (forall a. Kleisli m (Inst1 f cl a) b)
@@ -481,5 +483,6 @@ prop_consistent_compare x y = cellCompare compare (makeCell' x) (makeCell' y) ==
 return []
 
 -- | Check all the QuickCheck properties.
-run_tests :: IO Bool
-run_tests = $quickCheckAll
+run_tests :: (PropName -> Property -> IO (a, Result))
+          -> IO ([a], Bool)
+run_tests = $forAllProperties'

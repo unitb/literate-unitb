@@ -7,14 +7,16 @@ import Logic.Proof hiding (preserve)
 
     -- Libraries
 import Control.Lens hiding (Context,(.=),from,to,rewriteM)
+import Control.Lens.HierarchyTH
 import Control.Precondition
 
 import           Data.Typeable
 
 import GHC.Generics hiding ((:+:),prec)
 
+import Test.QuickCheck.ZoomEq
+
 import Utilities.Table
-import Utilities.TH
 
 data Theory = Theory 
         { _theoryName :: Name
@@ -41,3 +43,5 @@ empty_theory n = (makeTheory n)
 
 empty_theory' :: Pre => String -> Theory
 empty_theory' = empty_theory . fromString''
+
+instance ZoomEq Theory where

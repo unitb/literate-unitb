@@ -20,6 +20,7 @@ import Data.Serialize
 import GHC.Generics.Instances
 
 import Test.QuickCheck
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Functor
 import Utilities.Table
@@ -40,8 +41,11 @@ translate' = fmap1
 
 instance (Hashable name,Hashable t) => Hashable (AbsVar name t) where
 
+instance (ZoomEq t,ZoomEq n) => ZoomEq (AbsVar n t) where
+
 instance (Arbitrary t,Arbitrary n) => Arbitrary (AbsVar n t) where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance IsName n => Translatable (AbsVar n t) (AbsVar InternalName t) where
     translate = translate' asInternal

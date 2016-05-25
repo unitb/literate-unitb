@@ -23,6 +23,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Invariant
 import Control.Lens hiding (Context)
+import Control.Lens.HierarchyTH (mkCons)
 import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.RWS hiding ((<>))
@@ -39,7 +40,6 @@ import GHC.Generics.Instances
 import Text.Printf.TH
 
 import Utilities.Table
-import Utilities.TH (mkCons)
 import Utilities.Trace
 
 data POParam = POP 

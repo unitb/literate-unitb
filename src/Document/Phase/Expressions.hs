@@ -30,6 +30,7 @@ import UnitB.Syntax as AST hiding (invariant)
 import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
+import Control.Lens.Misc
 
 import           Control.Monad 
 import           Control.Monad.Reader.Class 
@@ -52,11 +53,12 @@ import           Data.Semigroup
 import qualified Data.Traversable   as T
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.Report
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
+import Text.Show.With
 
-import Utilities.Lens
-import Utilities.String
 import Utilities.Syntactic
 import Utilities.Table
 
@@ -74,7 +76,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             returnA -< SystemP ref x
     where
         err_msg :: Label -> String
-        err_msg = [printf|Multiple expressions with the label %s|] . show
+        err_msg = [printf|Multiple expressions with the label %s|] . pretty
         wrapup :: Hierarchy MachineId
                -> MTable MachineP2 
                -> Maybe [Table MachineId [(Label, ExprScope)]]
@@ -88,7 +90,7 @@ run_phase3_exprs = -- withHierarchy $ _ *** expressions >>> _ -- (C.id &&& expre
             let _ = exprs :: MTable (Table Label ExprScope)
             xs <- T.sequence $ make_phase3 <$> p2 <.> exprs
             let mergeError (cevt,(e:es)) = unless (all (((e^.eActions) ==).view eActions) es) $ 
-                    tell [MLError ([printf|event %s merges events with different action sets|] $ show cevt) []]
+                    tell [MLError ([printf|event %s merges events with different action sets|] $ pretty cevt) []]
                 mergeError (_,[]) = return ()
                 merges :: [(EventId, [EventP3])]
                 merges = xs^.traverse.pEventMerge'.withKey'.traverse.to ((:[]).second (L.map snd.snd))
@@ -176,7 +178,7 @@ assignment = machineCmd "\\evassignment" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             let frame = M.ascElems $ (p2^.pStateVars) `M.difference` (p2^.pAbstractVars)
                 act = BcmSuchThat frame pred
             li <- ask
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmeq_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -193,7 +195,7 @@ bcmeq_assgn = machineCmd "\\evbcmeq" $ \(Conc evt, NewLabel lbl, VarName v, Expr
             check_types
                 $ Right (Word var :: RawExpr) `mzeq` Right (asExpr xp)
             let act = Assign var xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmsuch_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -207,7 +209,7 @@ bcmsuch_assgn = machineCmd "\\evbcmsuch" $ \(Conc evt, NewLabel lbl, vs, Expr xs
                 ([printf|variable '%s' undeclared|] . render)
                 $ (`M.lookup` (p2^.pStateVars))
             let act = BcmSuchThat vars xp
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
 bcmin_assgn :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -222,8 +224,9 @@ bcmin_assgn = machineCmd "\\evbcmin" $ \(Conc evt, NewLabel lbl, VarName v, Expr
                     xs
             let act = BcmIn var xp
             check_types $ Right (Word var) `zelem` Right (asExpr xp)
-            return [(lbl,evtScope ev (Action (InhAdd (ev NE.:| [],act)) Local $ pure li))]
+            return [(lbl,evtScope ev (Action (InhAdd (pure ev,act)) Local $ pure li))]
 
+instance ZoomEq Initially where
 instance Scope Initially where
     type Impl Initially = WithDelete Initially
     kind x = case x^.inhStatus of 
@@ -238,16 +241,16 @@ instance IsExprScope Initially where
         return $ case (i^.inhStatus,i^.declSource) of
             (InhAdd x,_)
                 | L.null lis' -> [Right $ PInit lbl x]
-                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ show lbl,li):lis']
+                | otherwise   -> [Left $ MLError msg $ ([printf|predicate %s|] $ pretty lbl,li):lis']
                 where
                     lis = L.map (first $ view name) $ M.ascElems $ vs `M.intersection` used_var' x
                     lis' = L.map (first ([printf|deleted variable %s|] . render)) lis
-                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ show lbl
+                    msg  = [printf|initialization predicate '%s' refers to deleted variables|] $ pretty lbl
             (InhDelete (Just x),Local) -> [Right $ PDelInits lbl x]
             (InhDelete (Just _),Inherited) -> []
             (InhDelete Nothing,_) -> [Left $ Error msg li]
                 where
-                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ show lbl
+                    msg = [printf|initialization predicate '%s' was deleted but does not exist|] $ pretty lbl
         where
             li = i^.lineInfo
     toThyExpr _ _  = return []
@@ -284,6 +287,7 @@ witness_decl = machineCmd "\\witness" $ \(Conc evt, VarName var, Expr xp) _m p2 
                 then [(label $ render var,evtScope ev (Witness v p Local $ pure li))]
                 else [(label $ render var,evtScope ev (IndexWitness v p Local $ pure li))]
 
+instance ZoomEq EventExpr where
 instance Scope EventExpr where
     kind (EventExpr m) = show $ ShowString . kind <$> m
     keep_from s (EventExpr m) = Just $ EventExpr $ M.mapMaybe (keep_from s) m
@@ -294,11 +298,11 @@ instance Scope EventExpr where
         where
             msg (Right k) sc 
                 | inheritedFrom sc `elem` [[],[k]]
-                    = ([printf|%s (event '%s')|] (kind sc) (show k) :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s')|] (kind sc) (pretty k) :: String, view lineInfo sc)
                 | otherwise
-                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (show k) parents :: String, view lineInfo sc)
+                    = ([printf|%s (event '%s', from '%s')|] (kind sc) (pretty k) parents :: String, view lineInfo sc)
                 where
-                    parents = intercalate "," $ map show $ inheritedFrom sc
+                    parents = intercalate "," $ map pretty $ inheritedFrom sc
             msg (Left _) sc = ([printf|%s (initialization)|] (kind sc) :: String, view lineInfo sc)
     merge_scopes' (EventExpr m0) (EventExpr m1) = EventExpr <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (EventExpr es) = map EventExpr $ concatMap f $ toList es
@@ -315,15 +319,15 @@ checkLocalExpr' expKind free eid lbl sch = do
             vs <- view pDelVars 
             return $ case sch^.inhStatus of
                 InhAdd expr -> 
-                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (show eid) expKind (show lbl)
+                    let msg = [printf|event '%s', %s '%s' refers to deleted variables|] (pretty eid) expKind (pretty lbl)
                         errs   = vs `M.intersection` free expr
-                        schLI  = ([printf|%s '%s'|] expKind $ show lbl,) <$> sch^.lineInfo
+                        schLI  = ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                         varsLI = L.map (first $ [printf|deleted variable '%s'|] . render . view name) (M.ascElems errs)
                     in if M.null errs then []
                        else [Left $ MLError msg $ NE.toList schLI ++ varsLI]
                 InhDelete Nothing -> 
-                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (show eid) expKind (show lbl)
-                        li  = isOne $ ([printf|%s '%s'|] expKind $ show lbl,) <$> sch^.lineInfo
+                    let msg = [printf|event '%s', %s '%s' was deleted but does not exist|] (pretty eid) expKind (pretty lbl)
+                        li  = isOne $ ([printf|%s '%s'|] expKind $ pretty lbl,) <$> sch^.lineInfo
                     in [Left $ either (MLError msg) (Error msg.snd) li]
                 _ -> []
     where
@@ -365,7 +369,7 @@ parseEvtExpr' expKind fvars field scope evt lbl decl =
                     Old -> return []
                     New -> checkLocalExpr' expKind (fvars.snd) evt lbl decl
         old = case scope of
-            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- NE.toList evts]
+            Old -> \(evts,e) -> [Right (ev,[field lbl e]) | ev <- NE.toList $ unNonEmptyListSet evts]
             New -> const []
         new = case scope of
             Old -> const []
@@ -401,7 +405,7 @@ guard_decl = machineCmd "\\evguard" $ \(Conc evt, NewLabel lbl, Expr xs) _m p2 -
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (event_parser p2 ev) xs
-            return [(lbl,evtScope ev (Guard (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (Guard (InhAdd (pure ev,xp)) Local $ pure li))]
 
 guard_removal :: MPipeline MachineP2 [(Label,ExprScope)]
 guard_removal = machineCmd "\\removeguard" $ \(Conc evt_lbl,lbls) _m p2 -> do
@@ -427,7 +431,7 @@ coarse_sch_decl = machineCmd "\\cschedule" $ \(Conc evt, NewLabel lbl, Expr xs) 
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (CoarseSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
 
 fine_sch_decl :: MPipeline MachineP2
                     [(Label,ExprScope)]
@@ -435,12 +439,13 @@ fine_sch_decl = machineCmd "\\fschedule" $ \(Conc evt, NewLabel lbl, Expr xs) _m
             ev <- get_event p2 $ as_label (evt :: EventId)
             li <- ask
             xp <- parse_expr'' (schedule_parser p2 ev) xs
-            return [(lbl,evtScope ev (FineSchedule (InhAdd (ev NE.:| [],xp)) Local $ pure li))]
+            return [(lbl,evtScope ev (FineSchedule (InhAdd (pure ev,xp)) Local $ pure li))]
 
         -------------------------
         --  Theory Properties  --
         -------------------------
 
+instance ZoomEq Axiom where
 instance Scope Axiom where
     kind _ = "axiom"
     merge_scopes' _ _ = Nothing -- error "Axiom Scope.merge_scopes: _, _"
@@ -505,12 +510,13 @@ default_schedule_decl = arr $ \(p2,csch) ->
                 | otherwise     = map ((def,) . makeEvtCell (Right e)) [sch]
             where
                 def  = label "default"
-                sch  = CoarseSchedule (InhAdd (e NE.:| [],zfalse)) Inherited $ pure li
+                sch  = CoarseSchedule (InhAdd (pure e,zfalse)) Inherited $ pure li
                 sch' = sch & inhStatus %~ makeDelete & declSource .~ Local
 
 instance PrettyPrintable Invariant where
     pretty = kind
 
+instance ZoomEq Invariant where
 instance Scope Invariant where
     kind _ = "invariant"
     rename_events' _ x = [x]
@@ -535,6 +541,7 @@ invariant = machineCmd "\\invariant" $ \(NewLabel lbl,Expr xs) _m p2 -> do
             xp <- parse_expr'' (p2^.pMchSynt) xs
             return [(lbl,makeCell $ Invariant xp Local li)]
 
+instance ZoomEq InvTheorem where
 instance Scope InvTheorem where
     kind _ = "theorem"
     rename_events' _ x = [x]
@@ -562,6 +569,7 @@ mch_theorem = machineCmd "\\theorem" $ \(NewLabel lbl,Expr xs) _m p2 -> do
             xp <- parse_expr'' (p2^.pMchSynt) xs
             return [(lbl,makeCell $ InvTheorem xp Local li)]
 
+instance ZoomEq TransientProp where
 instance Scope TransientProp where
     kind _ = "transient predicate"
     rename_events' _ x = [x]
@@ -596,7 +604,7 @@ transient_prop = machineCmd "\\transient" $ \(evts', NewLabel lbl, Expr xs) _m 
             toEither $ error_list 
                 [ ( not $ L.null withInd
                   , [printf|event(s) %s have indices and require witnesses|] 
-                        $ intercalate "," $ map show withInd) ]
+                        $ intercalate "," $ map pretty withInd) ]
             let vs = used_var' tr
                 fv = vs `M.intersection` (p2^.pDummyVars)
                 prop = Tr fv tr es empty_hint
@@ -634,6 +642,7 @@ instance IsExprScope ConstraintProp where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq ConstraintProp where
 instance Scope ConstraintProp where
     kind _ = "co property"
     rename_events' _ x = [x]
@@ -668,6 +677,7 @@ instance IsExprScope SafetyDecl where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq SafetyDecl where
 instance Scope SafetyDecl where
     kind _ = "safety property"
     rename_events' _ x = [x]
@@ -720,6 +730,7 @@ instance IsExprScope ProgressDecl where
     toNewEvtExpr _ _ = return []
     toOldEvtExpr _ _ = return []
 
+instance ZoomEq ProgressDecl where
 instance Scope ProgressDecl where
     kind _ = "progress property"
     rename_events' _ x = [x]
@@ -767,7 +778,7 @@ instance IsEvtExpr IndexWitness where
     defaultEvtWitness _ _ = return []
     toMchScopeExpr _ _ = return []
     toEvtScopeExpr Old evt _ w
-        | w^.declSource == Local = return [Right (evt,[EIndWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EIndWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr New _ _ _ = return []
@@ -777,28 +788,28 @@ instance IsEvtExpr IndexWitness where
 instance PrettyPrintable IndexWitness where
     pretty = kind
 
-instance IsEvtExpr Witness where
+instance IsEvtExpr ES.Witness where
     defaultEvtWitness _ _ = return []
     toMchScopeExpr _ w   
-        | w^.declSource == Local = return [Right $ PInitWitness (v^.name) (v, w^.evtExpr)]
+        | w^.declSource == Local = return [Right $ PInitWitness (v^.name) (WitSuch v $ w^.evtExpr)]
         | otherwise              = return []
         where v = w^.ES.var
     toEvtScopeExpr Old _ _ _ = return []
     toEvtScopeExpr New evt _ w
-        | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (v, getExpr $ w^.evtExpr)])]
+        | w^.declSource == Local = return [Right (evt,[EWitness (v^.name) (WitSuch v $ w^.evtExpr)])]
         | otherwise              = return []
         where v = w^.ES.var
     setSource _ x = x
     inheritedFrom _ = []
 
-instance PrettyPrintable Witness where
+instance PrettyPrintable ES.Witness where
     pretty = kind
 
 instance IsEvtExpr ActionDecl where
     defaultEvtWitness ev scope = case (scope^.inhStatus, scope^.declSource) of 
         (InhDelete (Just (_,act)),Local) -> do
             vs <- view pDelVars
-            return [Right $ (ev,[EWitness (v^.name) (v, ba_pred act) 
+            return [Right $ (ev,[EWitness (v^.name) (witnessOf v act) 
                                          | v <- M.ascElems $ frame' act `M.intersection` vs ])]
         _ -> return []
     toMchScopeExpr _ _  = return []
@@ -806,8 +817,6 @@ instance IsEvtExpr ActionDecl where
             x <- parseEvtExpr' "action"
                 (uncurry M.union . (frame' &&& used_var'.ba_pred))
                 EActions scope eid lbl decl
-            --mapM_ (traceM . show) x
-            --when (L.null x) $ traceM "empty"
             return x
 
 instance PrettyPrintable ActionDecl where
@@ -895,14 +904,15 @@ defaultInitWitness :: MachineP2 -> [MachineP3'Field a b c] -> [MachineP3'Field a
 defaultInitWitness p2 xs = concatMap f xs ++ xs
     where
         vs = p2^.pDelVars
-        f (PDelInits _lbl expr) = [PInitWitness (v^.name) (v, expr)
+        f (PDelInits _lbl expr) = [PInitWitness (v^.name) (WitSuch v expr)
                                     | v <- M.ascElems $ used_var' expr `M.intersection` vs ]
         f _ = []
 
 return []
 
-check_props :: IO Bool
-check_props = $quickCheckAll
+check_props :: (PropName -> Property -> IO (a, Result))
+            -> IO ([a], Bool)
+check_props = $forAllProperties'
 
 instance Arbitrary ExprScope where
     arbitrary = ExprScope <$> $(arbitraryCell' ''IsExprScope [ [t| ExprScope |] ])

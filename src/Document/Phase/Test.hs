@@ -38,6 +38,7 @@ import UnitB.UnitB
     --
 import Control.Arrow
 import Control.Lens hiding ((<.>))
+import Control.Lens.Misc
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
@@ -51,11 +52,21 @@ import Data.Map.Class  as M
 import Data.Maybe
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
-import Utilities.Lens
 import Utilities.MapSyntax
 import Utilities.Syntactic
 import Utilities.Table
+
+mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
+mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
+
+prop_inherit_equiv :: Hierarchy Int
+                   -> Property
+prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
+    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
+
+return []
 
 runMap :: (M.IsKey Table k, Scope a) 
        => MapSyntax k a b 
@@ -85,7 +96,7 @@ case0 = do
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         li = LI "file.ext" 1 1
         sorts = M.fromList
@@ -95,7 +106,7 @@ case0 = do
         allSorts = M.intersectionWith (\ts th -> ts `M.union` f th) sorts thy
         pdef  = M.fromList
                 [ (mId "m0",L.map (as_pair' $ view _1) [(z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]) 
-                , (mId "m1",L.map (as_pair' $ view _1) [(z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)])]
+                , (mId "m1",L.map (as_pair' $ view _1) [(z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)])]
         evts = M.fromList 
                 [ (mId "m0",evts0)
                 , (mId "m1",evts1) ]
@@ -174,7 +185,7 @@ result0 = M.fromList
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         sorts0 = symbol_table [s0]
         sorts1 = symbol_table [s1] `M.union` sorts0
@@ -182,7 +193,7 @@ result0 = M.fromList
         allSorts0 = sorts0 `M.union` f thy0
         allSorts1 = sorts1 `M.union` f thy1
         pdef0  = [as_pair' (view _1) (z3Def [] "S0" [] (set_type s0') (se s0'),Local,li)]
-        pdef1  = [as_pair' (view _1) (z3Def [] "sl@S1" [] (set_type s1') (se s1'),Local,li)]
+        pdef1  = [as_pair' (view _1) (z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)]
         thy0 = symbol_table $ arithmetic:thy2
         thy1 = symbol_table $ set_theory:thy2
         thy2 = [basic_theory,arithmetic]
@@ -255,7 +266,7 @@ case2 = return $ do
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         s1' = make_type s1 [] 
         vs0 = M.fromList
                 [ ([tex|x|],makeCell $ Machine (z3Var "x" int) Local li) 
@@ -269,7 +280,7 @@ case2 = return $ do
                 , ([tex|q|],makeCell $ Evt $ M.singleton (Just "ce2") (EventDecl (Index $ z3Var "q" int) ("ce2":|[]) Local li))
                 , ([tex|x|],makeCell $ DelMch (Just $ z3Var "x" int) Local li) 
                 , ([tex|S0|],makeCell $ TheoryDef (z3Def [] "S0" [] (set_type s0') (se s0')) Local li)
-                , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl@S1" [] (set_type s1') (se s1')) Local li) ]
+                , ([tex|\S1|],makeCell $ TheoryDef (z3Def [] "sl$S1" [] (set_type s1') (se s1')) Local li) ]
         vs = M.fromList 
                 [ ("m0",vs0) 
                 , ("m1",vs1)]
@@ -285,7 +296,7 @@ result2 = do
             s0 = z3Sort "S0" "S0" 0
             s0' = make_type s0 [] 
             se new_type = zlift (set_type new_type) ztrue
-            s1 = z3Sort "\\S1" "sl@S1" 0
+            s1 = z3Sort "\\S1" "sl$S1" 0
             s1' = make_type s1 [] 
             fieldsM mid
                 | mid == "m0" = [ make' PStateVars "x" $ var "x"
@@ -298,7 +309,7 @@ result2 = do
             fieldsT mid
                 | mid == "m0" = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) ]
                 | otherwise   = [ make' PDefinitions "S0" (z3Def [] "S0" [] (set_type s0') (se s0')) 
-                                , make' PDefinitions "\\S1" (z3Def [] "sl@S1" [] (set_type s1') (se s1')) ]
+                                , make' PDefinitions "\\S1" (z3Def [] "sl$S1" [] (set_type s1') (se s1')) ]
             upMachine :: MachineId 
                       -> MachineP1' EventP1 EventP1 TheoryP2
                       -> MachineP2' EventP1 EventP1 TheoryP2
@@ -364,7 +375,7 @@ case4 = return $ do
         event evt lbl con x = event' evt lbl [evt] con x
         mkEvent evt lbl es con x inh = do
             scope <- ask
-            lift $ lbl ## makeEvtCell (Right evt) (con (inh (fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
+            lift $ lbl ## makeEvtCell (Right evt) (con (inh (NonEmptyListSet $ fromMaybe (evt :| []) $ nonEmpty es,x)) scope $ pure li)
         event' evt lbl es con x = mkEvent evt lbl es con x InhAdd
         del_event evt lbl es con = mkEvent evt lbl es con (assertFalse' "del_event") $ InhDelete . const Nothing
         li = LI "file.ext" 1 1 
@@ -417,7 +428,7 @@ result4 :: Either [Error] SystemP3
 result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
     where
         upgradeAll mid = upgrade newThy (newMch mid) (newEvt mid) (newEvt mid)
-        (x,x',xvar)  = prog_var "x" int
+        xvar = Var [tex|x|] int
         decl n t = decls %= insert_symbol (z3Var n t)
         c_aux b = ctx $ do
             decl "x" int
@@ -460,7 +471,7 @@ result4 = (mchTable.withKey.traverse %~ uncurry upgradeAll) <$> result3
             | eid == "ce0b"                = [ ECoarseSched "sch0" $ c [expr|y = y|] 
                                              , ECoarseSched "sch2" $ c [expr|y = 0|]]
             | eid == "ce1" && mid == "m1"  = [ EActions "act0" $ c' [act| y := y + 1 |] 
-                                             , make' EWitness "x" (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+                                             , make' EWitness "x" (WitEq xvar $ c' [expr|x - 1|]) ]
             | otherwise = []
 
 name5 :: TestName
@@ -585,17 +596,17 @@ result8 :: Either [Error] (SystemP Machine)
 result8 = Right $ SystemP h $ fromSyntax <$> ms
     where
         h = Hierarchy ["m0","m1"] (singleton "m1" "m0")
-        (x,x',xvar) = prog_var "x" int
+        xvar = Var [tex|x|] int
         ms = M.fromList [("m0",m0),("m1",m1)]
         s0 = z3Sort "S0" "S0" 0
-        s1 = z3Sort "\\S1" "sl@S1" 0
+        s1 = z3Sort "\\S1" "sl$S1" 0
         setS0 = set_type $ make_type s0 []
         setS1 = set_type $ make_type s1 []
         sorts0 = symbol_table [s0]
         sorts1 = symbol_table [s0,s1]
         defs0 = symbol_table [z3Def [] "S0" [] setS0 (zlift setS0 ztrue)]
         defs1 = symbol_table [ (z3Def [] "S0" [] setS0 (zlift setS0 ztrue))
-                             , (z3Def [] "sl@S1" [] setS1 (zlift setS1 ztrue))]
+                             , (z3Def [] "sl$S1" [] setS1 (zlift setS1 ztrue))]
         vars0 = symbol_table [z3Var "x" int,z3Var "y" int]
         vars1 = symbol_table [z3Var "z" int,z3Var "y" int]
         c' f = c $ f.(expected_type .~ Nothing)
@@ -662,8 +673,8 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
             params .= symbol_table [z3Var "p" bool]
             coarse_sched .= M.fromList 
                 [("default",c [expr| \false |])]
-            witness .= symbol_table' fst
-                [ (xvar, $typeCheck$ x' `mzeq` (x - 1)) ]
+            witness .= symbol_table' witVar
+                [ (WitEq xvar $ c' [expr| x - 1 |]) ]
             actions .= M.fromList
                 [ ("act0",c' [act| y := y + 1 |])]
             abs_actions .= M.fromList
@@ -685,14 +696,14 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             forM_ [ae0,ae1a,ae1b,cskip] $ newEdge askip
         evts1 = fromJust $ makeGraph $ do
-            ae0 <- newLeftVertex (Right "ae0") ae0sched
+            ae0  <- newLeftVertex (Right "ae0") ae0sched
             ae1a <- newLeftVertex (Right "ae1a") (def & old .~ ae1aEvt)
             ae1b <- newLeftVertex (Right "ae1b") (def & old .~ ae1bEvt)
             askip <- newLeftVertex skipLbl (def & old .~ skipEvt)
             ce0a <- newRightVertex (Right "ce0a") (def & new .~ ce0aEvt)
             ce0b <- newRightVertex (Right "ce0b") (def & new .~ ce0bEvt)
-            ce1 <- newRightVertex (Right "ce1") ce1Evt
-            ce2 <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
+            ce1  <- newRightVertex (Right "ce1") ce1Evt
+            ce2  <- newRightVertex (Right "ce2") (def & new .~ ce2Evt)
             cskip <- newRightVertex skipLbl (def & new .~ skipEvt)
             newEdge ae0 ce0a
             newEdge ae0 ce0b
@@ -704,32 +715,6 @@ result8 = Right $ SystemP h $ fromSyntax <$> ms
 name9 :: TestName
 name9 = testName "QuickCheck inheritance"
 
-prop_inherit_equiv :: Hierarchy Int
-                   -> Property
-prop_inherit_equiv h = forAll (mkMap h) $ \m -> 
-    inheritWith' id (L.map.(+)) (++) h m === inheritWithAlt id (L.map.(+)) (++) h (m :: Table Int [Int])
-
-case9 :: IO Bool
-case9 = f <$> quickCheckResult prop_inherit_equiv
-    where
-        f (Success _ _ _) = True
-        f _ = False
-
-result9 :: Bool
-result9 = True
-
-mkMap :: (Arbitrary a,M.IsKey Table k) => Hierarchy k -> Gen (Table k [a])
-mkMap (Hierarchy xs _) = M.fromList.L.zip xs <$> replicateM (L.length xs) arbitrary
-
---see :: Map ProgId ProgressProp
-seeA :: IO (Table Int [Int])
-seeA = return $ inheritWith' id (L.map.(+)) (++) hierarchy m
-
-hierarchy :: Hierarchy Int
-hierarchy = Hierarchy {order = [2,1], edges = M.fromList [(1,2)]}
-
-m :: Table Int [Int]
-m = M.fromList [(1,[3,-3,-2]),(2,[5,-1])]
-
-seeE :: IO (Table Int [Int])
-seeE = return $ inheritWithAlt id (L.map.(+)) (++) hierarchy m
+prop9 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
+prop9 = $(quickCheckWrap 'prop_inherit_equiv)

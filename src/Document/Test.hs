@@ -67,12 +67,14 @@ test = test_cases
         , Gar.test_case
         , Term.test_case
         , Parser.test_case
-        , Case "QuickCheck spec of machine parser" 
-            MSpec.run_spec True
+        , QuickCheckProps "QuickCheck spec of machine parser" 
+            MSpec.run_spec
         , all_properties
         , check_axioms
-        , Case "expression phase, properties" 
-            ((&&) <$> PExp.check_props <*> ESc.run_tests) True
+        , QuickCheckProps "expression phase, properties" 
+            PExp.check_props
+        , QuickCheckProps "expression scope, properties" 
+            ESc.run_tests
         ]
 
 result1 :: String
@@ -120,87 +122,9 @@ case2 = do
             return "ok"
         Left x -> return $ show $ x & traverse.traverseLineInfo.filename .~ ""
 
---prop_parser_exc_free xs = 
---    classify (depth xs < 5) "shallow" $
---    classify (5 <= depth xs && depth xs < 20) "medium" $
---    classify (20 <= depth xs && depth xs < 100) "deep" $
---    classify (100 <= depth xs) "very deep"
---    (case all_machines xs of
---        Right _ -> True
---        Left  _ -> True)
-
---properties = do
---        r <- quickCheckResult prop_parser_exc_free
---        case r of
---            Success _ _ _ -> return True
---            x -> putStrLn ("failed: " ++ show x) >> return False
---
---depth xs = maximum $ 0:map f xs
---    where
---        f (Env _ _ xs _)    = 1 + depth xs
---        f (Bracket _ _ xs _)  = 1 + depth xs
---        f (Text _)          = 0
-
---instance Arbitrary LatexDoc where
---    arbitrary = _ $ mapM nodeToDoc =<< do
---            n <- choose (1,7) :: Gen Int
---            if n == 1 
---                then do
---                    n <- choose (0,length kw+2)
---                    name <- if length kw <= n
---                        then arbitrary :: Gen String
---                        else return (kw ! n)
---                    m    <- choose (0,6) :: Gen Int
---                    xs   <- Doc (li 0 0) <$> replicateM m arbitrary
---                                         <*> pure (li 0 0)
---                    return $ [Env (li 0 0) name (li 0 0) xs (li 0 0)]
---            else if n == 2
---                then do
---                    b  <- elements [Curly,Square]
---                    m    <- choose (0,6) :: Gen Int
---                    xs   <- Doc (li 0 0) <$> replicateM m arbitrary 
---                                         <*> pure (li 0 0)
---                    return $ [Bracket b (li 0 0) xs (li 0 0)]
---            else if 2 < n
---                then do
---                    xs <- arbitrary :: Gen String
---                    let ys = if L.null xs 
---                        then "x"
---                        else xs
-----                    n <- choose (0,length cmd+1)
---                    case read_lines tex_tokens "" ys of
---                        Right x -> return $ map (Text . fst) x
---                        Left _  -> return $ [Text (TextBlock "x" (li 0 0))]
---            else error "Document.Test"
---        where
---            kw =
---                [   "machine"
---                ,   "variable"
---                ,   "indices"
---                ,   "evassignment"
---                ,   "cschedule"
---                ,   "fschedule"
---                ,   "invariant"
---                ,   "transient"
---                ,   "dummy"
---                ,   "use:set"
---                ,   "constant"
---                ,   "assumption"
---                ,   "initialization"
---                ,   "constraint"
---                ,   "proof"
---                ,   "calculation"
---                ]
-----            cmd =
-----                [   "\\newset"
-----                ,   "\\hint"
-----                ,   "\\ref"
-----                ,   "\\eqref"
-----                ]
-
 check_axioms :: TestCase
-check_axioms = Case "conformance of instances to type class axioms"
-    $(quickCheckClasses [''Document.Scope.Scope]) True
+check_axioms = QuickCheckProps "conformance of instances to type class axioms"
+    $(quickCheckClassesWith [''Document.Scope.Scope])
 
 all_properties :: TestCase
 all_properties = Case "the parser is exception free" 

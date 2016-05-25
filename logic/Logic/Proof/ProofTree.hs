@@ -22,6 +22,8 @@ import Data.Typeable
 
 import GHC.Generics (Generic)
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf.TH
 
 import Utilities.Syntactic
@@ -70,6 +72,7 @@ data TheoremRef =
 class (Syntactic a, Typeable a, Eq a) => ProofRule a where
     proof_po :: a -> Label -> Sequent -> Either [Error] [(Label,Sequent)]
 
+instance ZoomEq expr => ZoomEq (CalculationBase expr) where
 
 instance Syntactic (CalculationBase expr) where
     line_info c = l_info c
@@ -77,6 +80,8 @@ instance Syntactic (CalculationBase expr) where
     traverseLineInfo f c = tr <$> f (l_info c) <*> (traverse._4) f (following c)
         where
             tr x y = c { l_info = x, following = y }
+
+instance ZoomEq expr => ZoomEq (ProofBase expr) where
 
 instance Syntactic (ProofBase expr) where
     line_info (ByCases _ li)        = li
@@ -119,8 +124,6 @@ instance (Eq expr,IsExpr expr) => ProofRule (ProofBase expr) where
                               : ys)
         where 
             f (x,y) = (composite_label [lbl, x],y)
-            -- with_li x = label (x ++ show li)
-            -- li  = line_info c
 
     proof_po (ByCases xs li) lbl po = do
             dis <- toErrors li $ mzsome (L.map (\(_,x,_) -> Right x) xs)

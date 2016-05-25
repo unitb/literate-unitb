@@ -5,6 +5,7 @@ import qualified Utilities.Graph as G hiding (map)
 
     -- Libraries
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 instance (Ord a,Enum a,Eq b,Arbitrary b) => Arbitrary (G.Matrix a b) where
     arbitrary = do
@@ -31,5 +32,6 @@ axm_def m' = forAll arbitrary $ \(x,z) ->
 --             .&&. (forAll arbitrary (axm_def :: G.Matrix Int (G.Min Int) -> Property))
 
 return []
-run_spec :: IO Bool
-run_spec = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+run_spec :: (PropName -> Property -> IO (a, Result))
+         -> IO ([a], Bool)
+run_spec = $forAllProperties'

@@ -24,7 +24,7 @@ import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
 
-import UnitB.Expr hiding (Const)
+import UnitB.Expr
 import UnitB.Proof
 import UnitB.Syntax as AST 
 
@@ -32,6 +32,7 @@ import Z3.Z3
 
     -- Libraries
 import Control.Arrow
+import Control.CoApplicative
 import Control.Lens  hiding (indices,Context,Context',(.=))
 import Control.Monad hiding (guard)
 import Control.Precondition
@@ -215,7 +216,7 @@ proof_obligation' pos proofs m = do
             if lbl `M.member` pos
                 then return ()
                 else Left [Error 
-                    ([printf|a proof is provided for non-existant proof obligation %s|] $ show lbl)
+                    ([printf|a proof is provided for non-existant proof obligation %s|] $ pretty lbl)
                         li])
         xs <- forM (M.toList pos) (\(lbl,po) -> do
             case M.lookup lbl proofs of
@@ -285,7 +286,7 @@ init_sim_po m =
             prefix_label "SIM"
             _context (assert_ctx m)
             named_hyps $ m!.inits
-            named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
+            named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
         (forM_ (M.toList $ m!.del_inits) $ \(lbl,p) -> do
             emit_goal [lbl] p)
 
@@ -295,7 +296,7 @@ init_wit_wd_po m =
         (do _context (assert_ctx m)
             named_hyps $ m!.inits)
         (emit_goal ["INIT/WWD"] 
-            (well_definedness $ zall $ getExpr.snd <$> m!.init_witness))
+            (well_definedness $ zall $ witnessDef <$> m!.init_witness))
 
 init_witness_fis_po :: RawMachineAST -> M ()
 init_witness_fis_po m =
@@ -304,7 +305,7 @@ init_witness_fis_po m =
             named_hyps $ m!.inits)
         (emit_exist_goal ["INIT/WFIS"] 
             (M.ascElems $ (view' abs_vars m)  `M.difference` (view' variables m))
-            (M.ascElems $ snd <$> m!.init_witness))
+            (M.ascElems $ witnessDef <$> m!.init_witness))
 
 init_fis_po :: RawMachineAST -> M ()
 init_fis_po m = 
@@ -385,11 +386,11 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
         local_ind :: EventId -> RawEventMerging -> Table Name Var
         local_ind lbl e = renameAll' (add_suffix suff) $ e^.indices
             where
-                suff = mk_suff $ show lbl
+                suff = mk_suff $ pretty lbl
         new_ind :: EventId -> RawEventMerging -> RawExpr -> RawExpr
         new_ind lbl e = make_unique suff (e^.indices)
             where
-                suff = mk_suff $ show lbl
+                suff = mk_suff $ pretty lbl
             -- (M.elems ind) 
         tagged_sched :: EventId -> RawEventMerging -> Table Label RawExpr
         tagged_sched lbl e = M.map (new_ind lbl e) $ e^.new.coarse_sched & traverse %~ asExpr
@@ -410,9 +411,9 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                         all_fsch) 
                                 (progs ! lbl)
                         | otherwise -> error $ 
-                               [printf|transient predicate %s's side condition doesn't |] (show pname) 
+                               [printf|transient predicate %s's side condition doesn't |] (pretty pname) 
                             ++ [printf|match the fine schedule of event %s|]
-                                        (intercalate "," $ L.map show (NE.toList evt_lbl))
+                                        (intercalate "," $ L.map pretty (NE.toList evt_lbl))
                     Nothing
                         | not $ all_fsch == ztrue -> do
                             emit_goal [] $ zforall all_ind
@@ -509,7 +510,7 @@ inv_po m (pname, xp) =
                         (primed (view' variables m `M.union` view' abs_vars m) xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
-                 named_hyps $ M.mapKeys as_label $ snd <$> m!.init_witness)
+                 named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
             $ emit_goal [inv_init_lbl, pname] xp
 
 wit_wd_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
@@ -522,7 +523,7 @@ wit_wd_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_goal ["WWD"] $ well_definedness $ zall 
-                $ M.ascElems $ snd <$> evt^.witness)
+                $ M.ascElems $ witnessDef <$> evt^.witness)
 
 wit_fis_po :: RawMachineAST -> (EventId, RawEventMerging) -> M ()
 wit_fis_po m (lbl, evt) = 
@@ -535,7 +536,7 @@ wit_fis_po m (lbl, evt) =
                  named_hyps $ evt^.new.guards
                  named_hyps $ ba_predicate' (m!.variables) (evt^.new.actions))
             (emit_exist_goal ["WFIS"] pvar 
-                $ M.ascElems $ snd <$> evt^.witness)
+                $ M.ascElems $ witnessDef <$> evt^.witness)
     where
         pvar = L.map prime $ M.ascElems $ view' abs_vars m `M.difference` view' variables m
 
@@ -549,7 +550,7 @@ ind_wit_wd_po m (lbl, evts) =
             forM_ (evts^.evt_pairs) $ \evt -> do
                 with (POG.variables $ evt^.new.indices) $
                     emit_goal ["IWWD",evt^.concrete._1.to as_label] $ well_definedness $ zall 
-                        $ M.ascElems $ snd <$> evt^.ind_witness
+                        $ M.ascElems $ witnessDef <$> evt^.ind_witness
 
 ind_wit_fis_po :: RawMachineAST -> (EventId, RawEventSplitting) -> M ()
 ind_wit_fis_po m (lbl, evts) = 
@@ -563,12 +564,10 @@ ind_wit_fis_po m (lbl, evts) =
             forM_ (evts^.evt_pairs) $ \evt -> do
                 let pvar = evt^.added.indices
                 emit_exist_goal ["IWFIS"] (M.ascElems pvar)
-                    $ M.ascElems $ snd <$> ((evt^.ind_witness) `M.intersection` pvar)
+                    $ M.ascElems $ witnessDef <$> ((evt^.ind_witness) `M.intersection` pvar)
 
 removeSkip :: NonEmpty (SkipOrEvent, t) -> [(EventId, t)]
-removeSkip = rights.fmap distrLeft.NE.toList
-    where
-        distrLeft = sequenceOf _1
+removeSkip = rights.fmap (view distrLeft).NE.toList
 
 csched_ref_safety :: RawScheduleChange -> RawEventSplitting -> [(Label,RawSafetyProp)]
 csched_ref_safety sch ev = ev^.concrete_evts.to removeSkip & traverse %~ (as_label *** safe)
@@ -627,7 +626,7 @@ replace_csched_po m (lbl,evt') = do
                 with (do
                         POG.variables $ symbol_table vs
                         named_hyps old_c
-                        named_hyps $ M.mapKeys as_label $ snd <$> evt'^.ind_witness
+                        named_hyps $ M.mapKeys as_label $ witnessDef <$> evt'^.ind_witness
                         named_hyps old_f) $ 
                     emit_goal ["prog",plbl,"lhs"] p0
                 with (do
@@ -662,7 +661,7 @@ weaken_csched_po m (lbl,evt) = do
                     T.forM (evt^.evt_pairs) $ \e -> -- indices
                         POG.variables $ e^.added.indices
                     named_hyps $ invariants m 
-                    named_hyps $ M.mapKeys as_label $ snd <$> evt^.ind_witness
+                    named_hyps $ M.mapKeys as_label $ witnessDef <$> evt^.ind_witness
                         -- | old version admits old_f as assumption
                         -- | why is it correct or needed?
                         -- | named_hyps old_f
@@ -1018,10 +1017,10 @@ dump :: String -> Table Label Sequent -> IO ()
 dump name pos = do
         withFile (name ++ ".z") WriteMode (\h -> do
             forM_ (M.toList pos) (\(lbl, po) -> do
-                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ show lbl)
+                hPutStrLn h ([printf|(echo \"> %s\")\n(push)|] $ pretty lbl)
                 hPutStrLn h (z3_code po)
                 hPutStrLn h "(pop)"
-                hPutStrLn h ("; end of " ++ show lbl)
+                hPutStrLn h ("; end of " ++ pretty lbl)
                 ) )
 
 verify_all :: Table Label Sequent -> IO (Table Label Bool)

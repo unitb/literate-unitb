@@ -9,6 +9,7 @@ import Data.Array as A hiding ((!))
 import Data.List as L
 
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 dist :: Eq a => [a] -> [a] -> Int
 dist xs ys = 
@@ -165,5 +166,6 @@ prop_g xs' ys' zs' = dist xs zs <= dist xs ys + dist ys zs
         zs = map getSmall zs'
 
 return []
-run_test :: IO Bool
-run_test = $forAllProperties (quickCheckWithResult stdArgs { chatty = False })
+run_test :: (PropName -> Property -> IO (a, Result))
+         -> IO ([a], Bool)
+run_test = $forAllProperties'

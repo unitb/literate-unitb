@@ -17,15 +17,18 @@ import Data.Typeable
 import GHC.Generics 
 
 import Test.QuickCheck hiding (label)
+import Test.QuickCheck.ZoomEq
+
+import Text.Pretty
 
 data Label = Lbl String
-    deriving (Ord, Eq, Typeable, Generic)
+    deriving (Ord, Eq, Show, Typeable, Generic)
 
 class IsLabel a where
     as_label :: a -> Label
 
-instance Show Label where
-    show (Lbl s) = s
+instance PrettyPrintable Label where
+    pretty (Lbl s) = s
 
 instance IsString Label where
     fromString x = label x
@@ -39,6 +42,8 @@ instance IsLabel Name where
 instance (IsLabel l,IsLabel r) => IsLabel (Either l r) where
     as_label = either as_label as_label
 
+instance ZoomEq Label where
+    (.==) = (===)
 instance Arbitrary Label where
     arbitrary = Lbl <$> elements [ [x,y] | x <- ['a'..'z'], y <- ['0'..'9'] ]
 

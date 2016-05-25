@@ -217,7 +217,7 @@ z3_commands po =
         ++ [] )
     where
         (Sequent tout _ d _ assume hyps assert) = firstOrderSequent po
-        f ((lbl,xp),n) = [ Comment $ show lbl
+        f ((lbl,xp),n) = [ Comment $ pretty lbl
                          , Assert xp $ Just $ "h" ++ show n]
 
 smoke_test :: Label -> Sequent -> IO Validity
@@ -256,7 +256,7 @@ instance Exception Z3Exception
 
 map_failures :: (Int -> Label) -> IO a -> IO a
 map_failures po_name cmd = catch cmd $ \(Z3Exception i msg) -> do
-        fail $ printf "during verification of %s:\n%s" (show $ po_name i) msg 
+        fail $ printf "during verification of %s:\n%s" (pretty $ po_name i) msg 
 
 --subexpr :: TypeSystem t => AbsExpr t -> [AbsExpr t]
 --subexpr e = reverse $ f [] e
@@ -313,7 +313,7 @@ log_count = unsafePerformIO $ newMVar 0
 verify :: Label -> [Command] -> Int -> IO (Either String Satisfiability)
 verify lbl xs n = do
         let ys = concat $ map reverse $ groupBy eq xs
-            code = unlines $ map (show . as_tree) ys
+            code = unlines $ map (pretty . as_tree) ys
             eq x y = is_assert x && is_assert y
             is_assert (Assert _ _) = True
             is_assert _            = False
@@ -326,12 +326,10 @@ verify lbl xs n = do
                     && res /= ["unsat"]
                     && res /= ["unknown"]
                     && res /= ["timeout"]) then do
-            let header = Comment $ show lbl
+            let header = Comment $ pretty lbl
             n <- modifyMVar log_count $ 
                 return . ((1+) &&& id)
             writeFile (printf "log%d-1.z3" n) (unlines $ map pretty_print' $ header : ys)
-            -- writeFile (format "log{0}-2.z3" n) code
-            -- return $ Left (format "z3 error: \nstderr: {0}\nstdout: {1}" (show _err) (show out))
             return $ Right SatUnknown
         else if res == ["sat"] then do
             return $ Right Sat

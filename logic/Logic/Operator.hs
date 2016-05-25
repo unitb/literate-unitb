@@ -40,6 +40,7 @@ import Logic.Expr
     -- Libraries
 import Control.DeepSeq
 import Control.Lens
+import Control.Monad
 
 import Data.Default
 import Data.Either
@@ -48,9 +49,11 @@ import Data.List as L
 import Data.Serialize
 import Data.Typeable
 
+import GHC.Exts
 import GHC.Generics.Instances
 
-import Test.QuickCheck
+import Test.QuickCheck as QC
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
@@ -94,6 +97,8 @@ data Notation = Notation
     , _struct :: Matrix Operator Assoc
     } deriving (Eq,Generic,Show)
 
+instance ZoomEq Notation where
+    (.==) = (===)
 instance PrettyPrintable Notation where
     pretty _ = "<notation>" 
 
@@ -207,7 +212,8 @@ functionName (Left (UnaryOperator xs _ _))  = asName xs
 data BinOperator = BinOperator InternalName Name Flipping Fun
     deriving (Typeable,Generic,Eq,Ord,Show)
 
-
+instance ZoomEq BinOperator where
+    (.==) = (===)
 
 instance PrettyPrintable BinOperator where
     pretty (BinOperator x y _ _) = pretty (x,y) -- format str x y
@@ -343,6 +349,34 @@ instance NFData Command
 instance NFData BinOperator
 instance NFData Assoc
 instance NFData Flipping
+
+instance Arbitrary UnaryOperator where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+instance Arbitrary BinOperator where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+instance Arbitrary Command where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+instance Arbitrary Notation where
+    arbitrary = do
+        xs <- listOf arbitrary
+        new_ops (const $ return xs) empty_notation
+            >>= prec (const arbitrary)
+            >>= left_assoc  (const $ partitionOf <=< sublistOf $ rights xs)
+            >>= right_assoc (const $ partitionOf <=< sublistOf $ rights xs)
+            >>= quantifiers (const arbitrary)
+            >>= commands (const arbitrary)
+    -- , _relations = []
+    -- , _chaining = []
+    -- , _commands = []
+
+partitionOf :: [a] -> Gen [[a]]
+partitionOf xs = do
+    n  <- choose (1,length xs)
+    ys <- mapM (sequence . (,choose (1,n))) xs
+    return $ groupWith snd ys & traverse.traverse %~ fst
 
 instance Arbitrary Flipping where
     arbitrary = genericArbitrary

@@ -17,14 +17,17 @@ import qualified Data.List as L
 import qualified Data.Map as M 
 import qualified Data.Maybe as MM
 
+import GHC.Generics.Instances
+
 import Test.UnitTest
 import Test.QuickCheck as QC hiding (sized)
 import Test.QuickCheck.RandomTree hiding (size,subtrees)
 import Test.QuickCheck.Regression
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
+import Text.Show.With
 
-import Utilities.String
 import Utilities.Syntactic
 
 path2 :: FilePath
@@ -90,6 +93,10 @@ tests path = do
             Right xs -> xs
             Left msgs -> error $ L.unlines $ map report msgs)
 
+instance Arbitrary LatexToken where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary LatexDoc where
     arbitrary = sized $ \sz -> makeLatex "foo.txt" <$> aux (ceiling $ fromIntegral sz ** (1.5 :: Float) + 1)
         where
@@ -113,6 +120,7 @@ instance Arbitrary LatexDoc where
             sz x = size (x ())
 
 newtype Tokens = TokenStream [(LatexToken,LineInfo)]
+    deriving (Generic)
 
 instance Show Tokens where
     show (TokenStream xs) = show xs
@@ -151,6 +159,7 @@ instance Arbitrary Tokens where
             return x
         ts <- evalStateT (sequence xs) (true,li)
         return $ TokenStream ts
+    shrink = genericShrink
 
 instance Arbitrary MutatedTokens where
     arbitrary = do
@@ -269,12 +278,13 @@ counter1' = fromRight' $ scan_latex "foo.txt" (concatMap lexeme $ map fst counte
 
 return []
 
-properties :: IO Bool
-properties = $quickCheckAll
+properties :: (PropName -> Property -> IO (a, Result))
+           -> IO ([a], Bool)
+properties = $forAllProperties'
 
 cases :: TestCase
 cases = test_cases "latex parser" [
-    (Case "quickcheck" properties True),
+    (QuickCheckProps "quickcheck" properties),
     (Case "sample.tex" (main path2) result2),
     (Case "sorted seq err.tex" (main path3) result3),
     (CalcCase "reconstitute sample.tex" 

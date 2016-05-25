@@ -34,6 +34,7 @@ import           Data.Typeable
 
 import Test.UnitTest hiding (Node)
 import Test.QuickCheck
+import Test.QuickCheck.Report
 
 import Text.Printf.TH
 
@@ -43,29 +44,6 @@ import Utilities.Syntactic
 import System.IO.Unsafe
 
 --as_map = id
-
-test_case :: TestCase
-test_case = test
-
-test :: TestCase
-test = test_cases "Graphs and operator grammars" $
-    [ Case "case 0 - complete domain of matrices" case0 result0
-    --, Case "case 1 - operator grammar discrepancy" case1 result1
-    , Case "case 2 - new ambiguities" case2 result2
-    , Case "case 3 - transitive closures" case3 result3
-    , Case "case 4 - transitive closures in linear time" case4 result4
-    , test'
-    , Case "case 5 - error monad" case5 result5
-    , Case "case 6 - union of a list of {sorted} list" (show <$> case6) (show result6)
-    , Case "case 7 - union of a list of {unsorted} list" (show <$> case7) (show result7)  
-    , Case "case 8 - edit distance, random testing" case8 True
-    , Case "case 9 - edit distance, regression test from random testing" case9 0
-    , Case "QuickCheck of graphs" GSpec.run_spec True
-    , Case "case 11 - Relations, quickcheck" Rel.run_spec True
-    , Case "case 12 - New graphs, quickcheck" Graph.run_tests True  
-    , Case "case 13 - Sane line breaks, quickcheck" Lines.run_tests True
-    , Case "test 14 - quickcheck brackets" runSpec True
-    , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]
 
 case0 :: IO (Array (Int,Int) Bool)
 case0 = do
@@ -247,30 +225,28 @@ instance (Ord a, Arbitrary a) => Arbitrary (SortedList a) where
         xs <- arbitrary
         return $ SL $ sort xs
 
-case6 :: IO Result
-case6 = prop_valueOnSorted
+prop_valueOnSorted :: (Ord a,Show a) => [SortedList a] -> Property
+prop_valueOnSorted xs = unions ys === OL.nub (foldl OL.union [] ys)
+    where 
+        ys = map unSL xs
 
-result6 :: Result
-result6 = Success 100 [] "+++ OK, passed 100 tests.\n"
+prop_value :: (Ord a,Show a) => [[a]] -> Property
+prop_value xs = unions ys === OL.nub (foldl OL.union [] ys)
+    where 
+        ys = map id xs
 
-case7 :: IO Result
-case7 = prop_value
+return []
 
-result7 :: Result
-result7 = Success 100 [] "+++ OK, passed 100 tests.\n"
+case6 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
+case6 = $(quickCheckWrap 'prop_valueOnSorted)
 
-prop_valueOnSorted :: IO Result
-prop_valueOnSorted = quickCheckWithResult stdArgs { chatty = False }
-    $ \xs -> 
-        let ys = map unSL xs :: [[Int]] in 
-            unions ys == OL.nub (foldl OL.union [] ys)
+case7 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
+case7 = $(quickCheckWrap 'prop_value)
 
-prop_value :: IO Result
-prop_value = quickCheckWithResult stdArgs { chatty = False } $ \xs -> 
-    let ys = map id xs :: [[Int]] in 
-        unions ys == OL.nub (foldl OL.union [] ys)
-
-case8 :: IO Bool
+case8 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
 case8 = run_test
 
 case9 :: IO Int
@@ -278,3 +254,26 @@ case9 = return $ length $ filter not
             [ prop_a [26,27,0,-23,43] [0,43,-23]
             , prop_a [0,5,-2] [0,-2,5]
             ]
+
+test_case :: TestCase
+test_case = test
+
+test :: TestCase
+test = test_cases "Graphs and operator grammars" $
+    [ Case "case 0 - complete domain of matrices" case0 result0
+    --, Case "case 1 - operator grammar discrepancy" case1 result1
+    , Case "case 2 - new ambiguities" case2 result2
+    , Case "case 3 - transitive closures" case3 result3
+    , Case "case 4 - transitive closures in linear time" case4 result4
+    , test'
+    , Case "case 5 - error monad" case5 result5
+    , QuickCheckProps "case 6 - union of a list of {sorted} list" case6
+    , QuickCheckProps "case 7 - union of a list of {unsorted} list" case7
+    , QuickCheckProps "case 8 - edit distance, random testing" case8
+    , Case "case 9 - edit distance, regression test from random testing" case9 0
+    , QuickCheckProps "QuickCheck of graphs" GSpec.run_spec
+    , QuickCheckProps "case 11 - Relations, quickcheck" Rel.run_spec
+    , QuickCheckProps "case 12 - New graphs, quickcheck" Graph.run_tests
+    , QuickCheckProps "case 13 - Sane line breaks, quickcheck" Lines.run_tests
+    , QuickCheckProps "test 14 - quickcheck brackets" runSpec
+    , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]

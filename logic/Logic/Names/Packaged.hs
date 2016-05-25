@@ -129,8 +129,10 @@ instance Serialize InternalName where
 
 instance Arbitrary Name where
     arbitrary = view (from name) <$> arbitrary
+    shrink = genericShrink
 instance Arbitrary InternalName where
     arbitrary = view (from internal) <$> arbitrary
+    shrink = genericShrink
 
 instance Lift Name where
     lift n = [e| $(lift $ n^.name) ^. from name |]
