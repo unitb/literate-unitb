@@ -57,7 +57,7 @@ library
   default-extensions:    TypeOperators, ScopedTypeVariables, UndecidableInstances, TemplateHaskell
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6, template-haskell >=2.10 && <2.11, QuickCheck >=2.8 && <2.9, transformers >=0.4 && <0.5, invariants
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, containers >=0.5 && <0.6, template-haskell >=2.10 && <2.11, QuickCheck >=2.8.2 && < 2.9, transformers >=0.4 && <0.5, invariants
   
   -- Directories containing source files.
   hs-source-dirs:      .
