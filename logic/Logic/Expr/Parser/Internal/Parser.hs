@@ -7,7 +7,7 @@ module Logic.Expr.Parser.Internal.Parser where
 import Latex.Scanner 
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
-import Logic.Expr
+import Logic.Expr hiding (recordFields)
 import Logic.Expr.Parser.Internal.Monad 
 import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
@@ -22,10 +22,8 @@ import Utilities.Syntactic
 import Control.Lens hiding (Context,from)
 
 import           Control.Monad
--- import           Control.Monad.Trans
+import           Control.Monad.Loops
 import           Control.Monad.Trans.Either
--- import           Control.Monad.Trans.Maybe
--- import qualified Control.Monad.Trans.Reader as R
 import           Control.Precondition
 
 import           Data.Char
@@ -272,17 +270,7 @@ term = do
                         brackets Curly expr
                     e <- check_types $ check_type f (map Right args)
                     return $ Right e
-        , do    attempt open_square
-                xs <- sepP binding comma
-                close_square
-                let xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
-                    f _ ((x,_):|[]) = Success x
-                    f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
-                    msg = [printf|Multiple record entry with label '%s'|]
-                    raiseErrors :: Validation [Error] a -> Parser a
-                    raiseErrors = either (liftP . Scanner . const . Left) 
-                                         return . validationToEither
-                r <- raiseErrors $ traverseWithKey f xs'
+        , do    r <- recordFields binding
                 return $ Right $ Record $ RecLit r
         , do    quant <- from quants 
                 ns <- brackets Curly
@@ -348,6 +336,24 @@ term = do
                 return $ Right $ zint $ read xs
         ]
 
+recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Map Name a)
+recordFields field = do
+        attempt open_square
+        xs <- choose_la 
+            [ attempt close_square >> return []
+            , do xs <- sep1P field comma
+                 close_square
+                 return xs
+            ]
+        let xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
+            f _ ((x,_):|[]) = Success x
+            f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
+            msg = [printf|Multiple record entry with label '%s'|]
+            raiseErrors :: Validation [Error] a -> Parser a
+            raiseErrors = either (liftP . Scanner . const . Left) 
+                                 return . validationToEither
+        raiseErrors $ traverseWithKey f xs'
+
 dummy_types :: [Name] -> Context -> [Var]
 dummy_types vs (Context _ _ _ _ dums) = map f vs
     where
@@ -373,7 +379,13 @@ open_curly = read_listP [Open QuotedCurly]
 
 close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
-        
+
+applyRecUpdate :: [Map Name Expr] -> Term -> Parser Term
+applyRecUpdate rUpd (Right e) = return $ Right $ foldl (fmap Record . RecUpdate) e rUpd
+applyRecUpdate xs e@(Left op)
+        | L.null xs = return e
+        | otherwise = fail $ "Cannot apply a record update to an operator: " ++ pretty op
+
 expr :: Parser Expr
 expr = do
         r <- read_term []
@@ -398,21 +410,24 @@ expr = do
                         add_context "parsing \\{" $
                             read_op xs us $ Right e 
                 ,   add_context ("ready for <term>: " ++ show xs) $
-                        do  t <- term
+                        do  t  <- term
+                            rUpd <- manyP (recordFields binding)
                             add_context ("parsed <term>: " ++ show t) $
-                                read_op xs us t
+                                read_op xs us =<< applyRecUpdate rUpd t
                 ]
         read_op :: [([UnaryOperator], Term, BinOperator)] 
                 -> [UnaryOperator] 
                 -> Term 
                 -> Parser Term
         read_op xs us e0 = do
-            b1 <- liftP $ is_eof
-            b2 <- look_aheadP close_brack
-            b3 <- look_aheadP close_curly
-            b4 <- look_aheadP comma
-            b5 <- look_aheadP (read_listP [Close Curly])
-            if b1 || b2 || b3 || b4 || b5
+            end <- orM 
+                [ liftP $ is_eof
+                , look_aheadP close_brack
+                , look_aheadP close_curly
+                , look_aheadP close_square
+                , look_aheadP comma
+                , look_aheadP (read_listP [Close Curly]) ]
+            if end
             then do
                 reduce_all xs us e0
             else do

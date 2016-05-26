@@ -4,10 +4,10 @@ module Logic.TestGenericity where
     -- Modules
 import Logic.Expr
 import Logic.Expr.Const
-import Logic.Proof ()
+import Logic.Expr.Parser
 import Logic.Proof.Monad
+import Logic.QuasiQuote (expr,ctx)
 import Logic.Theory
-
 import Logic.Theories.SetTheory
 
 import Z3.Z3
@@ -15,9 +15,11 @@ import Z3.Z3
     -- Libraries
 import Control.Lens hiding (lifted,Context,Const)
 import Control.Monad
+import Control.Precondition
 
 import Data.Hashable
 import Data.Map hiding ( map, union, member )
+import qualified Data.Map as M
 import Data.PartialOrd
 import qualified Data.Set as S
 
@@ -213,6 +215,10 @@ test = test_cases "genericity" (
         , StringCase "Record expressions" case10 result10
         , StringCase "Record sets" case11 result11
         , Case "Record sets in Z3" case12 result12
+        , Case "Syntax for record literals" case13 result13
+        , Case "Syntax for record update" case14 result14
+        , Case "Record syntax: empty record" case15 result15
+        , Case "Records: multiple updates" case16 result16
         ] )
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -307,10 +313,6 @@ result8 = unlines
     , "(and (= 7 7) (= 7 87))"
     ]
 
-fromRight :: Either a b -> b
-fromRight (Right x) = x
-fromRight _ = error "expecting right"
-
 case8 :: IO String
 case8 = return $ unlines $ map pretty_print' $ disjuncts e'
     where
@@ -323,7 +325,7 @@ case8 = return $ unlines $ map pretty_print' $ disjuncts e'
         e0 = mzexists [z_decl] mztrue $ 
                             (p `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))
-        e = fromRight $ mzexists [z_decl] mztrue $ 
+        e = fromRight' $ mzexists [z_decl] mztrue $ 
                             (p `mzor` e0 `mzor` (mzeq z z7)) 
                     `mzand` (q `mzor` (mzeq z z87))
         e' = one_point_rule e
@@ -687,3 +689,77 @@ case12 = discharge ("case12") $ runSequent $ do
 
 result12 :: Validity
 result12 = Valid
+
+case13 :: IO Expr
+case13 = do
+        return $ getExpr $ c [expr| [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
+    where
+        c = ctx $ expected_type .= Nothing
+
+result13 :: Expr
+result13 = fromRight' $ zrecord (foo ## 7 >> bar ## zset_enum [1,2])
+    where
+        foo = [smt|foo|]
+        bar = [smt|bar|]
+
+case14 :: IO Expr
+case14 = return $ getExpr $ c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] |]
+    where
+        c = ctx $ do
+                decls %= M.union (symbol_table [(Var r t)])
+                expected_type .= Nothing
+        t = record_type $ runMap' $ do
+                x ## int
+                bar ## bool
+        r = [smt|r|]
+        x = [smt|x|]
+        bar = [smt|bar|]
+
+result14 :: Expr
+result14 = fromRight' $ zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
+    where
+        r  = Right $ Word $ Var r' $ record_type $ M.fromList 
+                    [ (bar,bool)
+                    , (x,int) ]
+        r'  = [smt|r|]
+        x   = [smt|x|]
+        foo = [smt|foo|]
+        bar = [smt|bar|]
+
+    -- empty record literal
+case15 :: IO Expr
+case15 = do
+        return $ getExpr $ c [expr| [  ] |]
+    where
+        c = ctx $ expected_type .= Nothing
+
+result15 :: Expr
+result15 = fromRight' $ zrecord (return ())
+
+    -- multiple record updates
+case16 :: IO Expr
+case16 = return $ getExpr $ c [expr| r [ 'foo := 7 ] [ 'bar := \{ 1,2 \} ] |]
+    where
+        c = ctx $ do
+                decls %= M.union (symbol_table [(Var r t)])
+                expected_type .= Nothing
+        t = record_type $ runMap' $ do
+                x ## int
+                bar ## bool
+        r = [smt|r|]
+        x = [smt|x|]
+        bar = [smt|bar|]
+
+result16 :: Expr
+result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum [1,2])
+    where
+        r  = Right $ Word $ Var r' $ record_type $ M.fromList 
+                    [ (bar,bool)
+                    , (x,int) ]
+        r'  = [smt|r|]
+        x   = [smt|x|]
+        foo = [smt|foo|]
+        bar = [smt|bar|]
+
+-- field lookup
+-- record set

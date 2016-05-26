@@ -115,6 +115,12 @@ getToken pr lb = liftP $ do
                 Just x -> return x
                 _ -> fail $ "expecting a " ++ lb ++ ": " ++ show x
 
+manyP :: Parser a -> Parser [a]
+manyP p = do
+        x <- get_params
+        liftP $ many
+            (runParserWith x p)
+
 sepP :: Parser a -> Parser b -> Parser [a]
 sepP m0 m1 = do
         x <- get_params
