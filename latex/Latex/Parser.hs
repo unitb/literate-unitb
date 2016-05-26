@@ -552,7 +552,7 @@ scan_file :: FilePath -> String
           -> Either [Error] [DocWithHoles]
 scan_file fname xs = do
         ys <- read_lines tex_tokens fname (uncomment xs)
-        read_tokens find_input_cmd fname ys (1,1)
+        read_tokens find_input_cmd ys (LI fname 1 1)
         
 --        read_tokens latex_content ys (1,1)
 

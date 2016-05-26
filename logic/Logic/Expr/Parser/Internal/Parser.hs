@@ -1,111 +1,49 @@
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE BangPatterns
+        ,RecordWildCards
+        ,PatternSynonyms      #-}
 module Logic.Expr.Parser.Internal.Parser where
 
     -- Modules
-import Latex.Scanner -- hiding (many)
+import Latex.Scanner 
 import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
 import Logic.Expr
+import Logic.Expr.Parser.Internal.Monad 
+import Logic.Expr.Parser.Internal.Scanner
 import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
 import Logic.Expr.Printable
 import Logic.Operator
 
-
 import Logic.Theories.SetTheory
 
-import Utilities.Error
 import Utilities.Syntactic
 
     -- Libraries
-import qualified Control.Applicative as A 
 import Control.Lens hiding (Context,from)
 
 import           Control.Monad
-import           Control.Monad.Trans
+-- import           Control.Monad.Trans
 import           Control.Monad.Trans.Either
-import           Control.Monad.Trans.Maybe
-import qualified Control.Monad.Trans.Reader as R
+-- import           Control.Monad.Trans.Maybe
+-- import qualified Control.Monad.Trans.Reader as R
+import           Control.Precondition
 
 import           Data.Char
 import           Data.Either
 import           Data.Either.Combinators
 import           Data.List as L
+import qualified Data.List.NonEmpty as NE
 import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
+import           Data.Semigroup hiding (option)
 import qualified Data.Set as S
+import           Data.Either.Validation
 
 import Text.Printf.TH
 
 import Utilities.EditDistance
 import Utilities.Graph as G ((!))
 import Utilities.Table
-
-data Param = Param 
-    { context   :: Context
-    , notation  :: Notation
-    , variables :: Table Name Expr
-    }
-
-data Parser a = Parser { fromParser :: MaybeT (R.ReaderT Param (Scanner ExprToken)) a }
-
-data Bracket = Curly | QuotedCurly | Round | Square
-    deriving (Eq, Show)
-
-data ExprToken = 
-        Open Bracket 
-        | Close Bracket 
-        | Ident String 
-        | Number String
-        | Operator String
-        | Comma | Colon
-    deriving (Show, Eq)
-
-instance Functor Parser where
-    fmap = liftM
-
-instance A.Applicative Parser where
-    f <*> x = f `ap` x
-    pure = return
-
-instance A.Alternative Parser where
-    m0 <|> m1 = m0 `mplus` m1
-    empty     = mzero
-
-instance Monad Parser where
-    Parser m0 >>= f = Parser $ m0 >>= (fromParser . f)
-    return x = Parser $ return x
-    fail x   = Parser $ lift $ fail x
-
-instance MonadPlus Parser where
-    Parser m0 `mplus` Parser m1 = Parser $ m0 `mplus` m1
-    mzero = Parser mzero
-    
-instance IsBracket Bracket String where
-    bracketPair Curly  = ("{","}")
-    bracketPair QuotedCurly = ("\\{","\\}")
-    bracketPair Round  = ("(",")")
-    bracketPair Square = ("[","]")
-
-instance Token ExprToken where
-    lexeme (Open b)   = openBracket b
-    lexeme (Close b)  = closeBracket b
-    lexeme (Ident n)  = n
-    lexeme (Number n) = n
-    lexeme (Operator op) = op
-    lexeme Comma      = ","
-    lexeme Colon      = ":"
-
-runParser :: Context -> Notation 
-          -> Table Name Expr
-          -> Parser a 
-          -> Scanner ExprToken a
-runParser x y w m = runParserWith (Param x y w) m
-
-runParserWith :: Param -> Parser a -> Scanner ExprToken a
-runParserWith x m = do
-        x <- R.runReaderT (runMaybeT $ fromParser m) x
-        maybe (fail "runParserWith: unmatched lookahead") return x
 
 get_context :: Parser Context 
 get_context = context `liftM` get_params
@@ -128,59 +66,6 @@ with_vars vs cmd = do
         f s@(Param { .. }) =
                 s { variables = M.map Word (fromList vs) `M.union` variables }
 
-get_params :: Parser Param
-get_params = Parser $ lift R.ask
-
-look_aheadP :: Parser a -> Parser Bool
-look_aheadP = liftHOF look_ahead
-
-liftP :: Scanner ExprToken a -> Parser a
-liftP = Parser . lift . lift
-
-liftHOF :: (   Scanner ExprToken a
-            -> Scanner ExprToken b )
-        -> Parser a -> Parser b
-liftHOF f m = do
-        x <- get_params
-        liftP $ f $ runParserWith x m
-
-tryP :: Parser a -> (a -> Parser b) -> Parser b -> Parser b
-tryP m0 m1 m2 = do
-        x <- get_params
-        let run m = R.runReaderT (runMaybeT $ fromParser m) x
-        Parser $ MaybeT $ R.ReaderT $ const $ try 
-            (run m0) 
-            (\k -> case k of
-                    Just x  -> run $ m1 x
-                    Nothing -> run m2)
-            (run m2)
-
-match_char :: Token a => (a -> Bool) -> Scanner a a
-match_char p = read_if p return (fail "")
-
-eat_space :: Scanner Char ()
-eat_space = do
-        b <- is_eof
-        if b
-        then return ()
-        else choice 
-                [ match_char isSpace >> return ()
-                , read_list "\\\\" >> return ()
-                , read_list "~" >> return ()
-                , read_list "&" >> return ()
-                , read_list "\\," >> return ()
-                , read_list "\\:" >> return ()
-                , read_list "\\;" >> return ()
-                , read_list "\\!" >> return ()
-                , read_list "\\quad" >> return ()
-                , read_list "\\qquad" >> return ()
-                , read_list "\\" >> match_char isDigit >> return ()
-                ] (return ())
-                (\_ -> eat_space)
-
-isWord :: Char -> Bool
-isWord x = isAlphaNum x || x == '_'
-
 comma :: Parser ()
 comma = read_listP [Comma] >> return ()
 
@@ -189,13 +74,6 @@ colon = read_listP [Colon] >> return ()
 
 read_listP :: [ExprToken] -> Parser [ExprToken]
 read_listP xs = liftP $ read_list xs
-
-read_list :: (Token a, Show a, Eq a) => [a] -> Scanner a [a]
-read_list xs = do
-        x <- match (match_string xs) 
-        case x of
-            Just x -> return x
-            Nothing -> fail ("expecting: " ++ show xs)
 
 brackets :: Bracket -> Parser a -> Parser a
 brackets b cmd = do
@@ -217,6 +95,13 @@ word_or_command = do
     case x of
         Ident xs -> return $ fromString'' xs
         _ -> fail "expecting an identifier"
+
+from :: [(Name,a)] -> Parser a
+from m = attempt $ do
+        x <- word_or_command
+        case x `L.lookup` m of
+                Nothing -> fail ""
+                Just x  -> return x
 
 type_t :: Parser Type
 type_t = do
@@ -291,13 +176,13 @@ get_variables'' :: Context
                 -> StringLi
                 -> LineInfo
                 -> Either [Error] [(Name, Var)]
-get_variables'' ctx m (LI fn i j) = do
+get_variables'' ctx m li = do
         toks <- read_tokens 
-            (scan_expr Nothing) fn (getString m) (i,j)
+            (scan_expr Nothing) (getString m) li
         xs   <- read_tokens 
             (runParser ctx
-                ($myError "") M.empty vars) 
-            fn toks (i,j)
+                undefined' M.empty vars) 
+            toks li
         return $ map (\(x,y) -> (x,Var x y)) xs
 
 unary :: Parser UnaryOperator
@@ -311,14 +196,6 @@ unary = do
         f op@(UnaryOperator _ tok _) = do
             read_listP [Operator $ render tok]
             return op
-
-choiceP :: [Parser a] -> Parser a -> (a -> Parser a) -> Parser a
-choiceP xs x final = do
-        y <- get_params
-        liftP $ choice 
-            (map (runParserWith y) xs)
-            (runParserWith y x)
-            (runParserWith y . final)
 
 oper :: Parser BinOperator
 oper = do
@@ -358,6 +235,20 @@ suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
         ys' = map toLower $ render ys
     ws = M.filterWithKey p m
 
+nameLit :: Parser Name
+nameLit = getToken (_Literal._NameLit) "name literal"
+
+assignTok :: Parser ()
+assignTok = getToken _Assign ":="
+
+binding :: Parser (Name,(Expr,LineInfo))
+binding = do
+    li <- liftP get_line_info
+    n  <- nameLit 
+    assignTok 
+    e  <- expr
+    return (n,(e,li))
+
 type Term = Either Command Expr
 
 term :: Parser Term
@@ -381,6 +272,18 @@ term = do
                         brackets Curly expr
                     e <- check_types $ check_type f (map Right args)
                     return $ Right e
+        , do    attempt open_square
+                xs <- sepP binding comma
+                close_square
+                let xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
+                    f _ ((x,_):|[]) = Success x
+                    f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
+                    msg = [printf|Multiple record entry with label '%s'|]
+                    raiseErrors :: Validation [Error] a -> Parser a
+                    raiseErrors = either (liftP . Scanner . const . Left) 
+                                         return . validationToEither
+                r <- raiseErrors $ traverseWithKey f xs'
+                return $ Right $ Record $ RecLit r
         , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
@@ -451,12 +354,14 @@ dummy_types vs (Context _ _ _ _ dums) = map f vs
         f x = maybe (Var x gA) id $ M.lookup x dums
 
 number :: Parser String
-number = liftP $ do
-            x <- read_char 
-            case x of
-                Number xs -> return xs
-                _ -> fail $ "expecting a number: " ++ show x
+number = getToken (_Literal._NumLit) "number"
                 
+open_square :: Parser [ExprToken]
+open_square = read_listP [Open Square]
+
+close_square :: Parser [ExprToken]
+close_square = read_listP [Close Square]
+
 open_brack :: Parser [ExprToken]
 open_brack  = read_listP [Open Round]
 
@@ -468,35 +373,7 @@ open_curly = read_listP [Open QuotedCurly]
 
 close_curly :: Parser [ExprToken]
 close_curly = read_listP [Close QuotedCurly]
-
-sep1P :: Parser a -> Parser b -> Parser [a]
-sep1P m0 m1 = do
-        x <- get_params
-        liftP $ sep1 
-            (runParserWith x m0)
-            (runParserWith x m1)
-
-choose_la :: [Parser a] -> Parser a
-choose_la (x:xs) = do
-        x `mplus` choose_la xs
-choose_la [] = mzero
-
-add_context :: String -> Parser a -> Parser a
-add_context _ cmd = cmd
-
-from :: [(Name,a)] -> Parser a
-from m = attempt $ do
-        x <- word_or_command
-        case x `L.lookup` m of
-                Nothing -> fail ""
-                Just x  -> return x
-
-attempt :: Parser a -> Parser a
-attempt cmd = do
-        tryP cmd 
-            return 
-            (Parser $ fail (error "Expression.attempt: shouldn't be evaluated"))
-            
+        
 expr :: Parser Expr
 expr = do
         r <- read_term []
@@ -612,84 +489,17 @@ apply_op op x0 x1 = do
     where
         err_msg = [printf|functional operator cannot be the operand of any binary operator: %s, %s|]
 
-option :: Monoid b => Scanner a b -> Scanner a b
-option cmd = do
-        try cmd
-            return
-            (return mempty)
-        
-scan_expr :: Maybe Notation -> Scanner Char [(ExprToken,LineInfo)] 
-scan_expr n = do
-        eat_space
-        ys <- peek
-        b  <- is_eof
-        if not b then do
-            li <- get_line_info
-            x  <- choice 
-                [ read_list "{" >> return (Open Curly)
-                , read_list "[" >> return (Open Square)
-                , read_list "(" >> return (Open Round)
-                , read_list "\\{" >> return (Open QuotedCurly)
-                , read_list "}" >> return (Close Curly)
-                , read_list "]" >> return (Close Square)
-                , read_list ")" >> return (Close Round)
-                , read_list "\\}" >> return (Close QuotedCurly)
-                , read_list ":" >> return Colon
-                , read_list "," >> return Comma
-                , match_char (`elem` ['.',';']) >>= \x -> return $ Operator [x]
-                , do
-                    ws <- option $ read_list "\\"
-                    x  <- match_char isAlpha
-                    xs <- many $ match_char isWord
-                    ys <- option $ read_list "\'"
-                    let zs = fromString'' $ ws ++ x : xs ++ ys
-                        zs :: Name
-                    if isOper n zs
-                        then return $ Operator $ render zs
-                        else return $ Ident $ render zs
-                , match_char isSymbol >>= \x -> return $ Operator [x]
-                , match_char isPunctuation >>= \x -> return $ Operator [x]
-                , do
-                    x  <- match_char isDigit
-                    xs <- many $ match_char isDigit
-                    ys <- peek
-                    when (any isWord $ take 1 ys) $ 
-                        fail ""
-                        -- return ()
-                    return $ Number $ x : xs ]
-                (do 
-                    cs <- peek
-                    let b  = take 5 ys == take 5 cs 
-                        zs
-                            | b         = ""
-                            | otherwise = [printf| '%s'|] (take 5 ys)
-                    fail $ [printf|invalid token: '%s'%s|] (take 5 cs) zs)
-                return
-            xs <- scan_expr n
-            return $ (x,li) : xs
-        else return []
-    where
-        isOper (Just n) zs = zs `elem` map token (n^.new_ops)
-        isOper Nothing _ = False
-
-parse_expression :: Context 
-           -> Notation
-           -> StringLi
-           -> Either [Error] Expr
-parse_expression ctx@(Context _ vars _ defs _)  n i@(StringLi input _) = do
-        let vars' = M.map Word vars `M.union` M.mapMaybe f defs
-            f (Def xs n args t _e) = do
-                    guard (L.null args)
-                    Just $ FunApp (mk_fun xs n [] t) []
+parse_expression :: ParserSetting
+                 -> StringLi
+                 -> Either [Error] Expr
+parse_expression set i@(StringLi input _) = do
+        let n = set^.language
             li = line_info i
         toks <- read_tokens (scan_expr $ Just n)
-            (li^.filename) 
-            input (li^.line, li^.column)
+            input li
         e   <- read_tokens 
-            (runParser ctx n vars' expr) 
-            (li^.filename) 
-            toks 
-            (li^.line, li^.column)
+            (runParser' set expr) 
+            toks li
         return $ normalize_generics $ flattenConnectors e
 
 parse_oper :: Monad m 
@@ -698,40 +508,26 @@ parse_oper :: Monad m
            -> EitherT [Error] m BinOperator
 parse_oper n s@(StringLi c _) = do
         let li = line_info s
-        toks <- hoistEither $ read_tokens (scan_expr $ Just n)
-            (li^.filename) 
-            c (li^.line, li^.column)
+        toks <- hoistEither $ read_tokens 
+            (scan_expr $ Just n)
+            c li
         !e   <- hoistEither $ read_tokens 
             (runParser empty_ctx n M.empty
                 oper) 
-            (li^.filename) 
-            toks (li^.line, li^.column)
+            toks li
         return e
 
 parse_expr' :: ParserSetting
             -> LatexDoc
             -> Either [Error] DispExpr
 parse_expr' p = parse_expr p . flatten_li' . drop_blank_text'
-
-contextOf :: ParserSetting -> Context
-contextOf set = Context (set^.sorts) (unions [set^.decls, ctx0, ctx1]) M.empty M.empty (set^.dum_ctx)
-    where
-        ctx0
-            | set^.is_step = primeAll $ set^.primed_vars
-            | otherwise    = M.empty
-        ctx1 
-            | set^.free_dummies = set^.dum_ctx
-            | otherwise         = M.empty
             
 parse_expr :: ParserSetting
            -> StringLi
            -> Either [Error] DispExpr
 parse_expr set xs = do
-        let ctx = contextOf set
-            li  = line_info xs
-        x  <- parse_expression ctx
-                (set^.language)
-                xs
+        let li  = line_info xs
+        x  <- parse_expression set xs
         typed_x  <- case set^.expected_type of
             Just t -> mapBoth 
                 (\xs -> map (`Error` li) xs) 

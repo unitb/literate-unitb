@@ -61,19 +61,19 @@ type UntypedExpr = GenExpr Name () GenericType HOQuantifier
 
 data GenExpr n t a q = 
         Word (AbsVar n t) 
-        | Record (RecordExpr n t a q)
+        | Record (RecordExpr (GenExpr n t a q))
         | Const Value t
         | FunApp (AbsFun n a) [GenExpr n t a q]
         | Binder q [AbsVar n t] (GenExpr n t a q) (GenExpr n t a q) t
         | Cast (GenExpr n t a q) a
         | Lift (GenExpr n t a q) a
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
-type RecFields n t a q = Table Name (GenExpr n t a q)
+type RecFields expr = Table Name expr
 
-data RecordExpr n t a q =
-        RecLit (RecFields n t a q)
-        | RecUpdate (GenExpr n t a q) (RecFields n t a q)
-        | FieldLookup (GenExpr n t a q) Name
+data RecordExpr expr =
+        RecLit (RecFields expr)
+        | RecUpdate expr (RecFields expr)
+        | FieldLookup expr Name
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
 
 data Value = RealVal Double | IntVal Int
@@ -106,12 +106,11 @@ instance Hashable Value
 instance (Hashable n,Hashable t,Hashable a,Hashable q) 
         => Hashable (GenExpr n t a q) where
 
-instance (Hashable n,Hashable t,Hashable q,Hashable a) 
-        => Hashable (RecordExpr n t a q) where
+instance (Hashable expr) => Hashable (RecordExpr expr) where
 
 {-# INLINE traverseRecExpr #-}
-traverseRecExpr :: Traversal (RecordExpr n t a q) (RecordExpr n' t' a' q')
-                             (GenExpr n t a q) (GenExpr n' t' a' q')
+traverseRecExpr :: Traversal (RecordExpr expr) (RecordExpr expr')
+                             expr expr'
 traverseRecExpr f (RecLit m) = RecLit <$> traverse f m
 traverseRecExpr f (RecUpdate x m) = 
       liftA2 RecUpdate (f x) (traverse f m)
@@ -280,7 +279,7 @@ instance ( IsName n,TypeSystem t,TypeSystem a
 typeOfRecord :: ( TypeSystem t, TypeSystem a
                 , TypeAnnotationPair t a
                 , IsName n,IsQuantifier q,Pre)
-             => RecordExpr n t a q -> t
+             => RecordExpr (GenExpr n t a q) -> t
 typeOfRecord (RecLit m) = recordTypeOfFields m
 typeOfRecord (RecUpdate x m) = recordTypeOfFields $ 
               M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
@@ -687,12 +686,12 @@ instance (NFData t,NFData q,NFData n) => NFData (AbsDef n t q)
 instance (NFData t,NFData n) => NFData (AbsVar n t)
 instance NFData Value
 instance (NFData t,NFData q,NFData n,NFData a) => NFData (GenExpr n t a q)
-instance (NFData t,NFData q,NFData n,NFData a) => NFData (RecordExpr n t a q)
+instance (NFData expr) => NFData (RecordExpr expr)
 
 instance (Serialize n,Serialize q,Serialize t,Serialize a)
     => Serialize (GenExpr n t a q) where
-instance (Serialize n,Serialize q,Serialize t,Serialize a)
-    => Serialize (RecordExpr n t a q) where
+instance (Serialize expr)
+    => Serialize (RecordExpr expr) where
 instance Serialize Value where
 instance (Serialize n,Serialize q,Serialize t) 
     => Serialize (AbsDef n t q) where

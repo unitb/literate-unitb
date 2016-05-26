@@ -6,7 +6,7 @@ module Latex.Scanner
     , look_ahead, try, choice
     , read_if, match, many
     , line_number
-    , sep1 )
+    , sep1,sep )
 where
 
 import Control.Monad
@@ -138,14 +138,13 @@ match_first ((p,f):xs) x = do
 read_lines :: Scanner Char a 
            -> FilePath -> String 
            -> Either [Error] a 
-read_lines s fn xs = read_tokens s fn (line_number fn xs) (1,1)
+read_lines s fn xs = read_tokens s (line_number fn xs) $ LI fn 1 1
 
 read_tokens :: Scanner a b
-            -> FilePath
             -> [(a, LineInfo)] 
-            -> (Int,Int) 
+            -> LineInfo
             -> Either [Error] b
-read_tokens (Scanner f) fn xs (i,j) = 
+read_tokens (Scanner f) xs (LI fn i j) = 
         do  li <- case xs of 
                 (_,li):_ -> return li
                 _ -> return (LI fn i j)

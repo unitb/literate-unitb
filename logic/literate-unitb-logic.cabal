@@ -68,7 +68,9 @@ library
         Logic.Expr.Type
         -- Logic.Expr.TypeChecking
         Logic.Expr.Variable
+        Logic.Expr.Parser.Internal.Monad
         Logic.Expr.Parser.Internal.Parser
+        Logic.Expr.Parser.Internal.Scanner
         Logic.Expr.Parser.Internal.Setting
         Logic.Names
         Logic.Names.Internals
