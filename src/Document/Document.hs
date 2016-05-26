@@ -29,6 +29,7 @@ import Control.Arrow hiding (left,app) -- (Arrow,arr,(>>>))
 import Control.Category
 
 import           Control.Lens
+import           Control.Lens.Misc
 import           Control.Monad 
 import qualified Control.Monad.Reader as R
 import           Control.Monad.Trans
@@ -44,7 +45,6 @@ import           Data.Semigroup
 
 import Prelude hiding ((.),id)
 
-import Utilities.Lens
 import Utilities.Syntactic as Syn
 import Utilities.Table
 

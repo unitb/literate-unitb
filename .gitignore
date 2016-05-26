@@ -24,10 +24,8 @@ ocaml/
 predicates.hs
 python/
 run_tests
-test
 verify
 windows.hs
-test_tmp.hs
 test_tmp
 print.hs
 play_ground.hs
@@ -131,4 +129,5 @@ Tests/byzantine/main/machine_m1_saf.tex
 Tests/byzantine/main/machine_m1_thm.tex
 Tests/byzantine/main/machine_m1_trans.tex
 cabal.sandbox.config
+x86_64-osx-ghc-7.10.3-packages.conf.d/
 

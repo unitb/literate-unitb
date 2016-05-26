@@ -22,7 +22,9 @@ import UnitB.Expr
 import UnitB.Syntax as AST
 
     -- Libraries
+import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
+import Control.CoApplicative
 import Control.Lens as L hiding ((<.>))
 
 import Control.Monad.Reader.Class 
@@ -344,18 +346,17 @@ pAllVars = to $ \x -> view pAbstractVars x `M.union` view pStateVars x
 
 pEventSplit' :: (HasMachineP1 phase)
              => Getter phase (Table EventId (AEvtType phase,[(EventId,CEvtType phase)]))
-pEventSplit' = pEventRef.to f
+pEventSplit' = pEventRef . to f
     where
-        distr (x,y) = (,y) <$> x
         f g = readGraph g $ do
             vs <- getLeftVertices
             fmap (M.fromList.rights) $ forM vs $ \v -> do
                 es' <- (fmap G.target <$> successors v )
-                    >>= T.mapM (\v -> distr <$> ((,) <$> rightKey v <*> rightInfo v) )
+                    >>= T.mapM (\v -> view distrLeft <$> liftA2 (,) (rightKey v) (rightInfo v) )
                 let es = rights $ NE.toList es'
                 k  <- leftKey v
                 e  <- leftInfo v
-                return $ distr (k,(e,es))
+                return $ (k,(e,es))^.distrLeft
 
 pEventSplit :: (HasMachineP1 phase)
             => Getter phase (Table EventId (AEvtType phase,[EventId]))
@@ -369,16 +370,15 @@ pEventMerge' :: (HasMachineP1 phase)
              => Getter phase (Table EventId (CEvtType phase,[(EventId,AEvtType phase)]))
 pEventMerge' = pEventRef.to f
     where
-        distr (x,y) = (,y) <$> x
         f g = readGraph g $ do
             vs <- getRightVertices
             fmap (M.fromList.rights) $ forM vs $ \v -> do
                 es' <- (fmap G.source <$> predecessors v )
-                    >>= T.mapM (\v -> distr <$> ((,) <$> leftKey v <*> leftInfo v) )
+                    >>= T.mapM (\v -> view distrLeft <$> ((,) <$> leftKey v <*> leftInfo v) )
                 let es = rights $ NE.toList es'
                 k  <- rightKey v
                 e  <- rightInfo v
-                return $ distr (k,(e,es))
+                return $ (k,(e,es))^.distrLeft
 
 traverseFilter :: M.IsKey Table k => (a -> Bool) -> Traversal' (Table k a) (Table k a)
 traverseFilter p f m = M.union <$> f m' <*> pure (m `M.difference` m')
@@ -570,7 +570,7 @@ topological_order = Pipeline empty_spec empty_spec $ \es' -> do
         cycl_err_msg _ (AcyclicSCC v) = return $ Just v
         cycl_err_msg lis (CyclicSCC vs) = do
             tell [MLError cycle_msg 
-                $ L.map (first show) $ M.toList $ 
+                $ L.map (first pretty) $ M.toList $ 
                 lis `M.intersection` fromList' vs ] 
             return Nothing -- (error "topological_order")
         msg = [printf|A cycle exists in the %s|]

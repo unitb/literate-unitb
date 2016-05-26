@@ -59,6 +59,13 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, data-map-class >=0.1 && <0.2, tagged >=0.8 && <0.9, QuickCheck >=2.8 && <2.9, data-ordlist, generic-instances
   
+  ghc-options: -W -fwarn-missing-signatures 
+         -fwarn-incomplete-uni-patterns
+         -fwarn-missing-methods
+         -fno-ignore-asserts
+         -fwarn-tabs -Werror
+         -j8
+
   -- Directories containing source files.
   hs-source-dirs:      .
   

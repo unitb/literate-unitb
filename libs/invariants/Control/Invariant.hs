@@ -7,8 +7,6 @@ module Control.Invariant
     , use', uses'
     , HasPrefix(..)
     , (===), isSubsetOf', isProperSubsetOf'
-    , isSubmapOf',isProperSubmapOf'
-    , member'
     , relation
     , trading, holds
     , invariantMessage
@@ -38,9 +36,9 @@ import GHC.Stack.Utils
 
 import PseudoMacros
 
-import Text.Printf.TH
+import Test.QuickCheck hiding ((===))
 
-import Data.Map.Class (isSubmapOf,isProperSubmapOf,member,IsMap,IsKey)
+import Text.Printf.TH
 
 newtype Checked a = Checked { getChecked :: a }
     deriving (Eq,Ord,NFData,Functor,Foldable,Traversable,Typeable)
@@ -192,21 +190,6 @@ isSubsetOf' = relation "/⊆" isSubsetOf
 isProperSubsetOf' :: (Ord a,Show a) => Set a -> Set a -> Invariant
 isProperSubsetOf' = relation "/⊂" isProperSubsetOf
 
-{-# INLINE isSubmapOf' #-}
-isSubmapOf' :: (IsMap map,IsKey map k,Eq k,Eq a,Show (map k a)) 
-            => map k a -> map k a -> Invariant
-isSubmapOf' = relation "/⊆" isSubmapOf
-
-{-# INLINE isProperSubmapOf' #-}
-isProperSubmapOf' :: (IsMap map,Eq k, Eq a,Show (map k a),IsKey map k) 
-                  => map k a -> map k a -> Invariant
-isProperSubmapOf' = relation "/⊂" isProperSubmapOf
-
-{-# INLINE member' #-}
-member' :: (Show k,Show (map k a),IsMap map,IsKey map k) 
-        => k -> map k a -> Invariant
-member' = relation "/∈" member
-
 relation :: (Show a,Show b) 
          => String 
          -> (a -> b -> Bool) 
@@ -218,6 +201,10 @@ class HasPrefix m where
     
 instance HasPrefix InvariantM where
     withPrefix pre (Invariant cmd) = Invariant $ local (pre:) cmd
+
+instance (HasInvariant a,Arbitrary a) => Arbitrary (Checked a) where
+    arbitrary = check' <$> arbitrary
+    shrink = fmap check' . shrink . getChecked
 
 mutate :: (IsChecked c a,Pre)
        => c -> State a k -> c

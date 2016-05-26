@@ -2,7 +2,7 @@
 module UnitB.Proof.PO where
 
     -- Modules
-import Logic.Expr as E hiding (Context,Const)
+import Logic.Expr as E hiding (Context)
 -- import Logic.Proof
 import Logic.Proof.POGenerator
 

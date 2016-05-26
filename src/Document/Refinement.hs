@@ -14,7 +14,7 @@ import UnitB.Syntax
 
 import Latex.Parser
 
-import Logic.Expr hiding (Const)
+import Logic.Expr 
 import Logic.Expr.Parser
 
     -- Libraries
@@ -140,7 +140,7 @@ instance Parsable One where
             lift $ Identity <$> f x
           [] -> lift $ do
             li <- ask
-            raise $ Error ([printf|refinement (%s): expecting more properties|] (show rule)) li
+            raise $ Error ([printf|refinement (%s): expecting more properties|] (pretty rule)) li
 instance Parsable [] where
     parseMany _ f = do
         xs <- get
@@ -156,7 +156,7 @@ instance Parsable Maybe where
             [x] -> Just <$> f x
             _   -> do
                 li <- ask
-                raise $ Error ([printf|refinement (%s): expecting at most one property|] (show rule)) li                
+                raise $ Error ([printf|refinement (%s): expecting at most one property|] (pretty rule)) li                
 
 instance Parsable NonEmpty where
     parseMany r f = (:|) <$> parseOne r f
@@ -174,7 +174,7 @@ parseProgress r = do
             Nothing -> do
                 li <- ask
                 raise $ Error ([printf|refinement (%s): %s should be a progress property|] 
-                            (show rule) (show x)) li
+                            (pretty rule) (pretty x)) li
 
 parseTransient :: (LivenessRule rule, Parsable f) 
                => rule
@@ -188,7 +188,7 @@ parseTransient r = do
                 Nothing -> do
                     li <- ask
                     raise $ Error ([printf|refinement (%s): %s should be a safety property|] 
-                            (show rule) (show lbl)) li
+                            (pretty rule) (pretty lbl)) li
 
 parseSafety :: (LivenessRule rule, Parsable f) 
             => rule
@@ -202,7 +202,7 @@ parseSafety r = do
                 Nothing -> do
                     li <- ask
                     raise $ Error ([printf|refinement (%s): %s should be a safety property|] 
-                                (show rule) (show x)) li
+                                (pretty rule) (pretty x)) li
 
 instance RuleParser Induction where
     promoteRule m (Inference g Proxy (Identity st) Proxy Proxy) _ hint = do
@@ -265,7 +265,7 @@ instance RuleParser Reference where
     promoteRule m _ (Identity ref) _ = do
         let pid = PId ref
         unless (pid `M.member` (m^.pProgress))
-            $ raise' $ Error $ [printf|invalid progress property: %s|] $ show ref
+            $ raise' $ Error $ [printf|invalid progress property: %s|] $ pretty ref
         return $ Reference pid
 instance RuleParser Ensure where
     makeEventList Proxy xs = do
@@ -273,7 +273,7 @@ instance RuleParser Ensure where
     promoteRule m proof evts hint = do
         let LeadsTo dum _ _ = proof^.goal
         evts' <- bind_all evts 
-            ([printf|invalid event name: %s|] . show) 
+            ([printf|invalid event name: %s|] . pretty) 
             (`M.lookup` (m^.pEventIds))
         hint <- tr_hint m 
                 (symbol_table dum)
@@ -332,14 +332,14 @@ parse_induction param = do
         toEither $ error_list
             [   ( length hyps_lbls /= 1
                 , [printf|too many hypotheses in the application of the rule: %s|] 
-                    $ intercalate "," $ map show hyps_lbls)
+                    $ intercalate "," $ map pretty hyps_lbls)
             ]
         let h0 = head hyps_lbls
         toEither $ error_list
             [   ( not (goal_lbl `member` prog)
-                , [printf|refinement (%s): %s should be a progress property|] rule (show goal_lbl) )
+                , [printf|refinement (%s): %s should be a progress property|] rule (pretty goal_lbl) )
             ,   ( not (h0 `member` prog)
-                , [printf|refinement (%s): %s should be a progress property|] rule (show h0) )
+                , [printf|refinement (%s): %s should be a progress property|] rule (pretty h0) )
             ]
         let (LeadsTo fv0 _ _) = getExpr <$> (prog ! goal_lbl)
             (LeadsTo fv1 _ _) = getExpr <$> (prog ! h0)

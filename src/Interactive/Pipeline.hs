@@ -176,7 +176,7 @@ prover (Shared { .. }) = do
         -- handler :: 
         handler lbl@(_,x) (ErrorCall msg) = do
             write_obs dump_cmd $ Just $ Just x
-            fail ([printf|During %s: %s|] (show lbl) msg)
+            fail ([printf|During %s: %s|] (pretty lbl) msg)
         worker req = forever $ do
             -- (k,po) <- takeMVar req
             (k,po) <- atomically $ readTBQueue req
@@ -215,7 +215,7 @@ proof_report pattern outs es b =
         ys = map f $ filter (match . snd) xs
         match xs  = maybe True (\f -> f `L.isInfixOf` map toLower (show $ snd $ fst xs)) pattern
         failure x = maybe False not $ snd $ snd x
-        f (n,((m,lbl),(_,_))) = [printf| x %s - %s  (%d)|] (show m) (show lbl) n
+        f (n,((m,lbl),(_,_))) = [printf| x %s - %s  (%d)|] (pretty m) (pretty lbl) n
 
 run_all :: [IO (IO ())] -> IO [ThreadId]
 run_all xs = do

@@ -18,6 +18,7 @@ import Data.Foldable
 import Data.Hashable
 import Data.List as L
 import Data.List.NonEmpty as NE hiding (take)
+import Data.MakeTable
 import Data.Map.Class  as M
 import Data.Semigroup
 import Data.Serialize hiding (label)
@@ -29,10 +30,10 @@ import GHC.Generics.Instances
 
 import Text.Printf
 
-import Test.QuickCheck hiding (label)
+import Test.QuickCheck as QC hiding (label)
+import Test.QuickCheck.ZoomEq
 
 import Utilities.Table
-import Utilities.TableConstr
 
 type Constraint = Constraint' Expr
 type RawConstraint = Constraint' RawExpr
@@ -66,13 +67,13 @@ data Direction = Up | Down
     deriving (Eq,Show,Generic)
 
 newtype EventId = EventId Label
-    deriving (Eq,Ord,Typeable,Generic,Hashable,PrettyPrintable)
+    deriving (Eq,Show,Ord,Typeable,Generic,Hashable,PrettyPrintable)
 
+instance ZoomEq EventId where
+    (.==) = (QC.===)
 instance Arbitrary EventId where
     arbitrary = EventId . label <$> elements ((:[]) <$> take 13 ['a' ..])
-
-instance Show EventId where
-    show (EventId x) = show x
+    shrink = genericShrink
 
 instance IsString EventId where
     fromString = EventId . fromString
@@ -125,7 +126,7 @@ instance Show ProgId where
     show (PId x) = show x
 
 instance PrettyPrintable ProgId where
-    pretty = show
+    pretty (PId x) = pretty x
 
 type ProgressProp = ProgressProp' Expr
 type RawProgressProp = ProgressProp' RawExpr
@@ -254,26 +255,37 @@ instance HasScope expr => HasScope (PropertySet' expr) where
         --, withPrefix "proofs" $ foldMapWithKey scopeCorrect'' (x^.proofs)
         ]
 
+instance ZoomEq expr => ZoomEq (PropertySet' expr) where
 instance Monoid (PropertySet' expr) where
     mempty  = genericMEmpty
     mappend = genericMAppend
     mconcat = genericMConcat
 
+instance ZoomEq expr => ZoomEq (ProgressProp' expr) where
 instance Arbitrary expr => Arbitrary (ProgressProp' expr) where
     arbitrary = genericArbitrary
+instance ZoomEq expr => ZoomEq (SafetyProp' expr) where
 instance Arbitrary expr => Arbitrary (SafetyProp' expr) where
     arbitrary = genericArbitrary
+instance ZoomEq expr => ZoomEq (Constraint' expr) where
 instance Arbitrary expr => Arbitrary (Constraint' expr) where
     arbitrary = genericArbitrary
+instance ZoomEq expr => ZoomEq (Transient' expr) where
 instance Arbitrary expr => Arbitrary (Transient' expr) where
     arbitrary = Tr <$> (M.fromList <$> arbitrary) 
                    <*> arbitrary 
                    <*> (NE.nub <$> arbitrary) 
                    <*> arbitrary
+instance ZoomEq ProgId where
+    (.==) = (QC.===)
 instance Arbitrary ProgId where
     arbitrary = genericArbitrary
+instance ZoomEq expr => ZoomEq (TrHint' expr) where
 instance Arbitrary expr => Arbitrary (TrHint' expr) where
     arbitrary = TrHint <$> (M.fromList <$> arbitrary) <*> arbitrary
+
+instance ZoomEq Direction where
+instance ZoomEq Variant where
 
 instance NFData ProgId
 instance NFData expr => NFData (Constraint' expr)

@@ -19,7 +19,6 @@ import Control.Precondition
 import Data.Char
 import Data.Either
 import Data.Either.Combinators
---import Data.Either.Validation
 import qualified Data.Foldable as F
 import Data.Graph
 import Data.List ( intercalate )
@@ -46,7 +45,6 @@ import Text.Printf.TH
 
 import Utilities.Graph hiding ( map, empty, size, (!) )
 import Utilities.Syntactic
---import Utilities.Zipper as Z
 
 data LatexNode = 
         EnvNode Environment

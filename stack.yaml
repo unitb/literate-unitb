@@ -11,6 +11,7 @@
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
 resolver: lts-6.0
+compiler: ghc-7.10.3
 
 ghc-options:
     # All packages
@@ -32,17 +33,27 @@ packages:
 - latex/
 - logic/
 - libs/axiomatic-classes
-- libs/data-map-class
+- libs/bipartite-graph
+- libs/classy-lens-hierarchy
+- libs/co-applicative
 - libs/data-compressed
+- libs/data-map-class
 - libs/data-packaged
-- libs/partial-order
-- libs/string-lenses
 - libs/existential
+- libs/file-system-mockup
 - libs/generic-instances
 - libs/invariants
+- libs/lens-extra
+- libs/partial-order
+- libs/pretty-printable
 - libs/printf-th
 - libs/reactive-banana-transformers
+- libs/show-with
+- libs/string-lenses
+- libs/transformer-lenses
+- libs/typelist-functor
 - libs/unfoldable
+- libs/unitb-testing
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - assert-0.0.1.2

@@ -5,7 +5,7 @@ import Control.Category
 import Control.Monad.State
 import Control.Lens
 
-import Data.Existential
+import Data.Constraint (Dict(..))
 import Data.Tuple
 import Data.Unfoldable
 
@@ -15,13 +15,13 @@ class Arrow arr => ArrowUnfold arr where
     fixA :: Unfoldable t 
          => arr a (Maybe (b,a)) -> arr a (Maybe (t b))
     fixExA :: arr a (Maybe (b,a)) -> arr (Dict (Unfoldable t),a) (Maybe (t b))
-    fixA a = arr (\_ -> D) &&& id >>> fixExA a
+    fixA a = arr (\_ -> Dict) &&& id >>> fixExA a
 
 instance Monad m => ArrowUnfold (Kleisli m) where
-    fixExA (Kleisli f) = Kleisli $ \(D,x) -> unfoldM f x
+    fixExA (Kleisli f) = Kleisli $ \(Dict,x) -> unfoldM f x
 
 instance ArrowUnfold (->) where
-    fixExA f (D,x) = unfold f x
+    fixExA f (Dict,x) = unfold f x
 
 arrOn :: Arrow arr 
       => Lens s t a b -> arr a b -> arr s t

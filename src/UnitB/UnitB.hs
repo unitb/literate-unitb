@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies,StandaloneDeriving #-}
 module UnitB.UnitB 
     ( module UnitB.Syntax
     , module UnitB.UnitB 
@@ -44,6 +44,8 @@ import qualified Data.Set as S
 
 import GHC.Generics.Instances
 
+import Test.QuickCheck.ZoomEq
+
 import Text.Printf.TH
 
 import Utilities.Syntactic
@@ -79,8 +81,9 @@ data MachinePO' expr = MachinePO
     deriving (Functor,Foldable,Traversable,Show,Generic,Eq)
 
 newtype Box a = Box (() -> a)
+    deriving (Generic)
 newtype MemBox a = MemBox a
-    deriving (Eq,Default,NFData)
+    deriving (Eq,Default,NFData,Generic)
 
 class IsBox f where
     box :: (() -> a) -> f a
@@ -175,7 +178,12 @@ instance Show1 MachinePO' where
 instance NFData (Box a) where
     rnf x = seq x ()
 
+deriving instance ZoomEq a => ZoomEq (MemBox a)
 
+instance ZoomEq a => ZoomEq (Box a) where
+    Box f .== Box g = f () .== g ()
+
+instance ZoomEq expr => ZoomEq (MachinePO' expr) where
 
 fromSyntax :: HasExpr expr => MachineAST' expr -> Machine' expr
 fromSyntax m = check $ makeMachinePO' m
@@ -204,7 +212,7 @@ withPOs ps m = fmap check' $ do
             let poBox = box $ \() -> raw_machine_pos' m
                 pos = unbox poBox
                 p = intersectionWith (\s (t,li) -> eitherToValidation $ runTactic li s t) pos ps
-                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ show lbl) li
+                f lbl (_,li) = Error ([printf|proof obligation does not exist: %s|] $ pretty lbl) li
                 errs = concat (p^.partsOf (traverse._Failure)) ++ elems (mapWithKey f $ ps `difference` pos)
                 errs' | null errs = sequenceA p
                       | otherwise = Failure errs
@@ -265,5 +273,5 @@ format_result xs' = do
             ys = L.map snd rs ++ [xs]
         return (L.unlines ys, passed, total)
     where
-        f (y,True)  = (True, "  o  " ++ show y)
-        f (y,False) = (False," xxx " ++ show y)
+        f (y,True)  = (True, "  o  " ++ pretty y)
+        f (y,False) = (False," xxx " ++ pretty y)

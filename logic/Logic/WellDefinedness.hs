@@ -7,7 +7,7 @@ import Logic.Theories.FunctionTheory
 import Logic.Theories.SetTheory
 
     -- Libraries
-import Control.Lens hiding (Const)
+import Control.Lens
 import Control.Precondition
 
 import Data.List
@@ -17,7 +17,7 @@ is_true_or_false e = is_true e `zor` is_false e
 
 is_true :: Expr -> Expr
 is_true e@(Word _) = e
-is_true e@(Const _ _) = e
+is_true e@(Lit _ _) = e
 is_true (Binder Forall vs r t tt) = Binder Forall vs ztrue (is_true $ r `zimplies` t) tt
 is_true (Binder Exists vs r t tt) = Binder Exists vs ztrue (is_true $ r `zand` t) tt
 is_true (Binder (UDQuant _ _ _ _) _ _ _ _) = assertFalse'
@@ -37,7 +37,7 @@ is_true e@(Record _) = e `zand` delta e
 
 is_false :: Expr -> Expr
 is_false e@(Word _) = znot e
-is_false e@(Const _ _) = znot e
+is_false e@(Lit _ _) = znot e
 is_false (Binder Forall vs r t tt) = Binder Exists vs ztrue (is_false $ r `zimplies` t) tt
 is_false (Binder Exists vs r t tt) = Binder Forall vs ztrue (is_false $ r `zand` t) tt
 is_false (Binder (UDQuant _ _ _ _) _ _ _ _) = assertFalse'
@@ -60,7 +60,7 @@ delta = well_definedness
 
 well_definedness :: Expr -> Expr
 well_definedness (Word _) = ztrue
-well_definedness (Const _ _) = ztrue
+well_definedness (Lit _ _) = ztrue
 well_definedness (Binder q vs r t _) = case q of
                 Forall -> (zforall vs ztrue t') `zor` (zexists vs ztrue $ t' `zand` neg)
                     where

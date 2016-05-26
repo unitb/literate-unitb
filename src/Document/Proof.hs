@@ -110,7 +110,7 @@ add_assumption lbl asm = do
         s <- ST.get
         if lbl `member` assumptions s then do
             li    <- ask
-            hard_error [Error ([printf|an assumption %s already exists|] $ show lbl) li]
+            hard_error [Error ([printf|an assumption %s already exists|] $ pretty lbl) li]
         else ST.put $ s { assumptions = insert lbl asm $ assumptions s }
 
 add_assert :: ( Monad m
@@ -123,7 +123,7 @@ add_assert lbl asrt = do
         s <- ST.get
         if lbl `member` assertions s then do
             li    <- ask
-            hard_error [Error ([printf|an assertion %s already exists|] $ show lbl) li]
+            hard_error [Error ([printf|an assertion %s already exists|] $ pretty lbl) li]
         else ST.put $ s { assertions = insert lbl asrt $ assertions s }
 
 add_proof :: ( Monad m
@@ -136,7 +136,7 @@ add_proof lbl prf = do
         s <- ST.get
         if lbl `member` subproofs s then do
             li    <- ask
-            hard_error [Error ([printf|a proof for assertion %s already exists|] $ show lbl) li]
+            hard_error [Error ([printf|a proof for assertion %s already exists|] $ pretty lbl) li]
         else
             ST.put $ s { subproofs = insert lbl prf $ subproofs s }
 
@@ -238,7 +238,7 @@ find_proof_step = visitor
                     li     <- ask
                     proofs <- lift $ ST.get
                     unless (lbl `M.member` assertions proofs)
-                            (hard_error [Error ([printf|invalid subproof label: %s|] $ show lbl) li])
+                            (hard_error [Error ([printf|invalid subproof label: %s|] $ pretty lbl) li])
                     p <- lift_i collect_proof_step-- (change_goal pr new_goal) m
                     add_proof lbl p
             )

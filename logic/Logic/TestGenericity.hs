@@ -27,7 +27,7 @@ import Test.QuickCheck
 import Test.QuickCheck.AxiomaticClass
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
-import Test.QuickCheck.Report ()
+import Test.QuickCheck.Report
 
 import Test.UnitTest
 
@@ -103,12 +103,6 @@ prop_type_mapping_acyclic (t0,t1) =
     where
         match = unify t0 t1 /= Nothing
         
-check_prop :: Testable prop => prop -> IO Bool
-check_prop p = do
-        r <- quickCheckResult p
-        case r of
-            Success _ _ _ -> return True
-            _             -> return False
 
 newtype GType = GType { getType :: Type }
     deriving (Show,Eq)
@@ -177,6 +171,8 @@ unicity_counter_example =
     [   (array real (Gen (z3Sort "C" "C" 1) [gB]),gB)
     ]
 
+return []
+
 test_case :: TestCase
 test_case = test
 
@@ -198,8 +194,8 @@ test = test_cases "genericity" (
         , Case "type inference 3" case5 result5
         , Case "type inference 4" case6 result6
         , Case "type inference 5" case7 result7
-        , Case "instantiation of unified types is unique" (check_prop prop_unifying_yields_unified_type) True
-        , Case "common type is symmetric" (check_prop prop_common_symm) True
+        , QuickCheckProps "instantiation of unified types is unique" $(quickCheckWrap 'prop_unifying_yields_unified_type)
+        , QuickCheckProps "common type is symmetric" $(quickCheckWrap 'prop_common_symm)
         , StringCase "common type is symmetric (counter-example)" (return $ show counter_ex_common_symm) "True"
         , StringCase "common type is symmetric (counter-example 2)" (return $ show counter_ex2_common_symm) "True"
         ] ++
@@ -209,9 +205,9 @@ test = test_cases "genericity" (
                 Nothing
             ) unicity_counter_example ++ 
 --        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
-        [ Case "type mapping are acyclic" (check_prop prop_type_mapping_acyclic) True
+        [ QuickCheckProps "type mapping are acyclic" $(quickCheckWrap 'prop_type_mapping_acyclic)
         , StringCase "one-point rule simplification on existentials" case8 result8
-        , Case "axioms of type classes PreOrd and PartialOrd" case9 True
+        , QuickCheckProps "axioms of type classes PreOrd and PartialOrd" case9
         , StringCase "Record expressions" case10 result10
         , StringCase "Record sets" case11 result11
         , Case "Record sets in Z3" case12 result12
@@ -330,8 +326,9 @@ case8 = return $ unlines $ map pretty_print' $ disjuncts e'
                     `mzand` (q `mzor` (mzeq z z87))
         e' = one_point_rule e
 
-case9 :: IO Bool
-case9 = $(quickCheckClasses [''PreOrd,''PartialOrd])
+case9 :: (PropName -> Property -> IO (a, Result))
+      -> IO ([a], Bool)
+case9 = $(quickCheckClassesWith [''PreOrd,''PartialOrd])
 
 instance IsQuantifier Integer where
     merge_range = Str . show

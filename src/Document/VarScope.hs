@@ -10,7 +10,7 @@ module Document.VarScope where
 import Document.Phase.Types
 import Document.Scope
 
-import Logic.Expr hiding (Const)
+import Logic.Expr
 
 import UnitB.Syntax
 
@@ -26,6 +26,7 @@ import           Data.Typeable
 import GHC.Generics.Instances
 
 import Test.QuickCheck
+import Test.QuickCheck.ZoomEq
 
 import Text.Printf
 
@@ -39,12 +40,15 @@ class (Typeable a,Scope a,PrettyPrintable a) => IsVarScope a where
     toMchDecl :: Name -> a -> [Either Error (MachineP2'Field ae ce t)]
 
 newtype VarScope = VarScope { _varScopeCell :: Cell IsVarScope }
-    deriving (Typeable)
+    deriving (Typeable,Generic)
 
 makeFields ''VarScope
 
 instance Show VarScope where
     show = readCell' show
+
+instance ZoomEq VarScope where
+    x .== y = read2CellsWith' (.==) (x === y) x y
 
 instance Scope VarScope where
     keep_from s = traverseCell' (keep_from s)
@@ -128,14 +132,17 @@ declOf (Index v) = Just v
 declOf (Param v) = Just v
 declOf (Promoted v) = v
 
+instance ZoomEq TheoryConst where
 instance Scope TheoryConst where
     kind _ = "constant"
     rename_events' _ e = [e]
 
+instance ZoomEq TheoryDef where
 instance Scope TheoryDef where
     kind _ = "constant"
     rename_events' _ e = [e]
 
+instance ZoomEq MachineVar where
 instance Scope MachineVar where
     merge_scopes' (DelMch Nothing s _) (Machine v Inherited li) = Just $ DelMch (Just v) s li
     merge_scopes' (Machine v Inherited li) (DelMch Nothing s _) = Just $ DelMch (Just v) s li
@@ -144,6 +151,7 @@ instance Scope MachineVar where
     kind (Machine _ _ _)  = "state variable"
     rename_events' _ e = [e]
 
+instance ZoomEq EventDecl where
 instance Scope EventDecl where
     kind x = case x^.scope of 
             Index _ -> "index"
@@ -173,6 +181,7 @@ instance Scope EventDecl where
 instance PrettyPrintable a => PrettyPrintable (EvtScope a) where
     pretty = show . fmap Pretty
 
+instance ZoomEq EvtDecls where
 instance Scope EvtDecls where
     kind (Evt m) = show $ M.map (view scope) m
     keep_from s (Evt m) 
@@ -189,7 +198,7 @@ instance Scope EvtDecls where
                 | otherwise = Just m
     error_item (Evt m) = fromJust' $ NE.nonEmpty $ ascElems $ mapWithKey msg m
         where
-            msg (Just k) x = (printf "%s (event '%s')" (kind x) (show k) :: String, x^.lineInfo)
+            msg (Just k) x = (printf "%s (event '%s')" (kind x) (pretty k) :: String, x^.lineInfo)
             msg Nothing x  = ("dummy", x^.lineInfo)
     merge_scopes' (Evt m0) (Evt m1) = Evt <$> scopeUnion merge_scopes' m0 m1
     rename_events' lookup (Evt vs) = Evt <$> concatMap f (toList vs)
@@ -200,19 +209,25 @@ instance Scope EvtDecls where
 
 instance Arbitrary TheoryDef where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary TheoryConst where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary MachineVar where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary EventDecl where
     arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary EvtDecls where
     arbitrary = Evt . fromList <$> arbitrary
+    shrink = genericShrink
 
+instance ZoomEq a => ZoomEq (EvtScope a) where
 instance Arbitrary a => Arbitrary (EvtScope a) where
     arbitrary = genericArbitrary
-
+    shrink = genericShrink

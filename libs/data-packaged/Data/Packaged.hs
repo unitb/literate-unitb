@@ -29,6 +29,8 @@ import GHC.Generics.Instances
 
 import Language.Haskell.TH.Syntax
 
+import Test.QuickCheck
+
 newtype Packaged a = Package { getPackage :: ByteString }
     deriving (Eq,Ord,Data,Generic,Hashable)
 
@@ -128,3 +130,7 @@ instance Monoid NullTerminatedString where
 
 instance Lift1 f => Lift (NullTerminated f) where
     lift x = [e| NullTerm $(lift1 $ getNullString x) |]
+
+instance (Arbitrary a,Serialize a) => Arbitrary (Packaged a) where
+    arbitrary = arbitrary & mapped %~ view packaged
+    shrink = unpackaged shrink

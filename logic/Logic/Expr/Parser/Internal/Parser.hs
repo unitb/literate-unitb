@@ -295,7 +295,7 @@ term = do
                         t' <- maybe 
                             (fail $ [printf|Inconsistent type for %s: %s|] 
                                     (render x)
-                                    $ intercalate "," $ map show ys)
+                                    $ intercalate "," $ map pretty ys)
                             return
                             $ foldM common gA ys
                         t' <- if t' == gA 
@@ -412,7 +412,7 @@ expr = do
                 ,   add_context ("ready for <term>: " ++ show xs) $
                         do  t  <- term
                             rUpd <- manyP (recordFields binding)
-                            add_context ("parsed <term>: " ++ show t) $
+                            add_context ("parsed <term>: " ++ pretty t) $
                                 read_op xs us =<< applyRecUpdate rUpd t
                 ]
         read_op :: [([UnaryOperator], Term, BinOperator)] 
