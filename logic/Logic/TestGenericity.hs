@@ -5,6 +5,7 @@ module Logic.TestGenericity where
 import Logic.Expr
 import Logic.Expr.Const
 import Logic.Proof.Monad
+import Logic.QuasiQuote hiding (var)
 import Logic.Theory
 
 import Logic.Theories.SetTheory
@@ -208,6 +209,9 @@ test = test_cases "genericity" (
         , StringCase "Record expressions" case10 result10
         , StringCase "Record sets" case11 result11
         , Case "Record sets in Z3" case12 result12
+        , Case "QuasiQuotes with proof monads" case13 result13
+        , Case "QuasiQuotes with proof monads and set theory" case14 result14
+        , Case "QuasiQuotes with proof monads and assumptions" case15 result15
         ] )
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -683,3 +687,29 @@ case12 = discharge ("case12") $ runSequent $ do
 
 result12 :: Validity
 result12 = Valid
+
+case13 :: IO Validity
+case13 = discharge("case13") $ runSequent $ do
+    declare "x" int
+    checkQ $ [expr| x = x |]
+
+result13 :: Validity
+result13 = Valid
+
+case14 :: IO Validity
+case14 = discharge("case14") $ runSequent $ do
+    declare "x" int
+    include set_theory
+    checkQ $ [expr| x \in \{x\} |]
+
+result14 :: Validity
+result14 = Valid
+
+case15 :: IO Validity
+case15 = discharge("case15") $ runSequent $ do
+    declare "x" int
+    assumeQ $ [expr| x = x |]
+    checkQ $ [expr| \neg x = x |]
+
+result15 :: Validity
+result15 = Invalid

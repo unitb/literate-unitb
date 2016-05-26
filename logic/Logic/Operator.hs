@@ -41,11 +41,13 @@ import Logic.Expr
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad
+import Control.Precondition
 
 import Data.Default
 import Data.Either
 import Data.Function
 import Data.List as L
+import Data.Semigroup
 import Data.Serialize
 import Data.Typeable
 
@@ -57,7 +59,6 @@ import Test.QuickCheck.ZoomEq
 
 import Text.Printf.TH
 
-import           Utilities.Error
 import           Utilities.Graph hiding ( Matrix )
 import qualified Utilities.Graph as G 
 
@@ -126,7 +127,7 @@ empty_notation = with_assoc $ Notation
     , _chaining = []
     , _commands = []
     , _quantifiers = []
-    , _struct = $myError "" }
+    , _struct = undefined' }
 
 new_ops :: Lens' Notation [Operator]
 new_ops = lens _new_ops (\n x -> with_assoc $ n { _new_ops = x })
@@ -152,7 +153,14 @@ instance Default Notation where
 
 with_assoc :: Notation -> Notation
 with_assoc n = n { _struct = assoc_table n }
-    
+
+instance Semigroup Notation where
+    (<>) = combine
+
+instance Monoid Notation where
+    mempty = empty_notation
+    mappend = combine
+
 combine :: Notation -> Notation -> Notation
 combine x y 
     | L.null (_new_ops x `intersect` _new_ops y)

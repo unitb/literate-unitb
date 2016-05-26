@@ -1,12 +1,16 @@
 module Logic.Expr.Parser.Internal.Setting where
 
+    -- Modules
 import Logic.Expr
 import Logic.Operator
 import Logic.Theory
 
+    -- Libraries
 import Control.DeepSeq
 
-import GHC.Generics ( Generic )
+import Data.Semigroup
+
+import GHC.Generics.Instances
 
 import Utilities.Table
 
@@ -34,6 +38,17 @@ instance PrettyPrintable ParserSetting where
     pretty _ = "<parser-setting>"
 
 instance NFData ParserSetting
+
+instance Semigroup ParserSetting where
+    ps0 <> ps1 = PSetting 
+                    { _language = (ps0^.language) `combine` (ps1^.language) 
+                    , _decls = (ps0^.decls) <> (ps1^.decls)
+                    , _parserSettingSorts = (ps0^.sorts) <> (ps1^.sorts)
+                    , _primed_vars = (ps0^.primed_vars) <> (ps1^.primed_vars)
+                    , _dum_ctx = (ps0^.dum_ctx) <> (ps1^.dum_ctx)
+                    , _is_step = (ps0^.is_step) || (ps1^.is_step)
+                    , _free_dummies = (ps0^.free_dummies) || (ps1^.free_dummies)
+                    , _expected_type = ps0^.expected_type }
 
 default_setting :: Notation -> ParserSetting
 default_setting n = PSetting 
