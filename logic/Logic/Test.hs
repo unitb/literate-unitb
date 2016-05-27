@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings,TypeFamilies #-}
-module Logic.TestGenericity where
+module Logic.Test where
 
     -- Modules
 import Logic.Expr

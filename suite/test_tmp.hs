@@ -19,7 +19,7 @@ import Document.Tests.TrainStation  as TS
 import Document.Tests.TrainStationRefinement  as TSRef
 import Document.Tests.TrainStationSets  as TSS
 import Logic.Expr
-import Logic.TestGenericity as Gen
+import Logic.Test as T
 import Z3.Test as Z3
 import Document.Phase.Test as Ph
 import Document.Test as Doc
@@ -99,7 +99,7 @@ main = timeIt $ void $ do
     return $ quickCheck MSpec.prop_expr_parser
     return $ printQuickCheckResult MSpec.run_spec
     return $ print =<< run_test_cases check_axioms
-    return $ run_test_cases Gen.test_case
+    return $ run_test_cases T.test_case
     -- timeout (60 * 1000000) $ do
     return $ run_test_cases UB.test_case
     -- return $ print =<< Lines.run_tests

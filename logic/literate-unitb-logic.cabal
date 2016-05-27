@@ -100,7 +100,7 @@ library
         Z3.Version
         Z3.Z3
         -- TEST CASES
-        Logic.TestGenericity
+        Logic.Test
         Z3.Test
   
   -- Modules included in this library but not exported.
