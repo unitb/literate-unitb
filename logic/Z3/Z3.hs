@@ -182,10 +182,10 @@ feed_z3 = unsafePerformIO $ do
         return (st, out, err)
         
 data Satisfiability = Sat | Unsat | SatUnknown
-    deriving (Show, Typeable, Eq)
+    deriving (Show, Typeable, Eq, Generic)
 
 data Validity = Valid | Invalid | ValUnknown
-    deriving (Show, Eq, Typeable)
+    deriving (Show, Eq, Typeable, Generic)
 
 data Command = Decl 
         (FODecl FOQuantifier) 
@@ -343,3 +343,5 @@ verify lbl xs n = do
             fail "verify: incomplete conditional"
 
 instance NFData Command
+instance NFData Satisfiability
+instance NFData Validity

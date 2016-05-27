@@ -8,7 +8,6 @@ import Data.Either.Validation
 import Data.Foldable as F
 import Data.Map.Class as M
 import Data.Semigroup
--- import Data.Tuple
 
 
 {-# INLINE withKey #-}

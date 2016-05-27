@@ -12,6 +12,7 @@ import Logic.Expr.Prism
 import Logic.Proof.Sequent
 
     -- Libraries
+import Control.DeepSeq
 import Control.Lens hiding (Context,Context',rewriteM)
 import Control.Monad.State
 
@@ -23,13 +24,15 @@ import Data.Tuple
 import qualified Data.Traversable as T
 import Data.Typeable
 
+import GHC.Generics
+
 import Utilities.Table
 
 data CanonicalLambda = CL 
         [Var'] [Var'] -- free vars, bound vars
         Expr'         -- range or term
         (Maybe Type)  -- return type, nothing if the type is boolean because of range
-    deriving (Eq, Ord, Typeable, Show)
+    deriving (Eq, Ord, Typeable, Show, Generic)
 
 arg_type :: CanonicalLambda -> [Type]
 arg_type (CL vs _ _ _) = L.map var_type vs
@@ -239,3 +242,5 @@ lambdas (FunApp fun args) = do
 lambdas (Cast e t) = (`Cast` t) <$> lambdas e
 lambdas (Lift e t) = (`Lift` t) <$> lambdas e
 lambdas (Record e) = Record <$> traverseRecExpr lambdas e
+
+instance NFData CanonicalLambda where

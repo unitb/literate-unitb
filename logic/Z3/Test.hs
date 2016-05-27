@@ -301,8 +301,10 @@ case8 = return $ Just $ to_fol_ctx types ctx
                 ]
 
 result8 :: Maybe (GenContext InternalName FOType HOQuantifier)
-result8 = ctx_strip_generics ctx
+result8 = ctx_strip_generics ctx & traverse.functions %~ M.delete pow
     where
+        pow :: InternalName
+        pow = addSuffix "@Open@@set@@Int@Close" [smt|pow|]
         ctx = Context M.empty M.empty fun' M.empty M.empty
         fun' = fun & traverse.namesOf %~ asInternal
         fun = -- M.fromList $ map g 

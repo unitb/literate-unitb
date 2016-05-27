@@ -106,6 +106,11 @@ instance TypeSystem FOType where
     make_type = FOT
     _FromSort = _FOT
 
+instance PrettyPrintable Sort where
+    pretty (RecordSort m) = [printf|{ %s }|] $ intercalate ", " 
+                $ zipWith (\f -> [printf|%s :: a%d|] (render f)) (M.keys m) [0..]
+    pretty s = render $ s^.name
+
 instance Hashable FOType where
 instance Hashable GenericType where
 instance Hashable Sort where

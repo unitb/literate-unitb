@@ -236,16 +236,17 @@ suggestion xs m = map (\(x,y) -> render x ++ " (" ++ y ++ ")") $ toAscList ws
 nameLit :: Parser Name
 nameLit = getToken (_Literal._NameLit) "name literal"
 
-assignTok :: Parser ()
-assignTok = getToken _Assign ":="
+assignTok :: Parser (a -> b -> (a,b))
+assignTok = getToken _Assign ":=" >> pure (,)
 
-binding :: Parser (Name,(Expr,LineInfo))
-binding = do
+colonTok :: Parser (a -> b -> (a,b))
+colonTok = getToken _Colon ":" >> pure (,)
+
+
+binding :: Parser (Expr -> LineInfo -> a) -> Parser (Name,a)
+binding tok = do
     li <- liftP get_line_info
-    n  <- nameLit 
-    assignTok 
-    e  <- expr
-    return (n,(e,li))
+    liftM2 (,) nameLit (tok <*> expr <*> pure li)
 
 type Term = Either Command Expr
 
@@ -270,8 +271,7 @@ term = do
                         brackets Curly expr
                     e <- check_types $ check_type f (map Right args)
                     return $ Right e
-        , do    r <- recordFields binding
-                return $ Right $ Record $ RecLit r
+        , Right <$> recordSetOrLit
         , do    quant <- from quants 
                 ns <- brackets Curly
                     $ sep1P word_or_command comma
@@ -336,7 +336,44 @@ term = do
                 return $ Right $ zint $ read xs
         ]
 
-recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Map Name a)
+recordSetOrLit :: Parser Expr
+recordSetOrLit = do
+        attempt open_square
+        check_types =<< choose_la 
+            [ attempt close_square >> return (zrecord M.empty)
+            , do li  <- liftP get_line_info
+                 n   <- nameLit
+                 sep <- choose_la [True <$ attempt assignTok, False <$ attempt colonTok]
+                 e   <- expr
+                 if sep 
+                    then rec_lit =<< ((n,(e,li)):) <$> parseTail lit
+                    else rec_set =<< ((n,(e,li)):) <$> parseTail set
+            ]
+    where
+        set = binding colonTok
+        lit = binding assignTok
+        rec_lit m = zrecord . M.map Right <$> validateFields m
+        rec_set m = zrecord_set . M.map Right <$> validateFields m
+        parseTail field = choose_la 
+            [ attempt close_square >> return []
+            , do getToken _Comma ","
+                 xs <- sep1P field comma
+                 close_square
+                 return xs
+            ]
+
+validateFields :: [(Name, (expr,LineInfo))] -> Parser (Table Name expr)
+validateFields xs = raiseErrors $ traverseWithKey f xs'
+    where
+        xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
+        f _ ((x,_):|[]) = Success x
+        f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
+        msg = [printf|Multiple record entry with label '%s'|]
+        raiseErrors :: Validation [Error] a -> Parser a
+        raiseErrors = either (liftP . Scanner . const . Left) 
+                             return . validationToEither
+
+recordFields :: Parser (Name,(a,LineInfo)) -> Parser (Table Name a)
 recordFields field = do
         attempt open_square
         xs <- choose_la 
@@ -345,14 +382,7 @@ recordFields field = do
                  close_square
                  return xs
             ]
-        let xs' = fromListWith (<>) $ xs & mapped._2 %~ pure
-            f _ ((x,_):|[]) = Success x
-            f k xs = Failure [MLError (msg $ render k) $ NE.toList xs & mapped._1 .~ " - "]
-            msg = [printf|Multiple record entry with label '%s'|]
-            raiseErrors :: Validation [Error] a -> Parser a
-            raiseErrors = either (liftP . Scanner . const . Left) 
-                                 return . validationToEither
-        raiseErrors $ traverseWithKey f xs'
+        validateFields xs
 
 dummy_types :: [Name] -> Context -> [Var]
 dummy_types vs (Context _ _ _ _ dums) = map f vs
@@ -411,7 +441,7 @@ expr = do
                             read_op xs us $ Right e 
                 ,   add_context ("ready for <term>: " ++ show xs) $
                         do  t  <- term
-                            rUpd <- manyP (recordFields binding)
+                            rUpd <- manyP (recordFields $ binding assignTok)
                             add_context ("parsed <term>: " ++ pretty t) $
                                 read_op xs us =<< applyRecUpdate rUpd t
                 ]

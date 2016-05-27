@@ -60,12 +60,12 @@ part3 :: TestCase
 part3 = test_cases
             "part 3"
             [ (poCase "test 9, verify disjunction rule" (verify path9 0) result9)
-            , (StringCase "test 10, error: cyclic proof" (find_errors path10) result10)
-            , (StringCase   "test 11, intermediate goals of monotonic \
+            , (stringCase "test 10, error: cyclic proof" (find_errors path10) result10)
+            , (stringCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)
             , (Case "test 12, bound variable with ambiguous type"
                 case12 result12)
-            , StringCase "test 13, inv6, PO" case13 result13
+            , stringCase "test 13, inv6, PO" case13 result13
             ]
 
 result0 :: String

@@ -6,7 +6,7 @@ import Logic.Expr
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
-import Logic.QuasiQuote (expr,ctx)
+import Logic.QuasiQuote (expr,ctx,ctxWith)
 import Logic.Theory
 import Logic.Theories.SetTheory
 
@@ -27,12 +27,12 @@ import Test.QuickCheck
 import Test.QuickCheck.AxiomaticClass
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
+import Test.QuickCheck.Regression
 import Test.QuickCheck.Report
 
-import Test.UnitTest
+import Test.UnitTest hiding (name)
 
 import Utilities.MapSyntax
-
 
 left :: Type -> Type
 left  = suffix_generics "1"
@@ -166,8 +166,9 @@ instance Arbitrary GType where
             let t = Gen s $ map getType ts
             return $ GType t
 
-unicity_counter_example :: [(Type,Type)]
-unicity_counter_example = 
+prop_unicity_counter_example :: Property
+prop_unicity_counter_example = regression 
+    (isNothing . prop_yield_same_type . (each %~ GType))
     [   (array real (Gen (z3Sort "C" "C" 1) [gB]),gB)
     ]
 
@@ -177,7 +178,7 @@ test_case :: TestCase
 test_case = test
 
 test :: TestCase
-test = test_cases "genericity" (
+test = test_cases "genericity" 
         [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [(vC1,int), (vB1,real)])
         , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [(vC1,set_type int), (vB1,real)])
         , Case "unification, t2" (return $ unify gtype stype2) Nothing
@@ -196,26 +197,23 @@ test = test_cases "genericity" (
         , Case "type inference 5" case7 result7
         , QuickCheckProps "instantiation of unified types is unique" $(quickCheckWrap 'prop_unifying_yields_unified_type)
         , QuickCheckProps "common type is symmetric" $(quickCheckWrap 'prop_common_symm)
-        , StringCase "common type is symmetric (counter-example)" (return $ show counter_ex_common_symm) "True"
-        , StringCase "common type is symmetric (counter-example 2)" (return $ show counter_ex2_common_symm) "True"
-        ] ++
-        map (\ce -> Case 
-                "instantiation of unified types is unique (counter examples)" 
-                (return $ prop_yield_same_type $ ce & each %~ GType) 
-                Nothing
-            ) unicity_counter_example ++ 
+        , stringCase "common type is symmetric (counter-example)" (return $ show counter_ex_common_symm) "True"
+        , stringCase "common type is symmetric (counter-example 2)" (return $ show counter_ex2_common_symm) "True"
+        , QuickCheckProps "instantiation of unified types is unique (counter examples)" 
+                $(quickCheckWrap 'prop_unicity_counter_example)
 --        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
-        [ QuickCheckProps "type mapping are acyclic" $(quickCheckWrap 'prop_type_mapping_acyclic)
-        , StringCase "one-point rule simplification on existentials" case8 result8
+        , QuickCheckProps "type mapping are acyclic" $(quickCheckWrap 'prop_type_mapping_acyclic)
+        , stringCase "one-point rule simplification on existentials" case8 result8
         , QuickCheckProps "axioms of type classes PreOrd and PartialOrd" case9
-        , StringCase "Record expressions" case10 result10
-        , StringCase "Record sets" case11 result11
+        , stringCase "Record expressions" case10 result10
+        , stringCase "Record sets" case11 result11
         , Case "Record sets in Z3" case12 result12
         , Case "Syntax for record literals" case13 result13
         , Case "Syntax for record update" case14 result14
         , Case "Record syntax: empty record" case15 result15
         , Case "Records: multiple updates" case16 result16
-        ] )
+        , Case "Records sets syntax" case17 result17
+        ] 
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
         vA1 = reserved "a" 1
@@ -358,7 +356,7 @@ case10 = return $ z3_code $ runSequent $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord (x ## 7 >> b ## mztrue)
+        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
         assume $ v2 .=. zrec_update v1 (x ## 7)
         check $ v1 .=. v2
 
@@ -393,8 +391,8 @@ case11 = return $ z3_code $ runSequent $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
+        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zcast (set_type bool) zset_all)
         check $ v1 .=. v2
 
 result11 :: String
@@ -680,8 +678,8 @@ case12 = discharge ("case12") $ runSequent $ do
             b = [smt|b|]
         v1 <- declare "v1" t
         v2 <- declare "v2" t
-        assume $ v1 .=. zrecord (x ## 7 >> b ## mztrue)
-        assume $ v2 `zelem` zrecord_set (x ## zmk_set 7 >> b ## zmk_set mztrue)
+        assume $ v1 .=. zrecord' (x ## 7 >> b ## mztrue)
+        assume $ v2 `zelem` zrecord_set' (x ## zmk_set 7 >> b ## zmk_set mztrue)
         check $ v1 .=. v2
 
 result12 :: Validity
@@ -694,7 +692,7 @@ case13 = do
         c = ctx $ expected_type .= Nothing
 
 result13 :: Expr
-result13 = fromRight' $ zrecord (foo ## 7 >> bar ## zset_enum [1,2])
+result13 = fromRight' $ zrecord' (foo ## 7 >> bar ## zset_enum [1,2])
     where
         foo = [smt|foo|]
         bar = [smt|bar|]
@@ -731,7 +729,7 @@ case15 = do
         c = ctx $ expected_type .= Nothing
 
 result15 :: Expr
-result15 = fromRight' $ zrecord (return ())
+result15 = fromRight' $ zrecord' (return ())
 
     -- multiple record updates
 case16 :: IO Expr
@@ -760,3 +758,37 @@ result16 = fromRight' $ zrec_update (zrec_update r (foo ## 7)) (bar ## zset_enum
 
 -- field lookup
 -- record set
+
+case17 :: IO Expr
+case17 = do
+        return $ getExpr $ 
+            c [expr| r [ 'foo := 7, 'bar := \{ 1,2 \} ] \in [ 'foo : \Int, 'x : \Int, 'bar : \pow.\Int ] |]
+    where
+        c = ctxWith [set_theory] $ do
+                decls %= M.union (symbol_table 
+                    [Var r t
+                    ,Var intV $ set_type int])
+        t = record_type $ runMap' $ do
+                x ## int
+                bar ## bool
+        r = [smt|r|]
+        x = [smt|x|]
+        intV = [tex|\Int|]
+        bar = [smt|bar|]
+
+
+result17 :: Expr
+result17 = fromRight' $ rec `zelem` set
+    where
+        zint_set = Right $ Word $ Var intV $ set_type int
+        intV = [tex|\Int|]
+        rec = zrec_update r (foo ## 7 >> bar ## zset_enum [1,2])
+        set = zrecord_set' (do foo ## zint_set; x ## zint_set; bar ## zpow_set zint_set)
+        r' = [smt|r|]
+        r  = Right $ Word $ Var r' $ record_type $ M.fromList 
+                    [ (bar,bool)
+                    , (x,int) ]
+        x = [smt|x|]
+        bar = [smt|bar|]
+        foo = [smt|foo|]
+

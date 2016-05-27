@@ -31,10 +31,12 @@ instance Applicative (Scanner a) where
 
 instance Monad (Scanner a) where
     f >>= gF = comb f gF
-    fail s   = Scanner (\(State _ li) -> Left [(Error s li)])
+    fail s   = raise . Error s =<< get_line_info
     return x = Scanner (\s -> Right (x,s))
 
-    
+raise :: Error -> Scanner a k
+raise e = Scanner (\_ -> Left [e])
+
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
 comb (Scanner f) gF = Scanner h
     where

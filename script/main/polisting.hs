@@ -1,14 +1,7 @@
 #!/usr/bin/env cabal exec runhaskell
 module Main where
 
--- import Logic.Expr.Classes
--- import Logic.Expr.PrettyPrint
-
 import Control.Applicative
--- import Control.Arrow
--- import Control.Monad.Fix
-
--- import Data.Char
 
 import System.Process
 

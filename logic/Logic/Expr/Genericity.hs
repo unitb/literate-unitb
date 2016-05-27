@@ -37,7 +37,7 @@ import Control.Arrow
 import Control.Lens hiding (rewrite,Context)
 import Control.Monad
 import Control.Monad.State
-import Control.Precondition hiding (isRight)
+import Control.Precondition
 
 import           Data.Either
 import           Data.List as L hiding ( union )

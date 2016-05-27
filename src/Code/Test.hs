@@ -35,15 +35,15 @@ test_case = test
 test :: TestCase
 test = test_cases
             "code generation in the cube example"
-            [ (StringCase "test0: code for the {state}" case0 result0)
-            , (StringCase "test1: code for the {event}" case1 result1)
-            , (StringCase "test2: code for the {initialization}" case2 result2) 
-            , (StringCase "test3: code for the {procedure + loop}" case3 result3) 
-            , (StringCase "test4: {whole source file}" case4 result4) 
-            , (StringCase "test5: run {source file}" case5 result5) 
-            , (StringCase "test6: verify {control flow graph}" case6 result6) 
-            , (StringCase "test7: {concurrent} code" case7 result7)
-            , (StringCase "test8: {run concurrent} code" case8 result8)
+            [ (stringCase "test0: code for the {state}" case0 result0)
+            , (stringCase "test1: code for the {event}" case1 result1)
+            , (stringCase "test2: code for the {initialization}" case2 result2) 
+            , (stringCase "test3: code for the {procedure + loop}" case3 result3) 
+            , (stringCase "test4: {whole source file}" case4 result4) 
+            , (stringCase "test5: run {source file}" case5 result5) 
+            , (stringCase "test6: verify {control flow graph}" case6 result6) 
+            , (stringCase "test7: {concurrent} code" case7 result7)
+            , (stringCase "test8: {run concurrent} code" case8 result8)
             ]
 
 

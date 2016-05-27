@@ -45,24 +45,24 @@ part0 :: TestCase
 part0 = test_cases
             "part 0"
             [ (Case "test 0, syntax" case0 $ Right [machine0])
-            , (StringCase "test 21, multiple imports of sets" case21 result21)
+            , (stringCase "test 21, multiple imports of sets" case21 result21)
             ]
 part1 :: TestCase
 part1 = test_cases
             "part 1"
             [ (poCase "test 1, verification" case1 result1)
-            , (StringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
-            , (StringCase "test 20, proof obligation, INIT/fis, loc" case20 result20)
-            , (StringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
-            , (StringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
-            , (StringCase "test 4, proof obligation, leave/sch" case4 result4)
+            , (stringCase "test 2, proof obligation, INIT/fis, in" case2 result2)
+            , (stringCase "test 20, proof obligation, INIT/fis, loc" case20 result20)
+            , (stringCase "test 3, proof obligation, leave/fis, in'" case3 result3)
+            , (stringCase "test 19, proof obligation, leave/fis, loc'" case19 result19)
+            , (stringCase "test 4, proof obligation, leave/sch" case4 result4)
             ]
 part2 :: TestCase
 part2 = test_cases
             "part 2"
-            [ (StringCase "test 5, proof obligation, leave/en/tr0/WFIS" case5 result5)
-            , (StringCase "test 23, proof obligation, leave/en/tr0/EN" case23 result23)
-            , (StringCase "test 24, proof obligation, leave/en/tr0/NEG" case24 result24)
+            [ (stringCase "test 5, proof obligation, leave/en/tr0/WFIS" case5 result5)
+            , (stringCase "test 23, proof obligation, leave/en/tr0/EN" case23 result23)
+            , (stringCase "test 24, proof obligation, leave/en/tr0/NEG" case24 result24)
             , (Case "test 7, undeclared symbol" case7 result7)
             , (Case "test 8, undeclared event (wrt transient)" case8 result8)
             , (Case "test 9, undeclared event (wrt c sched)" case9 result9)
@@ -72,12 +72,12 @@ part3 = test_cases
             "part 3"
             [ (Case "test 10, undeclared event (wrt indices)" case10 result10)
             , (Case "test 11, undeclared event (wrt assignment)" case11 result11)
-            , (StringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
+            , (stringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
             ]
 part4 :: TestCase
 part4 = test_cases
             "part 4"
-            [ (StringCase "test 13, verification, name clash between dummy and index" case13 result13)
+            [ (stringCase "test 13, verification, name clash between dummy and index" case13 result13)
             , (poCase "test 14, verification, non-exhaustive case analysis" case14 result14)
             , (poCase "test 15, verification, incorrect new assumption" case15 result15)
             ]
@@ -86,9 +86,9 @@ part5 :: TestCase
 part5 = test_cases
             "part 5"
             [ (poCase "test 16, verification, proof by parts" case16 result16)
-            , (StringCase "test 17, ill-defined types" case17 result17)
-            , (StringCase "test 18, assertions have type bool" case18 result18)
-            , (StringCase "test 22, missing witness" case22 result22)
+            , (stringCase "test 17, ill-defined types" case17 result17)
+            , (stringCase "test 18, assertions have type bool" case18 result18)
+            , (stringCase "test 22, missing witness" case22 result22)
             ]
 
 train_sort :: Sort

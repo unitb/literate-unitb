@@ -8,7 +8,7 @@ import Logic.Expr.Type
 import Logic.Names
 
     -- Library
-import Control.Applicative hiding (Const) -- ((<|>),(<$>),(<*>),many)
+import Control.Applicative hiding (Const)
 import Control.DeepSeq
 import Control.Monad.Reader
 import Control.Monad.State
@@ -29,6 +29,8 @@ import GHC.Generics.Instances
 import Test.QuickCheck
 import Test.QuickCheck.Report ()
 import Test.QuickCheck.ZoomEq
+
+import Text.Pretty
 
 import Utilities.Functor
 import Utilities.Table
@@ -66,6 +68,15 @@ defsAsVars = execState $ do
 
 class HasSymbols a b n | a -> b n where
     symbols :: a -> Table n b
+
+instance (PrettyPrintable n,PrettyPrintable t,PrettyPrintable q
+         , IsName n, IsQuantifier q, TypeSystem t) 
+        => PrettyPrintable (GenContext n t q) where
+    pretty = prettyRecord
+
+instance (PrettyPrintable n,PrettyPrintable t,PrettyPrintable q
+         , IsName n, IsQuantifier q, TypeSystem t) 
+        => PrettyRecord (GenContext n t q) where
 
 instance (Ord n,Hashable n) => HasSymbols (GenContext n t q) () n where
     symbols ctx = M.unions [f a,f b,f c]

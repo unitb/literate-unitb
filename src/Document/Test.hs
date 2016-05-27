@@ -49,12 +49,12 @@ test_case = test
 test :: TestCase
 test = test_cases 
         "Unit-B Document" 
-        [ StringCase "basic syntax and scopes" case1 result1
+        [ stringCase "basic syntax and scopes" case1 result1
         , LFD.test_case 
         -- , CC.test_case
         -- , Ind.test_case
         , SMch.test_case
-        , StringCase "Contextual predicate visibility rules" case2 result2 
+        , stringCase "Contextual predicate visibility rules" case2 result2 
         , Puz.test_case
         , UE.test_case
         , PhTest.test_case

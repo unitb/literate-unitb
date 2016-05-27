@@ -179,10 +179,10 @@ data Tree a = Node a (Tree a) (Tree a) | Leaf
 test' :: TestCase
 test' = test_cases
         "Formatting utilities"
-        [ StringCase "test 0" 
+        [ stringCase "test 0" 
                     (return $ [printf|hello %s name is %s and I'm %d years old|] "my" "Simon" 28) 
                     ("hello my name is Simon and I'm 28 years old")
-        , StringCase "test 1"
+        , stringCase "test 1"
                     (return $ [printf|this is a tree %s, its second leaf is %s|] (show t4) (show t2))
                     (   "this is a tree Node \"Candide+Paul-Henri\" (Node \"Yves+Sylvie\" Leaf Leaf) "
                      ++ "(Node \"Danielle+Louis\" (Node \"Francois+Elsa\" Leaf Leaf) "

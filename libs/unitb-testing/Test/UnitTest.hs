@@ -8,6 +8,7 @@ module Test.UnitTest
     , selectLeaf, dropLeaves, leaves
     , makeTestSuite, makeTestSuiteOnly
     , testName, TestName
+    , stringCase
     , callStackLineInfo
     , M, UnitTest(..) 
     , IsTestCase(..)
@@ -20,7 +21,9 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.SSem
 import Control.Concurrent.STM
+import Control.DeepSeq
 import Control.Exception
+import Control.Exception.Lens
 import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Loops
@@ -57,14 +60,22 @@ import Test.QuickCheck.Report
 import Text.Printf.TH
 
 data TestCase = 
-      forall a . (Show a, Eq a, Typeable a) => Case String (IO a) a
-    | forall a . (Show a, Eq a, Typeable a) => CalcCase String (IO a) (IO a) 
+      forall a . (Show a, Eq a, Typeable a, NFData a) => Case String (IO a) a
+    | forall a . (Show a, Eq a, Typeable a, NFData a) 
+        => CalcCase String (IO a) (IO a) 
     | StringCase String (IO String) String
     | LineSetCase String (IO String) String
     | Suite CallStack String [TestCase]
     | WithLineInfo CallStack TestCase
     | QuickCheckProps String (forall a. (PropName -> Property -> IO (a,Result)) -> IO ([a],Bool))
     | forall test. IsTestCase test => Other test
+
+stringCase :: Pre
+           => String 
+           -> IO String 
+           -> String
+           -> TestCase
+stringCase n test res = WithLineInfo (?loc) $ StringCase n test res
 
 class IsTestCase c where
     makeCase :: Maybe CallStack -> c -> ReaderT Args IO UnitTest
@@ -102,7 +113,7 @@ instance IsTestCase TestCase where
                             , _displayE = id
                             , _criterion = id
                             }
-    makeCase cs (LineSetCase x y z) = makeCase cs $ StringCase x 
+    makeCase cs (LineSetCase x y z) = makeCase cs $ stringCase x 
                                 ((asLines %~ NE.sort) <$> y) 
                                 (z & asLines %~ NE.sort)
     makeCase cs (QuickCheckProps n prop) = do
@@ -123,7 +134,7 @@ instance IsTestCase TestCase where
     nameOf f (QuickCheckProps n prop) = (\n' -> QuickCheckProps n' prop) <$> f n
     nameOf f (Other c) = Other <$> nameOf f c
     nameOf f (CalcCase n x0 x1) = (\n' -> CalcCase n' x0 x1) <$> f n
-    nameOf f (StringCase n x0 x1) = (\n' -> StringCase n' x0 x1) <$> f n
+    nameOf f (StringCase n x0 x1) = (\n' -> stringCase n' x0 x1) <$> f n
     nameOf f (LineSetCase n x0 x1) = (\n' -> LineSetCase n' x0 x1) <$> f n
 
 newtype M a = M { runM :: RWST Int [Either (STM [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
@@ -189,7 +200,7 @@ logNothing = const $ const $ const $ const $ return ()
 
 type PrintLog = CallStack -> String -> String -> String -> M ()
 
-data UnitTest = forall a b. Eq a => UT 
+data UnitTest = forall a b. (Eq a,NFData b) => UT 
     { name :: String
     , routine :: IO (b, PrintLog)
     , outcome :: a
@@ -240,34 +251,39 @@ run_test_cases_with xs opts = do
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
 
+putLn :: String -> M ()
+putLn xs = do
+        ys <- mk_lines xs
+        tell $ map Right ys
+
 test_suite_string :: CallStack
                   -> UnitTest 
                   -> M (STM (Either SomeException (Int,Int)))
 test_suite_string cs' ut = do
-        let putLn xs = do
-                ys <- mk_lines xs
-                -- lift $ putStr $ unlines ys
-                tell $ map Right ys
         case ut of
-          (UT x y z mli dispA dispE cri) -> forkTest $ do
+          (UT title test expected mli dispA dispE cri) -> forkTest $ do
             let cs = fromMaybe cs' mli
-            putLn ("+- " ++ x)
+            putLn ("+- " ++ title)
             r <- liftIO $ catch 
-                (Right `liftM` y) 
+                (Right <$> (liftIO . evaluate . force =<< test)) 
                 (\e -> return $ Left $ show (e :: SomeException))
             case r of
                 Right (r,printLog) -> 
-                    if (cri r == z)
+                    if (cri r == expected)
                     then return (1,1)
                     else do
                         take_failure_number
-                        printLog cs x (dispA r) (dispE z)
-                        new_failure cs x (dispA r) (dispE z)
+                        printLog cs title (dispA r) (dispE expected)
+                        new_failure cs title (dispA r) (dispE expected)
                         putLn "*** FAILED ***"
                         forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
                         return (0,1) 
                 Left m -> do
-                    putLn ("   Exception:  " ++ m)
+                    tell [Right $ "   Exception:  \n" ++ m]
+                    take_failure_number
+                    new_failure cs title m (dispE expected)
+                    putLn "*** FAILED ***"
+                    forM_ (callStackLineInfo cs) $ tell . (:[]) . Right
                     return (0,1)
           Node cs n xs -> do
             putLn ("+- " ++ n)
@@ -318,27 +334,29 @@ leafCount _ = 1
 capabilities :: SSem
 capabilities = unsafePerformIO $ new 32
 
-forkTest :: M a -> M (STM (Either SomeException a))
+newtype Handled = Handled SomeException 
+    deriving (Show, Exception)
+
+_Handled :: Prism' SomeException Handled
+_Handled = prism' toException fromException
+
+forkTest :: M (Int,Int) -> M (STM (Either SomeException (Int,Int)))
 forkTest cmd = do
     result <- liftIO $ newEmptyTMVarIO
     output <- liftIO $ newEmptyTMVarIO
     r <- ask
     liftIO $ wait capabilities
-    --tid <- liftIO myThreadId
     ref <- M $ lift ask
     t <- liftIO $ do
         ref <- newIORef []
         let handler e = do
-                ts <- readIORef ref
-                mapM_ (`throwTo` e) ts
                 putStrLn "failed"
                 print e
                 atomically $ do 
                     putTMVar result $ Left e
                     putTMVar output $ [show e]
         forkIO $ do
-        -- do
-            finally (handle handler $ do
+            finally (handling id handler $ do
                 (x,_,w) <- runReaderT (runRWST (runM cmd) r (-1)) ref
                 atomically $ putTMVar result (Right x)
                 xs <- forM w $ \ln -> do
@@ -346,7 +364,6 @@ forkTest cmd = do
                         atomically 
                         (return . (:[])) 
                         ln
-                -- atomically $ putTMVar output $ concat xs ++ lines (unpack stdout) ++ lines (unpack stderr)
                 atomically $ putTMVar output $ concat xs
                 )
                 (signal capabilities)

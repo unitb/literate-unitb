@@ -20,12 +20,12 @@ test_case = test_cases
     [ poCase "test0: verify m0" case0 result0 
     , poCase "test1: verify m1" case1 result1 
     , poCase "test2: verify m2" case2 result2 
-    , StringCase "test3: monotonic simplification" case3 result3
-    , StringCase "test4: monotonicity of POs" case4 result4 
-    , StringCase "test5: monotonicity in relation theory" case5 result5 
-    , StringCase "test6: monotonicity of POs" case6 result6
-    , StringCase "test7: POs, step 3 (monotonicity, associativity)" case7 result7
-    , StringCase "test8: POs, step 4 (monotonicity, associativity)" case8 result8 
+    , stringCase "test3: monotonic simplification" case3 result3
+    , stringCase "test4: monotonicity of POs" case4 result4 
+    , stringCase "test5: monotonicity in relation theory" case5 result5 
+    , stringCase "test6: monotonicity of POs" case6 result6
+    , stringCase "test7: POs, step 3 (monotonicity, associativity)" case7 result7
+    , stringCase "test8: POs, step 4 (monotonicity, associativity)" case8 result8 
     ]
 
 path0 :: FilePath

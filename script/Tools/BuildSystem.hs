@@ -7,7 +7,6 @@ where
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State hiding ( State )
--- import Control.Monad.Trans.Writer
 
 import Data.Map hiding ( map, filter )
 import Data.Time

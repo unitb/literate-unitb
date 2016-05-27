@@ -16,7 +16,7 @@ import Control.Lens
 import Data.Either.Combinators hiding 
         ( fromRight',fromLeft'
         , mapLeft,mapRight
-        , mapBoth )
+        , mapBoth, isRight, isLeft )
 import Data.List.NonEmpty
 import Data.Maybe hiding (fromJust)
 

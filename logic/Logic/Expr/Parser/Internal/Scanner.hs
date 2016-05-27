@@ -3,44 +3,20 @@ module Logic.Expr.Parser.Internal.Scanner where
 
     -- Modules
 import Latex.Scanner 
--- import Latex.Parser  hiding (Close,Open,BracketType(..),Command,Parser,Bracket,token)
 
 import Logic.Expr
--- import Logic.Expr.Parser.Internal.Setting hiding (with_vars)
--- import Logic.Expr.Printable
 import Logic.Operator
-
--- import Logic.Theories.SetTheory
 
 import Utilities.Syntactic
 
     -- Libraries
--- import qualified Control.Applicative as A 
 import Control.Lens hiding (Context,from)
 
 import           Control.Monad
--- import           Control.Monad.Trans
--- import           Control.Monad.Trans.Either
--- import           Control.Monad.Trans.Maybe
--- import qualified Control.Monad.Trans.Reader as R
--- import           Control.Precondition
 
 import           Data.Char
--- import           Data.Either
--- import           Data.Either.Combinators
--- import           Data.List as L
--- import qualified Data.List.NonEmpty as NE
--- import           Data.Map.Class as M hiding ( map )
--- import qualified Data.Map.Class as M
--- import           Data.Semigroup hiding (option)
--- import qualified Data.Set as S
--- import           Data.Either.Validation
 
 import Text.Printf.TH
-
--- import Utilities.EditDistance
--- import Utilities.Graph as G ((!))
--- import Utilities.Table
 
 pattern Number x = Literal (NumLit x)
 
