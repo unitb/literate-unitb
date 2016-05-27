@@ -13,9 +13,9 @@ test_case = test
 test :: TestCase
 test = test_cases 
             "refinement relations in the phase example" 
-            [ (Case "test 0, cyclic refinement relation between machines" (find_errors path0) result0)
-            , (Case "test 1, valid references to variables and event declared in ancestor" case1 result1)
-            , (Case "test 2, invalid proof obligations" case2 result2)
+            [ (aCase "test 0, cyclic refinement relation between machines" (find_errors path0) result0)
+            , (aCase "test 1, valid references to variables and event declared in ancestor" case1 result1)
+            , (aCase "test 2, invalid proof obligations" case2 result2)
             ] 
 
 path0 :: String

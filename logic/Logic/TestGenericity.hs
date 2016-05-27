@@ -6,7 +6,7 @@ import Logic.Expr
 import Logic.Expr.Const
 import Logic.Expr.Parser
 import Logic.Proof.Monad
-import Logic.QuasiQuote (expr,ctx,ctxWith)
+import Logic.QuasiQuote hiding (var)
 import Logic.Theory
 import Logic.Theories.SetTheory
 
@@ -179,41 +179,44 @@ test_case = test
 
 test :: TestCase
 test = test_cases "genericity" 
-        [ Case "unification, t0" (return $ unify gtype stype0) (Just $ fromList [(vC1,int), (vB1,real)])
-        , Case "unification, t1" (return $ unify gtype stype1) (Just $ fromList [(vC1,set_type int), (vB1,real)])
-        , Case "unification, t2" (return $ unify gtype stype2) Nothing
-        , Case "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [(vA1,set_type int), (vA2,real)])
-        , Case "unification, t4" (return $ unify gtype1 gtype2) Nothing
-        , Case "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [(vA2,set_type real), (vA1,set_type $ set_type real)])
-        , Case "unification, t6" (return $ unify int gC) (Just $ fromList [(vC2,int)])
-        , Case "type instantiation" (return $ instantiate (fromList [(c, set_type int),(b,real)]) gtype) stype1
---        ,  Case "type inference 0" case2 result2
-        , Case "type inference 1" case3 result3
---        , Case "type inference 2" case4 result4
+        [ aCase "unification, t0" (return $ unify gtype stype0) (Just $ fromList [(vC1,int), (vB1,real)])
+        , aCase "unification, t1" (return $ unify gtype stype1) (Just $ fromList [(vC1,set_type int), (vB1,real)])
+        , aCase "unification, t2" (return $ unify gtype stype2) Nothing
+        , aCase "unification, t3" (return $ unify gtype0 gtype1) (Just $ fromList [(vA1,set_type int), (vA2,real)])
+        , aCase "unification, t4" (return $ unify gtype1 gtype2) Nothing
+        , aCase "unification, t5" (return $ unify gtype0 gtype2) (Just $ fromList [(vA2,set_type real), (vA1,set_type $ set_type real)])
+        , aCase "unification, t6" (return $ unify int gC) (Just $ fromList [(vC2,int)])
+        , aCase "type instantiation" (return $ instantiate (fromList [(c, set_type int),(b,real)]) gtype) stype1
+--        ,  aCase "type inference 0" case2 result2
+        , aCase "type inference 1" case3 result3
+--        , aCase "type inference 2" case4 result4
                 -- does not work because we cannot match 
                 -- a generic parameter to a generic expression
-        , Case "type inference 3" case5 result5
-        , Case "type inference 4" case6 result6
-        , Case "type inference 5" case7 result7
+        , aCase "type inference 3" case5 result5
+        , aCase "type inference 4" case6 result6
+        , aCase "type inference 5" case7 result7
         , QuickCheckProps "instantiation of unified types is unique" $(quickCheckWrap 'prop_unifying_yields_unified_type)
         , QuickCheckProps "common type is symmetric" $(quickCheckWrap 'prop_common_symm)
         , stringCase "common type is symmetric (counter-example)" (return $ show counter_ex_common_symm) "True"
         , stringCase "common type is symmetric (counter-example 2)" (return $ show counter_ex2_common_symm) "True"
         , QuickCheckProps "instantiation of unified types is unique (counter examples)" 
                 $(quickCheckWrap 'prop_unicity_counter_example)
---        [ Case "types unify with self" (check_prop prop_type_unifies_with_self) True
+--        [ aCase "types unify with self" (check_prop prop_type_unifies_with_self) True
         , QuickCheckProps "type mapping are acyclic" $(quickCheckWrap 'prop_type_mapping_acyclic)
         , stringCase "one-point rule simplification on existentials" case8 result8
         , QuickCheckProps "axioms of type classes PreOrd and PartialOrd" case9
         , stringCase "Record expressions" case10 result10
         , stringCase "Record sets" case11 result11
-        , Case "Record sets in Z3" case12 result12
-        , Case "Syntax for record literals" case13 result13
-        , Case "Syntax for record update" case14 result14
-        , Case "Record syntax: empty record" case15 result15
-        , Case "Records: multiple updates" case16 result16
-        , Case "Records sets syntax" case17 result17
-        ] 
+        , aCase "Record sets in Z3" case12 result12
+        , aCase "Syntax for record literals" case13 result13
+        , aCase "Syntax for record update" case14 result14
+        , aCase "Record syntax: empty record" case15 result15
+        , aCase "Records: multiple updates" case16 result16
+        , aCase "Records sets syntax" case17 result17
+        , aCase "QuasiQuotes with proof monads" case18 result18
+        , aCase "QuasiQuotes with proof monads and set theory" case19 result19
+        , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
+        ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
         vA1 = reserved "a" 1
@@ -792,3 +795,28 @@ result17 = fromRight' $ rec `zelem` set
         bar = [smt|bar|]
         foo = [smt|foo|]
 
+case18 :: IO Validity
+case18 = discharge("case13") $ runSequent $ do
+    declare "x" int
+    checkQ $ [expr| x = x |]
+
+result18 :: Validity
+result18 = Valid
+
+case19 :: IO Validity
+case19 = discharge("case14") $ runSequent $ do
+    declare "x" int
+    include set_theory
+    checkQ $ [expr| x \in \{x\} |]
+
+result19 :: Validity
+result19 = Valid
+
+case20 :: IO Validity
+case20 = discharge("case15") $ runSequent $ do
+    declare "x" int
+    assumeQ $ [expr| x = x |]
+    checkQ $ [expr| \neg x = x |]
+
+result20 :: Validity
+result20 = Invalid

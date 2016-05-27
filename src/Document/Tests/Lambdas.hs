@@ -46,8 +46,8 @@ part1 = test_cases
             "part 1"
             [ (poCase "test 3, verification, set comprehension, failed proof" 
                 (verify path3 0) result3)
-            , (Case "test 4, adding a progress property" case4 result4)
-            , (Case "test 5, unless properties" case5 result5)
+            , (aCase "test 4, adding a progress property" case4 result4)
+            , (aCase "test 5, unless properties" case5 result5)
             ]            
 part2 :: TestCase
 part2 = test_cases
@@ -63,7 +63,7 @@ part3 = test_cases
             , (stringCase "test 10, error: cyclic proof" (find_errors path10) result10)
             , (stringCase   "test 11, intermediate goals of monotonic \
                               \simplification" case11 result11)
-            , (Case "test 12, bound variable with ambiguous type"
+            , (aCase "test 12, bound variable with ambiguous type"
                 case12 result12)
             , stringCase "test 13, inv6, PO" case13 result13
             ]

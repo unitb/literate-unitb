@@ -260,20 +260,20 @@ test_case = test
 
 test :: TestCase
 test = test_cases "Graphs and operator grammars" $
-    [ Case "case 0 - complete domain of matrices" case0 result0
-    --, Case "case 1 - operator grammar discrepancy" case1 result1
-    , Case "case 2 - new ambiguities" case2 result2
-    , Case "case 3 - transitive closures" case3 result3
-    , Case "case 4 - transitive closures in linear time" case4 result4
+    [ aCase "case 0 - complete domain of matrices" case0 result0
+    --, aCase "case 1 - operator grammar discrepancy" case1 result1
+    , aCase "case 2 - new ambiguities" case2 result2
+    , aCase "case 3 - transitive closures" case3 result3
+    , aCase "case 4 - transitive closures in linear time" case4 result4
     , test'
-    , Case "case 5 - error monad" case5 result5
+    , aCase "case 5 - error monad" case5 result5
     , QuickCheckProps "case 6 - union of a list of {sorted} list" case6
     , QuickCheckProps "case 7 - union of a list of {unsorted} list" case7
     , QuickCheckProps "case 8 - edit distance, random testing" case8
-    , Case "case 9 - edit distance, regression test from random testing" case9 0
+    , aCase "case 9 - edit distance, regression test from random testing" case9 0
     , QuickCheckProps "QuickCheck of graphs" GSpec.run_spec
     , QuickCheckProps "case 11 - Relations, quickcheck" Rel.run_spec
     , QuickCheckProps "case 12 - New graphs, quickcheck" Graph.run_tests
     , QuickCheckProps "case 13 - Sane line breaks, quickcheck" Lines.run_tests
     , QuickCheckProps "test 14 - quickcheck brackets" runSpec
-    , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]
+    , aCase "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]

@@ -65,11 +65,11 @@ test = test_cases
                 case12 result12
             , poCase "test 13, event splitting"
                 case13 result13
-            , Case "test 14, event splitting, event sets"
+            , aCase "test 14, event splitting, event sets"
                 case14 result14                
-            , Case "test 15, event splitting, expression sets"
+            , aCase "test 15, event splitting, expression sets"
                 case15 result15
-            , Case "test 16, event splitting, index decl"
+            , aCase "test 16, event splitting, index decl"
                 case16 result16
             , stringCase "test 17, empty parameter list"
                 case17 result17
@@ -79,11 +79,11 @@ test = test_cases
                 case19 result19
             , poCase "test 20, Lamport proofs"
                 case20 result20
-            , Case "test 21, new index witness"
+            , aCase "test 21, new index witness"
                 case21 result21
-            , Case "test 22, new index proof obligation part a"
+            , aCase "test 22, new index proof obligation part a"
                 case22 result22
-            , Case "test 23, new index proof obligation part b"
+            , aCase "test 23, new index proof obligation part b"
                 case23 result23
             , poCase "test 24, scoping in index witness feasibility"
                 case24 result24

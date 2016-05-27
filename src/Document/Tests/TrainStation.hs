@@ -44,7 +44,7 @@ test = test_cases
 part0 :: TestCase
 part0 = test_cases
             "part 0"
-            [ (Case "test 0, syntax" case0 $ Right [machine0])
+            [ (aCase "test 0, syntax" case0 $ Right [machine0])
             , (stringCase "test 21, multiple imports of sets" case21 result21)
             ]
 part1 :: TestCase
@@ -63,15 +63,15 @@ part2 = test_cases
             [ (stringCase "test 5, proof obligation, leave/en/tr0/WFIS" case5 result5)
             , (stringCase "test 23, proof obligation, leave/en/tr0/EN" case23 result23)
             , (stringCase "test 24, proof obligation, leave/en/tr0/NEG" case24 result24)
-            , (Case "test 7, undeclared symbol" case7 result7)
-            , (Case "test 8, undeclared event (wrt transient)" case8 result8)
-            , (Case "test 9, undeclared event (wrt c sched)" case9 result9)
+            , (aCase "test 7, undeclared symbol" case7 result7)
+            , (aCase "test 8, undeclared event (wrt transient)" case8 result8)
+            , (aCase "test 9, undeclared event (wrt c sched)" case9 result9)
             ]
 part3 :: TestCase
 part3 = test_cases
             "part 3"
-            [ (Case "test 10, undeclared event (wrt indices)" case10 result10)
-            , (Case "test 11, undeclared event (wrt assignment)" case11 result11)
+            [ (aCase "test 10, undeclared event (wrt indices)" case10 result10)
+            , (aCase "test 11, undeclared event (wrt assignment)" case11 result11)
             , (stringCase "test 12, proof obligation leave/INV/inv2" case12 result12)
             ]
 part4 :: TestCase

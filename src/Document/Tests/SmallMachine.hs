@@ -25,10 +25,10 @@ test_case = test
 
 test :: TestCase
 test = test_cases "small machine example" [
-        (Case "test 0" 
+        (aCase "test 0" 
             case0 $ 
             Right $ [m0_machine]),
-        (Case "test 1 (separate machine blocks)" 
+        (aCase "test 1 (separate machine blocks)" 
             case1 $ 
             Right $ [m1_machine]),
         (poCase "test 2 (verification, one failure)" 

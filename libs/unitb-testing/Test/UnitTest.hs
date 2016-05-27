@@ -8,7 +8,7 @@ module Test.UnitTest
     , selectLeaf, dropLeaves, leaves
     , makeTestSuite, makeTestSuiteOnly
     , testName, TestName
-    , stringCase
+    , stringCase, aCase
     , callStackLineInfo
     , M, UnitTest(..) 
     , IsTestCase(..)
@@ -76,6 +76,13 @@ stringCase :: Pre
            -> String
            -> TestCase
 stringCase n test res = WithLineInfo (?loc) $ StringCase n test res
+
+aCase :: (Pre,Eq a,Show a,Typeable a,NFData a)
+      => String
+      -> IO a 
+      -> a
+      -> TestCase
+aCase n test res = WithLineInfo (?loc) $ Case n test res
 
 class IsTestCase c where
     makeCase :: Maybe CallStack -> c -> ReaderT Args IO UnitTest

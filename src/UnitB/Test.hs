@@ -46,10 +46,10 @@ test = test_cases
         ,  poCase "1: train, model 0, verification" (check_mch train_m0) (result_train_m0)
         ,  stringCase "2: train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
         ,  stringCase "3: train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
-        ,  Case "4: Feasibility and partitioning" case3 result3
-        ,  Case "5: Debugging the partitioning" case4 result4
+        ,  aCase "4: Feasibility and partitioning" case3 result3
+        ,  aCase "5: Debugging the partitioning" case4 result4
         ,  Gen.test_case
-        ,  Case "6: unless with except and split event" case5 result5
+        ,  aCase "6: unless with except and split event" case5 result5
         ,  QuickCheckProps "7: QuickCheck names" Names.run_props
         ]
 

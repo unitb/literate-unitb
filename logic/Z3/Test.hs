@@ -37,22 +37,22 @@ test = test_cases
         [ case0, case1
         , case2, case3
         --, case4
-        , Case "canonical lambdas part a" case5a result5a
-        , Case "canonical lambdas part b" case5b result5b
-        , Case "canonical lambdas with quantifier part a" case6a result6a
-        , Case "canonical lambdas with quantifier part b" case6b result6b
-        , Case "conversion to first order typing (no type variables)" case7 result7
-        , Case "conversion to first order typing" case8 result8
-        , Case "instantiating type variables by matching some generic types" case9 result9 ]
+        , aCase "canonical lambdas part a" case5a result5a
+        , aCase "canonical lambdas part b" case5b result5b
+        , aCase "canonical lambdas with quantifier part a" case6a result6a
+        , aCase "canonical lambdas with quantifier part b" case6b result6b
+        , aCase "conversion to first order typing (no type variables)" case7 result7
+        , aCase "conversion to first order typing" case8 result8
+        , aCase "instantiating type variables by matching some generic types" case9 result9 ]
 
 case0 :: TestCase
-case0 = Case "sample_quant" (verify (label "") sample_quant 2) $ Right Sat
+case0 = aCase "sample_quant" (verify (label "") sample_quant 2) $ Right Sat
 case1 :: TestCase
-case1 = Case "sample_quant2" (verify (label "") sample_quant2 2) $ Right Sat
+case1 = aCase "sample_quant2" (verify (label "") sample_quant2 2) $ Right Sat
 case2 :: TestCase
-case2 = Case "sample_quant3" (verify (label "") sample_quant3 2) $ Right Unsat
+case2 = aCase "sample_quant3" (verify (label "") sample_quant3 2) $ Right Unsat
 case3 :: TestCase
-case3 = Case "sample proof" (discharge (label "") sample_proof) Valid
+case3 = aCase "sample proof" (discharge (label "") sample_proof) Valid
 
 sample :: String
 sample = unlines [

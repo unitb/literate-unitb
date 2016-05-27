@@ -25,7 +25,7 @@ test_case = test
 test :: TestCase
 test = test_cases
         "table of cubes example"
-        [ (Case "test 0 (syntax)" 
+        [ (aCase "test 0 (syntax)" 
                 case6 $ Right [machine6])
         , (poCase "test 1 (verification)" 
                 case7 result7)
