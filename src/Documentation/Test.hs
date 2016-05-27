@@ -26,12 +26,12 @@ import Utilities.Syntactic
 test_case :: TestCase
 test_case = test_cases 
         "Documentation generation" 
-        [ Case "m2, event m1:moveout" case0 result0
-        , Case "m3, event m1:moveout" case1 result1
-        , Case "safety properties of m2" case2 result2
-        , Case "progress properties of m2" case3 result3
-        , Case "File structure" case4 result4
-        , Case "Root machine" case5 result5
+        [ aCase "m2, event m1:moveout" case0 result0
+        , aCase "m3, event m1:moveout" case1 result1
+        , aCase "safety properties of m2" case2 result2
+        , aCase "progress properties of m2" case3 result3
+        , aCase "File structure" case4 result4
+        , aCase "Root machine" case5 result5
         ]
 
 result0 :: String

@@ -145,7 +145,7 @@ instance (Lift n,Lift t) => Lift (AbsVar n t) where
 instance (Lift t,Lift a,Lift q,Lift n) => Lift (GenExpr n t a q) where
     lift = genericLift
 
-instance (Lift t,Lift a,Lift q,Lift n) => Lift (RecordExpr n t a q) where
+instance (Lift expr) => Lift (RecordExpr expr) where
     lift = genericLift
 
 instance (Lift n,Lift a) => Lift (AbsFun n a) where

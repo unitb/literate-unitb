@@ -6,7 +6,7 @@ module Latex.Scanner
     , look_ahead, try, choice
     , read_if, match, many
     , line_number
-    , sep1 )
+    , sep1,sep )
 where
 
 import Control.Monad
@@ -31,10 +31,12 @@ instance Applicative (Scanner a) where
 
 instance Monad (Scanner a) where
     f >>= gF = comb f gF
-    fail s   = Scanner (\(State _ li) -> Left [(Error s li)])
+    fail s   = raise . Error s =<< get_line_info
     return x = Scanner (\s -> Right (x,s))
 
-    
+raise :: Error -> Scanner a k
+raise e = Scanner (\_ -> Left [e])
+
 comb :: Scanner a b -> (b -> Scanner a c) -> Scanner a c
 comb (Scanner f) gF = Scanner h
     where
@@ -138,14 +140,13 @@ match_first ((p,f):xs) x = do
 read_lines :: Scanner Char a 
            -> FilePath -> String 
            -> Either [Error] a 
-read_lines s fn xs = read_tokens s fn (line_number fn xs) (1,1)
+read_lines s fn xs = read_tokens s (line_number fn xs) $ LI fn 1 1
 
 read_tokens :: Scanner a b
-            -> FilePath
             -> [(a, LineInfo)] 
-            -> (Int,Int) 
+            -> LineInfo
             -> Either [Error] b
-read_tokens (Scanner f) fn xs (i,j) = 
+read_tokens (Scanner f) xs (LI fn i j) = 
         do  li <- case xs of 
                 (_,li):_ -> return li
                 _ -> return (LI fn i j)

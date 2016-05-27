@@ -254,10 +254,15 @@ Running test...
 |  |  |  +- Record expressions
 |  |  |  +- Record sets
 |  |  |  +- Record sets in Z3
-|  |  +- [ Success: 23 / 23 ]
+|  |  |  +- Syntax for record literals
+|  |  |  +- Syntax for record update
+|  |  |  +- Record syntax: empty record
+|  |  |  +- Records: multiple updates
+|  |  |  +- Records sets syntax
+|  |  +- [ Success: 28 / 28 ]
 |  |  +- 6: unless with except and split event
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 31 / 31 ]
+|  +- [ Success: 36 / 36 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -324,17 +329,17 @@ Running test...
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 253 / 253 ]
++- [ Success: 258 / 258 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   37351 total
+   37559 total
     1038 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
      751 src/Document/Phase.hs
-     747 logic/Logic/Expr/Expr.hs
-Run time: 1m 51s
+     745 logic/Logic/Expr/Expr.hs
+Run time: 1m 52s

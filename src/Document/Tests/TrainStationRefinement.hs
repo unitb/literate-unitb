@@ -20,9 +20,9 @@ test = test_cases
             , poCase "verify machine m2 (ref)" (verify path0 2) result2
             , poCase "verify machine m2 (ref), in many files" 
                 (verifyFiles (NE.fromList [path1,path1']) 2) result2
-            , StringCase "cyclic proof of liveness through 3 refinements" (find_errors path3) result3
-            , StringCase "refinement of undefined machine" (find_errors path4) result4
-            , StringCase "repeated imports" case5 result5
+            , stringCase "cyclic proof of liveness through 3 refinements" (find_errors path3) result3
+            , stringCase "refinement of undefined machine" (find_errors path4) result4
+            , stringCase "repeated imports" case5 result5
             ]
 
 result0 :: String

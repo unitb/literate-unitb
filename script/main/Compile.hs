@@ -19,7 +19,6 @@ import Shelly hiding ( get, put, (</>), liftIO )
 
 import System.Directory
 import System.FilePath
--- import System.Timeout
 import System.Console.ANSI
 import System.Exit
 import System.IO 

@@ -285,8 +285,8 @@ properties = $forAllProperties'
 cases :: TestCase
 cases = test_cases "latex parser" [
     (QuickCheckProps "quickcheck" properties),
-    (Case "sample.tex" (main path2) result2),
-    (Case "sorted seq err.tex" (main path3) result3),
+    (aCase "sample.tex" (main path2) result2),
+    (aCase "sorted seq err.tex" (main path3) result3),
     (CalcCase "reconstitute sample.tex" 
         (tests path2) 
         (uncomment <$> readFile path2)),

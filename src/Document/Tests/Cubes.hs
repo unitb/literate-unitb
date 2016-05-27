@@ -25,15 +25,15 @@ test_case = test
 test :: TestCase
 test = test_cases
         "table of cubes example"
-        [ (Case "test 0 (syntax)" 
+        [ (aCase "test 0 (syntax)" 
                 case6 $ Right [machine6])
         , (poCase "test 1 (verification)" 
                 case7 result7)
-        , (StringCase "test 2 (init/fis po)" 
+        , (stringCase "test 2 (init/fis po)" 
              case8 result8)
-        , (StringCase "proof of inv0" 
+        , (stringCase "proof of inv0" 
              case9 result9)
-        , (StringCase "empty proof"
+        , (stringCase "empty proof"
              case10 result10) 
         ]
 

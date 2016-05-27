@@ -4,6 +4,7 @@ module Text.Pretty where
     -- Libraries
 import Control.Applicative
 import Control.Arrow
+import Control.DeepSeq
 import Control.Lens hiding (List,cons,uncons)
 import Control.Monad.Reader
 
@@ -30,7 +31,7 @@ import Language.Haskell.TH.Quote
 import Prelude hiding (unlines)
 
 newtype Pretty a = Pretty { unPretty :: a }
-    deriving (Eq,Ord,Functor,Foldable,Traversable,Hashable)
+    deriving (Eq,Ord,Functor,Foldable,Traversable,Hashable,Generic)
 
 class PrettyPrintable a where
     pretty :: a -> String
@@ -69,11 +70,17 @@ instance (PrettyPrintable a,PrettyPrintable b)
         => PrettyPrintable (a,b) where
     pretty = show . (Pretty *** Pretty)
 
+instance NFData a => NFData (Pretty a) where
+
 withMargin :: String -> String -> String -> String
 withMargin first other = asLines %~ NE.zipWith (++) (first :| repeat other) 
 
 class PrettyRecord a where
     recordFields :: a -> (String,[(String,String)])
+    default recordFields 
+            :: (Generic a,GenericRecordFields (Rep a))
+            => a -> (String,[(String,String)])
+    recordFields = genericRecordFields []
 
 prettyRecord :: PrettyRecord a => a -> String
 prettyRecord r = unlines $ 

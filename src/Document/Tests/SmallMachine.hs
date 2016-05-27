@@ -25,34 +25,34 @@ test_case = test
 
 test :: TestCase
 test = test_cases "small machine example" [
-        (Case "test 0" 
+        (aCase "test 0" 
             case0 $ 
             Right $ [m0_machine]),
-        (Case "test 1 (separate machine blocks)" 
+        (aCase "test 1 (separate machine blocks)" 
             case1 $ 
             Right $ [m1_machine]),
         (poCase "test 2 (verification, one failure)" 
             case2 result2),
         (poCase "test 3 (verification)" 
             case3 result3),
-        (StringCase "test 4 (proof obligation, invariance)" 
+        (stringCase "test 4 (proof obligation, invariance)" 
             case4 result4),
-        (StringCase "test 5 (co, 'skip' proof obligation)" 
+        (stringCase "test 5 (co, 'skip' proof obligation)" 
             case5 result5),
         (poCase "test 6 (verification, coarse schedule stronger than guard)" 
             case6 result6),
-        (StringCase "test 7 (schedulability proof obligation)" 
+        (stringCase "test 7 (schedulability proof obligation)" 
             case7 result7),
-        (StringCase "test 8 (schedulability without selecting schedules (trivially true))" 
+        (stringCase "test 8 (schedulability without selecting schedules (trivially true))" 
             case8 result8),
             -- default: false is no longer weakened away
-        --(StringCase "test 9 (coarse schedule weakening, PO)" 
+        --(stringCase "test 9 (coarse schedule weakening, PO)" 
         --    case9 result9),
-        (StringCase "test 10 (transient PO, enablement)" 
+        (stringCase "test 10 (transient PO, enablement)" 
             case10 result10), 
-        (StringCase "test 11 (transient PO, negation)" 
+        (stringCase "test 11 (transient PO, negation)" 
             case11 result11),
-        (StringCase "test 12 name clash between coarse schedule and co properties" 
+        (stringCase "test 12 name clash between coarse schedule and co properties" 
             case12 result12) ]
 
 path0 :: String

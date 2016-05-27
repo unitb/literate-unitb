@@ -510,6 +510,7 @@ instance NFData expr => NFData (ConcrEvent' expr)
 instance NFData expr => NFData (Action' expr)
 instance NFData expr => NFData (ScheduleChange' expr)
 instance NFData expr => NFData (Witness' expr)
+instance NFData expr => NFData (EventRef expr)
 
 instance Serialize expr => Serialize (Event' expr) where
 instance Serialize expr => Serialize (AbstrEvent' expr) where

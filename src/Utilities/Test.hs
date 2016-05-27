@@ -179,10 +179,10 @@ data Tree a = Node a (Tree a) (Tree a) | Leaf
 test' :: TestCase
 test' = test_cases
         "Formatting utilities"
-        [ StringCase "test 0" 
+        [ stringCase "test 0" 
                     (return $ [printf|hello %s name is %s and I'm %d years old|] "my" "Simon" 28) 
                     ("hello my name is Simon and I'm 28 years old")
-        , StringCase "test 1"
+        , stringCase "test 1"
                     (return $ [printf|this is a tree %s, its second leaf is %s|] (show t4) (show t2))
                     (   "this is a tree Node \"Candide+Paul-Henri\" (Node \"Yves+Sylvie\" Leaf Leaf) "
                      ++ "(Node \"Danielle+Louis\" (Node \"Francois+Elsa\" Leaf Leaf) "
@@ -260,20 +260,20 @@ test_case = test
 
 test :: TestCase
 test = test_cases "Graphs and operator grammars" $
-    [ Case "case 0 - complete domain of matrices" case0 result0
-    --, Case "case 1 - operator grammar discrepancy" case1 result1
-    , Case "case 2 - new ambiguities" case2 result2
-    , Case "case 3 - transitive closures" case3 result3
-    , Case "case 4 - transitive closures in linear time" case4 result4
+    [ aCase "case 0 - complete domain of matrices" case0 result0
+    --, aCase "case 1 - operator grammar discrepancy" case1 result1
+    , aCase "case 2 - new ambiguities" case2 result2
+    , aCase "case 3 - transitive closures" case3 result3
+    , aCase "case 4 - transitive closures in linear time" case4 result4
     , test'
-    , Case "case 5 - error monad" case5 result5
+    , aCase "case 5 - error monad" case5 result5
     , QuickCheckProps "case 6 - union of a list of {sorted} list" case6
     , QuickCheckProps "case 7 - union of a list of {unsorted} list" case7
     , QuickCheckProps "case 8 - edit distance, random testing" case8
-    , Case "case 9 - edit distance, regression test from random testing" case9 0
+    , aCase "case 9 - edit distance, regression test from random testing" case9 0
     , QuickCheckProps "QuickCheck of graphs" GSpec.run_spec
     , QuickCheckProps "case 11 - Relations, quickcheck" Rel.run_spec
     , QuickCheckProps "case 12 - New graphs, quickcheck" Graph.run_tests
     , QuickCheckProps "case 13 - Sane line breaks, quickcheck" Lines.run_tests
     , QuickCheckProps "test 14 - quickcheck brackets" runSpec
-    , Case "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]
+    , aCase "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]

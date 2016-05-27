@@ -33,11 +33,12 @@ import Text.Printf.TH
 
 data POCase = POCase String (IO (String, Table Label Sequent)) String
 
-poCase :: String 
+poCase :: Pre
+       => String 
        -> IO (String, Table Label Sequent) 
        -> String
        -> TestCase
-poCase n test res = Other $ POCase n test res
+poCase n test res = WithLineInfo (?loc) $ Other $ POCase n test res
 
 instance IsTestCase POCase where
     makeCase cs (POCase n test res)     = do

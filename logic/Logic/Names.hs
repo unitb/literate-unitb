@@ -37,9 +37,9 @@ import Logic.Names.Internals as Names
 import Control.Lens
 import Data.Typeable
 
-class IsName n => HasNames a n | a -> n where
+class HasNames a n | a -> n where
     type SetNameT n' a :: *
-    namesOf :: IsName n' 
+    namesOf :: Ord n' 
             => Traversal a (SetNameT n' a)
                          n n'
 

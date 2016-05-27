@@ -467,8 +467,10 @@ zelemUnchecked x s = provided (set_type (type_of x) == type_of s) $
 zident :: ExprP
 zident = Right $ FunApp ident_fun []
 
-zrecord :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
-zrecord m = fmap (Record . RecLit) . traverseValidation id $ runMap' m
+zrecord' :: MapSyntax Name (ExprPG n t q) () -> ExprPG n t q
+zrecord' = zrecord . runMap'
+zrecord :: M.Map Name (ExprPG n t q) -> ExprPG n t q
+zrecord = fmap (Record . RecLit) . traverseValidation id
 
 zrec_update :: ExprPG n t q 
             -> MapSyntax Name (ExprPG n t q) ()

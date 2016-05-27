@@ -32,10 +32,10 @@ test = test_cases
             , POCase "verify theory 1: indirect (in)equality" case1 result1
             , POCase "verify theory 2: lattices" case2 result2
             , POCase "proofs by symmetry: PO" case3 result3
-            , Case "proofs by symmetry: hypotheses labels" case4 result4
-            , Case "cyclic references between proofs" case5 result5
+            , aCase "proofs by symmetry: hypotheses labels" case4 result4
+            , aCase "cyclic references between proofs" case5 result5
             , POCase "referring to theorems in automatic proofs (failure)" case6 result6
-            , Case "partial instantiation of theorems in calc. hints" case7 result7
+            , aCase "partial instantiation of theorems in calc. hints" case7 result7
             ]
 
 path0 :: String

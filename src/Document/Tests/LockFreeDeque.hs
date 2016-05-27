@@ -34,56 +34,56 @@ test = test_cases
                 (verify path0 0) result0)
             , (poCase "test 1, verification, failed proof with intervals" 
                 (verify path1 0) result1)
-            , (StringCase "test 2, error message name clash in guards" 
+            , (stringCase "test 2, error message name clash in guards" 
                 case2 result2)
             , (poCase "test 3, verification, looking up function outside of domain" 
                 (verify path3 0) result3)
             , (poCase "test 4, m1, liveness implemented with conditional behavior"
                 (verify path4 1) result4)
-            , (StringCase "test 5, transient, two branches, enablement of non-empty"
+            , (stringCase "test 5, transient, two branches, enablement of non-empty"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:non:empty/EN" 1)
                 result5)
-            , (StringCase "test 6, transient, two branches, enablement of empty"
+            , (stringCase "test 6, transient, two branches, enablement of empty"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:empty/EN" 1)
                 result6)
-            , (StringCase "test 7, transient, two branches, negation of empty"
+            , (stringCase "test 7, transient, two branches, negation of empty"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:empty/NEG" 1)
                 result7)
-            , (StringCase "test 8, transient, two branches, negation of non-empty"
+            , (stringCase "test 8, transient, two branches, negation of non-empty"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/m0:pop:left:non:empty/NEG" 1)
                 result8)
-            , (StringCase "test 9, transient, two branches, follow and disjunction"
+            , (stringCase "test 9, transient, two branches, follow and disjunction"
                 (proof_obligation path4 "m1/LIVE/m1:prog3/ensure/TR/leadsto" 1)
                 result9)
-            , (StringCase "test 10, duplicate refinement of liveness properties"
+            , (stringCase "test 10, duplicate refinement of liveness properties"
                 (find_errors path10)
                 result10)
-            , StringCase "test 11, missing witness"
+            , stringCase "test 11, missing witness"
                 (find_errors path11)
                 result11
             , poCase "test 12, carrier sets without using sets"
                 case12 result12
             , poCase "test 13, event splitting"
                 case13 result13
-            , Case "test 14, event splitting, event sets"
+            , aCase "test 14, event splitting, event sets"
                 case14 result14                
-            , Case "test 15, event splitting, expression sets"
+            , aCase "test 15, event splitting, expression sets"
                 case15 result15
-            , Case "test 16, event splitting, index decl"
+            , aCase "test 16, event splitting, index decl"
                 case16 result16
-            , StringCase "test 17, empty parameter list"
+            , stringCase "test 17, empty parameter list"
                 case17 result17
-            , StringCase "test 18, empty list in VarScope"
+            , stringCase "test 18, empty list in VarScope"
                 case18 result18
-            , StringCase "test 19, splitting POs"
+            , stringCase "test 19, splitting POs"
                 case19 result19
             , poCase "test 20, Lamport proofs"
                 case20 result20
-            , Case "test 21, new index witness"
+            , aCase "test 21, new index witness"
                 case21 result21
-            , Case "test 22, new index proof obligation part a"
+            , aCase "test 22, new index proof obligation part a"
                 case22 result22
-            , Case "test 23, new index proof obligation part b"
+            , aCase "test 23, new index proof obligation part b"
                 case23 result23
             , poCase "test 24, scoping in index witness feasibility"
                 case24 result24
@@ -93,7 +93,7 @@ test = test_cases
                 case26 result26
             -- , POCase "test 27, problem: failure in WD-checking"
             --     case27 result27
-            , StringCase "test 28, large WD-condition"
+            , stringCase "test 28, large WD-condition"
                 case28 result28
             ]            
 

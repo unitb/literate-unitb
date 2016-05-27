@@ -23,7 +23,7 @@ test_case = test_cases
     [ poCase "test0: verify m0" case0 result0 
     , poCase "test1: verify m1" case1 result1 
     , poCase "test2: verify m2" case2 result2 
-    , Case "test3: spontaneous events" case3 result3 
+    , aCase "test3: spontaneous events" case3 result3 
     ]
 
 path0 :: FilePath

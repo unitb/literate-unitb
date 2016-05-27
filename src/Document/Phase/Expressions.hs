@@ -42,7 +42,7 @@ import qualified Control.Monad.Writer as W
 
 import Control.Precondition
 
-import           Data.Either hiding (isLeft,isRight)
+import           Data.Either 
 import           Data.Existential
 import           Data.Functor.Compose
 import           Data.List as L hiding ( union, insert, inits )

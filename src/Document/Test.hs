@@ -49,12 +49,12 @@ test_case = test
 test :: TestCase
 test = test_cases 
         "Unit-B Document" 
-        [ StringCase "basic syntax and scopes" case1 result1
+        [ stringCase "basic syntax and scopes" case1 result1
         , LFD.test_case 
         -- , CC.test_case
         -- , Ind.test_case
         , SMch.test_case
-        , StringCase "Contextual predicate visibility rules" case2 result2 
+        , stringCase "Contextual predicate visibility rules" case2 result2 
         , Puz.test_case
         , UE.test_case
         , PhTest.test_case
@@ -127,7 +127,7 @@ check_axioms = QuickCheckProps "conformance of instances to type class axioms"
     $(quickCheckClassesWith [''Document.Scope.Scope])
 
 all_properties :: TestCase
-all_properties = Case "the parser is exception free" 
+all_properties = aCase "the parser is exception free" 
     (evaluate (all_machines tree) >> return ()) ()
 
 tree0' :: T LatexDoc

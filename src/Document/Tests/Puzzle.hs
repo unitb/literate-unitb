@@ -27,33 +27,33 @@ test_case = test_cases
         "The king and his advisors puzzle"
         [ poCase "puzzle, m0" case0 result0
         , poCase "puzzle, m1" case1 result1
-        , Case "puzzle, proof obligation" case2 result2
-        , Case "puzzle, event visit" case3 result3
-        , Case "puzzle, visit enablement, PO" case4 result4
-        , Case "puzzle, visit negation, PO" case5 result5
-        -- , Case "puzzle, remove default with weakento" case6 result6
+        , aCase "puzzle, proof obligation" case2 result2
+        , aCase "puzzle, event visit" case3 result3
+        , aCase "puzzle, visit enablement, PO" case4 result4
+        , aCase "puzzle, visit negation, PO" case5 result5
+        -- , aCase "puzzle, remove default with weakento" case6 result6
         , poCase "puzzle, m2" case7 result7
         , poCase "puzzle, m3" case8 result8
-        , Case "puzzle m3, wd of sums" case9 result9
-        , Case "puzzle m3, proofs with sums" case10 result10
+        , aCase "puzzle m3, wd of sums" case9 result9
+        , aCase "puzzle m3, proofs with sums" case10 result10
         , poCase "puzzle, m4" case11 result11
-        , Case "puzzle, deleted variables, m3" case12 result12
-        , Case "puzzle, deleted variables, m4" case13 result13
-        , StringCase "puzzle, error: invariant referring to deleted variable" case14 result14
-        , StringCase "puzzle, error: assignment to deleted variable" case15 result15
-        , Case "test 16, puzzle, removing actions, m3" case16 result16
-        , Case "test 17, puzzle, removed actions, m4" case17 result17
-        , StringCase "test 18, simulation proof obligation" case18 result18
-        , StringCase "test 19, simulation proof obligation (init)" case19 result19
-        , StringCase "test 20, crashing proof obligation of invariant with witness" case20 result20
-        , StringCase "test 21, deleting non-existant action" case21 result21
-        , StringCase "test 22, error providing a witness for non-deleted variable" case22 result22
-        , StringCase "test 23, error deleting non-existant variable" case23 result23
-            , Case "test 24, inherited vs local invariants" case24 result24
-        , StringCase "test 25, error: schedules and guards refer to deleted variables" case25 result25
-        , Case "test 27, old guards / new guards" case27 result27
-        , StringCase "test 28, illegal type application" case28 result28
-        , StringCase "test 29, theorem well-definedness" case29 result29
+        , aCase "puzzle, deleted variables, m3" case12 result12
+        , aCase "puzzle, deleted variables, m4" case13 result13
+        , stringCase "puzzle, error: invariant referring to deleted variable" case14 result14
+        , stringCase "puzzle, error: assignment to deleted variable" case15 result15
+        , aCase "test 16, puzzle, removing actions, m3" case16 result16
+        , aCase "test 17, puzzle, removed actions, m4" case17 result17
+        , stringCase "test 18, simulation proof obligation" case18 result18
+        , stringCase "test 19, simulation proof obligation (init)" case19 result19
+        , stringCase "test 20, crashing proof obligation of invariant with witness" case20 result20
+        , stringCase "test 21, deleting non-existant action" case21 result21
+        , stringCase "test 22, error providing a witness for non-deleted variable" case22 result22
+        , stringCase "test 23, error deleting non-existant variable" case23 result23
+            , aCase "test 24, inherited vs local invariants" case24 result24
+        , stringCase "test 25, error: schedules and guards refer to deleted variables" case25 result25
+        , aCase "test 27, old guards / new guards" case27 result27
+        , stringCase "test 28, illegal type application" case28 result28
+        , stringCase "test 29, theorem well-definedness" case29 result29
         ]
 
 path0 :: FilePath

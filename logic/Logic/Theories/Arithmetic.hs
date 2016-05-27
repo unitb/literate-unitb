@@ -51,6 +51,14 @@ zcard = typ_fun1 card_fun
 gT :: Type
 gT = VARIABLE $ fromString'' "t"
 
+zint_set :: ExprP
+zint_set = Right $ zlift (set_type int) ztrue
+
+znat_set :: ExprP
+znat_set = zcomprehension [n_decl] (0 .<= n) n
+    where
+        (n,n_decl) = var "n" int
+
 arithmetic :: Theory
 arithmetic = (empty_theory' "arithmetic") { 
         _extends = symbol_table [set_theory]

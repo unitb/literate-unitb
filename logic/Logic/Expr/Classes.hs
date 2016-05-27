@@ -169,12 +169,12 @@ symbol_table = symbol_table' id
 decorated_table :: Named a => [a] -> Table InternalName a
 decorated_table xs = M.fromList $ L.map (\x -> (decorated_name x, x)) xs
 
-renameAll' :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
+renameAll' :: (Ord n0,HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
            => (a -> SetNameT n1 a)
            -> Table n0 a -> Table n1 (SetNameT n1 a)
 renameAll' f = symbol_table . (traverse %~ f) . M.elems
 
-renameAll :: (HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
+renameAll :: (Ord n0,HasNames a n0,IsName n1,HasName (SetNameT n1 a) n1)
           => (n0 -> n1)
           -> Table n0 a -> Table n1 (SetNameT n1 a)
 renameAll f = renameAll' (namesOf %~ f)

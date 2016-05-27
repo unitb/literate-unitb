@@ -71,8 +71,8 @@ instance Foldable1 AbsFun where
 instance Traversable1 AbsFun where
     traverse1 = funName
 
-instance (IsName n,TypeSystem t) => PrettyPrintable (AbsFun n t) where
-    pretty (Fun xs n _ ts t _) = render n ++ pretty xs ++ ": " 
+instance (PrettyPrintable n,PrettyPrintable t,Tree t) => PrettyPrintable (AbsFun n t) where
+    pretty (Fun xs n _ ts t _) = pretty n ++ pretty xs ++ ": " 
             ++ args ++ pretty (as_tree t)
         where
             args
@@ -86,7 +86,7 @@ instance (TypeSystem t) => Typed (AbsFun n t) where
 instance HasName (AbsFun n t) n where
     name = to $ \(Fun _ x _ _ _ _) -> x
 
-instance IsName n => HasNames (AbsFun n t) n where
+instance HasNames (AbsFun n t) n where
     type SetNameT n' (AbsFun n t) = AbsFun n' t
     namesOf = traverse1
 

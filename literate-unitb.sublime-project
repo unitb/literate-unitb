@@ -4,7 +4,10 @@
 		{
 			"cmd":
 			[
+				"cabal",
+				"exec",
 				"runghc",
+				"--",
 				"-isrc:script:utils:latex:logic:libs/invariants:libs/generic-instances:libs/string-lenses:libs/axiomatic-classes:libs/printf-th",
 				"$project_path/script/main/display_errors.hs",
 				"$file",

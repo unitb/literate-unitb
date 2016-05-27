@@ -44,12 +44,12 @@ test = test_cases
         "Unit-B" 
         [  poCase "0: 'x eventually increases' verifies" (check_mch example0) (result_example0)
         ,  poCase "1: train, model 0, verification" (check_mch train_m0) (result_train_m0)
-        ,  Case "2: train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
-        ,  Case "3: train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
-        ,  Case "4: Feasibility and partitioning" case3 result3
-        ,  Case "5: Debugging the partitioning" case4 result4
+        ,  stringCase "2: train, m0 transient / enablement PO" (get_tr_en_po train_m0) result_train_m0_tr_en_po
+        ,  stringCase "3: train, m0 transient / falsification PO" (get_tr_neg_po train_m0) result_train_m0_tr_neg_po
+        ,  aCase "4: Feasibility and partitioning" case3 result3
+        ,  aCase "5: Debugging the partitioning" case4 result4
         ,  Gen.test_case
-        ,  Case "6: unless with except and split event" case5 result5
+        ,  aCase "6: unless with except and split event" case5 result5
         ,  QuickCheckProps "7: QuickCheck names" Names.run_props
         ]
 
@@ -193,6 +193,7 @@ result_train_m0_tr_en_po = unlines
     , " finite[_t]: (set t) -> Bool"
     , " ident[_a]: (Array a a)"
     , " mk-set[_t]: t -> (set t)"
+    , " pow[_a]: (set a) -> (set (set a))"
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
     , " qunion[_a,_b]: (set a) x (Array a (set b)) -> (set b)"
     , " set[_a,_b]: (set a) x (Array a b) -> (set b)"
@@ -307,6 +308,11 @@ result_train_m0_tr_en_po = unlines
     , "                             (= (select terms x) (select terms0 x))))"
     , "                 (= (qunion@@_t0@@_t r1 terms)"
     , "                    (qunion@@_t0@@_t r1 terms0)))))"
+    , " (forall ( (s1 (set _t))"
+    , "           (s2 (set _t)) )"
+    , "         (=> true"
+    , "             (= (elem@Open@@set@@_t@Close s2 (pow@@_t s1))"
+    , "                (subset s2 s1))))"
     , " (= t t_{param})"
     , "|----"
     , " (=> (select st t) (select st t_{param}))"
@@ -320,6 +326,7 @@ result_train_m0_tr_neg_po = unlines
     , " finite[_t]: (set t) -> Bool"
     , " ident[_a]: (Array a a)"
     , " mk-set[_t]: t -> (set t)"
+    , " pow[_a]: (set a) -> (set (set a))"
     , " qsum[_a]: (set a) x (Array a Int) -> Int"
     , " qunion[_a,_b]: (set a) x (Array a (set b)) -> (set b)"
     , " set[_a,_b]: (set a) x (Array a b) -> (set b)"
@@ -436,6 +443,11 @@ result_train_m0_tr_neg_po = unlines
     , "                             (= (select terms x) (select terms0 x))))"
     , "                 (= (qunion@@_t0@@_t r1 terms)"
     , "                    (qunion@@_t0@@_t r1 terms0)))))"
+    , " (forall ( (s1 (set _t))"
+    , "           (s2 (set _t)) )"
+    , "         (=> true"
+    , "             (= (elem@Open@@set@@_t@Close s2 (pow@@_t s1))"
+    , "                (subset s2 s1))))"
     , " (= t t_{param})"
     , "|----"
     , " (=> (select st t) (not (select st' t)))"

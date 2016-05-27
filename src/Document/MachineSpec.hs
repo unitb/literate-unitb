@@ -53,8 +53,9 @@ f_prop_type_error :: Tex -> Bool
 f_prop_type_error (Tex tex) = either (all is_type_error) (const False) (all_machines tex) 
 
 prop_expr_parser :: ExprNotation -> Property
-prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression ctx n (withLI $ showExpr n $ asExpr e)
+prop_expr_parser (ExprNotation ctx n e) = e' === parse_expression parser (withLI $ showExpr n $ asExpr e)
     where
+        parser = setting_from_context n ctx
         e' = Right e
         li = LI "" 0 0
         withLI xs = StringLi (map (\x -> (x,li)) xs) li

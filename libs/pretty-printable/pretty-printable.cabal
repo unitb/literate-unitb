@@ -54,10 +54,10 @@ library
   -- other-modules:       
   
   -- LANGUAGE extensions used by modules in this package.
-  default-extensions:    TypeOperators, ScopedTypeVariables, TemplateHaskell, DefaultSignatures, TypeSynonymInstances, FlexibleInstances, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving
+  default-extensions:    TypeOperators, ScopedTypeVariables, TemplateHaskell, DefaultSignatures, TypeSynonymInstances, FlexibleInstances, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveGeneric
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, mtl >=2.2 && <2.3, either >=4.4 && <4.5, transformers >=0.4 && <0.5, hashable >=1.2 && <1.3, unordered-containers >=0.2 && <0.3, semigroups >=0.18 && <0.19, containers >=0.5 && <0.6, template-haskell >=2.10 && <2.11, generic-instances, string-lenses, existential
+  build-depends:       base >=4.8 && <4.9, lens >=4.13 && <4.14, mtl >=2.2 && <2.3, either >=4.4 && <4.5, transformers >=0.4 && <0.5, hashable >=1.2 && <1.3, unordered-containers >=0.2 && <0.3, semigroups >=0.18 && <0.19, containers >=0.5 && <0.6, template-haskell >=2.10 && <2.11, generic-instances, string-lenses, existential, deepseq
   
   -- Directories containing source files.
   hs-source-dirs:      .

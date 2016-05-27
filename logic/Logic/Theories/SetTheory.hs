@@ -99,6 +99,7 @@ set_theory = Theory { .. }
             symbol_table
                 [ comprehension_fun
                 , qunion_fun
+                , zpow_set_fun
                 , mk_fun [gT] (z3Name "mk-set") [gT] $ set_type gT 
                 , mk_fun [gT] (z3Name "finite") [set_type gT] $ bool
                 ]
@@ -130,6 +131,7 @@ set_theory = Theory { .. }
                     .=. zunion_qu r1 terms `zunion` zunion_qu r2 terms 
             $axiom $    mzforall [x'_decl] (x' `zelem` r1) ( zselect terms x' .=. zselect terms' x' )
                     .=> zunion_qu r1 terms .=. zunion_qu r1 terms'
+            $axiom $    s2 `zelem` zpow_set s1 .=. s2 `zsubset` s1
                 -- elem over union
             -- $axiom $ mzforall [x_decl,s1_decl,s2_decl] mztrue (
             --                     (x `zelem` (s1 `zunion` s2)) 
@@ -192,6 +194,7 @@ zcompl        :: ExprP -> ExprP
 
 zunion        :: ExprP -> ExprP -> ExprP
 zmk_set       :: ExprP -> ExprP
+zpow_set      :: ExprP -> ExprP
 zset_enum     :: [ExprP] -> ExprP
 
 comprehension :: HOQuantifier
@@ -203,16 +206,19 @@ comprehension_fun = mk_fun' [gA,gB] "set" [set_type gA, array gA gB] $ set_type 
 zcomprehension :: [Var] -> ExprP -> ExprP -> ExprP
 zcomprehension = zquantifier comprehension
 
-zrecord_set :: MapSyntax Name ExprP ()
+zrecord_set' :: MapSyntax Name ExprP ()
+             -> ExprP
+zrecord_set' = zrecord_set . runMap'
+
+zrecord_set :: Map Name ExprP
             -> ExprP
 zrecord_set m = do
-        let m' = runMap' m :: Table Name ExprP
-            msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
+        let msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
                       (pretty e) (pretty $ type_of e)
             getElements :: ExprP -> Either [String] Type
             getElements e = e >>= \e -> maybe (Left [msg e]) Right $ type_of e^?_ElementType
-        (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m'
-        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m'
+        (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m
+        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m
         zcomprehension [r_decl] range r
 
 qunion :: HOQuantifier
@@ -238,7 +244,7 @@ zintersect   = typ_fun2 zintersect_fun
 zunion       = typ_fun2 zunion_fun
 zcompl       = typ_fun1 zcompl_fun
 
-zunion_fun, zintersect_fun, zcompl_fun, zempty_set_fun, zset_all_fun :: Fun
+zunion_fun, zintersect_fun, zcompl_fun, zempty_set_fun, zset_all_fun, zpow_set_fun :: Fun
 zsetdiff_fun :: IsName n => AbsFun n Type
 zunion_fun     = mk_fun' [] "union" [set_type gA,set_type gA] $ set_type gA
 zsetdiff_fun   = mk_fun' [gA] "set-diff" [set_type gA,set_type gA] $ set_type gA
@@ -246,8 +252,10 @@ zintersect_fun = mk_fun' [] "intersect" [set_type gA,set_type gA] $ set_type gA
 zcompl_fun     = mk_fun' [gA] "compl" [set_type gA] $ set_type gA
 zempty_set_fun = mk_fun' [gA] "empty-set" [] $ set_type gA
 zset_all_fun   = mk_fun' [gA] "all" [] $ set_type gA
+zpow_set_fun   = mk_fun' [gA] "pow" [set_type gA] $ set_type (set_type gA)
 
 zmk_set      = typ_fun1 (mk_fun' [gA] "mk-set" [gA] $ set_type gA)
+zpow_set     = typ_fun1 zpow_set_fun
 zset_enum (x:xs) = foldl zunion y ys 
     where
         y  = zmk_set x
@@ -312,6 +320,7 @@ set_notation = create $ do
                    , (fromString'' "\\qunion",qunion) ]
     commands    .= [ make Command "\\emptyset" "empty-set" 0 zempty_set_fun
                    , make Command "\\all" "all" 0 zset_all_fun
+                   , make Command "\\pow" "pow" 1 zpow_set_fun
                    , make Command "\\finite" "finite" 1 finite_fun ]
     chaining    .= [ ((subset,subset),subset) 
                    , ((subset,st_subset),st_subset)
