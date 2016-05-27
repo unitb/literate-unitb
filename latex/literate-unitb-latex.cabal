@@ -70,7 +70,7 @@ library
          -j8
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >= 4.8 && < 5, lens, mtl, semigroups, safe, deepseq, transformers >= 0.3, either, containers, directory >= 1.2.3.0 && < 1.2.6.0, filepath, parsec, QuickCheck, literate-unitb-utils, invariants, printf-th, axiomatic-classes, string-lenses, show-with, unitb-testing, generic-instances
+  build-depends:       base >= 4.8 && < 5, lens, mtl, semigroups, safe, deepseq, transformers >= 0.3, either, containers, directory >= 1.2.3.0, filepath, parsec, QuickCheck, literate-unitb-utils, invariants, printf-th, axiomatic-classes, string-lenses, show-with, unitb-testing, generic-instances
   
   -- Directories containing source files.
   hs-source-dirs:      .
