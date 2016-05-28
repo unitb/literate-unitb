@@ -32,6 +32,7 @@ packages:
 - script/
 - latex/
 - logic/
+- libs/async-priority
 - libs/axiomatic-classes
 - libs/bipartite-graph
 - libs/classy-lens-hierarchy

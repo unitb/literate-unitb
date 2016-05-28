@@ -55,7 +55,7 @@ args opt file = do
     _2 .= flag ++
         [ "-j8"
         , "-odir" ++ bin
-        , "-i" ++ intercalate ":" [inf,"suite","src","utils","latex","logic"
+        , "-i" ++ intercalate ":" [inf,"suite","src","utils","latex","logic","script"
                                   ,"libs/axiomatic-classes","libs/data-compressed"
                                   ,"libs/data-map-class","libs/data-packaged"
                                   ,"libs/existential","libs/generic-instances"
@@ -67,6 +67,7 @@ args opt file = do
                                   ,"libs/bipartite-graph","libs/classy-lens-hierarchy"
                                   ,"libs/co-applicative", "libs/unitb-testing"
                                   ,"libs/lens-extra", "libs/pretty-printable"
+                                  ,"libs/async-priority"
                                   ]
         , "-hidir" ++ inf
         , "-W", "-O0"

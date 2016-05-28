@@ -18,7 +18,8 @@ import Utilities.EditDistance
 import qualified Utilities.GraphSpec as GSpec
 
     -- Libraries
-import Control.Lens
+import           Control.Lens
+import qualified Control.Concurrent.Async.Test as Async
 
 import           Data.Array 
 import           Data.Function
@@ -276,4 +277,5 @@ test = test_cases "Graphs and operator grammars" $
     , QuickCheckProps "case 12 - New graphs, quickcheck" Graph.run_tests
     , QuickCheckProps "case 13 - Sane line breaks, quickcheck" Lines.run_tests
     , QuickCheckProps "test 14 - quickcheck brackets" runSpec
-    , aCase "test 15: Generic tuple parsing" Tup.case0 Tup.result0 ]
+    , aCase "test 15: Generic tuple parsing" Tup.case0 Tup.result0 
+    , Async.test_case ]

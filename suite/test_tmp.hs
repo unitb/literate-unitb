@@ -18,6 +18,7 @@ import Document.Tests.TerminationDetection  as Term
 import Document.Tests.TrainStation  as TS
 import Document.Tests.TrainStationRefinement  as TSRef
 import Document.Tests.TrainStationSets  as TSS
+import Control.Concurrent.Async.Test as Priority
 import Logic.Expr
 import Logic.Test as T
 import Z3.Test as Z3
@@ -72,6 +73,7 @@ main = timeIt $ void $ do
     system "rm log*.z3"
     writeFile "syntax.txt" $ unlines syntaxSummary
     putStrLn $ nameType
+
     return $ edit =<< raw_proof_obligation Deq.path1 "m0/INIT/FIS/q/p" 0
     return $ printQuickCheckResult MSpec.run_spec
     return $ quickCheck MSpec.prop_expr_parser
@@ -84,6 +86,8 @@ main = timeIt $ void $ do
     return $ run_test_cases Ph.test_case
     return $ run_test_cases Ut.test_case
     return $ run_test_cases Z3.test_case
+    run_test_cases $ test_cases "d" [Priority.test_case]
+    print =<< Priority.case0
     ----print =<< Ph.case7
     return $ run_test_cases Code.test_case
     return $ run_test_cases Sum.test_case

@@ -33,7 +33,7 @@ compile_script = do
         -- cabal_build "bench-bucket-packaged"
            -- >>= cabal_run
         -- compile_all
-        compile_app
+        -- compile_app
         -- profile_app
         return ()
 

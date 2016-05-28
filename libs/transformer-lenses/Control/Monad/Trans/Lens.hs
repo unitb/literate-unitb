@@ -12,7 +12,7 @@ insideRWST :: Applicative m
            => Setter (RWST r w s m a) (RWST r w s m b) (m a) (m b)
 insideRWST = _Wrapped . mapped . mapped . mapping' _1
 
-insideReaderT :: Setter (ReaderT r m a) (ReaderT r m b) (m a) (m b)
+insideReaderT :: Setter (ReaderT r m a) (ReaderT r n b) (m a) (n b)
 insideReaderT = _Wrapped . mapped
 
 mapping' :: Applicative f

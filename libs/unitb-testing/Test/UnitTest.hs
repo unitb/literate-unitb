@@ -19,13 +19,14 @@ where
     -- Libraries
 import Control.Applicative
 import Control.Concurrent
+import Control.Concurrent.Async hiding (wait)
 import Control.Concurrent.SSem
-import Control.Concurrent.STM
 import Control.DeepSeq
-import Control.Exception
+import Control.Exception (evaluate)
 import Control.Exception.Lens
 import Control.Lens hiding ((<.>))
 import Control.Monad
+import Control.Monad.Catch
 import Control.Monad.Loops
 import Control.Monad.Reader
 import Control.Monad.RWS
@@ -34,7 +35,6 @@ import Control.Monad.Trans.Maybe
 import Control.Precondition
 
 import           Data.Either
-import           Data.IORef
 import           Data.List
 import           Data.List.NonEmpty as NE (sort)
 import           Data.String.Indentation
@@ -43,6 +43,7 @@ import           Data.Tuple
 import           Data.Typeable
 
 import GHC.Stack
+import GHC.Stack.Utils
 import GHC.SrcLoc
 
 import Language.Haskell.TH
@@ -144,14 +145,13 @@ instance IsTestCase TestCase where
     nameOf f (StringCase n x0 x1) = (\n' -> stringCase n' x0 x1) <$> f n
     nameOf f (LineSetCase n x0 x1) = (\n' -> LineSetCase n' x0 x1) <$> f n
 
-newtype M a = M { runM :: RWST Int [Either (STM [String]) String] Int (ReaderT (IORef [ThreadId]) IO) a }
+newtype M a = M { runM :: RWST Int [Either (Async [String]) String] Int IO a }
     deriving ( Monad,Functor,Applicative,MonadIO
              , MonadReader Int
              , MonadState Int
-             , MonadWriter [Either (STM [String]) String])
+             , MonadWriter [Either (Async [String]) String])
 
 instance Indentation Int M where
-    -- func = 
     margin_string = do
         n <- margin
         return $ concat $ replicate n "|  "
@@ -215,14 +215,8 @@ data UnitTest = forall a b. (Eq a,NFData b) => UT
     , _displayA :: b -> String
     , _displayE :: a -> String
     , _criterion :: b -> a
-    -- , _source :: FilePath
     }
     | Node { _callStack :: CallStack, name :: String, _children :: [UnitTest] }
-
--- strip_line_info :: String -> String
--- strip_line_info xs = unlines $ map f $ lines xs
---     where
---         f xs = takeWhile (/= '(') xs
 
 run_quickCheck_suite :: Pre => TestCase -> IO Bool
 run_quickCheck_suite t = run_quickCheck_suite_with t $ return ()
@@ -244,16 +238,18 @@ run_test_cases_with xs opts = do
         let args = execState opts stdArgs
         swapMVar failure_number 0
         c        <- runReaderT (makeCase Nothing xs) args
-        ref      <- newIORef []
-        (b,_,w)  <- runReaderT (runRWST 
+        (b,_,w)  <- runRWST 
                         (runM $ test_suite_string ?loc c) 0 
-                        (assertFalse' "??")) ref
+                        (assertFalse' "??")
         forM_ w $ \ln -> do
-            case ln of
+            tag $ case ln of
                 Right xs -> putStrLn xs
-                Left xs -> atomically xs >>= mapM_ putStrLn
-        x <- fmap (uncurry (==)) <$> atomically b
-        either throw return x
+                Left xs -> waitCatch' xs >>= mapM_ putStrLn
+        x <- tag $ waitCatch b & mapped.mapped %~ uncurry (==)
+        return $ fromRight False x
+
+waitCatch' :: Async [String] -> IO [String]
+waitCatch' = try . waitCatch & mapped.mapped %~ either (pure . show) id . join
 
 disp :: (Typeable a, Show a) => a -> String
 disp x = fromMaybe (reindent $ show x) (cast x)
@@ -263,17 +259,28 @@ putLn xs = do
         ys <- mk_lines xs
         tell $ map Right ys
 
+data TaggedException = Tagged CallStack SomeException
+    deriving (Typeable)
+
+instance Show TaggedException where
+    show (Tagged loc e) = fromMaybe "?" (stackTrace [] loc) ++ "\n" ++ show e
+
+tag :: (Pre,MonadCatch m) => m a -> m a
+tag = handling id $ throwM . Tagged ?loc
+
+instance Exception TaggedException
+
 test_suite_string :: CallStack
                   -> UnitTest 
-                  -> M (STM (Either SomeException (Int,Int)))
+                  -> M (Async (Int,Int))
 test_suite_string cs' ut = do
         case ut of
           (UT title test expected mli dispA dispE cri) -> forkTest $ do
             let cs = fromMaybe cs' mli
             putLn ("+- " ++ title)
-            r <- liftIO $ catch 
+            r <- liftIO $ catching _BlockedIndefinitelyOnSTM
                 (Right <$> (liftIO . evaluate . force =<< test)) 
-                (\e -> return $ Left $ show (e :: SomeException))
+                (\e -> return $ Left $ show e)
             case r of
                 Right (r,printLog) -> 
                     if (cri r == expected)
@@ -347,40 +354,30 @@ newtype Handled = Handled SomeException
 _Handled :: Prism' SomeException Handled
 _Handled = prism' toException fromException
 
-forkTest :: M (Int,Int) -> M (STM (Either SomeException (Int,Int)))
+forkTest :: M (Int,Int) -> M (Async (Int,Int))
 forkTest cmd = do
-    result <- liftIO $ newEmptyTMVarIO
-    output <- liftIO $ newEmptyTMVarIO
     r <- ask
     liftIO $ wait capabilities
-    ref <- M $ lift ask
-    t <- liftIO $ do
-        ref <- newIORef []
-        let handler e = do
-                putStrLn "failed"
-                print e
-                atomically $ do 
-                    putTMVar result $ Left e
-                    putTMVar output $ [show e]
-        forkIO $ do
-            finally (handling id handler $ do
-                (x,_,w) <- runReaderT (runRWST (runM cmd) r (-1)) ref
-                atomically $ putTMVar result (Right x)
+    task <- liftIO $ do
+        let protect cmd = finally 
+                    (cmd `onException` putStrLn "failed")
+                    (signal capabilities)
+        async $ do
+            protect $ do
+                (x,_,w) <- runRWST (runM cmd) r (-1)
                 xs <- forM w $ \ln -> do
                     either 
-                        atomically 
+                        (tag . waitCatch')
                         (return . (:[])) 
                         ln
-                atomically $ putTMVar output $ concat xs
-                )
-                (signal capabilities)
-    liftIO $ modifyIORef ref (t:)
-    tell [Left $ readTMVar output]
-    return $ readTMVar result
+                return (x,concat xs)
+    tell [Left $ snd <$> task]
+    return $ fst <$> task
 
-mergeAll :: [STM a] -> M [a]
+mergeAll :: [Async a] 
+         -> M [Either SomeException a]
 mergeAll xs = liftIO $ do
-    forM xs atomically
+    tag $ forM xs waitCatch
 
 tempFile_num :: MVar Int
 tempFile_num = unsafePerformIO $ newMVar 0
@@ -389,13 +386,7 @@ tempFile :: FilePath -> IO FilePath
 tempFile path = do
     n <- takeMVar tempFile_num
     putMVar tempFile_num (n+1)
-    -- path <- canonicalizePath path
     let path' = dropExtension path ++ "-" ++ show n <.> takeExtension path
-    --     finalize = do
-    --         b <- doesFileExist path'
-    --         when b $
-    --             removeFile path'
-    -- mkWeakPtr path' (Just finalize)
     return path'
 
 data TestName = TestName String CallStack
