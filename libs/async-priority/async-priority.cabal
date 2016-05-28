@@ -51,6 +51,7 @@ library
   exposed-modules:     
       Control.Concurrent.Async.Priority
       Control.Concurrent.Async.Test  
+      Pipes.Lift.Async
 
   -- Modules included in this library but not exported.
   other-modules:       
@@ -60,7 +61,7 @@ library
   default-extensions:    TypeOperators, ScopedTypeVariables, BangPatterns, StandaloneDeriving, RankNTypes, TemplateHaskell, DeriveGeneric, TupleSections, GeneralizedNewtypeDeriving, FlexibleContexts, TypeSynonymInstances, FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, stm, transformer-lenses, monad-loops, mtl, lens, async, exceptions, unitb-testing, invariants, deepseq
+  build-depends:       base >=4.8 && <4.9, stm, transformer-lenses, monad-loops, mtl, lens, async, exceptions, unitb-testing, invariants, deepseq, pipes, pipes-safe
 
   ghc-options: -W -fwarn-missing-signatures 
          -fwarn-incomplete-uni-patterns

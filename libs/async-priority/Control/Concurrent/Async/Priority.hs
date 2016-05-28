@@ -4,9 +4,9 @@ module Control.Concurrent.Async.Priority
     , Async
     , async, cancel, waitSTM, wait
     , withScheduler
-    , try', trying'
-    , unfail'
-    , atomically', onException' )
+    , insideSchedT
+    , unfail' 
+    , atomically' )
 where
 
 import Control.Applicative
@@ -14,7 +14,6 @@ import qualified Control.Concurrent.Async as A
 import Control.Concurrent.STM hiding (TQueue)
 import Control.Concurrent.Async.Queue 
 import Control.DeepSeq
-import Control.Exception.Lens
 import Control.Lens
 
 import Control.Monad.Catch
@@ -24,8 +23,6 @@ import Control.Monad.Trans.Lens
 import Control.Precondition
 
 import GHC.Generics
-
-import Data.Monoid
 
 newtype SchedT s m a = SchedT { runSchedT :: ReaderT Scheduler m a }
     deriving (Functor,Applicative,Monad,MonadTrans
@@ -92,29 +89,11 @@ waitSTM (Async _ v) = lift $ do
 wait :: (Pre,MonadIO m) => Async s a -> SchedT s m a
 wait = atomically' . waitSTM
 
-onException' :: Sched s a -> Sched s b -> Sched s a
-onException' (SchedT (ReaderT m0)) (SchedT (ReaderT m1)) = SchedT $ ReaderT $ \r -> onException (m0 r) (m1 r)
-
-try' :: Exception e
-     => Sched s a -> Sched s (Either e a)
-try' = insideSchedT %~ try
-
 insideSchedT :: Setter (SchedT s m a) (SchedT s m' b) (m a) (m' b)
 insideSchedT = iso runSchedT SchedT . insideReaderT
 
-trying' :: MonadCatch m
-        => Getting (First e) SomeException e 
-        -> SchedT s m a 
-        -> SchedT s m (Either e a)
-trying' ln = insideSchedT %~ trying ln
-
 atomically' :: MonadIO m => SchedSTM s a -> SchedT s m a
 atomically' = insideSchedT %~ liftIO . atomically
-
--- withScheduler :: Int 
---               -> (forall s. Sched s a) 
---               -> IO a
--- withScheduler = withScheduler'
 
 unfail' :: (a -> SchedSTM s b) -> a -> SchedSTM s (Either a b)
 unfail' f x = f x & insideSchedT %~ fmap (maybe (Left x) Right) . unfail
