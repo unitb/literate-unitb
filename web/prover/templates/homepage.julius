@@ -2,6 +2,71 @@ var js_notice = document.getElementById(#{toJSON jsReqWarning});
 document.getElementById("notices").removeChild(js_notice);
 
 $(function() {
+  $('.del-decl').click(function () {
+    $(this).parent().parent().parent().slideUp(function () {
+      // slide up the declaration container
+
+      if ($(this).parent().children('.decl').length > 1) {
+        // there's more than one declaration container, so
+        // we can just delete this one.
+
+        decl = $(this).prev().find('.form-control');
+        // if there's a declaration before (above) this one
+        if (decl.length > 0) {
+          $(decl).focus(); // focus it
+        }
+        else {
+          // otherwise, focus the next one
+          $(this).next().find('.form-control').focus();
+        }
+
+        $(this).remove();
+      }
+      else {
+        // there's only one declaration container left;
+        // just clear it and focus the goal textarea
+        $("##{rawJS goalTextareaId}").focus();
+        $(this).find('.form-control').val('');
+      }
+    });
+  });
+
+  $('#add-decl').click(function () {
+    var btn = $(this);
+    var decls = btn.parent().children('.decl');
+
+    if (decls.length == 1 && !$(decls[0]).is(':visible')) {
+      $(decls[0]).fadeIn('slow', function() {      // fade it in
+        btn.attr('disabled', false);               // re-enable the '+' button after fading in
+        $(decls[0]).find('.form-control').focus();
+      });
+    }
+    else {
+      btn.attr('disabled', true);             // disable the '+' button while adding the new field
+      var num     = parseInt(
+                      $('.decl').last()
+                        .attr('id')
+                        .match(/\d+/)[0],
+                      10),                    // numeric id of the last declaration
+          newNum  = new Number(num + 1),      // numeric id of the new declaration input field
+          newElem = $('#div-decl' + num)      // get the declaration container
+            .clone(true, true)                // deep clone the last declaration
+            .attr('id', 'div-decl' + newNum)  // assign new id
+            .fadeIn('slow', function() {      // fade it in
+              btn.attr('disabled', false);    // re-enable the '+' button after fading in
+            });                  
+
+      newElem.find('.form-control')           // get the input field of the new declaration
+        .attr('id', 'decl' + newNum)          // assign new id to the input
+        .attr('name', 'decl' + newNum)        // assign new name
+        .val('');                             // clear the input text
+
+      // insert the new element after the last declaration input field
+      $('#div-decl' + num).after(newElem);
+      $('#decl' + newNum).focus();
+    }
+  });
+
   $("##{rawJS goalFormId}").submit(function(event) {
     event.preventDefault();
 

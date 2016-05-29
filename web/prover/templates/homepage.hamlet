@@ -1,26 +1,50 @@
 <h1.jumbotron>
   Literate Unit-B
-  <small> Web (demo)
+  <small> Web Prover
 
-<.page-header><h2>Web
-  <small> demo
+<.page-header><h2>Prover
 
 <section.list-group #notices>
   <span .list-group-item .list-group-item-warning ##{jsReqWarning}>
-    You need javascript enabled to be able to use the web demo.
+    You need javascript enabled to be able to use the web prover.
 
-<section.page-header>
-  <h2>JSON
+<section.page-header.row>
+  <.col-lg-4>
+    <form ##{goalFormId}>
 
-  <p>
-    Please enter some text in the textarea below, submit and see
-    what happens!
+      <.form-group>
+        <label for="theories">
+          Theories
+        <select #theories .form-control .selectpicker multiple data-live-search="true" autofocus>
+          <option>Arithmetic
+          <option>Sets
+          <option>Functions
+          <option disabled>Reals
 
-    <.fluid-container>
-      <form ##{goalFormId}>
-        <.form-group>
-          <textarea ##{goalTextareaId} placeholder="Goal..." required></textarea>
-        <button .btn .btn-primary type="submit">
-          Submit <span class="glyphicon glyphicon-send">
+      <.form-group>
+        <label>
+          Declarations
+        <button #add-decl .btn .btn-sm .btn-default type="button">
+          <small>
+            <span .glyphicon .glyphicon-plus>
+        <div #div-decl1 .decl>
+          <.input-group>
+            <input #decl1 .form-control name="decl1" type="text" placeholder="Declaration...">
+            <span .input-group-btn>
+              <button .del-decl .btn .btn-default type="button">
+                <small>
+                  <span .glyphicon .glyphicon-minus>
 
-      <ul ##{goalListId}>
+      <.form-group>
+        <label for="#{goalTextareaId}">
+          Goal
+        <textarea ##{goalTextareaId} .form-control placeholder="Goal..." rows="4" required>
+
+      <.form-group>
+      <button .btn .btn-primary type="submit">
+        Prove
+        <small .btn-icon>
+          <span .glyphicon .glyphicon-refresh>
+
+  <.col-lg-7 .col-lg-offset-1>
+    <ul ##{goalListId}>
