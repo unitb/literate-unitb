@@ -15,10 +15,10 @@
       <.form-group>
         <label for="theories">
           Theories
-        <select #theories .form-control .selectpicker multiple data-live-search="true" autofocus>
-          <option>Arithmetic
-          <option>Sets
-          <option>Functions
+        <select #theories name="theories" .form-control .selectpicker multiple data-live-search="true" autofocus>
+          <option value="arithmetic">Arithmetic
+          <option value="set_theory">Sets
+          <option value="function_theory">Functions
           <option disabled>Reals
 
       <.form-group>
@@ -38,7 +38,7 @@
       <.form-group>
         <label for="#{goalTextareaId}">
           Goal
-        <textarea ##{goalTextareaId} .form-control placeholder="Goal..." rows="4" required>
+        <textarea ##{goalTextareaId} name="goal" .form-control placeholder="Goal..." rows="4" required>
 
       <.form-group>
       <button .btn .btn-primary type="submit">

@@ -26,7 +26,9 @@ $(function() {
         // there's only one declaration container left;
         // just clear it and focus the goal textarea
         $("##{rawJS goalTextareaId}").focus();
-        $(this).find('.form-control').val('');
+        $(this).find('.form-control')
+          .val('')
+          .attr('disabled', true);
       }
     });
   });
@@ -36,9 +38,12 @@ $(function() {
     var decls = btn.parent().children('.decl');
 
     if (decls.length == 1 && !$(decls[0]).is(':visible')) {
-      $(decls[0]).fadeIn('slow', function() {      // fade it in
+      var input = $(decls[0]).find('.form-control');
+      input.attr('disabled', false);               // enable the declaration input
+
+      $(decls[0]).fadeIn('slow', function() {      // fade in the declaration container
         btn.attr('disabled', false);               // re-enable the '+' button after fading in
-        $(decls[0]).find('.form-control').focus();
+        input.focus();
       });
     }
     else {
@@ -77,12 +82,20 @@ $(function() {
       return;
     }
 
+    // create an array of strings of theory values
+    var theories = get_values($('#theories').serializeArray());
+
+    // create an array of strings of declarations
+    var decls = get_values($('.decl input').serializeArray());
+
     // Make an AJAX request to the server to submit a goal
     $.ajax({
       url: '@{GoalR}',
       type: 'POST',
       contentType: "application/json",
       data: JSON.stringify({
+        theories: theories,
+        declarations: decls,
         goal: goal,
       }),
       success: function (data) {
@@ -96,4 +109,16 @@ $(function() {
     });
 
   });
+
+  // given an array of objects of the following form
+  // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]
+  // returns an array of the 'value' fields, like this
+  // ["hi", "there"]
+  function get_values(arr_of_objs) {
+    var arr = []
+    $(arr_of_objs).each(function(i, field) {
+      arr.push(field.value);
+    });
+    return arr;
+  }
 });

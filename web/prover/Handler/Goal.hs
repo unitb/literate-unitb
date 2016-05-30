@@ -1,18 +1,31 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Handler.Goal where
-
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
-import GHC.Exts as E
-
 import Import
+
+import Data.Aeson
+
+data ProofForm = ProofForm {
+    theories     :: Vector Text,
+    declarations :: Vector Text,
+    goal         :: Text
+}
+
+instance FromJSON ProofForm where
+  parseJSON = withObject "proof" $ \o -> do
+    theories     <- o .: "theories"
+    declarations <- o .: "declarations"
+    goal         <- o .: "goal"
+    return ProofForm{..}
+
+instance ToJSON ProofForm where
+  toJSON ProofForm{..} = object [
+    "theories"     .= theories,
+    "declarations" .= declarations,
+    "goal"         .= goal ]
 
 postGoalR :: Handler Value
 postGoalR = do
-    goal <- (requireJsonBody :: Handler Value)
-    returnJson . revStrings $ goal
-
-revStrings :: Value -> Value
-revStrings (String x) = String (T.reverse x)
-revStrings (Object x) = let revVal (k, v) = (k, revStrings v)
-                        in  Object . E.fromList . map revVal . HM.toList $ x
-revStrings other      = other
+    pf <- requireJsonBody :: Handler ProofForm
+    returnJson pf
