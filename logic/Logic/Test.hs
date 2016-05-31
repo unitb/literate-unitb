@@ -216,6 +216,8 @@ test = test_cases "genericity"
         , aCase "QuasiQuotes with proof monads" case18 result18
         , aCase "QuasiQuotes with proof monads and set theory" case19 result19
         , aCase "QuasiQuotes with proof monads and assumptions" case20 result20
+        , aCase "Records lookup syntax" case21 result21
+        , aCase "Proofs with record lookup" case22 result22
         ]
     where
         reserved x n = addSuffix ("@" ++ show n) (fromString'' x)
@@ -820,3 +822,40 @@ case20 = discharge("case15") $ runSequent $ do
 
 result20 :: Validity
 result20 = Invalid
+
+case21 :: IO Expr
+case21 = return $ getExpr $ c [expr| r.'x = 7 |]
+    where
+        c = ctx $ do
+                decls %= M.union (symbol_table [(Var r t)])
+                expected_type .= Nothing
+        t = record_type $ runMap' $ do
+                x ## int
+                bar ## bool
+        r = [smt|r|]
+        x = [smt|x|]
+        bar = [smt|bar|]
+
+result21 :: Expr
+result21 = Record (FieldLookup r x) `zeq` zint 7
+    where
+        r  = Word $ Var r' $ record_type $ M.fromList 
+                    [ (bar,bool)
+                    , (x,int) ]
+        r'  = [smt|r|]
+        x   = [smt|x|]
+        bar = [smt|bar|]
+
+case22 :: IO Validity
+case22 = discharge "case22" $ runSequent $ do
+    let t = record_type $ runMap' $ do
+                x ## bool
+                bar ## int
+        x   = [smt|x|]
+        bar = [smt|bar|]
+    declare "r" t
+    assumeQ [expr| r = [ 'x := \true, 'bar := 7 ] |]
+    checkQ  [expr| r.'bar = 8 |]
+
+result22 :: Validity
+result22 = Invalid
