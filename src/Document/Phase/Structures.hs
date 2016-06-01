@@ -18,12 +18,7 @@ import Logic.Expr
 
 import UnitB.Syntax as AST
 
-import Logic.Theories.Arithmetic
-import Logic.Theories.FunctionTheory
-import Logic.Theories.IntervalTheory
-import Logic.Theories.PredCalc
-import Logic.Theories.RelationTheory
-import Logic.Theories.SetTheory
+import Logic.Theories
 
     --
     -- Libraries
@@ -95,7 +90,7 @@ run_phase1_types = proc p0 -> do
     --     -- BIG FLAG
     let _ = evts' :: MTable (G.BiGraph SkipOrEvent () ())
         f th = M.unions $ map (view AST.types) $ M.elems th
-        basic = symbol_table [arithmetic,basic_theory]
+        basic = preludeTheories
         imp_th = M.map (union basic . M.map fst) imp_th'
         all_types = M.intersectionWith (\ts th -> M.map fst ts `union` f th) types imp_th
         p1 = make_phase1 <$> p0 <.> imp_th 
@@ -169,13 +164,7 @@ refines_mch = machineCmd "\\refines" $ \(Identity amch) cmch (MachineP0 ms _) ->
 
 import_theory :: MPipeline MachineP0 [(Name, Theory, LineInfo)]
 import_theory = machineCmd "\\with" $ \(Identity (TheoryName th_name)) _m _ -> do
-        let th = symbol_table
-                 [ set_theory
-                 , function_theory
-                 , relation_theory
-                 , arithmetic
-                 , pred_calc
-                 , interval_theory ]
+        let th = supportedTheories
             msg = [printf|Undefined theory: %s |]
                 -- add suggestions
         li <- ask

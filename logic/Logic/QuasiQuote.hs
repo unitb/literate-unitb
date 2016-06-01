@@ -12,7 +12,7 @@ import Logic.Expr.Parser
 import Logic.Expr.Printable
 import Logic.Theory
 
-import Logic.Theories.Arithmetic
+import Logic.Theories
 
     -- Libraries
 import Control.Arrow
@@ -133,7 +133,7 @@ ctxWith :: [Theory]
 ctxWith xs cmd f = f r
     where
         r = execState cmd (theory_setting $ (empty_theory' "empty") { _extends = 
-                symbol_table $ xs ++ [arithmetic,basic_theory] } )
+                symbol_table $ xs ++ M.elems preludeTheories } )
 
 ctx :: State ParserSetting a 
     -> (ParserSetting -> b) -> b
