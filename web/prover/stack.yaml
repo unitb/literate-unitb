@@ -37,9 +37,35 @@ resolver: lts-5.16
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- '../../latex'
+- '../../logic'
+- '../../utils'
+- '../../libs/axiomatic-classes'
+- '../../libs/bipartite-graph'
+- '../../libs/classy-lens-hierarchy'
+- '../../libs/data-map-class'
+- '../../libs/data-packaged'
+- '../../libs/existential'
+- '../../libs/generic-instances'
+- '../../libs/invariants'
+- '../../libs/lens-extra'
+- '../../libs/partial-order'
+- '../../libs/pretty-printable'
+- '../../libs/printf-th'
+- '../../libs/show-with'
+- '../../libs/string-lenses'
+- '../../libs/transformer-lenses'
+- '../../libs/unitb-testing'
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- assert-0.0.1.2
+- directory-1.2.5.1
+- portable-lines-0.1
+- pseudomacros-0.0.2
+- QuickCheck-2.8.2
+- reactive-banana-1.1.0.0
+- transformers-compat-0.5.1.4
 
 # Override default flag values for local packages and extra-deps
 flags: {}

@@ -22,6 +22,8 @@ library
                      Handler.Common
                      Handler.Goal
                      Handler.Home
+                     Logic.Prover
+                     Model.ProofForm
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
@@ -79,6 +81,9 @@ library
                  , time
                  , case-insensitive
                  , wai
+                 , lens
+                 , literate-unitb-logic
+                 , literate-unitb-utils
 
 executable         web-prover
     if flag(library-only)

@@ -216,6 +216,9 @@ asStringLi li xs = unlinesLi ys'
 asLI :: Loc -> LineInfo
 asLI loc = uncurry (LI (loc_filename loc)) (loc_start loc)
 
+mkLI :: String -> LineInfo
+mkLI str = LI str 1 1
+
 locToLI :: SrcLoc -> LineInfo
 locToLI loc = LI
             (srcLocFile loc) 

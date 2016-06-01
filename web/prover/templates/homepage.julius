@@ -86,7 +86,7 @@ $(function() {
     var theories = get_values($('#theories').serializeArray());
 
     // create an array of strings of declarations
-    var decls = get_values($('.decl input').serializeArray());
+    var decls = flatten_obj($('.decl input').serializeArray());
 
     // Make an AJAX request to the server to submit a goal
     $.ajax({
@@ -100,7 +100,7 @@ $(function() {
       }),
       success: function (data) {
         var newNode = $("<li></li>");
-        newNode.text(data.goal);
+        newNode.text(JSON.stringify(data));
         $("##{rawJS goalListId}").append(newNode);
       },
       error: function (data) {
@@ -115,9 +115,24 @@ $(function() {
   // returns an array of the 'value' fields, like this
   // ["hi", "there"]
   function get_values(arr_of_objs) {
-    var arr = []
+    var arr = [];
     $(arr_of_objs).each(function(i, field) {
       arr.push(field.value);
+    });
+    return arr;
+  }
+
+  // given an array of objects of the following form
+  // [{"name":"decl1","value":"hi"},{"name":"decl2","value":"there"}]
+  // returns an array of arrays, like this
+  // [["decl1", "hi"], ["decl2", "there"]]
+  function flatten_obj(arr_of_objs) {
+    var arr = [];
+    $(arr_of_objs).each(function(i, field) {
+      sub_arr = [];
+      sub_arr.push(field.name);
+      sub_arr.push(field.value);
+      arr.push(sub_arr);
     });
     return arr;
   }

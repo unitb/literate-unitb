@@ -19,7 +19,7 @@
           <option value="arithmetic">Arithmetic
           <option value="set_theory">Sets
           <option value="function_theory">Functions
-          <option disabled>Reals
+          <!-- <option disabled>Reals -->
 
       <.form-group>
         <label>
