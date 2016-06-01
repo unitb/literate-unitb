@@ -48,9 +48,6 @@ instance IsTestCase POCase where
                     putStrLn n
                     print exc
                     return (show (exc :: SomeException), logNothing)
-                -- get_po = catch (snd `liftM` y) g
-                -- g :: SomeException -> IO (Table Label Sequent)
-                -- g = const $ putStrLn "EXCEPTION!!!" >> return M.empty
             return UT
                 { name = n
                 , routine = cmd
