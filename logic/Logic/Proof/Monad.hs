@@ -5,7 +5,7 @@ import Logic.Expr
 import Logic.Expr.Parser
 import Logic.Expr.Printable
 import Logic.Proof.Sequent
-import Logic.Theories.Arithmetic
+import Logic.Theories
 import Logic.Theory
 
     -- Libraries
@@ -29,9 +29,8 @@ runSequent (SequentM cmd) = empty_sequent
         & constants .~ symbol_table vs
         & context %~ merge_ctx (merge_all_ctx ctx)
     where
-        (g,(s,vs,asm,ctx)) = evalRWS cmd () (st,[arithmetic,basic_theory],M.empty)
-        st = theory_setting $ (empty_theory' "empty") { _extends = 
-                symbol_table [arithmetic,basic_theory] }
+        (g,(s,vs,asm,ctx)) = evalRWS cmd () (st,M.elems preludeTheories,M.empty)
+        st = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
 
 updateSetting :: SequentM ()
 updateSetting = SequentM $ do

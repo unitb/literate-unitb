@@ -85,6 +85,7 @@ library
         Logic.Proof.Sequent
         Logic.Proof.Tactics
         Logic.QuasiQuote
+        Logic.Theories
         Logic.Theories.Arithmetic
         Logic.Theories.FunctionTheory
         Logic.Theories.IntervalTheory

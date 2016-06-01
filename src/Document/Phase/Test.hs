@@ -23,6 +23,7 @@ import Latex.Monad
 import Logic.Expr.Parser
 import Logic.Theory
 
+import Logic.Theories
 import Logic.Theories.Arithmetic
 import Logic.Theories.SetTheory
 
@@ -92,7 +93,7 @@ case0 = do
         thy = M.fromList 
                 [ (mId "m0", symbol_table $ arithmetic:thy2) 
                 , (mId "m1", symbol_table $ set_theory:thy2) ]
-        thy2 = [basic_theory,arithmetic]
+        thy2 = M.elems preludeTheories
         s0 = z3Sort "S0" "S0" 0
         s0' = make_type s0 [] 
         se new_type = zlift (set_type new_type) ztrue
@@ -196,7 +197,7 @@ result0 = M.fromList
         pdef1  = [as_pair' (view _1) (z3Def [] "sl$S1" [] (set_type s1') (se s1'),Local,li)]
         thy0 = symbol_table $ arithmetic:thy2
         thy1 = symbol_table $ set_theory:thy2
-        thy2 = [basic_theory,arithmetic]
+        thy2 = M.elems preludeTheories
         li = LI "file.ext" 1 1
 
 name1 :: TestName

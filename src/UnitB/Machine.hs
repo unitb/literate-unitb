@@ -11,7 +11,7 @@ import Logic.Operator as OP
 import Logic.Proof
 import Logic.Theory as Th
 
-import Logic.Theories.Arithmetic
+import Logic.Theories
 
 import UnitB.Event
 import UnitB.Expr hiding (merge,target)
@@ -446,8 +446,7 @@ empty_machine' :: (HasScope expr, HasExpr expr) => Name -> MachineAST' expr
 empty_machine' n = check $ flip execState (makeMachineBase n (empty_theory n)) $ do
             -- & events .~ _ $ G.fromList _ _
             events .= G.fromList' [(skip,def)] [(skip,def)] [(skip,skip)]
-            theory .= (empty_theory n) { _extends = symbol_table 
-                [arithmetic, basic_theory] } 
+            theory .= (empty_theory n) { _extends = preludeTheories } 
             -- & name
     where
         skip = Left SkipEvent
