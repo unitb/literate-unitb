@@ -96,8 +96,8 @@ result1 = unlines
     , "passed 12 / 12"
     ]
 
-path1 :: String
-path1 = "Tests/new_syntax.tex"
+path1 :: FilePath
+path1 = [path|Tests/new_syntax.tex|]
 
 case1 :: IO String
 case1 = do
@@ -113,8 +113,8 @@ result2 = concat [
         "[Error \"predicate is undefined: 'a1'\" (LI \"\" 23 12)]"
     ]
 
-path2 :: String
-path2 = "Tests/new_syntax-err0.tex"
+path2 :: FilePath
+path2 = [path|Tests/new_syntax-err0.tex|]
 
 case2 :: IO String
 case2 = do

@@ -14,7 +14,7 @@ test_case = test_cases
     , poCase "test4: quantified union" case4 result4 ]
 
 path0 :: FilePath
-path0 = "Tests/termination detection/main.tex"
+path0 = [path|Tests/termination detection/main.tex|]
 
 case0 :: IO POResult
 case0 = verify path0 0
@@ -262,7 +262,7 @@ result3 = unlines
     ]
 
 path1 :: FilePath
-path1 = "Tests/termination detection/main.tex"
+path1 = [path|Tests/termination detection/main.tex|]
 
 case4 :: IO POResult
 case4 = verify path1 3

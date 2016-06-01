@@ -38,19 +38,19 @@ result2 =
      "Right (fromList [(\"align\",[]),(\"calculation\",[Env{calculation} (59),Env{calculation} (29)]),(\"equation\",[]),(\"invariant\",[]),(\"lemma\",[]),(\"machine\",[]),(\"theorem\",[])])"
     
 
-path3 :: String
 path3 = "Tests/sorted_sequences_err.tex"
+path3 :: FilePath
 
 result3 :: String
 result3 = concat
     [ "Left [Error \"unexpected: Close Curly (LI \\\"\\\" 29 13); expected: node; expected: end keyword (equation)\" (LI \"\" 29 13)]"
     ]
 
-path4 :: String
 path4 = "Tests/sorted_sequences.tex"
+path4 :: FilePath
 
-path5 :: String
 path5 = "Tests/integers.tex"
+path5 :: FilePath
 
 sections :: [String]
 sections = [

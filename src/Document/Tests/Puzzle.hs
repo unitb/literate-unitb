@@ -57,7 +57,7 @@ test_case = test_cases
         ]
 
 path0 :: FilePath
-path0 = "Tests/puzzle/puzzle.tex"
+path0 = [path|Tests/puzzle/puzzle.tex|]
 
 case0 :: IO (String, Table Label Sequent)
 case0 = verify path0 0
@@ -1342,7 +1342,7 @@ result13 = Right $ ( ["b","vs","n","c","fs"]
                  & each %~ (S.fromList . L.map fromString'')
 
 path14 :: FilePath
-path14 = "Tests/puzzle/puzzle-err0.tex"
+path14 = [path|Tests/puzzle/puzzle-err0.tex|]
 
 case14 :: IO String
 case14 = find_errors path14
@@ -1359,7 +1359,7 @@ result14 = unlines
         , "" ]
 
 path15 :: FilePath
-path15 = "Tests/puzzle/puzzle-err1.tex"
+path15 = [path|Tests/puzzle/puzzle-err1.tex|]
 
 case15 :: IO String
 case15 = find_errors path15
@@ -1984,7 +1984,7 @@ result19 = unlines
     ]
 
 path21 :: FilePath
-path21 = "Tests/puzzle/puzzle-err2.tex"
+path21 = [path|Tests/puzzle/puzzle-err2.tex|]
 
 case21 :: IO String
 case21 = find_errors path21
@@ -2069,7 +2069,7 @@ result21 = unlines
     ]
 
 path22 :: FilePath
-path22 = "Tests/puzzle/puzzle-err3.tex"
+path22 = [path|Tests/puzzle/puzzle-err3.tex|]
 
 case22 :: IO String
 case22 = find_errors path22
@@ -2080,7 +2080,7 @@ result22 = unlines
     ]
 
 path23 :: FilePath
-path23 = "Tests/puzzle/puzzle-err4.tex"
+path23 = [path|Tests/puzzle/puzzle-err4.tex|]
 
 case23 :: IO String
 case23 = find_errors path23
@@ -2103,7 +2103,7 @@ result24 = Right ( S.fromList ["inv0","inv1","inv2","m3:inv0","m3:inv1"
                  , S.fromList [])
 
 path25 :: FilePath
-path25 = "Tests/puzzle/puzzle-err5.tex"
+path25 = [path|Tests/puzzle/puzzle-err5.tex|]
 
 case25 :: IO String
 case25 = find_errors path25

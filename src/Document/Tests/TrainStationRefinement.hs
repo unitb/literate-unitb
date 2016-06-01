@@ -299,17 +299,17 @@ result2 = unlines
     , "passed 125 / 126"
     ]
 
-path0 :: String
-path0 = "Tests/train-station-ref.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station-ref.tex|]
 
-path1 :: String
-path1 = "Tests/train-station-ref/main.tex"
+path1 :: FilePath
+path1 = [path|Tests/train-station-ref/main.tex|]
 
-path1' :: String
-path1' = "Tests/train-station-ref/ref0.tex"
+path1' :: FilePath
+path1' = [path|Tests/train-station-ref/ref0.tex|]
 
-path3 :: String
-path3 = "Tests/train-station-ref-err0.tex"
+path3 :: FilePath
+path3 = [path|Tests/train-station-ref-err0.tex|]
 
 result3 :: String
 result3 = unlines
@@ -323,8 +323,8 @@ result3 = unlines
     , ""
     ]
 
-path4 :: String
-path4 = "Tests/train-station-ref-err1.tex"
+path4 :: FilePath
+path4 = [path|Tests/train-station-ref-err1.tex|]
 
 result4 :: String
 result4 = unlines
@@ -340,7 +340,7 @@ result4 = unlines
 --         Left xs -> unlines $ map report xs
 
 path5 :: FilePath
-path5 = "Tests/train-station-ref-err2.tex"
+path5 = [path|Tests/train-station-ref-err2.tex|]
 
 result5 :: String
 result5 = unlines

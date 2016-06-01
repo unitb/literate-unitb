@@ -18,8 +18,8 @@ test = test_cases
             , (aCase "test 2, invalid proof obligations" case2 result2)
             ] 
 
-path0 :: String
-path0 = "Tests/phases-t0.tex"
+path0 :: FilePath
+path0 = [path|Tests/phases-t0.tex|]
 
 result0 :: String
 result0 = unlines
@@ -33,8 +33,8 @@ result0 = unlines
     , ""
     ]
 
-path1 :: String
-path1 = "Tests/phases-t1.tex"
+path1 :: FilePath
+path1 = [path|Tests/phases-t1.tex|]
 
 case1 :: IO String
 case1 = find_errors path1 
@@ -42,8 +42,8 @@ case1 = find_errors path1
 result1 :: String
 result1 = "no errors"
 
-path2 :: String
-path2 = "Tests/phases-t2.tex"
+path2 :: FilePath
+path2 = [path|Tests/phases-t2.tex|]
 
 case2 :: IO String
 case2 = find_errors path2

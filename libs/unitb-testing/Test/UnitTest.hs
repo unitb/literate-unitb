@@ -13,6 +13,7 @@ module Test.UnitTest
     , M, UnitTest(..) 
     , IsTestCase(..)
     , logNothing, PrintLog
+    , path
     , allLeaves )
 where
 
@@ -46,10 +47,12 @@ import GHC.Stack
 import GHC.SrcLoc
 
 import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
 import Prelude
 import PseudoMacros
 
+import System.Directory
 import System.FilePath
 import System.IO
 import System.IO.Unsafe
@@ -457,3 +460,15 @@ makeTestSuite title = do
     else do
         mapM_ (reportError . [printf|missing component for test case # %d|]) es
         [e| undefined |]
+
+path :: QuasiQuoter
+path = QuasiQuoter 
+    { quoteExp = \xs -> do
+            xs' <- runIO $ canonicalizePath xs 
+            exists <- runIO (doesFileExist xs')  
+            when (not exists) $ fail $ "file " ++ show xs' ++ " does not exist" 
+            stringE xs
+    , quotePat  = undefined
+    , quoteType = undefined
+    , quoteDec  = undefined
+    }

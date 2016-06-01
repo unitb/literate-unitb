@@ -109,7 +109,7 @@ event6_evt = empty_event {
         c' = Word var_c'
 
 path6 :: FilePath
-path6    = "Tests/integers.tex"
+path6    = [path|Tests/integers.tex|]
 
 case6 :: IO (Either [Error] [RawMachineAST])
 case6    = (traverse.traverse %~ fmap getExpr.view' syntax) <$> parse path6
@@ -169,8 +169,8 @@ case7 :: IO (String, Table Label Sequent)
 case7 = do
     verify path6 0
 
-path8 :: String
-path8   = "Tests/integers_t8.tex"
+path8 :: FilePath
+path8   = [path|Tests/integers_t8.tex|]
 
 result8 :: String
 result8 = unlines
@@ -241,7 +241,7 @@ proof_kind (Assume _ _ _ _) = "assume"
 proof_kind (Definition _ _ _) = "definition"
 
 path10 :: FilePath
-path10   = "Tests/integers_t10.tex"
+path10   = [path|Tests/integers_t10.tex|]
 
 result10 :: String
 result10 = unlines

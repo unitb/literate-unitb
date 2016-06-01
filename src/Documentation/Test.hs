@@ -68,8 +68,8 @@ case0 = makeReport $ do
     return $ getListing $
             event_summary' m lbl evt
 
-path0 :: String
-path0 = "Tests/train-station-set.tex"
+path0 :: FilePath
+path0 = [path|Tests/train-station-set.tex|]
 
 result1 :: String
 result1 = unlines

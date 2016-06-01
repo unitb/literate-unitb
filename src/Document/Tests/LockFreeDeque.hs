@@ -167,10 +167,10 @@ result0 = unlines
     ]
 
 path0 :: FilePath
-path0 = "Tests/lock-free deque/main.tex"
+path0 = [path|Tests/lock-free deque/main.tex|]
 
 path1 :: FilePath
-path1 = "Tests/lock-free deque/main2.tex"
+path1 = [path|Tests/lock-free deque/main2.tex|]
 
 result1 :: String
 result1 = unlines
@@ -230,8 +230,8 @@ result1 = unlines
     , "passed 51 / 53"
     ]
 
-path2 :: String
-path2 = "Tests/lock-free deque/main3.tex"
+path2 :: FilePath
+path2 = [path|Tests/lock-free deque/main3.tex|]
 
 case2 :: IO String
 case2 = find_errors path2
@@ -257,8 +257,8 @@ result2 = unlines
     , ""
     ]
 
-path3 :: String
-path3 = "Tests/lock-free deque/main4.tex"
+path3 :: FilePath
+path3 = [path|Tests/lock-free deque/main4.tex|]
 
 result3 :: String
 result3 = unlines
@@ -327,7 +327,7 @@ result3 = unlines
     ]
 
 path4 :: FilePath
-path4 = "Tests/lock-free deque/main6.tex"
+path4 = [path|Tests/lock-free deque/main6.tex|]
 
 result4 :: String
 result4 = unlines
@@ -4529,7 +4529,7 @@ result9 = unlines
     ]
 
 path10 :: FilePath 
-path10 = "Tests/lock-free deque/main6-err0.tex"
+path10 = [path|Tests/lock-free deque/main6-err0.tex|]
 
 result10 :: String
 result10 = unlines
@@ -4544,7 +4544,7 @@ result10 = unlines
     ]
 
 path11 :: FilePath 
-path11 = "Tests/lock-free deque/main6-err1.tex"
+path11 = [path|Tests/lock-free deque/main6-err1.tex|]
 
 result11 :: String
 result11 = unlines
@@ -4555,7 +4555,7 @@ result11 = unlines
     ]
 
 path12 :: FilePath
-path12 = "Tests/lock-free deque/main7-err0.tex"
+path12 = [path|Tests/lock-free deque/main7-err0.tex|]
 
 case12 :: IO (String, Table Label Sequent)
 case12 = verify path12 0
@@ -4569,7 +4569,7 @@ result12 = unlines
     ]
 
 path13 :: FilePath
-path13 = "Tests/lock-free deque/main7.tex"
+path13 = [path|Tests/lock-free deque/main7.tex|]
 
 case13 :: IO (String, Table Label Sequent)
 case13 = verify path13 0
@@ -4630,7 +4630,7 @@ result16 = Right   ( [(Left SkipEvent,[]),("evt",["p"])]
                    , [(Left SkipEvent,[]),("evt0",["p"]),("evt1",["p"]),("evt2",["p","q"])])
 
 path17 :: FilePath
-path17 = "Tests/lock-free deque/main8-err0.tex"
+path17 = [path|Tests/lock-free deque/main8-err0.tex|]
 
 case17 :: IO String
 case17 = find_errors path17
@@ -4642,7 +4642,7 @@ result17 = unlines
     ]
 
 path18 :: FilePath
-path18 = "Tests/lock-free deque/main8-err1.tex"
+path18 = [path|Tests/lock-free deque/main8-err1.tex|]
 
 case18 :: IO String
 case18 = find_errors path18
@@ -4653,7 +4653,7 @@ result18 = concat
     ]
 
 path19 :: FilePath
-path19 = "Tests/lock-free deque/main8.tex"
+path19 = [path|Tests/lock-free deque/main8.tex|]
 
 case19 :: IO String
 case19 = proof_obligation path19 "m1/resp:pop:left/F_SCH/replace/eqv" 1
@@ -5242,7 +5242,7 @@ result19 = unlines
     ]
 
 path20 :: FilePath
-path20 = "Tests/lock-free deque/main9.tex"
+path20 = [path|Tests/lock-free deque/main9.tex|]
 
 result20 :: String
 result20 = unlines
@@ -5510,7 +5510,7 @@ case22 :: IO String
 case22 = proof_obligation path20 "m1/handle/C_SCH/delay/0/prog/m1:prog1/rhs/m1:sch0" 1
 
 path24 :: FilePath
-path24 = "Tests/lock-free deque/main10.tex"
+path24 = [path|Tests/lock-free deque/main10.tex|]
 
 case24 :: IO POResult
 case24 = verify path24 1
@@ -5544,7 +5544,7 @@ result24 = unlines
     ]
 
 path25 :: FilePath
-path25 = "Tests/lock-free deque/main11.tex"
+path25 = [path|Tests/lock-free deque/main11.tex|]
 
 case25 :: IO POResult
 case25 = verify path25 2
@@ -5574,7 +5574,7 @@ result25 = unlines
     ]
 
 path26 :: FilePath
-path26 = "Tests/lock-free deque/main12.tex"
+path26 = [path|Tests/lock-free deque/main12.tex|]
 
 case26 :: IO POResult
 case26 = verify path26 3
@@ -5889,7 +5889,7 @@ result26 = unlines
     ]
 
 path27 :: FilePath
-path27 = "Tests/lock-free deque/main13.tex"
+path27 = [path|Tests/lock-free deque/main13.tex|]
 
 case27 :: IO POResult
 case27 = verifyWith (timeout .= 5000 >> resource .= 2) path27 5
