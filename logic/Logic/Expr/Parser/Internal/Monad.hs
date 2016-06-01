@@ -21,6 +21,7 @@ import           Data.List as L
 import           Data.Map.Class as M hiding ( map )
 import qualified Data.Map.Class as M
 
+import Utilities.Syntactic
 import Utilities.Table
 
 data Param = Param 
@@ -94,7 +95,7 @@ getToken pr lb = liftP $ do
             x <- read_char
             case x^?pr of
                 Just x -> return x
-                _ -> fail $ "expecting a \'" ++ lb ++ "\': " ++ show x
+                _ -> fail $ "expecting a \'" ++ lb ++ "\': " ++ lexeme x
 
 manyP :: Parser a -> Parser [a]
 manyP p = do

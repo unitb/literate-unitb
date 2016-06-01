@@ -50,7 +50,7 @@ instance Token ExprToken where
     lexeme (Close b)  = closeBracket b
     lexeme (Ident n)  = n
     lexeme (Literal (NumLit n)) = n
-    lexeme (Literal (NameLit n)) = ':' : render n
+    lexeme (Literal (NameLit n)) = '\'' : render n
     lexeme (Operator op) = op
     lexeme Assign     = ":="
     lexeme Comma      = ","
