@@ -73,6 +73,8 @@ data MachineBase expr =
         { _machineBaseName :: Name
         , _theory     :: Theory
         , _variables  :: Table Name Var
+        , _oldDefs    :: Table Name expr
+        , _machineBaseDefs     :: Table Name expr
         , _machineBaseAbs_vars :: Table Name Var
         , _del_vars   :: Table Name Var
         , _init_witness :: Table Name (Witness' expr)
@@ -202,15 +204,17 @@ instance HasExpr expr => HasScope (MachineBase expr) where
     scopeCorrect' m = mconcat 
         [ withVars (symbols $ m^.theory) $ mconcat 
             [ withPrefix "inherited"
-                $ withVars' vars ((m^.del_vars) `M.union` (m^.abs_vars))
+                $ withVars' vars ((m^.del_vars) `M.union` absVarsNdefs)
                 $ scopeCorrect' $ m^.inh_props 
-            , withVars' vars ((m^.variables) `M.union` (m^.abs_vars))
+            , withVars' vars (varsNdefs `M.union` absVarsNdefs)
                 $ scopeCorrect' $ m^.props 
+            , withVars' vars ((m^.variables) `M.union` (m^.del_vars))
+                $ foldMapWithKey scopeCorrect'' $ m^.defs 
             , withPrefix "del init"
                 $ withVars' vars (m^.abs_vars)
                 $ foldMapWithKey scopeCorrect'' $ m^.del_inits
             , withPrefix "init" 
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.inits
             , withPrefix "witnesses (var)" 
                 $ withVars ((m^.abs_vars) `M.difference` (m^.variables))
@@ -218,23 +222,34 @@ instance HasExpr expr => HasScope (MachineBase expr) where
                         (M.elems $ witVar <$> m^.init_witness) 
                         (M.elems $ witVar <$> m^.init_witness)
             , withPrefix "witnesses (expr)" 
-                $ withVars ((m^.variables) `M.union` (m^.abs_vars))
+                $ withVars (varsNdefs `M.union` (m^.abs_vars))
                 $ foldMapWithKey scopeCorrect'' $ m^.init_witness
             , withPrefix "abstract events"
-                $ withVars' vars (m^.abs_vars)
+                $ withVars' vars absVarsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to leftMap
             , withPrefix "concrete events"
                 $ withVars' abs_vars (m^.abs_vars)
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ m^.events.to rightMap
             , withPrefix "splitting events"
                 $ withVars' abs_vars (m^.abs_vars)
-                $ withVars' vars (m^.variables)
+                $ withVars' vars varsNdefs
                 $ foldMapWithKey scopeCorrect'' $ all_downwards m
             ]
         , withPrefix "theory"
             $ scopeCorrect' $ m^.theory
         ]
+        where
+            varsNdefs = (m^.variables) `M.union` (m^.definedSymbols)
+            absVarsNdefs = (m^.abs_vars) `M.union` (m^.oldDefinedSymbols)
+
+definedSymbols :: HasExpr expr 
+               => Getter (MachineBase expr) (Table Name Var)
+definedSymbols = defs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
+
+oldDefinedSymbols :: HasExpr expr 
+               => Getter (MachineBase expr) (Table Name Var)
+oldDefinedSymbols = oldDefs.to (M.mapWithKey (\n -> Var n.type_of.getExpr))
 
 instance Controls (MachineBase expr) (MachineBase expr) where 
 

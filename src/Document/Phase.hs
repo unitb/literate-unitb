@@ -26,6 +26,7 @@ import Control.Applicative
 import Control.Arrow hiding (ArrowChoice(..))
 import Control.CoApplicative
 import Control.Lens as L hiding ((<.>))
+import Control.Lens.HierarchyTH
 
 import Control.Monad.Reader.Class 
 import Control.Monad.Reader (Reader,runReader) 
@@ -467,10 +468,15 @@ class ( IsMachine p
 instance ( IsMachine p
           , HasMachineP1 p
           , HasMachineP2' (MchType p)
-          , HasEventP2 (AEvtType p)
-          , HasEventP2 (CEvtType p)
+          , HasEventP2  (AEvtType p)
+          , HasEventP2  (CEvtType p)
           , HasTheoryP2 (ThyType p) ) 
     => HasMachineP2 p where
+
+instance HasMachineP1' MachineP2RawDef' where
+    machineP1' = $(oneLens '_p1)
+instance HasMachineP2' MachineP2RawDef' where
+    machineP2' = id
 
 class ( IsMachine p
       , HasMachineP3' (MchType p)

@@ -17,9 +17,9 @@ import Document.Visitor
 
 import Latex.Parser hiding (contents,source)
 
-import Logic.Expr
 import Logic.Expr.Parser
 
+import UnitB.Expr
 import UnitB.Syntax as AST
 
     --
@@ -31,7 +31,10 @@ import qualified Control.Category as C
 import Control.Lens as L hiding ((|>),(<.>),(<|),indices,Context)
 
 import           Control.Monad
+import           Control.Monad.Fix
 import           Control.Monad.Reader.Class 
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Maybe
 
 import Control.Precondition
 
@@ -58,6 +61,7 @@ run_phase2_vars = C.id &&& symbols >>> liftP wrapup
         wrap = L.map (second $ makeCell . uncurry3 TheoryDef)
         symbols = arr (view mchTable) >>> run_phase
             [ variable_decl
+            , definition
             , constant_decl
             , dummy_decl
             , index_decl
@@ -79,10 +83,31 @@ newMch :: [(Name,VarScope)]
        -> MachineP1' EventP1 EventP1 TheoryP2
        -> MachineP2' EventP1 EventP1 TheoryP2 
        -> MM' c (MachineP2' EventP1 EventP1 TheoryP2)
-newMch vars' m m' = makeMachineP2' m _pMchSynt <$> liftField toMchDecl vars'
+newMch vars' m _ = parseDefs =<< mfix (newMch' vars' m)
+
+newMch' :: [(Name,VarScope)] 
+        -> MachineP1' EventP1 EventP1 TheoryP2
+        -> MachineP2RawDef' EventP1 EventP1 TheoryP2 
+        -> MM' c (MachineP2RawDef' EventP1 EventP1 TheoryP2)
+newMch' vars' m m' = makeMachineP2'' m _pMchSynt <$> liftField toMchDecl vars'
     where
-        _pMchSynt = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
-        refVars   = (m'^.pAbstractVars) `M.union` (m'^.pStateVars)
+        _pMchSynt  = (m^.pCtxSynt & primed_vars .~ refVars & decls %~ M.union refVars)
+        refVars   = M.unions [m'^.pAbstractVars, m'^.pStateVars]
+
+parseDef :: MachineP2RawDef' ae ce thy
+         -> StringLi -> MM' c Expr
+parseDef m = liftEither . parse_expr (m^.pMchSynt & expected_type .~ Nothing)
+
+parseDefs :: MachineP2RawDef' ae ce thy
+          -> MM' c (MachineP2' ae ce thy )
+parseDefs m = do
+        m' <- m & pDefs (\defs -> triggerM =<< sequence 
+                             <$> (defs & traverse (unfail . parseDef m)))
+        let defs = M.mapWithKey (\n -> Var n.type_of.getExpr) $ m'^.pMchDef
+        return $ m' & pMchSynt.decls %~ M.union defs
+
+unfail :: MM' c a -> MM' c (Maybe a)
+unfail (MM (MaybeT cmd)) = MM $ lift cmd
 
 make_phase2 :: MachineP1
             -> Table Name VarScope
@@ -134,13 +159,20 @@ instance PrettyPrintable TheoryDef where
 
 variable_decl :: MPipeline MachineP1
                     [(Name,VarScope)]
-variable_decl = machine_var_decl Machine "\\variable"
+variable_decl = machine_var_decl MchVar "\\variable"
 
 instance IsVarScope TheoryConst where
     toOldEventDecl _ _ = []
     toNewEventDecl _ _ = []
     toThyDecl s th = [Right $ PConstants s $ thCons th]
     toMchDecl _ _  = []
+
+definition :: MPipeline MachineP1 
+                  [(Name,VarScope)]
+definition = machineCmd "\\definition" 
+                $ \(VarName n,Expr xp) _m _p1 -> do
+            li <- ask
+            return [(n,makeCell $ MchDef n xp Local li)]
 
 instance PrettyRecord TheoryConst where
     recordFields = genericRecordFields []
@@ -155,11 +187,24 @@ instance IsVarScope MachineVar where
     toOldEventDecl _ _ = []
     toNewEventDecl _ _ = []
     toThyDecl _ _ = []
-    toMchDecl s (Machine v Local _)     = [Right $ PStateVars s v]
-    toMchDecl s (Machine v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
-    toMchDecl s (DelMch (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
-    toMchDecl s (DelMch (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
-    toMchDecl s (DelMch Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
+    toMchDecl s (MchVar v Local _)     = [Right $ PStateVars s v]
+    toMchDecl s (MchVar v Inherited _) = map Right [PAbstractVars s v,PStateVars s v]
+    toMchDecl s (DelMchVar (Just v) Local li)     = map Right [PDelVars s (v,li),PAbstractVars s v]
+    toMchDecl s (DelMchVar (Just v) Inherited li) = [Right $ PDelVars s (v,li)]
+    toMchDecl s (DelMchVar Nothing _ li)    = [Left $ Error ([printf|deleted variable '%s' does not exist|] $ render s) li]
+
+instance PrettyPrintable MachineDef where
+    pretty = prettyRecord
+instance PrettyRecord MachineDef where
+    recordFields = genericRecordFields []
+instance IsVarScope MachineDef where
+    toOldEventDecl _ _ = []
+    toNewEventDecl _ _ = []
+    toThyDecl _ _ = []
+    toMchDecl _s (MchDef v term Local _) 
+            = [Right $ PMchDef v term]
+    toMchDecl _s (MchDef v term Inherited _) 
+            = [Right $ PMchDef v term,Right $ PMchOldDef v term]
 
 instance PrettyRecord MachineVar where
     recordFields = genericRecordFields []
@@ -169,7 +214,7 @@ instance PrettyPrintable MachineVar where
 remove_var :: MPipeline MachineP1 [(Name,VarScope)]
 remove_var = machineCmd "\\removevar" $ \(Identity xs) _m _p1 -> do
         li <- ask
-        return $ map ((\x -> (x,makeCell $ DelMch Nothing Local li)) . getVarName) xs
+        return $ map ((\x -> (x,makeCell $ DelMchVar Nothing Local li)) . getVarName) xs
 
 dummy_decl :: MPipeline MachineP1
                     [(Name,VarScope)]

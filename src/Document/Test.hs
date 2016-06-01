@@ -7,6 +7,7 @@ import Document.Document
 
 -- import qualified Document.Tests.CompCalc as CC
 import qualified Document.Tests.Cubes as Cubes 
+import qualified Document.Tests.Definitions as Defs
 -- import qualified Document.Tests.IndirectEq as Ind
 import qualified Document.Tests.Lambdas as Lambdas
 import qualified Document.Tests.LockFreeDeque as LFD
@@ -59,6 +60,7 @@ test = test_cases
         , UE.test_case
         , PhTest.test_case
         , Cubes.test_case
+        , Defs.test_case
         , Train.test_case
         , Lambdas.test_case
         , Phase.test_case

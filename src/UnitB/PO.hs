@@ -19,7 +19,7 @@ where
     -- Modules
 import Logic.Expr.Scope
 import Logic.Proof
-import           Logic.Proof.POGenerator hiding ( variables )
+import           Logic.Proof.POGenerator hiding ( variables, definitions )
 import qualified Logic.Proof.POGenerator as POG
 import Logic.Theory
 import Logic.WellDefinedness
@@ -102,22 +102,42 @@ sch_lbl           = label "SCH"
 thm_lbl           = label "THM"
 
 assert_ctx :: RawMachineAST -> Context
-assert_ctx m =
-          (Context M.empty (view' variables m `M.union` view' del_vars m) M.empty M.empty M.empty)
+assert_ctx m = empty_ctx
+        & constants .~ (vars `M.union` del)
+        & definitions .~ ds
+    where
+        del  = m!.del_vars
+        vars = m!.variables
+        mkDef n e = Def [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef $ m!.defs
 
 step_ctx :: RawMachineAST -> Context
 step_ctx m = merge_all_ctx 
-        [  Context M.empty (primeAll $ vars `M.union` abs) M.empty M.empty M.empty
+        [  empty_ctx 
+                & constants .~ primeAll (vars `M.union` abs)
+                & definitions .~ ds
         ,  assert_ctx m ]
     where
         abs  = m!.abs_vars
         vars = m!.variables
+        mkDef n e = Def [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef 
+                $ M.mapKeys addPrime 
+                $ primed (vars `M.union` abs) <$> m!.defs
 
 abstract_step_ctx :: RawMachineAST -> Context
 abstract_step_ctx m = merge_all_ctx 
-        [  Context M.empty (primeAll $ view' variables m) M.empty M.empty M.empty
+        [  empty_ctx 
+                & constants .~ primeAll vars
+                & definitions .~ ds
         ,  assert_ctx m ]
     where
+        mkDef n e = Def [] n [] (type_of e) e
+        ds   = M.mapWithKey mkDef 
+                $ M.mapKeys addPrime 
+                $ primed vars <$> m!.defs
+        vars = m!.variables
+
 
 evt_saf_ctx :: HasConcrEvent' event RawExpr => event -> Context
 evt_saf_ctx evt  = Context M.empty (evt^.new.params) M.empty M.empty M.empty
@@ -377,7 +397,7 @@ prop_tr m (pname, Tr fv xp' evt_lbl tr_hint) = provided (null inds) $ do
                                     named_hyps $ M.map (new_dummy ind) grd)
                       $ do
                         emit_goal [as_label evt_lbl,"NEG"] 
-                            $ xp `zimplies` (znot $ primed (m!.variables) xp) 
+                            $ xp `zimplies` (znot $ primed ((m!.variables) `M.union` (m!.definedSymbols)) xp) 
         all_ind = M.ascElems $ M.unions $ fv : L.zipWith local_ind (NE.toList evt_lbl) es
         inds    = L.map (fmap1 $ setSuffix "param") $ M.ascElems 
                         $ M.unions (L.map (view indices) es) `M.difference` hint
@@ -486,7 +506,8 @@ prop_saf' m excp (pname, Unless fv p q) =
                         rng
                         $ new_dummy inter $
                             zimplies (p `zand` znot q) 
-                                     (primed vars $ p `zor` q))
+                                     (primed (vars `M.union` (m!.definedSymbols)) 
+                                            $ p `zor` q))
     where
         evts = rights $ L.map (\(x,y) -> (,y) <$> x) $ M.toList $ all_upwards m
         vars = m!.variables
@@ -507,7 +528,7 @@ inv_po m (pname, xp) =
                         POG.variables $ evt^.new.indices
                         POG.variables $ evt^.new.params)
                     (emit_goal [as_label evt_lbl,inv_lbl,pname] 
-                        (primed (view' variables m `M.union` view' abs_vars m) xp))
+                        (primed (view' variables m `M.union` view' abs_vars m `M.union` view' definedSymbols m) xp))
         with (do _context $ assert_ctx m
                  named_hyps $ m!.inits 
                  named_hyps $ M.mapKeys as_label $ witnessDef <$> m!.init_witness)
@@ -832,7 +853,8 @@ co_wd_po m (lbl, Co vs p) =
                  prefix_label "CO"
                  _context $ step_ctx m
                  nameless_hyps $ M.elems $
-                    M.map (primed $ view' variables m) $ invariants m
+                    M.map (primed $ view' variables m `M.union` view' definedSymbols m) 
+                        $ invariants m
                  named_hyps $ invariants m)
              $ emit_goal ["WD"]
                 $ well_definedness $ zforall vs ztrue p

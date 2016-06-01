@@ -23,7 +23,7 @@ data Theory = Theory
         , _extends    :: Table Name Theory
         , _types      :: Table Name Sort
         , _funs       :: Table Name Fun
-        , _defs       :: Table Name Def
+        , _theoryDefs :: Table Name Def
         , _consts     :: Table Name Var
         , _theoryDummies :: Table Name Var 
         , _theorySyntacticThm :: SyntacticProp

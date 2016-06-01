@@ -110,6 +110,7 @@ library
           -- TEST CASES
         -- Document.Tests.CompCalc
         Document.Tests.Cubes
+        Document.Tests.Definitions
         Document.Tests.GarbageCollector
         -- Document.Tests.IndirectEq
         Document.Tests.Lambdas

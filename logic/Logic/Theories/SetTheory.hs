@@ -77,7 +77,7 @@ set_theory = Theory { .. }
                      , Side (Just $ Rel subset_fun Direct) (Just $ Rel subset_fun Flipped))
                    ]
                  }
-        _defs = symbol_table
+        _theoryDefs = symbol_table
                 [ z3Def [gT] "empty-set" [] (set_type gT) 
                         $ zlift (set_type gT) zfalse
                 , z3Def [gT] "all" [] (set_type gT) 

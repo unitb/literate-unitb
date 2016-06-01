@@ -6,10 +6,10 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
 import Control.Lens
+import Control.Lens.Extras
 
 import Data.Char
 import Data.Data hiding (typeOf)
-import Data.Data.Lens
 import Data.Default
 import Data.Graph
 import Data.Graph.Array
@@ -77,7 +77,14 @@ makePolyClass recName = do
           sigD (fieldName f) $ forallT typeVars
             (cxt [appT (conT className) (varT fT)]) t            
         ] -- substVars _ $ 
-    return $ polyClass:polyInstance:fields
+    exists <- is _Just <$> lookupTypeName (nameBase className)
+    let polyClass' 
+            | exists    = []
+            | otherwise = [polyClass]
+        fields' 
+            | exists    = []
+            | otherwise = fields
+    return $ polyClass' ++ polyInstance:fields'
 
 createHierarchy :: [(Name,Name)] -> DecsQ
 createHierarchy xs = do
@@ -126,6 +133,15 @@ makeHierarchy ls xs' = do
             makeInstance tn ns'
     xs <- concat <$> zipWithM makeInstance' xs (drop 1 $ tails xs)
     return xs    
+
+oneLens :: Name -> ExpQ
+oneLens n = [e| lens $(varE n) $lmbda |]
+    where
+        lmbda = do
+            rec <- newName "rec"
+            x   <- newName "x"
+            lamE [varP rec,varP x] $ recUpdE (varE rec) 
+                 [ sequence (n,varE x) ]
 
 classKind :: Name -> Q Int
 classKind n = do

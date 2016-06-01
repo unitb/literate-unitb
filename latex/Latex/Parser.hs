@@ -41,6 +41,7 @@ import qualified Text.Parsec as P
 import Text.Parsec.Error
 import qualified Text.Parsec.Pos as P
 
+import Text.Pretty
 import Text.Printf.TH
 
 import Utilities.Graph hiding ( map, empty, size, (!) )
@@ -115,6 +116,9 @@ instance Convertible StringLi where
 instance IsBracket BracketType Char where
     bracketPair Curly = ('{','}')
     bracketPair Square = ('[',']')
+
+instance PrettyPrintable LatexDoc where
+    pretty = flatten
 
 instance NFData Environment where
 instance NFData Bracket where

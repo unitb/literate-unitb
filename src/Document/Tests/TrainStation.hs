@@ -142,7 +142,7 @@ machine0 = newMachine trainName $ do
                     , basic_theory
                     , arithmetic
                     ]
-            ,  _defs = symbol_table
+            ,  _theoryDefs = symbol_table
                     [  train_def
                     ,  loc_def
                     ,  block_def ]

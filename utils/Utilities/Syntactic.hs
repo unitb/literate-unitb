@@ -28,6 +28,7 @@ import Test.QuickCheck as QC
 import Test.QuickCheck.ZoomEq
 
 import Text.ParserCombinators.ReadPrec
+import Text.Pretty
 import Text.Printf.TH
 
 
@@ -170,13 +171,24 @@ shrink_error_list es' = do
         es = nubSort es'
 
 data TokenStream a = StringLi [(a,LineInfo)] LineInfo
+    deriving (Eq,Ord,Show,Functor,Foldable,Traversable,Generic)
 
 type StringLi = TokenStream Char
+
+instance ZoomEq a => ZoomEq (TokenStream a) where
+instance PrettyPrintable LineInfo where
+    pretty (LI _ i j) = [printf|(li:%d:%d)|] i j
+instance PrettyPrintable a => PrettyPrintable (TokenStream a) where
+    pretty str@(StringLi xs _) = pretty (line_info str) ++ ": " ++ pretty (map fst xs)
 
 instance Syntactic (TokenStream a) where
     line_info (StringLi xs li) = headDef li (map snd xs)
     after (StringLi _ li) = li
     traverseLineInfo f (StringLi xs li) = StringLi <$> (traverse._2) f xs <*> f li
+
+instance Arbitrary def => Arbitrary (TokenStream def) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 unconsStream :: TokenStream a -> Maybe (a,LineInfo,TokenStream a)
 unconsStream (StringLi ((x,li):xs) li') = Just (x,li,StringLi xs li')
@@ -229,4 +241,5 @@ errorTrace fs stack msg = [MLError msg $ map (_2 %~ locToLI) loc]
 
 instance NFData Error
 instance NFData LineInfo
+instance NFData a => NFData (TokenStream a)
 instance Serialize LineInfo where
