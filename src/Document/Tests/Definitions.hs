@@ -16,7 +16,7 @@ test = test_cases
             , stringCase "invariance proof obligation" case2 result2 ]
 
 path0 :: FilePath
-path0 = "Tests/definitions/definitions.tex"
+path0 = [path|Tests/definitions/definitions.tex|]
 
 case0 :: IO String
 case0 = do

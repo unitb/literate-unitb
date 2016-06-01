@@ -36,6 +36,9 @@ import Data.List.Utils as L
 import Data.Map.Class as M hiding (lookup)
 import Data.Time
 
+import           Language.Haskell.TH hiding (report)
+import           Language.Haskell.TH.Quote
+
 import Prelude hiding (lookup)
 import PseudoMacros
 
@@ -271,4 +274,15 @@ edit :: FilePath -> IO ()
 edit str = do
     readProcess "edit" [] str
     return ()
+
+path :: QuasiQuoter
+path = QuasiQuoter 
+    { quoteExp = \xs -> do
+            exists <- runIO (doesFileExist xs)  
+            when (not exists) $ fail $ "file " ++ show xs ++ " does not exist" 
+            stringE xs
+    , quotePat  = undefined
+    , quoteType = undefined
+    , quoteDec  = undefined
+    }
 
