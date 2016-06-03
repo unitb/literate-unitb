@@ -19,19 +19,26 @@ import Data.Set as S
 import Utilities.Syntactic
 import Utilities.Table
 
-newtype SequentM a = SequentM (RWS () ([Sort],[Var],[Expr],[Context]) (ParserSetting,[Theory],Table Name Var) a)
+newtype SequentM a = SequentM (RWST () ([Sort],[Var],[Expr],[Context]) (ParserSetting,[Theory],Table Name Var) (Either [Error]) a)
     deriving (Functor,Applicative,Monad)
 
-runSequent :: SequentM Expr -> Sequent
-runSequent (SequentM cmd) = empty_sequent 
+runSequent :: SequentM Expr -> Either [Error] Sequent
+runSequent (SequentM cmd) =
+    mkSequent <$> evalRWST cmd () (st, M.elems preludeTheories, M.empty)
+    where
+        st = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
+
+runSequent' :: Pre
+            => SequentM Expr -> Sequent
+runSequent' = fromRight' . runSequent
+
+mkSequent :: (Expr, ([Sort], [Var], [Expr], [Context])) -> Sequent
+mkSequent (g, (s, vs, asm, ctx)) = empty_sequent 
         & goal .~ g 
         & nameless .~ asm
         & sorts .~ symbol_table s
         & constants .~ symbol_table vs
         & context %~ merge_ctx (merge_all_ctx ctx)
-    where
-        (g,(s,vs,asm,ctx)) = evalRWS cmd () (st,M.elems preludeTheories,M.empty)
-        st = theory_setting $ (empty_theory' "empty") { _extends =  preludeTheories }
 
 updateSetting :: SequentM ()
 updateSetting = SequentM $ do
