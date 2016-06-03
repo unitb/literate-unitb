@@ -133,7 +133,7 @@ instance IsBaseName Name where
     addPrime = primes %~ (+1)
     generateNames n = n : [ n & base %~ (<+ show i) | i <- [0..] ]
     language Proxy = latexName
-    z3Name = fromJust' . isZ3Name'
+    z3Name = either (assertFalse' . unlines) id . isZ3Name
     texName = fromString''
 
 class IsBaseName n => IsName n where
@@ -183,7 +183,7 @@ instance IsBaseName InternalName where
     generateNames (InternalName pre n suf) = 
             InternalName pre <$> generateNames n <*> pure suf
     language Proxy = asInternal' <$> z3Name'
-    z3Name str = asInternal' $ (z3Name str :: Name)
+    z3Name = either (assertFalse' . unlines) id . isZ3InternalName
     texName str = asInternal' $ (texName str :: Name)
 
 instance Hashable Name where
@@ -209,17 +209,18 @@ fromString' nm = InternalName "" (fromJust' $ isZ3Name' n) suf
 
 
 isZ3Name' :: String -> Maybe Name
-isZ3Name' x = either (const Nothing) Just $ isZ3Name x
+isZ3Name' = rightToMaybe . isZ3Name
 
 isZ3Name :: String -> Either [String] Name
-isZ3Name str = mapLeft (\x -> [err,show x]) $ parse' z3Name' "" str
+isZ3Name = parseLanguage z3Name'
+
+parseLanguage :: Language a -> String -> Either [String] a
+parseLanguage lang str = mapLeft (\x -> [err,show x]) $ parse' lang "" str
     where
         err = [printf|invalid name: '%s'|] str
 
 isName :: String -> Either [String] Name
-isName str = mapLeft (\x -> [err,show x]) $ parse' latexName "" str
-    where
-        err = [printf|invalid name: '%s'|] str
+isName = parseLanguage latexName
 
 isName' :: String -> Maybe Name
 isName' = either (const Nothing) Just . isName
@@ -236,6 +237,9 @@ addBackslash = backslash .~ True
 addSuffix :: String -> InternalName -> InternalName
 addSuffix n1 (InternalName pre n0 suf) = InternalName pre n0 $ suf ++ n1
 
+addPrefix :: String -> InternalName -> InternalName
+addPrefix n1 (InternalName pre n0 suf) = InternalName (n1 ++ pre) n0 suf
+
 dropSuffix :: InternalName -> InternalName
 dropSuffix (InternalName pre ns _) = InternalName pre ns ""
 
@@ -245,24 +249,40 @@ reserved pre n = InternalName pre (makeName $ show n) ""
 
 internal :: Lens' InternalName Name
 internal f (InternalName pre n suf) = (\n' -> InternalName pre n' suf) <$> f n
+
+isZ3InternalName :: String -> Either [String] InternalName
+isZ3InternalName = parseLanguage z3InternalName
  
+z3InternalName :: Language InternalName
+z3InternalName = InternalName <$> prefix 
+                              <*> z3Name' 
+                              <*> (option "" $ string "$")
+    where
+        prefix = option "" (string "@@" >> many1' z3NameChar >> string "@@_")
+
 z3Name' :: Language Name
 z3Name' = symb <|> name
     where
         name = 
             Name <$> option False (try (string "sl$" >> pure True)) 
-                 <*> many1' (alphaNum <|> char '-')
+                 <*> many1' z3NameChar
                  <*> (fromIntegral.L.length 
                         <$> many (string "@prime"))
                  <*> pure ""
         symb = Name False . sconcat <$> many1' symbol <*> pure 0 <*> pure ""
+
+z3NameChar :: Language Char
+z3NameChar = alphaNum <|> char '-'
+
+latexNameChar :: Language Char
+latexNameChar = alphaNum <|> char '_'
 
 latexName :: Language Name
 latexName = symb <|> name'
     where
         name' = 
             name <$> option False (string "\\" >> pure True) 
-                 <*> many1' (alphaNum <|> char '_')
+                 <*> many1' latexNameChar
                  <*> (fromIntegral.L.length 
                         <$> many (string "\'"))
                  <*> pure ""

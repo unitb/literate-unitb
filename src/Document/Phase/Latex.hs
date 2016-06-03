@@ -127,7 +127,7 @@ insideOneEnvOf :: Pre
                => [String] 
                -> LatexParserA a b
                -> LatexParserA a b
-insideOneEnvOf [] _ = assertFalse'
+insideOneEnvOf [] _ = undefined'
 insideOneEnvOf [tag] m = insideEnv tag m
 insideOneEnvOf (x0:x1:xs) m = insideEnv x0 m <!> insideOneEnvOf (x1:xs) m
 

@@ -5,6 +5,7 @@ module Logic.Theories.SetTheory where
 
     -- Modules
 import Logic.Expr
+import Logic.Expr.Type (Field(..))
 import Logic.Expr.Const
 import Logic.Operator
 import Logic.Theory 
@@ -212,13 +213,14 @@ zrecord_set' = zrecord_set . runMap'
 
 zrecord_set :: Map Name ExprP
             -> ExprP
-zrecord_set m = do
-        let msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
+zrecord_set m' = do
+        let m = M.mapKeysMonotonic Field m'
+            msg e = [printf|Expecting a set type for: %s\n  of type: %s|] 
                       (pretty e) (pretty $ type_of e)
             getElements :: ExprP -> Either [String] Type
             getElements e = e >>= \e -> maybe (Left [msg e]) Right $ type_of e^?_ElementType
         (r,r_decl) <- var "r" . recordTypeOfFields <$> traverseValidation getElements m
-        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m
+        let range = mzall $ mapWithKey (\field e -> zfield r field `zelem` e) m'
         zcomprehension [r_decl] range r
 
 qunion :: HOQuantifier

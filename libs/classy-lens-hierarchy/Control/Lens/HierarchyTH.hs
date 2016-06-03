@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Lens
 import Control.Lens.Extras
+import Control.Precondition
 
 import Data.Char
 import Data.Data hiding (typeOf)
@@ -15,7 +16,7 @@ import Data.Graph
 import Data.Graph.Array
 import Data.List as L
 import Data.List.Ordered
-import Data.Map as M
+import Data.Map as M hiding ((!))
 import Data.Tuple
 import Data.Typeable.Lens
 

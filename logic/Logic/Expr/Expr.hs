@@ -69,12 +69,12 @@ data GenExpr n t a q =
         | Cast (GenExpr n t a q) a
         | Lift (GenExpr n t a q) a
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
-type RecFields expr = Table Name expr
+type RecFields expr = Table Field expr
 
 data RecordExpr expr =
         RecLit (RecFields expr)
         | RecUpdate expr (RecFields expr)
-        | FieldLookup expr Name
+        | FieldLookup expr Field
     deriving (Eq,Ord,Typeable,Data,Generic,Show,Functor,Foldable,Traversable)
 
 data Value = RealVal Double | IntVal Int
@@ -313,12 +313,12 @@ typeOfRecord (RecUpdate x m) = recordTypeOfFields $
               M.map type_of m `M.union` fromJust' (type_of x^?fieldTypes) 
 typeOfRecord (FieldLookup x field) = fromJust' (type_of x^?fieldTypes.ix field)
 
-fieldTypes :: TypeSystem t => Prism' t (Table Name t)
+fieldTypes :: TypeSystem t => Prism' t (Table Field t)
 fieldTypes =  _FromSort.swapped.below _RecordSort
             . iso (\(ts,m) -> m & unsafePartsOf traverse .~ ts) 
                   (\m -> (M.elems m,() <$ m))
 
-recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Name e -> t
+recordTypeOfFields :: (Typed e, t ~ TypeOf e,TypeSystem t) => Table Field e -> t
 recordTypeOfFields m = make_type (RecordSort $ () <$ m) $ type_of <$> M.elems m
 
 ztuple_type :: TypeSystem t => [t] -> t
@@ -432,8 +432,10 @@ z3Def ts n = Def ts (z3Name n)
 
 lookupFields :: ( IsName n,TypeSystem t,TypeSystem a
                 , TypeAnnotationPair t a,IsQuantifier q) 
-             => GenExpr n t a q -> Table Name (GenExpr n t a q)
-lookupFields e = fromJust' $ type_of e^?fieldTypes.to (imap $ \f _ -> Record $ FieldLookup e f)
+             => GenExpr n t a q -> Table Field (GenExpr n t a q)
+lookupFields e = fromJust' $ type_of e^?fieldTypes.to fieldLookupMap
+    where
+      fieldLookupMap = imap $ \f _ -> Record $ FieldLookup e f
 
 instance ( ZoomEq t
          , ZoomEq n
@@ -469,11 +471,11 @@ instance (TypeSystem a, TypeSystem t
     as_tree' (Record (RecUpdate x m))  = 
         as_tree' (Record $ RecLit $ m `M.union` lookupFields x)
     as_tree' (Record (FieldLookup x field)) =
-        List <$> sequenceA [pure $ Str $ render field, as_tree' x]
+        List <$> sequenceA [pure $ Str $ accessor field, as_tree' x]
     as_tree' (Word (Var xs _))    = return $ Str $ render xs
     as_tree' (Lit xs _)         = return $ Str $ pretty xs
     as_tree' (FunApp f@(Fun _ _ _ _ t _) [])
-            | isLifted f =List <$> sequence   
+            | isLifted f = List <$> sequence   
                                [ List 
                                  <$> (map Str ["_","map"] ++) 
                                  <$> mapM as_tree' [t]

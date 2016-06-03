@@ -133,6 +133,11 @@ eat_space = do
         then return ()
         else choice 
                 [ match_char isSpace >> return ()
+                , do read_list "\\begin{array}{" 
+                     many (match_char (/= '}')) 
+                     read_list "}"
+                     return ()
+                , read_list "\\end{array}" >> return ()
                 , read_list "\\\\" >> return ()
                 , read_list "~" >> return ()
                 , read_list "&" >> return ()
