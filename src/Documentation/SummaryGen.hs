@@ -1,14 +1,7 @@
 {-# LANGUAGE ViewPatterns 
     , OverloadedStrings
     #-}
-module Documentation.SummaryGen 
-    ( FS
-    , produce_summaries
-    , event_summary' 
-    , getListing
-    , safety_sum
-    , liveness_sum )
-where
+module Documentation.SummaryGen where
 
     -- Modules
 import UnitB.Expr   hiding ((</>))
@@ -46,12 +39,39 @@ type M = RWS Bool [String] ()
     --      AST -> LaTeX conversions
     --      should we strike out expressions?
 
+data ExprStyle = Tagged | Definition
+
 data ExprDispOpt label expr = ExprDispOpt
         { _makeDoc :: label -> M ()                 -- Command to produce documentating comments
-        , _makeRef :: EventId -> label -> M String  -- How to convert a label to a LaTeX reference?
-        , _makeString :: expr -> M String }         -- How to convert (AST) type `a` to LaTeX?
+        , _style :: ExprStyle
+        , _pretty' :: label -> String
+        , _isDefaultSpecial :: Maybe (label -> Label -> Bool)
+        , _makeString :: expr -> String           -- How to convert (AST) type `a` to LaTeX?
+        }                                                      -- 
 
 makeLenses ''ExprDispOpt
+
+isDefault :: ExprDispOpt label expr -> label -> Bool
+isDefault p lbl = maybe False (\f -> f lbl "default") 
+                        (p^.isDefaultSpecial)
+
+makeRef :: ExprDispOpt label expr 
+        -> EventId -> label -> M String
+makeRef p pre lbl
+    | isDefault p lbl = return $ [printf|(\\ref{%s}/default)|] $ pretty pre
+    | otherwise       = return $ [printf|\\eqref{%s}|] (pretty pre ++ (p^.pretty') lbl)
+
+combineLblExpr :: ExprDispOpt label expr
+               -> EventId -> label -> String -> M String
+combineLblExpr opts pre lbl expr = case opts^.style of 
+                    Tagged     -> [printf|  \\item[ %s ]%s|] 
+                                            <$> makeRef opts pre lbl
+                                            <*> format_formula expr
+                    Definition -> fmap ("  \\item[] " ++)
+                                    $ format_formula 
+                                    $ [printf|%s\\3\\triangleq%s|] 
+                                            (opts^.pretty' $ lbl) 
+                                            expr
 
 instance Applicative Doc where
     pure x = Doc $ pure x
@@ -66,14 +86,19 @@ instance FileSystem Doc where
     liftFS f = NoParam $ Doc $ lift $ getNoParam f
     lift2FS f = OneParam $ \g -> Doc $ ReaderT $ \fn -> getOneParam f $ \x -> runReaderT (getDoc $ g x) fn
 
-defOptions :: PrettyPrintable label => (expr -> M String) -> ExprDispOpt label expr
+defOptions :: PrettyPrintable label 
+           => (expr -> String) 
+           -> ExprDispOpt label expr
 defOptions f = ExprDispOpt
             { _makeDoc = const $ return () 
             , _makeString = f 
-            , _makeRef = \pre lbl -> return $ [printf|\\eqref{%s}|] (pretty pre ++ pretty lbl) }
+            , _style = Tagged
+            , _pretty' = pretty
+            , _isDefaultSpecial = Nothing
+            }
 
 instance PrettyPrintable label => Default (ExprDispOpt label Expr) where
-    def = defOptions get_string'
+    def = defOptions prettyPrint
 
 show_removals :: Bool
 show_removals = True
@@ -156,6 +181,7 @@ properties_summary :: Machine -> Doc ()
 properties_summary m = do
         let prop = m!.props
         path <- ask
+        make_file (defs_file m) $ defs_sum m
         make_file (inv_file m) $ invariant_sum m
         make_file (inv_thm_file m) $ invariant_thm_sum prop
         make_file (live_file m) $ liveness_sum m
@@ -171,6 +197,9 @@ properties_summary m = do
             item $ input path $ constraint_file m
     where
         fn = prop_file_name m
+
+defs_file :: Machine -> String
+defs_file m  = "machine_" ++ (render $ m!.name) ++ "_def" <.> "tex"
 
 inv_file :: Machine -> String
 inv_file m  = "machine_" ++ (render $ m!.name) ++ "_inv" <.> "tex"
@@ -263,6 +292,15 @@ variable_sum m = section (keyword "variables") $
             item $ tell [[printf|$%s$|] $ render v]
             comment_of m (DocVar v)
 
+defs_sum :: Machine -> M ()
+defs_sum m = do
+        section kw_defs $ put_all_expr_with'
+                prettyPrint 
+                (style .= Definition) 
+                "" (M.toAscList $ m!.defs) 
+    where
+        kw_defs = "\\textbf{definitions}"
+
 invariant_sum :: Machine -> M ()
 invariant_sum m = do
         let prop = m!.props
@@ -282,20 +320,21 @@ liveness_sum m = do
         section kw $ put_all_expr' toString "" (M.toAscList $ prop^.progress) 
     where
         kw = "\\textbf{progress}"
-        toString (LeadsTo _ p q) = do
-            p' <- get_string' p
-            q' <- get_string' q
-            return $ [printf|%s \\quad \\mapsto\\quad %s|] p' q'
+        toString (LeadsTo _ p q) = 
+            [printf|%s \\quad \\mapsto\\quad %s|]
+                (prettyPrint p)
+                (prettyPrint q)
 
 safety_sum :: PropertySet -> M ()
 safety_sum prop = do
         section kw $ put_all_expr' toString "" (M.toAscList $ prop^.safety)
     where
         kw = "\\textbf{safety}"
-        toString (Unless _ p q) = do
-            p' <- get_string' p
-            q' <- get_string' q
-            return $ [printf|%s \\textbf{\\quad unless \\quad} %s|] p' q'
+        toString (Unless _ p q) = 
+                [printf|%s \\textbf{\\quad unless \\quad} %s|] p' q'
+            where
+                p' = prettyPrint p
+                q' = prettyPrint q
 
 transient_sum :: Machine -> M ()
 transient_sum m = do
@@ -303,14 +342,15 @@ transient_sum m = do
         section kw $ put_all_expr' toString "" (M.toAscList $ prop^.transient) 
     where
         kw = "\\textbf{transient}"
-        toString (Tr _ p evts hint) = do -- do
-            let TrHint sub lt = hint
+        toString (Tr _ p evts hint) = 
+                [printf|%s \\qquad \\text{(%s$%s$%s)}|] 
+                    p' evts' sub'' lt'
+            where
+                TrHint sub lt = hint
                 evts' :: String
                 evts' = intercalate "," $ L.map ([printf|\\ref{%s}|] . pretty) (NE.toList evts)
-            sub' <- forM (M.toList sub) $ \(v,p) -> do
-                p <- get_string' $ snd p
-                return (v,p)
-            let isNotIdent n (getExpr -> Word (Var n' _)) = n /= n'
+                sub'  = M.toList sub & traverse._2 %~ (prettyPrint . snd)
+                isNotIdent n (getExpr -> Word (Var n' _)) = n /= n'
                 isNotIdent _ _ = True
                 sub'' :: String
                 sub'' 
@@ -319,12 +359,7 @@ transient_sum m = do
                 asgnString (v,e) = [printf|%s := %s'~|~%s|] (render v) (render v) e
                 lt' :: String
                 lt' = maybe "" ([printf|, with \\eqref{%s}|] . pretty) lt
-            p <- get_string' p
-            return $ [printf|%s \\qquad \\text{(%s$%s$%s)}|] 
-                p evts' sub'' lt'
-            -- p' <- get_string' p
-            -- q' <- get_string' q
-            -- return $ [printf|{0} \\quad \\mapsto\\quad {1}|] p' q'
+                p' = prettyPrint p
 
 constraint_sum :: Machine -> M ()
 constraint_sum m = do
@@ -332,8 +367,7 @@ constraint_sum m = do
         section kw $ put_all_expr' toString "" (M.toAscList $ prop^.constraint)
     where
         kw = "\\textbf{safety}"
-        toString (Co _ p) = do
-            get_string' p
+        toString (Co _ p) = prettyPrint p
 
 format_formula :: String -> M String
 format_formula str = do
@@ -348,29 +382,23 @@ format_formula str = do
         g '&' = ""
         g x = [x]
 
-get_string' :: Expr -> M String
-get_string' e = do
-    return $ prettyPrint e
-
 put_expr :: ExprDispOpt label expr     
          -> EventId             -- label prefix (for LaTeX cross referencing)
          -> (label,expr)        -- AST and its label
          -> M ()
 put_expr opts pre (lbl,e) = do
-        ref <- (opts^.makeRef) pre lbl
-        --let ref :: String
-        --    ref = case lbl of
-        --            Nothing -> [printf|(\\ref{{0}}/default)|] pre
-        --            Just lbl -> [printf|\\eqref{{0}}|] (pretty pre ++ pretty lbl)
-        expr  <- format_formula =<< (opts^.makeString $ e)
-        tell [[printf|  \\item[ %s ]%s|] ref expr]
+        let expr = opts^.makeString $ e
+        tell . pure =<< combineLblExpr opts pre lbl expr
         opts^.makeDoc $ lbl
 
-put_all_expr' :: PrettyPrintable label => (a -> M String) -> EventId -> [(label, a)] -> M ()
+put_all_expr' :: PrettyPrintable label 
+              => (a -> String) 
+              -> EventId 
+              -> [(label, a)] -> M ()
 put_all_expr' f = put_all_expr_with' f (return ())
 
 put_all_expr_with' :: PrettyPrintable label
-                   => (expr -> M String)
+                   => (expr -> String)
                    -> State (ExprDispOpt label expr) ()
                    -> EventId 
                    -> [(label, expr)] -> M ()
@@ -380,11 +408,11 @@ put_all_expr_with' toString opts pre xs
         block $ forM_ xs $ put_expr (execState opts $ defOptions toString) pre
 
 put_all_expr :: EventId -> [(Label,Expr)] -> M ()
-put_all_expr = put_all_expr' get_string'
+put_all_expr = put_all_expr' prettyPrint
 
 put_all_expr_with :: State (ExprDispOpt Label Expr) () 
                   -> EventId -> [(Label, Expr)] -> M ()
-put_all_expr_with opts = put_all_expr_with' get_string' opts
+put_all_expr_with opts = put_all_expr_with' prettyPrint opts
 
 section :: String -> M () -> M ()
 section kw cmd = do
@@ -406,12 +434,9 @@ csched_sum lbl e = do
         section kw $ do
             when show_removals $
                 local (const True)
-                    $ put_all_expr_with (makeRef %= isDefault) lbl del_sch
-            put_all_expr_with (makeRef %= isDefault) lbl sch
+                    $ put_all_expr_with (isDefaultSpecial .= Just (==)) lbl del_sch
+            put_all_expr_with (isDefaultSpecial .= Just (==)) lbl sch
     where
-        isDefault f eid lbl
-            | lbl == "default" = return $ [printf|(\\ref{%s}/default)|] $ pretty (eid :: EventId)
-            | otherwise        = f eid lbl
         kw = "\\textbf{during}"    
         sch = M.toAscList $ e^.new.coarse_sched --coarse $ new_sched e
         del_sch = concatMap (fmap M.toList $ view $ deleted.coarse_sched) $ e^.evt_pairs.to NE.toList
@@ -452,13 +477,16 @@ act_sum lbl e = section kw $ do
         put_all_expr' put_assign lbl $ M.toAscList $ e^.actions
     where 
         kw = "\\textbf{begin}"
-        put_assign (Assign v e) = do
-            xs <- get_string' e
-            return $ [printf|%s \\bcmeq %s|] (render $ v^.name) xs
-        put_assign (BcmSuchThat vs e) = do
-            xs <- get_string' e
-            return $ [printf|%s \\bcmsuch %s|] (intercalate "," $ L.map (render . view name) vs :: String) xs
-        put_assign (BcmIn v e) = do
-            xs <- get_string' e
-            return $ [printf|%s \\bcmin %s|] (render $ v^.name) xs
+        put_assign (Assign v e) = 
+            [printf|%s \\bcmeq %s|] 
+                (render $ v^.name)
+                (prettyPrint e)
+        put_assign (BcmSuchThat vs e) = 
+            [printf|%s \\bcmsuch %s|] 
+                (intercalate "," $ L.map (render . view name) vs :: String)
+                (prettyPrint e)
+        put_assign (BcmIn v e) = 
+            [printf|%s \\bcmin %s|] 
+                (render $ v^.name)
+                (prettyPrint e)
 

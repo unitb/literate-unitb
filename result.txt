@@ -103,6 +103,11 @@ Running test...
 |  |  |  +- proof of inv0
 |  |  |  +- empty proof
 |  |  +- [ Success: 5 / 5 ]
+|  |  +- Specification and refinement of a lock-free algorithm
+|  |  |  +- parsing and using definitions
+|  |  |  +- proving using definitions
+|  |  |  +- invariance proof obligation
+|  |  +- [ Success: 3 / 3 ]
 |  |  +- train station example
 |  |  |  +- part 0
 |  |  |  |  +- test 0, syntax
@@ -222,7 +227,7 @@ Running test...
 |  |  +- conformance of instances to type class axioms
 |  |  +- expression phase, properties
 |  |  +- expression scope, properties
-|  +- [ Success: 170 / 170 ]
+|  +- [ Success: 173 / 173 ]
 |  +- Unit-B
 |  |  +- 0: 'x eventually increases' verifies
 |  |  +- 1: train, model 0, verification
@@ -262,10 +267,12 @@ Running test...
 |  |  |  +- QuasiQuotes with proof monads
 |  |  |  +- QuasiQuotes with proof monads and set theory
 |  |  |  +- QuasiQuotes with proof monads and assumptions
-|  |  +- [ Success: 31 / 31 ]
+|  |  |  +- Records lookup syntax
+|  |  |  +- Proofs with record lookup
+|  |  +- [ Success: 33 / 33 ]
 |  |  +- 6: unless with except and split event
 |  |  +- 7: QuickCheck names
-|  +- [ Success: 39 / 39 ]
+|  +- [ Success: 41 / 41 ]
 |  +- latex parser
 |  |  +- quickcheck
 |  |  +- sample.tex
@@ -326,23 +333,24 @@ Running test...
 |  |  +- progress properties of m2
 |  |  +- File structure
 |  |  +- Root machine
-|  +- [ Success: 6 / 6 ]
+|  |  +- definitions of m2
+|  +- [ Success: 7 / 7 ]
 |  +- Reactive.Banana extensions
 |  |  +- QuickCheck : Reactive.Banana.Property
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 261 / 261 ]
++- [ Success: 267 / 267 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   37616 total
-    1038 src/UnitB/PO.hs
+   38018 total
+    1060 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
-     751 src/Document/Phase.hs
-     745 logic/Logic/Expr/Expr.hs
-Run time: 2m 2s
+     757 src/Document/Phase.hs
+     747 logic/Logic/Expr/Expr.hs
+Run time: 1m 51s
