@@ -314,7 +314,11 @@ Running test...
 |  |  +- case 13 - Sane line breaks, quickcheck
 |  |  +- test 14 - quickcheck brackets
 |  |  +- test 15: Generic tuple parsing
-|  +- [ Success: 17 / 17 ]
+|  |  +- Control.Concurrent.Async.Priority
+|  |  |  +- Fail in some, pass in some
+|  |  |  +- High priority complete first
+|  |  +- [ Success: 2 / 2 ]
+|  +- [ Success: 19 / 19 ]
 |  +- code generation in the cube example
 |  |  +- test0: code for the {state}
 |  |  +- test1: code for the {event}
@@ -340,17 +344,17 @@ Running test...
 |  |  +- QuickCheck : Reactive.Banana.FileSystem
 |  |  +- QuickCheck : Reactive.Banana.Async2
 |  +- [ Success: 3 / 3 ]
-+- [ Success: 267 / 267 ]
++- [ Success: 269 / 269 ]
 Data.Map.Base
 
 ***************
 *** SUCCESS ***
 ***************
 Lines of Haskell code:
-   38018 total
+   38489 total
     1060 src/UnitB/PO.hs
      926 src/Document/Phase/Expressions.hs
      782 src/Document/Visitor.lhs
      757 src/Document/Phase.hs
      747 logic/Logic/Expr/Expr.hs
-Run time: 1m 51s
+Run time: 1m 57s
